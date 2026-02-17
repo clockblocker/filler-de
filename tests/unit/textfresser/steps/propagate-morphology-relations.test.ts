@@ -2,11 +2,13 @@ import { describe, expect, it } from "bun:test";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import { propagateMorphologyRelations } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations";
 import type { MorphologyPayload } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generation-types";
+import type { MorphemeItem } from "../../../../src/commanders/textfresser/domain/morpheme/morpheme-formatter";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 function makeCtx(params: {
 	lemma?: string;
+	morphemes?: MorphemeItem[];
 	morphology?: MorphologyPayload;
 	sourceTranslation?: string;
 }): GenerateSectionsResult {
@@ -29,7 +31,7 @@ function makeCtx(params: {
 		failedSections: [],
 		inflectionCells: [],
 		matchedEntry: null,
-		morphemes: [],
+		morphemes: params.morphemes ?? [],
 		nextIndex: 1,
 		relations: [],
 		resultingActions: [],
@@ -159,11 +161,14 @@ describe("propagateMorphologyRelations", () => {
 			kind: "MdFile" as const,
 			pathParts: ["Worter", "de", "lexem", "inflected", "a", "anl", "anlag"],
 		};
-		(ctx.textfresserState as unknown as { vam: { findByBasename: (word: string) => unknown[] } }).vam =
-			{
-				findByBasename: (word: string) =>
-					word === "Anlage" ? [inflectedPath] : [],
-			};
+		(
+			ctx.textfresserState as unknown as {
+				vam: { findByBasename: (word: string) => unknown[] };
+			}
+		).vam = {
+			findByBasename: (word: string) =>
+				word === "Anlage" ? [inflectedPath] : [],
+		};
 
 		const result = propagateMorphologyRelations(ctx);
 		expect(result.isOk()).toBe(true);
@@ -172,6 +177,234 @@ describe("propagateMorphologyRelations", () => {
 		expect(actions[0]?.kind).toBe(VaultActionKind.RenameMdFile);
 		expect(actions[1]?.kind).toBe(VaultActionKind.UpsertMdFile);
 		expect(actions[2]?.kind).toBe(VaultActionKind.ProcessMdFile);
+	});
+
+	it("creates DictEntry equation with decorated header and separability tag (G3)", () => {
+		const result = propagateMorphologyRelations(
+			makeCtx({
+				morphemes: [
+					{
+						kind: "Prefix",
+						linkTarget: "auf-prefix-de",
+						separability: "Separable",
+						surf: "auf",
+					},
+					{ kind: "Root", lemma: "passen", surf: "pass" },
+				],
+				morphology: {
+					compoundedFromLemmas: [],
+					prefixEquation: {
+						baseLemma: "passen",
+						prefixDisplay: ">auf",
+						prefixTarget: "auf-prefix-de",
+						sourceLemma: "aufpassen",
+					},
+				},
+			}),
+		);
+		expect(result.isOk()).toBe(true);
+		const actions = result._unsafeUnwrap().actions;
+		const transform = extractTransforms(actions)[0];
+		expect(transform).toBeDefined();
+		if (!transform) return;
+
+		const output = transform("");
+		expect(output).toContain(">auf ^MO-LM-1");
+		expect(output).toContain("#prefix/separable");
+		expect(output).toContain(
+			"[[auf-prefix-de|>auf]] + [[passen]] = [[aufpassen]]",
+		);
+	});
+
+	it("keeps separable and inseparable entries separate on the same prefix note (G3)", () => {
+		const sepResult = propagateMorphologyRelations(
+			makeCtx({
+				lemma: "übersetzen",
+				morphemes: [
+					{
+						kind: "Prefix",
+						linkTarget: "uber-prefix-de",
+						separability: "Separable",
+						surf: "über",
+					},
+					{ kind: "Root", lemma: "setzen", surf: "setz" },
+				],
+				morphology: {
+					compoundedFromLemmas: [],
+					prefixEquation: {
+						baseLemma: "setzen",
+						prefixDisplay: ">über",
+						prefixTarget: "uber-prefix-de",
+						sourceLemma: "übersetzen",
+					},
+				},
+			}),
+		);
+		const sepTransform = extractTransforms(sepResult._unsafeUnwrap().actions)[0];
+		expect(sepTransform).toBeDefined();
+		if (!sepTransform) return;
+		const afterSep = sepTransform("");
+
+		const insepResult = propagateMorphologyRelations(
+			makeCtx({
+				lemma: "übertreiben",
+				morphemes: [
+					{
+						kind: "Prefix",
+						linkTarget: "uber-prefix-de",
+						separability: "Inseparable",
+						surf: "über",
+					},
+					{ kind: "Root", lemma: "treiben", surf: "treib" },
+				],
+				morphology: {
+					compoundedFromLemmas: [],
+					prefixEquation: {
+						baseLemma: "treiben",
+						prefixDisplay: "über<",
+						prefixTarget: "uber-prefix-de",
+						sourceLemma: "übertreiben",
+					},
+				},
+			}),
+		);
+		const insepTransform = extractTransforms(insepResult._unsafeUnwrap().actions)[0];
+		expect(insepTransform).toBeDefined();
+		if (!insepTransform) return;
+		const output = insepTransform(afterSep);
+
+		expect(output).toContain(">über");
+		expect(output).toContain("über<");
+		expect(output).toContain("#prefix/separable");
+		expect(output).toContain("#prefix/inseparable");
+		expect(output).toContain("^MO-LM-1");
+		expect(output).toContain("^MO-LM-2");
+	});
+
+	it("appends and deduplicates equation on re-encounter for the same decorated entry", () => {
+		const result = propagateMorphologyRelations(
+			makeCtx({
+				lemma: "aufmachen",
+				morphemes: [
+					{
+						kind: "Prefix",
+						linkTarget: "auf-prefix-de",
+						separability: "Separable",
+						surf: "auf",
+					},
+					{ kind: "Root", lemma: "machen", surf: "mach" },
+				],
+				morphology: {
+					compoundedFromLemmas: [],
+					prefixEquation: {
+						baseLemma: "machen",
+						prefixDisplay: ">auf",
+						prefixTarget: "auf-prefix-de",
+						sourceLemma: "aufmachen",
+					},
+				},
+			}),
+		);
+		const transform = extractTransforms(result._unsafeUnwrap().actions)[0];
+		expect(transform).toBeDefined();
+		if (!transform) return;
+
+		const existingContent = [
+			"",
+			">auf ^MO-LM-1",
+			"",
+			'<span class="entry_section_title entry_section_title_tags">Tags</span>',
+			"#prefix/separable",
+			'<span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>',
+			"[[auf-prefix-de|>auf]] + [[passen]] = [[aufpassen]]",
+		].join("\n");
+
+		const first = transform(existingContent);
+		const expectedLine = "[[auf-prefix-de|>auf]] + [[machen]] = [[aufmachen]]";
+		expect(first).toContain("[[auf-prefix-de|>auf]] + [[passen]] = [[aufpassen]]");
+		expect(first).toContain(expectedLine);
+
+		const second = transform(first);
+		const matches = second.match(
+			/\[\[auf-prefix-de\|>auf\]\] \+ \[\[machen\]\] = \[\[aufmachen\]\]/g,
+		);
+		expect(matches?.length).toBe(1);
+	});
+
+	it("uses fallback append path for non-dict prefix notes (G2)", () => {
+		const result = propagateMorphologyRelations(
+			makeCtx({
+				morphemes: [
+					{
+						kind: "Prefix",
+						linkTarget: "auf-prefix-de",
+						separability: "Separable",
+						surf: "auf",
+					},
+					{ kind: "Root", lemma: "passen", surf: "pass" },
+				],
+				morphology: {
+					compoundedFromLemmas: [],
+					prefixEquation: {
+						baseLemma: "passen",
+						prefixDisplay: ">auf",
+						prefixTarget: "auf-prefix-de",
+						sourceLemma: "aufpassen",
+					},
+				},
+			}),
+		);
+
+		const transform = extractTransforms(result._unsafeUnwrap().actions)[0];
+		expect(transform).toBeDefined();
+		if (!transform) return;
+
+		const existing = "Meine freie Notiz ueber auf- Prefixe.";
+		const output = transform(existing);
+		expect(output).toContain(existing);
+		expect(output).toContain("entry_section_title_morphologie");
+		expect(output).toContain(
+			"[[auf-prefix-de|>auf]] + [[passen]] = [[aufpassen]]",
+		);
+		expect(output).not.toContain("^MO-LM-");
+		expect(output).not.toContain("#prefix/");
+	});
+
+	it("resolves equation targets to Library prefix path", () => {
+		const result = propagateMorphologyRelations(
+			makeCtx({
+				morphemes: [
+					{
+						kind: "Prefix",
+						linkTarget: "auf-prefix-de",
+						separability: "Separable",
+						surf: "auf",
+					},
+					{ kind: "Root", lemma: "passen", surf: "pass" },
+				],
+				morphology: {
+					compoundedFromLemmas: [],
+					prefixEquation: {
+						baseLemma: "passen",
+						prefixDisplay: ">auf",
+						prefixTarget: "auf-prefix-de",
+						sourceLemma: "aufpassen",
+					},
+				},
+			}),
+		);
+		expect(result.isOk()).toBe(true);
+
+		const actions = result._unsafeUnwrap().actions;
+		expect(actions[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
+		const upsertPayload = actions[0]?.payload as
+			| { splitPath: { pathParts: string[] } }
+			| undefined;
+		expect(upsertPayload?.splitPath.pathParts).toEqual([
+			"Library",
+			"de",
+			"prefix",
+		]);
 	});
 
 	it("falls back to no gloss when translation is missing", () => {

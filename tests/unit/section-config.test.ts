@@ -57,6 +57,7 @@ describe("getSectionsFor", () => {
 
 	test("returns correct sections for Morphem", () => {
 		expect(getSectionsFor({ unit: "Morphem" })).toBe(sectionsForMorphem);
+		expect(sectionsForMorphem).toContain("Morphology");
 	});
 
 	test("places morphology right after morphemes in section order", () => {

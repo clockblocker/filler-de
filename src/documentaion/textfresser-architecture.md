@@ -64,7 +64,7 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V16 scope**: Prompt-stability + pipeline hardening — Lemma adds runtime output guardrails with one controlled retry for suspicious same-surface outputs (separable inflected verbs, comparative/superlative-like inflected adjectives). Unsafe `contextWithLinkedParts` rewrites are dropped when stripped text does not match source context. Background Generate cleanup is now ownership-aware: empty targets are auto-trashed only when invocation-owned (or truly newly created in this run). Disambiguate senses now include optional `senseGloss` (short text gloss) alongside emoji signals.
 
-> **V17 scope**: Morphological relations v1 — Morphem output now supports optional top-level `derived_from` (single base) and `compounded_from` (immediate constituents). New DictSectionKind `Morphology` (`Morphologische Relationen`) is generated for Lexem entries (except proper nouns), ordered right after Morphem. Generate now enforces a 3-phase model (`lemma -> generation -> propagation`) by waiting for `WordTranslation` before all propagation steps. New `propagateMorphologyRelations` writes `<used_in>` backlinks for derivation/compounding and prefix equations to prefix notes; relation propagation now shares append/dedupe utilities and skips when source lemma is already referenced.
+> **V17 scope**: Morphological relations v1 — Morphem output now supports optional top-level `derived_from` (single base) and `compounded_from` (immediate constituents). New DictSectionKind `Morphology` (`Morphologische Relationen`) is generated for Lexem entries (except proper nouns), ordered right after Morphem. Generate now enforces a 3-phase model (`lemma -> generation -> propagation`) by waiting for `WordTranslation` before all propagation steps. Propagation is split: `propagateMorphologyRelations` owns Lexem-side morphology backlinks (`<used_in>` for derivation/compounding on Lexem notes) plus verb-prefix equations on prefix Morphem notes; `propagateMorphemes` owns bound-morpheme `<used_in>` aggregation on Morphem notes (including non-verb prefixes). Relation propagation shares append/dedupe utilities and skips when source lemma is already referenced.
 
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
@@ -242,7 +242,7 @@ DictSectionKind = "Relation" | "FreeForm" | "Attestation" | "Morphem" | "Morphol
 | `Attestation` | Kontexte | User's encountered contexts (`![[File#^blockId\|^]]`) | No |
 | `Relation` | Semantische Beziehungen | Lexical relations | **Yes** (see below) |
 | `Morphem` | Morpheme | Word decomposition. LLM returns structured data (`surf`/`lemma`/`tags`/`kind`), `morphemeFormatterHelper` converts to wikilink display (`[[auf\|>auf]]\|[[passen]]`) | No |
-| `Morphology` | Morphologische Relationen | Derivation/compounding structure (`<derived_from>`, `<consists_of>`, prefix equations, propagated `<used_in>`) | No |
+| `Morphology` | Morphologische Relationen | Derivation/compounding structure (`<derived_from>`, `<consists_of>`, verb-prefix equations, propagated `<used_in>`) | No |
 | `Inflection` | Flexion | Declension/conjugation tables | No |
 | `Deviation` | Abweichungen | Irregular forms, exceptions | No |
 | `Tags` | Tags | POS feature tags (`#noun/maskulin`, `#verb/transitiv/stark`). Generated from POS-specific Features prompts; tag parts are trim/lowercase-normalized and deduplicated when composing `#pos/...`. | No |
@@ -661,7 +661,7 @@ Generate fires automatically in the background after a successful Lemma command.
 checkAttestation → checkEligibility → checkLemmaResult
   → resolveExistingEntry (parse existing entries, use Lemma's disambiguationResult for re-encounter detection)
   → generateSections (async: LLM calls, or attestation append for re-encounters)
-  → propagateRelations → propagateMorphologyRelations → propagateInflections
+  → propagateRelations → propagateMorphologyRelations → propagateMorphemes → propagateInflections
   → serializeEntry (includes noteKind + emojiDescription in single metadata upsert) → moveToWorter → addWriteAction
 ```
 
@@ -692,7 +692,7 @@ All LLM calls are fired in parallel via `Promise.allSettled` (none depend on eac
 |---------|------|-----------|-----------|--------|
 | **Header** | No | — | `dispatchHeaderFormatter()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns, article genus priority is: LexemEnrichment genus, then noun-inflection genus fallback; when resolved, output is `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` via `de/lexem/noun/header-formatter`. Dispatch routes by POS; common formatter for non-nouns or unresolved noun genus. `emoji` is rendered from the full `emojiDescription` sequence in order. No LLM call. Sense signals are stored on `meta.entity` (`emojiDescription`, `ipa`) with legacy mirror `meta.emojiDescription` for compatibility. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
-| **Morphology** | No extra LLM call (reuses `Morphem` output) | — | `generateMorphologySection()` | `<derived_from>`, `<consists_of>`, prefix equation lines; structured payload also captured for propagation |
+| **Morphology** | No extra LLM call (reuses `Morphem` output) | — | `generateMorphologySection()` | `<derived_from>`, `<consists_of>`, verb-prefix equation lines; structured payload also captured for propagation |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
 | **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
 | **Translation** | Yes | `WordTranslation` | — (string pass-through) | Translates the lemma word (using attestation context for disambiguation only) → `EntrySection`. V6: changed from `PromptKind.Translate` (which translated the full sentence) to `WordTranslation` (input: `{word, pos, context}`, output: concise 1-3 word translation). |
@@ -776,14 +776,15 @@ Some are **asymmetric** (hypernym/hyponym, meronym/holonym) — the inverse is a
 Not all DictEntrySections participate in cross-reference propagation:
 
 - **Relation**: Full bidirectional propagation with inverse rules (see 9.2). This is where most SubSections live.
-- **Morphem**: If `Kohlekraftwerk` decomposes into `[[Kohle]] + [[Kraftwerk]]`, then `Kohle.md` could list `Kohlekraftwerk` under "compounds" — simpler, potentially one-directional.
+- **Morphem**: `propagateMorphemes` maintains `<used_in>` backlinks on Morphem notes for bound morphemes (`Suffix`, `Interfix`, `Suffixoid`, etc.) and non-verb prefixes. Verb prefixes with separability are skipped here.
+- **Morphology**: `propagateMorphologyRelations` writes `<used_in>` backlinks to Lexem targets for `<derived_from>`/`<consists_of>` and writes verb-prefix equations to prefix Morphem notes.
 - **Attestation**: No propagation — contexts are per-encounter.
 - **Inflection**: **Noun propagation** via `propagateInflections` — creates/updates one inflection entry per form with merged tags in inflected-form notes (see section 9.5). Other POS: no propagation.
 - **Header, FreeForm, Deviation**: No propagation.
 
 ### 9.4 Implementation
 
-**Source**: `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts`, `src/commanders/textfresser/common/target-path-resolver.ts`
+**Source**: `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts`, `src/commanders/textfresser/common/target-path-resolver.ts`
 
 The `propagateRelations` step runs after `generateSections` in the Generate pipeline. It uses the raw `relations` output captured during section generation (not re-parsed from markdown).
 
@@ -1156,10 +1157,12 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, use Lemma's disambiguationResult for re-encounter detection |
 | `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V12: Features prompt + Tags section, article in header for nouns. V13: `meta.linguisticUnit` restored for Lexem/Phrasem entries (`Morphem` still out of scope). Stores `meta.emojiDescription` from precomputedEmojiDescription or lemmaResult.emojiDescription. Header built from LemmaResult fields. Sets targetBlockId |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, resolve target paths via shared resolver, generate actions for target notes |
+| `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts` | Morphology propagation: Lexem `<used_in>` backlinks for derivation/compounding + verb-prefix equation propagation on decorated prefix Morphem entries (with non-dict fallback append path) |
+| `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts` | Morpheme propagation: bound-morpheme `<used_in>` aggregation on Morphem entries (Suffix/Interfix/etc + non-verb Prefix), with Root/Suffixoid fallback when morphology payload is incomplete |
 | `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create/update one inflection entry per form, merge tags, collapse legacy per-cell stubs |
 | `src/commanders/textfresser/commands/generate/steps/move-to-worter.ts` | Final destination policy step: closed-set Lexem POS → Library path, others → Worter sharded path, rename skipped when already at destination |
 | `src/commanders/textfresser/common/lemma-link-routing.ts` | Link-target policy helper: closed-set detection, pre-prompt target resolution, final target resolution, link-target formatting |
-| `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, `buildPropagationActionPair` helper |
+| `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, shared morpheme path resolver for prefix Library fallback, `buildPropagationActionPair` helper |
 | `src/commanders/textfresser/common/sharded-path.ts` | Sharded path computation for Worter entries; exports `SURFACE_KIND_PATH_INDEX` for healing checks |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
 | `src/commanders/textfresser/commands/generate/section-formatters/common/header-formatter.ts` | Common header line: emoji + wikilink + IPA/Youglish URL. No article — POS-neutral. Exports `buildYouglishUrl` for reuse. |

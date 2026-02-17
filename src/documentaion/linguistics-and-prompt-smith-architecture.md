@@ -925,7 +925,8 @@ VAM dispatch (ProcessMdFile / UpsertMdFile)
     ↓
 Propagation steps:
     ├─ propagateRelations → ProcessMdFile on target notes (cross-refs, shared dedupe append helper)
-    ├─ propagateMorphologyRelations → `<used_in>` backlinks + prefix equations
+    ├─ propagateMorphologyRelations → Lexem `<used_in>` backlinks + verb-prefix equations
+    ├─ propagateMorphemes → Morphem `<used_in>` backlinks (bound morphemes + non-verb prefixes)
     └─ propagateInflections → UpsertMdFile + ProcessMdFile for single inflection entries (tags-merged, legacy stubs auto-collapsed)
 ```
 

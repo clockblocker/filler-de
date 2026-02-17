@@ -43,6 +43,7 @@ export const sectionsForPhrasem: readonly DictSectionKind[] = [
 export const sectionsForMorphem: readonly DictSectionKind[] = [
 	S.Header,
 	S.Tags,
+	S.Morphology,
 	S.Attestation,
 	S.FreeForm,
 ];

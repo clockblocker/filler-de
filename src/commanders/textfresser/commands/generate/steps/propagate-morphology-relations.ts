@@ -1,14 +1,20 @@
 import { ok, type Result } from "neverthrow";
-import {
-	type LinguisticUnitKind,
-	SurfaceKind,
-} from "../../../../../linguistics/common/enums/core";
+import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
+import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
 import {
 	buildPropagationActionPair,
+	resolveMorphemePath,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
+import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
+import { dictNoteHelper } from "../../../domain/dict-note";
+import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
+import {
+	type MorphemeItem,
+	morphemeFormatterHelper,
+} from "../../../domain/morpheme/morpheme-formatter";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
@@ -16,39 +22,32 @@ import {
 } from "../../../targets/de/sections/section-kind";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
-import { normalizeLemma } from "./morphology-utils";
+import { normalizeLemma, normalizeMorphologyKey } from "./morphology-utils";
 import {
 	appendUniqueLinesToSection,
 	appendUniqueLinesToSectionBlock,
 	blockHasWikilinkTarget,
+	buildUsedInLine,
+	extractFirstNonEmptyLine,
 } from "./propagation-line-append";
 
-type MorphologyTargetKind = "Equation" | "UsedIn";
-
-type MorphologyTarget = {
-	kind: MorphologyTargetKind;
+type UsedInTarget = {
+	kind: "UsedIn";
 	lines: string[];
 	targetWord: string;
-	targetUnit: LinguisticUnitKind;
+	targetUnit: "Lexem" | "Phrasem" | "Morphem";
 };
 
-function extractFirstNonEmptyLine(raw: string | undefined): string | null {
-	if (!raw) return null;
+type EquationTarget = {
+	kind: "Equation";
+	lines: string[];
+	targetHeader: string;
+	targetWord: string;
+	prefixItem: MorphemeItem;
+	tagLine: string;
+};
 
-	for (const line of raw.split("\n")) {
-		const trimmed = line.trim();
-		if (trimmed.length > 0) return trimmed;
-	}
-	return null;
-}
-
-function buildUsedInLine(
-	sourceLemma: string,
-	sourceGloss: string | null,
-): string {
-	if (!sourceGloss) return `[[${sourceLemma}]]`;
-	return `[[${sourceLemma}]] *(${sourceGloss})*`;
-}
+type MorphologyTarget = UsedInTarget | EquationTarget;
 
 function normalizeWikilinkTarget(target: string): string {
 	return target.trim().toLowerCase();
@@ -67,8 +66,9 @@ function hasEquivalentEquationLine(
 		.filter((line) => line.length > 0)
 		.some((existingLine) => {
 			const existingTargets = extractLineTargetSignature(existingLine);
-			if (existingTargets.length !== candidateTargets.length)
+			if (existingTargets.length !== candidateTargets.length) {
 				return false;
+			}
 			return existingTargets.every((target, index) => {
 				const other = candidateTargets[index];
 				return other !== undefined && target === other;
@@ -81,6 +81,26 @@ function extractLineTargetSignature(line: string): string[] {
 		.parse(line)
 		.map((wikilink) => normalizeWikilinkTarget(wikilink.target))
 		.filter((target) => target.length > 0);
+}
+
+function appendEquationLine(params: {
+	candidateLine: string;
+	currentSectionContent: string;
+	sourceLemma: string;
+}): { changed: boolean; content: string } {
+	const normalized = params.currentSectionContent.trimEnd();
+	if (
+		blockHasWikilinkTarget(normalized, params.sourceLemma) ||
+		hasEquivalentEquationLine(normalized, params.candidateLine)
+	) {
+		return { changed: false, content: params.currentSectionContent };
+	}
+
+	const content =
+		normalized.length > 0
+			? `${normalized}\n${params.candidateLine}`
+			: params.candidateLine;
+	return { changed: true, content };
 }
 
 function buildTargets(ctx: GenerateSectionsResult): MorphologyTarget[] {
@@ -132,15 +152,39 @@ function buildTargets(ctx: GenerateSectionsResult): MorphologyTarget[] {
 			normalizeWikilinkTarget(targetWord) !==
 				normalizeWikilinkTarget(sourceLemma)
 		) {
-			const sourceGlossSuffix = sourceGloss ? ` *(${sourceGloss})*` : "";
-			targets.push({
-				kind: "Equation",
-				lines: [
-					`[[${morphology.prefixEquation.prefixTarget}|${morphology.prefixEquation.prefixDisplay}]] + [[${morphology.prefixEquation.baseLemma}]] = [[${morphology.prefixEquation.sourceLemma}]]${sourceGlossSuffix}`,
-				],
-				targetUnit: "Morphem",
-				targetWord,
-			});
+			const targetKey = normalizeMorphologyKey(targetWord);
+			if (targetKey) {
+				const prefixItem = ctx.morphemes.find(
+					(item) =>
+						item.kind === "Prefix" &&
+						Boolean(item.separability) &&
+						normalizeMorphologyKey(
+							item.linkTarget ?? item.lemma ?? item.surf,
+						) === targetKey,
+				);
+				if (prefixItem?.separability) {
+					const sourceGlossSuffix = sourceGloss
+						? ` *(${sourceGloss})*`
+						: "";
+					const targetHeader =
+						morphemeFormatterHelper.decorateSurface(
+							prefixItem.surf,
+							prefixItem.separability,
+							ctx.textfresserState.languages.target,
+						);
+
+					targets.push({
+						kind: "Equation",
+						lines: [
+							`[[${morphology.prefixEquation.prefixTarget}|${morphology.prefixEquation.prefixDisplay}]] + [[${morphology.prefixEquation.baseLemma}]] = [[${morphology.prefixEquation.sourceLemma}]]${sourceGlossSuffix}`,
+						],
+						prefixItem,
+						tagLine: `#prefix/${prefixItem.separability.toLowerCase()}`,
+						targetHeader,
+						targetWord,
+					});
+				}
+			}
 		}
 	}
 
@@ -152,7 +196,10 @@ function groupTargets(
 ): Map<string, MorphologyTarget> {
 	const grouped = new Map<string, MorphologyTarget>();
 	for (const target of targets) {
-		const key = `${target.kind}::${normalizeWikilinkTarget(target.targetWord)}`;
+		const key =
+			target.kind === "Equation"
+				? `${target.kind}::${normalizeWikilinkTarget(target.targetWord)}::${target.targetHeader}`
+				: `${target.kind}::${normalizeWikilinkTarget(target.targetWord)}`;
 		const existing = grouped.get(key);
 		if (!existing) {
 			grouped.set(key, target);
@@ -171,22 +218,32 @@ export function propagateMorphologyRelations(
 
 	const groupedTargets = groupTargets(targets);
 	const targetLang = ctx.textfresserState.languages.target;
+	const sourceLemma = ctx.textfresserState.latestLemmaResult.lemma;
 	const sectionCssSuffix = cssSuffixFor[DictSectionKind.Morphology];
 	const sectionTitle = TitleReprFor[DictSectionKind.Morphology][targetLang];
 	const sectionMarker = `<span class="entry_section_title entry_section_title_${sectionCssSuffix}">${sectionTitle}</span>`;
+	const tagsCssSuffix = cssSuffixFor[DictSectionKind.Tags];
+	const tagsTitle = TitleReprFor[DictSectionKind.Tags][targetLang];
 
 	const propagationActions: VaultAction[] = [];
-	const sourceLemma = ctx.textfresserState.latestLemmaResult.lemma;
 
 	for (const target of groupedTargets.values()) {
-		const resolved = resolveTargetPath({
-			desiredSurfaceKind: SurfaceKind.Lemma,
-			librarianLookup: ctx.textfresserState.lookupInLibrary,
-			targetLanguage: targetLang,
-			unitKind: target.targetUnit,
-			vamLookup: (word) => ctx.textfresserState.vam.findByBasename(word),
-			word: target.targetWord,
-		});
+		const resolved =
+			target.kind === "Equation"
+				? resolveMorphemePath(target.prefixItem, {
+						lookupInLibrary: ctx.textfresserState.lookupInLibrary,
+						targetLang,
+						vam: ctx.textfresserState.vam,
+					})
+				: resolveTargetPath({
+						desiredSurfaceKind: SurfaceKind.Lemma,
+						librarianLookup: ctx.textfresserState.lookupInLibrary,
+						targetLanguage: targetLang,
+						unitKind: target.targetUnit,
+						vamLookup: (word) =>
+							ctx.textfresserState.vam.findByBasename(word),
+						word: target.targetWord,
+					});
 
 		const transform =
 			target.kind === "UsedIn"
@@ -202,24 +259,123 @@ export function propagateMorphologyRelations(
 									sourceLemma,
 								),
 						})
-				: (content: string) =>
-						appendUniqueLinesToSection({
-							content,
-							lines: target.lines,
-							sectionMarker,
-							shouldSkipLine: ({
-								candidateLine,
-								currentBlockContent,
-							}) =>
-								blockHasWikilinkTarget(
+				: (content: string) => {
+						const candidateLine = target.lines[0];
+						if (!candidateLine) {
+							return content;
+						}
+
+						const existingEntries = dictNoteHelper.parse(content);
+						if (
+							existingEntries.length === 0 &&
+							content.trim().length > 0
+						) {
+							return appendUniqueLinesToSection({
+								content,
+								lines: [candidateLine],
+								sectionMarker,
+								shouldSkipLine: ({
+									candidateLine: currentCandidate,
 									currentBlockContent,
-									sourceLemma,
-								) ||
-								hasEquivalentEquationLine(
-									currentBlockContent,
+								}) =>
+									blockHasWikilinkTarget(
+										currentBlockContent,
+										sourceLemma,
+									) ||
+									hasEquivalentEquationLine(
+										currentBlockContent,
+										currentCandidate,
+									),
+							});
+						}
+
+						const matchedEntry = existingEntries.find(
+							(entry) =>
+								entry.headerContent === target.targetHeader,
+						);
+
+						if (matchedEntry) {
+							const morphologySection =
+								matchedEntry.sections.find(
+									(section) =>
+										section.kind === sectionCssSuffix,
+								);
+							if (morphologySection) {
+								const updated = appendEquationLine({
 									candidateLine,
-								),
+									currentSectionContent:
+										morphologySection.content,
+									sourceLemma,
+								});
+								if (!updated.changed) {
+									return content;
+								}
+								morphologySection.content = updated.content;
+							} else {
+								matchedEntry.sections.push({
+									content: candidateLine,
+									kind: sectionCssSuffix,
+									title: sectionTitle,
+								});
+							}
+
+							const { body, meta } =
+								dictNoteHelper.serialize(existingEntries);
+							if (Object.keys(meta).length > 0) {
+								return noteMetadataHelper.upsert(meta)(
+									body,
+								) as string;
+							}
+							return body;
+						}
+
+						const existingIds = existingEntries.map(
+							(entry) => entry.id,
+						);
+						const prefix = dictEntryIdHelper.buildPrefix(
+							"Morphem",
+							"Lemma",
+						);
+						const entryId = dictEntryIdHelper.build({
+							index: dictEntryIdHelper.nextIndex(
+								existingIds,
+								prefix,
+							),
+							surfaceKind: "Lemma",
+							unitKind: "Morphem",
 						});
+
+						const sections: EntrySection[] = [
+							{
+								content: target.tagLine,
+								kind: tagsCssSuffix,
+								title: tagsTitle,
+							},
+							{
+								content: candidateLine,
+								kind: sectionCssSuffix,
+								title: sectionTitle,
+							},
+						];
+
+						const newEntry: DictEntry = {
+							headerContent: target.targetHeader,
+							id: entryId,
+							meta: {},
+							sections,
+						};
+
+						const { body, meta } = dictNoteHelper.serialize([
+							...existingEntries,
+							newEntry,
+						]);
+						if (Object.keys(meta).length > 0) {
+							return noteMetadataHelper.upsert(meta)(
+								body,
+							) as string;
+						}
+						return body;
+					};
 
 		propagationActions.push(...resolved.healingActions);
 		propagationActions.push(

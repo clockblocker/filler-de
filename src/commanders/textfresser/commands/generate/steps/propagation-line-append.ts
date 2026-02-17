@@ -36,6 +36,26 @@ function splitLines(text: string): string[] {
 		.filter((line) => line.length > 0);
 }
 
+export function extractFirstNonEmptyLine(
+	raw: string | undefined,
+): string | null {
+	if (!raw) return null;
+
+	for (const line of raw.split("\n")) {
+		const trimmed = line.trim();
+		if (trimmed.length > 0) return trimmed;
+	}
+	return null;
+}
+
+export function buildUsedInLine(
+	sourceLemma: string,
+	sourceGloss: string | null,
+): string {
+	if (!sourceGloss) return `[[${sourceLemma}]]`;
+	return `[[${sourceLemma}]] *(${sourceGloss})*`;
+}
+
 function normalizeLine(line: string): string {
 	return line.trim();
 }

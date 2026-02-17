@@ -6,10 +6,8 @@
  * generates a RenameMdFile healing action to move the file.
  */
 
-import type {
-	LinguisticUnitKind,
-	SurfaceKind,
-} from "../../../linguistics/common/enums/core";
+import type { LinguisticUnitKind } from "../../../linguistics/common/enums/core";
+import { SurfaceKind } from "../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
 import {
 	SplitPathKind,
@@ -17,6 +15,7 @@ import {
 } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import type { TargetLanguage } from "../../../types";
+import type { MorphemeItem } from "../domain/morpheme/morpheme-formatter";
 import {
 	computeShardedFolderParts,
 	SURFACE_KIND_PATH_INDEX,
@@ -40,6 +39,12 @@ type ResolveTargetPathParams = {
 	desiredSurfaceKind: SurfaceKind;
 	vamLookup: PathLookupFn;
 	librarianLookup: PathLookupFn;
+};
+
+type ResolveMorphemePathParams = {
+	lookupInLibrary: PathLookupFn;
+	targetLang: TargetLanguage;
+	vam: { findByBasename: PathLookupFn };
 };
 
 /**
@@ -118,6 +123,62 @@ export function buildPropagationActionPair(
 			payload: { splitPath, transform },
 		},
 	];
+}
+
+/**
+ * Build a Library split path for a known German prefix.
+ * Convention: `Library/de/prefix/{surf}.md`
+ */
+export function buildPrefixLibraryPath(surf: string): SplitPathToMdFile {
+	return {
+		basename: surf.toLowerCase(),
+		extension: "md",
+		kind: SplitPathKind.MdFile,
+		pathParts: ["Library", "de", "prefix"],
+	};
+}
+
+/**
+ * Resolve the target split path for a morpheme.
+ *
+ * - Prefix with linkTarget (known German prefix): try VAM/librarian lookup, fall back to Library path
+ * - Others: use standard resolveTargetPath (goes to Wörter)
+ */
+export function resolveMorphemePath(
+	item: MorphemeItem,
+	params: ResolveMorphemePathParams,
+): ResolvedTargetPath {
+	if (item.linkTarget) {
+		const vamResults = params.vam.findByBasename(item.linkTarget);
+		if (vamResults.length > 0) {
+			const existing = vamResults[0];
+			if (existing) {
+				return { healingActions: [], splitPath: existing };
+			}
+		}
+
+		const libraryResults = params.lookupInLibrary(item.linkTarget);
+		if (libraryResults.length > 0) {
+			const existing = libraryResults[0];
+			if (existing) {
+				return { healingActions: [], splitPath: existing };
+			}
+		}
+
+		return {
+			healingActions: [],
+			splitPath: buildPrefixLibraryPath(item.surf),
+		};
+	}
+
+	return resolveTargetPath({
+		desiredSurfaceKind: SurfaceKind.Lemma,
+		librarianLookup: params.lookupInLibrary,
+		targetLanguage: params.targetLang,
+		unitKind: "Morphem",
+		vamLookup: (word) => params.vam.findByBasename(word),
+		word: item.lemma ?? item.surf,
+	});
 }
 
 function buildComputedSplitPath(

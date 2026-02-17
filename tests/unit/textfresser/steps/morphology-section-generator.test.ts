@@ -105,6 +105,31 @@ describe("generateMorphologySection", () => {
 		expect(result.section?.content).not.toContain("<derived_from>");
 	});
 
+	it("does not build prefix equation for non-verb prefix without separability", () => {
+		const result = generateMorphologySection({
+			morphemes: [
+				{ kind: "Prefix", surf: "un" },
+				{ kind: "Root", lemma: "klar", surf: "klar" },
+			],
+			output: {
+				derived_from: {
+					derivation_type: "prefix_derivation",
+					lemma: "klar",
+				},
+				morphemes: [
+					{ kind: "Prefix", surf: "un" },
+					{ kind: "Root", lemma: "klar", surf: "klar" },
+				],
+			},
+			sourceLemma: "unklar",
+			targetLang: "German",
+		});
+
+		expect(result.section?.content).toContain("<derived_from>");
+		expect(result.section?.content).toContain("[[klar]]");
+		expect(result.section?.content).not.toContain(" = [[unklar]]");
+	});
+
 	it("omits section when no morphology fields are available", () => {
 		const result = generateMorphologySection({
 			morphemes: [{ kind: "Root", lemma: "Xenon", surf: "xenon" }],

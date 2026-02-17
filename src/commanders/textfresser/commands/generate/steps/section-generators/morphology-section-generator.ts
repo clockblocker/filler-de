@@ -57,7 +57,8 @@ function inferPrefixEquation(
 	targetLang: GenerationTargetLanguage,
 ): MorphologyPayload["prefixEquation"] {
 	const first = morphemes[0];
-	if (!first || first.kind !== "Prefix") return undefined;
+	if (!first || first.kind !== "Prefix" || !first.separability)
+		return undefined;
 
 	const base = morphemes
 		.slice(1)

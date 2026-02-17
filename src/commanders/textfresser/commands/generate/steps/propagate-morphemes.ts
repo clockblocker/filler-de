@@ -1,39 +1,25 @@
 /**
  * Propagate morpheme back-references to target notes.
  *
- * For each morpheme in a multi-morpheme word, creates a structured DictEntry
- * on the morpheme's target note (e.g., prefix note in Library, or root/suffix
- * note in Wörter). Entries include header, tags, and attestation sections.
+ * Responsibilities:
+ * - bound morphemes (suffix/interfix/etc): maintain `<used_in>` backlinks on Morphem notes
+ * - non-verb prefixes: maintain `<used_in>` backlinks on Morphem notes
  *
- * Prefix entries are discriminated by separability: "aufpassen" (separable)
- * and "aufgrund" (inseparable) produce separate entries with different headers
- * (`>auf` vs `auf<`) and different tag sections.
- *
- * Skips single-morpheme words (simple roots like "Hand") since there's nothing
- * to cross-reference.
+ * Verb prefixes with separability are handled by `propagateMorphologyRelations`
+ * (prefix equations on decorated prefix entries), so they are skipped here.
  */
 
 import { ok, type Result } from "neverthrow";
-import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import {
-	SplitPathKind,
-	type SplitPathToMdFile,
-} from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
-import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
-import type { TargetLanguage } from "../../../../../types";
 import {
 	buildPropagationActionPair,
-	resolveTargetPath,
+	resolveMorphemePath,
 } from "../../../common/target-path-resolver";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
 import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
-import {
-	type MorphemeItem,
-	morphemeFormatterHelper,
-} from "../../../domain/morpheme/morpheme-formatter";
+import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
@@ -41,94 +27,104 @@ import {
 } from "../../../targets/de/sections/section-kind";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
+import { normalizeMorphologyKey } from "./morphology-utils";
+import {
+	blockHasWikilinkTarget,
+	buildUsedInLine,
+	extractFirstNonEmptyLine,
+} from "./propagation-line-append";
 
-/**
- * Build a Library split path for a known German prefix.
- * Convention: `Library/de/prefix/{surf}.md`
- */
-function buildPrefixLibraryPath(surf: string): SplitPathToMdFile {
-	return {
-		basename: surf.toLowerCase(),
-		extension: "md",
-		kind: SplitPathKind.MdFile,
-		pathParts: ["Library", "de", "prefix"],
-	};
-}
-
-/**
- * Resolve the target split path for a morpheme.
- *
- * - Prefix with linkTarget (known German prefix): try VAM/librarian lookup, fall back to Library path
- * - Others: use standard resolveTargetPath (goes to Wörter)
- */
-function resolveMorphemePath(
-	item: MorphemeItem,
-	ctx: GenerateSectionsResult,
-): { splitPath: SplitPathToMdFile; healingActions: VaultAction[] } {
-	const targetLang = ctx.textfresserState.languages.target;
-
-	if (item.linkTarget) {
-		// Known prefix — look up by linkTarget basename, fall back to Library path
-		const vamResults = ctx.textfresserState.vam.findByBasename(
-			item.linkTarget,
-		);
-		if (vamResults.length > 0) {
-			const existing = vamResults[0];
-			if (existing) {
-				return { healingActions: [], splitPath: existing };
-			}
-		}
-
-		const libResults = ctx.textfresserState.lookupInLibrary(
-			item.linkTarget,
-		);
-		if (libResults.length > 0) {
-			const existing = libResults[0];
-			if (existing) {
-				return { healingActions: [], splitPath: existing };
-			}
-		}
-
-		return {
-			healingActions: [],
-			splitPath: buildPrefixLibraryPath(item.surf),
-		};
-	}
-
-	// Non-prefix morpheme — resolve to Wörter via standard path
-	const word = item.lemma ?? item.surf;
-	return resolveTargetPath({
-		desiredSurfaceKind: SurfaceKind.Lemma,
-		librarianLookup: ctx.textfresserState.lookupInLibrary,
-		targetLanguage: targetLang,
-		unitKind: "Morphem",
-		vamLookup: (w) => ctx.textfresserState.vam.findByBasename(w),
-		word,
-	});
-}
-
-/** Build the header string for a morpheme entry. */
-function buildMorphemeHeader(
-	item: MorphemeItem,
-	targetLang: TargetLanguage,
-): string {
-	if (item.kind === "Prefix") {
-		return morphemeFormatterHelper.decorateSurface(
-			item.surf,
-			item.separability,
-			targetLang,
-		);
-	}
-	return item.lemma ?? item.surf;
-}
-
-/** Build the tag content for a morpheme entry (e.g. `#prefix/separable`). */
 function buildMorphemeTagContent(item: MorphemeItem): string {
-	const kindTag = item.kind.toLowerCase();
-	if (item.kind === "Prefix" && item.separability) {
-		return `#${kindTag}/${item.separability.toLowerCase()}`;
+	return `#${item.kind.toLowerCase()}`;
+}
+
+function buildMorphologyCoverageKeys(ctx: GenerateSectionsResult): Set<string> {
+	const keys = new Set<string>();
+	const morphology = ctx.morphology;
+	if (!morphology) return keys;
+
+	const add = (raw: string | null | undefined) => {
+		const key = normalizeMorphologyKey(raw);
+		if (key) {
+			keys.add(key);
+		}
+	};
+
+	add(morphology.derivedFromLemma);
+	for (const lemma of morphology.compoundedFromLemmas) {
+		add(lemma);
 	}
-	return `#${kindTag}`;
+	add(morphology.prefixEquation?.baseLemma);
+
+	return keys;
+}
+
+function shouldSkipMorphemeItem(
+	item: MorphemeItem,
+	morphologyCoverage: Set<string>,
+): boolean {
+	if (item.kind === "Prefix" && item.separability) {
+		return true;
+	}
+
+	if (item.kind !== "Root" && item.kind !== "Suffixoid") {
+		return false;
+	}
+
+	const key = normalizeMorphologyKey(
+		item.linkTarget ?? item.lemma ?? item.surf,
+	);
+	if (!key) return false;
+	return morphologyCoverage.has(key);
+}
+
+function appendToUsedInBlock(params: {
+	sectionContent: string;
+	sourceLemma: string;
+	usedInLine: string;
+}): { changed: boolean; content: string } {
+	const blockMarker = "<used_in>";
+	const blockStart = params.sectionContent.indexOf(blockMarker);
+
+	if (blockStart < 0) {
+		const normalized = params.sectionContent.trimEnd();
+		const content =
+			normalized.length > 0
+				? `${normalized}\n${blockMarker}\n${params.usedInLine}`
+				: `${blockMarker}\n${params.usedInLine}`;
+		return { changed: true, content };
+	}
+
+	const blockBodyStart = blockStart + blockMarker.length;
+	const afterBlock = params.sectionContent.slice(blockBodyStart);
+	const nextBlockMatch = afterBlock.match(/\n<[^>\n]+>/);
+	const blockBodyEnd =
+		nextBlockMatch?.index === undefined
+			? params.sectionContent.length
+			: blockBodyStart + nextBlockMatch.index;
+	const blockContent = params.sectionContent.slice(
+		blockBodyStart,
+		blockBodyEnd,
+	);
+
+	if (blockHasWikilinkTarget(blockContent, params.sourceLemma)) {
+		return { changed: false, content: params.sectionContent };
+	}
+
+	const existingLines = blockContent
+		.split("\n")
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0);
+	const updatedBlock =
+		existingLines.length > 0
+			? `${existingLines.join("\n")}\n${params.usedInLine}`
+			: params.usedInLine;
+
+	const content =
+		params.sectionContent.slice(0, blockBodyStart) +
+		`\n${updatedBlock}` +
+		params.sectionContent.slice(blockBodyEnd);
+	return { changed: true, content };
 }
 
 /**
@@ -139,56 +135,66 @@ export function propagateMorphemes(
 	ctx: GenerateSectionsResult,
 ): Result<GenerateSectionsResult, CommandError> {
 	const { morphemes } = ctx;
-	// Skip single-morpheme words — nothing to cross-reference
 	if (morphemes.length <= 1) {
 		return ok(ctx);
 	}
 
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const sourceWord = lemmaResult.lemma;
+	const sourceGloss = extractFirstNonEmptyLine(ctx.sourceTranslation);
+	const usedInLine = buildUsedInLine(sourceWord, sourceGloss);
 	const targetLang = ctx.textfresserState.languages.target;
+	const morphologyCoverage = buildMorphologyCoverageKeys(ctx);
 
-	const attestationCssSuffix = cssSuffixFor[DictSectionKind.Attestation];
-	const attestationTitle =
-		TitleReprFor[DictSectionKind.Attestation][targetLang];
+	const morphologyCssSuffix = cssSuffixFor[DictSectionKind.Morphology];
+	const morphologyTitle =
+		TitleReprFor[DictSectionKind.Morphology][targetLang];
 	const tagsCssSuffix = cssSuffixFor[DictSectionKind.Tags];
 	const tagsTitle = TitleReprFor[DictSectionKind.Tags][targetLang];
 
 	const propagationActions: VaultAction[] = [];
 
 	for (const item of morphemes) {
+		if (shouldSkipMorphemeItem(item, morphologyCoverage)) {
+			continue;
+		}
+
 		const morphemeWord = item.lemma ?? item.surf;
-		// Skip self-references (morpheme word === source lemma)
 		if (morphemeWord === sourceWord) continue;
 
-		const resolved = resolveMorphemePath(item, ctx);
-		const targetHeader = buildMorphemeHeader(item, targetLang);
-		const refLine = `[[${sourceWord}]]`;
+		const resolved = resolveMorphemePath(item, {
+			lookupInLibrary: ctx.textfresserState.lookupInLibrary,
+			targetLang,
+			vam: ctx.textfresserState.vam,
+		});
+		const targetHeader = item.lemma ?? item.surf;
 
 		const transform = (content: string) => {
 			const existingEntries = dictNoteHelper.parse(content);
 			const matchedEntry = existingEntries.find(
-				(e) => e.headerContent === targetHeader,
+				(entry) => entry.headerContent === targetHeader,
 			);
 
 			if (matchedEntry) {
-				// Re-encounter: append attestation reference if not already present
-				const attestationSection = matchedEntry.sections.find(
-					(s) => s.kind === attestationCssSuffix,
+				const morphologySection = matchedEntry.sections.find(
+					(section) => section.kind === morphologyCssSuffix,
 				);
-				if (attestationSection) {
-					const hasReference = wikilinkHelper
-						.parse(attestationSection.content)
-						.some((wikilink) => wikilink.target === sourceWord);
-					if (hasReference) {
+
+				if (morphologySection) {
+					const updatedMorphology = appendToUsedInBlock({
+						sectionContent: morphologySection.content,
+						sourceLemma: sourceWord,
+						usedInLine,
+					});
+					if (!updatedMorphology.changed) {
 						return content;
 					}
-					attestationSection.content = `${attestationSection.content.trimEnd()}\n${refLine}`;
+					morphologySection.content = updatedMorphology.content;
 				} else {
 					matchedEntry.sections.push({
-						content: refLine,
-						kind: attestationCssSuffix,
-						title: attestationTitle,
+						content: `<used_in>\n${usedInLine}`,
+						kind: morphologyCssSuffix,
+						title: morphologyTitle,
 					});
 				}
 
@@ -200,8 +206,7 @@ export function propagateMorphemes(
 				return body;
 			}
 
-			// New entry — build structured DictEntry
-			const existingIds = existingEntries.map((e) => e.id);
+			const existingIds = existingEntries.map((entry) => entry.id);
 			const prefix = dictEntryIdHelper.buildPrefix("Morphem", "Lemma");
 			const entryId = dictEntryIdHelper.build({
 				index: dictEntryIdHelper.nextIndex(existingIds, prefix),
@@ -216,9 +221,9 @@ export function propagateMorphemes(
 					title: tagsTitle,
 				},
 				{
-					content: refLine,
-					kind: attestationCssSuffix,
-					title: attestationTitle,
+					content: `<used_in>\n${usedInLine}`,
+					kind: morphologyCssSuffix,
+					title: morphologyTitle,
 				},
 			];
 
@@ -231,7 +236,6 @@ export function propagateMorphemes(
 
 			const allEntries = [...existingEntries, newEntry];
 			const { body, meta } = dictNoteHelper.serialize(allEntries);
-
 			if (Object.keys(meta).length > 0) {
 				return noteMetadataHelper.upsert(meta)(body) as string;
 			}
