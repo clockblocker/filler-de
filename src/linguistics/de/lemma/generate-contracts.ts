@@ -75,7 +75,7 @@ const deEnrichmentOutputBaseSchema = z
 	.object({
 		emojiDescription: emojiDescriptionSchema,
 		ipa: z.string().min(1),
-		senseGloss: senseGlossSchema.optional(),
+		senseGloss: senseGlossSchema.nullable().optional(),
 	})
 	.strict();
 
