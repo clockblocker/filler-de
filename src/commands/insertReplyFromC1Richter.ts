@@ -1,5 +1,6 @@
-import { Editor } from 'obsidian';
+import { Editor, Notice } from 'obsidian';
 import TextEaterPlugin from '../main';
+import { prompts } from '../prompts';
 import { cleanMarkdownFormatting } from './functions';
 
 export default async function insertReplyFromC1Richter(
@@ -8,7 +9,8 @@ export default async function insertReplyFromC1Richter(
 	selection: string
 ) {
 	try {
-		const response = await plugin.apiService.consultC1Richter(
+		const response = await plugin.apiService.generateContent(
+			prompts.c1Richter,
 			cleanMarkdownFormatting(selection)
 		);
 		if (response) {
@@ -16,5 +18,6 @@ export default async function insertReplyFromC1Richter(
 		}
 	} catch (error) {
 		console.error('Error in C1 Richter command:', error);
+		new Notice(`C1 Richter error: ${error.message}`);
 	}
 }

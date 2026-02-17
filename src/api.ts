@@ -1,14 +1,9 @@
-import { z } from 'zod';
-
 import {
 	GoogleGenerativeAI,
 	GenerationConfig,
-	HarmCategory,
-	HarmBlockThreshold,
-	ResponseSchema,
 } from '@google/generative-ai';
 import { TextEaterSettings } from './types';
-import { TFile, Vault, Notice, TAbstractFile, requestUrl } from 'obsidian';
+import { Vault, Notice } from 'obsidian';
 import { prompts } from './prompts';
 
 export class ApiService {

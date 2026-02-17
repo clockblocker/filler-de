@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
+import { Editor, Notice, TFile } from 'obsidian';
 import TextEaterPlugin from '../main';
 import { prompts } from '../prompts';
 import { longDash } from '../utils';
@@ -22,7 +22,7 @@ function getIPAIndexes(str: string) {
 	return matches.length ? matches[0] : null;
 }
 
-function incertYouglishLinkInIpa(baseBlock: string) {
+function insertYouglishLinkInIpa(baseBlock: string) {
 	const ipaI = getIPAIndexes(baseBlock);
 	const word = extractFirstBracketedWord(baseBlock);
 
@@ -43,7 +43,7 @@ function incertYouglishLinkInIpa(baseBlock: string) {
 	);
 }
 
-async function incertClipbordContentsInContextsBlock(
+async function insertClipboardContentsInContextsBlock(
 	baseBlock: string
 ): Promise<string> {
 	try {
@@ -94,8 +94,8 @@ export default async function fillTemplate(
 
 		const trimmedBaseEntrie = `${dictionaryEntry.replace('<agent_output>', '').replace('</agent_output>', '')}`;
 
-		const baseBlock = await incertClipbordContentsInContextsBlock(
-			incertYouglishLinkInIpa(trimmedBaseEntrie)
+		const baseBlock = await insertClipboardContentsInContextsBlock(
+			insertYouglishLinkInIpa(trimmedBaseEntrie)
 		);
 		const morphemsBlock =
 			morphems.replace('\n', '') === longDash ? '' : `${morphems}\n`;
