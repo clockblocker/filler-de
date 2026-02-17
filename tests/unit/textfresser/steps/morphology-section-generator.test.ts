@@ -13,6 +13,7 @@ describe("generateMorphologySection", () => {
 				},
 				morphemes: [{ kind: "Root", lemma: "frei", surf: "frei" }],
 			},
+			posLikeKind: "Noun",
 			sourceLemma: "Freiheit",
 			targetLang: "German",
 		});
@@ -37,6 +38,7 @@ describe("generateMorphologySection", () => {
 					{ kind: "Root", lemma: "Fenster", surf: "fenster" },
 				],
 			},
+			posLikeKind: "Noun",
 			sourceLemma: "Küchenfenster",
 			targetLang: "German",
 		});
@@ -66,6 +68,7 @@ describe("generateMorphologySection", () => {
 					{ kind: "Root", lemma: "passen", surf: "passen" },
 				],
 			},
+			posLikeKind: "Verb",
 			sourceLemma: "aufpassen",
 			sourceTranslation: "to pay attention",
 			targetLang: "German",
@@ -95,6 +98,7 @@ describe("generateMorphologySection", () => {
 					{ kind: "Root", lemma: "stehen", surf: "stehen" },
 				],
 			},
+			posLikeKind: "Verb",
 			sourceLemma: "verstehen",
 			targetLang: "German",
 		});
@@ -121,6 +125,7 @@ describe("generateMorphologySection", () => {
 					{ kind: "Root", lemma: "klar", surf: "klar" },
 				],
 			},
+			posLikeKind: "Adjective",
 			sourceLemma: "unklar",
 			targetLang: "German",
 		});
@@ -136,11 +141,89 @@ describe("generateMorphologySection", () => {
 			output: {
 				morphemes: [{ kind: "Root", lemma: "Xenon", surf: "xenon" }],
 			},
+			posLikeKind: "Noun",
 			sourceLemma: "Xenon",
 			targetLang: "German",
 		});
 
 		expect(result.section).toBeNull();
 		expect(result.morphology).toBeUndefined();
+	});
+
+	it("does not build separable-prefix equation for nouns", () => {
+		const result = generateMorphologySection({
+			morphemes: [
+				{
+					kind: "Prefix",
+					linkTarget: "ab-prefix-de",
+					separability: "Separable",
+					surf: "ab",
+				},
+				{ kind: "Root", lemma: "Fahrt", surf: "fahrt" },
+			],
+			output: {
+				derived_from: {
+					derivation_type: "prefix_derivation",
+					lemma: "Fahrt",
+				},
+				morphemes: [
+					{
+						kind: "Prefix",
+						linkTarget: "ab-prefix-de",
+						separability: "Separable",
+						surf: "ab",
+					},
+					{ kind: "Root", lemma: "Fahrt", surf: "fahrt" },
+				],
+			},
+			posLikeKind: "Noun",
+			sourceLemma: "Abfahrt",
+			targetLang: "German",
+		});
+
+		expect(result.section?.content).toContain("<derived_from>");
+		expect(result.section?.content).toContain("[[Fahrt]]");
+		expect(result.section?.content).not.toContain(" = [[Abfahrt]]");
+		expect(result.morphology?.prefixEquation).toBeUndefined();
+	});
+
+	it("keeps explicit derived_from even when prefix equation is present", () => {
+		const result = generateMorphologySection({
+			morphemes: [
+				{
+					kind: "Prefix",
+					linkTarget: "auf-prefix-de",
+					separability: "Separable",
+					surf: "auf",
+				},
+				{ kind: "Root", lemma: "passen", surf: "pass" },
+			],
+			output: {
+				derived_from: {
+					derivation_type: "prefix_derivation",
+					lemma: "abpassen",
+				},
+				morphemes: [
+					{
+						kind: "Prefix",
+						linkTarget: "auf-prefix-de",
+						separability: "Separable",
+						surf: "auf",
+					},
+					{ kind: "Root", lemma: "passen", surf: "pass" },
+				],
+			},
+			posLikeKind: "Verb",
+			sourceLemma: "aufpassen",
+			targetLang: "German",
+		});
+
+		expect(result.section?.content).toContain("<derived_from>");
+		expect(result.section?.content).toContain("[[abpassen]]");
+		expect(result.section?.content).toContain(
+			"[[auf-prefix-de|>auf]] + [[passen]] = [[aufpassen]]",
+		);
+		expect(result.morphology?.derivedFromLemma).toBe("abpassen");
+		expect(result.morphology?.prefixEquation?.baseLemma).toBe("passen");
 	});
 });

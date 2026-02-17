@@ -314,6 +314,7 @@ export async function generateNewEntrySections(
 				const result = generateMorphologySection({
 					morphemes,
 					output: morphemOutput,
+					posLikeKind: lemmaResult.posLikeKind,
 					sourceLemma: lemmaResult.lemma,
 					sourceTranslation,
 					targetLang,

@@ -3,10 +3,10 @@
  *
  * Responsibilities:
  * - bound morphemes (suffix/interfix/etc): maintain `<used_in>` backlinks on Morphem notes
- * - non-verb prefixes: maintain `<used_in>` backlinks on Morphem notes
+ * - prefixes that are not covered by a generated prefix equation: maintain `<used_in>` backlinks on Morphem notes
  *
- * Verb prefixes with separability are handled by `propagateMorphologyRelations`
- * (prefix equations on decorated prefix entries), so they are skipped here.
+ * Prefixes covered by `propagateMorphologyRelations` prefix equations are skipped
+ * here to avoid duplicate propagation.
  */
 
 import { ok, type Result } from "neverthrow";
@@ -59,11 +59,51 @@ function buildMorphologyCoverageKeys(ctx: GenerateSectionsResult): Set<string> {
 	return keys;
 }
 
+const MORPHOLOGY_STEM_MATCH_MIN_LENGTH = 4;
+
+function hasEquivalentMorphologyKey(key: string, coverageKey: string): boolean {
+	if (key === coverageKey) return true;
+
+	const shorter = key.length <= coverageKey.length ? key : coverageKey;
+	const longer = shorter === key ? coverageKey : key;
+	// TODO calibrate this threshold against real morphology samples.
+	if (shorter.length < MORPHOLOGY_STEM_MATCH_MIN_LENGTH) return false;
+	return longer.startsWith(shorter);
+}
+
+function collectMorphemeKeys(item: MorphemeItem): string[] {
+	const keys = new Set<string>();
+	const add = (value: string | null | undefined) => {
+		const normalized = normalizeMorphologyKey(value);
+		if (normalized) {
+			keys.add(normalized);
+		}
+	};
+	add(item.linkTarget);
+	add(item.lemma);
+	add(item.surf);
+	return [...keys];
+}
+
+function isHandledByPrefixEquation(
+	item: MorphemeItem,
+	morphology: GenerateSectionsResult["morphology"],
+): boolean {
+	if (item.kind !== "Prefix" || !item.separability) return false;
+	const equationPrefixKey = normalizeMorphologyKey(
+		morphology?.prefixEquation?.prefixTarget,
+	);
+	if (!equationPrefixKey) return false;
+
+	return collectMorphemeKeys(item).some((key) => key === equationPrefixKey);
+}
+
 function shouldSkipMorphemeItem(
 	item: MorphemeItem,
+	morphology: GenerateSectionsResult["morphology"],
 	morphologyCoverage: Set<string>,
 ): boolean {
-	if (item.kind === "Prefix" && item.separability) {
+	if (isHandledByPrefixEquation(item, morphology)) {
 		return true;
 	}
 
@@ -71,11 +111,24 @@ function shouldSkipMorphemeItem(
 		return false;
 	}
 
-	const key = normalizeMorphologyKey(
-		item.linkTarget ?? item.lemma ?? item.surf,
-	);
-	if (!key) return false;
-	return morphologyCoverage.has(key);
+	const itemKeys = collectMorphemeKeys(item);
+	if (itemKeys.length === 0) return false;
+
+	for (const key of itemKeys) {
+		if (morphologyCoverage.has(key)) {
+			return true;
+		}
+	}
+
+	for (const key of itemKeys) {
+		for (const coverageKey of morphologyCoverage) {
+			if (hasEquivalentMorphologyKey(key, coverageKey)) {
+				return true;
+			}
+		}
+	}
+
+	return false;
 }
 
 function appendToUsedInBlock(params: {
@@ -155,7 +208,7 @@ export function propagateMorphemes(
 	const propagationActions: VaultAction[] = [];
 
 	for (const item of morphemes) {
-		if (shouldSkipMorphemeItem(item, morphologyCoverage)) {
+		if (shouldSkipMorphemeItem(item, ctx.morphology, morphologyCoverage)) {
 			continue;
 		}
 
