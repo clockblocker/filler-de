@@ -1,0 +1,23 @@
+# Code Ownership Boundaries for filler-de
+# See docs/ARCHITECTURE.md for domain descriptions.
+#
+# Each source file is assigned to exactly one ownership domain.
+# Patterns are ordered so that no two rules match the same file.
+
+# --- plugin-core: lifecycle, configuration, shared types ---
+/src/main.ts            @domain/plugin-core
+/src/settings.ts        @domain/plugin-core
+/src/types.ts           @domain/plugin-core
+
+# --- commands: user-facing Obsidian commands ---
+/src/commands/          @domain/commands
+
+# --- ai-api: external LLM integration ---
+/src/api.ts             @domain/ai-api
+
+# --- prompt-engineering: prompt templates and builders ---
+/src/prompts/           @domain/prompt-engineering
+
+# --- filesystem: vault file read/write helpers ---
+/src/utils.ts           @domain/filesystem
+/src/file.ts            @domain/filesystem
