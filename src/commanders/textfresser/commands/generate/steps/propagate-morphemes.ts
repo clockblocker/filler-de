@@ -32,6 +32,8 @@ import {
 	blockHasWikilinkTarget,
 	buildUsedInLine,
 	extractFirstNonEmptyLine,
+	type PropagationResult,
+	splitLines,
 } from "./propagation-line-append";
 
 function buildMorphemeTagContent(item: MorphemeItem): string {
@@ -135,7 +137,7 @@ function appendToUsedInBlock(params: {
 	sectionContent: string;
 	sourceLemma: string;
 	usedInLine: string;
-}): { changed: boolean; content: string } {
+}): PropagationResult {
 	const blockMarker = "<used_in>";
 	const blockStart = params.sectionContent.indexOf(blockMarker);
 
@@ -164,10 +166,7 @@ function appendToUsedInBlock(params: {
 		return { changed: false, content: params.sectionContent };
 	}
 
-	const existingLines = blockContent
-		.split("\n")
-		.map((line) => line.trim())
-		.filter((line) => line.length > 0);
+	const existingLines = splitLines(blockContent);
 	const updatedBlock =
 		existingLines.length > 0
 			? `${existingLines.join("\n")}\n${params.usedInLine}`

@@ -1,5 +1,7 @@
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
 
+export type PropagationResult = { changed: boolean; content: string };
+
 type ShouldSkipLine = (params: {
 	candidateLine: string;
 	currentBlockContent: string;
@@ -29,7 +31,7 @@ function findSectionRange(
 	return { afterMarker, end, start };
 }
 
-function splitLines(text: string): string[] {
+export function splitLines(text: string): string[] {
 	return text
 		.split("\n")
 		.map((line) => line.trim())
@@ -77,7 +79,7 @@ function appendUniqueLinesToBlock(params: {
 	blockContent: string;
 	lines: string[];
 	shouldSkipLine?: ShouldSkipLine;
-}): { changed: boolean; content: string } {
+}): PropagationResult {
 	const candidates = collectUniqueCandidates(params.lines);
 	if (candidates.length === 0) {
 		return { changed: false, content: params.blockContent };
