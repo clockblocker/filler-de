@@ -1,5 +1,6 @@
 import { Editor, Notice } from 'obsidian';
 import TextEaterPlugin from '../main';
+import { prompts } from '../prompts';
 
 export default async function insertReplyFromKeymaker(
 	plugin: TextEaterPlugin,
@@ -7,7 +8,7 @@ export default async function insertReplyFromKeymaker(
 	selection: string
 ) {
 	try {
-		const response = await plugin.apiService.consultKeymaker(selection);
+		const response = await plugin.apiService.generateContent(prompts.keymaker, selection);
 		if (response) {
 			editor.replaceSelection(selection + '\n' + response + '\n');
 		}

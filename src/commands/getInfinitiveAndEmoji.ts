@@ -1,5 +1,6 @@
 import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
 import TextEaterPlugin from '../main';
+import { prompts } from '../prompts';
 
 export default async function getInfinitiveAndEmoji(
 	plugin: TextEaterPlugin,
@@ -9,7 +10,7 @@ export default async function getInfinitiveAndEmoji(
 	const word = file.basename;
 
 	try {
-		let response = await plugin.apiService.determineInfinitiveAndEmoji(word);
+		let response = await plugin.apiService.generateContent(prompts.determine_infinitive_and_pick_emoji, word);
 		if (response) {
 			response = response.replace(/^\n+/, '');
 			response = response.trim();

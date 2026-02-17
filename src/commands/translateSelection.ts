@@ -1,5 +1,6 @@
 import { Editor, Notice } from 'obsidian';
 import TextEaterPlugin from '../main';
+import { prompts } from '../prompts';
 
 export default async function translateSelection(
 	plugin: TextEaterPlugin,
@@ -8,7 +9,7 @@ export default async function translateSelection(
 ) {
 	try {
 		const cursor = editor.getCursor();
-		const response = await plugin.apiService.translateText(selection);
+		const response = await plugin.apiService.generateContent(prompts.translate_de_to_eng, selection);
 		if (response) {
 			editor.replaceSelection(selection + '\n\n' + response + '\n');
 			editor.setCursor({

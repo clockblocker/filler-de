@@ -1,7 +1,7 @@
 import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
 import TextEaterPlugin from '../main';
 import { prompts } from '../prompts';
-import { longDash } from '../utils';
+import { longDash, omitIfLongDash } from '../utils';
 
 function extractFirstBracketedWord(text: string) {
 	const match = text.match(/\[\[([^\]]+)\]\]/);
@@ -98,12 +98,12 @@ export default async function fillTemplate(
 			incertYouglishLinkInIpa(trimmedBaseEntrie)
 		);
 		const morphemsBlock =
-			morphems.replace('\n', '') === longDash ? '' : `${morphems}\n`;
+			omitIfLongDash(morphems) ? `${morphems}\n` : '';
 		const valenceBlock =
-			valence.replace('\n', '') === longDash ? '' : `${valence}`;
-		const fromsBlock = froms.replace('\n', '') === longDash ? '' : `${froms}`;
+			omitIfLongDash(valence);
+		const fromsBlock = omitIfLongDash(froms);
 		const adjFormsBlock =
-			adjForms.replace('\n', '') === longDash ? '' : `${adjForms}`;
+			omitIfLongDash(adjForms);
 
 		const blocks = [
 			baseBlock,

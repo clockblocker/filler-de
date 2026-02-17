@@ -2,6 +2,9 @@ import { Notice, TFile, TFolder, Vault, normalizePath } from 'obsidian';
 
 export const longDash = '—';
 
+export function omitIfLongDash(text: string): string {
+	return text.replace('\n', '') === longDash ? '' : text;
+}
 export const extractBacklinks = (content: string): string[] => {
 	const links = content
 		.split('[[')

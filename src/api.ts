@@ -9,7 +9,6 @@ import {
 } from '@google/generative-ai';
 import { TextEaterSettings } from './types';
 import { TFile, Vault, Notice, TAbstractFile, requestUrl } from 'obsidian';
-import { prompts } from './prompts';
 
 export class ApiService {
 	private genAI: GoogleGenerativeAI | null = null;
@@ -90,36 +89,5 @@ export class ApiService {
 			const duration = endTime - startTime;
 			throw new Error(error.message);
 		}
-	}
-
-	async fetchTemplate(word: string): Promise<string> {
-		const [dictionaryEntry, valenceBlock] = await Promise.all([
-			this.generateContent(prompts.generate_dictionary_entry, word),
-			this.generateContent(prompts.generate_valence_block, word),
-		]);
-		return `${dictionaryEntry.replace('<agent_output>', '').replace('</agent_output>', '')}\n\n---\n${valenceBlock}`;
-	}
-
-	async determineInfinitiveAndEmoji(word: string): Promise<string> {
-		return this.generateContent(
-			prompts.determine_infinitive_and_pick_emoji,
-			word
-		);
-	}
-
-	async normalize(text: string): Promise<string> {
-		return this.generateContent(prompts.normalize, text);
-	}
-
-	async translateText(text: string): Promise<string> {
-		return this.generateContent(prompts.translate_de_to_eng, text);
-	}
-
-	async consultKeymaker(text: string): Promise<string> {
-		return this.generateContent(prompts.keymaker, text);
-	}
-
-	async consultC1Richter(text: string): Promise<string> {
-		return this.generateContent(prompts.c1Richter, text);
 	}
 }
