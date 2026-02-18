@@ -1,4 +1,5 @@
 import { ResultAsync } from "neverthrow";
+import { getErrorMessage } from "../../../../../utils/get-error-message";
 import type { DictEntry } from "../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
@@ -165,7 +166,7 @@ export function generateSections(
 			buildReEncounterResult(ctx),
 			(error): CommandError => ({
 				kind: CommandErrorKind.ApiError,
-				reason: error instanceof Error ? error.message : String(error),
+				reason: getErrorMessage(error),
 			}),
 		);
 	}
@@ -264,7 +265,7 @@ export function generateSections(
 		})(),
 		(error): CommandError => ({
 			kind: CommandErrorKind.ApiError,
-			reason: error instanceof Error ? error.message : String(error),
+			reason: getErrorMessage(error),
 		}),
 	);
 }

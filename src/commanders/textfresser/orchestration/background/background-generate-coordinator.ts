@@ -13,6 +13,7 @@ import {
 	decrementPending,
 	incrementPending,
 } from "../../../../utils/idle-tracker";
+import { getErrorMessage } from "../../../../utils/get-error-message";
 import { logger } from "../../../../utils/logger";
 import type { LemmaResult } from "../../commands/lemma/types";
 import type { CommandError, CommandInput } from "../../commands/types";
@@ -85,7 +86,7 @@ export function createBackgroundGenerateCoordinator(params: {
 		)
 			.catch((error) => {
 				const reason =
-					error instanceof Error ? error.message : String(error);
+					getErrorMessage(error);
 				logger.warn("[Textfresser.backgroundGenerate] Failed:", reason);
 				request.notify(`⚠ Background generate failed: ${reason}`);
 			})

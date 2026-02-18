@@ -138,6 +138,13 @@ function createMatcher(
 }
 
 /**
+ * Normalize a wikilink target for case-insensitive comparison.
+ */
+function normalizeTarget(target: string): string {
+	return target.trim().toLowerCase();
+}
+
+/**
  * Wikilink helper object with grouped functions.
  */
 export const wikilinkHelper = {
@@ -146,6 +153,7 @@ export const wikilinkHelper = {
 	findByTarget,
 	findEnclosingByOffset,
 	matchesPattern,
+	normalizeTarget,
 	parse,
 	parseWithRanges,
 };

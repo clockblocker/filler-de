@@ -4,6 +4,7 @@ import type {
 } from "../../../../../linguistics/de/lexem/noun";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
+import { getErrorMessage } from "../../../../../utils/get-error-message";
 import { logger } from "../../../../../utils/logger";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { EntrySection } from "../../../domain/dict-note/types";
@@ -153,7 +154,7 @@ export async function generateNewEntrySections(
 		logger.warn(
 			"[generateSections] Enrichment failed; continuing with fallback metadata",
 			{
-				error: error instanceof Error ? error.message : String(error),
+				error: getErrorMessage(error),
 				lemma: lemmaResult.lemma,
 			},
 		);

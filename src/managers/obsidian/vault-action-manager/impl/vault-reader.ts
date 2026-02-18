@@ -1,5 +1,6 @@
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import type { TFile, TFolder, Vault } from "obsidian";
+import { getErrorMessage } from "../../../../utils/get-error-message";
 import { logger } from "../../../../utils/logger";
 import type { ActiveFileService } from "../file-services/active-view/active-file-service";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
@@ -43,7 +44,7 @@ export class VaultReader {
 			.asyncAndThen((file) =>
 				ResultAsync.fromPromise(this.vault.read(file), (error) =>
 					classifyReadContentError(
-						error instanceof Error ? error.message : String(error),
+						getErrorMessage(error),
 					),
 				),
 			);

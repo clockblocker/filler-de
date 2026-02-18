@@ -3,10 +3,9 @@
  */
 
 import type { SelectionInfo } from "../../../../../managers/obsidian/vault-action-manager";
-import { blockIdHelper } from "../../../../../stateless-helpers/block-id";
-import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { logger } from "../../../../../utils/logger";
 import type { Attestation } from "../types";
+import { buildSourceFields } from "./build-source-fields";
 
 /**
  * Build Attestation from a text selection.
@@ -19,17 +18,14 @@ export function buildAttestationFromSelection(
 	const blockContent = selection.surroundingRawBlock;
 	const splitPath = selection.splitPathToFileWithSelection;
 
-	const blockId = blockIdHelper.extractFromLine(blockContent);
-	const ref = blockId
-		? blockIdHelper.formatEmbed(splitPath.basename, blockId)
-		: blockContent;
+	const { ref, textWithOnlyTargetMarked } = buildSourceFields({
+		basename: splitPath.basename,
+		blockContent,
+		surface,
+	});
 
 	logger.info(`[attestation] blockContent: "${blockContent}"`);
-	logger.info(`[attestation] blockId: ${blockId}`);
 	logger.info(`[attestation] ref: "${ref}"`);
-
-	const stripped = markdownHelper.stripAll(blockContent);
-	const textWithOnlyTargetMarked = stripped.replace(surface, `[${surface}]`);
 
 	return {
 		source: {

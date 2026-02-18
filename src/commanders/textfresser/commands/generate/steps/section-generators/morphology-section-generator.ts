@@ -99,10 +99,10 @@ function buildPrefixEquationLine(
 function haveSameWikilinkTargets(left: string, right: string): boolean {
 	const leftTargets = wikilinkHelper
 		.parse(left)
-		.map((wikilink) => wikilink.target.trim().toLowerCase());
+		.map((wikilink) => wikilinkHelper.normalizeTarget(wikilink.target));
 	const rightTargets = wikilinkHelper
 		.parse(right)
-		.map((wikilink) => wikilink.target.trim().toLowerCase());
+		.map((wikilink) => wikilinkHelper.normalizeTarget(wikilink.target));
 	if (leftTargets.length !== rightTargets.length) return false;
 
 	return leftTargets.every((target, index) => {

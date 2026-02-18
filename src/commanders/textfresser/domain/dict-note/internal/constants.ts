@@ -9,3 +9,11 @@ export const ENTRY_SECTION_CSS_CLASS = "entry_section_title";
 /** Matches `<span class="entry_section_title entry_section_title_<kind>">Title</span>` */
 export const ENTRY_SECTION_MARKER_RE =
 	/<span class="entry_section_title entry_section_title_(\w+)">([^<]+)<\/span>/g;
+
+/** Build the HTML marker span for a dict-note section. */
+export function buildSectionMarkerHtml(
+	cssSuffix: string,
+	title: string,
+): string {
+	return `<span class="${ENTRY_SECTION_CSS_CLASS} ${ENTRY_SECTION_CSS_CLASS}_${cssSuffix}">${title}</span>`;
+}

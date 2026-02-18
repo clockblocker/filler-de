@@ -122,10 +122,14 @@ export function blockHasWikilinkTarget(
 	blockContent: string,
 	target: string,
 ): boolean {
-	const normalizedTarget = target.trim().toLowerCase();
+	const normalizedTarget = wikilinkHelper.normalizeTarget(target);
 	return wikilinkHelper
 		.parse(blockContent)
-		.some((link) => link.target.trim().toLowerCase() === normalizedTarget);
+		.some(
+			(link) =>
+				wikilinkHelper.normalizeTarget(link.target) ===
+				normalizedTarget,
+		);
 }
 
 export function appendUniqueLinesToSection(params: {

@@ -1,7 +1,6 @@
 import { ok, type Result } from "neverthrow";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
 import {
 	buildPropagationActionPair,
@@ -10,6 +9,7 @@ import {
 } from "../../../common/target-path-resolver";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
+import { buildSectionMarkerHtml } from "../../../domain/dict-note/internal/constants";
 import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
 import {
 	type MorphemeItem,
@@ -51,10 +51,6 @@ type EquationTarget = {
 
 type MorphologyTarget = UsedInTarget | EquationTarget;
 
-function normalizeWikilinkTarget(target: string): string {
-	return target.trim().toLowerCase();
-}
-
 function hasEquivalentEquationLine(
 	existingBlock: string,
 	candidateLine: string,
@@ -77,7 +73,7 @@ function hasEquivalentEquationLine(
 function extractLineTargetSignature(line: string): string[] {
 	return wikilinkHelper
 		.parse(line)
-		.map((wikilink) => normalizeWikilinkTarget(wikilink.target))
+		.map((wikilink) => wikilinkHelper.normalizeTarget(wikilink.target))
 		.filter((target) => target.length > 0);
 }
 
@@ -113,8 +109,8 @@ function buildTargets(ctx: GenerateSectionsResult): MorphologyTarget[] {
 	const derivedFrom = normalizeLemma(morphology.derivedFromLemma);
 	if (
 		derivedFrom &&
-		normalizeWikilinkTarget(derivedFrom) !==
-			normalizeWikilinkTarget(sourceLemma)
+		wikilinkHelper.normalizeTarget(derivedFrom) !==
+			wikilinkHelper.normalizeTarget(sourceLemma)
 	) {
 		targets.push({
 			kind: "UsedIn",
@@ -128,8 +124,8 @@ function buildTargets(ctx: GenerateSectionsResult): MorphologyTarget[] {
 		const normalized = normalizeLemma(lemma);
 		if (!normalized) continue;
 		if (
-			normalizeWikilinkTarget(normalized) ===
-			normalizeWikilinkTarget(sourceLemma)
+			wikilinkHelper.normalizeTarget(normalized) ===
+			wikilinkHelper.normalizeTarget(sourceLemma)
 		) {
 			continue;
 		}
@@ -147,8 +143,8 @@ function buildTargets(ctx: GenerateSectionsResult): MorphologyTarget[] {
 		);
 		if (
 			targetWord &&
-			normalizeWikilinkTarget(targetWord) !==
-				normalizeWikilinkTarget(sourceLemma)
+			wikilinkHelper.normalizeTarget(targetWord) !==
+				wikilinkHelper.normalizeTarget(sourceLemma)
 		) {
 			const targetKey = normalizeMorphologyKey(targetWord);
 			if (targetKey) {
@@ -196,8 +192,8 @@ function groupTargets(
 	for (const target of targets) {
 		const key =
 			target.kind === "Equation"
-				? `${target.kind}::${normalizeWikilinkTarget(target.targetWord)}::${target.targetHeader}`
-				: `${target.kind}::${normalizeWikilinkTarget(target.targetWord)}`;
+				? `${target.kind}::${wikilinkHelper.normalizeTarget(target.targetWord)}::${target.targetHeader}`
+				: `${target.kind}::${wikilinkHelper.normalizeTarget(target.targetWord)}`;
 		const existing = grouped.get(key);
 		if (!existing) {
 			grouped.set(key, target);
@@ -219,7 +215,7 @@ export function propagateMorphologyRelations(
 	const sourceLemma = ctx.textfresserState.latestLemmaResult.lemma;
 	const sectionCssSuffix = cssSuffixFor[DictSectionKind.Morphology];
 	const sectionTitle = TitleReprFor[DictSectionKind.Morphology][targetLang];
-	const sectionMarker = `<span class="entry_section_title entry_section_title_${sectionCssSuffix}">${sectionTitle}</span>`;
+	const sectionMarker = buildSectionMarkerHtml(sectionCssSuffix, sectionTitle);
 	const tagsCssSuffix = cssSuffixFor[DictSectionKind.Tags];
 	const tagsTitle = TitleReprFor[DictSectionKind.Tags][targetLang];
 
@@ -317,14 +313,7 @@ export function propagateMorphologyRelations(
 								});
 							}
 
-							const { body, meta } =
-								dictNoteHelper.serialize(existingEntries);
-							if (Object.keys(meta).length > 0) {
-								return noteMetadataHelper.upsert(meta)(
-									body,
-								) as string;
-							}
-							return body;
+							return dictNoteHelper.serializeWithMeta(existingEntries);
 						}
 
 						const existingIds = existingEntries.map(
@@ -363,16 +352,10 @@ export function propagateMorphologyRelations(
 							sections,
 						};
 
-						const { body, meta } = dictNoteHelper.serialize([
+						return dictNoteHelper.serializeWithMeta([
 							...existingEntries,
 							newEntry,
 						]);
-						if (Object.keys(meta).length > 0) {
-							return noteMetadataHelper.upsert(meta)(
-								body,
-							) as string;
-						}
-						return body;
 					};
 
 		propagationActions.push(...resolved.healingActions);

@@ -11,7 +11,6 @@
 
 import { ok, type Result } from "neverthrow";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import {
 	buildPropagationActionPair,
 	resolveMorphemePath,
@@ -250,12 +249,7 @@ export function propagateMorphemes(
 					});
 				}
 
-				const { body, meta } =
-					dictNoteHelper.serialize(existingEntries);
-				if (Object.keys(meta).length > 0) {
-					return noteMetadataHelper.upsert(meta)(body) as string;
-				}
-				return body;
+				return dictNoteHelper.serializeWithMeta(existingEntries);
 			}
 
 			const existingIds = existingEntries.map((entry) => entry.id);
@@ -287,11 +281,7 @@ export function propagateMorphemes(
 			};
 
 			const allEntries = [...existingEntries, newEntry];
-			const { body, meta } = dictNoteHelper.serialize(allEntries);
-			if (Object.keys(meta).length > 0) {
-				return noteMetadataHelper.upsert(meta)(body) as string;
-			}
-			return body;
+			return dictNoteHelper.serializeWithMeta(allEntries);
 		};
 
 		propagationActions.push(...resolved.healingActions);
