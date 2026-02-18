@@ -10,6 +10,8 @@ Scope:
 - Mark each capability as `covered` or `gap`.
 - Propose only minimal adapter glue where needed.
 
+Status: complete (implemented on February 18, 2026).
+
 ## Proposed Minimal Propagation IO Ports
 
 ```ts
@@ -44,6 +46,7 @@ Notes:
 - `readNoteOrEmpty` returns `Err` only for read/IO failures. Missing file maps to `ok("")`. Parse/validation/apply failures are handled in later stages, not in this port method.
 - `readManyMdFiles` is the preferred Stage 6 hydrate API for already-resolved targets (bulk parallel reads with explicit missing/error outcomes).
 - `readManyMdFiles` must classify "file vanished between `exists` and `readContent`" as `Missing`, not `Error`, to preserve create-on-write behavior under concurrent vault changes.
+- Current v1 implementation may use message-based `"file not found"` detection due VAM string error contracts; this debt is tracked in [`error-contract-book-of-work.md`](./error-contract-book-of-work.md) (`EC-001`).
 - `buildTargetWriteActions` returns actions to append to Generate's action list; v2 should keep dispatch outside the pure/apply phase.
 - `buildTargetWriteActions` intentionally narrows transform to sync `(content) => string` for v2. Even though VAM supports async transforms, v2 apply/serialize is designed as pure synchronous DTO algebra.
 - `findByLeafCoreName` is required for Library-hosted closed sets (for example prefixes/particles/prepositions) where path resolution must consult Librarian's leaf-core-name index.

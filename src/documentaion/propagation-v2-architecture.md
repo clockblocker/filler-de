@@ -566,6 +566,8 @@ Do not attempt one-shot migration.
 
 Do this before implementing propagation v2 logic.
 
+Status: complete (implemented on February 18, 2026).
+
 1. Define a minimal propagation IO contract for v2 orchestrator needs (`PropagationVaultPort` + Librarian lookup port).
 2. Map each required method to existing VAM/Librarian APIs.
 3. Mark each capability as `covered` or `gap`.
@@ -662,6 +664,7 @@ Track intentionally deferred work here after v1 implementation lands.
 5. Add optional transitive propagation as explicit extra pass (never implicit recursion).
 6. Add additional section mutation kinds with explicit merge policy entries.
 7. Add per-target error remediation UX (quick-open failing target, suggested fix path).
+8. Replace VAM string read errors with typed error kinds to remove message-substring classification in propagation adapters (tracked in [`error-contract-book-of-work.md`](./error-contract-book-of-work.md), case `EC-001`).
 
 These items are intentionally deferred from v1 for delivery focus.
 
