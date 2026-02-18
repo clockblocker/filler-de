@@ -217,7 +217,7 @@ function makeCommandInput(params: {
 	} as unknown as CommandInput;
 }
 
-const MIGRATED_NON_VERB_SLICES: ReadonlyArray<{
+const MIGRATED_SLICES: ReadonlyArray<{
 	linguisticUnit: "Lexem" | "Phrasem";
 	posLikeKind: string;
 	sliceKey: string;
@@ -247,6 +247,7 @@ const MIGRATED_NON_VERB_SLICES: ReadonlyArray<{
 		sliceKey: "de/lexem/preposition",
 	},
 	{ linguisticUnit: "Lexem", posLikeKind: "Pronoun", sliceKey: "de/lexem/pronoun" },
+	{ linguisticUnit: "Lexem", posLikeKind: "Verb", sliceKey: "de/lexem/verb" },
 	{
 		linguisticUnit: "Phrasem",
 		posLikeKind: "Collocation",
@@ -297,12 +298,12 @@ describe("propagateGeneratedSections", () => {
 		expect(calls.v2).toBe(0);
 	});
 
-	it("routes every migrated non-verb slice to v2 when kill-switch is true", async () => {
+	it("routes every migrated slice to v2 when kill-switch is true", async () => {
 		const { propagateGeneratedSections } = await import(
 			"../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections"
 		);
 
-		for (const slice of MIGRATED_NON_VERB_SLICES) {
+		for (const slice of MIGRATED_SLICES) {
 			resetCalls();
 			const result = propagateGeneratedSections(
 				makeCtx({
@@ -328,8 +329,9 @@ describe("propagateGeneratedSections", () => {
 
 		const result = propagateGeneratedSections(
 			makeCtx({
-				posLikeKind: "Verb",
+				posLikeKind: "Noun",
 				propagationV2Enabled: true,
+				targetLanguage: "English",
 			}),
 		);
 		expect(result.isOk()).toBe(true);

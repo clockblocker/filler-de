@@ -333,6 +333,71 @@ function makePhase5NonVerbFixtureCtx(
 	} as unknown as GenerateSectionsResult;
 }
 
+function makeVerbFixtureCtx(vault: InMemoryVault): GenerateSectionsResult {
+	return {
+		actions: [],
+		allEntries: [],
+		commandContext: {
+			activeFile: {
+				content: "",
+				splitPath: makeSplitPath({
+					basename: "Aufpassen",
+					surfaceKind: "lemma",
+					unitKind: "lexem",
+				}),
+			},
+		},
+		existingEntries: [],
+		failedSections: [],
+		inflectionCells: [],
+		matchedEntry: null,
+		morphemes: [
+			{ kind: "Prefix", separability: "Separable", surf: "auf" },
+			{ kind: "Root", lemma: "passen", surf: "pass" },
+		],
+		morphology: {
+			compoundedFromLemmas: ["Kohle"],
+			derivedFromLemma: "Kraft",
+			prefixEquation: {
+				baseLemma: "passen",
+				prefixDisplay: "auf",
+				prefixTarget: "auf",
+				sourceLemma: "Aufpassen",
+			},
+		},
+		nextIndex: 1,
+		nounInflectionGenus: undefined,
+		relations: [{ kind: "Synonym", words: ["Kohle"] }],
+		resultingActions: [],
+		sourceTranslation: "to pay attention",
+		textfresserState: {
+			languages: { known: "English", target: "German" },
+			latestLemmaResult: {
+				attestation: {
+					source: {
+						path: makeSplitPath({
+							basename: "Reading",
+							surfaceKind: "lemma",
+							unitKind: "lexem",
+						}),
+						ref: "![[Reading#^1|^]]",
+					},
+				},
+				disambiguationResult: null,
+				lemma: "Aufpassen",
+				linguisticUnit: "Lexem",
+				posLikeKind: "Verb",
+				surfaceKind: "Lemma",
+			},
+			lookupInLibrary: () => [],
+			propagationV2Enabled: true,
+			vam: {
+				findByBasename: makeFindByBasename(vault),
+			},
+		},
+	} as unknown as GenerateSectionsResult;
+}
+
 async function resolveProcessAfterContent(
 	action: Extract<VaultAction, { kind: typeof VaultActionKind.ProcessMdFile }>,
 	before: string,
@@ -672,5 +737,99 @@ describe("propagation v2 phase 5 non-verb slices", () => {
 				expect(count).toBe(1);
 			}
 		}
+	});
+});
+
+describe("propagation v2 phase 5 verb slice", () => {
+	it("keeps semantic DTO parity with legacy v1 on curated verb fixture", async () => {
+		const legacyVault = createSeedVault();
+		const v2Vault = createSeedVault();
+
+		const legacyResult = propagateLegacyV1(makeVerbFixtureCtx(legacyVault));
+		const v2Result = propagateV2(makeVerbFixtureCtx(v2Vault));
+
+		expect(legacyResult.isOk()).toBe(true);
+		expect(v2Result.isOk()).toBe(true);
+		if (legacyResult.isErr() || v2Result.isErr()) {
+			return;
+		}
+
+		await applyActionsToVault({
+			actions: legacyResult.value.actions,
+			vault: legacyVault,
+		});
+		await applyActionsToVault({
+			actions: v2Result.value.actions,
+			vault: v2Vault,
+		});
+
+		expect(buildDtoSnapshot(v2Vault)).toEqual(buildDtoSnapshot(legacyVault));
+	});
+
+	it("is idempotent for verb slice", async () => {
+		const vault = createSeedVault();
+		const firstRun = propagateV2(makeVerbFixtureCtx(vault));
+		expect(firstRun.isOk()).toBe(true);
+		if (firstRun.isErr()) {
+			return;
+		}
+
+		const firstApply = await applyActionsToVault({
+			actions: firstRun.value.actions,
+			vault,
+		});
+		expect(firstApply.changedPaths.size).toBeGreaterThan(0);
+
+		const secondRun = propagateV2(makeVerbFixtureCtx(vault));
+		expect(secondRun.isOk()).toBe(true);
+		if (secondRun.isErr()) {
+			return;
+		}
+		const secondApply = await applyActionsToVault({
+			actions: secondRun.value.actions,
+			vault,
+		});
+
+		expect(secondApply.changedPaths.size).toBe(0);
+	});
+
+	it("enforces one write action per target note for verb slice", () => {
+		const result = propagateV2(makeVerbFixtureCtx(createSeedVault()));
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) {
+			return;
+		}
+
+		const processCounts = buildProcessWriteCountByTarget(result.value.actions);
+		for (const count of processCounts.values()) {
+			expect(count).toBe(1);
+		}
+	});
+
+	it("matches legacy order-insensitive target+mutation-kind set for verb slice", async () => {
+		const legacyVault = createSeedVault();
+		const v2Vault = createSeedVault();
+
+		const legacyResult = propagateLegacyV1(makeVerbFixtureCtx(legacyVault));
+		const v2Result = propagateV2(makeVerbFixtureCtx(v2Vault));
+
+		expect(legacyResult.isOk()).toBe(true);
+		expect(v2Result.isOk()).toBe(true);
+		if (legacyResult.isErr() || v2Result.isErr()) {
+			return;
+		}
+
+		await applyActionsToVault({
+			actions: legacyResult.value.actions,
+			vault: legacyVault,
+		});
+		await applyActionsToVault({
+			actions: v2Result.value.actions,
+			vault: v2Vault,
+		});
+
+		expect(buildMutationKindSet(v2Vault)).toEqual(
+			buildMutationKindSet(legacyVault),
+		);
 	});
 });

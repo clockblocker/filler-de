@@ -19,6 +19,7 @@ const V2_MIGRATED_LEXEM_POS = [
 	"particle",
 	"preposition",
 	"pronoun",
+	"verb",
 ] as const;
 
 const V2_MIGRATED_PHRASEM_KINDS = [

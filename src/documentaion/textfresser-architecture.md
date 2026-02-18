@@ -790,9 +790,8 @@ The propagation facade (`propagateGeneratedSections`) runs after `generateSectio
 
 Routing source of truth is `V2_MIGRATED_SLICE_KEYS` in `propagate-generated-sections.ts`.
 As of February 18, 2026:
-- all non-verb `de/lexem/*` slices route to `v2`
+- all `de/lexem/*` slices route to `v2`
 - all `de/phrasem/*` slices route to `v2`
-- `de/lexem/verb` currently stays on `v1` until dedicated verb migration is enabled
 
 Both `propagateRelations` and `propagateInflections` use a **shared path resolver** (`resolveTargetPath`) that performs two-source lookup with healing:
 

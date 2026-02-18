@@ -137,7 +137,7 @@ export function foldScopedActionsToSingleWritePerTarget(
 	return ok([...renameActionsByKey.values(), ...foldedWriteActions]);
 }
 
-function collectNounScopedActions(
+function collectScopedActions(
 	ctx: GenerateSectionsResult,
 ): Result<ReadonlyArray<VaultAction>, CommandError> {
 	const scopedCtx: GenerateSectionsResult = {
@@ -154,7 +154,7 @@ function collectNounScopedActions(
 export function propagateV2(
 	ctx: GenerateSectionsResult,
 ): Result<GenerateSectionsResult, CommandError> {
-	return collectNounScopedActions(ctx)
+	return collectScopedActions(ctx)
 		.andThen(foldScopedActionsToSingleWritePerTarget)
 		.map((foldedActions) => ({
 			...ctx,
