@@ -613,8 +613,15 @@ Recommended contract surface:
 
 ### 16.5 Phase 4 - First Vertical Slice
 
-1. Migrate one slice first (`de/lexem/noun` inflection and relation-adjacent behavior).
-2. Verify parity and idempotency against current flow.
+1. Switch routing to per-slice in the propagation facade.
+2. Keep `propagationV2Enabled` as a global kill-switch: when `false`, always route to `v1`.
+3. Seed routing map with one migrated slice: `de/lexem/noun -> v2`; all non-migrated slices route to `v1`.
+4. Lock first-slice operation scope:
+   - Required: `Relation.addRelation`, `Inflection.upsertInflection`.
+   - Required when current noun `v1` behavior emits them: `Morphology.addBacklink`, `Morphology.addEquation`.
+   - Include `Tags.addTags` only if current noun `v1` propagation emits tag side-effects; do not add new tag propagation behavior in v2 slice 1.
+   - Keep `decorateAttestationSeparability` out of v2 slice scope (source-note formatting concern, not target-note propagation).
+5. Verify parity and idempotency against current flow using the Phase 4 sign-off gate.
 
 ### 16.6 Phase 5 - Incremental Rollout
 
@@ -627,8 +634,9 @@ Recommended contract surface:
 Do not mix v1 and v2 propagation writes within a single Generate invocation.
 
 1. Phase 3 routing is global by `propagationV2Enabled` (single engine per invocation).
-2. Phase 4+ migrates to per-slice routing once first vertical slices are production-ready.
-3. If a slice is not migrated in the per-slice phase, run full v1 for that invocation.
+2. Phase 4 switches to per-slice routing in facade.
+3. If source slice is migrated and kill-switch is enabled, run full `v2` for that invocation; otherwise run full `v1`.
+4. Never run mixed v1/v2 propagation engines in one invocation.
 
 ---
 
@@ -651,6 +659,23 @@ Do not mix v1 and v2 propagation writes within a single Generate invocation.
 
 1. Idempotency: second run produces no changes.
 2. Canonical serialization stability.
+
+### 17.4 Phase 4 Sign-Off Gate
+
+Primary gate (must pass):
+
+1. Semantic DTO parity between `v1` and `v2` on curated noun fixtures.
+2. Idempotency: second `v2` run over same inputs emits no mutations.
+3. Invariants: strict fail-fast/all-or-nothing emission, and one write action per target note.
+
+Secondary gate (should pass):
+
+1. Order-insensitive action-target parity for emitted mutation intents (`{ targetPath, mutationKind }` set parity vs `v1`).
+
+Out of scope for parity gate:
+
+1. Byte-for-byte markdown parity.
+2. Full `VaultAction[]` structural equality.
 
 ---
 
@@ -677,6 +702,7 @@ Post-migration deferred work is tracked in:
 3. Implement centralized matcher and tests.
 4. Implement merge policy dispatcher and tests.
 5. Implement orchestrator behind flag.
-6. Migrate noun slice and add idempotency test.
-7. Roll out remaining slices.
-8. Remove legacy step.
+6. Implement per-slice facade routing with global kill-switch precedence.
+7. Migrate noun slice operations in scoped order and add parity + idempotency tests.
+8. Roll out remaining slices.
+9. Remove legacy step.
