@@ -41,10 +41,15 @@ export class Textfresser {
 		private readonly vam: VaultActionManager,
 		languages: LanguagesConfig,
 		apiService: ApiService,
+		featureFlags?: {
+			propagationV2Enabled?: boolean;
+		},
 	) {
 		this.state = createInitialTextfresserState({
 			apiService,
 			languages,
+			propagationV2Enabled:
+				featureFlags?.propagationV2Enabled ?? false,
 			vam,
 		});
 

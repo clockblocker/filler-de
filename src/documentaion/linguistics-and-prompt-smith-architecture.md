@@ -926,10 +926,9 @@ serializeEntry() → markdown string
 VAM dispatch (ProcessMdFile / UpsertMdFile)
     ↓
 Propagation steps:
-    ├─ propagateRelations → ProcessMdFile on target notes (cross-refs, shared dedupe append helper)
-    ├─ propagateMorphologyRelations → Lexem `<used_in>` backlinks + verb-prefix equations
-    ├─ propagateMorphemes → Morphem `<used_in>` backlinks (bound morphemes + non-verb prefixes)
-    └─ propagateInflections → UpsertMdFile + ProcessMdFile for single inflection entries (tags-merged, legacy stubs auto-collapsed)
+    ├─ propagateGeneratedSections (facade switch by `propagationV2Enabled`)
+    ├─ v1 branch: propagateRelations → propagateMorphologyRelations → propagateMorphemes → decorateAttestationSeparability → propagateInflections
+    └─ v2 branch: propagateV2 (strict fail-fast, all-or-nothing action emission)
 ```
 
 ### 4.4 Adding a New Prompt (recipe)

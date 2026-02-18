@@ -185,6 +185,9 @@ export default class TextEaterPlugin extends Plugin {
 			this.vam,
 			this.settings.languages,
 			this.apiService,
+			{
+				propagationV2Enabled: this.settings.propagationV2Enabled,
+			},
 		);
 
 		// Dict note cleanup on file open (reorder entries, normalize attestation spacing)

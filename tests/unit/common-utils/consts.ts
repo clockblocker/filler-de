@@ -17,6 +17,7 @@ export const defaultSettingsForUnitTests: ParsedUserSettings = {
 	hideMetadata: true,
 	maxSectionDepth: 6,
 	navButtonsPosition: "left",
+	propagationV2Enabled: false,
 	showScrollBacklinks: true,
 	showScrollsInCodexesForDepth: 1,
 	splitInBlocksPlacement: "selection",

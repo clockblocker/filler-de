@@ -661,7 +661,7 @@ Generate fires automatically in the background after a successful Lemma command.
 checkAttestation → checkEligibility → checkLemmaResult
   → resolveExistingEntry (parse existing entries, use Lemma's disambiguationResult for re-encounter detection)
   → generateSections (async: LLM calls, or attestation append for re-encounters)
-  → propagateRelations → propagateMorphologyRelations → propagateMorphemes → propagateInflections
+  → propagateGeneratedSections (wrapper: legacy v1 chain or v2 path via `propagationV2Enabled`)
   → serializeEntry (includes noteKind + emojiDescription in single metadata upsert) → moveToWorter → addWriteAction
 ```
 
@@ -784,9 +784,9 @@ Not all DictEntrySections participate in cross-reference propagation:
 
 ### 9.4 Implementation
 
-**Source**: `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts`, `src/commanders/textfresser/common/target-path-resolver.ts`
+**Source**: `src/commanders/textfresser/commands/generate/steps/propagate-generated-sections.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts`, `src/commanders/textfresser/commands/generate/steps/decorate-attestation-separability.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts`, `src/commanders/textfresser/common/target-path-resolver.ts`
 
-The `propagateRelations` step runs after `generateSections` in the Generate pipeline. It uses the raw `relations` output captured during section generation (not re-parsed from markdown).
+The propagation facade (`propagateGeneratedSections`) runs after `generateSections` in the Generate pipeline. In v1 mode it executes `propagateRelations` -> `propagateMorphologyRelations` -> `propagateMorphemes` -> `decorateAttestationSeparability` -> `propagateInflections`; in v2 mode it routes to `propagateV2`. `propagateRelations` uses the raw `relations` output captured during section generation (not re-parsed from markdown).
 
 Both `propagateRelations` and `propagateInflections` use a **shared path resolver** (`resolveTargetPath`) that performs two-source lookup with healing:
 

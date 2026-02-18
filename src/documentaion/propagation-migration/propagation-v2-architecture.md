@@ -606,8 +606,10 @@ Recommended contract surface:
 
 ### 16.4 Phase 3 - Orchestrator Skeleton
 
-1. Introduce `propagate-v2` step behind feature flag.
-2. Wire validation, dedupe, grouping, apply, emit flow.
+1. Introduce `propagate-v2` step behind one global feature flag: `propagationV2Enabled`.
+2. Keep v1/v2 routing inside a propagation wrapper/facade (Generate entrypoint calls one propagation interface).
+3. Keep v2 strict fail-fast semantics (`Err` short-circuits Generate and no actions are emitted/dispatched).
+4. Wire validation, dedupe, grouping, apply, emit flow incrementally behind this flag.
 
 ### 16.5 Phase 4 - First Vertical Slice
 
@@ -624,9 +626,9 @@ Recommended contract surface:
 
 Do not mix v1 and v2 propagation writes within a single Generate invocation.
 
-1. Route each invocation to exactly one propagation engine (`v1` or `v2`) by source-slice flag.
-2. If a slice is not migrated, run full v1 for that invocation.
-3. Enable v2 per slice only when that slice has full propagation coverage.
+1. Phase 3 routing is global by `propagationV2Enabled` (single engine per invocation).
+2. Phase 4+ migrates to per-slice routing once first vertical slices are production-ready.
+3. If a slice is not migrated in the per-slice phase, run full v1 for that invocation.
 
 ---
 
