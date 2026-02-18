@@ -1,14 +1,3 @@
-import type {
-	InflectionItemDto,
-	InflectionSectionDto,
-	MorphologyBacklinkDto,
-	MorphologyEquationDto,
-	MorphologySectionDto,
-	RelationItemDto,
-	RelationSectionDto,
-	SectionMutation,
-	TagsSectionDto,
-} from "./types";
 import {
 	dedupeByKey,
 	inflectionItemIdentityKey,
@@ -19,6 +8,16 @@ import {
 	normalizeTagToken,
 	relationItemIdentityKey,
 } from "./normalize";
+import type {
+	InflectionSectionDto,
+	MorphologyBacklinkDto,
+	MorphologyEquationDto,
+	MorphologySectionDto,
+	RelationItemDto,
+	RelationSectionDto,
+	SectionMutation,
+	TagsSectionDto,
+} from "./types";
 
 export type MergeOutcome<TSection> = {
 	section: TSection;

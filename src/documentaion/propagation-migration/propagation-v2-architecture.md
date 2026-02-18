@@ -790,6 +790,6 @@ Post-migration deferred work is tracked in:
 4. Implement merge policy dispatcher and tests.
 5. Implement orchestrator behind flag (historical, completed).
 6. Implement per-slice facade routing with global kill-switch precedence (historical, completed).
-7. Migrate noun slice operations in scoped order and add parity + idempotency tests.
-8. Roll out remaining slices.
-9. Remove legacy step and kill-switch runtime wiring.
+7. Migrate noun slice operations in scoped order and add parity + idempotency tests (historical, completed).
+8. Roll out remaining slices (historical, completed).
+9. Remove legacy step and kill-switch runtime wiring (historical, completed).

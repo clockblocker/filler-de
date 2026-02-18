@@ -7,6 +7,7 @@ import {
 	makeSystemPathForSplitPath,
 } from "./impl/common/split-path-and-system-path";
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
+import type { ReadContentError } from "./types/read-content-error";
 import type {
 	AnySplitPath,
 	SplitPathToAnyFile,
@@ -41,7 +42,9 @@ export interface VaultActionManager {
 	waitForObsidianEvents(): Promise<void>;
 
 	// Read-only operations
-	readContent(splitPath: SplitPathToMdFile): Promise<Result<string, string>>;
+	readContent(
+		splitPath: SplitPathToMdFile,
+	): Promise<Result<string, ReadContentError>>;
 	exists(splitPath: AnySplitPath): boolean;
 	findByBasename(
 		basename: string,
@@ -81,3 +84,10 @@ export type {
 	DispatcherDebugState,
 	DispatchResult,
 } from "./impl/actions-processing/dispatcher";
+export {
+	classifyReadContentError,
+	isReadContentFileNotFound,
+	type ReadContentError,
+	ReadContentErrorKind,
+	readContentErrorToReason,
+} from "./types/read-content-error";

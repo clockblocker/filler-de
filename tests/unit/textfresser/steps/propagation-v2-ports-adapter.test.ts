@@ -3,7 +3,10 @@ import { err, ok } from "neverthrow";
 import {
 	createPropagationV2PortsAdapter,
 } from "../../../../src/commanders/textfresser/commands/generate/steps/propagation-v2-ports-adapter";
-import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
+import {
+	ReadContentErrorKind,
+	type VaultActionManager,
+} from "../../../../src/managers/obsidian/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToFolder,
@@ -26,6 +29,27 @@ function makePath(
 		kind: SplitPathKind.MdFile,
 		pathParts,
 	};
+}
+
+function fileNotFoundError(reason: string) {
+	return {
+		kind: ReadContentErrorKind.FileNotFound,
+		reason,
+	} as const;
+}
+
+function unknownReadError(reason: string) {
+	return {
+		kind: ReadContentErrorKind.Unknown,
+		reason,
+	} as const;
+}
+
+function permissionReadError(reason: string) {
+	return {
+		kind: ReadContentErrorKind.PermissionDenied,
+		reason,
+	} as const;
 }
 
 describe("propagation-v2-ports-adapter", () => {
@@ -77,7 +101,7 @@ describe("propagation-v2-ports-adapter", () => {
 			findByBasename: () => [],
 			readContent: async () => {
 				readAttempted = true;
-				return err("read should not be called");
+				return err(unknownReadError("read should not be called"));
 			},
 		};
 
@@ -101,7 +125,8 @@ describe("propagation-v2-ports-adapter", () => {
 		const vam: VamPortDependency = {
 			exists: () => true,
 			findByBasename: () => [],
-			readContent: async () => err("File not found: alpha"),
+			readContent: async () =>
+				err(fileNotFoundError("File not found: alpha")),
 		};
 
 		const ports = createPropagationV2PortsAdapter({
@@ -123,7 +148,7 @@ describe("propagation-v2-ports-adapter", () => {
 				return existsCalls === 1;
 			},
 			findByBasename: () => [],
-			readContent: async () => err("random io issue"),
+			readContent: async () => err(unknownReadError("random io issue")),
 		};
 
 		const ports = createPropagationV2PortsAdapter({
@@ -141,7 +166,8 @@ describe("propagation-v2-ports-adapter", () => {
 		const vam: VamPortDependency = {
 			exists: () => true,
 			findByBasename: () => [],
-			readContent: async () => err("permission denied"),
+			readContent: async () =>
+				err(permissionReadError("permission denied")),
 		};
 
 		const ports = createPropagationV2PortsAdapter({
@@ -153,7 +179,7 @@ describe("propagation-v2-ports-adapter", () => {
 		expect(results).toEqual([
 			{
 				kind: "Error",
-				reason: "permission denied",
+				reason: permissionReadError("permission denied"),
 				splitPath: alpha,
 			},
 		]);
@@ -166,7 +192,7 @@ describe("propagation-v2-ports-adapter", () => {
 		const vamMissing: VamPortDependency = {
 			exists: () => false,
 			findByBasename: () => [],
-			readContent: async () => err("unreachable"),
+			readContent: async () => err(unknownReadError("unreachable")),
 		};
 		const portsMissing = createPropagationV2PortsAdapter({
 			lookupInLibraryByCoreName: () => [],
@@ -180,7 +206,8 @@ describe("propagation-v2-ports-adapter", () => {
 		const vamRace: VamPortDependency = {
 			exists: () => true,
 			findByBasename: () => [],
-			readContent: async () => err("File not found: beta"),
+			readContent: async () =>
+				err(fileNotFoundError("File not found: beta")),
 		};
 		const portsRace = createPropagationV2PortsAdapter({
 			lookupInLibraryByCoreName: () => [],
@@ -198,7 +225,8 @@ describe("propagation-v2-ports-adapter", () => {
 		const vam: VamPortDependency = {
 			exists: () => true,
 			findByBasename: () => [],
-			readContent: async () => err("permission denied"),
+			readContent: async () =>
+				err(permissionReadError("permission denied")),
 		};
 
 		const ports = createPropagationV2PortsAdapter({

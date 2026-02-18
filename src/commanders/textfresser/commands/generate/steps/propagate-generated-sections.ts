@@ -1,6 +1,6 @@
 import type { Result } from "neverthrow";
-import { decorateAttestationSeparability } from "./decorate-attestation-separability";
 import type { CommandError } from "../../types";
+import { decorateAttestationSeparability } from "./decorate-attestation-separability";
 import type { GenerateSectionsResult } from "./generate-sections";
 import { propagateV2 } from "./propagate-v2";
 

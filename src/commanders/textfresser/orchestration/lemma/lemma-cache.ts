@@ -1,4 +1,5 @@
 import { ok, type Result } from "neverthrow";
+import type { ReadContentError } from "../../../../managers/obsidian/vault-action-manager/types/read-content-error";
 import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { stringifySplitPath } from "../../../../stateless-helpers/split-path-comparison";
 import { logger } from "../../../../utils/logger";
@@ -44,7 +45,7 @@ export async function handleLemmaCacheHit(params: {
 	state: TextfresserState;
 	readContent: (
 		splitPath: SplitPathToMdFile,
-	) => Promise<Result<string, string>>;
+	) => Promise<Result<string, ReadContentError>>;
 }): Promise<Result<void, CommandError>> {
 	const { cache, onRefetch, readContent, state } = params;
 	state.latestLemmaResult = cache.lemmaResult;

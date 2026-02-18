@@ -9,6 +9,14 @@ import {
 	foldScopedActionsToSingleWritePerTarget,
 	propagateV2,
 } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-v2";
+import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";
+import type { DictEntry } from "../../../../src/commanders/textfresser/domain/dict-note/types";
+import { parsePropagationNote } from "../../../../src/commanders/textfresser/domain/propagation";
+import { cssSuffixFor } from "../../../../src/commanders/textfresser/targets/de/sections/section-css-kind";
+import {
+	DictSectionKind,
+	TitleReprFor,
+} from "../../../../src/commanders/textfresser/targets/de/sections/section-kind";
 import { type NounInflectionCell } from "../../../../src/linguistics/de/lexem/noun";
 import {
 	makeSystemPathForSplitPath,
@@ -19,14 +27,6 @@ import {
 	SplitPathKind,
 	type SplitPathToMdFile,
 } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";
-import type { DictEntry } from "../../../../src/commanders/textfresser/domain/dict-note/types";
-import { cssSuffixFor } from "../../../../src/commanders/textfresser/targets/de/sections/section-css-kind";
-import {
-	DictSectionKind,
-	TitleReprFor,
-} from "../../../../src/commanders/textfresser/targets/de/sections/section-kind";
-import { parsePropagationNote } from "../../../../src/commanders/textfresser/domain/propagation";
 
 type InMemoryFile = {
 	content: string;
@@ -611,41 +611,74 @@ describe("propagation v2 phase 4 noun slice", () => {
 		expect(result.isErr()).toBe(true);
 	});
 
-	it("fails fast when ProcessMdFile payload is before/after instead of transform", () => {
+	it("supports ProcessMdFile before/after payload by normalizing it to a transform", async () => {
+		const splitPath = makeSplitPath({
+			basename: "ShapeMismatch",
+			surfaceKind: "lemma",
+			unitKind: "lexem",
+		});
 		const result = foldScopedActionsToSingleWritePerTarget([
 			{
 				kind: VaultActionKind.ProcessMdFile,
 				payload: {
 					after: "after",
 					before: "before",
-					splitPath: makeSplitPath({
-						basename: "ShapeMismatch",
-						surfaceKind: "lemma",
-						unitKind: "lexem",
-					}),
+					splitPath,
 				},
-			} as unknown as VaultAction,
+			},
 		]);
 
-		expect(result.isErr()).toBe(true);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) {
+			return;
+		}
+
+		const vault = new Map<string, InMemoryFile>();
+		setFile(vault, {
+			content: "before + before",
+			splitPath,
+		});
+		await applyActionsToVault({
+			actions: result.value,
+			vault,
+		});
+		expect(vault.get(keyFor(splitPath))?.content).toBe("after + before");
 	});
 
-	it("fails fast when UpsertMdFile carries explicit content", () => {
+	it("supports UpsertMdFile non-null content with deterministic transform order", async () => {
+		const splitPath = makeSplitPath({
+			basename: "NonNullUpsert",
+			surfaceKind: "lemma",
+			unitKind: "lexem",
+		});
 		const result = foldScopedActionsToSingleWritePerTarget([
 			{
 				kind: VaultActionKind.UpsertMdFile,
 				payload: {
 					content: "#seed",
-					splitPath: makeSplitPath({
-						basename: "NonNullUpsert",
-						surfaceKind: "lemma",
-						unitKind: "lexem",
-					}),
+					splitPath,
+				},
+			},
+			{
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					splitPath,
+					transform: (content: string) => `${content}\n#tail`,
 				},
 			},
 		]);
 
-		expect(result.isErr()).toBe(true);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) {
+			return;
+		}
+
+		const vault = new Map<string, InMemoryFile>();
+		await applyActionsToVault({
+			actions: result.value,
+			vault,
+		});
+		expect(vault.get(keyFor(splitPath))?.content).toBe("#seed\n#tail");
 	});
 
 	it("matches legacy order-insensitive target+mutation-kind set", async () => {
