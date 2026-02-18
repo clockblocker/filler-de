@@ -596,8 +596,10 @@ Recommended contract surface:
 
 1. Build typed parser/serializer adapters needed by v2 apply.
 2. Add characterization tests preserving current output where expected.
-3. Canonicalize typed Morphology backlink output (normalize surrounding whitespace in wikilink values) so semantically equal backlinks serialize identically.
-4. Replace Phase 1 `JSON.stringify`-based inflection change detection with explicit semantic diffing in adapter/apply boundary if profiling or readability warrants it.
+3. Keep Wikilink adapter scope minimal for v2 migration: support basic `WikilinkDto { target, displayText? }` only where required by parser/serializer boundaries.
+4. Explicitly defer suffix-decoration parsing/typing to Post-v1 Book of Work (TBD), unless a concrete Phase 2 blocker is discovered.
+5. Canonicalize typed Morphology backlink output (normalize surrounding whitespace in wikilink values) so semantically equal backlinks serialize identically.
+6. Replace Phase 1 `JSON.stringify`-based inflection change detection with explicit semantic diffing in adapter/apply boundary if profiling or readability warrants it.
 
 ### 16.4 Phase 3 - Orchestrator Skeleton
 
@@ -657,18 +659,9 @@ Do not mix v1 and v2 propagation writes within a single Generate invocation.
 
 ## 19. Post-v1 Book of Work
 
-Track intentionally deferred work here after v1 implementation lands.
+Post-migration deferred work is tracked in:
 
-1. Replace strict fail-fast with scoped partial-success policy once recovery model is designed.
-2. Remove single-writer assumption by adding collision-safe ID allocation/retry.
-3. Retire `byHeader` fallback after legacy/invalid notes are healed.
-4. Increase typed section coverage and reduce raw passthrough reliance.
-5. Add optional transitive propagation as explicit extra pass (never implicit recursion).
-6. Add additional section mutation kinds with explicit merge policy entries.
-7. Add per-target error remediation UX (quick-open failing target, suggested fix path).
-8. Replace VAM string read errors with typed error kinds to remove message-substring classification in propagation adapters (tracked in [`error-contract-book-of-work.md`](./error-contract-book-of-work.md), case `EC-001`).
-
-These items are intentionally deferred from v1 for delivery focus.
+- [`post-migration-book-of-work.md`](./post-migration-book-of-work.md)
 
 ---
 
