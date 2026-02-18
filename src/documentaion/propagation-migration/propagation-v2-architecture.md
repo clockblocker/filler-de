@@ -637,16 +637,16 @@ Prerequisite: Phase 4 assumes Phase 1 contracts and Phase 2 adapters are already
 5. BoW item 14 (shared post-propagation decoration step) is landed; verb slice migration is completed in routing/tests.
 6. At 100% coverage, transition in two PRs:
    - PR1: default `propagationV2Enabled=true`, keep kill-switch and v1 code as rollback path.
-   - PR2: remove v1 + kill-switch only after soak exit criteria are met.
+   - PR2: remove v1 + kill-switch after soak exit criteria are met, or after an explicit soak waiver decision.
 
 Phase 5 runtime source of truth:
 
-1. `V2_MIGRATED_SLICE_KEYS` in `src/commanders/textfresser/commands/generate/steps/propagate-generated-sections.ts`.
-2. As of February 18, 2026: all `de/lexem/*` and `de/phrasem/*` slices are migrated to `v2`.
-3. BoW item 14 status: landed on February 18, 2026; `decorateAttestationSeparability` now runs as a shared post-propagation step for both `v1` and `v2`.
+1. `propagateGeneratedSections` in `src/commanders/textfresser/commands/generate/steps/propagate-generated-sections.ts` (v2-only wrapper route).
+2. As of February 18, 2026: all `de/lexem/*` and `de/phrasem/*` slices are migrated to `v2`, and runtime routing no longer includes `v1`.
+3. BoW item 14 status: landed on February 18, 2026; `decorateAttestationSeparability` runs as a shared post-propagation step after `v2` core propagation.
 4. Non-verb audit outcome: decoration remains no-op for migrated non-verb slices; parity is locked by `tests/unit/textfresser/steps/propagate-v2-phase4.test.ts`.
-5. PR1 rollout notes/checklist source: `src/documentaion/propagation-migration/pr1-default-v2-rollout-notes.md`.
-6. PR1 default flip status: prepared on February 18, 2026 (`propagationV2Enabled=true` by default), with kill-switch + v1 preserved for soak.
+5. Soak tracking/waiver record: GitHub issue `#20` (waiver approved for pre-release/dev-only, no external users).
+6. PR2 status target: remove v1 path + kill-switch settings/state/wiring and keep v2-only runtime.
 
 #### 16.6.1 Risk x Usage Scoring Rubric
 
@@ -701,7 +701,7 @@ If any condition fails, do not batch; run independent per-slice sign-off.
 
 #### 16.6.3 PR2 Soak Exit Criteria
 
-Do not remove v1/kill-switch until all criteria pass:
+Do not remove v1/kill-switch until all criteria pass (unless a waiver is explicitly recorded per 16.6.4):
 
 1. Minimum soak window: 14 consecutive days with PR1 deployed.
 2. Minimum traffic: at least 100 successful `Generate` runs across at least 3 migrated slices during soak.
@@ -709,14 +709,21 @@ Do not remove v1/kill-switch until all criteria pass:
 4. Regression safety: zero open P0/P1 propagation regressions at cut time.
 5. CI: parity/idempotency/fail-fast suites for migrated slices are green on the PR2 head commit.
 
+#### 16.6.4 Soak Waiver Decision (Issue #20)
+
+1. Decision date: February 18, 2026.
+2. Decision: soak requirement waived for this rollout.
+3. Reason: pre-release/dev-only environment with no external users.
+4. Record: GitHub issue `#20` documents the waiver and PR2 execution plan.
+
 ### 16.7 Coexistence Rule During Migration
 
 Do not mix v1 and v2 propagation writes within a single Generate invocation.
 
-1. Phase 3 routing is global by `propagationV2Enabled` (single engine per invocation).
-2. Phase 4 switches to per-slice routing in facade.
-3. If source slice is migrated and kill-switch is enabled, run full `v2` for that invocation; otherwise run full `v1`.
-4. Never run mixed v1/v2 propagation engines in one invocation.
+1. Historical (Phase 3): routing was global by `propagationV2Enabled` (single engine per invocation).
+2. Historical (Phase 4): routing switched to per-slice in the facade.
+3. Current (post-PR2): runtime is v2-only; v1 routing path and kill-switch are removed.
+4. Mixed v1/v2 propagation engines are impossible in current runtime.
 
 ---
 
@@ -781,8 +788,8 @@ Post-migration deferred work is tracked in:
 2. Implement `intentKey` helper and tests.
 3. Implement centralized matcher and tests.
 4. Implement merge policy dispatcher and tests.
-5. Implement orchestrator behind flag.
-6. Implement per-slice facade routing with global kill-switch precedence.
+5. Implement orchestrator behind flag (historical, completed).
+6. Implement per-slice facade routing with global kill-switch precedence (historical, completed).
 7. Migrate noun slice operations in scoped order and add parity + idempotency tests.
 8. Roll out remaining slices.
-9. Remove legacy step.
+9. Remove legacy step and kill-switch runtime wiring.

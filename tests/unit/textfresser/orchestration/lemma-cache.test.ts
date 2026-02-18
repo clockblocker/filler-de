@@ -68,7 +68,6 @@ function makeState(cacheAtMs: number): TextfresserState {
 		latestLemmaTargetOwnedByInvocation: false,
 		lookupInLibrary: () => [],
 		pendingGenerate: null,
-		propagationV2Enabled: false,
 		promptRunner: {} as TextfresserState["promptRunner"],
 		vam: {} as TextfresserState["vam"],
 	};

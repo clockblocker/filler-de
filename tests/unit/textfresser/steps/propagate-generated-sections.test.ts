@@ -1,16 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import { err, ok } from "neverthrow";
 import type { CommandInput } from "../../../../src/commanders/textfresser/commands/types";
+import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import { dispatchActions } from "../../../../src/commanders/textfresser/orchestration/shared/dispatch-actions";
 import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
-import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 
 const calls = {
 	decorate: 0,
-	inflections: 0,
-	morphemes: 0,
-	morphology: 0,
-	relations: 0,
 	v2: 0,
 };
 
@@ -23,50 +19,10 @@ function okCtx(ctx: unknown) {
 }
 
 mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/propagate-relations",
-	() => ({
-		propagateRelations: (ctx: unknown) => {
-			calls.relations += 1;
-			return okCtx(ctx);
-		},
-	}),
-);
-
-mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations",
-	() => ({
-		propagateMorphologyRelations: (ctx: unknown) => {
-			calls.morphology += 1;
-			return okCtx(ctx);
-		},
-	}),
-);
-
-mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/propagate-morphemes",
-	() => ({
-		propagateMorphemes: (ctx: unknown) => {
-			calls.morphemes += 1;
-			return okCtx(ctx);
-		},
-	}),
-);
-
-mock.module(
 	"../../../../src/commanders/textfresser/commands/generate/steps/decorate-attestation-separability",
 	() => ({
 		decorateAttestationSeparability: (ctx: unknown) => {
 			calls.decorate += 1;
-			return okCtx(ctx);
-		},
-	}),
-);
-
-mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/propagate-inflections",
-	() => ({
-		propagateInflections: (ctx: unknown) => {
-			calls.inflections += 1;
 			return okCtx(ctx);
 		},
 	}),
@@ -145,17 +101,12 @@ mock.module(
 
 function resetCalls() {
 	calls.decorate = 0;
-	calls.inflections = 0;
-	calls.morphemes = 0;
-	calls.morphology = 0;
-	calls.relations = 0;
 	calls.v2 = 0;
 }
 
 function makeCtx(params: {
 	linguisticUnit?: "Lexem" | "Phrasem";
 	posLikeKind?: string;
-	propagationV2Enabled: boolean;
 	targetLanguage?: "German" | "English";
 }): GenerateSectionsResult {
 	const posLikeKind = params.posLikeKind ?? "Noun";
@@ -173,7 +124,6 @@ function makeCtx(params: {
 				posLikeKind,
 				surfaceKind: "Lemma",
 			},
-			propagationV2Enabled: params.propagationV2Enabled,
 		},
 	} as unknown as GenerateSectionsResult;
 }
@@ -181,7 +131,6 @@ function makeCtx(params: {
 function makeCommandInput(params: {
 	linguisticUnit?: "Lexem" | "Phrasem";
 	posLikeKind?: string;
-	propagationV2Enabled: boolean;
 	targetLanguage?: "German" | "English";
 }): CommandInput {
 	const posLikeKind = params.posLikeKind ?? "Noun";
@@ -212,59 +161,19 @@ function makeCommandInput(params: {
 				posLikeKind,
 				surfaceKind: "Lemma",
 			},
-			propagationV2Enabled: params.propagationV2Enabled,
 		},
 	} as unknown as CommandInput;
 }
 
-const MIGRATED_SLICES: ReadonlyArray<{
+const SAMPLE_SLICES: ReadonlyArray<{
 	linguisticUnit: "Lexem" | "Phrasem";
 	posLikeKind: string;
-	sliceKey: string;
+	targetLanguage?: "German" | "English";
 }> = [
-	{
-		linguisticUnit: "Lexem",
-		posLikeKind: "Adjective",
-		sliceKey: "de/lexem/adjective",
-	},
-	{ linguisticUnit: "Lexem", posLikeKind: "Adverb", sliceKey: "de/lexem/adverb" },
-	{ linguisticUnit: "Lexem", posLikeKind: "Article", sliceKey: "de/lexem/article" },
-	{
-		linguisticUnit: "Lexem",
-		posLikeKind: "Conjunction",
-		sliceKey: "de/lexem/conjunction",
-	},
-	{
-		linguisticUnit: "Lexem",
-		posLikeKind: "InteractionalUnit",
-		sliceKey: "de/lexem/interactionalunit",
-	},
-	{ linguisticUnit: "Lexem", posLikeKind: "Noun", sliceKey: "de/lexem/noun" },
-	{ linguisticUnit: "Lexem", posLikeKind: "Particle", sliceKey: "de/lexem/particle" },
-	{
-		linguisticUnit: "Lexem",
-		posLikeKind: "Preposition",
-		sliceKey: "de/lexem/preposition",
-	},
-	{ linguisticUnit: "Lexem", posLikeKind: "Pronoun", sliceKey: "de/lexem/pronoun" },
-	{ linguisticUnit: "Lexem", posLikeKind: "Verb", sliceKey: "de/lexem/verb" },
-	{
-		linguisticUnit: "Phrasem",
-		posLikeKind: "Collocation",
-		sliceKey: "de/phrasem/collocation",
-	},
-	{
-		linguisticUnit: "Phrasem",
-		posLikeKind: "CulturalQuotation",
-		sliceKey: "de/phrasem/culturalquotation",
-	},
-	{
-		linguisticUnit: "Phrasem",
-		posLikeKind: "DiscourseFormula",
-		sliceKey: "de/phrasem/discourseformula",
-	},
-	{ linguisticUnit: "Phrasem", posLikeKind: "Idiom", sliceKey: "de/phrasem/idiom" },
-	{ linguisticUnit: "Phrasem", posLikeKind: "Proverb", sliceKey: "de/phrasem/proverb" },
+	{ linguisticUnit: "Lexem", posLikeKind: "Noun", targetLanguage: "German" },
+	{ linguisticUnit: "Lexem", posLikeKind: "Verb", targetLanguage: "German" },
+	{ linguisticUnit: "Phrasem", posLikeKind: "Idiom", targetLanguage: "German" },
+	{ linguisticUnit: "Lexem", posLikeKind: "Noun", targetLanguage: "English" },
 ];
 
 describe("propagateGeneratedSections", () => {
@@ -279,68 +188,24 @@ describe("propagateGeneratedSections", () => {
 		mock.restore();
 	});
 
-	it("runs legacy v1 chain when kill-switch is false", async () => {
+	it("always routes core propagation through v2 and then decorates", async () => {
 		const { propagateGeneratedSections } = await import(
 			"../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections"
 		);
 
-		const result = propagateGeneratedSections(
-			makeCtx({
-				propagationV2Enabled: false,
-			}),
-		);
-		expect(result.isOk()).toBe(true);
-		expect(calls.relations).toBe(1);
-		expect(calls.morphology).toBe(1);
-		expect(calls.morphemes).toBe(1);
-		expect(calls.decorate).toBe(1);
-		expect(calls.inflections).toBe(1);
-		expect(calls.v2).toBe(0);
-	});
-
-	it("routes every migrated slice to v2 when kill-switch is true", async () => {
-		const { propagateGeneratedSections } = await import(
-			"../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections"
-		);
-
-		for (const slice of MIGRATED_SLICES) {
+		for (const slice of SAMPLE_SLICES) {
 			resetCalls();
 			const result = propagateGeneratedSections(
 				makeCtx({
 					linguisticUnit: slice.linguisticUnit,
 					posLikeKind: slice.posLikeKind,
-					propagationV2Enabled: true,
+					targetLanguage: slice.targetLanguage,
 				}),
 			);
 			expect(result.isOk()).toBe(true);
 			expect(calls.v2).toBe(1);
-			expect(calls.relations).toBe(0);
-			expect(calls.morphology).toBe(0);
-			expect(calls.morphemes).toBe(0);
 			expect(calls.decorate).toBe(1);
-			expect(calls.inflections).toBe(0);
 		}
-	});
-
-	it("falls back to legacy v1 chain for non-migrated slice when kill-switch is true", async () => {
-		const { propagateGeneratedSections } = await import(
-			"../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections"
-		);
-
-		const result = propagateGeneratedSections(
-			makeCtx({
-				posLikeKind: "Noun",
-				propagationV2Enabled: true,
-				targetLanguage: "English",
-			}),
-		);
-		expect(result.isOk()).toBe(true);
-		expect(calls.v2).toBe(0);
-		expect(calls.relations).toBe(1);
-		expect(calls.morphology).toBe(1);
-		expect(calls.morphemes).toBe(1);
-		expect(calls.decorate).toBe(1);
-		expect(calls.inflections).toBe(1);
 	});
 
 	it("v2 failure short-circuits Generate with zero emitted/dispatched actions", async () => {
@@ -359,7 +224,6 @@ describe("propagateGeneratedSections", () => {
 		const result = await generateCommand(
 			makeCommandInput({
 				posLikeKind: "Noun",
-				propagationV2Enabled: true,
 			}),
 		).andThen((actions) => dispatchActions(vam, actions));
 

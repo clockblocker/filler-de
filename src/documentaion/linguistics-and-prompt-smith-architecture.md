@@ -926,9 +926,8 @@ serializeEntry() → markdown string
 VAM dispatch (ProcessMdFile / UpsertMdFile)
     ↓
 Propagation steps:
-    ├─ propagateGeneratedSections (facade switch by `propagationV2Enabled`)
-    ├─ v1 branch: propagateRelations → propagateMorphologyRelations → propagateMorphemes → decorateAttestationSeparability → propagateInflections
-    └─ v2 branch: propagateV2 (strict fail-fast, all-or-nothing action emission)
+    └─ propagateGeneratedSections: propagateV2 (strict fail-fast, all-or-nothing action emission)
+       → decorateAttestationSeparability (source-note post-step)
 ```
 
 ### 4.4 Adding a New Prompt (recipe)
