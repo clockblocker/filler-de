@@ -634,7 +634,7 @@ Prerequisite: Phase 4 assumes Phase 1 contracts and Phase 2 adapters are already
 2. Keep tests green per slice.
 3. Require full sign-off gate per slice before moving to the next slice (batching allowed only under strict criteria below).
 4. Before migrating any non-verb slice, explicitly audit `decorateAttestationSeparability` as no-op/impossible for that slice and record the audit in the PR checklist.
-5. Defer verb slice migration until Book-of-Work item 14 is landed.
+5. BoW item 14 (shared post-propagation decoration step) is landed; verb slice migration can proceed under normal Phase 5 gating.
 6. At 100% coverage, transition in two PRs:
    - PR1: default `propagationV2Enabled=true`, keep kill-switch and v1 code as rollback path.
    - PR2: remove v1 + kill-switch only after soak exit criteria are met.
@@ -643,8 +643,9 @@ Phase 5 runtime source of truth:
 
 1. `V2_MIGRATED_SLICE_KEYS` in `src/commanders/textfresser/commands/generate/steps/propagate-generated-sections.ts`.
 2. As of February 18, 2026: all non-verb `de/lexem/*` and `de/phrasem/*` slices are migrated to `v2`.
-3. `de/lexem/verb` remains on `v1` until BoW item 14 is complete.
-4. Non-verb audit outcome: `decorateAttestationSeparability` remains no-op for migrated non-verb slices; parity is locked by `tests/unit/textfresser/steps/propagate-v2-phase4.test.ts`.
+3. `de/lexem/verb` remains on `v1` until verb slice migration is enabled.
+4. BoW item 14 status: landed on February 18, 2026; `decorateAttestationSeparability` now runs as a shared post-propagation step for both `v1` and `v2`.
+5. Non-verb audit outcome: decoration remains no-op for migrated non-verb slices; parity is locked by `tests/unit/textfresser/steps/propagate-v2-phase4.test.ts`.
 
 #### 16.6.1 Risk x Usage Scoring Rubric
 
@@ -682,7 +683,7 @@ Rollout priority score:
 1. `rolloutPriority = (2 * usageScore) - riskScore`
 2. Sort by `rolloutPriority` descending.
 3. Tie-breakers: lower `riskScore` first, then higher `usageScore`, then lexical slice key.
-4. Override: verb slices stay last until BoW item 14 is complete.
+4. Override: verb slices stay last unless explicitly reprioritized.
 
 #### 16.6.2 Batching Eligibility (Exception Path)
 

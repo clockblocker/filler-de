@@ -316,7 +316,7 @@ describe("propagateGeneratedSections", () => {
 			expect(calls.relations).toBe(0);
 			expect(calls.morphology).toBe(0);
 			expect(calls.morphemes).toBe(0);
-			expect(calls.decorate).toBe(0);
+			expect(calls.decorate).toBe(1);
 			expect(calls.inflections).toBe(0);
 		}
 	});
@@ -363,6 +363,7 @@ describe("propagateGeneratedSections", () => {
 
 		expect(result.isErr()).toBe(true);
 		expect(calls.v2).toBe(1);
+		expect(calls.decorate).toBe(0);
 		expect(serializeCalls).toBe(0);
 		expect(moveCalls).toBe(0);
 		expect(dispatchCalls).toBe(0);

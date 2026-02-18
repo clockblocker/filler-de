@@ -54,7 +54,6 @@ export function propagateLegacyV1(
 	return propagateRelations(ctx)
 		.andThen(propagateMorphologyRelations)
 		.andThen(propagateMorphemes)
-		.andThen(decorateAttestationSeparability)
 		.andThen(propagateInflections);
 }
 
@@ -69,8 +68,8 @@ export function propagateGeneratedSections(
 	ctx: GenerateSectionsResult,
 ): Result<GenerateSectionsResult, CommandError> {
 	if (shouldRouteToV2(ctx)) {
-		return propagateV2(ctx);
+		return propagateV2(ctx).andThen(decorateAttestationSeparability);
 	}
 
-	return propagateLegacyV1(ctx);
+	return propagateLegacyV1(ctx).andThen(decorateAttestationSeparability);
 }

@@ -17,6 +17,11 @@ Track intentionally deferred work here after propagation v2 migration lands.
 11. Add throttling/sampling for repeated propagation-v2 adapter warnings (for example skipped embedded/unparseable wikilinks) to keep logs actionable on large notes.
 12. Define and enforce an explicit v2 fold-stage action-shape contract (allowed scoped payload forms, unsupported forms, and fail-fast behavior), including tests that lock the contract.
 13. If broader compatibility is needed later, add deterministic fold support for `ProcessMdFile { before, after }` and non-null `UpsertMdFile` content with explicit precedence/merge rules.
-14. Extract `decorateAttestationSeparability` into a post-propagation step that runs after either v1 or v2 path. Currently embedded in `propagateLegacyV1` and silently skipped on v2. No-op for noun slice (gated on separable prefixes, verb-specific), but becomes a parity gap when verb slices migrate to v2 in Phase 5.
+
+## Completed
+
+14. Extract `decorateAttestationSeparability` into a post-propagation step that runs after either v1 or v2 path.
+   - Landed on February 18, 2026.
+   - `propagateGeneratedSections` now applies decoration after both route branches.
 
 These items are intentionally deferred from v1 for delivery focus.

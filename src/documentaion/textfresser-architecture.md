@@ -786,13 +786,13 @@ Not all DictEntrySections participate in cross-reference propagation:
 
 **Source**: `src/commanders/textfresser/commands/generate/steps/propagate-generated-sections.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts`, `src/commanders/textfresser/commands/generate/steps/decorate-attestation-separability.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts`, `src/commanders/textfresser/common/target-path-resolver.ts`
 
-The propagation facade (`propagateGeneratedSections`) runs after `generateSections` in the Generate pipeline. In v1 mode it executes `propagateRelations` -> `propagateMorphologyRelations` -> `propagateMorphemes` -> `decorateAttestationSeparability` -> `propagateInflections`; in v2 mode it routes to `propagateV2`. `propagateRelations` uses the raw `relations` output captured during section generation (not re-parsed from markdown).
+The propagation facade (`propagateGeneratedSections`) runs after `generateSections` in the Generate pipeline. Core propagation is selected by route (`v1` chain: `propagateRelations` -> `propagateMorphologyRelations` -> `propagateMorphemes` -> `propagateInflections`; `v2` chain: `propagateV2`), and then `decorateAttestationSeparability` runs as a shared post-propagation source-note step for both paths. `propagateRelations` uses the raw `relations` output captured during section generation (not re-parsed from markdown).
 
 Routing source of truth is `V2_MIGRATED_SLICE_KEYS` in `propagate-generated-sections.ts`.
 As of February 18, 2026:
 - all non-verb `de/lexem/*` slices route to `v2`
 - all `de/phrasem/*` slices route to `v2`
-- `de/lexem/verb` stays on `v1` until BoW item 14 is resolved
+- `de/lexem/verb` currently stays on `v1` until dedicated verb migration is enabled
 
 Both `propagateRelations` and `propagateInflections` use a **shared path resolver** (`resolveTargetPath`) that performs two-source lookup with healing:
 
