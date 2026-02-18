@@ -1,7 +1,6 @@
 import { ok, type Result } from "neverthrow";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
 import {
 	buildPropagationActionPair,
@@ -10,6 +9,8 @@ import {
 } from "../../../common/target-path-resolver";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
+import { buildSectionMarker } from "../../../domain/dict-note/internal/constants";
+import { serializeDictNote } from "../../../domain/dict-note/serialize-dict-note";
 import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
 import {
 	type MorphemeItem,
@@ -219,7 +220,7 @@ export function propagateMorphologyRelations(
 	const sourceLemma = ctx.textfresserState.latestLemmaResult.lemma;
 	const sectionCssSuffix = cssSuffixFor[DictSectionKind.Morphology];
 	const sectionTitle = TitleReprFor[DictSectionKind.Morphology][targetLang];
-	const sectionMarker = `<span class="entry_section_title entry_section_title_${sectionCssSuffix}">${sectionTitle}</span>`;
+	const sectionMarker = buildSectionMarker(sectionCssSuffix, sectionTitle);
 	const tagsCssSuffix = cssSuffixFor[DictSectionKind.Tags];
 	const tagsTitle = TitleReprFor[DictSectionKind.Tags][targetLang];
 
@@ -317,14 +318,7 @@ export function propagateMorphologyRelations(
 								});
 							}
 
-							const { body, meta } =
-								dictNoteHelper.serialize(existingEntries);
-							if (Object.keys(meta).length > 0) {
-								return noteMetadataHelper.upsert(meta)(
-									body,
-								) as string;
-							}
-							return body;
+							return serializeDictNote(existingEntries);
 						}
 
 						const existingIds = existingEntries.map(
@@ -363,16 +357,10 @@ export function propagateMorphologyRelations(
 							sections,
 						};
 
-						const { body, meta } = dictNoteHelper.serialize([
+						return serializeDictNote([
 							...existingEntries,
 							newEntry,
 						]);
-						if (Object.keys(meta).length > 0) {
-							return noteMetadataHelper.upsert(meta)(
-								body,
-							) as string;
-						}
-						return body;
 					};
 
 		propagationActions.push(...resolved.healingActions);

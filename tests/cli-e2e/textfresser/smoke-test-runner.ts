@@ -39,15 +39,15 @@ interface TestWord {
 }
 
 const TEST_WORDS: TestWord[] = [
-	{ surface: "Fahrer", sentenceIndex: 0, expectedLemma: "Fahrer", pattern: "Derivation from fahren" },
-	{ surface: "Abfahrt", sentenceIndex: 0, expectedLemma: "Abfahrt", pattern: "Compound/prefix derivation" },
-	{ surface: "Unterschrift", sentenceIndex: 1, expectedLemma: "Unterschrift", pattern: "Noun from unterschreiben" },
-	{ surface: "unterschreibt", sentenceIndex: 1, expectedLemma: "unterschreiben", pattern: "Verb conjugated" },
-	{ surface: "Bauarbeiter", sentenceIndex: 2, expectedLemma: "Bauarbeiter", pattern: "Compound word" },
-	{ surface: "Neubau", sentenceIndex: 2, expectedLemma: "Neubau", pattern: "Compound (Neu+Bau)" },
-	{ surface: "Vorstellung", sentenceIndex: 3, expectedLemma: "Vorstellung", pattern: "Sep verb derivation" },
-	{ surface: "Zusammenarbeit", sentenceIndex: 4, expectedLemma: "Zusammenarbeit", pattern: "Compound" },
-	{ surface: "Arbeit", sentenceIndex: 4, expectedLemma: "Arbeit", pattern: "Root noun" },
+	{ expectedLemma: "Fahrer", pattern: "Derivation from fahren", sentenceIndex: 0, surface: "Fahrer" },
+	{ expectedLemma: "Abfahrt", pattern: "Compound/prefix derivation", sentenceIndex: 0, surface: "Abfahrt" },
+	{ expectedLemma: "Unterschrift", pattern: "Noun from unterschreiben", sentenceIndex: 1, surface: "Unterschrift" },
+	{ expectedLemma: "unterschreiben", pattern: "Verb conjugated", sentenceIndex: 1, surface: "unterschreibt" },
+	{ expectedLemma: "Bauarbeiter", pattern: "Compound word", sentenceIndex: 2, surface: "Bauarbeiter" },
+	{ expectedLemma: "Neubau", pattern: "Compound (Neu+Bau)", sentenceIndex: 2, surface: "Neubau" },
+	{ expectedLemma: "Vorstellung", pattern: "Sep verb derivation", sentenceIndex: 3, surface: "Vorstellung" },
+	{ expectedLemma: "Zusammenarbeit", pattern: "Compound", sentenceIndex: 4, surface: "Zusammenarbeit" },
+	{ expectedLemma: "Arbeit", pattern: "Root noun", sentenceIndex: 4, surface: "Arbeit" },
 ];
 
 interface WordResult {
@@ -156,19 +156,19 @@ async function main() {
 		console.log(`    Pattern: ${word.pattern}`);
 
 		const result: WordResult = {
-			surface: word.surface,
-			sentenceIndex: word.sentenceIndex,
-			expectedLemma: word.expectedLemma,
-			pattern: word.pattern,
-			lemmaOk: false,
-			resolvedLemma: null,
-			pos: null,
-			linguisticUnit: null,
-			wikilinkInserted: false,
-			nestedWikilinks: false,
 			entryCreated: false,
 			entryPath: null,
 			errors: [],
+			expectedLemma: word.expectedLemma,
+			lemmaOk: false,
+			linguisticUnit: null,
+			nestedWikilinks: false,
+			pattern: word.pattern,
+			pos: null,
+			resolvedLemma: null,
+			sentenceIndex: word.sentenceIndex,
+			surface: word.surface,
+			wikilinkInserted: false,
 		};
 
 		// Snapshot entries before this word

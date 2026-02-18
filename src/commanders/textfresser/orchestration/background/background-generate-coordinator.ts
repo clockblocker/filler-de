@@ -14,6 +14,7 @@ import {
 	incrementPending,
 } from "../../../../utils/idle-tracker";
 import { logger } from "../../../../utils/logger";
+import { sleep } from "../../../../utils/sleep";
 import type { LemmaResult } from "../../commands/lemma/types";
 import type { CommandError, CommandInput } from "../../commands/types";
 import { buildPolicyDestinationPath } from "../../common/lemma-link-routing";
@@ -241,7 +242,7 @@ export function createBackgroundGenerateCoordinator(params: {
 			return;
 		}
 
-		await new Promise((resolve) => setTimeout(resolve, 300));
+		await sleep(300);
 
 		const currentFile = vam.mdPwd();
 		if (
