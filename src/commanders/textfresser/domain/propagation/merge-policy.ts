@@ -9,6 +9,16 @@ import type {
 	SectionMutation,
 	TagsSectionDto,
 } from "./types";
+import {
+	dedupeByKey,
+	inflectionItemIdentityKey,
+	morphologyBacklinkIdentityKey,
+	morphologyEquationIdentityKey,
+	normalizeCaseFold,
+	normalizeSpace,
+	normalizeTagToken,
+	relationItemIdentityKey,
+} from "./normalize";
 
 export type MergeOutcome<TSection> = {
 	section: TSection;
@@ -50,52 +60,6 @@ export type ApplySectionMutationResult =
 	| MergeOutcome<InflectionSectionDto>
 	| MergeOutcome<TagsSectionDto>;
 
-function normalizeSpace(value: string): string {
-	return value.trim().replace(/\s+/g, " ");
-}
-
-function normalizeCaseFold(value: string): string {
-	return normalizeSpace(value).toLowerCase();
-}
-
-function normalizeTagToken(value: string): string {
-	return normalizeCaseFold(value).replace(/\s+/g, "-");
-}
-
-function dedupeByKey<T>(
-	items: ReadonlyArray<T>,
-	getKey: (item: T) => string,
-): T[] {
-	const seen = new Set<string>();
-	const deduped: T[] = [];
-	for (const item of items) {
-		const key = getKey(item);
-		if (seen.has(key)) {
-			continue;
-		}
-		seen.add(key);
-		deduped.push(item);
-	}
-	return deduped;
-}
-
-function relationItemKey(item: RelationItemDto): string {
-	return `${normalizeCaseFold(item.relationKind)}::${normalizeCaseFold(item.targetLemma)}`;
-}
-
-function backlinkKey(item: MorphologyBacklinkDto): string {
-	return `${item.relationType}::${normalizeCaseFold(item.value)}`;
-}
-
-function equationKey(item: MorphologyEquationDto): string {
-	const lhs = item.lhsParts.map((part) => normalizeCaseFold(part)).join("+");
-	return `${lhs}=>${normalizeCaseFold(item.rhs)}`;
-}
-
-function inflectionItemKey(item: InflectionItemDto): string {
-	return normalizeCaseFold(item.form);
-}
-
 function dedupeTags(tags: ReadonlyArray<string>): string[] {
 	const deduped = dedupeByKey(tags, normalizeTagToken);
 	return deduped.map((tag) => normalizeTagToken(tag));
@@ -112,7 +76,7 @@ function applyRelationMutation(
 	};
 	const nextItems = dedupeByKey(
 		[...section.items, candidate],
-		relationItemKey,
+		relationItemIdentityKey,
 	);
 	return {
 		changed: nextItems.length !== section.items.length,
@@ -134,7 +98,7 @@ function applyMorphologyMutation(
 		};
 		const nextBacklinks = dedupeByKey(
 			[...section.backlinks, candidate],
-			backlinkKey,
+			morphologyBacklinkIdentityKey,
 		);
 		return {
 			changed: nextBacklinks.length !== section.backlinks.length,
@@ -151,7 +115,7 @@ function applyMorphologyMutation(
 	};
 	const nextEquations = dedupeByKey(
 		[...section.equations, candidate],
-		equationKey,
+		morphologyEquationIdentityKey,
 	);
 	return {
 		changed: nextEquations.length !== section.equations.length,
@@ -169,7 +133,7 @@ function applyInflectionMutation(
 	const targetFormKey = normalizeCaseFold(mutation.headerTemplate);
 	let matched = false;
 	const nextItems = section.items.map((item) => {
-		if (inflectionItemKey(item) !== targetFormKey) {
+		if (inflectionItemIdentityKey(item) !== targetFormKey) {
 			return item;
 		}
 		matched = true;

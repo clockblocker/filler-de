@@ -481,8 +481,10 @@ Serializer output is canonical and deterministic:
 3. Normalized whitespace and separators.
 4. Stable hashtag and wikilink formatting for typed sections.
 5. Raw passthrough sections are byte-preserving when untouched by mutations.
+6. Raw passthrough sections are not normalized in Phase 2 (including line endings, whitespace, and blank lines).
 
 Invariant: parse -> serialize -> parse yields equivalent DTO state.
+Phase 2 characterization baseline for typed sections is DTO semantic equivalence plus deterministic canonical v2 serializer output, not byte-for-byte parity.
 
 Canonicalization is expected and accepted on first touch for typed sections.
 
@@ -595,11 +597,12 @@ Recommended contract surface:
 ### 16.3 Phase 2 - Adapter Layer
 
 1. Build typed parser/serializer adapters needed by v2 apply.
-2. Add characterization tests preserving current output where expected.
+2. Add characterization tests using this baseline: typed sections assert DTO semantic equivalence + deterministic canonical v2 serializer output; raw passthrough asserts byte-preserving output.
 3. Keep Wikilink adapter scope minimal for v2 migration: support basic `WikilinkDto { target, displayText? }` only where required by parser/serializer boundaries.
-4. Explicitly defer suffix-decoration parsing/typing to Post-v1 Book of Work (TBD), unless a concrete Phase 2 blocker is discovered.
-5. Canonicalize typed Morphology backlink output (normalize surrounding whitespace in wikilink values) so semantically equal backlinks serialize identically.
-6. Replace Phase 1 `JSON.stringify`-based inflection change detection with explicit semantic diffing in adapter/apply boundary if profiling or readability warrants it.
+4. Exotic wikilinks (anchors, embeds, alias suffix decorations) are passthrough in Phase 2; when target extraction is unparseable for intent-building, log warning and skip that specific intent (not a hard run error).
+5. Explicitly defer suffix-decoration parsing/typing to Post-v1 Book of Work (TBD), unless a concrete Phase 2 blocker is discovered.
+6. Canonicalize typed Morphology backlink output (normalize surrounding whitespace in wikilink values) so semantically equal backlinks serialize identically.
+7. Defer semantic inflection diffing work by default; keep current Phase 1 diffing unless concrete readability/performance issues are observed.
 
 ### 16.4 Phase 3 - Orchestrator Skeleton
 
