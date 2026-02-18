@@ -86,9 +86,7 @@ export async function getExisingOrCreatedFileInWorterDir(
 				`Worter/Ordered/${first}/${prefix}/${shard}`
 			);
 
-			console.log('folderPath before', folderPath);
 			const folder = await ensureFolderExists(vault, folderPath);
-			console.log('folderPath after', folder, folder?.path);
 
 			const cleanFileName = originalName.replace(/[\\/:*?"<>|]/g, '');
 			filePath = `${folder.path}/${cleanFileName}.md`;

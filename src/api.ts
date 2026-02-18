@@ -1,15 +1,12 @@
-import { z } from 'zod';
-
 import {
 	GoogleGenerativeAI,
 	GenerationConfig,
-	HarmCategory,
-	HarmBlockThreshold,
-	ResponseSchema,
 } from '@google/generative-ai';
 import { TextEaterSettings } from './types';
-import { TFile, Vault, Notice, TAbstractFile, requestUrl } from 'obsidian';
+import { Vault, Notice } from 'obsidian';
 import { prompts } from './prompts';
+
+const API_TIMEOUT_MS = 30_000;
 
 export class ApiService {
 	private genAI: GoogleGenerativeAI | null = null;
@@ -21,9 +18,7 @@ export class ApiService {
 		private vault: Vault
 	) {
 		try {
-			if (this.settings.apiProvider === 'google') {
-				this.genAI = new GoogleGenerativeAI(this.settings.googleApiKey);
-			}
+			this.genAI = new GoogleGenerativeAI(this.settings.googleApiKey);
 		} catch (error) {
 			new Notice(`Error initializing API service: ${error.message}`);
 		}
@@ -34,17 +29,13 @@ export class ApiService {
 		userInput: string,
 		responseSchema?: boolean
 	): Promise<string> {
-		const startTime = performance.now();
 		try {
 			let response: string | null = null;
 			// Remove leading tab characters from the system prompt
 			systemPrompt = systemPrompt.replace(/^\t+/gm, '');
 
-			if (this.settings.apiProvider !== 'google') {
-				if (!this.settings.googleApiKey) {
-					throw new Error('Google API key not configured.');
-				}
-				throw new Error('API provider not configured correctly.');
+			if (!this.settings.googleApiKey) {
+				throw new Error('Google API key not configured.');
 			}
 
 			if (!this.genAI) {
@@ -80,14 +71,20 @@ export class ApiService {
 
 			const chatSession = this.chatSessions[chatKey];
 
-			const result = await chatSession.sendMessage(userInput);
+			const result = await Promise.race([
+				chatSession.sendMessage(userInput),
+				new Promise<never>((_, reject) =>
+					setTimeout(
+						() => reject(new Error('API request timed out')),
+						API_TIMEOUT_MS
+					)
+				),
+			]);
 			response = result.response.text();
 
 			const logResponse = response === null ? '' : response;
 			return logResponse;
 		} catch (error: any) {
-			const endTime = performance.now();
-			const duration = endTime - startTime;
 			throw new Error(error.message);
 		}
 	}

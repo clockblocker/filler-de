@@ -6,6 +6,7 @@ export default async function insertReplyFromKeymaker(
 	editor: Editor,
 	selection: string
 ) {
+	const notice = new Notice('Consulting Keymaker...', 0);
 	try {
 		const response = await plugin.apiService.consultKeymaker(selection);
 		if (response) {
@@ -13,5 +14,7 @@ export default async function insertReplyFromKeymaker(
 		}
 	} catch (error) {
 		new Notice(`Error: ${error.message}`);
+	} finally {
+		notice.hide();
 	}
 }

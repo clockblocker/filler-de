@@ -7,6 +7,7 @@ export default async function normalizeSelection(
 	file: TFile,
 	selection: string
 ) {
+	const notice = new Notice('Normalizing selection...', 0);
 	try {
 		const response = await plugin.apiService.normalize(selection);
 		if (response) {
@@ -14,5 +15,7 @@ export default async function normalizeSelection(
 		}
 	} catch (error) {
 		new Notice(`Error: ${error.message}`);
+	} finally {
+		notice.hide();
 	}
 }

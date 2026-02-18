@@ -79,6 +79,7 @@ export default async function fillTemplate(
 ) {
 	const word = file.basename;
 
+	const notice = new Notice('Generating dictionary entry...', 0);
 	try {
 		const [dictionaryEntry, froms, morphems, valence] = await Promise.all([
 			plugin.apiService.generateContent(
@@ -127,6 +128,8 @@ export default async function fillTemplate(
 		}
 	} catch (error) {
 		new Notice(`Error: ${error.message}`);
+	} finally {
+		notice.hide();
 	}
 }
 
