@@ -566,18 +566,23 @@ Do not attempt one-shot migration.
 
 Do this before implementing propagation v2 logic.
 
-1. Define a minimal `PropagationVaultPort` contract for v2 orchestrator needs.
-2. Map each required method to existing VAM APIs.
+1. Define a minimal propagation IO contract for v2 orchestrator needs (`PropagationVaultPort` + Librarian lookup port).
+2. Map each required method to existing VAM/Librarian APIs.
 3. Mark each capability as `covered` or `gap`.
-4. Implement missing VAM methods only for confirmed gaps.
+4. Implement missing VAM/Librarian methods only for confirmed gaps.
 5. Lock Phase 0 output as a short capability matrix in this section or an appendix.
+
+Phase 0 output is tracked in:
+
+- [`propagation-v2-phase0-capability-audit.md`](./propagation-v2-phase0-capability-audit.md)
 
 Recommended contract surface:
 
 1. Read existing note content by split path (or empty when missing).
-2. Resolve candidate target note paths by basename/policy.
-3. Emit upsert/process actions for one target note.
-4. Expose path-existence checks needed by resolver policy.
+2. Bulk read resolved target note paths with explicit per-path `Found`/`Missing`/`Error` outcomes (`readManyMdFiles`).
+3. Resolve candidate target note paths by basename/policy using both VAM lookups and Librarian leaf-core-name lookup.
+4. Emit upsert/process actions for one target note.
+5. Expose path-existence checks needed by resolver policy.
 
 ### 16.2 Phase 1 - Contracts and Guardrails
 
