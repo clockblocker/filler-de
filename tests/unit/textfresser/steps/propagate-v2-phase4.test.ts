@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
-import { propagateLegacyV1 } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections";
+import {
+	propagateGeneratedSections,
+	propagateLegacyV1,
+} from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections";
 import {
 	foldScopedActionsToSingleWritePerTarget,
 	propagateV2,
@@ -333,7 +336,10 @@ function makePhase5NonVerbFixtureCtx(
 	} as unknown as GenerateSectionsResult;
 }
 
-function makeVerbFixtureCtx(vault: InMemoryVault): GenerateSectionsResult {
+function makeVerbFixtureCtx(
+	vault: InMemoryVault,
+	params?: { propagationV2Enabled?: boolean },
+): GenerateSectionsResult {
 	return {
 		actions: [],
 		allEntries: [],
@@ -390,7 +396,7 @@ function makeVerbFixtureCtx(vault: InMemoryVault): GenerateSectionsResult {
 				surfaceKind: "Lemma",
 			},
 			lookupInLibrary: () => [],
-			propagationV2Enabled: true,
+			propagationV2Enabled: params?.propagationV2Enabled ?? true,
 			vam: {
 				findByBasename: makeFindByBasename(vault),
 			},
@@ -741,6 +747,47 @@ describe("propagation v2 phase 5 non-verb slices", () => {
 });
 
 describe("propagation v2 phase 5 verb slice", () => {
+	it("keeps source-note separability-decoration parity between v1/v2 wrapper routes", async () => {
+		const sourcePath = makeSplitPath({
+			basename: "Reading",
+			surfaceKind: "lemma",
+			unitKind: "lexem",
+		});
+		const sourceContent =
+			"Beide Spannen bleiben erhalten: [[Aufpassen|Pass]] ... [[Aufpassen|auf]].";
+		const legacyVault = createSeedVault();
+		const v2Vault = createSeedVault();
+		setFile(legacyVault, { content: sourceContent, splitPath: sourcePath });
+		setFile(v2Vault, { content: sourceContent, splitPath: sourcePath });
+
+		const legacyResult = propagateGeneratedSections(
+			makeVerbFixtureCtx(legacyVault, { propagationV2Enabled: false }),
+		);
+		const v2Result = propagateGeneratedSections(
+			makeVerbFixtureCtx(v2Vault, { propagationV2Enabled: true }),
+		);
+
+		expect(legacyResult.isOk()).toBe(true);
+		expect(v2Result.isOk()).toBe(true);
+		if (legacyResult.isErr() || v2Result.isErr()) {
+			return;
+		}
+
+		await applyActionsToVault({
+			actions: legacyResult.value.actions,
+			vault: legacyVault,
+		});
+		await applyActionsToVault({
+			actions: v2Result.value.actions,
+			vault: v2Vault,
+		});
+
+		const sourceKey = keyFor(sourcePath);
+		expect(v2Vault.get(sourceKey)?.content).toEqual(
+			legacyVault.get(sourceKey)?.content,
+		);
+	});
+
 	it("keeps semantic DTO parity with legacy v1 on curated verb fixture", async () => {
 		const legacyVault = createSeedVault();
 		const v2Vault = createSeedVault();
