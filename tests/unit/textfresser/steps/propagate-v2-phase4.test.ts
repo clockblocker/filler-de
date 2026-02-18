@@ -1,9 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
-import {
-	propagateGeneratedSections,
-	propagateLegacyV1,
-} from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections";
+import { propagateGeneratedSections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections";
+import { propagateInflections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-inflections";
+import { propagateMorphemes } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-morphemes";
+import { propagateMorphologyRelations } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations";
+import { propagateRelations } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-relations";
 import {
 	foldScopedActionsToSingleWritePerTarget,
 	propagateV2,
@@ -516,12 +517,23 @@ function buildProcessWriteCountByTarget(
 	return counts;
 }
 
+function runLegacyPropagationForParity(
+	ctx: GenerateSectionsResult,
+) {
+	return propagateRelations(ctx)
+		.andThen(propagateMorphologyRelations)
+		.andThen(propagateMorphemes)
+		.andThen(propagateInflections);
+}
+
 describe("propagation v2 phase 4 noun slice", () => {
 	it("keeps semantic DTO parity with legacy v1 on curated noun fixture", async () => {
 		const legacyVault = createSeedVault();
 		const v2Vault = createSeedVault();
 
-		const legacyResult = propagateLegacyV1(makeNounFixtureCtx(legacyVault));
+		const legacyResult = runLegacyPropagationForParity(
+			makeNounFixtureCtx(legacyVault),
+		);
 		const v2Result = propagateV2(makeNounFixtureCtx(v2Vault));
 
 		expect(legacyResult.isOk()).toBe(true);
@@ -640,7 +652,9 @@ describe("propagation v2 phase 4 noun slice", () => {
 		const legacyVault = createSeedVault();
 		const v2Vault = createSeedVault();
 
-		const legacyResult = propagateLegacyV1(makeNounFixtureCtx(legacyVault));
+		const legacyResult = runLegacyPropagationForParity(
+			makeNounFixtureCtx(legacyVault),
+		);
 		const v2Result = propagateV2(makeNounFixtureCtx(v2Vault));
 
 		expect(legacyResult.isOk()).toBe(true);
@@ -669,7 +683,7 @@ describe("propagation v2 phase 5 non-verb slices", () => {
 		for (const slice of PHASE5_NON_VERB_SLICES) {
 			const legacyVault = createSeedVault();
 			const v2Vault = createSeedVault();
-			const legacyResult = propagateLegacyV1(
+			const legacyResult = runLegacyPropagationForParity(
 				makePhase5NonVerbFixtureCtx(legacyVault, slice),
 			);
 			const v2Result = propagateV2(makePhase5NonVerbFixtureCtx(v2Vault, slice));
@@ -776,7 +790,9 @@ describe("propagation v2 phase 5 verb slice", () => {
 		const legacyVault = createSeedVault();
 		const v2Vault = createSeedVault();
 
-		const legacyResult = propagateLegacyV1(makeVerbFixtureCtx(legacyVault));
+		const legacyResult = runLegacyPropagationForParity(
+			makeVerbFixtureCtx(legacyVault),
+		);
 		const v2Result = propagateV2(makeVerbFixtureCtx(v2Vault));
 
 		expect(legacyResult.isOk()).toBe(true);
@@ -841,7 +857,9 @@ describe("propagation v2 phase 5 verb slice", () => {
 		const legacyVault = createSeedVault();
 		const v2Vault = createSeedVault();
 
-		const legacyResult = propagateLegacyV1(makeVerbFixtureCtx(legacyVault));
+		const legacyResult = runLegacyPropagationForParity(
+			makeVerbFixtureCtx(legacyVault),
+		);
 		const v2Result = propagateV2(makeVerbFixtureCtx(v2Vault));
 
 		expect(legacyResult.isOk()).toBe(true);
