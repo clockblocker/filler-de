@@ -1,4 +1,5 @@
 import type { Result } from "neverthrow";
+import { LANGUAGE_ISO_CODE } from "../../../../../linguistics/common/enums/core";
 import { decorateAttestationSeparability } from "./decorate-attestation-separability";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
@@ -8,16 +9,45 @@ import { propagateMorphologyRelations } from "./propagate-morphology-relations";
 import { propagateRelations } from "./propagate-relations";
 import { propagateV2 } from "./propagate-v2";
 
-export function propagateGeneratedSections(
+const V2_MIGRATED_SLICE_KEYS = new Set<string>(["de/lexem/noun"]);
+
+function normalizeSliceSegment(value: string): string {
+	return value.trim().toLowerCase();
+}
+
+export function buildPropagationSliceKey(
+	ctx: GenerateSectionsResult,
+): string {
+	const lemmaResult = ctx.textfresserState.latestLemmaResult;
+	const lang = LANGUAGE_ISO_CODE[ctx.textfresserState.languages.target];
+	const unit = normalizeSliceSegment(lemmaResult.linguisticUnit);
+	const pos = normalizeSliceSegment(lemmaResult.posLikeKind);
+	return `${lang}/${unit}/${pos}`;
+}
+
+export function propagateLegacyV1(
 	ctx: GenerateSectionsResult,
 ): Result<GenerateSectionsResult, CommandError> {
-	if (ctx.textfresserState.propagationV2Enabled) {
-		return propagateV2(ctx);
-	}
-
 	return propagateRelations(ctx)
 		.andThen(propagateMorphologyRelations)
 		.andThen(propagateMorphemes)
 		.andThen(decorateAttestationSeparability)
 		.andThen(propagateInflections);
+}
+
+function shouldRouteToV2(ctx: GenerateSectionsResult): boolean {
+	if (!ctx.textfresserState.propagationV2Enabled) {
+		return false;
+	}
+	return V2_MIGRATED_SLICE_KEYS.has(buildPropagationSliceKey(ctx));
+}
+
+export function propagateGeneratedSections(
+	ctx: GenerateSectionsResult,
+): Result<GenerateSectionsResult, CommandError> {
+	if (shouldRouteToV2(ctx)) {
+		return propagateV2(ctx);
+	}
+
+	return propagateLegacyV1(ctx);
 }

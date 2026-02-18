@@ -152,14 +152,38 @@ function resetCalls() {
 	calls.v2 = 0;
 }
 
-function makeCtx(propagationV2Enabled: boolean): GenerateSectionsResult {
+function makeCtx(params: {
+	posLikeKind?: "Noun" | "Verb";
+	propagationV2Enabled: boolean;
+	targetLanguage?: "German" | "English";
+}): GenerateSectionsResult {
+	const posLikeKind = params.posLikeKind ?? "Noun";
+	const targetLanguage = params.targetLanguage ?? "German";
 	return {
 		actions: [],
-		textfresserState: { propagationV2Enabled },
+		textfresserState: {
+			languages: { known: "English", target: targetLanguage },
+			latestLemmaResult: {
+				attestation: { source: { ref: "![[src#^1|^]]" } },
+				disambiguationResult: null,
+				lemma: "Haus",
+				linguisticUnit: "Lexem",
+				posLikeKind,
+				surfaceKind: "Lemma",
+			},
+			propagationV2Enabled: params.propagationV2Enabled,
+		},
 	} as unknown as GenerateSectionsResult;
 }
 
-function makeCommandInput(propagationV2Enabled: boolean): CommandInput {
+function makeCommandInput(params: {
+	posLikeKind?: "Noun" | "Verb";
+	propagationV2Enabled: boolean;
+	targetLanguage?: "German" | "English";
+}): CommandInput {
+	const posLikeKind = params.posLikeKind ?? "Noun";
+	const targetLanguage = params.targetLanguage ?? "German";
+
 	return {
 		commandContext: {
 			activeFile: {
@@ -175,7 +199,16 @@ function makeCommandInput(propagationV2Enabled: boolean): CommandInput {
 		},
 		resultingActions: [],
 		textfresserState: {
-			propagationV2Enabled,
+			languages: { known: "English", target: targetLanguage },
+			latestLemmaResult: {
+				attestation: { source: { ref: "![[src#^1|^]]" } },
+				disambiguationResult: null,
+				lemma: "Haus",
+				linguisticUnit: "Lexem",
+				posLikeKind,
+				surfaceKind: "Lemma",
+			},
+			propagationV2Enabled: params.propagationV2Enabled,
 		},
 	} as unknown as CommandInput;
 }
@@ -192,12 +225,16 @@ describe("propagateGeneratedSections", () => {
 		mock.restore();
 	});
 
-	it("runs legacy v1 chain when propagationV2Enabled is false", async () => {
+	it("runs legacy v1 chain when kill-switch is false", async () => {
 		const { propagateGeneratedSections } = await import(
 			"../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections"
 		);
 
-		const result = propagateGeneratedSections(makeCtx(false));
+		const result = propagateGeneratedSections(
+			makeCtx({
+				propagationV2Enabled: false,
+			}),
+		);
 		expect(result.isOk()).toBe(true);
 		expect(calls.relations).toBe(1);
 		expect(calls.morphology).toBe(1);
@@ -207,12 +244,17 @@ describe("propagateGeneratedSections", () => {
 		expect(calls.v2).toBe(0);
 	});
 
-	it("runs v2 path when propagationV2Enabled is true", async () => {
+	it("routes migrated noun slice to v2 when kill-switch is true", async () => {
 		const { propagateGeneratedSections } = await import(
 			"../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections"
 		);
 
-		const result = propagateGeneratedSections(makeCtx(true));
+		const result = propagateGeneratedSections(
+			makeCtx({
+				posLikeKind: "Noun",
+				propagationV2Enabled: true,
+			}),
+		);
 		expect(result.isOk()).toBe(true);
 		expect(calls.v2).toBe(1);
 		expect(calls.relations).toBe(0);
@@ -220,6 +262,26 @@ describe("propagateGeneratedSections", () => {
 		expect(calls.morphemes).toBe(0);
 		expect(calls.decorate).toBe(0);
 		expect(calls.inflections).toBe(0);
+	});
+
+	it("falls back to legacy v1 chain for non-migrated slice when kill-switch is true", async () => {
+		const { propagateGeneratedSections } = await import(
+			"../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections"
+		);
+
+		const result = propagateGeneratedSections(
+			makeCtx({
+				posLikeKind: "Verb",
+				propagationV2Enabled: true,
+			}),
+		);
+		expect(result.isOk()).toBe(true);
+		expect(calls.v2).toBe(0);
+		expect(calls.relations).toBe(1);
+		expect(calls.morphology).toBe(1);
+		expect(calls.morphemes).toBe(1);
+		expect(calls.decorate).toBe(1);
+		expect(calls.inflections).toBe(1);
 	});
 
 	it("v2 failure short-circuits Generate with zero emitted/dispatched actions", async () => {
@@ -235,9 +297,12 @@ describe("propagateGeneratedSections", () => {
 			},
 		} as unknown as VaultActionManager;
 
-		const result = await generateCommand(makeCommandInput(true)).andThen(
-			(actions) => dispatchActions(vam, actions),
-		);
+		const result = await generateCommand(
+			makeCommandInput({
+				posLikeKind: "Noun",
+				propagationV2Enabled: true,
+			}),
+		).andThen((actions) => dispatchActions(vam, actions));
 
 		expect(result.isErr()).toBe(true);
 		expect(calls.v2).toBe(1);

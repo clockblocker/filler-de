@@ -613,13 +613,18 @@ Recommended contract surface:
 
 ### 16.5 Phase 4 - First Vertical Slice
 
+Prerequisite: Phase 4 assumes Phase 1 contracts and Phase 2 adapters are already landed.
+
 1. Switch routing to per-slice in the propagation facade.
 2. Keep `propagationV2Enabled` as a global kill-switch: when `false`, always route to `v1`.
 3. Seed routing map with one migrated slice: `de/lexem/noun -> v2`; all non-migrated slices route to `v1`.
+   - Routing key is source-slice only: `(lang, unit, pos)`.
+   - `surfaceKind` is intentionally excluded from Phase 4 routing decisions.
 4. Lock first-slice operation scope:
    - Required: `Relation.addRelation`, `Inflection.upsertInflection`.
    - Required when current noun `v1` behavior emits them: `Morphology.addBacklink`, `Morphology.addEquation`.
    - Include `Tags.addTags` only if current noun `v1` propagation emits tag side-effects; do not add new tag propagation behavior in v2 slice 1.
+   - For noun slice parity in Phase 4, `Inflection.upsertInflection` materializes as tags updates on inflected-target entries (current `v1` behavior), not as propagated `Inflection` sections on targets.
    - Keep `decorateAttestationSeparability` out of v2 slice scope (source-note formatting concern, not target-note propagation).
 5. Verify parity and idempotency against current flow using the Phase 4 sign-off gate.
 
@@ -665,7 +670,7 @@ Do not mix v1 and v2 propagation writes within a single Generate invocation.
 Primary gate (must pass):
 
 1. Semantic DTO parity between `v1` and `v2` on curated noun fixtures.
-2. Idempotency: second `v2` run over same inputs emits no mutations.
+2. Idempotency: second `v2` run over same inputs emits no changed-target writes (zero effective target writes).
 3. Invariants: strict fail-fast/all-or-nothing emission, and one write action per target note.
 
 Secondary gate (should pass):
