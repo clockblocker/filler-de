@@ -596,6 +596,8 @@ Recommended contract surface:
 
 1. Build typed parser/serializer adapters needed by v2 apply.
 2. Add characterization tests preserving current output where expected.
+3. Canonicalize typed Morphology backlink output (normalize surrounding whitespace in wikilink values) so semantically equal backlinks serialize identically.
+4. Replace Phase 1 `JSON.stringify`-based inflection change detection with explicit semantic diffing in adapter/apply boundary if profiling or readability warrants it.
 
 ### 16.4 Phase 3 - Orchestrator Skeleton
 
