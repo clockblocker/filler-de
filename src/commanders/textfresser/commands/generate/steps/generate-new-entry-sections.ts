@@ -265,6 +265,17 @@ export async function generateNewEntrySections(
 	const settled = await Promise.allSettled(tasks);
 
 	const morphemOutput = unwrapOptional(settled[0], "Morphem", failedSections);
+	if (shouldGenerateMorphem && !morphemOutput) {
+		logger.warn(
+			"[generateSections] Morphem failed; skipping dependent outputs (Morphology section + morpheme/morphology propagation)",
+			{
+				lemma: lemmaResult.lemma,
+				willSkipMorphologySection: sectionSet.has(
+					DictSectionKind.Morphology,
+				),
+			},
+		);
+	}
 	const relationOutput = unwrapOptional(
 		settled[1],
 		"Relation",

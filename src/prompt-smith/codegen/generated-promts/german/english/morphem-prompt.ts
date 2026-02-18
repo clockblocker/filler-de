@@ -38,7 +38,7 @@ Rules:
 - derived_from must contain at most one immediate base lemma.
 - compounded_from must contain only immediate constituents (no deep decomposition).
 - Use canonical lemma forms in lemma, derived_from.lemma, and compounded_from.
-- If relation is uncertain or non-obvious, omit derived_from / compounded_from entirely.
+- If relation is uncertain or non-obvious, set derived_from and/or compounded_from to null.
 - Inflectional morphology is out of scope — analyze lemma form only.
 - The concatenation of all surf strings must exactly reconstruct the original word (case-insensitive).
 - Only Prefix-kind morphemes should have the separability field.

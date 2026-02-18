@@ -27,6 +27,16 @@ describe("Morphem schema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts explicit null morphology fields", () => {
+		const result = morphemSchemas.agentOutputSchema.safeParse({
+			compounded_from: null,
+			derived_from: null,
+			morphemes: [{ kind: "Root", lemma: "Hand", surf: "hand" }],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
 	it("rejects invalid derived_from cardinality", () => {
 		const result = morphemSchemas.agentOutputSchema.safeParse({
 			derived_from: [
