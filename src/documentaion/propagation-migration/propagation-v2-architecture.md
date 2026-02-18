@@ -645,6 +645,8 @@ Phase 5 runtime source of truth:
 2. As of February 18, 2026: all `de/lexem/*` and `de/phrasem/*` slices are migrated to `v2`.
 3. BoW item 14 status: landed on February 18, 2026; `decorateAttestationSeparability` now runs as a shared post-propagation step for both `v1` and `v2`.
 4. Non-verb audit outcome: decoration remains no-op for migrated non-verb slices; parity is locked by `tests/unit/textfresser/steps/propagate-v2-phase4.test.ts`.
+5. PR1 rollout notes/checklist source: `src/documentaion/propagation-migration/pr1-default-v2-rollout-notes.md`.
+6. PR1 default flip status: prepared on February 18, 2026 (`propagationV2Enabled=true` by default), with kill-switch + v1 preserved for soak.
 
 #### 16.6.1 Risk x Usage Scoring Rubric
 

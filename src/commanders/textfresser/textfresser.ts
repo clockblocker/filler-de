@@ -49,7 +49,7 @@ export class Textfresser {
 			apiService,
 			languages,
 			propagationV2Enabled:
-				featureFlags?.propagationV2Enabled ?? false,
+				featureFlags?.propagationV2Enabled ?? true,
 			vam,
 		});
 

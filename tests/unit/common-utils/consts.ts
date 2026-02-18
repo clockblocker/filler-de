@@ -19,7 +19,7 @@ export const defaultSettingsForUnitTests: ParsedUserSettings = {
 	languages: { known: "English", target: "German" },
 	maxSectionDepth: 6,
 	navButtonsPosition: "left",
-	propagationV2Enabled: false,
+	propagationV2Enabled: true,
 	showScrollBacklinks: true,
 	showScrollsInCodexesForDepth: 1,
 	splitInBlocksPlacement: "AboveSelection",

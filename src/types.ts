@@ -96,7 +96,7 @@ export const DEFAULT_SETTINGS: TextEaterSettings = {
 	libraryRoot: "Library",
 	maxSectionDepth: 6,
 	navButtonsPosition: "left",
-	propagationV2Enabled: false,
+	propagationV2Enabled: true,
 	showScrollBacklinks: true,
 	showScrollsInCodexesForDepth: 1,
 	splitInBlocksPlacement: "AboveSelection",

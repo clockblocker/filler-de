@@ -66,7 +66,7 @@ export function createInitialTextfresserState(params: {
 		latestLemmaTargetOwnedByInvocation: false,
 		lookupInLibrary: () => [],
 		pendingGenerate: null,
-		propagationV2Enabled: propagationV2Enabled ?? false,
+		propagationV2Enabled: propagationV2Enabled ?? true,
 		promptRunner: new PromptRunner(languages, apiService),
 		vam,
 	};
