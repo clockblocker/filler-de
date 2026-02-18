@@ -661,7 +661,7 @@ Generate fires automatically in the background after a successful Lemma command.
 checkAttestation → checkEligibility → checkLemmaResult
   → resolveExistingEntry (parse existing entries, use Lemma's disambiguationResult for re-encounter detection)
   → generateSections (async: LLM calls, or attestation append for re-encounters)
-  → propagateGeneratedSections (wrapper: legacy v1 chain or v2 path via `propagationV2Enabled`)
+  → propagateGeneratedSections (v2 core + source-note separability decoration)
   → serializeEntry (includes noteKind + emojiDescription in single metadata upsert) → moveToWorter → addWriteAction
 ```
 
@@ -786,12 +786,7 @@ Not all DictEntrySections participate in cross-reference propagation:
 
 **Source**: `src/commanders/textfresser/commands/generate/steps/propagate-generated-sections.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts`, `src/commanders/textfresser/commands/generate/steps/decorate-attestation-separability.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts`, `src/commanders/textfresser/common/target-path-resolver.ts`
 
-The propagation facade (`propagateGeneratedSections`) runs after `generateSections` in the Generate pipeline. Core propagation is selected by route (`v1` chain: `propagateRelations` -> `propagateMorphologyRelations` -> `propagateMorphemes` -> `propagateInflections`; `v2` chain: `propagateV2`), and then `decorateAttestationSeparability` runs as a shared post-propagation source-note step for both paths. `propagateRelations` uses the raw `relations` output captured during section generation (not re-parsed from markdown).
-
-Routing source of truth is `V2_MIGRATED_SLICE_KEYS` in `propagate-generated-sections.ts`.
-As of February 18, 2026:
-- all `de/lexem/*` slices route to `v2`
-- all `de/phrasem/*` slices route to `v2`
+The propagation facade (`propagateGeneratedSections`) runs after `generateSections` in the Generate pipeline. Runtime path is v2-only: `propagateV2`, then `decorateAttestationSeparability` as a shared post-propagation source-note step. `propagateRelations` uses the raw `relations` output captured during section generation (not re-parsed from markdown).
 
 Both `propagateRelations` and `propagateInflections` use a **shared path resolver** (`resolveTargetPath`) that performs two-source lookup with healing:
 

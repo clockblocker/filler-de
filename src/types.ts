@@ -77,7 +77,6 @@ export type TextEaterSettings = {
 	showScrollsInCodexesForDepth: number;
 	showScrollBacklinks: boolean;
 	hideMetadata: boolean; // Store metadata invisibly at end of file. When false, uses YAML frontmatter.
-	propagationV2Enabled: boolean;
 	translatePlacement: SelectionActionPlacement;
 	splitInBlocksPlacement: SelectionActionPlacement;
 	explainGrammarPlacement: SelectionActionPlacement;
@@ -96,7 +95,6 @@ export const DEFAULT_SETTINGS: TextEaterSettings = {
 	libraryRoot: "Library",
 	maxSectionDepth: 6,
 	navButtonsPosition: "left",
-	propagationV2Enabled: true,
 	showScrollBacklinks: true,
 	showScrollsInCodexesForDepth: 1,
 	splitInBlocksPlacement: "AboveSelection",
