@@ -29,6 +29,8 @@ import {
 	blockHasWikilinkTarget,
 	buildUsedInLine,
 	extractFirstNonEmptyLine,
+	type PropagationResult,
+	splitLines,
 } from "./propagation-line-append";
 
 type UsedInTarget = {
@@ -60,20 +62,16 @@ function hasEquivalentEquationLine(
 	const candidateTargets = extractLineTargetSignature(candidateLine);
 	if (candidateTargets.length === 0) return false;
 
-	return existingBlock
-		.split("\n")
-		.map((line) => line.trim())
-		.filter((line) => line.length > 0)
-		.some((existingLine) => {
-			const existingTargets = extractLineTargetSignature(existingLine);
-			if (existingTargets.length !== candidateTargets.length) {
-				return false;
-			}
-			return existingTargets.every((target, index) => {
-				const other = candidateTargets[index];
-				return other !== undefined && target === other;
-			});
+	return splitLines(existingBlock).some((existingLine) => {
+		const existingTargets = extractLineTargetSignature(existingLine);
+		if (existingTargets.length !== candidateTargets.length) {
+			return false;
+		}
+		return existingTargets.every((target, index) => {
+			const other = candidateTargets[index];
+			return other !== undefined && target === other;
 		});
+	});
 }
 
 function extractLineTargetSignature(line: string): string[] {
@@ -87,7 +85,7 @@ function appendEquationLine(params: {
 	candidateLine: string;
 	currentSectionContent: string;
 	sourceLemma: string;
-}): { changed: boolean; content: string } {
+}): PropagationResult {
 	const normalized = params.currentSectionContent.trimEnd();
 	if (
 		blockHasWikilinkTarget(normalized, params.sourceLemma) ||
