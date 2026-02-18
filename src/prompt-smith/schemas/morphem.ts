@@ -8,12 +8,13 @@ const userInputSchema = z.object({
 });
 
 const agentOutputSchema = z.object({
-	compounded_from: z.array(z.string()).optional(),
+	compounded_from: z.array(z.string()).nullable().optional(),
 	derived_from: z
 		.object({
 			derivation_type: z.string(),
 			lemma: z.string(),
 		})
+		.nullable()
 		.optional(),
 	morphemes: z.array(
 		z.object({

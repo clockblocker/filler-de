@@ -134,7 +134,37 @@ describe("propagateMorphemes", () => {
 		expect(output).toContain("[[obskurlich]]");
 	});
 
-	it("always skips verb prefixes with separability", () => {
+	it("skips separable prefixes when a matching prefix equation is present", () => {
+		const result = propagateMorphemes(
+			makeCtx({
+				lemma: "aufmachen",
+				morphemes: [
+					{
+						kind: "Prefix",
+						linkTarget: "auf-prefix-de",
+						separability: "Separable",
+						surf: "auf",
+					},
+					{ kind: "Root", lemma: "machen", surf: "mach" },
+				],
+				morphology: {
+					compoundedFromLemmas: [],
+					prefixEquation: {
+						baseLemma: "machen",
+						prefixDisplay: ">auf",
+						prefixTarget: "auf-prefix-de",
+						sourceLemma: "aufmachen",
+					},
+				},
+			}),
+		);
+		expect(result.isOk()).toBe(true);
+		const actions = result._unsafeUnwrap().actions;
+		// Prefix handled by equation and root covered by morphology payload.
+		expect(actions).toHaveLength(0);
+	});
+
+	it("keeps separable prefix propagation as fallback when no equation exists", () => {
 		const result = propagateMorphemes(
 			makeCtx({
 				lemma: "aufmachen",
@@ -151,8 +181,7 @@ describe("propagateMorphemes", () => {
 		);
 		expect(result.isOk()).toBe(true);
 		const actions = result._unsafeUnwrap().actions;
-		// Prefix skipped, root propagated
-		expect(actions).toHaveLength(2);
+		expect(actions).toHaveLength(4);
 	});
 
 	it("keeps non-verb prefix propagation", () => {
@@ -258,5 +287,22 @@ describe("propagateMorphemes", () => {
 		const actions = result._unsafeUnwrap().actions;
 		// Prefix only, self-ref root skipped
 		expect(actions).toHaveLength(2);
+	});
+
+	it("treats stem-equivalent Root coverage as covered (fahren vs Fahrt)", () => {
+		const result = propagateMorphemes(
+			makeCtx({
+				lemma: "Fahrkarte",
+				morphemes: [
+					{ kind: "Root", lemma: "fahren", surf: "fahr" },
+					{ kind: "Root", lemma: "Karte", surf: "karte" },
+				],
+				morphology: {
+					compoundedFromLemmas: ["Fahrt", "Karte"],
+				},
+			}),
+		);
+		expect(result.isOk()).toBe(true);
+		expect(result._unsafeUnwrap().actions).toHaveLength(0);
 	});
 });

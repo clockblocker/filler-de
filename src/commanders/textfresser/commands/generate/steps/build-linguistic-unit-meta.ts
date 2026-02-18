@@ -41,8 +41,10 @@ function buildLexemLinguisticUnit(
 ): GermanLinguisticUnit | null {
 	if (lemmaResult.surfaceKind === "Lemma") {
 		if (lemmaResult.posLikeKind === "Noun") {
+			// NounEnrichment is strict and the only enrichment shape with genus/nounClass.
 			if (
-				enrichmentOutput.posLikeKind === "Noun" &&
+				"genus" in enrichmentOutput &&
+				"nounClass" in enrichmentOutput &&
 				enrichmentOutput.genus &&
 				enrichmentOutput.nounClass
 			) {
@@ -217,7 +219,8 @@ function buildLexemEntity(
 	if (lemmaResult.surfaceKind === "Lemma") {
 		if (
 			lemmaResult.posLikeKind === "Noun" &&
-			enrichmentOutput.posLikeKind === "Noun" &&
+			"genus" in enrichmentOutput &&
+			"nounClass" in enrichmentOutput &&
 			enrichmentOutput.genus &&
 			enrichmentOutput.nounClass
 		) {
@@ -334,25 +337,11 @@ export function buildEntityMeta(
 	enrichmentOutput: EnrichmentOutput,
 	featuresOutput: FeaturesOutput | null,
 ): DeEntity | undefined {
-	if (
-		lemmaResult.linguisticUnit === "Lexem" &&
-		enrichmentOutput.linguisticUnit === "Lexem"
-	) {
+	if (lemmaResult.linguisticUnit === "Lexem") {
 		return buildLexemEntity(lemmaResult, enrichmentOutput, featuresOutput);
 	}
 
-	if (
-		lemmaResult.linguisticUnit === "Phrasem" &&
-		enrichmentOutput.linguisticUnit === "Phrasem"
-	) {
-		return buildPhrasemEntity(lemmaResult, enrichmentOutput);
-	}
-
-	logger.warn(
-		"[generateSections] Enrichment output linguisticUnit mismatched lemma result for entity metadata",
-		{ enrichmentUnit: enrichmentOutput.linguisticUnit, lemmaResult },
-	);
-	return undefined;
+	return buildPhrasemEntity(lemmaResult, enrichmentOutput);
 }
 
 export function buildLinguisticUnitMeta(
@@ -361,10 +350,7 @@ export function buildLinguisticUnitMeta(
 	enrichmentOutput: EnrichmentOutput,
 	featuresOutput: FeaturesOutput | null,
 ): GermanLinguisticUnit | undefined {
-	if (
-		lemmaResult.linguisticUnit === "Lexem" &&
-		enrichmentOutput.linguisticUnit === "Lexem"
-	) {
+	if (lemmaResult.linguisticUnit === "Lexem") {
 		const lexem = buildLexemLinguisticUnit(
 			entryId,
 			lemmaResult,
@@ -374,16 +360,5 @@ export function buildLinguisticUnitMeta(
 		return lexem ?? undefined;
 	}
 
-	if (
-		lemmaResult.linguisticUnit === "Phrasem" &&
-		enrichmentOutput.linguisticUnit === "Phrasem"
-	) {
-		return buildPhrasemLinguisticUnit(entryId, lemmaResult);
-	}
-
-	logger.warn(
-		"[generateSections] Enrichment output linguisticUnit mismatched lemma result",
-		{ enrichmentUnit: enrichmentOutput.linguisticUnit, lemmaResult },
-	);
-	return undefined;
+	return buildPhrasemLinguisticUnit(entryId, lemmaResult);
 }

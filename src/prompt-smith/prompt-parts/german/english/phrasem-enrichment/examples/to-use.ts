@@ -4,36 +4,24 @@ export const examples = [
 	{
 		input: {
 			context: "Das machen wir auf jeden Fall morgen.",
-			target: {
-				lemma: "auf jeden Fall",
-				linguisticUnit: "Phrasem",
-				posLikeKind: "DiscourseFormula",
-				surfaceKind: "Lemma",
-			},
+			kind: "DiscourseFormula",
+			word: "auf jeden Fall",
 		},
 		output: {
 			emojiDescription: ["✅"],
 			ipa: "aʊ̯f ˈjeːdn̩ fal",
-			linguisticUnit: "Phrasem",
-			posLikeKind: "DiscourseFormula",
 			senseGloss: "definitely / certainly",
 		},
 	},
 	{
 		input: {
 			context: "Er hat den Löffel abgegeben.",
-			target: {
-				lemma: "den Löffel abgeben",
-				linguisticUnit: "Phrasem",
-				posLikeKind: "Idiom",
-				surfaceKind: "Lemma",
-			},
+			kind: "Idiom",
+			word: "den Löffel abgeben",
 		},
 		output: {
 			emojiDescription: ["💀"],
 			ipa: "deːn ˈlœfl̩ ˈapɡeːbn̩",
-			linguisticUnit: "Phrasem",
-			posLikeKind: "Idiom",
 			senseGloss: "to die",
 		},
 	},

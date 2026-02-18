@@ -5,6 +5,7 @@ const supportedPromptKinds = [
 	"Morphem",
 	"Lemma",
 	"LexemEnrichment",
+	"NounEnrichment",
 	"PhrasemEnrichment",
 	"Relation",
 	"Inflection",

@@ -88,15 +88,13 @@ function makeAdjectiveLemmaResult(
 }
 
 function makeLexemEnrichment(
-	overrides: Partial<AgentOutput<"LexemEnrichment">> = {},
-): AgentOutput<"LexemEnrichment"> {
+	overrides: Partial<AgentOutput<"NounEnrichment">> = {},
+): AgentOutput<"NounEnrichment"> {
 	return {
 		emojiDescription: ["🏠"],
 		genus: "Neutrum",
 		ipa: "haʊ̯s",
-		linguisticUnit: "Lexem",
 		nounClass: "Common",
-		posLikeKind: "Noun",
 		...overrides,
 	};
 }
@@ -107,8 +105,6 @@ function makePhrasemEnrichment(
 	return {
 		emojiDescription: ["✅"],
 		ipa: "aʊ̯f ˈjeːdn̩ fal",
-		linguisticUnit: "Phrasem",
-		posLikeKind: "Collocation",
 		...overrides,
 	};
 }
@@ -117,8 +113,6 @@ function makeVerbLexemEnrichment(): AgentOutput<"LexemEnrichment"> {
 	return {
 		emojiDescription: ["🚪"],
 		ipa: "ˈaʊ̯fˌmaxn̩",
-		linguisticUnit: "Lexem",
-		posLikeKind: "Verb",
 	};
 }
 
@@ -126,8 +120,6 @@ function makeAdjectiveLexemEnrichment(): AgentOutput<"LexemEnrichment"> {
 	return {
 		emojiDescription: ["😌"],
 		ipa: "ʃtɔlts",
-		linguisticUnit: "Lexem",
-		posLikeKind: "Adjective",
 	};
 }
 
@@ -208,9 +200,7 @@ describe("buildLinguisticUnitMeta", () => {
 		const result = buildLinguisticUnitMeta(
 			"PH-LM-1",
 			makePhrasemLemmaResult(),
-			makePhrasemEnrichment({
-				posLikeKind: "Collocation",
-			}),
+			makePhrasemEnrichment(),
 			null,
 		);
 
@@ -224,17 +214,6 @@ describe("buildLinguisticUnitMeta", () => {
 				surfaceKind: "Lemma",
 			},
 		});
-	});
-
-	it("returns undefined when lemma/enrichment linguistic units mismatch", () => {
-		const result = buildLinguisticUnitMeta(
-			"LX-LM-NOUN-1",
-			makeLexemLemmaResult(),
-			makePhrasemEnrichment(),
-			null,
-		);
-
-		expect(result).toBeUndefined();
 	});
 
 	it("builds Lexem lemma metadata with full verb features", () => {

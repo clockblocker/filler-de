@@ -41,6 +41,7 @@ export type TextfresserState = {
 	targetBlockId?: string;
 	inFlightGenerate: InFlightGenerate | null;
 	pendingGenerate: PendingGenerate | null;
+	propagationV2Enabled: boolean;
 	languages: LanguagesConfig;
 	lookupInLibrary: PathLookupFn;
 	promptRunner: PromptRunner;
@@ -50,9 +51,10 @@ export type TextfresserState = {
 export function createInitialTextfresserState(params: {
 	apiService: ApiService;
 	languages: LanguagesConfig;
+	propagationV2Enabled?: boolean;
 	vam: VaultActionManager;
 }): TextfresserState {
-	const { apiService, languages, vam } = params;
+	const { apiService, languages, propagationV2Enabled, vam } = params;
 
 	return {
 		attestationForLatestNavigated: null,
@@ -64,6 +66,7 @@ export function createInitialTextfresserState(params: {
 		latestLemmaTargetOwnedByInvocation: false,
 		lookupInLibrary: () => [],
 		pendingGenerate: null,
+		propagationV2Enabled: propagationV2Enabled ?? true,
 		promptRunner: new PromptRunner(languages, apiService),
 		vam,
 	};

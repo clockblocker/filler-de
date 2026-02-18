@@ -56,13 +56,12 @@ export type GermanAdjectiveGovernedPattern = z.infer<
 export const GermanAdjectiveValencySchema = z
 	.object({
 		governedPattern: GermanAdjectiveGovernedPatternSchema,
-		governedPreposition: z.string().min(1).max(30).optional(),
+		governedPreposition: z.string().min(1).max(30).nullable().optional(),
 	})
 	.superRefine((value, ctx) => {
-		if (
-			value.governedPattern === "Prepositional" &&
-			!value.governedPreposition
-		) {
+		const governedPreposition = value.governedPreposition ?? undefined;
+
+		if (value.governedPattern === "Prepositional" && !governedPreposition) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				message:
@@ -72,10 +71,7 @@ export const GermanAdjectiveValencySchema = z
 			return;
 		}
 
-		if (
-			value.governedPattern !== "Prepositional" &&
-			value.governedPreposition
-		) {
+		if (value.governedPattern !== "Prepositional" && governedPreposition) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				message:

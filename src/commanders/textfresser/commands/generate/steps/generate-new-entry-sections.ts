@@ -4,6 +4,7 @@ import type {
 } from "../../../../../linguistics/de/lexem/noun";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
+import { logger } from "../../../../../utils/logger";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { EntrySection } from "../../../domain/dict-note/types";
 import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
@@ -19,7 +20,6 @@ import {
 	V3_SECTIONS,
 } from "./section-generation-context";
 import {
-	unwrapCritical,
 	unwrapOptional,
 	unwrapResultAsync,
 } from "./section-generation-results";
@@ -71,15 +71,20 @@ async function generateEnrichmentOutput(
 	context: string,
 ): Promise<EnrichmentOutput> {
 	if (lemmaResult.linguisticUnit === "Lexem") {
+		if (lemmaResult.posLikeKind === "Noun") {
+			return unwrapResultAsync(
+				promptRunner.generate(PromptKind.NounEnrichment, {
+					context,
+					word: lemmaResult.lemma,
+				}),
+			);
+		}
+
 		return unwrapResultAsync(
 			promptRunner.generate(PromptKind.LexemEnrichment, {
 				context,
-				target: {
-					lemma: lemmaResult.lemma,
-					linguisticUnit: "Lexem",
-					posLikeKind: lemmaResult.posLikeKind,
-					surfaceKind: lemmaResult.surfaceKind,
-				},
+				pos: lemmaResult.posLikeKind,
+				word: lemmaResult.lemma,
 			}),
 		);
 	}
@@ -87,14 +92,19 @@ async function generateEnrichmentOutput(
 	return unwrapResultAsync(
 		promptRunner.generate(PromptKind.PhrasemEnrichment, {
 			context,
-			target: {
-				lemma: lemmaResult.lemma,
-				linguisticUnit: "Phrasem",
-				posLikeKind: lemmaResult.posLikeKind,
-				surfaceKind: lemmaResult.surfaceKind,
-			},
+			kind: lemmaResult.posLikeKind,
+			word: lemmaResult.lemma,
 		}),
 	);
+}
+
+function buildFallbackEnrichmentOutput(
+	lemmaResult: LemmaResult,
+): EnrichmentOutput {
+	return {
+		emojiDescription: lemmaResult.precomputedEmojiDescription ?? ["❓"],
+		ipa: "unknown",
+	};
 }
 
 function buildEntryId(nextIndex: number, lemmaResult: LemmaResult): string {
@@ -129,11 +139,27 @@ export async function generateNewEntrySections(
 	const posOrKind = lemmaResult.posLikeKind;
 	const context = lemmaResult.attestation.source.textWithOnlyTargetMarked;
 
-	const enrichmentOutput = await generateEnrichmentOutput(
-		lemmaResult,
-		promptRunner,
-		context,
-	);
+	const failedSections: string[] = [];
+	let enrichmentOutput: EnrichmentOutput;
+
+	try {
+		enrichmentOutput = await generateEnrichmentOutput(
+			lemmaResult,
+			promptRunner,
+			context,
+		);
+	} catch (error) {
+		failedSections.push("Enrichment");
+		logger.warn(
+			"[generateSections] Enrichment failed; continuing with fallback metadata",
+			{
+				error: error instanceof Error ? error.message : String(error),
+				lemma: lemmaResult.lemma,
+			},
+		);
+		enrichmentOutput = buildFallbackEnrichmentOutput(lemmaResult);
+	}
+
 	const applicableSections = getSectionsFor(
 		buildSectionQuery(lemmaResult, enrichmentOutput),
 	);
@@ -238,8 +264,18 @@ export async function generateNewEntrySections(
 	];
 	const settled = await Promise.allSettled(tasks);
 
-	const failedSections: string[] = [];
 	const morphemOutput = unwrapOptional(settled[0], "Morphem", failedSections);
+	if (shouldGenerateMorphem && !morphemOutput) {
+		logger.warn(
+			"[generateSections] Morphem failed; skipping dependent outputs (Morphology section + morpheme/morphology propagation)",
+			{
+				lemma: lemmaResult.lemma,
+				willSkipMorphologySection: sectionSet.has(
+					DictSectionKind.Morphology,
+				),
+			},
+		);
+	}
 	const relationOutput = unwrapOptional(
 		settled[1],
 		"Relation",
@@ -255,12 +291,15 @@ export async function generateNewEntrySections(
 		"Inflection",
 		failedSections,
 	);
-	let translationOutput: WordTranslationOutput | null = null;
+	let translationOutput: WordTranslationOutput | null;
 	if (shouldGenerateTranslation) {
-		const criticalTranslation = unwrapCritical(settled[4], "Translation");
-		if (criticalTranslation !== null) {
-			translationOutput = criticalTranslation;
-		}
+		translationOutput = unwrapOptional(
+			settled[4],
+			"Translation",
+			failedSections,
+		);
+	} else {
+		translationOutput = null;
 	}
 	const featuresOutput = unwrapOptional(
 		settled[5],
@@ -314,6 +353,7 @@ export async function generateNewEntrySections(
 				const result = generateMorphologySection({
 					morphemes,
 					output: morphemOutput,
+					posLikeKind: lemmaResult.posLikeKind,
 					sourceLemma: lemmaResult.lemma,
 					sourceTranslation,
 					targetLang,

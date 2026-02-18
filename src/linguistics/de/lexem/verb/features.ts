@@ -29,7 +29,7 @@ export const GermanVerbReflexivitySchema = z.enum(germanVerbReflexivityValues);
 export type GermanVerbReflexivity = z.infer<typeof GermanVerbReflexivitySchema>;
 
 export const GermanVerbValencySchema = z.object({
-	governedPreposition: z.string().min(1).max(30).optional(),
+	governedPreposition: z.string().min(1).max(30).nullable().optional(),
 	reflexivity: GermanVerbReflexivitySchema,
 	separability: GermanVerbSeparabilitySchema,
 });

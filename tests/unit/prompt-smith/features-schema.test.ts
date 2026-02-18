@@ -40,6 +40,18 @@ describe("Features schema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts structured verb output with null governedPreposition", () => {
+			const result = featuresVerbSchemas.agentOutputSchema.safeParse({
+				conjugation: "Rregular",
+				valency: {
+					governedPreposition: null,
+					reflexivity: "NonReflexive",
+					separability: "Separable",
+				},
+			});
+			expect(result.success).toBe(true);
+		});
+
 		it("accepts structured adjective output", () => {
 			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse({
 				classification: "Qualitative",
@@ -103,6 +115,19 @@ describe("Features schema", () => {
 				gradability: "Gradable",
 				valency: {
 					governedPattern: "Prepositional",
+				},
+			});
+			expect(result.success).toBe(false);
+		});
+
+		it("rejects adjective prepositional valency with null preposition", () => {
+			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse({
+				classification: "Qualitative",
+				distribution: "AttributiveAndPredicative",
+				gradability: "Gradable",
+				valency: {
+					governedPattern: "Prepositional",
+					governedPreposition: null,
 				},
 			});
 			expect(result.success).toBe(false);

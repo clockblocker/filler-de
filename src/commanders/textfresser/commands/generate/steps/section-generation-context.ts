@@ -21,10 +21,10 @@ export function buildSectionQuery(
 	enrichmentOutput: EnrichmentOutput,
 ) {
 	if (lemmaResult.linguisticUnit === "Lexem") {
+		// NounEnrichment is strict and the only enrichment shape that carries nounClass.
 		const nounClass =
 			lemmaResult.posLikeKind === "Noun" &&
-			enrichmentOutput.linguisticUnit === "Lexem" &&
-			enrichmentOutput.posLikeKind === "Noun"
+			"nounClass" in enrichmentOutput
 				? (enrichmentOutput.nounClass ?? undefined)
 				: undefined;
 
@@ -48,7 +48,7 @@ export function resolveNounInflectionGenus(
 	if (lemmaResult.linguisticUnit !== "Lexem") return undefined;
 	if (lemmaResult.posLikeKind !== "Noun") return undefined;
 	if (nounInflectionOutput) return nounInflectionOutput.genus;
-	if (enrichmentOutput.linguisticUnit !== "Lexem") return undefined;
-	if (enrichmentOutput.posLikeKind !== "Noun") return undefined;
+	// NounEnrichment is strict and the only enrichment shape that carries genus.
+	if (!("genus" in enrichmentOutput)) return undefined;
 	return enrichmentOutput.genus ?? undefined;
 }

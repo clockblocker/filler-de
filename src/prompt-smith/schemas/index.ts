@@ -19,6 +19,7 @@ import { inflectionSchemas } from "./inflection";
 import { lemmaSchemas } from "./lemma";
 import { lexemEnrichmentSchemas } from "./lexem-enrichment";
 import { morphemSchemas } from "./morphem";
+import { nounEnrichmentSchemas } from "./noun-enrichment";
 import { nounInflectionSchemas } from "./noun-inflection";
 import { phrasemEnrichmentSchemas } from "./phrasem-enrichment";
 import { relationSchemas } from "./relation";
@@ -30,6 +31,7 @@ export const SchemasFor = {
 	[PromptKindEnum.Morphem]: morphemSchemas,
 	[PromptKindEnum.Lemma]: lemmaSchemas,
 	[PromptKindEnum.LexemEnrichment]: lexemEnrichmentSchemas,
+	[PromptKindEnum.NounEnrichment]: nounEnrichmentSchemas,
 	[PromptKindEnum.PhrasemEnrichment]: phrasemEnrichmentSchemas,
 	[PromptKindEnum.Relation]: relationSchemas,
 	[PromptKindEnum.Inflection]: inflectionSchemas,

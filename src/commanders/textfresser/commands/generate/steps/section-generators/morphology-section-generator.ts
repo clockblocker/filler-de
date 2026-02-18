@@ -9,7 +9,8 @@ import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../targets/de/sections/section-kind";
-import { normalizeLemma } from "../morphology-utils";
+import type { LemmaResult } from "../../../lemma/types";
+import { normalizeLemma, normalizeMorphologyKey } from "../morphology-utils";
 import type {
 	GenerationTargetLanguage,
 	MorphemOutput,
@@ -19,6 +20,7 @@ import type {
 export type MorphologySectionContext = {
 	morphemes: MorphemeItem[];
 	output: MorphemOutput;
+	posLikeKind: LemmaResult["posLikeKind"];
 	sourceLemma: string;
 	sourceTranslation?: string;
 	targetLang: GenerationTargetLanguage;
@@ -53,9 +55,12 @@ function buildGlossSuffix(sourceTranslation?: string): string {
 
 function inferPrefixEquation(
 	morphemes: MorphemeItem[],
+	posLikeKind: LemmaResult["posLikeKind"],
 	sourceLemma: string,
 	targetLang: GenerationTargetLanguage,
 ): MorphologyPayload["prefixEquation"] {
+	if (posLikeKind !== "Verb") return undefined;
+
 	const first = morphemes[0];
 	if (!first || first.kind !== "Prefix" || !first.separability)
 		return undefined;
@@ -116,16 +121,20 @@ export function generateMorphologySection(
 
 	const inferredPrefixEquation = inferPrefixEquation(
 		ctx.morphemes,
+		ctx.posLikeKind,
 		sourceLemma,
 		ctx.targetLang,
 	);
-	const derivedFromLemma = normalizeLemma(
-		inferredPrefixEquation?.baseLemma ?? ctx.output.derived_from?.lemma,
-	);
+	const derivedFromLemma = normalizeLemma(ctx.output.derived_from?.lemma);
 	const compoundedFromLemmas = dedupeLemmas(ctx.output.compounded_from ?? []);
 
 	const lines: string[] = [];
-	if (derivedFromLemma && !inferredPrefixEquation) {
+	const hasEquivalentDerivedFromAndEquationBase =
+		derivedFromLemma &&
+		inferredPrefixEquation &&
+		normalizeMorphologyKey(derivedFromLemma) ===
+			normalizeMorphologyKey(inferredPrefixEquation.baseLemma);
+	if (derivedFromLemma && !hasEquivalentDerivedFromAndEquationBase) {
 		lines.push("<derived_from>", `[[${derivedFromLemma}]]`);
 	}
 

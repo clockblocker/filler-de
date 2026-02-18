@@ -4,18 +4,13 @@ export const testExamples = [
 	{
 		input: {
 			context: "By and large, the rollout was successful.",
-			target: {
-				lemma: "by and large",
-				linguisticUnit: "Phrasem",
-				posLikeKind: "DiscourseFormula",
-				surfaceKind: "Lemma",
-			},
+			kind: "DiscourseFormula",
+			word: "by and large",
 		},
 		output: {
 			emojiDescription: ["📊", "👍"],
 			ipa: "baɪ ən lɑːrdʒ",
-			linguisticUnit: "Phrasem",
-			posLikeKind: "DiscourseFormula",
+			senseGloss: "generally speaking",
 		},
 	},
 ] satisfies {

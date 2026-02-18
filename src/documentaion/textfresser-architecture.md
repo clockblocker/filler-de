@@ -58,13 +58,13 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V13 scope**: Phraseme-kind threading + linguisticUnit metadata restore — Lemma output now includes `phrasemeKind` for `linguisticUnit: "Phrasem"`. `generateSections` restores `meta.linguisticUnit` for `Lexem` and `Phrasem` entries. Disambiguate senses now forward optional `phrasemeKind` hints extracted from `meta.linguisticUnit`.
 
-> **V14 scope**: Minimal Lemma + Generate enrichment cutover — `PromptKind.Lemma` now returns only classifier fields (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`). Core metadata (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`) moved to Generate via `PromptKind.LexemEnrichment` / `PromptKind.PhrasemEnrichment`. Features prompt is now POS-specific (`FeaturesNoun` ... `FeaturesInteractionalUnit`), and legacy `PromptKind.Features` is removed. Proper-noun/separable span expansion relies on `contextWithLinkedParts`; legacy `fullSurface` is removed. Runtime parsing remains backward-compatible with legacy Lemma keys (`pos` / `phrasemeKind`) by normalizing them to `posLikeKind`. Noun enrichment metadata (`genus`, `nounClass`) is treated as best-effort at parse time; header formatting first falls back to noun-inflection genus, then degrades to common header when genus is still missing.
+> **V14 scope**: Minimal Lemma + Generate enrichment cutover — `PromptKind.Lemma` now returns only classifier fields (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`). Core metadata (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`) moved to Generate via enrichment prompts. Features prompt is now POS-specific (`FeaturesNoun` ... `FeaturesInteractionalUnit`), and legacy `PromptKind.Features` is removed. Proper-noun/separable span expansion relies on `contextWithLinkedParts`; legacy `fullSurface` is removed. Runtime parsing remains backward-compatible with legacy Lemma keys (`pos` / `phrasemeKind`) by normalizing them to `posLikeKind`. Noun enrichment metadata (`genus`, `nounClass`) is treated as best-effort at parse time; header formatting first falls back to noun-inflection genus, then degrades to common header when genus is still missing.
 
 > **V15 scope**: Lemma safe-linking + deterministic target routing — Lemma now runs in two dispatch phases: pre-prompt safe link insertion (with optional Worter placeholder) and post-prompt final routing rewrite. Closed-set Lexem POS (`Pronoun`, `Article`, `Preposition`, `Conjunction`, `Particle`, `InteractionalUnit`) route to `Library/<lang>/<pos-kebab>/<lemma>.md`; all other entries route to Worter sharded paths. Post-prompt phase can rename placeholder to final target, delete placeholder only when empty and final exists, retarget temporary links (including multi-span expansion), and navigate from placeholder to final note when needed. Background Generate now uses the latest resolved target path as its primary source of truth.
 
 > **V16 scope**: Prompt-stability + pipeline hardening — Lemma adds runtime output guardrails with one controlled retry for suspicious same-surface outputs (separable inflected verbs, comparative/superlative-like inflected adjectives). Unsafe `contextWithLinkedParts` rewrites are dropped when stripped text does not match source context. Background Generate cleanup is now ownership-aware: empty targets are auto-trashed only when invocation-owned (or truly newly created in this run). Disambiguate senses now include optional `senseGloss` (short text gloss) alongside emoji signals.
 
-> **V17 scope**: Morphological relations v1 — Morphem output now supports optional top-level `derived_from` (single base) and `compounded_from` (immediate constituents). New DictSectionKind `Morphology` (`Morphologische Relationen`) is generated for Lexem entries (except proper nouns), ordered right after Morphem. Generate now enforces a 3-phase model (`lemma -> generation -> propagation`) by waiting for `WordTranslation` before all propagation steps. Propagation is split: `propagateMorphologyRelations` owns Lexem-side morphology backlinks (`<used_in>` for derivation/compounding on Lexem notes) plus verb-prefix equations on prefix Morphem notes; `propagateMorphemes` owns bound-morpheme `<used_in>` aggregation on Morphem notes (including non-verb prefixes). Relation propagation shares append/dedupe utilities and skips when source lemma is already referenced.
+> **V17 scope**: Morphological relations v1 — Morphem output now supports optional top-level `derived_from` (single base) and `compounded_from` (immediate constituents). New DictSectionKind `Morphology` (`Morphologische Relationen`) is generated for Lexem entries (except proper nouns), ordered right after Morphem. Generate now enforces a 3-phase model (`lemma -> generation -> propagation`) by waiting for `WordTranslation` before all propagation steps. Propagation is split: `propagateMorphologyRelations` owns Lexem-side morphology backlinks (`<used_in>` for derivation/compounding on Lexem notes) plus verb-prefix equations on prefix Morphem notes; `propagateMorphemes` owns bound-morpheme `<used_in>` aggregation on Morphem notes (including non-verb prefixes and separable prefixes that are not covered by an equation). Relation propagation shares append/dedupe utilities and skips when source lemma is already referenced.
 
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
@@ -661,7 +661,7 @@ Generate fires automatically in the background after a successful Lemma command.
 checkAttestation → checkEligibility → checkLemmaResult
   → resolveExistingEntry (parse existing entries, use Lemma's disambiguationResult for re-encounter detection)
   → generateSections (async: LLM calls, or attestation append for re-encounters)
-  → propagateRelations → propagateMorphologyRelations → propagateMorphemes → propagateInflections
+  → propagateGeneratedSections (wrapper: legacy v1 chain or v2 path via `propagationV2Enabled`)
   → serializeEntry (includes noteKind + emojiDescription in single metadata upsert) → moveToWorter → addWriteAction
 ```
 
@@ -686,16 +686,16 @@ Matching ignores surfaceKind so that inflected encounters (e.g., "Schlosses" →
 
 **Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Tags, Morphem, Morphology, Relation, Inflection, Translation, Attestation. Header is built from LemmaResult fields (no LLM call).
 
-All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). **Critical sections** (Translation) throw on failure; **optional sections** (Morphem, Relation, Inflection, Morphology) degrade gracefully — failures are logged and the entry is still created. Results are assembled in correct section order after all promises settle. Translation is always awaited before propagation so Generate keeps the strict `lemma -> generation -> propagation` sequence. Applicable sections:
+All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). Enrichment now has a fallback metadata path, and section prompts degrade gracefully (including Translation): failures are logged, recorded in `failedSections`, and entry creation continues. This prevents empty-note outcomes when upstream API calls fail. Results are assembled in correct section order after all promises settle. Applicable sections:
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
-| **Header** | No | — | `dispatchHeaderFormatter()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns, article genus priority is: LexemEnrichment genus, then noun-inflection genus fallback; when resolved, output is `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` via `de/lexem/noun/header-formatter`. Dispatch routes by POS; common formatter for non-nouns or unresolved noun genus. `emoji` is rendered from the full `emojiDescription` sequence in order. No LLM call. Sense signals are stored on `meta.entity` (`emojiDescription`, `ipa`) with legacy mirror `meta.emojiDescription` for compatibility. |
+| **Header** | No | — | `dispatchHeaderFormatter()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns, article genus priority is: NounEnrichment genus, then noun-inflection genus fallback; when resolved, output is `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` via `de/lexem/noun/header-formatter`. Dispatch routes by POS; common formatter for non-nouns or unresolved noun genus. `emoji` is rendered from the full `emojiDescription` sequence in order. No LLM call. Sense signals are stored on `meta.entity` (`emojiDescription`, `ipa`) with legacy mirror `meta.emojiDescription` for compatibility. |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
-| **Morphology** | No extra LLM call (reuses `Morphem` output) | — | `generateMorphologySection()` | `<derived_from>`, `<consists_of>`, verb-prefix equation lines; structured payload also captured for propagation |
+| **Morphology** | No extra LLM call (reuses `Morphem` output) | — | `generateMorphologySection()` | `<derived_from>`, `<consists_of>`, and verb-prefix equation lines (verbs only); `derived_from` remains explicit even when an equation is present unless it is equivalent to the equation base. Structured payload is also captured for propagation. |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
 | **Inflection** | Yes | `NounInflection` (nouns) or `Inflection` (other POS) | `formatInflection()` / `formatInflectionSection()` | `N: das [[Kohlekraftwerk]], die [[Kohlekraftwerke]]` → `EntrySection`. Nouns use structured cells (case×number with article+form); other POS use generic rows. Noun cells also feed `propagateInflections`. |
-| **Translation** | Yes | `WordTranslation` | — (string pass-through) | Translates the lemma word (using attestation context for disambiguation only) → `EntrySection`. V6: changed from `PromptKind.Translate` (which translated the full sentence) to `WordTranslation` (input: `{word, pos, context}`, output: concise 1-3 word translation). |
+| **Translation** | Yes | `WordTranslation` | — (string pass-through) | Translates the lemma word (using attestation context for disambiguation only) → `EntrySection`. Optional at runtime: failures are recorded and generation continues to avoid empty notes. V6: changed from `PromptKind.Translate` (which translated the full sentence) to `WordTranslation` (input: `{word, pos, context}`, output: concise 1-3 word translation). |
 | **Attestation** | No | — | — | `![[file#^blockId\|^]]` from `lemmaResult.attestation.source.ref` → `EntrySection` |
 | **Tags** | Yes | POS-specific `Features*` prompt (`FeaturesNoun`, `FeaturesVerb`, ...) | — (compound tag string) | `#pos/feature1/feature2` → `EntrySection`. Non-inflectional grammatical features (e.g., maskulin, transitiv/stark), with trim/lowercase normalization and global dedupe of path parts. Optional — entry still created if Features prompt fails. Only for Lexem POS. |
 
@@ -723,7 +723,7 @@ Different prompts are needed depending on:
 |-----------|--------|--------|
 | **TargetLanguage** | German, English, ... | Language of the dictionary |
 | **KnownLanguage** | Russian, English, ... | User's native language |
-| **PromptKind** | Lemma, Disambiguate, Morphem, Relation, Inflection, NounInflection, Translate, WordTranslation, Features | What task the LLM performs |
+| **PromptKind** | Lemma, LexemEnrichment, NounEnrichment, PhrasemEnrichment, Disambiguate, Morphem, Relation, Inflection, NounInflection, Translate, WordTranslation, Features* | What task the LLM performs |
 
 Section applicability (which sections a DictEntry gets) is determined by `LinguisticUnitKind` + `POS` + optional `nounClass` via `getSectionsFor()` in `src/commanders/textfresser/targets/de/sections/section-config.ts`:
 - **Lexem**: POS-dependent with `Morphology` enabled for all POS (e.g., Nouns get Morphem + Morphology + Inflection + Relation; Conjunctions get core + Morphology)
@@ -776,7 +776,7 @@ Some are **asymmetric** (hypernym/hyponym, meronym/holonym) — the inverse is a
 Not all DictEntrySections participate in cross-reference propagation:
 
 - **Relation**: Full bidirectional propagation with inverse rules (see 9.2). This is where most SubSections live.
-- **Morphem**: `propagateMorphemes` maintains `<used_in>` backlinks on Morphem notes for bound morphemes (`Suffix`, `Interfix`, `Suffixoid`, etc.) and non-verb prefixes. Verb prefixes with separability are skipped here.
+- **Morphem**: `propagateMorphemes` maintains `<used_in>` backlinks on Morphem notes for bound morphemes (`Suffix`, `Interfix`, `Suffixoid`, etc.) and prefixes not covered by a generated verb-prefix equation.
 - **Morphology**: `propagateMorphologyRelations` writes `<used_in>` backlinks to Lexem targets for `<derived_from>`/`<consists_of>` and writes verb-prefix equations to prefix Morphem notes.
 - **Attestation**: No propagation — contexts are per-encounter.
 - **Inflection**: **Noun propagation** via `propagateInflections` — creates/updates one inflection entry per form with merged tags in inflected-form notes (see section 9.5). Other POS: no propagation.
@@ -784,9 +784,14 @@ Not all DictEntrySections participate in cross-reference propagation:
 
 ### 9.4 Implementation
 
-**Source**: `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts`, `src/commanders/textfresser/common/target-path-resolver.ts`
+**Source**: `src/commanders/textfresser/commands/generate/steps/propagate-generated-sections.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts`, `src/commanders/textfresser/commands/generate/steps/decorate-attestation-separability.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts`, `src/commanders/textfresser/common/target-path-resolver.ts`
 
-The `propagateRelations` step runs after `generateSections` in the Generate pipeline. It uses the raw `relations` output captured during section generation (not re-parsed from markdown).
+The propagation facade (`propagateGeneratedSections`) runs after `generateSections` in the Generate pipeline. Core propagation is selected by route (`v1` chain: `propagateRelations` -> `propagateMorphologyRelations` -> `propagateMorphemes` -> `propagateInflections`; `v2` chain: `propagateV2`), and then `decorateAttestationSeparability` runs as a shared post-propagation source-note step for both paths. `propagateRelations` uses the raw `relations` output captured during section generation (not re-parsed from markdown).
+
+Routing source of truth is `V2_MIGRATED_SLICE_KEYS` in `propagate-generated-sections.ts`.
+As of February 18, 2026:
+- all `de/lexem/*` slices route to `v2`
+- all `de/phrasem/*` slices route to `v2`
 
 Both `propagateRelations` and `propagateInflections` use a **shared path resolver** (`resolveTargetPath`) that performs two-source lookup with healing:
 
@@ -868,7 +873,7 @@ Propagation VaultActions (including healing) added to ctx.actions
 
 **Key design decisions**:
 - **One entry per form/POS**: All case/number combos are represented as tags in one entry
-- **Genus source + fallback**: propagation prefers genus from `NounInflection` output, falls back to `LexemEnrichment` when needed, and still degrades to `#Inflection/Noun for: [[lemma]]` if both are missing
+- **Genus source + fallback**: propagation prefers genus from `NounInflection` output, falls back to `NounEnrichment` when needed, and still degrades to `#Inflection/Noun for: [[lemma]]` if both are missing
 - **Same-note skip**: When form === lemma, cells are skipped entirely (the main entry already covers this note)
 - **Legacy migration in-place**: old per-cell stubs are collapsed into the new entry format when a target note is touched
 - Deterministic tag ordering: case order + number order, with dedup + localization normalization
@@ -902,7 +907,7 @@ src/prompt-smith/
 │           └── to-test.ts           # Extra examples for validation only
 │
 ├── codegen/
-│   ├── consts.ts                    # PromptKind enum ("Translate","Morphem","Lemma","Disambiguate","Relation","Inflection","NounInflection","WordTranslation")
+│   ├── consts.ts                    # PromptKind enum (includes Lemma, LexemEnrichment, NounEnrichment, PhrasemEnrichment, Disambiguate, Relation, Inflection, WordTranslation, Features*)
 │   ├── generated-promts/            # AUTO-GENERATED compiled prompts
 │   └── skript/                      # Codegen pipeline scripts
 │       ├── run.ts                   # Orchestrator

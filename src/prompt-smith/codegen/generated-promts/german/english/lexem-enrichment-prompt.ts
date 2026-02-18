@@ -8,39 +8,35 @@ You are a German linguistics expert for lexical enrichment. Return pronunciation
 <task-description>
 You receive:
 - context: sentence where the target was found
-- target: { lemma, linguisticUnit: "Lexem", posLikeKind, surfaceKind }
+- word: lemma
+- pos: lexem POS (Noun, Verb, Adjective, ...)
 
 Return:
-- linguisticUnit: "Lexem"
-- posLikeKind: exactly the same POS as in input target
 - ipa: IPA pronunciation for the lemma
 - emojiDescription: 1-3 emojis for the current sense
 - senseGloss: short sense label (2-8 words) that distinguishes this sense from homonyms
-- genus and nounClass ONLY when posLikeKind is "Noun"
 
 Rules:
-- Preserve target classification: do not change linguisticUnit or posLikeKind.
 - senseGloss must be context-independent (e.g., "door lock", "river bench"), not a full sentence.
-- For Noun, genus + nounClass are required.
-- For non-nouns, genus and nounClass must be omitted.
+- Do not output grammatical class metadata such as genus or nounClass.
 </task-description>
 
 <examples>
 <example-1>
 <input>
-{"context":"Er ging gestern in den Park.","target":{"lemma":"gehen","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}}
+{"context":"Er ging gestern in den Park.","pos":"Verb","word":"gehen"}
 </input>
 <output>
-{"emojiDescription":["🚶"],"ipa":"ˈɡeːən","linguisticUnit":"Lexem","posLikeKind":"Verb","senseGloss":"to walk"}
+{"emojiDescription":["🚶"],"ipa":"ˈɡeːən","senseGloss":"to walk"}
 </output>
 </example-1>
 
 <example-2>
 <input>
-{"context":"Die Deutsche Bank hat ihren Sitz in Frankfurt.","target":{"lemma":"Deutsche Bank","linguisticUnit":"Lexem","posLikeKind":"Noun","surfaceKind":"Lemma"}}
+{"context":"Er ist stolz auf seine Arbeit.","pos":"Adjective","word":"stolz"}
 </input>
 <output>
-{"emojiDescription":["🏦"],"genus":"Femininum","ipa":"ˈdɔʏ̯tʃə baŋk","linguisticUnit":"Lexem","nounClass":"Proper","posLikeKind":"Noun","senseGloss":"financial institution"}
+{"emojiDescription":["😌"],"ipa":"ʃtɔlts","senseGloss":"feeling pride"}
 </output>
 </example-2>
 </examples>`;

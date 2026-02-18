@@ -1,14 +1,17 @@
 import { z } from "zod/v3";
-import {
-	DeLexemEnrichmentOutputSchema,
-	DeLexemTargetSchema,
-} from "../../linguistics/de/lemma";
 
 const userInputSchema = z.object({
 	context: z.string(),
-	target: DeLexemTargetSchema,
+	pos: z.string(),
+	word: z.string(),
 });
 
-const agentOutputSchema = DeLexemEnrichmentOutputSchema;
+const agentOutputSchema = z
+	.object({
+		emojiDescription: z.array(z.string().min(1).max(20)).min(1).max(3),
+		ipa: z.string().min(1),
+		senseGloss: z.string().min(3).max(120).nullable().optional(),
+	})
+	.strict();
 
 export const lexemEnrichmentSchemas = { agentOutputSchema, userInputSchema };

@@ -6,6 +6,7 @@ import { formatHeaderLine as formatNounHeader } from "./de/lexem/noun/header-for
 
 type EnrichmentOutput =
 	| AgentOutput<"LexemEnrichment">
+	| AgentOutput<"NounEnrichment">
 	| AgentOutput<"PhrasemEnrichment">;
 
 /**
@@ -27,11 +28,13 @@ export function dispatchHeaderFormatter(
 
 	if (
 		lemmaResult.linguisticUnit === "Lexem" &&
-		enrichmentOutput.linguisticUnit === "Lexem" &&
-		lemmaResult.posLikeKind === "Noun" &&
-		enrichmentOutput.posLikeKind === "Noun"
+		lemmaResult.posLikeKind === "Noun"
 	) {
-		const resolvedNounGenus = enrichmentOutput.genus ?? fallbackNounGenus;
+		// NounEnrichment is strict and the only enrichment shape that carries genus.
+		const resolvedNounGenus =
+			"genus" in enrichmentOutput
+				? (enrichmentOutput.genus ?? fallbackNounGenus)
+				: fallbackNounGenus;
 		if (resolvedNounGenus) {
 			return formatNounHeader(
 				output,

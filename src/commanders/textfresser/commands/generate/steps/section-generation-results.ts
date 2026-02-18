@@ -14,17 +14,6 @@ export function unwrapResultAsync<T>(
 	);
 }
 
-/** Unwrap a settled result for a critical section — throws if rejected. */
-export function unwrapCritical<T>(
-	result: PromiseSettledResult<T>,
-	sectionName: string,
-): T {
-	if (result.status === "fulfilled") return result.value;
-	throw new Error(
-		`Critical section "${sectionName}" failed: ${result.reason}`,
-	);
-}
-
 /** Unwrap a settled result for an optional section — returns null and logs if rejected. */
 export function unwrapOptional<T>(
 	result: PromiseSettledResult<T>,
@@ -33,9 +22,11 @@ export function unwrapOptional<T>(
 ): T | null {
 	if (result.status === "fulfilled") return result.value;
 	failedSections.push(sectionName);
+	const reason =
+		result.reason instanceof Error ? result.reason.message : result.reason;
 	logger.warn(
 		`[generateSections] Optional section "${sectionName}" failed:`,
-		result.reason,
+		reason,
 	);
 	return null;
 }

@@ -4,35 +4,25 @@ export const examples = [
 	{
 		input: {
 			context: "By and large, the rollout was successful.",
-			target: {
-				lemma: "by and large",
-				linguisticUnit: "Phrasem",
-				posLikeKind: "DiscourseFormula",
-				surfaceKind: "Lemma",
-			},
+			kind: "DiscourseFormula",
+			word: "by and large",
 		},
 		output: {
 			emojiDescription: ["📊", "👍"],
 			ipa: "baɪ ən lɑːrdʒ",
-			linguisticUnit: "Phrasem",
-			posLikeKind: "DiscourseFormula",
+			senseGloss: "generally speaking",
 		},
 	},
 	{
 		input: {
 			context: "After three hours of meetings, we called it a day.",
-			target: {
-				lemma: "call it a day",
-				linguisticUnit: "Phrasem",
-				posLikeKind: "Idiom",
-				surfaceKind: "Lemma",
-			},
+			kind: "Idiom",
+			word: "call it a day",
 		},
 		output: {
 			emojiDescription: ["🛑", "📅"],
 			ipa: "kɔːl ɪt ə deɪ",
-			linguisticUnit: "Phrasem",
-			posLikeKind: "Idiom",
+			senseGloss: "stop for now",
 		},
 	},
 ] satisfies {

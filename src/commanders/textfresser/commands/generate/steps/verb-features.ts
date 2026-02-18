@@ -3,10 +3,7 @@ import type {
 	FeaturesOutput,
 	VerbFeaturesOutput,
 } from "./section-generation-types";
-
-function normalizeTagPart(value: string): string {
-	return value.trim().toLowerCase().replace(/\s+/g, "-");
-}
+import { normalizeTagPart } from "./tag-normalization";
 
 export function isVerbFeaturesOutput(
 	output: FeaturesOutput | null,
