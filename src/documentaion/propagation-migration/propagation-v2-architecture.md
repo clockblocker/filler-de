@@ -630,9 +630,67 @@ Prerequisite: Phase 4 assumes Phase 1 contracts and Phase 2 adapters are already
 
 ### 16.6 Phase 5 - Incremental Rollout
 
-1. Migrate remaining section propagators one by one.
+1. Migrate remaining section propagators using a hybrid `risk x usage` order (objective rubric below).
 2. Keep tests green per slice.
-3. Remove legacy propagation once v2 fully covers active behavior.
+3. Require full sign-off gate per slice before moving to the next slice (batching allowed only under strict criteria below).
+4. Before migrating any non-verb slice, explicitly audit `decorateAttestationSeparability` as no-op/impossible for that slice and record the audit in the PR checklist.
+5. Defer verb slice migration until Book-of-Work item 14 is landed.
+6. At 100% coverage, transition in two PRs:
+   - PR1: default `propagationV2Enabled=true`, keep kill-switch and v1 code as rollback path.
+   - PR2: remove v1 + kill-switch only after soak exit criteria are met.
+
+#### 16.6.1 Risk x Usage Scoring Rubric
+
+Use this rubric to produce deterministic slice ordering.
+
+Operational measurement scope:
+
+1. Usage metrics are sourced from production plugin telemetry only (exclude CI, automated tests, and local development runs).
+2. `Successful Generate` means the command returns `Ok` and action dispatch completes without propagation error.
+3. Retry dedupe: if the same invocation key is retried within 60 seconds, count only the first successful completion.
+
+Usage score (`1..5`):
+
+1. Compute per-slice share of successful `Generate` invocations over the last 30 days.
+2. Convert share to quintiles (`5` highest usage, `1` lowest usage).
+
+Risk score (`1..5`):
+
+1. Start at `1`.
+2. Add `+1` if slice writes to 3 or more distinct target mutation kinds.
+3. Add `+1` if slice creates new target entries (not only updates existing entries).
+4. Add `+1` if slice depends on morphology equation/backlink marker parsing.
+5. Add `+1` if slice relies on path-healing actions (`RenameMdFile`) as normal flow.
+6. Cap at `5`.
+
+Rollout priority score:
+
+1. `rolloutPriority = (2 * usageScore) - riskScore`
+2. Sort by `rolloutPriority` descending.
+3. Tie-breakers: lower `riskScore` first, then higher `usageScore`, then lexical slice key.
+4. Override: verb slices stay last until BoW item 14 is complete.
+
+#### 16.6.2 Batching Eligibility (Exception Path)
+
+Default is one-slice-at-a-time gating. Batching multiple slices into one gate is allowed only if all conditions hold:
+
+1. Same v1 mutation-kind surface (identical set of `{Relation, MorphologyBacklink, MorphologyEquation, Inflection, Tags}` actually emitted).
+2. Same target surface policy (same lemma/inflected target resolution behavior).
+3. Same entry matching/creation behavior (no slice-specific matching override).
+4. Same no-op audit result for `decorateAttestationSeparability`.
+5. Near-isomorphic fixture topology (same fixture structure with only lexical data substitutions).
+
+If any condition fails, do not batch; run independent per-slice sign-off.
+
+#### 16.6.3 PR2 Soak Exit Criteria
+
+Do not remove v1/kill-switch until all criteria pass:
+
+1. Minimum soak window: 14 consecutive days with PR1 deployed.
+2. Minimum traffic: at least 100 successful `Generate` runs across at least 3 migrated slices during soak.
+3. Stability: zero kill-switch rollback activations during soak.
+4. Regression safety: zero open P0/P1 propagation regressions at cut time.
+5. CI: parity/idempotency/fail-fast suites for migrated slices are green on the PR2 head commit.
 
 ### 16.7 Coexistence Rule During Migration
 
