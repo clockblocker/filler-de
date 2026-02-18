@@ -34,7 +34,7 @@ type InMemoryVault = Map<string, InMemoryFile>;
 function makeSplitPath(params: {
 	basename: string;
 	surfaceKind: "inflected" | "lemma";
-	unitKind: "lexem" | "morphem";
+	unitKind: "lexem" | "morphem" | "phrasem";
 }): SplitPathToMdFile {
 	const normalized = params.basename.toLowerCase();
 	const shard1 = normalized.slice(0, 1) || "_";
@@ -213,6 +213,115 @@ function makeNounFixtureCtx(vault: InMemoryVault): GenerateSectionsResult {
 				lemma: "Kohlekraftwerk",
 				linguisticUnit: "Lexem",
 				posLikeKind: "Noun",
+				surfaceKind: "Lemma",
+			},
+			lookupInLibrary: () => [],
+			propagationV2Enabled: true,
+			vam: {
+				findByBasename: makeFindByBasename(vault),
+			},
+		},
+	} as unknown as GenerateSectionsResult;
+}
+
+type Phase5SliceFixture = {
+	linguisticUnit: "Lexem" | "Phrasem";
+	posLikeKind: string;
+	sliceKey: string;
+};
+
+const PHASE5_NON_VERB_SLICES: ReadonlyArray<Phase5SliceFixture> = [
+	{
+		linguisticUnit: "Lexem",
+		posLikeKind: "Adjective",
+		sliceKey: "de/lexem/adjective",
+	},
+	{ linguisticUnit: "Lexem", posLikeKind: "Adverb", sliceKey: "de/lexem/adverb" },
+	{ linguisticUnit: "Lexem", posLikeKind: "Article", sliceKey: "de/lexem/article" },
+	{
+		linguisticUnit: "Lexem",
+		posLikeKind: "Conjunction",
+		sliceKey: "de/lexem/conjunction",
+	},
+	{
+		linguisticUnit: "Lexem",
+		posLikeKind: "InteractionalUnit",
+		sliceKey: "de/lexem/interactionalunit",
+	},
+	{ linguisticUnit: "Lexem", posLikeKind: "Particle", sliceKey: "de/lexem/particle" },
+	{
+		linguisticUnit: "Lexem",
+		posLikeKind: "Preposition",
+		sliceKey: "de/lexem/preposition",
+	},
+	{ linguisticUnit: "Lexem", posLikeKind: "Pronoun", sliceKey: "de/lexem/pronoun" },
+	{
+		linguisticUnit: "Phrasem",
+		posLikeKind: "Collocation",
+		sliceKey: "de/phrasem/collocation",
+	},
+	{
+		linguisticUnit: "Phrasem",
+		posLikeKind: "CulturalQuotation",
+		sliceKey: "de/phrasem/culturalquotation",
+	},
+	{
+		linguisticUnit: "Phrasem",
+		posLikeKind: "DiscourseFormula",
+		sliceKey: "de/phrasem/discourseformula",
+	},
+	{ linguisticUnit: "Phrasem", posLikeKind: "Idiom", sliceKey: "de/phrasem/idiom" },
+	{ linguisticUnit: "Phrasem", posLikeKind: "Proverb", sliceKey: "de/phrasem/proverb" },
+];
+
+function makePhase5NonVerbFixtureCtx(
+	vault: InMemoryVault,
+	slice: Phase5SliceFixture,
+): GenerateSectionsResult {
+	const isPhrasem = slice.linguisticUnit === "Phrasem";
+	return {
+		actions: [],
+		allEntries: [],
+		commandContext: {
+			activeFile: {
+				content: "",
+				splitPath: makeSplitPath({
+					basename: isPhrasem ? "Auf jeden Fall" : "Langsam",
+					surfaceKind: "lemma",
+					unitKind: isPhrasem ? "phrasem" : "lexem",
+				}),
+			},
+		},
+		existingEntries: [],
+		failedSections: [],
+		inflectionCells: [],
+		matchedEntry: null,
+		morphemes: [],
+		morphology: {
+			compoundedFromLemmas: [],
+		},
+		nextIndex: 1,
+		nounInflectionGenus: undefined,
+		relations: [{ kind: "Synonym", words: ["Kohle"] }],
+		resultingActions: [],
+		sourceTranslation: "fixture translation",
+		textfresserState: {
+			languages: { known: "English", target: "German" },
+			latestLemmaResult: {
+				attestation: {
+					source: {
+						path: makeSplitPath({
+							basename: "Reading",
+							surfaceKind: "lemma",
+							unitKind: "lexem",
+						}),
+						ref: "![[Reading#^1|^]]",
+					},
+				},
+				disambiguationResult: null,
+				lemma: isPhrasem ? "Auf jeden Fall" : "Langsam",
+				linguisticUnit: slice.linguisticUnit,
+				posLikeKind: slice.posLikeKind,
 				surfaceKind: "Lemma",
 			},
 			lookupInLibrary: () => [],
@@ -487,5 +596,81 @@ describe("propagation v2 phase 4 noun slice", () => {
 		expect(buildMutationKindSet(v2Vault)).toEqual(
 			buildMutationKindSet(legacyVault),
 		);
+	});
+});
+
+describe("propagation v2 phase 5 non-verb slices", () => {
+	it("keeps semantic DTO parity with legacy v1 across migrated non-verb slices", async () => {
+		for (const slice of PHASE5_NON_VERB_SLICES) {
+			const legacyVault = createSeedVault();
+			const v2Vault = createSeedVault();
+			const legacyResult = propagateLegacyV1(
+				makePhase5NonVerbFixtureCtx(legacyVault, slice),
+			);
+			const v2Result = propagateV2(makePhase5NonVerbFixtureCtx(v2Vault, slice));
+
+			expect(legacyResult.isOk()).toBe(true);
+			expect(v2Result.isOk()).toBe(true);
+			if (legacyResult.isErr() || v2Result.isErr()) {
+				return;
+			}
+
+			await applyActionsToVault({
+				actions: legacyResult.value.actions,
+				vault: legacyVault,
+			});
+			await applyActionsToVault({
+				actions: v2Result.value.actions,
+				vault: v2Vault,
+			});
+
+			expect(buildDtoSnapshot(v2Vault)).toEqual(buildDtoSnapshot(legacyVault));
+		}
+	});
+
+	it("is idempotent for migrated non-verb slices", async () => {
+		for (const slice of PHASE5_NON_VERB_SLICES) {
+			const vault = createSeedVault();
+			const firstRun = propagateV2(makePhase5NonVerbFixtureCtx(vault, slice));
+			expect(firstRun.isOk()).toBe(true);
+			if (firstRun.isErr()) {
+				return;
+			}
+
+			const firstApply = await applyActionsToVault({
+				actions: firstRun.value.actions,
+				vault,
+			});
+			expect(firstApply.changedPaths.size).toBeGreaterThan(0);
+
+			const secondRun = propagateV2(makePhase5NonVerbFixtureCtx(vault, slice));
+			expect(secondRun.isOk()).toBe(true);
+			if (secondRun.isErr()) {
+				return;
+			}
+			const secondApply = await applyActionsToVault({
+				actions: secondRun.value.actions,
+				vault,
+			});
+
+			expect(secondApply.changedPaths.size).toBe(0);
+		}
+	});
+
+	it("enforces one write action per target note for migrated non-verb slices", () => {
+		for (const slice of PHASE5_NON_VERB_SLICES) {
+			const result = propagateV2(
+				makePhase5NonVerbFixtureCtx(createSeedVault(), slice),
+			);
+			expect(result.isOk()).toBe(true);
+			if (result.isErr()) {
+				return;
+			}
+
+			const processCounts = buildProcessWriteCountByTarget(result.value.actions);
+			for (const count of processCounts.values()) {
+				expect(count).toBe(1);
+			}
+		}
 	});
 });

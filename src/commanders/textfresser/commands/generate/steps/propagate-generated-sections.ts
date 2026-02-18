@@ -9,7 +9,30 @@ import { propagateMorphologyRelations } from "./propagate-morphology-relations";
 import { propagateRelations } from "./propagate-relations";
 import { propagateV2 } from "./propagate-v2";
 
-const V2_MIGRATED_SLICE_KEYS = new Set<string>(["de/lexem/noun"]);
+const V2_MIGRATED_LEXEM_POS = [
+	"adjective",
+	"adverb",
+	"article",
+	"conjunction",
+	"interactionalunit",
+	"noun",
+	"particle",
+	"preposition",
+	"pronoun",
+] as const;
+
+const V2_MIGRATED_PHRASEM_KINDS = [
+	"collocation",
+	"culturalquotation",
+	"discourseformula",
+	"idiom",
+	"proverb",
+] as const;
+
+const V2_MIGRATED_SLICE_KEYS = new Set<string>([
+	...V2_MIGRATED_LEXEM_POS.map((pos) => `de/lexem/${pos}`),
+	...V2_MIGRATED_PHRASEM_KINDS.map((kind) => `de/phrasem/${kind}`),
+]);
 
 function normalizeSliceSegment(value: string): string {
 	return value.trim().toLowerCase();

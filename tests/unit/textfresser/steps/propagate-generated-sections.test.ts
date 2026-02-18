@@ -153,11 +153,13 @@ function resetCalls() {
 }
 
 function makeCtx(params: {
-	posLikeKind?: "Noun" | "Verb";
+	linguisticUnit?: "Lexem" | "Phrasem";
+	posLikeKind?: string;
 	propagationV2Enabled: boolean;
 	targetLanguage?: "German" | "English";
 }): GenerateSectionsResult {
 	const posLikeKind = params.posLikeKind ?? "Noun";
+	const linguisticUnit = params.linguisticUnit ?? "Lexem";
 	const targetLanguage = params.targetLanguage ?? "German";
 	return {
 		actions: [],
@@ -167,7 +169,7 @@ function makeCtx(params: {
 				attestation: { source: { ref: "![[src#^1|^]]" } },
 				disambiguationResult: null,
 				lemma: "Haus",
-				linguisticUnit: "Lexem",
+				linguisticUnit,
 				posLikeKind,
 				surfaceKind: "Lemma",
 			},
@@ -177,11 +179,13 @@ function makeCtx(params: {
 }
 
 function makeCommandInput(params: {
-	posLikeKind?: "Noun" | "Verb";
+	linguisticUnit?: "Lexem" | "Phrasem";
+	posLikeKind?: string;
 	propagationV2Enabled: boolean;
 	targetLanguage?: "German" | "English";
 }): CommandInput {
 	const posLikeKind = params.posLikeKind ?? "Noun";
+	const linguisticUnit = params.linguisticUnit ?? "Lexem";
 	const targetLanguage = params.targetLanguage ?? "German";
 
 	return {
@@ -204,7 +208,7 @@ function makeCommandInput(params: {
 				attestation: { source: { ref: "![[src#^1|^]]" } },
 				disambiguationResult: null,
 				lemma: "Haus",
-				linguisticUnit: "Lexem",
+				linguisticUnit,
 				posLikeKind,
 				surfaceKind: "Lemma",
 			},
@@ -212,6 +216,55 @@ function makeCommandInput(params: {
 		},
 	} as unknown as CommandInput;
 }
+
+const MIGRATED_NON_VERB_SLICES: ReadonlyArray<{
+	linguisticUnit: "Lexem" | "Phrasem";
+	posLikeKind: string;
+	sliceKey: string;
+}> = [
+	{
+		linguisticUnit: "Lexem",
+		posLikeKind: "Adjective",
+		sliceKey: "de/lexem/adjective",
+	},
+	{ linguisticUnit: "Lexem", posLikeKind: "Adverb", sliceKey: "de/lexem/adverb" },
+	{ linguisticUnit: "Lexem", posLikeKind: "Article", sliceKey: "de/lexem/article" },
+	{
+		linguisticUnit: "Lexem",
+		posLikeKind: "Conjunction",
+		sliceKey: "de/lexem/conjunction",
+	},
+	{
+		linguisticUnit: "Lexem",
+		posLikeKind: "InteractionalUnit",
+		sliceKey: "de/lexem/interactionalunit",
+	},
+	{ linguisticUnit: "Lexem", posLikeKind: "Noun", sliceKey: "de/lexem/noun" },
+	{ linguisticUnit: "Lexem", posLikeKind: "Particle", sliceKey: "de/lexem/particle" },
+	{
+		linguisticUnit: "Lexem",
+		posLikeKind: "Preposition",
+		sliceKey: "de/lexem/preposition",
+	},
+	{ linguisticUnit: "Lexem", posLikeKind: "Pronoun", sliceKey: "de/lexem/pronoun" },
+	{
+		linguisticUnit: "Phrasem",
+		posLikeKind: "Collocation",
+		sliceKey: "de/phrasem/collocation",
+	},
+	{
+		linguisticUnit: "Phrasem",
+		posLikeKind: "CulturalQuotation",
+		sliceKey: "de/phrasem/culturalquotation",
+	},
+	{
+		linguisticUnit: "Phrasem",
+		posLikeKind: "DiscourseFormula",
+		sliceKey: "de/phrasem/discourseformula",
+	},
+	{ linguisticUnit: "Phrasem", posLikeKind: "Idiom", sliceKey: "de/phrasem/idiom" },
+	{ linguisticUnit: "Phrasem", posLikeKind: "Proverb", sliceKey: "de/phrasem/proverb" },
+];
 
 describe("propagateGeneratedSections", () => {
 	beforeEach(() => {
@@ -244,24 +297,28 @@ describe("propagateGeneratedSections", () => {
 		expect(calls.v2).toBe(0);
 	});
 
-	it("routes migrated noun slice to v2 when kill-switch is true", async () => {
+	it("routes every migrated non-verb slice to v2 when kill-switch is true", async () => {
 		const { propagateGeneratedSections } = await import(
 			"../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections"
 		);
 
-		const result = propagateGeneratedSections(
-			makeCtx({
-				posLikeKind: "Noun",
-				propagationV2Enabled: true,
-			}),
-		);
-		expect(result.isOk()).toBe(true);
-		expect(calls.v2).toBe(1);
-		expect(calls.relations).toBe(0);
-		expect(calls.morphology).toBe(0);
-		expect(calls.morphemes).toBe(0);
-		expect(calls.decorate).toBe(0);
-		expect(calls.inflections).toBe(0);
+		for (const slice of MIGRATED_NON_VERB_SLICES) {
+			resetCalls();
+			const result = propagateGeneratedSections(
+				makeCtx({
+					linguisticUnit: slice.linguisticUnit,
+					posLikeKind: slice.posLikeKind,
+					propagationV2Enabled: true,
+				}),
+			);
+			expect(result.isOk()).toBe(true);
+			expect(calls.v2).toBe(1);
+			expect(calls.relations).toBe(0);
+			expect(calls.morphology).toBe(0);
+			expect(calls.morphemes).toBe(0);
+			expect(calls.decorate).toBe(0);
+			expect(calls.inflections).toBe(0);
+		}
 	});
 
 	it("falls back to legacy v1 chain for non-migrated slice when kill-switch is true", async () => {

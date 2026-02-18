@@ -639,20 +639,34 @@ Prerequisite: Phase 4 assumes Phase 1 contracts and Phase 2 adapters are already
    - PR1: default `propagationV2Enabled=true`, keep kill-switch and v1 code as rollback path.
    - PR2: remove v1 + kill-switch only after soak exit criteria are met.
 
+Phase 5 runtime source of truth:
+
+1. `V2_MIGRATED_SLICE_KEYS` in `src/commanders/textfresser/commands/generate/steps/propagate-generated-sections.ts`.
+2. As of February 18, 2026: all non-verb `de/lexem/*` and `de/phrasem/*` slices are migrated to `v2`.
+3. `de/lexem/verb` remains on `v1` until BoW item 14 is complete.
+4. Non-verb audit outcome: `decorateAttestationSeparability` remains no-op for migrated non-verb slices; parity is locked by `tests/unit/textfresser/steps/propagate-v2-phase4.test.ts`.
+
 #### 16.6.1 Risk x Usage Scoring Rubric
 
 Use this rubric to produce deterministic slice ordering.
 
 Operational measurement scope:
 
-1. Usage metrics are sourced from production plugin telemetry only (exclude CI, automated tests, and local development runs).
-2. `Successful Generate` means the command returns `Ok` and action dispatch completes without propagation error.
-3. Retry dedupe: if the same invocation key is retried within 60 seconds, count only the first successful completion.
+1. Do not add telemetry/analytics infrastructure for migration.
+2. `usageScore` is a documented manual ranking input provided by user/domain knowledge in each rollout PR.
+3. Manual `usageScore` must be recorded in the PR description as a `1..5` value with a one-line rationale.
 
 Usage score (`1..5`):
 
-1. Compute per-slice share of successful `Generate` invocations over the last 30 days.
-2. Convert share to quintiles (`5` highest usage, `1` lowest usage).
+1. Assign relative usage rank manually (`5` highest usage, `1` lowest usage).
+2. Keep ordering deterministic by documenting each slice's assigned score in the rollout PR.
+
+Phase 5 required gate per slice PR:
+
+1. Run and pass parity/idempotency/fail-fast/one-write-target tests for the slice.
+2. Run `bun run typecheck:changed`.
+3. Run full `bun test` for non-regression.
+4. If full `bun test` baseline is red, include baseline vs PR failure counts in PR notes.
 
 Risk score (`1..5`):
 
@@ -679,6 +693,7 @@ Default is one-slice-at-a-time gating. Batching multiple slices into one gate is
 3. Same entry matching/creation behavior (no slice-specific matching override).
 4. Same no-op audit result for `decorateAttestationSeparability`.
 5. Near-isomorphic fixture topology (same fixture structure with only lexical data substitutions).
+6. Explicit maintainer sign-off before batching.
 
 If any condition fails, do not batch; run independent per-slice sign-off.
 
