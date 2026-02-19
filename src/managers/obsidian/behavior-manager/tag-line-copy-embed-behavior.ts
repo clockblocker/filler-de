@@ -1,5 +1,6 @@
 import { type App, MarkdownView, Notice } from "obsidian";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
+import { getErrorMessage } from "../../../utils/get-error-message";
 import type { VaultActionManager } from "../vault-action-manager";
 import { logError } from "../vault-action-manager/helpers/issue-handlers";
 
@@ -65,7 +66,7 @@ export async function tagLineCopyEmbedBehavior(
 		await navigator.clipboard.writeText(embed);
 	} catch (error) {
 		logError({
-			description: `Error tagging line with block embed: ${error}`,
+			description: `Error tagging line with block embed: ${getErrorMessage(error)}`,
 			location: "tagLineCopyEmbedBehavior",
 		});
 	}

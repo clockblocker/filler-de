@@ -14,10 +14,7 @@ import {
 	SPACE_F,
 } from "../../../../../types/literals/ui";
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../codecs";
-import {
-	computeCodexSuffix,
-	pathPartsWithRootToSuffixParts,
-} from "../../../paths/path-finder";
+import { computeCodexSuffix } from "../../../paths/path-finder";
 import type { TreeNodeStatus } from "../tree-node/types/atoms";
 import { TreeNodeStatus as Status } from "../tree-node/types/atoms";
 import { PREFIX_OF_CODEX } from "./literals";
@@ -40,7 +37,7 @@ function makeLeafBasename(nodeName: string, pathParts: string[]): string {
 	const settings = getParsedUserSettings();
 	const rules = makeCodecRulesFromSettings(settings);
 	const codecs = makeCodecs(rules);
-	const suffixParts = pathPartsWithRootToSuffixParts(pathParts);
+	const suffixParts = codecs.suffix.pathPartsWithRootToSuffixParts(pathParts);
 	return codecs.suffix.serializeSeparatedSuffix({
 		coreName: nodeName,
 		suffixParts,
