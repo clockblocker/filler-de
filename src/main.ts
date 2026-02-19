@@ -50,6 +50,7 @@ import {
 import { getErrorMessage } from "./utils/get-error-message";
 import { whenIdle as whenIdleTracker } from "./utils/idle-tracker";
 import { logger } from "./utils/logger";
+import { sleep } from "./utils/sleep";
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
@@ -82,9 +83,7 @@ export default class TextEaterPlugin extends Plugin {
 				callback: async () => {
 					// Wait for plugin to be fully initialized
 					while (!this.initialized) {
-						await new Promise((resolve) =>
-							setTimeout(resolve, 100),
-						);
+						await sleep(100);
 					}
 					// Tests access APIs via: app.plugins.plugins["cbcr-text-eater-de"]?.getHelpersTestingApi?.()
 				},
@@ -104,7 +103,7 @@ export default class TextEaterPlugin extends Plugin {
 			await this.whenLayoutReady();
 			await this.whenMetadataResolved();
 
-			await this.sleep(300);
+			await sleep(300);
 
 			await this.loadPlugin();
 			this.initialized = true;
@@ -152,10 +151,6 @@ export default class TextEaterPlugin extends Plugin {
 
 	private hasUsableMetadataSignal(): boolean {
 		return !!this.app.vault.getRoot();
-	}
-
-	private sleep(ms: number) {
-		return new Promise((r) => setTimeout(r, ms));
 	}
 
 	async loadPlugin() {
@@ -575,7 +570,7 @@ export default class TextEaterPlugin extends Plugin {
 
 		await this.saveData(this.settings);
 		// Allow file system to flush before any potential reload
-		await new Promise((resolve) => setTimeout(resolve, 100));
+		await sleep(100);
 		this.previousSettings = {
 			...this.settings,
 			suffixDelimiter: { ...this.settings.suffixDelimiter },

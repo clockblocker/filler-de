@@ -1,6 +1,7 @@
 import type { Result } from "neverthrow";
 import type { App } from "obsidian";
 import { logger } from "../../../utils/logger";
+import { sleep } from "../../../utils/sleep";
 import { ActiveFileService } from "./file-services/active-view/active-file-service";
 import { SelectionService } from "./file-services/active-view/selection-service";
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
@@ -206,7 +207,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		const startTime = Date.now();
 
 		// Small initial delay to let Obsidian process events
-		await new Promise((resolve) => setTimeout(resolve, initialDelayMs));
+		await sleep(initialDelayMs);
 
 		let intervalMs = 50;
 		let consecutiveChecks = 0;
@@ -230,7 +231,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 				intervalMs = Math.min(intervalMs * 1.2, 200);
 			}
 
-			await new Promise((resolve) => setTimeout(resolve, intervalMs));
+			await sleep(intervalMs);
 		}
 
 		// Final check - if still missing, log warning (tests will handle with their own polling)

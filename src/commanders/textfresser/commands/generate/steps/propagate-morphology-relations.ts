@@ -10,7 +10,8 @@ import {
 } from "../../../common/target-path-resolver";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
-import { buildSectionMarkerHtml } from "../../../domain/dict-note/internal/constants";
+import { buildSectionMarker } from "../../../domain/dict-note/internal/constants";
+import { serializeDictNote } from "../../../domain/dict-note/serialize-dict-note";
 import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
 import {
 	type MorphemeItem,
@@ -216,10 +217,7 @@ export function propagateMorphologyRelations(
 	const sourceLemma = ctx.textfresserState.latestLemmaResult.lemma;
 	const sectionCssSuffix = cssSuffixFor[DictSectionKind.Morphology];
 	const sectionTitle = TitleReprFor[DictSectionKind.Morphology][targetLang];
-	const sectionMarker = buildSectionMarkerHtml(
-		sectionCssSuffix,
-		sectionTitle,
-	);
+	const sectionMarker = buildSectionMarker(sectionCssSuffix, sectionTitle);
 	const usedInBlockMarker = morphologyRelationHelper.markerForRelationType(
 		"used_in",
 		targetLang,
@@ -324,9 +322,7 @@ export function propagateMorphologyRelations(
 								});
 							}
 
-							return dictNoteHelper.serializeWithMeta(
-								existingEntries,
-							);
+							return serializeDictNote(existingEntries);
 						}
 
 						const existingIds = existingEntries.map(
@@ -365,7 +361,7 @@ export function propagateMorphologyRelations(
 							sections,
 						};
 
-						return dictNoteHelper.serializeWithMeta([
+						return serializeDictNote([
 							...existingEntries,
 							newEntry,
 						]);

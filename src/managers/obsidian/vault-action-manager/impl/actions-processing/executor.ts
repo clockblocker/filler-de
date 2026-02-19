@@ -2,6 +2,7 @@ import { err, ok } from "neverthrow";
 import type { Vault } from "obsidian";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
 import { logger } from "../../../../../utils/logger";
+import { sleep } from "../../../../../utils/sleep";
 import type { ActiveFileService } from "../../file-services/active-view/active-file-service";
 import type { TFileHelper } from "../../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../../file-services/background/helpers/tfolder-helper";
@@ -11,7 +12,6 @@ import {
 } from "../../helpers/pathfinder";
 import type { SplitPathToMdFile } from "../../types/split-path";
 import { type VaultAction, VaultActionKind } from "../../types/vault-action";
-import { makeSystemPathForSplitPath } from "../common/split-path-and-system-path";
 
 export class Executor {
 	constructor(
@@ -59,7 +59,7 @@ export class Executor {
 			case VaultActionKind.UpsertMdFile: {
 				// INVARIANT: Parent folders exist (ensured by dispatcher)
 				const { splitPath, content } = action.payload;
-				const _path = makeSystemPathForSplitPath(splitPath);
+				const _path = pathfinder.systemPathFromSplitPath(splitPath);
 
 				// Check if file already exists
 				const fileResult = await this.tfileHelper.getFile(splitPath);
@@ -118,7 +118,7 @@ export class Executor {
 				// Restore inline title selection after rename
 				if (result.isOk() && savedInlineTitleSelection) {
 					// Small delay for Obsidian to update view after rename
-					await new Promise((resolve) => setTimeout(resolve, 50));
+					await sleep(50);
 					this.active.restoreInlineTitleSelection(
 						savedInlineTitleSelection,
 					);

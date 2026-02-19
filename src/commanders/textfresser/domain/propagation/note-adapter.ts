@@ -4,6 +4,7 @@ import { morphologyRelationHelper } from "../../../../stateless-helpers/morpholo
 import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
 import type { TargetLanguage } from "../../../../types";
 import { logger } from "../../../../utils/logger";
+import { extractHashTags } from "../../../../utils/text-utils";
 import { compareSectionsByWeight } from "../../targets/de/sections/section-config";
 import { cssSuffixFor } from "../../targets/de/sections/section-css-kind";
 import {
@@ -11,7 +12,7 @@ import {
 	TitleReprFor,
 } from "../../targets/de/sections/section-kind";
 import {
-	ENTRY_SECTION_CSS_CLASS,
+	buildSectionMarker,
 	ENTRY_SECTION_MARKER_RE,
 	ENTRY_SEPARATOR,
 	ENTRY_SEPARATOR_RE,
@@ -175,10 +176,6 @@ function collectSectionMarkers(text: string): ParsedSectionMarker[] {
 		});
 	}
 	return markers;
-}
-
-function buildSectionMarker(cssKind: string, title: string): string {
-	return `<span class="${ENTRY_SECTION_CSS_CLASS} ${ENTRY_SECTION_CSS_CLASS}_${cssKind}">${title}</span>`;
 }
 
 function parseBasicWikilinkFromMatch(match: {
@@ -561,10 +558,6 @@ function parseMorphologySection(rawContent: string): MorphologySectionDto {
 		equations: dedupeByKey(equations, morphologyEquationIdentityKey),
 		kind: "Morphology",
 	};
-}
-
-function extractHashTags(text: string): string[] {
-	return text.match(/#[^\s]+/g) ?? [];
 }
 
 function parseInflectionSection(rawContent: string): InflectionSectionDto {

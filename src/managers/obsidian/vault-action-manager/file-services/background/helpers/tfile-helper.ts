@@ -2,6 +2,7 @@ import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { type FileManager, TFile, type Vault } from "obsidian";
 import { getErrorMessage } from "../../../../../../utils/get-error-message";
 import { logger } from "../../../../../../utils/logger";
+import { sleep as delay } from "../../../../../../utils/sleep";
 import {
 	errorBothSourceAndTargetNotFound,
 	errorCreateFailed,
@@ -25,8 +26,6 @@ import {
 } from "../../../types/split-path";
 import type { Transform } from "../../../types/vault-action";
 import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
-
-const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Helper for TFile operations in the vault.

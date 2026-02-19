@@ -6,7 +6,7 @@ import {
 	buildPropagationActionPair,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
-import { buildSectionMarkerHtml } from "../../../domain/dict-note/internal/constants";
+import { buildSectionMarker } from "../../../domain/dict-note/internal/constants";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
@@ -107,10 +107,7 @@ export function propagateRelations(
 	const propagationActions: VaultAction[] = [];
 	const relationCssSuffix = cssSuffixFor[DictSectionKind.Relation];
 	const relationTitle = TitleReprFor[DictSectionKind.Relation][targetLang];
-	const sectionMarker = buildSectionMarkerHtml(
-		relationCssSuffix,
-		relationTitle,
-	);
+	const sectionMarker = buildSectionMarker(relationCssSuffix, relationTitle);
 
 	for (const [targetWord, entries] of byTarget) {
 		const resolved = resolveTargetPath({

@@ -19,6 +19,7 @@ import {
 } from "../../../common/target-path-resolver";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
+import { serializeDictNote } from "../../../domain/dict-note/serialize-dict-note";
 import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
 import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
@@ -292,7 +293,7 @@ export function propagateMorphemes(
 					});
 				}
 
-				return dictNoteHelper.serializeWithMeta(existingEntries);
+				return serializeDictNote(existingEntries);
 			}
 
 			const existingIds = existingEntries.map((entry) => entry.id);
@@ -326,8 +327,7 @@ export function propagateMorphemes(
 				sections,
 			};
 
-			const allEntries = [...existingEntries, newEntry];
-			return dictNoteHelper.serializeWithMeta(allEntries);
+			return serializeDictNote([...existingEntries, newEntry]);
 		};
 
 		propagationActions.push(...resolved.healingActions);
