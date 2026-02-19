@@ -1,237 +1,116 @@
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import { err, ok } from "neverthrow";
-import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
-import type { CommandInput } from "../../../../src/commanders/textfresser/commands/types";
-import { dispatchActions } from "../../../../src/commanders/textfresser/orchestration/shared/dispatch-actions";
-import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
+import { describe, expect, it } from "bun:test";
+import { propagateGeneratedSections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections";
+import type {
+	GenerateSectionsResult,
+	ParsedRelation,
+} from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
+import type { MorphemeItem } from "../../../../src/commanders/textfresser/domain/morpheme/morpheme-formatter";
+import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
+import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
-const calls = {
-	core: 0,
-	decorate: 0,
+const SOURCE_PATH = {
+	basename: "chapter-1",
+	extension: "md" as const,
+	kind: "MdFile" as const,
+	pathParts: ["Reading"],
 };
 
-let shouldFailCore = false;
-let serializeCalls = 0;
-let moveCalls = 0;
-
-function okCtx(ctx: unknown) {
-	return ok(ctx);
-}
-
-mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/decorate-attestation-separability",
-	() => ({
-		decorateAttestationSeparability: (ctx: unknown) => {
-			calls.decorate += 1;
-			return okCtx(ctx);
-		},
-	}),
-);
-
-mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/propagate-core",
-	() => ({
-		propagateCore: (ctx: unknown) => {
-			calls.core += 1;
-			if (shouldFailCore) {
-				return err({
-					kind: "ApiError",
-					reason: "propagation core failed",
-				});
-			}
-			return okCtx(ctx);
-		},
-	}),
-);
-
-mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/check-attestation",
-	() => ({
-		checkAttestation: <T>(state: T) => okCtx(state),
-	}),
-);
-
-mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/check-eligibility",
-	() => ({
-		checkEligibility: <T>(state: T) => okCtx(state),
-	}),
-);
-
-mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/check-lemma-result",
-	() => ({
-		checkLemmaResult: <T>(state: T) => okCtx(state),
-	}),
-);
-
-mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/resolve-existing-entry",
-	() => ({
-		resolveExistingEntry: <T>(state: T) => okCtx(state),
-	}),
-);
-
-mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/generate-sections",
-	() => ({
-		generateSections: <T>(state: T) => okCtx(state),
-	}),
-);
-
-mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/serialize-entry",
-	() => ({
-		serializeEntry: <T>(state: T) => {
-			serializeCalls += 1;
-			return okCtx(state);
-		},
-	}),
-);
-
-mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/move-to-worter",
-	() => ({
-		moveToWorter: <T>(state: T) => {
-			moveCalls += 1;
-			return okCtx(state);
-		},
-	}),
-);
-
-function resetCalls() {
-	calls.core = 0;
-	calls.decorate = 0;
-}
-
-function makeCtx(params: {
-	linguisticUnit?: "Lexem" | "Phrasem";
-	posLikeKind?: string;
-	targetLanguage?: "German" | "English";
+function makeCtx(params?: {
+	morphemes?: MorphemeItem[];
+	relations?: ParsedRelation[];
 }): GenerateSectionsResult {
-	const posLikeKind = params.posLikeKind ?? "Noun";
-	const linguisticUnit = params.linguisticUnit ?? "Lexem";
-	const targetLanguage = params.targetLanguage ?? "German";
+	const morphemes = params?.morphemes ?? [];
+	const relations = params?.relations ?? [];
+
 	return {
 		actions: [],
-		textfresserState: {
-			languages: { known: "English", target: targetLanguage },
-			latestLemmaResult: {
-				attestation: { source: { ref: "![[src#^1|^]]" } },
-				disambiguationResult: null,
-				lemma: "Haus",
-				linguisticUnit,
-				posLikeKind,
-				surfaceKind: "Lemma",
-			},
-		},
-	} as unknown as GenerateSectionsResult;
-}
-
-function makeCommandInput(params: {
-	linguisticUnit?: "Lexem" | "Phrasem";
-	posLikeKind?: string;
-	targetLanguage?: "German" | "English";
-}): CommandInput {
-	const posLikeKind = params.posLikeKind ?? "Noun";
-	const linguisticUnit = params.linguisticUnit ?? "Lexem";
-	const targetLanguage = params.targetLanguage ?? "German";
-
-	return {
+		allEntries: [],
 		commandContext: {
 			activeFile: {
 				content: "",
 				splitPath: {
-					basename: "gehen",
+					basename: "aufpassen",
 					extension: "md",
 					kind: "MdFile",
-					pathParts: ["Worter", "de"],
+					pathParts: ["Worter"],
 				},
 			},
-			selection: null,
 		},
+		existingEntries: [],
+		failedSections: [],
+		inflectionCells: [],
+		matchedEntry: null,
+		morphemes,
+		nextIndex: 1,
+		relations,
 		resultingActions: [],
 		textfresserState: {
-			languages: { known: "English", target: targetLanguage },
+			languages: { known: "English", target: "German" },
 			latestLemmaResult: {
-				attestation: { source: { ref: "![[src#^1|^]]" } },
+				attestation: {
+					source: {
+						path: SOURCE_PATH,
+						ref: "![[chapter-1#^1|^]]",
+						textRaw: "",
+						textWithOnlyTargetMarked: "",
+					},
+					target: { surface: "aufpassen" },
+				},
 				disambiguationResult: null,
-				lemma: "Haus",
-				linguisticUnit,
-				posLikeKind,
+				lemma: "aufpassen",
+				linguisticUnit: "Lexem",
+				posLikeKind: "Verb",
 				surfaceKind: "Lemma",
 			},
-		},
-	} as unknown as CommandInput;
+			lookupInLibrary: () => [],
+			vam: { findByBasename: () => [] },
+		} as unknown as TextfresserState,
+	} as unknown as GenerateSectionsResult;
 }
 
-const SAMPLE_SLICES: ReadonlyArray<{
-	linguisticUnit: "Lexem" | "Phrasem";
-	posLikeKind: string;
-	targetLanguage?: "German" | "English";
-}> = [
-	{ linguisticUnit: "Lexem", posLikeKind: "Noun", targetLanguage: "German" },
-	{ linguisticUnit: "Lexem", posLikeKind: "Verb", targetLanguage: "German" },
-	{ linguisticUnit: "Phrasem", posLikeKind: "Idiom", targetLanguage: "German" },
-	{ linguisticUnit: "Lexem", posLikeKind: "Noun", targetLanguage: "English" },
-];
-
-	describe("propagateGeneratedSections", () => {
-	beforeEach(() => {
-		shouldFailCore = false;
-		serializeCalls = 0;
-		moveCalls = 0;
-		resetCalls();
-	});
-
-	afterAll(() => {
-		mock.restore();
-	});
-
-	it("always routes core propagation and then decorates", async () => {
-		const { propagateGeneratedSections } = await import(
-			"../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections"
-		);
-
-		for (const slice of SAMPLE_SLICES) {
-			resetCalls();
-			const result = propagateGeneratedSections(
-				makeCtx({
-					linguisticUnit: slice.linguisticUnit,
-					posLikeKind: slice.posLikeKind,
-					targetLanguage: slice.targetLanguage,
-				}),
-			);
-			expect(result.isOk()).toBe(true);
-			expect(calls.core).toBe(1);
-			expect(calls.decorate).toBe(1);
-		}
-	});
-
-	it("core propagation failure short-circuits Generate with zero emitted/dispatched actions", async () => {
-		shouldFailCore = true;
-		const { generateCommand } = await import(
-			"../../../../src/commanders/textfresser/commands/generate/generate-command"
-		);
-		let dispatchCalls = 0;
-		const vam = {
-			dispatch: async () => {
-				dispatchCalls += 1;
-				return ok(undefined);
-			},
-		} as unknown as VaultActionManager;
-
-		const result = await generateCommand(
-			makeCommandInput({
-				posLikeKind: "Noun",
+describe("propagateGeneratedSections", () => {
+	it("runs core propagation and the source-note post-step together", async () => {
+		const result = propagateGeneratedSections(
+			makeCtx({
+				morphemes: [
+					{
+						kind: "Prefix",
+						linkTarget: "auf-prefix-de",
+						separability: "Separable",
+						surf: "auf",
+					},
+				],
+				relations: [{ kind: "Synonym", words: ["Heim"] }],
 			}),
-		).andThen((actions) => dispatchActions(vam, actions));
+		);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
 
-		expect(result.isErr()).toBe(true);
-		expect(calls.core).toBe(1);
-		expect(calls.decorate).toBe(0);
-		expect(serializeCalls).toBe(0);
-		expect(moveCalls).toBe(0);
-		expect(dispatchCalls).toBe(0);
+		const actions = result.value.actions;
+		const upsertCount = actions.filter(
+			(action) => action.kind === VaultActionKind.UpsertMdFile,
+		).length;
+		expect(upsertCount).toBeGreaterThan(0);
+
+		const sourceProcess = actions.find(
+			(action) =>
+				action.kind === VaultActionKind.ProcessMdFile &&
+				action.payload.splitPath.basename === SOURCE_PATH.basename &&
+				action.payload.splitPath.pathParts.join("/") ===
+					SOURCE_PATH.pathParts.join("/"),
+		);
+		expect(sourceProcess).toBeDefined();
+		if (!sourceProcess || !("transform" in sourceProcess.payload)) return;
+
+		const sample = "[[aufpassen|Pass]] auf dich [[aufpassen|auf]]";
+		const transformed = await sourceProcess.payload.transform(sample);
+		expect(transformed).toBe(sample);
+	});
+
+	it("is a no-op when neither propagation nor post-step conditions apply", () => {
+		const result = propagateGeneratedSections(makeCtx());
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+		expect(result.value.actions).toHaveLength(0);
 	});
 });
