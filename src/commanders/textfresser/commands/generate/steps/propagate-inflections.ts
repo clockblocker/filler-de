@@ -2,7 +2,6 @@ import { ok, type Result } from "neverthrow";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { logger } from "../../../../../utils/logger";
 import {
 	buildPropagationActionPair,
@@ -10,6 +9,7 @@ import {
 } from "../../../common/target-path-resolver";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
+import { serializeDictNote } from "../../../domain/dict-note/serialize-dict-note";
 import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
@@ -221,13 +221,7 @@ export function propagateInflections(
 
 			if (!didChange) return content;
 
-			const { body, meta } = dictNoteHelper.serialize(compactedEntries);
-
-			if (Object.keys(meta).length > 0) {
-				const metaTransform = noteMetadataHelper.upsert(meta);
-				return metaTransform(body) as string;
-			}
-			return body;
+			return serializeDictNote(compactedEntries);
 		};
 
 		propagationActions.push(...resolved.healingActions);

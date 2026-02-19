@@ -1,5 +1,13 @@
 export * from "./intent-key";
 export * from "./merge-policy";
+export type {
+	PropagationNoteEntry,
+	PropagationRawSection,
+	PropagationSection,
+	PropagationTypedSection,
+	SerializePropagationNoteResult,
+	WikilinkDto,
+} from "./note-adapter";
 export {
 	parseBasicWikilinkDto,
 	parsePropagationNote,
@@ -13,12 +21,4 @@ export type {
 	PropagationVaultPort,
 	ReadManyMdFilesOutcome,
 } from "./ports";
-export type {
-	PropagationNoteEntry,
-	PropagationRawSection,
-	PropagationSection,
-	PropagationTypedSection,
-	SerializePropagationNoteResult,
-	WikilinkDto,
-} from "./note-adapter";
 export type * from "./types";

@@ -1,3 +1,4 @@
+import { dedupeByKeyFirst } from "../../../../utils/array-utils";
 import type {
 	InflectionItemDto,
 	MorphologyBacklinkDto,
@@ -17,22 +18,7 @@ export function normalizeTagToken(value: string): string {
 	return normalizeCaseFold(value).replace(/\s+/g, "-");
 }
 
-export function dedupeByKey<T>(
-	items: ReadonlyArray<T>,
-	getKey: (item: T) => string,
-): T[] {
-	const seen = new Set<string>();
-	const deduped: T[] = [];
-	for (const item of items) {
-		const key = getKey(item);
-		if (seen.has(key)) {
-			continue;
-		}
-		seen.add(key);
-		deduped.push(item);
-	}
-	return deduped;
-}
+export { dedupeByKeyFirst as dedupeByKey };
 
 export function relationItemIdentityKey(item: RelationItemDto): string {
 	return `${normalizeCaseFold(item.relationKind)}::${normalizeCaseFold(item.targetLemma)}`;

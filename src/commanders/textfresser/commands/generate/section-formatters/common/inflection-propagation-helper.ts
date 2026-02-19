@@ -167,9 +167,8 @@ export function parseLegacyInflectionHeaderTag(
 	return buildLocalizedInflectionTag(caseValue, numberValue, targetLanguage);
 }
 
-export function extractHashTags(content: string): string[] {
-	return content.match(/#[^\s]+/g) ?? [];
-}
+import { extractHashTags } from "../../../../../../utils/text-utils";
+export { extractHashTags };
 
 export function buildLocalizedInflectionTagsFromCells(
 	cells: NounInflectionCell[],

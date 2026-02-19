@@ -40,20 +40,7 @@ export function sameRename(
 
 // --- generic dedupe helpers ---
 
-/**
- * Keep the LAST occurrence for each key.
- * (matches your "newest wins" default behavior)
- */
-export function dedupeByKey<T>(
-	items: readonly T[],
-	keyFn: (item: T) => string,
-): T[] {
-	const map = new Map<string, T>();
-	for (const item of items) {
-		map.set(keyFn(item), item);
-	}
-	return Array.from(map.values());
-}
+export { dedupeByKeyLast as dedupeByKey } from "../../../../../utils/array-utils";
 
 /**
  * Dedupe items by a custom equality predicate.

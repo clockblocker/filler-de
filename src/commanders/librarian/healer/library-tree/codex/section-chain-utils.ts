@@ -2,31 +2,10 @@
  * Utilities for working with section chains in codex generation.
  */
 
+import { dedupeByKeyFirst as dedupeByKey } from "../../../../../utils/array-utils";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 
-// ─── Generic Dedup ───
-
-/**
- * Generic deduplication by key function.
- * Preserves first occurrence order.
- *
- * @param items - Array of items to deduplicate
- * @param keyFn - Function to extract a string key from each item
- */
-export function dedupeByKey<T>(items: T[], keyFn: (t: T) => string): T[] {
-	const seen = new Set<string>();
-	const result: T[] = [];
-
-	for (const item of items) {
-		const key = keyFn(item);
-		if (!seen.has(key)) {
-			seen.add(key);
-			result.push(item);
-		}
-	}
-
-	return result;
-}
+export { dedupeByKey };
 
 // ─── Chain Utilities ───
 

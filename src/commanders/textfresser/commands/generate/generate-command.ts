@@ -17,7 +17,7 @@ import { serializeEntry } from "./steps/serialize-entry";
  * checkAttestation → checkEligibility → checkLemmaResult
  * → resolveExistingEntry (parse existing entries)
  * → generateSections (async: LLM calls or append attestation)
- * → propagateGeneratedSections (wrapper: v1 legacy chain or v2 flag path)
+ * → propagateGeneratedSections (v2-only propagation + post-propagation decoration)
  * → serializeEntry (includes noteKind meta) → moveToWorter(policy destination) → addWriteAction
  */
 export function generateCommand(

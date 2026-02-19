@@ -1,7 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import { err, ok } from "neverthrow";
-import type { CommandInput } from "../../../../src/commanders/textfresser/commands/types";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
+import type { CommandInput } from "../../../../src/commanders/textfresser/commands/types";
 import { dispatchActions } from "../../../../src/commanders/textfresser/orchestration/shared/dispatch-actions";
 import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
 

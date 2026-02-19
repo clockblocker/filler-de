@@ -2,7 +2,10 @@ import { ResultAsync } from "neverthrow";
 import type { PhrasemeKind } from "../../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
 import type { DeEntity } from "../../../../../linguistics/de";
 import type { DeLexemPos } from "../../../../../linguistics/de/lemma";
-import type { VaultActionManager } from "../../../../../managers/obsidian/vault-action-manager";
+import {
+	readContentErrorToReason,
+	type VaultActionManager,
+} from "../../../../../managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { AgentOutput } from "../../../../../prompt-smith";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
@@ -120,7 +123,9 @@ export function disambiguateSense(
 	): ResultAsync<string, CommandError> =>
 		ResultAsync.fromPromise(
 			vam.readContent(filePath).then((r) => {
-				if (r.isErr()) throw new Error(r.error);
+				if (r.isErr()) {
+					throw new Error(readContentErrorToReason(r.error));
+				}
 				return r.value;
 			}),
 			(e): CommandError => ({

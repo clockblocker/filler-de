@@ -11,13 +11,13 @@
 
 import { ok, type Result } from "neverthrow";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import {
 	buildPropagationActionPair,
 	resolveMorphemePath,
 } from "../../../common/target-path-resolver";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
+import { serializeDictNote } from "../../../domain/dict-note/serialize-dict-note";
 import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
 import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
@@ -250,12 +250,7 @@ export function propagateMorphemes(
 					});
 				}
 
-				const { body, meta } =
-					dictNoteHelper.serialize(existingEntries);
-				if (Object.keys(meta).length > 0) {
-					return noteMetadataHelper.upsert(meta)(body) as string;
-				}
-				return body;
+				return serializeDictNote(existingEntries);
 			}
 
 			const existingIds = existingEntries.map((entry) => entry.id);
@@ -286,12 +281,7 @@ export function propagateMorphemes(
 				sections,
 			};
 
-			const allEntries = [...existingEntries, newEntry];
-			const { body, meta } = dictNoteHelper.serialize(allEntries);
-			if (Object.keys(meta).length > 0) {
-				return noteMetadataHelper.upsert(meta)(body) as string;
-			}
-			return body;
+			return serializeDictNote([...existingEntries, newEntry]);
 		};
 
 		propagationActions.push(...resolved.healingActions);

@@ -788,6 +788,10 @@ Not all DictEntrySections participate in cross-reference propagation:
 
 The propagation facade (`propagateGeneratedSections`) runs after `generateSections` in the Generate pipeline. Runtime path is v2-only: `propagateV2`, then `decorateAttestationSeparability` as a shared post-propagation source-note step. `propagateRelations` uses the raw `relations` output captured during section generation (not re-parsed from markdown).
 
+`propagateV2` folds all scoped propagation actions to one write per target note. The fold contract accepts `ProcessMdFile` in both payload shapes (`transform` and `before/after`) and accepts non-null `UpsertMdFile` content as deterministic transform input, preserving original action order per target path.
+
+Propagation note-adapter warning logs are sampled (`first-N + periodic`) for repeated cases (embedded/unparseable wikilinks) to keep logs actionable on large notes.
+
 Both `propagateRelations` and `propagateInflections` use a **shared path resolver** (`resolveTargetPath`) that performs two-source lookup with healing:
 
 ```
@@ -1160,10 +1164,13 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts` | Morphology propagation: Lexem `<used_in>` backlinks for derivation/compounding + verb-prefix equation propagation on decorated prefix Morphem entries (with non-dict fallback append path) |
 | `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts` | Morpheme propagation: bound-morpheme `<used_in>` aggregation on Morphem entries (Suffix/Interfix/etc + non-verb Prefix), with Root/Suffixoid fallback when morphology payload is incomplete |
 | `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create/update one inflection entry per form, merge tags, collapse legacy per-cell stubs |
+| `src/commanders/textfresser/commands/generate/steps/propagate-v2.ts` | V2 propagation orchestration + fold-to-single-write contract per target note |
+| `src/commanders/textfresser/commands/generate/steps/propagation-v2-ports-adapter.ts` | V2 IO adapter ports (`readManyMdFiles`, typed missing/error classification, write-action construction) |
 | `src/commanders/textfresser/commands/generate/steps/move-to-worter.ts` | Final destination policy step: closed-set Lexem POS → Library path, others → Worter sharded path, rename skipped when already at destination |
 | `src/commanders/textfresser/common/lemma-link-routing.ts` | Link-target policy helper: closed-set detection, pre-prompt target resolution, final target resolution, link-target formatting |
 | `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, shared morpheme path resolver for prefix Library fallback, `buildPropagationActionPair` helper |
 | `src/commanders/textfresser/common/sharded-path.ts` | Sharded path computation for Worter entries; exports `SURFACE_KIND_PATH_INDEX` for healing checks |
+| `src/commanders/textfresser/domain/propagation/note-adapter.ts` | Typed parse/serialize adapter for propagation sections with passthrough handling and sampled warning logs |
 | `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
 | `src/commanders/textfresser/commands/generate/section-formatters/common/header-formatter.ts` | Common header line: emoji + wikilink + IPA/Youglish URL. No article — POS-neutral. Exports `buildYouglishUrl` for reuse. |
 | `src/commanders/textfresser/commands/generate/section-formatters/de/lexem/noun/header-formatter.ts` | Noun-specific header: prepends article derived from `genus` via `articleFromGenus`. |
@@ -1226,6 +1233,10 @@ To add support for a new target language (e.g., Japanese):
 | `tests/unit/textfresser/steps/disambiguate-sense.test.ts` | Disambiguate: mock VAM + PromptRunner, bounds check, precomputed emojiDescription, V2 legacy |
 | `tests/unit/textfresser/steps/propagate-relations.test.ts` | Relation propagation: inverse kinds, self-ref skip, dedup, VaultAction shapes, healing when target in inflected/ |
 | `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note skip, single-entry tags merge, legacy stub collapse, genus fallback + header upgrade, VAM path reuse |
+| `tests/unit/textfresser/steps/propagate-v2-phase4.test.ts` | V2 propagation parity/idempotency/one-write invariants, fold contract behavior, phase-5 migrated slice parity |
+| `tests/unit/textfresser/steps/propagation-v2-ports-adapter.test.ts` | V2 port adapter contract: dedupe reads, typed missing/error classification, candidate lookup, action-pair construction |
+| `tests/unit/textfresser/domain/propagation/note-adapter.test.ts` | Typed section parse/serialize characterization + deterministic canonicalization + passthrough guarantees |
+| `tests/unit/textfresser/domain/propagation/morphology-roundtrip-corpus.test.ts` | Morphology mixed-marker regression corpus + roundtrip equivalence guards against backlink/equation reclassification |
 | `tests/unit/textfresser/common/target-path-resolver.test.ts` | Path resolver: VAM/librarian lookup, computed fallback, inflected→lemma healing, no-heal cases, `buildPropagationActionPair` |
 | `tests/unit/textfresser/steps/lemma-expansion.test.ts` | V8: `expandOffsetForFullSurface()` — expansion math, verification, fallback on mismatch |
 | **Types** | |

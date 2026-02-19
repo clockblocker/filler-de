@@ -1,16 +1,16 @@
 import { describe, expect, it } from "bun:test";
 import { dictNoteHelper } from "../../../../../src/commanders/textfresser/domain/dict-note";
+import type {
+	PropagationNoteEntry,
+	PropagationSection,
+} from "../../../../../src/commanders/textfresser/domain/propagation";
 import {
 	parsePropagationNote,
 	serializePropagationNote,
 } from "../../../../../src/commanders/textfresser/domain/propagation";
 import type {
-	PropagationNoteEntry,
-	PropagationSection,
-} from "../../../../../src/commanders/textfresser/domain/propagation";
-import type {
-	InflectionSectionDto,
 	InflectionItemDto,
+	InflectionSectionDto,
 	MorphologyBacklinkDto,
 	MorphologyEquationDto,
 	MorphologySectionDto,
