@@ -111,7 +111,7 @@ export function createBottomToolbar(
 
 		// Update visibility of contextual buttons
 		const buttons = toolbarEl.querySelectorAll(".tf-contextual-btn");
-		for (const button of buttons) {
+		for (const button of Array.from(buttons)) {
 			if (button instanceof HTMLElement) {
 				button.style.display = hasSelection ? "" : "none";
 			}

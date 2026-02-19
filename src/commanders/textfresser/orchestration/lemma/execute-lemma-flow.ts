@@ -71,7 +71,7 @@ export function executeLemmaFlow(params: {
 		.map(() => {
 			const lemma = state.latestLemmaResult;
 			if (!lemma) {
-				return;
+				return undefined;
 			}
 
 			state.latestLemmaInvocationCache = {
@@ -98,6 +98,7 @@ export function executeLemmaFlow(params: {
 					: "";
 			notify(`✓ ${lemma.lemma}${pos}`);
 			requestBackgroundGenerate(notify);
+			return undefined;
 		})
 		.mapErr((error) => {
 			const reason =

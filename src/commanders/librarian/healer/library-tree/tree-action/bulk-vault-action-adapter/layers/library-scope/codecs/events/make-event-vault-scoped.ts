@@ -1,7 +1,7 @@
 import type { CodecRules } from "../../../../../../../../codecs/rules";
 import type { AnySplitPathInsideLibrary } from "../../../../../../../../codecs/split-path-inside-library/types/split-path-inside-library";
 import { visitInsideEvent } from "../../helpers/scoped-event-helpers";
-import type { DescopedEvent } from "../../types/generics";
+import type { DescopedEvent } from "../../types/generics/scoped-event";
 import type { LibraryScopedVaultEvent } from "../../types/scoped-event";
 import { makeVaultScopedSplitPath } from "../split-path-inside-the-library";
 

@@ -39,6 +39,9 @@ Source: local health-check run before new Textfresser feature work.
   - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/scripts/typecheck-changed.sh`
 - Issue: final `grep` can produce exit code 1 with no useful output (false-fail behavior for "no matched diagnostics").
 - Follow-up: preserve non-empty diagnostics and avoid grep-only exit semantics as the pass/fail source.
+- Update (2026-02-19): Completed.
+  - Replaced grep-driven pass/fail with `tsc` exit-status + filtered diagnostics for changed files only.
+  - Added bash-3-compatible implementation (no `mapfile`) and explicit "no relevant changed-file errors" output path.
 
 #### 1.3) Return lint to green
 - Current state: `bun run lint` fails.
@@ -102,6 +105,9 @@ Source: ideas extracted from open PRs #6, #7, #13, #15, #16, #17, #22 in clockbl
 #### 7) Add API timeout to `generate()` call
 - Source: PR #22
 - `client.chat.completions.parse()` in `api-service.ts` has no timeout. Wrap in `Promise.race` with 30-60s timeout.
+- Update (2026-02-19): Completed.
+  - Added `GENERATE_TIMEOUT_MS = 45_000` and wrapped `client.chat.completions.parse()` in a timeout helper.
+  - Timeout errors are marked retryable in existing `withRetry` flow.
 
 #### 8) `literals.ts` — consider killing or splitting by domain
 - Source: PR #6 ideas (#4)
@@ -120,6 +126,9 @@ Source: ideas extracted from open PRs #6, #7, #13, #15, #16, #17, #22 in clockbl
 #### 11) Unsafe `error.message` access in catch blocks
 - Source: PR #6 fix
 - Catch blocks accessing `error.message` without `instanceof Error` narrowing. Check `src/main.ts` and `tfile-helper.ts`.
+- Update (2026-02-19): Verified for scoped files.
+  - Audited `src/main.ts` and `src/managers/obsidian/vault-action-manager/file-services/background/helpers/tfile-helper.ts`.
+  - No unsafe `catch` access of `error.message` remains in those two files; no code change required.
 
 #### 12) Event listener leak in `whenMetadataResolved()`
 - Source: PR #6 fix

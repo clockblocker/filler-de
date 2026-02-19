@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { propagateGeneratedSections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections";
 import type {
 	GenerateSectionsResult,
 	ParsedRelation,
 } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
+import { propagateGeneratedSections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections";
 import type { MorphemeItem } from "../../../../src/commanders/textfresser/domain/morpheme/morpheme-formatter";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";

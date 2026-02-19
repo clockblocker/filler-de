@@ -103,6 +103,7 @@ export class Textfresser {
 					}
 					this.scrollToTargetBlock();
 				}
+				return undefined;
 			})
 			.mapErr((error) => {
 				const reason =

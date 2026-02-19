@@ -1,4 +1,4 @@
-import { err, ok, ResultAsync } from "neverthrow";
+import { errAsync, okAsync, ResultAsync } from "neverthrow";
 import {
 	type VaultAction,
 	VaultActionKind,
@@ -20,9 +20,7 @@ export const splitInBlocksCommand: LibrarianCommandFn = (input) => {
 
 	if (!selection?.text?.trim()) {
 		notify("No text selected");
-		return ResultAsync.fromResult(
-			err({ kind: CommandErrorKind.NoSelection }),
-		);
+		return errAsync({ kind: CommandErrorKind.NoSelection });
 	}
 
 	const highestBlockNumber = blockIdHelper.findHighestNumber(
@@ -51,14 +49,12 @@ export const splitInBlocksCommand: LibrarianCommandFn = (input) => {
 		if (result.isErr()) {
 			const reason = result.error.map((e) => e.error).join(", ");
 			notify(`Error: ${reason}`);
-			return ResultAsync.fromResult(
-				err<void, CommandError>({
-					kind: CommandErrorKind.DispatchFailed,
-					reason,
-				}),
-			);
+			return errAsync<void, CommandError>({
+				kind: CommandErrorKind.DispatchFailed,
+				reason,
+			});
 		}
 		notify(`Split into ${blockCount} blocks`);
-		return ResultAsync.fromResult(ok(undefined));
+		return okAsync(undefined);
 	});
 };

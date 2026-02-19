@@ -20,7 +20,12 @@ export function createCheckboxFrontmatterHandler(
 	return {
 		doesApply: () => true,
 		handle: (payload) => {
-			librarian.handlePropertyCheckboxClick(payload);
+			const maybeWithHandler = librarian as unknown as {
+				handlePropertyCheckboxClick?: (
+					payload: CheckboxFrontmatterPayload,
+				) => void;
+			};
+			maybeWithHandler.handlePropertyCheckboxClick?.(payload);
 			return { outcome: HandlerOutcome.Handled };
 		},
 	};
