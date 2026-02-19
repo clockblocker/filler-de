@@ -1,5 +1,6 @@
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { type FileManager, TFile, type Vault } from "obsidian";
+import { getErrorMessage } from "../../../../../../utils/get-error-message";
 import { logger } from "../../../../../../utils/logger";
 import {
 	errorBothSourceAndTargetNotFound,
@@ -80,7 +81,7 @@ export class TFileHelper {
 			const createdFile = await this.vault.create(systemPath, content);
 			return ok(createdFile);
 		} catch (error) {
-			const msg = error instanceof Error ? error.message : String(error);
+			const msg = getErrorMessage(error);
 			if (msg.includes("already exists")) {
 				// Race condition: file was created by another process
 				return this.getFile(splitPath).mapErr((getErr) =>
@@ -228,7 +229,7 @@ export class TFileHelper {
 			(error) =>
 				errorTrashDuplicateFile(
 					pathfinder.systemPathFromSplitPath(splitPath),
-					error instanceof Error ? error.message : String(error),
+					getErrorMessage(error),
 				),
 		);
 	}
@@ -289,8 +290,7 @@ export class TFileHelper {
 		return ResultAsync.fromPromise(
 			this.fileManager.renameFile(file, toPath),
 			(error) => {
-				const msg =
-					error instanceof Error ? error.message : String(error);
+				const msg = getErrorMessage(error);
 				logger.error(
 					"[TFileHelper.renameFile] vault.rename threw",
 					JSON.stringify({ error: msg, to: toPath }),
@@ -325,7 +325,7 @@ export class TFileHelper {
 				errorWriteFailed(
 					"file",
 					pathfinder.systemPathFromSplitPath(splitPath),
-					error instanceof Error ? error.message : String(error),
+					getErrorMessage(error),
 				),
 		).map(() => file);
 	}
@@ -351,7 +351,7 @@ export class TFileHelper {
 			errorWriteFailed(
 				"file",
 				pathfinder.systemPathFromSplitPath(splitPath),
-				error instanceof Error ? error.message : String(error),
+				getErrorMessage(error),
 			);
 
 		return ResultAsync.fromPromise(this.vault.read(file), makeError)

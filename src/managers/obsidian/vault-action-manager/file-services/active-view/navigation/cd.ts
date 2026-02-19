@@ -1,6 +1,7 @@
 import { err, ok, type Result } from "neverthrow";
 import { type App, MarkdownView, type TFile } from "obsidian";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
+import { getErrorMessage } from "../../../../../../utils/get-error-message";
 import { errorNoTFileFound, errorOpenFileFailed } from "../../../errors";
 import { pathfinder } from "../../../helpers/pathfinder";
 import type { SplitPathToAnyFile } from "../../../types/split-path";
@@ -60,11 +61,7 @@ export async function cd(
 		await waitForViewReady(app, tfile);
 		return ok(tfile);
 	} catch (error) {
-		return err(
-			errorOpenFileFailed(
-				error instanceof Error ? error.message : String(error),
-			),
-		);
+		return err(errorOpenFileFailed(getErrorMessage(error)));
 	}
 }
 

@@ -1,5 +1,6 @@
 import { err, ok } from "neverthrow";
 import type { Vault } from "obsidian";
+import { getErrorMessage } from "../../../../../utils/get-error-message";
 import { logger } from "../../../../../utils/logger";
 import type { ActiveFileService } from "../../file-services/active-view/active-file-service";
 import type { TFileHelper } from "../../file-services/background/helpers/tfile-helper";
@@ -52,9 +53,7 @@ export class Executor {
 					);
 					return ok(undefined);
 				} catch (error) {
-					return err(
-						error instanceof Error ? error.message : String(error),
-					);
+					return err(getErrorMessage(error));
 				}
 			}
 			case VaultActionKind.UpsertMdFile: {

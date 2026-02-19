@@ -47,6 +47,7 @@ import {
 	isSuffixDelimiterConfig,
 	migrateStringDelimiter,
 } from "./utils/delimiter";
+import { getErrorMessage } from "./utils/get-error-message";
 import { whenIdle as whenIdleTracker } from "./utils/idle-tracker";
 import { logger } from "./utils/logger";
 
@@ -92,7 +93,7 @@ export default class TextEaterPlugin extends Plugin {
 			});
 		} catch (error) {
 			logError({
-				description: `Error during plugin onload: ${error instanceof Error ? error.message : String(error)}`,
+				description: `Error during plugin onload: ${getErrorMessage(error)}`,
 				location: "TextEaterPlugin",
 			});
 		}
@@ -109,7 +110,7 @@ export default class TextEaterPlugin extends Plugin {
 			this.initialized = true;
 		} catch (error) {
 			logError({
-				description: `Error during plugin initialization: ${error instanceof Error ? error.message : String(error)}`,
+				description: `Error during plugin initialization: ${getErrorMessage(error)}`,
 				location: "TextEaterPlugin",
 			});
 		}
@@ -281,7 +282,7 @@ export default class TextEaterPlugin extends Plugin {
 			} catch (error) {
 				logger.error(
 					"[TextEaterPlugin] Failed to initialize librarian:",
-					error instanceof Error ? error.message : String(error),
+					getErrorMessage(error),
 				);
 			}
 		}
@@ -704,7 +705,7 @@ export default class TextEaterPlugin extends Plugin {
 		} catch (error) {
 			logger.error(
 				"[TextEaterPlugin] Failed to reinitialize librarian:",
-				error instanceof Error ? error.message : String(error),
+				getErrorMessage(error),
 			);
 		}
 	}

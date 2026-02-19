@@ -1,5 +1,6 @@
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { type FileManager, TFolder, type Vault } from "obsidian";
+import { getErrorMessage } from "../../../../../../utils/get-error-message";
 import { logger } from "../../../../../../utils/logger";
 import {
 	errorBothSourceAndTargetNotFound,
@@ -194,8 +195,7 @@ export class TFolderHelper {
 		return ResultAsync.fromPromise(
 			this.fileManager.renameFile(folder, toPath),
 			(error) => {
-				const msg =
-					error instanceof Error ? error.message : String(error);
+				const msg = getErrorMessage(error);
 				logger.error(
 					"[TFolderHelper.renameFolder] vault.rename threw",
 					JSON.stringify({ error: msg, to: toPath }),

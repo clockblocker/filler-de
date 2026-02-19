@@ -9,6 +9,7 @@ import {
 	splitPathsEqual,
 	stringifySplitPath,
 } from "../../../../stateless-helpers/split-path-comparison";
+import { getErrorMessage } from "../../../../utils/get-error-message";
 import {
 	decrementPending,
 	incrementPending,
@@ -84,8 +85,7 @@ export function createBackgroundGenerateCoordinator(params: {
 			request.notify,
 		)
 			.catch((error) => {
-				const reason =
-					error instanceof Error ? error.message : String(error);
+				const reason = getErrorMessage(error);
 				logger.warn("[Textfresser.backgroundGenerate] Failed:", reason);
 				request.notify(`⚠ Background generate failed: ${reason}`);
 			})
