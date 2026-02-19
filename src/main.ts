@@ -9,7 +9,7 @@ import normalizeSelection from './commands/normalizeSelection';
 import translateSelection from './commands/translateSelection';
 import formatSelectionWithNumber from './commands/formatSelectionWithNumber';
 import addBacklinksToCurrentFile from './commands/addBacklinksToCurrentFile';
-import insertReplyFromKeymaker from './commands/insertReplyFromC1Richter';
+import insertReplyFromKeymaker from './commands/insertReplyFromKeymaker';
 import insertReplyFromC1Richter from './commands/insertReplyFromC1Richter';
 
 export default class TextEaterPlugin extends Plugin {
@@ -71,7 +71,6 @@ export default class TextEaterPlugin extends Plugin {
 				if (view.file) {
 					if (!checking) {
 						fillTemplate(this, editor, view.file);
-						// testEndgame(this, editor, view.file);
 					}
 					return true;
 				}
@@ -97,88 +96,63 @@ export default class TextEaterPlugin extends Plugin {
 			},
 		});
 
-		this.addCommand({
-			id: 'duplicate-selection',
-			name: 'Add links to normal/inf forms to selected text',
-			editorCheckCallback: (
-				checking: boolean,
-				editor: Editor,
-				view: MarkdownView
-			) => {
-				const selection = editor.getSelection();
-				if (selection && view.file) {
-					if (!checking) {
-						normalizeSelection(this, editor, view.file, selection);
-					}
-					return true;
-				}
-				return false;
+		const selectionCommands: {
+			id: string;
+			name: string;
+			action: (sel: string, editor: Editor, view: MarkdownView) => void;
+			requiresFile?: boolean;
+		}[] = [
+			{
+				id: 'duplicate-selection',
+				name: 'Add links to normal/inf forms to selected text',
+				requiresFile: true,
+				action: (sel, editor, view) =>
+					normalizeSelection(this, editor, view.file!, sel),
 			},
-		});
+			{
+				id: 'translate-selection',
+				name: 'Translate selected text',
+				action: (sel, editor) => translateSelection(this, editor, sel),
+			},
+			{
+				id: 'format-selection-with-number',
+				name: 'Split selection into linked blocks',
+				requiresFile: true,
+				action: (sel, editor, view) =>
+					formatSelectionWithNumber(this, editor, view.file!, sel),
+			},
+			{
+				id: 'check-ru-de-translation',
+				name: 'Keymaker',
+				action: (sel, editor) => insertReplyFromKeymaker(this, editor, sel),
+			},
+			{
+				id: 'check-schriben',
+				name: 'Schriben check',
+				action: (sel, editor) => insertReplyFromC1Richter(this, editor, sel),
+			},
+		];
 
-		this.addCommand({
-			id: 'translate-selection',
-			name: 'Translate selected text',
-			editorCheckCallback: (checking: boolean, editor: Editor) => {
-				const selection = editor.getSelection();
-				if (selection) {
-					if (!checking) {
-						translateSelection(this, editor, selection);
+		for (const cmd of selectionCommands) {
+			this.addCommand({
+				id: cmd.id,
+				name: cmd.name,
+				editorCheckCallback: (
+					checking: boolean,
+					editor: Editor,
+					view: MarkdownView
+				) => {
+					const selection = editor.getSelection();
+					if (selection && (!cmd.requiresFile || view.file)) {
+						if (!checking) {
+							cmd.action(selection, editor, view);
+						}
+						return true;
 					}
-					return true;
-				}
-				return false;
-			},
-		});
-
-		this.addCommand({
-			id: 'format-selection-with-number',
-			name: 'Split selection into linked blocks',
-			editorCheckCallback: (
-				checking: boolean,
-				editor: Editor,
-				view: MarkdownView
-			) => {
-				const selection = editor.getSelection();
-				if (selection && view.file) {
-					if (!checking) {
-						formatSelectionWithNumber(this, editor, view.file, selection);
-					}
-					return true;
-				}
-				return false;
-			},
-		});
-
-		this.addCommand({
-			id: 'check-ru-de-translation',
-			name: 'Keymaker',
-			editorCheckCallback: (checking: boolean, editor: Editor) => {
-				const selection = editor.getSelection();
-				if (selection) {
-					if (!checking) {
-						insertReplyFromKeymaker(this, editor, selection);
-					}
-					return true;
-				}
-				return false;
-			},
-		});
-
-		this.addCommand({
-			id: 'check-schriben',
-			name: 'Schriben check',
-			editorCheckCallback: (checking: boolean, editor: Editor) => {
-				const selection = editor.getSelection();
-				if (selection) {
-					if (!checking) {
-						insertReplyFromC1Richter(this, editor, selection);
-					}
-					return true;
-				}
-				return false;
-			},
-		});
+					return false;
+				},
+			});
+		}
 	}
 
 	async loadSettings() {

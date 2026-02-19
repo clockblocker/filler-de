@@ -28,31 +28,5 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
-
-		new Setting(containerEl)
-			.setName('DeepSeek API key')
-			.setDesc('Enter your DeepSeek API key')
-			.addText((text) =>
-				text
-					.setPlaceholder('Enter your API key')
-					.setValue(this.plugin.settings.deepseekApiKey)
-					.onChange(async (value) => {
-						this.plugin.settings.deepseekApiKey = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName('API provider')
-			.setDesc('Choose your API provider')
-			.addDropdown((dropdown) => {
-				dropdown
-					.addOption('google', 'Google')
-					.setValue(this.plugin.settings.apiProvider)
-					.onChange(async (value: 'google') => {
-						this.plugin.settings.apiProvider = value;
-						await this.plugin.saveSettings();
-					});
-			});
 	}
 }

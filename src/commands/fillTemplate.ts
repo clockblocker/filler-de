@@ -1,7 +1,11 @@
-import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
+import { Editor, Notice, TFile } from 'obsidian';
 import TextEaterPlugin from '../main';
 import { prompts } from '../prompts';
 import { longDash } from '../utils';
+
+function blockOrEmpty(block: string): string {
+	return block.replace('\n', '') === longDash ? '' : block;
+}
 
 function extractFirstBracketedWord(text: string) {
 	const match = text.match(/\[\[([^\]]+)\]\]/);
@@ -78,6 +82,7 @@ export default async function fillTemplate(
 	callBack?: () => void
 ) {
 	const word = file.basename;
+	const notice = new Notice('Generating…', 0);
 
 	try {
 		const [dictionaryEntry, froms, morphems, valence] = await Promise.all([
@@ -97,13 +102,10 @@ export default async function fillTemplate(
 		const baseBlock = await incertClipbordContentsInContextsBlock(
 			incertYouglishLinkInIpa(trimmedBaseEntrie)
 		);
-		const morphemsBlock =
-			morphems.replace('\n', '') === longDash ? '' : `${morphems}\n`;
-		const valenceBlock =
-			valence.replace('\n', '') === longDash ? '' : `${valence}`;
-		const fromsBlock = froms.replace('\n', '') === longDash ? '' : `${froms}`;
-		const adjFormsBlock =
-			adjForms.replace('\n', '') === longDash ? '' : `${adjForms}`;
+		const morphemsBlock = blockOrEmpty(morphems);
+		const valenceBlock = blockOrEmpty(valence);
+		const fromsBlock = blockOrEmpty(froms);
+		const adjFormsBlock = blockOrEmpty(adjForms);
 
 		const blocks = [
 			baseBlock,
@@ -127,6 +129,8 @@ export default async function fillTemplate(
 		}
 	} catch (error) {
 		new Notice(`Error: ${error.message}`);
+	} finally {
+		notice.hide();
 	}
 }
 
