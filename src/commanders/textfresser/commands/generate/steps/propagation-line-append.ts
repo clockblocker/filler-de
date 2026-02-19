@@ -55,7 +55,7 @@ export function buildUsedInLine(
 	sourceLemma: string,
 	sourceGloss: string | null,
 ): string {
-	if (!sourceGloss) return `[[${sourceLemma}]]`;
+	if (!sourceGloss) return `[[${sourceLemma}]] `;
 	return `[[${sourceLemma}]] *(${sourceGloss})* `;
 }
 
@@ -71,9 +71,13 @@ function collectUniqueCandidates(lines: string[]): string[] {
 		if (normalized.length === 0) continue;
 		if (seen.has(normalized)) continue;
 		seen.add(normalized);
-		out.push(normalized);
+		out.push(line);
 	}
 	return out;
+}
+
+function trimTrailingNewlines(text: string): string {
+	return text.replace(/\n+$/g, "");
 }
 
 function appendUniqueLinesToBlock(params: {
@@ -89,11 +93,12 @@ function appendUniqueLinesToBlock(params: {
 	const existingLines = splitLines(params.blockContent);
 	const existingSet = new Set(existingLines);
 
-	let current = params.blockContent.trimEnd();
+	let current = trimTrailingNewlines(params.blockContent);
 	const toAppend: string[] = [];
 
 	for (const candidate of candidates) {
-		if (existingSet.has(candidate)) continue;
+		const normalizedCandidate = normalizeLine(candidate);
+		if (existingSet.has(normalizedCandidate)) continue;
 		if (
 			params.shouldSkipLine?.({
 				candidateLine: candidate,
@@ -104,7 +109,7 @@ function appendUniqueLinesToBlock(params: {
 		}
 
 		toAppend.push(candidate);
-		existingSet.add(candidate);
+		existingSet.add(normalizedCandidate);
 		current = current.length > 0 ? `${current}\n${candidate}` : candidate;
 	}
 
@@ -113,8 +118,10 @@ function appendUniqueLinesToBlock(params: {
 	}
 
 	const content =
-		params.blockContent.trimEnd().length > 0
-			? `${params.blockContent.trimEnd()}\n${toAppend.join("\n")}`
+		trimTrailingNewlines(params.blockContent).length > 0
+			? `${trimTrailingNewlines(params.blockContent)}\n${toAppend.join(
+					"\n",
+				)}`
 			: toAppend.join("\n");
 	return { changed: true, content };
 }

@@ -35,7 +35,6 @@ import {
 	buildUsedInLine,
 	extractFirstNonEmptyLine,
 	type PropagationResult,
-	splitLines,
 } from "./propagation-line-append";
 
 function buildMorphemeTagContent(item: MorphemeItem): string {
@@ -161,7 +160,7 @@ function appendToUsedInBlock(params: {
 	}
 
 	if (blockStart < 0) {
-		const normalized = params.sectionContent.trimEnd();
+		const normalized = trimTrailingNewlines(params.sectionContent);
 		const content =
 			normalized.length > 0
 				? `${normalized}\n${blockMarker}\n${params.usedInLine}`
@@ -182,7 +181,7 @@ function appendToUsedInBlock(params: {
 		return { changed: false, content: params.sectionContent };
 	}
 
-	const existingLines = splitLines(blockContent);
+	const existingLines = splitNonEmptyLinesPreservingTrailingSpaces(blockContent);
 	const updatedBlock =
 		existingLines.length > 0
 			? `${existingLines.join("\n")}\n${params.usedInLine}`
@@ -193,6 +192,16 @@ function appendToUsedInBlock(params: {
 		`\n${updatedBlock}` +
 		params.sectionContent.slice(blockBodyEnd);
 	return { changed: true, content };
+}
+
+function trimTrailingNewlines(text: string): string {
+	return text.replace(/\n+$/g, "");
+}
+
+function splitNonEmptyLinesPreservingTrailingSpaces(text: string): string[] {
+	return text
+		.split("\n")
+		.filter((line) => line.trim().length > 0);
 }
 
 function findNextMorphologyMarkerOffset(text: string): number {

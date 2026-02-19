@@ -130,7 +130,7 @@ describe("propagateMorphemes", () => {
 		if (!rootTransform) return;
 		const output = rootTransform("");
 		expect(output).toContain("obskur");
-		expect(output).toContain("used_in:");
+		expect(output).toContain("Verwendet in:");
 		expect(output).toContain("[[obskurlich]]");
 	});
 
@@ -232,8 +232,8 @@ describe("propagateMorphemes", () => {
 		expect(output).toContain("heit");
 		expect(output).toContain("#suffix");
 		expect(output).toContain("Morphologische Relationen");
-		expect(output).toContain("used_in:");
-		expect(output).toContain("[[Freiheit]] *(freedom)*");
+		expect(output).toContain("Verwendet in:");
+		expect(output).toContain("[[Freiheit]] *(freedom)* ");
 		expect(output).not.toContain("Kontexte");
 		expect(output).toMatch(/\^MO-LM-\d+/);
 	});
@@ -261,7 +261,7 @@ describe("propagateMorphemes", () => {
 			'<span class="entry_section_title entry_section_title_tags">Tags</span>',
 			"#suffix",
 			'<span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>',
-			"used_in:",
+			"Verwendet in:",
 			"[[Eitelkeit]]",
 		].join("\n");
 

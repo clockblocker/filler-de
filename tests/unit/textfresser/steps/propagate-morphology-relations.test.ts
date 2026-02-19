@@ -97,8 +97,8 @@ describe("propagateMorphologyRelations", () => {
 		expect(transform).toBeDefined();
 		if (!transform) return;
 		const output = transform("");
-		expect(output).toContain("used_in:");
-		expect(output).toContain("[[aufpassen]] *(to watch out)*");
+		expect(output).toContain("Verwendet in:");
+		expect(output).toContain("[[aufpassen]] *(to watch out)* ");
 	});
 
 	it("propagates compounds to each constituent target", () => {
@@ -171,7 +171,7 @@ describe("propagateMorphologyRelations", () => {
 		const first = transform(
 			[
 				'<span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>',
-				"used_in:",
+				"Verwendet in:",
 				"[[alt]]",
 			].join("\n"),
 		);

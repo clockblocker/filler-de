@@ -58,7 +58,7 @@ describe("resolveExistingEntry", () => {
 			meta: {},
 			sections: [
 				{
-					content: "used_in:\n[[Zusammenarbeit]] *(cooperation)*",
+					content: "Verwendet in:\n[[Zusammenarbeit]] *(cooperation)* ",
 					kind: cssSuffixFor[DictSectionKind.Morphology],
 					title: "Morphologische Relationen",
 				},

@@ -24,14 +24,14 @@ const localizedLabelsByTargetLanguage: Record<
 	Record<LocalisedMorphologyRelationLabel, string>
 > = {
 	English: {
-		consists_of: "consists_of",
-		derived_from: "derived_from",
-		used_in: "used_in",
+		consists_of: "Consists of",
+		derived_from: "Derived from",
+		used_in: "Used in",
 	},
 	German: {
-		consists_of: "consists_of",
-		derived_from: "derived_from",
-		used_in: "used_in",
+		consists_of: "Besteht aus",
+		derived_from: "Abgeleitet von",
+		used_in: "Verwendet in",
 	},
 };
 
