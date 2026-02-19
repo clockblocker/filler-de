@@ -34,7 +34,6 @@ export class ApiService {
 		userInput: string,
 		responseSchema?: boolean
 	): Promise<string> {
-		const startTime = performance.now();
 		try {
 			let response: string | null = null;
 			// Remove leading tab characters from the system prompt
@@ -66,7 +65,7 @@ export class ApiService {
 						responseMimeType: `application/json`,
 					};
 
-			const chatKey = systemPrompt;
+			const chatKey = `${systemPrompt}::${!!responseSchema}`;
 			if (!this.chatSessions[chatKey]) {
 				const model = this.genAI.getGenerativeModel({
 					model: this.model,
@@ -89,8 +88,6 @@ export class ApiService {
 			const logResponse = response === null ? '' : response;
 			return logResponse;
 		} catch (error: any) {
-			const endTime = performance.now();
-			const duration = endTime - startTime;
 			throw new Error(error.message);
 		}
 	}

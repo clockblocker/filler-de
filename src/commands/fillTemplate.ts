@@ -4,7 +4,7 @@ import { prompts } from '../prompts';
 import { longDash } from '../utils';
 
 function blockOrEmpty(block: string): string {
-	return block.replace('\n', '') === longDash ? '' : block;
+	return block.trim() === longDash ? '' : block;
 }
 
 function extractFirstBracketedWord(text: string) {
