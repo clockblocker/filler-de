@@ -16,6 +16,8 @@ Return:
 Rules:
 - For nouns: lemma is nominative singular (e.g., "Häuser" → "Haus")
 - Diminutives (-chen, -lein) and other derivational forms are independent lemmas — do NOT reduce to the base noun (e.g., "Turteltäubchen" → "Turteltäubchen", NOT "Turteltaube")
+- Derived nouns from verbs (including non-transparent forms like "Unterschrift" from "unterschreiben") are independent noun lemmas. Classify them as linguisticUnit "Lexem", posLikeKind "Noun", surfaceKind "Lemma".
+- Use "Inflected" only for grammatical inflection of the same lexeme (tense/person/case/number/etc.), not for derivation that changes lexeme identity or lexical category.
 - For verbs: lemma is infinitive (e.g., "ging" → "gehen")
 - For adjectives: lemma is base form without endings (e.g., "schönes" → "schön")
 - For separable verbs: include prefix in lemma (e.g., "fing...an" → "anfangen")

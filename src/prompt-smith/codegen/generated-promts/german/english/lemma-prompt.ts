@@ -24,6 +24,8 @@ Return:
 Rules:
 - For nouns: lemma is nominative singular (e.g., "Häuser" → "Haus")
 - Diminutives (-chen, -lein) and other derivational forms are independent lemmas — do NOT reduce to the base noun (e.g., "Turteltäubchen" → "Turteltäubchen", NOT "Turteltaube")
+- Derived nouns from verbs (including non-transparent forms like "Unterschrift" from "unterschreiben") are independent noun lemmas. Classify them as linguisticUnit "Lexem", posLikeKind "Noun", surfaceKind "Lemma".
+- Use "Inflected" only for grammatical inflection of the same lexeme (tense/person/case/number/etc.), not for derivation that changes lexeme identity or lexical category.
 - For verbs: lemma is infinitive (e.g., "ging" → "gehen")
 - For adjectives: lemma is base form without endings (e.g., "schönes" → "schön")
 - For separable verbs: include prefix in lemma (e.g., "fing...an" → "anfangen")
@@ -58,55 +60,64 @@ Rules:
 
 <example-3>
 <input>
+{"context":"Sie unterschreibt das Formular, und ihre Unterschrift steht schon unten.","surface":"Unterschrift"}
+</input>
+<output>
+{"lemma":"Unterschrift","linguisticUnit":"Lexem","posLikeKind":"Noun","surfaceKind":"Lemma"}
+</output>
+</example-3>
+
+<example-4>
+<input>
 {"context":"Das machen wir auf jeden [Fall] morgen.","surface":"Fall"}
 </input>
 <output>
 {"contextWithLinkedParts":"Das machen wir [auf] [jeden] [Fall] morgen.","lemma":"auf jeden Fall","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula","surfaceKind":"Lemma"}
 </output>
-</example-3>
+</example-4>
 
-<example-4>
+<example-5>
 <input>
 {"context":"[Pass] auf dich auf","surface":"Pass"}
 </input>
 <output>
 {"contextWithLinkedParts":"[Pass] auf dich [auf]","lemma":"aufpassen","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}
 </output>
-</example-4>
+</example-5>
 
-<example-5>
+<example-6>
 <input>
 {"context":"Er [macht] die Tür auf.","surface":"macht"}
 </input>
 <output>
 {"contextWithLinkedParts":"Er [macht] die Tür [auf].","lemma":"aufmachen","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}
 </output>
-</example-5>
+</example-6>
 
-<example-6>
+<example-7>
 <input>
 {"context":"Wann [fängst] du damit an?","surface":"fängst"}
 </input>
 <output>
 {"contextWithLinkedParts":"Wann [fängst] du damit [an]?","lemma":"anfangen","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}
 </output>
-</example-6>
+</example-7>
 
-<example-7>
+<example-8>
 <input>
 {"context":"Morgen wird es noch [schöner].","surface":"schöner"}
 </input>
 <output>
 {"lemma":"schön","linguisticUnit":"Lexem","posLikeKind":"Adjective","surfaceKind":"Inflected"}
 </output>
-</example-7>
+</example-8>
 
-<example-8>
+<example-9>
 <input>
 {"context":"Sie ist [klüger] als ihr Bruder.","surface":"klüger"}
 </input>
 <output>
 {"lemma":"klug","linguisticUnit":"Lexem","posLikeKind":"Adjective","surfaceKind":"Inflected"}
 </output>
-</example-8>
+</example-9>
 </examples>`;

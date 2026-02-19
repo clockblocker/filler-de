@@ -123,6 +123,20 @@ export const examples = [
 			],
 		},
 	},
+	// Nominal compound without invented interfix: Neu + Bau
+	{
+		input: {
+			context: "Die Stadt plant einen Neubau am Stadtrand.",
+			word: "Neubau",
+		},
+		output: {
+			compounded_from: ["Neu", "Bau"],
+			morphemes: [
+				{ kind: "Root", lemma: "neu", surf: "neu" },
+				{ kind: "Root", lemma: "Bau", surf: "bau" },
+			],
+		},
+	},
 	// Simple root, no morphology fields
 	{
 		input: {

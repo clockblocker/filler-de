@@ -35,6 +35,9 @@ Rules:
 - Interfixes (Fugenelemente like -s-, -n-, -es-, -er-, -e-, -ens-) connect compound parts — mark them as Interfix.
 - For compound words, each independent stem is a separate Root.
 - Derivational affixes (un-, ver-, be-, -keit, -ung, -lich, -bar, etc.) are Prefix or Suffix.
+- Do NOT invent one-letter morphemes or interfixes to force segmentation.
+- Interfix is valid only when it is a real German Fugenelement between two roots (e.g., s, n, en, es, er, e, ens). Never split a root just to create an interfix.
+- Example constraint: "Neubau" = "neu" + "bau" (no extra "b" interfix token).
 - derived_from must contain at most one immediate base lemma.
 - compounded_from must contain only immediate constituents (no deep decomposition).
 - Use canonical lemma forms in lemma, derived_from.lemma, and compounded_from.
@@ -119,19 +122,28 @@ Rules:
 
 <example-9>
 <input>
+{"context":"Die Stadt plant einen Neubau am Stadtrand.","word":"Neubau"}
+</input>
+<output>
+{"compounded_from":["Neu","Bau"],"morphemes":[{"kind":"Root","lemma":"neu","surf":"neu"},{"kind":"Root","lemma":"Bau","surf":"bau"}]}
+</output>
+</example-9>
+
+<example-10>
+<input>
 {"context":"Sie hob die Hand.","word":"Hand"}
 </input>
 <output>
 {"morphemes":[{"kind":"Root","lemma":"Hand","surf":"hand"}]}
 </output>
-</example-9>
+</example-10>
 
-<example-10>
+<example-11>
 <input>
 {"context":"Das Wort Xenon steht im Periodensystem.","word":"Xenon"}
 </input>
 <output>
 {"morphemes":[{"kind":"Root","lemma":"Xenon","surf":"xenon"}]}
 </output>
-</example-10>
+</example-11>
 </examples>`;

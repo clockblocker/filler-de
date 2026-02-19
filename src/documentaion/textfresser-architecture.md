@@ -669,6 +669,8 @@ checkAttestation → checkEligibility → checkLemmaResult
 
 Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
 
+`checkEligibility` accepts `noteKind: DictEntry` and missing `noteKind` as before, and now also allows Textfresser-structured propagation notes (section-marker stubs) even when a foreign `noteKind` is present. This lets direct Lemma lookups upgrade legacy/migrated stubs instead of failing early.
+
 #### Re-Encounter Detection (V3)
 
 `resolveExistingEntry` parses the active file via `dictNoteHelper.parse()` and uses `lemmaResult.disambiguationResult` (set during Lemma's disambiguation step) to determine the path:
@@ -677,6 +679,8 @@ Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
 - **`disambiguationResult` is null** → new sense; `nextIndex` computed via `dictEntryIdHelper.nextIndex()` for the new entry
 
 Matching ignores surfaceKind so that inflected encounters (e.g., "Schlosses" → `LX-IN-NOUN-`) correctly resolve to the existing lemma entry (`LX-LM-NOUN-`).
+
+Propagation-only stubs are explicitly excluded from re-encounter matching: if the matched entry has propagation sections (e.g., Morphology/Relation/Tags/Inflection) but lacks both Attestation and Translation, `resolveExistingEntry` drops that stub and forces full Generate path. This prevents propagation targets from getting stuck as permanent stubs.
 
 #### Section Generation (V2)
 
