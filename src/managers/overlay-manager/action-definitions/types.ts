@@ -16,7 +16,9 @@ const OVERLAY_ACTION_KINDS = [
 	"GoToNextPage",
 ] as const satisfies readonly (keyof typeof CommandKind)[];
 
-export type OverlayActionKind = (typeof OVERLAY_ACTION_KINDS)[number];
+export const OverlayActionKindSchema = z.enum(OVERLAY_ACTION_KINDS);
+export type OverlayActionKind = z.infer<typeof OverlayActionKindSchema>;
+export const OverlayActionKind = OverlayActionKindSchema.enum;
 
 const OVERLAY_PLACEMENT_LITERALS = [
 	"AboveSelection",

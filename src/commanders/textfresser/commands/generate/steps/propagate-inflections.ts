@@ -9,7 +9,6 @@ import {
 } from "../../../common/target-path-resolver";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
-import { serializeDictNote } from "../../../domain/dict-note/serialize-dict-note";
 import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
@@ -221,7 +220,7 @@ export function propagateInflections(
 
 			if (!didChange) return content;
 
-			return serializeDictNote(compactedEntries);
+			return dictNoteHelper.serializeToString(compactedEntries);
 		};
 
 		propagationActions.push(...resolved.healingActions);
