@@ -251,19 +251,19 @@ export function disambiguateSense(
 			);
 		}
 
-		// Edge case: all matching entries lack emojiDescription (V2 legacy)
-		// → backward compat: treat as re-encounter of the first match
+		// Hard cutover: if all matches are missing emojiDescription,
+		// we cannot disambiguate reliably, so treat this as a new sense.
 		const sensesWithEmoji = senses.filter(
 			(s) => s.emojiDescription !== null,
 		) as Array<(typeof senses)[number] & { emojiDescription: string[] }>;
 
 		if (sensesWithEmoji.length === 0) {
 			logger.info(
-				"[disambiguate] V2 legacy path — no emojiDescription on any sense",
+				"[disambiguate] Missing emojiDescription on all senses; treating as new sense",
 			);
 			return ResultAsync.fromSafePromise(
 				Promise.resolve({
-					matchedIndex: senses[0]?.index,
+					matchedIndex: null,
 				} as DisambiguationResult),
 			);
 		}

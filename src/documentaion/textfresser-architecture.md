@@ -42,7 +42,7 @@ User clicks the wikilink → navigates to the dictionary note
 User gets a tailor-made dictionary that grows with their reading
 ```
 
-> **V2 scope**: German target, 6 generated sections (Header, Morphem, Relation, Inflection, Translation, Attestation), re-encounter detection (append attestation vs new entry), cross-reference propagation for relations, noun inflection propagation in inflected-form notes, user-facing notices.
+> **Core scope**: German target, 6 generated sections (Header, Morphem, Relation, Inflection, Translation, Attestation), re-encounter detection (append attestation vs new entry), cross-reference propagation for relations, noun inflection propagation in inflected-form notes, user-facing notices.
 
 > **V3 scope**: Polysemy disambiguation — new Disambiguate prompt in Lemma command, enriched note metadata per entry ID for fast lookup without note parsing, VAM API expansion (`getSplitPathsToExistingFilesWithBasename`), Lemma-side sense matching before Generate.
 
@@ -50,7 +50,7 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V7 scope**: Polysemy quality fixes — Header emoji prompt changed to reflect the specific sense in context (not "primary/most common meaning"). Disambiguate gloss rule added: must be context-independent (e.g., "Schließvorrichtung" not "Fahrradschloss"). New polysemous examples in Header and Disambiguate prompts (Schloss castle vs lock).
 
-> **V10 scope**: Emoji-as-semantic-differentiator — **Definition section dropped entirely** (along with `PromptKind.Semantics`). Homonym disambiguation now uses **emoji arrays** instead of text glosses. Header prompt returns `emojiDescription: string[]` (1-3 emojis capturing the sense, e.g., `["🏰"]` vs `["🔒","🔑"]` for *Schloss*). Disambiguate prompt receives `emojiDescription` + `unitKind` + `pos` + `genus` (+ optional `phrasemeKind`) per sense (richer context than the old text gloss). `meta.semantics` replaced by `meta.emojiDescription: string[]`. `LemmaResult.precomputedSemantics` replaced by `precomputedEmojiDescription: string[]`. Old entries without `emojiDescription` hit V2 legacy path (first-match fallback). CORE_SECTIONS reduced to `[Header, Translation, Attestation, FreeForm]`.
+> **V10 scope**: Emoji-as-semantic-differentiator — **Definition section dropped entirely** (along with `PromptKind.Semantics`). Homonym disambiguation now uses **emoji arrays** instead of text glosses. Header prompt returns `emojiDescription: string[]` (1-3 emojis capturing the sense, e.g., `["🏰"]` vs `["🔒","🔑"]` for *Schloss*). Disambiguate prompt receives `emojiDescription` + `unitKind` + `pos` + `genus` (+ optional `phrasemeKind`) per sense (richer context than the old text gloss). `meta.semantics` replaced by `meta.emojiDescription: string[]`. `LemmaResult.precomputedSemantics` replaced by `precomputedEmojiDescription: string[]`. Entries without `emojiDescription` are treated as new-sense candidates. CORE_SECTIONS reduced to `[Header, Translation, Attestation, FreeForm]`.
 
 > **V11 scope**: Kill Header Prompt — `PromptKind.Header` eliminated. `emojiDescription` (1-3 emojis) and `ipa` (IPA pronunciation) moved into Lemma prompt output. Header line built from LemmaResult fields (`formatHeaderLine()` takes `{ emojiDescription, ipa }` instead of `AgentOutput<"Header">`). Header emoji display uses the full `emojiDescription` sequence in order. `genus` and article (der/die/das) dropped from header line. `buildLinguisticUnit()` removed — `meta.linguisticUnit` no longer populated during Generate. One fewer API call per new entry.
 
@@ -64,7 +64,7 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V16 scope**: Prompt-stability + pipeline hardening — Lemma adds runtime output guardrails with one controlled retry for suspicious same-surface outputs (separable inflected verbs, comparative/superlative-like inflected adjectives). Unsafe `contextWithLinkedParts` rewrites are dropped when stripped text does not match source context. Background Generate cleanup is now ownership-aware: empty targets are auto-trashed only when invocation-owned (or truly newly created in this run). Disambiguate senses now include optional `senseGloss` (short text gloss) alongside emoji signals.
 
-> **V17 scope**: Morphological relations v1 — Morphem output now supports optional top-level `derived_from` (single base) and `compounded_from` (immediate constituents). New DictSectionKind `Morphology` (`Morphologische Relationen`) is generated for Lexem entries (except proper nouns), ordered right after Morphem. Generate now enforces a 3-phase model (`lemma -> generation -> propagation`) by waiting for `WordTranslation` before all propagation steps. Propagation is split: `propagateMorphologyRelations` owns Lexem-side morphology backlinks (localized relation markers, e.g. German `Verwendet in:`) plus verb-prefix equations on prefix Morphem notes; `propagateMorphemes` owns bound-morpheme localized `used in` aggregation on Morphem notes (including non-verb prefixes and separable prefixes that are not covered by an equation). Relation propagation shares append/dedupe utilities and skips when source lemma is already referenced.
+> **V17 scope**: Morphological relations — Morphem output now supports optional top-level `derived_from` (single base) and `compounded_from` (immediate constituents). New DictSectionKind `Morphology` (`Morphologische Relationen`) is generated for Lexem entries (except proper nouns), ordered right after Morphem. Generate now enforces a 3-phase model (`lemma -> generation -> propagation`) by waiting for `WordTranslation` before all propagation steps. Propagation is split: `propagateMorphologyRelations` owns Lexem-side morphology backlinks (localized relation markers, e.g. German `Verwendet in:`) plus verb-prefix equations on prefix Morphem notes; `propagateMorphemes` owns bound-morpheme localized `used in` aggregation on Morphem notes (including non-verb prefixes and separable prefixes that are not covered by an equation). Relation propagation shares append/dedupe utilities and skips when source lemma is already referenced.
 
 > **V9 scope**: LinguisticUnit DTO — Zod-schema-based type system as source of truth for DictEntries. German + Noun fully featured (`genus`, `nounClass`); all other POS/unit kinds have stubs. `GermanLinguisticUnit` built during Generate and stored in `meta.linguisticUnit`. Header prompt now returns `genus` ("Maskulinum"/"Femininum"/"Neutrum") instead of `article` ("der"/"die"/"das"); formatter derives article via `articleFromGenus`. New files: `surface-factory.ts`, `genus.ts`, `noun.ts`, `pos-features.ts`, `lexem-surface.ts`, `phrasem-surface.ts`, `morphem-surface.ts`, `linguistic-unit.ts`. 21 new DTO tests.
 
@@ -447,7 +447,7 @@ commandFn(input) → VaultAction[] → vam.dispatch(actions)
 |---------|--------|---------|
 | `Lemma` | V3 | Recon: classify word via LLM, disambiguate sense against existing entries (metadata `emojiDescription` lookup + Disambiguate prompt), wrap in wikilink, store result, notify user, fire background Generate. V5: bounds-check. V8: proper noun detection (nounClass), fullSurface expansion for multi-word proper nouns. V10: emoji-based disambiguation |
 | `Generate` | V3 | Build DictEntry: LLM-generated sections (Morphem, Relation, Inflection, Translation) + header from Lemma output + Attestation; re-encounter detection (via Lemma's disambiguationResult); cross-ref propagation; serialize, move to Wörter, notify user. Fires automatically in background after Lemma (user stays on source text); also callable manually. V5: scroll-to-entry (deferred via wikilink click handler when running in background) |
-| `TranslateSelection` | V1 | Translate selected text via LLM |
+| `TranslateSelection` | Implemented | Translate selected text via LLM |
 
 **Source**: `src/commanders/textfresser/textfresser.ts`, `src/commanders/textfresser/commands/types.ts`
 
@@ -627,7 +627,7 @@ If no entries for this POS → disambiguationResult = null (new sense, skip Disa
 Build senses: Array<{ index, emojiDescription, ipa?, senseGloss?, unitKind, pos?, genus? }> from metadata + parsed entry IDs
   (prefer `meta.entity`; fallback to legacy `meta.emojiDescription` / `meta.linguisticUnit`)
   (`senseGloss` fallback order: `meta.entity.senseGloss` → `meta.senseGloss` → first non-empty Translation line)
-  (V10: entries without emojiDescription → V2 legacy path: treat as re-encounter of first match)
+  (V10+: entries without emojiDescription are treated as new-sense candidates)
   ↓
 Call PromptKind.Disambiguate with { lemma, context, senses }
   ↓
@@ -661,7 +661,7 @@ Generate fires automatically in the background after a successful Lemma command.
 checkAttestation → checkEligibility → checkLemmaResult
   → resolveExistingEntry (parse existing entries, use Lemma's disambiguationResult for re-encounter detection)
   → generateSections (async: LLM calls, or attestation append for re-encounters)
-  → propagateGeneratedSections (v2 core + source-note separability decoration)
+  → propagateGeneratedSections (core propagation + source-note separability decoration)
   → serializeEntry (includes noteKind + emojiDescription in single metadata upsert) → moveToWorter → addWriteAction
 ```
 
@@ -682,7 +682,7 @@ Matching ignores surfaceKind so that inflected encounters (e.g., "Schlosses" →
 
 Propagation-only stubs are explicitly excluded from re-encounter matching: if the matched entry has propagation sections (e.g., Morphology/Relation/Tags/Inflection) but lacks both Attestation and Translation, `resolveExistingEntry` drops that stub and forces full Generate path. This prevents propagation targets from getting stuck as permanent stubs.
 
-#### Section Generation (V2)
+#### Section Generation
 
 `generateSections` has two paths:
 
@@ -709,7 +709,7 @@ Each `EntrySection` gets:
 
 #### Entry ID
 
-Built via `dictEntryIdHelper.build()`. V2 uses `nextIndex` computed from existing entries:
+Built via `dictEntryIdHelper.build()`. Generate uses `nextIndex` computed from existing entries:
 - Lexem: `LX-{SurfaceTag}-{PosTag}-{nextIndex}` (e.g., `LX-LM-NOUN-1`, `LX-LM-NOUN-2`)
 - Phrasem/Morphem: `{UnitTag}-{SurfaceTag}-{nextIndex}`
 
@@ -749,7 +749,7 @@ For non-Lexem units, `pos` is passed to LLM prompts as the `linguisticUnit` name
 
 ## 9. Cross-Reference Propagation
 
-> **Status**: V2 implemented.
+> **Status**: implemented.
 
 When Generate fills DictEntrySections for a new DictEntry, the LLM output contains references to other Surfaces. Cross-reference propagation ensures those references are **bidirectional** — if A references B, then B's Note is updated to reference A back.
 
@@ -790,9 +790,9 @@ Not all DictEntrySections participate in cross-reference propagation:
 
 **Source**: `src/commanders/textfresser/commands/generate/steps/propagate-generated-sections.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts`, `src/commanders/textfresser/commands/generate/steps/decorate-attestation-separability.ts`, `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts`, `src/commanders/textfresser/common/target-path-resolver.ts`
 
-The propagation facade (`propagateGeneratedSections`) runs after `generateSections` in the Generate pipeline. Runtime path is v2-only: `propagateV2`, then `decorateAttestationSeparability` as a shared post-propagation source-note step. `propagateRelations` uses the raw `relations` output captured during section generation (not re-parsed from markdown).
+The propagation facade (`propagateGeneratedSections`) runs after `generateSections` in the Generate pipeline. Runtime path is core-only: `propagateCore`, then `decorateAttestationSeparability` as a shared post-propagation source-note step. `propagateRelations` uses the raw `relations` output captured during section generation (not re-parsed from markdown).
 
-`propagateV2` folds all scoped propagation actions to one write per target note. The fold contract accepts `ProcessMdFile` in both payload shapes (`transform` and `before/after`) and accepts non-null `UpsertMdFile` content as deterministic transform input, preserving original action order per target path.
+`propagateCore` folds all scoped propagation actions to one write per target note. The fold contract accepts `ProcessMdFile` in both payload shapes (`transform` and `before/after`) and accepts non-null `UpsertMdFile` content as deterministic transform input, preserving original action order per target path.
 
 Propagation note-adapter warning logs are sampled (`first-N + periodic`) for repeated cases (embedded/unparseable wikilinks) to keep logs actionable on large notes.
 
@@ -1168,8 +1168,8 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts` | Morphology propagation: Lexem localized `used in` backlinks for derivation/compounding + verb-prefix equation propagation on decorated prefix Morphem entries (with non-dict fallback append path) |
 | `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts` | Morpheme propagation: bound-morpheme localized `used in` aggregation on Morphem entries (Suffix/Interfix/etc + non-verb Prefix), with Root/Suffixoid fallback when morphology payload is incomplete |
 | `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create/update one inflection entry per form, merge tags, collapse legacy per-cell stubs |
-| `src/commanders/textfresser/commands/generate/steps/propagate-v2.ts` | V2 propagation orchestration + fold-to-single-write contract per target note |
-| `src/commanders/textfresser/commands/generate/steps/propagation-v2-ports-adapter.ts` | V2 IO adapter ports (`readManyMdFiles`, typed missing/error classification, write-action construction) |
+| `src/commanders/textfresser/commands/generate/steps/propagate-core.ts` | Core propagation orchestration + fold-to-single-write contract per target note |
+| `src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter.ts` | Propagation IO adapter ports (`readManyMdFiles`, typed missing/error classification, write-action construction) |
 | `src/commanders/textfresser/commands/generate/steps/move-to-worter.ts` | Final destination policy step: closed-set Lexem POS → Library path, others → Worter sharded path, rename skipped when already at destination |
 | `src/commanders/textfresser/common/lemma-link-routing.ts` | Link-target policy helper: closed-set detection, pre-prompt target resolution, final target resolution, link-target formatting |
 | `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, shared morpheme path resolver for prefix Library fallback, `buildPropagationActionPair` helper |
@@ -1234,11 +1234,11 @@ To add support for a new target language (e.g., Japanese):
 | `tests/unit/textfresser/formatters/relation-formatter.test.ts` | Relation formatter: symbol notation, grouping, dedup |
 | `tests/unit/textfresser/formatters/inflection-formatter.test.ts` | Generic inflection formatter: label/forms rows |
 | `tests/unit/textfresser/formatters/de/lexem/noun/inflection-formatter.test.ts` | Noun inflection: case grouping, N/A/G/D order, cells pass-through |
-| `tests/unit/textfresser/steps/disambiguate-sense.test.ts` | Disambiguate: mock VAM + PromptRunner, bounds check, precomputed emojiDescription, V2 legacy |
+| `tests/unit/textfresser/steps/disambiguate-sense.test.ts` | Disambiguate: mock VAM + PromptRunner, bounds check, precomputed emojiDescription, missing-emoji fallback |
 | `tests/unit/textfresser/steps/propagate-relations.test.ts` | Relation propagation: inverse kinds, self-ref skip, dedup, VaultAction shapes, healing when target in inflected/ |
 | `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note skip, single-entry tags merge, legacy stub collapse, genus fallback + header upgrade, VAM path reuse |
-| `tests/unit/textfresser/steps/propagate-v2-phase4.test.ts` | V2 propagation parity/idempotency/one-write invariants, fold contract behavior, phase-5 migrated slice parity |
-| `tests/unit/textfresser/steps/propagation-v2-ports-adapter.test.ts` | V2 port adapter contract: dedupe reads, typed missing/error classification, candidate lookup, action-pair construction |
+| `tests/unit/textfresser/steps/propagate-generated-sections.test.ts` | Wrapper routing and fail-fast propagation behavior for Generate |
+| `tests/unit/textfresser/steps/propagation-ports-adapter.test.ts` | Port adapter contract: dedupe reads, typed missing/error classification, candidate lookup, action-pair construction |
 | `tests/unit/textfresser/domain/propagation/note-adapter.test.ts` | Typed section parse/serialize characterization + deterministic canonicalization + passthrough guarantees |
 | `tests/unit/textfresser/domain/propagation/morphology-roundtrip-corpus.test.ts` | Morphology mixed-marker regression corpus + roundtrip equivalence guards against backlink/equation reclassification |
 | `tests/unit/textfresser/common/target-path-resolver.test.ts` | Path resolver: VAM/librarian lookup, computed fallback, inflected→lemma healing, no-heal cases, `buildPropagationActionPair` |
@@ -1259,7 +1259,7 @@ To add support for a new target language (e.g., Japanese):
 - Disambiguate prompt uses emoji-based senses (emojiDescription + unitKind + pos + genus)
 - `meta.emojiDescription: string[]` replaces `meta.semantics: string`
 - `LemmaResult.precomputedEmojiDescription` replaces `precomputedSemantics`
-- V2 legacy path: entries without `emojiDescription` fall back to first-match
+- Entries without `emojiDescription` are treated as new-sense candidates
 
 ### Deferred Items
 

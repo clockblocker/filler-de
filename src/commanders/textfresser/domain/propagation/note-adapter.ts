@@ -247,7 +247,7 @@ export function serializeWikilinkDto(link: WikilinkDto): string {
 		logSampledWarning({
 			context: { link },
 			message:
-				"[propagation-v2-note-adapter] Serializing wikilink with empty target",
+				"[propagation-note-adapter] Serializing wikilink with empty target",
 			sampleKey: "empty-target",
 		});
 		return "[[]]";
@@ -280,7 +280,7 @@ function extractWikilinkTokensFromText(text: string): string[] {
 					wikilink: typeof fullMatch === "string" ? fullMatch : "",
 				},
 				message:
-					"[propagation-v2-note-adapter] Skipping embedded wikilink during target extraction",
+					"[propagation-note-adapter] Skipping embedded wikilink during target extraction",
 				sampleKey: fullMatch.trim(),
 			});
 			continue;
@@ -335,7 +335,7 @@ function serializePreservedWikilink(raw: string): string {
 			raw,
 		},
 		message:
-			"[propagation-v2-note-adapter] Failed to serialize preserved wikilink; emitting empty marker",
+			"[propagation-note-adapter] Failed to serialize preserved wikilink; emitting empty marker",
 		sampleKey: raw.trim(),
 	});
 	return "[[]]";
@@ -378,7 +378,7 @@ function parseRelationToken(
 			token: trimmed,
 		},
 		message:
-			"[propagation-v2-note-adapter] Preserving unsupported relation wikilink token",
+			"[propagation-note-adapter] Preserving unsupported relation wikilink token",
 		sampleKey: `${relationKind}:${trimmed}`,
 	});
 	return {
@@ -539,7 +539,7 @@ function parseMorphologySection(rawContent: string): MorphologySectionDto {
 						relationType: activeRelationType,
 					},
 					message:
-						"[propagation-v2-note-adapter] Skipping unparseable morphology backlink line",
+						"[propagation-note-adapter] Skipping unparseable morphology backlink line",
 					sampleKey: `${activeRelationType}:${trimmed}`,
 				});
 				continue;

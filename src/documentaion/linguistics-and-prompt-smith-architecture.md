@@ -670,7 +670,7 @@ Contracts in `src/linguistics/de/lemma/` are the runtime source for lemma classi
   - optional `contextWithLinkedParts` for multi-span attestation replacement
   - legacy compatibility input aliases: `pos` (Lexem) and `phrasemeKind` (Phrasem), normalized to canonical `posLikeKind`
   - normalized output always includes `contextWithLinkedParts` key (`string | undefined`) after schema transform
-- `generate-contracts.ts` defines core v1 prompt contracts:
+- `generate-contracts.ts` defines core prompt contracts:
   - shared target (`DeLexicalTargetSchema`)
   - enrichment (`DeEnrichmentInputSchema` / `DeEnrichmentOutputSchema`, including optional `senseGloss`)
   - relation (`DeRelationInputSchema` / `DeRelationOutputSchema`)
@@ -926,7 +926,7 @@ serializeEntry() → markdown string
 VAM dispatch (ProcessMdFile / UpsertMdFile)
     ↓
 Propagation steps:
-    └─ propagateGeneratedSections: propagateV2 (strict fail-fast, all-or-nothing action emission)
+    └─ propagateGeneratedSections: propagateCore (strict fail-fast, all-or-nothing action emission)
        → decorateAttestationSeparability (source-note post-step)
 ```
 

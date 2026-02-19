@@ -12,13 +12,13 @@ Track error-shape debt where APIs currently return unstable string messages and 
 
 Primary landing points:
 
-- `src/commanders/textfresser/commands/generate/steps/propagation-v2-ports-adapter.ts`
+- `src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter.ts`
 - `src/managers/obsidian/vault-action-manager/impl/vault-reader.ts`
 
 Rationale:
 
 - String-message matching was fragile (localization/wording drift).
-- Propagation v2 keeps race-safe behavior (`exists` true, then vanished file) by mapping typed `FileNotFound` reads to `Missing`.
+- Propagation keeps race-safe behavior (`exists` true, then vanished file) by mapping typed `FileNotFound` reads to `Missing`.
 
 Landed shape:
 

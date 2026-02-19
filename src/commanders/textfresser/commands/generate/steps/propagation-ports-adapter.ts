@@ -24,19 +24,19 @@ type VamPortDependency = Pick<
 	"exists" | "findByBasename" | "readContent"
 >;
 
-export type CreatePropagationV2PortsAdapterParams = {
+export type CreatePropagationPortsAdapterParams = {
 	vam: VamPortDependency;
 	lookupInLibraryByCoreName: PathLookupFn;
 };
 
-export type PropagationV2PortsAdapter = {
+export type PropagationPortsAdapter = {
 	vault: PropagationVaultPort;
 	libraryLookup: PropagationLibraryLookupPort;
 };
 
-export function createPropagationV2PortsAdapter(
-	params: CreatePropagationV2PortsAdapterParams,
-): PropagationV2PortsAdapter {
+export function createPropagationPortsAdapter(
+	params: CreatePropagationPortsAdapterParams,
+): PropagationPortsAdapter {
 	const libraryLookup = createPropagationLibraryLookupPort(
 		params.lookupInLibraryByCoreName,
 	);

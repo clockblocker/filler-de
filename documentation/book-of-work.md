@@ -1,6 +1,6 @@
 # Book Of Work
 
-## Deferred Follow-Ups (Morphological Relations V1)
+## Deferred Follow-Ups (Morphological Relations)
 
 ### 1) Prefix derivations: avoid redundant `<derived_from>` with equation
 - Status: Deferred by request.

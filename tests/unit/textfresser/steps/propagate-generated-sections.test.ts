@@ -6,11 +6,11 @@ import { dispatchActions } from "../../../../src/commanders/textfresser/orchestr
 import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
 
 const calls = {
+	core: 0,
 	decorate: 0,
-	v2: 0,
 };
 
-let shouldFailV2 = false;
+let shouldFailCore = false;
 let serializeCalls = 0;
 let moveCalls = 0;
 
@@ -29,14 +29,14 @@ mock.module(
 );
 
 mock.module(
-	"../../../../src/commanders/textfresser/commands/generate/steps/propagate-v2",
+	"../../../../src/commanders/textfresser/commands/generate/steps/propagate-core",
 	() => ({
-		propagateV2: (ctx: unknown) => {
-			calls.v2 += 1;
-			if (shouldFailV2) {
+		propagateCore: (ctx: unknown) => {
+			calls.core += 1;
+			if (shouldFailCore) {
 				return err({
 					kind: "ApiError",
-					reason: "propagation v2 failed",
+					reason: "propagation core failed",
 				});
 			}
 			return okCtx(ctx);
@@ -100,8 +100,8 @@ mock.module(
 );
 
 function resetCalls() {
+	calls.core = 0;
 	calls.decorate = 0;
-	calls.v2 = 0;
 }
 
 function makeCtx(params: {
@@ -176,9 +176,9 @@ const SAMPLE_SLICES: ReadonlyArray<{
 	{ linguisticUnit: "Lexem", posLikeKind: "Noun", targetLanguage: "English" },
 ];
 
-describe("propagateGeneratedSections", () => {
+	describe("propagateGeneratedSections", () => {
 	beforeEach(() => {
-		shouldFailV2 = false;
+		shouldFailCore = false;
 		serializeCalls = 0;
 		moveCalls = 0;
 		resetCalls();
@@ -188,7 +188,7 @@ describe("propagateGeneratedSections", () => {
 		mock.restore();
 	});
 
-	it("always routes core propagation through v2 and then decorates", async () => {
+	it("always routes core propagation and then decorates", async () => {
 		const { propagateGeneratedSections } = await import(
 			"../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections"
 		);
@@ -203,13 +203,13 @@ describe("propagateGeneratedSections", () => {
 				}),
 			);
 			expect(result.isOk()).toBe(true);
-			expect(calls.v2).toBe(1);
+			expect(calls.core).toBe(1);
 			expect(calls.decorate).toBe(1);
 		}
 	});
 
-	it("v2 failure short-circuits Generate with zero emitted/dispatched actions", async () => {
-		shouldFailV2 = true;
+	it("core propagation failure short-circuits Generate with zero emitted/dispatched actions", async () => {
+		shouldFailCore = true;
 		const { generateCommand } = await import(
 			"../../../../src/commanders/textfresser/commands/generate/generate-command"
 		);
@@ -228,7 +228,7 @@ describe("propagateGeneratedSections", () => {
 		).andThen((actions) => dispatchActions(vam, actions));
 
 		expect(result.isErr()).toBe(true);
-		expect(calls.v2).toBe(1);
+		expect(calls.core).toBe(1);
 		expect(calls.decorate).toBe(0);
 		expect(serializeCalls).toBe(0);
 		expect(moveCalls).toBe(0);

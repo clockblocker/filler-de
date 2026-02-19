@@ -179,7 +179,7 @@ describe("disambiguateSense", () => {
 		expect(value!.matchedIndex).toBeNull();
 	});
 
-	it("returns first entry index for V2 legacy (all entries lack emojiDescription)", async () => {
+	it("treats all-senses-missing-emojiDescription as new sense", async () => {
 		const content = buildNoteContent([
 			{ id: "LX-LM-NOUN-1" },
 		]);
@@ -187,9 +187,8 @@ describe("disambiguateSense", () => {
 		const runner = makePromptRunner(null);
 		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
 		expect(result.isOk()).toBe(true);
-		// V2 legacy: treat as re-encounter of first match
 		const value = result._unsafeUnwrap();
-		expect(value).toEqual({ matchedIndex: 1 });
+		expect(value).toEqual({ matchedIndex: null });
 	});
 
 	it("returns error when prompt runner fails", async () => {

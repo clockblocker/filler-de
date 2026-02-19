@@ -14,7 +14,7 @@ import { propagateRelations } from "./propagate-relations";
 
 type ProcessTransform = (content: string) => string | Promise<string>;
 
-function buildV2Error(reason: string): CommandError {
+function buildPropagationError(reason: string): CommandError {
 	return {
 		kind: "ApiError",
 		reason,
@@ -136,8 +136,8 @@ export function foldScopedActionsToSingleWritePerTarget(
 		}
 
 		return err(
-			buildV2Error(
-				`[propagateV2] Unsupported scoped action kind: ${action.kind}`,
+			buildPropagationError(
+				`[propagateCore] Unsupported scoped action kind: ${action.kind}`,
 			),
 		);
 	}
@@ -174,7 +174,7 @@ function collectScopedActions(
 		.map((result) => result.actions);
 }
 
-export function propagateV2(
+export function propagateCore(
 	ctx: GenerateSectionsResult,
 ): Result<GenerateSectionsResult, CommandError> {
 	return collectScopedActions(ctx)
