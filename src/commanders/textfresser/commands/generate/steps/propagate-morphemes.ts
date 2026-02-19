@@ -11,9 +11,9 @@
 
 import { ok, type Result } from "neverthrow";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import type { TargetLanguage } from "../../../../../types";
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
+import type { TargetLanguage } from "../../../../../types";
 import {
 	buildPropagationActionPair,
 	resolveMorphemePath,
@@ -200,10 +200,7 @@ function findNextMorphologyMarkerOffset(text: string): number {
 	for (const match of text.matchAll(regex)) {
 		const index = match.index;
 		const markerCandidate = match[1];
-		if (
-			typeof index !== "number" ||
-			typeof markerCandidate !== "string"
-		) {
+		if (typeof index !== "number" || typeof markerCandidate !== "string") {
 			continue;
 		}
 		if (morphologyRelationHelper.parseMarker(markerCandidate)) {

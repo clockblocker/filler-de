@@ -51,7 +51,10 @@ for (const relationType of [
 ] as const) {
 	for (const targetLanguage of ["English", "German"] as const) {
 		const marker = markerForRelationType(relationType, targetLanguage);
-		relationTypeByNormalizedMarker.set(normalizeMarker(marker), relationType);
+		relationTypeByNormalizedMarker.set(
+			normalizeMarker(marker),
+			relationType,
+		);
 	}
 }
 

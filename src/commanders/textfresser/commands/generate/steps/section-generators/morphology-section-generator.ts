@@ -1,5 +1,5 @@
-import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 import { morphologyRelationHelper } from "../../../../../../stateless-helpers/morphology-relation";
+import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import {
 	type MorphemeItem,

@@ -1,5 +1,5 @@
-import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
+import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
 
 export type PropagationResult = { changed: boolean; content: string };
 

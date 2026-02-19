@@ -4,8 +4,8 @@ import { propagateMorphologyRelations } from "../../../../src/commanders/textfre
 import type { MorphologyPayload } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generation-types";
 import type { MorphemeItem } from "../../../../src/commanders/textfresser/domain/morpheme/morpheme-formatter";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
-import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 function makeCtx(params: {
 	lemma?: string;

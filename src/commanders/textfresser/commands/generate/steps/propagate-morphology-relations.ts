@@ -1,8 +1,8 @@
 import { ok, type Result } from "neverthrow";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
+import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
 import {
 	buildPropagationActionPair,

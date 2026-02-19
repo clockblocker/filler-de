@@ -125,8 +125,7 @@ function buildLookupCandidates(word: string): string[] {
 	if (firstChar.length === 0) {
 		return candidates;
 	}
-	const decapitalized =
-		firstChar.toLocaleLowerCase("de-DE") + word.slice(1);
+	const decapitalized = firstChar.toLocaleLowerCase("de-DE") + word.slice(1);
 	if (decapitalized !== word) {
 		candidates.push(decapitalized);
 	}

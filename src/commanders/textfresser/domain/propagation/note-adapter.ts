@@ -6,7 +6,10 @@ import type { TargetLanguage } from "../../../../types";
 import { logger } from "../../../../utils/logger";
 import { compareSectionsByWeight } from "../../targets/de/sections/section-config";
 import { cssSuffixFor } from "../../targets/de/sections/section-css-kind";
-import { DictSectionKind, TitleReprFor } from "../../targets/de/sections/section-kind";
+import {
+	DictSectionKind,
+	TitleReprFor,
+} from "../../targets/de/sections/section-kind";
 import {
 	ENTRY_SECTION_CSS_CLASS,
 	ENTRY_SECTION_MARKER_RE,
