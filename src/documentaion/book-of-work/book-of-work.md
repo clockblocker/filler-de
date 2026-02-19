@@ -101,6 +101,10 @@ Source: ideas extracted from open PRs #6, #7, #13, #15, #16, #17, #22 in clockbl
 #### 6) Fold `serializeDictNote()` into `dictNoteHelper` facade
 - Source: PR #7 ideas
 - `serialize-dict-note.ts` is a thin wrapper. Add `dictNoteHelper.serializeToString()`, delete the file, update 5 imports.
+- Update (2026-02-19): Completed.
+  - Added `dictNoteHelper.serializeToString()` facade method.
+  - Updated propagation step imports/call-sites to use `dictNoteHelper` directly.
+  - Deleted `serialize-dict-note.ts`.
 
 #### 7) Add API timeout to `generate()` call
 - Source: PR #22
@@ -120,6 +124,9 @@ Source: ideas extracted from open PRs #6, #7, #13, #15, #16, #17, #22 in clockbl
 #### 10) Add `@generated` header to prompt-smith codegen output
 - Source: PR #6 ideas (#9)
 - `src/prompt-smith/index.ts` is generated but committed alongside hand-written code with no marker.
+- Update (2026-02-19): Completed in generator.
+  - Added `// @generated` to both prompt-file and index-file templates in codegen script.
+  - Existing generated files will pick up the marker on next `bun run codegen:prompts`.
 
 ### Bug fixes to verify against current code
 
