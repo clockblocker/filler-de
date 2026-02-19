@@ -34,22 +34,46 @@ function composeTransforms(
 }
 
 function extractProcessTransform(
-	action: Extract<VaultAction, { kind: typeof VaultActionKind.ProcessMdFile }>,
+	action: Extract<
+		VaultAction,
+		{ kind: typeof VaultActionKind.ProcessMdFile }
+	>,
 ): Result<
 	{ splitPath: SplitPathToMdFile; transform: ProcessTransform },
 	CommandError
 > {
-	if (!("transform" in action.payload)) {
-		return err(
-			buildV2Error(
-				"[propagateV2] Unsupported ProcessMdFile payload shape: expected transform",
-			),
-		);
+	if ("transform" in action.payload) {
+		return ok({
+			splitPath: action.payload.splitPath,
+			transform: action.payload.transform,
+		});
 	}
-
+	const { after, before, splitPath } = action.payload;
 	return ok({
-		splitPath: action.payload.splitPath,
-		transform: action.payload.transform,
+		splitPath,
+		transform: (content: string) => content.replace(before, after),
+	});
+}
+
+function setContentTransform(content: string): ProcessTransform {
+	return () => content;
+}
+
+function appendTransformToPlan(params: {
+	writePlansByPath: Map<string, TargetWritePlan>;
+	splitPath: SplitPathToMdFile;
+	transform: ProcessTransform;
+}): void {
+	const { splitPath, transform, writePlansByPath } = params;
+	const targetPath = makeSystemPathForSplitPath(splitPath);
+	const existing = writePlansByPath.get(targetPath);
+	if (existing) {
+		existing.transforms.push(transform);
+		return;
+	}
+	writePlansByPath.set(targetPath, {
+		splitPath,
+		transforms: [transform],
 	});
 }
 
@@ -69,6 +93,10 @@ type TargetWritePlan = {
 export function foldScopedActionsToSingleWritePerTarget(
 	actions: ReadonlyArray<VaultAction>,
 ): Result<VaultAction[], CommandError> {
+	// Fold contract:
+	// - Supported: RenameMdFile, UpsertMdFile(content null|string), ProcessMdFile(transform|before/after)
+	// - Unsupported: all other action kinds (fail-fast)
+	// Precedence is original action order per target path by composing transforms in sequence.
 	const renameActionsByKey = new Map<
 		string,
 		Extract<VaultAction, { kind: typeof VaultActionKind.RenameMdFile }>
@@ -84,11 +112,11 @@ export function foldScopedActionsToSingleWritePerTarget(
 		if (action.kind === VaultActionKind.UpsertMdFile) {
 			const content = action.payload.content;
 			if (content !== null && content !== undefined) {
-				return err(
-					buildV2Error(
-						"[propagateV2] Unsupported UpsertMdFile payload: non-null content cannot be folded safely",
-					),
-				);
+				appendTransformToPlan({
+					splitPath: action.payload.splitPath,
+					transform: setContentTransform(content),
+					writePlansByPath,
+				});
 			}
 			continue;
 		}
@@ -99,16 +127,11 @@ export function foldScopedActionsToSingleWritePerTarget(
 				return err(transformResult.error);
 			}
 			const { splitPath, transform } = transformResult.value;
-			const targetPath = makeSystemPathForSplitPath(splitPath);
-			const existing = writePlansByPath.get(targetPath);
-			if (existing) {
-				existing.transforms.push(transform);
-			} else {
-				writePlansByPath.set(targetPath, {
-					splitPath,
-					transforms: [transform],
-				});
-			}
+			appendTransformToPlan({
+				splitPath,
+				transform,
+				writePlansByPath,
+			});
 			continue;
 		}
 

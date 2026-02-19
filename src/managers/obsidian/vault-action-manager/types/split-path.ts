@@ -4,6 +4,7 @@ import type { TFile, TFolder } from "obsidian";
 // system-path-and-split-path-codec.ts which is a v4-only API.
 import { z } from "zod";
 import { FILE, FOLDER, MD_FILE, MdSchema } from "./literals";
+import type { ReadContentError } from "./read-content-error";
 
 /**
  * @example
@@ -68,7 +69,7 @@ export type SplitPathToAnyFile = SplitPathToFile | SplitPathToMdFile;
 export type SplitPathFromTo<T extends AnySplitPath> = { from: T; to: T };
 
 export type SplitPathToMdFileWithReader = SplitPathToMdFile & {
-	read: () => Promise<Result<string, string>>;
+	read: () => Promise<Result<string, ReadContentError>>;
 };
 
 export type SplitPathWithReader = SplitPathToMdFileWithReader | SplitPathToFile;

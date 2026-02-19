@@ -1,21 +1,8 @@
 import type { Result } from "neverthrow";
-import { decorateAttestationSeparability } from "./decorate-attestation-separability";
 import type { CommandError } from "../../types";
+import { decorateAttestationSeparability } from "./decorate-attestation-separability";
 import type { GenerateSectionsResult } from "./generate-sections";
-import { propagateInflections } from "./propagate-inflections";
-import { propagateMorphemes } from "./propagate-morphemes";
-import { propagateMorphologyRelations } from "./propagate-morphology-relations";
-import { propagateRelations } from "./propagate-relations";
 import { propagateV2 } from "./propagate-v2";
-
-export function propagateLegacyV1(
-	ctx: GenerateSectionsResult,
-): Result<GenerateSectionsResult, CommandError> {
-	return propagateRelations(ctx)
-		.andThen(propagateMorphologyRelations)
-		.andThen(propagateMorphemes)
-		.andThen(propagateInflections);
-}
 
 export function propagateGeneratedSections(
 	ctx: GenerateSectionsResult,

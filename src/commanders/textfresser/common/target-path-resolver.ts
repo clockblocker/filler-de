@@ -71,7 +71,7 @@ export function resolveTargetPath(
 	} = params;
 
 	// 1. Try VAM lookup
-	const vamResults = vamLookup(word);
+	const vamResults = lookupWithCaseFallback(vamLookup, word);
 	if (vamResults.length > 0) {
 		const existing = vamResults[0];
 		if (existing) {
@@ -87,7 +87,7 @@ export function resolveTargetPath(
 	}
 
 	// 2. Try librarian lookup
-	const libResults = librarianLookup(word);
+	const libResults = lookupWithCaseFallback(librarianLookup, word);
 	if (libResults.length > 0) {
 		const existing = libResults[0];
 		if (existing) {
@@ -104,6 +104,32 @@ export function resolveTargetPath(
 		desiredSurfaceKind,
 	);
 	return { healingActions: [], splitPath };
+}
+
+function lookupWithCaseFallback(
+	lookup: PathLookupFn,
+	word: string,
+): SplitPathToMdFile[] {
+	for (const candidate of buildLookupCandidates(word)) {
+		const results = lookup(candidate);
+		if (results.length > 0) {
+			return results;
+		}
+	}
+	return [];
+}
+
+function buildLookupCandidates(word: string): string[] {
+	const candidates = [word];
+	const firstChar = word.charAt(0);
+	if (firstChar.length === 0) {
+		return candidates;
+	}
+	const decapitalized = firstChar.toLocaleLowerCase("de-DE") + word.slice(1);
+	if (decapitalized !== word) {
+		candidates.push(decapitalized);
+	}
+	return candidates;
 }
 
 /**

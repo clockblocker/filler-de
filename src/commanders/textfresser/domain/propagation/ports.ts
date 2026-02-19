@@ -1,5 +1,6 @@
 import type { Result } from "neverthrow";
 import type { VaultAction } from "../../../../managers/obsidian/vault-action-manager";
+import type { ReadContentError } from "../../../../managers/obsidian/vault-action-manager/types/read-content-error";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
@@ -19,7 +20,7 @@ export type ReadManyMdFilesOutcome =
 	| {
 			kind: "Error";
 			splitPath: SplitPathToMdFile;
-			reason: string;
+			reason: ReadContentError;
 	  };
 
 export type FindCandidateTargetsParams = {

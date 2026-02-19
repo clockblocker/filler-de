@@ -27,6 +27,9 @@ Rules:
 - Interfixes (Fugenelemente like -s-, -n-, -es-, -er-, -e-, -ens-) connect compound parts — mark them as Interfix.
 - For compound words, each independent stem is a separate Root.
 - Derivational affixes (un-, ver-, be-, -keit, -ung, -lich, -bar, etc.) are Prefix or Suffix.
+- Do NOT invent one-letter morphemes or interfixes to force segmentation.
+- Interfix is valid only when it is a real German Fugenelement between two roots (e.g., s, n, en, es, er, e, ens). Never split a root just to create an interfix.
+- Example constraint: "Neubau" = "neu" + "bau" (no extra "b" interfix token).
 - derived_from must contain at most one immediate base lemma.
 - compounded_from must contain only immediate constituents (no deep decomposition).
 - Use canonical lemma forms in lemma, derived_from.lemma, and compounded_from.

@@ -1,6 +1,7 @@
 import { ok, type Result } from "neverthrow";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
+import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
 import {
@@ -162,7 +163,7 @@ function buildTargets(ctx: GenerateSectionsResult): MorphologyTarget[] {
 				);
 				if (prefixItem?.separability) {
 					const sourceGlossSuffix = sourceGloss
-						? ` *(${sourceGloss})*`
+						? ` *(${sourceGloss})* `
 						: "";
 					const targetHeader =
 						morphemeFormatterHelper.decorateSurface(
@@ -220,6 +221,12 @@ export function propagateMorphologyRelations(
 	const sectionCssSuffix = cssSuffixFor[DictSectionKind.Morphology];
 	const sectionTitle = TitleReprFor[DictSectionKind.Morphology][targetLang];
 	const sectionMarker = `<span class="entry_section_title entry_section_title_${sectionCssSuffix}">${sectionTitle}</span>`;
+	const usedInBlockMarker = morphologyRelationHelper.markerForRelationType(
+		"used_in",
+		targetLang,
+	);
+	const usedInBlockMarkerAliases =
+		morphologyRelationHelper.markerAliasesForRelationType("used_in");
 	const tagsCssSuffix = cssSuffixFor[DictSectionKind.Tags];
 	const tagsTitle = TitleReprFor[DictSectionKind.Tags][targetLang];
 
@@ -247,7 +254,8 @@ export function propagateMorphologyRelations(
 			target.kind === "UsedIn"
 				? (content: string) =>
 						appendUniqueLinesToSectionBlock({
-							blockMarker: "<used_in>",
+							blockMarker: usedInBlockMarker,
+							blockMarkerAliases: usedInBlockMarkerAliases,
 							content,
 							lines: target.lines,
 							sectionMarker,

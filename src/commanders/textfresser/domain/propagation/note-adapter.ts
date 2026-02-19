@@ -1,12 +1,21 @@
 import { z } from "zod/v3";
 import { blockIdHelper } from "../../../../stateless-helpers/block-id";
+import { morphologyRelationHelper } from "../../../../stateless-helpers/morphology-relation";
 import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
+import type { TargetLanguage } from "../../../../types";
 import { logger } from "../../../../utils/logger";
-import { ENTRY_SECTION_CSS_CLASS, ENTRY_SECTION_MARKER_RE } from "../dict-note/internal/constants";
-import { ENTRY_SEPARATOR, ENTRY_SEPARATOR_RE } from "../dict-note/internal/constants";
 import { compareSectionsByWeight } from "../../targets/de/sections/section-config";
 import { cssSuffixFor } from "../../targets/de/sections/section-css-kind";
-import { DictSectionKind } from "../../targets/de/sections/section-kind";
+import {
+	DictSectionKind,
+	TitleReprFor,
+} from "../../targets/de/sections/section-kind";
+import {
+	ENTRY_SECTION_CSS_CLASS,
+	ENTRY_SECTION_MARKER_RE,
+	ENTRY_SEPARATOR,
+	ENTRY_SEPARATOR_RE,
+} from "../dict-note/internal/constants";
 import {
 	dedupeByKey,
 	inflectionItemIdentityKey,
@@ -36,7 +45,9 @@ export type WikilinkDto = {
 	displayText?: string;
 };
 
-export type PropagationTypedSection<K extends TypedSectionKind = TypedSectionKind> = {
+export type PropagationTypedSection<
+	K extends TypedSectionKind = TypedSectionKind,
+> = {
 	kind: K;
 	cssKind: string;
 	title: string;
@@ -56,7 +67,9 @@ export type PropagationRawSection = {
 	rawBlock: string;
 };
 
-export type PropagationSection = PropagationRawSection | AnyPropagationTypedSection;
+export type PropagationSection =
+	| PropagationRawSection
+	| AnyPropagationTypedSection;
 
 export type PropagationNoteEntry = {
 	id: string;
@@ -83,6 +96,10 @@ const RELATION_SYMBOL_ORDER = new Map<string, number>([
 const BASIC_WIKILINK_RE = /^\[\[([^\]|#]+)(?:\|([^\]#]+))?\]\]$/;
 const ANY_WIKILINK_RE = /^\[\[([^\]|]+)(?:\|([^\]]+))?\]\]$/;
 const ANY_WIKILINK_GLOBAL_RE = /\[\[[^\]]+\]\]/g;
+const WARN_SAMPLE_FIRST_N = 3;
+const WARN_SAMPLE_EVERY_N = 50;
+const WARN_SAMPLE_MAX_KEYS = 2000;
+const warningCountBySampleKey = new Map<string, number>();
 
 const EntriesMetaSchema = z
 	.object({ entries: z.record(z.record(z.unknown())).optional() })
@@ -102,6 +119,36 @@ type ParsedSectionMarker = {
 	cssKind: string;
 	title: string;
 };
+
+function logSampledWarning(params: {
+	message: string;
+	sampleKey: string;
+	context: Record<string, unknown>;
+}): void {
+	const key = `${params.message}::${params.sampleKey}`;
+	if (
+		!warningCountBySampleKey.has(key) &&
+		warningCountBySampleKey.size >= WARN_SAMPLE_MAX_KEYS
+	) {
+		// TODO(telemetry): calibrate sampling cache size with real vault corpus sizes.
+		warningCountBySampleKey.clear();
+	}
+	const nextCount = (warningCountBySampleKey.get(key) ?? 0) + 1;
+	warningCountBySampleKey.set(key, nextCount);
+
+	const shouldLog =
+		nextCount <= WARN_SAMPLE_FIRST_N ||
+		nextCount % WARN_SAMPLE_EVERY_N === 0;
+	if (!shouldLog) {
+		return;
+	}
+
+	logger.warn(params.message, {
+		...params.context,
+		sampled: nextCount > WARN_SAMPLE_FIRST_N,
+		seenCount: nextCount,
+	});
+}
 
 function collectSectionMarkers(text: string): ParsedSectionMarker[] {
 	const markers: ParsedSectionMarker[] = [];
@@ -142,10 +189,10 @@ function parseBasicWikilinkFromMatch(match: {
 	if (target.length === 0) {
 		return null;
 	}
-	const displayText = match.displayText ? normalizeSpace(match.displayText) : undefined;
-	return displayText
-		? { displayText, target }
-		: { target };
+	const displayText = match.displayText
+		? normalizeSpace(match.displayText)
+		: undefined;
+	return displayText ? { displayText, target } : { target };
 }
 
 function parseAnyWikilinkToken(raw: string): {
@@ -200,15 +247,17 @@ export function parseBasicWikilinkDto(raw: string): WikilinkDto | null {
 export function serializeWikilinkDto(link: WikilinkDto): string {
 	const target = normalizeSpace(link.target);
 	if (target.length === 0) {
-		logger.warn(
-			"[propagation-v2-note-adapter] Serializing wikilink with empty target",
-			{
-				link,
-			},
-		);
+		logSampledWarning({
+			context: { link },
+			message:
+				"[propagation-v2-note-adapter] Serializing wikilink with empty target",
+			sampleKey: "empty-target",
+		});
 		return "[[]]";
 	}
-	const displayText = link.displayText ? normalizeSpace(link.displayText) : "";
+	const displayText = link.displayText
+		? normalizeSpace(link.displayText)
+		: "";
 	if (displayText.length === 0) {
 		return `[[${target}]]`;
 	}
@@ -229,12 +278,14 @@ function extractWikilinkTokensFromText(text: string): string[] {
 		}
 		const previousChar = index > 0 ? text[index - 1] : "";
 		if (previousChar === "!") {
-			logger.warn(
-				"[propagation-v2-note-adapter] Skipping embedded wikilink during target extraction",
-				{
+			logSampledWarning({
+				context: {
 					wikilink: typeof fullMatch === "string" ? fullMatch : "",
 				},
-			);
+				message:
+					"[propagation-v2-note-adapter] Skipping embedded wikilink during target extraction",
+				sampleKey: fullMatch.trim(),
+			});
 			continue;
 		}
 		tokens.push(fullMatch.trim());
@@ -282,12 +333,14 @@ function serializePreservedWikilink(raw: string): string {
 	if (fallback.length > 0) {
 		return fallback;
 	}
-	logger.warn(
-		"[propagation-v2-note-adapter] Failed to serialize preserved wikilink; emitting empty marker",
-		{
+	logSampledWarning({
+		context: {
 			raw,
 		},
-	);
+		message:
+			"[propagation-v2-note-adapter] Failed to serialize preserved wikilink; emitting empty marker",
+		sampleKey: raw.trim(),
+	});
 	return "[[]]";
 }
 
@@ -322,13 +375,15 @@ function parseRelationToken(
 	}
 	const preservedTokens = extractPreservedWikilinksFromText(trimmed);
 	const preserved = preservedTokens[0] ?? trimmed;
-	logger.warn(
-		"[propagation-v2-note-adapter] Preserving unsupported relation wikilink token",
-		{
+	logSampledWarning({
+		context: {
 			line,
 			token: trimmed,
 		},
-	);
+		message:
+			"[propagation-v2-note-adapter] Preserving unsupported relation wikilink token",
+		sampleKey: `${relationKind}:${trimmed}`,
+	});
 	return {
 		relationKind,
 		targetLemma: targetLemmaForRelationToken(preserved),
@@ -414,7 +469,10 @@ function parseRelationSection(rawContent: string): RelationSectionDto {
 		}
 		const relationKind = relationLineMatch[1];
 		const rawTargets = relationLineMatch[2];
-		if (typeof relationKind !== "string" || typeof rawTargets !== "string") {
+		if (
+			typeof relationKind !== "string" ||
+			typeof rawTargets !== "string"
+		) {
 			continue;
 		}
 		for (const token of rawTargets.split(",")) {
@@ -434,19 +492,12 @@ function parseRelationSection(rawContent: string): RelationSectionDto {
 function parseMorphologyRelationMarker(
 	line: string,
 ): MorphologyBacklinkDto["relationType"] | null {
-	if (line === "<derived_from>") {
-		return "derived_from";
-	}
-	if (line === "<consists_of>") {
-		return "compounded_from";
-	}
-	if (line === "<used_in>") {
-		return "used_in";
-	}
-	return null;
+	return morphologyRelationHelper.parseMarker(line);
 }
 
-function parseMorphologyEquationLine(line: string): MorphologyEquationDto | null {
+function parseMorphologyEquationLine(
+	line: string,
+): MorphologyEquationDto | null {
 	const tokens = extractRawEquationTokens(line);
 	if (!tokens) {
 		return null;
@@ -485,13 +536,15 @@ function parseMorphologySection(rawContent: string): MorphologySectionDto {
 				relationType: activeRelationType,
 			});
 			if (values.length === 0) {
-				logger.warn(
-					"[propagation-v2-note-adapter] Skipping unparseable morphology backlink line",
-					{
+				logSampledWarning({
+					context: {
 						line: trimmed,
 						relationType: activeRelationType,
 					},
-				);
+					message:
+						"[propagation-v2-note-adapter] Skipping unparseable morphology backlink line",
+					sampleKey: `${activeRelationType}:${trimmed}`,
+				});
 				continue;
 			}
 			for (const value of values) {
@@ -500,7 +553,6 @@ function parseMorphologySection(rawContent: string): MorphologySectionDto {
 					value,
 				});
 			}
-			continue;
 		}
 	}
 
@@ -557,7 +609,7 @@ function parseSectionsForEntry(sectionText: string): PropagationSection[] {
 	return markers.map((marker, index) => {
 		const sectionEnd =
 			index + 1 < markers.length
-				? markers[index + 1]?.index ?? sectionText.length
+				? (markers[index + 1]?.index ?? sectionText.length)
 				: sectionText.length;
 		const rawBlock = sectionText.slice(marker.index, sectionEnd);
 		const rawContent = sectionText.slice(marker.markerEnd, sectionEnd);
@@ -627,7 +679,9 @@ function parseEntryChunk(
 	if (!id) {
 		return null;
 	}
-	const headerContent = normalizeSpace(blockIdHelper.stripFromEnd(headerLine));
+	const headerContent = normalizeSpace(
+		blockIdHelper.stripFromEnd(headerLine),
+	);
 	const headerEndOffset = chunk.indexOf(headerLine) + headerLine.length;
 	const sectionText = chunk.slice(headerEndOffset);
 
@@ -691,15 +745,15 @@ function serializeRelationSection(payload: RelationSectionDto): string {
 				normalizeCaseFold(right.targetLemma),
 			),
 		);
-			const wikilinks = sortedItems.map((item) => {
-				const raw = item.targetWikilink.trim();
-				if (raw.length > 0) {
-					return serializePreservedWikilink(raw);
-				}
-				return serializeWikilinkDto({
-					target: normalizeSpace(item.targetLemma),
-				});
+		const wikilinks = sortedItems.map((item) => {
+			const raw = item.targetWikilink.trim();
+			if (raw.length > 0) {
+				return serializePreservedWikilink(raw);
+			}
+			return serializeWikilinkDto({
+				target: normalizeSpace(item.targetLemma),
 			});
+		});
 		if (wikilinks.length === 0) {
 			continue;
 		}
@@ -712,17 +766,18 @@ function normalizeBacklinkWikilink(rawValue: string): string {
 	return serializePreservedWikilink(rawValue);
 }
 
-function serializeMorphologySection(payload: MorphologySectionDto): string {
+function serializeMorphologySection(
+	payload: MorphologySectionDto,
+	targetLanguage: TargetLanguage,
+): string {
 	const lines: string[] = [];
 	const backlinks = dedupeByKey(
 		payload.backlinks,
 		morphologyBacklinkIdentityKey,
 	);
-	const relationTypeOrder: ReadonlyArray<MorphologyBacklinkDto["relationType"]> = [
-		"derived_from",
-		"compounded_from",
-		"used_in",
-	];
+	const relationTypeOrder: ReadonlyArray<
+		MorphologyBacklinkDto["relationType"]
+	> = ["derived_from", "compounded_from", "used_in"];
 	for (const relationType of relationTypeOrder) {
 		const typed = backlinks
 			.filter((backlink) => backlink.relationType === relationType)
@@ -736,7 +791,12 @@ function serializeMorphologySection(payload: MorphologySectionDto): string {
 		}
 
 		if (relationType === "derived_from") {
-			lines.push("<derived_from>");
+			lines.push(
+				morphologyRelationHelper.markerForRelationType(
+					relationType,
+					targetLanguage,
+				),
+			);
 			for (const backlink of typed) {
 				lines.push(normalizeBacklinkWikilink(backlink.value));
 			}
@@ -744,16 +804,28 @@ function serializeMorphologySection(payload: MorphologySectionDto): string {
 		}
 
 		if (relationType === "compounded_from") {
-			lines.push("<consists_of>");
+			lines.push(
+				morphologyRelationHelper.markerForRelationType(
+					relationType,
+					targetLanguage,
+				),
+			);
 			lines.push(
 				typed
-					.map((backlink) => normalizeBacklinkWikilink(backlink.value))
+					.map((backlink) =>
+						normalizeBacklinkWikilink(backlink.value),
+					)
 					.join(" + "),
 			);
 			continue;
 		}
 
-		lines.push("<used_in>");
+		lines.push(
+			morphologyRelationHelper.markerForRelationType(
+				relationType,
+				targetLanguage,
+			),
+		);
 		for (const backlink of typed) {
 			lines.push(normalizeBacklinkWikilink(backlink.value));
 		}
@@ -762,11 +834,10 @@ function serializeMorphologySection(payload: MorphologySectionDto): string {
 	const equations = dedupeByKey(
 		payload.equations,
 		morphologyEquationIdentityKey,
-	).sort(
-		(left, right) =>
-			morphologyEquationIdentityKey(left).localeCompare(
-				morphologyEquationIdentityKey(right),
-			),
+	).sort((left, right) =>
+		morphologyEquationIdentityKey(left).localeCompare(
+			morphologyEquationIdentityKey(right),
+		),
 	);
 	for (const equation of equations) {
 		const lhs = equation.lhsParts
@@ -777,6 +848,15 @@ function serializeMorphologySection(payload: MorphologySectionDto): string {
 	}
 
 	return lines.join("\n");
+}
+
+function inferTargetLanguageFromSectionTitle(
+	sectionTitle: string,
+): TargetLanguage {
+	if (sectionTitle === TitleReprFor[DictSectionKind.Morphology].German) {
+		return "German";
+	}
+	return "English";
 }
 
 function serializeInflectionSection(payload: InflectionSectionDto): string {
@@ -817,7 +897,10 @@ function serializeTypedSection(section: AnyPropagationTypedSection): string {
 			return content.length > 0 ? `${marker}\n${content}` : marker;
 		}
 		case "Morphology": {
-			const content = serializeMorphologySection(section.payload);
+			const content = serializeMorphologySection(
+				section.payload,
+				inferTargetLanguageFromSectionTitle(section.title),
+			);
 			return content.length > 0 ? `${marker}\n${content}` : marker;
 		}
 		case "Inflection": {
@@ -893,7 +976,9 @@ export function parsePropagationNote(noteText: string): PropagationNoteEntry[] {
 export function serializePropagationNote(
 	entries: ReadonlyArray<PropagationNoteEntry>,
 ): SerializePropagationNoteResult {
-	const body = entries.map((entry) => serializeEntry(entry)).join(ENTRY_SEPARATOR);
+	const body = entries
+		.map((entry) => serializeEntry(entry))
+		.join(ENTRY_SEPARATOR);
 	const entriesMeta: Record<string, Record<string, unknown>> = {};
 	for (const entry of entries) {
 		if (Object.keys(entry.meta).length > 0) {
@@ -902,6 +987,7 @@ export function serializePropagationNote(
 	}
 	return {
 		body,
-		meta: Object.keys(entriesMeta).length > 0 ? { entries: entriesMeta } : {},
+		meta:
+			Object.keys(entriesMeta).length > 0 ? { entries: entriesMeta } : {},
 	};
 }

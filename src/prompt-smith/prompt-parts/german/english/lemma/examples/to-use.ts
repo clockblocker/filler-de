@@ -29,6 +29,20 @@ export const examples = [
 	},
 	{
 		input: {
+			context:
+				"Sie unterschreibt das Formular, und ihre Unterschrift steht schon unten.",
+			surface: "Unterschrift",
+		},
+		output: {
+			contextWithLinkedParts: undefined,
+			lemma: "Unterschrift",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Noun",
+			surfaceKind: "Lemma",
+		},
+	},
+	{
+		input: {
 			context: "Das machen wir auf jeden [Fall] morgen.",
 			surface: "Fall",
 		},

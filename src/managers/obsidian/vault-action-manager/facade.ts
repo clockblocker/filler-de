@@ -27,6 +27,7 @@ import type {
 	VaultActionManager,
 	VaultEventHandler,
 } from "./index";
+import type { ReadContentError } from "./types/read-content-error";
 import type {
 	AnySplitPath,
 	SplitPathToAnyFile,
@@ -251,7 +252,7 @@ export class VaultActionManagerImpl implements VaultActionManager {
 
 	readContent(
 		splitPathArg: SplitPathToMdFile,
-	): Promise<Result<string, string>> {
+	): Promise<Result<string, ReadContentError>> {
 		return this.reader.readContent(splitPathArg);
 	}
 

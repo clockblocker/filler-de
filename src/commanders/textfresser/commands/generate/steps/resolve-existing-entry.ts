@@ -2,6 +2,8 @@ import { ok, type Result } from "neverthrow";
 import { logger } from "../../../../../utils/logger";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { type DictEntry, dictNoteHelper } from "../../../domain/dict-note";
+import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
+import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { CommandError, CommandStateWithLemma } from "../../types";
 
 export type ResolvedEntryState = CommandStateWithLemma & {
@@ -9,6 +11,26 @@ export type ResolvedEntryState = CommandStateWithLemma & {
 	matchedEntry: DictEntry | null;
 	nextIndex: number;
 };
+
+const ATTESTATION_CSS_SUFFIX = cssSuffixFor[DictSectionKind.Attestation];
+const TRANSLATION_CSS_SUFFIX = cssSuffixFor[DictSectionKind.Translation];
+const PROPAGATION_ONLY_SECTION_SUFFIXES = new Set<string>([
+	cssSuffixFor[DictSectionKind.Relation],
+	cssSuffixFor[DictSectionKind.Morphology],
+	cssSuffixFor[DictSectionKind.Inflection],
+	cssSuffixFor[DictSectionKind.Tags],
+]);
+
+function isPropagationOnlyStubEntry(entry: DictEntry): boolean {
+	const sectionKinds = new Set(entry.sections.map((section) => section.kind));
+	const hasAttestation = sectionKinds.has(ATTESTATION_CSS_SUFFIX);
+	const hasTranslation = sectionKinds.has(TRANSLATION_CSS_SUFFIX);
+	const hasPropagationOnlySection = [...sectionKinds].some((kind) =>
+		PROPAGATION_ONLY_SECTION_SUFFIXES.has(kind),
+	);
+
+	return !hasAttestation && !hasTranslation && hasPropagationOnlySection;
+}
 
 /**
  * Parse existing note content into DictEntry[], find matching entry using
@@ -24,8 +46,7 @@ export function resolveExistingEntry(
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const content = ctx.commandContext.activeFile.content;
 
-	const existingEntries = dictNoteHelper.parse(content);
-	const existingIds = existingEntries.map((e) => e.id);
+	let existingEntries = dictNoteHelper.parse(content);
 
 	const prefix = dictEntryIdHelper.buildPrefix(
 		lemmaResult.linguisticUnit,
@@ -59,10 +80,22 @@ export function resolveExistingEntry(
 	}
 	// If no disambResult → matchedEntry stays null (new entry)
 
+	if (matchedEntry && isPropagationOnlyStubEntry(matchedEntry)) {
+		const stubEntryId = matchedEntry.id;
+		logger.info(
+			`[resolveEntry] matchedEntry=${stubEntryId} is propagation-only stub — forcing full generation`,
+		);
+		existingEntries = existingEntries.filter(
+			(entry) => entry.id !== stubEntryId,
+		);
+		matchedEntry = null;
+	}
+
 	logger.info(
 		`[resolveEntry] matchedEntry=${matchedEntry ? matchedEntry.id : "null"}`,
 	);
 
+	const existingIds = existingEntries.map((e) => e.id);
 	const nextIndex = dictEntryIdHelper.nextIndex(existingIds, prefix);
 
 	return ok({

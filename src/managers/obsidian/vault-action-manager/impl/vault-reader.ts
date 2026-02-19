@@ -6,6 +6,10 @@ import type { TFileHelper } from "../file-services/background/helpers/tfile-help
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
 import { pathfinder } from "../helpers/pathfinder";
 import type { DiscriminatedTAbstractFile } from "../helpers/pathfinder/types";
+import {
+	classifyReadContentError,
+	type ReadContentError,
+} from "../types/read-content-error";
 import type {
 	AnySplitPath,
 	SplitPathToFileWithTRef,
@@ -27,16 +31,20 @@ export class VaultReader {
 
 	async readContent(
 		target: SplitPathToMdFile,
-	): Promise<Result<string, string>> {
+	): Promise<Result<string, ReadContentError>> {
 		if (this.active.isInActiveView(target)) {
-			return this.active.getContent();
+			return this.active
+				.getContent()
+				.mapErr((reason) => classifyReadContentError(reason));
 		}
 		return this.tfileHelper
 			.getFile(target)
-			.mapErr((e) => `File not found: ${e}`)
+			.mapErr((reason) => classifyReadContentError(reason))
 			.asyncAndThen((file) =>
-				ResultAsync.fromPromise(this.vault.read(file), (e) =>
-					e instanceof Error ? e.message : String(e),
+				ResultAsync.fromPromise(this.vault.read(file), (error) =>
+					classifyReadContentError(
+						error instanceof Error ? error.message : String(error),
+					),
 				),
 			);
 	}

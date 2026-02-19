@@ -4,9 +4,12 @@ import type {
 	VaultActionManager,
 } from "../../../../../managers/obsidian/vault-action-manager";
 import {
+	isReadContentFileNotFound,
 	makeSystemPathForSplitPath,
+	readContentErrorToReason,
 	VaultActionKind,
 } from "../../../../../managers/obsidian/vault-action-manager";
+import type { ReadContentError } from "../../../../../managers/obsidian/vault-action-manager/types/read-content-error";
 import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { PathLookupFn } from "../../../common/target-path-resolver";
 import type {
@@ -121,7 +124,7 @@ export function createPropagationVaultPort(params: {
 			if (readOutcome.kind === "Missing") {
 				return ok("");
 			}
-			return err(readOutcome.reason);
+			return err(readContentErrorToReason(readOutcome.reason));
 		},
 	};
 }
@@ -175,17 +178,12 @@ function dedupeSplitPaths(
 	return [...bySystemPath.values()];
 }
 
-function isFileNotFoundReadError(reason: string): boolean {
-	const normalized = reason.trim().toLowerCase();
-	return normalized.includes("file not found");
-}
-
 function isMissingAfterReadFailure(
-	reason: string,
+	reason: ReadContentError,
 	splitPath: SplitPathToMdFile,
 	vam: VamPortDependency,
 ): boolean {
-	if (isFileNotFoundReadError(reason)) return true;
+	if (isReadContentFileNotFound(reason)) return true;
 	// Race-safe fallback: file can vanish between the pre-read exists() and readContent().
 	return !vam.exists(splitPath);
 }

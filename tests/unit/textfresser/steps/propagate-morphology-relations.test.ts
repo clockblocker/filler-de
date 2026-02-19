@@ -4,6 +4,7 @@ import { propagateMorphologyRelations } from "../../../../src/commanders/textfre
 import type { MorphologyPayload } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generation-types";
 import type { MorphemeItem } from "../../../../src/commanders/textfresser/domain/morpheme/morpheme-formatter";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
+import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 function makeCtx(params: {
@@ -96,8 +97,8 @@ describe("propagateMorphologyRelations", () => {
 		expect(transform).toBeDefined();
 		if (!transform) return;
 		const output = transform("");
-		expect(output).toContain("<used_in>");
-		expect(output).toContain("[[aufpassen]] *(to watch out)*");
+		expect(output).toContain("Verwendet in:");
+		expect(output).toContain("[[aufpassen]] *(to watch out)* ");
 	});
 
 	it("propagates compounds to each constituent target", () => {
@@ -119,6 +120,40 @@ describe("propagateMorphologyRelations", () => {
 		expect(actions[3]?.kind).toBe(VaultActionKind.ProcessMdFile);
 	});
 
+	it("resolves decapitalized constituent path when lookup has lowercase lemma", () => {
+		const ctx = makeCtx({
+			lemma: "Fahrkarte",
+			morphology: {
+				compoundedFromLemmas: ["Fahren"],
+			},
+		});
+		const fahrenPath: SplitPathToMdFile = {
+			basename: "fahren",
+			extension: "md",
+			kind: "MdFile",
+			pathParts: ["Worter", "de", "lexem", "lemma", "f", "fah", "fahre"],
+		};
+		(
+			ctx.textfresserState as unknown as {
+				vam: { findByBasename: (word: string) => SplitPathToMdFile[] };
+			}
+		).vam = {
+			findByBasename: (word: string) =>
+				word === "fahren" ? [fahrenPath] : [],
+		};
+
+		const result = propagateMorphologyRelations(ctx);
+		expect(result.isOk()).toBe(true);
+		const actions = result._unsafeUnwrap().actions;
+		const upsertAction = actions[0];
+		expect(upsertAction?.kind).toBe(VaultActionKind.UpsertMdFile);
+		if (!upsertAction || upsertAction.kind !== VaultActionKind.UpsertMdFile) {
+			return;
+		}
+		const payload = upsertAction.payload as { splitPath: SplitPathToMdFile };
+		expect(payload.splitPath.basename).toBe("fahren");
+	});
+
 	it("deduplicates exact backlinks and appends at block end", () => {
 		const result = propagateMorphologyRelations(
 			makeCtx({
@@ -136,7 +171,7 @@ describe("propagateMorphologyRelations", () => {
 		const first = transform(
 			[
 				'<span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>',
-				"<used_in>",
+				"Verwendet in:",
 				"[[alt]]",
 			].join("\n"),
 		);

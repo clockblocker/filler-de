@@ -1,3 +1,4 @@
+import { morphologyRelationHelper } from "../../../../../../stateless-helpers/morphology-relation";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import {
@@ -31,6 +32,42 @@ export type MorphologySectionResult = {
 	section: EntrySection | null;
 };
 
+function buildPreferredCompoundedLemmaByKey(
+	morphemes: MorphemeItem[],
+): Map<string, string> {
+	const preferred = new Map<string, string>();
+
+	const assign = (candidate: string): void => {
+		const trimmed = candidate.trim();
+		if (trimmed.length === 0) return;
+		const key = trimmed.toLowerCase();
+		if (!preferred.has(key)) {
+			preferred.set(key, trimmed);
+		}
+	};
+
+	for (const morpheme of morphemes) {
+		if (morpheme.lemma) {
+			assign(morpheme.lemma);
+		}
+		if (morpheme.surf) {
+			assign(morpheme.surf);
+		}
+	}
+
+	return preferred;
+}
+
+function resolveCompoundedLemma(
+	lemma: string,
+	preferredByKey: Map<string, string>,
+): string | null {
+	const normalized = normalizeLemma(lemma);
+	if (!normalized) return null;
+	const preferred = preferredByKey.get(normalized.toLowerCase());
+	return preferred ?? normalized;
+}
+
 function dedupeLemmas(lemmas: string[]): string[] {
 	const out: string[] = [];
 	const seen = new Set<string>();
@@ -50,7 +87,7 @@ function buildGlossSuffix(sourceTranslation?: string): string {
 		?.split("\n")
 		.map((line) => line.trim())
 		.find((line) => line.length > 0);
-	return firstLine ? ` *(${firstLine})*` : "";
+	return firstLine ? ` *(${firstLine})* ` : "";
 }
 
 function inferPrefixEquation(
@@ -126,7 +163,16 @@ export function generateMorphologySection(
 		ctx.targetLang,
 	);
 	const derivedFromLemma = normalizeLemma(ctx.output.derived_from?.lemma);
-	const compoundedFromLemmas = dedupeLemmas(ctx.output.compounded_from ?? []);
+	const preferredCompoundedLemmaByKey = buildPreferredCompoundedLemmaByKey(
+		ctx.morphemes,
+	);
+	const compoundedFromLemmas = dedupeLemmas(
+		(ctx.output.compounded_from ?? [])
+			.map((lemma) =>
+				resolveCompoundedLemma(lemma, preferredCompoundedLemmaByKey),
+			)
+			.filter((lemma): lemma is string => Boolean(lemma)),
+	);
 
 	const lines: string[] = [];
 	const hasEquivalentDerivedFromAndEquationBase =
@@ -135,12 +181,21 @@ export function generateMorphologySection(
 		normalizeMorphologyKey(derivedFromLemma) ===
 			normalizeMorphologyKey(inferredPrefixEquation.baseLemma);
 	if (derivedFromLemma && !hasEquivalentDerivedFromAndEquationBase) {
-		lines.push("<derived_from>", `[[${derivedFromLemma}]]`);
+		lines.push(
+			morphologyRelationHelper.markerForRelationType(
+				"derived_from",
+				ctx.targetLang,
+			),
+			`[[${derivedFromLemma}]]`,
+		);
 	}
 
 	if (compoundedFromLemmas.length > 0) {
 		lines.push(
-			"<consists_of>",
+			morphologyRelationHelper.markerForRelationType(
+				"compounded_from",
+				ctx.targetLang,
+			),
 			compoundedFromLemmas.map((lemma) => `[[${lemma}]]`).join(" + "),
 		);
 	}

@@ -557,9 +557,10 @@ whenIdle() polls until pendingCount === 0 + 1000ms grace period
 VaultReader provides read-only access without going through the dispatch pipeline:
 
 ```typescript
-readContent(splitPath: SplitPathToMdFile): Promise<Result<string, string>>
+readContent(splitPath: SplitPathToMdFile): Promise<Result<string, ReadContentError>>
 // If file is in active view → reads from editor
 // Otherwise → reads from vault via TFileHelper
+// Error type: ReadContentError { kind: FileNotFound | PermissionDenied | Unknown, reason }
 
 exists(target: AnySplitPath): boolean
 // Folder → tfolderHelper.getFolder().isOk()
@@ -715,6 +716,7 @@ The executor detects whether the target file is currently open in the editor. If
 | `facade.ts` | `VaultActionManagerImpl` — wires all components together |
 | **Types** | |
 | `types/split-path.ts` | SplitPath discriminated union + Zod schemas |
+| `types/read-content-error.ts` | Typed read error union (`ReadContentError`) + helpers |
 | `types/vault-action.ts` | VaultAction discriminated union (10 kinds) |
 | `types/vault-event.ts` | VaultEvent discriminated union (6 kinds) |
 | `types/literals.ts` | Zod literal schemas for action/event kind composition |
