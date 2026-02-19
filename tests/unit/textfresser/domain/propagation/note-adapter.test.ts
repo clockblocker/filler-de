@@ -27,11 +27,11 @@ const TYPED_NOTE_FIXTURE = [
 	"= [[Heim]], [[Gebäude|Gebäude]]",
 	"≈ [[Wohnung]]",
 	'<span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>',
-	"<derived_from>",
+	"derived_from:",
 	" [[ Wurzel ]] ",
-	"<consists_of>",
+	"consists_of:",
 	"[[Haus]] + [[Boot]]",
-	"<used_in>",
+	"used_in:",
 	"[[Hausboot]] *(boat house)*",
 	"[[ab|ab]] + [[fahren]] = [[abfahren]] *(to depart)*",
 	'<span class="entry_section_title entry_section_title_flexion">Flexion</span>',
@@ -58,7 +58,7 @@ const EXOTIC_TYPED_NOTE_FIXTURE = [
 	'<span class="entry_section_title entry_section_title_synonyme">Semantische Beziehungen</span>',
 	"= [[Haus#^13|Haus]], [[Heim]]",
 	'<span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>',
-	"<used_in>",
+	"used_in:",
 	"[[Haus#^13|Haus]]",
 	"[[ab#^1|ab]] + [[fahren]] = [[abfahren]]",
 ].join("\n");
@@ -193,15 +193,15 @@ function parseLegacyMorphologySection(content: string): MorphologySectionDto {
 		if (trimmed.length === 0) {
 			continue;
 		}
-		if (trimmed === "<derived_from>") {
+		if (trimmed === "derived_from:") {
 			relationType = "derived_from";
 			continue;
 		}
-		if (trimmed === "<consists_of>") {
+		if (trimmed === "consists_of:") {
 			relationType = "compounded_from";
 			continue;
 		}
-		if (trimmed === "<used_in>") {
+		if (trimmed === "used_in:") {
 			relationType = "used_in";
 			continue;
 		}
@@ -400,7 +400,7 @@ describe("propagation-v2 note adapter", () => {
 		const second = serializePropagationNote(parsePropagationNote(first.body));
 
 		expect(second.body).toBe(first.body);
-		expect(first.body.includes("<derived_from>\n[[Wurzel]]")).toBe(true);
+		expect(first.body.includes("derived_from:\n[[Wurzel]]")).toBe(true);
 	});
 
 	it("round-trips morphology DTO with backlinks and equations without reclassifying equations", () => {

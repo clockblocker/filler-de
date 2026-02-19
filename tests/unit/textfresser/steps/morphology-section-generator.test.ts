@@ -18,9 +18,9 @@ describe("generateMorphologySection", () => {
 			targetLang: "German",
 		});
 
-		expect(result.section?.content).toContain("<derived_from>");
+		expect(result.section?.content).toContain("derived_from:");
 		expect(result.section?.content).toContain("[[frei]]");
-		expect(result.section?.content).not.toContain("<consists_of>");
+		expect(result.section?.content).not.toContain("consists_of:");
 	});
 
 	it("renders compound-only block", () => {
@@ -43,9 +43,9 @@ describe("generateMorphologySection", () => {
 			targetLang: "German",
 		});
 
-		expect(result.section?.content).toContain("<consists_of>");
+		expect(result.section?.content).toContain("consists_of:");
 		expect(result.section?.content).toContain("[[Küche]] + [[Fenster]]");
-		expect(result.section?.content).not.toContain("<derived_from>");
+		expect(result.section?.content).not.toContain("derived_from:");
 	});
 
 	it("renders mixed output with prefix equation and gloss", () => {
@@ -74,8 +74,8 @@ describe("generateMorphologySection", () => {
 			targetLang: "German",
 		});
 
-		expect(result.section?.content).not.toContain("<derived_from>");
-		expect(result.section?.content).toContain("<consists_of>");
+		expect(result.section?.content).not.toContain("derived_from:");
+		expect(result.section?.content).toContain("consists_of:");
 		expect(result.section?.content).toContain(
 			"[[auf-prefix-de|>auf]] + [[passen]] = [[aufpassen]] *(to pay attention)*",
 		);
@@ -106,7 +106,7 @@ describe("generateMorphologySection", () => {
 		expect(result.section?.content).toContain(
 			"[[ver-prefix-de|ver<]] + [[stehen]] = [[verstehen]]",
 		);
-		expect(result.section?.content).not.toContain("<derived_from>");
+		expect(result.section?.content).not.toContain("derived_from:");
 	});
 
 	it("does not build prefix equation for non-verb prefix without separability", () => {
@@ -130,7 +130,7 @@ describe("generateMorphologySection", () => {
 			targetLang: "German",
 		});
 
-		expect(result.section?.content).toContain("<derived_from>");
+		expect(result.section?.content).toContain("derived_from:");
 		expect(result.section?.content).toContain("[[klar]]");
 		expect(result.section?.content).not.toContain(" = [[unklar]]");
 	});
@@ -181,7 +181,7 @@ describe("generateMorphologySection", () => {
 			targetLang: "German",
 		});
 
-		expect(result.section?.content).toContain("<derived_from>");
+		expect(result.section?.content).toContain("derived_from:");
 		expect(result.section?.content).toContain("[[Fahrt]]");
 		expect(result.section?.content).not.toContain(" = [[Abfahrt]]");
 		expect(result.morphology?.prefixEquation).toBeUndefined();
@@ -218,12 +218,38 @@ describe("generateMorphologySection", () => {
 			targetLang: "German",
 		});
 
-		expect(result.section?.content).toContain("<derived_from>");
+		expect(result.section?.content).toContain("derived_from:");
 		expect(result.section?.content).toContain("[[abpassen]]");
 		expect(result.section?.content).toContain(
 			"[[auf-prefix-de|>auf]] + [[passen]] = [[aufpassen]]",
 		);
 		expect(result.morphology?.derivedFromLemma).toBe("abpassen");
 		expect(result.morphology?.prefixEquation?.baseLemma).toBe("passen");
+	});
+
+	it("normalizes compounded lemma casing using morpheme lemmas", () => {
+		const result = generateMorphologySection({
+			morphemes: [
+				{ kind: "Root", lemma: "fahren", surf: "fahr" },
+				{ kind: "Root", lemma: "Karte", surf: "karte" },
+			],
+			output: {
+				compounded_from: ["Fahren", "Karte"],
+				morphemes: [
+					{ kind: "Root", lemma: "fahren", surf: "fahr" },
+					{ kind: "Root", lemma: "Karte", surf: "karte" },
+				],
+			},
+			posLikeKind: "Noun",
+			sourceLemma: "Fahrkarte",
+			targetLang: "German",
+		});
+
+		expect(result.section?.content).toContain("consists_of:");
+		expect(result.section?.content).toContain("[[fahren]] + [[Karte]]");
+		expect(result.morphology?.compoundedFromLemmas).toEqual([
+			"fahren",
+			"Karte",
+		]);
 	});
 });

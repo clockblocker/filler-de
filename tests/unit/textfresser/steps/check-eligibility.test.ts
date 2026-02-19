@@ -39,7 +39,7 @@ body`;
 noteKind: Page
 ---
 <span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>
-<used_in>
+used_in:
 [[Zusammenarbeit]]`;
 		const result = checkEligibility(makeState(content));
 		expect(result.isOk()).toBe(true);

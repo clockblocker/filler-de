@@ -2,8 +2,8 @@
  * Propagate morpheme back-references to target notes.
  *
  * Responsibilities:
- * - bound morphemes (suffix/interfix/etc): maintain `<used_in>` backlinks on Morphem notes
- * - prefixes that are not covered by a generated prefix equation: maintain `<used_in>` backlinks on Morphem notes
+ * - bound morphemes (suffix/interfix/etc): maintain `used_in:` backlinks on Morphem notes
+ * - prefixes that are not covered by a generated prefix equation: maintain `used_in:` backlinks on Morphem notes
  *
  * Prefixes covered by `propagateMorphologyRelations` prefix equations are skipped
  * here to avoid duplicate propagation.
@@ -11,6 +11,8 @@
 
 import { ok, type Result } from "neverthrow";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
+import type { TargetLanguage } from "../../../../../types";
+import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import {
 	buildPropagationActionPair,
@@ -136,10 +138,27 @@ function shouldSkipMorphemeItem(
 function appendToUsedInBlock(params: {
 	sectionContent: string;
 	sourceLemma: string;
+	targetLanguage: TargetLanguage;
 	usedInLine: string;
 }): PropagationResult {
-	const blockMarker = "<used_in>";
-	const blockStart = params.sectionContent.indexOf(blockMarker);
+	const blockMarker = morphologyRelationHelper.markerForRelationType(
+		"used_in",
+		params.targetLanguage,
+	);
+	const markerAliases =
+		morphologyRelationHelper.markerAliasesForRelationType("used_in");
+	let blockStart = -1;
+	let matchedMarker = blockMarker;
+	for (const marker of [blockMarker, ...markerAliases]) {
+		const markerStart = params.sectionContent.indexOf(marker);
+		if (markerStart < 0) {
+			continue;
+		}
+		if (blockStart < 0 || markerStart < blockStart) {
+			blockStart = markerStart;
+			matchedMarker = marker;
+		}
+	}
 
 	if (blockStart < 0) {
 		const normalized = params.sectionContent.trimEnd();
@@ -150,13 +169,10 @@ function appendToUsedInBlock(params: {
 		return { changed: true, content };
 	}
 
-	const blockBodyStart = blockStart + blockMarker.length;
+	const blockBodyStart = blockStart + matchedMarker.length;
 	const afterBlock = params.sectionContent.slice(blockBodyStart);
-	const nextBlockMatch = afterBlock.match(/\n<[^>\n]+>/);
 	const blockBodyEnd =
-		nextBlockMatch?.index === undefined
-			? params.sectionContent.length
-			: blockBodyStart + nextBlockMatch.index;
+		blockBodyStart + findNextMorphologyMarkerOffset(afterBlock);
 	const blockContent = params.sectionContent.slice(
 		blockBodyStart,
 		blockBodyEnd,
@@ -177,6 +193,24 @@ function appendToUsedInBlock(params: {
 		`\n${updatedBlock}` +
 		params.sectionContent.slice(blockBodyEnd);
 	return { changed: true, content };
+}
+
+function findNextMorphologyMarkerOffset(text: string): number {
+	const regex = /\n([^\n]+)/g;
+	for (const match of text.matchAll(regex)) {
+		const index = match.index;
+		const markerCandidate = match[1];
+		if (
+			typeof index !== "number" ||
+			typeof markerCandidate !== "string"
+		) {
+			continue;
+		}
+		if (morphologyRelationHelper.parseMarker(markerCandidate)) {
+			return index;
+		}
+	}
+	return text.length;
 }
 
 /**
@@ -236,6 +270,7 @@ export function propagateMorphemes(
 					const updatedMorphology = appendToUsedInBlock({
 						sectionContent: morphologySection.content,
 						sourceLemma: sourceWord,
+						targetLanguage: targetLang,
 						usedInLine,
 					});
 					if (!updatedMorphology.changed) {
@@ -244,7 +279,10 @@ export function propagateMorphemes(
 					morphologySection.content = updatedMorphology.content;
 				} else {
 					matchedEntry.sections.push({
-						content: `<used_in>\n${usedInLine}`,
+						content: `${morphologyRelationHelper.markerForRelationType(
+							"used_in",
+							targetLang,
+						)}\n${usedInLine}`,
 						kind: morphologyCssSuffix,
 						title: morphologyTitle,
 					});
@@ -273,7 +311,10 @@ export function propagateMorphemes(
 					title: tagsTitle,
 				},
 				{
-					content: `<used_in>\n${usedInLine}`,
+					content: `${morphologyRelationHelper.markerForRelationType(
+						"used_in",
+						targetLang,
+					)}\n${usedInLine}`,
 					kind: morphologyCssSuffix,
 					title: morphologyTitle,
 				},

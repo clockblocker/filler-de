@@ -85,7 +85,7 @@ function createStructuredTargetNote(params: {
 		});
 	}
 	sections.push({
-		content: params.includeUsedInMarker ? "<used_in>\n[[alt]]" : "",
+		content: params.includeUsedInMarker ? "used_in:\n[[alt]]" : "",
 		kind: cssSuffixFor[DictSectionKind.Morphology],
 		title: TitleReprFor[DictSectionKind.Morphology].German,
 	});

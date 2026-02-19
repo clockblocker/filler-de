@@ -1,10 +1,12 @@
 import { z } from "zod/v3";
 import { blockIdHelper } from "../../../../stateless-helpers/block-id";
+import { morphologyRelationHelper } from "../../../../stateless-helpers/morphology-relation";
 import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
+import type { TargetLanguage } from "../../../../types";
 import { logger } from "../../../../utils/logger";
 import { compareSectionsByWeight } from "../../targets/de/sections/section-config";
 import { cssSuffixFor } from "../../targets/de/sections/section-css-kind";
-import { DictSectionKind } from "../../targets/de/sections/section-kind";
+import { DictSectionKind, TitleReprFor } from "../../targets/de/sections/section-kind";
 import {
 	ENTRY_SECTION_CSS_CLASS,
 	ENTRY_SECTION_MARKER_RE,
@@ -487,16 +489,7 @@ function parseRelationSection(rawContent: string): RelationSectionDto {
 function parseMorphologyRelationMarker(
 	line: string,
 ): MorphologyBacklinkDto["relationType"] | null {
-	if (line === "<derived_from>") {
-		return "derived_from";
-	}
-	if (line === "<consists_of>") {
-		return "compounded_from";
-	}
-	if (line === "<used_in>") {
-		return "used_in";
-	}
-	return null;
+	return morphologyRelationHelper.parseMarker(line);
 }
 
 function parseMorphologyEquationLine(
@@ -770,7 +763,10 @@ function normalizeBacklinkWikilink(rawValue: string): string {
 	return serializePreservedWikilink(rawValue);
 }
 
-function serializeMorphologySection(payload: MorphologySectionDto): string {
+function serializeMorphologySection(
+	payload: MorphologySectionDto,
+	targetLanguage: TargetLanguage,
+): string {
 	const lines: string[] = [];
 	const backlinks = dedupeByKey(
 		payload.backlinks,
@@ -792,7 +788,12 @@ function serializeMorphologySection(payload: MorphologySectionDto): string {
 		}
 
 		if (relationType === "derived_from") {
-			lines.push("<derived_from>");
+			lines.push(
+				morphologyRelationHelper.markerForRelationType(
+					relationType,
+					targetLanguage,
+				),
+			);
 			for (const backlink of typed) {
 				lines.push(normalizeBacklinkWikilink(backlink.value));
 			}
@@ -800,7 +801,12 @@ function serializeMorphologySection(payload: MorphologySectionDto): string {
 		}
 
 		if (relationType === "compounded_from") {
-			lines.push("<consists_of>");
+			lines.push(
+				morphologyRelationHelper.markerForRelationType(
+					relationType,
+					targetLanguage,
+				),
+			);
 			lines.push(
 				typed
 					.map((backlink) =>
@@ -811,7 +817,12 @@ function serializeMorphologySection(payload: MorphologySectionDto): string {
 			continue;
 		}
 
-		lines.push("<used_in>");
+		lines.push(
+			morphologyRelationHelper.markerForRelationType(
+				relationType,
+				targetLanguage,
+			),
+		);
 		for (const backlink of typed) {
 			lines.push(normalizeBacklinkWikilink(backlink.value));
 		}
@@ -834,6 +845,15 @@ function serializeMorphologySection(payload: MorphologySectionDto): string {
 	}
 
 	return lines.join("\n");
+}
+
+function inferTargetLanguageFromSectionTitle(
+	sectionTitle: string,
+): TargetLanguage {
+	if (sectionTitle === TitleReprFor[DictSectionKind.Morphology].German) {
+		return "German";
+	}
+	return "English";
 }
 
 function serializeInflectionSection(payload: InflectionSectionDto): string {
@@ -874,7 +894,10 @@ function serializeTypedSection(section: AnyPropagationTypedSection): string {
 			return content.length > 0 ? `${marker}\n${content}` : marker;
 		}
 		case "Morphology": {
-			const content = serializeMorphologySection(section.payload);
+			const content = serializeMorphologySection(
+				section.payload,
+				inferTargetLanguageFromSectionTitle(section.title),
+			);
 			return content.length > 0 ? `${marker}\n${content}` : marker;
 		}
 		case "Inflection": {

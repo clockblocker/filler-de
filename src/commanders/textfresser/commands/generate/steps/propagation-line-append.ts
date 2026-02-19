@@ -1,4 +1,5 @@
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
+import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
 
 export type PropagationResult = { changed: boolean; content: string };
 
@@ -55,7 +56,7 @@ export function buildUsedInLine(
 	sourceGloss: string | null,
 ): string {
 	if (!sourceGloss) return `[[${sourceLemma}]]`;
-	return `[[${sourceLemma}]] *(${sourceGloss})*`;
+	return `[[${sourceLemma}]] *(${sourceGloss})* `;
 }
 
 function normalizeLine(line: string): string {
@@ -164,13 +165,40 @@ export function appendUniqueLinesToSection(params: {
 }
 
 function findNextBlockMarkerOffset(text: string): number {
-	const match = text.match(/\n<[^>\n]+>/);
-	if (match?.index === undefined) return text.length;
-	return match.index;
+	const regex = /\n([^\n]+)/g;
+	for (const match of text.matchAll(regex)) {
+		const index = match.index;
+		const candidate = match[1];
+		if (typeof index !== "number" || typeof candidate !== "string") {
+			continue;
+		}
+		if (morphologyRelationHelper.parseMarker(candidate)) {
+			return index;
+		}
+	}
+	return text.length;
+}
+
+function findBlockStart(
+	sectionContent: string,
+	candidates: ReadonlyArray<string>,
+): { marker: string; start: number } | null {
+	let firstMatch: { marker: string; start: number } | null = null;
+	for (const marker of candidates) {
+		const start = sectionContent.indexOf(marker);
+		if (start < 0) {
+			continue;
+		}
+		if (!firstMatch || start < firstMatch.start) {
+			firstMatch = { marker, start };
+		}
+	}
+	return firstMatch;
 }
 
 export function appendUniqueLinesToSectionBlock(params: {
 	blockMarker: string;
+	blockMarkerAliases?: string[];
 	content: string;
 	lines: string[];
 	sectionMarker: string;
@@ -191,8 +219,12 @@ export function appendUniqueLinesToSectionBlock(params: {
 		sectionRange.afterMarker,
 		sectionRange.end,
 	);
-	const blockStart = sectionContent.indexOf(params.blockMarker);
-	if (blockStart < 0) {
+	const blockCandidates = [
+		params.blockMarker,
+		...(params.blockMarkerAliases ?? []),
+	];
+	const blockMatch = findBlockStart(sectionContent, blockCandidates);
+	if (!blockMatch) {
 		const appended = appendUniqueLinesToBlock({
 			blockContent: "",
 			lines: params.lines,
@@ -212,7 +244,7 @@ export function appendUniqueLinesToSectionBlock(params: {
 		);
 	}
 
-	const blockBodyStart = blockStart + params.blockMarker.length;
+	const blockBodyStart = blockMatch.start + blockMatch.marker.length;
 	const afterBlock = sectionContent.slice(blockBodyStart);
 	const blockBodyEnd = blockBodyStart + findNextBlockMarkerOffset(afterBlock);
 	const blockContent = sectionContent.slice(blockBodyStart, blockBodyEnd);

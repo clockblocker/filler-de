@@ -143,6 +143,21 @@ describe("resolveTargetPath", () => {
 		expect(result.splitPath).toBe(first);
 	});
 
+	it("falls back to decapitalized lookup when only lowercase basename exists", () => {
+		const existing = makeWorterPath("fahren", "lemma");
+		const result = resolveTargetPath({
+			desiredSurfaceKind: "Lemma",
+			librarianLookup: EMPTY_LOOKUP,
+			targetLanguage: "German",
+			unitKind: "Lexem",
+			vamLookup: (word) => (word === "fahren" ? [existing] : []),
+			word: "Fahren",
+		});
+
+		expect(result.healingActions).toHaveLength(0);
+		expect(result.splitPath).toBe(existing);
+	});
+
 	it("does not heal when existing and desired surface kind match", () => {
 		const existing = makeWorterPath("anfangen", "inflected");
 		const result = resolveTargetPath({
