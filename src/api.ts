@@ -80,7 +80,10 @@ export class ApiService {
 
 			const chatSession = this.chatSessions[chatKey];
 
-			const result = await chatSession.sendMessage(userInput);
+			const timeout = new Promise<never>((_, reject) =>
+				setTimeout(() => reject(new Error('API request timed out after 30 seconds')), 30_000)
+			);
+			const result = await Promise.race([chatSession.sendMessage(userInput), timeout]);
 			response = result.response.text();
 
 			const logResponse = response === null ? '' : response;

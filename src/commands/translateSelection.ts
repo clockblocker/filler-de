@@ -6,6 +6,7 @@ export default async function translateSelection(
 	editor: Editor,
 	selection: string
 ) {
+	const notice = new Notice('Generating…', 0);
 	try {
 		const cursor = editor.getCursor();
 		const response = await plugin.apiService.translateText(selection);
@@ -18,5 +19,7 @@ export default async function translateSelection(
 		}
 	} catch (error) {
 		new Notice(`Error: ${error.message}`);
+	} finally {
+		notice.hide();
 	}
 }
