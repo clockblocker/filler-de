@@ -1,5 +1,66 @@
 # Book Of Work
 
+## Pre-Extension Stabilization Backlog (Audit 2026-02-19)
+
+Source: local health-check run before new Textfresser feature work.
+
+### P0 (blockers)
+
+#### 0.1) Fix order-dependent unit tests caused by leaked module mocks
+- Symptom: tests pass in isolation but fail when specific files are run together.
+- Repro:
+  - `bun test --preload ./tests/unit/setup.ts tests/unit/textfresser/steps/propagate-generated-sections.test.ts tests/unit/textfresser/steps/generate-reencounter-sections.test.ts`
+  - `bun test --preload ./tests/unit/setup.ts tests/unit/textfresser/steps/propagate-generated-sections.test.ts tests/unit/textfresser/steps/decorate-attestation-separability.test.ts`
+- Root cause: top-level `mock.module(...)` in `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/tests/unit/textfresser/steps/propagate-generated-sections.test.ts` shadows real modules across the process.
+- Follow-up:
+  - Isolate mocks per test (or use scoped dynamic imports + restore discipline).
+  - Audit other top-level `mock.module(...)` users for similar bleed.
+
+#### 0.2) Restore `src/` TypeScript compile health
+- Current state: `bun x tsc --noEmit -skipLibCheck` reports production-code errors in `src/` (not only tests).
+- High-priority breakpoints:
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/librarian/codecs/locator/internal/from.ts`
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/librarian/commands/split-in-blocks.ts`
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-vault-scoped.ts`
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/managers/obsidian/behavior-manager/checkbox-behavior.ts`
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/managers/overlay-manager/index.ts`
+
+### P1 (stability + correctness)
+
+#### 1.1) Resolve stale separability-decoration tests vs current contract
+- Current implementation says no visual alias markers are added for multi-span separable verbs:
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/textfresser/commands/generate/steps/decorate-attestation-separability.ts`
+- Existing tests still expect `>` / `<` decorations:
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/tests/unit/textfresser/steps/decorate-attestation-separability.test.ts`
+- Decision needed: reintroduce marker behavior or update tests to the current no-marker design.
+
+#### 1.2) Make `typecheck:changed` script deterministic and actionable
+- Current script:
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/scripts/typecheck-changed.sh`
+- Issue: final `grep` can produce exit code 1 with no useful output (false-fail behavior for "no matched diagnostics").
+- Follow-up: preserve non-empty diagnostics and avoid grep-only exit semantics as the pass/fail source.
+
+#### 1.3) Return lint to green
+- Current state: `bun run lint` fails.
+- Notable error/warning hotspots:
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/textfresser/domain/propagation/note-adapter.ts`
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/textfresser/orchestration/lemma/execute-lemma-flow.ts`
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/textfresser/textfresser.ts`
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/stateless-helpers/wikilink.ts`
+
+### P2 (maintainability / debt)
+
+#### 2.1) Decompose large multi-responsibility modules
+- Largest active hotspots in runtime code:
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/textfresser/domain/propagation/note-adapter.ts`
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/textfresser/commands/generate/steps/generate-new-entry-sections.ts`
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/main.ts`
+- Follow-up: split parser/serializer/normalization/section-dispatch concerns into focused modules with targeted tests.
+
+#### 2.2) Reduce risky cast footprint in critical pathways
+- Health-check snapshot found high cast volume (`as any`, `as unknown as`, `@ts-expect-error`) across runtime and tests.
+- Start with runtime modules touched by P0/P1 fixes, then tighten tests.
+
 ## Deferred Follow-Ups (Morphological Relations)
 
 ### 1) Prefix derivations: avoid redundant `<derived_from>` with equation
