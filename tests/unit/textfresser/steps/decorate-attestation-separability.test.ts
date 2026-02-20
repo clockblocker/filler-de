@@ -73,7 +73,7 @@ function extractTransform(
 }
 
 describe("decorateAttestationSeparability", () => {
-	it("decorates separable verb with two wikilinks: prefix gets < and stem gets >", () => {
+	it("keeps multi-span aliases unchanged for separable verbs", () => {
 		const ctx = makeCtx([
 			{
 				kind: "Prefix",
@@ -91,9 +91,7 @@ describe("decorateAttestationSeparability", () => {
 
 		const content = "[[aufpassen|Pass]] auf dich [[aufpassen|auf]]";
 		const decorated = transform!(content);
-		expect(decorated).toBe(
-			"[[aufpassen|>Pass]] auf dich [[aufpassen|auf<]]",
-		);
+		expect(decorated).toBe(content);
 	});
 
 	it("skips inseparable verbs (no decoration)", () => {
@@ -218,7 +216,7 @@ describe("decorateAttestationSeparability", () => {
 		expect(decorated).toBe(content);
 	});
 
-	it("handles case-insensitive prefix matching", () => {
+	it("keeps case-variant multi-span aliases unchanged", () => {
 		const ctx = makeCtx([
 			{
 				kind: "Prefix",
@@ -234,8 +232,6 @@ describe("decorateAttestationSeparability", () => {
 		// Capitalized prefix alias (e.g., at sentence start)
 		const content = "[[aufpassen|Auf]] dich [[aufpassen|Pass]]!";
 		const decorated = transform!(content);
-		expect(decorated).toBe(
-			"[[aufpassen|Auf<]] dich [[aufpassen|>Pass]]!",
-		);
+		expect(decorated).toBe(content);
 	});
 });

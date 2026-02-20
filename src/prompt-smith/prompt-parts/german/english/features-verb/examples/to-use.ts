@@ -7,7 +7,7 @@ export const examples = [
 			word: "aufmachen",
 		},
 		output: {
-			conjugation: "Rregular",
+			conjugation: "Regular",
 			valency: {
 				reflexivity: "NonReflexive",
 				separability: "Separable",
@@ -20,7 +20,7 @@ export const examples = [
 			word: "sich kümmern",
 		},
 		output: {
-			conjugation: "Rregular",
+			conjugation: "Regular",
 			valency: {
 				governedPreposition: "um",
 				reflexivity: "ReflexiveOnly",

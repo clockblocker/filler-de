@@ -1,6 +1,12 @@
+import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
+
 export function normalizeLemma(raw: string | null | undefined): string | null {
 	const trimmed = raw?.trim();
-	return trimmed && trimmed.length > 0 ? trimmed : null;
+	if (!trimmed || trimmed.length === 0) {
+		return null;
+	}
+	const normalized = wikilinkHelper.normalizeLinkTarget(trimmed);
+	return normalized.length > 0 ? normalized : null;
 }
 
 export function normalizeMorphologyKey(

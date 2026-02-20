@@ -226,20 +226,12 @@ export function generateSections(
 				generated.enrichmentOutput,
 				generated.featuresOutput,
 			);
-			const emojiDescription =
-				entity?.emojiDescription ??
-				lemmaResult.precomputedEmojiDescription ??
-				generated.enrichmentOutput.emojiDescription;
-			const senseGloss =
-				entity?.senseGloss ?? generated.enrichmentOutput.senseGloss;
 
 			const newEntry: DictEntry = {
 				headerContent: generated.headerContent,
 				id: generated.entryId,
 				meta: {
 					...(entity ? { entity } : {}),
-					emojiDescription,
-					...(senseGloss ? { senseGloss } : {}),
 					...(verbEntryIdentity ? { verbEntryIdentity } : {}),
 					...(linguisticUnit ? { linguisticUnit } : {}),
 				},

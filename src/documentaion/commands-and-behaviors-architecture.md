@@ -1,6 +1,10 @@
 # Commands & Behaviors — Architecture
 
 > **Scope**: This document covers `command-executor/` and `behavior-manager/` — the layer between raw user events and the two commanders (Librarian, Textfresser). For the event detection layer, see `UserEventInterceptor`. For the file system layer, see `vam-architecture.md`.
+>
+> **Compatibility Policy (Dev Mode, 2026-02-20)**:
+> - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
+> - Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
 
 ---
 
@@ -50,7 +54,7 @@ src/managers/obsidian/
 `CommandKind` is a Zod enum merging all Librarian and Textfresser command kind strings:
 
 ```
-Librarian:   GoToPrevPage, GoToNextPage, MakeText, SplitToPages, SplitInBlocks
+Librarian:   GoToPrevPage, GoToNextPage, SplitToPages, SplitInBlocks
 Textfresser: TranslateSelection, Generate, Lemma
 ```
 
@@ -107,7 +111,7 @@ Three possible outcomes: `Handled` (consumed), `Passthrough` (native behavior), 
 |----------|-------------|---------------------|------------|
 | **codex-checkbox** | `CheckboxClicked` | `librarian.isCodexInsideLibrary(splitPath)` | `librarian.handleCodexCheckboxClick(payload)` |
 | **checkbox-frontmatter** | `CheckboxInFrontmatterClicked` | Always applies | `librarian.handlePropertyCheckboxClick(payload)` |
-| **wikilink-completion** | `WikilinkCompleted` | Always applies | Three-step resolution: suffix alias → Obsidian resolve → corename tree lookup (uses `pickClosestLeaf` for disambiguation) |
+| **wikilink-completion** | `WikilinkCompleted` | Always applies | Three-step resolution: suffix alias → Obsidian resolve → corename tree lookup. On a single match, auto-resolves via `pickClosestLeaf`; on ambiguous matches, returns passthrough (no silent auto-pick). |
 
 ### 4.4 Textfresser Behavior
 

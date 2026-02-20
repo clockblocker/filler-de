@@ -25,4 +25,16 @@ describe("formatInflectionSection", () => {
 		const result = formatInflectionSection({ rows: [] });
 		expect(result).toBe("");
 	});
+
+	it("normalizes wikilink targets that contain vault paths", () => {
+		const result = formatInflectionSection({
+			rows: [
+				{
+					forms: "ich [[Worter/de/lexem/lemma/f/fah/fahre/Fahren|fahre]]",
+					label: "Präsens",
+				},
+			],
+		});
+		expect(result).toBe("Präsens: ich [[Fahren|fahre]]");
+	});
 });

@@ -75,7 +75,6 @@ import {
 	getNextPage as getNextPageImpl,
 	getPrevPage as getPrevPageImpl,
 } from "./page-navigation";
-import { buildPageNavMigrationActions } from "./section-healing/page-nav-migration";
 import { triggerSectionHealing as triggerSectionHealingImpl } from "./section-healing/section-healing-coordinator";
 import { PREFIX_OF_CODEX } from "./types/consts/literals";
 import type { NodeName } from "./types/schemas/node-name";
@@ -146,12 +145,11 @@ export class Librarian {
 			const allFiles = allFilesResult.value;
 
 			// Build Create actions for each file
-			const { createActions, migrationActions } =
-				await buildInitialCreateActions(
-					allFiles,
-					this.codecs,
-					this.rules,
-				);
+			const { createActions } = await buildInitialCreateActions(
+				allFiles,
+				this.codecs,
+				this.rules,
+			);
 
 			// Apply all create actions via HealingTransaction
 			const tx = new HealingTransaction(this.healer);
@@ -210,13 +208,7 @@ export class Librarian {
 				);
 			allHealingActions.push(...deletionHealingActions);
 
-			// Build page navigation migration actions
-			const pageNavMigrationActions = await buildPageNavMigrationActions(
-				allFiles,
-				this.rules,
-			);
-
-			// Combine all actions and dispatch once (healing → codex → backlink → migration)
+			// Combine all actions and dispatch once (healing → codex → backlink)
 			const allVaultActions = [
 				...assembleVaultActions(
 					allHealingActions,
@@ -229,8 +221,6 @@ export class Librarian {
 					this.codecs,
 					this.rules,
 				),
-				...migrationActions, // Convert YAML frontmatter to internal format
-				...pageNavMigrationActions, // Add missing page navigation indices
 			];
 
 			if (allVaultActions.length > 0) {

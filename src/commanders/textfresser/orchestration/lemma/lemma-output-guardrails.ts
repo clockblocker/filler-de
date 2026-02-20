@@ -1,4 +1,5 @@
 import { multiSpanHelper } from "../../../../stateless-helpers/multi-span";
+import { wikilinkHelper } from "../../../../stateless-helpers/wikilink";
 import type { PromptOutput } from "../../llm/prompt-catalog";
 
 type LemmaPromptOutput = PromptOutput<"Lemma">;
@@ -88,6 +89,23 @@ function contextWithLinkedPartsMatches(
 	);
 }
 
+function sanitizeLemmaOutput(output: LemmaPromptOutput): LemmaPromptOutput {
+	const normalizedLemma = wikilinkHelper.normalizeLinkTarget(output.lemma);
+	const normalizedContextWithLinkedParts =
+		typeof output.contextWithLinkedParts === "string"
+			? wikilinkHelper.normalizeWikilinkTargetsInText(
+					output.contextWithLinkedParts,
+				)
+			: undefined;
+
+	return {
+		...output,
+		contextWithLinkedParts: normalizedContextWithLinkedParts,
+		lemma:
+			normalizedLemma.length > 0 ? normalizedLemma : output.lemma.trim(),
+	};
+}
+
 export function evaluateLemmaOutputGuardrails(params: {
 	context: string;
 	output: LemmaPromptOutput;
@@ -96,31 +114,31 @@ export function evaluateLemmaOutputGuardrails(params: {
 	const { context, output, surface } = params;
 	const coreIssues: string[] = [];
 
-	let sanitizedOutput: LemmaPromptOutput = output;
+	let sanitizedOutput: LemmaPromptOutput = sanitizeLemmaOutput(output);
 	let droppedContextWithLinkedParts = false;
 
-	const linkedParts = output.contextWithLinkedParts;
+	const linkedParts = sanitizedOutput.contextWithLinkedParts;
 	if (
 		typeof linkedParts === "string" &&
 		linkedParts.length > 0 &&
 		!contextWithLinkedPartsMatches(context, linkedParts)
 	) {
 		sanitizedOutput = {
-			...output,
+			...sanitizedOutput,
 			contextWithLinkedParts: undefined,
 		};
 		droppedContextWithLinkedParts = true;
 	}
 
-	const normalizedLemma = normalizeGermanToken(output.lemma);
+	const normalizedLemma = normalizeGermanToken(sanitizedOutput.lemma);
 	const normalizedSurface = normalizeGermanToken(surface);
 	const hasSameSurfaceLemma = normalizedLemma === normalizedSurface;
 
 	if (
 		hasSameSurfaceLemma &&
-		output.linguisticUnit === "Lexem" &&
-		output.posLikeKind === "Verb" &&
-		output.surfaceKind === "Inflected" &&
+		sanitizedOutput.linguisticUnit === "Lexem" &&
+		sanitizedOutput.posLikeKind === "Verb" &&
+		sanitizedOutput.surfaceKind === "Inflected" &&
 		hasSeparableVerbEvidence(context, surface)
 	) {
 		coreIssues.push(
@@ -130,9 +148,9 @@ export function evaluateLemmaOutputGuardrails(params: {
 
 	if (
 		hasSameSurfaceLemma &&
-		output.linguisticUnit === "Lexem" &&
-		output.posLikeKind === "Adjective" &&
-		output.surfaceKind === "Inflected" &&
+		sanitizedOutput.linguisticUnit === "Lexem" &&
+		sanitizedOutput.posLikeKind === "Adjective" &&
+		sanitizedOutput.surfaceKind === "Inflected" &&
 		looksComparativeOrSuperlative(surface)
 	) {
 		coreIssues.push(

@@ -21,12 +21,12 @@
 | H2-D | fliegen | ✅ | ✅ | ✅ |  |
 | H2-E | Lauf | ✅ | ✅ | ✅ |  |
 | H2-F | laufen | ✅ | ✅ | ✅ |  |
-| V1-A | macht | ✅ | ✅ | ✅ |  |
-| V1-B | fängst | ✅ | ✅ | ❌ |  |
-| V1-C | kauft | ✅ | ✅ | ❌ |  |
-| V1-D | Pass | ✅ | ✅ | ❌ |  |
-| V1-E | gibt | ✅ | ✅ | ❌ |  |
-| V1-F | hört | ✅ | ✅ | ❌ |  |
+| SV-A | macht | ✅ | ✅ | ✅ |  |
+| SV-B | fängst | ✅ | ✅ | ❌ |  |
+| SV-C | kauft | ✅ | ✅ | ❌ |  |
+| SV-D | Pass | ✅ | ✅ | ❌ |  |
+| SV-E | gibt | ✅ | ✅ | ❌ |  |
+| SV-F | hört | ✅ | ✅ | ❌ |  |
 | PH1-A | Auf keinen Fall | ✅ | ✅ | ❌ |  |
 | PH1-B | Hals über Kopf | ✅ | ✅ | ❌ |  |
 | PH1-C | in Ordnung | ✅ | ✅ | ✅ |  |
@@ -320,9 +320,9 @@ Die Kinder [[laufen]] schnell im Park. ^h2f
 
 ---
 
-### V1: Separable Verbs
+### SV: Separable Verbs
 
-#### V1-A: "macht" — Should detect "aufmachen" separable verb
+#### SV-A: "macht" — Should detect "aufmachen" separable verb
 
 **Lemma**: OK
 
@@ -343,7 +343,7 @@ Er [[macht]] die Tür auf. ^v1a
 
 ---
 
-#### V1-B: "fängst" — "anfangen", inflected stem + detached prefix
+#### SV-B: "fängst" — "anfangen", inflected stem + detached prefix
 
 **Lemma**: OK
 
@@ -362,7 +362,7 @@ Wann [[fängst]] du damit an? ^v1b
 
 ---
 
-#### V1-C: "kauft" — "einkaufen"
+#### SV-C: "kauft" — "einkaufen"
 
 **Lemma**: OK
 
@@ -381,7 +381,7 @@ Sie [[kauft]] im Supermarkt ein. ^v1c
 
 ---
 
-#### V1-D: "Pass" — "aufpassen" imperative — TWO "auf" in sentence!
+#### SV-D: "Pass" — "aufpassen" imperative — TWO "auf" in sentence!
 
 **Lemma**: OK
 
@@ -400,7 +400,7 @@ Sie [[kauft]] im Supermarkt ein. ^v1c
 
 ---
 
-#### V1-E: "gibt" — "zurückgeben"
+#### SV-E: "gibt" — "zurückgeben"
 
 **Lemma**: OK
 
@@ -419,7 +419,7 @@ Er [[gibt]] das Buch morgen zurück. ^v1e
 
 ---
 
-#### V1-F: "hört" — "aufhören"
+#### SV-F: "hört" — "aufhören"
 
 **Lemma**: OK
 

@@ -56,6 +56,7 @@ function makeState(cacheAtMs: number): TextfresserState {
 	return {
 		attestationForLatestNavigated: null,
 		inFlightGenerate: null,
+		isLibraryLookupAvailable: false,
 		languages: { known: "English", target: "German" },
 		latestFailedSections: [],
 		latestLemmaInvocationCache: {

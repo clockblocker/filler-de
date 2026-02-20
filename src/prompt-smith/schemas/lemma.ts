@@ -7,8 +7,6 @@ const userInputSchema = z.object({
 });
 
 // Runtime cutover: Lemma validates against the minimal classifier contract.
-// DeLemmaResultSchema accepts legacy alias keys (pos / phrasemeKind) and normalizes
-// them into canonical posLikeKind output for downstream consumers.
 // Enrichment/feature contracts are exported below for Generate routing.
 const agentOutputSchema = DeLemmaResultSchema;
 

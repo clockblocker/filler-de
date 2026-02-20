@@ -356,36 +356,36 @@ function getTypedPayload(
 	}
 }
 
-describe("propagation-v2 note adapter", () => {
-	it("parses typed sections with DTO semantics equivalent to v1-parsed section content", () => {
-		const v1Entries = dictNoteHelper.parse(TYPED_NOTE_FIXTURE);
-		const v1Entry = v1Entries[0];
-		if (!v1Entry) {
-			throw new Error("Expected v1 fixture to parse one entry");
+describe("propagation note adapter", () => {
+	it("parses typed sections with DTO semantics equivalent to legacy parsed section content", () => {
+		const legacyEntries = dictNoteHelper.parse(TYPED_NOTE_FIXTURE);
+		const legacyEntry = legacyEntries[0];
+		if (!legacyEntry) {
+			throw new Error("Expected legacy fixture to parse one entry");
 		}
 		const expectedRelation = parseLegacyRelationSection(
-			getSectionContentByCssKind(v1Entry, "synonyme"),
+			getSectionContentByCssKind(legacyEntry, "synonyme"),
 		);
 		const expectedMorphology = parseLegacyMorphologySection(
-			getSectionContentByCssKind(v1Entry, "morphologie"),
+			getSectionContentByCssKind(legacyEntry, "morphologie"),
 		);
 		const expectedInflection = parseLegacyInflectionSection(
-			getSectionContentByCssKind(v1Entry, "flexion"),
+			getSectionContentByCssKind(legacyEntry, "flexion"),
 		);
 		const expectedTags = parseLegacyTagsSection(
-			getSectionContentByCssKind(v1Entry, "tags"),
+			getSectionContentByCssKind(legacyEntry, "tags"),
 		);
 
-		const v2Entries = parsePropagationNote(TYPED_NOTE_FIXTURE);
-		const v2Entry = v2Entries[0];
-		if (!v2Entry) {
-			throw new Error("Expected v2 fixture to parse one entry");
+		const currentEntries = parsePropagationNote(TYPED_NOTE_FIXTURE);
+		const currentEntry = currentEntries[0];
+		if (!currentEntry) {
+			throw new Error("Expected current fixture to parse one entry");
 		}
 
-		const actualRelation = getTypedPayload(v2Entry, "Relation");
-		const actualMorphology = getTypedPayload(v2Entry, "Morphology");
-		const actualInflection = getTypedPayload(v2Entry, "Inflection");
-		const actualTags = getTypedPayload(v2Entry, "Tags");
+		const actualRelation = getTypedPayload(currentEntry, "Relation");
+		const actualMorphology = getTypedPayload(currentEntry, "Morphology");
+		const actualInflection = getTypedPayload(currentEntry, "Inflection");
+		const actualTags = getTypedPayload(currentEntry, "Tags");
 
 		expect(actualRelation).toEqual(expectedRelation);
 		expect(actualMorphology).toEqual(expectedMorphology);
@@ -470,5 +470,38 @@ describe("propagation-v2 note adapter", () => {
 
 		const serialized = serializePropagationNote(parsed);
 		expect(serialized.body.includes(RAW_TRANSLATION_BLOCK)).toBe(true);
+	});
+
+	it("preserves top-level metadata mirrors on parse", () => {
+		const noteWithLegacyMeta = [
+			"wort ^raw-1",
+			"",
+			'<span class="entry_section_title entry_section_title_translations">Übersetzung</span>',
+			"word",
+			"",
+			'<section id="textfresser_meta_keep_me_invisible">',
+			JSON.stringify({
+				entries: {
+					"raw-1": {
+						emojiDescription: ["🧪"],
+						ipa: "ipa",
+						semantics: "legacy semantics",
+						senseGloss: "legacy gloss",
+						verbEntryIdentity: "conjugation:Irregular",
+					},
+				},
+			}),
+			"</section>",
+		].join("\n");
+
+		const parsed = parsePropagationNote(noteWithLegacyMeta);
+		expect(parsed).toHaveLength(1);
+		expect(parsed[0]?.meta).toEqual({
+			emojiDescription: ["🧪"],
+			ipa: "ipa",
+			semantics: "legacy semantics",
+			senseGloss: "legacy gloss",
+			verbEntryIdentity: "conjugation:Irregular",
+		});
 	});
 });

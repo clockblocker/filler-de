@@ -2,6 +2,11 @@
 
 Track error-shape debt where APIs currently return unstable string messages and callers must infer semantics from text.
 
+## Compatibility Policy (Dev Mode, 2026-02-20)
+
+- Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
+- Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
+
 ## Cases
 
 | ID | Area | Current Contract | Current Workaround | Desired Contract | Priority | Status |
@@ -12,13 +17,13 @@ Track error-shape debt where APIs currently return unstable string messages and 
 
 Primary landing points:
 
-- `src/commanders/textfresser/commands/generate/steps/propagation-v2-ports-adapter.ts`
+- `src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter.ts`
 - `src/managers/obsidian/vault-action-manager/impl/vault-reader.ts`
 
 Rationale:
 
 - String-message matching was fragile (localization/wording drift).
-- Propagation v2 keeps race-safe behavior (`exists` true, then vanished file) by mapping typed `FileNotFound` reads to `Missing`.
+- Propagation keeps race-safe behavior (`exists` true, then vanished file) by mapping typed `FileNotFound` reads to `Missing`.
 
 Landed shape:
 

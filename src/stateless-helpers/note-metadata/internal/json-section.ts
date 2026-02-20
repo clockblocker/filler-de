@@ -15,9 +15,8 @@ const SECTION = "section";
 const reEscape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 // Pattern to match metadata section (captures JSON content)
-// Matches both id={...} (legacy) and id="..." (new) formats
 const PATTERN = new RegExp(
-	`\\n*<${SECTION}\\s+id=[\\{"]${reEscape(META_SECTION_ID)}[\\}"]>([\\s\\S]*?)<\\/${SECTION}>\\n*`,
+	`\\n*<${SECTION}\\s+id="${reEscape(META_SECTION_ID)}">([\\s\\S]*?)<\\/${SECTION}>\\n*`,
 );
 
 /** Find the start index of the metadata section (excluding preceding whitespace), or null if none. */

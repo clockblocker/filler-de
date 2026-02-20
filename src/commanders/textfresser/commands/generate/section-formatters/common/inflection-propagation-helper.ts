@@ -23,7 +23,6 @@ const CASE_ORDER_INDEX = new Map(
 );
 
 const INFLECTION_TAG_RE = /^#([^/\s]+)\/([^/\s]+)$/;
-const LEGACY_HEADER_RE = /^#([^/\s]+)\/([^/\s]+) for: \[\[(.+)\]\]$/;
 
 export type ParsedInflectionTag = {
 	caseValue: CaseValue;
@@ -144,27 +143,6 @@ export function parseLocalizedInflectionTag(
 			targetLanguage,
 		),
 	};
-}
-
-export function parseLegacyInflectionHeaderTag(
-	header: string,
-	lemma: string,
-	targetLanguage: TargetLanguage,
-): string | null {
-	const match = header.match(LEGACY_HEADER_RE);
-	if (!match) return null;
-
-	const caseLabel = match[1];
-	const numberLabel = match[2];
-	const headerLemma = match[3];
-	if (!caseLabel || !numberLabel || !headerLemma) return null;
-	if (headerLemma !== lemma) return null;
-
-	const caseValue = caseValueFromLocalizedLabel(caseLabel);
-	const numberValue = numberValueFromLocalizedLabel(numberLabel);
-	if (!caseValue || !numberValue) return null;
-
-	return buildLocalizedInflectionTag(caseValue, numberValue, targetLanguage);
 }
 
 import { extractHashTags } from "../../../../../../utils/text-utils";

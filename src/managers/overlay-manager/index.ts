@@ -15,8 +15,8 @@ export {
 	computeNavActions,
 	type PageNavMetadata,
 } from "./action-definitions/placement-utils";
+export type { ActionDefinition } from "./action-definitions/types";
 export {
-	type ActionDefinition,
 	OverlayActionKind,
 	OverlayActionKindSchema,
 	OverlayPlacement,

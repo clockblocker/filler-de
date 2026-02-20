@@ -1,5 +1,6 @@
 import type { AgentOutput } from "../../../../../../prompt-smith";
 import type { RelationSubKind } from "../../../../../../prompt-smith/schemas/relation";
+import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 
 const SYMBOL_FOR_KIND: Record<RelationSubKind, string> = {
 	Antonym: "≠",
@@ -19,7 +20,11 @@ export function formatRelationSection(output: AgentOutput<"Relation">): string {
 	return output.relations
 		.map((r) => {
 			const symbol = SYMBOL_FOR_KIND[r.kind];
-			const words = r.words.map((w) => `[[${w}]]`).join(", ");
+			const words = r.words
+				.map(
+					(word) => `[[${wikilinkHelper.normalizeLinkTarget(word)}]]`,
+				)
+				.join(", ");
 			return `${symbol} ${words}`;
 		})
 		.join("\n");

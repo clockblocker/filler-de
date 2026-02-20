@@ -15,7 +15,7 @@ describe("Lemma schema", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("accepts legacy Lexem output with pos and normalizes to posLikeKind", () => {
+	it("rejects Lexem output with legacy pos alias only", () => {
 		const result = agentOutputSchema.safeParse({
 			lemma: "Haus",
 			linguisticUnit: "Lexem",
@@ -23,12 +23,10 @@ describe("Lemma schema", () => {
 			surfaceKind: "Lemma",
 		});
 
-		expect(result.success).toBe(true);
-		if (!result.success) return;
-		expect(result.data.posLikeKind).toBe("Noun");
+		expect(result.success).toBe(false);
 	});
 
-	it("accepts legacy Phrasem output with phrasemeKind and normalizes to posLikeKind", () => {
+	it("rejects Phrasem output with legacy phrasemeKind alias only", () => {
 		const result = agentOutputSchema.safeParse({
 			lemma: "auf jeden Fall",
 			linguisticUnit: "Phrasem",
@@ -36,9 +34,7 @@ describe("Lemma schema", () => {
 			surfaceKind: "Lemma",
 		});
 
-		expect(result.success).toBe(true);
-		if (!result.success) return;
-		expect(result.data.posLikeKind).toBe("DiscourseFormula");
+		expect(result.success).toBe(false);
 	});
 
 	it("rejects Phrasem output without posLikeKind", () => {

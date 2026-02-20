@@ -7,7 +7,6 @@ import type {
 } from "../../../../../../../../codecs";
 import { canonizeSplitPathWithSeparatedSuffix } from "../../../../../utils/canonical-naming/canonicalization-policy";
 import type { TreeNodeLocatorForLibraryScopedSplitPath } from "../../../materialized-node-events/types";
-import { adaptCodecResult } from "../../error-adapters";
 
 export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
 	SK extends SplitPathKind,
@@ -15,11 +14,9 @@ export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
 	sp: SplitPathInsideLibraryOf<SK>,
 	codecs: Codecs,
 ): Result<TreeNodeLocatorForLibraryScopedSplitPath<SK>, string> {
-	const withSeparatedSuffixResult = adaptCodecResult(
-		codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
-			sp,
-		),
-	);
+	const withSeparatedSuffixResult = codecs.splitPathWithSeparatedSuffix
+		.splitPathInsideLibraryToWithSeparatedSuffix(sp)
+		.mapErr((error) => error.message);
 
 	if (withSeparatedSuffixResult.isErr()) {
 		return err(withSeparatedSuffixResult.error);
@@ -27,18 +24,16 @@ export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
 
 	const { splitPathToLibraryRoot } = getParsedUserSettings();
 	const libraryRootName = splitPathToLibraryRoot.basename;
-	const cspRes = adaptCodecResult(
-		canonizeSplitPathWithSeparatedSuffix(
-			codecs.suffix,
-			libraryRootName,
-			withSeparatedSuffixResult.value,
-		),
-	);
+	const cspRes = canonizeSplitPathWithSeparatedSuffix(
+		codecs.suffix,
+		libraryRootName,
+		withSeparatedSuffixResult.value,
+	).mapErr((error) => error.message);
 	if (cspRes.isErr()) return err(cspRes.error);
 
-	const locatorRes = adaptCodecResult(
-		codecs.locator.canonicalSplitPathInsideLibraryToLocator(cspRes.value),
-	);
+	const locatorRes = codecs.locator
+		.canonicalSplitPathInsideLibraryToLocator(cspRes.value)
+		.mapErr((error) => error.message);
 	if (locatorRes.isErr()) return err(locatorRes.error);
 
 	// Cast is safe: locator type corresponds to split path kind

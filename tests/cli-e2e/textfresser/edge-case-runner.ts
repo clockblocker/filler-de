@@ -123,53 +123,53 @@ const TEST_CASES: TestCase[] = [
 		id: "H2-F",
 		surface: "laufen",
 	},
-	// ── V1: Separable Verbs ──
+	// ── SV: Separable Verbs ──
 	{
 		content: "Er macht die Tür auf. ^v1a",
 		description: 'Should detect "aufmachen" separable verb',
-		filePath: `${TEST_RUNS_ROOT}/V1/V1-A-aufmachen.md`,
-		group: "V1",
-		id: "V1-A",
+		filePath: `${TEST_RUNS_ROOT}/SV/SV-A-aufmachen.md`,
+		group: "SV",
+		id: "SV-A",
 		surface: "macht",
 	},
 	{
 		content: "Wann fängst du damit an? ^v1b",
 		description: '"anfangen", inflected stem + detached prefix',
-		filePath: `${TEST_RUNS_ROOT}/V1/V1-B-anfangen.md`,
-		group: "V1",
-		id: "V1-B",
+		filePath: `${TEST_RUNS_ROOT}/SV/SV-B-anfangen.md`,
+		group: "SV",
+		id: "SV-B",
 		surface: "fängst",
 	},
 	{
 		content: "Sie kauft im Supermarkt ein. ^v1c",
 		description: '"einkaufen"',
-		filePath: `${TEST_RUNS_ROOT}/V1/V1-C-einkaufen.md`,
-		group: "V1",
-		id: "V1-C",
+		filePath: `${TEST_RUNS_ROOT}/SV/SV-C-einkaufen.md`,
+		group: "SV",
+		id: "SV-C",
 		surface: "kauft",
 	},
 	{
 		content: "Pass bitte auf die Kinder auf! ^v1d",
 		description: '"aufpassen" imperative — TWO "auf" in sentence!',
-		filePath: `${TEST_RUNS_ROOT}/V1/V1-D-aufpassen.md`,
-		group: "V1",
-		id: "V1-D",
+		filePath: `${TEST_RUNS_ROOT}/SV/SV-D-aufpassen.md`,
+		group: "SV",
+		id: "SV-D",
 		surface: "Pass",
 	},
 	{
 		content: "Er gibt das Buch morgen zurück. ^v1e",
 		description: '"zurückgeben"',
-		filePath: `${TEST_RUNS_ROOT}/V1/V1-E-zurueckgeben.md`,
-		group: "V1",
-		id: "V1-E",
+		filePath: `${TEST_RUNS_ROOT}/SV/SV-E-zurueckgeben.md`,
+		group: "SV",
+		id: "SV-E",
 		surface: "gibt",
 	},
 	{
 		content: "Sie hört mit dem Rauchen auf. ^v1f",
 		description: '"aufhören"',
-		filePath: `${TEST_RUNS_ROOT}/V1/V1-F-aufhoeren.md`,
-		group: "V1",
-		id: "V1-F",
+		filePath: `${TEST_RUNS_ROOT}/SV/SV-F-aufhoeren.md`,
+		group: "SV",
+		id: "SV-F",
 		surface: "hört",
 	},
 	// ── PH1: Phrasems ──
@@ -327,7 +327,7 @@ async function main(): Promise<void> {
 	await deleteAllUnder("Library/de");
 	await deleteAllUnder(`${TEST_RUNS_ROOT}/H1`);
 	await deleteAllUnder(`${TEST_RUNS_ROOT}/H2`);
-	await deleteAllUnder(`${TEST_RUNS_ROOT}/V1`);
+	await deleteAllUnder(`${TEST_RUNS_ROOT}/SV`);
 	await deleteAllUnder(`${TEST_RUNS_ROOT}/PH1`);
 	await deleteAllUnder(`${TEST_RUNS_ROOT}/ADJ1`);
 	await deletePath(`${TEST_RUNS_ROOT}/A1/A1-A.md`);
@@ -350,7 +350,7 @@ async function main(): Promise<void> {
 	const results: TestResult[] = [];
 
 	// Group test cases by group to run in order
-	const groups = ["H1", "H2", "V1", "PH1", "ADJ1"];
+	const groups = ["H1", "H2", "SV", "PH1", "ADJ1"];
 
 	for (const group of groups) {
 		const groupCases = TEST_CASES.filter((tc) => tc.group === group);
@@ -452,14 +452,14 @@ async function main(): Promise<void> {
 
 function generateReport(results: TestResult[]): string {
 	const now = new Date().toISOString().split("T")[0];
-	const groups = ["H1", "H2", "V1", "PH1", "ADJ1"];
+	const groups = ["H1", "H2", "SV", "PH1", "ADJ1"];
 
 	const groupNames: Record<string, string> = {
 		ADJ1: "Adjective Forms & Propagation",
 		H1: "Homonym Nouns",
 		H2: "Cross-POS",
 		PH1: "Phrasems / Multi-Word Expressions",
-		V1: "Separable Verbs",
+		SV: "Separable Verbs",
 	};
 
 	let md = `# Textfresser Edge Case Testing — Book of Work\n\n`;

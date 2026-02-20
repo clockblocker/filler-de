@@ -82,7 +82,7 @@ describe("GermanLinguisticUnitSchema", () => {
 				kind: "Lexem",
 				surface: {
 					features: {
-						conjugation: "Rregular",
+						conjugation: "Regular",
 						pos: "Verb",
 						valency: {
 							reflexivity: "NonReflexive",
@@ -115,7 +115,7 @@ describe("GermanLinguisticUnitSchema", () => {
 				kind: "Lexem",
 				surface: {
 					features: {
-						conjugation: "Rregular",
+						conjugation: "Regular",
 						pos: "Verb",
 					},
 					lemma: "aufmachen",

@@ -5,7 +5,13 @@ import { makeNodeSegmentId } from "../../../healer/library-tree/tree-node/codecs
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
 import type { CodecError } from "../../errors";
 import { makeLocatorError } from "../../errors";
-import type { SegmentIdCodecs } from "../../segment-id";
+import type {
+	FileNodeSegmentId,
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+	SectionNodeSegmentIdChain,
+	SegmentIdCodecs,
+} from "../../segment-id";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibraryOf,
@@ -26,7 +32,7 @@ type SegmentIdForKind = {
 function serializeAndBuildLocator<NK extends TreeNodeKind>(
 	segmentId: SegmentIdCodecs,
 	components: { coreName: string; targetKind: NK; extension?: string },
-	segmentIdChainToParent: ReturnType<typeof makeNodeSegmentId>[],
+	segmentIdChainToParent: SectionNodeSegmentIdChain,
 	errorContext: Record<string, unknown>,
 ): Result<
 	{
@@ -84,12 +90,14 @@ export function canonicalSplitPathInsideLibraryToLocator(
 	sp: AnyCanonicalSplitPathInsideLibrary,
 ): Result<TreeNodeLocator, CodecError> {
 	// Both pathParts and segmentIdChainToParent INCLUDE Library root
-	const segmentIdChainToParent = sp.pathParts.map((nodeName) =>
-		makeNodeSegmentId({
-			children: {},
-			kind: TreeNodeKind.Section,
-			nodeName,
-		}),
+	const segmentIdChainToParent: SectionNodeSegmentIdChain = sp.pathParts.map(
+		(nodeName) =>
+			makeNodeSegmentId({
+				children: {},
+				kind: TreeNodeKind.Section,
+				// pathParts are section names by codec invariant
+				nodeName: nodeName as (typeof sp.pathParts)[number],
+			}) as SectionNodeSegmentId,
 	);
 
 	switch (sp.kind) {

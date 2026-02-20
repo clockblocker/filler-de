@@ -2,6 +2,7 @@ import { Modal, Notice, Plugin, TFile } from "obsidian";
 import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
 import { cleanupDictNote } from "./commanders/textfresser/common/cleanup/cleanup-dict-note";
+import { buildClosedSetSurfaceHubBackfillActions } from "./commanders/textfresser/common/closed-set-surface-hub";
 import { DICT_ENTRY_NOTE_KIND } from "./commanders/textfresser/common/metadata";
 import { Textfresser } from "./commanders/textfresser/textfresser";
 import {
@@ -44,8 +45,6 @@ import {
 import {
 	buildCanonicalDelimiter,
 	buildFlexibleDelimiterPattern,
-	isSuffixDelimiterConfig,
-	migrateStringDelimiter,
 } from "./utils/delimiter";
 import { getErrorMessage } from "./utils/get-error-message";
 import { whenIdle as whenIdleTracker } from "./utils/idle-tracker";
@@ -250,19 +249,7 @@ export default class TextEaterPlugin extends Plugin {
 				await this.librarian.init();
 
 				// Wire librarian corename lookup into Textfresser for propagation path resolution
-				if (this.textfresser) {
-					const lib = this.librarian;
-					this.textfresser.setLibrarianLookup((name) =>
-						lib.findMatchingLeavesByCoreName(name).map(
-							(m): SplitPathToMdFile => ({
-								basename: m.basename,
-								extension: "md",
-								kind: "MdFile",
-								pathParts: m.pathParts,
-							}),
-						),
-					);
-				}
+				this.wireLibrarianLookup();
 
 				// Register user event handlers after librarian is initialized
 				const handlers = createHandlers(
@@ -275,6 +262,7 @@ export default class TextEaterPlugin extends Plugin {
 					);
 				}
 			} catch (error) {
+				this.clearLibrarianLookup();
 				logger.error(
 					"[TextEaterPlugin] Failed to initialize librarian:",
 					getErrorMessage(error),
@@ -321,16 +309,6 @@ export default class TextEaterPlugin extends Plugin {
 	private async loadSettings() {
 		const loadedData = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
-
-		// Migrate old string delimiter format to new config format
-		if (
-			loadedData?.suffixDelimiter &&
-			!isSuffixDelimiterConfig(loadedData.suffixDelimiter)
-		) {
-			this.settings.suffixDelimiter = migrateStringDelimiter(
-				loadedData.suffixDelimiter as string,
-			);
-		}
 
 		// Initialize global state with parsed settings
 		initializeState(this.settings);
@@ -432,6 +410,14 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			callback: () => {
+				void this.rebuildClosedSetSurfaceHubs();
+			},
+			id: "rebuild-closed-set-surface-hubs",
+			name: "Rebuild closed-set surface hubs",
+		});
+
+		this.addCommand({
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
 					void this.commandExecutor?.(CommandKind.SplitToPages);
@@ -441,6 +427,58 @@ export default class TextEaterPlugin extends Plugin {
 			id: "split-to-pages",
 			name: "Split file into pages",
 		});
+	}
+
+	private async rebuildClosedSetSurfaceHubs(): Promise<void> {
+		if (!this.textfresser) {
+			new Notice("Textfresser is not initialized");
+			return;
+		}
+		if (!this.textfresser.getState().isLibraryLookupAvailable) {
+			logger.warn(
+				"[TextEaterPlugin.rebuildClosedSetSurfaceHubs] Library lookup is unavailable; aborting to avoid destructive backfill",
+			);
+			new Notice(
+				"Closed-set hub rebuild is unavailable until Librarian lookup is ready",
+			);
+			return;
+		}
+
+		logger.info(
+			"[TextEaterPlugin.rebuildClosedSetSurfaceHubs] Starting rebuild",
+		);
+		new Notice("Rebuilding closed-set hubs...");
+
+		const result = await buildClosedSetSurfaceHubBackfillActions({
+			lookupInLibrary: this.textfresser.getState().lookupInLibrary,
+			targetLanguage: this.textfresser.getState().languages.target,
+			vam: this.vam,
+		});
+		if (result.isErr()) {
+			logger.warn(
+				"[TextEaterPlugin.rebuildClosedSetSurfaceHubs] Failed to build actions:",
+				result.error,
+			);
+			new Notice(`Failed to rebuild closed-set hubs: ${result.error}`);
+			return;
+		}
+
+		if (result.value.length === 0) {
+			new Notice("Closed-set hubs are already up to date");
+			return;
+		}
+
+		const dispatchResult = await this.vam.dispatch(result.value);
+		if (dispatchResult.isErr()) {
+			logger.warn(
+				"[TextEaterPlugin.rebuildClosedSetSurfaceHubs] Failed to dispatch actions:",
+				dispatchResult.error,
+			);
+			new Notice("Failed to rebuild closed-set hubs");
+			return;
+		}
+
+		new Notice(`Updated closed-set hubs (${result.value.length} actions)`);
 	}
 
 	getActiveFileServiceTestingApi() {
@@ -679,6 +717,7 @@ export default class TextEaterPlugin extends Plugin {
 			teardown();
 		}
 		this.handlerTeardowns = [];
+		this.clearLibrarianLookup();
 
 		if (this.librarian) {
 			await this.librarian.unsubscribe();
@@ -686,6 +725,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.librarian = new Librarian(this.vam);
 		try {
 			await this.librarian.init();
+			this.wireLibrarianLookup();
 
 			// Register new handlers
 			const handlers = createHandlers(
@@ -698,11 +738,33 @@ export default class TextEaterPlugin extends Plugin {
 				);
 			}
 		} catch (error) {
+			this.clearLibrarianLookup();
 			logger.error(
 				"[TextEaterPlugin] Failed to reinitialize librarian:",
 				getErrorMessage(error),
 			);
 		}
+	}
+
+	private wireLibrarianLookup(): void {
+		if (!this.textfresser || !this.librarian) {
+			return;
+		}
+		const lib = this.librarian;
+		this.textfresser.setLibrarianLookup((name) =>
+			lib.findMatchingLeavesByCoreName(name).map(
+				(m): SplitPathToMdFile => ({
+					basename: m.basename,
+					extension: "md",
+					kind: "MdFile",
+					pathParts: m.pathParts,
+				}),
+			),
+		);
+	}
+
+	private clearLibrarianLookup(): void {
+		this.textfresser?.clearLibrarianLookup();
 	}
 }
 

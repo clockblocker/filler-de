@@ -5,6 +5,7 @@ import {
 	type NounInflectionCell,
 } from "../../../../../../../../linguistics/de/lexem/noun";
 import type { AgentOutput } from "../../../../../../../../prompt-smith";
+import { wikilinkHelper } from "../../../../../../../../stateless-helpers/wikilink";
 
 /**
  * Group cells by case, then format each case line as:
@@ -19,7 +20,7 @@ export function formatInflection(output: AgentOutput<"NounInflection">): {
 	const cells: NounInflectionCell[] = output.cells.map((c) => ({
 		article: c.article,
 		case: c.case,
-		form: c.form,
+		form: wikilinkHelper.normalizeLinkTarget(c.form),
 		number: c.number,
 	}));
 
@@ -37,7 +38,9 @@ export function formatInflection(output: AgentOutput<"NounInflection">): {
 		if (!group || group.length === 0) continue;
 
 		const label = CASE_SHORT_LABEL[caseVal];
-		const forms = group.map((c) => `${c.article} [[${c.form}]]`).join(", ");
+		const forms = group
+			.map((cell) => `${cell.article} [[${cell.form}]]`)
+			.join(", ");
 		lines.push(`${label}: ${forms}`);
 	}
 

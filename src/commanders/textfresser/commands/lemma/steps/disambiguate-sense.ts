@@ -184,52 +184,22 @@ export function disambiguateSense(
 					Array.isArray(entity?.emojiDescription) &&
 					entity.emojiDescription.length > 0
 						? entity.emojiDescription
-						: e.meta.emojiDescription;
-				const ipaFromLegacyMeta = e.meta.ipa;
+						: null;
 				const ipa =
 					typeof entity?.ipa === "string" && entity.ipa.length > 0
 						? entity.ipa
-						: typeof ipaFromLegacyMeta === "string" &&
-								ipaFromLegacyMeta.length > 0
-							? ipaFromLegacyMeta
-							: extractIpaFromHeaderContent(e.headerContent);
+						: extractIpaFromHeaderContent(e.headerContent);
 				const senseGlossFromEntity =
 					extractSenseGlossFromEntity(entity);
-				const senseGlossFromLegacyMeta =
-					typeof e.meta.senseGloss === "string" &&
-					e.meta.senseGloss.length > 0
-						? e.meta.senseGloss
-						: undefined;
 				const senseGloss =
 					senseGlossFromEntity ??
-					senseGlossFromLegacyMeta ??
 					extractSenseGlossFromTranslationSection(e);
-
-				let genus = extractGenusFromEntity(entity);
-				let phrasemeKind = extractPhrasemeKindFromEntity(entity);
-
-				// Extract genus/phraseme kind from legacy linguisticUnit metadata if needed.
-				const lu = e.meta.linguisticUnit;
-				if (lu?.kind === "Lexem") {
-					const features = lu.surface.features;
-					if (
-						!genus &&
-						features.pos === "Noun" &&
-						"genus" in features
-					) {
-						genus = features.genus;
-					}
-				} else if (!phrasemeKind && lu?.kind === "Phrasem") {
-					phrasemeKind = lu.surface.features.phrasemeKind;
-				}
 				return {
-					emojiDescription: Array.isArray(emojiDescription)
-						? emojiDescription
-						: null,
-					genus,
+					emojiDescription,
+					genus: extractGenusFromEntity(entity),
 					index: parsed.index,
 					ipa,
-					phrasemeKind,
+					phrasemeKind: extractPhrasemeKindFromEntity(entity),
 					pos: parsed.pos,
 					senseGloss,
 					unitKind: parsed.unitKind,
@@ -251,19 +221,19 @@ export function disambiguateSense(
 			);
 		}
 
-		// Edge case: all matching entries lack emojiDescription (V2 legacy)
-		// → backward compat: treat as re-encounter of the first match
+		// Hard cutover: if all matches are missing emojiDescription,
+		// we cannot disambiguate reliably, so treat this as a new sense.
 		const sensesWithEmoji = senses.filter(
 			(s) => s.emojiDescription !== null,
 		) as Array<(typeof senses)[number] & { emojiDescription: string[] }>;
 
 		if (sensesWithEmoji.length === 0) {
 			logger.info(
-				"[disambiguate] V2 legacy path — no emojiDescription on any sense",
+				"[disambiguate] Missing emojiDescription on all senses; treating as new sense",
 			);
 			return ResultAsync.fromSafePromise(
 				Promise.resolve({
-					matchedIndex: senses[0]?.index,
+					matchedIndex: null,
 				} as DisambiguationResult),
 			);
 		}

@@ -1,4 +1,5 @@
 import type { AgentOutput } from "../../../../../../prompt-smith";
+import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 
 /**
  * Format LLM inflection output into markdown lines.
@@ -13,5 +14,11 @@ import type { AgentOutput } from "../../../../../../prompt-smith";
 export function formatInflectionSection(
 	output: AgentOutput<"Inflection">,
 ): string {
-	return output.rows.map((r) => `${r.label}: ${r.forms}`).join("\n");
+	return output.rows
+		.map((row) => {
+			const normalizedForms =
+				wikilinkHelper.normalizeWikilinkTargetsInText(row.forms);
+			return `${row.label}: ${normalizedForms}`;
+		})
+		.join("\n");
 }

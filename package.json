@@ -47,7 +47,7 @@
 		"lint": "bun x biome check .",
 		"prompt:stability": "bun tests/prompt-test/stability-runner.ts",
 		"prompt:test": "bun tests/prompt-test/runner.ts",
-		"silo": "bun scripts/knowledge-silo.ts",
+		"runbook": "bash scripts/runbook-cli/textfresser-runbook",
 		"splitter:run": "bun tests/splitter-runner.ts",
 		"test": "bun run test:unit",
 		"test:cli-e2e": "bun run build && bun test --env-file=.env.cli-e2e tests/cli-e2e/ --timeout 25000",

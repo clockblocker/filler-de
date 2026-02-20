@@ -126,3 +126,55 @@ describe("wikilinkHelper.createMatcher", () => {
 		expect(nextMatch()).toBeNull();
 	});
 });
+
+describe("wikilinkHelper.normalizeLinkTarget", () => {
+	it("keeps plain targets unchanged", () => {
+		expect(wikilinkHelper.normalizeLinkTarget("fahren")).toBe("fahren");
+	});
+
+	it("extracts basename from vault path targets", () => {
+		expect(
+			wikilinkHelper.normalizeLinkTarget(
+				"Worter/de/lexem/lemma/f/fah/fahre/Fahren",
+			),
+		).toBe("Fahren");
+	});
+
+	it("normalizes wrapped wikilink targets", () => {
+		expect(
+			wikilinkHelper.normalizeLinkTarget(
+				"[[Library/de/prefix/auf-prefix-de|>auf]]",
+			),
+		).toBe("auf-prefix-de");
+	});
+
+	it("preserves anchors while flattening vault paths", () => {
+		expect(
+			wikilinkHelper.normalizeLinkTarget(
+				"Worter/de/lexem/lemma/f/fah/fahre/Fahren#^abc",
+			),
+		).toBe("Fahren#^abc");
+	});
+
+	it("does not flatten generic slash-based targets", () => {
+		expect(
+			wikilinkHelper.normalizeLinkTarget("domain/schema/field"),
+		).toBe("domain/schema/field");
+	});
+});
+
+describe("wikilinkHelper.normalizeWikilinkTargetsInText", () => {
+	it("rewrites path-like targets but keeps aliases", () => {
+		const result = wikilinkHelper.normalizeWikilinkTargetsInText(
+			"[[Worter/de/lexem/lemma/f/fah/fahre/Fahren|Fahren]] + [[fahren]]",
+		);
+		expect(result).toBe("[[Fahren|Fahren]] + [[fahren]]");
+	});
+
+	it("keeps anchors when normalizing path-like targets", () => {
+		const result = wikilinkHelper.normalizeWikilinkTargetsInText(
+			"[[Worter/de/x/Fahren#^abc|fährt]]",
+		);
+		expect(result).toBe("[[Fahren#^abc|fährt]]");
+	});
+});

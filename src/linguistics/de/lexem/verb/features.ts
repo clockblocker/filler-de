@@ -1,7 +1,7 @@
 import { z } from "zod/v3";
 import type { POS } from "../../../common/enums/linguistic-units/lexem/pos";
 
-const germanVerbConjugationValues = ["Irregular", "Rregular"] as const;
+const germanVerbConjugationValues = ["Irregular", "Regular"] as const;
 
 export const GermanVerbConjugationSchema = z.enum(germanVerbConjugationValues);
 export type GermanVerbConjugation = z.infer<typeof GermanVerbConjugationSchema>;

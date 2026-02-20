@@ -162,8 +162,8 @@ export function stripOnlyFrontmatter(content: string): string {
 export function frontmatterToInternal(
 	fm: Record<string, unknown>,
 ): ScrollMetadataWithImport {
-	// Detect status from common field names and values
-	const statusField = fm.status ?? fm.completion ?? fm.state;
+	// Status is derived only from canonical `status` key.
+	const statusField = fm.status;
 	const isDone =
 		statusField === "done" ||
 		statusField === TreeNodeStatus.Done ||

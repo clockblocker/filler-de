@@ -31,7 +31,7 @@ describe("Features schema", () => {
 
 		it("accepts structured verb output", () => {
 			const result = featuresVerbSchemas.agentOutputSchema.safeParse({
-				conjugation: "Rregular",
+				conjugation: "Regular",
 				valency: {
 					reflexivity: "NonReflexive",
 					separability: "Separable",
@@ -42,7 +42,7 @@ describe("Features schema", () => {
 
 		it("accepts structured verb output with null governedPreposition", () => {
 			const result = featuresVerbSchemas.agentOutputSchema.safeParse({
-				conjugation: "Rregular",
+				conjugation: "Regular",
 				valency: {
 					governedPreposition: null,
 					reflexivity: "NonReflexive",
@@ -88,7 +88,7 @@ describe("Features schema", () => {
 
 		it("rejects unknown separability", () => {
 			const result = featuresVerbSchemas.agentOutputSchema.safeParse({
-				conjugation: "Rregular",
+				conjugation: "Regular",
 				valency: {
 					reflexivity: "NonReflexive",
 					separability: "Both",
@@ -99,7 +99,7 @@ describe("Features schema", () => {
 
 		it("rejects unknown conjugation", () => {
 			const result = featuresVerbSchemas.agentOutputSchema.safeParse({
-				conjugation: "Regular",
+				conjugation: "SemiRegular",
 				valency: {
 					reflexivity: "NonReflexive",
 					separability: "Separable",

@@ -75,7 +75,3 @@ export type AnyCanonicalSplitPathInsideLibrary =
 	| CanonicalSplitPathToFolderInsideLibrary
 	| CanonicalSplitPathToFileInsideLibrary
 	| CanonicalSplitPathToMdFileInsideLibrary;
-
-// Legacy alias for backward compatibility
-export type CanonicalSplitPathInsideLibrary =
-	AnyCanonicalSplitPathInsideLibrary;

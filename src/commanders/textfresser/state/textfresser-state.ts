@@ -42,6 +42,7 @@ export type TextfresserState = {
 	inFlightGenerate: InFlightGenerate | null;
 	pendingGenerate: PendingGenerate | null;
 	languages: LanguagesConfig;
+	isLibraryLookupAvailable: boolean;
 	lookupInLibrary: PathLookupFn;
 	promptRunner: PromptRunner;
 	vam: VaultActionManager;
@@ -57,6 +58,7 @@ export function createInitialTextfresserState(params: {
 	return {
 		attestationForLatestNavigated: null,
 		inFlightGenerate: null,
+		isLibraryLookupAvailable: false,
 		languages,
 		latestFailedSections: [],
 		latestLemmaInvocationCache: null,

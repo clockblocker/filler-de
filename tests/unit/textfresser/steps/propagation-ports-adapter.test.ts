@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { err, ok } from "neverthrow";
 import {
-	createPropagationV2PortsAdapter,
-} from "../../../../src/commanders/textfresser/commands/generate/steps/propagation-v2-ports-adapter";
+	createPropagationPortsAdapter,
+} from "../../../../src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter";
 import {
 	ReadContentErrorKind,
 	type VaultActionManager,
@@ -52,7 +52,7 @@ function permissionReadError(reason: string) {
 	} as const;
 }
 
-describe("propagation-v2-ports-adapter", () => {
+describe("propagation-ports-adapter", () => {
 	it("readManyMdFiles deduplicates input and preserves deterministic first-seen order", async () => {
 		const alpha = makePath("alpha");
 		const beta = makePath("beta");
@@ -71,7 +71,7 @@ describe("propagation-v2-ports-adapter", () => {
 			},
 		};
 
-		const ports = createPropagationV2PortsAdapter({
+		const ports = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [],
 			vam,
 		});
@@ -105,7 +105,7 @@ describe("propagation-v2-ports-adapter", () => {
 			},
 		};
 
-		const ports = createPropagationV2PortsAdapter({
+		const ports = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [],
 			vam,
 		});
@@ -129,7 +129,7 @@ describe("propagation-v2-ports-adapter", () => {
 				err(fileNotFoundError("File not found: alpha")),
 		};
 
-		const ports = createPropagationV2PortsAdapter({
+		const ports = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [],
 			vam,
 		});
@@ -151,7 +151,7 @@ describe("propagation-v2-ports-adapter", () => {
 			readContent: async () => err(unknownReadError("random io issue")),
 		};
 
-		const ports = createPropagationV2PortsAdapter({
+		const ports = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [],
 			vam,
 		});
@@ -170,7 +170,7 @@ describe("propagation-v2-ports-adapter", () => {
 				err(permissionReadError("permission denied")),
 		};
 
-		const ports = createPropagationV2PortsAdapter({
+		const ports = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [],
 			vam,
 		});
@@ -194,7 +194,7 @@ describe("propagation-v2-ports-adapter", () => {
 			findByBasename: () => [],
 			readContent: async () => err(unknownReadError("unreachable")),
 		};
-		const portsMissing = createPropagationV2PortsAdapter({
+		const portsMissing = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [],
 			vam: vamMissing,
 		});
@@ -209,7 +209,7 @@ describe("propagation-v2-ports-adapter", () => {
 			readContent: async () =>
 				err(fileNotFoundError("File not found: beta")),
 		};
-		const portsRace = createPropagationV2PortsAdapter({
+		const portsRace = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [],
 			vam: vamRace,
 		});
@@ -229,7 +229,7 @@ describe("propagation-v2-ports-adapter", () => {
 				err(permissionReadError("permission denied")),
 		};
 
-		const ports = createPropagationV2PortsAdapter({
+		const ports = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [],
 			vam,
 		});
@@ -262,7 +262,7 @@ describe("propagation-v2-ports-adapter", () => {
 			readContent: async () => ok(""),
 		};
 
-		const ports = createPropagationV2PortsAdapter({
+		const ports = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [shared, fromLibraryOnly],
 			vam,
 		});
@@ -282,7 +282,7 @@ describe("propagation-v2-ports-adapter", () => {
 
 	it("buildTargetWriteActions returns sync upsert/process action pair", () => {
 		const alpha = makePath("alpha");
-		const ports = createPropagationV2PortsAdapter({
+		const ports = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [],
 			vam: {
 				exists: () => true,

@@ -1,5 +1,6 @@
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
+import { canonicalizeTargetForComparison } from "../../../common/target-comparison";
 
 export type PropagationResult = { changed: boolean; content: string };
 
@@ -130,12 +131,12 @@ export function blockHasWikilinkTarget(
 	blockContent: string,
 	target: string,
 ): boolean {
-	const normalizedTarget = wikilinkHelper.normalizeTarget(target);
+	const normalizedTarget = canonicalizeTargetForComparison(target);
 	return wikilinkHelper
 		.parse(blockContent)
 		.some(
 			(link) =>
-				wikilinkHelper.normalizeTarget(link.target) ===
+				canonicalizeTargetForComparison(link.target) ===
 				normalizedTarget,
 		);
 }

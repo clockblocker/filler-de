@@ -145,7 +145,7 @@ const MORPHOLOGY_CORPUS: MorphologyCorpusFixture[] = [
 	},
 ];
 
-describe("propagation-v2 morphology corpus", () => {
+describe("propagation morphology corpus", () => {
 	it("matches expected parse semantics for mixed and malformed morphology fixtures", () => {
 		for (const fixture of MORPHOLOGY_CORPUS) {
 			const parsed = getMorphologyPayload(fixture.note);

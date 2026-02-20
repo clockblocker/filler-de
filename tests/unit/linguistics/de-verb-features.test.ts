@@ -7,7 +7,7 @@ import {
 describe("German verb features", () => {
 	it("parses full verb features", () => {
 		const result = GermanVerbFullFeaturesSchema.safeParse({
-			conjugation: "Rregular",
+			conjugation: "Regular",
 			pos: "Verb",
 			valency: {
 				governedPreposition: "um",

@@ -1,6 +1,10 @@
 # VaultActionManager — Architecture
 
 > **Scope**: This document covers the VaultActionManager (VAM) — the file system abstraction layer used by all other managers and commanders. For the vocabulary/dictionary subsystem, see `textfresser-architecture.md`. For tree/healing/codex, see the Librarian docs. For E2E testing, see `e2e-architecture.md`.
+>
+> **Compatibility Policy (Dev Mode, 2026-02-20)**:
+> - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
+> - Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
 
 ---
 

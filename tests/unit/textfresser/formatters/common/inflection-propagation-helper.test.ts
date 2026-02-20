@@ -4,7 +4,6 @@ import {
 	buildNounInflectionPropagationHeader,
 	isNounInflectionPropagationHeaderForLemma,
 	mergeLocalizedInflectionTags,
-	parseLegacyInflectionHeaderTag,
 } from "../../../../../src/commanders/textfresser/commands/generate/section-formatters/common/inflection-propagation-helper";
 import type { NounInflectionCell } from "../../../../../src/linguistics/de/lexem/noun";
 
@@ -62,32 +61,6 @@ describe("inflectionPropagationHelper", () => {
 		expect(merged).toBe(
 			"#Nominativ/Plural #Akkusativ/Plural #Dativ/Plural",
 		);
-	});
-
-	it("parses legacy per-cell headers and localizes tags", () => {
-		expect(
-			parseLegacyInflectionHeaderTag(
-				"#Nominativ/Plural for: [[Kraftwerk]]",
-				"Kraftwerk",
-				"German",
-			),
-		).toBe("#Nominativ/Plural");
-
-		expect(
-			parseLegacyInflectionHeaderTag(
-				"#Nominative/Plural for: [[Kraftwerk]]",
-				"Kraftwerk",
-				"German",
-			),
-		).toBe("#Nominativ/Plural");
-
-		expect(
-			parseLegacyInflectionHeaderTag(
-				"#Nominativ/Plural for: [[Fabrik]]",
-				"Kraftwerk",
-				"German",
-			),
-		).toBeNull();
 	});
 
 	it("builds fallback and genus-specific noun inflection headers", () => {

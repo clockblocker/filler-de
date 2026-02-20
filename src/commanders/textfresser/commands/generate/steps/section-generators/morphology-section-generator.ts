@@ -1,5 +1,6 @@
 import { morphologyRelationHelper } from "../../../../../../stateless-helpers/morphology-relation";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
+import { canonicalizeTargetForComparison } from "../../../../common/target-comparison";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import {
 	type MorphemeItem,
@@ -136,10 +137,10 @@ function buildPrefixEquationLine(
 function haveSameWikilinkTargets(left: string, right: string): boolean {
 	const leftTargets = wikilinkHelper
 		.parse(left)
-		.map((wikilink) => wikilinkHelper.normalizeTarget(wikilink.target));
+		.map((wikilink) => canonicalizeTargetForComparison(wikilink.target));
 	const rightTargets = wikilinkHelper
 		.parse(right)
-		.map((wikilink) => wikilinkHelper.normalizeTarget(wikilink.target));
+		.map((wikilink) => canonicalizeTargetForComparison(wikilink.target));
 	if (leftTargets.length !== rightTargets.length) return false;
 
 	return leftTargets.every((target, index) => {

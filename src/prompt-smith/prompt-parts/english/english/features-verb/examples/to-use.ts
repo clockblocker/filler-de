@@ -7,7 +7,7 @@ export const examples = [
 			word: "open up",
 		},
 		output: {
-			conjugation: "Rregular",
+			conjugation: "Regular",
 			valency: {
 				reflexivity: "NonReflexive",
 				separability: "Separable",
@@ -20,7 +20,7 @@ export const examples = [
 			word: "rely",
 		},
 		output: {
-			conjugation: "Rregular",
+			conjugation: "Regular",
 			valency: {
 				governedPreposition: "on",
 				reflexivity: "NonReflexive",

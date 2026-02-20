@@ -4,6 +4,7 @@
  */
 
 import type { MorphemeKind } from "../../../../linguistics/common/enums/linguistic-units/morphem/morpheme-kind";
+import { wikilinkHelper } from "../../../../stateless-helpers/wikilink";
 import type { TargetLanguage } from "../../../../types";
 
 export type MorphemeItem = {
@@ -50,9 +51,10 @@ function formatAsWikilink(
 	_targetLang: TargetLanguage,
 ): string {
 	const display = item.surf;
-	const target =
+	const target = wikilinkHelper.normalizeLinkTarget(
 		item.linkTarget ??
-		(item.lemma && item.lemma !== item.surf ? item.lemma : item.surf);
+			(item.lemma && item.lemma !== item.surf ? item.lemma : item.surf),
+	);
 
 	if (target.toLowerCase() === display.toLowerCase()) return `[[${target}]]`;
 	return `[[${target}|${display}]]`;

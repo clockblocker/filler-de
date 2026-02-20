@@ -1,10 +1,10 @@
 /**
  * Split path utilities for the library tree.
  *
- * NOTE: For new code, prefer importing from `src/commanders/librarian-new/paths/path-computer.ts`
- * which consolidates all path computation logic. This file is kept for backward compatibility.
+ * NOTE: For new code, prefer `src/commanders/librarian/paths/path-finder.ts`
+ * to keep path logic centralized.
  *
- * @see PathFinder in `src/commanders/librarian-new/paths/path-computer.ts`
+ * @see PathFinder in `src/commanders/librarian/paths/path-finder.ts`
  */
 import { ok, type Result } from "neverthrow";
 import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";

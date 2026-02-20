@@ -23,7 +23,6 @@ import {
 	extractHashTags,
 	isNounInflectionPropagationHeaderForLemma,
 	mergeLocalizedInflectionTags,
-	parseLegacyInflectionHeaderTag,
 } from "../section-formatters/common/inflection-propagation-helper";
 import type { GenerateSectionsResult } from "./generate-sections";
 
@@ -62,7 +61,6 @@ function findTagsSection(entry: DictEntry): EntrySection | undefined {
  *
  * For each inflected form, creates or updates one inflection entry per lemma/POS
  * and stores all case/number variants as tags in a tags section.
- * Also auto-collapses legacy per-cell entries into the single-entry format.
  */
 export function propagateInflections(
 	ctx: GenerateSectionsResult,
@@ -111,9 +109,7 @@ export function propagateInflections(
 
 		const transform = (content: string) => {
 			const existingEntries = dictNoteHelper.parse(content);
-			const legacyEntryIndexes: number[] = [];
 			const matchingEntryIndexes: number[] = [];
-			const tagsFromLegacyHeaders: string[] = [];
 			const tagsFromExistingMatches: string[] = [];
 
 			for (let index = 0; index < existingEntries.length; index++) {
@@ -133,24 +129,12 @@ export function propagateInflections(
 							...extractHashTags(tagsSection.content),
 						);
 					}
-					continue;
-				}
-
-				const legacyTag = parseLegacyInflectionHeaderTag(
-					entry.headerContent,
-					lemma,
-					targetLanguage,
-				);
-				if (legacyTag) {
-					legacyEntryIndexes.push(index);
-					tagsFromLegacyHeaders.push(legacyTag);
 				}
 			}
 
-			const indexesToRemove = new Set<number>([
-				...legacyEntryIndexes,
-				...matchingEntryIndexes.slice(1),
-			]);
+			const indexesToRemove = new Set<number>(
+				matchingEntryIndexes.slice(1),
+			);
 			const compactedEntries = existingEntries.filter(
 				(_, index) => !indexesToRemove.has(index),
 			);
@@ -164,11 +148,7 @@ export function propagateInflections(
 				}
 			}
 
-			const tagsToMerge = [
-				...tagsFromCells,
-				...tagsFromLegacyHeaders,
-				...tagsFromExistingMatches,
-			];
+			const tagsToMerge = [...tagsFromCells, ...tagsFromExistingMatches];
 
 			if (!targetEntry) {
 				const existingIds = compactedEntries.map((entry) => entry.id);
