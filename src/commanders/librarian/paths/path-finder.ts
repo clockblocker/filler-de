@@ -57,17 +57,6 @@ export function computeCodexSuffix(nodeNames: string[]): string[] {
 	return nodeNames.slice(1).reverse();
 }
 
-/**
- * Convert path parts (WITH Library root) to suffix parts.
- * Drops the Library root, then reverses.
- */
-export function pathPartsWithRootToSuffixParts(
-	pathParts: string[],
-): NodeName[] {
-	// Drop Library root (first element), then reverse
-	return pathParts.slice(1).reverse() as NodeName[];
-}
-
 // ─── Segment ID Parsing ───
 
 /**

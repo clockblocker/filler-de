@@ -9,6 +9,7 @@ import {
 	logWarning,
 } from "../managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import type { TextEaterSettings } from "../types";
+import { getErrorMessage } from "../utils/get-error-message";
 import { withRetry } from "./retry";
 
 function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
@@ -47,12 +48,7 @@ function isRetryableApiError(error: unknown): boolean {
 }
 
 function toApiServiceError(error: unknown): ApiServiceError {
-	return {
-		reason:
-			error instanceof Error
-				? error.message
-				: `API call failed: ${String(error)}`,
-	};
+	return { reason: getErrorMessage(error) };
 }
 
 export class ApiService {
@@ -115,9 +111,9 @@ export class ApiService {
 				dangerouslyAllowBrowser: true,
 				fetch: fetchViaObsidian,
 			});
-		} catch (error: any) {
+		} catch (error) {
 			logError({
-				description: `Error initializing API service: ${error.message}`,
+				description: `Error initializing API service: ${getErrorMessage(error)}`,
 				location: "ApiService",
 			});
 		}
@@ -141,8 +137,9 @@ export class ApiService {
 			}
 
 			throw new Error(`Google API error: ${res.status}: ${res.text}`);
-		} catch (error: any) {
-			const message = error?.message || "Failed to call Google API";
+		} catch (error) {
+			const message =
+				getErrorMessage(error) || "Failed to call Google API";
 
 			// "Cached content is too small" is expected when prompt < 2048 tokens
 			const isExpectedCacheError = message.includes(
