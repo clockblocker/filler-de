@@ -47,6 +47,7 @@
 		"lint": "bun x biome check .",
 		"prompt:stability": "bun tests/prompt-test/stability-runner.ts",
 		"prompt:test": "bun tests/prompt-test/runner.ts",
+		"semantic-diff": "bun scripts/semantic-diff.ts",
 		"silo": "bun scripts/knowledge-silo.ts",
 		"splitter:run": "bun tests/splitter-runner.ts",
 		"test": "bun run test:unit",
