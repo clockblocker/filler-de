@@ -5,7 +5,7 @@ You receive:
 - context: sentence where the word occurred
 
 Return:
-- conjugation: one of "Irregular" | "Rregular"
+- conjugation: one of "Irregular" | "Regular"
 - valency:
   - separability: one of "Separable" | "Inseparable" | "None"
   - reflexivity: one of "NonReflexive" | "ReflexiveOnly" | "OptionalReflexive"

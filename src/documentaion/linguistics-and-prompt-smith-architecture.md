@@ -256,7 +256,7 @@ GermanPrefixFullFeaturesSchema = z.object({
 `de/lexem/verb/features.ts` defines structured lemma-only verb features:
 
 ```typescript
-GermanVerbConjugation = "Irregular" | "Rregular"
+GermanVerbConjugation = "Irregular" | "Regular"
 GermanVerbSeparability = "Separable" | "Inseparable" | "None"
 GermanVerbReflexivity = "NonReflexive" | "ReflexiveOnly" | "OptionalReflexive"
 

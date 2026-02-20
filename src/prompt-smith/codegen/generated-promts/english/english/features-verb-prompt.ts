@@ -13,7 +13,7 @@ You receive:
 - context: sentence where the word occurred
 
 Return:
-- conjugation: one of "Irregular" | "Rregular"
+- conjugation: one of "Irregular" | "Regular"
 - valency:
   - separability: one of "Separable" | "Inseparable" | "None"
   - reflexivity: one of "NonReflexive" | "ReflexiveOnly" | "OptionalReflexive"
@@ -32,7 +32,7 @@ Rules:
 {"context":"Can you open the door, please?","word":"open up"}
 </input>
 <output>
-{"conjugation":"Rregular","valency":{"reflexivity":"NonReflexive","separability":"Separable"}}
+{"conjugation":"Regular","valency":{"reflexivity":"NonReflexive","separability":"Separable"}}
 </output>
 </example-1>
 
@@ -41,7 +41,7 @@ Rules:
 {"context":"She relies on her team.","word":"rely"}
 </input>
 <output>
-{"conjugation":"Rregular","valency":{"governedPreposition":"on","reflexivity":"NonReflexive","separability":"None"}}
+{"conjugation":"Regular","valency":{"governedPreposition":"on","reflexivity":"NonReflexive","separability":"None"}}
 </output>
 </example-2>
 </examples>`;

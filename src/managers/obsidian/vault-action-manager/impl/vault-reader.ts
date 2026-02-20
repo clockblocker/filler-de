@@ -38,8 +38,11 @@ export class VaultReader {
 				.getContent()
 				.mapErr((reason) => classifyReadContentError(reason));
 		}
-		return this.tfileHelper
-			.getFile(target)
+		const immediateFileResult = this.tfileHelper.getFile(target);
+		const fileResult = immediateFileResult.isOk()
+			? immediateFileResult
+			: await this.tfileHelper.getFileWithRetry(target);
+		return fileResult
 			.mapErr((reason) => classifyReadContentError(reason))
 			.asyncAndThen((file) =>
 				ResultAsync.fromPromise(this.vault.read(file), (error) =>

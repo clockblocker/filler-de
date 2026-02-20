@@ -27,6 +27,9 @@ import {
 import type { Transform } from "../../../types/vault-action";
 import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
 
+const GET_FILE_RETRY_COUNT = 10;
+const GET_FILE_RETRY_DELAY_MS = 50;
+
 /**
  * Helper for TFile operations in the vault.
  *
@@ -58,6 +61,26 @@ export class TFileHelper {
 		}
 
 		return err(errorTypeMismatch("file", systemPath));
+	}
+
+	async getFileWithRetry<SPF extends SplitPathToAnyFile>(
+		splitPath: SPF,
+		maxRetries = GET_FILE_RETRY_COUNT,
+	): Promise<Result<TFile, string>> {
+		let lastResult = this.getFile(splitPath);
+		if (lastResult.isOk()) {
+			return lastResult;
+		}
+
+		for (let retry = 0; retry < maxRetries; retry++) {
+			await delay(GET_FILE_RETRY_DELAY_MS);
+			lastResult = this.getFile(splitPath);
+			if (lastResult.isOk()) {
+				return lastResult;
+			}
+		}
+
+		return lastResult;
 	}
 
 	async upsertMdFile(
@@ -136,7 +159,10 @@ export class TFileHelper {
 
 		// Both missing - poll for source (Obsidian index may lag after folder renames)
 		if (fromResult.isErr() && toResult.isErr()) {
-			fromResult = await this.pollForFile(from, 10);
+			fromResult = await this.getFileWithRetry(
+				from,
+				GET_FILE_RETRY_COUNT,
+			);
 		}
 
 		if (fromResult.isErr()) {
@@ -169,21 +195,6 @@ export class TFileHelper {
 			fromFile: fromResult.value,
 			toFile: toResult.isOk() ? toResult.value : null,
 		});
-	}
-
-	private async pollForFile<SPF extends SplitPathToAnyFile>(
-		splitPath: SPF,
-		maxRetries: number,
-	): Promise<Result<TFile, string>> {
-		const retryDelayMs = 50;
-		for (let retry = 0; retry < maxRetries; retry++) {
-			await delay(retryDelayMs);
-			const result = this.getFile(splitPath);
-			if (result.isOk()) {
-				return result;
-			}
-		}
-		return this.getFile(splitPath);
 	}
 
 	private async handleTargetCollision<SPF extends SplitPathToAnyFile>(
@@ -308,7 +319,17 @@ export class TFileHelper {
 		splitPath: SplitPathToMdFile,
 		content: string,
 	): Promise<Result<TFile, string>> {
-		return this.getFile(splitPath).asyncAndThen((file) =>
+		const immediateFileResult = this.getFile(splitPath);
+		if (immediateFileResult.isOk()) {
+			return this.tryVaultModify(
+				immediateFileResult.value,
+				content,
+				splitPath,
+			);
+		}
+
+		const fileResult = await this.getFileWithRetry(splitPath);
+		return fileResult.asyncAndThen((file) =>
 			this.tryVaultModify(file, content, splitPath),
 		);
 	}
@@ -336,7 +357,17 @@ export class TFileHelper {
 		splitPath: SplitPathToMdFile;
 		transform: Transform;
 	}): Promise<Result<TFile, string>> {
-		return this.getFile(splitPath).asyncAndThen((file) =>
+		const immediateFileResult = this.getFile(splitPath);
+		if (immediateFileResult.isOk()) {
+			return this.tryReadAndTransform(
+				immediateFileResult.value,
+				transform,
+				splitPath,
+			);
+		}
+
+		const fileResult = await this.getFileWithRetry(splitPath);
+		return fileResult.asyncAndThen((file) =>
 			this.tryReadAndTransform(file, transform, splitPath),
 		);
 	}

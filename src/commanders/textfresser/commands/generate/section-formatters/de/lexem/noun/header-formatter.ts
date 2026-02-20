@@ -2,6 +2,7 @@ import {
 	articleFromGenus,
 	type GermanGenus,
 } from "../../../../../../../../linguistics/de/lexem/noun/features";
+import { wikilinkHelper } from "../../../../../../../../stateless-helpers/wikilink";
 import { buildYouglishUrl } from "../../../common/header-formatter";
 
 /**
@@ -17,7 +18,8 @@ export function formatHeaderLine(
 ): string {
 	const emoji = output.emojiDescription.join(" ");
 	const article = articleFromGenus[genus];
-	const youglishUrl = buildYouglishUrl(lemma, targetLanguage);
+	const normalizedLemma = wikilinkHelper.normalizeLinkTarget(lemma);
+	const youglishUrl = buildYouglishUrl(normalizedLemma, targetLanguage);
 
-	return `${emoji} ${article} [[${lemma}]], [${output.ipa}](${youglishUrl})`;
+	return `${emoji} ${article} [[${normalizedLemma}]], [${output.ipa}](${youglishUrl})`;
 }

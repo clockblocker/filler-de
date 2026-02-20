@@ -6,6 +6,28 @@ import type {
 import type { CommandError } from "../../commands/types";
 import { CommandErrorKind } from "../../errors";
 
+function stringifySplitPath(splitPath: {
+	pathParts: string[];
+	basename: string;
+}): string {
+	return [...splitPath.pathParts, splitPath.basename].join("/");
+}
+
+function formatDispatchFailure(failure: {
+	action: VaultAction;
+	error: string;
+}): string {
+	const action = failure.action;
+	switch (action.kind) {
+		case "RenameFolder":
+		case "RenameFile":
+		case "RenameMdFile":
+			return `${action.kind}(${stringifySplitPath(action.payload.from)} -> ${stringifySplitPath(action.payload.to)}): ${failure.error}`;
+		default:
+			return `${action.kind}(${stringifySplitPath(action.payload.splitPath)}): ${failure.error}`;
+	}
+}
+
 export function dispatchActions(
 	vam: VaultActionManager,
 	actions: VaultAction[],
@@ -14,7 +36,7 @@ export function dispatchActions(
 		vam.dispatch(actions).then((dispatchResult) => {
 			if (dispatchResult.isErr()) {
 				const reason = dispatchResult.error
-					.map((e) => e.error)
+					.map((failure) => formatDispatchFailure(failure))
 					.join(", ");
 				return err({
 					kind: CommandErrorKind.DispatchFailed,

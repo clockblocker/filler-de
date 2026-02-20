@@ -88,4 +88,21 @@ describe("formatInflection", () => {
 		expect(formattedSection).toBe("");
 		expect(cells).toHaveLength(0);
 	});
+
+	it("normalizes path-like form targets to basename", () => {
+		const { formattedSection, cells } = formatInflection({
+			cells: [
+				{
+					article: "die",
+					case: "Nominative",
+					form: "Worter/de/lexem/lemma/f/fah/fahre/Fahren",
+					number: "Plural",
+				},
+			],
+			genus: "Neutrum",
+		});
+
+		expect(formattedSection).toBe("N: die [[Fahren]]");
+		expect(cells[0]?.form).toBe("Fahren");
+	});
 });

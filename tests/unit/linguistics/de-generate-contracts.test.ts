@@ -181,7 +181,7 @@ describe("De generate contracts", () => {
 
 	it("accepts structured verb features output", () => {
 		const output = DeFeaturesOutputSchema.safeParse({
-			conjugation: "Rregular",
+			conjugation: "Regular",
 			valency: {
 				reflexivity: "NonReflexive",
 				separability: "Separable",

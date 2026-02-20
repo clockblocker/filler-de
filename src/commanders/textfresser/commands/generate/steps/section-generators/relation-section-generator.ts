@@ -1,3 +1,4 @@
+import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../../targets/de/sections/section-css-kind";
 import {
@@ -24,7 +25,9 @@ export type RelationSectionResult = {
 function toParsedRelations(output: RelationOutput): ParsedRelation[] {
 	return output.relations.map((relation) => ({
 		kind: relation.kind,
-		words: relation.words,
+		words: relation.words.map((word) =>
+			wikilinkHelper.normalizeLinkTarget(word),
+		),
 	}));
 }
 

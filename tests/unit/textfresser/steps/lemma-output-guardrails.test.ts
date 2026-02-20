@@ -81,4 +81,40 @@ describe("lemma output guardrails", () => {
 		const chosen = chooseBestEffortLemmaOutput({ first, second });
 		expect(chosen.output.lemma).toBe("anfangen");
 	});
+
+	it("normalizes path-like lemma outputs to basename", () => {
+		const evaluation = evaluateLemmaOutputGuardrails({
+			context: "Er [fährt] schnell.",
+			output: {
+				contextWithLinkedParts: "Er [[Worter/de/lexem/lemma/f/fah/fahre/Fahren|fährt]] schnell.",
+				lemma: "Worter/de/lexem/lemma/f/fah/fahre/Fahren",
+				linguisticUnit: "Lexem",
+				posLikeKind: "Verb",
+				surfaceKind: "Inflected",
+			},
+			surface: "fährt",
+		});
+
+		expect(evaluation.output.lemma).toBe("Fahren");
+	});
+
+	it("keeps normalized contextWithLinkedParts when stripped text matches", () => {
+		const evaluation = evaluateLemmaOutputGuardrails({
+			context: "Er [[Fahren|fährt]] schnell.",
+			output: {
+				contextWithLinkedParts:
+					"Er [[Worter/de/lexem/lemma/f/fah/fahre/Fahren|fährt]] schnell.",
+				lemma: "fahren",
+				linguisticUnit: "Lexem",
+				posLikeKind: "Verb",
+				surfaceKind: "Inflected",
+			},
+			surface: "fährt",
+		});
+
+		expect(evaluation.droppedContextWithLinkedParts).toBe(false);
+		expect(evaluation.output.contextWithLinkedParts).toBe(
+			"Er [[Fahren|fährt]] schnell.",
+		);
+	});
 });

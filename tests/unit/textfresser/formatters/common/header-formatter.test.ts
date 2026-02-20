@@ -52,4 +52,15 @@ describe("formatHeaderLine", () => {
 		);
 		expect(result).toContain("/english)");
 	});
+
+	it("normalizes vault-path lemma targets to basename", () => {
+		const result = formatHeaderLine(
+			{ emojiDescription: ["🚗"], ipa: "ˈfaːʁən" },
+			"Worter/de/lexem/lemma/f/fah/fahre/Fahren",
+			"German",
+		);
+		expect(result).toBe(
+			"🚗 [[Fahren]], [ˈfaːʁən](https://youglish.com/pronounce/Fahren/german)",
+		);
+	});
 });
