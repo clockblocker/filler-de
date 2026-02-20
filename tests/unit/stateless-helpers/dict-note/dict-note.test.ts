@@ -126,6 +126,24 @@ describe("dictNoteHelper.parse", () => {
 		expect(entries[0]?.meta).toEqual({});
 	});
 
+	test("strips legacy top-level metadata mirrors on parse", () => {
+		const note = makeNoteWithMeta(KOHLEKRAFTWERK_ENTRY, {
+			entries: {
+				"l-nom-n-m1": {
+					emojiDescription: ["🏭", "⚡"],
+					ipa: "ˈkoːləˌkraftvɛɐ̯k",
+					semantics: "legacy semantics",
+					senseGloss: "legacy gloss",
+					status: "Done",
+				},
+			},
+		});
+
+		const entries = dictNoteHelper.parse(note);
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.meta).toEqual({ status: "Done" });
+	});
+
 	test("two sections with same kind but different titles preserved", () => {
 		const entries = dictNoteHelper.parse(KOHLEKRAFTWERK_ENTRY);
 		const sections = entries[0]?.sections;

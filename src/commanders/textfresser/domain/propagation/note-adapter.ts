@@ -105,6 +105,22 @@ const warningCountBySampleKey = new Map<string, number>();
 const EntriesMetaSchema = z
 	.object({ entries: z.record(z.record(z.unknown())).optional() })
 	.passthrough();
+const LEGACY_ENTRY_META_KEYS = new Set([
+	"emojiDescription",
+	"ipa",
+	"semantics",
+	"senseGloss",
+]);
+
+function stripLegacyEntryMeta(
+	meta: Record<string, unknown>,
+): Record<string, unknown> {
+	return Object.fromEntries(
+		Object.entries(meta).filter(
+			([key]) => !LEGACY_ENTRY_META_KEYS.has(key),
+		),
+	);
+}
 
 const typedSectionKindByCssKind = new Map<string, TypedSectionKind>([
 	[cssSuffixFor[DictSectionKind.Relation], "Relation"],
@@ -688,7 +704,7 @@ function parseEntryChunk(
 	return {
 		headerContent,
 		id,
-		meta: metaByEntryId[id] ?? {},
+		meta: stripLegacyEntryMeta(metaByEntryId[id] ?? {}),
 		sections: parseSectionsForEntry(sectionText),
 	};
 }

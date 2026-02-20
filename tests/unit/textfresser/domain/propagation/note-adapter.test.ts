@@ -471,4 +471,33 @@ describe("propagation note adapter", () => {
 		const serialized = serializePropagationNote(parsed);
 		expect(serialized.body.includes(RAW_TRANSLATION_BLOCK)).toBe(true);
 	});
+
+	it("strips legacy top-level metadata mirrors on parse", () => {
+		const noteWithLegacyMeta = [
+			"wort ^raw-1",
+			"",
+			'<span class="entry_section_title entry_section_title_translations">Übersetzung</span>',
+			"word",
+			"",
+			'<section id="textfresser_meta_keep_me_invisible">',
+			JSON.stringify({
+				entries: {
+					"raw-1": {
+						emojiDescription: ["🧪"],
+						ipa: "ipa",
+						semantics: "legacy semantics",
+						senseGloss: "legacy gloss",
+						verbEntryIdentity: "conjugation:Irregular",
+					},
+				},
+			}),
+			"</section>",
+		].join("\n");
+
+		const parsed = parsePropagationNote(noteWithLegacyMeta);
+		expect(parsed).toHaveLength(1);
+		expect(parsed[0]?.meta).toEqual({
+			verbEntryIdentity: "conjugation:Irregular",
+		});
+	});
 });

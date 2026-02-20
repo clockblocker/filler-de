@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { errAsync, ok, okAsync } from "neverthrow";
 import { disambiguateSense } from "../../../../src/commanders/textfresser/commands/lemma/steps/disambiguate-sense";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
-import type { DeEntity, GermanLinguisticUnit } from "../../../../src/linguistics/de";
+import type { DeEntity } from "../../../../src/linguistics/de";
 import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
@@ -69,17 +69,86 @@ const API_RESULT_PHRASEM = {
 	surfaceKind: "Lemma",
 } as const;
 
+function makeNounEntity(
+	params: {
+		emojiDescription: string[];
+		genus?: "Femininum" | "Maskulinum" | "Neutrum";
+		lemma?: string;
+		senseGloss?: string;
+	} = { emojiDescription: ["🏦"] },
+): DeEntity<"Lexem", "Lemma"> {
+	return {
+		emojiDescription: params.emojiDescription,
+		features: {
+			inflectional: {},
+			lexical: {
+				genus: params.genus ?? "Femininum",
+				nounClass: "Common",
+				pos: "Noun",
+			},
+		},
+		ipa: "ˈbaŋk",
+		language: "German",
+		lemma: params.lemma ?? "Bank",
+		linguisticUnit: "Lexem",
+		posLikeKind: "Noun",
+		...(params.senseGloss ? { senseGloss: params.senseGloss } : {}),
+		surfaceKind: "Lemma",
+	};
+}
+
+function makeVerbEntity(
+	emojiDescription: string[],
+): DeEntity<"Lexem", "Lemma"> {
+	return {
+		emojiDescription,
+		features: {
+			inflectional: {},
+			lexical: {
+				conjugation: "Irregular",
+				pos: "Verb",
+				valency: {
+					governedPreposition: null,
+					reflexivity: "NonReflexive",
+					separability: "None",
+				},
+			},
+		},
+		ipa: "ˈfaːʁən",
+		language: "German",
+		lemma: "fahren",
+		linguisticUnit: "Lexem",
+		posLikeKind: "Verb",
+		surfaceKind: "Lemma",
+	};
+}
+
+function makePhrasemEntity(
+	emojiDescription: string[],
+): DeEntity<"Phrasem", "Lemma"> {
+	return {
+		emojiDescription,
+		features: {
+			inflectional: {},
+			lexical: { phrasemeKind: "DiscourseFormula" },
+		},
+		ipa: "aʊ̯f ˈjeːdn̩ fal",
+		language: "German",
+		lemma: "auf jeden Fall",
+		linguisticUnit: "Phrasem",
+		posLikeKind: "DiscourseFormula",
+		surfaceKind: "Lemma",
+	};
+}
+
 /**
  * Build a minimal note with entries for testing.
- * Each entry has: header line with ^blockId, metadata with optional emojiDescription.
+ * Each entry has: header line with ^blockId, metadata with canonical entity payload.
  */
 function buildNoteContent(
 	entries: Array<{
 		entity?: DeEntity;
 		id: string;
-		emojiDescription?: string[];
-		linguisticUnit?: GermanLinguisticUnit;
-		senseGloss?: string;
 		translationFirstLine?: string;
 	}>,
 ): string {
@@ -96,22 +165,13 @@ function buildNoteContent(
 		string,
 		{
 			entity?: DeEntity;
-			emojiDescription?: string[];
-			linguisticUnit?: GermanLinguisticUnit;
-			senseGloss?: string;
 		}
 	> = {};
 	for (const e of entries) {
 		const entryMeta: {
 			entity?: DeEntity;
-			emojiDescription?: string[];
-			linguisticUnit?: GermanLinguisticUnit;
-			senseGloss?: string;
 		} = {};
 		if (e.entity) entryMeta.entity = e.entity;
-		if (e.emojiDescription) entryMeta.emojiDescription = e.emojiDescription;
-		if (e.linguisticUnit) entryMeta.linguisticUnit = e.linguisticUnit;
-		if (e.senseGloss) entryMeta.senseGloss = e.senseGloss;
 		meta[e.id.toUpperCase()] = entryMeta;
 	}
 
@@ -129,7 +189,7 @@ describe("disambiguateSense", () => {
 
 	it("returns null when note exists but has no matching entries", async () => {
 		const content = buildNoteContent([
-			{ emojiDescription: ["🏦"], id: "LX-LM-VERB-1" },
+			{ entity: makeVerbEntity(["🏦"]), id: "LX-LM-VERB-1" },
 		]);
 		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makePromptRunner(null);
@@ -140,7 +200,7 @@ describe("disambiguateSense", () => {
 
 	it("returns matchedIndex when prompt matches existing sense", async () => {
 		const content = buildNoteContent([
-			{ emojiDescription: ["🏦"], id: "LX-LM-NOUN-1" },
+			{ entity: makeNounEntity({ emojiDescription: ["🏦"] }), id: "LX-LM-NOUN-1" },
 		]);
 		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makePromptRunner(1);
@@ -151,7 +211,7 @@ describe("disambiguateSense", () => {
 
 	it("returns null with precomputedEmojiDescription when prompt says new sense", async () => {
 		const content = buildNoteContent([
-			{ emojiDescription: ["🏦"], id: "LX-LM-NOUN-1" },
+			{ entity: makeNounEntity({ emojiDescription: ["🏦"] }), id: "LX-LM-NOUN-1" },
 		]);
 		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makePromptRunner(null, ["🪑", "🌳"]);
@@ -166,7 +226,7 @@ describe("disambiguateSense", () => {
 
 	it("bounds-checks matchedIndex — out-of-range treated as new sense", async () => {
 		const content = buildNoteContent([
-			{ emojiDescription: ["🏦"], id: "LX-LM-NOUN-1" },
+			{ entity: makeNounEntity({ emojiDescription: ["🏦"] }), id: "LX-LM-NOUN-1" },
 		]);
 		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		// LLM returns matchedIndex 99 — not a valid index
@@ -193,7 +253,7 @@ describe("disambiguateSense", () => {
 
 	it("returns error when prompt runner fails", async () => {
 		const content = buildNoteContent([
-			{ emojiDescription: ["🏦"], id: "LX-LM-NOUN-1" },
+			{ entity: makeNounEntity({ emojiDescription: ["🏦"] }), id: "LX-LM-NOUN-1" },
 		]);
 		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
 		const runner = makeFailingPromptRunner();
@@ -201,19 +261,11 @@ describe("disambiguateSense", () => {
 		expect(result.isErr()).toBe(true);
 	});
 
-	it("forwards phrasemeKind hint from metadata to disambiguate prompt senses", async () => {
+	it("forwards phrasemeKind hint from entity metadata to disambiguate prompt senses", async () => {
 		const content = buildNoteContent([
 			{
-				emojiDescription: ["✅"],
+				entity: makePhrasemEntity(["✅"]),
 				id: "PH-LM-1",
-				linguisticUnit: {
-					kind: "Phrasem",
-					surface: {
-						features: { phrasemeKind: "DiscourseFormula" },
-						lemma: "auf jeden Fall",
-						surfaceKind: "Lemma",
-					},
-				},
 			},
 		]);
 		const vam = makeVam({
@@ -330,7 +382,7 @@ describe("disambiguateSense", () => {
 	it("derives senseGloss from translation section when metadata gloss is missing", async () => {
 		const content = buildNoteContent([
 			{
-				emojiDescription: ["🔒"],
+				entity: makeNounEntity({ emojiDescription: ["🔒"] }),
 				id: "LX-LM-NOUN-1",
 				translationFirstLine: "door lock",
 			},
@@ -376,10 +428,10 @@ describe("disambiguateSense", () => {
 			pathParts: ["Library", "de", "noun"],
 		};
 		const fallbackContent = buildNoteContent([
-			{ emojiDescription: ["🏦"], id: "LX-LM-NOUN-1" },
+			{ entity: makeNounEntity({ emojiDescription: ["🏦"] }), id: "LX-LM-NOUN-1" },
 		]);
 		const preferredContent = buildNoteContent([
-			{ emojiDescription: ["💺"], id: "LX-LM-NOUN-2" },
+			{ entity: makeNounEntity({ emojiDescription: ["💺"] }), id: "LX-LM-NOUN-2" },
 		]);
 		const vam = makeVam({
 			contentByPath: {

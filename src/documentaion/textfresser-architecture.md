@@ -50,7 +50,7 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V7 scope**: Polysemy quality fixes — Header emoji prompt changed to reflect the specific sense in context (not "primary/most common meaning"). Disambiguate gloss rule added: must be context-independent (e.g., "Schließvorrichtung" not "Fahrradschloss"). New polysemous examples in Header and Disambiguate prompts (Schloss castle vs lock).
 
-> **V10 scope**: Emoji-as-semantic-differentiator — **Definition section dropped entirely** (along with `PromptKind.Semantics`). Homonym disambiguation now uses **emoji arrays** instead of text glosses. Header prompt returns `emojiDescription: string[]` (1-3 emojis capturing the sense, e.g., `["🏰"]` vs `["🔒","🔑"]` for *Schloss*). Disambiguate prompt receives `emojiDescription` + `unitKind` + `pos` + `genus` (+ optional `phrasemeKind`) per sense (richer context than the old text gloss). `meta.semantics` replaced by `meta.emojiDescription: string[]`. `LemmaResult.precomputedSemantics` replaced by `precomputedEmojiDescription: string[]`. Entries without `emojiDescription` are treated as new-sense candidates. CORE_SECTIONS reduced to `[Header, Translation, Attestation, FreeForm]`.
+> **V10 scope**: Emoji-as-semantic-differentiator — **Definition section dropped entirely** (along with `PromptKind.Semantics`). Homonym disambiguation now uses **emoji arrays** instead of text glosses. Header prompt returns `emojiDescription: string[]` (1-3 emojis capturing the sense, e.g., `["🏰"]` vs `["🔒","🔑"]` for *Schloss*). Disambiguate prompt receives `emojiDescription` + `unitKind` + `pos` + `genus` (+ optional `phrasemeKind`) per sense (richer context than the old text gloss). `meta.semantics` replaced by canonical `meta.entity.emojiDescription`. `LemmaResult.precomputedSemantics` replaced by `precomputedEmojiDescription: string[]`. Entries without `emojiDescription` are treated as new-sense candidates. CORE_SECTIONS reduced to `[Header, Translation, Attestation, FreeForm]`.
 
 > **V11 scope**: Kill Header Prompt — `PromptKind.Header` eliminated. `emojiDescription` (1-3 emojis) and `ipa` (IPA pronunciation) moved into Lemma prompt output. Header line built from LemmaResult fields (`formatHeaderLine()` takes `{ emojiDescription, ipa }` instead of `AgentOutput<"Header">`). Header emoji display uses the full `emojiDescription` sequence in order. `genus` and article (der/die/das) dropped from header line. `buildLinguisticUnit()` removed — `meta.linguisticUnit` no longer populated during Generate. One fewer API call per new entry.
 
@@ -319,7 +319,6 @@ D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
 type DictEntryMeta = {
   entity?: DeEntity;                        // canonical DTO for generation/propagation
   linguisticUnit?: GermanLinguisticUnit;  // V9: typed DTO (see section 15)
-  emojiDescription?: string[];            // legacy mirror for compatibility
 } & Record<string, unknown>;
 
 type DictEntry = {
@@ -344,7 +343,7 @@ Per-DictEntry metadata is stored in a hidden `<section>` at the bottom of the No
 
 ```html
 <section id="textfresser_meta_keep_me_invisible">
-{"entries":{"LX-LM-NOUN-1":{"status":"Done","emojiDescription":["🏭","⚡"]},"LX-LM-NOUN-2":{"status":"NotStarted","emojiDescription":["🏰"]}}}
+{"entries":{"LX-LM-NOUN-1":{"entity":{"emojiDescription":["🏭","⚡"],"ipa":"ˈkoːləˌkraftvɛɐ̯k","language":"German","lemma":"Kohlekraftwerk","linguisticUnit":"Lexem","posLikeKind":"Noun","surfaceKind":"Lemma","features":{"inflectional":{},"lexical":{"genus":"Neutrum","nounClass":"Common","pos":"Noun"}}}}}}
 </section>
 ```
 
@@ -625,8 +624,8 @@ Filter entries by matching unitKind + POS (ignoring surfaceKind, so LX-LM-NOUN-*
 If no entries for this POS → disambiguationResult = null (new sense, skip Disambiguate call)
   ↓
 Build senses: Array<{ index, emojiDescription, ipa?, senseGloss?, unitKind, pos?, genus? }> from metadata + parsed entry IDs
-  (prefer `meta.entity`; fallback to legacy `meta.emojiDescription` / `meta.linguisticUnit`)
-  (`senseGloss` fallback order: `meta.entity.senseGloss` → `meta.senseGloss` → first non-empty Translation line)
+  (source of truth: `meta.entity`; no top-level mirror fallbacks)
+  (`senseGloss` fallback order: `meta.entity.senseGloss` → first non-empty Translation line)
   (V10+: entries without emojiDescription are treated as new-sense candidates)
   ↓
 Call PromptKind.Disambiguate with { lemma, context, senses }
@@ -642,7 +641,7 @@ V5 bounds check: if matchedIndex is not in validIndices → treat as new sense
 
 **Key optimizations**:
 - The Disambiguate LLM call is skipped entirely when no note exists (first encounter) or no entries with matching POS exist (first sense for this POS)
-- **V10**: When Disambiguate returns `matchedIndex: null` (new sense), it also returns an `emojiDescription` (1-3 emojis). This is stored as `LemmaResult.precomputedEmojiDescription` and used by Generate as the preferred source for `meta.emojiDescription` (falling back to `lemmaResult.emojiDescription` from Lemma LLM output).
+- **V10**: When Disambiguate returns `matchedIndex: null` (new sense), it also returns an `emojiDescription` (1-3 emojis). This is stored as `LemmaResult.precomputedEmojiDescription` and used by Generate as the source for `meta.entity.emojiDescription`.
 - **V5**: `matchedIndex` is bounds-checked against `validIndices` — out-of-range values are treated as new sense (prevents LLM hallucinating invalid indices)
 
 The disambiguation result is stored in `LemmaResult.disambiguationResult` and consumed by Generate's `resolveExistingEntry` step, which no longer needs to re-parse or re-match.
@@ -662,7 +661,7 @@ checkAttestation → checkEligibility → checkLemmaResult
   → resolveExistingEntry (parse existing entries, use Lemma's disambiguationResult for re-encounter detection)
   → generateSections (async: LLM calls, or attestation append for re-encounters)
   → propagateGeneratedSections (core propagation + source-note separability decoration)
-  → serializeEntry (includes noteKind + emojiDescription in single metadata upsert)
+  → serializeEntry (includes noteKind + entity metadata in single metadata upsert)
   → moveToWorter
   → maintainClosedSetSurfaceHub (lazy Worter surface-hub management for ambiguous closed-set surfaces; no-op when library lookup is unavailable)
   → addWriteAction
@@ -703,7 +702,7 @@ All LLM calls are fired in parallel via `Promise.allSettled` (none depend on eac
 
 | Section | LLM? | PromptKind | Formatter | Output |
 |---------|------|-----------|-----------|--------|
-| **Header** | No | — | `dispatchHeaderFormatter()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns, article genus priority is: NounEnrichment genus, then noun-inflection genus fallback; when resolved, output is `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` via `de/lexem/noun/header-formatter`. Dispatch routes by POS; common formatter for non-nouns or unresolved noun genus. `emoji` is rendered from the full `emojiDescription` sequence in order. No LLM call. Sense signals are stored on `meta.entity` (`emojiDescription`, `ipa`) with legacy mirror `meta.emojiDescription` for compatibility. |
+| **Header** | No | — | `dispatchHeaderFormatter()` | `{emoji} [[lemma]], [{ipa}](youglish_url)` → `DictEntry.headerContent`. For nouns, article genus priority is: NounEnrichment genus, then noun-inflection genus fallback; when resolved, output is `{emoji} {article} [[lemma]], [{ipa}](youglish_url)` via `de/lexem/noun/header-formatter`. Dispatch routes by POS; common formatter for non-nouns or unresolved noun genus. `emoji` is rendered from the full `emojiDescription` sequence in order. No LLM call. Sense signals are stored on canonical `meta.entity` (`emojiDescription`, `ipa`). |
 | **Morphem** | Yes | `Morphem` | `morphemeFormatterHelper.formatSection()` | `[[kohle]]\|[[kraft]]\|[[werk]]` → `EntrySection` |
 | **Morphology** | No extra LLM call (reuses `Morphem` output) | — | `generateMorphologySection()` | Localized `derived_from`/`consists_of` markers (German: `Abgeleitet von:`, `Besteht aus:`) and verb-prefix equation lines (verbs only); `derived_from` remains explicit even when an equation is present unless it is equivalent to the equation base. Structured payload is also captured for propagation. |
 | **Relation** | Yes | `Relation` | `formatRelationSection()` | `= [[Synonym]], ⊃ [[Hypernym]]` → `EntrySection`. Raw output also stored for propagation. |
@@ -752,7 +751,7 @@ For non-Lexem units, `pos` is passed to LLM prompts as the `linguisticUnit` name
 - **Multi-word selection**: Lemma handling phrasem attestations from multi-word selections
 - **Deviation section**: Additional LLM-generated section for irregular forms and exceptions
 - ~~**Scroll to latest updated entry**~~: Implemented in V5. `scrollToTargetBlock()` finds `^{blockId}` line and calls `ActiveFileService.scrollToLine()`. For background Generate: deferred via wikilink click handler — `awaitGenerateAndScroll()` waits for the in-flight promise, then scrolls if user is on the target note.
-- ~~**Disambiguate prompt returning semantic info for new senses**~~: V5: returned text `semantics` gloss. V10: replaced with `emojiDescription` (1-3 emoji array). V11: `emojiDescription` moved to Lemma prompt output (Header prompt eliminated), stored in `meta.emojiDescription`.
+- ~~**Disambiguate prompt returning semantic info for new senses**~~: V5: returned text `semantics` gloss. V10: replaced with `emojiDescription` (1-3 emoji array). V11: `emojiDescription` moved to Lemma prompt output (Header prompt eliminated), now persisted in canonical `meta.entity`.
 
 ---
 
@@ -1167,13 +1166,13 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/errors.ts` | TextfresserCommandError (extends BaseCommandError), AttestationParsingError |
 | **Commands** | |
 | `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma rewrite helpers: attestation resolution, wikilink formatting, robust two-pass source rewrite (`temporary → final`, block-id fallback, multi-span retargeting) |
-| `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures. V10+: emoji-based senses with emojiDescription+unitKind+pos+genus, plus optional phrasemeKind hints from `meta.linguisticUnit`. V16: adds optional `senseGloss` per sense (`entity`/legacy/meta+translation fallback) for homonym quality. Returns precomputedEmojiDescription for new-sense path. |
+| `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures. V10+: emoji-based senses with emojiDescription+unitKind+pos+genus. V16: adds optional `senseGloss` per sense (`entity` + translation fallback) for homonym quality. Returns precomputedEmojiDescription for new-sense path. |
 | `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type (V3: disambiguationResult, V10: precomputedEmojiDescription, V8: nounClass) |
 | `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
 | `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
 | `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, use Lemma's disambiguationResult for re-encounter detection |
-| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V12: Features prompt + Tags section, article in header for nouns. V13: `meta.linguisticUnit` restored for Lexem/Phrasem entries (`Morphem` still out of scope). Stores `meta.emojiDescription` from precomputedEmojiDescription or lemmaResult.emojiDescription. Header built from LemmaResult fields. Sets targetBlockId |
+| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V12: Features prompt + Tags section, article in header for nouns. V13: `meta.linguisticUnit` restored for Lexem/Phrasem entries (`Morphem` still out of scope). Persists canonical `meta.entity` (including emoji/ipa/sense). Header built from LemmaResult fields. Sets targetBlockId |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, resolve target paths via shared resolver, generate actions for target notes |
 | `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts` | Morphology propagation: Lexem localized `used in` backlinks for derivation/compounding + verb-prefix equation propagation on decorated prefix Morphem entries (with non-dict fallback append path) |
 | `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts` | Morpheme propagation: bound-morpheme localized `used in` aggregation on Morphem entries (Suffix/Interfix/etc + non-verb Prefix), with Root/Suffixoid fallback when morphology payload is incomplete |
@@ -1270,7 +1269,7 @@ To add support for a new target language (e.g., Japanese):
 - Dropped `DictSectionKind.Definition` and `PromptKind.Semantics` entirely
 - V11: Header prompt eliminated — `emojiDescription` and `ipa` moved to Lemma prompt output
 - Disambiguate prompt uses emoji-based senses (emojiDescription + unitKind + pos + genus)
-- `meta.emojiDescription: string[]` replaces `meta.semantics: string`
+- `meta.entity.emojiDescription: string[]` replaces `meta.semantics: string`
 - `LemmaResult.precomputedEmojiDescription` replaces `precomputedSemantics`
 - Entries without `emojiDescription` are treated as new-sense candidates
 
@@ -1285,7 +1284,7 @@ To add support for a new target language (e.g., Japanese):
 
 ## 15. LinguisticUnit DTO — Source of Truth Type System
 
-> **Status**: V9+ — implemented (German + Noun/Verb/Adjective full features; remaining POS/unit kinds are stubs). Canonical DTO is `DictEntry.meta.entity` (`Entity<L,U,S,P>` with `features.lexical` + `features.inflectional`), while `meta.linguisticUnit` remains as a compatibility mirror.
+> **Status**: V9+ — implemented (German + Noun/Verb/Adjective full features; remaining POS/unit kinds are stubs). Canonical DTO is `DictEntry.meta.entity` (`Entity<L,U,S,P>` with `features.lexical` + `features.inflectional`). `meta.linguisticUnit` is auxiliary typed surface metadata.
 
 ### 15.1 Problem
 
@@ -1461,7 +1460,7 @@ const newEntry: DictEntry = {
   headerContent,
   id: entryId,
   meta: {
-    emojiDescription: lemmaResult.precomputedEmojiDescription ?? lemmaResult.emojiDescription,
+    ...(entity ? { entity } : {}),
     ...(linguisticUnit ? { linguisticUnit } : {}),
   },
   sections,
