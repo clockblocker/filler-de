@@ -1,4 +1,4 @@
-import { Editor, MarkdownView, Notice, TFile } from 'obsidian';
+import { Editor, Notice, TFile } from 'obsidian';
 import TextEaterPlugin from '../main';
 
 export default async function getInfinitiveAndEmoji(
@@ -7,6 +7,7 @@ export default async function getInfinitiveAndEmoji(
 	file: TFile
 ) {
 	const word = file.basename;
+	const notice = new Notice('Generating…', 0);
 
 	try {
 		let response = await plugin.apiService.determineInfinitiveAndEmoji(word);
@@ -17,5 +18,7 @@ export default async function getInfinitiveAndEmoji(
 		}
 	} catch (error) {
 		new Notice(`Error: ${error.message}`);
+	} finally {
+		notice.hide();
 	}
 }
