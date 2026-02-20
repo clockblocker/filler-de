@@ -64,7 +64,7 @@ describe("lemma-link-routing", () => {
 		});
 
 		expect(fromLibrary.splitPath).toEqual(libraryPath);
-		expect(fromLibrary.linkTarget).toBe("Library/de/noun/Staub");
+		expect(fromLibrary.linkTarget).toBe("Staub");
 		expect(fromLibrary.shouldCreatePlaceholder).toBe(false);
 
 		const placeholder = computePrePromptTarget({
@@ -76,6 +76,24 @@ describe("lemma-link-routing", () => {
 		});
 		expect(placeholder.shouldCreatePlaceholder).toBe(true);
 		expect(placeholder.splitPath.pathParts[0]).toBe("Worter");
+	});
+
+	it("pre-prompt target: uses full-path for ambiguous Library basename", () => {
+		const sourcePath = makePath("Source", ["Books", "A"]);
+		const libraryPronoun = makePath("ich", ["Library", "de", "pronoun"]);
+		const libraryArticle = makePath("ich", ["Library", "de", "article"]);
+
+		const target = computePrePromptTarget({
+			lookupInLibrary: () => [libraryPronoun, libraryArticle],
+			resolveLinkpathDest: () => null,
+			sourcePath,
+			surface: "ich",
+			targetLanguage: "German",
+		});
+
+		expect(target.splitPath).toEqual(libraryPronoun);
+		expect(target.linkTarget).toBe("Library/de/pronoun/ich");
+		expect(target.shouldCreatePlaceholder).toBe(false);
 	});
 
 	it("final target resolution honors closed/open policy and precedence", () => {
@@ -108,11 +126,32 @@ describe("lemma-link-routing", () => {
 		expect(open.linkTarget).toBe("laufen");
 	});
 
-	it("formats link target as full path for Library and basename for Worter", () => {
+	it("formats link target as basename by default", () => {
 		const library = makePath("ich", ["Library", "de", "pronoun"]);
 		const worter = makePath("laufen", ["Worter", "de", "lexem", "lemma", "l", "lau", "laufe"]);
 
-		expect(formatLinkTarget(library)).toBe("Library/de/pronoun/ich");
+		expect(formatLinkTarget(library)).toBe("ich");
 		expect(formatLinkTarget(worter)).toBe("laufen");
+		expect(formatLinkTarget(library, { libraryTargetStyle: "full-path" })).toBe(
+			"Library/de/pronoun/ich",
+		);
+	});
+
+	it("falls back to full-path for Library target when basename is ambiguous", () => {
+		const libraryPronoun = makePath("ich", ["Library", "de", "pronoun"]);
+		const libraryArticle = makePath("ich", ["Library", "de", "article"]);
+
+		const target = computeFinalTarget({
+			findByBasename: () => [libraryPronoun, libraryArticle],
+			lemma: "ich",
+			linguisticUnit: "Lexem",
+			lookupInLibrary: () => [libraryPronoun],
+			posLikeKind: "Pronoun",
+			surfaceKind: "Lemma",
+			targetLanguage: "German",
+		});
+
+		expect(target.splitPath).toEqual(libraryPronoun);
+		expect(target.linkTarget).toBe("Library/de/pronoun/ich");
 	});
 });

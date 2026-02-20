@@ -131,6 +131,12 @@ export class Textfresser {
 
 	setLibrarianLookup(fn: PathLookupFn): void {
 		this.state.lookupInLibrary = fn;
+		this.state.isLibraryLookupAvailable = true;
+	}
+
+	clearLibrarianLookup(): void {
+		this.state.lookupInLibrary = () => [];
+		this.state.isLibraryLookupAvailable = false;
 	}
 
 	private scrollToTargetBlock(): void {

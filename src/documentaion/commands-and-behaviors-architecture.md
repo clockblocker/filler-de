@@ -107,7 +107,7 @@ Three possible outcomes: `Handled` (consumed), `Passthrough` (native behavior), 
 |----------|-------------|---------------------|------------|
 | **codex-checkbox** | `CheckboxClicked` | `librarian.isCodexInsideLibrary(splitPath)` | `librarian.handleCodexCheckboxClick(payload)` |
 | **checkbox-frontmatter** | `CheckboxInFrontmatterClicked` | Always applies | `librarian.handlePropertyCheckboxClick(payload)` |
-| **wikilink-completion** | `WikilinkCompleted` | Always applies | Three-step resolution: suffix alias → Obsidian resolve → corename tree lookup (uses `pickClosestLeaf` for disambiguation) |
+| **wikilink-completion** | `WikilinkCompleted` | Always applies | Three-step resolution: suffix alias → Obsidian resolve → corename tree lookup. On a single match, auto-resolves via `pickClosestLeaf`; on ambiguous matches, returns passthrough (no silent auto-pick). |
 
 ### 4.4 Textfresser Behavior
 

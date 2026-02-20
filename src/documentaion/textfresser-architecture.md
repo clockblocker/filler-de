@@ -662,10 +662,19 @@ checkAttestation → checkEligibility → checkLemmaResult
   → resolveExistingEntry (parse existing entries, use Lemma's disambiguationResult for re-encounter detection)
   → generateSections (async: LLM calls, or attestation append for re-encounters)
   → propagateGeneratedSections (core propagation + source-note separability decoration)
-  → serializeEntry (includes noteKind + emojiDescription in single metadata upsert) → moveToWorter → addWriteAction
+  → serializeEntry (includes noteKind + emojiDescription in single metadata upsert)
+  → moveToWorter
+  → maintainClosedSetSurfaceHub (lazy Worter surface-hub management for ambiguous closed-set surfaces; no-op when library lookup is unavailable)
+  → addWriteAction
 ```
 
-`moveToWorter` is now policy-based: closed-set Lexem POS routes to Library, all other entries route to Worter sharded folders. It skips rename when the active file is already at destination.
+`moveToWorter` is policy-based: closed-set Lexem POS routes to Library, all other entries route to Worter sharded folders. It skips rename when the active file is already at destination.
+
+Closed-set ambiguity support (manual links) is handled by `maintainClosedSetSurfaceHub`:
+
+- Canonical closed-set dict content stays in `Library`.
+- For ambiguous closed-set surfaces, Textfresser maintains a minimal hub note at `Worter/<lang>/closed-set-hub/<surface>.md`.
+- LLM-confirmed attestation links still point directly to the specific Library note.
 
 Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
 
@@ -809,7 +818,7 @@ resolveTargetPath(word, desiredSurfaceKind, vamLookup, librarianLookup):
     If existing is in lemma/ but desired is inflected → use as-is (lemma files can hold both)
 ```
 
-The `librarianLookup` callback is wired in `main.ts` after Librarian init via `Textfresser.setLibrarianLookup()`, converting `LeafMatch[]` → `SplitPathToMdFile[]`. Before Librarian init, defaults to `() => []`.
+The `librarianLookup` callback is wired in `main.ts` after Librarian init via `Textfresser.setLibrarianLookup()`, converting `LeafMatch[]` → `SplitPathToMdFile[]`. Before Librarian init it defaults to `() => []` and `TextfresserState.isLibraryLookupAvailable = false`; hub-maintenance and hub-backfill flows are guarded in this degraded mode to avoid destructive rewrites.
 
 ```
 generateSections captures raw relation output (ParsedRelation[])
@@ -1049,7 +1058,7 @@ bun run codegen:prompts
   - `Lemma` delegates to `executeLemmaFlow(...)`
   - `Generate` / `TranslateSelection` delegate to `actionCommandFnForCommandKind`
 - `createHandler()` delegates to `createWikilinkClickHandler(...)`
-- `getState()` + `setLibrarianLookup(...)`
+- `getState()` + `setLibrarianLookup(...)` + `clearLibrarianLookup()`
 - private `scrollToTargetBlock()` UX helper
 
 State is owned by `TextfresserState` in `state/textfresser-state.ts`:
@@ -1062,6 +1071,7 @@ State is owned by `TextfresserState` in `state/textfresser-state.ts`:
 - `inFlightGenerate` / `pendingGenerate`
 - `targetBlockId`
 - `latestFailedSections`
+- `isLibraryLookupAvailable`
 
 ### 11.2 Unified Lemma Path
 
@@ -1143,8 +1153,8 @@ To add support for a new target language (e.g., Japanese):
 | File | Purpose |
 |------|---------|
 | **Textfresser Commander** | |
-| `src/commanders/textfresser/textfresser.ts` | Thin public orchestrator: constructor wiring, command delegation, handler delegation, `setLibrarianLookup()`, and `scrollToTargetBlock()` |
-| `src/commanders/textfresser/state/textfresser-state.ts` | TextfresserState + `InFlightGenerate` / `PendingGenerate` / `LemmaInvocationCache` + `createInitialTextfresserState()` |
+| `src/commanders/textfresser/textfresser.ts` | Thin public orchestrator: constructor wiring, command delegation, handler delegation, lookup wiring (`setLibrarianLookup()` / `clearLibrarianLookup()`), and `scrollToTargetBlock()` |
+| `src/commanders/textfresser/state/textfresser-state.ts` | TextfresserState + `InFlightGenerate` / `PendingGenerate` / `LemmaInvocationCache` + lookup-availability guard flag + `createInitialTextfresserState()` |
 | `src/commanders/textfresser/orchestration/lemma/execute-lemma-flow.ts` | Unified Lemma execution path (cache check, two-phase run, notifications, cache persistence, background trigger) |
 | `src/commanders/textfresser/orchestration/lemma/run-lemma-two-phase.ts` | Phase A/Phase B Lemma routing and source rewrite orchestration |
 | `src/commanders/textfresser/orchestration/lemma/lemma-output-guardrails.ts` | Lemma output guardrails: separable-verb/adjective checks, `contextWithLinkedParts` stripped-text validation, best-effort retry selection |
@@ -1171,7 +1181,10 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/propagate-core.ts` | Core propagation orchestration + fold-to-single-write contract per target note |
 | `src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter.ts` | Propagation IO adapter ports (`readManyMdFiles`, typed missing/error classification, write-action construction) |
 | `src/commanders/textfresser/commands/generate/steps/move-to-worter.ts` | Final destination policy step: closed-set Lexem POS → Library path, others → Worter sharded path, rename skipped when already at destination |
-| `src/commanders/textfresser/common/lemma-link-routing.ts` | Link-target policy helper: closed-set detection, pre-prompt target resolution, final target resolution, link-target formatting |
+| `src/commanders/textfresser/commands/generate/steps/maintain-closed-set-surface-hub.ts` | Closed-set hub maintenance step: lazily create/update/trash `Worter/<lang>/closed-set-hub/<surface>.md` for ambiguous closed-set surfaces; guarded by `isLibraryLookupAvailable` |
+| `src/commanders/textfresser/common/lemma-link-routing.ts` | Link-target policy helper: closed-set detection, pre-prompt target resolution, final target resolution, and basename-default rendering with Library ambiguity fallback to full-path |
+| `src/commanders/textfresser/common/closed-set-surface-hub.ts` | Closed-set surface hub policy helpers: target detection, hub content rendering, action planning, backfill action builder |
+| `src/commanders/textfresser/common/target-comparison.ts` | Domain comparison canonicalization (`trim + case-fold`) for target equality checks outside `wikilinkHelper` |
 | `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, shared morpheme path resolver for prefix Library fallback, `buildPropagationActionPair` helper |
 | `src/commanders/textfresser/common/sharded-path.ts` | Sharded path computation for Worter entries; exports `SURFACE_KIND_PATH_INDEX` for healing checks |
 | `src/commanders/textfresser/domain/propagation/note-adapter.ts` | Typed parse/serialize adapter for propagation sections with passthrough handling and sampled warning logs |
