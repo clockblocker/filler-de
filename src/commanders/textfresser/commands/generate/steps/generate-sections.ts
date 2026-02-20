@@ -1,13 +1,12 @@
 import { ResultAsync } from "neverthrow";
-import { getErrorMessage } from "../../../../../utils/get-error-message";
 import type { DictEntry } from "../../../domain/dict-note/types";
+import { toApiCommandError } from "../../../errors";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../targets/de/sections/section-kind";
 import type { CommandError } from "../../types";
-import { CommandErrorKind } from "../../types";
 import {
 	buildEntityMeta,
 	buildLinguisticUnitMeta,
@@ -164,10 +163,7 @@ export function generateSections(
 	if (ctx.matchedEntry) {
 		return ResultAsync.fromPromise(
 			buildReEncounterResult(ctx),
-			(error): CommandError => ({
-				kind: CommandErrorKind.ApiError,
-				reason: getErrorMessage(error),
-			}),
+			toApiCommandError,
 		);
 	}
 
@@ -263,9 +259,6 @@ export function generateSections(
 				targetBlockId: generated.entryId,
 			};
 		})(),
-		(error): CommandError => ({
-			kind: CommandErrorKind.ApiError,
-			reason: getErrorMessage(error),
-		}),
+		toApiCommandError,
 	);
 }
