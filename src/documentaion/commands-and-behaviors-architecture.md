@@ -1,6 +1,10 @@
 # Commands & Behaviors — Architecture
 
 > **Scope**: This document covers `command-executor/` and `behavior-manager/` — the layer between raw user events and the two commanders (Librarian, Textfresser). For the event detection layer, see `UserEventInterceptor`. For the file system layer, see `vam-architecture.md`.
+>
+> **Compatibility Policy (Dev Mode, 2026-02-20)**:
+> - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
+> - Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
 
 ---
 

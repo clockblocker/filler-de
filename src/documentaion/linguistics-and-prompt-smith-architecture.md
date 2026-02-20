@@ -1,6 +1,10 @@
 # Linguistics & Prompt-Smith — Architecture
 
 > **Scope**: This document covers the **linguistics type system** (`src/linguistics/`) and the **prompt management layer** (`src/prompt-smith/`). These two modules form the foundational layer that both the Lemma and Generate commands depend on. For the command pipeline itself, see `textfresser-architecture.md`. For FS dispatch, see `vam-architecture.md`.
+>
+> **Compatibility Policy (Dev Mode, 2026-02-20)**:
+> - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
+> - Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
 
 ---
 

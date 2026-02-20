@@ -39,8 +39,8 @@ function stripCliNoise(text: string): string {
 
 async function runEval(code: string): Promise<string> {
 	const proc = Bun.spawn([BIN, `vault=${VAULT}`, "eval", `code=${code}`], {
-		stdout: "pipe",
 		stderr: "pipe",
+		stdout: "pipe",
 	});
 
 	const timer = setTimeout(() => {
@@ -68,8 +68,8 @@ async function runEval(code: string): Promise<string> {
 
 async function runCli(args: string[]): Promise<string> {
 	const proc = Bun.spawn([BIN, `vault=${VAULT}`, ...args], {
-		stdout: "pipe",
 		stderr: "pipe",
+		stdout: "pipe",
 	});
 
 	const timer = setTimeout(() => {

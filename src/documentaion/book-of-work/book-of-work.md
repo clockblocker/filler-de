@@ -1,5 +1,10 @@
 # Book Of Work
 
+## Compatibility Policy (Dev Mode, 2026-02-20)
+
+- Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
+- Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
+
 ## Pre-Extension Stabilization Backlog (Audit 2026-02-19)
 
 Source: local health-check run before new Textfresser feature work.
@@ -161,3 +166,7 @@ Source: ideas extracted from open PRs #6, #7, #13, #15, #16, #17, #22 in clockbl
 #### 18) Unit test coverage expansion
 - Source: PR #6 ideas (#1)
 - Pure-logic modules first: codecs, vault-action-queue, section-healing. No Obsidian runtime deps needed.
+
+#### 19) Textfresser wikilink resolution (spec-driven)
+- Detailed design is maintained in `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/documentaion/specs/textfresser-wikilink-resolution-spec.md`.
+- Keep BOW at pointer level only; implementation decisions and edge-case policy live in the spec.

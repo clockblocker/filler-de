@@ -4,6 +4,11 @@ Status: Draft
 Owner: Textfresser
 Last updated: 2026-02-20
 
+## Compatibility Policy (Dev Mode, 2026-02-20)
+
+1. Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
+2. Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
+
 ## Why this spec exists
 
 Wikilink target resolution has grown across multiple helpers and call-sites. We need one explicit contract for how Textfresser resolves and rewrites link targets.

@@ -1,6 +1,10 @@
 # Librarian Tree & Healing System — Architecture
 
 > **Scope**: This document covers the tree/healing/codex half of the plugin (the "Librarian" commander). For the vocabulary/dictionary half, see `textfresser-architecture.md`. For E2E testing, see `e2e-architecture.md`.
+>
+> **Compatibility Policy (Dev Mode, 2026-02-20)**:
+> - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
+> - Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
 
 ---
 
