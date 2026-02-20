@@ -80,7 +80,6 @@ export type {
 } from "./split-path-inside-library";
 export type {
 	AnyCanonicalSplitPathInsideLibrary,
-	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibraryOf,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,

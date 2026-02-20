@@ -2,8 +2,8 @@ import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
 import type { SplitPathKind } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
+	AnyCanonicalSplitPathInsideLibrary,
 	AnySplitPathInsideLibrary,
-	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibraryOf,
 	Codecs,
 	SplitPathInsideLibraryOf,
@@ -44,14 +44,14 @@ export function tryCanonicalizeSplitPathToDestination(
 	policy: ChangePolicy,
 	intent: RenameIntent | undefined, // undefined = not rename
 	codecs: Codecs,
-): Result<CanonicalSplitPathInsideLibrary, string>;
+): Result<AnyCanonicalSplitPathInsideLibrary, string>;
 export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	sp: AnySplitPathInsideLibrary,
 	policy: ChangePolicy,
 	intent: RenameIntent | undefined, // undefined = not rename
 	codecs: Codecs,
 ): Result<
-	CanonicalSplitPathInsideLibraryOf<SK> | CanonicalSplitPathInsideLibrary,
+	CanonicalSplitPathInsideLibraryOf<SK> | AnyCanonicalSplitPathInsideLibrary,
 	string
 > {
 	const effectivePolicy =
@@ -121,7 +121,7 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 		return ok(
 			canonizedResult.value as unknown as
 				| CanonicalSplitPathInsideLibraryOf<SK>
-				| CanonicalSplitPathInsideLibrary,
+				| AnyCanonicalSplitPathInsideLibrary,
 		);
 	}
 
@@ -230,6 +230,6 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	return ok(
 		canonizedResult.value as unknown as
 			| CanonicalSplitPathInsideLibraryOf<SK>
-			| CanonicalSplitPathInsideLibrary,
+			| AnyCanonicalSplitPathInsideLibrary,
 	);
 }

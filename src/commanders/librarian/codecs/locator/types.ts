@@ -1,5 +1,5 @@
 import type {
-	CanonicalSplitPathInsideLibrary,
+	AnyCanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
@@ -23,7 +23,7 @@ export type {
 	SectionNodeLocator,
 	ScrollNodeLocator,
 	FileNodeLocator,
-	CanonicalSplitPathInsideLibrary,
+	AnyCanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,

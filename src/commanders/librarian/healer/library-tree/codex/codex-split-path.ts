@@ -1,8 +1,5 @@
 /**
  * Compute the canonical split path for a section's codex file.
- *
- * NOTE: This file is a thin wrapper around PathFinder.buildCodexSplitPath
- * for backward compatibility. New code should import from paths/path-finder directly.
  */
 
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
@@ -12,7 +9,7 @@ import { PREFIX_OF_CODEX } from "./literals";
 
 /**
  * Compute codex split path from section chain.
- * Throws on error for backward compatibility.
+ * Throws on error.
  *
  * @param sectionChain - Full chain including Library root, e.g. ["Library﹘Section﹘", "A﹘Section﹘"]
  * @param codecs - Codec API for parsing segment IDs

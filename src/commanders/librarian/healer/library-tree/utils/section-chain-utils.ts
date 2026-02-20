@@ -1,10 +1,10 @@
 /**
  * Section chain utilities for the library tree.
  *
- * NOTE: For new code, prefer importing from `src/commanders/librarian-new/paths/path-computer.ts`
- * which consolidates all path computation logic. This file is kept for backward compatibility.
+ * NOTE: For new code, prefer `src/commanders/librarian/paths/path-finder.ts`
+ * to keep section-chain/path logic centralized.
  *
- * @see PathFinder.parseSectionChainToNodeNames in `src/commanders/librarian-new/paths/path-computer.ts`
+ * @see PathFinder.parseSectionChainToNodeNames in `src/commanders/librarian/paths/path-finder.ts`
  */
 import { err, ok, type Result } from "neverthrow";
 import type { CodecError } from "../../../codecs/errors";

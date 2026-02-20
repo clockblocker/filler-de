@@ -3,8 +3,6 @@ export { makeSplitPathWithSeparatedSuffixCodecs } from "./make";
 export type {
 	AnyCanonicalSplitPathInsideLibrary,
 	CanonicalSeparatedSuffixedBasename,
-	// Legacy alias
-	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibraryOf,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
