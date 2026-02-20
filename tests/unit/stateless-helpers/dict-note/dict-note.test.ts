@@ -126,7 +126,7 @@ describe("dictNoteHelper.parse", () => {
 		expect(entries[0]?.meta).toEqual({});
 	});
 
-	test("strips legacy top-level metadata mirrors on parse", () => {
+	test("preserves top-level metadata fields on parse", () => {
 		const note = makeNoteWithMeta(KOHLEKRAFTWERK_ENTRY, {
 			entries: {
 				"l-nom-n-m1": {
@@ -141,7 +141,13 @@ describe("dictNoteHelper.parse", () => {
 
 		const entries = dictNoteHelper.parse(note);
 		expect(entries).toHaveLength(1);
-		expect(entries[0]?.meta).toEqual({ status: "Done" });
+		expect(entries[0]?.meta).toEqual({
+			emojiDescription: ["🏭", "⚡"],
+			ipa: "ˈkoːləˌkraftvɛɐ̯k",
+			semantics: "legacy semantics",
+			senseGloss: "legacy gloss",
+			status: "Done",
+		});
 	});
 
 	test("two sections with same kind but different titles preserved", () => {

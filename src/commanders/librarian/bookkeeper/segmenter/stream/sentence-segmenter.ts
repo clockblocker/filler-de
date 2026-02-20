@@ -105,7 +105,7 @@ function countZwsBefore(positions: number[], index: number): number {
 
 /**
  * Segments text preserving paragraph structure.
- * Returns sentences with paragraph boundary markers (legacy version).
+ * Returns sentences with paragraph boundary markers.
  */
 export function segmentWithParagraphs(
 	content: string,

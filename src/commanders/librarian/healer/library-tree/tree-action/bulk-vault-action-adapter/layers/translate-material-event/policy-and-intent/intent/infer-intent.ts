@@ -1,7 +1,6 @@
 import type { Codecs } from "../../../../../../../../codecs";
 import { TreeNodeKind } from "../../../../../../tree-node/types/atoms";
 import type { RenameTreeNodeNodeMaterializedEvent } from "../../../materialized-node-events/types";
-import { adaptCodecResult } from "../../error-adapters";
 import { RenameIntent } from "./types";
 
 /**
@@ -71,9 +70,9 @@ export function inferRenameIntent(
 	if (!basenameChanged) return RenameIntent.Move;
 
 	// basename changed: check if it's a "move-by-name" or just a rename
-	const sepRes = adaptCodecResult(
-		codecs.suffix.parseSeparatedSuffix(to.basename),
-	);
+	const sepRes = codecs.suffix
+		.parseSeparatedSuffix(to.basename)
+		.mapErr((error) => error.message);
 
 	// if invalid basename, treat as plain rename (will be rejected/healed later anyway)
 	if (sepRes.isErr()) return RenameIntent.Rename;

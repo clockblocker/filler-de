@@ -10,7 +10,6 @@ import type {
 	SplitPathInsideLibraryWithSeparatedSuffixOf,
 } from "../../../../../codecs";
 import type { NodeName } from "../../../../../types/schemas/node-name";
-import { adaptCodecResult } from "../../bulk-vault-action-adapter/layers/translate-material-event/error-adapters";
 import { RenameIntent } from "../../bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
 import { ChangePolicy } from "../../bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
 import {
@@ -60,11 +59,9 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	// --- PathKing: pathParts are source of truth, build canonical from them
 	if (effectivePolicy === ChangePolicy.PathKing) {
 		// Convert to split path with separated suffix (validates NodeNames)
-		const withSeparatedSuffixResult = adaptCodecResult(
-			codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
-				sp,
-			),
-		);
+		const withSeparatedSuffixResult = codecs.splitPathWithSeparatedSuffix
+			.splitPathInsideLibraryToWithSeparatedSuffix(sp)
+			.mapErr((error) => error.message);
 		if (withSeparatedSuffixResult.isErr()) {
 			return err(withSeparatedSuffixResult.error);
 		}
@@ -76,9 +73,9 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 		const { cleanBasename, marker } = extractDuplicateMarker(sp.basename);
 		if (marker) {
 			// Re-parse without duplicate marker to get clean coreName
-			const cleanSepRes = adaptCodecResult(
-				codecs.suffix.parseSeparatedSuffix(cleanBasename),
-			);
+			const cleanSepRes = codecs.suffix
+				.parseSeparatedSuffix(cleanBasename)
+				.mapErr((error) => error.message);
 			if (cleanSepRes.isErr()) return err(cleanSepRes.error);
 			// Re-attach marker to coreName
 			const coreNameWithMarker = (cleanSepRes.value.coreName +
@@ -128,11 +125,9 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	// --- NameKing: interpret basename as path intent, then OUTPUT PathKing-canonical split path
 
 	// Convert to split path with separated suffix (validates NodeNames)
-	const withSeparatedSuffixResult = adaptCodecResult(
-		codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
-			sp,
-		),
-	);
+	const withSeparatedSuffixResult = codecs.splitPathWithSeparatedSuffix
+		.splitPathInsideLibraryToWithSeparatedSuffix(sp)
+		.mapErr((error) => error.message);
 	if (withSeparatedSuffixResult.isErr()) {
 		return err(withSeparatedSuffixResult.error);
 	}
@@ -142,9 +137,9 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	// Handle duplicate markers (business logic)
 	const { cleanBasename, marker } = extractDuplicateMarker(sp.basename);
 	if (marker) {
-		const cleanSepRes = adaptCodecResult(
-			codecs.suffix.parseSeparatedSuffix(cleanBasename),
-		);
+		const cleanSepRes = codecs.suffix
+			.parseSeparatedSuffix(cleanBasename)
+			.mapErr((error) => error.message);
 		if (cleanSepRes.isErr()) return err(cleanSepRes.error);
 		const coreNameWithMarker = (cleanSepRes.value.coreName +
 			marker) as NodeName;

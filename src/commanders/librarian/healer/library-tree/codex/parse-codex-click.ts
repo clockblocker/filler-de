@@ -8,7 +8,6 @@ import { getParsedUserSettings } from "../../../../../global-state/global-state"
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { NodeSegmentIdSeparator } from "../../../codecs/segment-id/types/segment-id";
-import { adaptCodecResult } from "../tree-action/bulk-vault-action-adapter/layers/translate-material-event/error-adapters";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import { PREFIX_OF_CODEX } from "./literals";
 
@@ -70,9 +69,9 @@ export function parseCodexLinkTarget(
 	const codecs = makeCodecs(rules);
 
 	// Parse as suffixed basename
-	const parseResult = adaptCodecResult(
-		codecs.suffix.parseSeparatedSuffix(linkTarget),
-	);
+	const parseResult = codecs.suffix
+		.parseSeparatedSuffix(linkTarget)
+		.mapErr((error) => error.message);
 
 	if (parseResult.isErr()) {
 		return err(`Failed to parse link target: ${parseResult.error}`);

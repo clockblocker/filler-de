@@ -5,7 +5,6 @@ import {
 	parseFrontmatter,
 	stripOnlyFrontmatter,
 } from "../../../src/stateless-helpers/note-metadata/internal/frontmatter";
-import { migrateFrontmatter } from "../../../src/stateless-helpers/note-metadata/internal/migration";
 
 describe("frontmatter", () => {
 	describe("parseFrontmatter", () => {
@@ -193,82 +192,9 @@ title: Test
 			expect(result.tags).toEqual(["a", "b"]);
 		});
 
-		it("uses completion field as fallback", () => {
+		it("does not map non-canonical status keys", () => {
 			const result = frontmatterToInternal({ completion: "done" });
-			expect(result.status).toBe("Done");
-		});
-	});
-
-	describe("migrateFrontmatter", () => {
-		it("converts frontmatter to internal format", () => {
-			const content = `---
-title: Test
-status: done
----
-Content here`;
-			const transform = migrateFrontmatter();
-			const result = transform(content);
-
-			// Should not contain YAML frontmatter
-			expect(result).not.toContain("---");
-			// Should contain internal metadata section
-			expect(result).toContain('<section id="textfresser_meta_keep_me_invisible">');
-			// Should contain Done status
-			expect(result).toContain('"status":"Done"');
-			// Should contain title directly (not in "imported")
-			expect(result).toContain('"title":"Test"');
-			expect(result).not.toContain('"imported"');
-			// Should preserve content
-			expect(result).toContain("Content here");
-		});
-
-		it("returns original if no frontmatter", () => {
-			const content = "Just content";
-			const transform = migrateFrontmatter();
-			expect(transform(content)).toBe("Just content");
-		});
-
-		it("handles content with only frontmatter", () => {
-			const content = `---
-title: Only Meta
----
-`;
-			const transform = migrateFrontmatter();
-			const result = transform(content);
-
-			expect(result).not.toContain("---");
-			expect(result).toContain('<section id="textfresser_meta_keep_me_invisible">');
-		});
-
-		it("keeps YAML when stripYaml is false", () => {
-			const content = `---
-title: Test
-status: done
----
-Content here`;
-			const transform = migrateFrontmatter({ stripYaml: false });
-			const result = transform(content);
-
-			// Should keep YAML frontmatter
-			expect(result).toContain("---");
-			expect(result).toContain("title: Test");
-			// Should also have internal metadata section
-			expect(result).toContain('<section id="textfresser_meta_keep_me_invisible">');
-			expect(result).toContain('"status":"Done"');
-			// Should preserve content
-			expect(result).toContain("Content here");
-		});
-
-		it("strips YAML when stripYaml is true (explicit)", () => {
-			const content = `---
-title: Test
----
-Content`;
-			const transform = migrateFrontmatter({ stripYaml: true });
-			const result = transform(content);
-
-			expect(result).not.toContain("---");
-			expect(result).toContain('<section id="textfresser_meta_keep_me_invisible">');
+			expect(result.status).toBe("NotStarted");
 		});
 	});
 

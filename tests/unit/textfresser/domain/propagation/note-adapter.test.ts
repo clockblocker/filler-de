@@ -472,7 +472,7 @@ describe("propagation note adapter", () => {
 		expect(serialized.body.includes(RAW_TRANSLATION_BLOCK)).toBe(true);
 	});
 
-	it("strips legacy top-level metadata mirrors on parse", () => {
+	it("preserves top-level metadata mirrors on parse", () => {
 		const noteWithLegacyMeta = [
 			"wort ^raw-1",
 			"",
@@ -497,6 +497,10 @@ describe("propagation note adapter", () => {
 		const parsed = parsePropagationNote(noteWithLegacyMeta);
 		expect(parsed).toHaveLength(1);
 		expect(parsed[0]?.meta).toEqual({
+			emojiDescription: ["🧪"],
+			ipa: "ipa",
+			semantics: "legacy semantics",
+			senseGloss: "legacy gloss",
 			verbEntryIdentity: "conjugation:Irregular",
 		});
 	});

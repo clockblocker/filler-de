@@ -12,7 +12,6 @@ import {
 	type MaterializedNodeEvent,
 	type TreeNodeLocatorForEvent,
 } from "../../../materialized-node-events/types";
-import { adaptCodecResult } from "../../error-adapters";
 import { inferPolicyAndIntent } from "../../policy-and-intent/infer-policy-and-intent";
 
 export function tryMakeDestinationLocatorFromEvent<
@@ -21,9 +20,9 @@ export function tryMakeDestinationLocatorFromEvent<
 	const cspRes = tryMakeCanonicalSplitPathToDestination(ev, codecs);
 	if (cspRes.isErr()) return err(cspRes.error);
 
-	const locatorRes = adaptCodecResult(
-		codecs.locator.canonicalSplitPathInsideLibraryToLocator(cspRes.value),
-	);
+	const locatorRes = codecs.locator
+		.canonicalSplitPathInsideLibraryToLocator(cspRes.value)
+		.mapErr((error) => error.message);
 	if (locatorRes.isErr()) return err(locatorRes.error);
 
 	// Cast is safe: locator type corresponds to event's split path kind
@@ -37,11 +36,9 @@ const tryMakeCanonicalSplitPathToDestination = <
 	codecs: Codecs,
 ): Result<CanonicalSplitPathToDestination<E>, string> => {
 	if (ev.kind === MaterializedEventKind.Delete) {
-		const withSeparatedSuffixResult = adaptCodecResult(
-			codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
-				ev.splitPath,
-			),
-		);
+		const withSeparatedSuffixResult = codecs.splitPathWithSeparatedSuffix
+			.splitPathInsideLibraryToWithSeparatedSuffix(ev.splitPath)
+			.mapErr((error) => error.message);
 		if (withSeparatedSuffixResult.isErr()) {
 			return err(withSeparatedSuffixResult.error) as Result<
 				CanonicalSplitPathToDestination<E>,
@@ -50,13 +47,11 @@ const tryMakeCanonicalSplitPathToDestination = <
 		}
 		const { splitPathToLibraryRoot } = getParsedUserSettings();
 		const libraryRootName = splitPathToLibraryRoot.basename;
-		const r = adaptCodecResult(
-			canonizeSplitPathWithSeparatedSuffix(
-				codecs.suffix,
-				libraryRootName,
-				withSeparatedSuffixResult.value,
-			),
-		);
+		const r = canonizeSplitPathWithSeparatedSuffix(
+			codecs.suffix,
+			libraryRootName,
+			withSeparatedSuffixResult.value,
+		).mapErr((error) => error.message);
 		return r as Result<CanonicalSplitPathToDestination<E>, string>;
 	}
 

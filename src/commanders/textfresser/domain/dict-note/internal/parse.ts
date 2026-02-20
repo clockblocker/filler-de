@@ -9,22 +9,6 @@ const AnyObjectSchema = z.record(z.unknown());
 const EntriesMetaSchema = z
 	.object({ entries: z.record(AnyObjectSchema).optional() })
 	.passthrough();
-const LEGACY_ENTRY_META_KEYS = new Set([
-	"emojiDescription",
-	"ipa",
-	"semantics",
-	"senseGloss",
-]);
-
-function stripLegacyEntryMeta(
-	meta: Record<string, unknown>,
-): Record<string, unknown> {
-	return Object.fromEntries(
-		Object.entries(meta).filter(
-			([key]) => !LEGACY_ENTRY_META_KEYS.has(key),
-		),
-	);
-}
 
 function parseSections(text: string): EntrySection[] {
 	const markers: { index: number; kind: string; title: string }[] = [];
@@ -78,7 +62,7 @@ function parseEntryChunk(
 	const headerEnd = chunk.indexOf(headerLine) + headerLine.length;
 	const sectionsText = chunk.slice(headerEnd);
 	const sections = parseSections(sectionsText);
-	const meta = stripLegacyEntryMeta(metaByEntryId[id] ?? {});
+	const meta = metaByEntryId[id] ?? {};
 
 	return { headerContent, id, meta, sections };
 }
