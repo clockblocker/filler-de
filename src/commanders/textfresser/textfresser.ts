@@ -9,7 +9,6 @@ import type { EventHandler } from "../../managers/obsidian/user-event-intercepto
 import type { VaultActionManager } from "../../managers/obsidian/vault-action-manager";
 import type { ApiService } from "../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../types";
-import { logger } from "../../utils/logger";
 import { actionCommandFnForCommandKind } from "./commands";
 import type { CommandInput, TextfresserCommandKind } from "./commands/types";
 import type { PathLookupFn } from "./common/target-path-resolver";
@@ -21,6 +20,7 @@ import {
 import { createWikilinkClickHandler } from "./orchestration/handlers/wikilink-click-handler";
 import { executeLemmaFlow } from "./orchestration/lemma/execute-lemma-flow";
 import { dispatchActions } from "./orchestration/shared/dispatch-actions";
+import { notifyAndLogError } from "./orchestration/shared/notify-error";
 import {
 	createInitialTextfresserState,
 	type TextfresserState,
@@ -104,15 +104,7 @@ export class Textfresser {
 					this.scrollToTargetBlock();
 				}
 			})
-			.mapErr((error) => {
-				const reason =
-					"reason" in error
-						? error.reason
-						: `Command failed: ${error.kind}`;
-				notify(`⚠ ${reason}`);
-				logger.warn(`[Textfresser.${commandName}] Failed:`, error);
-				return error;
-			});
+			.mapErr(notifyAndLogError(notify, `Textfresser.${commandName}`));
 	}
 
 	createHandler(): EventHandler<WikilinkClickPayload> {

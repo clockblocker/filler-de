@@ -1,12 +1,12 @@
 import { errAsync, ResultAsync } from "neverthrow";
 import type { CommandContext } from "../../../../managers/obsidian/command-executor";
 import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
-import { logger } from "../../../../utils/logger";
 import { resolveAttestation } from "../../commands/lemma/lemma-command";
 import type { CommandError, CommandInput } from "../../commands/types";
 import { buildPolicyDestinationPath } from "../../common/lemma-link-routing";
 import { CommandErrorKind } from "../../errors";
 import type { TextfresserState } from "../../state/textfresser-state";
+import { notifyAndLogError } from "../shared/notify-error";
 import {
 	buildLemmaInvocationKey,
 	getValidLemmaInvocationCache,
@@ -49,15 +49,7 @@ export function executeLemmaFlow(params: {
 				readContent: (splitPath) => vam.readContent(splitPath),
 				state,
 			}),
-		).mapErr((error) => {
-			const reason =
-				"reason" in error
-					? error.reason
-					: `Command failed: ${error.kind}`;
-			notify(`⚠ ${reason}`);
-			logger.warn("[Textfresser.Lemma] Failed:", error);
-			return error;
-		});
+		).mapErr(notifyAndLogError(notify, "Textfresser.Lemma"));
 	}
 
 	return new ResultAsync(
@@ -99,13 +91,5 @@ export function executeLemmaFlow(params: {
 			notify(`✓ ${lemma.lemma}${pos}`);
 			requestBackgroundGenerate(notify);
 		})
-		.mapErr((error) => {
-			const reason =
-				"reason" in error
-					? error.reason
-					: `Command failed: ${error.kind}`;
-			notify(`⚠ ${reason}`);
-			logger.warn("[Textfresser.Lemma] Failed:", error);
-			return error;
-		});
+		.mapErr(notifyAndLogError(notify, "Textfresser.Lemma"));
 }

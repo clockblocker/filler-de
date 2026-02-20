@@ -19,6 +19,7 @@ import { sleep } from "../../../../utils/sleep";
 import type { LemmaResult } from "../../commands/lemma/types";
 import type { CommandError, CommandInput } from "../../commands/types";
 import { buildPolicyDestinationPath } from "../../common/lemma-link-routing";
+import { extractErrorReason } from "../../errors";
 import type {
 	InFlightGenerate,
 	PendingGenerate,
@@ -169,10 +170,7 @@ export function createBackgroundGenerateCoordinator(params: {
 		if (generateResult.isErr()) {
 			const cleanupSummary = await cleanupIfEmpty();
 			const error = generateResult.error;
-			const reason =
-				"reason" in error
-					? error.reason
-					: `Command failed: ${error.kind}`;
+			const reason = extractErrorReason(error);
 			throw new Error(
 				`${reason} (cleanup=${cleanupSummary}, owned=${targetOwnedByInvocation}, existedBefore=${targetExistedBefore})`,
 			);
