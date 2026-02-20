@@ -58,7 +58,7 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V13 scope**: Phraseme-kind threading + linguisticUnit metadata restore — Lemma output now includes `phrasemeKind` for `linguisticUnit: "Phrasem"`. `generateSections` restores `meta.linguisticUnit` for `Lexem` and `Phrasem` entries. Disambiguate senses now forward optional `phrasemeKind` hints extracted from `meta.linguisticUnit`.
 
-> **V14 scope**: Minimal Lemma + Generate enrichment cutover — `PromptKind.Lemma` now returns only classifier fields (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`). Core metadata (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`) moved to Generate via enrichment prompts. Features prompt is now POS-specific (`FeaturesNoun` ... `FeaturesInteractionalUnit`), and legacy `PromptKind.Features` is removed. Proper-noun/separable span expansion relies on `contextWithLinkedParts`; legacy `fullSurface` is removed. Runtime parsing remains backward-compatible with legacy Lemma keys (`pos` / `phrasemeKind`) by normalizing them to `posLikeKind`. Noun enrichment metadata (`genus`, `nounClass`) is treated as best-effort at parse time; header formatting first falls back to noun-inflection genus, then degrades to common header when genus is still missing.
+> **V14 scope**: Minimal Lemma + Generate enrichment cutover — `PromptKind.Lemma` now returns only classifier fields (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`). Core metadata (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`) moved to Generate via enrichment prompts. Features prompt is now POS-specific (`FeaturesNoun` ... `FeaturesInteractionalUnit`), and legacy `PromptKind.Features` is removed. Proper-noun/separable span expansion relies on `contextWithLinkedParts`; legacy `fullSurface` is removed. Noun enrichment metadata (`genus`, `nounClass`) is treated as best-effort at parse time; header formatting first falls back to noun-inflection genus, then degrades to common header when genus is still missing.
 
 > **V15 scope**: Lemma safe-linking + deterministic target routing — Lemma now runs in two dispatch phases: pre-prompt safe link insertion (with optional Worter placeholder) and post-prompt final routing rewrite. Closed-set Lexem POS (`Pronoun`, `Article`, `Preposition`, `Conjunction`, `Particle`, `InteractionalUnit`) route to `Library/<lang>/<pos-kebab>/<lemma>.md`; all other entries route to Worter sharded paths. Post-prompt phase can rename placeholder to final target, delete placeholder only when empty and final exists, retarget temporary links (including multi-span expansion), and navigate from placeholder to final note when needed. Background Generate now uses the latest resolved target path as its primary source of truth.
 
@@ -311,7 +311,7 @@ D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
 - **Header line**: emoji sequence (from `emojiDescription`) + `[[Surface]]` + pronunciation link + ` ^blockId`
 - **DictEntryId format** (validated by `DictEntryIdSchema`): `^{LinguisticUnitKindTag}-{SurfaceKindTag}(-{PosTag}-{index})` — the PosTag+index suffix is Lexem-only. E.g., `^lx-lm-nom-1` (Lexem, Lemma surface, Noun, 1st meaning). Final format TBD.
 - **DictEntrySections**: marked with `<span class="entry_section_title entry_section_title_{kind}">Title</span>`
-- **Multiple DictEntries** (different meanings of the same Surface) separated by `\n\n\n---\n---\n\n\n` (parser also accepts older `\n\n---\n---\n\n` and legacy `\n---\n---\n---\n`)
+- **Multiple DictEntries** (different meanings of the same Surface) separated by `\n\n\n---\n---\n\n\n`
 
 ### 5.2 Parsed Representation
 
@@ -869,8 +869,7 @@ propagateInflections:
       3. buildPropagationActionPair(splitPath, transform) → [UpsertMdFile, ProcessMdFile]
          transform:
            a. merge tags into existing new-format entry (same header)
-           b. auto-collapse legacy per-cell stubs: "#<Case>/<Number> for: [[lemma]]"
-           c. ensure/update Tags section with normalized tag line
+           b. ensure/update Tags section with normalized tag line
   ↓
 Propagation VaultActions (including healing) added to ctx.actions
 ```
@@ -886,7 +885,6 @@ Propagation VaultActions (including healing) added to ctx.actions
 - **One entry per form/POS**: All case/number combos are represented as tags in one entry
 - **Genus source + fallback**: propagation prefers genus from `NounInflection` output, falls back to `NounEnrichment` when needed, and still degrades to `#Inflection/Noun for: [[lemma]]` if both are missing
 - **Same-note skip**: When form === lemma, cells are skipped entirely (the main entry already covers this note)
-- **Legacy migration in-place**: old per-cell stubs are collapsed into the new entry format when a target note is touched
 - Deterministic tag ordering: case order + number order, with dedup + localization normalization
 - Same UpsertMdFile + ProcessMdFile pattern as relation propagation
 - Skipped for re-encounters and non-noun POS
@@ -1176,7 +1174,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, resolve target paths via shared resolver, generate actions for target notes |
 | `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts` | Morphology propagation: Lexem localized `used in` backlinks for derivation/compounding + verb-prefix equation propagation on decorated prefix Morphem entries (with non-dict fallback append path) |
 | `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts` | Morpheme propagation: bound-morpheme localized `used in` aggregation on Morphem entries (Suffix/Interfix/etc + non-verb Prefix), with Root/Suffixoid fallback when morphology payload is incomplete |
-| `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create/update one inflection entry per form, merge tags, collapse legacy per-cell stubs |
+| `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create/update one inflection entry per form, merge tags |
 | `src/commanders/textfresser/commands/generate/steps/propagate-core.ts` | Core propagation orchestration + fold-to-single-write contract per target note |
 | `src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter.ts` | Propagation IO adapter ports (`readManyMdFiles`, typed missing/error classification, write-action construction) |
 | `src/commanders/textfresser/commands/generate/steps/move-to-worter.ts` | Final destination policy step: closed-set Lexem POS → Library path, others → Worter sharded path, rename skipped when already at destination |

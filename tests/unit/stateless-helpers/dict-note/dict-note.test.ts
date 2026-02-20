@@ -45,7 +45,7 @@ const WINDRAD_ENTRY = [
 	"wind turbine",
 ].join("\n");
 
-const MULTI_ENTRY_BODY = `${KOHLEKRAFTWERK_ENTRY}\n---\n---\n---\n${WINDRAD_ENTRY}`;
+const MULTI_ENTRY_BODY = `${KOHLEKRAFTWERK_ENTRY}\n\n\n---\n---\n\n\n${WINDRAD_ENTRY}`;
 
 function makeNoteWithMeta(body: string, meta: Record<string, unknown>): string {
 	const padding = "\n".repeat(20);
@@ -83,7 +83,7 @@ describe("dictNoteHelper.parse", () => {
 		expect(e.meta).toEqual({ status: "Done" });
 	});
 
-	test("parses multiple entries separated by ---\\n---\\n---", () => {
+	test("parses multiple entries separated by canonical separator", () => {
 		const note = makeNoteWithMeta(MULTI_ENTRY_BODY, {
 			entries: {
 				"l-nom-n-m1": { status: "Done" },

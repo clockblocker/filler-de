@@ -24,7 +24,7 @@ describe("DeLemmaResultSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("accepts legacy Lexem `pos` and normalizes to posLikeKind", () => {
+	it("rejects legacy Lexem `pos` alias", () => {
 		const result = DeLemmaResultSchema.safeParse({
 			lemma: "Haus",
 			linguisticUnit: "Lexem",
@@ -32,12 +32,10 @@ describe("DeLemmaResultSchema", () => {
 			surfaceKind: "Lemma",
 		});
 
-		expect(result.success).toBe(true);
-		if (!result.success) return;
-		expect(result.data.posLikeKind).toBe("Noun");
+		expect(result.success).toBe(false);
 	});
 
-	it("accepts legacy Phrasem `phrasemeKind` and normalizes to posLikeKind", () => {
+	it("rejects legacy Phrasem `phrasemeKind` alias", () => {
 		const result = DeLemmaResultSchema.safeParse({
 			lemma: "auf jeden Fall",
 			linguisticUnit: "Phrasem",
@@ -45,9 +43,7 @@ describe("DeLemmaResultSchema", () => {
 			surfaceKind: "Lemma",
 		});
 
-		expect(result.success).toBe(true);
-		if (!result.success) return;
-		expect(result.data.posLikeKind).toBe("DiscourseFormula");
+		expect(result.success).toBe(false);
 	});
 
 	it("rejects Morphem", () => {
@@ -55,30 +51,6 @@ describe("DeLemmaResultSchema", () => {
 			lemma: "auf-",
 			linguisticUnit: "Morphem",
 			posLikeKind: "Prefix",
-			surfaceKind: "Lemma",
-		});
-
-		expect(result.success).toBe(false);
-	});
-
-	it("rejects Lexem with conflicting posLikeKind and pos", () => {
-		const result = DeLemmaResultSchema.safeParse({
-			lemma: "run",
-			linguisticUnit: "Lexem",
-			pos: "Verb",
-			posLikeKind: "Noun",
-			surfaceKind: "Lemma",
-		});
-
-		expect(result.success).toBe(false);
-	});
-
-	it("rejects Phrasem with conflicting posLikeKind and phrasemeKind", () => {
-		const result = DeLemmaResultSchema.safeParse({
-			lemma: "auf jeden Fall",
-			linguisticUnit: "Phrasem",
-			phrasemeKind: "DiscourseFormula",
-			posLikeKind: "Idiom",
 			surfaceKind: "Lemma",
 		});
 

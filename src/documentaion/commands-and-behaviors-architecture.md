@@ -50,7 +50,7 @@ src/managers/obsidian/
 `CommandKind` is a Zod enum merging all Librarian and Textfresser command kind strings:
 
 ```
-Librarian:   GoToPrevPage, GoToNextPage, MakeText, SplitToPages, SplitInBlocks
+Librarian:   GoToPrevPage, GoToNextPage, SplitToPages, SplitInBlocks
 Textfresser: TranslateSelection, Generate, Lemma
 ```
 

@@ -159,7 +159,7 @@ function buildNoteContent(
 			: "";
 		return `${header}${translationSection}`;
 	});
-	const body = entryBlocks.join("\n\n---\n---\n\n");
+	const body = entryBlocks.join("\n\n\n---\n---\n\n\n");
 
 	const meta: Record<
 		string,

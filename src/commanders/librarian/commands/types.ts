@@ -20,7 +20,6 @@ const LIBRARIAN_COMMAND_KIND_STR = [
 	"GoToPrevPage",
 	"SplitInBlocks",
 	"SplitToPages",
-	"MakeText",
 ] as const;
 
 export const LibrarianCommandKindSchema = z.enum(LIBRARIAN_COMMAND_KIND_STR);

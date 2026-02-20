@@ -45,8 +45,6 @@ import {
 import {
 	buildCanonicalDelimiter,
 	buildFlexibleDelimiterPattern,
-	isSuffixDelimiterConfig,
-	migrateStringDelimiter,
 } from "./utils/delimiter";
 import { getErrorMessage } from "./utils/get-error-message";
 import { whenIdle as whenIdleTracker } from "./utils/idle-tracker";
@@ -311,16 +309,6 @@ export default class TextEaterPlugin extends Plugin {
 	private async loadSettings() {
 		const loadedData = await this.loadData();
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
-
-		// Migrate old string delimiter format to new config format
-		if (
-			loadedData?.suffixDelimiter &&
-			!isSuffixDelimiterConfig(loadedData.suffixDelimiter)
-		) {
-			this.settings.suffixDelimiter = migrateStringDelimiter(
-				loadedData.suffixDelimiter as string,
-			);
-		}
 
 		// Initialize global state with parsed settings
 		initializeState(this.settings);

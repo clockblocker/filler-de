@@ -50,7 +50,6 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 		switch (kind) {
 			case CommandKind.GoToPrevPage:
 			case CommandKind.GoToNextPage:
-			case CommandKind.MakeText:
 			case CommandKind.SplitToPages:
 			case CommandKind.SplitInBlocks: {
 				// Delegate to librarian - codex guard handled internally

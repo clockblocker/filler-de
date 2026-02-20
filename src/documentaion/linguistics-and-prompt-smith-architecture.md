@@ -649,7 +649,7 @@ type AgentOutput<K extends PromptKind> = z.infer<SchemasFor[K]["agentOutputSchem
 
 #### Runtime schema catalog (cutover)
 
-- `Lemma`: minimal classifier result (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`), with runtime alias compatibility for legacy keys (`pos` / `phrasemeKind`) normalized to `posLikeKind`.
+- `Lemma`: minimal classifier result (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`).
 - `LexemEnrichment`: lightweight non-noun lexical metadata (`word` + `pos` input; output `emojiDescription`, `ipa`, optional `senseGloss`).
 - `NounEnrichment`: noun-only metadata (`word` input; output `emojiDescription`, `ipa`, optional `senseGloss`, optional `genus` + `nounClass`).
 - `PhrasemEnrichment`: lightweight phrasem metadata (`word` + `kind` input; output `emojiDescription`, `ipa`, optional `senseGloss`).
@@ -665,10 +665,9 @@ Contracts in `src/linguistics/de/lemma/` are the runtime source for lemma classi
 
 - `DeLemmaResultSchema` narrows lemma classification to:
   - `linguisticUnit: "Lexem" | "Phrasem"` (Morphem excluded in this phase)
-  - `posLikeKind` with compatibility guaranteed by schema branch (`POS` for Lexem, `PhrasemeKind` for Phrasem)
+  - `posLikeKind` guaranteed by schema branch (`POS` for Lexem, `PhrasemeKind` for Phrasem)
   - required `surfaceKind`
   - optional `contextWithLinkedParts` for multi-span attestation replacement
-  - legacy compatibility input aliases: `pos` (Lexem) and `phrasemeKind` (Phrasem), normalized to canonical `posLikeKind`
   - normalized output always includes `contextWithLinkedParts` key (`string | undefined`) after schema transform
 - `generate-contracts.ts` defines core prompt contracts:
   - shared target (`DeLexicalTargetSchema`)

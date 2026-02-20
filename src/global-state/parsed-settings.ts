@@ -8,8 +8,6 @@ import type { Prettify } from "../types/helpers";
 import {
 	buildCanonicalDelimiter,
 	buildFlexibleDelimiterPattern,
-	isSuffixDelimiterConfig,
-	migrateStringDelimiter,
 } from "../utils/delimiter";
 
 export type ParsedUserSettings = Prettify<
@@ -29,12 +27,7 @@ export function parseSettings(settings: TextEaterSettings): ParsedUserSettings {
 		);
 	}
 
-	// Migrate old string format to new config format
-	const suffixDelimiterConfig = isSuffixDelimiterConfig(
-		settings.suffixDelimiter,
-	)
-		? settings.suffixDelimiter
-		: migrateStringDelimiter(settings.suffixDelimiter as unknown as string);
+	const suffixDelimiterConfig = settings.suffixDelimiter;
 
 	const { libraryRoot: _, suffixDelimiter: __, ...rest } = settings;
 

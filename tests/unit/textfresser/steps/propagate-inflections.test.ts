@@ -307,50 +307,6 @@ describe("propagateInflections", () => {
 		}
 	});
 
-	it("auto-collapses legacy per-cell entries into new format entry", () => {
-		const cells: NounInflectionCell[] = [
-			{
-				article: "die",
-				case: "Nominative",
-				form: "Kraftwerke",
-				number: "Plural",
-			},
-		];
-		const ctx = makeCtx(cells);
-		const transform = getProcessTransform(ctx, "Kraftwerke");
-		expect(transform).toBeDefined();
-		if (!transform) return;
-
-		const legacyEntries: DictEntry[] = [
-			{
-				headerContent: "#Nominativ/Plural for: [[Kraftwerk]]",
-				id: "LX-IN-NOUN-1",
-				meta: {},
-				sections: [],
-			},
-			{
-				headerContent: "#Akkusativ/Plural for: [[Kraftwerk]]",
-				id: "LX-IN-NOUN-2",
-				meta: {},
-				sections: [],
-			},
-		];
-		const { body } = dictNoteHelper.serialize(legacyEntries);
-		const output = transform(body);
-		const entries = dictNoteHelper.parse(output);
-
-		expect(entries).toHaveLength(1);
-		expect(entries[0]?.headerContent).toBe(
-			"#Inflection/Noun/Maskulin for: [[Kraftwerk]]",
-		);
-		const firstEntry = entries[0];
-		if (firstEntry) {
-			expect(getTagsContent(firstEntry)).toBe(
-				"#Nominativ/Plural #Akkusativ/Plural",
-			);
-		}
-	});
-
 	it("propagates with fallback header when noun genus is unresolved", () => {
 		const cells: NounInflectionCell[] = [
 			{
