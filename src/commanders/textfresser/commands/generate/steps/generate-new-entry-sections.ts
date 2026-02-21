@@ -13,7 +13,6 @@ import { getSectionsFor } from "../../../targets/de/sections/section-config";
 import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { LemmaResult } from "../../lemma/types";
 import { dispatchHeaderFormatter } from "../section-formatters/header-dispatch";
-import { buildClosedSetReferenceSection } from "./closed-set-reference-section";
 import { getFeaturesPromptKindForPos } from "./features-prompt-dispatch";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 import {
@@ -428,14 +427,6 @@ export async function generateNewEntrySections(
 				break;
 			}
 		}
-	}
-
-	const closedSetReferenceSection = buildClosedSetReferenceSection({
-		lemmaResult,
-		lookupInLibrary: ctx.textfresserState.lookupInLibrary,
-	});
-	if (closedSetReferenceSection) {
-		sections.push(closedSetReferenceSection);
 	}
 
 	const entryId = buildEntryId(ctx.nextIndex, lemmaResult);

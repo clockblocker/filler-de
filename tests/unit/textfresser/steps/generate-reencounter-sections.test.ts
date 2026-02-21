@@ -10,7 +10,7 @@ import type { TextfresserState } from "../../../../src/commanders/textfresser/st
 
 const PHRASEM_ENTRY_ID = "PH-LM-1";
 const NOUN_ENTRY_ID = "LX-LM-NOUN-1";
-const PRONOUN_ENTRY_ID = "LX-LM-PRONOUN-1";
+const PRONOUN_ENTRY_ID = "LX-LM-PRON-1";
 
 function section(kind: string, content: string): EntrySection {
 	return { content, kind, title: kind };
@@ -312,7 +312,7 @@ describe("generateSections re-encounter behavior", () => {
 		expect(promptCalls).toHaveLength(0);
 	});
 
-	it("adds closed-set reference section on lexem re-encounter when library target exists", async () => {
+	it("adds closed-set membership as a dedicated lightweight entry on re-encounter", async () => {
 		const promptCalls: string[] = [];
 		const matchedEntry: DictEntry = {
 			headerContent: "Entry",
@@ -320,9 +320,9 @@ describe("generateSections re-encounter behavior", () => {
 			meta: {},
 			sections: [
 				section("kontexte", "![[Other#^2|^]]"),
-					section("synonyme", "= [[wir]]"),
-					section("morpheme", "[[wir]]"),
-					section("morphologie", "Abgeleitet von: [[wir]]"),
+				section("synonyme", "= [[wir]]"),
+				section("morpheme", "[[wir]]"),
+				section("morphologie", "Abgeleitet von: [[wir]]"),
 				section("flexion", "Nom: [[wir]]"),
 				section("tags", "#pronoun/personal"),
 				section("translations", "we"),
@@ -339,12 +339,83 @@ describe("generateSections re-encounter behavior", () => {
 		const result = await generateSections(ctx);
 		expect(result.isOk()).toBe(true);
 		expect(promptCalls).toHaveLength(0);
+		if (result.isErr()) return;
+
 		const closedSetRefs = matchedEntry.sections.find(
-			(s) => s.kind === "closed_set_references",
+			(s) => s.kind === "closed_set_membership",
 		);
-		expect(closedSetRefs?.content).toContain(
-			"[[wir-personal-pronomen-de|wir (Pronoun)]]",
+		expect(closedSetRefs).toBeUndefined();
+
+		const membershipEntry = result.value.allEntries.find(
+			(entry) =>
+				entry.id !== PRONOUN_ENTRY_ID &&
+				entry.sections.some(
+					(section) => section.kind === "closed_set_membership",
+				),
 		);
+		expect(membershipEntry).toBeDefined();
+		expect(membershipEntry?.headerContent).toBe("wir (Pronoun)");
+		const membershipSection = membershipEntry?.sections.find(
+			(s) => s.kind === "closed_set_membership",
+		);
+		expect(membershipSection?.content).toContain(
+			"- [[wir-personal-pronomen-de|wir (Pronoun)]]",
+		);
+		expect(
+			membershipEntry?.sections.some(
+				(s) => s.kind === "tags" && s.content.includes("#kind/closed-set"),
+			),
+		).toBe(true);
+		expect(result.value.targetBlockId).toBe(PRONOUN_ENTRY_ID);
+	});
+
+	it("dedupes closed-set membership entry on repeated re-encounter", async () => {
+		const promptCalls: string[] = [];
+		const membershipEntry: DictEntry = {
+			headerContent: "wir (Pronoun)",
+			id: "LX-LM-PRON-2",
+			meta: {},
+			sections: [
+				section(
+					"closed_set_membership",
+					"- [[wir-personal-pronomen-de|wir (Pronoun)]]",
+				),
+				section("tags", "#kind/closed-set"),
+			],
+		};
+		const matchedEntry: DictEntry = {
+			headerContent: "Entry",
+			id: PRONOUN_ENTRY_ID,
+			meta: {},
+			sections: [
+				section("kontexte", "![[Other#^2|^]]"),
+				section("synonyme", "= [[wir]]"),
+				section("morpheme", "[[wir]]"),
+				section("morphologie", "Abgeleitet von: [[wir]]"),
+				section("flexion", "Nom: [[wir]]"),
+				section("tags", "#pronoun/personal"),
+				section("translations", "we"),
+			],
+		};
+		const ctx = makeClosedSetLexemCtx({
+			matchedEntry,
+			promptGenerate: (kind) => {
+				promptCalls.push(kind);
+				return okAsync("unused");
+			},
+		});
+		ctx.existingEntries = [matchedEntry, membershipEntry];
+
+		const result = await generateSections(ctx);
+		expect(result.isOk()).toBe(true);
+		expect(promptCalls).toHaveLength(0);
+		if (result.isErr()) return;
+
+		const membershipEntries = result.value.allEntries.filter((entry) =>
+			entry.sections.some((section) => section.kind === "closed_set_membership"),
+		);
+		expect(membershipEntries).toHaveLength(1);
+		expect(membershipEntries[0]?.id).toBe("LX-LM-PRON-2");
 	});
 });
 
@@ -411,5 +482,87 @@ describe("generateSections new-entry resilience", () => {
 		expect(onlyEntry?.sections[0]?.content).toBe("![[Src#^1|^]]");
 		expect(result.value.failedSections).toContain("Enrichment");
 		expect(result.value.failedSections).toContain("Translation");
+	});
+
+	it("creates a separate closed-set membership entry on closed-set first encounter", async () => {
+		const promptCalls: string[] = [];
+		const ctx = {
+			actions: [],
+			commandContext: {
+				activeFile: {
+					content: "",
+					splitPath: {
+						basename: "wir",
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Worter"],
+					},
+				},
+			},
+			existingEntries: [],
+			matchedEntry: null,
+			nextIndex: 1,
+			resultingActions: [],
+			textfresserState: {
+				inFlightGenerate: null,
+				languages: { known: "English", target: "German" },
+				latestFailedSections: [],
+				latestLemmaInvocationCache: null,
+				latestLemmaResult: {
+					attestation: {
+						source: {
+							ref: "![[Src#^9|^]]",
+							textRaw: "Wir lernen.",
+							textWithOnlyTargetMarked: "[Wir] lernen.",
+						},
+						target: { surface: "Wir" },
+					},
+					disambiguationResult: null,
+					lemma: "wir",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Pronoun",
+					surfaceKind: "Lemma",
+				},
+				lookupInLibrary: () => [
+					{
+						basename: "wir-personal-pronomen-de",
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Library", "de", "pronoun"],
+					},
+				],
+				promptRunner: {
+					generate: (kind: string) => {
+						promptCalls.push(kind);
+						return errAsync({ reason: `${kind} failed` });
+					},
+				},
+				vam: {},
+			} as unknown as TextfresserState,
+		} as unknown as ResolvedEntryState;
+
+		const result = await generateSections(ctx);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+
+		expect(promptCalls).toContain("LexemEnrichment");
+		expect(result.value.allEntries).toHaveLength(2);
+		expect(result.value.targetBlockId).toBe("LX-LM-PRON-1");
+
+		const membershipEntry = result.value.allEntries.find((entry) =>
+			entry.sections.some((section) => section.kind === "closed_set_membership"),
+		);
+		expect(membershipEntry).toBeDefined();
+		expect(membershipEntry?.id).toBe("LX-LM-PRON-2");
+		expect(membershipEntry?.headerContent).toBe("wir (Pronoun)");
+		expect(
+			membershipEntry?.sections.some(
+				(section) =>
+					section.kind === "closed_set_membership" &&
+					section.content.includes(
+						"- [[wir-personal-pronomen-de|wir (Pronoun)]]",
+					),
+			),
+		).toBe(true);
 	});
 });

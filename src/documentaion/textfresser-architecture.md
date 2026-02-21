@@ -693,7 +693,7 @@ Propagation-only stubs are explicitly excluded from re-encounter matching: if th
 **Path A (re-encounter)**: If `matchedEntry` exists, append attestation ref (deduped), then check expected V3 sections. If sections are complete, keep fast path (no LLM). If some V3 sections are missing, Generate calls only the missing section generators and merges only those missing sections into the existing entry.
 
 **Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Tags, Morphem, Morphology, Relation, Inflection, Translation, Attestation. Header is built from LemmaResult fields (no LLM call).
-For closed-set Lexem entries, Generate ensures a non-LLM `closed_set_references` section with a Library pointer when Librarian lookup returns a matching leaf (surface-host note keeps the cross-link).
+For closed-set Lexem entries, Generate ensures a non-LLM lightweight membership DictEntry under the same `Worter` surface-host note. That entry gets its own block ID and contains a `closed_set_membership` section with a Library pointer plus a closed-set tag.
 
 All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). Enrichment now has a fallback metadata path, and section prompts degrade gracefully (including Translation): failures are logged, recorded in `failedSections`, and entry creation continues. This prevents empty-note outcomes when upstream API calls fail. Results are assembled in correct section order after all promises settle. Applicable sections:
 

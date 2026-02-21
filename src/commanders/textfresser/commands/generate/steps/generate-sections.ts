@@ -16,7 +16,7 @@ import {
 	buildFeatureTagPath,
 	getFeaturesPromptKindForPos,
 } from "./features-prompt-dispatch";
-import { upsertClosedSetReferenceSection } from "./closed-set-reference-section";
+import { ensureClosedSetMembershipEntry } from "./closed-set-membership-entry";
 import { generateNewEntrySections } from "./generate-new-entry-sections";
 import type { GenerateSectionsResult } from "./generate-sections-result";
 import { computeMissingV3SectionKinds } from "./reencounter-sections";
@@ -56,6 +56,25 @@ function appendAttestation(entry: DictEntry, ctx: ResolvedEntryState): void {
 	}
 }
 
+function ensureClosedSetMembershipEntries(params: {
+	ctx: ResolvedEntryState;
+	existingEntries: DictEntry[];
+}): DictEntry[] {
+	const lemmaResult = params.ctx.textfresserState.latestLemmaResult;
+	if (lemmaResult.linguisticUnit !== "Lexem") {
+		return params.existingEntries;
+	}
+
+	const membershipResult = ensureClosedSetMembershipEntry({
+		existingEntries: params.existingEntries,
+		lemmaResult,
+		lookupInLibrary: params.ctx.textfresserState.lookupInLibrary,
+		targetLanguage: params.ctx.textfresserState.languages.target,
+	});
+
+	return membershipResult?.entries ?? params.existingEntries;
+}
+
 async function buildReEncounterResult(
 	ctx: ResolvedEntryState,
 ): Promise<GenerateSectionsResult> {
@@ -77,10 +96,9 @@ async function buildReEncounterResult(
 	}
 
 	appendAttestation(matchedEntry, ctx);
-	upsertClosedSetReferenceSection({
-		entry: matchedEntry,
-		lemmaResult: ctx.textfresserState.latestLemmaResult,
-		lookupInLibrary: ctx.textfresserState.lookupInLibrary,
+	const entriesWithMembership = ensureClosedSetMembershipEntries({
+		ctx,
+		existingEntries,
 	});
 	const missingSectionKinds = computeMissingV3SectionKinds({
 		entry: matchedEntry,
@@ -93,7 +111,7 @@ async function buildReEncounterResult(
 
 		return {
 			...ctx,
-			allEntries: existingEntries,
+			allEntries: entriesWithMembership,
 			failedSections: [],
 			inflectionCells: [],
 			morphemes: [],
@@ -124,7 +142,7 @@ async function buildReEncounterResult(
 	ctx.textfresserState.targetBlockId = matchedEntry.id;
 	return {
 		...ctx,
-		allEntries: existingEntries,
+		allEntries: entriesWithMembership,
 		failedSections: generated.failedSections,
 		inflectionCells: generated.inflectionCells,
 		morphemes: generated.morphemes,
@@ -199,11 +217,11 @@ export function generateSections(
 
 				if (matchedByVerbIdentity) {
 					appendAttestation(matchedByVerbIdentity, ctx);
-					upsertClosedSetReferenceSection({
-						entry: matchedByVerbIdentity,
-						lemmaResult,
-						lookupInLibrary: ctx.textfresserState.lookupInLibrary,
-					});
+					const entriesWithMembership =
+						ensureClosedSetMembershipEntries({
+							ctx,
+							existingEntries: ctx.existingEntries,
+						});
 					matchedByVerbIdentity.meta.verbEntryIdentity =
 						verbEntryIdentity;
 					ctx.textfresserState.latestFailedSections =
@@ -213,7 +231,7 @@ export function generateSections(
 
 					return {
 						...ctx,
-						allEntries: ctx.existingEntries,
+						allEntries: entriesWithMembership,
 						failedSections: generated.failedSections,
 						inflectionCells: [],
 						morphemes: [],
@@ -252,10 +270,15 @@ export function generateSections(
 			ctx.textfresserState.latestFailedSections =
 				generated.failedSections;
 			ctx.textfresserState.targetBlockId = generated.entryId;
+			const entriesWithNewEntry = [...ctx.existingEntries, newEntry];
+			const allEntries = ensureClosedSetMembershipEntries({
+				ctx,
+				existingEntries: entriesWithNewEntry,
+			});
 
 			return {
 				...ctx,
-				allEntries: [...ctx.existingEntries, newEntry],
+				allEntries,
 				failedSections: generated.failedSections,
 				inflectionCells: generated.inflectionCells,
 				morphemes: generated.morphemes,

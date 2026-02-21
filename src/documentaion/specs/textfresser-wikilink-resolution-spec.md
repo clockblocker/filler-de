@@ -454,7 +454,7 @@ Add a maintenance command:
      - `maintainClosedSetSurfaceHub` removed from `generate-command` pipeline.
    - Dedicated backfill command removed:
      - `rebuild-closed-set-surface-hubs` removed from `src/main.ts`.
-   - Generate ensures a `closed_set_references` section for closed-set Lexem entries when Library lookup resolves a target.
+   - Generate ensures a dedicated lightweight closed-set membership DictEntry (with `closed_set_membership` section + closed-set tag) when Library lookup resolves a target.
 2. Legacy code still present but no longer active in the primary pipeline:
    - `src/commanders/textfresser/common/closed-set-surface-hub.ts`
    - `src/commanders/textfresser/commands/generate/steps/maintain-closed-set-surface-hub.ts`
