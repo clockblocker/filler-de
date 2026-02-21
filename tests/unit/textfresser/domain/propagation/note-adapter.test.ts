@@ -504,7 +504,9 @@ describe("propagation note adapter", () => {
 	});
 
 	it("normalizes relation targetLemma from explicit Worter/Library path wikilinks", () => {
-		const parsed = parsePropagationNote(PATH_RELATION_NOTE_FIXTURE);
+		const parsed = parsePropagationNote(PATH_RELATION_NOTE_FIXTURE, {
+			parseLibraryBasename: parseLibraryBasenameForTest,
+		});
 		const entry = parsed[0];
 		if (!entry) {
 			throw new Error("Expected relation path fixture entry");
@@ -563,7 +565,9 @@ describe("propagation note adapter", () => {
 	});
 
 	it("normalizes morphology backlinks from explicit Worter/Library path wikilinks", () => {
-		const parsed = parsePropagationNote(PATH_MORPHOLOGY_BACKLINK_NOTE_FIXTURE);
+		const parsed = parsePropagationNote(PATH_MORPHOLOGY_BACKLINK_NOTE_FIXTURE, {
+			parseLibraryBasename: parseLibraryBasenameForTest,
+		});
 		const entry = parsed[0];
 		if (!entry) {
 			throw new Error("Expected morphology backlink fixture entry");

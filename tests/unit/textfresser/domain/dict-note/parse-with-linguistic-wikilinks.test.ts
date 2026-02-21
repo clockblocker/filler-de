@@ -15,8 +15,19 @@ function section(kind: DictSectionKind, content: string) {
 	};
 }
 
-function parseLibraryBasename(basename: string) {
+function parseLibraryBasenameWithDash(basename: string) {
 	const parts = basename.split("-");
+	const coreName = parts[0];
+	if (!coreName) return null;
+	if (parts.length <= 1) return null;
+	return {
+		coreName,
+		suffixParts: parts.slice(1),
+	};
+}
+
+function parseLibraryBasenameWithUnderscore(basename: string) {
+	const parts = basename.split("_");
 	const coreName = parts[0];
 	if (!coreName) return null;
 	if (parts.length <= 1) return null;
@@ -69,7 +80,7 @@ describe("dictNoteHelper.parseWithLinguisticWikilinks", () => {
 						]
 					: [],
 			noteText: serialized,
-			parseLibraryBasename,
+			parseLibraryBasename: parseLibraryBasenameWithDash,
 		});
 		const [entry] = parsed;
 		expect(entry).toBeDefined();
@@ -169,6 +180,96 @@ describe("dictNoteHelper.parseWithLinguisticWikilinks", () => {
 		expect(link?.targetRef).toEqual({
 			kind: "Unresolved",
 			target: "#^local-anchor",
+		});
+	});
+
+	it("strips leading go-back links before linguistic wikilink classification", () => {
+		const entries: DictEntry[] = [
+			{
+				headerContent: "entry",
+				id: "LX-LM-VERB-1",
+				meta: {},
+				sections: [
+					section(
+						DictSectionKind.Relation,
+						"[[__-Parent|← Parent]]\n= [[arbeiten]]",
+					),
+				],
+			},
+		];
+		const noteText = dictNoteHelper.serialize(entries).body;
+		const [entry] = dictNoteHelper.parseWithLinguisticWikilinks({
+			noteText,
+		});
+		const wikilinks = entry?.linguisticWikilinks ?? [];
+
+		expect(wikilinks).toHaveLength(1);
+		expect(wikilinks[0]?.target).toBe("arbeiten");
+	});
+
+	it("uses separator-aware library basename parser without hardcoded '-' assumptions", () => {
+		const entries: DictEntry[] = [
+			{
+				headerContent: "wir",
+				id: "LX-LM-PRON-1",
+				meta: {},
+				sections: [
+					section(
+						DictSectionKind.Attestation,
+						"[[wir_personal_pronomen_de|Wir]] arbeiten.",
+					),
+				],
+			},
+		];
+		const serialized = dictNoteHelper.serialize(entries).body;
+		const parsed = dictNoteHelper.parseWithLinguisticWikilinks({
+			lookupInLibraryByCoreName: (coreName: string) =>
+				coreName === "wir"
+					? [
+							{
+								basename: "wir_personal_pronomen_de",
+								extension: "md",
+								kind: "MdFile",
+								pathParts: ["Library", "de", "pronomen", "personal"],
+							},
+						]
+					: [],
+			noteText: serialized,
+			parseLibraryBasename: parseLibraryBasenameWithUnderscore,
+		});
+		const [entry] = parsed;
+		const [wikilink] = entry?.linguisticWikilinks ?? [];
+		expect(wikilink?.targetRef).toEqual({
+			basename: "wir_personal_pronomen_de",
+			coreName: "wir",
+			kind: "LibraryLeaf",
+			suffixParts: ["personal", "pronomen", "de"],
+		});
+	});
+
+	it("keeps explicit Library path links unresolved when parser is unavailable", () => {
+		const entries: DictEntry[] = [
+			{
+				headerContent: "wir",
+				id: "LX-LM-PRON-1",
+				meta: {},
+				sections: [
+					section(
+						DictSectionKind.Attestation,
+						"[[Library/de/pronomen/personal/wir-personal-pronomen-de|Wir]]",
+					),
+				],
+			},
+		];
+		const noteText = dictNoteHelper.serialize(entries).body;
+		const [entry] = dictNoteHelper.parseWithLinguisticWikilinks({
+			noteText,
+		});
+		const [wikilink] = entry?.linguisticWikilinks ?? [];
+
+		expect(wikilink?.targetRef).toEqual({
+			kind: "Unresolved",
+			target: "Library/de/pronomen/personal/wir-personal-pronomen-de",
 		});
 	});
 });

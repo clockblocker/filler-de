@@ -6,7 +6,10 @@ import {
 	shouldPropagateLinksForSection,
 } from "../../../../src/commanders/textfresser/common/linguistic-wikilink-context";
 import { cssSuffixFor } from "../../../../src/commanders/textfresser/targets/de/sections/section-css-kind";
-import { DictSectionKind } from "../../../../src/commanders/textfresser/targets/de/sections/section-kind";
+import {
+	ALL_DICT_SECTION_KINDS,
+	DictSectionKind,
+} from "../../../../src/commanders/textfresser/targets/de/sections/section-kind";
 
 describe("linguistic-wikilink-context", () => {
 	it("classifies FreeForm as user-authored manual surface lookup", () => {
@@ -62,5 +65,28 @@ describe("linguistic-wikilink-context", () => {
 		expect(shouldPropagateLinksForSection(DictSectionKind.Translation)).toBe(
 			false,
 		);
+	});
+
+	it("covers policy mapping for all section kinds", () => {
+		for (const sectionKind of ALL_DICT_SECTION_KINDS) {
+			const policyByKind = resolveSectionLinkPolicyForKind(sectionKind);
+			const policyByCss = resolveSectionLinkPolicyForCssKind(
+				cssSuffixFor[sectionKind],
+			);
+			expect(policyByCss).toEqual(policyByKind);
+			expect(shouldPropagateLinksForSection(sectionKind)).toBe(
+				policyByKind.propagates,
+			);
+
+			const desiredSurfaceKind =
+				resolveDesiredSurfaceKindForPropagationSection(sectionKind);
+			if (policyByKind.targetKind === "Lemma") {
+				expect(desiredSurfaceKind).toBe("Lemma");
+			} else if (policyByKind.targetKind === "Inflected") {
+				expect(desiredSurfaceKind).toBe("Inflected");
+			} else {
+				expect(desiredSurfaceKind).toBeNull();
+			}
+		}
 	});
 });

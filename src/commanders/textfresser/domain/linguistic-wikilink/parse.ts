@@ -1,12 +1,10 @@
 import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { stringifySplitPath } from "../../../../stateless-helpers/split-path-comparison";
 import {
-	wikilinkHelper,
 	type ParsedWikilink,
+	wikilinkHelper,
 } from "../../../../stateless-helpers/wikilink";
-import {
-	resolveSectionLinkPolicyForCssKind,
-} from "../../common/linguistic-wikilink-context";
+import { resolveSectionLinkPolicyForCssKind } from "../../common/linguistic-wikilink-context";
 import type {
 	LibraryBasenameParser,
 	LibraryLookupByCoreName,
@@ -31,9 +29,9 @@ export function parseLinguisticWikilinks(
 		const { anchor, baseTarget } = splitAnchor(parsed.target);
 		const targetRef = resolveTargetRef({
 			baseTarget,
-			rawTarget: parsed.target,
 			lookupInLibraryByCoreName: params.lookupInLibraryByCoreName,
 			parseLibraryBasename: params.parseLibraryBasename,
+			rawTarget: parsed.target,
 			targetKind: policy.targetKind,
 		});
 
@@ -65,7 +63,7 @@ function resolveTargetRef(params: {
 			return buildLibraryLeafRef({
 				basename: explicitPath.basename,
 				parseLibraryBasename: params.parseLibraryBasename,
-				pathParts: explicitPath.pathParts,
+				rawTarget: params.rawTarget,
 			});
 		}
 
@@ -119,14 +117,20 @@ function resolveLibraryLeafByBasename(params: {
 	lookupInLibraryByCoreName?: LibraryLookupByCoreName;
 	parseLibraryBasename?: LibraryBasenameParser;
 }): LinguisticWikilinkDto["targetRef"] | null {
+	if (!params.parseLibraryBasename) {
+		return null;
+	}
+
 	const parsed = params.parseLibraryBasename?.(params.basename) ?? null;
+	if (!parsed || parsed.suffixParts.length === 0) {
+		return null;
+	}
 	const lookup = params.lookupInLibraryByCoreName;
 
 	let matchedSplitPath: SplitPathToMdFile | null = null;
-	let matchedCoreName: string | null = parsed?.coreName ?? null;
 
 	if (lookup) {
-		for (const coreCandidate of buildCoreNameCandidates(params.basename, parsed)) {
+		for (const coreCandidate of buildCoreNameCandidates(parsed.coreName)) {
 			const exactMatches = lookup(coreCandidate).filter(
 				(splitPath) => splitPath.basename === params.basename,
 			);
@@ -141,7 +145,6 @@ function resolveLibraryLeafByBasename(params: {
 				),
 			);
 			matchedSplitPath = sortedExactMatches[0] ?? null;
-			matchedCoreName = coreCandidate;
 			break;
 		}
 	}
@@ -149,42 +152,27 @@ function resolveLibraryLeafByBasename(params: {
 	if (matchedSplitPath) {
 		return buildLibraryLeafRef({
 			basename: matchedSplitPath.basename,
-			coreNameHint: matchedCoreName ?? undefined,
-			parsedBasename: parsed,
+			parsedBasename:
+				params.parseLibraryBasename?.(matchedSplitPath.basename) ??
+				null,
 			parseLibraryBasename: params.parseLibraryBasename,
-			pathParts: matchedSplitPath.pathParts,
+			rawTarget: params.basename,
 		});
 	}
 
-	if (parsed && parsed.suffixParts.length > 0) {
-		return {
-			basename: params.basename,
-			coreName: parsed.coreName,
-			kind: "LibraryLeaf",
-			suffixParts: parsed.suffixParts,
-		};
-	}
-
-	return null;
+	return buildLibraryLeafRef({
+		basename: params.basename,
+		parsedBasename: parsed,
+		parseLibraryBasename: params.parseLibraryBasename,
+		rawTarget: params.basename,
+	});
 }
 
-function buildCoreNameCandidates(
-	basename: string,
-	parsed: ParsedLibraryBasename | null,
-): string[] {
+function buildCoreNameCandidates(coreName: string): string[] {
 	const candidates = new Set<string>();
-	const trimmed = basename.trim();
+	const trimmed = coreName.trim();
 	if (trimmed.length > 0) {
 		candidates.add(trimmed);
-	}
-
-	if (parsed?.coreName) {
-		candidates.add(parsed.coreName.trim());
-	}
-
-	const hyphenIndex = trimmed.indexOf("-");
-	if (hyphenIndex > 0) {
-		candidates.add(trimmed.slice(0, hyphenIndex).trim());
 	}
 
 	const output: string[] = [];
@@ -207,53 +195,26 @@ function buildCoreNameCandidates(
 
 function buildLibraryLeafRef(params: {
 	basename: string;
-	pathParts: string[];
+	rawTarget: string;
 	parsedBasename?: ParsedLibraryBasename | null;
 	parseLibraryBasename?: LibraryBasenameParser;
-	coreNameHint?: string;
 }): LinguisticWikilinkDto["targetRef"] {
 	const parsed =
 		params.parsedBasename ??
 		params.parseLibraryBasename?.(params.basename) ??
 		null;
-	if (parsed && parsed.suffixParts.length > 0) {
+	if (!parsed || parsed.suffixParts.length === 0) {
 		return {
-			basename: params.basename,
-			coreName: parsed.coreName,
-			kind: "LibraryLeaf",
-			suffixParts: parsed.suffixParts,
+			kind: "Unresolved",
+			target: params.rawTarget,
 		};
 	}
-
-	const suffixPartsFromPath = params.pathParts.slice(1).reverse();
-	const coreName =
-		params.coreNameHint ??
-		inferCoreNameFromBasenameAndSuffix(params.basename, suffixPartsFromPath);
-
 	return {
 		basename: params.basename,
-		coreName,
+		coreName: parsed.coreName,
 		kind: "LibraryLeaf",
-		suffixParts: suffixPartsFromPath,
+		suffixParts: parsed.suffixParts,
 	};
-}
-
-function inferCoreNameFromBasenameAndSuffix(
-	basename: string,
-	suffixParts: string[],
-): string {
-	if (suffixParts.length === 0) {
-		return basename;
-	}
-
-	const suffix = suffixParts.join("-");
-	const suffixToken = `-${suffix}`;
-	if (!basename.endsWith(suffixToken)) {
-		return basename;
-	}
-
-	const withoutSuffix = basename.slice(0, -suffixToken.length).trim();
-	return withoutSuffix.length > 0 ? withoutSuffix : basename;
 }
 
 function splitAnchor(target: string): {
@@ -302,7 +263,10 @@ function parseExplicitPath(target: string): {
 
 function normalizeBasename(target: string): string {
 	const trimmed = target.trim();
-	const lastSlash = Math.max(trimmed.lastIndexOf("/"), trimmed.lastIndexOf("\\"));
+	const lastSlash = Math.max(
+		trimmed.lastIndexOf("/"),
+		trimmed.lastIndexOf("\\"),
+	);
 	const basename = lastSlash >= 0 ? trimmed.slice(lastSlash + 1) : trimmed;
 	return basename.toLowerCase().endsWith(".md")
 		? basename.slice(0, -3)

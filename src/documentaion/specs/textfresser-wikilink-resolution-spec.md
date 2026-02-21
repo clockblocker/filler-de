@@ -476,6 +476,17 @@ Add a maintenance command:
 3. Notes:
    - This status block is a snapshot of current branch/worktree state, not a release/merge guarantee.
 
+### Contract status map (implemented vs target)
+
+| Area | Implemented contract | Target/draft contract | Status |
+|------|----------------------|------------------------|--------|
+| Parse-time DTO emission | `dictNoteHelper.parseWithLinguisticWikilinks` emits section-context DTOs from parsed entry sections. | DTOs are the canonical in-memory representation for generated and parsed dict-entry wikilinks. | Implemented |
+| Go-back link boundary | Go-back links are stripped upstream in `parseWithLinguisticWikilinks` before calling `parseLinguisticWikilinks`. | Keep `parseLinguisticWikilinks` pure (classification only), with system-link cleanup outside it. | Implemented |
+| Library basename decomposition | `parseLibraryBasename` is the single source for `{ coreName, suffixParts }`; no separator/path guessing in linguistic parser. | Separator-aware decomposition is fully delegated to Librarian API. | Implemented |
+| Missing basename parser behavior | Without `parseLibraryBasename`, parser does not infer `LibraryLeaf`; explicit Library links stay unresolved/opaque in `targetRef`. | Conservative behavior: never guess Library decomposition when parser is unavailable. | Implemented |
+| Closed-set membership model | Closed-set pointers are represented as dedicated lightweight membership entries under shared `Worter` surface host notes. | No dedicated hub note type; mixed-role surface-host notes are valid. | Implemented |
+| Legacy migration/backfill command | Old hub rebuild command was removed and no replacement one-shot migrator command is committed. | Optional maintenance command to backfill/update membership entries vault-wide. | Open |
+
 ### Decision backlog (to resolve separately)
 
 1. Scope of first implementation slice:

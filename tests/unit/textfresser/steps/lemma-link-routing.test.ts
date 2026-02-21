@@ -270,6 +270,50 @@ describe("lemma-link-routing", () => {
 		expect(target.linkTarget).toBe("ich");
 	});
 
+	it("routes phrasem targets into phrasem Worter shards", () => {
+		const target = computeFinalTarget({
+			findByBasename: () => [],
+			lemma: "auf jeden Fall",
+			linguisticUnit: "Phrasem",
+			lookupInLibrary: () => [],
+			posLikeKind: null,
+			surfaceKind: "Lemma",
+			targetLanguage: "German",
+		});
+
+		expect(target.splitPath.pathParts[0]).toBe("Worter");
+		expect(target.splitPath.pathParts[1]).toBe("de");
+		expect(target.splitPath.pathParts[2]).toBe("phrasem");
+		expect(target.splitPath.pathParts[3]).toBe("lemma");
+		expect(target.splitPath.basename).toBe("auf jeden Fall");
+	});
+
+	it("routes inflected and variant surfaces into corresponding Worter buckets", () => {
+		const inflected = computeFinalTarget({
+			findByBasename: () => [],
+			lemma: "aß",
+			linguisticUnit: "Lexem",
+			lookupInLibrary: () => [],
+			posLikeKind: "Verb",
+			surfaceKind: "Inflected",
+			targetLanguage: "German",
+		});
+		expect(inflected.splitPath.pathParts[3]).toBe("inflected");
+		expect(inflected.splitPath.basename).toBe("aß");
+
+		const variant = computeFinalTarget({
+			findByBasename: () => [],
+			lemma: "ass",
+			linguisticUnit: "Lexem",
+			lookupInLibrary: () => [],
+			posLikeKind: "Verb",
+			surfaceKind: "Variant",
+			targetLanguage: "German",
+		});
+		expect(variant.splitPath.pathParts[3]).toBe("variant");
+		expect(variant.splitPath.basename).toBe("ass");
+	});
+
 	it("closed-set selection filters by POS suffix and picks deterministic lexical candidate", () => {
 		const pronounDemonstrative = makePath("die-demonstrativ-pronomen-de", [
 			"Library",
