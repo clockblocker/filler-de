@@ -1,5 +1,5 @@
 import {
-	parseLinguisticWikilinksInSection,
+	parseLinguisticWikilinks,
 	type LibraryBasenameParser,
 	type LibraryLookupByCoreName,
 } from "../linguistic-wikilink";
@@ -19,7 +19,7 @@ export function parseWithLinguisticWikilinks(
 
 	return parsedEntries.map((entry) => {
 		const linguisticWikilinks = entry.sections.flatMap((section) =>
-			parseLinguisticWikilinksInSection({
+			parseLinguisticWikilinks({
 				content: section.content,
 				lookupInLibraryByCoreName:
 					params.lookupInLibraryByCoreName,

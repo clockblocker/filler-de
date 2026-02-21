@@ -31,6 +31,7 @@ export function parseLinguisticWikilinks(
 		const { anchor, baseTarget } = splitAnchor(parsed.target);
 		const targetRef = resolveTargetRef({
 			baseTarget,
+			rawTarget: parsed.target,
 			lookupInLibraryByCoreName: params.lookupInLibraryByCoreName,
 			parseLibraryBasename: params.parseLibraryBasename,
 			targetKind: policy.targetKind,
@@ -53,6 +54,7 @@ export function parseLinguisticWikilinks(
 
 function resolveTargetRef(params: {
 	baseTarget: string;
+	rawTarget: string;
 	targetKind: LinguisticWikilinkDto["targetKind"];
 	lookupInLibraryByCoreName?: LibraryLookupByCoreName;
 	parseLibraryBasename?: LibraryBasenameParser;
@@ -71,7 +73,7 @@ function resolveTargetRef(params: {
 			if (params.targetKind === "None") {
 				return {
 					kind: "Unresolved",
-					target: params.baseTarget,
+					target: params.rawTarget,
 				};
 			}
 			return {
@@ -83,6 +85,12 @@ function resolveTargetRef(params: {
 	}
 
 	const normalizedBasename = normalizeBasename(params.baseTarget);
+	if (normalizedBasename.length === 0) {
+		return {
+			kind: "Unresolved",
+			target: params.rawTarget,
+		};
+	}
 	const resolvedLibraryLeaf = resolveLibraryLeafByBasename({
 		basename: normalizedBasename,
 		lookupInLibraryByCoreName: params.lookupInLibraryByCoreName,
@@ -95,7 +103,7 @@ function resolveTargetRef(params: {
 	if (params.targetKind === "None") {
 		return {
 			kind: "Unresolved",
-			target: params.baseTarget,
+			target: params.rawTarget,
 		};
 	}
 
@@ -142,6 +150,7 @@ function resolveLibraryLeafByBasename(params: {
 		return buildLibraryLeafRef({
 			basename: matchedSplitPath.basename,
 			coreNameHint: matchedCoreName ?? undefined,
+			parsedBasename: parsed,
 			parseLibraryBasename: params.parseLibraryBasename,
 			pathParts: matchedSplitPath.pathParts,
 		});
@@ -186,9 +195,6 @@ function buildCoreNameCandidates(
 		output.push(candidate);
 
 		const firstChar = candidate.charAt(0);
-		if (firstChar.length === 0) {
-			continue;
-		}
 		const decapitalized =
 			firstChar.toLocaleLowerCase("de-DE") + candidate.slice(1);
 		if (decapitalized !== candidate) {
@@ -202,10 +208,14 @@ function buildCoreNameCandidates(
 function buildLibraryLeafRef(params: {
 	basename: string;
 	pathParts: string[];
+	parsedBasename?: ParsedLibraryBasename | null;
 	parseLibraryBasename?: LibraryBasenameParser;
 	coreNameHint?: string;
 }): LinguisticWikilinkDto["targetRef"] {
-	const parsed = params.parseLibraryBasename?.(params.basename) ?? null;
+	const parsed =
+		params.parsedBasename ??
+		params.parseLibraryBasename?.(params.basename) ??
+		null;
 	if (parsed && parsed.suffixParts.length > 0) {
 		return {
 			basename: params.basename,
@@ -311,15 +321,6 @@ function dedupeStrings(values: string[]): string[] {
 		deduped.push(key);
 	}
 	return deduped;
-}
-
-export function parseLinguisticWikilinksInSection(params: {
-	content: string;
-	sectionCssKind: string;
-	lookupInLibraryByCoreName?: LibraryLookupByCoreName;
-	parseLibraryBasename?: LibraryBasenameParser;
-}): LinguisticWikilinkDto[] {
-	return parseLinguisticWikilinks(params);
 }
 
 export function parseSingleLinguisticWikilink(params: {

@@ -1,6 +1,5 @@
 export {
 	parseLinguisticWikilinks,
-	parseLinguisticWikilinksInSection,
 	parseSingleLinguisticWikilink,
 } from "./parse";
 export type {

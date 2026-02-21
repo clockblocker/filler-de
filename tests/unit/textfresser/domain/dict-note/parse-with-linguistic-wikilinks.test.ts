@@ -144,4 +144,31 @@ describe("dictNoteHelper.parseWithLinguisticWikilinks", () => {
 			kind: "WorterNote",
 		});
 	});
+
+	it("routes anchor-only wikilinks to unresolved target refs", () => {
+		const entries: DictEntry[] = [
+			{
+				headerContent: "entry",
+				id: "LX-LM-VERB-1",
+				meta: {},
+				sections: [
+					section(
+						DictSectionKind.Relation,
+						"= [[#^local-anchor]]",
+					),
+				],
+			},
+		];
+		const noteText = dictNoteHelper.serialize(entries).body;
+		const [entry] = dictNoteHelper.parseWithLinguisticWikilinks({
+			noteText,
+		});
+		const [link] = entry?.linguisticWikilinks ?? [];
+		expect(link?.target).toBe("#^local-anchor");
+		expect(link?.anchor).toBe("#^local-anchor");
+		expect(link?.targetRef).toEqual({
+			kind: "Unresolved",
+			target: "#^local-anchor",
+		});
+	});
 });
