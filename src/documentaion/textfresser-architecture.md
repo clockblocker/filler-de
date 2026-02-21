@@ -677,7 +677,7 @@ Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
 
 #### Re-Encounter Detection (V3)
 
-`resolveExistingEntry` parses the active file via `dictNoteHelper.parse()` and uses `lemmaResult.disambiguationResult` (set during Lemma's disambiguation step) to determine the path:
+`resolveExistingEntry` parses the active file via `dictNoteHelper.parseWithLinguisticWikilinks()` (wired with Librarian lookup + basename parser when available) and uses `lemmaResult.disambiguationResult` (set during Lemma's disambiguation step) to determine the path:
 
 - **`disambiguationResult.matchedIndex` set** → find entry by unitKind + POS + index (ignoring surfaceKind), set `matchedEntry`, take `isExistingEntry` path in `generateSections`
 - **`disambiguationResult` is null** → new sense; `nextIndex` computed via `dictEntryIdHelper.nextIndex()` for the new entry
@@ -803,7 +803,7 @@ The propagation facade (`propagateGeneratedSections`) runs after `generateSectio
 `propagateCore` folds all scoped propagation actions to one write per target note. The fold contract accepts `ProcessMdFile` in both payload shapes (`transform` and `before/after`) and accepts non-null `UpsertMdFile` content as deterministic transform input, preserving original action order per target path.
 
 Propagation note-adapter warning logs are sampled (`first-N + periodic`) for repeated cases (embedded/unparseable wikilinks) to keep logs actionable on large notes.
-Relation-section `targetLemma` extraction in the propagation note-adapter now reuses linguistic wikilink parsing policy, so explicit `Worter/...` or `Library/...` path tokens are collapsed to semantic lemma keys while preserving the original rendered wikilink token for roundtrip safety.
+Relation-section `targetLemma` extraction in the propagation note-adapter now reuses linguistic wikilink parsing policy. Explicit `Worter/...` path tokens are collapsed to semantic lemma keys, and explicit `Library/...` tokens are collapsed when `parseLibraryBasename` is provided; otherwise Library tokens stay conservative/unresolved while preserving original rendered wikilink tokens for roundtrip safety.
 Morphology equation parsing applies the same policy for basic wikilinks, collapsing known-root path targets to semantic lemma parts (`lhsParts`/`rhs`) to keep equation identity deterministic across legacy full-path and basename forms.
 Morphology backlink parsing also canonicalizes basic known-root wikilinks (`Worter/...` and `Library/...`) to compact targets while preserving alias text; anchor/exotic backlink tokens remain passthrough-preserved for roundtrip safety.
 `parsePropagationNote()` accepts optional linguistic-parse deps (`lookupInLibraryByCoreName`, `parseLibraryBasename`) so bare Library basenames (for example `[[wir-personal-pronomen-de]]`) can resolve semantically during propagation parse when Librarian utilities are available.
