@@ -482,6 +482,19 @@ export class Librarian {
 		return this.healer.getLeavesByCoreName(coreName);
 	}
 
+	parseLibraryBasename(
+		basename: string,
+	): { coreName: string; suffixParts: string[] } | null {
+		const parsed = this.codecs.suffix.parseSeparatedSuffix(basename);
+		if (parsed.isErr()) {
+			return null;
+		}
+		return {
+			coreName: parsed.value.coreName,
+			suffixParts: [...parsed.value.suffixParts],
+		};
+	}
+
 	/**
 	 * Handle checkbox click in a codex file.
 	 * Parses the line content to determine the target (scroll or section),

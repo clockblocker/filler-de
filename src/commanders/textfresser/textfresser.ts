@@ -13,6 +13,7 @@ import { logger } from "../../utils/logger";
 import { actionCommandFnForCommandKind } from "./commands";
 import type { CommandInput, TextfresserCommandKind } from "./commands/types";
 import type { PathLookupFn } from "./common/target-path-resolver";
+import type { LibraryBasenameParser } from "./domain/linguistic-wikilink";
 import { CommandErrorKind } from "./errors";
 import {
 	type BackgroundGenerateCoordinator,
@@ -129,13 +130,18 @@ export class Textfresser {
 		return this.state;
 	}
 
-	setLibrarianLookup(fn: PathLookupFn): void {
-		this.state.lookupInLibrary = fn;
+	setLibrarianResolvers(params: {
+		lookupInLibraryByCoreName: PathLookupFn;
+		parseLibraryBasename: LibraryBasenameParser;
+	}): void {
+		this.state.lookupInLibrary = params.lookupInLibraryByCoreName;
+		this.state.parseLibraryBasename = params.parseLibraryBasename;
 		this.state.isLibraryLookupAvailable = true;
 	}
 
 	clearLibrarianLookup(): void {
 		this.state.lookupInLibrary = () => [];
+		this.state.parseLibraryBasename = () => null;
 		this.state.isLibraryLookupAvailable = false;
 	}
 

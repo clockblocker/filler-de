@@ -65,6 +65,7 @@ export function resolveExistingEntry(
 	const parsedEntries = dictNoteHelper.parseWithLinguisticWikilinks({
 		lookupInLibraryByCoreName: ctx.textfresserState.lookupInLibrary,
 		noteText: content,
+		parseLibraryBasename: ctx.textfresserState.parseLibraryBasename,
 	});
 	let existingEntries: DictEntryWithLinguisticWikilinks[] = parsedEntries;
 

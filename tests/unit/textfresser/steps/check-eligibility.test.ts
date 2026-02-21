@@ -38,6 +38,8 @@ body`;
 		const content = `---
 noteKind: Page
 ---
+## Zusammenarbeit ^LX-LM-NOUN-1
+
 <span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>
 Verwendet in:
 [[Zusammenarbeit]]`;
@@ -57,5 +59,16 @@ regular note body`;
 				"noteKind: Page",
 			);
 		}
+	});
+
+	it("rejects legacy section-marker stub without entry block id", () => {
+		const content = `---
+noteKind: Page
+---
+<span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>
+Verwendet in:
+[[Zusammenarbeit]]`;
+		const result = checkEligibility(makeState(content));
+		expect(result.isErr()).toBe(true);
 	});
 });

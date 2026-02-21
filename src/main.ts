@@ -690,16 +690,19 @@ export default class TextEaterPlugin extends Plugin {
 			return;
 		}
 		const lib = this.librarian;
-		this.textfresser.setLibrarianLookup((name) =>
-			lib.findMatchingLeavesByCoreName(name).map(
-				(m): SplitPathToMdFile => ({
-					basename: m.basename,
-					extension: "md",
-					kind: "MdFile",
-					pathParts: m.pathParts,
-				}),
-			),
-		);
+		this.textfresser.setLibrarianResolvers({
+			lookupInLibraryByCoreName: (name) =>
+				lib.findMatchingLeavesByCoreName(name).map(
+					(m): SplitPathToMdFile => ({
+						basename: m.basename,
+						extension: "md",
+						kind: "MdFile",
+						pathParts: m.pathParts,
+					}),
+				),
+			parseLibraryBasename: (basename) =>
+				lib.parseLibraryBasename(basename),
+		});
 	}
 
 	private clearLibrarianLookup(): void {

@@ -5,6 +5,7 @@ import type { LanguagesConfig } from "../../../types";
 import type { LemmaResult } from "../commands/lemma/types";
 import type { Attestation } from "../common/attestation/types";
 import type { PathLookupFn } from "../common/target-path-resolver";
+import type { LibraryBasenameParser } from "../domain/linguistic-wikilink";
 import { PromptRunner } from "../llm/prompt-runner";
 
 export type InFlightGenerate = {
@@ -44,6 +45,7 @@ export type TextfresserState = {
 	languages: LanguagesConfig;
 	isLibraryLookupAvailable: boolean;
 	lookupInLibrary: PathLookupFn;
+	parseLibraryBasename: LibraryBasenameParser;
 	promptRunner: PromptRunner;
 	vam: VaultActionManager;
 };
@@ -65,6 +67,7 @@ export function createInitialTextfresserState(params: {
 		latestLemmaResult: null,
 		latestLemmaTargetOwnedByInvocation: false,
 		lookupInLibrary: () => [],
+		parseLibraryBasename: () => null,
 		pendingGenerate: null,
 		promptRunner: new PromptRunner(languages, apiService),
 		vam,

@@ -69,7 +69,10 @@ function makeHarness(options: HarnessOptions) {
 		{ known: "English", target: "German" },
 		{} as ApiService,
 	);
-	textfresser.setLibrarianLookup(options.lookupInLibrary ?? (() => []));
+	textfresser.setLibrarianResolvers({
+		lookupInLibraryByCoreName: options.lookupInLibrary ?? (() => []),
+		parseLibraryBasename: () => null,
+	});
 	textfresser.getState().promptRunner = {
 		generate: (kind) => {
 			if (kind === "Lemma") {
@@ -309,7 +312,7 @@ describe("lemma two-phase flow", () => {
 			basename: "geht",
 			extension: "md",
 			kind: "MdFile",
-			pathParts: ["Worter", "de", "lexem", "lemma", "g", "geh", "geht"],
+			pathParts: ["Worter", "de", "unknown", "g", "geh", "geht"],
 		};
 		const { cdCalls, textfresser } = makeHarness({
 			lemma: "gehen",

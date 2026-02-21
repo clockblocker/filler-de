@@ -673,7 +673,7 @@ checkAttestation → checkEligibility → checkLemmaResult
 
 Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
 
-`checkEligibility` accepts `noteKind: DictEntry` and missing `noteKind` as before, and now also allows Textfresser-structured propagation notes (section-marker stubs) even when a foreign `noteKind` is present. This lets direct Lemma lookups upgrade legacy/migrated stubs instead of failing early.
+`checkEligibility` accepts `noteKind: DictEntry` and missing `noteKind` as before, and also allows Textfresser-structured propagation notes even when a foreign `noteKind` is present. Structured-note detection now uses real parsers (`dictNoteHelper.parse()` and `parsePropagationNote()`) rather than marker-string heuristics, so entry-shaped propagation notes are eligible while marker-only stubs without an entry block id are rejected.
 
 #### Re-Encounter Detection (V3)
 
@@ -821,7 +821,7 @@ resolveTargetPath(word, desiredSurfaceKind, vamLookup, librarianLookup):
     If existing is in lemma/ but desired is inflected → use as-is (lemma files can hold both)
 ```
 
-The `librarianLookup` callback is wired in `main.ts` after Librarian init via `Textfresser.setLibrarianLookup()`, converting `LeafMatch[]` → `SplitPathToMdFile[]`. Before Librarian init it defaults to `() => []` and `TextfresserState.isLibraryLookupAvailable = false`; library-dependent routing paths degrade to Worter-only behavior until lookup is available.
+Librarian resolvers are wired in `main.ts` after Librarian init via `Textfresser.setLibrarianResolvers()`, providing both core-name lookup (`LeafMatch[]` → `SplitPathToMdFile[]`) and basename decomposition (`parseLibraryBasename`). Before Librarian init, state defaults are `lookupInLibrary = () => []`, `parseLibraryBasename = () => null`, and `TextfresserState.isLibraryLookupAvailable = false`; library-dependent routing paths degrade to Worter-only behavior until resolvers are available.
 
 ```
 generateSections captures raw relation output (ParsedRelation[])
@@ -1059,7 +1059,7 @@ bun run codegen:prompts
   - `Lemma` delegates to `executeLemmaFlow(...)`
   - `Generate` / `TranslateSelection` delegate to `actionCommandFnForCommandKind`
 - `createHandler()` delegates to `createWikilinkClickHandler(...)`
-- `getState()` + `setLibrarianLookup(...)` + `clearLibrarianLookup()`
+- `getState()` + `setLibrarianResolvers(...)` + `clearLibrarianLookup()`
 - private `scrollToTargetBlock()` UX helper
 
 State is owned by `TextfresserState` in `state/textfresser-state.ts`:
@@ -1154,7 +1154,7 @@ To add support for a new target language (e.g., Japanese):
 | File | Purpose |
 |------|---------|
 | **Textfresser Commander** | |
-| `src/commanders/textfresser/textfresser.ts` | Thin public orchestrator: constructor wiring, command delegation, handler delegation, lookup wiring (`setLibrarianLookup()` / `clearLibrarianLookup()`), and `scrollToTargetBlock()` |
+| `src/commanders/textfresser/textfresser.ts` | Thin public orchestrator: constructor wiring, command delegation, handler delegation, Librarian resolver wiring (`setLibrarianResolvers()` / `clearLibrarianLookup()`), and `scrollToTargetBlock()` |
 | `src/commanders/textfresser/state/textfresser-state.ts` | TextfresserState + `InFlightGenerate` / `PendingGenerate` / `LemmaInvocationCache` + lookup-availability guard flag + `createInitialTextfresserState()` |
 | `src/commanders/textfresser/orchestration/lemma/execute-lemma-flow.ts` | Unified Lemma execution path (cache check, two-phase run, notifications, cache persistence, background trigger) |
 | `src/commanders/textfresser/orchestration/lemma/run-lemma-two-phase.ts` | Phase A/Phase B Lemma routing and source rewrite orchestration |

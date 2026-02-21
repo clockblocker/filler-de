@@ -2,7 +2,7 @@ import { err, ok, type Result } from "neverthrow";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import { DICT_ENTRY_NOTE_KIND } from "../../../common/metadata";
 import { dictNoteHelper } from "../../../domain/dict-note";
-import { ENTRY_SECTION_CSS_CLASS } from "../../../domain/dict-note/internal/constants";
+import { parsePropagationNote } from "../../../domain/propagation";
 import {
 	type CommandError,
 	CommandErrorKind,
@@ -10,13 +10,17 @@ import {
 	EligibilitySchema,
 } from "../../types";
 
-function isTextfresserStructuredNote(content: string): boolean {
+function isTextfresserStructuredNote(ctx: CommandState): boolean {
+	const content = ctx.commandContext.activeFile.content;
 	if (dictNoteHelper.parse(content).length > 0) {
 		return true;
 	}
 
-	return content.includes(
-		`<span class="${ENTRY_SECTION_CSS_CLASS} ${ENTRY_SECTION_CSS_CLASS}_`,
+	return (
+		parsePropagationNote(content, {
+			lookupInLibraryByCoreName: ctx.textfresserState.lookupInLibrary,
+			parseLibraryBasename: ctx.textfresserState.parseLibraryBasename,
+		}).length > 0
 	);
 }
 
@@ -31,7 +35,7 @@ export function checkEligibility(
 	if (
 		noteKind === undefined ||
 		noteKind === DICT_ENTRY_NOTE_KIND ||
-		isTextfresserStructuredNote(content)
+		isTextfresserStructuredNote(ctx)
 	) {
 		return ok(ctx);
 	}
