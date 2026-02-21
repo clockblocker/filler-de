@@ -105,8 +105,6 @@ const RELATION_SYMBOL_ORDER = new Map<string, number>([
 ]);
 
 const BASIC_WIKILINK_RE = /^\[\[([^\]|#]+)(?:\|([^\]#]+))?\]\]$/;
-const ANY_WIKILINK_RE = /^\[\[([^\]|]+)(?:\|([^\]]+))?\]\]$/;
-const ANY_WIKILINK_GLOBAL_RE = /\[\[[^\]]+\]\]/g;
 const WARN_SAMPLE_FIRST_N = 3;
 const WARN_SAMPLE_EVERY_N = 50;
 const WARN_SAMPLE_MAX_KEYS = 2000;
@@ -213,22 +211,16 @@ function parseAnyWikilinkToken(raw: string): {
 	target: string;
 	displayText?: string;
 } | null {
-	const trimmed = raw.trim();
-	const match = trimmed.match(ANY_WIKILINK_RE);
-	if (!match) {
+	const exact = parseExactWikilinkToken(raw);
+	if (!exact) {
 		return null;
 	}
-	const target = match[1];
-	const displayText = match[2];
-	if (typeof target !== "string") {
-		return null;
-	}
-	const normalizedTarget = normalizeSpace(target);
+	const normalizedTarget = normalizeSpace(exact.target);
 	if (normalizedTarget.length === 0) {
 		return null;
 	}
-	if (typeof displayText === "string") {
-		const normalizedDisplay = normalizeSpace(displayText);
+	if (typeof exact.alias === "string") {
+		const normalizedDisplay = normalizeSpace(exact.alias);
 		return normalizedDisplay.length > 0
 			? {
 					displayText: normalizedDisplay,
@@ -424,16 +416,9 @@ export function serializeWikilinkDto(link: WikilinkDto): string {
 
 function extractWikilinkTokensFromText(text: string): string[] {
 	const tokens: string[] = [];
-	const regex = new RegExp(
-		ANY_WIKILINK_GLOBAL_RE.source,
-		ANY_WIKILINK_GLOBAL_RE.flags,
-	);
-	for (const match of text.matchAll(regex)) {
-		const index = match.index;
-		const fullMatch = match[0];
-		if (typeof index !== "number" || typeof fullMatch !== "string") {
-			continue;
-		}
+	for (const parsed of wikilinkHelper.parseWithRanges(text)) {
+		const index = parsed.start;
+		const fullMatch = parsed.fullMatch;
 		const previousChar = index > 0 ? text[index - 1] : "";
 		if (previousChar === "!") {
 			logSampledWarning({

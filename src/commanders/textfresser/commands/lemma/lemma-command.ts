@@ -1,5 +1,6 @@
 import { blockIdHelper } from "../../../../stateless-helpers/block-id";
 import { markdownHelper } from "../../../../stateless-helpers/markdown-strip";
+import { wikilinkHelper } from "../../../../stateless-helpers/wikilink";
 import { logger } from "../../../../utils/logger";
 import { buildAttestationFromSelection } from "../../common/attestation/builders/build-from-selection";
 import type { Attestation } from "../../common/attestation/types";
@@ -120,34 +121,11 @@ function iterWikilinks(text: string): Array<{
 	fullMatch: string;
 	surface: string;
 }> {
-	const regex = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g;
-	const matches: Array<{
-		index: number;
-		fullMatch: string;
-		surface: string;
-	}> = [];
-
-	for (const match of text.matchAll(regex)) {
-		const index = match.index;
-		const fullMatch = match[0];
-		const target = match[1];
-		const alias = match[2];
-		if (
-			index === undefined ||
-			typeof fullMatch !== "string" ||
-			typeof target !== "string"
-		) {
-			continue;
-		}
-
-		matches.push({
-			fullMatch,
-			index,
-			surface: alias ?? target,
-		});
-	}
-
-	return matches;
+	return wikilinkHelper.parseWithRanges(text).map((wikilink) => ({
+		fullMatch: wikilink.fullMatch,
+		index: wikilink.start,
+		surface: wikilink.surface,
+	}));
 }
 
 function replaceFirstWikilinkByDisplayedSurface(

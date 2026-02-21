@@ -7,13 +7,10 @@ export type {
 	PropagationSection,
 	PropagationTypedSection,
 	SerializePropagationNoteResult,
-	WikilinkDto,
 } from "./note-adapter";
 export {
-	parseBasicWikilinkDto,
 	parsePropagationNote,
 	serializePropagationNote,
-	serializeWikilinkDto,
 } from "./note-adapter";
 export type {
 	BuildTargetWriteActionsParams,

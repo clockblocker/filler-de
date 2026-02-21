@@ -63,7 +63,7 @@ export function isClosedSetPos(pos: DeLexemPos): boolean {
 	return CLOSED_SET_POS.has(pos);
 }
 
-export function buildOpenClassWorterPath(
+function buildOpenClassWorterPath(
 	lemma: string,
 	targetLanguage: TargetLanguage,
 	linguisticUnit: "Lexem" | "Phrasem",
