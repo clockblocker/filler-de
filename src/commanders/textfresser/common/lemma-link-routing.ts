@@ -6,10 +6,10 @@ import {
 	type SplitPathToMdFile,
 } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { TargetLanguage } from "../../../types";
-import { computeShardedFolderParts } from "./sharded-path";
+import { computeShardSegments, computeShardedFolderParts } from "./sharded-path";
 import type { PathLookupFn } from "./target-path-resolver";
 
-const CLOSED_SET_POS: ReadonlySet<DeLexemPos> = new Set([
+const CLOSED_SET_POS: ReadonlySet<DeLexemPos> = new Set<DeLexemPos>([
 	"Pronoun",
 	"Article",
 	"Preposition",
@@ -17,6 +17,7 @@ const CLOSED_SET_POS: ReadonlySet<DeLexemPos> = new Set([
 	"Particle",
 	"InteractionalUnit",
 ]);
+const UNKNOWN_WORKING_SEGMENT = "unknown";
 
 type LinkpathResolver = (
 	linkpath: string,
@@ -26,6 +27,7 @@ type LinkpathResolver = (
 export type ComputedLinkTarget = {
 	splitPath: SplitPathToMdFile;
 	linkTarget: string;
+	linkTargetSplitPath: SplitPathToMdFile;
 	shouldCreatePlaceholder: boolean;
 };
 
@@ -33,8 +35,9 @@ type PrePromptTargetParams = {
 	surface: string;
 	sourcePath: SplitPathToMdFile;
 	targetLanguage: TargetLanguage;
+	findByBasename: (basename: string) => SplitPathToMdFile[];
 	resolveLinkpathDest: LinkpathResolver;
-	lookupInLibrary: PathLookupFn;
+	lookupInLibrary?: PathLookupFn;
 };
 
 type FinalTargetParams = {
@@ -55,29 +58,8 @@ type PolicyDestinationParams = {
 	targetLanguage: TargetLanguage;
 };
 
-type FormatLinkTargetOpts = {
-	libraryTargetStyle?: "full-path" | "basename";
-};
-
 export function isClosedSetPos(pos: DeLexemPos): boolean {
 	return CLOSED_SET_POS.has(pos);
-}
-
-export function buildClosedSetLibraryPath(
-	lemma: string,
-	targetLanguage: TargetLanguage,
-	pos: DeLexemPos,
-): SplitPathToMdFile {
-	return {
-		basename: lemma,
-		extension: "md",
-		kind: SplitPathKind.MdFile,
-		pathParts: [
-			"Library",
-			LANGUAGE_ISO_CODE[targetLanguage],
-			toPosKebab(pos),
-		],
-	};
 }
 
 export function buildOpenClassWorterPath(
@@ -102,17 +84,7 @@ export function buildOpenClassWorterPath(
 export function buildPolicyDestinationPath(
 	params: PolicyDestinationParams,
 ): SplitPathToMdFile {
-	const { lemma, linguisticUnit, posLikeKind, surfaceKind, targetLanguage } =
-		params;
-
-	if (
-		linguisticUnit === "Lexem" &&
-		posLikeKind &&
-		isClosedSetPos(posLikeKind)
-	) {
-		return buildClosedSetLibraryPath(lemma, targetLanguage, posLikeKind);
-	}
-
+	const { lemma, linguisticUnit, surfaceKind, targetLanguage } = params;
 	return buildOpenClassWorterPath(
 		lemma,
 		targetLanguage,
@@ -123,95 +95,139 @@ export function buildPolicyDestinationPath(
 
 export function formatLinkTarget(
 	splitPath: SplitPathToMdFile,
-	opts?: FormatLinkTargetOpts,
 ): string {
-	const libraryTargetStyle = opts?.libraryTargetStyle ?? "basename";
-
-	if (isLibraryPath(splitPath) && libraryTargetStyle === "full-path") {
-		return [...splitPath.pathParts, splitPath.basename].join("/");
-	}
-
 	return splitPath.basename;
-}
-
-function splitPathKey(splitPath: SplitPathToMdFile): string {
-	return [...splitPath.pathParts, splitPath.basename].join("/");
-}
-
-function resolveLibraryRenderStyle(params: {
-	findByBasename: (basename: string) => SplitPathToMdFile[];
-	splitPath: SplitPathToMdFile;
-}): "full-path" | "basename" {
-	if (!isLibraryPath(params.splitPath)) {
-		return "basename";
-	}
-
-	const matches = params.findByBasename(params.splitPath.basename);
-	const uniqueMatchKeys = new Set(
-		matches.map((match) => splitPathKey(match)),
-	);
-	if (uniqueMatchKeys.size <= 1) {
-		return "basename";
-	}
-
-	return "full-path";
-}
-
-function formatResolvedTarget(params: {
-	findByBasename: (basename: string) => SplitPathToMdFile[];
-	splitPath: SplitPathToMdFile;
-}): string {
-	const libraryTargetStyle = resolveLibraryRenderStyle(params);
-	return formatLinkTarget(params.splitPath, { libraryTargetStyle });
 }
 
 export function computePrePromptTarget(
 	params: PrePromptTargetParams,
 ): ComputedLinkTarget {
-	const {
-		surface,
-		sourcePath,
-		targetLanguage,
-		resolveLinkpathDest,
-		lookupInLibrary,
-	} = params;
-
-	const fromResolver = resolveLinkpathDest(surface, sourcePath);
-	if (fromResolver) {
-		return {
-			linkTarget: formatResolvedTarget({
-				findByBasename: lookupInLibrary,
-				splitPath: fromResolver,
-			}),
-			shouldCreatePlaceholder: false,
-			splitPath: fromResolver,
-		};
+	const { findByBasename, resolveLinkpathDest, sourcePath, targetLanguage } =
+		params;
+	const surface = normalizeSurface(params.surface);
+	if (isSingleTokenSurface(surface)) {
+		const fromWorter = resolveReusableWorterHost({
+			findByBasename,
+			resolveLinkpathDest,
+			sourcePath,
+			surface,
+		});
+		if (fromWorter) {
+			return {
+				linkTarget: formatLinkTarget(fromWorter),
+				linkTargetSplitPath: fromWorter,
+				shouldCreatePlaceholder: false,
+				splitPath: fromWorter,
+			};
+		}
 	}
 
-	const libraryMatch = lookupInLibrary(surface)[0];
-	if (libraryMatch) {
-		return {
-			linkTarget: formatResolvedTarget({
-				findByBasename: lookupInLibrary,
-				splitPath: libraryMatch,
-			}),
-			shouldCreatePlaceholder: false,
-			splitPath: libraryMatch,
-		};
-	}
-
-	const placeholderPath = buildOpenClassWorterPath(
-		surface,
-		targetLanguage,
-		"Lexem",
-		"Lemma",
-	);
-
+	const unknownWorkingPath = buildUnknownWorkingPath(surface, targetLanguage);
 	return {
-		linkTarget: formatLinkTarget(placeholderPath),
+		linkTarget: formatLinkTarget(unknownWorkingPath),
+		linkTargetSplitPath: unknownWorkingPath,
 		shouldCreatePlaceholder: true,
-		splitPath: placeholderPath,
+		splitPath: unknownWorkingPath,
 	};
+}
+
+function resolveReusableWorterHost(params: {
+	surface: string;
+	sourcePath: SplitPathToMdFile;
+	findByBasename: (basename: string) => SplitPathToMdFile[];
+	resolveLinkpathDest: LinkpathResolver;
+}): SplitPathToMdFile | null {
+	for (const candidate of buildLookupCandidates(params.surface)) {
+		const byBasename = params
+			.findByBasename(candidate)
+			.find(
+				(splitPath) =>
+					isWorterPath(splitPath) && !isUnknownWorkingPath(splitPath),
+			);
+		if (byBasename) {
+			return byBasename;
+		}
+
+		const fromResolver = params.resolveLinkpathDest(
+			candidate,
+			params.sourcePath,
+		);
+		if (
+			fromResolver &&
+			isWorterPath(fromResolver) &&
+			!isUnknownWorkingPath(fromResolver)
+		) {
+			return fromResolver;
+		}
+	}
+
+	return null;
+}
+
+function buildUnknownWorkingPath(
+	surface: string,
+	targetLanguage: TargetLanguage,
+): SplitPathToMdFile {
+	const normalizedSurface = normalizeSurface(surface);
+	// Keep unknown working notes sharded to avoid hot-folder collisions during parallel runs.
+	const segments = computeShardSegments(normalizedSurface);
+	const first = segments[0] ?? "_";
+	const prefix = segments[1] ?? first;
+	const shard = segments[2] ?? prefix;
+	return {
+		basename: normalizedSurface,
+		extension: "md",
+		kind: SplitPathKind.MdFile,
+		pathParts: [
+			"Worter",
+			LANGUAGE_ISO_CODE[targetLanguage],
+			UNKNOWN_WORKING_SEGMENT,
+			first,
+			prefix,
+			shard,
+		],
+	};
+}
+
+function isSingleTokenSurface(surface: string): boolean {
+	const normalized = normalizeSurface(surface);
+	return normalized.length > 0 && !/\s/u.test(normalized);
+}
+
+function normalizeSurface(surface: string): string {
+	return surface.trim();
+}
+
+function buildLookupCandidates(word: string): string[] {
+	const candidates = [word];
+	const firstChar = word.charAt(0);
+	if (firstChar.length === 0) {
+		return candidates;
+	}
+	// TODO: Use active dictionary language locale instead of hardcoded German.
+	const decapitalized = firstChar.toLocaleLowerCase("de-DE") + word.slice(1);
+	if (decapitalized !== word) {
+		candidates.push(decapitalized);
+	}
+	return candidates;
+}
+
+export function isUnknownWorkingPath(splitPath: SplitPathToMdFile): boolean {
+	return (
+		splitPath.pathParts[0] === "Worter" &&
+		splitPath.pathParts[2] === UNKNOWN_WORKING_SEGMENT
+	);
+}
+
+function findReusableWorterMatch(
+	matches: ReadonlyArray<SplitPathToMdFile>,
+): SplitPathToMdFile | null {
+	return (
+		matches.find(
+			(splitPath) =>
+				isWorterPath(splitPath) && !isUnknownWorkingPath(splitPath),
+		) ?? null
+	);
 }
 
 export function computeFinalTarget(
@@ -233,42 +249,38 @@ export function computeFinalTarget(
 		isClosedSetPos(posLikeKind);
 
 	const existingMatches = findByBasename(lemma);
+	const reusableWorterMatch = findReusableWorterMatch(existingMatches);
 
-	if (isClosedSetLexem) {
-		const libraryMatch = existingMatches.find(isLibraryPath);
-		if (libraryMatch) {
-			return {
-				linkTarget: formatResolvedTarget({
-					findByBasename,
-					splitPath: libraryMatch,
-				}),
-				shouldCreatePlaceholder: false,
-				splitPath: libraryMatch,
-			};
-		}
+	if (isClosedSetLexem && posLikeKind !== null) {
+		const libraryMatch =
+			existingMatches.find(isLibraryPath) ??
+			lookupInLibrary(lemma)[0] ??
+			null;
+		const splitPath =
+			reusableWorterMatch ??
+			buildOpenClassWorterPath(
+				lemma,
+				targetLanguage,
+				linguisticUnit,
+				surfaceKind,
+			);
+		const linkTargetSplitPath = libraryMatch ?? splitPath;
 
-		const fromLibraryLookup = lookupInLibrary(lemma)[0];
-		if (fromLibraryLookup) {
-			return {
-				linkTarget: formatResolvedTarget({
-					findByBasename,
-					splitPath: fromLibraryLookup,
-				}),
-				shouldCreatePlaceholder: false,
-				splitPath: fromLibraryLookup,
-			};
-		}
+		return {
+			linkTarget: formatLinkTarget(linkTargetSplitPath),
+			linkTargetSplitPath,
+			shouldCreatePlaceholder: false,
+			splitPath,
+		};
 	}
 
-	if (!isClosedSetLexem) {
-		const worterMatch = existingMatches.find(isWorterPath);
-		if (worterMatch) {
-			return {
-				linkTarget: formatLinkTarget(worterMatch),
-				shouldCreatePlaceholder: false,
-				splitPath: worterMatch,
-			};
-		}
+	if (reusableWorterMatch) {
+		return {
+			linkTarget: formatLinkTarget(reusableWorterMatch),
+			linkTargetSplitPath: reusableWorterMatch,
+			shouldCreatePlaceholder: false,
+			splitPath: reusableWorterMatch,
+		};
 	}
 
 	const computed = buildPolicyDestinationPath({
@@ -280,10 +292,8 @@ export function computeFinalTarget(
 	});
 
 	return {
-		linkTarget: formatResolvedTarget({
-			findByBasename,
-			splitPath: computed,
-		}),
+		linkTarget: formatLinkTarget(computed),
+		linkTargetSplitPath: computed,
 		shouldCreatePlaceholder: false,
 		splitPath: computed,
 	};
@@ -295,8 +305,4 @@ function isLibraryPath(splitPath: SplitPathToMdFile): boolean {
 
 function isWorterPath(splitPath: SplitPathToMdFile): boolean {
 	return splitPath.pathParts[0] === "Worter";
-}
-
-function toPosKebab(pos: DeLexemPos): string {
-	return pos.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
 }

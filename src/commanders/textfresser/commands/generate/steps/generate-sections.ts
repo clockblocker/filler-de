@@ -16,6 +16,7 @@ import {
 	buildFeatureTagPath,
 	getFeaturesPromptKindForPos,
 } from "./features-prompt-dispatch";
+import { upsertClosedSetReferenceSection } from "./closed-set-reference-section";
 import { generateNewEntrySections } from "./generate-new-entry-sections";
 import type { GenerateSectionsResult } from "./generate-sections-result";
 import { computeMissingV3SectionKinds } from "./reencounter-sections";
@@ -76,6 +77,11 @@ async function buildReEncounterResult(
 	}
 
 	appendAttestation(matchedEntry, ctx);
+	upsertClosedSetReferenceSection({
+		entry: matchedEntry,
+		lemmaResult: ctx.textfresserState.latestLemmaResult,
+		lookupInLibrary: ctx.textfresserState.lookupInLibrary,
+	});
 	const missingSectionKinds = computeMissingV3SectionKinds({
 		entry: matchedEntry,
 		lemmaResult: ctx.textfresserState.latestLemmaResult,
@@ -193,6 +199,11 @@ export function generateSections(
 
 				if (matchedByVerbIdentity) {
 					appendAttestation(matchedByVerbIdentity, ctx);
+					upsertClosedSetReferenceSection({
+						entry: matchedByVerbIdentity,
+						lemmaResult,
+						lookupInLibrary: ctx.textfresserState.lookupInLibrary,
+					});
 					matchedByVerbIdentity.meta.verbEntryIdentity =
 						verbEntryIdentity;
 					ctx.textfresserState.latestFailedSections =

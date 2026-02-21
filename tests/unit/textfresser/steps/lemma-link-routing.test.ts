@@ -1,6 +1,5 @@
 import { describe, expect, it } from "bun:test";
 import {
-	buildClosedSetLibraryPath,
 	computeFinalTarget,
 	computePrePromptTarget,
 	formatLinkTarget,
@@ -29,18 +28,12 @@ describe("lemma-link-routing", () => {
 		expect(isClosedSetPos("Verb")).toBe(false);
 	});
 
-	it("builds closed-set Library path as <lemma>.md", () => {
-		const path = buildClosedSetLibraryPath("ich", "German", "Pronoun");
-		expect(path.basename).toBe("ich");
-		expect(path.pathParts).toEqual(["Library", "de", "pronoun"]);
-	});
-
 	it("pre-prompt target: resolver match wins over library lookup", () => {
 		const sourcePath = makePath("Source", ["Books", "A"]);
 		const resolverPath = makePath("gehen", ["Worter", "de", "lexem", "lemma", "g", "geh", "gehen"]);
 
 		const target = computePrePromptTarget({
-			lookupInLibrary: () => [makePath("gehen", ["Library", "de", "verb"])],
+			findByBasename: () => [],
 			resolveLinkpathDest: () => resolverPath,
 			sourcePath,
 			surface: "gehen",
@@ -52,23 +45,32 @@ describe("lemma-link-routing", () => {
 		expect(target.linkTarget).toBe("gehen");
 	});
 
-	it("pre-prompt target: falls back to library lookup, then to Worter placeholder", () => {
+	it("pre-prompt target: reuses existing Worter for single-token or creates unknown temp note", () => {
 		const sourcePath = makePath("Source", ["Books", "A"]);
-		const libraryPath = makePath("Staub", ["Library", "de", "noun"]);
-		const fromLibrary = computePrePromptTarget({
-			lookupInLibrary: () => [libraryPath],
+		const existingWorter = makePath("Staub", [
+			"Worter",
+			"de",
+			"lexem",
+			"lemma",
+			"s",
+			"sta",
+			"staub",
+		]);
+
+		const fromWorter = computePrePromptTarget({
+			findByBasename: () => [existingWorter],
 			resolveLinkpathDest: () => null,
 			sourcePath,
 			surface: "Staub",
 			targetLanguage: "German",
 		});
 
-		expect(fromLibrary.splitPath).toEqual(libraryPath);
-		expect(fromLibrary.linkTarget).toBe("Staub");
-		expect(fromLibrary.shouldCreatePlaceholder).toBe(false);
+		expect(fromWorter.splitPath).toEqual(existingWorter);
+		expect(fromWorter.linkTarget).toBe("Staub");
+		expect(fromWorter.shouldCreatePlaceholder).toBe(false);
 
 		const placeholder = computePrePromptTarget({
-			lookupInLibrary: () => [],
+			findByBasename: () => [],
 			resolveLinkpathDest: () => null,
 			sourcePath,
 			surface: "Staub",
@@ -76,41 +78,46 @@ describe("lemma-link-routing", () => {
 		});
 		expect(placeholder.shouldCreatePlaceholder).toBe(true);
 		expect(placeholder.splitPath.pathParts[0]).toBe("Worter");
+		expect(placeholder.splitPath.pathParts[2]).toBe("unknown");
 	});
 
-	it("pre-prompt target: uses full-path for ambiguous Library basename", () => {
+	it("pre-prompt target: multi-token selection always gets unknown temp note", () => {
 		const sourcePath = makePath("Source", ["Books", "A"]);
-		const libraryPronoun = makePath("ich", ["Library", "de", "pronoun"]);
-		const libraryArticle = makePath("ich", ["Library", "de", "article"]);
 
 		const target = computePrePromptTarget({
-			lookupInLibrary: () => [libraryPronoun, libraryArticle],
+			findByBasename: () => [
+				makePath("pass", ["Worter", "de", "lexem", "lemma", "p", "pas", "passa"]),
+			],
 			resolveLinkpathDest: () => null,
 			sourcePath,
-			surface: "ich",
+			surface: "Pass auf",
 			targetLanguage: "German",
 		});
 
-		expect(target.splitPath).toEqual(libraryPronoun);
-		expect(target.linkTarget).toBe("Library/de/pronoun/ich");
-		expect(target.shouldCreatePlaceholder).toBe(false);
+		expect(target.shouldCreatePlaceholder).toBe(true);
+		expect(target.splitPath.pathParts[2]).toBe("unknown");
 	});
 
 	it("final target resolution honors closed/open policy and precedence", () => {
-		const libraryPath = makePath("ich", ["Library", "de", "pronoun"]);
+		const libraryPath = makePath("ich-personal-pronomen-de", [
+			"Library",
+			"de",
+			"pronoun",
+		]);
 		const worterPath = makePath("ich", ["Worter", "de", "lexem", "lemma", "i", "ich", "ich"]);
 
 		const closed = computeFinalTarget({
-			findByBasename: () => [worterPath, libraryPath],
+			findByBasename: () => [worterPath],
 			lemma: "ich",
 			linguisticUnit: "Lexem",
-			lookupInLibrary: () => [],
+			lookupInLibrary: () => [libraryPath],
 			posLikeKind: "Pronoun",
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
 		});
-		expect(closed.splitPath).toEqual(libraryPath);
-		expect(closed.linkTarget).toBe("Library/de/pronoun/ich");
+		expect(closed.splitPath).toEqual(worterPath);
+		expect(closed.linkTarget).toBe("ich-personal-pronomen-de");
+		expect(closed.linkTargetSplitPath).toEqual(libraryPath);
 
 		const open = computeFinalTarget({
 			findByBasename: () => [],
@@ -132,12 +139,9 @@ describe("lemma-link-routing", () => {
 
 		expect(formatLinkTarget(library)).toBe("ich");
 		expect(formatLinkTarget(worter)).toBe("laufen");
-		expect(formatLinkTarget(library, { libraryTargetStyle: "full-path" })).toBe(
-			"Library/de/pronoun/ich",
-		);
 	});
 
-	it("falls back to full-path for Library target when basename is ambiguous", () => {
+	it("keeps basename-only rendering even with ambiguous library core lookups", () => {
 		const libraryPronoun = makePath("ich", ["Library", "de", "pronoun"]);
 		const libraryArticle = makePath("ich", ["Library", "de", "article"]);
 
@@ -151,7 +155,26 @@ describe("lemma-link-routing", () => {
 			targetLanguage: "German",
 		});
 
-		expect(target.splitPath).toEqual(libraryPronoun);
-		expect(target.linkTarget).toBe("Library/de/pronoun/ich");
+		expect(target.splitPath.pathParts[0]).toBe("Worter");
+		expect(target.splitPath.basename).toBe("ich");
+		expect(target.linkTarget).toBe("ich");
+		expect(target.linkTargetSplitPath).toEqual(libraryPronoun);
+	});
+
+	it("closed-set fallback keeps attestation target on Worter when no Library match exists", () => {
+		const worterPath = makePath("wir", ["Worter", "de", "lexem", "lemma", "w", "wir", "wir"]);
+		const target = computeFinalTarget({
+			findByBasename: () => [worterPath],
+			lemma: "wir",
+			linguisticUnit: "Lexem",
+			lookupInLibrary: () => [],
+			posLikeKind: "Pronoun",
+			surfaceKind: "Lemma",
+			targetLanguage: "German",
+		});
+
+		expect(target.splitPath).toEqual(worterPath);
+		expect(target.linkTarget).toBe("wir");
+		expect(target.linkTargetSplitPath).toEqual(worterPath);
 	});
 });

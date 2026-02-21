@@ -10,6 +10,7 @@ import type { TextfresserState } from "../../../../src/commanders/textfresser/st
 
 const PHRASEM_ENTRY_ID = "PH-LM-1";
 const NOUN_ENTRY_ID = "LX-LM-NOUN-1";
+const PRONOUN_ENTRY_ID = "LX-LM-PRONOUN-1";
 
 function section(kind: string, content: string): EntrySection {
 	return { content, kind, title: kind };
@@ -57,6 +58,63 @@ function makePhrasemCtx(params: {
 				surfaceKind: "Lemma",
 			},
 			lookupInLibrary: () => [],
+			promptRunner: {
+				generate: (kind: string) => params.promptGenerate(kind),
+			},
+			vam: {},
+		} as unknown as TextfresserState,
+	} as unknown as ResolvedEntryState;
+}
+
+function makeClosedSetLexemCtx(params: {
+	matchedEntry: DictEntry;
+	promptGenerate: (kind: string) => ResultAsync<unknown, unknown>;
+}): ResolvedEntryState {
+	return {
+		actions: [],
+		commandContext: {
+			activeFile: {
+				content: "",
+				splitPath: {
+					basename: "wir",
+					extension: "md",
+					kind: "MdFile",
+					pathParts: ["Worter", "de", "lexem", "lemma", "w", "wir", "wir"],
+				},
+			},
+		},
+		existingEntries: [params.matchedEntry],
+		matchedEntry: params.matchedEntry,
+		nextIndex: 2,
+		resultingActions: [],
+		textfresserState: {
+			inFlightGenerate: null,
+			languages: { known: "English", target: "German" },
+			latestFailedSections: [],
+			latestLemmaInvocationCache: null,
+			latestLemmaResult: {
+				attestation: {
+					source: {
+						ref: "![[Src#^7|^]]",
+						textRaw: "Wir arbeiten zusammen.",
+						textWithOnlyTargetMarked: "[Wir] arbeiten zusammen.",
+					},
+					target: { surface: "Wir" },
+				},
+				disambiguationResult: { matchedIndex: 1 },
+				lemma: "wir",
+				linguisticUnit: "Lexem",
+				posLikeKind: "Pronoun",
+				surfaceKind: "Lemma",
+			},
+			lookupInLibrary: () => [
+				{
+					basename: "wir-personal-pronomen-de",
+					extension: "md",
+					kind: "MdFile",
+					pathParts: ["Library", "de", "pronoun"],
+				},
+			],
 			promptRunner: {
 				generate: (kind: string) => params.promptGenerate(kind),
 			},
@@ -252,6 +310,41 @@ describe("generateSections re-encounter behavior", () => {
 		const result = await generateSections(ctx);
 		expect(result.isOk()).toBe(true);
 		expect(promptCalls).toHaveLength(0);
+	});
+
+	it("adds closed-set reference section on lexem re-encounter when library target exists", async () => {
+		const promptCalls: string[] = [];
+		const matchedEntry: DictEntry = {
+			headerContent: "Entry",
+			id: PRONOUN_ENTRY_ID,
+			meta: {},
+			sections: [
+				section("kontexte", "![[Other#^2|^]]"),
+					section("synonyme", "= [[wir]]"),
+					section("morpheme", "[[wir]]"),
+					section("morphologie", "Abgeleitet von: [[wir]]"),
+				section("flexion", "Nom: [[wir]]"),
+				section("tags", "#pronoun/personal"),
+				section("translations", "we"),
+			],
+		};
+		const ctx = makeClosedSetLexemCtx({
+			matchedEntry,
+			promptGenerate: (kind) => {
+				promptCalls.push(kind);
+				return okAsync("unused");
+			},
+		});
+
+		const result = await generateSections(ctx);
+		expect(result.isOk()).toBe(true);
+		expect(promptCalls).toHaveLength(0);
+		const closedSetRefs = matchedEntry.sections.find(
+			(s) => s.kind === "closed_set_references",
+		);
+		expect(closedSetRefs?.content).toContain(
+			"[[wir-personal-pronomen-de|wir (Pronoun)]]",
+		);
 	});
 });
 

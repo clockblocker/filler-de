@@ -7,7 +7,6 @@ import { checkAttestation } from "./steps/check-attestation";
 import { checkEligibility } from "./steps/check-eligibility";
 import { checkLemmaResult } from "./steps/check-lemma-result";
 import { generateSections } from "./steps/generate-sections";
-import { maintainClosedSetSurfaceHub } from "./steps/maintain-closed-set-surface-hub";
 import { moveToWorter } from "./steps/move-to-worter";
 import { propagateGeneratedSections } from "./steps/propagate-generated-sections";
 import { resolveExistingEntry } from "./steps/resolve-existing-entry";
@@ -20,7 +19,7 @@ import { serializeEntry } from "./steps/serialize-entry";
  * → generateSections (async: LLM calls or append attestation)
  * → propagateGeneratedSections (core propagation + post-propagation decoration)
  * → serializeEntry (includes noteKind meta) → moveToWorter(policy destination)
- * → maintainClosedSetSurfaceHub (closed-set ambiguous manual-link hubs) → addWriteAction
+ * → addWriteAction
  */
 export function generateCommand(
 	input: CommandInput,
@@ -39,7 +38,6 @@ export function generateCommand(
 		.andThen(propagateGeneratedSections)
 		.andThen(serializeEntry)
 		.andThen(moveToWorter)
-		.andThen(maintainClosedSetSurfaceHub)
 		.andThen((c) => {
 			const activeFile = c.commandContext.activeFile;
 			const writeAction = {

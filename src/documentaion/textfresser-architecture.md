@@ -64,7 +64,7 @@ User gets a tailor-made dictionary that grows with their reading
 
 > **V14 scope**: Minimal Lemma + Generate enrichment cutover — `PromptKind.Lemma` now returns only classifier fields (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`). Core metadata (`emojiDescription`, `ipa`, noun-only `genus` + `nounClass`) moved to Generate via enrichment prompts. Features prompt is now POS-specific (`FeaturesNoun` ... `FeaturesInteractionalUnit`), and legacy `PromptKind.Features` is removed. Proper-noun/separable span expansion relies on `contextWithLinkedParts`; legacy `fullSurface` is removed. Noun enrichment metadata (`genus`, `nounClass`) is treated as best-effort at parse time; header formatting first falls back to noun-inflection genus, then degrades to common header when genus is still missing.
 
-> **V15 scope**: Lemma safe-linking + deterministic target routing — Lemma now runs in two dispatch phases: pre-prompt safe link insertion (with optional Worter placeholder) and post-prompt final routing rewrite. Closed-set Lexem POS (`Pronoun`, `Article`, `Preposition`, `Conjunction`, `Particle`, `InteractionalUnit`) route to `Library/<lang>/<pos-kebab>/<lemma>.md`; all other entries route to Worter sharded paths. Post-prompt phase can rename placeholder to final target, delete placeholder only when empty and final exists, retarget temporary links (including multi-span expansion), and navigate from placeholder to final note when needed. Background Generate now uses the latest resolved target path as its primary source of truth.
+> **V15 scope**: Lemma safe-linking + deterministic target routing — Lemma now runs in two dispatch phases: pre-prompt safe link insertion (with optional temporary `Worter/.../unknown/...` working note) and post-prompt final routing rewrite. Closed-set Lexem POS still rewrite attestation links to `Library` leaves, but Generate target routing is surface-host-first in `Worter` (mixed-role note model). Post-prompt phase can rename/delete temporary working notes, retarget temporary links (including multi-span expansion), and navigate from temporary note to final note when needed. Background Generate now uses the latest resolved target path as its primary source of truth.
 
 > **V16 scope**: Prompt-stability + pipeline hardening — Lemma adds runtime output guardrails with one controlled retry for suspicious same-surface outputs (separable inflected verbs, comparative/superlative-like inflected adjectives). Unsafe `contextWithLinkedParts` rewrites are dropped when stripped text does not match source context. Background Generate cleanup is now ownership-aware: empty targets are auto-trashed only when invocation-owned (or truly newly created in this run). Disambiguate senses now include optional `senseGloss` (short text gloss) alongside emoji signals.
 
@@ -472,9 +472,9 @@ Translates selected text using the prompt-smith system:
 The dictionary pipeline is split into two commands — **Lemma** (user-facing) and **Generate** (fires automatically in background after Lemma):
 
 **V15/V16 update**: Lemma is now a two-phase flow with guarded prompt handling:
-1. **Phase A (pre-prompt)**: resolve/create a safe pre-target and insert a clickable wikilink immediately (`[[surface]]` or `[[target|surface]]`), optionally creating a placeholder note in Worter.
+1. **Phase A (pre-prompt)**: reuse an existing `Worter` surface note when available for single-token selection; otherwise create a temporary working note under `Worter/.../unknown/...`, then insert a clickable wikilink immediately (`[[surface]]` or `[[target|surface]]`).
 2. **Prompt guardrail stage**: run `PromptKind.Lemma`, validate output, and retry once on core guardrail violations.
-3. **Phase B (post-prompt)**: disambiguate, resolve final policy target (closed-set → Library, otherwise Worter), rewrite source links to final target (including temporary-link retarget + multi-span), then move/cleanup placeholder.
+3. **Phase B (post-prompt)**: disambiguate, resolve final generation target in `Worter` (surface host), resolve attestation rewrite target (closed-set may point to `Library`), rewrite source links (including temporary-link retarget + multi-span), then rename/delete temporary `unknown` note.
 
 ```
      Lemma (recon + disambiguation)                Generate (background, automatic)
@@ -513,10 +513,9 @@ The user selects a word and calls "Lemma". This is the classification + disambig
 Lemma now runs in two dispatch phases to avoid dead links:
 
 1. **Phase A (pre-prompt)**:
-   - Resolve pre-target via `vam.resolveLinkpathDest(surface, from)` (Obsidian native resolver).
-   - Fallback to Librarian corename lookup.
-   - If unresolved, create a Worter placeholder note and link to it immediately.
-   - Dispatch: optional `UpsertMdFile(placeholder)` + source `ProcessMdFile` with temporary wikilink.
+   - If single-token surface resolves to existing `Worter` note, reuse it.
+   - Otherwise create temporary working note at `Worter/.../unknown/.../{surface}.md`.
+   - Dispatch: optional `UpsertMdFile(unknown-working-note)` + source `ProcessMdFile` with temporary wikilink.
 2. **Phase B (post-prompt)**:
    - Run `PromptKind.Lemma` and apply guardrails:
      - reject same-surface `lemma` for `Lexem + Verb + Inflected` when separable-prefix evidence exists in context;
@@ -525,11 +524,11 @@ Lemma now runs in two dispatch phases to avoid dead links:
    - If core guardrail fails, run exactly one retry; if still invalid, continue with best-effort output and warning logs.
    - Run `disambiguateSense` (preferred path = resolved final target).
    - Resolve final target with deterministic policy:
-     - Closed-set Lexem POS (`Pronoun`, `Article`, `Preposition`, `Conjunction`, `Particle`, `InteractionalUnit`) → `Library/<lang>/<pos-kebab>/<lemma>.md`.
-     - Otherwise → Worter sharded path.
+     - Generation target note always resolves to a `Worter` surface host path.
+     - Closed-set Lexem POS (`Pronoun`, `Article`, `Preposition`, `Conjunction`, `Particle`, `InteractionalUnit`) still resolve attestation rewrite links to `Library` leaves.
    - If placeholder exists and final differs:
      - rename placeholder to final when final does not exist;
-     - else delete placeholder only when placeholder content is empty/whitespace.
+     - for `unknown` temporary notes, delete placeholder when final already exists.
    - Track `latestLemmaTargetOwnedByInvocation` for the resolved final target and pass it into background-generate cleanup policy.
    - Rewrite source wikilink(s) to final target, including second-pass temporary-link retargeting and multi-span expansion.
    - If user is currently on placeholder note and final target differs, navigate to final target.
@@ -667,17 +666,10 @@ checkAttestation → checkEligibility → checkLemmaResult
   → propagateGeneratedSections (core propagation + source-note separability decoration)
   → serializeEntry (includes noteKind + entity metadata in single metadata upsert)
   → moveToWorter
-  → maintainClosedSetSurfaceHub (lazy Worter surface-hub management for ambiguous closed-set surfaces; no-op when library lookup is unavailable)
   → addWriteAction
 ```
 
-`moveToWorter` is policy-based: closed-set Lexem POS routes to Library, all other entries route to Worter sharded folders. It skips rename when the active file is already at destination.
-
-Closed-set ambiguity support (manual links) is handled by `maintainClosedSetSurfaceHub`:
-
-- Canonical closed-set dict content stays in `Library`.
-- For ambiguous closed-set surfaces, Textfresser maintains a minimal hub note at `Worter/<lang>/closed-set-hub/<surface>.md`.
-- LLM-confirmed attestation links still point directly to the specific Library note.
+`moveToWorter` keeps dict-entry generation in `Worter` surface-host notes (including closed-set encounters). It skips rename when the active file is already at destination.
 
 Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
 
@@ -701,6 +693,7 @@ Propagation-only stubs are explicitly excluded from re-encounter matching: if th
 **Path A (re-encounter)**: If `matchedEntry` exists, append attestation ref (deduped), then check expected V3 sections. If sections are complete, keep fast path (no LLM). If some V3 sections are missing, Generate calls only the missing section generators and merges only those missing sections into the existing entry.
 
 **Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Tags, Morphem, Morphology, Relation, Inflection, Translation, Attestation. Header is built from LemmaResult fields (no LLM call).
+For closed-set Lexem entries, Generate ensures a non-LLM `closed_set_references` section with a Library pointer when Librarian lookup returns a matching leaf (surface-host note keeps the cross-link).
 
 All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). Enrichment now has a fallback metadata path, and section prompts degrade gracefully (including Translation): failures are logged, recorded in `failedSections`, and entry creation continues. This prevents empty-note outcomes when upstream API calls fail. Results are assembled in correct section order after all promises settle. Applicable sections:
 
@@ -821,7 +814,7 @@ resolveTargetPath(word, desiredSurfaceKind, vamLookup, librarianLookup):
     If existing is in lemma/ but desired is inflected → use as-is (lemma files can hold both)
 ```
 
-The `librarianLookup` callback is wired in `main.ts` after Librarian init via `Textfresser.setLibrarianLookup()`, converting `LeafMatch[]` → `SplitPathToMdFile[]`. Before Librarian init it defaults to `() => []` and `TextfresserState.isLibraryLookupAvailable = false`; hub-maintenance and hub-backfill flows are guarded in this degraded mode to avoid destructive rewrites.
+The `librarianLookup` callback is wired in `main.ts` after Librarian init via `Textfresser.setLibrarianLookup()`, converting `LeafMatch[]` → `SplitPathToMdFile[]`. Before Librarian init it defaults to `() => []` and `TextfresserState.isLibraryLookupAvailable = false`; library-dependent routing paths degrade to Worter-only behavior until lookup is available.
 
 ```
 generateSections captures raw relation output (ParsedRelation[])
@@ -1181,10 +1174,9 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create/update one inflection entry per form, merge tags |
 | `src/commanders/textfresser/commands/generate/steps/propagate-core.ts` | Core propagation orchestration + fold-to-single-write contract per target note |
 | `src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter.ts` | Propagation IO adapter ports (`readManyMdFiles`, typed missing/error classification, write-action construction) |
-| `src/commanders/textfresser/commands/generate/steps/move-to-worter.ts` | Final destination policy step: closed-set Lexem POS → Library path, others → Worter sharded path, rename skipped when already at destination |
-| `src/commanders/textfresser/commands/generate/steps/maintain-closed-set-surface-hub.ts` | Closed-set hub maintenance step: lazily create/update/trash `Worter/<lang>/closed-set-hub/<surface>.md` for ambiguous closed-set surfaces; guarded by `isLibraryLookupAvailable` |
-| `src/commanders/textfresser/common/lemma-link-routing.ts` | Link-target policy helper: closed-set detection, pre-prompt target resolution, final target resolution, and basename-default rendering with Library ambiguity fallback to full-path |
-| `src/commanders/textfresser/common/closed-set-surface-hub.ts` | Closed-set surface hub policy helpers: target detection, hub content rendering, action planning, backfill action builder |
+| `src/commanders/textfresser/commands/generate/steps/move-to-worter.ts` | Final destination policy step: keep generated dict-entry notes in Worter surface-host paths (rename skipped when already at destination) |
+| `src/commanders/textfresser/common/lemma-link-routing.ts` | Link-target policy helper: pre-prompt working-note routing (`Worter` reuse vs `unknown` temp), final generation target routing (`Worter`), and attestation rewrite target routing (closed-set may point to `Library`) |
+| `src/commanders/textfresser/common/closed-set-surface-hub.ts` | Legacy dedicated-hub helpers from earlier rollout; no longer part of active Generate pipeline after mixed-role surface-host alignment |
 | `src/commanders/textfresser/common/target-comparison.ts` | Domain comparison canonicalization (`trim + case-fold`) for target equality checks outside `wikilinkHelper` |
 | `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, shared morpheme path resolver for prefix Library fallback, `buildPropagationActionPair` helper |
 | `src/commanders/textfresser/common/sharded-path.ts` | Sharded path computation for Worter entries; exports `SURFACE_KIND_PATH_INDEX` for healing checks |

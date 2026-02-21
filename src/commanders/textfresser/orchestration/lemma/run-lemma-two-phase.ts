@@ -1,4 +1,9 @@
 import { err, ok, type Result } from "neverthrow";
+import {
+	PHRASEM_KINDS,
+	type PhrasemeKind,
+} from "../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
+import { DE_LEXEM_POS, type DeLexemPos } from "../../../../linguistics/de";
 import type {
 	VaultAction,
 	VaultActionManager,
@@ -19,6 +24,7 @@ import type { Attestation } from "../../common/attestation/types";
 import {
 	computeFinalTarget,
 	computePrePromptTarget,
+	isUnknownWorkingPath,
 } from "../../common/lemma-link-routing";
 import { CommandErrorKind } from "../../errors";
 import type { TextfresserState } from "../../state/textfresser-state";
@@ -28,6 +34,16 @@ import {
 	evaluateLemmaOutputGuardrails,
 } from "./lemma-output-guardrails";
 import { buildLemmaRewritePlan, buildUpdatedBlock } from "./lemma-rewrite-plan";
+
+type ResolvedPosLikeKind =
+	| {
+			linguisticUnit: "Lexem";
+			posLikeKind: DeLexemPos;
+	  }
+	| {
+			linguisticUnit: "Phrasem";
+			posLikeKind: PhrasemeKind;
+	  };
 
 export async function runLemmaTwoPhase(params: {
 	input: CommandInput;
@@ -46,7 +62,7 @@ export async function runLemmaTwoPhase(params: {
 
 	const surface = attestation.target.surface;
 	const prePromptTarget = computePrePromptTarget({
-		lookupInLibrary: state.lookupInLibrary,
+		findByBasename: (basename) => vam.findByBasename(basename),
 		resolveLinkpathDest: (linkpath, from) =>
 			vam.resolveLinkpathDest(linkpath, from),
 		sourcePath: attestation.source.path,
@@ -182,6 +198,13 @@ export async function runLemmaTwoPhase(params: {
 		);
 	}
 	const lemmaPromptOutput = selectedGuardrailEvaluation.output;
+	const resolvedPosLikeKind = resolvePosLikeKind(lemmaPromptOutput);
+	if (!resolvedPosLikeKind) {
+		return err({
+			kind: CommandErrorKind.ApiError,
+			reason: "Lemma output has invalid posLikeKind for linguisticUnit",
+		});
+	}
 
 	const finalTarget = computeFinalTarget({
 		findByBasename: (basename) => vam.findByBasename(basename),
@@ -189,39 +212,41 @@ export async function runLemmaTwoPhase(params: {
 		linguisticUnit: lemmaPromptOutput.linguisticUnit,
 		lookupInLibrary: state.lookupInLibrary,
 		posLikeKind:
-			lemmaPromptOutput.linguisticUnit === "Lexem"
-				? lemmaPromptOutput.posLikeKind
+			resolvedPosLikeKind.linguisticUnit === "Lexem"
+				? resolvedPosLikeKind.posLikeKind
 				: null,
 		surfaceKind: lemmaPromptOutput.surfaceKind,
 		targetLanguage: state.languages.target,
 	});
 
-	const disambiguation =
-		lemmaPromptOutput.linguisticUnit === "Lexem"
-			? await disambiguateSense(
-					vam,
-					state.promptRunner,
-					{
-						lemma: lemmaPromptOutput.lemma,
-						linguisticUnit: "Lexem",
-						pos: lemmaPromptOutput.posLikeKind,
-						surfaceKind: lemmaPromptOutput.surfaceKind,
-					},
-					context,
-					finalTarget.splitPath,
-				)
-			: await disambiguateSense(
-					vam,
-					state.promptRunner,
-					{
-						lemma: lemmaPromptOutput.lemma,
-						linguisticUnit: "Phrasem",
-						phrasemeKind: lemmaPromptOutput.posLikeKind,
-						surfaceKind: lemmaPromptOutput.surfaceKind,
-					},
-					context,
-					finalTarget.splitPath,
-				);
+	let disambiguation: Awaited<ReturnType<typeof disambiguateSense>>;
+	if (resolvedPosLikeKind.linguisticUnit === "Lexem") {
+		disambiguation = await disambiguateSense(
+			vam,
+			state.promptRunner,
+			{
+				lemma: lemmaPromptOutput.lemma,
+				linguisticUnit: "Lexem",
+				pos: resolvedPosLikeKind.posLikeKind,
+				surfaceKind: lemmaPromptOutput.surfaceKind,
+			},
+			context,
+			finalTarget.splitPath,
+		);
+	} else {
+		disambiguation = await disambiguateSense(
+			vam,
+			state.promptRunner,
+			{
+				lemma: lemmaPromptOutput.lemma,
+				linguisticUnit: "Phrasem",
+				phrasemeKind: resolvedPosLikeKind.posLikeKind,
+				surfaceKind: lemmaPromptOutput.surfaceKind,
+			},
+			context,
+			finalTarget.splitPath,
+		);
+	}
 	if (disambiguation.isErr()) {
 		return err(disambiguation.error);
 	}
@@ -238,13 +263,13 @@ export async function runLemmaTwoPhase(params: {
 			? null
 			: { matchedIndex: disambiguationResult.matchedIndex };
 
-	if (lemmaPromptOutput.linguisticUnit === "Lexem") {
+	if (resolvedPosLikeKind.linguisticUnit === "Lexem") {
 		state.latestLemmaResult = {
 			attestation,
 			disambiguationResult: normalizedDisambiguation,
 			lemma: lemmaPromptOutput.lemma,
 			linguisticUnit: "Lexem",
-			posLikeKind: lemmaPromptOutput.posLikeKind,
+			posLikeKind: resolvedPosLikeKind.posLikeKind,
 			precomputedEmojiDescription,
 			surfaceKind: lemmaPromptOutput.surfaceKind,
 		};
@@ -254,7 +279,7 @@ export async function runLemmaTwoPhase(params: {
 			disambiguationResult: normalizedDisambiguation,
 			lemma: lemmaPromptOutput.lemma,
 			linguisticUnit: "Phrasem",
-			posLikeKind: lemmaPromptOutput.posLikeKind,
+			posLikeKind: resolvedPosLikeKind.posLikeKind,
 			precomputedEmojiDescription,
 			surfaceKind: lemmaPromptOutput.surfaceKind,
 		};
@@ -269,10 +294,11 @@ export async function runLemmaTwoPhase(params: {
 	});
 
 	const currentPath = vam.mdPwd();
+	const navigationTarget = finalTarget.linkTargetSplitPath;
 	const shouldNavigateToFinal =
 		placeholderPath !== null &&
 		currentPath !== null &&
-		!splitPathsEqual(placeholderPath, finalTarget.splitPath) &&
+		!splitPathsEqual(placeholderPath, navigationTarget) &&
 		splitPathsEqual(currentPath, placeholderPath);
 
 	let placeholderWasCleaned = false;
@@ -304,17 +330,25 @@ export async function runLemmaTwoPhase(params: {
 			placeholderWasRenamed = true;
 			finalTargetOwnedByInvocation = !placeholderExistedBeforePhaseA;
 		} else {
-			const placeholderContentResult =
-				await vam.readContent(placeholderPath);
-			if (
-				placeholderContentResult.isOk() &&
-				placeholderContentResult.value.trim().length === 0
-			) {
+			if (isUnknownWorkingPath(placeholderPath)) {
 				phaseBActions.push({
 					kind: VaultActionKind.TrashMdFile,
 					payload: { splitPath: placeholderPath },
 				});
 				placeholderWasCleaned = true;
+			} else {
+				const placeholderContentResult =
+					await vam.readContent(placeholderPath);
+				if (
+					placeholderContentResult.isOk() &&
+					placeholderContentResult.value.trim().length === 0
+				) {
+					phaseBActions.push({
+						kind: VaultActionKind.TrashMdFile,
+						payload: { splitPath: placeholderPath },
+					});
+					placeholderWasCleaned = true;
+				}
 			}
 		}
 	}
@@ -356,13 +390,14 @@ export async function runLemmaTwoPhase(params: {
 	state.latestLemmaTargetOwnedByInvocation = finalTargetOwnedByInvocation;
 
 	if (shouldNavigateToFinal) {
-		const cdResult = await vam.cd(finalTarget.splitPath);
+		const cdResult = await vam.cd(navigationTarget);
 		if (cdResult.isErr()) {
 			logger.warn(
 				"[Textfresser.Lemma] Failed to navigate from placeholder to final target",
 				{
 					error: cdResult.error,
 					finalTarget: finalTarget.splitPath,
+					navigationTarget,
 					placeholderPath,
 				},
 			);
@@ -370,4 +405,36 @@ export async function runLemmaTwoPhase(params: {
 	}
 
 	return ok(undefined);
+}
+
+function isDeLexemPosLikeKind(value: string): value is DeLexemPos {
+	return DE_LEXEM_POS.some((pos) => pos === value);
+}
+
+function isPhrasemeKind(value: string): value is PhrasemeKind {
+	return PHRASEM_KINDS.some((kind) => kind === value);
+}
+
+function resolvePosLikeKind(output: {
+	linguisticUnit: "Lexem" | "Phrasem";
+	posLikeKind: string;
+}): ResolvedPosLikeKind | null {
+	if (output.linguisticUnit === "Lexem") {
+		if (!isDeLexemPosLikeKind(output.posLikeKind)) {
+			return null;
+		}
+		return {
+			linguisticUnit: "Lexem",
+			posLikeKind: output.posLikeKind,
+		};
+	}
+
+	if (!isPhrasemeKind(output.posLikeKind)) {
+		return null;
+	}
+
+	return {
+		linguisticUnit: "Phrasem",
+		posLikeKind: output.posLikeKind,
+	};
 }

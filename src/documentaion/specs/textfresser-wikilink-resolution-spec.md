@@ -434,32 +434,35 @@ Add a maintenance command:
 9. Unknown-lifecycle policy:
    - `Worter/.../unknown/...` notes are invocation-temporary and must be resolved by rename or deletion when Lemma finalization completes.
 
-### Implementation status (worktree snapshot, 2026-02-20)
+### Implementation status (worktree snapshot, 2026-02-21)
 
 1. Implemented in current worktree:
-   - Closed-set hub policy module and lifecycle actions:
-     - `src/commanders/textfresser/common/closed-set-surface-hub.ts`
-   - Generate pipeline hook for hub maintenance:
-     - `src/commanders/textfresser/commands/generate/steps/maintain-closed-set-surface-hub.ts`
-   - Backfill maintenance command:
-     - `rebuild-closed-set-surface-hubs` in `src/main.ts`
-     - Includes lookup-availability guard: command aborts when Librarian lookup wiring is unavailable.
-   - Wikilink completion ambiguity guard (2+ matches -> passthrough):
-     - `src/managers/obsidian/behavior-manager/wikilink-complition-behavior.ts`
-   - Domain comparison normalization module + call-site migration:
-     - `src/commanders/textfresser/common/target-comparison.ts`
-   - Generation render policy update:
-     - `formatLinkTarget()` basename default + Library ambiguity fallback in `src/commanders/textfresser/common/lemma-link-routing.ts`
-   - Generate-time safety in degraded init states:
-     - `maintainClosedSetSurfaceHub` is now a no-op when `TextfresserState.isLibraryLookupAvailable` is false.
-2. Still open (design/rollout not finished):
+   - Lemma pre-query working-target routing now follows `Worter`-first host policy:
+     - Reuse existing `Worter` note for single-token surface when found.
+     - Otherwise create temporary `Worter/.../unknown/.../{surface}.md`.
+     - Files:
+       - `src/commanders/textfresser/common/lemma-link-routing.ts`
+       - `src/commanders/textfresser/orchestration/lemma/run-lemma-two-phase.ts`
+   - `unknown` temp note cleanup tightened:
+     - `unknown` working note is trashed when final target already exists.
+     - `unknown` paths are excluded from reusable/canonical target selection.
+   - Closed-set finalize routing split:
+     - Generation target path resolves to `Worter` surface host.
+     - Source attestation rewrite target can still resolve to `Library` leaf.
+   - Library target rendering is basename-only (no ambiguity-driven full-path fallback).
+   - Generate pipeline no longer runs dedicated hub-maintenance step:
+     - `maintainClosedSetSurfaceHub` removed from `generate-command` pipeline.
+   - Dedicated backfill command removed:
+     - `rebuild-closed-set-surface-hubs` removed from `src/main.ts`.
+   - Generate ensures a `closed_set_references` section for closed-set Lexem entries when Library lookup resolves a target.
+2. Legacy code still present but no longer active in the primary pipeline:
+   - `src/commanders/textfresser/common/closed-set-surface-hub.ts`
+   - `src/commanders/textfresser/commands/generate/steps/maintain-closed-set-surface-hub.ts`
+3. Still open (design/rollout not finished):
    - Full API boundary cleanup between `wikilinkHelper` syntax responsibilities and policy modules.
    - Canonical lightweight/full DTO contracts with explicit anchor field across all call-sites.
    - Unified resolver precedence by command phase/intent (Obsidian vs Librarian vs policy-computed).
    - Bulk rewrite parse/classify/selective-normalize/reassemble contract finalization.
-3. New design delta after 2026-02-21 decisions:
-   - Spec now treats closed-set "hub role" as mixed-role surface-host entries, not as a dedicated note type.
-   - Existing implementation currently has dedicated closed-set-hub modules in places; align in follow-up implementation slice.
 4. Notes:
    - This status block is a snapshot of current branch/worktree state, not a release/merge guarantee.
 
