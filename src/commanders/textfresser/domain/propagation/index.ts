@@ -1,6 +1,7 @@
 export * from "./intent-key";
 export * from "./merge-policy";
 export type {
+	ParsePropagationNoteOptions,
 	PropagationNoteEntry,
 	PropagationRawSection,
 	PropagationSection,

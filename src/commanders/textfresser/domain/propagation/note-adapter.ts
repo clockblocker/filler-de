@@ -11,6 +11,8 @@ import { logger } from "../../../../utils/logger";
 import { extractHashTags } from "../../../../utils/text-utils";
 import {
 	parseSingleLinguisticWikilink,
+	type LibraryBasenameParser,
+	type LibraryLookupByCoreName,
 	type LinguisticWikilinkDto as ParsedLinguisticWikilinkDto,
 } from "../linguistic-wikilink";
 import { compareSectionsByWeight } from "../../targets/de/sections/section-config";
@@ -122,6 +124,11 @@ const typedSectionKindByCssKind = new Map<string, TypedSectionKind>([
 ]);
 const MORPHOLOGY_SECTION_CSS_KIND = cssSuffixFor[DictSectionKind.Morphology];
 const RELATION_SECTION_CSS_KIND = cssSuffixFor[DictSectionKind.Relation];
+
+export type ParsePropagationNoteOptions = {
+	lookupInLibraryByCoreName?: LibraryLookupByCoreName;
+	parseLibraryBasename?: LibraryBasenameParser;
+};
 
 type ParsedSectionMarker = {
 	index: number;
@@ -250,12 +257,15 @@ function parseExactWikilinkToken(raw: string): ParsedWikilink | null {
 function parseLinguisticWikilinkToken(
 	raw: string,
 	sectionCssKind: string,
+	options?: ParsePropagationNoteOptions,
 ): ParsedLinguisticWikilinkDto | null {
 	const exact = parseExactWikilinkToken(raw);
 	if (!exact) {
 		return null;
 	}
 	return parseSingleLinguisticWikilink({
+		lookupInLibraryByCoreName: options?.lookupInLibraryByCoreName,
+		parseLibraryBasename: options?.parseLibraryBasename,
 		sectionCssKind,
 		wikilink: exact,
 	});
@@ -288,10 +298,12 @@ function targetLemmaFromLinguisticWikilink(
 
 function targetLemmaForMorphologyEquationPart(
 	rawToken: string,
+	options?: ParsePropagationNoteOptions,
 ): string | null {
 	const parsedLinguistic = parseLinguisticWikilinkToken(
 		rawToken,
 		MORPHOLOGY_SECTION_CSS_KIND,
+		options,
 	);
 	if (!parsedLinguistic) {
 		return null;
@@ -440,6 +452,7 @@ function parseRelationToken(
 	relationKind: string,
 	rawToken: string,
 	line: string,
+	options?: ParsePropagationNoteOptions,
 ): RelationItemDto | null {
 	const trimmed = rawToken.trim();
 	if (trimmed.length === 0) {
@@ -448,6 +461,7 @@ function parseRelationToken(
 	const parsedLinguistic = parseLinguisticWikilinkToken(
 		trimmed,
 		RELATION_SECTION_CSS_KIND,
+		options,
 	);
 	const basic = parseBasicWikilinkDto(trimmed);
 	if (basic) {
@@ -490,10 +504,13 @@ function parseRelationToken(
 	};
 }
 
-function parseEquationPartToken(rawToken: string): string {
+function parseEquationPartToken(
+	rawToken: string,
+	options?: ParsePropagationNoteOptions,
+): string {
 	const basic = parseBasicWikilinkDto(rawToken);
 	if (basic) {
-		const resolved = targetLemmaForMorphologyEquationPart(rawToken);
+		const resolved = targetLemmaForMorphologyEquationPart(rawToken, options);
 		return normalizeSpace(resolved ?? basic.target);
 	}
 	return serializePreservedWikilink(rawToken);
@@ -555,7 +572,10 @@ function extractRawEquationTokens(line: string): {
 	};
 }
 
-function parseRelationSection(rawContent: string): RelationSectionDto {
+function parseRelationSection(
+	rawContent: string,
+	options?: ParsePropagationNoteOptions,
+): RelationSectionDto {
 	const items: RelationItemDto[] = [];
 	const lines = rawContent.split(/\r?\n/);
 	for (const line of lines) {
@@ -576,7 +596,12 @@ function parseRelationSection(rawContent: string): RelationSectionDto {
 			continue;
 		}
 		for (const token of rawTargets.split(",")) {
-			const parsed = parseRelationToken(relationKind, token, trimmed);
+			const parsed = parseRelationToken(
+				relationKind,
+				token,
+				trimmed,
+				options,
+			);
 			if (!parsed) {
 				continue;
 			}
@@ -597,18 +622,24 @@ function parseMorphologyRelationMarker(
 
 function parseMorphologyEquationLine(
 	line: string,
+	options?: ParsePropagationNoteOptions,
 ): MorphologyEquationDto | null {
 	const tokens = extractRawEquationTokens(line);
 	if (!tokens) {
 		return null;
 	}
 	return {
-		lhsParts: tokens.lhsTokens.map(parseEquationPartToken),
-		rhs: parseEquationPartToken(tokens.rhsToken),
+		lhsParts: tokens.lhsTokens.map((token) =>
+			parseEquationPartToken(token, options),
+		),
+		rhs: parseEquationPartToken(tokens.rhsToken, options),
 	};
 }
 
-function parseMorphologySection(rawContent: string): MorphologySectionDto {
+function parseMorphologySection(
+	rawContent: string,
+	options?: ParsePropagationNoteOptions,
+): MorphologySectionDto {
 	let activeRelationType: MorphologyBacklinkDto["relationType"] | null = null;
 	const backlinks: MorphologyBacklinkDto[] = [];
 	const equations: MorphologyEquationDto[] = [];
@@ -624,7 +655,7 @@ function parseMorphologySection(rawContent: string): MorphologySectionDto {
 			continue;
 		}
 
-		const equation = parseMorphologyEquationLine(trimmed);
+		const equation = parseMorphologyEquationLine(trimmed, options);
 		if (equation) {
 			equations.push(equation);
 			continue;
@@ -700,7 +731,10 @@ function parseTagsSection(rawContent: string): TagsSectionDto {
 	};
 }
 
-function parseSectionsForEntry(sectionText: string): PropagationSection[] {
+function parseSectionsForEntry(
+	sectionText: string,
+	options?: ParsePropagationNoteOptions,
+): PropagationSection[] {
 	const markers = collectSectionMarkers(sectionText);
 	return markers.map((marker, index) => {
 		const sectionEnd =
@@ -723,14 +757,14 @@ function parseSectionsForEntry(sectionText: string): PropagationSection[] {
 				return {
 					cssKind: marker.cssKind,
 					kind: "Relation",
-					payload: parseRelationSection(rawContent),
+					payload: parseRelationSection(rawContent, options),
 					title: marker.title,
 				};
 			case "Morphology":
 				return {
 					cssKind: marker.cssKind,
 					kind: "Morphology",
-					payload: parseMorphologySection(rawContent),
+					payload: parseMorphologySection(rawContent, options),
 					title: marker.title,
 				};
 			case "Inflection":
@@ -761,6 +795,7 @@ function parseSectionsForEntry(sectionText: string): PropagationSection[] {
 function parseEntryChunk(
 	chunk: string,
 	metaByEntryId: Record<string, Record<string, unknown>>,
+	options?: ParsePropagationNoteOptions,
 ): PropagationNoteEntry | null {
 	const lines = chunk.split("\n");
 	let headerLine: string | null = null;
@@ -792,7 +827,7 @@ function parseEntryChunk(
 		headerContent,
 		id,
 		meta: metaByEntryId[id] ?? {},
-		sections: parseSectionsForEntry(sectionText),
+		sections: parseSectionsForEntry(sectionText, options),
 	};
 }
 
@@ -1053,7 +1088,10 @@ function serializeEntry(entry: PropagationNoteEntry): string {
 	return `\n${headerLine}\n\n${serializedSections}`;
 }
 
-export function parsePropagationNote(noteText: string): PropagationNoteEntry[] {
+export function parsePropagationNote(
+	noteText: string,
+	options?: ParsePropagationNoteOptions,
+): PropagationNoteEntry[] {
 	const { body } = noteMetadataHelper.decompose(noteText);
 	// zod v3/v4 boundary: read() expects v4 ZodSchema, our schema is v3 — runtime-compatible
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1068,7 +1106,7 @@ export function parsePropagationNote(noteText: string): PropagationNoteEntry[] {
 		if (chunk.trim().length === 0) {
 			continue;
 		}
-		const entry = parseEntryChunk(chunk, metaByEntryId);
+		const entry = parseEntryChunk(chunk, metaByEntryId, options);
 		if (entry) {
 			entries.push(entry);
 		}

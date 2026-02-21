@@ -74,6 +74,12 @@ const PATH_MORPHOLOGY_EQUATION_NOTE_FIXTURE = [
 	'<span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>',
 	"[[Worter/de/morphem/lemma/a/ab]] + [[Worter/de/lexem/lemma/f/fah/fahr/fahren]] = [[Worter/de/lexem/lemma/a/abf/abfa/abfahren]]",
 ].join("\n");
+const BARE_LIBRARY_BASENAME_RELATION_NOTE_FIXTURE = [
+	"🧭 basis ^r-2",
+	"",
+	'<span class="entry_section_title entry_section_title_synonyme">Semantische Beziehungen</span>',
+	"= [[wir-personal-pronomen-de|Wir]]",
+].join("\n");
 const MORPHOLOGY_DTO_ROUNDTRIP_ENTRY: PropagationNoteEntry = {
 	headerContent: "ab-",
 	id: "m-1",
@@ -117,6 +123,27 @@ function normalizeCaseFold(value: string): string {
 
 function normalizeTagToken(value: string): string {
 	return normalizeCaseFold(value).replace(/\s+/g, "-");
+}
+
+function parseLibraryBasenameForTest(basename: string): {
+	coreName: string;
+	suffixParts: string[];
+} | null {
+	const parts = basename
+		.split("-")
+		.map((part) => normalizeSpace(part))
+		.filter((part) => part.length > 0);
+	if (parts.length < 3) {
+		return null;
+	}
+	const coreName = parts[0];
+	if (!coreName) {
+		return null;
+	}
+	return {
+		coreName,
+		suffixParts: parts.slice(1),
+	};
 }
 
 function legacySerializeWikilink(target: string, displayText?: string): string {
@@ -488,6 +515,23 @@ describe("propagation note adapter", () => {
 			item.targetWikilink.includes("Library/de/pronomen/personal"),
 		);
 		expect(libraryPathItem?.targetLemma).toBe("wir");
+	});
+
+	it("resolves bare library basenames when parse options include library basename parser", () => {
+		const parsed = parsePropagationNote(BARE_LIBRARY_BASENAME_RELATION_NOTE_FIXTURE, {
+			parseLibraryBasename: parseLibraryBasenameForTest,
+		});
+		const entry = parsed[0];
+		if (!entry) {
+			throw new Error("Expected bare-library fixture entry");
+		}
+		const relation = getTypedPayload(entry, "Relation");
+		expect(relation).toBeDefined();
+		if (!relation) {
+			return;
+		}
+		expect(relation.items).toHaveLength(1);
+		expect(relation.items[0]?.targetLemma).toBe("wir");
 	});
 
 	it("normalizes morphology equation parts from explicit Worter path wikilinks", () => {

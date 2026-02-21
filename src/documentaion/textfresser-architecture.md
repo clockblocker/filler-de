@@ -805,6 +805,7 @@ The propagation facade (`propagateGeneratedSections`) runs after `generateSectio
 Propagation note-adapter warning logs are sampled (`first-N + periodic`) for repeated cases (embedded/unparseable wikilinks) to keep logs actionable on large notes.
 Relation-section `targetLemma` extraction in the propagation note-adapter now reuses linguistic wikilink parsing policy, so explicit `Worter/...` or `Library/...` path tokens are collapsed to semantic lemma keys while preserving the original rendered wikilink token for roundtrip safety.
 Morphology equation parsing applies the same policy for basic wikilinks, collapsing known-root path targets to semantic lemma parts (`lhsParts`/`rhs`) to keep equation identity deterministic across legacy full-path and basename forms.
+`parsePropagationNote()` accepts optional linguistic-parse deps (`lookupInLibraryByCoreName`, `parseLibraryBasename`) so bare Library basenames (for example `[[wir-personal-pronomen-de]]`) can resolve semantically during propagation parse when Librarian utilities are available.
 
 Both `propagateRelations` and `propagateInflections` use a **shared path resolver** (`resolveTargetPath`) that performs two-source lookup with healing:
 
