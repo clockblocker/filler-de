@@ -310,20 +310,79 @@ function canonicalWikilinkTargetForMorphologyBacklink(
 	return stripped.length > 0 ? stripped : null;
 }
 
-function targetLemmaForMorphologyEquationPart(
-	rawToken: string,
-	options?: ParsePropagationNoteOptions,
-): string | null {
-	const parsedLinguistic = parseLinguisticWikilinkToken(
-		rawToken,
-		MORPHOLOGY_SECTION_CSS_KIND,
-		options,
-	);
-	if (!parsedLinguistic) {
-		return null;
+type SemanticTokenPurpose =
+	| "RelationLemma"
+	| "MorphologyEquationPart"
+	| "MorphologyBacklinkTarget";
+
+type SemanticWikilinkTokenResolution = {
+	trimmedToken: string;
+	basic: WikilinkDto | null;
+	parsedLinguistic: ParsedLinguisticWikilinkDto | null;
+	canonicalTarget: string | null;
+};
+
+function resolveSemanticWikilinkToken(params: {
+	rawToken: string;
+	sectionCssKind: string;
+	purpose: SemanticTokenPurpose;
+	options?: ParsePropagationNoteOptions;
+	parsedLinguisticHint?: ParsedLinguisticWikilinkDto | null;
+}): SemanticWikilinkTokenResolution {
+	const trimmedToken = params.rawToken.trim();
+	if (trimmedToken.length === 0) {
+		return {
+			basic: null,
+			canonicalTarget: null,
+			parsedLinguistic: null,
+			trimmedToken,
+		};
 	}
-	const resolved = targetLemmaFromLinguisticWikilink(parsedLinguistic);
-	return resolved.length > 0 ? resolved : null;
+
+	const parsedLinguistic =
+		params.parsedLinguisticHint ??
+		parseLinguisticWikilinkToken(
+			trimmedToken,
+			params.sectionCssKind,
+			params.options,
+		);
+	const basic = parseBasicWikilinkDto(trimmedToken);
+
+	let canonicalTarget: string | null = null;
+	if (parsedLinguistic) {
+		const semanticTarget =
+			params.purpose === "MorphologyBacklinkTarget"
+				? canonicalWikilinkTargetForMorphologyBacklink(parsedLinguistic)
+				: targetLemmaFromLinguisticWikilink(parsedLinguistic);
+		const normalizedSemanticTarget = normalizeSpace(semanticTarget ?? "");
+		if (normalizedSemanticTarget.length > 0) {
+			canonicalTarget = normalizedSemanticTarget;
+		}
+	}
+
+	if (!canonicalTarget && basic) {
+		const normalizedBasicTarget = normalizeSpace(basic.target);
+		if (normalizedBasicTarget.length > 0) {
+			canonicalTarget = normalizedBasicTarget;
+		}
+	}
+
+	if (!canonicalTarget && params.purpose === "RelationLemma") {
+		const loose = parseAnyWikilinkToken(trimmedToken);
+		if (loose) {
+			canonicalTarget = normalizeSpace(loose.target);
+		} else {
+			const fallback = normalizeSpace(trimmedToken);
+			canonicalTarget = fallback.length > 0 ? fallback : null;
+		}
+	}
+
+	return {
+		basic,
+		canonicalTarget,
+		parsedLinguistic,
+		trimmedToken,
+	};
 }
 
 export function parseBasicWikilinkDto(raw: string): WikilinkDto | null {
@@ -432,25 +491,6 @@ function serializePreservedWikilink(raw: string): string {
 	return "[[]]";
 }
 
-function targetLemmaForRelationToken(params: {
-	rawToken: string;
-	parsedLinguistic?: ParsedLinguisticWikilinkDto | null;
-}): string {
-	const parsedLinguistic = params.parsedLinguistic;
-	if (parsedLinguistic) {
-		return targetLemmaFromLinguisticWikilink(parsedLinguistic);
-	}
-	const parsedBasic = parseBasicWikilinkDto(params.rawToken);
-	if (parsedBasic) {
-		return parsedBasic.target;
-	}
-	const loose = parseAnyWikilinkToken(params.rawToken);
-	if (loose) {
-		return loose.target;
-	}
-	return normalizeSpace(params.rawToken);
-}
-
 function parseRelationToken(
 	relationKind: string,
 	rawToken: string,
@@ -461,31 +501,27 @@ function parseRelationToken(
 	if (trimmed.length === 0) {
 		return null;
 	}
-	const parsedLinguistic = parseLinguisticWikilinkToken(
-		trimmed,
-		RELATION_SECTION_CSS_KIND,
+	const resolution = resolveSemanticWikilinkToken({
 		options,
-	);
-	const basic = parseBasicWikilinkDto(trimmed);
-	if (basic) {
+		purpose: "RelationLemma",
+		rawToken: trimmed,
+		sectionCssKind: RELATION_SECTION_CSS_KIND,
+	});
+	if (resolution.basic) {
 		return {
 			relationKind,
-			targetLemma: targetLemmaForRelationToken({
-				parsedLinguistic,
-				rawToken: trimmed,
-			}),
-			targetWikilink: serializeWikilinkDto(basic),
+			targetLemma:
+				resolution.canonicalTarget ?? normalizeSpace(trimmed),
+			targetWikilink: serializeWikilinkDto(resolution.basic),
 		};
 	}
 	const preservedTokens = extractPreservedWikilinksFromText(trimmed);
 	const preserved = preservedTokens[0] ?? trimmed;
-	if (parsedLinguistic) {
+	if (resolution.parsedLinguistic) {
 		return {
 			relationKind,
-			targetLemma: targetLemmaForRelationToken({
-				parsedLinguistic,
-				rawToken: preserved,
-			}),
+			targetLemma:
+				resolution.canonicalTarget ?? normalizeSpace(preserved),
 			targetWikilink: preserved,
 		};
 	}
@@ -498,11 +534,16 @@ function parseRelationToken(
 			"[propagation-note-adapter] Preserving unsupported relation wikilink token",
 		sampleKey: `${relationKind}:${trimmed}`,
 	});
+	const preservedResolution = resolveSemanticWikilinkToken({
+		options,
+		purpose: "RelationLemma",
+		rawToken: preserved,
+		sectionCssKind: RELATION_SECTION_CSS_KIND,
+	});
 	return {
 		relationKind,
-		targetLemma: targetLemmaForRelationToken({
-			rawToken: preserved,
-		}),
+		targetLemma:
+			preservedResolution.canonicalTarget ?? normalizeSpace(preserved),
 		targetWikilink: preserved,
 	};
 }
@@ -511,10 +552,16 @@ function parseEquationPartToken(
 	rawToken: string,
 	options?: ParsePropagationNoteOptions,
 ): string {
-	const basic = parseBasicWikilinkDto(rawToken);
-	if (basic) {
-		const resolved = targetLemmaForMorphologyEquationPart(rawToken, options);
-		return normalizeSpace(resolved ?? basic.target);
+	const resolution = resolveSemanticWikilinkToken({
+		options,
+		purpose: "MorphologyEquationPart",
+		rawToken,
+		sectionCssKind: MORPHOLOGY_SECTION_CSS_KIND,
+	});
+	if (resolution.basic) {
+		return normalizeSpace(
+			resolution.canonicalTarget ?? resolution.basic.target,
+		);
 	}
 	return serializePreservedWikilink(rawToken);
 }
@@ -535,21 +582,20 @@ function parseMorphologyBacklinkValues(params: {
 }): string[] {
 	const basicLinks = extractWikilinkTokensFromText(params.line)
 		.map((token) => {
-			const basic = parseBasicWikilinkDto(token);
-			if (!basic) {
+			const resolution = resolveSemanticWikilinkToken({
+				options: params.options,
+				purpose: "MorphologyBacklinkTarget",
+				rawToken: token,
+				sectionCssKind: MORPHOLOGY_SECTION_CSS_KIND,
+			});
+			if (!resolution.basic) {
 				return null;
 			}
-			const parsedLinguistic = parseLinguisticWikilinkToken(
-				token,
-				MORPHOLOGY_SECTION_CSS_KIND,
-				params.options,
+			const target = normalizeSpace(
+				resolution.canonicalTarget ?? resolution.basic.target,
 			);
-			const canonicalTarget = parsedLinguistic
-				? canonicalWikilinkTargetForMorphologyBacklink(parsedLinguistic)
-				: null;
-			const target = normalizeSpace(canonicalTarget ?? basic.target);
 			return serializeWikilinkDto({
-				displayText: basic.displayText,
+				displayText: resolution.basic.displayText,
 				target,
 			});
 		})
