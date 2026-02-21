@@ -7,7 +7,10 @@ import {
 } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { TargetLanguage } from "../../../types";
 import { resolveClosedSetLibraryTarget } from "./closed-set-library-target-resolver";
-import { computeShardSegments, computeShardedFolderParts } from "./sharded-path";
+import {
+	computeShardedFolderParts,
+	computeShardSegments,
+} from "./sharded-path";
 import type { PathLookupFn } from "./target-path-resolver";
 
 const CLOSED_SET_POS: ReadonlySet<DeLexemPos> = new Set<DeLexemPos>([
@@ -94,9 +97,7 @@ export function buildPolicyDestinationPath(
 	);
 }
 
-export function formatLinkTarget(
-	splitPath: SplitPathToMdFile,
-): string {
+export function formatLinkTarget(splitPath: SplitPathToMdFile): string {
 	return splitPath.basename;
 }
 
@@ -112,6 +113,7 @@ export function computePrePromptTarget(
 			resolveLinkpathDest,
 			sourcePath,
 			surface,
+			targetLanguage,
 		});
 		if (fromWorter) {
 			return {
@@ -135,30 +137,32 @@ export function computePrePromptTarget(
 function resolveReusableWorterHost(params: {
 	surface: string;
 	sourcePath: SplitPathToMdFile;
+	targetLanguage: TargetLanguage;
 	findByBasename: (basename: string) => SplitPathToMdFile[];
 	resolveLinkpathDest: LinkpathResolver;
 }): SplitPathToMdFile | null {
 	for (const candidate of buildLookupCandidates(params.surface)) {
-		const byBasename = params
-			.findByBasename(candidate)
-			.find(
-				(splitPath) =>
-					isWorterPath(splitPath) && !isUnknownWorkingPath(splitPath),
-			);
-		if (byBasename) {
-			return byBasename;
-		}
-
 		const fromResolver = params.resolveLinkpathDest(
 			candidate,
 			params.sourcePath,
 		);
 		if (
 			fromResolver &&
-			isWorterPath(fromResolver) &&
+			isWorterPathForLanguage(fromResolver, params.targetLanguage) &&
 			!isUnknownWorkingPath(fromResolver)
 		) {
 			return fromResolver;
+		}
+
+		const byBasename = params
+			.findByBasename(candidate)
+			.find(
+				(splitPath) =>
+					isWorterPathForLanguage(splitPath, params.targetLanguage) &&
+					!isUnknownWorkingPath(splitPath),
+			);
+		if (byBasename) {
+			return byBasename;
 		}
 	}
 
@@ -222,11 +226,13 @@ export function isUnknownWorkingPath(splitPath: SplitPathToMdFile): boolean {
 
 function findReusableWorterMatch(
 	matches: ReadonlyArray<SplitPathToMdFile>,
+	targetLanguage: TargetLanguage,
 ): SplitPathToMdFile | null {
 	return (
 		matches.find(
 			(splitPath) =>
-				isWorterPath(splitPath) && !isUnknownWorkingPath(splitPath),
+				isWorterPathForLanguage(splitPath, targetLanguage) &&
+				!isUnknownWorkingPath(splitPath),
 		) ?? null
 	);
 }
@@ -250,7 +256,10 @@ export function computeFinalTarget(
 		isClosedSetPos(posLikeKind);
 
 	const existingMatches = findByBasename(lemma);
-	const reusableWorterMatch = findReusableWorterMatch(existingMatches);
+	const reusableWorterMatch = findReusableWorterMatch(
+		existingMatches,
+		targetLanguage,
+	);
 
 	if (isClosedSetLexem && posLikeKind !== null) {
 		const libraryMatch = resolveClosedSetLibraryTarget({
@@ -310,4 +319,14 @@ function isLibraryPath(splitPath: SplitPathToMdFile): boolean {
 
 function isWorterPath(splitPath: SplitPathToMdFile): boolean {
 	return splitPath.pathParts[0] === "Worter";
+}
+
+function isWorterPathForLanguage(
+	splitPath: SplitPathToMdFile,
+	targetLanguage: TargetLanguage,
+): boolean {
+	return (
+		isWorterPath(splitPath) &&
+		splitPath.pathParts[1] === LANGUAGE_ISO_CODE[targetLanguage]
+	);
 }

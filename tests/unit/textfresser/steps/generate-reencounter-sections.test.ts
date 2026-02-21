@@ -497,6 +497,58 @@ describe("generateSections re-encounter behavior", () => {
 		expect(membershipEntries).toHaveLength(1);
 		expect(membershipEntries[0]?.id).toBe("LX-LM-PRON-2");
 	});
+
+	it("reuses existing membership entry when legacy pointer basename becomes stale", async () => {
+		const membershipEntry: DictEntry = {
+			headerContent: "wir (Pronoun)",
+			id: "LX-LM-PRON-2",
+			meta: {},
+			sections: [
+				section(
+					"closed_set_membership",
+					"- [[wir-alt-personal-pronomen-de|wir (Pronoun)]]",
+				),
+				section("tags", "#kind/closed-set"),
+			],
+		};
+		const matchedEntry: DictEntry = {
+			headerContent: "Entry",
+			id: PRONOUN_ENTRY_ID,
+			meta: {},
+			sections: [
+				section("kontexte", "![[Other#^2|^]]"),
+				section("synonyme", "= [[wir]]"),
+				section("morpheme", "[[wir]]"),
+				section("morphologie", "Abgeleitet von: [[wir]]"),
+				section("flexion", "Nom: [[wir]]"),
+				section("tags", "#pronoun/personal"),
+				section("translations", "we"),
+			],
+		};
+		const ctx = makeClosedSetLexemCtx({
+			matchedEntry,
+			promptGenerate: () => okAsync("unused"),
+		});
+		ctx.existingEntries = [matchedEntry, membershipEntry];
+
+		const result = await generateSections(ctx);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+
+		const membershipEntries = result.value.allEntries.filter((entry) =>
+			entry.sections.some(
+				(section) => section.kind === "closed_set_membership",
+			),
+		);
+		expect(membershipEntries).toHaveLength(1);
+		expect(membershipEntries[0]?.id).toBe("LX-LM-PRON-2");
+		const membershipSection = membershipEntries[0]?.sections.find(
+			(section) => section.kind === "closed_set_membership",
+		);
+		expect(membershipSection?.content).toBe(
+			"- [[wir-personal-pronomen-de|wir (Pronoun)]]",
+		);
+	});
 });
 
 describe("generateSections new-entry resilience", () => {

@@ -36,25 +36,27 @@ export function resolveClosedSetLibraryTarget(
 	const expectedLanguageSuffix = normalizeToken(
 		LANGUAGE_ISO_CODE[params.targetLanguage],
 	);
-	const languageFiltered = filterByLanguageSuffix(
+	const languageMatches = filterByLanguageSuffix(
 		dedupedLibraryCandidates,
 		expectedLanguageSuffix,
 	);
+	const languageScopedCandidates =
+		languageMatches.length > 0 ? languageMatches : dedupedLibraryCandidates;
 
 	const expectedPosSuffixes = POS_SUFFIX_BY_POS[params.posLikeKind] ?? [];
-	const posFiltered =
-		expectedPosSuffixes.length > 0
-			? filterByPosSuffix(languageFiltered, expectedPosSuffixes)
-			: [];
+	if (expectedPosSuffixes.length === 0) {
+		return sortDeterministically(languageScopedCandidates)[0] ?? null;
+	}
 
-	const narrowed =
-		posFiltered.length > 0
-			? posFiltered
-			: languageFiltered.length > 0
-				? languageFiltered
-				: dedupedLibraryCandidates;
+	const posFiltered = filterByPosSuffix(
+		languageScopedCandidates,
+		expectedPosSuffixes,
+	);
+	if (posFiltered.length === 0) {
+		return null;
+	}
 
-	return sortDeterministically(narrowed)[0] ?? null;
+	return sortDeterministically(posFiltered)[0] ?? null;
 }
 
 function dedupeLibraryCandidates(
@@ -104,10 +106,9 @@ function filterByLanguageSuffix(
 	candidates: ReadonlyArray<SplitPathToMdFile>,
 	expectedLanguageSuffix: string,
 ): SplitPathToMdFile[] {
-	const matched = candidates.filter(
+	return candidates.filter(
 		(candidate) => getLanguageSuffix(candidate) === expectedLanguageSuffix,
 	);
-	return matched.length > 0 ? matched : [...candidates];
 }
 
 function filterByPosSuffix(

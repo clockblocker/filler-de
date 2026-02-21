@@ -45,6 +45,39 @@ describe("lemma-link-routing", () => {
 		expect(target.linkTarget).toBe("gehen");
 	});
 
+	it("pre-prompt target: keeps language scoping and resolver precedence", () => {
+		const sourcePath = makePath("Source", ["Books", "A"]);
+		const englishWorter = makePath("gehen", [
+			"Worter",
+			"en",
+			"lexem",
+			"lemma",
+			"g",
+			"geh",
+			"gehen",
+		]);
+		const germanResolverPath = makePath("gehen", [
+			"Worter",
+			"de",
+			"lexem",
+			"lemma",
+			"g",
+			"geh",
+			"gehen",
+		]);
+
+		const target = computePrePromptTarget({
+			findByBasename: () => [englishWorter],
+			resolveLinkpathDest: () => germanResolverPath,
+			sourcePath,
+			surface: "gehen",
+			targetLanguage: "German",
+		});
+
+		expect(target.splitPath).toEqual(germanResolverPath);
+		expect(target.shouldCreatePlaceholder).toBe(false);
+	});
+
 	it("pre-prompt target: reuses existing Worter for single-token or creates unknown temp note", () => {
 		const sourcePath = makePath("Source", ["Books", "A"]);
 		const existingWorter = makePath("Staub", [
@@ -176,6 +209,65 @@ describe("lemma-link-routing", () => {
 		expect(target.splitPath).toEqual(worterPath);
 		expect(target.linkTarget).toBe("wir");
 		expect(target.linkTargetSplitPath).toEqual(worterPath);
+	});
+
+	it("closed-set fallback keeps Worter target when only wrong-POS Library candidates exist", () => {
+		const worterPath = makePath("die", [
+			"Worter",
+			"de",
+			"lexem",
+			"lemma",
+			"d",
+			"die",
+			"die",
+		]);
+		const article = makePath("die-bestimmter-artikel-de", [
+			"Library",
+			"de",
+			"artikel",
+			"bestimmter",
+		]);
+
+		const target = computeFinalTarget({
+			findByBasename: () => [worterPath],
+			lemma: "die",
+			linguisticUnit: "Lexem",
+			lookupInLibrary: () => [article],
+			posLikeKind: "Pronoun",
+			surfaceKind: "Lemma",
+			targetLanguage: "German",
+		});
+
+		expect(target.splitPath).toEqual(worterPath);
+		expect(target.linkTarget).toBe("die");
+		expect(target.linkTargetSplitPath).toEqual(worterPath);
+	});
+
+	it("final target reuse is language-scoped for Worter matches", () => {
+		const englishWorter = makePath("ich", [
+			"Worter",
+			"en",
+			"lexem",
+			"lemma",
+			"i",
+			"ich",
+			"ich",
+		]);
+
+		const target = computeFinalTarget({
+			findByBasename: () => [englishWorter],
+			lemma: "ich",
+			linguisticUnit: "Lexem",
+			lookupInLibrary: () => [],
+			posLikeKind: "Noun",
+			surfaceKind: "Lemma",
+			targetLanguage: "German",
+		});
+
+		expect(target.splitPath.pathParts[0]).toBe("Worter");
+		expect(target.splitPath.pathParts[1]).toBe("de");
+		expect(target.splitPath.basename).toBe("ich");
+		expect(target.linkTarget).toBe("ich");
 	});
 
 	it("closed-set selection filters by POS suffix and picks deterministic lexical candidate", () => {

@@ -362,7 +362,7 @@ Example:
 
 1. One Lemma invocation owns at most one working target note.
 2. Pre-query selection handling:
-   - If selected surface is one word and already resolves to an existing `Worter` note, reuse that note.
+   - If selected surface is one word and already resolves to an existing `Worter` note in the active target language, reuse that note.
    - Otherwise create a temporary working note at `Worter/.../unknown/.../{selected_text}.md`.
 3. Insert clickable wikilink immediately before LLM calls (progress-first UX).
 4. `unknown` path is temporary only; it must not remain after LLM finalization.
@@ -436,6 +436,7 @@ Add a maintenance command:
 10. Closed-set Library target selection policy:
    - Select Library leaf by language suffix + POS suffix match from Library suffix parts.
    - If multiple leaves still match, choose deterministically by lexical basename sort.
+   - If no POS-matching leaf exists, return no Library target (fall back to `Worter` host routing for the current invocation).
 11. Section-context policy centralization:
    - Section-level wikilink assumptions (source, intent, target-kind, propagation eligibility) are centralized in a shared policy helper and consumed by Generate/Propagation.
 12. Parse-time DTO policy:
