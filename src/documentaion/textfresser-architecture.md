@@ -684,6 +684,8 @@ Sync `Result` checks transition to async `ResultAsync` at `generateSections`.
 
 Matching ignores surfaceKind so that inflected encounters (e.g., "Schlosses" → `LX-IN-NOUN-`) correctly resolve to the existing lemma entry (`LX-LM-NOUN-`).
 
+For parse-time linguistic link DTO consumers, `dictNoteHelper.parseWithLinguisticWikilinks()` returns the same entries augmented with section-context-classified wikilink DTOs (source/intent/target-kind and target-ref classification) while leaving note serialization unchanged.
+
 Propagation-only stubs are explicitly excluded from re-encounter matching: if the matched entry has propagation sections (e.g., Morphology/Relation/Tags/Inflection) but lacks both Attestation and Translation, `resolveExistingEntry` drops that stub and forces full Generate path. This prevents propagation targets from getting stuck as permanent stubs.
 
 #### Section Generation

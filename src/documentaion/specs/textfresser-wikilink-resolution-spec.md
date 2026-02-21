@@ -438,6 +438,8 @@ Add a maintenance command:
    - If multiple leaves still match, choose deterministically by lexical basename sort.
 11. Section-context policy centralization:
    - Section-level wikilink assumptions (source, intent, target-kind, propagation eligibility) are centralized in a shared policy helper and consumed by Generate/Propagation.
+12. Parse-time DTO policy:
+   - `dictNoteHelper.parseWithLinguisticWikilinks` emits section-context-classified linguistic wikilink DTOs per entry (source, intent, target-kind + target ref classification) without changing markdown serialization behavior.
 
 ### Implementation status (worktree snapshot, 2026-02-21)
 

@@ -2,6 +2,7 @@ import type {
 	DeEntity,
 	GermanLinguisticUnit,
 } from "../../../../linguistics/de";
+import type { LinguisticWikilinkDto } from "../linguistic-wikilink";
 
 export type EntrySection = {
 	kind: string; // CSS suffix: "kontexte", "synonyme", "morpheme", etc.
@@ -19,4 +20,8 @@ export type DictEntry = {
 	headerContent: string; // Header line without the ^blockId
 	sections: EntrySection[];
 	meta: DictEntryMeta;
+};
+
+export type DictEntryWithLinguisticWikilinks = DictEntry & {
+	linguisticWikilinks: LinguisticWikilinkDto[];
 };
