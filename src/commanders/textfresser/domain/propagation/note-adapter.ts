@@ -296,6 +296,20 @@ function targetLemmaFromLinguisticWikilink(
 	return normalizeSpace(wikilink.target);
 }
 
+function canonicalWikilinkTargetForMorphologyBacklink(
+	wikilink: ParsedLinguisticWikilinkDto,
+): string | null {
+	const targetRef = wikilink.targetRef;
+	if (targetRef.kind === "WorterNote") {
+		return normalizeSpace(targetRef.basename);
+	}
+	if (targetRef.kind === "LibraryLeaf") {
+		return normalizeSpace(targetRef.basename);
+	}
+	const stripped = normalizeSpace(stripAnchorFromTarget(wikilink.target));
+	return stripped.length > 0 ? stripped : null;
+}
+
 function targetLemmaForMorphologyEquationPart(
 	rawToken: string,
 	options?: ParsePropagationNoteOptions,
@@ -376,17 +390,6 @@ function extractWikilinkTokensFromText(text: string): string[] {
 		tokens.push(fullMatch.trim());
 	}
 	return tokens;
-}
-
-function extractBasicWikilinksFromText(text: string): WikilinkDto[] {
-	const links: WikilinkDto[] = [];
-	for (const token of extractWikilinkTokensFromText(text)) {
-		const parsed = parseBasicWikilinkDto(token);
-		if (parsed) {
-			links.push(parsed);
-		}
-	}
-	return links;
 }
 
 function extractPreservedWikilinksFromText(text: string): string[] {
@@ -528,10 +531,29 @@ function serializeEquationPart(part: string): string {
 function parseMorphologyBacklinkValues(params: {
 	line: string;
 	relationType: MorphologyBacklinkDto["relationType"];
+	options?: ParsePropagationNoteOptions;
 }): string[] {
-	const basicLinks = extractBasicWikilinksFromText(params.line).map((link) =>
-		serializeWikilinkDto(link),
-	);
+	const basicLinks = extractWikilinkTokensFromText(params.line)
+		.map((token) => {
+			const basic = parseBasicWikilinkDto(token);
+			if (!basic) {
+				return null;
+			}
+			const parsedLinguistic = parseLinguisticWikilinkToken(
+				token,
+				MORPHOLOGY_SECTION_CSS_KIND,
+				params.options,
+			);
+			const canonicalTarget = parsedLinguistic
+				? canonicalWikilinkTargetForMorphologyBacklink(parsedLinguistic)
+				: null;
+			const target = normalizeSpace(canonicalTarget ?? basic.target);
+			return serializeWikilinkDto({
+				displayText: basic.displayText,
+				target,
+			});
+		})
+		.filter((link): link is string => typeof link === "string");
 	if (basicLinks.length > 0) {
 		if (params.relationType === "compounded_from") {
 			return basicLinks;
@@ -664,6 +686,7 @@ function parseMorphologySection(
 		if (activeRelationType) {
 			const values = parseMorphologyBacklinkValues({
 				line: trimmed,
+				options,
 				relationType: activeRelationType,
 			});
 			if (values.length === 0) {

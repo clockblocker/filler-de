@@ -74,6 +74,15 @@ const PATH_MORPHOLOGY_EQUATION_NOTE_FIXTURE = [
 	'<span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>',
 	"[[Worter/de/morphem/lemma/a/ab]] + [[Worter/de/lexem/lemma/f/fah/fahr/fahren]] = [[Worter/de/lexem/lemma/a/abf/abfa/abfahren]]",
 ].join("\n");
+const PATH_MORPHOLOGY_BACKLINK_NOTE_FIXTURE = [
+	"🪢 rueck ^m-3",
+	"",
+	'<span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>',
+	"Abgeleitet von:",
+	"[[Library/de/praeposition/über-praeposition-de|über]]",
+	"Verwendet in:",
+	"[[Worter/de/lexem/lemma/h/hau/haus/hausboot|Hausboot]]",
+].join("\n");
 const BARE_LIBRARY_BASENAME_RELATION_NOTE_FIXTURE = [
 	"🧭 basis ^r-2",
 	"",
@@ -551,6 +560,29 @@ describe("propagation note adapter", () => {
 			lhsParts: ["ab", "fahren"],
 			rhs: "abfahren",
 		});
+	});
+
+	it("normalizes morphology backlinks from explicit Worter/Library path wikilinks", () => {
+		const parsed = parsePropagationNote(PATH_MORPHOLOGY_BACKLINK_NOTE_FIXTURE);
+		const entry = parsed[0];
+		if (!entry) {
+			throw new Error("Expected morphology backlink fixture entry");
+		}
+		const morphology = getTypedPayload(entry, "Morphology");
+		expect(morphology).toBeDefined();
+		if (!morphology) {
+			return;
+		}
+
+		const derivedFrom = morphology.backlinks.find(
+			(item) => item.relationType === "derived_from",
+		);
+		expect(derivedFrom?.value).toBe("[[über-praeposition-de|über]]");
+
+		const usedIn = morphology.backlinks.find(
+			(item) => item.relationType === "used_in",
+		);
+		expect(usedIn?.value).toBe("[[hausboot|Hausboot]]");
 	});
 
 	it("preserves untouched raw passthrough section bytes exactly", () => {
