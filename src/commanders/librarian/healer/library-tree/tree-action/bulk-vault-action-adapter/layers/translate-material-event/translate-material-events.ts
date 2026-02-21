@@ -5,7 +5,6 @@ import {
 	MaterializedEventKind as MaterializedEventType,
 	type MaterializedNodeEvent,
 } from "../materialized-node-events/types";
-import { adaptCodecResult } from "./error-adapters";
 import { traslateCreateMaterializedEvent } from "./translators/translate-create-material-event";
 import { traslateDeleteMaterializedEvent } from "./translators/translate-delete-material-event";
 import { traslateRenameMaterializedEvent } from "./translators/traslate-rename-materila-event";
@@ -72,8 +71,8 @@ export const translateMaterializedEvents = (
 function isCodexEvent(ev: MaterializedNodeEvent, codecs: Codecs): boolean {
 	const splitPath =
 		ev.kind === MaterializedEventType.Rename ? ev.to : ev.splitPath;
-	const result = adaptCodecResult(
-		codecs.suffix.parseSeparatedSuffix(splitPath.basename),
-	);
+	const result = codecs.suffix
+		.parseSeparatedSuffix(splitPath.basename)
+		.mapErr((error) => error.message);
 	return result.isOk() && result.value.coreName === PREFIX_OF_CODEX;
 }

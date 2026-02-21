@@ -1,6 +1,10 @@
 # E2E Testing — Architecture (CLI-Based)
 
 > **Scope**: This document covers the CLI-based end-to-end testing infrastructure for the Textfresser plugin. For the file system abstraction layer, see `vam-architecture.md`. For vocabulary/dictionary commands, see `textfresser-architecture.md`.
+>
+> **Compatibility Policy (Dev Mode, 2026-02-20)**:
+> - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
+> - Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
 
 ---
 

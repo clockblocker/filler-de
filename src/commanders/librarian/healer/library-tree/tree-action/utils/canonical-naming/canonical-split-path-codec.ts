@@ -2,8 +2,8 @@ import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
 import type { AnySplitPath } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
+	AnyCanonicalSplitPathInsideLibrary,
 	AnySplitPathInsideLibrary,
-	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
@@ -26,10 +26,10 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 ): Result<CanonicalSplitPathToMdFileInsideLibrary, string>;
 export function tryParseCanonicalSplitPathInsideLibrary(
 	sp: AnySplitPathInsideLibrary,
-): Result<CanonicalSplitPathInsideLibrary, string>;
+): Result<AnyCanonicalSplitPathInsideLibrary, string>;
 export function tryParseCanonicalSplitPathInsideLibrary(
 	sp: AnySplitPathInsideLibrary,
-): Result<CanonicalSplitPathInsideLibrary, string> {
+): Result<AnyCanonicalSplitPathInsideLibrary, string> {
 	const pathPartsRes = tryParsePathParts(sp.pathParts);
 	if (pathPartsRes.isErr()) return err(pathPartsRes.error);
 
@@ -61,7 +61,7 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 		return err(canonizedResult.error.message);
 	}
 
-	return ok(canonizedResult.value as CanonicalSplitPathInsideLibrary);
+	return ok(canonizedResult.value as AnyCanonicalSplitPathInsideLibrary);
 }
 
 function tryParsePathParts(
@@ -97,10 +97,10 @@ export function makeRegularSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToMdFileInsideLibrary,
 ): SplitPathToMdFileInsideLibrary;
 export function makeRegularSplitPathInsideLibrary(
-	sp: CanonicalSplitPathInsideLibrary,
+	sp: AnyCanonicalSplitPathInsideLibrary,
 ): AnySplitPathInsideLibrary;
 export function makeRegularSplitPathInsideLibrary(
-	sp: CanonicalSplitPathInsideLibrary,
+	sp: AnyCanonicalSplitPathInsideLibrary,
 ): AnySplitPathInsideLibrary {
 	const settings = getParsedUserSettings();
 	const rules = makeCodecRulesFromSettings(settings);

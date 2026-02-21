@@ -3,6 +3,7 @@ import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
+import { canonicalizeTargetForComparison } from "../../../common/target-comparison";
 import {
 	buildPropagationActionPair,
 	resolveMorphemePath,
@@ -75,7 +76,7 @@ function hasEquivalentEquationLine(
 function extractLineTargetSignature(line: string): string[] {
 	return wikilinkHelper
 		.parse(line)
-		.map((wikilink) => wikilinkHelper.normalizeTarget(wikilink.target))
+		.map((wikilink) => canonicalizeTargetForComparison(wikilink.target))
 		.filter((target) => target.length > 0);
 }
 
@@ -111,8 +112,8 @@ function buildTargets(ctx: GenerateSectionsResult): MorphologyTarget[] {
 	const derivedFrom = normalizeLemma(morphology.derivedFromLemma);
 	if (
 		derivedFrom &&
-		wikilinkHelper.normalizeTarget(derivedFrom) !==
-			wikilinkHelper.normalizeTarget(sourceLemma)
+		canonicalizeTargetForComparison(derivedFrom) !==
+			canonicalizeTargetForComparison(sourceLemma)
 	) {
 		targets.push({
 			kind: "UsedIn",
@@ -126,8 +127,8 @@ function buildTargets(ctx: GenerateSectionsResult): MorphologyTarget[] {
 		const normalized = normalizeLemma(lemma);
 		if (!normalized) continue;
 		if (
-			wikilinkHelper.normalizeTarget(normalized) ===
-			wikilinkHelper.normalizeTarget(sourceLemma)
+			canonicalizeTargetForComparison(normalized) ===
+			canonicalizeTargetForComparison(sourceLemma)
 		) {
 			continue;
 		}
@@ -145,8 +146,8 @@ function buildTargets(ctx: GenerateSectionsResult): MorphologyTarget[] {
 		);
 		if (
 			targetWord &&
-			wikilinkHelper.normalizeTarget(targetWord) !==
-				wikilinkHelper.normalizeTarget(sourceLemma)
+			canonicalizeTargetForComparison(targetWord) !==
+				canonicalizeTargetForComparison(sourceLemma)
 		) {
 			const targetKey = normalizeMorphologyKey(targetWord);
 			if (targetKey) {
@@ -194,8 +195,8 @@ function groupTargets(
 	for (const target of targets) {
 		const key =
 			target.kind === "Equation"
-				? `${target.kind}::${wikilinkHelper.normalizeTarget(target.targetWord)}::${target.targetHeader}`
-				: `${target.kind}::${wikilinkHelper.normalizeTarget(target.targetWord)}`;
+				? `${target.kind}::${canonicalizeTargetForComparison(target.targetWord)}::${target.targetHeader}`
+				: `${target.kind}::${canonicalizeTargetForComparison(target.targetWord)}`;
 		const existing = grouped.get(key);
 		if (!existing) {
 			grouped.set(key, target);

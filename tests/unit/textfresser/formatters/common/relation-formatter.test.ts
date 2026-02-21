@@ -53,4 +53,16 @@ describe("formatRelationSection", () => {
 		const result = formatRelationSection({ relations: [] });
 		expect(result).toBe("");
 	});
+
+	it("normalizes relation words when prompt output contains vault paths", () => {
+		const result = formatRelationSection({
+			relations: [
+				{
+					kind: "Synonym",
+					words: ["Worter/de/lexem/lemma/f/fah/fahre/Fahren"],
+				},
+			],
+		});
+		expect(result).toBe("= [[Fahren]]");
+	});
 });

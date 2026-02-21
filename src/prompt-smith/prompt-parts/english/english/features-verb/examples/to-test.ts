@@ -7,7 +7,7 @@ export const testExamples = [
 			word: "open up",
 		},
 		output: {
-			conjugation: "Rregular",
+			conjugation: "Regular",
 			valency: {
 				reflexivity: "NonReflexive",
 				separability: "Separable",

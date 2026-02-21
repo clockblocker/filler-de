@@ -45,4 +45,16 @@ describe("noun formatHeaderLine", () => {
 			"💨 ✨ der [[Staub]], [ˈʃtaʊ̯p](https://youglish.com/pronounce/Staub/german)",
 		);
 	});
+
+	it("normalizes vault-path lemma targets to basename", () => {
+		const result = formatHeaderLine(
+			{ emojiDescription: ["🚗"], ipa: "ˈfaːʁən" },
+			"Worter/de/lexem/lemma/f/fah/fahre/Fahren",
+			"German",
+			"Maskulinum",
+		);
+		expect(result).toBe(
+			"🚗 der [[Fahren]], [ˈfaːʁən](https://youglish.com/pronounce/Fahren/german)",
+		);
+	});
 });

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -n "${BASH_SOURCE[0]:-}" ]]; then
+	_RUNBOOK_CLI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+else
+	_RUNBOOK_CLI_DIR="$(cd "$(dirname "$0")" && pwd)"
+fi
+
+usage() {
+	echo "Textfresser runbook CLI"
+	echo ""
+	echo "Usage:"
+	echo "  scripts/runbook-cli/textfresser-runbook <command> [args]"
+	echo ""
+	echo "General commands:"
+	echo "  preflight         Check CLI/vault/plugin reachability"
+	echo "  doctor            Run deeper diagnostics and IPC smoke checks"
+	echo "  show-config       Print VAULT/PLUGIN_ID/SRC/OBSIDIAN_BIN"
+	echo "  wait-idle         Wait for Textfresser pending work to settle"
+	echo "  lemma <surface>   Fire Lemma for a surface in SRC"
+	echo "  read-source       Read SRC content"
+	echo "  links-source      List outgoing links from SRC"
+	echo "  list-entries      List Worter/de markdown entries"
+	echo "  check-no-nested   Detect nested wikilinks in SRC"
+	echo "  check-entry <p>   Validate that a dictionary entry is non-empty"
+	echo "  scan-empty        Check all linked Worter entries for emptiness"
+	echo "  reload-plugin     Reload plugin in target vault"
+	echo "  reset-source      Recreate SRC fixture and wait for idle"
+	echo "  reset             Full clean slate (trash Worter + reset SRC + reload plugin)"
+	echo ""
+	echo "Environment overrides:"
+	echo "  VAULT, PLUGIN_ID, SRC, OBSIDIAN_BIN"
+}
+
+cmd="${1:-help}"
+shift || true
+
+case "$cmd" in
+help|-h|--help)
+	usage
+	;;
+preflight|doctor|show-config|wait-idle|read-source|links-source|list-entries|check-no-nested|scan-empty|reload-plugin|reset-source|reset)
+	exec "$_RUNBOOK_CLI_DIR/commands/$cmd.sh" "$@"
+	;;
+lemma|check-entry)
+	exec "$_RUNBOOK_CLI_DIR/commands/$cmd.sh" "$@"
+	;;
+*)
+	echo "Unknown command: $cmd"
+	echo ""
+	usage
+	exit 1
+	;;
+esac

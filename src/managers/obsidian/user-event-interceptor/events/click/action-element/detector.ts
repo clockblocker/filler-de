@@ -7,8 +7,7 @@
  * - Overflow menu items
  *
  * Note: Action elements typically don't use handlers since they
- * are already handled by the action executor system. This detector
- * primarily exists for compatibility and future extension.
+ * are already handled by the action executor system.
  */
 
 import { DomSelectors } from "../../../../../../utils/dom-selectors";

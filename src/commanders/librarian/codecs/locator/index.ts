@@ -1,8 +1,8 @@
 export type { LocatorCodecs } from "./make";
 export { makeLocatorCodecs } from "./make";
 export type {
+	AnyCanonicalSplitPathInsideLibrary,
 	AnyNodeLocator,
-	CanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,

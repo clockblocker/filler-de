@@ -127,7 +127,7 @@ function makeVerbFeatures(
 	overrides: Partial<AgentOutput<"FeaturesVerb">> = {},
 ): AgentOutput<"FeaturesVerb"> {
 	return {
-		conjugation: "Rregular",
+		conjugation: "Regular",
 		valency: {
 			reflexivity: "NonReflexive",
 			separability: "Separable",
@@ -228,7 +228,7 @@ describe("buildLinguisticUnitMeta", () => {
 			kind: "Lexem",
 			surface: {
 				features: {
-					conjugation: "Rregular",
+					conjugation: "Regular",
 					pos: "Verb",
 					valency: {
 						reflexivity: "NonReflexive",

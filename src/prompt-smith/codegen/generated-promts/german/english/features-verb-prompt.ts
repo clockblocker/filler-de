@@ -13,7 +13,7 @@ You receive:
 - context: sentence where the word occurred
 
 Return:
-- conjugation: one of "Irregular" | "Rregular"
+- conjugation: one of "Irregular" | "Regular"
 - valency:
   - separability: one of "Separable" | "Inseparable" | "None"
   - reflexivity: one of "NonReflexive" | "ReflexiveOnly" | "OptionalReflexive"
@@ -32,7 +32,7 @@ Rules:
 {"context":"Kannst du bitte die Tür aufmachen?","word":"aufmachen"}
 </input>
 <output>
-{"conjugation":"Rregular","valency":{"reflexivity":"NonReflexive","separability":"Separable"}}
+{"conjugation":"Regular","valency":{"reflexivity":"NonReflexive","separability":"Separable"}}
 </output>
 </example-1>
 
@@ -41,7 +41,7 @@ Rules:
 {"context":"Ich kümmere mich um die Kinder.","word":"sich kümmern"}
 </input>
 <output>
-{"conjugation":"Rregular","valency":{"governedPreposition":"um","reflexivity":"ReflexiveOnly","separability":"None"}}
+{"conjugation":"Regular","valency":{"governedPreposition":"um","reflexivity":"ReflexiveOnly","separability":"None"}}
 </output>
 </example-2>
 </examples>`;

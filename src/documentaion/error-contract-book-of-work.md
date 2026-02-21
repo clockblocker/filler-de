@@ -2,6 +2,11 @@
 
 Track error-shape debt where APIs currently return unstable string messages and callers must infer semantics from text.
 
+## Compatibility Policy (Dev Mode, 2026-02-20)
+
+- Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
+- Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
+
 ## Cases
 
 | ID | Area | Current Contract | Current Workaround | Desired Contract | Priority | Status |

@@ -7,7 +7,7 @@ export const testExamples = [
 			word: "aufmachen",
 		},
 		output: {
-			conjugation: "Rregular",
+			conjugation: "Regular",
 			valency: {
 				reflexivity: "NonReflexive",
 				separability: "Separable",

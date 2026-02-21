@@ -45,7 +45,7 @@ const WINDRAD_ENTRY = [
 	"wind turbine",
 ].join("\n");
 
-const MULTI_ENTRY_BODY = `${KOHLEKRAFTWERK_ENTRY}\n---\n---\n---\n${WINDRAD_ENTRY}`;
+const MULTI_ENTRY_BODY = `${KOHLEKRAFTWERK_ENTRY}\n\n\n---\n---\n\n\n${WINDRAD_ENTRY}`;
 
 function makeNoteWithMeta(body: string, meta: Record<string, unknown>): string {
 	const padding = "\n".repeat(20);
@@ -83,7 +83,7 @@ describe("dictNoteHelper.parse", () => {
 		expect(e.meta).toEqual({ status: "Done" });
 	});
 
-	test("parses multiple entries separated by ---\\n---\\n---", () => {
+	test("parses multiple entries separated by canonical separator", () => {
 		const note = makeNoteWithMeta(MULTI_ENTRY_BODY, {
 			entries: {
 				"l-nom-n-m1": { status: "Done" },
@@ -124,6 +124,30 @@ describe("dictNoteHelper.parse", () => {
 
 		expect(entries).toHaveLength(1);
 		expect(entries[0]?.meta).toEqual({});
+	});
+
+	test("preserves top-level metadata fields on parse", () => {
+		const note = makeNoteWithMeta(KOHLEKRAFTWERK_ENTRY, {
+			entries: {
+				"l-nom-n-m1": {
+					emojiDescription: ["🏭", "⚡"],
+					ipa: "ˈkoːləˌkraftvɛɐ̯k",
+					semantics: "legacy semantics",
+					senseGloss: "legacy gloss",
+					status: "Done",
+				},
+			},
+		});
+
+		const entries = dictNoteHelper.parse(note);
+		expect(entries).toHaveLength(1);
+		expect(entries[0]?.meta).toEqual({
+			emojiDescription: ["🏭", "⚡"],
+			ipa: "ˈkoːləˌkraftvɛɐ̯k",
+			semantics: "legacy semantics",
+			senseGloss: "legacy gloss",
+			status: "Done",
+		});
 	});
 
 	test("two sections with same kind but different titles preserved", () => {

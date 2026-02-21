@@ -8,5 +8,4 @@ export const commandFnForCommandKind = {
 	[LibrarianCommandKind.GoToPrevPage]: goToPrevPageCommand,
 	[LibrarianCommandKind.SplitInBlocks]: splitInBlocksCommand,
 	[LibrarianCommandKind.SplitToPages]: splitToPagesCommand,
-	[LibrarianCommandKind.MakeText]: splitToPagesCommand, // legacy alias
 } satisfies Record<LibrarianCommandKind, LibrarianCommandFn>;

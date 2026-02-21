@@ -184,52 +184,22 @@ export function disambiguateSense(
 					Array.isArray(entity?.emojiDescription) &&
 					entity.emojiDescription.length > 0
 						? entity.emojiDescription
-						: e.meta.emojiDescription;
-				const ipaFromLegacyMeta = e.meta.ipa;
+						: null;
 				const ipa =
 					typeof entity?.ipa === "string" && entity.ipa.length > 0
 						? entity.ipa
-						: typeof ipaFromLegacyMeta === "string" &&
-								ipaFromLegacyMeta.length > 0
-							? ipaFromLegacyMeta
-							: extractIpaFromHeaderContent(e.headerContent);
+						: extractIpaFromHeaderContent(e.headerContent);
 				const senseGlossFromEntity =
 					extractSenseGlossFromEntity(entity);
-				const senseGlossFromLegacyMeta =
-					typeof e.meta.senseGloss === "string" &&
-					e.meta.senseGloss.length > 0
-						? e.meta.senseGloss
-						: undefined;
 				const senseGloss =
 					senseGlossFromEntity ??
-					senseGlossFromLegacyMeta ??
 					extractSenseGlossFromTranslationSection(e);
-
-				let genus = extractGenusFromEntity(entity);
-				let phrasemeKind = extractPhrasemeKindFromEntity(entity);
-
-				// Extract genus/phraseme kind from legacy linguisticUnit metadata if needed.
-				const lu = e.meta.linguisticUnit;
-				if (lu?.kind === "Lexem") {
-					const features = lu.surface.features;
-					if (
-						!genus &&
-						features.pos === "Noun" &&
-						"genus" in features
-					) {
-						genus = features.genus;
-					}
-				} else if (!phrasemeKind && lu?.kind === "Phrasem") {
-					phrasemeKind = lu.surface.features.phrasemeKind;
-				}
 				return {
-					emojiDescription: Array.isArray(emojiDescription)
-						? emojiDescription
-						: null,
-					genus,
+					emojiDescription,
+					genus: extractGenusFromEntity(entity),
 					index: parsed.index,
 					ipa,
-					phrasemeKind,
+					phrasemeKind: extractPhrasemeKindFromEntity(entity),
 					pos: parsed.pos,
 					senseGloss,
 					unitKind: parsed.unitKind,

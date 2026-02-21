@@ -1,3 +1,5 @@
+import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
+
 const YOUGLISH_BASE = "https://youglish.com/pronounce";
 
 export function buildYouglishUrl(
@@ -19,7 +21,8 @@ export function formatHeaderLine(
 	targetLanguage: string,
 ): string {
 	const emoji = output.emojiDescription.join(" ");
-	const youglishUrl = buildYouglishUrl(lemma, targetLanguage);
+	const normalizedLemma = wikilinkHelper.normalizeLinkTarget(lemma);
+	const youglishUrl = buildYouglishUrl(normalizedLemma, targetLanguage);
 
-	return `${emoji} [[${lemma}]], [${output.ipa}](${youglishUrl})`;
+	return `${emoji} [[${normalizedLemma}]], [${output.ipa}](${youglishUrl})`;
 }

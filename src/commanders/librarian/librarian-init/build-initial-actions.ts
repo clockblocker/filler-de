@@ -1,32 +1,16 @@
 import { z } from "zod";
 import type { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
-import type {
-	SplitPathToMdFile,
-	SplitPathWithReader,
-} from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathWithReader } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
-import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
-import { parseFrontmatter } from "../../../stateless-helpers/note-metadata/internal/frontmatter";
-import { readJsonSection } from "../../../stateless-helpers/note-metadata/internal/json-section";
-import {
-	addFrontmatter,
-	migrateFrontmatter,
-	migrateToFrontmatter,
-} from "../../../stateless-helpers/note-metadata/internal/migration";
 import { logger } from "../../../utils/logger";
 import type {
 	AnySplitPathInsideLibrary,
 	CodecRules,
 	Codecs,
-	SplitPathToMdFileInsideLibrary,
 } from "../codecs";
 import { isCodexSplitPath } from "../healer/library-tree/codex/helpers";
-import {
-	makeVaultScopedSplitPath,
-	tryParseAsInsideLibrarySplitPath,
-} from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
+import { tryParseAsInsideLibrarySplitPath } from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import { inferCreatePolicy } from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
 import type { CreateTreeLeafAction } from "../healer/library-tree/tree-action/types/tree-action";
 import { tryCanonicalizeSplitPathToDestination } from "../healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
@@ -45,18 +29,16 @@ const ScrollMetadataSchema = z
 
 export type BuildInitialActionsResult = {
 	createActions: CreateTreeLeafAction[];
-	migrationActions: VaultAction[];
 };
 
 /**
  * Build CreateTreeLeafAction for each file in the library.
  * Applies policy (NameKing for root, PathKing for nested) to determine canonical location.
  * Reads status from md file metadata or YAML frontmatter.
- * Returns migration actions for files that need format conversion.
  *
  * @param files - Files from vault with readers
  * @param codecs - Codec API
- * @param rules - Codec rules (includes hideMetadata setting)
+ * @param rules - Codec rules
  */
 export async function buildInitialCreateActions(
 	files: SplitPathWithReader[],
@@ -64,7 +46,6 @@ export async function buildInitialCreateActions(
 	rules: CodecRules,
 ): Promise<BuildInitialActionsResult> {
 	const createActions: CreateTreeLeafAction[] = [];
-	const migrationActions: VaultAction[] = [];
 
 	for (const file of files) {
 		// Skip codex files (basename starts with __)
@@ -132,61 +113,6 @@ export async function buildInitialCreateActions(
 				if (meta?.status === "Done") {
 					status = TreeNodeStatus.Done;
 				}
-
-				// Check which formats exist for migration
-				const hasInternal =
-					readJsonSection(content, ScrollMetadataSchema) !== null;
-				const hasFrontmatter = parseFrontmatter(content) !== null;
-
-				// Cast observedPath to MdFile since we're inside file.kind === MdFile check
-				const mdPath = observedPath as SplitPathToMdFileInsideLibrary;
-				const vaultMdPath = makeVaultScopedSplitPath(
-					mdPath,
-					rules,
-				) as SplitPathToMdFile;
-
-				if (rules.hideMetadata) {
-					// Want internal format - migrate YAML to internal if needed
-					if (hasFrontmatter && !hasInternal) {
-						migrationActions.push({
-							kind: VaultActionKind.ProcessMdFile,
-							payload: {
-								splitPath: vaultMdPath,
-								transform: migrateFrontmatter({
-									stripYaml: true,
-								}),
-							},
-						});
-					}
-				} else {
-					// Want YAML format
-					if (hasInternal && meta) {
-						// Convert internal to YAML
-						migrationActions.push({
-							kind: VaultActionKind.ProcessMdFile,
-							payload: {
-								splitPath: vaultMdPath,
-								transform: migrateToFrontmatter(meta),
-							},
-						});
-					} else if (!hasFrontmatter) {
-						// No metadata at all - add YAML with current status
-						const statusValue =
-							status === TreeNodeStatus.Done
-								? TreeNodeStatus.Done
-								: TreeNodeStatus.NotStarted;
-
-						migrationActions.push({
-							kind: VaultActionKind.ProcessMdFile,
-							payload: {
-								splitPath: vaultMdPath,
-								transform: addFrontmatter({
-									status: statusValue,
-								}),
-							},
-						});
-					}
-				}
 			}
 		}
 
@@ -212,5 +138,5 @@ export async function buildInitialCreateActions(
 		}
 	}
 
-	return { createActions, migrationActions };
+	return { createActions };
 }

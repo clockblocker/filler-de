@@ -58,7 +58,6 @@ export function listCommandsExecutableIn(
 	} else {
 		// Scroll commands: split into pages
 		commands.push(CommandKind.SplitToPages);
-		commands.push(CommandKind.MakeText);
 	}
 
 	// Selection-dependent commands available for any library file

@@ -125,13 +125,44 @@ export function formatLinkTarget(
 	splitPath: SplitPathToMdFile,
 	opts?: FormatLinkTargetOpts,
 ): string {
-	const libraryTargetStyle = opts?.libraryTargetStyle ?? "full-path";
+	const libraryTargetStyle = opts?.libraryTargetStyle ?? "basename";
 
 	if (isLibraryPath(splitPath) && libraryTargetStyle === "full-path") {
 		return [...splitPath.pathParts, splitPath.basename].join("/");
 	}
 
 	return splitPath.basename;
+}
+
+function splitPathKey(splitPath: SplitPathToMdFile): string {
+	return [...splitPath.pathParts, splitPath.basename].join("/");
+}
+
+function resolveLibraryRenderStyle(params: {
+	findByBasename: (basename: string) => SplitPathToMdFile[];
+	splitPath: SplitPathToMdFile;
+}): "full-path" | "basename" {
+	if (!isLibraryPath(params.splitPath)) {
+		return "basename";
+	}
+
+	const matches = params.findByBasename(params.splitPath.basename);
+	const uniqueMatchKeys = new Set(
+		matches.map((match) => splitPathKey(match)),
+	);
+	if (uniqueMatchKeys.size <= 1) {
+		return "basename";
+	}
+
+	return "full-path";
+}
+
+function formatResolvedTarget(params: {
+	findByBasename: (basename: string) => SplitPathToMdFile[];
+	splitPath: SplitPathToMdFile;
+}): string {
+	const libraryTargetStyle = resolveLibraryRenderStyle(params);
+	return formatLinkTarget(params.splitPath, { libraryTargetStyle });
 }
 
 export function computePrePromptTarget(
@@ -148,7 +179,10 @@ export function computePrePromptTarget(
 	const fromResolver = resolveLinkpathDest(surface, sourcePath);
 	if (fromResolver) {
 		return {
-			linkTarget: formatLinkTarget(fromResolver),
+			linkTarget: formatResolvedTarget({
+				findByBasename: lookupInLibrary,
+				splitPath: fromResolver,
+			}),
 			shouldCreatePlaceholder: false,
 			splitPath: fromResolver,
 		};
@@ -157,7 +191,10 @@ export function computePrePromptTarget(
 	const libraryMatch = lookupInLibrary(surface)[0];
 	if (libraryMatch) {
 		return {
-			linkTarget: formatLinkTarget(libraryMatch),
+			linkTarget: formatResolvedTarget({
+				findByBasename: lookupInLibrary,
+				splitPath: libraryMatch,
+			}),
 			shouldCreatePlaceholder: false,
 			splitPath: libraryMatch,
 		};
@@ -201,7 +238,10 @@ export function computeFinalTarget(
 		const libraryMatch = existingMatches.find(isLibraryPath);
 		if (libraryMatch) {
 			return {
-				linkTarget: formatLinkTarget(libraryMatch),
+				linkTarget: formatResolvedTarget({
+					findByBasename,
+					splitPath: libraryMatch,
+				}),
 				shouldCreatePlaceholder: false,
 				splitPath: libraryMatch,
 			};
@@ -210,7 +250,10 @@ export function computeFinalTarget(
 		const fromLibraryLookup = lookupInLibrary(lemma)[0];
 		if (fromLibraryLookup) {
 			return {
-				linkTarget: formatLinkTarget(fromLibraryLookup),
+				linkTarget: formatResolvedTarget({
+					findByBasename,
+					splitPath: fromLibraryLookup,
+				}),
 				shouldCreatePlaceholder: false,
 				splitPath: fromLibraryLookup,
 			};
@@ -237,7 +280,10 @@ export function computeFinalTarget(
 	});
 
 	return {
-		linkTarget: formatLinkTarget(computed),
+		linkTarget: formatResolvedTarget({
+			findByBasename,
+			splitPath: computed,
+		}),
 		shouldCreatePlaceholder: false,
 		splitPath: computed,
 	};

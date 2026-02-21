@@ -645,6 +645,13 @@ function parseSectionsForEntry(sectionText: string): PropagationSection[] {
 					title: marker.title,
 				};
 		}
+
+		return {
+			cssKind: marker.cssKind,
+			kind: "Raw",
+			rawBlock,
+			title: marker.title,
+		};
 	});
 }
 

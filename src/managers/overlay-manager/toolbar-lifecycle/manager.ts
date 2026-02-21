@@ -2,7 +2,7 @@
  * Manager for toolbar lifecycle - create, update, and destroy toolbars.
  */
 
-import type { MarkdownView } from "obsidian";
+import { MarkdownView } from "obsidian";
 import { z } from "zod";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import {
@@ -56,7 +56,9 @@ export function updateToolbarVisibility(
 	const activeLeafIds = new Set<string>();
 
 	for (const leaf of leaves) {
-		const file = leaf.view?.file;
+		const view = leaf.view;
+		if (!(view instanceof MarkdownView)) continue;
+		const file = view.file;
 		if (!file || file.extension !== "md") continue;
 
 		// Skip codex files - no toolbars for them
@@ -67,11 +69,11 @@ export function updateToolbarVisibility(
 		if (!leafId) continue;
 		activeLeafIds.add(leafId);
 
-		const container = leaf.view.containerEl?.querySelector(".view-content");
+		const container = view.containerEl?.querySelector(".view-content");
 		if (!container || !(container instanceof HTMLElement)) continue;
 
 		// Read page metadata for nav button state
-		const pageMetadata = getPageMetadata(leaf.view as MarkdownView);
+		const pageMetadata = getPageMetadata(view);
 		const navActions = computeNavActions(pageMetadata);
 
 		// Combine base bottom actions with nav actions
@@ -103,7 +105,7 @@ export function updateToolbarVisibility(
 		// Create/update edge zones
 		if (!edgeZones.has(leafId)) {
 			const zones = createEdgeZones(container);
-			zones.attach(container, leaf.view as MarkdownView);
+			zones.attach(container, view);
 			zones.setNavActions(navActions);
 			edgeZones.set(leafId, zones);
 		} else {

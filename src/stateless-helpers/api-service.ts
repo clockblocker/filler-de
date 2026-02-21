@@ -36,10 +36,19 @@ function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
 
 // 7 days
 const TTL_SECONDS = 604800;
+const GENERATE_TIMEOUT_MS = 45_000;
+
+class ApiTimeoutError extends Error {
+	constructor(timeoutMs: number) {
+		super(`API request timed out after ${timeoutMs}ms`);
+		this.name = "ApiTimeoutError";
+	}
+}
 
 export type ApiServiceError = { reason: string };
 
 function isRetryableApiError(error: unknown): boolean {
+	if (error instanceof ApiTimeoutError) return true;
 	if (error instanceof APIConnectionError) return true;
 	if (error instanceof APIError) {
 		return error.status === 429 || (error.status ?? 0) >= 500;
@@ -194,6 +203,25 @@ export class ApiService {
 		return null;
 	}
 
+	private async withTimeout<T>(
+		promise: Promise<T>,
+		timeoutMs: number,
+	): Promise<T> {
+		let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+		try {
+			const timeoutPromise = new Promise<never>((_, reject) => {
+				timeoutHandle = setTimeout(() => {
+					reject(new ApiTimeoutError(timeoutMs));
+				}, timeoutMs);
+			});
+			return await Promise.race([promise, timeoutPromise]);
+		} finally {
+			if (timeoutHandle) {
+				clearTimeout(timeoutHandle);
+			}
+		}
+	}
+
 	generate<T extends z.ZodTypeAny>({
 		systemPrompt,
 		userInput,
@@ -234,28 +262,31 @@ export class ApiService {
 
 				return withRetry(
 					async () => {
-						const completion = await client.chat.completions.parse({
-							messages,
-							model,
-							// Type assertion needed due to Zod version mismatch between our deps and OpenAI SDK
-							response_format: zodResponseFormat(
-								schema as unknown as Parameters<
-									typeof zodResponseFormat
-								>[0],
-								"data",
-							),
-							temperature: 0,
-							top_p: 0.95,
-							...(cachedId
-								? {
-										extra_body: {
-											google: {
-												cached_content: cachedId,
+						const completion = await this.withTimeout(
+							client.chat.completions.parse({
+								messages,
+								model,
+								// Type assertion needed due to Zod version mismatch between our deps and OpenAI SDK
+								response_format: zodResponseFormat(
+									schema as unknown as Parameters<
+										typeof zodResponseFormat
+									>[0],
+									"data",
+								),
+								temperature: 0,
+								top_p: 0.95,
+								...(cachedId
+									? {
+											extra_body: {
+												google: {
+													cached_content: cachedId,
+												},
 											},
-										},
-									}
-								: {}),
-						});
+										}
+									: {}),
+							}),
+							GENERATE_TIMEOUT_MS,
+						);
 
 						const parsed = completion.choices?.[0]?.message?.parsed;
 

@@ -121,12 +121,17 @@ export function createBackgroundGenerateCoordinator(params: {
 	): Promise<void> {
 		const targetExistedBefore = vam.exists(targetPath);
 
+		async function readTargetContent() {
+			// Single retry layer lives in VaultReader/TFileHelper.
+			return vam.readContent(targetPath);
+		}
+
 		async function cleanupIfEmpty(): Promise<string> {
 			const shouldCleanup =
 				targetOwnedByInvocation || !targetExistedBefore;
 			if (!shouldCleanup) return "skipped";
 
-			const currentContent = await vam.readContent(targetPath);
+			const currentContent = await readTargetContent();
 			if (currentContent.isErr()) return "gone";
 			if (currentContent.value.trim().length > 0) return "has-content";
 
@@ -149,7 +154,7 @@ export function createBackgroundGenerateCoordinator(params: {
 			return "deleted";
 		}
 
-		const contentResult = await vam.readContent(targetPath);
+		const contentResult = await readTargetContent();
 		const content = contentResult.isOk() ? contentResult.value : "";
 
 		const stateSnapshot: TextfresserState = {
@@ -193,7 +198,7 @@ export function createBackgroundGenerateCoordinator(params: {
 			);
 		}
 
-		const finalContentResult = await vam.readContent(targetPath);
+		const finalContentResult = await readTargetContent();
 		if (finalContentResult.isErr()) {
 			throw new Error(
 				"Background generate finished but target note could not be read",

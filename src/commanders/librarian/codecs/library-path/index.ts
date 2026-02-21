@@ -26,7 +26,7 @@ export type LibraryPath = {
 	readonly segments: readonly string[];
 	/** File extension if this is a file, undefined for folders */
 	readonly extension?: string;
-	/** SplitPath kind for compatibility */
+	/** SplitPath kind */
 	readonly kind: SplitPathKind;
 };
 

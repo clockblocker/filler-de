@@ -1,6 +1,10 @@
 # Librarian Tree & Healing System — Architecture
 
 > **Scope**: This document covers the tree/healing/codex half of the plugin (the "Librarian" commander). For the vocabulary/dictionary half, see `textfresser-architecture.md`. For E2E testing, see `e2e-architecture.md`.
+>
+> **Compatibility Policy (Dev Mode, 2026-02-20)**:
+> - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
+> - Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
 
 ---
 
@@ -527,7 +531,7 @@ The system supports two metadata storage formats:
 ```
 Placed at the bottom of the file with 20 newlines of padding (invisible in Obsidian).
 
-**YAML Frontmatter** (visible, legacy):
+**YAML Frontmatter** (visible):
 ```yaml
 ---
 status: Done
@@ -539,7 +543,6 @@ prevPageIdx: 42
 
 - **Read**: tries JSON first, falls back to YAML
 - **Write**: respects `rules.hideMetadata` setting (JSON if true, YAML if false)
-- **Migration**: at init, converts between formats based on settings
 
 ### 11.3 Public API
 
@@ -635,17 +638,15 @@ On plugin load, the Librarian rebuilds the entire tree from vault state:
    d. Canonicalize to destination
    e. Build locator → CreateTreeLeafAction
    f. Read metadata → extract status (Done/NotStarted)
-   g. Detect metadata format → generate migration action if needed
 5. Apply all CreateTreeLeafActions via HealingTransaction
 6. Find invalid codex files → delete actions
 7. Scan for orphaned codexes → cleanup actions
 8. Subscribe to vault events (BEFORE dispatch — catches cascading events)
 9. Process codex impacts → deletions + recreations
-10. Build page navigation migration actions
-11. Assemble: healing + codex + backlink + migration actions
-12. Single vam.dispatch(allVaultActions)
-13. Wait for queue to drain
-14. Commit transaction
+10. Assemble: healing + codex + backlink actions
+11. Single vam.dispatch(allVaultActions)
+12. Wait for queue to drain
+13. Commit transaction
 ```
 
 **Source**: `src/commanders/librarian/librarian.ts:init()`, `src/commanders/librarian/librarian-init/`

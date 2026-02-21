@@ -127,7 +127,7 @@ function handleEditorMenu(
 				.setIcon("split")
 				.onClick(() => {
 					if (!commandExecutor) return;
-					void commandExecutor(CommandKind.MakeText);
+					void commandExecutor(CommandKind.SplitToPages);
 				}),
 		);
 	}

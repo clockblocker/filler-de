@@ -37,166 +37,17 @@ export const DePhrasemLemmaResultSchema = deLemmaResultBaseSchema.extend({
 	posLikeKind: PhrasemeKindSchema,
 });
 
-const deLemmaResultCompatInputSchema = deLemmaResultBaseSchema.extend({
-	linguisticUnit: DeLemmaLinguisticUnitSchema,
-	phrasemeKind: PhrasemeKindSchema.nullable().optional(),
-	pos: DeLexemPosSchema.nullable().optional(),
-	posLikeKind: DePosLikeKindSchema.nullable().optional(),
-});
-
-export const DeLemmaResultSchema = deLemmaResultCompatInputSchema
-	.superRefine((value, ctx) => {
-		if (value.linguisticUnit === "Lexem") {
-			if (
-				value.phrasemeKind !== undefined &&
-				value.phrasemeKind !== null
-			) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					message:
-						'Lexem must not provide "phrasemeKind" (legacy alias is only valid for Phrasem)',
-					path: ["phrasemeKind"],
-				});
-			}
-
-			const posLikeAsLexem = DeLexemPosSchema.safeParse(
-				value.posLikeKind,
-			);
-			if (
-				value.posLikeKind !== undefined &&
-				value.posLikeKind !== null &&
-				!posLikeAsLexem.success
-			) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					message:
-						'Lexem "posLikeKind" must be a lexical POS (Noun, Verb, ...)',
-					path: ["posLikeKind"],
-				});
-			}
-
-			if (
-				!posLikeAsLexem.success &&
-				(value.pos === undefined || value.pos === null)
-			) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					message:
-						'Lexem requires either canonical "posLikeKind" or legacy "pos"',
-					path: ["posLikeKind"],
-				});
-			}
-
-			if (
-				posLikeAsLexem.success &&
-				value.pos &&
-				value.pos !== posLikeAsLexem.data
-			) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					message:
-						'Conflicting Lexem POS values: "posLikeKind" and "pos" must match',
-					path: ["posLikeKind"],
-				});
-			}
-			return;
-		}
-
-		if (value.pos !== undefined && value.pos !== null) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				message:
-					'Phrasem must not provide "pos" (legacy alias is only valid for Lexem)',
-				path: ["pos"],
-			});
-		}
-
-		const posLikeAsPhrasem = PhrasemeKindSchema.safeParse(
-			value.posLikeKind,
-		);
-		if (
-			value.posLikeKind !== undefined &&
-			value.posLikeKind !== null &&
-			!posLikeAsPhrasem.success
-		) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				message:
-					'Phrasem "posLikeKind" must be a phraseme kind (Idiom, Collocation, ...)',
-				path: ["posLikeKind"],
-			});
-		}
-
-		if (
-			!posLikeAsPhrasem.success &&
-			(value.phrasemeKind === undefined || value.phrasemeKind === null)
-		) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				message:
-					'Phrasem requires either canonical "posLikeKind" or legacy "phrasemeKind"',
-				path: ["posLikeKind"],
-			});
-		}
-
-		if (
-			posLikeAsPhrasem.success &&
-			value.phrasemeKind &&
-			value.phrasemeKind !== posLikeAsPhrasem.data
-		) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				message:
-					'Conflicting Phrasem kind values: "posLikeKind" and "phrasemeKind" must match',
-				path: ["posLikeKind"],
-			});
-		}
-	})
+export const DeLemmaResultSchema = z
+	.discriminatedUnion("linguisticUnit", [
+		DeLexemLemmaResultSchema,
+		DePhrasemLemmaResultSchema,
+	])
 	.transform((value) => {
-		const contextWithLinkedParts =
-			value.contextWithLinkedParts ?? undefined;
-
-		if (value.linguisticUnit === "Lexem") {
-			const parsedPosLikeKind = DeLexemPosSchema.safeParse(
-				value.posLikeKind,
-			);
-			const posLikeKind = parsedPosLikeKind.success
-				? parsedPosLikeKind.data
-				: value.pos;
-
-			if (!posLikeKind) {
-				throw new Error(
-					'Invalid Lexem lemma result: missing both "posLikeKind" and "pos"',
-				);
-			}
-
-			return {
-				contextWithLinkedParts,
-				lemma: value.lemma,
-				linguisticUnit: "Lexem" as const,
-				posLikeKind,
-				surfaceKind: value.surfaceKind,
-			};
-		}
-
-		const parsedPhrasemeLikeKind = PhrasemeKindSchema.safeParse(
-			value.posLikeKind,
-		);
-		const posLikeKind = parsedPhrasemeLikeKind.success
-			? parsedPhrasemeLikeKind.data
-			: value.phrasemeKind;
-
-		if (!posLikeKind) {
-			throw new Error(
-				'Invalid Phrasem lemma result: missing both "posLikeKind" and "phrasemeKind"',
-			);
-		}
-
 		return {
-			contextWithLinkedParts,
+			contextWithLinkedParts: value.contextWithLinkedParts ?? undefined,
 			lemma: value.lemma,
-			linguisticUnit: "Phrasem" as const,
-			posLikeKind,
+			linguisticUnit: value.linguisticUnit,
+			posLikeKind: value.posLikeKind,
 			surfaceKind: value.surfaceKind,
 		};
 	});
