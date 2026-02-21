@@ -402,23 +402,23 @@ function serializePreservedWikilink(raw: string): string {
 	return "[[]]";
 }
 
-function targetLemmaForRelationToken(rawToken: string): string {
-	const parsedLinguistic = parseLinguisticWikilinkToken(
-		rawToken,
-		RELATION_SECTION_CSS_KIND,
-	);
+function targetLemmaForRelationToken(params: {
+	rawToken: string;
+	parsedLinguistic?: ParsedLinguisticWikilinkDto | null;
+}): string {
+	const parsedLinguistic = params.parsedLinguistic;
 	if (parsedLinguistic) {
 		return targetLemmaFromLinguisticWikilink(parsedLinguistic);
 	}
-	const parsedBasic = parseBasicWikilinkDto(rawToken);
+	const parsedBasic = parseBasicWikilinkDto(params.rawToken);
 	if (parsedBasic) {
 		return parsedBasic.target;
 	}
-	const loose = parseAnyWikilinkToken(rawToken);
+	const loose = parseAnyWikilinkToken(params.rawToken);
 	if (loose) {
 		return loose.target;
 	}
-	return normalizeSpace(rawToken);
+	return normalizeSpace(params.rawToken);
 }
 
 function parseRelationToken(
@@ -430,16 +430,33 @@ function parseRelationToken(
 	if (trimmed.length === 0) {
 		return null;
 	}
+	const parsedLinguistic = parseLinguisticWikilinkToken(
+		trimmed,
+		RELATION_SECTION_CSS_KIND,
+	);
 	const basic = parseBasicWikilinkDto(trimmed);
 	if (basic) {
 		return {
 			relationKind,
-			targetLemma: targetLemmaForRelationToken(trimmed),
+			targetLemma: targetLemmaForRelationToken({
+				parsedLinguistic,
+				rawToken: trimmed,
+			}),
 			targetWikilink: serializeWikilinkDto(basic),
 		};
 	}
 	const preservedTokens = extractPreservedWikilinksFromText(trimmed);
 	const preserved = preservedTokens[0] ?? trimmed;
+	if (parsedLinguistic) {
+		return {
+			relationKind,
+			targetLemma: targetLemmaForRelationToken({
+				parsedLinguistic,
+				rawToken: preserved,
+			}),
+			targetWikilink: preserved,
+		};
+	}
 	logSampledWarning({
 		context: {
 			line,
@@ -451,7 +468,9 @@ function parseRelationToken(
 	});
 	return {
 		relationKind,
-		targetLemma: targetLemmaForRelationToken(preserved),
+		targetLemma: targetLemmaForRelationToken({
+			rawToken: preserved,
+		}),
 		targetWikilink: preserved,
 	};
 }
