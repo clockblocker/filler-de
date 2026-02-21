@@ -6,6 +6,7 @@ import {
 	buildPropagationActionPair,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
+import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import { buildSectionMarker } from "../../../domain/dict-note/internal/constants";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
@@ -108,10 +109,14 @@ export function propagateRelations(
 	const relationCssSuffix = cssSuffixFor[DictSectionKind.Relation];
 	const relationTitle = TitleReprFor[DictSectionKind.Relation][targetLang];
 	const sectionMarker = buildSectionMarker(relationCssSuffix, relationTitle);
+	const desiredSurfaceKind =
+		resolveDesiredSurfaceKindForPropagationSection(
+			DictSectionKind.Relation,
+		) ?? SurfaceKind.Lemma;
 
 	for (const [targetWord, entries] of byTarget) {
 		const resolved = resolveTargetPath({
-			desiredSurfaceKind: SurfaceKind.Lemma,
+			desiredSurfaceKind,
 			librarianLookup: ctx.textfresserState.lookupInLibrary,
 			targetLanguage: targetLang,
 			unitKind,

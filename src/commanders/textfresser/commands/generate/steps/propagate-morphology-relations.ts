@@ -4,6 +4,7 @@ import type { VaultAction } from "../../../../../managers/obsidian/vault-action-
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
 import { canonicalizeTargetForComparison } from "../../../common/target-comparison";
+import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import {
 	buildPropagationActionPair,
 	resolveMorphemePath,
@@ -223,6 +224,10 @@ export function propagateMorphologyRelations(
 		"used_in",
 		targetLang,
 	);
+	const desiredSurfaceKind =
+		resolveDesiredSurfaceKindForPropagationSection(
+			DictSectionKind.Morphology,
+		) ?? SurfaceKind.Lemma;
 	const usedInBlockMarkerAliases =
 		morphologyRelationHelper.markerAliasesForRelationType("used_in");
 	const tagsCssSuffix = cssSuffixFor[DictSectionKind.Tags];
@@ -239,7 +244,7 @@ export function propagateMorphologyRelations(
 						vam: ctx.textfresserState.vam,
 					})
 				: resolveTargetPath({
-						desiredSurfaceKind: SurfaceKind.Lemma,
+						desiredSurfaceKind,
 						librarianLookup: ctx.textfresserState.lookupInLibrary,
 						targetLanguage: targetLang,
 						unitKind: target.targetUnit,

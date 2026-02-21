@@ -14,6 +14,7 @@ import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { LemmaResult } from "../../lemma/types";
 import { dispatchHeaderFormatter } from "../section-formatters/header-dispatch";
 import { getFeaturesPromptKindForPos } from "./features-prompt-dispatch";
+import { shouldPropagateLinksForSection } from "../../../common/linguistic-wikilink-context";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 import {
 	buildSectionQuery,
@@ -171,11 +172,9 @@ export async function generateNewEntrySections(
 			(onlySections ? onlySections.has(sectionKind) : true),
 	);
 	const sectionSet = new Set(v3Applicable);
-	const shouldRunPropagation =
-		sectionSet.has(DictSectionKind.Relation) ||
-		sectionSet.has(DictSectionKind.Morphem) ||
-		sectionSet.has(DictSectionKind.Morphology) ||
-		sectionSet.has(DictSectionKind.Inflection);
+	const shouldRunPropagation = v3Applicable.some((sectionKind) =>
+		shouldPropagateLinksForSection(sectionKind),
+	);
 	const featuresPromptKind =
 		lemmaResult.linguisticUnit === "Lexem"
 			? getFeaturesPromptKindForPos(lemmaResult.posLikeKind)

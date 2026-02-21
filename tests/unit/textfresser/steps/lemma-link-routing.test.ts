@@ -240,4 +240,29 @@ describe("lemma-link-routing", () => {
 		expect(target.linkTarget).toBe("über-praeposition-de");
 		expect(target.linkTargetSplitPath).toEqual(preposition);
 	});
+
+	it("closed-set selection narrows interactional units when suffix matches aliases", () => {
+		const interactional = makePath("ja-interjektion-de", [
+			"Library",
+			"de",
+			"interjektion",
+		]);
+		const particle = makePath("ja-fokuspartikel-de", [
+			"Library",
+			"de",
+			"partikel",
+		]);
+		const target = computeFinalTarget({
+			findByBasename: () => [],
+			lemma: "ja",
+			linguisticUnit: "Lexem",
+			lookupInLibrary: () => [particle, interactional],
+			posLikeKind: "InteractionalUnit",
+			surfaceKind: "Lemma",
+			targetLanguage: "German",
+		});
+
+		expect(target.linkTarget).toBe("ja-interjektion-de");
+		expect(target.linkTargetSplitPath).toEqual(interactional);
+	});
 });

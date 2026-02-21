@@ -694,6 +694,7 @@ Propagation-only stubs are explicitly excluded from re-encounter matching: if th
 
 **Path B (new entry)**: Determines applicable sections via `getSectionsFor()`, filtered to the **V3 set**: Header, Tags, Morphem, Morphology, Relation, Inflection, Translation, Attestation. Header is built from LemmaResult fields (no LLM call).
 For closed-set Lexem entries, Generate ensures a non-LLM lightweight membership DictEntry under the same `Worter` surface-host note. That entry gets its own block ID and contains a `closed_set_membership` section with a Library pointer plus a closed-set tag. Library target selection is POS-aware from Library suffix hierarchy and deterministic (lexical basename tie-break).
+Section-level wikilink behavior assumptions are centralized in `linguistic-wikilink-context.ts` (source/intent/target-kind/propagation eligibility), and propagation surface-kind routing reads from that policy instead of hardcoded per-step checks.
 
 All LLM calls are fired in parallel via `Promise.allSettled` (none depend on each other's results). Enrichment now has a fallback metadata path, and section prompts degrade gracefully (including Translation): failures are logged, recorded in `failedSections`, and entry creation continues. This prevents empty-note outcomes when upstream API calls fail. Results are assembled in correct section order after all promises settle. Applicable sections:
 

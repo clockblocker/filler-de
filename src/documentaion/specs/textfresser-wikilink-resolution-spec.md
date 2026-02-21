@@ -436,6 +436,8 @@ Add a maintenance command:
 10. Closed-set Library target selection policy:
    - Select Library leaf by language suffix + POS suffix match from Library suffix parts.
    - If multiple leaves still match, choose deterministically by lexical basename sort.
+11. Section-context policy centralization:
+   - Section-level wikilink assumptions (source, intent, target-kind, propagation eligibility) are centralized in a shared policy helper and consumed by Generate/Propagation.
 
 ### Implementation status (worktree snapshot, 2026-02-21)
 

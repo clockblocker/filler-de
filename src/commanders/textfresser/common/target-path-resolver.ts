@@ -16,6 +16,8 @@ import {
 import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import type { TargetLanguage } from "../../../types";
 import type { MorphemeItem } from "../domain/morpheme/morpheme-formatter";
+import { DictSectionKind } from "../targets/de/sections/section-kind";
+import { resolveDesiredSurfaceKindForPropagationSection } from "./linguistic-wikilink-context";
 import {
 	computeShardedFolderParts,
 	SURFACE_KIND_PATH_INDEX,
@@ -197,8 +199,13 @@ export function resolveMorphemePath(
 		};
 	}
 
+	const desiredSurfaceKind =
+		resolveDesiredSurfaceKindForPropagationSection(
+			DictSectionKind.Morphem,
+		) ?? SurfaceKind.Lemma;
+
 	return resolveTargetPath({
-		desiredSurfaceKind: SurfaceKind.Lemma,
+		desiredSurfaceKind,
 		librarianLookup: params.lookupInLibrary,
 		targetLanguage: params.targetLang,
 		unitKind: "Morphem",

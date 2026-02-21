@@ -7,6 +7,13 @@ import type { TargetLanguage } from "../../../types";
 const POS_SUFFIX_BY_POS: Partial<Record<DeLexemPos, readonly string[]>> = {
 	Article: ["artikel", "article"],
 	Conjunction: ["konjunktion", "conjunction"],
+	// TODO: Confirm canonical Librarian suffix for InteractionalUnit and trim aliases.
+	InteractionalUnit: [
+		"interaktionale-einheit",
+		"interjection",
+		"interjektion",
+		"interactional-unit",
+	],
 	Particle: ["partikel", "particle"],
 	Preposition: ["praeposition", "preposition"],
 	Pronoun: ["pronomen", "pronoun"],

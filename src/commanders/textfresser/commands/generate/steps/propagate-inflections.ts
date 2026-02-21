@@ -7,6 +7,7 @@ import {
 	buildPropagationActionPair,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
+import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
 import { serializeDictNote } from "../../../domain/dict-note/serialize-dict-note";
@@ -88,6 +89,10 @@ export function propagateInflections(
 
 	const byForm = groupByForm(inflectionCells);
 	const propagationActions: VaultAction[] = [];
+	const desiredSurfaceKind =
+		resolveDesiredSurfaceKindForPropagationSection(
+			DictSectionKind.Inflection,
+		) ?? SurfaceKind.Inflected;
 
 	for (const [form, cells] of byForm) {
 		if (form === lemma) continue;
@@ -99,7 +104,7 @@ export function propagateInflections(
 
 		// Different note — resolve path + create UpsertMdFile + ProcessMdFile
 		const resolved = resolveTargetPath({
-			desiredSurfaceKind: SurfaceKind.Inflected,
+			desiredSurfaceKind,
 			librarianLookup: ctx.textfresserState.lookupInLibrary,
 			targetLanguage,
 			unitKind: lemmaResult.linguisticUnit,
