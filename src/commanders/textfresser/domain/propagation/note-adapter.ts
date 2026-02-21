@@ -534,16 +534,9 @@ function parseRelationToken(
 			"[propagation-note-adapter] Preserving unsupported relation wikilink token",
 		sampleKey: `${relationKind}:${trimmed}`,
 	});
-	const preservedResolution = resolveSemanticWikilinkToken({
-		options,
-		purpose: "RelationLemma",
-		rawToken: preserved,
-		sectionCssKind: RELATION_SECTION_CSS_KIND,
-	});
 	return {
 		relationKind,
-		targetLemma:
-			preservedResolution.canonicalTarget ?? normalizeSpace(preserved),
+		targetLemma: normalizeSpace(preserved),
 		targetWikilink: preserved,
 	};
 }
