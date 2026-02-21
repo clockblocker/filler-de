@@ -1,7 +1,11 @@
 import { ok, type Result } from "neverthrow";
 import { logger } from "../../../../../utils/logger";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
-import { type DictEntry, dictNoteHelper } from "../../../domain/dict-note";
+import {
+	type DictEntry,
+	type DictEntryWithLinguisticWikilinks,
+	dictNoteHelper,
+} from "../../../domain/dict-note";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { CommandError, CommandStateWithLemma } from "../../types";
@@ -32,6 +36,18 @@ function isPropagationOnlyStubEntry(entry: DictEntry): boolean {
 	return !hasAttestation && !hasTranslation && hasPropagationOnlySection;
 }
 
+function isPropagationOnlyStubEntryWithWikilinks(
+	entry: DictEntryWithLinguisticWikilinks,
+): boolean {
+	const hasNonGeneratedIntentLink = entry.linguisticWikilinks.some(
+		(wikilink) => wikilink.intent !== "GenerateSectionLink",
+	);
+	if (hasNonGeneratedIntentLink) {
+		return false;
+	}
+	return isPropagationOnlyStubEntry(entry);
+}
+
 /**
  * Parse existing note content into DictEntry[], find matching entry using
  * disambiguation result from Lemma step.
@@ -46,7 +62,11 @@ export function resolveExistingEntry(
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const content = ctx.commandContext.activeFile.content;
 
-	let existingEntries = dictNoteHelper.parse(content);
+	const parsedEntries = dictNoteHelper.parseWithLinguisticWikilinks({
+		lookupInLibraryByCoreName: ctx.textfresserState.lookupInLibrary,
+		noteText: content,
+	});
+	let existingEntries: DictEntryWithLinguisticWikilinks[] = parsedEntries;
 
 	const prefix = dictEntryIdHelper.buildPrefix(
 		lemmaResult.linguisticUnit,
@@ -57,7 +77,7 @@ export function resolveExistingEntry(
 	);
 
 	const disambResult = lemmaResult.disambiguationResult;
-	let matchedEntry: DictEntry | null = null;
+	let matchedEntry: DictEntryWithLinguisticWikilinks | null = null;
 
 	logger.info(
 		`[resolveEntry] disambResult=${disambResult ? `matchedIndex=${disambResult.matchedIndex}` : "null"}`,
@@ -80,7 +100,10 @@ export function resolveExistingEntry(
 	}
 	// If no disambResult → matchedEntry stays null (new entry)
 
-	if (matchedEntry && isPropagationOnlyStubEntry(matchedEntry)) {
+	if (
+		matchedEntry &&
+		isPropagationOnlyStubEntryWithWikilinks(matchedEntry)
+	) {
 		const stubEntryId = matchedEntry.id;
 		logger.info(
 			`[resolveEntry] matchedEntry=${stubEntryId} is propagation-only stub — forcing full generation`,

@@ -1173,7 +1173,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
 | `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
-| `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries, use Lemma's disambiguationResult for re-encounter detection |
+| `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries with linguistic wikilink DTO augmentation, use Lemma's disambiguationResult for re-encounter detection, and suppress propagation-stub fallback when non-generated link intent is present |
 | `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V12: Features prompt + Tags section, article in header for nouns. V13: `meta.linguisticUnit` restored for Lexem/Phrasem entries (`Morphem` still out of scope). Persists canonical `meta.entity` (including emoji/ipa/sense). Header built from LemmaResult fields. Sets targetBlockId |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, resolve target paths via shared resolver, generate actions for target notes |
 | `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts` | Morphology propagation: Lexem localized `used in` backlinks for derivation/compounding + verb-prefix equation propagation on decorated prefix Morphem entries (with non-dict fallback append path) |
@@ -1183,7 +1183,6 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter.ts` | Propagation IO adapter ports (`readManyMdFiles`, typed missing/error classification, write-action construction) |
 | `src/commanders/textfresser/commands/generate/steps/move-to-worter.ts` | Final destination policy step: keep generated dict-entry notes in Worter surface-host paths (rename skipped when already at destination) |
 | `src/commanders/textfresser/common/lemma-link-routing.ts` | Link-target policy helper: pre-prompt working-note routing (`Worter` reuse vs `unknown` temp), final generation target routing (`Worter`), and attestation rewrite target routing (closed-set may point to `Library`) |
-| `src/commanders/textfresser/common/closed-set-surface-hub.ts` | Legacy dedicated-hub helpers from earlier rollout; no longer part of active Generate pipeline after mixed-role surface-host alignment |
 | `src/commanders/textfresser/common/target-comparison.ts` | Domain comparison canonicalization (`trim + case-fold`) for target equality checks outside `wikilinkHelper` |
 | `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, shared morpheme path resolver for prefix Library fallback, `buildPropagationActionPair` helper |
 | `src/commanders/textfresser/common/sharded-path.ts` | Sharded path computation for Worter entries; exports `SURFACE_KIND_PATH_INDEX` for healing checks |

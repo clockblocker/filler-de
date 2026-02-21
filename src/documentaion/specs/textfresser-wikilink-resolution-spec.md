@@ -462,15 +462,17 @@ Add a maintenance command:
    - Dedicated backfill command removed:
      - `rebuild-closed-set-surface-hubs` removed from `src/main.ts`.
    - Generate ensures a dedicated lightweight closed-set membership DictEntry (with `closed_set_membership` section + closed-set tag) when Library lookup resolves a target.
-2. Legacy code still present but no longer active in the primary pipeline:
-   - `src/commanders/textfresser/common/closed-set-surface-hub.ts`
-   - `src/commanders/textfresser/commands/generate/steps/maintain-closed-set-surface-hub.ts`
-3. Still open (design/rollout not finished):
+   - Runtime consumer wiring:
+     - `resolve-existing-entry` now parses entries through `dictNoteHelper.parseWithLinguisticWikilinks` and uses link intent to avoid classifying manual-link entries as propagation-only stubs.
+   - Legacy dedicated hub modules removed from repository:
+     - `src/commanders/textfresser/common/closed-set-surface-hub.ts`
+     - `src/commanders/textfresser/commands/generate/steps/maintain-closed-set-surface-hub.ts`
+2. Still open (design/rollout not finished):
    - Full API boundary cleanup between `wikilinkHelper` syntax responsibilities and policy modules.
    - Canonical lightweight/full DTO contracts with explicit anchor field across all call-sites.
    - Unified resolver precedence by command phase/intent (Obsidian vs Librarian vs policy-computed).
    - Bulk rewrite parse/classify/selective-normalize/reassemble contract finalization.
-4. Notes:
+3. Notes:
    - This status block is a snapshot of current branch/worktree state, not a release/merge guarantee.
 
 ### Decision backlog (to resolve separately)

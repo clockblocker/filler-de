@@ -107,4 +107,35 @@ describe("resolveExistingEntry", () => {
 		expect(result.value.existingEntries).toHaveLength(1);
 		expect(result.value.nextIndex).toBe(2);
 	});
+
+	it("does not treat matched entry as propagation-only stub when manual links are present", () => {
+		const entryWithManualLinks: DictEntry = {
+			headerContent: "Arbeit",
+			id: "LX-LM-NOUN-1",
+			meta: {},
+			sections: [
+				{
+					content: "≈ [[Zusammenarbeit]]",
+					kind: cssSuffixFor[DictSectionKind.Relation],
+					title: "Semantische Beziehungen",
+				},
+				{
+					content: "User note: [[Arbeit]] is everywhere.",
+					kind: cssSuffixFor[DictSectionKind.FreeForm],
+					title: "Freeform",
+				},
+			],
+		};
+		const content = dictNoteHelper.serialize([entryWithManualLinks]).body;
+
+		const result = resolveExistingEntry(makeCtx(content, { matchedIndex: 1 }));
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) {
+			return;
+		}
+
+		expect(result.value.matchedEntry?.id).toBe(entryWithManualLinks.id);
+		expect(result.value.existingEntries).toHaveLength(1);
+		expect(result.value.nextIndex).toBe(2);
+	});
 });
