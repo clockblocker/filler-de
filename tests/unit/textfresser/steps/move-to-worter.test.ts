@@ -102,7 +102,7 @@ function makeCtx(
 }
 
 describe("moveToWorter policy destination", () => {
-	it("moves closed-set lexems to Library destination", () => {
+	it("keeps closed-set lexems in Worter destination", () => {
 		const ctx = makeCtx({
 			activePathParts: ["Worter", "de", "lexem", "lemma", "i", "ich", "ich"],
 			lemma: "ich",
@@ -113,16 +113,7 @@ describe("moveToWorter policy destination", () => {
 
 		const result = moveToWorter(ctx);
 		expect(result.isOk()).toBe(true);
-		const actions = result._unsafeUnwrap().actions;
-		expect(actions).toHaveLength(1);
-		const action = actions[0];
-		expect(action?.kind).toBe(VaultActionKind.RenameMdFile);
-
-		const payload = action?.payload as {
-			to: { pathParts: string[]; basename: string };
-		};
-		expect(payload.to.pathParts).toEqual(["Library", "de", "pronoun"]);
-		expect(payload.to.basename).toBe("ich");
+		expect(result._unsafeUnwrap().actions).toHaveLength(0);
 	});
 
 	it("moves open-class entries to Worter destination", () => {
@@ -145,7 +136,7 @@ describe("moveToWorter policy destination", () => {
 		expect(payload.to.basename).toBe("laufen");
 	});
 
-	it("is a no-op when already at destination", () => {
+	it("moves closed-set entries from legacy Library path to Worter destination", () => {
 		const ctx = makeCtx({
 			activePathParts: ["Library", "de", "pronoun"],
 			lemma: "ich",
@@ -156,6 +147,12 @@ describe("moveToWorter policy destination", () => {
 
 		const result = moveToWorter(ctx);
 		expect(result.isOk()).toBe(true);
-		expect(result._unsafeUnwrap().actions).toHaveLength(0);
+		const action = result._unsafeUnwrap().actions[0];
+		expect(action?.kind).toBe(VaultActionKind.RenameMdFile);
+		const payload = action?.payload as {
+			to: { pathParts: string[]; basename: string };
+		};
+		expect(payload.to.pathParts[0]).toBe("Worter");
+		expect(payload.to.basename).toBe("ich");
 	});
 });
