@@ -17,13 +17,23 @@ export function resolveAttestation(input: CommandInput): Attestation | null {
 	}
 
 	const selection = commandContext.selection;
-	if (selection?.text) {
-		return buildAttestationFromSelection(
-			selection as typeof selection & { text: string },
-		);
+	if (hasSelectedText(selection)) {
+		return buildAttestationFromSelection(selection);
 	}
 
 	return null;
+}
+
+function hasSelectedText(
+	selection: CommandInput["commandContext"]["selection"],
+): selection is NonNullable<CommandInput["commandContext"]["selection"]> & {
+	text: string;
+} {
+	return (
+		selection !== null &&
+		typeof selection.text === "string" &&
+		selection.text.length > 0
+	);
 }
 
 /**

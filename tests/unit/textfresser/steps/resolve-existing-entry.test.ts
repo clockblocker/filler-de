@@ -108,6 +108,37 @@ describe("resolveExistingEntry", () => {
 		expect(result.value.nextIndex).toBe(2);
 	});
 
+	it("treats null disambiguation as new-entry flow while keeping parsed entries", () => {
+		const realEntry: DictEntry = {
+			headerContent: "Arbeit",
+			id: "LX-LM-NOUN-1",
+			meta: {},
+			sections: [
+				{
+					content: "![[Source#^1|^]]",
+					kind: cssSuffixFor[DictSectionKind.Attestation],
+					title: "Kontexte",
+				},
+				{
+					content: "work",
+					kind: cssSuffixFor[DictSectionKind.Translation],
+					title: "Übersetzung",
+				},
+			],
+		};
+		const content = dictNoteHelper.serialize([realEntry]).body;
+
+		const result = resolveExistingEntry(makeCtx(content, null));
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) {
+			return;
+		}
+
+		expect(result.value.matchedEntry).toBeNull();
+		expect(result.value.existingEntries).toHaveLength(1);
+		expect(result.value.nextIndex).toBe(2);
+	});
+
 	it("does not treat matched entry as propagation-only stub when manual links are present", () => {
 		const entryWithManualLinks: DictEntry = {
 			headerContent: "Arbeit",

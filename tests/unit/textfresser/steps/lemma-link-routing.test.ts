@@ -24,6 +24,7 @@ describe("lemma-link-routing", () => {
 		expect(isClosedSetPos("Pronoun")).toBe(true);
 		expect(isClosedSetPos("Article")).toBe(true);
 		expect(isClosedSetPos("Conjunction")).toBe(true);
+		expect(isClosedSetPos("Particle")).toBe(true);
 		expect(isClosedSetPos("Noun")).toBe(false);
 		expect(isClosedSetPos("Verb")).toBe(false);
 	});
