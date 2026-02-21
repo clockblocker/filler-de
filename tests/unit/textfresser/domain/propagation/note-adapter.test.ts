@@ -62,6 +62,12 @@ const EXOTIC_TYPED_NOTE_FIXTURE = [
 	"[[Haus#^13|Haus]]",
 	"[[ab#^1|ab]] + [[fahren]] = [[abfahren]]",
 ].join("\n");
+const PATH_RELATION_NOTE_FIXTURE = [
+	"🔗 ziel ^r-1",
+	"",
+	'<span class="entry_section_title entry_section_title_synonyme">Semantische Beziehungen</span>',
+	"= [[Worter/de/lexem/lemma/s/spe/spei/speisen#^verb-1|speisen]], [[Library/de/pronomen/personal/wir-personal-pronomen-de|Wir]]",
+].join("\n");
 const MORPHOLOGY_DTO_ROUNDTRIP_ENTRY: PropagationNoteEntry = {
 	headerContent: "ab-",
 	id: "m-1",
@@ -453,6 +459,29 @@ describe("propagation note adapter", () => {
 			lhsParts: ["[[ab#^1|ab]]", "fahren"],
 			rhs: "abfahren",
 		});
+	});
+
+	it("normalizes relation targetLemma from explicit Worter/Library path wikilinks", () => {
+		const parsed = parsePropagationNote(PATH_RELATION_NOTE_FIXTURE);
+		const entry = parsed[0];
+		if (!entry) {
+			throw new Error("Expected relation path fixture entry");
+		}
+		const relation = getTypedPayload(entry, "Relation");
+		expect(relation).toBeDefined();
+		if (!relation) {
+			return;
+		}
+
+		const worterPathItem = relation.items.find((item) =>
+			item.targetWikilink.includes("Worter/de/lexem/lemma"),
+		);
+		expect(worterPathItem?.targetLemma).toBe("speisen");
+
+		const libraryPathItem = relation.items.find((item) =>
+			item.targetWikilink.includes("Library/de/pronomen/personal"),
+		);
+		expect(libraryPathItem?.targetLemma).toBe("wir");
 	});
 
 	it("preserves untouched raw passthrough section bytes exactly", () => {

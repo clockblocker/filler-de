@@ -2,9 +2,17 @@ import { z } from "zod/v3";
 import { blockIdHelper } from "../../../../stateless-helpers/block-id";
 import { morphologyRelationHelper } from "../../../../stateless-helpers/morphology-relation";
 import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
+import {
+	wikilinkHelper,
+	type ParsedWikilink,
+} from "../../../../stateless-helpers/wikilink";
 import type { TargetLanguage } from "../../../../types";
 import { logger } from "../../../../utils/logger";
 import { extractHashTags } from "../../../../utils/text-utils";
+import {
+	parseSingleLinguisticWikilink,
+	type LinguisticWikilinkDto as ParsedLinguisticWikilinkDto,
+} from "../linguistic-wikilink";
 import { compareSectionsByWeight } from "../../targets/de/sections/section-config";
 import { cssSuffixFor } from "../../targets/de/sections/section-css-kind";
 import {
@@ -112,6 +120,7 @@ const typedSectionKindByCssKind = new Map<string, TypedSectionKind>([
 	[cssSuffixFor[DictSectionKind.Inflection], "Inflection"],
 	[cssSuffixFor[DictSectionKind.Tags], "Tags"],
 ]);
+const RELATION_SECTION_CSS_KIND = cssSuffixFor[DictSectionKind.Relation];
 
 type ParsedSectionMarker = {
 	index: number;
@@ -222,6 +231,58 @@ function parseAnyWikilinkToken(raw: string): {
 				};
 	}
 	return { target: normalizedTarget };
+}
+
+function parseExactWikilinkToken(raw: string): ParsedWikilink | null {
+	const trimmed = raw.trim();
+	const parsed = wikilinkHelper.parse(trimmed);
+	if (parsed.length !== 1) {
+		return null;
+	}
+	const first = parsed[0];
+	if (!first || first.fullMatch !== trimmed) {
+		return null;
+	}
+	return first;
+}
+
+function parseLinguisticWikilinkToken(
+	raw: string,
+	sectionCssKind: string,
+): ParsedLinguisticWikilinkDto | null {
+	const exact = parseExactWikilinkToken(raw);
+	if (!exact) {
+		return null;
+	}
+	return parseSingleLinguisticWikilink({
+		sectionCssKind,
+		wikilink: exact,
+	});
+}
+
+function stripAnchorFromTarget(target: string): string {
+	const hashIndex = target.indexOf("#");
+	if (hashIndex < 0) {
+		return target;
+	}
+	return target.slice(0, hashIndex);
+}
+
+function targetLemmaFromLinguisticWikilink(
+	wikilink: ParsedLinguisticWikilinkDto,
+): string {
+	const targetRef = wikilink.targetRef;
+	if (targetRef.kind === "WorterNote") {
+		return normalizeSpace(targetRef.basename);
+	}
+	if (targetRef.kind === "LibraryLeaf") {
+		return normalizeSpace(targetRef.coreName);
+	}
+	const stripped = normalizeSpace(stripAnchorFromTarget(wikilink.target));
+	if (stripped.length > 0) {
+		return stripped;
+	}
+	return normalizeSpace(wikilink.target);
 }
 
 export function parseBasicWikilinkDto(raw: string): WikilinkDto | null {
@@ -342,6 +403,13 @@ function serializePreservedWikilink(raw: string): string {
 }
 
 function targetLemmaForRelationToken(rawToken: string): string {
+	const parsedLinguistic = parseLinguisticWikilinkToken(
+		rawToken,
+		RELATION_SECTION_CSS_KIND,
+	);
+	if (parsedLinguistic) {
+		return targetLemmaFromLinguisticWikilink(parsedLinguistic);
+	}
 	const parsedBasic = parseBasicWikilinkDto(rawToken);
 	if (parsedBasic) {
 		return parsedBasic.target;
@@ -366,7 +434,7 @@ function parseRelationToken(
 	if (basic) {
 		return {
 			relationKind,
-			targetLemma: basic.target,
+			targetLemma: targetLemmaForRelationToken(trimmed),
 			targetWikilink: serializeWikilinkDto(basic),
 		};
 	}

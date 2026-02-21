@@ -803,6 +803,7 @@ The propagation facade (`propagateGeneratedSections`) runs after `generateSectio
 `propagateCore` folds all scoped propagation actions to one write per target note. The fold contract accepts `ProcessMdFile` in both payload shapes (`transform` and `before/after`) and accepts non-null `UpsertMdFile` content as deterministic transform input, preserving original action order per target path.
 
 Propagation note-adapter warning logs are sampled (`first-N + periodic`) for repeated cases (embedded/unparseable wikilinks) to keep logs actionable on large notes.
+Relation-section `targetLemma` extraction in the propagation note-adapter now reuses linguistic wikilink parsing policy, so explicit `Worter/...` or `Library/...` path tokens are collapsed to semantic lemma keys while preserving the original rendered wikilink token for roundtrip safety.
 
 Both `propagateRelations` and `propagateInflections` use a **shared path resolver** (`resolveTargetPath`) that performs two-source lookup with healing:
 
