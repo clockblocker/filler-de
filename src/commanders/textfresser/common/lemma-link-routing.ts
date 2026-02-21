@@ -6,6 +6,7 @@ import {
 	type SplitPathToMdFile,
 } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { TargetLanguage } from "../../../types";
+import { resolveClosedSetLibraryTarget } from "./closed-set-library-target-resolver";
 import { computeShardSegments, computeShardedFolderParts } from "./sharded-path";
 import type { PathLookupFn } from "./target-path-resolver";
 
@@ -252,10 +253,14 @@ export function computeFinalTarget(
 	const reusableWorterMatch = findReusableWorterMatch(existingMatches);
 
 	if (isClosedSetLexem && posLikeKind !== null) {
-		const libraryMatch =
-			existingMatches.find(isLibraryPath) ??
-			lookupInLibrary(lemma)[0] ??
-			null;
+		const libraryMatch = resolveClosedSetLibraryTarget({
+			candidates: [
+				...existingMatches.filter(isLibraryPath),
+				...lookupInLibrary(lemma),
+			],
+			posLikeKind,
+			targetLanguage,
+		});
 		const splitPath =
 			reusableWorterMatch ??
 			buildOpenClassWorterPath(

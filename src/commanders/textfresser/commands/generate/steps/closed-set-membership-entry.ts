@@ -1,6 +1,7 @@
 import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { TargetLanguage } from "../../../../../types";
 import { isClosedSetPos } from "../../../common/lemma-link-routing";
+import { resolveClosedSetLibraryTarget } from "../../../common/closed-set-library-target-resolver";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
@@ -31,20 +32,21 @@ type EnsureMembershipResult = {
 	entry: DictEntry;
 };
 
-function resolveClosedSetLibraryTarget(params: {
+function resolveClosedSetLibraryTargetForLemma(params: {
 	lemmaResult: ClosedSetLexemLemmaResult;
 	lookupInLibrary: (coreName: string) => SplitPathToMdFile[];
+	targetLanguage: TargetLanguage;
 }): SplitPathToMdFile | null {
 	const { lemmaResult } = params;
 	if (!isClosedSetPos(lemmaResult.posLikeKind)) {
 		return null;
 	}
 
-	return (
-		params
-			.lookupInLibrary(lemmaResult.lemma)
-			.find((splitPath) => splitPath.pathParts[0] === "Library") ?? null
-	);
+	return resolveClosedSetLibraryTarget({
+		candidates: params.lookupInLibrary(lemmaResult.lemma),
+		posLikeKind: lemmaResult.posLikeKind,
+		targetLanguage: params.targetLanguage,
+	});
 }
 
 function buildMembershipSection(params: {
@@ -147,9 +149,10 @@ function buildMembershipEntryId(params: {
 export function ensureClosedSetMembershipEntry(
 	params: EnsureMembershipParams,
 ): EnsureMembershipResult | null {
-	const libraryTarget = resolveClosedSetLibraryTarget({
+	const libraryTarget = resolveClosedSetLibraryTargetForLemma({
 		lemmaResult: params.lemmaResult,
 		lookupInLibrary: params.lookupInLibrary,
+		targetLanguage: params.targetLanguage,
 	});
 	if (!libraryTarget) {
 		return null;

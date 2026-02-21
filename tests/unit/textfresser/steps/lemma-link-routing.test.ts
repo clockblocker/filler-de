@@ -177,4 +177,67 @@ describe("lemma-link-routing", () => {
 		expect(target.linkTarget).toBe("wir");
 		expect(target.linkTargetSplitPath).toEqual(worterPath);
 	});
+
+	it("closed-set selection filters by POS suffix and picks deterministic lexical candidate", () => {
+		const pronounDemonstrative = makePath("die-demonstrativ-pronomen-de", [
+			"Library",
+			"de",
+			"pronomen",
+			"demonstrativ",
+		]);
+		const pronounRelative = makePath("die-relativ-pronomen-de", [
+			"Library",
+			"de",
+			"pronomen",
+			"relativ",
+		]);
+		const article = makePath("die-bestimmter-artikel-de", [
+			"Library",
+			"de",
+			"artikel",
+			"bestimmter",
+		]);
+		const target = computeFinalTarget({
+			findByBasename: () => [],
+			lemma: "die",
+			linguisticUnit: "Lexem",
+			lookupInLibrary: () => [
+				pronounRelative,
+				article,
+				pronounDemonstrative,
+			],
+			posLikeKind: "Pronoun",
+			surfaceKind: "Lemma",
+			targetLanguage: "German",
+		});
+
+		expect(target.linkTarget).toBe("die-demonstrativ-pronomen-de");
+		expect(target.linkTargetSplitPath).toEqual(pronounDemonstrative);
+	});
+
+	it("closed-set selection ignores non-matching POS families", () => {
+		const preposition = makePath("über-praeposition-de", [
+			"Library",
+			"de",
+			"praeposition",
+		]);
+		const prefixTrennbar = makePath("über-trennbares-praefix-de", [
+			"Library",
+			"de",
+			"praefix",
+			"trennbares",
+		]);
+		const target = computeFinalTarget({
+			findByBasename: () => [],
+			lemma: "über",
+			linguisticUnit: "Lexem",
+			lookupInLibrary: () => [prefixTrennbar, preposition],
+			posLikeKind: "Preposition",
+			surfaceKind: "Lemma",
+			targetLanguage: "German",
+		});
+
+		expect(target.linkTarget).toBe("über-praeposition-de");
+		expect(target.linkTargetSplitPath).toEqual(preposition);
+	});
 });

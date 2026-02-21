@@ -369,6 +369,86 @@ describe("generateSections re-encounter behavior", () => {
 		expect(result.value.targetBlockId).toBe(PRONOUN_ENTRY_ID);
 	});
 
+	it("uses POS-aware Library target for closed-set membership entry", async () => {
+		const matchedEntry: DictEntry = {
+			headerContent: "Entry",
+			id: PRONOUN_ENTRY_ID,
+			meta: {},
+			sections: [
+				section("kontexte", "![[Other#^2|^]]"),
+				section("synonyme", "= [[die]]"),
+				section("morpheme", "[[die]]"),
+				section("morphologie", "Abgeleitet von: [[die]]"),
+				section("flexion", "Nom: [[die]]"),
+				section("tags", "#pronoun/personal"),
+				section("translations", "they"),
+			],
+		};
+		const ctx = makeClosedSetLexemCtx({
+			matchedEntry,
+			promptGenerate: () => okAsync("unused"),
+		});
+		ctx.textfresserState.latestLemmaResult = {
+			attestation: {
+				source: {
+					path: {
+						basename: "source",
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Texts"],
+					},
+					ref: "![[Src#^11|^]]",
+					textRaw: "Die arbeiten zusammen.",
+					textWithOnlyTargetMarked: "[Die] arbeiten zusammen.",
+				},
+				target: { surface: "Die" },
+			},
+			disambiguationResult: { matchedIndex: 1 },
+			lemma: "die",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Pronoun",
+			surfaceKind: "Lemma",
+		};
+		ctx.textfresserState.lookupInLibrary = () => [
+			{
+				basename: "die-bestimmter-artikel-de",
+				extension: "md",
+				kind: "MdFile",
+				pathParts: ["Library", "de", "artikel", "bestimmter"],
+			},
+			{
+				basename: "die-relativ-pronomen-de",
+				extension: "md",
+				kind: "MdFile",
+				pathParts: ["Library", "de", "pronomen", "relativ"],
+			},
+			{
+				basename: "die-demonstrativ-pronomen-de",
+				extension: "md",
+				kind: "MdFile",
+				pathParts: ["Library", "de", "pronomen", "demonstrativ"],
+			},
+		];
+
+		const result = await generateSections(ctx);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+
+		const membershipEntry = result.value.allEntries.find((entry) =>
+			entry.sections.some((section) => section.kind === "closed_set_membership"),
+		);
+		expect(membershipEntry).toBeDefined();
+		const membershipSection = membershipEntry?.sections.find(
+			(section) => section.kind === "closed_set_membership",
+		);
+		expect(membershipSection?.content).toContain(
+			"- [[die-demonstrativ-pronomen-de|die (Pronoun)]]",
+		);
+		expect(membershipSection?.content).not.toContain(
+			"die-bestimmter-artikel-de",
+		);
+	});
+
 	it("dedupes closed-set membership entry on repeated re-encounter", async () => {
 		const promptCalls: string[] = [];
 		const membershipEntry: DictEntry = {

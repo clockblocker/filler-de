@@ -433,6 +433,9 @@ Add a maintenance command:
    - No dedicated hub-only note type is required.
 9. Unknown-lifecycle policy:
    - `Worter/.../unknown/...` notes are invocation-temporary and must be resolved by rename or deletion when Lemma finalization completes.
+10. Closed-set Library target selection policy:
+   - Select Library leaf by language suffix + POS suffix match from Library suffix parts.
+   - If multiple leaves still match, choose deterministically by lexical basename sort.
 
 ### Implementation status (worktree snapshot, 2026-02-21)
 
