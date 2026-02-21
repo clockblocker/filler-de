@@ -68,6 +68,12 @@ const PATH_RELATION_NOTE_FIXTURE = [
 	'<span class="entry_section_title entry_section_title_synonyme">Semantische Beziehungen</span>',
 	"= [[Worter/de/lexem/lemma/s/spe/spei/speisen#^verb-1|speisen]], [[Library/de/pronomen/personal/wir-personal-pronomen-de|Wir]]",
 ].join("\n");
+const PATH_MORPHOLOGY_EQUATION_NOTE_FIXTURE = [
+	"🧩 pfad ^m-2",
+	"",
+	'<span class="entry_section_title entry_section_title_morphologie">Morphologische Relationen</span>',
+	"[[Worter/de/morphem/lemma/a/ab]] + [[Worter/de/lexem/lemma/f/fah/fahr/fahren]] = [[Worter/de/lexem/lemma/a/abf/abfa/abfahren]]",
+].join("\n");
 const MORPHOLOGY_DTO_ROUNDTRIP_ENTRY: PropagationNoteEntry = {
 	headerContent: "ab-",
 	id: "m-1",
@@ -482,6 +488,25 @@ describe("propagation note adapter", () => {
 			item.targetWikilink.includes("Library/de/pronomen/personal"),
 		);
 		expect(libraryPathItem?.targetLemma).toBe("wir");
+	});
+
+	it("normalizes morphology equation parts from explicit Worter path wikilinks", () => {
+		const parsed = parsePropagationNote(PATH_MORPHOLOGY_EQUATION_NOTE_FIXTURE);
+		const entry = parsed[0];
+		if (!entry) {
+			throw new Error("Expected morphology path fixture entry");
+		}
+		const morphology = getTypedPayload(entry, "Morphology");
+		expect(morphology).toBeDefined();
+		if (!morphology) {
+			return;
+		}
+
+		expect(morphology.equations).toHaveLength(1);
+		expect(morphology.equations[0]).toEqual({
+			lhsParts: ["ab", "fahren"],
+			rhs: "abfahren",
+		});
 	});
 
 	it("preserves untouched raw passthrough section bytes exactly", () => {

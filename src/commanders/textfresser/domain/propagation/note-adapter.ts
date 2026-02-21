@@ -120,6 +120,7 @@ const typedSectionKindByCssKind = new Map<string, TypedSectionKind>([
 	[cssSuffixFor[DictSectionKind.Inflection], "Inflection"],
 	[cssSuffixFor[DictSectionKind.Tags], "Tags"],
 ]);
+const MORPHOLOGY_SECTION_CSS_KIND = cssSuffixFor[DictSectionKind.Morphology];
 const RELATION_SECTION_CSS_KIND = cssSuffixFor[DictSectionKind.Relation];
 
 type ParsedSectionMarker = {
@@ -283,6 +284,20 @@ function targetLemmaFromLinguisticWikilink(
 		return stripped;
 	}
 	return normalizeSpace(wikilink.target);
+}
+
+function targetLemmaForMorphologyEquationPart(
+	rawToken: string,
+): string | null {
+	const parsedLinguistic = parseLinguisticWikilinkToken(
+		rawToken,
+		MORPHOLOGY_SECTION_CSS_KIND,
+	);
+	if (!parsedLinguistic) {
+		return null;
+	}
+	const resolved = targetLemmaFromLinguisticWikilink(parsedLinguistic);
+	return resolved.length > 0 ? resolved : null;
 }
 
 export function parseBasicWikilinkDto(raw: string): WikilinkDto | null {
@@ -478,7 +493,8 @@ function parseRelationToken(
 function parseEquationPartToken(rawToken: string): string {
 	const basic = parseBasicWikilinkDto(rawToken);
 	if (basic) {
-		return normalizeSpace(basic.target);
+		const resolved = targetLemmaForMorphologyEquationPart(rawToken);
+		return normalizeSpace(resolved ?? basic.target);
 	}
 	return serializePreservedWikilink(rawToken);
 }
