@@ -6,25 +6,32 @@
  * Analyzes git history to detect modules where a single contributor dominates
  * ownership, indicating a "knowledge silo" risk (low bus factor).
  *
- * Usage: bun scripts/knowledge-silo.ts [--days=N] [--threshold=N]
+ * Usage: bun scripts/knowledge-silo.ts [--days=N] [--threshold=N] [--json] [--output=<path>]
  *   --days       Recency window for silo detection (default: 90)
  *   --threshold  Ownership % above which a single author is flagged (default: 80)
+ *   --json       Output machine-readable JSON instead of markdown
+ *   --output     Write output to a file instead of stdout
  */
 
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { $ } from "bun";
 
 // ── Config ──────────────────────────────────────────────────────────────────
 
-interface CliArgs {
+export interface CliArgs {
 	recencyDays: number;
 	siloThreshold: number;
+	json: boolean;
+	output: string | null;
 }
 
 function parseArgs(): CliArgs {
 	const args = process.argv.slice(2);
 	let recencyDays = 90;
 	let siloThreshold = 80;
+	let json = false;
+	let output: string | null = null;
 
 	for (const arg of args) {
 		const daysMatch = arg.match(/^--days=(\d+)$/);
@@ -37,30 +44,39 @@ function parseArgs(): CliArgs {
 			siloThreshold = Number(thresholdMatch[1]);
 			continue;
 		}
+		if (arg === "--json") {
+			json = true;
+			continue;
+		}
+		const outputMatch = arg.match(/^--output=(.+)$/);
+		if (outputMatch) {
+			output = outputMatch[1]!;
+			continue;
+		}
 	}
 
-	return { recencyDays, siloThreshold };
+	return { json, output, recencyDays, siloThreshold };
 }
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-interface AuthorStats {
+export interface AuthorStats {
 	linesAdded: number;
 	linesDeleted: number;
 	commits: number;
 	lastCommitDate: Date;
 }
 
-interface FileStats {
+export interface FileStats {
 	authors: Map<string, AuthorStats>;
 }
 
-interface ModuleStats {
+export interface ModuleStats {
 	files: number;
 	authors: Map<string, AuthorStats>;
 }
 
-interface SiloReport {
+export interface SiloReport {
 	module: string;
 	busFactor: number;
 	topAuthor: string;
@@ -75,7 +91,7 @@ interface SiloReport {
 // ── Module Classification ───────────────────────────────────────────────────
 
 /** Maps a file path to its logical module name (2-level deep for key dirs). */
-function classifyModule(filePath: string): string | null {
+export function classifyModule(filePath: string): string | null {
 	if (!filePath.startsWith("src/")) return null;
 
 	const parts = filePath.replace("src/", "").split("/");
@@ -165,7 +181,7 @@ async function parseGitLog(): Promise<Map<string, FileStats>> {
 
 // ── Aggregation ─────────────────────────────────────────────────────────────
 
-function aggregateByModule(
+export function aggregateByModule(
 	fileStats: Map<string, FileStats>,
 ): Map<string, ModuleStats> {
 	const modules = new Map<string, ModuleStats>();
@@ -210,7 +226,7 @@ function aggregateByModule(
  * Bus factor = minimum number of authors whose combined commit share
  * exceeds 50% of the module's total commits.
  */
-function computeBusFactor(authors: Map<string, AuthorStats>): number {
+export function computeBusFactor(authors: Map<string, AuthorStats>): number {
 	const totalCommits = [...authors.values()].reduce(
 		(sum, a) => sum + a.commits,
 		0,
@@ -232,11 +248,11 @@ function computeBusFactor(authors: Map<string, AuthorStats>): number {
 
 // ── Silo Detection ─────────────────────────────────────────────────────────
 
-function detectSilos(
+export function detectSilos(
 	modules: Map<string, ModuleStats>,
-	config: CliArgs,
+	config: Pick<CliArgs, "recencyDays" | "siloThreshold">,
+	now: Date = new Date(),
 ): SiloReport[] {
-	const now = new Date();
 	const reports: SiloReport[] = [];
 
 	for (const [moduleName, mod] of modules) {
@@ -408,6 +424,19 @@ function formatReport(reports: SiloReport[], config: CliArgs): string {
 	return lines.join("\n");
 }
 
+// ── JSON Report ─────────────────────────────────────────────────────────────
+
+function formatJson(reports: SiloReport[]): string {
+	return JSON.stringify(
+		reports.map((r) => ({
+			...r,
+			lastOtherAuthorDate: r.lastOtherAuthorDate?.toISOString() ?? null,
+		})),
+		null,
+		2,
+	);
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -424,12 +453,26 @@ async function main() {
 	}
 
 	const reports = detectSilos(modules, config);
-	const markdown = formatReport(reports, config);
+	const output = config.json
+		? formatJson(reports)
+		: formatReport(reports, config);
 
-	console.log(markdown);
+	if (config.output) {
+		const dir = dirname(config.output);
+		if (!existsSync(dir)) {
+			mkdirSync(dir, { recursive: true });
+		}
+		writeFileSync(config.output, output, "utf-8");
+		console.log(`Report written to ${config.output}`);
+	} else {
+		console.log(output);
+	}
 }
 
-main().catch((err) => {
-	console.error("Failed to run knowledge silo analysis:", err);
-	process.exit(1);
-});
+// Only run main when executed directly (not imported for tests)
+if (import.meta.main) {
+	main().catch((err) => {
+		console.error("Failed to run knowledge silo analysis:", err);
+		process.exit(1);
+	});
+}
