@@ -25,7 +25,8 @@ import {
 const FALLBACK_KNOWN_LANGUAGE = KnownLanguage.English;
 
 function generatePromptFile(systemPrompt: string): string {
-	return `// AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+	return `// @generated
+// AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
 // Run: bun run codegen:prompts
 
 export const systemPrompt = \`${systemPrompt.replace(/`/g, "\\`").replace(/\$/g, "\\$")}\`;
@@ -112,7 +113,8 @@ function generateIndex(generated: GeneratedPrompt[]): void {
 		}
 	}
 
-	const content = `// AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+	const content = `// @generated
+// AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
 // Run: bun run codegen:prompts
 
 ${imports.join("\n")}

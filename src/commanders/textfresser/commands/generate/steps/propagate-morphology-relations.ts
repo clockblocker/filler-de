@@ -12,7 +12,6 @@ import {
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
 import { buildSectionMarker } from "../../../domain/dict-note/internal/constants";
-import { serializeDictNote } from "../../../domain/dict-note/serialize-dict-note";
 import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
 import {
 	type MorphemeItem,
@@ -323,7 +322,9 @@ export function propagateMorphologyRelations(
 								});
 							}
 
-							return serializeDictNote(existingEntries);
+							return dictNoteHelper.serializeToString(
+								existingEntries,
+							);
 						}
 
 						const existingIds = existingEntries.map(
@@ -362,7 +363,7 @@ export function propagateMorphologyRelations(
 							sections,
 						};
 
-						return serializeDictNote([
+						return dictNoteHelper.serializeToString([
 							...existingEntries,
 							newEntry,
 						]);
