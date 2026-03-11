@@ -20,6 +20,7 @@ import {
 } from "../../commands/lemma/lemma-command";
 import { disambiguateSense } from "../../commands/lemma/steps/disambiguate-sense";
 import type { CommandError, CommandInput } from "../../commands/types";
+import { buildSourceFields } from "../../common/attestation/builders/build-source-fields";
 import type { Attestation } from "../../common/attestation/types";
 import {
 	computeFinalTarget,
@@ -33,7 +34,11 @@ import {
 	chooseBestEffortLemmaOutput,
 	evaluateLemmaOutputGuardrails,
 } from "./lemma-output-guardrails";
-import { buildLemmaRewritePlan, buildUpdatedBlock } from "./lemma-rewrite-plan";
+import {
+	buildLemmaRewritePlan,
+	buildUpdatedBlock,
+	type RewritePlan,
+} from "./lemma-rewrite-plan";
 
 type ResolvedPosLikeKind =
 	| {
@@ -263,29 +268,6 @@ export async function runLemmaTwoPhase(params: {
 			? null
 			: { matchedIndex: disambiguationResult.matchedIndex };
 
-	if (resolvedPosLikeKind.linguisticUnit === "Lexem") {
-		state.latestLemmaResult = {
-			attestation,
-			disambiguationResult: normalizedDisambiguation,
-			lemma: lemmaPromptOutput.lemma,
-			linguisticUnit: "Lexem",
-			posLikeKind: resolvedPosLikeKind.posLikeKind,
-			precomputedEmojiDescription,
-			surfaceKind: lemmaPromptOutput.surfaceKind,
-		};
-	} else {
-		state.latestLemmaResult = {
-			attestation,
-			disambiguationResult: normalizedDisambiguation,
-			lemma: lemmaPromptOutput.lemma,
-			linguisticUnit: "Phrasem",
-			posLikeKind: resolvedPosLikeKind.posLikeKind,
-			precomputedEmojiDescription,
-			surfaceKind: lemmaPromptOutput.surfaceKind,
-		};
-	}
-	state.latestResolvedLemmaTargetPath = finalTarget.splitPath;
-
 	const rewritePlan = buildLemmaRewritePlan({
 		attestation,
 		contextWithLinkedParts:
@@ -384,6 +366,34 @@ export async function runLemmaTwoPhase(params: {
 		return err(phaseBDispatch.error);
 	}
 
+	syncAttestationAfterSemanticResolution({
+		attestation,
+		lemma: lemmaPromptOutput.lemma,
+		rewritePlan,
+	});
+	if (resolvedPosLikeKind.linguisticUnit === "Lexem") {
+		state.latestLemmaResult = {
+			attestation,
+			disambiguationResult: normalizedDisambiguation,
+			lemma: lemmaPromptOutput.lemma,
+			linguisticUnit: "Lexem",
+			posLikeKind: resolvedPosLikeKind.posLikeKind,
+			precomputedEmojiDescription,
+			surfaceKind: lemmaPromptOutput.surfaceKind,
+		};
+	} else {
+		state.latestLemmaResult = {
+			attestation,
+			disambiguationResult: normalizedDisambiguation,
+			lemma: lemmaPromptOutput.lemma,
+			linguisticUnit: "Phrasem",
+			posLikeKind: resolvedPosLikeKind.posLikeKind,
+			precomputedEmojiDescription,
+			surfaceKind: lemmaPromptOutput.surfaceKind,
+		};
+	}
+	state.latestResolvedLemmaTargetPath = finalTarget.splitPath;
+
 	state.latestLemmaPlaceholderPath = placeholderWasCleaned
 		? undefined
 		: (placeholderPath ?? undefined);
@@ -405,6 +415,29 @@ export async function runLemmaTwoPhase(params: {
 	}
 
 	return ok(undefined);
+}
+
+function syncAttestationAfterSemanticResolution(params: {
+	attestation: Attestation;
+	lemma: string;
+	rewritePlan: RewritePlan;
+}): void {
+	const { attestation, lemma, rewritePlan } = params;
+	const resolvedSurface =
+		rewritePlan.replaceSurface ?? attestation.target.surface;
+
+	attestation.target.lemma = lemma;
+	attestation.target.surface = resolvedSurface;
+	if (rewritePlan.replaceOffsetInBlock !== undefined) {
+		attestation.target.offsetInBlock = rewritePlan.replaceOffsetInBlock;
+	}
+
+	attestation.source.textRaw = rewritePlan.updatedBlock;
+	attestation.source.ref = buildSourceFields({
+		basename: attestation.source.path.basename,
+		blockContent: rewritePlan.updatedBlock,
+		surface: resolvedSurface,
+	}).ref;
 }
 
 function isDeLexemPosLikeKind(value: string): value is DeLexemPos {

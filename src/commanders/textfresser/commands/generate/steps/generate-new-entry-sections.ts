@@ -6,6 +6,7 @@ import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
 import { logger } from "../../../../../utils/logger";
+import { shouldPropagateLinksForSection } from "../../../common/linguistic-wikilink-context";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { EntrySection } from "../../../domain/dict-note/types";
 import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
@@ -14,7 +15,6 @@ import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { LemmaResult } from "../../lemma/types";
 import { dispatchHeaderFormatter } from "../section-formatters/header-dispatch";
 import { getFeaturesPromptKindForPos } from "./features-prompt-dispatch";
-import { shouldPropagateLinksForSection } from "../../../common/linguistic-wikilink-context";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 import {
 	buildSectionQuery,

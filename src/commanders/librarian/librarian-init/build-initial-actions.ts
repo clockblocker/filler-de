@@ -4,11 +4,7 @@ import type { SplitPathWithReader } from "../../../managers/obsidian/vault-actio
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import { logger } from "../../../utils/logger";
-import type {
-	AnySplitPathInsideLibrary,
-	CodecRules,
-	Codecs,
-} from "../codecs";
+import type { AnySplitPathInsideLibrary, CodecRules, Codecs } from "../codecs";
 import { isCodexSplitPath } from "../healer/library-tree/codex/helpers";
 import { tryParseAsInsideLibrarySplitPath } from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import { inferCreatePolicy } from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";

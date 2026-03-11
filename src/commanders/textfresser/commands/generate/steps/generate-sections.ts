@@ -12,11 +12,11 @@ import {
 	buildEntityMeta,
 	buildLinguisticUnitMeta,
 } from "./build-linguistic-unit-meta";
+import { ensureClosedSetMembershipEntry } from "./closed-set-membership-entry";
 import {
 	buildFeatureTagPath,
 	getFeaturesPromptKindForPos,
 } from "./features-prompt-dispatch";
-import { ensureClosedSetMembershipEntry } from "./closed-set-membership-entry";
 import { generateNewEntrySections } from "./generate-new-entry-sections";
 import type { GenerateSectionsResult } from "./generate-sections-result";
 import { computeMissingV3SectionKinds } from "./reencounter-sections";

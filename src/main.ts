@@ -280,6 +280,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.overlayManager = new OverlayManager({
 			app: this.app,
 			commandExecutor: this.commandExecutor ?? undefined,
+			librarian: this.librarian,
 			plugin: this,
 			userEventInterceptor: this.userEventInterceptor,
 			vam: this.vam,

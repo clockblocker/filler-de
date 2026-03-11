@@ -5,9 +5,7 @@ import {
 	type DictSectionKind as DictSectionKindType,
 } from "../targets/de/sections/section-kind";
 
-export type LinguisticWikilinkSource =
-	| "UserAuthored"
-	| "TextfresserCommand";
+export type LinguisticWikilinkSource = "UserAuthored" | "TextfresserCommand";
 
 export type LinguisticWikilinkIntent =
 	| "ManualSurfaceLookup"

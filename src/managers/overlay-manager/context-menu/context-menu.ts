@@ -1,16 +1,14 @@
 /**
- * Context menu integration for "Split into pages" action.
- *
- * Shows menu item when:
- * - File is in library
- * - File is Scroll OR untyped
- * - Scroll would split to multiple pages
+ * Context menu integration for editor and file-explorer actions.
  */
 
-import type { App, Menu, Plugin } from "obsidian";
+import type { App, Menu, Plugin, TAbstractFile } from "obsidian";
+import { TFolder } from "obsidian";
 import { z } from "zod";
+import { canConvertFolderToBook } from "../../../commanders/librarian/bookkeeper/folder-to-book-action";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/bookkeeper/split-to-pages-action";
 import { makeCodecRulesFromSettings } from "../../../commanders/librarian/codecs/rules";
+import type { Librarian } from "../../../commanders/librarian/librarian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import {
@@ -22,6 +20,8 @@ import {
 	CommandKind,
 } from "../../obsidian/command-executor";
 import type { VaultActionManager } from "../../obsidian/vault-action-manager";
+import { pathfinder } from "../../obsidian/vault-action-manager/helpers/pathfinder";
+import { SplitPathKind } from "../../obsidian/vault-action-manager/types/split-path";
 
 /** Schema for reading noteKind from file metadata. */
 const FileTypeMetadataSchema = z.object({
@@ -30,6 +30,7 @@ const FileTypeMetadataSchema = z.object({
 
 export type ContextMenuDeps = {
 	app: App;
+	librarian: Librarian;
 	plugin: Plugin;
 	commandExecutor: CommandExecutor | null;
 	vam: VaultActionManager;
@@ -40,17 +41,25 @@ export type ContextMenuDeps = {
  * Returns teardown function for cleanup.
  */
 export function setupContextMenu(deps: ContextMenuDeps): () => void {
-	const { app, plugin, commandExecutor, vam } = deps;
+	const { app, commandExecutor, librarian, plugin, vam } = deps;
 
-	const eventRef = app.workspace.on("editor-menu", (menu: Menu) => {
+	const editorMenuRef = app.workspace.on("editor-menu", (menu: Menu) => {
 		handleEditorMenu(menu, vam, commandExecutor);
 	});
+	const fileMenuRef = app.workspace.on(
+		"file-menu",
+		(menu: Menu, file: TAbstractFile) => {
+			handleFileMenu(menu, file, librarian);
+		},
+	);
 
-	plugin.registerEvent(eventRef);
+	plugin.registerEvent(editorMenuRef);
+	plugin.registerEvent(fileMenuRef);
 
 	// Return teardown (Obsidian handles unregistration via registerEvent)
 	return () => {
-		app.workspace.offref(eventRef);
+		app.workspace.offref(editorMenuRef);
+		app.workspace.offref(fileMenuRef);
 	};
 }
 
@@ -131,4 +140,37 @@ function handleEditorMenu(
 				}),
 		);
 	}
+}
+
+function handleFileMenu(
+	menu: Menu,
+	file: TAbstractFile,
+	librarian: Librarian,
+): void {
+	if (!(file instanceof TFolder)) {
+		return;
+	}
+
+	const splitPath = pathfinder.splitPathFromAbstract(file);
+	if (splitPath.kind !== SplitPathKind.Folder) {
+		return;
+	}
+
+	const settings = getParsedUserSettings();
+	const rules = makeCodecRulesFromSettings(settings);
+	const directChildren = file.children.map((child) =>
+		pathfinder.splitPathFromAbstract(child),
+	);
+	if (!canConvertFolderToBook(splitPath, directChildren, rules)) {
+		return;
+	}
+
+	menu.addItem((item) =>
+		item
+			.setTitle("Convert folder to book")
+			.setIcon("book")
+			.onClick(() => {
+				void librarian.convertFolderToBook(splitPath);
+			}),
+	);
 }
