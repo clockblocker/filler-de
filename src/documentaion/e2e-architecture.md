@@ -14,7 +14,7 @@ The E2E test suite validates the Textfresser plugin **running inside a real Obsi
 
 **Test targets**: Librarian healing, codex generation, suffix healing, status propagation, file/folder deletion cleanup.
 
-**Current coverage**: 16 tests across 8 chain steps (000–007), covering init healing, file creation, folder rename, create+rename, single file delete, folder delete, corename rename, and basename healing.
+**Current coverage**: 24 tests across 12 chain steps (000–011), covering init healing, file creation, folder rename, create+rename, single file delete, folder delete, corename rename, basename healing, checkbox propagation, lemma command integration, and file move codex regeneration.
 
 **Not yet ported** (deferred):
 - Checkbox clicking (old chain-0/004) — requires `eval`-based DOM manipulation
@@ -316,6 +316,10 @@ const EXPECTED_FILES_AFTER_001 = [...EXPECTED_FILES_AFTER_000, ...NEW_FILES];
 | 005 | 1 | Delete folder | Folder's codex + descendants gone, parent codex updated |
 | 006 | 1 | Create + rename ×3 | Codex shows final corename, no intermediate traces |
 | 007 | 1 | Create file without suffix | File renamed with suffix, go-back link added |
+| 008 | 2 | Toggle scroll checkbox | Scroll and ancestor codex checkbox states update |
+| 009 | 2 | Toggle section checkbox | Descendant statuses propagate and section codexes update |
+| 010 | 3 | Lemma command on selected text | Command integration rewrites the selected text in-place |
+| 011 | 3 | Move file via CLI `move` | Old and new section codexes regenerate after file relocation |
 
 ---
 
