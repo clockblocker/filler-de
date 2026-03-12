@@ -14,9 +14,7 @@ export type LibraryBasenameParser = (
 	basename: string,
 ) => ParsedLibraryBasename | null;
 
-export type LibraryLookupByCoreName = (
-	coreName: string,
-) => SplitPathToMdFile[];
+export type LibraryLookupByCoreName = (coreName: string) => SplitPathToMdFile[];
 
 export type LibraryLeafTargetRef = {
 	kind: "LibraryLeaf";

@@ -2,11 +2,11 @@ import { ok, type Result } from "neverthrow";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
+import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import {
 	buildPropagationActionPair,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
-import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import { buildSectionMarker } from "../../../domain/dict-note/internal/constants";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {

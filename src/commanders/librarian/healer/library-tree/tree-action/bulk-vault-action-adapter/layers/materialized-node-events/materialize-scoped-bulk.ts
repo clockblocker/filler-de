@@ -12,6 +12,22 @@ import {
 } from "./helpers/materialized-event-helpers";
 import { MaterializedEventKind, type MaterializedNodeEvent } from "./types";
 
+type InsideRenameScopedEvent =
+	| Extract<
+			LibraryScopedVaultEvent,
+			{
+				kind: typeof VaultEventKind.FileRenamed;
+				scope: typeof Scope.Inside;
+			}
+	  >
+	| Extract<
+			LibraryScopedVaultEvent,
+			{
+				kind: typeof VaultEventKind.FolderRenamed;
+				scope: typeof Scope.Inside;
+			}
+	  >;
+
 /**
  * Bulk (scoped) -> flat list of single-node "Create/Delete/Rename" events.
  *
@@ -56,6 +72,11 @@ export function materializeScopedBulk(
 
 	for (const r of bulk.roots) {
 		const m = materializeRenameFromScopedRoot(r);
+		if (m) out.push(m);
+	}
+
+	for (const e of bulk.events) {
+		const m = materializeRenameFromScopedEventFallback(e, bulk.roots);
 		if (m) out.push(m);
 	}
 
@@ -174,4 +195,54 @@ export function materializeRenameFromScopedRoot(
 	}
 
 	return null;
+}
+
+function materializeRenameFromScopedEventFallback(
+	ev: LibraryScopedVaultEvent,
+	roots: LibraryScopedBulkVaultEvent["roots"],
+): MaterializedNodeEvent | null {
+	if (ev.scope !== Scope.Inside) return null;
+	if (
+		ev.kind !== VaultEventKind.FileRenamed &&
+		ev.kind !== VaultEventKind.FolderRenamed
+	) {
+		return null;
+	}
+	const renameEvent: InsideRenameScopedEvent = ev;
+
+	const alreadyCoveredByRoot = roots.some((root) => {
+		if (
+			root.kind !== VaultEventKind.FileRenamed &&
+			root.kind !== VaultEventKind.FolderRenamed
+		) {
+			return false;
+		}
+		return isEquivalentRename(root, renameEvent);
+	});
+	if (alreadyCoveredByRoot) return null;
+
+	return materializeRenameFromScopedRoot(renameEvent);
+}
+
+function isEquivalentRename(
+	left: Extract<
+		LibraryScopedBulkVaultEvent["roots"][number],
+		| { kind: typeof VaultEventKind.FileRenamed }
+		| { kind: typeof VaultEventKind.FolderRenamed }
+	>,
+	right: Extract<
+		LibraryScopedVaultEvent,
+		| { kind: typeof VaultEventKind.FileRenamed }
+		| { kind: typeof VaultEventKind.FolderRenamed }
+	>,
+): boolean {
+	return (
+		left.kind === right.kind &&
+		left.from.kind === right.from.kind &&
+		left.to.kind === right.to.kind &&
+		left.from.basename === right.from.basename &&
+		left.to.basename === right.to.basename &&
+		left.from.pathParts.join("/") === right.from.pathParts.join("/") &&
+		left.to.pathParts.join("/") === right.to.pathParts.join("/")
+	);
 }

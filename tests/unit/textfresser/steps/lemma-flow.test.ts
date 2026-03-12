@@ -205,6 +205,20 @@ describe("lemma two-phase flow", () => {
 		);
 	});
 
+	it("synchronizes attestation after semantic resolution", async () => {
+		const { textfresser } = makeHarness({ lemma: "gehen" });
+		const result = await textfresser.executeCommand(
+			"Lemma",
+			makeLemmaContext(),
+			() => {},
+		);
+		expect(result.isOk()).toBe(true);
+
+		const attestation = textfresser.getState().latestLemmaResult?.attestation;
+		expect(attestation?.target.lemma).toBe("gehen");
+		expect(attestation?.source.textRaw).toContain("|geht]]");
+	});
+
 	it("deletes placeholder only when it is empty and final target already exists", async () => {
 		const { dispatches, textfresser } = makeHarness({
 			finalExists: true,

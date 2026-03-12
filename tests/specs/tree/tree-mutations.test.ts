@@ -92,8 +92,13 @@ describe("Tree Mutations", () => {
 			expect(Object.keys(root.children)).toHaveLength(1);
 
 			const childValues = Object.values(root.children);
-			expect(childValues[0].nodeName).toBe("Note");
-			expect(childValues[0].kind).toBe(TreeNodeKind.Scroll);
+			const child = childValues[0];
+			expect(child).toBeDefined();
+			if (!child) {
+				return;
+			}
+			expect(child.nodeName).toBe("Note");
+			expect(child.kind).toBe(TreeNodeKind.Scroll);
 		});
 
 		it("auto-creates parent sections when needed", () => {
@@ -206,7 +211,7 @@ describe("Tree Mutations", () => {
 			expect(Object.keys(root.children)).toHaveLength(0);
 		});
 
-		it("prunes empty ancestor sections", () => {
+		it("retains empty ancestor sections after deleting the last leaf", () => {
 			const tree = createTree();
 
 			// Create deep structure
@@ -247,9 +252,25 @@ describe("Tree Mutations", () => {
 				),
 			});
 
-			// All empty ancestors should be pruned
+			// Empty sections remain addressable so their codexes can be regenerated.
 			root = tree.getRoot();
-			expect(Object.keys(root.children)).toHaveLength(0);
+			const a = Object.values(root.children).find(
+				(c) => c.nodeName === "a",
+			) as SectionNode | undefined;
+			expect(a).toBeDefined();
+			const b = a
+				? (Object.values(a.children).find(
+						(c) => c.nodeName === "b",
+					) as SectionNode | undefined)
+				: undefined;
+			expect(b).toBeDefined();
+			const c = b
+				? (Object.values(b.children).find(
+						(child) => child.nodeName === "c",
+					) as SectionNode | undefined)
+				: undefined;
+			expect(c).toBeDefined();
+			expect(c ? Object.keys(c.children) : []).toHaveLength(0);
 		});
 
 		it("preserves siblings when deleting", () => {
@@ -435,6 +456,49 @@ describe("Tree Mutations", () => {
 				expect(renamed.status).toBe(TreeNodeStatus.Done);
 			}
 		});
+
+		it("throws on rename collision", () => {
+			const tree = createTree();
+
+			tree.apply({
+				actionType: TreeActionType.Create,
+				observedSplitPath: {
+					basename: "A",
+					extension: MD,
+					kind: SplitPathKind.MdFile,
+					pathParts: ["Library"],
+				},
+				targetLocator: makeScrollLocator(
+					["Library" as NodeName],
+					"A" as NodeName,
+				),
+			});
+
+			tree.apply({
+				actionType: TreeActionType.Create,
+				observedSplitPath: {
+					basename: "B",
+					extension: MD,
+					kind: SplitPathKind.MdFile,
+					pathParts: ["Library"],
+				},
+				targetLocator: makeScrollLocator(
+					["Library" as NodeName],
+					"B" as NodeName,
+				),
+			});
+
+			expect(() =>
+				tree.apply({
+					actionType: TreeActionType.Rename,
+					newNodeName: "B" as NodeName,
+					targetLocator: makeScrollLocator(
+						["Library" as NodeName],
+						"A" as NodeName,
+					),
+				}),
+			).toThrow();
+		});
 	});
 
 	describe("apply Move", () => {
@@ -479,6 +543,12 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName],
 					"archive" as NodeName,
 				),
+				observedSplitPath: {
+					basename: "Note-recipes",
+					extension: MD,
+					kind: SplitPathKind.MdFile,
+					pathParts: ["Library", "archive"],
+				},
 				targetLocator: makeScrollLocator(
 					["Library" as NodeName, "recipes" as NodeName],
 					"Note" as NodeName,
@@ -552,6 +622,11 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName],
 					"archive" as NodeName,
 				),
+				observedSplitPath: {
+					basename: "soup",
+					kind: SplitPathKind.Folder,
+					pathParts: ["Library", "archive"],
+				},
 				targetLocator: makeSectionLocator(
 					["Library" as NodeName, "recipes" as NodeName],
 					"soup" as NodeName,
@@ -573,6 +648,59 @@ describe("Tree Mutations", () => {
 			expect(
 				Object.values(soup.children).find((c) => c.nodeName === "Note"),
 			).toBeDefined();
+		});
+
+		it("throws on move collision", () => {
+			const tree = createTree();
+
+			tree.apply({
+				actionType: TreeActionType.Create,
+				observedSplitPath: {
+					basename: "Note-recipes",
+					extension: MD,
+					kind: SplitPathKind.MdFile,
+					pathParts: ["Library", "recipes"],
+				},
+				targetLocator: makeScrollLocator(
+					["Library" as NodeName, "recipes" as NodeName],
+					"Note" as NodeName,
+				),
+			});
+
+			tree.apply({
+				actionType: TreeActionType.Create,
+				observedSplitPath: {
+					basename: "Note-archive",
+					extension: MD,
+					kind: SplitPathKind.MdFile,
+					pathParts: ["Library", "archive"],
+				},
+				targetLocator: makeScrollLocator(
+					["Library" as NodeName, "archive" as NodeName],
+					"Note" as NodeName,
+				),
+			});
+
+			expect(() =>
+				tree.apply({
+					actionType: TreeActionType.Move,
+					newNodeName: "Note" as NodeName,
+					newParentLocator: makeSectionLocator(
+						["Library" as NodeName],
+						"archive" as NodeName,
+					),
+					observedSplitPath: {
+						basename: "Note-recipes",
+						extension: MD,
+						kind: SplitPathKind.MdFile,
+						pathParts: ["Library", "archive"],
+					},
+					targetLocator: makeScrollLocator(
+						["Library" as NodeName, "recipes" as NodeName],
+						"Note" as NodeName,
+					),
+				}),
+			).toThrow();
 		});
 	});
 
@@ -737,11 +865,11 @@ describe("Tree Mutations", () => {
 				"Note" as NodeName,
 			);
 			const action = {
-				actionType: TreeActionType.Create as const,
+				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
 					extension: MD,
-					kind: SplitPathKind.MdFile as const,
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
 				},
 				targetLocator: locator,
@@ -828,10 +956,10 @@ describe("Tree Mutations", () => {
 			expect(
 				Object.values(root.children).find((c) => c.nodeName === "A"),
 			).toBeUndefined();
-			// Section should be pruned since it's empty
+			// Empty sections remain so downstream codex regeneration can clear them.
 			expect(
 				Object.values(root.children).find((c) => c.nodeName === "section"),
-			).toBeUndefined();
+			).toBeDefined();
 		});
 	});
 });

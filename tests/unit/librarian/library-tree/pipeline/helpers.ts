@@ -11,8 +11,6 @@ import {
 } from "../../../../../src/commanders/librarian/codecs";
 import type { Healer } from "../../../../../src/commanders/librarian/healer/healer";
 import {
-	codexImpactToDeletions,
-	codexImpactToRecreations,
 	extractInvalidCodexesFromBulk,
 } from "../../../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
 import type { CodexImpact } from "../../../../../src/commanders/librarian/healer/library-tree/codex/compute-codex-impact";
@@ -20,8 +18,8 @@ import { mergeCodexImpacts } from "../../../../../src/commanders/librarian/heale
 import type { CodexAction } from "../../../../../src/commanders/librarian/healer/library-tree/codex/types/codex-action";
 import { buildTreeActions } from "../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
 import type { CreateTreeLeafAction, TreeAction } from "../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
-import type { TreeReader } from "../../../../../src/commanders/librarian/healer/library-tree/tree-interfaces";
 import type { HealingAction } from "../../../../../src/commanders/librarian/healer/library-tree/types/healing-action";
+import { processCodexImpacts } from "../../../../../src/commanders/librarian/librarian-init/process-codex-impacts";
 import type { BulkVaultEvent } from "../../../../../src/managers/obsidian/vault-action-manager";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { makeTree, type TreeShape } from "../tree-test-helpers";
@@ -129,20 +127,16 @@ export function processBulkEvent(
 		codecs,
 	);
 
-	// Step 5: Convert codex deletions to healing actions (merge with invalid codexes)
-	const codexImpactDeletions = codexImpactToDeletions(
-		mergedCodexImpact,
+	// Step 5: Use the same incremental codex path as Librarian.processActions.
+	const {
+		codexRecreations: recreationActions,
+		deletionHealingActions: codexImpactDeletions,
+	} = processCodexImpacts(
+		codexImpacts,
 		healer,
 		codecs,
 	);
 	const deletionActions = [...invalidCodexDeletions, ...codexImpactDeletions];
-
-	// Step 6: Convert codex recreations to codex actions
-	const recreationActions = codexImpactToRecreations(
-		mergedCodexImpact,
-		healer,
-		codecs,
-	);
 
 	const result: PipelineResult = {
 		codexImpacts,

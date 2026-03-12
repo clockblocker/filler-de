@@ -15,9 +15,9 @@ TreeAction[] (Create/Delete/Rename/Move/ChangeStatus)
     ↓
 computeCodexImpact() → CodexImpact
     ↓
-codexImpactToDeletions() → HealingAction[] (DeleteMdFile)
-    +
-codexImpactToRecreations() → CodexAction[] (UpsertCodex + WriteScrollStatus)
+processCodexImpacts()
+  ├─ codexImpactToDeletions() → HealingAction[] (DeleteMdFile)
+  └─ codexImpactToIncrementalRecreations() → CodexAction[] (EnsureCodexFileExists + ProcessCodex + WriteScrollStatus)
     +
 extractScrollStatusActions() → WriteScrollStatusAction[] (from direct scroll changes)
     ↓
@@ -63,15 +63,18 @@ The codex is still at `L3-L2/__-L2-L1.md` (intermediate location).
 
 **Solution**: `computeMoveImpact` captures `observedSplitPath` (intermediate location) and `codexImpactToDeletions` uses it for Move actions via `buildIntermediateCodexPath()`.
 
-**Phase 2: Recreations** (`codexImpactToRecreations`)
-- Uses **full regeneration approach** (similar to init):
-  1. Collects ALL section chains from current tree state
-  2. Generates `UpsertCodex` for all sections (ensures all codexes are up-to-date)
-  3. Generates `WriteScrollStatus` for descendant scrolls when status propagates
+**Phase 2: Recreations** (`codexImpactToIncrementalRecreations`, via `processCodexImpacts`)
+- Uses **incremental regeneration** for event-driven updates:
+  1. Starts from `impact.impactedChains`
+  2. Regenerates only impacted sections plus descendant section codexes required by section renames/status propagation
+  3. Generates `EnsureCodexFileExists` + `ProcessCodex` for those sections
+  4. Generates `WriteScrollStatus` for descendant scrolls when status propagates
+
+**Init remains full regeneration**: `processCodexImpactsForInit()` still uses `codexImpactToRecreations()` to rebuild every codex from the fully constructed tree.
 
 Both phases are combined with healing actions and dispatched in a single batch. The `VaultActionManager`'s topological sort ensures correct ordering (deletes before creates when needed).
 
-This approach is simpler and more reliable than tracking incremental changes, ensuring no orphaned codexes remain.
+For event-driven updates, the tree retains emptied sections after leaf moves/deletes so the old parent codex can be regenerated and cleared instead of being skipped.
 
 ## CodexImpact
 
@@ -102,11 +105,12 @@ Impact always includes ancestors (status aggregates upward).
 
 | Action | Trigger | VaultAction |
 |--------|---------|-------------|
-| `UpsertCodex` | Section exists (create or update) | `UpsertMdFile` |
+| `EnsureCodexFileExists` | Section exists and codex file may be missing | `UpsertMdFile` with `content: null` |
+| `ProcessCodex` | Section content/backlink needs regeneration | `ProcessMdFile` |
 | `WriteScrollStatus` | Status propagation to leaves OR direct scroll status change | `ProcessMdFile` |
 
 **Note:** 
-- `UpsertCodex` replaces the old `CreateCodex`/`UpdateCodex` distinction - upsert handles both cases.
+- `EnsureCodexFileExists` + `ProcessCodex` replaced the older single-step codex upsert flow in the event-driven path.
 - Codex deletions are now handled as `DeleteMdFile` HealingActions (via `codexImpactToDeletions`), not as `DeleteCodex` CodexActions. This ensures proper ordering with healing actions in a single dispatch.
 
 ## Codex File Format
@@ -142,7 +146,9 @@ Impact always includes ancestors (status aggregates upward).
 | `generateCodexContent` | SectionNode → markdown content |
 | `computeCodexSplitPath` | Section chain → codex file path |
 | `codexImpactToDeletions` | CodexImpact → HealingAction[] (DeleteMdFile) |
-| `codexImpactToRecreations` | CodexImpact → CodexAction[] (UpsertCodex + WriteScrollStatus) |
+| `processCodexImpacts` | Merge impacts, compute deletions, compute incremental recreations |
+| `codexImpactToIncrementalRecreations` | CodexImpact → CodexAction[] for impacted sections only |
+| `codexImpactToRecreations` | Full-tree codex recreation (used by init) |
 | `codexActionsToVaultActions` | CodexAction[] → VaultAction[] |
 | `buildIntermediateCodexPath` | Build delete path at intermediate (observed) location |
 | `buildMovedCodexPath` | Build delete path at final (newChain) location |

@@ -6,6 +6,9 @@ mock.module("obsidian", () => ({
 		file: unknown;
 		editor: unknown;
 	},
+	Notice: class Notice {
+		constructor(_message: string) {}
+	},
 	TFile: class TFile {
 		path = "";
 		basename = "";
@@ -19,14 +22,16 @@ mock.module("obsidian", () => ({
 
 // CJS fallback (kept for any require-using code paths)
 if (typeof require !== "undefined") {
-	// @ts-expect-error - require.cache shape
 	require.cache = require.cache || {};
-	// @ts-expect-error - require.cache shape
+	// @ts-expect-error - lightweight module stub for tests, not a full Node Module
 	require.cache["obsidian"] = {
 		exports: {
 			MarkdownView: class MarkdownView {
 				file: unknown;
 				editor: unknown;
+			},
+			Notice: class Notice {
+				constructor(_message: string) {}
 			},
 			TFile: class TFile {
 				path = "";

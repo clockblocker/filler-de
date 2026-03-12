@@ -13,11 +13,13 @@ import type {
 import { MD } from "../../managers/obsidian/vault-action-manager/types/literals";
 import {
 	SplitPathKind,
+	type SplitPathToFolder,
 	type SplitPathToMdFile,
 	type SplitPathToMdFileWithReader,
 } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
+import { folderToBookAction } from "./bookkeeper/folder-to-book-action";
 import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";
 import {
 	type CodecRules,
@@ -396,6 +398,27 @@ export class Librarian {
 			},
 			info,
 		);
+	}
+
+	async convertFolderToBook(folderPath: SplitPathToFolder): Promise<void> {
+		if (!this.healer) {
+			logger.warn(
+				"[Librarian.convertFolderToBook] No healer, returning early",
+			);
+			return;
+		}
+
+		const result = await folderToBookAction({
+			codecs: this.codecs,
+			folderPath,
+			rules: this.rules,
+			vam: this.vam,
+		});
+		if (!result || result.treeActions.length === 0) {
+			return;
+		}
+
+		await this.processActions(result.treeActions, []);
 	}
 
 	/**

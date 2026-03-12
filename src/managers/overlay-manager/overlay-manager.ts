@@ -11,6 +11,7 @@
  */
 
 import type { App, Plugin } from "obsidian";
+import type { Librarian } from "../../commanders/librarian/librarian";
 import type { CommandExecutor } from "../obsidian/command-executor";
 import {
 	type ActionElementPayload,
@@ -46,6 +47,7 @@ import { updateToolbarVisibility } from "./toolbar-lifecycle/manager";
  */
 export type OverlayManagerDeps = {
 	app: App;
+	librarian: Librarian;
 	plugin?: Plugin;
 	userEventInterceptor?: UserEventInterceptor;
 	commandExecutor?: CommandExecutor;
@@ -57,6 +59,7 @@ export type OverlayManagerDeps = {
  */
 export class OverlayManager {
 	private readonly app: App;
+	private readonly librarian: Librarian;
 	private readonly plugin: Plugin | null;
 	private readonly workspaceInterceptor: WorkspaceEventInterceptor;
 	private readonly userEventInterceptor: UserEventInterceptor | null;
@@ -73,6 +76,7 @@ export class OverlayManager {
 
 	constructor(deps: OverlayManagerDeps) {
 		this.app = deps.app;
+		this.librarian = deps.librarian;
 		this.plugin = deps.plugin ?? null;
 		this.workspaceInterceptor = new WorkspaceEventInterceptor(this.app);
 		this.userEventInterceptor = deps.userEventInterceptor ?? null;
@@ -128,6 +132,7 @@ export class OverlayManager {
 			this.contextMenuTeardown = setupContextMenu({
 				app: this.app,
 				commandExecutor: this.commandExecutor,
+				librarian: this.librarian,
 				plugin: this.plugin,
 				vam: this.vam,
 			});

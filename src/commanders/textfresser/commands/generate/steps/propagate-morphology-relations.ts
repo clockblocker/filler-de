@@ -3,8 +3,8 @@ import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
-import { canonicalizeTargetForComparison } from "../../../common/target-comparison";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
+import { canonicalizeTargetForComparison } from "../../../common/target-comparison";
 import {
 	buildPropagationActionPair,
 	resolveMorphemePath,

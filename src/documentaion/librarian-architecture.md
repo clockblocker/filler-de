@@ -256,7 +256,9 @@ makeLibraryScopedBulkVaultEvent()
   → filter to library-only events, convert to library-scoped paths
   ↓ Layer 2: Materialization
 materializeScopedBulk()
-  → expand folder events into per-node events (sections + leaves)
+  → expand folder events into per-node events (sections + leaves),
+    preferring semantic roots and falling back to raw inside-library rename
+    events when a matching root is absent
   ↓ Layer 3: Translation
 translateMaterializedEvents()
   → infer policy + intent → produce TreeAction[]
@@ -313,17 +315,18 @@ All actions use **canonical tree locators** (segment IDs), not vault paths. The 
 
 The Healer is the core engine. For each TreeAction, it:
 
-1. **Disambiguates collisions** (Create only): if segment ID already occupied by a different file, assigns a new name
-2. **Normalizes duplicates** (Create only): `"Untitled 2 1"` → `"Untitled 3"`
-3. **Applies to tree**: `tree.apply(action)` → `{ changed, node }`
-4. **Skips if idempotent**: if `changed === false`, returns empty
-5. **Computes codex impact**: which sections need index regeneration
-6. **Computes healing actions**: what filesystem renames are needed
+1. **Disambiguates create collisions**: if a Create targets an occupied leaf slot, assigns a new name
+2. **Rejects rename/move collisions**: if Rename or Move would overwrite an occupied segment, throws and aborts the transaction
+3. **Normalizes duplicates** (Create only): `"Untitled 2 1"` → `"Untitled 3"`
+4. **Applies to tree**: `tree.apply(action)` → `{ changed, node }`
+5. **Skips if idempotent**: if `changed === false`, returns empty
+6. **Computes codex impact**: which sections need index regeneration
+7. **Computes healing actions**: what filesystem renames are needed
 
 ```typescript
 class Healer {
   getHealingActionsFor(action: TreeAction): HealerApplyResult {
-    // 1. Collision detection (Create only)
+    // 1. Create collision disambiguation / rename-move collision rejection
     // 2. tree.apply(action) → { changed, node }
     // 3. If !changed → return empty
     // 4. computeCodexImpact(action)
@@ -483,7 +486,7 @@ TreeAction[] → computeCodexImpact() per action → CodexImpact[]
 merge impacts → deduplicate chains
   ↓
 codexImpactToDeletions() → HealingAction[] (DeleteMdFile for old codexes)
-codexImpactToRecreations() → VaultAction[] (UpsertMdFile + ProcessMdFile for new codexes)
+processCodexImpacts() → incremental codex recreations for impacted sections
   ↓
 extractScrollStatusActions() → VaultAction[] (ProcessMdFile for scroll metadata updates)
   ↓
@@ -660,6 +663,7 @@ On plugin load, the Librarian rebuilds the entire tree from vault state:
 | Command | Purpose |
 |---------|---------|
 | `SplitToPages` | Segment a long scroll into paginated folder structure |
+| `ConvertFolderToBook` | Explorer folder action: rename direct child scrolls into page files and regenerate the codex |
 | `SplitInBlocks` | Add Obsidian block markers (`^N`) to content |
 | `GoToNextPage` | Navigate to next page sibling |
 | `GoToPrevPage` | Navigate to previous page sibling |
@@ -687,7 +691,22 @@ Splits a long markdown file into paginated pages inside a new section folder:
 
 The callback bypasses the normal event flow since the Librarian's self-event filter would ignore its own dispatched actions.
 
-### 14.4 Codex Checkbox Interaction
+### 14.4 ConvertFolderToBook
+
+Triggered from the file explorer context menu on a section folder:
+
+1. List direct children in the folder
+2. Abort if any child folder exists
+3. Keep only direct markdown children
+4. Order them by leading number when every file starts with a unique number
+5. Otherwise fall back to alphabetical basename order
+6. Rename each scroll into canonical page naming (`Section_Page_000...`)
+7. Rewrite each file as a Page note with page navigation metadata
+8. Apply synthetic `RenameScrollNodeAction`s through the Librarian to regenerate the section codex
+
+This action reuses the same self-event-filter bypass strategy as `SplitToPages`, but the section already exists, so it updates the existing section tree node instead of creating a new one.
+
+### 14.5 Codex Checkbox Interaction
 
 When a user clicks a checkbox in a codex file:
 
@@ -822,16 +841,18 @@ class Tree {
 - Duplicate healing on re-delivered events
 - Unnecessary work on idempotent operations
 
-### 18.3 Auto-Pruning
+### 18.3 Empty Sections
 
-When a node is deleted, empty ancestor sections are automatically pruned:
+Empty sections are retained in the tree after leaf deletes and leaf moves:
 
 ```
-Delete "Note" from Library/A/B/:
-  → B becomes empty → pruned
-  → A becomes empty → pruned
-  → Library still has other children → kept
+Move "Note" from Library/A/B/ to Library/C/:
+  → B becomes empty → kept
+  → A becomes empty → kept
+  → codex regeneration can clear __-B-A and __-A instead of skipping them
 ```
+
+Sections are removed only by explicit section delete/move actions, not by implicit ancestor pruning.
 
 ### 18.4 Section Chain Creation
 
@@ -855,6 +876,7 @@ Move and Create actions may target sections that don't exist yet. `ensureSection
 | `section-healing/section-healing-coordinator.ts` | On-demand codex creation for new sections |
 | `list-commands-executable.ts` | Query available commands for a file |
 | `page-navigation.ts` | Tree-based page sibling lookup |
+| `bookkeeper/folder-to-book-action.ts` | Folder explorer action for converting scroll folders into paged books |
 | **Codecs** | |
 | `codecs/index.ts` | Codec factory and public API |
 | `codecs/rules.ts` | CodecRules configuration |

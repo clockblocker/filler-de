@@ -101,10 +101,7 @@ export function resolveExistingEntry(
 	}
 	// If no disambResult → matchedEntry stays null (new entry)
 
-	if (
-		matchedEntry &&
-		isPropagationOnlyStubEntryWithWikilinks(matchedEntry)
-	) {
+	if (matchedEntry && isPropagationOnlyStubEntryWithWikilinks(matchedEntry)) {
 		const stubEntryId = matchedEntry.id;
 		logger.info(
 			`[resolveEntry] matchedEntry=${stubEntryId} is propagation-only stub — forcing full generation`,

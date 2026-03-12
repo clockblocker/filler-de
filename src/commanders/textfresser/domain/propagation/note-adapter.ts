@@ -3,18 +3,12 @@ import { blockIdHelper } from "../../../../stateless-helpers/block-id";
 import { morphologyRelationHelper } from "../../../../stateless-helpers/morphology-relation";
 import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
 import {
-	wikilinkHelper,
 	type ParsedWikilink,
+	wikilinkHelper,
 } from "../../../../stateless-helpers/wikilink";
 import type { TargetLanguage } from "../../../../types";
 import { logger } from "../../../../utils/logger";
 import { extractHashTags } from "../../../../utils/text-utils";
-import {
-	parseSingleLinguisticWikilink,
-	type LibraryBasenameParser,
-	type LibraryLookupByCoreName,
-	type LinguisticWikilinkDto as ParsedLinguisticWikilinkDto,
-} from "../linguistic-wikilink";
 import { compareSectionsByWeight } from "../../targets/de/sections/section-config";
 import { cssSuffixFor } from "../../targets/de/sections/section-css-kind";
 import {
@@ -27,6 +21,12 @@ import {
 	ENTRY_SEPARATOR,
 	ENTRY_SEPARATOR_RE,
 } from "../dict-note/internal/constants";
+import {
+	type LibraryBasenameParser,
+	type LibraryLookupByCoreName,
+	type LinguisticWikilinkDto as ParsedLinguisticWikilinkDto,
+	parseSingleLinguisticWikilink,
+} from "../linguistic-wikilink";
 import {
 	dedupeByKey,
 	inflectionItemIdentityKey,
@@ -495,8 +495,7 @@ function parseRelationToken(
 	if (resolution.basic) {
 		return {
 			relationKind,
-			targetLemma:
-				resolution.canonicalTarget ?? normalizeSpace(trimmed),
+			targetLemma: resolution.canonicalTarget ?? normalizeSpace(trimmed),
 			targetWikilink: serializeWikilinkDto(resolution.basic),
 		};
 	}

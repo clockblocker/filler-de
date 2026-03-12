@@ -45,6 +45,10 @@ import {
 	performMutation010,
 	testPostHealing010,
 } from "./chains/3-chain/010-lemma-manne";
+import {
+	performMutation011,
+	testPostHealing011,
+} from "./chains/3-chain/011-move-file-cli-codex";
 
 describe("Librarian CLI E2E", () => {
 	beforeAll(async () => {
@@ -124,4 +128,11 @@ describe("Librarian CLI E2E", () => {
 		await waitForIdle(120_000);
 	});
 	it("rewrites selected noun with a lemma wikilink", testPostHealing010);
+
+	// 011: Move a file via the official CLI move command
+	it("moves a file between sections for 011", async () => {
+		await performMutation011();
+		await waitForIdle();
+	});
+	it("regenerates affected codexes after file move", testPostHealing011);
 });

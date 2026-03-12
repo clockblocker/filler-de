@@ -67,7 +67,7 @@ export function buildPageSplitActions(
 	const newPathParts = [...sourcePath.pathParts, folderBasename];
 
 	// Build section chain for the new folder (all path parts including the new folder)
-	const sectionChain = buildSectionChain(newPathParts);
+	const sectionChain = buildSectionChainFromPathParts(newPathParts);
 
 	// Build segment ID for the deleted scroll (same coreName, but Scroll kind)
 	const deletedScrollSegmentId = serializeSegmentId({
@@ -200,9 +200,17 @@ export function buildTooShortMetadataAction(
 		kind: VaultActionKind.ProcessMdFile,
 		payload: {
 			splitPath: sourcePath,
-			transform: (content) => addPageFrontmatter(content),
+			transform: buildExistingPageTransform(undefined, undefined),
 		},
 	};
+}
+
+export function buildExistingPageTransform(
+	prevPageIdx: number | undefined,
+	nextPageIdx: number | undefined,
+): (content: string) => string {
+	return (content) =>
+		convertExistingContentToPage(content, prevPageIdx, nextPageIdx);
 }
 
 /**
@@ -210,16 +218,26 @@ export function buildTooShortMetadataAction(
  * Uses upsertMetadata to respect hideMetadata setting.
  * Also applies block markers for consistency with multi-page splits.
  */
-function addPageFrontmatter(content: string): string {
+function convertExistingContentToPage(
+	content: string,
+	prevPageIdx: number | undefined,
+	nextPageIdx: number | undefined,
+): string {
 	// Read existing metadata (from either format)
 	const existing = noteMetadataHelper.read(content, PageMetadataSchema);
 
 	// Build new metadata, preserving existing fields
-	const meta = {
+	const meta: Record<string, unknown> = {
 		...(existing ?? {}),
 		noteKind: PAGE_FRONTMATTER.noteKind,
 		status: (existing?.status as TreeNodeStatus) ?? PAGE_FRONTMATTER.status,
 	};
+	if (prevPageIdx !== undefined) {
+		meta.prevPageIdx = prevPageIdx;
+	}
+	if (nextPageIdx !== undefined) {
+		meta.nextPageIdx = nextPageIdx;
+	}
 
 	// Strip existing metadata and markers, then apply fresh block markers
 	const cleanContent = noteMetadataHelper.strip(content);
@@ -232,7 +250,9 @@ function addPageFrontmatter(content: string): string {
  * Builds section chain (segment IDs) from path parts (node names).
  * Each path part becomes a section segment ID.
  */
-function buildSectionChain(pathParts: string[]): SectionNodeSegmentId[] {
+export function buildSectionChainFromPathParts(
+	pathParts: string[],
+): SectionNodeSegmentId[] {
 	return pathParts.map(
 		(nodeName) =>
 			serializeSegmentId({
