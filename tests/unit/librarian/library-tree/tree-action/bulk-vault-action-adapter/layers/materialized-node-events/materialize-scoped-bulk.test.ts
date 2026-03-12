@@ -499,6 +499,70 @@ describe("materializeScopedBulk", () => {
 
 			expectMultisetEqual(result, []);
 		});
+
+		it("falls back to bulk.events for inside-library renames when roots are missing", () => {
+			const bulk: LibraryScopedBulkVaultEvent = {
+				debug: {
+					collapsedCount: { creates: 0, deletes: 0, renames: 0 },
+					endedAt: 0,
+					reduced: { rootDeletes: 0, rootRenames: 0 },
+					startedAt: 0,
+					trueCount: { creates: 0, deletes: 0, renames: 0 },
+				},
+				events: [
+					{
+						...{
+							from: MdFile("old-scroll", ["berry"]),
+							kind: VaultEventKind.FileRenamed,
+							to: MdFile("old-scroll", ["fish"]),
+						},
+						scope: Scope.Inside,
+					},
+				],
+				roots: [],
+			};
+
+			const result = materializeScopedBulk(bulk);
+
+			expectMultisetEqual(result, [
+				{
+					from: MdFile("old-scroll", ["berry"]),
+					kind: MaterializedEventKind.Rename,
+					nodeKind: TreeNodeKind.Scroll,
+					to: MdFile("old-scroll", ["fish"]),
+				},
+			]);
+		});
+
+		it("does not double-emit rename when both root and event are present", () => {
+			const renameEvent = {
+				...{
+					from: MdFile("old-scroll", ["berry"]),
+					kind: VaultEventKind.FileRenamed,
+					to: MdFile("old-scroll", ["fish"]),
+				},
+				scope: Scope.Inside,
+			} as const;
+
+			const bulk: LibraryScopedBulkVaultEvent = {
+				debug: {
+					collapsedCount: { creates: 0, deletes: 0, renames: 0 },
+					endedAt: 0,
+					reduced: { rootDeletes: 0, rootRenames: 0 },
+					startedAt: 0,
+					trueCount: { creates: 0, deletes: 0, renames: 0 },
+				},
+				events: [renameEvent],
+				roots: [renameEvent],
+			};
+
+			const result = materializeScopedBulk(bulk);
+			const renames = result.filter(
+				(event) => event.kind === MaterializedEventKind.Rename,
+			);
+
+			expect(renames).toHaveLength(1);
+		});
 	});
 
 	describe("Empty Bulk", () => {
@@ -589,4 +653,3 @@ describe("materializeScopedBulk", () => {
 		});
 	});
 });
-

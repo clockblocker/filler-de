@@ -50,6 +50,31 @@ function makeSegmentId(node: TreeNode): TreeNodeSegmentId {
 	return makeNodeSegmentId(node);
 }
 
+function makeSegmentIdForNodeName(
+	node: ScrollNode,
+	nodeName: NodeName,
+): SegmentIdOf<typeof TreeNodeKind.Scroll>;
+function makeSegmentIdForNodeName(
+	node: FileNode,
+	nodeName: NodeName,
+): SegmentIdOf<typeof TreeNodeKind.File>;
+function makeSegmentIdForNodeName(
+	node: SectionNode,
+	nodeName: NodeName,
+): SegmentIdOf<typeof TreeNodeKind.Section>;
+function makeSegmentIdForNodeName(
+	node: TreeNode,
+	nodeName: NodeName,
+): TreeNodeSegmentId {
+	if (node.kind === TreeNodeKind.Section) {
+		return makeNodeSegmentId({ ...node, nodeName });
+	}
+	if (node.kind === TreeNodeKind.Scroll) {
+		return makeNodeSegmentId({ ...node, nodeName });
+	}
+	return makeNodeSegmentId({ ...node, nodeName });
+}
+
 // ─── Result Type ───
 
 /**
@@ -175,33 +200,7 @@ export class Tree implements TreeFacade {
 		}
 
 		delete parentSection.children[targetLocator.segmentId];
-
-		// Auto-prune empty ancestors
-		this.pruneEmptyAncestors(targetLocator.segmentIdChainToParent);
 		return { changed: true, node: null };
-	}
-
-	private pruneEmptyAncestors(chain: SectionNodeSegmentId[]): void {
-		// Walk from deepest to shallowest
-		for (let i = chain.length - 1; i >= 0; i--) {
-			const parentChain = chain.slice(0, i);
-			const segmentId = chain[i];
-			if (!segmentId) continue;
-
-			const parent = this.findSection(parentChain);
-			if (!parent) break;
-
-			const child = parent.children[segmentId];
-			if (
-				child &&
-				child.kind === TreeNodeKind.Section &&
-				Object.keys(child.children).length === 0
-			) {
-				delete parent.children[segmentId];
-			} else {
-				break; // Stop if non-empty
-			}
-		}
 	}
 
 	// ─── Rename ───
@@ -225,10 +224,17 @@ export class Tree implements TreeFacade {
 			return { changed: false, node };
 		}
 
+		const newSegmentId = makeSegmentIdForNodeName(node, newNodeName);
+		const collidingNode = parentSection.children[newSegmentId];
+		if (collidingNode) {
+			throw new Error(
+				`Rename collision: destination segment ${newSegmentId} is already occupied`,
+			);
+		}
+
 		// Remove old, insert with new name
 		delete parentSection.children[targetLocator.segmentId];
 		node.nodeName = newNodeName;
-		const newSegmentId = makeSegmentId(node);
 		parentSection.children[newSegmentId] = node;
 
 		return { changed: true, node };
@@ -252,21 +258,37 @@ export class Tree implements TreeFacade {
 			return { changed: false, node: null };
 		}
 
-		delete oldParent.children[targetLocator.segmentId];
-
-		// Prune old ancestors if empty
-		this.pruneEmptyAncestors(targetLocator.segmentIdChainToParent);
-
-		// Ensure new parent chain exists
 		const newParentChain = [
 			...newParentLocator.segmentIdChainToParent,
 			newParentLocator.segmentId,
 		];
+		const existingNewParent = this.findSection(newParentChain);
+		const newSegmentId = makeSegmentIdForNodeName(node, newNodeName);
+		const collidingNode = existingNewParent?.children[newSegmentId];
+		if (collidingNode && collidingNode !== node) {
+			throw new Error(
+				`Move collision: destination segment ${newSegmentId} is already occupied`,
+			);
+		}
+
+		if (
+			targetLocator.segmentId === newSegmentId &&
+			targetLocator.segmentIdChainToParent.length ===
+				newParentChain.length &&
+			targetLocator.segmentIdChainToParent.every(
+				(segment, index) => segment === newParentChain[index],
+			)
+		) {
+			return { changed: false, node };
+		}
+
+		delete oldParent.children[targetLocator.segmentId];
+
+		// Ensure new parent chain exists
 		const newParent = this.ensureSectionChain(newParentChain);
 
 		// Update node name and attach
 		node.nodeName = newNodeName;
-		const newSegmentId = makeSegmentId(node);
 		newParent.children[newSegmentId] = node;
 		return { changed: true, node };
 	}

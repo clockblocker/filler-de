@@ -256,7 +256,9 @@ makeLibraryScopedBulkVaultEvent()
   → filter to library-only events, convert to library-scoped paths
   ↓ Layer 2: Materialization
 materializeScopedBulk()
-  → expand folder events into per-node events (sections + leaves)
+  → expand folder events into per-node events (sections + leaves),
+    preferring semantic roots and falling back to raw inside-library rename
+    events when a matching root is absent
   ↓ Layer 3: Translation
 translateMaterializedEvents()
   → infer policy + intent → produce TreeAction[]
@@ -313,17 +315,18 @@ All actions use **canonical tree locators** (segment IDs), not vault paths. The 
 
 The Healer is the core engine. For each TreeAction, it:
 
-1. **Disambiguates collisions** (Create only): if segment ID already occupied by a different file, assigns a new name
-2. **Normalizes duplicates** (Create only): `"Untitled 2 1"` → `"Untitled 3"`
-3. **Applies to tree**: `tree.apply(action)` → `{ changed, node }`
-4. **Skips if idempotent**: if `changed === false`, returns empty
-5. **Computes codex impact**: which sections need index regeneration
-6. **Computes healing actions**: what filesystem renames are needed
+1. **Disambiguates create collisions**: if a Create targets an occupied leaf slot, assigns a new name
+2. **Rejects rename/move collisions**: if Rename or Move would overwrite an occupied segment, throws and aborts the transaction
+3. **Normalizes duplicates** (Create only): `"Untitled 2 1"` → `"Untitled 3"`
+4. **Applies to tree**: `tree.apply(action)` → `{ changed, node }`
+5. **Skips if idempotent**: if `changed === false`, returns empty
+6. **Computes codex impact**: which sections need index regeneration
+7. **Computes healing actions**: what filesystem renames are needed
 
 ```typescript
 class Healer {
   getHealingActionsFor(action: TreeAction): HealerApplyResult {
-    // 1. Collision detection (Create only)
+    // 1. Create collision disambiguation / rename-move collision rejection
     // 2. tree.apply(action) → { changed, node }
     // 3. If !changed → return empty
     // 4. computeCodexImpact(action)
@@ -483,7 +486,7 @@ TreeAction[] → computeCodexImpact() per action → CodexImpact[]
 merge impacts → deduplicate chains
   ↓
 codexImpactToDeletions() → HealingAction[] (DeleteMdFile for old codexes)
-codexImpactToRecreations() → VaultAction[] (UpsertMdFile + ProcessMdFile for new codexes)
+processCodexImpacts() → incremental codex recreations for impacted sections
   ↓
 extractScrollStatusActions() → VaultAction[] (ProcessMdFile for scroll metadata updates)
   ↓
@@ -838,16 +841,18 @@ class Tree {
 - Duplicate healing on re-delivered events
 - Unnecessary work on idempotent operations
 
-### 18.3 Auto-Pruning
+### 18.3 Empty Sections
 
-When a node is deleted, empty ancestor sections are automatically pruned:
+Empty sections are retained in the tree after leaf deletes and leaf moves:
 
 ```
-Delete "Note" from Library/A/B/:
-  → B becomes empty → pruned
-  → A becomes empty → pruned
-  → Library still has other children → kept
+Move "Note" from Library/A/B/ to Library/C/:
+  → B becomes empty → kept
+  → A becomes empty → kept
+  → codex regeneration can clear __-B-A and __-A instead of skipping them
 ```
+
+Sections are removed only by explicit section delete/move actions, not by implicit ancestor pruning.
 
 ### 18.4 Section Chain Creation
 

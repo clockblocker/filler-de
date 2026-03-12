@@ -59,6 +59,11 @@ export function materializeScopedBulk(
 		if (m) out.push(m);
 	}
 
+	for (const e of bulk.events) {
+		const m = materializeRenameFromScopedEventFallback(e, bulk.roots);
+		if (m) out.push(m);
+	}
+
 	return out;
 }
 
@@ -174,4 +179,47 @@ export function materializeRenameFromScopedRoot(
 	}
 
 	return null;
+}
+
+function materializeRenameFromScopedEventFallback(
+	ev: LibraryScopedVaultEvent,
+	roots: LibraryScopedBulkVaultEvent["roots"],
+): MaterializedNodeEvent | null {
+	if (ev.scope !== Scope.Inside) return null;
+	if (
+		ev.kind !== VaultEventKind.FileRenamed &&
+		ev.kind !== VaultEventKind.FolderRenamed
+	) {
+		return null;
+	}
+
+	const alreadyCoveredByRoot = roots.some((root) =>
+		isEquivalentRename(root, ev),
+	);
+	if (alreadyCoveredByRoot) return null;
+
+	return materializeRenameFromScopedRoot(ev);
+}
+
+function isEquivalentRename(
+	left: Extract<
+		LibraryScopedBulkVaultEvent["roots"][number],
+		| { kind: typeof VaultEventKind.FileRenamed }
+		| { kind: typeof VaultEventKind.FolderRenamed }
+	>,
+	right: Extract<
+		LibraryScopedVaultEvent,
+		| { kind: typeof VaultEventKind.FileRenamed }
+		| { kind: typeof VaultEventKind.FolderRenamed }
+	>,
+): boolean {
+	return (
+		left.kind === right.kind &&
+		left.from.kind === right.from.kind &&
+		left.to.kind === right.to.kind &&
+		left.from.basename === right.from.basename &&
+		left.to.basename === right.to.basename &&
+		left.from.pathParts.join("/") === right.from.pathParts.join("/") &&
+		left.to.pathParts.join("/") === right.to.pathParts.join("/")
+	);
 }
