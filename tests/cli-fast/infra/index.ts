@@ -8,7 +8,8 @@ export {
 	ensureVaultOpenFast,
 	prepareFastSuite,
 	reloadPluginFast,
-	waitForPluginIdleFast,
+	waitFor,
+	type FastWaitLevel,
 } from "./runtime";
 export {
 	createExactFile,

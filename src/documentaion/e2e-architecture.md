@@ -18,6 +18,12 @@ The E2E test suite validates the Textfresser plugin **running inside a real Obsi
 
 **Fast-path coverage**: `tests/cli-fast/` provides a lighter harness for focused CLI scenarios. It keeps the same real-Obsidian execution model, but skips the full fixture reload cycle from `setupTestVault()` and instead prepares only the minimal subtree needed by the test.
 
+The fast harness does not use plugin-side `whenIdle()` as its primary sync primitive. It uses explicit settling waits plus polling assertions:
+- `waitFor("short")` = `100ms`
+- `waitFor("medium")` = `500ms`
+- `waitFor("medium-long")` = `1000ms`
+- `waitFor("long")` = `2000ms`
+
 **Not yet ported** (deferred):
 - Checkbox clicking (old chain-0/004) — requires `eval`-based DOM manipulation
 - Page metadata preservation — requires separate vault fixture
@@ -55,7 +61,7 @@ The E2E test suite validates the Textfresser plugin **running inside a real Obsi
 ├──────────────────────────────────────────────────────────────────────┤
 │  Fast Harness (tests/cli-fast/)                                      │
 │    prepareFastSuite() → deploy build → ensure vault open             │
-│    → reload once → waitForIdle                                       │
+│    → reload once → waitFor("short")                                  │
 │    focused fixture helpers → direct CLI file ops                     │
 ├──────────────────────────────────────────────────────────────────────┤
 │  Plugin-Side (src/)                                                   │
@@ -72,7 +78,7 @@ The E2E test suite validates the Textfresser plugin **running inside a real Obsi
 4. **Synchronization** via `waitForIdle()` — calls `plugin.whenIdle()` inside Obsidian via `eval`
 5. **Assertions** poll the vault state until expectations are met or timeout
 
-The fast harness uses the same low-level CLI primitives, but narrows the setup to a minimal fixture and exact `path=` operations. This is useful when a scenario only needs one subtree and the full chain bootstrap dominates runtime.
+The fast harness uses the same low-level CLI primitives, but narrows the setup to a minimal fixture and exact `path=` operations. This is useful when a scenario only needs one subtree and the full chain bootstrap dominates runtime. Synchronization there is intentionally explicit: apply an operation, wait at the chosen ladder level, then let polling assertions prove the final state.
 
 ---
 

@@ -1,9 +1,5 @@
 import { beforeAll, describe, expect, it } from "bun:test";
-import {
-	deleteExactFile,
-	prepareFastSuite,
-	waitForPluginIdleFast,
-} from "../infra";
+import { deleteExactFile, prepareFastSuite, waitFor } from "../infra";
 import {
 	createFastDeleteFileFixture,
 	expectFastDeleteFileHealing,
@@ -35,7 +31,7 @@ describe("Librarian CLI Fast - delete file", () => {
 		await resetFastDeleteFileFixture();
 		await createFastDeleteFileFixture();
 		await deleteExactFile(FAST_DELETE_FILE_FIXTURE.ingredientsPath);
-		await waitForPluginIdleFast();
+		await waitFor("short");
 		await expectFastDeleteFileHealing();
 
 		const elapsedMs = Math.round(performance.now() - startedAt);

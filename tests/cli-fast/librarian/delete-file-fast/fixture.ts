@@ -1,10 +1,5 @@
 import type { FastExpectations } from "../../infra";
-import {
-	createExactFile,
-	deleteAnyPath,
-	expectFastHealing,
-	waitForPluginIdleFast,
-} from "../../infra";
+import { createExactFile, deleteAnyPath, expectFastHealing, waitFor } from "../../infra";
 
 const ROOT = "Library/CliFast/Pie/Fish";
 
@@ -37,7 +32,7 @@ export const FAST_DELETE_FILE_EXPECTATIONS: FastExpectations = {
 
 export async function resetFastDeleteFileFixture(): Promise<void> {
 	await deleteAnyPath(FAST_DELETE_FILE_FIXTURE.rootPath);
-	await waitForPluginIdleFast();
+	await waitFor("short");
 }
 
 export async function createFastDeleteFileFixture(): Promise<void> {
@@ -46,7 +41,7 @@ export async function createFastDeleteFileFixture(): Promise<void> {
 		"# Ingredients",
 	);
 	await createExactFile(FAST_DELETE_FILE_FIXTURE.stepsPath, "# Steps");
-	await waitForPluginIdleFast();
+	await waitFor("short");
 }
 
 export async function expectFastDeleteFileHealing(): Promise<void> {

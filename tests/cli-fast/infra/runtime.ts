@@ -1,9 +1,18 @@
 import { copyFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { obsidian, obsidianEval } from "../../cli-e2e/utils/cli";
+import { obsidian } from "../../cli-e2e/utils/cli";
 
 const PLUGIN_ID = "cbcr-text-eater-de";
 const PROJECT_ROOT = resolve(import.meta.dir, "../../..");
+
+const WAIT_LEVEL_MS = {
+	long: 2000,
+	medium: 500,
+	"medium-long": 1000,
+	short: 100,
+} as const;
+
+export type FastWaitLevel = keyof typeof WAIT_LEVEL_MS;
 
 function getVaultPath(): string {
 	const vaultPath = process.env.CLI_E2E_VAULT_PATH;
@@ -75,16 +84,13 @@ export async function reloadPluginFast(): Promise<void> {
 	await obsidian(`plugin:reload id=${PLUGIN_ID}`);
 }
 
-export async function waitForPluginIdleFast(
-	timeoutMs = 15_000,
-): Promise<void> {
-	const code = `(async()=>{await app.plugins.plugins['${PLUGIN_ID}'].whenIdle();return 'idle'})()`;
-	await obsidianEval(code, timeoutMs);
+export async function waitFor(level: FastWaitLevel): Promise<void> {
+	await Bun.sleep(WAIT_LEVEL_MS[level]);
 }
 
 export async function prepareFastSuite(): Promise<void> {
 	deployLatestBuild();
 	await ensureVaultOpenFast();
 	await reloadPluginFast();
-	await waitForPluginIdleFast();
+	await waitFor("short");
 }
