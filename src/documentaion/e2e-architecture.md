@@ -16,6 +16,8 @@ The E2E test suite validates the Textfresser plugin **running inside a real Obsi
 
 **Current coverage**: 24 tests across 12 chain steps (000–011), covering init healing, file creation, folder rename, create+rename, single file delete, folder delete, corename rename, basename healing, checkbox propagation, lemma command integration, and file move codex regeneration.
 
+**Fast-path coverage**: `tests/cli-fast/` provides a lighter harness for focused CLI scenarios. It keeps the same real-Obsidian execution model, but skips the full fixture reload cycle from `setupTestVault()` and instead prepares only the minimal subtree needed by the test.
+
 **Not yet ported** (deferred):
 - Checkbox clicking (old chain-0/004) — requires `eval`-based DOM manipulation
 - Page metadata preservation — requires separate vault fixture
@@ -51,6 +53,11 @@ The E2E test suite validates the Textfresser plugin **running inside a real Obsi
 │    deployBuildArtifacts → ensureVaultOpen → reloadPlugin             │
 │    → clean Library/Outside → create fixtures → reload → waitForIdle  │
 ├──────────────────────────────────────────────────────────────────────┤
+│  Fast Harness (tests/cli-fast/)                                      │
+│    prepareFastSuite() → deploy build → ensure vault open             │
+│    → reload once → waitForIdle                                       │
+│    focused fixture helpers → direct CLI file ops                     │
+├──────────────────────────────────────────────────────────────────────┤
 │  Plugin-Side (src/)                                                   │
 │    ├─ utils/idle-tracker.ts  → pendingCount + whenIdle()             │
 │    └─ main.ts                → plugin.whenIdle() hook                │
@@ -64,6 +71,8 @@ The E2E test suite validates the Textfresser plugin **running inside a real Obsi
 3. **Vault ops** use either CLI commands (for files) or `eval` (for folders and complex operations)
 4. **Synchronization** via `waitForIdle()` — calls `plugin.whenIdle()` inside Obsidian via `eval`
 5. **Assertions** poll the vault state until expectations are met or timeout
+
+The fast harness uses the same low-level CLI primitives, but narrows the setup to a minimal fixture and exact `path=` operations. This is useful when a scenario only needs one subtree and the full chain bootstrap dominates runtime.
 
 ---
 
@@ -258,6 +267,23 @@ Library/
       Ingredients.md
       Steps.md
       Result_picture.jpg
+
+### 7.4 Fast Setup (`tests/cli-fast/`)
+
+The fast harness keeps the vault open and deploys the latest build, but avoids the full fixture recreation cycle:
+
+```
+1. Deploy build artifacts (main.js, manifest.json)
+2. Ensure vault is open in Obsidian
+3. Reload plugin once and wait for idle
+4. Delete only the subtree owned by the focused test
+5. Create the minimal fixture for that test
+6. Wait for idle, run mutation, wait for idle again
+```
+
+Guideline:
+- Use `tests/cli-e2e/` for chain-style regression tests that need the historical fixture.
+- Use `tests/cli-fast/` for isolated CLI scenarios where the expensive part is harness setup, not the mutation itself.
     Soup/
       Pho_Bo/
         Ingredients.md

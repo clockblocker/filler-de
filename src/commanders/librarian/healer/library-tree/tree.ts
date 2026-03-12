@@ -51,18 +51,6 @@ function makeSegmentId(node: TreeNode): TreeNodeSegmentId {
 }
 
 function makeSegmentIdForNodeName(
-	node: ScrollNode,
-	nodeName: NodeName,
-): SegmentIdOf<typeof TreeNodeKind.Scroll>;
-function makeSegmentIdForNodeName(
-	node: FileNode,
-	nodeName: NodeName,
-): SegmentIdOf<typeof TreeNodeKind.File>;
-function makeSegmentIdForNodeName(
-	node: SectionNode,
-	nodeName: NodeName,
-): SegmentIdOf<typeof TreeNodeKind.Section>;
-function makeSegmentIdForNodeName(
 	node: TreeNode,
 	nodeName: NodeName,
 ): TreeNodeSegmentId {

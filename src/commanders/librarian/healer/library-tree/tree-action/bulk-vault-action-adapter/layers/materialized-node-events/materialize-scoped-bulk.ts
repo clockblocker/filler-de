@@ -12,6 +12,22 @@ import {
 } from "./helpers/materialized-event-helpers";
 import { MaterializedEventKind, type MaterializedNodeEvent } from "./types";
 
+type InsideRenameScopedEvent =
+	| Extract<
+			LibraryScopedVaultEvent,
+			{
+				kind: typeof VaultEventKind.FileRenamed;
+				scope: typeof Scope.Inside;
+			}
+	  >
+	| Extract<
+			LibraryScopedVaultEvent,
+			{
+				kind: typeof VaultEventKind.FolderRenamed;
+				scope: typeof Scope.Inside;
+			}
+	  >;
+
 /**
  * Bulk (scoped) -> flat list of single-node "Create/Delete/Rename" events.
  *
@@ -192,13 +208,20 @@ function materializeRenameFromScopedEventFallback(
 	) {
 		return null;
 	}
+	const renameEvent: InsideRenameScopedEvent = ev;
 
-	const alreadyCoveredByRoot = roots.some((root) =>
-		isEquivalentRename(root, ev),
-	);
+	const alreadyCoveredByRoot = roots.some((root) => {
+		if (
+			root.kind !== VaultEventKind.FileRenamed &&
+			root.kind !== VaultEventKind.FolderRenamed
+		) {
+			return false;
+		}
+		return isEquivalentRename(root, renameEvent);
+	});
 	if (alreadyCoveredByRoot) return null;
 
-	return materializeRenameFromScopedRoot(ev);
+	return materializeRenameFromScopedRoot(renameEvent);
 }
 
 function isEquivalentRename(

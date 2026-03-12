@@ -92,8 +92,13 @@ describe("Tree Mutations", () => {
 			expect(Object.keys(root.children)).toHaveLength(1);
 
 			const childValues = Object.values(root.children);
-			expect(childValues[0].nodeName).toBe("Note");
-			expect(childValues[0].kind).toBe(TreeNodeKind.Scroll);
+			const child = childValues[0];
+			expect(child).toBeDefined();
+			if (!child) {
+				return;
+			}
+			expect(child.nodeName).toBe("Note");
+			expect(child.kind).toBe(TreeNodeKind.Scroll);
 		});
 
 		it("auto-creates parent sections when needed", () => {
@@ -538,6 +543,12 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName],
 					"archive" as NodeName,
 				),
+				observedSplitPath: {
+					basename: "Note-recipes",
+					extension: MD,
+					kind: SplitPathKind.MdFile,
+					pathParts: ["Library", "archive"],
+				},
 				targetLocator: makeScrollLocator(
 					["Library" as NodeName, "recipes" as NodeName],
 					"Note" as NodeName,
@@ -611,6 +622,11 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName],
 					"archive" as NodeName,
 				),
+				observedSplitPath: {
+					basename: "soup",
+					kind: SplitPathKind.Folder,
+					pathParts: ["Library", "archive"],
+				},
 				targetLocator: makeSectionLocator(
 					["Library" as NodeName, "recipes" as NodeName],
 					"soup" as NodeName,
@@ -673,6 +689,12 @@ describe("Tree Mutations", () => {
 						["Library" as NodeName],
 						"archive" as NodeName,
 					),
+					observedSplitPath: {
+						basename: "Note-recipes",
+						extension: MD,
+						kind: SplitPathKind.MdFile,
+						pathParts: ["Library", "archive"],
+					},
 					targetLocator: makeScrollLocator(
 						["Library" as NodeName, "recipes" as NodeName],
 						"Note" as NodeName,
@@ -843,11 +865,11 @@ describe("Tree Mutations", () => {
 				"Note" as NodeName,
 			);
 			const action = {
-				actionType: TreeActionType.Create as const,
+				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
 					extension: MD,
-					kind: SplitPathKind.MdFile as const,
+					kind: SplitPathKind.MdFile,
 					pathParts: ["Library"],
 				},
 				targetLocator: locator,
