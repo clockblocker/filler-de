@@ -17,10 +17,7 @@ import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "../codecs/segment-id/types/segment-id";
-import {
-	buildPageSplitActions,
-	buildTooShortMetadataAction,
-} from "./build-actions";
+import { buildPageSplitActions } from "./build-actions";
 import {
 	handleSplitToPagesError,
 	makeSplitToPagesError,
@@ -123,13 +120,6 @@ async function executeDispatch(
 	const { sourcePath, rules, segmentation } = input;
 
 	if (segmentation.tooShortToSplit) {
-		const action = buildTooShortMetadataAction(sourcePath);
-		const result = await vam.dispatch([action]);
-		if (result.isErr()) {
-			return err(
-				makeSplitToPagesError.dispatchFailed(String(result.error)),
-			);
-		}
 		return ok({ tooShort: true });
 	}
 
@@ -178,9 +168,7 @@ export async function splitToPagesAction(
 
 	const result = dispatchResult.value;
 	if (result.tooShort) {
-		// Should not happen. We only show button for 2+ pages.
-		// If user still invokes the command, we just add metadata.
-		// Invoking the command on an already split page is idempotent.
+		// Should not happen because UI only exposes the action for multi-page content.
 		return;
 	}
 

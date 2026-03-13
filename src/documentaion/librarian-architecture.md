@@ -534,7 +534,7 @@ The system supports two metadata storage formats:
 **JSON Section** (hidden, authoritative):
 ```html
 <section id="textfresser_meta_keep_me_invisible">
-{"status":"Done","prevPageIdx":42}
+{"status":"Done","noteKind":"Page"}
 </section>
 ```
 Placed at the bottom of the file with 20 newlines of padding (invisible in Obsidian).
@@ -543,7 +543,7 @@ Placed at the bottom of the file with 20 newlines of padding (invisible in Obsid
 ```yaml
 ---
 status: Done
-prevPageIdx: 42
+noteKind: Page
 ---
 ```
 
@@ -668,10 +668,9 @@ On plugin load, the Librarian rebuilds the entire tree from vault state:
 | Command | Purpose |
 |---------|---------|
 | `SplitToPages` | Segment a long scroll into paginated folder structure |
-| `ConvertFolderToBook` | Explorer folder action: rename direct child scrolls into page files and regenerate the codex |
 | `SplitInBlocks` | Add Obsidian block markers (`^N`) to content |
-| `GoToNextPage` | Navigate to next page sibling |
-| `GoToPrevPage` | Navigate to previous page sibling |
+| `GoToNextPage` | Navigate to next library scroll in display order |
+| `GoToPrevPage` | Navigate to previous library scroll in display order |
 
 ### 14.2 Command Architecture
 
@@ -690,26 +689,20 @@ Splits a long markdown file into paginated pages inside a new section folder:
 
 1. Segment content into blocks via `splitStrInBlocksWithIntermediate()`
 2. Group blocks into pages via `groupBlocksIntoPages()`
-3. Build vault actions (create folder, create page files, delete original, add metadata)
+3. Build vault actions (create folder, create page files, delete original, add page note metadata)
 4. Dispatch via VAM
 5. Call `onSectionCreated()` → triggers `Librarian.triggerSectionHealing()` to create codex
 
 The callback bypasses the normal event flow since the Librarian's self-event filter would ignore its own dispatched actions.
 
-### 14.4 ConvertFolderToBook
+### 14.4 Navigation Commands
 
-Triggered from the file explorer context menu on a section folder:
+`GoToNextPage` / `GoToPrevPage` no longer depend on per-file navigation metadata. They flatten the Librarian tree into a depth-first list of scrolls using the same display-name sort as codex rendering, then jump to the adjacent scroll in that order.
 
-1. List direct children in the folder
-2. Abort if any child folder exists
-3. Keep only direct markdown children
-4. Order them by leading number when every file starts with a unique number
-5. Otherwise fall back to alphabetical basename order
-6. Rename each scroll into canonical page naming (`Section_Page_000...`)
-7. Rewrite each file as a Page note with page navigation metadata
-8. Apply synthetic `RenameScrollNodeAction`s through the Librarian to regenerate the section codex
-
-This action reuses the same self-event-filter bypass strategy as `SplitToPages`, but the section already exists, so it updates the existing section tree node instead of creating a new one.
+Codex files act as a local anchor for their folder:
+- `GoToPrevPage` on a codex is disabled
+- `GoToNextPage` on a codex opens the first direct markdown child in that folder
+- `GoToPrevPage` on the first direct markdown child in a folder returns that folder's codex
 
 ### 14.5 Codex Checkbox Interaction
 
@@ -762,13 +755,13 @@ The segmenter uses a streaming pipeline for complex text processing:
 
 ### 15.3 Page Metadata
 
-Each page file gets navigation metadata:
+Each page file gets note metadata:
 
 ```json
-{ "noteKind": "Page", "prevPageIdx": 0, "nextPageIdx": 2 }
+{ "noteKind": "Page", "status": "NotStarted" }
 ```
 
-The `GoToNextPage` / `GoToPrevPage` commands read this metadata to navigate between siblings.
+Navigation no longer reads page metadata. It uses the Librarian tree order directly.
 
 **Source**: `src/commanders/librarian/bookkeeper/`
 
@@ -880,8 +873,7 @@ Move and Create actions may target sections that don't exist yet. `ensureSection
 | `librarian-init/assemble-vault-actions.ts` | Convert healing + codex to VaultActions |
 | `section-healing/section-healing-coordinator.ts` | On-demand codex creation for new sections |
 | `list-commands-executable.ts` | Query available commands for a file |
-| `page-navigation.ts` | Tree-based page sibling lookup |
-| `bookkeeper/folder-to-book-action.ts` | Folder explorer action for converting scroll folders into paged books |
+| `page-navigation.ts` | Tree-based next/prev scroll lookup |
 | **Codecs** | |
 | `codecs/index.ts` | Codec factory and public API |
 | `codecs/rules.ts` | CodecRules configuration |

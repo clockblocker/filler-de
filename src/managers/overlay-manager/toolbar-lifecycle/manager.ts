@@ -3,36 +3,10 @@
  */
 
 import { MarkdownView } from "obsidian";
-import { z } from "zod";
-import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
-import {
-	computeNavActions,
-	type PageNavMetadata,
-} from "../action-definitions/placement-utils";
+import { computeNavActions } from "../action-definitions/placement-utils";
 import type { ActionConfig } from "../bottom-toolbar/types";
 import { buildSplitPath } from "./path-utils";
 import type { ToolbarLifecycleContext, ToolbarUpdateConfig } from "./types";
-
-/** Schema for reading page navigation metadata */
-const PageNavMetadataSchema = z
-	.object({
-		nextPageIdx: z.number().optional(),
-		noteKind: z.string().optional(),
-		prevPageIdx: z.number().optional(),
-	})
-	.passthrough();
-
-/**
- * Read page metadata from editor content.
- */
-function getPageMetadata(view: MarkdownView): PageNavMetadata | null {
-	// Get editor content synchronously
-	const editor = view.editor;
-	if (!editor) return null;
-
-	const content = editor.getValue();
-	return noteMetadataHelper.read(content, PageNavMetadataSchema);
-}
 
 /**
  * Update toolbar visibility - creates, updates, or destroys toolbars based on workspace state.
@@ -43,6 +17,7 @@ export function updateToolbarVisibility(
 ): void {
 	const {
 		app,
+		librarian,
 		bottomToolbars,
 		selectionToolbars,
 		edgeZones,
@@ -72,9 +47,10 @@ export function updateToolbarVisibility(
 		const container = view.containerEl?.querySelector(".view-content");
 		if (!container || !(container instanceof HTMLElement)) continue;
 
-		// Read page metadata for nav button state
-		const pageMetadata = getPageMetadata(view);
-		const navActions = computeNavActions(pageMetadata);
+		const filePath = buildSplitPath(file.path);
+		const navActions = filePath
+			? computeNavActions(librarian, filePath)
+			: [];
 
 		// Combine base bottom actions with nav actions
 		const allBottomActions: ActionConfig[] = [
@@ -112,7 +88,6 @@ export function updateToolbarVisibility(
 			edgeZones.get(leafId)?.setNavActions(navActions);
 		}
 
-		const filePath = buildSplitPath(file.path);
 		if (filePath) {
 			bottomToolbars.get(leafId)?.show(filePath);
 		}

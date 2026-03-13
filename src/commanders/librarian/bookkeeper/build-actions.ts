@@ -2,7 +2,6 @@
  * Builds VaultActions for page splitting operation.
  */
 
-import { z } from "zod";
 import { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
 import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
@@ -15,26 +14,11 @@ import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "../codecs/segment-id/types/segment-id";
-import {
-	TreeNodeKind,
-	type TreeNodeStatus,
-} from "../healer/library-tree/tree-node/types/atoms";
+import { TreeNodeKind } from "../healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../types/schemas/node-name";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
-import {
-	splitStrInBlocks,
-	stripBlockMarkers,
-} from "./segmenter/block-marker/split-str-in-blocks";
 import type { SegmentationResult } from "./types";
 import { PAGE_FRONTMATTER, PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
-
-// Schema for reading existing page metadata
-const PageMetadataSchema = z
-	.object({
-		noteKind: z.string().optional(),
-		status: z.enum(["Done", "NotStarted"]).optional(),
-	})
-	.passthrough();
 
 export type PageSplitResult = {
 	actions: VaultAction[];
@@ -87,18 +71,9 @@ export function buildPageSplitActions(
 		rules,
 	);
 
-	const totalPages = result.pages.length;
 	for (const page of result.pages) {
-		// Pages from segmentContentWithBlockMarkers already have block markers
-		// Compute navigation indices
-		const prevPageIdx = page.pageIndex > 0 ? page.pageIndex - 1 : undefined;
-		const nextPageIdx =
-			page.pageIndex < totalPages - 1 ? page.pageIndex + 1 : undefined;
-		const pageContent = formatPageContent(
-			page.content,
-			prevPageIdx,
-			nextPageIdx,
-		);
+		// Pages from segmentContentWithBlockMarkers already have block markers.
+		const pageContent = formatPageContent(page.content);
 
 		const pagePath =
 			page.pageIndex === 0
@@ -164,86 +139,16 @@ function buildPageSplitPath(
 }
 
 /**
- * Formats page content with metadata including navigation indices.
+ * Formats page content with page metadata.
  * Uses upsertMetadata to respect hideMetadata setting.
- *
- * @param content - The page content to format
- * @param prevPageIdx - Index of previous page (undefined if first page)
- * @param nextPageIdx - Index of next page (undefined if last page)
  */
-function formatPageContent(
-	content: string,
-	prevPageIdx: number | undefined,
-	nextPageIdx: number | undefined,
-): string {
+function formatPageContent(content: string): string {
 	// Transform is synchronous here, cast is safe
 	const metadata: Record<string, unknown> = {
 		noteKind: PAGE_FRONTMATTER.noteKind,
 		status: PAGE_FRONTMATTER.status,
 	};
-	if (prevPageIdx !== undefined) {
-		metadata.prevPageIdx = prevPageIdx;
-	}
-	if (nextPageIdx !== undefined) {
-		metadata.nextPageIdx = nextPageIdx;
-	}
 	return noteMetadataHelper.upsert(metadata)(content) as string;
-}
-
-/**
- * Builds VaultAction to add noteKind metadata to a file that's too short to split.
- */
-export function buildTooShortMetadataAction(
-	sourcePath: SplitPathToMdFile,
-): VaultAction {
-	return {
-		kind: VaultActionKind.ProcessMdFile,
-		payload: {
-			splitPath: sourcePath,
-			transform: buildExistingPageTransform(undefined, undefined),
-		},
-	};
-}
-
-export function buildExistingPageTransform(
-	prevPageIdx: number | undefined,
-	nextPageIdx: number | undefined,
-): (content: string) => string {
-	return (content) =>
-		convertExistingContentToPage(content, prevPageIdx, nextPageIdx);
-}
-
-/**
- * Adds noteKind: Page metadata to content.
- * Uses upsertMetadata to respect hideMetadata setting.
- * Also applies block markers for consistency with multi-page splits.
- */
-function convertExistingContentToPage(
-	content: string,
-	prevPageIdx: number | undefined,
-	nextPageIdx: number | undefined,
-): string {
-	// Read existing metadata (from either format)
-	const existing = noteMetadataHelper.read(content, PageMetadataSchema);
-
-	// Build new metadata, preserving existing fields
-	const meta: Record<string, unknown> = {
-		...(existing ?? {}),
-		noteKind: PAGE_FRONTMATTER.noteKind,
-		status: (existing?.status as TreeNodeStatus) ?? PAGE_FRONTMATTER.status,
-	};
-	if (prevPageIdx !== undefined) {
-		meta.prevPageIdx = prevPageIdx;
-	}
-	if (nextPageIdx !== undefined) {
-		meta.nextPageIdx = nextPageIdx;
-	}
-
-	// Strip existing metadata and markers, then apply fresh block markers
-	const cleanContent = noteMetadataHelper.strip(content);
-	const withoutMarkers = stripBlockMarkers(cleanContent);
-	const { markedText } = splitStrInBlocks(withoutMarkers, 0);
-	return noteMetadataHelper.upsert(meta)(markedText) as string;
 }
 
 /**

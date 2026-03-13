@@ -58,7 +58,7 @@ Librarian:   GoToPrevPage, GoToNextPage, SplitToPages, SplitInBlocks
 Textfresser: TranslateSelection, Generate, Lemma
 ```
 
-Explorer-only actions are separate from `CommandKind`. `ConvertFolderToBook` is registered from the overlay context-menu layer and calls the Librarian directly because it operates on a clicked folder, not the active editor file.
+There are currently no explorer-only Librarian actions outside `CommandKind`.
 
 ### 3.2 CommandContext
 

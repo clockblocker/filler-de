@@ -13,7 +13,6 @@ export {
 	type ComputedActions,
 	computeAllowedActions,
 	computeNavActions,
-	type PageNavMetadata,
 } from "./action-definitions/placement-utils";
 export type { ActionDefinition } from "./action-definitions/types";
 export {

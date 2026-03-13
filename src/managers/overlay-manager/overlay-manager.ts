@@ -132,7 +132,6 @@ export class OverlayManager {
 			this.contextMenuTeardown = setupContextMenu({
 				app: this.app,
 				commandExecutor: this.commandExecutor,
-				librarian: this.librarian,
 				plugin: this.plugin,
 				vam: this.vam,
 			});
@@ -193,6 +192,7 @@ export class OverlayManager {
 				createSelectionToolbar: (container) =>
 					createSelectionToolbar({ container }),
 				edgeZones: this.edgeZones,
+				librarian: this.librarian,
 				selectionToolbars: this.selectionToolbars,
 			},
 			actions,

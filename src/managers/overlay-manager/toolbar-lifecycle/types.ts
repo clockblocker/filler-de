@@ -3,12 +3,14 @@
  */
 
 import type { App } from "obsidian";
+import type { Librarian } from "../../../commanders/librarian/librarian";
 import type { ActionConfig, BottomToolbar } from "../bottom-toolbar/types";
 import type { EdgeZones } from "../edge-zones/types";
 import type { SelectionToolbar } from "../selection-toolbar/types";
 
 export type ToolbarLifecycleContext = {
 	app: App;
+	librarian: Librarian;
 	bottomToolbars: Map<string, BottomToolbar>;
 	selectionToolbars: Map<string, SelectionToolbar>;
 	edgeZones: Map<string, EdgeZones>;

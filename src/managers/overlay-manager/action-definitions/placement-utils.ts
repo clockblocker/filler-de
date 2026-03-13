@@ -2,9 +2,11 @@
  * Utilities for computing action placements.
  */
 
+import type { Librarian } from "../../../commanders/librarian/librarian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { SelectionActionPlacement } from "../../../types";
 import { CommandKind } from "../../obsidian/command-executor";
+import type { SplitPathToMdFile } from "../../obsidian/vault-action-manager/types/split-path";
 import type { ActionConfig } from "../bottom-toolbar/types";
 import { ACTION_DEFINITIONS } from "./definitions";
 import { OverlayPlacement } from "./types";
@@ -18,15 +20,6 @@ export type ComputedActions = {
 };
 
 /**
- * Page metadata for navigation buttons.
- */
-export type PageNavMetadata = {
-	noteKind?: string;
-	prevPageIdx?: number;
-	nextPageIdx?: number;
-};
-
-/**
  * Compute which actions go to which toolbar based on current settings.
  * Does NOT include navigation buttons - use computeNavActions() separately.
  */
@@ -36,7 +29,7 @@ export function computeAllowedActions(): ComputedActions {
 	const bottomActions: ActionConfig[] = [];
 
 	for (const def of Object.values(ACTION_DEFINITIONS)) {
-		// Skip nav buttons - they're computed separately with metadata
+		// Skip nav buttons - they're computed separately from Librarian state.
 		if (def.settingKey === null) continue;
 
 		const placement = settings[
@@ -59,36 +52,29 @@ export function computeAllowedActions(): ComputedActions {
 }
 
 /**
- * Compute navigation button actions based on page metadata.
- * Returns nav buttons only if noteKind === "Page".
- * Buttons are disabled based on prevPageIdx/nextPageIdx presence.
+ * Compute navigation button actions for a library markdown file.
+ * Buttons are disabled when there is no adjacent target.
  */
 export function computeNavActions(
-	metadata: PageNavMetadata | null,
+	librarian: Librarian,
+	splitPath: SplitPathToMdFile,
 ): ActionConfig[] {
-	// Only show nav buttons for Page notes
-	if (!metadata || metadata.noteKind !== "Page") {
-		return [];
-	}
-
-	// No buttons if neither index is present
-	const hasAnyIndex =
-		metadata.prevPageIdx !== undefined ||
-		metadata.nextPageIdx !== undefined;
-	if (!hasAnyIndex) {
+	const prevPath = librarian.getPrevPage(splitPath);
+	const nextPath = librarian.getNextPage(splitPath);
+	if (!prevPath && !nextPath) {
 		return [];
 	}
 
 	return [
 		{
 			contextual: false,
-			disabled: metadata.prevPageIdx === undefined,
+			disabled: prevPath === null,
 			id: CommandKind.GoToPrevPage,
 			label: "<",
 		},
 		{
 			contextual: false,
-			disabled: metadata.nextPageIdx === undefined,
+			disabled: nextPath === null,
 			id: CommandKind.GoToNextPage,
 			label: ">",
 		},

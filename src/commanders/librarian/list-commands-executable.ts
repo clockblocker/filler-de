@@ -6,6 +6,7 @@ import type { SplitPathToMdFile } from "../../managers/obsidian/vault-action-man
 import { parsePageIndex } from "./bookkeeper/page-codec";
 import type { Codecs } from "./codecs";
 import type { Healer } from "./healer/healer";
+import { isCodexSplitPath } from "./healer/library-tree/codex/helpers";
 import {
 	getNextPage as getNextPageImpl,
 	getPrevPage as getPrevPageImpl,
@@ -41,22 +42,15 @@ export function listCommandsExecutableIn(
 
 	const { coreName } = parsedSuffix.value;
 
-	// Check if it's a page
-	const pageInfo = parsePageIndex(coreName);
-	if (pageInfo.isPage && healer) {
-		// Use tree to check if adjacent pages exist
-		if (getPrevPageImpl(healer, codecs, splitPath) !== null) {
-			commands.push(CommandKind.GoToPrevPage);
-		}
-		if (getNextPageImpl(healer, codecs, splitPath) !== null) {
-			commands.push(CommandKind.GoToNextPage);
-		}
-	} else if (pageInfo.isPage) {
-		// Fallback: no healer yet, include both nav commands
+	if (healer && getPrevPageImpl(healer, codecs, splitPath) !== null) {
 		commands.push(CommandKind.GoToPrevPage);
+	}
+	if (healer && getNextPageImpl(healer, codecs, splitPath) !== null) {
 		commands.push(CommandKind.GoToNextPage);
-	} else {
-		// Scroll commands: split into pages
+	}
+
+	// Scroll commands: split into pages, but don't offer it for generated page files.
+	if (!isCodexSplitPath(splitPath) && !parsePageIndex(coreName).isPage) {
 		commands.push(CommandKind.SplitToPages);
 	}
 
