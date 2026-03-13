@@ -104,6 +104,108 @@ describe("generateCodexContent", () => {
 			// Child section links to its codex
 			expect(result).toContain("- [ ] [[__-A|A]]");
 		});
+
+		it("sorts scroll entries alphabetically by display name", () => {
+			const librarySection = section("Library", {
+				"01 Beginner's Basics﹘Scroll﹘md": scroll(
+					"01 Beginner's Basics",
+				),
+				"03 Peddler's Produce I﹘Scroll﹘md": scroll(
+					"03 Peddler's Produce I",
+				),
+				"04 Act Adversaries I﹘Scroll﹘md": scroll(
+					"04 Act Adversaries I",
+				),
+			});
+			const chain = [sec("Library")];
+
+			const result = generateCodexContent(librarySection, chain, codecs);
+
+			expect(
+				result
+					.trim()
+					.split("\n")
+					.map((line) => line.trimEnd()),
+			).toEqual([
+				"- [ ] [[01 Beginner's Basics|01 Beginner's Basics]]",
+				"- [ ] [[03 Peddler's Produce I|03 Peddler's Produce I]]",
+				"- [ ] [[04 Act Adversaries I|04 Act Adversaries I]]",
+			]);
+		});
+
+		it("sorts numeric prefixes by numeric value instead of lexicographic order", () => {
+			const librarySection = section("Library", {
+				"2 Act Adversaries﹘Scroll﹘md": scroll("2 Act Adversaries"),
+				"03 Beginner's Basics﹘Scroll﹘md": scroll(
+					"03 Beginner's Basics",
+				),
+				"10 Atlas Additions﹘Scroll﹘md": scroll("10 Atlas Additions"),
+			});
+			const chain = [sec("Library")];
+
+			const result = generateCodexContent(librarySection, chain, codecs);
+
+			expect(
+				result
+					.trim()
+					.split("\n")
+					.map((line) => line.trimEnd()),
+			).toEqual([
+				"- [ ] [[2 Act Adversaries|2 Act Adversaries]]",
+				"- [ ] [[03 Beginner's Basics|03 Beginner's Basics]]",
+				"- [ ] [[10 Atlas Additions|10 Atlas Additions]]",
+			]);
+		});
+
+		it("places numeric-prefixed names before non-numeric names", () => {
+			const librarySection = section("Library", {
+				"02 Beginner's Basics﹘Scroll﹘md": scroll(
+					"02 Beginner's Basics",
+				),
+				"Atlas Memories﹘Scroll﹘md": scroll("Atlas Memories"),
+				"Cartographer's Courage﹘Scroll﹘md": scroll(
+					"Cartographer's Courage",
+				),
+			});
+			const chain = [sec("Library")];
+
+			const result = generateCodexContent(librarySection, chain, codecs);
+
+			expect(
+				result
+					.trim()
+					.split("\n")
+					.map((line) => line.trimEnd()),
+			).toEqual([
+				"- [ ] [[02 Beginner's Basics|02 Beginner's Basics]]",
+				"- [ ] [[Atlas Memories|Atlas Memories]]",
+				"- [ ] [[Cartographer's Courage|Cartographer's Courage]]",
+			]);
+		});
+
+		it("uses alphanumeric comparison when numeric prefixes are equal or absent", () => {
+			const librarySection = section("Library", {
+				"02 Challenge 2﹘Scroll﹘md": scroll("02 Challenge 2"),
+				"02 Challenge 10﹘Scroll﹘md": scroll("02 Challenge 10"),
+				"Act 2﹘Scroll﹘md": scroll("Act 2"),
+				"Act 10﹘Scroll﹘md": scroll("Act 10"),
+			});
+			const chain = [sec("Library")];
+
+			const result = generateCodexContent(librarySection, chain, codecs);
+
+			expect(
+				result
+					.trim()
+					.split("\n")
+					.map((line) => line.trimEnd()),
+			).toEqual([
+				"- [ ] [[02 Challenge 2|02 Challenge 2]]",
+				"- [ ] [[02 Challenge 10|02 Challenge 10]]",
+				"- [ ] [[Act 2|Act 2]]",
+				"- [ ] [[Act 10|Act 10]]",
+			]);
+		});
 	});
 
 	describe("first-level section codex", () => {

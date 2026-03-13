@@ -9,13 +9,18 @@ import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { sectionChainToPathParts } from "../../../paths/path-finder";
 import { TreeNodeKind } from "../tree-node/types/atoms";
-import type { SectionNode } from "../tree-node/types/tree-node";
+import type { SectionNode, TreeNode } from "../tree-node/types/tree-node";
 import { computeSectionStatus } from "./compute-section-status";
 import {
 	formatChildSectionLine,
 	formatFileLine,
 	formatScrollLine,
 } from "./format-codex-line";
+
+const alphaNumericCollator = new Intl.Collator(undefined, {
+	numeric: true,
+	sensitivity: "base",
+});
 
 // ─── Chain Parsing Helper ───
 
@@ -128,7 +133,7 @@ function generateItems(
 	const lines: string[] = [];
 	const indent = TAB.repeat(depth);
 
-	const children = Object.values(section.children);
+	const children = sortChildrenForCodex(Object.values(section.children));
 
 	for (const child of children) {
 		switch (child.kind) {
@@ -178,4 +183,44 @@ function generateItems(
 	}
 
 	return lines;
+}
+
+function sortChildrenForCodex(children: TreeNode[]): TreeNode[] {
+	return [...children].sort((left, right) =>
+		compareNodeNamesForCodex(left.nodeName, right.nodeName),
+	);
+}
+
+function compareNodeNamesForCodex(left: string, right: string): number {
+	const leftLeadingNumber = readLeadingNumber(left);
+	const rightLeadingNumber = readLeadingNumber(right);
+
+	if (leftLeadingNumber !== null && rightLeadingNumber === null) {
+		return -1;
+	}
+	if (leftLeadingNumber === null && rightLeadingNumber !== null) {
+		return 1;
+	}
+	if (leftLeadingNumber !== null && rightLeadingNumber !== null) {
+		const numberDiff = leftLeadingNumber - rightLeadingNumber;
+		if (numberDiff !== 0) {
+			return numberDiff;
+		}
+	}
+
+	const alphaNumericDiff = alphaNumericCollator.compare(left, right);
+	if (alphaNumericDiff !== 0) {
+		return alphaNumericDiff;
+	}
+
+	return left.localeCompare(right);
+}
+
+function readLeadingNumber(value: string): number | null {
+	const match = value.match(/^\d+/);
+	if (!match) {
+		return null;
+	}
+
+	return Number.parseInt(match[0], 10);
 }

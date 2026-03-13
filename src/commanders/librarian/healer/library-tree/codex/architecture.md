@@ -132,6 +132,11 @@ Impact always includes ancestors (status aggregates upward).
    - Files: link only
    - Sections: checkbox (aggregated) + link + nested children
 
+Children are sorted by display name before rendering at each depth:
+- leading numeric prefixes sort before non-numeric names
+- two numeric-prefixed names compare those prefixes numerically
+- ties and non-numeric names fall back to alphanumeric comparison
+
 ### Depth Control
 - `maxSectionDepth`: how deep to show nested sections
 - `showScrollsInCodexesForDepth`: at what depth scrolls appear

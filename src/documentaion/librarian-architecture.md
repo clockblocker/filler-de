@@ -424,6 +424,11 @@ The Librarian creates a transaction per event batch. If any action fails, the tr
 
 A codex is an **auto-generated markdown index file** for each section folder. It lists the section's children as a checkbox list with wikilinks.
 
+Children are rendered in a deterministic display-name order at each nesting level:
+- names with a leading numeric prefix sort before names without one
+- when both names start with digits, the full leading digit runs are compared numerically
+- otherwise ordering falls back to generic alphanumeric comparison
+
 **Naming**: `__-{SectionSuffix}.md` — the `__` prefix marks it as system-generated.
 
 Example codex for section chain `[Library, German, Verbs]`:
