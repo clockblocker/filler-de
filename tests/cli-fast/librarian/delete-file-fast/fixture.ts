@@ -1,26 +1,26 @@
 import type { FastExpectations } from "../../infra";
 import { createExactFile, deleteAnyPath, expectFastHealing, waitFor } from "../../infra";
 
-const ROOT = "Library/CliFast/Pie/Fish";
+const ROOT = "Library/CliFast/DeleteFile/Pie/Fish";
 
 export const FAST_DELETE_FILE_FIXTURE = {
-	codexPath: `${ROOT}/__-Fish-Pie-CliFast.md`,
-	ingredientsPath: `${ROOT}/Ingredients-Fish-Pie-CliFast.md`,
-	rootPath: "Library/CliFast",
-	stepsPath: `${ROOT}/Steps-Fish-Pie-CliFast.md`,
+	codexPath: `${ROOT}/__-Fish-Pie-DeleteFile-CliFast.md`,
+	ingredientsPath: `${ROOT}/Ingredients-Fish-Pie-DeleteFile-CliFast.md`,
+	rootPath: "Library/CliFast/DeleteFile",
+	stepsPath: `${ROOT}/Steps-Fish-Pie-DeleteFile-CliFast.md`,
 };
 
 export const FAST_DELETE_FILE_EXPECTATIONS: FastExpectations = {
 	contentChecks: [
 		[
 			FAST_DELETE_FILE_FIXTURE.codexPath,
-			["Steps-Fish-Pie-CliFast"],
+			["Steps-Fish-Pie-DeleteFile-CliFast"],
 		],
 	],
 	contentMustNotContain: [
 		[
 			FAST_DELETE_FILE_FIXTURE.codexPath,
-			["Ingredients-Fish-Pie-CliFast"],
+			["Ingredients-Fish-Pie-DeleteFile-CliFast"],
 		],
 	],
 	files: [

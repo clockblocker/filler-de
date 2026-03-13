@@ -14,7 +14,7 @@ The E2E test suite validates the Textfresser plugin **running inside a real Obsi
 
 **Test targets**: Librarian healing, codex generation, suffix healing, status propagation, file/folder deletion cleanup.
 
-**Current coverage**: 24 tests across 12 chain steps (000–011), covering init healing, file creation, folder rename, create+rename, single file delete, folder delete, corename rename, basename healing, checkbox propagation, lemma command integration, and file move codex regeneration.
+**Current coverage**: the legacy chain suite still covers 24 tests across 12 chain steps (000–011), covering init healing, file creation, folder rename, create+rename, single file delete, folder delete, corename rename, basename healing, checkbox propagation, lemma command integration, and file move codex regeneration.
 
 **Fast-path coverage**: `tests/cli-fast/` provides a lighter harness for focused CLI scenarios. It keeps the same real-Obsidian execution model, but skips the full fixture reload cycle from `setupTestVault()` and instead prepares only the minimal subtree needed by the test.
 
@@ -23,6 +23,13 @@ The fast harness does not use plugin-side `whenIdle()` as its primary sync primi
 - `waitFor("medium")` = `500ms`
 - `waitFor("medium-long")` = `1000ms`
 - `waitFor("long")` = `2000ms`
+
+**Migrated fast scenarios so far**:
+- `004-delete-file` via `tests/cli-fast/librarian/delete-file-fast.test.ts`
+- `003-create-and-rename-a-file` via `tests/cli-fast/librarian/create-and-rename-file-fast.test.ts`
+- `007-create-file-basename-healing` via `tests/cli-fast/librarian/create-file-basename-healing-fast.test.ts`
+- `006-rename-corename` via `tests/cli-fast/librarian/rename-corename-fast.test.ts`
+- `002-rename-files` via `tests/cli-fast/librarian/rename-files-fast.test.ts`
 
 **Not yet ported** (deferred):
 - Checkbox clicking (old chain-0/004) — requires `eval`-based DOM manipulation
@@ -75,7 +82,9 @@ The fast harness does not use plugin-side `whenIdle()` as its primary sync primi
 1. **Bun test** spawns as a normal test process (no Electron, no WDIO)
 2. **CLI wrapper** (`cli.ts`) invokes Obsidian's CLI binary via `Bun.spawn` to run commands in the running Obsidian instance
 3. **Vault ops** use either CLI commands (for files) or `eval` (for folders and complex operations)
-4. **Synchronization** via `waitForIdle()` — calls `plugin.whenIdle()` inside Obsidian via `eval`
+4. **Synchronization** uses one of two paths:
+   - legacy chain suite: `waitForIdle()` via plugin `whenIdle()`
+   - fast suite: explicit `waitFor(...)` settle windows plus polling assertions
 5. **Assertions** poll the vault state until expectations are met or timeout
 
 The fast harness uses the same low-level CLI primitives, but narrows the setup to a minimal fixture and exact `path=` operations. This is useful when a scenario only needs one subtree and the full chain bootstrap dominates runtime. Synchronization there is intentionally explicit: apply an operation, wait at the chosen ladder level, then let polling assertions prove the final state.
@@ -135,7 +144,7 @@ sh -c '/path/to/Obsidian vault=X eval code="if(!x){...}"'
 Bun.spawn([OBSIDIAN_BIN, 'vault=X', 'eval', 'code=if(!x){...}'])
 ```
 
-### 4.3 CLI `create`/`move`/`delete` Only Work for Files
+### 4.3 CLI `create`/`rename`/`move`/`delete` Only Work for Files
 
 CLI file commands don't handle folders. Folder operations must use `eval`:
 
@@ -150,9 +159,19 @@ obsidianEval("const f=app.vault.getAbstractFileByPath('Library/Old'); app.vault.
 obsidianEval("const f=app.vault.getAbstractFileByPath('Library/Old'); app.fileManager.renameFile(f,'Library/New')")
 ```
 
-### 4.4 `file path=X` Returns Exit 0 on "Not Found"
+### 4.4 `file path=X` in the Fast Harness
 
-Can't use CLI `file` command to check existence. Use eval instead:
+The fast harness currently uses `file path=...` for exact existence checks and treats `stdout` starting with `Error:` as missing. This keeps the common path on direct CLI commands and has been stable in migrated scenarios so far.
+
+If this starts flaking on future ports, fall back to `eval` for the affected helper rather than changing scenario code.
+
+```typescript
+const command = `file path=${quoteCli(path)}`;
+const result = await obsidian(command);
+return !result.stdout.startsWith("Error:");
+```
+
+The legacy harness originally avoided relying on this command and used `eval` instead:
 
 ```typescript
 const result = await obsidianEval(
@@ -169,7 +188,7 @@ return result === "yes";
 
 `src/utils/idle-tracker.ts` tracks in-flight async work via a `pendingCount` counter. This now includes Textfresser background Generate lifecycle (increment on launch, decrement in `finally`). `whenIdle()` waits for the counter to reach 0, then applies a 1000ms grace period to catch cascading work (healing → more events → more healing, or Lemma → background Generate).
 
-### 5.2 Test-Side: `waitForIdle()`
+### 5.2 Legacy Chain Sync: `waitForIdle()`
 
 Calls `plugin.whenIdle()` inside Obsidian via `eval`:
 
@@ -180,7 +199,19 @@ export async function waitForIdle(timeoutMs = 15_000): Promise<void> {
 }
 ```
 
-### 5.3 Combined Flow
+### 5.3 Fast Suite Sync: `waitFor(...)`
+
+The fast suite deliberately avoids plugin-side idle hooks. It settles briefly after each operation, then relies on polling assertions to prove the final state:
+
+```typescript
+await createExactFile(path, content);
+await waitFor("short");
+await renameExactFile(path, "Renamed.md");
+await waitFor("short");
+await expectFastHealing(expectations);
+```
+
+### 5.4 Combined Flow
 
 ```
 Test mutation (createFile, renamePath, deletePath)
@@ -204,7 +235,7 @@ Assertion phase (poll-based)
 
 ### 6.1 Polling Engine
 
-All assertions use `pollUntilPass()` — retries the assertion function every 300ms until it passes or 15s timeout:
+All assertions use `pollUntilPass()` — retries the assertion function until it passes or timeout is reached. The legacy and fast harnesses use the same shape with different intervals/timeouts tuned to their needs.
 
 ```typescript
 async function pollUntilPass(fn: () => Promise<void>, timeoutMs = 15_000)
@@ -273,23 +304,6 @@ Library/
       Ingredients.md
       Steps.md
       Result_picture.jpg
-
-### 7.4 Fast Setup (`tests/cli-fast/`)
-
-The fast harness keeps the vault open and deploys the latest build, but avoids the full fixture recreation cycle:
-
-```
-1. Deploy build artifacts (main.js, manifest.json)
-2. Ensure vault is open in Obsidian
-3. Reload plugin once and wait for idle
-4. Delete only the subtree owned by the focused test
-5. Create the minimal fixture for that test
-6. Wait for idle, run mutation, wait for idle again
-```
-
-Guideline:
-- Use `tests/cli-e2e/` for chain-style regression tests that need the historical fixture.
-- Use `tests/cli-fast/` for isolated CLI scenarios where the expensive part is harness setup, not the mutation itself.
     Soup/
       Pho_Bo/
         Ingredients.md
@@ -298,6 +312,42 @@ Guideline:
 Outside/
   Avatar-S1-E1.md
 ```
+
+### 7.4 Fast Setup (`tests/cli-fast/`)
+
+The fast harness keeps the vault open and deploys the latest build, but avoids the full fixture recreation cycle:
+
+```
+1. Deploy build artifacts (main.js, manifest.json)
+2. Ensure vault is open in Obsidian
+3. Reload plugin once and wait for `waitFor("short")`
+4. Delete only the subtree owned by the focused test, usually under a unique path like `Library/CliFast/<ScenarioName>/...`
+5. Create the minimal fixture for that test
+6. Apply explicit `waitFor(...)` settles around the mutation
+7. Let polling assertions verify the healed result
+```
+
+Guideline:
+- Use `tests/cli-e2e/` for chain-style regression tests that need the historical fixture.
+- Use `tests/cli-fast/` for isolated CLI scenarios where the expensive part is harness setup, not the mutation itself.
+
+### 7.5 Fast Migration Timings
+
+Measured on `cli-e2e-test-vault` on March 12, 2026.
+
+`Fast path time` is the dedicated `tests/cli-fast/` scenario runtime from local fixture reset through assertion.
+
+For `003` and `004`, `legacy path time` is the original chain-style run: `setupTestVault()` plus the prerequisite legacy mutations needed to reach the scenario step.
+
+For `002`, `006`, and `007`, the original legacy mutations are no longer a stable stopwatch target on the current vault. Their `legacy path time` below uses the old `setupTestVault()` bootstrap plus an equivalent focused scenario run under that harness, which is the comparison that matters for setup-overhead reduction.
+
+| Scenario | Legacy path time | Fast path time | Setup cost removed |
+|----------|------------------|----------------|--------------------|
+| `004-delete-file` | `16184ms` | `3484ms` | Full `setupTestVault()` bootstrap, whole-vault cleanup, and prerequisite chain state only needed to reach one Fish codex delete |
+| `003-create-and-rename-a-file` | `15014ms` | `3871ms` | Full `setupTestVault()` bootstrap plus historical `001` and `002` setup used only to reach one Berry codex rename |
+| `007-create-file-basename-healing` | `10901ms` | `4688ms` | Full `setupTestVault()` bootstrap for a single unsuffixed scroll create plus go-back-link assertion |
+| `006-rename-corename` | `15864ms` | `9770ms` | Full `setupTestVault()` bootstrap for one Ramen subtree plus three same-folder renames |
+| `002-rename-files` | `19467ms` | `14029ms` | Full `setupTestVault()` bootstrap for one focused Recipe subtree plus the two folder renames that trigger descendant healing |
 
 ---
 

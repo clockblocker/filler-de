@@ -44,6 +44,22 @@ export async function createExactFile(
 	assertNoCliError(result.stdout, command);
 }
 
+export async function createExactBinaryFile(
+	path: string,
+	bytes: readonly number[] = [0],
+): Promise<void> {
+	const parent = path.includes("/") ? path.slice(0, path.lastIndexOf("/")) : "";
+	if (parent) {
+		await ensureFolder(parent);
+	}
+
+	const escapedPath = path.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+	const encodedBytes = bytes.join(",");
+	await obsidianEval(
+		`(async()=>{const data=new Uint8Array([${encodedBytes}]);await app.vault.createBinary('${escapedPath}',data.buffer);return 'ok'})()`,
+	);
+}
+
 export async function readExactFile(path: string): Promise<string> {
 	const command = `read path=${quoteCli(path)}`;
 	const result = await obsidian(command);
@@ -55,6 +71,26 @@ export async function deleteExactFile(path: string): Promise<void> {
 	const command = `delete path=${quoteCli(path)} permanent`;
 	const result = await obsidian(command);
 	assertNoCliError(result.stdout, command);
+}
+
+export async function renameExactFile(
+	path: string,
+	name: string,
+): Promise<void> {
+	const command = `rename path=${quoteCli(path)} name=${quoteCli(name)}`;
+	const result = await obsidian(command);
+	assertNoCliError(result.stdout, command);
+}
+
+export async function renameAnyPath(
+	fromPath: string,
+	toPath: string,
+): Promise<void> {
+	const escapedFromPath = fromPath.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+	const escapedToPath = toPath.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+	await obsidianEval(
+		`(async()=>{const file=app.vault.getAbstractFileByPath('${escapedFromPath}');if(!file){throw new Error('Not found: ${escapedFromPath}')}await app.fileManager.renameFile(file,'${escapedToPath}');return 'ok'})()`,
+	);
 }
 
 export async function deleteAnyPath(path: string): Promise<void> {

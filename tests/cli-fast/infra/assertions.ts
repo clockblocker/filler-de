@@ -9,7 +9,17 @@ const POLL_INTERVAL_MS = 200;
 const POLL_TIMEOUT_MS = 5_000;
 
 export type FastExpectations = {
+	exactCodexes?: {
+		folder: string;
+		paths: readonly string[];
+	};
 	files?: readonly string[];
+	folderSnapshot?: {
+		exactCodexes?: readonly string[];
+		files?: readonly string[];
+		folder: string;
+		goneFiles?: readonly string[];
+	};
 	goneFiles?: readonly string[];
 	contentChecks?: readonly [path: string, expectedFragments: readonly string[]][];
 	contentMustNotContain?: readonly [path: string, forbiddenFragments: readonly string[]][];
@@ -52,6 +62,58 @@ export async function expectExactFiles(paths: readonly string[]): Promise<void> 
 		throw new Error(
 			`Missing ${missing.length} file(s):\n${missing.map((path) => `  - ${path}`).join("\n")}\n\nVault contains:\n${allFiles.join("\n")}`,
 		);
+	});
+}
+
+export async function expectExactCodexes(params: {
+	folder: string;
+	paths: readonly string[];
+}): Promise<void> {
+	await pollUntilPass(async () => {
+		const allFiles = await listExactFiles(params.folder);
+		const actualCodexes = allFiles.filter((path) => {
+			const basename = path.split("/").pop() ?? "";
+			return basename.startsWith("__-");
+		});
+		expect([...actualCodexes].sort()).toEqual([...params.paths].sort());
+	});
+}
+
+export async function expectFolderSnapshot(params: {
+	exactCodexes?: readonly string[];
+	files?: readonly string[];
+	folder: string;
+	goneFiles?: readonly string[];
+}): Promise<void> {
+	await pollUntilPass(async () => {
+		const allFiles = await listExactFiles(params.folder);
+		const allFilesSet = new Set(allFiles);
+
+		if (params.files) {
+			const missing = params.files.filter((path) => !allFilesSet.has(path));
+			if (missing.length > 0) {
+				throw new Error(
+					`Missing ${missing.length} file(s):\n${missing.map((path) => `  - ${path}`).join("\n")}\n\nFolder contains:\n${allFiles.join("\n")}`,
+				);
+			}
+		}
+
+		if (params.goneFiles) {
+			const stillPresent = params.goneFiles.filter((path) => allFilesSet.has(path));
+			if (stillPresent.length > 0) {
+				throw new Error(
+					`Still present ${stillPresent.length} file(s):\n${stillPresent.map((path) => `  - ${path}`).join("\n")}\n\nFolder contains:\n${allFiles.join("\n")}`,
+				);
+			}
+		}
+
+		if (params.exactCodexes) {
+			const actualCodexes = allFiles.filter((path) => {
+				const basename = path.split("/").pop() ?? "";
+				return basename.startsWith("__-");
+			});
+			expect([...actualCodexes].sort()).toEqual([...params.exactCodexes].sort());
+		}
 	});
 }
 
@@ -113,6 +175,14 @@ async function assertNegativeContentChecks(
 export async function expectFastHealing(
 	expectations: FastExpectations,
 ): Promise<void> {
+	if (expectations.folderSnapshot) {
+		await expectFolderSnapshot(expectations.folderSnapshot);
+	}
+
+	if (expectations.exactCodexes) {
+		await expectExactCodexes(expectations.exactCodexes);
+	}
+
 	if (expectations.files) {
 		await expectExactFiles(expectations.files);
 	}

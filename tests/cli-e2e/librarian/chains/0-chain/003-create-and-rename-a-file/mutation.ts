@@ -1,7 +1,7 @@
 import { createFile, renamePath, waitForIdle } from "../../../../utils";
 
 export async function performMutation003(): Promise<void> {
-	// Step 1: Create a new file with correct suffix directly
+	// Step 1: Create a new file with the canonical suffix directly.
 	const originalPath = "Library/Recipe/Pie/Berry/MyNote-Berry-Pie-Recipe.md";
 	await createFile(originalPath, "# New scroll content");
 
