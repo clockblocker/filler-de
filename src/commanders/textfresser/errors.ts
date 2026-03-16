@@ -1,4 +1,5 @@
 import z from "zod";
+import { getErrorMessage } from "../../utils/get-error-message";
 import {
 	BASE_COMMAND_ERROR_KIND_STR,
 	type BaseCommandError,
@@ -44,3 +45,18 @@ export const AttestationParsingErrorKind =
 export type AttestationParsingError =
 	| { kind: typeof AttestationParsingErrorKind.WikilinkNotFound }
 	| { kind: typeof AttestationParsingErrorKind.BlockIdNotFound };
+
+// ─── Error Helpers ───
+
+/** Extract a human-readable reason from a CommandError. */
+export function extractErrorReason(error: CommandError): string {
+	return "reason" in error ? error.reason : `Command failed: ${error.kind}`;
+}
+
+/** Convert an unknown thrown value into an ApiError CommandError. */
+export function toApiCommandError(error: unknown): CommandError {
+	return {
+		kind: CommandErrorKind.ApiError,
+		reason: getErrorMessage(error),
+	};
+}
