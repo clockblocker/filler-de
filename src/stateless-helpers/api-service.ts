@@ -6,10 +6,10 @@ import type { z } from "zod";
 import {
 	formatError,
 	logError,
-	logWarning,
 } from "../managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import type { TextEaterSettings } from "../types";
 import { getErrorMessage } from "../utils/get-error-message";
+import { logger } from "../utils/logger";
 import { withRetry } from "./retry";
 
 const REQUEST_LABEL_HEADER = "x-textfresser-request-label";
@@ -221,11 +221,9 @@ export class ApiService {
 				return id;
 			}
 		} catch (___errors) {
-			logWarning({
-				description:
-					"CachedContent creation failed; proceeding without cache",
-				location: "ApiService",
-			});
+			logger.info(
+				"[Textfresser] [ApiService]: CachedContent creation failed; proceeding without cache",
+			);
 		}
 		return null;
 	}

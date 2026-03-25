@@ -300,7 +300,7 @@ export function disambiguateSense(
 		return readExistingNote(preferredPath)
 			.andThen(runWithContent)
 			.orElse(() => {
-				logger.warn(
+				logger.info(
 					"[disambiguate] Preferred path could not be read, falling back to basename search",
 					{
 						lemma: apiResult.lemma,
