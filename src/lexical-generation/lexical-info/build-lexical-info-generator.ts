@@ -11,6 +11,7 @@ import type {
 	LexicalCore,
 	LexicalGenerationSettings,
 	LexicalInfo,
+	LexicalInfoGenerator,
 	LexicalInfoField,
 	MorphemicBreakdown,
 	ResolvedLemma,
@@ -383,7 +384,9 @@ function mapRelationsField(result: RelationResult | null, applicable: boolean) {
 	} as const;
 }
 
-export function buildLexicalInfoGenerator(deps: PromptDeps) {
+export function buildLexicalInfoGenerator(
+	deps: PromptDeps,
+): LexicalInfoGenerator {
 	return async (
 		lemma: ResolvedLemma,
 		attestation: string,

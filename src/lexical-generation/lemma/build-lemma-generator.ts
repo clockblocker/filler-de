@@ -1,7 +1,8 @@
-import { ok } from "neverthrow";
+import { err, ok } from "neverthrow";
 import { executePrompt } from "../internal/prompt-executor";
 import type {
 	CreateLexicalGenerationModuleParams,
+	LemmaGenerator,
 	ResolvedLemma,
 } from "../public-types";
 import {
@@ -46,14 +47,14 @@ export function buildLemmaGenerator(
 		CreateLexicalGenerationModuleParams,
 		"fetchStructured" | "knownLang" | "targetLang"
 	>,
-) {
+): LemmaGenerator {
 	return async (selection: string, attestation: string) => {
 		const firstAttempt = await executePrompt(deps, "Lemma", {
 			context: attestation,
 			surface: selection,
 		});
 		if (firstAttempt.isErr()) {
-			return firstAttempt;
+			return err(firstAttempt.error);
 		}
 
 		const firstEvaluation = evaluateLemmaOutputGuardrails({

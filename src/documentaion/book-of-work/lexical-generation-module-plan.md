@@ -83,6 +83,25 @@ type CreateLexicalGenerationModuleParams<TTargetLang> = {
 
 `fetchStructured` is the only required external runtime dependency for now. Keep logging, retries, and caching internal unless the implementation later proves they must be injected.
 
+Exact contract:
+
+```ts
+type StructuredFetchFn = <T>(params: {
+  requestLabel: string;
+  systemPrompt: string;
+  userInput: string;
+  schema: ZodSchemaLike<T>;
+  withCache?: boolean;
+}) => Promise<Result<T, LexicalGenerationError>>;
+```
+
+This is the transport boundary, not a prompt boundary. The lexical generation module owns:
+
+- prompt-smith usage
+- prompt selection/routing
+- input stringification
+- mapping transport/model failures into `LexicalGenerationError`
+
 ### 2. Settings
 
 ```ts
@@ -183,6 +202,13 @@ Notes:
 - `core` should contain generated enrichment like `ipa` and `emojiDescription`, not LU/POS/surfaceKind.
 - `lemma` remains the source of truth for lexical identity and discriminants.
 - `inflections` should be a first-class field, not hidden inside `features`.
+- `LexemFeatures`, `PhrasemFeatures`, `LexemInflections`, `MorphemicBreakdown`, and `LexicalRelations` are module-owned public DTOs.
+- First pass can keep those DTOs thin and close to today's shapes, but they must not be raw prompt output aliases. Prompt churn should not leak through the public API.
+- `generateLexicalInfo(...)` should default to best-effort DTO assembly:
+  - return top-level `Err(...)` only for hard-stop failures that prevent any coherent top-level result
+  - use field-level `{ status: "error" }` when some sub-generation failed but a valid top-level DTO can still be returned
+  - examples of top-level `Err(...)`: unsupported language pair, broken prompt routing, internal contract violation
+  - examples of field-level `error`: enrichment/features/inflections/relations/morphemic breakdown prompt failure for an otherwise valid lemma
 
 ### 6. Error Contract
 
@@ -224,7 +250,6 @@ src/lexical-generation/
   disambiguation/
   lexical-info/
   prompt-smith/
-  adapters/
 ```
 
 Rules:
@@ -232,6 +257,7 @@ Rules:
 - No imports from Obsidian managers, VAM, or Textfresser orchestration state.
 - `prompt-smith` can be moved under this subtree or wrapped from its current location as an internal dependency during migration.
 - Language-specific prompt routing can remain internal and use existing prompt assets until later cleanup.
+- Compatibility adapters from `LexicalInfo` DTOs to existing Textfresser section formatters belong on the Textfresser side, not inside the extracted lexical generation module.
 
 ## Migration Plan
 
@@ -273,7 +299,7 @@ Rules:
 
 - Replace direct prompt-runner usage in Lemma/Generate flows with calls into the new module.
 - Keep rendering, propagation, and note updates in Textfresser.
-- Add adapters from `LexicalInfo` DTOs to existing section formatters as an intermediate migration step.
+- Add Textfresser-side compatibility adapters from `LexicalInfo` DTOs to existing section formatters as an intermediate migration step.
 
 ### Phase 7. Remove old coupling
 

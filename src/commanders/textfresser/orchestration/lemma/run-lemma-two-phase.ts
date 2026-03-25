@@ -127,43 +127,38 @@ export async function runLemmaTwoPhase(params: {
 
 	const context = attestation.source.textWithOnlyTargetMarked;
 	const lexicalGeneration = state.lexicalGeneration;
-	let lemmaPromptOutput: Result<
-		{
-			contextWithLinkedParts?: string;
-			lemma: string;
-			linguisticUnit: "Lexem" | "Phrasem";
-			posLikeKind: string;
-			surfaceKind: "Lemma" | "Inflected" | "Variant";
-		},
-		CommandError
-	>;
+	let resolvedLemma: {
+		contextWithLinkedParts?: string | null;
+		lemma: string;
+		linguisticUnit: "Lexem" | "Phrasem";
+		posLikeKind: string;
+		surfaceKind: "Lemma" | "Inflected" | "Variant";
+	};
 	if (lexicalGeneration) {
 		const result = await lexicalGeneration.buildLemmaGenerator()(
 			surface,
 			context,
 		);
-		lemmaPromptOutput = result.isErr()
-			? err({
-					kind: CommandErrorKind.ApiError,
-					reason: result.error.message,
-				})
-			: ok(result.value);
+		if (result.isErr()) {
+			return err({
+				kind: CommandErrorKind.ApiError,
+				reason: result.error.message,
+			});
+		}
+		resolvedLemma = result.value;
 	} else {
 		const result = await state.promptRunner.generate("Lemma", {
 			context,
 			surface,
 		});
-		lemmaPromptOutput = result.isErr()
-			? err({
-					kind: CommandErrorKind.ApiError,
-					reason: result.error.reason,
-				})
-			: ok(result.value);
+		if (result.isErr()) {
+			return err({
+				kind: CommandErrorKind.ApiError,
+				reason: result.error.reason,
+			});
+		}
+		resolvedLemma = result.value;
 	}
-	if (lemmaPromptOutput.isErr()) {
-		return err(lemmaPromptOutput.error);
-	}
-	const resolvedLemma = lemmaPromptOutput.value;
 	const resolvedPosLikeKind = resolvePosLikeKind(resolvedLemma);
 	if (!resolvedPosLikeKind) {
 		return err({

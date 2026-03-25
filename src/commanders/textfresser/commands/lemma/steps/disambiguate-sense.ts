@@ -385,7 +385,7 @@ export async function disambiguateSense(
 
 		const fallbackContent = await readExistingNote(fallbackPath);
 		if (fallbackContent.isErr()) {
-			return fallbackContent;
+			return err(fallbackContent.error);
 		}
 		return runWithContent(fallbackContent.value);
 	}
@@ -398,7 +398,7 @@ export async function disambiguateSense(
 
 	const content = await readExistingNote(filePath);
 	if (content.isErr()) {
-		return content;
+		return err(content.error);
 	}
 
 	return runWithContent(content.value);

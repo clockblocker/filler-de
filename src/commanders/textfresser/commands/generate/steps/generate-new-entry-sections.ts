@@ -2,6 +2,7 @@ import type {
 	GermanGenus,
 	NounInflectionCell,
 } from "../../../../../linguistics/de/lexem/noun";
+import type { ResolvedLemma } from "../../../../../lexical-generation";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
@@ -15,6 +16,10 @@ import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { LemmaResult } from "../../lemma/types";
 import { dispatchHeaderFormatter } from "../section-formatters/header-dispatch";
 import { getFeaturesPromptKindForPos } from "./features-prompt-dispatch";
+import {
+	adaptLexicalInfoToCompatibility,
+	collectLexicalInfoFailures,
+} from "./lexical-info-compat";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 import {
 	buildSectionQuery,
@@ -109,6 +114,26 @@ function buildFallbackEnrichmentOutput(
 	};
 }
 
+function toResolvedLemma(lemmaResult: LemmaResult): ResolvedLemma {
+	if (lemmaResult.linguisticUnit === "Lexem") {
+		return {
+			contextWithLinkedParts: undefined,
+			lemma: lemmaResult.lemma,
+			linguisticUnit: "Lexem",
+			posLikeKind: lemmaResult.posLikeKind,
+			surfaceKind: lemmaResult.surfaceKind,
+		};
+	}
+
+	return {
+		contextWithLinkedParts: undefined,
+		lemma: lemmaResult.lemma,
+		linguisticUnit: "Phrasem",
+		posLikeKind: lemmaResult.posLikeKind,
+		surfaceKind: lemmaResult.surfaceKind,
+	};
+}
+
 function buildEntryId(nextIndex: number, lemmaResult: LemmaResult): string {
 	if (lemmaResult.linguisticUnit === "Lexem") {
 		return dictEntryIdHelper.build({
@@ -143,23 +168,136 @@ export async function generateNewEntrySections(
 
 	const failedSections: string[] = [];
 	let enrichmentOutput: EnrichmentOutput;
+	let featuresOutput: FeaturesOutput | null = null;
+	let morphemOutput: MorphemOutput | null = null;
+	let relationOutput: RelationOutput | null = null;
+	let nounInflectionOutput: NounInflectionOutput | null = null;
+	let otherInflectionOutput: InflectionOutput | null = null;
+	const lexicalGeneration = ctx.textfresserState.lexicalGeneration;
 
 	try {
-		enrichmentOutput = await generateEnrichmentOutput(
-			lemmaResult,
-			promptRunner,
-			context,
-		);
+		if (lexicalGeneration) {
+			const lexicalInfoResult =
+				await lexicalGeneration.buildLexicalInfoGenerator()(
+					toResolvedLemma(lemmaResult),
+					context,
+					{
+						precomputedEmojiDescription:
+							lemmaResult.precomputedEmojiDescription,
+					},
+				);
+			if (lexicalInfoResult.isErr()) {
+				throw new Error(lexicalInfoResult.error.message);
+			}
+
+			collectLexicalInfoFailures(lexicalInfoResult.value, failedSections);
+			const compatibility = adaptLexicalInfoToCompatibility(
+				lexicalInfoResult.value,
+			);
+
+			enrichmentOutput =
+				compatibility.enrichmentOutput ??
+				buildFallbackEnrichmentOutput(lemmaResult);
+			featuresOutput = compatibility.featuresOutput;
+			morphemOutput = compatibility.morphemOutput;
+			relationOutput = compatibility.relationOutput;
+			nounInflectionOutput = compatibility.nounInflectionOutput;
+			otherInflectionOutput = compatibility.otherInflectionOutput;
+		} else {
+			enrichmentOutput = await generateEnrichmentOutput(
+				lemmaResult,
+				promptRunner,
+				context,
+			);
+		}
 	} catch (error) {
 		failedSections.push("Enrichment");
 		logger.warn(
-			"[generateSections] Enrichment failed; continuing with fallback metadata",
+			"[generateSections] Lexical generation failed; continuing with fallback metadata",
 			{
 				error: getErrorMessage(error),
 				lemma: lemmaResult.lemma,
 			},
 		);
 		enrichmentOutput = buildFallbackEnrichmentOutput(lemmaResult);
+
+		const featuresPromptKind =
+			lemmaResult.linguisticUnit === "Lexem"
+				? getFeaturesPromptKindForPos(lemmaResult.posLikeKind)
+				: null;
+		const shouldGenerateMorphem = true;
+		const tasks: [
+			Promise<MorphemOutput> | null,
+			Promise<RelationOutput> | null,
+			Promise<NounInflectionOutput> | null,
+			Promise<InflectionOutput> | null,
+			Promise<FeaturesOutput> | null,
+		] = [
+			shouldGenerateMorphem
+				? unwrapResultAsync(
+						promptRunner.generate(PromptKind.Morphem, {
+							context,
+							word,
+						}),
+					)
+				: null,
+			unwrapResultAsync(
+				promptRunner.generate(PromptKind.Relation, {
+					context,
+					pos: posOrKind,
+					word,
+				}),
+			),
+			lemmaResult.linguisticUnit === "Lexem" &&
+			lemmaResult.posLikeKind === "Noun"
+				? unwrapResultAsync(
+						promptRunner.generate(PromptKind.NounInflection, {
+							context,
+							word,
+						}),
+					)
+				: null,
+			lemmaResult.linguisticUnit === "Lexem" &&
+			lemmaResult.posLikeKind !== "Noun"
+				? unwrapResultAsync(
+						promptRunner.generate(PromptKind.Inflection, {
+							context,
+							pos: posOrKind,
+							word,
+						}),
+					)
+				: null,
+			featuresPromptKind
+				? unwrapResultAsync(
+						promptRunner.generate(featuresPromptKind, {
+							context,
+							word,
+						}),
+					)
+				: null,
+		];
+		const settled = await Promise.allSettled(tasks);
+		morphemOutput = unwrapOptional(settled[0], "Morphem", failedSections);
+		relationOutput = unwrapOptional(
+			settled[1],
+			"Relation",
+			failedSections,
+		);
+		nounInflectionOutput = unwrapOptional(
+			settled[2],
+			"Inflection",
+			failedSections,
+		);
+		otherInflectionOutput = unwrapOptional(
+			settled[3],
+			"Inflection",
+			failedSections,
+		);
+		featuresOutput = unwrapOptional(
+			settled[4],
+			"Features",
+			failedSections,
+		);
 	}
 
 	const applicableSections = getSectionsFor(
@@ -175,96 +313,11 @@ export async function generateNewEntrySections(
 	const shouldRunPropagation = v3Applicable.some((sectionKind) =>
 		shouldPropagateLinksForSection(sectionKind),
 	);
-	const featuresPromptKind =
-		lemmaResult.linguisticUnit === "Lexem"
-			? getFeaturesPromptKindForPos(lemmaResult.posLikeKind)
-			: null;
-
 	const shouldGenerateMorphem =
 		sectionSet.has(DictSectionKind.Morphem) ||
 		sectionSet.has(DictSectionKind.Morphology);
-	const morphemTask: Promise<MorphemOutput> | null = shouldGenerateMorphem
-		? unwrapResultAsync(
-				promptRunner.generate(PromptKind.Morphem, {
-					context,
-					word,
-				}),
-			)
-		: null;
-	const relationTask: Promise<RelationOutput> | null = sectionSet.has(
-		DictSectionKind.Relation,
-	)
-		? unwrapResultAsync(
-				promptRunner.generate(PromptKind.Relation, {
-					context,
-					pos: posOrKind,
-					word,
-				}),
-			)
-		: null;
-	const nounInflectionTask: Promise<NounInflectionOutput> | null =
-		sectionSet.has(DictSectionKind.Inflection) &&
-		lemmaResult.linguisticUnit === "Lexem" &&
-		lemmaResult.posLikeKind === "Noun"
-			? unwrapResultAsync(
-					promptRunner.generate(PromptKind.NounInflection, {
-						context,
-						word,
-					}),
-				)
-			: null;
-	const inflectionTask: Promise<InflectionOutput> | null =
-		sectionSet.has(DictSectionKind.Inflection) &&
-		lemmaResult.linguisticUnit === "Lexem" &&
-		lemmaResult.posLikeKind !== "Noun"
-			? unwrapResultAsync(
-					promptRunner.generate(PromptKind.Inflection, {
-						context,
-						pos: posOrKind,
-						word,
-					}),
-				)
-			: null;
 	const shouldGenerateTranslation =
 		sectionSet.has(DictSectionKind.Translation) || shouldRunPropagation;
-	const translationTask: Promise<WordTranslationOutput> | null =
-		shouldGenerateTranslation
-			? unwrapResultAsync(
-					promptRunner.generate(PromptKind.WordTranslation, {
-						context: markdownHelper.replaceWikilinks(context),
-						pos: posOrKind,
-						word,
-					}),
-				)
-			: null;
-	const featuresTask: Promise<FeaturesOutput> | null =
-		sectionSet.has(DictSectionKind.Tags) && featuresPromptKind
-			? unwrapResultAsync(
-					promptRunner.generate(featuresPromptKind, {
-						context,
-						word,
-					}),
-				)
-			: null;
-
-	const tasks: [
-		Promise<MorphemOutput> | null,
-		Promise<RelationOutput> | null,
-		Promise<NounInflectionOutput> | null,
-		Promise<InflectionOutput> | null,
-		Promise<WordTranslationOutput> | null,
-		Promise<FeaturesOutput> | null,
-	] = [
-		morphemTask,
-		relationTask,
-		nounInflectionTask,
-		inflectionTask,
-		translationTask,
-		featuresTask,
-	];
-	const settled = await Promise.allSettled(tasks);
-
-	const morphemOutput = unwrapOptional(settled[0], "Morphem", failedSections);
 	if (shouldGenerateMorphem && !morphemOutput) {
 		logger.warn(
 			"[generateSections] Morphem failed; skipping dependent outputs (Morphology section + morpheme/morphology propagation)",
@@ -272,40 +325,31 @@ export async function generateNewEntrySections(
 				lemma: lemmaResult.lemma,
 				willSkipMorphologySection: sectionSet.has(
 					DictSectionKind.Morphology,
-				),
+					),
 			},
 		);
 	}
-	const relationOutput = unwrapOptional(
-		settled[1],
-		"Relation",
-		failedSections,
-	);
-	const nounInflectionOutput = unwrapOptional(
-		settled[2],
-		"Inflection",
-		failedSections,
-	);
-	const otherInflectionOutput = unwrapOptional(
-		settled[3],
-		"Inflection",
-		failedSections,
-	);
 	let translationOutput: WordTranslationOutput | null;
 	if (shouldGenerateTranslation) {
-		translationOutput = unwrapOptional(
-			settled[4],
-			"Translation",
-			failedSections,
-		);
+		try {
+			translationOutput = await unwrapResultAsync(
+				promptRunner.generate(PromptKind.WordTranslation, {
+					context: markdownHelper.replaceWikilinks(context),
+					pos: posOrKind,
+					word,
+				}),
+			);
+		} catch (error) {
+			failedSections.push("Translation");
+			logger.warn("[generateSections] Translation failed", {
+				error: getErrorMessage(error),
+				lemma: lemmaResult.lemma,
+			});
+			translationOutput = null;
+		}
 	} else {
 		translationOutput = null;
 	}
-	const featuresOutput = unwrapOptional(
-		settled[5],
-		"Features",
-		failedSections,
-	);
 	const nounInflectionGenus = resolveNounInflectionGenus(
 		lemmaResult,
 		enrichmentOutput,

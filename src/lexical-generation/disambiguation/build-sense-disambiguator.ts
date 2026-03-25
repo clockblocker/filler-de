@@ -1,9 +1,10 @@
-import { ok } from "neverthrow";
+import { err, ok } from "neverthrow";
 import { executePrompt } from "../internal/prompt-executor";
 import type {
 	CandidateSense,
 	CreateLexicalGenerationModuleParams,
 	ResolvedLemma,
+	SenseDisambiguator,
 	SenseMatchResult,
 } from "../public-types";
 
@@ -26,7 +27,7 @@ export function buildSenseDisambiguator(
 		CreateLexicalGenerationModuleParams,
 		"fetchStructured" | "knownLang" | "targetLang"
 	>,
-) {
+): SenseDisambiguator {
 	return async (
 		lemma: ResolvedLemma,
 		attestation: string,
@@ -80,7 +81,7 @@ export function buildSenseDisambiguator(
 			})),
 		});
 		if (promptResult.isErr()) {
-			return promptResult;
+			return err(promptResult.error);
 		}
 
 		const matchedCandidate = promptCandidates.find(
