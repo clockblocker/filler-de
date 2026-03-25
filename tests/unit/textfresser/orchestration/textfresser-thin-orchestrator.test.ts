@@ -42,6 +42,7 @@ function makeHarness() {
 		vam,
 		{ known: "English", target: "German" },
 		{} as ApiService,
+		{ generateInflections: true },
 	);
 
 	return { dispatches, scrollCalls, textfresser };

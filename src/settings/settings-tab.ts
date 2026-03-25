@@ -109,6 +109,18 @@ export class SettingsTab extends PluginSettingTab {
 					});
 			});
 
+		new Setting(containerEl)
+			.setName(t.generateInflections)
+			.setDesc(t.generateInflectionsDesc)
+			.addToggle((toggle) =>
+				toggle
+					.setValue(this.plugin.settings.generateInflections)
+					.onChange(async (value) => {
+						this.plugin.settings.generateInflections = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
 		// Actions settings (moved here, after Languages)
 		new Setting(containerEl).setName(t.actionsHeading).setHeading();
 

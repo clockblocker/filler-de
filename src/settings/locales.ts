@@ -12,6 +12,7 @@ export type SettingsLocale = {
 	apiProvider: string;
 	knownLanguage: string;
 	targetLanguage: string;
+	generateInflections: string;
 	libraryRoot: string;
 	maxSectionDepth: string;
 	showScrollsDepth: string;
@@ -26,6 +27,7 @@ export type SettingsLocale = {
 	apiProviderDesc: string;
 	knownLanguageDesc: string;
 	targetLanguageDesc: string;
+	generateInflectionsDesc: string;
 	libraryRootDesc: string;
 	maxSectionDepthDesc: string;
 	showScrollsDepthDesc: string;
@@ -89,6 +91,9 @@ const ENGLISH_LOCALE: SettingsLocale = {
 	knownLanguage: "Language you know",
 	knownLanguageDesc: "Your native or known language for translations",
 	languagesHeading: "Languages",
+	generateInflections: "Generate inflections",
+	generateInflectionsDesc:
+		"Include inflection tables and rows when generating lexical info.",
 	libraryHeading: "Library",
 	libraryRoot: "Library root folder",
 	libraryRootDesc: "The folder containing your library of texts",
@@ -157,6 +162,9 @@ const RUSSIAN_LOCALE: SettingsLocale = {
 	knownLanguage: "Язык, который вы знаете",
 	knownLanguageDesc: "Ваш родной язык для переводов",
 	languagesHeading: "Языки",
+	generateInflections: "Генерировать флексии",
+	generateInflectionsDesc:
+		"Добавлять таблицы и строки флексий при генерации лексической информации.",
 	libraryHeading: "Библиотека",
 	libraryRoot: "Корневая папка библиотеки",
 	libraryRootDesc: "Папка с вашей библиотекой текстов",

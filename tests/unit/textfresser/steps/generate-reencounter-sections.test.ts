@@ -1,5 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { errAsync, okAsync, type ResultAsync } from "neverthrow";
+import { err, errAsync, okAsync, type ResultAsync } from "neverthrow";
+import {
+	type LexicalGenerationModule,
+	LexicalGenerationFailureKind,
+	lexicalGenerationError,
+} from "../../../../src/lexical-generation";
 import { generateSections } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import type { ResolvedEntryState } from "../../../../src/commanders/textfresser/commands/generate/steps/resolve-existing-entry";
 import type {
@@ -310,6 +315,96 @@ describe("generateSections re-encounter behavior", () => {
 		const result = await generateSections(ctx);
 		expect(result.isOk()).toBe(true);
 		expect(promptCalls).toHaveLength(0);
+	});
+
+	it("falls back from lexical-generation hard stop without non-applicable prompt calls", async () => {
+		const promptCalls: string[] = [];
+		const ctx = {
+			actions: [],
+			commandContext: {
+				activeFile: {
+					content: "",
+					splitPath: {
+						basename: "berlin",
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Worter"],
+					},
+				},
+			},
+			existingEntries: [],
+			matchedEntry: null,
+			nextIndex: 1,
+			resultingActions: [],
+			textfresserState: {
+				inFlightGenerate: null,
+				languages: { known: "English", target: "German" },
+				latestFailedSections: [],
+				latestLemmaInvocationCache: null,
+				latestLemmaResult: {
+					attestation: {
+						source: {
+							ref: "![[Src#^3|^]]",
+							textRaw: "Berlin ist gross.",
+							textWithOnlyTargetMarked: "[Berlin] ist gross.",
+						},
+						target: { surface: "Berlin" },
+					},
+					disambiguationResult: null,
+					lemma: "Berlin",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Noun",
+					surfaceKind: "Lemma",
+				},
+				lexicalGeneration: {
+					buildLexicalInfoGenerator: () => async () =>
+						err(
+							lexicalGenerationError(
+								LexicalGenerationFailureKind.InternalContractViolation,
+								"lexical info contract broke",
+							),
+						),
+				} as unknown as LexicalGenerationModule,
+				lookupInLibrary: () => [],
+				promptRunner: {
+					generate: (kind: string) => {
+						promptCalls.push(kind);
+						switch (kind) {
+							case "NounEnrichment":
+								return okAsync({
+									emojiDescription: ["🏙️"],
+									genus: "Neutrum",
+									ipa: "bɛʁˈliːn",
+									nounClass: "Proper",
+								});
+							case "FeaturesNoun":
+								return okAsync({ tags: ["city"] });
+							case "WordTranslation":
+								return okAsync("Berlin");
+							default:
+								throw new Error(`unexpected prompt ${kind}`);
+						}
+					},
+				},
+				vam: {},
+			} as unknown as TextfresserState,
+		} as unknown as ResolvedEntryState;
+
+		const result = await generateSections(ctx);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+
+		expect(result.value.failedSections).toEqual([]);
+		expect(ctx.textfresserState.latestFailedSections).toEqual([]);
+		expect(promptCalls).toEqual([
+			"NounEnrichment",
+			"FeaturesNoun",
+			"WordTranslation",
+		]);
+		expect(promptCalls).not.toContain("Relation");
+		expect(promptCalls).not.toContain("Morphem");
+		expect(promptCalls).not.toContain("NounInflection");
+		expect(promptCalls).not.toContain("Inflection");
 	});
 
 	it("adds closed-set membership as a dedicated lightweight entry on re-encounter", async () => {

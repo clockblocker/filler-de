@@ -64,10 +64,42 @@ function makeHarness(options: HarnessOptions) {
 		selection: { getInfo: () => null },
 	} as unknown as VaultActionManager;
 
+	const apiService = {
+		generate: async ({ requestLabel }: { requestLabel: string }) => {
+			if (requestLabel === "Lemma") {
+				if (lemmaFailuresLeft > 0) {
+					lemmaFailuresLeft -= 1;
+					return errAsync({ reason: "lemma failed" });
+				}
+				const configuredOutput = options.lemmaOutputs?.[
+					Math.min(
+						lemmaCallCount,
+						Math.max((options.lemmaOutputs?.length ?? 1) - 1, 0),
+					)
+				];
+				lemmaCallCount += 1;
+
+				if (configuredOutput) {
+					return okAsync(configuredOutput);
+				}
+
+				return okAsync({
+					lemma: options.lemma,
+					linguisticUnit: "Lexem",
+					posLikeKind: "Verb",
+					surfaceKind: "Lemma",
+				});
+			}
+
+			return okAsync({ emojiDescription: null, matchedIndex: null });
+		},
+	} as unknown as ApiService;
+
 	const textfresser = new Textfresser(
 		vam,
 		{ known: "English", target: "German" },
-		{} as ApiService,
+		apiService,
+		{ generateInflections: true },
 	);
 	textfresser.setLibrarianResolvers({
 		lookupInLibraryByCoreName: options.lookupInLibrary ?? (() => []),

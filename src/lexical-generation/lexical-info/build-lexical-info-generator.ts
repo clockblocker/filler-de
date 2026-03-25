@@ -1,7 +1,10 @@
-import { ok, type Result } from "neverthrow";
+import { err, ok, type Result } from "neverthrow";
 import type { PromptKind } from "../../prompt-smith/codegen/consts";
 import type { AgentOutput, UserInput } from "../../prompt-smith/schemas";
-import type { LexicalGenerationError } from "../errors";
+import {
+	LexicalGenerationFailureKind,
+	type LexicalGenerationError,
+} from "../errors";
 import { executePrompt } from "../internal/prompt-executor";
 import type {
 	CreateLexicalGenerationModuleParams,
@@ -52,6 +55,29 @@ type NounInflectionResult = Result<
 >;
 type MorphemResult = Result<AgentOutput<"Morphem">, LexicalGenerationError>;
 type RelationResult = Result<AgentOutput<"Relation">, LexicalGenerationError>;
+
+function isHardStopFailure(error: LexicalGenerationError): boolean {
+	switch (error.kind) {
+		case LexicalGenerationFailureKind.InternalContractViolation:
+		case LexicalGenerationFailureKind.PromptNotAvailable:
+		case LexicalGenerationFailureKind.UnsupportedLanguagePair:
+			return true;
+		default:
+			return false;
+	}
+}
+
+function findHardStopFailure(
+	results: Array<Result<unknown, LexicalGenerationError> | null>,
+): LexicalGenerationError | null {
+	for (const result of results) {
+		if (result?.isErr() && isHardStopFailure(result.error)) {
+			return result.error;
+		}
+	}
+
+	return null;
+}
 
 function buildCorePrompt(lemma: ResolvedLemma): {
 	input: UserInput<CorePromptKind>;
@@ -399,6 +425,9 @@ export function buildLexicalInfoGenerator(
 			corePrompt.kind,
 			corePrompt.input,
 		);
+		if (coreResult.isErr() && isHardStopFailure(coreResult.error)) {
+			return err(coreResult.error);
+		}
 
 		const coreField = coreResult.isOk()
 			? ({
@@ -468,6 +497,15 @@ export function buildLexicalInfoGenerator(
 			morphemPromise,
 			inflectionPromise,
 		]);
+		const hardStopFailure = findHardStopFailure([
+			featuresResult,
+			relationsResult,
+			morphemResult,
+			inflectionResult,
+		]);
+		if (hardStopFailure) {
+			return err(hardStopFailure);
+		}
 
 		if (lemma.linguisticUnit === "Phrasem") {
 			const lexicalInfo: LexicalInfo = {

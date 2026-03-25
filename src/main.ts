@@ -174,12 +174,7 @@ export default class TextEaterPlugin extends Plugin {
 		);
 		this.vam = new VaultActionManagerImpl(this.app);
 
-		// Textfresser commander (vocabulary commands orchestrator)
-		this.textfresser = new Textfresser(
-			this.vam,
-			this.settings.languages,
-			this.apiService,
-		);
+		this.rebuildTextfresser();
 
 		// Dict note cleanup on file open (reorder entries, normalize attestation spacing)
 		this.registerEvent(
@@ -267,6 +262,10 @@ export default class TextEaterPlugin extends Plugin {
 					getErrorMessage(error),
 				);
 			}
+		}
+
+		if (!this.textfresser) {
+			throw new Error("Textfresser failed to initialize");
 		}
 
 		// Initialize command executor after librarian
@@ -485,6 +484,7 @@ export default class TextEaterPlugin extends Plugin {
 			...this.settings,
 			suffixDelimiter: { ...this.settings.suffixDelimiter },
 		};
+		this.rebuildTextfresser();
 		// Reinitialize librarian with new settings
 		await this.reinitLibrarian();
 	}
@@ -509,6 +509,10 @@ export default class TextEaterPlugin extends Plugin {
 			const backlinksChanged =
 				prev.showScrollBacklinks !== curr.showScrollBacklinks;
 			const hideMetadataChanged = prev.hideMetadata !== curr.hideMetadata;
+			const lexicalGenerationChanged =
+				prev.generateInflections !== curr.generateInflections ||
+				prev.languages.known !== curr.languages.known ||
+				prev.languages.target !== curr.languages.target;
 
 			if (delimiterChanged) {
 				const confirmed = await this.handleDelimiterChange(
@@ -527,10 +531,14 @@ export default class TextEaterPlugin extends Plugin {
 				depthChanged ||
 				rootChanged ||
 				backlinksChanged ||
-				hideMetadataChanged
+				hideMetadataChanged ||
+				lexicalGenerationChanged
 			) {
 				// Update global state BEFORE reinit so librarian uses new settings
 				updateParsedSettings(this.settings);
+				if (lexicalGenerationChanged) {
+					this.rebuildTextfresser();
+				}
 				await this.reinitLibrarian();
 			}
 
@@ -684,6 +692,17 @@ export default class TextEaterPlugin extends Plugin {
 				getErrorMessage(error),
 			);
 		}
+	}
+
+	private rebuildTextfresser(): void {
+		this.textfresser = new Textfresser(
+			this.vam,
+			this.settings.languages,
+			this.apiService,
+			{
+				generateInflections: this.settings.generateInflections,
+			},
+		);
 	}
 
 	private wireLibrarianLookup(): void {

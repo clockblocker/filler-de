@@ -3,6 +3,7 @@
  */
 
 import { errAsync } from "neverthrow";
+import type { LexicalGenerationSettings } from "../../lexical-generation";
 import type { CommandContext } from "../../managers/obsidian/command-executor";
 import type { WikilinkClickPayload } from "../../managers/obsidian/user-event-interceptor/events";
 import type { EventHandler } from "../../managers/obsidian/user-event-interceptor/types/handler";
@@ -42,10 +43,12 @@ export class Textfresser {
 		private readonly vam: VaultActionManager,
 		languages: LanguagesConfig,
 		apiService: ApiService,
+		lexicalGenerationSettings: LexicalGenerationSettings,
 	) {
 		this.state = createInitialTextfresserState({
 			apiService,
 			languages,
+			lexicalGenerationSettings,
 			vam,
 		});
 

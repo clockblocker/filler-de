@@ -72,6 +72,20 @@ type GenerateNewEntrySectionsOptions = {
 	onlySections?: ReadonlySet<DictSectionKind>;
 };
 
+type ApplicableSectionState = {
+	applicableSections: readonly DictSectionKind[];
+	sectionSet: Set<DictSectionKind>;
+	v3Applicable: DictSectionKind[];
+};
+
+type LegacyApplicableOutputs = {
+	featuresOutput: FeaturesOutput | null;
+	morphemOutput: MorphemOutput | null;
+	nounInflectionOutput: NounInflectionOutput | null;
+	otherInflectionOutput: InflectionOutput | null;
+	relationOutput: RelationOutput | null;
+};
+
 async function generateEnrichmentOutput(
 	lemmaResult: LemmaResult,
 	promptRunner: PromptRunner,
@@ -155,6 +169,123 @@ function buildEntryId(nextIndex: number, lemmaResult: LemmaResult): string {
 	return "";
 }
 
+function resolveApplicableSectionState(
+	lemmaResult: LemmaResult,
+	enrichmentOutput: EnrichmentOutput,
+	options: GenerateNewEntrySectionsOptions,
+): ApplicableSectionState {
+	const applicableSections = getSectionsFor(
+		buildSectionQuery(lemmaResult, enrichmentOutput),
+	);
+	const onlySections = options.onlySections;
+	const v3Applicable = applicableSections.filter(
+		(sectionKind) =>
+			V3_SECTIONS.has(sectionKind) &&
+			(onlySections ? onlySections.has(sectionKind) : true),
+	);
+
+	return {
+		applicableSections,
+		sectionSet: new Set(v3Applicable),
+		v3Applicable,
+	};
+}
+
+async function generateLegacyApplicableOutputs(params: {
+	applicableSectionState: ApplicableSectionState;
+	context: string;
+	failedSections: string[];
+	lemmaResult: LemmaResult;
+	promptRunner: PromptRunner;
+}): Promise<LegacyApplicableOutputs> {
+	const { applicableSectionState, context, failedSections, lemmaResult } =
+		params;
+	const { promptRunner } = params;
+	const word = lemmaResult.lemma;
+	const posOrKind = lemmaResult.posLikeKind;
+	const featuresPromptKind =
+		lemmaResult.linguisticUnit === "Lexem"
+			? getFeaturesPromptKindForPos(lemmaResult.posLikeKind)
+			: null;
+	const tasks: [
+		Promise<MorphemOutput> | null,
+		Promise<RelationOutput> | null,
+		Promise<NounInflectionOutput> | null,
+		Promise<InflectionOutput> | null,
+		Promise<FeaturesOutput> | null,
+	] = [
+		applicableSectionState.sectionSet.has(DictSectionKind.Morphem) ||
+		applicableSectionState.sectionSet.has(DictSectionKind.Morphology)
+			? unwrapResultAsync(
+					promptRunner.generate(PromptKind.Morphem, {
+						context,
+						word,
+					}),
+				)
+			: null,
+		applicableSectionState.sectionSet.has(DictSectionKind.Relation)
+			? unwrapResultAsync(
+					promptRunner.generate(PromptKind.Relation, {
+						context,
+						pos: posOrKind,
+						word,
+					}),
+				)
+			: null,
+		applicableSectionState.sectionSet.has(DictSectionKind.Inflection) &&
+		lemmaResult.linguisticUnit === "Lexem" &&
+		lemmaResult.posLikeKind === "Noun"
+			? unwrapResultAsync(
+					promptRunner.generate(PromptKind.NounInflection, {
+						context,
+						word,
+					}),
+				)
+			: null,
+		applicableSectionState.sectionSet.has(DictSectionKind.Inflection) &&
+		lemmaResult.linguisticUnit === "Lexem" &&
+		lemmaResult.posLikeKind !== "Noun"
+			? unwrapResultAsync(
+					promptRunner.generate(PromptKind.Inflection, {
+						context,
+						pos: posOrKind,
+						word,
+					}),
+				)
+			: null,
+		applicableSectionState.sectionSet.has(DictSectionKind.Tags) &&
+		featuresPromptKind
+			? unwrapResultAsync(
+					promptRunner.generate(featuresPromptKind, {
+						context,
+						word,
+					}),
+				)
+			: null,
+	];
+	const settled = await Promise.allSettled(tasks);
+
+	return {
+		featuresOutput: unwrapOptional(settled[4], "Features", failedSections),
+		morphemOutput: unwrapOptional(settled[0], "Morphem", failedSections),
+		nounInflectionOutput: unwrapOptional(
+			settled[2],
+			"Inflection",
+			failedSections,
+		),
+		otherInflectionOutput: unwrapOptional(
+			settled[3],
+			"Inflection",
+			failedSections,
+		),
+		relationOutput: unwrapOptional(
+			settled[1],
+			"Relation",
+			failedSections,
+		),
+	};
+}
+
 export async function generateNewEntrySections(
 	ctx: ResolvedEntryState,
 	options: GenerateNewEntrySectionsOptions = {},
@@ -173,6 +304,7 @@ export async function generateNewEntrySections(
 	let relationOutput: RelationOutput | null = null;
 	let nounInflectionOutput: NounInflectionOutput | null = null;
 	let otherInflectionOutput: InflectionOutput | null = null;
+	let applicableSectionState: ApplicableSectionState | null = null;
 	const lexicalGeneration = ctx.textfresserState.lexicalGeneration;
 
 	try {
@@ -187,7 +319,7 @@ export async function generateNewEntrySections(
 					},
 				);
 			if (lexicalInfoResult.isErr()) {
-				throw new Error(lexicalInfoResult.error.message);
+				throw lexicalInfoResult.error;
 			}
 
 			collectLexicalInfoFailures(lexicalInfoResult.value, failedSections);
@@ -209,107 +341,81 @@ export async function generateNewEntrySections(
 				promptRunner,
 				context,
 			);
+			applicableSectionState = resolveApplicableSectionState(
+				lemmaResult,
+				enrichmentOutput,
+				options,
+			);
+			({
+				featuresOutput,
+				morphemOutput,
+				nounInflectionOutput,
+				otherInflectionOutput,
+				relationOutput,
+			} = await generateLegacyApplicableOutputs({
+				applicableSectionState,
+				context,
+				failedSections,
+				lemmaResult,
+				promptRunner,
+			}));
 		}
 	} catch (error) {
-		failedSections.push("Enrichment");
+		const lexicalGenerationErrorMessage =
+			typeof error === "object" &&
+			error !== null &&
+			"message" in error &&
+			typeof error.message === "string"
+				? error.message
+				: getErrorMessage(error);
 		logger.warn(
 			"[generateSections] Lexical generation failed; continuing with fallback metadata",
 			{
-				error: getErrorMessage(error),
+				error: lexicalGenerationErrorMessage,
 				lemma: lemmaResult.lemma,
 			},
 		);
-		enrichmentOutput = buildFallbackEnrichmentOutput(lemmaResult);
+		try {
+			enrichmentOutput = await generateEnrichmentOutput(
+				lemmaResult,
+				promptRunner,
+				context,
+			);
+		} catch (legacyError) {
+			failedSections.push("Enrichment");
+			logger.warn(
+				"[generateSections] Legacy enrichment fallback failed; using minimal metadata",
+				{
+					error: getErrorMessage(legacyError),
+					lemma: lemmaResult.lemma,
+				},
+			);
+			enrichmentOutput = buildFallbackEnrichmentOutput(lemmaResult);
+		}
 
-		const featuresPromptKind =
-			lemmaResult.linguisticUnit === "Lexem"
-				? getFeaturesPromptKindForPos(lemmaResult.posLikeKind)
-				: null;
-		const shouldGenerateMorphem = true;
-		const tasks: [
-			Promise<MorphemOutput> | null,
-			Promise<RelationOutput> | null,
-			Promise<NounInflectionOutput> | null,
-			Promise<InflectionOutput> | null,
-			Promise<FeaturesOutput> | null,
-		] = [
-			shouldGenerateMorphem
-				? unwrapResultAsync(
-						promptRunner.generate(PromptKind.Morphem, {
-							context,
-							word,
-						}),
-					)
-				: null,
-			unwrapResultAsync(
-				promptRunner.generate(PromptKind.Relation, {
-					context,
-					pos: posOrKind,
-					word,
-				}),
-			),
-			lemmaResult.linguisticUnit === "Lexem" &&
-			lemmaResult.posLikeKind === "Noun"
-				? unwrapResultAsync(
-						promptRunner.generate(PromptKind.NounInflection, {
-							context,
-							word,
-						}),
-					)
-				: null,
-			lemmaResult.linguisticUnit === "Lexem" &&
-			lemmaResult.posLikeKind !== "Noun"
-				? unwrapResultAsync(
-						promptRunner.generate(PromptKind.Inflection, {
-							context,
-							pos: posOrKind,
-							word,
-						}),
-					)
-				: null,
-			featuresPromptKind
-				? unwrapResultAsync(
-						promptRunner.generate(featuresPromptKind, {
-							context,
-							word,
-						}),
-					)
-				: null,
-		];
-		const settled = await Promise.allSettled(tasks);
-		morphemOutput = unwrapOptional(settled[0], "Morphem", failedSections);
-		relationOutput = unwrapOptional(
-			settled[1],
-			"Relation",
-			failedSections,
+		applicableSectionState = resolveApplicableSectionState(
+			lemmaResult,
+			enrichmentOutput,
+			options,
 		);
-		nounInflectionOutput = unwrapOptional(
-			settled[2],
-			"Inflection",
+		({
+			featuresOutput,
+			morphemOutput,
+			nounInflectionOutput,
+			otherInflectionOutput,
+			relationOutput,
+		} = await generateLegacyApplicableOutputs({
+			applicableSectionState,
+			context,
 			failedSections,
-		);
-		otherInflectionOutput = unwrapOptional(
-			settled[3],
-			"Inflection",
-			failedSections,
-		);
-		featuresOutput = unwrapOptional(
-			settled[4],
-			"Features",
-			failedSections,
-		);
+			lemmaResult,
+			promptRunner,
+		}));
 	}
 
-	const applicableSections = getSectionsFor(
-		buildSectionQuery(lemmaResult, enrichmentOutput),
-	);
-	const onlySections = options.onlySections;
-	const v3Applicable = applicableSections.filter(
-		(sectionKind) =>
-			V3_SECTIONS.has(sectionKind) &&
-			(onlySections ? onlySections.has(sectionKind) : true),
-	);
-	const sectionSet = new Set(v3Applicable);
+	const { sectionSet, v3Applicable } =
+		applicableSectionState ??
+		resolveApplicableSectionState(lemmaResult, enrichmentOutput, options);
 	const shouldRunPropagation = v3Applicable.some((sectionKind) =>
 		shouldPropagateLinksForSection(sectionKind),
 	);

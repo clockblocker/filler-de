@@ -73,6 +73,7 @@ describe("background generate coordinator", () => {
 		const state = createInitialTextfresserState({
 			apiService: {} as ApiService,
 			languages: { known: "English", target: "German" },
+			lexicalGenerationSettings: { generateInflections: true },
 			vam,
 		});
 
@@ -136,6 +137,7 @@ describe("background generate coordinator", () => {
 		const state = createInitialTextfresserState({
 			apiService: {} as ApiService,
 			languages: { known: "English", target: "German" },
+			lexicalGenerationSettings: { generateInflections: true },
 			vam,
 		});
 
@@ -195,6 +197,7 @@ describe("background generate coordinator", () => {
 		const state = createInitialTextfresserState({
 			apiService: {} as ApiService,
 			languages: { known: "English", target: "German" },
+			lexicalGenerationSettings: { generateInflections: true },
 			vam,
 		});
 
@@ -246,6 +249,7 @@ describe("background generate coordinator", () => {
 		const state = createInitialTextfresserState({
 			apiService: {} as ApiService,
 			languages: { known: "English", target: "German" },
+			lexicalGenerationSettings: { generateInflections: true },
 			vam,
 		});
 
@@ -291,6 +295,7 @@ describe("background generate coordinator", () => {
 		const state = createInitialTextfresserState({
 			apiService: {} as ApiService,
 			languages: { known: "English", target: "German" },
+			lexicalGenerationSettings: { generateInflections: true },
 			vam,
 		});
 
@@ -348,6 +353,7 @@ describe("background generate coordinator", () => {
 		const state = createInitialTextfresserState({
 			apiService: {} as ApiService,
 			languages: { known: "English", target: "German" },
+			lexicalGenerationSettings: { generateInflections: true },
 			vam,
 		});
 

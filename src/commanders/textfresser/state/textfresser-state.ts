@@ -1,6 +1,7 @@
 import {
 	createLexicalGenerationModule,
 	type LexicalGenerationError,
+	type LexicalGenerationSettings,
 	LexicalGenerationFailureKind,
 	type LexicalGenerationModule,
 	lexicalGenerationError,
@@ -63,9 +64,10 @@ export type TextfresserState = {
 export function createInitialTextfresserState(params: {
 	apiService: ApiService;
 	languages: LanguagesConfig;
+	lexicalGenerationSettings: LexicalGenerationSettings;
 	vam: VaultActionManager;
 }): TextfresserState {
-	const { apiService, languages, vam } = params;
+	const { apiService, languages, lexicalGenerationSettings, vam } = params;
 	const fetchStructured: StructuredFetchFn = async ({
 		requestLabel,
 		schema,
@@ -93,7 +95,7 @@ export function createInitialTextfresserState(params: {
 	const lexicalGenerationResult = createLexicalGenerationModule({
 		fetchStructured,
 		knownLang: languages.known,
-		settings: { generateInflections: true },
+		settings: lexicalGenerationSettings,
 		targetLang: languages.target,
 	});
 

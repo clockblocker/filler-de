@@ -83,12 +83,14 @@ export type TextEaterSettings = {
 	generatePlacement: SelectionActionPlacement;
 	navButtonsPosition: "left" | "right";
 	languages: LanguagesConfig;
+	generateInflections: boolean;
 };
 
 export const DEFAULT_SETTINGS: TextEaterSettings = {
 	apiProvider: "google",
 	explainGrammarPlacement: "AboveSelection",
 	generatePlacement: "Bottom",
+	generateInflections: true,
 	googleApiKey: "",
 	hideMetadata: true,
 	languages: { known: "Russian", target: "German" },
