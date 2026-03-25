@@ -1,7 +1,13 @@
-import { ResultAsync } from "neverthrow";
+import { err, ok, type Result } from "neverthrow";
+import type {
+	CandidateSense,
+	ResolvedLemma,
+	SenseDisambiguator,
+} from "../../../../../lexical-generation";
 import type { PhrasemeKind } from "../../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
 import type { DeEntity } from "../../../../../linguistics/de";
 import type { DeLexemPos } from "../../../../../linguistics/de/lemma";
+import type { GermanGenus } from "../../../../../linguistics/de/lexem/noun/features";
 import {
 	readContentErrorToReason,
 	type VaultActionManager,
@@ -111,32 +117,33 @@ function extractSenseGlossFromTranslationSection(entry: {
  * - { matchedIndex } if an existing sense matches
  * - null if this is a new sense or first encounter
  */
-export function disambiguateSense(
+export async function disambiguateSense(
 	vam: VaultActionManager,
 	promptRunner: PromptRunner,
 	apiResult: LemmaApiResult,
 	context: string,
 	preferredPath?: SplitPathToMdFile,
-): ResultAsync<DisambiguationResult, CommandError> {
-	const readExistingNote = (
+	options?: {
+		disambiguateWith?: SenseDisambiguator;
+	},
+): Promise<Result<DisambiguationResult, CommandError>> {
+	const readExistingNote = async (
 		filePath: SplitPathToMdFile,
-	): ResultAsync<string, CommandError> =>
-		ResultAsync.fromPromise(
-			vam.readContent(filePath).then((r) => {
-				if (r.isErr()) {
-					throw new Error(readContentErrorToReason(r.error));
-				}
-				return r.value;
-			}),
-			(e): CommandError => ({
+	): Promise<Result<string, CommandError>> => {
+		const readResult = await vam.readContent(filePath);
+		if (readResult.isErr()) {
+			return err({
 				kind: CommandErrorKind.ApiError,
-				reason: e instanceof Error ? e.message : String(e),
-			}),
-		);
+				reason: readContentErrorToReason(readResult.error),
+			});
+		}
 
-	const runWithContent = (
+		return ok(readResult.value);
+	};
+
+	const runWithContent = async (
 		content: string,
-	): ResultAsync<DisambiguationResult, CommandError> => {
+	): Promise<Result<DisambiguationResult, CommandError>> => {
 		const existingEntries = dictNoteHelper.parse(content);
 
 		// Match by unitKind + POS, ignoring surfaceKind so that
@@ -169,9 +176,7 @@ export function disambiguateSense(
 
 		if (matchingEntries.length === 0) {
 			logger.info("[disambiguate] No matching entries — new entry");
-			return ResultAsync.fromSafePromise(
-				Promise.resolve(null as DisambiguationResult),
-			);
+			return ok(null as DisambiguationResult);
 		}
 
 		// Build senses from matching entries
@@ -216,9 +221,74 @@ export function disambiguateSense(
 			logger.info(
 				"[disambiguate] All entries failed to parse — new entry",
 			);
-			return ResultAsync.fromSafePromise(
-				Promise.resolve(null as DisambiguationResult),
+			return ok(null as DisambiguationResult);
+		}
+
+		if (options?.disambiguateWith) {
+			const lemmaForDisambiguator: ResolvedLemma =
+				apiResult.linguisticUnit === "Lexem"
+					? {
+							contextWithLinkedParts: undefined,
+							lemma: apiResult.lemma,
+							linguisticUnit: "Lexem",
+							posLikeKind: apiResult.pos,
+							surfaceKind:
+								apiResult.surfaceKind as ResolvedLemma["surfaceKind"],
+						}
+					: {
+							contextWithLinkedParts: undefined,
+							lemma: apiResult.lemma,
+							linguisticUnit: "Phrasem",
+							posLikeKind: apiResult.phrasemeKind,
+							surfaceKind:
+								apiResult.surfaceKind as ResolvedLemma["surfaceKind"],
+						};
+			const candidateSenses = senses.map((sense): CandidateSense => {
+				if (sense.unitKind === "Lexem") {
+					return {
+						emojiDescription: sense.emojiDescription ?? undefined,
+						genus: sense.genus as GermanGenus | undefined,
+						id: String(sense.index),
+						ipa: sense.ipa,
+						linguisticUnit: "Lexem",
+						posLikeKind: sense.pos as DeLexemPos,
+						senseGloss: sense.senseGloss,
+					};
+				}
+
+				return {
+					emojiDescription: sense.emojiDescription ?? undefined,
+					id: String(sense.index),
+					ipa: sense.ipa,
+					linguisticUnit: "Phrasem",
+					posLikeKind: (sense.phrasemeKind ??
+						apiResult.phrasemeKind) as PhrasemeKind,
+					senseGloss: sense.senseGloss,
+				};
+			});
+			const moduleResult = await options.disambiguateWith(
+				lemmaForDisambiguator,
+				context,
+				candidateSenses,
 			);
+			if (moduleResult.isErr()) {
+				return err({
+					kind: CommandErrorKind.ApiError,
+					reason: moduleResult.error.message,
+				});
+			}
+
+			if (moduleResult.value.kind === "matched") {
+				return ok({
+					matchedIndex: Number(moduleResult.value.senseId),
+				});
+			}
+
+			return ok({
+				matchedIndex: null,
+				precomputedEmojiDescription:
+					moduleResult.value.precomputedEmojiDescription,
+			});
 		}
 
 		// Hard cutover: if all matches are missing emojiDescription,
@@ -231,17 +301,16 @@ export function disambiguateSense(
 			logger.info(
 				"[disambiguate] Missing emojiDescription on all senses; treating as new sense",
 			);
-			return ResultAsync.fromSafePromise(
-				Promise.resolve({
-					matchedIndex: null,
-				} as DisambiguationResult),
-			);
+			return ok({
+				matchedIndex: null,
+			} as DisambiguationResult);
 		}
 
 		// Call Disambiguate prompt
 		logger.info("[disambiguate] Calling Disambiguate prompt");
-		return promptRunner
-			.generate(PromptKind.Disambiguate, {
+		const promptResult = await promptRunner.generate(
+			PromptKind.Disambiguate,
+			{
 				context,
 				lemma: apiResult.lemma,
 				senses: sensesWithEmoji.map((s) => ({
@@ -254,41 +323,40 @@ export function disambiguateSense(
 					senseGloss: s.senseGloss,
 					unitKind: s.unitKind,
 				})),
-			})
-			.mapErr(
-				(e): CommandError => ({
-					kind: CommandErrorKind.ApiError,
-					reason: e.reason,
-				}),
-			)
-			.map(
-				(output: AgentOutput<"Disambiguate">): DisambiguationResult => {
-					logger.info(
-						`[disambiguate] Prompt returned matchedIndex=${output.matchedIndex}`,
-					);
-					if (output.matchedIndex === null) {
-						return {
-							matchedIndex: null,
-							precomputedEmojiDescription:
-								output.emojiDescription ?? undefined,
-						};
-					}
+			},
+		);
+		if (promptResult.isErr()) {
+			return err({
+				kind: CommandErrorKind.ApiError,
+				reason: promptResult.error.reason,
+			});
+		}
 
-					const validIndices = sensesWithEmoji.map((s) => s.index);
-					if (!validIndices.includes(output.matchedIndex)) {
-						logger.warn(
-							`[disambiguate] matchedIndex ${output.matchedIndex} not in valid indices ${JSON.stringify(validIndices)} — treating as new sense`,
-						);
-						return {
-							matchedIndex: null,
-							precomputedEmojiDescription:
-								output.emojiDescription ?? undefined,
-						};
-					}
+		const output = promptResult.value as AgentOutput<"Disambiguate">;
+		logger.info(
+			`[disambiguate] Prompt returned matchedIndex=${output.matchedIndex}`,
+		);
+		if (output.matchedIndex === null) {
+			return ok({
+				matchedIndex: null,
+				precomputedEmojiDescription:
+					output.emojiDescription ?? undefined,
+			});
+		}
 
-					return { matchedIndex: output.matchedIndex };
-				},
+		const validIndices = sensesWithEmoji.map((s) => s.index);
+		if (!validIndices.includes(output.matchedIndex)) {
+			logger.warn(
+				`[disambiguate] matchedIndex ${output.matchedIndex} not in valid indices ${JSON.stringify(validIndices)} — treating as new sense`,
 			);
+			return ok({
+				matchedIndex: null,
+				precomputedEmojiDescription:
+					output.emojiDescription ?? undefined,
+			});
+		}
+
+		return ok({ matchedIndex: output.matchedIndex });
 	};
 
 	const files = vam.findByBasename(apiResult.lemma);
@@ -297,34 +365,41 @@ export function disambiguateSense(
 	);
 
 	if (preferredPath) {
-		return readExistingNote(preferredPath)
-			.andThen(runWithContent)
-			.orElse(() => {
-				logger.info(
-					"[disambiguate] Preferred path could not be read, falling back to basename search",
-					{
-						lemma: apiResult.lemma,
-						preferredPath,
-					},
-				);
-				const fallbackPath = files[0];
-				if (!fallbackPath) {
-					logger.info(
-						"[disambiguate] First encounter — no existing note",
-					);
-					return ResultAsync.fromSafePromise(
-						Promise.resolve(null as DisambiguationResult),
-					);
-				}
-				return readExistingNote(fallbackPath).andThen(runWithContent);
-			});
+		const preferredContent = await readExistingNote(preferredPath);
+		if (preferredContent.isOk()) {
+			return runWithContent(preferredContent.value);
+		}
+
+		logger.info(
+			"[disambiguate] Preferred path could not be read, falling back to basename search",
+			{
+				lemma: apiResult.lemma,
+				preferredPath,
+			},
+		);
+		const fallbackPath = files[0];
+		if (!fallbackPath) {
+			logger.info("[disambiguate] First encounter — no existing note");
+			return ok(null as DisambiguationResult);
+		}
+
+		const fallbackContent = await readExistingNote(fallbackPath);
+		if (fallbackContent.isErr()) {
+			return fallbackContent;
+		}
+		return runWithContent(fallbackContent.value);
 	}
 
 	const filePath = files[0];
 	if (!filePath) {
 		logger.info("[disambiguate] First encounter — no existing note");
-		return ResultAsync.fromSafePromise(Promise.resolve(null));
+		return ok(null);
 	}
 
-	return readExistingNote(filePath).andThen(runWithContent);
+	const content = await readExistingNote(filePath);
+	if (content.isErr()) {
+		return content;
+	}
+
+	return runWithContent(content.value);
 }

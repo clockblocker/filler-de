@@ -1,3 +1,11 @@
+import {
+	createLexicalGenerationModule,
+	type LexicalGenerationError,
+	LexicalGenerationFailureKind,
+	type LexicalGenerationModule,
+	lexicalGenerationError,
+	type StructuredFetchFn,
+} from "../../../lexical-generation";
 import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { ApiService } from "../../../stateless-helpers/api-service";
@@ -39,6 +47,8 @@ export type TextfresserState = {
 	latestLemmaPlaceholderPath?: SplitPathToMdFile;
 	latestLemmaInvocationCache: LemmaInvocationCache | null;
 	latestFailedSections: string[];
+	lexicalGeneration?: LexicalGenerationModule | null;
+	lexicalGenerationInitError?: LexicalGenerationError;
 	targetBlockId?: string;
 	inFlightGenerate: InFlightGenerate | null;
 	pendingGenerate: PendingGenerate | null;
@@ -56,6 +66,36 @@ export function createInitialTextfresserState(params: {
 	vam: VaultActionManager;
 }): TextfresserState {
 	const { apiService, languages, vam } = params;
+	const fetchStructured: StructuredFetchFn = async ({
+		requestLabel,
+		schema,
+		systemPrompt,
+		userInput,
+		withCache = true,
+	}) => {
+		const result = await apiService.generate({
+			requestLabel,
+			// biome-ignore lint/suspicious/noExplicitAny: cross-zod transport boundary
+			schema: schema as any,
+			systemPrompt,
+			userInput,
+			withCache,
+		});
+
+		return result.mapErr((error) =>
+			lexicalGenerationError(
+				LexicalGenerationFailureKind.FetchFailed,
+				error.reason,
+				{ requestLabel },
+			),
+		);
+	};
+	const lexicalGenerationResult = createLexicalGenerationModule({
+		fetchStructured,
+		knownLang: languages.known,
+		settings: { generateInflections: true },
+		targetLang: languages.target,
+	});
 
 	return {
 		attestationForLatestNavigated: null,
@@ -66,6 +106,12 @@ export function createInitialTextfresserState(params: {
 		latestLemmaInvocationCache: null,
 		latestLemmaResult: null,
 		latestLemmaTargetOwnedByInvocation: false,
+		lexicalGeneration: lexicalGenerationResult.isOk()
+			? lexicalGenerationResult.value
+			: null,
+		lexicalGenerationInitError: lexicalGenerationResult.isErr()
+			? lexicalGenerationResult.error
+			: undefined,
 		lookupInLibrary: () => [],
 		parseLibraryBasename: () => null,
 		pendingGenerate: null,

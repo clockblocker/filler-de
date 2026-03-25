@@ -9,7 +9,6 @@ import type {
 	VaultActionManager,
 } from "../../../../managers/obsidian/vault-action-manager";
 import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager";
-import { PromptKind } from "../../../../prompt-smith/codegen/consts";
 import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import { logger } from "../../../../utils/logger";
 import {
@@ -30,10 +29,6 @@ import {
 import { CommandErrorKind } from "../../errors";
 import type { TextfresserState } from "../../state/textfresser-state";
 import { dispatchActions } from "../shared/dispatch-actions";
-import {
-	chooseBestEffortLemmaOutput,
-	evaluateLemmaOutputGuardrails,
-} from "./lemma-output-guardrails";
 import {
 	buildLemmaRewritePlan,
 	buildUpdatedBlock,
@@ -131,79 +126,45 @@ export async function runLemmaTwoPhase(params: {
 	}
 
 	const context = attestation.source.textWithOnlyTargetMarked;
-	const lemmaPromptResult = await state.promptRunner.generate(
-		PromptKind.Lemma,
-		{ context, surface },
-	);
-	if (lemmaPromptResult.isErr()) {
-		return err({
-			kind: CommandErrorKind.ApiError,
-			reason: lemmaPromptResult.error.reason,
-		});
-	}
-	const firstGuardrailEvaluation = evaluateLemmaOutputGuardrails({
-		context,
-		output: lemmaPromptResult.value,
-		surface,
-	});
-	let selectedGuardrailEvaluation = firstGuardrailEvaluation;
-
-	if (firstGuardrailEvaluation.coreIssues.length > 0) {
-		logger.warn(
-			"[Textfresser.Lemma] Guardrail rejected first lemma output; retrying once",
-			{
-				coreIssues: firstGuardrailEvaluation.coreIssues,
-				firstOutput: firstGuardrailEvaluation.output,
-				surface,
-			},
-		);
-		const retryPromptResult = await state.promptRunner.generate(
-			PromptKind.Lemma,
-			{ context, surface },
-		);
-		if (retryPromptResult.isErr()) {
-			return err({
-				kind: CommandErrorKind.ApiError,
-				reason: retryPromptResult.error.reason,
-			});
-		}
-
-		const secondGuardrailEvaluation = evaluateLemmaOutputGuardrails({
+	const lexicalGeneration = state.lexicalGeneration;
+	let lemmaPromptOutput: Result<
+		{
+			contextWithLinkedParts?: string;
+			lemma: string;
+			linguisticUnit: "Lexem" | "Phrasem";
+			posLikeKind: string;
+			surfaceKind: "Lemma" | "Inflected" | "Variant";
+		},
+		CommandError
+	>;
+	if (lexicalGeneration) {
+		const result = await lexicalGeneration.buildLemmaGenerator()(
+			surface,
 			context,
-			output: retryPromptResult.value,
+		);
+		lemmaPromptOutput = result.isErr()
+			? err({
+					kind: CommandErrorKind.ApiError,
+					reason: result.error.message,
+				})
+			: ok(result.value);
+	} else {
+		const result = await state.promptRunner.generate("Lemma", {
+			context,
 			surface,
 		});
-		selectedGuardrailEvaluation = chooseBestEffortLemmaOutput({
-			first: firstGuardrailEvaluation,
-			second: secondGuardrailEvaluation,
-		});
-
-		if (secondGuardrailEvaluation.coreIssues.length > 0) {
-			logger.warn(
-				"[Textfresser.Lemma] Guardrail retry exhausted; continuing with best-effort output",
-				{
-					firstCoreIssues: firstGuardrailEvaluation.coreIssues,
-					firstOutput: firstGuardrailEvaluation.output,
-					secondCoreIssues: secondGuardrailEvaluation.coreIssues,
-					secondOutput: secondGuardrailEvaluation.output,
-					selectedOutput: selectedGuardrailEvaluation.output,
-					surface,
-				},
-			);
-		}
+		lemmaPromptOutput = result.isErr()
+			? err({
+					kind: CommandErrorKind.ApiError,
+					reason: result.error.reason,
+				})
+			: ok(result.value);
 	}
-
-	if (selectedGuardrailEvaluation.droppedContextWithLinkedParts) {
-		logger.warn(
-			"[Textfresser.Lemma] Dropping unsafe contextWithLinkedParts due stripped-text mismatch",
-			{
-				output: selectedGuardrailEvaluation.output,
-				surface,
-			},
-		);
+	if (lemmaPromptOutput.isErr()) {
+		return err(lemmaPromptOutput.error);
 	}
-	const lemmaPromptOutput = selectedGuardrailEvaluation.output;
-	const resolvedPosLikeKind = resolvePosLikeKind(lemmaPromptOutput);
+	const resolvedLemma = lemmaPromptOutput.value;
+	const resolvedPosLikeKind = resolvePosLikeKind(resolvedLemma);
 	if (!resolvedPosLikeKind) {
 		return err({
 			kind: CommandErrorKind.ApiError,
@@ -213,14 +174,14 @@ export async function runLemmaTwoPhase(params: {
 
 	const finalTarget = computeFinalTarget({
 		findByBasename: (basename) => vam.findByBasename(basename),
-		lemma: lemmaPromptOutput.lemma,
-		linguisticUnit: lemmaPromptOutput.linguisticUnit,
+		lemma: resolvedLemma.lemma,
+		linguisticUnit: resolvedLemma.linguisticUnit,
 		lookupInLibrary: state.lookupInLibrary,
 		posLikeKind:
 			resolvedPosLikeKind.linguisticUnit === "Lexem"
 				? resolvedPosLikeKind.posLikeKind
 				: null,
-		surfaceKind: lemmaPromptOutput.surfaceKind,
+		surfaceKind: resolvedLemma.surfaceKind,
 		targetLanguage: state.languages.target,
 	});
 
@@ -230,26 +191,38 @@ export async function runLemmaTwoPhase(params: {
 			vam,
 			state.promptRunner,
 			{
-				lemma: lemmaPromptOutput.lemma,
+				lemma: resolvedLemma.lemma,
 				linguisticUnit: "Lexem",
 				pos: resolvedPosLikeKind.posLikeKind,
-				surfaceKind: lemmaPromptOutput.surfaceKind,
+				surfaceKind: resolvedLemma.surfaceKind,
 			},
 			context,
 			finalTarget.splitPath,
+			lexicalGeneration
+				? {
+						disambiguateWith:
+							lexicalGeneration.buildSenseDisambiguator(),
+					}
+				: undefined,
 		);
 	} else {
 		disambiguation = await disambiguateSense(
 			vam,
 			state.promptRunner,
 			{
-				lemma: lemmaPromptOutput.lemma,
+				lemma: resolvedLemma.lemma,
 				linguisticUnit: "Phrasem",
 				phrasemeKind: resolvedPosLikeKind.posLikeKind,
-				surfaceKind: lemmaPromptOutput.surfaceKind,
+				surfaceKind: resolvedLemma.surfaceKind,
 			},
 			context,
 			finalTarget.splitPath,
+			lexicalGeneration
+				? {
+						disambiguateWith:
+							lexicalGeneration.buildSenseDisambiguator(),
+					}
+				: undefined,
 		);
 	}
 	if (disambiguation.isErr()) {
@@ -271,7 +244,7 @@ export async function runLemmaTwoPhase(params: {
 	const rewritePlan = buildLemmaRewritePlan({
 		attestation,
 		contextWithLinkedParts:
-			lemmaPromptOutput.contextWithLinkedParts ?? undefined,
+			resolvedLemma.contextWithLinkedParts ?? undefined,
 		linkTarget: finalTarget.linkTarget,
 	});
 
@@ -368,28 +341,28 @@ export async function runLemmaTwoPhase(params: {
 
 	syncAttestationAfterSemanticResolution({
 		attestation,
-		lemma: lemmaPromptOutput.lemma,
+		lemma: resolvedLemma.lemma,
 		rewritePlan,
 	});
 	if (resolvedPosLikeKind.linguisticUnit === "Lexem") {
 		state.latestLemmaResult = {
 			attestation,
 			disambiguationResult: normalizedDisambiguation,
-			lemma: lemmaPromptOutput.lemma,
+			lemma: resolvedLemma.lemma,
 			linguisticUnit: "Lexem",
 			posLikeKind: resolvedPosLikeKind.posLikeKind,
 			precomputedEmojiDescription,
-			surfaceKind: lemmaPromptOutput.surfaceKind,
+			surfaceKind: resolvedLemma.surfaceKind,
 		};
 	} else {
 		state.latestLemmaResult = {
 			attestation,
 			disambiguationResult: normalizedDisambiguation,
-			lemma: lemmaPromptOutput.lemma,
+			lemma: resolvedLemma.lemma,
 			linguisticUnit: "Phrasem",
 			posLikeKind: resolvedPosLikeKind.posLikeKind,
 			precomputedEmojiDescription,
-			surfaceKind: lemmaPromptOutput.surfaceKind,
+			surfaceKind: resolvedLemma.surfaceKind,
 		};
 	}
 	state.latestResolvedLemmaTargetPath = finalTarget.splitPath;
