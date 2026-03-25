@@ -170,3 +170,7 @@ Source: ideas extracted from open PRs #6, #7, #13, #15, #16, #17, #22 in clockbl
 #### 19) Textfresser wikilink resolution (spec-driven)
 - Detailed design is maintained in `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/documentaion/specs/textfresser-wikilink-resolution-spec.md`.
 - Keep BOW at pointer level only; implementation decisions and edge-case policy live in the spec.
+
+#### 20) Lexical generation module extraction
+- Executor plan is maintained in `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/documentaion/book-of-work/lexical-generation-module-plan.md`.
+- Scope: extract lemma generation, sense disambiguation, and lexical info generation into a self-contained library-style module.
