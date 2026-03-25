@@ -7,6 +7,37 @@ function toOpenAiZodSchema(schema: unknown): Parameters<typeof zodResponseFormat
 	return schema as Parameters<typeof zodResponseFormat>[0];
 }
 
+function hasDirectSelfRefInDefinitions(schema: unknown): boolean {
+	if (!schema || typeof schema !== "object") {
+		return false;
+	}
+
+	const definitions = (schema as { definitions?: Record<string, unknown> }).definitions;
+	if (!definitions || typeof definitions !== "object") {
+		return false;
+	}
+
+	const containsSelfRef = (value: unknown, ref: string): boolean => {
+		if (!value || typeof value !== "object") {
+			return false;
+		}
+		if (
+			"$ref" in value &&
+			(value as { $ref?: unknown }).$ref === ref
+		) {
+			return true;
+		}
+		if (Array.isArray(value)) {
+			return value.some((item) => containsSelfRef(item, ref));
+		}
+		return Object.values(value).some((item) => containsSelfRef(item, ref));
+	};
+
+	return Object.entries(definitions).some(([name, value]) =>
+		containsSelfRef(value, `#/definitions/${name}`),
+	);
+}
+
 describe("Prompt-smith agent output schemas", () => {
 	it("are compatible with strict zodResponseFormat conversion", () => {
 		const failures: string[] = [];
@@ -21,6 +52,23 @@ describe("Prompt-smith agent output schemas", () => {
 				const message =
 					error instanceof Error ? error.message : String(error);
 				failures.push(`${kind}: ${message}`);
+			}
+		}
+
+		expect(failures).toEqual([]);
+	});
+
+	it("do not emit direct self-referential JSON schema definitions", () => {
+		const failures: string[] = [];
+
+		for (const [kind, schemas] of Object.entries(SchemasFor)) {
+			const responseFormat = zodResponseFormat(
+				toOpenAiZodSchema(schemas.agentOutputSchema),
+				"data",
+			);
+
+			if (hasDirectSelfRefInDefinitions(responseFormat.json_schema.schema)) {
+				failures.push(kind);
 			}
 		}
 
