@@ -12,6 +12,8 @@ import type { TextEaterSettings } from "../types";
 import { getErrorMessage } from "../utils/get-error-message";
 import { withRetry } from "./retry";
 
+const REQUEST_LABEL_HEADER = "x-textfresser-request-label";
+
 function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
 	if (!initHeaders) {
 		return {};
@@ -32,6 +34,22 @@ function normalizeHeaders(initHeaders?: HeadersInit): Record<string, string> {
 		Object.assign(out, initHeaders);
 	}
 	return out;
+}
+
+function takeHeader(
+	headers: Record<string, string>,
+	headerName: string,
+): string | undefined {
+	const match = Object.keys(headers).find(
+		(key) => key.toLowerCase() === headerName.toLowerCase(),
+	);
+	if (!match) {
+		return undefined;
+	}
+
+	const value = headers[match];
+	delete headers[match];
+	return value;
 }
 
 // 7 days
@@ -56,8 +74,14 @@ function isRetryableApiError(error: unknown): boolean {
 	return false;
 }
 
-function toApiServiceError(error: unknown): ApiServiceError {
-	return { reason: getErrorMessage(error) };
+function toApiServiceError(
+	error: unknown,
+	requestLabel?: string,
+): ApiServiceError {
+	const reason = getErrorMessage(error);
+	return {
+		reason: requestLabel ? `[prompt:${requestLabel}] ${reason}` : reason,
+	};
 }
 
 export class ApiService {
@@ -82,6 +106,7 @@ export class ApiService {
 					typeof input === "string" ? input : (input as any).url;
 
 				const headers = normalizeHeaders(init?.headers);
+				const requestLabel = takeHeader(headers, REQUEST_LABEL_HEADER);
 
 				// Ensure Authorization header is there for Google Gemini
 				if (!headers.authorization) {
@@ -101,7 +126,9 @@ export class ApiService {
 				}).then((r) => {
 					if (r.status >= 400) {
 						logError({
-							description: `fetchViaObsidian error: ${r.status} - ${r.text}`,
+							description: `fetchViaObsidian error${
+								requestLabel ? ` [prompt:${requestLabel}]` : ""
+							}: ${r.status} - ${r.text}`,
 							location: "ApiService",
 						});
 					}
@@ -223,11 +250,13 @@ export class ApiService {
 	}
 
 	generate<T extends z.ZodTypeAny>({
+		requestLabel,
 		systemPrompt,
 		userInput,
 		schema,
 		withCache = true,
 	}: {
+		requestLabel?: string;
 		systemPrompt: string;
 		userInput: string;
 		schema: T;
@@ -248,22 +277,24 @@ export class ApiService {
 			? this.ensureCachedContentIdForSystemPrompt(cleanedPrompt)
 			: Promise.resolve(null);
 
-		return ResultAsync.fromPromise(cachePromise, toApiServiceError).andThen(
-			(cachedId) => {
-				const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] =
-					[];
-				if (!cachedId) {
-					messages.push({
-						content: cleanedPrompt,
-						role: "system",
-					});
-				}
-				messages.push({ content: userInput, role: "user" });
+		return ResultAsync.fromPromise(cachePromise, (error) =>
+			toApiServiceError(error, requestLabel),
+		).andThen((cachedId) => {
+			const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] =
+				[];
+			if (!cachedId) {
+				messages.push({
+					content: cleanedPrompt,
+					role: "system",
+				});
+			}
+			messages.push({ content: userInput, role: "user" });
 
-				return withRetry(
-					async () => {
-						const completion = await this.withTimeout(
-							client.chat.completions.parse({
+			return withRetry(
+				async () => {
+					const completion = await this.withTimeout(
+						client.chat.completions.parse(
+							{
 								messages,
 								model,
 								// Type assertion needed due to Zod version mismatch between our deps and OpenAI SDK
@@ -284,26 +315,37 @@ export class ApiService {
 											},
 										}
 									: {}),
-							}),
-							GENERATE_TIMEOUT_MS,
-						);
+							},
+							requestLabel
+								? {
+										headers: {
+											[REQUEST_LABEL_HEADER]:
+												requestLabel,
+										},
+									}
+								: undefined,
+						),
+						GENERATE_TIMEOUT_MS,
+					);
 
-						const parsed = completion.choices?.[0]?.message?.parsed;
+					const parsed = completion.choices?.[0]?.message?.parsed;
 
-						if (parsed) return parsed;
+					if (parsed) return parsed;
 
-						throw new Error(
-							formatError({
-								description:
-									"Failed to parse response: parsed is undefined",
-								location: "ApiService",
-							}),
-						);
-					},
-					isRetryableApiError,
-					toApiServiceError,
-				);
-			},
-		);
+					throw new Error(
+						formatError({
+							description: `Failed to parse response${
+								requestLabel
+									? ` for prompt ${requestLabel}`
+									: ""
+							}: parsed is undefined`,
+							location: "ApiService",
+						}),
+					);
+				},
+				isRetryableApiError,
+				(error) => toApiServiceError(error, requestLabel),
+			);
+		});
 	}
 }

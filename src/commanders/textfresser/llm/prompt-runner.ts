@@ -33,6 +33,7 @@ export class PromptRunner {
 		// The runtime types are compatible but TS can't verify across Zod versions
 		return this.apiService
 			.generate({
+				requestLabel: kind,
 				// biome-ignore lint/suspicious/noExplicitAny: Zod v3/v4 type mismatch
 				schema: schema as any,
 				systemPrompt,
