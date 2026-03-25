@@ -2,16 +2,16 @@ export {
 	expectExactCodexes,
 	expectExactFiles,
 	expectExactGoneFiles,
-	expectFolderSnapshot,
 	expectFastHealing,
+	expectFolderSnapshot,
 	type FastExpectations,
 } from "./assertions";
 export {
 	ensureVaultOpenFast,
+	type FastWaitLevel,
 	prepareFastSuite,
 	reloadPluginFast,
 	waitFor,
-	type FastWaitLevel,
 } from "./runtime";
 export {
 	createExactBinaryFile,
