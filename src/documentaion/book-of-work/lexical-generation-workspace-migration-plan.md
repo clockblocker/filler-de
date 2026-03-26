@@ -10,6 +10,7 @@ The end state is:
 - `textfresser` does not import language-specific linguistic contracts for lexical generation work
 - `textfresser` does not reconstruct lexical truth from stored metadata
 - lexical parsing, lexical tagging, and target-language-specific semantics stay hidden inside `lexical-generation`
+- `src/linguistics/` no longer exists as a separate long-term boundary
 
 ## Locked Decisions
 
@@ -19,6 +20,10 @@ The end state is:
 - `textfresser` owns rendering, propagation, note mutations, and Obsidian orchestration
 - `lexical-generation` owns lemma generation, sense disambiguation, lexical info generation, and lexical metadata semantics
 - a larger internal lexical monolith is acceptable for now if it is hidden from `textfresser`
+- `src/linguistics/` is transitional and should be dissolved rather than preserved as a parallel lexical boundary
+- target-language-specific logic currently living under `src/linguistics/` should move into `lexical-generation`
+- only language-independent lexical enums and types should remain available for `textfresser`
+- those language-independent lexical primitives should be exported from the new boundary rather than imported from `src/linguistics/*`
 
 ### Public contract direction
 
@@ -171,10 +176,13 @@ Exit condition:
 - classify remaining imports into:
   - true app policy
   - still-unwanted lexical leakage
+- move all target-language-specific `src/linguistics/*` code behind the `lexical-generation` boundary
+- leave only language-independent lexical primitives available to `textfresser`
 
 Exit condition:
 
 - lexical-generation-related linguistic imports are gone from `textfresser`
+- `src/linguistics/` is no longer acting as a separately consumed boundary for lexical features
 
 ### Phase 7. Tighten the generator public surface
 
@@ -229,3 +237,5 @@ The migration is done when:
 - disambiguation consumes stored `LexicalMeta[]`
 - lexical-generation-related `linguistics/*` imports are gone from `textfresser`
 - the generator public surface is small enough to treat as a workspace boundary
+- target-language-specific code from `src/linguistics/` has been moved under `lexical-generation`
+- only language-independent lexical primitives remain public to `textfresser`
