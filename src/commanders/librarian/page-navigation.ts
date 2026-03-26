@@ -3,6 +3,7 @@ import {
 	type SplitPathToMdFile,
 } from "../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Codecs } from "./codecs";
+import type { SectionNodeSegmentId } from "./codecs/segment-id/types/segment-id";
 import { sortTreeNodesForDisplay } from "./display-name-sort";
 import type { Healer } from "./healer/healer";
 import { isCodexSplitPath } from "./healer/library-tree/codex/helpers";
@@ -166,7 +167,7 @@ function findSectionByPathParts(
 	codecs: Codecs,
 	pathParts: string[],
 ): SectionNode | undefined {
-	const chain: string[] = [];
+	const chain: SectionNodeSegmentId[] = [];
 
 	for (const part of pathParts) {
 		const segmentIdResult = codecs.segmentId.serializeSegmentIdUnchecked({
@@ -176,7 +177,7 @@ function findSectionByPathParts(
 		if (segmentIdResult.isErr()) {
 			return undefined;
 		}
-		chain.push(segmentIdResult.value);
+		chain.push(segmentIdResult.value as SectionNodeSegmentId);
 	}
 
 	return healer.findSection(chain);
@@ -186,9 +187,14 @@ function buildCodexPath(
 	pathParts: string[],
 	codecs: Codecs,
 ): SplitPathToMdFile | null {
+	const [rootSection] = pathParts;
+	if (!rootSection) {
+		return null;
+	}
+
 	const suffixParts =
 		pathParts.length === 1
-			? [pathParts[0]]
+			? [rootSection]
 			: codecs.suffix.pathPartsToSuffixParts(pathParts.slice(1));
 	const basenameResult = codecs.suffix.serializeSeparatedSuffixUnchecked({
 		coreName: "__",

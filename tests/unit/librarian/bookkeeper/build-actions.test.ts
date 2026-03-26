@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { z } from "zod/v3";
+import { z } from "zod";
 import {
 	buildPageSplitActions,
 } from "../../../../src/commanders/librarian/bookkeeper/build-actions";
@@ -57,6 +57,9 @@ describe("buildPageSplitActions", () => {
 		const firstAction = split.actions[0];
 		if (!firstAction || firstAction.kind !== "UpsertMdFile") {
 			throw new Error("Expected first action to upsert first page");
+		}
+		if (typeof firstAction.payload.content !== "string") {
+			throw new Error("Expected split page content to be materialized");
 		}
 
 		const metadata = noteMetadataHelper.read(

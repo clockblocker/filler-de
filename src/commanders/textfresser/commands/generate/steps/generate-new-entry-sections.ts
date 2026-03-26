@@ -1,11 +1,5 @@
-import type {
-	LexicalInfo,
-	ResolvedLemma,
-} from "../../../../../lexical-generation";
-import type {
-	GermanGenus,
-	NounInflectionCell,
-} from "../../../../../linguistics/de/lexem/noun";
+import type { LexicalInfo } from "../../../../../lexical-generation";
+import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
@@ -16,7 +10,6 @@ import type { EntrySection } from "../../../domain/dict-note/types";
 import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
 import { getSectionsFor } from "../../../targets/de/sections/section-config";
 import { DictSectionKind } from "../../../targets/de/sections/section-kind";
-import type { LemmaResult } from "../../lemma/types";
 import { dispatchHeaderFormatter } from "../section-formatters/header-dispatch";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 import {
@@ -26,9 +19,9 @@ import {
 } from "./section-generation-context";
 import { unwrapResultAsync } from "./section-generation-results";
 import type {
+	GeneratedSectionArtifacts,
 	MorphologyPayload,
 	ParsedRelation,
-	WordTranslationOutput,
 } from "./section-generation-types";
 import {
 	generateAttestationSection,
@@ -40,20 +33,12 @@ import {
 	generateTranslationSection,
 } from "./section-generators";
 
-type PromptRunner = ResolvedEntryState["textfresserState"]["promptRunner"];
-
-export type GeneratedEntrySectionsData = {
+export type GeneratedEntrySectionsData = GeneratedSectionArtifacts & {
 	entryId: string;
 	failedSections: string[];
 	headerContent: string;
-	inflectionCells: NounInflectionCell[];
 	lexicalInfo: LexicalInfo;
-	morphology?: MorphologyPayload;
-	morphemes: MorphemeItem[];
-	nounInflectionGenus?: GermanGenus;
-	relations: ParsedRelation[];
 	sections: EntrySection[];
-	sourceTranslation?: string;
 };
 
 type GenerateNewEntrySectionsOptions = {
@@ -87,27 +72,12 @@ function collectLexicalInfoFailures(
 	}
 }
 
-function toResolvedLemma(lemmaResult: LemmaResult): ResolvedLemma {
-	if (lemmaResult.linguisticUnit === "Lexem") {
-		return {
-			contextWithLinkedParts: undefined,
-			lemma: lemmaResult.lemma,
-			linguisticUnit: "Lexem",
-			posLikeKind: lemmaResult.posLikeKind,
-			surfaceKind: lemmaResult.surfaceKind,
-		};
-	}
-
-	return {
-		contextWithLinkedParts: undefined,
-		lemma: lemmaResult.lemma,
-		linguisticUnit: "Phrasem",
-		posLikeKind: lemmaResult.posLikeKind,
-		surfaceKind: lemmaResult.surfaceKind,
-	};
-}
-
-function buildEntryId(nextIndex: number, lemmaResult: LemmaResult): string {
+function buildEntryId(
+	nextIndex: number,
+	lemmaResult: NonNullable<
+		ResolvedEntryState["textfresserState"]["latestLemmaResult"]
+	>,
+): string {
 	if (lemmaResult.linguisticUnit === "Lexem") {
 		return dictEntryIdHelper.build({
 			index: nextIndex,
@@ -170,7 +140,7 @@ export async function generateNewEntrySections(
 	}
 
 	const lexicalInfoResult = await lexicalGeneration.generateLexicalInfo(
-		toResolvedLemma(lemmaResult),
+		lemmaResult,
 		context,
 		{
 			precomputedEmojiDescription:
@@ -217,7 +187,7 @@ export async function generateNewEntrySections(
 			},
 		);
 	}
-	let translationOutput: WordTranslationOutput | null;
+	let translationOutput: string | null;
 	if (shouldGenerateTranslation) {
 		try {
 			translationOutput = await unwrapResultAsync(

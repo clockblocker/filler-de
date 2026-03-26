@@ -58,14 +58,14 @@ function makeFailingPromptRunner(): PromptRunner {
 const API_RESULT_NOUN = {
 	lemma: "Bank",
 	linguisticUnit: "Lexem",
-	pos: "Noun",
+	posLikeKind: "Noun",
 	surfaceKind: "Lemma",
 } as const;
 
 const API_RESULT_PHRASEM = {
 	lemma: "auf jeden Fall",
 	linguisticUnit: "Phrasem",
-	phrasemeKind: "DiscourseFormula",
+	posLikeKind: "DiscourseFormula",
 	surfaceKind: "Lemma",
 } as const;
 

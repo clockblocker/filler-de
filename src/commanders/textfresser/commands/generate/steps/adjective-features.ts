@@ -1,23 +1,10 @@
-import type {
-	AdjectiveFeaturesOutput,
-	FeaturesOutput,
-} from "./section-generation-types";
+import type { LexemFeatures } from "../../../../../lexical-generation";
 import { normalizeTagPart } from "./tag-normalization";
 
-export function isAdjectiveFeaturesOutput(
-	output: FeaturesOutput | null,
-): output is AdjectiveFeaturesOutput {
-	return (
-		output !== null &&
-		"classification" in output &&
-		"distribution" in output &&
-		"gradability" in output &&
-		"valency" in output
-	);
-}
+type AdjectiveFeatures = Extract<LexemFeatures, { kind: "adjective" }>;
 
 export function buildAdjectiveFeatureTags(
-	output: AdjectiveFeaturesOutput,
+	output: AdjectiveFeatures,
 ): string[] {
 	const tags = [
 		`classification-${normalizeTagPart(output.classification)}`,

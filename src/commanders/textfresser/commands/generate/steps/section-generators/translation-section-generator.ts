@@ -4,13 +4,10 @@ import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../targets/de/sections/section-kind";
-import type {
-	GenerationTargetLanguage,
-	WordTranslationOutput,
-} from "../section-generation-types";
+import type { GenerationTargetLanguage } from "../section-generation-types";
 
 export type TranslationSectionContext = {
-	output: WordTranslationOutput;
+	output: string;
 	targetLang: GenerationTargetLanguage;
 };
 

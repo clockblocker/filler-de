@@ -1,11 +1,7 @@
-import type { SurfaceKind } from "../../../../linguistics/common/enums/core";
-import type { PhrasemeKind } from "../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
-import type { DeLexemPos } from "../../../../linguistics/de/lemma";
+import type { ResolvedLemma } from "../../../../lexical-generation";
 import type { Attestation } from "../../common/attestation/types";
 
-type LemmaResultBase = {
-	surfaceKind: SurfaceKind;
-	lemma: string;
+type LemmaLocalState = {
 	attestation: Attestation;
 	/** null = new sense or first encounter */
 	disambiguationResult: { matchedIndex: number } | null;
@@ -13,18 +9,10 @@ type LemmaResultBase = {
 	precomputedEmojiDescription?: string[];
 };
 
-type LexemLemmaResult = LemmaResultBase & {
-	linguisticUnit: "Lexem";
-	posLikeKind: DeLexemPos;
-};
+export type LemmaResult = ResolvedLemma & LemmaLocalState;
 
-type PhrasemLemmaResult = LemmaResultBase & {
-	linguisticUnit: "Phrasem";
-	posLikeKind: PhrasemeKind;
-};
-
-export type LemmaResult = LexemLemmaResult | PhrasemLemmaResult;
-
-export function getLexemPos(result: LemmaResult): DeLexemPos | undefined {
+export function getLexemPos(
+	result: LemmaResult,
+): Extract<ResolvedLemma, { linguisticUnit: "Lexem" }>["posLikeKind"] | undefined {
 	return result.linguisticUnit === "Lexem" ? result.posLikeKind : undefined;
 }

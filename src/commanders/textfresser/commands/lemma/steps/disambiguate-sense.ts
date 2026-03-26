@@ -4,10 +4,7 @@ import type {
 	ResolvedLemma,
 	SenseDisambiguator,
 } from "../../../../../lexical-generation";
-import type { PhrasemeKind } from "../../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
 import type { DeEntity } from "../../../../../linguistics/de";
-import type { DeLexemPos } from "../../../../../linguistics/de/lemma";
-import type { GermanGenus } from "../../../../../linguistics/de/lexem/noun/features";
 import {
 	readContentErrorToReason,
 	type VaultActionManager,
@@ -25,22 +22,6 @@ import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
-
-type LemmaApiResult =
-	| {
-			lemma: string;
-			linguisticUnit: "Lexem";
-			phrasemeKind?: undefined;
-			pos: DeLexemPos;
-			surfaceKind: string;
-	  }
-	| {
-			lemma: string;
-			linguisticUnit: "Phrasem";
-			phrasemeKind: PhrasemeKind;
-			pos?: undefined;
-			surfaceKind: string;
-	  };
 
 type DisambiguationResult =
 	| { matchedIndex: number }
@@ -74,7 +55,7 @@ function extractGenusFromEntity(
 
 function extractPhrasemeKindFromEntity(
 	entity: DeEntity | undefined,
-): PhrasemeKind | undefined {
+): Extract<ResolvedLemma, { linguisticUnit: "Phrasem" }>["posLikeKind"] | undefined {
 	if (entity?.linguisticUnit === "Phrasem") {
 		return entity.posLikeKind;
 	}
@@ -121,7 +102,7 @@ function extractSenseGlossFromTranslationSection(entry: {
 export async function disambiguateSense(
 	vam: VaultActionManager,
 	promptRunner: PromptRunner,
-	apiResult: LemmaApiResult,
+	lemma: ResolvedLemma,
 	context: string,
 	preferredPath?: SplitPathToMdFile,
 	options?: {
@@ -157,22 +138,16 @@ export async function disambiguateSense(
 				);
 				return false;
 			}
-			if (parsed.unitKind !== apiResult.linguisticUnit) return false;
-			if (
-				apiResult.linguisticUnit === "Lexem" &&
-				parsed.pos !== apiResult.pos
-			) {
+			if (parsed.unitKind !== lemma.linguisticUnit) return false;
+			if (lemma.linguisticUnit === "Lexem" && parsed.pos !== lemma.posLikeKind) {
 				return false;
 			}
 			return true;
 		});
 
-		const kindLabel =
-			apiResult.linguisticUnit === "Lexem"
-				? apiResult.pos
-				: apiResult.phrasemeKind;
+		const kindLabel = lemma.posLikeKind;
 		logger.info(
-			`[disambiguate] Parsed ${existingEntries.length} entries, matching=${matchingEntries.length} (unitKind=${apiResult.linguisticUnit}, kind=${kindLabel})`,
+			`[disambiguate] Parsed ${existingEntries.length} entries, matching=${matchingEntries.length} (unitKind=${lemma.linguisticUnit}, kind=${kindLabel})`,
 		);
 
 		if (matchingEntries.length === 0) {
@@ -226,33 +201,23 @@ export async function disambiguateSense(
 		}
 
 		if (options?.disambiguateWith) {
-			const lemmaForDisambiguator: ResolvedLemma =
-				apiResult.linguisticUnit === "Lexem"
-					? {
-							contextWithLinkedParts: undefined,
-							lemma: apiResult.lemma,
-							linguisticUnit: "Lexem",
-							posLikeKind: apiResult.pos,
-							surfaceKind:
-								apiResult.surfaceKind as ResolvedLemma["surfaceKind"],
-						}
-					: {
-							contextWithLinkedParts: undefined,
-							lemma: apiResult.lemma,
-							linguisticUnit: "Phrasem",
-							posLikeKind: apiResult.phrasemeKind,
-							surfaceKind:
-								apiResult.surfaceKind as ResolvedLemma["surfaceKind"],
-						};
 			const candidateSenses = senses.map((sense): CandidateSense => {
 				if (sense.unitKind === "Lexem") {
 					return {
 						emojiDescription: sense.emojiDescription ?? undefined,
-						genus: sense.genus as GermanGenus | undefined,
+						genus:
+							sense.genus as Extract<
+								CandidateSense,
+								{ linguisticUnit: "Lexem" }
+							>["genus"],
 						id: String(sense.index),
 						ipa: sense.ipa,
 						linguisticUnit: "Lexem",
-						posLikeKind: sense.pos as DeLexemPos,
+						posLikeKind:
+							sense.pos as Extract<
+								CandidateSense,
+								{ linguisticUnit: "Lexem" }
+							>["posLikeKind"],
 						senseGloss: sense.senseGloss,
 					};
 				}
@@ -262,13 +227,15 @@ export async function disambiguateSense(
 					id: String(sense.index),
 					ipa: sense.ipa,
 					linguisticUnit: "Phrasem",
-					posLikeKind: (sense.phrasemeKind ??
-						apiResult.phrasemeKind) as PhrasemeKind,
+					posLikeKind: (sense.phrasemeKind ?? lemma.posLikeKind) as Extract<
+						CandidateSense,
+						{ linguisticUnit: "Phrasem" }
+					>["posLikeKind"],
 					senseGloss: sense.senseGloss,
 				};
 			});
 			const moduleResult = await options.disambiguateWith(
-				lemmaForDisambiguator,
+				lemma,
 				context,
 				candidateSenses,
 			);
@@ -315,7 +282,7 @@ export async function disambiguateSense(
 			PromptKind.Disambiguate,
 			{
 				context,
-				lemma: apiResult.lemma,
+				lemma: lemma.lemma,
 				senses: sensesWithEmoji.map((s) => ({
 					emojiDescription: s.emojiDescription,
 					genus: s.genus,
@@ -362,9 +329,9 @@ export async function disambiguateSense(
 		return ok({ matchedIndex: output.matchedIndex });
 	};
 
-	const files = vam.findByBasename(apiResult.lemma);
+	const files = vam.findByBasename(lemma.lemma);
 	logger.info(
-		`[disambiguate] Found ${files.length} files for "${apiResult.lemma}"`,
+		`[disambiguate] Found ${files.length} files for "${lemma.lemma}"`,
 	);
 
 	if (preferredPath) {
@@ -376,7 +343,7 @@ export async function disambiguateSense(
 		logger.info(
 			"[disambiguate] Preferred path could not be read, falling back to basename search",
 			{
-				lemma: apiResult.lemma,
+				lemma: lemma.lemma,
 				preferredPath,
 			},
 		);

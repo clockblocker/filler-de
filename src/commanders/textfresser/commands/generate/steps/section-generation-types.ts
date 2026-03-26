@@ -2,7 +2,6 @@ import type {
 	GermanGenus,
 	NounInflectionCell,
 } from "../../../../../linguistics/de/lexem/noun";
-import type { AgentOutput } from "../../../../../prompt-smith";
 import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
 import type { TargetLanguage } from "../../../../../types";
 import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
@@ -25,26 +24,8 @@ export type MorphologyPayload = {
 	prefixEquation?: PrefixEquationPayload;
 };
 
-export type LexemEnrichmentOutput =
-	| AgentOutput<"LexemEnrichment">
-	| AgentOutput<"NounEnrichment">;
-export type PhrasemEnrichmentOutput = AgentOutput<"PhrasemEnrichment">;
-export type EnrichmentOutput = LexemEnrichmentOutput | PhrasemEnrichmentOutput;
-
-export type MorphemOutput = AgentOutput<"Morphem">;
-export type RelationOutput = AgentOutput<"Relation">;
-export type NounInflectionOutput = AgentOutput<"NounInflection">;
-export type InflectionOutput = AgentOutput<"Inflection">;
-export type WordTranslationOutput = AgentOutput<"WordTranslation">;
-export type TagFeaturesOutput = AgentOutput<"FeaturesNoun">;
-export type AdjectiveFeaturesOutput = AgentOutput<"FeaturesAdjective">;
-export type VerbFeaturesOutput = AgentOutput<"FeaturesVerb">;
-export type FeaturesOutput =
-	| TagFeaturesOutput
-	| AdjectiveFeaturesOutput
-	| VerbFeaturesOutput;
-
 export type GeneratedSectionArtifacts = {
+	/** Structured propagation inputs derived from LexicalInfo render helpers. */
 	inflectionCells: NounInflectionCell[];
 	morphology?: MorphologyPayload;
 	morphemes: MorphemeItem[];

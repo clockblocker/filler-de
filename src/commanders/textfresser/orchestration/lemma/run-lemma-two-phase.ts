@@ -1,10 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
 import type { ResolvedLemma } from "../../../../lexical-generation";
-import {
-	PHRASEM_KINDS,
-	type PhrasemeKind,
-} from "../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
-import { DE_LEXEM_POS, type DeLexemPos } from "../../../../linguistics/de";
 import type {
 	VaultAction,
 	VaultActionManager,
@@ -35,16 +30,6 @@ import {
 	buildUpdatedBlock,
 	type RewritePlan,
 } from "./lemma-rewrite-plan";
-
-type ResolvedPosLikeKind =
-	| {
-			linguisticUnit: "Lexem";
-			posLikeKind: DeLexemPos;
-	  }
-	| {
-			linguisticUnit: "Phrasem";
-			posLikeKind: PhrasemeKind;
-	  };
 
 export async function runLemmaTwoPhase(params: {
 	input: CommandInput;
@@ -149,13 +134,6 @@ export async function runLemmaTwoPhase(params: {
 		);
 	}
 	const resolvedLemma: ResolvedLemma = lemmaResult.value;
-	const resolvedPosLikeKind = resolvePosLikeKind(resolvedLemma);
-	if (!resolvedPosLikeKind) {
-		return err({
-			kind: CommandErrorKind.ApiError,
-			reason: "Lemma output has invalid posLikeKind for linguisticUnit",
-		});
-	}
 
 	const finalTarget = computeFinalTarget({
 		findByBasename: (basename) => vam.findByBasename(basename),
@@ -163,47 +141,23 @@ export async function runLemmaTwoPhase(params: {
 		linguisticUnit: resolvedLemma.linguisticUnit,
 		lookupInLibrary: state.lookupInLibrary,
 		posLikeKind:
-			resolvedPosLikeKind.linguisticUnit === "Lexem"
-				? resolvedPosLikeKind.posLikeKind
+			resolvedLemma.linguisticUnit === "Lexem"
+				? resolvedLemma.posLikeKind
 				: null,
 		surfaceKind: resolvedLemma.surfaceKind,
 		targetLanguage: state.languages.target,
 	});
 
-	let disambiguation: Awaited<ReturnType<typeof disambiguateSense>>;
-	if (resolvedPosLikeKind.linguisticUnit === "Lexem") {
-		disambiguation = await disambiguateSense(
-			vam,
-			state.promptRunner,
-			{
-				lemma: resolvedLemma.lemma,
-				linguisticUnit: "Lexem",
-				pos: resolvedPosLikeKind.posLikeKind,
-				surfaceKind: resolvedLemma.surfaceKind,
-			},
-			context,
-			finalTarget.splitPath,
-			{
-				disambiguateWith: lexicalGeneration.disambiguateSense,
-			},
-		);
-	} else {
-		disambiguation = await disambiguateSense(
-			vam,
-			state.promptRunner,
-			{
-				lemma: resolvedLemma.lemma,
-				linguisticUnit: "Phrasem",
-				phrasemeKind: resolvedPosLikeKind.posLikeKind,
-				surfaceKind: resolvedLemma.surfaceKind,
-			},
-			context,
-			finalTarget.splitPath,
-			{
-				disambiguateWith: lexicalGeneration.disambiguateSense,
-			},
-		);
-	}
+	const disambiguation = await disambiguateSense(
+		vam,
+		state.promptRunner,
+		resolvedLemma,
+		context,
+		finalTarget.splitPath,
+		{
+			disambiguateWith: lexicalGeneration.disambiguateSense,
+		},
+	);
 	if (disambiguation.isErr()) {
 		return err(disambiguation.error);
 	}
@@ -323,27 +277,12 @@ export async function runLemmaTwoPhase(params: {
 		lemma: resolvedLemma.lemma,
 		rewritePlan,
 	});
-	if (resolvedPosLikeKind.linguisticUnit === "Lexem") {
-		state.latestLemmaResult = {
-			attestation,
-			disambiguationResult: normalizedDisambiguation,
-			lemma: resolvedLemma.lemma,
-			linguisticUnit: "Lexem",
-			posLikeKind: resolvedPosLikeKind.posLikeKind,
-			precomputedEmojiDescription,
-			surfaceKind: resolvedLemma.surfaceKind,
-		};
-	} else {
-		state.latestLemmaResult = {
-			attestation,
-			disambiguationResult: normalizedDisambiguation,
-			lemma: resolvedLemma.lemma,
-			linguisticUnit: "Phrasem",
-			posLikeKind: resolvedPosLikeKind.posLikeKind,
-			precomputedEmojiDescription,
-			surfaceKind: resolvedLemma.surfaceKind,
-		};
-	}
+	state.latestLemmaResult = {
+		...resolvedLemma,
+		attestation,
+		disambiguationResult: normalizedDisambiguation,
+		precomputedEmojiDescription,
+	};
 	state.latestResolvedLemmaTargetPath = finalTarget.splitPath;
 
 	state.latestLemmaPlaceholderPath = placeholderWasCleaned
@@ -390,36 +329,4 @@ function syncAttestationAfterSemanticResolution(params: {
 		blockContent: rewritePlan.updatedBlock,
 		surface: resolvedSurface,
 	}).ref;
-}
-
-function isDeLexemPosLikeKind(value: string): value is DeLexemPos {
-	return DE_LEXEM_POS.some((pos) => pos === value);
-}
-
-function isPhrasemeKind(value: string): value is PhrasemeKind {
-	return PHRASEM_KINDS.some((kind) => kind === value);
-}
-
-function resolvePosLikeKind(output: {
-	linguisticUnit: "Lexem" | "Phrasem";
-	posLikeKind: string;
-}): ResolvedPosLikeKind | null {
-	if (output.linguisticUnit === "Lexem") {
-		if (!isDeLexemPosLikeKind(output.posLikeKind)) {
-			return null;
-		}
-		return {
-			linguisticUnit: "Lexem",
-			posLikeKind: output.posLikeKind,
-		};
-	}
-
-	if (!isPhrasemeKind(output.posLikeKind)) {
-		return null;
-	}
-
-	return {
-		linguisticUnit: "Phrasem",
-		posLikeKind: output.posLikeKind,
-	};
 }
