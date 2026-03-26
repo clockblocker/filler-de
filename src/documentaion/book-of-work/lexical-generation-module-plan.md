@@ -18,10 +18,10 @@ The extraction has started, but the boundary is still mixed:
 - `src/lexical-generation/` already exposes `createLexicalGenerationModule`, `ResolvedLemma`, `SenseMatchResult`, and `LexicalInfo`.
 - `textfresser` now fails early when lexical generation initialization fails for an unsupported pair.
 - `textfresser` no longer falls back from lexical generation into legacy direct prompt orchestration at runtime.
-- `textfresser` still translates `LexicalInfo` back into legacy section DTOs in `lexical-info-compat.ts`.
-- section applicability and header rendering still depend on compatibility-era shapes rather than a direct `LexicalInfo` render contract.
+- generated sections, morphology artifacts, and metadata now consume `LexicalInfo` directly.
+- translation remains the explicit non-lexical input in the render pipeline.
 
-That means the generator is now the only lexical execution path, but not yet the render contract. It is still being adapted back into the old model.
+That means the generator is now both the lexical execution path and the section render contract. The remaining cleanup is mostly dead compatibility-era types and follow-on propagation simplification.
 
 ## Architecture Decisions
 

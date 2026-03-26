@@ -1,3 +1,4 @@
+import type { LexicalInfo } from "../../../../../../lexical-generation";
 import { resolveMorphemeItems } from "../../../../common/morpheme-link-target";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import type { MorphemeItem } from "../../../../domain/morpheme/morpheme-formatter";
@@ -7,13 +8,10 @@ import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../targets/de/sections/section-kind";
-import type {
-	GenerationTargetLanguage,
-	MorphemOutput,
-} from "../section-generation-types";
+import type { GenerationTargetLanguage } from "../section-generation-types";
 
 export type MorphemSectionContext = {
-	output: MorphemOutput;
+	lexicalInfo: LexicalInfo;
 	targetLang: GenerationTargetLanguage;
 };
 
@@ -24,9 +22,13 @@ export type MorphemSectionResult = {
 
 export function generateMorphemSection(
 	ctx: MorphemSectionContext,
-): MorphemSectionResult {
+): MorphemSectionResult | null {
+	if (ctx.lexicalInfo.morphemicBreakdown.status !== "ready") {
+		return null;
+	}
+
 	const morphemes = resolveMorphemeItems(
-		ctx.output.morphemes,
+		ctx.lexicalInfo.morphemicBreakdown.value.morphemes,
 		ctx.targetLang,
 	);
 

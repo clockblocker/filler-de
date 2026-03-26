@@ -1,5 +1,7 @@
+import type { LexicalInfo } from "../../../../../../lexical-generation";
 import { morphologyRelationHelper } from "../../../../../../stateless-helpers/morphology-relation";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
+import { resolveMorphemeItems } from "../../../../common/morpheme-link-target";
 import { canonicalizeTargetForComparison } from "../../../../common/target-comparison";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import {
@@ -11,19 +13,15 @@ import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../targets/de/sections/section-kind";
-import type { LemmaResult } from "../../../lemma/types";
 import { normalizeLemma, normalizeMorphologyKey } from "../morphology-utils";
 import type {
 	GenerationTargetLanguage,
-	MorphemOutput,
 	MorphologyPayload,
 } from "../section-generation-types";
 
 export type MorphologySectionContext = {
-	morphemes: MorphemeItem[];
-	output: MorphemOutput;
-	posLikeKind: LemmaResult["posLikeKind"];
-	sourceLemma: string;
+	lexicalInfo: LexicalInfo;
+	morphemes?: MorphemeItem[];
 	sourceTranslation?: string;
 	targetLang: GenerationTargetLanguage;
 };
@@ -93,7 +91,7 @@ function buildGlossSuffix(sourceTranslation?: string): string {
 
 function inferPrefixEquation(
 	morphemes: MorphemeItem[],
-	posLikeKind: LemmaResult["posLikeKind"],
+	posLikeKind: LexicalInfo["lemma"]["posLikeKind"],
 	sourceLemma: string,
 	targetLang: GenerationTargetLanguage,
 ): MorphologyPayload["prefixEquation"] {
@@ -152,23 +150,34 @@ function haveSameWikilinkTargets(left: string, right: string): boolean {
 export function generateMorphologySection(
 	ctx: MorphologySectionContext,
 ): MorphologySectionResult {
-	const sourceLemma = normalizeLemma(ctx.sourceLemma);
+	if (ctx.lexicalInfo.morphemicBreakdown.status !== "ready") {
+		return { section: null };
+	}
+
+	const sourceLemma = normalizeLemma(ctx.lexicalInfo.lemma.lemma);
 	if (!sourceLemma) {
 		return { section: null };
 	}
 
+	const morphemes =
+		ctx.morphemes ??
+		resolveMorphemeItems(
+			ctx.lexicalInfo.morphemicBreakdown.value.morphemes,
+			ctx.targetLang,
+		);
+	const morphemicBreakdown = ctx.lexicalInfo.morphemicBreakdown.value;
 	const inferredPrefixEquation = inferPrefixEquation(
-		ctx.morphemes,
-		ctx.posLikeKind,
+		morphemes,
+		ctx.lexicalInfo.lemma.posLikeKind,
 		sourceLemma,
 		ctx.targetLang,
 	);
-	const derivedFromLemma = normalizeLemma(ctx.output.derived_from?.lemma);
+	const derivedFromLemma = normalizeLemma(morphemicBreakdown.derivedFrom?.lemma);
 	const preferredCompoundedLemmaByKey = buildPreferredCompoundedLemmaByKey(
-		ctx.morphemes,
+		morphemes,
 	);
 	const compoundedFromLemmas = dedupeLemmas(
-		(ctx.output.compounded_from ?? [])
+		(morphemicBreakdown.compoundedFrom ?? [])
 			.map((lemma) =>
 				resolveCompoundedLemma(lemma, preferredCompoundedLemmaByKey),
 			)

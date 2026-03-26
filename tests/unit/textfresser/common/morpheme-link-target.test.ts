@@ -1,14 +1,14 @@
 import { describe, expect, it } from "bun:test";
 import { resolveMorphemeItems } from "../../../../src/commanders/textfresser/common/morpheme-link-target";
-import type { LlmMorpheme } from "../../../../src/prompt-smith/schemas/morphem";
+import type { LexicalMorpheme } from "../../../../src/lexical-generation";
 
 describe("resolveMorphemeItems", () => {
 	it("does not duplicate prefix suffix when surf already contains -prefix-de", () => {
-		const morphemes: LlmMorpheme[] = [
+		const morphemes: LexicalMorpheme[] = [
 			{
 				kind: "Prefix",
 				separability: "Separable",
-				surf: "Worter/de/prefix/auf-prefix-de",
+				surface: "Worter/de/prefix/auf-prefix-de",
 			},
 		];
 
@@ -18,11 +18,11 @@ describe("resolveMorphemeItems", () => {
 	});
 
 	it("builds canonical prefix target from plain prefix surface", () => {
-		const morphemes: LlmMorpheme[] = [
+		const morphemes: LexicalMorpheme[] = [
 			{
 				kind: "Prefix",
 				separability: "Inseparable",
-				surf: "ver",
+				surface: "ver",
 			},
 		];
 
@@ -32,11 +32,11 @@ describe("resolveMorphemeItems", () => {
 	});
 
 	it("strips anchors from morpheme surf/lemma tokens", () => {
-		const morphemes: LlmMorpheme[] = [
+		const morphemes: LexicalMorpheme[] = [
 			{
 				kind: "Root",
 				lemma: "fahren#^lemma",
-				surf: "fährt#^surface",
+				surface: "fährt#^surface",
 			},
 		];
 

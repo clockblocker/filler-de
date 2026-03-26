@@ -1,20 +1,64 @@
 import { describe, expect, it } from "bun:test";
 import { generateMorphologySection } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generators/morphology-section-generator";
-import type { MorphemeItem } from "../../../../src/commanders/textfresser/domain/morpheme/morpheme-formatter";
+import type { LexicalInfo } from "../../../../src/lexical-generation";
+
+function makeLexicalInfo(
+	overrides: Partial<
+		Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>
+	> = {},
+): Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }> {
+	return {
+		core: {
+			status: "ready",
+			value: {
+				emojiDescription: ["🧩"],
+				ipa: "unknown",
+			},
+		},
+		features: {
+			status: "ready",
+			value: {
+				genus: "Femininum",
+				kind: "noun",
+				nounClass: "Common",
+				tags: [],
+			},
+		},
+		inflections: { status: "not_applicable" },
+		lemma: {
+			lemma: "Freiheit",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Noun",
+			surfaceKind: "Lemma",
+		},
+		morphemicBreakdown: {
+			status: "ready",
+			value: {
+				morphemes: [{ kind: "Root", lemma: "frei", surface: "frei" }],
+			},
+		},
+		relations: { status: "not_applicable" },
+		...overrides,
+	};
+}
 
 describe("generateMorphologySection", () => {
 	it("renders derived-only block", () => {
 		const result = generateMorphologySection({
-			morphemes: [{ kind: "Root", lemma: "frei", surf: "frei" }],
-			output: {
-				derived_from: {
-					derivation_type: "suffix_derivation",
-					lemma: "frei",
+			lexicalInfo: makeLexicalInfo({
+				morphemicBreakdown: {
+					status: "ready",
+					value: {
+						derivedFrom: {
+							derivationType: "suffix_derivation",
+							lemma: "frei",
+						},
+						morphemes: [
+							{ kind: "Root", lemma: "frei", surface: "frei" },
+						],
+					},
 				},
-				morphemes: [{ kind: "Root", lemma: "frei", surf: "frei" }],
-			},
-			posLikeKind: "Noun",
-			sourceLemma: "Freiheit",
+			}),
 			targetLang: "German",
 		});
 
@@ -25,21 +69,33 @@ describe("generateMorphologySection", () => {
 
 	it("renders compound-only block", () => {
 		const result = generateMorphologySection({
-			morphemes: [
-				{ kind: "Root", lemma: "Küche", surf: "küche" },
-				{ kind: "Interfix", surf: "n" },
-				{ kind: "Root", lemma: "Fenster", surf: "fenster" },
-			],
-			output: {
-				compounded_from: ["Küche", "Fenster"],
-				morphemes: [
-					{ kind: "Root", lemma: "Küche", surf: "küche" },
-					{ kind: "Interfix", surf: "n" },
-					{ kind: "Root", lemma: "Fenster", surf: "fenster" },
-				],
-			},
-			posLikeKind: "Noun",
-			sourceLemma: "Küchenfenster",
+			lexicalInfo: makeLexicalInfo({
+				lemma: {
+					lemma: "Küchenfenster",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Noun",
+					surfaceKind: "Lemma",
+				},
+				morphemicBreakdown: {
+					status: "ready",
+					value: {
+						compoundedFrom: ["Küche", "Fenster"],
+						morphemes: [
+							{
+								kind: "Root",
+								lemma: "Küche",
+								surface: "küche",
+							},
+							{ kind: "Interfix", surface: "n" },
+							{
+								kind: "Root",
+								lemma: "Fenster",
+								surface: "fenster",
+							},
+						],
+					},
+				},
+			}),
 			targetLang: "German",
 		});
 
@@ -49,27 +105,44 @@ describe("generateMorphologySection", () => {
 	});
 
 	it("renders mixed output with prefix equation and gloss", () => {
-		const morphemes: MorphemeItem[] = [
-			{
-				kind: "Prefix",
-				linkTarget: "auf-prefix-de",
-				separability: "Separable",
-				surf: "auf",
-			},
-			{ kind: "Root", lemma: "passen", surf: "passen" },
-		];
-
 		const result = generateMorphologySection({
-			morphemes,
-			output: {
-				compounded_from: ["A", "B"],
-				morphemes: [
-					{ kind: "Prefix", separability: "Separable", surf: "auf" },
-					{ kind: "Root", lemma: "passen", surf: "passen" },
-				],
-			},
-			posLikeKind: "Verb",
-			sourceLemma: "aufpassen",
+			lexicalInfo: makeLexicalInfo({
+				features: {
+					status: "ready",
+					value: {
+						conjugation: "Regular",
+						kind: "verb",
+						valency: {
+							reflexivity: "NonReflexive",
+							separability: "Separable",
+						},
+					},
+				},
+				lemma: {
+					lemma: "aufpassen",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Verb",
+					surfaceKind: "Lemma",
+				},
+				morphemicBreakdown: {
+					status: "ready",
+					value: {
+						compoundedFrom: ["A", "B"],
+						morphemes: [
+							{
+								kind: "Prefix",
+								separability: "Separable",
+								surface: "auf",
+							},
+							{
+								kind: "Root",
+								lemma: "passen",
+								surface: "passen",
+							},
+						],
+					},
+				},
+			}),
 			sourceTranslation: "to pay attention",
 			targetLang: "German",
 		});
@@ -83,23 +156,42 @@ describe("generateMorphologySection", () => {
 
 	it("renders inseparable prefix marker in equation", () => {
 		const result = generateMorphologySection({
-			morphemes: [
-				{
-					kind: "Prefix",
-					linkTarget: "ver-prefix-de",
-					separability: "Inseparable",
-					surf: "ver",
+			lexicalInfo: makeLexicalInfo({
+				features: {
+					status: "ready",
+					value: {
+						conjugation: "Regular",
+						kind: "verb",
+						valency: {
+							reflexivity: "NonReflexive",
+							separability: "Inseparable",
+						},
+					},
 				},
-				{ kind: "Root", lemma: "stehen", surf: "stehen" },
-			],
-			output: {
-				morphemes: [
-					{ kind: "Prefix", separability: "Inseparable", surf: "ver" },
-					{ kind: "Root", lemma: "stehen", surf: "stehen" },
-				],
-			},
-			posLikeKind: "Verb",
-			sourceLemma: "verstehen",
+				lemma: {
+					lemma: "verstehen",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Verb",
+					surfaceKind: "Lemma",
+				},
+				morphemicBreakdown: {
+					status: "ready",
+					value: {
+						morphemes: [
+							{
+								kind: "Prefix",
+								separability: "Inseparable",
+								surface: "ver",
+							},
+							{
+								kind: "Root",
+								lemma: "stehen",
+								surface: "stehen",
+							},
+						],
+					},
+				},
+			}),
 			targetLang: "German",
 		});
 
@@ -111,22 +203,41 @@ describe("generateMorphologySection", () => {
 
 	it("does not build prefix equation for non-verb prefix without separability", () => {
 		const result = generateMorphologySection({
-			morphemes: [
-				{ kind: "Prefix", surf: "un" },
-				{ kind: "Root", lemma: "klar", surf: "klar" },
-			],
-			output: {
-				derived_from: {
-					derivation_type: "prefix_derivation",
-					lemma: "klar",
+			lexicalInfo: makeLexicalInfo({
+				features: {
+					status: "ready",
+					value: {
+						classification: "Qualitative",
+						distribution: "AttributiveAndPredicative",
+						gradability: "Gradable",
+						kind: "adjective",
+						valency: { governedPattern: "None" },
+					},
 				},
-				morphemes: [
-					{ kind: "Prefix", surf: "un" },
-					{ kind: "Root", lemma: "klar", surf: "klar" },
-				],
-			},
-			posLikeKind: "Adjective",
-			sourceLemma: "unklar",
+				lemma: {
+					lemma: "unklar",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Adjective",
+					surfaceKind: "Lemma",
+				},
+				morphemicBreakdown: {
+					status: "ready",
+					value: {
+						derivedFrom: {
+							derivationType: "prefix_derivation",
+							lemma: "klar",
+						},
+						morphemes: [
+							{ kind: "Prefix", surface: "un" },
+							{
+								kind: "Root",
+								lemma: "klar",
+								surface: "klar",
+							},
+						],
+					},
+				},
+			}),
 			targetLang: "German",
 		});
 
@@ -137,12 +248,26 @@ describe("generateMorphologySection", () => {
 
 	it("omits section when no morphology fields are available", () => {
 		const result = generateMorphologySection({
-			morphemes: [{ kind: "Root", lemma: "Xenon", surf: "xenon" }],
-			output: {
-				morphemes: [{ kind: "Root", lemma: "Xenon", surf: "xenon" }],
-			},
-			posLikeKind: "Noun",
-			sourceLemma: "Xenon",
+			lexicalInfo: makeLexicalInfo({
+				lemma: {
+					lemma: "Xenon",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Noun",
+					surfaceKind: "Lemma",
+				},
+				morphemicBreakdown: {
+					status: "ready",
+					value: {
+						morphemes: [
+							{
+								kind: "Root",
+								lemma: "Xenon",
+								surface: "xenon",
+							},
+						],
+					},
+				},
+			}),
 			targetLang: "German",
 		});
 
@@ -152,30 +277,35 @@ describe("generateMorphologySection", () => {
 
 	it("does not build separable-prefix equation for nouns", () => {
 		const result = generateMorphologySection({
-					morphemes: [
-						{
-							kind: "Prefix",
-							separability: "Separable",
-							surf: "ab",
-						},
-				{ kind: "Root", lemma: "Fahrt", surf: "fahrt" },
-			],
-			output: {
-				derived_from: {
-					derivation_type: "prefix_derivation",
-					lemma: "Fahrt",
+			lexicalInfo: makeLexicalInfo({
+				lemma: {
+					lemma: "Abfahrt",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Noun",
+					surfaceKind: "Lemma",
 				},
-					morphemes: [
-						{
-							kind: "Prefix",
-							separability: "Separable",
-							surf: "ab",
+				morphemicBreakdown: {
+					status: "ready",
+					value: {
+						derivedFrom: {
+							derivationType: "prefix_derivation",
+							lemma: "Fahrt",
 						},
-					{ kind: "Root", lemma: "Fahrt", surf: "fahrt" },
-				],
-			},
-			posLikeKind: "Noun",
-			sourceLemma: "Abfahrt",
+						morphemes: [
+							{
+								kind: "Prefix",
+								separability: "Separable",
+								surface: "ab",
+							},
+							{
+								kind: "Root",
+								lemma: "Fahrt",
+								surface: "fahrt",
+							},
+						],
+					},
+				},
+			}),
 			targetLang: "German",
 		});
 
@@ -187,31 +317,46 @@ describe("generateMorphologySection", () => {
 
 	it("keeps explicit derived_from even when prefix equation is present", () => {
 		const result = generateMorphologySection({
+			lexicalInfo: makeLexicalInfo({
+				features: {
+					status: "ready",
+					value: {
+						conjugation: "Regular",
+						kind: "verb",
+						valency: {
+							reflexivity: "NonReflexive",
+							separability: "Separable",
+						},
+					},
+				},
+				lemma: {
+					lemma: "aufpassen",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Verb",
+					surfaceKind: "Lemma",
+				},
+				morphemicBreakdown: {
+					status: "ready",
+					value: {
+						derivedFrom: {
+							derivationType: "prefix_derivation",
+							lemma: "abpassen",
+						},
 						morphemes: [
 							{
 								kind: "Prefix",
-								linkTarget: "auf-prefix-de",
 								separability: "Separable",
-								surf: "auf",
+								surface: "auf",
 							},
-				{ kind: "Root", lemma: "passen", surf: "pass" },
-			],
-			output: {
-				derived_from: {
-					derivation_type: "prefix_derivation",
-					lemma: "abpassen",
+							{
+								kind: "Root",
+								lemma: "passen",
+								surface: "pass",
+							},
+						],
+					},
 				},
-					morphemes: [
-						{
-							kind: "Prefix",
-							separability: "Separable",
-							surf: "auf",
-						},
-					{ kind: "Root", lemma: "passen", surf: "pass" },
-				],
-			},
-			posLikeKind: "Verb",
-			sourceLemma: "aufpassen",
+			}),
 			targetLang: "German",
 		});
 
@@ -226,19 +371,32 @@ describe("generateMorphologySection", () => {
 
 	it("normalizes compounded lemma casing using morpheme lemmas", () => {
 		const result = generateMorphologySection({
-			morphemes: [
-				{ kind: "Root", lemma: "fahren", surf: "fahr" },
-				{ kind: "Root", lemma: "Karte", surf: "karte" },
-			],
-			output: {
-				compounded_from: ["Fahren", "Karte"],
-				morphemes: [
-					{ kind: "Root", lemma: "fahren", surf: "fahr" },
-					{ kind: "Root", lemma: "Karte", surf: "karte" },
-				],
-			},
-			posLikeKind: "Noun",
-			sourceLemma: "Fahrkarte",
+			lexicalInfo: makeLexicalInfo({
+				lemma: {
+					lemma: "Fahrkarte",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Noun",
+					surfaceKind: "Lemma",
+				},
+				morphemicBreakdown: {
+					status: "ready",
+					value: {
+						compoundedFrom: ["Fahren", "Karte"],
+						morphemes: [
+							{
+								kind: "Root",
+								lemma: "fahren",
+								surface: "fahr",
+							},
+							{
+								kind: "Root",
+								lemma: "Karte",
+								surface: "karte",
+							},
+						],
+					},
+				},
+			}),
 			targetLang: "German",
 		});
 

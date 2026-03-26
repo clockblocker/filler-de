@@ -15,10 +15,6 @@ import { getSectionsFor } from "../../../targets/de/sections/section-config";
 import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { LemmaResult } from "../../lemma/types";
 import { dispatchHeaderFormatter } from "../section-formatters/header-dispatch";
-import {
-	adaptLexicalInfoToCompatibility,
-	collectLexicalInfoFailures,
-} from "./lexical-info-compat";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 import {
 	buildSectionQuery,
@@ -27,14 +23,8 @@ import {
 } from "./section-generation-context";
 import { unwrapResultAsync } from "./section-generation-results";
 import type {
-	EnrichmentOutput,
-	FeaturesOutput,
-	InflectionOutput,
-	MorphemOutput,
 	MorphologyPayload,
-	NounInflectionOutput,
 	ParsedRelation,
-	RelationOutput,
 	WordTranslationOutput,
 } from "./section-generation-types";
 import {
@@ -51,11 +41,10 @@ type PromptRunner = ResolvedEntryState["textfresserState"]["promptRunner"];
 
 export type GeneratedEntrySectionsData = {
 	entryId: string;
-	enrichmentOutput: EnrichmentOutput;
 	failedSections: string[];
-	featuresOutput: FeaturesOutput | null;
 	headerContent: string;
 	inflectionCells: NounInflectionCell[];
+	lexicalInfo: LexicalInfo;
 	morphology?: MorphologyPayload;
 	morphemes: MorphemeItem[];
 	nounInflectionGenus?: GermanGenus;
@@ -74,13 +63,25 @@ type ApplicableSectionState = {
 	v3Applicable: DictSectionKind[];
 };
 
-function buildFallbackEnrichmentOutput(
-	lemmaResult: LemmaResult,
-): EnrichmentOutput {
-	return {
-		emojiDescription: lemmaResult.precomputedEmojiDescription ?? ["❓"],
-		ipa: "unknown",
-	};
+function collectLexicalInfoFailures(
+	lexicalInfo: LexicalInfo,
+	failedSections: string[],
+): void {
+	if (lexicalInfo.core.status === "error") {
+		failedSections.push("Enrichment");
+	}
+	if (lexicalInfo.features.status === "error") {
+		failedSections.push("Features");
+	}
+	if (lexicalInfo.inflections.status === "error") {
+		failedSections.push("Inflection");
+	}
+	if (lexicalInfo.morphemicBreakdown.status === "error") {
+		failedSections.push("Morphem");
+	}
+	if (lexicalInfo.relations.status === "error") {
+		failedSections.push("Relation");
+	}
 }
 
 function toResolvedLemma(lemmaResult: LemmaResult): ResolvedLemma {
@@ -155,12 +156,6 @@ export async function generateNewEntrySections(
 	const context = lemmaResult.attestation.source.textWithOnlyTargetMarked;
 
 	const failedSections: string[] = [];
-	let enrichmentOutput: EnrichmentOutput;
-	let featuresOutput: FeaturesOutput | null = null;
-	let morphemOutput: MorphemOutput | null = null;
-	let relationOutput: RelationOutput | null = null;
-	let nounInflectionOutput: NounInflectionOutput | null = null;
-	let otherInflectionOutput: InflectionOutput | null = null;
 	let applicableSectionState: ApplicableSectionState | null = null;
 	let lexicalInfo: LexicalInfo | null = null;
 	const lexicalGeneration = ctx.textfresserState.lexicalGeneration;
@@ -185,28 +180,6 @@ export async function generateNewEntrySections(
 
 	lexicalInfo = lexicalInfoResult.value;
 	collectLexicalInfoFailures(lexicalInfo, failedSections);
-	const compatibility = adaptLexicalInfoToCompatibility(
-		lexicalInfo,
-	);
-
-	enrichmentOutput =
-		compatibility.enrichmentOutput ??
-		buildFallbackEnrichmentOutput(lemmaResult);
-	featuresOutput = compatibility.featuresOutput;
-	morphemOutput = compatibility.morphemOutput;
-	relationOutput = compatibility.relationOutput;
-	nounInflectionOutput = compatibility.nounInflectionOutput;
-	otherInflectionOutput = compatibility.otherInflectionOutput;
-
-	if (
-		compatibility.enrichmentOutput === null &&
-		lemmaResult.precomputedEmojiDescription
-	) {
-		logger.warn(
-			"[generateSections] Lexical core unavailable; using fallback header metadata",
-			{ lemma: lemmaResult.lemma },
-		);
-	}
 
 	if (!applicableSectionState) {
 		applicableSectionState = resolveApplicableSectionState(
@@ -226,7 +199,11 @@ export async function generateNewEntrySections(
 		sectionSet.has(DictSectionKind.Morphology);
 	const shouldGenerateTranslation =
 		sectionSet.has(DictSectionKind.Translation) || shouldRunPropagation;
-	if (shouldGenerateMorphem && !morphemOutput) {
+	const morphemSectionResult = generateMorphemSection({
+		lexicalInfo,
+		targetLang,
+	});
+	if (shouldGenerateMorphem && !morphemSectionResult) {
 		logger.warn(
 			"[generateSections] Morphem failed; skipping dependent outputs (Morphology section + morpheme/morphology propagation)",
 			{
@@ -267,13 +244,6 @@ export async function generateNewEntrySections(
 	let inflectionCells: NounInflectionCell[] = [];
 	let morphemes: MorphemeItem[] = [];
 	let morphology: MorphologyPayload | undefined;
-
-	const morphemSectionResult = morphemOutput
-		? generateMorphemSection({
-				output: morphemOutput,
-				targetLang,
-			})
-		: null;
 	if (morphemSectionResult) {
 		morphemes = morphemSectionResult.morphemes;
 	}
@@ -292,12 +262,10 @@ export async function generateNewEntrySections(
 			}
 
 			case DictSectionKind.Morphology: {
-				if (!morphemOutput) break;
+				if (!morphemSectionResult) break;
 				const result = generateMorphologySection({
+					lexicalInfo,
 					morphemes,
-					output: morphemOutput,
-					posLikeKind: lemmaResult.posLikeKind,
-					sourceLemma: lemmaResult.lemma,
 					sourceTranslation,
 					targetLang,
 				});
@@ -375,12 +343,11 @@ export async function generateNewEntrySections(
 	}
 
 	return {
-		enrichmentOutput,
 		entryId,
 		failedSections,
-		featuresOutput,
 		headerContent,
 		inflectionCells,
+		lexicalInfo,
 		morphemes,
 		morphology,
 		nounInflectionGenus,

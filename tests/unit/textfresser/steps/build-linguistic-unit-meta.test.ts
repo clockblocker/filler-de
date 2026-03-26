@@ -4,10 +4,22 @@ import {
 	buildLinguisticUnitMeta,
 } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import type { LemmaResult } from "../../../../src/commanders/textfresser/commands/lemma/types";
-import type { AgentOutput } from "../../../../src/prompt-smith";
+import {
+	LexicalGenerationFailureKind,
+	type LexicalInfo,
+	lexicalGenerationError,
+} from "../../../../src/lexical-generation";
 
 type LexemLemmaResult = Extract<LemmaResult, { linguisticUnit: "Lexem" }>;
 type PhrasemLemmaResult = Extract<LemmaResult, { linguisticUnit: "Phrasem" }>;
+type LexemLexicalInfo = Extract<
+	LexicalInfo,
+	{ lemma: { linguisticUnit: "Lexem" } }
+>;
+type PhrasemLexicalInfo = Extract<
+	LexicalInfo,
+	{ lemma: { linguisticUnit: "Phrasem" } }
+>;
 
 function makeLexemLemmaResult(
 	overrides: Partial<LexemLemmaResult> = {},
@@ -67,86 +79,66 @@ function makePhrasemLemmaResult(
 	};
 }
 
-function makeVerbLemmaResult(
-	overrides: Partial<LexemLemmaResult> = {},
-): LexemLemmaResult {
-	return makeLexemLemmaResult({
-		lemma: "aufmachen",
-		posLikeKind: "Verb",
-		...overrides,
-	});
-}
-
-function makeAdjectiveLemmaResult(
-	overrides: Partial<LexemLemmaResult> = {},
-): LexemLemmaResult {
-	return makeLexemLemmaResult({
-		lemma: "stolz",
-		posLikeKind: "Adjective",
-		...overrides,
-	});
-}
-
-function makeLexemEnrichment(
-	overrides: Partial<AgentOutput<"NounEnrichment">> = {},
-): AgentOutput<"NounEnrichment"> {
+function makeLexemLexicalInfo(
+	overrides: Partial<LexemLexicalInfo> = {},
+): LexemLexicalInfo {
 	return {
-		emojiDescription: ["🏠"],
-		genus: "Neutrum",
-		ipa: "haʊ̯s",
-		nounClass: "Common",
-		...overrides,
-	};
-}
-
-function makePhrasemEnrichment(
-	overrides: Partial<AgentOutput<"PhrasemEnrichment">> = {},
-): AgentOutput<"PhrasemEnrichment"> {
-	return {
-		emojiDescription: ["✅"],
-		ipa: "aʊ̯f ˈjeːdn̩ fal",
-		...overrides,
-	};
-}
-
-function makeVerbLexemEnrichment(): AgentOutput<"LexemEnrichment"> {
-	return {
-		emojiDescription: ["🚪"],
-		ipa: "ˈaʊ̯fˌmaxn̩",
-	};
-}
-
-function makeAdjectiveLexemEnrichment(): AgentOutput<"LexemEnrichment"> {
-	return {
-		emojiDescription: ["😌"],
-		ipa: "ʃtɔlts",
-	};
-}
-
-function makeVerbFeatures(
-	overrides: Partial<AgentOutput<"FeaturesVerb">> = {},
-): AgentOutput<"FeaturesVerb"> {
-	return {
-		conjugation: "Regular",
-		valency: {
-			reflexivity: "NonReflexive",
-			separability: "Separable",
+		core: {
+			status: "ready",
+			value: {
+				emojiDescription: ["🏠"],
+				ipa: "haʊ̯s",
+			},
 		},
+		features: {
+			status: "ready",
+			value: {
+				genus: "Neutrum",
+				kind: "noun",
+				nounClass: "Common",
+				tags: [],
+			},
+		},
+		inflections: { status: "not_applicable" },
+		lemma: {
+			lemma: "Haus",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Noun",
+			surfaceKind: "Lemma",
+		},
+		morphemicBreakdown: { status: "not_applicable" },
+		relations: { status: "not_applicable" },
 		...overrides,
 	};
 }
 
-function makeAdjectiveFeatures(
-	overrides: Partial<AgentOutput<"FeaturesAdjective">> = {},
-): AgentOutput<"FeaturesAdjective"> {
+function makePhrasemLexicalInfo(
+	overrides: Partial<PhrasemLexicalInfo> = {},
+): PhrasemLexicalInfo {
 	return {
-		classification: "Qualitative",
-		distribution: "AttributiveAndPredicative",
-		gradability: "Gradable",
-		valency: {
-			governedPattern: "Prepositional",
-			governedPreposition: "auf",
+		core: {
+			status: "ready",
+			value: {
+				emojiDescription: ["✅"],
+				ipa: "aʊ̯f ˈjeːdn̩ fal",
+			},
 		},
+		features: {
+			status: "ready",
+			value: {
+				kind: "tags",
+				tags: [],
+			},
+		},
+		inflections: { status: "not_applicable" },
+		lemma: {
+			lemma: "auf jeden Fall",
+			linguisticUnit: "Phrasem",
+			posLikeKind: "Collocation",
+			surfaceKind: "Lemma",
+		},
+		morphemicBreakdown: { status: "not_applicable" },
+		relations: { status: "not_applicable" },
 		...overrides,
 	};
 }
@@ -156,8 +148,7 @@ describe("buildLinguisticUnitMeta", () => {
 		const result = buildLinguisticUnitMeta(
 			"LX-LM-NOUN-1",
 			makeLexemLemmaResult(),
-			makeLexemEnrichment(),
-			null,
+			makeLexemLexicalInfo(),
 		);
 
 		expect(result).toEqual({
@@ -180,8 +171,14 @@ describe("buildLinguisticUnitMeta", () => {
 			makeLexemLemmaResult({
 				surfaceKind: "Inflected",
 			}),
-			makeLexemEnrichment(),
-			null,
+			makeLexemLexicalInfo({
+				lemma: {
+					lemma: "Haus",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Noun",
+					surfaceKind: "Inflected",
+				},
+			}),
 		);
 
 		expect(result).toEqual({
@@ -200,8 +197,7 @@ describe("buildLinguisticUnitMeta", () => {
 		const result = buildLinguisticUnitMeta(
 			"PH-LM-1",
 			makePhrasemLemmaResult(),
-			makePhrasemEnrichment(),
-			null,
+			makePhrasemLexicalInfo(),
 		);
 
 		expect(result).toEqual({
@@ -219,9 +215,36 @@ describe("buildLinguisticUnitMeta", () => {
 	it("builds Lexem lemma metadata with full verb features", () => {
 		const result = buildLinguisticUnitMeta(
 			"LX-LM-VRB-1",
-			makeVerbLemmaResult(),
-			makeVerbLexemEnrichment(),
-			makeVerbFeatures(),
+			makeLexemLemmaResult({
+				lemma: "aufmachen",
+				posLikeKind: "Verb",
+			}),
+			makeLexemLexicalInfo({
+				core: {
+					status: "ready",
+					value: {
+						emojiDescription: ["🚪"],
+						ipa: "ˈaʊ̯fˌmaxn̩",
+					},
+				},
+				features: {
+					status: "ready",
+					value: {
+						conjugation: "Regular",
+						kind: "verb",
+						valency: {
+							reflexivity: "NonReflexive",
+							separability: "Separable",
+						},
+					},
+				},
+				lemma: {
+					lemma: "aufmachen",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Verb",
+					surfaceKind: "Lemma",
+				},
+			}),
 		);
 
 		expect(result).toEqual({
@@ -244,9 +267,38 @@ describe("buildLinguisticUnitMeta", () => {
 	it("builds Lexem lemma metadata with full adjective features", () => {
 		const result = buildLinguisticUnitMeta(
 			"LX-LM-ADJ-1",
-			makeAdjectiveLemmaResult(),
-			makeAdjectiveLexemEnrichment(),
-			makeAdjectiveFeatures(),
+			makeLexemLemmaResult({
+				lemma: "stolz",
+				posLikeKind: "Adjective",
+			}),
+			makeLexemLexicalInfo({
+				core: {
+					status: "ready",
+					value: {
+						emojiDescription: ["😌"],
+						ipa: "ʃtɔlts",
+					},
+				},
+				features: {
+					status: "ready",
+					value: {
+						classification: "Qualitative",
+						distribution: "AttributiveAndPredicative",
+						gradability: "Gradable",
+						kind: "adjective",
+						valency: {
+							governedPattern: "Prepositional",
+							governedPreposition: "auf",
+						},
+					},
+				},
+				lemma: {
+					lemma: "stolz",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Adjective",
+					surfaceKind: "Lemma",
+				},
+			}),
 		);
 
 		expect(result).toEqual({
@@ -273,8 +325,7 @@ describe("buildEntityMeta", () => {
 	it("builds Lexem lemma entity with lexical genus and nounClass", () => {
 		const result = buildEntityMeta(
 			makeLexemLemmaResult(),
-			makeLexemEnrichment(),
-			null,
+			makeLexemLexicalInfo(),
 		);
 
 		expect(result).toEqual({
@@ -301,8 +352,14 @@ describe("buildEntityMeta", () => {
 			makeLexemLemmaResult({
 				surfaceKind: "Inflected",
 			}),
-			makeLexemEnrichment(),
-			null,
+			makeLexemLexicalInfo({
+				lemma: {
+					lemma: "Haus",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Noun",
+					surfaceKind: "Inflected",
+				},
+			}),
 		);
 
 		expect(result).toEqual({
@@ -326,18 +383,34 @@ describe("buildEntityMeta", () => {
 			makeLexemLemmaResult({
 				precomputedEmojiDescription: ["🪑", "🌳"],
 			}),
-			makeLexemEnrichment(),
-			null,
+			makeLexemLexicalInfo(),
 		);
 
 		expect(result?.emojiDescription).toEqual(["🪑", "🌳"]);
 	});
 
+	it("falls back to unknown core metadata when lexical core is unavailable", () => {
+		const result = buildEntityMeta(
+			makeLexemLemmaResult(),
+			makeLexemLexicalInfo({
+				core: {
+					status: "error",
+					error: lexicalGenerationError(
+						LexicalGenerationFailureKind.FetchFailed,
+						"x",
+					),
+				},
+			}),
+		);
+
+		expect(result?.emojiDescription).toEqual(["❓"]);
+		expect(result?.ipa).toBe("unknown");
+	});
+
 	it("builds Phrasem entity with lexical phrasemeKind", () => {
 		const result = buildEntityMeta(
 			makePhrasemLemmaResult(),
-			makePhrasemEnrichment(),
-			null,
+			makePhrasemLexicalInfo(),
 		);
 
 		expect(result).toEqual({

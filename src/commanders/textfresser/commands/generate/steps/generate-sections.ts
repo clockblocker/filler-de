@@ -24,7 +24,7 @@ import { computeMissingV3SectionKinds } from "./reencounter-sections";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 import {
 	buildVerbEntryIdentityFromFeatures,
-	isVerbFeaturesOutput,
+	getVerbLexicalFeatures,
 } from "./verb-features";
 
 export {
@@ -199,7 +199,11 @@ function getVerbEntryIdentity(entry: DictEntry): string | null {
 
 	return buildVerbEntryIdentityFromFeatures({
 		conjugation: surface.features.conjugation,
-		valency: surface.features.valency,
+		valency: {
+			...surface.features.valency,
+			governedPreposition:
+				surface.features.valency.governedPreposition ?? undefined,
+		},
 	});
 }
 
@@ -226,10 +230,11 @@ export function generateSections(
 			const isVerbLexem =
 				lemmaResult.linguisticUnit === "Lexem" &&
 				lemmaResult.posLikeKind === "Verb";
+			const verbFeatures = getVerbLexicalFeatures(generated.lexicalInfo);
 			const verbEntryIdentity =
-				isVerbLexem && isVerbFeaturesOutput(generated.featuresOutput)
+				isVerbLexem && verbFeatures
 					? buildVerbEntryIdentityFromFeatures(
-							generated.featuresOutput,
+							verbFeatures,
 						)
 					: undefined;
 
@@ -271,13 +276,11 @@ export function generateSections(
 			const linguisticUnit = buildLinguisticUnitMeta(
 				generated.entryId,
 				lemmaResult,
-				generated.enrichmentOutput,
-				generated.featuresOutput,
+				generated.lexicalInfo,
 			);
 			const entity = buildEntityMeta(
 				lemmaResult,
-				generated.enrichmentOutput,
-				generated.featuresOutput,
+				generated.lexicalInfo,
 			);
 
 			const newEntry: DictEntry = {

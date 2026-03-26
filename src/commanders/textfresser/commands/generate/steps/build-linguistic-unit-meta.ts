@@ -1,3 +1,4 @@
+import type { LexicalInfo } from "../../../../../lexical-generation";
 import type {
 	DeEntity,
 	GermanLinguisticUnit,
@@ -5,13 +6,7 @@ import type {
 import { logger } from "../../../../../utils/logger";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { LemmaResult } from "../../lemma/types";
-import { isAdjectiveFeaturesOutput } from "./adjective-features";
-import type {
-	EnrichmentOutput,
-	FeaturesOutput,
-	LexemEnrichmentOutput,
-} from "./section-generation-types";
-import { isVerbFeaturesOutput } from "./verb-features";
+import { getVerbLexicalFeatures } from "./verb-features";
 
 function buildLemmaRefId(entryId: string): string {
 	const parsed = dictEntryIdHelper.parse(entryId);
@@ -36,24 +31,22 @@ function buildLemmaRefId(entryId: string): string {
 function buildLexemLinguisticUnit(
 	entryId: string,
 	lemmaResult: Extract<LemmaResult, { linguisticUnit: "Lexem" }>,
-	enrichmentOutput: LexemEnrichmentOutput,
-	featuresOutput: FeaturesOutput | null,
+	lexicalInfo: Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>,
 ): GermanLinguisticUnit | null {
 	if (lemmaResult.surfaceKind === "Lemma") {
 		if (lemmaResult.posLikeKind === "Noun") {
-			// NounEnrichment is strict and the only enrichment shape with genus/nounClass.
 			if (
-				"genus" in enrichmentOutput &&
-				"nounClass" in enrichmentOutput &&
-				enrichmentOutput.genus &&
-				enrichmentOutput.nounClass
+				lexicalInfo.features.status === "ready" &&
+				lexicalInfo.features.value.kind === "noun" &&
+				lexicalInfo.features.value.genus &&
+				lexicalInfo.features.value.nounClass
 			) {
 				return {
 					kind: "Lexem",
 					surface: {
 						features: {
-							genus: enrichmentOutput.genus,
-							nounClass: enrichmentOutput.nounClass,
+							genus: lexicalInfo.features.value.genus,
+							nounClass: lexicalInfo.features.value.nounClass,
 							pos: lemmaResult.posLikeKind,
 						},
 						lemma: lemmaResult.lemma,
@@ -64,20 +57,21 @@ function buildLexemLinguisticUnit(
 
 			logger.warn(
 				"[generateSections] Missing noun genus/nounClass for Lexem lemma metadata",
-				{ enrichmentOutput, lemmaResult },
+				{ lemmaResult, lexicalInfo },
 			);
 			return null;
 		}
 
 		if (lemmaResult.posLikeKind === "Verb") {
-			if (isVerbFeaturesOutput(featuresOutput)) {
+			const verbFeatures = getVerbLexicalFeatures(lexicalInfo);
+			if (verbFeatures) {
 				return {
 					kind: "Lexem",
 					surface: {
 						features: {
-							conjugation: featuresOutput.conjugation,
+							conjugation: verbFeatures.conjugation,
 							pos: "Verb",
-							valency: featuresOutput.valency,
+							valency: verbFeatures.valency,
 						},
 						lemma: lemmaResult.lemma,
 						surfaceKind: "Lemma",
@@ -87,22 +81,27 @@ function buildLexemLinguisticUnit(
 
 			logger.warn(
 				"[generateSections] Missing verb features for Lexem lemma metadata",
-				{ enrichmentOutput, featuresOutput, lemmaResult },
+				{ lemmaResult, lexicalInfo },
 			);
 			return null;
 		}
 
 		if (lemmaResult.posLikeKind === "Adjective") {
-			if (isAdjectiveFeaturesOutput(featuresOutput)) {
+			if (
+				lexicalInfo.features.status === "ready" &&
+				lexicalInfo.features.value.kind === "adjective"
+			) {
 				return {
 					kind: "Lexem",
 					surface: {
 						features: {
-							classification: featuresOutput.classification,
-							distribution: featuresOutput.distribution,
-							gradability: featuresOutput.gradability,
+							classification:
+								lexicalInfo.features.value.classification,
+							distribution:
+								lexicalInfo.features.value.distribution,
+							gradability: lexicalInfo.features.value.gradability,
 							pos: "Adjective",
-							valency: featuresOutput.valency,
+							valency: lexicalInfo.features.value.valency,
 						},
 						lemma: lemmaResult.lemma,
 						surfaceKind: "Lemma",
@@ -112,7 +111,7 @@ function buildLexemLinguisticUnit(
 
 			logger.warn(
 				"[generateSections] Missing adjective features for Lexem lemma metadata",
-				{ enrichmentOutput, featuresOutput, lemmaResult },
+				{ lemmaResult, lexicalInfo },
 			);
 			return null;
 		}
@@ -170,8 +169,7 @@ function buildPhrasemLinguisticUnit(
 
 function buildLexemEntity(
 	lemmaResult: Extract<LemmaResult, { linguisticUnit: "Lexem" }>,
-	enrichmentOutput: LexemEnrichmentOutput,
-	featuresOutput: FeaturesOutput | null,
+	lexicalInfo: Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>,
 ): DeEntity<"Lexem"> {
 	const buildPosOnlyLexicalFeature = (
 		pos: Extract<LemmaResult, { linguisticUnit: "Lexem" }>["posLikeKind"],
@@ -203,15 +201,21 @@ function buildLexemEntity(
 	const commonFields = {
 		emojiDescription:
 			lemmaResult.precomputedEmojiDescription ??
-			enrichmentOutput.emojiDescription,
-		ipa: enrichmentOutput.ipa,
+			(lexicalInfo.core.status === "ready"
+				? lexicalInfo.core.value.emojiDescription
+				: ["❓"]),
+		ipa:
+			lexicalInfo.core.status === "ready"
+				? lexicalInfo.core.value.ipa
+				: "unknown",
 		language: "German" as const,
 		lemma: lemmaResult.lemma,
 		linguisticUnit: "Lexem" as const,
 		posLikeKind: lemmaResult.posLikeKind,
-		...(typeof enrichmentOutput.senseGloss === "string" &&
-		enrichmentOutput.senseGloss.length > 0
-			? { senseGloss: enrichmentOutput.senseGloss }
+		...(lexicalInfo.core.status === "ready" &&
+		typeof lexicalInfo.core.value.senseGloss === "string" &&
+		lexicalInfo.core.value.senseGloss.length > 0
+			? { senseGloss: lexicalInfo.core.value.senseGloss }
 			: {}),
 		surfaceKind: lemmaResult.surfaceKind,
 	};
@@ -219,36 +223,34 @@ function buildLexemEntity(
 	if (lemmaResult.surfaceKind === "Lemma") {
 		if (
 			lemmaResult.posLikeKind === "Noun" &&
-			"genus" in enrichmentOutput &&
-			"nounClass" in enrichmentOutput &&
-			enrichmentOutput.genus &&
-			enrichmentOutput.nounClass
+			lexicalInfo.features.status === "ready" &&
+			lexicalInfo.features.value.kind === "noun" &&
+			lexicalInfo.features.value.genus &&
+			lexicalInfo.features.value.nounClass
 		) {
 			return {
 				...commonFields,
 				features: {
 					inflectional: {},
 					lexical: {
-						genus: enrichmentOutput.genus,
-						nounClass: enrichmentOutput.nounClass,
+						genus: lexicalInfo.features.value.genus,
+						nounClass: lexicalInfo.features.value.nounClass,
 						pos: "Noun",
 					},
 				},
 			} satisfies DeEntity<"Lexem">;
 		}
 
-		if (
-			lemmaResult.posLikeKind === "Verb" &&
-			isVerbFeaturesOutput(featuresOutput)
-		) {
+		const verbFeatures = getVerbLexicalFeatures(lexicalInfo);
+		if (lemmaResult.posLikeKind === "Verb" && verbFeatures) {
 			return {
 				...commonFields,
 				features: {
 					inflectional: {},
 					lexical: {
-						conjugation: featuresOutput.conjugation,
+						conjugation: verbFeatures.conjugation,
 						pos: "Verb",
-						valency: featuresOutput.valency,
+						valency: verbFeatures.valency,
 					},
 				},
 			} satisfies DeEntity<"Lexem">;
@@ -256,18 +258,20 @@ function buildLexemEntity(
 
 		if (
 			lemmaResult.posLikeKind === "Adjective" &&
-			isAdjectiveFeaturesOutput(featuresOutput)
+			lexicalInfo.features.status === "ready" &&
+			lexicalInfo.features.value.kind === "adjective"
 		) {
 			return {
 				...commonFields,
 				features: {
 					inflectional: {},
 					lexical: {
-						classification: featuresOutput.classification,
-						distribution: featuresOutput.distribution,
-						gradability: featuresOutput.gradability,
+						classification:
+							lexicalInfo.features.value.classification,
+						distribution: lexicalInfo.features.value.distribution,
+						gradability: lexicalInfo.features.value.gradability,
 						pos: "Adjective",
-						valency: featuresOutput.valency,
+						valency: lexicalInfo.features.value.valency,
 					},
 				},
 			} satisfies DeEntity<"Lexem">;
@@ -294,20 +298,26 @@ function buildLexemEntity(
 
 function buildPhrasemEntity(
 	lemmaResult: Extract<LemmaResult, { linguisticUnit: "Phrasem" }>,
-	enrichmentOutput: EnrichmentOutput,
+	lexicalInfo: Extract<LexicalInfo, { lemma: { linguisticUnit: "Phrasem" } }>,
 ): DeEntity<"Phrasem"> {
 	const commonFields = {
 		emojiDescription:
 			lemmaResult.precomputedEmojiDescription ??
-			enrichmentOutput.emojiDescription,
-		ipa: enrichmentOutput.ipa,
+			(lexicalInfo.core.status === "ready"
+				? lexicalInfo.core.value.emojiDescription
+				: ["❓"]),
+		ipa:
+			lexicalInfo.core.status === "ready"
+				? lexicalInfo.core.value.ipa
+				: "unknown",
 		language: "German" as const,
 		lemma: lemmaResult.lemma,
 		linguisticUnit: "Phrasem" as const,
 		posLikeKind: lemmaResult.posLikeKind,
-		...(typeof enrichmentOutput.senseGloss === "string" &&
-		enrichmentOutput.senseGloss.length > 0
-			? { senseGloss: enrichmentOutput.senseGloss }
+		...(lexicalInfo.core.status === "ready" &&
+		typeof lexicalInfo.core.value.senseGloss === "string" &&
+		lexicalInfo.core.value.senseGloss.length > 0
+			? { senseGloss: lexicalInfo.core.value.senseGloss }
 			: {}),
 		surfaceKind: lemmaResult.surfaceKind,
 	};
@@ -334,31 +344,63 @@ function buildPhrasemEntity(
 
 export function buildEntityMeta(
 	lemmaResult: LemmaResult,
-	enrichmentOutput: EnrichmentOutput,
-	featuresOutput: FeaturesOutput | null,
+	lexicalInfo: LexicalInfo,
 ): DeEntity | undefined {
-	if (lemmaResult.linguisticUnit === "Lexem") {
-		return buildLexemEntity(lemmaResult, enrichmentOutput, featuresOutput);
+	if (
+		lemmaResult.linguisticUnit === "Lexem" &&
+		lexicalInfo.lemma.linguisticUnit === "Lexem"
+	) {
+		return buildLexemEntity(
+			lemmaResult,
+			lexicalInfo as Extract<
+				LexicalInfo,
+				{ lemma: { linguisticUnit: "Lexem" } }
+			>,
+		);
 	}
 
-	return buildPhrasemEntity(lemmaResult, enrichmentOutput);
+	if (
+		lemmaResult.linguisticUnit === "Phrasem" &&
+		lexicalInfo.lemma.linguisticUnit === "Phrasem"
+	) {
+		return buildPhrasemEntity(
+			lemmaResult,
+			lexicalInfo as Extract<
+				LexicalInfo,
+				{ lemma: { linguisticUnit: "Phrasem" } }
+			>,
+		);
+	}
+
+	return undefined;
 }
 
 export function buildLinguisticUnitMeta(
 	entryId: string,
 	lemmaResult: LemmaResult,
-	enrichmentOutput: EnrichmentOutput,
-	featuresOutput: FeaturesOutput | null,
+	lexicalInfo: LexicalInfo,
 ): GermanLinguisticUnit | undefined {
-	if (lemmaResult.linguisticUnit === "Lexem") {
+	if (
+		lemmaResult.linguisticUnit === "Lexem" &&
+		lexicalInfo.lemma.linguisticUnit === "Lexem"
+	) {
 		const lexem = buildLexemLinguisticUnit(
 			entryId,
 			lemmaResult,
-			enrichmentOutput,
-			featuresOutput,
+			lexicalInfo as Extract<
+				LexicalInfo,
+				{ lemma: { linguisticUnit: "Lexem" } }
+			>,
 		);
 		return lexem ?? undefined;
 	}
 
-	return buildPhrasemLinguisticUnit(entryId, lemmaResult);
+	if (
+		lemmaResult.linguisticUnit === "Phrasem" &&
+		lexicalInfo.lemma.linguisticUnit === "Phrasem"
+	) {
+		return buildPhrasemLinguisticUnit(entryId, lemmaResult);
+	}
+
+	return undefined;
 }

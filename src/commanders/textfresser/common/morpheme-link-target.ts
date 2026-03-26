@@ -1,11 +1,11 @@
 /**
- * Converts LLM morpheme output to MorphemeItem[] with resolved linkTarget.
+ * Converts lexical morphemes to MorphemeItem[] with resolved linkTarget.
  *
  * - Prefix (German): linkTarget = "{surf}-prefix-de" (Library canonical basename)
  * - Others: linkTarget stays undefined — formatter falls back to lemma ?? surf
  */
 
-import type { LlmMorpheme } from "../../../prompt-smith/schemas/morphem";
+import type { LexicalMorpheme } from "../../../lexical-generation";
 import { wikilinkHelper } from "../../../stateless-helpers/wikilink";
 import type { TargetLanguage } from "../../../types";
 import type { MorphemeItem } from "../domain/morpheme/morpheme-formatter";
@@ -33,12 +33,12 @@ function buildPrefixTarget(value: string): string {
 }
 
 export function resolveMorphemeItems(
-	morphemes: LlmMorpheme[],
+	morphemes: LexicalMorpheme[],
 	targetLang: TargetLanguage,
 ): MorphemeItem[] {
 	return morphemes.map((m): MorphemeItem => {
 		const normalizedRawSurf = stripAnchor(
-			wikilinkHelper.normalizeLinkTarget(m.surf),
+			wikilinkHelper.normalizeLinkTarget(m.surface),
 		);
 		const normalizedSurf =
 			m.kind === "Prefix" && targetLang === "German"

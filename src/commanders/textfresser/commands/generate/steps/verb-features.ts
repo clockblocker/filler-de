@@ -1,17 +1,27 @@
-import { buildGermanVerbEntryIdentity } from "../../../../../linguistics/de";
 import type {
-	FeaturesOutput,
-	VerbFeaturesOutput,
-} from "./section-generation-types";
+	LexemFeatures,
+	LexicalInfo,
+} from "../../../../../lexical-generation";
+import { buildGermanVerbEntryIdentity } from "../../../../../linguistics/de";
 import { normalizeTagPart } from "./tag-normalization";
 
-export function isVerbFeaturesOutput(
-	output: FeaturesOutput | null,
-): output is VerbFeaturesOutput {
-	return output !== null && "conjugation" in output && "valency" in output;
+export type VerbLexicalFeatures = Extract<LexemFeatures, { kind: "verb" }>;
+
+export function getVerbLexicalFeatures(
+	lexicalInfo: LexicalInfo,
+): VerbLexicalFeatures | null {
+	if (lexicalInfo.lemma.linguisticUnit !== "Lexem") {
+		return null;
+	}
+	if (lexicalInfo.features.status !== "ready") {
+		return null;
+	}
+	return lexicalInfo.features.value.kind === "verb"
+		? lexicalInfo.features.value
+		: null;
 }
 
-export function buildVerbFeatureTags(output: VerbFeaturesOutput): string[] {
+export function buildVerbFeatureTags(output: VerbLexicalFeatures): string[] {
 	const tags = [
 		`conjugation-${normalizeTagPart(output.conjugation)}`,
 		`separability-${normalizeTagPart(output.valency.separability)}`,
@@ -28,7 +38,7 @@ export function buildVerbFeatureTags(output: VerbFeaturesOutput): string[] {
 }
 
 export function buildVerbEntryIdentityFromFeatures(
-	output: VerbFeaturesOutput,
+	output: Pick<VerbLexicalFeatures, "conjugation" | "valency">,
 ): string {
 	return buildGermanVerbEntryIdentity({
 		conjugation: output.conjugation,
