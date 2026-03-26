@@ -88,10 +88,18 @@ function toMorphemOutput(lexicalInfo: LexicalInfo): MorphemOutput | null {
 					derivation_type:
 						lexicalInfo.morphemicBreakdown.value.derivedFrom
 							.derivationType,
-					lemma: lexicalInfo.morphemicBreakdown.value.derivedFrom.lemma,
+					lemma: lexicalInfo.morphemicBreakdown.value.derivedFrom
+						.lemma,
 				}
 			: undefined,
-		morphemes: lexicalInfo.morphemicBreakdown.value.morphemes,
+		morphemes: lexicalInfo.morphemicBreakdown.value.morphemes.map(
+			(morpheme) => ({
+				kind: morpheme.kind,
+				lemma: morpheme.lemma,
+				separability: morpheme.separability,
+				surf: morpheme.surface,
+			}),
+		),
 	};
 }
 
@@ -132,7 +140,10 @@ function toInflectionOutputs(lexicalInfo: LexicalInfo): {
 	return {
 		nounInflectionOutput: null,
 		otherInflectionOutput: {
-			rows: lexicalInfo.inflections.value.rows,
+			rows: lexicalInfo.inflections.value.rows.map((row) => ({
+				forms: row.forms.map((form) => `[[${form.form}]]`).join(", "),
+				label: row.label,
+			})),
 		},
 	};
 }

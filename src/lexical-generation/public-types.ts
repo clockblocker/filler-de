@@ -1,24 +1,5 @@
 import type { Result } from "neverthrow";
 import type { z } from "zod/v3";
-import type { PhrasemeKind } from "../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
-import type { DeLexemPos } from "../linguistics/de/lemma";
-import type {
-	GermanAdjectiveClassification,
-	GermanAdjectiveDistribution,
-	GermanAdjectiveGradability,
-	GermanAdjectiveValency,
-} from "../linguistics/de/lexem/adjective/features";
-import type {
-	GermanGenus,
-	NounClass,
-	NounInflectionCell,
-} from "../linguistics/de/lexem/noun/features";
-import type {
-	GermanVerbConjugation,
-	GermanVerbValency,
-} from "../linguistics/de/lexem/verb/features";
-import type { LlmMorpheme } from "../prompt-smith/schemas/morphem";
-import type { RelationSubKind } from "../prompt-smith/schemas/relation";
 import type { KnownLanguage, TargetLanguage } from "../types";
 import type {
 	LexicalGenerationError,
@@ -27,6 +8,101 @@ import type {
 import type { LexicalGenerationSettings } from "./settings";
 
 export type ZodSchemaLike<T> = z.ZodType<T>;
+
+export type LexicalSurfaceKind = "Lemma" | "Inflected" | "Variant";
+
+export type LexicalPos =
+	| "Noun"
+	| "Pronoun"
+	| "Article"
+	| "Adjective"
+	| "Verb"
+	| "Preposition"
+	| "Adverb"
+	| "Particle"
+	| "Conjunction"
+	| "InteractionalUnit";
+
+export type LexicalPhrasemeKind =
+	| "Idiom"
+	| "Collocation"
+	| "DiscourseFormula"
+	| "Proverb"
+	| "CulturalQuotation";
+
+export type LexicalGenus = "Maskulinum" | "Femininum" | "Neutrum";
+
+export type LexicalNounClass = "Common" | "Proper";
+
+export type LexicalCase =
+	| "Nominative"
+	| "Accusative"
+	| "Dative"
+	| "Genitive";
+
+export type LexicalNumber = "Singular" | "Plural";
+
+export type LexicalMorphemeKind =
+	| "Root"
+	| "Prefix"
+	| "Suffix"
+	| "Suffixoid"
+	| "Circumfix"
+	| "Interfix"
+	| "Duplifix";
+
+export type LexicalAdjectiveClassification =
+	| "Qualitative"
+	| "Relational"
+	| "Participial";
+
+export type LexicalAdjectiveDistribution =
+	| "AttributiveAndPredicative"
+	| "AttributiveOnly"
+	| "PredicativeOnly";
+
+export type LexicalAdjectiveGradability = "Gradable" | "NonGradable";
+
+export type LexicalAdjectiveGovernedPattern =
+	| "None"
+	| "Dative"
+	| "Accusative"
+	| "Genitive"
+	| "Prepositional"
+	| "ZuInfinitive"
+	| "DassClause";
+
+export type LexicalAdjectiveValency = {
+	governedPattern: LexicalAdjectiveGovernedPattern;
+	governedPreposition?: string;
+};
+
+export type LexicalVerbConjugation = "Irregular" | "Regular";
+
+export type LexicalVerbSeparability =
+	| "Separable"
+	| "Inseparable"
+	| "None";
+
+export type LexicalVerbReflexivity =
+	| "NonReflexive"
+	| "ReflexiveOnly"
+	| "OptionalReflexive";
+
+export type LexicalVerbValency = {
+	governedPreposition?: string;
+	reflexivity: LexicalVerbReflexivity;
+	separability: LexicalVerbSeparability;
+};
+
+export type LexicalRelationKind =
+	| "Synonym"
+	| "NearSynonym"
+	| "Antonym"
+	| "Hypernym"
+	| "Hyponym"
+	| "Meronym"
+	| "Holonym";
 
 export type StructuredFetchFn = <T>(params: {
 	requestLabel: string;
@@ -40,15 +116,15 @@ export type ResolvedLemma =
 	| {
 			linguisticUnit: "Lexem";
 			lemma: string;
-			posLikeKind: DeLexemPos;
-			surfaceKind: "Lemma" | "Inflected" | "Variant";
+			posLikeKind: LexicalPos;
+			surfaceKind: LexicalSurfaceKind;
 			contextWithLinkedParts?: string;
 	  }
 	| {
 			linguisticUnit: "Phrasem";
 			lemma: string;
-			posLikeKind: PhrasemeKind;
-			surfaceKind: "Lemma" | "Inflected" | "Variant";
+			posLikeKind: LexicalPhrasemeKind;
+			surfaceKind: LexicalSurfaceKind;
 			contextWithLinkedParts?: string;
 	  };
 
@@ -56,16 +132,16 @@ export type CandidateSense =
 	| {
 			id: string;
 			linguisticUnit: "Lexem";
-			posLikeKind: DeLexemPos;
+			posLikeKind: LexicalPos;
 			emojiDescription?: string[];
-			genus?: GermanGenus;
+			genus?: LexicalGenus;
 			ipa?: string;
 			senseGloss?: string;
 	  }
 	| {
 			id: string;
 			linguisticUnit: "Phrasem";
-			posLikeKind: PhrasemeKind;
+			posLikeKind: LexicalPhrasemeKind;
 			emojiDescription?: string[];
 			ipa?: string;
 			senseGloss?: string;
@@ -90,21 +166,21 @@ export type LexicalCore = {
 export type LexemFeatures =
 	| {
 			kind: "noun";
-			genus?: GermanGenus;
-			nounClass?: NounClass;
+			genus?: LexicalGenus;
+			nounClass?: LexicalNounClass;
 			tags: string[];
 	  }
 	| {
 			kind: "adjective";
-			classification: GermanAdjectiveClassification;
-			distribution: GermanAdjectiveDistribution;
-			gradability: GermanAdjectiveGradability;
-			valency: GermanAdjectiveValency;
+			classification: LexicalAdjectiveClassification;
+			distribution: LexicalAdjectiveDistribution;
+			gradability: LexicalAdjectiveGradability;
+			valency: LexicalAdjectiveValency;
 	  }
 	| {
 			kind: "verb";
-			conjugation: GermanVerbConjugation;
-			valency: GermanVerbValency;
+			conjugation: LexicalVerbConjugation;
+			valency: LexicalVerbValency;
 	  }
 	| {
 			kind: "tags";
@@ -116,16 +192,32 @@ export type PhrasemFeatures = {
 	tags: string[];
 };
 
+export type LexicalInflectionForm = {
+	form: string;
+};
+
 export type LexemInflections =
 	| {
 			kind: "noun";
-			cells: NounInflectionCell[];
-			genus: GermanGenus;
+			cells: Array<{
+				article: string;
+				case: LexicalCase;
+				form: string;
+				number: LexicalNumber;
+			}>;
+			genus: LexicalGenus;
 	  }
 	| {
 			kind: "generic";
-			rows: Array<{ forms: string; label: string }>;
+			rows: Array<{ forms: LexicalInflectionForm[]; label: string }>;
 	  };
+
+export type LexicalMorpheme = {
+	kind: LexicalMorphemeKind;
+	lemma?: string;
+	separability?: "Separable" | "Inseparable";
+	surface: string;
+};
 
 export type MorphemicBreakdown = {
 	compoundedFrom?: string[];
@@ -133,12 +225,12 @@ export type MorphemicBreakdown = {
 		derivationType: string;
 		lemma: string;
 	};
-	morphemes: LlmMorpheme[];
+	morphemes: LexicalMorpheme[];
 };
 
 export type LexicalRelations = {
 	relations: Array<{
-		kind: RelationSubKind;
+		kind: LexicalRelationKind;
 		words: string[];
 	}>;
 };
@@ -192,9 +284,9 @@ export type LexicalInfoGenerator = (
 ) => Promise<Result<LexicalInfo, LexicalGenerationError>>;
 
 export type LexicalGenerationModule = {
-	buildLemmaGenerator(): LemmaGenerator;
-	buildSenseDisambiguator(): SenseDisambiguator;
-	buildLexicalInfoGenerator(): LexicalInfoGenerator;
+	generateLemma: LemmaGenerator;
+	disambiguateSense: SenseDisambiguator;
+	generateLexicalInfo: LexicalInfoGenerator;
 };
 
 export type LexicalGenerationModuleResult = Result<

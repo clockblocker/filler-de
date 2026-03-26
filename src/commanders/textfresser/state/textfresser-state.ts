@@ -1,9 +1,9 @@
 import {
 	createLexicalGenerationModule,
 	type LexicalGenerationError,
-	type LexicalGenerationSettings,
 	LexicalGenerationFailureKind,
 	type LexicalGenerationModule,
+	type LexicalGenerationSettings,
 	lexicalGenerationError,
 	type StructuredFetchFn,
 } from "../../../lexical-generation";

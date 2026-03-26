@@ -1,4 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
+import type { ResolvedLemma } from "../../../../lexical-generation";
 import {
 	PHRASEM_KINDS,
 	type PhrasemeKind,
@@ -34,6 +35,7 @@ import {
 	buildUpdatedBlock,
 	type RewritePlan,
 } from "./lemma-rewrite-plan";
+import { commandApiError } from "../../errors";
 
 type ResolvedPosLikeKind =
 	| {
@@ -127,38 +129,23 @@ export async function runLemmaTwoPhase(params: {
 
 	const context = attestation.source.textWithOnlyTargetMarked;
 	const lexicalGeneration = state.lexicalGeneration;
-	let resolvedLemma: {
-		contextWithLinkedParts?: string | null;
-		lemma: string;
-		linguisticUnit: "Lexem" | "Phrasem";
-		posLikeKind: string;
-		surfaceKind: "Lemma" | "Inflected" | "Variant";
-	};
-	if (lexicalGeneration) {
-		const result = await lexicalGeneration.buildLemmaGenerator()(
-			surface,
-			context,
-		);
-		if (result.isErr()) {
-			return err({
-				kind: CommandErrorKind.ApiError,
-				reason: result.error.message,
-			});
-		}
-		resolvedLemma = result.value;
-	} else {
-		const result = await state.promptRunner.generate("Lemma", {
-			context,
-			surface,
-		});
-		if (result.isErr()) {
-			return err({
-				kind: CommandErrorKind.ApiError,
-				reason: result.error.reason,
-			});
-		}
-		resolvedLemma = result.value;
+	if (!lexicalGeneration) {
+		return err(commandApiError({
+			lexicalGenerationError: state.lexicalGenerationInitError,
+			reason:
+				state.lexicalGenerationInitError?.message ??
+				"Lexical generation is unavailable",
+		}));
 	}
+
+	const lemmaResult = await lexicalGeneration.generateLemma(surface, context);
+	if (lemmaResult.isErr()) {
+		return err(commandApiError({
+			lexicalGenerationError: lemmaResult.error,
+			reason: lemmaResult.error.message,
+		}));
+	}
+	const resolvedLemma: ResolvedLemma = lemmaResult.value;
 	const resolvedPosLikeKind = resolvePosLikeKind(resolvedLemma);
 	if (!resolvedPosLikeKind) {
 		return err({
@@ -193,12 +180,9 @@ export async function runLemmaTwoPhase(params: {
 			},
 			context,
 			finalTarget.splitPath,
-			lexicalGeneration
-				? {
-						disambiguateWith:
-							lexicalGeneration.buildSenseDisambiguator(),
-					}
-				: undefined,
+			{
+				disambiguateWith: lexicalGeneration.disambiguateSense,
+			},
 		);
 	} else {
 		disambiguation = await disambiguateSense(
@@ -212,12 +196,9 @@ export async function runLemmaTwoPhase(params: {
 			},
 			context,
 			finalTarget.splitPath,
-			lexicalGeneration
-				? {
-						disambiguateWith:
-							lexicalGeneration.buildSenseDisambiguator(),
-					}
-				: undefined,
+			{
+				disambiguateWith: lexicalGeneration.disambiguateSense,
+			},
 		);
 	}
 	if (disambiguation.isErr()) {

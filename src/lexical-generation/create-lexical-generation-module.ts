@@ -17,8 +17,8 @@ export function createLexicalGenerationModule(
 	}
 
 	return ok({
-		buildLemmaGenerator: () => buildLemmaGenerator(params),
-		buildLexicalInfoGenerator: () => buildLexicalInfoGenerator(params),
-		buildSenseDisambiguator: () => buildSenseDisambiguator(params),
+		disambiguateSense: buildSenseDisambiguator(params),
+		generateLemma: buildLemmaGenerator(params),
+		generateLexicalInfo: buildLexicalInfoGenerator(params),
 	});
 }

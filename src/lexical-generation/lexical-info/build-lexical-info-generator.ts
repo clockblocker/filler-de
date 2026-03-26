@@ -1,9 +1,10 @@
 import { err, ok, type Result } from "neverthrow";
 import type { PromptKind } from "../../prompt-smith/codegen/consts";
 import type { AgentOutput, UserInput } from "../../prompt-smith/schemas";
+import { wikilinkHelper } from "../../stateless-helpers/wikilink";
 import {
-	LexicalGenerationFailureKind,
 	type LexicalGenerationError,
+	LexicalGenerationFailureKind,
 } from "../errors";
 import { executePrompt } from "../internal/prompt-executor";
 import type {
@@ -14,8 +15,8 @@ import type {
 	LexicalCore,
 	LexicalGenerationSettings,
 	LexicalInfo,
-	LexicalInfoGenerator,
 	LexicalInfoField,
+	LexicalInfoGenerator,
 	MorphemicBreakdown,
 	ResolvedLemma,
 } from "../public-types";
@@ -112,6 +113,24 @@ function buildCorePrompt(lemma: ResolvedLemma): {
 		},
 		kind: "LexemEnrichment",
 	};
+}
+
+function parseGenericInflectionForms(rawForms: string): Array<{ form: string }> {
+	return rawForms
+		.split(",")
+		.map((form) => form.trim())
+		.filter((form) => form.length > 0)
+		.map((form) => {
+			const [wikilink] = wikilinkHelper.parse(form);
+			if (wikilink) {
+				return {
+					form: wikilinkHelper.normalizeLinkTarget(wikilink.surface),
+				};
+			}
+
+			return { form: wikilinkHelper.normalizeLinkTarget(form) };
+		})
+		.filter((form) => form.form.length > 0);
 }
 
 function mapCoreOutputToCore(
@@ -279,7 +298,11 @@ function mapFeaturesField(
 				distribution: value.distribution,
 				gradability: value.gradability,
 				kind: "adjective",
-				valency: value.valency,
+				valency: {
+					governedPattern: value.valency.governedPattern,
+					governedPreposition:
+						value.valency.governedPreposition ?? undefined,
+				},
 			},
 		};
 	}
@@ -291,7 +314,12 @@ function mapFeaturesField(
 			value: {
 				conjugation: value.conjugation,
 				kind: "verb",
-				valency: value.valency,
+				valency: {
+					governedPreposition:
+						value.valency.governedPreposition ?? undefined,
+					reflexivity: value.valency.reflexivity,
+					separability: value.valency.separability,
+				},
 			},
 		};
 	}
@@ -356,7 +384,10 @@ function mapInflectionsField(
 		status: "ready",
 		value: {
 			kind: "generic",
-			rows: inflectionResult.value.rows,
+			rows: inflectionResult.value.rows.map((row) => ({
+				forms: parseGenericInflectionForms(row.forms),
+				label: row.label,
+			})),
 		},
 	};
 }
@@ -386,7 +417,12 @@ function mapMorphemicBreakdownField(
 						lemma: result.value.derived_from.lemma,
 					}
 				: undefined,
-			morphemes: result.value.morphemes,
+			morphemes: result.value.morphemes.map((morpheme) => ({
+				kind: morpheme.kind,
+				lemma: morpheme.lemma ?? undefined,
+				separability: morpheme.separability ?? undefined,
+				surface: morpheme.surf,
+			})),
 		},
 	};
 }

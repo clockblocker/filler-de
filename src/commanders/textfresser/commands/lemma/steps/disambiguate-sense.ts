@@ -22,6 +22,7 @@ import { dictNoteHelper } from "../../../domain/dict-note";
 import type { PromptRunner } from "../../../llm/prompt-runner";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import { DictSectionKind } from "../../../targets/de/sections/section-kind";
+import { commandApiError } from "../../../errors";
 import type { CommandError } from "../../types";
 import { CommandErrorKind } from "../../types";
 
@@ -272,10 +273,10 @@ export async function disambiguateSense(
 				candidateSenses,
 			);
 			if (moduleResult.isErr()) {
-				return err({
-					kind: CommandErrorKind.ApiError,
+				return err(commandApiError({
+					lexicalGenerationError: moduleResult.error,
 					reason: moduleResult.error.message,
-				});
+				}));
 			}
 
 			if (moduleResult.value.kind === "matched") {

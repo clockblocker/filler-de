@@ -89,8 +89,8 @@ export type TextEaterSettings = {
 export const DEFAULT_SETTINGS: TextEaterSettings = {
 	apiProvider: "google",
 	explainGrammarPlacement: "AboveSelection",
-	generatePlacement: "Bottom",
 	generateInflections: true,
+	generatePlacement: "Bottom",
 	googleApiKey: "",
 	hideMetadata: true,
 	languages: { known: "Russian", target: "German" },

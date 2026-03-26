@@ -1,8 +1,8 @@
+import type { ResolvedLemma } from "../../../../../lexical-generation";
 import type {
 	GermanGenus,
 	NounInflectionCell,
 } from "../../../../../linguistics/de/lexem/noun";
-import type { ResolvedLemma } from "../../../../../lexical-generation";
 import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
@@ -15,7 +15,6 @@ import { getSectionsFor } from "../../../targets/de/sections/section-config";
 import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { LemmaResult } from "../../lemma/types";
 import { dispatchHeaderFormatter } from "../section-formatters/header-dispatch";
-import { getFeaturesPromptKindForPos } from "./features-prompt-dispatch";
 import {
 	adaptLexicalInfoToCompatibility,
 	collectLexicalInfoFailures,
@@ -26,10 +25,7 @@ import {
 	resolveNounInflectionGenus,
 	V3_SECTIONS,
 } from "./section-generation-context";
-import {
-	unwrapOptional,
-	unwrapResultAsync,
-} from "./section-generation-results";
+import { unwrapResultAsync } from "./section-generation-results";
 import type {
 	EnrichmentOutput,
 	FeaturesOutput,
@@ -77,47 +73,6 @@ type ApplicableSectionState = {
 	sectionSet: Set<DictSectionKind>;
 	v3Applicable: DictSectionKind[];
 };
-
-type LegacyApplicableOutputs = {
-	featuresOutput: FeaturesOutput | null;
-	morphemOutput: MorphemOutput | null;
-	nounInflectionOutput: NounInflectionOutput | null;
-	otherInflectionOutput: InflectionOutput | null;
-	relationOutput: RelationOutput | null;
-};
-
-async function generateEnrichmentOutput(
-	lemmaResult: LemmaResult,
-	promptRunner: PromptRunner,
-	context: string,
-): Promise<EnrichmentOutput> {
-	if (lemmaResult.linguisticUnit === "Lexem") {
-		if (lemmaResult.posLikeKind === "Noun") {
-			return unwrapResultAsync(
-				promptRunner.generate(PromptKind.NounEnrichment, {
-					context,
-					word: lemmaResult.lemma,
-				}),
-			);
-		}
-
-		return unwrapResultAsync(
-			promptRunner.generate(PromptKind.LexemEnrichment, {
-				context,
-				pos: lemmaResult.posLikeKind,
-				word: lemmaResult.lemma,
-			}),
-		);
-	}
-
-	return unwrapResultAsync(
-		promptRunner.generate(PromptKind.PhrasemEnrichment, {
-			context,
-			kind: lemmaResult.posLikeKind,
-			word: lemmaResult.lemma,
-		}),
-	);
-}
 
 function buildFallbackEnrichmentOutput(
 	lemmaResult: LemmaResult,
@@ -191,101 +146,6 @@ function resolveApplicableSectionState(
 	};
 }
 
-async function generateLegacyApplicableOutputs(params: {
-	applicableSectionState: ApplicableSectionState;
-	context: string;
-	failedSections: string[];
-	lemmaResult: LemmaResult;
-	promptRunner: PromptRunner;
-}): Promise<LegacyApplicableOutputs> {
-	const { applicableSectionState, context, failedSections, lemmaResult } =
-		params;
-	const { promptRunner } = params;
-	const word = lemmaResult.lemma;
-	const posOrKind = lemmaResult.posLikeKind;
-	const featuresPromptKind =
-		lemmaResult.linguisticUnit === "Lexem"
-			? getFeaturesPromptKindForPos(lemmaResult.posLikeKind)
-			: null;
-	const tasks: [
-		Promise<MorphemOutput> | null,
-		Promise<RelationOutput> | null,
-		Promise<NounInflectionOutput> | null,
-		Promise<InflectionOutput> | null,
-		Promise<FeaturesOutput> | null,
-	] = [
-		applicableSectionState.sectionSet.has(DictSectionKind.Morphem) ||
-		applicableSectionState.sectionSet.has(DictSectionKind.Morphology)
-			? unwrapResultAsync(
-					promptRunner.generate(PromptKind.Morphem, {
-						context,
-						word,
-					}),
-				)
-			: null,
-		applicableSectionState.sectionSet.has(DictSectionKind.Relation)
-			? unwrapResultAsync(
-					promptRunner.generate(PromptKind.Relation, {
-						context,
-						pos: posOrKind,
-						word,
-					}),
-				)
-			: null,
-		applicableSectionState.sectionSet.has(DictSectionKind.Inflection) &&
-		lemmaResult.linguisticUnit === "Lexem" &&
-		lemmaResult.posLikeKind === "Noun"
-			? unwrapResultAsync(
-					promptRunner.generate(PromptKind.NounInflection, {
-						context,
-						word,
-					}),
-				)
-			: null,
-		applicableSectionState.sectionSet.has(DictSectionKind.Inflection) &&
-		lemmaResult.linguisticUnit === "Lexem" &&
-		lemmaResult.posLikeKind !== "Noun"
-			? unwrapResultAsync(
-					promptRunner.generate(PromptKind.Inflection, {
-						context,
-						pos: posOrKind,
-						word,
-					}),
-				)
-			: null,
-		applicableSectionState.sectionSet.has(DictSectionKind.Tags) &&
-		featuresPromptKind
-			? unwrapResultAsync(
-					promptRunner.generate(featuresPromptKind, {
-						context,
-						word,
-					}),
-				)
-			: null,
-	];
-	const settled = await Promise.allSettled(tasks);
-
-	return {
-		featuresOutput: unwrapOptional(settled[4], "Features", failedSections),
-		morphemOutput: unwrapOptional(settled[0], "Morphem", failedSections),
-		nounInflectionOutput: unwrapOptional(
-			settled[2],
-			"Inflection",
-			failedSections,
-		),
-		otherInflectionOutput: unwrapOptional(
-			settled[3],
-			"Inflection",
-			failedSections,
-		),
-		relationOutput: unwrapOptional(
-			settled[1],
-			"Relation",
-			failedSections,
-		),
-	};
-}
-
 export async function generateNewEntrySections(
 	ctx: ResolvedEntryState,
 	options: GenerateNewEntrySectionsOptions = {},
@@ -306,111 +166,55 @@ export async function generateNewEntrySections(
 	let otherInflectionOutput: InflectionOutput | null = null;
 	let applicableSectionState: ApplicableSectionState | null = null;
 	const lexicalGeneration = ctx.textfresserState.lexicalGeneration;
-
-	try {
-		if (lexicalGeneration) {
-			const lexicalInfoResult =
-				await lexicalGeneration.buildLexicalInfoGenerator()(
-					toResolvedLemma(lemmaResult),
-					context,
-					{
-						precomputedEmojiDescription:
-							lemmaResult.precomputedEmojiDescription,
-					},
-				);
-			if (lexicalInfoResult.isErr()) {
-				throw lexicalInfoResult.error;
-			}
-
-			collectLexicalInfoFailures(lexicalInfoResult.value, failedSections);
-			const compatibility = adaptLexicalInfoToCompatibility(
-				lexicalInfoResult.value,
-			);
-
-			enrichmentOutput =
-				compatibility.enrichmentOutput ??
-				buildFallbackEnrichmentOutput(lemmaResult);
-			featuresOutput = compatibility.featuresOutput;
-			morphemOutput = compatibility.morphemOutput;
-			relationOutput = compatibility.relationOutput;
-			nounInflectionOutput = compatibility.nounInflectionOutput;
-			otherInflectionOutput = compatibility.otherInflectionOutput;
-		} else {
-			enrichmentOutput = await generateEnrichmentOutput(
-				lemmaResult,
-				promptRunner,
-				context,
-			);
-			applicableSectionState = resolveApplicableSectionState(
-				lemmaResult,
-				enrichmentOutput,
-				options,
-			);
-			({
-				featuresOutput,
-				morphemOutput,
-				nounInflectionOutput,
-				otherInflectionOutput,
-				relationOutput,
-			} = await generateLegacyApplicableOutputs({
-				applicableSectionState,
-				context,
-				failedSections,
-				lemmaResult,
-				promptRunner,
-			}));
-		}
-	} catch (error) {
-		const lexicalGenerationErrorMessage =
-			typeof error === "object" &&
-			error !== null &&
-			"message" in error &&
-			typeof error.message === "string"
-				? error.message
-				: getErrorMessage(error);
-		logger.warn(
-			"[generateSections] Lexical generation failed; continuing with fallback metadata",
-			{
-				error: lexicalGenerationErrorMessage,
-				lemma: lemmaResult.lemma,
-			},
+	if (!lexicalGeneration) {
+		throw (
+			ctx.textfresserState.lexicalGenerationInitError ??
+			new Error("Lexical generation is unavailable")
 		);
-		try {
-			enrichmentOutput = await generateEnrichmentOutput(
-				lemmaResult,
-				promptRunner,
-				context,
-			);
-		} catch (legacyError) {
-			failedSections.push("Enrichment");
-			logger.warn(
-				"[generateSections] Legacy enrichment fallback failed; using minimal metadata",
-				{
-					error: getErrorMessage(legacyError),
-					lemma: lemmaResult.lemma,
-				},
-			);
-			enrichmentOutput = buildFallbackEnrichmentOutput(lemmaResult);
-		}
+	}
 
+	const lexicalInfoResult = await lexicalGeneration.generateLexicalInfo(
+		toResolvedLemma(lemmaResult),
+		context,
+		{
+			precomputedEmojiDescription:
+				lemmaResult.precomputedEmojiDescription,
+		},
+	);
+	if (lexicalInfoResult.isErr()) {
+		throw lexicalInfoResult.error;
+	}
+
+	collectLexicalInfoFailures(lexicalInfoResult.value, failedSections);
+	const compatibility = adaptLexicalInfoToCompatibility(
+		lexicalInfoResult.value,
+	);
+
+	enrichmentOutput =
+		compatibility.enrichmentOutput ??
+		buildFallbackEnrichmentOutput(lemmaResult);
+	featuresOutput = compatibility.featuresOutput;
+	morphemOutput = compatibility.morphemOutput;
+	relationOutput = compatibility.relationOutput;
+	nounInflectionOutput = compatibility.nounInflectionOutput;
+	otherInflectionOutput = compatibility.otherInflectionOutput;
+
+	if (
+		compatibility.enrichmentOutput === null &&
+		lemmaResult.precomputedEmojiDescription
+	) {
+		logger.warn(
+			"[generateSections] Lexical core unavailable; using fallback header metadata",
+			{ lemma: lemmaResult.lemma },
+		);
+	}
+
+	if (!applicableSectionState) {
 		applicableSectionState = resolveApplicableSectionState(
 			lemmaResult,
 			enrichmentOutput,
 			options,
 		);
-		({
-			featuresOutput,
-			morphemOutput,
-			nounInflectionOutput,
-			otherInflectionOutput,
-			relationOutput,
-		} = await generateLegacyApplicableOutputs({
-			applicableSectionState,
-			context,
-			failedSections,
-			lemmaResult,
-			promptRunner,
-		}));
 	}
 
 	const { sectionSet, v3Applicable } =
@@ -431,7 +235,7 @@ export async function generateNewEntrySections(
 				lemma: lemmaResult.lemma,
 				willSkipMorphologySection: sectionSet.has(
 					DictSectionKind.Morphology,
-					),
+				),
 			},
 		);
 	}

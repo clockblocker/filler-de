@@ -1,8 +1,9 @@
-import { ok, ResultAsync } from "neverthrow";
+import { errAsync, ok, ResultAsync } from "neverthrow";
 import type { VaultAction } from "../../../../managers/obsidian/vault-action-manager";
 import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
 
 import type { CommandError, CommandInput, CommandState } from "../types";
+import { commandApiError } from "../types";
 import { checkAttestation } from "./steps/check-attestation";
 import { checkEligibility } from "./steps/check-eligibility";
 import { checkLemmaResult } from "./steps/check-lemma-result";
@@ -24,6 +25,13 @@ import { serializeEntry } from "./steps/serialize-entry";
 export function generateCommand(
 	input: CommandInput,
 ): ResultAsync<VaultAction[], CommandError> {
+	if (input.textfresserState.lexicalGenerationInitError) {
+		return errAsync(commandApiError({
+			lexicalGenerationError: input.textfresserState.lexicalGenerationInitError,
+			reason: input.textfresserState.lexicalGenerationInitError.message,
+		}));
+	}
+
 	const state: CommandState = { ...input, actions: [] };
 
 	return new ResultAsync(

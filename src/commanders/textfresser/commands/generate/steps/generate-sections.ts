@@ -1,4 +1,5 @@
 import { ResultAsync } from "neverthrow";
+import type { LexicalGenerationError } from "../../../../../lexical-generation";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
 import type { DictEntry } from "../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
@@ -7,7 +8,7 @@ import {
 	TitleReprFor,
 } from "../../../targets/de/sections/section-kind";
 import type { CommandError } from "../../types";
-import { CommandErrorKind } from "../../types";
+import { commandApiError, CommandErrorKind } from "../../types";
 import {
 	buildEntityMeta,
 	buildLinguisticUnitMeta,
@@ -33,6 +34,32 @@ export {
 export { buildFeatureTagPath, getFeaturesPromptKindForPos };
 export type { GenerateSectionsResult } from "./generate-sections-result";
 export type { ParsedRelation } from "./section-generation-types";
+
+function isLexicalGenerationError(
+	error: unknown,
+): error is LexicalGenerationError {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"kind" in error &&
+		"message" in error &&
+		typeof error.kind === "string" &&
+		typeof error.message === "string"
+	);
+}
+
+function toGenerateCommandError(error: unknown): CommandError {
+	if (isLexicalGenerationError(error)) {
+		return commandApiError({
+			lexicalGenerationError: error,
+			reason: error.message,
+		});
+	}
+
+	return commandApiError({
+		reason: getErrorMessage(error),
+	});
+}
 
 function appendAttestation(entry: DictEntry, ctx: ResolvedEntryState): void {
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
@@ -188,10 +215,7 @@ export function generateSections(
 	if (ctx.matchedEntry) {
 		return ResultAsync.fromPromise(
 			buildReEncounterResult(ctx),
-			(error): CommandError => ({
-				kind: CommandErrorKind.ApiError,
-				reason: getErrorMessage(error),
-			}),
+			toGenerateCommandError,
 		);
 	}
 
@@ -289,9 +313,6 @@ export function generateSections(
 				targetBlockId: generated.entryId,
 			};
 		})(),
-		(error): CommandError => ({
-			kind: CommandErrorKind.ApiError,
-			reason: getErrorMessage(error),
-		}),
+		toGenerateCommandError,
 	);
 }

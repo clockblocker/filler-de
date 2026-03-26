@@ -1,4 +1,5 @@
 import z from "zod";
+import type { LexicalGenerationError } from "../../lexical-generation";
 import {
 	BASE_COMMAND_ERROR_KIND_STR,
 	type BaseCommandError,
@@ -17,13 +18,30 @@ export type CommandErrorKind = z.infer<typeof CommandErrorKindSchema>;
 export const CommandErrorKind = CommandErrorKindSchema.enum;
 
 type TextfresserSpecificCommandError =
-	| { kind: typeof CommandErrorKind.ApiError; reason: string }
+	| {
+			kind: typeof CommandErrorKind.ApiError;
+			reason: string;
+			lexicalGenerationError?: LexicalGenerationError;
+	  }
 	| { kind: typeof CommandErrorKind.UNUSED_STUB };
 
 export type TextfresserCommandError =
 	| BaseCommandError
 	| TextfresserSpecificCommandError;
 export type CommandError = TextfresserCommandError;
+
+export function commandApiError(params: {
+	reason: string;
+	lexicalGenerationError?: LexicalGenerationError;
+}): CommandError {
+	return {
+		kind: CommandErrorKind.ApiError,
+		...(params.lexicalGenerationError
+			? { lexicalGenerationError: params.lexicalGenerationError }
+			: {}),
+		reason: params.reason,
+	};
+}
 
 // ─── Attestation Parsing Error ───
 

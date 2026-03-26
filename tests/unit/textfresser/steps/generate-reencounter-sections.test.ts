@@ -1,10 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { err, errAsync, okAsync, type ResultAsync } from "neverthrow";
-import {
-	type LexicalGenerationModule,
-	LexicalGenerationFailureKind,
-	lexicalGenerationError,
-} from "../../../../src/lexical-generation";
+import { err, errAsync, ok, okAsync, type ResultAsync } from "neverthrow";
 import { generateSections } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import type { ResolvedEntryState } from "../../../../src/commanders/textfresser/commands/generate/steps/resolve-existing-entry";
 import type {
@@ -12,6 +7,12 @@ import type {
 	EntrySection,
 } from "../../../../src/commanders/textfresser/domain/dict-note/types";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
+import {
+	LexicalGenerationFailureKind,
+	type LexicalGenerationModule,
+	type LexicalInfo,
+	lexicalGenerationError,
+} from "../../../../src/lexical-generation";
 
 const PHRASEM_ENTRY_ID = "PH-LM-1";
 const NOUN_ENTRY_ID = "LX-LM-NOUN-1";
@@ -21,8 +22,78 @@ function section(kind: string, content: string): EntrySection {
 	return { content, kind, title: kind };
 }
 
+function makeLexicalGeneration(
+	lexicalInfo: LexicalInfo,
+): LexicalGenerationModule {
+	return {
+		generateLexicalInfo: async () => ok(lexicalInfo),
+	} as unknown as LexicalGenerationModule;
+}
+
+function makePhrasemLexicalInfo(): LexicalInfo {
+	return {
+		core: {
+			status: "ready",
+			value: {
+				emojiDescription: ["💬"],
+				ipa: "ipa",
+			},
+		},
+		features: { status: "not_applicable" },
+		inflections: { status: "not_applicable" },
+		lemma: {
+			lemma: "redensart",
+			linguisticUnit: "Phrasem",
+			posLikeKind: "Idiom",
+			surfaceKind: "Lemma",
+		},
+		morphemicBreakdown: { status: "not_applicable" },
+		relations: {
+			status: "ready",
+			value: {
+				relations: [{ kind: "Synonym", words: ["nah"] }],
+			},
+		},
+	};
+}
+
+function makePronounLexicalInfo(): LexicalInfo {
+	return {
+		core: {
+			status: "ready",
+			value: {
+				emojiDescription: ["👥"],
+				ipa: "viːɐ̯",
+			},
+		},
+		features: {
+			status: "ready",
+			value: {
+				kind: "tags",
+				tags: ["personal"],
+			},
+		},
+		inflections: {
+			status: "ready",
+			value: {
+				kind: "generic",
+				rows: [{ forms: [{ form: "wir" }], label: "Nominative" }],
+			},
+		},
+		lemma: {
+			lemma: "wir",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Pronoun",
+			surfaceKind: "Lemma",
+		},
+		morphemicBreakdown: { status: "not_applicable" },
+		relations: { status: "not_applicable" },
+	};
+}
+
 function makePhrasemCtx(params: {
 	matchedEntry: DictEntry;
+	lexicalInfo?: LexicalInfo;
 	promptGenerate: (kind: string) => ResultAsync<unknown, unknown>;
 }): ResolvedEntryState {
 	return {
@@ -62,6 +133,9 @@ function makePhrasemCtx(params: {
 				posLikeKind: "Idiom",
 				surfaceKind: "Lemma",
 			},
+			lexicalGeneration: makeLexicalGeneration(
+				params.lexicalInfo ?? makePhrasemLexicalInfo(),
+			),
 			lookupInLibrary: () => [],
 			promptRunner: {
 				generate: (kind: string) => params.promptGenerate(kind),
@@ -73,6 +147,7 @@ function makePhrasemCtx(params: {
 
 function makeClosedSetLexemCtx(params: {
 	matchedEntry: DictEntry;
+	lexicalInfo?: LexicalInfo;
 	promptGenerate: (kind: string) => ResultAsync<unknown, unknown>;
 }): ResolvedEntryState {
 	return {
@@ -112,6 +187,9 @@ function makeClosedSetLexemCtx(params: {
 				posLikeKind: "Pronoun",
 				surfaceKind: "Lemma",
 			},
+			lexicalGeneration: makeLexicalGeneration(
+				params.lexicalInfo ?? makePronounLexicalInfo(),
+			),
 			lookupInLibrary: () => [
 				{
 					basename: "wir-personal-pronomen-de",
@@ -190,7 +268,6 @@ describe("generateSections re-encounter behavior", () => {
 
 		const result = await generateSections(ctx);
 		expect(result.isOk()).toBe(true);
-		expect(promptCalls).toContain("PhrasemEnrichment");
 		expect(promptCalls).toContain("WordTranslation");
 
 		const translationSection = matchedEntry.sections.find(
@@ -234,7 +311,6 @@ describe("generateSections re-encounter behavior", () => {
 
 		const result = await generateSections(ctx);
 		expect(result.isOk()).toBe(true);
-		expect(promptCalls).toContain("Relation");
 		expect(promptCalls).toContain("WordTranslation");
 
 		const relationSection = matchedEntry.sections.find(
@@ -301,6 +377,33 @@ describe("generateSections re-encounter behavior", () => {
 					posLikeKind: "Noun",
 					surfaceKind: "Lemma",
 				},
+				lexicalGeneration: makeLexicalGeneration({
+					core: {
+						status: "ready",
+						value: {
+							emojiDescription: ["🏙️"],
+							ipa: "bɛʁˈliːn",
+						},
+					},
+					features: {
+						status: "ready",
+						value: {
+							genus: undefined,
+							kind: "noun",
+							nounClass: "Proper",
+							tags: ["city"],
+						},
+					},
+					inflections: { status: "not_applicable" },
+					lemma: {
+						lemma: "Name",
+						linguisticUnit: "Lexem",
+						posLikeKind: "Noun",
+						surfaceKind: "Lemma",
+					},
+					morphemicBreakdown: { status: "not_applicable" },
+					relations: { status: "not_applicable" },
+				}),
 				lookupInLibrary: () => [],
 				promptRunner: {
 					generate: (kind: string) => {
@@ -317,7 +420,7 @@ describe("generateSections re-encounter behavior", () => {
 		expect(promptCalls).toHaveLength(0);
 	});
 
-	it("falls back from lexical-generation hard stop without non-applicable prompt calls", async () => {
+	it("fails on lexical-generation hard stop without reviving legacy prompt fallbacks", async () => {
 		const promptCalls: string[] = [];
 		const ctx = {
 			actions: [],
@@ -357,7 +460,7 @@ describe("generateSections re-encounter behavior", () => {
 					surfaceKind: "Lemma",
 				},
 				lexicalGeneration: {
-					buildLexicalInfoGenerator: () => async () =>
+					generateLexicalInfo: async () =>
 						err(
 							lexicalGenerationError(
 								LexicalGenerationFailureKind.InternalContractViolation,
@@ -391,16 +494,19 @@ describe("generateSections re-encounter behavior", () => {
 		} as unknown as ResolvedEntryState;
 
 		const result = await generateSections(ctx);
-		expect(result.isOk()).toBe(true);
-		if (result.isErr()) return;
+		expect(result.isErr()).toBe(true);
+		if (result.isOk()) return;
 
-		expect(result.value.failedSections).toEqual([]);
-		expect(ctx.textfresserState.latestFailedSections).toEqual([]);
-		expect(promptCalls).toEqual([
-			"NounEnrichment",
-			"FeaturesNoun",
-			"WordTranslation",
-		]);
+		expect(result.error.kind).toBe("ApiError");
+		if ("reason" in result.error) {
+			expect(result.error.reason).toContain("lexical info contract broke");
+		}
+		if ("lexicalGenerationError" in result.error) {
+			expect(result.error.lexicalGenerationError?.kind).toBe(
+				LexicalGenerationFailureKind.InternalContractViolation,
+			);
+		}
+		expect(promptCalls).toEqual([]);
 		expect(promptCalls).not.toContain("Relation");
 		expect(promptCalls).not.toContain("Morphem");
 		expect(promptCalls).not.toContain("NounInflection");
@@ -686,6 +792,43 @@ describe("generateSections new-entry resilience", () => {
 					posLikeKind: "InteractionalUnit",
 					surfaceKind: "Lemma",
 				},
+				lexicalGeneration: makeLexicalGeneration({
+					core: {
+						error: lexicalGenerationError(
+							LexicalGenerationFailureKind.FetchFailed,
+							"core failed",
+						),
+						status: "error",
+					},
+					features: {
+						error: lexicalGenerationError(
+							LexicalGenerationFailureKind.FetchFailed,
+							"features failed",
+						),
+						status: "error",
+					},
+					inflections: { status: "not_applicable" },
+					lemma: {
+						lemma: "ja",
+						linguisticUnit: "Lexem",
+						posLikeKind: "InteractionalUnit",
+						surfaceKind: "Lemma",
+					},
+					morphemicBreakdown: {
+						error: lexicalGenerationError(
+							LexicalGenerationFailureKind.FetchFailed,
+							"morphem failed",
+						),
+						status: "error",
+					},
+					relations: {
+						error: lexicalGenerationError(
+							LexicalGenerationFailureKind.FetchFailed,
+							"relation failed",
+						),
+						status: "error",
+					},
+				}),
 				lookupInLibrary: () => [],
 				promptRunner: {
 					generate: (kind: string) => {
@@ -701,13 +844,16 @@ describe("generateSections new-entry resilience", () => {
 		expect(result.isOk()).toBe(true);
 		if (result.isErr()) return;
 
-		expect(promptCalls).toContain("LexemEnrichment");
+		expect(promptCalls).toEqual(["WordTranslation"]);
 		expect(result.value.allEntries).toHaveLength(1);
 		const onlyEntry = result.value.allEntries[0];
 		expect(onlyEntry?.sections).toHaveLength(1);
 		expect(onlyEntry?.sections[0]?.kind).toBe("kontexte");
 		expect(onlyEntry?.sections[0]?.content).toBe("![[Src#^1|^]]");
 		expect(result.value.failedSections).toContain("Enrichment");
+		expect(result.value.failedSections).toContain("Features");
+		expect(result.value.failedSections).toContain("Morphem");
+		expect(result.value.failedSections).toContain("Relation");
 		expect(result.value.failedSections).toContain("Translation");
 	});
 
@@ -750,6 +896,7 @@ describe("generateSections new-entry resilience", () => {
 					posLikeKind: "Pronoun",
 					surfaceKind: "Lemma",
 				},
+				lexicalGeneration: makeLexicalGeneration(makePronounLexicalInfo()),
 				lookupInLibrary: () => [
 					{
 						basename: "wir-personal-pronomen-de",
@@ -772,7 +919,7 @@ describe("generateSections new-entry resilience", () => {
 		expect(result.isOk()).toBe(true);
 		if (result.isErr()) return;
 
-		expect(promptCalls).toContain("LexemEnrichment");
+		expect(promptCalls).toEqual(["WordTranslation"]);
 		expect(result.value.allEntries).toHaveLength(2);
 		expect(result.value.targetBlockId).toBe("LX-LM-PRON-1");
 

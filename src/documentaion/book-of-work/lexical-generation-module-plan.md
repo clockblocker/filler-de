@@ -2,42 +2,56 @@
 
 ## Goal
 
-Extract Textfresser's LLM-backed lexical generation into a self-contained library-style module with a narrow public API and no Obsidian-specific runtime dependencies.
+Treat lexical generation as an importable package boundary inside the repo:
 
-This module should own:
+- thin public interface
+- a small set of exposed types
+- its own tests next to the generation code
+- no Obsidian-specific runtime concerns in its public contract
 
-- lemma generation
-- sense disambiguation against existing candidate senses
-- lexical info generation
-- prompt routing and prompt-smith usage
-- result/error contracts for generation work
+`textfresser` should consume generated results and turn them into sections, propagation commands, and note mutations. It should not decide which lexical prompt to call or reconstruct linguistic truth from legacy shapes.
 
-This module should not own:
+## Current Snapshot
 
-- markdown section rendering
-- propagation
-- dict-entry serialization
-- note path computation
-- wikilink rewriting
-- VAM or other Obsidian-facing file operations
+The extraction has started, but the boundary is still mixed:
 
-## Agreed Decisions
+- `src/lexical-generation/` already exposes `createLexicalGenerationModule`, `ResolvedLemma`, `SenseMatchResult`, and `LexicalInfo`.
+- `textfresser` now fails early when lexical generation initialization fails for an unsupported pair.
+- `textfresser` no longer falls back from lexical generation into legacy direct prompt orchestration at runtime.
+- `textfresser` still translates `LexicalInfo` back into legacy section DTOs in `lexical-info-compat.ts`.
+- section applicability and header rendering still depend on compatibility-era shapes rather than a direct `LexicalInfo` render contract.
 
-- `prompt-smith` becomes an internal submodule/dependency of the new lexical generation module.
-- `selection` is the raw user-selected span.
-- `attestation` is a plain string containing the whole sentence/context used for lexical inference.
-- Lemma generation returns a structured DTO, not a bare string.
-- Sense matching is a third function, separate from both lemma generation and lexical info generation.
-- Language pair and generation settings are bound on module creation. Reconfigure by rebuilding the module.
-- `LexicalInfo` includes the resolved lemma DTO as one of its fields.
-- `LexicalInfo` is a discriminated per-unit DTO family with closely aligned top-level shape.
-- Generation APIs should not throw for ordinary model/runtime failures. Return `Result` with explicit failure kinds.
-- The first setting to wire through is `generateInflections: boolean`, but the settings shape should be ready for future toggles.
-- The only Obsidian-specific concern that should remain outside the module is fetching / persistence orchestration in the caller.
+That means the generator is now the only lexical execution path, but not yet the render contract. It is still being adapted back into the old model.
 
-## Target Public API
+## Architecture Decisions
 
-Canonical shape:
+- Keep the module where it is for now, but treat `src/lexical-generation/` as if it were an external package.
+- The public boundary is a handful of tested functions plus exposed types.
+- `LexicalInfo` is produced by lexical generation and is the semantic source of truth.
+- `textfresser` calls `generateXxx()` functions in its chain and works from returned DTOs.
+- `textfresser` owns rendering policy only.
+- `LexicalInfo` carries raw semantic data only. No markdown-ish, wikilink-shaped, or prompt-shaped payloads belong in the public lexical contract.
+- lexical generation owns semantic availability via `ready | error | disabled | not_applicable`.
+- No runtime fallback from `textfresser` into legacy prompt-by-prompt generation.
+- A clean break is allowed. Behavior does not need to preserve legacy quirks when they conflict with the new contract.
+- `ResolvedLemma` is the canonical lemma DTO. `textfresser` may wrap it with command-local state, but should not maintain a competing semantic lemma contract.
+- Unsupported language pairs fail early and visibly at command entry. Missing lexical generation must not silently route into legacy code.
+- Public API should be direct methods (`generateLemma()`, `disambiguateSense()`, `generateLexicalInfo()`), not builder factories without a lifecycle reason.
+- `LexicalInfo` is considered sufficient to render generated sections, apart from explicit non-lexical inputs such as translation/context/user-authored content.
+- Generator tests should live with the generator code and avoid Obsidian specifics.
+- `textfresser` unit tests should mock the generator or use `LexicalInfo` fixtures.
+- end-to-end tests should keep covering the full real chain.
+
+Status meanings:
+
+- `ready`: applicable and successfully produced
+- `disabled`: intentionally turned off by settings
+- `not_applicable`: semantically irrelevant for this lemma/unit
+- `error`: applicable, attempted, and failed
+
+## Public Boundary
+
+The boundary should stay small and explicit:
 
 ```ts
 const lexicalGeneration = createLexicalGenerationModule({
@@ -47,303 +61,219 @@ const lexicalGeneration = createLexicalGenerationModule({
   fetchStructured,
 });
 
-const generateLemma = lexicalGeneration.buildLemmaGenerator();
-const disambiguateSense = lexicalGeneration.buildSenseDisambiguator();
-const generateLexicalInfo = lexicalGeneration.buildLexicalInfoGenerator();
-
-const lemmaResult = await generateLemma(selection, attestation);
-const senseMatch = await disambiguateSense(
-  lemmaResult,
-  attestation,
-  candidateSenses,
-);
-
-if (senseMatch.kind === "new") {
-  const lexicalInfo = await generateLexicalInfo(lemmaResult, attestation);
-}
+const generateLemma = lexicalGeneration.generateLemma;
+const disambiguateSense = lexicalGeneration.disambiguateSense;
+const generateLexicalInfo = lexicalGeneration.generateLexicalInfo;
 ```
 
-Notes:
+Publicly consumed types:
 
-- If the old top-level `buildLemmaGenerator(targetLang, knownLang, ...)` naming is still desired, keep that as a thin wrapper over `createLexicalGenerationModule(...)`.
-- The module creation boundary is the place where language pair, settings, retries, and transport are configured.
+- `ResolvedLemma`
+- `CandidateSense`
+- `SenseMatchResult`
+- `LexicalInfo`
+- `LexicalInfoField`
+- `LexicalMorpheme`
+- `LexicalRelationKind`
+- `LexicalGenerationError`
+- `LexicalGenerationSettings`
 
-## Draft Contracts
+Rules for the boundary:
 
-### 1. Module Creation
+- No public type may reference Obsidian, VAM, vault readers, note DTOs, or command state.
+- No public type may reference `prompt-smith` schema types or other incidental generator internals.
+- Public DTOs must be stable against prompt churn.
+- Prompt selection, prompt-smith wiring, retries, and structured fetch orchestration stay inside the generator.
+- `textfresser` should depend on the public types only, not generator internals.
 
-```ts
-type CreateLexicalGenerationModuleParams<TTargetLang> = {
-  targetLang: TTargetLang;
-  knownLang: KnownLanguage;
-  settings: LexicalGenerationSettings<TTargetLang>;
-  fetchStructured: StructuredFetchFn;
-};
-```
+## Target Ownership Split
 
-`fetchStructured` is the only required external runtime dependency for now. Keep logging, retries, and caching internal unless the implementation later proves they must be injected.
+Lexical generation owns:
 
-Exact contract:
+- lemma generation
+- sense disambiguation
+- lexical info generation
+- prompt routing and prompt-smith usage
+- public generation DTOs and error contracts
+- semantic applicability and per-field statuses
 
-```ts
-type StructuredFetchFn = <T>(params: {
-  requestLabel: string;
-  systemPrompt: string;
-  userInput: string;
-  schema: ZodSchemaLike<T>;
-  withCache?: boolean;
-}) => Promise<Result<T, LexicalGenerationError>>;
-```
+`textfresser` owns:
 
-This is the transport boundary, not a prompt boundary. The lexical generation module owns:
+- section rendering
+- propagation
+- dict-entry serialization
+- note path computation
+- wikilink rewriting
+- user-authored/context sections
+- Obsidian/VAM orchestration
 
-- prompt-smith usage
-- prompt selection/routing
-- input stringification
-- mapping transport/model failures into `LexicalGenerationError`
+## Target End State
 
-### 2. Settings
+`textfresser` generate flow should look like this:
 
-```ts
-type LexicalGenerationSettings<TTargetLang> = {
-  generateInflections: boolean;
-};
-```
+1. Resolve or create the working target as it already does.
+2. Call generator functions for lemma, disambiguation, and lexical info.
+3. Pass `LexicalInfo` plus minimal vault/context inputs into rendering code.
+4. Render sections and build propagation commands from that data.
+5. Apply note mutations.
 
-Keep the type open for more toggles later, but do not pre-build unused complexity in the first pass.
+What must be gone in the end:
 
-### 3. Lemma Result
+- direct lexical prompt dispatch from `textfresser`
+- runtime fallback from new generation to old generation
+- `LexicalInfo` to legacy prompt-output compatibility adapters
+- section logic that re-derives semantic applicability from legacy assumptions
 
-Base requirement: preserve today's structured lemma DTO shape, but detach it from Obsidian-only attestation types.
+## Refactor Strategy
 
-```ts
-type ResolvedLemma =
-  | {
-      linguisticUnit: "Lexem";
-      lemma: string;
-      posLikeKind: DeLexemPos;
-      surfaceKind: SurfaceKind;
-      contextWithLinkedParts?: string;
-    }
-  | {
-      linguisticUnit: "Phrasem";
-      lemma: string;
-      posLikeKind: PhrasemeKind;
-      surfaceKind: SurfaceKind;
-      contextWithLinkedParts?: string;
-    };
-```
+### Phase 1. Freeze the package-style boundary
 
-### 4. Sense Disambiguation
+- Keep `src/lexical-generation/` as the only lexical generation entrypoint.
+- Audit exports and remove anything not meant to be package-public.
+- Confirm that the current public contract covers all generation consumers.
+- Tighten docs so `LexicalInfo` is explicitly the source of truth.
 
-```ts
-type CandidateSense =
-  | {
-      id: string;
-      linguisticUnit: "Lexem";
-      posLikeKind: DeLexemPos;
-      emojiDescription?: string[];
-      ipa?: string;
-      senseGloss?: string;
-    }
-  | {
-      id: string;
-      linguisticUnit: "Phrasem";
-      posLikeKind: PhrasemeKind;
-      emojiDescription?: string[];
-      ipa?: string;
-      senseGloss?: string;
-    };
+Exit condition:
 
-type SenseMatchResult =
-  | { kind: "matched"; senseId: string }
-  | { kind: "new" };
-```
+- a caller can use lexical generation without importing anything from `textfresser` or Obsidian-facing code
 
-This function must not fetch vault state itself. The caller assembles candidate senses and passes them in.
+### Phase 2. Make `LexicalInfo` the render contract
 
-### 5. Lexical Info
+- Audit every generated section in `textfresser`.
+- For each section, identify whether it is:
+  - fully renderable from `LexicalInfo`
+  - renderable from `LexicalInfo` plus plain vault/context inputs
+  - still depending on prompt output that is not represented in `LexicalInfo`
+- If a generated section still needs lexical data that is not in `LexicalInfo`, add that data to the generator contract instead of rebuilding it in `textfresser`.
 
-Top-level shape should stay close across units, while keeping truthful per-unit discriminations.
+Exit condition:
 
-```ts
-type LexicalInfoField<T> =
-  | { status: "ready"; value: T }
-  | { status: "disabled" }
-  | { status: "not_applicable" }
-  | { status: "error"; error: LexicalGenerationError };
+- every generated lexical section has a defined input contract rooted in `LexicalInfo`
 
-type LexicalCore = {
-  ipa: string;
-  emojiDescription: string[];
-};
+Section contract matrix to lock before Phase 3:
 
-type LexicalInfo =
-  | {
-      lemma: Extract<ResolvedLemma, { linguisticUnit: "Lexem" }>;
-      core: LexicalInfoField<LexicalCore>;
-      features: LexicalInfoField<LexemFeatures>;
-      inflections: LexicalInfoField<LexemInflections>;
-      morphemicBreakdown: LexicalInfoField<MorphemicBreakdown>;
-      relations: LexicalInfoField<LexicalRelations>;
-    }
-  | {
-      lemma: Extract<ResolvedLemma, { linguisticUnit: "Phrasem" }>;
-      core: LexicalInfoField<LexicalCore>;
-      features: LexicalInfoField<PhrasemFeatures>;
-      inflections: LexicalInfoField<never>;
-      morphemicBreakdown: LexicalInfoField<MorphemicBreakdown>;
-      relations: LexicalInfoField<LexicalRelations>;
-    };
-```
+| Section | Lexical inputs | Non-lexical inputs | Owner | Failure behavior |
+| --- | --- | --- | --- | --- |
+| Header | `lemma`, `core`, noun `features.genus` or noun `inflections.genus` fallback | target language | lexical data from generator, render policy in `textfresser` | render common header when noun genus is unresolved |
+| Tags | `features` | target language | lexical data from generator, render policy in `textfresser` | skip section on `not_applicable` or `error` |
+| Attestation | none | attestation ref, target language | `textfresser` | always render |
+| Relation | `relations` | target language | lexical data from generator, render policy in `textfresser` | skip section on field `error`, record failure |
+| Translation | none | translation output, target language | non-lexical for now | skip section on translation failure, record failure |
+| Morphem | `morphemicBreakdown` | target language | lexical data from generator, render policy in `textfresser` | skip section on field `error`, record failure |
+| Morphology | `morphemicBreakdown` | optional translation, target language | mixed: lexical data from generator plus render inference in `textfresser` | skip section when morphemes are unavailable |
+| Inflection | `inflections` | target language | lexical data from generator, render policy in `textfresser` | skip section on `disabled`, `not_applicable`, or field `error`; record failure only for `error` |
 
-Notes:
+### Phase 3. Cut `textfresser` over to direct DTO consumption
 
-- `core` should contain generated enrichment like `ipa` and `emojiDescription`, not LU/POS/surfaceKind.
-- `lemma` remains the source of truth for lexical identity and discriminants.
-- `inflections` should be a first-class field, not hidden inside `features`.
-- `LexemFeatures`, `PhrasemFeatures`, `LexemInflections`, `MorphemicBreakdown`, and `LexicalRelations` are module-owned public DTOs.
-- First pass can keep those DTOs thin and close to today's shapes, but they must not be raw prompt output aliases. Prompt churn should not leak through the public API.
-- `generateLexicalInfo(...)` should default to best-effort DTO assembly:
-  - return top-level `Err(...)` only for hard-stop failures that prevent any coherent top-level result
-  - use field-level `{ status: "error" }` when some sub-generation failed but a valid top-level DTO can still be returned
-  - examples of top-level `Err(...)`: unsupported language pair, broken prompt routing, internal contract violation
-  - examples of field-level `error`: enrichment/features/inflections/relations/morphemic breakdown prompt failure for an otherwise valid lemma
+- Change section building so it consumes `LexicalInfo` directly.
+- Replace the current unpacking into `enrichmentOutput`, `featuresOutput`, `morphemOutput`, `nounInflectionOutput`, `otherInflectionOutput`, and `relationOutput`.
+- Keep any additional non-lexical inputs explicit and easy to consume.
+- Stop importing prompt-routing helpers and prompt kinds in `textfresser` for lexical generation work.
 
-### 6. Error Contract
+Exit condition:
 
-Use `Result<T, LexicalGenerationError>` across public generation functions.
+- `generate-new-entry-sections.ts` no longer needs legacy lexical prompt DTOs as its internal working model
 
-Draft failure enum:
+### Phase 4. Delete legacy mixed paths
 
-```ts
-enum LexicalGenerationFailureKind {
-  UnsupportedLanguagePair,
-  PromptNotAvailable,
-  InvalidModelOutput,
-  FetchFailed,
-  RetryExhausted,
-  InternalContractViolation,
-}
-```
+- Remove `lexical-info-compat.ts`.
+- Remove now-dead prompt dispatch helpers used only by the old path.
+- Remove compatibility-era section applicability/header helpers that still require legacy enrichment-shaped data.
 
-Each error should carry enough context to log/debug without requiring the caller to inspect thrown exceptions.
+Exit condition:
 
-## Target Module Boundaries
+- `textfresser` has one lexical generation path only
 
-Preferred new top-level area:
+### Phase 5. Separate tests by ownership
 
-```text
-src/lexical-generation/
-```
+- Keep generator tests under generator-owned folders.
+- Expand generator tests to cover:
+  - factory creation
+  - lemma guardrails
+  - sense disambiguation
+  - lexical info statuses
+  - hard-stop vs field-level failure behavior
+  - public DTO mapping
+- Change `textfresser` unit tests to use mocks or `LexicalInfo` fixtures instead of prompt-output-shaped fixtures.
+- Keep or extend e2e tests for the real full chain.
 
-Suggested initial layout:
+Exit condition:
 
-```text
-src/lexical-generation/
-  index.ts
-  create-lexical-generation-module.ts
-  public-types.ts
-  errors.ts
-  settings.ts
-  lemma/
-  disambiguation/
-  lexical-info/
-  prompt-smith/
-```
+- generator behavior is tested without Obsidian
+- `textfresser` tests no longer assert generator internals
 
-Rules:
+### Phase 6. Shrink the remaining seam
 
-- No imports from Obsidian managers, VAM, or Textfresser orchestration state.
-- `prompt-smith` can be moved under this subtree or wrapped from its current location as an internal dependency during migration.
-- Language-specific prompt routing can remain internal and use existing prompt assets until later cleanup.
-- Compatibility adapters from `LexicalInfo` DTOs to existing Textfresser section formatters belong on the Textfresser side, not inside the extracted lexical generation module.
+- Remove stale types in `textfresser` that only existed for prompt output compatibility.
+- Review `TextfresserState` so it stores lexical generation dependencies without duplicating lexical orchestration logic.
+- Update architecture docs once the single path is stable.
 
-## Migration Plan
+Exit condition:
 
-### Phase 1. Freeze contracts
+- the lexical boundary is small, explicit, and easy to reason about
 
-- Introduce public DTOs and error/result types for the new module.
-- Remove Obsidian-specific attestation types from lemma-generation-facing contracts.
-- Define the canonical plain-string `attestation` contract and use it consistently.
+## Concrete Code Targets
 
-### Phase 2. Build the module shell
+Primary cut points:
 
-- Create `src/lexical-generation/` with factory, public types, and internal subfolders.
-- Add the internal `fetchStructured` abstraction.
-- Add minimal unit tests for factory wiring and error passthrough.
+- `src/lexical-generation/public-types.ts`
+- `src/lexical-generation/create-lexical-generation-module.ts`
+- `src/lexical-generation/lemma/`
+- `src/lexical-generation/disambiguation/`
+- `src/lexical-generation/lexical-info/`
+- `src/commanders/textfresser/commands/generate/steps/generate-new-entry-sections.ts`
+- `src/commanders/textfresser/commands/generate/steps/lexical-info-compat.ts`
+- `src/commanders/textfresser/state/textfresser-state.ts`
 
-### Phase 3. Move lemma generation
+Deletion candidates once the cutover lands:
 
-- Extract current lemma prompt invocation and guardrail logic from Textfresser orchestration into the new module.
-- Keep output shape aligned with today's `DeLemmaResult` contract.
-- Do not carry over note-rewrite, placeholder, or VAM logic.
-
-### Phase 4. Move sense disambiguation
-
-- Extract the LLM-based sense matching logic into the new module.
-- Replace direct vault lookup assumptions with `candidateSenses` input.
-- Keep the return value to `matched` vs `new`; do not entangle it with entry generation.
-
-### Phase 5. Move lexical enrichment generation
-
-- Extract prompt selection and structured output handling for:
-  - core enrichment
-  - features
-  - inflections
-  - morphemic breakdown
-  - relations
-- Return a resolved `LexicalInfo` DTO, not markdown strings.
-
-### Phase 6. Adapt Textfresser callers
-
-- Replace direct prompt-runner usage in Lemma/Generate flows with calls into the new module.
-- Keep rendering, propagation, and note updates in Textfresser.
-- Add Textfresser-side compatibility adapters from `LexicalInfo` DTOs to existing section formatters as an intermediate migration step.
-
-### Phase 7. Remove old coupling
-
-- Delete or shrink old prompt-runner call sites that now duplicate module behavior.
-- Remove obsolete Textfresser-local lemma/disambiguation/generation types where replaced by shared lexical module contracts.
-- Update architecture docs once the code path is stable.
-
-## Explicit Non-Goals For First Pass
-
-- No UI/streaming rendering of partially resolved lexical info.
-- No attempt to move VAM, rendering, or propagation into the new module.
-- No cache redesign unless extraction is blocked without it.
-- No Node server packaging in this pass.
-- No prompt asset rewrite unless required for boundary cleanup.
+- the legacy branch in `generate-new-entry-sections.ts`
+- `lexical-info-compat.ts`
+- prompt-dispatch code that exists only to support the deleted branch
 
 ## Testing Plan
 
-Minimum required:
+Generator-owned tests should live with the generation area and cover package behavior, not Obsidian orchestration.
 
-- Unit tests for `generateLemma` contract mapping and guardrail behavior.
-- Unit tests for `disambiguateSense` with `matched` and `new` cases.
-- Unit tests for `generateLexicalInfo` status fields:
-  - `ready`
-  - `disabled`
-  - `not_applicable`
-  - `error`
-- Unit tests proving no public API throws on ordinary fetch/model failures.
-- Regression tests for Textfresser adapters that consume the extracted DTOs.
+Required generator test coverage:
 
-Follow-up:
+- supported and unsupported module creation
+- lemma retry and guardrail behavior
+- disambiguation `matched` and `new`
+- lexical info `ready`
+- lexical info `disabled`
+- lexical info `not_applicable`
+- lexical info field-level `error`
+- top-level hard-stop failures
+- public DTO mapping for each supported lexical family
 
-- If extraction materially changes command flows, add focused CLI or orchestration tests around Lemma and Generate.
+`textfresser` unit tests should cover:
+
+- rendering sections from `LexicalInfo`
+- propagation decisions from `LexicalInfo`
+- minimal extra-context handling
+
+e2e coverage should continue to assert:
+
+- the full lemma to generate to render chain
+- real vault mutations
+- real plugin behavior under Obsidian
 
 ## Acceptance Criteria
 
-- A caller can use the lexical generation module without importing Obsidian-specific types.
-- Textfresser orchestration no longer decides which prompt to call for lemma, disambiguation, or lexical info generation.
-- Lexical generation returns structured DTOs, not rendered markdown.
-- `generateInflections` is wired through settings and reflected in `LexicalInfo`.
-- Public generation calls return `Result` values with explicit failure kinds and do not rely on thrown exceptions for ordinary failures.
-- Existing Textfresser behavior remains functionally intact after adapting to the new module.
+- `src/lexical-generation/` is usable as a package-style module with a narrow public API.
+- `textfresser` does not decide which lexical prompt to call.
+- `LexicalInfo` is the semantic source of truth for generated lexical sections.
+- `textfresser` renders from `LexicalInfo` directly instead of legacy compatibility DTOs.
+- There is no runtime fallback from generator output back into legacy lexical prompt orchestration.
+- Generator tests live with the generator and do not depend on Obsidian.
+- `textfresser` unit tests mock the generator or consume `LexicalInfo` fixtures.
+- e2e tests still cover the full live chain.
 
-## Open Follow-Ups After Extraction
+## Remaining High-Level Question
 
-- Decide whether to expose top-level convenience wrappers in addition to the module factory.
-- Decide whether internal retries/caching should stay hidden or become configurable.
-- Decide when to physically relocate or rewrite existing `prompt-smith` assets after the initial extraction lands.
+One architecture question still needs an explicit call during implementation:
+
+- If any generated section still needs LLM-produced lexical data that is outside current `LexicalInfo`, that data should move into the lexical generation contract unless we intentionally classify that section as non-lexical.
+
+That question should be resolved section-by-section during Phase 2, not hidden behind a compatibility adapter.

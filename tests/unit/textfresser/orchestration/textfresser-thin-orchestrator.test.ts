@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { ok, okAsync } from "neverthrow";
+import { LexicalGenerationFailureKind } from "../../../../src/lexical-generation";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
 import type { CommandContext } from "../../../../src/managers/obsidian/command-executor";
@@ -63,6 +64,16 @@ function makeTranslateContext(): CommandContext {
 	};
 }
 
+function makeGenerateContext(): CommandContext {
+	return {
+		activeFile: {
+			content: "line",
+			splitPath: SOURCE_PATH,
+		},
+		selection: null,
+	};
+}
+
 describe("Textfresser thin orchestrator", () => {
 	it("delegates TranslateSelection through action-command map and dispatches actions", async () => {
 		const { dispatches, textfresser } = makeHarness();
@@ -104,5 +115,52 @@ describe("Textfresser thin orchestrator", () => {
 		const attestation = textfresser.getState().attestationForLatestNavigated;
 		expect(attestation?.target.surface).toBe("geht");
 		expect(attestation?.source.ref).toBe("![[Source#^1|^]]");
+	});
+
+	it("fails Lemma immediately when lexical generation init is unsupported", async () => {
+		const notifications: string[] = [];
+		const { dispatches, textfresser } = makeHarness();
+		textfresser.getState().lexicalGeneration = null;
+		textfresser.getState().lexicalGenerationInitError = {
+			details: { knownLang: "Russian", targetLang: "English" },
+			kind: LexicalGenerationFailureKind.UnsupportedLanguagePair,
+			message: "Unsupported language pair: English -> Russian",
+		};
+
+		const result = await textfresser.executeCommand(
+			"Lemma",
+			makeTranslateContext(),
+			(message) => notifications.push(message),
+		);
+
+		expect(result.isErr()).toBe(true);
+		expect(dispatches).toHaveLength(0);
+		if (result.isErr()) {
+			expect("reason" in result.error && result.error.reason).toContain(
+				"Unsupported language pair",
+			);
+		}
+		expect(notifications).toHaveLength(0);
+	});
+
+	it("fails Generate immediately when lexical generation init is unsupported", async () => {
+		const notifications: string[] = [];
+		const { dispatches, textfresser } = makeHarness();
+		textfresser.getState().lexicalGeneration = null;
+		textfresser.getState().lexicalGenerationInitError = {
+			details: { knownLang: "Russian", targetLang: "English" },
+			kind: LexicalGenerationFailureKind.UnsupportedLanguagePair,
+			message: "Unsupported language pair: English -> Russian",
+		};
+
+		const result = await textfresser.executeCommand(
+			"Generate",
+			makeGenerateContext(),
+			(message) => notifications.push(message),
+		);
+
+		expect(result.isErr()).toBe(true);
+		expect(dispatches).toHaveLength(0);
+		expect(notifications[0]).toContain("Unsupported language pair");
 	});
 });

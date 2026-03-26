@@ -85,15 +85,15 @@ const ENGLISH_LOCALE: SettingsLocale = {
 
 	// Setting descriptions
 	geminiApiKeyDesc: "Enter your Gemini API key",
+	generateInflections: "Generate inflections",
+	generateInflectionsDesc:
+		"Include inflection tables and rows when generating lexical info.",
 	hideMetadata: "Hide metadata",
 	hideMetadataDesc:
 		"Store metadata invisibly at end of file. When off, uses YAML frontmatter.",
 	knownLanguage: "Language you know",
 	knownLanguageDesc: "Your native or known language for translations",
 	languagesHeading: "Languages",
-	generateInflections: "Generate inflections",
-	generateInflectionsDesc:
-		"Include inflection tables and rows when generating lexical info.",
 	libraryHeading: "Library",
 	libraryRoot: "Library root folder",
 	libraryRootDesc: "The folder containing your library of texts",
@@ -156,15 +156,15 @@ const RUSSIAN_LOCALE: SettingsLocale = {
 
 	// Setting descriptions
 	geminiApiKeyDesc: "Введите ваш ключ Gemini API",
+	generateInflections: "Генерировать флексии",
+	generateInflectionsDesc:
+		"Добавлять таблицы и строки флексий при генерации лексической информации.",
 	hideMetadata: "Скрыть метаданные",
 	hideMetadataDesc:
 		"Хранить метаданные невидимо в конце файла. Если выкл., использует YAML frontmatter.",
 	knownLanguage: "Язык, который вы знаете",
 	knownLanguageDesc: "Ваш родной язык для переводов",
 	languagesHeading: "Языки",
-	generateInflections: "Генерировать флексии",
-	generateInflectionsDesc:
-		"Добавлять таблицы и строки флексий при генерации лексической информации.",
 	libraryHeading: "Библиотека",
 	libraryRoot: "Корневая папка библиотеки",
 	libraryRootDesc: "Папка с вашей библиотекой текстов",

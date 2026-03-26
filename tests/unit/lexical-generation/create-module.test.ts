@@ -3,12 +3,13 @@ import { ok } from "neverthrow";
 import {
 	createLexicalGenerationModule,
 	LexicalGenerationFailureKind,
+	type StructuredFetchFn,
 } from "../../../src/lexical-generation";
 
 describe("createLexicalGenerationModule", () => {
 	it("builds generators for a supported language pair", () => {
 		const result = createLexicalGenerationModule({
-			fetchStructured: async () => ok({}),
+			fetchStructured: (async () => ok({})) as StructuredFetchFn,
 			knownLang: "English",
 			settings: { generateInflections: true },
 			targetLang: "German",
@@ -16,14 +17,14 @@ describe("createLexicalGenerationModule", () => {
 
 		expect(result.isOk()).toBe(true);
 		const module = result._unsafeUnwrap();
-		expect(typeof module.buildLemmaGenerator).toBe("function");
-		expect(typeof module.buildSenseDisambiguator).toBe("function");
-		expect(typeof module.buildLexicalInfoGenerator).toBe("function");
+		expect(typeof module.generateLemma).toBe("function");
+		expect(typeof module.disambiguateSense).toBe("function");
+		expect(typeof module.generateLexicalInfo).toBe("function");
 	});
 
 	it("fails creation for an unsupported language pair", () => {
 		const result = createLexicalGenerationModule({
-			fetchStructured: async () => ok({}),
+			fetchStructured: (async () => ok({})) as StructuredFetchFn,
 			knownLang: "German" as never,
 			settings: { generateInflections: true },
 			targetLang: "German",

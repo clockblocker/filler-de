@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test";
 import { err, ok } from "neverthrow";
 import {
 	createLexicalGenerationModule,
-	lexicalGenerationError,
 	LexicalGenerationFailureKind,
+	lexicalGenerationError,
 	type StructuredFetchFn,
 } from "../../../src/lexical-generation";
 
@@ -67,7 +67,7 @@ describe("lexical-generation lexical info", () => {
 			targetLang: "German",
 		})._unsafeUnwrap();
 
-		const result = await module.buildLexicalInfoGenerator()(
+		const result = await module.generateLexicalInfo(
 			{
 				lemma: "Bank",
 				linguisticUnit: "Lexem",
@@ -153,7 +153,7 @@ describe("lexical-generation lexical info", () => {
 			targetLang: "German",
 		})._unsafeUnwrap();
 
-		const result = await module.buildLexicalInfoGenerator()(
+		const result = await module.generateLexicalInfo(
 			{
 				lemma: "Bank",
 				linguisticUnit: "Lexem",
@@ -211,7 +211,7 @@ describe("lexical-generation lexical info", () => {
 			targetLang: "German",
 		})._unsafeUnwrap();
 
-		const result = await module.buildLexicalInfoGenerator()(
+		const result = await module.generateLexicalInfo(
 			{
 				lemma: "gehen",
 				linguisticUnit: "Lexem",
@@ -229,6 +229,77 @@ describe("lexical-generation lexical info", () => {
 				kind: LexicalGenerationFailureKind.FetchFailed,
 			},
 			status: "error",
+		});
+	});
+
+	it("maps generic inflection rows into raw form arrays", async () => {
+		const module = createLexicalGenerationModule({
+			fetchStructured: async <T>({
+				requestLabel,
+			}: Parameters<StructuredFetchFn>[0]) => {
+				switch (requestLabel) {
+					case "LexemEnrichment":
+						return okValue<T>({
+							emojiDescription: ["🚶"],
+							ipa: "ɡeːən",
+						});
+					case "FeaturesVerb":
+						return okValue<T>({
+							conjugation: "Regular",
+							valency: {
+								governedPreposition: null,
+								reflexivity: "NonReflexive",
+								separability: "None",
+							},
+						});
+					case "Inflection":
+						return okValue<T>({
+							rows: [
+								{
+									forms: "[[gehe]], [[gehst]]",
+									label: "Prasens",
+								},
+							],
+						});
+					case "Relation":
+						return okValue<T>({ relations: [] });
+					case "Morphem":
+						return okValue<T>({
+							compounded_from: null,
+							derived_from: null,
+							morphemes: [],
+						});
+					default:
+						throw new Error(`unexpected requestLabel ${requestLabel}`);
+				}
+			},
+			knownLang: "English",
+			settings: { generateInflections: true },
+			targetLang: "German",
+		})._unsafeUnwrap();
+
+		const result = await module.generateLexicalInfo(
+			{
+				lemma: "gehen",
+				linguisticUnit: "Lexem",
+				posLikeKind: "Verb",
+				surfaceKind: "Lemma",
+			},
+			"Ich gehe nach Hause",
+		);
+
+		expect(result.isOk()).toBe(true);
+		expect(result._unsafeUnwrap().inflections).toEqual({
+			status: "ready",
+			value: {
+				kind: "generic",
+				rows: [
+					{
+						forms: [{ form: "gehe" }, { form: "gehst" }],
+						label: "Prasens",
+					},
+				],
+			},
 		});
 	});
 
@@ -253,7 +324,7 @@ describe("lexical-generation lexical info", () => {
 			targetLang: "German",
 		})._unsafeUnwrap();
 
-		const result = await module.buildLexicalInfoGenerator()(
+		const result = await module.generateLexicalInfo(
 			{
 				lemma: "Bank",
 				linguisticUnit: "Lexem",
@@ -315,7 +386,7 @@ describe("lexical-generation lexical info", () => {
 			targetLang: "German",
 		})._unsafeUnwrap();
 
-		const result = await module.buildLexicalInfoGenerator()(
+		const result = await module.generateLexicalInfo(
 			{
 				lemma: "gehen",
 				linguisticUnit: "Lexem",

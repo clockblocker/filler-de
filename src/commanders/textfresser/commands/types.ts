@@ -12,7 +12,7 @@ import type { LemmaResult } from "./lemma/types";
 
 // Re-export for convenience
 export type { CommandError } from "../errors";
-export { CommandErrorKind } from "../errors";
+export { commandApiError, CommandErrorKind } from "../errors";
 
 // ─── Command Kind ───
 
