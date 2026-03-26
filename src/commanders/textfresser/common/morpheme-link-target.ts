@@ -5,7 +5,7 @@
  * - Others: linkTarget stays undefined — formatter falls back to lemma ?? surf
  */
 
-import type { LexicalMorpheme } from "../../../lexical-generation";
+import type { LexicalMorpheme } from "@textfresser/lexical-generation";
 import { wikilinkHelper } from "../../../stateless-helpers/wikilink";
 import type { TargetLanguage } from "../../../types";
 import type { MorphemeItem } from "../domain/morpheme/morpheme-formatter";

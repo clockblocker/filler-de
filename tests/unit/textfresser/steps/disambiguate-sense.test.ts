@@ -11,7 +11,7 @@ import {
 	lexicalGenerationError,
 	type SenseDisambiguator,
 	type SenseMatchResult,
-} from "../../../../src/lexical-generation";
+} from "@textfresser/lexical-generation";
 
 const MOCK_SPLIT_PATH: SplitPathToMdFile = {
 	basename: "Bank",

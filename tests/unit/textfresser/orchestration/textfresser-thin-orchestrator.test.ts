@@ -5,7 +5,7 @@ import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-a
 import { ok, okAsync } from "neverthrow";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
-import { LexicalGenerationFailureKind } from "../../../../src/lexical-generation";
+import { LexicalGenerationFailureKind } from "@textfresser/lexical-generation";
 import type { CommandContext } from "../../../../src/managers/obsidian/command-executor";
 import { PayloadKind } from "../../../../src/managers/obsidian/user-event-interceptor/types/payload-base";
 import type { ApiService } from "../../../../src/stateless-helpers/api-service";

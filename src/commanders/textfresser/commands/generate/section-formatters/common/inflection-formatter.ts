@@ -1,4 +1,4 @@
-import type { LexemInflections } from "../../../../../../lexical-generation";
+import type { LexemInflections } from "@textfresser/lexical-generation";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 
 type GenericInflectionSectionInput = {

@@ -4,10 +4,10 @@ import {
 	type PromptInput,
 	type PromptKind,
 	type PromptOutput,
-} from "../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import type { KnownLanguage, TargetLanguage } from "../../../types";
 
-export type { PromptKind } from "../../../lexical-generation";
+export type { PromptKind } from "@textfresser/lexical-generation";
 
 export function getPromptSystemPrompt(params: {
 	target: TargetLanguage;

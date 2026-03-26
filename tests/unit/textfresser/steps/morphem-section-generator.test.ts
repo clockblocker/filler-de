@@ -4,7 +4,7 @@ import {
 	LexicalGenerationFailureKind,
 	type LexicalInfo,
 	lexicalGenerationError,
-} from "../../../../src/lexical-generation";
+} from "@textfresser/lexical-generation";
 
 function makeLexicalInfo(): Extract<
 	LexicalInfo,

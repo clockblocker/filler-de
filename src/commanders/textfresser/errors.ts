@@ -1,5 +1,5 @@
 import z from "zod";
-import type { LexicalGenerationError } from "../../lexical-generation";
+import type { LexicalGenerationError } from "@textfresser/lexical-generation";
 import {
 	BASE_COMMAND_ERROR_KIND_STR,
 	type BaseCommandError,

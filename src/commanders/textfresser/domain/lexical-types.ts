@@ -8,7 +8,7 @@ import type {
 	LexicalVerbConjugation,
 	LexicalVerbReflexivity,
 	LexicalVerbSeparability,
-} from "../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import type { TargetLanguage } from "../../../types";
 
 export type TextfresserLexemPos = LexicalPos;

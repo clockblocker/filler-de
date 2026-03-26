@@ -1,5 +1,5 @@
-import type { LexicalInfo } from "../../../../../lexical-generation";
-import { PromptKind } from "../../../../../lexical-generation";
+import type { LexicalInfo } from "@textfresser/lexical-generation";
+import { PromptKind } from "@textfresser/lexical-generation";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
 import { logger } from "../../../../../utils/logger";

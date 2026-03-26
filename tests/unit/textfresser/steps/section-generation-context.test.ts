@@ -4,7 +4,7 @@ import {
 	resolveNounInflectionGenus,
 } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generation-context";
 import { getSectionsFor } from "../../../../src/commanders/textfresser/targets/de/sections/section-config";
-import type { LexicalInfo } from "../../../../src/lexical-generation";
+import type { LexicalInfo } from "@textfresser/lexical-generation";
 
 function makeNounLexicalInfo(
 	overrides: Partial<Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>> = {},

@@ -8,7 +8,7 @@ import type {
 	LexicalMeta,
 	ResolvedLemma,
 	SenseDisambiguator,
-} from "../../../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import { logger } from "../../../../../utils/logger";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";

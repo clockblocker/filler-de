@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { okAsync } from "neverthrow";
 import { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
-import { PromptKind } from "../../../../src/lexical-generation";
+import { PromptKind } from "@textfresser/lexical-generation";
 import type { ApiService } from "../../../../src/stateless-helpers/api-service";
 
 describe("PromptRunner", () => {

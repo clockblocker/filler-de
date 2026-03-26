@@ -3,7 +3,7 @@ import {
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
 import { errAsync, ok, type ResultAsync } from "neverthrow";
-import { PromptKind } from "../../../../lexical-generation";
+import { PromptKind } from "@textfresser/lexical-generation";
 import { blockIdHelper } from "../../../../stateless-helpers/block-id";
 import { markdownHelper } from "../../../../stateless-helpers/markdown-strip";
 import {

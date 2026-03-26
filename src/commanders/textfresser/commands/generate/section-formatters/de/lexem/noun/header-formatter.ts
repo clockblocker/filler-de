@@ -1,4 +1,4 @@
-import type { LexicalGenus } from "../../../../../../../../lexical-generation";
+import type { LexicalGenus } from "@textfresser/lexical-generation";
 import { wikilinkHelper } from "../../../../../../../../stateless-helpers/wikilink";
 import { ARTICLE_BY_GENUS } from "../../../../../../domain/lexical-types";
 import { buildYouglishUrl } from "../../../common/header-formatter";

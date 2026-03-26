@@ -16,12 +16,12 @@ The end state is:
 
 ### Boundary ownership
 
-- `textfresser` should treat `src/lexical-generation/` as if it were an external package
+- `textfresser` should treat `src/packages/lexical-generation/` as if it were an external package
 - `textfresser` owns rendering, propagation, note mutations, and Obsidian orchestration
 - `lexical-generation` owns lemma generation, sense disambiguation, lexical info generation, and lexical metadata semantics
 - a larger internal lexical monolith is acceptable for now if it is hidden from `textfresser`
 - `src/linguistics/` is transitional and should be dissolved rather than preserved as a parallel lexical boundary
-- target-language-specific logic currently living under `src/linguistics/` should move into `src/lexical-generation/internal/linguistics/`
+- target-language-specific logic currently living under `src/linguistics/` should move into `src/packages/lexical-generation/internal/linguistics/`
 - only language-independent lexical enums and types should remain available for `textfresser`
 - those language-independent lexical primitives should be exported from the new boundary rather than imported from `src/linguistics/*`
 
@@ -124,7 +124,7 @@ This plan does not yet lock:
 
 - add `LexicalMeta` to `lexical-generation`
 - add a generator-owned helper that derives `LexicalMeta` or at least `metaTag` from `ResolvedLemma`
-- document and then tighten the intended public exports of `src/lexical-generation/index.ts`
+- document and then tighten the intended public exports of `src/packages/lexical-generation/index.ts`
 
 Exit condition:
 
@@ -191,7 +191,7 @@ Exit condition:
 
 Exit condition:
 
-- `src/lexical-generation/index.ts` exposes a small workspace-ready surface
+- `src/packages/lexical-generation/index.ts` exposes a small workspace-ready surface
 
 ### Phase 8. Rewrite tests by ownership
 
@@ -237,5 +237,5 @@ The migration is done when:
 - disambiguation consumes stored `LexicalMeta[]`
 - lexical-generation-related `linguistics/*` imports are gone from `textfresser`
 - the generator public surface is small enough to treat as a workspace boundary
-- target-language-specific code from `src/linguistics/` has been moved under `src/lexical-generation/internal/linguistics/`
+- target-language-specific code from `src/linguistics/` has been moved under `src/packages/lexical-generation/internal/linguistics/`
 - only language-independent lexical primitives remain public to `textfresser`

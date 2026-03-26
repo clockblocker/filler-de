@@ -5,7 +5,7 @@ import {
 	LexicalGenerationFailureKind,
 	type LexicalInfo,
 	lexicalGenerationError,
-} from "../../../../src/lexical-generation";
+} from "@textfresser/lexical-generation";
 
 type LexemLemmaResult = Extract<LemmaResult, { linguisticUnit: "Lexem" }>;
 type PhrasemLemmaResult = Extract<LemmaResult, { linguisticUnit: "Phrasem" }>;

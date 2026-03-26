@@ -2,7 +2,7 @@ import { ResultAsync } from "neverthrow";
 import type {
 	LexicalGenerationError,
 	LexicalInfo,
-} from "../../../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
 import type { DictEntry } from "../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";

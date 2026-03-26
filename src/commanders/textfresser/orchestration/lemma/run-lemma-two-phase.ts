@@ -4,7 +4,7 @@ import type {
 } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
-import type { ResolvedLemma } from "../../../../lexical-generation";
+import type { ResolvedLemma } from "@textfresser/lexical-generation";
 import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import { logger } from "../../../../utils/logger";
 import {

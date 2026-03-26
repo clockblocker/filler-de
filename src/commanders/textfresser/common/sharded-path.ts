@@ -11,7 +11,7 @@ import {
 	LANGUAGE_ISO_CODE,
 	type LinguisticUnitKind,
 	type SurfaceKind,
-} from "../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import type { TargetLanguage } from "../../../types";
 
 const WORTER_ROOT = "Worter";

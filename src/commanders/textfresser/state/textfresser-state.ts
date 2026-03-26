@@ -8,7 +8,7 @@ import {
 	type LexicalGenerationSettings,
 	lexicalGenerationError,
 	type StructuredFetchFn,
-} from "../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import type { ApiService } from "../../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../../types";
 import type { LemmaResult } from "../commands/lemma/types";

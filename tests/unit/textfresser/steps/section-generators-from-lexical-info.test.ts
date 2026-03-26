@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { generateInflectionSection } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generators/inflection-section-generator";
 import { generateRelationSection } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generators/relation-section-generator";
 import { generateTagsSection } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generators/tags-section-generator";
-import type { LexicalInfo } from "../../../../src/lexical-generation";
+import type { LexicalInfo } from "@textfresser/lexical-generation";
 
 function makeVerbLexicalInfo(): Extract<
 	LexicalInfo,

@@ -11,7 +11,7 @@ import {
 	type LexicalGenerationModule,
 	type LexicalInfo,
 	lexicalGenerationError,
-} from "../../../../src/lexical-generation";
+} from "@textfresser/lexical-generation";
 import { DEFAULT_SETTINGS } from "../../../../src/types";
 
 function makeProperNounLexicalInfo(): LexicalInfo {

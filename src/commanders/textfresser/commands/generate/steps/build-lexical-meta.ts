@@ -2,7 +2,7 @@ import {
 	createLexicalMeta,
 	type LexicalInfo,
 	type LexicalMeta,
-} from "../../../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import type { LemmaResult } from "../../lemma/types";
 
 function resolveEmojiDescription(lexicalInfo: LexicalInfo): string[] {

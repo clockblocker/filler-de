@@ -1,4 +1,4 @@
-import type { LexicalInfo } from "../../../../../lexical-generation";
+import type { LexicalInfo } from "@textfresser/lexical-generation";
 import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import {
 	buildLexicalSectionQuery,

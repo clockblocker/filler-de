@@ -1,4 +1,4 @@
-import type { LexemFeatures } from "../../../../../lexical-generation";
+import type { LexemFeatures } from "@textfresser/lexical-generation";
 import { normalizeTagPart } from "./tag-normalization";
 
 type AdjectiveFeatures = Extract<LexemFeatures, { kind: "adjective" }>;

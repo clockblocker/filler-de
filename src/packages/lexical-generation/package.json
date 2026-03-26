@@ -1,0 +1,27 @@
+{
+	"dependencies": {
+		"neverthrow": "8.2.0",
+		"zod": "4.1.12"
+	},
+	"devDependencies": {
+		"@types/bun": "1.3.0",
+		"bun-types": "1.3.4",
+		"openai": "6.6.0",
+		"typescript": "5.9.3",
+		"winston": "3.19.0"
+	},
+	"exports": {
+		".": "./index.ts"
+	},
+	"name": "@textfresser/lexical-generation",
+	"private": true,
+	"scripts": {
+		"codegen:prompts": "bun ./internal/prompt-smith/codegen/skript/run.ts",
+		"fix": "bun x biome check --write --unsafe . 2>/dev/null || true",
+		"prompt:stability": "bun ./tests/prompt-test/stability-runner.ts",
+		"prompt:test": "bun ./tests/prompt-test/runner.ts",
+		"test": "bun test --reporter=dot --preload ../../../tests/unit/setup.ts ./tests/"
+	},
+	"type": "module",
+	"version": "0.0.0"
+}

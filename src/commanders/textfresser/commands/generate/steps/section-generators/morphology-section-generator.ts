@@ -1,4 +1,4 @@
-import type { LexicalInfo } from "../../../../../../lexical-generation";
+import type { LexicalInfo } from "@textfresser/lexical-generation";
 import { morphologyRelationHelper } from "../../../../../../stateless-helpers/morphology-relation";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 import { resolveMorphemeItems } from "../../../../common/morpheme-link-target";

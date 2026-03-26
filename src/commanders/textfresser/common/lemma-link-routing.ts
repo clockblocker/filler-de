@@ -6,7 +6,7 @@ import {
 	LANGUAGE_ISO_CODE,
 	type LexicalPos,
 	type SurfaceKind,
-} from "../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import type { TargetLanguage } from "../../../types";
 import { resolveClosedSetLibraryTarget } from "./closed-set-library-target-resolver";
 import {

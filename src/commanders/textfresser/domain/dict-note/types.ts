@@ -1,4 +1,4 @@
-import type { LexicalMeta } from "../../../../lexical-generation";
+import type { LexicalMeta } from "@textfresser/lexical-generation";
 import type { LinguisticWikilinkDto } from "../linguistic-wikilink";
 
 export type EntrySection = {

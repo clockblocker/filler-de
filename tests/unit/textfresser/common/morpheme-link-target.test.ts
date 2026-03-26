@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { resolveMorphemeItems } from "../../../../src/commanders/textfresser/common/morpheme-link-target";
-import type { LexicalMorpheme } from "../../../../src/lexical-generation";
+import type { LexicalMorpheme } from "@textfresser/lexical-generation";
 
 describe("resolveMorphemeItems", () => {
 	it("does not duplicate prefix suffix when surf already contains -prefix-de", () => {

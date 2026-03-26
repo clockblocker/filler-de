@@ -12,7 +12,7 @@ import {
 	type LexicalGenerationModule,
 	type LexicalInfo,
 	lexicalGenerationError,
-} from "../../../../src/lexical-generation";
+} from "@textfresser/lexical-generation";
 
 const PHRASEM_ENTRY_ID = "PH-LM-1";
 const NOUN_ENTRY_ID = "LX-LM-NOUN-1";

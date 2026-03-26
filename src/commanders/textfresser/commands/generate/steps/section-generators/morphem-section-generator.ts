@@ -1,4 +1,4 @@
-import type { LexicalInfo } from "../../../../../../lexical-generation";
+import type { LexicalInfo } from "@textfresser/lexical-generation";
 import { resolveMorphemeItems } from "../../../../common/morpheme-link-target";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import type { MorphemeItem } from "../../../../domain/morpheme/morpheme-formatter";

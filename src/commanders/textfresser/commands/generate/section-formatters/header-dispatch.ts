@@ -1,7 +1,7 @@
 import type {
 	LexicalGenus,
 	LexicalInfo,
-} from "../../../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import { formatHeaderLine as formatCommonHeader } from "./common/header-formatter";
 import { formatHeaderLine as formatNounHeader } from "./de/lexem/noun/header-formatter";
 

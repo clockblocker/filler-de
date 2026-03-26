@@ -1,4 +1,4 @@
-import type { ResolvedLemma } from "../../../../lexical-generation";
+import type { ResolvedLemma } from "@textfresser/lexical-generation";
 import type { Attestation } from "../../common/attestation/types";
 
 type LemmaLocalState = {

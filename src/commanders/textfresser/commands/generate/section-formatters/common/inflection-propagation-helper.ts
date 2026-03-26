@@ -2,7 +2,7 @@ import type {
 	LexicalCase,
 	LexicalGenus,
 	LexicalNumber,
-} from "../../../../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import type { TargetLanguage } from "../../../../../../types";
 import { extractHashTags } from "../../../../../../utils/text-utils";
 import {

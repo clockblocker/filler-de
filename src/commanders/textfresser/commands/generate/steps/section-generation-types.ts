@@ -1,7 +1,7 @@
 import type {
 	LexicalGenus,
 	LexicalRelationKind,
-} from "../../../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import type { TargetLanguage } from "../../../../../types";
 import type { TextfresserNounInflectionCell } from "../../../domain/lexical-types";
 import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";

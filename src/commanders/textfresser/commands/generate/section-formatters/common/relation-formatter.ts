@@ -1,4 +1,4 @@
-import type { LexicalRelations } from "../../../../../../lexical-generation";
+import type { LexicalRelations } from "@textfresser/lexical-generation";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 
 const SYMBOL_FOR_KIND: Record<

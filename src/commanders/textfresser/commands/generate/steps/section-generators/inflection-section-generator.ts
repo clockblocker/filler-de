@@ -1,4 +1,4 @@
-import type { LexicalInfo } from "../../../../../../lexical-generation";
+import type { LexicalInfo } from "@textfresser/lexical-generation";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import type { TextfresserNounInflectionCell } from "../../../../domain/lexical-types";
 import { cssSuffixFor } from "../../../../targets/de/sections/section-css-kind";

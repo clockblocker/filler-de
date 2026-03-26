@@ -124,7 +124,7 @@ Source: ideas extracted from open PRs #6, #7, #13, #15, #16, #17, #22 in clockbl
 
 #### 10) Add `@generated` header to prompt-smith codegen output
 - Source: PR #6 ideas (#9)
-- `src/lexical-generation/internal/prompt-smith/index.ts` is generated but committed alongside hand-written code with no marker.
+- `src/packages/lexical-generation/internal/prompt-smith/index.ts` is generated but committed alongside hand-written code with no marker.
 
 ### Bug fixes to verify against current code
 
@@ -174,3 +174,7 @@ Source: ideas extracted from open PRs #6, #7, #13, #15, #16, #17, #22 in clockbl
 #### 20) Lexical generation module extraction
 - Executor plan is maintained in `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/documentaion/book-of-work/lexical-generation-module-plan.md`.
 - Scope: extract lemma generation, sense disambiguation, and lexical info generation into a self-contained library-style module.
+
+#### 21) Obsidian event layer extraction
+- Executor plan is maintained in `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/documentaion/book-of-work/obsidian-event-layer-workspace-migration-plan.md`.
+- Scope: extract `user-event-interceptor/` into a workspace-ready package with a tiny facade, plain event payloads, and internalized detector/codec mechanics.

@@ -1,7 +1,7 @@
 import type {
 	LexemFeatures,
 	LexicalInfo,
-} from "../../../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import { buildVerbEntryIdentity } from "../../../domain/lexical-types";
 import { normalizeTagPart } from "./tag-normalization";
 

@@ -8,7 +8,7 @@ import {
 	posFormFromPosTag,
 	posTagFormFromPos,
 	type SurfaceKind,
-} from "../../../../lexical-generation";
+} from "@textfresser/lexical-generation";
 import {
 	LINGUISTIC_UNIT_KIND_TAGS,
 	type LinguisticUnitKindTag,

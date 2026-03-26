@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { generateMorphologySection } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generators/morphology-section-generator";
-import type { LexicalInfo } from "../../../../src/lexical-generation";
+import type { LexicalInfo } from "@textfresser/lexical-generation";
 
 function makeLexicalInfo(
 	overrides: Partial<

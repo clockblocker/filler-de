@@ -1,4 +1,4 @@
-import type { LexicalInfo } from "../../../../../lexical-generation";
+import type { LexicalInfo } from "@textfresser/lexical-generation";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { DictEntry } from "../../../domain/dict-note/types";
 import { getSectionsFor } from "../../../targets/de/sections/section-config";
