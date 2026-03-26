@@ -1,6 +1,6 @@
+import type { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../../../../global-state/global-state";
-import type { SplitPathKind } from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	Codecs,
 	SplitPathInsideLibraryOf,

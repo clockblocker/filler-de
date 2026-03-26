@@ -17,9 +17,8 @@
  * - WikilinkDetector: wikilink completions
  */
 
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { App, Plugin } from "obsidian";
-
-import type { VaultActionManager } from "../vault-action-manager";
 import { ActionElementDetector } from "./events/click/action-element/detector";
 import { CheckboxClickedDetector } from "./events/click/checkbox/detector";
 import { CheckboxFrontmatterDetector } from "./events/click/checkbox-frontmatter/detector";

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { resolveExistingEntry } from "../../../../src/commanders/textfresser/commands/generate/steps/resolve-existing-entry";
 import type { CommandStateWithLemma } from "../../../../src/commanders/textfresser/commands/types";
 import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";
 import type { DictEntry } from "../../../../src/commanders/textfresser/domain/dict-note/types";
 import { cssSuffixFor } from "../../../../src/commanders/textfresser/targets/de/sections/section-css-kind";
 import { DictSectionKind } from "../../../../src/commanders/textfresser/targets/de/sections/section-kind";
-import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const DUMMY_PATH: SplitPathToMdFile = {
 	basename: "Arbeit",

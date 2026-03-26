@@ -1,18 +1,18 @@
 import { describe, expect, it } from "bun:test";
-import { err, ok } from "neverthrow";
-import {
-	createPropagationPortsAdapter,
-} from "../../../../src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter";
 import {
 	ReadContentErrorKind,
 	type VaultActionManager,
-} from "../../../../src/managers/obsidian/vault-action-manager";
+} from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
-} from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager/types/split-path";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import { err, ok } from "neverthrow";
+import {
+	createPropagationPortsAdapter,
+} from "../../../../src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter";
 
 type VamPortDependency = Pick<
 	VaultActionManager,

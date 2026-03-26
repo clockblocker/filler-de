@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { computeLineChanges } from "../../../../src/managers/obsidian/vault-action-manager/file-services/active-view/writer/compute-line-changes";
+import { computeLineChanges } from "@textfresser/vault-action-manager/file-services/active-view/writer/compute-line-changes";
 
 describe("computeLineChanges", () => {
 	describe("no-op scenarios", () => {
@@ -23,35 +23,55 @@ describe("computeLineChanges", () => {
 		it("replaces first line", () => {
 			const changes = computeLineChanges("old\nkeep", "NEW\nkeep");
 			expect(changes).toEqual([
-				{ from: { ch: 0, line: 0 }, text: "NEW", to: { ch: 3, line: 0 } },
+				{
+					from: { ch: 0, line: 0 },
+					text: "NEW",
+					to: { ch: 3, line: 0 },
+				},
 			]);
 		});
 
 		it("replaces last line", () => {
 			const changes = computeLineChanges("keep\nold", "keep\nNEW");
 			expect(changes).toEqual([
-				{ from: { ch: 0, line: 1 }, text: "NEW", to: { ch: 3, line: 1 } },
+				{
+					from: { ch: 0, line: 1 },
+					text: "NEW",
+					to: { ch: 3, line: 1 },
+				},
 			]);
 		});
 
 		it("replaces only line in single-line document", () => {
 			const changes = computeLineChanges("old", "new");
 			expect(changes).toEqual([
-				{ from: { ch: 0, line: 0 }, text: "new", to: { ch: 3, line: 0 } },
+				{
+					from: { ch: 0, line: 0 },
+					text: "new",
+					to: { ch: 3, line: 0 },
+				},
 			]);
 		});
 
 		it("handles line with different length (shorter to longer)", () => {
 			const changes = computeLineChanges("short", "much longer text");
 			expect(changes).toEqual([
-				{ from: { ch: 0, line: 0 }, text: "much longer text", to: { ch: 5, line: 0 } },
+				{
+					from: { ch: 0, line: 0 },
+					text: "much longer text",
+					to: { ch: 5, line: 0 },
+				},
 			]);
 		});
 
 		it("handles line with different length (longer to shorter)", () => {
 			const changes = computeLineChanges("much longer text", "short");
 			expect(changes).toEqual([
-				{ from: { ch: 0, line: 0 }, text: "short", to: { ch: 16, line: 0 } },
+				{
+					from: { ch: 0, line: 0 },
+					text: "short",
+					to: { ch: 16, line: 0 },
+				},
 			]);
 		});
 	});
@@ -100,12 +120,16 @@ describe("computeLineChanges", () => {
 	describe("line addition at end", () => {
 		it("adds single line to end", () => {
 			const changes = computeLineChanges("a", "a\nb");
-			expect(changes).toEqual([{ from: { ch: 1, line: 0 }, text: "\nb" }]);
+			expect(changes).toEqual([
+				{ from: { ch: 1, line: 0 }, text: "\nb" },
+			]);
 		});
 
 		it("adds multiple lines to end", () => {
 			const changes = computeLineChanges("a", "a\nb\nc\nd");
-			expect(changes).toEqual([{ from: { ch: 1, line: 0 }, text: "\nb\nc\nd" }]);
+			expect(changes).toEqual([
+				{ from: { ch: 1, line: 0 }, text: "\nb\nc\nd" },
+			]);
 		});
 
 		it("adds to empty document (go-back link case)", () => {
@@ -113,7 +137,11 @@ describe("computeLineChanges", () => {
 			const changes = computeLineChanges("", "[[link]]");
 			// Empty doc has one line with length 0
 			expect(changes).toEqual([
-				{ from: { ch: 0, line: 0 }, text: "[[link]]", to: { ch: 0, line: 0 } },
+				{
+					from: { ch: 0, line: 0 },
+					text: "[[link]]",
+					to: { ch: 0, line: 0 },
+				},
 			]);
 		});
 
@@ -122,7 +150,11 @@ describe("computeLineChanges", () => {
 			// First: replace empty line with "line1"
 			// Second: append "\nline2"
 			expect(changes).toEqual([
-				{ from: { ch: 0, line: 0 }, text: "line1", to: { ch: 0, line: 0 } },
+				{
+					from: { ch: 0, line: 0 },
+					text: "line1",
+					to: { ch: 0, line: 0 },
+				},
 				{ from: { ch: 0, line: 0 }, text: "\nline2" },
 			]);
 		});
@@ -130,12 +162,23 @@ describe("computeLineChanges", () => {
 
 	describe("mixed operations", () => {
 		it("replaces and adds lines", () => {
-			const changes = computeLineChanges("old1\nold2", "new1\nnew2\nnew3");
+			const changes = computeLineChanges(
+				"old1\nold2",
+				"new1\nnew2\nnew3",
+			);
 			// Lines 0,1: replace
 			// After line 1: append new3
 			expect(changes).toEqual([
-				{ from: { ch: 0, line: 0 }, text: "new1", to: { ch: 4, line: 0 } },
-				{ from: { ch: 0, line: 1 }, text: "new2", to: { ch: 4, line: 1 } },
+				{
+					from: { ch: 0, line: 0 },
+					text: "new1",
+					to: { ch: 4, line: 0 },
+				},
+				{
+					from: { ch: 0, line: 1 },
+					text: "new2",
+					to: { ch: 4, line: 1 },
+				},
 				{ from: { ch: 4, line: 1 }, text: "\nnew3" },
 			]);
 		});
@@ -233,7 +276,11 @@ describe("computeLineChanges", () => {
 			const after = "- [x] Task 1\n- [x] Task 2";
 			const changes = computeLineChanges(before, after);
 			expect(changes).toEqual([
-				{ from: { ch: 0, line: 0 }, text: "- [x] Task 1", to: { ch: 12, line: 0 } },
+				{
+					from: { ch: 0, line: 0 },
+					text: "- [x] Task 1",
+					to: { ch: 12, line: 0 },
+				},
 			]);
 		});
 
@@ -241,7 +288,9 @@ describe("computeLineChanges", () => {
 			const before = "Line 1\nLine 2";
 			const after = "Line 1\nLine 2\nLine 3\nLine 4";
 			const changes = computeLineChanges(before, after);
-			expect(changes).toEqual([{ from: { ch: 6, line: 1 }, text: "\nLine 3\nLine 4" }]);
+			expect(changes).toEqual([
+				{ from: { ch: 6, line: 1 }, text: "\nLine 3\nLine 4" },
+			]);
 		});
 	});
 });

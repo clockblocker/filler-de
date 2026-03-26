@@ -9,9 +9,9 @@
  * 5. If not: let native behavior proceed
  */
 
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { type App, MarkdownView } from "obsidian";
 import { blockIdHelper } from "../../../../../stateless-helpers/block-id";
-import type { VaultActionManager } from "../../../vault-action-manager";
 import { HandlerOutcome } from "../../types/handler";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";

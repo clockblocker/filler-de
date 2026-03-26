@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import { propagateInflections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-inflections";
-import type { TextfresserNounInflectionCell } from "../../../../src/commanders/textfresser/domain/lexical-types";
 import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";
 import type { DictEntry } from "../../../../src/commanders/textfresser/domain/dict-note/types";
+import type { TextfresserNounInflectionCell } from "../../../../src/commanders/textfresser/domain/lexical-types";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
-import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 function makeCtx(
 	inflectionCells: TextfresserNounInflectionCell[],

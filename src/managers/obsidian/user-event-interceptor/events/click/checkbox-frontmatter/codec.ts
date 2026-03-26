@@ -2,7 +2,7 @@
  * CheckboxFrontmatterCodec - encodes property checkbox click data into payload.
  */
 
-import type { SplitPathToMdFile } from "../../../../vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { createEventCodec } from "../../codec-factory";
 import type { CheckboxFrontmatterPayload } from "./payload";
 import { createCheckboxFrontmatterPayload } from "./payload";

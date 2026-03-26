@@ -1,17 +1,18 @@
 import { describe, expect, it } from "bun:test";
-import { collapseActions } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/collapse";
-import { buildDependencyGraph, makeGraphKey } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dependency-detector";
-import { topologicalSort } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/topological-sort";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
+import { collapseActions } from "@textfresser/vault-action-manager/impl/actions-processing/collapse";
+import {
+	buildDependencyGraph,
+	makeGraphKey,
+} from "@textfresser/vault-action-manager/impl/actions-processing/dependency-detector";
+import { topologicalSort } from "@textfresser/vault-action-manager/impl/actions-processing/topological-sort";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
-import {
-	VaultActionKind,
-} from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 
 const folder = (
 	basename: string,
@@ -58,7 +59,10 @@ describe("EnsureExist Integration", () => {
 		};
 		const ensureFile: VaultAction = {
 			kind: VaultActionKind.UpsertMdFile,
-			payload: { content: null, splitPath: mdFile("file", ["root", "parent", "child"]) },
+			payload: {
+				content: null,
+				splitPath: mdFile("file", ["root", "parent", "child"]),
+			},
 		};
 
 		const graph = buildDependencyGraph([
@@ -116,7 +120,11 @@ describe("EnsureExist Integration", () => {
 
 		// Collapse first: UpsertMdFile(null) + ProcessMdFile → both kept,
 		// then UpsertMdFile(content) replaces UpsertMdFile(null) and removes ProcessMdFile
-		const collapsed = await collapseActions([ensureExist, process, replace]);
+		const collapsed = await collapseActions([
+			ensureExist,
+			process,
+			replace,
+		]);
 		// After collapse: only UpsertMdFile(content) remains
 		expect(collapsed).toHaveLength(1);
 		expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
@@ -142,13 +150,16 @@ describe("EnsureExist Integration", () => {
 		};
 		const createFile: VaultAction = {
 			kind: VaultActionKind.UpsertMdFile,
-			payload: { content: "initial", splitPath: mdFile("file", ["root"]) },
+			payload: {
+				content: "initial",
+				splitPath: mdFile("file", ["root"]),
+			},
 		};
 		const process: VaultAction = {
 			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file", ["root"]),
-				transform: async (c) => c + "\nprocessed",
+				transform: async (c) => `${c}\nprocessed`,
 			},
 		};
 
@@ -162,7 +173,8 @@ describe("EnsureExist Integration", () => {
 		const sorted = topologicalSort(allActions, graph);
 
 		expect(sorted[0]).toBe(rootFolder);
-		expect(sorted.indexOf(process)).toBeGreaterThan(sorted.indexOf(collapsed[0]!));
+		expect(sorted.indexOf(process)).toBeGreaterThan(
+			sorted.indexOf(collapsed[0]!),
+		);
 	});
 });
-

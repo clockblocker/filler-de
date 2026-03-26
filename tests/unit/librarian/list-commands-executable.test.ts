@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
@@ -7,8 +9,6 @@ import { makeCodexBasename } from "../../../src/commanders/librarian/healer/libr
 import { listCommandsExecutableIn } from "../../../src/commanders/librarian/list-commands-executable";
 import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
 import { CommandKind } from "../../../src/managers/obsidian/command-executor";
-import type { SplitPathToMdFile } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpyWithHooks } from "../common-utils/setup-spy";
 import { makeTree } from "./library-tree/tree-test-helpers";

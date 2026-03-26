@@ -1,9 +1,9 @@
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { WikilinkClickPayload } from "../../../../managers/obsidian/user-event-interceptor/events";
 import {
 	type EventHandler,
 	HandlerOutcome,
 } from "../../../../managers/obsidian/user-event-interceptor/types/handler";
-import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
 import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import { buildAttestationFromWikilinkClickPayload } from "../../common/attestation/builders/build-from-wikilink-click-payload";
 import type {

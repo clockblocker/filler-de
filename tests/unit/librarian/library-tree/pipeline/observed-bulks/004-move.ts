@@ -1,5 +1,5 @@
-import type { BulkVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager";
-import { MD } from "../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
+import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 
 export const bulkEvent: BulkVaultEvent = {
 	debug: {

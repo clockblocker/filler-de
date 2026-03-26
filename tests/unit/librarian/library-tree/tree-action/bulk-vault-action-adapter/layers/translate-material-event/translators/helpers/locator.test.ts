@@ -1,4 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import type {
+	SplitPathToFile,
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	type CodecRules,
 	type Codecs,
@@ -8,13 +15,6 @@ import {
 import { RenameIntent } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
 import { ChangePolicy } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
 import { tryCanonicalizeSplitPathToDestination } from "../../../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
-import { MD } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
-import type {
-	SplitPathToFile,
-	SplitPathToFolder,
-	SplitPathToMdFile,
-} from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";
 

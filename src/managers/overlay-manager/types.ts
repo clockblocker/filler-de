@@ -2,7 +2,7 @@
  * Shared types for overlay-manager.
  */
 
-import type { SplitPathToMdFile } from "../obsidian/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 
 /**
  * Toolbar button configuration.

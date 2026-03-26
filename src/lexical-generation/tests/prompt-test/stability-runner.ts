@@ -66,15 +66,16 @@ function getSystemPrompt(params: {
 	targetLanguage: string;
 }): string {
 	const targetDict =
-		PROMPT_FOR[capitalize(params.targetLanguage) as keyof typeof PROMPT_FOR];
+		PROMPT_FOR[
+			capitalize(params.targetLanguage) as keyof typeof PROMPT_FOR
+		];
 	const knownDict =
 		targetDict?.[
 			capitalize(
 				params.knownLanguage,
 			) as keyof (typeof targetDict)[keyof typeof targetDict]
 		];
-	const prompt =
-		knownDict?.[params.promptKind as keyof typeof knownDict];
+	const prompt = knownDict?.[params.promptKind as keyof typeof knownDict];
 
 	if (!prompt) {
 		throw new Error(
@@ -90,7 +91,9 @@ const [runsArg, targetArg = "german", knownArg = "english"] =
 const repeats = Number(runsArg ?? "5");
 
 if (!Number.isFinite(repeats) || repeats < 1) {
-	throw new Error("Usage: bun run tests/prompt-test/stability-runner.ts [repeats>=1] [targetLang] [knownLang]");
+	throw new Error(
+		"Usage: bun run tests/prompt-test/stability-runner.ts [repeats>=1] [targetLang] [knownLang]",
+	);
 }
 
 const apiKey = process.env.GEMINI_API_KEY;
@@ -195,7 +198,9 @@ const markdownLines: string[] = [
 
 for (const kindResult of report.results as Array<Record<string, unknown>>) {
 	markdownLines.push(`## ${kindResult.promptKind as string}`, "");
-	for (const example of kindResult.examples as Array<Record<string, unknown>>) {
+	for (const example of kindResult.examples as Array<
+		Record<string, unknown>
+	>) {
 		markdownLines.push(
 			`### Example ${example.exampleIndex as number}`,
 			`- Passes: ${example.passes as number}/${repeats} (rate=${example.passRate})`,
@@ -203,7 +208,9 @@ for (const kindResult of report.results as Array<Record<string, unknown>>) {
 			`- Expected: \`${JSON.stringify(example.expectedOutput)}\``,
 			"- Output distribution:",
 		);
-		for (const dist of example.distribution as Array<Record<string, unknown>>) {
+		for (const dist of example.distribution as Array<
+			Record<string, unknown>
+		>) {
 			markdownLines.push(
 				`  - ${dist.count as number}x \`${dist.output as string}\``,
 			);
@@ -213,4 +220,3 @@ for (const kindResult of report.results as Array<Record<string, unknown>>) {
 }
 
 fs.writeFileSync(path.join(outDir, "result.md"), markdownLines.join("\n"));
-console.log(`Stability report written to: ${outDir}`);

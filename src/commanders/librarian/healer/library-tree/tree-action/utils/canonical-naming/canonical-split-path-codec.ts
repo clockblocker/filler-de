@@ -1,6 +1,6 @@
+import type { AnySplitPath } from "@textfresser/vault-action-manager/types/split-path";
 import { err, ok, type Result } from "neverthrow";
 import { getParsedUserSettings } from "../../../../../../../global-state/global-state";
-import type { AnySplitPath } from "../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
 	AnySplitPathInsideLibrary,

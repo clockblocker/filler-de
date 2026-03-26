@@ -2,7 +2,7 @@
  * Types for bottom toolbar.
  */
 
-import type { SplitPathToMdFile } from "../../obsidian/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 
 /**
  * Action configuration for toolbar buttons.

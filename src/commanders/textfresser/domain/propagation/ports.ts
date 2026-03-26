@@ -1,11 +1,11 @@
-import type { Result } from "neverthrow";
-import type { VaultAction } from "../../../../managers/obsidian/vault-action-manager";
-import type { ReadContentError } from "../../../../managers/obsidian/vault-action-manager/types/read-content-error";
+import type { VaultAction } from "@textfresser/vault-action-manager";
+import type { ReadContentError } from "@textfresser/vault-action-manager/types/read-content-error";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
+import type { Result } from "neverthrow";
 
 export type ReadManyMdFilesOutcome =
 	| {

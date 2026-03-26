@@ -52,9 +52,9 @@ describe("inflection label localization", () => {
 		expect(
 			getGermanGenusLabelForTargetLanguage("Femininum", "German"),
 		).toBe("Feminin");
-		expect(
-			getGermanGenusLabelForTargetLanguage("Neutrum", "German"),
-		).toBe("Neutrum");
+		expect(getGermanGenusLabelForTargetLanguage("Neutrum", "German")).toBe(
+			"Neutrum",
+		);
 
 		expect(
 			getGermanGenusLabelForTargetLanguage("Maskulinum", "English"),
@@ -62,8 +62,8 @@ describe("inflection label localization", () => {
 		expect(
 			getGermanGenusLabelForTargetLanguage("Femininum", "English"),
 		).toBe("Feminine");
-		expect(
-			getGermanGenusLabelForTargetLanguage("Neutrum", "English"),
-		).toBe("Neuter");
+		expect(getGermanGenusLabelForTargetLanguage("Neutrum", "English")).toBe(
+			"Neuter",
+		);
 	});
 });

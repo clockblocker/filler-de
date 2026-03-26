@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import type { FileNodeSegmentId, ScrollNodeSegmentId, SectionNodeSegmentId } from "../../../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
 import {
 	type CodexImpact,
@@ -7,8 +9,6 @@ import {
 import { TreeActionType } from "../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 import { TreeNodeKind, TreeNodeStatus } from "../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../../../src/commanders/librarian/types/schemas/node-name";
-import { MD } from "../../../../../src/managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathKind } from "../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;

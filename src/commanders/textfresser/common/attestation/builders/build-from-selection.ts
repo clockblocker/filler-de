@@ -2,7 +2,7 @@
  * Build Attestation from a text selection context.
  */
 
-import type { SelectionInfo } from "../../../../../managers/obsidian/vault-action-manager";
+import type { SelectionInfo } from "@textfresser/vault-action-manager";
 import { logger } from "../../../../../utils/logger";
 import type { Attestation } from "../types";
 import { buildSourceFields } from "./build-source-fields";

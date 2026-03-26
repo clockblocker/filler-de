@@ -1,9 +1,9 @@
-import { errAsync, ok, type ResultAsync } from "neverthrow";
-import { PromptKind } from "../../../../lexical-generation";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "../../../../managers/obsidian/vault-action-manager";
+} from "@textfresser/vault-action-manager";
+import { errAsync, ok, type ResultAsync } from "neverthrow";
+import { PromptKind } from "../../../../lexical-generation";
 import { blockIdHelper } from "../../../../stateless-helpers/block-id";
 import { markdownHelper } from "../../../../stateless-helpers/markdown-strip";
 import {

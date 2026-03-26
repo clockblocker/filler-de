@@ -2,9 +2,9 @@
  * Error types for the split-to-pages action.
  */
 
+import { logError } from "@textfresser/vault-action-manager/helpers/issue-handlers";
 import { Notice } from "obsidian";
 import { z } from "zod";
-import { logError } from "../../../../managers/obsidian/vault-action-manager/helpers/issue-handlers";
 
 // ─── Error Kind Enum ───
 

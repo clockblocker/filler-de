@@ -1,5 +1,8 @@
-import { LANGUAGE_ISO_CODE, type LexicalPos } from "../../../lexical-generation";
-import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import {
+	LANGUAGE_ISO_CODE,
+	type LexicalPos,
+} from "../../../lexical-generation";
 import { stringifySplitPath } from "../../../stateless-helpers/split-path-comparison";
 import type { TargetLanguage } from "../../../types";
 

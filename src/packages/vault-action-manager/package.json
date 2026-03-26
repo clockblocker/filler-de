@@ -1,0 +1,14 @@
+{
+	"exports": {
+		".": "./src/index.ts",
+		"./file-services/*": "./src/file-services/*.ts",
+		"./helpers/issue-handlers": "./src/helpers/issue-handlers.ts",
+		"./helpers/pathfinder": "./src/helpers/pathfinder/index.ts",
+		"./impl/*": "./src/impl/*.ts",
+		"./types/*": "./src/types/*.ts"
+	},
+	"name": "@textfresser/vault-action-manager",
+	"private": true,
+	"type": "module",
+	"version": "0.0.0"
+}

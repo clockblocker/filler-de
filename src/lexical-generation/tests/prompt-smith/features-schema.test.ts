@@ -53,15 +53,17 @@ describe("Features schema", () => {
 		});
 
 		it("accepts structured adjective output", () => {
-			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse({
-				classification: "Qualitative",
-				distribution: "AttributiveAndPredicative",
-				gradability: "Gradable",
-				valency: {
-					governedPattern: "Prepositional",
-					governedPreposition: "auf",
+			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse(
+				{
+					classification: "Qualitative",
+					distribution: "AttributiveAndPredicative",
+					gradability: "Gradable",
+					valency: {
+						governedPattern: "Prepositional",
+						governedPreposition: "auf",
+					},
 				},
-			});
+			);
 			expect(result.success).toBe(true);
 		});
 
@@ -109,40 +111,46 @@ describe("Features schema", () => {
 		});
 
 		it("rejects adjective prepositional valency without preposition", () => {
-			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse({
-				classification: "Qualitative",
-				distribution: "AttributiveAndPredicative",
-				gradability: "Gradable",
-				valency: {
-					governedPattern: "Prepositional",
+			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse(
+				{
+					classification: "Qualitative",
+					distribution: "AttributiveAndPredicative",
+					gradability: "Gradable",
+					valency: {
+						governedPattern: "Prepositional",
+					},
 				},
-			});
+			);
 			expect(result.success).toBe(false);
 		});
 
 		it("rejects adjective prepositional valency with null preposition", () => {
-			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse({
-				classification: "Qualitative",
-				distribution: "AttributiveAndPredicative",
-				gradability: "Gradable",
-				valency: {
-					governedPattern: "Prepositional",
-					governedPreposition: null,
+			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse(
+				{
+					classification: "Qualitative",
+					distribution: "AttributiveAndPredicative",
+					gradability: "Gradable",
+					valency: {
+						governedPattern: "Prepositional",
+						governedPreposition: null,
+					},
 				},
-			});
+			);
 			expect(result.success).toBe(false);
 		});
 
 		it("rejects adjective extra preposition when not prepositional", () => {
-			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse({
-				classification: "Qualitative",
-				distribution: "AttributiveAndPredicative",
-				gradability: "Gradable",
-				valency: {
-					governedPattern: "None",
-					governedPreposition: "auf",
+			const result = featuresAdjectiveSchemas.agentOutputSchema.safeParse(
+				{
+					classification: "Qualitative",
+					distribution: "AttributiveAndPredicative",
+					gradability: "Gradable",
+					valency: {
+						governedPattern: "None",
+						governedPreposition: "auf",
+					},
 				},
-			});
+			);
 			expect(result.success).toBe(false);
 		});
 	});

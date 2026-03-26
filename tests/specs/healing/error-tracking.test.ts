@@ -7,6 +7,8 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
@@ -21,8 +23,6 @@ import { Tree } from "../../../src/commanders/librarian/healer/library-tree/tree
 import { TreeActionType } from "../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 import { TreeNodeStatus } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import {

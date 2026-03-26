@@ -1,16 +1,19 @@
 import { describe, expect, it } from "bun:test";
-import { buildDependencyGraph, makeGraphKey } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dependency-detector";
-import { topologicalSort } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/topological-sort";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
+import {
+	buildDependencyGraph,
+	makeGraphKey,
+} from "@textfresser/vault-action-manager/impl/actions-processing/dependency-detector";
+import { topologicalSort } from "@textfresser/vault-action-manager/impl/actions-processing/topological-sort";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager/types/vault-action";
 
 const folder = (
 	basename: string,
@@ -124,7 +127,10 @@ describe("topologicalSort", () => {
 		};
 		const create: VaultAction = {
 			kind: VaultActionKind.UpsertMdFile,
-			payload: { content: "", splitPath: mdFile("file", ["root", "sub"]) },
+			payload: {
+				content: "",
+				splitPath: mdFile("file", ["root", "sub"]),
+			},
 		};
 		const process: VaultAction = {
 			kind: VaultActionKind.ProcessMdFile,
@@ -197,8 +203,8 @@ describe("topologicalSort", () => {
 		// Manually create cycle (this shouldn't happen in real usage)
 		const key1 = makeGraphKey(action1);
 		const key2 = makeGraphKey(action2);
-		graph.get(key1)!.dependsOn.push(action2);
-		graph.get(key2)!.dependsOn.push(action1);
+		graph.get(key1)?.dependsOn.push(action2);
+		graph.get(key2)?.dependsOn.push(action1);
 
 		expect(() => {
 			topologicalSort([action1, action2], graph);
@@ -270,4 +276,3 @@ describe("topologicalSort", () => {
 		expect(sorted.indexOf(child)).toBeGreaterThan(sorted.indexOf(parent));
 	});
 });
-

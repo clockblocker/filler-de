@@ -1,9 +1,9 @@
-import { ok, type Result } from "neverthrow";
-import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager/types/vault-action";
+import { ok, type Result } from "neverthrow";
 import { buildPolicyDestinationPath } from "../../../common/lemma-link-routing";
 import type { CommandError, CommandStateWithLemma } from "../../types";
 

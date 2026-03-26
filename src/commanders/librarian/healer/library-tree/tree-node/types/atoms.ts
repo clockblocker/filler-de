@@ -1,8 +1,8 @@
-import z from "zod";
 import {
 	EmptyStringSchema,
 	MdSchema,
-} from "../../../../../../managers/obsidian/vault-action-manager/types/literals";
+} from "@textfresser/vault-action-manager/types/literals";
+import z from "zod";
 import {
 	DONE_STATUS,
 	FILE_NODE_TYPE,

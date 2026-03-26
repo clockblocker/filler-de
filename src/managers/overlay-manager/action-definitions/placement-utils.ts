@@ -2,11 +2,11 @@
  * Utilities for computing action placements.
  */
 
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { SelectionActionPlacement } from "../../../types";
 import { CommandKind } from "../../obsidian/command-executor";
-import type { SplitPathToMdFile } from "../../obsidian/vault-action-manager/types/split-path";
 import type { ActionConfig } from "../bottom-toolbar/types";
 import { ACTION_DEFINITIONS } from "./definitions";
 import { OverlayPlacement } from "./types";

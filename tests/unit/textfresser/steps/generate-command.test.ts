@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import { ok, okAsync } from "neverthrow";
 import { generateCommand } from "../../../../src/commanders/textfresser/commands/generate/generate-command";
 import { buildPolicyDestinationPath } from "../../../../src/commanders/textfresser/common/lemma-link-routing";
@@ -11,7 +12,6 @@ import {
 	type LexicalInfo,
 	lexicalGenerationError,
 } from "../../../../src/lexical-generation";
-import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 import { DEFAULT_SETTINGS } from "../../../../src/types";
 
 function makeProperNounLexicalInfo(): LexicalInfo {

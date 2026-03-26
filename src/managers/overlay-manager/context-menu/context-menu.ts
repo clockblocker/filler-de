@@ -2,6 +2,7 @@
  * Context menu integration for editor and file-explorer actions.
  */
 
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { App, Menu, Plugin } from "obsidian";
 import { z } from "zod";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/bookkeeper/split-to-pages-action";
@@ -16,7 +17,6 @@ import {
 	type CommandExecutor,
 	CommandKind,
 } from "../../obsidian/command-executor";
-import type { VaultActionManager } from "../../obsidian/vault-action-manager";
 
 /** Schema for reading noteKind from file metadata. */
 const FileTypeMetadataSchema = z.object({

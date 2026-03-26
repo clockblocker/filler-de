@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	computeFinalTarget,
 	computePrePromptTarget,
 	formatLinkTarget,
 	isClosedSetPos,
 } from "../../../../src/commanders/textfresser/common/lemma-link-routing";
-import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 function makePath(
 	basename: string,

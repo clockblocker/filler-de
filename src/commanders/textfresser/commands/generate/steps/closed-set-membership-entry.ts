@@ -1,4 +1,4 @@
-import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
 import type { TargetLanguage } from "../../../../../types";
 import { resolveClosedSetLibraryTarget } from "../../../common/closed-set-library-target-resolver";

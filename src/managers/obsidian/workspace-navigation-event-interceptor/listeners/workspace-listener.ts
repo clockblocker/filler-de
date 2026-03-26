@@ -2,8 +2,8 @@
  * WorkspaceListener - wraps Obsidian workspace event registration.
  */
 
+import { makeSplitPath } from "@textfresser/vault-action-manager";
 import type { App, EventRef, TFile } from "obsidian";
-import { makeSplitPath } from "../../vault-action-manager";
 import {
 	type WorkspaceEvent,
 	WorkspaceEventKind,

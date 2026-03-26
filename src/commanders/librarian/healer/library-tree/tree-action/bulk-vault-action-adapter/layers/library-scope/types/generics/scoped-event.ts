@@ -1,4 +1,4 @@
-import type { VaultEvent } from "../../../../../../../../../../managers/obsidian/vault-action-manager";
+import type { VaultEvent } from "@textfresser/vault-action-manager";
 import type {
 	FileCreatedVaultEvent,
 	FileDeletedVaultEvent,
@@ -7,7 +7,7 @@ import type {
 	FolderDeletedVaultEvent,
 	FolderRenamedVaultEvent,
 	VaultEventKind,
-} from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/vault-event";
+} from "@textfresser/vault-action-manager/types/vault-event";
 import type {
 	LibraryScopedVaultEvent,
 	ScopedFileCreatedVaultEventInside,

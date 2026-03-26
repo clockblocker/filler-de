@@ -2,10 +2,10 @@
  * Types for Librarian commands.
  */
 
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { ResultAsync } from "neverthrow";
 import { z } from "zod";
 import type { CommandContext } from "../../../managers/obsidian/command-executor";
-import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
 import type { CommandError } from "../errors";
 import type { Librarian } from "../librarian";
 

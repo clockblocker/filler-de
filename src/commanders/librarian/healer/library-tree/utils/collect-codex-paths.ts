@@ -1,4 +1,4 @@
-import { pathfinder } from "../../../../../managers/obsidian/vault-action-manager/helpers/pathfinder";
+import { pathfinder } from "@textfresser/vault-action-manager/helpers/pathfinder";
 import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
 import { computeCodexSplitPath } from "../codex/codex-split-path";

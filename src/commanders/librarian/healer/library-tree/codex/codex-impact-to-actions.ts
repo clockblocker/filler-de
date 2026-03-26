@@ -3,13 +3,13 @@
  * Requires tree access to generate content.
  */
 
-import { err, ok } from "neverthrow";
 import {
 	type BulkVaultEvent,
 	VaultEventKind,
-} from "../../../../../managers/obsidian/vault-action-manager";
-import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { err, ok } from "neverthrow";
 import { logger } from "../../../../../utils/logger";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";

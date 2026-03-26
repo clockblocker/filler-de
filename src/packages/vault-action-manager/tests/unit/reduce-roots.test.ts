@@ -1,14 +1,14 @@
 import { describe, expect, it } from "bun:test";
-import { makeSystemPathForSplitPath } from "../../../src/managers/obsidian/vault-action-manager";
-import { reduceRoots } from "../../../src/managers/obsidian/vault-action-manager/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/reduce-roots";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
+import { makeSystemPathForSplitPath } from "@textfresser/vault-action-manager";
+import { reduceRoots } from "@textfresser/vault-action-manager/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/reduce-roots";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import type { VaultEvent } from "../../../src/managers/obsidian/vault-action-manager/types/vault-event";
-import { VaultEventKind } from "../../../src/managers/obsidian/vault-action-manager/types/vault-event";
+} from "@textfresser/vault-action-manager/types/split-path";
+import type { VaultEvent } from "@textfresser/vault-action-manager/types/vault-event";
+import { VaultEventKind } from "@textfresser/vault-action-manager/types/vault-event";
 
 // Helper: build split paths
 const F = (path: string): SplitPathToFolder => {
@@ -22,21 +22,21 @@ const F = (path: string): SplitPathToFolder => {
 };
 
 const P = (path: string): SplitPathToMdFile | SplitPathToFile => {
-    const parts = path.split("/");
-    const filename = parts.pop() ?? "";
-    const dot = filename.lastIndexOf(".");
-    const basename = dot === -1 ? filename : filename.slice(0, dot);
-    const ext = dot === -1 ? "" : filename.slice(dot + 1);
-  
-    return ext === "md"
-      ? { basename, extension: MD, kind: "MdFile", pathParts: parts }
-      : { basename, extension: ext, kind: "File", pathParts: parts };
+	const parts = path.split("/");
+	const filename = parts.pop() ?? "";
+	const dot = filename.lastIndexOf(".");
+	const basename = dot === -1 ? filename : filename.slice(0, dot);
+	const ext = dot === -1 ? "" : filename.slice(dot + 1);
+
+	return ext === "md"
+		? { basename, extension: MD, kind: "MdFile", pathParts: parts }
+		: { basename, extension: ext, kind: "File", pathParts: parts };
 };
 
 const fileRenamed = (from: string, to: string) => ({
-    from: P(from),
-    kind: VaultEventKind.FileRenamed,
-    to: P(to),
+	from: P(from),
+	kind: VaultEventKind.FileRenamed,
+	to: P(to),
 });
 
 const folderRenamed = (
@@ -64,12 +64,18 @@ const folderTrashed = (
 
 // Helper: stable key for event comparison
 const eventKey = (e: VaultEvent): string => {
-	if (e.kind === VaultEventKind.FileRenamed || e.kind === VaultEventKind.FolderRenamed) {
+	if (
+		e.kind === VaultEventKind.FileRenamed ||
+		e.kind === VaultEventKind.FolderRenamed
+	) {
 		const from = makeSystemPathForSplitPath(e.from);
 		const to = makeSystemPathForSplitPath(e.to);
 		return `${e.kind}:${from}→${to}`;
 	}
-	if (e.kind === VaultEventKind.FileDeleted || e.kind === VaultEventKind.FolderDeleted) {
+	if (
+		e.kind === VaultEventKind.FileDeleted ||
+		e.kind === VaultEventKind.FolderDeleted
+	) {
 		const path = makeSystemPathForSplitPath(e.splitPath);
 		return `${e.kind}:${path}`;
 	}
@@ -171,10 +177,7 @@ describe("reduceRoots", () => {
 
 	describe("Mixed operations", () => {
 		it("12. FolderRenamed(A→B) + FileTrashed(C/x.md)", () => {
-			const events = [
-				folderRenamed("A", "B"),
-				fileTrashed("C/x.md"),
-			];
+			const events = [folderRenamed("A", "B"), fileTrashed("C/x.md")];
 			const roots = reduceRoots(events);
 			assertRoots(roots, events);
 		});
@@ -211,19 +214,13 @@ describe("reduceRoots", () => {
 		});
 
 		it("multiple independent folder renames", () => {
-			const events = [
-				folderRenamed("A", "B"),
-				folderRenamed("C", "D"),
-			];
+			const events = [folderRenamed("A", "B"), folderRenamed("C", "D")];
 			const roots = reduceRoots(events);
 			assertRoots(roots, events);
 		});
 
 		it("duplicate folder renames - both filtered (should be deduplicated earlier)", () => {
-			const events = [
-				folderRenamed("A", "B"),
-				folderRenamed("A", "B"),
-			];
+			const events = [folderRenamed("A", "B"), folderRenamed("A", "B")];
 			const roots = reduceRoots(events);
 			// Duplicates cover each other, resulting in 0 roots
 			// This indicates duplicates should be handled in earlier pipeline stage
@@ -261,10 +258,7 @@ describe("reduceRoots", () => {
 		});
 
 		it("FolderDeleted(A/b) + FileDeleted(A/bad/x.md) - file not in deleted folder", () => {
-			const events = [
-				folderTrashed("A/b"),
-				fileTrashed("A/bad/x.md"),
-			];
+			const events = [folderTrashed("A/b"), fileTrashed("A/bad/x.md")];
 			const roots = reduceRoots(events);
 			// File at A/bad is not inside A/b, so both are roots
 			assertRoots(roots, events);
@@ -298,4 +292,3 @@ describe("reduceRoots", () => {
 		});
 	});
 });
-

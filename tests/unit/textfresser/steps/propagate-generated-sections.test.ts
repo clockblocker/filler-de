@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import type {
 	GenerateSectionsResult,
 	ParsedRelation,
@@ -6,7 +7,6 @@ import type {
 import { propagateGeneratedSections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-generated-sections";
 import type { MorphemeItem } from "../../../../src/commanders/textfresser/domain/morpheme/morpheme-formatter";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
-import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 const SOURCE_PATH = {
 	basename: "chapter-1",

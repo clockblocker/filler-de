@@ -1,6 +1,6 @@
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { errAsync, ResultAsync } from "neverthrow";
 import type { CommandContext } from "../../../../managers/obsidian/command-executor";
-import type { VaultActionManager } from "../../../../managers/obsidian/vault-action-manager";
 import { logger } from "../../../../utils/logger";
 import { resolveAttestation } from "../../commands/lemma/lemma-command";
 import type { CommandError, CommandInput } from "../../commands/types";

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { ExistenceChecker } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dispatcher";
+import type { ExistenceChecker } from "@textfresser/vault-action-manager/impl/actions-processing/dispatcher";
 import {
 	buildActionKeyIndex,
 	buildEnsureExistKeys,
@@ -9,15 +9,15 @@ import {
 	ensureDestinationsExist,
 	getDestinationsToCheck,
 	hasActionForKey,
-} from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/ensure-requirements-helpers";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
+} from "@textfresser/vault-action-manager/impl/actions-processing/ensure-requirements-helpers";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
-import { VaultActionKind } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 
 const folder = (
 	basename: string,
@@ -67,7 +67,14 @@ describe("collectTrashPaths", () => {
 			},
 			{
 				kind: VaultActionKind.TrashFile,
-				payload: { splitPath: { basename: "file2", extension: "txt", kind: "File", pathParts: ["root"] } },
+				payload: {
+					splitPath: {
+						basename: "file2",
+						extension: "txt",
+						kind: "File",
+						pathParts: ["root"],
+					},
+				},
 			},
 		];
 
@@ -178,7 +185,9 @@ describe("buildParentFolderKeys", () => {
 });
 
 describe("buildEnsureExistKeys", () => {
-	const pathToSplitPathToFolder = (path: string): SplitPathToFolder | null => {
+	const pathToSplitPathToFolder = (
+		path: string,
+	): SplitPathToFolder | null => {
 		const parts = path.split("/");
 		if (parts.length === 0) return null;
 		return folder(parts[parts.length - 1] ?? "", parts.slice(0, -1));
@@ -298,7 +307,9 @@ describe("hasActionForKey", () => {
 });
 
 describe("getDestinationsToCheck", () => {
-	const pathToSplitPathToFolder = (path: string): SplitPathToFolder | null => {
+	const pathToSplitPathToFolder = (
+		path: string,
+	): SplitPathToFolder | null => {
 		const parts = path.split("/");
 		if (parts.length === 0) return null;
 		return folder(parts[parts.length - 1] ?? "", parts.slice(0, -1));
@@ -360,14 +371,18 @@ describe("getDestinationsToCheck", () => {
 		expect(result.ensureExistFolderKeys.has("root/parent")).toBe(false); // Filtered by trash
 		// Note: File is not filtered because we only check direct trash matches
 		// The file itself is not trashed, only its parent folder
-		expect(result.ensureExistFileKeys.has("root/parent/file.md")).toBe(true);
+		expect(result.ensureExistFileKeys.has("root/parent/file.md")).toBe(
+			true,
+		);
 		// But root folder should still be there
 		expect(result.ensureExistFolderKeys.has("root")).toBe(true);
 	});
 });
 
 describe("ensureDestinationsExist", () => {
-	const pathToSplitPathToFolder = (path: string): SplitPathToFolder | null => {
+	const pathToSplitPathToFolder = (
+		path: string,
+	): SplitPathToFolder | null => {
 		const parts = path.split("/");
 		if (parts.length === 0) return null;
 		return folder(parts[parts.length - 1] ?? "", parts.slice(0, -1));
@@ -494,7 +509,10 @@ describe("ensureDestinationsExist", () => {
 			createFileKeys: new Set<string>(),
 			createFolderKeys: new Set<string>(["root/parent"]), // Same key
 			ensureExistFileKeys: new Set<string>(),
-			ensureExistFolderKeys: new Set<string>(["root/parent", "root/other"]),
+			ensureExistFolderKeys: new Set<string>([
+				"root/parent",
+				"root/other",
+			]),
 		};
 
 		let callCount = 0;
@@ -641,7 +659,14 @@ describe("buildActionKeyIndex", () => {
 			},
 			{
 				kind: VaultActionKind.TrashFile,
-				payload: { splitPath: { basename: "b", extension: "txt", kind: "File", pathParts: ["root"] } },
+				payload: {
+					splitPath: {
+						basename: "b",
+						extension: "txt",
+						kind: "File",
+						pathParts: ["root"],
+					},
+				},
 			},
 			{
 				kind: VaultActionKind.TrashMdFile,

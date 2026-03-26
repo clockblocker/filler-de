@@ -12,9 +12,9 @@
  * 4. Apply HandleResult
  */
 
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { App } from "obsidian";
 import z from "zod";
-import type { VaultActionManager } from "../../vault-action-manager";
 import type { AnyPayload } from "./payload-base";
 
 export const HandlerOutcomeEnum = z.enum([

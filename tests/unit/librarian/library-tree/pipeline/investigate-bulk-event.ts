@@ -9,11 +9,11 @@
  *   const result = investigateBulkEvent(createActions, bulkEvent);
  */
 
+import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
 import type { CodexImpact } from "../../../../../src/commanders/librarian/healer/library-tree/codex/compute-codex-impact";
 import type { CodexAction } from "../../../../../src/commanders/librarian/healer/library-tree/codex/types/codex-action";
 import type { CreateTreeLeafAction, TreeAction } from "../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 import type { HealingAction } from "../../../../../src/commanders/librarian/healer/library-tree/types/healing-action";
-import type { BulkVaultEvent } from "../../../../../src/managers/obsidian/vault-action-manager";
 import {
 	createPipelineFromCreateActions,
 	type PipelineResult,

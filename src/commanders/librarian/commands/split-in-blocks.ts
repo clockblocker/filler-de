@@ -1,8 +1,8 @@
-import { errAsync, okAsync, ResultAsync } from "neverthrow";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "../../../managers/obsidian/vault-action-manager";
+} from "@textfresser/vault-action-manager";
+import { errAsync, okAsync, ResultAsync } from "neverthrow";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import { splitStrInBlocks } from "../bookkeeper/segmenter/block-marker/split-str-in-blocks";
 import { type CommandError, CommandErrorKind } from "../errors";

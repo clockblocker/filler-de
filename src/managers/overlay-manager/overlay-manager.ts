@@ -10,6 +10,7 @@
  * See about.md for responsibility boundary documentation.
  */
 
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { App, Plugin } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
 import type { CommandExecutor } from "../obsidian/command-executor";
@@ -20,7 +21,6 @@ import {
 	type SelectionChangedPayload,
 	type UserEventInterceptor,
 } from "../obsidian/user-event-interceptor";
-import type { VaultActionManager } from "../obsidian/vault-action-manager";
 import type {
 	Teardown,
 	WorkspaceEvent,

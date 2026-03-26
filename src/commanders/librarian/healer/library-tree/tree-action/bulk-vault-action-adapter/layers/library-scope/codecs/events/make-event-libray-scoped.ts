@@ -1,7 +1,7 @@
 import {
 	type VaultEvent,
 	VaultEventKind,
-} from "../../../../../../../../../../managers/obsidian/vault-action-manager";
+} from "@textfresser/vault-action-manager";
 import type {
 	FileCreatedVaultEvent,
 	FileDeletedVaultEvent,
@@ -9,7 +9,7 @@ import type {
 	FolderCreatedVaultEvent,
 	FolderDeletedVaultEvent,
 	FolderRenamedVaultEvent,
-} from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/vault-event";
+} from "@textfresser/vault-action-manager/types/vault-event";
 import type { CodecRules } from "../../../../../../../../codecs/rules";
 import type { LibraryScopedVaultEvent } from "../../types/scoped-event";
 import { Scope } from "../../types/scoped-event";

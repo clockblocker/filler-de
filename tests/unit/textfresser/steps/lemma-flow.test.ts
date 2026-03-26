@@ -1,14 +1,14 @@
 import { describe, expect, it } from "bun:test";
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import type {
+	SplitPathToMdFile,
+} from "@textfresser/vault-action-manager/types/split-path";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import { errAsync, ok, okAsync } from "neverthrow";
 import type { PromptOutput } from "../../../../src/commanders/textfresser/llm/prompt-catalog";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
 import type { CommandContext } from "../../../../src/managers/obsidian/command-executor";
-import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
-import type {
-	SplitPathToMdFile,
-} from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 import type { ApiService } from "../../../../src/stateless-helpers/api-service";
 
 type HarnessOptions = {

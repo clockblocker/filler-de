@@ -2,6 +2,7 @@
 	"author": "clockblocker",
 	"dependencies": {
 		"@codemirror/view": "latest",
+		"@textfresser/vault-action-manager": "workspace:*",
 		"@types/mocha": "^10.0.10",
 		"@types/sbd": "latest",
 		"neverthrow": "^8.2.0",
@@ -53,10 +54,13 @@
 		"test": "bun run test:unit",
 		"test:cli-e2e": "bun run build && bun test --env-file=.env.cli-e2e tests/cli-e2e/ --timeout 25000",
 		"test:lexical-generation": "bun run clearTestLogs && bun test --reporter=dot --preload ./tests/unit/setup.ts src/lexical-generation/tests/",
-		"test:unit": "bun run clearTestLogs && bun test --reporter=dot --preload ./tests/unit/setup.ts src/lexical-generation/tests/ tests/unit/ tests/specs/",
+		"test:unit": "bun run clearTestLogs && bun test --reporter=dot --preload ./tests/unit/setup.ts src/lexical-generation/tests/ src/packages/*/tests/ tests/unit/ tests/specs/",
 		"typecheck:changed": "bash scripts/typecheck-changed.sh",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"type": "commonjs",
-	"version": "0.0.1"
+	"version": "0.0.1",
+	"workspaces": [
+		"src/packages/*"
+	]
 }

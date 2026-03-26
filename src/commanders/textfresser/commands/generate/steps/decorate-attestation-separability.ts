@@ -12,8 +12,8 @@
  * Produces a ProcessMdFile action for the source reading note (attestation.source.path).
  */
 
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import { ok, type Result } from "neverthrow";
-import { VaultActionKind } from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";

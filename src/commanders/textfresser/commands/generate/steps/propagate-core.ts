@@ -1,10 +1,10 @@
-import { err, ok, type Result } from "neverthrow";
 import {
 	makeSystemPathForSplitPath,
 	type VaultAction,
 	VaultActionKind,
-} from "../../../../../managers/obsidian/vault-action-manager";
-import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import { err, ok, type Result } from "neverthrow";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
 import { propagateInflections } from "./propagate-inflections";

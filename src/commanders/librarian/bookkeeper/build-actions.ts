@@ -2,11 +2,11 @@
  * Builds VaultActions for page splitting operation.
  */
 
-import { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
-import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
-import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import type { CodecRules } from "../codecs/rules";
 import { serializeSegmentId } from "../codecs/segment-id/internal/serialize";

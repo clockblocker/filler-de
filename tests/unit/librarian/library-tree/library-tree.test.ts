@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../../src/commanders/librarian/codecs";
 import { Healer } from "../../../../src/commanders/librarian/healer/healer";
 import { codexImpactToIncrementalRecreations } from "../../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
@@ -7,8 +9,6 @@ import { mergeCodexImpacts } from "../../../../src/commanders/librarian/healer/l
 import { TreeActionType } from "../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 import { TreeNodeStatus } from "../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../../src/commanders/librarian/types/schemas/node-name";
-import { MD } from "../../../../src/managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathKind } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
 import {

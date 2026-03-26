@@ -32,7 +32,9 @@ export async function callGemini<T extends z.ZodTypeAny>(opts: {
 			],
 			model: MODEL,
 			response_format: zodResponseFormat(
-				opts.schema as unknown as Parameters<typeof zodResponseFormat>[0],
+				opts.schema as unknown as Parameters<
+					typeof zodResponseFormat
+				>[0],
 				"data",
 			),
 			temperature: 0,

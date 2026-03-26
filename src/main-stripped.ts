@@ -2,8 +2,9 @@
  * Stripped-down interface for TextEaterPlugin.
  * Used by settings and utility modules that don't need the full plugin.
  */
+
+import type { ActiveFileService } from "@textfresser/vault-action-manager/file-services/active-view/active-file-service";
 import type { Plugin } from "obsidian";
-import type { ActiveFileService } from "./managers/obsidian/vault-action-manager/file-services/active-view/active-file-service";
 import type { TextEaterSettings } from "./types";
 
 /**

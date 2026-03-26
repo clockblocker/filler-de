@@ -11,9 +11,7 @@ function okValue<T>(value: unknown) {
 	return ok(value as T);
 }
 
-function errValue<T>(
-	error: ReturnType<typeof lexicalGenerationError>,
-) {
+function errValue<T>(error: ReturnType<typeof lexicalGenerationError>) {
 	return err<T, ReturnType<typeof lexicalGenerationError>>(error);
 }
 
@@ -56,10 +54,14 @@ describe("lexical-generation lexical info", () => {
 						});
 					case "Relation":
 						return okValue<T>({
-							relations: [{ kind: "Hypernym", words: ["Institut"] }],
+							relations: [
+								{ kind: "Hypernym", words: ["Institut"] },
+							],
 						});
 					default:
-						throw new Error(`unexpected requestLabel ${requestLabel}`);
+						throw new Error(
+							`unexpected requestLabel ${requestLabel}`,
+						);
 				}
 			},
 			knownLang: "English",
@@ -149,7 +151,9 @@ describe("lexical-generation lexical info", () => {
 					case "Relation":
 						return okValue<T>({ relations: [] });
 					default:
-						throw new Error(`unexpected requestLabel ${requestLabel}`);
+						throw new Error(
+							`unexpected requestLabel ${requestLabel}`,
+						);
 				}
 			},
 			knownLang: "English",
@@ -207,7 +211,9 @@ describe("lexical-generation lexical info", () => {
 							),
 						);
 					default:
-						throw new Error(`unexpected requestLabel ${requestLabel}`);
+						throw new Error(
+							`unexpected requestLabel ${requestLabel}`,
+						);
 				}
 			},
 			knownLang: "English",
@@ -265,7 +271,9 @@ describe("lexical-generation lexical info", () => {
 					case "Relation":
 						return okValue<T>({ relations: [] });
 					default:
-						throw new Error(`unexpected requestLabel ${requestLabel}`);
+						throw new Error(
+							`unexpected requestLabel ${requestLabel}`,
+						);
 				}
 			},
 			knownLang: "English",
@@ -330,7 +338,9 @@ describe("lexical-generation lexical info", () => {
 					case "Relation":
 						return okValue<T>({ relations: [] });
 					default:
-						throw new Error(`unexpected requestLabel ${requestLabel}`);
+						throw new Error(
+							`unexpected requestLabel ${requestLabel}`,
+						);
 				}
 			},
 			knownLang: "English",
@@ -406,7 +416,9 @@ describe("lexical-generation lexical info", () => {
 							morphemes: [],
 						});
 					default:
-						throw new Error(`unexpected requestLabel ${requestLabel}`);
+						throw new Error(
+							`unexpected requestLabel ${requestLabel}`,
+						);
 				}
 			},
 			knownLang: "English",
@@ -514,7 +526,9 @@ describe("lexical-generation lexical info", () => {
 							),
 						);
 					default:
-						throw new Error(`unexpected requestLabel ${requestLabel}`);
+						throw new Error(
+							`unexpected requestLabel ${requestLabel}`,
+						);
 				}
 			},
 			knownLang: "English",

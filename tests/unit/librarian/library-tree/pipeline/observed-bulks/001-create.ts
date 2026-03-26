@@ -1,5 +1,5 @@
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type { CreateTreeLeafAction } from "../../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
-import { MD } from "../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 
 export const createActions: CreateTreeLeafAction[] = [
 	{

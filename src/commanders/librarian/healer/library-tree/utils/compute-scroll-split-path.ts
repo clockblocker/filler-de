@@ -1,5 +1,5 @@
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import { err, ok, type Result } from "neverthrow";
-import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
 import type { ScrollNodeLocator } from "../../../codecs/locator/types";

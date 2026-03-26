@@ -1,6 +1,6 @@
+import type { VaultAction } from "@textfresser/vault-action-manager";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import { errAsync, ok, ResultAsync } from "neverthrow";
-import type { VaultAction } from "../../../../managers/obsidian/vault-action-manager";
-import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager/types/vault-action";
 
 import type { CommandError, CommandInput, CommandState } from "../types";
 import { commandApiError } from "../types";

@@ -4,7 +4,7 @@
 
 import { EditorSelection } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import type { SplitPathToMdFile } from "../../../vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { createEventCodec } from "../codec-factory";
 import type { SelectAllPayload } from "./payload";
 import { createSelectAllPayload } from "./payload";

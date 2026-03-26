@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import { moveToWorter } from "../../../../src/commanders/textfresser/commands/generate/steps/move-to-worter";
 import type { CommandStateWithLemma } from "../../../../src/commanders/textfresser/commands/types";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
-import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 function makeCtx(
 	params:

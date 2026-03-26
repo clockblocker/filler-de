@@ -6,6 +6,8 @@ import {
 	it,
 	spyOn,
 } from "bun:test";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
@@ -16,8 +18,6 @@ import {
 	getPrevPage,
 } from "../../../src/commanders/librarian/page-navigation";
 import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
-import type { SplitPathToMdFile } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 import { makeTree } from "./library-tree/tree-test-helpers";

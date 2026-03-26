@@ -5,6 +5,7 @@
       "name": "cbcr-text-eater-de",
       "dependencies": {
         "@codemirror/view": "latest",
+        "@textfresser/vault-action-manager": "workspace:*",
         "@types/mocha": "^10.0.10",
         "@types/sbd": "latest",
         "neverthrow": "^8.2.0",
@@ -33,6 +34,10 @@
         "tsx": "^4.20.6",
         "typescript": "^5.9.3",
       },
+    },
+    "src/packages/vault-action-manager": {
+      "name": "@textfresser/vault-action-manager",
+      "version": "0.0.0",
     },
   },
   "packages": {
@@ -199,6 +204,8 @@
     "@rollup/rollup-linux-x64-gnu": ["@rollup/rollup-linux-x64-gnu@4.53.3", "", { "os": "linux", "cpu": "x64" }, "sha512-3EhFi1FU6YL8HTUJZ51imGJWEX//ajQPfqWLI3BQq4TlvHy4X0MOr5q3D2Zof/ka0d5FNdPwZXm3Yyib/UEd+w=="],
 
     "@so-ric/colorspace": ["@so-ric/colorspace@1.1.6", "", { "dependencies": { "color": "^5.0.2", "text-hex": "1.0.x" } }, "sha512-/KiKkpHNOBgkFJwu9sh48LkHSMYGyuTcSFK/qMBdnOAlrRJzRSXAOFB5qwzaVQuDl8wAvHVMkaASQDReTahxuw=="],
+
+    "@textfresser/vault-action-manager": ["@textfresser/vault-action-manager@workspace:src/packages/vault-action-manager"],
 
     "@tybys/wasm-util": ["@tybys/wasm-util@0.10.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg=="],
 

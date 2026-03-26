@@ -8,6 +8,10 @@
  * Subscribes to GenericClickDetector and filters for wikilink targets.
  */
 
+import {
+	makeSystemPathForSplitPath,
+	type VaultActionManager,
+} from "@textfresser/vault-action-manager";
 import { type App, MarkdownView } from "obsidian";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
@@ -15,10 +19,6 @@ import {
 	decrementPending,
 	incrementPending,
 } from "../../../../../../utils/idle-tracker";
-import {
-	makeSystemPathForSplitPath,
-	type VaultActionManager,
-} from "../../../../vault-action-manager";
 import { HandlerOutcome } from "../../../types/handler";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";

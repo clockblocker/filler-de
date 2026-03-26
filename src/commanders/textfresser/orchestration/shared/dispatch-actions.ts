@@ -1,8 +1,8 @@
-import { err, ok, ResultAsync } from "neverthrow";
 import type {
 	VaultAction,
 	VaultActionManager,
-} from "../../../../managers/obsidian/vault-action-manager";
+} from "@textfresser/vault-action-manager";
+import { err, ok, ResultAsync } from "neverthrow";
 import type { CommandError } from "../../commands/types";
 import { CommandErrorKind } from "../../errors";
 

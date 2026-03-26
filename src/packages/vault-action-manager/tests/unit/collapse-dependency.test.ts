@@ -1,16 +1,19 @@
 import { describe, expect, it } from "bun:test";
-import { collapseActions } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/collapse";
-import { buildDependencyGraph, makeGraphKey } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dependency-detector";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
+import { collapseActions } from "@textfresser/vault-action-manager/impl/actions-processing/collapse";
+import {
+	buildDependencyGraph,
+	makeGraphKey,
+} from "@textfresser/vault-action-manager/impl/actions-processing/dependency-detector";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager/types/vault-action";
 
 const folder = (
 	basename: string,
@@ -41,7 +44,7 @@ describe("Collapse + Dependencies", () => {
 			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
-				transform: async (c) => c + "\nprocessed",
+				transform: async (c) => `${c}\nprocessed`,
 			},
 		};
 
@@ -106,14 +109,14 @@ describe("Collapse + Dependencies", () => {
 			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
-				transform: async (c) => c + "A",
+				transform: async (c) => `${c}A`,
 			},
 		};
 		const process2: VaultAction = {
 			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
-				transform: async (c) => c + "B",
+				transform: async (c) => `${c}B`,
 			},
 		};
 
@@ -134,7 +137,7 @@ describe("Collapse + Dependencies", () => {
 			kind: VaultActionKind.ProcessMdFile,
 			payload: {
 				splitPath: mdFile("file"),
-				transform: async (c) => c + "\nprocessed",
+				transform: async (c) => `${c}\nprocessed`,
 			},
 		};
 		const upsert: VaultAction = {
@@ -145,15 +148,20 @@ describe("Collapse + Dependencies", () => {
 		// Collapse: ProcessMdFile first, UpsertMdFile(null) after
 		const collapsed = await collapseActions([process, upsert]);
 		expect(collapsed).toHaveLength(2);
-		expect(collapsed.some(a => a.kind === VaultActionKind.UpsertMdFile)).toBe(true);
-		expect(collapsed.some(a => a.kind === VaultActionKind.ProcessMdFile)).toBe(true);
+		expect(
+			collapsed.some((a) => a.kind === VaultActionKind.UpsertMdFile),
+		).toBe(true);
+		expect(
+			collapsed.some((a) => a.kind === VaultActionKind.ProcessMdFile),
+		).toBe(true);
 
 		// Dependency graph should find ProcessMdFile depends on UpsertMdFile
 		const graph = buildDependencyGraph(collapsed);
 		const processKey = makeGraphKey(process);
 		const processDeps = graph.get(processKey);
 		expect(processDeps?.dependsOn).toHaveLength(1);
-		expect(processDeps?.dependsOn[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
+		expect(processDeps?.dependsOn[0]?.kind).toBe(
+			VaultActionKind.UpsertMdFile,
+		);
 	});
 });
-

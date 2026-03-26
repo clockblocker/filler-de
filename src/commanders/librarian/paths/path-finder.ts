@@ -12,9 +12,9 @@
  * All suffix computation should go through this module.
  */
 
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import { err, ok, type Result } from "neverthrow";
-import { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../codecs";
 import type {
 	SectionNodeSegmentId,

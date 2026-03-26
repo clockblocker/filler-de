@@ -1,13 +1,13 @@
 import type { Result } from "neverthrow";
 import type { z } from "zod/v3";
 import type {
-	KnownLanguage,
-	TargetLanguage,
-} from "./internal/shared/languages";
-import type {
 	LexicalGenerationError,
 	LexicalGenerationFailureKind,
 } from "./errors";
+import type {
+	KnownLanguage,
+	TargetLanguage,
+} from "./internal/shared/languages";
 import type { LexicalGenerationSettings } from "./settings";
 
 export type ZodSchemaLike<T> = z.ZodType<T>;

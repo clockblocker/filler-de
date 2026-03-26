@@ -1,5 +1,5 @@
+import type { AnySplitPath } from "@textfresser/vault-action-manager/types/split-path";
 import type { Result } from "neverthrow";
-import type { AnySplitPath } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { CodecError } from "../errors";
 import type { CodecRules } from "../rules";
 import type {

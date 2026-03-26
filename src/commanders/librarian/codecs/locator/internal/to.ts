@@ -1,6 +1,6 @@
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import { err, ok, type Result } from "neverthrow";
-import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
 import { sectionChainToPathParts } from "../../../healer/library-tree/utils/section-chain-utils";
 import type { CodecError } from "../../errors";

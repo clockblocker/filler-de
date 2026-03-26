@@ -1,7 +1,7 @@
 import {
+	type LexicalPos,
 	PromptKind,
 	type PromptKind as PromptKindType,
-	type LexicalPos,
 } from "../../../../../lexical-generation";
 
 export type FeaturesPromptKind = Extract<PromptKindType, `Features${string}`>;

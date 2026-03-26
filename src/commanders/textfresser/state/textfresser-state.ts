@@ -1,3 +1,5 @@
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	createLexicalGenerationModule,
 	type LexicalGenerationError,
@@ -7,8 +9,6 @@ import {
 	lexicalGenerationError,
 	type StructuredFetchFn,
 } from "../../../lexical-generation";
-import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
-import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { ApiService } from "../../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../../types";
 import type { LemmaResult } from "../commands/lemma/types";

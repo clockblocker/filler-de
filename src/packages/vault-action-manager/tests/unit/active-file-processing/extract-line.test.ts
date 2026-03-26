@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { extractLine } from "../../../../src/managers/obsidian/vault-action-manager/file-services/active-view/selection-service";
+import { extractLine } from "@textfresser/vault-action-manager/file-services/active-view/selection-service";
 
 describe("extractLine", () => {
 	it("extracts line at document start", () => {

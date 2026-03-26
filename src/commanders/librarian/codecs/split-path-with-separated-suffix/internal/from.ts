@@ -1,7 +1,7 @@
 import {
 	SplitPathKind,
 	type SplitPathKind as SplitPathKindType,
-} from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
 import type { SuffixCodecs } from "../../internal/suffix";
 import type {
 	AnySplitPathInsideLibrary,

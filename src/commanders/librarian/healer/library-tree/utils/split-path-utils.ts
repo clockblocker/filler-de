@@ -6,9 +6,10 @@
  *
  * @see PathFinder in `src/commanders/librarian/paths/path-finder.ts`
  */
+
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import { ok, type Result } from "neverthrow";
-import { MD } from "../../../../../managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathKind } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type {
 	Codecs,
 	SplitPathToFileInsideLibrary,

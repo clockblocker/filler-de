@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import {
 	buildPropagationActionPair,
 	type PathLookupFn,
 	resolveTargetPath,
 } from "../../../../src/commanders/textfresser/common/target-path-resolver";
-import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 const EMPTY_LOOKUP: PathLookupFn = () => [];
 

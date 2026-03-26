@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import type {
 	AnySplitPath,
 	SplitPathToMdFile,
-} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	splitPathsEqual,
 	stringifySplitPath,

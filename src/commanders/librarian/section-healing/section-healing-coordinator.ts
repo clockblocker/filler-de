@@ -1,5 +1,5 @@
-import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
-import { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
+import type { VaultAction } from "@textfresser/vault-action-manager";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type { SplitHealingInfo } from "../bookkeeper/split-to-pages-action";
 import type { CodecRules, Codecs } from "../codecs";
 import type { ScrollNodeSegmentId } from "../codecs/segment-id/types/segment-id";

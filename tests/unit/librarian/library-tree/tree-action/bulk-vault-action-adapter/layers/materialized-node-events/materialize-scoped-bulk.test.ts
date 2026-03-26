@@ -1,13 +1,13 @@
 import { describe, expect, it } from "bun:test";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { VaultEventKind } from "@textfresser/vault-action-manager/types/vault-event";
 import type { LibraryScopedBulkVaultEvent } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import { Scope } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
 import { materializeScopedBulk } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/materialize-scoped-bulk";
 import type { MaterializedNodeEvent } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
 import { MaterializedEventKind } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
 import { TreeNodeKind } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
-import { MD } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { VaultEventKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 
 // Helper: create library-scoped split paths
 const F = (basename: string, pathParts: string[] = []): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.Folder } => ({

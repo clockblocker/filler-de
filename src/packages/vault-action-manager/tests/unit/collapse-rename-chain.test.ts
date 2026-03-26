@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { collapseActions } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/collapse";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
-import type { SplitPathToMdFile } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { VaultActionKind } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+import { collapseActions } from "@textfresser/vault-action-manager/impl/actions-processing/collapse";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 
 const mdFile = (
 	basename: string,
@@ -36,7 +36,7 @@ describe("collapseActions - Rename Chain Handling", () => {
 		// Current behavior: different keys (different 'from' paths), so both kept
 		// Future optimization: could collapse to single rename a.md → c.md
 		expect(collapsed.length).toBeGreaterThanOrEqual(1);
-		
+
 		// Verify both renames are present (current implementation)
 		// Or verify single rename a→c (if optimization implemented)
 		const fromPaths = collapsed

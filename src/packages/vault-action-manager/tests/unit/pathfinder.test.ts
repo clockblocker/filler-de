@@ -1,7 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { pathfinder } from "../../../src/managers/obsidian/vault-action-manager/helpers/pathfinder";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathKind, type SplitPathToFile, type SplitPathToFolder, type SplitPathToMdFile } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { pathfinder } from "@textfresser/vault-action-manager/helpers/pathfinder";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import {
+	SplitPathKind,
+	type SplitPathToFile,
+	type SplitPathToFolder,
+	type SplitPathToMdFile,
+} from "@textfresser/vault-action-manager/types/split-path";
 
 describe("pathfinder.systemPathFromSplitPath | pathfinder.splitPathFromSystemPath", () => {
 	describe("decode (string → SplitPath)", () => {
@@ -16,7 +21,8 @@ describe("pathfinder.systemPathFromSplitPath | pathfinder.splitPathFromSystemPat
 		});
 
 		it("decodes md file path", () => {
-			const result = pathfinder.splitPathFromSystemPath("root/notes/file.md");
+			const result =
+				pathfinder.splitPathFromSystemPath("root/notes/file.md");
 			expect(result).toEqual({
 				basename: "file",
 				extension: MD,
@@ -38,7 +44,9 @@ describe("pathfinder.systemPathFromSplitPath | pathfinder.splitPathFromSystemPat
 		});
 
 		it("decodes non-md file path", () => {
-			const result = pathfinder.splitPathFromSystemPath("root/assets/image.png");
+			const result = pathfinder.splitPathFromSystemPath(
+				"root/assets/image.png",
+			);
 			expect(result).toEqual({
 				basename: "image",
 				extension: "png",
@@ -48,7 +56,9 @@ describe("pathfinder.systemPathFromSplitPath | pathfinder.splitPathFromSystemPat
 		});
 
 		it("decodes folder path", () => {
-			const result = pathfinder.splitPathFromSystemPath("root/library/Section");
+			const result = pathfinder.splitPathFromSystemPath(
+				"root/library/Section",
+			);
 			expect(result).toEqual({
 				basename: "Section",
 				kind: SplitPathKind.Folder,
@@ -66,7 +76,8 @@ describe("pathfinder.systemPathFromSplitPath | pathfinder.splitPathFromSystemPat
 		});
 
 		it("normalizes leading slashes", () => {
-			const result = pathfinder.splitPathFromSystemPath("///root/file.md");
+			const result =
+				pathfinder.splitPathFromSystemPath("///root/file.md");
 			expect(result).toEqual({
 				basename: "file",
 				extension: MD,
@@ -85,7 +96,8 @@ describe("pathfinder.systemPathFromSplitPath | pathfinder.splitPathFromSystemPat
 		});
 
 		it("handles file with multiple dots in name", () => {
-			const result = pathfinder.splitPathFromSystemPath("root/file.name.md");
+			const result =
+				pathfinder.splitPathFromSystemPath("root/file.name.md");
 			expect(result).toEqual({
 				basename: "file.name",
 				extension: MD,
@@ -95,7 +107,8 @@ describe("pathfinder.systemPathFromSplitPath | pathfinder.splitPathFromSystemPat
 		});
 
 		it("handles empty path parts", () => {
-			const result = pathfinder.splitPathFromSystemPath("//root//file.md//");
+			const result =
+				pathfinder.splitPathFromSystemPath("//root//file.md//");
 			expect(result).toEqual({
 				basename: "file",
 				extension: MD,
@@ -107,7 +120,9 @@ describe("pathfinder.systemPathFromSplitPath | pathfinder.splitPathFromSystemPat
 
 	describe("encode (SplitPath → string)", () => {
 		it("encodes root folder", () => {
-			const result = pathfinder.systemPathFromSplitPath(pathfinder.SPLIT_PATH_TO_ROOT_FOLDER);
+			const result = pathfinder.systemPathFromSplitPath(
+				pathfinder.SPLIT_PATH_TO_ROOT_FOLDER,
+			);
 			expect(result).toBe("");
 		});
 

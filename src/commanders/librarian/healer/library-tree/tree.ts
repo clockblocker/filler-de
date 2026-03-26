@@ -1,4 +1,4 @@
-import { MD } from "../../../../managers/obsidian/vault-action-manager/types/literals";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type { Codecs } from "../../codecs";
 import type { SegmentIdOf } from "../../codecs/segment-id/types";
 import type {

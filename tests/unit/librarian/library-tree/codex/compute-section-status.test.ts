@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import { computeSectionStatus } from "../../../../../src/commanders/librarian/healer/library-tree/codex/compute-section-status";
 import {
 	TreeNodeKind,
@@ -9,7 +10,6 @@ import type {
 	SectionNode,
 } from "../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/commanders/librarian/types/schemas/node-name";
-import { MD } from "../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 
 // Helpers
 const scroll = (

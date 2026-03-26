@@ -1,5 +1,5 @@
-import type { MD } from "../../../../managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { MD } from "@textfresser/vault-action-manager/types/literals";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import type { InvertRecord } from "../../../../types/helpers";
 import type { FileExtension } from "../../healer/library-tree/tree-node/types/atoms";
 import { TreeNodeKind } from "../../healer/library-tree/tree-node/types/atoms";
@@ -22,7 +22,7 @@ export type CorrespondingTreeNodeKind<SK extends SplitPathKind> =
 	SplitPathKindToTreeNodeKind[SK];
 
 export type SplitPathForTreeNodeKind<T extends TreeNodeKind> =
-	import("../../../../managers/obsidian/vault-action-manager/types/split-path").SplitPath<
+	import("@textfresser/vault-action-manager/types/split-path").SplitPath<
 		CorrespondingSplitPathKind<T>
 	>;
 

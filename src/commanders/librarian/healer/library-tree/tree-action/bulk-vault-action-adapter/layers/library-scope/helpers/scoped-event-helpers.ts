@@ -12,7 +12,7 @@
  * - Visitor pattern for exhaustive handling
  */
 
-import { VaultEventKind } from "../../../../../../../../../managers/obsidian/vault-action-manager";
+import { VaultEventKind } from "@textfresser/vault-action-manager";
 import type {
 	LibraryScopedVaultEvent,
 	ScopedFileCreatedVaultEventInside,

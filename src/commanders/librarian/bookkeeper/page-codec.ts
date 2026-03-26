@@ -1,9 +1,9 @@
-import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
-} from "../../../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
 import { serializeSeparatedSuffix } from "../codecs/internal/suffix/serialize";
 import type { CodecRules } from "../codecs/rules";
 import type { NodeName } from "../types/schemas/node-name";

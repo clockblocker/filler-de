@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import {
-	makeRegularSplitPathInsideLibrary,
-	tryParseCanonicalSplitPathInsideLibrary,
-} from "../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec";
-import { MD } from "../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import {
+	makeRegularSplitPathInsideLibrary,
+	tryParseCanonicalSplitPathInsideLibrary,
+} from "../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec";
 import { defaultSettingsForUnitTests } from "../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../common-utils/setup-spy";
 

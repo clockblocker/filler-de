@@ -1,4 +1,4 @@
-import { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import type { Codecs, SplitPathToFolderInsideLibrary } from "../../codecs";
 import type { SectionNodeSegmentId } from "../../codecs/segment-id/types/segment-id";
 import { makeNodeSegmentId } from "../library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";

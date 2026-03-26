@@ -1,7 +1,7 @@
+import type { MD } from "@textfresser/vault-action-manager/types/literals";
+import type { SplitPathWithReader } from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
-import type { MD } from "../../../managers/obsidian/vault-action-manager/types/literals";
-import type { SplitPathWithReader } from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import { logger } from "../../../utils/logger";
 import type { AnySplitPathInsideLibrary, CodecRules, Codecs } from "../codecs";

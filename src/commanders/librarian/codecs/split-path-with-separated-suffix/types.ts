@@ -1,7 +1,7 @@
 import type {
 	SplitPathKind,
 	SplitPathKind as SplitPathKindEnum,
-} from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
 import type { SeparatedSuffixedBasename } from "../internal/suffix/types";
 import type { SplitPathInsideLibraryOf } from "../split-path-inside-library";
 

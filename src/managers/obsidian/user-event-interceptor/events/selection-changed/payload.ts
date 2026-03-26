@@ -2,8 +2,8 @@
  * SelectionChangedPayload - payload for text selection change events.
  */
 
+import { SplitPathToMdFileSchema } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
-import { SplitPathToMdFileSchema } from "../../../vault-action-manager/types/split-path";
 import { PayloadKind } from "../../types/payload-base";
 
 export const SelectionChangedPayloadSchema = z.object({

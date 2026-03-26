@@ -37,7 +37,8 @@ const BANNED_IMPORT_RULES: ReadonlyArray<{
 	},
 	{
 		reason: "VaultActionManager import is forbidden in pure propagator modules",
-		test: (importSpecifier) => importSpecifier.includes("vault-action-manager"),
+		test: (importSpecifier) =>
+			importSpecifier.includes("vault-action-manager"),
 	},
 ];
 
@@ -78,10 +79,7 @@ function extractImportSpecifiers(
 
 	const visit = (node: Node): void => {
 		if (isImportDeclaration(node)) {
-			if (
-				node.moduleSpecifier &&
-				isStringLiteral(node.moduleSpecifier)
-			) {
+			if (node.moduleSpecifier && isStringLiteral(node.moduleSpecifier)) {
 				moduleSpecifiers.add(node.moduleSpecifier.text);
 			}
 		}
@@ -103,10 +101,7 @@ function extractImportSpecifiers(
 			moduleSpecifiers.add(node.moduleReference.expression.text);
 		}
 
-		if (
-			isCallExpression(node) &&
-			node.arguments.length === 1
-		) {
+		if (isCallExpression(node) && node.arguments.length === 1) {
 			const argument = node.arguments[0];
 			if (!argument || !isStringLiteral(argument)) {
 				forEachChild(node, visit);
@@ -116,7 +111,10 @@ function extractImportSpecifiers(
 			if (node.expression.kind === SyntaxKind.ImportKeyword) {
 				moduleSpecifiers.add(firstArgument);
 			}
-			if (isIdentifier(node.expression) && node.expression.text === "require") {
+			if (
+				isIdentifier(node.expression) &&
+				node.expression.text === "require"
+			) {
 				moduleSpecifiers.add(firstArgument);
 			}
 		}
@@ -128,7 +126,9 @@ function extractImportSpecifiers(
 	return [...moduleSpecifiers];
 }
 
-function findForbiddenImportsInFile(absoluteFilePath: string): ImportViolation[] {
+function findForbiddenImportsInFile(
+	absoluteFilePath: string,
+): ImportViolation[] {
 	const source = readFileSync(absoluteFilePath, "utf8");
 	const moduleSpecifiers = extractImportSpecifiers(absoluteFilePath, source);
 	const violations: ImportViolation[] = [];

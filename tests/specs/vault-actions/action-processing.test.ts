@@ -13,18 +13,18 @@ import { describe, expect, it } from "bun:test";
 import {
 	buildDependencyGraph,
 	makeGraphKey,
-} from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dependency-detector";
-import { topologicalSort } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/topological-sort";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
+} from "@textfresser/vault-action-manager/impl/actions-processing/dependency-detector";
+import { topologicalSort } from "@textfresser/vault-action-manager/impl/actions-processing/topological-sort";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager/types/vault-action";
 
 // ─── Test Helpers ───
 

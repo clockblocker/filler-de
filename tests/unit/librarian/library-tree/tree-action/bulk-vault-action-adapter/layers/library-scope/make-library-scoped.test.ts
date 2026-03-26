@@ -1,4 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import type { VaultEvent } from "@textfresser/vault-action-manager/types/vault-event";
+import { VaultEventKind } from "@textfresser/vault-action-manager/types/vault-event";
 import { makeCodecRulesFromSettings } from "../../../../../../../../src/commanders/librarian/codecs";
 import { makeEventLibraryScoped } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-libray-scoped";
 import {
@@ -20,10 +24,6 @@ import {
 	type ScopedFolderRenamedVaultEventOutside,
 	type ScopedFolderRenamedVaultEventOutsideToInside,
 } from "../../../../../../../../src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
-import { MD } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import type { VaultEvent } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
-import { VaultEventKind } from "../../../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 import { defaultSettingsForUnitTests } from "../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../common-utils/setup-spy";
 

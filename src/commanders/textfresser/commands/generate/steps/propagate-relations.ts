@@ -1,6 +1,6 @@
+import type { VaultAction } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
 import { SurfaceKind } from "../../../../../lexical-generation";
-import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import {
 	buildPropagationActionPair,

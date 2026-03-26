@@ -1,12 +1,12 @@
+import {
+	formatError,
+	logError,
+} from "@textfresser/vault-action-manager/helpers/issue-handlers";
 import { errAsync, ResultAsync } from "neverthrow";
 import { Notice, requestUrl } from "obsidian";
 import OpenAI, { APIConnectionError, APIError } from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
 import type { z } from "zod";
-import {
-	formatError,
-	logError,
-} from "../managers/obsidian/vault-action-manager/helpers/issue-handlers";
 import type { TextEaterSettings } from "../types";
 import { getErrorMessage } from "../utils/get-error-message";
 import { logger } from "../utils/logger";

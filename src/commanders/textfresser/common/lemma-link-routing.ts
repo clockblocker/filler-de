@@ -1,12 +1,12 @@
 import {
-	type LexicalPos,
-	LANGUAGE_ISO_CODE,
-	type SurfaceKind,
-} from "../../../lexical-generation";
-import {
 	SplitPathKind,
 	type SplitPathToMdFile,
-} from "../../../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
+import {
+	LANGUAGE_ISO_CODE,
+	type LexicalPos,
+	type SurfaceKind,
+} from "../../../lexical-generation";
 import type { TargetLanguage } from "../../../types";
 import { resolveClosedSetLibraryTarget } from "./closed-set-library-target-resolver";
 import {

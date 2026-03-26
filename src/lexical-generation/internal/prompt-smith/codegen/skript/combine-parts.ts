@@ -1,8 +1,5 @@
 import * as path from "node:path";
-import type {
-	KnownLanguage,
-	TargetLanguage,
-} from "../../../shared/languages";
+import type { KnownLanguage, TargetLanguage } from "../../../shared/languages";
 import type { PromptKind } from "../consts";
 import { getPartsPath, wrapInXmlTag } from "./utils";
 

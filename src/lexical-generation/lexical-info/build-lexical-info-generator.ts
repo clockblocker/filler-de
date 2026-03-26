@@ -1,5 +1,4 @@
 import { err, ok, type Result } from "neverthrow";
-import { wikilinkHelper } from "../internal/shared/wikilink";
 import {
 	type LexicalGenerationError,
 	LexicalGenerationFailureKind,
@@ -7,6 +6,7 @@ import {
 import { executePrompt } from "../internal/prompt-executor";
 import type { PromptKind } from "../internal/prompt-smith/codegen/consts";
 import type { AgentOutput, UserInput } from "../internal/prompt-smith/schemas";
+import { wikilinkHelper } from "../internal/shared/wikilink";
 import type {
 	CreateLexicalGenerationModuleParams,
 	GenerateLexicalInfoOptions,

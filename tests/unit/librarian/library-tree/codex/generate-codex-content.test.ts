@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
@@ -15,7 +16,6 @@ import type {
 	SectionNode,
 } from "../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../../src/commanders/librarian/types/schemas/node-name";
-import { MD } from "../../../../../src/managers/obsidian/vault-action-manager/types/literals";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 

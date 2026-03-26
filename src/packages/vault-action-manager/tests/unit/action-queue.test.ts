@@ -1,11 +1,11 @@
 import { describe, expect, it, mock } from "bun:test";
+import { ActionQueue } from "@textfresser/vault-action-manager/impl/actions-processing/action-queue";
+import type { Dispatcher } from "@textfresser/vault-action-manager/impl/actions-processing/dispatcher";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import { ok } from "neverthrow";
-import { ActionQueue } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/action-queue";
-import type { Dispatcher } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dispatcher";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
-import type { SplitPathToMdFile } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
-import { VaultActionKind } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 const mdFile = (
 	basename: string,
@@ -63,7 +63,7 @@ describe("ActionQueue", () => {
 	});
 
 	it("logs warning when dropping actions", async () => {
-		const { logger } = await import("../../../src/utils/logger");
+		const { logger } = await import("../../../../utils/logger");
 		const warnSpy = mock(() => {});
 		const originalWarn = logger.warn;
 		logger.warn = warnSpy as typeof logger.warn;
@@ -100,7 +100,7 @@ describe("ActionQueue", () => {
 		};
 
 		// Simulate: first dispatch is executing, second dispatch is waiting
-		let waiterResolved = false;
+		const _waiterResolved = false;
 
 		// First: start a real dispatch that will succeed
 		const firstPromise = queue.dispatch([makeAction("first")]);

@@ -1,6 +1,6 @@
+import type { VaultAction } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
 import { SurfaceKind } from "../../../../../lexical-generation";
-import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import { logger } from "../../../../../utils/logger";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import {
@@ -11,6 +11,7 @@ import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
 import { serializeDictNote } from "../../../domain/dict-note/serialize-dict-note";
 import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
+import type { TextfresserNounInflectionCell } from "../../../domain/lexical-types";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
@@ -25,7 +26,6 @@ import {
 	mergeLocalizedInflectionTags,
 } from "../section-formatters/common/inflection-propagation-helper";
 import type { GenerateSectionsResult } from "./generate-sections";
-import type { TextfresserNounInflectionCell } from "../../../domain/lexical-types";
 
 /** Group cells by form word. */
 function groupByForm(

@@ -5,7 +5,10 @@ type GenericInflectionSectionInput = {
 	rows: Array<{
 		forms:
 			| string
-			| Extract<LexemInflections, { kind: "generic" }>["rows"][number]["forms"];
+			| Extract<
+					LexemInflections,
+					{ kind: "generic" }
+			  >["rows"][number]["forms"];
 		label: string;
 	}>;
 };

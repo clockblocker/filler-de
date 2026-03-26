@@ -4,11 +4,11 @@
  * Unlike UserEvents, workspace events are notifications (no action callbacks).
  */
 
-import { z } from "zod";
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
-} from "../../vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
+import { z } from "zod";
 
 const WorkspaceEventKindSchema = z.enum([
 	"LayoutReady",

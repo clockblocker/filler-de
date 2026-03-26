@@ -1,7 +1,7 @@
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
-} from "../../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
 import type { Codecs } from "./codecs";
 import type { SectionNodeSegmentId } from "./codecs/segment-id/types/segment-id";
 import { sortTreeNodesForDisplay } from "./display-name-sort";

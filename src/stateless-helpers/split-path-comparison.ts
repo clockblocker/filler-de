@@ -1,7 +1,7 @@
 import type {
 	AnySplitPath,
 	SplitPathToMdFile,
-} from "../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
 
 /**
  * Compare two split paths for structural equality.

@@ -6,16 +6,16 @@
  * generates a RenameMdFile healing action to move the file.
  */
 
+import type { VaultAction } from "@textfresser/vault-action-manager";
+import {
+	SplitPathKind,
+	type SplitPathToMdFile,
+} from "@textfresser/vault-action-manager/types/split-path";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import {
 	type LinguisticUnitKind,
 	SurfaceKind,
 } from "../../../lexical-generation";
-import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
-import {
-	SplitPathKind,
-	type SplitPathToMdFile,
-} from "../../../managers/obsidian/vault-action-manager/types/split-path";
-import { VaultActionKind } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 import type { TargetLanguage } from "../../../types";
 import type { MorphemeItem } from "../domain/morpheme/morpheme-formatter";
 import { DictSectionKind } from "../targets/de/sections/section-kind";

@@ -2,8 +2,8 @@
  * WikilinkClickPayload - payload for internal link (wikilink) clicks.
  */
 
+import { SplitPathToMdFileSchema } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
-import { SplitPathToMdFileSchema } from "../../../../vault-action-manager/types/split-path";
 import { PayloadKind } from "../../../types/payload-base";
 
 export const ModifiersSchema = z.object({

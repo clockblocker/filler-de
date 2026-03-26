@@ -9,8 +9,8 @@
  * here to avoid duplicate propagation.
  */
 
+import type { VaultAction } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
-import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
 import type { TargetLanguage } from "../../../../../types";
 import {

@@ -1,3 +1,14 @@
+import type {
+	BulkVaultEvent,
+	VaultAction,
+	VaultActionManager,
+} from "@textfresser/vault-action-manager";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import {
+	SplitPathKind,
+	type SplitPathToMdFile,
+	type SplitPathToMdFileWithReader,
+} from "@textfresser/vault-action-manager/types/split-path";
 import { errAsync, okAsync, type ResultAsync } from "neverthrow";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
@@ -5,17 +16,6 @@ import type {
 	CommandKind,
 } from "../../managers/obsidian/command-executor";
 import type { CheckboxPayload } from "../../managers/obsidian/user-event-interceptor";
-import type {
-	BulkVaultEvent,
-	VaultAction,
-	VaultActionManager,
-} from "../../managers/obsidian/vault-action-manager";
-import { MD } from "../../managers/obsidian/vault-action-manager/types/literals";
-import {
-	SplitPathKind,
-	type SplitPathToMdFile,
-	type SplitPathToMdFileWithReader,
-} from "../../managers/obsidian/vault-action-manager/types/split-path";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";

@@ -1,10 +1,10 @@
-import { err, ok, type Result } from "neverthrow";
-import type { ResolvedLemma } from "../../../../lexical-generation";
 import type {
 	VaultAction,
 	VaultActionManager,
-} from "../../../../managers/obsidian/vault-action-manager";
-import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager";
+} from "@textfresser/vault-action-manager";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
+import { err, ok, type Result } from "neverthrow";
+import type { ResolvedLemma } from "../../../../lexical-generation";
 import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import { logger } from "../../../../utils/logger";
 import {

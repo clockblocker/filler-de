@@ -4,7 +4,7 @@ import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../../../../../../../../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
 import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,

@@ -1,10 +1,10 @@
-import type { ResultAsync } from "neverthrow";
 import type {
 	VaultAction,
 	VaultActionManager,
-} from "../../../../managers/obsidian/vault-action-manager";
-import { VaultActionKind } from "../../../../managers/obsidian/vault-action-manager";
-import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { ResultAsync } from "neverthrow";
 import {
 	splitPathsEqual,
 	stringifySplitPath,

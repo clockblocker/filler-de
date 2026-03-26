@@ -1,10 +1,13 @@
 import * as path from "node:path";
 import { PROMPT_FOR, SchemasFor } from "../../internal/prompt-smith";
-import type { PromptKind } from "../../internal/prompt-smith/codegen/consts";
 import { ALL_PROMPT_KINDS } from "../../internal/prompt-smith/codegen/consts";
 import type { AvaliablePromptDict } from "../../internal/prompt-smith/types";
 import { callGemini } from "./api-client";
-import { type ExampleResult, type RunResult, writeRunResult } from "./log-manager";
+import {
+	type ExampleResult,
+	type RunResult,
+	writeRunResult,
+} from "./log-manager";
 
 function toKebabCase(str: string): string {
 	return str
@@ -40,10 +43,6 @@ const [promptKindArg, targetArg = "german", knownArg = "english"] =
 	process.argv.slice(2);
 
 if (!promptKindArg) {
-	console.error(
-		`Usage: bun run prompt:test <PromptKind> [targetLang] [knownLang]\n` +
-			`Available kinds: ${ALL_PROMPT_KINDS.join(", ")}`,
-	);
 	process.exit(1);
 }
 
@@ -51,37 +50,26 @@ const promptKind = ALL_PROMPT_KINDS.find(
 	(k) => k.toLowerCase() === promptKindArg.toLowerCase(),
 );
 if (!promptKind) {
-	console.error(
-		`Unknown prompt kind: "${promptKindArg}"\n` +
-			`Available: ${ALL_PROMPT_KINDS.join(", ")}`,
-	);
 	process.exit(1);
 }
 
 const targetLanguage = capitalize(targetArg) as keyof typeof PROMPT_FOR;
-const knownLanguage = capitalize(knownArg) as keyof AvaliablePromptDict[typeof targetLanguage];
+const knownLanguage = capitalize(
+	knownArg,
+) as keyof AvaliablePromptDict[typeof targetLanguage];
 
 // Validate language pair exists in PROMPT_FOR
 const targetDict = PROMPT_FOR[targetLanguage];
 if (!targetDict) {
-	console.error(
-		`Unknown target language: "${targetLanguage}"\n` +
-			`Available: ${Object.keys(PROMPT_FOR).join(", ")}`,
-	);
 	process.exit(1);
 }
 const knownDict = targetDict[knownLanguage];
 if (!knownDict) {
-	console.error(
-		`Unknown known language: "${knownLanguage}" for target "${targetLanguage}"\n` +
-			`Available: ${Object.keys(targetDict).join(", ")}`,
-	);
 	process.exit(1);
 }
 
 const promptModule = knownDict[promptKind];
 if (!promptModule) {
-	console.error(`No prompt found for ${targetLanguage}/${knownLanguage}/${promptKind}`);
 	process.exit(1);
 }
 
@@ -89,7 +77,7 @@ if (!promptModule) {
 
 const toTestPath = path.resolve(
 	import.meta.dir,
-		"../../internal/prompt-smith/prompt-parts",
+	"../../internal/prompt-smith/prompt-parts",
 	toKebabCase(targetLanguage),
 	toKebabCase(knownLanguage),
 	toKebabCase(promptKind),
@@ -100,16 +88,11 @@ let testExamples: { input: unknown; output: unknown }[];
 try {
 	const mod = await import(toTestPath);
 	testExamples = mod.testExamples;
-} catch (err) {
-	console.error(`Failed to load test examples from ${toTestPath}:`, err);
+} catch (_err) {
 	process.exit(1);
 }
 
 if (!testExamples.length) {
-	console.error(
-		`No test examples found in ${toTestPath}\n` +
-			"Add examples to the testExamples array first.",
-	);
 	process.exit(1);
 }
 
@@ -117,7 +100,6 @@ if (!testExamples.length) {
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
-	console.error("Missing GEMINI_API_KEY environment variable");
 	process.exit(1);
 }
 
@@ -126,19 +108,13 @@ if (!apiKey) {
 const schema = SchemasFor[promptKind].agentOutputSchema;
 const { systemPrompt } = promptModule;
 
-console.log(
-	`\nRunning ${testExamples.length} test(s) for ${promptKind} (${targetLanguage} → ${knownLanguage})\n`,
-);
-
 const exampleResults: ExampleResult[] = [];
 
-for (const [i, example] of testExamples.entries()) {
+for (const [_i, example] of testExamples.entries()) {
 	const userInput =
 		typeof example.input === "string"
 			? example.input
 			: JSON.stringify(example.input);
-
-	console.log(`  [${i + 1}/${testExamples.length}] ${userInput.slice(0, 60)}...`);
 
 	const result = await callGemini({
 		apiKey,
@@ -160,8 +136,11 @@ for (const [i, example] of testExamples.entries()) {
 		...(result.error ? { error: result.error } : {}),
 	});
 
-	const status = matchesExpected ? "✅" : schemaValid ? "⚠️  schema ok, mismatch" : "❌ error";
-	console.log(`         ${status} (${result.durationMs}ms)`);
+	const _status = matchesExpected
+		? "✅"
+		: schemaValid
+			? "⚠️  schema ok, mismatch"
+			: "❌ error";
 }
 
 // --- Write logs ---
@@ -175,17 +154,12 @@ const runResult: RunResult = {
 	timestamp: new Date().toISOString(),
 };
 
-const logDir = writeRunResult(runResult);
+const _logDir = writeRunResult(runResult);
 
 // --- Summary ---
 
 const passed = exampleResults.filter((e) => e.matchesExpected).length;
-const schemaOk = exampleResults.filter((e) => e.schemaValid).length;
+const _schemaOk = exampleResults.filter((e) => e.schemaValid).length;
 const total = exampleResults.length;
-
-console.log(`\n--- Summary ---`);
-console.log(`Schema valid: ${schemaOk}/${total}`);
-console.log(`Matches expected: ${passed}/${total}`);
-console.log(`Logs: ${logDir}`);
 
 process.exit(passed === total ? 0 : 1);

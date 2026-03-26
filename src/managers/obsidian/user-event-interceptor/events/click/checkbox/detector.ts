@@ -7,13 +7,13 @@
  * Subscribes to GenericClickDetector and filters for checkbox targets.
  */
 
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { type App, MarkdownView } from "obsidian";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
 import {
 	decrementPending,
 	incrementPending,
 } from "../../../../../../utils/idle-tracker";
-import type { VaultActionManager } from "../../../../vault-action-manager";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
 import type { GenericClickDetector } from "../generic-click-detector";

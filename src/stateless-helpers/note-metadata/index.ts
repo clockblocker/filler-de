@@ -5,9 +5,9 @@
  * Consumers don't know if metadata is stored as YAML frontmatter or internal JSON.
  */
 
+import type { Transform } from "@textfresser/vault-action-manager/types/vault-action";
 import { z } from "zod";
 import { getParsedUserSettings } from "../../global-state/global-state";
-import type { Transform } from "../../managers/obsidian/vault-action-manager/types/vault-action";
 import {
 	extractFrontmatter,
 	frontmatterToInternal,

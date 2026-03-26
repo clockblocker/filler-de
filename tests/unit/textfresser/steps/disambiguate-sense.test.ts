@@ -1,4 +1,6 @@
 import { describe, expect, it } from "bun:test";
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { err, ok, type Result } from "neverthrow";
 import { disambiguateSense } from "../../../../src/commanders/textfresser/commands/lemma/steps/disambiguate-sense";
 import {
@@ -10,8 +12,6 @@ import {
 	type SenseDisambiguator,
 	type SenseMatchResult,
 } from "../../../../src/lexical-generation";
-import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
-import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
 const MOCK_SPLIT_PATH: SplitPathToMdFile = {
 	basename: "Bank",

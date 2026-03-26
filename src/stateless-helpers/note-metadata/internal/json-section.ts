@@ -3,8 +3,8 @@
  * Not exported from the module - use public API instead.
  */
 
+import type { Transform } from "@textfresser/vault-action-manager/types/vault-action";
 import type { z } from "zod";
-import type { Transform } from "../../../managers/obsidian/vault-action-manager/types/vault-action";
 
 // ─── Constants ───
 

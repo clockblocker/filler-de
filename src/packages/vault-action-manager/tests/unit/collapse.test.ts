@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { collapseActions } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/collapse";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
-import type { SplitPathToMdFile } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { VaultActionKind } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+import { collapseActions } from "@textfresser/vault-action-manager/impl/actions-processing/collapse";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 
 const mdFile = (
 	basename: string,
@@ -143,7 +143,9 @@ describe("collapseActions", () => {
 			const collapsed = await collapseActions([write, process]);
 			const single = collapsed[0]!;
 			expect(single.kind).toBe(VaultActionKind.UpsertMdFile);
-			expect((single as { payload: { content: string } }).payload.content).toBe("HELLO");
+			expect(
+				(single as { payload: { content: string } }).payload.content,
+			).toBe("HELLO");
 		});
 
 		it("applies process after write with async transform", async () => {
@@ -162,7 +164,9 @@ describe("collapseActions", () => {
 			const collapsed = await collapseActions([write, process]);
 			const single = collapsed[0]!;
 			expect(single.kind).toBe(VaultActionKind.UpsertMdFile);
-			expect((single as { payload: { content: string } }).payload.content).toBe("HELLO");
+			expect(
+				(single as { payload: { content: string } }).payload.content,
+			).toBe("HELLO");
 		});
 
 		it("discards process when write comes after", async () => {
@@ -231,7 +235,9 @@ describe("collapseActions", () => {
 			const collapsed = await collapseActions([write, p1, p2]);
 			const single = collapsed[0]!;
 			expect(single.kind).toBe(VaultActionKind.UpsertMdFile);
-			expect((single as { payload: { content: string } }).payload.content).toBe("HELLO!");
+			expect(
+				(single as { payload: { content: string } }).payload.content,
+			).toBe("HELLO!");
 		});
 	});
 
@@ -286,8 +292,11 @@ describe("collapseActions", () => {
 
 			const collapsed = await collapseActions([create, write]);
 			expect(collapsed).toHaveLength(1);
-			expect(collapsed[0]!.kind).toBe(VaultActionKind.UpsertMdFile);
-			expect((collapsed[0] as { payload: { content: string } }).payload.content).toBe("final");
+			expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
+			expect(
+				(collapsed[0] as { payload: { content: string } }).payload
+					.content,
+			).toBe("final");
 		});
 
 		it("trash wins over create", async () => {
@@ -317,8 +326,11 @@ describe("collapseActions", () => {
 
 			const collapsed = await collapseActions([ensureExist, create]);
 			expect(collapsed).toHaveLength(1);
-			expect(collapsed[0]!.kind).toBe(VaultActionKind.UpsertMdFile);
-			expect((collapsed[0] as { payload: { content: string } }).payload.content).toBe("content");
+			expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
+			expect(
+				(collapsed[0] as { payload: { content: string } }).payload
+					.content,
+			).toBe("content");
 		});
 
 		it("collapses UpsertMdFile(content) + UpsertMdFile(null) to UpsertMdFile(content)", async () => {
@@ -333,8 +345,11 @@ describe("collapseActions", () => {
 
 			const collapsed = await collapseActions([create, ensureExist]);
 			expect(collapsed).toHaveLength(1);
-			expect(collapsed[0]!.kind).toBe(VaultActionKind.UpsertMdFile);
-			expect((collapsed[0] as { payload: { content: string } }).payload.content).toBe("content");
+			expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
+			expect(
+				(collapsed[0] as { payload: { content: string } }).payload
+					.content,
+			).toBe("content");
 		});
 
 		it("merges UpsertMdFile(null) + UpsertMdFile into UpsertMdFile with content", async () => {
@@ -349,8 +364,11 @@ describe("collapseActions", () => {
 
 			const collapsed = await collapseActions([ensureExist, write]);
 			expect(collapsed).toHaveLength(1);
-			expect(collapsed[0]!.kind).toBe(VaultActionKind.UpsertMdFile);
-			expect((collapsed[0] as { payload: { content: string | null } }).payload.content).toBe("final");
+			expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
+			expect(
+				(collapsed[0] as { payload: { content: string | null } })
+					.payload.content,
+			).toBe("final");
 		});
 
 		it("keeps both UpsertMdFile(null) + ProcessMdFile (ProcessMdFile needs file to exist)", async () => {
@@ -508,10 +526,14 @@ describe("collapseActions", () => {
 			expect(collapsed).toHaveLength(2);
 
 			const aAction = collapsed.find(
-				(a) => (a.payload as { splitPath: { basename: string } }).splitPath.basename === "a.md",
+				(a) =>
+					(a.payload as { splitPath: { basename: string } }).splitPath
+						.basename === "a.md",
 			);
 			const bAction = collapsed.find(
-				(a) => (a.payload as { splitPath: { basename: string } }).splitPath.basename === "b.md",
+				(a) =>
+					(a.payload as { splitPath: { basename: string } }).splitPath
+						.basename === "b.md",
 			);
 
 			expect(aAction).toBeDefined();

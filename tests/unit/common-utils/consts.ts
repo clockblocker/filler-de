@@ -1,5 +1,5 @@
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import type { ParsedUserSettings } from "../../../src/global-state/parsed-settings";
-import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
 import {
 	buildCanonicalDelimiter,
 	buildFlexibleDelimiterPattern,

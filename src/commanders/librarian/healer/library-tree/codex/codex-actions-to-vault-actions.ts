@@ -2,11 +2,11 @@
  * Convert CodexAction[] to VaultAction[].
  */
 
-import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "../../../../../managers/obsidian/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager/types/vault-action";
 import { noteMetadataHelper } from "../../../../../stateless-helpers/note-metadata";
 import type { Codecs } from "../../../codecs";
 import type { CodecRules } from "../../../codecs/rules";

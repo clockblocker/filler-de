@@ -1,4 +1,4 @@
-import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 
 type AttestationSource = {
 	/** Formatted for sourcing: ![[file#^blockId|^]] if block ID exists, else raw block text */

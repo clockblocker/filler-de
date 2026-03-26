@@ -1,4 +1,9 @@
 import { describe, expect, it } from "bun:test";
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import type {
+	SplitPathToMdFile,
+} from "@textfresser/vault-action-manager/types/split-path";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import { errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import {
 	createBackgroundGenerateCoordinator,
@@ -7,11 +12,6 @@ import {
 	createInitialTextfresserState,
 	type TextfresserState,
 } from "../../../../src/commanders/textfresser/state/textfresser-state";
-import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
-import type {
-	SplitPathToMdFile,
-} from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 import type { ApiService } from "../../../../src/stateless-helpers/api-service";
 
 function buildTargetPath(basename: string): SplitPathToMdFile {

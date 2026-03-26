@@ -1,4 +1,4 @@
-import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
+import type { VaultAction } from "@textfresser/vault-action-manager";
 import type { CodecRules, Codecs } from "../codecs";
 import { healingActionsToVaultActions } from "../codecs/healing-to-vault-action";
 import { codexActionsToVaultActions } from "../healer/library-tree/codex";

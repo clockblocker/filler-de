@@ -1,4 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
+import type { PossibleRootVaultEvent } from "@textfresser/vault-action-manager/impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import type {
+	FileCreatedVaultEvent,
+	FileDeletedVaultEvent,
+	FileRenamedVaultEvent,
+	FolderCreatedVaultEvent,
+	FolderDeletedVaultEvent,
+	FolderRenamedVaultEvent,
+	VaultEvent,
+} from "@textfresser/vault-action-manager/types/vault-event";
+import { VaultEventKind } from "@textfresser/vault-action-manager/types/vault-event";
 import {
 	type CodecRules,
 	type Codecs,
@@ -9,20 +23,6 @@ import { buildTreeActions } from "../../../../../../src/commanders/librarian/hea
 import { TreeActionType } from "../../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 import { getNodeName } from "../../../../../../src/commanders/librarian/healer/library-tree/tree-action/utils/locator/locator-utils";
 import { TreeNodeKind } from "../../../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
-import type { BulkVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager";
-import type { PossibleRootVaultEvent } from "../../../../../../src/managers/obsidian/vault-action-manager/impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
-import { MD } from "../../../../../../src/managers/obsidian/vault-action-manager/types/literals";
-import { SplitPathKind } from "../../../../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import type {
-	FileCreatedVaultEvent,
-	FileDeletedVaultEvent,
-	FileRenamedVaultEvent,
-	FolderCreatedVaultEvent,
-	FolderDeletedVaultEvent,
-	FolderRenamedVaultEvent,
-	VaultEvent,
-} from "../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
-import { VaultEventKind } from "../../../../../../src/managers/obsidian/vault-action-manager/types/vault-event";
 import { defaultSettingsForUnitTests } from "../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../common-utils/setup-spy";
 

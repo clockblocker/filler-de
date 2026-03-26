@@ -1,3 +1,16 @@
+import {
+	makeSplitPath,
+	makeSystemPathForSplitPath,
+	VaultActionKind,
+	VaultActionManagerImpl,
+} from "@textfresser/vault-action-manager";
+import { ActiveFileService } from "@textfresser/vault-action-manager/file-services/active-view/active-file-service";
+import { TFileHelper } from "@textfresser/vault-action-manager/file-services/background/helpers/tfile-helper";
+import { TFolderHelper } from "@textfresser/vault-action-manager/file-services/background/helpers/tfolder-helper";
+import { logError } from "@textfresser/vault-action-manager/helpers/issue-handlers";
+import { pathfinder } from "@textfresser/vault-action-manager/helpers/pathfinder";
+import { VaultReader } from "@textfresser/vault-action-manager/impl/vault-reader";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { Modal, Notice, Plugin, TFile } from "obsidian";
 import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
@@ -19,19 +32,6 @@ import {
 	createCommandExecutor,
 } from "./managers/obsidian/command-executor";
 import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
-import {
-	makeSplitPath,
-	makeSystemPathForSplitPath,
-	VaultActionKind,
-	VaultActionManagerImpl,
-} from "./managers/obsidian/vault-action-manager";
-import { ActiveFileService } from "./managers/obsidian/vault-action-manager/file-services/active-view/active-file-service";
-import { TFileHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfile-helper";
-import { TFolderHelper } from "./managers/obsidian/vault-action-manager/file-services/background/helpers/tfolder-helper";
-import { logError } from "./managers/obsidian/vault-action-manager/helpers/issue-handlers";
-import { pathfinder } from "./managers/obsidian/vault-action-manager/helpers/pathfinder";
-import { VaultReader } from "./managers/obsidian/vault-action-manager/impl/vault-reader";
-import type { SplitPathToMdFile } from "./managers/obsidian/vault-action-manager/types/split-path";
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
 import { ApiService } from "./stateless-helpers/api-service";

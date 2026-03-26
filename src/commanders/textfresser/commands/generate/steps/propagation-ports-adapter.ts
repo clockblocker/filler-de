@@ -1,16 +1,16 @@
-import { err, ok, type Result } from "neverthrow";
 import type {
 	VaultAction,
 	VaultActionManager,
-} from "../../../../../managers/obsidian/vault-action-manager";
+} from "@textfresser/vault-action-manager";
 import {
 	isReadContentFileNotFound,
 	makeSystemPathForSplitPath,
 	readContentErrorToReason,
 	VaultActionKind,
-} from "../../../../../managers/obsidian/vault-action-manager";
-import type { ReadContentError } from "../../../../../managers/obsidian/vault-action-manager/types/read-content-error";
-import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
+import type { ReadContentError } from "@textfresser/vault-action-manager/types/read-content-error";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import { err, ok, type Result } from "neverthrow";
 import type { PathLookupFn } from "../../../common/target-path-resolver";
 import type {
 	FindCandidateTargetsParams,

@@ -1,12 +1,12 @@
 import { z } from "zod/v3";
 import {
+	type LinguisticUnitKind,
+	type POS,
 	POS_TAGS,
+	type PosTag,
 	PosTagSchema,
 	posFormFromPosTag,
 	posTagFormFromPos,
-	type LinguisticUnitKind,
-	type POS,
-	type PosTag,
 	type SurfaceKind,
 } from "../../../../lexical-generation";
 import {

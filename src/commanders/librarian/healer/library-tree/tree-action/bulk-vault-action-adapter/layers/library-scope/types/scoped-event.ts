@@ -1,8 +1,7 @@
-import z from "zod";
 import type {
 	BulkVaultEvent,
 	VaultEventKind,
-} from "../../../../../../../../../managers/obsidian/vault-action-manager";
+} from "@textfresser/vault-action-manager";
 import type {
 	FileCreatedVaultEvent,
 	FileDeletedVaultEvent,
@@ -10,7 +9,8 @@ import type {
 	FolderCreatedVaultEvent,
 	FolderDeletedVaultEvent,
 	FolderRenamedVaultEvent,
-} from "../../../../../../../../../managers/obsidian/vault-action-manager/types/vault-event";
+} from "@textfresser/vault-action-manager/types/vault-event";
+import z from "zod";
 import type { Prettify } from "../../../../../../../../../types/helpers";
 import type {
 	SplitPathToFileInsideLibrary,

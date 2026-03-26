@@ -2,7 +2,9 @@ import { describe, expect, it } from "bun:test";
 import { zodResponseFormat } from "openai/helpers/zod";
 import { SchemasFor } from "../../internal/prompt-smith/schemas";
 
-function toOpenAiZodSchema(schema: unknown): Parameters<typeof zodResponseFormat>[0] {
+function toOpenAiZodSchema(
+	schema: unknown,
+): Parameters<typeof zodResponseFormat>[0] {
 	// Runtime-compatible Zod schema bridge across v3/v4 typings.
 	return schema as Parameters<typeof zodResponseFormat>[0];
 }
@@ -12,7 +14,8 @@ function hasDirectSelfRefInDefinitions(schema: unknown): boolean {
 		return false;
 	}
 
-	const definitions = (schema as { definitions?: Record<string, unknown> }).definitions;
+	const definitions = (schema as { definitions?: Record<string, unknown> })
+		.definitions;
 	if (!definitions || typeof definitions !== "object") {
 		return false;
 	}
@@ -21,10 +24,7 @@ function hasDirectSelfRefInDefinitions(schema: unknown): boolean {
 		if (!value || typeof value !== "object") {
 			return false;
 		}
-		if (
-			"$ref" in value &&
-			(value as { $ref?: unknown }).$ref === ref
-		) {
+		if ("$ref" in value && (value as { $ref?: unknown }).$ref === ref) {
 			return true;
 		}
 		if (Array.isArray(value)) {
@@ -67,7 +67,9 @@ describe("Prompt-smith agent output schemas", () => {
 				"data",
 			);
 
-			if (hasDirectSelfRefInDefinitions(responseFormat.json_schema.schema)) {
+			if (
+				hasDirectSelfRefInDefinitions(responseFormat.json_schema.schema)
+			) {
 				failures.push(kind);
 			}
 		}

@@ -5,7 +5,7 @@
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "../../../managers/obsidian/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager/types/vault-action";
 import { makeVaultScopedSplitPath } from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import type { HealingAction } from "../healer/library-tree/types/healing-action";
 import type { CodecRules } from "./rules";

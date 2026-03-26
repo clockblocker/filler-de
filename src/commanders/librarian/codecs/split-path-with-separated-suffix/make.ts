@@ -1,5 +1,5 @@
+import type { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import type { Result } from "neverthrow";
-import type { SplitPathKind } from "../../../../managers/obsidian/vault-action-manager/types/split-path";
 import type { CodecError } from "../errors";
 import type { SuffixCodecs } from "../internal/suffix";
 import type { SplitPathInsideLibraryOf } from "../split-path-inside-library";

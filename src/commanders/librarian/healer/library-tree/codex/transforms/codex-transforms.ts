@@ -3,7 +3,7 @@
  * Used by ProcessMdFile actions to update codex content and backlinks.
  */
 
-import type { Transform } from "../../../../../../managers/obsidian/vault-action-manager/types/vault-action";
+import type { Transform } from "@textfresser/vault-action-manager/types/vault-action";
 import { goBackLinkHelper } from "../../../../../../stateless-helpers/go-back-link/go-back-link";
 import { noteMetadataHelper } from "../../../../../../stateless-helpers/note-metadata";
 import { LINE_BREAK } from "../../../../../../types/literals/ui";

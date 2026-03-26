@@ -1,15 +1,18 @@
 import { describe, expect, it } from "bun:test";
-import { buildDependencyGraph, makeGraphKey } from "../../../src/managers/obsidian/vault-action-manager/impl/actions-processing/dependency-detector";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
+import {
+	buildDependencyGraph,
+	makeGraphKey,
+} from "@textfresser/vault-action-manager/impl/actions-processing/dependency-detector";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager/types/vault-action";
 
 const folder = (
 	basename: string,
@@ -212,7 +215,10 @@ describe("buildDependencyGraph", () => {
 		};
 		const createFile: VaultAction = {
 			kind: VaultActionKind.UpsertMdFile,
-			payload: { content: "", splitPath: mdFile("file", ["root", "sub"]) },
+			payload: {
+				content: "",
+				splitPath: mdFile("file", ["root", "sub"]),
+			},
 		};
 		const process: VaultAction = {
 			kind: VaultActionKind.ProcessMdFile,
@@ -303,4 +309,3 @@ describe("buildDependencyGraph", () => {
 		expect(ensureDeps?.dependsOn).toContain(parent);
 	});
 });
-

@@ -1,8 +1,8 @@
-import z from "zod";
 import {
 	CREATE,
 	DELETE,
-} from "../../../../../../managers/obsidian/vault-action-manager/types/literals";
+} from "@textfresser/vault-action-manager/types/literals";
+import z from "zod";
 import type { Prettify } from "../../../../../../types/helpers";
 import type {
 	SplitPathToFileInsideLibrary,

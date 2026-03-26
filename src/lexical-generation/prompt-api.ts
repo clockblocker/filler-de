@@ -1,7 +1,3 @@
-import type {
-	KnownLanguage,
-	TargetLanguage,
-} from "./internal/shared/languages";
 import {
 	type AgentOutput,
 	PROMPT_FOR,
@@ -9,9 +5,13 @@ import {
 	type UserInput,
 } from "./internal/prompt-smith";
 import {
-	PromptKind as PromptKindEnum,
 	type PromptKind as InternalPromptKind,
+	PromptKind as PromptKindEnum,
 } from "./internal/prompt-smith/codegen/consts";
+import type {
+	KnownLanguage,
+	TargetLanguage,
+} from "./internal/shared/languages";
 
 export const PromptKind = PromptKindEnum;
 export type PromptKind = InternalPromptKind;

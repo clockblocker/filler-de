@@ -3,6 +3,7 @@
  * BulkVaultEvent → TreeActions → Healer → CodexImpact → Deletions → Recreations → HealingActions
  */
 
+import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
 import {
 	type CodecRules,
 	type Codecs,
@@ -20,7 +21,6 @@ import { buildTreeActions } from "../../../../../src/commanders/librarian/healer
 import type { CreateTreeLeafAction, TreeAction } from "../../../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
 import type { HealingAction } from "../../../../../src/commanders/librarian/healer/library-tree/types/healing-action";
 import { processCodexImpacts } from "../../../../../src/commanders/librarian/librarian-init/process-codex-impacts";
-import type { BulkVaultEvent } from "../../../../../src/managers/obsidian/vault-action-manager";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { makeTree, type TreeShape } from "../tree-test-helpers";
 

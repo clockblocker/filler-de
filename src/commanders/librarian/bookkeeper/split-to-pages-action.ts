@@ -3,12 +3,12 @@
  * Splits a long markdown file into paginated folder structure.
  */
 
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import type { ActiveFileService } from "@textfresser/vault-action-manager/file-services/active-view/active-file-service";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { err, ok, type Result } from "neverthrow";
 import { Notice } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { VaultActionManager } from "../../../managers/obsidian/vault-action-manager";
-import type { ActiveFileService } from "../../../managers/obsidian/vault-action-manager/file-services/active-view/active-file-service";
-import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link/go-back-link";
 import { parseSeparatedSuffix } from "../codecs/internal/suffix/parse";
 import type { CodecRules } from "../codecs/rules";

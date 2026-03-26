@@ -1,10 +1,10 @@
-import type { Result } from "neverthrow";
-import { ok } from "neverthrow";
-import type { VaultActionManager } from "../../../../../managers/obsidian/vault-action-manager";
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
-} from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
+import type { Result } from "neverthrow";
+import { ok } from "neverthrow";
 import type { NodeName } from "../../../types/schemas/node-name";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";

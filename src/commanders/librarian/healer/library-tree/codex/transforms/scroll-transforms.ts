@@ -3,7 +3,7 @@
  * Used by ProcessMdFile actions to update scroll backlinks.
  */
 
-import type { Transform } from "../../../../../../managers/obsidian/vault-action-manager/types/vault-action";
+import type { Transform } from "@textfresser/vault-action-manager/types/vault-action";
 import { goBackLinkHelper } from "../../../../../../stateless-helpers/go-back-link/go-back-link";
 import { noteMetadataHelper } from "../../../../../../stateless-helpers/note-metadata";
 import type { Codecs } from "../../../../codecs";

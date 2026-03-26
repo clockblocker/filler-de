@@ -1,8 +1,8 @@
-import { makeSplitPath } from "../managers/obsidian/vault-action-manager";
+import { makeSplitPath } from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToFolder,
-} from "../managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
 import type { SuffixDelimiterConfig, TextEaterSettings } from "../types";
 import type { Prettify } from "../types/helpers";
 import {

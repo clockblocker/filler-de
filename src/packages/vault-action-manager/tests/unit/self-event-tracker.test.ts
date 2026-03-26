@@ -1,13 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { SelfEventTracker } from "../../../src/managers/obsidian/vault-action-manager/impl/event-processing/self-event-tracker";
-import { MD } from "../../../src/managers/obsidian/vault-action-manager/types/literals";
+import { SelfEventTracker } from "@textfresser/vault-action-manager/impl/event-processing/self-event-tracker";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import { SplitPathKind } from "../../../src/managers/obsidian/vault-action-manager/types/split-path";
-import type { VaultAction } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
-import { VaultActionKind } from "../../../src/managers/obsidian/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 
 const folder = (
 	basename: string,
@@ -135,7 +135,9 @@ describe("SelfEventTracker", () => {
 		// The folder itself (exact match) should also be ignored (popped)
 		expect(tracker.shouldIgnore("Library/target")).toBe(true);
 		// After exact pop, prefix still works for descendants
-		expect(tracker.shouldIgnore("Library/target/yet-another.md")).toBe(true);
+		expect(tracker.shouldIgnore("Library/target/yet-another.md")).toBe(
+			true,
+		);
 	});
 
 	it("ProcessMdFile paths are NOT registered", () => {

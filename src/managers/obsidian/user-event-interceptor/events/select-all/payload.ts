@@ -3,8 +3,8 @@
  */
 
 import type { EditorView } from "@codemirror/view";
+import { SplitPathToMdFileSchema } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
-import { SplitPathToMdFileSchema } from "../../../vault-action-manager/types/split-path";
 import { PayloadKind } from "../../types/payload-base";
 
 /**

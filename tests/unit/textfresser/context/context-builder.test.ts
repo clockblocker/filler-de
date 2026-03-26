@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { buildAttestationFromWikilinkClickPayload } from "../../../../src/commanders/textfresser/common/attestation/builders/build-from-wikilink-click-payload";
-import type { WikilinkClickPayload } from "../../../../src/managers/obsidian/user-event-interceptor/events/click/wikilink-click/payload";
-import { PayloadKind } from "../../../../src/managers/obsidian/user-event-interceptor/types/payload-base";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
-} from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager/types/split-path";
+import { buildAttestationFromWikilinkClickPayload } from "../../../../src/commanders/textfresser/common/attestation/builders/build-from-wikilink-click-payload";
+import type { WikilinkClickPayload } from "../../../../src/managers/obsidian/user-event-interceptor/events/click/wikilink-click/payload";
+import { PayloadKind } from "../../../../src/managers/obsidian/user-event-interceptor/types/payload-base";
 
 const makeSplitPath = (basename: string): SplitPathToMdFile => ({
 	basename,

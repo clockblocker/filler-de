@@ -6,8 +6,8 @@
  * - splitPath: File context (may be optional for some events)
  */
 
+import { SplitPathToMdFileSchema } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
-import { SplitPathToMdFileSchema } from "../../vault-action-manager/types/split-path";
 
 export const PayloadKindSchema = z.enum([
 	"CheckboxClicked",

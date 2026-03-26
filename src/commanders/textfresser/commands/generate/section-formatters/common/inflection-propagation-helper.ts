@@ -1,13 +1,3 @@
-import {
-	CASE_ORDER,
-	NUMBER_ORDER,
-	caseValueFromLocalizedLabel,
-	getCaseLabelForTargetLanguage,
-	getGenusLabelForTargetLanguage,
-	getNumberLabelForTargetLanguage,
-	numberValueFromLocalizedLabel,
-	type TextfresserNounInflectionCell,
-} from "../../../../domain/lexical-types";
 import type {
 	LexicalCase,
 	LexicalGenus,
@@ -15,6 +5,16 @@ import type {
 } from "../../../../../../lexical-generation";
 import type { TargetLanguage } from "../../../../../../types";
 import { extractHashTags } from "../../../../../../utils/text-utils";
+import {
+	CASE_ORDER,
+	caseValueFromLocalizedLabel,
+	getCaseLabelForTargetLanguage,
+	getGenusLabelForTargetLanguage,
+	getNumberLabelForTargetLanguage,
+	NUMBER_ORDER,
+	numberValueFromLocalizedLabel,
+	type TextfresserNounInflectionCell,
+} from "../../../../domain/lexical-types";
 
 const NUMBER_ORDER_INDEX = new Map(
 	NUMBER_ORDER.map((numberValue, idx) => [numberValue, idx] as const),
