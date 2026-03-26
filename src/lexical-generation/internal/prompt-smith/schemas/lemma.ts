@@ -1,32 +1,5 @@
 import { z } from "zod/v3";
-import {
-	DE_LEMMA_LINGUISTIC_UNITS,
-	DE_LEXEM_POS,
-	type DeEnrichmentInput,
-	DeEnrichmentInputSchema,
-	type DeEnrichmentOutput,
-	DeEnrichmentOutputSchema,
-	type DeFeaturesInput,
-	DeFeaturesInputSchema,
-	type DeFeaturesOutput,
-	DeFeaturesOutputSchema,
-	type DeInflectionInput,
-	DeInflectionInputSchema,
-	type DeInflectionOutput,
-	DeInflectionOutputSchema,
-	type DeLemmaResult,
-	DeLemmaResultSchema,
-	type DeLexicalTarget,
-	DeLexicalTargetSchema,
-	type DeRelationInput,
-	DeRelationInputSchema,
-	type DeRelationOutput,
-	DeRelationOutputSchema,
-	type DeWordTranslationInput,
-	DeWordTranslationInputSchema,
-	type DeWordTranslationOutput,
-	DeWordTranslationOutputSchema,
-} from "../../contracts/de";
+import { DE_LEMMA_LINGUISTIC_UNITS, DE_LEXEM_POS } from "../../contracts/de";
 import {
 	LEXICAL_PHRASEME_KIND_VALUES,
 	LexicalSurfaceKindSchema,

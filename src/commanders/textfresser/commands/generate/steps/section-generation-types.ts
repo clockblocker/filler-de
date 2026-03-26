@@ -1,8 +1,8 @@
+import type { RelationSubKind } from "../../../../../lexical-generation/internal/prompt-smith/schemas/relation";
 import type {
 	GermanGenus,
 	NounInflectionCell,
 } from "../../../../../linguistics/de/lexem/noun";
-import type { RelationSubKind } from "../../../../../lexical-generation/internal/prompt-smith/schemas/relation";
 import type { TargetLanguage } from "../../../../../types";
 import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
 

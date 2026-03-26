@@ -1,12 +1,5 @@
 import { err, type Result } from "neverthrow";
 import {
-	type AgentOutput,
-	PROMPT_FOR,
-	SchemasFor,
-	type UserInput,
-} from "./prompt-smith";
-import type { PromptKind } from "./prompt-smith/codegen/consts";
-import {
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,
 } from "../errors";
@@ -14,6 +7,13 @@ import type {
 	CreateLexicalGenerationModuleParams,
 	ZodSchemaLike,
 } from "../public-types";
+import {
+	type AgentOutput,
+	PROMPT_FOR,
+	SchemasFor,
+	type UserInput,
+} from "./prompt-smith";
+import type { PromptKind } from "./prompt-smith/codegen/consts";
 
 type PromptExecutorDeps = Pick<
 	CreateLexicalGenerationModuleParams,

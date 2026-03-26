@@ -1,9 +1,9 @@
 import { errAsync, ok, type ResultAsync } from "neverthrow";
+import { PromptKind } from "../../../../lexical-generation/internal/prompt-smith/codegen/consts";
 import {
 	type VaultAction,
 	VaultActionKind,
 } from "../../../../managers/obsidian/vault-action-manager";
-import { PromptKind } from "../../../../lexical-generation/internal/prompt-smith/codegen/consts";
 import { blockIdHelper } from "../../../../stateless-helpers/block-id";
 import { markdownHelper } from "../../../../stateless-helpers/markdown-strip";
 import {

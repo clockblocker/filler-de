@@ -1,12 +1,12 @@
 import { err, ok, type Result } from "neverthrow";
-import type { PromptKind } from "../internal/prompt-smith/codegen/consts";
-import type { AgentOutput, UserInput } from "../internal/prompt-smith/schemas";
 import { wikilinkHelper } from "../../stateless-helpers/wikilink";
 import {
 	type LexicalGenerationError,
 	LexicalGenerationFailureKind,
 } from "../errors";
 import { executePrompt } from "../internal/prompt-executor";
+import type { PromptKind } from "../internal/prompt-smith/codegen/consts";
+import type { AgentOutput, UserInput } from "../internal/prompt-smith/schemas";
 import type {
 	CreateLexicalGenerationModuleParams,
 	GenerateLexicalInfoOptions,
@@ -502,14 +502,16 @@ export function buildLexicalInfoGenerator(
 
 		const coreField = withPrecomputedEmojiDescription(
 			coreResult.isOk()
-			? ({
-					status: "ready",
-					value: mapCoreOutputToCore(coreResult.value),
-				} as const)
-			: (coreWithFallbackEmoji(options.precomputedEmojiDescription) ?? {
-					error: coreResult.error,
-					status: "error",
-				}),
+				? ({
+						status: "ready",
+						value: mapCoreOutputToCore(coreResult.value),
+					} as const)
+				: (coreWithFallbackEmoji(
+						options.precomputedEmojiDescription,
+					) ?? {
+						error: coreResult.error,
+						status: "error",
+					}),
 			options.precomputedEmojiDescription,
 		);
 		const coreOutput = coreResult.isOk() ? coreResult.value : null;

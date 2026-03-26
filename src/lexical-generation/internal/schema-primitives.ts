@@ -44,11 +44,19 @@ const lexicalPhrasemeKindValues = [
 export const LexicalPhrasemeKindSchema = z.enum(lexicalPhrasemeKindValues);
 export const LEXICAL_PHRASEME_KIND_VALUES = LexicalPhrasemeKindSchema.options;
 
-const lexicalSurfaceKindValues = ["Lemma", "Inflected", "Variant"] as const satisfies readonly LexicalSurfaceKind[];
+const lexicalSurfaceKindValues = [
+	"Lemma",
+	"Inflected",
+	"Variant",
+] as const satisfies readonly LexicalSurfaceKind[];
 
 export const LexicalSurfaceKindSchema = z.enum(lexicalSurfaceKindValues);
 
-const lexicalLinguisticUnitKindValues = ["Phrasem", "Lexem", "Morphem"] as const;
+const lexicalLinguisticUnitKindValues = [
+	"Phrasem",
+	"Lexem",
+	"Morphem",
+] as const;
 
 export const LexicalLinguisticUnitKindSchema = z.enum(
 	lexicalLinguisticUnitKindValues,
@@ -63,7 +71,10 @@ const lexicalCaseValues = [
 
 export const LexicalCaseSchema = z.enum(lexicalCaseValues);
 
-const lexicalNumberValues = ["Singular", "Plural"] as const satisfies readonly LexicalNumber[];
+const lexicalNumberValues = [
+	"Singular",
+	"Plural",
+] as const satisfies readonly LexicalNumber[];
 
 export const LexicalNumberSchema = z.enum(lexicalNumberValues);
 
@@ -75,7 +86,10 @@ const lexicalGenusValues = [
 
 export const LexicalGenusSchema = z.enum(lexicalGenusValues);
 
-const lexicalNounClassValues = ["Common", "Proper"] as const satisfies readonly LexicalNounClass[];
+const lexicalNounClassValues = [
+	"Common",
+	"Proper",
+] as const satisfies readonly LexicalNounClass[];
 
 export const LexicalNounClassSchema = z.enum(lexicalNounClassValues);
 

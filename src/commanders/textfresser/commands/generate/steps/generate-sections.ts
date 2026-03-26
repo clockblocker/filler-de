@@ -156,11 +156,10 @@ async function buildReEncounterResult(
 		ctx,
 		existingEntries,
 	});
-	const canUseLemmaOnlyFastPath =
-		!(
-			lemmaResult.linguisticUnit === "Lexem" &&
-			lemmaResult.posLikeKind === "Noun"
-		);
+	const canUseLemmaOnlyFastPath = !(
+		lemmaResult.linguisticUnit === "Lexem" &&
+		lemmaResult.posLikeKind === "Noun"
+	);
 	if (canUseLemmaOnlyFastPath) {
 		const missingSections = computeMissingV3SectionKindsFromLemmaResult({
 			entry: matchedEntry,

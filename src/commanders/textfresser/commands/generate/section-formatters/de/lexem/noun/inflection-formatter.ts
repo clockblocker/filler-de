@@ -1,10 +1,10 @@
+import type { AgentOutput } from "../../../../../../../../lexical-generation/internal/prompt-smith";
 import type { CaseValue } from "../../../../../../../../linguistics/common/enums/inflection/feature-values";
 import {
 	CASE_ORDER,
 	CASE_SHORT_LABEL,
 	type NounInflectionCell,
 } from "../../../../../../../../linguistics/de/lexem/noun";
-import type { AgentOutput } from "../../../../../../../../lexical-generation/internal/prompt-smith";
 import { wikilinkHelper } from "../../../../../../../../stateless-helpers/wikilink";
 
 /**
