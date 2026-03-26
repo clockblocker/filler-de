@@ -1,6 +1,8 @@
 import { z } from "zod/v3";
-import { LinguisticUnitKindSchema } from "../../../../linguistics/common/enums/core";
-import { PhrasemeKindSchema } from "../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
+import {
+	LexicalLinguisticUnitKindSchema,
+	LexicalPhrasemeKindSchema,
+} from "../../schema-primitives";
 
 const userInputSchema = z.object({
 	context: z.string(),
@@ -11,10 +13,10 @@ const userInputSchema = z.object({
 			genus: z.string().optional(),
 			index: z.number(),
 			ipa: z.string().min(1).optional(),
-			phrasemeKind: PhrasemeKindSchema.optional(),
+			phrasemeKind: LexicalPhrasemeKindSchema.optional(),
 			pos: z.string().optional(),
 			senseGloss: z.string().min(3).max(120).optional(),
-			unitKind: LinguisticUnitKindSchema,
+			unitKind: LexicalLinguisticUnitKindSchema,
 		}),
 	),
 });

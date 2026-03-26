@@ -1,9 +1,10 @@
 import { z } from "zod/v3";
-import { GermanGenusSchema, NounClassSchema } from "../lexem/noun/features";
 import {
-	GermanVerbConjugationSchema,
-	GermanVerbValencySchema,
-} from "../lexem/verb/features";
+	LexicalGenusSchema,
+	LexicalNounClassSchema,
+	LexicalVerbConjugationSchema,
+	LexicalVerbValencySchema,
+} from "../../schema-primitives";
 import type { DeLemmaResult } from "./de-lemma-result";
 import {
 	DeLexemLemmaResultSchema,
@@ -83,9 +84,9 @@ export const DeLexemEnrichmentOutputSchema = z.discriminatedUnion(
 	"posLikeKind",
 	[
 		deEnrichmentOutputBaseSchema.extend({
-			genus: GermanGenusSchema.nullable().optional(),
+			genus: LexicalGenusSchema.nullable().optional(),
 			linguisticUnit: z.literal("Lexem"),
-			nounClass: NounClassSchema.nullable().optional(),
+			nounClass: LexicalNounClassSchema.nullable().optional(),
 			posLikeKind: z.literal("Noun"),
 		}),
 		...DeLexemPosSchema.options
@@ -163,8 +164,8 @@ const deFeatureTagOutputSchema = z.object({
 });
 const deVerbFeatureOutputSchema = z
 	.object({
-		conjugation: GermanVerbConjugationSchema,
-		valency: GermanVerbValencySchema,
+		conjugation: LexicalVerbConjugationSchema,
+		valency: LexicalVerbValencySchema,
 	})
 	.strict();
 

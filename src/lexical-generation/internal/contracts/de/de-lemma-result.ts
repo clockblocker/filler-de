@@ -1,7 +1,10 @@
 import { z } from "zod/v3";
-import { SurfaceKindSchema } from "../../common/enums/core";
-import { PARTS_OF_SPEECH_STR } from "../../common/enums/linguistic-units/lexem/pos";
-import { PhrasemeKindSchema } from "../../common/enums/linguistic-units/phrasem/phrasem-kind";
+import {
+	LEXICAL_PHRASEME_KIND_VALUES,
+	LEXICAL_POS_VALUES,
+	LexicalPhrasemeKindSchema,
+	LexicalSurfaceKindSchema,
+} from "../../schema-primitives";
 
 const deLemmaLinguisticUnits = ["Lexem", "Phrasem"] as const;
 
@@ -10,21 +13,20 @@ export type DeLemmaLinguisticUnit = z.infer<typeof DeLemmaLinguisticUnitSchema>;
 export const DeLemmaLinguisticUnit = DeLemmaLinguisticUnitSchema.enum;
 export const DE_LEMMA_LINGUISTIC_UNITS = DeLemmaLinguisticUnitSchema.options;
 
-// Re-create POS schema with zod/v3 (pos.ts uses zod v4).
-export const DeLexemPosSchema = z.enum(PARTS_OF_SPEECH_STR);
+export const DeLexemPosSchema = z.enum(LEXICAL_POS_VALUES);
 export type DeLexemPos = z.infer<typeof DeLexemPosSchema>;
 export const DE_LEXEM_POS = DeLexemPosSchema.options;
 
 export const DePosLikeKindSchema = z.union([
 	DeLexemPosSchema,
-	PhrasemeKindSchema,
+	LexicalPhrasemeKindSchema,
 ]);
 export type DePosLikeKind = z.infer<typeof DePosLikeKindSchema>;
 
 const deLemmaResultBaseSchema = z.object({
 	contextWithLinkedParts: z.string().nullable().optional(),
 	lemma: z.string(),
-	surfaceKind: SurfaceKindSchema,
+	surfaceKind: LexicalSurfaceKindSchema,
 });
 
 export const DeLexemLemmaResultSchema = deLemmaResultBaseSchema.extend({
@@ -34,7 +36,7 @@ export const DeLexemLemmaResultSchema = deLemmaResultBaseSchema.extend({
 
 export const DePhrasemLemmaResultSchema = deLemmaResultBaseSchema.extend({
 	linguisticUnit: z.literal("Phrasem"),
-	posLikeKind: PhrasemeKindSchema,
+	posLikeKind: z.enum(LEXICAL_PHRASEME_KIND_VALUES),
 });
 
 export const DeLemmaResultSchema = z

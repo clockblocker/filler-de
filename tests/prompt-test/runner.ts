@@ -132,8 +132,7 @@ console.log(
 
 const exampleResults: ExampleResult[] = [];
 
-for (let i = 0; i < testExamples.length; i++) {
-	const example = testExamples[i];
+for (const [i, example] of testExamples.entries()) {
 	const userInput =
 		typeof example.input === "string"
 			? example.input

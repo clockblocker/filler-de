@@ -1,16 +1,46 @@
 import { z } from "zod/v3";
-import { PHRASEM_KINDS } from "../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
 import {
 	DE_LEMMA_LINGUISTIC_UNITS,
 	DE_LEXEM_POS,
-} from "../../../../linguistics/de/lemma";
+	type DeEnrichmentInput,
+	DeEnrichmentInputSchema,
+	type DeEnrichmentOutput,
+	DeEnrichmentOutputSchema,
+	type DeFeaturesInput,
+	DeFeaturesInputSchema,
+	type DeFeaturesOutput,
+	DeFeaturesOutputSchema,
+	type DeInflectionInput,
+	DeInflectionInputSchema,
+	type DeInflectionOutput,
+	DeInflectionOutputSchema,
+	type DeLemmaResult,
+	DeLemmaResultSchema,
+	type DeLexicalTarget,
+	DeLexicalTargetSchema,
+	type DeRelationInput,
+	DeRelationInputSchema,
+	type DeRelationOutput,
+	DeRelationOutputSchema,
+	type DeWordTranslationInput,
+	DeWordTranslationInputSchema,
+	type DeWordTranslationOutput,
+	DeWordTranslationOutputSchema,
+} from "../../contracts/de";
+import {
+	LEXICAL_PHRASEME_KIND_VALUES,
+	LexicalSurfaceKindSchema,
+} from "../../schema-primitives";
 
 const userInputSchema = z.object({
 	context: z.string(),
 	surface: z.string(),
 });
 
-const lemmaPromptPosLikeKinds = [...DE_LEXEM_POS, ...PHRASEM_KINDS] as const;
+const lemmaPromptPosLikeKinds = [
+	...DE_LEXEM_POS,
+	...LEXICAL_PHRASEME_KIND_VALUES,
+] as const;
 
 // Keep the API-facing schema flat: Gemini rejects the recursive JSON schema
 // emitted for the discriminated union form used by the stricter runtime contract.
@@ -19,7 +49,7 @@ const agentOutputSchema = z.object({
 	lemma: z.string(),
 	linguisticUnit: z.enum(DE_LEMMA_LINGUISTIC_UNITS),
 	posLikeKind: z.enum(lemmaPromptPosLikeKinds),
-	surfaceKind: z.enum(["Lemma", "Inflected", "Variant"]),
+	surfaceKind: LexicalSurfaceKindSchema,
 });
 
 export const lemmaSchemas = { agentOutputSchema, userInputSchema };
@@ -48,4 +78,4 @@ export {
 	DeWordTranslationInputSchema,
 	type DeWordTranslationOutput,
 	DeWordTranslationOutputSchema,
-} from "../../../../linguistics/de/lemma";
+} from "../../contracts/de";
