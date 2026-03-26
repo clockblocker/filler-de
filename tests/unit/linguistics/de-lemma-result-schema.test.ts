@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { DeLemmaResultSchema } from "../../../src/linguistics/de/lemma";
+import { DeLemmaResultSchema } from "../../../src/lexical-generation/internal/contracts/de";
 
 describe("DeLemmaResultSchema", () => {
 	it("accepts Lexem + Verb", () => {

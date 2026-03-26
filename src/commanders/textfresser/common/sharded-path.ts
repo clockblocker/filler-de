@@ -7,11 +7,11 @@
  * Example: "anfangen" (German, Lexem, Lemma) → ["Worter", "de", "lexem", "lemma", "a", "anf", "anfan"]
  */
 
-import type {
-	LinguisticUnitKind,
-	SurfaceKind,
-} from "../../../linguistics/common/enums/core";
-import { LANGUAGE_ISO_CODE } from "../../../linguistics/common/enums/core";
+import {
+	LANGUAGE_ISO_CODE,
+	type LinguisticUnitKind,
+	type SurfaceKind,
+} from "../../../lexical-generation";
 import type { TargetLanguage } from "../../../types";
 
 const WORTER_ROOT = "Worter";

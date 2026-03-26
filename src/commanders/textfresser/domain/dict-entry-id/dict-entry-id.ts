@@ -1,16 +1,14 @@
 import { z } from "zod/v3";
-import type {
-	LinguisticUnitKind,
-	SurfaceKind,
-} from "../../../../linguistics/common/enums/core";
 import {
-	type POS,
 	POS_TAGS,
-	type PosTag,
 	PosTagSchema,
 	posFormFromPosTag,
 	posTagFormFromPos,
-} from "../../../../linguistics/common/enums/linguistic-units/lexem/pos";
+	type LinguisticUnitKind,
+	type POS,
+	type PosTag,
+	type SurfaceKind,
+} from "../../../../lexical-generation";
 import {
 	LINGUISTIC_UNIT_KIND_TAGS,
 	type LinguisticUnitKindTag,

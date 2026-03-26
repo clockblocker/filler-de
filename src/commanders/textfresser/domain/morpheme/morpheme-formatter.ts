@@ -3,7 +3,7 @@
  * Converts structured LLM morpheme output into wikilink display strings.
  */
 
-import type { MorphemeKind } from "../../../../linguistics/common/enums/linguistic-units/morphem/morpheme-kind";
+import type { MorphemeKind } from "../../../../lexical-generation";
 import { wikilinkHelper } from "../../../../stateless-helpers/wikilink";
 import type { TargetLanguage } from "../../../../types";
 

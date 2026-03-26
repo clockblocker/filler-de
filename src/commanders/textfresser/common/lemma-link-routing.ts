@@ -1,6 +1,8 @@
-import type { SurfaceKind } from "../../../linguistics/common/enums/core";
-import { LANGUAGE_ISO_CODE } from "../../../linguistics/common/enums/core";
-import type { LexicalPos } from "../../../lexical-generation";
+import {
+	type LexicalPos,
+	LANGUAGE_ISO_CODE,
+	type SurfaceKind,
+} from "../../../lexical-generation";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,

@@ -1,5 +1,4 @@
-import { LANGUAGE_ISO_CODE } from "../../../linguistics/common/enums/core";
-import type { LexicalPos } from "../../../lexical-generation";
+import { LANGUAGE_ISO_CODE, type LexicalPos } from "../../../lexical-generation";
 import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { stringifySplitPath } from "../../../stateless-helpers/split-path-comparison";
 import type { TargetLanguage } from "../../../types";

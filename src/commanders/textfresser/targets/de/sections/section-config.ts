@@ -1,4 +1,4 @@
-import type { POS } from "../../../../../linguistics/common/enums/linguistic-units/lexem/pos";
+import type { POS } from "../../../../../lexical-generation";
 import { cssSuffixFor } from "./section-css-kind";
 import { ALL_DICT_SECTION_KINDS, DictSectionKind } from "./section-kind";
 

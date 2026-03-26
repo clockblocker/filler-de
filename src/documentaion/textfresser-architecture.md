@@ -162,7 +162,7 @@ Note (Obsidian .md file, named after a Surface)
 
 ## 4. Linguistic Type System
 
-**Location**: `src/linguistics/`
+**Location**: `src/lexical-generation/internal/linguistics/` for internal schemas, with public primitives exported from `src/lexical-generation/`
 
 ### 4.1 Linguistic Units
 
@@ -178,7 +178,7 @@ LinguisticUnitKind = "Phrasem" | "Lexem" | "Morphem"
 | **Phrasem** | Multi-word expression | *ins Gras beißen* (idiom), *starker Kaffee* (collocation) |
 | **Morphem** | Sub-word unit | *-keit* (suffix), *un-* (prefix) |
 
-**Source**: `src/linguistics/enums/core.ts`
+**Source**: `src/lexical-generation/primitives.ts` (public) and `src/lexical-generation/internal/linguistics/common/enums/core.ts` (internal)
 
 ### 4.2 Surface Kinds
 
@@ -202,7 +202,7 @@ POS = "Noun" | "Pronoun" | "Article" | "Adjective" | "Verb"
 
 Each POS has a compact **PosTag** (`NOUN`, `PRON`, `ART`, `ADJ`, `VERB`, `PREP`, `ADV`, `PART`, `KON`, `IU`) with bidirectional maps.
 
-**Source**: `src/linguistics/enums/linguistic-units/lexem/pos.ts`
+**Source**: `src/lexical-generation/primitives.ts` (public) and `src/lexical-generation/internal/linguistics/common/enums/linguistic-units/lexem/pos.ts` (internal)
 
 ### 4.4 Phraseme Kinds
 
@@ -212,7 +212,7 @@ PhrasemeKind = "Idiom" | "Collocation" | "DiscourseFormula" | "Proverb" | "Cultu
 
 Each kind has further sub-classifications (e.g., collocation strength: `Free | Bound | Frozen`, collocation type: `ADJ+NOUN`, `VERB+NOUN`, etc.).
 
-**Source**: `src/linguistics/enums/linguistic-units/phrasem/phrasem-kind.ts`
+**Source**: `src/lexical-generation/internal/linguistics/common/enums/linguistic-units/phrasem/phrasem-kind.ts`
 
 ### 4.5 Morpheme Tags
 
@@ -229,7 +229,7 @@ Separability = "Separable" | "Inseparable"
 
 Some prefixes (*über-*, *unter-*, *um-*, *durch-*) are dual-use — separable or inseparable depending on context.
 
-**Source**: `src/linguistics/de/morphem/prefix/features.ts`
+**Source**: `src/lexical-generation/internal/linguistics/de/morphem/prefix/features.ts`
 
 ### 4.6 DictEntrySection Kinds
 
@@ -278,7 +278,7 @@ DictEntrySubSections are the unit at which cross-reference propagation operates 
 
 ### 4.8 Detailed Inflectional Enums
 
-> **Deleted**: The legacy `src/linguistics/old-enums.ts` that previously defined detailed grammatical categories (Person, Number, Case, Tense, Verb Mood, Noun Class, Comparison Degree, Theta Roles, Stylistic Tone, Scalar Degree) has been removed as dead code. Currently used inflectional enums live in `src/linguistics/common/enums/` and `src/linguistics/german/`.
+> **Deleted**: The legacy `src/linguistics/old-enums.ts` that previously defined detailed grammatical categories (Person, Number, Case, Tense, Verb Mood, Noun Class, Comparison Degree, Theta Roles, Stylistic Tone, Scalar Degree) has been removed as dead code. The surviving linguistic enum/schema layer now lives under `src/lexical-generation/internal/linguistics/`, with only shared primitives re-exported from `src/lexical-generation/`.
 
 ---
 
@@ -1203,30 +1203,30 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/domain/morpheme/morpheme-formatter.ts` | Morpheme → wikilink display formatter (canonical module) |
 | `src/stateless-helpers/api-service.ts` | Gemini API wrapper (returns `ResultAsync`, retry on transient errors) |
 | `src/stateless-helpers/retry.ts` | Generic retry with exponential backoff (`withRetry()`) |
-| **Linguistics — Enums** | |
-| `src/linguistics/common/enums/core.ts` | LinguisticUnitKind, SurfaceKind |
-| `src/linguistics/common/enums/linguistic-units/lexem/pos.ts` | POS, PosTag |
-| `src/linguistics/common/enums/linguistic-units/phrasem/phrasem-kind.ts` | PhrasemeKind |
-| `src/linguistics/common/enums/linguistic-units/morphem/morpheme-kind.ts` | MorphemeKind |
-| `src/linguistics/de/morphem/prefix/features.ts` | SeparabilitySchema (Separable/Inseparable) |
-| `src/linguistics/common/enums/inflection/feature-values.ts` | CaseValue, NumberValue Zod enums |
-| **Linguistics — DTO (V9)** | |
-| `src/linguistics/common/dto/surface-factory.ts` | `makeSurfaceSchema()` — produces surfaceKind discriminated union from Full + Ref features |
-| `src/linguistics/common/dto/phrasem-surface.ts` | Language-independent PhrasemSurfaceSchema (Collocation with strength, stubs for Idiom/Proverb/etc.) |
-| `src/linguistics/german/enums/genus.ts` | GermanGenusSchema ("Maskulinum"\|"Femininum"\|"Neutrum"), `articleFromGenus` mapping |
-| `src/linguistics/german/features/noun.ts` | GermanNounFull/RefFeaturesSchema (genus, nounClass for Full; just POS for Ref) |
-| `src/linguistics/german/features/pos-features.ts` | GermanLexemFull/RefFeaturesSchema — all POS in discriminated union (Noun/Verb/Adjective specialized, rest stubs) |
-| `src/linguistics/german/schemas/lexem-surface.ts` | GermanLexemSurfaceSchema via `makeSurfaceSchema` |
-| `src/linguistics/german/schemas/morphem-surface.ts` | GermanMorphemSurfaceSchema (Prefix with separability, stubs for rest) |
-| `src/linguistics/german/schemas/linguistic-unit.ts` | GermanLinguisticUnitSchema — top-level `kind` discriminated union |
-| `src/linguistics/german/schemas/index.ts` | Barrel exports for all German schemas + types |
+| **Lexical-Generation Public Primitives** | |
+| `src/lexical-generation/primitives.ts` | Public language-independent enums/primitives: LinguisticUnitKind, SurfaceKind, POS, PosTag, MorphemeKind, LANGUAGE_ISO_CODE |
+| **Lexical-Generation Internal Linguistics** | |
+| `src/lexical-generation/internal/linguistics/common/enums/core.ts` | Internal source of LinguisticUnitKind, SurfaceKind |
+| `src/lexical-generation/internal/linguistics/common/enums/linguistic-units/lexem/pos.ts` | Internal source of POS, PosTag |
+| `src/lexical-generation/internal/linguistics/common/enums/linguistic-units/phrasem/phrasem-kind.ts` | PhrasemeKind |
+| `src/lexical-generation/internal/linguistics/common/enums/linguistic-units/morphem/morpheme-kind.ts` | MorphemeKind |
+| `src/lexical-generation/internal/linguistics/de/morphem/prefix/features.ts` | SeparabilitySchema (Separable/Inseparable) |
+| `src/lexical-generation/internal/linguistics/common/enums/inflection/feature-values.ts` | CaseValue, NumberValue Zod enums |
+| **Lexical-Generation Internal DTO (V9)** | |
+| `src/lexical-generation/internal/linguistics/common/dto/surface-factory.ts` | `makeSurfaceSchema()` — produces surfaceKind discriminated union from Full + Ref features |
+| `src/lexical-generation/internal/linguistics/common/dto/phrasem-surface.ts` | Language-independent PhrasemSurfaceSchema (Collocation with strength, stubs for Idiom/Proverb/etc.) |
+| `src/lexical-generation/internal/linguistics/de/lexem/noun/features.ts` | GermanGenusSchema ("Maskulinum"\|"Femininum"\|"Neutrum"), `articleFromGenus` mapping |
+| `src/lexical-generation/internal/linguistics/de/lexem/index.ts` | GermanLexemFull/RefFeaturesSchema — all POS in discriminated union (Noun/Verb/Adjective specialized, rest stubs) |
+| `src/lexical-generation/internal/linguistics/de/lexem/index.ts` | GermanLexemSurfaceSchema via `makeSurfaceSchema` |
+| `src/lexical-generation/internal/linguistics/de/morphem/index.ts` | GermanMorphemSurfaceSchema (Prefix with separability, stubs for rest) |
+| `src/lexical-generation/internal/linguistics/de/index.ts` | GermanLinguisticUnitSchema — top-level `kind` discriminated union |
 | **Linguistics — Sections & Inflection** | |
 | `src/commanders/textfresser/targets/de/sections/section-kind.ts` | DictSectionKind, TitleReprFor (canonical module) |
 | `src/commanders/textfresser/targets/de/sections/section-css-kind.ts` | DictSectionKind → CSS suffix mapping (canonical module) |
 | `src/commanders/textfresser/targets/de/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS+nounClass; `sectionsForProperNoun` (V8); SECTION_DISPLAY_WEIGHT + compareSectionsByWeight(): section display ordering |
 | `src/commanders/textfresser/domain/dict-entry-id/dict-entry-id.ts` | DictEntryId builder/parser (canonical module) |
-| `src/linguistics/german/inflection/noun.ts` | NounInflectionCell type, German case/number tags, display order |
-| ~~`src/linguistics/old-enums.ts`~~ | Deleted — was dead code (inflectional dimensions, theta roles, tones) |
+| `src/commanders/textfresser/domain/lexical-types.ts` | App-owned noun inflection/genus helpers derived from public lexical DTOs |
+| ~~`src/linguistics/`~~ | Deleted as a separate boundary; moved under `src/lexical-generation/internal/linguistics/` |
 | **Prompt-Smith** | |
 | `src/lexical-generation/internal/prompt-smith/index.ts` | PROMPT_FOR registry (generated) |
 | `src/lexical-generation/internal/prompt-smith/schemas/` | Zod I/O schemas: translate, word-translation, morphem, lemma, disambiguate, relation, inflection, noun-inflection |
@@ -1278,6 +1278,8 @@ To add support for a new target language (e.g., Japanese):
 ---
 
 ## 15. LinguisticUnit DTO — Source of Truth Type System
+
+> **Path note**: This section still shows some pre-migration example paths from the old standalone `src/linguistics/` layout. The current implementation lives under `src/lexical-generation/internal/linguistics/`, and public app-facing primitives come from `src/lexical-generation/`.
 
 > **Status**: V9+ — implemented (German + Noun/Verb/Adjective full features; remaining POS/unit kinds are stubs). Canonical DTO is `DictEntry.meta.entity` (`Entity<L,U,S,P>` with `features.lexical` + `features.inflectional`). `meta.linguisticUnit` is auxiliary typed surface metadata.
 
@@ -1339,28 +1341,24 @@ All three unit kinds follow the **same structural pattern**:
 
 Layer structure (implemented):
 ```
-src/linguistics/
-├── common/                 ← shared infrastructure
-│   ├── enums/core.ts           — LinguisticUnitKind, SurfaceKind
-│   ├── enums/.../pos.ts        — POS, PosTag (10 parts of speech)
-│   ├── enums/.../phrasem-kind  — PhrasemeKind (5 kinds)
-│   ├── enums/.../morpheme-kind — MorphemeKind (10 kinds)
-│   └── dto/
-│       ├── surface-factory.ts  — makeSurfaceSchema(Full, Ref) → surfaceKind discriminated union
-│       └── phrasem-surface.ts  — language-independent PhrasemSurface (Collocation with strength, etc.)
-│
-├── german/                 ← picks from common, builds concrete schemas
-│   ├── enums/
-│   │   └── genus.ts            — GermanGenusSchema + articleFromGenus mapping
-│   ├── features/
-│   │   ├── noun.ts             — GermanNounFull/RefFeaturesSchema (genus, nounClass)
-│   │   └── pos-features.ts     — GermanLexemFull/RefFeaturesSchema (all POS, Noun has real features)
-│   ├── schemas/
-│   │   ├── lexem-surface.ts    — GermanLexemSurfaceSchema (via makeSurfaceSchema)
-│   │   ├── morphem-surface.ts  — GermanMorphemSurfaceSchema (Prefix with separability, etc.)
-│   │   ├── linguistic-unit.ts  — GermanLinguisticUnitSchema (top-level discriminated union)
-│   │   └── index.ts            — barrel exports
-│   └── inflection/noun.ts      — NounInflectionCell, case/number tags
+src/lexical-generation/
+├── primitives.ts                    ← public language-independent lexical primitives for textfresser
+└── internal/
+    ├── contracts/de/                ← runtime DE lemma/generation contracts
+    └── linguistics/                 ← internal schema layer, not consumed directly by textfresser
+        ├── common/
+        │   ├── enums/core.ts            — LinguisticUnitKind, SurfaceKind
+        │   ├── enums/.../pos.ts         — POS, PosTag (10 parts of speech)
+        │   ├── enums/.../phrasem-kind   — PhrasemeKind (5 kinds)
+        │   ├── enums/.../morpheme-kind  — MorphemeKind
+        │   └── dto/
+        │       ├── surface-factory.ts   — makeSurfaceSchema(Full, Ref)
+        │       └── phrasem-surface.ts   — language-independent PhrasemSurface
+        └── de/
+            ├── lexem/                   — German lexem features + surface schema
+            ├── morphem/                 — German morpheme features + surface schema
+            ├── phrasem/                 — phrasem surface barrel
+            └── index.ts                 — GermanLinguisticUnitSchema barrel
 ```
 
 ### 15.5 Zod Schema Design

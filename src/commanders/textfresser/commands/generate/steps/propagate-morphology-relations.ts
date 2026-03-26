@@ -1,5 +1,5 @@
 import { ok, type Result } from "neverthrow";
-import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
+import { SurfaceKind } from "../../../../../lexical-generation";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
 import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";

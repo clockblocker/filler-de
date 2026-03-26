@@ -1,6 +1,6 @@
 # Linguistics & Prompt-Smith — Architecture
 
-> **Scope**: This document covers the **linguistics type system** (`src/linguistics/`) and the **prompt management layer** (`src/lexical-generation/internal/prompt-smith/`). These two modules form the foundational layer that both the Lemma and Generate commands depend on. For the command pipeline itself, see `textfresser-architecture.md`. For FS dispatch, see `vam-architecture.md`.
+> **Scope**: This document covers the internal linguistic schema layer under `src/lexical-generation/internal/linguistics/`, the public lexical primitives exported from `src/lexical-generation/`, and the prompt management layer under `src/lexical-generation/internal/prompt-smith/`. There is no longer a separate `src/linguistics/` module. For the command pipeline itself, see `textfresser-architecture.md`. For FS dispatch, see `vam-architecture.md`.
 >
 > **Compatibility Policy (Dev Mode, 2026-02-20)**:
 > - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
@@ -10,9 +10,9 @@
 
 ## 1. Purpose
 
-### Why a linguistics type system?
+### Why an internal linguistic schema layer?
 
-Every word the user encounters flows through a pipeline that starts with LLM classification and ends with a markdown dictionary entry in the vault. The linguistics module provides a **Zod-schema-based type system** that serves as the single source of truth for:
+Every word the user encounters flows through a pipeline that starts with LLM classification and ends with a markdown dictionary entry in the vault. The internal linguistic layer inside `lexical-generation` provides a **Zod-schema-based type system** that serves as the single source of truth for:
 
 - **LLM output validation** — agent responses are parsed against Zod schemas that reference linguistics enums
 - **Section formatters** — formatters consume typed DTOs (e.g., `NounInflectionCell`) rather than raw JSON
@@ -32,11 +32,11 @@ Prompt-Smith handles all of this with a codegen pipeline that produces a type-sa
 
 ---
 
-## 2. Linguistics — Type Hierarchy
+## 2. Linguistic Schemas — Type Hierarchy
 
 ### 2.1 Common (language-agnostic)
 
-The `src/linguistics/common/` subtree defines enums and schemas shared across all languages.
+The internal subtree `src/lexical-generation/internal/linguistics/common/` defines enums and schemas shared across all languages. Only the language-independent primitives that `textfresser` needs are re-exported publicly from `src/lexical-generation/`.
 
 #### Core discriminants
 
@@ -168,7 +168,7 @@ export const FOO_OPTIONS  = FooSchema.options;    // Readonly string array
 
 ### 2.2 German-specific (de/)
 
-**Location**: `src/linguistics/de/`
+**Location**: `src/lexical-generation/internal/linguistics/de/`
 
 The German-specific layer derives from common enums, adding features only where a POS or morpheme kind has language-specific properties.
 
@@ -665,7 +665,7 @@ type AgentOutput<K extends PromptKind> = z.infer<SchemasFor[K]["agentOutputSchem
 
 #### De linguistics contracts (now wired)
 
-Contracts in `src/linguistics/de/lemma/` are the runtime source for lemma classification and internal enrichment/route shapes.
+Contracts in `src/lexical-generation/internal/contracts/de/` are the runtime source for lemma classification and internal enrichment/route shapes.
 
 - `DeLemmaResultSchema` narrows lemma classification to:
   - `linguisticUnit: "Lexem" | "Phrasem"` (Morphem excluded in this phase)
@@ -816,7 +816,7 @@ Type: `AvaliablePromptDict = Record<TargetLanguage, Record<KnownLanguage, Record
 
 **Why prompt-smith uses zod/v3**: The `SchemasFor` schemas are passed to `zodResponseFormat()` (OpenAI SDK) which requires specific Zod APIs. Prompt-smith relies on v3 semantics like `z.record(valueSchema)` (single-arg for value) and `.passthrough()` (not deprecated in v3). All schema files import `{ z } from "zod/v3"`.
 
-**Safe imports from linguistics**:
+**Safe imports from lexical-generation**:
 - `PARTS_OF_SPEECH_STR` — plain `readonly string[]`, no Zod runtime involved
 - `LinguisticUnitKindSchema`, `SurfaceKindSchema` — defined with v3 in `core.ts`
 - `MorphemeKindSchema`, `GermanMorphemeKindSchema`, `SeparabilitySchema` — defined with v3
@@ -953,6 +953,6 @@ To add a new `PromptKind` (e.g., `"Etymology"`):
 
 ### old-enums.ts — DELETED
 
-`src/linguistics/old-enums.ts` has been deleted. It contained legacy enum definitions (discourse formula roles, collocation types, stylistic tones, scalar degrees, theta roles, noun classes, verb moods, comparison degrees) that were never imported by active code. The only consumers were files in `src/types/old/`, which were also deleted as dead code.
+The old standalone `src/linguistics/` tree has been dissolved. Its former language-specific contents now live under `src/lexical-generation/internal/linguistics/`, and its externally consumed language-independent primitives are re-exported from `src/lexical-generation/`.
 
 Relevant enums that are actually used live in the structured `common/enums/` and `de/` modules.

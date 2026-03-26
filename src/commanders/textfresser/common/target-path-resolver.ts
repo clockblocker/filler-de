@@ -6,8 +6,10 @@
  * generates a RenameMdFile healing action to move the file.
  */
 
-import type { LinguisticUnitKind } from "../../../linguistics/common/enums/core";
-import { SurfaceKind } from "../../../linguistics/common/enums/core";
+import {
+	type LinguisticUnitKind,
+	SurfaceKind,
+} from "../../../lexical-generation";
 import type { VaultAction } from "../../../managers/obsidian/vault-action-manager";
 import {
 	SplitPathKind,

@@ -21,7 +21,7 @@ The end state is:
 - `lexical-generation` owns lemma generation, sense disambiguation, lexical info generation, and lexical metadata semantics
 - a larger internal lexical monolith is acceptable for now if it is hidden from `textfresser`
 - `src/linguistics/` is transitional and should be dissolved rather than preserved as a parallel lexical boundary
-- target-language-specific logic currently living under `src/linguistics/` should move into `lexical-generation`
+- target-language-specific logic currently living under `src/linguistics/` should move into `src/lexical-generation/internal/linguistics/`
 - only language-independent lexical enums and types should remain available for `textfresser`
 - those language-independent lexical primitives should be exported from the new boundary rather than imported from `src/linguistics/*`
 
@@ -237,5 +237,5 @@ The migration is done when:
 - disambiguation consumes stored `LexicalMeta[]`
 - lexical-generation-related `linguistics/*` imports are gone from `textfresser`
 - the generator public surface is small enough to treat as a workspace boundary
-- target-language-specific code from `src/linguistics/` has been moved under `lexical-generation`
+- target-language-specific code from `src/linguistics/` has been moved under `src/lexical-generation/internal/linguistics/`
 - only language-independent lexical primitives remain public to `textfresser`

@@ -7,11 +7,11 @@ import {
 } from "./internal/prompt-smith";
 import {
 	PromptKind as PromptKindEnum,
-	type PromptKind,
+	type PromptKind as InternalPromptKind,
 } from "./internal/prompt-smith/codegen/consts";
 
-export { PromptKindEnum as PromptKind };
-export type { PromptKind };
+export const PromptKind = PromptKindEnum;
+export type PromptKind = InternalPromptKind;
 
 export type PromptInput<K extends PromptKind> = UserInput<K>;
 export type PromptOutput<K extends PromptKind> = AgentOutput<K>;

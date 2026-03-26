@@ -8,13 +8,8 @@ export {
 	createLexicalMeta,
 	createMetaTagFromResolvedLemma,
 } from "./lexical-meta";
-export {
-	getLexicalPromptOutputSchema,
-	getLexicalPromptSystemPrompt,
-	PromptKind,
-	type PromptInput,
-	type PromptOutput,
-} from "./prompt-api";
+export * from "./primitives";
+export * from "./prompt-api";
 export type {
 	CreateLexicalGenerationModuleParams,
 	GenerateLexicalInfoOptions,

@@ -1,4 +1,4 @@
-import { SurfaceKind } from "../../../linguistics/common/enums/core";
+import { SurfaceKind } from "../../../lexical-generation";
 import { cssSuffixFor } from "../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
