@@ -157,9 +157,15 @@ export type LexicalInfoField<T> =
 	| { status: "not_applicable" }
 	| { status: "error"; error: LexicalGenerationError };
 
+export type LexicalNounIdentity = {
+	genus?: LexicalGenus;
+	nounClass?: LexicalNounClass;
+};
+
 export type LexicalCore = {
 	emojiDescription: string[];
 	ipa: string;
+	nounIdentity?: LexicalNounIdentity;
 	senseGloss?: string;
 };
 

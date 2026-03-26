@@ -1,4 +1,7 @@
-import type { LexicalInfo } from "../../../../../lexical-generation";
+import type {
+	LexicalInfo,
+	LexicalNounIdentity,
+} from "../../../../../lexical-generation";
 import type {
 	DeEntity,
 	GermanLinguisticUnit,
@@ -7,6 +10,52 @@ import { logger } from "../../../../../utils/logger";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { LemmaResult } from "../../lemma/types";
 import { getVerbLexicalFeatures } from "./verb-features";
+
+function resolveCoreSignal(lexicalInfo: LexicalInfo): {
+	emojiDescription: string[];
+	ipa: string;
+	senseGloss?: string;
+} {
+	if (lexicalInfo.core.status === "ready") {
+		return {
+			emojiDescription: lexicalInfo.core.value.emojiDescription,
+			ipa: lexicalInfo.core.value.ipa,
+			...(typeof lexicalInfo.core.value.senseGloss === "string" &&
+			lexicalInfo.core.value.senseGloss.length > 0
+				? { senseGloss: lexicalInfo.core.value.senseGloss }
+				: {}),
+		};
+	}
+
+	return {
+		emojiDescription: ["❓"],
+		ipa: "unknown",
+	};
+}
+
+function resolveNounIdentity(
+	lexicalInfo: Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>,
+): LexicalNounIdentity | undefined {
+	if (lexicalInfo.lemma.posLikeKind !== "Noun") {
+		return undefined;
+	}
+
+	if (
+		lexicalInfo.features.status === "ready" &&
+		lexicalInfo.features.value.kind === "noun"
+	) {
+		return {
+			genus: lexicalInfo.features.value.genus,
+			nounClass: lexicalInfo.features.value.nounClass,
+		};
+	}
+
+	if (lexicalInfo.core.status === "ready") {
+		return lexicalInfo.core.value.nounIdentity;
+	}
+
+	return undefined;
+}
 
 function buildLemmaRefId(entryId: string): string {
 	const parsed = dictEntryIdHelper.parse(entryId);
@@ -35,18 +84,17 @@ function buildLexemLinguisticUnit(
 ): GermanLinguisticUnit | null {
 	if (lemmaResult.surfaceKind === "Lemma") {
 		if (lemmaResult.posLikeKind === "Noun") {
+			const nounIdentity = resolveNounIdentity(lexicalInfo);
 			if (
-				lexicalInfo.features.status === "ready" &&
-				lexicalInfo.features.value.kind === "noun" &&
-				lexicalInfo.features.value.genus &&
-				lexicalInfo.features.value.nounClass
+				nounIdentity?.genus &&
+				nounIdentity.nounClass
 			) {
 				return {
 					kind: "Lexem",
 					surface: {
 						features: {
-							genus: lexicalInfo.features.value.genus,
-							nounClass: lexicalInfo.features.value.nounClass,
+							genus: nounIdentity.genus,
+							nounClass: nounIdentity.nounClass,
 							pos: lemmaResult.posLikeKind,
 						},
 						lemma: lemmaResult.lemma,
@@ -198,43 +246,32 @@ function buildLexemEntity(
 		}
 	};
 
+	const coreSignal = resolveCoreSignal(lexicalInfo);
 	const commonFields = {
-		emojiDescription:
-			lemmaResult.precomputedEmojiDescription ??
-			(lexicalInfo.core.status === "ready"
-				? lexicalInfo.core.value.emojiDescription
-				: ["❓"]),
-		ipa:
-			lexicalInfo.core.status === "ready"
-				? lexicalInfo.core.value.ipa
-				: "unknown",
+		emojiDescription: coreSignal.emojiDescription,
+		ipa: coreSignal.ipa,
 		language: "German" as const,
 		lemma: lemmaResult.lemma,
 		linguisticUnit: "Lexem" as const,
 		posLikeKind: lemmaResult.posLikeKind,
-		...(lexicalInfo.core.status === "ready" &&
-		typeof lexicalInfo.core.value.senseGloss === "string" &&
-		lexicalInfo.core.value.senseGloss.length > 0
-			? { senseGloss: lexicalInfo.core.value.senseGloss }
-			: {}),
+		...(coreSignal.senseGloss ? { senseGloss: coreSignal.senseGloss } : {}),
 		surfaceKind: lemmaResult.surfaceKind,
 	};
 
 	if (lemmaResult.surfaceKind === "Lemma") {
+		const nounIdentity = resolveNounIdentity(lexicalInfo);
 		if (
 			lemmaResult.posLikeKind === "Noun" &&
-			lexicalInfo.features.status === "ready" &&
-			lexicalInfo.features.value.kind === "noun" &&
-			lexicalInfo.features.value.genus &&
-			lexicalInfo.features.value.nounClass
+			nounIdentity?.genus &&
+			nounIdentity.nounClass
 		) {
 			return {
 				...commonFields,
 				features: {
 					inflectional: {},
 					lexical: {
-						genus: lexicalInfo.features.value.genus,
-						nounClass: lexicalInfo.features.value.nounClass,
+						genus: nounIdentity.genus,
+						nounClass: nounIdentity.nounClass,
 						pos: "Noun",
 					},
 				},
@@ -300,25 +337,15 @@ function buildPhrasemEntity(
 	lemmaResult: Extract<LemmaResult, { linguisticUnit: "Phrasem" }>,
 	lexicalInfo: Extract<LexicalInfo, { lemma: { linguisticUnit: "Phrasem" } }>,
 ): DeEntity<"Phrasem"> {
+	const coreSignal = resolveCoreSignal(lexicalInfo);
 	const commonFields = {
-		emojiDescription:
-			lemmaResult.precomputedEmojiDescription ??
-			(lexicalInfo.core.status === "ready"
-				? lexicalInfo.core.value.emojiDescription
-				: ["❓"]),
-		ipa:
-			lexicalInfo.core.status === "ready"
-				? lexicalInfo.core.value.ipa
-				: "unknown",
+		emojiDescription: coreSignal.emojiDescription,
+		ipa: coreSignal.ipa,
 		language: "German" as const,
 		lemma: lemmaResult.lemma,
 		linguisticUnit: "Phrasem" as const,
 		posLikeKind: lemmaResult.posLikeKind,
-		...(lexicalInfo.core.status === "ready" &&
-		typeof lexicalInfo.core.value.senseGloss === "string" &&
-		lexicalInfo.core.value.senseGloss.length > 0
-			? { senseGloss: lexicalInfo.core.value.senseGloss }
-			: {}),
+		...(coreSignal.senseGloss ? { senseGloss: coreSignal.senseGloss } : {}),
 		surfaceKind: lemmaResult.surfaceKind,
 	};
 

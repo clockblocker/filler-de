@@ -84,6 +84,10 @@ describe("lexical-generation lexical info", () => {
 				value: {
 					emojiDescription: ["🏦"],
 					ipa: "baŋk",
+					nounIdentity: {
+						genus: "Femininum",
+						nounClass: "Common",
+					},
 					senseGloss: "financial institution",
 				},
 			},
@@ -229,6 +233,78 @@ describe("lexical-generation lexical info", () => {
 				kind: LexicalGenerationFailureKind.FetchFailed,
 			},
 			status: "error",
+		});
+	});
+
+	it("preserves noun identity from core when FeaturesNoun fails", async () => {
+		const module = createLexicalGenerationModule({
+			fetchStructured: async <T>({
+				requestLabel,
+			}: Parameters<StructuredFetchFn>[0]) => {
+				switch (requestLabel) {
+					case "NounEnrichment":
+						return okValue<T>({
+							emojiDescription: ["🏛️"],
+							genus: "Neutrum",
+							ipa: "bɛʁˈliːn",
+							nounClass: "Proper",
+						});
+					case "FeaturesNoun":
+						return errValue<T>(
+							lexicalGenerationError(
+								LexicalGenerationFailureKind.FetchFailed,
+								"features failed",
+							),
+						);
+					case "NounInflection":
+						return okValue<T>({
+							cells: [],
+							genus: "Neutrum",
+						});
+					case "Morphem":
+						return okValue<T>({
+							compounded_from: null,
+							derived_from: null,
+							morphemes: [],
+						});
+					case "Relation":
+						return okValue<T>({ relations: [] });
+					default:
+						throw new Error(`unexpected requestLabel ${requestLabel}`);
+				}
+			},
+			knownLang: "English",
+			settings: { generateInflections: true },
+			targetLang: "German",
+		})._unsafeUnwrap();
+
+		const result = await module.generateLexicalInfo(
+			{
+				lemma: "Berlin",
+				linguisticUnit: "Lexem",
+				posLikeKind: "Noun",
+				surfaceKind: "Lemma",
+			},
+			"Ich bin in Berlin",
+		);
+
+		expect(result.isOk()).toBe(true);
+		expect(result._unsafeUnwrap()).toMatchObject({
+			core: {
+				status: "ready",
+				value: {
+					nounIdentity: {
+						genus: "Neutrum",
+						nounClass: "Proper",
+					},
+				},
+			},
+			features: {
+				error: {
+					kind: LexicalGenerationFailureKind.FetchFailed,
+				},
+				status: "error",
+			},
 		});
 	});
 

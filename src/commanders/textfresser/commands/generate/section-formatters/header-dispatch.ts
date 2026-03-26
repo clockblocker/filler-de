@@ -42,6 +42,10 @@ function resolveNounGenus(lexicalInfo: LexicalInfo): LexicalGenus | undefined {
 		return lexicalInfo.inflections.value.genus;
 	}
 
+	if (lexicalInfo.core.status === "ready") {
+		return lexicalInfo.core.value.nounIdentity?.genus;
+	}
+
 	return undefined;
 }
 

@@ -111,6 +111,35 @@ describe("section-generation-context", () => {
 		);
 	});
 
+	it("derives proper-noun applicability from core noun identity when noun features fail", () => {
+		const query = buildSectionQuery(
+			makeNounLexicalInfo({
+				core: {
+					status: "ready",
+					value: {
+						emojiDescription: ["🏙️"],
+						ipa: "bɛʁˈliːn",
+						nounIdentity: {
+							genus: "Neutrum",
+							nounClass: "Proper",
+						},
+					},
+				},
+				features: {
+					status: "error",
+					error: {
+						kind: "FetchFailed",
+						message: "features failed",
+					} as never,
+				},
+			}),
+		);
+
+		expect(getSectionsFor(query)).toEqual(
+			getSectionsFor({ nounClass: "Proper", pos: "Noun", unit: "Lexem" }),
+		);
+	});
+
 	it("resolves noun genus from inflections when lexical noun features omit it", () => {
 		const genus = resolveNounInflectionGenus(
 			makeNounLexicalInfo({
@@ -130,6 +159,33 @@ describe("section-generation-context", () => {
 						genus: "Neutrum",
 						kind: "noun",
 					},
+				},
+			}),
+		);
+
+		expect(genus).toBe("Neutrum");
+	});
+
+	it("resolves noun genus from core noun identity when noun features are unavailable", () => {
+		const genus = resolveNounInflectionGenus(
+			makeNounLexicalInfo({
+				core: {
+					status: "ready",
+					value: {
+						emojiDescription: ["🏙️"],
+						ipa: "bɛʁˈliːn",
+						nounIdentity: {
+							genus: "Neutrum",
+							nounClass: "Proper",
+						},
+					},
+				},
+				features: {
+					status: "error",
+					error: {
+						kind: "FetchFailed",
+						message: "features failed",
+					} as never,
 				},
 			}),
 		);

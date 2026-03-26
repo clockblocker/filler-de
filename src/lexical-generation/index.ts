@@ -26,6 +26,7 @@ export type {
 	LexicalInfoGenerator,
 	LexicalMorpheme,
 	LexicalMorphemeKind,
+	LexicalNounIdentity,
 	LexicalNounClass,
 	LexicalNumber,
 	LexicalPhrasemeKind,

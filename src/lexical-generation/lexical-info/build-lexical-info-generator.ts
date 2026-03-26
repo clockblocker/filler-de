@@ -142,6 +142,18 @@ function mapCoreOutputToCore(
 	return {
 		emojiDescription: output.emojiDescription,
 		ipa: output.ipa,
+		...("genus" in output || "nounClass" in output
+			? {
+					nounIdentity: {
+						...("genus" in output && output.genus != null
+							? { genus: output.genus }
+							: {}),
+						...("nounClass" in output && output.nounClass != null
+							? { nounClass: output.nounClass }
+							: {}),
+					},
+				}
+			: {}),
 		...(typeof output.senseGloss === "string" &&
 		output.senseGloss.length > 0
 			? { senseGloss: output.senseGloss }

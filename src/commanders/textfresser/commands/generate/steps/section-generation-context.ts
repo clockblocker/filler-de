@@ -1,4 +1,8 @@
-import type { LexicalInfo, LexicalGenus } from "../../../../../lexical-generation";
+import type {
+	LexicalGenus,
+	LexicalInfo,
+	LexicalNounIdentity,
+} from "../../../../../lexical-generation";
 import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 
 /** V3 sections — the ones generated in the current pipeline. */
@@ -12,17 +16,39 @@ export const V3_SECTIONS = new Set<DictSectionKind>([
 	DictSectionKind.Tags,
 ]);
 
+function resolveNounIdentity(
+	lexicalInfo: Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>,
+): LexicalNounIdentity | undefined {
+	if (lexicalInfo.lemma.posLikeKind !== "Noun") {
+		return undefined;
+	}
+
+	if (
+		lexicalInfo.features.status === "ready" &&
+		lexicalInfo.features.value.kind === "noun"
+	) {
+		return {
+			genus: lexicalInfo.features.value.genus,
+			nounClass: lexicalInfo.features.value.nounClass,
+		};
+	}
+
+	if (lexicalInfo.core.status === "ready") {
+		return lexicalInfo.core.value.nounIdentity;
+	}
+
+	return undefined;
+}
+
 export function buildSectionQuery(lexicalInfo: LexicalInfo) {
 	if (lexicalInfo.lemma.linguisticUnit === "Lexem") {
-		const nounClass =
-			lexicalInfo.lemma.posLikeKind === "Noun" &&
-			lexicalInfo.features.status === "ready" &&
-			lexicalInfo.features.value.kind === "noun"
-				? lexicalInfo.features.value.nounClass
-				: undefined;
-
 		return {
-			nounClass,
+			nounClass: resolveNounIdentity(
+				lexicalInfo as Extract<
+					LexicalInfo,
+					{ lemma: { linguisticUnit: "Lexem" } }
+				>,
+			)?.nounClass,
 			pos: lexicalInfo.lemma.posLikeKind,
 			unit: "Lexem" as const,
 		};
@@ -57,5 +83,10 @@ export function resolveNounInflectionGenus(
 		return lexicalInfo.features.value.genus;
 	}
 
-	return undefined;
+	return resolveNounIdentity(
+		lexicalInfo as Extract<
+			LexicalInfo,
+			{ lemma: { linguisticUnit: "Lexem" } }
+		>,
+	)?.genus;
 }

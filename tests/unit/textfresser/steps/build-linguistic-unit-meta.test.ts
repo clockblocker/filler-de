@@ -165,6 +165,46 @@ describe("buildLinguisticUnitMeta", () => {
 		});
 	});
 
+	it("builds noun lemma metadata from core noun identity when noun features fail", () => {
+		const result = buildLinguisticUnitMeta(
+			"LX-LM-NOUN-1",
+			makeLexemLemmaResult(),
+			makeLexemLexicalInfo({
+				core: {
+					status: "ready",
+					value: {
+						emojiDescription: ["🏠"],
+						ipa: "haʊ̯s",
+						nounIdentity: {
+							genus: "Neutrum",
+							nounClass: "Common",
+						},
+					},
+				},
+				features: {
+					error: lexicalGenerationError(
+						LexicalGenerationFailureKind.FetchFailed,
+						"features failed",
+					),
+					status: "error",
+				},
+			}),
+		);
+
+		expect(result).toEqual({
+			kind: "Lexem",
+			surface: {
+				features: {
+					genus: "Neutrum",
+					nounClass: "Common",
+					pos: "Noun",
+				},
+				lemma: "Haus",
+				surfaceKind: "Lemma",
+			},
+		});
+	});
+
 	it("builds Lexem inflected metadata with ref features", () => {
 		const result = buildLinguisticUnitMeta(
 			"LX-IN-NOUN-1",
@@ -378,7 +418,7 @@ describe("buildEntityMeta", () => {
 		});
 	});
 
-	it("prefers precomputedEmojiDescription for entity signal", () => {
+	it("uses lexical core emoji for entity signal even when lemma has precomputed emoji", () => {
 		const result = buildEntityMeta(
 			makeLexemLemmaResult({
 				precomputedEmojiDescription: ["🪑", "🌳"],
@@ -386,7 +426,7 @@ describe("buildEntityMeta", () => {
 			makeLexemLexicalInfo(),
 		);
 
-		expect(result?.emojiDescription).toEqual(["🪑", "🌳"]);
+		expect(result?.emojiDescription).toEqual(["🏠"]);
 	});
 
 	it("falls back to unknown core metadata when lexical core is unavailable", () => {
@@ -394,11 +434,11 @@ describe("buildEntityMeta", () => {
 			makeLexemLemmaResult(),
 			makeLexemLexicalInfo({
 				core: {
-					status: "error",
 					error: lexicalGenerationError(
 						LexicalGenerationFailureKind.FetchFailed,
 						"x",
 					),
+					status: "error",
 				},
 			}),
 		);

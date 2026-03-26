@@ -3,6 +3,7 @@ import { dispatchHeaderFormatter } from "../../../../src/commanders/textfresser/
 import {
 	LexicalGenerationFailureKind,
 	type LexicalInfo,
+	lexicalGenerationError,
 } from "../../../../src/lexical-generation";
 
 function makeVerbLexicalInfo(
@@ -164,6 +165,33 @@ describe("dispatchHeaderFormatter", () => {
 						genus: "Maskulinum",
 						kind: "noun",
 					},
+				},
+			}),
+			"German",
+		);
+		expect(result).toContain("der [[Test]]");
+	});
+
+	it("uses core noun genus when noun features are unavailable", () => {
+		const result = dispatchHeaderFormatter(
+			makeNounLexicalInfo({
+				core: {
+					status: "ready",
+					value: {
+						emojiDescription: ["🔧"],
+						ipa: "tɛst",
+						nounIdentity: {
+							genus: "Maskulinum",
+							nounClass: "Common",
+						},
+					},
+				},
+				features: {
+					status: "error",
+					error: lexicalGenerationError(
+						LexicalGenerationFailureKind.FetchFailed,
+						"features failed",
+					),
 				},
 			}),
 			"German",
