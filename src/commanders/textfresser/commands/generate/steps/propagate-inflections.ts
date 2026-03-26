@@ -1,6 +1,5 @@
 import { ok, type Result } from "neverthrow";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
-import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import { logger } from "../../../../../utils/logger";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
@@ -26,12 +25,13 @@ import {
 	mergeLocalizedInflectionTags,
 } from "../section-formatters/common/inflection-propagation-helper";
 import type { GenerateSectionsResult } from "./generate-sections";
+import type { TextfresserNounInflectionCell } from "../../../domain/lexical-types";
 
 /** Group cells by form word. */
 function groupByForm(
-	cells: NounInflectionCell[],
-): Map<string, NounInflectionCell[]> {
-	const map = new Map<string, NounInflectionCell[]>();
+	cells: TextfresserNounInflectionCell[],
+): Map<string, TextfresserNounInflectionCell[]> {
+	const map = new Map<string, TextfresserNounInflectionCell[]>();
 	for (const cell of cells) {
 		const group = map.get(cell.form) ?? [];
 		group.push(cell);

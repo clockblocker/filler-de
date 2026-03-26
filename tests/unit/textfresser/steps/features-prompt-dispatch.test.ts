@@ -3,7 +3,7 @@ import {
 	buildFeatureTagPath,
 	getFeaturesPromptKindForPos,
 } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
-import { PromptKind } from "../../../../src/lexical-generation/internal/prompt-smith/codegen/consts";
+import { PromptKind } from "../../../../src/lexical-generation";
 
 describe("getFeaturesPromptKindForPos", () => {
 	it("maps every Lexem POS to a dedicated Features prompt kind", () => {

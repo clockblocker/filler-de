@@ -1,13 +1,13 @@
-import type { RelationSubKind } from "../../../../../lexical-generation/internal/prompt-smith/schemas/relation";
 import type {
-	GermanGenus,
-	NounInflectionCell,
-} from "../../../../../linguistics/de/lexem/noun";
+	LexicalGenus,
+	LexicalRelationKind,
+} from "../../../../../lexical-generation";
 import type { TargetLanguage } from "../../../../../types";
+import type { TextfresserNounInflectionCell } from "../../../domain/lexical-types";
 import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
 
 export type ParsedRelation = {
-	kind: RelationSubKind;
+	kind: LexicalRelationKind;
 	words: string[];
 };
 
@@ -26,10 +26,10 @@ export type MorphologyPayload = {
 
 export type GeneratedPropagationArtifacts = {
 	/** Structured propagation inputs derived from LexicalInfo render helpers. */
-	inflectionCells: NounInflectionCell[];
+	inflectionCells: TextfresserNounInflectionCell[];
 	morphology?: MorphologyPayload;
 	morphemes: MorphemeItem[];
-	nounInflectionGenus?: GermanGenus;
+	nounInflectionGenus?: LexicalGenus;
 	relations: ParsedRelation[];
 	sourceTranslation?: string;
 };

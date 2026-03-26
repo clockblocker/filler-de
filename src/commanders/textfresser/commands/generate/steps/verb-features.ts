@@ -2,7 +2,7 @@ import type {
 	LexemFeatures,
 	LexicalInfo,
 } from "../../../../../lexical-generation";
-import { buildGermanVerbEntryIdentity } from "../../../../../linguistics/de";
+import { buildVerbEntryIdentity } from "../../../domain/lexical-types";
 import { normalizeTagPart } from "./tag-normalization";
 
 export type VerbLexicalFeatures = Extract<LexemFeatures, { kind: "verb" }>;
@@ -40,7 +40,7 @@ export function buildVerbFeatureTags(output: VerbLexicalFeatures): string[] {
 export function buildVerbEntryIdentityFromFeatures(
 	output: Pick<VerbLexicalFeatures, "conjugation" | "valency">,
 ): string {
-	return buildGermanVerbEntryIdentity({
+	return buildVerbEntryIdentity({
 		conjugation: output.conjugation,
 		valency: output.valency,
 	});

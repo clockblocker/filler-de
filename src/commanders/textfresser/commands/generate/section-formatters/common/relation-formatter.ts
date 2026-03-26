@@ -1,8 +1,10 @@
-import type { AgentOutput } from "../../../../../../lexical-generation/internal/prompt-smith";
-import type { RelationSubKind } from "../../../../../../lexical-generation/internal/prompt-smith/schemas/relation";
+import type { LexicalRelations } from "../../../../../../lexical-generation";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 
-const SYMBOL_FOR_KIND: Record<RelationSubKind, string> = {
+const SYMBOL_FOR_KIND: Record<
+	LexicalRelations["relations"][number]["kind"],
+	string
+> = {
 	Antonym: "≠",
 	Holonym: "∋",
 	Hypernym: "⊃",
@@ -16,7 +18,7 @@ const SYMBOL_FOR_KIND: Record<RelationSubKind, string> = {
  * Format LLM relation output into markdown lines.
  * Each line: `{symbol} [[word1]], [[word2]]`
  */
-export function formatRelationSection(output: AgentOutput<"Relation">): string {
+export function formatRelationSection(output: LexicalRelations): string {
 	return output.relations
 		.map((r) => {
 			const symbol = SYMBOL_FOR_KIND[r.kind];

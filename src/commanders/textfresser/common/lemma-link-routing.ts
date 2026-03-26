@@ -1,6 +1,6 @@
 import type { SurfaceKind } from "../../../linguistics/common/enums/core";
 import { LANGUAGE_ISO_CODE } from "../../../linguistics/common/enums/core";
-import type { DeLexemPos } from "../../../linguistics/de";
+import type { LexicalPos } from "../../../lexical-generation";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
@@ -13,7 +13,7 @@ import {
 } from "./sharded-path";
 import type { PathLookupFn } from "./target-path-resolver";
 
-const CLOSED_SET_POS: ReadonlySet<DeLexemPos> = new Set<DeLexemPos>([
+const CLOSED_SET_POS: ReadonlySet<LexicalPos> = new Set<LexicalPos>([
 	"Pronoun",
 	"Article",
 	"Preposition",
@@ -47,7 +47,7 @@ type PrePromptTargetParams = {
 type FinalTargetParams = {
 	lemma: string;
 	linguisticUnit: "Lexem" | "Phrasem";
-	posLikeKind: DeLexemPos | null;
+	posLikeKind: LexicalPos | null;
 	surfaceKind: SurfaceKind;
 	targetLanguage: TargetLanguage;
 	findByBasename: (basename: string) => SplitPathToMdFile[];
@@ -57,12 +57,12 @@ type FinalTargetParams = {
 type PolicyDestinationParams = {
 	lemma: string;
 	linguisticUnit: "Lexem" | "Phrasem";
-	posLikeKind: DeLexemPos | null;
+	posLikeKind: LexicalPos | null;
 	surfaceKind: SurfaceKind;
 	targetLanguage: TargetLanguage;
 };
 
-export function isClosedSetPos(pos: DeLexemPos): boolean {
+export function isClosedSetPos(pos: LexicalPos): boolean {
 	return CLOSED_SET_POS.has(pos);
 }
 

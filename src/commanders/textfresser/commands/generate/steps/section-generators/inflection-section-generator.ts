@@ -1,6 +1,6 @@
 import type { LexicalInfo } from "../../../../../../lexical-generation";
-import type { NounInflectionCell } from "../../../../../../linguistics/de/lexem/noun";
 import type { EntrySection } from "../../../../domain/dict-note/types";
+import type { TextfresserNounInflectionCell } from "../../../../domain/lexical-types";
 import { cssSuffixFor } from "../../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
@@ -15,7 +15,7 @@ export type InflectionSectionContext = {
 };
 
 export type InflectionSectionResult = {
-	inflectionCells: NounInflectionCell[];
+	inflectionCells: TextfresserNounInflectionCell[];
 	section: EntrySection | null;
 };
 
@@ -36,7 +36,7 @@ export function generateInflectionSection(
 	ctx: InflectionSectionContext,
 ): InflectionSectionResult {
 	let content: string | undefined;
-	let inflectionCells: NounInflectionCell[] = [];
+	let inflectionCells: TextfresserNounInflectionCell[] = [];
 
 	if (
 		ctx.lexicalInfo.lemma.linguisticUnit === "Lexem" &&

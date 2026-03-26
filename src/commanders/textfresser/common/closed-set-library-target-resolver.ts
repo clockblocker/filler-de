@@ -1,10 +1,10 @@
 import { LANGUAGE_ISO_CODE } from "../../../linguistics/common/enums/core";
-import type { DeLexemPos } from "../../../linguistics/de";
+import type { LexicalPos } from "../../../lexical-generation";
 import type { SplitPathToMdFile } from "../../../managers/obsidian/vault-action-manager/types/split-path";
 import { stringifySplitPath } from "../../../stateless-helpers/split-path-comparison";
 import type { TargetLanguage } from "../../../types";
 
-const POS_SUFFIX_BY_POS: Partial<Record<DeLexemPos, readonly string[]>> = {
+const POS_SUFFIX_BY_POS: Partial<Record<LexicalPos, readonly string[]>> = {
 	Article: ["artikel", "article"],
 	Conjunction: ["konjunktion", "conjunction"],
 	// TODO: Confirm canonical Librarian suffix for InteractionalUnit and trim aliases.
@@ -21,7 +21,7 @@ const POS_SUFFIX_BY_POS: Partial<Record<DeLexemPos, readonly string[]>> = {
 
 type ResolveClosedSetLibraryTargetParams = {
 	candidates: ReadonlyArray<SplitPathToMdFile>;
-	posLikeKind: DeLexemPos;
+	posLikeKind: LexicalPos;
 	targetLanguage: TargetLanguage;
 };
 

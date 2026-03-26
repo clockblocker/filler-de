@@ -5,11 +5,11 @@ import {
 	isNounInflectionPropagationHeaderForLemma,
 	mergeLocalizedInflectionTags,
 } from "../../../../../src/commanders/textfresser/commands/generate/section-formatters/common/inflection-propagation-helper";
-import type { NounInflectionCell } from "../../../../../src/linguistics/de/lexem/noun";
+import type { TextfresserNounInflectionCell } from "../../../../../src/commanders/textfresser/domain/lexical-types";
 
 describe("inflectionPropagationHelper", () => {
 	it("builds deterministic deduped tag order from cells", () => {
-		const cells: NounInflectionCell[] = [
+		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
 				case: "Accusative",

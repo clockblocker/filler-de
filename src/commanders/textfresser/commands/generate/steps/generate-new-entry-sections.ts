@@ -1,12 +1,12 @@
 import type { LexicalInfo } from "../../../../../lexical-generation";
-import { PromptKind } from "../../../../../lexical-generation/internal/prompt-smith/codegen/consts";
-import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
+import { PromptKind } from "../../../../../lexical-generation";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
 import { logger } from "../../../../../utils/logger";
 import { shouldPropagateLinksForSection } from "../../../common/linguistic-wikilink-context";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { EntrySection } from "../../../domain/dict-note/types";
+import type { TextfresserNounInflectionCell } from "../../../domain/lexical-types";
 import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
 import { getSectionsFor } from "../../../targets/de/sections/section-config";
 import { DictSectionKind } from "../../../targets/de/sections/section-kind";
@@ -219,7 +219,7 @@ export async function generateNewEntrySections(
 
 	const sections: EntrySection[] = [];
 	let relations: ParsedRelation[] = [];
-	let inflectionCells: NounInflectionCell[] = [];
+	let inflectionCells: TextfresserNounInflectionCell[] = [];
 	let morphemes: MorphemeItem[] = [];
 	let morphology: MorphologyPayload | undefined;
 	if (morphemSectionResult) {

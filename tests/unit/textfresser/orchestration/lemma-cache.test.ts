@@ -46,9 +46,12 @@ function makeLemmaResult(): LemmaResult {
 
 function makeProperNounLemmaResult(): LemmaResult {
 	return {
-		...makeLemmaResult(),
+		attestation: makeAttestation(),
+		disambiguationResult: { matchedIndex: 1 },
 		lemma: "Berlin",
+		linguisticUnit: "Lexem",
 		posLikeKind: "Noun",
+		surfaceKind: "Lemma",
 	};
 }
 
@@ -76,6 +79,7 @@ function makeState(cacheAtMs: number): TextfresserState {
 		latestLemmaResult: null,
 		latestLemmaTargetOwnedByInvocation: false,
 		lookupInLibrary: () => [],
+		parseLibraryBasename: () => null,
 		pendingGenerate: null,
 		promptRunner: {} as TextfresserState["promptRunner"],
 		vam: {} as TextfresserState["vam"],
@@ -108,6 +112,7 @@ function makeStateWithLemmaResult(
 		latestLemmaResult: null,
 		latestLemmaTargetOwnedByInvocation: false,
 		lookupInLibrary: () => [],
+		parseLibraryBasename: () => null,
 		pendingGenerate: null,
 		promptRunner: {} as TextfresserState["promptRunner"],
 		vam: {} as TextfresserState["vam"],

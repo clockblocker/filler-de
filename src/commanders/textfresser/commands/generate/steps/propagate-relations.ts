@@ -1,5 +1,4 @@
 import { ok, type Result } from "neverthrow";
-import type { RelationSubKind } from "../../../../../lexical-generation/internal/prompt-smith/schemas/relation";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
@@ -8,6 +7,7 @@ import {
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
 import { buildSectionMarker } from "../../../domain/dict-note/internal/constants";
+import type { TextfresserRelationKind } from "../../../domain/lexical-types";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
@@ -23,7 +23,7 @@ import {
 	blockHasWikilinkTarget,
 } from "./propagation-line-append";
 
-const INVERSE_KIND: Record<RelationSubKind, RelationSubKind> = {
+const INVERSE_KIND: Record<TextfresserRelationKind, TextfresserRelationKind> = {
 	Antonym: "Antonym",
 	Holonym: "Meronym",
 	Hypernym: "Hyponym",
@@ -33,7 +33,7 @@ const INVERSE_KIND: Record<RelationSubKind, RelationSubKind> = {
 	Synonym: "Synonym",
 };
 
-const SYMBOL_FOR_KIND: Record<RelationSubKind, string> = {
+const SYMBOL_FOR_KIND: Record<TextfresserRelationKind, string> = {
 	Antonym: "≠",
 	Holonym: "∋",
 	Hypernym: "⊃",
@@ -47,7 +47,7 @@ const SYMBOL_FOR_KIND: Record<RelationSubKind, string> = {
  * Build a formatted inverse relation line: `{symbol} [[source]]`
  */
 function buildInverseRelationLine(
-	inverseKind: RelationSubKind,
+	inverseKind: TextfresserRelationKind,
 	sourceWord: string,
 ): string {
 	return `${SYMBOL_FOR_KIND[inverseKind]} [[${sourceWord}]]`;
@@ -58,8 +58,11 @@ function buildInverseRelationLine(
  */
 function collectInversePairs(
 	relations: ParsedRelation[],
-): { targetWord: string; inverseKind: RelationSubKind }[] {
-	const pairs: { targetWord: string; inverseKind: RelationSubKind }[] = [];
+): { targetWord: string; inverseKind: TextfresserRelationKind }[] {
+	const pairs: {
+		targetWord: string;
+		inverseKind: TextfresserRelationKind;
+	}[] = [];
 	for (const rel of relations) {
 		const inverseKind = INVERSE_KIND[rel.kind];
 		for (const word of rel.words) {
@@ -93,7 +96,7 @@ export function propagateRelations(
 	// Group pairs by target word (a word may appear in multiple relation kinds)
 	const byTarget = new Map<
 		string,
-		{ inverseKind: RelationSubKind; line: string }[]
+		{ inverseKind: TextfresserRelationKind; line: string }[]
 	>();
 	for (const { targetWord, inverseKind } of pairs) {
 		if (targetWord === sourceWord) continue; // skip self-references

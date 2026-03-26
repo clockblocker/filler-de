@@ -1,12 +1,12 @@
 import {
 	PromptKind,
 	type PromptKind as PromptKindType,
-} from "../../../../../lexical-generation/internal/prompt-smith/codegen/consts";
-import type { DeLexemPos } from "../../../../../linguistics/de";
+	type LexicalPos,
+} from "../../../../../lexical-generation";
 
 export type FeaturesPromptKind = Extract<PromptKindType, `Features${string}`>;
 
-const FEATURES_PROMPT_KIND_BY_POS: Record<DeLexemPos, FeaturesPromptKind> = {
+const FEATURES_PROMPT_KIND_BY_POS: Record<LexicalPos, FeaturesPromptKind> = {
 	Adjective: PromptKind.FeaturesAdjective,
 	Adverb: PromptKind.FeaturesAdverb,
 	Article: PromptKind.FeaturesArticle,
@@ -20,12 +20,12 @@ const FEATURES_PROMPT_KIND_BY_POS: Record<DeLexemPos, FeaturesPromptKind> = {
 };
 
 export function getFeaturesPromptKindForPos(
-	pos: DeLexemPos,
+	pos: LexicalPos,
 ): FeaturesPromptKind {
 	return FEATURES_PROMPT_KIND_BY_POS[pos];
 }
 
-export function buildFeatureTagPath(pos: DeLexemPos, tags: string[]): string {
+export function buildFeatureTagPath(pos: LexicalPos, tags: string[]): string {
 	const parts = [
 		pos.toLowerCase(),
 		...tags

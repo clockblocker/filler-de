@@ -1,11 +1,13 @@
-import type { AgentOutput } from "../../../../../../../../lexical-generation/internal/prompt-smith";
-import type { CaseValue } from "../../../../../../../../linguistics/common/enums/inflection/feature-values";
+import type {
+	LexemInflections,
+	LexicalCase,
+} from "../../../../../../../../lexical-generation";
+import { wikilinkHelper } from "../../../../../../../../stateless-helpers/wikilink";
 import {
 	CASE_ORDER,
 	CASE_SHORT_LABEL,
-	type NounInflectionCell,
-} from "../../../../../../../../linguistics/de/lexem/noun";
-import { wikilinkHelper } from "../../../../../../../../stateless-helpers/wikilink";
+	type TextfresserNounInflectionCell,
+} from "../../../../../../domain/lexical-types";
 
 /**
  * Group cells by case, then format each case line as:
@@ -13,11 +15,13 @@ import { wikilinkHelper } from "../../../../../../../../stateless-helpers/wikili
  *
  * Returns both the formatted section string and the raw cells for propagation.
  */
-export function formatInflection(output: AgentOutput<"NounInflection">): {
+export function formatInflection(
+	output: Extract<LexemInflections, { kind: "noun" }>,
+): {
 	formattedSection: string;
-	cells: NounInflectionCell[];
+	cells: TextfresserNounInflectionCell[];
 } {
-	const cells: NounInflectionCell[] = output.cells.map((c) => ({
+	const cells: TextfresserNounInflectionCell[] = output.cells.map((c) => ({
 		article: c.article,
 		case: c.case,
 		form: wikilinkHelper.normalizeLinkTarget(c.form),
@@ -25,7 +29,7 @@ export function formatInflection(output: AgentOutput<"NounInflection">): {
 	}));
 
 	// Group cells by case
-	const byCase = new Map<CaseValue, NounInflectionCell[]>();
+	const byCase = new Map<LexicalCase, TextfresserNounInflectionCell[]>();
 	for (const cell of cells) {
 		const group = byCase.get(cell.case) ?? [];
 		group.push(cell);

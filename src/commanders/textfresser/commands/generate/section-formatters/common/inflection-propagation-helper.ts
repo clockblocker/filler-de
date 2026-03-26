@@ -1,20 +1,21 @@
 import {
-	type CaseValue,
+	CASE_ORDER,
+	NUMBER_ORDER,
 	caseValueFromLocalizedLabel,
 	getCaseLabelForTargetLanguage,
+	getGenusLabelForTargetLanguage,
 	getNumberLabelForTargetLanguage,
-	type NumberValue,
 	numberValueFromLocalizedLabel,
-} from "../../../../../../linguistics/common/enums/inflection/feature-values";
-import {
-	CASE_ORDER,
-	type GermanGenus,
-	getGermanGenusLabelForTargetLanguage,
-	type NounInflectionCell,
-} from "../../../../../../linguistics/de/lexem/noun";
+	type TextfresserNounInflectionCell,
+} from "../../../../domain/lexical-types";
+import type {
+	LexicalCase,
+	LexicalGenus,
+	LexicalNumber,
+} from "../../../../../../lexical-generation";
 import type { TargetLanguage } from "../../../../../../types";
+import { extractHashTags } from "../../../../../../utils/text-utils";
 
-const NUMBER_ORDER: readonly NumberValue[] = ["Singular", "Plural"];
 const NUMBER_ORDER_INDEX = new Map(
 	NUMBER_ORDER.map((numberValue, idx) => [numberValue, idx] as const),
 );
@@ -25,8 +26,8 @@ const CASE_ORDER_INDEX = new Map(
 const INFLECTION_TAG_RE = /^#([^/\s]+)\/([^/\s]+)$/;
 
 export type ParsedInflectionTag = {
-	caseValue: CaseValue;
-	numberValue: NumberValue;
+	caseValue: LexicalCase;
+	numberValue: LexicalNumber;
 	tag: string;
 };
 
@@ -78,16 +79,13 @@ function sortAndDedupeTags(
 
 export function buildNounInflectionPropagationHeader(
 	lemma: string,
-	genus: GermanGenus | undefined,
+	genus: LexicalGenus | undefined,
 	targetLanguage: TargetLanguage,
 ): string {
 	if (!genus) {
 		return `#Inflection/Noun for: [[${lemma}]]`;
 	}
-	const genusLabel = getGermanGenusLabelForTargetLanguage(
-		genus,
-		targetLanguage,
-	);
+	const genusLabel = getGenusLabelForTargetLanguage(genus, targetLanguage);
 	return `#Inflection/Noun/${genusLabel} for: [[${lemma}]]`;
 }
 
@@ -107,8 +105,8 @@ export function isNounInflectionPropagationHeaderForLemma(
 }
 
 export function buildLocalizedInflectionTag(
-	caseValue: CaseValue,
-	numberValue: NumberValue,
+	caseValue: LexicalCase,
+	numberValue: LexicalNumber,
 	targetLanguage: TargetLanguage,
 ): string {
 	const caseLabel = getCaseLabelForTargetLanguage(caseValue, targetLanguage);
@@ -145,11 +143,10 @@ export function parseLocalizedInflectionTag(
 	};
 }
 
-import { extractHashTags } from "../../../../../../utils/text-utils";
 export { extractHashTags };
 
 export function buildLocalizedInflectionTagsFromCells(
-	cells: NounInflectionCell[],
+	cells: TextfresserNounInflectionCell[],
 	targetLanguage: TargetLanguage,
 ): string[] {
 	const tags = cells.map((cell) =>

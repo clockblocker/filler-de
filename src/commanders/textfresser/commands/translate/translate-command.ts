@@ -1,5 +1,5 @@
 import { errAsync, ok, type ResultAsync } from "neverthrow";
-import { PromptKind } from "../../../../lexical-generation/internal/prompt-smith/codegen/consts";
+import { PromptKind } from "../../../../lexical-generation";
 import {
 	type VaultAction,
 	VaultActionKind,

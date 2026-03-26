@@ -1,8 +1,6 @@
-import {
-	articleFromGenus,
-	type GermanGenus,
-} from "../../../../../../../../linguistics/de/lexem/noun/features";
+import type { LexicalGenus } from "../../../../../../../../lexical-generation";
 import { wikilinkHelper } from "../../../../../../../../stateless-helpers/wikilink";
+import { ARTICLE_BY_GENUS } from "../../../../../../domain/lexical-types";
 import { buildYouglishUrl } from "../../../common/header-formatter";
 
 /**
@@ -14,10 +12,10 @@ export function formatHeaderLine(
 	output: { emojiDescription: string[]; ipa: string },
 	lemma: string,
 	targetLanguage: string,
-	genus: GermanGenus,
+	genus: LexicalGenus,
 ): string {
 	const emoji = output.emojiDescription.join(" ");
-	const article = articleFromGenus[genus];
+	const article = ARTICLE_BY_GENUS[genus];
 	const normalizedLemma = wikilinkHelper.normalizeLinkTarget(lemma);
 	const youglishUrl = buildYouglishUrl(normalizedLemma, targetLanguage);
 

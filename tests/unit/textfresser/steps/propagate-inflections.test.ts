@@ -1,14 +1,14 @@
 import { describe, expect, it } from "bun:test";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import { propagateInflections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-inflections";
+import type { TextfresserNounInflectionCell } from "../../../../src/commanders/textfresser/domain/lexical-types";
 import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";
 import type { DictEntry } from "../../../../src/commanders/textfresser/domain/dict-note/types";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
-import type { NounInflectionCell } from "../../../../src/linguistics/de/lexem/noun";
 import { VaultActionKind } from "../../../../src/managers/obsidian/vault-action-manager/types/vault-action";
 
 function makeCtx(
-	inflectionCells: NounInflectionCell[],
+	inflectionCells: TextfresserNounInflectionCell[],
 	lemma = "Kraftwerk",
 	options: {
 		nounInflectionGenus?: GenerateSectionsResult["nounInflectionGenus"];
@@ -104,7 +104,7 @@ describe("propagateInflections", () => {
 	});
 
 	it("creates UpsertMdFile + ProcessMdFile for forms different from lemma", () => {
-		const cells: NounInflectionCell[] = [
+		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
 				case: "Nominative",
@@ -125,7 +125,7 @@ describe("propagateInflections", () => {
 	});
 
 	it("skips cells when form equals lemma (no actions, allEntries unchanged)", () => {
-		const cells: NounInflectionCell[] = [
+		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "das",
 				case: "Nominative",
@@ -148,7 +148,7 @@ describe("propagateInflections", () => {
 	});
 
 	it("groups multiple cells by form word and writes one inflection entry with merged tags", () => {
-		const cells: NounInflectionCell[] = [
+		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
 				case: "Nominative",
@@ -208,7 +208,7 @@ describe("propagateInflections", () => {
 			kind: "MdFile" as const,
 			pathParts: ["Worter", "de", "lexem", "inflected", "k", "kra", "kraft"],
 		};
-		const cells: NounInflectionCell[] = [
+		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
 				case: "Nominative",
@@ -238,7 +238,7 @@ describe("propagateInflections", () => {
 	});
 
 	it("deduplicates identical tags for a form", () => {
-		const cells: NounInflectionCell[] = [
+		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
 				case: "Nominative",
@@ -267,7 +267,7 @@ describe("propagateInflections", () => {
 	});
 
 	it("merges tags into existing new-format entry", () => {
-		const cells: NounInflectionCell[] = [
+		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
 				case: "Nominative",
@@ -308,7 +308,7 @@ describe("propagateInflections", () => {
 	});
 
 	it("propagates with fallback header when noun genus is unresolved", () => {
-		const cells: NounInflectionCell[] = [
+		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
 				case: "Nominative",
@@ -338,7 +338,7 @@ describe("propagateInflections", () => {
 	});
 
 	it("upgrades fallback header to genus header when genus becomes available", () => {
-		const cells: NounInflectionCell[] = [
+		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
 				case: "Nominative",

@@ -1,5 +1,14 @@
-import type { AgentOutput } from "../../../../../../lexical-generation/internal/prompt-smith";
+import type { LexemInflections } from "../../../../../../lexical-generation";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
+
+type GenericInflectionSectionInput = {
+	rows: Array<{
+		forms:
+			| string
+			| Extract<LexemInflections, { kind: "generic" }>["rows"][number]["forms"];
+		label: string;
+	}>;
+};
 
 /**
  * Format LLM inflection output into markdown lines.
@@ -12,12 +21,19 @@ import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
  *   D: dem [[Kohlekraftwerk]], den [[Kohlekraftwerken]]
  */
 export function formatInflectionSection(
-	output: AgentOutput<"Inflection">,
+	output: GenericInflectionSectionInput,
 ): string {
 	return output.rows
 		.map((row) => {
 			const normalizedForms =
-				wikilinkHelper.normalizeWikilinkTargetsInText(row.forms);
+				typeof row.forms === "string"
+					? wikilinkHelper.normalizeWikilinkTargetsInText(row.forms)
+					: row.forms
+							.map(
+								(form) =>
+									`[[${wikilinkHelper.normalizeLinkTarget(form.form)}]]`,
+							)
+							.join(", ");
 			return `${row.label}: ${normalizedForms}`;
 		})
 		.join("\n");

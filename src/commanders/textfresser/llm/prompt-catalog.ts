@@ -1,25 +1,24 @@
 import {
-	type AgentOutput,
-	PROMPT_FOR,
-	SchemasFor,
-	type UserInput,
-} from "../../../lexical-generation/internal/prompt-smith";
-import type { PromptKind } from "../../../lexical-generation/internal/prompt-smith/codegen/consts";
+	getLexicalPromptOutputSchema,
+	getLexicalPromptSystemPrompt,
+	type PromptInput,
+	type PromptKind,
+	type PromptOutput,
+} from "../../../lexical-generation";
 import type { KnownLanguage, TargetLanguage } from "../../../types";
 
-export type { PromptKind } from "../../../lexical-generation/internal/prompt-smith/codegen/consts";
+export type { PromptKind } from "../../../lexical-generation";
 
 export function getPromptSystemPrompt(params: {
 	target: TargetLanguage;
 	known: KnownLanguage;
 	kind: PromptKind;
 }): string {
-	return PROMPT_FOR[params.target][params.known][params.kind].systemPrompt;
+	return getLexicalPromptSystemPrompt(params);
 }
 
 export function getPromptOutputSchema(kind: PromptKind) {
-	return SchemasFor[kind].agentOutputSchema;
+	return getLexicalPromptOutputSchema(kind);
 }
 
-export type PromptInput<K extends PromptKind> = UserInput<K>;
-export type PromptOutput<K extends PromptKind> = AgentOutput<K>;
+export type { PromptInput, PromptOutput };
