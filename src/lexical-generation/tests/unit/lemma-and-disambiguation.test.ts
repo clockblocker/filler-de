@@ -6,7 +6,7 @@ import {
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,
 	type StructuredFetchFn,
-} from "../../../src/lexical-generation";
+} from "../../index";
 
 describe("lexical-generation lemma/disambiguation", () => {
 	it("retries lemma generation and keeps the better guarded result", async () => {

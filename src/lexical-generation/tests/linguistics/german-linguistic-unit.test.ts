@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { GermanLinguisticUnitSchema } from "../../../src/lexical-generation/internal/linguistics/de";
+import { GermanLinguisticUnitSchema } from "../../internal/linguistics/de";
 
 describe("GermanLinguisticUnitSchema", () => {
 	describe("Lexem + Noun", () => {

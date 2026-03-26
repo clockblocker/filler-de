@@ -4,7 +4,7 @@ import {
 	createLexicalGenerationModule,
 	LexicalGenerationFailureKind,
 	type StructuredFetchFn,
-} from "../../../src/lexical-generation";
+} from "../../index";
 
 describe("createLexicalGenerationModule", () => {
 	it("builds generators for a supported language pair", () => {

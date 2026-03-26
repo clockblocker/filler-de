@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { lemmaSchemas } from "../../../src/lexical-generation/internal/prompt-smith/schemas/lemma";
+import { lemmaSchemas } from "../../internal/prompt-smith/schemas/lemma";
 
 const { agentOutputSchema } = lemmaSchemas;
 

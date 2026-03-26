@@ -1,4 +1,4 @@
-import type { KnownLanguage, TargetLanguage } from "../../../types";
+import type { KnownLanguage, TargetLanguage } from "../shared/languages";
 import type { PromptKind } from "./codegen/consts";
 
 export type AvaliablePromptDict = Record<

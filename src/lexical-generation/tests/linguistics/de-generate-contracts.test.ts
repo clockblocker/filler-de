@@ -11,7 +11,7 @@ import {
 	DeRelationOutputSchema,
 	DeWordTranslationInputSchema,
 	DeWordTranslationOutputSchema,
-} from "../../../src/lexical-generation/internal/contracts/de";
+} from "../../internal/contracts/de";
 
 describe("De generate contracts", () => {
 	it("accepts Lexem lexical target", () => {

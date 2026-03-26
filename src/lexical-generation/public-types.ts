@@ -1,6 +1,9 @@
 import type { Result } from "neverthrow";
 import type { z } from "zod/v3";
-import type { KnownLanguage, TargetLanguage } from "../types";
+import type {
+	KnownLanguage,
+	TargetLanguage,
+} from "./internal/shared/languages";
 import type {
 	LexicalGenerationError,
 	LexicalGenerationFailureKind,

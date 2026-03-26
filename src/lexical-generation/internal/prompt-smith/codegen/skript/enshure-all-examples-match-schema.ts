@@ -5,8 +5,8 @@ import {
 	ALL_TARGET_LANGUAGES,
 	type KnownLanguage,
 	type TargetLanguage,
-} from "../../../../../types";
-import { logger } from "../../../../../utils/logger";
+} from "../../../shared/languages";
+import { logger } from "../../../shared/logger";
 import { SchemasFor } from "../../schemas";
 import { ALL_PROMPT_KINDS, type PromptKind } from "../consts";
 import { getPartsPath, partsExist } from "./utils";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { zodResponseFormat } from "openai/helpers/zod";
-import { SchemasFor } from "../../../src/lexical-generation/internal/prompt-smith/schemas";
+import { SchemasFor } from "../../internal/prompt-smith/schemas";
 
 function toOpenAiZodSchema(schema: unknown): Parameters<typeof zodResponseFormat>[0] {
 	// Runtime-compatible Zod schema bridge across v3/v4 typings.

@@ -1,5 +1,5 @@
-import { multiSpanHelper } from "../../stateless-helpers/multi-span";
-import { wikilinkHelper } from "../../stateless-helpers/wikilink";
+import { multiSpanHelper } from "../internal/shared/multi-span";
+import { wikilinkHelper } from "../internal/shared/wikilink";
 import type { AgentOutput } from "../internal/prompt-smith";
 
 type LemmaPromptOutput = AgentOutput<"Lemma">;

@@ -1,5 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
-import { wikilinkHelper } from "../../stateless-helpers/wikilink";
+import { wikilinkHelper } from "../internal/shared/wikilink";
 import {
 	type LexicalGenerationError,
 	LexicalGenerationFailureKind,

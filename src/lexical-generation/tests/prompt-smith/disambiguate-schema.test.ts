@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { disambiguateSchemas } from "../../../src/lexical-generation/internal/prompt-smith/schemas/disambiguate";
+import { disambiguateSchemas } from "../../internal/prompt-smith/schemas/disambiguate";
 
 const { userInputSchema } = disambiguateSchemas;
 

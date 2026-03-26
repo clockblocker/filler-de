@@ -1,6 +1,6 @@
 import { describe, it } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
 import {
 	createSourceFile,
 	forEachChild,
@@ -150,15 +150,12 @@ function findForbiddenImportsInFile(absoluteFilePath: string): ImportViolation[]
 
 describe("lexical-generation internal linguistics IO boundary", () => {
 	it("blocks manager/VAM/Obsidian imports from internal linguistic schema modules", () => {
-		const workspaceRoot = process.cwd();
-		const linguisticsRoot = join(
-			workspaceRoot,
-			"src/lexical-generation/internal/linguistics",
-		);
+		const packageRoot = resolve(import.meta.dir, "..", "..");
+		const linguisticsRoot = join(packageRoot, "internal/linguistics");
 		const linguisticsFiles = collectTsFilesRecursively(linguisticsRoot);
 		if (linguisticsFiles.length === 0) {
 			throw new Error(
-				"Boundary guard misconfigured: no TypeScript files found in src/lexical-generation/internal/linguistics",
+				"Boundary guard misconfigured: no TypeScript files found in lexical-generation/internal/linguistics",
 			);
 		}
 
@@ -173,7 +170,7 @@ describe("lexical-generation internal linguistics IO boundary", () => {
 			.map(
 				(violation) =>
 					`${relative(
-						workspaceRoot,
+						packageRoot,
 						violation.filePath,
 					)} imports "${violation.importSpecifier}" (${violation.reason})`,
 			)

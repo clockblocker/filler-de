@@ -1,8 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { err, ok, type Result } from "neverthrow";
-import { ALL_TARGET_LANGUAGES, KnownLanguage } from "../../../../../types";
-import { logger } from "../../../../../utils/logger";
+import {
+	ALL_TARGET_LANGUAGES,
+	KnownLanguage,
+} from "../../../shared/languages";
+import { logger } from "../../../shared/logger";
 import { ALL_PROMPT_KINDS } from "../consts";
 import { getPartsPath } from "./utils";
 

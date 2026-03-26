@@ -1,4 +1,7 @@
-import type { KnownLanguage, TargetLanguage } from "../types";
+import type {
+	KnownLanguage,
+	TargetLanguage,
+} from "./internal/shared/languages";
 import {
 	type AgentOutput,
 	PROMPT_FOR,
