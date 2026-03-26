@@ -182,6 +182,27 @@ function coreWithFallbackEmoji(
 	};
 }
 
+function withPrecomputedEmojiDescription(
+	coreField: LexicalInfoField<LexicalCore>,
+	precomputedEmojiDescription?: string[],
+): LexicalInfoField<LexicalCore> {
+	if (
+		coreField.status !== "ready" ||
+		!precomputedEmojiDescription ||
+		precomputedEmojiDescription.length === 0
+	) {
+		return coreField;
+	}
+
+	return {
+		status: "ready",
+		value: {
+			...coreField.value,
+			emojiDescription: precomputedEmojiDescription,
+		},
+	};
+}
+
 function resolveFeaturesPromptKind(
 	lemma: Extract<ResolvedLemma, { linguisticUnit: "Lexem" }>,
 ): FeaturePromptKind {
@@ -479,7 +500,8 @@ export function buildLexicalInfoGenerator(
 			return err(coreResult.error);
 		}
 
-		const coreField = coreResult.isOk()
+		const coreField = withPrecomputedEmojiDescription(
+			coreResult.isOk()
 			? ({
 					status: "ready",
 					value: mapCoreOutputToCore(coreResult.value),
@@ -487,7 +509,9 @@ export function buildLexicalInfoGenerator(
 			: (coreWithFallbackEmoji(options.precomputedEmojiDescription) ?? {
 					error: coreResult.error,
 					status: "error",
-				});
+				}),
+			options.precomputedEmojiDescription,
+		);
 		const coreOutput = coreResult.isOk() ? coreResult.value : null;
 		const isProperNoun = isProperNounFromCore(coreField, coreOutput);
 

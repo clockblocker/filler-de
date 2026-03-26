@@ -70,6 +70,17 @@ export async function handleLemmaCacheHit(params: {
 		return ok(undefined);
 	}
 
+	if (
+		cache.lemmaResult.linguisticUnit === "Lexem" &&
+		cache.lemmaResult.posLikeKind === "Noun"
+	) {
+		logger.info(
+			"[Textfresser.Lemma] cache-hit noun entry requires lexical refresh, refetching",
+		);
+		onRefetch();
+		return ok(undefined);
+	}
+
 	const missingSections = computeMissingV3SectionKindsFromLemmaResult({
 		entry: matchedEntry,
 		lemmaResult: cache.lemmaResult,

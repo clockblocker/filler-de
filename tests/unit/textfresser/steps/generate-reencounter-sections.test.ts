@@ -30,6 +30,18 @@ function makeLexicalGeneration(
 	} as unknown as LexicalGenerationModule;
 }
 
+function makeTrackingLexicalGeneration(params: {
+	lexicalInfo: LexicalInfo;
+	onGenerateLexicalInfo: () => void;
+}): LexicalGenerationModule {
+	return {
+		generateLexicalInfo: async () => {
+			params.onGenerateLexicalInfo();
+			return ok(params.lexicalInfo);
+		},
+	} as unknown as LexicalGenerationModule;
+}
+
 function makePhrasemLexicalInfo(): LexicalInfo {
 	return {
 		core: {
@@ -209,6 +221,7 @@ function makeClosedSetLexemCtx(params: {
 describe("generateSections re-encounter behavior", () => {
 	it("keeps fast path for complete re-encounter entries (append attestation only)", async () => {
 		const promptCalls: string[] = [];
+		let lexicalInfoCalls = 0;
 		const matchedEntry: DictEntry = {
 			headerContent: "Entry",
 			id: PHRASEM_ENTRY_ID,
@@ -226,10 +239,17 @@ describe("generateSections re-encounter behavior", () => {
 				return okAsync("unused");
 			},
 		});
+		ctx.textfresserState.lexicalGeneration = makeTrackingLexicalGeneration({
+			lexicalInfo: makePhrasemLexicalInfo(),
+			onGenerateLexicalInfo: () => {
+				lexicalInfoCalls += 1;
+			},
+		});
 
 		const result = await generateSections(ctx);
 		expect(result.isOk()).toBe(true);
 		expect(promptCalls).toHaveLength(0);
+		expect(lexicalInfoCalls).toBe(0);
 
 		const attestationSection = matchedEntry.sections.find(
 			(s) => s.kind === "kontexte",

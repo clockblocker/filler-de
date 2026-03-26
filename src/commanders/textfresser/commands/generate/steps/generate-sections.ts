@@ -20,7 +20,10 @@ import {
 } from "./features-prompt-dispatch";
 import { generateNewEntrySections } from "./generate-new-entry-sections";
 import type { GenerateSectionsResult } from "./generate-sections-result";
-import { computeMissingV3SectionKinds } from "./reencounter-sections";
+import {
+	computeMissingV3SectionKinds,
+	computeMissingV3SectionKindsFromLemmaResult,
+} from "./reencounter-sections";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 import {
 	buildVerbEntryIdentityFromFeatures,
@@ -131,6 +134,7 @@ async function buildReEncounterResult(
 	ctx: ResolvedEntryState,
 ): Promise<GenerateSectionsResult> {
 	const { matchedEntry, existingEntries } = ctx;
+	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	if (!matchedEntry) {
 		ctx.textfresserState.latestFailedSections = [];
 		return {
@@ -152,6 +156,34 @@ async function buildReEncounterResult(
 		ctx,
 		existingEntries,
 	});
+	const canUseLemmaOnlyFastPath =
+		!(
+			lemmaResult.linguisticUnit === "Lexem" &&
+			lemmaResult.posLikeKind === "Noun"
+		);
+	if (canUseLemmaOnlyFastPath) {
+		const missingSections = computeMissingV3SectionKindsFromLemmaResult({
+			entry: matchedEntry,
+			lemmaResult,
+		});
+		if (missingSections.length === 0) {
+			ctx.textfresserState.latestFailedSections = [];
+			ctx.textfresserState.targetBlockId = matchedEntry.id;
+
+			return {
+				...ctx,
+				allEntries: entriesWithMembership,
+				failedSections: [],
+				inflectionCells: [],
+				morphemes: [],
+				morphology: undefined,
+				nounInflectionGenus: undefined,
+				relations: [],
+				sourceTranslation: undefined,
+				targetBlockId: matchedEntry.id,
+			};
+		}
+	}
 	const lexicalInfo = await generateLexicalInfoForEntry(ctx);
 	const missingSectionKinds = computeMissingV3SectionKinds({
 		entry: matchedEntry,

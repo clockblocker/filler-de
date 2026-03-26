@@ -236,6 +236,66 @@ describe("lexical-generation lexical info", () => {
 		});
 	});
 
+	it("preserves precomputed emoji for new-sense identity even when core enrichment succeeds", async () => {
+		const module = createLexicalGenerationModule({
+			fetchStructured: async <T>({
+				requestLabel,
+			}: Parameters<StructuredFetchFn>[0]) => {
+				switch (requestLabel) {
+					case "NounEnrichment":
+						return okValue<T>({
+							emojiDescription: ["🏦"],
+							genus: "Femininum",
+							ipa: "baŋk",
+							nounClass: "Common",
+						});
+					case "FeaturesNoun":
+						return okValue<T>({ tags: ["finance"] });
+					case "NounInflection":
+						return okValue<T>({
+							cells: [],
+							genus: "Femininum",
+						});
+					case "Morphem":
+						return okValue<T>({
+							compounded_from: null,
+							derived_from: null,
+							morphemes: [],
+						});
+					case "Relation":
+						return okValue<T>({ relations: [] });
+					default:
+						throw new Error(`unexpected requestLabel ${requestLabel}`);
+				}
+			},
+			knownLang: "English",
+			settings: { generateInflections: true },
+			targetLang: "German",
+		})._unsafeUnwrap();
+
+		const result = await module.generateLexicalInfo(
+			{
+				lemma: "Bank",
+				linguisticUnit: "Lexem",
+				posLikeKind: "Noun",
+				surfaceKind: "Lemma",
+			},
+			"Ich sitze auf der Bank",
+			{
+				precomputedEmojiDescription: ["🪑", "🌳"],
+			},
+		);
+
+		expect(result.isOk()).toBe(true);
+		expect(result._unsafeUnwrap().core).toMatchObject({
+			status: "ready",
+			value: {
+				emojiDescription: ["🪑", "🌳"],
+				ipa: "baŋk",
+			},
+		});
+	});
+
 	it("preserves noun identity from core when FeaturesNoun fails", async () => {
 		const module = createLexicalGenerationModule({
 			fetchStructured: async <T>({

@@ -44,6 +44,14 @@ function makeLemmaResult(): LemmaResult {
 	};
 }
 
+function makeProperNounLemmaResult(): LemmaResult {
+	return {
+		...makeLemmaResult(),
+		lemma: "Berlin",
+		posLikeKind: "Noun",
+	};
+}
+
 function makeState(cacheAtMs: number): TextfresserState {
 	const lemmaResult = makeLemmaResult();
 	const resolvedTargetPath: SplitPathToMdFile = {
@@ -51,6 +59,38 @@ function makeState(cacheAtMs: number): TextfresserState {
 		extension: "md",
 		kind: "MdFile",
 		pathParts: ["Worter", "de", "lexem", "lemma", "g", "geh", "gehen"],
+	};
+
+	return {
+		attestationForLatestNavigated: null,
+		inFlightGenerate: null,
+		isLibraryLookupAvailable: false,
+		languages: { known: "English", target: "German" },
+		latestFailedSections: [],
+		latestLemmaInvocationCache: {
+			cachedAtMs: cacheAtMs,
+			key: buildLemmaInvocationKey(lemmaResult.attestation),
+			lemmaResult,
+			resolvedTargetPath,
+		},
+		latestLemmaResult: null,
+		latestLemmaTargetOwnedByInvocation: false,
+		lookupInLibrary: () => [],
+		pendingGenerate: null,
+		promptRunner: {} as TextfresserState["promptRunner"],
+		vam: {} as TextfresserState["vam"],
+	};
+}
+
+function makeStateWithLemmaResult(
+	lemmaResult: LemmaResult,
+	cacheAtMs: number,
+): TextfresserState {
+	const resolvedTargetPath: SplitPathToMdFile = {
+		basename: lemmaResult.lemma,
+		extension: "md",
+		kind: "MdFile",
+		pathParts: ["Worter", "de"],
 	};
 
 	return {
@@ -163,6 +203,37 @@ describe("lemma cache", () => {
 			cache: {
 				...cache,
 				generatedEntryId: "LX-LM-VERB-1",
+			},
+			onRefetch: () => {
+				refetchCalls += 1;
+			},
+			readContent: async () => ok(content),
+			state,
+		});
+
+		expect(result.isOk()).toBe(true);
+		expect(refetchCalls).toBe(1);
+	});
+
+	it("cache-hit noun entry refetches conservatively", async () => {
+		const state = makeStateWithLemmaResult(
+			makeProperNounLemmaResult(),
+			Date.now(),
+		);
+		const cache = state.latestLemmaInvocationCache;
+		expect(cache).toBeTruthy();
+		if (!cache) return;
+
+		const content = buildDictEntryContent({
+			entryId: "LX-LM-NOUN-1",
+			sectionKinds: ["kontexte", "translations", "tags"],
+		});
+		let refetchCalls = 0;
+
+		const result = await handleLemmaCacheHit({
+			cache: {
+				...cache,
+				generatedEntryId: "LX-LM-NOUN-1",
 			},
 			onRefetch: () => {
 				refetchCalls += 1;
