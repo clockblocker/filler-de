@@ -19,7 +19,7 @@ import {
 } from "./section-generation-context";
 import { unwrapResultAsync } from "./section-generation-results";
 import type {
-	GeneratedSectionArtifacts,
+	GeneratedPropagationArtifacts,
 	MorphologyPayload,
 	ParsedRelation,
 } from "./section-generation-types";
@@ -33,7 +33,7 @@ import {
 	generateTranslationSection,
 } from "./section-generators";
 
-export type GeneratedEntrySectionsData = GeneratedSectionArtifacts & {
+export type GeneratedEntrySectionsData = GeneratedPropagationArtifacts & {
 	entryId: string;
 	failedSections: string[];
 	headerContent: string;

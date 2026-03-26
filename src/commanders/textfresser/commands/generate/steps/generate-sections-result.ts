@@ -1,9 +1,9 @@
 import type { DictEntry } from "../../../domain/dict-note/types";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
-import type { GeneratedSectionArtifacts } from "./section-generation-types";
+import type { GeneratedPropagationArtifacts } from "./section-generation-types";
 
 export type GenerateSectionsResult = ResolvedEntryState &
-	GeneratedSectionArtifacts & {
+	GeneratedPropagationArtifacts & {
 	allEntries: DictEntry[];
 	/** Section names that failed LLM generation but were optional — entry was still created. */
 	failedSections: string[];

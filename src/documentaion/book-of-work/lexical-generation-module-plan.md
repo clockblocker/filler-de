@@ -13,15 +13,17 @@ Treat lexical generation as an importable package boundary inside the repo:
 
 ## Current Snapshot
 
-The extraction has started, but the boundary is still mixed:
+The extraction has started, and most runtime seams are now cut over:
 
 - `src/lexical-generation/` already exposes `createLexicalGenerationModule`, `ResolvedLemma`, `SenseMatchResult`, and `LexicalInfo`.
 - `textfresser` now fails early when lexical generation initialization fails for an unsupported pair.
 - `textfresser` no longer falls back from lexical generation into legacy direct prompt orchestration at runtime.
-- generated sections, morphology artifacts, and metadata now consume `LexicalInfo` directly.
+- lemma flow now stores `ResolvedLemma` as its semantic base DTO, with only command-local attestation/disambiguation state layered on top.
+- generated sections, propagation artifacts, and metadata now consume `LexicalInfo` directly.
+- re-encounter section expectations now rely on one stored section-query rule instead of ad hoc prompt-era noun-class reconstruction.
 - translation remains the explicit non-lexical input in the render pipeline.
 
-That means the generator is now both the lexical execution path and the section render contract. The remaining cleanup is mostly dead compatibility-era types and follow-on propagation simplification.
+That means the generator is now both the lexical execution path and the section render contract. The remaining cleanup is mostly naming/docs cleanup and shrinking the stored-entry seam further where it still exists for re-encounter logic.
 
 ## Architecture Decisions
 

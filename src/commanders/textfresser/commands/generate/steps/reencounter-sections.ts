@@ -1,63 +1,20 @@
-import type { NounClass } from "../../../../../linguistics/de/lexem/noun/features";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { DictEntry } from "../../../domain/dict-note/types";
 import { getSectionsFor } from "../../../targets/de/sections/section-config";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import type { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { LemmaResult } from "../../lemma/types";
+import { buildStoredSectionQuery } from "./lexical-section-query";
 import { V3_SECTIONS } from "./section-generation-context";
-
-export function resolveNounClassFromEntryMeta(
-	entry: DictEntry,
-): NounClass | undefined {
-	const entity = entry.meta.entity;
-	if (
-		entity?.linguisticUnit === "Lexem" &&
-		entity.posLikeKind === "Noun" &&
-		"nounClass" in entity.features.lexical
-	) {
-		const nounClass = entity.features.lexical.nounClass;
-		if (nounClass === "Common" || nounClass === "Proper") {
-			return nounClass;
-		}
-	}
-
-	const linguisticUnit = entry.meta.linguisticUnit;
-	if (
-		linguisticUnit?.kind === "Lexem" &&
-		linguisticUnit.surface.features.pos === "Noun" &&
-		"nounClass" in linguisticUnit.surface.features
-	) {
-		const nounClass = linguisticUnit.surface.features.nounClass;
-		if (nounClass === "Common" || nounClass === "Proper") {
-			return nounClass;
-		}
-	}
-
-	return undefined;
-}
 
 export function resolveExpectedV3SectionKinds(params: {
 	entry: DictEntry;
 	lemmaResult: LemmaResult;
 }): DictSectionKind[] {
 	const { entry, lemmaResult } = params;
-
-	if (lemmaResult.linguisticUnit === "Lexem") {
-		const nounClass =
-			lemmaResult.posLikeKind === "Noun"
-				? resolveNounClassFromEntryMeta(entry)
-				: undefined;
-		return getSectionsFor({
-			nounClass,
-			pos: lemmaResult.posLikeKind,
-			unit: "Lexem",
-		}).filter((sectionKind) => V3_SECTIONS.has(sectionKind));
-	}
-
-	return getSectionsFor({ unit: "Phrasem" }).filter((sectionKind) =>
-		V3_SECTIONS.has(sectionKind),
-	);
+	return getSectionsFor(
+		buildStoredSectionQuery({ entry, lemma: lemmaResult }),
+	).filter((sectionKind) => V3_SECTIONS.has(sectionKind));
 }
 
 export function computeMissingV3SectionKinds(params: {

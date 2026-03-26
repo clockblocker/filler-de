@@ -420,6 +420,136 @@ describe("generateSections re-encounter behavior", () => {
 		expect(promptCalls).toHaveLength(0);
 	});
 
+	it("uses stored proper-noun metadata on re-encounter when lexical noun features degrade", async () => {
+		const promptCalls: string[] = [];
+		let lexicalInfoCalls = 0;
+		const matchedEntry: DictEntry = {
+			headerContent: "Entry",
+			id: NOUN_ENTRY_ID,
+			meta: {
+				entity: {
+					features: {
+						inflectional: {},
+						lexical: { pos: "Noun" },
+					},
+					linguisticUnit: "Lexem",
+					posLikeKind: "Noun",
+				} as unknown as NonNullable<DictEntry["meta"]["entity"]>,
+				linguisticUnit: {
+					kind: "Lexem",
+					surface: {
+						features: {
+							genus: "Neutrum",
+							nounClass: "Proper",
+							pos: "Noun",
+						},
+						lemma: "Berlin",
+						surfaceKind: "Lemma",
+					},
+				},
+			},
+			sections: [
+				section("kontexte", "![[Src#^1|^]]"),
+				section("tags", "#noun"),
+			],
+		};
+		const ctx = {
+			actions: [],
+			commandContext: {
+				activeFile: {
+					content: "",
+					splitPath: {
+						basename: "berlin",
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Worter"],
+					},
+				},
+			},
+			existingEntries: [matchedEntry],
+			matchedEntry,
+			nextIndex: 2,
+			resultingActions: [],
+			textfresserState: {
+				inFlightGenerate: null,
+				languages: { known: "English", target: "German" },
+				latestFailedSections: [],
+				latestLemmaInvocationCache: null,
+				latestLemmaResult: {
+					attestation: {
+						source: {
+							ref: "![[Src#^1|^]]",
+							textRaw: "Berlin ist gross.",
+							textWithOnlyTargetMarked: "[Berlin] ist gross.",
+						},
+						target: { surface: "Berlin" },
+					},
+					disambiguationResult: { matchedIndex: 1 },
+					lemma: "Berlin",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Noun",
+					surfaceKind: "Lemma",
+				},
+				lexicalGeneration: {
+					generateLexicalInfo: async () => {
+						lexicalInfoCalls += 1;
+						return ok({
+							core: {
+								status: "ready",
+								value: {
+									emojiDescription: ["🏙️"],
+									ipa: "bɛʁˈliːn",
+									nounIdentity: {
+										genus: "Neutrum",
+										nounClass: "Proper",
+									},
+								},
+							},
+							features: {
+								error: lexicalGenerationError(
+									LexicalGenerationFailureKind.FetchFailed,
+									"features failed",
+								),
+								status: "error",
+							},
+							inflections: { status: "not_applicable" },
+							lemma: {
+								lemma: "Berlin",
+								linguisticUnit: "Lexem",
+								posLikeKind: "Noun",
+								surfaceKind: "Lemma",
+							},
+							morphemicBreakdown: { status: "not_applicable" },
+							relations: { status: "not_applicable" },
+						});
+					},
+				} as unknown as LexicalGenerationModule,
+				lookupInLibrary: () => [],
+				promptRunner: {
+					generate: (kind: string) => {
+						promptCalls.push(kind);
+						if (kind === "WordTranslation") {
+							return okAsync("Berlin");
+						}
+						return okAsync("unused");
+					},
+				},
+				vam: {},
+			} as unknown as TextfresserState,
+		} as unknown as ResolvedEntryState;
+
+		const result = await generateSections(ctx);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+
+		expect(lexicalInfoCalls).toBe(1);
+		expect(promptCalls).toEqual(["WordTranslation"]);
+		expect(
+			matchedEntry.sections.map((section) => section.kind).sort(),
+		).toEqual(["kontexte", "tags", "translations"]);
+		expect(result.value.failedSections).toContain("Features");
+	});
+
 	it("fails on lexical-generation hard stop without reviving legacy prompt fallbacks", async () => {
 		const promptCalls: string[] = [];
 		const ctx = {

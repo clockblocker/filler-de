@@ -24,7 +24,7 @@ export type MorphologyPayload = {
 	prefixEquation?: PrefixEquationPayload;
 };
 
-export type GeneratedSectionArtifacts = {
+export type GeneratedPropagationArtifacts = {
 	/** Structured propagation inputs derived from LexicalInfo render helpers. */
 	inflectionCells: NounInflectionCell[];
 	morphology?: MorphologyPayload;

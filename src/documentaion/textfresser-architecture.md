@@ -591,21 +591,16 @@ Uses `ProcessMdFile` with a transform function: exact `rawBlock` replacement fir
 
 Result stored as `TextfresserState.latestLemmaResult`:
 ```typescript
-type LemmaResult = {
-  linguisticUnit: LinguisticUnitKind;
-  pos?: POS;
-  surfaceKind: SurfaceKind;
-  lemma: string;
-  emojiDescription: string[];         // V11: 1-3 emojis from Lemma LLM output
-  ipa: string;                        // V11: IPA pronunciation from Lemma LLM output
-  attestation: Attestation;           // captured context
+type LemmaResult = ResolvedLemma & {
+  attestation: Attestation;           // command-local context
   disambiguationResult: {             // V3: sense matching outcome
     matchedIndex: number;             // index of existing entry (re-encounter)
   } | null;                           // null = new sense or first encounter
   precomputedEmojiDescription?: string[];  // V10: emoji description from Disambiguate when new sense detected
-  nounClass?: "Common" | "Proper";   // V8: only for Nouns — controls section config
 };
 ```
+
+`ResolvedLemma` is the semantic DTO from lexical generation. `LemmaResult` is now just that DTO plus command-local attestation/disambiguation state.
 
 #### Polysemy Disambiguation (V3)
 
@@ -1169,12 +1164,12 @@ To add support for a new target language (e.g., Japanese):
 | **Commands** | |
 | `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma rewrite helpers: attestation resolution, wikilink formatting, robust two-pass source rewrite (`temporary → final`, block-id fallback, multi-span retargeting) |
 | `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures. V10+: emoji-based senses with emojiDescription+unitKind+pos+genus. V16: adds optional `senseGloss` per sense (`entity` + translation fallback) for homonym quality. Returns precomputedEmojiDescription for new-sense path. |
-| `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type (V3: disambiguationResult, V10: precomputedEmojiDescription, V8: nounClass) |
+| `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type = `ResolvedLemma` plus command-local attestation/disambiguation state |
 | `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
 | `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
 | `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries with linguistic wikilink DTO augmentation, use Lemma's disambiguationResult for re-encounter detection, and suppress propagation-stub fallback when non-generated link intent is present |
-| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Async: LLM calls per section (or append attestation for re-encounters). V12: Features prompt + Tags section, article in header for nouns. V13: `meta.linguisticUnit` restored for Lexem/Phrasem entries (`Morphem` still out of scope). Persists canonical `meta.entity` (including emoji/ipa/sense). Header built from LemmaResult fields. Sets targetBlockId |
+| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Generate orchestration over lexical DTOs: append attestation for re-encounters or persist new entries from `LexicalInfo`, with re-encounter section expectations resolved from stored metadata |
 | `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, resolve target paths via shared resolver, generate actions for target notes |
 | `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts` | Morphology propagation: Lexem localized `used in` backlinks for derivation/compounding + verb-prefix equation propagation on decorated prefix Morphem entries (with non-dict fallback append path) |
 | `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts` | Morpheme propagation: bound-morpheme localized `used in` aggregation on Morphem entries (Suffix/Interfix/etc + non-verb Prefix), with Root/Suffixoid fallback when morphology payload is incomplete |

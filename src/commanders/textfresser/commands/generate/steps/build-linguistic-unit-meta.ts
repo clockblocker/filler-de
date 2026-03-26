@@ -1,6 +1,5 @@
 import type {
 	LexicalInfo,
-	LexicalNounIdentity,
 } from "../../../../../lexical-generation";
 import type {
 	DeEntity,
@@ -9,6 +8,7 @@ import type {
 import { logger } from "../../../../../utils/logger";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { LemmaResult } from "../../lemma/types";
+import { resolveLexemNounIdentity } from "./lexical-section-query";
 import { getVerbLexicalFeatures } from "./verb-features";
 
 function resolveCoreSignal(lexicalInfo: LexicalInfo): {
@@ -33,30 +33,6 @@ function resolveCoreSignal(lexicalInfo: LexicalInfo): {
 	};
 }
 
-function resolveNounIdentity(
-	lexicalInfo: Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>,
-): LexicalNounIdentity | undefined {
-	if (lexicalInfo.lemma.posLikeKind !== "Noun") {
-		return undefined;
-	}
-
-	if (
-		lexicalInfo.features.status === "ready" &&
-		lexicalInfo.features.value.kind === "noun"
-	) {
-		return {
-			genus: lexicalInfo.features.value.genus,
-			nounClass: lexicalInfo.features.value.nounClass,
-		};
-	}
-
-	if (lexicalInfo.core.status === "ready") {
-		return lexicalInfo.core.value.nounIdentity;
-	}
-
-	return undefined;
-}
-
 function buildLemmaRefId(entryId: string): string {
 	const parsed = dictEntryIdHelper.parse(entryId);
 	if (!parsed || parsed.surfaceKind === "Lemma") return entryId;
@@ -79,12 +55,12 @@ function buildLemmaRefId(entryId: string): string {
 
 function buildLexemLinguisticUnit(
 	entryId: string,
-	lemmaResult: Extract<LemmaResult, { linguisticUnit: "Lexem" }>,
+		lemmaResult: Extract<LemmaResult, { linguisticUnit: "Lexem" }>,
 	lexicalInfo: Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>,
 ): GermanLinguisticUnit | null {
 	if (lemmaResult.surfaceKind === "Lemma") {
 		if (lemmaResult.posLikeKind === "Noun") {
-			const nounIdentity = resolveNounIdentity(lexicalInfo);
+			const nounIdentity = resolveLexemNounIdentity(lexicalInfo);
 			if (nounIdentity?.genus && nounIdentity.nounClass) {
 				return {
 					kind: "Lexem",
@@ -256,7 +232,7 @@ function buildLexemEntity(
 	};
 
 	if (lemmaResult.surfaceKind === "Lemma") {
-		const nounIdentity = resolveNounIdentity(lexicalInfo);
+		const nounIdentity = resolveLexemNounIdentity(lexicalInfo);
 		if (
 			lemmaResult.posLikeKind === "Noun" &&
 			nounIdentity?.genus &&
