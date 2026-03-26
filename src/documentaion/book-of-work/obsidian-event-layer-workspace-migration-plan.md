@@ -59,6 +59,53 @@ The public API must not export:
 - idle-tracker helpers
 - raw Obsidian editor/view elements in payloads
 
+### Event coverage
+
+- `selectionChanged` stays in the public API
+- it already fits the intended boundary well:
+  - plain data payload
+  - no effect result needed
+  - real app consumer exists in `OverlayManager`
+
+### Registration model
+
+- v1 keeps the current one-handler-per-event-kind contract
+- multi-handler composition is not part of the package boundary
+- if app code wants composition, it should compose handlers before registration
+
+### Native knowledge ownership
+
+- native-resolution knowledge for `wikilinkCompleted` moves into the package
+- consumers must not need `app.metadataCache` or similar `App` access to decide whether Obsidian can already resolve a link
+- the public payload may include derived facts like `canResolveNatively`, but not `App`-shaped access
+
+### Wikilink click passthrough scope
+
+- restored passthrough for `wikilinkClicked` is v1-scoped to plain unmodified left-click same-pane navigation only
+- modifier-assisted navigation behavior remains native and is not abstracted into a broader public contract yet
+
+### File context policy
+
+- `sourcePath` is always a vault-relative string
+- it is `undefined` only when there truly is no file context
+- no public unions involving split-path domain types are allowed
+
+### Result model policy
+
+- the new result model is effect-only for mutating events
+- read-only events return only `handled` or `passthrough`
+- mutated payloads do not cross the public handler boundary
+
+### Sequencing
+
+- the factory/object facade should be introduced before the workspace move
+- Phase 5 should be mostly file movement plus import rewiring, not a public contract redesign
+
+### Internal validation policy
+
+- Zod schemas may remain internal if they continue to help internal validation and tests
+- Zod schemas are not part of the package public surface
+
 ### Public payload policy
 
 Public payloads should be plain data only.
@@ -251,6 +298,8 @@ Exit condition:
 - remove public exports for detectors, codecs, payload schemas, and helper factories
 - stop exposing `HandlerContext` with `App` and `VaultActionManager`
 - convert result handling from payload-mutation to event-specific effects
+- keep one handler per event kind
+- keep `selectionChanged` public
 
 Exit condition:
 
@@ -261,6 +310,7 @@ Exit condition:
 - replace public `splitPath` with `sourcePath: string`
 - remove `EditorView` from public `SelectAllPayload` and `WikilinkPayload`
 - remove `HTMLElement` from public `ActionElementPayload`
+- move `wikilinkCompleted` native-resolution knowledge behind package internals
 - move any event-application data needed for native handling behind internal adapters
 - push Obsidian/editor-specific state back into detectors and codec/application internals
 

@@ -3,8 +3,8 @@
  */
 
 import type { EditorView } from "@codemirror/view";
-import { SplitPathToMdFileSchema } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
+import { toSourcePath } from "../source-path";
 import { PayloadKind } from "../../types/payload-base";
 
 /**
@@ -14,19 +14,14 @@ import { PayloadKind } from "../../types/payload-base";
 export const SelectAllPayloadSchemaPartial = z.object({
 	/** Full document content */
 	content: z.string(),
-	/** Custom selection range set by behaviors (from, to) */
-	customSelection: z
-		.object({
-			from: z.number(),
-			to: z.number(),
-		})
-		.optional(),
 	kind: z.literal(PayloadKind.SelectAll),
 	/** File where select-all was triggered (optional) */
-	splitPath: SplitPathToMdFileSchema.optional(),
+	sourcePath: z.string().optional(),
 });
 
-export type SelectAllPayload = z.infer<typeof SelectAllPayloadSchemaPartial> & {
+export type SelectAllPayload = z.infer<typeof SelectAllPayloadSchemaPartial>;
+
+export type InternalSelectAllPayload = SelectAllPayload & {
 	/** CodeMirror view for dispatching selection changes */
 	view: EditorView;
 };
@@ -37,12 +32,26 @@ export type SelectAllPayload = z.infer<typeof SelectAllPayloadSchemaPartial> & {
 export function createSelectAllPayload(
 	content: string,
 	view: EditorView,
-	splitPath?: SelectAllPayload["splitPath"],
-): SelectAllPayload {
+	splitPath?: {
+		basename: string;
+		extension: string;
+		kind: string;
+		pathParts: string[];
+	},
+): InternalSelectAllPayload {
 	return {
 		content,
 		kind: PayloadKind.SelectAll,
-		splitPath,
+		sourcePath: toSourcePath(
+			splitPath as
+				| {
+						basename: string;
+						extension: "md";
+						kind: "MdFile";
+						pathParts: string[];
+				  }
+				| undefined,
+		),
 		view,
 	};
 }

@@ -4,14 +4,13 @@
 
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { createEventCodec } from "../../codec-factory";
-import type { Modifiers, WikilinkClickPayload, WikiTarget } from "./payload";
+import type { WikilinkClickPayload, WikiTarget } from "./payload";
 import { createWikilinkClickPayload } from "./payload";
 
 export type WikilinkClickData = {
 	wikiTarget: WikiTarget;
 	blockContent: string;
 	splitPath: SplitPathToMdFile;
-	modifiers: Modifiers;
 };
 
 export const WikilinkClickCodec = createEventCodec(
@@ -23,6 +22,5 @@ export const WikilinkClickCodec = createEventCodec(
 			data.wikiTarget,
 			data.blockContent,
 			data.splitPath,
-			data.modifiers,
 		),
 );

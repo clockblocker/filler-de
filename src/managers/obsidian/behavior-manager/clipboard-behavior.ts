@@ -2,15 +2,17 @@ import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link/go-bac
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import {
 	type ClipboardPayload,
-	type EventHandler,
-	HandlerOutcome,
+	type UserEventHandler,
+	UserEventKind,
 } from "../user-event-interceptor";
 
 /**
  * Create a handler that strips metadata from clipboard copy.
  * Removes go-back links and metadata sections from copied text.
  */
-export function createClipboardHandler(): EventHandler<ClipboardPayload> {
+export function createClipboardHandler(): UserEventHandler<
+	typeof UserEventKind.ClipboardCopy
+> {
 	return {
 		doesApply: () => true, // Always try to handle clipboard events
 		handle: (payload) => {
@@ -20,11 +22,11 @@ export function createClipboardHandler(): EventHandler<ClipboardPayload> {
 
 			// Only return modified if we actually stripped something
 			if (strippedText === original.trim()) {
-				return { outcome: HandlerOutcome.Passthrough };
+				return { outcome: "passthrough" } as const;
 			}
 			return {
-				data: { ...payload, modifiedText: strippedText },
-				outcome: HandlerOutcome.Modified,
+				effect: { modifiedText: strippedText },
+				outcome: "effect",
 			};
 		},
 	};

@@ -1,42 +1,31 @@
-/**
- * PayloadBase - base type for all event payloads.
- *
- * All payloads include:
- * - kind: Discriminator for the payload type
- * - splitPath: File context (may be optional for some events)
- */
-
-import { SplitPathToMdFileSchema } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
+import {
+	UserEventKind,
+	type UserEventPayloadMap,
+} from "../contracts";
 
 export const PayloadKindSchema = z.enum([
-	"CheckboxClicked",
-	"CheckboxInFrontmatterClicked",
-	"ActionElementClicked",
-	"ClipboardCopy",
-	"SelectAll",
-	"WikilinkCompleted",
-	"WikilinkClicked",
-	"SelectionChanged",
+	UserEventKind.CheckboxClicked,
+	UserEventKind.CheckboxFrontmatterClicked,
+	UserEventKind.ActionElementClicked,
+	UserEventKind.ClipboardCopy,
+	UserEventKind.SelectAll,
+	UserEventKind.WikilinkCompleted,
+	UserEventKind.WikilinkClicked,
+	UserEventKind.SelectionChanged,
 ]);
 
 export type PayloadKind = z.infer<typeof PayloadKindSchema>;
-export const PayloadKind = PayloadKindSchema.enum;
 
-/**
- * Base schema for payloads that have file context.
- */
-export const PayloadWithPathSchema = z.object({
-	kind: PayloadKindSchema,
-	splitPath: SplitPathToMdFileSchema,
-});
+export const PayloadKind = {
+	ActionElementClicked: UserEventKind.ActionElementClicked,
+	CheckboxClicked: UserEventKind.CheckboxClicked,
+	CheckboxInFrontmatterClicked: UserEventKind.CheckboxFrontmatterClicked,
+	ClipboardCopy: UserEventKind.ClipboardCopy,
+	SelectAll: UserEventKind.SelectAll,
+	SelectionChanged: UserEventKind.SelectionChanged,
+	WikilinkClicked: UserEventKind.WikilinkClicked,
+	WikilinkCompleted: UserEventKind.WikilinkCompleted,
+} as const;
 
-/**
- * Base type for payloads with file context.
- */
-export type PayloadWithPath = z.infer<typeof PayloadWithPathSchema>;
-
-/**
- * Union type of all payload kinds.
- */
-export type AnyPayload = { kind: PayloadKind };
+export type AnyPayload = UserEventPayloadMap[PayloadKind];

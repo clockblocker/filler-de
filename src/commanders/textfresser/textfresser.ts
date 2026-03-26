@@ -6,8 +6,11 @@ import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { errAsync } from "neverthrow";
 import type { LexicalGenerationSettings } from "@textfresser/lexical-generation";
 import type { CommandContext } from "../../managers/obsidian/command-executor";
-import type { WikilinkClickPayload } from "../../managers/obsidian/user-event-interceptor/events";
-import type { EventHandler } from "../../managers/obsidian/user-event-interceptor/types/handler";
+import {
+	type UserEventHandler,
+	type WikilinkClickPayload,
+	UserEventKind,
+} from "../../managers/obsidian/user-event-interceptor";
 import type { ApiService } from "../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../types";
 import { logger } from "../../utils/logger";
@@ -120,7 +123,7 @@ export class Textfresser {
 			});
 	}
 
-	createHandler(): EventHandler<WikilinkClickPayload> {
+	createHandler(): UserEventHandler<typeof UserEventKind.WikilinkClicked> {
 		return createWikilinkClickHandler({
 			awaitGenerateAndScroll:
 				this.backgroundGenerateCoordinator.awaitGenerateAndScroll,

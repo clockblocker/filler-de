@@ -7,7 +7,7 @@ import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/pr
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
 import { LexicalGenerationFailureKind } from "@textfresser/lexical-generation";
 import type { CommandContext } from "../../../../src/managers/obsidian/command-executor";
-import { PayloadKind } from "../../../../src/managers/obsidian/user-event-interceptor/types/payload-base";
+import { UserEventKind } from "../../../../src/managers/obsidian/user-event-interceptor";
 import type { ApiService } from "../../../../src/stateless-helpers/api-service";
 
 const SOURCE_PATH: SplitPathToMdFile = {
@@ -100,18 +100,13 @@ describe("Textfresser thin orchestrator", () => {
 		const outcome = await handler.handle(
 			{
 				blockContent: "Er sieht [[gehen|geht]] schnell. ^1",
-				kind: PayloadKind.WikilinkClicked,
-				modifiers: { alt: false, ctrl: false, meta: false, shift: false },
-				splitPath: SOURCE_PATH,
-				wikiTarget: { alias: "geht", basename: "gehen" },
-			},
-			{
-				app: {} as Parameters<typeof handler.handle>[1]["app"],
-				vam: {} as Parameters<typeof handler.handle>[1]["vam"],
+				kind: UserEventKind.WikilinkClicked,
+				sourcePath: "Books/Source.md",
+				target: { alias: "geht", basename: "gehen" },
 			},
 		);
 
-		expect(outcome.outcome).toBe("Passthrough");
+		expect(outcome.outcome).toBe("passthrough");
 		const attestation = textfresser.getState().attestationForLatestNavigated;
 		expect(attestation?.target.surface).toBe("geht");
 		expect(attestation?.source.ref).toBe("![[Source#^1|^]]");

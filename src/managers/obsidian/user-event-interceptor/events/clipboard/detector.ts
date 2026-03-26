@@ -9,10 +9,9 @@
  * 5. If not: let native behavior proceed
  */
 
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { type App, MarkdownView } from "obsidian";
 import { blockIdHelper } from "../../../../../stateless-helpers/block-id";
-import { HandlerOutcome } from "../../types/handler";
+import type { SelectionTextSource } from "../../contracts";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";
 import { getCurrentFilePath } from "../get-current-file-path";
@@ -25,7 +24,7 @@ export class ClipboardDetector {
 
 	constructor(
 		private readonly app: App,
-		private readonly vam: VaultActionManager,
+		private readonly selectionTextSource: SelectionTextSource,
 		createInvoker: (kind: PayloadKind) => HandlerInvoker<ClipboardPayload>,
 	) {
 		this.invoker = createInvoker(PayloadKind.ClipboardCopy);
@@ -54,7 +53,7 @@ export class ClipboardDetector {
 		// Use VAM to get selection - handles CodeMirror virtualization properly
 		// (window.getSelection() only gets text from rendered DOM nodes, missing scrolled content)
 		const selection =
-			this.vam.activeFileService.getSelection() ??
+			this.selectionTextSource.getSelectionText() ??
 			window.getSelection()?.toString();
 
 		// No selection: handle block reference copy (copy only, not cut)
@@ -83,18 +82,15 @@ export class ClipboardDetector {
 		evt.preventDefault();
 
 		void invoke().then((result) => {
-			if (result.outcome === HandlerOutcome.Passthrough) {
+			if (result.outcome === "passthrough") {
 				// Handler decided to passthrough - but we already prevented default
 				// Set clipboard to original text
 				evt.clipboardData?.setData("text/plain", payload.originalText);
-			} else if (
-				result.outcome === HandlerOutcome.Modified &&
-				result.data
-			) {
+			} else if (result.outcome === "effect") {
 				// Handler modified the payload - use modified text
 				if (evt.clipboardData === null) return;
-				ClipboardCodec.decode(result.data, evt.clipboardData);
-			} else if (result.outcome === HandlerOutcome.Handled) {
+				ClipboardCodec.applyEffect(result.effect, evt.clipboardData);
+			} else if (result.outcome === "handled") {
 				// Handler consumed the event - do nothing
 			}
 		});

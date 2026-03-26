@@ -1,31 +1,19 @@
 import { describe, expect, it } from "bun:test";
-import {
-	SplitPathKind,
-	type SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
 import { buildAttestationFromWikilinkClickPayload } from "../../../../src/commanders/textfresser/common/attestation/builders/build-from-wikilink-click-payload";
-import type { WikilinkClickPayload } from "../../../../src/managers/obsidian/user-event-interceptor/events/click/wikilink-click/payload";
-import { PayloadKind } from "../../../../src/managers/obsidian/user-event-interceptor/types/payload-base";
-
-const makeSplitPath = (basename: string): SplitPathToMdFile => ({
-	basename,
-	extension: "md",
-	kind: SplitPathKind.MdFile,
-	pathParts: [],
-});
-
-const defaultModifiers = { alt: false, ctrl: false, meta: false, shift: false };
+import {
+	type WikilinkClickPayload,
+	UserEventKind,
+} from "../../../../src/managers/obsidian/user-event-interceptor";
 
 const makePayload = (
 	basename: string,
 	blockContent: string,
-	wikiTarget: { basename: string; alias?: string },
+	target: { basename: string; alias?: string },
 ): WikilinkClickPayload => ({
 	blockContent,
-	kind: PayloadKind.WikilinkClicked,
-	modifiers: defaultModifiers,
-	splitPath: makeSplitPath(basename),
-	wikiTarget,
+	kind: UserEventKind.WikilinkClicked,
+	sourcePath: `${basename}.md`,
+	target,
 });
 
 describe("buildAttestationFromWikilinkClickPayload", () => {

@@ -4,6 +4,7 @@
 
 import type { EditorView } from "@codemirror/view";
 import { z } from "zod";
+import { toSourcePath } from "../source-path";
 import { PayloadKind } from "../../types/payload-base";
 
 /**
@@ -11,18 +12,18 @@ import { PayloadKind } from "../../types/payload-base";
  * and add the view at runtime.
  */
 export const WikilinkPayloadSchemaPartial = z.object({
-	/** Alias to insert (set by behaviors) */
-	aliasToInsert: z.string().optional(),
-	/** Position before ]] */
-	closePos: z.number(),
+	canResolveNatively: z.boolean(),
 	kind: z.literal(PayloadKind.WikilinkCompleted),
 	/** Raw content between [[ and ]] */
 	linkContent: z.string(),
-	/** Resolved wikilink target basename (set by behaviors for corename resolution) */
-	resolvedTarget: z.string().optional(),
+	sourcePath: z.string().optional(),
 });
 
-export type WikilinkPayload = z.infer<typeof WikilinkPayloadSchemaPartial> & {
+export type WikilinkPayload = z.infer<typeof WikilinkPayloadSchemaPartial>;
+
+export type InternalWikilinkPayload = WikilinkPayload & {
+	/** Position before ]] */
+	closePos: number;
 	/** EditorView for inserting alias */
 	view: EditorView;
 };
@@ -34,11 +35,22 @@ export function createWikilinkPayload(
 	linkContent: string,
 	closePos: number,
 	view: EditorView,
-): WikilinkPayload {
+	params?: {
+		canResolveNatively: boolean;
+		sourcePath?: {
+			basename: string;
+			extension: "md";
+			kind: "MdFile";
+			pathParts: string[];
+		};
+	},
+): InternalWikilinkPayload {
 	return {
+		canResolveNatively: params?.canResolveNatively ?? false,
 		closePos,
 		kind: PayloadKind.WikilinkCompleted,
 		linkContent,
+		sourcePath: toSourcePath(params?.sourcePath),
 		view,
 	};
 }

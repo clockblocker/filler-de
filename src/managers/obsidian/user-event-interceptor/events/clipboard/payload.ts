@@ -1,21 +1,16 @@
-/**
- * ClipboardPayload - payload for clipboard copy/cut events.
- */
-
-import { SplitPathToMdFileSchema } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
+import { toSourcePath } from "../source-path";
 import { PayloadKind } from "../../types/payload-base";
 
 export const ClipboardPayloadSchema = z.object({
 	/** True if cut, false if copy */
 	isCut: z.boolean(),
 	kind: z.literal(PayloadKind.ClipboardCopy),
-	/** Modified text set by behaviors (used by codec.decode) */
-	modifiedText: z.string().optional(),
 	/** Original selected text */
 	originalText: z.string(),
 	/** File where clipboard event occurred (optional - may not have active file) */
-	splitPath: SplitPathToMdFileSchema.optional(),
+	sourcePath: z.string().optional(),
 });
 
 export type ClipboardPayload = z.infer<typeof ClipboardPayloadSchema>;
@@ -26,12 +21,12 @@ export type ClipboardPayload = z.infer<typeof ClipboardPayloadSchema>;
 export function createClipboardPayload(
 	originalText: string,
 	isCut: boolean,
-	splitPath?: ClipboardPayload["splitPath"],
+	splitPath?: SplitPathToMdFile,
 ): ClipboardPayload {
 	return {
 		isCut,
 		kind: PayloadKind.ClipboardCopy,
 		originalText,
-		splitPath,
+		sourcePath: toSourcePath(splitPath),
 	};
 }

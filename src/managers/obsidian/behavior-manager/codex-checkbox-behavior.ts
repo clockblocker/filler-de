@@ -3,11 +3,11 @@
  * Delegates to Librarian for all logic.
  */
 
+import { makeSplitPath } from "@textfresser/vault-action-manager";
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import {
-	type CheckboxPayload,
-	type EventHandler,
-	HandlerOutcome,
+	type UserEventHandler,
+	UserEventKind,
 } from "../user-event-interceptor";
 
 /**
@@ -16,13 +16,21 @@ import {
  */
 export function createCodexCheckboxHandler(
 	librarian: Librarian,
-): EventHandler<CheckboxPayload> {
+): UserEventHandler<typeof UserEventKind.CheckboxClicked> {
 	return {
 		doesApply: (payload) =>
-			librarian.isCodexInsideLibrary(payload.splitPath),
+			payload.sourcePath !== undefined &&
+			librarian.isCodexInsideLibrary(
+				makeSplitPath(payload.sourcePath) as {
+					basename: string;
+					extension: "md";
+					kind: "MdFile";
+					pathParts: string[];
+				},
+			),
 		handle: async (payload) => {
 			await librarian.handleCodexCheckboxClick(payload);
-			return { outcome: HandlerOutcome.Handled };
+			return { outcome: "handled" } as const;
 		},
 	};
 }

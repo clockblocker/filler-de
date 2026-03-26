@@ -7,7 +7,6 @@
  * Subscribes to GenericClickDetector and filters for checkbox targets.
  */
 
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { type App, MarkdownView } from "obsidian";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
 import {
@@ -16,6 +15,7 @@ import {
 } from "../../../../../../utils/idle-tracker";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
+import { getCurrentFilePath } from "../../get-current-file-path";
 import type { GenericClickDetector } from "../generic-click-detector";
 import { CheckboxCodec } from "./codec";
 import type { CheckboxPayload } from "./payload";
@@ -27,7 +27,6 @@ export class CheckboxClickedDetector {
 	constructor(
 		private readonly genericClick: GenericClickDetector,
 		private readonly app: App,
-		private readonly vam: VaultActionManager,
 		createInvoker: (kind: PayloadKind) => HandlerInvoker<CheckboxPayload>,
 	) {
 		this.invoker = createInvoker(PayloadKind.CheckboxClicked);
@@ -59,7 +58,7 @@ export class CheckboxClickedDetector {
 		if (!this.isTaskCheckbox(target)) return;
 
 		// Get current file path
-		const splitPath = this.vam.mdPwd();
+		const splitPath = getCurrentFilePath(this.app);
 		if (!splitPath) return;
 
 		const checkbox = target as HTMLInputElement;

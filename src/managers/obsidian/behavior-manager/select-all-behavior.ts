@@ -1,16 +1,18 @@
 import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link/go-back-link";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import {
-	type EventHandler,
-	HandlerOutcome,
 	type SelectAllPayload,
+	type UserEventHandler,
+	UserEventKind,
 } from "../user-event-interceptor";
 
 /**
  * Create a handler for smart select-all.
  * Excludes frontmatter, go-back links, and metadata sections.
  */
-export function createSelectAllHandler(): EventHandler<SelectAllPayload> {
+export function createSelectAllHandler(): UserEventHandler<
+	typeof UserEventKind.SelectAll
+> {
 	return {
 		doesApply: (payload) => {
 			const { from, to } = calculateSmartRange(payload.content);
@@ -22,13 +24,13 @@ export function createSelectAllHandler(): EventHandler<SelectAllPayload> {
 
 			// If the range covers everything or nothing, passthrough
 			if ((from === 0 && to === payload.content.length) || from >= to) {
-				return { outcome: HandlerOutcome.Passthrough };
+				return { outcome: "passthrough" } as const;
 			}
 
-			// Return modified payload with custom selection
+			// Return custom selection effect
 			return {
-				data: { ...payload, customSelection: { from, to } },
-				outcome: HandlerOutcome.Modified,
+				effect: { selection: { from, to } },
+				outcome: "effect",
 			};
 		},
 	};

@@ -1,24 +1,11 @@
-/**
- * UserEventInterceptor - unified facade for user event detection with handler pattern.
- *
- * Architecture:
- * - Raw DOM events are captured by detectors
- * - Events are encoded into payloads via codecs
- * - Single handler per event type transforms/handles payload
- * - Default actions apply final transformations
- *
- * Detectors:
- * - ClipboardDetector: copy/cut events
- * - CheckboxClickedDetector: task checkbox clicks
- * - CheckboxFrontmatterDetector: property checkbox clicks
- * - ActionElementDetector: [data-action] button clicks
- * - SelectAllDetector: Ctrl/Cmd+A
- * - SelectionChangedDetector: text selection changes
- * - WikilinkDetector: wikilink completions
- */
-
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import type { App, Plugin } from "obsidian";
+import type {
+	ObsidianEventLayer,
+	ObsidianEventLayerDeps,
+	UserEventHandler,
+	UserEventKind,
+	UserEventPayloadMap,
+	UserEventResult,
+} from "./contracts";
 import { ActionElementDetector } from "./events/click/action-element/detector";
 import { CheckboxClickedDetector } from "./events/click/checkbox/detector";
 import { CheckboxFrontmatterDetector } from "./events/click/checkbox-frontmatter/detector";
@@ -28,12 +15,7 @@ import { ClipboardDetector } from "./events/clipboard/detector";
 import { SelectAllDetector } from "./events/select-all/detector";
 import { SelectionChangedDetector } from "./events/selection-changed/detector";
 import { WikilinkDetector } from "./events/wikilink/detector";
-import {
-	type EventHandler,
-	type HandlerContext,
-	HandlerOutcome,
-	type HandlerTeardown,
-} from "./types/handler";
+import type { HandlerTeardown } from "./types/handler";
 import type { AnyPayload, PayloadKind } from "./types/payload-base";
 
 /**
@@ -50,40 +32,37 @@ interface Detector {
  */
 export type HandlerInvoker<P extends AnyPayload> = (payload: P) => {
 	applies: boolean;
-	invoke: () => Promise<{
-		outcome: HandlerOutcome;
-		data?: P;
-	}>;
+	invoke: () => Promise<UserEventResult<P["kind"]>>;
 };
 
-export class UserEventInterceptor {
+class ObsidianEventLayerImpl implements ObsidianEventLayer {
 	private readonly genericClickDetector: GenericClickDetector;
 	private readonly detectors: Detector[];
 	private readonly handlers = new Map<
-		PayloadKind,
-		EventHandler<AnyPayload>
+		UserEventKind,
+		UserEventHandler<UserEventKind>
 	>();
-	private readonly ctx: HandlerContext;
 	private listening = false;
 
-	constructor(app: App, plugin: Plugin, vam: VaultActionManager) {
-		this.ctx = { app, vam };
-
+	constructor({ app, plugin, selectionTextSource }: ObsidianEventLayerDeps) {
 		// Create shared generic click detector
 		this.genericClickDetector = new GenericClickDetector();
 
 		// Create all detectors with handler invoker
 		this.detectors = [
-			new ClipboardDetector(app, vam, this.createInvoker.bind(this)),
+			new ClipboardDetector(
+				app,
+				selectionTextSource,
+				this.createInvoker.bind(this),
+			),
 			new CheckboxClickedDetector(
 				this.genericClickDetector,
 				app,
-				vam,
 				this.createInvoker.bind(this),
 			),
 			new CheckboxFrontmatterDetector(
 				this.genericClickDetector,
-				vam,
+				app,
 				this.createInvoker.bind(this),
 			),
 			new ActionElementDetector(
@@ -93,7 +72,6 @@ export class UserEventInterceptor {
 			new WikilinkClickDetector(
 				this.genericClickDetector,
 				app,
-				vam,
 				this.createInvoker.bind(this),
 			),
 			new SelectAllDetector(app, this.createInvoker.bind(this)),
@@ -107,11 +85,11 @@ export class UserEventInterceptor {
 	 * Only one handler per kind is allowed.
 	 * Returns teardown function to unregister.
 	 */
-	setHandler<P extends AnyPayload>(
-		kind: PayloadKind,
-		handler: EventHandler<P>,
+	setHandler<K extends UserEventKind>(
+		kind: K,
+		handler: UserEventHandler<K>,
 	): HandlerTeardown {
-		this.handlers.set(kind, handler as EventHandler<AnyPayload>);
+		this.handlers.set(kind, handler as UserEventHandler<UserEventKind>);
 		return () => {
 			if (this.handlers.get(kind) === handler) {
 				this.handlers.delete(kind);
@@ -122,7 +100,7 @@ export class UserEventInterceptor {
 	/**
 	 * Start listening to all user events.
 	 */
-	startListening(): void {
+	start(): void {
 		if (this.listening) return;
 
 		this.listening = true;
@@ -139,7 +117,7 @@ export class UserEventInterceptor {
 	/**
 	 * Stop listening to all user events.
 	 */
-	stopListening(): void {
+	stop(): void {
 		if (!this.listening) return;
 
 		this.listening = false;
@@ -164,36 +142,37 @@ export class UserEventInterceptor {
 	): HandlerInvoker<P> {
 		return (payload: P) => {
 			const handler = this.handlers.get(kind) as
-				| EventHandler<P>
+				| UserEventHandler<UserEventKind>
 				| undefined;
 
 			if (!handler) {
 				return {
 					applies: false,
-					invoke: async () => ({
-						outcome: HandlerOutcome.Passthrough,
-					}),
+					invoke: async () => ({ outcome: "passthrough" }),
 				};
 			}
 
-			const applies = handler.doesApply(payload);
+			const applies = handler.doesApply(payload as never);
 
 			return {
 				applies,
 				invoke: async () => {
 					if (!applies) {
-						return { outcome: HandlerOutcome.Passthrough };
+						return { outcome: "passthrough" } as UserEventResult<
+							P["kind"]
+						>;
 					}
-					const result = await handler.handle(payload, this.ctx);
-					if (result.outcome === HandlerOutcome.Modified) {
-						return {
-							data: result.data,
-							outcome: HandlerOutcome.Modified,
-						};
-					}
-					return { outcome: result.outcome };
+					return handler.handle(payload as never) as UserEventResult<
+						P["kind"]
+					>;
 				},
 			};
 		};
 	}
+}
+
+export function createObsidianEventLayer(
+	deps: ObsidianEventLayerDeps,
+): ObsidianEventLayer {
+	return new ObsidianEventLayerImpl(deps);
 }

@@ -2,8 +2,9 @@
  * CheckboxPayload - payload for task checkbox clicks in content.
  */
 
-import { SplitPathToMdFileSchema } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
+import { toSourcePath } from "../../source-path";
 import { PayloadKind } from "../../../types/payload-base";
 
 export const CheckboxPayloadSchema = z.object({
@@ -13,7 +14,7 @@ export const CheckboxPayloadSchema = z.object({
 	/** Line content after "- [ ] " or "- [x] " */
 	lineContent: z.string(),
 	/** File where checkbox was clicked */
-	splitPath: SplitPathToMdFileSchema,
+	sourcePath: z.string(),
 });
 
 export type CheckboxPayload = z.infer<typeof CheckboxPayloadSchema>;
@@ -22,7 +23,7 @@ export type CheckboxPayload = z.infer<typeof CheckboxPayloadSchema>;
  * Create a checkbox payload.
  */
 export function createCheckboxPayload(
-	splitPath: CheckboxPayload["splitPath"],
+	splitPath: SplitPathToMdFile,
 	checked: boolean,
 	lineContent: string,
 ): CheckboxPayload {
@@ -30,6 +31,6 @@ export function createCheckboxPayload(
 		checked,
 		kind: PayloadKind.CheckboxClicked,
 		lineContent,
-		splitPath,
+		sourcePath: toSourcePath(splitPath) ?? "",
 	};
 }

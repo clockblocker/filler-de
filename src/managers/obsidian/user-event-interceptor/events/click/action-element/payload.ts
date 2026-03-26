@@ -11,26 +11,16 @@ export const ActionElementPayloadSchema = z.object({
 	kind: z.literal(PayloadKind.ActionElementClicked),
 });
 
-/**
- * ActionElementPayload includes the button element which can't be validated by Zod.
- */
-export type ActionElementPayload = z.infer<
-	typeof ActionElementPayloadSchema
-> & {
-	/** The button element that was clicked */
-	button: HTMLElement;
-};
+export type ActionElementPayload = z.infer<typeof ActionElementPayloadSchema>;
 
 /**
  * Create an action element payload.
  */
 export function createActionElementPayload(
 	actionId: string,
-	button: HTMLElement,
 ): ActionElementPayload {
 	return {
 		actionId,
-		button,
 		kind: PayloadKind.ActionElementClicked,
 	};
 }

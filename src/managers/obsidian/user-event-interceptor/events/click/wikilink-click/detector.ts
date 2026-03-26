@@ -8,10 +8,6 @@
  * Subscribes to GenericClickDetector and filters for wikilink targets.
  */
 
-import {
-	makeSystemPathForSplitPath,
-	type VaultActionManager,
-} from "@textfresser/vault-action-manager";
 import { type App, MarkdownView } from "obsidian";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
@@ -19,12 +15,12 @@ import {
 	decrementPending,
 	incrementPending,
 } from "../../../../../../utils/idle-tracker";
-import { HandlerOutcome } from "../../../types/handler";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
+import { getCurrentFilePath } from "../../get-current-file-path";
 import type { GenericClickDetector } from "../generic-click-detector";
 import { WikilinkClickCodec } from "./codec";
-import type { Modifiers, WikilinkClickPayload, WikiTarget } from "./payload";
+import type { WikilinkClickPayload, WikiTarget } from "./payload";
 
 export class WikilinkClickDetector {
 	private unsubscribe: (() => void) | null = null;
@@ -33,7 +29,6 @@ export class WikilinkClickDetector {
 	constructor(
 		private readonly genericClick: GenericClickDetector,
 		private readonly app: App,
-		private readonly vam: VaultActionManager,
 		createInvoker: (
 			kind: PayloadKind,
 		) => HandlerInvoker<WikilinkClickPayload>,
@@ -67,26 +62,13 @@ export class WikilinkClickDetector {
 		const linkElement = this.findLinkElement(target);
 		if (!linkElement) return;
 
-		// Extract modifiers
-		const modifiers: Modifiers = {
-			alt: evt.altKey,
-			ctrl: evt.ctrlKey,
-			meta: evt.metaKey,
-			shift: evt.shiftKey,
-		};
-
 		// If any modifier is held, always passthrough to let Obsidian handle (new tab, etc.)
-		if (
-			modifiers.ctrl ||
-			modifiers.meta ||
-			modifiers.shift ||
-			modifiers.alt
-		) {
+		if (evt.ctrlKey || evt.metaKey || evt.shiftKey || evt.altKey) {
 			return;
 		}
 
 		// Get current file path
-		const splitPath = this.vam.mdPwd();
+		const splitPath = getCurrentFilePath(this.app);
 		if (!splitPath) return;
 
 		// Extract link data
@@ -100,7 +82,6 @@ export class WikilinkClickDetector {
 		// Encode to payload
 		const payload = WikilinkClickCodec.encode({
 			blockContent,
-			modifiers,
 			splitPath,
 			wikiTarget,
 		});
@@ -117,11 +98,11 @@ export class WikilinkClickDetector {
 		evt.preventDefault();
 		const result = await invoke();
 
-		if (result.outcome === HandlerOutcome.Passthrough) {
+		if (result.outcome === "passthrough") {
 			// Handler decided to passthrough - restore navigation that was prevented
 			this.app.workspace.openLinkText(
 				wikiTarget.basename,
-				makeSystemPathForSplitPath(splitPath),
+				payload.sourcePath,
 				false,
 			);
 		}

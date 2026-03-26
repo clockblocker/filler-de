@@ -62,7 +62,6 @@ export class ActionElementDetector {
 		// Encode to payload
 		const payload = ActionElementCodec.encode({
 			actionId,
-			button,
 		});
 
 		// Check if handler applies

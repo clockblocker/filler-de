@@ -6,8 +6,8 @@
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import {
 	type CheckboxFrontmatterPayload,
-	type EventHandler,
-	HandlerOutcome,
+	type UserEventHandler,
+	UserEventKind,
 } from "../user-event-interceptor";
 
 /**
@@ -16,7 +16,7 @@ import {
  */
 export function createCheckboxFrontmatterHandler(
 	librarian: Librarian,
-): EventHandler<CheckboxFrontmatterPayload> {
+): UserEventHandler<typeof UserEventKind.CheckboxFrontmatterClicked> {
 	return {
 		doesApply: () => true,
 		handle: (payload) => {
@@ -26,7 +26,7 @@ export function createCheckboxFrontmatterHandler(
 				) => void;
 			};
 			maybeWithHandler.handlePropertyCheckboxClick?.(payload);
-			return { outcome: HandlerOutcome.Handled };
+			return { outcome: "handled" } as const;
 		},
 	};
 }

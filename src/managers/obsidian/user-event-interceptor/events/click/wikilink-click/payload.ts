@@ -1,21 +1,8 @@
-/**
- * WikilinkClickPayload - payload for internal link (wikilink) clicks.
- */
-
-import { SplitPathToMdFileSchema } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
+import { toSourcePath } from "../../source-path";
 import { PayloadKind } from "../../../types/payload-base";
 
-export const ModifiersSchema = z.object({
-	alt: z.boolean(),
-	ctrl: z.boolean(),
-	meta: z.boolean(),
-	shift: z.boolean(),
-});
-
-export type Modifiers = z.infer<typeof ModifiersSchema>;
-
-/** Wikilink target: [[basename]] or [[basename|alias]] */
 export const WikiTargetSchema = z.object({
 	alias: z.string().optional(),
 	basename: z.string(),
@@ -24,33 +11,23 @@ export const WikiTargetSchema = z.object({
 export type WikiTarget = z.infer<typeof WikiTargetSchema>;
 
 export const WikilinkClickPayloadSchema = z.object({
-	/** Full line/block content where link is located */
 	blockContent: z.string(),
 	kind: z.literal(PayloadKind.WikilinkClicked),
-	/** Modifier keys held during click */
-	modifiers: ModifiersSchema,
-	/** File where link was clicked */
-	splitPath: SplitPathToMdFileSchema,
-	/** Wikilink target info */
-	wikiTarget: WikiTargetSchema,
+	sourcePath: z.string(),
+	target: WikiTargetSchema,
 });
 
 export type WikilinkClickPayload = z.infer<typeof WikilinkClickPayloadSchema>;
 
-/**
- * Create a wikilink click payload.
- */
 export function createWikilinkClickPayload(
-	wikiTarget: WikiTarget,
+	target: WikiTarget,
 	blockContent: string,
-	splitPath: WikilinkClickPayload["splitPath"],
-	modifiers: Modifiers,
+	splitPath: SplitPathToMdFile,
 ): WikilinkClickPayload {
 	return {
 		blockContent,
 		kind: PayloadKind.WikilinkClicked,
-		modifiers,
-		splitPath,
-		wikiTarget,
+		sourcePath: toSourcePath(splitPath) ?? "",
+		target,
 	};
 }

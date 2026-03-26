@@ -16,10 +16,9 @@ import type { Librarian } from "../../commanders/librarian/librarian";
 import type { CommandExecutor } from "../obsidian/command-executor";
 import {
 	type ActionElementPayload,
-	HandlerOutcome,
-	PayloadKind,
+	type ObsidianEventLayer,
 	type SelectionChangedPayload,
-	type UserEventInterceptor,
+	UserEventKind,
 } from "../obsidian/user-event-interceptor";
 import type {
 	Teardown,
@@ -49,7 +48,7 @@ export type OverlayManagerDeps = {
 	app: App;
 	librarian: Librarian;
 	plugin?: Plugin;
-	userEventInterceptor?: UserEventInterceptor;
+	userEventInterceptor?: ObsidianEventLayer;
 	commandExecutor?: CommandExecutor;
 	vam: VaultActionManager;
 };
@@ -62,7 +61,7 @@ export class OverlayManager {
 	private readonly librarian: Librarian;
 	private readonly plugin: Plugin | null;
 	private readonly workspaceInterceptor: WorkspaceEventInterceptor;
-	private readonly userEventInterceptor: UserEventInterceptor | null;
+	private readonly userEventInterceptor: ObsidianEventLayer | null;
 	private readonly commandExecutor: CommandExecutor | null;
 	private readonly vam: VaultActionManager;
 	private workspaceTeardown: Teardown | null = null;
@@ -93,7 +92,7 @@ export class OverlayManager {
 		if (this.userEventInterceptor) {
 			this.selectionHandlerTeardown =
 				this.userEventInterceptor.setHandler(
-					PayloadKind.SelectionChanged,
+					UserEventKind.SelectionChanged,
 					{
 						doesApply: () => true,
 						handle: async (payload: SelectionChangedPayload) => {
@@ -104,14 +103,14 @@ export class OverlayManager {
 								selectionToolbars: this.selectionToolbars,
 							});
 							this.activeLeafId = result.newActiveLeafId;
-							return { outcome: HandlerOutcome.Passthrough };
+							return { outcome: "passthrough" } as const;
 						},
 					},
 				);
 
 			this.actionClickHandlerTeardown =
 				this.userEventInterceptor.setHandler(
-					PayloadKind.ActionElementClicked,
+					UserEventKind.ActionElementClicked,
 					{
 						doesApply: (payload: ActionElementPayload) =>
 							KNOWN_ACTION_IDS.has(payload.actionId),
@@ -121,7 +120,7 @@ export class OverlayManager {
 								commandExecutor: this.commandExecutor,
 								vam: this.vam,
 							});
-							return { outcome: HandlerOutcome.Handled };
+							return { outcome: "handled" } as const;
 						},
 					},
 				);

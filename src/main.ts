@@ -31,7 +31,10 @@ import {
 	CommandKind,
 	createCommandExecutor,
 } from "./managers/obsidian/command-executor";
-import { UserEventInterceptor } from "./managers/obsidian/user-event-interceptor";
+import {
+	createObsidianEventLayer,
+	type ObsidianEventLayer,
+} from "./managers/obsidian/user-event-interceptor";
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
 import { ApiService } from "./stateless-helpers/api-service";
@@ -58,7 +61,7 @@ export default class TextEaterPlugin extends Plugin {
 	testingTFileHelper: TFileHelper;
 	testingTFolderHelper: TFolderHelper;
 	vam: VaultActionManagerImpl;
-	userEventInterceptor: UserEventInterceptor;
+	userEventInterceptor: ObsidianEventLayer;
 	overlayManager: OverlayManager | null = null;
 	delimiterChangeService: DelimiterChangeService | null = null;
 
@@ -214,11 +217,13 @@ export default class TextEaterPlugin extends Plugin {
 		);
 
 		// Unified user event interceptor (clicks, clipboard, select-all, wikilinks)
-		this.userEventInterceptor = new UserEventInterceptor(
-			this.app,
-			this,
-			this.vam,
-		);
+		this.userEventInterceptor = createObsidianEventLayer({
+			app: this.app,
+			plugin: this,
+			selectionTextSource: {
+				getSelectionText: () => this.vam.activeFileService.getSelection(),
+			},
+		});
 
 		// New Librarian (healing modes)
 		this.librarian = new Librarian(this.vam);
@@ -229,7 +234,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.vam.startListening();
 
 		// Start listening to user events (clicks, clipboard, select-all, wikilinks)
-		this.userEventInterceptor.startListening();
+		this.userEventInterceptor.start();
 
 		// Initialize delimiter change service (does not require librarian)
 		this.delimiterChangeService = new DelimiterChangeService(
@@ -299,7 +304,7 @@ export default class TextEaterPlugin extends Plugin {
 		}
 		this.handlerTeardowns = [];
 		if (this.userEventInterceptor)
-			this.userEventInterceptor.stopListening();
+			this.userEventInterceptor.stop();
 		if (this.librarian) this.librarian.unsubscribe();
 		// Clear global state
 		clearState();

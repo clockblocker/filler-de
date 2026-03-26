@@ -1,32 +1,18 @@
 import { describe, expect, it } from "bun:test";
-import type { EditorView } from "@codemirror/view";
 import { createWikilinkCompletionHandler } from "../../../src/managers/obsidian/behavior-manager/wikilink-complition-behavior";
-import type { WikilinkPayload } from "../../../src/managers/obsidian/user-event-interceptor/events/wikilink/payload";
+import {
+	type WikilinkPayload,
+	UserEventKind,
+} from "../../../src/managers/obsidian/user-event-interceptor";
 
 type WikilinkLibrarian = Parameters<typeof createWikilinkCompletionHandler>[0];
 
 function makePayload(linkContent: string): WikilinkPayload {
 	return {
-		closePos: linkContent.length,
-		kind: "WikilinkCompleted",
+		canResolveNatively: false,
+		kind: UserEventKind.WikilinkCompleted,
 		linkContent,
-		view: {} as EditorView,
-	};
-}
-
-function makeContext() {
-	const app = {
-		metadataCache: {
-			getFirstLinkpathDest: () => null,
-		},
-		workspace: {
-			getActiveFile: () => ({ path: "Books/lesson.md" }),
-		},
-	};
-
-	return {
-		app,
-		vam: {},
+		sourcePath: "Books/lesson.md",
 	};
 }
 
@@ -41,8 +27,8 @@ describe("wikilink completion behavior", () => {
 		} as unknown as WikilinkLibrarian;
 
 		const handler = createWikilinkCompletionHandler(librarian);
-		const result = handler.handle(makePayload("die"), makeContext());
-		expect(result).toEqual({ outcome: "Passthrough" });
+		const result = handler.handle(makePayload("die"));
+		expect(result).toEqual({ outcome: "passthrough" });
 	});
 
 	it("keeps single-match auto-resolution behavior", () => {
@@ -54,18 +40,14 @@ describe("wikilink completion behavior", () => {
 		} as unknown as WikilinkLibrarian;
 
 		const handler = createWikilinkCompletionHandler(librarian);
-		const result = handler.handle(makePayload("die"), makeContext());
+		const result = handler.handle(makePayload("die"));
 
 		expect(result).toEqual({
-			data: {
+			effect: {
 				aliasToInsert: "die",
-				closePos: 3,
-				kind: "WikilinkCompleted",
-				linkContent: "die",
 				resolvedTarget: "die-pronoun-de",
-				view: expect.any(Object),
 			},
-			outcome: "Modified",
+			outcome: "effect",
 		});
 	});
 });

@@ -16,21 +16,23 @@
 
 import { EditorView, type ViewUpdate } from "@codemirror/view";
 import type { Plugin } from "obsidian";
-import { HandlerOutcome } from "../../types/handler";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";
+import { getCurrentFilePath } from "../get-current-file-path";
 import { WikilinkCodec } from "./codec";
-import type { WikilinkPayload } from "./payload";
+import type { InternalWikilinkPayload } from "./payload";
 
 export class WikilinkDetector {
 	private extension: ReturnType<typeof EditorView.updateListener.of> | null =
 		null;
 	private listening = false;
-	private readonly invoker: HandlerInvoker<WikilinkPayload>;
+	private readonly invoker: HandlerInvoker<InternalWikilinkPayload>;
 
 	constructor(
 		private readonly plugin: Plugin,
-		createInvoker: (kind: PayloadKind) => HandlerInvoker<WikilinkPayload>,
+		createInvoker: (
+			kind: PayloadKind,
+		) => HandlerInvoker<InternalWikilinkPayload>,
 	) {
 		this.invoker = createInvoker(PayloadKind.WikilinkCompleted);
 	}
@@ -71,20 +73,40 @@ export class WikilinkDetector {
 			linkContent,
 			view: vu.view,
 		});
+		const currentFile = getCurrentFilePath(this.plugin.app);
+		payload.sourcePath = currentFile
+			? [...currentFile.pathParts, `${currentFile.basename}.md`].join("/")
+			: undefined;
+		payload.canResolveNatively = this.canResolveNatively(
+			linkContent,
+			payload.sourcePath,
+		);
 
 		const { applies, invoke } = this.invoker(payload);
 
 		if (!applies) return;
 
 		void invoke().then((result) => {
-			if (result.outcome === HandlerOutcome.Modified && result.data) {
-				if (result.data.resolvedTarget) {
-					WikilinkCodec.replaceTarget(result.data);
-				} else {
-					WikilinkCodec.insertAlias(result.data);
-				}
+			if (result.outcome !== "effect") return;
+			if ("resolvedTarget" in result.effect) {
+				WikilinkCodec.replaceTarget(payload, result.effect);
+				return;
 			}
+			WikilinkCodec.insertAlias(payload, result.effect);
 		});
+	}
+
+	private canResolveNatively(
+		linkContent: string,
+		sourcePath?: string,
+	): boolean {
+		if (!sourcePath) return false;
+		return (
+			this.plugin.app.metadataCache.getFirstLinkpathDest(
+				linkContent,
+				sourcePath,
+			) !== null
+		);
 	}
 
 	/** Case 1: cursor positioned right after ]] (manual typing) */

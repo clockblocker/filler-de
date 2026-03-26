@@ -2,8 +2,8 @@
  * SelectionChangedPayload - payload for text selection change events.
  */
 
-import { SplitPathToMdFileSchema } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
+import { toSourcePath } from "../source-path";
 import { PayloadKind } from "../../types/payload-base";
 
 export const SelectionChangedPayloadSchema = z.object({
@@ -15,7 +15,7 @@ export const SelectionChangedPayloadSchema = z.object({
 	/** Source of the selection change */
 	source: z.enum(["mouse", "keyboard", "drag"]),
 	/** File where selection changed (optional) */
-	splitPath: SplitPathToMdFileSchema.optional(),
+	sourcePath: z.string().optional(),
 });
 
 export type SelectionChangedPayload = z.infer<
@@ -29,13 +29,18 @@ export function createSelectionChangedPayload(
 	hasSelection: boolean,
 	selectedText: string,
 	source: SelectionChangedPayload["source"],
-	splitPath?: SelectionChangedPayload["splitPath"],
+	splitPath?: {
+		basename: string;
+		extension: "md";
+		kind: "MdFile";
+		pathParts: string[];
+	},
 ): SelectionChangedPayload {
 	return {
 		hasSelection,
 		kind: PayloadKind.SelectionChanged,
 		selectedText,
 		source,
-		splitPath,
+		sourcePath: toSourcePath(splitPath),
 	};
 }

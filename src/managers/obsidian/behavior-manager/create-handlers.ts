@@ -10,9 +10,9 @@
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import type { Textfresser } from "../../../commanders/textfresser/textfresser";
 import {
-	type AnyPayload,
-	type EventHandler,
-	PayloadKind,
+	type UserEventHandler,
+	type UserEventKind,
+	UserEventKind as UserEventKinds,
 } from "../user-event-interceptor";
 import { createCheckboxFrontmatterHandler } from "./checkbox-behavior";
 import { createClipboardHandler } from "./clipboard-behavior";
@@ -24,9 +24,11 @@ import { createWikilinkCompletionHandler } from "./wikilink-complition-behavior"
  * Handler definition with kind and handler.
  */
 export type HandlerDef = {
-	kind: PayloadKind;
-	handler: EventHandler<AnyPayload>;
-};
+	[K in UserEventKind]: {
+		handler: UserEventHandler<K>;
+		kind: K;
+	};
+}[UserEventKind];
 
 /**
  * Create all handlers for user event registration.
@@ -42,40 +44,34 @@ export function createHandlers(
 	const handlers: HandlerDef[] = [
 		// Stateless handlers (call services directly)
 		{
-			handler: createClipboardHandler() as EventHandler<AnyPayload>,
-			kind: PayloadKind.ClipboardCopy,
+			handler: createClipboardHandler(),
+			kind: UserEventKinds.ClipboardCopy,
 		},
 		{
-			handler: createSelectAllHandler() as EventHandler<AnyPayload>,
-			kind: PayloadKind.SelectAll,
+			handler: createSelectAllHandler(),
+			kind: UserEventKinds.SelectAll,
 		},
 
 		// Librarian handlers (thin routing to librarian methods)
 		{
-			handler: createWikilinkCompletionHandler(
-				librarian,
-			) as EventHandler<AnyPayload>,
-			kind: PayloadKind.WikilinkCompleted,
+			handler: createWikilinkCompletionHandler(librarian),
+			kind: UserEventKinds.WikilinkCompleted,
 		},
 		{
-			handler: createCheckboxFrontmatterHandler(
-				librarian,
-			) as EventHandler<AnyPayload>,
-			kind: PayloadKind.CheckboxInFrontmatterClicked,
+			handler: createCheckboxFrontmatterHandler(librarian),
+			kind: UserEventKinds.CheckboxFrontmatterClicked,
 		},
 		{
-			handler: createCodexCheckboxHandler(
-				librarian,
-			) as EventHandler<AnyPayload>,
-			kind: PayloadKind.CheckboxClicked,
+			handler: createCodexCheckboxHandler(librarian),
+			kind: UserEventKinds.CheckboxClicked,
 		},
 	];
 
 	// Textfresser handler (wikilink click tracking)
 	if (textfresser) {
 		handlers.push({
-			handler: textfresser.createHandler() as EventHandler<AnyPayload>,
-			kind: PayloadKind.WikilinkClicked,
+			handler: textfresser.createHandler(),
+			kind: UserEventKinds.WikilinkClicked,
 		});
 	}
 

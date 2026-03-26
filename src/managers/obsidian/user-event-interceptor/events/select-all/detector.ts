@@ -5,22 +5,23 @@
  */
 
 import type { EditorView } from "@codemirror/view";
-import { type App, MarkdownView, Platform } from "obsidian";
+import { type App, MarkdownView } from "obsidian";
 import { DomSelectors } from "../../../../../utils/dom-selectors";
-import { HandlerOutcome } from "../../types/handler";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";
 import { getCurrentFilePath } from "../get-current-file-path";
 import { SelectAllCodec } from "./codec";
-import type { SelectAllPayload } from "./payload";
+import type { InternalSelectAllPayload } from "./payload";
 
 export class SelectAllDetector {
 	private handler: ((evt: KeyboardEvent) => void) | null = null;
-	private readonly invoker: HandlerInvoker<SelectAllPayload>;
+	private readonly invoker: HandlerInvoker<InternalSelectAllPayload>;
 
 	constructor(
 		private readonly app: App,
-		createInvoker: (kind: PayloadKind) => HandlerInvoker<SelectAllPayload>,
+		createInvoker: (
+			kind: PayloadKind,
+		) => HandlerInvoker<InternalSelectAllPayload>,
 	) {
 		this.invoker = createInvoker(PayloadKind.SelectAll);
 	}
@@ -47,9 +48,12 @@ export class SelectAllDetector {
 
 	private handleKeydown(evt: KeyboardEvent): void {
 		// Check for Ctrl+A (Windows/Linux) or Cmd+A (Mac)
+		const isMacOS =
+			typeof navigator !== "undefined" &&
+			navigator.platform.toLowerCase().includes("mac");
 		const isSelectAll =
 			evt.key === "a" &&
-			(Platform.isMacOS ? evt.metaKey : evt.ctrlKey) &&
+			(isMacOS ? evt.metaKey : evt.ctrlKey) &&
 			!evt.shiftKey &&
 			!evt.altKey;
 
@@ -99,9 +103,8 @@ export class SelectAllDetector {
 		evt.stopPropagation();
 
 		void invoke().then((result) => {
-			if (result.outcome === HandlerOutcome.Modified && result.data) {
-				// Apply custom selection from modified payload
-				SelectAllCodec.applySelection(result.data);
+			if (result.outcome === "effect") {
+				SelectAllCodec.applySelection(payload, result.effect);
 			}
 			// For "handled" or "passthrough", nothing more to do
 			// (passthrough after preventDefault means no selection change)

@@ -1,9 +1,10 @@
+import { makeSplitPath } from "@textfresser/vault-action-manager";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import type { WikilinkClickPayload } from "../../../../managers/obsidian/user-event-interceptor/events";
 import {
-	type EventHandler,
-	HandlerOutcome,
-} from "../../../../managers/obsidian/user-event-interceptor/types/handler";
+	type UserEventHandler,
+	type WikilinkClickPayload,
+	UserEventKind,
+} from "../../../../managers/obsidian/user-event-interceptor";
 import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import { buildAttestationFromWikilinkClickPayload } from "../../common/attestation/builders/build-from-wikilink-click-payload";
 import type {
@@ -15,7 +16,7 @@ export function createWikilinkClickHandler(params: {
 	awaitGenerateAndScroll: (inFlight: InFlightGenerate) => Promise<void>;
 	state: TextfresserState;
 	vam: VaultActionManager;
-}): EventHandler<WikilinkClickPayload> {
+}): UserEventHandler<typeof UserEventKind.WikilinkClicked> {
 	const { awaitGenerateAndScroll, state, vam } = params;
 
 	return {
@@ -31,19 +32,23 @@ export function createWikilinkClickHandler(params: {
 			const inFlight = state.inFlightGenerate;
 			if (inFlight) {
 				const clickedTarget = vam.resolveLinkpathDest(
-					payload.wikiTarget.basename,
-					payload.splitPath,
+					payload.target.basename,
+					makeSplitPath(payload.sourcePath) as {
+						basename: string;
+						extension: "md";
+						kind: "MdFile";
+						pathParts: string[];
+					},
 				);
 				const isInFlightTarget = clickedTarget
 					? splitPathsEqual(clickedTarget, inFlight.targetPath)
-					: payload.wikiTarget.basename ===
-						inFlight.targetPath.basename;
+					: payload.target.basename === inFlight.targetPath.basename;
 				if (isInFlightTarget) {
 					void awaitGenerateAndScroll(inFlight);
 				}
 			}
 
-			return { outcome: HandlerOutcome.Passthrough };
+			return { outcome: "passthrough" } as const;
 		},
 	};
 }

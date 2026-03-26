@@ -10,38 +10,16 @@
 
 import type { LeafMatch } from "../../../commanders/librarian/healer/library-tree/types/leaf-match";
 import { nonEmptyArrayResult } from "../../../types/utils";
-import type { WikilinkPayload } from "../user-event-interceptor/events/wikilink/payload";
+import {
+	type UserEventHandler,
+	type WikilinkPayload,
+	UserEventKind,
+} from "../user-event-interceptor";
 import { pickClosestLeaf } from "./pick-closest-leaf";
 
 type WikilinkCompletionLibrarianPort = {
 	resolveWikilinkAlias(linkContent: string): string | null;
 	findMatchingLeavesByCoreName(coreName: string): LeafMatch[];
-};
-
-type MinimalWikilinkHandlerContext = {
-	app: {
-		metadataCache: {
-			getFirstLinkpathDest: (
-				linkpath: string,
-				sourcePath: string,
-			) => unknown | null;
-		};
-		workspace: {
-			getActiveFile: () => { path: string } | null;
-		};
-	};
-};
-
-type WikilinkCompletionOutcome =
-	| { outcome: "Passthrough" }
-	| { outcome: "Modified"; data: WikilinkPayload };
-
-type WikilinkCompletionHandler = {
-	doesApply: (payload: WikilinkPayload) => boolean;
-	handle: (
-		payload: WikilinkPayload,
-		ctx: MinimalWikilinkHandlerContext,
-	) => WikilinkCompletionOutcome;
 };
 
 /**
@@ -50,31 +28,22 @@ type WikilinkCompletionHandler = {
  */
 export function createWikilinkCompletionHandler(
 	librarian: WikilinkCompletionLibrarianPort,
-): WikilinkCompletionHandler {
+): UserEventHandler<typeof UserEventKind.WikilinkCompleted> {
 	return {
 		doesApply: () => true,
-		handle: (payload, ctx) => {
+		handle: (payload) => {
 			// 1. Try suffix-based alias resolution (existing behavior)
 			const alias = librarian.resolveWikilinkAlias(payload.linkContent);
 			if (alias !== null) {
 				return {
-					data: { ...payload, aliasToInsert: alias },
-					outcome: "Modified",
+					effect: { aliasToInsert: alias },
+					outcome: "effect",
 				};
 			}
 
 			// 2. Check if Obsidian can already resolve this link
-			const activeFile = ctx.app.workspace.getActiveFile();
-			if (!activeFile) {
-				return { outcome: "Passthrough" };
-			}
-
-			const resolved = ctx.app.metadataCache.getFirstLinkpathDest(
-				payload.linkContent,
-				activeFile.path,
-			);
-			if (resolved) {
-				return { outcome: "Passthrough" };
+			if (payload.canResolveNatively) {
+				return { outcome: "passthrough" } as const;
 			}
 
 			// 3. Look up corename in library tree
@@ -83,27 +52,26 @@ export function createWikilinkCompletionHandler(
 			);
 			const nonEmpty = nonEmptyArrayResult(matches);
 			if (nonEmpty.isErr()) {
-				return { outcome: "Passthrough" };
+				return { outcome: "passthrough" } as const;
 			}
 			// Ambiguous corename match: do not auto-pick one leaf target.
 			// Keep user's input untouched to avoid silent mislinking.
 			if (nonEmpty.value.length > 1) {
-				return { outcome: "Passthrough" };
+				return { outcome: "passthrough" } as const;
 			}
 
-			const currentPathParts = activeFile.path.split("/");
+			const currentPathParts = payload.sourcePath?.split("/") ?? [];
 			// Drop filename to get folder path parts
 			currentPathParts.pop();
 
 			const best = pickClosestLeaf(nonEmpty.value, currentPathParts);
 
 			return {
-				data: {
-					...payload,
+				effect: {
 					aliasToInsert: payload.linkContent,
 					resolvedTarget: best.basename,
 				},
-				outcome: "Modified",
+				outcome: "effect",
 			};
 		},
 	};

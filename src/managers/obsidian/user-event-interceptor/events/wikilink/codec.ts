@@ -4,7 +4,8 @@
 
 import type { EditorView } from "@codemirror/view";
 import { createEventCodec } from "../codec-factory";
-import type { WikilinkPayload } from "./payload";
+import type { UserEventEffectMap, UserEventKind } from "../../contracts";
+import type { InternalWikilinkPayload, WikilinkPayload } from "./payload";
 import { createWikilinkPayload } from "./payload";
 
 export type WikilinkData = {
@@ -17,36 +18,44 @@ export const WikilinkCodec = createEventCodec(
 	/**
 	 * Encode wikilink data into a payload.
 	 */
-	(data: WikilinkData): WikilinkPayload =>
+	(data: WikilinkData): InternalWikilinkPayload =>
 		createWikilinkPayload(data.linkContent, data.closePos, data.view),
 	{
 		/**
-		 * Insert alias at closePos if set in payload.
+		 * Insert alias at closePos.
 		 */
-		insertAlias(payload: WikilinkPayload): void {
-			if (payload.aliasToInsert) {
-				payload.view.dispatch({
-					changes: {
-						from: payload.closePos,
-						insert: `|${payload.aliasToInsert}`,
-					},
-				});
-			}
+		insertAlias(
+			payload: InternalWikilinkPayload,
+			effect: Extract<
+				UserEventEffectMap[typeof UserEventKind.WikilinkCompleted],
+				{ aliasToInsert: string; resolvedTarget?: never }
+			>,
+		): void {
+			payload.view.dispatch({
+				changes: {
+					from: payload.closePos,
+					insert: `|${effect.aliasToInsert}`,
+				},
+			});
 		},
 
 		/**
 		 * Replace link content with resolved target + alias.
 		 * Replaces the text between [[ and ]] with "resolvedTarget|aliasToInsert".
 		 */
-		replaceTarget(payload: WikilinkPayload): void {
-			if (!payload.resolvedTarget) return;
-
+		replaceTarget(
+			payload: InternalWikilinkPayload,
+			effect: Extract<
+				UserEventEffectMap[typeof UserEventKind.WikilinkCompleted],
+				{ resolvedTarget: string }
+			>,
+		): void {
 			const from = payload.closePos - payload.linkContent.length;
 			const to = payload.closePos;
-			const alias = payload.aliasToInsert;
+			const alias = effect.aliasToInsert;
 			const insert = alias
-				? `${payload.resolvedTarget}|${alias}`
-				: payload.resolvedTarget;
+				? `${effect.resolvedTarget}|${alias}`
+				: effect.resolvedTarget;
 
 			payload.view.dispatch({
 				changes: { from, insert, to },

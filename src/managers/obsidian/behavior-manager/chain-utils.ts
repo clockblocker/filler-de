@@ -1,9 +1,7 @@
 import {
-	type AnyPayload,
-	type EventHandler,
-	type HandleResult,
-	type HandlerContext,
-	HandlerOutcome,
+	type UserEventHandler,
+	type UserEventKind,
+	type UserEventPayloadMap,
 } from "../user-event-interceptor";
 
 /**
@@ -13,24 +11,21 @@ import {
  * @param handlers - Handlers to chain (first match wins)
  * @returns Combined handler
  */
-export function chainHandlers<P extends AnyPayload>(
-	...handlers: EventHandler<P>[]
-): EventHandler<P> {
+export function chainHandlers<K extends UserEventKind>(
+	...handlers: UserEventHandler<K>[]
+): UserEventHandler<K> {
 	return {
-		doesApply: (payload: P): boolean => {
+		doesApply: (payload: UserEventPayloadMap[K]): boolean => {
 			return handlers.some((h) => h.doesApply(payload));
 		},
-		handle: async (
-			payload: P,
-			ctx: HandlerContext,
-		): Promise<HandleResult<P>> => {
+		handle: async (payload: UserEventPayloadMap[K]) => {
 			for (const handler of handlers) {
 				if (handler.doesApply(payload)) {
-					return handler.handle(payload, ctx);
+					return handler.handle(payload);
 				}
 			}
 			// No handler applied - passthrough
-			return { outcome: HandlerOutcome.Passthrough };
+			return { outcome: "passthrough" } as const;
 		},
 	};
 }

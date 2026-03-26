@@ -7,7 +7,7 @@
  * Subscribes to GenericClickDetector and filters for property checkbox targets.
  */
 
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import type { App } from "obsidian";
 import { DomSelectors } from "../../../../../../utils/dom-selectors";
 import {
 	decrementPending,
@@ -15,6 +15,7 @@ import {
 } from "../../../../../../utils/idle-tracker";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
+import { getCurrentFilePath } from "../../get-current-file-path";
 import type { GenericClickDetector } from "../generic-click-detector";
 import { CheckboxFrontmatterCodec } from "./codec";
 import type { CheckboxFrontmatterPayload } from "./payload";
@@ -25,7 +26,7 @@ export class CheckboxFrontmatterDetector {
 
 	constructor(
 		private readonly genericClick: GenericClickDetector,
-		private readonly vam: VaultActionManager,
+		private readonly app: App,
 		createInvoker: (
 			kind: PayloadKind,
 		) => HandlerInvoker<CheckboxFrontmatterPayload>,
@@ -57,7 +58,7 @@ export class CheckboxFrontmatterDetector {
 		if (!propertyInfo) return;
 
 		// Get current file path
-		const splitPath = this.vam.mdPwd();
+		const splitPath = getCurrentFilePath(this.app);
 		if (!splitPath) return;
 
 		// Encode to payload

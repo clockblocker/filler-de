@@ -8,7 +8,6 @@ import { createActionElementPayload } from "./payload";
 
 export type ActionElementClickData = {
 	actionId: string;
-	button: HTMLElement;
 };
 
 export const ActionElementCodec = createEventCodec(
@@ -16,5 +15,5 @@ export const ActionElementCodec = createEventCodec(
 	 * Encode action element click data into a payload.
 	 */
 	(data: ActionElementClickData): ActionElementPayload =>
-		createActionElementPayload(data.actionId, data.button),
+		createActionElementPayload(data.actionId),
 );

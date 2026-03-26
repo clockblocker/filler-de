@@ -2,8 +2,9 @@
  * Build Attestation from wikilink click data.
  */
 
+import { makeSplitPath } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
-import type { WikilinkClickPayload } from "../../../../../managers/obsidian/user-event-interceptor/events";
+import type { WikilinkClickPayload } from "../../../../../managers/obsidian/user-event-interceptor";
 import type { AttestationParsingError } from "../../../errors";
 import type { Attestation } from "../types";
 import { buildSourceFields } from "./build-source-fields";
@@ -16,10 +17,16 @@ import { buildSourceFields } from "./build-source-fields";
 export function buildAttestationFromWikilinkClickPayload(
 	input: WikilinkClickPayload,
 ): Result<Attestation, AttestationParsingError> {
-	const { blockContent, splitPath, wikiTarget } = input;
+	const splitPath = makeSplitPath(input.sourcePath) as {
+		basename: string;
+		extension: "md";
+		kind: "MdFile";
+		pathParts: string[];
+	};
+	const { blockContent, target } = input;
 
 	// surface = alias if exists, else basename (what user clicked)
-	const surface = wikiTarget.alias ?? wikiTarget.basename;
+	const surface = target.alias ?? target.basename;
 
 	const { ref, textWithOnlyTargetMarked } = buildSourceFields({
 		basename: splitPath.basename,
@@ -36,7 +43,7 @@ export function buildAttestationFromWikilinkClickPayload(
 		},
 		target: {
 			// lemma is the basename when alias exists (i.e., wikilink was [[lemma|surface]])
-			lemma: wikiTarget.alias ? wikiTarget.basename : undefined,
+			lemma: target.alias ? target.basename : undefined,
 			surface,
 		},
 	});

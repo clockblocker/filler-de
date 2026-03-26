@@ -2,8 +2,9 @@
  * CheckboxFrontmatterPayload - payload for property checkbox clicks in frontmatter.
  */
 
-import { SplitPathToMdFileSchema } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
+import { toSourcePath } from "../../source-path";
 import { PayloadKind } from "../../../types/payload-base";
 
 export const CheckboxFrontmatterPayloadSchema = z.object({
@@ -13,7 +14,7 @@ export const CheckboxFrontmatterPayloadSchema = z.object({
 	/** Property name (e.g., "status") */
 	propertyName: z.string(),
 	/** File where property checkbox was clicked */
-	splitPath: SplitPathToMdFileSchema,
+	sourcePath: z.string(),
 });
 
 export type CheckboxFrontmatterPayload = z.infer<
@@ -24,7 +25,7 @@ export type CheckboxFrontmatterPayload = z.infer<
  * Create a checkbox frontmatter payload.
  */
 export function createCheckboxFrontmatterPayload(
-	splitPath: CheckboxFrontmatterPayload["splitPath"],
+	splitPath: SplitPathToMdFile,
 	checked: boolean,
 	propertyName: string,
 ): CheckboxFrontmatterPayload {
@@ -32,6 +33,6 @@ export function createCheckboxFrontmatterPayload(
 		checked,
 		kind: PayloadKind.CheckboxInFrontmatterClicked,
 		propertyName,
-		splitPath,
+		sourcePath: toSourcePath(splitPath) ?? "",
 	};
 }
