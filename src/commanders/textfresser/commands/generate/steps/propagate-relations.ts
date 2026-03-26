@@ -1,7 +1,7 @@
 import { ok, type Result } from "neverthrow";
 import { SurfaceKind } from "../../../../../linguistics/common/enums/core";
 import type { VaultAction } from "../../../../../managers/obsidian/vault-action-manager";
-import type { RelationSubKind } from "../../../../../prompt-smith/schemas/relation";
+import type { RelationSubKind } from "../../../../../lexical-generation/internal/prompt-smith/schemas/relation";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import {
 	buildPropagationActionPair,

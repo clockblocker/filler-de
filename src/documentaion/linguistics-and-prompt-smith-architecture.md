@@ -1,6 +1,6 @@
 # Linguistics & Prompt-Smith — Architecture
 
-> **Scope**: This document covers the **linguistics type system** (`src/linguistics/`) and the **prompt management layer** (`src/prompt-smith/`). These two modules form the foundational layer that both the Lemma and Generate commands depend on. For the command pipeline itself, see `textfresser-architecture.md`. For FS dispatch, see `vam-architecture.md`.
+> **Scope**: This document covers the **linguistics type system** (`src/linguistics/`) and the **prompt management layer** (`src/lexical-generation/internal/prompt-smith/`). These two modules form the foundational layer that both the Lemma and Generate commands depend on. For the command pipeline itself, see `textfresser-architecture.md`. For FS dispatch, see `vam-architecture.md`.
 >
 > **Compatibility Policy (Dev Mode, 2026-02-20)**:
 > - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
@@ -574,10 +574,10 @@ Lower weight = earlier in the note. Unknown kinds sort to weight 99. `compareSec
 
 ### 3.1 Architecture Overview
 
-**Location**: `src/prompt-smith/`
+**Location**: `src/lexical-generation/internal/prompt-smith/`
 
 ```
-src/prompt-smith/
+src/lexical-generation/internal/prompt-smith/
 ├── index.ts                          # Auto-generated: PROMPT_FOR dict + re-exports
 ├── types.ts                          # AvaliablePromptDict type
 ├── schemas/                          # Zod I/O schemas per PromptKind
@@ -681,7 +681,7 @@ Contracts in `src/linguistics/de/lemma/` are the runtime source for lemma classi
   - features (`DeFeaturesInputSchema` / `DeFeaturesOutputSchema`)
   - word translation (`DeWordTranslationInputSchema` / `DeWordTranslationOutputSchema`)
 
-`src/prompt-smith/schemas/lemma.ts` now uses `DeLemmaResultSchema` directly at runtime.
+`src/lexical-generation/internal/prompt-smith/schemas/lemma.ts` now uses `DeLemmaResultSchema` directly at runtime.
 
 **v3/v4 bridging in schemas**: Where a common enum uses Zod v4 (e.g., `POSSchema`), schemas re-create it with v3:
 

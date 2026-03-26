@@ -2,7 +2,7 @@ import type { DeLexemPos } from "../../../../../linguistics/de";
 import {
 	PromptKind,
 	type PromptKind as PromptKindType,
-} from "../../../../../prompt-smith/codegen/consts";
+} from "../../../../../lexical-generation/internal/prompt-smith/codegen/consts";
 
 export type FeaturesPromptKind = Extract<PromptKindType, `Features${string}`>;
 

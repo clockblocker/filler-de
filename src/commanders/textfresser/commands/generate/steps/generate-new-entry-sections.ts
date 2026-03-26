@@ -1,6 +1,6 @@
 import type { LexicalInfo } from "../../../../../lexical-generation";
 import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
-import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
+import { PromptKind } from "../../../../../lexical-generation/internal/prompt-smith/codegen/consts";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
 import { logger } from "../../../../../utils/logger";

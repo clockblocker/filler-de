@@ -1,4 +1,4 @@
-import type { AgentOutput } from "../../../../../../prompt-smith";
+import type { AgentOutput } from "../../../../../../lexical-generation/internal/prompt-smith";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 
 /**

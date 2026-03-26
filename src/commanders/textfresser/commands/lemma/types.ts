@@ -13,6 +13,8 @@ export type LemmaResult = ResolvedLemma & LemmaLocalState;
 
 export function getLexemPos(
 	result: LemmaResult,
-): Extract<ResolvedLemma, { linguisticUnit: "Lexem" }>["posLikeKind"] | undefined {
+):
+	| Extract<ResolvedLemma, { linguisticUnit: "Lexem" }>["posLikeKind"]
+	| undefined {
 	return result.linguisticUnit === "Lexem" ? result.posLikeKind : undefined;
 }

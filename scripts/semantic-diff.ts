@@ -89,10 +89,10 @@ function classifyModule(filePath: string): string {
 		}
 
 		if (topDir === "prompt-smith" && parts.length >= 2) {
-			if (parts[1] === "codegen") return "src/prompt-smith/codegen";
-			if (parts[1] === "schemas") return "src/prompt-smith/schemas";
-			if (parts[1] === "prompt-parts") return "src/prompt-smith/prompt-parts";
-			return `src/prompt-smith/${parts[1]}`;
+			if (parts[1] === "codegen") return "src/lexical-generation/internal/prompt-smith/codegen";
+			if (parts[1] === "schemas") return "src/lexical-generation/internal/prompt-smith/schemas";
+			if (parts[1] === "prompt-parts") return "src/lexical-generation/internal/prompt-smith/prompt-parts";
+			return `src/lexical-generation/internal/prompt-smith/${parts[1]}`;
 		}
 
 		return `src/${topDir}`;

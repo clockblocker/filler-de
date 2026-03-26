@@ -2,8 +2,8 @@ import { z } from "zod/v3";
 import {
 	CaseValueSchema,
 	NumberValueSchema,
-} from "../../linguistics/common/enums/inflection/feature-values";
-import { GermanGenusSchema } from "../../linguistics/de/lexem/noun/features";
+} from "../../../../linguistics/common/enums/inflection/feature-values";
+import { GermanGenusSchema } from "../../../../linguistics/de/lexem/noun/features";
 
 const userInputSchema = z.object({
 	context: z.string(),

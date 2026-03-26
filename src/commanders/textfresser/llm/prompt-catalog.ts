@@ -3,11 +3,11 @@ import {
 	PROMPT_FOR,
 	SchemasFor,
 	type UserInput,
-} from "../../../prompt-smith";
-import type { PromptKind } from "../../../prompt-smith/codegen/consts";
+} from "../../../lexical-generation/internal/prompt-smith";
+import type { PromptKind } from "../../../lexical-generation/internal/prompt-smith/codegen/consts";
 import type { KnownLanguage, TargetLanguage } from "../../../types";
 
-export type { PromptKind } from "../../../prompt-smith/codegen/consts";
+export type { PromptKind } from "../../../lexical-generation/internal/prompt-smith/codegen/consts";
 
 export function getPromptSystemPrompt(params: {
 	target: TargetLanguage;

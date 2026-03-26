@@ -1,6 +1,6 @@
 import { z } from "zod/v3";
-import { GermanMorphemeKindSchema } from "../../linguistics/de/morphem/de-morphem-kind";
-import { SeparabilitySchema } from "../../linguistics/de/morphem/prefix/features";
+import { GermanMorphemeKindSchema } from "../../../../linguistics/de/morphem/de-morphem-kind";
+import { SeparabilitySchema } from "../../../../linguistics/de/morphem/prefix/features";
 
 const userInputSchema = z.object({
 	context: z.string(),

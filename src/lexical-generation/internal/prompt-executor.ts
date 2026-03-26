@@ -4,8 +4,8 @@ import {
 	PROMPT_FOR,
 	SchemasFor,
 	type UserInput,
-} from "../../prompt-smith";
-import type { PromptKind } from "../../prompt-smith/codegen/consts";
+} from "./prompt-smith";
+import type { PromptKind } from "./prompt-smith/codegen/consts";
 import {
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,

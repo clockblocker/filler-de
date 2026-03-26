@@ -6,8 +6,8 @@ import {
 	ALL_TARGET_LANGUAGES,
 	KnownLanguage,
 	type TargetLanguage,
-} from "../../../types";
-import { logger } from "../../../utils/logger";
+} from "../../../../../types";
+import { logger } from "../../../../../utils/logger";
 import { ALL_PROMPT_KINDS, type PromptKind } from "../consts";
 import { combineParts } from "./combine-parts";
 import { ensureAllExamplesMatchSchema } from "./enshure-all-examples-match-schema";

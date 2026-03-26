@@ -3,9 +3,7 @@ import { normalizeTagPart } from "./tag-normalization";
 
 type AdjectiveFeatures = Extract<LexemFeatures, { kind: "adjective" }>;
 
-export function buildAdjectiveFeatureTags(
-	output: AdjectiveFeatures,
-): string[] {
+export function buildAdjectiveFeatureTags(output: AdjectiveFeatures): string[] {
 	const tags = [
 		`classification-${normalizeTagPart(output.classification)}`,
 		`gradability-${normalizeTagPart(output.gradability)}`,

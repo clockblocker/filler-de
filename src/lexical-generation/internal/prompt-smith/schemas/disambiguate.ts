@@ -1,6 +1,6 @@
 import { z } from "zod/v3";
-import { LinguisticUnitKindSchema } from "../../linguistics/common/enums/core";
-import { PhrasemeKindSchema } from "../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
+import { LinguisticUnitKindSchema } from "../../../../linguistics/common/enums/core";
+import { PhrasemeKindSchema } from "../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
 
 const userInputSchema = z.object({
 	context: z.string(),

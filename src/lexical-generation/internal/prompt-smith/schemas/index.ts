@@ -1,5 +1,5 @@
 import type { z } from "zod/v3";
-import type { Prettify } from "../../types/helpers";
+import type { Prettify } from "../../../../types/helpers";
 import {
 	type PromptKind,
 	PromptKind as PromptKindEnum,

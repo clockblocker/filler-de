@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
-import type { PromptKind } from "../../prompt-smith/codegen/consts";
-import type { AgentOutput, UserInput } from "../../prompt-smith/schemas";
+import type { PromptKind } from "../internal/prompt-smith/codegen/consts";
+import type { AgentOutput, UserInput } from "../internal/prompt-smith/schemas";
 import { wikilinkHelper } from "../../stateless-helpers/wikilink";
 import {
 	type LexicalGenerationError,

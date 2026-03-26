@@ -1,6 +1,4 @@
-import type {
-	LexicalInfo,
-} from "../../../../../lexical-generation";
+import type { LexicalInfo } from "../../../../../lexical-generation";
 import type {
 	DeEntity,
 	GermanLinguisticUnit,
@@ -55,7 +53,7 @@ function buildLemmaRefId(entryId: string): string {
 
 function buildLexemLinguisticUnit(
 	entryId: string,
-		lemmaResult: Extract<LemmaResult, { linguisticUnit: "Lexem" }>,
+	lemmaResult: Extract<LemmaResult, { linguisticUnit: "Lexem" }>,
 	lexicalInfo: Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>,
 ): GermanLinguisticUnit | null {
 	if (lemmaResult.surfaceKind === "Lemma") {

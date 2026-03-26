@@ -1,4 +1,4 @@
-import type { AgentOutput } from "../../prompt-smith";
+import type { AgentOutput } from "../internal/prompt-smith";
 import { multiSpanHelper } from "../../stateless-helpers/multi-span";
 import { wikilinkHelper } from "../../stateless-helpers/wikilink";
 

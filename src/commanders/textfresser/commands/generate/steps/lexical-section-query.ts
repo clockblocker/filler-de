@@ -1,27 +1,28 @@
 import type {
 	LexicalGenus,
 	LexicalInfo,
+	LexicalNounClass,
 	LexicalNounIdentity,
 } from "../../../../../lexical-generation";
 import type { DictEntry } from "../../../domain/dict-note/types";
 
-type LexemLexicalInfo = Extract<
-	LexicalInfo,
-	{ lemma: { linguisticUnit: "Lexem" } }
->;
+type LexemLemma = Extract<LexicalInfo["lemma"], { linguisticUnit: "Lexem" }>;
 
 type LexicalSectionQuery =
 	| {
 			unit: "Lexem";
-			pos: LexemLexicalInfo["lemma"]["posLikeKind"];
+			pos: LexemLemma["posLikeKind"];
 			nounClass?: LexicalNounIdentity["nounClass"];
 	  }
 	| { unit: "Phrasem" };
 
 export function resolveLexemNounIdentity(
-	lexicalInfo: LexemLexicalInfo,
+	lexicalInfo: LexicalInfo,
 ): LexicalNounIdentity | undefined {
-	if (lexicalInfo.lemma.posLikeKind !== "Noun") {
+	if (
+		lexicalInfo.lemma.linguisticUnit !== "Lexem" ||
+		lexicalInfo.lemma.posLikeKind !== "Noun"
+	) {
 		return undefined;
 	}
 
@@ -40,6 +41,34 @@ export function resolveLexemNounIdentity(
 	}
 
 	return undefined;
+}
+
+function isLexicalGenus(value: unknown): value is LexicalGenus {
+	return (
+		value === "Maskulinum" ||
+		value === "Femininum" ||
+		value === "Neutrum"
+	);
+}
+
+function isLexicalNounClass(value: unknown): value is LexicalNounClass {
+	return value === "Common" || value === "Proper";
+}
+
+function toLexicalNounIdentity(params: {
+	genus: unknown;
+	nounClass: unknown;
+}): LexicalNounIdentity | undefined {
+	const genus = isLexicalGenus(params.genus) ? params.genus : undefined;
+	const nounClass = isLexicalNounClass(params.nounClass)
+		? params.nounClass
+		: undefined;
+
+	if (!genus && !nounClass) {
+		return undefined;
+	}
+
+	return { genus, nounClass };
 }
 
 export function buildLexicalSectionQuery(
@@ -66,10 +95,10 @@ function resolveStoredNounIdentity(
 	) {
 		const { features } = linguisticUnit.surface;
 		if ("nounClass" in features || "genus" in features) {
-			return {
+			return toLexicalNounIdentity({
 				genus: "genus" in features ? features.genus : undefined,
 				nounClass: "nounClass" in features ? features.nounClass : undefined,
-			};
+			});
 		}
 	}
 
@@ -79,13 +108,13 @@ function resolveStoredNounIdentity(
 		entity.posLikeKind === "Noun" &&
 		"nounClass" in entity.features.lexical
 	) {
-		return {
+		return toLexicalNounIdentity({
 			genus:
 				"genus" in entity.features.lexical
 					? entity.features.lexical.genus
 					: undefined,
 			nounClass: entity.features.lexical.nounClass,
-		};
+		});
 	}
 
 	return undefined;

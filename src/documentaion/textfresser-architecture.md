@@ -892,7 +892,7 @@ Propagation VaultActions (including healing) added to ctx.actions
 
 ## 10. Prompt-Smith System
 
-**Location**: `src/prompt-smith/`
+**Location**: `src/lexical-generation/internal/prompt-smith/`
 
 ### 10.1 Overview
 
@@ -905,7 +905,7 @@ Prompt-smith is a **build-time prompt management system** that:
 ### 10.2 Directory Layout
 
 ```
-src/prompt-smith/
+src/lexical-generation/internal/prompt-smith/
 ├── prompt-parts/                    # Human-written source prompts
 │   └── [target-lang]/[known-lang]/[prompt-kind]/
 │       ├── agent-role.ts            # LLM persona instruction
@@ -1013,7 +1013,7 @@ For **target-language-only** prompts, only the mandatory `english/` known-langua
 
 **New language pair** (e.g., French→English):
 ```bash
-mkdir -p src/prompt-smith/prompt-parts/french/english/translate/examples
+mkdir -p src/lexical-generation/internal/prompt-smith/prompt-parts/french/english/translate/examples
 # Create: agent-role.ts, task-description.ts, examples/to-use.ts
 bun run codegen:prompts
 ```
@@ -1228,11 +1228,11 @@ To add support for a new target language (e.g., Japanese):
 | `src/linguistics/german/inflection/noun.ts` | NounInflectionCell type, German case/number tags, display order |
 | ~~`src/linguistics/old-enums.ts`~~ | Deleted — was dead code (inflectional dimensions, theta roles, tones) |
 | **Prompt-Smith** | |
-| `src/prompt-smith/index.ts` | PROMPT_FOR registry (generated) |
-| `src/prompt-smith/schemas/` | Zod I/O schemas: translate, word-translation, morphem, lemma, disambiguate, relation, inflection, noun-inflection |
-| `src/prompt-smith/codegen/consts.ts` | PromptKind enum |
-| `src/prompt-smith/codegen/skript/run.ts` | Codegen orchestrator |
-| `src/prompt-smith/prompt-parts/` | Human-written prompt sources (3 kinds × 2 lang pairs) |
+| `src/lexical-generation/internal/prompt-smith/index.ts` | PROMPT_FOR registry (generated) |
+| `src/lexical-generation/internal/prompt-smith/schemas/` | Zod I/O schemas: translate, word-translation, morphem, lemma, disambiguate, relation, inflection, noun-inflection |
+| `src/lexical-generation/internal/prompt-smith/codegen/consts.ts` | PromptKind enum |
+| `src/lexical-generation/internal/prompt-smith/codegen/skript/run.ts` | Codegen orchestrator |
+| `src/lexical-generation/internal/prompt-smith/prompt-parts/` | Human-written prompt sources (3 kinds × 2 lang pairs) |
 | **Tests (V5)** | |
 | `tests/unit/textfresser/formatters/common/header-formatter.test.ts` | Common header formatter: emoji/ipa/wikilink assembly (no article) |
 | `tests/unit/textfresser/formatters/de/lexem/noun/header-formatter.test.ts` | Noun header formatter: genus → der/die/das article |

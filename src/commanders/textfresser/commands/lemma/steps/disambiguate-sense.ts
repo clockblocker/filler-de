@@ -10,8 +10,8 @@ import {
 	type VaultActionManager,
 } from "../../../../../managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../../managers/obsidian/vault-action-manager/types/split-path";
-import type { AgentOutput } from "../../../../../prompt-smith";
-import { PromptKind } from "../../../../../prompt-smith/codegen/consts";
+import type { AgentOutput } from "../../../../../lexical-generation/internal/prompt-smith";
+import { PromptKind } from "../../../../../lexical-generation/internal/prompt-smith/codegen/consts";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { logger } from "../../../../../utils/logger";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
@@ -55,7 +55,9 @@ function extractGenusFromEntity(
 
 function extractPhrasemeKindFromEntity(
 	entity: DeEntity | undefined,
-): Extract<ResolvedLemma, { linguisticUnit: "Phrasem" }>["posLikeKind"] | undefined {
+):
+	| Extract<ResolvedLemma, { linguisticUnit: "Phrasem" }>["posLikeKind"]
+	| undefined {
 	if (entity?.linguisticUnit === "Phrasem") {
 		return entity.posLikeKind;
 	}
@@ -139,7 +141,10 @@ export async function disambiguateSense(
 				return false;
 			}
 			if (parsed.unitKind !== lemma.linguisticUnit) return false;
-			if (lemma.linguisticUnit === "Lexem" && parsed.pos !== lemma.posLikeKind) {
+			if (
+				lemma.linguisticUnit === "Lexem" &&
+				parsed.pos !== lemma.posLikeKind
+			) {
 				return false;
 			}
 			return true;
@@ -205,19 +210,17 @@ export async function disambiguateSense(
 				if (sense.unitKind === "Lexem") {
 					return {
 						emojiDescription: sense.emojiDescription ?? undefined,
-						genus:
-							sense.genus as Extract<
-								CandidateSense,
-								{ linguisticUnit: "Lexem" }
-							>["genus"],
+						genus: sense.genus as Extract<
+							CandidateSense,
+							{ linguisticUnit: "Lexem" }
+						>["genus"],
 						id: String(sense.index),
 						ipa: sense.ipa,
 						linguisticUnit: "Lexem",
-						posLikeKind:
-							sense.pos as Extract<
-								CandidateSense,
-								{ linguisticUnit: "Lexem" }
-							>["posLikeKind"],
+						posLikeKind: sense.pos as Extract<
+							CandidateSense,
+							{ linguisticUnit: "Lexem" }
+						>["posLikeKind"],
 						senseGloss: sense.senseGloss,
 					};
 				}
@@ -227,7 +230,8 @@ export async function disambiguateSense(
 					id: String(sense.index),
 					ipa: sense.ipa,
 					linguisticUnit: "Phrasem",
-					posLikeKind: (sense.phrasemeKind ?? lemma.posLikeKind) as Extract<
+					posLikeKind: (sense.phrasemeKind ??
+						lemma.posLikeKind) as Extract<
 						CandidateSense,
 						{ linguisticUnit: "Phrasem" }
 					>["posLikeKind"],

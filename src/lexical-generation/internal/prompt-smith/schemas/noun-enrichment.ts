@@ -2,7 +2,7 @@ import { z } from "zod/v3";
 import {
 	GermanGenusSchema,
 	NounClassSchema,
-} from "../../linguistics/de/lexem/noun/features";
+} from "../../../../linguistics/de/lexem/noun/features";
 
 const userInputSchema = z.object({
 	context: z.string(),

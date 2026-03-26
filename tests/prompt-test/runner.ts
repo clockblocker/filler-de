@@ -1,8 +1,8 @@
 import * as path from "node:path";
-import { PROMPT_FOR, SchemasFor } from "../../src/prompt-smith";
-import type { PromptKind } from "../../src/prompt-smith/codegen/consts";
-import { ALL_PROMPT_KINDS } from "../../src/prompt-smith/codegen/consts";
-import type { AvaliablePromptDict } from "../../src/prompt-smith/types";
+import { PROMPT_FOR, SchemasFor } from "../../src/lexical-generation/internal/prompt-smith";
+import type { PromptKind } from "../../src/lexical-generation/internal/prompt-smith/codegen/consts";
+import { ALL_PROMPT_KINDS } from "../../src/lexical-generation/internal/prompt-smith/codegen/consts";
+import type { AvaliablePromptDict } from "../../src/lexical-generation/internal/prompt-smith/types";
 import { callGemini } from "./api-client";
 import { type ExampleResult, type RunResult, writeRunResult } from "./log-manager";
 
@@ -89,7 +89,7 @@ if (!promptModule) {
 
 const toTestPath = path.resolve(
 	import.meta.dir,
-	"../../src/prompt-smith/prompt-parts",
+	"../../src/lexical-generation/internal/prompt-smith/prompt-parts",
 	toKebabCase(targetLanguage),
 	toKebabCase(knownLanguage),
 	toKebabCase(promptKind),

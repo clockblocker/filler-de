@@ -2,7 +2,7 @@ import { z } from "zod/v3";
 import {
 	GermanVerbConjugationSchema,
 	GermanVerbValencySchema,
-} from "../../linguistics/de/lexem/verb/features";
+} from "../../../../linguistics/de/lexem/verb/features";
 import { featurePromptUserInputSchema } from "./feature-shared";
 
 const userInputSchema = featurePromptUserInputSchema;

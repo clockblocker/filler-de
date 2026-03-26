@@ -1,9 +1,9 @@
 import { z } from "zod/v3";
-import { PHRASEM_KINDS } from "../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
+import { PHRASEM_KINDS } from "../../../../linguistics/common/enums/linguistic-units/phrasem/phrasem-kind";
 import {
 	DE_LEMMA_LINGUISTIC_UNITS,
 	DE_LEXEM_POS,
-} from "../../linguistics/de/lemma";
+} from "../../../../linguistics/de/lemma";
 
 const userInputSchema = z.object({
 	context: z.string(),
@@ -48,4 +48,4 @@ export {
 	DeWordTranslationInputSchema,
 	type DeWordTranslationOutput,
 	DeWordTranslationOutputSchema,
-} from "../../linguistics/de/lemma";
+} from "../../../../linguistics/de/lemma";

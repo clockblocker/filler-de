@@ -1,5 +1,5 @@
-import type { AgentOutput } from "../../../../../../prompt-smith";
-import type { RelationSubKind } from "../../../../../../prompt-smith/schemas/relation";
+import type { AgentOutput } from "../../../../../../lexical-generation/internal/prompt-smith";
+import type { RelationSubKind } from "../../../../../../lexical-generation/internal/prompt-smith/schemas/relation";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 
 const SYMBOL_FOR_KIND: Record<RelationSubKind, string> = {

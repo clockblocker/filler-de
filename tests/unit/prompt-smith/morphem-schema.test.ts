@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { morphemSchemas } from "../../../src/prompt-smith/schemas/morphem";
+import { morphemSchemas } from "../../../src/lexical-generation/internal/prompt-smith/schemas/morphem";
 
 describe("Morphem schema", () => {
 	it("accepts optional derived_from and compounded_from", () => {

@@ -4,7 +4,7 @@ import {
 	GermanAdjectiveDistributionSchema,
 	GermanAdjectiveGradabilitySchema,
 	GermanAdjectiveValencySchema,
-} from "../../linguistics/de/lexem/adjective/features";
+} from "../../../../linguistics/de/lexem/adjective/features";
 import { featurePromptUserInputSchema } from "./feature-shared";
 
 const userInputSchema = featurePromptUserInputSchema;
