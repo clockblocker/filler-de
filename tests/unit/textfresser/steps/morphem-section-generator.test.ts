@@ -87,11 +87,11 @@ describe("generateMorphemSection", () => {
 			lexicalInfo: {
 				...makeLexicalInfo(),
 				morphemicBreakdown: {
-					status: "error",
 					error: lexicalGenerationError(
 						LexicalGenerationFailureKind.InvalidModelOutput,
 						"nope",
 					),
+					status: "error",
 				},
 			},
 			targetLang: "German",

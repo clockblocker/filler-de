@@ -27,7 +27,7 @@ import {
 	computePrePromptTarget,
 	isUnknownWorkingPath,
 } from "../../common/lemma-link-routing";
-import { CommandErrorKind } from "../../errors";
+import { CommandErrorKind, commandApiError } from "../../errors";
 import type { TextfresserState } from "../../state/textfresser-state";
 import { dispatchActions } from "../shared/dispatch-actions";
 import {
@@ -35,7 +35,6 @@ import {
 	buildUpdatedBlock,
 	type RewritePlan,
 } from "./lemma-rewrite-plan";
-import { commandApiError } from "../../errors";
 
 type ResolvedPosLikeKind =
 	| {
@@ -130,20 +129,24 @@ export async function runLemmaTwoPhase(params: {
 	const context = attestation.source.textWithOnlyTargetMarked;
 	const lexicalGeneration = state.lexicalGeneration;
 	if (!lexicalGeneration) {
-		return err(commandApiError({
-			lexicalGenerationError: state.lexicalGenerationInitError,
-			reason:
-				state.lexicalGenerationInitError?.message ??
-				"Lexical generation is unavailable",
-		}));
+		return err(
+			commandApiError({
+				lexicalGenerationError: state.lexicalGenerationInitError,
+				reason:
+					state.lexicalGenerationInitError?.message ??
+					"Lexical generation is unavailable",
+			}),
+		);
 	}
 
 	const lemmaResult = await lexicalGeneration.generateLemma(surface, context);
 	if (lemmaResult.isErr()) {
-		return err(commandApiError({
-			lexicalGenerationError: lemmaResult.error,
-			reason: lemmaResult.error.message,
-		}));
+		return err(
+			commandApiError({
+				lexicalGenerationError: lemmaResult.error,
+				reason: lemmaResult.error.message,
+			}),
+		);
 	}
 	const resolvedLemma: ResolvedLemma = lemmaResult.value;
 	const resolvedPosLikeKind = resolvePosLikeKind(resolvedLemma);

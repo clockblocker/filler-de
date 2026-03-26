@@ -1,4 +1,7 @@
-import type { LexicalInfo, LexicalGenus } from "../../../../../lexical-generation";
+import type {
+	LexicalGenus,
+	LexicalInfo,
+} from "../../../../../lexical-generation";
 import { formatHeaderLine as formatCommonHeader } from "./common/header-formatter";
 import { formatHeaderLine as formatNounHeader } from "./de/lexem/noun/header-formatter";
 
@@ -70,9 +73,5 @@ export function dispatchHeaderFormatter(
 		}
 	}
 
-	return formatCommonHeader(
-		output,
-		lexicalInfo.lemma.lemma,
-		targetLanguage,
-	);
+	return formatCommonHeader(output, lexicalInfo.lemma.lemma, targetLanguage);
 }

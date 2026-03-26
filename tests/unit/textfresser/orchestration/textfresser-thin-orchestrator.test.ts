@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { ok, okAsync } from "neverthrow";
-import { LexicalGenerationFailureKind } from "../../../../src/lexical-generation";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
+import { LexicalGenerationFailureKind } from "../../../../src/lexical-generation";
 import type { CommandContext } from "../../../../src/managers/obsidian/command-executor";
 import { PayloadKind } from "../../../../src/managers/obsidian/user-event-interceptor/types/payload-base";
 import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";

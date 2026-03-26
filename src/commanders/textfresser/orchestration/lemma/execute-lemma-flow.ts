@@ -5,7 +5,7 @@ import { logger } from "../../../../utils/logger";
 import { resolveAttestation } from "../../commands/lemma/lemma-command";
 import type { CommandError, CommandInput } from "../../commands/types";
 import { buildPolicyDestinationPath } from "../../common/lemma-link-routing";
-import { commandApiError, CommandErrorKind } from "../../errors";
+import { CommandErrorKind, commandApiError } from "../../errors";
 import type { TextfresserState } from "../../state/textfresser-state";
 import {
 	buildLemmaInvocationKey,
@@ -25,10 +25,12 @@ export function executeLemmaFlow(params: {
 }): ResultAsync<void, CommandError> {
 	const { context, notify, requestBackgroundGenerate, state, vam } = params;
 	if (state.lexicalGenerationInitError) {
-		return errAsync(commandApiError({
-			lexicalGenerationError: state.lexicalGenerationInitError,
-			reason: state.lexicalGenerationInitError.message,
-		}));
+		return errAsync(
+			commandApiError({
+				lexicalGenerationError: state.lexicalGenerationInitError,
+				reason: state.lexicalGenerationInitError.message,
+			}),
+		);
 	}
 
 	const input: CommandInput = {

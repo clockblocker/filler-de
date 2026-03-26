@@ -126,11 +126,11 @@ describe("section-generation-context", () => {
 					},
 				},
 				features: {
-					status: "error",
 					error: {
 						kind: "FetchFailed",
 						message: "features failed",
 					} as never,
+					status: "error",
 				},
 			}),
 		);
@@ -181,11 +181,11 @@ describe("section-generation-context", () => {
 					},
 				},
 				features: {
-					status: "error",
 					error: {
 						kind: "FetchFailed",
 						message: "features failed",
 					} as never,
+					status: "error",
 				},
 			}),
 		);

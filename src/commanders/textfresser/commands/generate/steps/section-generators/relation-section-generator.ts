@@ -7,7 +7,10 @@ import {
 	TitleReprFor,
 } from "../../../../targets/de/sections/section-kind";
 import { formatRelationSection } from "../../section-formatters/common/relation-formatter";
-import type { GenerationTargetLanguage, ParsedRelation } from "../section-generation-types";
+import type {
+	GenerationTargetLanguage,
+	ParsedRelation,
+} from "../section-generation-types";
 
 export type RelationSectionContext = {
 	lexicalInfo: LexicalInfo;

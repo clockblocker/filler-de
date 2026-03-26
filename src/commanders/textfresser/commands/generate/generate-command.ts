@@ -26,10 +26,14 @@ export function generateCommand(
 	input: CommandInput,
 ): ResultAsync<VaultAction[], CommandError> {
 	if (input.textfresserState.lexicalGenerationInitError) {
-		return errAsync(commandApiError({
-			lexicalGenerationError: input.textfresserState.lexicalGenerationInitError,
-			reason: input.textfresserState.lexicalGenerationInitError.message,
-		}));
+		return errAsync(
+			commandApiError({
+				lexicalGenerationError:
+					input.textfresserState.lexicalGenerationInitError,
+				reason: input.textfresserState.lexicalGenerationInitError
+					.message,
+			}),
+		);
 	}
 
 	const state: CommandState = { ...input, actions: [] };

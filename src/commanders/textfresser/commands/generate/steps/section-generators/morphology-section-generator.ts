@@ -172,10 +172,11 @@ export function generateMorphologySection(
 		sourceLemma,
 		ctx.targetLang,
 	);
-	const derivedFromLemma = normalizeLemma(morphemicBreakdown.derivedFrom?.lemma);
-	const preferredCompoundedLemmaByKey = buildPreferredCompoundedLemmaByKey(
-		morphemes,
+	const derivedFromLemma = normalizeLemma(
+		morphemicBreakdown.derivedFrom?.lemma,
 	);
+	const preferredCompoundedLemmaByKey =
+		buildPreferredCompoundedLemmaByKey(morphemes);
 	const compoundedFromLemmas = dedupeLemmas(
 		(morphemicBreakdown.compoundedFrom ?? [])
 			.map((lemma) =>

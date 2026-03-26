@@ -24,7 +24,9 @@ function formatGenericInflectionRows(
 ): string {
 	return rows
 		.map((row) => {
-			const forms = row.forms.map((form) => `[[${form.form}]]`).join(", ");
+			const forms = row.forms
+				.map((form) => `[[${form.form}]]`)
+				.join(", ");
 			return `${row.label}: ${forms}`;
 		})
 		.join("\n");

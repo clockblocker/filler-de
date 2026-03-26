@@ -115,7 +115,9 @@ function buildCorePrompt(lemma: ResolvedLemma): {
 	};
 }
 
-function parseGenericInflectionForms(rawForms: string): Array<{ form: string }> {
+function parseGenericInflectionForms(
+	rawForms: string,
+): Array<{ form: string }> {
 	return rawForms
 		.split(",")
 		.map((form) => form.trim())

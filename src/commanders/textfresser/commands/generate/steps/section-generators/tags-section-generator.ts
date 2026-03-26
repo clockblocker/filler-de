@@ -5,9 +5,7 @@ import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../targets/de/sections/section-kind";
-import {
-	buildAdjectiveFeatureTags,
-} from "../adjective-features";
+import { buildAdjectiveFeatureTags } from "../adjective-features";
 import { buildFeatureTagPath } from "../features-prompt-dispatch";
 import type { GenerationTargetLanguage } from "../section-generation-types";
 import { buildVerbFeatureTags } from "../verb-features";

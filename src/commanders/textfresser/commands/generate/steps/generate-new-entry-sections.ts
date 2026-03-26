@@ -1,4 +1,7 @@
-import type { LexicalInfo, ResolvedLemma } from "../../../../../lexical-generation";
+import type {
+	LexicalInfo,
+	ResolvedLemma,
+} from "../../../../../lexical-generation";
 import type {
 	GermanGenus,
 	NounInflectionCell,

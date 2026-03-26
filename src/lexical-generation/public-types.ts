@@ -34,11 +34,7 @@ export type LexicalGenus = "Maskulinum" | "Femininum" | "Neutrum";
 
 export type LexicalNounClass = "Common" | "Proper";
 
-export type LexicalCase =
-	| "Nominative"
-	| "Accusative"
-	| "Dative"
-	| "Genitive";
+export type LexicalCase = "Nominative" | "Accusative" | "Dative" | "Genitive";
 
 export type LexicalNumber = "Singular" | "Plural";
 
@@ -79,10 +75,7 @@ export type LexicalAdjectiveValency = {
 
 export type LexicalVerbConjugation = "Irregular" | "Regular";
 
-export type LexicalVerbSeparability =
-	| "Separable"
-	| "Inseparable"
-	| "None";
+export type LexicalVerbSeparability = "Separable" | "Inseparable" | "None";
 
 export type LexicalVerbReflexivity =
 	| "NonReflexive"

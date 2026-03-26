@@ -8,7 +8,7 @@ import {
 	TitleReprFor,
 } from "../../../targets/de/sections/section-kind";
 import type { CommandError } from "../../types";
-import { commandApiError, CommandErrorKind } from "../../types";
+import { commandApiError } from "../../types";
 import {
 	buildEntityMeta,
 	buildLinguisticUnitMeta,
@@ -233,9 +233,7 @@ export function generateSections(
 			const verbFeatures = getVerbLexicalFeatures(generated.lexicalInfo);
 			const verbEntryIdentity =
 				isVerbLexem && verbFeatures
-					? buildVerbEntryIdentityFromFeatures(
-							verbFeatures,
-						)
+					? buildVerbEntryIdentityFromFeatures(verbFeatures)
 					: undefined;
 
 			if (verbEntryIdentity) {
@@ -278,10 +276,7 @@ export function generateSections(
 				lemmaResult,
 				generated.lexicalInfo,
 			);
-			const entity = buildEntityMeta(
-				lemmaResult,
-				generated.lexicalInfo,
-			);
+			const entity = buildEntityMeta(lemmaResult, generated.lexicalInfo);
 
 			const newEntry: DictEntry = {
 				headerContent: generated.headerContent,

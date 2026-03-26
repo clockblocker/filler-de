@@ -85,10 +85,7 @@ function buildLexemLinguisticUnit(
 	if (lemmaResult.surfaceKind === "Lemma") {
 		if (lemmaResult.posLikeKind === "Noun") {
 			const nounIdentity = resolveNounIdentity(lexicalInfo);
-			if (
-				nounIdentity?.genus &&
-				nounIdentity.nounClass
-			) {
+			if (nounIdentity?.genus && nounIdentity.nounClass) {
 				return {
 					kind: "Lexem",
 					surface: {

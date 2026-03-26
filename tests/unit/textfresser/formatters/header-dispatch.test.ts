@@ -187,11 +187,11 @@ describe("dispatchHeaderFormatter", () => {
 					},
 				},
 				features: {
-					status: "error",
 					error: lexicalGenerationError(
 						LexicalGenerationFailureKind.FetchFailed,
 						"features failed",
 					),
+					status: "error",
 				},
 			}),
 			"German",
@@ -203,11 +203,11 @@ describe("dispatchHeaderFormatter", () => {
 		const result = dispatchHeaderFormatter(
 			makeVerbLexicalInfo({
 				core: {
-					status: "error",
 					error: {
 						kind: LexicalGenerationFailureKind.FetchFailed,
 						message: "nope",
 					},
+					status: "error",
 				},
 			}),
 			"German",
