@@ -1,5 +1,8 @@
 import { ResultAsync } from "neverthrow";
-import type { LexicalGenerationError } from "../../../../../lexical-generation";
+import type {
+	LexicalGenerationError,
+	LexicalInfo,
+} from "../../../../../lexical-generation";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
 import type { DictEntry } from "../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
@@ -9,10 +12,7 @@ import {
 } from "../../../targets/de/sections/section-kind";
 import type { CommandError } from "../../types";
 import { commandApiError } from "../../types";
-import {
-	buildEntityMeta,
-	buildLinguisticUnitMeta,
-} from "./build-linguistic-unit-meta";
+import { buildLexicalMeta } from "./build-lexical-meta";
 import { ensureClosedSetMembershipEntry } from "./closed-set-membership-entry";
 import {
 	buildFeatureTagPath,
@@ -27,10 +27,7 @@ import {
 	getVerbLexicalFeatures,
 } from "./verb-features";
 
-export {
-	buildEntityMeta,
-	buildLinguisticUnitMeta,
-} from "./build-linguistic-unit-meta";
+export { buildLexicalMeta } from "./build-lexical-meta";
 export { buildFeatureTagPath, getFeaturesPromptKindForPos };
 export type { GenerateSectionsResult } from "./generate-sections-result";
 export type { ParsedRelation } from "./section-generation-types";
@@ -102,6 +99,34 @@ function ensureClosedSetMembershipEntries(params: {
 	return membershipResult?.entries ?? params.existingEntries;
 }
 
+async function generateLexicalInfoForEntry(
+	ctx: ResolvedEntryState,
+): Promise<LexicalInfo> {
+	const lexicalGeneration = ctx.textfresserState.lexicalGeneration;
+	if (!lexicalGeneration) {
+		throw (
+			ctx.textfresserState.lexicalGenerationInitError ??
+			new Error("Lexical generation is unavailable")
+		);
+	}
+
+	const lexicalInfoResult = await lexicalGeneration.generateLexicalInfo(
+		ctx.textfresserState.latestLemmaResult,
+		ctx.textfresserState.latestLemmaResult.attestation.source
+			.textWithOnlyTargetMarked,
+		{
+			precomputedEmojiDescription:
+				ctx.textfresserState.latestLemmaResult
+					.precomputedEmojiDescription,
+		},
+	);
+	if (lexicalInfoResult.isErr()) {
+		throw lexicalInfoResult.error;
+	}
+
+	return lexicalInfoResult.value;
+}
+
 async function buildReEncounterResult(
 	ctx: ResolvedEntryState,
 ): Promise<GenerateSectionsResult> {
@@ -127,9 +152,10 @@ async function buildReEncounterResult(
 		ctx,
 		existingEntries,
 	});
+	const lexicalInfo = await generateLexicalInfoForEntry(ctx);
 	const missingSectionKinds = computeMissingV3SectionKinds({
 		entry: matchedEntry,
-		lemmaResult: ctx.textfresserState.latestLemmaResult,
+		lexicalInfo,
 	});
 
 	if (missingSectionKinds.length === 0) {
@@ -151,6 +177,7 @@ async function buildReEncounterResult(
 	}
 
 	const generated = await generateNewEntrySections(ctx, {
+		lexicalInfoOverride: lexicalInfo,
 		onlySections: new Set(missingSectionKinds),
 	});
 	const missingCssKinds = new Set(
@@ -187,24 +214,7 @@ function getVerbEntryIdentity(entry: DictEntry): string | null {
 		return fromMeta;
 	}
 
-	const linguisticUnit = entry.meta.linguisticUnit;
-	if (!linguisticUnit || linguisticUnit.kind !== "Lexem") {
-		return null;
-	}
-
-	const surface = linguisticUnit.surface;
-	if (surface.surfaceKind !== "Lemma" || surface.features.pos !== "Verb") {
-		return null;
-	}
-
-	return buildVerbEntryIdentityFromFeatures({
-		conjugation: surface.features.conjugation,
-		valency: {
-			...surface.features.valency,
-			governedPreposition:
-				surface.features.valency.governedPreposition ?? undefined,
-		},
-	});
+	return null;
 }
 
 /**
@@ -271,20 +281,15 @@ export function generateSections(
 				}
 			}
 
-			const linguisticUnit = buildLinguisticUnitMeta(
-				generated.entryId,
-				lemmaResult,
-				generated.lexicalInfo,
-			);
-			const entity = buildEntityMeta(lemmaResult, generated.lexicalInfo);
-
 			const newEntry: DictEntry = {
 				headerContent: generated.headerContent,
 				id: generated.entryId,
 				meta: {
-					...(entity ? { entity } : {}),
+					lexicalMeta: buildLexicalMeta(
+						lemmaResult,
+						generated.lexicalInfo,
+					),
 					...(verbEntryIdentity ? { verbEntryIdentity } : {}),
-					...(linguisticUnit ? { linguisticUnit } : {}),
 				},
 				sections: generated.sections,
 			};

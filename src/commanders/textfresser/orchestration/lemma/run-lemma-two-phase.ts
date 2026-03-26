@@ -150,7 +150,6 @@ export async function runLemmaTwoPhase(params: {
 
 	const disambiguation = await disambiguateSense(
 		vam,
-		state.promptRunner,
 		resolvedLemma,
 		context,
 		finalTarget.splitPath,

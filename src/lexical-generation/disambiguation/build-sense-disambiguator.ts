@@ -1,20 +1,23 @@
 import { err, ok } from "neverthrow";
 import { executePrompt } from "../internal/prompt-executor";
+import { parseLexicalMetaTag } from "../lexical-meta";
 import type {
-	CandidateSense,
 	CreateLexicalGenerationModuleParams,
+	LexicalMeta,
 	ResolvedLemma,
 	SenseDisambiguator,
 	SenseMatchResult,
 } from "../public-types";
 
-type IndexedCandidateSense = CandidateSense & {
+type IndexedLexicalMeta = LexicalMeta & {
+	cacheIndex: number;
+	parsedMetaTag: NonNullable<ReturnType<typeof parseLexicalMetaTag>>;
 	promptIndex: number;
 };
 
 function matchesLemma(
 	lemma: ResolvedLemma,
-	candidate: CandidateSense,
+	candidate: NonNullable<ReturnType<typeof parseLexicalMetaTag>>,
 ): boolean {
 	if (lemma.linguisticUnit !== candidate.linguisticUnit) {
 		return false;
@@ -31,11 +34,28 @@ export function buildSenseDisambiguator(
 	return async (
 		lemma: ResolvedLemma,
 		attestation: string,
-		candidateSenses: CandidateSense[],
+		candidateSenses: LexicalMeta[],
 	) => {
-		const matchingCandidates = candidateSenses.filter((candidate) =>
-			matchesLemma(lemma, candidate),
-		);
+		const matchingCandidates = candidateSenses
+			.map((candidate, cacheIndex) => {
+				const parsedMetaTag = parseLexicalMetaTag(candidate.metaTag);
+				if (!parsedMetaTag) {
+					return null;
+				}
+
+				return {
+					...candidate,
+					cacheIndex,
+					parsedMetaTag,
+				};
+			})
+			.filter((candidate) => candidate !== null)
+			.filter(
+				(candidate) => candidate.parsedMetaTag.surfaceKind === "Lemma",
+			)
+			.filter((candidate) =>
+				matchesLemma(lemma, candidate.parsedMetaTag),
+			);
 
 		if (matchingCandidates.length === 0) {
 			return ok<SenseMatchResult>({ kind: "new" });
@@ -50,7 +70,7 @@ export function buildSenseDisambiguator(
 			.map((candidate, index) => ({
 				...candidate,
 				promptIndex: index + 1,
-			})) satisfies IndexedCandidateSense[];
+			})) satisfies IndexedLexicalMeta[];
 
 		if (promptCandidates.length === 0) {
 			return ok<SenseMatchResult>({ kind: "new" });
@@ -61,23 +81,16 @@ export function buildSenseDisambiguator(
 			lemma: lemma.lemma,
 			senses: promptCandidates.map((candidate) => ({
 				emojiDescription: candidate.emojiDescription ?? [],
-				genus:
-					candidate.linguisticUnit === "Lexem" &&
-					candidate.posLikeKind === "Noun"
-						? candidate.genus
-						: undefined,
 				index: candidate.promptIndex,
-				ipa: candidate.ipa,
 				phrasemeKind:
-					candidate.linguisticUnit === "Phrasem"
-						? candidate.posLikeKind
+					candidate.parsedMetaTag.linguisticUnit === "Phrasem"
+						? candidate.parsedMetaTag.posLikeKind
 						: undefined,
 				pos:
-					candidate.linguisticUnit === "Lexem"
-						? candidate.posLikeKind
+					candidate.parsedMetaTag.linguisticUnit === "Lexem"
+						? candidate.parsedMetaTag.posLikeKind
 						: undefined,
-				senseGloss: candidate.senseGloss,
-				unitKind: candidate.linguisticUnit,
+				unitKind: candidate.parsedMetaTag.linguisticUnit,
 			})),
 		});
 		if (promptResult.isErr()) {
@@ -90,8 +103,8 @@ export function buildSenseDisambiguator(
 		);
 		if (matchedCandidate) {
 			return ok<SenseMatchResult>({
+				cacheIndex: matchedCandidate.cacheIndex,
 				kind: "matched",
-				senseId: matchedCandidate.id,
 			});
 		}
 

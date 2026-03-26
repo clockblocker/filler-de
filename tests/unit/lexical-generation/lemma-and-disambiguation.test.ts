@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { err, ok } from "neverthrow";
 import {
 	createLexicalGenerationModule,
+	createLexicalMeta,
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,
 	type StructuredFetchFn,
@@ -76,25 +77,31 @@ describe("lexical-generation lemma/disambiguation", () => {
 			},
 			"Ich gehe zur Bank",
 			[
-				{
+				createLexicalMeta({
 					emojiDescription: ["🪑"],
-					id: "sense-1",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Noun",
-				},
-				{
+					lemma: {
+						lemma: "Bank",
+						linguisticUnit: "Lexem",
+						posLikeKind: "Noun",
+						surfaceKind: "Lemma",
+					},
+				}),
+				createLexicalMeta({
 					emojiDescription: ["🏦"],
-					id: "sense-2",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Noun",
-				},
+					lemma: {
+						lemma: "Bank",
+						linguisticUnit: "Lexem",
+						posLikeKind: "Noun",
+						surfaceKind: "Lemma",
+					},
+				}),
 			],
 		);
 
 		expect(matched.isOk()).toBe(true);
 		expect(matched._unsafeUnwrap()).toEqual({
+			cacheIndex: 1,
 			kind: "matched",
-			senseId: "sense-2",
 		});
 
 		const moduleForNewSense = createLexicalGenerationModule({
@@ -122,12 +129,15 @@ describe("lexical-generation lemma/disambiguation", () => {
 			},
 			"Das Schloss an der Tur war kaputt.",
 			[
-				{
+				createLexicalMeta({
 					emojiDescription: ["🏰"],
-					id: "sense-1",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Noun",
-				},
+					lemma: {
+						lemma: "Schloss",
+						linguisticUnit: "Lexem",
+						posLikeKind: "Noun",
+						surfaceKind: "Lemma",
+					},
+				}),
 			],
 		);
 
@@ -165,12 +175,15 @@ describe("lexical-generation lemma/disambiguation", () => {
 			},
 			"Ich gehe zur Bank",
 			[
-				{
+				createLexicalMeta({
 					emojiDescription: ["🏦"],
-					id: "sense-1",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Noun",
-				},
+					lemma: {
+						lemma: "Bank",
+						linguisticUnit: "Lexem",
+						posLikeKind: "Noun",
+						surfaceKind: "Lemma",
+					},
+				}),
 			],
 		);
 

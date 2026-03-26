@@ -4,8 +4,11 @@ export {
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,
 } from "./errors";
+export {
+	createLexicalMeta,
+	createMetaTagFromResolvedLemma,
+} from "./lexical-meta";
 export type {
-	CandidateSense,
 	CreateLexicalGenerationModuleParams,
 	GenerateLexicalInfoOptions,
 	LemmaGenerator,
@@ -24,6 +27,7 @@ export type {
 	LexicalInfo,
 	LexicalInfoField,
 	LexicalInfoGenerator,
+	LexicalMeta,
 	LexicalMorpheme,
 	LexicalMorphemeKind,
 	LexicalNounClass,

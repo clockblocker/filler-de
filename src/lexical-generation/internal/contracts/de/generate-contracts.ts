@@ -39,7 +39,9 @@ export function toDeLexicalTarget(result: DeLemmaResult): DeLexicalTarget {
 		return {
 			lemma: result.lemma,
 			linguisticUnit: "Lexem",
-			posLikeKind: result.posLikeKind,
+			posLikeKind: result.posLikeKind as z.infer<
+				typeof DeLexemTargetSchema
+			>["posLikeKind"],
 			surfaceKind: result.surfaceKind,
 		};
 	}
@@ -47,7 +49,9 @@ export function toDeLexicalTarget(result: DeLemmaResult): DeLexicalTarget {
 	return {
 		lemma: result.lemma,
 		linguisticUnit: "Phrasem",
-		posLikeKind: result.posLikeKind,
+		posLikeKind: result.posLikeKind as z.infer<
+			typeof DePhrasemTargetSchema
+		>["posLikeKind"],
 		surfaceKind: result.surfaceKind,
 	};
 }

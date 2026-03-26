@@ -1,6 +1,6 @@
 import type { LexicalInfo } from "../../../../../lexical-generation";
-import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
 import { PromptKind } from "../../../../../lexical-generation/internal/prompt-smith/codegen/consts";
+import type { NounInflectionCell } from "../../../../../linguistics/de/lexem/noun";
 import { markdownHelper } from "../../../../../stateless-helpers/markdown-strip";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
 import { logger } from "../../../../../utils/logger";
@@ -42,6 +42,7 @@ export type GeneratedEntrySectionsData = GeneratedPropagationArtifacts & {
 };
 
 type GenerateNewEntrySectionsOptions = {
+	lexicalInfoOverride?: LexicalInfo;
 	onlySections?: ReadonlySet<DictSectionKind>;
 };
 
@@ -131,27 +132,31 @@ export async function generateNewEntrySections(
 	const failedSections: string[] = [];
 	let applicableSectionState: ApplicableSectionState | null = null;
 	let lexicalInfo: LexicalInfo | null = null;
-	const lexicalGeneration = ctx.textfresserState.lexicalGeneration;
-	if (!lexicalGeneration) {
-		throw (
-			ctx.textfresserState.lexicalGenerationInitError ??
-			new Error("Lexical generation is unavailable")
+	if (options.lexicalInfoOverride) {
+		lexicalInfo = options.lexicalInfoOverride;
+	} else {
+		const lexicalGeneration = ctx.textfresserState.lexicalGeneration;
+		if (!lexicalGeneration) {
+			throw (
+				ctx.textfresserState.lexicalGenerationInitError ??
+				new Error("Lexical generation is unavailable")
+			);
+		}
+
+		const lexicalInfoResult = await lexicalGeneration.generateLexicalInfo(
+			lemmaResult,
+			context,
+			{
+				precomputedEmojiDescription:
+					lemmaResult.precomputedEmojiDescription,
+			},
 		);
-	}
+		if (lexicalInfoResult.isErr()) {
+			throw lexicalInfoResult.error;
+		}
 
-	const lexicalInfoResult = await lexicalGeneration.generateLexicalInfo(
-		lemmaResult,
-		context,
-		{
-			precomputedEmojiDescription:
-				lemmaResult.precomputedEmojiDescription,
-		},
-	);
-	if (lexicalInfoResult.isErr()) {
-		throw lexicalInfoResult.error;
+		lexicalInfo = lexicalInfoResult.value;
 	}
-
-	lexicalInfo = lexicalInfoResult.value;
 	collectLexicalInfoFailures(lexicalInfo, failedSections);
 
 	if (!applicableSectionState) {

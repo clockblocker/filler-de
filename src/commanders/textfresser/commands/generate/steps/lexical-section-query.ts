@@ -1,10 +1,8 @@
 import type {
 	LexicalGenus,
 	LexicalInfo,
-	LexicalNounClass,
 	LexicalNounIdentity,
 } from "../../../../../lexical-generation";
-import type { DictEntry } from "../../../domain/dict-note/types";
 
 type LexemLemma = Extract<LexicalInfo["lemma"], { linguisticUnit: "Lexem" }>;
 
@@ -43,34 +41,6 @@ export function resolveLexemNounIdentity(
 	return undefined;
 }
 
-function isLexicalGenus(value: unknown): value is LexicalGenus {
-	return (
-		value === "Maskulinum" ||
-		value === "Femininum" ||
-		value === "Neutrum"
-	);
-}
-
-function isLexicalNounClass(value: unknown): value is LexicalNounClass {
-	return value === "Common" || value === "Proper";
-}
-
-function toLexicalNounIdentity(params: {
-	genus: unknown;
-	nounClass: unknown;
-}): LexicalNounIdentity | undefined {
-	const genus = isLexicalGenus(params.genus) ? params.genus : undefined;
-	const nounClass = isLexicalNounClass(params.nounClass)
-		? params.nounClass
-		: undefined;
-
-	if (!genus && !nounClass) {
-		return undefined;
-	}
-
-	return { genus, nounClass };
-}
-
 export function buildLexicalSectionQuery(
 	lexicalInfo: LexicalInfo,
 ): LexicalSectionQuery {
@@ -78,60 +48,6 @@ export function buildLexicalSectionQuery(
 		return {
 			nounClass: resolveLexemNounIdentity(lexicalInfo)?.nounClass,
 			pos: lexicalInfo.lemma.posLikeKind,
-			unit: "Lexem",
-		};
-	}
-
-	return { unit: "Phrasem" };
-}
-
-function resolveStoredNounIdentity(
-	entry: DictEntry,
-): LexicalNounIdentity | undefined {
-	const linguisticUnit = entry.meta.linguisticUnit;
-	if (
-		linguisticUnit?.kind === "Lexem" &&
-		linguisticUnit.surface.features.pos === "Noun"
-	) {
-		const { features } = linguisticUnit.surface;
-		if ("nounClass" in features || "genus" in features) {
-			return toLexicalNounIdentity({
-				genus: "genus" in features ? features.genus : undefined,
-				nounClass: "nounClass" in features ? features.nounClass : undefined,
-			});
-		}
-	}
-
-	const entity = entry.meta.entity;
-	if (
-		entity?.linguisticUnit === "Lexem" &&
-		entity.posLikeKind === "Noun" &&
-		"nounClass" in entity.features.lexical
-	) {
-		return toLexicalNounIdentity({
-			genus:
-				"genus" in entity.features.lexical
-					? entity.features.lexical.genus
-					: undefined,
-			nounClass: entity.features.lexical.nounClass,
-		});
-	}
-
-	return undefined;
-}
-
-export function buildStoredSectionQuery(params: {
-	entry: DictEntry;
-	lemma: LexicalInfo["lemma"];
-}): LexicalSectionQuery {
-	const { entry, lemma } = params;
-	if (lemma.linguisticUnit === "Lexem") {
-		return {
-			nounClass:
-				lemma.posLikeKind === "Noun"
-					? resolveStoredNounIdentity(entry)?.nounClass
-					: undefined,
-			pos: lemma.posLikeKind,
 			unit: "Lexem",
 		};
 	}

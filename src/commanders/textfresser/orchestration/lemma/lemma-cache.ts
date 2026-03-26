@@ -4,7 +4,7 @@ import type { SplitPathToMdFile } from "../../../../managers/obsidian/vault-acti
 import { stringifySplitPath } from "../../../../stateless-helpers/split-path-comparison";
 import { logger } from "../../../../utils/logger";
 import {
-	computeMissingV3SectionKinds,
+	computeMissingV3SectionKindsFromLemmaResult,
 	findEntryForLemmaResult,
 } from "../../commands/generate/steps/reencounter-sections";
 import type { CommandError } from "../../commands/types";
@@ -70,7 +70,7 @@ export async function handleLemmaCacheHit(params: {
 		return ok(undefined);
 	}
 
-	const missingSections = computeMissingV3SectionKinds({
+	const missingSections = computeMissingV3SectionKindsFromLemmaResult({
 		entry: matchedEntry,
 		lemmaResult: cache.lemmaResult,
 	});

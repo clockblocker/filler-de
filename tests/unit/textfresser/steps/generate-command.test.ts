@@ -137,26 +137,9 @@ describe("generateCommand proper-noun fallback", () => {
 		expect(entries).toHaveLength(1);
 
 		const entry = entries[0];
-		expect(entry?.meta.entity?.linguisticUnit).toBe("Lexem");
-		if (entry?.meta.entity?.linguisticUnit === "Lexem") {
-			expect(entry.meta.entity.features.lexical).toMatchObject({
-				genus: "Neutrum",
-				nounClass: "Proper",
-				pos: "Noun",
-			});
-		}
-
-		expect(entry?.meta.linguisticUnit).toMatchObject({
-			kind: "Lexem",
-			surface: {
-				features: {
-					genus: "Neutrum",
-					nounClass: "Proper",
-					pos: "Noun",
-				},
-				lemma: "Berlin",
-				surfaceKind: "Lemma",
-			},
+		expect(entry?.meta.lexicalMeta).toEqual({
+			emojiDescription: ["🏙️"],
+			metaTag: "lx|noun|lemma",
 		});
 
 		const sectionKinds = new Set(entry?.sections.map((section) => section.kind));

@@ -121,27 +121,13 @@ export type ResolvedLemma =
 			contextWithLinkedParts?: string;
 	  };
 
-export type CandidateSense =
-	| {
-			id: string;
-			linguisticUnit: "Lexem";
-			posLikeKind: LexicalPos;
-			emojiDescription?: string[];
-			genus?: LexicalGenus;
-			ipa?: string;
-			senseGloss?: string;
-	  }
-	| {
-			id: string;
-			linguisticUnit: "Phrasem";
-			posLikeKind: LexicalPhrasemeKind;
-			emojiDescription?: string[];
-			ipa?: string;
-			senseGloss?: string;
-	  };
+export type LexicalMeta = {
+	emojiDescription: string[];
+	metaTag: string;
+};
 
 export type SenseMatchResult =
-	| { kind: "matched"; senseId: string }
+	| { kind: "matched"; cacheIndex: number }
 	| { kind: "new"; precomputedEmojiDescription?: string[] };
 
 export type LexicalInfoField<T> =
@@ -273,7 +259,7 @@ export type LemmaGenerator = (
 export type SenseDisambiguator = (
 	lemma: ResolvedLemma,
 	attestation: string,
-	candidateSenses: CandidateSense[],
+	candidateSenses: LexicalMeta[],
 ) => Promise<Result<SenseMatchResult, LexicalGenerationError>>;
 
 export type LexicalInfoGenerator = (

@@ -1,7 +1,4 @@
-import type {
-	DeEntity,
-	GermanLinguisticUnit,
-} from "../../../../linguistics/de";
+import type { LexicalMeta } from "../../../../lexical-generation";
 import type { LinguisticWikilinkDto } from "../linguistic-wikilink";
 
 export type EntrySection = {
@@ -11,8 +8,7 @@ export type EntrySection = {
 };
 
 export type DictEntryMeta = {
-	entity?: DeEntity;
-	linguisticUnit?: GermanLinguisticUnit;
+	lexicalMeta?: LexicalMeta;
 } & Record<string, unknown>;
 
 export type DictEntry = {

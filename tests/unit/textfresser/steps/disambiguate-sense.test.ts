@@ -1,8 +1,15 @@
 import { describe, expect, it } from "bun:test";
-import { errAsync, ok, okAsync } from "neverthrow";
+import { err, ok, type Result } from "neverthrow";
 import { disambiguateSense } from "../../../../src/commanders/textfresser/commands/lemma/steps/disambiguate-sense";
-import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
-import type { DeEntity } from "../../../../src/linguistics/de";
+import {
+	createLexicalMeta,
+	type LexicalGenerationError,
+	LexicalGenerationFailureKind,
+	type LexicalMeta,
+	lexicalGenerationError,
+	type SenseDisambiguator,
+	type SenseMatchResult,
+} from "../../../../src/lexical-generation";
 import type { VaultActionManager } from "../../../../src/managers/obsidian/vault-action-manager";
 import type { SplitPathToMdFile } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
 
@@ -12,6 +19,20 @@ const MOCK_SPLIT_PATH: SplitPathToMdFile = {
 	kind: "MdFile" as const,
 	pathParts: ["Worter"],
 };
+
+const API_RESULT_NOUN = {
+	lemma: "Bank",
+	linguisticUnit: "Lexem",
+	posLikeKind: "Noun",
+	surfaceKind: "Lemma",
+} as const;
+
+const API_RESULT_PHRASEM = {
+	lemma: "auf jeden Fall",
+	linguisticUnit: "Phrasem",
+	posLikeKind: "DiscourseFormula",
+	surfaceKind: "Lemma",
+} as const;
 
 function splitPathKey(path: SplitPathToMdFile): string {
 	return [...path.pathParts, `${path.basename}.${path.extension}`].join("/");
@@ -32,390 +53,301 @@ function makeVam(opts: {
 	} as unknown as VaultActionManager;
 }
 
-function makePromptRunner(
-	matchedIndex: number | null,
-	emojiDescription?: string[] | null,
-	onGenerate?: (input: unknown) => void,
-): PromptRunner {
-	return {
-		generate: (_kind, input) => {
-			onGenerate?.(input);
-			return okAsync({
-				emojiDescription: emojiDescription ?? null,
-				matchedIndex,
-			});
-		},
-	} as unknown as PromptRunner;
+function makeSenseDisambiguator(params: {
+	onCall?: (cache: LexicalMeta[]) => void;
+	result: Result<SenseMatchResult, LexicalGenerationError>;
+}): SenseDisambiguator {
+	return async (_lemma, _attestation, cache) => {
+		params.onCall?.(cache);
+		return params.result;
+	};
 }
 
-function makeFailingPromptRunner(): PromptRunner {
+function buildLexemMeta(params: {
+	emojiDescription: string[];
+	index: number;
+	posLikeKind?: "Noun" | "Verb";
+	surfaceKind?: "Lemma" | "Inflected";
+}): { id: string; lexicalMeta: LexicalMeta } {
+	const posLikeKind = params.posLikeKind ?? "Noun";
+	const surfaceKind = params.surfaceKind ?? "Lemma";
+	const posToken = posLikeKind === "Noun" ? "NOUN" : "VERB";
+
 	return {
-		generate: () =>
-			errAsync({ reason: "API error" }),
-	} as unknown as PromptRunner;
-}
-
-const API_RESULT_NOUN = {
-	lemma: "Bank",
-	linguisticUnit: "Lexem",
-	posLikeKind: "Noun",
-	surfaceKind: "Lemma",
-} as const;
-
-const API_RESULT_PHRASEM = {
-	lemma: "auf jeden Fall",
-	linguisticUnit: "Phrasem",
-	posLikeKind: "DiscourseFormula",
-	surfaceKind: "Lemma",
-} as const;
-
-function makeNounEntity(
-	params: {
-		emojiDescription: string[];
-		genus?: "Femininum" | "Maskulinum" | "Neutrum";
-		lemma?: string;
-		senseGloss?: string;
-	} = { emojiDescription: ["🏦"] },
-): DeEntity<"Lexem", "Lemma"> {
-	return {
-		emojiDescription: params.emojiDescription,
-		features: {
-			inflectional: {},
-			lexical: {
-				genus: params.genus ?? "Femininum",
-				nounClass: "Common",
-				pos: "Noun",
+		id: `LX-${surfaceKind === "Lemma" ? "LM" : "IN"}-${posToken}-${params.index}`,
+		lexicalMeta: createLexicalMeta({
+			emojiDescription: params.emojiDescription,
+			lemma: {
+				lemma: posLikeKind === "Noun" ? "Bank" : "fahren",
+				linguisticUnit: "Lexem",
+				posLikeKind,
+				surfaceKind,
 			},
-		},
-		ipa: "ˈbaŋk",
-		language: "German",
-		lemma: params.lemma ?? "Bank",
-		linguisticUnit: "Lexem",
-		posLikeKind: "Noun",
-		...(params.senseGloss ? { senseGloss: params.senseGloss } : {}),
-		surfaceKind: "Lemma",
+		}),
 	};
 }
 
-function makeVerbEntity(
-	emojiDescription: string[],
-): DeEntity<"Lexem", "Lemma"> {
+function buildPhrasemMeta(params: {
+	emojiDescription: string[];
+	index: number;
+	posLikeKind?: "DiscourseFormula" | "Collocation";
+}): { id: string; lexicalMeta: LexicalMeta } {
+	const posLikeKind = params.posLikeKind ?? "DiscourseFormula";
+
 	return {
-		emojiDescription,
-		features: {
-			inflectional: {},
-			lexical: {
-				conjugation: "Irregular",
-				pos: "Verb",
-				valency: {
-					governedPreposition: null,
-					reflexivity: "NonReflexive",
-					separability: "None",
-				},
+		id: `PH-LM-${params.index}`,
+		lexicalMeta: createLexicalMeta({
+			emojiDescription: params.emojiDescription,
+			lemma: {
+				lemma: "auf jeden Fall",
+				linguisticUnit: "Phrasem",
+				posLikeKind,
+				surfaceKind: "Lemma",
 			},
-		},
-		ipa: "ˈfaːʁən",
-		language: "German",
-		lemma: "fahren",
-		linguisticUnit: "Lexem",
-		posLikeKind: "Verb",
-		surfaceKind: "Lemma",
+		}),
 	};
 }
 
-function makePhrasemEntity(
-	emojiDescription: string[],
-): DeEntity<"Phrasem", "Lemma"> {
-	return {
-		emojiDescription,
-		features: {
-			inflectional: {},
-			lexical: { phrasemeKind: "DiscourseFormula" },
-		},
-		ipa: "aʊ̯f ˈjeːdn̩ fal",
-		language: "German",
-		lemma: "auf jeden Fall",
-		linguisticUnit: "Phrasem",
-		posLikeKind: "DiscourseFormula",
-		surfaceKind: "Lemma",
-	};
-}
-
-/**
- * Build a minimal note with entries for testing.
- * Each entry has: header line with ^blockId, metadata with canonical entity payload.
- */
 function buildNoteContent(
 	entries: Array<{
-		entity?: DeEntity;
 		id: string;
-		translationFirstLine?: string;
+		lexicalMeta?: LexicalMeta;
 	}>,
 ): string {
-	const entryBlocks = entries.map((e) => {
-		const header = `[[Bank]] ^${e.id}`;
-		const translationSection = e.translationFirstLine
-			? `\n\n<span class="entry_section_title entry_section_title_translations">Übersetzung</span>\n${e.translationFirstLine}`
-			: "";
-		return `${header}${translationSection}`;
-	});
-	const body = entryBlocks.join("\n\n\n---\n---\n\n\n");
+	const body = entries
+		.map((entry) => `[[Bank]] ^${entry.id}`)
+		.join("\n\n\n---\n---\n\n\n");
 
-	const meta: Record<
-		string,
-		{
-			entity?: DeEntity;
-		}
-	> = {};
-	for (const e of entries) {
-		const entryMeta: {
-			entity?: DeEntity;
-		} = {};
-		if (e.entity) entryMeta.entity = e.entity;
-		meta[e.id.toUpperCase()] = entryMeta;
+	const metaEntries: Record<string, { lexicalMeta?: LexicalMeta }> = {};
+	for (const entry of entries) {
+		metaEntries[entry.id.toUpperCase()] = entry.lexicalMeta
+			? { lexicalMeta: entry.lexicalMeta }
+			: {};
 	}
 
-	return `${body}\n\n<section id="textfresser_meta_keep_me_invisible">\n${JSON.stringify({ entries: meta })}\n</section>`;
+	return `${body}\n\n<section id="textfresser_meta_keep_me_invisible">\n${JSON.stringify({ entries: metaEntries })}\n</section>`;
 }
 
 describe("disambiguateSense", () => {
-	it("returns null when no files found (first encounter)", async () => {
-		const vam = makeVam({ files: [] });
-		const runner = makePromptRunner(null);
-		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
-		expect(result.isOk()).toBe(true);
-		expect(result._unsafeUnwrap()).toBeNull();
-	});
-
-	it("returns null when note exists but has no matching entries", async () => {
-		const content = buildNoteContent([
-			{ entity: makeVerbEntity(["🏦"]), id: "LX-LM-VERB-1" },
-		]);
-		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
-		const runner = makePromptRunner(null);
-		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
-		expect(result.isOk()).toBe(true);
-		expect(result._unsafeUnwrap()).toBeNull();
-	});
-
-	it("returns matchedIndex when prompt matches existing sense", async () => {
-		const content = buildNoteContent([
-			{ entity: makeNounEntity({ emojiDescription: ["🏦"] }), id: "LX-LM-NOUN-1" },
-		]);
-		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
-		const runner = makePromptRunner(1);
-		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "Ich gehe zur Bank");
-		expect(result.isOk()).toBe(true);
-		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: 1 });
-	});
-
-	it("returns null with precomputedEmojiDescription when prompt says new sense", async () => {
-		const content = buildNoteContent([
-			{ entity: makeNounEntity({ emojiDescription: ["🏦"] }), id: "LX-LM-NOUN-1" },
-		]);
-		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
-		const runner = makePromptRunner(null, ["🪑", "🌳"]);
-		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "Sitz auf der Bank");
-		expect(result.isOk()).toBe(true);
-		const value = result._unsafeUnwrap();
-		expect(value).toEqual({
-			matchedIndex: null,
-			precomputedEmojiDescription: ["🪑", "🌳"],
-		});
-	});
-
-	it("bounds-checks matchedIndex — out-of-range treated as new sense", async () => {
-		const content = buildNoteContent([
-			{ entity: makeNounEntity({ emojiDescription: ["🏦"] }), id: "LX-LM-NOUN-1" },
-		]);
-		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
-		// LLM returns matchedIndex 99 — not a valid index
-		const runner = makePromptRunner(99, ["❓"]);
-		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
-		expect(result.isOk()).toBe(true);
-		const value = result._unsafeUnwrap();
-		// Should be treated as new sense with precomputedEmojiDescription
-		expect(value).not.toBeNull();
-		expect(value!.matchedIndex).toBeNull();
-	});
-
-	it("treats all-senses-missing-emojiDescription as new sense", async () => {
-		const content = buildNoteContent([
-			{ id: "LX-LM-NOUN-1" },
-		]);
-		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
-		const runner = makePromptRunner(null);
-		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
-		expect(result.isOk()).toBe(true);
-		const value = result._unsafeUnwrap();
-		expect(value).toEqual({ matchedIndex: null });
-	});
-
-	it("returns error when prompt runner fails", async () => {
-		const content = buildNoteContent([
-			{ entity: makeNounEntity({ emojiDescription: ["🏦"] }), id: "LX-LM-NOUN-1" },
-		]);
-		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
-		const runner = makeFailingPromptRunner();
-		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
-		expect(result.isErr()).toBe(true);
-	});
-
-	it("forwards phrasemeKind hint from entity metadata to disambiguate prompt senses", async () => {
-		const content = buildNoteContent([
-			{
-				entity: makePhrasemEntity(["✅"]),
-				id: "PH-LM-1",
-			},
-		]);
-		const vam = makeVam({
-			content,
-			files: [
-				{
-					...MOCK_SPLIT_PATH,
-					basename: "auf jeden Fall",
-				},
-			],
-		});
-		let capturedInput: unknown;
-		const runner = makePromptRunner(1, null, (input) => {
-			capturedInput = input;
-		});
+	it("returns null when no files found", async () => {
 		const result = await disambiguateSense(
-			vam,
-			runner,
-			API_RESULT_PHRASEM,
+			makeVam({ files: [] }),
+			API_RESULT_NOUN,
 			"context",
 		);
+
 		expect(result.isOk()).toBe(true);
-		const inputObj = capturedInput as {
-			senses?: Array<{ phrasemeKind?: string }>;
-		};
-		expect(inputObj.senses?.[0]?.phrasemeKind).toBe("DiscourseFormula");
+		expect(result._unsafeUnwrap()).toBeNull();
 	});
 
-	it("forwards ipa hint from entity metadata to disambiguate prompt senses", async () => {
+	it("passes stored lexical meta through to lexical-generation unchanged", async () => {
 		const content = buildNoteContent([
+			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
+			buildLexemMeta({ emojiDescription: ["🪑"], index: 2 }),
+		]);
+		let capturedCache: LexicalMeta[] | undefined;
+
+		const result = await disambiguateSense(
+			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
+			API_RESULT_NOUN,
+			"context",
+			undefined,
 			{
-				entity: {
-					emojiDescription: ["🏦"],
-					features: {
-						inflectional: {},
-						lexical: {
-							genus: "Femininum",
-							nounClass: "Common",
-							pos: "Noun",
-						},
+				disambiguateWith: makeSenseDisambiguator({
+					onCall: (cache) => {
+						capturedCache = cache;
 					},
-					ipa: "ˈbaŋk",
-					language: "German",
+					result: ok({ cacheIndex: 1, kind: "matched" }),
+				}),
+			},
+		);
+
+		expect(result.isOk()).toBe(true);
+		expect(capturedCache).toEqual([
+			createLexicalMeta({
+				emojiDescription: ["🏦"],
+				lemma: {
 					lemma: "Bank",
 					linguisticUnit: "Lexem",
 					posLikeKind: "Noun",
 					surfaceKind: "Lemma",
 				},
-				id: "LX-LM-NOUN-1",
-			},
-		]);
-		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
-		let capturedInput: unknown;
-		const runner = makePromptRunner(1, null, (input) => {
-			capturedInput = input;
-		});
-
-		const result = await disambiguateSense(
-			vam,
-			runner,
-			API_RESULT_NOUN,
-			"context",
-		);
-		expect(result.isOk()).toBe(true);
-		const inputObj = capturedInput as {
-			senses?: Array<{ ipa?: string }>;
-		};
-		expect(inputObj.senses?.[0]?.ipa).toBe("ˈbaŋk");
-	});
-
-	it("forwards senseGloss from entity metadata to disambiguate prompt senses", async () => {
-		const content = buildNoteContent([
-			{
-				entity: {
-					emojiDescription: ["🏰"],
-					features: {
-						inflectional: {},
-						lexical: {
-							genus: "Neutrum",
-							nounClass: "Common",
-							pos: "Noun",
-						},
-					},
-					ipa: "ʃlɔs",
-					language: "German",
-					lemma: "Schloss",
+			}),
+			createLexicalMeta({
+				emojiDescription: ["🪑"],
+				lemma: {
+					lemma: "Bank",
 					linguisticUnit: "Lexem",
 					posLikeKind: "Noun",
-					senseGloss: "castle palace",
 					surfaceKind: "Lemma",
 				},
-				id: "LX-LM-NOUN-1",
-			},
+			}),
 		]);
-		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
-		let capturedInput: unknown;
-		const runner = makePromptRunner(1, null, (input) => {
-			capturedInput = input;
-		});
-
-		const result = await disambiguateSense(
-			vam,
-			runner,
-			API_RESULT_NOUN,
-			"context",
-		);
-		expect(result.isOk()).toBe(true);
-		const inputObj = capturedInput as {
-			senses?: Array<{ senseGloss?: string }>;
-		};
-		expect(inputObj.senses?.[0]?.senseGloss).toBe("castle palace");
+		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: 2 });
 	});
 
-	it("derives senseGloss from translation section when metadata gloss is missing", async () => {
+	it("maps new-sense results through with precomputed emoji", async () => {
 		const content = buildNoteContent([
-			{
-				entity: makeNounEntity({ emojiDescription: ["🔒"] }),
-				id: "LX-LM-NOUN-1",
-				translationFirstLine: "door lock",
-			},
+			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
 		]);
-		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
-		let capturedInput: unknown;
-		const runner = makePromptRunner(1, null, (input) => {
-			capturedInput = input;
-		});
 
 		const result = await disambiguateSense(
-			vam,
-			runner,
+			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
-			"context",
+			"Sitz auf der Bank",
+			undefined,
+			{
+				disambiguateWith: makeSenseDisambiguator({
+					result: ok({
+						kind: "new",
+						precomputedEmojiDescription: ["🪑", "🌳"],
+					}),
+				}),
+			},
 		);
+
 		expect(result.isOk()).toBe(true);
-		const inputObj = capturedInput as {
-			senses?: Array<{ senseGloss?: string }>;
-		};
-		expect(inputObj.senses?.[0]?.senseGloss).toBe("door lock");
+		expect(result._unsafeUnwrap()).toEqual({
+			matchedIndex: null,
+			precomputedEmojiDescription: ["🪑", "🌳"],
+		});
 	});
 
-	it("returns null when all entries fail to parse", async () => {
-		// Entries with completely invalid IDs
-		const body = "[[Bank]] ^invalid-id-format";
-		const meta = `<section id="textfresser_meta_keep_me_invisible">\n{"entries":{}}\n</section>`;
-		const content = `${body}\n\n${meta}`;
-		const vam = makeVam({ content, files: [MOCK_SPLIT_PATH] });
-		const runner = makePromptRunner(null);
-		const result = await disambiguateSense(vam, runner, API_RESULT_NOUN, "context");
+	it("treats out-of-range cache indices as a new sense", async () => {
+		const content = buildNoteContent([
+			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
+		]);
+
+		const result = await disambiguateSense(
+			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
+			API_RESULT_NOUN,
+			"context",
+			undefined,
+			{
+				disambiguateWith: makeSenseDisambiguator({
+					result: ok({ cacheIndex: 99, kind: "matched" }),
+				}),
+			},
+		);
+
 		expect(result.isOk()).toBe(true);
-		expect(result._unsafeUnwrap()).toBeNull();
+		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: null });
+	});
+
+	it("ignores entries without lexical meta and still lets lexical-generation decide", async () => {
+		const content = buildNoteContent([
+			{ id: "LX-LM-NOUN-1" },
+		]);
+		let capturedCache: LexicalMeta[] | undefined;
+
+		const result = await disambiguateSense(
+			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
+			API_RESULT_NOUN,
+			"context",
+			undefined,
+			{
+				disambiguateWith: makeSenseDisambiguator({
+					onCall: (cache) => {
+						capturedCache = cache;
+					},
+					result: ok({ kind: "new" }),
+				}),
+			},
+		);
+
+		expect(result.isOk()).toBe(true);
+		expect(capturedCache).toEqual([]);
+		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: null });
+	});
+
+	it("ignores invalid entry ids when assembling lexical meta cache", async () => {
+		const content =
+			"[[Bank]] ^invalid-id-format\n\n<section id=\"textfresser_meta_keep_me_invisible\">\n" +
+			JSON.stringify({
+				entries: {
+					"INVALID-ID-FORMAT": {
+						lexicalMeta: buildLexemMeta({
+							emojiDescription: ["🏦"],
+							index: 1,
+						}).lexicalMeta,
+					},
+				},
+			}) +
+			"\n</section>";
+		let capturedCache: LexicalMeta[] | undefined;
+
+		const result = await disambiguateSense(
+			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
+			API_RESULT_NOUN,
+			"context",
+			undefined,
+			{
+				disambiguateWith: makeSenseDisambiguator({
+					onCall: (cache) => {
+						capturedCache = cache;
+					},
+					result: ok({ kind: "new" }),
+				}),
+			},
+		);
+
+		expect(result.isOk()).toBe(true);
+		expect(capturedCache).toEqual([]);
+		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: null });
+	});
+
+	it("supports phraseme lexical meta candidates", async () => {
+		const content = buildNoteContent([
+			buildPhrasemMeta({ emojiDescription: ["✅"], index: 1 }),
+		]);
+		let capturedCache: LexicalMeta[] | undefined;
+
+		const result = await disambiguateSense(
+			makeVam({
+				content,
+				files: [{ ...MOCK_SPLIT_PATH, basename: "auf jeden Fall" }],
+			}),
+			API_RESULT_PHRASEM,
+			"context",
+			undefined,
+			{
+				disambiguateWith: makeSenseDisambiguator({
+					onCall: (cache) => {
+						capturedCache = cache;
+					},
+					result: ok({ cacheIndex: 0, kind: "matched" }),
+				}),
+			},
+		);
+
+		expect(result.isOk()).toBe(true);
+		expect(capturedCache?.[0]?.metaTag).toBe("ph|discourse-formula|lemma");
+		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: 1 });
+	});
+
+	it("returns lexical-generation failures as command errors", async () => {
+		const content = buildNoteContent([
+			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
+		]);
+
+		const result = await disambiguateSense(
+			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
+			API_RESULT_NOUN,
+			"context",
+			undefined,
+			{
+				disambiguateWith: makeSenseDisambiguator({
+					result: err(
+						lexicalGenerationError(
+							LexicalGenerationFailureKind.FetchFailed,
+							"API error",
+						),
+					),
+				}),
+			},
+		);
+
+		expect(result.isErr()).toBe(true);
 	});
 
 	it("uses preferred target path before basename fallback", async () => {
@@ -428,25 +360,28 @@ describe("disambiguateSense", () => {
 			pathParts: ["Library", "de", "noun"],
 		};
 		const fallbackContent = buildNoteContent([
-			{ entity: makeNounEntity({ emojiDescription: ["🏦"] }), id: "LX-LM-NOUN-1" },
+			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
 		]);
 		const preferredContent = buildNoteContent([
-			{ entity: makeNounEntity({ emojiDescription: ["💺"] }), id: "LX-LM-NOUN-2" },
+			buildLexemMeta({ emojiDescription: ["💺"], index: 2 }),
 		]);
-		const vam = makeVam({
-			contentByPath: {
-				[splitPathKey(fallbackPath)]: fallbackContent,
-				[splitPathKey(preferredPath)]: preferredContent,
-			},
-			files: [fallbackPath],
-		});
-		const runner = makePromptRunner(2);
+
 		const result = await disambiguateSense(
-			vam,
-			runner,
+			makeVam({
+				contentByPath: {
+					[splitPathKey(fallbackPath)]: fallbackContent,
+					[splitPathKey(preferredPath)]: preferredContent,
+				},
+				files: [fallbackPath],
+			}),
 			API_RESULT_NOUN,
 			"context",
 			preferredPath,
+			{
+				disambiguateWith: makeSenseDisambiguator({
+					result: ok({ cacheIndex: 0, kind: "matched" }),
+				}),
+			},
 		);
 
 		expect(result.isOk()).toBe(true);
