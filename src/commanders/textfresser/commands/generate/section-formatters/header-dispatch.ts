@@ -1,49 +1,74 @@
-import type { GermanGenus } from "../../../../../linguistics/de";
-import type { AgentOutput } from "../../../../../prompt-smith";
-import type { LemmaResult } from "../../lemma/types";
+import type { LexicalInfo, LexicalGenus } from "../../../../../lexical-generation";
 import { formatHeaderLine as formatCommonHeader } from "./common/header-formatter";
 import { formatHeaderLine as formatNounHeader } from "./de/lexem/noun/header-formatter";
 
-type EnrichmentOutput =
-	| AgentOutput<"LexemEnrichment">
-	| AgentOutput<"NounEnrichment">
-	| AgentOutput<"PhrasemEnrichment">;
+function resolveHeaderCore(lexicalInfo: LexicalInfo): {
+	emojiDescription: string[];
+	ipa: string;
+} {
+	if (lexicalInfo.core.status === "ready") {
+		return {
+			emojiDescription: lexicalInfo.core.value.emojiDescription,
+			ipa: lexicalInfo.core.value.ipa,
+		};
+	}
 
-/**
- * Dispatch header formatting by POS.
- * Currently only Noun diverges (prepends article derived from genus).
- */
-export function dispatchHeaderFormatter(
-	lemmaResult: LemmaResult,
-	enrichmentOutput: EnrichmentOutput,
-	targetLanguage: string,
-	fallbackNounGenus?: GermanGenus,
-): string {
-	const output = {
-		emojiDescription:
-			lemmaResult.precomputedEmojiDescription ??
-			enrichmentOutput.emojiDescription,
-		ipa: enrichmentOutput.ipa,
+	return {
+		emojiDescription: ["❓"],
+		ipa: "unknown",
 	};
+}
+
+function resolveNounGenus(lexicalInfo: LexicalInfo): LexicalGenus | undefined {
+	if (
+		lexicalInfo.lemma.linguisticUnit !== "Lexem" ||
+		lexicalInfo.lemma.posLikeKind !== "Noun"
+	) {
+		return undefined;
+	}
 
 	if (
-		lemmaResult.linguisticUnit === "Lexem" &&
-		lemmaResult.posLikeKind === "Noun"
+		lexicalInfo.features.status === "ready" &&
+		lexicalInfo.features.value.kind === "noun" &&
+		lexicalInfo.features.value.genus
 	) {
-		// NounEnrichment is strict and the only enrichment shape that carries genus.
-		const resolvedNounGenus =
-			"genus" in enrichmentOutput
-				? (enrichmentOutput.genus ?? fallbackNounGenus)
-				: fallbackNounGenus;
-		if (resolvedNounGenus) {
+		return lexicalInfo.features.value.genus;
+	}
+
+	if (
+		lexicalInfo.inflections.status === "ready" &&
+		lexicalInfo.inflections.value.kind === "noun"
+	) {
+		return lexicalInfo.inflections.value.genus;
+	}
+
+	return undefined;
+}
+
+export function dispatchHeaderFormatter(
+	lexicalInfo: LexicalInfo,
+	targetLanguage: string,
+): string {
+	const output = resolveHeaderCore(lexicalInfo);
+
+	if (
+		lexicalInfo.lemma.linguisticUnit === "Lexem" &&
+		lexicalInfo.lemma.posLikeKind === "Noun"
+	) {
+		const nounGenus = resolveNounGenus(lexicalInfo);
+		if (nounGenus) {
 			return formatNounHeader(
 				output,
-				lemmaResult.lemma,
+				lexicalInfo.lemma.lemma,
 				targetLanguage,
-				resolvedNounGenus,
+				nounGenus,
 			);
 		}
 	}
 
-	return formatCommonHeader(output, lemmaResult.lemma, targetLanguage);
+	return formatCommonHeader(
+		output,
+		lexicalInfo.lemma.lemma,
+		targetLanguage,
+	);
 }

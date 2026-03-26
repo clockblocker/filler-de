@@ -1,107 +1,142 @@
 import { describe, expect, it } from "bun:test";
 import { dispatchHeaderFormatter } from "../../../../src/commanders/textfresser/commands/generate/section-formatters/header-dispatch";
-import type { LemmaResult } from "../../../../src/commanders/textfresser/commands/lemma/types";
-import type { AgentOutput } from "../../../../src/prompt-smith";
+import {
+	LexicalGenerationFailureKind,
+	type LexicalInfo,
+} from "../../../../src/lexical-generation";
 
-type LexemLemmaResult = Extract<LemmaResult, { linguisticUnit: "Lexem" }>;
-type PhrasemLemmaResult = Extract<LemmaResult, { linguisticUnit: "Phrasem" }>;
-
-function makeLexemLemmaResult(
-	overrides: Partial<LexemLemmaResult> = {},
-): LexemLemmaResult {
+function makeVerbLexicalInfo(
+	overrides: Partial<Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>> = {},
+): Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }> {
 	return {
-		attestation: {
-			source: {
-				ref: "ref",
-				textWithOnlyTargetMarked: "context",
+		core: {
+			status: "ready",
+			value: {
+				emojiDescription: ["🔧"],
+				ipa: "tɛst",
 			},
-		} as LemmaResult["attestation"],
-		disambiguationResult: null,
-		lemma: "Test",
-		linguisticUnit: "Lexem",
-		posLikeKind: "Verb",
-		surfaceKind: "Lemma",
+		},
+		features: {
+			status: "ready",
+			value: {
+				conjugation: "Regular",
+				kind: "verb",
+				valency: {
+					reflexivity: "NonReflexive",
+					separability: "None",
+				},
+			},
+		},
+		inflections: { status: "not_applicable" },
+		lemma: {
+			lemma: "Test",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Verb",
+			surfaceKind: "Lemma",
+		},
+		morphemicBreakdown: { status: "not_applicable" },
+		relations: { status: "not_applicable" },
 		...overrides,
 	};
 }
 
-function makePhrasemLemmaResult(
-	overrides: Partial<PhrasemLemmaResult> = {},
-): PhrasemLemmaResult {
+function makeNounLexicalInfo(
+	overrides: Partial<Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>> = {},
+): Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }> {
 	return {
-		attestation: {
-			source: {
-				ref: "ref",
-				textWithOnlyTargetMarked: "context",
+		core: {
+			status: "ready",
+			value: {
+				emojiDescription: ["🔧"],
+				ipa: "tɛst",
 			},
-		} as LemmaResult["attestation"],
-		disambiguationResult: null,
-		lemma: "Test",
-		linguisticUnit: "Phrasem",
-		posLikeKind: "DiscourseFormula",
-		surfaceKind: "Lemma",
+		},
+		features: {
+			status: "ready",
+			value: {
+				genus: "Maskulinum",
+				kind: "noun",
+				nounClass: "Common",
+				tags: [],
+			},
+		},
+		inflections: { status: "not_applicable" },
+		lemma: {
+			lemma: "Test",
+			linguisticUnit: "Lexem",
+			posLikeKind: "Noun",
+			surfaceKind: "Lemma",
+		},
+		morphemicBreakdown: { status: "not_applicable" },
+		relations: { status: "not_applicable" },
 		...overrides,
 	};
 }
 
-function makeVerbEnrichment(): AgentOutput<"LexemEnrichment"> {
+function makePhrasemLexicalInfo(
+	overrides: Partial<Extract<LexicalInfo, { lemma: { linguisticUnit: "Phrasem" } }>> = {},
+): Extract<LexicalInfo, { lemma: { linguisticUnit: "Phrasem" } }> {
 	return {
-		emojiDescription: ["🔧"],
-		ipa: "tɛst",
-	};
-}
-
-function makeNounEnrichment(
-	overrides: Partial<AgentOutput<"NounEnrichment">> = {},
-): AgentOutput<"NounEnrichment"> {
-	return {
-		emojiDescription: ["🔧"],
-		genus: "Maskulinum",
-		ipa: "tɛst",
-		nounClass: "Common",
+		core: {
+			status: "ready",
+			value: {
+				emojiDescription: ["🔧"],
+				ipa: "tɛst",
+			},
+		},
+		features: {
+			status: "ready",
+			value: {
+				kind: "tags",
+				tags: [],
+			},
+		},
+		inflections: { status: "not_applicable" },
+		lemma: {
+			lemma: "Test",
+			linguisticUnit: "Phrasem",
+			posLikeKind: "DiscourseFormula",
+			surfaceKind: "Lemma",
+		},
+		morphemicBreakdown: { status: "not_applicable" },
+		relations: { status: "not_applicable" },
 		...overrides,
 	};
 }
 
 describe("dispatchHeaderFormatter", () => {
 	it("dispatches Noun with genus to noun formatter (article in output)", () => {
-		const result = dispatchHeaderFormatter(
-			makeLexemLemmaResult({ posLikeKind: "Noun" }),
-			makeNounEnrichment(),
-			"German",
-		);
+		const result = dispatchHeaderFormatter(makeNounLexicalInfo(), "German");
 		expect(result).toContain("der [[Test]]");
 	});
 
 	it("dispatches Verb to common formatter (no article)", () => {
-		const result = dispatchHeaderFormatter(
-			makeLexemLemmaResult({ posLikeKind: "Verb" }),
-			makeVerbEnrichment(),
-			"German",
-		);
+		const result = dispatchHeaderFormatter(makeVerbLexicalInfo(), "German");
 		expect(result).toBe(
 			"🔧 [[Test]], [tɛst](https://youglish.com/pronounce/Test/german)",
 		);
 	});
 
 	it("dispatches Phrasem to common formatter", () => {
-		const result = dispatchHeaderFormatter(
-			makePhrasemLemmaResult(),
-			{
-				emojiDescription: ["🔧"],
-				ipa: "tɛst",
-			},
-			"German",
-		);
+		const result = dispatchHeaderFormatter(makePhrasemLexicalInfo(), "German");
 		expect(result).toBe(
 			"🔧 [[Test]], [tɛst](https://youglish.com/pronounce/Test/german)",
 		);
 	});
 
-	it("falls back to common when enrichment is not noun-compatible", () => {
+	it("falls back to common when noun genus is unavailable", () => {
 		const result = dispatchHeaderFormatter(
-			makeLexemLemmaResult({ posLikeKind: "Noun" }),
-			makeVerbEnrichment(),
+			makeNounLexicalInfo({
+				features: {
+					status: "ready",
+					value: {
+						genus: undefined,
+						kind: "noun",
+						nounClass: "Common",
+						tags: [],
+					},
+				},
+			}),
 			"German",
 		);
 		expect(result).not.toContain("der ");
@@ -110,41 +145,46 @@ describe("dispatchHeaderFormatter", () => {
 		expect(result).toContain("[[Test]]");
 	});
 
-	it("uses fallback noun genus when enrichment genus is missing", () => {
+	it("uses noun inflection genus when noun lexical genus is missing", () => {
 		const result = dispatchHeaderFormatter(
-			makeLexemLemmaResult({ posLikeKind: "Noun" }),
-			makeNounEnrichment({ genus: undefined }),
+			makeNounLexicalInfo({
+				features: {
+					status: "ready",
+					value: {
+						genus: undefined,
+						kind: "noun",
+						nounClass: "Common",
+						tags: [],
+					},
+				},
+				inflections: {
+					status: "ready",
+					value: {
+						cells: [],
+						genus: "Maskulinum",
+						kind: "noun",
+					},
+				},
+			}),
 			"German",
-			"Maskulinum",
 		);
 		expect(result).toContain("der [[Test]]");
 	});
 
-	it("ignores fallback genus for non-noun entries", () => {
+	it("falls back to minimal header metadata when lexical core is unavailable", () => {
 		const result = dispatchHeaderFormatter(
-			makeLexemLemmaResult({ posLikeKind: "Verb" }),
-			makeVerbEnrichment(),
-			"German",
-			"Femininum",
-		);
-		expect(result).toBe(
-			"🔧 [[Test]], [tɛst](https://youglish.com/pronounce/Test/german)",
-		);
-	});
-
-	it("uses precomputedEmojiDescription when available", () => {
-		const result = dispatchHeaderFormatter(
-			makeLexemLemmaResult({
-				posLikeKind: "Verb",
-				precomputedEmojiDescription: ["🚀"],
+			makeVerbLexicalInfo({
+				core: {
+					status: "error",
+					error: {
+						kind: LexicalGenerationFailureKind.FetchFailed,
+						message: "nope",
+					},
+				},
 			}),
-			{
-				emojiDescription: ["🔧"],
-				ipa: "tɛst",
-			},
 			"German",
 		);
-		expect(result).toContain("🚀");
-		expect(result).not.toContain("🔧");
+		expect(result).toContain("❓");
+		expect(result).toContain("[unknown]");
 	});
 });

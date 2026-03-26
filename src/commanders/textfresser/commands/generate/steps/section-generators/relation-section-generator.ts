@@ -1,3 +1,4 @@
+import type { LexicalInfo } from "../../../../../../lexical-generation";
 import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../../targets/de/sections/section-css-kind";
@@ -6,14 +7,10 @@ import {
 	TitleReprFor,
 } from "../../../../targets/de/sections/section-kind";
 import { formatRelationSection } from "../../section-formatters/common/relation-formatter";
-import type {
-	GenerationTargetLanguage,
-	ParsedRelation,
-	RelationOutput,
-} from "../section-generation-types";
+import type { GenerationTargetLanguage, ParsedRelation } from "../section-generation-types";
 
 export type RelationSectionContext = {
-	output: RelationOutput;
+	lexicalInfo: LexicalInfo;
 	targetLang: GenerationTargetLanguage;
 };
 
@@ -22,8 +19,12 @@ export type RelationSectionResult = {
 	section: EntrySection | null;
 };
 
-function toParsedRelations(output: RelationOutput): ParsedRelation[] {
-	return output.relations.map((relation) => ({
+function toParsedRelations(lexicalInfo: LexicalInfo): ParsedRelation[] {
+	if (lexicalInfo.relations.status !== "ready") {
+		return [];
+	}
+
+	return lexicalInfo.relations.value.relations.map((relation) => ({
 		kind: relation.kind,
 		words: relation.words.map((word) =>
 			wikilinkHelper.normalizeLinkTarget(word),
@@ -34,8 +35,12 @@ function toParsedRelations(output: RelationOutput): ParsedRelation[] {
 export function generateRelationSection(
 	ctx: RelationSectionContext,
 ): RelationSectionResult {
-	const relations = toParsedRelations(ctx.output);
-	const content = formatRelationSection(ctx.output);
+	const relations = toParsedRelations(ctx.lexicalInfo);
+	if (ctx.lexicalInfo.relations.status !== "ready") {
+		return { relations, section: null };
+	}
+
+	const content = formatRelationSection(ctx.lexicalInfo.relations.value);
 
 	if (!content) {
 		return { relations, section: null };

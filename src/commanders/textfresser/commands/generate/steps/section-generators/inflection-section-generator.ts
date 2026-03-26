@@ -1,3 +1,4 @@
+import type { LexicalInfo } from "../../../../../../lexical-generation";
 import type { NounInflectionCell } from "../../../../../../linguistics/de/lexem/noun";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../../targets/de/sections/section-css-kind";
@@ -5,19 +6,11 @@ import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../targets/de/sections/section-kind";
-import type { LemmaResult } from "../../../lemma/types";
-import { formatInflectionSection } from "../../section-formatters/common/inflection-formatter";
 import { formatInflection } from "../../section-formatters/de/lexem/noun/inflection-formatter";
-import type {
-	GenerationTargetLanguage,
-	InflectionOutput,
-	NounInflectionOutput,
-} from "../section-generation-types";
+import type { GenerationTargetLanguage } from "../section-generation-types";
 
 export type InflectionSectionContext = {
-	lemmaResult: LemmaResult;
-	nounInflectionOutput: NounInflectionOutput | null;
-	otherInflectionOutput: InflectionOutput | null;
+	lexicalInfo: LexicalInfo;
 	targetLang: GenerationTargetLanguage;
 };
 
@@ -26,6 +19,17 @@ export type InflectionSectionResult = {
 	section: EntrySection | null;
 };
 
+function formatGenericInflectionRows(
+	rows: Array<{ forms: Array<{ form: string }>; label: string }>,
+): string {
+	return rows
+		.map((row) => {
+			const forms = row.forms.map((form) => `[[${form.form}]]`).join(", ");
+			return `${row.label}: ${forms}`;
+		})
+		.join("\n");
+}
+
 export function generateInflectionSection(
 	ctx: InflectionSectionContext,
 ): InflectionSectionResult {
@@ -33,19 +37,18 @@ export function generateInflectionSection(
 	let inflectionCells: NounInflectionCell[] = [];
 
 	if (
-		ctx.lemmaResult.linguisticUnit === "Lexem" &&
-		ctx.lemmaResult.posLikeKind === "Noun" &&
-		ctx.nounInflectionOutput
+		ctx.lexicalInfo.lemma.linguisticUnit === "Lexem" &&
+		ctx.lexicalInfo.inflections.status === "ready"
 	) {
-		const result = formatInflection(ctx.nounInflectionOutput);
-		content = result.formattedSection;
-		inflectionCells = result.cells;
-	} else if (
-		ctx.lemmaResult.linguisticUnit === "Lexem" &&
-		ctx.lemmaResult.posLikeKind !== "Noun" &&
-		ctx.otherInflectionOutput
-	) {
-		content = formatInflectionSection(ctx.otherInflectionOutput);
+		if (ctx.lexicalInfo.inflections.value.kind === "noun") {
+			const result = formatInflection(ctx.lexicalInfo.inflections.value);
+			content = result.formattedSection;
+			inflectionCells = result.cells;
+		} else {
+			content = formatGenericInflectionRows(
+				ctx.lexicalInfo.inflections.value.rows,
+			);
+		}
 	}
 
 	if (!content) {

@@ -1,4 +1,4 @@
-import type { ResolvedLemma } from "../../../../../lexical-generation";
+import type { LexicalInfo, ResolvedLemma } from "../../../../../lexical-generation";
 import type {
 	GermanGenus,
 	NounInflectionCell,
@@ -125,13 +125,10 @@ function buildEntryId(nextIndex: number, lemmaResult: LemmaResult): string {
 }
 
 function resolveApplicableSectionState(
-	lemmaResult: LemmaResult,
-	enrichmentOutput: EnrichmentOutput,
+	lexicalInfo: LexicalInfo,
 	options: GenerateNewEntrySectionsOptions,
 ): ApplicableSectionState {
-	const applicableSections = getSectionsFor(
-		buildSectionQuery(lemmaResult, enrichmentOutput),
-	);
+	const applicableSections = getSectionsFor(buildSectionQuery(lexicalInfo));
 	const onlySections = options.onlySections;
 	const v3Applicable = applicableSections.filter(
 		(sectionKind) =>
@@ -165,6 +162,7 @@ export async function generateNewEntrySections(
 	let nounInflectionOutput: NounInflectionOutput | null = null;
 	let otherInflectionOutput: InflectionOutput | null = null;
 	let applicableSectionState: ApplicableSectionState | null = null;
+	let lexicalInfo: LexicalInfo | null = null;
 	const lexicalGeneration = ctx.textfresserState.lexicalGeneration;
 	if (!lexicalGeneration) {
 		throw (
@@ -185,9 +183,10 @@ export async function generateNewEntrySections(
 		throw lexicalInfoResult.error;
 	}
 
-	collectLexicalInfoFailures(lexicalInfoResult.value, failedSections);
+	lexicalInfo = lexicalInfoResult.value;
+	collectLexicalInfoFailures(lexicalInfo, failedSections);
 	const compatibility = adaptLexicalInfoToCompatibility(
-		lexicalInfoResult.value,
+		lexicalInfo,
 	);
 
 	enrichmentOutput =
@@ -211,15 +210,14 @@ export async function generateNewEntrySections(
 
 	if (!applicableSectionState) {
 		applicableSectionState = resolveApplicableSectionState(
-			lemmaResult,
-			enrichmentOutput,
+			lexicalInfo,
 			options,
 		);
 	}
 
 	const { sectionSet, v3Applicable } =
 		applicableSectionState ??
-		resolveApplicableSectionState(lemmaResult, enrichmentOutput, options);
+		resolveApplicableSectionState(lexicalInfo, options);
 	const shouldRunPropagation = v3Applicable.some((sectionKind) =>
 		shouldPropagateLinksForSection(sectionKind),
 	);
@@ -260,18 +258,9 @@ export async function generateNewEntrySections(
 	} else {
 		translationOutput = null;
 	}
-	const nounInflectionGenus = resolveNounInflectionGenus(
-		lemmaResult,
-		enrichmentOutput,
-		nounInflectionOutput,
-	);
+	const nounInflectionGenus = resolveNounInflectionGenus(lexicalInfo);
 
-	const headerContent = dispatchHeaderFormatter(
-		lemmaResult,
-		enrichmentOutput,
-		targetLang,
-		nounInflectionGenus,
-	);
+	const headerContent = dispatchHeaderFormatter(lexicalInfo, targetLang);
 
 	const sections: EntrySection[] = [];
 	let relations: ParsedRelation[] = [];
@@ -320,9 +309,8 @@ export async function generateNewEntrySections(
 			}
 
 			case DictSectionKind.Relation: {
-				if (!relationOutput) break;
 				const result = generateRelationSection({
-					output: relationOutput,
+					lexicalInfo,
 					targetLang,
 				});
 				relations = result.relations;
@@ -334,9 +322,7 @@ export async function generateNewEntrySections(
 
 			case DictSectionKind.Inflection: {
 				const result = generateInflectionSection({
-					lemmaResult,
-					nounInflectionOutput,
-					otherInflectionOutput,
+					lexicalInfo,
 					targetLang,
 				});
 				inflectionCells = result.inflectionCells;
@@ -360,8 +346,7 @@ export async function generateNewEntrySections(
 
 			case DictSectionKind.Tags: {
 				const section = generateTagsSection({
-					featuresOutput,
-					lemmaResult,
+					lexicalInfo,
 					targetLang,
 				});
 				if (section) {
