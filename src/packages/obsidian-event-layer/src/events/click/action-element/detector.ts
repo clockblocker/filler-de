@@ -10,7 +10,7 @@
  * are already handled by the action executor system.
  */
 
-import { DomSelectors } from "../../../../../../utils/dom-selectors";
+import { DomSelectors } from "../../../internal/dom-selectors";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
 import type { GenericClickDetector } from "../generic-click-detector";

@@ -8,7 +8,7 @@ import {
 	type CheckboxFrontmatterPayload,
 	type UserEventHandler,
 	UserEventKind,
-} from "../user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 
 /**
  * Create a handler for frontmatter property checkbox clicks.

@@ -4,7 +4,7 @@
 
 import { makeSplitPath } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
-import type { WikilinkClickPayload } from "../../../../../managers/obsidian/user-event-interceptor";
+import type { WikilinkClickPayload } from "@textfresser/obsidian-event-layer";
 import type { AttestationParsingError } from "../../../errors";
 import type { Attestation } from "../types";
 import { buildSourceFields } from "./build-source-fields";

@@ -7,7 +7,7 @@ import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/pr
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
 import { LexicalGenerationFailureKind } from "@textfresser/lexical-generation";
 import type { CommandContext } from "../../../../src/managers/obsidian/command-executor";
-import { UserEventKind } from "../../../../src/managers/obsidian/user-event-interceptor";
+import { UserEventKind } from "@textfresser/obsidian-event-layer";
 import type { ApiService } from "../../../../src/stateless-helpers/api-service";
 
 const SOURCE_PATH: SplitPathToMdFile = {

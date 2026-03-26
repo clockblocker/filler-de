@@ -4,7 +4,7 @@ import {
 	type SelectAllPayload,
 	type UserEventHandler,
 	UserEventKind,
-} from "../user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 
 /**
  * Create a handler for smart select-all.

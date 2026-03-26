@@ -13,7 +13,7 @@ import {
 	type UserEventHandler,
 	type UserEventKind,
 	UserEventKind as UserEventKinds,
-} from "../user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 import { createCheckboxFrontmatterHandler } from "./checkbox-behavior";
 import { createClipboardHandler } from "./clipboard-behavior";
 import { createCodexCheckboxHandler } from "./codex-checkbox-behavior";

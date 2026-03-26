@@ -1,0 +1,14 @@
+{
+	"dependencies": {
+		"@codemirror/view": "latest",
+		"@textfresser/vault-action-manager": "workspace:*",
+		"zod": "latest"
+	},
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"name": "@textfresser/obsidian-event-layer",
+	"private": true,
+	"type": "module",
+	"version": "0.0.0"
+}

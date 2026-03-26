@@ -12,7 +12,8 @@
 		"ts-plugin-sort-import-suggestions": "^1.0.4",
 		"typescript-eslint": "latest",
 		"winston": "latest",
-		"zod": "latest"
+		"zod": "latest",
+		"@textfresser/obsidian-event-layer": "workspace:*"
 	},
 	"description": "Go trough the german texts, building your own dictionary from your personal contexts",
 	"devDependencies": {

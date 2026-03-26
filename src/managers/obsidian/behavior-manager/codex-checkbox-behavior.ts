@@ -8,7 +8,7 @@ import type { Librarian } from "../../../commanders/librarian/librarian";
 import {
 	type UserEventHandler,
 	UserEventKind,
-} from "../user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 
 /**
  * Create a handler for task checkbox clicks in codex files.

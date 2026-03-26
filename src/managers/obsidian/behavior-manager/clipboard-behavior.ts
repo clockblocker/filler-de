@@ -4,7 +4,7 @@ import {
 	type ClipboardPayload,
 	type UserEventHandler,
 	UserEventKind,
-} from "../user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 
 /**
  * Create a handler that strips metadata from clipboard copy.

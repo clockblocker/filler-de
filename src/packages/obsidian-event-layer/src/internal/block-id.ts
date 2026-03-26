@@ -1,0 +1,92 @@
+/**
+ * Block ID extraction and formatting utilities.
+ * Supports both alphanumeric (e.g., ^abc-123) and numeric-only (e.g., ^6) block IDs.
+ */
+
+/** Pattern to match alphanumeric block ID at end of line (space before ^ optional) */
+const BLOCK_ID_PATTERN = /\s?\^([a-zA-Z0-9-]+)\s*$/;
+
+/** Pattern to match numeric-only block ID at end of line (space before ^ optional) */
+const NUMERIC_BLOCK_ID_PATTERN = /\s?\^(\d+)\s*$/;
+
+/**
+ * Extract block ID from end of line if present.
+ * Supports alphanumeric block IDs (e.g., ^abc, ^abc-123, ^6).
+ * @param line - The line text to check
+ * @returns The block ID (without ^) or null if no block marker found
+ */
+function extractFromLine(line: string): string | null {
+	const match = line.match(BLOCK_ID_PATTERN);
+	return match?.[1] ?? null;
+}
+
+/**
+ * Extract numeric-only block ID from a line if it has one.
+ * Only matches patterns like ^6, ^123 (digits only).
+ * @param line - The line text to check
+ * @returns The block ID (without ^) or null if no block marker found
+ */
+function extractNumeric(line: string): string | null {
+	const match = line.match(NUMERIC_BLOCK_ID_PATTERN);
+	return match?.[1] ?? null;
+}
+
+/**
+ * Find the highest block ID number in file content.
+ * Matches patterns like " ^0", " ^123", etc.
+ */
+function findHighestNumber(content: string): number {
+	// Match block markers at end of lines: " ^N" or "^N" at line end (space optional)
+	const matches = content.match(/\s?\^(\d+)(?:\s*$|\n)/gm);
+	if (!matches) return -1;
+
+	const numbers = matches.map((match) => {
+		const numMatch = match.match(/\^(\d+)/);
+		return numMatch?.[1] ? Number.parseInt(numMatch[1], 10) : 0;
+	});
+
+	return Math.max(-1, ...numbers);
+}
+
+/**
+ * Format a block embed wikilink.
+ * @param basename - The file basename (without extension)
+ * @param id - The block ID (without ^)
+ * @returns Formatted embed like `![[basename#^id|^]]`
+ */
+function formatEmbed(basename: string, id: string): string {
+	return `![[${basename}#^${id}|^]]`;
+}
+
+/**
+ * Check if text ends with a block ID pattern.
+ * @param text - Text to check
+ * @returns Match info with id and index, or null if no match
+ */
+function matchesPattern(text: string): { id: string; index: number } | null {
+	const match = text.match(BLOCK_ID_PATTERN);
+	const id = match?.[1];
+	if (!id || match.index === undefined) return null;
+	return { id, index: match.index };
+}
+
+/**
+ * Strip block ID from end of text if present.
+ * @param text - Text to process
+ * @returns Text with trailing block ID removed
+ */
+function stripFromEnd(text: string): string {
+	return text.replace(BLOCK_ID_PATTERN, "");
+}
+
+/**
+ * Block ID helper object with grouped functions.
+ */
+export const blockIdHelper = {
+	extractFromLine,
+	extractNumeric,
+	findHighestNumber,
+	formatEmbed,
+	matchesPattern,
+	stripFromEnd,
+};

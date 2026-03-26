@@ -19,7 +19,7 @@ import {
 	type ObsidianEventLayer,
 	type SelectionChangedPayload,
 	UserEventKind,
-} from "../obsidian/user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 import type {
 	Teardown,
 	WorkspaceEvent,

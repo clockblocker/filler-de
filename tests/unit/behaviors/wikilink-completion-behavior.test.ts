@@ -3,7 +3,7 @@ import { createWikilinkCompletionHandler } from "../../../src/managers/obsidian/
 import {
 	type WikilinkPayload,
 	UserEventKind,
-} from "../../../src/managers/obsidian/user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 
 type WikilinkLibrarian = Parameters<typeof createWikilinkCompletionHandler>[0];
 

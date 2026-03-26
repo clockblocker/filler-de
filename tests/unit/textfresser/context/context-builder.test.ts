@@ -3,7 +3,7 @@ import { buildAttestationFromWikilinkClickPayload } from "../../../../src/comman
 import {
 	type WikilinkClickPayload,
 	UserEventKind,
-} from "../../../../src/managers/obsidian/user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 
 const makePayload = (
 	basename: string,

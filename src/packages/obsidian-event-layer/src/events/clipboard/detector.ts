@@ -10,7 +10,7 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
-import { blockIdHelper } from "../../../../../stateless-helpers/block-id";
+import { blockIdHelper } from "../../internal/block-id";
 import type { SelectionTextSource } from "../../contracts";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";

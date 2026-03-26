@@ -14,7 +14,7 @@ import {
 	type UserEventHandler,
 	type WikilinkPayload,
 	UserEventKind,
-} from "../user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 import { pickClosestLeaf } from "./pick-closest-leaf";
 
 type WikilinkCompletionLibrarianPort = {

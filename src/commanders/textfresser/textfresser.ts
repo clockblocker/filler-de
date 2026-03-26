@@ -10,7 +10,7 @@ import {
 	type UserEventHandler,
 	type WikilinkClickPayload,
 	UserEventKind,
-} from "../../managers/obsidian/user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 import type { ApiService } from "../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../types";
 import { logger } from "../../utils/logger";

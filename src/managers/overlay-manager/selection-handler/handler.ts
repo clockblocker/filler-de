@@ -2,7 +2,7 @@
  * Handler for selection changed events.
  */
 
-import type { SelectionChangedPayload } from "../../obsidian/user-event-interceptor";
+import type { SelectionChangedPayload } from "@textfresser/obsidian-event-layer";
 import type { SelectionHandlerContext, SelectionHandlerResult } from "./types";
 
 /**

@@ -2,7 +2,7 @@ import {
 	type UserEventHandler,
 	type UserEventKind,
 	type UserEventPayloadMap,
-} from "../user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 
 /**
  * Chain multiple handlers for the same event type.

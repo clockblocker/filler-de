@@ -8,11 +8,11 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
-import { DomSelectors } from "../../../../../../utils/dom-selectors";
+import { DomSelectors } from "../../../internal/dom-selectors";
 import {
 	decrementPending,
 	incrementPending,
-} from "../../../../../../utils/idle-tracker";
+} from "../../../internal/idle-tracker";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
 import { getCurrentFilePath } from "../../get-current-file-path";

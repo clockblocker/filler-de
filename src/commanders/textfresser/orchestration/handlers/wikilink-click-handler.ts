@@ -4,7 +4,7 @@ import {
 	type UserEventHandler,
 	type WikilinkClickPayload,
 	UserEventKind,
-} from "../../../../managers/obsidian/user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import { buildAttestationFromWikilinkClickPayload } from "../../common/attestation/builders/build-from-wikilink-click-payload";
 import type {

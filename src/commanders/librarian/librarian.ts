@@ -15,7 +15,7 @@ import type {
 	CommandContext,
 	CommandKind,
 } from "../../managers/obsidian/command-executor";
-import type { CheckboxPayload } from "../../managers/obsidian/user-event-interceptor";
+import type { CheckboxPayload } from "@textfresser/obsidian-event-layer";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";

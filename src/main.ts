@@ -34,7 +34,7 @@ import {
 import {
 	createObsidianEventLayer,
 	type ObsidianEventLayer,
-} from "./managers/obsidian/user-event-interceptor";
+} from "@textfresser/obsidian-event-layer";
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
 import { ApiService } from "./stateless-helpers/api-service";
