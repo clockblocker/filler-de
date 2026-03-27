@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
@@ -178,16 +177,6 @@ async function main(): Promise<void> {
 	}
 
 	generateIndex(generated);
-
-	// Run bun fix to format generated files
-	try {
-		execSync("bun fix", { stdio: "inherit" });
-	} catch {
-		// bun fix may fail due to pre-existing lint errors, but formatting still works
-		logger.warn(
-			"bun fix exited with errors (likely pre-existing lint issues)",
-		);
-	}
 }
 
 main().catch((err) => {

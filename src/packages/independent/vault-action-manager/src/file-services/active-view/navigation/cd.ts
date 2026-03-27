@@ -1,7 +1,7 @@
 import { err, ok, type Result } from "neverthrow";
 import { type App, MarkdownView, type TFile } from "obsidian";
-import { DomSelectors } from "../../../../../../../utils/dom-selectors";
-import { getErrorMessage } from "../../../../../../../utils/get-error-message";
+import { DomSelectors } from "../../../internal/dom-selectors";
+import { getErrorMessage } from "../../../internal/get-error-message";
 import { errorNoTFileFound, errorOpenFileFailed } from "../../../errors";
 import { pathfinder } from "../../../helpers/pathfinder";
 import type { SplitPathToAnyFile } from "../../../types/split-path";

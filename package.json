@@ -39,7 +39,8 @@
 	"main": "main.js",
 	"name": "cbcr-text-eater-de",
 	"scripts": {
-		"build": "bun run codegen:prompts && bun run build:root",
+		"build": "bun run build:root",
+		"build:full": "bun run codegen:prompts && bun run build:root",
 		"build:root": "bun build ./src/main.ts --outfile=main.js --platform=node --format=cjs --external obsidian --external electron --external @codemirror/*",
 		"build:dev": "bun x tsc -noEmit -skipLibCheck && bun run esbuild.config.mjs development",
 		"clearTestLogs": "bun ./tests/tracing/scripts/clear-test-logs.ts",
@@ -61,6 +62,7 @@
 		"typecheck:changed": "bash scripts/typecheck-changed.sh",
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"workspace:build": "bun ./scripts/workspace-task.ts build",
+		"workspace:build-full": "bun ./scripts/workspace-task.ts build-full",
 		"workspace:install": "bun ./scripts/workspace-task.ts install"
 	},
 	"type": "commonjs",

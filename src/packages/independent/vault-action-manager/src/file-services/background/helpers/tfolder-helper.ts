@@ -1,7 +1,7 @@
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { type FileManager, TFolder, type Vault } from "obsidian";
-import { getErrorMessage } from "../../../../../../../utils/get-error-message";
-import { logger } from "../../../../../../../utils/logger";
+import { getErrorMessage } from "../../../internal/get-error-message";
+import { logger } from "../../../internal/logger";
 import {
 	errorBothSourceAndTargetNotFound,
 	errorCreateFailed,

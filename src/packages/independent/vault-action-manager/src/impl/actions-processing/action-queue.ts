@@ -2,8 +2,8 @@ import { err, ok } from "neverthrow";
 import {
 	decrementPending,
 	incrementPending,
-} from "../../../../../../utils/idle-tracker";
-import { logger } from "../../../../../../utils/logger";
+} from "../../internal/idle-tracker";
+import { logger } from "../../internal/logger";
 import type { VaultAction } from "../../types/vault-action";
 import type { Dispatcher, DispatchResult } from "./dispatcher";
 

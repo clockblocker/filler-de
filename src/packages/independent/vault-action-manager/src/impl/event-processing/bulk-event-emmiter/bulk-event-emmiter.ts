@@ -2,7 +2,7 @@ import type { App, TAbstractFile } from "obsidian";
 import {
 	decrementPending,
 	incrementPending,
-} from "../../../../../../../utils/idle-tracker";
+} from "../../../internal/idle-tracker";
 import { type VaultEvent, VaultEventKind } from "../../../types/vault-event";
 import type { SelfEventTracker } from "../self-event-tracker";
 import {

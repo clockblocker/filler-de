@@ -63,7 +63,7 @@ describe("ActionQueue", () => {
 	});
 
 	it("logs warning when dropping actions", async () => {
-		const { logger } = await import("../../../../../utils/logger");
+		const { logger } = await import("../../src/internal/logger");
 		const warnSpy = mock(() => {});
 		const originalWarn = logger.warn;
 		logger.warn = warnSpy as typeof logger.warn;

@@ -1,7 +1,7 @@
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import type { TFile, TFolder, Vault } from "obsidian";
-import { getErrorMessage } from "../../../../../utils/get-error-message";
-import { logger } from "../../../../../utils/logger";
+import { getErrorMessage } from "../internal/get-error-message";
+import { logger } from "../internal/logger";
 import type { ActiveFileService } from "../file-services/active-view/active-file-service";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";

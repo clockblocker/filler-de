@@ -1,4 +1,8 @@
 {
+	"dependencies": {
+		"neverthrow": "^8.2.0",
+		"zod": "latest"
+	},
 	"exports": {
 		".": "./src/index.ts",
 		"./file-services/*": "./src/file-services/*.ts",
@@ -8,7 +12,13 @@
 		"./types/*": "./src/types/*.ts"
 	},
 	"name": "@textfresser/vault-action-manager",
+	"peerDependencies": {
+		"obsidian": "^1.10.2"
+	},
 	"private": true,
+	"scripts": {
+		"build": "bun ../../../../scripts/build-workspace-package.ts"
+	},
 	"type": "module",
 	"version": "0.0.0"
 }

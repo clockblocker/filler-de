@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-type Task = "build" | "install";
+type Task = "build" | "build-full" | "install";
 
 type PackageInfo = {
 	dir: string;
@@ -18,8 +18,10 @@ const [, , taskArg, ...restArgs] = process.argv;
 const task = taskArg as Task | undefined;
 const dryRun = restArgs.includes("--dry-run");
 
-if (task !== "build" && task !== "install") {
-	console.error("Usage: bun ./scripts/workspace-task.ts <build|install> [--dry-run]");
+if (task !== "build" && task !== "build-full" && task !== "install") {
+	console.error(
+		"Usage: bun ./scripts/workspace-task.ts <build|build-full|install> [--dry-run]",
+	);
 	process.exit(1);
 }
 
@@ -122,12 +124,29 @@ async function runPackageTask(
 	task: Task,
 	dryRun: boolean,
 ): Promise<void> {
-	if (task === "build") {
-		if (!pkg.scripts.build) {
-			console.log(`\n==> [${pkg.relativeDir}] skip build (no build script)`);
+	if (task === "build" || task === "build-full") {
+		const scriptName = task === "build-full" ? "build:full" : "build";
+		if (!pkg.scripts[scriptName]) {
+			if (task === "build-full" && pkg.scripts.build) {
+				await runCommand(
+					"bun",
+					["run", "build"],
+					pkg.dir,
+					dryRun,
+					pkg.relativeDir,
+				);
+				return;
+			}
+			console.log(`\n==> [${pkg.relativeDir}] skip ${scriptName} (no ${scriptName} script)`);
 			return;
 		}
-		await runCommand("bun", ["run", "build"], pkg.dir, dryRun, pkg.relativeDir);
+		await runCommand(
+			"bun",
+			["run", scriptName],
+			pkg.dir,
+			dryRun,
+			pkg.relativeDir,
+		);
 		return;
 	}
 
@@ -141,6 +160,11 @@ async function runRootTask(
 ): Promise<void> {
 	if (task === "build") {
 		await runCommand("bun", ["run", "build:root"], repoRoot, dryRun, ".");
+		return;
+	}
+
+	if (task === "build-full") {
+		await runCommand("bun", ["run", "build:full"], repoRoot, dryRun, ".");
 		return;
 	}
 

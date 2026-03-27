@@ -40,7 +40,7 @@ export function sameRename(
 
 // --- generic dedupe helpers ---
 
-export { dedupeByKeyLast as dedupeByKey } from "../../../../../../utils/array-utils";
+export { dedupeByKeyLast as dedupeByKey } from "../../internal/collections";
 
 /**
  * Dedupe items by a custom equality predicate.

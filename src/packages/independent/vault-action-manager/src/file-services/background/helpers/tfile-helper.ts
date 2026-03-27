@@ -1,8 +1,8 @@
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { type FileManager, TFile, type Vault } from "obsidian";
-import { getErrorMessage } from "../../../../../../../utils/get-error-message";
-import { logger } from "../../../../../../../utils/logger";
-import { sleep as delay } from "../../../../../../../utils/sleep";
+import { getErrorMessage } from "../../../internal/get-error-message";
+import { logger } from "../../../internal/logger";
+import { sleep as delay } from "../../../internal/sleep";
 import {
 	errorBothSourceAndTargetNotFound,
 	errorCreateFailed,

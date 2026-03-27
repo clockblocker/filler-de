@@ -1,5 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
-import { logger } from "../../../../../../utils/logger";
+import { logger } from "../../internal/logger";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
