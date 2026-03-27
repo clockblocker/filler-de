@@ -1,29 +1,13 @@
+import { err, ok, type Result } from "neverthrow";
 import { type App, type Editor, MarkdownView } from "obsidian";
-import {
-	type MaybeLegacy,
-	unwrapMaybeLegacyByThrowing,
-} from "../internal/maybe";
+import { errorGetEditor } from "../errors";
 
-export async function getMaybeLegacyEditor(
-	app: App,
-): Promise<MaybeLegacy<Editor>> {
+export function getEditor(app: App): Result<Editor, string> {
 	try {
 		const view = app.workspace.getActiveViewOfType(MarkdownView);
-		if (view?.file) {
-			return { data: view.editor, error: false };
-		}
-		return { description: "Failed to get Editor", error: true };
+		return view?.file ? ok(view.editor) : err(errorGetEditor());
 	} catch (error) {
-		return { description: `Failed to get Editor: ${error}`, error: true };
+		const message = error instanceof Error ? error.message : String(error);
+		return err(errorGetEditor(message));
 	}
-}
-
-export async function getEditor(app: App): Promise<Editor> {
-	const mbEditor = await getMaybeLegacyEditor(app);
-	if (mbEditor.error) {
-		throw new Error(mbEditor.description ?? "No active editor");
-	}
-
-	const editor = unwrapMaybeLegacyByThrowing(mbEditor);
-	return editor;
 }
