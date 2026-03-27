@@ -1,6 +1,6 @@
 # Linguistics & Prompt-Smith — Architecture
 
-> **Scope**: This document covers the internal linguistic schema layer under `src/packages/lexical-generation/internal/linguistics/`, the public lexical primitives exported from `src/packages/lexical-generation/`, and the prompt management layer under `src/packages/lexical-generation/internal/prompt-smith/`. There is no longer a separate `src/linguistics/` module. For the command pipeline itself, see `textfresser-architecture.md`. For FS dispatch, see `vam-architecture.md`.
+> **Scope**: This document covers the internal linguistic schema layer under `src/packages/independent/lexical-generation/internal/linguistics/`, the public lexical primitives exported from `src/packages/independent/lexical-generation/`, and the prompt management layer under `src/packages/independent/lexical-generation/internal/prompt-smith/`. There is no longer a separate `src/linguistics/` module. For the command pipeline itself, see `textfresser-architecture.md`. For FS dispatch, see `vam-architecture.md`.
 >
 > **Compatibility Policy (Dev Mode, 2026-02-20)**:
 > - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
@@ -36,7 +36,7 @@ Prompt-Smith handles all of this with a codegen pipeline that produces a type-sa
 
 ### 2.1 Common (language-agnostic)
 
-The internal subtree `src/packages/lexical-generation/internal/linguistics/common/` defines enums and schemas shared across all languages. Only the language-independent primitives that `textfresser` needs are re-exported publicly from `src/packages/lexical-generation/`.
+The internal subtree `src/packages/independent/lexical-generation/internal/linguistics/common/` defines enums and schemas shared across all languages. Only the language-independent primitives that `textfresser` needs are re-exported publicly from `src/packages/independent/lexical-generation/`.
 
 #### Core discriminants
 
@@ -168,7 +168,7 @@ export const FOO_OPTIONS  = FooSchema.options;    // Readonly string array
 
 ### 2.2 German-specific (de/)
 
-**Location**: `src/packages/lexical-generation/internal/linguistics/de/`
+**Location**: `src/packages/independent/lexical-generation/internal/linguistics/de/`
 
 The German-specific layer derives from common enums, adding features only where a POS or morpheme kind has language-specific properties.
 
@@ -574,10 +574,10 @@ Lower weight = earlier in the note. Unknown kinds sort to weight 99. `compareSec
 
 ### 3.1 Architecture Overview
 
-**Location**: `src/packages/lexical-generation/internal/prompt-smith/`
+**Location**: `src/packages/independent/lexical-generation/internal/prompt-smith/`
 
 ```
-src/packages/lexical-generation/internal/prompt-smith/
+src/packages/independent/lexical-generation/internal/prompt-smith/
 ├── index.ts                          # Auto-generated: PROMPT_FOR dict + re-exports
 ├── types.ts                          # AvaliablePromptDict type
 ├── schemas/                          # Zod I/O schemas per PromptKind
@@ -665,7 +665,7 @@ type AgentOutput<K extends PromptKind> = z.infer<SchemasFor[K]["agentOutputSchem
 
 #### De linguistics contracts (now wired)
 
-Contracts in `src/packages/lexical-generation/internal/contracts/de/` are the runtime source for lemma classification and internal enrichment/route shapes.
+Contracts in `src/packages/independent/lexical-generation/internal/contracts/de/` are the runtime source for lemma classification and internal enrichment/route shapes.
 
 - `DeLemmaResultSchema` narrows lemma classification to:
   - `linguisticUnit: "Lexem" | "Phrasem"` (Morphem excluded in this phase)
@@ -681,7 +681,7 @@ Contracts in `src/packages/lexical-generation/internal/contracts/de/` are the ru
   - features (`DeFeaturesInputSchema` / `DeFeaturesOutputSchema`)
   - word translation (`DeWordTranslationInputSchema` / `DeWordTranslationOutputSchema`)
 
-`src/packages/lexical-generation/internal/prompt-smith/schemas/lemma.ts` now uses `DeLemmaResultSchema` directly at runtime.
+`src/packages/independent/lexical-generation/internal/prompt-smith/schemas/lemma.ts` now uses `DeLemmaResultSchema` directly at runtime.
 
 **v3/v4 bridging in schemas**: Where a common enum uses Zod v4 (e.g., `POSSchema`), schemas re-create it with v3:
 
@@ -953,6 +953,6 @@ To add a new `PromptKind` (e.g., `"Etymology"`):
 
 ### old-enums.ts — DELETED
 
-The old standalone `src/linguistics/` tree has been dissolved. Its former language-specific contents now live under `src/packages/lexical-generation/internal/linguistics/`, and its externally consumed language-independent primitives are re-exported from `src/packages/lexical-generation/`.
+The old standalone `src/linguistics/` tree has been dissolved. Its former language-specific contents now live under `src/packages/independent/lexical-generation/internal/linguistics/`, and its externally consumed language-independent primitives are re-exported from `src/packages/independent/lexical-generation/`.
 
 Relevant enums that are actually used live in the structured `common/enums/` and `de/` modules.

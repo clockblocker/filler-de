@@ -22,7 +22,7 @@ Codex healing via healCodexForSection()
 
 ## Step 1: Click Detection
 
-**File**: `src/packages/obsidian-event-layer/src/events/click/checkbox/detector.ts`
+**File**: `src/packages/composed/obsidian-event-layer/src/events/click/checkbox/detector.ts`
 
 ```typescript
 // GenericClickDetector uses MOUSEDOWN in capture phase

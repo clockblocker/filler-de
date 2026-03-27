@@ -124,7 +124,7 @@ Source: ideas extracted from open PRs #6, #7, #13, #15, #16, #17, #22 in clockbl
 
 #### 10) Add `@generated` header to prompt-smith codegen output
 - Source: PR #6 ideas (#9)
-- `src/packages/lexical-generation/internal/prompt-smith/index.ts` is generated but committed alongside hand-written code with no marker.
+- `src/packages/independent/lexical-generation/internal/prompt-smith/index.ts` is generated but committed alongside hand-written code with no marker.
 
 ### Bug fixes to verify against current code
 
@@ -151,7 +151,7 @@ Source: ideas extracted from open PRs #6, #7, #13, #15, #16, #17, #22 in clockbl
 
 #### 15) Codec factory `createEventCodec<TPayload>()`
 - Source: PR #6 ideas (#3)
-- 8 event codecs in `src/packages/obsidian-event-layer/src/events/` reimplement similar encode/decode. A factory would reduce boilerplate. Marginal — works fine as-is.
+- 8 event codecs in `src/packages/composed/obsidian-event-layer/src/events/` reimplement similar encode/decode. A factory would reduce boilerplate. Marginal — works fine as-is.
 
 ### Longer-term
 

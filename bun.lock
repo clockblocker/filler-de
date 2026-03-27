@@ -37,7 +37,7 @@
         "typescript": "^5.9.3",
       },
     },
-    "src/packages/lexical-generation": {
+    "src/packages/independent/lexical-generation": {
       "name": "@textfresser/lexical-generation",
       "version": "0.0.0",
       "dependencies": {
@@ -52,7 +52,7 @@
         "winston": "3.19.0",
       },
     },
-    "src/packages/obsidian-event-layer": {
+    "src/packages/composed/obsidian-event-layer": {
       "name": "@textfresser/obsidian-event-layer",
       "version": "0.0.0",
       "dependencies": {
@@ -61,7 +61,7 @@
         "zod": "latest",
       },
     },
-    "src/packages/vault-action-manager": {
+    "src/packages/independent/vault-action-manager": {
       "name": "@textfresser/vault-action-manager",
       "version": "0.0.0",
     },
@@ -231,11 +231,11 @@
 
     "@so-ric/colorspace": ["@so-ric/colorspace@1.1.6", "", { "dependencies": { "color": "^5.0.2", "text-hex": "1.0.x" } }, "sha512-/KiKkpHNOBgkFJwu9sh48LkHSMYGyuTcSFK/qMBdnOAlrRJzRSXAOFB5qwzaVQuDl8wAvHVMkaASQDReTahxuw=="],
 
-    "@textfresser/lexical-generation": ["@textfresser/lexical-generation@workspace:src/packages/lexical-generation"],
+    "@textfresser/lexical-generation": ["@textfresser/lexical-generation@workspace:src/packages/independent/lexical-generation"],
 
-    "@textfresser/obsidian-event-layer": ["@textfresser/obsidian-event-layer@workspace:src/packages/obsidian-event-layer"],
+    "@textfresser/obsidian-event-layer": ["@textfresser/obsidian-event-layer@workspace:src/packages/composed/obsidian-event-layer"],
 
-    "@textfresser/vault-action-manager": ["@textfresser/vault-action-manager@workspace:src/packages/vault-action-manager"],
+    "@textfresser/vault-action-manager": ["@textfresser/vault-action-manager@workspace:src/packages/independent/vault-action-manager"],
 
     "@tybys/wasm-util": ["@tybys/wasm-util@0.10.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg=="],
 

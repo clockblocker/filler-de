@@ -2,6 +2,7 @@
 	"compilerOptions": {
 		"allowImportingTsExtensions": true,
 		"allowJs": true,
+		"baseUrl": ".",
 
 		// Override Bun's default settings that might affect discriminated unions
 		"isolatedModules": false,
@@ -28,7 +29,27 @@
 		"strictPropertyInitialization": false,
 		"target": "ESNext",
 		"types": ["obsidian", "bun-types", "mocha"],
-		"verbatimModuleSyntax": true
+		"verbatimModuleSyntax": true,
+		"paths": {
+			"@textfresser/vault-action-manager": [
+				"src/packages/independent/vault-action-manager/src/index.ts"
+			],
+			"@textfresser/vault-action-manager/*": [
+				"src/packages/independent/vault-action-manager/src/*"
+			],
+			"@textfresser/lexical-generation": [
+				"src/packages/independent/lexical-generation/index.ts"
+			],
+			"@textfresser/lexical-generation/*": [
+				"src/packages/independent/lexical-generation/*"
+			],
+			"@textfresser/obsidian-event-layer": [
+				"src/packages/composed/obsidian-event-layer/src/index.ts"
+			],
+			"@textfresser/obsidian-event-layer/*": [
+				"src/packages/composed/obsidian-event-layer/src/*"
+			]
+		}
 	},
 	"plugins": [
 		{
