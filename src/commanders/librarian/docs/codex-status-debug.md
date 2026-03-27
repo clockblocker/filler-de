@@ -54,5 +54,5 @@ Going with Option A - register one-time listener on mousedown when we handle cod
 
 ## Files Modified
 
-- `src/managers/obsidian/user-event-interceptor/events/click/checkbox/detector.ts`
+- `src/packages/obsidian-event-layer/src/events/click/checkbox/detector.ts`
   - Add mouseup/click prevention after detecting codex checkbox

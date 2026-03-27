@@ -1,6 +1,6 @@
 # Commands & Behaviors — Architecture
 
-> **Scope**: This document covers `command-executor/` and `behavior-manager/` — the layer between raw user events and the two commanders (Librarian, Textfresser). For the event detection layer, see `UserEventInterceptor`. For the file system layer, see `vam-architecture.md`.
+> **Scope**: This document covers `command-executor/` and `behavior-manager/` — the layer between raw user events and the two commanders (Librarian, Textfresser). For the event detection layer, see `@textfresser/obsidian-event-layer`. For the file system layer, see `vam-architecture.md`.
 >
 > **Compatibility Policy (Dev Mode, 2026-02-20)**:
 > - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
@@ -13,7 +13,7 @@
 These two sibling modules bridge **user intent** (menu clicks, keyboard shortcuts, DOM events) to **commander logic** (Librarian tree ops, Textfresser vocabulary ops):
 
 1. **`command-executor/`** — palette/menu-triggered actions dispatched by `CommandKind` to the right commander.
-2. **`behavior-manager/`** — DOM-event-driven handlers registered with `UserEventInterceptor`, implementing the two-phase `doesApply` / `handle` protocol.
+2. **`behavior-manager/`** — DOM-event-driven handlers registered with `@textfresser/obsidian-event-layer`, implementing the two-phase `doesApply` / `handle` protocol.
 
 The two modules have zero cross-references — they are fully independent concerns.
 
@@ -38,7 +38,7 @@ src/managers/obsidian/
 │   ├── wikilink-complition-behavior.ts (wikilink auto-completion → Librarian)
 │   ├── tag-line-copy-embed-behavior.ts (tag line with block ID, copy embed)
 │   └── pick-closest-leaf.ts       (helper: disambiguate multiple wikilink targets by path proximity)
-├── user-event-interceptor/        (unchanged — event detection layer)
+├── ../../packages/obsidian-event-layer/ (workspace package — event detection layer)
 ├── vault-action-manager/          (unchanged — FS abstraction layer)
 └── workspace-navigation-event-interceptor/ (unchanged)
 ```
@@ -85,7 +85,7 @@ Factory that closes over `{ librarian, textfresser, vam }` and returns an `execu
 
 **Source**: `behavior-manager/`
 
-Behaviors implement the `EventHandler<P>` protocol from `UserEventInterceptor`:
+Behaviors implement the `UserEventHandler<K>` protocol from `@textfresser/obsidian-event-layer`:
 
 ```typescript
 interface EventHandler<P> {
