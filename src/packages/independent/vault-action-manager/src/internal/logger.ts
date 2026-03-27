@@ -1,3 +1,9 @@
+type LogMethod = "error" | "info" | "warn";
+
+export type LogSink = {
+	[Method in LogMethod]: (message: string) => void;
+};
+
 function formatMessage(message: string, args: readonly unknown[]): string {
 	if (args.length === 0) {
 		return message;
@@ -20,12 +26,24 @@ function formatMessage(message: string, args: readonly unknown[]): string {
 	return `${message} ${rendered.join(" ")}`;
 }
 
+const defaultSink: LogSink = globalThis.console;
+
+let sink: LogSink = defaultSink;
+
+export function setLoggerSink(nextSink: LogSink): void {
+	sink = nextSink;
+}
+
+export function resetLoggerSink(): void {
+	sink = defaultSink;
+}
+
 function write(
-	method: "error" | "info" | "warn",
+	method: LogMethod,
 	message: string,
 	args: readonly unknown[],
 ): void {
-	console[method](formatMessage(message, args));
+	sink[method](formatMessage(message, args));
 }
 
 export const logger = {
