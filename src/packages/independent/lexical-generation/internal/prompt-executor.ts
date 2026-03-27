@@ -20,7 +20,7 @@ type PromptExecutorDeps = Pick<
 	"fetchStructured" | "knownLang" | "targetLang"
 >;
 
-export const REQUIRED_PROMPT_KINDS = [
+const REQUIRED_PROMPT_KINDS = [
 	"Lemma",
 	"Disambiguate",
 	"LexemEnrichment",

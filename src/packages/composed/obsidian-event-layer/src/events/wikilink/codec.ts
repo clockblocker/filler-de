@@ -8,7 +8,7 @@ import { createEventCodec } from "../codec-factory";
 import type { InternalWikilinkPayload } from "./payload";
 import { createWikilinkPayload } from "./payload";
 
-export type WikilinkData = {
+type WikilinkData = {
 	linkContent: string;
 	closePos: number;
 	view: EditorView;

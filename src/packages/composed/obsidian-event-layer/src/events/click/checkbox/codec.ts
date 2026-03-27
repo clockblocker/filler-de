@@ -7,7 +7,7 @@ import { createEventCodec } from "../../codec-factory";
 import type { CheckboxPayload } from "./payload";
 import { createCheckboxPayload } from "./payload";
 
-export type CheckboxClickData = {
+type CheckboxClickData = {
 	splitPath: SplitPathToMdFile;
 	checked: boolean;
 	lineContent: string;

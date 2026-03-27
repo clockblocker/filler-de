@@ -5,7 +5,7 @@ import { createEventCodec } from "../codec-factory";
 import type { InternalSelectAllPayload } from "./payload";
 import { createSelectAllPayload } from "./payload";
 
-export type SelectAllData = {
+type SelectAllData = {
 	content: string;
 	view: EditorView;
 	splitPath?: SplitPathToMdFile;

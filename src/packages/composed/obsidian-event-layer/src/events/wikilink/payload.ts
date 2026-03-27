@@ -11,7 +11,7 @@ import { toSourcePath } from "../source-path";
  * Note: EditorView cannot be validated by Zod, so we use a partial schema
  * and add the view at runtime.
  */
-export const WikilinkPayloadSchemaPartial = z.object({
+const WikilinkPayloadSchemaPartial = z.object({
 	canResolveNatively: z.boolean(),
 	kind: z.literal(PayloadKind.WikilinkCompleted),
 	/** Raw content between [[ and ]] */

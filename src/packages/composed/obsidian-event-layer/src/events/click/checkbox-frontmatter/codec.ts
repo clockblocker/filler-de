@@ -7,7 +7,7 @@ import { createEventCodec } from "../../codec-factory";
 import type { CheckboxFrontmatterPayload } from "./payload";
 import { createCheckboxFrontmatterPayload } from "./payload";
 
-export type CheckboxFrontmatterClickData = {
+type CheckboxFrontmatterClickData = {
 	splitPath: SplitPathToMdFile;
 	checked: boolean;
 	propertyName: string;

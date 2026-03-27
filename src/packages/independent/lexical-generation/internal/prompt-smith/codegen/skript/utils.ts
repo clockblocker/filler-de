@@ -12,7 +12,7 @@ export function wrapInXmlTag(tagName: string, content: string): string {
 	return `<${tagName}>\n${content}\n</${tagName}>`;
 }
 
-export const PARTS_DIR = path.resolve(import.meta.dir, "../../prompt-parts");
+const PARTS_DIR = path.resolve(import.meta.dir, "../../prompt-parts");
 
 export const GENERATED_DIR = path.resolve(
 	import.meta.dir,

@@ -1,9 +1,16 @@
 import { describe, expect, it } from "bun:test";
+import type { LexemInflections } from "@textfresser/lexical-generation";
 import { formatInflection } from "../../../../../../../src/commanders/textfresser/commands/generate/section-formatters/de/lexem/noun/inflection-formatter";
+
+function makeNounInflections(
+	input: Omit<Extract<LexemInflections, { kind: "noun" }>, "kind">,
+): Extract<LexemInflections, { kind: "noun" }> {
+	return { kind: "noun", ...input };
+}
 
 describe("formatInflection", () => {
 	it("formats cells grouped by case in N/A/G/D order", () => {
-		const { formattedSection } = formatInflection({
+		const { formattedSection } = formatInflection(makeNounInflections({
 			cells: [
 				{ article: "das", case: "Nominative", form: "Kraftwerk", number: "Singular" },
 				{ article: "die", case: "Nominative", form: "Kraftwerke", number: "Plural" },
@@ -15,7 +22,7 @@ describe("formatInflection", () => {
 				{ article: "den", case: "Dative", form: "Kraftwerken", number: "Plural" },
 			],
 			genus: "Neutrum",
-		});
+		}));
 
 		const lines = formattedSection.split("\n");
 		expect(lines).toHaveLength(4);
@@ -26,13 +33,13 @@ describe("formatInflection", () => {
 	});
 
 	it("returns raw cells for propagation", () => {
-		const { cells } = formatInflection({
+		const { cells } = formatInflection(makeNounInflections({
 			cells: [
 				{ article: "der", case: "Nominative", form: "Mann", number: "Singular" },
 				{ article: "die", case: "Nominative", form: "Männer", number: "Plural" },
 			],
 			genus: "Maskulinum",
-		});
+		}));
 
 		expect(cells).toHaveLength(2);
 		expect(cells[0]).toEqual({
@@ -50,19 +57,19 @@ describe("formatInflection", () => {
 	});
 
 	it("skips missing cases", () => {
-		const { formattedSection } = formatInflection({
+		const { formattedSection } = formatInflection(makeNounInflections({
 			cells: [
 				{ article: "das", case: "Nominative", form: "Kind", number: "Singular" },
 				{ article: "die", case: "Nominative", form: "Kinder", number: "Plural" },
 			],
 			genus: "Neutrum",
-		});
+		}));
 
 		expect(formattedSection).toBe("N: das [[Kind]], die [[Kinder]]");
 	});
 
 	it("handles all four cases with only singular", () => {
-		const { formattedSection } = formatInflection({
+		const { formattedSection } = formatInflection(makeNounInflections({
 			cells: [
 				{ article: "der", case: "Nominative", form: "Tisch", number: "Singular" },
 				{ article: "den", case: "Accusative", form: "Tisch", number: "Singular" },
@@ -70,7 +77,7 @@ describe("formatInflection", () => {
 				{ article: "dem", case: "Dative", form: "Tisch", number: "Singular" },
 			],
 			genus: "Maskulinum",
-		});
+		}));
 
 		const lines = formattedSection.split("\n");
 		expect(lines).toHaveLength(4);
@@ -81,16 +88,16 @@ describe("formatInflection", () => {
 	});
 
 	it("handles empty cells", () => {
-		const { formattedSection, cells } = formatInflection({
+		const { formattedSection, cells } = formatInflection(makeNounInflections({
 			cells: [],
 			genus: "Neutrum",
-		});
+		}));
 		expect(formattedSection).toBe("");
 		expect(cells).toHaveLength(0);
 	});
 
 	it("normalizes path-like form targets to basename", () => {
-		const { formattedSection, cells } = formatInflection({
+		const { formattedSection, cells } = formatInflection(makeNounInflections({
 			cells: [
 				{
 					article: "die",
@@ -100,7 +107,7 @@ describe("formatInflection", () => {
 				},
 			],
 			genus: "Neutrum",
-		});
+		}));
 
 		expect(formattedSection).toBe("N: die [[Fahren]]");
 		expect(cells[0]?.form).toBe("Fahren");

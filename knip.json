@@ -3,6 +3,12 @@
 	"ignore": ["**/*.d.ts"],
 	"ignoreBinaries": ["bun"],
 	"ignoreDependencies": ["obsidian", "electron", "@codemirror/*", "tslib"],
+	"ignoreUnresolved": ["./tests/unit/setup.ts"],
+	"ignoreIssues": {
+		"src/packages/independent/lexical-generation/internal/prompt-smith/prompt-parts/**/*.ts": [
+			"files"
+		]
+	},
 	"project": ["src/**/*.ts"],
 	"workspaces": {
 		"src/packages/composed/obsidian-event-layer": {
@@ -15,9 +21,6 @@
 				"internal/prompt-smith/codegen/skript/run.ts",
 				"tests/**/*.ts"
 			],
-			"ignoreIssues": {
-				"internal/prompt-smith/prompt-parts/**/*.ts": ["files"]
-			},
 			"project": ["**/*.ts"]
 		},
 		"src/packages/independent/vault-action-manager": {

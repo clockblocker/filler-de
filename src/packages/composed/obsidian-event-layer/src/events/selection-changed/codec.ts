@@ -7,7 +7,7 @@ import { createEventCodec } from "../codec-factory";
 import type { SelectionChangedPayload } from "./payload";
 import { createSelectionChangedPayload } from "./payload";
 
-export type SelectionChangedData = {
+type SelectionChangedData = {
 	hasSelection: boolean;
 	selectedText: string;
 	source: SelectionChangedPayload["source"];

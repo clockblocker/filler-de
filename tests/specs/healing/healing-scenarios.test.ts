@@ -111,11 +111,13 @@ describe("Healing Scenarios", () => {
 				(a) => a.kind === "RenameMdFile",
 			);
 
-			// If observed basename doesn't match canonical, healing should rename
-			if (renameActions.length > 0) {
-				const rename = renameActions[0];
-				expect(rename.payload.to.basename).toBe("Note-recipes");
+			expect(renameActions.length).toBeGreaterThan(0);
+			const rename = renameActions[0];
+			expect(rename).toBeDefined();
+			if (!rename) {
+				throw new Error("Expected RenameMdFile healing action");
 			}
+			expect(rename.payload.to.basename).toBe("Note-recipes");
 		});
 
 		it("creates leaf at depth 2 with two-part suffix (reversed)", () => {
@@ -151,11 +153,14 @@ describe("Healing Scenarios", () => {
 				(a) => a.kind === "RenameMdFile",
 			);
 
-			if (renameActions.length > 0) {
-				const rename = renameActions[0];
-				// Canonical suffix should be soup-recipes (reversed depth)
-				expect(rename.payload.to.basename).toBe("Note-soup-recipes");
+			expect(renameActions.length).toBeGreaterThan(0);
+			const rename = renameActions[0];
+			expect(rename).toBeDefined();
+			if (!rename) {
+				throw new Error("Expected RenameMdFile healing action");
 			}
+			// Canonical suffix should be soup-recipes (reversed depth)
+			expect(rename.payload.to.basename).toBe("Note-soup-recipes");
 		});
 	});
 
@@ -426,9 +431,10 @@ describe("Healing Scenarios", () => {
 				targetLocator: deleteLocator,
 			});
 
-			// Verify deleted (and section pruned)
+			// Verify deleted; empty parent section remains in the tree
 			shape = toShape(healer);
-			expect(shape.children).toBeUndefined();
+			expect(shape.children?.cooking).toBeDefined();
+			expect(shape.children?.cooking).toEqual({ children: undefined });
 		});
 	});
 

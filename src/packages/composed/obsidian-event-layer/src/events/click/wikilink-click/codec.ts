@@ -7,7 +7,7 @@ import { createEventCodec } from "../../codec-factory";
 import type { WikilinkClickPayload, WikiTarget } from "./payload";
 import { createWikilinkClickPayload } from "./payload";
 
-export type WikilinkClickData = {
+type WikilinkClickData = {
 	wikiTarget: WikiTarget;
 	blockContent: string;
 	splitPath: SplitPathToMdFile;

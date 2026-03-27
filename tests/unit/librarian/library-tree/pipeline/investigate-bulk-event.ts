@@ -177,11 +177,11 @@ function logOtherHealingActions(actions: HealingAction[]): void {
 
 function formatHealingAction(action: HealingAction): string {
 	switch (action.kind) {
-		case "CreateFolder":
-			return action.payload.splitPath.pathParts.join("/");
 		case "DeleteMdFile":
 			return action.payload.splitPath.pathParts.join("/");
-		default:
+		case "RenameFile":
+		case "RenameFolder":
+		case "RenameMdFile":
 			return JSON.stringify(action.payload);
 	}
 }

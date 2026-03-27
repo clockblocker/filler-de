@@ -13,6 +13,7 @@ const defaultDelimiterConfig = {
 export const defaultSettingsForUnitTests: ParsedUserSettings = {
 	apiProvider: "google",
 	explainGrammarPlacement: "AboveSelection",
+	generateInflections: true,
 	generatePlacement: "Bottom",
 	googleApiKey: "",
 	hideMetadata: true,

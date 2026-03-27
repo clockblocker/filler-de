@@ -42,7 +42,7 @@ function formatExamples(
 		.join("\n\n");
 }
 
-export function buildSystemPrompt(parts: PromptParts): string {
+function buildSystemPrompt(parts: PromptParts): string {
 	const sections = [
 		wrapInXmlTag("agent-role", parts.agentRole),
 		wrapInXmlTag("task-description", parts.taskDescription),

@@ -22,7 +22,7 @@ function safeFileName(s: string): string {
 	return s.replace(/[\\/]/g, " ").trim();
 }
 
-export const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
+const systemPathToSplitPath = z.codec(z.string(), SplitPathSchema, {
 	decode: (systemPath: string): AnySplitPath => {
 		const normalized = systemPath.replace(/^[\\/]+|[\\/]+$/g, "");
 		if (!normalized) {

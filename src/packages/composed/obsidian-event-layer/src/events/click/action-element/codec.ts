@@ -6,7 +6,7 @@ import { createEventCodec } from "../../codec-factory";
 import type { ActionElementPayload } from "./payload";
 import { createActionElementPayload } from "./payload";
 
-export type ActionElementClickData = {
+type ActionElementClickData = {
 	actionId: string;
 };
 

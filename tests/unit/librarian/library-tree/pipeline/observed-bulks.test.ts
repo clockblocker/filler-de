@@ -151,11 +151,11 @@ function formatTreeAction(action: PipelineResult["treeActions"][0]): string {
 
 function formatHealingAction(action: PipelineResult["healingActions"][0]): string {
 	switch (action.kind) {
-		case "CreateFolder":
-			return action.payload.splitPath.pathParts.join("/");
 		case "DeleteMdFile":
 			return action.payload.splitPath.pathParts.join("/");
-		default:
+		case "RenameFile":
+		case "RenameFolder":
+		case "RenameMdFile":
 			return JSON.stringify(action.payload);
 	}
 }

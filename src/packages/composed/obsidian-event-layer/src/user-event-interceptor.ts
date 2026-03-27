@@ -1,6 +1,7 @@
 import type {
 	ObsidianEventLayer,
 	ObsidianEventLayerDeps,
+	Teardown,
 	UserEventHandler,
 	UserEventKind,
 	UserEventResult,
@@ -14,7 +15,6 @@ import { ClipboardDetector } from "./events/clipboard/detector";
 import { SelectAllDetector } from "./events/select-all/detector";
 import { SelectionChangedDetector } from "./events/selection-changed/detector";
 import { WikilinkDetector } from "./events/wikilink/detector";
-import type { HandlerTeardown } from "./types/handler";
 import type { AnyPayload, PayloadKind } from "./types/payload-base";
 
 /**
@@ -87,7 +87,7 @@ class ObsidianEventLayerImpl implements ObsidianEventLayer {
 	setHandler<K extends UserEventKind>(
 		kind: K,
 		handler: UserEventHandler<K>,
-	): HandlerTeardown {
+	): Teardown {
 		this.handlers.set(kind, handler as UserEventHandler<UserEventKind>);
 		return () => {
 			if (this.handlers.get(kind) === handler) {

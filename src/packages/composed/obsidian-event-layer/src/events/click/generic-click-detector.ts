@@ -9,7 +9,7 @@
  * from toggling checkboxes (Obsidian uses mouseup for checkbox toggling).
  */
 
-export type RawClickHandler = (target: HTMLElement, evt: MouseEvent) => void;
+type RawClickHandler = (target: HTMLElement, evt: MouseEvent) => void;
 
 export class GenericClickDetector {
 	private subscribers = new Set<RawClickHandler>();

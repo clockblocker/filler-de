@@ -16,6 +16,7 @@
  *   tx.commit(); // or tx.rollback() on error
  */
 
+import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
 import { err, ok, type Result } from "neverthrow";
 import { logger } from "../../../utils/logger";
 import {
@@ -119,7 +120,7 @@ export class HealingTransaction {
 	 * Record a vault operation failure.
 	 */
 	recordVaultFailure(
-		action: HealingAction,
+		action: VaultAction | HealingAction,
 		errorMessage: string,
 		recoverable = false,
 	): void {

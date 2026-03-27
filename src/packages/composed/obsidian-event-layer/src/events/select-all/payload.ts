@@ -11,7 +11,7 @@ import { toSourcePath } from "../source-path";
  * Note: EditorView cannot be validated by Zod, so we use a partial schema
  * and add the view at runtime.
  */
-export const SelectAllPayloadSchemaPartial = z.object({
+const SelectAllPayloadSchemaPartial = z.object({
 	/** Full document content */
 	content: z.string(),
 	kind: z.literal(PayloadKind.SelectAll),

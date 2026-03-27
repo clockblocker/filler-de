@@ -90,10 +90,6 @@ export function errorNoTFileFound(path: string): string {
 	return `No TFile found for path: ${path}`;
 }
 
-export function errorInvalidCdArgument(): string {
-	return "Invalid argument to ActiveFileService.cd";
-}
-
 export function errorOpenFileFailed(errorMessage: string): string {
 	return `Failed to open file: ${errorMessage}`;
 }

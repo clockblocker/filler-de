@@ -1,6 +1,6 @@
 type LogMethod = "error" | "info" | "warn";
 
-export type LogSink = {
+type LogSink = {
 	[Method in LogMethod]: (message: string) => void;
 };
 
@@ -26,17 +26,7 @@ function formatMessage(message: string, args: readonly unknown[]): string {
 	return `${message} ${rendered.join(" ")}`;
 }
 
-const defaultSink: LogSink = globalThis.console;
-
-let sink: LogSink = defaultSink;
-
-export function setLoggerSink(nextSink: LogSink): void {
-	sink = nextSink;
-}
-
-export function resetLoggerSink(): void {
-	sink = defaultSink;
-}
+const sink: LogSink = globalThis.console;
 
 function write(
 	method: LogMethod,

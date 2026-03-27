@@ -90,4 +90,4 @@ export const DomSelectors = {
 /**
  * Type for DOM selector keys.
  */
-export type DomSelectorKey = keyof typeof DomSelectors;
+type DomSelectorKey = keyof typeof DomSelectors;
