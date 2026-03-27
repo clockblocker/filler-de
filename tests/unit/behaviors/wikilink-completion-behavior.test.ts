@@ -1,13 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import { createWikilinkCompletionHandler } from "../../../src/managers/obsidian/behavior-manager/wikilink-complition-behavior";
 import {
-	type WikilinkPayload,
+	type PayloadFor,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 
 type WikilinkLibrarian = Parameters<typeof createWikilinkCompletionHandler>[0];
 
-function makePayload(linkContent: string): WikilinkPayload {
+function makePayload(linkContent: string): PayloadFor<"WikilinkCompleted"> {
 	return {
 		canResolveNatively: false,
 		kind: UserEventKind.WikilinkCompleted,

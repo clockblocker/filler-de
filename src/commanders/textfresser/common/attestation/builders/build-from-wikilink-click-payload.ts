@@ -4,7 +4,7 @@
 
 import { makeSplitPath } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
-import type { WikilinkClickPayload } from "@textfresser/obsidian-event-layer";
+import type { PayloadFor } from "@textfresser/obsidian-event-layer";
 import type { AttestationParsingError } from "../../../errors";
 import type { Attestation } from "../types";
 import { buildSourceFields } from "./build-source-fields";
@@ -15,7 +15,7 @@ import { buildSourceFields } from "./build-source-fields";
  * @returns Result with Attestation or AttestationError
  */
 export function buildAttestationFromWikilinkClickPayload(
-	input: WikilinkClickPayload,
+	input: PayloadFor<"WikilinkClicked">,
 ): Result<Attestation, AttestationParsingError> {
 	const splitPath = makeSplitPath(input.sourcePath) as {
 		basename: string;

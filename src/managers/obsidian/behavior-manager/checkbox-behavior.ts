@@ -5,7 +5,7 @@
 
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import {
-	type CheckboxFrontmatterPayload,
+	type PayloadFor,
 	type UserEventHandler,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
@@ -22,7 +22,7 @@ export function createCheckboxFrontmatterHandler(
 		handle: (payload) => {
 			const maybeWithHandler = librarian as unknown as {
 				handlePropertyCheckboxClick?: (
-					payload: CheckboxFrontmatterPayload,
+					payload: PayloadFor<"CheckboxFrontmatterClicked">,
 				) => void;
 			};
 			maybeWithHandler.handlePropertyCheckboxClick?.(payload);

@@ -68,20 +68,10 @@ type UserPayloadByKey = {
 	};
 };
 
-export type UserPayloadFor<K extends UserEventKindKey> = UserPayloadByKey[K];
-
-export type ActionElementPayload = UserPayloadFor<"ActionElementClicked">;
-export type CheckboxPayload = UserPayloadFor<"CheckboxClicked">;
-export type CheckboxFrontmatterPayload =
-	UserPayloadFor<"CheckboxFrontmatterClicked">;
-export type ClipboardPayload = UserPayloadFor<"ClipboardCopy">;
-export type SelectAllPayload = UserPayloadFor<"SelectAll">;
-export type SelectionChangedPayload = UserPayloadFor<"SelectionChanged">;
-export type WikilinkClickPayload = UserPayloadFor<"WikilinkClicked">;
-export type WikilinkPayload = UserPayloadFor<"WikilinkCompleted">;
+export type PayloadFor<K extends UserEventKindKey> = UserPayloadByKey[K];
 
 export type UserEventPayloadMap = {
-	[K in UserEventKindKey as (typeof UserEventKind)[K]]: UserPayloadFor<K>;
+	[K in UserEventKindKey as (typeof UserEventKind)[K]]: PayloadFor<K>;
 };
 
 type UserEffectByKey = {
@@ -92,10 +82,10 @@ type UserEffectByKey = {
 		| { aliasToInsert?: string; resolvedTarget: string };
 };
 
-export type UserEffectFor<K extends keyof UserEffectByKey> = UserEffectByKey[K];
+export type EffectFor<K extends keyof UserEffectByKey> = UserEffectByKey[K];
 
 export type UserEventEffectMap = {
-	[K in keyof UserEffectByKey as (typeof UserEventKind)[K]]: UserEffectFor<K>;
+	[K in keyof UserEffectByKey as (typeof UserEventKind)[K]]: EffectFor<K>;
 };
 
 type EventKindsWithEffects = keyof UserEventEffectMap;

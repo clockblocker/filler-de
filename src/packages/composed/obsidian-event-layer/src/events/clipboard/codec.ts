@@ -7,7 +7,7 @@
 
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { createEventCodec } from "../codec-factory";
-import type { UserEventEffectMap, UserEventKind } from "../../contracts";
+import type { EffectFor } from "../../contracts";
 import type { ClipboardPayload } from "./payload";
 import { createClipboardPayload } from "./payload";
 
@@ -26,7 +26,7 @@ export const ClipboardCodec = createEventCodec(
 		 * Apply clipboard effect to the clipboard data.
 		 */
 		applyEffect(
-			effect: UserEventEffectMap[typeof UserEventKind.ClipboardCopy],
+			effect: EffectFor<"ClipboardCopy">,
 			clipboardData: DataTransfer,
 		): void {
 			clipboardData.setData("text/plain", effect.modifiedText);

@@ -15,7 +15,7 @@ import type {
 	CommandContext,
 	CommandKind,
 } from "../../managers/obsidian/command-executor";
-import type { CheckboxPayload } from "@textfresser/obsidian-event-layer";
+import type { PayloadFor } from "@textfresser/obsidian-event-layer";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";
@@ -500,7 +500,9 @@ export class Librarian {
 	 * Parses the line content to determine the target (scroll or section),
 	 * builds a ChangeNodeStatusAction, and enqueues it for processing.
 	 */
-	async handleCodexCheckboxClick(payload: CheckboxPayload): Promise<void> {
+	async handleCodexCheckboxClick(
+		payload: PayloadFor<"CheckboxClicked">,
+	): Promise<void> {
 		if (!this.healer) {
 			logger.warn("[Librarian.handleCodexCheckboxClick] No healer");
 			return;

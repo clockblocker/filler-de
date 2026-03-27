@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { buildAttestationFromWikilinkClickPayload } from "../../../../src/commanders/textfresser/common/attestation/builders/build-from-wikilink-click-payload";
 import {
-	type WikilinkClickPayload,
+	type PayloadFor,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 
@@ -9,7 +9,7 @@ const makePayload = (
 	basename: string,
 	blockContent: string,
 	target: { basename: string; alias?: string },
-): WikilinkClickPayload => ({
+): PayloadFor<"WikilinkClicked"> => ({
 	blockContent,
 	kind: UserEventKind.WikilinkClicked,
 	sourcePath: `${basename}.md`,

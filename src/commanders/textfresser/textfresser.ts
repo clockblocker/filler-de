@@ -8,7 +8,6 @@ import type { LexicalGenerationSettings } from "@textfresser/lexical-generation"
 import type { CommandContext } from "../../managers/obsidian/command-executor";
 import {
 	type UserEventHandler,
-	type WikilinkClickPayload,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 import type { ApiService } from "../../stateless-helpers/api-service";

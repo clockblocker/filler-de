@@ -2,14 +2,14 @@
  * Handler for selection changed events.
  */
 
-import type { SelectionChangedPayload } from "@textfresser/obsidian-event-layer";
+import type { PayloadFor } from "@textfresser/obsidian-event-layer";
 import type { SelectionHandlerContext, SelectionHandlerResult } from "./types";
 
 /**
  * Handle selection changed events - update toolbar visibility based on selection state.
  */
 export function handleSelectionChanged(
-	payload: SelectionChangedPayload,
+	payload: PayloadFor<"SelectionChanged">,
 	context: SelectionHandlerContext,
 ): SelectionHandlerResult {
 	const { app, bottomToolbars, selectionToolbars } = context;

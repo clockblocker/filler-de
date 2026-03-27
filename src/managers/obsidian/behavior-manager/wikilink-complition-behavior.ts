@@ -12,7 +12,6 @@ import type { LeafMatch } from "../../../commanders/librarian/healer/library-tre
 import { nonEmptyArrayResult } from "../../../types/utils";
 import {
 	type UserEventHandler,
-	type WikilinkPayload,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 import { pickClosestLeaf } from "./pick-closest-leaf";

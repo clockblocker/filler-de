@@ -15,9 +15,8 @@ import type { App, Plugin } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
 import type { CommandExecutor } from "../obsidian/command-executor";
 import {
-	type ActionElementPayload,
 	type ObsidianEventLayer,
-	type SelectionChangedPayload,
+	type PayloadFor,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 import type {
@@ -95,7 +94,7 @@ export class OverlayManager {
 					UserEventKind.SelectionChanged,
 					{
 						doesApply: () => true,
-						handle: async (payload: SelectionChangedPayload) => {
+						handle: async (payload: PayloadFor<"SelectionChanged">) => {
 							const result = handleSelectionChanged(payload, {
 								activeLeafId: this.activeLeafId,
 								app: this.app,
@@ -112,9 +111,9 @@ export class OverlayManager {
 				this.userEventInterceptor.setHandler(
 					UserEventKind.ActionElementClicked,
 					{
-						doesApply: (payload: ActionElementPayload) =>
+						doesApply: (payload: PayloadFor<"ActionElementClicked">) =>
 							KNOWN_ACTION_IDS.has(payload.actionId),
-						handle: async (payload: ActionElementPayload) => {
+						handle: async (payload: PayloadFor<"ActionElementClicked">) => {
 							await dispatchActionClick(payload.actionId, {
 								app: this.app,
 								commandExecutor: this.commandExecutor,

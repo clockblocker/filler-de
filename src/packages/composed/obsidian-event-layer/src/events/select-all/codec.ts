@@ -1,7 +1,7 @@
 import type { EditorView } from "@codemirror/view";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { createEventCodec } from "../codec-factory";
-import type { UserEventEffectMap, UserEventKind } from "../../contracts";
+import type { EffectFor } from "../../contracts";
 import type { InternalSelectAllPayload } from "./payload";
 import { createSelectAllPayload } from "./payload";
 
@@ -23,7 +23,7 @@ export const SelectAllCodec = createEventCodec(
 		 */
 		applySelection(
 			payload: InternalSelectAllPayload,
-			effect: UserEventEffectMap[typeof UserEventKind.SelectAll],
+			effect: EffectFor<"SelectAll">,
 		): void {
 			const { from, to } = effect.selection;
 			payload.view.dispatch({

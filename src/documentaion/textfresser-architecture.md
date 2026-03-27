@@ -395,7 +395,7 @@ Stored in `TextfresserState.attestationForLatestNavigated`:
 ```
 User clicks [[Kohlekraftwerk]] in a text paragraph
   ↓
-UserEventInterceptor fires WikilinkClickPayload
+UserEventInterceptor fires `PayloadFor<"WikilinkClicked">`
   ↓
 Textfresser.createHandler() → buildAttestationFromWikilinkClickPayload()
   ↓

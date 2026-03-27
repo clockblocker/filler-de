@@ -2,7 +2,6 @@ import { makeSplitPath } from "@textfresser/vault-action-manager";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import {
 	type UserEventHandler,
-	type WikilinkClickPayload,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";

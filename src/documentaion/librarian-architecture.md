@@ -709,7 +709,7 @@ Codex files act as a local anchor for their folder:
 When a user clicks a checkbox in a codex file:
 
 ```
-mousedown event → CheckboxDetector → CheckboxPayload
+mousedown event → CheckboxDetector → `PayloadFor<"CheckboxClicked">`
   ↓
 Handler.doesApply() → isCodexInsideLibrary() → true
   ↓
