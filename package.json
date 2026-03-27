@@ -3,6 +3,7 @@
 	"dependencies": {
 		"@codemirror/view": "latest",
 		"@textfresser/lexical-generation": "workspace:*",
+		"@textfresser/obsidian-event-layer": "workspace:*",
 		"@textfresser/vault-action-manager": "workspace:*",
 		"@types/mocha": "^10.0.10",
 		"@types/sbd": "latest",
@@ -12,8 +13,7 @@
 		"ts-plugin-sort-import-suggestions": "^1.0.4",
 		"typescript-eslint": "latest",
 		"winston": "latest",
-		"zod": "latest",
-		"@textfresser/obsidian-event-layer": "workspace:*"
+		"zod": "4.3.6"
 	},
 	"description": "Go trough the german texts, building your own dictionary from your personal contexts",
 	"devDependencies": {

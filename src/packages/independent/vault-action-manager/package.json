@@ -1,7 +1,7 @@
 {
 	"dependencies": {
 		"neverthrow": "^8.2.0",
-		"zod": "latest"
+		"zod": "4.3.6"
 	},
 	"exports": {
 		".": "./src/index.ts",

@@ -2,7 +2,7 @@
 	"dependencies": {
 		"@codemirror/view": "latest",
 		"@textfresser/vault-action-manager": "workspace:*",
-		"zod": "latest"
+		"zod": "4.3.6"
 	},
 	"exports": {
 		".": "./src/index.ts"

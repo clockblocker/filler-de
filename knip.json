@@ -1,8 +1,28 @@
 {
 	"$schema": "https://unpkg.com/knip@5/schema.json",
-	"entry": ["src/main.ts"],
 	"ignore": ["**/*.d.ts"],
 	"ignoreBinaries": ["bun"],
 	"ignoreDependencies": ["obsidian", "electron", "@codemirror/*", "tslib"],
-	"project": ["src/**/*.ts"]
+	"project": ["src/**/*.ts"],
+	"workspaces": {
+		"src/packages/composed/obsidian-event-layer": {
+			"entry": ["src/index.ts"],
+			"project": ["src/**/*.ts"]
+		},
+		"src/packages/independent/lexical-generation": {
+			"entry": [
+				"index.ts",
+				"internal/prompt-smith/codegen/skript/run.ts",
+				"tests/**/*.ts"
+			],
+			"ignoreIssues": {
+				"internal/prompt-smith/prompt-parts/**/*.ts": ["files"]
+			},
+			"project": ["**/*.ts"]
+		},
+		"src/packages/independent/vault-action-manager": {
+			"entry": ["src/index.ts", "tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
+		}
+	}
 }
