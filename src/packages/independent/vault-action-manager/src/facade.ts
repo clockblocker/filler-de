@@ -1,7 +1,5 @@
 import type { Result } from "neverthrow";
 import type { App } from "obsidian";
-import { logger } from "./internal/logger";
-import { sleep } from "./internal/sleep";
 import { ActiveFileService } from "./file-services/active-view/active-file-service";
 import { SelectionService } from "./file-services/active-view/selection-service";
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
@@ -28,6 +26,8 @@ import type {
 	VaultActionManager,
 	VaultEventHandler,
 } from "./index";
+import { logger } from "./internal/logger";
+import { sleep } from "./internal/sleep";
 import type { ReadContentError } from "./types/read-content-error";
 import type {
 	AnySplitPath,

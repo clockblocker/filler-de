@@ -4,8 +4,8 @@
 
 import type { EditorView } from "@codemirror/view";
 import { z } from "zod";
-import { toSourcePath } from "../source-path";
 import { PayloadKind } from "../../types/payload-base";
+import { toSourcePath } from "../source-path";
 
 /**
  * Note: EditorView cannot be validated by Zod, so we use a partial schema

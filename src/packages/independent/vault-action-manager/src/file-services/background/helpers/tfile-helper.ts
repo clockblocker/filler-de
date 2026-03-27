@@ -1,8 +1,5 @@
 import { err, ok, type Result, ResultAsync } from "neverthrow";
 import { type FileManager, TFile, type Vault } from "obsidian";
-import { getErrorMessage } from "../../../internal/get-error-message";
-import { logger } from "../../../internal/logger";
-import { sleep as delay } from "../../../internal/sleep";
 import {
 	errorBothSourceAndTargetNotFound,
 	errorCreateFailed,
@@ -18,6 +15,9 @@ import {
 	type MdFileWithContentDto,
 	pathfinder,
 } from "../../../helpers/pathfinder";
+import { getErrorMessage } from "../../../internal/get-error-message";
+import { logger } from "../../../internal/logger";
+import { sleep as delay } from "../../../internal/sleep";
 import {
 	type SplitPathFromTo,
 	SplitPathKind,

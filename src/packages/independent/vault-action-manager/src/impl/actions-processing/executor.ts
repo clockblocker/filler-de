@@ -1,8 +1,5 @@
 import { err, ok } from "neverthrow";
 import type { Vault } from "obsidian";
-import { getErrorMessage } from "../../internal/get-error-message";
-import { logger } from "../../internal/logger";
-import { sleep } from "../../internal/sleep";
 import type { ActiveFileService } from "../../file-services/active-view/active-file-service";
 import type { TFileHelper } from "../../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../../file-services/background/helpers/tfolder-helper";
@@ -10,6 +7,9 @@ import {
 	type MdFileWithContentDto,
 	pathfinder,
 } from "../../helpers/pathfinder";
+import { getErrorMessage } from "../../internal/get-error-message";
+import { logger } from "../../internal/logger";
+import { sleep } from "../../internal/sleep";
 import type { SplitPathToMdFile } from "../../types/split-path";
 import { type VaultAction, VaultActionKind } from "../../types/vault-action";
 

@@ -1,10 +1,10 @@
 export {
-	type EffectFor,
 	type ObsidianEventLayer,
 	type ObsidianEventLayerDeps,
 	type PayloadFor,
 	type SelectionTextSource,
 	type Teardown,
+	type UserEffectFor,
 	type UserEventHandler,
 	UserEventKind,
 	type UserEventPayloadMap,

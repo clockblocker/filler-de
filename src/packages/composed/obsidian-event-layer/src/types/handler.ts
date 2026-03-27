@@ -1,8 +1,8 @@
 import type {
-	Teardown as HandlerTeardown,
 	UserEventHandler as EventHandler,
-	UserEventKind,
 	UserEventResult as HandleResult,
+	Teardown as HandlerTeardown,
+	UserEventKind,
 } from "../contracts";
 
 export type { EventHandler, HandleResult, HandlerTeardown };

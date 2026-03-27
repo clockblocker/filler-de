@@ -5,8 +5,8 @@ import {
 	type EditorPosition,
 	MarkdownView,
 } from "obsidian";
-import { DomSelectors } from "../../../internal/dom-selectors";
 import { errorNoActiveView } from "../../../errors";
+import { DomSelectors } from "../../../internal/dom-selectors";
 import type { SplitPathToMdFile } from "../../../types/split-path";
 import type { Transform } from "../../../types/vault-action";
 import { computeLineChanges } from "./compute-line-changes";

@@ -11,8 +11,7 @@ export const UserEventKind = {
 	WikilinkCompleted: "wikilinkCompleted",
 } as const;
 
-export type UserEventKind =
-	(typeof UserEventKind)[keyof typeof UserEventKind];
+export type UserEventKind = (typeof UserEventKind)[keyof typeof UserEventKind];
 
 type UserPayloadByKey = {
 	ActionElementClicked: {
@@ -66,7 +65,8 @@ type UserPayloadByKey = {
 	};
 };
 
-export type PayloadFor<K extends keyof typeof UserEventKind> = UserPayloadByKey[K];
+export type PayloadFor<K extends keyof typeof UserEventKind> =
+	UserPayloadByKey[K];
 
 export type UserEventPayloadMap = {
 	[K in keyof typeof UserEventKind as (typeof UserEventKind)[K]]: PayloadFor<K>;
@@ -80,17 +80,15 @@ type UserEffectByKey = {
 		| { aliasToInsert?: string; resolvedTarget: string };
 };
 
-export type EffectFor<K extends keyof UserEffectByKey> = UserEffectByKey[K];
+export type UserEffectFor<K extends keyof UserEffectByKey> = UserEffectByKey[K];
 
 export type UserEventEffectMap = {
-	[K in keyof UserEffectByKey as (typeof UserEventKind)[K]]: EffectFor<K>;
+	[K in keyof UserEffectByKey as (typeof UserEventKind)[K]]: UserEffectFor<K>;
 };
 
 type EventKindsWithEffects = keyof UserEventEffectMap;
 
-type BaseUserEventResult =
-	| { outcome: "handled" }
-	| { outcome: "passthrough" };
+type BaseUserEventResult = { outcome: "handled" } | { outcome: "passthrough" };
 
 export type UserEventResult<K extends UserEventKind> =
 	| BaseUserEventResult

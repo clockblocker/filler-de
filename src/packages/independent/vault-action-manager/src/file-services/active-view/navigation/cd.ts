@@ -1,9 +1,9 @@
 import { err, ok, type Result } from "neverthrow";
 import { type App, MarkdownView, type TFile } from "obsidian";
-import { DomSelectors } from "../../../internal/dom-selectors";
-import { getErrorMessage } from "../../../internal/get-error-message";
 import { errorNoTFileFound, errorOpenFileFailed } from "../../../errors";
 import { pathfinder } from "../../../helpers/pathfinder";
+import { DomSelectors } from "../../../internal/dom-selectors";
+import { getErrorMessage } from "../../../internal/get-error-message";
 import type { SplitPathToAnyFile } from "../../../types/split-path";
 
 export async function cd(app: App, file: TFile): Promise<Result<TFile, string>>;

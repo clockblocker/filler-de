@@ -9,12 +9,12 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
-import { wikilinkHelper } from "../../../internal/wikilink-helper";
 import { DomSelectors } from "../../../internal/dom-selectors";
 import {
 	decrementPending,
 	incrementPending,
 } from "../../../internal/idle-tracker";
+import { wikilinkHelper } from "../../../internal/wikilink-helper";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
 import { getCurrentFilePath } from "../../get-current-file-path";

@@ -1,7 +1,7 @@
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { z } from "zod";
-import { toSourcePath } from "../../source-path";
 import { PayloadKind } from "../../../types/payload-base";
+import { toSourcePath } from "../../source-path";
 
 export const WikiTargetSchema = z.object({
 	alias: z.string().optional(),

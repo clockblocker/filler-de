@@ -3,8 +3,8 @@
  */
 
 import { z } from "zod";
-import { toSourcePath } from "../source-path";
 import { PayloadKind } from "../../types/payload-base";
+import { toSourcePath } from "../source-path";
 
 export const SelectionChangedPayloadSchema = z.object({
 	/** True if there's currently a text selection */

@@ -3,9 +3,9 @@
  */
 
 import type { EditorView } from "@codemirror/view";
-import type { EffectFor } from "../../contracts";
+import type { UserEffectFor } from "../../contracts";
 import { createEventCodec } from "../codec-factory";
-import type { InternalWikilinkPayload, WikilinkPayload } from "./payload";
+import type { InternalWikilinkPayload } from "./payload";
 import { createWikilinkPayload } from "./payload";
 
 export type WikilinkData = {
@@ -27,7 +27,7 @@ export const WikilinkCodec = createEventCodec(
 		insertAlias(
 			payload: InternalWikilinkPayload,
 			effect: Extract<
-				EffectFor<"WikilinkCompleted">,
+				UserEffectFor<"WikilinkCompleted">,
 				{ aliasToInsert: string; resolvedTarget?: never }
 			>,
 		): void {
@@ -46,7 +46,7 @@ export const WikilinkCodec = createEventCodec(
 		replaceTarget(
 			payload: InternalWikilinkPayload,
 			effect: Extract<
-				EffectFor<"WikilinkCompleted">,
+				UserEffectFor<"WikilinkCompleted">,
 				{ resolvedTarget: string }
 			>,
 		): void {

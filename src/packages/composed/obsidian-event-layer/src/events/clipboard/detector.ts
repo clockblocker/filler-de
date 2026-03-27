@@ -10,8 +10,8 @@
  */
 
 import { type App, MarkdownView } from "obsidian";
-import { blockIdHelper } from "../../internal/block-id";
 import type { SelectionTextSource } from "../../contracts";
+import { blockIdHelper } from "../../internal/block-id";
 import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";
 import { getCurrentFilePath } from "../get-current-file-path";

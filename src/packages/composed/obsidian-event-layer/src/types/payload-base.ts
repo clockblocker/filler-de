@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-	UserEventKind,
-	type UserEventPayloadMap,
-} from "../contracts";
+import { UserEventKind, type UserEventPayloadMap } from "../contracts";
 
 export const PayloadKindSchema = z.enum([
 	UserEventKind.CheckboxClicked,
