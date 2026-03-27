@@ -42,10 +42,9 @@ function generateMarkdown(result: RunResult): string {
 		"",
 	);
 
-	for (let i = 0; i < result.examples.length; i++) {
-		const ex = result.examples[i];
+	for (const [index, ex] of result.examples.entries()) {
 		lines.push(
-			`## Example ${i + 1}`,
+			`## Example ${index + 1}`,
 			`**Input**: \`${JSON.stringify(ex.input)}\``,
 			`**Expected**: \`${JSON.stringify(ex.expectedOutput)}\``,
 			`**Actual**: \`${JSON.stringify(ex.actualOutput)}\``,

@@ -82,8 +82,9 @@ describe("ActionQueue", () => {
 		logger.warn = originalWarn;
 
 		expect(warnSpy).toHaveBeenCalled();
-		const callArgs = warnSpy.mock.calls[0];
-		expect(callArgs?.[0]).toContain("[ActionQueue]");
+		expect(warnSpy).toHaveBeenCalledWith(
+			expect.stringContaining("[ActionQueue]"),
+		);
 	});
 
 	it("signals drain waiters even on overflow", async () => {

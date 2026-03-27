@@ -33,6 +33,15 @@ const mdFile = (
 	pathParts,
 });
 
+function expectFirstAction(actions: readonly VaultAction[]): VaultAction {
+	const firstAction = actions[0];
+	expect(firstAction).toBeDefined();
+	if (!firstAction) {
+		throw new Error("Expected at least one action");
+	}
+	return firstAction;
+}
+
 describe("EnsureExist Integration", () => {
 	it("should ensure parent folders exist before files (recursive)", () => {
 		// ProcessMdFile on nested file should require parent folders
@@ -127,8 +136,12 @@ describe("EnsureExist Integration", () => {
 		]);
 		// After collapse: only UpsertMdFile(content) remains
 		expect(collapsed).toHaveLength(1);
-		expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
-		expect((collapsed[0]! as typeof replace).payload.content).toBe("new");
+		const collapsedAction = expectFirstAction(collapsed);
+		expect(collapsedAction.kind).toBe(VaultActionKind.UpsertMdFile);
+		if (collapsedAction.kind !== VaultActionKind.UpsertMdFile) {
+			throw new Error("Expected collapsed action to be UpsertMdFile");
+		}
+		expect(collapsedAction.payload.content).toBe("new");
 
 		// Build dependency graph on collapsed actions
 		const graph = buildDependencyGraph(collapsed);
@@ -171,10 +184,11 @@ describe("EnsureExist Integration", () => {
 		const allActions = [rootFolder, ...collapsed, process];
 		const graph = buildDependencyGraph(allActions);
 		const sorted = topologicalSort(allActions, graph);
+		const collapsedAction = expectFirstAction(collapsed);
 
 		expect(sorted[0]).toBe(rootFolder);
 		expect(sorted.indexOf(process)).toBeGreaterThan(
-			sorted.indexOf(collapsed[0]!),
+			sorted.indexOf(collapsedAction),
 		);
 	});
 });

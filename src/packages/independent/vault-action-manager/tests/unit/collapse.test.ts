@@ -14,6 +14,15 @@ const mdFile = (
 	pathParts,
 });
 
+function expectFirstCollapsedAction<T>(actions: readonly T[]): T {
+	const firstAction = actions[0];
+	expect(firstAction).toBeDefined();
+	if (!firstAction) {
+		throw new Error("Expected at least one collapsed action");
+	}
+	return firstAction;
+}
+
 describe("collapseActions", () => {
 	describe("ProcessMdFile composition", () => {
 		it("composes multiple processes in order", async () => {
@@ -33,9 +42,15 @@ describe("collapseActions", () => {
 			} as const;
 
 			const collapsed = await collapseActions([p1, p2]);
-			const single = collapsed[0]!;
+			const single = expectFirstCollapsedAction(collapsed);
 			expect(single.kind).toBe(VaultActionKind.ProcessMdFile);
-			const result = await (single as typeof p2).payload.transform("x");
+			if (
+				single.kind !== VaultActionKind.ProcessMdFile ||
+				!("transform" in single.payload)
+			) {
+				throw new Error("Expected collapsed action to keep transform");
+			}
+			const result = await single.payload.transform("x");
 			expect(result).toBe("xAB");
 		});
 
@@ -63,8 +78,14 @@ describe("collapseActions", () => {
 			} as const;
 
 			const collapsed = await collapseActions([p1, p2, p3]);
-			const single = collapsed[0]!;
-			const result = await (single as typeof p3).payload.transform("x");
+			const single = expectFirstCollapsedAction(collapsed);
+			if (
+				single.kind !== VaultActionKind.ProcessMdFile ||
+				!("transform" in single.payload)
+			) {
+				throw new Error("Expected collapsed action to keep transform");
+			}
+			const result = await single.payload.transform("x");
 			expect(result).toBe("x123");
 		});
 
@@ -85,8 +106,14 @@ describe("collapseActions", () => {
 			} as const;
 
 			const collapsed = await collapseActions([p1, p2]);
-			const single = collapsed[0]!;
-			const result = await (single as typeof p2).payload.transform("x");
+			const single = expectFirstCollapsedAction(collapsed);
+			if (
+				single.kind !== VaultActionKind.ProcessMdFile ||
+				!("transform" in single.payload)
+			) {
+				throw new Error("Expected collapsed action to keep transform");
+			}
+			const result = await single.payload.transform("x");
 			expect(result).toBe("xAB");
 		});
 	});
@@ -141,11 +168,12 @@ describe("collapseActions", () => {
 			} as const;
 
 			const collapsed = await collapseActions([write, process]);
-			const single = collapsed[0]!;
+			const single = expectFirstCollapsedAction(collapsed);
 			expect(single.kind).toBe(VaultActionKind.UpsertMdFile);
-			expect(
-				(single as { payload: { content: string } }).payload.content,
-			).toBe("HELLO");
+			if (single.kind !== VaultActionKind.UpsertMdFile) {
+				throw new Error("Expected collapsed action to be UpsertMdFile");
+			}
+			expect(single.payload.content).toBe("HELLO");
 		});
 
 		it("applies process after write with async transform", async () => {
@@ -162,11 +190,12 @@ describe("collapseActions", () => {
 			} as const;
 
 			const collapsed = await collapseActions([write, process]);
-			const single = collapsed[0]!;
+			const single = expectFirstCollapsedAction(collapsed);
 			expect(single.kind).toBe(VaultActionKind.UpsertMdFile);
-			expect(
-				(single as { payload: { content: string } }).payload.content,
-			).toBe("HELLO");
+			if (single.kind !== VaultActionKind.UpsertMdFile) {
+				throw new Error("Expected collapsed action to be UpsertMdFile");
+			}
+			expect(single.payload.content).toBe("HELLO");
 		});
 
 		it("discards process when write comes after", async () => {
@@ -233,11 +262,12 @@ describe("collapseActions", () => {
 			} as const;
 
 			const collapsed = await collapseActions([write, p1, p2]);
-			const single = collapsed[0]!;
+			const single = expectFirstCollapsedAction(collapsed);
 			expect(single.kind).toBe(VaultActionKind.UpsertMdFile);
-			expect(
-				(single as { payload: { content: string } }).payload.content,
-			).toBe("HELLO!");
+			if (single.kind !== VaultActionKind.UpsertMdFile) {
+				throw new Error("Expected collapsed action to be UpsertMdFile");
+			}
+			expect(single.payload.content).toBe("HELLO!");
 		});
 	});
 

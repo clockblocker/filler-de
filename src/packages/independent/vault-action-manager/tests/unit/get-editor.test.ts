@@ -1,9 +1,10 @@
 import { describe, expect, it } from "bun:test";
+import type { Editor } from "obsidian";
 import { getEditor } from "../../src/helpers/get-editor";
 
 describe("getEditor", () => {
 	it("returns ok when an active markdown view has a file", () => {
-		const editor = { replaceSelection: () => {} };
+		const editor = { replaceSelection: () => {} } as unknown as Editor;
 		const app = {
 			workspace: {
 				getActiveViewOfType: () => ({

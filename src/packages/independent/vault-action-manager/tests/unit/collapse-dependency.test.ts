@@ -34,6 +34,15 @@ const mdFile = (
 	pathParts,
 });
 
+function expectFirstAction(actions: readonly VaultAction[]): VaultAction {
+	const firstAction = actions[0];
+	expect(firstAction).toBeDefined();
+	if (!firstAction) {
+		throw new Error("Expected at least one collapsed action");
+	}
+	return firstAction;
+}
+
 describe("Collapse + Dependencies", () => {
 	it("should preserve file dependency after UpsertMdFile + ProcessMdFile collapse", async () => {
 		const create: VaultAction = {
@@ -51,15 +60,17 @@ describe("Collapse + Dependencies", () => {
 		// Collapse: UpsertMdFile + ProcessMdFile → UpsertMdFile with transformed content
 		const collapsed = await collapseActions([create, process]);
 		expect(collapsed).toHaveLength(1);
-		expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
-		expect(
-			(collapsed[0] as { payload: { content: string } }).payload.content,
-		).toBe("initial\nprocessed");
+		const collapsedAction = expectFirstAction(collapsed);
+		expect(collapsedAction.kind).toBe(VaultActionKind.UpsertMdFile);
+		if (collapsedAction.kind !== VaultActionKind.UpsertMdFile) {
+			throw new Error("Expected collapsed action to be UpsertMdFile");
+		}
+		expect(collapsedAction.payload.content).toBe("initial\nprocessed");
 
 		// After collapse, UpsertMdFile has no file dependencies (just parent folders if any)
 		// This is expected - dispatcher will re-ensure requirements
 		const graph = buildDependencyGraph(collapsed);
-		const collapsedKey = makeGraphKey(collapsed[0]!);
+		const collapsedKey = makeGraphKey(collapsedAction);
 		const collapsedDeps = graph.get(collapsedKey);
 		expect(collapsedDeps?.dependsOn).toHaveLength(0); // No file dependencies, only parent folders if any
 	});
@@ -95,12 +106,16 @@ describe("Collapse + Dependencies", () => {
 
 		const collapsed = await collapseActions([create, replace]);
 		expect(collapsed).toHaveLength(1);
-		expect(collapsed[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
-		expect(collapsed[0]?.payload?.content).toBe("final");
+		const collapsedAction = expectFirstAction(collapsed);
+		expect(collapsedAction.kind).toBe(VaultActionKind.UpsertMdFile);
+		if (collapsedAction.kind !== VaultActionKind.UpsertMdFile) {
+			throw new Error("Expected collapsed action to be UpsertMdFile");
+		}
+		expect(collapsedAction.payload.content).toBe("final");
 
 		// UpsertMdFile is preserved, so dependencies are fine
 		const graph = buildDependencyGraph(collapsed);
-		const collapsedKey = makeGraphKey(collapsed[0]!);
+		const collapsedKey = makeGraphKey(collapsedAction);
 		expect(graph.has(collapsedKey)).toBe(true); // Key is same (based on path, not content)
 	});
 

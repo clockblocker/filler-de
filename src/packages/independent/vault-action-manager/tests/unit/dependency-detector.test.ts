@@ -33,6 +33,14 @@ const mdFile = (
 	pathParts,
 });
 
+function expectAction<T>(action: T | undefined, label: string): T {
+	expect(action).toBeDefined();
+	if (!action) {
+		throw new Error(`Expected ${label} to be defined`);
+	}
+	return action;
+}
+
 describe("buildDependencyGraph", () => {
 	it("should create graph entries for all actions", () => {
 		const actions: VaultAction[] = [
@@ -47,10 +55,12 @@ describe("buildDependencyGraph", () => {
 		];
 
 		const graph = buildDependencyGraph(actions);
+		const firstAction = expectAction(actions[0], "first action");
+		const secondAction = expectAction(actions[1], "second action");
 
 		expect(graph.size).toBe(2);
-		expect(graph.has(makeGraphKey(actions[0]!))).toBe(true);
-		expect(graph.has(makeGraphKey(actions[1]!))).toBe(true);
+		expect(graph.has(makeGraphKey(firstAction))).toBe(true);
+		expect(graph.has(makeGraphKey(secondAction))).toBe(true);
 	});
 
 	it("should detect ProcessMdFile depends on UpsertMdFile for same file", () => {
