@@ -1,1 +1,1 @@
-export { getParsedUserSettings } from "@textfresser/library-core/internal/root/global-state";
+export { getParsedUserSettings } from "../../../../../../global-state/global-state";

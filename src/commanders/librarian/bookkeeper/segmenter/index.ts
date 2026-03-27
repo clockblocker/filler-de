@@ -3,7 +3,7 @@ import {
 	type RemovedItem,
 	type ReplacedItem,
 } from "../../../../stateless-helpers/offset-mapper";
-import type { SeparatedSuffixedBasename } from "../../codecs/internal/suffix/types";
+import type { SeparatedSuffixedBasename } from "@textfresser/library-core/codecs";
 import type {
 	PageSegment,
 	SegmentationConfig,

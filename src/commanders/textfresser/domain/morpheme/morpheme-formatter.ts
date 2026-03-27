@@ -4,7 +4,7 @@
  */
 
 import type { MorphemeKind } from "@textfresser/lexical-generation";
-import { wikilinkHelper } from "/note-addressing/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import type { TargetLanguage } from "../../../../types";
 
 export type MorphemeItem = {

@@ -1,11 +1,11 @@
 import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
-import type { Codecs } from "../../codecs";
-import type { SectionNodeSegmentId } from "../../codecs/segment-id/types/segment-id";
-import { TreeNodeKind } from "../library-tree/tree-node/types/atoms";
-import type { SectionNode } from "../library-tree/tree-node/types/tree-node";
-import type { HealingAction } from "../library-tree/types/healing-action";
-import { sectionChainToPathParts } from "../library-tree/utils/section-chain-utils";
-import { buildObservedLeafSplitPath } from "../library-tree/utils/split-path-utils";
+import type { Codecs } from "@textfresser/library-core/codecs";
+import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
+import type { HealingAction } from "@textfresser/library-core/healing";
+import { sectionChainToPathParts } from "@textfresser/library-core/healer/library-tree/utils/section-chain-utils";
+import type { SectionNode } from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
+import { buildObservedLeafSplitPath } from "@textfresser/library-core/healer/library-tree/utils/split-path-utils";
+import { TreeNodeKind } from "@textfresser/library-core/tree";
 import {
 	computeLeafHealingForFile,
 	computeLeafHealingForScroll,

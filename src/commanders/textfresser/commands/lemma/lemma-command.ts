@@ -1,6 +1,6 @@
 import { blockIdHelper } from "../../../../stateless-helpers/block-id";
 import { markdownHelper } from "../../../../stateless-helpers/markdown-strip";
-import { wikilinkHelper } from "/note-addressing/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import { logger } from "../../../../utils/logger";
 import { buildAttestationFromSelection } from "../../common/attestation/builders/build-from-selection";
 import type { Attestation } from "../../common/attestation/types";

@@ -9,7 +9,7 @@ import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
-import { Healer } from "../../../../../src/commanders/librarian/healer/healer";
+import { Healer } from "../../../../src/commanders/librarian/healer/healer";
 import { codexImpactToRecreations } from "@textfresser/library-core/healer/library-tree/codex/codex-impact-to-actions";
 import { mergeCodexImpacts } from "@textfresser/library-core/healer/library-tree/codex/merge-codex-impacts";
 import { Tree } from "@textfresser/library-core/healer/library-tree/tree";

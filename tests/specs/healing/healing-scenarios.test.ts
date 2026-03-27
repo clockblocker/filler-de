@@ -50,6 +50,16 @@ afterEach(() => {
 	getParsedUserSettingsSpy.mockRestore();
 });
 
+function sectionChildren(
+	node:
+		| { children?: Record<string, unknown> }
+		| { kind: string }
+		| undefined,
+): Record<string, unknown> | undefined {
+	if (!node || "kind" in node) return undefined;
+	return node.children;
+}
+
 describe("Healing Scenarios", () => {
 	describe("Create Leaf -> Healing Generates Correct Path", () => {
 		it("creates leaf at Library root with no suffix", () => {
@@ -315,12 +325,12 @@ describe("Healing Scenarios", () => {
 
 			// Tree should be updated
 			const shape = toShape(healer);
+			const recipesChildren = sectionChildren(shape.children?.recipes);
+			const archiveChildren = sectionChildren(shape.children?.archive);
 			// soup should no longer be under recipes
-			// @ts-expect-error accessing nested
-			expect(shape.children?.recipes?.children?.soup).toBeUndefined();
+			expect(recipesChildren?.soup).toBeUndefined();
 			// soup should be under archive
-			// @ts-expect-error accessing nested
-			expect(shape.children?.archive?.children?.soup).toBeDefined();
+			expect(archiveChildren?.soup).toBeDefined();
 		});
 	});
 
@@ -352,9 +362,9 @@ describe("Healing Scenarios", () => {
 
 			// Verify created
 			let shape = toShape(healer);
+			const recipesChildren = sectionChildren(shape.children?.recipes);
 			expect(shape.children?.recipes).toBeDefined();
-			// @ts-expect-error accessing nested
-			expect(shape.children?.recipes?.children?.Untitled).toBeDefined();
+			expect(recipesChildren?.Untitled).toBeDefined();
 
 			// Step 2: Rename the scroll
 			const renameLocator = makeScrollLocator(
@@ -370,10 +380,9 @@ describe("Healing Scenarios", () => {
 
 			// Verify renamed
 			shape = toShape(healer);
-			// @ts-expect-error accessing nested
-			expect(shape.children?.recipes?.children?.Untitled).toBeUndefined();
-			// @ts-expect-error accessing nested
-			expect(shape.children?.recipes?.children?.MyNote).toBeDefined();
+			const renamedRecipesChildren = sectionChildren(shape.children?.recipes);
+			expect(renamedRecipesChildren?.Untitled).toBeUndefined();
+			expect(renamedRecipesChildren?.MyNote).toBeDefined();
 		});
 
 		it("create, rename parent, delete maintains consistency", () => {
@@ -415,10 +424,10 @@ describe("Healing Scenarios", () => {
 
 			// Verify state
 			let shape = toShape(healer);
+			const cookingChildren = sectionChildren(shape.children?.cooking);
 			expect(shape.children?.recipes).toBeUndefined();
 			expect(shape.children?.cooking).toBeDefined();
-			// @ts-expect-error accessing nested
-			expect(shape.children?.cooking?.children?.Note).toBeDefined();
+			expect(cookingChildren?.Note).toBeDefined();
 
 			// Step 3: Delete the scroll (using new path)
 			const deleteLocator = makeScrollLocator(
@@ -514,8 +523,14 @@ describe("Healing Scenarios", () => {
 
 			// Verify sections were created
 			const shape = toShape(healer);
-			// @ts-expect-error accessing nested
-			expect(shape.children?.nonexistent?.children?.deep?.children?.Note).toBeDefined();
+			const nonexistentChildren = sectionChildren(shape.children?.nonexistent);
+			const deepChildren = sectionChildren(
+				nonexistentChildren?.deep as
+					| { children?: Record<string, unknown> }
+					| { kind: string }
+					| undefined,
+			);
+			expect(deepChildren?.Note).toBeDefined();
 		});
 
 		it("delete on non-existent node does not throw", () => {
@@ -599,10 +614,12 @@ describe("Healing Scenarios", () => {
 
 			// Verify file was added to tree
 			const shape = toShape(healer);
-			// @ts-expect-error accessing nested
-			expect(shape.children?.assets?.children?.image).toBeDefined();
-			// @ts-expect-error accessing nested
-			expect(shape.children?.assets?.children?.image?.extension).toBe("png");
+			const assetsChildren = sectionChildren(shape.children?.assets);
+			const image = assetsChildren?.image as
+				| { extension?: string }
+				| undefined;
+			expect(image).toBeDefined();
+			expect(image?.extension).toBe("png");
 		});
 	});
 });

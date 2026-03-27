@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { MD } from "@textfresser/vault-action-manager/types/literals";
 import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import { makeCodecRulesFromSettings, makeCodecs } from "@textfresser/library-core/codecs";
-import { Healer } from "../../../../src/commanders/librarian/healer/healer";
+import { Healer } from "../../../src/commanders/librarian/healer/healer";
 import { codexImpactToIncrementalRecreations } from "@textfresser/library-core/healer/library-tree/codex/codex-impact-to-actions";
 import { generateChildrenList } from "@textfresser/library-core/healer/library-tree/codex/generate-codex-content";
 import { mergeCodexImpacts } from "@textfresser/library-core/healer/library-tree/codex/merge-codex-impacts";
@@ -90,7 +90,7 @@ describe("Healer", () => {
 	});
 
 	describe("apply Delete", () => {
-		it("deletes leaf and prunes empty ancestors", () => {
+		it("deletes leaf and keeps empty ancestor sections", () => {
 			const healer = makeTree({
 				children: {
 					recipe: {
@@ -118,8 +118,14 @@ describe("Healer", () => {
 			});
 
 			const shape = toShape(healer);
-			// All empty ancestors should be pruned
-			expect(shape.children).toBeUndefined();
+			expect(shape.children?.recipe).toBeDefined();
+			expect(shape.children?.recipe).toEqual({
+				children: {
+					pie: {
+						children: undefined,
+					},
+				},
+			});
 		});
 
 		it("preserves non-empty siblings", () => {

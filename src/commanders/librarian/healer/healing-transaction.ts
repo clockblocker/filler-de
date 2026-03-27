@@ -17,6 +17,8 @@
  */
 
 import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
+import type { CodexImpact } from "@textfresser/library-core/codex";
+import type { HealingAction, TreeAction } from "@textfresser/library-core/healing";
 import { err, ok, type Result } from "neverthrow";
 import { logger } from "../../../utils/logger";
 import {
@@ -27,9 +29,6 @@ import {
 } from "../errors/healing-error";
 import type { Healer, HealerApplyResult } from "./healer";
 import { getHealingAuditLog } from "./healing-audit-log";
-import type { CodexImpact } from "./library-tree/codex/compute-codex-impact";
-import type { TreeAction } from "./library-tree/tree-action/types/tree-action";
-import type { HealingAction } from "./library-tree/types/healing-action";
 
 // ─── Types ───
 

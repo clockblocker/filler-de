@@ -11,7 +11,7 @@ import type {
 	FolderRenamedVaultEvent,
 } from "@textfresser/vault-action-manager/types/vault-event";
 import z from "zod";
-import type { Prettify } from "../../../../../../../../../types/helpers";
+import type { Prettify } from "@textfresser/library-core/internal/root/type-helpers";
 import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,

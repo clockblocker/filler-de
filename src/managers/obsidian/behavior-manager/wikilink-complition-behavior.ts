@@ -8,7 +8,7 @@
  * 3. Corename lookup in tree → replace target with suffixed basename + alias
  */
 
-import type { LeafMatch } from "../../../commanders/librarian/healer/library-tree/types/leaf-match";
+import type { LeafMatch } from "@textfresser/library-core/tree";
 import { nonEmptyArrayResult } from "../../../types/utils";
 import {
 	type UserEventHandler,

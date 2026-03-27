@@ -1,1 +1,1 @@
-export * from "./healer/library-tree/codex";
+export * from "../healer/library-tree/codex";

@@ -1,4 +1,4 @@
 export type {
 	LanguagesConfig,
 	SuffixDelimiterConfig,
-} from "../../../../../types";
+} from "../../../../../../types";

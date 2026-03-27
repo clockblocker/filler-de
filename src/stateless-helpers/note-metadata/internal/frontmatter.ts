@@ -7,7 +7,7 @@ import type { Transform } from "@textfresser/vault-action-manager/types/vault-ac
 import {
 	TreeNodeStatus,
 	type TreeNodeStatus as TreeNodeStatusType,
-} from "../../../commanders/librarian/healer/library-tree/tree-node/types/atoms";
+} from "@textfresser/library-core/tree";
 
 // ─── Constants ───
 

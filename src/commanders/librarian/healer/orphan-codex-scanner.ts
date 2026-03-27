@@ -12,11 +12,11 @@
 
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "@textfresser/library-core/codecs";
 import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
-import { computeCodexSplitPath } from "./library-tree/codex/codex-split-path";
-import { isCodexSplitPath } from "./library-tree/codex/helpers";
-import type { TreeReader } from "./library-tree/tree-interfaces";
-import { TreeNodeKind } from "./library-tree/tree-node/types/atoms";
-import type { HealingAction } from "./library-tree/types/healing-action";
+import type { HealingAction } from "@textfresser/library-core/healing";
+import { computeCodexSplitPath } from "@textfresser/library-core/codex";
+import { isCodexSplitPath } from "@textfresser/library-core/healer/library-tree/codex/helpers";
+import type { TreeReader } from "@textfresser/library-core/healer/library-tree/tree-interfaces";
+import { TreeNodeKind } from "@textfresser/library-core/tree";
 
 // ─── Types ───
 

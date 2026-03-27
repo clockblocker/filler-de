@@ -1,1 +1,1 @@
-export { nonEmptyArrayResult } from "@textfresser/library-core/internal/root/type-utils";
+export { nonEmptyArrayResult } from "../../../../../../types/utils";

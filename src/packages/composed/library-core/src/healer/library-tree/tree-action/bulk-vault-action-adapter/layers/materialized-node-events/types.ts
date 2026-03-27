@@ -5,7 +5,7 @@ import {
 } from "@textfresser/vault-action-manager/types/literals";
 import type { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import z from "zod";
-import type { Prettify } from "../../../../../../../../types/helpers";
+import type { Prettify } from "@textfresser/library-core/internal/root/type-helpers";
 import type {
 	SplitPathInsideLibraryOf,
 	SplitPathToFileInsideLibrary,

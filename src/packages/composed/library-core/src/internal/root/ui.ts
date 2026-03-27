@@ -10,4 +10,4 @@ export {
 	OBSIDIAN_LINK_CLOSE,
 	OBSIDIAN_LINK_OPEN,
 	PIPE,
-} from "@textfresser/library-core/internal/root/ui";
+} from "../../../../../../types/literals/ui";

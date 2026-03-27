@@ -2,15 +2,13 @@ import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-pat
 import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import type {
 	Codecs,
-	SplitPathToFileInsideLibrary,
-	SplitPathToMdFileInsideLibrary,
-} from "../../codecs";
-import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
-} from "../../codecs/locator/types";
-import type { HealingAction } from "../library-tree/types/healing-action";
-import { buildCanonicalLeafSplitPath } from "../library-tree/utils/split-path-utils";
+	SplitPathToFileInsideLibrary,
+	SplitPathToMdFileInsideLibrary,
+} from "@textfresser/library-core/codecs";
+import type { HealingAction } from "@textfresser/library-core/healing";
+import { buildCanonicalLeafSplitPath } from "@textfresser/library-core/healer/library-tree/utils/split-path-utils";
 
 /**
  * Compute healing actions for a leaf node (Scroll or File).

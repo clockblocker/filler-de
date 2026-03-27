@@ -8,17 +8,18 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager/types/vault-action";
-import type { Codecs } from "../../codecs";
-import type { CodecRules } from "../../codecs/rules";
-import { computeCodexSplitPath } from "../library-tree/codex/codex-split-path";
+import type { Codecs, CodecRules } from "@textfresser/library-core/codecs";
+import {
+	collectTreeData,
+	computeCodexSplitPath,
+} from "@textfresser/library-core/codex";
 import {
 	makeBacklinkTransform,
 	makeStripScrollBacklinkTransform,
-} from "../library-tree/codex/transforms/scroll-transforms";
-import { collectTreeData } from "../library-tree/codex/tree-collectors";
-import { makeVaultScopedSplitPath } from "../library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
-import type { TreeReader } from "../library-tree/tree-interfaces";
-import { computeScrollSplitPath } from "../library-tree/utils/compute-scroll-split-path";
+} from "@textfresser/library-core/healer/library-tree/codex/transforms/scroll-transforms";
+import { makeVaultScopedSplitPath } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
+import type { TreeReader } from "@textfresser/library-core/healer/library-tree/tree-interfaces";
+import { computeScrollSplitPath } from "@textfresser/library-core/healer/library-tree/utils/compute-scroll-split-path";
 
 /**
  * Produce VaultAction[] to set or strip go-back links for all library md files

@@ -1,16 +1,42 @@
 import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
-import { splitPathsEqual } from "../../../stateless-helpers/split-path-comparison";
 import type {
 	Codecs,
+	FileNodeLocator,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "@textfresser/library-core/codecs";
-import type {
-	FileNodeLocator,
 	ScrollNodeLocator,
-} from "@textfresser/library-core/codecs/locator/types";
+} from "@textfresser/library-core/codecs";
 import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
+import type { CodexImpact } from "@textfresser/library-core/codex";
+import { computeCodexImpact } from "@textfresser/library-core/codex";
+import type { LeafMatch, Tree } from "@textfresser/library-core/tree";
+import type { TreeReader } from "@textfresser/library-core/healer/library-tree/tree-interfaces";
+import { makeNodeSegmentId } from "@textfresser/library-core/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
+import {
+	TreeNodeKind,
+	type TreeNodeStatus,
+} from "@textfresser/library-core/tree";
+import type {
+	SectionNode,
+	TreeNode,
+} from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
+import {
+	getRootBaseName,
+	resolveNextAvailableNameInSection,
+} from "@textfresser/library-core/healer/library-tree/utils/duplicate-name-resolver";
+import { buildCanonicalLeafSplitPath } from "@textfresser/library-core/healer/library-tree/utils/split-path-utils";
+import type {
+	ChangeNodeStatusAction,
+	CreateTreeLeafAction,
+	DeleteNodeAction,
+	HealingAction,
+	MoveNodeAction,
+	RenameNodeAction,
+	TreeAction,
+} from "@textfresser/library-core/healing";
+import { TreeActionType } from "@textfresser/library-core/healing";
+import { splitPathsEqual } from "../../../stateless-helpers/split-path-comparison";
 import {
 	computeDescendantSuffixHealing,
 	computeLeafHealingForFile,
@@ -18,33 +44,6 @@ import {
 	computeLeafMoveHealing,
 	computeSectionMoveHealing,
 } from "./healing-computers";
-import {
-	type CodexImpact,
-	computeCodexImpact,
-} from "./library-tree/codex/compute-codex-impact";
-import type { LeafMatch, Tree } from "./library-tree/tree";
-import type {
-	ChangeNodeStatusAction,
-	CreateTreeLeafAction,
-	DeleteNodeAction,
-	MoveNodeAction,
-	RenameNodeAction,
-	TreeAction,
-} from "./library-tree/tree-action/types/tree-action";
-import { TreeActionType } from "./library-tree/tree-action/types/tree-action";
-import type { TreeReader } from "./library-tree/tree-interfaces";
-import { makeNodeSegmentId } from "./library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import { TreeNodeKind } from "./library-tree/tree-node/types/atoms";
-import type {
-	SectionNode,
-	TreeNode,
-} from "./library-tree/tree-node/types/tree-node";
-import type { HealingAction } from "./library-tree/types/healing-action";
-import {
-	getRootBaseName,
-	resolveNextAvailableNameInSection,
-} from "./library-tree/utils/duplicate-name-resolver";
-import { buildCanonicalLeafSplitPath } from "./library-tree/utils/split-path-utils";
 import { parseOldSectionPath } from "./utils/old-section-path";
 
 // ─── Result Type ───

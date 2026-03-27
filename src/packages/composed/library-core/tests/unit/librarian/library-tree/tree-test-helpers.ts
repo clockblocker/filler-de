@@ -19,7 +19,7 @@ import type {
 	SectionNodeSegmentId,
 } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
 import { NodeSegmentIdSeparator } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
-import { Healer } from "../../../../src/commanders/librarian/healer/healer";
+import { Healer } from "../../../src/commanders/librarian/healer/healer";
 import { Tree } from "@textfresser/library-core/healer/library-tree/tree";
 import { makeNodeSegmentId } from "@textfresser/library-core/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind, TreeNodeStatus } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
