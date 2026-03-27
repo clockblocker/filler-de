@@ -14,20 +14,20 @@ import { MD } from "@textfresser/vault-action-manager/types/literals";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../src/commanders/librarian/codecs";
+} from "@textfresser/library-core/codecs";
 import {
 	pathPartsToSuffixParts,
 	pathPartsWithRootToSuffixParts,
 	suffixPartsToPathParts,
-} from "../../../src/commanders/librarian/codecs/internal/suffix/path-parts";
+} from "@textfresser/library-core/codecs/internal/suffix/path-parts";
 import {
 	serializeSeparatedSuffix,
 	serializeSeparatedSuffixUnchecked,
-} from "../../../src/commanders/librarian/codecs/internal/suffix/serialize";
-import { TreeNodeKind, TreeNodeStatus } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
-import type { ScrollNode } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
-import { buildObservedLeafSplitPath } from "../../../src/commanders/librarian/healer/library-tree/utils/split-path-utils";
-import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
+} from "@textfresser/library-core/codecs/internal/suffix/serialize";
+import { TreeNodeKind, TreeNodeStatus } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
+import type { ScrollNode } from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
+import { buildObservedLeafSplitPath } from "@textfresser/library-core/healer/library-tree/utils/split-path-utils";
+import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 

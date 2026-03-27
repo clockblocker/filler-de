@@ -3,6 +3,8 @@
 	"dependencies": {
 		"@codemirror/view": "latest",
 		"@textfresser/lexical-generation": "workspace:*",
+		"@textfresser/library-core": "workspace:*",
+		"@textfresser/note-addressing": "workspace:*",
 		"@textfresser/obsidian-event-layer": "workspace:*",
 		"@textfresser/vault-action-manager": "workspace:*",
 		"@types/mocha": "^10.0.10",

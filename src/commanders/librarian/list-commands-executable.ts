@@ -4,9 +4,9 @@ import {
 	type CommandKind as CommandKindType,
 } from "../../managers/obsidian/command-executor";
 import { parsePageIndex } from "./bookkeeper/page-codec";
-import type { Codecs } from "./codecs";
+import type { Codecs } from "@textfresser/library-core/codecs";
 import type { Healer } from "./healer/healer";
-import { isCodexSplitPath } from "./healer/library-tree/codex/helpers";
+import { isCodexSplitPath } from "@textfresser/library-core/healer/library-tree/codex/helpers";
 import {
 	getNextPage as getNextPageImpl,
 	getPrevPage as getPrevPageImpl,

@@ -74,7 +74,7 @@ handleCheckboxClicked(payload: CheckboxClickPayload) {
 
 ## Step 4: Tree Apply
 
-**File**: `src/commanders/librarian/healer/library-tree/tree.ts`
+**File**: `@textfresser/library-core/healer/library-tree/tree.ts`
 
 ```typescript
 apply(action: TreeAction): Result<ApplyResult, TreeError> {
@@ -86,7 +86,7 @@ apply(action: TreeAction): Result<ApplyResult, TreeError> {
 
 ## Step 5: Status Propagation (Sections Only)
 
-**File**: `src/commanders/librarian/healer/library-tree/tree.ts` (~line 280)
+**File**: `@textfresser/library-core/healer/library-tree/tree.ts` (~line 280)
 
 ```typescript
 propagateStatus(section: SectionNode, status: NodeStatus) {
@@ -99,7 +99,7 @@ propagateStatus(section: SectionNode, status: NodeStatus) {
 
 ## Step 6: Status Computation
 
-**File**: `src/commanders/librarian/healer/library-tree/codex/compute-section-status.ts`
+**File**: `@textfresser/library-core/healer/library-tree/codex/compute-section-status.ts`
 
 ```typescript
 computeSectionStatus(section: SectionNode): NodeStatus {

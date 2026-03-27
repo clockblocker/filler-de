@@ -15,15 +15,15 @@ import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-pat
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../src/commanders/librarian/codecs";
-import { Tree } from "../../../src/commanders/librarian/healer/library-tree/tree";
-import { TreeActionType } from "../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
+} from "@textfresser/library-core/codecs";
+import { Tree } from "@textfresser/library-core/healer/library-tree/tree";
+import { TreeActionType } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
-import type { SectionNode } from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/tree-node";
-import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
+} from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
+import type { SectionNode } from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
+import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import {

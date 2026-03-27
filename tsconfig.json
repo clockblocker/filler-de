@@ -43,6 +43,18 @@
 			"@textfresser/lexical-generation/*": [
 				"src/packages/independent/lexical-generation/src/*"
 			],
+			"@textfresser/library-core": [
+				"src/packages/composed/library-core/src/index.ts"
+			],
+			"@textfresser/library-core/*": [
+				"src/packages/composed/library-core/src/*"
+			],
+			"@textfresser/note-addressing": [
+				"src/packages/independent/note-addressing/src/index.ts"
+			],
+			"@textfresser/note-addressing/*": [
+				"src/packages/independent/note-addressing/src/*"
+			],
 			"@textfresser/obsidian-event-layer": [
 				"src/packages/composed/obsidian-event-layer/src/index.ts"
 			],

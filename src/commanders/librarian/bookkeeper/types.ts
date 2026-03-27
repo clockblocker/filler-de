@@ -3,8 +3,8 @@ import type { NonEmptyArray } from "../../../types/helpers";
 import {
 	TreeNodeStatus,
 	type TreeNodeStatus as TreeNodeStatusType,
-} from "../healer/library-tree/tree-node/types/atoms";
-import type { NodeName } from "../types/schemas/node-name";
+} from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
+import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
 
 // ─── Zod Enums ───
 

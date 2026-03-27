@@ -4,9 +4,9 @@ import {
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
 } from "@textfresser/vault-action-manager/types/split-path";
-import { serializeSeparatedSuffix } from "../codecs/internal/suffix/serialize";
-import type { CodecRules } from "../codecs/rules";
-import type { NodeName } from "../types/schemas/node-name";
+import { serializeSeparatedSuffix } from "@textfresser/library-core/codecs/internal/suffix/serialize";
+import type { CodecRules } from "@textfresser/library-core/codecs/rules";
+import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
 import { PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
 
 const MAX_PAGE_INDEX = 10 ** PAGE_INDEX_DIGITS - 1; // 999 for 3 digits

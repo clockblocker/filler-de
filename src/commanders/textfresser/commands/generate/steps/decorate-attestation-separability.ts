@@ -14,7 +14,7 @@
 
 import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import { ok, type Result } from "neverthrow";
-import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
 

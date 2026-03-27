@@ -1,5 +1,5 @@
 import type { LexicalInfo } from "@textfresser/lexical-generation";
-import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../../targets/de/sections/section-css-kind";
 import {

@@ -8,14 +8,14 @@ import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-pat
 import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
-import type { CodecRules } from "../codecs/rules";
-import { serializeSegmentId } from "../codecs/segment-id/internal/serialize";
+import type { CodecRules } from "@textfresser/library-core/codecs/rules";
+import { serializeSegmentId } from "@textfresser/library-core/codecs/segment-id/internal/serialize";
 import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-} from "../codecs/segment-id/types/segment-id";
-import { TreeNodeKind } from "../healer/library-tree/tree-node/types/atoms";
-import type { NodeName } from "../types/schemas/node-name";
+} from "@textfresser/library-core/codecs/segment-id/types/segment-id";
+import { TreeNodeKind } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
+import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
 import type { SegmentationResult } from "./types";
 import { PAGE_FRONTMATTER, PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";

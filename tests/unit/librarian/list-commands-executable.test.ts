@@ -4,10 +4,10 @@ import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-pat
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../src/commanders/librarian/codecs";
-import { makeCodexBasename } from "../../../src/commanders/librarian/healer/library-tree/codex/format-codex-line";
+} from "@textfresser/library-core/codecs";
+import { makeCodexBasename } from "@textfresser/library-core/healer/library-tree/codex/format-codex-line";
 import { listCommandsExecutableIn } from "../../../src/commanders/librarian/list-commands-executable";
-import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
+import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
 import { CommandKind } from "../../../src/managers/obsidian/command-executor";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpyWithHooks } from "../common-utils/setup-spy";

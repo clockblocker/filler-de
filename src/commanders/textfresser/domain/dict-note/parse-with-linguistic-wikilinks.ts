@@ -1,4 +1,4 @@
-import { goBackLinkHelper } from "../../../../stateless-helpers/go-back-link/go-back-link";
+import { goBackLinkHelper } from "@textfresser/note-addressing/go-back-link";
 import {
 	type LibraryBasenameParser,
 	type LibraryLookupByCoreName,

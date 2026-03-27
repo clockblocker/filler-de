@@ -10,8 +10,8 @@
  * and generates cleanup actions for mismatched codexes.
  */
 
-import type { Codecs, SplitPathToMdFileInsideLibrary } from "../codecs";
-import type { SectionNodeSegmentId } from "../codecs/segment-id/types/segment-id";
+import type { Codecs, SplitPathToMdFileInsideLibrary } from "@textfresser/library-core/codecs";
+import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
 import { computeCodexSplitPath } from "./library-tree/codex/codex-split-path";
 import { isCodexSplitPath } from "./library-tree/codex/helpers";
 import type { TreeReader } from "./library-tree/tree-interfaces";

@@ -9,16 +9,16 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { MD } from "@textfresser/vault-action-manager/types/literals";
 import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
-import type { SplitPathToMdFileInsideLibrary } from "../../../src/commanders/librarian/codecs";
+import type { SplitPathToMdFileInsideLibrary } from "@textfresser/library-core/codecs";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../src/commanders/librarian/codecs";
+} from "@textfresser/library-core/codecs";
 import {
 	OrphanCodexScanner,
 	scanAndGenerateOrphanActions,
 } from "../../../src/commanders/librarian/healer/orphan-codex-scanner";
-import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
+import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import { makeTree } from "../../unit/librarian/library-tree/tree-test-helpers";

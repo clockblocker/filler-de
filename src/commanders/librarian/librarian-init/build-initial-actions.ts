@@ -4,16 +4,16 @@ import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-pat
 import { z } from "zod";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import { logger } from "../../../utils/logger";
-import type { AnySplitPathInsideLibrary, CodecRules, Codecs } from "../codecs";
-import { isCodexSplitPath } from "../healer/library-tree/codex/helpers";
-import { tryParseAsInsideLibrarySplitPath } from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
-import { inferCreatePolicy } from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
-import type { CreateTreeLeafAction } from "../healer/library-tree/tree-action/types/tree-action";
-import { tryCanonicalizeSplitPathToDestination } from "../healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
+import type { AnySplitPathInsideLibrary, CodecRules, Codecs } from "@textfresser/library-core/codecs";
+import { isCodexSplitPath } from "@textfresser/library-core/healer/library-tree/codex/helpers";
+import { tryParseAsInsideLibrarySplitPath } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
+import { inferCreatePolicy } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/infer-create";
+import type { CreateTreeLeafAction } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
+import { tryCanonicalizeSplitPathToDestination } from "@textfresser/library-core/healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "../healer/library-tree/tree-node/types/atoms";
+} from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
 
 // ─── Scroll Metadata Schema ───
 

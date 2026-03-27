@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { LeafMatch } from "../../../src/commanders/librarian/healer/library-tree/types/leaf-match";
+import type { LeafMatch } from "@textfresser/library-core/healer/library-tree/types/leaf-match";
 import { pickClosestLeaf } from "../../../src/managers/obsidian/behavior-manager/pick-closest-leaf";
 
 describe("pickClosestLeaf", () => {

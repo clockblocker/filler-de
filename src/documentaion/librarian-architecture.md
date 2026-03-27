@@ -76,7 +76,7 @@ type SectionNode = {
 type TreeNode = ScrollNode | FileNode | SectionNode;
 ```
 
-**Source**: `src/commanders/librarian/healer/library-tree/tree-node/types/tree-node.ts`
+**Source**: `@textfresser/library-core/healer/library-tree/tree-node/types/tree-node.ts`
 
 ---
 
@@ -106,7 +106,7 @@ canonical:     "laufen-Verbs-German"
 
 **Sections have no suffix** — their identity comes from their folder path directly.
 
-**Source**: `src/commanders/librarian/codecs/internal/suffix/`
+**Source**: `@textfresser/library-core/codecs/internal/suffix/`
 
 ---
 
@@ -162,7 +162,7 @@ Format: `{coreName}‐{NodeKind}‐{extension}`
 
 Segment IDs serve as keys in the `SectionNode.children` record. They are deterministic (same node always produces the same ID) and collision-free within a parent.
 
-**Source**: `src/commanders/librarian/codecs/segment-id/`
+**Source**: `@textfresser/library-core/codecs/segment-id/`
 
 ### 5.2 Node Locators
 
@@ -178,7 +178,7 @@ type ScrollNodeLocator = {
 
 The chain includes all ancestors from root (exclusive) to parent (inclusive). Locators are the **canonical address** of a node, independent of filesystem state.
 
-**Source**: `src/commanders/librarian/codecs/locator/`
+**Source**: `@textfresser/library-core/codecs/locator/`
 
 ---
 
@@ -239,7 +239,7 @@ Vault SplitPath → library-scoped → separated-suffix → canonical → locato
 2. **Separated suffix**: `{ coreName: "laufen", suffixParts: ["Verbs", "German"] }`
 3. **Locator**: `{ segmentId: "laufen‐Scroll‐md", chain: ["German‐Section‐", "Verbs‐Section‐"] }`
 
-**Source**: `src/commanders/librarian/codecs/`
+**Source**: `@textfresser/library-core/codecs/`
 
 ---
 
@@ -264,7 +264,7 @@ translateMaterializedEvents()
   → infer policy + intent → produce TreeAction[]
 ```
 
-**Source**: `src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/`
+**Source**: `@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/`
 
 ### 7.2 Policy Inference
 
@@ -287,7 +287,7 @@ For Rename events, intent detection distinguishes:
 - **Rename intent**: user changed the core name (same parent)
 - **Move intent**: suffix changed → user wants to relocate
 
-**Source**: `src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/`
+**Source**: `@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/`
 
 ### 7.3 Tree Action Types
 
@@ -305,7 +305,7 @@ type TreeActionType = "Create" | "Delete" | "Rename" | "Move" | "ChangeStatus";
 
 All actions use **canonical tree locators** (segment IDs), not vault paths. The `observedSplitPath` is carried only for healing — it's the actual filesystem state that may need correction.
 
-**Source**: `src/commanders/librarian/healer/library-tree/tree-action/types/tree-action.ts`
+**Source**: `@textfresser/library-core/healer/library-tree/tree-action/types/tree-action.ts`
 
 ---
 
@@ -397,7 +397,7 @@ type HealingAction =
 
 These are converted to vault-scoped `VaultAction[]` via `healingActionToVaultAction()` before dispatch.
 
-**Source**: `src/commanders/librarian/healer/library-tree/types/healing-action.ts`, `src/commanders/librarian/codecs/healing-to-vault-action.ts`
+**Source**: `@textfresser/library-core/healer/library-tree/types/healing-action.ts`, `@textfresser/library-core/codecs/healing-to-vault-action.ts`
 
 ### 8.6 Healing Transaction
 
@@ -468,7 +468,7 @@ Impact per action type:
 | Move | Old parent + new parent + ancestors | Section (if section move) | — |
 | ChangeStatus | Parent + ancestors | — | — |
 
-**Source**: `src/commanders/librarian/healer/library-tree/codex/compute-codex-impact.ts`
+**Source**: `@textfresser/library-core/healer/library-tree/codex/compute-codex-impact.ts`
 
 ### 9.3 Status Aggregation
 
@@ -498,7 +498,7 @@ extractScrollStatusActions() → VaultAction[] (ProcessMdFile for scroll metadat
 All dispatched in single vam.dispatch() batch
 ```
 
-**Source**: `src/commanders/librarian/healer/library-tree/codex/`
+**Source**: `@textfresser/library-core/healer/library-tree/codex/`
 
 ---
 
@@ -812,7 +812,7 @@ type CanonicalSplitPathInsideLibrary = {
 
 This is the authoritative representation used by locators and healing.
 
-**Source**: `src/managers/obsidian/vault-action-manager/types/split-path.ts`, `src/commanders/librarian/codecs/split-path-with-separated-suffix/`
+**Source**: `src/managers/obsidian/vault-action-manager/types/split-path.ts`, `@textfresser/library-core/codecs/split-path-with-separated-suffix/`
 
 ---
 
@@ -856,7 +856,7 @@ Sections are removed only by explicit section delete/move actions, not by implic
 
 Move and Create actions may target sections that don't exist yet. `ensureSectionChain()` creates missing intermediate sections along the chain.
 
-**Source**: `src/commanders/librarian/healer/library-tree/tree.ts`
+**Source**: `@textfresser/library-core/healer/library-tree/tree.ts`
 
 ---
 
@@ -927,9 +927,9 @@ Move and Create actions may target sections that don't exist yet. `ensureSection
 
 ### 20.1 Zod v4 Import in atoms.ts
 
-`src/commanders/librarian/healer/library-tree/tree-node/types/atoms.ts` uses `import z from "zod"` (v4 default import) instead of `import { z } from "zod/v3"`. This is the same v3/v4 mismatch trap documented in MEMORY.md. While it may not cause runtime issues here (enums are simple), it violates the project-wide rule in CLAUDE.md: "always use `import { z } from "zod/v3"`".
+`@textfresser/library-core/healer/library-tree/tree-node/types/atoms.ts` uses `import z from "zod"` (v4 default import) instead of `import { z } from "zod/v3"`. This is the same v3/v4 mismatch trap documented in MEMORY.md. While it may not cause runtime issues here (enums are simple), it violates the project-wide rule in CLAUDE.md: "always use `import { z } from "zod/v3"`".
 
-**Same issue in**: `src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types.ts` — uses `import z from "zod"`.
+**Same issue in**: `@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types.ts` — uses `import z from "zod"`.
 
 **Risk**: If these schemas ever compose with v3 schemas (e.g., passed to a function expecting v3 ZodType), it can cause `keyValidator._parse is not a function` at runtime.
 

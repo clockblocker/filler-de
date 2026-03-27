@@ -24,9 +24,9 @@ Source: local health-check run before new Textfresser feature work.
 #### 0.2) Restore `src/` TypeScript compile health
 - Current state: `bun x tsc --noEmit -skipLibCheck` reports production-code errors in `src/` (not only tests).
 - High-priority breakpoints:
-  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/librarian/codecs/locator/internal/from.ts`
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/@textfresser/library-core/codecs/locator/internal/from.ts`
   - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/librarian/commands/split-in-blocks.ts`
-  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/librarian/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-vault-scoped.ts`
+  - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-vault-scoped.ts`
   - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/managers/obsidian/behavior-manager/checkbox-behavior.ts`
   - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/managers/overlay-manager/index.ts`
 

@@ -15,21 +15,21 @@ import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-pat
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../src/commanders/librarian/codecs";
+} from "@textfresser/library-core/codecs";
 import { Healer } from "../../../src/commanders/librarian/healer/healer";
 import {
 	codexImpactToDeletions,
 	codexImpactToIncrementalRecreations,
 	codexImpactToRecreations,
-} from "../../../src/commanders/librarian/healer/library-tree/codex/codex-impact-to-actions";
-import { mergeCodexImpacts } from "../../../src/commanders/librarian/healer/library-tree/codex/merge-codex-impacts";
-import { Tree } from "../../../src/commanders/librarian/healer/library-tree/tree";
-import { TreeActionType } from "../../../src/commanders/librarian/healer/library-tree/tree-action/types/tree-action";
+} from "@textfresser/library-core/healer/library-tree/codex/codex-impact-to-actions";
+import { mergeCodexImpacts } from "@textfresser/library-core/healer/library-tree/codex/merge-codex-impacts";
+import { Tree } from "@textfresser/library-core/healer/library-tree/tree";
+import { TreeActionType } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
-import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
+} from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
+import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import {

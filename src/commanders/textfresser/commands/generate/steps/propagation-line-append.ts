@@ -1,5 +1,5 @@
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
-import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import { canonicalizeTargetForComparison } from "../../../common/target-comparison";
 
 export type PropagationResult = { changed: boolean; content: string };

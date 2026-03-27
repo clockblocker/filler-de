@@ -9,14 +9,14 @@ import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/
 import { err, ok, type Result } from "neverthrow";
 import { Notice } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { goBackLinkHelper } from "../../../stateless-helpers/go-back-link/go-back-link";
-import { parseSeparatedSuffix } from "../codecs/internal/suffix/parse";
-import type { CodecRules } from "../codecs/rules";
-import { makeCodecRulesFromSettings } from "../codecs/rules";
+import { goBackLinkHelper } from "@textfresser/note-addressing/go-back-link";
+import { parseSeparatedSuffix } from "@textfresser/library-core/codecs/internal/suffix/parse";
+import type { CodecRules } from "@textfresser/library-core/codecs/rules";
+import { makeCodecRulesFromSettings } from "@textfresser/library-core/codecs/rules";
 import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-} from "../codecs/segment-id/types/segment-id";
+} from "@textfresser/library-core/codecs/segment-id/types/segment-id";
 import { buildPageSplitActions } from "./build-actions";
 import {
 	handleSplitToPagesError,

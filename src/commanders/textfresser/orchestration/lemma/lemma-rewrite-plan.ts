@@ -1,6 +1,6 @@
 import { markdownHelper } from "../../../../stateless-helpers/markdown-strip";
 import { multiSpanHelper } from "../../../../stateless-helpers/multi-span";
-import { wikilinkHelper } from "../../../../stateless-helpers/wikilink";
+import { wikilinkHelper } from "/note-addressing/wikilink";
 import { logger } from "../../../../utils/logger";
 import {
 	buildWikilinkForTarget,

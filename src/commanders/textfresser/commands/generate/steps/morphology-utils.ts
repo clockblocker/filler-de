@@ -1,4 +1,4 @@
-import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 
 export function normalizeLemma(raw: string | null | undefined): string | null {
 	const trimmed = raw?.trim();

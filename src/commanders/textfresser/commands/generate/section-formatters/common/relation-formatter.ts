@@ -1,5 +1,5 @@
 import type { LexicalRelations } from "@textfresser/lexical-generation";
-import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 
 const SYMBOL_FOR_KIND: Record<
 	LexicalRelations["relations"][number]["kind"],

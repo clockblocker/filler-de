@@ -16,8 +16,8 @@ import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-
 import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../codecs";
-import type { HealingAction } from "../healer/library-tree/types/healing-action";
+} from "@textfresser/library-core/codecs";
+import type { HealingAction } from "@textfresser/library-core/healer/library-tree/types/healing-action";
 
 // ─── Error Types ───
 

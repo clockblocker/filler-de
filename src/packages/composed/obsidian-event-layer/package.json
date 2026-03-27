@@ -1,6 +1,7 @@
 {
 	"dependencies": {
 		"@codemirror/view": "latest",
+		"@textfresser/note-addressing": "workspace:*",
 		"@textfresser/vault-action-manager": "workspace:*",
 		"zod": "4.3.6"
 	},

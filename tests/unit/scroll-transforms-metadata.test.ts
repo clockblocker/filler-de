@@ -2,13 +2,13 @@
  * Unit test to verify scroll transforms preserve JSON metadata.
  */
 import { describe, expect, it, mock } from "bun:test";
-import { makeCodecRulesFromSettings, makeCodecs } from "../../src/commanders/librarian/codecs";
-import type { SectionNodeSegmentId } from "../../src/commanders/librarian/codecs/segment-id";
-import { NodeSegmentIdSeparator } from "../../src/commanders/librarian/codecs/segment-id/types/segment-id";
+import { makeCodecRulesFromSettings, makeCodecs } from "@textfresser/library-core/codecs";
+import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
+import { NodeSegmentIdSeparator } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
 import {
 	makeBacklinkTransform,
 	makeStripScrollBacklinkTransform,
-} from "../../src/commanders/librarian/healer/library-tree/codex/transforms/scroll-transforms";
+} from "@textfresser/library-core/healer/library-tree/codex/transforms/scroll-transforms";
 import { noteMetadataHelper } from "../../src/stateless-helpers/note-metadata";
 import { defaultSettingsForUnitTests } from "./common-utils/consts";
 

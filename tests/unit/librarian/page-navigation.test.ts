@@ -11,13 +11,13 @@ import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-pat
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "../../../src/commanders/librarian/codecs";
-import { makeCodexBasename } from "../../../src/commanders/librarian/healer/library-tree/codex/format-codex-line";
+} from "@textfresser/library-core/codecs";
+import { makeCodexBasename } from "@textfresser/library-core/healer/library-tree/codex/format-codex-line";
 import {
 	getNextPage,
 	getPrevPage,
 } from "../../../src/commanders/librarian/page-navigation";
-import type { NodeName } from "../../../src/commanders/librarian/types/schemas/node-name";
+import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 import { makeTree } from "./library-tree/tree-test-helpers";

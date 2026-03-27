@@ -3,7 +3,7 @@ import { stringifySplitPath } from "../../../../stateless-helpers/split-path-com
 import {
 	type ParsedWikilink,
 	wikilinkHelper,
-} from "../../../../stateless-helpers/wikilink";
+} from "/note-addressing/wikilink";
 import { resolveSectionLinkPolicyForCssKind } from "../../common/linguistic-wikilink-context";
 import type {
 	LibraryBasenameParser,

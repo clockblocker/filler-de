@@ -1,4 +1,4 @@
-import { wikilinkHelper } from "../../../../../../stateless-helpers/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 
 const YOUGLISH_BASE = "https://youglish.com/pronounce";
 

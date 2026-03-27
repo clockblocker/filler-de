@@ -5,12 +5,12 @@ import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "../codecs";
+} from "@textfresser/library-core/codecs";
 import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
-} from "../codecs/locator/types";
-import type { SectionNodeSegmentId } from "../codecs/segment-id/types/segment-id";
+} from "@textfresser/library-core/codecs/locator/types";
+import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
 import {
 	computeDescendantSuffixHealing,
 	computeLeafHealingForFile,

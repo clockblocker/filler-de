@@ -1,0 +1,30 @@
+{
+	"name": "@textfresser/library-core",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"dependencies": {
+		"@textfresser/note-addressing": "workspace:*",
+		"@textfresser/vault-action-manager": "workspace:*",
+		"neverthrow": "^8.2.0",
+		"zod": "4.3.6"
+	},
+	"exports": {
+		".": "./src/index.ts",
+		"./codecs": "./src/codecs/index.ts",
+		"./codecs/*": "./src/codecs/*",
+		"./codex": "./src/codex/index.ts",
+		"./codex/*": "./src/healer/library-tree/codex/*",
+		"./display-name-sort": "./src/display-name-sort.ts",
+		"./healing": "./src/healing/index.ts",
+		"./healing/*": "./src/healer/library-tree/*",
+		"./internal/*": "./src/internal/*",
+		"./path-finder": "./src/path-finder.ts",
+		"./tree": "./src/tree/index.ts",
+		"./tree/*": "./src/healer/library-tree/*",
+		"./types/*": "./src/types/*"
+	},
+	"scripts": {
+		"build": "bun ../../../../scripts/build-workspace-package.ts"
+	}
+}

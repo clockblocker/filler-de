@@ -2,7 +2,7 @@ import type {
 	LexemInflections,
 	LexicalCase,
 } from "@textfresser/lexical-generation";
-import { wikilinkHelper } from "../../../../../../../../stateless-helpers/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import {
 	CASE_ORDER,
 	CASE_SHORT_LABEL,

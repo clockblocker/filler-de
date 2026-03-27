@@ -1,5 +1,5 @@
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
-import { wikilinkHelper } from "../../../../../stateless-helpers/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import type { TargetLanguage } from "../../../../../types";
 import { resolveClosedSetLibraryTarget } from "../../../common/closed-set-library-target-resolver";
 import { isClosedSetPos } from "../../../common/lemma-link-routing";

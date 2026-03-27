@@ -5,7 +5,7 @@ import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata"
 import {
 	type ParsedWikilink,
 	wikilinkHelper,
-} from "../../../../stateless-helpers/wikilink";
+} from "/note-addressing/wikilink";
 import type { TargetLanguage } from "../../../../types";
 import { logger } from "../../../../utils/logger";
 import { extractHashTags } from "../../../../utils/text-utils";
