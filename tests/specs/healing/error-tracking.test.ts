@@ -13,7 +13,7 @@ import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "@textfresser/library-core/codecs";
-import { Healer } from "../../../src/commanders/librarian/healer/healer";
+import { Healer } from "@textfresser/library-core/healing";
 import {
 	getHealingAuditLog,
 	resetHealingAuditLog,

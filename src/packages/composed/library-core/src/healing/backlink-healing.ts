@@ -3,21 +3,21 @@
  * Runs on init and on rename/move; uses only goBackLinkHelper for link building.
  */
 
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
-import {
-	type VaultAction,
-	VaultActionKind,
-} from "@textfresser/vault-action-manager/types/vault-action";
-import type { Codecs, CodecRules } from "@textfresser/library-core/codecs";
+import type { CodecRules, Codecs } from "../codecs";
 import {
 	collectTreeData,
 	computeCodexSplitPath,
 	makeBacklinkTransform,
 	makeStripScrollBacklinkTransform,
-} from "@textfresser/library-core/codex";
-import type { TreeReader } from "@textfresser/library-core/tree";
-import { makeVaultScopedSplitPath } from "@textfresser/library-core/tree/library-scope";
-import { computeScrollSplitPath } from "@textfresser/library-core/tree/utils";
+} from "../codex";
+import type { TreeReader } from "../tree";
+import { makeVaultScopedSplitPath } from "../tree/library-scope";
+import { computeScrollSplitPath } from "../tree/utils";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import {
+	type VaultAction,
+	VaultActionKind,
+} from "@textfresser/vault-action-manager/types/vault-action";
 
 /**
  * Produce VaultAction[] to set or strip go-back links for all library md files

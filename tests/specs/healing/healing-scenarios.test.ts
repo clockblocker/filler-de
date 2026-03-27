@@ -16,13 +16,13 @@ import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "@textfresser/library-core/codecs";
-import { Healer } from "../../../src/commanders/librarian/healer/healer";
 import {
 	codexImpactToDeletions,
 	codexImpactToIncrementalRecreations,
 	codexImpactToRecreations,
 	mergeCodexImpacts,
 } from "@textfresser/library-core/codex";
+import { Healer } from "@textfresser/library-core/healing";
 import { Tree, TreeNodeKind, TreeNodeStatus } from "@textfresser/library-core/tree";
 import { TreeActionType } from "@textfresser/library-core/tree/actions";
 import type { NodeName } from "@textfresser/library-core/types";

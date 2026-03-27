@@ -5,8 +5,8 @@ import {
 import type { Codecs } from "@textfresser/library-core/codecs";
 import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
 import { sortTreeNodesForDisplay } from "@textfresser/library-core/display-name-sort";
-import type { Healer } from "./healer/healer";
 import { isCodexSplitPath } from "@textfresser/library-core/codex";
+import type { Healer } from "@textfresser/library-core/healing";
 import {
 	TreeNodeKind,
 } from "@textfresser/library-core/tree";

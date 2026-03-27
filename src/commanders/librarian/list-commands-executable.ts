@@ -5,7 +5,7 @@ import {
 } from "../../managers/obsidian/command-executor";
 import { parsePageIndex } from "./bookkeeper/page-codec";
 import type { Codecs } from "@textfresser/library-core/codecs";
-import type { Healer } from "./healer/healer";
+import type { Healer } from "@textfresser/library-core/healing";
 import { isCodexSplitPath } from "@textfresser/library-core/codex";
 import {
 	getNextPage as getNextPageImpl,

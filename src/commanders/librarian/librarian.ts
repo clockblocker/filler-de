@@ -36,8 +36,6 @@ import type {
 	LibrarianCommandInput,
 	LibrarianCommandKind,
 } from "./commands/types";
-import { getBacklinkHealingVaultActions } from "./healer/backlink-healing";
-import { Healer } from "./healer/healer";
 import { HealingTransaction } from "./healer/healing-transaction";
 import {
 	type CodexClickTarget,
@@ -54,16 +52,18 @@ import {
 	TreeNodeStatus,
 } from "@textfresser/library-core/tree";
 import { buildTreeActions } from "@textfresser/library-core/tree/actions";
-import type {
-	ChangeNodeStatusAction,
-	TreeAction,
-	HealingAction,
+import {
+	type ChangeNodeStatusAction,
+	getBacklinkHealingVaultActions,
+	Healer,
+	type HealingAction,
+	scanAndGenerateOrphanActions,
+	type TreeAction,
 } from "@textfresser/library-core/healing";
 import {
 	extractScrollStatusActions,
 	findInvalidCodexFiles,
 } from "@textfresser/library-core/tree/utils";
-import { scanAndGenerateOrphanActions } from "./healer/orphan-codex-scanner";
 import {
 	assembleVaultActions,
 	buildInitialCreateActions,

@@ -1,5 +1,5 @@
 import type { Codecs } from "@textfresser/library-core/codecs";
-import type { Healer } from "../healer/healer";
+import type { Healer } from "@textfresser/library-core/healing";
 import {
 	type CodexAction,
 	type CodexImpact,

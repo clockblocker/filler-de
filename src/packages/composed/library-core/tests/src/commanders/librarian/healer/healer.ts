@@ -1,1 +1,1 @@
-export { Healer } from "../../../../../../../../../src/commanders/librarian/healer/healer";
+export { Healer } from "@textfresser/library-core/healing";

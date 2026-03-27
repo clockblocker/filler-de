@@ -27,7 +27,7 @@ import {
 	makeInternalError,
 	makeVaultOperationError,
 } from "../errors/healing-error";
-import type { Healer, HealerApplyResult } from "./healer";
+import type { Healer, HealerApplyResult } from "@textfresser/library-core/healing";
 import { getHealingAuditLog } from "./healing-audit-log";
 
 // ─── Types ───

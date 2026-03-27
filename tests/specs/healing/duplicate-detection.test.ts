@@ -17,7 +17,7 @@ import {
 import {
 	OrphanCodexScanner,
 	scanAndGenerateOrphanActions,
-} from "../../../src/commanders/librarian/healer/orphan-codex-scanner";
+} from "@textfresser/library-core/healing";
 import type { NodeName } from "@textfresser/library-core/types";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";

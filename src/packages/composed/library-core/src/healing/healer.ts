@@ -1,43 +1,40 @@
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import type {
 	Codecs,
 	FileNodeLocator,
+	ScrollNodeLocator,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-	ScrollNodeLocator,
-} from "@textfresser/library-core/codecs";
-import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
-import type { CodexImpact } from "@textfresser/library-core/codex";
-import { computeCodexImpact } from "@textfresser/library-core/codex";
-import {
-	type FileNode,
-	type LeafMatch,
-	makeNodeSegmentId,
-	type ScrollNode,
-	type SectionNode,
-	type Tree,
-	type TreeNode,
-	type TreeReader,
-	TreeNodeKind,
-	type TreeNodeStatus,
-} from "@textfresser/library-core/tree";
-import {
-	getRootBaseName,
-	resolveNextAvailableNameInSection,
-	buildCanonicalLeafSplitPath,
-} from "@textfresser/library-core/tree/utils";
+} from "../codecs";
+import type { SectionNodeSegmentId } from "../codecs/segment-id";
+import type { CodexImpact } from "../codex";
+import { computeCodexImpact } from "../codex";
 import type {
 	ChangeNodeStatusAction,
 	CreateTreeLeafAction,
 	DeleteNodeAction,
-	HealingAction,
 	MoveNodeAction,
 	RenameNodeAction,
 	TreeAction,
-} from "@textfresser/library-core/healing";
-import { TreeActionType } from "@textfresser/library-core/healing";
-import { splitPathsEqual } from "../../../stateless-helpers/split-path-comparison";
+} from "../healer/library-tree/tree-action/types/tree-action";
+import type { HealingAction } from "../healer/library-tree/types/healing-action";
+import { TreeActionType } from "../healer/library-tree/tree-action/types/tree-action";
+import {
+	type LeafMatch,
+	makeNodeSegmentId,
+	type SectionNode,
+	type Tree,
+	type TreeNode,
+	TreeNodeKind,
+	type TreeReader,
+} from "../tree";
+import {
+	buildCanonicalLeafSplitPath,
+	getRootBaseName,
+	resolveNextAvailableNameInSection,
+} from "../tree/utils";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { splitPathsEqual } from "./split-path-equality";
 import {
 	computeDescendantSuffixHealing,
 	computeLeafHealingForFile,

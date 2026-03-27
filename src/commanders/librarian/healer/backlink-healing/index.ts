@@ -1,1 +1,1 @@
-export { getBacklinkHealingVaultActions } from "./get-backlink-healing-vault-actions";
+export { getBacklinkHealingVaultActions } from "@textfresser/library-core/healing";

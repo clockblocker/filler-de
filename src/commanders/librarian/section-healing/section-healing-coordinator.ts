@@ -3,9 +3,11 @@ import { MD } from "@textfresser/vault-action-manager/types/literals";
 import type { SplitHealingInfo } from "../bookkeeper/split-to-pages-action";
 import type { CodecRules, Codecs } from "@textfresser/library-core/codecs";
 import type { ScrollNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
-import { getBacklinkHealingVaultActions } from "../healer/backlink-healing/get-backlink-healing-vault-actions";
-import type { Healer } from "../healer/healer";
 import type { CodexImpact } from "@textfresser/library-core/codex";
+import {
+	getBacklinkHealingVaultActions,
+	type Healer,
+} from "@textfresser/library-core/healing";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,

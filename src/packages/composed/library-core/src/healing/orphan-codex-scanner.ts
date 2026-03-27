@@ -10,15 +10,15 @@
  * and generates cleanup actions for mismatched codexes.
  */
 
-import type { Codecs, SplitPathToMdFileInsideLibrary } from "@textfresser/library-core/codecs";
-import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
-import type { HealingAction } from "@textfresser/library-core/healing";
+import type { Codecs, SplitPathToMdFileInsideLibrary } from "../codecs";
+import type { SectionNodeSegmentId } from "../codecs/segment-id";
+import type { HealingAction } from "../healer/library-tree/types/healing-action";
 import {
 	computeCodexSplitPath,
 	isCodexSplitPath,
-} from "@textfresser/library-core/codex";
-import type { TreeReader } from "@textfresser/library-core/tree";
-import { TreeNodeKind } from "@textfresser/library-core/tree";
+} from "../codex";
+import type { TreeReader } from "../tree";
+import { TreeNodeKind } from "../tree";
 
 // ─── Types ───
 
