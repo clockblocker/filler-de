@@ -38,10 +38,10 @@
 				"src/packages/independent/vault-action-manager/src/*"
 			],
 			"@textfresser/lexical-generation": [
-				"src/packages/independent/lexical-generation/index.ts"
+				"src/packages/independent/lexical-generation/src/index.ts"
 			],
 			"@textfresser/lexical-generation/*": [
-				"src/packages/independent/lexical-generation/*"
+				"src/packages/independent/lexical-generation/src/*"
 			],
 			"@textfresser/obsidian-event-layer": [
 				"src/packages/composed/obsidian-event-layer/src/index.ts"

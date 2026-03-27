@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	buildGermanVerbEntryIdentity,
 	GermanVerbFullFeaturesSchema,
-} from "../../internal/linguistics/de/lexem/verb/features";
+} from "../../src/internal/linguistics/de/lexem/verb/features";
 
 describe("German verb features", () => {
 	it("parses full verb features", () => {

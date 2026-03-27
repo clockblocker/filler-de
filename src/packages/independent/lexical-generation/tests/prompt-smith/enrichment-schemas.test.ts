@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { lexemEnrichmentSchemas } from "../../internal/prompt-smith/schemas/lexem-enrichment";
-import { nounEnrichmentSchemas } from "../../internal/prompt-smith/schemas/noun-enrichment";
-import { phrasemEnrichmentSchemas } from "../../internal/prompt-smith/schemas/phrasem-enrichment";
+import { lexemEnrichmentSchemas } from "../../src/internal/prompt-smith/schemas/lexem-enrichment";
+import { nounEnrichmentSchemas } from "../../src/internal/prompt-smith/schemas/noun-enrichment";
+import { phrasemEnrichmentSchemas } from "../../src/internal/prompt-smith/schemas/phrasem-enrichment";
 
 describe("Enrichment schemas", () => {
 	it("accepts Lexem enrichment input/output", () => {

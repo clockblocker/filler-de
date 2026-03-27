@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { zodResponseFormat } from "openai/helpers/zod";
-import { SchemasFor } from "../../internal/prompt-smith/schemas";
+import { SchemasFor } from "../../src/internal/prompt-smith/schemas";
 
 function toOpenAiZodSchema(
 	schema: unknown,

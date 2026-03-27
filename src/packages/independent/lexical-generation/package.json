@@ -10,14 +10,14 @@
 		"winston": "3.19.0"
 	},
 	"exports": {
-		".": "./index.ts"
+		".": "./src/index.ts"
 	},
 	"name": "@textfresser/lexical-generation",
 	"private": true,
 	"scripts": {
 		"build": "bun ../../../../scripts/build-workspace-package.ts",
 		"build:full": "bun run codegen:prompts && bun ../../../../scripts/build-workspace-package.ts",
-		"codegen:prompts": "bun ./internal/prompt-smith/codegen/skript/run.ts",
+		"codegen:prompts": "bun ./src/internal/prompt-smith/codegen/skript/run.ts",
 		"fix": "bun x biome check --write --unsafe . 2>/dev/null || true",
 		"prompt:stability": "bun ./tests/prompt-test/stability-runner.ts",
 		"prompt:test": "bun ./tests/prompt-test/runner.ts",

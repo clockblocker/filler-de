@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { PROMPT_FOR, SchemasFor } from "../../internal/prompt-smith";
-import type { PromptKind } from "../../internal/prompt-smith/codegen/consts";
+import { PROMPT_FOR, SchemasFor } from "../../src/internal/prompt-smith";
+import type { PromptKind } from "../../src/internal/prompt-smith/codegen/consts";
 import { callGemini } from "./api-client";
 
 type Example = { input: unknown; output: unknown };
@@ -49,7 +49,7 @@ async function loadTestExamples(
 ): Promise<Example[]> {
 	const toTestPath = path.resolve(
 		import.meta.dir,
-		"../../internal/prompt-smith/prompt-parts",
+		"../../src/internal/prompt-smith/prompt-parts",
 		toKebabCase(targetLanguage),
 		toKebabCase(knownLanguage),
 		toKebabCase(promptKind),

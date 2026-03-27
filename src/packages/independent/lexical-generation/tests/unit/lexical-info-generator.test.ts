@@ -5,7 +5,7 @@ import {
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,
 	type StructuredFetchFn,
-} from "../../index";
+} from "../../src/index";
 
 function okValue<T>(value: unknown) {
 	return ok(value as T);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import { featuresAdjectiveSchemas } from "../../internal/prompt-smith/schemas/features-adjective";
-import { featuresNounSchemas } from "../../internal/prompt-smith/schemas/features-noun";
-import { featuresVerbSchemas } from "../../internal/prompt-smith/schemas/features-verb";
+import { featuresAdjectiveSchemas } from "../../src/internal/prompt-smith/schemas/features-adjective";
+import { featuresNounSchemas } from "../../src/internal/prompt-smith/schemas/features-noun";
+import { featuresVerbSchemas } from "../../src/internal/prompt-smith/schemas/features-verb";
 
 describe("Features schema", () => {
 	describe("userInputSchema", () => {

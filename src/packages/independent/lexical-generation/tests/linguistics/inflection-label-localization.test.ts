@@ -4,8 +4,8 @@ import {
 	getCaseLabelForTargetLanguage,
 	getNumberLabelForTargetLanguage,
 	numberValueFromLocalizedLabel,
-} from "../../internal/linguistics/common/enums/inflection/feature-values";
-import { getGermanGenusLabelForTargetLanguage } from "../../internal/linguistics/de/lexem/noun/features";
+} from "../../src/internal/linguistics/common/enums/inflection/feature-values";
+import { getGermanGenusLabelForTargetLanguage } from "../../src/internal/linguistics/de/lexem/noun/features";
 
 describe("inflection label localization", () => {
 	it("returns German case/number labels", () => {
