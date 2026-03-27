@@ -17,7 +17,7 @@ import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "@textfresser/library-core/codecs";
-import type { HealingAction } from "@textfresser/library-core/healer/library-tree/types/healing-action";
+import type { HealingAction } from "@textfresser/library-core/healing";
 
 // ─── Error Types ───
 

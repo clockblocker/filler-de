@@ -29,7 +29,7 @@ import {
 import type {
 	ScrollNodeLocator,
 	SectionNodeLocator,
-} from "@textfresser/library-core/codecs/locator/types";
+} from "@textfresser/library-core/codecs/locator";
 import { commandFnForCommandKind } from "./commands";
 import type {
 	CommandError,
@@ -43,26 +43,26 @@ import {
 	type CodexClickTarget,
 	type CodexImpact,
 	extractInvalidCodexesFromBulk,
-	parseCodexClickLineContent,
-} from "@textfresser/library-core/healer/library-tree/codex";
-import {
 	isCodexInsideLibrary as isCodexInsideLibraryHelper,
 	isCodexSplitPath,
-} from "@textfresser/library-core/healer/library-tree/codex/helpers";
-import type { LeafMatch } from "@textfresser/library-core/healer/library-tree/tree";
-import { Tree } from "@textfresser/library-core/healer/library-tree/tree";
-import { buildTreeActions } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter";
+	parseCodexClickLineContent,
+} from "@textfresser/library-core/codex";
+import type { LeafMatch } from "@textfresser/library-core/tree";
+import {
+	Tree,
+	TreeNodeKind,
+	TreeNodeStatus,
+} from "@textfresser/library-core/tree";
+import { buildTreeActions } from "@textfresser/library-core/tree/actions";
 import type {
 	ChangeNodeStatusAction,
 	TreeAction,
-} from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
+	HealingAction,
+} from "@textfresser/library-core/healing";
 import {
-	TreeNodeKind,
-	TreeNodeStatus,
-} from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
-import type { HealingAction } from "@textfresser/library-core/healer/library-tree/types/healing-action";
-import { extractScrollStatusActions } from "@textfresser/library-core/healer/library-tree/utils/extract-scroll-status-actions";
-import { findInvalidCodexFiles } from "@textfresser/library-core/healer/library-tree/utils/find-invalid-codex-files";
+	extractScrollStatusActions,
+	findInvalidCodexFiles,
+} from "@textfresser/library-core/tree/utils";
 import { scanAndGenerateOrphanActions } from "./healer/orphan-codex-scanner";
 import {
 	assembleVaultActions,
@@ -76,8 +76,7 @@ import {
 	getPrevPage as getPrevPageImpl,
 } from "./page-navigation";
 import { triggerSectionHealing as triggerSectionHealingImpl } from "./section-healing/section-healing-coordinator";
-import { PREFIX_OF_CODEX } from "@textfresser/library-core/types/consts/literals";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+import { PREFIX_OF_CODEX, type NodeName } from "@textfresser/library-core/types";
 import { VaultActionQueue } from "./vault-action-queue/vault-action-queue";
 import { resolveAliasFromSuffix } from "./wikilink-alias/wikilink-alias";
 

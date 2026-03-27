@@ -18,16 +18,17 @@ import {
 import {
 	pathPartsToSuffixParts,
 	pathPartsWithRootToSuffixParts,
-	suffixPartsToPathParts,
-} from "@textfresser/library-core/codecs/internal/suffix/path-parts";
-import {
 	serializeSeparatedSuffix,
 	serializeSeparatedSuffixUnchecked,
-} from "@textfresser/library-core/codecs/internal/suffix/serialize";
-import { TreeNodeKind, TreeNodeStatus } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
-import type { ScrollNode } from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
-import { buildObservedLeafSplitPath } from "@textfresser/library-core/healer/library-tree/utils/split-path-utils";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+	suffixPartsToPathParts,
+} from "@textfresser/library-core/codecs/suffix";
+import {
+	type ScrollNode,
+	TreeNodeKind,
+	TreeNodeStatus,
+} from "@textfresser/library-core/tree";
+import { buildObservedLeafSplitPath } from "@textfresser/library-core/tree/utils";
+import type { NodeName } from "@textfresser/library-core/types";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 

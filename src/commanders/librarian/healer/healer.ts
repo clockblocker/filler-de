@@ -7,25 +7,26 @@ import type {
 	SplitPathToMdFileInsideLibrary,
 	ScrollNodeLocator,
 } from "@textfresser/library-core/codecs";
-import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
+import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
 import type { CodexImpact } from "@textfresser/library-core/codex";
 import { computeCodexImpact } from "@textfresser/library-core/codex";
-import type { LeafMatch, Tree } from "@textfresser/library-core/tree";
-import type { TreeReader } from "@textfresser/library-core/healer/library-tree/tree-interfaces";
-import { makeNodeSegmentId } from "@textfresser/library-core/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import {
+	type FileNode,
+	type LeafMatch,
+	makeNodeSegmentId,
+	type ScrollNode,
+	type SectionNode,
+	type Tree,
+	type TreeNode,
+	type TreeReader,
 	TreeNodeKind,
 	type TreeNodeStatus,
 } from "@textfresser/library-core/tree";
-import type {
-	SectionNode,
-	TreeNode,
-} from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
 import {
 	getRootBaseName,
 	resolveNextAvailableNameInSection,
-} from "@textfresser/library-core/healer/library-tree/utils/duplicate-name-resolver";
-import { buildCanonicalLeafSplitPath } from "@textfresser/library-core/healer/library-tree/utils/split-path-utils";
+	buildCanonicalLeafSplitPath,
+} from "@textfresser/library-core/tree/utils";
 import type {
 	ChangeNodeStatusAction,
 	CreateTreeLeafAction,

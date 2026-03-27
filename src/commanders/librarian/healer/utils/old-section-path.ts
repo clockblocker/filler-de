@@ -1,7 +1,7 @@
 import { err, ok, type Result } from "neverthrow";
 import type { Codecs, CodecError } from "@textfresser/library-core/codecs";
-import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
-import { sectionChainToPathParts } from "@textfresser/library-core/healer/library-tree/utils/section-chain-utils";
+import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
+import { sectionChainToPathParts } from "@textfresser/library-core/tree/utils";
 
 /**
  * Parse old section path from a section locator.

@@ -1,4 +1,3 @@
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import type {
 	Codecs,
 	FileNodeLocator,
@@ -6,14 +5,15 @@ import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "@textfresser/library-core/codecs";
-import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
-import { makeNodeSegmentId } from "@textfresser/library-core/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import { TreeNodeKind } from "@textfresser/library-core/tree";
-import type {
-	FileNode,
-	ScrollNode,
-} from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
+import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
 import type { HealingAction } from "@textfresser/library-core/healing";
+import {
+	type FileNode,
+	makeNodeSegmentId,
+	type ScrollNode,
+	TreeNodeKind,
+} from "@textfresser/library-core/tree";
+import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	computeLeafHealingForFile,
 	computeLeafHealingForScroll,

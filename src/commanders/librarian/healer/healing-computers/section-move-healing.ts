@@ -3,11 +3,13 @@ import type {
 	Codecs,
 	SplitPathToFolderInsideLibrary,
 } from "@textfresser/library-core/codecs";
-import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
+import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
 import type { HealingAction } from "@textfresser/library-core/healing";
-import { makeNodeSegmentId } from "@textfresser/library-core/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import type { SectionNode } from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
-import { sectionChainToPathParts } from "@textfresser/library-core/healer/library-tree/utils/section-chain-utils";
+import {
+	makeNodeSegmentId,
+	type SectionNode,
+} from "@textfresser/library-core/tree";
+import { sectionChainToPathParts } from "@textfresser/library-core/tree/utils";
 import { computeDescendantSuffixHealing } from "./descendant-suffix-healing";
 
 export type SectionMoveParams = {

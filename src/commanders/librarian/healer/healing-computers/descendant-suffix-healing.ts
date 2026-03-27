@@ -1,11 +1,15 @@
 import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import type { Codecs } from "@textfresser/library-core/codecs";
-import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
+import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
 import type { HealingAction } from "@textfresser/library-core/healing";
-import { sectionChainToPathParts } from "@textfresser/library-core/healer/library-tree/utils/section-chain-utils";
-import type { SectionNode } from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
-import { buildObservedLeafSplitPath } from "@textfresser/library-core/healer/library-tree/utils/split-path-utils";
-import { TreeNodeKind } from "@textfresser/library-core/tree";
+import {
+	type SectionNode,
+	TreeNodeKind,
+} from "@textfresser/library-core/tree";
+import {
+	buildObservedLeafSplitPath,
+	sectionChainToPathParts,
+} from "@textfresser/library-core/tree/utils";
 import {
 	computeLeafHealingForFile,
 	computeLeafHealingForScroll,

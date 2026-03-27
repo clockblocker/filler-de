@@ -19,10 +19,9 @@ import {
 	resetHealingAuditLog,
 } from "../../../src/commanders/librarian/healer/healing-audit-log";
 import { HealingTransaction } from "../../../src/commanders/librarian/healer/healing-transaction";
-import { Tree } from "@textfresser/library-core/healer/library-tree/tree";
-import { TreeActionType } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
-import { TreeNodeStatus } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+import { Tree, TreeNodeStatus } from "@textfresser/library-core/tree";
+import { TreeActionType } from "@textfresser/library-core/tree/actions";
+import type { NodeName } from "@textfresser/library-core/types";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import {

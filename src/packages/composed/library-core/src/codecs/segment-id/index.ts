@@ -10,6 +10,7 @@ export type {
 } from "./types/segment-id";
 export {
 	FileNodeSegmentIdSchema,
+	NodeSegmentIdSeparator,
 	NodeSegmentIdSeparatorSchema,
 	ScrollNodeSegmentIdSchema,
 	SectionNodeSegmentIdChainSchema,

@@ -3,15 +3,17 @@ import {
 	type SplitPathToMdFile,
 } from "@textfresser/vault-action-manager/types/split-path";
 import type { Codecs } from "@textfresser/library-core/codecs";
-import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
+import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
 import { sortTreeNodesForDisplay } from "@textfresser/library-core/display-name-sort";
 import type { Healer } from "./healer/healer";
-import { isCodexSplitPath } from "@textfresser/library-core/healer/library-tree/codex/helpers";
-import { TreeNodeKind } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
+import { isCodexSplitPath } from "@textfresser/library-core/codex";
+import {
+	TreeNodeKind,
+} from "@textfresser/library-core/tree";
 import type {
 	ScrollNode,
 	SectionNode,
-} from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
+} from "@textfresser/library-core/tree";
 
 /**
  * Get previous library scroll using the tree's display order.

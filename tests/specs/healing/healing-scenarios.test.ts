@@ -21,15 +21,11 @@ import {
 	codexImpactToDeletions,
 	codexImpactToIncrementalRecreations,
 	codexImpactToRecreations,
-} from "@textfresser/library-core/healer/library-tree/codex/codex-impact-to-actions";
-import { mergeCodexImpacts } from "@textfresser/library-core/healer/library-tree/codex/merge-codex-impacts";
-import { Tree } from "@textfresser/library-core/healer/library-tree/tree";
-import { TreeActionType } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
-import {
-	TreeNodeKind,
-	TreeNodeStatus,
-} from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+	mergeCodexImpacts,
+} from "@textfresser/library-core/codex";
+import { Tree, TreeNodeKind, TreeNodeStatus } from "@textfresser/library-core/tree";
+import { TreeActionType } from "@textfresser/library-core/tree/actions";
+import type { NodeName } from "@textfresser/library-core/types";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import {

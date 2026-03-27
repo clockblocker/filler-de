@@ -12,17 +12,20 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./codecs": "./src/codecs/index.ts",
-		"./codecs/*": "./src/codecs/*",
+		"./codecs/locator": "./src/codecs/locator.ts",
+		"./codecs/segment-id": "./src/codecs/segment-id.ts",
+		"./codecs/suffix": "./src/codecs/suffix.ts",
 		"./codex": "./src/codex/index.ts",
-		"./codex/*": "./src/healer/library-tree/codex/*",
 		"./display-name-sort": "./src/display-name-sort.ts",
 		"./healing": "./src/healing/index.ts",
-		"./healing/*": "./src/healer/library-tree/*",
 		"./internal/*": "./src/internal/*",
 		"./path-finder": "./src/path-finder.ts",
 		"./tree": "./src/tree/index.ts",
-		"./tree/*": "./src/healer/library-tree/*",
-		"./types/*": "./src/types/*"
+		"./tree/actions": "./src/tree/actions.ts",
+		"./tree/canonical": "./src/tree/canonical.ts",
+		"./tree/library-scope": "./src/tree/library-scope.ts",
+		"./tree/utils": "./src/tree/utils.ts",
+		"./types": "./src/types/index.ts"
 	},
 	"scripts": {
 		"build": "bun ../../../../scripts/build-workspace-package.ts"

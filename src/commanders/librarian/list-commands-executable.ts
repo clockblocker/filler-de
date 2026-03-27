@@ -6,7 +6,7 @@ import {
 import { parsePageIndex } from "./bookkeeper/page-codec";
 import type { Codecs } from "@textfresser/library-core/codecs";
 import type { Healer } from "./healer/healer";
-import { isCodexSplitPath } from "@textfresser/library-core/healer/library-tree/codex/helpers";
+import { isCodexSplitPath } from "@textfresser/library-core/codex";
 import {
 	getNextPage as getNextPageImpl,
 	getPrevPage as getPrevPageImpl,

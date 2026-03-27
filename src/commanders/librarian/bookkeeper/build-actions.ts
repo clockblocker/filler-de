@@ -8,14 +8,17 @@ import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-pat
 import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
 import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
-import type { CodecRules } from "@textfresser/library-core/codecs/rules";
-import { serializeSegmentId } from "@textfresser/library-core/codecs/segment-id/internal/serialize";
+import type { CodecRules } from "@textfresser/library-core/codecs";
 import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-} from "@textfresser/library-core/codecs/segment-id/types/segment-id";
-import { TreeNodeKind } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+} from "@textfresser/library-core/codecs/segment-id";
+import {
+	makeNodeSegmentId,
+	TreeNodeKind,
+	TreeNodeStatus,
+} from "@textfresser/library-core/tree";
+import type { NodeName } from "@textfresser/library-core/types";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
 import type { SegmentationResult } from "./types";
 import { PAGE_FRONTMATTER, PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
@@ -54,10 +57,11 @@ export function buildPageSplitActions(
 	const sectionChain = buildSectionChainFromPathParts(newPathParts);
 
 	// Build segment ID for the deleted scroll (same coreName, but Scroll kind)
-	const deletedScrollSegmentId = serializeSegmentId({
-		coreName: result.sourceCoreName,
+	const deletedScrollSegmentId = makeNodeSegmentId({
 		extension: MD,
-		targetKind: TreeNodeKind.Scroll,
+		kind: TreeNodeKind.Scroll,
+		nodeName: result.sourceCoreName,
+		status: TreeNodeStatus.NotStarted,
 	}) as ScrollNodeSegmentId;
 
 	// 1. Create pages (always at least one when this function is called)
@@ -160,9 +164,10 @@ export function buildSectionChainFromPathParts(
 ): SectionNodeSegmentId[] {
 	return pathParts.map(
 		(nodeName) =>
-			serializeSegmentId({
-				coreName: nodeName as NodeName,
-				targetKind: TreeNodeKind.Section,
+			makeNodeSegmentId({
+				children: {},
+				kind: TreeNodeKind.Section,
+				nodeName: nodeName as NodeName,
 			}) as SectionNodeSegmentId,
 	);
 }

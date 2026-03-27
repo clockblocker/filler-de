@@ -1,14 +1,14 @@
 import type { Codecs } from "@textfresser/library-core/codecs";
 import type { Healer } from "../healer/healer";
 import {
+	type CodexAction,
 	type CodexImpact,
 	codexImpactToDeletions,
 	codexImpactToIncrementalRecreations,
 	codexImpactToRecreations,
-} from "@textfresser/library-core/healer/library-tree/codex";
-import { mergeCodexImpacts } from "@textfresser/library-core/healer/library-tree/codex/merge-codex-impacts";
-import type { CodexAction } from "@textfresser/library-core/healer/library-tree/codex/types/codex-action";
-import type { HealingAction } from "@textfresser/library-core/healer/library-tree/types/healing-action";
+	mergeCodexImpacts,
+} from "@textfresser/library-core/codex";
+import type { HealingAction } from "@textfresser/library-core/healing";
 
 export type ProcessCodexImpactsResult = {
 	/** Healing actions for codex deletions */

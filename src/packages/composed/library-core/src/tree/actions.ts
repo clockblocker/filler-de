@@ -1,3 +1,4 @@
+export { buildTreeActions } from "../healer/library-tree/tree-action/bulk-vault-action-adapter";
 export type {
 	ChangeNodeStatusAction,
 	CreateTreeLeafAction,
@@ -7,8 +8,7 @@ export type {
 	TreeAction,
 } from "../healer/library-tree/tree-action/types/tree-action";
 export { TreeActionType } from "../healer/library-tree/tree-action/types/tree-action";
-export type { HealingAction } from "../healer/library-tree/types/healing-action";
 export {
-	healingActionToVaultAction,
-	healingActionsToVaultActions,
-} from "../codecs/healing-to-vault-action";
+	getNodeName,
+	getParentLocator,
+} from "../healer/library-tree/tree-action/utils/locator/locator-utils";

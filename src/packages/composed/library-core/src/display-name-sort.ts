@@ -1,4 +1,4 @@
-import type { TreeNode } from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
+import type { TreeNode } from "./tree";
 
 const alphaNumericCollator = new Intl.Collator(undefined, {
 	numeric: true,

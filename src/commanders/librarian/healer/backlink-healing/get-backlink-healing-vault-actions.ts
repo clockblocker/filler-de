@@ -12,14 +12,12 @@ import type { Codecs, CodecRules } from "@textfresser/library-core/codecs";
 import {
 	collectTreeData,
 	computeCodexSplitPath,
-} from "@textfresser/library-core/codex";
-import {
 	makeBacklinkTransform,
 	makeStripScrollBacklinkTransform,
-} from "@textfresser/library-core/healer/library-tree/codex/transforms/scroll-transforms";
-import { makeVaultScopedSplitPath } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
-import type { TreeReader } from "@textfresser/library-core/healer/library-tree/tree-interfaces";
-import { computeScrollSplitPath } from "@textfresser/library-core/healer/library-tree/utils/compute-scroll-split-path";
+} from "@textfresser/library-core/codex";
+import type { TreeReader } from "@textfresser/library-core/tree";
+import { makeVaultScopedSplitPath } from "@textfresser/library-core/tree/library-scope";
+import { computeScrollSplitPath } from "@textfresser/library-core/tree/utils";
 
 /**
  * Produce VaultAction[] to set or strip go-back links for all library md files

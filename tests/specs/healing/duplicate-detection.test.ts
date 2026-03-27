@@ -18,7 +18,7 @@ import {
 	OrphanCodexScanner,
 	scanAndGenerateOrphanActions,
 } from "../../../src/commanders/librarian/healer/orphan-codex-scanner";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+import type { NodeName } from "@textfresser/library-core/types";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import { makeTree } from "../../unit/librarian/library-tree/tree-test-helpers";

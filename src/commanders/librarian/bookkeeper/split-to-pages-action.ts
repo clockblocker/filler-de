@@ -10,13 +10,15 @@ import { err, ok, type Result } from "neverthrow";
 import { Notice } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { goBackLinkHelper } from "@textfresser/note-addressing/go-back-link";
-import { parseSeparatedSuffix } from "@textfresser/library-core/codecs/internal/suffix/parse";
-import type { CodecRules } from "@textfresser/library-core/codecs/rules";
-import { makeCodecRulesFromSettings } from "@textfresser/library-core/codecs/rules";
+import {
+	type CodecRules,
+	makeCodecRulesFromSettings,
+} from "@textfresser/library-core/codecs";
 import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-} from "@textfresser/library-core/codecs/segment-id/types/segment-id";
+} from "@textfresser/library-core/codecs/segment-id";
+import { parseSeparatedSuffix } from "@textfresser/library-core/codecs/suffix";
 import { buildPageSplitActions } from "./build-actions";
 import {
 	handleSplitToPagesError,

@@ -16,14 +16,14 @@ import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "@textfresser/library-core/codecs";
-import { Tree } from "@textfresser/library-core/healer/library-tree/tree";
-import { TreeActionType } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
 import {
+	type SectionNode,
+	Tree,
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
-import type { SectionNode } from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+} from "@textfresser/library-core/tree";
+import { TreeActionType } from "@textfresser/library-core/tree/actions";
+import type { NodeName } from "@textfresser/library-core/types";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import {

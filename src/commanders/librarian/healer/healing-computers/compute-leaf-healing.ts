@@ -8,7 +8,7 @@ import type {
 	SplitPathToMdFileInsideLibrary,
 } from "@textfresser/library-core/codecs";
 import type { HealingAction } from "@textfresser/library-core/healing";
-import { buildCanonicalLeafSplitPath } from "@textfresser/library-core/healer/library-tree/utils/split-path-utils";
+import { buildCanonicalLeafSplitPath } from "@textfresser/library-core/tree/utils";
 
 /**
  * Compute healing actions for a leaf node (Scroll or File).

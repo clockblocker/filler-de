@@ -12,12 +12,12 @@ import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "@textfresser/library-core/codecs";
-import { makeCodexBasename } from "@textfresser/library-core/healer/library-tree/codex/format-codex-line";
+import { makeCodexBasename } from "@textfresser/library-core/codex";
 import {
 	getNextPage,
 	getPrevPage,
 } from "../../../src/commanders/librarian/page-navigation";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+import type { NodeName } from "@textfresser/library-core/types";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 import { makeTree } from "./library-tree/tree-test-helpers";
