@@ -7,7 +7,6 @@ export {
 	type Teardown,
 	type UserEventHandler,
 	UserEventKind,
-	type UserEventKindKey,
 	type UserEventPayloadMap,
 	type UserEventResult,
 } from "./contracts";

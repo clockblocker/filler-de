@@ -14,8 +14,6 @@ export const UserEventKind = {
 export type UserEventKind =
 	(typeof UserEventKind)[keyof typeof UserEventKind];
 
-export type UserEventKindKey = keyof typeof UserEventKind;
-
 type UserPayloadByKey = {
 	ActionElementClicked: {
 		actionId: string;
@@ -68,10 +66,10 @@ type UserPayloadByKey = {
 	};
 };
 
-export type PayloadFor<K extends UserEventKindKey> = UserPayloadByKey[K];
+export type PayloadFor<K extends keyof typeof UserEventKind> = UserPayloadByKey[K];
 
 export type UserEventPayloadMap = {
-	[K in UserEventKindKey as (typeof UserEventKind)[K]]: PayloadFor<K>;
+	[K in keyof typeof UserEventKind as (typeof UserEventKind)[K]]: PayloadFor<K>;
 };
 
 type UserEffectByKey = {

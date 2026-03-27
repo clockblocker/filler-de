@@ -3,7 +3,6 @@ import type {
 	ObsidianEventLayerDeps,
 	UserEventHandler,
 	UserEventKind,
-	UserEventPayloadMap,
 	UserEventResult,
 } from "./contracts";
 import { ActionElementDetector } from "./events/click/action-element/detector";
