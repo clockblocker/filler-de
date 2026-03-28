@@ -1,4 +1,3 @@
-import type { VaultAction } from "@textfresser/vault-action-manager";
 import type { CodecRules, Codecs } from "@textfresser/library-core/codecs";
 import {
 	type CodexAction,
@@ -8,6 +7,7 @@ import {
 	type HealingAction,
 	healingActionsToVaultActions,
 } from "@textfresser/library-core/healing";
+import type { VaultAction } from "@textfresser/vault-action-manager";
 
 /**
  * Combine healing actions and codex actions into vault actions.

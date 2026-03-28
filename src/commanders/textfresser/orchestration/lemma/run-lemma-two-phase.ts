@@ -13,7 +13,7 @@ import {
 	resolveAttestation,
 	rewriteAttestationSourceContent,
 } from "../../commands/lemma/lemma-command";
-import { disambiguateSense } from "../../commands/lemma/steps/disambiguate-sense";
+import { resolveSenseMatchFromVault } from "../../commands/lemma/steps/resolve-sense-match-from-vault";
 import type { CommandError, CommandInput } from "../../commands/types";
 import { buildSourceFields } from "../../common/attestation/builders/build-source-fields";
 import type { Attestation } from "../../common/attestation/types";
@@ -148,7 +148,7 @@ export async function runLemmaTwoPhase(params: {
 		targetLanguage: state.languages.target,
 	});
 
-	const disambiguation = await disambiguateSense(
+	const disambiguation = await resolveSenseMatchFromVault(
 		vam,
 		resolvedLemma,
 		context,

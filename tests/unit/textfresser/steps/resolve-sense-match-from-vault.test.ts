@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { err, ok, type Result } from "neverthrow";
-import { disambiguateSense } from "../../../../src/commanders/textfresser/commands/lemma/steps/disambiguate-sense";
+import { resolveSenseMatchFromVault } from "../../../../src/commanders/textfresser/commands/lemma/steps/resolve-sense-match-from-vault";
 import {
 	createLexicalMeta,
 	type LexicalGenerationError,
@@ -128,9 +128,9 @@ function buildNoteContent(
 	return `${body}\n\n<section id="textfresser_meta_keep_me_invisible">\n${JSON.stringify({ entries: metaEntries })}\n</section>`;
 }
 
-describe("disambiguateSense", () => {
+describe("resolveSenseMatchFromVault", () => {
 	it("returns null when no files found", async () => {
-		const result = await disambiguateSense(
+		const result = await resolveSenseMatchFromVault(
 			makeVam({ files: [] }),
 			API_RESULT_NOUN,
 			"context",
@@ -147,7 +147,7 @@ describe("disambiguateSense", () => {
 		]);
 		let capturedCache: LexicalMeta[] | undefined;
 
-		const result = await disambiguateSense(
+		const result = await resolveSenseMatchFromVault(
 			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
 			"context",
@@ -191,7 +191,7 @@ describe("disambiguateSense", () => {
 			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
 		]);
 
-		const result = await disambiguateSense(
+		const result = await resolveSenseMatchFromVault(
 			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
 			"Sitz auf der Bank",
@@ -218,7 +218,7 @@ describe("disambiguateSense", () => {
 			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
 		]);
 
-		const result = await disambiguateSense(
+		const result = await resolveSenseMatchFromVault(
 			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
 			"context",
@@ -235,12 +235,10 @@ describe("disambiguateSense", () => {
 	});
 
 	it("ignores entries without lexical meta and still lets lexical-generation decide", async () => {
-		const content = buildNoteContent([
-			{ id: "LX-LM-NOUN-1" },
-		]);
+		const content = buildNoteContent([{ id: "LX-LM-NOUN-1" }]);
 		let capturedCache: LexicalMeta[] | undefined;
 
-		const result = await disambiguateSense(
+		const result = await resolveSenseMatchFromVault(
 			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
 			"context",
@@ -276,7 +274,7 @@ describe("disambiguateSense", () => {
 			"\n</section>";
 		let capturedCache: LexicalMeta[] | undefined;
 
-		const result = await disambiguateSense(
+		const result = await resolveSenseMatchFromVault(
 			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
 			"context",
@@ -302,7 +300,7 @@ describe("disambiguateSense", () => {
 		]);
 		let capturedCache: LexicalMeta[] | undefined;
 
-		const result = await disambiguateSense(
+		const result = await resolveSenseMatchFromVault(
 			makeVam({
 				content,
 				files: [{ ...MOCK_SPLIT_PATH, basename: "auf jeden Fall" }],
@@ -330,7 +328,7 @@ describe("disambiguateSense", () => {
 			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
 		]);
 
-		const result = await disambiguateSense(
+		const result = await resolveSenseMatchFromVault(
 			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
 			"context",
@@ -366,7 +364,7 @@ describe("disambiguateSense", () => {
 			buildLexemMeta({ emojiDescription: ["💺"], index: 2 }),
 		]);
 
-		const result = await disambiguateSense(
+		const result = await resolveSenseMatchFromVault(
 			makeVam({
 				contentByPath: {
 					[splitPathKey(fallbackPath)]: fallbackContent,

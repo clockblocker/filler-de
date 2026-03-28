@@ -172,7 +172,7 @@ function findDecorationSpans(text: string): DecorationSpan[] {
 			const span = potentialSpans[i];
 			if (!span) continue;
 
-			const { openPos, closePos, content, hasBoundary } = span;
+			const { openPos, closePos, hasBoundary } = span;
 
 			// Check if this span has an internal boundary
 			let shouldStrip = hasBoundary;

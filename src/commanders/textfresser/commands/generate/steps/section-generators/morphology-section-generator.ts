@@ -1,6 +1,6 @@
 import type { LexicalInfo } from "@textfresser/lexical-generation";
-import { morphologyRelationHelper } from "../../../../../../stateless-helpers/morphology-relation";
 import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
+import { morphologyRelationHelper } from "../../../../../../stateless-helpers/morphology-relation";
 import { resolveMorphemeItems } from "../../../../common/morpheme-link-target";
 import { canonicalizeTargetForComparison } from "../../../../common/target-comparison";
 import type { EntrySection } from "../../../../domain/dict-note/types";

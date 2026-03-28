@@ -1,9 +1,9 @@
+import type { SeparatedSuffixedBasename } from "@textfresser/library-core/codecs";
 import {
 	offsetMapperHelper,
 	type RemovedItem,
 	type ReplacedItem,
 } from "../../../../stateless-helpers/offset-mapper";
-import type { SeparatedSuffixedBasename } from "@textfresser/library-core/codecs";
 import type {
 	PageSegment,
 	SegmentationConfig,
@@ -137,7 +137,7 @@ export function segmentContentWithBlockMarkers(
 	// Check if content is too short to split
 	if (withoutMarkers.length < config.minContentSizeChars) {
 		// For too-short content, still apply block markers
-		const { markedText, blockCount } = splitStrInBlocksWithIntermediate(
+		const { markedText } = splitStrInBlocksWithIntermediate(
 			withoutMarkers,
 			0,
 		);

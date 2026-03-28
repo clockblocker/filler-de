@@ -1163,7 +1163,7 @@ To add support for a new target language (e.g., Japanese):
 | `src/commanders/textfresser/errors.ts` | TextfresserCommandError (extends BaseCommandError), AttestationParsingError |
 | **Commands** | |
 | `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma rewrite helpers: attestation resolution, wikilink formatting, robust two-pass source rewrite (`temporary → final`, block-id fallback, multi-span retargeting) |
-| `src/commanders/textfresser/commands/lemma/steps/disambiguate-sense.ts` | V3: look up existing note, match entries by unitKind+POS (ignoring surfaceKind), call Disambiguate prompt. V5: bounds-check matchedIndex, log parse failures. V10+: emoji-based senses with emojiDescription+unitKind+pos+genus. V16: adds optional `senseGloss` per sense (`entity` + translation fallback) for homonym quality. Returns precomputedEmojiDescription for new-sense path. |
+| `src/commanders/textfresser/commands/lemma/steps/resolve-sense-match-from-vault.ts` | App-side adapter for sense resolution: load stored lexical metadata from the target note, pass it to `lexical-generation` disambiguation, and map generator `cacheIndex` back to dict entry indices. Bounds-checks matches, logs parse failures, and returns precomputed emoji descriptions for new-sense paths. |
 | `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type = `ResolvedLemma` plus command-local attestation/disambiguation state |
 | `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
 | `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
@@ -1241,7 +1241,7 @@ To add support for a new target language (e.g., Japanese):
 | `tests/unit/textfresser/formatters/relation-formatter.test.ts` | Relation formatter: symbol notation, grouping, dedup |
 | `tests/unit/textfresser/formatters/inflection-formatter.test.ts` | Generic inflection formatter: label/forms rows |
 | `tests/unit/textfresser/formatters/de/lexem/noun/inflection-formatter.test.ts` | Noun inflection: case grouping, N/A/G/D order, cells pass-through |
-| `tests/unit/textfresser/steps/disambiguate-sense.test.ts` | Disambiguate: mock VAM + PromptRunner, bounds check, precomputed emojiDescription, missing-emoji fallback |
+| `tests/unit/textfresser/steps/resolve-sense-match-from-vault.test.ts` | Sense-match adapter: mock VAM + lexical generator, bounds check, precomputed emojiDescription, missing-emoji fallback |
 | `tests/unit/textfresser/steps/propagate-relations.test.ts` | Relation propagation: inverse kinds, self-ref skip, dedup, VaultAction shapes, healing when target in inflected/ |
 | `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note skip, single-entry tags merge, legacy stub collapse, genus fallback + header upgrade, VAM path reuse |
 | `tests/unit/textfresser/steps/propagate-generated-sections.test.ts` | Wrapper routing and fail-fast propagation behavior for Generate |

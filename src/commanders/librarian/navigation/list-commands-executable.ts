@@ -1,12 +1,12 @@
+import type { Codecs } from "@textfresser/library-core/codecs";
+import { isCodexSplitPath } from "@textfresser/library-core/codex";
+import type { Healer } from "@textfresser/library-core/healing";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import {
 	CommandKind,
 	type CommandKind as CommandKindType,
 } from "../../../managers/obsidian/command-executor";
 import { parsePageIndex } from "../pages/page-codec";
-import type { Codecs } from "@textfresser/library-core/codecs";
-import type { Healer } from "@textfresser/library-core/healing";
-import { isCodexSplitPath } from "@textfresser/library-core/codex";
 import {
 	getNextPage as getNextPageImpl,
 	getPrevPage as getPrevPageImpl,
