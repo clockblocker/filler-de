@@ -94,7 +94,8 @@ async function extractFinalWrittenContent(actions: readonly unknown[]) {
 		throw new Error("expected final ProcessMdFile write action");
 	}
 
-	return await writeAction.payload.transform("");
+	const payload = writeAction.payload as { transform: (input: string) => Promise<string> | string };
+	return await payload.transform("");
 }
 
 function sectionMarker(kind: DictSectionKind): string {

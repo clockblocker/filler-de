@@ -3,10 +3,9 @@ import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import type { TargetLanguage } from "../../../../../types";
 import { resolveClosedSetLibraryTarget } from "../../../common/closed-set-library-target-resolver";
 import { isClosedSetPos } from "../../../common/lemma-link-routing";
-import type { NoteEntry, NoteSection } from "../../../core/notes/types";
+import type { NoteEntry } from "../../../core/notes/types";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { EntrySection } from "../../../domain/dict-note/types";
-import { buildSectionMarker } from "../../../domain/dict-note/internal/constants";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
@@ -41,54 +40,6 @@ type EnsureMembershipResult = {
 	entries: NoteEntry[];
 	entry: NoteEntry;
 };
-
-function normalizeLegacySectionBody(text: string): string {
-	return text
-		.trim()
-		.split("\n")
-		.map((line) => line.trimEnd())
-		.join("\n");
-}
-
-function findMembershipSection(entry: NoteEntry): NoteSection | undefined {
-	return entry.sections.find((section) => {
-		if (section.kind === "typed") {
-			return section.marker === CLOSED_SET_MEMBERSHIP_SECTION_KIND;
-		}
-		return (
-			section.marker === CLOSED_SET_MEMBERSHIP_SECTION_KIND &&
-			section.title === CLOSED_SET_MEMBERSHIP_SECTION_TITLE
-		);
-	});
-}
-
-function getMembershipSectionContent(section: NoteSection): string | null {
-	if (section.kind === "typed") {
-		return section.content;
-	}
-	if (
-		section.marker !== CLOSED_SET_MEMBERSHIP_SECTION_KIND ||
-		section.title !== CLOSED_SET_MEMBERSHIP_SECTION_TITLE
-	) {
-		return null;
-	}
-	const marker = buildSectionMarker(section.marker, section.title);
-	if (!section.rawBlock.startsWith(marker)) {
-		return null;
-	}
-	return normalizeLegacySectionBody(section.rawBlock.slice(marker.length));
-}
-
-function setMembershipSectionContent(
-	section: NoteSection,
-	content: string,
-): void {
-	if (section.kind === "typed") {
-		setTypedSectionContent(section, content);
-		return;
-	}
-	section.rawBlock = `${buildSectionMarker(CLOSED_SET_MEMBERSHIP_SECTION_KIND, CLOSED_SET_MEMBERSHIP_SECTION_TITLE)}\n${content}`;
-}
 
 function resolveClosedSetLibraryTargetForLemma(params: {
 	lemmaResult: ClosedSetLexemLemmaResult;
@@ -132,7 +83,10 @@ function hasLibraryPointer(entry: NoteEntry, libraryBasename: string): boolean {
 }
 
 function isClosedSetMembershipEntry(entry: NoteEntry): boolean {
-	return findMembershipSection(entry) !== undefined;
+	return (
+		findFirstTypedSectionByMarker(entry, CLOSED_SET_MEMBERSHIP_SECTION_KIND) !==
+		undefined
+	);
 }
 
 function ensureTagsSection(
@@ -166,7 +120,10 @@ function appendPointerIfMissing(params: {
 	entry: NoteEntry;
 	membershipSection: EntrySection;
 }): void {
-	const existingMembershipSection = findMembershipSection(params.entry);
+	const existingMembershipSection = findFirstTypedSectionByMarker(
+		params.entry,
+		CLOSED_SET_MEMBERSHIP_SECTION_KIND,
+	);
 	if (!existingMembershipSection) {
 		const [section] = adaptLegacySectionsForEntry(params.entry, [
 			params.membershipSection,
@@ -176,16 +133,13 @@ function appendPointerIfMissing(params: {
 		}
 		return;
 	}
-	const existingContent = getMembershipSectionContent(existingMembershipSection);
-	if (existingContent === null) {
-		return;
-	}
+	const existingContent = getTypedSectionContent(existingMembershipSection);
 	if (
 		existingContent.includes(params.membershipSection.content)
 	) {
 		return;
 	}
-	setMembershipSectionContent(
+	setTypedSectionContent(
 		existingMembershipSection,
 		existingContent.trim().length
 			? `${existingContent.trimEnd()}\n${params.membershipSection.content}`
@@ -197,7 +151,10 @@ function replacePointers(params: {
 	entry: NoteEntry;
 	membershipSection: EntrySection;
 }): void {
-	const existingMembershipSection = findMembershipSection(params.entry);
+	const existingMembershipSection = findFirstTypedSectionByMarker(
+		params.entry,
+		CLOSED_SET_MEMBERSHIP_SECTION_KIND,
+	);
 	if (!existingMembershipSection) {
 		const [section] = adaptLegacySectionsForEntry(params.entry, [
 			params.membershipSection,
@@ -207,7 +164,7 @@ function replacePointers(params: {
 		}
 		return;
 	}
-	setMembershipSectionContent(existingMembershipSection, params.membershipSection.content);
+	setTypedSectionContent(existingMembershipSection, params.membershipSection.content);
 }
 
 function basenameFromWikilinkTarget(target: string): string {
@@ -221,16 +178,15 @@ function basenameFromWikilinkTarget(target: string): string {
 }
 
 function getMembershipPointerBasenames(entry: NoteEntry): string[] {
-	const membershipSection = findMembershipSection(entry);
+	const membershipSection = findFirstTypedSectionByMarker(
+		entry,
+		CLOSED_SET_MEMBERSHIP_SECTION_KIND,
+	);
 	if (!membershipSection) {
 		return [];
 	}
-	const content = getMembershipSectionContent(membershipSection);
-	if (content === null) {
-		return [];
-	}
 	return wikilinkHelper
-		.parse(content)
+		.parse(getTypedSectionContent(membershipSection))
 		.map((wikilink) => basenameFromWikilinkTarget(wikilink.target));
 }
 

@@ -59,4 +59,15 @@ Rules:
 {"cells":[{"article":"der","case":"Nominative","form":"Hund","number":"Singular"},{"article":"die","case":"Nominative","form":"Hunde","number":"Plural"},{"article":"den","case":"Accusative","form":"Hund","number":"Singular"},{"article":"die","case":"Accusative","form":"Hunde","number":"Plural"},{"article":"dem","case":"Dative","form":"Hund","number":"Singular"},{"article":"den","case":"Dative","form":"Hunden","number":"Plural"},{"article":"des","case":"Genitive","form":"Hundes","number":"Singular"},{"article":"der","case":"Genitive","form":"Hunde","number":"Plural"}],"genus":"Maskulinum"}
 </output>
 </example-3>
-</examples>`;
+</examples>
+
+<format-reminder>
+Return ONLY a single JSON object that matches the required schema.
+
+Do NOT include:
+- XML tags such as <output> or </output>
+- markdown code fences
+- explanatory text
+- comments
+- any text before or after the JSON object
+</format-reminder>`;

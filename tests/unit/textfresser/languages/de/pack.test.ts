@@ -7,6 +7,7 @@ import {
 describe("deLanguagePack", () => {
 	it("maps current German section metadata onto stable section keys", () => {
 		const relation = deLanguagePack.getSection("relation");
+		const membership = deLanguagePack.getSection("closed_set_membership");
 		const freeform = deLanguagePack.getSection("freeform");
 
 		expect(relation.marker).toBe("synonyme");
@@ -26,6 +27,15 @@ describe("deLanguagePack", () => {
 			sectionIntent: "ManualSurfaceLookup",
 			source: "UserAuthored",
 			targetKind: "Surface",
+		});
+
+		expect(membership.marker).toBe("closed_set_membership");
+		expect(membership.titleFor("German")).toBe("Closed-set membership");
+		expect(membership.linkPolicy).toEqual({
+			propagates: false,
+			sectionIntent: "GenerateSectionLink",
+			source: "TextfresserCommand",
+			targetKind: "None",
 		});
 	});
 
@@ -62,6 +72,9 @@ describe("deLanguagePack", () => {
 		expect(findSectionSpecByMarker(deLanguagePack, "translations")?.key).toBe(
 			"translation",
 		);
+		expect(
+			findSectionSpecByMarker(deLanguagePack, "closed_set_membership")?.key,
+		).toBe("closed_set_membership");
 		expect(findSectionSpecByMarker(deLanguagePack, "missing")).toBeUndefined();
 	});
 });

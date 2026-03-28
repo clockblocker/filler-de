@@ -1,0 +1,196 @@
+{
+  "examples": [
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "Sie [fängt] morgen mit der Arbeit [an]",
+        "lemma": "anfangen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "durationMs": 699,
+      "expectedOutput": {
+        "contextWithLinkedParts": "Sie [fängt] morgen mit der Arbeit [an]",
+        "lemma": "anfangen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "input": {
+        "context": "Sie [fängt] morgen mit der Arbeit an",
+        "surface": "fängt"
+      },
+      "matchesExpected": true,
+      "raw": "{\"content\":\"{\\\"contextWithLinkedParts\\\":\\\"Sie [fängt] morgen mit der Arbeit [an]\\\",\\\"lemma\\\":\\\"anfangen\\\",\\\"linguisticUnit\\\":\\\"Lexem\\\",\\\"posLikeKind\\\":\\\"Verb\\\",\\\"surfaceKind\\\":\\\"Inflected\\\"}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"Sie [fängt] morgen mit der Arbeit [an]\",\"lemma\":\"anfangen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Verb\",\"surfaceKind\":\"Inflected\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "Sie [kauft] im Supermarkt [ein].",
+        "lemma": "einkaufen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "durationMs": 556,
+      "expectedOutput": {
+        "contextWithLinkedParts": "Sie [kauft] im Supermarkt [ein].",
+        "lemma": "einkaufen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "input": {
+        "context": "Sie [kauft] im Supermarkt ein.",
+        "surface": "kauft"
+      },
+      "matchesExpected": true,
+      "raw": "{\"content\":\"{\\\"contextWithLinkedParts\\\":\\\"Sie [kauft] im Supermarkt [ein].\\\",\\\"lemma\\\":\\\"einkaufen\\\",\\\"linguisticUnit\\\":\\\"Lexem\\\",\\\"posLikeKind\\\":\\\"Verb\\\",\\\"surfaceKind\\\":\\\"Inflected\\\"}\\n\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"Sie [kauft] im Supermarkt [ein].\",\"lemma\":\"einkaufen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Verb\",\"surfaceKind\":\"Inflected\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "Er [rief] seine Mutter [an]",
+        "lemma": "anrufen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "durationMs": 567,
+      "expectedOutput": {
+        "contextWithLinkedParts": "Er [rief] seine Mutter [an]",
+        "lemma": "anrufen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "input": {
+        "context": "Er [rief] seine Mutter an",
+        "surface": "rief"
+      },
+      "matchesExpected": true,
+      "raw": "{\"content\":\"{\\\"contextWithLinkedParts\\\":\\\"Er [rief] seine Mutter [an]\\\",\\\"lemma\\\":\\\"anrufen\\\",\\\"linguisticUnit\\\":\\\"Lexem\\\",\\\"posLikeKind\\\":\\\"Verb\\\",\\\"surfaceKind\\\":\\\"Inflected\\\"}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"Er [rief] seine Mutter [an]\",\"lemma\":\"anrufen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Verb\",\"surfaceKind\":\"Inflected\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "Mir ist [aufgefallen], dass er nicht da war.",
+        "lemma": "auffallen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "durationMs": 661,
+      "expectedOutput": {
+        "contextWithLinkedParts": "Mir ist [aufgefallen], dass er nicht da war.",
+        "lemma": "auffallen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "input": {
+        "context": "Mir ist [aufgefallen], dass er nicht da war.",
+        "surface": "aufgefallen"
+      },
+      "matchesExpected": true,
+      "raw": "{\"content\":\"{\\n  \\\"contextWithLinkedParts\\\": \\\"Mir ist [aufgefallen], dass er nicht da war.\\\",\\n  \\\"lemma\\\": \\\"auffallen\\\",\\n  \\\"linguisticUnit\\\": \\\"Lexem\\\",\\n  \\\"posLikeKind\\\": \\\"Verb\\\",\\n  \\\"surfaceKind\\\": \\\"Inflected\\\"\\n}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"Mir ist [aufgefallen], dass er nicht da war.\",\"lemma\":\"auffallen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Verb\",\"surfaceKind\":\"Inflected\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "Die Dursleys [besaßen] alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte Sorge.",
+        "lemma": "besitzen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "durationMs": 772,
+      "expectedOutput": {
+        "contextWithLinkedParts": "Die Dursleys [besaßen] alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte Sorge.",
+        "lemma": "besitzen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "input": {
+        "context": "Die Dursleys [besaßen] alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte Sorge.",
+        "surface": "besaßen"
+      },
+      "matchesExpected": true,
+      "raw": "{\"content\":\"{\\n  \\\"contextWithLinkedParts\\\": \\\"Die Dursleys [besaßen] alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte Sorge.\\\",\\n  \\\"lemma\\\": \\\"besitzen\\\",\\n  \\\"linguisticUnit\\\": \\\"Lexem\\\",\\n  \\\"posLikeKind\\\": \\\"Verb\\\",\\n  \\\"surfaceKind\\\": \\\"Inflected\\\"\\n}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"Die Dursleys [besaßen] alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte Sorge.\",\"lemma\":\"besitzen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Verb\",\"surfaceKind\":\"Inflected\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": null,
+      "durationMs": 717,
+      "error": "JSON Parse error: Unrecognized token '<'",
+      "expectedOutput": {
+        "contextWithLinkedParts": "Die Dursleys besaßen alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte [Sorge].",
+        "lemma": "Sorge",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Noun",
+        "surfaceKind": "Lemma"
+      },
+      "input": {
+        "context": "Die Dursleys besaßen alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte [Sorge].",
+        "surface": "Sorge"
+      },
+      "matchesExpected": false,
+      "raw": "",
+      "schemaValid": false
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "„Du bekommst ja dein Budget. Und jetzt hör auf, mir [Honig] um den [Bart] zu [schmieren].",
+        "lemma": "Honig um den Bart schmieren",
+        "linguisticUnit": "Phrasem",
+        "posLikeKind": "Idiom",
+        "surfaceKind": "Partial"
+      },
+      "durationMs": 757,
+      "expectedOutput": {
+        "contextWithLinkedParts": "„Du bekommst ja dein Budget. Und jetzt hör auf, mir [Honig] um den [Bart] zu [schmieren].",
+        "lemma": "Honig um den Bart schmieren",
+        "linguisticUnit": "Phrasem",
+        "posLikeKind": "Idiom",
+        "surfaceKind": "Partial"
+      },
+      "input": {
+        "context": "„Du bekommst ja dein Budget. Und jetzt hör auf, mir Honig um den Bart zu [schmieren].",
+        "surface": "schmieren"
+      },
+      "matchesExpected": true,
+      "raw": "{\"content\":\"{\\n  \\\"contextWithLinkedParts\\\": \\\"„Du bekommst ja dein Budget. Und jetzt hör auf, mir [Honig] um den [Bart] zu [schmieren].\\\",\\n  \\\"lemma\\\": \\\"Honig um den Bart schmieren\\\",\\n  \\\"linguisticUnit\\\": \\\"Phrasem\\\",\\n  \\\"posLikeKind\\\": \\\"Idiom\\\",\\n  \\\"surfaceKind\\\": \\\"Partial\\\"\\n}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"„Du bekommst ja dein Budget. Und jetzt hör auf, mir [Honig] um den [Bart] zu [schmieren].\",\"lemma\":\"Honig um den Bart schmieren\",\"linguisticUnit\":\"Phrasem\",\"posLikeKind\":\"Idiom\",\"surfaceKind\":\"Partial\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "Ich [drehe] den Wasserhahn [zu]",
+        "lemma": "zudrehen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "durationMs": 582,
+      "expectedOutput": {
+        "contextWithLinkedParts": "Ich [drehe] den Wasserhahn [zu]",
+        "lemma": "zudrehen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "input": {
+        "context": "Ich [drehe] den Wasserhahn zu",
+        "surface": "drehe"
+      },
+      "matchesExpected": true,
+      "raw": "{\"content\":\"{\\\"contextWithLinkedParts\\\":\\\"Ich [drehe] den Wasserhahn [zu]\\\",\\\"lemma\\\":\\\"zudrehen\\\",\\\"linguisticUnit\\\":\\\"Lexem\\\",\\\"posLikeKind\\\":\\\"Verb\\\",\\\"surfaceKind\\\":\\\"Inflected\\\"}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"Ich [drehe] den Wasserhahn [zu]\",\"lemma\":\"zudrehen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Verb\",\"surfaceKind\":\"Inflected\"}}",
+      "schemaValid": true
+    }
+  ],
+  "knownLanguage": "English",
+  "model": "gemini-2.5-flash-lite",
+  "promptKind": "Lemma",
+  "targetLanguage": "German",
+  "timestamp": "2026-03-28T10:35:00.006Z"
+}

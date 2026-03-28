@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import type { KnownLanguage, TargetLanguage } from "../../../shared/languages";
 import type { PromptKind } from "../consts";
+import { formatReminder } from "./format-reminder";
 import { getPartsPath, wrapInXmlTag } from "./utils";
 
 interface PromptParts {
@@ -47,6 +48,7 @@ function buildSystemPrompt(parts: PromptParts): string {
 		wrapInXmlTag("agent-role", parts.agentRole),
 		wrapInXmlTag("task-description", parts.taskDescription),
 		wrapInXmlTag("examples", formatExamples(parts.examples)),
+		wrapInXmlTag("format-reminder", formatReminder),
 	];
 
 	return sections.join("\n\n");

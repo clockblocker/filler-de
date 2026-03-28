@@ -41,8 +41,6 @@ Rules:
 - Do not "clean up", remove, or move existing brackets. Only add missing lemma-part brackets.
 - For separable verbs in separated position: return contextWithLinkedParts with both the conjugated verb stem and the separated prefix marked.
 - For phrasems where the user selected only one word: return contextWithLinkedParts with ALL words of the phrasem marked.
-- Example: input "... größte [Sorge]." and no extra lemma parts needed -> return "... größte [Sorge]."
-- Example: input "... Honig um den Bart zu [schmieren]." and lemma "Honig um den Bart schmieren" -> return "... [Honig] um den [Bart] zu [schmieren]."
 - contextWithLinkedParts text (with brackets stripped) must be identical to the input context text (with brackets stripped).
 </task-description>
 
@@ -136,4 +134,15 @@ Rules:
 {"contextWithLinkedParts":"Sie ist [klüger] als ihr Bruder.","lemma":"klug","linguisticUnit":"Lexem","posLikeKind":"Adjective","surfaceKind":"Inflected"}
 </output>
 </example-10>
-</examples>`;
+</examples>
+
+<format-reminder>
+Return ONLY a single JSON object that matches the required schema.
+
+Do NOT include:
+- XML tags such as <output> or </output>
+- markdown code fences
+- explanatory text
+- comments
+- any text before or after the JSON object
+</format-reminder>`;

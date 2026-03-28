@@ -11,6 +11,9 @@ import {
 	TitleReprFor,
 } from "../../targets/de/sections/section-kind";
 
+const CLOSED_SET_MEMBERSHIP_MARKER = "closed_set_membership";
+const CLOSED_SET_MEMBERSHIP_TITLE = "Closed-set membership";
+
 const LINK_POLICY_BY_KIND: Record<DictSectionKind, SectionLinkPolicy> = {
 	[DictSectionKind.Attestation]: {
 		propagates: false,
@@ -74,7 +77,10 @@ const LINK_POLICY_BY_KIND: Record<DictSectionKind, SectionLinkPolicy> = {
 	},
 };
 
-const SECTION_KIND_BY_KEY: Record<SectionKey, DictSectionKind> = {
+const SECTION_KIND_BY_KEY: Record<
+	Exclude<SectionKey, "closed_set_membership">,
+	DictSectionKind
+> = {
 	attestation: DictSectionKind.Attestation,
 	deviation: DictSectionKind.Deviation,
 	freeform: DictSectionKind.FreeForm,
@@ -87,7 +93,37 @@ const SECTION_KIND_BY_KEY: Record<SectionKey, DictSectionKind> = {
 	translation: DictSectionKind.Translation,
 };
 
+function buildClosedSetMembershipSpec(): SectionSpec {
+	return {
+		claimPolicy: {
+			canClaim(input) {
+				return (
+					input.occurrence === 0 &&
+					input.marker === CLOSED_SET_MEMBERSHIP_MARKER &&
+					input.title === CLOSED_SET_MEMBERSHIP_TITLE
+				);
+			},
+			fallback: "raw",
+		},
+		key: "closed_set_membership",
+		linkPolicy: {
+			propagates: false,
+			sectionIntent: "GenerateSectionLink",
+			source: "TextfresserCommand",
+			targetKind: "None",
+		},
+		marker: CLOSED_SET_MEMBERSHIP_MARKER,
+		order: 98,
+		titleFor() {
+			return CLOSED_SET_MEMBERSHIP_TITLE;
+		},
+	};
+}
+
 function buildSectionSpec(key: SectionKey): SectionSpec {
+	if (key === "closed_set_membership") {
+		return buildClosedSetMembershipSpec();
+	}
 	const kind = SECTION_KIND_BY_KEY[key];
 	return {
 		claimPolicy: {
@@ -119,6 +155,7 @@ const sections = [
 	buildSectionSpec("morphology"),
 	buildSectionSpec("inflection"),
 	buildSectionSpec("tags"),
+	buildSectionSpec("closed_set_membership"),
 	buildSectionSpec("freeform"),
 	buildSectionSpec("deviation"),
 ] as const;
