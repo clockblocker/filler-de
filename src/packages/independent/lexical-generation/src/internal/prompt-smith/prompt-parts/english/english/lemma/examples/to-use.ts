@@ -37,7 +37,7 @@ export const examples = [
 			lemma: "by and large",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "DiscourseFormula",
-			surfaceKind: "Lemma",
+			surfaceKind: "Partial",
 		},
 	},
 ] satisfies {

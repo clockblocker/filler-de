@@ -3,13 +3,14 @@ import { logger } from "../../../../../utils/logger";
 import { findSectionSpecByMarker } from "../../../core/contracts/language-pack";
 import { resolveEntryMatch } from "../../../core/entries/entry-match-policy";
 import { entryIdentity } from "../../../core/entries/entry-identity";
-import { type DictEntry, dictNoteHelper } from "../../../domain/dict-note";
+import type { NoteEntry } from "../../../core/notes/types";
 import { deLanguagePack } from "../../../languages/de/pack";
 import type { CommandError, CommandStateWithLemma } from "../../types";
+import { parseGenerateEntries } from "./canonical-note-entry";
 
 export type ResolvedEntryState = CommandStateWithLemma & {
-	existingEntries: DictEntry[];
-	matchedEntry: DictEntry | null;
+	existingEntries: NoteEntry[];
+	matchedEntry: NoteEntry | null;
 	nextIndex: number;
 };
 
@@ -27,7 +28,7 @@ export function resolveExistingEntry(
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const content = ctx.commandContext.activeFile.content;
 
-	const parsedEntries = dictNoteHelper.parseWithLinguisticWikilinks({
+	const parsedEntries = parseGenerateEntries({
 		lookupInLibraryByCoreName: ctx.textfresserState.lookupInLibrary,
 		noteText: content,
 		parseLibraryBasename: ctx.textfresserState.parseLibraryBasename,
@@ -48,7 +49,9 @@ export function resolveExistingEntry(
 				: undefined,
 		stubPolicy: {
 			getSectionKey(section) {
-				return findSectionSpecByMarker(deLanguagePack, section.kind)?.key;
+				return section.marker
+					? findSectionSpecByMarker(deLanguagePack, section.marker)?.key
+					: undefined;
 			},
 			propagationOnlyKeys: [
 				"relation",

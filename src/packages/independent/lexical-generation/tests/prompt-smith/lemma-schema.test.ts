@@ -15,6 +15,18 @@ describe("Lemma schema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts Partial phrasem output", () => {
+		const result = agentOutputSchema.safeParse({
+			contextWithLinkedParts: "Das machen wir [auf] [jeden] [Fall] morgen.",
+			lemma: "auf jeden Fall",
+			linguisticUnit: "Phrasem",
+			posLikeKind: "DiscourseFormula",
+			surfaceKind: "Partial",
+		});
+
+		expect(result.success).toBe(true);
+	});
+
 	it("rejects Lexem output with legacy pos alias only", () => {
 		const result = agentOutputSchema.safeParse({
 			lemma: "Haus",

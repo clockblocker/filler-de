@@ -3,14 +3,22 @@ import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import type { TargetLanguage } from "../../../../../types";
 import { resolveClosedSetLibraryTarget } from "../../../common/closed-set-library-target-resolver";
 import { isClosedSetPos } from "../../../common/lemma-link-routing";
+import type { NoteEntry } from "../../../core/notes/types";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
-import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
+import type { EntrySection } from "../../../domain/dict-note/types";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../targets/de/sections/section-kind";
 import type { LemmaResult } from "../../lemma/types";
+import {
+	adaptLegacySectionsForEntry,
+	findFirstSectionByMarker,
+	getSectionContent,
+	insertSectionByOrder,
+	setSectionContent,
+} from "./canonical-note-entry";
 
 const CLOSED_SET_MEMBERSHIP_SECTION_KIND = "closed_set_membership";
 const CLOSED_SET_MEMBERSHIP_SECTION_TITLE = "Closed-set membership";
@@ -22,15 +30,15 @@ type ClosedSetLexemLemmaResult = Extract<
 >;
 
 type EnsureMembershipParams = {
-	existingEntries: DictEntry[];
+	existingEntries: NoteEntry[];
 	lemmaResult: ClosedSetLexemLemmaResult;
 	lookupInLibrary: (coreName: string) => SplitPathToMdFile[];
 	targetLanguage: TargetLanguage;
 };
 
 type EnsureMembershipResult = {
-	entries: DictEntry[];
-	entry: DictEntry;
+	entries: NoteEntry[];
+	entry: NoteEntry;
 };
 
 function resolveClosedSetLibraryTargetForLemma(params: {
@@ -70,72 +78,93 @@ function buildTagsSection(targetLanguage: TargetLanguage): EntrySection {
 	};
 }
 
-function hasLibraryPointer(entry: DictEntry, libraryBasename: string): boolean {
+function hasLibraryPointer(entry: NoteEntry, libraryBasename: string): boolean {
 	return getMembershipPointerBasenames(entry).includes(libraryBasename);
 }
 
-function isClosedSetMembershipEntry(entry: DictEntry): boolean {
-	return entry.sections.some(
-		(section) => section.kind === CLOSED_SET_MEMBERSHIP_SECTION_KIND,
+function isClosedSetMembershipEntry(entry: NoteEntry): boolean {
+	return (
+		findFirstSectionByMarker(entry, CLOSED_SET_MEMBERSHIP_SECTION_KIND) !==
+		undefined
 	);
 }
 
 function ensureTagsSection(
-	entry: DictEntry,
+	entry: NoteEntry,
 	targetLanguage: TargetLanguage,
 ): void {
 	const tagsKind = cssSuffixFor[DictSectionKind.Tags];
-	const existing = entry.sections.find(
-		(section) => section.kind === tagsKind,
-	);
+	const existing = findFirstSectionByMarker(entry, tagsKind);
 	if (!existing) {
-		entry.sections.push(buildTagsSection(targetLanguage));
+		const [section] = adaptLegacySectionsForEntry(entry, [
+			buildTagsSection(targetLanguage),
+		]);
+		if (section) {
+			insertSectionByOrder(entry, section);
+		}
 		return;
 	}
-	if (existing.content.includes(CLOSED_SET_TAG)) {
+	const existingContent = getSectionContent(existing) ?? "";
+	if (existingContent.includes(CLOSED_SET_TAG)) {
 		return;
 	}
-	existing.content = existing.content.trim().length
-		? `${existing.content.trimEnd()}\n${CLOSED_SET_TAG}`
-		: CLOSED_SET_TAG;
+	setSectionContent(
+		existing,
+		existingContent.trim().length
+			? `${existingContent.trimEnd()}\n${CLOSED_SET_TAG}`
+			: CLOSED_SET_TAG,
+	);
 }
 
 function appendPointerIfMissing(params: {
-	entry: DictEntry;
+	entry: NoteEntry;
 	membershipSection: EntrySection;
 }): void {
-	const existingMembershipSection = params.entry.sections.find(
-		(section) => section.kind === CLOSED_SET_MEMBERSHIP_SECTION_KIND,
+	const existingMembershipSection = findFirstSectionByMarker(
+		params.entry,
+		CLOSED_SET_MEMBERSHIP_SECTION_KIND,
 	);
 	if (!existingMembershipSection) {
-		params.entry.sections.push(params.membershipSection);
+		const [section] = adaptLegacySectionsForEntry(params.entry, [
+			params.membershipSection,
+		]);
+		if (section) {
+			insertSectionByOrder(params.entry, section);
+		}
 		return;
 	}
+	const existingContent = getSectionContent(existingMembershipSection) ?? "";
 	if (
-		existingMembershipSection.content.includes(
-			params.membershipSection.content,
-		)
+		existingContent.includes(params.membershipSection.content)
 	) {
 		return;
 	}
-	existingMembershipSection.content = existingMembershipSection.content.trim()
-		.length
-		? `${existingMembershipSection.content.trimEnd()}\n${params.membershipSection.content}`
-		: params.membershipSection.content;
+	setSectionContent(
+		existingMembershipSection,
+		existingContent.trim().length
+			? `${existingContent.trimEnd()}\n${params.membershipSection.content}`
+			: params.membershipSection.content,
+	);
 }
 
 function replacePointers(params: {
-	entry: DictEntry;
+	entry: NoteEntry;
 	membershipSection: EntrySection;
 }): void {
-	const existingMembershipSection = params.entry.sections.find(
-		(section) => section.kind === CLOSED_SET_MEMBERSHIP_SECTION_KIND,
+	const existingMembershipSection = findFirstSectionByMarker(
+		params.entry,
+		CLOSED_SET_MEMBERSHIP_SECTION_KIND,
 	);
 	if (!existingMembershipSection) {
-		params.entry.sections.push(params.membershipSection);
+		const [section] = adaptLegacySectionsForEntry(params.entry, [
+			params.membershipSection,
+		]);
+		if (section) {
+			insertSectionByOrder(params.entry, section);
+		}
 		return;
 	}
-	existingMembershipSection.content = params.membershipSection.content;
+	setSectionContent(existingMembershipSection, params.membershipSection.content);
 }
 
 function basenameFromWikilinkTarget(target: string): string {
@@ -148,20 +177,25 @@ function basenameFromWikilinkTarget(target: string): string {
 		: withoutAnchor;
 }
 
-function getMembershipPointerBasenames(entry: DictEntry): string[] {
-	const membershipSection = entry.sections.find(
-		(section) => section.kind === CLOSED_SET_MEMBERSHIP_SECTION_KIND,
+function getMembershipPointerBasenames(entry: NoteEntry): string[] {
+	const membershipSection = findFirstSectionByMarker(
+		entry,
+		CLOSED_SET_MEMBERSHIP_SECTION_KIND,
 	);
 	if (!membershipSection) {
 		return [];
 	}
+	const content = getSectionContent(membershipSection);
+	if (content === null) {
+		return [];
+	}
 	return wikilinkHelper
-		.parse(membershipSection.content)
+		.parse(content)
 		.map((wikilink) => basenameFromWikilinkTarget(wikilink.target));
 }
 
 function buildMembershipEntryId(params: {
-	existingEntries: DictEntry[];
+	existingEntries: NoteEntry[];
 	lemmaResult: ClosedSetLexemLemmaResult;
 }): string {
 	const existingIds = params.existingEntries.map((entry) => entry.id);
@@ -247,15 +281,21 @@ export function ensureClosedSetMembershipEntry(
 		};
 	}
 
-	const newEntry: DictEntry = {
+	const newEntry: NoteEntry = {
 		headerContent: expectedHeader,
 		id: buildMembershipEntryId({
 			existingEntries: params.existingEntries,
 			lemmaResult: params.lemmaResult,
 		}),
 		meta: {},
-		sections: [membershipSection, buildTagsSection(params.targetLanguage)],
+		sections: [],
 	};
+	newEntry.sections.push(
+		...adaptLegacySectionsForEntry(newEntry, [
+			membershipSection,
+			buildTagsSection(params.targetLanguage),
+		]),
+	);
 
 	return {
 		entries: [...params.existingEntries, newEntry],

@@ -52,7 +52,7 @@ export const examples = [
 			lemma: "auf jeden Fall",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "DiscourseFormula",
-			surfaceKind: "Lemma",
+			surfaceKind: "Partial",
 		},
 	},
 	{

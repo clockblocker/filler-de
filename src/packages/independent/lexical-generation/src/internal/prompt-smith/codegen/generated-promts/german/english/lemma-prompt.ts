@@ -17,7 +17,7 @@ Return:
 - posLikeKind:
   - when linguisticUnit is "Lexem": POS value (Noun, Pronoun, Article, Adjective, Verb, Preposition, Adverb, Particle, Conjunction, InteractionalUnit)
   - when linguisticUnit is "Phrasem": Phraseme kind (Idiom, Collocation, DiscourseFormula, Proverb, CulturalQuotation)
-- surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), or "Variant" (spelling variant)
+- surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), "Variant" (spelling variant), or "Partial" (surface covers only part of a multi-word lemma)
 - lemma: the dictionary/citation form of the word
 - contextWithLinkedParts: when the lemma consists of multiple parts in the context (e.g., separable prefix verb in separated position, or phrasem words), re-emit the full context with ALL parts of the lemma wrapped in [square brackets]. The originally marked surface must remain marked. Omit when the surface already covers the full lemma (single contiguous word).
 
@@ -34,6 +34,7 @@ Rules:
 - Phrasem: multi-word fixed expression (e.g., "auf jeden Fall" → lemma: "auf jeden Fall")
 - When linguisticUnit is "Phrasem", posLikeKind must be a phraseme kind
 - If the surface IS the lemma, surfaceKind is "Lemma"
+- If the selected surface covers only one part of a multi-word lemma, surfaceKind is "Partial"
 - For separable verbs in separated position: return contextWithLinkedParts with both the conjugated verb stem and the separated prefix marked.
 - For phrasems where the user selected only one word: return contextWithLinkedParts with ALL words of the phrasem marked.
 - contextWithLinkedParts text (with brackets stripped) must be identical to the input context text (with brackets stripped).
@@ -72,7 +73,7 @@ Rules:
 {"context":"Das machen wir auf jeden [Fall] morgen.","surface":"Fall"}
 </input>
 <output>
-{"contextWithLinkedParts":"Das machen wir [auf] [jeden] [Fall] morgen.","lemma":"auf jeden Fall","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula","surfaceKind":"Lemma"}
+{"contextWithLinkedParts":"Das machen wir [auf] [jeden] [Fall] morgen.","lemma":"auf jeden Fall","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula","surfaceKind":"Partial"}
 </output>
 </example-4>
 

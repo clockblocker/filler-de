@@ -96,7 +96,7 @@ export type GermanAdjectiveFullFeatures = z.infer<
 	typeof GermanAdjectiveFullFeaturesSchema
 >;
 
-/** Ref features for Adjective Inflected/Variant — full profile lives on the Lemma entry. */
+/** Ref features for Adjective Inflected/Variant/Partial — full profile lives on the Lemma entry. */
 export const GermanAdjectiveRefFeaturesSchema = z.object({
 	pos: z.literal("Adjective" satisfies POS),
 });

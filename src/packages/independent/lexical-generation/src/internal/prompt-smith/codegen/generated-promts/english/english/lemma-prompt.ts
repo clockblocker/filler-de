@@ -17,7 +17,7 @@ Return:
 - posLikeKind:
   - when linguisticUnit is "Lexem": POS value (Noun, Pronoun, Article, Adjective, Verb, Preposition, Adverb, Particle, Conjunction, InteractionalUnit)
   - when linguisticUnit is "Phrasem": Phraseme kind (Idiom, Collocation, DiscourseFormula, Proverb, CulturalQuotation)
-- surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), or "Variant" (spelling variant)
+- surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), "Variant" (spelling variant), or "Partial" (surface covers only part of a multi-word lemma)
 - lemma: the dictionary/citation form of the word
 - contextWithLinkedParts: optional; use [square brackets] to mark all lemma parts when the lemma is discontinuous in context.
 
@@ -26,6 +26,7 @@ Rules:
 - For verbs: lemma is base form (e.g., "went" → "go")
 - When linguisticUnit is "Phrasem", posLikeKind must be a phraseme kind
 - If the surface IS the lemma, surfaceKind is "Lemma"
+- If the selected surface covers only one part of a multi-word lemma, surfaceKind is "Partial"
 - contextWithLinkedParts text (with brackets stripped) must be identical to input context text (with brackets stripped).
 </task-description>
 
@@ -53,7 +54,7 @@ Rules:
 {"context":"I will, [by and] [large], agree with that.","surface":"large"}
 </input>
 <output>
-{"lemma":"by and large","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula","surfaceKind":"Lemma"}
+{"lemma":"by and large","linguisticUnit":"Phrasem","posLikeKind":"DiscourseFormula","surfaceKind":"Partial"}
 </output>
 </example-3>
 </examples>`;

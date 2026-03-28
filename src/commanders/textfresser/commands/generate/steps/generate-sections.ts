@@ -4,7 +4,7 @@ import type {
 	LexicalInfo,
 } from "@textfresser/lexical-generation";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
-import type { DictEntry } from "../../../domain/dict-note/types";
+import type { NoteEntry } from "../../../core/notes/types";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
@@ -29,6 +29,14 @@ import {
 	buildVerbEntryIdentityFromFeatures,
 	getVerbLexicalFeatures,
 } from "./verb-features";
+import {
+	adaptLegacySectionsForEntry,
+	findFirstSectionByMarker,
+	getSectionContent,
+	hasSectionWithMarker,
+	insertSectionByOrder,
+	setSectionContent,
+} from "./canonical-note-entry";
 
 export { buildLexicalMeta } from "./build-lexical-meta";
 export { buildFeatureTagPath, getFeaturesPromptKindForPos };
@@ -61,32 +69,44 @@ function toGenerateCommandError(error: unknown): CommandError {
 	});
 }
 
-function appendAttestation(entry: DictEntry, ctx: ResolvedEntryState): void {
+function appendAttestation(entry: NoteEntry, ctx: ResolvedEntryState): void {
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const attestationRef = lemmaResult.attestation.source.ref;
 	const attestationCssSuffix = cssSuffixFor[DictSectionKind.Attestation];
-	const attestationSection = entry.sections.find(
-		(section) => section.kind === attestationCssSuffix,
+	const attestationSection = findFirstSectionByMarker(
+		entry,
+		attestationCssSuffix,
 	);
 
 	if (attestationSection) {
-		if (!attestationSection.content.includes(attestationRef)) {
-			attestationSection.content += `\n\n${attestationRef}`;
+		const existingContent = getSectionContent(attestationSection) ?? "";
+		if (!existingContent.includes(attestationRef)) {
+			setSectionContent(
+				attestationSection,
+				existingContent.length > 0
+					? `${existingContent}\n\n${attestationRef}`
+					: attestationRef,
+			);
 		}
 	} else {
 		const targetLang = ctx.textfresserState.languages.target;
-		entry.sections.push({
-			content: attestationRef,
-			kind: attestationCssSuffix,
-			title: TitleReprFor[DictSectionKind.Attestation][targetLang],
-		});
+		const [section] = adaptLegacySectionsForEntry(entry, [
+			{
+				content: attestationRef,
+				kind: attestationCssSuffix,
+				title: TitleReprFor[DictSectionKind.Attestation][targetLang],
+			},
+		]);
+		if (section) {
+			insertSectionByOrder(entry, section);
+		}
 	}
 }
 
 function ensureClosedSetMembershipEntries(params: {
 	ctx: ResolvedEntryState;
-	existingEntries: DictEntry[];
-}): DictEntry[] {
+	existingEntries: NoteEntry[];
+}): NoteEntry[] {
 	const lemmaResult = params.ctx.textfresserState.latestLemmaResult;
 	if (lemmaResult.linguisticUnit !== "Lexem") {
 		return params.existingEntries;
@@ -214,12 +234,21 @@ async function buildReEncounterResult(
 	const missingCssKinds = new Set(
 		missingSectionKinds.map((sectionKind) => cssSuffixFor[sectionKind]),
 	);
-	for (const section of generated.sections) {
-		const alreadyExists = matchedEntry.sections.some(
-			(existing) => existing.kind === section.kind,
-		);
-		if (!alreadyExists && missingCssKinds.has(section.kind)) {
-			matchedEntry.sections.push(section);
+	const adaptedSections = adaptLegacySectionsForEntry(
+		matchedEntry,
+		generated.sections,
+	);
+	for (let index = 0; index < generated.sections.length; index += 1) {
+		const legacySection = generated.sections[index];
+		const adaptedSection = adaptedSections[index];
+		if (!legacySection || !adaptedSection) {
+			continue;
+		}
+		if (
+			!hasSectionWithMarker(matchedEntry, legacySection.kind) &&
+			missingCssKinds.has(legacySection.kind)
+		) {
+			insertSectionByOrder(matchedEntry, adaptedSection);
 		}
 	}
 
@@ -239,7 +268,7 @@ async function buildReEncounterResult(
 	};
 }
 
-function getVerbEntryIdentity(entry: DictEntry): string | null {
+function getVerbEntryIdentity(entry: NoteEntry): string | null {
 	const fromMeta = entry.meta.verbEntryIdentity;
 	if (typeof fromMeta === "string" && fromMeta.length > 0) {
 		return fromMeta;
@@ -312,7 +341,7 @@ export function generateSections(
 				}
 			}
 
-			const newEntry: DictEntry = {
+			const newEntry: NoteEntry = {
 				headerContent: generated.headerContent,
 				id: generated.entryId,
 				meta: {
@@ -322,8 +351,11 @@ export function generateSections(
 					),
 					...(verbEntryIdentity ? { verbEntryIdentity } : {}),
 				},
-				sections: generated.sections,
+				sections: [],
 			};
+			newEntry.sections.push(
+				...adaptLegacySectionsForEntry(newEntry, generated.sections),
+			);
 
 			ctx.textfresserState.latestFailedSections =
 				generated.failedSections;

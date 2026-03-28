@@ -1,11 +1,19 @@
 import type { LexicalInfo } from "@textfresser/lexical-generation";
+import type { NoteEntry } from "../../../core/notes/types";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
-import type { DictEntry } from "../../../domain/dict-note/types";
 import { getSectionsFor } from "../../../targets/de/sections/section-config";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import type { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import type { LemmaResult } from "../../lemma/types";
 import { buildSectionQuery, V3_SECTIONS } from "./section-generation-context";
+
+function sectionMarkers(entry: NoteEntry): Set<string> {
+	return new Set(
+		entry.sections
+			.map((section) => section.marker)
+			.filter((marker): marker is string => typeof marker === "string"),
+	);
+}
 
 export function resolveExpectedV3SectionKinds(params: {
 	lexicalInfo: LexicalInfo;
@@ -30,32 +38,32 @@ export function resolveExpectedV3SectionKindsFromLemmaResult(params: {
 }
 
 export function computeMissingV3SectionKinds(params: {
-	entry: DictEntry;
+	entry: NoteEntry;
 	lexicalInfo: LexicalInfo;
 }): DictSectionKind[] {
 	const expectedKinds = resolveExpectedV3SectionKinds(params);
-	const existingKinds = new Set(params.entry.sections.map((s) => s.kind));
+	const existingKinds = sectionMarkers(params.entry);
 	return expectedKinds.filter(
 		(sectionKind) => !existingKinds.has(cssSuffixFor[sectionKind]),
 	);
 }
 
 export function computeMissingV3SectionKindsFromLemmaResult(params: {
-	entry: DictEntry;
+	entry: NoteEntry;
 	lemmaResult: LemmaResult;
 }): DictSectionKind[] {
 	const expectedKinds = resolveExpectedV3SectionKindsFromLemmaResult(params);
-	const existingKinds = new Set(params.entry.sections.map((s) => s.kind));
+	const existingKinds = sectionMarkers(params.entry);
 	return expectedKinds.filter(
 		(sectionKind) => !existingKinds.has(cssSuffixFor[sectionKind]),
 	);
 }
 
 export function findEntryForLemmaResult(params: {
-	entries: DictEntry[];
+	entries: NoteEntry[];
 	generatedEntryId?: string;
 	lemmaResult: LemmaResult;
-}): DictEntry | null {
+}): NoteEntry | null {
 	const { entries, generatedEntryId, lemmaResult } = params;
 
 	if (generatedEntryId) {

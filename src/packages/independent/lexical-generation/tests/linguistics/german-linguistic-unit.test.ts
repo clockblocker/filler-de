@@ -197,6 +197,22 @@ describe("GermanLinguisticUnitSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("parses Partial with ref features", () => {
+			const result = GermanLinguisticUnitSchema.safeParse({
+				kind: "Phrasem",
+				surface: {
+					features: {
+						phrasemeKind: "DiscourseFormula",
+					},
+					lemma: "auf jeden Fall",
+					lemmaRef: "PH-DF-1",
+					surface: "Fall",
+					surfaceKind: "Partial",
+				},
+			});
+			expect(result.success).toBe(true);
+		});
+
 		it("parses DiscourseFormula with role", () => {
 			const result = GermanLinguisticUnitSchema.safeParse({
 				kind: "Phrasem",

@@ -42,6 +42,14 @@ function toCanonicalSection(
 	};
 }
 
+export function fromLegacyEntrySection(
+	section: LegacyEntrySection,
+	pack: LanguagePack,
+	occurrence: number,
+): NoteSection {
+	return toCanonicalSection(section, pack, occurrence);
+}
+
 export function fromLegacyDictEntry(
 	entry: LegacyDictEntry,
 	pack: LanguagePack,

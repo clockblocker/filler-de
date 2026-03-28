@@ -1,11 +1,18 @@
 import { describe, expect, it } from "bun:test";
 import { err, errAsync, ok, okAsync, type ResultAsync } from "neverthrow";
 import { generateSections } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
+import {
+	findFirstSectionByMarker,
+	getSectionContent,
+} from "../../../../src/commanders/textfresser/commands/generate/steps/canonical-note-entry";
 import type { ResolvedEntryState } from "../../../../src/commanders/textfresser/commands/generate/steps/resolve-existing-entry";
+import type { NoteEntry } from "../../../../src/commanders/textfresser/core/notes/types";
 import type {
-	DictEntry,
+	DictEntry as LegacyDictEntry,
 	EntrySection,
 } from "../../../../src/commanders/textfresser/domain/dict-note/types";
+import { fromLegacyDictEntry } from "../../../../src/commanders/textfresser/domain/dict-note";
+import { deLanguagePack } from "../../../../src/commanders/textfresser/languages/de/pack";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
 import {
 	LexicalGenerationFailureKind,
@@ -20,6 +27,33 @@ const PRONOUN_ENTRY_ID = "LX-LM-PRON-1";
 
 function section(kind: string, content: string): EntrySection {
 	return { content, kind, title: kind };
+}
+
+function entry(input: LegacyDictEntry): NoteEntry {
+	return fromLegacyDictEntry(input, deLanguagePack);
+}
+
+function sectionContent(
+	entryValue: NoteEntry | undefined,
+	marker: string,
+): string | undefined {
+	if (!entryValue) {
+		return undefined;
+	}
+	const section = findFirstSectionByMarker(entryValue, marker);
+	return section ? (getSectionContent(section) ?? undefined) : undefined;
+}
+
+function hasSection(entryValue: NoteEntry | undefined, marker: string): boolean {
+	return entryValue
+		? findFirstSectionByMarker(entryValue, marker) !== undefined
+		: false;
+}
+
+function sectionMarkers(entryValue: NoteEntry): string[] {
+	return entryValue.sections
+		.map((section) => section.marker)
+		.filter((marker): marker is string => typeof marker === "string");
 }
 
 function makeLexicalGeneration(
@@ -104,7 +138,7 @@ function makePronounLexicalInfo(): LexicalInfo {
 }
 
 function makePhrasemCtx(params: {
-	matchedEntry: DictEntry;
+	matchedEntry: NoteEntry;
 	lexicalInfo?: LexicalInfo;
 	promptGenerate: (kind: string) => ResultAsync<unknown, unknown>;
 }): ResolvedEntryState {
@@ -158,7 +192,7 @@ function makePhrasemCtx(params: {
 }
 
 function makeClosedSetLexemCtx(params: {
-	matchedEntry: DictEntry;
+	matchedEntry: NoteEntry;
 	lexicalInfo?: LexicalInfo;
 	promptGenerate: (kind: string) => ResultAsync<unknown, unknown>;
 }): ResolvedEntryState {
