@@ -24,7 +24,7 @@ export const DePosLikeKindSchema = z.union([
 export type DePosLikeKind = z.infer<typeof DePosLikeKindSchema>;
 
 const deLemmaResultBaseSchema = z.object({
-	contextWithLinkedParts: z.string().nullable().optional(),
+	contextWithLinkedParts: z.string(),
 	lemma: z.string(),
 	surfaceKind: LexicalSurfaceKindSchema,
 });
@@ -46,7 +46,7 @@ export const DeLemmaResultSchema = z
 	])
 	.transform((value) => {
 		return {
-			contextWithLinkedParts: value.contextWithLinkedParts ?? undefined,
+			contextWithLinkedParts: value.contextWithLinkedParts,
 			lemma: value.lemma,
 			linguisticUnit: value.linguisticUnit,
 			posLikeKind: value.posLikeKind,

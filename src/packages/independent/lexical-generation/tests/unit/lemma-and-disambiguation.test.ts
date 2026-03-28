@@ -20,6 +20,7 @@ describe("lexical-generation lemma/disambiguation", () => {
 
 				if (calls.length === 1) {
 					return ok({
+						contextWithLinkedParts: "Er geht auf.",
 						lemma: "geht",
 						linguisticUnit: "Lexem",
 						posLikeKind: "Verb",
@@ -28,6 +29,7 @@ describe("lexical-generation lemma/disambiguation", () => {
 				}
 
 				return ok({
+					contextWithLinkedParts: "Er geht auf.",
 					lemma: "aufgehen",
 					linguisticUnit: "Lexem",
 					posLikeKind: "Verb",

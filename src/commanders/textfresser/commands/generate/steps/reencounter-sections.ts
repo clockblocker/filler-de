@@ -10,8 +10,11 @@ import { buildSectionQuery, V3_SECTIONS } from "./section-generation-context";
 function sectionMarkers(entry: NoteEntry): Set<string> {
 	return new Set(
 		entry.sections
-			.map((section) => section.marker)
-			.filter((marker): marker is string => typeof marker === "string"),
+			.filter(
+				(section): section is Extract<NoteEntry["sections"][number], { kind: "typed" }> =>
+					section.kind === "typed",
+			)
+			.map((section) => section.marker),
 	);
 }
 

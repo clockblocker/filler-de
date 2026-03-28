@@ -7,7 +7,7 @@ export const examples = [
 			surface: "ging",
 		},
 		output: {
-			contextWithLinkedParts: undefined,
+			contextWithLinkedParts: "Er ging gestern in den Park.",
 			lemma: "gehen",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Verb",
@@ -20,7 +20,7 @@ export const examples = [
 			surface: "Haus",
 		},
 		output: {
-			contextWithLinkedParts: undefined,
+			contextWithLinkedParts: "Das Haus steht am Ende der Straße.",
 			lemma: "Haus",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Noun",
@@ -34,7 +34,8 @@ export const examples = [
 			surface: "Unterschrift",
 		},
 		output: {
-			contextWithLinkedParts: undefined,
+			contextWithLinkedParts:
+				"Sie unterschreibt das Formular, und ihre Unterschrift steht schon unten.",
 			lemma: "Unterschrift",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Noun",
@@ -52,6 +53,21 @@ export const examples = [
 			lemma: "auf jeden Fall",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "DiscourseFormula",
+			surfaceKind: "Partial",
+		},
+	},
+	{
+		input: {
+			context:
+				"Zu ihrer Schwester Greta sagt sie: „Drück mir bitte die [Daumen], dass alles gut geht!“",
+			surface: "Daumen",
+		},
+		output: {
+			contextWithLinkedParts:
+				"Zu ihrer Schwester Greta sagt sie: „[Drück] mir bitte [die] [Daumen], dass alles gut geht!“",
+			lemma: "die Daumen drücken",
+			linguisticUnit: "Phrasem",
+			posLikeKind: "Idiom",
 			surfaceKind: "Partial",
 		},
 	},
@@ -100,7 +116,7 @@ export const examples = [
 			surface: "schöner",
 		},
 		output: {
-			contextWithLinkedParts: undefined,
+			contextWithLinkedParts: "Morgen wird es noch [schöner].",
 			lemma: "schön",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Adjective",
@@ -113,7 +129,7 @@ export const examples = [
 			surface: "klüger",
 		},
 		output: {
-			contextWithLinkedParts: undefined,
+			contextWithLinkedParts: "Sie ist [klüger] als ihr Bruder.",
 			lemma: "klug",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Adjective",

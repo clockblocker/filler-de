@@ -31,11 +31,11 @@ import {
 } from "./verb-features";
 import {
 	adaptLegacySectionsForEntry,
-	findFirstSectionByMarker,
-	getSectionContent,
-	hasSectionWithMarker,
+	findFirstTypedSectionByMarker,
+	getTypedSectionContent,
+	hasTypedSectionWithMarker,
 	insertSectionByOrder,
-	setSectionContent,
+	setTypedSectionContent,
 } from "./canonical-note-entry";
 
 export { buildLexicalMeta } from "./build-lexical-meta";
@@ -73,15 +73,15 @@ function appendAttestation(entry: NoteEntry, ctx: ResolvedEntryState): void {
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const attestationRef = lemmaResult.attestation.source.ref;
 	const attestationCssSuffix = cssSuffixFor[DictSectionKind.Attestation];
-	const attestationSection = findFirstSectionByMarker(
+	const attestationSection = findFirstTypedSectionByMarker(
 		entry,
 		attestationCssSuffix,
 	);
 
 	if (attestationSection) {
-		const existingContent = getSectionContent(attestationSection) ?? "";
+		const existingContent = getTypedSectionContent(attestationSection);
 		if (!existingContent.includes(attestationRef)) {
-			setSectionContent(
+			setTypedSectionContent(
 				attestationSection,
 				existingContent.length > 0
 					? `${existingContent}\n\n${attestationRef}`
@@ -245,7 +245,7 @@ async function buildReEncounterResult(
 			continue;
 		}
 		if (
-			!hasSectionWithMarker(matchedEntry, legacySection.kind) &&
+			!hasTypedSectionWithMarker(matchedEntry, legacySection.kind) &&
 			missingCssKinds.has(legacySection.kind)
 		) {
 			insertSectionByOrder(matchedEntry, adaptedSection);

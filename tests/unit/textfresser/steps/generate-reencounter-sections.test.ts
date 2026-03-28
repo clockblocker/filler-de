@@ -2,11 +2,12 @@ import { describe, expect, it } from "bun:test";
 import { err, errAsync, ok, okAsync, type ResultAsync } from "neverthrow";
 import { generateSections } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import {
-	findFirstSectionByMarker,
-	getSectionContent,
+	findFirstTypedSectionByMarker,
+	getTypedSectionContent,
 } from "../../../../src/commanders/textfresser/commands/generate/steps/canonical-note-entry";
 import type { ResolvedEntryState } from "../../../../src/commanders/textfresser/commands/generate/steps/resolve-existing-entry";
 import type { NoteEntry } from "../../../../src/commanders/textfresser/core/notes/types";
+import { buildSectionMarker } from "../../../../src/commanders/textfresser/domain/dict-note/internal/constants";
 import type {
 	DictEntry as LegacyDictEntry,
 	EntrySection,
@@ -14,6 +15,11 @@ import type {
 import { fromLegacyDictEntry } from "../../../../src/commanders/textfresser/domain/dict-note";
 import { deLanguagePack } from "../../../../src/commanders/textfresser/languages/de/pack";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
+import { cssSuffixFor } from "../../../../src/commanders/textfresser/targets/de/sections/section-css-kind";
+import {
+	ALL_DICT_SECTION_KINDS,
+	TitleReprFor,
+} from "../../../../src/commanders/textfresser/targets/de/sections/section-kind";
 import {
 	LexicalGenerationFailureKind,
 	type LexicalGenerationModule,
@@ -25,8 +31,22 @@ const PHRASEM_ENTRY_ID = "PH-LM-1";
 const NOUN_ENTRY_ID = "LX-LM-NOUN-1";
 const PRONOUN_ENTRY_ID = "LX-LM-PRON-1";
 
+const titleByCssKind = new Map(
+	ALL_DICT_SECTION_KINDS.map((kind) => [
+		cssSuffixFor[kind],
+		TitleReprFor[kind].German,
+	]),
+);
+
 function section(kind: string, content: string): EntrySection {
-	return { content, kind, title: kind };
+	return {
+		content,
+		kind,
+		title:
+			kind === "closed_set_membership"
+				? "Closed-set membership"
+				: (titleByCssKind.get(kind) ?? kind),
+	};
 }
 
 function entry(input: LegacyDictEntry): NoteEntry {
@@ -40,13 +60,34 @@ function sectionContent(
 	if (!entryValue) {
 		return undefined;
 	}
-	const section = findFirstSectionByMarker(entryValue, marker);
-	return section ? (getSectionContent(section) ?? undefined) : undefined;
+	const section = findFirstTypedSectionByMarker(entryValue, marker);
+	if (section) {
+		return getTypedSectionContent(section);
+	}
+	const rawSection = entryValue.sections.find(
+		(
+			candidate,
+		): candidate is Extract<NoteEntry["sections"][number], { kind: "raw" }> =>
+			candidate.kind === "raw" && candidate.marker === marker,
+	);
+	if (!rawSection || !rawSection.title || !rawSection.marker) {
+		return undefined;
+	}
+	const markerText = buildSectionMarker(rawSection.marker, rawSection.title);
+	if (!rawSection.rawBlock.startsWith(markerText)) {
+		return undefined;
+	}
+	return rawSection.rawBlock
+		.slice(markerText.length)
+		.trim()
+		.split("\n")
+		.map((line) => line.trimEnd())
+		.join("\n");
 }
 
 function hasSection(entryValue: NoteEntry | undefined, marker: string): boolean {
 	return entryValue
-		? findFirstSectionByMarker(entryValue, marker) !== undefined
+		? findFirstTypedSectionByMarker(entryValue, marker) !== undefined
 		: false;
 }
 
@@ -256,7 +297,7 @@ describe("generateSections re-encounter behavior", () => {
 	it("keeps fast path for complete re-encounter entries (append attestation only)", async () => {
 		const promptCalls: string[] = [];
 		let lexicalInfoCalls = 0;
-		const matchedEntry: DictEntry = {
+		const matchedEntry = entry({
 			headerContent: "Entry",
 			id: PHRASEM_ENTRY_ID,
 			meta: {},
@@ -265,7 +306,7 @@ describe("generateSections re-encounter behavior", () => {
 				section("synonyme", "= [[nah]]"),
 				section("translations", "idiom"),
 			],
-		};
+		});
 		const ctx = makePhrasemCtx({
 			matchedEntry,
 			promptGenerate: (kind) => {
@@ -285,16 +326,17 @@ describe("generateSections re-encounter behavior", () => {
 		expect(promptCalls).toHaveLength(0);
 		expect(lexicalInfoCalls).toBe(0);
 
-		const attestationSection = matchedEntry.sections.find(
-			(s) => s.kind === "kontexte",
+		expect(sectionContent(matchedEntry, "kontexte")).toContain(
+			"![[Other#^2|^]]",
 		);
-		expect(attestationSection?.content).toContain("![[Other#^2|^]]");
-		expect(attestationSection?.content).toContain("![[Src#^1|^]]");
+		expect(sectionContent(matchedEntry, "kontexte")).toContain(
+			"![[Src#^1|^]]",
+		);
 	});
 
 	it("regenerates and merges missing V3 sections on re-encounter", async () => {
 		const promptCalls: string[] = [];
-		const matchedEntry: DictEntry = {
+		const matchedEntry = entry({
 			headerContent: "Entry",
 			id: PHRASEM_ENTRY_ID,
 			meta: {},
@@ -302,7 +344,7 @@ describe("generateSections re-encounter behavior", () => {
 				section("kontexte", "![[Other#^2|^]]"),
 				section("synonyme", "= [[nah]]"),
 			],
-		};
+		});
 		const ctx = makePhrasemCtx({
 			matchedEntry,
 			promptGenerate: (kind) => {
@@ -324,15 +366,14 @@ describe("generateSections re-encounter behavior", () => {
 		expect(result.isOk()).toBe(true);
 		expect(promptCalls).toContain("WordTranslation");
 
-		const translationSection = matchedEntry.sections.find(
-			(s) => s.kind === "translations",
+		expect(sectionContent(matchedEntry, "translations")).toBe(
+			"idiom translation",
 		);
-		expect(translationSection?.content).toBe("idiom translation");
 	});
 
 	it("still requests WordTranslation before relation regeneration", async () => {
 		const promptCalls: string[] = [];
-		const matchedEntry: DictEntry = {
+		const matchedEntry = entry({
 			headerContent: "Entry",
 			id: PHRASEM_ENTRY_ID,
 			meta: {},
@@ -340,7 +381,7 @@ describe("generateSections re-encounter behavior", () => {
 				section("kontexte", "![[Other#^2|^]]"),
 				section("translations", "existing translation"),
 			],
-		};
+		});
 		const ctx = makePhrasemCtx({
 			matchedEntry,
 			promptGenerate: (kind) => {
@@ -367,15 +408,12 @@ describe("generateSections re-encounter behavior", () => {
 		expect(result.isOk()).toBe(true);
 		expect(promptCalls).toContain("WordTranslation");
 
-		const relationSection = matchedEntry.sections.find(
-			(s) => s.kind === "synonyme",
-		);
-		expect(relationSection?.content).toContain("= [[nah]]");
+		expect(sectionContent(matchedEntry, "synonyme")).toContain("= [[nah]]");
 	});
 
 	it("does not require morphem/inflection for proper-noun re-encounter", async () => {
 		const promptCalls: string[] = [];
-		const matchedEntry: DictEntry = {
+		const matchedEntry = entry({
 			headerContent: "Entry",
 			id: NOUN_ENTRY_ID,
 			meta: {
@@ -386,14 +424,14 @@ describe("generateSections re-encounter behavior", () => {
 					},
 					linguisticUnit: "Lexem",
 					posLikeKind: "Noun",
-				} as unknown as NonNullable<DictEntry["meta"]["entity"]>,
+				} as unknown as NonNullable<LegacyDictEntry["meta"]["entity"]>,
 			},
 			sections: [
 				section("kontexte", "![[Src#^1|^]]"),
 				section("translations", "proper noun"),
 				section("tags", "#noun"),
 			],
-		};
+		});
 		const ctx = {
 			actions: [],
 			commandContext: {
@@ -477,7 +515,7 @@ describe("generateSections re-encounter behavior", () => {
 	it("uses stored proper-noun metadata on re-encounter when lexical noun features degrade", async () => {
 		const promptCalls: string[] = [];
 		let lexicalInfoCalls = 0;
-		const matchedEntry: DictEntry = {
+		const matchedEntry = entry({
 			headerContent: "Entry",
 			id: NOUN_ENTRY_ID,
 			meta: {
@@ -488,7 +526,7 @@ describe("generateSections re-encounter behavior", () => {
 					},
 					linguisticUnit: "Lexem",
 					posLikeKind: "Noun",
-				} as unknown as NonNullable<DictEntry["meta"]["entity"]>,
+				} as unknown as NonNullable<LegacyDictEntry["meta"]["entity"]>,
 				linguisticUnit: {
 					kind: "Lexem",
 					surface: {
@@ -506,7 +544,7 @@ describe("generateSections re-encounter behavior", () => {
 				section("kontexte", "![[Src#^1|^]]"),
 				section("tags", "#noun"),
 			],
-		};
+		});
 		const ctx = {
 			actions: [],
 			commandContext: {
@@ -598,9 +636,11 @@ describe("generateSections re-encounter behavior", () => {
 
 		expect(lexicalInfoCalls).toBe(1);
 		expect(promptCalls).toEqual(["WordTranslation"]);
-		expect(
-			matchedEntry.sections.map((section) => section.kind).sort(),
-		).toEqual(["kontexte", "tags", "translations"]);
+		expect(sectionMarkers(matchedEntry).sort()).toEqual([
+			"kontexte",
+			"tags",
+			"translations",
+		]);
 		expect(result.value.failedSections).toContain("Features");
 	});
 
@@ -699,7 +739,7 @@ describe("generateSections re-encounter behavior", () => {
 
 	it("adds closed-set membership as a dedicated lightweight entry on re-encounter", async () => {
 		const promptCalls: string[] = [];
-		const matchedEntry: DictEntry = {
+		const matchedEntry = entry({
 			headerContent: "Entry",
 			id: PRONOUN_ENTRY_ID,
 			meta: {},
@@ -712,7 +752,7 @@ describe("generateSections re-encounter behavior", () => {
 				section("tags", "#pronoun/personal"),
 				section("translations", "we"),
 			],
-		};
+		});
 		const ctx = makeClosedSetLexemCtx({
 			matchedEntry,
 			promptGenerate: (kind) => {
@@ -726,36 +766,28 @@ describe("generateSections re-encounter behavior", () => {
 		expect(promptCalls).toHaveLength(0);
 		if (result.isErr()) return;
 
-		const closedSetRefs = matchedEntry.sections.find(
-			(s) => s.kind === "closed_set_membership",
-		);
-		expect(closedSetRefs).toBeUndefined();
+		expect(hasSection(matchedEntry, "closed_set_membership")).toBe(false);
 
 		const membershipEntry = result.value.allEntries.find(
 			(entry) =>
 				entry.id !== PRONOUN_ENTRY_ID &&
 				entry.sections.some(
-					(section) => section.kind === "closed_set_membership",
+					(section) => section.marker === "closed_set_membership",
 				),
 		);
 		expect(membershipEntry).toBeDefined();
 		expect(membershipEntry?.headerContent).toBe("wir (Pronoun)");
-		const membershipSection = membershipEntry?.sections.find(
-			(s) => s.kind === "closed_set_membership",
-		);
-		expect(membershipSection?.content).toContain(
+		expect(sectionContent(membershipEntry, "closed_set_membership")).toContain(
 			"- [[wir-personal-pronomen-de|wir (Pronoun)]]",
 		);
 		expect(
-			membershipEntry?.sections.some(
-				(s) => s.kind === "tags" && s.content.includes("#kind/closed-set"),
-			),
+			sectionContent(membershipEntry, "tags")?.includes("#kind/closed-set"),
 		).toBe(true);
 		expect(result.value.targetBlockId).toBe(PRONOUN_ENTRY_ID);
 	});
 
 	it("uses POS-aware Library target for closed-set membership entry", async () => {
-		const matchedEntry: DictEntry = {
+		const matchedEntry = entry({
 			headerContent: "Entry",
 			id: PRONOUN_ENTRY_ID,
 			meta: {},
@@ -768,7 +800,7 @@ describe("generateSections re-encounter behavior", () => {
 				section("tags", "#pronoun/personal"),
 				section("translations", "they"),
 			],
-		};
+		});
 		const ctx = makeClosedSetLexemCtx({
 			matchedEntry,
 			promptGenerate: () => okAsync("unused"),
@@ -820,23 +852,22 @@ describe("generateSections re-encounter behavior", () => {
 		if (result.isErr()) return;
 
 		const membershipEntry = result.value.allEntries.find((entry) =>
-			entry.sections.some((section) => section.kind === "closed_set_membership"),
+			entry.sections.some(
+				(section) => section.marker === "closed_set_membership",
+			),
 		);
 		expect(membershipEntry).toBeDefined();
-		const membershipSection = membershipEntry?.sections.find(
-			(section) => section.kind === "closed_set_membership",
-		);
-		expect(membershipSection?.content).toContain(
+		expect(sectionContent(membershipEntry, "closed_set_membership")).toContain(
 			"- [[die-demonstrativ-pronomen-de|die (Pronoun)]]",
 		);
-		expect(membershipSection?.content).not.toContain(
+		expect(sectionContent(membershipEntry, "closed_set_membership")).not.toContain(
 			"die-bestimmter-artikel-de",
 		);
 	});
 
 	it("dedupes closed-set membership entry on repeated re-encounter", async () => {
 		const promptCalls: string[] = [];
-		const membershipEntry: DictEntry = {
+		const membershipEntry = entry({
 			headerContent: "wir (Pronoun)",
 			id: "LX-LM-PRON-2",
 			meta: {},
@@ -847,8 +878,8 @@ describe("generateSections re-encounter behavior", () => {
 				),
 				section("tags", "#kind/closed-set"),
 			],
-		};
-		const matchedEntry: DictEntry = {
+		});
+		const matchedEntry = entry({
 			headerContent: "Entry",
 			id: PRONOUN_ENTRY_ID,
 			meta: {},
@@ -861,7 +892,7 @@ describe("generateSections re-encounter behavior", () => {
 				section("tags", "#pronoun/personal"),
 				section("translations", "we"),
 			],
-		};
+		});
 		const ctx = makeClosedSetLexemCtx({
 			matchedEntry,
 			promptGenerate: (kind) => {
@@ -877,14 +908,16 @@ describe("generateSections re-encounter behavior", () => {
 		if (result.isErr()) return;
 
 		const membershipEntries = result.value.allEntries.filter((entry) =>
-			entry.sections.some((section) => section.kind === "closed_set_membership"),
+			entry.sections.some(
+				(section) => section.marker === "closed_set_membership",
+			),
 		);
 		expect(membershipEntries).toHaveLength(1);
 		expect(membershipEntries[0]?.id).toBe("LX-LM-PRON-2");
 	});
 
 	it("reuses existing membership entry when legacy pointer basename becomes stale", async () => {
-		const membershipEntry: DictEntry = {
+		const membershipEntry = entry({
 			headerContent: "wir (Pronoun)",
 			id: "LX-LM-PRON-2",
 			meta: {},
@@ -895,8 +928,8 @@ describe("generateSections re-encounter behavior", () => {
 				),
 				section("tags", "#kind/closed-set"),
 			],
-		};
-		const matchedEntry: DictEntry = {
+		});
+		const matchedEntry = entry({
 			headerContent: "Entry",
 			id: PRONOUN_ENTRY_ID,
 			meta: {},
@@ -909,7 +942,7 @@ describe("generateSections re-encounter behavior", () => {
 				section("tags", "#pronoun/personal"),
 				section("translations", "we"),
 			],
-		};
+		});
 		const ctx = makeClosedSetLexemCtx({
 			matchedEntry,
 			promptGenerate: () => okAsync("unused"),
@@ -922,15 +955,12 @@ describe("generateSections re-encounter behavior", () => {
 
 		const membershipEntries = result.value.allEntries.filter((entry) =>
 			entry.sections.some(
-				(section) => section.kind === "closed_set_membership",
+				(section) => section.marker === "closed_set_membership",
 			),
 		);
 		expect(membershipEntries).toHaveLength(1);
 		expect(membershipEntries[0]?.id).toBe("LX-LM-PRON-2");
-		const membershipSection = membershipEntries[0]?.sections.find(
-			(section) => section.kind === "closed_set_membership",
-		);
-		expect(membershipSection?.content).toBe(
+		expect(sectionContent(membershipEntries[0], "closed_set_membership")).toBe(
 			"- [[wir-personal-pronomen-de|wir (Pronoun)]]",
 		);
 	});
@@ -1032,8 +1062,8 @@ describe("generateSections new-entry resilience", () => {
 		expect(result.value.allEntries).toHaveLength(1);
 		const onlyEntry = result.value.allEntries[0];
 		expect(onlyEntry?.sections).toHaveLength(1);
-		expect(onlyEntry?.sections[0]?.kind).toBe("kontexte");
-		expect(onlyEntry?.sections[0]?.content).toBe("![[Src#^1|^]]");
+		expect(onlyEntry?.sections[0]?.marker).toBe("kontexte");
+		expect(sectionContent(onlyEntry, "kontexte")).toBe("![[Src#^1|^]]");
 		expect(result.value.failedSections).toContain("Enrichment");
 		expect(result.value.failedSections).toContain("Features");
 		expect(result.value.failedSections).toContain("Morphem");
@@ -1108,18 +1138,16 @@ describe("generateSections new-entry resilience", () => {
 		expect(result.value.targetBlockId).toBe("LX-LM-PRON-1");
 
 		const membershipEntry = result.value.allEntries.find((entry) =>
-			entry.sections.some((section) => section.kind === "closed_set_membership"),
+			entry.sections.some(
+				(section) => section.marker === "closed_set_membership",
+			),
 		);
 		expect(membershipEntry).toBeDefined();
 		expect(membershipEntry?.id).toBe("LX-LM-PRON-2");
 		expect(membershipEntry?.headerContent).toBe("wir (Pronoun)");
 		expect(
-			membershipEntry?.sections.some(
-				(section) =>
-					section.kind === "closed_set_membership" &&
-					section.content.includes(
-						"- [[wir-personal-pronomen-de|wir (Pronoun)]]",
-					),
+			sectionContent(membershipEntry, "closed_set_membership")?.includes(
+				"- [[wir-personal-pronomen-de|wir (Pronoun)]]",
 			),
 		).toBe(true);
 	});

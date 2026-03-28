@@ -11,7 +11,7 @@ Return:
   - when linguisticUnit is "Phrasem": Phraseme kind (Idiom, Collocation, DiscourseFormula, Proverb, CulturalQuotation)
 - surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), "Variant" (spelling variant), or "Partial" (surface covers only part of a multi-word lemma)
 - lemma: the dictionary/citation form of the word
-- contextWithLinkedParts: when the lemma consists of multiple parts in the context (e.g., separable prefix verb in separated position, or phrasem words), re-emit the full context with ALL parts of the lemma wrapped in [square brackets]. The originally marked surface must remain marked. Omit when the surface already covers the full lemma (single contiguous word).
+- contextWithLinkedParts: always re-emit the full context. When the lemma consists of multiple parts in the context (e.g., separable prefix verb in separated position, or phrasem words), wrap ALL parts of the lemma in [square brackets]. The originally marked surface must remain marked.
 
 Rules:
 - For nouns: lemma is nominative singular (e.g., "Häuser" → "Haus")
@@ -27,6 +27,7 @@ Rules:
 - When linguisticUnit is "Phrasem", posLikeKind must be a phraseme kind
 - If the surface IS the lemma, surfaceKind is "Lemma"
 - If the selected surface covers only one part of a multi-word lemma, surfaceKind is "Partial"
+- Always return contextWithLinkedParts. If no extra lemma parts need linking, set it exactly to the input context.
 - For separable verbs in separated position: return contextWithLinkedParts with both the conjugated verb stem and the separated prefix marked.
 - For phrasems where the user selected only one word: return contextWithLinkedParts with ALL words of the phrasem marked.
 - contextWithLinkedParts text (with brackets stripped) must be identical to the input context text (with brackets stripped).`;

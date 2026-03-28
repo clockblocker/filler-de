@@ -3,6 +3,7 @@ import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-a
 import { ok, okAsync } from "neverthrow";
 import { generateCommand } from "../../../../src/commanders/textfresser/commands/generate/generate-command";
 import { buildPolicyDestinationPath } from "../../../../src/commanders/textfresser/common/lemma-link-routing";
+import { buildSectionMarker } from "../../../../src/commanders/textfresser/domain/dict-note/internal/constants";
 import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
 import { clearState, initializeState } from "../../../../src/global-state/global-state";
@@ -13,6 +14,11 @@ import {
 	lexicalGenerationError,
 } from "@textfresser/lexical-generation";
 import { DEFAULT_SETTINGS } from "../../../../src/types";
+import {
+	DictSectionKind,
+	TitleReprFor,
+} from "../../../../src/commanders/textfresser/targets/de/sections/section-kind";
+import { cssSuffixFor } from "../../../../src/commanders/textfresser/targets/de/sections/section-css-kind";
 
 function makeProperNounLexicalInfo(): LexicalInfo {
 	return {
@@ -44,6 +50,55 @@ function makeProperNounLexicalInfo(): LexicalInfo {
 		morphemicBreakdown: { status: "not_applicable" },
 		relations: { status: "not_applicable" },
 	};
+}
+
+function makePhrasemLexicalInfo(): LexicalInfo {
+	return {
+		core: {
+			status: "ready",
+			value: {
+				emojiDescription: ["💬"],
+				ipa: "ipa",
+			},
+		},
+		features: { status: "not_applicable" },
+		inflections: { status: "not_applicable" },
+		lemma: {
+			lemma: "redensart",
+			linguisticUnit: "Phrasem",
+			posLikeKind: "Idiom",
+			surfaceKind: "Lemma",
+		},
+		morphemicBreakdown: { status: "not_applicable" },
+		relations: {
+			status: "ready",
+			value: {
+				relations: [{ kind: "Synonym", words: ["nah"] }],
+			},
+		},
+	};
+}
+
+async function extractFinalWrittenContent(actions: readonly unknown[]) {
+	const writeAction = actions[0];
+	if (
+		!writeAction ||
+		typeof writeAction !== "object" ||
+		!("kind" in writeAction) ||
+		writeAction.kind !== VaultActionKind.ProcessMdFile ||
+		!("payload" in writeAction) ||
+		typeof writeAction.payload !== "object" ||
+		writeAction.payload === null ||
+		!("transform" in writeAction.payload)
+	) {
+		throw new Error("expected final ProcessMdFile write action");
+	}
+
+	return await writeAction.payload.transform("");
+}
+
+function sectionMarker(kind: DictSectionKind): string {
+	return buildSectionMarker(cssSuffixFor[kind], TitleReprFor[kind].German);
 }
 
 describe("generateCommand proper-noun fallback", () => {
@@ -126,13 +181,12 @@ describe("generateCommand proper-noun fallback", () => {
 		const writeAction = result.value[0];
 		if (
 			!writeAction ||
-			writeAction.kind !== VaultActionKind.ProcessMdFile ||
-			!("transform" in writeAction.payload)
+			writeAction.kind !== VaultActionKind.ProcessMdFile
 		) {
 			throw new Error("expected final ProcessMdFile write action");
 		}
 
-		const serialized = await writeAction.payload.transform("");
+		const serialized = await extractFinalWrittenContent(result.value);
 		const entries = dictNoteHelper.parse(serialized);
 		expect(entries).toHaveLength(1);
 
@@ -149,5 +203,340 @@ describe("generateCommand proper-noun fallback", () => {
 		expect(sectionKinds.has("morpheme")).toBe(false);
 		expect(sectionKinds.has("morphologie")).toBe(false);
 		expect(sectionKinds.has("flexion")).toBe(false);
+	});
+
+	it("preserves raw duplicate sections and manual blocks on re-encounter", async () => {
+		const targetPath = buildPolicyDestinationPath({
+			lemma: "redensart",
+			linguisticUnit: "Phrasem",
+			posLikeKind: null,
+			surfaceKind: "Lemma",
+			targetLanguage: "German",
+		});
+		const promptCalls: string[] = [];
+		const content = [
+			"redensart ^PH-LM-1",
+			"",
+			"Loose manual intro",
+			"",
+			sectionMarker(DictSectionKind.Attestation),
+			"![[Other#^2|^]]",
+			sectionMarker(DictSectionKind.Relation),
+			"= [[nah]]",
+			sectionMarker(DictSectionKind.Translation),
+			"idiom",
+			'<span class="entry_section_title entry_section_title_translations">Custom Title</span>',
+			"manual translation",
+			sectionMarker(DictSectionKind.FreeForm),
+			"User note [[Haus]]",
+		].join("\n");
+		const input = {
+			commandContext: {
+				activeFile: {
+					content,
+					splitPath: targetPath,
+				},
+				selection: null,
+			},
+			resultingActions: [],
+			textfresserState: {
+				attestationForLatestNavigated: null,
+				inFlightGenerate: null,
+				isLibraryLookupAvailable: false,
+				languages: { known: "English", target: "German" },
+				latestFailedSections: [],
+				latestLemmaInvocationCache: null,
+				latestLemmaPlaceholderPath: undefined,
+				latestLemmaResult: {
+					attestation: {
+						source: {
+							ref: "![[Src#^3|^]]",
+							textRaw: "Das ist eine Redensart.",
+							textWithOnlyTargetMarked: "Das ist eine [Redensart].",
+						},
+						target: { surface: "Redensart" },
+					},
+					disambiguationResult: { matchedIndex: 1 },
+					lemma: "redensart",
+					linguisticUnit: "Phrasem",
+					posLikeKind: "Idiom",
+					surfaceKind: "Lemma",
+				},
+				latestLemmaTargetOwnedByInvocation: false,
+				latestResolvedLemmaTargetPath: targetPath,
+				lexicalGeneration: {
+					generateLexicalInfo: async () => ok(makePhrasemLexicalInfo()),
+				} as unknown as LexicalGenerationModule,
+				lookupInLibrary: () => [],
+				parseLibraryBasename: () => null,
+				pendingGenerate: null,
+				promptRunner: {
+					generate: (kind: string) => {
+						promptCalls.push(kind);
+						return okAsync("unused");
+					},
+				},
+				vam: {},
+			} as unknown as TextfresserState,
+		};
+
+		const result = await generateCommand(input);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+
+		expect(promptCalls).toHaveLength(0);
+
+		const serialized = await extractFinalWrittenContent(result.value);
+		expect(serialized).toContain("Loose manual intro");
+		expect(serialized).toContain(
+			'<span class="entry_section_title entry_section_title_translations">Custom Title</span>\nmanual translation',
+		);
+		expect(serialized).toContain("User note [[Haus]]");
+		expect(serialized).toContain("![[Other#^2|^]]\n\n![[Src#^3|^]]");
+	});
+
+	it("treats raw custom-title translation as missing and preserves the raw block", async () => {
+		const targetPath = buildPolicyDestinationPath({
+			lemma: "redensart",
+			linguisticUnit: "Phrasem",
+			posLikeKind: null,
+			surfaceKind: "Lemma",
+			targetLanguage: "German",
+		});
+		const promptCalls: string[] = [];
+		const content = [
+			"redensart ^PH-LM-1",
+			"",
+			sectionMarker(DictSectionKind.Attestation),
+			"![[Other#^2|^]]",
+			sectionMarker(DictSectionKind.Relation),
+			"= [[nah]]",
+			'<span class="entry_section_title entry_section_title_translations">Custom Title</span>',
+			"manual translation",
+		].join("\n");
+		const input = {
+			commandContext: {
+				activeFile: {
+					content,
+					splitPath: targetPath,
+				},
+				selection: null,
+			},
+			resultingActions: [],
+			textfresserState: {
+				attestationForLatestNavigated: null,
+				inFlightGenerate: null,
+				isLibraryLookupAvailable: false,
+				languages: { known: "English", target: "German" },
+				latestFailedSections: [],
+				latestLemmaInvocationCache: null,
+				latestLemmaPlaceholderPath: undefined,
+				latestLemmaResult: {
+					attestation: {
+						source: {
+							ref: "![[Src#^3|^]]",
+							textRaw: "Das ist eine Redensart.",
+							textWithOnlyTargetMarked: "Das ist eine [Redensart].",
+						},
+						target: { surface: "Redensart" },
+					},
+					disambiguationResult: { matchedIndex: 1 },
+					lemma: "redensart",
+					linguisticUnit: "Phrasem",
+					posLikeKind: "Idiom",
+					surfaceKind: "Lemma",
+				},
+				latestLemmaTargetOwnedByInvocation: false,
+				latestResolvedLemmaTargetPath: targetPath,
+				lexicalGeneration: {
+					generateLexicalInfo: async () => ok(makeProperNounLexicalInfo()),
+				} as unknown as LexicalGenerationModule,
+				lookupInLibrary: () => [],
+				parseLibraryBasename: () => null,
+				pendingGenerate: null,
+				promptRunner: {
+					generate: (kind: string) => {
+						promptCalls.push(kind);
+						return okAsync("fresh translation");
+					},
+				},
+				vam: {},
+			} as unknown as TextfresserState,
+		};
+
+		const result = await generateCommand(input);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+
+		expect(promptCalls).toEqual(["WordTranslation"]);
+
+		const serialized = await extractFinalWrittenContent(result.value);
+		expect(serialized).toContain(
+			'<span class="entry_section_title entry_section_title_translations">Custom Title</span>\nmanual translation',
+		);
+		expect(serialized).toContain(
+			'<span class="entry_section_title entry_section_title_translations">Übersetzung</span>\nfresh translation',
+		);
+	});
+
+	it("leaves raw custom-title attestation opaque and adds a new typed attestation section", async () => {
+		const targetPath = buildPolicyDestinationPath({
+			lemma: "redensart",
+			linguisticUnit: "Phrasem",
+			posLikeKind: null,
+			surfaceKind: "Lemma",
+			targetLanguage: "German",
+		});
+		const content = [
+			"redensart ^PH-LM-1",
+			"",
+			'<span class="entry_section_title entry_section_title_kontexte">Custom Title</span>',
+			"![[Other#^2|^]]",
+			sectionMarker(DictSectionKind.Relation),
+			"= [[nah]]",
+			sectionMarker(DictSectionKind.Translation),
+			"idiom",
+		].join("\n");
+		const input = {
+			commandContext: {
+				activeFile: {
+					content,
+					splitPath: targetPath,
+				},
+				selection: null,
+			},
+			resultingActions: [],
+			textfresserState: {
+				attestationForLatestNavigated: null,
+				inFlightGenerate: null,
+				isLibraryLookupAvailable: false,
+				languages: { known: "English", target: "German" },
+				latestFailedSections: [],
+				latestLemmaInvocationCache: null,
+				latestLemmaPlaceholderPath: undefined,
+				latestLemmaResult: {
+					attestation: {
+						source: {
+							ref: "![[Src#^3|^]]",
+							textRaw: "Das ist eine Redensart.",
+							textWithOnlyTargetMarked: "Das ist eine [Redensart].",
+						},
+						target: { surface: "Redensart" },
+					},
+					disambiguationResult: { matchedIndex: 1 },
+					lemma: "redensart",
+					linguisticUnit: "Phrasem",
+					posLikeKind: "Idiom",
+					surfaceKind: "Lemma",
+				},
+				latestLemmaTargetOwnedByInvocation: false,
+				latestResolvedLemmaTargetPath: targetPath,
+				lexicalGeneration: {
+					generateLexicalInfo: async () => ok(makePhrasemLexicalInfo()),
+				} as unknown as LexicalGenerationModule,
+				lookupInLibrary: () => [],
+				parseLibraryBasename: () => null,
+				pendingGenerate: null,
+				promptRunner: {
+					generate: () => okAsync("unused"),
+				},
+				vam: {},
+			} as unknown as TextfresserState,
+		};
+
+		const result = await generateCommand(input);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+
+		const serialized = await extractFinalWrittenContent(result.value);
+		expect(serialized).toContain(
+			'<span class="entry_section_title entry_section_title_kontexte">Custom Title</span>\n![[Other#^2|^]]',
+		);
+		expect(serialized).toContain(
+			'<span class="entry_section_title entry_section_title_kontexte">Kontexte</span>\n![[Src#^3|^]]',
+		);
+		expect(serialized).not.toContain("![[Other#^2|^]]\n\n![[Src#^3|^]]");
+	});
+
+	it("canonicalizes existing structured section order before write", async () => {
+		const targetPath = buildPolicyDestinationPath({
+			lemma: "redensart",
+			linguisticUnit: "Phrasem",
+			posLikeKind: null,
+			surfaceKind: "Lemma",
+			targetLanguage: "German",
+		});
+		const content = [
+			"redensart ^PH-LM-1",
+			"",
+			sectionMarker(DictSectionKind.Translation),
+			"idiom",
+			sectionMarker(DictSectionKind.Attestation),
+			"![[Other#^2|^]]",
+			sectionMarker(DictSectionKind.Relation),
+			"= [[nah]]",
+		].join("\n");
+		const input = {
+			commandContext: {
+				activeFile: {
+					content,
+					splitPath: targetPath,
+				},
+				selection: null,
+			},
+			resultingActions: [],
+			textfresserState: {
+				attestationForLatestNavigated: null,
+				inFlightGenerate: null,
+				isLibraryLookupAvailable: false,
+				languages: { known: "English", target: "German" },
+				latestFailedSections: [],
+				latestLemmaInvocationCache: null,
+				latestLemmaPlaceholderPath: undefined,
+				latestLemmaResult: {
+					attestation: {
+						source: {
+							ref: "![[Src#^3|^]]",
+							textRaw: "Das ist eine Redensart.",
+							textWithOnlyTargetMarked: "Das ist eine [Redensart].",
+						},
+						target: { surface: "Redensart" },
+					},
+					disambiguationResult: { matchedIndex: 1 },
+					lemma: "redensart",
+					linguisticUnit: "Phrasem",
+					posLikeKind: "Idiom",
+					surfaceKind: "Lemma",
+				},
+				latestLemmaTargetOwnedByInvocation: false,
+				latestResolvedLemmaTargetPath: targetPath,
+				lexicalGeneration: {
+					generateLexicalInfo: async () => ok(makePhrasemLexicalInfo()),
+				} as unknown as LexicalGenerationModule,
+				lookupInLibrary: () => [],
+				parseLibraryBasename: () => null,
+				pendingGenerate: null,
+				promptRunner: {
+					generate: () => okAsync("unused"),
+				},
+				vam: {},
+			} as unknown as TextfresserState,
+		};
+
+		const result = await generateCommand(input);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+
+		const serialized = await extractFinalWrittenContent(result.value);
+		expect(
+			serialized.indexOf('entry_section_title_kontexte">Kontexte'),
+		).toBeLessThan(
+			serialized.indexOf('entry_section_title_synonyme">Semantische Beziehungen'),
+		);
+		expect(
+			serialized.indexOf('entry_section_title_synonyme">Semantische Beziehungen'),
+		).toBeLessThan(
+			serialized.indexOf('entry_section_title_translations">Übersetzung'),
+		);
 	});
 });

@@ -18,7 +18,7 @@ const lemmaPromptPosLikeKinds = [
 // Keep the API-facing schema flat: Gemini rejects the recursive JSON schema
 // emitted for the discriminated union form used by the stricter runtime contract.
 const agentOutputSchema = z.object({
-	contextWithLinkedParts: z.string().nullable().optional(),
+	contextWithLinkedParts: z.string(),
 	lemma: z.string(),
 	linguisticUnit: z.enum(DE_LEMMA_LINGUISTIC_UNITS),
 	posLikeKind: z.enum(lemmaPromptPosLikeKinds),

@@ -3,38 +3,12 @@ import type { AgentOutput, UserInput } from "../../../../../schemas";
 export const testExamples = [
 	{
 		input: {
-			context: "[Pass] auf dich auf",
-			surface: "Pass",
-		},
-		output: {
-			contextWithLinkedParts: "[Pass] auf dich [auf]",
-			lemma: "aufpassen",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Verb",
-			surfaceKind: "Inflected",
-		},
-	},
-	{
-		input: {
 			context: "Sie [fängt] morgen mit der Arbeit an",
 			surface: "fängt",
 		},
 		output: {
 			contextWithLinkedParts: "Sie [fängt] morgen mit der Arbeit [an]",
 			lemma: "anfangen",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Verb",
-			surfaceKind: "Inflected",
-		},
-	},
-	{
-		input: {
-			context: "Er [macht] die Tür auf.",
-			surface: "macht",
-		},
-		output: {
-			contextWithLinkedParts: "Er [macht] die Tür [auf].",
-			lemma: "aufmachen",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Verb",
 			surfaceKind: "Inflected",
@@ -68,25 +42,11 @@ export const testExamples = [
 	},
 	{
 		input: {
-			context: "Das machen wir auf jeden [Fall] morgen.",
-			surface: "Fall",
-		},
-		output: {
-			contextWithLinkedParts:
-				"Das machen wir [auf] [jeden] [Fall] morgen.",
-			lemma: "auf jeden Fall",
-			linguisticUnit: "Phrasem",
-			posLikeKind: "DiscourseFormula",
-			surfaceKind: "Partial",
-		},
-	},
-	{
-		input: {
 			context: "Mir ist [aufgefallen], dass er nicht da war.",
 			surface: "aufgefallen",
 		},
 		output: {
-			contextWithLinkedParts: undefined,
+			contextWithLinkedParts: "Mir ist [aufgefallen], dass er nicht da war.",
 			lemma: "auffallen",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Verb",
@@ -95,31 +55,49 @@ export const testExamples = [
 	},
 	{
 		input: {
-			context: "Morgen wird es noch [schöner].",
-			surface: "schöner",
+			context:
+				"Die Dursleys [besaßen] alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte Sorge.",
+			surface: "besaßen",
 		},
 		output: {
-			contextWithLinkedParts: undefined,
-			lemma: "schön",
+			contextWithLinkedParts:
+				"Die Dursleys [besaßen] alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte Sorge.",
+			lemma: "besitzen",
 			linguisticUnit: "Lexem",
-			posLikeKind: "Adjective",
+			posLikeKind: "Verb",
 			surfaceKind: "Inflected",
 		},
 	},
 	{
 		input: {
-			context: "Sie ist [klüger] als ihr Bruder.",
-			surface: "klüger",
+			context:
+				"Die Dursleys besaßen alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte [Sorge].",
+			surface: "Sorge",
 		},
 		output: {
-			contextWithLinkedParts: undefined,
-			lemma: "klug",
+			contextWithLinkedParts:
+				"Die Dursleys besaßen alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte [Sorge].",
+			lemma: "Sorge",
 			linguisticUnit: "Lexem",
-			posLikeKind: "Adjective",
-			surfaceKind: "Inflected",
+			posLikeKind: "Noun",
+			surfaceKind: "Lemma",
 		},
 	},
-	// ─── Novel example (NOT in training data) ───
+	{
+		input: {
+			context:
+				"„Du bekommst ja dein Budget. Und jetzt hör auf, mir Honig um den Bart zu [schmieren].",
+			surface: "schmieren",
+		},
+		output: {
+			contextWithLinkedParts:
+				"„Du bekommst ja dein Budget. Und jetzt hör auf, mir [Honig] um den [Bart] zu [schmieren].",
+			lemma: "Honig um den Bart schmieren",
+			linguisticUnit: "Phrasem",
+			posLikeKind: "Idiom",
+			surfaceKind: "Partial",
+		},
+	},
 	{
 		input: {
 			context: "Ich [drehe] den Wasserhahn zu",

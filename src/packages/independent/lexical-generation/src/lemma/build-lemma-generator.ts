@@ -11,7 +11,7 @@ import {
 } from "./guardrails";
 
 function toResolvedLemma(output: {
-	contextWithLinkedParts?: string | null;
+	contextWithLinkedParts: string;
 	lemma: string;
 	linguisticUnit: "Lexem" | "Phrasem";
 	posLikeKind: string;
@@ -19,7 +19,7 @@ function toResolvedLemma(output: {
 }): ResolvedLemma {
 	if (output.linguisticUnit === "Lexem") {
 		return {
-			contextWithLinkedParts: output.contextWithLinkedParts ?? undefined,
+			contextWithLinkedParts: output.contextWithLinkedParts,
 			lemma: output.lemma,
 			linguisticUnit: "Lexem",
 			posLikeKind: output.posLikeKind as Extract<
@@ -31,7 +31,7 @@ function toResolvedLemma(output: {
 	}
 
 	return {
-		contextWithLinkedParts: output.contextWithLinkedParts ?? undefined,
+		contextWithLinkedParts: output.contextWithLinkedParts,
 		lemma: output.lemma,
 		linguisticUnit: "Phrasem",
 		posLikeKind: output.posLikeKind as Extract<

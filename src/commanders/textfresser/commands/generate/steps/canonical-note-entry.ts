@@ -13,21 +13,17 @@ import {
 	fromLegacyDictEntries,
 } from "../../../domain/dict-note";
 import { createNoteCodec } from "../../../core/notes/note-codec";
-import type { NoteEntry, NoteSection } from "../../../core/notes/types";
+import type {
+	NoteEntry,
+	NoteSection,
+	TypedNoteSection,
+} from "../../../core/notes/types";
 
 const noteCodec = createNoteCodec(deLanguagePack);
 
 export type GenerateMatchableNoteEntry = NoteEntry & {
 	linguisticWikilinks: LinguisticWikilinkDto[];
 };
-
-function normalizeSectionBody(text: string): string {
-	return text
-		.trim()
-		.split("\n")
-		.map((line) => line.trimEnd())
-		.join("\n");
-}
 
 function sectionMarker(section: NoteSection): string | undefined {
 	if (section.kind === "typed") {
@@ -37,6 +33,13 @@ function sectionMarker(section: NoteSection): string | undefined {
 }
 
 function sectionWeight(section: NoteSection): number {
+	if (section.kind !== "typed") {
+		return Number.POSITIVE_INFINITY;
+	}
+	return deLanguagePack.getSectionByMarker(section.marker)?.order ?? 99;
+}
+
+function structuredSectionWeight(section: NoteSection): number {
 	const marker = sectionMarker(section);
 	if (!marker) {
 		return Number.POSITIVE_INFINITY;
@@ -63,61 +66,45 @@ function extractLinguisticWikilinks(
 	},
 ): LinguisticWikilinkDto[] {
 	return entry.sections.flatMap((section) => {
-		const marker = sectionMarker(section);
-		const content = getSectionContent(section);
-		if (!marker || content === null) {
+		if (section.kind !== "typed") {
 			return [];
 		}
 		return parseLinguisticWikilinks({
-			content: goBackLinkHelper.strip(content),
+			content: goBackLinkHelper.strip(section.content),
 			lookupInLibraryByCoreName: params.lookupInLibraryByCoreName,
 			parseLibraryBasename: params.parseLibraryBasename,
-			sectionCssKind: marker,
+			sectionCssKind: section.marker,
 		});
 	});
 }
 
-export function getSectionContent(section: NoteSection): string | null {
-	if (section.kind === "typed") {
-		return section.content;
-	}
-	if (!section.marker || !section.title) {
-		return null;
-	}
-	const markerText = buildSectionMarker(section.marker, section.title);
-	if (!section.rawBlock.startsWith(markerText)) {
-		return null;
-	}
-	return normalizeSectionBody(section.rawBlock.slice(markerText.length));
+export function getTypedSectionContent(section: TypedNoteSection): string {
+	return section.content;
 }
 
-export function setSectionContent(
-	section: NoteSection,
+export function setTypedSectionContent(
+	section: TypedNoteSection,
 	content: string,
-): NoteSection {
-	if (section.kind === "typed") {
-		section.content = content;
-		return section;
-	}
-	if (!section.marker || !section.title) {
-		throw new Error("Cannot update content for raw section without marker/title");
-	}
-	section.rawBlock = `${buildSectionMarker(section.marker, section.title)}\n${content}`;
+): TypedNoteSection {
+	section.content = content;
 	return section;
 }
 
-export function findFirstSectionByMarker(
+export function findFirstTypedSectionByMarker(
 	entry: NoteEntry,
 	marker: string,
-): NoteSection | undefined {
-	return entry.sections.find((section) => sectionMarker(section) === marker);
+): TypedNoteSection | undefined {
+	return entry.sections.find(
+		(section): section is TypedNoteSection =>
+			section.kind === "typed" && section.marker === marker,
+	);
 }
 
-export function hasSectionWithMarker(
+export function hasTypedSectionWithMarker(
 	entry: NoteEntry,
 	marker: string,
 ): boolean {
-	return findFirstSectionByMarker(entry, marker) !== undefined;
+	return findFirstTypedSectionByMarker(entry, marker) !== undefined;
 }
 
 export function insertSectionByOrder(
@@ -125,31 +112,36 @@ export function insertSectionByOrder(
 	section: NoteSection,
 ): void {
 	const targetWeight = sectionWeight(section);
-	let insertAt = entry.sections.length;
-	let sawStructuredSection = false;
-
-	for (let index = 0; index < entry.sections.length; index += 1) {
+	let trailingLooseRawStart = entry.sections.length;
+	for (let index = entry.sections.length - 1; index >= 0; index -= 1) {
 		const current = entry.sections[index];
-		if (!current) {
+		if (!current || sectionMarker(current) !== undefined) {
+			break;
+		}
+		trailingLooseRawStart = index;
+	}
+
+	let insertAt = trailingLooseRawStart;
+	let sawTypedSection = false;
+
+	for (let index = 0; index < trailingLooseRawStart; index += 1) {
+		const current = entry.sections[index];
+		if (!current || current.kind !== "typed") {
 			continue;
 		}
-		const currentMarker = sectionMarker(current);
-		if (!currentMarker) {
-			continue;
-		}
-		sawStructuredSection = true;
+		sawTypedSection = true;
 		if (sectionWeight(current) > targetWeight) {
 			insertAt = index;
 			break;
 		}
 	}
 
-	if (!sawStructuredSection) {
-		const leadingLooseRawCount = entry.sections.findIndex(
+	if (!sawTypedSection) {
+		const firstStructuredIndex = entry.sections.findIndex(
 			(current) => sectionMarker(current) !== undefined,
 		);
-		if (leadingLooseRawCount >= 0) {
-			insertAt = leadingLooseRawCount;
+		if (firstStructuredIndex >= 0) {
+			insertAt = firstStructuredIndex;
 		}
 	}
 
@@ -183,6 +175,65 @@ export function adaptLegacyEntries(entries: readonly {
 	sections: LegacyEntrySection[];
 }[]): NoteEntry[] {
 	return fromLegacyDictEntries(entries, deLanguagePack);
+}
+
+export function orderGenerateEntrySections(entry: NoteEntry): void {
+	let prefixEnd = 0;
+	while (
+		prefixEnd < entry.sections.length &&
+		sectionMarker(entry.sections[prefixEnd]!) === undefined
+	) {
+		prefixEnd += 1;
+	}
+
+	let suffixStart = entry.sections.length;
+	while (
+		suffixStart > prefixEnd &&
+		sectionMarker(entry.sections[suffixStart - 1]!) === undefined
+	) {
+		suffixStart -= 1;
+	}
+
+	const prefix = entry.sections.slice(0, prefixEnd);
+	const suffix = entry.sections.slice(suffixStart);
+	const middle = entry.sections.slice(prefixEnd, suffixStart);
+
+	const units: Array<{
+		index: number;
+		leadingLooseRaw: NoteSection[];
+		section: NoteSection;
+	}> = [];
+	let pendingLooseRaw: NoteSection[] = [];
+
+	for (const section of middle) {
+		if (sectionMarker(section) === undefined) {
+			pendingLooseRaw.push(section);
+			continue;
+		}
+		units.push({
+			index: units.length,
+			leadingLooseRaw: pendingLooseRaw,
+			section,
+		});
+		pendingLooseRaw = [];
+	}
+
+	const sortedUnits = [...units].sort((left, right) => {
+		const weightDelta =
+			structuredSectionWeight(left.section) -
+			structuredSectionWeight(right.section);
+		if (weightDelta !== 0) {
+			return weightDelta;
+		}
+		return left.index - right.index;
+	});
+
+	entry.sections = [
+		...prefix,
+		...sortedUnits.flatMap((unit) => [...unit.leadingLooseRaw, unit.section]),
+		...pendingLooseRaw,
+		...suffix,
+	];
 }
 
 export function serializeGenerateEntries(entries: NoteEntry[]) {

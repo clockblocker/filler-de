@@ -19,7 +19,7 @@ Return:
   - when linguisticUnit is "Phrasem": Phraseme kind (Idiom, Collocation, DiscourseFormula, Proverb, CulturalQuotation)
 - surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), "Variant" (spelling variant), or "Partial" (surface covers only part of a multi-word lemma)
 - lemma: the dictionary/citation form of the word
-- contextWithLinkedParts: when the lemma consists of multiple parts in the context (e.g., separable prefix verb in separated position, or phrasem words), re-emit the full context with ALL parts of the lemma wrapped in [square brackets]. The originally marked surface must remain marked. Omit when the surface already covers the full lemma (single contiguous word).
+- contextWithLinkedParts: always re-emit the full context. When the lemma consists of multiple parts in the context (e.g., separable prefix verb in separated position, or phrasem words), wrap ALL parts of the lemma in [square brackets]. The originally marked surface must remain marked.
 
 Rules:
 - For nouns: lemma is nominative singular (e.g., "Häuser" → "Haus")
@@ -35,6 +35,7 @@ Rules:
 - When linguisticUnit is "Phrasem", posLikeKind must be a phraseme kind
 - If the surface IS the lemma, surfaceKind is "Lemma"
 - If the selected surface covers only one part of a multi-word lemma, surfaceKind is "Partial"
+- Always return contextWithLinkedParts. If no extra lemma parts need linking, set it exactly to the input context.
 - For separable verbs in separated position: return contextWithLinkedParts with both the conjugated verb stem and the separated prefix marked.
 - For phrasems where the user selected only one word: return contextWithLinkedParts with ALL words of the phrasem marked.
 - contextWithLinkedParts text (with brackets stripped) must be identical to the input context text (with brackets stripped).
@@ -46,7 +47,7 @@ Rules:
 {"context":"Er ging gestern in den Park.","surface":"ging"}
 </input>
 <output>
-{"lemma":"gehen","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}
+{"contextWithLinkedParts":"Er ging gestern in den Park.","lemma":"gehen","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}
 </output>
 </example-1>
 
@@ -55,7 +56,7 @@ Rules:
 {"context":"Das Haus steht am Ende der Straße.","surface":"Haus"}
 </input>
 <output>
-{"lemma":"Haus","linguisticUnit":"Lexem","posLikeKind":"Noun","surfaceKind":"Lemma"}
+{"contextWithLinkedParts":"Das Haus steht am Ende der Straße.","lemma":"Haus","linguisticUnit":"Lexem","posLikeKind":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-2>
 
@@ -64,7 +65,7 @@ Rules:
 {"context":"Sie unterschreibt das Formular, und ihre Unterschrift steht schon unten.","surface":"Unterschrift"}
 </input>
 <output>
-{"lemma":"Unterschrift","linguisticUnit":"Lexem","posLikeKind":"Noun","surfaceKind":"Lemma"}
+{"contextWithLinkedParts":"Sie unterschreibt das Formular, und ihre Unterschrift steht schon unten.","lemma":"Unterschrift","linguisticUnit":"Lexem","posLikeKind":"Noun","surfaceKind":"Lemma"}
 </output>
 </example-3>
 
@@ -79,46 +80,55 @@ Rules:
 
 <example-5>
 <input>
+{"context":"Zu ihrer Schwester Greta sagt sie: „Drück mir bitte die [Daumen], dass alles gut geht!“","surface":"Daumen"}
+</input>
+<output>
+{"contextWithLinkedParts":"Zu ihrer Schwester Greta sagt sie: „[Drück] mir bitte [die] [Daumen], dass alles gut geht!“","lemma":"die Daumen drücken","linguisticUnit":"Phrasem","posLikeKind":"Idiom","surfaceKind":"Partial"}
+</output>
+</example-5>
+
+<example-6>
+<input>
 {"context":"[Pass] auf dich auf","surface":"Pass"}
 </input>
 <output>
 {"contextWithLinkedParts":"[Pass] auf dich [auf]","lemma":"aufpassen","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}
 </output>
-</example-5>
+</example-6>
 
-<example-6>
+<example-7>
 <input>
 {"context":"Er [macht] die Tür auf.","surface":"macht"}
 </input>
 <output>
 {"contextWithLinkedParts":"Er [macht] die Tür [auf].","lemma":"aufmachen","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}
 </output>
-</example-6>
+</example-7>
 
-<example-7>
+<example-8>
 <input>
 {"context":"Wann [fängst] du damit an?","surface":"fängst"}
 </input>
 <output>
 {"contextWithLinkedParts":"Wann [fängst] du damit [an]?","lemma":"anfangen","linguisticUnit":"Lexem","posLikeKind":"Verb","surfaceKind":"Inflected"}
 </output>
-</example-7>
-
-<example-8>
-<input>
-{"context":"Morgen wird es noch [schöner].","surface":"schöner"}
-</input>
-<output>
-{"lemma":"schön","linguisticUnit":"Lexem","posLikeKind":"Adjective","surfaceKind":"Inflected"}
-</output>
 </example-8>
 
 <example-9>
 <input>
+{"context":"Morgen wird es noch [schöner].","surface":"schöner"}
+</input>
+<output>
+{"contextWithLinkedParts":"Morgen wird es noch [schöner].","lemma":"schön","linguisticUnit":"Lexem","posLikeKind":"Adjective","surfaceKind":"Inflected"}
+</output>
+</example-9>
+
+<example-10>
+<input>
 {"context":"Sie ist [klüger] als ihr Bruder.","surface":"klüger"}
 </input>
 <output>
-{"lemma":"klug","linguisticUnit":"Lexem","posLikeKind":"Adjective","surfaceKind":"Inflected"}
+{"contextWithLinkedParts":"Sie ist [klüger] als ihr Bruder.","lemma":"klug","linguisticUnit":"Lexem","posLikeKind":"Adjective","surfaceKind":"Inflected"}
 </output>
-</example-9>
+</example-10>
 </examples>`;

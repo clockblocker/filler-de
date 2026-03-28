@@ -1,0 +1,198 @@
+{
+  "examples": [
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "Sie [fängt] morgen mit der Arbeit [an]",
+        "lemma": "anfangen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "durationMs": 700,
+      "expectedOutput": {
+        "contextWithLinkedParts": "Sie [fängt] morgen mit der Arbeit [an]",
+        "lemma": "anfangen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "input": {
+        "context": "Sie [fängt] morgen mit der Arbeit an",
+        "surface": "fängt"
+      },
+      "matchesExpected": true,
+      "raw": "{\"content\":\"{\\\"contextWithLinkedParts\\\":\\\"Sie [fängt] morgen mit der Arbeit [an]\\\",\\\"lemma\\\":\\\"anfangen\\\",\\\"linguisticUnit\\\":\\\"Lexem\\\",\\\"posLikeKind\\\":\\\"Verb\\\",\\\"surfaceKind\\\":\\\"Inflected\\\"}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"Sie [fängt] morgen mit der Arbeit [an]\",\"lemma\":\"anfangen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Verb\",\"surfaceKind\":\"Inflected\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "Sie [kauft] im Supermarkt [ein].",
+        "lemma": "einkaufen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "durationMs": 630,
+      "expectedOutput": {
+        "contextWithLinkedParts": "Sie [kauft] im Supermarkt [ein].",
+        "lemma": "einkaufen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "input": {
+        "context": "Sie [kauft] im Supermarkt ein.",
+        "surface": "kauft"
+      },
+      "matchesExpected": true,
+      "raw": "{\"content\":\"{\\\"contextWithLinkedParts\\\":\\\"Sie [kauft] im Supermarkt [ein].\\\",\\\"lemma\\\":\\\"einkaufen\\\",\\\"linguisticUnit\\\":\\\"Lexem\\\",\\\"posLikeKind\\\":\\\"Verb\\\",\\\"surfaceKind\\\":\\\"Inflected\\\"}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"Sie [kauft] im Supermarkt [ein].\",\"lemma\":\"einkaufen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Verb\",\"surfaceKind\":\"Inflected\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "Er [rief] seine Mutter [an]",
+        "lemma": "anrufen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "durationMs": 605,
+      "expectedOutput": {
+        "contextWithLinkedParts": "Er [rief] seine Mutter [an]",
+        "lemma": "anrufen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "input": {
+        "context": "Er [rief] seine Mutter an",
+        "surface": "rief"
+      },
+      "matchesExpected": true,
+      "raw": "{\"content\":\"{\\\"contextWithLinkedParts\\\":\\\"Er [rief] seine Mutter [an]\\\",\\\"lemma\\\":\\\"anrufen\\\",\\\"linguisticUnit\\\":\\\"Lexem\\\",\\\"posLikeKind\\\":\\\"Verb\\\",\\\"surfaceKind\\\":\\\"Inflected\\\"}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"Er [rief] seine Mutter [an]\",\"lemma\":\"anrufen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Verb\",\"surfaceKind\":\"Inflected\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "Mir ist [aufgefallen], dass er nicht da war.",
+        "lemma": "auffallen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "durationMs": 614,
+      "expectedOutput": {
+        "lemma": "auffallen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "input": {
+        "context": "Mir ist [aufgefallen], dass er nicht da war.",
+        "surface": "aufgefallen"
+      },
+      "matchesExpected": false,
+      "raw": "{\"content\":\"{\\\"contextWithLinkedParts\\\":\\\"Mir ist [aufgefallen], dass er nicht da war.\\\",\\\"lemma\\\":\\\"auffallen\\\",\\\"linguisticUnit\\\":\\\"Lexem\\\",\\\"posLikeKind\\\":\\\"Verb\\\",\\\"surfaceKind\\\":\\\"Inflected\\\"}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"Mir ist [aufgefallen], dass er nicht da war.\",\"lemma\":\"auffallen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Verb\",\"surfaceKind\":\"Inflected\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": null,
+        "lemma": "besitzen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "durationMs": 717,
+      "expectedOutput": {
+        "lemma": "besitzen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "input": {
+        "context": "Die Dursleys [besaßen] alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte Sorge.",
+        "surface": "besaßen"
+      },
+      "matchesExpected": false,
+      "raw": "{\"content\":\"{\\\"contextWithLinkedParts\\\":null,\\\"lemma\\\":\\\"besitzen\\\",\\\"linguisticUnit\\\":\\\"Lexem\\\",\\\"posLikeKind\\\":\\\"Verb\\\",\\\"surfaceKind\\\":\\\"Inflected\\\"}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":null,\"lemma\":\"besitzen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Verb\",\"surfaceKind\":\"Inflected\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": null,
+        "lemma": "Sorge",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Noun",
+        "surfaceKind": "Lemma"
+      },
+      "durationMs": 631,
+      "expectedOutput": {
+        "lemma": "Sorge",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Noun",
+        "surfaceKind": "Lemma"
+      },
+      "input": {
+        "context": "Die Dursleys besaßen alles, was sie wollten, doch sie hatten auch ein Geheimnis, und dass es jemand aufdecken könnte, war ihre größte [Sorge].",
+        "surface": "Sorge"
+      },
+      "matchesExpected": false,
+      "raw": "{\"content\":\"{\\\"contextWithLinkedParts\\\":null,\\\"lemma\\\":\\\"Sorge\\\",\\\"linguisticUnit\\\":\\\"Lexem\\\",\\\"posLikeKind\\\":\\\"Noun\\\",\\\"surfaceKind\\\":\\\"Lemma\\\"}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":null,\"lemma\":\"Sorge\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Noun\",\"surfaceKind\":\"Lemma\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "Zu ihrer Schwester Greta sagt sie: „Drück mir bitte die [Daumen], dass alles gut geht!“",
+        "lemma": "Daumen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Noun",
+        "surfaceKind": "Lemma"
+      },
+      "durationMs": 579,
+      "expectedOutput": {
+        "contextWithLinkedParts": "Zu ihrer Schwester Greta sagt sie: „[Drück] mir bitte [die] [Daumen], dass alles gut geht!“",
+        "lemma": "die Daumen drücken",
+        "linguisticUnit": "Phrasem",
+        "posLikeKind": "Idiom",
+        "surfaceKind": "Partial"
+      },
+      "input": {
+        "context": "Zu ihrer Schwester Greta sagt sie: „Drück mir bitte die [Daumen], dass alles gut geht!“",
+        "surface": "Daumen"
+      },
+      "matchesExpected": false,
+      "raw": "{\"content\":\"{\\\"contextWithLinkedParts\\\":\\\"Zu ihrer Schwester Greta sagt sie: „Drück mir bitte die [Daumen], dass alles gut geht!“\\\",\\\"lemma\\\":\\\"Daumen\\\",\\\"linguisticUnit\\\":\\\"Lexem\\\",\\\"posLikeKind\\\":\\\"Noun\\\",\\\"surfaceKind\\\":\\\"Lemma\\\"}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"Zu ihrer Schwester Greta sagt sie: „Drück mir bitte die [Daumen], dass alles gut geht!“\",\"lemma\":\"Daumen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Noun\",\"surfaceKind\":\"Lemma\"}}",
+      "schemaValid": true
+    },
+    {
+      "actualOutput": {
+        "contextWithLinkedParts": "Ich [drehe] den Wasserhahn [zu]",
+        "lemma": "zudrehen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "durationMs": 573,
+      "expectedOutput": {
+        "contextWithLinkedParts": "Ich [drehe] den Wasserhahn [zu]",
+        "lemma": "zudrehen",
+        "linguisticUnit": "Lexem",
+        "posLikeKind": "Verb",
+        "surfaceKind": "Inflected"
+      },
+      "input": {
+        "context": "Ich [drehe] den Wasserhahn zu",
+        "surface": "drehe"
+      },
+      "matchesExpected": true,
+      "raw": "{\"content\":\"{\\\"contextWithLinkedParts\\\":\\\"Ich [drehe] den Wasserhahn [zu]\\\",\\\"lemma\\\":\\\"zudrehen\\\",\\\"linguisticUnit\\\":\\\"Lexem\\\",\\\"posLikeKind\\\":\\\"Verb\\\",\\\"surfaceKind\\\":\\\"Inflected\\\"}\",\"role\":\"assistant\",\"parsed\":{\"contextWithLinkedParts\":\"Ich [drehe] den Wasserhahn [zu]\",\"lemma\":\"zudrehen\",\"linguisticUnit\":\"Lexem\",\"posLikeKind\":\"Verb\",\"surfaceKind\":\"Inflected\"}}",
+      "schemaValid": true
+    }
+  ],
+  "knownLanguage": "English",
+  "model": "gemini-2.5-flash-lite",
+  "promptKind": "Lemma",
+  "targetLanguage": "German",
+  "timestamp": "2026-03-28T10:14:34.883Z"
+}

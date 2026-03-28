@@ -7,7 +7,7 @@ export const examples = [
 			surface: "went",
 		},
 		output: {
-			contextWithLinkedParts: undefined,
+			contextWithLinkedParts: "She went to the store yesterday.",
 			lemma: "go",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Verb",
@@ -20,7 +20,7 @@ export const examples = [
 			surface: "house",
 		},
 		output: {
-			contextWithLinkedParts: undefined,
+			contextWithLinkedParts: "The house was painted blue.",
 			lemma: "house",
 			linguisticUnit: "Lexem",
 			posLikeKind: "Noun",
@@ -33,7 +33,7 @@ export const examples = [
 			surface: "large",
 		},
 		output: {
-			contextWithLinkedParts: undefined,
+			contextWithLinkedParts: "I will, [by and] [large], agree with that.",
 			lemma: "by and large",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "DiscourseFormula",

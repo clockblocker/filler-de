@@ -92,11 +92,9 @@ function contextWithLinkedPartsMatches(
 function sanitizeLemmaOutput(output: LemmaPromptOutput): LemmaPromptOutput {
 	const normalizedLemma = wikilinkHelper.normalizeLinkTarget(output.lemma);
 	const normalizedContextWithLinkedParts =
-		typeof output.contextWithLinkedParts === "string"
-			? wikilinkHelper.normalizeWikilinkTargetsInText(
-					output.contextWithLinkedParts,
-				)
-			: undefined;
+		wikilinkHelper.normalizeWikilinkTargetsInText(
+			output.contextWithLinkedParts,
+		);
 
 	return {
 		...output,
@@ -119,13 +117,11 @@ export function evaluateLemmaOutputGuardrails(params: {
 
 	const linkedParts = sanitizedOutput.contextWithLinkedParts;
 	if (
-		typeof linkedParts === "string" &&
-		linkedParts.length > 0 &&
 		!contextWithLinkedPartsMatches(context, linkedParts)
 	) {
 		sanitizedOutput = {
 			...sanitizedOutput,
-			contextWithLinkedParts: undefined,
+			contextWithLinkedParts: context,
 		};
 		droppedContextWithLinkedParts = true;
 	}

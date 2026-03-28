@@ -5,7 +5,10 @@ import type { CommandStateWithLemma } from "../../../../src/commanders/textfress
 import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";
 import type { DictEntry } from "../../../../src/commanders/textfresser/domain/dict-note/types";
 import { cssSuffixFor } from "../../../../src/commanders/textfresser/targets/de/sections/section-css-kind";
-import { DictSectionKind } from "../../../../src/commanders/textfresser/targets/de/sections/section-kind";
+import {
+	DictSectionKind,
+	TitleReprFor,
+} from "../../../../src/commanders/textfresser/targets/de/sections/section-kind";
 
 const DUMMY_PATH: SplitPathToMdFile = {
 	basename: "Arbeit",
@@ -153,7 +156,7 @@ describe("resolveExistingEntry", () => {
 				{
 					content: "User note: [[Arbeit]] is everywhere.",
 					kind: cssSuffixFor[DictSectionKind.FreeForm],
-					title: "Freeform",
+					title: TitleReprFor[DictSectionKind.FreeForm].German,
 				},
 			],
 		};

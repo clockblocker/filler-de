@@ -3,9 +3,10 @@ import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import type { TargetLanguage } from "../../../../../types";
 import { resolveClosedSetLibraryTarget } from "../../../common/closed-set-library-target-resolver";
 import { isClosedSetPos } from "../../../common/lemma-link-routing";
-import type { NoteEntry } from "../../../core/notes/types";
+import type { NoteEntry, NoteSection } from "../../../core/notes/types";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import type { EntrySection } from "../../../domain/dict-note/types";
+import { buildSectionMarker } from "../../../domain/dict-note/internal/constants";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
@@ -14,10 +15,10 @@ import {
 import type { LemmaResult } from "../../lemma/types";
 import {
 	adaptLegacySectionsForEntry,
-	findFirstSectionByMarker,
-	getSectionContent,
+	findFirstTypedSectionByMarker,
+	getTypedSectionContent,
 	insertSectionByOrder,
-	setSectionContent,
+	setTypedSectionContent,
 } from "./canonical-note-entry";
 
 const CLOSED_SET_MEMBERSHIP_SECTION_KIND = "closed_set_membership";
@@ -40,6 +41,54 @@ type EnsureMembershipResult = {
 	entries: NoteEntry[];
 	entry: NoteEntry;
 };
+
+function normalizeLegacySectionBody(text: string): string {
+	return text
+		.trim()
+		.split("\n")
+		.map((line) => line.trimEnd())
+		.join("\n");
+}
+
+function findMembershipSection(entry: NoteEntry): NoteSection | undefined {
+	return entry.sections.find((section) => {
+		if (section.kind === "typed") {
+			return section.marker === CLOSED_SET_MEMBERSHIP_SECTION_KIND;
+		}
+		return (
+			section.marker === CLOSED_SET_MEMBERSHIP_SECTION_KIND &&
+			section.title === CLOSED_SET_MEMBERSHIP_SECTION_TITLE
+		);
+	});
+}
+
+function getMembershipSectionContent(section: NoteSection): string | null {
+	if (section.kind === "typed") {
+		return section.content;
+	}
+	if (
+		section.marker !== CLOSED_SET_MEMBERSHIP_SECTION_KIND ||
+		section.title !== CLOSED_SET_MEMBERSHIP_SECTION_TITLE
+	) {
+		return null;
+	}
+	const marker = buildSectionMarker(section.marker, section.title);
+	if (!section.rawBlock.startsWith(marker)) {
+		return null;
+	}
+	return normalizeLegacySectionBody(section.rawBlock.slice(marker.length));
+}
+
+function setMembershipSectionContent(
+	section: NoteSection,
+	content: string,
+): void {
+	if (section.kind === "typed") {
+		setTypedSectionContent(section, content);
+		return;
+	}
+	section.rawBlock = `${buildSectionMarker(CLOSED_SET_MEMBERSHIP_SECTION_KIND, CLOSED_SET_MEMBERSHIP_SECTION_TITLE)}\n${content}`;
+}
 
 function resolveClosedSetLibraryTargetForLemma(params: {
 	lemmaResult: ClosedSetLexemLemmaResult;
@@ -83,10 +132,7 @@ function hasLibraryPointer(entry: NoteEntry, libraryBasename: string): boolean {
 }
 
 function isClosedSetMembershipEntry(entry: NoteEntry): boolean {
-	return (
-		findFirstSectionByMarker(entry, CLOSED_SET_MEMBERSHIP_SECTION_KIND) !==
-		undefined
-	);
+	return findMembershipSection(entry) !== undefined;
 }
 
 function ensureTagsSection(
@@ -94,7 +140,7 @@ function ensureTagsSection(
 	targetLanguage: TargetLanguage,
 ): void {
 	const tagsKind = cssSuffixFor[DictSectionKind.Tags];
-	const existing = findFirstSectionByMarker(entry, tagsKind);
+	const existing = findFirstTypedSectionByMarker(entry, tagsKind);
 	if (!existing) {
 		const [section] = adaptLegacySectionsForEntry(entry, [
 			buildTagsSection(targetLanguage),
@@ -104,11 +150,11 @@ function ensureTagsSection(
 		}
 		return;
 	}
-	const existingContent = getSectionContent(existing) ?? "";
+	const existingContent = getTypedSectionContent(existing);
 	if (existingContent.includes(CLOSED_SET_TAG)) {
 		return;
 	}
-	setSectionContent(
+	setTypedSectionContent(
 		existing,
 		existingContent.trim().length
 			? `${existingContent.trimEnd()}\n${CLOSED_SET_TAG}`
@@ -120,10 +166,7 @@ function appendPointerIfMissing(params: {
 	entry: NoteEntry;
 	membershipSection: EntrySection;
 }): void {
-	const existingMembershipSection = findFirstSectionByMarker(
-		params.entry,
-		CLOSED_SET_MEMBERSHIP_SECTION_KIND,
-	);
+	const existingMembershipSection = findMembershipSection(params.entry);
 	if (!existingMembershipSection) {
 		const [section] = adaptLegacySectionsForEntry(params.entry, [
 			params.membershipSection,
@@ -133,13 +176,16 @@ function appendPointerIfMissing(params: {
 		}
 		return;
 	}
-	const existingContent = getSectionContent(existingMembershipSection) ?? "";
+	const existingContent = getMembershipSectionContent(existingMembershipSection);
+	if (existingContent === null) {
+		return;
+	}
 	if (
 		existingContent.includes(params.membershipSection.content)
 	) {
 		return;
 	}
-	setSectionContent(
+	setMembershipSectionContent(
 		existingMembershipSection,
 		existingContent.trim().length
 			? `${existingContent.trimEnd()}\n${params.membershipSection.content}`
@@ -151,10 +197,7 @@ function replacePointers(params: {
 	entry: NoteEntry;
 	membershipSection: EntrySection;
 }): void {
-	const existingMembershipSection = findFirstSectionByMarker(
-		params.entry,
-		CLOSED_SET_MEMBERSHIP_SECTION_KIND,
-	);
+	const existingMembershipSection = findMembershipSection(params.entry);
 	if (!existingMembershipSection) {
 		const [section] = adaptLegacySectionsForEntry(params.entry, [
 			params.membershipSection,
@@ -164,7 +207,7 @@ function replacePointers(params: {
 		}
 		return;
 	}
-	setSectionContent(existingMembershipSection, params.membershipSection.content);
+	setMembershipSectionContent(existingMembershipSection, params.membershipSection.content);
 }
 
 function basenameFromWikilinkTarget(target: string): string {
@@ -178,14 +221,11 @@ function basenameFromWikilinkTarget(target: string): string {
 }
 
 function getMembershipPointerBasenames(entry: NoteEntry): string[] {
-	const membershipSection = findFirstSectionByMarker(
-		entry,
-		CLOSED_SET_MEMBERSHIP_SECTION_KIND,
-	);
+	const membershipSection = findMembershipSection(entry);
 	if (!membershipSection) {
 		return [];
 	}
-	const content = getSectionContent(membershipSection);
+	const content = getMembershipSectionContent(membershipSection);
 	if (content === null) {
 		return [];
 	}

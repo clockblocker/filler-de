@@ -8,7 +8,7 @@ import { entryIdentity } from "./entry-identity";
 
 export type MatchableEntry = {
 	id: string;
-	sections: Array<{ kind: string }>;
+	sections: Array<{ kind: string; marker?: string }>;
 	linguisticWikilinks: Array<{ intent: string }>;
 };
 
