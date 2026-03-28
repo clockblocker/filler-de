@@ -11,7 +11,7 @@ Return:
   - when linguisticUnit is "Phrasem": Phraseme kind (Idiom, Collocation, DiscourseFormula, Proverb, CulturalQuotation)
 - surfaceKind: "Lemma" (already dictionary form), "Inflected" (conjugated/declined), "Variant" (spelling variant), or "Partial" (surface covers only part of a multi-word lemma)
 - lemma: the dictionary/citation form of the word
-- contextWithLinkedParts: always re-emit the full context. When the lemma consists of multiple parts in the context (e.g., separable prefix verb in separated position, or phrasem words), wrap ALL parts of the lemma in [square brackets]. The originally marked surface must remain marked.
+- contextWithLinkedParts: always re-emit the full context. Start from the input context and preserve the user's existing [square brackets] on the selected surface. If the lemma has additional parts elsewhere in the sentence, add [square brackets] to those parts too. Never remove brackets that were already present in the input.
 
 Rules:
 - For nouns: lemma is nominative singular (e.g., "Häuser" → "Haus")
@@ -27,7 +27,10 @@ Rules:
 - When linguisticUnit is "Phrasem", posLikeKind must be a phraseme kind
 - If the surface IS the lemma, surfaceKind is "Lemma"
 - If the selected surface covers only one part of a multi-word lemma, surfaceKind is "Partial"
-- Always return contextWithLinkedParts. If no extra lemma parts need linking, set it exactly to the input context.
+- Always return contextWithLinkedParts.
+- If no extra lemma parts need linking, contextWithLinkedParts must be EXACTLY the input context, including the original brackets around the selected surface.
+- If extra lemma parts do need linking, keep the original brackets around the selected surface and add brackets around the missing lemma parts.
+- Do not "clean up", remove, or move existing brackets. Only add missing lemma-part brackets.
 - For separable verbs in separated position: return contextWithLinkedParts with both the conjugated verb stem and the separated prefix marked.
 - For phrasems where the user selected only one word: return contextWithLinkedParts with ALL words of the phrasem marked.
 - contextWithLinkedParts text (with brackets stripped) must be identical to the input context text (with brackets stripped).`;
