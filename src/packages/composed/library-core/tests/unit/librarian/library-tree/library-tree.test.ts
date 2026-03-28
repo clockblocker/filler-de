@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { MD } from "@textfresser/vault-action-manager/types/literals";
 import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
 import { makeCodecRulesFromSettings, makeCodecs } from "@textfresser/library-core/codecs";
-import { Healer } from "../../../src/commanders/librarian/healer/healer";
+import { Healer } from "@textfresser/library-core/healing";
 import { codexImpactToIncrementalRecreations } from "@textfresser/library-core/healer/library-tree/codex/codex-impact-to-actions";
 import { generateChildrenList } from "@textfresser/library-core/healer/library-tree/codex/generate-codex-content";
 import { mergeCodexImpacts } from "@textfresser/library-core/healer/library-tree/codex/merge-codex-impacts";

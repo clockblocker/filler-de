@@ -6,14 +6,14 @@ import {
 	VaultActionKind,
 } from "@textfresser/vault-action-manager/types/vault-action";
 import type { App, TFile } from "obsidian";
-import { getMdFilesInLibrary } from "../../stateless-helpers/library-files";
-import type { SuffixDelimiterConfig } from "../../types";
+import { getMdFilesInLibrary } from "../../../stateless-helpers/library-files";
+import type { SuffixDelimiterConfig } from "../../../types";
 import {
 	buildCanonicalDelimiter,
 	buildFlexibleDelimiterPattern,
-} from "../../utils/delimiter";
-import { logger } from "../../utils/logger";
-import type { Librarian } from "./librarian";
+} from "../../../utils/delimiter";
+import { logger } from "../../../utils/logger";
+import type { Librarian } from "../librarian";
 
 export interface DelimiterChangeResult {
 	success: boolean;

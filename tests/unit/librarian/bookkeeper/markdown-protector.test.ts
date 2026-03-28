@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	protectMarkdownSyntax,
 	restoreProtectedContent,
-} from "../../../../src/commanders/librarian/bookkeeper/segmenter/stream/markdown-protector";
+} from "../../../../src/commanders/librarian/pages/segmenter/stream/markdown-protector";
 
 describe("markdown-protector", () => {
 	describe("protectMarkdownSyntax", () => {

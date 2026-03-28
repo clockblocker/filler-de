@@ -16,7 +16,7 @@ import { makeCodexBasename } from "@textfresser/library-core/codex";
 import {
 	getNextPage,
 	getPrevPage,
-} from "../../../src/commanders/librarian/page-navigation";
+} from "../../../src/commanders/librarian/navigation/page-navigation";
 import type { NodeName } from "@textfresser/library-core/types";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";

@@ -1,6 +1,3 @@
-import type { VaultAction } from "@textfresser/vault-action-manager";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import type { SplitHealingInfo } from "../bookkeeper/split-to-pages-action";
 import type { CodecRules, Codecs } from "@textfresser/library-core/codecs";
 import type { ScrollNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
 import type { CodexImpact } from "@textfresser/library-core/codex";
@@ -8,11 +5,11 @@ import {
 	getBacklinkHealingVaultActions,
 	type Healer,
 } from "@textfresser/library-core/healing";
-import {
-	TreeNodeKind,
-	TreeNodeStatus,
-} from "@textfresser/library-core/tree";
-import { assembleVaultActions, processCodexImpacts } from "../librarian-init";
+import { TreeNodeKind, TreeNodeStatus } from "@textfresser/library-core/tree";
+import type { VaultAction } from "@textfresser/vault-action-manager";
+import { MD } from "@textfresser/vault-action-manager/types/literals";
+import type { SplitHealingInfo } from "../pages/split-to-pages-action";
+import { assembleVaultActions, processCodexImpacts } from "../init";
 
 /**
  * Dependencies for section healing.

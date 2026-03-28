@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { z } from "zod";
 import {
 	buildPageSplitActions,
-} from "../../../../src/commanders/librarian/bookkeeper/build-actions";
-import type { SegmentationResult } from "../../../../src/commanders/librarian/bookkeeper/types";
+} from "../../../../src/commanders/librarian/pages/build-actions";
+import type { SegmentationResult } from "../../../../src/commanders/librarian/pages/types";
 import {
 	makeCodecRulesFromSettings,
 } from "@textfresser/library-core/codecs";

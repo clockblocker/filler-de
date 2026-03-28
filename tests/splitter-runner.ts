@@ -1,9 +1,9 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { join, parse } from "path";
-import { segmentContent } from "../src/commanders/librarian/bookkeeper/segmenter";
-import { splitStrInBlocks } from "../src/commanders/librarian/bookkeeper/segmenter/block-marker/split-str-in-blocks";
-import { DEFAULT_LANGUAGE_CONFIG } from "../src/commanders/librarian/bookkeeper/segmenter/language-config";
-import { DEFAULT_SEGMENTATION_CONFIG } from "../src/commanders/librarian/bookkeeper/types";
+import { segmentContent } from "../src/commanders/librarian/pages/segmenter";
+import { splitStrInBlocks } from "../src/commanders/librarian/pages/segmenter/block-marker/split-str-in-blocks";
+import { DEFAULT_LANGUAGE_CONFIG } from "../src/commanders/librarian/pages/segmenter/language-config";
+import { DEFAULT_SEGMENTATION_CONFIG } from "../src/commanders/librarian/pages/types";
 
 const INPUT_DIR = "tests/texts_to_split";
 const OUTPUT_DIR = "tests/splitter-logs";

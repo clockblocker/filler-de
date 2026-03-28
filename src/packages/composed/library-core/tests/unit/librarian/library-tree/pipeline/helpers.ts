@@ -10,7 +10,7 @@ import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "@textfresser/library-core/codecs";
-import type { Healer } from "../../../../src/commanders/librarian/healer/healer";
+import type { Healer } from "@textfresser/library-core/healing";
 import {
 	extractInvalidCodexesFromBulk,
 } from "@textfresser/library-core/healer/library-tree/codex/codex-impact-to-actions";
@@ -20,7 +20,7 @@ import type { CodexAction } from "@textfresser/library-core/healer/library-tree/
 import { buildTreeActions } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
 import type { CreateTreeLeafAction, TreeAction } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
 import type { HealingAction } from "@textfresser/library-core/healer/library-tree/types/healing-action";
-import { processCodexImpacts } from "../../../../src/commanders/librarian/librarian-init/process-codex-impacts";
+import { processCodexImpacts } from "../../../../src/commanders/librarian/init/process-codex-impacts";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { makeTree, type TreeShape } from "../tree-test-helpers";
 

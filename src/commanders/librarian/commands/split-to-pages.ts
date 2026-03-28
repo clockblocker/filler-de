@@ -1,5 +1,5 @@
 import { ResultAsync } from "neverthrow";
-import { splitToPagesAction } from "../bookkeeper/split-to-pages-action";
+import { splitToPagesAction } from "../pages/split-to-pages-action";
 import type { LibrarianCommandFn } from "./types";
 
 export const splitToPagesCommand: LibrarianCommandFn = (input) => {

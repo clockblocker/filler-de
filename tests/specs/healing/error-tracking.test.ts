@@ -17,8 +17,8 @@ import { Healer } from "@textfresser/library-core/healing";
 import {
 	getHealingAuditLog,
 	resetHealingAuditLog,
-} from "../../../src/commanders/librarian/healer/healing-audit-log";
-import { HealingTransaction } from "../../../src/commanders/librarian/healer/healing-transaction";
+} from "../../../src/commanders/librarian/runtime/healing-audit-log";
+import { HealingTransaction } from "../../../src/commanders/librarian/runtime/healing-transaction";
 import { Tree, TreeNodeStatus } from "@textfresser/library-core/tree";
 import { TreeActionType } from "@textfresser/library-core/tree/actions";
 import type { NodeName } from "@textfresser/library-core/types";

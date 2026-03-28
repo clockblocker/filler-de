@@ -12,7 +12,7 @@ import { pathfinder } from "@textfresser/vault-action-manager/helpers/pathfinder
 import { VaultReader } from "@textfresser/vault-action-manager/impl/vault-reader";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { Modal, Notice, Plugin, TFile } from "obsidian";
-import { DelimiterChangeService } from "./commanders/librarian/delimiter-change-service";
+import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
 import { cleanupDictNote } from "./commanders/textfresser/common/cleanup/cleanup-dict-note";
 import { DICT_ENTRY_NOTE_KIND } from "./commanders/textfresser/common/metadata";

@@ -1,3 +1,46 @@
+import {
+	type CodecRules,
+	type Codecs,
+	makeCodecRulesFromSettings,
+	makeCodecs,
+	type SplitPathToMdFileInsideLibrary,
+} from "@textfresser/library-core/codecs";
+import type {
+	ScrollNodeLocator,
+	SectionNodeLocator,
+} from "@textfresser/library-core/codecs/locator";
+import {
+	type CodexClickTarget,
+	type CodexImpact,
+	extractInvalidCodexesFromBulk,
+	isCodexInsideLibrary as isCodexInsideLibraryHelper,
+	isCodexSplitPath,
+	parseCodexClickLineContent,
+} from "@textfresser/library-core/codex";
+import {
+	type ChangeNodeStatusAction,
+	getBacklinkHealingVaultActions,
+	Healer,
+	type HealingAction,
+	scanAndGenerateOrphanActions,
+	type TreeAction,
+} from "@textfresser/library-core/healing";
+import type { LeafMatch } from "@textfresser/library-core/tree";
+import {
+	Tree,
+	TreeNodeKind,
+	TreeNodeStatus,
+} from "@textfresser/library-core/tree";
+import { buildTreeActions } from "@textfresser/library-core/tree/actions";
+import {
+	extractScrollStatusActions,
+	findInvalidCodexFiles,
+} from "@textfresser/library-core/tree/utils";
+import {
+	type NodeName,
+	PREFIX_OF_CODEX,
+} from "@textfresser/library-core/types";
+import type { PayloadFor } from "@textfresser/obsidian-event-layer";
 import type {
 	BulkVaultEvent,
 	VaultAction,
@@ -15,70 +58,30 @@ import type {
 	CommandContext,
 	CommandKind,
 } from "../../managers/obsidian/command-executor";
-import type { PayloadFor } from "@textfresser/obsidian-event-layer";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
-import type { SplitHealingInfo } from "./bookkeeper/split-to-pages-action";
-import {
-	type CodecRules,
-	type Codecs,
-	makeCodecRulesFromSettings,
-	makeCodecs,
-	type SplitPathToMdFileInsideLibrary,
-} from "@textfresser/library-core/codecs";
-import type {
-	ScrollNodeLocator,
-	SectionNodeLocator,
-} from "@textfresser/library-core/codecs/locator";
+import type { SplitHealingInfo } from "./pages/split-to-pages-action";
 import { commandFnForCommandKind } from "./commands";
 import type {
 	CommandError,
 	LibrarianCommandInput,
 	LibrarianCommandKind,
 } from "./commands/types";
-import { HealingTransaction } from "./healer/healing-transaction";
-import {
-	type CodexClickTarget,
-	type CodexImpact,
-	extractInvalidCodexesFromBulk,
-	isCodexInsideLibrary as isCodexInsideLibraryHelper,
-	isCodexSplitPath,
-	parseCodexClickLineContent,
-} from "@textfresser/library-core/codex";
-import type { LeafMatch } from "@textfresser/library-core/tree";
-import {
-	Tree,
-	TreeNodeKind,
-	TreeNodeStatus,
-} from "@textfresser/library-core/tree";
-import { buildTreeActions } from "@textfresser/library-core/tree/actions";
-import {
-	type ChangeNodeStatusAction,
-	getBacklinkHealingVaultActions,
-	Healer,
-	type HealingAction,
-	scanAndGenerateOrphanActions,
-	type TreeAction,
-} from "@textfresser/library-core/healing";
-import {
-	extractScrollStatusActions,
-	findInvalidCodexFiles,
-} from "@textfresser/library-core/tree/utils";
+import { HealingTransaction } from "./runtime/healing-transaction";
 import {
 	assembleVaultActions,
 	buildInitialCreateActions,
 	processCodexImpacts,
 	processCodexImpactsForInit,
-} from "./librarian-init";
-import { listCommandsExecutableIn as listCommandsExecutableInImpl } from "./list-commands-executable";
+} from "./init";
+import { listCommandsExecutableIn as listCommandsExecutableInImpl } from "./navigation/list-commands-executable";
 import {
 	getNextPage as getNextPageImpl,
 	getPrevPage as getPrevPageImpl,
-} from "./page-navigation";
-import { triggerSectionHealing as triggerSectionHealingImpl } from "./section-healing/section-healing-coordinator";
-import { PREFIX_OF_CODEX, type NodeName } from "@textfresser/library-core/types";
-import { VaultActionQueue } from "./vault-action-queue/vault-action-queue";
-import { resolveAliasFromSuffix } from "./wikilink-alias/wikilink-alias";
+} from "./navigation/page-navigation";
+import { triggerSectionHealing as triggerSectionHealingImpl } from "./runtime/section-healing";
+import { VaultActionQueue } from "./runtime/vault-action-queue";
+import { resolveAliasFromSuffix } from "./navigation/wikilink-alias";
 
 // ─── Queue Item ───
 

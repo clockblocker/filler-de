@@ -3,7 +3,10 @@
  * No framework dependencies - behaviors add library-specific logic.
  */
 
-import type { AliasResult, SuffixParser } from "./types";
+import type {
+	AliasResult,
+	SuffixParser,
+} from "./wikilink-alias-types";
 
 /**
  * Resolve alias from link content using a suffix parser.

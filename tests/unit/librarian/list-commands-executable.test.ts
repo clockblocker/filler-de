@@ -6,7 +6,7 @@ import {
 	makeCodecs,
 } from "@textfresser/library-core/codecs";
 import { makeCodexBasename } from "@textfresser/library-core/codex";
-import { listCommandsExecutableIn } from "../../../src/commanders/librarian/list-commands-executable";
+import { listCommandsExecutableIn } from "../../../src/commanders/librarian/navigation/list-commands-executable";
 import type { NodeName } from "@textfresser/library-core/types";
 import { CommandKind } from "../../../src/managers/obsidian/command-executor";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";

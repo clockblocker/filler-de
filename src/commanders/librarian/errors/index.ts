@@ -2,7 +2,7 @@ import z from "zod";
 import {
 	BASE_COMMAND_ERROR_KIND_STR,
 	type BaseCommandError,
-} from "../base-command-error";
+} from "../../base-command-error";
 
 // ─── Command Error ───
 
