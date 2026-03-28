@@ -33,7 +33,7 @@ The result is not just "large". It is structurally misleading: modules named `co
 - Let the language pack decide section applicability.
 - Keep translation acquisition as a core service and translation formatting as a renderer concern.
 - Keep lemma-triggered background generate for now, but treat it as an Obsidian workflow coordinator behavior.
-- Keep section-aware path resolution behind a small policy contract supplied by the language pack.
+- Keep section-aware path resolution behind explicit routing contracts instead of one vague policy abstraction.
 - Use the literal renderer/parser folder structure, but expose each language through a `pack.ts` entrypoint.
 
 ## What the current code tells us
@@ -180,7 +180,6 @@ type SectionKey =
 type LanguagePack = {
   targetLang: TargetLanguage;
   sectionCatalog: SectionCatalog;
-  noteCodec: NoteCodec;
   propagationPolicy: PropagationPolicy;
   renderers: SectionRendererRegistry;
   parsers: SectionParserRegistry;
@@ -188,6 +187,72 @@ type LanguagePack = {
 ```
 
 Important: `SectionKey` is core-stable, while titles and css markers are language-pack data.
+`NoteCodec` is core-owned and parameterized by the language pack. The pack supplies section metadata, marker/title mapping, parsers, renderers, and ordering policy; it does not own a separate codec.
+
+## Contracts to freeze first
+
+These contracts should be named and agreed before implementation starts. They are the real stability boundary for the rewrite.
+
+### EntryIdentity
+
+Defines entry identity beyond `id: string`:
+
+- parsed ID shape
+- index semantics
+- unit/POS matching rules
+- surface-kind tolerance where current behavior depends on it
+
+### EntryMatchPolicy
+
+Defines re-encounter matching behavior:
+
+- how `matchedIndex` is interpreted
+- how existing entries are selected
+- propagation-only stub detection
+- manual-link escape hatches that prevent stub classification
+
+### NoteCodec
+
+One canonical note codec for Textfresser notes:
+
+- parse note text into entries and sections
+- preserve raw unsupported sections
+- serialize entries back to note text
+- apply current canonicalization rules for typed sections
+
+Propagation must consume this canonical parsed note model. It should not own a second codec or a second structural note model.
+
+### SectionClaimFallbackPolicy
+
+Defines when a parser is allowed to claim a section as typed:
+
+- if a parser can parse and reserialize a section losslessly enough for current behavior, it may claim it
+- otherwise the entire section stays raw
+
+This must be pinned to fixtures and snapshots:
+
+- if `parse -> serialize` changes any approved typed-section fixture beyond current canonicalization rules, the parser must not claim that section
+- approved canonicalization must itself be fixture-backed and explicit
+
+### RoutingPorts
+
+Routing must be split by workflow, not hidden in one generic port:
+
+- lemma routing
+- propagation routing
+- morpheme/library routing
+
+Each routing contract must explicitly cover current precedence and fallback rules.
+
+### GenerateSessionCoordinator
+
+Defines the async/session behavior around background generate:
+
+- state snapshotting
+- pending-request coalescing
+- ownership and empty-target cleanup
+- cache handoff
+- deferred scroll behavior
 
 ### Note abstraction
 
@@ -222,6 +287,7 @@ type DictEntry = {
 
 The language pack is responsible for mapping `SectionKey <-> marker/title`.
 The raw-section variant is required for exact round-trip preservation of unsupported, duplicate, or user-authored sections.
+For typed sections, preservation should follow current canonicalization behavior rather than byte-for-byte stability.
 
 ### Generation input contract
 
@@ -252,20 +318,38 @@ Flow:
 - language-specific generators convert lexical DTOs into section DTOs
 - renderers convert section DTOs into markdown sections
 
-### Vault contract
+### Routing and workflow ports
 
-Core logic should depend on a minimal vault port:
+Core logic should depend on smaller ports rather than one catch-all vault port.
 
 ```ts
-type VaultPort = {
+type FileMutationPort = {
   exists(path: SplitPathToMdFile): boolean;
   read(path: SplitPathToMdFile): Promise<Result<string, VaultError>>;
   dispatch(actions: VaultAction[]): Promise<Result<void, VaultError>>;
+};
+
+type LookupPort = {
   findByBasename(name: string): SplitPathToMdFile[];
+  resolveLinkpathDest?(
+    linkpath: string,
+    from: SplitPathToMdFile,
+  ): SplitPathToMdFile | null;
+};
+
+type SessionPort = {
+  getCurrentFilePath(): SplitPathToMdFile | null;
+  navigateTo?(path: SplitPathToMdFile): Promise<Result<void, VaultError>>;
+  scrollToBlockId?(blockId: string): void;
 };
 ```
 
-Keep `VaultActionManager` at the edge.
+Keep `VaultActionManager` at the edge, but do not pretend all workflows need the same subset of its capabilities.
+Capability requirements must be explicit by use case:
+
+- `runLemma` requires file mutation, basename lookup, linkpath resolution, current-file lookup, and navigation
+- `runGenerate` requires file mutation and basename lookup, but not navigation
+- deferred scrolling belongs to `GenerateSessionCoordinator` / Obsidian edge behavior, not generic generate core
 
 ## Rewrite responsibilities by module
 
@@ -301,7 +385,7 @@ Keep `VaultActionManager` at the edge.
 
 ### Core notes
 
-- generic note parse/serialize shell
+- canonical note parse/serialize shell
 - entry metadata abstraction
 - stable section ordering by language-pack policy, while preserving original order for ties and opaque/raw sections
 - typed entry match helpers
@@ -406,7 +490,12 @@ Start from the existing baselines, not from zero. Do this before moving code, ot
 
 - add `SectionKey`
 - add `LanguagePack`
-- add `VaultPort`
+- freeze `EntryIdentity`
+- freeze `EntryMatchPolicy`
+- freeze the canonical `NoteCodec`
+- freeze `SectionClaimFallbackPolicy`
+- freeze routing ports for lemma, propagation, and morpheme/library resolution
+- freeze `GenerateSessionCoordinator`
 - add lexical gateway interface
 - add a generic `DictEntry` / `NoteSection` model
 
@@ -493,6 +582,9 @@ If parse/serialize semantics change during refactor, re-encounter and propagatio
 Mitigation:
 
 - snapshot and E2E tests before moving behavior
+- define preservation precisely:
+  - raw sections preserve bytes
+  - typed sections preserve current canonicalization behavior
 
 ### Risk 4. Async/session workflow drift
 
@@ -530,6 +622,8 @@ This also covers duplicate sections and sections that are recognized structurall
 
 The note codec must recognize every section marker needed for full round-tripping. Typed semantic parsers are only required for propagation-relevant sections.
 Freeform/manual content stays opaque unless a specific parser opts into a typed representation.
+If a parser cannot safely provide current-behavior round-tripping for a claimed section, it must leave the section raw.
+That safety bar is determined by fixtures and snapshots, not judgment in the abstract.
 
 ### 4. Generation remains DTO-first
 
@@ -560,13 +654,19 @@ Propagation should parse target notes into objects, merge typed payloads there, 
 
 ### 9. Path resolution sees semantics only through policy
 
-Filesystem and target-path logic may consume a policy contract, but must not import language-specific section modules directly.
-That policy must be explicit about:
+Filesystem and target-path logic must not import language-specific section modules directly.
+Instead, routing behavior should be split into explicit workflow contracts:
+
+- lemma routing
+- propagation routing
+- morpheme/library routing
+
+Those contracts must be explicit about:
 
 - lookup precedence
 - normalization and case fallback
 - healing asymmetry
-- special routing rules such as morpheme or library fallback
+- special routing rules such as reusable Worter hosts, unknown placeholders, closed-set fallback, and morpheme or library routing
 
 ### 10. First pass preserves the note surface format
 
@@ -575,10 +675,11 @@ Do not mix architecture cleanup with note-format cleanup.
 ## Recommended implementation order
 
 1. Extend existing tests around note round-tripping, attestation rewrite, path resolution, propagation, re-encounter matching, and background generate coordination.
-2. Introduce `SectionKey`, `LanguagePack`, and `VaultPort`.
-3. Wrap existing German behavior as `dePack`.
-4. Move note and propagation logic behind the new contracts, including explicit raw-section support and ordering guarantees.
-5. Move entry matching and stub policy into `core/entries`.
-6. Rewrite generate to consume the contracts.
-7. Preserve background-generate coordinator semantics through a dedicated migration step.
-8. Shrink the Obsidian adapter last.
+2. Freeze contracts first: `EntryIdentity`, `EntryMatchPolicy`, canonical `NoteCodec`, `SectionClaimFallbackPolicy`, routing ports, and `GenerateSessionCoordinator`.
+3. Introduce `SectionKey` and `LanguagePack`.
+4. Wrap existing German behavior as `dePack`.
+5. Move note and propagation logic behind the canonical note codec, including explicit raw-section support and ordering guarantees.
+6. Move entry matching and stub policy into `core/entries`.
+7. Rewrite generate to consume the contracts.
+8. Preserve background-generate coordinator semantics through a dedicated migration step.
+9. Shrink the Obsidian adapter last.
