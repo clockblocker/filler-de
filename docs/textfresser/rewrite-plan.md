@@ -189,6 +189,24 @@ type LanguagePack = {
 Important: `SectionKey` is core-stable, while titles and css markers are language-pack data.
 `NoteCodec` is core-owned and parameterized by the language pack. The pack supplies section metadata, marker/title mapping, parsers, renderers, and ordering policy; it does not own a separate codec.
 
+Prefer one `SectionSpec` per `SectionKey` over several loosely-related registries.
+
+```ts
+type SectionSpec = {
+  key: SectionKey;
+  marker: string;
+  titleFor(targetLang: TargetLanguage): string;
+  order: number;
+  appliesTo(input: SectionApplicabilityInput): boolean;
+  linkPolicy: SectionLinkPolicy;
+  claimPolicy: SectionClaimFallbackPolicy;
+  parser?: SectionParser;
+  renderer?: SectionRenderer;
+};
+```
+
+Applicability, ordering, marker/title mapping, link policy, parser claim rules, and renderer selection should move together to avoid drift.
+
 ## Contracts to freeze first
 
 These contracts should be named and agreed before implementation starts. They are the real stability boundary for the rewrite.
@@ -201,6 +219,7 @@ Defines entry identity beyond `id: string`:
 - index semantics
 - unit/POS matching rules
 - surface-kind tolerance where current behavior depends on it
+- next-index allocation rules
 
 ### EntryMatchPolicy
 
@@ -210,6 +229,12 @@ Defines re-encounter matching behavior:
 - how existing entries are selected
 - propagation-only stub detection
 - manual-link escape hatches that prevent stub classification
+
+This should be frozen as a decision table backed by fixtures before any structural refactor:
+
+- matching ignores `surfaceKind` where current behavior does
+- next-index allocation still respects the current ID-prefix space
+- stub detection depends on both section presence and wikilink intent
 
 ### NoteCodec
 
@@ -243,6 +268,7 @@ Routing must be split by workflow, not hidden in one generic port:
 - morpheme/library routing
 
 Each routing contract must explicitly cover current precedence and fallback rules.
+Implementation should use one shared routing engine with workflow-specific entrypoints, not three unrelated routing implementations.
 
 ### GenerateSessionCoordinator
 
@@ -253,6 +279,19 @@ Defines the async/session behavior around background generate:
 - ownership and empty-target cleanup
 - cache handoff
 - deferred scroll behavior
+
+Prefer an explicit result payload over mutable-state diffing:
+
+```ts
+type GenerateSessionResult = {
+  actions: VaultAction[];
+  targetBlockId?: string;
+  failedSections: string[];
+  cacheUpdates?: {
+    generatedEntryId?: string;
+  };
+};
+```
 
 ### Note abstraction
 
@@ -351,6 +390,8 @@ Capability requirements must be explicit by use case:
 - `runGenerate` requires file mutation and basename lookup, but not navigation
 - deferred scrolling belongs to `GenerateSessionCoordinator` / Obsidian edge behavior, not generic generate core
 
+Shared lookup fallback, case normalization, and link normalization should live in core services. Workflow-specific routing behavior should be layered on top of those shared services.
+
 ## Rewrite responsibilities by module
 
 ### Obsidian adapter
@@ -377,6 +418,7 @@ Capability requirements must be explicit by use case:
   - request section rendering from language pack
   - plan propagation
   - serialize note
+  - return explicit session outputs for coordinator handoff
 
 - `runTranslate`
   - take selected text / block
@@ -389,6 +431,7 @@ Capability requirements must be explicit by use case:
 - entry metadata abstraction
 - stable section ordering by language-pack policy, while preserving original order for ties and opaque/raw sections
 - typed entry match helpers
+- shared linguistic wikilink normalization service
 
 ### Core propagation
 
@@ -399,6 +442,7 @@ Capability requirements must be explicit by use case:
 - fold writes by target file only after object-level merge planning
 
 Core propagation should operate on `SectionKey` and typed payloads, never on German section constants.
+Core propagation should consume the canonical parsed note model plus typed section extractors, not a second propagation-specific note codec.
 
 ### Language pack
 
@@ -434,10 +478,10 @@ src/commanders/textfresser/
       dict-note.ts
       note-codec.ts
       note-meta.ts
+      linguistic-wikilink-normalizer.ts
     propagation/
       planner.ts
       merge-policy.ts
-      note-codec.ts
       types.ts
     vault/
       target-paths.ts
@@ -490,6 +534,7 @@ Start from the existing baselines, not from zero. Do this before moving code, ot
 
 - add `SectionKey`
 - add `LanguagePack`
+- freeze `SectionSpec`
 - freeze `EntryIdentity`
 - freeze `EntryMatchPolicy`
 - freeze the canonical `NoteCodec`
@@ -516,6 +561,7 @@ Goal: prove the contract without changing behavior.
 - split generic note shell from language-specific section mapping
 - make section sorting and marker rendering depend on pack data, not German imports
 - preserve duplicate-section round-tripping and raw passthrough exactly
+- move linguistic wikilink normalization into a shared core service
 
 ### Phase 4. Move propagation into core
 
@@ -525,6 +571,7 @@ Goal: prove the contract without changing behavior.
 
 This is the hardest phase because current propagation parsing is the most contaminated generic layer.
 The target end state is object-first propagation: parse note -> merge typed section payloads -> serialize note.
+Propagation must consume the canonical note codec output plus typed section extractors. Do not preserve a second propagation-specific note model.
 
 ### Phase 5. Rewrite generate around the new contracts
 
@@ -594,6 +641,7 @@ Mitigation:
 
 - keep background generate coordination as an explicit migration track with dedicated regression coverage
 - do not fold async coordinator changes into unrelated module moves
+- prefer explicit `GenerateSessionResult` handoff over snapshot-and-copy mutable state
 
 ## Acceptance criteria
 
@@ -606,6 +654,7 @@ Mitigation:
 - Duplicate sections, raw unsupported sections, and manual sections survive round-trip unchanged.
 - Re-encounter matching and propagation-only stub handling behave exactly as they do today.
 - Background generate preserves current coalescing, cleanup, and state-handoff behavior.
+- There is one canonical `NoteCodec`, and propagation consumes it instead of maintaining a second note model.
 
 ## Decisions applied to implementation
 
@@ -624,6 +673,7 @@ The note codec must recognize every section marker needed for full round-trippin
 Freeform/manual content stays opaque unless a specific parser opts into a typed representation.
 If a parser cannot safely provide current-behavior round-tripping for a claimed section, it must leave the section raw.
 That safety bar is determined by fixtures and snapshots, not judgment in the abstract.
+Linguistic wikilink normalization is a shared core concern; language packs decide only the section semantics around normalized links.
 
 ### 4. Generation remains DTO-first
 
@@ -668,6 +718,8 @@ Those contracts must be explicit about:
 - healing asymmetry
 - special routing rules such as reusable Worter hosts, unknown placeholders, closed-set fallback, and morpheme or library routing
 
+Use one shared routing engine for common lookup and normalization behavior, with workflow-specific entrypoints for lemma, propagation, and morpheme/library routing.
+
 ### 10. First pass preserves the note surface format
 
 Do not mix architecture cleanup with note-format cleanup.
@@ -675,11 +727,12 @@ Do not mix architecture cleanup with note-format cleanup.
 ## Recommended implementation order
 
 1. Extend existing tests around note round-tripping, attestation rewrite, path resolution, propagation, re-encounter matching, and background generate coordination.
-2. Freeze contracts first: `EntryIdentity`, `EntryMatchPolicy`, canonical `NoteCodec`, `SectionClaimFallbackPolicy`, routing ports, and `GenerateSessionCoordinator`.
+2. Freeze contracts first: `SectionSpec`, `EntryIdentity`, `EntryMatchPolicy`, canonical `NoteCodec`, `SectionClaimFallbackPolicy`, routing ports/engine, and `GenerateSessionCoordinator`.
 3. Introduce `SectionKey` and `LanguagePack`.
 4. Wrap existing German behavior as `dePack`.
-5. Move note and propagation logic behind the canonical note codec, including explicit raw-section support and ordering guarantees.
-6. Move entry matching and stub policy into `core/entries`.
-7. Rewrite generate to consume the contracts.
-8. Preserve background-generate coordinator semantics through a dedicated migration step.
-9. Shrink the Obsidian adapter last.
+5. Move note logic behind the canonical note codec, including explicit raw-section support, ordering guarantees, and shared link normalization.
+6. Move propagation to consume the canonical note model plus typed section extractors.
+7. Move entry matching and stub policy into `core/entries`.
+8. Rewrite generate to consume the contracts and return explicit session outputs.
+9. Preserve background-generate coordinator semantics through a dedicated migration step.
+10. Shrink the Obsidian adapter last.
