@@ -19,7 +19,7 @@ describe("createNoteCodec", () => {
 
 		const [entry] = codec.parse(noteText);
 		expect(entry).toBeDefined();
-		expect(entry?.sections).toHaveLength(3);
+		expect(entry?.sections).toHaveLength(4);
 		expect(entry?.sections[0]).toMatchObject({
 			kind: "raw",
 			rawBlock: "\n\nManual intro\n\n",
@@ -32,6 +32,10 @@ describe("createNoteCodec", () => {
 			title: "Übersetzung",
 		});
 		expect(entry?.sections[2]).toMatchObject({
+			kind: "raw",
+			rawBlock: "\n",
+		});
+		expect(entry?.sections[3]).toMatchObject({
 			kind: "raw",
 			key: "translation",
 			marker: "translations",
@@ -114,6 +118,10 @@ describe("createNoteCodec", () => {
 			rawBlock: "\n\n",
 		});
 		expect(rawSections[1]).toMatchObject({
+			kind: "raw",
+			rawBlock: "\n\n",
+		});
+		expect(rawSections[2]).toMatchObject({
 			key: "translation",
 			rawBlock:
 				'<span class="entry_section_title entry_section_title_translations">Übersetzung</span>\ndwelling',

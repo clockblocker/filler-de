@@ -56,7 +56,7 @@ export const GermanNounFullFeaturesSchema = z.object({
 	pos: z.literal("Noun" satisfies POS),
 });
 
-/** Ref features for Noun Inflected/Variant — genus lives on the Lemma entry. */
+/** Ref features for Noun Inflected/Variant/Partial — genus lives on the Lemma entry. */
 export const GermanNounRefFeaturesSchema = z.object({
 	pos: z.literal("Noun" satisfies POS),
 });

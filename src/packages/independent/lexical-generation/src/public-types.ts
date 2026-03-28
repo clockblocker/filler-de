@@ -12,7 +12,11 @@ import type { LexicalGenerationSettings } from "./settings";
 
 export type ZodSchemaLike<T> = z.ZodType<T>;
 
-export type LexicalSurfaceKind = "Lemma" | "Inflected" | "Variant";
+export type LexicalSurfaceKind =
+	| "Lemma"
+	| "Inflected"
+	| "Variant"
+	| "Partial";
 
 export type LexicalPos =
 	| "Noun"

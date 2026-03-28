@@ -121,9 +121,12 @@ function parseEntryChunk(
 		const nextMarker = markers[index + 1];
 		const sectionEnd = nextMarker ? nextMarker.index : sectionsText.length;
 		const rawBlock = sectionsText.slice(marker.index, sectionEnd);
-		const content = normalizeTypedContent(
-			sectionsText.slice(marker.markerEnd, sectionEnd),
+		const sectionBody = sectionsText.slice(marker.markerEnd, sectionEnd);
+		const contentWithoutTrailingWhitespace = sectionBody.replace(/\s+$/u, "");
+		const trailingRaw = sectionBody.slice(
+			contentWithoutTrailingWhitespace.length,
 		);
+		const content = normalizeTypedContent(sectionBody);
 		const occurrence = occurrenceByMarker.get(marker.marker) ?? 0;
 		occurrenceByMarker.set(marker.marker, occurrence + 1);
 		const sectionSpec = findSectionSpecByMarker(pack, marker.marker);
@@ -144,6 +147,7 @@ function parseEntryChunk(
 				marker: marker.marker,
 				title: marker.title,
 			});
+			pushLooseRawSection(sections, trailingRaw);
 		} else {
 			const rawSection: RawNoteSection = {
 				kind: "raw",

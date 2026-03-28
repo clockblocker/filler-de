@@ -15,7 +15,7 @@ function toResolvedLemma(output: {
 	lemma: string;
 	linguisticUnit: "Lexem" | "Phrasem";
 	posLikeKind: string;
-	surfaceKind: "Lemma" | "Inflected" | "Variant";
+	surfaceKind: "Lemma" | "Inflected" | "Variant" | "Partial";
 }): ResolvedLemma {
 	if (output.linguisticUnit === "Lexem") {
 		return {

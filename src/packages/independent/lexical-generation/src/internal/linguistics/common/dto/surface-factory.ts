@@ -4,10 +4,11 @@ import { z } from "zod/v3";
  * Factory that produces a surface schema (discriminated on "surfaceKind")
  * from Full-feature and Ref-feature schemas.
  *
- * Three variants:
+ * Four variants:
  * - Lemma: canonical form with full features
  * - Inflected: derived form referencing a lemma entry
  * - Variant: spelling/orthographic variant referencing a lemma entry
+ * - Partial: surface that covers only part of a multi-word lemma
  */
 export function makeSurfaceSchema<
 	F extends z.ZodTypeAny,
@@ -35,5 +36,18 @@ export function makeSurfaceSchema<
 		surfaceKind: z.literal("Variant"),
 	});
 
-	return z.discriminatedUnion("surfaceKind", [lemma, inflected, variant]);
+	const partial = z.object({
+		features: refFeatures,
+		lemma: z.string().min(1),
+		lemmaRef: z.string().min(1),
+		surface: z.string().min(1),
+		surfaceKind: z.literal("Partial"),
+	});
+
+	return z.discriminatedUnion("surfaceKind", [
+		lemma,
+		inflected,
+		variant,
+		partial,
+	]);
 }

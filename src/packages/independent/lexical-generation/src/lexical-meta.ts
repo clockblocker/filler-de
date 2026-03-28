@@ -26,6 +26,7 @@ const lexicalUnitToToken = {
 const surfaceKindToToken = {
 	Inflected: "inflected",
 	Lemma: "lemma",
+	Partial: "partial",
 	Variant: "variant",
 } as const satisfies Record<LexicalSurfaceKind, string>;
 
@@ -58,6 +59,7 @@ const lexicalUnitFromToken = {
 const surfaceKindFromToken = {
 	inflected: "Inflected",
 	lemma: "Lemma",
+	partial: "Partial",
 	variant: "Variant",
 } as const satisfies Record<string, LexicalSurfaceKind>;
 

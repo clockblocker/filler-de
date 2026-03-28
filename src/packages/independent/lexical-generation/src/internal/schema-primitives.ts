@@ -48,6 +48,7 @@ const lexicalSurfaceKindValues = [
 	"Lemma",
 	"Inflected",
 	"Variant",
+	"Partial",
 ] as const satisfies readonly LexicalSurfaceKind[];
 
 export const LexicalSurfaceKindSchema = z.enum(lexicalSurfaceKindValues);

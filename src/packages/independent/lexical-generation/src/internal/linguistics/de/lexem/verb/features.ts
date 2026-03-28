@@ -45,7 +45,7 @@ export type GermanVerbFullFeatures = z.infer<
 	typeof GermanVerbFullFeaturesSchema
 >;
 
-/** Ref features for Verb Inflected/Variant — full verb profile lives on the Lemma entry. */
+/** Ref features for Verb Inflected/Variant/Partial — full verb profile lives on the Lemma entry. */
 export const GermanVerbRefFeaturesSchema = z.object({
 	pos: z.literal("Verb" satisfies POS),
 });
