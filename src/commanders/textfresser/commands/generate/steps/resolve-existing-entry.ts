@@ -1,13 +1,10 @@
 import { ok, type Result } from "neverthrow";
 import { logger } from "../../../../../utils/logger";
-import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
-import {
-	type DictEntry,
-	type DictEntryWithLinguisticWikilinks,
-	dictNoteHelper,
-} from "../../../domain/dict-note";
-import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
-import { DictSectionKind } from "../../../targets/de/sections/section-kind";
+import { findSectionSpecByMarker } from "../../../core/contracts/language-pack";
+import { resolveEntryMatch } from "../../../core/entries/entry-match-policy";
+import { entryIdentity } from "../../../core/entries/entry-identity";
+import { type DictEntry, dictNoteHelper } from "../../../domain/dict-note";
+import { deLanguagePack } from "../../../languages/de/pack";
 import type { CommandError, CommandStateWithLemma } from "../../types";
 
 export type ResolvedEntryState = CommandStateWithLemma & {
@@ -15,38 +12,6 @@ export type ResolvedEntryState = CommandStateWithLemma & {
 	matchedEntry: DictEntry | null;
 	nextIndex: number;
 };
-
-const ATTESTATION_CSS_SUFFIX = cssSuffixFor[DictSectionKind.Attestation];
-const TRANSLATION_CSS_SUFFIX = cssSuffixFor[DictSectionKind.Translation];
-const PROPAGATION_ONLY_SECTION_SUFFIXES = new Set<string>([
-	cssSuffixFor[DictSectionKind.Relation],
-	cssSuffixFor[DictSectionKind.Morphology],
-	cssSuffixFor[DictSectionKind.Inflection],
-	cssSuffixFor[DictSectionKind.Tags],
-]);
-
-function isPropagationOnlyStubEntry(entry: DictEntry): boolean {
-	const sectionKinds = new Set(entry.sections.map((section) => section.kind));
-	const hasAttestation = sectionKinds.has(ATTESTATION_CSS_SUFFIX);
-	const hasTranslation = sectionKinds.has(TRANSLATION_CSS_SUFFIX);
-	const hasPropagationOnlySection = [...sectionKinds].some((kind) =>
-		PROPAGATION_ONLY_SECTION_SUFFIXES.has(kind),
-	);
-
-	return !hasAttestation && !hasTranslation && hasPropagationOnlySection;
-}
-
-function isPropagationOnlyStubEntryWithWikilinks(
-	entry: DictEntryWithLinguisticWikilinks,
-): boolean {
-	const hasNonGeneratedIntentLink = entry.linguisticWikilinks.some(
-		(wikilink) => wikilink.intent !== "GenerateSectionLink",
-	);
-	if (hasNonGeneratedIntentLink) {
-		return false;
-	}
-	return isPropagationOnlyStubEntry(entry);
-}
 
 /**
  * Parse existing note content into DictEntry[], find matching entry using
@@ -67,57 +32,59 @@ export function resolveExistingEntry(
 		noteText: content,
 		parseLibraryBasename: ctx.textfresserState.parseLibraryBasename,
 	});
-	let existingEntries: DictEntryWithLinguisticWikilinks[] = parsedEntries;
-
-	const prefix = dictEntryIdHelper.buildPrefix(
-		lemmaResult.linguisticUnit,
-		lemmaResult.surfaceKind,
-		lemmaResult.linguisticUnit === "Lexem"
-			? lemmaResult.posLikeKind
-			: undefined,
-	);
-
 	const disambResult = lemmaResult.disambiguationResult;
-	let matchedEntry: DictEntryWithLinguisticWikilinks | null = null;
 
 	logger.info(
 		`[resolveEntry] disambResult=${disambResult ? `matchedIndex=${disambResult.matchedIndex}` : "null"}`,
 	);
 
-	if (disambResult) {
-		// Match by unitKind + POS + index, ignoring surfaceKind so that
-		// inflected forms find lemma entries and vice versa
-		matchedEntry =
-			existingEntries.find((e) => {
-				const parsed = dictEntryIdHelper.parse(e.id);
-				return (
-					parsed !== undefined &&
-					parsed.index === disambResult.matchedIndex &&
-					parsed.unitKind === lemmaResult.linguisticUnit &&
-					(lemmaResult.linguisticUnit !== "Lexem" ||
-						parsed.pos === lemmaResult.posLikeKind)
-				);
-			}) ?? null;
-	}
-	// If no disambResult → matchedEntry stays null (new entry)
+	const { existingEntries, matchedEntry, nextIndex } = resolveEntryMatch({
+		disambiguationResult: disambResult,
+		existingEntries: parsedEntries,
+		linguisticUnit: lemmaResult.linguisticUnit,
+		posLikeKind:
+			lemmaResult.linguisticUnit === "Lexem"
+				? lemmaResult.posLikeKind
+				: undefined,
+		stubPolicy: {
+			getSectionKey(section) {
+				return findSectionSpecByMarker(deLanguagePack, section.kind)?.key;
+			},
+			propagationOnlyKeys: [
+				"relation",
+				"morphology",
+				"inflection",
+				"tags",
+			],
+		},
+		surfaceKind: lemmaResult.surfaceKind,
+	});
 
-	if (matchedEntry && isPropagationOnlyStubEntryWithWikilinks(matchedEntry)) {
-		const stubEntryId = matchedEntry.id;
-		logger.info(
-			`[resolveEntry] matchedEntry=${stubEntryId} is propagation-only stub — forcing full generation`,
-		);
-		existingEntries = existingEntries.filter(
-			(entry) => entry.id !== stubEntryId,
-		);
-		matchedEntry = null;
+	if (
+		disambResult &&
+		matchedEntry === null &&
+		existingEntries.length < parsedEntries.length
+	) {
+		const matchedStub = parsedEntries.find((entry) => {
+			const parsed = entryIdentity.parse(entry.id);
+			return (
+				parsed !== undefined &&
+				parsed.index === disambResult.matchedIndex &&
+				parsed.unitKind === lemmaResult.linguisticUnit &&
+				(lemmaResult.linguisticUnit !== "Lexem" ||
+					parsed.pos === lemmaResult.posLikeKind)
+			);
+		});
+		if (matchedStub) {
+			logger.info(
+				`[resolveEntry] matchedEntry=${matchedStub.id} is propagation-only stub — forcing full generation`,
+			);
+		}
 	}
 
 	logger.info(
 		`[resolveEntry] matchedEntry=${matchedEntry ? matchedEntry.id : "null"}`,
 	);
-
-	const existingIds = existingEntries.map((e) => e.id);
-	const nextIndex = dictEntryIdHelper.nextIndex(existingIds, prefix);
 
 	return ok({
 		...ctx,

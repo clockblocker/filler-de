@@ -21,7 +21,8 @@
 		"fix": "bun x biome check --write --unsafe . 2>/dev/null || true",
 		"prompt:stability": "bun ./tests/prompt-test/stability-runner.ts",
 		"prompt:test": "bun ./tests/prompt-test/runner.ts",
-		"test": "bun test --reporter=dot --preload ../../../../tests/unit/setup.ts ./tests/"
+		"test": "bun test --reporter=dot --preload ../../../../tests/unit/setup.ts ./tests/",
+		"test:prompt-live": "bun test --reporter=dot --preload ../../../../tests/unit/setup.ts ./tests/prompt-test/live-prompt.test.ts"
 	},
 	"type": "module",
 	"version": "0.0.0"

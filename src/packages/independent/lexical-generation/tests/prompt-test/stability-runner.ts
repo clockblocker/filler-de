@@ -1,38 +1,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { PROMPT_FOR, SchemasFor } from "../../src/internal/prompt-smith";
 import type { PromptKind } from "../../src/internal/prompt-smith/codegen/consts";
-import { callGemini } from "./api-client";
-
-type Example = { input: unknown; output: unknown };
-
-function toKebabCase(str: string): string {
-	return str
-		.replace(/([a-z])([A-Z])/g, "$1-$2")
-		.replace(/[\s_]+/g, "-")
-		.toLowerCase();
-}
-
-function capitalize(s: string): string {
-	return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-}
-
-function deepEqual(a: unknown, b: unknown): boolean {
-	if (a === b) return true;
-	if (a == null || b == null) return a === b;
-	if (typeof a !== typeof b) return false;
-	if (typeof a !== "object") return false;
-
-	const aObj = a as Record<string, unknown>;
-	const bObj = b as Record<string, unknown>;
-	const aKeys = Object.keys(aObj).sort();
-	const bKeys = Object.keys(bObj).sort();
-
-	if (aKeys.length !== bKeys.length) return false;
-	return aKeys.every(
-		(key) => bKeys.includes(key) && deepEqual(aObj[key], bObj[key]),
-	);
-}
+import { getGeminiApiKey } from "./env";
+import {
+	executeStructuredPromptCase,
+	loadLexicalPromptFixtures,
+	parsePromptSelectionArgs,
+	resolveLexicalPromptTarget,
+} from "./harness";
 
 function serializeOutput(value: unknown): string {
 	try {
@@ -40,50 +15,6 @@ function serializeOutput(value: unknown): string {
 	} catch {
 		return String(value);
 	}
-}
-
-async function loadTestExamples(
-	targetLanguage: string,
-	knownLanguage: string,
-	promptKind: PromptKind,
-): Promise<Example[]> {
-	const toTestPath = path.resolve(
-		import.meta.dir,
-		"../../src/internal/prompt-smith/prompt-parts",
-		toKebabCase(targetLanguage),
-		toKebabCase(knownLanguage),
-		toKebabCase(promptKind),
-		"examples/to-test.ts",
-	);
-
-	const mod = await import(toTestPath);
-	return (mod.testExamples as Example[]) ?? [];
-}
-
-function getSystemPrompt(params: {
-	knownLanguage: string;
-	promptKind: PromptKind;
-	targetLanguage: string;
-}): string {
-	const targetDict =
-		PROMPT_FOR[
-			capitalize(params.targetLanguage) as keyof typeof PROMPT_FOR
-		];
-	const knownDict =
-		targetDict?.[
-			capitalize(
-				params.knownLanguage,
-			) as keyof (typeof targetDict)[keyof typeof targetDict]
-		];
-	const prompt = knownDict?.[params.promptKind as keyof typeof knownDict];
-
-	if (!prompt) {
-		throw new Error(
-			`Prompt not found for ${params.targetLanguage}/${params.knownLanguage}/${params.promptKind}`,
-		);
-	}
-
-	return prompt.systemPrompt;
 }
 
 const [runsArg, targetArg = "german", knownArg = "english"] =
@@ -96,10 +27,7 @@ if (!Number.isFinite(repeats) || repeats < 1) {
 	);
 }
 
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-	throw new Error("Missing GEMINI_API_KEY environment variable");
-}
+const apiKey = getGeminiApiKey();
 
 const promptKinds: PromptKind[] = ["Lemma", "Disambiguate"];
 const targetLanguage = targetArg.toLowerCase();
@@ -117,17 +45,10 @@ const report: Record<string, unknown> = {
 };
 
 for (const promptKind of promptKinds) {
-	const schema = SchemasFor[promptKind].agentOutputSchema;
-	const systemPrompt = getSystemPrompt({
-		knownLanguage,
-		promptKind,
-		targetLanguage,
-	});
-	const examples = await loadTestExamples(
-		targetLanguage,
-		knownLanguage,
-		promptKind,
+	const prompt = resolveLexicalPromptTarget(
+		parsePromptSelectionArgs([promptKind, targetArg, knownArg]),
 	);
+	const examples = await loadLexicalPromptFixtures(prompt);
 
 	if (examples.length === 0) {
 		continue;
@@ -143,24 +64,16 @@ for (const promptKind of promptKinds) {
 		const outputs = new Map<string, number>();
 
 		for (let run = 0; run < repeats; run++) {
-			const userInput =
-				typeof example.input === "string"
-					? example.input
-					: JSON.stringify(example.input);
-
-			const result = await callGemini({
+			const result = await executeStructuredPromptCase({
 				apiKey,
-				schema,
-				systemPrompt,
-				userInput,
+				example,
+				prompt,
 			});
-			const actual = result.parsed;
-			const matchesExpected = deepEqual(actual, example.output);
-			if (matchesExpected) {
+			if (result.matchesExpected) {
 				passCount += 1;
 			}
 
-			const key = serializeOutput(actual);
+			const key = serializeOutput(result.actualOutput);
 			outputs.set(key, (outputs.get(key) ?? 0) + 1);
 		}
 
