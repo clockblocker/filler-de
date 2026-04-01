@@ -2,6 +2,7 @@ import type { MorphemeKind } from "@textfresser/lexical-generation";
 import type { Prettify } from "node_modules/zod/v4/core/util";
 import type { LinguisticUnitKind } from "./packages/independent/linguistics/src/common/enums/core";
 
+// Lemmas
 type BaseLinguisticUnitMap = {
 	[LUK in LinguisticUnitKind]: { lingUnitKind: LUK };
 };
@@ -16,5 +17,6 @@ type BaseMorphemMap = {
 
 type Prefix = BaseMorphemMap["Prefix"];
 
-// features: { }
+// inherentFeatures: {} -- for lemmas
+// inflectional: {} -- for flection
 // relations: { }
