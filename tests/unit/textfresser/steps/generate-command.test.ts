@@ -80,7 +80,19 @@ function makePhrasemLexicalInfo(): LexicalInfo {
 }
 
 async function extractFinalWrittenContent(actions: readonly unknown[]) {
-	const writeAction = actions[0];
+	const writeAction = [...actions]
+		.reverse()
+		.find(
+			(action) =>
+				typeof action === "object" &&
+				action !== null &&
+				"kind" in action &&
+				action.kind === VaultActionKind.ProcessMdFile &&
+				"payload" in action &&
+				typeof action.payload === "object" &&
+				action.payload !== null &&
+				"transform" in action.payload,
+		);
 	if (
 		!writeAction ||
 		typeof writeAction !== "object" ||
@@ -100,6 +112,75 @@ async function extractFinalWrittenContent(actions: readonly unknown[]) {
 
 function sectionMarker(kind: DictSectionKind): string {
 	return buildSectionMarker(cssSuffixFor[kind], TitleReprFor[kind].German);
+}
+
+function makePhrasemGenerateInput(params: {
+	content: string;
+	lexicalInfo?: LexicalInfo;
+	promptCalls?: string[];
+	promptResult?: string;
+}) {
+	const targetPath = buildPolicyDestinationPath({
+		lemma: "redensart",
+		linguisticUnit: "Phrasem",
+		posLikeKind: null,
+		surfaceKind: "Lemma",
+		targetLanguage: "German",
+	});
+	const promptCalls = params.promptCalls ?? [];
+
+	return {
+		commandContext: {
+			activeFile: {
+				content: params.content,
+				splitPath: targetPath,
+			},
+			selection: null,
+		},
+		resultingActions: [],
+		textfresserState: {
+			attestationForLatestNavigated: null,
+			inFlightGenerate: null,
+			isLibraryLookupAvailable: false,
+			languages: { known: "English", target: "German" },
+			latestFailedSections: [],
+			latestLemmaInvocationCache: null,
+			latestLemmaPlaceholderPath: undefined,
+			latestLemmaResult: {
+				attestation: {
+					source: {
+						ref: "![[Src#^3|^]]",
+						textRaw: "Das ist eine Redensart.",
+						textWithOnlyTargetMarked: "Das ist eine [Redensart].",
+					},
+					target: { surface: "Redensart" },
+				},
+				disambiguationResult: { matchedIndex: 1 },
+				lemma: "redensart",
+				linguisticUnit: "Phrasem",
+				posLikeKind: "Idiom",
+				surfaceKind: "Lemma",
+			},
+			latestLemmaTargetOwnedByInvocation: false,
+			latestResolvedLemmaTargetPath: targetPath,
+			lexicalGeneration: {
+				generateLexicalInfo: async () =>
+					ok(params.lexicalInfo ?? makePhrasemLexicalInfo()),
+			} as unknown as LexicalGenerationModule,
+			lookupInLibrary: () => [],
+			parseLibraryBasename: () => null,
+			pendingGenerate: null,
+			promptRunner: {
+				generate: (kind: string) => {
+					promptCalls.push(kind);
+					return okAsync(params.promptResult ?? "fresh translation");
+				},
+			},
+			vam: {
+				findByBasename: () => [],
+			},
+		} as unknown as TextfresserState,
+	};
 }
 
 describe("generateCommand proper-noun fallback", () => {
@@ -538,6 +619,83 @@ describe("generateCommand proper-noun fallback", () => {
 			serialized.indexOf('entry_section_title_synonyme">Semantische Beziehungen'),
 		).toBeLessThan(
 			serialized.indexOf('entry_section_title_translations">Übersetzung'),
+		);
+	});
+
+	it("preserves mixed typed and manual notes while inserting generated sections before a loose footer", async () => {
+		const promptCalls: string[] = [];
+		const content = [
+			"redensart ^PH-LM-1",
+			"",
+			sectionMarker(DictSectionKind.Attestation),
+			"![[Other#^2|^]]",
+			sectionMarker(DictSectionKind.FreeForm),
+			"User note [[Haus]]",
+			"",
+			"Manual footer",
+		].join("\n");
+
+		const result = await generateCommand(
+			makePhrasemGenerateInput({
+				content,
+				promptCalls,
+			}),
+		);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+
+		expect(promptCalls).toEqual(["WordTranslation"]);
+
+		const serialized = await extractFinalWrittenContent(result.value);
+		expect(serialized).toContain("User note [[Haus]]");
+		expect(
+			serialized.indexOf('entry_section_title_translations">Übersetzung'),
+		).toBeLessThan(serialized.indexOf('entry_section_title_notizen">Notizen'));
+		expect(
+			serialized.indexOf('entry_section_title_notizen">Notizen'),
+		).toBeLessThan(serialized.indexOf("Manual footer"));
+		expect(serialized.indexOf("Manual footer")).toBeGreaterThan(
+			serialized.indexOf('entry_section_title_synonyme">Semantische Beziehungen'),
+		);
+	});
+
+	it("adds a typed translation while preserving duplicate recognized raw translation blocks", async () => {
+		const promptCalls: string[] = [];
+		const content = [
+			"redensart ^PH-LM-1",
+			"",
+			sectionMarker(DictSectionKind.Attestation),
+			"![[Other#^2|^]]",
+			sectionMarker(DictSectionKind.Relation),
+			"= [[nah]]",
+			'<span class="entry_section_title entry_section_title_translations">Custom Title</span>',
+			"manual translation",
+			sectionMarker(DictSectionKind.Translation),
+			"duplicate translation block",
+			sectionMarker(DictSectionKind.FreeForm),
+			"User note [[Haus]]",
+		].join("\n");
+
+		const result = await generateCommand(
+			makePhrasemGenerateInput({
+				content,
+				promptCalls,
+			}),
+		);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) return;
+
+		expect(promptCalls).toEqual(["WordTranslation"]);
+
+		const serialized = await extractFinalWrittenContent(result.value);
+		expect(serialized).toContain(
+			'<span class="entry_section_title entry_section_title_translations">Custom Title</span>\nmanual translation',
+		);
+		expect(serialized).toContain(
+			'<span class="entry_section_title entry_section_title_translations">Übersetzung</span>\nduplicate translation block',
+		);
+		expect(serialized).toContain(
+			'<span class="entry_section_title entry_section_title_translations">Übersetzung</span>\nfresh translation',
 		);
 	});
 });

@@ -1,7 +1,4 @@
-import { z } from "zod/v3";
-import { blockIdHelper } from "../../../../stateless-helpers/block-id";
 import { morphologyRelationHelper } from "../../../../stateless-helpers/morphology-relation";
-import { noteMetadataHelper } from "../../../../stateless-helpers/note-metadata";
 import {
 	type ParsedWikilink,
 	wikilinkHelper,
@@ -9,18 +6,16 @@ import {
 import type { TargetLanguage } from "../../../../types";
 import { logger } from "../../../../utils/logger";
 import { extractHashTags } from "../../../../utils/text-utils";
-import { compareSectionsByWeight } from "../../targets/de/sections/section-config";
-import { cssSuffixFor } from "../../targets/de/sections/section-css-kind";
-import {
-	DictSectionKind,
-	TitleReprFor,
-} from "../../targets/de/sections/section-kind";
-import {
-	buildSectionMarker,
-	ENTRY_SECTION_MARKER_RE,
-	ENTRY_SEPARATOR,
-	ENTRY_SEPARATOR_RE,
-} from "../dict-note/internal/constants";
+import type { LanguagePack } from "../../core/contracts/language-pack";
+import type { SectionKey } from "../../core/contracts/section-key";
+import { createNoteCodec } from "../../core/notes/note-codec";
+import type {
+	NoteEntry,
+	NoteSection,
+	TypedNoteSection,
+} from "../../core/notes/types";
+import { deLanguagePack } from "../../languages/de/pack";
+import { buildSectionMarker } from "../dict-note/internal/constants";
 import {
 	type LibraryBasenameParser,
 	type LibraryLookupByCoreName,
@@ -60,7 +55,8 @@ export type PropagationTypedSection<
 	K extends TypedSectionKind = TypedSectionKind,
 > = {
 	kind: K;
-	cssKind: string;
+	key?: SectionKey;
+	cssKind?: string;
 	title: string;
 	payload: SectionPayloadByKind[K];
 };
@@ -73,8 +69,9 @@ type AnyPropagationTypedSection =
 
 export type PropagationRawSection = {
 	kind: "Raw";
-	cssKind: string;
-	title: string;
+	key?: SectionKey;
+	cssKind?: string;
+	title?: string;
 	rawBlock: string;
 };
 
@@ -110,30 +107,71 @@ const WARN_SAMPLE_EVERY_N = 50;
 const WARN_SAMPLE_MAX_KEYS = 2000;
 const warningCountBySampleKey = new Map<string, number>();
 
-const EntriesMetaSchema = z
-	.object({ entries: z.record(z.record(z.unknown())).optional() })
-	.passthrough();
-
-const typedSectionKindByCssKind = new Map<string, TypedSectionKind>([
-	[cssSuffixFor[DictSectionKind.Relation], "Relation"],
-	[cssSuffixFor[DictSectionKind.Morphology], "Morphology"],
-	[cssSuffixFor[DictSectionKind.Inflection], "Inflection"],
-	[cssSuffixFor[DictSectionKind.Tags], "Tags"],
+const SUPPORTED_PROPAGATION_SECTION_KEYS = new Set<SectionKey>([
+	"relation",
+	"morphology",
+	"inflection",
+	"tags",
 ]);
-const MORPHOLOGY_SECTION_CSS_KIND = cssSuffixFor[DictSectionKind.Morphology];
-const RELATION_SECTION_CSS_KIND = cssSuffixFor[DictSectionKind.Relation];
+
+function createPropagationLanguagePack(): LanguagePack {
+	const sections = deLanguagePack.sections.map((section) =>
+		SUPPORTED_PROPAGATION_SECTION_KEYS.has(section.key)
+			? section
+			: {
+					...section,
+					claimPolicy: {
+						fallback: "raw" as const,
+						canClaim() {
+							return false;
+						},
+					},
+				},
+	);
+	const sectionByKey = new Map(sections.map((section) => [section.key, section]));
+	const sectionByMarker = new Map(
+		sections.map((section) => [section.marker, section]),
+	);
+
+	return {
+		getSection(key) {
+			const section = sectionByKey.get(key);
+			if (!section) {
+				throw new Error(`Unknown section key: ${key}`);
+			}
+			return section;
+		},
+		getSectionByMarker(marker) {
+			return sectionByMarker.get(marker);
+		},
+		sections,
+		targetLang: deLanguagePack.targetLang,
+	};
+}
+
+const noteCodec = createNoteCodec(createPropagationLanguagePack());
+const typedSectionKindByKey = new Map<SectionKey, TypedSectionKind>([
+	["relation", "Relation"],
+	["morphology", "Morphology"],
+	["inflection", "Inflection"],
+	["tags", "Tags"],
+]);
+const sectionKeyByTypedSectionKind = new Map<TypedSectionKind, SectionKey>([
+	["Relation", "relation"],
+	["Morphology", "morphology"],
+	["Inflection", "inflection"],
+	["Tags", "tags"],
+]);
+const MORPHOLOGY_SECTION_CSS_KIND =
+	deLanguagePack.getSection("morphology").marker;
+const RELATION_SECTION_CSS_KIND = deLanguagePack.getSection("relation").marker;
+const GERMAN_MORPHOLOGY_TITLE = deLanguagePack
+	.getSection("morphology")
+	.titleFor("German");
 
 export type ParsePropagationNoteOptions = {
 	lookupInLibraryByCoreName?: LibraryLookupByCoreName;
 	parseLibraryBasename?: LibraryBasenameParser;
-};
-
-type ParsedSectionMarker = {
-	index: number;
-	marker: string;
-	markerEnd: number;
-	cssKind: string;
-	title: string;
 };
 
 function logSampledWarning(params: {
@@ -164,33 +202,6 @@ function logSampledWarning(params: {
 		sampled: nextCount > WARN_SAMPLE_FIRST_N,
 		seenCount: nextCount,
 	});
-}
-
-function collectSectionMarkers(text: string): ParsedSectionMarker[] {
-	const markers: ParsedSectionMarker[] = [];
-	const regex = new RegExp(ENTRY_SECTION_MARKER_RE.source, "g");
-	for (const match of text.matchAll(regex)) {
-		const index = match.index;
-		const marker = match[0];
-		const cssKind = match[1];
-		const title = match[2];
-		if (
-			typeof index !== "number" ||
-			typeof marker !== "string" ||
-			typeof cssKind !== "string" ||
-			typeof title !== "string"
-		) {
-			continue;
-		}
-		markers.push({
-			cssKind,
-			index,
-			marker,
-			markerEnd: index + marker.length,
-			title,
-		});
-	}
-	return markers;
 }
 
 function parseBasicWikilinkFromMatch(match: {
@@ -777,124 +788,6 @@ function parseTagsSection(rawContent: string): TagsSectionDto {
 	};
 }
 
-function parseSectionsForEntry(
-	sectionText: string,
-	options?: ParsePropagationNoteOptions,
-): PropagationSection[] {
-	const markers = collectSectionMarkers(sectionText);
-	return markers.map((marker, index) => {
-		const sectionEnd =
-			index + 1 < markers.length
-				? (markers[index + 1]?.index ?? sectionText.length)
-				: sectionText.length;
-		const rawBlock = sectionText.slice(marker.index, sectionEnd);
-		const rawContent = sectionText.slice(marker.markerEnd, sectionEnd);
-		const typedKind = typedSectionKindByCssKind.get(marker.cssKind);
-		if (!typedKind) {
-			return {
-				cssKind: marker.cssKind,
-				kind: "Raw",
-				rawBlock,
-				title: marker.title,
-			};
-		}
-		switch (typedKind) {
-			case "Relation":
-				return {
-					cssKind: marker.cssKind,
-					kind: "Relation",
-					payload: parseRelationSection(rawContent, options),
-					title: marker.title,
-				};
-			case "Morphology":
-				return {
-					cssKind: marker.cssKind,
-					kind: "Morphology",
-					payload: parseMorphologySection(rawContent, options),
-					title: marker.title,
-				};
-			case "Inflection":
-				return {
-					cssKind: marker.cssKind,
-					kind: "Inflection",
-					payload: parseInflectionSection(rawContent),
-					title: marker.title,
-				};
-			case "Tags":
-				return {
-					cssKind: marker.cssKind,
-					kind: "Tags",
-					payload: parseTagsSection(rawContent),
-					title: marker.title,
-				};
-		}
-
-		return {
-			cssKind: marker.cssKind,
-			kind: "Raw",
-			rawBlock,
-			title: marker.title,
-		};
-	});
-}
-
-function parseEntryChunk(
-	chunk: string,
-	metaByEntryId: Record<string, Record<string, unknown>>,
-	options?: ParsePropagationNoteOptions,
-): PropagationNoteEntry | null {
-	const lines = chunk.split("\n");
-	let headerLine: string | null = null;
-	for (const line of lines) {
-		if (line.trim().length === 0) {
-			continue;
-		}
-		const id = blockIdHelper.extractFromLine(line);
-		if (id) {
-			headerLine = line;
-			break;
-		}
-	}
-	if (!headerLine) {
-		return null;
-	}
-
-	const id = blockIdHelper.extractFromLine(headerLine);
-	if (!id) {
-		return null;
-	}
-	const headerContent = normalizeSpace(
-		blockIdHelper.stripFromEnd(headerLine),
-	);
-	const headerEndOffset = chunk.indexOf(headerLine) + headerLine.length;
-	const sectionText = chunk.slice(headerEndOffset);
-
-	return {
-		headerContent,
-		id,
-		meta: metaByEntryId[id] ?? {},
-		sections: parseSectionsForEntry(sectionText, options),
-	};
-}
-
-function sortSectionsForSerialization(
-	sections: ReadonlyArray<PropagationSection>,
-): PropagationSection[] {
-	return sections
-		.map((section, index) => ({ index, section }))
-		.sort((left, right) => {
-			const weightCompare = compareSectionsByWeight(
-				{ kind: left.section.cssKind },
-				{ kind: right.section.cssKind },
-			);
-			if (weightCompare !== 0) {
-				return weightCompare;
-			}
-			return left.index - right.index;
-		})
-		.map((item) => item.section);
-}
-
 function serializeRelationSection(payload: RelationSectionDto): string {
 	const grouped = new Map<string, RelationItemDto[]>();
 	for (const item of dedupeByKey(payload.items, relationItemIdentityKey)) {
@@ -1037,7 +930,7 @@ function serializeMorphologySection(
 function inferTargetLanguageFromSectionTitle(
 	sectionTitle: string,
 ): TargetLanguage {
-	if (sectionTitle === TitleReprFor[DictSectionKind.Morphology].German) {
+	if (sectionTitle === GERMAN_MORPHOLOGY_TITLE) {
 		return "German";
 	}
 	return "English";
@@ -1073,29 +966,181 @@ function serializeTagsSection(payload: TagsSectionDto): string {
 	return tags.join(" ");
 }
 
-function serializeTypedSection(section: AnyPropagationTypedSection): string {
-	const marker = buildSectionMarker(section.cssKind, section.title);
+function resolvePropagationSectionKey(
+	section: AnyPropagationTypedSection,
+): SectionKey {
+	if (section.key) {
+		return section.key;
+	}
+	const key = sectionKeyByTypedSectionKind.get(section.kind);
+	if (!key) {
+		throw new Error(`Unsupported propagation section kind: ${section.kind}`);
+	}
+	return key;
+}
+
+function adaptTypedNoteSection(
+	section: TypedNoteSection,
+	options?: ParsePropagationNoteOptions,
+): AnyPropagationTypedSection | null {
+	const typedKind = typedSectionKindByKey.get(section.key);
+	if (!typedKind) {
+		return null;
+	}
+
+	switch (typedKind) {
+		case "Relation":
+			return {
+				cssKind: section.marker,
+				key: section.key,
+				kind: "Relation",
+				payload: parseRelationSection(section.content, options),
+				title: section.title,
+			};
+		case "Morphology":
+			return {
+				cssKind: section.marker,
+				key: section.key,
+				kind: "Morphology",
+				payload: parseMorphologySection(section.content, options),
+				title: section.title,
+			};
+		case "Inflection":
+			return {
+				cssKind: section.marker,
+				key: section.key,
+				kind: "Inflection",
+				payload: parseInflectionSection(section.content),
+				title: section.title,
+			};
+		case "Tags":
+			return {
+				cssKind: section.marker,
+				key: section.key,
+				kind: "Tags",
+				payload: parseTagsSection(section.content),
+				title: section.title,
+			};
+	}
+}
+
+function adaptNoteSection(
+	section: NoteSection,
+	options?: ParsePropagationNoteOptions,
+): PropagationSection {
+	if (section.kind === "raw") {
+		return {
+			cssKind: section.marker,
+			key: section.key,
+			kind: "Raw",
+			rawBlock: section.rawBlock,
+			title: section.title,
+		};
+	}
+
+	const typed = adaptTypedNoteSection(section, options);
+	if (typed) {
+		return typed;
+	}
+
+	return {
+		cssKind: section.marker,
+		key: section.key,
+		kind: "Raw",
+		rawBlock: noteCodec.serialize([
+			{
+				headerContent: "placeholder",
+				id: "placeholder",
+				meta: {},
+				sections: [section],
+			},
+		]).body.replace(/^\nplaceholder \^placeholder\n\n?/, ""),
+		title: section.title,
+	};
+}
+
+function adaptNoteEntry(
+	entry: NoteEntry,
+	options?: ParsePropagationNoteOptions,
+): PropagationNoteEntry {
+	const sections = entry.sections
+		.map((section) => adaptNoteSection(section, options))
+		.filter((section) => {
+			if (section.kind !== "Raw") {
+				return true;
+			}
+			return (
+				typeof section.cssKind === "string" ||
+				typeof section.title === "string" ||
+				section.rawBlock.trim().length > 0
+			);
+		});
+
+	return {
+		headerContent: entry.headerContent,
+		id: entry.id,
+		meta: entry.meta,
+		sections,
+	};
+}
+
+function serializeTypedSectionContent(
+	section: AnyPropagationTypedSection,
+): string {
 	switch (section.kind) {
-		case "Relation": {
-			const content = serializeRelationSection(section.payload);
-			return content.length > 0 ? `${marker}\n${content}` : marker;
-		}
-		case "Morphology": {
-			const content = serializeMorphologySection(
+		case "Relation":
+			return serializeRelationSection(section.payload);
+		case "Morphology":
+			return serializeMorphologySection(
 				section.payload,
 				inferTargetLanguageFromSectionTitle(section.title),
 			);
-			return content.length > 0 ? `${marker}\n${content}` : marker;
-		}
-		case "Inflection": {
-			const content = serializeInflectionSection(section.payload);
-			return content.length > 0 ? `${marker}\n${content}` : marker;
-		}
-		case "Tags": {
-			const content = serializeTagsSection(section.payload);
-			return content.length > 0 ? `${marker}\n${content}` : marker;
-		}
+		case "Inflection":
+			return serializeInflectionSection(section.payload);
+		case "Tags":
+			return serializeTagsSection(section.payload);
 	}
+}
+
+function adaptPropagationSection(section: PropagationSection): NoteSection {
+	if (section.kind === "Raw") {
+		return {
+			kind: "raw",
+			key: section.key,
+			marker: section.cssKind,
+			rawBlock: section.rawBlock,
+			title: section.title,
+		};
+	}
+
+	const key = resolvePropagationSectionKey(section);
+	const packSection = deLanguagePack.getSection(key);
+	return {
+		content: serializeTypedSectionContent(section),
+		key,
+		kind: "typed",
+		marker: packSection.marker,
+		title: section.title,
+	};
+}
+
+function adaptPropagationEntry(entry: PropagationNoteEntry): NoteEntry {
+	return {
+		headerContent: entry.headerContent,
+		id: entry.id,
+		meta: entry.meta,
+		sections: entry.sections.map(adaptPropagationSection),
+	};
+}
+
+function serializeTypedSection(section: AnyPropagationTypedSection): string {
+	const key = resolvePropagationSectionKey(section);
+	const marker = buildSectionMarker(
+		section.cssKind ?? deLanguagePack.getSection(key).marker,
+		section.title,
+	);
+	const content = serializeTypedSectionContent(section);
+	return content.length > 0 ? `${marker}\n${content}` : marker;
 }
 
 function serializeSection(section: PropagationSection): string {
@@ -1124,12 +1169,11 @@ function joinSerializedSections(blocks: ReadonlyArray<string>): string {
 
 function serializeEntry(entry: PropagationNoteEntry): string {
 	const headerLine = `${entry.headerContent} ^${entry.id}`;
-	const sections = sortSectionsForSerialization(entry.sections);
-	if (sections.length === 0) {
+	if (entry.sections.length === 0) {
 		return `\n${headerLine}\n`;
 	}
 	const serializedSections = joinSerializedSections(
-		sections.map(serializeSection),
+		entry.sections.map(serializeSection),
 	);
 	return `\n${headerLine}\n\n${serializedSections}`;
 }
@@ -1138,34 +1182,15 @@ export function parsePropagationNote(
 	noteText: string,
 	options?: ParsePropagationNoteOptions,
 ): PropagationNoteEntry[] {
-	const { body } = noteMetadataHelper.decompose(noteText);
-	// zod v3/v4 boundary: read() expects v4 ZodSchema, our schema is v3 — runtime-compatible
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const meta = noteMetadataHelper.read(
-		noteText,
-		EntriesMetaSchema as any,
-	) as z.infer<typeof EntriesMetaSchema> | null;
-	const metaByEntryId = meta?.entries ?? {};
-
-	const entries: PropagationNoteEntry[] = [];
-	for (const chunk of body.split(ENTRY_SEPARATOR_RE)) {
-		if (chunk.trim().length === 0) {
-			continue;
-		}
-		const entry = parseEntryChunk(chunk, metaByEntryId, options);
-		if (entry) {
-			entries.push(entry);
-		}
-	}
-	return entries;
+	return noteCodec
+		.parse(noteText)
+		.map((entry) => adaptNoteEntry(entry, options));
 }
 
 export function serializePropagationNote(
 	entries: ReadonlyArray<PropagationNoteEntry>,
 ): SerializePropagationNoteResult {
-	const body = entries
-		.map((entry) => serializeEntry(entry))
-		.join(ENTRY_SEPARATOR);
+	const body = entries.map((entry) => serializeEntry(entry)).join("\n\n\n---\n---\n\n\n");
 	const entriesMeta: Record<string, Record<string, unknown>> = {};
 	for (const entry of entries) {
 		if (Object.keys(entry.meta).length > 0) {

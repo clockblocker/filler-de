@@ -33,6 +33,7 @@ prompt.ts
 .env.cli-e2e
 
 /tests/prompt-test/logs
+/src/packages/independent/lexical-generation/tests/prompt-test/logs
 
 
 # Bun

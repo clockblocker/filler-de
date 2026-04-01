@@ -1,6 +1,5 @@
 import { ok, type Result } from "neverthrow";
 import { logger } from "../../../../../utils/logger";
-import { findSectionSpecByMarker } from "../../../core/contracts/language-pack";
 import { resolveEntryMatch } from "../../../core/entries/entry-match-policy";
 import { entryIdentity } from "../../../core/entries/entry-identity";
 import type { NoteEntry } from "../../../core/notes/types";
@@ -49,9 +48,14 @@ export function resolveExistingEntry(
 				: undefined,
 		stubPolicy: {
 			getSectionKey(section) {
-				return section.marker
-					? findSectionSpecByMarker(deLanguagePack, section.marker)?.key
-					: undefined;
+				if (section.kind !== "typed") {
+					return undefined;
+				}
+				const marker = section.marker;
+				if (!marker) {
+					return undefined;
+				}
+				return deLanguagePack.getSectionByMarker(marker)?.key;
 			},
 			propagationOnlyKeys: [
 				"relation",

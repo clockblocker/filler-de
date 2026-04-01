@@ -172,4 +172,27 @@ describe("resolveExistingEntry", () => {
 		expect(result.value.existingEntries).toHaveLength(1);
 		expect(result.value.nextIndex).toBe(2);
 	});
+
+	it("still drops a propagation-only stub when raw recognized sections sit nearby", () => {
+		const stubWithRawNeighborContent = [
+			"Arbeit ^LX-LM-NOUN-1",
+			"",
+			'<span class="entry_section_title entry_section_title_synonyme">Semantische Beziehungen</span>',
+			"≈ [[Zusammenarbeit]]",
+			'<span class="entry_section_title entry_section_title_translations">Custom Title</span>',
+			"manual translation",
+		].join("\n");
+
+		const result = resolveExistingEntry(
+			makeCtx(stubWithRawNeighborContent, { matchedIndex: 1 }),
+		);
+		expect(result.isOk()).toBe(true);
+		if (result.isErr()) {
+			return;
+		}
+
+		expect(result.value.matchedEntry).toBeNull();
+		expect(result.value.existingEntries).toHaveLength(0);
+		expect(result.value.nextIndex).toBe(1);
+	});
 });
