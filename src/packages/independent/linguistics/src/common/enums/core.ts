@@ -1,5 +1,5 @@
 import { z } from "zod/v3";
-import type { TargetLanguage } from "../../../shared/languages";
+import type { TargetLanguage } from "../languages";
 
 export const LANGUAGE_ISO_CODE: Record<TargetLanguage, string> = {
 	English: "en",

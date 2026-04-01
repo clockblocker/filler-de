@@ -1,20 +1,5 @@
 import { z } from "zod/v3";
 import { PhrasemSurfaceSchema } from "../common/dto/phrasem-surface";
-
-export type {
-	DeEntity,
-	DePosLikeDiscriminator,
-	EnEntity,
-	EngEntity,
-	EngPosLikeDiscriminator,
-	EnPosLikeDiscriminator,
-	Entity,
-	FeatureSet,
-	InflectionalFeatureSet,
-	LexicalFeatureSet,
-	PosLikeDiscriminator,
-} from "../common/entity";
-
 import { GermanLexemSurfaceSchema } from "./lexem";
 import { GermanMorphemSurfaceSchema } from "./morphem";
 
@@ -35,54 +20,10 @@ export const GermanLinguisticUnitSchema = z.discriminatedUnion("kind", [
 export type GermanLinguisticUnit = z.infer<typeof GermanLinguisticUnitSchema>;
 
 export {
-	DE_LEMMA_LINGUISTIC_UNITS,
-	DE_LEXEM_POS,
-	type DeEnrichmentInput,
-	DeEnrichmentInputSchema,
-	type DeEnrichmentOutput,
-	DeEnrichmentOutputSchema,
-	type DeFeaturesInput,
-	DeFeaturesInputSchema,
-	type DeFeaturesOutput,
-	DeFeaturesOutputSchema,
-	type DeInflectionInput,
-	DeInflectionInputSchema,
-	type DeInflectionOutput,
-	DeInflectionOutputSchema,
-	DeLemmaLinguisticUnit,
-	DeLemmaLinguisticUnitSchema,
-	type DeLemmaResult,
-	DeLemmaResultSchema,
-	DeLexemLemmaResultSchema,
-	type DeLexemPos,
-	DeLexemPosSchema,
-	type DeLexemTarget,
-	DeLexemTargetSchema,
-	type DeLexicalTarget,
-	DeLexicalTargetSchema,
-	DePhrasemLemmaResultSchema,
-	type DePhrasemTarget,
-	DePhrasemTargetSchema,
-	type DePosLikeKind,
-	DePosLikeKindSchema,
-	type DeRelationInput,
-	DeRelationInputSchema,
-	type DeRelationOutput,
-	DeRelationOutputSchema,
-	type DeRelationSubKind,
-	DeRelationSubKindSchema,
-	type DeWordTranslationInput,
-	DeWordTranslationInputSchema,
-	type DeWordTranslationOutput,
-	DeWordTranslationOutputSchema,
-	isDeLexemTarget,
-	isDePhrasemTarget,
-	toDeLexicalTarget,
-} from "./lemma";
-export {
 	type GermanLexemSurface,
 	GermanLexemSurfaceSchema,
 } from "./lexem";
+export * from "./schema-primitives";
 export {
 	type GermanAdjectiveClassification,
 	GermanAdjectiveClassificationSchema,
@@ -99,7 +40,6 @@ export {
 	type GermanAdjectiveValency,
 	GermanAdjectiveValencySchema,
 } from "./lexem/adjective/features";
-// Barrel exports
 export {
 	articleFromGenus,
 	GermanGenus,
@@ -124,3 +64,8 @@ export {
 	type GermanMorphemSurface,
 	GermanMorphemSurfaceSchema,
 } from "./morphem";
+export {
+	type GermanMorphemeKind,
+	GERMAN_MORPHEME_KINDS,
+	GermanMorphemeKindSchema,
+} from "./morphem/de-morphem-kind";

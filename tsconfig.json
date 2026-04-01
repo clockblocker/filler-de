@@ -43,6 +43,12 @@
 			"@textfresser/lexical-generation/*": [
 				"src/packages/independent/lexical-generation/src/*"
 			],
+			"@textfresser/linguistics": [
+				"src/packages/independent/linguistics/src/index.ts"
+			],
+			"@textfresser/linguistics/*": [
+				"src/packages/independent/linguistics/src/*"
+			],
 			"@textfresser/library-core": [
 				"src/packages/composed/library-core/src/index.ts"
 			],

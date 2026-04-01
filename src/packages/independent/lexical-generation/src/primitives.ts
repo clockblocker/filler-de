@@ -6,7 +6,7 @@ export {
 	SURFACE_KINDS,
 	SurfaceKind,
 	SurfaceKindSchema,
-} from "./internal/linguistics/common/enums/core";
+} from "@textfresser/linguistics/common";
 export {
 	PARTS_OF_SPEECH,
 	PARTS_OF_SPEECH_STR,
@@ -18,9 +18,9 @@ export {
 	PosTagSchema,
 	posFormFromPosTag,
 	posTagFormFromPos,
-} from "./internal/linguistics/common/enums/linguistic-units/lexem/pos";
+} from "@textfresser/linguistics/common";
 export {
 	MORPHEME_KINDS,
 	MorphemeKind,
 	MorphemeKindSchema,
-} from "./internal/linguistics/common/enums/linguistic-units/morphem/morpheme-kind";
+} from "@textfresser/linguistics/common";

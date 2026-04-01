@@ -1,4 +1,4 @@
-import type { TargetLanguage } from "../../../shared/languages";
+import type { TargetLanguage } from "../languages";
 import type {
 	GermanAdjectiveClassification,
 	GermanAdjectiveDistribution,

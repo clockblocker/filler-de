@@ -1,5 +1,5 @@
 import { z } from "zod/v3";
-import type { TargetLanguage } from "../../../../shared/languages";
+import type { TargetLanguage } from "../../../common/languages";
 import type {
 	CaseValue,
 	NumberValue,

@@ -148,14 +148,14 @@ function findForbiddenImportsInFile(
 	return violations;
 }
 
-describe("lexical-generation internal linguistics IO boundary", () => {
+describe("linguistics workspace IO boundary", () => {
 	it("blocks manager/VAM/Obsidian imports from internal linguistic schema modules", () => {
 		const packageRoot = resolve(import.meta.dir, "..", "..");
-		const linguisticsRoot = join(packageRoot, "src/internal/linguistics");
+		const linguisticsRoot = join(packageRoot, "src");
 		const linguisticsFiles = collectTsFilesRecursively(linguisticsRoot);
 		if (linguisticsFiles.length === 0) {
 			throw new Error(
-				"Boundary guard misconfigured: no TypeScript files found in lexical-generation/src/internal/linguistics",
+				"Boundary guard misconfigured: no TypeScript files found in linguistics/src",
 			);
 		}
 
