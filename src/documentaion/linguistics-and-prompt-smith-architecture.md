@@ -1,6 +1,6 @@
 # Linguistics & Prompt-Smith — Architecture
 
-> **Scope**: This document covers the internal linguistic schema layer under `src/packages/independent/lexical-generation/internal/linguistics/`, the public lexical primitives exported from `src/packages/independent/lexical-generation/`, and the prompt management layer under `src/packages/independent/lexical-generation/internal/prompt-smith/`. There is no longer a separate `src/linguistics/` module. For the command pipeline itself, see `textfresser-architecture.md`. For FS dispatch, see `vam-architecture.md`.
+> **Scope**: This document covers the shared linguistic schema workspace under `src/packages/independent/linguistics/src/`, the public lexical primitives exported from `src/packages/independent/lexical-generation/`, and the prompt management layer under `src/packages/independent/lexical-generation/internal/prompt-smith/`. There is no longer a separate `src/linguistics/` module, and `lexical-generation` now consumes `@textfresser/linguistics` instead of owning the schema tree directly. For the command pipeline itself, see `textfresser-architecture.md`. For FS dispatch, see `vam-architecture.md`.
 >
 > **Compatibility Policy (Dev Mode, 2026-02-20)**:
 > - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
@@ -12,7 +12,7 @@
 
 ### Why an internal linguistic schema layer?
 
-Every word the user encounters flows through a pipeline that starts with LLM classification and ends with a markdown dictionary entry in the vault. The internal linguistic layer inside `lexical-generation` provides a **Zod-schema-based type system** that serves as the single source of truth for:
+Every word the user encounters flows through a pipeline that starts with LLM classification and ends with a markdown dictionary entry in the vault. The shared `@textfresser/linguistics` workspace provides a **Zod-schema-based type system** that serves as the single source of truth for:
 
 - **LLM output validation** — agent responses are parsed against Zod schemas that reference linguistics enums
 - **Section formatters** — formatters consume typed DTOs (e.g., `NounInflectionCell`) rather than raw JSON
@@ -36,7 +36,7 @@ Prompt-Smith handles all of this with a codegen pipeline that produces a type-sa
 
 ### 2.1 Common (language-agnostic)
 
-The internal subtree `src/packages/independent/lexical-generation/internal/linguistics/common/` defines enums and schemas shared across all languages. Only the language-independent primitives that `textfresser` needs are re-exported publicly from `src/packages/independent/lexical-generation/`.
+The shared subtree `src/packages/independent/linguistics/src/common/` defines enums and schemas shared across all languages. The language-independent primitives that `textfresser` needs are still re-exported publicly from `src/packages/independent/lexical-generation/`.
 
 #### Core discriminants
 
@@ -168,7 +168,7 @@ export const FOO_OPTIONS  = FooSchema.options;    // Readonly string array
 
 ### 2.2 German-specific (de/)
 
-**Location**: `src/packages/independent/lexical-generation/internal/linguistics/de/`
+**Location**: `src/packages/independent/linguistics/src/de/`
 
 The German-specific layer derives from common enums, adding features only where a POS or morpheme kind has language-specific properties.
 
@@ -953,6 +953,6 @@ To add a new `PromptKind` (e.g., `"Etymology"`):
 
 ### old-enums.ts — DELETED
 
-The old standalone `src/linguistics/` tree has been dissolved. Its former language-specific contents now live under `src/packages/independent/lexical-generation/internal/linguistics/`, and its externally consumed language-independent primitives are re-exported from `src/packages/independent/lexical-generation/`.
+The old standalone `src/linguistics/` tree has been dissolved. Its former language-specific contents now live under `src/packages/independent/linguistics/src/`, and `lexical-generation` re-exports only the language-independent primitives it wants to expose publicly.
 
 Relevant enums that are actually used live in the structured `common/enums/` and `de/` modules.

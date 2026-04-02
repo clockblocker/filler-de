@@ -162,7 +162,7 @@ Note (Obsidian .md file, named after a Surface)
 
 ## 4. Linguistic Type System
 
-**Location**: `src/packages/independent/lexical-generation/internal/linguistics/` for internal schemas, with public primitives exported from `src/packages/independent/lexical-generation/`
+**Location**: `src/packages/independent/linguistics/src/` for shared schemas, with public primitives re-exported from `src/packages/independent/lexical-generation/`
 
 ### 4.1 Linguistic Units
 
@@ -178,7 +178,7 @@ LinguisticUnitKind = "Phrasem" | "Lexem" | "Morphem"
 | **Phrasem** | Multi-word expression | *ins Gras beißen* (idiom), *starker Kaffee* (collocation) |
 | **Morphem** | Sub-word unit | *-keit* (suffix), *un-* (prefix) |
 
-**Source**: `src/packages/independent/lexical-generation/primitives.ts` (public) and `src/packages/independent/lexical-generation/internal/linguistics/common/enums/core.ts` (internal)
+**Source**: `src/packages/independent/lexical-generation/primitives.ts` (public) and `src/packages/independent/linguistics/src/common/enums/core.ts` (workspace)
 
 ### 4.2 Surface Kinds
 
@@ -202,7 +202,7 @@ POS = "Noun" | "Pronoun" | "Article" | "Adjective" | "Verb"
 
 Each POS has a compact **PosTag** (`NOUN`, `PRON`, `ART`, `ADJ`, `VERB`, `PREP`, `ADV`, `PART`, `KON`, `IU`) with bidirectional maps.
 
-**Source**: `src/packages/independent/lexical-generation/primitives.ts` (public) and `src/packages/independent/lexical-generation/internal/linguistics/common/enums/linguistic-units/lexem/pos.ts` (internal)
+**Source**: `src/packages/independent/lexical-generation/primitives.ts` (public) and `src/packages/independent/linguistics/src/common/enums/linguistic-units/lexem/pos.ts` (workspace)
 
 ### 4.4 Phraseme Kinds
 
@@ -212,7 +212,7 @@ PhrasemeKind = "Idiom" | "Collocation" | "DiscourseFormula" | "Proverb" | "Cultu
 
 Each kind has further sub-classifications (e.g., collocation strength: `Free | Bound | Frozen`, collocation type: `ADJ+NOUN`, `VERB+NOUN`, etc.).
 
-**Source**: `src/packages/independent/lexical-generation/internal/linguistics/common/enums/linguistic-units/phrasem/phrasem-kind.ts`
+**Source**: `src/packages/independent/linguistics/src/common/enums/linguistic-units/phrasem/phrasem-kind.ts`
 
 ### 4.5 Morpheme Tags
 
@@ -229,7 +229,7 @@ Separability = "Separable" | "Inseparable"
 
 Some prefixes (*über-*, *unter-*, *um-*, *durch-*) are dual-use — separable or inseparable depending on context.
 
-**Source**: `src/packages/independent/lexical-generation/internal/linguistics/de/morphem/prefix/features.ts`
+**Source**: `src/packages/independent/linguistics/src/de/morphem/prefix/features.ts`
 
 ### 4.6 DictEntrySection Kinds
 
@@ -278,7 +278,7 @@ DictEntrySubSections are the unit at which cross-reference propagation operates 
 
 ### 4.8 Detailed Inflectional Enums
 
-> **Deleted**: The legacy `src/linguistics/old-enums.ts` that previously defined detailed grammatical categories (Person, Number, Case, Tense, Verb Mood, Noun Class, Comparison Degree, Theta Roles, Stylistic Tone, Scalar Degree) has been removed as dead code. The surviving linguistic enum/schema layer now lives under `src/packages/independent/lexical-generation/internal/linguistics/`, with only shared primitives re-exported from `src/packages/independent/lexical-generation/`.
+> **Deleted**: The legacy `src/linguistics/old-enums.ts` that previously defined detailed grammatical categories (Person, Number, Case, Tense, Verb Mood, Noun Class, Comparison Degree, Theta Roles, Stylistic Tone, Scalar Degree) has been removed as dead code. The surviving linguistic enum/schema layer now lives under `src/packages/independent/linguistics/src/`, with only selected shared primitives re-exported from `src/packages/independent/lexical-generation/`.
 
 ---
 
@@ -1144,118 +1144,7 @@ To add support for a new target language (e.g., Japanese):
 
 ---
 
-## 13. Key File Index
-
-| File | Purpose |
-|------|---------|
-| **Textfresser Commander** | |
-| `src/commanders/textfresser/textfresser.ts` | Thin public orchestrator: constructor wiring, command delegation, handler delegation, Librarian resolver wiring (`setLibrarianResolvers()` / `clearLibrarianLookup()`), and `scrollToTargetBlock()` |
-| `src/commanders/textfresser/state/textfresser-state.ts` | TextfresserState + `InFlightGenerate` / `PendingGenerate` / `LemmaInvocationCache` + lookup-availability guard flag + `createInitialTextfresserState()` |
-| `src/commanders/textfresser/orchestration/lemma/execute-lemma-flow.ts` | Unified Lemma execution path (cache check, two-phase run, notifications, cache persistence, background trigger) |
-| `src/commanders/textfresser/orchestration/lemma/run-lemma-two-phase.ts` | Phase A/Phase B Lemma routing and source rewrite orchestration |
-| `src/commanders/textfresser/orchestration/lemma/lemma-output-guardrails.ts` | Lemma output guardrails: separable-verb/adjective checks, `contextWithLinkedParts` stripped-text validation, best-effort retry selection |
-| `src/commanders/textfresser/orchestration/background/background-generate-coordinator.ts` | Background Generate queueing, execution, rollback, deferred scroll hook |
-| `src/commanders/textfresser/orchestration/handlers/wikilink-click-handler.ts` | Wikilink click handler factory for attestation tracking + deferred scroll trigger |
-| `src/commanders/textfresser/commands/types.ts` | CommandFn, CommandInput, TextfresserCommandKind |
-| `src/commanders/textfresser/llm/prompt-runner.ts` | PromptRunner: LLM call wrapper |
-| `src/commanders/textfresser/llm/prompt-catalog.ts` | Prompt lookup + schema lookup facade (`PROMPT_FOR` + `SchemasFor`) |
-| `src/commanders/base-command-error.ts` | Shared BaseCommandError for commander-level command failures |
-| `src/commanders/textfresser/errors.ts` | TextfresserCommandError (extends BaseCommandError), AttestationParsingError |
-| **Commands** | |
-| `src/commanders/textfresser/commands/lemma/lemma-command.ts` | Lemma rewrite helpers: attestation resolution, wikilink formatting, robust two-pass source rewrite (`temporary → final`, block-id fallback, multi-span retargeting) |
-| `src/commanders/textfresser/commands/lemma/steps/resolve-sense-match-from-vault.ts` | App-side adapter for sense resolution: load stored lexical metadata from the target note, pass it to `lexical-generation` disambiguation, and map generator `cacheIndex` back to dict entry indices. Bounds-checks matches, logs parse failures, and returns precomputed emoji descriptions for new-sense paths. |
-| `src/commanders/textfresser/commands/lemma/types.ts` | LemmaResult type = `ResolvedLemma` plus command-local attestation/disambiguation state |
-| `src/commanders/textfresser/commands/generate/generate-command.ts` | Generate pipeline orchestrator |
-| `src/commanders/textfresser/commands/generate/steps/check-attestation.ts` | Sync check: attestation available |
-| `src/commanders/textfresser/commands/generate/steps/check-lemma-result.ts` | Sync check: lemma result available |
-| `src/commanders/textfresser/commands/generate/steps/resolve-existing-entry.ts` | Parse existing entries with linguistic wikilink DTO augmentation, use Lemma's disambiguationResult for re-encounter detection, and suppress propagation-stub fallback when non-generated link intent is present |
-| `src/commanders/textfresser/commands/generate/steps/generate-sections.ts` | Generate orchestration over lexical DTOs: append attestation for re-encounters or persist new entries from `LexicalInfo`, with re-encounter section expectations resolved from stored metadata |
-| `src/commanders/textfresser/commands/generate/steps/propagate-relations.ts` | Cross-ref: compute inverse relations, resolve target paths via shared resolver, generate actions for target notes |
-| `src/commanders/textfresser/commands/generate/steps/propagate-morphology-relations.ts` | Morphology propagation: Lexem localized `used in` backlinks for derivation/compounding + verb-prefix equation propagation on decorated prefix Morphem entries (with non-dict fallback append path) |
-| `src/commanders/textfresser/commands/generate/steps/propagate-morphemes.ts` | Morpheme propagation: bound-morpheme localized `used in` aggregation on Morphem entries (Suffix/Interfix/etc + non-verb Prefix), with Root/Suffixoid fallback when morphology payload is incomplete |
-| `src/commanders/textfresser/commands/generate/steps/propagate-inflections.ts` | Noun inflection propagation: resolve target paths via shared resolver, create/update one inflection entry per form, merge tags |
-| `src/commanders/textfresser/commands/generate/steps/propagate-core.ts` | Core propagation orchestration + fold-to-single-write contract per target note |
-| `src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter.ts` | Propagation IO adapter ports (`readManyMdFiles`, typed missing/error classification, write-action construction) |
-| `src/commanders/textfresser/commands/generate/steps/move-to-worter.ts` | Final destination policy step: keep generated dict-entry notes in Worter surface-host paths (rename skipped when already at destination) |
-| `src/commanders/textfresser/common/lemma-link-routing.ts` | Link-target policy helper: pre-prompt working-note routing (`Worter` reuse vs `unknown` temp), final generation target routing (`Worter`), and attestation rewrite target routing (closed-set may point to `Library`) |
-| `src/commanders/textfresser/common/target-comparison.ts` | Domain comparison canonicalization (`trim + case-fold`) for target equality checks outside `wikilinkHelper` |
-| `src/commanders/textfresser/common/target-path-resolver.ts` | Shared path resolution for propagation: two-source lookup (VAM → Librarian → computed sharded path), inflected→lemma healing, shared morpheme path resolver for prefix Library fallback, `buildPropagationActionPair` helper |
-| `src/commanders/textfresser/common/sharded-path.ts` | Sharded path computation for Worter entries; exports `SURFACE_KIND_PATH_INDEX` for healing checks |
-| `src/commanders/textfresser/domain/propagation/note-adapter.ts` | Typed parse/serialize adapter for propagation sections with passthrough handling and sampled warning logs |
-| `src/commanders/textfresser/commands/generate/steps/serialize-entry.ts` | Serialize ALL DictEntries to note body + apply noteKind metadata (single upsert) |
-| `src/commanders/textfresser/commands/generate/section-formatters/common/header-formatter.ts` | Common header line: emoji + wikilink + IPA/Youglish URL. No article — POS-neutral. Exports `buildYouglishUrl` for reuse. |
-| `src/commanders/textfresser/commands/generate/section-formatters/de/lexem/noun/header-formatter.ts` | Noun-specific header: prepends article derived from `genus` via `articleFromGenus`. |
-| `src/commanders/textfresser/commands/generate/section-formatters/de/lexem/{pos}/header-formatter.ts` | Re-export from common (verb, adjective, pronoun, article, preposition, adverb, particle, conjunction, interactional-unit). |
-| `src/commanders/textfresser/commands/generate/section-formatters/header-dispatch.ts` | POS-aware header dispatch: Noun+genus → noun formatter, everything else → common. Absorbs `precomputedEmojiDescription` fallback. |
-| `src/commanders/textfresser/commands/generate/section-formatters/common/relation-formatter.ts` | Relation LLM output → symbol notation |
-| `src/commanders/textfresser/commands/generate/section-formatters/common/inflection-formatter.ts` | Generic inflection LLM output → `{label}: {forms}` lines |
-| `src/commanders/textfresser/commands/generate/section-formatters/de/lexem/noun/inflection-formatter.ts` | Noun inflection: structured cells → `N: das [[Kraftwerk]], die [[Kraftwerke]]` + raw cells for propagation |
-| `src/commanders/textfresser/commands/translate/translate-command.ts` | Translate pipeline |
-| `src/commanders/textfresser/common/cleanup/cleanup-dict-note.ts` | V6: Dict note cleanup on file open — reorder entries (LM first, IN last), normalize attestation spacing |
-| **Attestation** | |
-| `src/commanders/textfresser/common/attestation/types.ts` | Attestation type |
-| `src/commanders/textfresser/common/attestation/builders/build-from-wikilink-click-payload.ts` | Build from wikilink click |
-| `src/commanders/textfresser/common/attestation/builders/build-from-selection.ts` | Build from text selection |
-| **Stateless Helpers** | |
-| **VAM (V3 addition)** | |
-| `src/managers/obsidian/vault-action-manager/` | Read APIs for basename lookup + linkpath resolution (`resolveLinkpathDest`) and active-view scroll helpers |
-| `src/commanders/textfresser/domain/dict-note/` | Parse/serialize dictionary notes (canonical module) |
-| `src/commanders/textfresser/domain/morpheme/morpheme-formatter.ts` | Morpheme → wikilink display formatter (canonical module) |
-| `src/stateless-helpers/api-service.ts` | Gemini API wrapper (returns `ResultAsync`, retry on transient errors) |
-| `src/stateless-helpers/retry.ts` | Generic retry with exponential backoff (`withRetry()`) |
-| **Lexical-Generation Public Primitives** | |
-| `src/packages/independent/lexical-generation/primitives.ts` | Public language-independent enums/primitives: LinguisticUnitKind, SurfaceKind, POS, PosTag, MorphemeKind, LANGUAGE_ISO_CODE |
-| **Lexical-Generation Internal Linguistics** | |
-| `src/packages/independent/lexical-generation/internal/linguistics/common/enums/core.ts` | Internal source of LinguisticUnitKind, SurfaceKind |
-| `src/packages/independent/lexical-generation/internal/linguistics/common/enums/linguistic-units/lexem/pos.ts` | Internal source of POS, PosTag |
-| `src/packages/independent/lexical-generation/internal/linguistics/common/enums/linguistic-units/phrasem/phrasem-kind.ts` | PhrasemeKind |
-| `src/packages/independent/lexical-generation/internal/linguistics/common/enums/linguistic-units/morphem/morpheme-kind.ts` | MorphemeKind |
-| `src/packages/independent/lexical-generation/internal/linguistics/de/morphem/prefix/features.ts` | SeparabilitySchema (Separable/Inseparable) |
-| `src/packages/independent/lexical-generation/internal/linguistics/common/enums/inflection/feature-values.ts` | CaseValue, NumberValue Zod enums |
-| **Lexical-Generation Internal DTO (V9)** | |
-| `src/packages/independent/lexical-generation/internal/linguistics/common/dto/surface-factory.ts` | `makeSurfaceSchema()` — produces surfaceKind discriminated union from Full + Ref features |
-| `src/packages/independent/lexical-generation/internal/linguistics/common/dto/phrasem-surface.ts` | Language-independent PhrasemSurfaceSchema (Collocation with strength, stubs for Idiom/Proverb/etc.) |
-| `src/packages/independent/lexical-generation/internal/linguistics/de/lexem/noun/features.ts` | GermanGenusSchema ("Maskulinum"\|"Femininum"\|"Neutrum"), `articleFromGenus` mapping |
-| `src/packages/independent/lexical-generation/internal/linguistics/de/lexem/index.ts` | GermanLexemFull/RefFeaturesSchema — all POS in discriminated union (Noun/Verb/Adjective specialized, rest stubs) |
-| `src/packages/independent/lexical-generation/internal/linguistics/de/lexem/index.ts` | GermanLexemSurfaceSchema via `makeSurfaceSchema` |
-| `src/packages/independent/lexical-generation/internal/linguistics/de/morphem/index.ts` | GermanMorphemSurfaceSchema (Prefix with separability, stubs for rest) |
-| `src/packages/independent/lexical-generation/internal/linguistics/de/index.ts` | GermanLinguisticUnitSchema — top-level `kind` discriminated union |
-| **Linguistics — Sections & Inflection** | |
-| `src/commanders/textfresser/targets/de/sections/section-kind.ts` | DictSectionKind, TitleReprFor (canonical module) |
-| `src/commanders/textfresser/targets/de/sections/section-css-kind.ts` | DictSectionKind → CSS suffix mapping (canonical module) |
-| `src/commanders/textfresser/targets/de/sections/section-config.ts` | getSectionsFor(): applicable sections per unit+POS+nounClass; `sectionsForProperNoun` (V8); SECTION_DISPLAY_WEIGHT + compareSectionsByWeight(): section display ordering |
-| `src/commanders/textfresser/domain/dict-entry-id/dict-entry-id.ts` | DictEntryId builder/parser (canonical module) |
-| `src/commanders/textfresser/domain/lexical-types.ts` | App-owned noun inflection/genus helpers derived from public lexical DTOs |
-| ~~`src/linguistics/`~~ | Deleted as a separate boundary; moved under `src/packages/independent/lexical-generation/internal/linguistics/` |
-| **Prompt-Smith** | |
-| `src/packages/independent/lexical-generation/internal/prompt-smith/index.ts` | PROMPT_FOR registry (generated) |
-| `src/packages/independent/lexical-generation/internal/prompt-smith/schemas/` | Zod I/O schemas: translate, word-translation, morphem, lemma, disambiguate, relation, inflection, noun-inflection |
-| `src/packages/independent/lexical-generation/internal/prompt-smith/codegen/consts.ts` | PromptKind enum |
-| `src/packages/independent/lexical-generation/internal/prompt-smith/codegen/skript/run.ts` | Codegen orchestrator |
-| `src/packages/independent/lexical-generation/internal/prompt-smith/prompt-parts/` | Human-written prompt sources (3 kinds × 2 lang pairs) |
-| **Tests (V5)** | |
-| `tests/unit/textfresser/formatters/common/header-formatter.test.ts` | Common header formatter: emoji/ipa/wikilink assembly (no article) |
-| `tests/unit/textfresser/formatters/de/lexem/noun/header-formatter.test.ts` | Noun header formatter: genus → der/die/das article |
-| `tests/unit/textfresser/formatters/header-dispatch.test.ts` | Header dispatch: Noun+genus → noun formatter, Verb/Morphem → common, precomputedEmoji fallback |
-| `tests/unit/linguistics/german-linguistic-unit.test.ts` | GermanLinguisticUnit DTO — Lexem+Noun/Verb/Adjective, stub POS coverage, Phrasem, Morphem, rejection cases |
-| `tests/unit/textfresser/formatters/relation-formatter.test.ts` | Relation formatter: symbol notation, grouping, dedup |
-| `tests/unit/textfresser/formatters/inflection-formatter.test.ts` | Generic inflection formatter: label/forms rows |
-| `tests/unit/textfresser/formatters/de/lexem/noun/inflection-formatter.test.ts` | Noun inflection: case grouping, N/A/G/D order, cells pass-through |
-| `tests/unit/textfresser/steps/resolve-sense-match-from-vault.test.ts` | Sense-match adapter: mock VAM + lexical generator, bounds check, precomputed emojiDescription, missing-emoji fallback |
-| `tests/unit/textfresser/steps/propagate-relations.test.ts` | Relation propagation: inverse kinds, self-ref skip, dedup, VaultAction shapes, healing when target in inflected/ |
-| `tests/unit/textfresser/steps/propagate-inflections.test.ts` | Inflection propagation: form grouping, same-note skip, single-entry tags merge, legacy stub collapse, genus fallback + header upgrade, VAM path reuse |
-| `tests/unit/textfresser/steps/propagate-generated-sections.test.ts` | Wrapper routing and fail-fast propagation behavior for Generate |
-| `tests/unit/textfresser/steps/propagation-ports-adapter.test.ts` | Port adapter contract: dedupe reads, typed missing/error classification, candidate lookup, action-pair construction |
-| `tests/unit/textfresser/domain/propagation/note-adapter.test.ts` | Typed section parse/serialize characterization + deterministic canonicalization + passthrough guarantees |
-| `tests/unit/textfresser/domain/propagation/morphology-roundtrip-corpus.test.ts` | Morphology mixed-marker regression corpus + roundtrip equivalence guards against backlink/equation reclassification |
-| `tests/unit/textfresser/common/target-path-resolver.test.ts` | Path resolver: VAM/librarian lookup, computed fallback, inflected→lemma healing, no-heal cases, `buildPropagationActionPair` |
-| `tests/unit/textfresser/steps/lemma-expansion.test.ts` | V8: `expandOffsetForFullSurface()` — expansion math, verification, fallback on mismatch |
-| **Types** | |
-| `src/types.ts` | LanguagesConfig, KnownLanguage, TargetLanguage |
-
----
-
-## 14. Work in Progress
+## 13. Work in Progress
 
 ### Current Focus
 
@@ -1279,7 +1168,7 @@ To add support for a new target language (e.g., Japanese):
 
 ## 15. LinguisticUnit DTO — Source of Truth Type System
 
-> **Path note**: This section still shows some pre-migration example paths from the old standalone `src/linguistics/` layout. The current implementation lives under `src/packages/independent/lexical-generation/internal/linguistics/`, and public app-facing primitives come from `src/packages/independent/lexical-generation/`.
+> **Path note**: This section still shows some pre-migration example paths from the old standalone `src/linguistics/` layout. The current implementation lives under `src/packages/independent/linguistics/src/`, and public app-facing primitives come from `src/packages/independent/lexical-generation/`.
 
 > **Status**: V9+ — implemented (German + Noun/Verb/Adjective full features; remaining POS/unit kinds are stubs). Canonical DTO is `DictEntry.meta.entity` (`Entity<L,U,S,P>` with `features.lexical` + `features.inflectional`). `meta.linguisticUnit` is auxiliary typed surface metadata.
 
@@ -1371,7 +1260,7 @@ Everything is **Zod-schema-based** — types derived via `z.infer<>`. The same s
 #### Noun features (Full vs Ref)
 
 ```typescript
-// src/linguistics/german/features/noun.ts
+// src/packages/independent/linguistics/src/de/lexem/noun/features.ts
 const GermanNounFullFeaturesSchema = z.object({
   pos: z.literal("Noun"),
   genus: GermanGenusSchema,      // "Maskulinum"|"Femininum"|"Neutrum"
@@ -1383,7 +1272,7 @@ const GermanNounRefFeaturesSchema = z.object({ pos: z.literal("Noun") });
 #### POS features assembly (stubs for non-specialized POS)
 
 ```typescript
-// src/linguistics/german/features/pos-features.ts
+// src/packages/independent/linguistics/src/de/lexem/index.ts
 // POS literals re-declared in v3 to avoid v4 import trap from pos.ts
 const fullStubs = ["Pronoun", "Article", "Preposition", ...].map(pos => z.object({ pos: z.literal(pos) }));
 
@@ -1404,7 +1293,7 @@ const GermanLexemRefFeaturesSchema = z.discriminatedUnion("pos", [
 #### Surface factory
 
 ```typescript
-// src/linguistics/common/dto/surface-factory.ts
+// src/packages/independent/linguistics/src/common/dto/surface-factory.ts
 function makeSurfaceSchema<F extends z.ZodTypeAny, R extends z.ZodTypeAny>(
   fullFeatures: F, refFeatures: R,
 ) {
@@ -1421,20 +1310,20 @@ function makeSurfaceSchema<F extends z.ZodTypeAny, R extends z.ZodTypeAny>(
 #### Assembly
 
 ```typescript
-// src/linguistics/german/schemas/lexem-surface.ts
+// src/packages/independent/linguistics/src/de/lexem/index.ts
 const GermanLexemSurfaceSchema = makeSurfaceSchema(
   GermanLexemFullFeaturesSchema, GermanLexemRefFeaturesSchema,
 );
 
-// src/linguistics/common/dto/phrasem-surface.ts (language-independent)
+// src/packages/independent/linguistics/src/common/dto/phrasem-surface.ts (language-independent)
 const PhrasemSurfaceSchema = makeSurfaceSchema(PhrasemFullFeatures, PhrasemRefFeatures);
 
-// src/linguistics/german/schemas/morphem-surface.ts
+// src/packages/independent/linguistics/src/de/morphem/index.ts
 const GermanMorphemSurfaceSchema = makeSurfaceSchema(
   GermanMorphemFullFeatures, GermanMorphemRefFeatures,
 );
 
-// src/linguistics/german/schemas/linguistic-unit.ts
+// src/packages/independent/linguistics/src/de/index.ts
 const GermanLinguisticUnitSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("Lexem"),   surface: GermanLexemSurfaceSchema }),
   z.object({ kind: z.literal("Phrasem"), surface: PhrasemSurfaceSchema }),

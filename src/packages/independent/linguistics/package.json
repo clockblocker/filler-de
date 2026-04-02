@@ -1,8 +1,4 @@
 {
-	"name": "@textfresser/linguistics",
-	"private": true,
-	"type": "module",
-	"version": "0.0.0",
 	"dependencies": {
 		"zod": "3.25.76"
 	},
@@ -19,9 +15,13 @@
 		"./en": "./src/en/index.ts",
 		"./en/*": "./src/en/*"
 	},
+	"name": "@textfresser/linguistics",
+	"private": true,
 	"scripts": {
 		"build": "bun ../../../../scripts/build-workspace-package.ts",
 		"fix": "bun x biome check --write --unsafe . 2>/dev/null || true",
 		"test": "bun test --reporter=dot --preload ../../../../tests/unit/setup.ts ./tests/"
-	}
+	},
+	"type": "module",
+	"version": "0.0.0"
 }
