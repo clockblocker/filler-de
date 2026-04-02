@@ -8,7 +8,7 @@ export {
 	LexicalPhrasemeKindSchema,
 	LexicalPosSchema,
 	LexicalSurfaceKindSchema,
-} from "src/packages/independent/old-linguistics/src/common";
+} from "@textfresser/linguistics/common";
 export {
 	LexicalAdjectiveClassificationSchema,
 	LexicalAdjectiveDistributionSchema,
@@ -22,4 +22,4 @@ export {
 	LexicalVerbSeparabilitySchema,
 	LexicalVerbValencySchema,
 	SeparabilitySchema,
-} from "src/packages/independent/old-linguistics/src/de/schema-primitives";
+} from "@textfresser/linguistics/de/schema-primitives";

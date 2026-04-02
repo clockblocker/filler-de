@@ -1,4 +1,4 @@
-import { SurfaceKind } from "src/packages/independent/old-linguistics/src";
+import { SurfaceKind } from "@textfresser/linguistics";
 import { cssSuffixFor } from "../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,

@@ -7,7 +7,7 @@ import type {
 	LinguisticUnitKind,
 	POS,
 	SurfaceKind,
-} from "src/packages/independent/old-linguistics/src";
+} from "@textfresser/linguistics";
 
 function buildPrefix(
 	unitKind: LinguisticUnitKind,
