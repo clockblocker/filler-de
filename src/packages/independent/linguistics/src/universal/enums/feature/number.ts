@@ -15,8 +15,8 @@ const numberValues = [
 ] as const;
 
 // Source: https://universaldependencies.org/u/feat/Number.html
-export const Number = z.enum(numberValues);
-export type Number = z.infer<typeof Number>;
+export const GrammaticalNumber = z.enum(numberValues);
+export type GrammaticalNumber = z.infer<typeof GrammaticalNumber>;
 
 const numberRepr = {
 	Coll: "collective / mass / singulare tantum",
@@ -30,8 +30,8 @@ const numberRepr = {
 	Ptan: "plurale tantum",
 	Sing: "singular number",
 	Tri: "trial number",
-} satisfies Record<Number, string>;
+} satisfies Record<GrammaticalNumber, string>;
 
-export function reprForNumber(number: Number) {
+export function reprForNumber(number: GrammaticalNumber) {
 	return numberRepr[number];
 }
