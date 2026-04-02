@@ -1,6 +1,6 @@
 import type { VaultAction } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
-import { SurfaceKind } from "@textfresser/linguistics";
+import { SurfaceKind } from "src/packages/independent/old-linguistics/src";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import {
 	buildPropagationActionPair,

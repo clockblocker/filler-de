@@ -1,4 +1,4 @@
-import type { POS } from "@textfresser/linguistics";
+import type { POS } from "src/packages/independent/old-linguistics/src";
 import { cssSuffixFor } from "./section-css-kind";
 import { ALL_DICT_SECTION_KINDS, DictSectionKind } from "./section-kind";
 

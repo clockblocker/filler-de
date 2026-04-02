@@ -1,7 +1,7 @@
 import type {
 	LinguisticUnitKind,
 	MorphemeKind,
-} from "@textfresser/linguistics";
+} from "src/packages/independent/old-linguistics/src";
 import type { Prettify } from "node_modules/zod/v4/core/util";
 
 // Lemmas

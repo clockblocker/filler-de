@@ -6,7 +6,7 @@ import type {
 	LexicalVerbConjugation,
 	LexicalVerbReflexivity,
 	LexicalVerbSeparability,
-} from "@textfresser/linguistics";
+} from "src/packages/independent/old-linguistics/src";
 import type {
 	LexemInflections,
 	LexicalRelationKind,

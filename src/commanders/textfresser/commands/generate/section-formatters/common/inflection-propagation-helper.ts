@@ -2,7 +2,7 @@ import type {
 	LexicalCase,
 	LexicalGenus,
 	LexicalNumber,
-} from "@textfresser/linguistics";
+} from "src/packages/independent/old-linguistics/src";
 import type { TargetLanguage } from "../../../../../../types";
 import { extractHashTags } from "../../../../../../utils/text-utils";
 import {

@@ -15,7 +15,7 @@ import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-a
 import {
 	type LinguisticUnitKind,
 	SurfaceKind,
-} from "@textfresser/linguistics";
+} from "src/packages/independent/old-linguistics/src";
 import type { TargetLanguage } from "../../../types";
 import type { MorphemeItem } from "../domain/morpheme/morpheme-formatter";
 import { DictSectionKind } from "../targets/de/sections/section-kind";

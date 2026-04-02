@@ -15,7 +15,7 @@ import type {
 	LexicalVerbConjugation,
 	LexicalVerbValency,
 	TargetLanguage,
-} from "@textfresser/linguistics";
+} from "src/packages/independent/old-linguistics/src";
 import type { Result } from "neverthrow";
 import type { z } from "zod/v3";
 import type {

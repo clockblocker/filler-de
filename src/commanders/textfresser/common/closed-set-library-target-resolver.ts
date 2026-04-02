@@ -2,7 +2,7 @@ import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/
 import {
 	LANGUAGE_ISO_CODE,
 	type LexicalPos,
-} from "@textfresser/linguistics";
+} from "src/packages/independent/old-linguistics/src";
 import { stringifySplitPath } from "../../../stateless-helpers/split-path-comparison";
 import type { TargetLanguage } from "../../../types";
 

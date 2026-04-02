@@ -1,4 +1,4 @@
-import type { LexicalGenus } from "@textfresser/linguistics";
+import type { LexicalGenus } from "src/packages/independent/old-linguistics/src";
 import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import { ARTICLE_BY_GENUS } from "../../../../../../domain/lexical-types";
 import { buildYouglishUrl } from "../../../common/header-formatter";

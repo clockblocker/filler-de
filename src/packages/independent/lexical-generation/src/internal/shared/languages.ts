@@ -5,8 +5,8 @@ export {
 	KnownLanguageSchema,
 	TargetLanguage,
 	TargetLanguageSchema,
-} from "@textfresser/linguistics/common";
+} from "src/packages/independent/old-linguistics/src/common";
 export type {
 	KnownLanguage,
 	TargetLanguage,
-} from "@textfresser/linguistics/common";
+} from "src/packages/independent/old-linguistics/src/common";

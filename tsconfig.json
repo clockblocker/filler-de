@@ -44,10 +44,10 @@
 				"src/packages/independent/lexical-generation/src/*"
 			],
 			"@textfresser/linguistics": [
-				"src/packages/independent/linguistics/src/index.ts"
+				"src/packages/independent/old-linguistics/src/index.ts"
 			],
 			"@textfresser/linguistics/*": [
-				"src/packages/independent/linguistics/src/*"
+				"src/packages/independent/old-linguistics/src/*"
 			],
 			"@textfresser/library-core": [
 				"src/packages/composed/library-core/src/index.ts"

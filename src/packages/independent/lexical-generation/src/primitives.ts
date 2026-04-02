@@ -6,7 +6,7 @@ export {
 	SURFACE_KINDS,
 	SurfaceKind,
 	SurfaceKindSchema,
-} from "@textfresser/linguistics/common";
+} from "src/packages/independent/old-linguistics/src/common";
 export {
 	PARTS_OF_SPEECH,
 	PARTS_OF_SPEECH_STR,
@@ -18,9 +18,9 @@ export {
 	PosTagSchema,
 	posFormFromPosTag,
 	posTagFormFromPos,
-} from "@textfresser/linguistics/common";
+} from "src/packages/independent/old-linguistics/src/common";
 export {
 	MORPHEME_KINDS,
 	MorphemeKind,
 	MorphemeKindSchema,
-} from "@textfresser/linguistics/common";
+} from "src/packages/independent/old-linguistics/src/common";

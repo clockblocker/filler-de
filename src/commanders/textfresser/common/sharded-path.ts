@@ -11,7 +11,7 @@ import {
 	LANGUAGE_ISO_CODE,
 	type LinguisticUnitKind,
 	type SurfaceKind,
-} from "@textfresser/linguistics";
+} from "src/packages/independent/old-linguistics/src";
 import type { TargetLanguage } from "../../../types";
 
 const WORTER_ROOT = "Worter";

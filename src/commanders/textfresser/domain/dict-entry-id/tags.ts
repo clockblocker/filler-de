@@ -4,7 +4,7 @@ import z from "zod";
 import {
 	LinguisticUnitKind,
 	SurfaceKind,
-} from "@textfresser/linguistics";
+} from "src/packages/independent/old-linguistics/src";
 
 const LINGUISTIC_UNIT_KIND_TAGS_STR = ["LX", "PH", "MO"] as const;
 

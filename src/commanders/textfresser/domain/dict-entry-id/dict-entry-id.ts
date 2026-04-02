@@ -8,7 +8,7 @@ import {
 	posFormFromPosTag,
 	posTagFormFromPos,
 	type SurfaceKind,
-} from "@textfresser/linguistics";
+} from "src/packages/independent/old-linguistics/src";
 import {
 	LINGUISTIC_UNIT_KIND_TAGS,
 	type LinguisticUnitKindTag,
