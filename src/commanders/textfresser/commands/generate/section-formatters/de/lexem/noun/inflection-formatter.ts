@@ -1,7 +1,7 @@
 import type {
 	LexemInflections,
-	LexicalCase,
 } from "@textfresser/lexical-generation";
+import type { LexicalCase } from "@textfresser/linguistics";
 import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import {
 	CASE_ORDER,

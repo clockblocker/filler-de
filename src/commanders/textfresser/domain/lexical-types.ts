@@ -1,13 +1,15 @@
 import type {
-	LexemInflections,
 	LexicalCase,
 	LexicalGenus,
 	LexicalNumber,
 	LexicalPos,
-	LexicalRelationKind,
 	LexicalVerbConjugation,
 	LexicalVerbReflexivity,
 	LexicalVerbSeparability,
+} from "@textfresser/linguistics";
+import type {
+	LexemInflections,
+	LexicalRelationKind,
 } from "@textfresser/lexical-generation";
 import type { TargetLanguage } from "../../../types";
 

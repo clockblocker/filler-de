@@ -1,4 +1,4 @@
-import { SurfaceKind } from "@textfresser/lexical-generation";
+import { SurfaceKind } from "@textfresser/linguistics";
 import { cssSuffixFor } from "../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,

@@ -1,8 +1,8 @@
 import {
-	type LexicalPos,
 	PromptKind,
 	type PromptKind as PromptKindType,
 } from "@textfresser/lexical-generation";
+import type { LexicalPos } from "@textfresser/linguistics";
 
 export type FeaturesPromptKind = Extract<PromptKindType, `Features${string}`>;
 

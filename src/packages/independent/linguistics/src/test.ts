@@ -1,8 +1,5 @@
-import type {
-	LinguisticUnitKind,
-	MorphemeKind,
-} from "@textfresser/linguistics";
 import type { Prettify } from "node_modules/zod/v4/core/util";
+import type { LinguisticUnitKind, MorphemeKind } from "./common";
 
 // Lemmas
 type BaseLinguisticUnitMap = {

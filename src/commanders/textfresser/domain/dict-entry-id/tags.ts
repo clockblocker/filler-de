@@ -4,7 +4,7 @@ import z from "zod";
 import {
 	LinguisticUnitKind,
 	SurfaceKind,
-} from "@textfresser/lexical-generation";
+} from "@textfresser/linguistics";
 
 const LINGUISTIC_UNIT_KIND_TAGS_STR = ["LX", "PH", "MO"] as const;
 

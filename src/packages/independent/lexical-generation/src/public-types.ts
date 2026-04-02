@@ -1,99 +1,30 @@
+import type {
+	KnownLanguage,
+	LexicalAdjectiveClassification,
+	LexicalAdjectiveDistribution,
+	LexicalAdjectiveGradability,
+	LexicalAdjectiveValency,
+	LexicalCase,
+	LexicalGenus,
+	LexicalMorphemeKind,
+	LexicalNounClass,
+	LexicalNumber,
+	LexicalPhrasemeKind,
+	LexicalPos,
+	LexicalSurfaceKind,
+	LexicalVerbConjugation,
+	LexicalVerbValency,
+	TargetLanguage,
+} from "@textfresser/linguistics";
 import type { Result } from "neverthrow";
 import type { z } from "zod/v3";
 import type {
 	LexicalGenerationError,
 	LexicalGenerationFailureKind,
 } from "./errors";
-import type {
-	KnownLanguage,
-	TargetLanguage,
-} from "./internal/shared/languages";
 import type { LexicalGenerationSettings } from "./settings";
 
 export type ZodSchemaLike<T> = z.ZodType<T>;
-
-export type LexicalSurfaceKind =
-	| "Lemma"
-	| "Inflected"
-	| "Variant"
-	| "Partial";
-
-export type LexicalPos =
-	| "Noun"
-	| "Pronoun"
-	| "Article"
-	| "Adjective"
-	| "Verb"
-	| "Preposition"
-	| "Adverb"
-	| "Particle"
-	| "Conjunction"
-	| "InteractionalUnit";
-
-export type LexicalPhrasemeKind =
-	| "Idiom"
-	| "Collocation"
-	| "DiscourseFormula"
-	| "Proverb"
-	| "CulturalQuotation";
-
-export type LexicalGenus = "Maskulinum" | "Femininum" | "Neutrum";
-
-export type LexicalNounClass = "Common" | "Proper";
-
-export type LexicalCase = "Nominative" | "Accusative" | "Dative" | "Genitive";
-
-export type LexicalNumber = "Singular" | "Plural";
-
-export type LexicalMorphemeKind =
-	| "Root"
-	| "Prefix"
-	| "Suffix"
-	| "Suffixoid"
-	| "Circumfix"
-	| "Interfix"
-	| "Duplifix";
-
-export type LexicalAdjectiveClassification =
-	| "Qualitative"
-	| "Relational"
-	| "Participial";
-
-export type LexicalAdjectiveDistribution =
-	| "AttributiveAndPredicative"
-	| "AttributiveOnly"
-	| "PredicativeOnly";
-
-export type LexicalAdjectiveGradability = "Gradable" | "NonGradable";
-
-export type LexicalAdjectiveGovernedPattern =
-	| "None"
-	| "Dative"
-	| "Accusative"
-	| "Genitive"
-	| "Prepositional"
-	| "ZuInfinitive"
-	| "DassClause";
-
-export type LexicalAdjectiveValency = {
-	governedPattern: LexicalAdjectiveGovernedPattern;
-	governedPreposition?: string;
-};
-
-export type LexicalVerbConjugation = "Irregular" | "Regular";
-
-export type LexicalVerbSeparability = "Separable" | "Inseparable" | "None";
-
-export type LexicalVerbReflexivity =
-	| "NonReflexive"
-	| "ReflexiveOnly"
-	| "OptionalReflexive";
-
-export type LexicalVerbValency = {
-	governedPreposition?: string;
-	reflexivity: LexicalVerbReflexivity;
-	separability: LexicalVerbSeparability;
-};
 
 export type LexicalRelationKind =
 	| "Synonym"
