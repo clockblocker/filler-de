@@ -2,14 +2,12 @@ import { z } from "zod/v3";
 
 // Source: https://universaldependencies.org/u/feat/Abbr.html
 
-export const Abbr = z.boolean();
-export type Abbr = z.infer<typeof Abbr>;
-export const ABBR_KEY = "abbr";
+export const IsAbbr = z.boolean();
+export type IsAbbr = z.infer<typeof IsAbbr>;
+export const IS_ABBR_KEY = "abbr";
 
-export function getReprForAbbr(abbr: Abbr) {
-	const reprForAbbr = "abbreviation";
+export function getReprForIsAbbr(isAbbr: IsAbbr) {
+	const reprForIsAbbr = "abbreviation";
 
-	return abbr ? reprForAbbr : `not ${reprForAbbr}`;
+	return isAbbr ? reprForIsAbbr : `not ${reprForIsAbbr}`;
 }
-
-export const AbbrPart = z.object({ [ABBR_KEY]: Abbr });

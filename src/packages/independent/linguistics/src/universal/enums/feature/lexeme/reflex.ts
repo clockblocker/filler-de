@@ -1,12 +1,12 @@
 import { z } from "zod/v3";
 
 // Source: https://universaldependencies.org/u/feat/Reflex.html
-export const REFLEX_KEY = "reflex";
-export const Reflex = z.boolean();
-export type Reflex = z.infer<typeof Reflex>;
+export const IS_REFLEX_KEY = "reflex";
+export const IsReflex = z.boolean();
+export type IsReflex = z.infer<typeof IsReflex>;
 
-export function getReprForReflex(reflex: Reflex) {
-	const reprForReflex = "reflexive";
+export function getReprForIsReflex(isReflex: IsReflex) {
+	const reprForIsReflex = "reflexive";
 
-	return reflex ? reprForReflex : `not ${reprForReflex}`;
+	return isReflex ? reprForIsReflex : `not ${reprForIsReflex}`;
 }

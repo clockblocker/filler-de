@@ -1,14 +1,14 @@
 import { z } from "zod/v3";
 
 // Source: https://universaldependencies.org/u/feat/Poss.html
-export const POSS_KEY = "poss";
-export const Poss = z.boolean();
-export type Poss = z.infer<typeof Poss>;
+export const IS_POSS_KEY = "poss";
+export const IsPoss = z.boolean();
+export type IsPoss = z.infer<typeof IsPoss>;
 
-export function getReprForPoss(poss: Poss) {
-	const reprForPoss = "possessive";
+export function getReprForIsPoss(isPoss: IsPoss) {
+	const reprForIsPoss = "possessive";
 
-	return poss ? reprForPoss : `not ${reprForPoss}`;
+	return isPoss ? reprForIsPoss : `not ${reprForIsPoss}`;
 }
 
-export const PossPart = z.object({ [POSS_KEY]: Poss });
+export const PossPart = z.object({ [IS_POSS_KEY]: IsPoss });
