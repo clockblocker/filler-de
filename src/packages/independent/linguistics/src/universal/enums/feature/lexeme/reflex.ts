@@ -10,5 +10,3 @@ export function getReprForReflex(reflex: Reflex) {
 
 	return reflex ? reprForReflex : `not ${reprForReflex}`;
 }
-
-export const ReflexPart = z.object({ [REFLEX_KEY]: Reflex });

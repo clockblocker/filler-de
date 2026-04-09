@@ -39,27 +39,27 @@ export const Case = z.enum(caseValues);
 export type Case = z.infer<typeof Case>;
 
 const reprForCase = {
-	Abe: "abessive / caritive / privative",
-	Abl: "ablative / adelative",
+	Abe: "abessive", // caritive | privative
+	Abl: "ablative", // adelative
 	Add: "additive",
 	Ade: "adessive",
-	All: "allative / adlative",
-	Ben: "benefactive / destinative",
-	Cau: "causative / motivative / purposive",
+	All: "allative", // adlative
+	Ben: "benefactive", // destinative
+	Cau: "causative", // motivative | purposive
 	Cmp: "comparative",
 	Cns: "considerative",
-	Com: "comitative / associative",
+	Com: "comitative", // associative
 	Dat: "dative",
-	Del: "delative / superelative",
+	Del: "delative", // superelative
 	Dis: "distributive",
-	Ela: "elative / inelative",
+	Ela: "elative", // inelative
 	Equ: "equative",
-	Ess: "essive / prolative",
+	Ess: "essive", // prolative
 	Gen: "genitive",
-	Ill: "illative / inlative",
+	Ill: "illative", // inlative
 	Ine: "inessive",
-	Ins: "instrumental / instructive",
-	Lat: "lative / directional allative",
+	Ins: "instrumental", // instructive
+	Lat: "lative", // directional allative
 	Loc: "locative",
 	Par: "partitive",
 	Per: "perlative",
@@ -69,7 +69,7 @@ const reprForCase = {
 	Sub: "subessive",
 	Sup: "superessive",
 	Tem: "temporal",
-	Ter: "terminative / terminal allative",
+	Ter: "terminative", // terminal allative
 } satisfies Record<Case, string>;
 
 export function getReprForCase(caseValue: Case) {

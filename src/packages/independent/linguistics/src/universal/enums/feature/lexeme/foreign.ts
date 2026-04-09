@@ -10,5 +10,3 @@ export function getReprForForeign(foreign: Foreign) {
 
 	return foreign ? reprForForeign : `not ${reprForForeign}`;
 }
-
-export const ForeignPart = z.object({ [FOREIGN_KEY]: Foreign });
