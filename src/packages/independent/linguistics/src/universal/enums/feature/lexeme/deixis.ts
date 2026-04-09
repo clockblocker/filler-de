@@ -14,7 +14,7 @@ const deixisValues = [
 export const Deixis = z.enum(deixisValues);
 export type Deixis = z.infer<typeof Deixis>;
 
-const deixisRepr = {
+const reprForDeixis = {
 	Abv: "above the reference point",
 	Bel: "below the reference point",
 	Even: "at the same level as the reference point",
@@ -24,6 +24,6 @@ const deixisRepr = {
 	Remt: "remote, distal",
 } satisfies Record<Deixis, string>;
 
-export function reprForDeixis(deixis: Deixis) {
-	return deixisRepr[deixis];
+export function getReprForDeixis(deixis: Deixis) {
+	return reprForDeixis[deixis];
 }

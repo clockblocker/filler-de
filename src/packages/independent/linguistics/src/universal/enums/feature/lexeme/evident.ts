@@ -6,11 +6,11 @@ const evidentValues = ["Fh", "Nfh"] as const;
 export const Evident = z.enum(evidentValues);
 export type Evident = z.infer<typeof Evident>;
 
-const evidentRepr = {
+const reprForEvident = {
 	Fh: "firsthand",
 	Nfh: "non-firsthand",
 } satisfies Record<Evident, string>;
 
-export function reprForEvident(evident: Evident) {
-	return evidentRepr[evident];
+export function getReprForEvident(evident: Evident) {
+	return reprForEvident[evident];
 }

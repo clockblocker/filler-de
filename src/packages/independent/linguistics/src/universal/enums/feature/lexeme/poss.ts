@@ -6,10 +6,10 @@ const possValues = ["Yes"] as const;
 export const Poss = z.enum(possValues);
 export type Poss = z.infer<typeof Poss>;
 
-const possRepr = {
+const reprForPoss = {
 	Yes: "possessive",
 } satisfies Record<Poss, string>;
 
-export function reprForPoss(poss: Poss) {
-	return possRepr[poss];
+export function getReprForPoss(poss: Poss) {
+	return reprForPoss[poss];
 }

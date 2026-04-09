@@ -6,7 +6,7 @@ const tenseValues = ["Fut", "Imp", "Past", "Pqp", "Pres"] as const;
 export const Tense = z.enum(tenseValues);
 export type Tense = z.infer<typeof Tense>;
 
-const tenseRepr = {
+const reprForTense = {
 	Fut: "future tense",
 	Imp: "imperfect",
 	Past: "past tense / preterite / aorist",
@@ -14,6 +14,6 @@ const tenseRepr = {
 	Pres: "present / non-past tense / aorist",
 } satisfies Record<Tense, string>;
 
-export function reprForTense(tense: Tense) {
-	return tenseRepr[tense];
+export function getReprForTense(tense: Tense) {
+	return reprForTense[tense];
 }

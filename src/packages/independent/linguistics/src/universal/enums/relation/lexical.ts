@@ -13,7 +13,7 @@ const lexicalRelations = [
 export const LexicalRelation = z.enum(lexicalRelations);
 export type LexicalRelation = z.infer<typeof LexicalRelation>;
 
-const lexicalRelationRepr = {
+const reprForLexicalRelation = {
 	Antonym: "≠",
 	Holonym: "∋",
 	Hypernym: "⊃",
@@ -23,6 +23,6 @@ const lexicalRelationRepr = {
 	Synonym: "=",
 } satisfies Record<LexicalRelation, string>;
 
-export function reprForLexicalRelation(lexicalRelation: LexicalRelation) {
-	return lexicalRelationRepr[lexicalRelation];
+export function getReprForLexicalRelation(lexicalRelation: LexicalRelation) {
+	return reprForLexicalRelation[lexicalRelation];
 }

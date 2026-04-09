@@ -42,7 +42,7 @@ const nounClassValues = [
 export const NounClass = z.enum(nounClassValues);
 export type NounClass = z.infer<typeof NounClass>;
 
-const nounClassRepr = {
+const reprForNounClass = {
 	Bantu1: "singular, persons",
 	Bantu2: "plural, persons",
 	Bantu3: "singular, plants, thin objects",
@@ -80,6 +80,6 @@ const nounClassRepr = {
 	Wol12: "Wolof noun class 12/n (manner)",
 } satisfies Record<NounClass, string>;
 
-export function reprForNounClass(nounClass: NounClass) {
-	return nounClassRepr[nounClass];
+export function getReprForNounClass(nounClass: NounClass) {
+	return reprForNounClass[nounClass];
 }

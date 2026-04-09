@@ -6,11 +6,11 @@ const deixisRefValues = ["1", "2"] as const;
 export const DeixisRef = z.enum(deixisRefValues);
 export type DeixisRef = z.infer<typeof DeixisRef>;
 
-const deixisRefRepr = {
+const reprForDeixisRef = {
 	"1": "deixis relative to the first person participant (speaker)",
 	"2": "deixis relative to the second person participant (hearer)",
 } satisfies Record<DeixisRef, string>;
 
-export function reprForDeixisRef(deixisRef: DeixisRef) {
-	return deixisRefRepr[deixisRef];
+export function getReprForDeixisRef(deixisRef: DeixisRef) {
+	return reprForDeixisRef[deixisRef];
 }

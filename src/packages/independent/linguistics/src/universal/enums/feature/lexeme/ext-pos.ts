@@ -17,7 +17,7 @@ const extPosValues = [
 export const ExtPos = z.enum(extPosValues);
 export type ExtPos = z.infer<typeof ExtPos>;
 
-const extPosRepr = {
+const reprForExtPos = {
 	ADJ: "adjective-like expression",
 	ADP: "adposition-like expression",
 	ADV: "adverb-like expression",
@@ -30,6 +30,6 @@ const extPosRepr = {
 	SCONJ: "subordinator-like expression",
 } satisfies Record<ExtPos, string>;
 
-export function reprForExtPos(extPos: ExtPos) {
-	return extPosRepr[extPos];
+export function getReprForExtPos(extPos: ExtPos) {
+	return reprForExtPos[extPos];
 }

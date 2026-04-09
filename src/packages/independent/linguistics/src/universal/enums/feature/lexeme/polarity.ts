@@ -6,11 +6,11 @@ const polarityValues = ["Neg", "Pos"] as const;
 export const Polarity = z.enum(polarityValues);
 export type Polarity = z.infer<typeof Polarity>;
 
-const polarityRepr = {
+const reprForPolarity = {
 	Neg: "negative",
 	Pos: "positive, affirmative",
 } satisfies Record<Polarity, string>;
 
-export function reprForPolarity(polarity: Polarity) {
-	return polarityRepr[polarity];
+export function getReprForPolarity(polarity: Polarity) {
+	return reprForPolarity[polarity];
 }

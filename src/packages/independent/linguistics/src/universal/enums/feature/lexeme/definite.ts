@@ -6,7 +6,7 @@ const definiteValues = ["Com", "Cons", "Def", "Ind", "Spec"] as const;
 export const Definite = z.enum(definiteValues);
 export type Definite = z.infer<typeof Definite>;
 
-const definiteRepr = {
+const reprForDefinite = {
 	Com: "complex",
 	Cons: "construct state / reduced definiteness",
 	Def: "definite",
@@ -14,6 +14,6 @@ const definiteRepr = {
 	Spec: "specific indefinite",
 } satisfies Record<Definite, string>;
 
-export function reprForDefinite(definite: Definite) {
-	return definiteRepr[definite];
+export function getReprForDefinite(definite: Definite) {
+	return reprForDefinite[definite];
 }

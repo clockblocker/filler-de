@@ -11,13 +11,13 @@ const phrasemeKindValues = [
 export const PhrasemeKind = z.enum(phrasemeKindValues);
 export type PhrasemeKind = z.infer<typeof PhrasemeKind>;
 
-const phrasemeKindRepr = {
+const reprForPhrasemeKind = {
 	Collocation: "collocation",
 	CulturalQuotation: "cultural quotation",
 	Idiom: "idiom",
 	Proverb: "proverb",
 } satisfies Record<PhrasemeKind, string>;
 
-export function reprForPhrasemeKind(phrasemeKind: PhrasemeKind) {
-	return phrasemeKindRepr[phrasemeKind];
+export function getReprForPhrasemeKind(phrasemeKind: PhrasemeKind) {
+	return reprForPhrasemeKind[phrasemeKind];
 }

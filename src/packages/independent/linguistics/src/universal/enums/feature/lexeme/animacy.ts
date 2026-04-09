@@ -6,13 +6,13 @@ const animacyValues = ["Anim", "Hum", "Inan", "Nhum"] as const;
 export const Animacy = z.enum(animacyValues);
 export type Animacy = z.infer<typeof Animacy>;
 
-const animacyRepr = {
+const reprForAnimacy = {
 	Anim: "animate",
 	Hum: "human",
 	Inan: "inanimate",
 	Nhum: "non-human",
 } satisfies Record<Animacy, string>;
 
-export function reprForAnimacy(animacy: Animacy) {
-	return animacyRepr[animacy];
+export function getReprForAnimacy(animacy: Animacy) {
+	return reprForAnimacy[animacy];
 }

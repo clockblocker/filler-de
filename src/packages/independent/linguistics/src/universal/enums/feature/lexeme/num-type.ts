@@ -14,7 +14,7 @@ const numTypeValues = [
 export const NumType = z.enum(numTypeValues);
 export type NumType = z.infer<typeof NumType>;
 
-const numTypeRepr = {
+const reprForNumType = {
 	Card: "cardinal number or corresponding interrogative / relative / indefinite / demonstrative word",
 	Dist: "distributive numeral",
 	Frac: "fraction",
@@ -24,6 +24,6 @@ const numTypeRepr = {
 	Sets: "number of sets of things; collective numeral",
 } satisfies Record<NumType, string>;
 
-export function reprForNumType(numType: NumType) {
-	return numTypeRepr[numType];
+export function getReprForNumType(numType: NumType) {
+	return reprForNumType[numType];
 }

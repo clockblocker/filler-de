@@ -6,10 +6,10 @@ const abbrValues = ["Yes"] as const;
 export const Abbr = z.enum(abbrValues);
 export type Abbr = z.infer<typeof Abbr>;
 
-const abbrRepr = {
+const reprForAbbr = {
 	Yes: "abbreviation",
 } satisfies Record<Abbr, string>;
 
-export function reprForAbbr(abbr: Abbr) {
-	return abbrRepr[abbr];
+export function getReprForAbbr(abbr: Abbr) {
+	return reprForAbbr[abbr];
 }

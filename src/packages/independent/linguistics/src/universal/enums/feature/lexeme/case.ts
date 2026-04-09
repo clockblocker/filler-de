@@ -38,7 +38,7 @@ const caseValues = [
 export const Case = z.enum(caseValues);
 export type Case = z.infer<typeof Case>;
 
-const caseRepr = {
+const reprForCase = {
 	Abe: "abessive / caritive / privative",
 	Abl: "ablative / adelative",
 	Add: "additive",
@@ -72,6 +72,6 @@ const caseRepr = {
 	Ter: "terminative / terminal allative",
 } satisfies Record<Case, string>;
 
-export function reprForCase(caseValue: Case) {
-	return caseRepr[caseValue];
+export function getReprForCase(caseValue: Case) {
+	return reprForCase[caseValue];
 }

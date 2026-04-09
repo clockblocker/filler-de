@@ -6,7 +6,7 @@ const degreeValues = ["Abs", "Aug", "Cmp", "Dim", "Equ", "Pos", "Sup"] as const;
 export const Degree = z.enum(degreeValues);
 export type Degree = z.infer<typeof Degree>;
 
-const degreeRepr = {
+const reprForDegree = {
 	Abs: "absolute superlative",
 	Aug: "augmentative",
 	Cmp: "comparative, second degree",
@@ -16,6 +16,6 @@ const degreeRepr = {
 	Sup: "superlative, third degree",
 } satisfies Record<Degree, string>;
 
-export function reprForDegree(degree: Degree) {
-	return degreeRepr[degree];
+export function getReprForDegree(degree: Degree) {
+	return reprForDegree[degree];
 }

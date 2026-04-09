@@ -18,7 +18,7 @@ const pronTypeValues = [
 export const PronType = z.enum(pronTypeValues);
 export type PronType = z.infer<typeof PronType>;
 
-const pronTypeRepr = {
+const reprForPronType = {
 	Art: "article",
 	Dem: "demonstrative",
 	Emp: "emphatic",
@@ -32,6 +32,6 @@ const pronTypeRepr = {
 	Tot: "total",
 } satisfies Record<PronType, string>;
 
-export function reprForPronType(pronType: PronType) {
-	return pronTypeRepr[pronType];
+export function getReprForPronType(pronType: PronType) {
+	return reprForPronType[pronType];
 }

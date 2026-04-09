@@ -6,10 +6,10 @@ const reflexValues = ["Yes"] as const;
 export const Reflex = z.enum(reflexValues);
 export type Reflex = z.infer<typeof Reflex>;
 
-const reflexRepr = {
+const reprForReflex = {
 	Yes: "reflexive",
 } satisfies Record<Reflex, string>;
 
-export function reprForReflex(reflex: Reflex) {
-	return reflexRepr[reflex];
+export function getReprForReflex(reflex: Reflex) {
+	return reprForReflex[reflex];
 }

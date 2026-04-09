@@ -6,7 +6,7 @@ const aspectValues = ["Hab", "Imp", "Iter", "Perf", "Prog", "Prosp"] as const;
 export const Aspect = z.enum(aspectValues);
 export type Aspect = z.infer<typeof Aspect>;
 
-const aspectRepr = {
+const reprForAspect = {
 	Hab: "habitual aspect",
 	Imp: "imperfect aspect",
 	Iter: "iterative / frequentative aspect",
@@ -15,6 +15,6 @@ const aspectRepr = {
 	Prosp: "prospective aspect",
 } satisfies Record<Aspect, string>;
 
-export function reprForAspect(aspect: Aspect) {
-	return aspectRepr[aspect];
+export function getReprForAspect(aspect: Aspect) {
+	return reprForAspect[aspect];
 }

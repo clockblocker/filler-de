@@ -21,7 +21,7 @@ const moodValues = [
 export const Mood = z.enum(moodValues);
 export type Mood = z.infer<typeof Mood>;
 
-const moodRepr = {
+const reprForMood = {
 	Adm: "admirative",
 	Cnd: "conditional",
 	Des: "desiderative",
@@ -38,6 +38,6 @@ const moodRepr = {
 	Sub: "subjunctive / conjunctive",
 } satisfies Record<Mood, string>;
 
-export function reprForMood(mood: Mood) {
-	return moodRepr[mood];
+export function getReprForMood(mood: Mood) {
+	return reprForMood[mood];
 }

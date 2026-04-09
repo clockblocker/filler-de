@@ -18,7 +18,7 @@ const numberValues = [
 export const GrammaticalNumber = z.enum(numberValues);
 export type GrammaticalNumber = z.infer<typeof GrammaticalNumber>;
 
-const numberRepr = {
+const reprForNumber = {
 	Coll: "collective / mass / singulare tantum",
 	Count: "count plural",
 	Dual: "dual number",
@@ -32,6 +32,6 @@ const numberRepr = {
 	Tri: "trial number",
 } satisfies Record<GrammaticalNumber, string>;
 
-export function reprForNumber(number: GrammaticalNumber) {
-	return numberRepr[number];
+export function getReprForNumber(number: GrammaticalNumber) {
+	return reprForNumber[number];
 }

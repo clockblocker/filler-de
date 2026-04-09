@@ -35,7 +35,7 @@ export type OtherPos = z.infer<typeof OtherPos>;
 export const Pos = z.union([OpenClassPos, ClosedClassPos, OtherPos]);
 export type Pos = z.infer<typeof Pos>;
 
-const posRepr = {
+const reprForPos = {
 	ADJ: "adjective",
 	ADP: "adposition",
 	ADV: "adverb",
@@ -55,6 +55,6 @@ const posRepr = {
 	X: "other",
 } satisfies Record<Pos, string>;
 
-export function reprForPos(pos: Pos) {
-	return posRepr[pos];
+export function getReprForPos(pos: Pos) {
+	return reprForPos[pos];
 }

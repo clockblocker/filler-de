@@ -17,36 +17,36 @@ export type SurfaceKind = z.infer<typeof SurfaceKind>;
 export const OrthographicStatus = z.enum(orthographicStatusValues);
 export type OrthographicStatus = z.infer<typeof OrthographicStatus>;
 
-const luRepr = {
+const reprForLu = {
 	Discourse: "discourse",
 	Lexeme: "lexeme",
 	Morpheme: "morpheme",
 	Phraseme: "phraseme",
 } satisfies Record<Lu, string>;
 
-const morphologicalFormRepr = {
+export function getReprForLu(lu: Lu) {
+	return reprForLu[lu];
+}
+
+const reprForSurfaceKind = {
 	Inflection: "inflection",
 	Lemma: "lemma",
 	Partial: "partial",
 	Variant: "variant",
 } satisfies Record<SurfaceKind, string>;
 
-const orthographicStatusRepr = {
+export function getReprForSurfaceKind(morphologicalForm: SurfaceKind) {
+	return reprForSurfaceKind[morphologicalForm];
+}
+
+const reprForOrthographicStatus = {
 	Standard: "standard",
 	Typo: "typo",
 	Variant: "variant",
 } satisfies Record<OrthographicStatus, string>;
 
-export function reprForLu(lu: Lu) {
-	return luRepr[lu];
-}
-
-export function reprForSurfaceKind(morphologicalForm: SurfaceKind) {
-	return morphologicalFormRepr[morphologicalForm];
-}
-
-export function reprForOrthographicStatus(
+export function getReprForOrthographicStatus(
 	orthographicStatus: OrthographicStatus,
 ) {
-	return orthographicStatusRepr[orthographicStatus];
+	return reprForOrthographicStatus[orthographicStatus];
 }

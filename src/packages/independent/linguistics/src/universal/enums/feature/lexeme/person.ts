@@ -6,7 +6,7 @@ const personValues = ["0", "1", "2", "3", "4"] as const;
 export const Person = z.enum(personValues);
 export type Person = z.infer<typeof Person>;
 
-const personRepr = {
+const reprForPerson = {
 	"0": "zero person",
 	"1": "first person",
 	"2": "second person",
@@ -14,6 +14,6 @@ const personRepr = {
 	"4": "fourth person",
 } satisfies Record<Person, string>;
 
-export function reprForPerson(person: Person) {
-	return personRepr[person];
+export function getReprForPerson(person: Person) {
+	return reprForPerson[person];
 }
