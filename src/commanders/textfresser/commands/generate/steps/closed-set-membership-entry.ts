@@ -1,5 +1,5 @@
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import type { TargetLanguage } from "../../../../../types";
 import { resolveClosedSetLibraryTarget } from "../../../common/closed-set-library-target-resolver";
 import { isClosedSetPos } from "../../../common/lemma-link-routing";
@@ -84,8 +84,10 @@ function hasLibraryPointer(entry: NoteEntry, libraryBasename: string): boolean {
 
 function isClosedSetMembershipEntry(entry: NoteEntry): boolean {
 	return (
-		findFirstTypedSectionByMarker(entry, CLOSED_SET_MEMBERSHIP_SECTION_KIND) !==
-		undefined
+		findFirstTypedSectionByMarker(
+			entry,
+			CLOSED_SET_MEMBERSHIP_SECTION_KIND,
+		) !== undefined
 	);
 }
 
@@ -134,9 +136,7 @@ function appendPointerIfMissing(params: {
 		return;
 	}
 	const existingContent = getTypedSectionContent(existingMembershipSection);
-	if (
-		existingContent.includes(params.membershipSection.content)
-	) {
+	if (existingContent.includes(params.membershipSection.content)) {
 		return;
 	}
 	setTypedSectionContent(
@@ -164,7 +164,10 @@ function replacePointers(params: {
 		}
 		return;
 	}
-	setTypedSectionContent(existingMembershipSection, params.membershipSection.content);
+	setTypedSectionContent(
+		existingMembershipSection,
+		params.membershipSection.content,
+	);
 }
 
 function basenameFromWikilinkTarget(target: string): string {
