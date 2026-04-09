@@ -18,16 +18,16 @@ export const Voice = z.enum(voiceValues);
 export type Voice = z.infer<typeof Voice>;
 
 const reprForVoice = {
-	Act: "active or actor-focus voice",
-	Antip: "antipassive voice",
-	Bfoc: "beneficiary-focus voice",
-	Cau: "causative voice",
-	Dir: "direct voice",
-	Inv: "inverse voice",
-	Lfoc: "location-focus voice",
-	Mid: "middle voice",
-	Pass: "passive or patient-focus voice",
-	Rcp: "reciprocal voice",
+	Act: "active", // actor-focus
+	Antip: "antipassive",
+	Bfoc: "beneficiary-focus",
+	Cau: "causative",
+	Dir: "direct",
+	Inv: "inverse",
+	Lfoc: "location-focus",
+	Mid: "middle",
+	Pass: "passive", // patient-focus
+	Rcp: "reciprocal",
 } satisfies Record<Voice, string>;
 
 export function getReprForVoice(voice: Voice) {

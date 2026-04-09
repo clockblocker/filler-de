@@ -7,11 +7,11 @@ export const Tense = z.enum(tenseValues);
 export type Tense = z.infer<typeof Tense>;
 
 const reprForTense = {
-	Fut: "future tense",
+	Fut: "future",
 	Imp: "imperfect",
-	Past: "past tense / preterite / aorist",
+	Past: "past", // preterite / aorist
 	Pqp: "pluperfect",
-	Pres: "present / non-past tense / aorist",
+	Pres: "present", // non-past / aorist
 } satisfies Record<Tense, string>;
 
 export function getReprForTense(tense: Tense) {

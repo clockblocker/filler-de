@@ -16,14 +16,14 @@ export const VerbForm = z.enum(verbFormValues);
 export type VerbForm = z.infer<typeof VerbForm>;
 
 const reprForVerbForm = {
-	Conv: "converb, transgressive, adverbial participle, verbal adverb",
+	Conv: "converb", // transgressive, adverbial participle, verbal adverb
 	Fin: "finite verb",
 	Gdv: "gerundive",
 	Ger: "gerund",
 	Inf: "infinitive",
-	Part: "participle, verbal adjective",
+	Part: "participle", // verbal adjective
 	Sup: "supine",
-	Vnoun: "verbal noun, masdar",
+	Vnoun: "verbal noun", // masdar
 } satisfies Record<VerbForm, string>;
 
 export function getReprForVerbForm(verbForm: VerbForm) {

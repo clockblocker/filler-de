@@ -26,16 +26,16 @@ const reprForMood = {
 	Cnd: "conditional",
 	Des: "desiderative",
 	Imp: "imperative",
-	Ind: "indicative or realis",
+	Ind: "indicative", // or realis
 	Int: "interrogative",
 	Irr: "irrealis",
-	Jus: "jussive / injunctive",
+	Jus: "jussive", // or injunctive
 	Nec: "necessitative",
 	Opt: "optative",
 	Pot: "potential",
 	Prp: "purposive",
 	Qot: "quotative",
-	Sub: "subjunctive / conjunctive",
+	Sub: "subjunctive", // or conjunctive
 } satisfies Record<Mood, string>;
 
 export function getReprForMood(mood: Mood) {

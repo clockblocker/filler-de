@@ -19,17 +19,17 @@ export const GrammaticalNumber = z.enum(numberValues);
 export type GrammaticalNumber = z.infer<typeof GrammaticalNumber>;
 
 const reprForNumber = {
-	Coll: "collective / mass / singulare tantum",
+	Coll: "collective", // mass / singulare tantum
 	Count: "count plural",
-	Dual: "dual number",
-	Grpa: "greater paucal number",
-	Grpl: "greater plural number",
-	Inv: "inverse number",
-	Pauc: "paucal number",
-	Plur: "plural number",
+	Dual: "dual",
+	Grpa: "greater paucal",
+	Grpl: "greater plural",
+	Inv: "inverse",
+	Pauc: "paucal",
+	Plur: "plural",
 	Ptan: "plurale tantum",
-	Sing: "singular number",
-	Tri: "trial number",
+	Sing: "singular",
+	Tri: "trial",
 } satisfies Record<GrammaticalNumber, string>;
 
 export function getReprForNumber(number: GrammaticalNumber) {

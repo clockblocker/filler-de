@@ -7,11 +7,11 @@ export const Person = z.enum(personValues);
 export type Person = z.infer<typeof Person>;
 
 const reprForPerson = {
-	"0": "zero person",
-	"1": "first person",
-	"2": "second person",
-	"3": "third person",
-	"4": "fourth person",
+	"0": "zero",
+	"1": "first",
+	"2": "second",
+	"3": "third",
+	"4": "fourth",
 } satisfies Record<Person, string>;
 
 export function getReprForPerson(person: Person) {
