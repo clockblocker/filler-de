@@ -1,15 +1,14 @@
 import { z } from "zod/v3";
 
-const foreignValues = ["Yes"] as const;
-
 // Source: https://universaldependencies.org/u/feat/Foreign.html
-export const Foreign = z.enum(foreignValues);
+export const FOREIGN_KEY = "foreign";
+export const Foreign = z.boolean();
 export type Foreign = z.infer<typeof Foreign>;
 
-const reprForForeign = {
-	Yes: "foreign",
-} satisfies Record<Foreign, string>;
-
 export function getReprForForeign(foreign: Foreign) {
-	return reprForForeign[foreign];
+	const reprForForeign = "foreign";
+
+	return foreign ? reprForForeign : `not ${reprForForeign}`;
 }
+
+export const ForeignPart = z.object({ [FOREIGN_KEY]: Foreign });

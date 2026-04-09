@@ -1,15 +1,15 @@
 import { z } from "zod/v3";
 
-const abbrValues = ["Yes"] as const;
-
 // Source: https://universaldependencies.org/u/feat/Abbr.html
-export const Abbr = z.enum(abbrValues);
+
+export const ABBR_KEY = "abbr";
+export const Abbr = z.boolean();
 export type Abbr = z.infer<typeof Abbr>;
 
-const reprForAbbr = {
-	Yes: "abbreviation",
-} satisfies Record<Abbr, string>;
-
 export function getReprForAbbr(abbr: Abbr) {
-	return reprForAbbr[abbr];
+	const reprForAbbr = "abbreviation";
+
+	return abbr ? reprForAbbr : `not ${reprForAbbr}`;
 }
+
+export const AbbrPart = z.object({ [ABBR_KEY]: Abbr });
