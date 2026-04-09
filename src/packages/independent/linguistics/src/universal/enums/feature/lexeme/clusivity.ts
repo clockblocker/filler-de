@@ -5,6 +5,7 @@ const clusivityValues = ["Ex", "In"] as const;
 // Source: https://universaldependencies.org/u/feat/Clusivity.html
 export const Clusivity = z.enum(clusivityValues);
 export type Clusivity = z.infer<typeof Clusivity>;
+export const CLUSIVITY_KEY = "clusivity";
 
 const reprForClusivity = {
 	Ex: "exclusive",

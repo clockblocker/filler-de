@@ -5,14 +5,15 @@ const aspectValues = ["Hab", "Imp", "Iter", "Perf", "Prog", "Prosp"] as const;
 // Source: https://universaldependencies.org/u/feat/Aspect.html
 export const Aspect = z.enum(aspectValues);
 export type Aspect = z.infer<typeof Aspect>;
+export const ASPECT_KEY = "aspect";
 
 const reprForAspect = {
-	Hab: "habitual aspect",
-	Imp: "imperfect aspect",
-	Iter: "iterative / frequentative aspect",
-	Perf: "perfect aspect",
-	Prog: "progressive aspect",
-	Prosp: "prospective aspect",
+	Hab: "habitual",
+	Imp: "imperfect",
+	Iter: "iterative", // frequentative
+	Perf: "perfect",
+	Prog: "progressive",
+	Prosp: "prospective",
 } satisfies Record<Aspect, string>;
 
 export function getReprForAspect(aspect: Aspect) {

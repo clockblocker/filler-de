@@ -5,6 +5,7 @@ const deixisRefValues = ["1", "2"] as const;
 // Source: https://universaldependencies.org/u/feat/DeixisRef.html
 export const DeixisRef = z.enum(deixisRefValues);
 export type DeixisRef = z.infer<typeof DeixisRef>;
+export const DEIXIS_REF_KEY = "deixisRef";
 
 const reprForDeixisRef = {
 	"1": "deixis relative to the first person participant (speaker)",

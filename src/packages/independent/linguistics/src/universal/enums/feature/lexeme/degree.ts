@@ -5,6 +5,7 @@ const degreeValues = ["Abs", "Aug", "Cmp", "Dim", "Equ", "Pos", "Sup"] as const;
 // Source: https://universaldependencies.org/u/feat/Degree.html
 export const Degree = z.enum(degreeValues);
 export type Degree = z.infer<typeof Degree>;
+export const DEGREE_KEY = "degree";
 
 const reprForDegree = {
 	Abs: "absolute superlative",

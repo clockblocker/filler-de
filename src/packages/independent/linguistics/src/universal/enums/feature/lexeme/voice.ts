@@ -16,6 +16,7 @@ const voiceValues = [
 // Source: https://universaldependencies.org/u/feat/Voice.html
 export const Voice = z.enum(voiceValues);
 export type Voice = z.infer<typeof Voice>;
+export const VOICE_KEY = "voice";
 
 const reprForVoice = {
 	Act: "active", // actor-focus

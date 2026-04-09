@@ -13,6 +13,7 @@ const deixisValues = [
 // Source: https://universaldependencies.org/u/feat/Deixis.html
 export const Deixis = z.enum(deixisValues);
 export type Deixis = z.infer<typeof Deixis>;
+export const DEIXIS_KEY = "deixis";
 
 const reprForDeixis = {
 	Abv: "above the reference point",

@@ -17,6 +17,7 @@ const pronTypeValues = [
 // Source: https://universaldependencies.org/u/feat/PronType.html
 export const PronType = z.enum(pronTypeValues);
 export type PronType = z.infer<typeof PronType>;
+export const PRON_TYPE_KEY = "pronType";
 
 const reprForPronType = {
 	Art: "article",
