@@ -1,96 +1,49 @@
-// export type AbstractLemma<U extends Lu> = U
-
+import type { Prettify } from "src/types/helpers";
 import type {
-	EmptyShape,
-	MergeByKey,
-	Prettify,
-	ReplaceProp,
-} from "src/types/helpers";
-import {
-	type LemmaKind,
+	LemmaKind,
 	OrthographicStatus,
-	type SurfaceKind,
+	SurfaceKind,
 } from "./enums/core/selection";
 import type { MorphemeKind } from "./enums/kind/morpheme-kind";
 import type { PhrasemeKind } from "./enums/kind/phraseme-kind";
 import type { Pos } from "./enums/kind/pos";
 
-type AbstractLemmaMap = MergeByKey<
-	{
-		[LemmaKind.Enum.Lexeme]: { pos: Pos };
-		[LemmaKind.Enum.Phraseme]: { phrasemeKind: PhrasemeKind };
-		[LemmaKind.Enum.Morpheme]: { morphemeKind: MorphemeKind };
-	},
-	{
-		[LK in LemmaKind]: { lemmaKind: LK; spelledLemma: string };
-	}
->;
+type LemmaFieldsFor<LK extends LemmaKind> =
+	LK extends typeof LemmaKind.Enum.Lexeme
+		? { pos: Pos }
+		: LK extends typeof LemmaKind.Enum.Phraseme
+			? { phrasemeKind: PhrasemeKind }
+			: LK extends typeof LemmaKind.Enum.Morpheme
+				? { morphemeKind: MorphemeKind }
+				: never;
 
-type LemmaFor<LK extends keyof AbstractLemmaMap = keyof AbstractLemmaMap> =
-	AbstractLemmaMap[LK];
-
-type AbstractSurfaceMap = {
-	[SK in SurfaceKind]: {
-		surfaceKind: SK;
-		spelledSurface: string;
-		lemma: LemmaFor;
-	};
-};
-
-type AbstractSelectionMap = MergeByKey<
-	{
-		[OrthographicStatus.Enum.Standard]: {
-			surfaceMap: AbstractSurfaceMap;
-		};
-		[OrthographicStatus.Enum.Typo]: {
-			surfaceMap: AbstractSurfaceMap;
-		};
-		[OrthographicStatus.Enum.Unknown]: EmptyShape;
-	},
-	{
-		[OS in OrthographicStatus]: { orthographicStatus: OS };
-	}
->;
-
-type SurfaceMapFor<OS extends keyof AbstractSelectionMap> =
-	AbstractSelectionMap[OS] extends { surfaceMap: infer SM } ? SM : never;
+type LemmaFor<LK extends LemmaKind = LemmaKind> = LK extends LemmaKind
+	? Prettify<LemmaFieldsFor<LK> & { lemmaKind: LK; spelledLemma: string }>
+	: never;
 
 type SurfaceFor<
-	OS extends keyof AbstractSelectionMap,
-	SK extends keyof SurfaceMapFor<OS>,
-	LK extends keyof AbstractLemmaMap = keyof AbstractLemmaMap,
-> = SurfaceMapFor<OS>[SK] extends { lemma: unknown }
-	? ReplaceProp<SurfaceMapFor<OS>[SK], "lemma", LemmaFor<LK>>
-	: SurfaceMapFor<OS>[SK];
+	SK extends SurfaceKind = SurfaceKind,
+	LK extends LemmaKind = LemmaKind,
+> = SK extends SurfaceKind
+	? Prettify<{
+			surfaceKind: SK;
+			spelledSurface: string;
+			lemma: LemmaFor<LK>;
+		}>
+	: never;
 
 type AbstractSelectionFor<
-	OS extends keyof AbstractSelectionMap = keyof AbstractSelectionMap,
-	SK extends keyof SurfaceMapFor<OS> = keyof SurfaceMapFor<OS>,
-	LK extends keyof AbstractLemmaMap = keyof AbstractLemmaMap,
-> = OS extends keyof AbstractSelectionMap
+	OS extends OrthographicStatus = OrthographicStatus,
+	SK extends SurfaceKind = SurfaceKind,
+	LK extends LemmaKind = LemmaKind,
+> = OS extends OrthographicStatus
 	? Prettify<
-			Pick<AbstractSelectionMap[OS], "orthographicStatus"> &
-				([SurfaceMapFor<OS>] extends [never]
-					? EmptyShape
-					: { surface: SurfaceFor<OS, SK, LK> })
+			{
+				orthographicStatus: OS;
+			} & (OS extends typeof OrthographicStatus.Enum.Unknown
+				? Record<never, never>
+				: { surface: SurfaceFor<SK, LK> })
 		>
 	: never;
 
-/** Expeced to be 
- * 
-	```type InfCheck = {
-		orthographicStatus: "Standard";
-		surface: {
-		    surfaceKind: "Lemma";
-		    spelledSurface: string;
-		    lemma: {
-		        phrasemeKind: "DiscourseFormula" | "Cliché" | "Aphorism";
-		        lemmaKind: "Phraseme";
-		        spelledLemma: string;
-		    };
-	};```
-	
-	on hover 
-}
- */
 type InfCheck = AbstractSelectionFor<"Standard", "Lemma", "Phraseme">;
