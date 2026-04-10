@@ -14,9 +14,15 @@ export type MergeByKey<A, B> = Prettify<{
 			: never;
 }>;
 
+export type ReplaceProp<T, K extends PropertyKey, V> = Prettify<
+	Omit<T, K> & Record<K, V>
+>;
+
 export type Optional<T, K extends keyof T> = Prettify<
 	Omit<T, K> & Partial<Pick<T, K>>
 >;
+
+export type EmptyShape = Record<never, never>;
 
 export const isReadonlyArray = <T>(x: T | readonly T[]): x is readonly T[] =>
 	Array.isArray(x);

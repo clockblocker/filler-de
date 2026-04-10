@@ -1,6 +1,11 @@
 // export type AbstractLemma<U extends Lu> = U
 
-import type { MergeByKey, Prettify } from "src/types/helpers";
+import type {
+	EmptyShape,
+	MergeByKey,
+	Prettify,
+	ReplaceProp,
+} from "src/types/helpers";
 import {
 	type LemmaKind,
 	OrthographicStatus,
@@ -40,7 +45,7 @@ type AbstractSelectionMap = MergeByKey<
 		[OrthographicStatus.Enum.Typo]: {
 			surfaceMap: AbstractSurfaceMap;
 		};
-		[OrthographicStatus.Enum.Unknown]: {};
+		[OrthographicStatus.Enum.Unknown]: EmptyShape;
 	},
 	{
 		[OS in OrthographicStatus]: { orthographicStatus: OS };
@@ -50,15 +55,11 @@ type AbstractSelectionMap = MergeByKey<
 type SurfaceMapFor<OS extends keyof AbstractSelectionMap> =
 	AbstractSelectionMap[OS] extends { surfaceMap: infer SM } ? SM : never;
 
-type ReplaceProp<T, K extends PropertyKey, V> = Prettify<
-	Omit<T, K> & Record<K, V>
->;
-
 type SurfaceFor<
 	OS extends keyof AbstractSelectionMap,
 	SK extends keyof SurfaceMapFor<OS>,
 	LK extends keyof AbstractLemmaMap = keyof AbstractLemmaMap,
-> = SurfaceMapFor<OS>[SK] extends { lemma: any }
+> = SurfaceMapFor<OS>[SK] extends { lemma: unknown }
 	? ReplaceProp<SurfaceMapFor<OS>[SK], "lemma", LemmaFor<LK>>
 	: SurfaceMapFor<OS>[SK];
 
@@ -70,9 +71,9 @@ type AbstractSelectionFor<
 	? Prettify<
 			Pick<AbstractSelectionMap[OS], "orthographicStatus"> &
 				([SurfaceMapFor<OS>] extends [never]
-					? {}
+					? EmptyShape
 					: { surface: SurfaceFor<OS, SK, LK> })
 		>
 	: never;
 
-type InfCheck = AbstractSelectionFor<"Standard", "Lemma", "Morpheme">;
+type InfCheck = AbstractSelectionFor<"Standard", "Lemma", "Phraseme">;
