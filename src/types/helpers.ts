@@ -2,6 +2,18 @@ export type Prettify<T> = {
 	[K in keyof T]: T[K];
 } & {};
 
+export type Merge<A, B> = Prettify<Omit<A, keyof B> & B>;
+
+export type MergeByKey<A, B> = Prettify<{
+	[K in keyof A | keyof B]: K extends keyof A
+		? K extends keyof B
+			? Prettify<A[K] & B[K]>
+			: A[K]
+		: K extends keyof B
+			? B[K]
+			: never;
+}>;
+
 export type Optional<T, K extends keyof T> = Prettify<
 	Omit<T, K> & Partial<Pick<T, K>>
 >;
