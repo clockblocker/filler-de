@@ -22,6 +22,7 @@ import { POLITE_KEY, type Polite } from "./lexeme/polite";
 import { IS_POSS_KEY, type IsPoss } from "./lexeme/poss";
 import { PRON_TYPE_KEY, type PronType } from "./lexeme/pron-type";
 import { IS_REFLEX_KEY, type IsReflex } from "./lexeme/reflex";
+import type { IS_SEPARABLE_KEY, IsSeparable } from "./lexeme/separable";
 import { TENSE_KEY, type Tense } from "./lexeme/tense";
 import { VERB_FORM_KEY, type VerbForm } from "./lexeme/verb-form";
 import { VOICE_KEY, type Voice } from "./lexeme/voice";
@@ -53,4 +54,5 @@ export type AbstractFeatures = Prettify<{
 	[TENSE_KEY]: Tense;
 	[VERB_FORM_KEY]: VerbForm;
 	[VOICE_KEY]: Voice;
+	[IS_SEPARABLE_KEY]: IsSeparable;
 }>;
