@@ -48,22 +48,31 @@ type AbstractSelectionMap = MergeByKey<
 >;
 
 type SurfaceMapFor<OS extends keyof AbstractSelectionMap> =
-	OS extends keyof AbstractSelectionMap
-		? AbstractSelectionMap[OS] extends { surfaceMap: infer SM }
-			? SM
-			: never
-		: never;
+	AbstractSelectionMap[OS] extends { surfaceMap: infer SM } ? SM : never;
+
+type ReplaceProp<T, K extends PropertyKey, V> = Prettify<
+	Omit<T, K> & Record<K, V>
+>;
+
+type SurfaceFor<
+	OS extends keyof AbstractSelectionMap,
+	SK extends keyof SurfaceMapFor<OS>,
+	LK extends keyof AbstractLemmaMap = keyof AbstractLemmaMap,
+> = SurfaceMapFor<OS>[SK] extends { lemma: any }
+	? ReplaceProp<SurfaceMapFor<OS>[SK], "lemma", LemmaFor<LK>>
+	: SurfaceMapFor<OS>[SK];
 
 type AbstractSelectionFor<
 	OS extends keyof AbstractSelectionMap = keyof AbstractSelectionMap,
 	SK extends keyof SurfaceMapFor<OS> = keyof SurfaceMapFor<OS>,
+	LK extends keyof AbstractLemmaMap = keyof AbstractLemmaMap,
 > = OS extends keyof AbstractSelectionMap
 	? Prettify<
 			Pick<AbstractSelectionMap[OS], "orthographicStatus"> &
 				([SurfaceMapFor<OS>] extends [never]
 					? {}
-					: { surface: SurfaceMapFor<OS>[SK] })
+					: { surface: SurfaceFor<OS, SK, LK> })
 		>
 	: never;
 
-type InfCheck = AbstractSelectionFor<"Standard", "Lemma">;
+type InfCheck = AbstractSelectionFor<"Standard", "Lemma", "Morpheme">;
