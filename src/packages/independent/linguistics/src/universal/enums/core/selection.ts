@@ -2,7 +2,11 @@ import { z } from "zod/v3";
 
 // -- OrthographicStatus --
 
-const orthographicStatusValues = ["Standard", "Variant", "Typo"] as const;
+const orthographicStatusValues = [
+	"Standard", // Accepted spelling of a known surface
+	"Typo",     // Misspelling mapped to a known surface
+	"Unknown",  // No known surface match
+] as const;
 
 export const OrthographicStatus = z.enum(orthographicStatusValues);
 export type OrthographicStatus = z.infer<typeof OrthographicStatus>;
@@ -10,7 +14,7 @@ export type OrthographicStatus = z.infer<typeof OrthographicStatus>;
 const reprForOrthographicStatus = {
 	Standard: "standard",
 	Typo: "typo",
-	Variant: "variant",
+	Unknown: "unknown",
 } as const satisfies Record<OrthographicStatus, string>;
 
 export function getReprForOrthographicStatus(
@@ -23,7 +27,7 @@ export function getReprForOrthographicStatus(
 
 // Variant is like color vs colour, email vs e-mail.
 // Partial means the selected surface covers only part of a multi-word lemma.
-const surfaceKinds = ["Lemma", "Inflection", "Variant", "Partial"] as const;
+const surfaceKinds = ["Inflection", "Lemma", "Variant", "Partial"] as const;
 
 export const SurfaceKind = z.enum(surfaceKinds);
 export type SurfaceKind = z.infer<typeof SurfaceKind>;
