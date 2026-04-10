@@ -22,6 +22,10 @@ export type Optional<T, K extends keyof T> = Prettify<
 	Omit<T, K> & Partial<Pick<T, K>>
 >;
 
+export type SubsetOf<T extends PropertyKey> = Prettify<
+	Partial<Record<T, true>>
+>;
+
 export type EmptyShape = Record<never, never>;
 
 export const isReadonlyArray = <T>(x: T | readonly T[]): x is readonly T[] =>

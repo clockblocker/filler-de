@@ -17,9 +17,9 @@ import type { Pos } from "./enums/kind/pos";
 
 type AbstractLemmaMap = MergeByKey<
 	{
-		[LemmaKind.Enum.Lexeme]: { pos: Partial<Pos> };
-		[LemmaKind.Enum.Phraseme]: { phrasemeKind: Partial<PhrasemeKind> };
-		[LemmaKind.Enum.Morpheme]: { morphemeKind: Partial<MorphemeKind> };
+		[LemmaKind.Enum.Lexeme]: { pos: Pos };
+		[LemmaKind.Enum.Phraseme]: { phrasemeKind: PhrasemeKind };
+		[LemmaKind.Enum.Morpheme]: { morphemeKind: MorphemeKind };
 	},
 	{
 		[LK in LemmaKind]: { lemmaKind: LK; spelledLemma: string };
@@ -76,4 +76,21 @@ type AbstractSelectionFor<
 		>
 	: never;
 
+/** Expeced to be 
+ * 
+	```type InfCheck = {
+		orthographicStatus: "Standard";
+		surface: {
+		    surfaceKind: "Lemma";
+		    spelledSurface: string;
+		    lemma: {
+		        phrasemeKind: "DiscourseFormula" | "Cliché" | "Aphorism";
+		        lemmaKind: "Phraseme";
+		        spelledLemma: string;
+		    };
+	};```
+	
+	on hover 
+}
+ */
 type InfCheck = AbstractSelectionFor<"Standard", "Lemma", "Phraseme">;
