@@ -16,7 +16,7 @@ import type {
 
 export type AbstractLexeme = Prettify<{
 	[MORPHEME_KIND_KEY]?: MorphemeKind;
-	features?: Partial<AbstractFeatures>;
+	inherentFeatures?: Partial<AbstractFeatures>;
 	[IS_CLOSED_SET_KEY]?: IsClosedSet;
 }>;
 
@@ -40,4 +40,3 @@ export type AbstractPhrasem = Prettify<
 		  }
 	)
 >;
-
