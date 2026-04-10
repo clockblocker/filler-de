@@ -32,19 +32,20 @@ type AbstractSurfaceMap = {
 	};
 };
 
-export type AbstractSelectionMap = Prettify<{
-	[OrthographicStatus.Enum.Standard]: {
-		orthographicStatus: typeof OrthographicStatus.Enum.Standard;
-		surfaceMap: AbstractSurfaceMap;
-	};
-	[OrthographicStatus.Enum.Typo]: {
-		orthographicStatus: typeof OrthographicStatus.Enum.Typo;
-		surfaceMap: AbstractSurfaceMap;
-	};
-	[OrthographicStatus.Enum.Unknown]: {
-		orthographicStatus: typeof OrthographicStatus.Enum.Unknown;
-	};
-}>;
+type AbstractSelectionMap = MergeByKey<
+	{
+		[OrthographicStatus.Enum.Standard]: {
+			surfaceMap: AbstractSurfaceMap;
+		};
+		[OrthographicStatus.Enum.Typo]: {
+			surfaceMap: AbstractSurfaceMap;
+		};
+		[OrthographicStatus.Enum.Unknown]: {};
+	},
+	{
+		[OS in OrthographicStatus]: { orthographicStatus: OS };
+	}
+>;
 
 type SurfaceMapFor<OS extends keyof AbstractSelectionMap> =
 	OS extends keyof AbstractSelectionMap
