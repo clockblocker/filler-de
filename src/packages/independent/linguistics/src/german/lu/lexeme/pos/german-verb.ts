@@ -1,32 +1,20 @@
 import z from "zod/v3";
 import type { AbstractLemma } from "../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
-import {
-	GENDER_KEY,
-	Gender,
-} from "../../../../universal/enums/feature/ud/gender";
-import { MOOD_KEY, Mood } from "../../../../universal/enums/feature/ud/mood";
-import {
-	GrammaticalNumber,
-	NUMBER_KEY,
-} from "../../../../universal/enums/feature/ud/number";
-import {
-	PERSON_KEY,
-	Person,
-} from "../../../../universal/enums/feature/ud/person";
-import { TENSE_KEY, Tense } from "../../../../universal/enums/feature/ud/tense";
-import {
-	VERB_FORM_KEY,
-	VerbForm,
-} from "../../../../universal/enums/feature/ud/verb-form";
+import { Gender } from "../../../../universal/enums/feature/ud/gender";
+import { Mood } from "../../../../universal/enums/feature/ud/mood";
+import { GrammaticalNumber } from "../../../../universal/enums/feature/ud/number";
+import { Person } from "../../../../universal/enums/feature/ud/person";
+import { Tense } from "../../../../universal/enums/feature/ud/tense";
+import { VerbForm } from "../../../../universal/enums/feature/ud/verb-form";
 
 const GermanVerbInflectionalFeaturesSchema = z.object({
-	[GENDER_KEY]: Gender.optional(),
-	[MOOD_KEY]: Mood.optional(),
-	[NUMBER_KEY]: GrammaticalNumber.optional(),
-	[PERSON_KEY]: Person.optional(),
-	[TENSE_KEY]: Tense.optional(),
-	[VERB_FORM_KEY]: VerbForm.optional(),
+	gender: Gender.optional(),
+	mood: Mood.optional(),
+	number: GrammaticalNumber.optional(),
+	person: Person.optional(),
+	tense: Tense.optional(),
+	verbForm: VerbForm.optional(),
 }) satisfies z.ZodType<
 	AbstractSelectionFor<
 		"Standard",
