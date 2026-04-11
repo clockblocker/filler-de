@@ -1,9 +1,11 @@
 import z from "zod/v3";
 
+type EmptyZodRawShape = Record<never, never>;
+
 type BuildLemmaSelectionArgs<
 	LemmaIdentityShape extends z.ZodRawShape,
-	LemmaExtraShape extends z.ZodRawShape = {},
-	SurfaceExtraShape extends z.ZodRawShape = {},
+	LemmaExtraShape extends z.ZodRawShape = EmptyZodRawShape,
+	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 > = {
 	lemmaIdentityShape: LemmaIdentityShape;
 	lemmaExtraShape?: LemmaExtraShape;
@@ -12,8 +14,8 @@ type BuildLemmaSelectionArgs<
 
 export function buildLemmaSelection<
 	LemmaIdentityShape extends z.ZodRawShape,
-	LemmaExtraShape extends z.ZodRawShape = {},
-	SurfaceExtraShape extends z.ZodRawShape = {},
+	LemmaExtraShape extends z.ZodRawShape = EmptyZodRawShape,
+	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 >({
 	lemmaIdentityShape,
 	lemmaExtraShape = {} as LemmaExtraShape,

@@ -1,10 +1,12 @@
 import z from "zod/v3";
 
+type EmptyZodRawShape = Record<never, never>;
+
 type BuildInflectionSelectionArgs<
 	InflectionalFeaturesSchema extends z.ZodTypeAny,
 	LemmaIdentityShape extends z.ZodRawShape,
-	LemmaExtraShape extends z.ZodRawShape = {},
-	SurfaceExtraShape extends z.ZodRawShape = {},
+	LemmaExtraShape extends z.ZodRawShape = EmptyZodRawShape,
+	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 > = {
 	inflectionalFeaturesSchema: InflectionalFeaturesSchema;
 	lemmaIdentityShape: LemmaIdentityShape;
@@ -15,8 +17,8 @@ type BuildInflectionSelectionArgs<
 export function buildInflectionSelection<
 	InflectionalFeaturesSchema extends z.ZodTypeAny,
 	LemmaIdentityShape extends z.ZodRawShape,
-	LemmaExtraShape extends z.ZodRawShape = {},
-	SurfaceExtraShape extends z.ZodRawShape = {},
+	LemmaExtraShape extends z.ZodRawShape = EmptyZodRawShape,
+	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 >({
 	inflectionalFeaturesSchema,
 	lemmaIdentityShape,
