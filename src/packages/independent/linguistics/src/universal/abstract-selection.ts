@@ -53,5 +53,5 @@ export type AbstractSelectionFor<
 		>
 	: never;
 
-type InfCheck = AbstractSelectionFor<"Standard", "Inflection", "Phraseme">;
-type InfCheck1 = AbstractSelectionFor<"Standard", "Lemma", "Lexeme">;
+// type InfCheck = AbstractSelectionFor<"Standard", "Inflection", "Phraseme">;
+// type InfCheck1 = AbstractSelectionFor<"Standard", "Lemma", "Lexeme">;

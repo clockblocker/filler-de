@@ -4,8 +4,8 @@ import { z } from "zod/v3";
 
 const orthographicStatusValues = [
 	"Standard", // Accepted spelling of a known surface
-	"Typo",     // Misspelling mapped to a known surface
-	"Unknown",  // No known surface match
+	"Typo", // Misspelling mapped to a known surface
+	"Unknown", // No known surface match
 ] as const;
 
 export const OrthographicStatus = z.enum(orthographicStatusValues);

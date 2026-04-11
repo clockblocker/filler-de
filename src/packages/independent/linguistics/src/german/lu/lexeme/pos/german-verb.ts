@@ -7,6 +7,8 @@ import { GrammaticalNumber } from "../../../../universal/enums/feature/ud/number
 import { Person } from "../../../../universal/enums/feature/ud/person";
 import { Tense } from "../../../../universal/enums/feature/ud/tense";
 import { VerbForm } from "../../../../universal/enums/feature/ud/verb-form";
+import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
+import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 
 const GermanVerbInflectionalFeaturesSchema = z.object({
 	gender: Gender.optional(),
@@ -27,33 +29,20 @@ const GermanVerbInherentFeaturesSchema = z.object({}) satisfies z.ZodType<
 	AbstractLemma<"Lexeme">["inherentFeatures"]
 >;
 
-export const GermanVerbInflectionSelectionSchema = z.object({
-	orthographicStatus: z.literal("Standard"),
-	surface: z.object({
-		inflectionalFeatures: GermanVerbInflectionalFeaturesSchema,
-		lemma: z.object({
-			lemmaKind: z.literal("Lexeme"),
-			pos: z.literal("VERB"),
-			spelledLemma: z.string(),
-		}),
-		spelledSurface: z.string(),
-		surfaceKind: z.literal("Inflection"),
-	}),
+const GermanVerbLemmaIdentityShape = {
+	lemmaKind: z.literal("Lexeme"),
+	pos: z.literal("VERB"),
+} satisfies z.ZodRawShape;
+
+export const GermanVerbInflectionSelectionSchema = buildInflectionSelection({
+	inflectionalFeaturesSchema: GermanVerbInflectionalFeaturesSchema,
+	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
 }) satisfies z.ZodType<
 	AbstractSelectionFor<"Standard", "Inflection", "Lexeme">
 >;
 
-export const GermanVerbLemmaSelectionSchema = z.object({
-	orthographicStatus: z.literal("Standard"),
-	surface: z.object({
-		lemma: z.object({
-			lemmaKind: z.literal("Lexeme"),
-			pos: z.literal("VERB"),
-			spelledLemma: z.string(),
-		}),
-		spelledSurface: z.string(),
-		surfaceKind: z.literal("Lemma"),
-	}),
+export const GermanVerbLemmaSelectionSchema = buildLemmaSelection({
+	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
 }) satisfies z.ZodType<AbstractSelectionFor<"Standard", "Lemma", "Lexeme">>;
 
 export const GermanVerbLemmaSchema = z.object({
