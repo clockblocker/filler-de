@@ -13,6 +13,7 @@ bun test path/to/test.test.ts  # single file
 # Code quality
 bun run lint         # check only
 bun fix              # fix lint + format
+bun run typecheck    # full tsgo typecheck
 bun run typecheck:changed  # typecheck vs master (RUN BEFORE FINISHING WORK)
 
 # CLI E2E (requires running Obsidian + .env.cli-e2e)

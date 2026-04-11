@@ -110,7 +110,8 @@ export function parseLexicalMetaTag(
 
 	const linguisticUnit =
 		lexicalUnitFromToken[unitToken as keyof typeof lexicalUnitFromToken];
-	const surfaceKind = surfaceKindFromToken[surfaceToken];
+	const surfaceKind =
+		surfaceKindFromToken[surfaceToken as keyof typeof surfaceKindFromToken];
 
 	if (!linguisticUnit || !surfaceKind) {
 		return null;

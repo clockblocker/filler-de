@@ -106,7 +106,7 @@ function makeHarness(options: HarnessOptions) {
 		parseLibraryBasename: () => null,
 	});
 	textfresser.getState().promptRunner = {
-		generate: (kind) => {
+		generate: (kind: string) => {
 			if (kind === "Lemma") {
 				if (lemmaFailuresLeft > 0) {
 					lemmaFailuresLeft -= 1;

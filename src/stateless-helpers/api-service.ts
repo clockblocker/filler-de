@@ -98,19 +98,24 @@ export class ApiService {
 				new Notice("Missing Google API key in settings.");
 			}
 
-			function fetchViaObsidian(
-				input: RequestInfo,
+			const googleApiKey = this.settings.googleApiKey;
+			const fetchViaObsidian = async (
+				input: string | URL | Request,
 				init?: RequestInit,
-			): Promise<Response> {
+			): Promise<Response> => {
 				const url =
-					typeof input === "string" ? input : (input as any).url;
+					typeof input === "string"
+						? input
+						: input instanceof URL
+							? input.toString()
+							: input.url;
 
 				const headers = normalizeHeaders(init?.headers);
 				const requestLabel = takeHeader(headers, REQUEST_LABEL_HEADER);
 
 				// Ensure Authorization header is there for Google Gemini
 				if (!headers.authorization) {
-					headers.authorization = `Bearer ${this.settings.googleApiKey}`;
+					headers.authorization = `Bearer ${googleApiKey}`;
 				}
 
 				if (init?.body && !headers["content-type"]) {
@@ -131,7 +136,7 @@ export class ApiService {
 							}: ${r.status} - ${r.text}`,
 							location: "ApiService",
 						});
-					}
+				};
 					return new Response(r.text, {
 						headers: r.headers as any,
 						status: r.status,

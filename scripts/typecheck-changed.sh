@@ -14,7 +14,7 @@ CHANGED_FILES_TMP=$(mktemp)
 trap 'rm -f "$CHANGED_FILES_TMP"' EXIT
 printf '%s\n' "$CHANGED_FILE_LIST" > "$CHANGED_FILES_TMP"
 
-TSC_OUTPUT=$(bun x tsc --noEmit --pretty false 2>&1)
+TSC_OUTPUT=$(bun x tsgo --noEmit --pretty false 2>&1)
 TSC_EXIT=$?
 
 if [ $TSC_EXIT -eq 0 ]; then

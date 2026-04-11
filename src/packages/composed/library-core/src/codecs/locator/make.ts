@@ -4,7 +4,12 @@ import type { TreeNodeKind } from "../../healer/library-tree/tree-node/types/ato
 import type { CodecError } from "../errors";
 import type { SuffixCodecs } from "../internal/suffix";
 import type { SegmentIdCodecs } from "../segment-id";
-import type { CanonicalSplitPathInsideLibraryOf } from "../split-path-with-separated-suffix";
+import type {
+	CanonicalSplitPathInsideLibraryOf,
+	CanonicalSplitPathToFileInsideLibrary,
+	CanonicalSplitPathToFolderInsideLibrary,
+	CanonicalSplitPathToMdFileInsideLibrary,
+} from "../split-path-with-separated-suffix";
 import type {
 	CorrespondingSplitPathKind,
 	CorrespondingTreeNodeKind,
@@ -29,9 +34,29 @@ export function makeLocatorCodecs(
 	_segmentId: SegmentIdCodecs,
 	_suffix: SuffixCodecs,
 ): LocatorCodecs {
+	const canonicalSplitPathToLocator: LocatorCodecs["canonicalSplitPathInsideLibraryToLocator"] =
+		(sp) => {
+			switch (sp.kind) {
+				case "File":
+					return canonicalSplitPathInsideLibraryToLocator(
+						_segmentId,
+						sp as unknown as CanonicalSplitPathToFileInsideLibrary,
+					) as never;
+				case "MdFile":
+					return canonicalSplitPathInsideLibraryToLocator(
+						_segmentId,
+						sp as unknown as CanonicalSplitPathToMdFileInsideLibrary,
+					) as never;
+				case "Folder":
+					return canonicalSplitPathInsideLibraryToLocator(
+						_segmentId,
+						sp as unknown as CanonicalSplitPathToFolderInsideLibrary,
+					) as never;
+			}
+		};
+
 	return {
-		canonicalSplitPathInsideLibraryToLocator: (sp) =>
-			canonicalSplitPathInsideLibraryToLocator(_segmentId, sp),
+		canonicalSplitPathInsideLibraryToLocator: canonicalSplitPathToLocator,
 		locatorToCanonicalSplitPathInsideLibrary: (loc) =>
 			locatorToCanonicalSplitPathInsideLibrary(_segmentId, _suffix, loc),
 	};

@@ -69,13 +69,14 @@ export class TFolderHelper {
 			const createdFolder = await this.vault.createFolder(systemPath);
 			return ok(createdFolder);
 		} catch (error) {
-			if (error.message?.includes("already exists")) {
+			const message = getErrorMessage(error);
+			if (message.includes("already exists")) {
 				// Race condition: folder was created by another process
 				return this.getFolder(splitPath).mapErr((getErr) =>
 					errorCreationRaceCondition("folder", systemPath, getErr),
 				);
 			}
-			return err(errorCreateFailed("folder", systemPath, error.message));
+			return err(errorCreateFailed("folder", systemPath, message));
 		}
 	}
 

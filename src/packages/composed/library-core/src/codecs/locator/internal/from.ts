@@ -13,7 +13,6 @@ import type {
 	SegmentIdCodecs,
 } from "../../segment-id";
 import type {
-	AnyCanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibraryOf,
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
@@ -21,7 +20,6 @@ import type {
 } from "../../split-path-with-separated-suffix";
 import type { NodeLocatorOf } from "../../types";
 import type { CorrespondingTreeNodeKind } from "../../types/type-mappings";
-import type { TreeNodeLocator } from "../types";
 
 type SegmentIdForKind = {
 	[TreeNodeKind.File]: FileNodeSegmentId;
@@ -84,11 +82,7 @@ export function canonicalSplitPathInsideLibraryToLocator<
 >(
 	segmentId: SegmentIdCodecs,
 	sp: CanonicalSplitPathInsideLibraryOf<SK>,
-): Result<NodeLocatorOf<CorrespondingTreeNodeKind<SK>>, CodecError>;
-export function canonicalSplitPathInsideLibraryToLocator(
-	segmentId: SegmentIdCodecs,
-	sp: AnyCanonicalSplitPathInsideLibrary,
-): Result<TreeNodeLocator, CodecError> {
+): Result<NodeLocatorOf<CorrespondingTreeNodeKind<SK>>, CodecError> {
 	// Both pathParts and segmentIdChainToParent INCLUDE Library root
 	const segmentIdChainToParent: SectionNodeSegmentIdChain = sp.pathParts.map(
 		(nodeName) =>
@@ -102,38 +96,49 @@ export function canonicalSplitPathInsideLibraryToLocator(
 
 	switch (sp.kind) {
 		case SplitPathKind.File:
+			{
+				const filePath =
+					sp as unknown as CanonicalSplitPathToFileInsideLibrary;
 			return serializeAndBuildLocator(
 				segmentId,
 				{
-					coreName: sp.separatedSuffixedBasename.coreName,
-					extension: sp.extension,
+					coreName: filePath.separatedSuffixedBasename.coreName,
+					extension: filePath.extension,
 					targetKind: TreeNodeKind.File,
 				},
 				segmentIdChainToParent,
-				{ extension: sp.extension },
-			);
+				{ extension: filePath.extension },
+			) as Result<NodeLocatorOf<CorrespondingTreeNodeKind<SK>>, CodecError>;
+			}
 
 		case SplitPathKind.MdFile:
+			{
+				const mdPath =
+					sp as unknown as CanonicalSplitPathToMdFileInsideLibrary;
 			return serializeAndBuildLocator(
 				segmentId,
 				{
-					coreName: sp.separatedSuffixedBasename.coreName,
+					coreName: mdPath.separatedSuffixedBasename.coreName,
 					extension: MD,
 					targetKind: TreeNodeKind.Scroll,
 				},
 				segmentIdChainToParent,
 				{},
-			);
+			) as Result<NodeLocatorOf<CorrespondingTreeNodeKind<SK>>, CodecError>;
+			}
 
 		case SplitPathKind.Folder:
+			{
+				const folderPath = sp as CanonicalSplitPathToFolderInsideLibrary;
 			return serializeAndBuildLocator(
 				segmentId,
 				{
-					coreName: sp.separatedSuffixedBasename.coreName,
+					coreName: folderPath.separatedSuffixedBasename.coreName,
 					targetKind: TreeNodeKind.Section,
 				},
 				segmentIdChainToParent,
 				{},
-			);
+			) as Result<NodeLocatorOf<CorrespondingTreeNodeKind<SK>>, CodecError>;
+			}
 	}
 }

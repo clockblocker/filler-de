@@ -2,7 +2,6 @@
 	"compilerOptions": {
 		"allowImportingTsExtensions": true,
 		"allowJs": true,
-		"baseUrl": ".",
 
 		// Override Bun's default settings that might affect discriminated unions
 		"isolatedModules": false,
@@ -32,40 +31,40 @@
 		"verbatimModuleSyntax": true,
 		"paths": {
 			"@textfresser/vault-action-manager": [
-				"src/packages/independent/vault-action-manager/src/index.ts"
+				"./src/packages/independent/vault-action-manager/src/index.ts"
 			],
 			"@textfresser/vault-action-manager/*": [
-				"src/packages/independent/vault-action-manager/src/*"
+				"./src/packages/independent/vault-action-manager/src/*"
 			],
 			"@textfresser/lexical-generation": [
-				"src/packages/independent/lexical-generation/src/index.ts"
+				"./src/packages/independent/lexical-generation/src/index.ts"
 			],
 			"@textfresser/lexical-generation/*": [
-				"src/packages/independent/lexical-generation/src/*"
+				"./src/packages/independent/lexical-generation/src/*"
 			],
 			"@textfresser/linguistics": [
-				"src/packages/independent/old-linguistics/src/index.ts"
+				"./src/packages/independent/old-linguistics/src/index.ts"
 			],
 			"@textfresser/linguistics/*": [
-				"src/packages/independent/old-linguistics/src/*"
+				"./src/packages/independent/old-linguistics/src/*"
 			],
 			"@textfresser/library-core": [
-				"src/packages/composed/library-core/src/index.ts"
+				"./src/packages/composed/library-core/src/index.ts"
 			],
 			"@textfresser/library-core/*": [
-				"src/packages/composed/library-core/src/*"
+				"./src/packages/composed/library-core/src/*"
 			],
 			"@textfresser/note-addressing": [
-				"src/packages/independent/note-addressing/src/index.ts"
+				"./src/packages/independent/note-addressing/src/index.ts"
 			],
 			"@textfresser/note-addressing/*": [
-				"src/packages/independent/note-addressing/src/*"
+				"./src/packages/independent/note-addressing/src/*"
 			],
 			"@textfresser/obsidian-event-layer": [
-				"src/packages/composed/obsidian-event-layer/src/index.ts"
+				"./src/packages/composed/obsidian-event-layer/src/index.ts"
 			],
 			"@textfresser/obsidian-event-layer/*": [
-				"src/packages/composed/obsidian-event-layer/src/*"
+				"./src/packages/composed/obsidian-event-layer/src/*"
 			]
 		}
 	},

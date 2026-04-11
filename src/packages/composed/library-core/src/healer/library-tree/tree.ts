@@ -347,7 +347,7 @@ export class Tree implements TreeFacade {
 				current = this.root;
 				continue;
 			}
-			const child = current.children[segId];
+			const child: TreeNode | undefined = current.children[segId];
 			if (!child || child.kind !== TreeNodeKind.Section) return undefined;
 			current = child;
 		}
@@ -362,7 +362,7 @@ export class Tree implements TreeFacade {
 				current = this.root;
 				continue;
 			}
-			let child = current.children[segId];
+			let child: TreeNode | undefined = current.children[segId];
 			if (!child) {
 				const nodeName = this.extractNodeNameFromSegmentId(segId);
 				child = {

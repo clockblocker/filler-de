@@ -88,9 +88,11 @@ class ObsidianEventLayerImpl implements ObsidianEventLayer {
 		kind: K,
 		handler: UserEventHandler<K>,
 	): Teardown {
-		this.handlers.set(kind, handler as UserEventHandler<UserEventKind>);
+		const storedHandler =
+			handler as unknown as UserEventHandler<UserEventKind>;
+		this.handlers.set(kind, storedHandler);
 		return () => {
-			if (this.handlers.get(kind) === handler) {
+			if (this.handlers.get(kind) === storedHandler) {
 				this.handlers.delete(kind);
 			}
 		};

@@ -34,6 +34,8 @@ import {
 import {
 	createObsidianEventLayer,
 	type ObsidianEventLayer,
+	type UserEventHandler,
+	type UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
@@ -255,9 +257,10 @@ export default class TextEaterPlugin extends Plugin {
 					this.librarian,
 					this.textfresser ?? undefined,
 				);
-				for (const { kind, handler } of handlers) {
-					this.handlerTeardowns.push(
-						this.userEventInterceptor.setHandler(kind, handler),
+				for (const handlerDef of handlers) {
+					this.registerUserEventHandler(
+						handlerDef.kind,
+						handlerDef.handler,
 					);
 				}
 			} catch (error) {
@@ -685,9 +688,10 @@ export default class TextEaterPlugin extends Plugin {
 				this.librarian,
 				this.textfresser ?? undefined,
 			);
-			for (const { kind, handler } of handlers) {
-				this.handlerTeardowns.push(
-					this.userEventInterceptor.setHandler(kind, handler),
+			for (const handlerDef of handlers) {
+				this.registerUserEventHandler(
+					handlerDef.kind,
+					handlerDef.handler,
 				);
 			}
 		} catch (error) {
@@ -707,6 +711,18 @@ export default class TextEaterPlugin extends Plugin {
 			{
 				generateInflections: this.settings.generateInflections,
 			},
+		);
+	}
+
+	private registerUserEventHandler(
+		kind: UserEventKind,
+		handler: unknown,
+	): void {
+		this.handlerTeardowns.push(
+			this.userEventInterceptor.setHandler(
+				kind as never,
+				handler as never,
+			),
 		);
 	}
 

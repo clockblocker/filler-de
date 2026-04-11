@@ -6,6 +6,7 @@ import {
 	KnownLanguageSchema,
 	ReprForLanguage,
 	type SelectionActionPlacement as SelectionActionPlacementType,
+	SelectionActionPlacementSchema,
 	type TargetLanguage,
 	TargetLanguageSchema,
 } from "../types";
@@ -63,7 +64,10 @@ export class SettingsTab extends PluginSettingTab {
 				dropdown
 					.addOption("google", "Google")
 					.setValue(this.plugin.settings.apiProvider)
-					.onChange(async (value: "google") => {
+					.onChange(async (value) => {
+						if (value !== "google") {
+							return;
+						}
 						this.plugin.settings.apiProvider = value;
 						await this.plugin.saveSettings();
 					});
@@ -81,10 +85,14 @@ export class SettingsTab extends PluginSettingTab {
 				}
 				dropdown
 					.setValue(this.plugin.settings.languages.known)
-					.onChange(async (value: KnownLanguage) => {
+					.onChange(async (value) => {
+						const parsed = KnownLanguageSchema.safeParse(value);
+						if (!parsed.success) {
+							return;
+						}
 						this.plugin.settings.languages = {
 							...this.plugin.settings.languages,
-							known: value,
+							known: parsed.data,
 						};
 						await this.plugin.saveSettings();
 						this.display();
@@ -100,10 +108,14 @@ export class SettingsTab extends PluginSettingTab {
 				}
 				dropdown
 					.setValue(this.plugin.settings.languages.target)
-					.onChange(async (value: TargetLanguage) => {
+					.onChange(async (value) => {
+						const parsed = TargetLanguageSchema.safeParse(value);
+						if (!parsed.success) {
+							return;
+						}
 						this.plugin.settings.languages = {
 							...this.plugin.settings.languages,
-							target: value,
+							target: parsed.data,
 						};
 						await this.plugin.saveSettings();
 					});
@@ -149,12 +161,19 @@ export class SettingsTab extends PluginSettingTab {
 							] as string,
 						)
 						.onChange(
-							async (value: SelectionActionPlacementType) => {
+							async (value) => {
+								const parsed =
+									SelectionActionPlacementSchema.safeParse(
+										value,
+									);
+								if (!parsed.success) {
+									return;
+								}
 								// Type assertion needed: settingKey is dynamic but we know it's a placement key
 								// biome-ignore lint/suspicious/noExplicitAny: Dynamic settings key access
 								(this.plugin.settings as any)[
 									def.settingKey as string
-								] = value;
+								] = parsed.data;
 								await this.plugin.saveSettings();
 							},
 						);
@@ -169,7 +188,10 @@ export class SettingsTab extends PluginSettingTab {
 					.addOption("left", t.navButtonsLeft)
 					.addOption("right", t.navButtonsRight)
 					.setValue(this.plugin.settings.navButtonsPosition)
-					.onChange(async (value: "left" | "right") => {
+					.onChange(async (value) => {
+						if (value !== "left" && value !== "right") {
+							return;
+						}
 						this.plugin.settings.navButtonsPosition = value;
 						await this.plugin.saveSettings();
 					});

@@ -22,7 +22,7 @@ Source: local health-check run before new Textfresser feature work.
   - Audit other top-level `mock.module(...)` users for similar bleed.
 
 #### 0.2) Restore `src/` TypeScript compile health
-- Current state: `bun x tsc --noEmit -skipLibCheck` reports production-code errors in `src/` (not only tests).
+- Current state: `bun run typecheck` reports production-code errors in `src/` (not only tests).
 - High-priority breakpoints:
   - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/@textfresser/library-core/codecs/locator/internal/from.ts`
   - `/Users/annagorelova/work/Textfresser_vault/.obsidian/plugins/textfresser/src/commanders/librarian/commands/split-in-blocks.ts`
