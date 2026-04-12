@@ -4,6 +4,7 @@ import type { Lemma } from "../src";
 import {
 	GermanNounInflectionSelectionSchema,
 	GermanNounLemmaSchema,
+	GermanNounLemmaSelectionSchema,
 	GermanNounStandardPartialSelectionSchema,
 	GermanNounTypoInflectionSelectionSchema,
 } from "../src/german/lu/lexeme/noun/german-noun-bundle";
@@ -31,6 +32,7 @@ describe("German noun schemas", () => {
 					number: "Plur",
 				},
 				lemma: {
+					emojiDescription: ["👶"],
 					lemmaKind: "Lexeme",
 					pos: "NOUN",
 					spelledLemma: "Kind",
@@ -66,6 +68,7 @@ describe("German noun schemas", () => {
 
 	it("accepts lexical inherent features for German nouns", () => {
 		const result = GermanNounLemmaSchema.safeParse({
+			emojiDescription: ["👶"],
 			inherentFeatures: {
 				gender: "Neut",
 			},
@@ -81,6 +84,32 @@ describe("German noun schemas", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("rejects invalid emoji descriptions", () => {
+		const lemmaResult = GermanNounLemmaSchema.safeParse({
+			emojiDescription: [],
+			inherentFeatures: {},
+			lexicalRelations: {},
+			morphologicalRelations: {},
+			pos: "NOUN",
+		});
+		const selectionResult = GermanNounLemmaSelectionSchema.safeParse({
+			orthographicStatus: "Standard",
+			surface: {
+				lemma: {
+					emojiDescription: ["house"],
+					lemmaKind: "Lexeme",
+					pos: "NOUN",
+					spelledLemma: "Haus",
+				},
+				spelledSurface: "Haus",
+				surfaceKind: "Lemma",
+			},
+		});
+
+		expect(lemmaResult.success).toBe(false);
+		expect(selectionResult.success).toBe(false);
 	});
 
 	it("rejects unsupported inherent feature keys", () => {

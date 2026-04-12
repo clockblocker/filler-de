@@ -3,6 +3,7 @@ import type {
 	OrthographicStatus,
 	SurfaceKind,
 } from "../enums/core/selection";
+import { EmojiDescriptionSchema } from "../emoji-description";
 
 type EmptyZodRawShape = Record<never, never>;
 type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
@@ -44,6 +45,7 @@ export function buildLemmaSelection<
 	const lemmaSchema = z
 		.object(lemmaIdentityShape)
 		.extend({
+			emojiDescription: EmojiDescriptionSchema.optional(),
 			spelledLemma: z.string(),
 		})
 		.extend(lemmaExtraShape);

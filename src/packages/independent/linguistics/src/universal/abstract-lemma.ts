@@ -16,6 +16,7 @@ import type {
 import type { LemmaDiscriminatorFor } from "./lemma-discriminator";
 
 type AbstractLexemeLemma<P extends Pos = Pos> = Prettify<{
+	emojiDescription?: string[];
 	pos: P;
 	inherentFeatures: Partial<AbstractFeatures>;
 	lexicalRelations: AbstractLexicalRelations;
@@ -24,6 +25,7 @@ type AbstractLexemeLemma<P extends Pos = Pos> = Prettify<{
 }>;
 
 type AbstractMorphemLemma<MK extends MorphemeKind = MorphemeKind> = Prettify<{
+	emojiDescription?: string[];
 	morphemeKind: MK;
 	lexicalRelations: AbstractLexicalRelations;
 	isClosedSet?: IsClosedSet;
@@ -31,6 +33,7 @@ type AbstractMorphemLemma<MK extends MorphemeKind = MorphemeKind> = Prettify<{
 
 type AbstractPhrasemLemma<PK extends PhrasemeKind = PhrasemeKind> = Prettify<
 	{
+		emojiDescription?: string[];
 		lexicalRelations: AbstractLexicalRelations;
 		[PHRASEME_KIND_KEY]: PK;
 	} & (

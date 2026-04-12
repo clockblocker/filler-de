@@ -35,6 +35,7 @@ describe("German non-lexeme schemas", () => {
 
 	it("accepts German morpheme lemmas with lexical relations", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
+			emojiDescription: ["🧩"],
 			isClosedSet: false,
 			lexicalRelations: {
 				synonym: ["ab-"],
@@ -96,6 +97,7 @@ describe("German non-lexeme schemas", () => {
 				orthographicStatus: "Typo",
 				surface: {
 					lemma: {
+						emojiDescription: ["🧩"],
 						lemmaKind: "Morpheme",
 						morphemeKind: "Suffix",
 						spelledLemma: "-heit",
@@ -109,6 +111,7 @@ describe("German non-lexeme schemas", () => {
 				orthographicStatus: "Typo",
 				surface: {
 					lemma: {
+						emojiDescription: ["💬"],
 						lemmaKind: "Phraseme",
 						phrasemeKind: "Cliché",
 						spelledLemma: "Zeit ist Geld",

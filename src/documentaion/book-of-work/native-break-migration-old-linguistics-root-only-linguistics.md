@@ -24,6 +24,7 @@ Meta-tag rule:
 - the meta tag represents canonical note identity, not full native selection identity
 - it is allowed to drive cache/disambiguation filtering for stored note senses
 - it must encode only the stable note-shaping fields needed for that job: lemma kind, discriminator, and surface kind
+- target language is intentionally excluded because canonical note identity is already language-scoped by note location / app policy
 - it must not encode `orthographicStatus`
 - it must not encode `inflectionalFeatures`
 - `orthographicStatus` and `inflectionalFeatures` belong to selection-instance resolution, not canonical stored-note identity
@@ -40,18 +41,23 @@ Add these exports at the root:
 - required type-only broad aliases for ergonomic downstream use:
   - `AnyLemma<L>`
   - `AnySelection<L>`
+- `UnknownSelection`
 - `OrthographicStatus`
 - `SurfaceKind`
 - `LemmaKind`
 - `Pos`
 - `PhrasemeKind`
 - `MorphemeKind`
+- generic cross-language native enums that downstream consumers need for mapping/parsing/formatting:
+  - `Case`
+  - `Gender`
+  - `GrammaticalNumber`
 
 Generator code should obtain targeted schemas by indexing into the exported registries, not by importing leaf primitives or separate schema helper barrels. Examples:
 - lemma generation for German verb: `LemmaSchema.German.Lexeme.VERB`
 - inflection generation for German noun: `SelectionSchema.German.Standard.Inflection.Lexeme.NOUN`
 
-Do not add leaf feature enums to the root just to preserve the old `schema-primitives` pattern. Do not add parallel top-level helper exports for every targeted branch unless a concrete ergonomics problem appears during implementation.
+Do not add leaf feature enums, language-specific feature enums, or targeted branch helper exports to the root just to preserve the old `schema-primitives` pattern. Generic cross-language enums needed by real downstream consumers are allowed; everything else stays off the root unless a concrete ergonomics problem appears during implementation.
 
 Do not expose these from the new root:
 - legacy aliases like `LexicalPos`, `POS`, `LinguisticUnitKind`, `LANGUAGE_ISO_CODE`
@@ -74,7 +80,7 @@ Do not expose these from the new root:
 
 `@textfresser/lexical-generation`
 - Replace `ResolvedLemma` with `ResolvedSelection`, inferred from the appropriate `SelectionSchema.German` branches for non-`Unknown` selections
-- For `Unknown` results, `ResolvedSelection` is exactly `AbstractSelectionFor<"Unknown">`, i.e. `{ orthographicStatus: "Unknown" }`
+- For `Unknown` results, `ResolvedSelection` uses a small public `UnknownSelection` type, i.e. `{ orthographicStatus: "Unknown" }`; do not expose `AbstractSelectionFor` as part of the public root API just for this case
 - Rename `generateLemma()` to `resolveSelection()`
 - Rename `createMetaTagFromResolvedLemma()` to `createMetaTagFromSelection()`
 - Rename `createLexicalMeta({ lemma })` to `createLexicalMeta({ selection })`
@@ -89,8 +95,10 @@ Do not expose these from the new root:
   - `LexicalVerbConjugation`
   - `LexicalVerbValency`
   - legacy `LexicalPos` / `LexicalPhrasemeKind` / `LexicalSurfaceKind`
-- Replace ad hoc feature unions with a schema-native shape:
-  - `features: { inherentFeatures: Record<string, string | boolean> }`
+- Replace ad hoc feature unions with a schema-native typed shape that preserves native feature keys and value types:
+  - `features: { inherentFeatures: Partial<...native generic feature shape...> }`
+  - do not collapse `inherentFeatures` to `Record<string, string | boolean>`
+  - if Textfresser renders tags generically from `inherentFeatures`, the contract must preserve stable feature keys and native enum/boolean values so formatting logic does not become heuristic
 - Keep `inflections`, `relations`, and `morphemicBreakdown`, but switch their value vocabularies to native enums where those values are exposed
 - Change morpheme separability from string labels to boolean `isSeparable`
 - Keep `LexicalRelationKind` as a `lexical-generation`-owned DTO contract for now
@@ -118,7 +126,7 @@ Do not expose these from the new root:
 9. Rewrite Textfresser consumers:
    - localize app-owned note/path/tag concepts instead of importing them from linguistics
    - switch section routing to native discriminators like `Pos`, `PhrasemeKind`, `MorphemeKind`, `LemmaKind`, and `SurfaceKind`
-   - allow Textfresser to consume generic native linguistic enums from the root for mapping/parsing/formatting, for example `Case`, `Gender`, and `Number`; do not introduce language-specific exports
+   - allow Textfresser to consume generic native linguistic enums from the root for mapping/parsing/formatting, for example `Case`, `Gender`, and `GrammaticalNumber`; do not introduce language-specific exports
    - remove nounClass-based branching; use `PROPN` directly
    - narrow broad selection/lemma types through discriminator fields rather than importing targeted schemas
    - replace adjective/verb-specific tag builders with generic `inherentFeatures` tag rendering
@@ -131,8 +139,9 @@ Do not expose these from the new root:
 ## Test cases and acceptance
 
 Required checks:
-- `rg` finds no `old-linguistics`
-- `rg` finds no `@textfresser/linguistics/*` imports outside the package itself
+- production/source import checks exclude docs and prose-only references:
+  - `rg` finds no `old-linguistics` references in runtime/package source after deletion
+  - `rg` finds no `@textfresser/linguistics/*` imports in consumer code outside the package itself
 - root export smoke tests cover the curated root surface (`LemmaSchema`, `SelectionSchema`, discriminants, and any intentionally exported type-only convenience aliases)
 - lexical-generation tests cover:
   - `resolveSelection()` success cases

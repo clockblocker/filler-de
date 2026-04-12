@@ -15,7 +15,11 @@ type LemmaFor<
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > = LK extends LemmaKind
 	? Prettify<
-			LemmaIdentityFieldsFor<LK, D> & { lemmaKind: LK; spelledLemma: string }
+			LemmaIdentityFieldsFor<LK, D> & {
+				emojiDescription?: string[];
+				lemmaKind: LK;
+				spelledLemma: string;
+			}
 		>
 	: never;
 

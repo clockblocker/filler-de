@@ -1,5 +1,6 @@
 import z from "zod/v3";
 import type { OrthographicStatus } from "../enums/core/selection";
+import { EmojiDescriptionSchema } from "../emoji-description";
 
 type EmptyZodRawShape = Record<never, never>;
 type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
@@ -40,6 +41,7 @@ export function buildInflectionSelection<
 	const lemmaSchema = z
 		.object(lemmaIdentityShape)
 		.extend({
+			emojiDescription: EmojiDescriptionSchema.optional(),
 			spelledLemma: z.string(),
 		})
 		.extend(lemmaExtraShape);
