@@ -1,4 +1,4 @@
-import type { Prettify } from "src/types/helpers";
+import type { Prettify } from "../../../../../types/helpers";
 import type {
 	LemmaKind,
 	OrthographicStatus,
@@ -53,5 +53,4 @@ export type AbstractSelectionFor<
 		>
 	: never;
 
-// type InfCheck = AbstractSelectionFor<"Standard", "Inflection", "Phraseme">;
 // type InfCheck1 = AbstractSelectionFor<"Standard", "Lemma", "Lexeme">;
