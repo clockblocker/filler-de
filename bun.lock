@@ -77,7 +77,7 @@
       },
     },
     "src/packages/independent/linguistics": {
-      "name": "@textfresser/linguistics-next",
+      "name": "@textfresser/linguistics",
       "version": "0.0.0",
       "dependencies": {
         "zod": "3.25.76",
@@ -92,7 +92,7 @@
       "version": "0.0.0",
     },
     "src/packages/independent/old-linguistics": {
-      "name": "@textfresser/linguistics",
+      "name": "@textfresser/old-linguistics",
       "version": "0.0.0",
       "dependencies": {
         "zod": "3.25.76",
@@ -283,13 +283,13 @@
 
     "@textfresser/library-core": ["@textfresser/library-core@workspace:src/packages/composed/library-core"],
 
-    "@textfresser/linguistics": ["@textfresser/linguistics@workspace:src/packages/independent/old-linguistics"],
-
-    "@textfresser/linguistics-next": ["@textfresser/linguistics-next@workspace:src/packages/independent/linguistics"],
+    "@textfresser/linguistics": ["@textfresser/linguistics@workspace:src/packages/independent/linguistics"],
 
     "@textfresser/note-addressing": ["@textfresser/note-addressing@workspace:src/packages/independent/note-addressing"],
 
     "@textfresser/obsidian-event-layer": ["@textfresser/obsidian-event-layer@workspace:src/packages/composed/obsidian-event-layer"],
+
+    "@textfresser/old-linguistics": ["@textfresser/old-linguistics@workspace:src/packages/independent/old-linguistics"],
 
     "@textfresser/vault-action-manager": ["@textfresser/vault-action-manager@workspace:src/packages/independent/vault-action-manager"],
 
@@ -667,9 +667,9 @@
 
     "@textfresser/linguistics/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
-    "@textfresser/linguistics-next/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
-
     "@textfresser/obsidian-event-layer/@codemirror/view": ["@codemirror/view@6.41.0", "", { "dependencies": { "@codemirror/state": "^6.6.0", "crelt": "^1.0.6", "style-mod": "^4.1.0", "w3c-keyname": "^2.2.4" } }, "sha512-6H/qadXsVuDY219Yljhohglve8xf4B8xJkVOEWfA5uiYKiTFppjqsvsfR5iPA0RbvRBoOyTZpbLIxe9+0UR8xA=="],
+
+    "@textfresser/old-linguistics/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@types/bun/bun-types": ["bun-types@1.3.0", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-u8X0thhx+yJ0KmkxuEo9HAtdfgCBaM/aI9K90VQcQioAmkVp3SG3FkwWGibUFz3WdXAdcsqOcbU40lK7tbHdkQ=="],
 

@@ -5,11 +5,34 @@ import type {
 	LemmaSchemaLanguageShape,
 	SelectionSchemaLanguageShape,
 } from "./registry-shapes";
+import type { AbstractLemma } from "./universal/abstract-lemma";
+import type { AbstractSelectionFor } from "./universal/abstract-selection";
+import {
+	LemmaKind as LemmaKindSchema,
+	OrthographicStatus as OrthographicStatusSchema,
+	SurfaceKind as SurfaceKindSchema,
+} from "./universal/enums/core/selection";
+import { Case as CaseSchema } from "./universal/enums/feature/ud/case";
+import { Gender as GenderSchema } from "./universal/enums/feature/ud/gender";
+import { GrammaticalNumber as GrammaticalNumberSchema } from "./universal/enums/feature/ud/number";
+export { MorphemeKind } from "./universal/enums/kind/morpheme-kind";
+import {
+	PhrasemeKind as PhrasemeKindSchema,
+} from "./universal/enums/kind/phraseme-kind";
+import { Pos as PosSchema } from "./universal/enums/kind/pos";
 
-const supportedLanguages = ["German"] as const;
+export const TARGET_LANGUAGES = ["German"] as const;
 
-const SupportedLanguage = z.enum(supportedLanguages);
-type SupportedLanguage = z.infer<typeof SupportedLanguage>;
+export const TargetLanguageSchema = z.enum(TARGET_LANGUAGES);
+export const OrthographicStatus = OrthographicStatusSchema.enum;
+export const SurfaceKind = SurfaceKindSchema.enum;
+export const LemmaKind = LemmaKindSchema.enum;
+export const Case = CaseSchema.enum;
+export const Gender = GenderSchema.enum;
+export const GrammaticalNumber = GrammaticalNumberSchema.enum;
+export const PhrasemeKind = PhrasemeKindSchema.enum;
+export const Pos = PosSchema.enum;
+type SupportedLanguage = z.infer<typeof TargetLanguageSchema>;
 
 type SelectionSchemaShape = {
 	[L in SupportedLanguage]: SelectionSchemaLanguageShape;
@@ -24,6 +47,16 @@ export const LemmaSchema = {
 } satisfies LemmaSchemaShape;
 
 export type TargetLanguage = keyof typeof LemmaSchema;
+export type OrthographicStatus = z.infer<typeof OrthographicStatusSchema>;
+export type SurfaceKind = z.infer<typeof SurfaceKindSchema>;
+export type LemmaKind = z.infer<typeof LemmaKindSchema>;
+export type Case = z.infer<typeof CaseSchema>;
+export type Gender = z.infer<typeof GenderSchema>;
+export type GrammaticalNumber = z.infer<typeof GrammaticalNumberSchema>;
+export type PhrasemeKind = z.infer<typeof PhrasemeKindSchema>;
+export type Pos = z.infer<typeof PosSchema>;
+export type InherentFeatures = AbstractLemma<"Lexeme">["inherentFeatures"];
+export type UnknownSelection = AbstractSelectionFor<"Unknown">;
 
 export type Lemma<
 	L extends TargetLanguage,
@@ -47,6 +80,34 @@ export type Selection<
 		LK
 	> = SelectionDiscriminatorArg<L, OS, SK, LK>,
 > = InferSchema<SelectionSchemaFor<L, OS, SK, LK, D>>;
+
+type LanguageLemmaUnion<L extends TargetLanguage> = {
+	[LK in keyof (typeof LemmaSchema)[L]]: {
+		[D in keyof (typeof LemmaSchema)[L][LK]]: InferSchema<
+			(typeof LemmaSchema)[L][LK][D]
+		>;
+	}[keyof (typeof LemmaSchema)[L][LK]];
+}[keyof (typeof LemmaSchema)[L]];
+
+type ValueOf<T> = T[keyof T];
+
+type KnownSelectionUnionForLanguage<L extends TargetLanguage> = ValueOf<{
+	[OS in Exclude<keyof (typeof SelectionSchema)[L], "Unknown">]: ValueOf<{
+		[SK in keyof (typeof SelectionSchema)[L][OS]]: ValueOf<{
+			[LK in keyof (typeof SelectionSchema)[L][OS][SK]]: InferSchema<
+				ValueOf<(typeof SelectionSchema)[L][OS][SK][LK]>
+			>;
+		}>;
+	}>;
+}>;
+
+export type AnyLemma<L extends TargetLanguage = TargetLanguage> = {
+	[LL in L]: LanguageLemmaUnion<LL>;
+}[L];
+
+export type AnySelection<L extends TargetLanguage = TargetLanguage> = {
+	[LL in L]: KnownSelectionUnionForLanguage<LL> | UnknownSelection;
+}[L];
 
 type LemmaSchemaShape = {
 	[L in SupportedLanguage]: LemmaSchemaLanguageShape;
