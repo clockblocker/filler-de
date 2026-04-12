@@ -1,6 +1,5 @@
 import type { VaultAction } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
-import { SurfaceKind } from "@textfresser/linguistics";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import {
 	buildPropagationActionPair,
@@ -8,6 +7,7 @@ import {
 } from "../../../common/target-path-resolver";
 import { buildSectionMarker } from "../../../domain/dict-note/internal/constants";
 import type { TextfresserRelationKind } from "../../../domain/lexical-types";
+import { SurfaceKind } from "../../../domain/note-linguistic-policy";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,

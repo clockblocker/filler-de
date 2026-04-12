@@ -7,12 +7,12 @@
  * Example: "anfangen" (German, Lexem, Lemma) → ["Worter", "de", "lexem", "lemma", "a", "anf", "anfan"]
  */
 
+import type { TargetLanguage } from "../../../types";
 import {
-	LANGUAGE_ISO_CODE,
+	TARGET_LANGUAGE_CODE,
 	type LinguisticUnitKind,
 	type SurfaceKind,
-} from "@textfresser/linguistics";
-import type { TargetLanguage } from "../../../types";
+} from "../domain/note-linguistic-policy";
 
 const WORTER_ROOT = "Worter";
 const PREFIX_LENGTH = 3;
@@ -52,7 +52,7 @@ export function computeShardedFolderParts(
 	unitKind: LinguisticUnitKind,
 	surfaceKind: SurfaceKind,
 ): string[] {
-	const langCode = LANGUAGE_ISO_CODE[targetLanguage];
+	const langCode = TARGET_LANGUAGE_CODE[targetLanguage];
 	const segments = computeShardSegments(originalName);
 	return [
 		WORTER_ROOT,

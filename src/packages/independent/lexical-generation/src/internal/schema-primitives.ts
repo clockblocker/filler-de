@@ -1,25 +1,23 @@
 export {
 	LEXICAL_PHRASEME_KIND_VALUES,
 	LEXICAL_POS_VALUES,
-	LexicalCaseSchema,
-	LexicalLinguisticUnitKindSchema,
-	LexicalMorphemeKindSchema,
-	LexicalNumberSchema,
-	LexicalPhrasemeKindSchema,
-	LexicalPosSchema,
-	LexicalSurfaceKindSchema,
-} from "@textfresser/linguistics/common";
-export {
 	LexicalAdjectiveClassificationSchema,
 	LexicalAdjectiveDistributionSchema,
 	LexicalAdjectiveGovernedPatternSchema,
 	LexicalAdjectiveGradabilitySchema,
 	LexicalAdjectiveValencySchema,
+	LexicalCaseSchema,
 	LexicalGenusSchema,
+	LexicalLinguisticUnitKindSchema,
+	LexicalMorphemeKindSchema,
 	LexicalNounClassSchema,
+	LexicalNumberSchema,
+	LexicalPhrasemeKindSchema,
+	LexicalPosSchema,
+	LexicalSurfaceKindSchema,
 	LexicalVerbConjugationSchema,
 	LexicalVerbReflexivitySchema,
 	LexicalVerbSeparabilitySchema,
 	LexicalVerbValencySchema,
 	SeparabilitySchema,
-} from "@textfresser/linguistics/de/schema-primitives";
+} from "./legacy-linguistics";

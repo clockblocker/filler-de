@@ -1,4 +1,4 @@
-import type { POS } from "@textfresser/linguistics";
+import type { POS } from "../../../domain/note-linguistic-policy";
 import { cssSuffixFor } from "./section-css-kind";
 import { ALL_DICT_SECTION_KINDS, DictSectionKind } from "./section-kind";
 
@@ -115,4 +115,6 @@ export function getSectionsFor(
 		case "Morphem":
 			return sectionsForMorphem;
 	}
+
+	throw new Error(`Unhandled section query unit: ${JSON.stringify(query)}`);
 }

@@ -1,10 +1,10 @@
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
-import {
-	LANGUAGE_ISO_CODE,
-	type LexicalPos,
-} from "@textfresser/linguistics";
 import { stringifySplitPath } from "../../../stateless-helpers/split-path-comparison";
 import type { TargetLanguage } from "../../../types";
+import {
+	TARGET_LANGUAGE_CODE,
+	type POS as LexicalPos,
+} from "../domain/note-linguistic-policy";
 
 const POS_SUFFIX_BY_POS: Partial<Record<LexicalPos, readonly string[]>> = {
 	Article: ["artikel", "article"],
@@ -36,7 +36,7 @@ export function resolveClosedSetLibraryTarget(
 	}
 
 	const expectedLanguageSuffix = normalizeToken(
-		LANGUAGE_ISO_CODE[params.targetLanguage],
+		TARGET_LANGUAGE_CODE[params.targetLanguage],
 	);
 	const languageMatches = filterByLanguageSuffix(
 		dedupedLibraryCandidates,

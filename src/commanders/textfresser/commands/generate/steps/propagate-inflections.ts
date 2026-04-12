@@ -1,6 +1,5 @@
 import type { VaultAction } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
-import { SurfaceKind } from "@textfresser/linguistics";
 import { logger } from "../../../../../utils/logger";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import {
@@ -12,6 +11,7 @@ import { dictNoteHelper } from "../../../domain/dict-note";
 import { serializeDictNote } from "../../../domain/dict-note/serialize-dict-note";
 import type { DictEntry, EntrySection } from "../../../domain/dict-note/types";
 import type { TextfresserNounInflectionCell } from "../../../domain/lexical-types";
+import { SurfaceKind } from "../../../domain/note-linguistic-policy";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,

@@ -2,12 +2,12 @@ import {
 	SplitPathKind,
 	type SplitPathToMdFile,
 } from "@textfresser/vault-action-manager/types/split-path";
-import {
-	LANGUAGE_ISO_CODE,
-	type LexicalPos,
-	type SurfaceKind,
-} from "@textfresser/linguistics";
 import type { TargetLanguage } from "../../../types";
+import {
+	TARGET_LANGUAGE_CODE,
+	type POS as LexicalPos,
+	type SurfaceKind,
+} from "../domain/note-linguistic-policy";
 import { resolveClosedSetLibraryTarget } from "./closed-set-library-target-resolver";
 import {
 	computeShardedFolderParts,
@@ -187,7 +187,7 @@ function buildUnknownWorkingPath(
 		kind: SplitPathKind.MdFile,
 		pathParts: [
 			"Worter",
-			LANGUAGE_ISO_CODE[targetLanguage],
+			TARGET_LANGUAGE_CODE[targetLanguage],
 			UNKNOWN_WORKING_SEGMENT,
 			first,
 			prefix,
@@ -329,6 +329,6 @@ function isWorterPathForLanguage(
 ): boolean {
 	return (
 		isWorterPath(splitPath) &&
-		splitPath.pathParts[1] === LANGUAGE_ISO_CODE[targetLanguage]
+		splitPath.pathParts[1] === TARGET_LANGUAGE_CODE[targetLanguage]
 	);
 }

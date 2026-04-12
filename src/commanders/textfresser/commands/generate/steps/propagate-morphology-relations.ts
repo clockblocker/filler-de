@@ -1,6 +1,5 @@
 import type { VaultAction } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
-import { SurfaceKind } from "@textfresser/linguistics";
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
 import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
@@ -19,6 +18,7 @@ import {
 	type MorphemeItem,
 	morphemeFormatterHelper,
 } from "../../../domain/morpheme/morpheme-formatter";
+import { SurfaceKind } from "../../../domain/note-linguistic-policy";
 import { cssSuffixFor } from "../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,

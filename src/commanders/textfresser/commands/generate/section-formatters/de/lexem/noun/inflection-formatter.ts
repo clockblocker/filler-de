@@ -1,11 +1,11 @@
 import type {
 	LexemInflections,
 } from "@textfresser/lexical-generation";
-import type { LexicalCase } from "@textfresser/linguistics";
 import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import {
 	CASE_ORDER,
 	CASE_SHORT_LABEL,
+	type LexicalCase,
 	type TextfresserNounInflectionCell,
 } from "../../../../../../domain/lexical-types";
 

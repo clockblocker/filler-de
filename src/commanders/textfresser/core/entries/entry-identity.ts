@@ -7,7 +7,7 @@ import type {
 	LinguisticUnitKind,
 	POS,
 	SurfaceKind,
-} from "@textfresser/linguistics";
+} from "../../domain/note-linguistic-policy";
 
 function buildPrefix(
 	unitKind: LinguisticUnitKind,

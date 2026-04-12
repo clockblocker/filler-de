@@ -1,19 +1,24 @@
 import type {
-	LexicalCase,
-	LexicalGenus,
-	LexicalNumber,
-	LexicalPos,
-	LexicalVerbConjugation,
-	LexicalVerbReflexivity,
-	LexicalVerbSeparability,
-} from "@textfresser/linguistics";
-import type {
 	LexemInflections,
 	LexicalRelationKind,
 } from "@textfresser/lexical-generation";
 import type { TargetLanguage } from "../../../types";
+import type { POS } from "./note-linguistic-policy";
 
-export type TextfresserLexemPos = LexicalPos;
+export type LexicalCase = "Nominative" | "Accusative" | "Genitive" | "Dative";
+export type LexicalGenus = "Femininum" | "Maskulinum" | "Neutrum";
+export type LexicalNumber = "Singular" | "Plural";
+export type LexicalVerbConjugation = "Irregular" | "Regular";
+export type LexicalVerbReflexivity =
+	| "NonReflexive"
+	| "ReflexiveOnly"
+	| "OptionalReflexive";
+export type LexicalVerbSeparability =
+	| "Separable"
+	| "Inseparable"
+	| "None";
+
+export type TextfresserLexemPos = POS;
 export type TextfresserRelationKind = LexicalRelationKind;
 export type TextfresserNounInflectionCell = Extract<
 	LexemInflections,

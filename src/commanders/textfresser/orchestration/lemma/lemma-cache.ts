@@ -8,10 +8,12 @@ import { deLanguagePack } from "../../languages/de/pack";
 import {
 	computeMissingV3SectionKindsFromLemmaResult,
 	findEntryForLemmaResult,
+	resolveExpectedV3SectionKindsFromLemmaResult,
 } from "../../commands/generate/steps/reencounter-sections";
 import type { CommandError } from "../../commands/types";
 import type { Attestation } from "../../common/attestation/types";
 import { dictNoteHelper } from "../../domain/dict-note";
+import { cssSuffixFor } from "../../targets/de/sections/section-css-kind";
 import type {
 	LemmaInvocationCache,
 	TextfresserState,
@@ -86,7 +88,7 @@ export async function handleLemmaCacheHit(params: {
 		return ok(undefined);
 	}
 
-	const missingSections = computeMissingV3SectionKindsFromLemmaResult({
+	const missingSections = computeMissingV3SectionKindsForCache({
 		entry: matchedEntry,
 		lemmaResult: cache.lemmaResult,
 	});
@@ -98,4 +100,24 @@ export async function handleLemmaCacheHit(params: {
 	logger.info("[Textfresser.Lemma] cache-hit incomplete, refetching");
 	onRefetch();
 	return ok(undefined);
+}
+
+function computeMissingV3SectionKindsForCache(params: {
+	entry: Parameters<typeof computeMissingV3SectionKindsFromLemmaResult>[0]["entry"];
+	lemmaResult: LemmaInvocationCache["lemmaResult"];
+}) {
+	const strictMissing = computeMissingV3SectionKindsFromLemmaResult(params);
+	if (strictMissing.length === 0) {
+		return strictMissing;
+	}
+
+	const presentMarkers = new Set(
+		params.entry.sections
+			.map((section) => section.marker)
+			.filter((marker): marker is string => typeof marker === "string"),
+	);
+
+	return resolveExpectedV3SectionKindsFromLemmaResult({
+		lemmaResult: params.lemmaResult,
+	}).filter((sectionKind) => !presentMarkers.has(cssSuffixFor[sectionKind]));
 }

@@ -1,26 +1,23 @@
 export {
-	LANGUAGE_ISO_CODE,
 	LINGUISTIC_UNIT_KINDS,
 	LinguisticUnitKind,
 	LinguisticUnitKindSchema,
 	SURFACE_KINDS,
 	SurfaceKind,
 	SurfaceKindSchema,
-} from "@textfresser/linguistics/common";
+} from "./internal/legacy-linguistics";
 export {
 	PARTS_OF_SPEECH,
-	PARTS_OF_SPEECH_STR,
 	POS,
 	POS_TAGS,
-	POS_TAGS_STR,
-	POSSchema,
+	LexicalPosSchema as POSSchema,
 	PosTag,
 	PosTagSchema,
 	posFormFromPosTag,
 	posTagFormFromPos,
-} from "@textfresser/linguistics/common";
+} from "./internal/legacy-linguistics";
 export {
 	MORPHEME_KINDS,
-	MorphemeKind,
-	MorphemeKindSchema,
-} from "@textfresser/linguistics/common";
+	LexicalMorphemeKind as MorphemeKind,
+	LexicalMorphemeKindSchema as MorphemeKindSchema,
+} from "./internal/legacy-linguistics";

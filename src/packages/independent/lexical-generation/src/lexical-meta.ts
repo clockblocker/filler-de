@@ -6,7 +6,7 @@ import type {
 	LexicalPhrasemeKind,
 	LexicalPos,
 	LexicalSurfaceKind,
-} from "@textfresser/linguistics";
+} from "./internal/legacy-linguistics";
 
 type ParsedLexicalMetaTag =
 	| {

@@ -1,4 +1,8 @@
 import type {
+	KnownLanguage,
+	TargetLanguage,
+} from "./internal/shared/languages";
+import type {
 	LexicalAdjectiveClassification,
 	LexicalAdjectiveDistribution,
 	LexicalAdjectiveGradability,
@@ -13,17 +17,13 @@ import type {
 	LexicalSurfaceKind,
 	LexicalVerbConjugation,
 	LexicalVerbValency,
-} from "@textfresser/linguistics";
+} from "./internal/legacy-linguistics";
 import type { Result } from "neverthrow";
 import type { z } from "zod/v3";
 import type {
 	LexicalGenerationError,
 	LexicalGenerationFailureKind,
 } from "./errors";
-import type {
-	KnownLanguage,
-	TargetLanguage,
-} from "./internal/shared/languages";
 import type { LexicalGenerationSettings } from "./settings";
 
 export type ZodSchemaLike<T> = z.ZodType<T>;

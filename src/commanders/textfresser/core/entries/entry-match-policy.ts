@@ -2,7 +2,7 @@ import type {
 	LinguisticUnitKind,
 	POS,
 	SurfaceKind,
-} from "@textfresser/linguistics";
+} from "../../domain/note-linguistic-policy";
 import type { SectionKey } from "../contracts/section-key";
 import { entryIdentity } from "./entry-identity";
 

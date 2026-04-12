@@ -1,8 +1,3 @@
-import type {
-	LexicalCase,
-	LexicalGenus,
-	LexicalNumber,
-} from "@textfresser/linguistics";
 import type { TargetLanguage } from "../../../../../../types";
 import { extractHashTags } from "../../../../../../utils/text-utils";
 import {
@@ -11,6 +6,9 @@ import {
 	getCaseLabelForTargetLanguage,
 	getGenusLabelForTargetLanguage,
 	getNumberLabelForTargetLanguage,
+	type LexicalCase,
+	type LexicalGenus,
+	type LexicalNumber,
 	NUMBER_ORDER,
 	numberValueFromLocalizedLabel,
 	type TextfresserNounInflectionCell,

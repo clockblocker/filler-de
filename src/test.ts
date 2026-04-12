@@ -1,7 +1,7 @@
 import type {
-	LinguisticUnitKind,
 	MorphemeKind,
 } from "@textfresser/linguistics";
+import type { LinguisticUnitKind } from "./commanders/textfresser/domain/note-linguistic-policy";
 
 type Prettify<T> = {
 	[K in keyof T]: T[K];

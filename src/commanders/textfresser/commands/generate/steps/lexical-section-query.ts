@@ -2,7 +2,7 @@ import type {
 	LexicalInfo,
 	LexicalNounIdentity,
 } from "@textfresser/lexical-generation";
-import type { LexicalGenus } from "@textfresser/linguistics";
+import type { LexicalGenus } from "../../../domain/lexical-types";
 
 type LexemLemma = Extract<LexicalInfo["lemma"], { linguisticUnit: "Lexem" }>;
 

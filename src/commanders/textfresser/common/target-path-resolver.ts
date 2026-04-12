@@ -12,11 +12,11 @@ import {
 	type SplitPathToMdFile,
 } from "@textfresser/vault-action-manager/types/split-path";
 import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import type { TargetLanguage } from "../../../types";
 import {
 	type LinguisticUnitKind,
 	SurfaceKind,
-} from "@textfresser/linguistics";
-import type { TargetLanguage } from "../../../types";
+} from "../domain/note-linguistic-policy";
 import type { MorphemeItem } from "../domain/morpheme/morpheme-formatter";
 import { DictSectionKind } from "../targets/de/sections/section-kind";
 import { resolveDesiredSurfaceKindForPropagationSection } from "./linguistic-wikilink-context";
