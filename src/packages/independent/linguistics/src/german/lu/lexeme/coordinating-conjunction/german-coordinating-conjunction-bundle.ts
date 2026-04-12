@@ -1,0 +1,38 @@
+import { buildGermanLexemeBundle } from "../shared/build-german-lexeme-bundle";
+import {
+	GermanCoordinatingConjunctionInflectionalFeaturesSchema,
+	GermanCoordinatingConjunctionInherentFeaturesSchema,
+} from "./parts/german-coordinating-conjunction-features";
+import {
+	GermanCoordinatingConjunctionLexicalRelationsSchema,
+	GermanCoordinatingConjunctionMorphologicalRelationsSchema,
+} from "./parts/german-coordinating-conjunction-relations";
+
+const GermanCoordinatingConjunctionSchemas = buildGermanLexemeBundle({
+	inflectionalFeaturesSchema:
+		GermanCoordinatingConjunctionInflectionalFeaturesSchema,
+	inherentFeaturesSchema: GermanCoordinatingConjunctionInherentFeaturesSchema,
+	lexicalRelationsSchema: GermanCoordinatingConjunctionLexicalRelationsSchema,
+	morphologicalRelationsSchema:
+		GermanCoordinatingConjunctionMorphologicalRelationsSchema,
+	pos: "CCONJ",
+});
+
+export const GermanCoordinatingConjunctionInflectionSelectionSchema =
+	GermanCoordinatingConjunctionSchemas.InflectionSelectionSchema;
+export const GermanCoordinatingConjunctionLemmaSelectionSchema =
+	GermanCoordinatingConjunctionSchemas.LemmaSelectionSchema;
+export const GermanCoordinatingConjunctionStandardPartialSelectionSchema =
+	GermanCoordinatingConjunctionSchemas.StandardPartialSelectionSchema;
+export const GermanCoordinatingConjunctionStandardVariantSelectionSchema =
+	GermanCoordinatingConjunctionSchemas.StandardVariantSelectionSchema;
+export const GermanCoordinatingConjunctionTypoInflectionSelectionSchema =
+	GermanCoordinatingConjunctionSchemas.TypoInflectionSelectionSchema;
+export const GermanCoordinatingConjunctionTypoLemmaSelectionSchema =
+	GermanCoordinatingConjunctionSchemas.TypoLemmaSelectionSchema;
+export const GermanCoordinatingConjunctionTypoPartialSelectionSchema =
+	GermanCoordinatingConjunctionSchemas.TypoPartialSelectionSchema;
+export const GermanCoordinatingConjunctionTypoVariantSelectionSchema =
+	GermanCoordinatingConjunctionSchemas.TypoVariantSelectionSchema;
+export const GermanCoordinatingConjunctionLemmaSchema =
+	GermanCoordinatingConjunctionSchemas.LemmaSchema;

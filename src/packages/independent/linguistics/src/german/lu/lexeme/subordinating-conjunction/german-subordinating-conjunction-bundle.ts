@@ -1,0 +1,40 @@
+import { buildGermanLexemeBundle } from "../shared/build-german-lexeme-bundle";
+import {
+	GermanSubordinatingConjunctionInflectionalFeaturesSchema,
+	GermanSubordinatingConjunctionInherentFeaturesSchema,
+} from "./parts/german-subordinating-conjunction-features";
+import {
+	GermanSubordinatingConjunctionLexicalRelationsSchema,
+	GermanSubordinatingConjunctionMorphologicalRelationsSchema,
+} from "./parts/german-subordinating-conjunction-relations";
+
+const GermanSubordinatingConjunctionSchemas = buildGermanLexemeBundle({
+	inflectionalFeaturesSchema:
+		GermanSubordinatingConjunctionInflectionalFeaturesSchema,
+	inherentFeaturesSchema:
+		GermanSubordinatingConjunctionInherentFeaturesSchema,
+	lexicalRelationsSchema:
+		GermanSubordinatingConjunctionLexicalRelationsSchema,
+	morphologicalRelationsSchema:
+		GermanSubordinatingConjunctionMorphologicalRelationsSchema,
+	pos: "SCONJ",
+});
+
+export const GermanSubordinatingConjunctionInflectionSelectionSchema =
+	GermanSubordinatingConjunctionSchemas.InflectionSelectionSchema;
+export const GermanSubordinatingConjunctionLemmaSelectionSchema =
+	GermanSubordinatingConjunctionSchemas.LemmaSelectionSchema;
+export const GermanSubordinatingConjunctionStandardPartialSelectionSchema =
+	GermanSubordinatingConjunctionSchemas.StandardPartialSelectionSchema;
+export const GermanSubordinatingConjunctionStandardVariantSelectionSchema =
+	GermanSubordinatingConjunctionSchemas.StandardVariantSelectionSchema;
+export const GermanSubordinatingConjunctionTypoInflectionSelectionSchema =
+	GermanSubordinatingConjunctionSchemas.TypoInflectionSelectionSchema;
+export const GermanSubordinatingConjunctionTypoLemmaSelectionSchema =
+	GermanSubordinatingConjunctionSchemas.TypoLemmaSelectionSchema;
+export const GermanSubordinatingConjunctionTypoPartialSelectionSchema =
+	GermanSubordinatingConjunctionSchemas.TypoPartialSelectionSchema;
+export const GermanSubordinatingConjunctionTypoVariantSelectionSchema =
+	GermanSubordinatingConjunctionSchemas.TypoVariantSelectionSchema;
+export const GermanSubordinatingConjunctionLemmaSchema =
+	GermanSubordinatingConjunctionSchemas.LemmaSchema;
