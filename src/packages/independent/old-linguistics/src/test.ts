@@ -1,5 +1,8 @@
-import type { Prettify } from "node_modules/zod/v4/core/util";
 import type { LinguisticUnitKind, MorphemeKind } from "./common";
+
+type Prettify<T> = {
+	[K in keyof T]: T[K];
+} & {};
 
 // Lemmas
 type BaseLinguisticUnitMap = {

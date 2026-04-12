@@ -1,5 +1,6 @@
 import z from "zod/v3";
 import type { LemmaSchemaLanguageShape } from "../registry-shapes";
+import { GermanNounLemmaSchema } from "./lu/lexeme/noun/german-noun-bundle";
 import { GermanVerbLemmaSchema } from "./lu/lexeme/verb/german-verb-bundle";
 
 const AnySchema = z.any();
@@ -13,7 +14,7 @@ export const GermanLemmaSchema = {
 		CCONJ: AnySchema,
 		DET: AnySchema,
 		INTJ: AnySchema,
-		NOUN: AnySchema,
+		NOUN: GermanNounLemmaSchema,
 		NUM: AnySchema,
 		PART: AnySchema,
 		PRON: AnySchema,

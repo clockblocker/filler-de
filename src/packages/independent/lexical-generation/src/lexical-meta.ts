@@ -1,10 +1,12 @@
 import type {
 	LexicalMeta,
+	ResolvedLemma,
+} from "./public-types";
+import type {
 	LexicalPhrasemeKind,
 	LexicalPos,
 	LexicalSurfaceKind,
-	ResolvedLemma,
-} from "./public-types";
+} from "@textfresser/linguistics";
 
 type ParsedLexicalMetaTag =
 	| {

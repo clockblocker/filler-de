@@ -4,8 +4,7 @@ import {
 	GermanVerbLemmaSchema,
 	GermanVerbStandardPartialSelectionSchema,
 	GermanVerbTypoInflectionSelectionSchema,
-	GermanVerbUnknownSelectionSchema,
-} from "../src/german/lu/lexeme/pos/german-verb";
+} from "../src/german/lu/lexeme/verb/german-verb-bundle";
 import { LemmaSchema, SelectionSchema } from "../src";
 import { getInverseLexicalRelation } from "../src/universal/enums/relation/lexical";
 import { getInverseMorphologicalRelation } from "../src/universal/enums/relation/morphological";
@@ -134,7 +133,7 @@ describe("German verb schemas", () => {
 	});
 
 	it("accepts unknown selections without a surface", () => {
-		const result = GermanVerbUnknownSelectionSchema.safeParse({
+		const result = SelectionSchema.German.Unknown.safeParse({
 			orthographicStatus: "Unknown",
 		});
 
@@ -172,9 +171,6 @@ describe("German verb schemas", () => {
 		);
 		expect(SelectionSchema.German.Typo.Inflection.Lexeme.VERB).toBe(
 			GermanVerbTypoInflectionSelectionSchema,
-		);
-		expect(SelectionSchema.German.Unknown).toBe(
-			GermanVerbUnknownSelectionSchema,
 		);
 		expect(LemmaSchema.German.Lexeme.VERB).toBe(GermanVerbLemmaSchema);
 	});

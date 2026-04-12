@@ -6,7 +6,3 @@ export {
 	TargetLanguage,
 	TargetLanguageSchema,
 } from "@textfresser/linguistics/common";
-export type {
-	KnownLanguage,
-	TargetLanguage,
-} from "@textfresser/linguistics/common";
