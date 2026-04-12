@@ -20,6 +20,15 @@ Boundary rule:
 - `lexical-generation` uses exact targeted schemas from the registry for prompt IO and validation, for example a German verb lemma or a German noun inflection branch
 - the rest of the system stays as abstract as possible and treats data as broad lemma/selection unions, narrowing only through discriminator fields and inferred subtypes
 
+Meta-tag rule:
+- the meta tag represents canonical note identity, not full native selection identity
+- it is allowed to drive cache/disambiguation filtering for stored note senses
+- it must encode only the stable note-shaping fields needed for that job: lemma kind, discriminator, and surface kind
+- it must not encode `orthographicStatus`
+- it must not encode `inflectionalFeatures`
+- `orthographicStatus` and `inflectionalFeatures` belong to selection-instance resolution, not canonical stored-note identity
+- disambiguation should continue to narrow stored candidates to canonical lemma-note candidates before comparing senses
+
 ## What `linguistics/src/index.ts` should expose
 
 Yes, it needs a broader root surface, but only a curated native one.
@@ -28,7 +37,7 @@ Add these exports at the root:
 - `TargetLanguageSchema`, `TargetLanguage`, `TARGET_LANGUAGES`
 - `LemmaSchema`, `SelectionSchema`
 - `Lemma`, `Selection`
-- type-only broad aliases for ergonomic downstream use, if needed:
+- required type-only broad aliases for ergonomic downstream use:
   - `AnyLemma<L>`
   - `AnySelection<L>`
 - `OrthographicStatus`
@@ -48,6 +57,7 @@ Do not expose these from the new root:
 - legacy aliases like `LexicalPos`, `POS`, `LinguisticUnitKind`, `LANGUAGE_ISO_CODE`
 - `common` / `de` subpath entrypoints
 - app-policy helpers for note IDs, tags, paths, or UI labels
+- native relation helper types unless a concrete non-generator consumer appears later
 
 ## Public API changes
 
@@ -56,9 +66,15 @@ Do not expose these from the new root:
 - Publish only `"."` from `package.json`
 - Remove `old-linguistics` path mappings and workspace usage
 - Do not publish replacement `common` / `de` subpath entrypoints
+- Make the package-name cutover atomic:
+  - in the same patch, stop `old-linguistics` from claiming `@textfresser/linguistics`
+  - in the same patch, rename the new package to `@textfresser/linguistics`
+  - in the same patch, repoint TS paths and workspace dependency resolution to the new package
+  - do not leave an intermediate state where both packages claim the same name or where `@textfresser/linguistics` still resolves to `old-linguistics`
 
 `@textfresser/lexical-generation`
 - Replace `ResolvedLemma` with `ResolvedSelection`, inferred from the appropriate `SelectionSchema.German` branches for non-`Unknown` selections
+- For `Unknown` results, `ResolvedSelection` is exactly `AbstractSelectionFor<"Unknown">`, i.e. `{ orthographicStatus: "Unknown" }`
 - Rename `generateLemma()` to `resolveSelection()`
 - Rename `createMetaTagFromResolvedLemma()` to `createMetaTagFromSelection()`
 - Rename `createLexicalMeta({ lemma })` to `createLexicalMeta({ selection })`
@@ -75,17 +91,25 @@ Do not expose these from the new root:
   - legacy `LexicalPos` / `LexicalPhrasemeKind` / `LexicalSurfaceKind`
 - Replace ad hoc feature unions with a schema-native shape:
   - `features: { inherentFeatures: Record<string, string | boolean> }`
-- Keep `inflections`, `relations`, and `morphemicBreakdown`, but switch their value vocabularies to native enums
+- Keep `inflections`, `relations`, and `morphemicBreakdown`, but switch their value vocabularies to native enums where those values are exposed
 - Change morpheme separability from string labels to boolean `isSeparable`
+- Keep `LexicalRelationKind` as a `lexical-generation`-owned DTO contract for now
+- Do not widen the curated `@textfresser/linguistics` root API just to expose native relation DTOs unless another non-generator consumer needs them
 
 ## Migration steps
 
 1. Expand the new root export surface.
-2. Rename the new package to `@textfresser/linguistics` and update `package.json`, `tsconfig.json`, and workspace references.
+2. Perform the package-name cutover atomically:
+   - rename `src/packages/independent/linguistics/package.json` to `@textfresser/linguistics`
+   - in the same patch, stop `src/packages/independent/old-linguistics/package.json` from publishing `@textfresser/linguistics`
+   - in the same patch, repoint `tsconfig.json`, workspace dependencies, and lockfile state to the new package
+   - only then proceed with deleting `old-linguistics`
 3. Rewrite `lexical-generation` to import only from the new root.
 4. Remove `internal/schema-primitives.ts` as the package boundary. Replace it with direct indexing into `LemmaSchema` / `SelectionSchema` for exact task-specific schemas, and use inferred types from the broad exported types for non-generator code.
 5. Rewrite lemma resolution to return native selections, not legacy lemma wrappers.
-6. Update meta-tag creation/parsing to encode native `lemmaKind`, discriminator, and `surfaceKind`.
+6. Update meta-tag creation/parsing to work with native selections.
+   - The exact post-migration tag format is not locked by this plan.
+   - Compatibility with pre-migration tag formats is not required.
 7. Rewrite prompt schemas, examples, and guardrails to native values:
    - `Lexeme`, `Inflection`, `NOUN`, `PROPN`, `DET`, etc.
    - new phraseme kinds
@@ -94,6 +118,7 @@ Do not expose these from the new root:
 9. Rewrite Textfresser consumers:
    - localize app-owned note/path/tag concepts instead of importing them from linguistics
    - switch section routing to native discriminators like `Pos`, `PhrasemeKind`, `MorphemeKind`, `LemmaKind`, and `SurfaceKind`
+   - allow Textfresser to consume generic native linguistic enums from the root for mapping/parsing/formatting, for example `Case`, `Gender`, and `Number`; do not introduce language-specific exports
    - remove nounClass-based branching; use `PROPN` directly
    - narrow broad selection/lemma types through discriminator fields rather than importing targeted schemas
    - replace adjective/verb-specific tag builders with generic `inherentFeatures` tag rendering
@@ -112,8 +137,9 @@ Required checks:
 - lexical-generation tests cover:
   - `resolveSelection()` success cases
   - task-specific prompt schemas selected from the registry resolve to the expected German branches
-  - meta-tag roundtrip from native selection
-  - disambiguation filtering on native selection identity
+  - `AnyLemma<L>` and `AnySelection<L>` compile ergonomically for downstream narrowing
+  - meta-tag roundtrip from canonical note identity
+  - disambiguation filters canonical lemma-note candidates and does not depend on `orthographicStatus` or `inflectionalFeatures`
   - lexical info generation with native enums
 - Textfresser tests cover:
   - section selection for `NOUN` vs `PROPN`
@@ -132,6 +158,9 @@ Required checks:
 - Breaking TypeScript API changes are allowed.
 - Breaking prompt-output shape changes are allowed.
 - Persisted lexical metadata and note-generation behavior may change as part of this cut.
+- Meta-tag format compatibility with pre-migration data is not a goal.
 - App-level concepts like language-code maps, dict-entry IDs, and section/tag routing are not linguistic public API and should stay local to Textfresser.
 - Missing old semantics are intentionally removed unless they already exist in the new schema model.
-- Type-only convenience aliases for broad unions are acceptable if they make downstream narrowing practical, but runtime union schemas are not part of the minimum plan.
+- `AnyLemma<L>` and `AnySelection<L>` are part of the minimum root API because downstream code is expected to narrow broad unions ergonomically.
+- Runtime union schemas are not part of the minimum plan.
+- `LexicalRelationKind` remains a generator-owned DTO until a concrete shared consumer forces a different boundary.
