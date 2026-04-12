@@ -15,10 +15,10 @@ import {
 import { Case as CaseSchema } from "./universal/enums/feature/ud/case";
 import { Gender as GenderSchema } from "./universal/enums/feature/ud/gender";
 import { GrammaticalNumber as GrammaticalNumberSchema } from "./universal/enums/feature/ud/number";
+
 export { MorphemeKind } from "./universal/enums/kind/morpheme-kind";
-import {
-	PhrasemeKind as PhrasemeKindSchema,
-} from "./universal/enums/kind/phraseme-kind";
+
+import { PhrasemeKind as PhrasemeKindSchema } from "./universal/enums/kind/phraseme-kind";
 import { Pos as PosSchema } from "./universal/enums/kind/pos";
 
 export const TARGET_LANGUAGES = ["German"] as const;
@@ -32,19 +32,6 @@ export const Gender = GenderSchema.enum;
 export const GrammaticalNumber = GrammaticalNumberSchema.enum;
 export const PhrasemeKind = PhrasemeKindSchema.enum;
 export const Pos = PosSchema.enum;
-type SupportedLanguage = z.infer<typeof TargetLanguageSchema>;
-
-type SelectionSchemaShape = {
-	[L in SupportedLanguage]: SelectionSchemaLanguageShape;
-};
-
-export const SelectionSchema = {
-	German: GermanSelectionSchema,
-} satisfies SelectionSchemaShape;
-
-export const LemmaSchema = {
-	German: GermanLemmaSchema,
-} satisfies LemmaSchemaShape;
 
 export type TargetLanguage = keyof typeof LemmaSchema;
 export type OrthographicStatus = z.infer<typeof OrthographicStatusSchema>;
@@ -57,6 +44,14 @@ export type PhrasemeKind = z.infer<typeof PhrasemeKindSchema>;
 export type Pos = z.infer<typeof PosSchema>;
 export type InherentFeatures = AbstractLemma<"Lexeme">["inherentFeatures"];
 export type UnknownSelection = AbstractSelectionFor<"Unknown">;
+
+export const SelectionSchema = {
+	German: GermanSelectionSchema,
+} satisfies SelectionSchemaShape;
+
+export const LemmaSchema = {
+	German: GermanLemmaSchema,
+} satisfies LemmaSchemaShape;
 
 export type Lemma<
 	L extends TargetLanguage,
@@ -80,6 +75,12 @@ export type Selection<
 		LK
 	> = SelectionDiscriminatorArg<L, OS, SK, LK>,
 > = InferSchema<SelectionSchemaFor<L, OS, SK, LK, D>>;
+
+type SupportedLanguage = z.infer<typeof TargetLanguageSchema>;
+
+type SelectionSchemaShape = {
+	[L in SupportedLanguage]: SelectionSchemaLanguageShape;
+};
 
 type LanguageLemmaUnion<L extends TargetLanguage> = {
 	[LK in keyof (typeof LemmaSchema)[L]]: {
