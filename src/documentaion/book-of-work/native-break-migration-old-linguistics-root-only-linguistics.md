@@ -149,11 +149,15 @@ Required checks:
 - production/source import checks exclude docs and prose-only references:
   - `rg` finds no `old-linguistics` references in runtime/package source after deletion
   - `rg` finds no `@textfresser/linguistics/*` imports in consumer code outside the package itself
-- root export smoke tests cover the curated root surface (`LemmaSchema`, `SelectionSchema`, discriminants, and any intentionally exported type-only convenience aliases)
+- root export smoke tests cover the curated root surface:
+  - registry roots: `LemmaSchema`, `SelectionSchema`
+  - discriminants/enums required by downstream consumers: `TargetLanguageSchema`, `TARGET_LANGUAGES`, `OrthographicStatus`, `SurfaceKind`, `LemmaKind`, `Pos`, `PhrasemeKind`, `MorphemeKind`, `Case`, `Gender`, `GrammaticalNumber`
+  - required type-level convenience exports: `Lemma`, `Selection`, `AnyLemma`, `AnySelection`, `UnknownSelection`, `InherentFeatures`
 - lexical-generation tests cover:
   - `resolveSelection()` success cases
   - task-specific prompt schemas selected from the registry resolve to the expected German branches
   - `AnyLemma<L>` and `AnySelection<L>` compile ergonomically for downstream narrowing
+  - bare `AnyLemma` and `AnySelection` compile ergonomically with the default `L = TargetLanguage` form and still narrow correctly through discriminators
   - meta-tag roundtrip from canonical note identity
   - disambiguation filters canonical lemma-note candidates and does not depend on `orthographicStatus` or `inflectionalFeatures`
   - lexical info generation with native enums
