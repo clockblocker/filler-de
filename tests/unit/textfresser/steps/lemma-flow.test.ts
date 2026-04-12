@@ -84,6 +84,7 @@ function makeHarness(options: HarnessOptions) {
 				}
 
 				return okAsync({
+					contextWithLinkedParts: "Er [geht] schnell. ^1",
 					lemma: options.lemma,
 					linguisticUnit: "Lexem",
 					posLikeKind: "Verb",
@@ -125,6 +126,7 @@ function makeHarness(options: HarnessOptions) {
 				}
 
 				return okAsync({
+					contextWithLinkedParts: "Er [geht] schnell. ^1",
 					lemma: options.lemma,
 					linguisticUnit: "Lexem",
 					posLikeKind: "Verb",
@@ -287,7 +289,8 @@ describe("lemma two-phase flow", () => {
 			lemma: "anfangen",
 			lemmaOutputs: [
 				{
-					contextWithLinkedParts: undefined,
+					contextWithLinkedParts:
+						"Du [fängst] morgen mit der Arbeit an. ^1",
 					lemma: "fängst",
 					linguisticUnit: "Lexem",
 					posLikeKind: "Verb",

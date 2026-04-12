@@ -3,6 +3,8 @@ import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/
 import { ok, type Result } from "neverthrow";
 import { stringifySplitPath } from "../../../../stateless-helpers/split-path-comparison";
 import { logger } from "../../../../utils/logger";
+import { fromLegacyDictEntries } from "../../domain/dict-note";
+import { deLanguagePack } from "../../languages/de/pack";
 import {
 	computeMissingV3SectionKindsFromLemmaResult,
 	findEntryForLemmaResult,
@@ -58,7 +60,10 @@ export async function handleLemmaCacheHit(params: {
 		return ok(undefined);
 	}
 
-	const entries = dictNoteHelper.parse(contentResult.value);
+	const entries = fromLegacyDictEntries(
+		dictNoteHelper.parse(contentResult.value),
+		deLanguagePack,
+	);
 	const matchedEntry = findEntryForLemmaResult({
 		entries,
 		generatedEntryId: cache.generatedEntryId,

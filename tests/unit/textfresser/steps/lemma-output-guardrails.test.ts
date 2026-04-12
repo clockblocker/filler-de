@@ -9,7 +9,7 @@ describe("lemma output guardrails", () => {
 		const evaluation = evaluateLemmaOutputGuardrails({
 			context: "Du [fängst] morgen mit der Arbeit an.",
 			output: {
-				contextWithLinkedParts: undefined,
+				contextWithLinkedParts: "Du [fängst] morgen mit der Arbeit an.",
 				lemma: "fängst",
 				linguisticUnit: "Lexem",
 				posLikeKind: "Verb",
@@ -25,7 +25,7 @@ describe("lemma output guardrails", () => {
 		const evaluation = evaluateLemmaOutputGuardrails({
 			context: "Sie ist [klüger] als ihr Bruder.",
 			output: {
-				contextWithLinkedParts: undefined,
+				contextWithLinkedParts: "Sie ist [klüger] als ihr Bruder.",
 				lemma: "klüger",
 				linguisticUnit: "Lexem",
 				posLikeKind: "Adjective",
@@ -51,14 +51,16 @@ describe("lemma output guardrails", () => {
 		});
 
 		expect(evaluation.droppedContextWithLinkedParts).toBe(true);
-		expect(evaluation.output.contextWithLinkedParts).toBeUndefined();
+		expect(evaluation.output.contextWithLinkedParts).toBe(
+			"Du [fängst] morgen mit der Arbeit an.",
+		);
 	});
 
 	it("prefers retry output when it has fewer core issues", () => {
 		const first = evaluateLemmaOutputGuardrails({
 			context: "Du [fängst] morgen mit der Arbeit an.",
 			output: {
-				contextWithLinkedParts: undefined,
+				contextWithLinkedParts: "Du [fängst] morgen mit der Arbeit an.",
 				lemma: "fängst",
 				linguisticUnit: "Lexem",
 				posLikeKind: "Verb",
@@ -69,7 +71,7 @@ describe("lemma output guardrails", () => {
 		const second = evaluateLemmaOutputGuardrails({
 			context: "Du [fängst] morgen mit der Arbeit an.",
 			output: {
-				contextWithLinkedParts: undefined,
+				contextWithLinkedParts: "Du [fängst] morgen mit der Arbeit an.",
 				lemma: "anfangen",
 				linguisticUnit: "Lexem",
 				posLikeKind: "Verb",

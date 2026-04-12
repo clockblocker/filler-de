@@ -35,7 +35,7 @@ export const linguisticUnitKindFrom: Record<
 
 // -- SurfaceKindTag --
 
-const SURFACE_KIND_TAGS_STR = ["LM", "IN", "VA"] as const;
+const SURFACE_KIND_TAGS_STR = ["LM", "IN", "VA", "PA"] as const;
 
 export const SurfaceKindTagSchema = z.enum(SURFACE_KIND_TAGS_STR);
 export type SurfaceKindTag = z.infer<typeof SurfaceKindTagSchema>;
@@ -46,10 +46,12 @@ export const surfaceKindTagFrom: Record<SurfaceKind, SurfaceKindTag> = {
 	[SurfaceKind.Lemma]: SurfaceKindTag.LM,
 	[SurfaceKind.Inflected]: SurfaceKindTag.IN,
 	[SurfaceKind.Variant]: SurfaceKindTag.VA,
+	[SurfaceKind.Partial]: SurfaceKindTag.PA,
 } as const satisfies Record<SurfaceKind, SurfaceKindTag>;
 
 export const surfaceKindFrom: Record<SurfaceKindTag, SurfaceKind> = {
 	[SurfaceKindTag.LM]: SurfaceKind.Lemma,
 	[SurfaceKindTag.IN]: SurfaceKind.Inflected,
 	[SurfaceKindTag.VA]: SurfaceKind.Variant,
+	[SurfaceKindTag.PA]: SurfaceKind.Partial,
 } as const satisfies Record<SurfaceKindTag, SurfaceKind>;

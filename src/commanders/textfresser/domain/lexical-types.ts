@@ -132,7 +132,7 @@ export function numberValueFromLocalizedLabel(
 export function buildVerbEntryIdentity(profile: {
 	conjugation: LexicalVerbConjugation;
 	valency: {
-		governedPreposition?: string;
+		governedPreposition?: string | null;
 		reflexivity: LexicalVerbReflexivity;
 		separability: LexicalVerbSeparability;
 	};
