@@ -24,8 +24,6 @@ const GermanUnknownSelectionSchema = z.object({
 	orthographicStatus: z.literal("Unknown"),
 }) satisfies z.ZodType<AbstractSelectionFor<"Unknown">>;
 
-type asdd = AbstractSelectionFor<"Unknown">;
-
 export const GermanSelectionSchema = {
 	Standard: {
 		Inflection: {

@@ -39,9 +39,10 @@ Add these exports at the root:
 - `LemmaSchema`, `SelectionSchema`
 - `Lemma`, `Selection`
 - required type-only broad aliases for ergonomic downstream use:
-  - `AnyLemma<L>`
-  - `AnySelection<L>`
+  - `AnyLemma<L extends TargetLanguage = TargetLanguage>`
+  - `AnySelection<L extends TargetLanguage = TargetLanguage>`
 - `UnknownSelection`
+- `InherentFeatures`
 - `OrthographicStatus`
 - `SurfaceKind`
 - `LemmaKind`
@@ -96,7 +97,8 @@ Do not expose these from the new root:
   - `LexicalVerbValency`
   - legacy `LexicalPos` / `LexicalPhrasemeKind` / `LexicalSurfaceKind`
 - Replace ad hoc feature unions with a schema-native typed shape that preserves native feature keys and value types:
-  - `features: { inherentFeatures: Partial<...native generic feature shape...> }`
+  - `features: { inherentFeatures: InherentFeatures }`
+  - `InherentFeatures` is a public root export derived from the native model for lexeme inherent features, i.e. the public alias for the current native `AbstractLemma<"Lexeme">["inherentFeatures"]` shape
   - do not collapse `inherentFeatures` to `Record<string, string | boolean>`
   - if Textfresser renders tags generically from `inherentFeatures`, the contract must preserve stable feature keys and native enum/boolean values so formatting logic does not become heuristic
 - Keep `inflections`, `relations`, and `morphemicBreakdown`, but switch their value vocabularies to native enums where those values are exposed
@@ -130,6 +132,11 @@ Do not expose these from the new root:
    - remove nounClass-based branching; use `PROPN` directly
    - narrow broad selection/lemma types through discriminator fields rather than importing targeted schemas
    - replace adjective/verb-specific tag builders with generic `inherentFeatures` tag rendering
+   - Textfresser owns generic feature rendering policy:
+     - display maps for feature keys
+     - display maps for enum/boolean values
+     - ordering/grouping rules for rendered tags and labels
+   - `linguistics` exports the raw native enums/types/schemas, not app-facing display helpers
    - update noun/header/inflection label formatting to native enum values
    - update morpheme formatting to boolean separability
 10. Remove all `@textfresser/linguistics/*` deep imports.
@@ -170,6 +177,6 @@ Required checks:
 - Meta-tag format compatibility with pre-migration data is not a goal.
 - App-level concepts like language-code maps, dict-entry IDs, and section/tag routing are not linguistic public API and should stay local to Textfresser.
 - Missing old semantics are intentionally removed unless they already exist in the new schema model.
-- `AnyLemma<L>` and `AnySelection<L>` are part of the minimum root API because downstream code is expected to narrow broad unions ergonomically.
+- `AnyLemma<L extends TargetLanguage = TargetLanguage>` and `AnySelection<L extends TargetLanguage = TargetLanguage>` are part of the minimum root API because downstream code is expected to narrow broad unions ergonomically; omitting `L` means “all supported target languages”
 - Runtime union schemas are not part of the minimum plan.
 - `LexicalRelationKind` remains a generator-owned DTO until a concrete shared consumer forces a different boundary.
