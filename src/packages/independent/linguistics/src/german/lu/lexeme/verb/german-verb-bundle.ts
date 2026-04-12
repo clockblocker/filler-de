@@ -63,10 +63,6 @@ export const GermanVerbTypoVariantSelectionSchema = buildLemmaSelection({
 	surfaceKind: "Variant",
 }) satisfies z.ZodType<AbstractSelectionFor<"Typo", "Variant", "Lexeme">>;
 
-export const GermanVerbUnknownSelectionSchema = z.object({
-	orthographicStatus: z.literal("Unknown"),
-}) satisfies z.ZodType<AbstractSelectionFor<"Unknown">>;
-
 export const GermanVerbLemmaSchema = z.object({
 	inherentFeatures: GermanVerbInherentFeaturesSchema,
 	lexicalRelations: GermanVerbLexicalRelationsSchema,
