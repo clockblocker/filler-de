@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { LemmaSchema, SelectionSchema } from "../src";
+import type { Lemma } from "../src";
 import {
 	GermanNounInflectionSelectionSchema,
 	GermanNounLemmaSchema,
@@ -8,6 +9,19 @@ import {
 } from "../src/german/lu/lexeme/noun/german-noun-bundle";
 
 describe("German noun schemas", () => {
+	it("exposes inferred lemma types from the registry", () => {
+		const lemma: Lemma<"German", "Lexeme", "NOUN"> = {
+			inherentFeatures: {
+				gender: "Neut",
+			},
+			lexicalRelations: {},
+			morphologicalRelations: {},
+			pos: "NOUN",
+		};
+
+		expect(lemma.pos).toBe("NOUN");
+	});
+
 	it("accepts supported German noun inflectional features", () => {
 		const result = GermanNounInflectionSelectionSchema.safeParse({
 			orthographicStatus: "Standard",
