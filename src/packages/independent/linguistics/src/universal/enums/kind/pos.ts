@@ -21,6 +21,11 @@ const closedClassPosValues = [
 ] as const;
 
 const otherPosValues = ["PUNCT", "SYM", "X"] as const;
+export const POS_VALUES = [
+	...openClassPosValues,
+	...closedClassPosValues,
+	...otherPosValues,
+] as const;
 
 export const OpenClassPos = z.enum(openClassPosValues);
 export type OpenClassPos = z.infer<typeof OpenClassPos>;
@@ -32,7 +37,7 @@ export const OtherPos = z.enum(otherPosValues);
 export type OtherPos = z.infer<typeof OtherPos>;
 
 // Source: https://universaldependencies.org/u/pos/index.html
-export const Pos = z.union([OpenClassPos, ClosedClassPos, OtherPos]);
+export const Pos = z.enum(POS_VALUES);
 export type Pos = z.infer<typeof Pos>;
 
 const reprForPos = {

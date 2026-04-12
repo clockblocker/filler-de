@@ -13,43 +13,50 @@ import type {
 	AbstractLexicalRelations,
 	AbstractMorphologicalRelations,
 } from "./enums/relation/relation";
+import type { LemmaDiscriminatorFor } from "./lemma-discriminator";
 
-type AbstractLexemeLemma = Prettify<{
-	pos: Pos;
+type AbstractLexemeLemma<P extends Pos = Pos> = Prettify<{
+	pos: P;
 	inherentFeatures: Partial<AbstractFeatures>;
 	lexicalRelations: AbstractLexicalRelations;
 	morphologicalRelations: AbstractMorphologicalRelations;
 	isClosedSet?: IsClosedSet;
 }>;
 
-type AbstractMorphemLemma = Prettify<{
-	morphemeKind: MorphemeKind;
+type AbstractMorphemLemma<MK extends MorphemeKind = MorphemeKind> = Prettify<{
+	morphemeKind: MK;
 	lexicalRelations: AbstractLexicalRelations;
 	isClosedSet?: IsClosedSet;
 }>;
 
-type AbstractPhrasemLemma = Prettify<
+type AbstractPhrasemLemma<PK extends PhrasemeKind = PhrasemeKind> = Prettify<
 	{
 		lexicalRelations: AbstractLexicalRelations;
-		[PHRASEME_KIND_KEY]: PhrasemeKind;
+		[PHRASEME_KIND_KEY]: PK;
 	} & (
 		| {
 				[PHRASEME_KIND_KEY]:
-					| typeof PhrasemeKind.enum.Aphorism
-					| typeof PhrasemeKind.enum.Cliché;
+					| Extract<PK, typeof PhrasemeKind.enum.Aphorism>
+					| Extract<PK, typeof PhrasemeKind.enum.Cliché>;
 		  }
 		| {
-				[PHRASEME_KIND_KEY]: typeof PhrasemeKind.enum.DiscourseFormula;
+				[PHRASEME_KIND_KEY]: Extract<
+					PK,
+					typeof PhrasemeKind.enum.DiscourseFormula
+				>;
 				discourseFormulaRole?: DiscourseFormulaRole;
 		  }
 	)
 >;
 
-export type AbstractLemma<LK extends LemmaKind = LemmaKind> =
+export type AbstractLemma<
+	LK extends LemmaKind = LemmaKind,
+	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
+> =
 	LK extends "Lexeme"
-		? AbstractLexemeLemma
+		? AbstractLexemeLemma<Extract<D, Pos>>
 		: LK extends "Morpheme"
-			? AbstractMorphemLemma
+			? AbstractMorphemLemma<Extract<D, MorphemeKind>>
 			: LK extends "Phraseme"
-				? AbstractPhrasemLemma
+				? AbstractPhrasemLemma<Extract<D, PhrasemeKind>>
 				: never;

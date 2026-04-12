@@ -5,20 +5,18 @@ import type {
 	SurfaceKind,
 } from "./enums/core/selection";
 import type { AbstractFeatures } from "./enums/feature/feature";
-import type { MorphemeKind } from "./enums/kind/morpheme-kind";
-import type { PhrasemeKind } from "./enums/kind/phraseme-kind";
-import type { Pos } from "./enums/kind/pos";
+import type {
+	LemmaDiscriminatorFor,
+	LemmaIdentityFieldsFor,
+} from "./lemma-discriminator";
 
-type LemmaFieldsFor<LK extends LemmaKind> = LK extends "Lexeme"
-	? { pos: Pos }
-	: LK extends "Phraseme"
-		? { phrasemeKind: PhrasemeKind }
-		: LK extends "Morpheme"
-			? { morphemeKind: MorphemeKind }
-			: never;
-
-type LemmaFor<LK extends LemmaKind = LemmaKind> = LK extends LemmaKind
-	? Prettify<LemmaFieldsFor<LK> & { lemmaKind: LK; spelledLemma: string }>
+type LemmaFor<
+	LK extends LemmaKind = LemmaKind,
+	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
+> = LK extends LemmaKind
+	? Prettify<
+			LemmaIdentityFieldsFor<LK, D> & { lemmaKind: LK; spelledLemma: string }
+		>
 	: never;
 
 type SurfaceFieldsFor<SK extends SurfaceKind> = SK extends "Inflection"
@@ -28,13 +26,14 @@ type SurfaceFieldsFor<SK extends SurfaceKind> = SK extends "Inflection"
 type SurfaceFor<
 	SK extends SurfaceKind = SurfaceKind,
 	LK extends LemmaKind = LemmaKind,
+	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > = SK extends SurfaceKind
 	? Prettify<
 			{
 				surfaceKind: SK;
 				spelledSurface: string;
 			} & SurfaceFieldsFor<SK> & {
-					lemma: LemmaFor<LK>;
+					lemma: LemmaFor<LK, D>;
 				}
 		>
 	: never;
@@ -43,13 +42,14 @@ export type AbstractSelectionFor<
 	OS extends OrthographicStatus = OrthographicStatus,
 	SK extends SurfaceKind = SurfaceKind,
 	LK extends LemmaKind = LemmaKind,
+	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > = OS extends OrthographicStatus
 	? Prettify<
 			{
 				orthographicStatus: OS;
 			} & (OS extends "Unknown"
 				? Record<never, never>
-				: { surface: SurfaceFor<SK, LK> })
+				: { surface: SurfaceFor<SK, LK, D> })
 		>
 	: never;
 

@@ -3,6 +3,7 @@ import {
 	GermanVerbInflectionSelectionSchema,
 	GermanVerbLemmaSchema,
 } from "../src/german/lu/lexeme/pos/german-verb";
+import { LemmaSchema, SelectionSchema } from "../src";
 import { getInverseLexicalRelation } from "../src/universal/enums/relation/lexical";
 import { getInverseMorphologicalRelation } from "../src/universal/enums/relation/morphological";
 
@@ -108,5 +109,12 @@ describe("German verb schemas", () => {
 			"sourceFor",
 		);
 		expect(getInverseMorphologicalRelation("usedIn")).toBe("consistsOf");
+	});
+
+	it("exposes nested registry access for German verbs", () => {
+		expect(SelectionSchema.German.Standard.Inflection.Lexeme.VERB).toBe(
+			GermanVerbInflectionSelectionSchema,
+		);
+		expect(LemmaSchema.German.Lexeme.VERB).toBe(GermanVerbLemmaSchema);
 	});
 });
