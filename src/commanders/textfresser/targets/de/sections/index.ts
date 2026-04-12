@@ -2,10 +2,9 @@ export {
 	compareSectionsByWeight,
 	getSectionsFor,
 	SECTION_DISPLAY_WEIGHT,
-	sectionsForLexemPos,
-	sectionsForMorphem,
-	sectionsForPhrasem,
-	sectionsForProperNoun,
+	sectionsForLexemePos,
+	sectionsForMorpheme,
+	sectionsForPhraseme,
 } from "./section-config";
 export { cssSuffixFor } from "./section-css-kind";
 export {

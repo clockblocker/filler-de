@@ -4,10 +4,29 @@ import { parseLexicalMetaTag } from "../lexical-meta";
 import type {
 	CreateLexicalGenerationModuleParams,
 	LexicalMeta,
-	ResolvedLemma,
+	ResolvedSelection,
 	SenseDisambiguator,
 	SenseMatchResult,
 } from "../public-types";
+import {
+	getLemmaKind,
+	getSelectionDiscriminator,
+	getSpelledLemma,
+	getSurfaceKind,
+	isKnownSelection,
+} from "../selection-helpers";
+
+const LEGACY_UNIT_KIND_FROM_NATIVE = {
+	Lexeme: "Lexem",
+	Morpheme: "Morphem",
+	Phraseme: "Phrasem",
+} as const;
+
+const LEGACY_PHRASEME_KIND_FROM_NATIVE = {
+	Aphorism: "Proverb",
+	Cliché: "Idiom",
+	DiscourseFormula: "DiscourseFormula",
+} as const;
 
 type IndexedLexicalMeta = LexicalMeta & {
 	cacheIndex: number;
@@ -16,13 +35,16 @@ type IndexedLexicalMeta = LexicalMeta & {
 };
 
 function matchesLemma(
-	lemma: ResolvedLemma,
+	selection: ResolvedSelection,
 	candidate: NonNullable<ReturnType<typeof parseLexicalMetaTag>>,
 ): boolean {
-	if (lemma.linguisticUnit !== candidate.linguisticUnit) {
+	if (!isKnownSelection(selection)) {
 		return false;
 	}
-	return lemma.posLikeKind === candidate.posLikeKind;
+	if (getLemmaKind(selection) !== candidate.lemmaKind) {
+		return false;
+	}
+	return getSelectionDiscriminator(selection) === candidate.discriminator;
 }
 
 export function buildSenseDisambiguator(
@@ -32,7 +54,7 @@ export function buildSenseDisambiguator(
 	>,
 ): SenseDisambiguator {
 	return async (
-		lemma: ResolvedLemma,
+		selection: ResolvedSelection,
 		attestation: string,
 		candidateSenses: LexicalMeta[],
 	) => {
@@ -49,13 +71,13 @@ export function buildSenseDisambiguator(
 					parsedMetaTag,
 				};
 			})
-			.filter((candidate) => candidate !== null)
-			.filter(
-				(candidate) => candidate.parsedMetaTag.surfaceKind === "Lemma",
-			)
-			.filter((candidate) =>
-				matchesLemma(lemma, candidate.parsedMetaTag),
-			);
+				.filter((candidate) => candidate !== null)
+				.filter(
+					(candidate) => candidate.parsedMetaTag.surfaceKind === "Lemma",
+				)
+				.filter((candidate) =>
+					matchesLemma(selection, candidate.parsedMetaTag),
+				);
 
 		if (matchingCandidates.length === 0) {
 			return ok<SenseMatchResult>({ kind: "new" });
@@ -76,23 +98,31 @@ export function buildSenseDisambiguator(
 			return ok<SenseMatchResult>({ kind: "new" });
 		}
 
-		const promptResult = await executePrompt(deps, "Disambiguate", {
-			context: attestation,
-			lemma: lemma.lemma,
-			senses: promptCandidates.map((candidate) => ({
-				emojiDescription: candidate.emojiDescription ?? [],
-				index: candidate.promptIndex,
-				phrasemeKind:
-					candidate.parsedMetaTag.linguisticUnit === "Phrasem"
-						? candidate.parsedMetaTag.posLikeKind
-						: undefined,
-				pos:
-					candidate.parsedMetaTag.linguisticUnit === "Lexem"
-						? candidate.parsedMetaTag.posLikeKind
-						: undefined,
-				unitKind: candidate.parsedMetaTag.linguisticUnit,
-			})),
-		});
+			const promptResult = await executePrompt(deps, "Disambiguate", {
+				context: attestation,
+				lemma: getSpelledLemma(selection) ?? "",
+				senses: promptCandidates.map((candidate) => ({
+					emojiDescription: candidate.emojiDescription ?? [],
+					genus: undefined,
+					index: candidate.promptIndex,
+					ipa: undefined,
+					pos:
+						candidate.parsedMetaTag.lemmaKind === "Lexeme"
+							? candidate.parsedMetaTag.discriminator
+							: undefined,
+					phrasemeKind:
+						candidate.parsedMetaTag.lemmaKind === "Phraseme"
+							? LEGACY_PHRASEME_KIND_FROM_NATIVE[
+									candidate.parsedMetaTag.discriminator as keyof typeof LEGACY_PHRASEME_KIND_FROM_NATIVE
+								]
+							: undefined,
+					senseGloss: undefined,
+					unitKind:
+						LEGACY_UNIT_KIND_FROM_NATIVE[
+							candidate.parsedMetaTag.lemmaKind
+						],
+				})),
+			});
 		if (promptResult.isErr()) {
 			return err(promptResult.error);
 		}

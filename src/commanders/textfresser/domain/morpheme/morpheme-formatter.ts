@@ -8,6 +8,7 @@ import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import type { TargetLanguage } from "../../../../types";
 
 export type MorphemeItem = {
+	isSeparable?: boolean;
 	kind: MorphemeKind;
 	surf: string;
 	lemma?: string;
@@ -23,17 +24,11 @@ export type MorphemeItem = {
  */
 function decorateSurface(
 	surf: string,
-	separability: "Separable" | "Inseparable" | undefined,
+	isSeparable: boolean | undefined,
 	targetLang: TargetLanguage,
 ): string {
-	if (!separability || targetLang !== "German") return surf;
-
-	switch (separability) {
-		case "Separable":
-			return `>${surf}`;
-		case "Inseparable":
-			return `${surf}<`;
-	}
+	if (isSeparable === undefined || targetLang !== "German") return surf;
+	return isSeparable ? `>${surf}` : `${surf}<`;
 }
 
 /**

@@ -1,87 +1,92 @@
 import type {
-	LexemInflections,
+	Case,
+	Gender,
+	GrammaticalNumber,
+	InherentFeatures,
+	LexemeInflections,
 	LexicalRelationKind,
 } from "@textfresser/lexical-generation";
 import type { TargetLanguage } from "../../../types";
 import type { POS } from "./note-linguistic-policy";
 
-export type LexicalCase = "Nominative" | "Accusative" | "Genitive" | "Dative";
-export type LexicalGenus = "Femininum" | "Maskulinum" | "Neutrum";
-export type LexicalNumber = "Singular" | "Plural";
-export type LexicalVerbConjugation = "Irregular" | "Regular";
-export type LexicalVerbReflexivity =
-	| "NonReflexive"
-	| "ReflexiveOnly"
-	| "OptionalReflexive";
-export type LexicalVerbSeparability =
-	| "Separable"
-	| "Inseparable"
-	| "None";
-
-export type TextfresserLexemPos = POS;
+export type LexicalCase = Extract<Case, "Acc" | "Dat" | "Gen" | "Nom">;
+export type LexicalGenus = Extract<Gender, "Fem" | "Masc" | "Neut">;
+export type LexicalNumber = Extract<GrammaticalNumber, "Plur" | "Sing">;
+export type TextfresserLexemePos = POS;
 export type TextfresserRelationKind = LexicalRelationKind;
-export type TextfresserNounInflectionCell = Extract<
-	LexemInflections,
-	{ kind: "noun" }
->["cells"][number];
+export type TextfresserNounInflectionCell = {
+	article: string;
+	case: LexicalCase;
+	form: string;
+	number: LexicalNumber;
+};
 
-const CASE_VALUE_ORDER: readonly LexicalCase[] = [
-	"Nominative",
-	"Accusative",
-	"Genitive",
-	"Dative",
-];
-const NUMBER_VALUE_ORDER: readonly LexicalNumber[] = ["Singular", "Plural"];
+const CASE_VALUE_ORDER: readonly LexicalCase[] = ["Nom", "Acc", "Gen", "Dat"];
+const NUMBER_VALUE_ORDER: readonly LexicalNumber[] = ["Sing", "Plur"];
 const GENUS_LABELS = {
 	English: {
-		Femininum: "Feminine",
-		Maskulinum: "Masculine",
-		Neutrum: "Neuter",
+		Fem: "Feminine",
+		Masc: "Masculine",
+		Neut: "Neuter",
 	},
 	German: {
-		Femininum: "Feminin",
-		Maskulinum: "Maskulin",
-		Neutrum: "Neutrum",
+		Fem: "Feminin",
+		Masc: "Maskulin",
+		Neut: "Neutrum",
 	},
 } satisfies Record<TargetLanguage, Record<LexicalGenus, string>>;
 const CASE_LABELS = {
 	English: {
-		Accusative: "Accusative",
-		Dative: "Dative",
-		Genitive: "Genitive",
-		Nominative: "Nominative",
+		Acc: "Accusative",
+		Dat: "Dative",
+		Gen: "Genitive",
+		Nom: "Nominative",
 	},
 	German: {
-		Accusative: "Akkusativ",
-		Dative: "Dativ",
-		Genitive: "Genitiv",
-		Nominative: "Nominativ",
+		Acc: "Akkusativ",
+		Dat: "Dativ",
+		Gen: "Genitiv",
+		Nom: "Nominativ",
 	},
 } satisfies Record<TargetLanguage, Record<LexicalCase, string>>;
 const NUMBER_LABELS = {
 	English: {
-		Plural: "Plural",
-		Singular: "Singular",
+		Plur: "Plural",
+		Sing: "Singular",
 	},
 	German: {
-		Plural: "Plural",
-		Singular: "Singular",
+		Plur: "Plural",
+		Sing: "Singular",
 	},
 } satisfies Record<TargetLanguage, Record<LexicalNumber, string>>;
 
 export const CASE_ORDER = CASE_VALUE_ORDER;
 export const NUMBER_ORDER = NUMBER_VALUE_ORDER;
 export const CASE_SHORT_LABEL: Record<LexicalCase, string> = {
-	Accusative: "A",
-	Dative: "D",
-	Genitive: "G",
-	Nominative: "N",
+	Acc: "A",
+	Dat: "D",
+	Gen: "G",
+	Nom: "N",
 };
 export const ARTICLE_BY_GENUS: Record<LexicalGenus, "der" | "die" | "das"> = {
-	Femininum: "die",
-	Maskulinum: "der",
-	Neutrum: "das",
+	Fem: "die",
+	Masc: "der",
+	Neut: "das",
 };
+
+export function isLexicalCase(value: Case): value is LexicalCase {
+	return value === "Nom" || value === "Acc" || value === "Gen" || value === "Dat";
+}
+
+export function isLexicalGenus(value: Gender): value is LexicalGenus {
+	return value === "Fem" || value === "Masc" || value === "Neut";
+}
+
+export function isLexicalNumber(
+	value: GrammaticalNumber,
+): value is LexicalNumber {
+	return value === "Sing" || value === "Plur";
+}
 
 function buildReverseLookup<TValue extends string>(
 	labels: Record<TargetLanguage, Record<TValue, string>>,
@@ -135,21 +140,16 @@ export function numberValueFromLocalizedLabel(
 }
 
 export function buildVerbEntryIdentity(profile: {
-	conjugation: LexicalVerbConjugation;
-	valency: {
-		governedPreposition?: string | null;
-		reflexivity: LexicalVerbReflexivity;
-		separability: LexicalVerbSeparability;
-	};
+	inherentFeatures: Pick<InherentFeatures, "reflex" | "separable">;
 }): string {
-	const normalizedPreposition = profile.valency.governedPreposition
-		? profile.valency.governedPreposition.trim().toLowerCase()
-		: "none";
-
 	return [
-		`conjugation:${profile.conjugation}`,
-		`separability:${profile.valency.separability}`,
-		`reflexivity:${profile.valency.reflexivity}`,
-		`preposition:${normalizedPreposition}`,
+		`reflex:${profile.inherentFeatures.reflex === true ? "yes" : "no"}`,
+		`separable:${
+			profile.inherentFeatures.separable === undefined
+				? "unknown"
+				: profile.inherentFeatures.separable
+					? "yes"
+					: "no"
+		}`,
 	].join("|");
 }

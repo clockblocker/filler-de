@@ -11,10 +11,18 @@ import type { MorphemeItem } from "../../../domain/morpheme/morpheme-formatter";
 import { getSectionsFor } from "../../../targets/de/sections/section-config";
 import { DictSectionKind } from "../../../targets/de/sections/section-kind";
 import { dispatchHeaderFormatter } from "../section-formatters/header-dispatch";
+import {
+	getLemmaSurfaceKind,
+	getLemmaText,
+	getLemmaUnitKind,
+	getLexemePos,
+	isLexemeResult,
+	isPhrasemeResult,
+} from "../../lemma/types";
 import type { ResolvedEntryState } from "./resolve-existing-entry";
 import {
 	buildSectionQuery,
-	resolveNounInflectionGenus,
+	resolveNounInflectionGender,
 	V3_SECTIONS,
 } from "./section-generation-context";
 import { unwrapResultAsync } from "./section-generation-results";
@@ -26,7 +34,7 @@ import type {
 import {
 	generateAttestationSection,
 	generateInflectionSection,
-	generateMorphemSection,
+	generateMorphemeSection,
 	generateMorphologySection,
 	generateRelationSection,
 	generateTagsSection,
@@ -66,7 +74,7 @@ function collectLexicalInfoFailures(
 		failedSections.push("Inflection");
 	}
 	if (lexicalInfo.morphemicBreakdown.status === "error") {
-		failedSections.push("Morphem");
+		failedSections.push("Morpheme");
 	}
 	if (lexicalInfo.relations.status === "error") {
 		failedSections.push("Relation");
@@ -79,20 +87,30 @@ function buildEntryId(
 		ResolvedEntryState["textfresserState"]["latestLemmaResult"]
 	>,
 ): string {
-	if (lemmaResult.linguisticUnit === "Lexem") {
+	const unitKind = getLemmaUnitKind(lemmaResult);
+	const surfaceKind = getLemmaSurfaceKind(lemmaResult);
+	if (!unitKind || !surfaceKind) {
+		return "";
+	}
+
+	if (isLexemeResult(lemmaResult)) {
+		const pos = getLexemePos(lemmaResult);
+		if (!pos) {
+			return "";
+		}
 		return dictEntryIdHelper.build({
 			index: nextIndex,
-			pos: lemmaResult.posLikeKind,
-			surfaceKind: lemmaResult.surfaceKind,
-			unitKind: "Lexem",
+			pos,
+			surfaceKind,
+			unitKind: "Lexeme",
 		});
 	}
 
-	if (lemmaResult.linguisticUnit === "Phrasem") {
+	if (isPhrasemeResult(lemmaResult)) {
 		return dictEntryIdHelper.build({
 			index: nextIndex,
-			surfaceKind: lemmaResult.surfaceKind,
-			unitKind: lemmaResult.linguisticUnit,
+			surfaceKind,
+			unitKind: "Phraseme",
 		});
 	}
 
@@ -125,8 +143,9 @@ export async function generateNewEntrySections(
 	const lemmaResult = ctx.textfresserState.latestLemmaResult;
 	const { promptRunner, languages } = ctx.textfresserState;
 	const targetLang = languages.target;
-	const word = lemmaResult.lemma;
-	const posOrKind = lemmaResult.posLikeKind;
+	const word = getLemmaText(lemmaResult) ?? "";
+	const posOrKind =
+		getLexemePos(lemmaResult) ?? getLemmaUnitKind(lemmaResult) ?? "unknown";
 	const context = lemmaResult.attestation.source.textWithOnlyTargetMarked;
 
 	const failedSections: string[] = [];
@@ -172,23 +191,23 @@ export async function generateNewEntrySections(
 	const shouldRunPropagation = v3Applicable.some((sectionKind) =>
 		shouldPropagateLinksForSection(sectionKind),
 	);
-	const shouldGenerateMorphem =
-		sectionSet.has(DictSectionKind.Morphem) ||
+	const shouldGenerateMorpheme =
+		sectionSet.has(DictSectionKind.Morpheme) ||
 		sectionSet.has(DictSectionKind.Morphology);
 	const shouldGenerateTranslation =
 		sectionSet.has(DictSectionKind.Translation) || shouldRunPropagation;
-	const morphemSectionResult = generateMorphemSection({
+	const morphemSectionResult = generateMorphemeSection({
 		lexicalInfo,
 		targetLang,
 	});
-	if (shouldGenerateMorphem && !morphemSectionResult) {
+	if (shouldGenerateMorpheme && !morphemSectionResult) {
 		logger.warn(
-			"[generateSections] Morphem failed; skipping dependent outputs (Morphology section + morpheme/morphology propagation)",
-			{
-				lemma: lemmaResult.lemma,
-				willSkipMorphologySection: sectionSet.has(
-					DictSectionKind.Morphology,
-				),
+				"[generateSections] Morpheme failed; skipping dependent outputs (Morphology section + morpheme/morphology propagation)",
+				{
+					lemma: getLemmaText(lemmaResult),
+					willSkipMorphologySection: sectionSet.has(
+						DictSectionKind.Morphology,
+					),
 			},
 		);
 	}
@@ -203,17 +222,17 @@ export async function generateNewEntrySections(
 				}),
 			);
 		} catch (error) {
-			failedSections.push("Translation");
-			logger.warn("[generateSections] Translation failed", {
-				error: getErrorMessage(error),
-				lemma: lemmaResult.lemma,
-			});
-			translationOutput = null;
+				failedSections.push("Translation");
+				logger.warn("[generateSections] Translation failed", {
+					error: getErrorMessage(error),
+					lemma: getLemmaText(lemmaResult),
+				});
+				translationOutput = null;
 		}
 	} else {
 		translationOutput = null;
 	}
-	const nounInflectionGenus = resolveNounInflectionGenus(lexicalInfo);
+	const nounInflectionGenus = resolveNounInflectionGender(lexicalInfo);
 
 	const headerContent = dispatchHeaderFormatter(lexicalInfo, targetLang);
 
@@ -233,7 +252,7 @@ export async function generateNewEntrySections(
 
 	for (const sectionKind of v3Applicable) {
 		switch (sectionKind) {
-			case DictSectionKind.Morphem: {
+			case DictSectionKind.Morpheme: {
 				if (!morphemSectionResult) break;
 				sections.push(morphemSectionResult.section);
 				break;
@@ -313,12 +332,12 @@ export async function generateNewEntrySections(
 		}
 	}
 
-	const entryId = buildEntryId(ctx.nextIndex, lemmaResult);
-	if (!entryId) {
-		throw new Error(
-			`Unexpected linguisticUnit for entry ID: ${lemmaResult.linguisticUnit}`,
-		);
-	}
+		const entryId = buildEntryId(ctx.nextIndex, lemmaResult);
+		if (!entryId) {
+			throw new Error(
+				`Unexpected selection for entry ID: ${JSON.stringify(lemmaResult)}`,
+			);
+		}
 
 	return {
 		entryId,

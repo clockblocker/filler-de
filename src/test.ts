@@ -12,11 +12,11 @@ type BaseLinguisticUnitMap = {
 	[LUK in LinguisticUnitKind]: { lingUnitKind: LUK };
 };
 
-// type Lexem = LinguisticUnitMap["Lexem"];
+// type Lexeme = LinguisticUnitMap["Lexeme"];
 
 type BaseMorphemMap = {
 	[MK in MorphemeKind]: Prettify<
-		{ morphemeKind: MK } & BaseLinguisticUnitMap["Morphem"]
+		{ morphemeKind: MK } & BaseLinguisticUnitMap["Morpheme"]
 	>;
 };
 

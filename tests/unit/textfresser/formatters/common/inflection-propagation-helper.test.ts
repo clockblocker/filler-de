@@ -12,33 +12,33 @@ describe("inflectionPropagationHelper", () => {
 		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
-				case: "Accusative",
+				case: "Acc",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 			{
 				article: "der",
-				case: "Genitive",
+				case: "Gen",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 			{
 				article: "das",
-				case: "Nominative",
+				case: "Nom",
 				form: "Kraftwerk",
-				number: "Singular",
+				number: "Sing",
 			},
 			{
 				article: "die",
-				case: "Nominative",
+				case: "Nom",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 			{
 				article: "die",
-				case: "Nominative",
+				case: "Nom",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 		];
 
@@ -74,7 +74,7 @@ describe("inflectionPropagationHelper", () => {
 		expect(
 			buildNounInflectionPropagationHeader(
 				"Staub",
-				"Maskulinum",
+				"Masc",
 				"German",
 			),
 		).toBe("#Inflection/Noun/Maskulin for: [[Staub]]");

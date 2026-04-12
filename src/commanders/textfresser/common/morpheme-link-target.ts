@@ -49,10 +49,13 @@ export function resolveMorphemeItems(
 				? stripAnchor(wikilinkHelper.normalizeLinkTarget(m.lemma))
 				: undefined;
 		const base: MorphemeItem = {
+			isSeparable: m.isSeparable,
 			kind: m.kind,
+			...(m.isSeparable !== undefined && {
+				separability: m.isSeparable ? "Separable" : "Inseparable",
+			}),
 			surf: normalizedSurf,
 			...(normalizedLemma != null && { lemma: normalizedLemma }),
-			...(m.separability != null && { separability: m.separability }),
 		};
 
 		if (m.kind === "Prefix" && targetLang === "German") {

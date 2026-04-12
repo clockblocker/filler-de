@@ -2,11 +2,14 @@ import { describe, expect, it } from "bun:test";
 import { err, ok } from "neverthrow";
 import {
 	createLexicalGenerationModule,
-	createLexicalMeta,
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,
 	type StructuredFetchFn,
 } from "../../src/index";
+import {
+	makeLexemeMeta,
+	makeLexemeSelection,
+} from "./helpers";
 
 describe("lexical-generation lemma/disambiguation", () => {
 	it("retries lemma generation and keeps the better guarded result", async () => {
@@ -41,14 +44,14 @@ describe("lexical-generation lemma/disambiguation", () => {
 			targetLang: "German",
 		})._unsafeUnwrap();
 
-		const result = await module.generateLemma("geht", "Er geht auf.");
+		const result = await module.resolveSelection("geht", "Er geht auf.");
 
 		expect(result.isOk()).toBe(true);
 		expect(result._unsafeUnwrap()).toMatchObject({
-			lemma: "aufgehen",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Verb",
-			surfaceKind: "Lemma",
+			surface: {
+				lemma: { pos: "VERB", spelledLemma: "aufgehen" },
+				surfaceKind: "Lemma",
+			},
 		});
 		expect(calls).toEqual(["Lemma", "Lemma"]);
 	});
@@ -71,31 +74,18 @@ describe("lexical-generation lemma/disambiguation", () => {
 		})._unsafeUnwrap();
 
 		const matched = await module.disambiguateSense(
-			{
-				lemma: "Bank",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Noun",
-				surfaceKind: "Lemma",
-			},
+			makeLexemeSelection({ lemma: "Bank", pos: "NOUN" }),
 			"Ich gehe zur Bank",
 			[
-				createLexicalMeta({
+				makeLexemeMeta({
 					emojiDescription: ["🪑"],
-					lemma: {
-						lemma: "Bank",
-						linguisticUnit: "Lexem",
-						posLikeKind: "Noun",
-						surfaceKind: "Lemma",
-					},
+					lemma: "Bank",
+					pos: "NOUN",
 				}),
-				createLexicalMeta({
+				makeLexemeMeta({
 					emojiDescription: ["🏦"],
-					lemma: {
-						lemma: "Bank",
-						linguisticUnit: "Lexem",
-						posLikeKind: "Noun",
-						surfaceKind: "Lemma",
-					},
+					lemma: "Bank",
+					pos: "NOUN",
 				}),
 			],
 		);
@@ -123,22 +113,13 @@ describe("lexical-generation lemma/disambiguation", () => {
 		})._unsafeUnwrap();
 
 		const fresh = await moduleForNewSense.disambiguateSense(
-			{
-				lemma: "Schloss",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Noun",
-				surfaceKind: "Lemma",
-			},
+			makeLexemeSelection({ lemma: "Schloss", pos: "NOUN" }),
 			"Das Schloss an der Tur war kaputt.",
 			[
-				createLexicalMeta({
+				makeLexemeMeta({
 					emojiDescription: ["🏰"],
-					lemma: {
-						lemma: "Schloss",
-						linguisticUnit: "Lexem",
-						posLikeKind: "Noun",
-						surfaceKind: "Lemma",
-					},
+					lemma: "Schloss",
+					pos: "NOUN",
 				}),
 			],
 		);
@@ -169,22 +150,13 @@ describe("lexical-generation lemma/disambiguation", () => {
 		})._unsafeUnwrap();
 
 		const result = await module.disambiguateSense(
-			{
-				lemma: "Bank",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Noun",
-				surfaceKind: "Lemma",
-			},
+			makeLexemeSelection({ lemma: "Bank", pos: "NOUN" }),
 			"Ich gehe zur Bank",
 			[
-				createLexicalMeta({
+				makeLexemeMeta({
 					emojiDescription: ["🏦"],
-					lemma: {
-						lemma: "Bank",
-						linguisticUnit: "Lexem",
-						posLikeKind: "Noun",
-						surfaceKind: "Lemma",
-					},
+					lemma: "Bank",
+					pos: "NOUN",
 				}),
 			],
 		);

@@ -15,7 +15,7 @@ export type LinguisticWikilinkIntent =
 
 export type LinguisticWikilinkTargetKind =
 	| "Lemma"
-	| "Inflected"
+	| "Inflection"
 	| "Surface"
 	| "None";
 
@@ -58,9 +58,9 @@ const SECTION_LINK_POLICY_BY_KIND: Record<
 		propagates: true,
 		sectionIntent: "GenerateSectionLink",
 		source: "TextfresserCommand",
-		targetKind: "Inflected",
+		targetKind: "Inflection",
 	},
-	[DictSectionKind.Morphem]: {
+	[DictSectionKind.Morpheme]: {
 		propagates: true,
 		sectionIntent: "GenerateSectionLink",
 		source: "TextfresserCommand",
@@ -134,8 +134,8 @@ export function resolveDesiredSurfaceKindForPropagationSection(
 	if (targetKind === "Lemma") {
 		return SurfaceKind.Lemma;
 	}
-	if (targetKind === "Inflected") {
-		return SurfaceKind.Inflected;
+	if (targetKind === "Inflection") {
+		return SurfaceKind.Inflection;
 	}
 	return null;
 }

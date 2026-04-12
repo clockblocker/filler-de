@@ -9,31 +9,31 @@ function makeCtx(
 		| {
 				activePathParts: string[];
 				lemma: string;
-				linguisticUnit: "Lexem";
+				linguisticUnit: "Lexeme";
 				posLikeKind:
-					| "Noun"
-					| "Pronoun"
-					| "Article"
-					| "Adjective"
-					| "Verb"
-					| "Preposition"
-					| "Adverb"
-					| "Particle"
-					| "Conjunction"
-					| "InteractionalUnit";
-				surfaceKind: "Lemma" | "Inflected" | "Variant";
+					| "NOUN"
+					| "PRON"
+					| "DET"
+					| "ADJ"
+					| "VERB"
+					| "ADP"
+					| "ADV"
+					| "PART"
+					| "CCONJ"
+					| "INTJ";
+				surfaceKind: "Lemma" | "Inflection" | "Variant";
 		  }
 		| {
 				activePathParts: string[];
 				lemma: string;
-				linguisticUnit: "Phrasem";
+				linguisticUnit: "Phraseme";
 				posLikeKind:
 					| "Idiom"
 					| "Collocation"
 					| "DiscourseFormula"
 					| "Proverb"
 					| "CulturalQuotation";
-				surfaceKind: "Lemma" | "Inflected" | "Variant";
+				surfaceKind: "Lemma" | "Inflection" | "Variant";
 		  },
 ): CommandStateWithLemma {
 	return {
@@ -54,7 +54,7 @@ function makeCtx(
 		textfresserState: {
 			languages: { known: "English", target: "German" },
 			latestLemmaResult:
-				params.linguisticUnit === "Lexem"
+				params.linguisticUnit === "Lexeme"
 					? {
 							attestation: {
 								source: {
@@ -72,7 +72,7 @@ function makeCtx(
 							},
 							disambiguationResult: null,
 							lemma: params.lemma,
-							linguisticUnit: "Lexem",
+							linguisticUnit: "Lexeme",
 							posLikeKind: params.posLikeKind,
 							surfaceKind: params.surfaceKind,
 						}
@@ -93,7 +93,7 @@ function makeCtx(
 							},
 							disambiguationResult: null,
 							lemma: params.lemma,
-							linguisticUnit: "Phrasem",
+							linguisticUnit: "Phraseme",
 							posLikeKind: params.posLikeKind,
 							surfaceKind: params.surfaceKind,
 						},
@@ -104,10 +104,10 @@ function makeCtx(
 describe("moveToWorter policy destination", () => {
 	it("keeps closed-set lexems in Worter destination", () => {
 		const ctx = makeCtx({
-			activePathParts: ["Worter", "de", "lexem", "lemma", "i", "ich", "ich"],
+			activePathParts: ["Worter", "de", "lexeme", "lemma", "i", "ich", "ich"],
 			lemma: "ich",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Pronoun",
+			linguisticUnit: "Lexeme",
+			posLikeKind: "PRON",
 			surfaceKind: "Lemma",
 		});
 
@@ -120,8 +120,8 @@ describe("moveToWorter policy destination", () => {
 		const ctx = makeCtx({
 			activePathParts: ["Library", "de", "verb"],
 			lemma: "laufen",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Verb",
+			linguisticUnit: "Lexeme",
+			posLikeKind: "VERB",
 			surfaceKind: "Lemma",
 		});
 
@@ -140,8 +140,8 @@ describe("moveToWorter policy destination", () => {
 		const ctx = makeCtx({
 			activePathParts: ["Library", "de", "pronoun"],
 			lemma: "ich",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Pronoun",
+			linguisticUnit: "Lexeme",
+			posLikeKind: "PRON",
 			surfaceKind: "Lemma",
 		});
 

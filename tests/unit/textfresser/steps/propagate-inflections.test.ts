@@ -49,7 +49,7 @@ function makeCtx(
 		nextIndex: 1,
 		nounInflectionGenus: hasNounGenusOverride
 			? options.nounInflectionGenus
-			: "Maskulinum",
+			: "Masc",
 		relations: [],
 		resultingActions: [],
 		textfresserState: {
@@ -58,8 +58,8 @@ function makeCtx(
 				attestation: { source: { ref: "![[Test#^1|^]]" } },
 				disambiguationResult: null,
 				lemma,
-				linguisticUnit: "Lexem",
-				posLikeKind: "Noun",
+				linguisticUnit: "Lexeme",
+				posLikeKind: "NOUN",
 				surfaceKind: "Lemma",
 			},
 			lookupInLibrary: () => [],
@@ -107,9 +107,9 @@ describe("propagateInflections", () => {
 		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
-				case: "Nominative",
+				case: "Nom",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 		];
 		const ctx = makeCtx(cells);
@@ -128,15 +128,15 @@ describe("propagateInflections", () => {
 		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "das",
-				case: "Nominative",
+				case: "Nom",
 				form: "Kraftwerk",
-				number: "Singular",
+				number: "Sing",
 			},
 			{
 				article: "das",
-				case: "Accusative",
+				case: "Acc",
 				form: "Kraftwerk",
-				number: "Singular",
+				number: "Sing",
 			},
 		];
 		const ctx = makeCtx(cells);
@@ -151,27 +151,27 @@ describe("propagateInflections", () => {
 		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
-				case: "Nominative",
+				case: "Nom",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 			{
 				article: "die",
-				case: "Accusative",
+				case: "Acc",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 			{
 				article: "der",
-				case: "Genitive",
+				case: "Gen",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 			{
 				article: "den",
-				case: "Dative",
+				case: "Dat",
 				form: "Kraftwerken",
-				number: "Plural",
+				number: "Plur",
 			},
 		];
 		const ctx = makeCtx(cells);
@@ -211,9 +211,9 @@ describe("propagateInflections", () => {
 		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
-				case: "Nominative",
+				case: "Nom",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 		];
 		const ctx = makeCtx(cells);
@@ -241,15 +241,15 @@ describe("propagateInflections", () => {
 		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
-				case: "Nominative",
+				case: "Nom",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 			{
 				article: "die",
-				case: "Nominative",
+				case: "Nom",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 		];
 		const ctx = makeCtx(cells);
@@ -270,15 +270,15 @@ describe("propagateInflections", () => {
 		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
-				case: "Nominative",
+				case: "Nom",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 			{
 				article: "der",
-				case: "Genitive",
+				case: "Gen",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 		];
 		const ctx = makeCtx(cells);
@@ -311,9 +311,9 @@ describe("propagateInflections", () => {
 		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
-				case: "Nominative",
+				case: "Nom",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 		];
 		const ctx = makeCtx(cells, "Kraftwerk", {
@@ -341,16 +341,16 @@ describe("propagateInflections", () => {
 		const cells: TextfresserNounInflectionCell[] = [
 			{
 				article: "die",
-				case: "Nominative",
+				case: "Nom",
 				form: "Kraftwerke",
-				number: "Plural",
+				number: "Plur",
 			},
 		];
 		const withoutGenusCtx = makeCtx(cells, "Kraftwerk", {
 			nounInflectionGenus: undefined,
 		});
 		const withGenusCtx = makeCtx(cells, "Kraftwerk", {
-			nounInflectionGenus: "Maskulinum",
+			nounInflectionGenus: "Masc",
 		});
 
 		const createFallbackTransform = getProcessTransform(

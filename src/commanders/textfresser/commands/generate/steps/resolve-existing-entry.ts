@@ -43,7 +43,7 @@ export function resolveExistingEntry(
 		existingEntries: parsedEntries,
 		linguisticUnit: lemmaResult.linguisticUnit,
 		posLikeKind:
-			lemmaResult.linguisticUnit === "Lexem"
+			lemmaResult.linguisticUnit === "Lexeme"
 				? lemmaResult.posLikeKind
 				: undefined,
 		stubPolicy: {
@@ -78,7 +78,7 @@ export function resolveExistingEntry(
 				parsed !== undefined &&
 				parsed.index === disambResult.matchedIndex &&
 				parsed.unitKind === lemmaResult.linguisticUnit &&
-				(lemmaResult.linguisticUnit !== "Lexem" ||
+				(lemmaResult.linguisticUnit !== "Lexeme" ||
 					parsed.pos === lemmaResult.posLikeKind)
 			);
 		});

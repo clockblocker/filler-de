@@ -10,19 +10,19 @@ import {
 } from "../../../../targets/de/sections/section-kind";
 import type { GenerationTargetLanguage } from "../section-generation-types";
 
-export type MorphemSectionContext = {
+export type MorphemeSectionContext = {
 	lexicalInfo: LexicalInfo;
 	targetLang: GenerationTargetLanguage;
 };
 
-export type MorphemSectionResult = {
+export type MorphemeSectionResult = {
 	morphemes: MorphemeItem[];
 	section: EntrySection;
 };
 
-export function generateMorphemSection(
-	ctx: MorphemSectionContext,
-): MorphemSectionResult | null {
+export function generateMorphemeSection(
+	ctx: MorphemeSectionContext,
+): MorphemeSectionResult | null {
 	if (ctx.lexicalInfo.morphemicBreakdown.status !== "ready") {
 		return null;
 	}
@@ -39,8 +39,8 @@ export function generateMorphemSection(
 				morphemes,
 				ctx.targetLang,
 			),
-			kind: cssSuffixFor[DictSectionKind.Morphem],
-			title: TitleReprFor[DictSectionKind.Morphem][ctx.targetLang],
+			kind: cssSuffixFor[DictSectionKind.Morpheme],
+			title: TitleReprFor[DictSectionKind.Morpheme][ctx.targetLang],
 		},
 	};
 }

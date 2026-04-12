@@ -17,7 +17,7 @@ describe("createLexicalGenerationModule", () => {
 
 		expect(result.isOk()).toBe(true);
 		const module = result._unsafeUnwrap();
-		expect(typeof module.generateLemma).toBe("function");
+		expect(typeof module.resolveSelection).toBe("function");
 		expect(typeof module.disambiguateSense).toBe("function");
 		expect(typeof module.generateLexicalInfo).toBe("function");
 	});

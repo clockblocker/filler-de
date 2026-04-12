@@ -42,9 +42,9 @@ export type DictEntryId = z.infer<typeof DictEntryIdSchema>;
 
 // -- Parsed type --
 
-interface ParsedLexemId {
+interface ParsedLexemeId {
 	unitKindTag: "LX";
-	unitKind: "Lexem";
+	unitKind: "Lexeme";
 	surfaceKindTag: SurfaceKindTag;
 	surfaceKind: SurfaceKind;
 	posTag: PosTag;
@@ -52,9 +52,9 @@ interface ParsedLexemId {
 	index: number;
 }
 
-interface ParsedNonLexemId {
+interface ParsedNonLexemeId {
 	unitKindTag: Exclude<LinguisticUnitKindTag, "LX">;
-	unitKind: Exclude<LinguisticUnitKind, "Lexem">;
+	unitKind: Exclude<LinguisticUnitKind, "Lexeme">;
 	surfaceKindTag: SurfaceKindTag;
 	surfaceKind: SurfaceKind;
 	posTag: undefined;
@@ -62,7 +62,7 @@ interface ParsedNonLexemId {
 	index: number;
 }
 
-export type ParsedDictEntryId = ParsedLexemId | ParsedNonLexemId;
+export type ParsedDictEntryId = ParsedLexemeId | ParsedNonLexemeId;
 
 // -- Parse --
 
@@ -85,12 +85,12 @@ export function parseDictEntryId(id: string): ParsedDictEntryId | undefined {
 			posTag,
 			surfaceKind: surfaceKindFrom[surfaceKindTag],
 			surfaceKindTag,
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			unitKindTag,
 		};
 	}
 
-	// Phrasem/Morphem must NOT have a POS tag
+	// Phraseme/Morpheme must NOT have a POS tag
 	if (rawPos) return undefined;
 
 	return {
@@ -101,31 +101,31 @@ export function parseDictEntryId(id: string): ParsedDictEntryId | undefined {
 		surfaceKindTag,
 		unitKind: linguisticUnitKindFrom[unitKindTag],
 		unitKindTag,
-	} as ParsedNonLexemId;
+	} as ParsedNonLexemeId;
 }
 
 // -- Build --
 
-interface BuildLexemIdParts {
-	unitKind: "Lexem";
+interface BuildLexemeIdParts {
+	unitKind: "Lexeme";
 	surfaceKind: SurfaceKind;
 	pos: POS;
 	index: number;
 }
 
-interface BuildNonLexemIdParts {
-	unitKind: Exclude<LinguisticUnitKind, "Lexem">;
+interface BuildNonLexemeIdParts {
+	unitKind: Exclude<LinguisticUnitKind, "Lexeme">;
 	surfaceKind: SurfaceKind;
 	index: number;
 }
 
-export type BuildDictEntryIdParts = BuildLexemIdParts | BuildNonLexemIdParts;
+export type BuildDictEntryIdParts = BuildLexemeIdParts | BuildNonLexemeIdParts;
 
 export function buildDictEntryId(parts: BuildDictEntryIdParts): string {
 	const unitTag = linguisticUnitKindTagFrom[parts.unitKind];
 	const surfaceTag = surfaceKindTagFrom[parts.surfaceKind];
 
-	if (parts.unitKind === "Lexem") {
+	if (parts.unitKind === "Lexeme") {
 		const posTag = posTagFormFromPos[parts.pos];
 		return `${unitTag}-${surfaceTag}-${posTag}-${parts.index}`;
 	}
@@ -156,7 +156,7 @@ function buildPrefix(
 	const unitTag = linguisticUnitKindTagFrom[unitKind];
 	const surfaceTag = surfaceKindTagFrom[surfaceKind];
 
-	if (unitKind === "Lexem" && pos) {
+	if (unitKind === "Lexeme" && pos) {
 		const posTag = posTagFormFromPos[pos];
 		return `${unitTag}-${surfaceTag}-${posTag}-`;
 	}

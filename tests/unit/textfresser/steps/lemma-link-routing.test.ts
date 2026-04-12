@@ -20,18 +20,18 @@ function makePath(
 }
 
 describe("lemma-link-routing", () => {
-	it("detects closed-set lexem POS correctly", () => {
-		expect(isClosedSetPos("Pronoun")).toBe(true);
-		expect(isClosedSetPos("Article")).toBe(true);
-		expect(isClosedSetPos("Conjunction")).toBe(true);
-		expect(isClosedSetPos("Particle")).toBe(true);
-		expect(isClosedSetPos("Noun")).toBe(false);
-		expect(isClosedSetPos("Verb")).toBe(false);
+	it("detects closed-set lexeme POS correctly", () => {
+		expect(isClosedSetPos("PRON")).toBe(true);
+		expect(isClosedSetPos("DET")).toBe(true);
+		expect(isClosedSetPos("CCONJ")).toBe(true);
+		expect(isClosedSetPos("PART")).toBe(true);
+		expect(isClosedSetPos("NOUN")).toBe(false);
+		expect(isClosedSetPos("VERB")).toBe(false);
 	});
 
 	it("pre-prompt target: resolver match wins over library lookup", () => {
 		const sourcePath = makePath("Source", ["Books", "A"]);
-		const resolverPath = makePath("gehen", ["Worter", "de", "lexem", "lemma", "g", "geh", "gehen"]);
+		const resolverPath = makePath("gehen", ["Worter", "de", "lexeme", "lemma", "g", "geh", "gehen"]);
 
 		const target = computePrePromptTarget({
 			findByBasename: () => [],
@@ -51,7 +51,7 @@ describe("lemma-link-routing", () => {
 		const englishWorter = makePath("gehen", [
 			"Worter",
 			"en",
-			"lexem",
+			"lexeme",
 			"lemma",
 			"g",
 			"geh",
@@ -60,7 +60,7 @@ describe("lemma-link-routing", () => {
 		const germanResolverPath = makePath("gehen", [
 			"Worter",
 			"de",
-			"lexem",
+			"lexeme",
 			"lemma",
 			"g",
 			"geh",
@@ -84,7 +84,7 @@ describe("lemma-link-routing", () => {
 		const existingWorter = makePath("Staub", [
 			"Worter",
 			"de",
-			"lexem",
+			"lexeme",
 			"lemma",
 			"s",
 			"sta",
@@ -120,7 +120,7 @@ describe("lemma-link-routing", () => {
 
 		const target = computePrePromptTarget({
 			findByBasename: () => [
-				makePath("pass", ["Worter", "de", "lexem", "lemma", "p", "pas", "passa"]),
+				makePath("pass", ["Worter", "de", "lexeme", "lemma", "p", "pas", "passa"]),
 			],
 			resolveLinkpathDest: () => null,
 			sourcePath,
@@ -138,14 +138,14 @@ describe("lemma-link-routing", () => {
 			"de",
 			"pronoun",
 		]);
-		const worterPath = makePath("ich", ["Worter", "de", "lexem", "lemma", "i", "ich", "ich"]);
+		const worterPath = makePath("ich", ["Worter", "de", "lexeme", "lemma", "i", "ich", "ich"]);
 
 		const closed = computeFinalTarget({
 			findByBasename: () => [worterPath],
 			lemma: "ich",
-			linguisticUnit: "Lexem",
+			linguisticUnit: "Lexeme",
 			lookupInLibrary: () => [libraryPath],
-			posLikeKind: "Pronoun",
+			posLikeKind: "PRON",
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
 		});
@@ -156,9 +156,9 @@ describe("lemma-link-routing", () => {
 		const open = computeFinalTarget({
 			findByBasename: () => [],
 			lemma: "laufen",
-			linguisticUnit: "Lexem",
+			linguisticUnit: "Lexeme",
 			lookupInLibrary: () => [makePath("laufen", ["Library", "de", "verb"])],
-			posLikeKind: "Verb",
+			posLikeKind: "VERB",
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
 		});
@@ -169,7 +169,7 @@ describe("lemma-link-routing", () => {
 
 	it("formats link target as basename by default", () => {
 		const library = makePath("ich", ["Library", "de", "pronoun"]);
-		const worter = makePath("laufen", ["Worter", "de", "lexem", "lemma", "l", "lau", "laufe"]);
+		const worter = makePath("laufen", ["Worter", "de", "lexeme", "lemma", "l", "lau", "laufe"]);
 
 		expect(formatLinkTarget(library)).toBe("ich");
 		expect(formatLinkTarget(worter)).toBe("laufen");
@@ -182,9 +182,9 @@ describe("lemma-link-routing", () => {
 		const target = computeFinalTarget({
 			findByBasename: () => [libraryPronoun, libraryArticle],
 			lemma: "ich",
-			linguisticUnit: "Lexem",
+			linguisticUnit: "Lexeme",
 			lookupInLibrary: () => [libraryPronoun],
-			posLikeKind: "Pronoun",
+			posLikeKind: "PRON",
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
 		});
@@ -196,13 +196,13 @@ describe("lemma-link-routing", () => {
 	});
 
 	it("closed-set fallback keeps attestation target on Worter when no Library match exists", () => {
-		const worterPath = makePath("wir", ["Worter", "de", "lexem", "lemma", "w", "wir", "wir"]);
+		const worterPath = makePath("wir", ["Worter", "de", "lexeme", "lemma", "w", "wir", "wir"]);
 		const target = computeFinalTarget({
 			findByBasename: () => [worterPath],
 			lemma: "wir",
-			linguisticUnit: "Lexem",
+			linguisticUnit: "Lexeme",
 			lookupInLibrary: () => [],
-			posLikeKind: "Pronoun",
+			posLikeKind: "PRON",
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
 		});
@@ -216,7 +216,7 @@ describe("lemma-link-routing", () => {
 		const worterPath = makePath("die", [
 			"Worter",
 			"de",
-			"lexem",
+			"lexeme",
 			"lemma",
 			"d",
 			"die",
@@ -232,9 +232,9 @@ describe("lemma-link-routing", () => {
 		const target = computeFinalTarget({
 			findByBasename: () => [worterPath],
 			lemma: "die",
-			linguisticUnit: "Lexem",
+			linguisticUnit: "Lexeme",
 			lookupInLibrary: () => [article],
-			posLikeKind: "Pronoun",
+			posLikeKind: "PRON",
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
 		});
@@ -248,7 +248,7 @@ describe("lemma-link-routing", () => {
 		const englishWorter = makePath("ich", [
 			"Worter",
 			"en",
-			"lexem",
+			"lexeme",
 			"lemma",
 			"i",
 			"ich",
@@ -258,9 +258,9 @@ describe("lemma-link-routing", () => {
 		const target = computeFinalTarget({
 			findByBasename: () => [englishWorter],
 			lemma: "ich",
-			linguisticUnit: "Lexem",
+			linguisticUnit: "Lexeme",
 			lookupInLibrary: () => [],
-			posLikeKind: "Noun",
+			posLikeKind: "NOUN",
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
 		});
@@ -275,7 +275,7 @@ describe("lemma-link-routing", () => {
 		const target = computeFinalTarget({
 			findByBasename: () => [],
 			lemma: "auf jeden Fall",
-			linguisticUnit: "Phrasem",
+			linguisticUnit: "Phraseme",
 			lookupInLibrary: () => [],
 			posLikeKind: null,
 			surfaceKind: "Lemma",
@@ -284,7 +284,7 @@ describe("lemma-link-routing", () => {
 
 		expect(target.splitPath.pathParts[0]).toBe("Worter");
 		expect(target.splitPath.pathParts[1]).toBe("de");
-		expect(target.splitPath.pathParts[2]).toBe("phrasem");
+		expect(target.splitPath.pathParts[2]).toBe("phraseme");
 		expect(target.splitPath.pathParts[3]).toBe("lemma");
 		expect(target.splitPath.basename).toBe("auf jeden Fall");
 	});
@@ -293,21 +293,21 @@ describe("lemma-link-routing", () => {
 		const inflected = computeFinalTarget({
 			findByBasename: () => [],
 			lemma: "aß",
-			linguisticUnit: "Lexem",
+			linguisticUnit: "Lexeme",
 			lookupInLibrary: () => [],
-			posLikeKind: "Verb",
-			surfaceKind: "Inflected",
+			posLikeKind: "VERB",
+			surfaceKind: "Inflection",
 			targetLanguage: "German",
 		});
-		expect(inflected.splitPath.pathParts[3]).toBe("inflected");
+		expect(inflected.splitPath.pathParts[3]).toBe("inflection");
 		expect(inflected.splitPath.basename).toBe("aß");
 
 		const variant = computeFinalTarget({
 			findByBasename: () => [],
 			lemma: "ass",
-			linguisticUnit: "Lexem",
+			linguisticUnit: "Lexeme",
 			lookupInLibrary: () => [],
-			posLikeKind: "Verb",
+			posLikeKind: "VERB",
 			surfaceKind: "Variant",
 			targetLanguage: "German",
 		});
@@ -337,13 +337,13 @@ describe("lemma-link-routing", () => {
 		const target = computeFinalTarget({
 			findByBasename: () => [],
 			lemma: "die",
-			linguisticUnit: "Lexem",
+			linguisticUnit: "Lexeme",
 			lookupInLibrary: () => [
 				pronounRelative,
 				article,
 				pronounDemonstrative,
 			],
-			posLikeKind: "Pronoun",
+			posLikeKind: "PRON",
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
 		});
@@ -367,9 +367,9 @@ describe("lemma-link-routing", () => {
 		const target = computeFinalTarget({
 			findByBasename: () => [],
 			lemma: "über",
-			linguisticUnit: "Lexem",
+			linguisticUnit: "Lexeme",
 			lookupInLibrary: () => [prefixTrennbar, preposition],
-			posLikeKind: "Preposition",
+			posLikeKind: "ADP",
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
 		});
@@ -392,9 +392,9 @@ describe("lemma-link-routing", () => {
 		const target = computeFinalTarget({
 			findByBasename: () => [],
 			lemma: "ja",
-			linguisticUnit: "Lexem",
+			linguisticUnit: "Lexeme",
 			lookupInLibrary: () => [particle, interactional],
-			posLikeKind: "InteractionalUnit",
+			posLikeKind: "INTJ",
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
 		});

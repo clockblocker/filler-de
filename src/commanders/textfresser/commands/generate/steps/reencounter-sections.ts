@@ -31,12 +31,12 @@ export function resolveExpectedV3SectionKindsFromLemmaResult(params: {
 }): DictSectionKind[] {
 	const { lemmaResult } = params;
 	return getSectionsFor(
-		lemmaResult.linguisticUnit === "Lexem"
+		lemmaResult.linguisticUnit === "Lexeme"
 			? {
 					pos: lemmaResult.posLikeKind,
-					unit: "Lexem",
+					unit: "Lexeme",
 				}
-			: { unit: "Phrasem" },
+			: { unit: "Phraseme" },
 	).filter((sectionKind) => V3_SECTIONS.has(sectionKind));
 }
 
@@ -84,7 +84,7 @@ export function findEntryForLemmaResult(params: {
 			if (parsed.index !== disambiguation.matchedIndex) return false;
 			if (parsed.unitKind !== lemmaResult.linguisticUnit) return false;
 			if (
-				lemmaResult.linguisticUnit === "Lexem" &&
+				lemmaResult.linguisticUnit === "Lexeme" &&
 				parsed.pos !== lemmaResult.posLikeKind
 			) {
 				return false;

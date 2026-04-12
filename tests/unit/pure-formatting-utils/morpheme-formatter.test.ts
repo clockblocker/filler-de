@@ -8,25 +8,25 @@ describe("morphemeFormatterHelper.decorateSurface", () => {
 
 	it("decorates German Separable prefix with >", () => {
 		expect(
-			morphemeFormatterHelper.decorateSurface("auf", "Separable", "German"),
+			morphemeFormatterHelper.decorateSurface("auf", true, "German"),
 		).toBe(">auf");
 	});
 
 	it("decorates German Inseparable prefix with <", () => {
 		expect(
-			morphemeFormatterHelper.decorateSurface("ver", "Inseparable", "German"),
+			morphemeFormatterHelper.decorateSurface("ver", false, "German"),
 		).toBe("ver<");
 	});
 
 	it("ignores separability for English", () => {
 		expect(
-			morphemeFormatterHelper.decorateSurface("auf", "Separable", "English"),
+			morphemeFormatterHelper.decorateSurface("auf", true, "English"),
 		).toBe("auf");
 	});
 
 	it("ignores Inseparable for English", () => {
 		expect(
-			morphemeFormatterHelper.decorateSurface("ver", "Inseparable", "English"),
+			morphemeFormatterHelper.decorateSurface("ver", false, "English"),
 		).toBe("ver");
 	});
 });
@@ -62,7 +62,7 @@ describe("morphemeFormatterHelper.formatAsWikilink", () => {
 	it("formats morpheme with Separable separability (no decoration in section)", () => {
 		expect(
 			morphemeFormatterHelper.formatAsWikilink(
-				{ kind: "Prefix", separability: "Separable", surf: "auf" },
+				{ kind: "Prefix", isSeparable: true, surf: "auf" },
 				"German",
 			),
 		).toBe("[[auf]]");
@@ -71,7 +71,7 @@ describe("morphemeFormatterHelper.formatAsWikilink", () => {
 	it("formats morpheme with Inseparable separability (no decoration in section)", () => {
 		expect(
 			morphemeFormatterHelper.formatAsWikilink(
-				{ kind: "Prefix", separability: "Inseparable", surf: "ver" },
+				{ kind: "Prefix", isSeparable: false, surf: "ver" },
 				"German",
 			),
 		).toBe("[[ver]]");
@@ -80,7 +80,7 @@ describe("morphemeFormatterHelper.formatAsWikilink", () => {
 	it("formats morpheme with both lemma and separability", () => {
 		expect(
 			morphemeFormatterHelper.formatAsWikilink(
-				{ kind: "Prefix", lemma: "auf-", separability: "Separable", surf: "auf" },
+				{ kind: "Prefix", isSeparable: true, lemma: "auf-", surf: "auf" },
 				"German",
 			),
 		).toBe("[[auf-|auf]]");
@@ -89,7 +89,7 @@ describe("morphemeFormatterHelper.formatAsWikilink", () => {
 	it("ignores separability for English", () => {
 		expect(
 			morphemeFormatterHelper.formatAsWikilink(
-				{ kind: "Prefix", separability: "Separable", surf: "un" },
+				{ kind: "Prefix", isSeparable: true, surf: "un" },
 				"English",
 			),
 		).toBe("[[un]]");
@@ -98,7 +98,7 @@ describe("morphemeFormatterHelper.formatAsWikilink", () => {
 	it("formats prefix with linkTarget (no decoration in section)", () => {
 		expect(
 			morphemeFormatterHelper.formatAsWikilink(
-				{ kind: "Prefix", linkTarget: "ver-prefix-de", separability: "Inseparable", surf: "ver" },
+				{ kind: "Prefix", isSeparable: false, linkTarget: "ver-prefix-de", surf: "ver" },
 				"German",
 			),
 		).toBe("[[ver-prefix-de|ver]]");
@@ -125,7 +125,7 @@ describe("morphemeFormatterHelper.formatAsWikilink", () => {
 	it("linkTarget overrides lemma for target (no decoration in section)", () => {
 		expect(
 			morphemeFormatterHelper.formatAsWikilink(
-				{ kind: "Prefix", linkTarget: "auf-prefix-de", separability: "Separable", surf: "auf" },
+				{ kind: "Prefix", isSeparable: true, linkTarget: "auf-prefix-de", surf: "auf" },
 				"German",
 			),
 		).toBe("[[auf-prefix-de|auf]]");
@@ -137,7 +137,7 @@ describe("morphemeFormatterHelper.formatSection", () => {
 		expect(
 			morphemeFormatterHelper.formatSection(
 				[
-					{ kind: "Prefix", separability: "Separable", surf: "auf" },
+					{ kind: "Prefix", isSeparable: true, surf: "auf" },
 					{ kind: "Root", surf: "passen" },
 				],
 				"German",
@@ -162,7 +162,7 @@ describe("morphemeFormatterHelper.formatSection", () => {
 		expect(
 			morphemeFormatterHelper.formatSection(
 				[
-					{ kind: "Prefix", separability: "Inseparable", surf: "ver" },
+					{ kind: "Prefix", isSeparable: false, surf: "ver" },
 					{ kind: "Root", surf: "stehen" },
 				],
 				"German",

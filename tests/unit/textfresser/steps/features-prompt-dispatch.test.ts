@@ -7,30 +7,33 @@ import { PromptKind } from "@textfresser/lexical-generation";
 
 describe("getFeaturesPromptKindForPos", () => {
 	it("maps every Lexem POS to a dedicated Features prompt kind", () => {
-		expect(getFeaturesPromptKindForPos("Noun")).toBe(PromptKind.FeaturesNoun);
-		expect(getFeaturesPromptKindForPos("Pronoun")).toBe(
+		expect(getFeaturesPromptKindForPos("NOUN")).toBe(PromptKind.FeaturesNoun);
+		expect(getFeaturesPromptKindForPos("PRON")).toBe(
 			PromptKind.FeaturesPronoun,
 		);
-		expect(getFeaturesPromptKindForPos("Article")).toBe(
+		expect(getFeaturesPromptKindForPos("DET")).toBe(
 			PromptKind.FeaturesArticle,
 		);
-		expect(getFeaturesPromptKindForPos("Adjective")).toBe(
+		expect(getFeaturesPromptKindForPos("ADJ")).toBe(
 			PromptKind.FeaturesAdjective,
 		);
-		expect(getFeaturesPromptKindForPos("Verb")).toBe(PromptKind.FeaturesVerb);
-		expect(getFeaturesPromptKindForPos("Preposition")).toBe(
+		expect(getFeaturesPromptKindForPos("VERB")).toBe(PromptKind.FeaturesVerb);
+		expect(getFeaturesPromptKindForPos("ADP")).toBe(
 			PromptKind.FeaturesPreposition,
 		);
-		expect(getFeaturesPromptKindForPos("Adverb")).toBe(
+		expect(getFeaturesPromptKindForPos("ADV")).toBe(
 			PromptKind.FeaturesAdverb,
 		);
-		expect(getFeaturesPromptKindForPos("Particle")).toBe(
+		expect(getFeaturesPromptKindForPos("PART")).toBe(
 			PromptKind.FeaturesParticle,
 		);
-		expect(getFeaturesPromptKindForPos("Conjunction")).toBe(
+		expect(getFeaturesPromptKindForPos("CCONJ")).toBe(
 			PromptKind.FeaturesConjunction,
 		);
-		expect(getFeaturesPromptKindForPos("InteractionalUnit")).toBe(
+		expect(getFeaturesPromptKindForPos("SCONJ")).toBe(
+			PromptKind.FeaturesConjunction,
+		);
+		expect(getFeaturesPromptKindForPos("INTJ")).toBe(
 			PromptKind.FeaturesInteractionalUnit,
 		);
 	});
@@ -39,7 +42,7 @@ describe("getFeaturesPromptKindForPos", () => {
 describe("buildFeatureTagPath", () => {
 	it("dedupes repeated tags globally while preserving first occurrence", () => {
 		expect(
-			buildFeatureTagPath("Noun", [
+			buildFeatureTagPath("NOUN", [
 				"masculine",
 				"common",
 				"common",
@@ -49,14 +52,14 @@ describe("buildFeatureTagPath", () => {
 	});
 
 	it("dedupes tags that repeat the POS root", () => {
-		expect(buildFeatureTagPath("Noun", ["noun", "common", "NOUN"])).toBe(
+		expect(buildFeatureTagPath("NOUN", ["noun", "common", "NOUN"])).toBe(
 			"#noun/common",
 		);
 	});
 
 	it("trims and normalizes tags to lowercase", () => {
 		expect(
-			buildFeatureTagPath("Verb", [" TransitIV ", " ", "STARK"]),
+			buildFeatureTagPath("VERB", [" TransitIV ", " ", "STARK"]),
 		).toBe("#verb/transitiv/stark");
 	});
 });

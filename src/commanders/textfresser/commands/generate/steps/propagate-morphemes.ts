@@ -2,8 +2,8 @@
  * Propagate morpheme back-references to target notes.
  *
  * Responsibilities:
- * - bound morphemes (suffix/interfix/etc): maintain `used_in:` backlinks on Morphem notes
- * - prefixes that are not covered by a generated prefix equation: maintain `used_in:` backlinks on Morphem notes
+ * - bound morphemes (suffix/interfix/etc): maintain `used_in:` backlinks on Morpheme notes
+ * - prefixes that are not covered by a generated prefix equation: maintain `used_in:` backlinks on Morpheme notes
  *
  * Prefixes covered by `propagateMorphologyRelations` prefix equations are skipped
  * here to avoid duplicate propagation.
@@ -297,11 +297,11 @@ export function propagateMorphemes(
 			}
 
 			const existingIds = existingEntries.map((entry) => entry.id);
-			const prefix = dictEntryIdHelper.buildPrefix("Morphem", "Lemma");
+			const prefix = dictEntryIdHelper.buildPrefix("Morpheme", "Lemma");
 			const entryId = dictEntryIdHelper.build({
 				index: dictEntryIdHelper.nextIndex(existingIds, prefix),
 				surfaceKind: "Lemma",
-				unitKind: "Morphem",
+				unitKind: "Morpheme",
 			});
 
 			const sections: EntrySection[] = [

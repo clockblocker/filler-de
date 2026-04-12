@@ -1,47 +1,31 @@
-import type {
-	LexemFeatures,
-	LexicalInfo,
-} from "@textfresser/lexical-generation";
+import type { InherentFeatures, LexicalInfo } from "@textfresser/lexical-generation";
+import { getLexicalInfoInherentFeatures, getLexicalInfoPos } from "../../../domain/lexical-info-view";
 import { buildVerbEntryIdentity } from "../../../domain/lexical-types";
-import { normalizeTagPart } from "./tag-normalization";
 
-export type VerbLexicalFeatures = Extract<LexemFeatures, { kind: "verb" }>;
+export type VerbLexicalFeatures = Pick<InherentFeatures, "reflex" | "separable">;
 
 export function getVerbLexicalFeatures(
 	lexicalInfo: LexicalInfo,
 ): VerbLexicalFeatures | null {
-	if (lexicalInfo.lemma.linguisticUnit !== "Lexem") {
+	if (getLexicalInfoPos(lexicalInfo) !== "VERB") {
 		return null;
 	}
-	if (lexicalInfo.features.status !== "ready") {
+
+	const inherentFeatures = getLexicalInfoInherentFeatures(lexicalInfo);
+	if (!inherentFeatures) {
 		return null;
 	}
-	return lexicalInfo.features.value.kind === "verb"
-		? lexicalInfo.features.value
-		: null;
-}
 
-export function buildVerbFeatureTags(output: VerbLexicalFeatures): string[] {
-	const tags = [
-		`conjugation-${normalizeTagPart(output.conjugation)}`,
-		`separability-${normalizeTagPart(output.valency.separability)}`,
-		`reflexivity-${normalizeTagPart(output.valency.reflexivity)}`,
-	];
-
-	if (output.valency.governedPreposition) {
-		tags.push(
-			`prep-${normalizeTagPart(output.valency.governedPreposition)}`,
-		);
-	}
-
-	return tags;
+	return {
+		reflex: inherentFeatures.reflex,
+		separable: inherentFeatures.separable,
+	};
 }
 
 export function buildVerbEntryIdentityFromFeatures(
-	output: Pick<VerbLexicalFeatures, "conjugation" | "valency">,
+	output: VerbLexicalFeatures,
 ): string {
 	return buildVerbEntryIdentity({
-		conjugation: output.conjugation,
-		valency: output.valency,
+		inherentFeatures: output,
 	});
 }

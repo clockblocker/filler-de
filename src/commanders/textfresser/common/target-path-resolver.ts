@@ -203,14 +203,14 @@ export function resolveMorphemePath(
 
 	const desiredSurfaceKind =
 		resolveDesiredSurfaceKindForPropagationSection(
-			DictSectionKind.Morphem,
+			DictSectionKind.Morpheme,
 		) ?? SurfaceKind.Lemma;
 
 	return resolveTargetPath({
 		desiredSurfaceKind,
 		librarianLookup: params.lookupInLibrary,
 		targetLanguage: params.targetLang,
-		unitKind: "Morphem",
+		unitKind: "Morpheme",
 		vamLookup: (word) => params.vam.findByBasename(word),
 		word: item.lemma ?? item.surf,
 	});

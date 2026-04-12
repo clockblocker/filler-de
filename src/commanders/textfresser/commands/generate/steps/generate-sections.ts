@@ -30,6 +30,10 @@ import {
 	getVerbLexicalFeatures,
 } from "./verb-features";
 import {
+	getLexemePos,
+	isLexemeResult,
+} from "../../lemma/types";
+import {
 	adaptLegacySectionsForEntry,
 	findFirstTypedSectionByMarker,
 	getTypedSectionContent,
@@ -108,7 +112,7 @@ function ensureClosedSetMembershipEntries(params: {
 	existingEntries: NoteEntry[];
 }): NoteEntry[] {
 	const lemmaResult = params.ctx.textfresserState.latestLemmaResult;
-	if (lemmaResult.linguisticUnit !== "Lexem") {
+	if (!isLexemeResult(lemmaResult)) {
 		return params.existingEntries;
 	}
 
@@ -177,8 +181,7 @@ async function buildReEncounterResult(
 		existingEntries,
 	});
 	const canUseLemmaOnlyFastPath = !(
-		lemmaResult.linguisticUnit === "Lexem" &&
-		lemmaResult.posLikeKind === "Noun"
+		isLexemeResult(lemmaResult) && getLexemePos(lemmaResult) === "NOUN"
 	);
 	if (canUseLemmaOnlyFastPath) {
 		const missingSections = computeMissingV3SectionKindsFromLemmaResult({
@@ -295,14 +298,13 @@ export function generateSections(
 
 	return ResultAsync.fromPromise(
 		(async () => {
-			const generated = await generateNewEntrySections(ctx);
-			const lemmaResult = ctx.textfresserState.latestLemmaResult;
-			const isVerbLexem =
-				lemmaResult.linguisticUnit === "Lexem" &&
-				lemmaResult.posLikeKind === "Verb";
+				const generated = await generateNewEntrySections(ctx);
+				const lemmaResult = ctx.textfresserState.latestLemmaResult;
+				const isVerbLexeme =
+					isLexemeResult(lemmaResult) && getLexemePos(lemmaResult) === "VERB";
 			const verbFeatures = getVerbLexicalFeatures(generated.lexicalInfo);
 			const verbEntryIdentity =
-				isVerbLexem && verbFeatures
+				isVerbLexeme && verbFeatures
 					? buildVerbEntryIdentityFromFeatures(verbFeatures)
 					: undefined;
 

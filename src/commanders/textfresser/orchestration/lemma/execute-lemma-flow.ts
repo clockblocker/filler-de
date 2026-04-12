@@ -93,7 +93,7 @@ export function executeLemmaFlow(params: {
 						lemma: lemma.lemma,
 						linguisticUnit: lemma.linguisticUnit,
 						posLikeKind:
-							lemma.linguisticUnit === "Lexem"
+							lemma.linguisticUnit === "Lexeme"
 								? lemma.posLikeKind
 								: null,
 						surfaceKind: lemma.surfaceKind,
@@ -102,7 +102,7 @@ export function executeLemmaFlow(params: {
 			};
 
 			const pos =
-				lemma.linguisticUnit === "Lexem"
+				lemma.linguisticUnit === "Lexeme"
 					? ` (${lemma.posLikeKind})`
 					: "";
 			notify(`✓ ${lemma.lemma}${pos}`);

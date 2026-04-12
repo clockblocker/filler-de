@@ -10,6 +10,7 @@ import {
 	LEMMA_IDEMPOTENCE_WINDOW_MS,
 } from "../../../../src/commanders/textfresser/orchestration/lemma/lemma-cache";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
+import { makeLexemeLemmaResult } from "../helpers/native-fixtures";
 
 const SOURCE_PATH: SplitPathToMdFile = {
 	basename: "Source",
@@ -34,25 +35,21 @@ function makeAttestation(): Attestation {
 }
 
 function makeLemmaResult(): LemmaResult {
-	return {
+	return makeLexemeLemmaResult({
 		attestation: makeAttestation(),
-		disambiguationResult: { matchedIndex: 1 },
 		lemma: "gehen",
-		linguisticUnit: "Lexem",
-		posLikeKind: "Verb",
-		surfaceKind: "Lemma",
-	};
+		pos: "VERB",
+		disambiguationResult: { matchedIndex: 1 },
+	});
 }
 
 function makeProperNounLemmaResult(): LemmaResult {
-	return {
+	return makeLexemeLemmaResult({
 		attestation: makeAttestation(),
-		disambiguationResult: { matchedIndex: 1 },
 		lemma: "Berlin",
-		linguisticUnit: "Lexem",
-		posLikeKind: "Noun",
-		surfaceKind: "Lemma",
-	};
+		pos: "NOUN",
+		disambiguationResult: { matchedIndex: 1 },
+	});
 }
 
 function makeState(cacheAtMs: number): TextfresserState {

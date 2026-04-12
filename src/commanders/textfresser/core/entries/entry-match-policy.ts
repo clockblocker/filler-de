@@ -69,7 +69,7 @@ export function resolveEntryMatch<TEntry extends MatchableEntry>(
 	const prefix = entryIdentity.buildPrefix(
 		params.linguisticUnit,
 		params.surfaceKind,
-		params.linguisticUnit === "Lexem" ? params.posLikeKind : undefined,
+		params.linguisticUnit === "Lexeme" ? params.posLikeKind : undefined,
 	);
 
 	let existingEntries = [...params.existingEntries];
@@ -82,7 +82,7 @@ export function resolveEntryMatch<TEntry extends MatchableEntry>(
 					parsed !== undefined &&
 					parsed.index === params.disambiguationResult?.matchedIndex &&
 					parsed.unitKind === params.linguisticUnit &&
-					(params.linguisticUnit !== "Lexem" ||
+					(params.linguisticUnit !== "Lexeme" ||
 						parsed.pos === params.posLikeKind)
 				);
 			}) ?? null;

@@ -1,10 +1,12 @@
 import type {
-	LexemInflections,
+	LexemeInflections,
 } from "@textfresser/lexical-generation";
 import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 import {
 	CASE_ORDER,
 	CASE_SHORT_LABEL,
+	isLexicalCase,
+	isLexicalNumber,
 	type LexicalCase,
 	type TextfresserNounInflectionCell,
 } from "../../../../../../domain/lexical-types";
@@ -16,17 +18,26 @@ import {
  * Returns both the formatted section string and the raw cells for propagation.
  */
 export function formatInflection(
-	output: Extract<LexemInflections, { kind: "noun" }>,
+	output: Extract<LexemeInflections, { kind: "noun" }>,
 ): {
 	formattedSection: string;
 	cells: TextfresserNounInflectionCell[];
 } {
-	const cells: TextfresserNounInflectionCell[] = output.cells.map((c) => ({
-		article: c.article,
-		case: c.case,
-		form: wikilinkHelper.normalizeLinkTarget(c.form),
-		number: c.number,
-	}));
+	const isSupportedCell = (
+		cell: Extract<LexemeInflections, { kind: "noun" }>["cells"][number],
+	): cell is Extract<LexemeInflections, { kind: "noun" }>["cells"][number] & {
+		case: LexicalCase;
+		number: TextfresserNounInflectionCell["number"];
+	} => isLexicalCase(cell.case) && isLexicalNumber(cell.number);
+
+	const cells: TextfresserNounInflectionCell[] = output.cells
+		.filter(isSupportedCell)
+		.map((cell) => ({
+			article: cell.article,
+			case: cell.case,
+			form: wikilinkHelper.normalizeLinkTarget(cell.form),
+			number: cell.number,
+		}));
 
 	// Group cells by case
 	const byCase = new Map<LexicalCase, TextfresserNounInflectionCell[]>();

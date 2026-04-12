@@ -7,16 +7,23 @@ import type { POS as LexicalPos } from "../../../domain/note-linguistic-policy";
 export type FeaturesPromptKind = Extract<PromptKindType, `Features${string}`>;
 
 const FEATURES_PROMPT_KIND_BY_POS: Record<LexicalPos, FeaturesPromptKind> = {
-	Adjective: PromptKind.FeaturesAdjective,
-	Adverb: PromptKind.FeaturesAdverb,
-	Article: PromptKind.FeaturesArticle,
-	Conjunction: PromptKind.FeaturesConjunction,
-	InteractionalUnit: PromptKind.FeaturesInteractionalUnit,
-	Noun: PromptKind.FeaturesNoun,
-	Particle: PromptKind.FeaturesParticle,
-	Preposition: PromptKind.FeaturesPreposition,
-	Pronoun: PromptKind.FeaturesPronoun,
-	Verb: PromptKind.FeaturesVerb,
+	ADJ: PromptKind.FeaturesAdjective,
+	ADP: PromptKind.FeaturesPreposition,
+	ADV: PromptKind.FeaturesAdverb,
+	AUX: PromptKind.FeaturesVerb,
+	CCONJ: PromptKind.FeaturesConjunction,
+	DET: PromptKind.FeaturesArticle,
+	INTJ: PromptKind.FeaturesInteractionalUnit,
+	NOUN: PromptKind.FeaturesNoun,
+	NUM: PromptKind.FeaturesNoun,
+	PART: PromptKind.FeaturesParticle,
+	PRON: PromptKind.FeaturesPronoun,
+	PROPN: PromptKind.FeaturesNoun,
+	PUNCT: PromptKind.FeaturesInteractionalUnit,
+	SCONJ: PromptKind.FeaturesConjunction,
+	SYM: PromptKind.FeaturesInteractionalUnit,
+	VERB: PromptKind.FeaturesVerb,
+	X: PromptKind.FeaturesInteractionalUnit,
 };
 
 export function getFeaturesPromptKindForPos(

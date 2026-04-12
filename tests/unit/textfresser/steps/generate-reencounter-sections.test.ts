@@ -26,6 +26,13 @@ import {
 	type LexicalInfo,
 	lexicalGenerationError,
 } from "@textfresser/lexical-generation";
+import {
+	makeLexemeLemmaResult,
+	makeLexemeLexicalInfo,
+	makePhrasemeLemmaResult,
+	makePhrasemeLexicalInfo,
+	makeRelations,
+} from "../helpers/native-fixtures";
 
 const PHRASEM_ENTRY_ID = "PH-LM-1";
 const NOUN_ENTRY_ID = "LX-LM-NOUN-1";
@@ -118,7 +125,7 @@ function makeTrackingLexicalGeneration(params: {
 }
 
 function makePhrasemLexicalInfo(): LexicalInfo {
-	return {
+	return makePhrasemeLexicalInfo({
 		core: {
 			status: "ready",
 			value: {
@@ -126,26 +133,13 @@ function makePhrasemLexicalInfo(): LexicalInfo {
 				ipa: "ipa",
 			},
 		},
-		features: { status: "not_applicable" },
-		inflections: { status: "not_applicable" },
-		lemma: {
-			lemma: "redensart",
-			linguisticUnit: "Phrasem",
-			posLikeKind: "Idiom",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: {
-			status: "ready",
-			value: {
-				relations: [{ kind: "Synonym", words: ["nah"] }],
-			},
-		},
-	};
+		lemma: "redensart",
+		relations: makeRelations([{ kind: "Synonym", words: ["nah"] }]),
+	});
 }
 
 function makePronounLexicalInfo(): LexicalInfo {
-	return {
+	return makeLexemeLexicalInfo({
 		core: {
 			status: "ready",
 			value: {
@@ -156,26 +150,19 @@ function makePronounLexicalInfo(): LexicalInfo {
 		features: {
 			status: "ready",
 			value: {
-				kind: "tags",
-				tags: ["personal"],
+				inherentFeatures: {},
 			},
 		},
 		inflections: {
 			status: "ready",
 			value: {
 				kind: "generic",
-				rows: [{ forms: [{ form: "wir" }], label: "Nominative" }],
+				rows: [{ forms: [{ form: "wir" }], label: "Nom" }],
 			},
 		},
-		lemma: {
-			lemma: "wir",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Pronoun",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: { status: "not_applicable" },
-	};
+		lemma: "wir",
+		pos: "PRON",
+	});
 }
 
 function makePhrasemCtx(params: {
@@ -204,22 +191,25 @@ function makePhrasemCtx(params: {
 			inFlightGenerate: null,
 			languages: { known: "English", target: "German" },
 			latestFailedSections: [],
-			latestLemmaInvocationCache: null,
-			latestLemmaResult: {
-				attestation: {
-					source: {
-						ref: "![[Src#^1|^]]",
-						textRaw: "context",
-						textWithOnlyTargetMarked: "context [redensart]",
+				latestLemmaInvocationCache: null,
+				latestLemmaResult: makePhrasemeLemmaResult({
+						attestation: {
+							source: {
+								path: {
+									basename: "source",
+									extension: "md",
+									kind: "MdFile",
+									pathParts: ["Texts"],
+								},
+								ref: "![[Src#^1|^]]",
+								textRaw: "context",
+								textWithOnlyTargetMarked: "context [redensart]",
+						},
+						target: { surface: "redensart" },
 					},
-					target: { surface: "redensart" },
-				},
-				disambiguationResult: { matchedIndex: 1 },
-				lemma: "redensart",
-				linguisticUnit: "Phrasem",
-				posLikeKind: "Idiom",
-				surfaceKind: "Lemma",
-			},
+					disambiguationResult: { matchedIndex: 1 },
+					lemma: "redensart",
+				}),
 			lexicalGeneration: makeLexicalGeneration(
 				params.lexicalInfo ?? makePhrasemLexicalInfo(),
 			),
@@ -258,22 +248,26 @@ function makeClosedSetLexemCtx(params: {
 			inFlightGenerate: null,
 			languages: { known: "English", target: "German" },
 			latestFailedSections: [],
-			latestLemmaInvocationCache: null,
-			latestLemmaResult: {
-				attestation: {
-					source: {
-						ref: "![[Src#^7|^]]",
-						textRaw: "Wir arbeiten zusammen.",
-						textWithOnlyTargetMarked: "[Wir] arbeiten zusammen.",
+				latestLemmaInvocationCache: null,
+				latestLemmaResult: makeLexemeLemmaResult({
+						attestation: {
+							source: {
+								path: {
+									basename: "source",
+									extension: "md",
+									kind: "MdFile",
+									pathParts: ["Texts"],
+								},
+								ref: "![[Src#^7|^]]",
+								textRaw: "Wir arbeiten zusammen.",
+								textWithOnlyTargetMarked: "[Wir] arbeiten zusammen.",
+						},
+						target: { surface: "Wir" },
 					},
-					target: { surface: "Wir" },
-				},
-				disambiguationResult: { matchedIndex: 1 },
-				lemma: "wir",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Pronoun",
-				surfaceKind: "Lemma",
-			},
+					disambiguationResult: { matchedIndex: 1 },
+					lemma: "wir",
+					pos: "PRON",
+				}),
 			lexicalGeneration: makeLexicalGeneration(
 				params.lexicalInfo ?? makePronounLexicalInfo(),
 			),
@@ -420,10 +414,10 @@ describe("generateSections re-encounter behavior", () => {
 				entity: {
 					features: {
 						inflectional: {},
-						lexical: { nounClass: "Proper", pos: "Noun" },
+						lexical: { nounClass: "Proper", pos: "NOUN" },
 					},
-					linguisticUnit: "Lexem",
-					posLikeKind: "Noun",
+					linguisticUnit: "Lexeme",
+					posLikeKind: "NOUN",
 				} as unknown as NonNullable<LegacyDictEntry["meta"]["entity"]>,
 			},
 			sections: [
@@ -454,48 +448,44 @@ describe("generateSections re-encounter behavior", () => {
 				languages: { known: "English", target: "German" },
 				latestFailedSections: [],
 				latestLemmaInvocationCache: null,
-				latestLemmaResult: {
-					attestation: {
-						source: {
-							ref: "![[Src#^1|^]]",
-							textRaw: "context",
-							textWithOnlyTargetMarked: "context [Name]",
+					latestLemmaResult: makeLexemeLemmaResult({
+							attestation: {
+								source: {
+									path: {
+										basename: "source",
+										extension: "md",
+										kind: "MdFile",
+										pathParts: ["Texts"],
+									},
+									ref: "![[Src#^1|^]]",
+									textRaw: "context",
+									textWithOnlyTargetMarked: "context [Name]",
+							},
+							target: { surface: "Name" },
 						},
-						target: { surface: "Name" },
-					},
-					disambiguationResult: { matchedIndex: 1 },
-					lemma: "Name",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Noun",
-					surfaceKind: "Lemma",
-				},
-				lexicalGeneration: makeLexicalGeneration({
-					core: {
-						status: "ready",
-						value: {
-							emojiDescription: ["🏙️"],
-							ipa: "bɛʁˈliːn",
-						},
-					},
-					features: {
-						status: "ready",
-						value: {
-							genus: undefined,
-							kind: "noun",
-							nounClass: "Proper",
-							tags: ["city"],
-						},
-					},
-					inflections: { status: "not_applicable" },
-					lemma: {
+						disambiguationResult: { matchedIndex: 1 },
 						lemma: "Name",
-						linguisticUnit: "Lexem",
-						posLikeKind: "Noun",
-						surfaceKind: "Lemma",
-					},
-					morphemicBreakdown: { status: "not_applicable" },
-					relations: { status: "not_applicable" },
-				}),
+						pos: "PROPN",
+					}),
+					lexicalGeneration: makeLexicalGeneration({
+						...makeLexemeLexicalInfo({
+							core: {
+								status: "ready",
+								value: {
+									emojiDescription: ["🏙️"],
+									ipa: "bɛʁˈliːn",
+								},
+							},
+							features: {
+								status: "ready",
+								value: {
+									inherentFeatures: {},
+								},
+							},
+							lemma: "Name",
+							pos: "PROPN",
+						}),
+					}),
 				lookupInLibrary: () => [],
 				promptRunner: {
 					generate: (kind: string) => {
@@ -522,18 +512,18 @@ describe("generateSections re-encounter behavior", () => {
 				entity: {
 					features: {
 						inflectional: {},
-						lexical: { pos: "Noun" },
+						lexical: { pos: "NOUN" },
 					},
-					linguisticUnit: "Lexem",
-					posLikeKind: "Noun",
+					linguisticUnit: "Lexeme",
+					posLikeKind: "NOUN",
 				} as unknown as NonNullable<LegacyDictEntry["meta"]["entity"]>,
 				linguisticUnit: {
-					kind: "Lexem",
+					kind: "Lexeme",
 					surface: {
 						features: {
-							genus: "Neutrum",
+							genus: "Neut",
 							nounClass: "Proper",
-							pos: "Noun",
+							pos: "NOUN",
 						},
 						lemma: "Berlin",
 						surfaceKind: "Lemma",
@@ -567,54 +557,49 @@ describe("generateSections re-encounter behavior", () => {
 				languages: { known: "English", target: "German" },
 				latestFailedSections: [],
 				latestLemmaInvocationCache: null,
-				latestLemmaResult: {
-					attestation: {
-						source: {
-							ref: "![[Src#^1|^]]",
-							textRaw: "Berlin ist gross.",
-							textWithOnlyTargetMarked: "[Berlin] ist gross.",
+					latestLemmaResult: makeLexemeLemmaResult({
+							attestation: {
+								source: {
+									path: {
+										basename: "source",
+										extension: "md",
+										kind: "MdFile",
+										pathParts: ["Texts"],
+									},
+									ref: "![[Src#^1|^]]",
+									textRaw: "Berlin ist gross.",
+									textWithOnlyTargetMarked: "[Berlin] ist gross.",
+							},
+							target: { surface: "Berlin" },
 						},
-						target: { surface: "Berlin" },
-					},
-					disambiguationResult: { matchedIndex: 1 },
-					lemma: "Berlin",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Noun",
-					surfaceKind: "Lemma",
-				},
+						disambiguationResult: { matchedIndex: 1 },
+						lemma: "Berlin",
+						pos: "PROPN",
+					}),
 				lexicalGeneration: {
 					generateLexicalInfo: async () => {
 						lexicalInfoCalls += 1;
-						return ok({
-							core: {
-								status: "ready",
-								value: {
-									emojiDescription: ["🏙️"],
-									ipa: "bɛʁˈliːn",
-									nounIdentity: {
-										genus: "Neutrum",
-										nounClass: "Proper",
+							return ok(
+								makeLexemeLexicalInfo({
+									core: {
+										status: "ready",
+										value: {
+											emojiDescription: ["🏙️"],
+											ipa: "bɛʁˈliːn",
+										},
 									},
-								},
-							},
-							features: {
-								error: lexicalGenerationError(
-									LexicalGenerationFailureKind.FetchFailed,
-									"features failed",
-								),
-								status: "error",
-							},
-							inflections: { status: "not_applicable" },
-							lemma: {
-								lemma: "Berlin",
-								linguisticUnit: "Lexem",
-								posLikeKind: "Noun",
-								surfaceKind: "Lemma",
-							},
-							morphemicBreakdown: { status: "not_applicable" },
-							relations: { status: "not_applicable" },
-						});
-					},
+									features: {
+										error: lexicalGenerationError(
+											LexicalGenerationFailureKind.FetchFailed,
+											"features failed",
+										),
+										status: "error",
+									},
+									lemma: "Berlin",
+									pos: "PROPN",
+								}),
+							);
+						},
 				} as unknown as LexicalGenerationModule,
 				lookupInLibrary: () => [],
 				promptRunner: {
@@ -668,21 +653,24 @@ describe("generateSections re-encounter behavior", () => {
 				languages: { known: "English", target: "German" },
 				latestFailedSections: [],
 				latestLemmaInvocationCache: null,
-				latestLemmaResult: {
-					attestation: {
-						source: {
-							ref: "![[Src#^3|^]]",
-							textRaw: "Berlin ist gross.",
-							textWithOnlyTargetMarked: "[Berlin] ist gross.",
+					latestLemmaResult: makeLexemeLemmaResult({
+							attestation: {
+								source: {
+									path: {
+										basename: "source",
+										extension: "md",
+										kind: "MdFile",
+										pathParts: ["Texts"],
+									},
+									ref: "![[Src#^3|^]]",
+									textRaw: "Berlin ist gross.",
+									textWithOnlyTargetMarked: "[Berlin] ist gross.",
+							},
+							target: { surface: "Berlin" },
 						},
-						target: { surface: "Berlin" },
-					},
-					disambiguationResult: null,
-					lemma: "Berlin",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Noun",
-					surfaceKind: "Lemma",
-				},
+						lemma: "Berlin",
+						pos: "PROPN",
+					}),
 				lexicalGeneration: {
 					generateLexicalInfo: async () =>
 						err(
@@ -700,7 +688,7 @@ describe("generateSections re-encounter behavior", () => {
 							case "NounEnrichment":
 								return okAsync({
 									emojiDescription: ["🏙️"],
-									genus: "Neutrum",
+									genus: "Neut",
 									ipa: "bɛʁˈliːn",
 									nounClass: "Proper",
 								});
@@ -732,7 +720,7 @@ describe("generateSections re-encounter behavior", () => {
 		}
 		expect(promptCalls).toEqual([]);
 		expect(promptCalls).not.toContain("Relation");
-		expect(promptCalls).not.toContain("Morphem");
+		expect(promptCalls).not.toContain("Morpheme");
 		expect(promptCalls).not.toContain("NounInflection");
 		expect(promptCalls).not.toContain("Inflection");
 	});
@@ -776,9 +764,9 @@ describe("generateSections re-encounter behavior", () => {
 				),
 		);
 		expect(membershipEntry).toBeDefined();
-		expect(membershipEntry?.headerContent).toBe("wir (Pronoun)");
+		expect(membershipEntry?.headerContent).toBe("wir (PRON)");
 		expect(sectionContent(membershipEntry, "closed_set_membership")).toContain(
-			"- [[wir-personal-pronomen-de|wir (Pronoun)]]",
+			"- [[wir-personal-pronomen-de|wir (PRON)]]",
 		);
 		expect(
 			sectionContent(membershipEntry, "tags")?.includes("#kind/closed-set"),
@@ -805,27 +793,25 @@ describe("generateSections re-encounter behavior", () => {
 			matchedEntry,
 			promptGenerate: () => okAsync("unused"),
 		});
-		ctx.textfresserState.latestLemmaResult = {
-			attestation: {
-				source: {
-					path: {
-						basename: "source",
-						extension: "md",
-						kind: "MdFile",
-						pathParts: ["Texts"],
+			ctx.textfresserState.latestLemmaResult = makeLexemeLemmaResult({
+				attestation: {
+					source: {
+						path: {
+							basename: "source",
+							extension: "md",
+							kind: "MdFile",
+							pathParts: ["Texts"],
+						},
+						ref: "![[Src#^11|^]]",
+						textRaw: "Die arbeiten zusammen.",
+						textWithOnlyTargetMarked: "[Die] arbeiten zusammen.",
 					},
-					ref: "![[Src#^11|^]]",
-					textRaw: "Die arbeiten zusammen.",
-					textWithOnlyTargetMarked: "[Die] arbeiten zusammen.",
+					target: { surface: "Die" },
 				},
-				target: { surface: "Die" },
-			},
-			disambiguationResult: { matchedIndex: 1 },
-			lemma: "die",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Pronoun",
-			surfaceKind: "Lemma",
-		};
+				disambiguationResult: { matchedIndex: 1 },
+				lemma: "die",
+				pos: "PRON",
+			});
 		ctx.textfresserState.lookupInLibrary = () => [
 			{
 				basename: "die-bestimmter-artikel-de",
@@ -858,7 +844,7 @@ describe("generateSections re-encounter behavior", () => {
 		);
 		expect(membershipEntry).toBeDefined();
 		expect(sectionContent(membershipEntry, "closed_set_membership")).toContain(
-			"- [[die-demonstrativ-pronomen-de|die (Pronoun)]]",
+			"- [[die-demonstrativ-pronomen-de|die (PRON)]]",
 		);
 		expect(sectionContent(membershipEntry, "closed_set_membership")).not.toContain(
 			"die-bestimmter-artikel-de",
@@ -868,13 +854,13 @@ describe("generateSections re-encounter behavior", () => {
 	it("dedupes closed-set membership entry on repeated re-encounter", async () => {
 		const promptCalls: string[] = [];
 		const membershipEntry = entry({
-			headerContent: "wir (Pronoun)",
+			headerContent: "wir (PRON)",
 			id: "LX-LM-PRON-2",
 			meta: {},
 			sections: [
 				section(
 					"closed_set_membership",
-					"- [[wir-personal-pronomen-de|wir (Pronoun)]]",
+						"- [[wir-personal-pronomen-de|wir (PRON)]]",
 				),
 				section("tags", "#kind/closed-set"),
 			],
@@ -918,13 +904,13 @@ describe("generateSections re-encounter behavior", () => {
 
 	it("reuses existing membership entry when legacy pointer basename becomes stale", async () => {
 		const membershipEntry = entry({
-			headerContent: "wir (Pronoun)",
+			headerContent: "wir (PRON)",
 			id: "LX-LM-PRON-2",
 			meta: {},
 			sections: [
 				section(
 					"closed_set_membership",
-					"- [[wir-alt-personal-pronomen-de|wir (Pronoun)]]",
+						"- [[wir-alt-personal-pronomen-de|wir (PRON)]]",
 				),
 				section("tags", "#kind/closed-set"),
 			],
@@ -960,9 +946,9 @@ describe("generateSections re-encounter behavior", () => {
 		);
 		expect(membershipEntries).toHaveLength(1);
 		expect(membershipEntries[0]?.id).toBe("LX-LM-PRON-2");
-		expect(sectionContent(membershipEntries[0], "closed_set_membership")).toBe(
-			"- [[wir-personal-pronomen-de|wir (Pronoun)]]",
-		);
+			expect(sectionContent(membershipEntries[0], "closed_set_membership")).toBe(
+				"- [[wir-personal-pronomen-de|wir (PRON)]]",
+			);
 	});
 });
 
@@ -991,58 +977,58 @@ describe("generateSections new-entry resilience", () => {
 				languages: { known: "English", target: "German" },
 				latestFailedSections: [],
 				latestLemmaInvocationCache: null,
-				latestLemmaResult: {
+				latestLemmaResult: makeLexemeLemmaResult({
 					attestation: {
 						source: {
+							path: {
+								basename: "source",
+								extension: "md",
+								kind: "MdFile",
+								pathParts: ["Texts"],
+							},
 							ref: "![[Src#^1|^]]",
 							textRaw: "Ja, das stimmt.",
 							textWithOnlyTargetMarked: "[Ja], das stimmt.",
 						},
 						target: { surface: "Ja" },
 					},
-					disambiguationResult: null,
 					lemma: "ja",
-					linguisticUnit: "Lexem",
-					posLikeKind: "InteractionalUnit",
-					surfaceKind: "Lemma",
-				},
-				lexicalGeneration: makeLexicalGeneration({
-					core: {
-						error: lexicalGenerationError(
-							LexicalGenerationFailureKind.FetchFailed,
-							"core failed",
-						),
-						status: "error",
-					},
-					features: {
-						error: lexicalGenerationError(
-							LexicalGenerationFailureKind.FetchFailed,
-							"features failed",
-						),
-						status: "error",
-					},
-					inflections: { status: "not_applicable" },
-					lemma: {
-						lemma: "ja",
-						linguisticUnit: "Lexem",
-						posLikeKind: "InteractionalUnit",
-						surfaceKind: "Lemma",
-					},
-					morphemicBreakdown: {
-						error: lexicalGenerationError(
-							LexicalGenerationFailureKind.FetchFailed,
-							"morphem failed",
-						),
-						status: "error",
-					},
-					relations: {
-						error: lexicalGenerationError(
-							LexicalGenerationFailureKind.FetchFailed,
-							"relation failed",
-						),
-						status: "error",
-					},
+					pos: "INTJ",
 				}),
+					lexicalGeneration: makeLexicalGeneration(
+						makeLexemeLexicalInfo({
+							core: {
+								error: lexicalGenerationError(
+									LexicalGenerationFailureKind.FetchFailed,
+									"core failed",
+								),
+								status: "error",
+							},
+							features: {
+								error: lexicalGenerationError(
+									LexicalGenerationFailureKind.FetchFailed,
+									"features failed",
+								),
+								status: "error",
+							},
+							lemma: "ja",
+							morphemicBreakdown: {
+								error: lexicalGenerationError(
+									LexicalGenerationFailureKind.FetchFailed,
+									"morphem failed",
+								),
+								status: "error",
+							},
+							pos: "INTJ",
+							relations: {
+								error: lexicalGenerationError(
+									LexicalGenerationFailureKind.FetchFailed,
+									"relation failed",
+								),
+								status: "error",
+							},
+						}),
+					),
 				lookupInLibrary: () => [],
 				promptRunner: {
 					generate: (kind: string) => {
@@ -1066,7 +1052,7 @@ describe("generateSections new-entry resilience", () => {
 		expect(sectionContent(onlyEntry, "kontexte")).toBe("![[Src#^1|^]]");
 		expect(result.value.failedSections).toContain("Enrichment");
 		expect(result.value.failedSections).toContain("Features");
-		expect(result.value.failedSections).toContain("Morphem");
+		expect(result.value.failedSections).toContain("Morpheme");
 		expect(result.value.failedSections).toContain("Relation");
 		expect(result.value.failedSections).toContain("Translation");
 	});
@@ -1095,21 +1081,24 @@ describe("generateSections new-entry resilience", () => {
 				languages: { known: "English", target: "German" },
 				latestFailedSections: [],
 				latestLemmaInvocationCache: null,
-				latestLemmaResult: {
+				latestLemmaResult: makeLexemeLemmaResult({
 					attestation: {
 						source: {
+							path: {
+								basename: "source",
+								extension: "md",
+								kind: "MdFile",
+								pathParts: ["Texts"],
+							},
 							ref: "![[Src#^9|^]]",
 							textRaw: "Wir lernen.",
 							textWithOnlyTargetMarked: "[Wir] lernen.",
 						},
 						target: { surface: "Wir" },
 					},
-					disambiguationResult: null,
 					lemma: "wir",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Pronoun",
-					surfaceKind: "Lemma",
-				},
+					pos: "PRON",
+				}),
 				lexicalGeneration: makeLexicalGeneration(makePronounLexicalInfo()),
 				lookupInLibrary: () => [
 					{
@@ -1144,10 +1133,10 @@ describe("generateSections new-entry resilience", () => {
 		);
 		expect(membershipEntry).toBeDefined();
 		expect(membershipEntry?.id).toBe("LX-LM-PRON-2");
-		expect(membershipEntry?.headerContent).toBe("wir (Pronoun)");
+		expect(membershipEntry?.headerContent).toBe("wir (PRON)");
 		expect(
 			sectionContent(membershipEntry, "closed_set_membership")?.includes(
-				"- [[wir-personal-pronomen-de|wir (Pronoun)]]",
+				"- [[wir-personal-pronomen-de|wir (PRON)]]",
 			),
 		).toBe(true);
 	});

@@ -2,6 +2,7 @@ import { err, ok, type Result } from "neverthrow";
 import {
 	type LexicalGenerationError,
 	LexicalGenerationFailureKind,
+	lexicalGenerationError,
 } from "../errors";
 import { executePrompt } from "../internal/prompt-executor";
 import type { PromptKind } from "../internal/prompt-smith/codegen/consts";
@@ -10,16 +11,22 @@ import { wikilinkHelper } from "../internal/shared/wikilink";
 import type {
 	CreateLexicalGenerationModuleParams,
 	GenerateLexicalInfoOptions,
-	LexemFeatures,
-	LexemInflections,
 	LexicalCore,
+	LexicalFeatures,
 	LexicalGenerationSettings,
 	LexicalInfo,
 	LexicalInfoField,
 	LexicalInfoGenerator,
+	LexemeInflections,
 	MorphemicBreakdown,
-	ResolvedLemma,
+	ResolvedSelection,
 } from "../public-types";
+import {
+	getSpelledLemma,
+	isKnownSelection,
+	isLexemeSelection,
+	isPhrasemeSelection,
+} from "../selection-helpers";
 
 type PromptDeps = Pick<
 	CreateLexicalGenerationModuleParams,
@@ -80,36 +87,47 @@ function findHardStopFailure(
 	return null;
 }
 
-function buildCorePrompt(lemma: ResolvedLemma): {
+function buildCorePrompt(lemma: ResolvedSelection): {
 	input: UserInput<CorePromptKind>;
 	kind: CorePromptKind;
-} {
-	if (lemma.linguisticUnit === "Phrasem") {
+} | null {
+	if (!isKnownSelection(lemma)) {
+		return null;
+	}
+
+	if (isPhrasemeSelection(lemma)) {
 		return {
 			input: {
 				context: "",
-				kind: lemma.posLikeKind,
-				word: lemma.lemma,
+				kind: lemma.surface.lemma.phrasemeKind,
+				word: lemma.surface.lemma.spelledLemma,
 			},
 			kind: "PhrasemEnrichment",
 		};
 	}
 
-	if (lemma.posLikeKind === "Noun") {
+	if (
+		isLexemeSelection(lemma) &&
+		(lemma.surface.lemma.pos === "NOUN" || lemma.surface.lemma.pos === "PROPN")
+	) {
 		return {
 			input: {
 				context: "",
-				word: lemma.lemma,
+				word: lemma.surface.lemma.spelledLemma,
 			},
 			kind: "NounEnrichment",
 		};
 	}
 
+	if (!isLexemeSelection(lemma)) {
+		return null;
+	}
+
 	return {
 		input: {
 			context: "",
-			pos: lemma.posLikeKind,
-			word: lemma.lemma,
+			pos: lemma.surface.lemma.pos,
+			word: lemma.surface.lemma.spelledLemma,
 		},
 		kind: "LexemEnrichment",
 	};
@@ -144,18 +162,6 @@ function mapCoreOutputToCore(
 	return {
 		emojiDescription: output.emojiDescription,
 		ipa: output.ipa,
-		...("genus" in output || "nounClass" in output
-			? {
-					nounIdentity: {
-						...("genus" in output && output.genus != null
-							? { genus: output.genus }
-							: {}),
-						...("nounClass" in output && output.nounClass != null
-							? { nounClass: output.nounClass }
-							: {}),
-					},
-				}
-			: {}),
 		...(typeof output.senseGloss === "string" &&
 		output.senseGloss.length > 0
 			? { senseGloss: output.senseGloss }
@@ -204,69 +210,94 @@ function withPrecomputedEmojiDescription(
 }
 
 function resolveFeaturesPromptKind(
-	lemma: Extract<ResolvedLemma, { linguisticUnit: "Lexem" }>,
-): FeaturePromptKind {
-	switch (lemma.posLikeKind) {
-		case "Adjective":
+	lemma: Extract<
+		ResolvedSelection,
+		{ surface: { lemma: { lemmaKind: "Lexeme" } } }
+	>,
+): FeaturePromptKind | null {
+	switch (lemma.surface.lemma.pos) {
+		case "ADJ":
 			return "FeaturesAdjective";
-		case "Adverb":
+		case "ADV":
 			return "FeaturesAdverb";
-		case "Article":
-			return "FeaturesArticle";
-		case "Conjunction":
-			return "FeaturesConjunction";
-		case "InteractionalUnit":
-			return "FeaturesInteractionalUnit";
-		case "Noun":
-			return "FeaturesNoun";
-		case "Particle":
-			return "FeaturesParticle";
-		case "Preposition":
+		case "ADP":
 			return "FeaturesPreposition";
-		case "Pronoun":
-			return "FeaturesPronoun";
-		case "Verb":
+		case "AUX":
 			return "FeaturesVerb";
+		case "CCONJ":
+		case "SCONJ":
+			return "FeaturesConjunction";
+		case "DET":
+			return "FeaturesArticle";
+		case "INTJ":
+			return "FeaturesInteractionalUnit";
+		case "NOUN":
+			return "FeaturesNoun";
+		case "PART":
+			return "FeaturesParticle";
+		case "PRON":
+			return "FeaturesPronoun";
+		case "VERB":
+			return "FeaturesVerb";
+		default:
+			return null;
 	}
 }
 
-function isProperNounFromCore(
-	coreField: LexicalInfoField<LexicalCore>,
-	coreOutput:
-		| AgentOutput<"NounEnrichment">
-		| AgentOutput<"LexemEnrichment">
-		| AgentOutput<"PhrasemEnrichment">
-		| null,
-): boolean {
-	if (coreField.status !== "ready") {
-		return false;
-	}
+function isProperNounSelection(
+	selection: ResolvedSelection,
+): selection is Extract<
+	ResolvedSelection,
+	{ surface: { lemma: { lemmaKind: "Lexeme"; pos: "PROPN" } } }
+> {
+	return isLexemeSelection(selection) && selection.surface.lemma.pos === "PROPN";
+}
 
-	return (
-		!!coreOutput &&
-		"nounClass" in coreOutput &&
-		coreOutput.nounClass === "Proper"
-	);
+const NATIVE_GENDER_FROM_LEGACY = {
+	Femininum: "Fem",
+	Maskulinum: "Masc",
+	Neutrum: "Neut",
+} as const;
+
+const NATIVE_CASE_FROM_LEGACY = {
+	Accusative: "Acc",
+	Dative: "Dat",
+	Genitive: "Gen",
+	Nominative: "Nom",
+} as const;
+
+const NATIVE_NUMBER_FROM_LEGACY = {
+	Plural: "Plur",
+	Singular: "Sing",
+} as const;
+
+function mapLegacyGenderToNative(
+	gender: "Femininum" | "Maskulinum" | "Neutrum" | null | undefined,
+) {
+	return gender ? NATIVE_GENDER_FROM_LEGACY[gender] : undefined;
 }
 
 function shouldGenerateRelations(
-	lemma: ResolvedLemma,
+	lemma: ResolvedSelection,
 	isProperNoun: boolean,
 ): boolean {
 	if (isProperNoun) {
 		return false;
 	}
-	if (lemma.linguisticUnit === "Phrasem") {
+	if (isPhrasemeSelection(lemma)) {
 		return true;
 	}
+	if (!isLexemeSelection(lemma)) {
+		return false;
+	}
 
-	switch (lemma.posLikeKind) {
-		case "Adjective":
-		case "Adverb":
-		case "Noun":
-		case "Particle":
-		case "Preposition":
-		case "Verb":
+	switch (lemma.surface.lemma.pos) {
+		case "ADJ":
+		case "ADP":
+		case "ADV":
+		case "NOUN":
+		case "PART":
+		case "VERB":
 			return true;
 		default:
 			return false;
@@ -274,10 +305,10 @@ function shouldGenerateRelations(
 }
 
 function shouldGenerateMorphemicBreakdown(
-	lemma: ResolvedLemma,
+	lemma: ResolvedSelection,
 	isProperNoun: boolean,
 ): boolean {
-	if (lemma.linguisticUnit === "Phrasem") {
+	if (isPhrasemeSelection(lemma)) {
 		return false;
 	}
 
@@ -286,22 +317,22 @@ function shouldGenerateMorphemicBreakdown(
 
 function shouldGenerateInflections(
 	settings: LexicalGenerationSettings,
-	lemma: ResolvedLemma,
+	lemma: ResolvedSelection,
 	isProperNoun: boolean,
 ): "disabled" | "not_applicable" | "generate" {
 	if (!settings.generateInflections) {
 		return "disabled";
 	}
-	if (lemma.linguisticUnit === "Phrasem" || isProperNoun) {
+	if (!isLexemeSelection(lemma) || isProperNoun) {
 		return "not_applicable";
 	}
 
-	switch (lemma.posLikeKind) {
-		case "Adjective":
-		case "Article":
-		case "Noun":
-		case "Pronoun":
-		case "Verb":
+	switch (lemma.surface.lemma.pos) {
+		case "ADJ":
+		case "DET":
+		case "NOUN":
+		case "PRON":
+		case "VERB":
 			return "generate";
 		default:
 			return "not_applicable";
@@ -309,81 +340,47 @@ function shouldGenerateInflections(
 }
 
 function mapFeaturesField(
-	lemma: Extract<ResolvedLemma, { linguisticUnit: "Lexem" }>,
+	lemma: ResolvedSelection,
 	coreOutput:
 		| AgentOutput<"LexemEnrichment">
 		| AgentOutput<"NounEnrichment">
 		| AgentOutput<"PhrasemEnrichment">
 		| null,
 	featuresResult: FeaturePromptResult | null,
-): LexicalInfoField<LexemFeatures> {
-	if (!featuresResult) {
+): LexicalInfoField<LexicalFeatures> {
+	if (!isLexemeSelection(lemma)) {
 		return { status: "not_applicable" };
 	}
-	if (featuresResult.isErr()) {
+	if (featuresResult?.isErr()) {
 		return { error: featuresResult.error, status: "error" };
 	}
 
-	if (lemma.posLikeKind === "Adjective") {
-		const value = featuresResult.value as AgentOutput<"FeaturesAdjective">;
-		return {
-			status: "ready",
-			value: {
-				classification: value.classification,
-				distribution: value.distribution,
-				gradability: value.gradability,
-				kind: "adjective",
-				valency: {
-					governedPattern: value.valency.governedPattern,
-					governedPreposition:
-						value.valency.governedPreposition ?? undefined,
-				},
-			},
-		};
+	const inherentFeatures: LexicalFeatures["inherentFeatures"] = {};
+	const legacyGender =
+		coreOutput && "genus" in coreOutput ? coreOutput.genus : undefined;
+	if (legacyGender != null) {
+		inherentFeatures.gender = mapLegacyGenderToNative(legacyGender);
 	}
 
-	if (lemma.posLikeKind === "Verb") {
+	if (
+		lemma.surface.lemma.pos === "VERB" &&
+		featuresResult &&
+		featuresResult.isOk()
+	) {
 		const value = featuresResult.value as AgentOutput<"FeaturesVerb">;
-		return {
-			status: "ready",
-			value: {
-				conjugation: value.conjugation,
-				kind: "verb",
-				valency: {
-					governedPreposition:
-						value.valency.governedPreposition ?? undefined,
-					reflexivity: value.valency.reflexivity,
-					separability: value.valency.separability,
-				},
-			},
-		};
+		inherentFeatures.reflex = value.valency.reflexivity !== "NonReflexive";
+		inherentFeatures.separable =
+			value.valency.separability === "Separable"
+				? true
+				: value.valency.separability === "Inseparable"
+					? false
+					: undefined;
 	}
 
-	if (lemma.posLikeKind === "Noun") {
-		const value = featuresResult.value as AgentOutput<"FeaturesNoun">;
-		return {
-			status: "ready",
-			value: {
-				genus:
-					coreOutput && "genus" in coreOutput
-						? (coreOutput.genus ?? undefined)
-						: undefined,
-				kind: "noun",
-				nounClass:
-					coreOutput && "nounClass" in coreOutput
-						? (coreOutput.nounClass ?? undefined)
-						: undefined,
-				tags: value.tags,
-			},
-		};
-	}
-
-	const value = featuresResult.value as AgentOutput<"FeaturesAdverb">;
 	return {
 		status: "ready",
 		value: {
-			kind: "tags",
-			tags: value.tags,
+			inherentFeatures,
 		},
 	};
 }
@@ -391,7 +388,7 @@ function mapFeaturesField(
 function mapInflectionsField(
 	inflectionResult: GenericInflectionResult | NounInflectionResult | null,
 	status: "disabled" | "not_applicable" | "generate",
-): LexicalInfoField<LexemInflections> {
+): LexicalInfoField<LexemeInflections> {
 	if (status === "disabled") {
 		return { status: "disabled" };
 	}
@@ -408,8 +405,13 @@ function mapInflectionsField(
 		return {
 			status: "ready",
 			value: {
-				cells: inflectionResult.value.cells,
-				genus: inflectionResult.value.genus,
+				cells: inflectionResult.value.cells.map((cell) => ({
+					article: cell.article,
+					case: NATIVE_CASE_FROM_LEGACY[cell.case],
+					form: cell.form,
+					number: NATIVE_NUMBER_FROM_LEGACY[cell.number],
+				})),
+				gender: NATIVE_GENDER_FROM_LEGACY[inflectionResult.value.genus],
 				kind: "noun",
 			},
 		};
@@ -452,13 +454,18 @@ function mapMorphemicBreakdownField(
 						lemma: result.value.derived_from.lemma,
 					}
 				: undefined,
-			morphemes: result.value.morphemes.map((morpheme) => ({
-				kind: morpheme.kind,
-				lemma: morpheme.lemma ?? undefined,
-				separability: morpheme.separability ?? undefined,
-				surface: morpheme.surf,
-			})),
-		},
+				morphemes: result.value.morphemes.map((morpheme) => ({
+					kind: morpheme.kind,
+					isSeparable:
+						morpheme.separability === "Separable"
+							? true
+							: morpheme.separability === "Inseparable"
+								? false
+								: undefined,
+					lemma: morpheme.lemma ?? undefined,
+					surface: morpheme.surf,
+				})),
+			},
 	};
 }
 
@@ -485,11 +492,19 @@ export function buildLexicalInfoGenerator(
 	deps: PromptDeps,
 ): LexicalInfoGenerator {
 	return async (
-		lemma: ResolvedLemma,
+		lemma: ResolvedSelection,
 		attestation: string,
 		options: GenerateLexicalInfoOptions = {},
 	) => {
 		const corePrompt = buildCorePrompt(lemma);
+		if (!corePrompt) {
+			return err(
+				lexicalGenerationError(
+					LexicalGenerationFailureKind.InternalContractViolation,
+					"generateLexicalInfo requires a known lexeme or phraseme selection",
+				),
+			);
+		}
 		corePrompt.input.context = attestation;
 		const coreResult = await executePrompt(
 			deps,
@@ -511,14 +526,14 @@ export function buildLexicalInfoGenerator(
 					) ?? {
 						error: coreResult.error,
 						status: "error",
-					}),
-			options.precomputedEmojiDescription,
-		);
-		const coreOutput = coreResult.isOk() ? coreResult.value : null;
-		const isProperNoun = isProperNounFromCore(coreField, coreOutput);
+						}),
+				options.precomputedEmojiDescription,
+			);
+			const coreOutput = coreResult.isOk() ? coreResult.value : null;
+			const isProperNoun = isProperNounSelection(lemma);
 
-		const relationApplicable = shouldGenerateRelations(lemma, isProperNoun);
-		const morphemApplicable = shouldGenerateMorphemicBreakdown(
+			const relationApplicable = shouldGenerateRelations(lemma, isProperNoun);
+			const morphemApplicable = shouldGenerateMorphemicBreakdown(
 			lemma,
 			isProperNoun,
 		);
@@ -528,39 +543,45 @@ export function buildLexicalInfoGenerator(
 			isProperNoun,
 		);
 
-		const featuresPromise =
-			lemma.linguisticUnit === "Lexem"
-				? executePrompt(deps, resolveFeaturesPromptKind(lemma), {
+			const featurePromptKind = isLexemeSelection(lemma)
+				? resolveFeaturesPromptKind(lemma)
+				: null;
+			const featuresPromise = isLexemeSelection(lemma) && featurePromptKind
+				? executePrompt(deps, featurePromptKind, {
 						context: attestation,
-						word: lemma.lemma,
+						word: lemma.surface.lemma.spelledLemma,
 					})
 				: Promise.resolve(null);
-		const relationPromise = relationApplicable
-			? executePrompt(deps, "Relation", {
-					context: attestation,
-					pos: lemma.posLikeKind,
-					word: lemma.lemma,
-				})
-			: Promise.resolve(null);
-		const morphemPromise = morphemApplicable
-			? executePrompt(deps, "Morphem", {
-					context: attestation,
-					word: lemma.lemma,
-				})
-			: Promise.resolve(null);
-		const inflectionPromise =
-			lemma.linguisticUnit === "Lexem" && inflectionMode === "generate"
-				? lemma.posLikeKind === "Noun"
-					? executePrompt(deps, "NounInflection", {
-							context: attestation,
-							word: lemma.lemma,
-						})
-					: executePrompt(deps, "Inflection", {
-							context: attestation,
-							pos: lemma.posLikeKind,
-							word: lemma.lemma,
-						})
+			const relationPromise = relationApplicable
+				? executePrompt(deps, "Relation", {
+						context: attestation,
+						pos: isLexemeSelection(lemma)
+							? lemma.surface.lemma.pos
+							: isPhrasemeSelection(lemma)
+								? lemma.surface.lemma.phrasemeKind
+								: "unknown",
+						word: getSpelledLemma(lemma) ?? "",
+					})
 				: Promise.resolve(null);
+			const morphemPromise = morphemApplicable
+				? executePrompt(deps, "Morphem", {
+						context: attestation,
+						word: getSpelledLemma(lemma) ?? "",
+					})
+				: Promise.resolve(null);
+			const inflectionPromise =
+				isLexemeSelection(lemma) && inflectionMode === "generate"
+					? lemma.surface.lemma.pos === "NOUN"
+						? executePrompt(deps, "NounInflection", {
+								context: attestation,
+								word: lemma.surface.lemma.spelledLemma,
+							})
+						: executePrompt(deps, "Inflection", {
+								context: attestation,
+								pos: lemma.surface.lemma.pos,
+								word: lemma.surface.lemma.spelledLemma,
+							})
+					: Promise.resolve(null);
 
 		const [
 			featuresResult,
@@ -583,35 +604,35 @@ export function buildLexicalInfoGenerator(
 			return err(hardStopFailure);
 		}
 
-		if (lemma.linguisticUnit === "Phrasem") {
+			if (isPhrasemeSelection(lemma)) {
+				const lexicalInfo: LexicalInfo = {
+					core: coreField,
+					features: { status: "not_applicable" },
+					inflections: { status: "not_applicable" },
+					morphemicBreakdown: mapMorphemicBreakdownField(
+						morphemResult,
+						morphemApplicable,
+				),
+				relations: mapRelationsField(
+						relationsResult,
+						relationApplicable,
+					),
+					selection: lemma,
+				};
+				return ok(lexicalInfo);
+			}
+
 			const lexicalInfo: LexicalInfo = {
 				core: coreField,
-				features: { status: "not_applicable" },
-				inflections: { status: "not_applicable" },
-				lemma,
+				features: mapFeaturesField(lemma, coreOutput, featuresResult),
+				inflections: mapInflectionsField(inflectionResult, inflectionMode),
 				morphemicBreakdown: mapMorphemicBreakdownField(
 					morphemResult,
 					morphemApplicable,
 				),
-				relations: mapRelationsField(
-					relationsResult,
-					relationApplicable,
-				),
+				relations: mapRelationsField(relationsResult, relationApplicable),
+				selection: lemma,
 			};
-			return ok(lexicalInfo);
-		}
-
-		const lexicalInfo: LexicalInfo = {
-			core: coreField,
-			features: mapFeaturesField(lemma, coreOutput, featuresResult),
-			inflections: mapInflectionsField(inflectionResult, inflectionMode),
-			lemma,
-			morphemicBreakdown: mapMorphemicBreakdownField(
-				morphemResult,
-				morphemApplicable,
-			),
-			relations: mapRelationsField(relationsResult, relationApplicable),
-		};
 
 		return ok(lexicalInfo);
 	};

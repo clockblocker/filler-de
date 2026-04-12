@@ -2,67 +2,61 @@ import { describe, expect, test } from "bun:test";
 import {
 	getSectionsFor,
 	SECTION_DISPLAY_WEIGHT,
-	sectionsForLexemPos,
-	sectionsForMorphem,
-	sectionsForPhrasem,
-	sectionsForProperNoun,
+	sectionsForLexemePos,
+	sectionsForMorpheme,
+	sectionsForPhraseme,
 } from "../../src/commanders/textfresser/targets/de/sections/section-config";
 
 describe("getSectionsFor", () => {
 	test("returns correct sections for Lexem+Noun", () => {
-		expect(getSectionsFor({ pos: "Noun", unit: "Lexem" })).toBe(
-			sectionsForLexemPos.Noun,
+		expect(getSectionsFor({ pos: "NOUN", unit: "Lexeme" })).toBe(
+			sectionsForLexemePos.NOUN,
 		);
-		expect(sectionsForLexemPos.Noun).toContain("Morphology");
+		expect(sectionsForLexemePos.NOUN).toContain("Morphology");
 	});
 
-	test("returns correct sections for Lexem+Noun (Common) — same as default", () => {
-		expect(
-			getSectionsFor({ nounClass: "Common", pos: "Noun", unit: "Lexem" }),
-		).toBe(sectionsForLexemPos.Noun);
-	});
-
-	test("returns correct sections for Lexem+Noun (undefined nounClass) — backward compatible", () => {
-		expect(getSectionsFor({ pos: "Noun", unit: "Lexem" })).toBe(
-			sectionsForLexemPos.Noun,
+	test("returns correct sections for Lexeme+NOUN", () => {
+		expect(getSectionsFor({ pos: "NOUN", unit: "Lexeme" })).toBe(
+			sectionsForLexemePos.NOUN,
 		);
 	});
 
-	test("returns proper noun sections for Lexem+Noun+Proper", () => {
-		expect(
-			getSectionsFor({ nounClass: "Proper", pos: "Noun", unit: "Lexem" }),
-		).toBe(sectionsForProperNoun);
-		expect(sectionsForProperNoun).not.toContain("Morphology");
+	test("routes proper nouns through PROPN", () => {
+		expect(getSectionsFor({ pos: "PROPN", unit: "Lexeme" })).toBe(
+			sectionsForLexemePos.PROPN,
+		);
+		expect(sectionsForLexemePos.PROPN).not.toContain("Morphology");
 	});
 
-	test("includes morphology for every Lexem POS", () => {
-		for (const sections of Object.values(sectionsForLexemPos)) {
+	test("includes morphology for the POS classes that use it", () => {
+		for (const [pos, sections] of Object.entries(sectionsForLexemePos)) {
+			if (pos === "PROPN" || pos === "PUNCT" || pos === "SYM") {
+				expect(sections).not.toContain("Morphology");
+				continue;
+			}
+
 			expect(sections).toContain("Morphology");
 		}
 	});
 
-	test("nounClass is ignored for non-Noun POS", () => {
-		// nounClass should only matter for Noun — casting to test edge case
-		const query = {
-			nounClass: "Proper" as const,
-			pos: "Verb" as const,
-			unit: "Lexem" as const,
-		};
-		expect(getSectionsFor(query)).toBe(sectionsForLexemPos.Verb);
+	test("returns verb sections directly by POS", () => {
+		expect(getSectionsFor({ pos: "VERB", unit: "Lexeme" })).toBe(
+			sectionsForLexemePos.VERB,
+		);
 	});
 
 	test("returns correct sections for Phrasem", () => {
-		expect(getSectionsFor({ unit: "Phrasem" })).toBe(sectionsForPhrasem);
+		expect(getSectionsFor({ unit: "Phraseme" })).toBe(sectionsForPhraseme);
 	});
 
 	test("returns correct sections for Morphem", () => {
-		expect(getSectionsFor({ unit: "Morphem" })).toBe(sectionsForMorphem);
-		expect(sectionsForMorphem).toContain("Morphology");
+		expect(getSectionsFor({ unit: "Morpheme" })).toBe(sectionsForMorpheme);
+		expect(sectionsForMorpheme).toContain("Morphology");
 	});
 
 	test("places morphology right after morphemes in section order", () => {
 		expect(SECTION_DISPLAY_WEIGHT.Morphology).toBe(
-			SECTION_DISPLAY_WEIGHT.Morphem + 1,
+			SECTION_DISPLAY_WEIGHT.Morpheme + 1,
 		);
 	});
 });

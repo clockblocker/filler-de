@@ -36,7 +36,7 @@ describe("resolveTargetPath", () => {
 			desiredSurfaceKind: "Lemma",
 			librarianLookup: EMPTY_LOOKUP,
 			targetLanguage: "German",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			vamLookup: EMPTY_LOOKUP,
 			word: "anfangen",
 		});
@@ -53,7 +53,7 @@ describe("resolveTargetPath", () => {
 			desiredSurfaceKind: "Lemma",
 			librarianLookup: EMPTY_LOOKUP,
 			targetLanguage: "German",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			vamLookup: () => [existing],
 			word: "anfangen",
 		});
@@ -68,7 +68,7 @@ describe("resolveTargetPath", () => {
 			desiredSurfaceKind: "Lemma",
 			librarianLookup: () => [libPath],
 			targetLanguage: "German",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			vamLookup: EMPTY_LOOKUP,
 			word: "anfangen",
 		});
@@ -83,7 +83,7 @@ describe("resolveTargetPath", () => {
 			desiredSurfaceKind: "Lemma",
 			librarianLookup: EMPTY_LOOKUP,
 			targetLanguage: "German",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			vamLookup: () => [existing],
 			word: "anfangen",
 		});
@@ -101,10 +101,10 @@ describe("resolveTargetPath", () => {
 	it("does NOT heal when existing is lemma and desired is inflected", () => {
 		const existing = makeWorterPath("Kraftwerke", "lemma");
 		const result = resolveTargetPath({
-			desiredSurfaceKind: "Inflected",
+			desiredSurfaceKind: "Inflection",
 			librarianLookup: EMPTY_LOOKUP,
 			targetLanguage: "German",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			vamLookup: () => [existing],
 			word: "Kraftwerke",
 		});
@@ -119,7 +119,7 @@ describe("resolveTargetPath", () => {
 			desiredSurfaceKind: "Lemma",
 			librarianLookup: () => [libPath],
 			targetLanguage: "German",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			vamLookup: EMPTY_LOOKUP,
 			word: "anfangen",
 		});
@@ -135,7 +135,7 @@ describe("resolveTargetPath", () => {
 			desiredSurfaceKind: "Lemma",
 			librarianLookup: EMPTY_LOOKUP,
 			targetLanguage: "German",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			vamLookup: () => [first, second],
 			word: "anfangen",
 		});
@@ -149,7 +149,7 @@ describe("resolveTargetPath", () => {
 			desiredSurfaceKind: "Lemma",
 			librarianLookup: EMPTY_LOOKUP,
 			targetLanguage: "German",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			vamLookup: (word) => (word === "fahren" ? [existing] : []),
 			word: "Fahren",
 		});
@@ -161,10 +161,10 @@ describe("resolveTargetPath", () => {
 	it("does not heal when existing and desired surface kind match", () => {
 		const existing = makeWorterPath("anfangen", "inflected");
 		const result = resolveTargetPath({
-			desiredSurfaceKind: "Inflected",
+			desiredSurfaceKind: "Inflection",
 			librarianLookup: EMPTY_LOOKUP,
 			targetLanguage: "German",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			vamLookup: () => [existing],
 			word: "anfangen",
 		});

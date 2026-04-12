@@ -43,14 +43,14 @@ describe("linguistic-wikilink-context", () => {
 		).toBe("Lemma");
 		expect(
 			resolveDesiredSurfaceKindForPropagationSection(
-				DictSectionKind.Morphem,
+				DictSectionKind.Morpheme,
 			),
 		).toBe("Lemma");
 		expect(
 			resolveDesiredSurfaceKindForPropagationSection(
 				DictSectionKind.Inflection,
 			),
-		).toBe("Inflected");
+		).toBe("Inflection");
 	});
 
 	it("uses css-kind mapping consistently with section-kind mapping", () => {
@@ -82,8 +82,8 @@ describe("linguistic-wikilink-context", () => {
 				resolveDesiredSurfaceKindForPropagationSection(sectionKind);
 			if (policyByKind.targetKind === "Lemma") {
 				expect(desiredSurfaceKind).toBe("Lemma");
-			} else if (policyByKind.targetKind === "Inflected") {
-				expect(desiredSurfaceKind).toBe("Inflected");
+			} else if (policyByKind.targetKind === "Inflection") {
+				expect(desiredSurfaceKind).toBe("Inflection");
 			} else {
 				expect(desiredSurfaceKind).toBeNull();
 			}

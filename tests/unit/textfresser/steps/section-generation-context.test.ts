@@ -1,185 +1,65 @@
 import { describe, expect, it } from "bun:test";
 import {
 	buildSectionQuery,
-	resolveNounInflectionGenus,
+	resolveNounInflectionGender,
 } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generation-context";
-import { getSectionsFor } from "../../../../src/commanders/textfresser/targets/de/sections/section-config";
-import type { LexicalInfo } from "@textfresser/lexical-generation";
+import {
+	makeLexemeLexicalInfo,
+	makeNounInflections,
+	makePhrasemeLexicalInfo,
+} from "../helpers/native-fixtures";
 
-function makeNounLexicalInfo(
-	overrides: Partial<Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>> = {},
-): Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }> {
-	return {
-		core: {
-			status: "ready",
-			value: {
-				emojiDescription: ["🏙️"],
-				ipa: "bɛʁˈliːn",
-			},
-		},
-		features: {
-			status: "ready",
-			value: {
-				genus: "Neutrum",
-				kind: "noun",
-				nounClass: "Common",
-				tags: ["city"],
-			},
-		},
-		inflections: { status: "not_applicable" },
-		lemma: {
-			lemma: "Berlin",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Noun",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: { status: "not_applicable" },
-		...overrides,
-	};
-}
-
-function makePhrasemLexicalInfo(): Extract<
-	LexicalInfo,
-	{ lemma: { linguisticUnit: "Phrasem" } }
-> {
-	return {
-		core: {
-			status: "ready",
-			value: {
-				emojiDescription: ["💬"],
-				ipa: "ipa",
-			},
-		},
-		features: {
-			status: "ready",
-			value: {
-				kind: "tags",
-				tags: [],
-			},
-		},
-		inflections: { status: "not_applicable" },
-		lemma: {
-			lemma: "unter vier Augen",
-			linguisticUnit: "Phrasem",
-			posLikeKind: "Idiom",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: { status: "ready", value: { relations: [] } },
-	};
+function makeNounLexicalInfo(params: {
+	features?: ReturnType<typeof makeLexemeLexicalInfo>["features"];
+	inflections?: ReturnType<typeof makeLexemeLexicalInfo>["inflections"];
+} = {}) {
+	return makeLexemeLexicalInfo({
+		features:
+			params.features ??
+			({
+				status: "ready",
+				value: {
+					inherentFeatures: {
+						gender: "Neut",
+					},
+				},
+			} as const),
+		inflections: params.inflections,
+		lemma: "Berlin",
+		pos: "NOUN",
+	});
 }
 
 describe("section-generation-context", () => {
-	it("derives proper-noun section applicability from LexicalInfo features", () => {
-		const query = buildSectionQuery(
-			makeNounLexicalInfo({
-				features: {
-					status: "ready",
-					value: {
-						genus: undefined,
-						kind: "noun",
-						nounClass: "Proper",
-						tags: ["city"],
-					},
-				},
-			}),
-		);
-
-		expect(getSectionsFor(query)).toEqual(
-			getSectionsFor({ nounClass: "Proper", pos: "Noun", unit: "Lexem" }),
-		);
-	});
-
-	it("treats missing nounClass as common-noun applicability", () => {
-		const query = buildSectionQuery(
-			makeNounLexicalInfo({
-				features: {
-					status: "ready",
-					value: {
-						genus: undefined,
-						kind: "noun",
-						nounClass: undefined,
-						tags: ["city"],
-					},
-				},
-			}),
-		);
-
-		expect(getSectionsFor(query)).toEqual(
-			getSectionsFor({ nounClass: undefined, pos: "Noun", unit: "Lexem" }),
-		);
-	});
-
-	it("derives proper-noun applicability from core noun identity when noun features fail", () => {
-		const query = buildSectionQuery(
-			makeNounLexicalInfo({
-				core: {
-					status: "ready",
-					value: {
-						emojiDescription: ["🏙️"],
-						ipa: "bɛʁˈliːn",
-						nounIdentity: {
-							genus: "Neutrum",
-							nounClass: "Proper",
-						},
-					},
-				},
-				features: {
-					error: {
-						kind: "FetchFailed",
-						message: "features failed",
-					} as never,
-					status: "error",
-				},
-			}),
-		);
-
-		expect(getSectionsFor(query)).toEqual(
-			getSectionsFor({ nounClass: "Proper", pos: "Noun", unit: "Lexem" }),
-		);
+	it("builds a lexeme section query from the native selection", () => {
+		expect(buildSectionQuery(makeNounLexicalInfo())).toEqual({
+			pos: "NOUN",
+			unit: "Lexeme",
+		});
 	});
 
 	it("resolves noun genus from inflections when lexical noun features omit it", () => {
-		const genus = resolveNounInflectionGenus(
+		const genus = resolveNounInflectionGender(
 			makeNounLexicalInfo({
 				features: {
 					status: "ready",
 					value: {
-						genus: undefined,
-						kind: "noun",
-						nounClass: "Common",
-						tags: ["city"],
+						inherentFeatures: {},
 					},
 				},
 				inflections: {
 					status: "ready",
-					value: {
-						cells: [],
-						genus: "Neutrum",
-						kind: "noun",
-					},
+					value: makeNounInflections({ cells: [], gender: "Neut" }),
 				},
 			}),
 		);
 
-		expect(genus).toBe("Neutrum");
+		expect(genus).toBe("Neut");
 	});
 
-	it("resolves noun genus from core noun identity when noun features are unavailable", () => {
-		const genus = resolveNounInflectionGenus(
+	it("returns undefined when noun features are unavailable and no inflection gender exists", () => {
+		const genus = resolveNounInflectionGender(
 			makeNounLexicalInfo({
-				core: {
-					status: "ready",
-					value: {
-						emojiDescription: ["🏙️"],
-						ipa: "bɛʁˈliːn",
-						nounIdentity: {
-							genus: "Neutrum",
-							nounClass: "Proper",
-						},
-					},
-				},
 				features: {
 					error: {
 						kind: "FetchFailed",
@@ -190,12 +70,12 @@ describe("section-generation-context", () => {
 			}),
 		);
 
-		expect(genus).toBe("Neutrum");
+		expect(genus).toBeUndefined();
 	});
 
 	it("returns phrasem section query directly from LexicalInfo", () => {
-		expect(buildSectionQuery(makePhrasemLexicalInfo())).toEqual({
-			unit: "Phrasem",
+		expect(buildSectionQuery(makePhrasemeLexicalInfo())).toEqual({
+			unit: "Phraseme",
 		});
 	});
 });

@@ -43,8 +43,8 @@ function makeCtx(params: {
 				attestation: { source: { ref: "![[Src#^1|^]]" } },
 				disambiguationResult: null,
 				lemma,
-				linguisticUnit: "Lexem",
-				posLikeKind: "Verb",
+				linguisticUnit: "Lexeme",
+				posLikeKind: "VERB",
 				surfaceKind: "Lemma",
 			},
 			lookupInLibrary: () => [],
@@ -131,7 +131,7 @@ describe("propagateMorphologyRelations", () => {
 			basename: "fahren",
 			extension: "md",
 			kind: "MdFile",
-			pathParts: ["Worter", "de", "lexem", "lemma", "f", "fah", "fahre"],
+			pathParts: ["Worter", "de", "lexeme", "lemma", "f", "fah", "fahre"],
 		};
 		(
 			ctx.textfresserState as unknown as {
@@ -194,7 +194,7 @@ describe("propagateMorphologyRelations", () => {
 			basename: "Anlage",
 			extension: "md" as const,
 			kind: "MdFile" as const,
-			pathParts: ["Worter", "de", "lexem", "inflected", "a", "anl", "anlag"],
+			pathParts: ["Worter", "de", "lexeme", "inflection", "a", "anl", "anlag"],
 		};
 		(
 			ctx.textfresserState as unknown as {
@@ -208,10 +208,9 @@ describe("propagateMorphologyRelations", () => {
 		const result = propagateMorphologyRelations(ctx);
 		expect(result.isOk()).toBe(true);
 		const actions = result._unsafeUnwrap().actions;
-		expect(actions).toHaveLength(3);
-		expect(actions[0]?.kind).toBe(VaultActionKind.RenameMdFile);
-		expect(actions[1]?.kind).toBe(VaultActionKind.UpsertMdFile);
-		expect(actions[2]?.kind).toBe(VaultActionKind.ProcessMdFile);
+		expect(actions).toHaveLength(2);
+		expect(actions[0]?.kind).toBe(VaultActionKind.UpsertMdFile);
+		expect(actions[1]?.kind).toBe(VaultActionKind.ProcessMdFile);
 	});
 
 	it("creates DictEntry equation with decorated header and separability tag (G3)", () => {
@@ -221,6 +220,7 @@ describe("propagateMorphologyRelations", () => {
 					{
 						kind: "Prefix",
 						linkTarget: "auf-prefix-de",
+						isSeparable: true,
 						separability: "Separable",
 						surf: "auf",
 					},
@@ -259,6 +259,7 @@ describe("propagateMorphologyRelations", () => {
 					{
 						kind: "Prefix",
 						linkTarget: "uber-prefix-de",
+						isSeparable: true,
 						separability: "Separable",
 						surf: "über",
 					},
@@ -287,6 +288,7 @@ describe("propagateMorphologyRelations", () => {
 					{
 						kind: "Prefix",
 						linkTarget: "uber-prefix-de",
+						isSeparable: false,
 						separability: "Inseparable",
 						surf: "über",
 					},
@@ -324,6 +326,7 @@ describe("propagateMorphologyRelations", () => {
 					{
 						kind: "Prefix",
 						linkTarget: "auf-prefix-de",
+						isSeparable: true,
 						separability: "Separable",
 						surf: "auf",
 					},
@@ -373,6 +376,7 @@ describe("propagateMorphologyRelations", () => {
 					{
 						kind: "Prefix",
 						linkTarget: "auf-prefix-de",
+						isSeparable: true,
 						separability: "Separable",
 						surf: "auf",
 					},
@@ -412,6 +416,7 @@ describe("propagateMorphologyRelations", () => {
 					{
 						kind: "Prefix",
 						linkTarget: "auf-prefix-de",
+						isSeparable: true,
 						separability: "Separable",
 						surf: "auf",
 					},

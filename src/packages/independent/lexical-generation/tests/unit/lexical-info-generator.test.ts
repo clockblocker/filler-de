@@ -6,6 +6,7 @@ import {
 	lexicalGenerationError,
 	type StructuredFetchFn,
 } from "../../src/index";
+import { makeLexemeSelection } from "./helpers";
 
 function okValue<T>(value: unknown) {
 	return ok(value as T);
@@ -70,12 +71,7 @@ describe("lexical-generation lexical info", () => {
 		})._unsafeUnwrap();
 
 		const result = await module.generateLexicalInfo(
-			{
-				lemma: "Bank",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Noun",
-				surfaceKind: "Lemma",
-			},
+			makeLexemeSelection({ lemma: "Bank", pos: "NOUN" }),
 			"Ich gehe zur Bank",
 		);
 
@@ -86,34 +82,55 @@ describe("lexical-generation lexical info", () => {
 				value: {
 					emojiDescription: ["🏦"],
 					ipa: "baŋk",
-					nounIdentity: {
-						genus: "Femininum",
-						nounClass: "Common",
-					},
 					senseGloss: "financial institution",
 				},
 			},
 			features: {
 				status: "ready",
 				value: {
-					genus: "Femininum",
-					kind: "noun",
-					nounClass: "Common",
-					tags: ["finance", "place"],
+					inherentFeatures: {
+						gender: "Fem",
+					},
 				},
 			},
 			inflections: {
 				status: "ready",
 				value: {
-					genus: "Femininum",
 					kind: "noun",
+					gender: "Fem",
+					cells: [
+						{
+							article: "die",
+							case: "Nom",
+							form: "Bank",
+							number: "Sing",
+						},
+					],
 				},
 			},
 			morphemicBreakdown: {
 				status: "ready",
+				value: {
+					morphemes: [],
+				},
 			},
 			relations: {
 				status: "ready",
+				value: {
+					relations: [{ kind: "Hypernym", words: ["Institut"] }],
+				},
+			},
+			selection: {
+				orthographicStatus: "Standard",
+				surface: {
+					lemma: {
+						lemmaKind: "Lexeme",
+						pos: "NOUN",
+						spelledLemma: "Bank",
+					},
+					spelledSurface: "Bank",
+					surfaceKind: "Lemma",
+				},
 			},
 		});
 		expect(calls).toEqual([
@@ -162,12 +179,7 @@ describe("lexical-generation lexical info", () => {
 		})._unsafeUnwrap();
 
 		const result = await module.generateLexicalInfo(
-			{
-				lemma: "Bank",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Noun",
-				surfaceKind: "Lemma",
-			},
+			makeLexemeSelection({ lemma: "Bank", pos: "NOUN" }),
 			"Ich gehe zur Bank",
 		);
 
@@ -222,12 +234,7 @@ describe("lexical-generation lexical info", () => {
 		})._unsafeUnwrap();
 
 		const result = await module.generateLexicalInfo(
-			{
-				lemma: "gehen",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Verb",
-				surfaceKind: "Lemma",
-			},
+			makeLexemeSelection({ lemma: "gehen", pos: "VERB" }),
 			"Ich gehe nach Hause",
 		);
 
@@ -282,12 +289,7 @@ describe("lexical-generation lexical info", () => {
 		})._unsafeUnwrap();
 
 		const result = await module.generateLexicalInfo(
-			{
-				lemma: "Bank",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Noun",
-				surfaceKind: "Lemma",
-			},
+			makeLexemeSelection({ lemma: "Bank", pos: "NOUN" }),
 			"Ich sitze auf der Bank",
 			{
 				precomputedEmojiDescription: ["🪑", "🌳"],
@@ -349,12 +351,7 @@ describe("lexical-generation lexical info", () => {
 		})._unsafeUnwrap();
 
 		const result = await module.generateLexicalInfo(
-			{
-				lemma: "Berlin",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Noun",
-				surfaceKind: "Lemma",
-			},
+			makeLexemeSelection({ lemma: "Berlin", pos: "NOUN" }),
 			"Ich bin in Berlin",
 		);
 
@@ -363,10 +360,8 @@ describe("lexical-generation lexical info", () => {
 			core: {
 				status: "ready",
 				value: {
-					nounIdentity: {
-						genus: "Neutrum",
-						nounClass: "Proper",
-					},
+					emojiDescription: ["🏛️"],
+					ipa: "bɛʁˈliːn",
 				},
 			},
 			features: {
@@ -374,6 +369,21 @@ describe("lexical-generation lexical info", () => {
 					kind: LexicalGenerationFailureKind.FetchFailed,
 				},
 				status: "error",
+			},
+			inflections: {
+				status: "ready",
+				value: {
+					kind: "noun",
+					gender: "Neut",
+				},
+			},
+			selection: {
+				surface: {
+					lemma: {
+						pos: "NOUN",
+						spelledLemma: "Berlin",
+					},
+				},
 			},
 		});
 	});
@@ -427,12 +437,7 @@ describe("lexical-generation lexical info", () => {
 		})._unsafeUnwrap();
 
 		const result = await module.generateLexicalInfo(
-			{
-				lemma: "gehen",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Verb",
-				surfaceKind: "Lemma",
-			},
+			makeLexemeSelection({ lemma: "gehen", pos: "VERB" }),
 			"Ich gehe nach Hause",
 		);
 
@@ -473,12 +478,7 @@ describe("lexical-generation lexical info", () => {
 		})._unsafeUnwrap();
 
 		const result = await module.generateLexicalInfo(
-			{
-				lemma: "Bank",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Noun",
-				surfaceKind: "Lemma",
-			},
+			makeLexemeSelection({ lemma: "Bank", pos: "NOUN" }),
 			"Ich gehe zur Bank",
 		);
 
@@ -537,12 +537,7 @@ describe("lexical-generation lexical info", () => {
 		})._unsafeUnwrap();
 
 		const result = await module.generateLexicalInfo(
-			{
-				lemma: "gehen",
-				linguisticUnit: "Lexem",
-				posLikeKind: "Verb",
-				surfaceKind: "Lemma",
-			},
+			makeLexemeSelection({ lemma: "gehen", pos: "VERB" }),
 			"Ich gehe nach Hause",
 		);
 

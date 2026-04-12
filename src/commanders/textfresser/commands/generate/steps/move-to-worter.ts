@@ -17,7 +17,7 @@ export function moveToWorter(
 		lemma: lemmaResult.lemma,
 		linguisticUnit: lemmaResult.linguisticUnit,
 		posLikeKind:
-			lemmaResult.linguisticUnit === "Lexem"
+			lemmaResult.linguisticUnit === "Lexeme"
 				? lemmaResult.posLikeKind
 				: null,
 		surfaceKind: lemmaResult.surfaceKind,

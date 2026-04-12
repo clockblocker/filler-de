@@ -1,146 +1,77 @@
 import type {
-	LexicalMeta,
-	ResolvedLemma,
-} from "./public-types";
-import type {
-	LexicalPhrasemeKind,
-	LexicalPos,
-	LexicalSurfaceKind,
-} from "./internal/legacy-linguistics";
+	LemmaKind,
+	MorphemeKind,
+	PhrasemeKind,
+	Pos,
+	SurfaceKind,
+} from "@textfresser/linguistics";
+import type { LexicalMeta, ResolvedSelection } from "./public-types";
+import {
+	getLemmaKind,
+	getSelectionDiscriminator,
+	getSurfaceKind,
+	isKnownSelection,
+} from "./selection-helpers";
 
-type ParsedLexicalMetaTag =
-	| {
-			linguisticUnit: "Lexem";
-			posLikeKind: LexicalPos;
-			surfaceKind: LexicalSurfaceKind;
-	  }
-	| {
-			linguisticUnit: "Phrasem";
-			posLikeKind: LexicalPhrasemeKind;
-			surfaceKind: LexicalSurfaceKind;
-	  };
+type ParsedLexicalMetaTag = {
+	discriminator: MorphemeKind | PhrasemeKind | Pos;
+	lemmaKind: LemmaKind;
+	surfaceKind: SurfaceKind;
+};
 
-const lexicalUnitToToken = {
-	Lexem: "lx",
-	Phrasem: "ph",
-} as const;
+export function createMetaTagFromSelection(selection: ResolvedSelection): string {
+	if (!isKnownSelection(selection)) {
+		return "unknown";
+	}
 
-const surfaceKindToToken = {
-	Inflected: "inflected",
-	Lemma: "lemma",
-	Partial: "partial",
-	Variant: "variant",
-} as const satisfies Record<LexicalSurfaceKind, string>;
+	const lemmaKind = getLemmaKind(selection);
+	const discriminator = getSelectionDiscriminator(selection);
+	const surfaceKind = getSurfaceKind(selection);
+	if (!lemmaKind || !discriminator || !surfaceKind) {
+		return "unknown";
+	}
 
-const posToToken = {
-	Adjective: "adjective",
-	Adverb: "adverb",
-	Article: "article",
-	Conjunction: "conjunction",
-	InteractionalUnit: "interactional-unit",
-	Noun: "noun",
-	Particle: "particle",
-	Preposition: "preposition",
-	Pronoun: "pronoun",
-	Verb: "verb",
-} as const satisfies Record<LexicalPos, string>;
-
-const phrasemeKindToToken = {
-	Collocation: "collocation",
-	CulturalQuotation: "cultural-quotation",
-	DiscourseFormula: "discourse-formula",
-	Idiom: "idiom",
-	Proverb: "proverb",
-} as const satisfies Record<LexicalPhrasemeKind, string>;
-
-const lexicalUnitFromToken = {
-	lx: "Lexem",
-	ph: "Phrasem",
-} as const;
-
-const surfaceKindFromToken = {
-	inflected: "Inflected",
-	lemma: "Lemma",
-	partial: "Partial",
-	variant: "Variant",
-} as const satisfies Record<string, LexicalSurfaceKind>;
-
-const posFromToken = Object.fromEntries(
-	Object.entries(posToToken).map(([pos, token]) => [token, pos]),
-) as Record<(typeof posToToken)[keyof typeof posToToken], LexicalPos>;
-
-const phrasemeKindFromToken = Object.fromEntries(
-	Object.entries(phrasemeKindToToken).map(([kind, token]) => [token, kind]),
-) as Record<
-	(typeof phrasemeKindToToken)[keyof typeof phrasemeKindToToken],
-	LexicalPhrasemeKind
->;
-
-export function createMetaTagFromResolvedLemma(lemma: ResolvedLemma): string {
-	const unitToken = lexicalUnitToToken[lemma.linguisticUnit];
-	const posToken =
-		lemma.linguisticUnit === "Lexem"
-			? posToToken[lemma.posLikeKind]
-			: phrasemeKindToToken[lemma.posLikeKind];
-	const surfaceToken = surfaceKindToToken[lemma.surfaceKind];
-
-	return `${unitToken}|${posToken}|${surfaceToken}`;
+	return `${lemmaKind}|${discriminator}|${surfaceKind}`;
 }
 
 export function createLexicalMeta(params: {
 	emojiDescription: string[];
-	lemma: ResolvedLemma;
+	selection: ResolvedSelection;
 }): LexicalMeta {
 	return {
 		emojiDescription: params.emojiDescription,
-		metaTag: createMetaTagFromResolvedLemma(params.lemma),
+		metaTag: createMetaTagFromSelection(params.selection),
 	};
 }
 
 export function parseLexicalMetaTag(
 	metaTag: string,
 ): ParsedLexicalMetaTag | null {
-	const [unitToken, posToken, surfaceToken, ...rest] = metaTag.split("|");
+	const [lemmaKind, discriminator, surfaceKind, ...rest] = metaTag.split("|");
 	if (
-		typeof unitToken !== "string" ||
-		typeof posToken !== "string" ||
-		typeof surfaceToken !== "string" ||
+		typeof lemmaKind !== "string" ||
+		typeof discriminator !== "string" ||
+		typeof surfaceKind !== "string" ||
 		rest.length > 0
 	) {
 		return null;
 	}
 
-	const linguisticUnit =
-		lexicalUnitFromToken[unitToken as keyof typeof lexicalUnitFromToken];
-	const surfaceKind =
-		surfaceKindFromToken[surfaceToken as keyof typeof surfaceKindFromToken];
-
-	if (!linguisticUnit || !surfaceKind) {
-		return null;
-	}
-
-	if (linguisticUnit === "Lexem") {
-		const posLikeKind = posFromToken[posToken as keyof typeof posFromToken];
-		if (!posLikeKind) {
-			return null;
-		}
-
-		return {
-			linguisticUnit,
-			posLikeKind,
-			surfaceKind,
-		};
-	}
-
-	const posLikeKind =
-		phrasemeKindFromToken[posToken as keyof typeof phrasemeKindFromToken];
-	if (!posLikeKind) {
+	if (
+		(lemmaKind !== "Lexeme" &&
+			lemmaKind !== "Phraseme" &&
+			lemmaKind !== "Morpheme") ||
+		(surfaceKind !== "Inflection" &&
+			surfaceKind !== "Lemma" &&
+			surfaceKind !== "Partial" &&
+			surfaceKind !== "Variant")
+	) {
 		return null;
 	}
 
 	return {
-		linguisticUnit,
-		posLikeKind,
+		discriminator: discriminator as ParsedLexicalMetaTag["discriminator"],
+		lemmaKind,
 		surfaceKind,
 	};
 }

@@ -4,7 +4,7 @@ import type {
 } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
-import type { ResolvedLemma } from "@textfresser/lexical-generation";
+import type { ResolvedSelection } from "@textfresser/lexical-generation";
 import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import { logger } from "../../../../utils/logger";
 import {
@@ -25,6 +25,15 @@ import {
 import { CommandErrorKind, commandApiError } from "../../errors";
 import type { TextfresserState } from "../../state/textfresser-state";
 import { dispatchActions } from "../shared/dispatch-actions";
+import {
+	getSelectionDiscriminator,
+	getSelectionPos,
+	getSelectionSurfaceKind,
+	getSelectionUnitKind,
+	getSpelledLemma,
+	isLexemeSelection,
+	isPhrasemeSelection,
+} from "../../domain/native-selection";
 import {
 	buildLemmaRewritePlan,
 	buildUpdatedBlock,
@@ -124,7 +133,7 @@ export async function runLemmaTwoPhase(params: {
 		);
 	}
 
-	const lemmaResult = await lexicalGeneration.generateLemma(surface, context);
+	const lemmaResult = await lexicalGeneration.resolveSelection(surface, context);
 	if (lemmaResult.isErr()) {
 		return err(
 			commandApiError({
@@ -133,18 +142,30 @@ export async function runLemmaTwoPhase(params: {
 			}),
 		);
 	}
-	const resolvedLemma: ResolvedLemma = lemmaResult.value;
+	const resolvedLemma: ResolvedSelection = lemmaResult.value;
+	const spelledLemma = getSpelledLemma(resolvedLemma);
+	const linguisticUnit = getSelectionUnitKind(resolvedLemma);
+	const surfaceKind = getSelectionSurfaceKind(resolvedLemma);
+	if (!spelledLemma || !linguisticUnit || !surfaceKind) {
+		return err({
+			kind: CommandErrorKind.NotEligible,
+			reason: "Selection could not be resolved to a note target",
+		});
+	}
+	if (!isLexemeSelection(resolvedLemma) && !isPhrasemeSelection(resolvedLemma)) {
+		return err({
+			kind: CommandErrorKind.NotEligible,
+			reason: "Selection resolved to an unsupported unit kind",
+		});
+	}
 
 	const finalTarget = computeFinalTarget({
 		findByBasename: (basename) => vam.findByBasename(basename),
-		lemma: resolvedLemma.lemma,
-		linguisticUnit: resolvedLemma.linguisticUnit,
+		lemma: spelledLemma,
+		linguisticUnit: isLexemeSelection(resolvedLemma) ? "Lexeme" : "Phraseme",
 		lookupInLibrary: state.lookupInLibrary,
-		posLikeKind:
-			resolvedLemma.linguisticUnit === "Lexem"
-				? resolvedLemma.posLikeKind
-				: null,
-		surfaceKind: resolvedLemma.surfaceKind,
+		posLikeKind: getSelectionPos(resolvedLemma) ?? null,
+		surfaceKind,
 		targetLanguage: state.languages.target,
 	});
 
@@ -273,15 +294,30 @@ export async function runLemmaTwoPhase(params: {
 
 	syncAttestationAfterSemanticResolution({
 		attestation,
-		lemma: resolvedLemma.lemma,
+		lemma: spelledLemma,
 		rewritePlan,
 	});
-	state.latestLemmaResult = {
-		...resolvedLemma,
-		attestation,
-		disambiguationResult: normalizedDisambiguation,
-		precomputedEmojiDescription,
-	};
+	state.latestLemmaResult = isLexemeSelection(resolvedLemma)
+		? {
+				...resolvedLemma,
+				attestation,
+				disambiguationResult: normalizedDisambiguation,
+				lemma: spelledLemma,
+				linguisticUnit: "Lexeme",
+				posLikeKind: resolvedLemma.surface.lemma.pos,
+				precomputedEmojiDescription,
+				surfaceKind,
+			}
+		: {
+				...resolvedLemma,
+				attestation,
+				disambiguationResult: normalizedDisambiguation,
+				lemma: spelledLemma,
+				linguisticUnit: "Phraseme",
+				posLikeKind: null,
+				precomputedEmojiDescription,
+				surfaceKind,
+			};
 	state.latestResolvedLemmaTargetPath = finalTarget.splitPath;
 
 	state.latestLemmaPlaceholderPath = placeholderWasCleaned

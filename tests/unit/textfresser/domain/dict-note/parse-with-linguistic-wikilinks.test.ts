@@ -115,11 +115,11 @@ describe("dictNoteHelper.parseWithLinguisticWikilinks", () => {
 		});
 
 		const inflectionAß = wikilinks.find((link) => link.target === "aß");
-		expect(inflectionAß?.targetKind).toBe("Inflected");
+		expect(inflectionAß?.targetKind).toBe("Inflection");
 		expect(inflectionAß?.targetRef).toMatchObject({
 			basename: "aß",
 			kind: "WorterNote",
-			surfaceKind: "Inflected",
+			surfaceKind: "Inflection",
 		});
 
 		const freeformHaus = wikilinks.find(

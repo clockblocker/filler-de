@@ -1,14 +1,18 @@
 import type { LexicalInfo } from "@textfresser/lexical-generation";
 import type { EntrySection } from "../../../../domain/dict-note/types";
+import {
+	getLexicalInfoInherentFeatures,
+	getLexicalInfoPos,
+	isLexicalInfoLexeme,
+} from "../../../../domain/lexical-info-view";
 import { cssSuffixFor } from "../../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../targets/de/sections/section-kind";
-import { buildAdjectiveFeatureTags } from "../adjective-features";
 import { buildFeatureTagPath } from "../features-prompt-dispatch";
+import { buildInherentFeatureTags } from "../inherent-feature-tags";
 import type { GenerationTargetLanguage } from "../section-generation-types";
-import { buildVerbFeatureTags } from "../verb-features";
 
 export type TagsSectionContext = {
 	lexicalInfo: LexicalInfo;
@@ -18,26 +22,17 @@ export type TagsSectionContext = {
 export function generateTagsSection(
 	ctx: TagsSectionContext,
 ): EntrySection | null {
-	if (ctx.lexicalInfo.lemma.linguisticUnit !== "Lexem") return null;
-	if (ctx.lexicalInfo.features.status !== "ready") return null;
+	if (!isLexicalInfoLexeme(ctx.lexicalInfo)) return null;
 
-	let tags: string[];
+	const pos = getLexicalInfoPos(ctx.lexicalInfo);
+	const inherentFeatures = getLexicalInfoInherentFeatures(ctx.lexicalInfo);
+	if (!pos || !inherentFeatures) return null;
 
-	if (ctx.lexicalInfo.features.value.kind === "verb") {
-		tags = buildVerbFeatureTags(ctx.lexicalInfo.features.value);
-	} else if (ctx.lexicalInfo.features.value.kind === "adjective") {
-		tags = buildAdjectiveFeatureTags(ctx.lexicalInfo.features.value);
-	} else if (
-		ctx.lexicalInfo.features.value.kind === "noun" ||
-		ctx.lexicalInfo.features.value.kind === "tags"
-	) {
-		tags = ctx.lexicalInfo.features.value.tags;
-	} else {
-		return null;
-	}
+	const tags = buildInherentFeatureTags(inherentFeatures);
+	if (tags.length === 0) return null;
 
 	return {
-		content: buildFeatureTagPath(ctx.lexicalInfo.lemma.posLikeKind, tags),
+		content: buildFeatureTagPath(pos, tags),
 		kind: cssSuffixFor[DictSectionKind.Tags],
 		title: TitleReprFor[DictSectionKind.Tags][ctx.targetLang],
 	};

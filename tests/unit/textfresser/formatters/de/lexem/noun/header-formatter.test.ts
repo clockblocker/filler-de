@@ -7,7 +7,7 @@ describe("noun formatHeaderLine", () => {
 			{ emojiDescription: ["☁️"], ipa: "ˈhɪml̩" },
 			"Himmel",
 			"German",
-			"Maskulinum",
+			"Masc",
 		);
 		expect(result).toBe(
 			"☁️ der [[Himmel]], [ˈhɪml̩](https://youglish.com/pronounce/Himmel/german)",
@@ -19,7 +19,7 @@ describe("noun formatHeaderLine", () => {
 			{ emojiDescription: ["🏦"], ipa: "baŋk" },
 			"Bank",
 			"German",
-			"Femininum",
+			"Fem",
 		);
 		expect(result).toContain("die [[Bank]]");
 	});
@@ -29,7 +29,7 @@ describe("noun formatHeaderLine", () => {
 			{ emojiDescription: ["🏠"], ipa: "haʊ̯s" },
 			"Haus",
 			"German",
-			"Neutrum",
+			"Neut",
 		);
 		expect(result).toContain("das [[Haus]]");
 	});
@@ -39,7 +39,7 @@ describe("noun formatHeaderLine", () => {
 			{ emojiDescription: ["💨", "✨"], ipa: "ˈʃtaʊ̯p" },
 			"Staub",
 			"German",
-			"Maskulinum",
+			"Masc",
 		);
 		expect(result).toBe(
 			"💨 ✨ der [[Staub]], [ˈʃtaʊ̯p](https://youglish.com/pronounce/Staub/german)",
@@ -51,7 +51,7 @@ describe("noun formatHeaderLine", () => {
 			{ emojiDescription: ["🚗"], ipa: "ˈfaːʁən" },
 			"Worter/de/lexem/lemma/f/fah/fahre/Fahren",
 			"German",
-			"Maskulinum",
+			"Masc",
 		);
 		expect(result).toBe(
 			"🚗 der [[Fahren]], [ˈfaːʁən](https://youglish.com/pronounce/Fahren/german)",

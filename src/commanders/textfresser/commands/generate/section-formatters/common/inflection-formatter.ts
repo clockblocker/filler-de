@@ -1,4 +1,4 @@
-import type { LexemInflections } from "@textfresser/lexical-generation";
+import type { LexemeInflections } from "@textfresser/lexical-generation";
 import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
 
 type GenericInflectionSectionInput = {
@@ -6,7 +6,7 @@ type GenericInflectionSectionInput = {
 		forms:
 			| string
 			| Extract<
-					LexemInflections,
+					LexemeInflections,
 					{ kind: "generic" }
 			  >["rows"][number]["forms"];
 		label: string;

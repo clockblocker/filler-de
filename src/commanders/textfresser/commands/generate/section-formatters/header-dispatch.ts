@@ -1,7 +1,11 @@
-import type {
-	LexicalInfo,
-} from "@textfresser/lexical-generation";
+import type { LexicalInfo } from "@textfresser/lexical-generation";
 import type { LexicalGenus } from "../../../domain/lexical-types";
+import {
+	getLexicalInfoGender,
+	getLexicalInfoLemma,
+	getLexicalInfoPos,
+	isLexicalInfoLexeme,
+} from "../../../domain/lexical-info-view";
 import { formatHeaderLine as formatCommonHeader } from "./common/header-formatter";
 import { formatHeaderLine as formatNounHeader } from "./de/lexem/noun/header-formatter";
 
@@ -22,34 +26,12 @@ function resolveHeaderCore(lexicalInfo: LexicalInfo): {
 	};
 }
 
-function resolveNounGenus(lexicalInfo: LexicalInfo): LexicalGenus | undefined {
-	if (
-		lexicalInfo.lemma.linguisticUnit !== "Lexem" ||
-		lexicalInfo.lemma.posLikeKind !== "Noun"
-	) {
+function resolveNounGender(lexicalInfo: LexicalInfo): LexicalGenus | undefined {
+	if (!isLexicalInfoLexeme(lexicalInfo) || getLexicalInfoPos(lexicalInfo) !== "NOUN") {
 		return undefined;
 	}
 
-	if (
-		lexicalInfo.features.status === "ready" &&
-		lexicalInfo.features.value.kind === "noun" &&
-		lexicalInfo.features.value.genus
-	) {
-		return lexicalInfo.features.value.genus;
-	}
-
-	if (
-		lexicalInfo.inflections.status === "ready" &&
-		lexicalInfo.inflections.value.kind === "noun"
-	) {
-		return lexicalInfo.inflections.value.genus;
-	}
-
-	if (lexicalInfo.core.status === "ready") {
-		return lexicalInfo.core.value.nounIdentity?.genus;
-	}
-
-	return undefined;
+	return getLexicalInfoGender(lexicalInfo);
 }
 
 export function dispatchHeaderFormatter(
@@ -57,21 +39,14 @@ export function dispatchHeaderFormatter(
 	targetLanguage: string,
 ): string {
 	const output = resolveHeaderCore(lexicalInfo);
+	const lemma = getLexicalInfoLemma(lexicalInfo) ?? "unknown";
 
-	if (
-		lexicalInfo.lemma.linguisticUnit === "Lexem" &&
-		lexicalInfo.lemma.posLikeKind === "Noun"
-	) {
-		const nounGenus = resolveNounGenus(lexicalInfo);
-		if (nounGenus) {
-			return formatNounHeader(
-				output,
-				lexicalInfo.lemma.lemma,
-				targetLanguage,
-				nounGenus,
-			);
+	if (isLexicalInfoLexeme(lexicalInfo) && getLexicalInfoPos(lexicalInfo) === "NOUN") {
+		const nounGender = resolveNounGender(lexicalInfo);
+		if (nounGender) {
+			return formatNounHeader(output, lemma, targetLanguage, nounGender);
 		}
 	}
 
-	return formatCommonHeader(output, lexicalInfo.lemma.lemma, targetLanguage);
+	return formatCommonHeader(output, lemma, targetLanguage);
 }

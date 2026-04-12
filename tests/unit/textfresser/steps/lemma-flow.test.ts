@@ -288,22 +288,22 @@ describe("lemma two-phase flow", () => {
 		const { getLemmaCallCount, textfresser } = makeHarness({
 			lemma: "anfangen",
 			lemmaOutputs: [
-				{
-					contextWithLinkedParts:
-						"Du [fängst] morgen mit der Arbeit an. ^1",
-					lemma: "fängst",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Verb",
-					surfaceKind: "Inflected",
-				},
-				{
-					contextWithLinkedParts:
-						"Du [fängst] morgen mit der Arbeit [an]. ^1",
-					lemma: "anfangen",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Verb",
-					surfaceKind: "Inflected",
-				},
+					{
+						contextWithLinkedParts:
+							"Du [fängst] morgen mit der Arbeit an. ^1",
+						lemma: "fängst",
+						linguisticUnit: "Lexem",
+						posLikeKind: "Verb",
+						surfaceKind: "Inflected",
+					},
+					{
+						contextWithLinkedParts:
+							"Du [fängst] morgen mit der Arbeit [an]. ^1",
+						lemma: "anfangen",
+						linguisticUnit: "Lexem",
+						posLikeKind: "Verb",
+						surfaceKind: "Inflected",
+					},
 			],
 		});
 
@@ -328,14 +328,14 @@ describe("lemma two-phase flow", () => {
 		const { textfresser } = makeHarness({
 			lemma: "anfangen",
 			lemmaOutputs: [
-				{
-					contextWithLinkedParts:
-						"Du [fängst] morgen mit der Arbeit [an] EXTRA",
-					lemma: "anfangen",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Verb",
-					surfaceKind: "Inflected",
-				},
+					{
+						contextWithLinkedParts:
+							"Du [fängst] morgen mit der Arbeit [an] EXTRA",
+						lemma: "anfangen",
+						linguisticUnit: "Lexem",
+						posLikeKind: "Verb",
+						surfaceKind: "Inflected",
+					},
 			],
 		});
 

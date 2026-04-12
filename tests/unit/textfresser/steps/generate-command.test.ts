@@ -13,6 +13,13 @@ import {
 	type LexicalInfo,
 	lexicalGenerationError,
 } from "@textfresser/lexical-generation";
+import {
+	makeLexemeLexicalInfo,
+	makeLexemeLemmaResult,
+	makePhrasemeLexicalInfo,
+	makePhrasemeLemmaResult,
+	makeRelations,
+} from "../helpers/native-fixtures";
 import { DEFAULT_SETTINGS } from "../../../../src/types";
 import {
 	DictSectionKind,
@@ -21,16 +28,12 @@ import {
 import { cssSuffixFor } from "../../../../src/commanders/textfresser/targets/de/sections/section-css-kind";
 
 function makeProperNounLexicalInfo(): LexicalInfo {
-	return {
+	return makeLexemeLexicalInfo({
 		core: {
 			status: "ready",
 			value: {
 				emojiDescription: ["🏙️"],
 				ipa: "bɛʁˈliːn",
-				nounIdentity: {
-					genus: "Neutrum",
-					nounClass: "Proper",
-				},
 			},
 		},
 		features: {
@@ -40,20 +43,13 @@ function makeProperNounLexicalInfo(): LexicalInfo {
 			),
 			status: "error",
 		},
-		inflections: { status: "not_applicable" },
-		lemma: {
-			lemma: "Berlin",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Noun",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: { status: "not_applicable" },
-	};
+		lemma: "Berlin",
+		pos: "PROPN",
+	});
 }
 
 function makePhrasemLexicalInfo(): LexicalInfo {
-	return {
+	return makePhrasemeLexicalInfo({
 		core: {
 			status: "ready",
 			value: {
@@ -61,22 +57,14 @@ function makePhrasemLexicalInfo(): LexicalInfo {
 				ipa: "ipa",
 			},
 		},
-		features: { status: "not_applicable" },
-		inflections: { status: "not_applicable" },
-		lemma: {
-			lemma: "redensart",
-			linguisticUnit: "Phrasem",
-			posLikeKind: "Idiom",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
+		lemma: "redensart",
 		relations: {
 			status: "ready",
 			value: {
 				relations: [{ kind: "Synonym", words: ["nah"] }],
 			},
 		},
-	};
+	});
 }
 
 async function extractFinalWrittenContent(actions: readonly unknown[]) {
@@ -122,7 +110,7 @@ function makePhrasemGenerateInput(params: {
 }) {
 	const targetPath = buildPolicyDestinationPath({
 		lemma: "redensart",
-		linguisticUnit: "Phrasem",
+		linguisticUnit: "Phraseme",
 		posLikeKind: null,
 		surfaceKind: "Lemma",
 		targetLanguage: "German",
@@ -147,19 +135,24 @@ function makePhrasemGenerateInput(params: {
 			latestLemmaInvocationCache: null,
 			latestLemmaPlaceholderPath: undefined,
 			latestLemmaResult: {
-				attestation: {
-					source: {
-						ref: "![[Src#^3|^]]",
-						textRaw: "Das ist eine Redensart.",
-						textWithOnlyTargetMarked: "Das ist eine [Redensart].",
+				...makePhrasemeLemmaResult({
+						attestation: {
+							source: {
+								path: {
+									basename: "source",
+									extension: "md",
+									kind: "MdFile",
+									pathParts: ["Texts"],
+								},
+								ref: "![[Src#^3|^]]",
+								textRaw: "Das ist eine Redensart.",
+								textWithOnlyTargetMarked: "Das ist eine [Redensart].",
+						},
+						target: { surface: "Redensart" },
 					},
-					target: { surface: "Redensart" },
-				},
-				disambiguationResult: { matchedIndex: 1 },
-				lemma: "redensart",
-				linguisticUnit: "Phrasem",
-				posLikeKind: "Idiom",
-				surfaceKind: "Lemma",
+					disambiguationResult: { matchedIndex: 1 },
+					lemma: "redensart",
+				}),
 			},
 			latestLemmaTargetOwnedByInvocation: false,
 			latestResolvedLemmaTargetPath: targetPath,
@@ -195,8 +188,8 @@ describe("generateCommand proper-noun fallback", () => {
 	it("keeps proper-noun sections and noun metadata when noun features fail", async () => {
 		const targetPath = buildPolicyDestinationPath({
 			lemma: "Berlin",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Noun",
+			linguisticUnit: "Lexeme",
+			posLikeKind: "PROPN",
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
 		});
@@ -220,19 +213,24 @@ describe("generateCommand proper-noun fallback", () => {
 				latestLemmaInvocationCache: null,
 				latestLemmaPlaceholderPath: undefined,
 				latestLemmaResult: {
-					attestation: {
-						source: {
-							ref: "![[Src#^3|^]]",
-							textRaw: "Berlin ist gross.",
-							textWithOnlyTargetMarked: "[Berlin] ist gross.",
+					...makeLexemeLemmaResult({
+						attestation: {
+							source: {
+								path: {
+									basename: "source",
+									extension: "md",
+									kind: "MdFile",
+									pathParts: ["Texts"],
+								},
+								ref: "![[Src#^3|^]]",
+								textRaw: "Berlin ist gross.",
+								textWithOnlyTargetMarked: "[Berlin] ist gross.",
+							},
+							target: { surface: "Berlin" },
 						},
-						target: { surface: "Berlin" },
-					},
-					disambiguationResult: null,
-					lemma: "Berlin",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Noun",
-					surfaceKind: "Lemma",
+						lemma: "Berlin",
+						pos: "PROPN",
+					}),
 				},
 				latestLemmaTargetOwnedByInvocation: false,
 				latestResolvedLemmaTargetPath: targetPath,
@@ -275,7 +273,7 @@ describe("generateCommand proper-noun fallback", () => {
 		const entry = entries[0];
 		expect(entry?.meta.lexicalMeta).toEqual({
 			emojiDescription: ["🏙️"],
-			metaTag: "lx|noun|lemma",
+			metaTag: "Lexeme|PROPN|Lemma",
 		});
 
 		const sectionKinds = new Set(entry?.sections.map((section) => section.kind));
@@ -290,7 +288,7 @@ describe("generateCommand proper-noun fallback", () => {
 	it("preserves raw duplicate sections and manual blocks on re-encounter", async () => {
 		const targetPath = buildPolicyDestinationPath({
 			lemma: "redensart",
-			linguisticUnit: "Phrasem",
+			linguisticUnit: "Phraseme",
 			posLikeKind: null,
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
@@ -329,9 +327,15 @@ describe("generateCommand proper-noun fallback", () => {
 				latestFailedSections: [],
 				latestLemmaInvocationCache: null,
 				latestLemmaPlaceholderPath: undefined,
-				latestLemmaResult: {
+				latestLemmaResult: makePhrasemeLemmaResult({
 					attestation: {
 						source: {
+							path: {
+								basename: "source",
+								extension: "md",
+								kind: "MdFile",
+								pathParts: ["Texts"],
+							},
 							ref: "![[Src#^3|^]]",
 							textRaw: "Das ist eine Redensart.",
 							textWithOnlyTargetMarked: "Das ist eine [Redensart].",
@@ -340,10 +344,7 @@ describe("generateCommand proper-noun fallback", () => {
 					},
 					disambiguationResult: { matchedIndex: 1 },
 					lemma: "redensart",
-					linguisticUnit: "Phrasem",
-					posLikeKind: "Idiom",
-					surfaceKind: "Lemma",
-				},
+				}),
 				latestLemmaTargetOwnedByInvocation: false,
 				latestResolvedLemmaTargetPath: targetPath,
 				lexicalGeneration: {
@@ -380,7 +381,7 @@ describe("generateCommand proper-noun fallback", () => {
 	it("treats raw custom-title translation as missing and preserves the raw block", async () => {
 		const targetPath = buildPolicyDestinationPath({
 			lemma: "redensart",
-			linguisticUnit: "Phrasem",
+			linguisticUnit: "Phraseme",
 			posLikeKind: null,
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
@@ -413,9 +414,15 @@ describe("generateCommand proper-noun fallback", () => {
 				latestFailedSections: [],
 				latestLemmaInvocationCache: null,
 				latestLemmaPlaceholderPath: undefined,
-				latestLemmaResult: {
+				latestLemmaResult: makePhrasemeLemmaResult({
 					attestation: {
 						source: {
+							path: {
+								basename: "source",
+								extension: "md",
+								kind: "MdFile",
+								pathParts: ["Texts"],
+							},
 							ref: "![[Src#^3|^]]",
 							textRaw: "Das ist eine Redensart.",
 							textWithOnlyTargetMarked: "Das ist eine [Redensart].",
@@ -424,14 +431,11 @@ describe("generateCommand proper-noun fallback", () => {
 					},
 					disambiguationResult: { matchedIndex: 1 },
 					lemma: "redensart",
-					linguisticUnit: "Phrasem",
-					posLikeKind: "Idiom",
-					surfaceKind: "Lemma",
-				},
+				}),
 				latestLemmaTargetOwnedByInvocation: false,
 				latestResolvedLemmaTargetPath: targetPath,
 				lexicalGeneration: {
-					generateLexicalInfo: async () => ok(makeProperNounLexicalInfo()),
+					generateLexicalInfo: async () => ok(makePhrasemLexicalInfo()),
 				} as unknown as LexicalGenerationModule,
 				lookupInLibrary: () => [],
 				parseLibraryBasename: () => null,
@@ -464,7 +468,7 @@ describe("generateCommand proper-noun fallback", () => {
 	it("leaves raw custom-title attestation opaque and adds a new typed attestation section", async () => {
 		const targetPath = buildPolicyDestinationPath({
 			lemma: "redensart",
-			linguisticUnit: "Phrasem",
+			linguisticUnit: "Phraseme",
 			posLikeKind: null,
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
@@ -496,9 +500,15 @@ describe("generateCommand proper-noun fallback", () => {
 				latestFailedSections: [],
 				latestLemmaInvocationCache: null,
 				latestLemmaPlaceholderPath: undefined,
-				latestLemmaResult: {
+				latestLemmaResult: makePhrasemeLemmaResult({
 					attestation: {
 						source: {
+							path: {
+								basename: "source",
+								extension: "md",
+								kind: "MdFile",
+								pathParts: ["Texts"],
+							},
 							ref: "![[Src#^3|^]]",
 							textRaw: "Das ist eine Redensart.",
 							textWithOnlyTargetMarked: "Das ist eine [Redensart].",
@@ -507,10 +517,7 @@ describe("generateCommand proper-noun fallback", () => {
 					},
 					disambiguationResult: { matchedIndex: 1 },
 					lemma: "redensart",
-					linguisticUnit: "Phrasem",
-					posLikeKind: "Idiom",
-					surfaceKind: "Lemma",
-				},
+				}),
 				latestLemmaTargetOwnedByInvocation: false,
 				latestResolvedLemmaTargetPath: targetPath,
 				lexicalGeneration: {
@@ -543,7 +550,7 @@ describe("generateCommand proper-noun fallback", () => {
 	it("canonicalizes existing structured section order before write", async () => {
 		const targetPath = buildPolicyDestinationPath({
 			lemma: "redensart",
-			linguisticUnit: "Phrasem",
+			linguisticUnit: "Phraseme",
 			posLikeKind: null,
 			surfaceKind: "Lemma",
 			targetLanguage: "German",
@@ -575,9 +582,15 @@ describe("generateCommand proper-noun fallback", () => {
 				latestFailedSections: [],
 				latestLemmaInvocationCache: null,
 				latestLemmaPlaceholderPath: undefined,
-				latestLemmaResult: {
+				latestLemmaResult: makePhrasemeLemmaResult({
 					attestation: {
 						source: {
+							path: {
+								basename: "source",
+								extension: "md",
+								kind: "MdFile",
+								pathParts: ["Texts"],
+							},
 							ref: "![[Src#^3|^]]",
 							textRaw: "Das ist eine Redensart.",
 							textWithOnlyTargetMarked: "Das ist eine [Redensart].",
@@ -586,10 +599,7 @@ describe("generateCommand proper-noun fallback", () => {
 					},
 					disambiguationResult: { matchedIndex: 1 },
 					lemma: "redensart",
-					linguisticUnit: "Phrasem",
-					posLikeKind: "Idiom",
-					surfaceKind: "Lemma",
-				},
+				}),
 				latestLemmaTargetOwnedByInvocation: false,
 				latestResolvedLemmaTargetPath: targetPath,
 				lexicalGeneration: {

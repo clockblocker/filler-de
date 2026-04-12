@@ -2,107 +2,60 @@ import { describe, expect, it } from "bun:test";
 import { dispatchHeaderFormatter } from "../../../../src/commanders/textfresser/commands/generate/section-formatters/header-dispatch";
 import {
 	LexicalGenerationFailureKind,
-	type LexicalInfo,
 	lexicalGenerationError,
 } from "@textfresser/lexical-generation";
+import {
+	makeLexemeLexicalInfo,
+	makeNounInflections,
+	makePhrasemeLexicalInfo,
+} from "../helpers/native-fixtures";
 
-function makeVerbLexicalInfo(
-	overrides: Partial<Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>> = {},
-): Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }> {
-	return {
-		core: {
-			status: "ready",
-			value: {
-				emojiDescription: ["🔧"],
-				ipa: "tɛst",
-			},
-		},
+function makeVerbLexicalInfo(params: {
+	core?: ReturnType<typeof makeLexemeLexicalInfo>["core"];
+} = {}) {
+	return makeLexemeLexicalInfo({
+		core: params.core,
 		features: {
 			status: "ready",
 			value: {
-				conjugation: "Regular",
-				kind: "verb",
-				valency: {
-					reflexivity: "NonReflexive",
-					separability: "None",
+				inherentFeatures: {
+					reflex: false,
+					separable: false,
 				},
 			},
 		},
-		inflections: { status: "not_applicable" },
-		lemma: {
-			lemma: "Test",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Verb",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: { status: "not_applicable" },
-		...overrides,
-	};
+		lemma: "Test",
+		pos: "VERB",
+	});
 }
 
-function makeNounLexicalInfo(
-	overrides: Partial<Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }>> = {},
-): Extract<LexicalInfo, { lemma: { linguisticUnit: "Lexem" } }> {
-	return {
-		core: {
-			status: "ready",
-			value: {
-				emojiDescription: ["🔧"],
-				ipa: "tɛst",
-			},
-		},
-		features: {
-			status: "ready",
-			value: {
-				genus: "Maskulinum",
-				kind: "noun",
-				nounClass: "Common",
-				tags: [],
-			},
-		},
-		inflections: { status: "not_applicable" },
-		lemma: {
-			lemma: "Test",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Noun",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: { status: "not_applicable" },
-		...overrides,
-	};
+function makeNounLexicalInfo(params: {
+	features?: ReturnType<typeof makeLexemeLexicalInfo>["features"];
+	inflections?: ReturnType<typeof makeLexemeLexicalInfo>["inflections"];
+	core?: ReturnType<typeof makeLexemeLexicalInfo>["core"];
+} = {}) {
+	return makeLexemeLexicalInfo({
+		core: params.core,
+		features:
+			params.features ??
+			({
+				status: "ready",
+				value: {
+					inherentFeatures: {
+						gender: "Masc",
+					},
+				},
+			} as const),
+		inflections: params.inflections,
+		lemma: "Test",
+		pos: "NOUN",
+	});
 }
 
-function makePhrasemLexicalInfo(
-	overrides: Partial<Extract<LexicalInfo, { lemma: { linguisticUnit: "Phrasem" } }>> = {},
-): Extract<LexicalInfo, { lemma: { linguisticUnit: "Phrasem" } }> {
-	return {
-		core: {
-			status: "ready",
-			value: {
-				emojiDescription: ["🔧"],
-				ipa: "tɛst",
-			},
-		},
-		features: {
-			status: "ready",
-			value: {
-				kind: "tags",
-				tags: [],
-			},
-		},
-		inflections: { status: "not_applicable" },
-		lemma: {
-			lemma: "Test",
-			linguisticUnit: "Phrasem",
-			posLikeKind: "DiscourseFormula",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: { status: "not_applicable" },
-		...overrides,
-	};
+function makePhrasemLexicalInfo() {
+	return makePhrasemeLexicalInfo({
+		lemma: "Test",
+	});
 }
 
 describe("dispatchHeaderFormatter", () => {
@@ -121,7 +74,7 @@ describe("dispatchHeaderFormatter", () => {
 	it("dispatches Phrasem to common formatter", () => {
 		const result = dispatchHeaderFormatter(makePhrasemLexicalInfo(), "German");
 		expect(result).toBe(
-			"🔧 [[Test]], [tɛst](https://youglish.com/pronounce/Test/german)",
+			"💬 [[Test]], [tɛst](https://youglish.com/pronounce/Test/german)",
 		);
 	});
 
@@ -131,10 +84,7 @@ describe("dispatchHeaderFormatter", () => {
 				features: {
 					status: "ready",
 					value: {
-						genus: undefined,
-						kind: "noun",
-						nounClass: "Common",
-						tags: [],
+						inherentFeatures: {},
 					},
 				},
 			}),
@@ -152,19 +102,12 @@ describe("dispatchHeaderFormatter", () => {
 				features: {
 					status: "ready",
 					value: {
-						genus: undefined,
-						kind: "noun",
-						nounClass: "Common",
-						tags: [],
+						inherentFeatures: {},
 					},
 				},
 				inflections: {
 					status: "ready",
-					value: {
-						cells: [],
-						genus: "Maskulinum",
-						kind: "noun",
-					},
+					value: makeNounInflections({ cells: [], gender: "Masc" }),
 				},
 			}),
 			"German",
@@ -172,26 +115,19 @@ describe("dispatchHeaderFormatter", () => {
 		expect(result).toContain("der [[Test]]");
 	});
 
-	it("uses core noun genus when noun features are unavailable", () => {
+	it("uses noun inflection gender when noun features are unavailable", () => {
 		const result = dispatchHeaderFormatter(
 			makeNounLexicalInfo({
-				core: {
-					status: "ready",
-					value: {
-						emojiDescription: ["🔧"],
-						ipa: "tɛst",
-						nounIdentity: {
-							genus: "Maskulinum",
-							nounClass: "Common",
-						},
-					},
-				},
 				features: {
 					error: lexicalGenerationError(
 						LexicalGenerationFailureKind.FetchFailed,
 						"features failed",
 					),
 					status: "error",
+				},
+				inflections: {
+					status: "ready",
+					value: makeNounInflections({ cells: [], gender: "Masc" }),
 				},
 			}),
 			"German",

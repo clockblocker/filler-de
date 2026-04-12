@@ -24,14 +24,14 @@ const CLOSED_SET_MEMBERSHIP_SECTION_KIND = "closed_set_membership";
 const CLOSED_SET_MEMBERSHIP_SECTION_TITLE = "Closed-set membership";
 const CLOSED_SET_TAG = "#kind/closed-set";
 
-type ClosedSetLexemLemmaResult = Extract<
+type ClosedSetLexemeLemmaResult = Extract<
 	LemmaResult,
-	{ linguisticUnit: "Lexem" }
+	{ linguisticUnit: "Lexeme" }
 >;
 
 type EnsureMembershipParams = {
 	existingEntries: NoteEntry[];
-	lemmaResult: ClosedSetLexemLemmaResult;
+	lemmaResult: ClosedSetLexemeLemmaResult;
 	lookupInLibrary: (coreName: string) => SplitPathToMdFile[];
 	targetLanguage: TargetLanguage;
 };
@@ -42,7 +42,7 @@ type EnsureMembershipResult = {
 };
 
 function resolveClosedSetLibraryTargetForLemma(params: {
-	lemmaResult: ClosedSetLexemLemmaResult;
+	lemmaResult: ClosedSetLexemeLemmaResult;
 	lookupInLibrary: (coreName: string) => SplitPathToMdFile[];
 	targetLanguage: TargetLanguage;
 }): SplitPathToMdFile | null {
@@ -61,7 +61,7 @@ function resolveClosedSetLibraryTargetForLemma(params: {
 function buildMembershipSection(params: {
 	libraryBasename: string;
 	lemma: string;
-	pos: ClosedSetLexemLemmaResult["posLikeKind"];
+	pos: ClosedSetLexemeLemmaResult["posLikeKind"];
 }): EntrySection {
 	return {
 		content: `- [[${params.libraryBasename}|${params.lemma} (${params.pos})]]`,
@@ -195,11 +195,11 @@ function getMembershipPointerBasenames(entry: NoteEntry): string[] {
 
 function buildMembershipEntryId(params: {
 	existingEntries: NoteEntry[];
-	lemmaResult: ClosedSetLexemLemmaResult;
+	lemmaResult: ClosedSetLexemeLemmaResult;
 }): string {
 	const existingIds = params.existingEntries.map((entry) => entry.id);
 	const prefix = dictEntryIdHelper.buildPrefix(
-		"Lexem",
+		"Lexeme",
 		params.lemmaResult.surfaceKind,
 		params.lemmaResult.posLikeKind,
 	);
@@ -208,7 +208,7 @@ function buildMembershipEntryId(params: {
 		index: nextIndex,
 		pos: params.lemmaResult.posLikeKind,
 		surfaceKind: params.lemmaResult.surfaceKind,
-		unitKind: "Lexem",
+		unitKind: "Lexeme",
 	});
 }
 

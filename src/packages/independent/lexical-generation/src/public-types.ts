@@ -1,23 +1,16 @@
 import type {
+	AnySelection,
+	Case,
+	Gender,
+	GrammaticalNumber,
+	InherentFeatures,
+	MorphemeKind,
+	UnknownSelection,
+} from "@textfresser/linguistics";
+import type {
 	KnownLanguage,
 	TargetLanguage,
 } from "./internal/shared/languages";
-import type {
-	LexicalAdjectiveClassification,
-	LexicalAdjectiveDistribution,
-	LexicalAdjectiveGradability,
-	LexicalAdjectiveValency,
-	LexicalCase,
-	LexicalGenus,
-	LexicalMorphemeKind,
-	LexicalNounClass,
-	LexicalNumber,
-	LexicalPhrasemeKind,
-	LexicalPos,
-	LexicalSurfaceKind,
-	LexicalVerbConjugation,
-	LexicalVerbValency,
-} from "./internal/legacy-linguistics";
 import type { Result } from "neverthrow";
 import type { z } from "zod/v3";
 import type {
@@ -45,21 +38,20 @@ export type StructuredFetchFn = <T>(params: {
 	withCache?: boolean;
 }) => Promise<Result<T, LexicalGenerationError>>;
 
-export type ResolvedLemma =
-	| {
-			linguisticUnit: "Lexem";
-			lemma: string;
-			posLikeKind: LexicalPos;
-			surfaceKind: LexicalSurfaceKind;
-			contextWithLinkedParts?: string;
-	  }
-	| {
-			linguisticUnit: "Phrasem";
-			lemma: string;
-			posLikeKind: LexicalPhrasemeKind;
-			surfaceKind: LexicalSurfaceKind;
-			contextWithLinkedParts?: string;
-	  };
+type ResolvedSelectionContext = {
+	contextWithLinkedParts?: string;
+};
+
+export type ResolvedKnownSelection = Exclude<
+	AnySelection<"German">,
+	UnknownSelection
+> &
+	ResolvedSelectionContext;
+export type ResolvedUnknownSelection = UnknownSelection &
+	ResolvedSelectionContext;
+export type ResolvedSelection =
+	| ResolvedKnownSelection
+	| ResolvedUnknownSelection;
 
 export type LexicalMeta = {
 	emojiDescription: string[];
@@ -76,61 +68,30 @@ export type LexicalInfoField<T> =
 	| { status: "not_applicable" }
 	| { status: "error"; error: LexicalGenerationError };
 
-export type LexicalNounIdentity = {
-	genus?: LexicalGenus;
-	nounClass?: LexicalNounClass;
-};
-
 export type LexicalCore = {
 	emojiDescription: string[];
 	ipa: string;
-	nounIdentity?: LexicalNounIdentity;
 	senseGloss?: string;
 };
 
-export type LexemFeatures =
-	| {
-			kind: "noun";
-			genus?: LexicalGenus;
-			nounClass?: LexicalNounClass;
-			tags: string[];
-	  }
-	| {
-			kind: "adjective";
-			classification: LexicalAdjectiveClassification;
-			distribution: LexicalAdjectiveDistribution;
-			gradability: LexicalAdjectiveGradability;
-			valency: LexicalAdjectiveValency;
-	  }
-	| {
-			kind: "verb";
-			conjugation: LexicalVerbConjugation;
-			valency: LexicalVerbValency;
-	  }
-	| {
-			kind: "tags";
-			tags: string[];
-	  };
-
-export type PhrasemFeatures = {
-	kind: "tags";
-	tags: string[];
+export type LexicalFeatures = {
+	inherentFeatures: InherentFeatures;
 };
 
 export type LexicalInflectionForm = {
 	form: string;
 };
 
-export type LexemInflections =
+export type LexemeInflections =
 	| {
 			kind: "noun";
 			cells: Array<{
 				article: string;
-				case: LexicalCase;
+				case: Case;
 				form: string;
-				number: LexicalNumber;
+				number: GrammaticalNumber;
 			}>;
-			genus: LexicalGenus;
+			gender: Gender;
 	  }
 	| {
 			kind: "generic";
@@ -138,9 +99,9 @@ export type LexemInflections =
 	  };
 
 export type LexicalMorpheme = {
-	kind: LexicalMorphemeKind;
+	isSeparable?: boolean;
+	kind: MorphemeKind;
 	lemma?: string;
-	separability?: "Separable" | "Inseparable";
 	surface: string;
 };
 
@@ -161,22 +122,14 @@ export type LexicalRelations = {
 };
 
 export type LexicalInfo =
-	| {
-			lemma: Extract<ResolvedLemma, { linguisticUnit: "Lexem" }>;
-			core: LexicalInfoField<LexicalCore>;
-			features: LexicalInfoField<LexemFeatures>;
-			inflections: LexicalInfoField<LexemInflections>;
-			morphemicBreakdown: LexicalInfoField<MorphemicBreakdown>;
-			relations: LexicalInfoField<LexicalRelations>;
-	  }
-	| {
-			lemma: Extract<ResolvedLemma, { linguisticUnit: "Phrasem" }>;
-			core: LexicalInfoField<LexicalCore>;
-			features: LexicalInfoField<PhrasemFeatures>;
-			inflections: LexicalInfoField<never>;
-			morphemicBreakdown: LexicalInfoField<MorphemicBreakdown>;
-			relations: LexicalInfoField<LexicalRelations>;
-	  };
+	{
+		core: LexicalInfoField<LexicalCore>;
+		features: LexicalInfoField<LexicalFeatures>;
+		inflections: LexicalInfoField<LexemeInflections>;
+		morphemicBreakdown: LexicalInfoField<MorphemicBreakdown>;
+		relations: LexicalInfoField<LexicalRelations>;
+		selection: ResolvedSelection;
+	};
 
 export type GenerateLexicalInfoOptions = {
 	precomputedEmojiDescription?: string[];
@@ -191,27 +144,27 @@ export type CreateLexicalGenerationModuleParams<
 	fetchStructured: StructuredFetchFn;
 };
 
-export type LemmaGenerator = (
+export type SelectionResolver = (
 	selection: string,
 	attestation: string,
-) => Promise<Result<ResolvedLemma, LexicalGenerationError>>;
+) => Promise<Result<ResolvedSelection, LexicalGenerationError>>;
 
 export type SenseDisambiguator = (
-	lemma: ResolvedLemma,
+	selection: ResolvedSelection,
 	attestation: string,
 	candidateSenses: LexicalMeta[],
 ) => Promise<Result<SenseMatchResult, LexicalGenerationError>>;
 
 export type LexicalInfoGenerator = (
-	lemma: ResolvedLemma,
+	selection: ResolvedSelection,
 	attestation: string,
 	options?: GenerateLexicalInfoOptions,
 ) => Promise<Result<LexicalInfo, LexicalGenerationError>>;
 
 export type LexicalGenerationModule = {
-	generateLemma: LemmaGenerator;
 	disambiguateSense: SenseDisambiguator;
 	generateLexicalInfo: LexicalInfoGenerator;
+	resolveSelection: SelectionResolver;
 };
 
 export type LexicalGenerationModuleResult = Result<

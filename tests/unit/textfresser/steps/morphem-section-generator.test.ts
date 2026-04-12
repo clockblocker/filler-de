@@ -1,71 +1,54 @@
 import { describe, expect, it } from "bun:test";
-import { generateMorphemSection } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generators/morphem-section-generator";
+import { generateMorphemeSection } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generators/morphem-section-generator";
 import {
 	LexicalGenerationFailureKind,
-	type LexicalInfo,
 	lexicalGenerationError,
 } from "@textfresser/lexical-generation";
+import {
+	makeLexemeLexicalInfo,
+	makeMorphemicBreakdown,
+} from "../helpers/native-fixtures";
 
-function makeLexicalInfo(): Extract<
-	LexicalInfo,
-	{ lemma: { linguisticUnit: "Lexem" } }
-> {
-	return {
-		core: {
-			status: "ready",
-			value: {
-				emojiDescription: ["👂"],
-				ipa: "aʊ̯fˌpasn̩",
-			},
-		},
+function makeLexicalInfo() {
+	return makeLexemeLexicalInfo({
 		features: {
 			status: "ready",
 			value: {
-				conjugation: "Regular",
-				kind: "verb",
-				valency: {
-					reflexivity: "NonReflexive",
-					separability: "Separable",
+				inherentFeatures: {
+					reflex: false,
+					separable: true,
 				},
 			},
 		},
-		inflections: { status: "not_applicable" },
-		lemma: {
-			lemma: "aufpassen",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Verb",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: {
-			status: "ready",
-			value: {
-				morphemes: [
-					{
-						kind: "Prefix",
-						separability: "Separable",
-						surface: "auf",
-					},
-					{
-						kind: "Root",
-						lemma: "passen",
-						surface: "passen",
-					},
-				],
-			},
-		},
-		relations: { status: "not_applicable" },
-	};
+		lemma: "aufpassen",
+		morphemicBreakdown: makeMorphemicBreakdown({
+			morphemes: [
+				{
+					isSeparable: true,
+					kind: "Prefix",
+					surface: "auf",
+				},
+				{
+					kind: "Root",
+					lemma: "passen",
+					surface: "passen",
+				},
+			],
+		}),
+		pos: "VERB",
+	});
 }
 
-describe("generateMorphemSection", () => {
+describe("generateMorphemeSection", () => {
 	it("renders morphemes directly from lexical morphemic breakdown", () => {
-		const result = generateMorphemSection({
+		const result = generateMorphemeSection({
 			lexicalInfo: makeLexicalInfo(),
 			targetLang: "German",
 		});
 
 		expect(result?.morphemes).toEqual([
 			{
+				isSeparable: true,
 				kind: "Prefix",
 				linkTarget: "auf-prefix-de",
 				separability: "Separable",
@@ -77,13 +60,11 @@ describe("generateMorphemSection", () => {
 				surf: "passen",
 			},
 		]);
-		expect(result?.section.content).toBe(
-			"[[auf-prefix-de|auf]]|[[passen]]",
-		);
+		expect(result?.section.content).toBe("[[auf-prefix-de|auf]]|[[passen]]");
 	});
 
 	it("returns null when morphemic breakdown is unavailable", () => {
-		const result = generateMorphemSection({
+		const result = generateMorphemeSection({
 			lexicalInfo: {
 				...makeLexicalInfo(),
 				morphemicBreakdown: {

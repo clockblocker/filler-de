@@ -4,7 +4,7 @@
  * Generates deterministic folder structure based on word name:
  * Worter/<lang>/<unit>/<surface>/<first>/<prefix>/<shard>
  *
- * Example: "anfangen" (German, Lexem, Lemma) → ["Worter", "de", "lexem", "lemma", "a", "anf", "anfan"]
+ * Example: "anfangen" (German, Lexeme, Lemma) → ["Worter", "de", "lexem", "lemma", "a", "anf", "anfan"]
  */
 
 import type { TargetLanguage } from "../../../types";
@@ -42,7 +42,7 @@ export function computeShardSegments(name: string): string[] {
  *
  * @param originalName - The word/file basename (e.g., "anfangen")
  * @param targetLanguage - Target language (e.g., "German")
- * @param unitKind - Linguistic unit kind (e.g., "Lexem")
+ * @param unitKind - Linguistic unit kind (e.g., "Lexeme")
  * @param surfaceKind - Surface kind (e.g., "Lemma")
  * @returns Path parts array: ["Worter", langCode, unitKind, surfaceKind, first, prefix, shard]
  */

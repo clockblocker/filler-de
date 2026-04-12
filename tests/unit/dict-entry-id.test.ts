@@ -48,11 +48,11 @@ describe("parseDictEntryId", () => {
 		const result = parseDictEntryId("LX-LM-NOUN-1");
 		expect(result).toEqual({
 			index: 1,
-			pos: "Noun",
+			pos: "NOUN",
 			posTag: "NOUN",
 			surfaceKind: "Lemma",
 			surfaceKindTag: "LM",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			unitKindTag: "LX",
 		});
 	});
@@ -61,11 +61,11 @@ describe("parseDictEntryId", () => {
 		const result = parseDictEntryId("LX-IN-VERB-42");
 		expect(result).toEqual({
 			index: 42,
-			pos: "Verb",
+			pos: "VERB",
 			posTag: "VERB",
-			surfaceKind: "Inflected",
+			surfaceKind: "Inflection",
 			surfaceKindTag: "IN",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			unitKindTag: "LX",
 		});
 	});
@@ -78,7 +78,7 @@ describe("parseDictEntryId", () => {
 			posTag: undefined,
 			surfaceKind: "Lemma",
 			surfaceKindTag: "LM",
-			unitKind: "Phrasem",
+			unitKind: "Phraseme",
 			unitKindTag: "PH",
 		});
 	});
@@ -91,7 +91,7 @@ describe("parseDictEntryId", () => {
 			posTag: undefined,
 			surfaceKind: "Variant",
 			surfaceKindTag: "VA",
-			unitKind: "Morphem",
+			unitKind: "Morpheme",
 			unitKindTag: "MO",
 		});
 	});
@@ -114,9 +114,9 @@ describe("buildDictEntryId", () => {
 		expect(
 			buildDictEntryId({
 				index: 1,
-				pos: "Noun",
+				pos: "NOUN",
 				surfaceKind: "Lemma",
-				unitKind: "Lexem",
+				unitKind: "Lexeme",
 			}),
 		).toBe("LX-LM-NOUN-1");
 	});
@@ -126,7 +126,7 @@ describe("buildDictEntryId", () => {
 			buildDictEntryId({
 				index: 5,
 				surfaceKind: "Lemma",
-				unitKind: "Phrasem",
+				unitKind: "Phraseme",
 			}),
 		).toBe("PH-LM-5");
 	});
@@ -136,7 +136,7 @@ describe("buildDictEntryId", () => {
 			buildDictEntryId({
 				index: 2,
 				surfaceKind: "Variant",
-				unitKind: "Morphem",
+				unitKind: "Morpheme",
 			}),
 		).toBe("MO-VA-2");
 	});
@@ -146,17 +146,17 @@ describe("round-trip: build → parse", () => {
 	test("Lexem round-trip", () => {
 		const id = buildDictEntryId({
 			index: 7,
-			pos: "Verb",
-			surfaceKind: "Inflected",
-			unitKind: "Lexem",
+			pos: "VERB",
+			surfaceKind: "Inflection",
+			unitKind: "Lexeme",
 		});
 		const parsed = parseDictEntryId(id);
 		expect(parsed).toBeDefined();
-		expect(parsed?.unitKind).toBe("Lexem");
-		expect(parsed?.surfaceKind).toBe("Inflected");
+		expect(parsed?.unitKind).toBe("Lexeme");
+		expect(parsed?.surfaceKind).toBe("Inflection");
 		expect(parsed?.index).toBe(7);
 		if (parsed?.unitKindTag === "LX") {
-			expect(parsed?.pos).toBe("Verb");
+			expect(parsed?.pos).toBe("VERB");
 		}
 	});
 
@@ -164,11 +164,11 @@ describe("round-trip: build → parse", () => {
 		const id = buildDictEntryId({
 			index: 3,
 			surfaceKind: "Lemma",
-			unitKind: "Phrasem",
+			unitKind: "Phraseme",
 		});
 		const parsed = parseDictEntryId(id);
 		expect(parsed).toBeDefined();
-		expect(parsed?.unitKind).toBe("Phrasem");
+		expect(parsed?.unitKind).toBe("Phraseme");
 		expect(parsed?.index).toBe(3);
 	});
 });
@@ -191,19 +191,19 @@ describe("dictEntryIdHelper.nextIndex", () => {
 
 describe("dictEntryIdHelper.buildPrefix", () => {
 	test("builds Lexem prefix with POS", () => {
-		expect(dictEntryIdHelper.buildPrefix("Lexem", "Lemma", "Noun")).toBe(
+		expect(dictEntryIdHelper.buildPrefix("Lexeme", "Lemma", "NOUN")).toBe(
 			"LX-LM-NOUN-",
 		);
 	});
 
 	test("builds Phrasem prefix", () => {
-		expect(dictEntryIdHelper.buildPrefix("Phrasem", "Lemma")).toBe(
+		expect(dictEntryIdHelper.buildPrefix("Phraseme", "Lemma")).toBe(
 			"PH-LM-",
 		);
 	});
 
 	test("builds Morphem prefix", () => {
-		expect(dictEntryIdHelper.buildPrefix("Morphem", "Variant")).toBe(
+		expect(dictEntryIdHelper.buildPrefix("Morpheme", "Variant")).toBe(
 			"MO-VA-",
 		);
 	});

@@ -7,18 +7,18 @@ import {
 } from "../domain/note-linguistic-policy";
 
 const POS_SUFFIX_BY_POS: Partial<Record<LexicalPos, readonly string[]>> = {
-	Article: ["artikel", "article"],
-	Conjunction: ["konjunktion", "conjunction"],
+	ADP: ["praeposition", "preposition"],
+	CCONJ: ["konjunktion", "conjunction"],
+	DET: ["artikel", "article"],
 	// TODO: Confirm canonical Librarian suffix for InteractionalUnit and trim aliases.
-	InteractionalUnit: [
+	INTJ: [
 		"interaktionale-einheit",
 		"interjection",
 		"interjektion",
 		"interactional-unit",
 	],
-	Particle: ["partikel", "particle"],
-	Preposition: ["praeposition", "preposition"],
-	Pronoun: ["pronomen", "pronoun"],
+	PART: ["partikel", "particle"],
+	PRON: ["pronomen", "pronoun"],
 };
 
 type ResolveClosedSetLibraryTargetParams = {

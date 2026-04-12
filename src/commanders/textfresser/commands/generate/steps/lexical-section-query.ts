@@ -1,83 +1,37 @@
-import type {
-	LexicalInfo,
-	LexicalNounIdentity,
-} from "@textfresser/lexical-generation";
+import type { LexicalInfo } from "@textfresser/lexical-generation";
 import type { LexicalGenus } from "../../../domain/lexical-types";
-
-type LexemLemma = Extract<LexicalInfo["lemma"], { linguisticUnit: "Lexem" }>;
+import {
+	getLexicalInfoGender,
+	getLexicalInfoPos,
+	isLexicalInfoLexeme,
+} from "../../../domain/lexical-info-view";
 
 type LexicalSectionQuery =
 	| {
-			unit: "Lexem";
-			pos: LexemLemma["posLikeKind"];
-			nounClass?: LexicalNounIdentity["nounClass"];
+			unit: "Lexeme";
+			pos: NonNullable<ReturnType<typeof getLexicalInfoPos>>;
 	  }
-	| { unit: "Phrasem" };
-
-export function resolveLexemNounIdentity(
-	lexicalInfo: LexicalInfo,
-): LexicalNounIdentity | undefined {
-	if (
-		lexicalInfo.lemma.linguisticUnit !== "Lexem" ||
-		lexicalInfo.lemma.posLikeKind !== "Noun"
-	) {
-		return undefined;
-	}
-
-	if (
-		lexicalInfo.features.status === "ready" &&
-		lexicalInfo.features.value.kind === "noun"
-	) {
-		return {
-			genus: lexicalInfo.features.value.genus,
-			nounClass: lexicalInfo.features.value.nounClass,
-		};
-	}
-
-	if (lexicalInfo.core.status === "ready") {
-		return lexicalInfo.core.value.nounIdentity;
-	}
-
-	return undefined;
-}
+	| { unit: "Phraseme" };
 
 export function buildLexicalSectionQuery(
 	lexicalInfo: LexicalInfo,
 ): LexicalSectionQuery {
-	if (lexicalInfo.lemma.linguisticUnit === "Lexem") {
+	if (isLexicalInfoLexeme(lexicalInfo)) {
 		return {
-			nounClass: resolveLexemNounIdentity(lexicalInfo)?.nounClass,
-			pos: lexicalInfo.lemma.posLikeKind,
-			unit: "Lexem",
+			pos: getLexicalInfoPos(lexicalInfo) ?? "X",
+			unit: "Lexeme",
 		};
 	}
 
-	return { unit: "Phrasem" };
+	return { unit: "Phraseme" };
 }
 
-export function resolveNounInflectionGenus(
+export function resolveNounInflectionGender(
 	lexicalInfo: LexicalInfo,
 ): LexicalGenus | undefined {
-	if (
-		lexicalInfo.lemma.linguisticUnit !== "Lexem" ||
-		lexicalInfo.lemma.posLikeKind !== "Noun"
-	) {
+	if (!isLexicalInfoLexeme(lexicalInfo) || getLexicalInfoPos(lexicalInfo) !== "NOUN") {
 		return undefined;
 	}
 
-	if (
-		lexicalInfo.inflections.status === "ready" &&
-		lexicalInfo.inflections.value.kind === "noun"
-	) {
-		return lexicalInfo.inflections.value.genus;
-	}
-
-	if (
-		lexicalInfo.features.status === "ready" &&
-		lexicalInfo.features.value.kind === "noun"
-	) {
-		return lexicalInfo.features.value.genus;
-	}
-
-	return resolveLexemNounIdentity(lexicalInfo)?.genus;
+	return getLexicalInfoGender(lexicalInfo);
 }

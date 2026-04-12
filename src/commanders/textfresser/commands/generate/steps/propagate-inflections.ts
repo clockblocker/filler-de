@@ -92,7 +92,7 @@ export function propagateInflections(
 	const desiredSurfaceKind =
 		resolveDesiredSurfaceKindForPropagationSection(
 			DictSectionKind.Inflection,
-		) ?? SurfaceKind.Inflected;
+		) ?? SurfaceKind.Inflection;
 
 	for (const [form, cells] of byForm) {
 		if (form === lemma) continue;
@@ -158,15 +158,15 @@ export function propagateInflections(
 			if (!targetEntry) {
 				const existingIds = compactedEntries.map((entry) => entry.id);
 				const prefix = dictEntryIdHelper.buildPrefix(
-					"Lexem",
-					"Inflected",
-					"Noun",
+					"Lexeme",
+					"Inflection",
+					"NOUN",
 				);
 				const entryId = dictEntryIdHelper.build({
 					index: dictEntryIdHelper.nextIndex(existingIds, prefix),
-					pos: "Noun",
-					surfaceKind: "Inflected",
-					unitKind: "Lexem",
+					pos: "NOUN",
+					surfaceKind: "Inflection",
+					unitKind: "Lexeme",
 				});
 
 				const newEntry: DictEntry = {

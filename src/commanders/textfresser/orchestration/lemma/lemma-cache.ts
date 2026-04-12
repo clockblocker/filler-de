@@ -78,8 +78,8 @@ export async function handleLemmaCacheHit(params: {
 	}
 
 	if (
-		cache.lemmaResult.linguisticUnit === "Lexem" &&
-		cache.lemmaResult.posLikeKind === "Noun"
+		cache.lemmaResult.linguisticUnit === "Lexeme" &&
+		cache.lemmaResult.posLikeKind === "NOUN"
 	) {
 		logger.info(
 			"[Textfresser.Lemma] cache-hit noun entry requires lexical refresh, refetching",

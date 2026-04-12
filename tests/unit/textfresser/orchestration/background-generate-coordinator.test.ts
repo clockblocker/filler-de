@@ -13,6 +13,7 @@ import {
 	type TextfresserState,
 } from "../../../../src/commanders/textfresser/state/textfresser-state";
 import type { ApiService } from "../../../../src/stateless-helpers/api-service";
+import { makeLexemeLemmaResult } from "../helpers/native-fixtures";
 
 function buildTargetPath(basename: string): SplitPathToMdFile {
 	return {
@@ -29,7 +30,7 @@ function setLatestLemmaState(
 	targetPath: SplitPathToMdFile,
 	targetOwnedByInvocation = false,
 ): void {
-	state.latestLemmaResult = {
+	state.latestLemmaResult = makeLexemeLemmaResult({
 		attestation: {
 			source: {
 				path: {
@@ -47,12 +48,9 @@ function setLatestLemmaState(
 				surface: "geht",
 			},
 		},
-		disambiguationResult: null,
 		lemma,
-		linguisticUnit: "Lexem",
-		posLikeKind: "Verb",
-		surfaceKind: "Lemma",
-	};
+		pos: "VERB",
+	});
 	state.latestResolvedLemmaTargetPath = targetPath;
 	state.latestLemmaTargetOwnedByInvocation = targetOwnedByInvocation;
 }

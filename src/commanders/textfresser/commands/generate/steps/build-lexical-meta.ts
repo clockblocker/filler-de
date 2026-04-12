@@ -19,6 +19,6 @@ export function buildLexicalMeta(
 ): LexicalMeta {
 	return createLexicalMeta({
 		emojiDescription: resolveEmojiDescription(lexicalInfo),
-		lemma: lemmaResult,
+		selection: lemmaResult,
 	});
 }

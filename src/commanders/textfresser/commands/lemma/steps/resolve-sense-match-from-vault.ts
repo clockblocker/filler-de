@@ -1,11 +1,12 @@
 import type {
-	ResolvedLemma,
+	ResolvedSelection,
 	SenseDisambiguator,
 } from "@textfresser/lexical-generation";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
 import { err, ok, type Result } from "neverthrow";
 import { logger } from "../../../../../utils/logger";
+import { getSpelledLemma } from "../../../domain/native-selection";
 import { commandApiError } from "../../../errors";
 import type { CommandError } from "../../types";
 import { loadStoredSenseCandidates } from "./load-stored-sense-candidates";
@@ -17,15 +18,19 @@ export type SenseMatchFromVault =
 
 export async function resolveSenseMatchFromVault(
 	vam: VaultActionManager,
-	lemma: ResolvedLemma,
+	lemma: ResolvedSelection,
 	context: string,
 	preferredPath?: SplitPathToMdFile,
 	options?: {
 		disambiguateWith?: SenseDisambiguator;
 	},
 ): Promise<Result<SenseMatchFromVault, CommandError>> {
+	const spelledLemma = getSpelledLemma(lemma);
+	if (!spelledLemma) {
+		return ok(null);
+	}
 	const candidatesResult = await loadStoredSenseCandidates({
-		lemma: lemma.lemma,
+		lemma: spelledLemma,
 		preferredPath,
 		vam,
 	});

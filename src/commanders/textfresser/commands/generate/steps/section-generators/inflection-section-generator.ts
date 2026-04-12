@@ -1,6 +1,7 @@
 import type { LexicalInfo } from "@textfresser/lexical-generation";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import type { TextfresserNounInflectionCell } from "../../../../domain/lexical-types";
+import { isLexicalInfoLexeme } from "../../../../domain/lexical-info-view";
 import { cssSuffixFor } from "../../../../targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
@@ -39,7 +40,7 @@ export function generateInflectionSection(
 	let inflectionCells: TextfresserNounInflectionCell[] = [];
 
 	if (
-		ctx.lexicalInfo.lemma.linguisticUnit === "Lexem" &&
+		isLexicalInfoLexeme(ctx.lexicalInfo) &&
 		ctx.lexicalInfo.inflections.status === "ready"
 	) {
 		if (ctx.lexicalInfo.inflections.value.kind === "noun") {

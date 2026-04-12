@@ -43,10 +43,10 @@ describe("resolveEntryMatch", () => {
 		const result = resolveEntryMatch({
 			disambiguationResult: { matchedIndex: 2 },
 			existingEntries: entries,
-			linguisticUnit: "Lexem",
-			posLikeKind: "Verb",
+			linguisticUnit: "Lexeme",
+			posLikeKind: "VERB",
 			stubPolicy,
-			surfaceKind: "Inflected",
+			surfaceKind: "Inflection",
 		});
 
 		expect(result.matchedEntry?.id).toBe("LX-LM-VERB-2");
@@ -72,8 +72,8 @@ describe("resolveEntryMatch", () => {
 		const result = resolveEntryMatch({
 			disambiguationResult: { matchedIndex: 1 },
 			existingEntries: entries,
-			linguisticUnit: "Lexem",
-			posLikeKind: "Noun",
+			linguisticUnit: "Lexeme",
+			posLikeKind: "NOUN",
 			stubPolicy,
 			surfaceKind: "Lemma",
 		});
@@ -107,8 +107,8 @@ describe("resolveEntryMatch", () => {
 		const result = resolveEntryMatch({
 			disambiguationResult: { matchedIndex: 1 },
 			existingEntries: entries,
-			linguisticUnit: "Lexem",
-			posLikeKind: "Noun",
+			linguisticUnit: "Lexeme",
+			posLikeKind: "NOUN",
 			stubPolicy,
 			surfaceKind: "Lemma",
 		});

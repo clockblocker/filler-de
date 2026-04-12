@@ -43,9 +43,9 @@ const LINK_POLICY_BY_KIND: Record<DictSectionKind, SectionLinkPolicy> = {
 		propagates: true,
 		sectionIntent: "GenerateSectionLink",
 		source: "TextfresserCommand",
-		targetKind: "Inflected",
+		targetKind: "Inflection",
 	},
-	[DictSectionKind.Morphem]: {
+	[DictSectionKind.Morpheme]: {
 		propagates: true,
 		sectionIntent: "GenerateSectionLink",
 		source: "TextfresserCommand",
@@ -86,7 +86,7 @@ const SECTION_KIND_BY_KEY: Record<
 	freeform: DictSectionKind.FreeForm,
 	header: DictSectionKind.Header,
 	inflection: DictSectionKind.Inflection,
-	morphem: DictSectionKind.Morphem,
+	morphem: DictSectionKind.Morpheme,
 	morphology: DictSectionKind.Morphology,
 	relation: DictSectionKind.Relation,
 	tags: DictSectionKind.Tags,

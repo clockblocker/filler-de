@@ -1,197 +1,93 @@
 import { describe, expect, it } from "bun:test";
 import { buildLexicalMeta } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
-import type { LemmaResult } from "../../../../src/commanders/textfresser/commands/lemma/types";
 import {
 	LexicalGenerationFailureKind,
-	type LexicalInfo,
 	lexicalGenerationError,
 } from "@textfresser/lexical-generation";
-
-type LexemLemmaResult = Extract<LemmaResult, { linguisticUnit: "Lexem" }>;
-type PhrasemLemmaResult = Extract<LemmaResult, { linguisticUnit: "Phrasem" }>;
-type LexemLexicalInfo = Extract<
-	LexicalInfo,
-	{ lemma: { linguisticUnit: "Lexem" } }
->;
-type PhrasemLexicalInfo = Extract<
-	LexicalInfo,
-	{ lemma: { linguisticUnit: "Phrasem" } }
->;
-
-function makeLexemLemmaResult(
-	overrides: Partial<LexemLemmaResult> = {},
-): LexemLemmaResult {
-	return {
-		attestation: {
-			source: {
-				path: {
-					basename: "Haus",
-					extension: "md",
-					kind: "MdFile",
-					pathParts: ["Worter"],
-				},
-				ref: "![[Test#^1|^]]",
-				textRaw: "Die Häuser sind alt.",
-				textWithOnlyTargetMarked: "Die [Häuser] sind alt.",
-			},
-			target: {
-				surface: "Häuser",
-			},
-		},
-		disambiguationResult: null,
-		lemma: "Haus",
-		linguisticUnit: "Lexem",
-		posLikeKind: "Noun",
-		surfaceKind: "Lemma",
-		...overrides,
-	};
-}
-
-function makePhrasemLemmaResult(
-	overrides: Partial<PhrasemLemmaResult> = {},
-): PhrasemLemmaResult {
-	return {
-		attestation: {
-			source: {
-				path: {
-					basename: "Haus",
-					extension: "md",
-					kind: "MdFile",
-					pathParts: ["Worter"],
-				},
-				ref: "![[Test#^1|^]]",
-				textRaw: "Die Häuser sind alt.",
-				textWithOnlyTargetMarked: "Die [Häuser] sind alt.",
-			},
-			target: {
-				surface: "Häuser",
-			},
-		},
-		disambiguationResult: null,
-		lemma: "auf jeden Fall",
-		linguisticUnit: "Phrasem",
-		posLikeKind: "Collocation",
-		surfaceKind: "Lemma",
-		...overrides,
-	};
-}
-
-function makeLexemLexicalInfo(
-	overrides: Partial<LexemLexicalInfo> = {},
-): LexemLexicalInfo {
-	return {
-		core: {
-			status: "ready",
-			value: {
-				emojiDescription: ["🏠"],
-				ipa: "haʊ̯s",
-			},
-		},
-		features: {
-			status: "ready",
-			value: {
-				genus: "Neutrum",
-				kind: "noun",
-				nounClass: "Common",
-				tags: [],
-			},
-		},
-		inflections: { status: "not_applicable" },
-		lemma: {
-			lemma: "Haus",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Noun",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: { status: "not_applicable" },
-		...overrides,
-	};
-}
-
-function makePhrasemLexicalInfo(
-	overrides: Partial<PhrasemLexicalInfo> = {},
-): PhrasemLexicalInfo {
-	return {
-		core: {
-			status: "ready",
-			value: {
-				emojiDescription: ["✅"],
-				ipa: "aʊ̯f ˈjeːdn̩ fal",
-			},
-		},
-		features: {
-			status: "ready",
-			value: {
-				kind: "tags",
-				tags: [],
-			},
-		},
-		inflections: { status: "not_applicable" },
-		lemma: {
-			lemma: "auf jeden Fall",
-			linguisticUnit: "Phrasem",
-			posLikeKind: "Collocation",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: { status: "not_applicable" },
-		...overrides,
-	};
-}
+import {
+	makeLexemeLemmaResult,
+	makeLexemeLexicalInfo,
+	makePhrasemeLemmaResult,
+	makePhrasemeLexicalInfo,
+} from "../helpers/native-fixtures";
 
 describe("buildLexicalMeta", () => {
 	it("builds lexical meta for lexem lemmas", () => {
 		expect(
 			buildLexicalMeta(
-				makeLexemLemmaResult(),
-				makeLexemLexicalInfo(),
+				makeLexemeLemmaResult({ lemma: "Haus", pos: "NOUN" }),
+				makeLexemeLexicalInfo({
+					core: {
+						status: "ready",
+						value: {
+							emojiDescription: ["🏠"],
+							ipa: "haʊ̯s",
+						},
+					},
+					lemma: "Haus",
+					pos: "NOUN",
+				}),
 			),
 		).toEqual({
 			emojiDescription: ["🏠"],
-			metaTag: "lx|noun|lemma",
+			metaTag: "Lexeme|NOUN|Lemma",
 		});
 	});
 
 	it("builds lexical meta for phrasem lemmas", () => {
 		expect(
 			buildLexicalMeta(
-				makePhrasemLemmaResult(),
-				makePhrasemLexicalInfo(),
+				makePhrasemeLemmaResult({
+					lemma: "auf jeden Fall",
+					phrasemeKind: "DiscourseFormula",
+				}),
+				makePhrasemeLexicalInfo({
+					lemma: "auf jeden Fall",
+					phrasemeKind: "DiscourseFormula",
+					core: {
+						status: "ready",
+						value: {
+							emojiDescription: ["✅"],
+							ipa: "aʊ̯f ˈjeːdn̩ fal",
+						},
+					},
+				}),
 			),
 		).toEqual({
 			emojiDescription: ["✅"],
-			metaTag: "ph|collocation|lemma",
+			metaTag: "Phraseme|DiscourseFormula|Lemma",
 		});
 	});
 
 	it("encodes non-lemma surfaces in metaTag", () => {
 		expect(
 			buildLexicalMeta(
-				makeLexemLemmaResult({
-					posLikeKind: "Verb",
-					surfaceKind: "Inflected",
+				makeLexemeLemmaResult({
+					lemma: "gehen",
+					pos: "VERB",
+					spelledSurface: "geht",
+					surfaceKind: "Inflection",
 				}),
-				makeLexemLexicalInfo({
-					lemma: {
-						lemma: "gehen",
-						linguisticUnit: "Lexem",
-						posLikeKind: "Verb",
-						surfaceKind: "Inflected",
-					},
+				makeLexemeLexicalInfo({
+					lemma: "gehen",
+					pos: "VERB",
+					spelledSurface: "geht",
+					surfaceKind: "Inflection",
 				}),
 			),
 		).toEqual({
-			emojiDescription: ["🏠"],
-			metaTag: "lx|verb|inflected",
+			emojiDescription: ["🔧"],
+			metaTag: "Lexeme|VERB|Inflection",
 		});
 	});
 
 	it("falls back to unknown emoji when lexical core is unavailable", () => {
 		expect(
 			buildLexicalMeta(
-				makeLexemLemmaResult(),
-				makeLexemLexicalInfo({
+				makeLexemeLemmaResult({ lemma: "Haus", pos: "NOUN" }),
+				makeLexemeLexicalInfo({
+					lemma: "Haus",
+					pos: "NOUN",
 					core: {
 						error: lexicalGenerationError(
 							LexicalGenerationFailureKind.FetchFailed,
@@ -203,7 +99,7 @@ describe("buildLexicalMeta", () => {
 			),
 		).toEqual({
 			emojiDescription: ["❓"],
-			metaTag: "lx|noun|lemma",
+			metaTag: "Lexeme|NOUN|Lemma",
 		});
 	});
 });

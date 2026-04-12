@@ -6,8 +6,8 @@ describe("resolveMorphemeItems", () => {
 	it("does not duplicate prefix suffix when surf already contains -prefix-de", () => {
 		const morphemes: LexicalMorpheme[] = [
 			{
+				isSeparable: true,
 				kind: "Prefix",
-				separability: "Separable",
 				surface: "Worter/de/prefix/auf-prefix-de",
 			},
 		];
@@ -20,8 +20,8 @@ describe("resolveMorphemeItems", () => {
 	it("builds canonical prefix target from plain prefix surface", () => {
 		const morphemes: LexicalMorpheme[] = [
 			{
+				isSeparable: false,
 				kind: "Prefix",
-				separability: "Inseparable",
 				surface: "ver",
 			},
 		];

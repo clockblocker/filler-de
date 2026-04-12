@@ -19,18 +19,18 @@ export const linguisticUnitKindTagFrom: Record<
 	LinguisticUnitKind,
 	LinguisticUnitKindTag
 > = {
-	[LinguisticUnitKind.Lexem]: LinguisticUnitKindTag.LX,
-	[LinguisticUnitKind.Phrasem]: LinguisticUnitKindTag.PH,
-	[LinguisticUnitKind.Morphem]: LinguisticUnitKindTag.MO,
+	[LinguisticUnitKind.Lexeme]: LinguisticUnitKindTag.LX,
+	[LinguisticUnitKind.Phraseme]: LinguisticUnitKindTag.PH,
+	[LinguisticUnitKind.Morpheme]: LinguisticUnitKindTag.MO,
 } as const satisfies Record<LinguisticUnitKind, LinguisticUnitKindTag>;
 
 export const linguisticUnitKindFrom: Record<
 	LinguisticUnitKindTag,
 	LinguisticUnitKind
 > = {
-	[LinguisticUnitKindTag.LX]: LinguisticUnitKind.Lexem,
-	[LinguisticUnitKindTag.PH]: LinguisticUnitKind.Phrasem,
-	[LinguisticUnitKindTag.MO]: LinguisticUnitKind.Morphem,
+	[LinguisticUnitKindTag.LX]: LinguisticUnitKind.Lexeme,
+	[LinguisticUnitKindTag.PH]: LinguisticUnitKind.Phraseme,
+	[LinguisticUnitKindTag.MO]: LinguisticUnitKind.Morpheme,
 } as const satisfies Record<LinguisticUnitKindTag, LinguisticUnitKind>;
 
 // -- SurfaceKindTag --
@@ -44,14 +44,14 @@ export const SURFACE_KIND_TAGS = SurfaceKindTagSchema.options;
 
 export const surfaceKindTagFrom: Record<SurfaceKind, SurfaceKindTag> = {
 	[SurfaceKind.Lemma]: SurfaceKindTag.LM,
-	[SurfaceKind.Inflected]: SurfaceKindTag.IN,
+	[SurfaceKind.Inflection]: SurfaceKindTag.IN,
 	[SurfaceKind.Variant]: SurfaceKindTag.VA,
 	[SurfaceKind.Partial]: SurfaceKindTag.PA,
 } as const satisfies Record<SurfaceKind, SurfaceKindTag>;
 
 export const surfaceKindFrom: Record<SurfaceKindTag, SurfaceKind> = {
 	[SurfaceKindTag.LM]: SurfaceKind.Lemma,
-	[SurfaceKindTag.IN]: SurfaceKind.Inflected,
+	[SurfaceKindTag.IN]: SurfaceKind.Inflection,
 	[SurfaceKindTag.VA]: SurfaceKind.Variant,
 	[SurfaceKindTag.PA]: SurfaceKind.Partial,
 } as const satisfies Record<SurfaceKindTag, SurfaceKind>;

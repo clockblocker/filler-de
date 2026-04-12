@@ -8,9 +8,9 @@ export {
 	type InflectionSectionResult,
 } from "./inflection-section-generator";
 export {
-	generateMorphemSection,
-	type MorphemSectionContext,
-	type MorphemSectionResult,
+	generateMorphemeSection,
+	type MorphemeSectionContext,
+	type MorphemeSectionResult,
 } from "./morphem-section-generator";
 export {
 	generateMorphologySection,

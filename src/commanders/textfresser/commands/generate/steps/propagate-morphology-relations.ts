@@ -41,7 +41,7 @@ type UsedInTarget = {
 	kind: "UsedIn";
 	lines: string[];
 	targetWord: string;
-	targetUnit: "Lexem" | "Phrasem" | "Morphem";
+	targetUnit: "Lexeme" | "Phraseme" | "Morpheme";
 };
 
 type EquationTarget = {
@@ -155,19 +155,19 @@ function buildTargets(ctx: GenerateSectionsResult): MorphologyTarget[] {
 				const prefixItem = ctx.morphemes.find(
 					(item) =>
 						item.kind === "Prefix" &&
-						Boolean(item.separability) &&
+						item.isSeparable !== undefined &&
 						normalizeMorphologyKey(
 							item.linkTarget ?? item.lemma ?? item.surf,
 						) === targetKey,
 				);
-				if (prefixItem?.separability) {
+				if (prefixItem?.isSeparable !== undefined) {
 					const sourceGlossSuffix = sourceGloss
 						? ` *(${sourceGloss})* `
 						: "";
 					const targetHeader =
 						morphemeFormatterHelper.decorateSurface(
 							prefixItem.surf,
-							prefixItem.separability,
+							prefixItem.isSeparable,
 							ctx.textfresserState.languages.target,
 						);
 
@@ -177,7 +177,9 @@ function buildTargets(ctx: GenerateSectionsResult): MorphologyTarget[] {
 							`[[${morphology.prefixEquation.prefixTarget}|${morphology.prefixEquation.prefixDisplay}]] + [[${morphology.prefixEquation.baseLemma}]] = [[${morphology.prefixEquation.sourceLemma}]]${sourceGlossSuffix}`,
 						],
 						prefixItem,
-						tagLine: `#prefix/${prefixItem.separability.toLowerCase()}`,
+						tagLine: `#prefix/${
+							prefixItem.isSeparable ? "separable" : "inseparable"
+						}`,
 						targetHeader,
 						targetWord,
 					});
@@ -335,7 +337,7 @@ export function propagateMorphologyRelations(
 							(entry) => entry.id,
 						);
 						const prefix = dictEntryIdHelper.buildPrefix(
-							"Morphem",
+							"Morpheme",
 							"Lemma",
 						);
 						const entryId = dictEntryIdHelper.build({
@@ -344,7 +346,7 @@ export function propagateMorphologyRelations(
 								prefix,
 							),
 							surfaceKind: "Lemma",
-							unitKind: "Morphem",
+							unitKind: "Morpheme",
 						});
 
 						const sections: EntrySection[] = [

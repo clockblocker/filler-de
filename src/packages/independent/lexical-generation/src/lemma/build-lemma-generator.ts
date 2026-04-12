@@ -1,53 +1,115 @@
 import { err, ok } from "neverthrow";
+import { SelectionSchema } from "@textfresser/linguistics";
 import { executePrompt } from "../internal/prompt-executor";
 import type {
 	CreateLexicalGenerationModuleParams,
-	LemmaGenerator,
-	ResolvedLemma,
+	ResolvedSelection,
+	SelectionResolver,
 } from "../public-types";
 import {
 	chooseBestEffortLemmaOutput,
 	evaluateLemmaOutputGuardrails,
 } from "./guardrails";
 
-function toResolvedLemma(output: {
+const POS_FROM_LEGACY = {
+	Adjective: "ADJ",
+	Adverb: "ADV",
+	Article: "DET",
+	Conjunction: "CCONJ",
+	InteractionalUnit: "INTJ",
+	Noun: "NOUN",
+	Particle: "PART",
+	Preposition: "ADP",
+	Pronoun: "PRON",
+	Verb: "VERB",
+} as const;
+
+const PHRASEME_KIND_FROM_LEGACY = {
+	Collocation: "Cliché",
+	CulturalQuotation: "Aphorism",
+	DiscourseFormula: "DiscourseFormula",
+	Idiom: "Cliché",
+	Proverb: "Aphorism",
+} as const;
+
+const SURFACE_KIND_FROM_LEGACY = {
+	Inflected: "Inflection",
+	Lemma: "Lemma",
+	Partial: "Partial",
+	Variant: "Variant",
+} as const;
+
+function toResolvedSelection(output: {
 	contextWithLinkedParts: string;
 	lemma: string;
 	linguisticUnit: "Lexem" | "Phrasem";
 	posLikeKind: string;
 	surfaceKind: "Lemma" | "Inflected" | "Variant" | "Partial";
-}): ResolvedLemma {
+	spelledSurface: string;
+}): ResolvedSelection {
+	const surfaceKind = SURFACE_KIND_FROM_LEGACY[output.surfaceKind];
+	const base = {
+		contextWithLinkedParts: output.contextWithLinkedParts,
+		orthographicStatus: "Standard" as const,
+		surface: {
+			spelledSurface: output.spelledSurface,
+			surfaceKind,
+		},
+	};
+
 	if (output.linguisticUnit === "Lexem") {
+		const pos = POS_FROM_LEGACY[output.posLikeKind as keyof typeof POS_FROM_LEGACY];
+		const rawSelection = {
+			...base,
+			surface: {
+				...base.surface,
+				...(surfaceKind === "Inflection" ? { inflectionalFeatures: {} } : {}),
+				lemma: {
+					lemmaKind: "Lexeme" as const,
+					pos,
+					spelledLemma: output.lemma,
+				},
+			},
+		};
 		return {
+			...SelectionSchema.German.Standard[surfaceKind].Lexeme[pos].parse(
+				rawSelection,
+			),
 			contextWithLinkedParts: output.contextWithLinkedParts,
-			lemma: output.lemma,
-			linguisticUnit: "Lexem",
-			posLikeKind: output.posLikeKind as Extract<
-				ResolvedLemma,
-				{ linguisticUnit: "Lexem" }
-			>["posLikeKind"],
-			surfaceKind: output.surfaceKind,
 		};
 	}
 
+	const phrasemeKind =
+		PHRASEME_KIND_FROM_LEGACY[
+			output.posLikeKind as keyof typeof PHRASEME_KIND_FROM_LEGACY
+		];
+	const phrasemeSurfaceKind =
+		surfaceKind === "Inflection" ? "Lemma" : surfaceKind;
+	const rawSelection = {
+		...base,
+		surface: {
+			...base.surface,
+			lemma: {
+				lemmaKind: "Phraseme" as const,
+				phrasemeKind,
+				spelledLemma: output.lemma,
+			},
+		},
+	};
 	return {
+		...SelectionSchema.German.Standard.Lemma.Phraseme[phrasemeKind].parse(
+			rawSelection,
+		),
 		contextWithLinkedParts: output.contextWithLinkedParts,
-		lemma: output.lemma,
-		linguisticUnit: "Phrasem",
-		posLikeKind: output.posLikeKind as Extract<
-			ResolvedLemma,
-			{ linguisticUnit: "Phrasem" }
-		>["posLikeKind"],
-		surfaceKind: output.surfaceKind,
 	};
 }
 
-export function buildLemmaGenerator(
+export function buildSelectionResolver(
 	deps: Pick<
 		CreateLexicalGenerationModuleParams,
 		"fetchStructured" | "knownLang" | "targetLang"
 	>,
-): LemmaGenerator {
+): SelectionResolver {
 	return async (selection: string, attestation: string) => {
 		const firstAttempt = await executePrompt(deps, "Lemma", {
 			context: attestation,
@@ -64,7 +126,12 @@ export function buildLemmaGenerator(
 		});
 
 		if (firstEvaluation.coreIssues.length === 0) {
-			return ok(toResolvedLemma(firstEvaluation.output));
+			return ok(
+				toResolvedSelection({
+					...firstEvaluation.output,
+					spelledSurface: selection,
+				}),
+			);
 		}
 
 		const secondAttempt = await executePrompt(deps, "Lemma", {
@@ -72,7 +139,12 @@ export function buildLemmaGenerator(
 			surface: selection,
 		});
 		if (secondAttempt.isErr()) {
-			return ok(toResolvedLemma(firstEvaluation.output));
+			return ok(
+				toResolvedSelection({
+					...firstEvaluation.output,
+					spelledSurface: selection,
+				}),
+			);
 		}
 
 		const secondEvaluation = evaluateLemmaOutputGuardrails({
@@ -82,11 +154,14 @@ export function buildLemmaGenerator(
 		});
 
 		return ok(
-			toResolvedLemma(
-				chooseBestEffortLemmaOutput({
-					first: firstEvaluation,
-					second: secondEvaluation,
-				}).output,
+			toResolvedSelection(
+				{
+					...chooseBestEffortLemmaOutput({
+						first: firstEvaluation,
+						second: secondEvaluation,
+					}).output,
+					spelledSurface: selection,
+				},
 			),
 		);
 	};

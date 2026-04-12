@@ -5,19 +5,19 @@ describe("entryIdentity", () => {
 	it("round-trips lexem ids through build and parse", () => {
 		const id = entryIdentity.build({
 			index: 3,
-			pos: "Verb",
+			pos: "VERB",
 			surfaceKind: "Lemma",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 		});
 
 		expect(id).toBe("LX-LM-VERB-3");
 		expect(entryIdentity.parse(id)).toEqual({
 			index: 3,
-			pos: "Verb",
+			pos: "VERB",
 			posTag: "VERB",
 			surfaceKind: "Lemma",
 			surfaceKindTag: "LM",
-			unitKind: "Lexem",
+			unitKind: "Lexeme",
 			unitKindTag: "LX",
 		});
 	});
@@ -26,7 +26,7 @@ describe("entryIdentity", () => {
 		const id = entryIdentity.build({
 			index: 2,
 			surfaceKind: "Variant",
-			unitKind: "Phrasem",
+			unitKind: "Phraseme",
 		});
 
 		expect(id).toBe("PH-VA-2");
@@ -36,13 +36,13 @@ describe("entryIdentity", () => {
 			posTag: undefined,
 			surfaceKind: "Variant",
 			surfaceKindTag: "VA",
-			unitKind: "Phrasem",
+			unitKind: "Phraseme",
 			unitKindTag: "PH",
 		});
 	});
 
 	it("allocates next index within the current prefix space only", () => {
-		const prefix = entryIdentity.buildPrefix("Lexem", "Lemma", "Noun");
+		const prefix = entryIdentity.buildPrefix("Lexeme", "Lemma", "NOUN");
 		const nextIndex = entryIdentity.nextIndex(
 			[
 				"LX-LM-NOUN-1",

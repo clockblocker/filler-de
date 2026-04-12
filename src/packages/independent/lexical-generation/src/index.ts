@@ -4,31 +4,35 @@ export {
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,
 } from "./errors";
+export type {
+	Case,
+	Gender,
+	GrammaticalNumber,
+	InherentFeatures,
+} from "@textfresser/linguistics";
 export {
 	createLexicalMeta,
-	createMetaTagFromResolvedLemma,
+	createMetaTagFromSelection,
 } from "./lexical-meta";
 export * from "./prompt-api";
 export type {
 	CreateLexicalGenerationModuleParams,
 	GenerateLexicalInfoOptions,
-	LemmaGenerator,
-	LexemFeatures,
-	LexemInflections,
 	LexicalCore,
+	LexicalFeatures,
 	LexicalGenerationModule,
-	LexicalInflectionForm,
 	LexicalInfo,
 	LexicalInfoField,
 	LexicalInfoGenerator,
+	LexicalInflectionForm,
 	LexicalMeta,
 	LexicalMorpheme,
-	LexicalNounIdentity,
 	LexicalRelationKind,
 	LexicalRelations,
+	LexemeInflections,
 	MorphemicBreakdown,
-	PhrasemFeatures,
-	ResolvedLemma,
+	ResolvedSelection,
+	SelectionResolver,
 	SenseDisambiguator,
 	SenseMatchResult,
 	StructuredFetchFn,

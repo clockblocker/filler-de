@@ -5,6 +5,10 @@ import { resolveMorphemeItems } from "../../../../common/morpheme-link-target";
 import { canonicalizeTargetForComparison } from "../../../../common/target-comparison";
 import type { EntrySection } from "../../../../domain/dict-note/types";
 import {
+	getLexicalInfoLemma,
+	getLexicalInfoPos,
+} from "../../../../domain/lexical-info-view";
+import {
 	type MorphemeItem,
 	morphemeFormatterHelper,
 } from "../../../../domain/morpheme/morpheme-formatter";
@@ -91,14 +95,14 @@ function buildGlossSuffix(sourceTranslation?: string): string {
 
 function inferPrefixEquation(
 	morphemes: MorphemeItem[],
-	posLikeKind: LexicalInfo["lemma"]["posLikeKind"],
+	posLikeKind: ReturnType<typeof getLexicalInfoPos>,
 	sourceLemma: string,
 	targetLang: GenerationTargetLanguage,
 ): MorphologyPayload["prefixEquation"] {
-	if (posLikeKind !== "Verb") return undefined;
+	if (posLikeKind !== "VERB") return undefined;
 
 	const first = morphemes[0];
-	if (!first || first.kind !== "Prefix" || !first.separability)
+	if (!first || first.kind !== "Prefix" || first.isSeparable === undefined)
 		return undefined;
 
 	const base = morphemes
@@ -116,7 +120,7 @@ function inferPrefixEquation(
 		baseLemma,
 		prefixDisplay: morphemeFormatterHelper.decorateSurface(
 			first.surf,
-			first.separability,
+			first.isSeparable,
 			targetLang,
 		),
 		prefixTarget,
@@ -154,7 +158,7 @@ export function generateMorphologySection(
 		return { section: null };
 	}
 
-	const sourceLemma = normalizeLemma(ctx.lexicalInfo.lemma.lemma);
+	const sourceLemma = normalizeLemma(getLexicalInfoLemma(ctx.lexicalInfo) ?? "");
 	if (!sourceLemma) {
 		return { section: null };
 	}
@@ -168,7 +172,7 @@ export function generateMorphologySection(
 	const morphemicBreakdown = ctx.lexicalInfo.morphemicBreakdown.value;
 	const inferredPrefixEquation = inferPrefixEquation(
 		morphemes,
-		ctx.lexicalInfo.lemma.posLikeKind,
+		getLexicalInfoPos(ctx.lexicalInfo),
 		sourceLemma,
 		ctx.targetLang,
 	);

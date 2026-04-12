@@ -11,7 +11,7 @@ export type LinguisticWikilinkIntent =
 
 export type LinguisticWikilinkTargetKind =
 	| "Lemma"
-	| "Inflected"
+	| "Inflection"
 	| "Surface"
 	| "None";
 

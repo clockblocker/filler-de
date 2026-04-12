@@ -4,7 +4,6 @@ import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/
 import { err, ok, type Result } from "neverthrow";
 import { resolveSenseMatchFromVault } from "../../../../src/commanders/textfresser/commands/lemma/steps/resolve-sense-match-from-vault";
 import {
-	createLexicalMeta,
 	type LexicalGenerationError,
 	LexicalGenerationFailureKind,
 	type LexicalMeta,
@@ -12,6 +11,12 @@ import {
 	type SenseDisambiguator,
 	type SenseMatchResult,
 } from "@textfresser/lexical-generation";
+import {
+	makeLexemeMeta,
+	makeLexemeSelection,
+	makePhrasemeMeta,
+	makePhrasemeSelection,
+} from "../helpers/native-fixtures";
 
 const MOCK_SPLIT_PATH: SplitPathToMdFile = {
 	basename: "Bank",
@@ -20,19 +25,15 @@ const MOCK_SPLIT_PATH: SplitPathToMdFile = {
 	pathParts: ["Worter"],
 };
 
-const API_RESULT_NOUN = {
+const API_RESULT_NOUN = makeLexemeSelection({
 	lemma: "Bank",
-	linguisticUnit: "Lexem",
-	posLikeKind: "Noun",
-	surfaceKind: "Lemma",
-} as const;
+	pos: "NOUN",
+});
 
-const API_RESULT_PHRASEM = {
+const API_RESULT_PHRASEME = makePhrasemeSelection({
 	lemma: "auf jeden Fall",
-	linguisticUnit: "Phrasem",
-	posLikeKind: "DiscourseFormula",
-	surfaceKind: "Lemma",
-} as const;
+	phrasemeKind: "DiscourseFormula",
+});
 
 function splitPathKey(path: SplitPathToMdFile): string {
 	return [...path.pathParts, `${path.basename}.${path.extension}`].join("/");
@@ -63,47 +64,38 @@ function makeSenseDisambiguator(params: {
 	};
 }
 
-function buildLexemMeta(params: {
+function buildLexemeMeta(params: {
 	emojiDescription: string[];
 	index: number;
-	posLikeKind?: "Noun" | "Verb";
-	surfaceKind?: "Lemma" | "Inflected";
+	pos?: "NOUN" | "VERB";
+	surfaceKind?: "Lemma" | "Inflection";
 }): { id: string; lexicalMeta: LexicalMeta } {
-	const posLikeKind = params.posLikeKind ?? "Noun";
+	const pos = params.pos ?? "NOUN";
 	const surfaceKind = params.surfaceKind ?? "Lemma";
-	const posToken = posLikeKind === "Noun" ? "NOUN" : "VERB";
+	const posToken = pos === "NOUN" ? "NOUN" : "VERB";
 
 	return {
 		id: `LX-${surfaceKind === "Lemma" ? "LM" : "IN"}-${posToken}-${params.index}`,
-		lexicalMeta: createLexicalMeta({
+		lexicalMeta: makeLexemeMeta({
 			emojiDescription: params.emojiDescription,
-			lemma: {
-				lemma: posLikeKind === "Noun" ? "Bank" : "fahren",
-				linguisticUnit: "Lexem",
-				posLikeKind,
-				surfaceKind,
-			},
+			lemma: pos === "NOUN" ? "Bank" : "fahren",
+			pos,
+			surfaceKind,
 		}),
 	};
 }
 
-function buildPhrasemMeta(params: {
+function buildPhrasemeMeta(params: {
 	emojiDescription: string[];
 	index: number;
-	posLikeKind?: "DiscourseFormula" | "Collocation";
+	phrasemeKind?: "DiscourseFormula";
 }): { id: string; lexicalMeta: LexicalMeta } {
-	const posLikeKind = params.posLikeKind ?? "DiscourseFormula";
-
 	return {
 		id: `PH-LM-${params.index}`,
-		lexicalMeta: createLexicalMeta({
+		lexicalMeta: makePhrasemeMeta({
 			emojiDescription: params.emojiDescription,
-			lemma: {
-				lemma: "auf jeden Fall",
-				linguisticUnit: "Phrasem",
-				posLikeKind,
-				surfaceKind: "Lemma",
-			},
+			lemma: "auf jeden Fall",
+			phrasemeKind: params.phrasemeKind ?? "DiscourseFormula",
 		}),
 	};
 }
@@ -142,8 +134,8 @@ describe("resolveSenseMatchFromVault", () => {
 
 	it("passes stored lexical meta through to lexical-generation unchanged", async () => {
 		const content = buildNoteContent([
-			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
-			buildLexemMeta({ emojiDescription: ["🪑"], index: 2 }),
+			buildLexemeMeta({ emojiDescription: ["🏦"], index: 1 }),
+			buildLexemeMeta({ emojiDescription: ["🪑"], index: 2 }),
 		]);
 		let capturedCache: LexicalMeta[] | undefined;
 
@@ -164,23 +156,15 @@ describe("resolveSenseMatchFromVault", () => {
 
 		expect(result.isOk()).toBe(true);
 		expect(capturedCache).toEqual([
-			createLexicalMeta({
+			makeLexemeMeta({
 				emojiDescription: ["🏦"],
-				lemma: {
-					lemma: "Bank",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Noun",
-					surfaceKind: "Lemma",
-				},
+				lemma: "Bank",
+				pos: "NOUN",
 			}),
-			createLexicalMeta({
+			makeLexemeMeta({
 				emojiDescription: ["🪑"],
-				lemma: {
-					lemma: "Bank",
-					linguisticUnit: "Lexem",
-					posLikeKind: "Noun",
-					surfaceKind: "Lemma",
-				},
+				lemma: "Bank",
+				pos: "NOUN",
 			}),
 		]);
 		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: 2 });
@@ -188,7 +172,7 @@ describe("resolveSenseMatchFromVault", () => {
 
 	it("maps new-sense results through with precomputed emoji", async () => {
 		const content = buildNoteContent([
-			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
+			buildLexemeMeta({ emojiDescription: ["🏦"], index: 1 }),
 		]);
 
 		const result = await resolveSenseMatchFromVault(
@@ -215,7 +199,7 @@ describe("resolveSenseMatchFromVault", () => {
 
 	it("treats out-of-range cache indices as a new sense", async () => {
 		const content = buildNoteContent([
-			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
+			buildLexemeMeta({ emojiDescription: ["🏦"], index: 1 }),
 		]);
 
 		const result = await resolveSenseMatchFromVault(
@@ -264,7 +248,7 @@ describe("resolveSenseMatchFromVault", () => {
 			JSON.stringify({
 				entries: {
 					"INVALID-ID-FORMAT": {
-						lexicalMeta: buildLexemMeta({
+						lexicalMeta: buildLexemeMeta({
 							emojiDescription: ["🏦"],
 							index: 1,
 						}).lexicalMeta,
@@ -296,7 +280,7 @@ describe("resolveSenseMatchFromVault", () => {
 
 	it("supports phraseme lexical meta candidates", async () => {
 		const content = buildNoteContent([
-			buildPhrasemMeta({ emojiDescription: ["✅"], index: 1 }),
+			buildPhrasemeMeta({ emojiDescription: ["✅"], index: 1 }),
 		]);
 		let capturedCache: LexicalMeta[] | undefined;
 
@@ -305,7 +289,7 @@ describe("resolveSenseMatchFromVault", () => {
 				content,
 				files: [{ ...MOCK_SPLIT_PATH, basename: "auf jeden Fall" }],
 			}),
-			API_RESULT_PHRASEM,
+			API_RESULT_PHRASEME,
 			"context",
 			undefined,
 			{
@@ -319,13 +303,13 @@ describe("resolveSenseMatchFromVault", () => {
 		);
 
 		expect(result.isOk()).toBe(true);
-		expect(capturedCache?.[0]?.metaTag).toBe("ph|discourse-formula|lemma");
+		expect(capturedCache?.[0]?.metaTag).toBe("Phraseme|DiscourseFormula|Lemma");
 		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: 1 });
 	});
 
 	it("returns lexical-generation failures as command errors", async () => {
 		const content = buildNoteContent([
-			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
+			buildLexemeMeta({ emojiDescription: ["🏦"], index: 1 }),
 		]);
 
 		const result = await resolveSenseMatchFromVault(
@@ -358,10 +342,10 @@ describe("resolveSenseMatchFromVault", () => {
 			pathParts: ["Library", "de", "noun"],
 		};
 		const fallbackContent = buildNoteContent([
-			buildLexemMeta({ emojiDescription: ["🏦"], index: 1 }),
+			buildLexemeMeta({ emojiDescription: ["🏦"], index: 1 }),
 		]);
 		const preferredContent = buildNoteContent([
-			buildLexemMeta({ emojiDescription: ["💺"], index: 2 }),
+			buildLexemeMeta({ emojiDescription: ["💺"], index: 2 }),
 		]);
 
 		const result = await resolveSenseMatchFromVault(

@@ -1,7 +1,7 @@
 import { ok } from "neverthrow";
 import { buildSenseDisambiguator } from "./disambiguation/build-sense-disambiguator";
 import { validatePromptAvailability } from "./internal/prompt-executor";
-import { buildLemmaGenerator } from "./lemma/build-lemma-generator";
+import { buildSelectionResolver } from "./lemma/build-lemma-generator";
 import { buildLexicalInfoGenerator } from "./lexical-info/build-lexical-info-generator";
 import type {
 	CreateLexicalGenerationModuleParams,
@@ -18,7 +18,7 @@ export function createLexicalGenerationModule(
 
 	return ok({
 		disambiguateSense: buildSenseDisambiguator(params),
-		generateLemma: buildLemmaGenerator(params),
 		generateLexicalInfo: buildLexicalInfoGenerator(params),
+		resolveSelection: buildSelectionResolver(params),
 	});
 }

@@ -69,30 +69,30 @@ describe("computeShardSegments", () => {
 describe("computeShardedFolderParts", () => {
 	it("produces correct path for German/Lexem/Lemma", () => {
 		expect(
-			computeShardedFolderParts("anfangen", "German", "Lexem", "Lemma"),
-		).toEqual(["Worter", "de", "lexem", "lemma", "a", "anf", "anfan"]);
+			computeShardedFolderParts("anfangen", "German", "Lexeme", "Lemma"),
+		).toEqual(["Worter", "de", "lexeme", "lemma", "a", "anf", "anfan"]);
 	});
 
 	it("produces correct path for English/Phrasem/Inflected", () => {
 		expect(
-			computeShardedFolderParts("break up", "English", "Phrasem", "Inflected"),
-		).toEqual(["Worter", "en", "phrasem", "inflected", "b", "bre", "break"]);
+			computeShardedFolderParts("break up", "English", "Phraseme", "Inflection"),
+		).toEqual(["Worter", "en", "phraseme", "inflection", "b", "bre", "break"]);
 	});
 
 	it("produces correct path for German/Morphem/Variant", () => {
 		expect(
-			computeShardedFolderParts("ver", "German", "Morphem", "Variant"),
-		).toEqual(["Worter", "de", "morphem", "variant", "v", "ver", "ver"]);
+			computeShardedFolderParts("ver", "German", "Morpheme", "Variant"),
+		).toEqual(["Worter", "de", "morpheme", "variant", "v", "ver", "ver"]);
 	});
 
 	it("lowercases unit and surface kind in path", () => {
 		const parts = computeShardedFolderParts(
 			"Haus",
 			"German",
-			"Lexem",
+			"Lexeme",
 			"Lemma",
 		);
-		expect(parts[2]).toBe("lexem");
+		expect(parts[2]).toBe("lexeme");
 		expect(parts[3]).toBe("lemma");
 	});
 });

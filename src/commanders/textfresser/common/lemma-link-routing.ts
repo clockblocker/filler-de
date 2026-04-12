@@ -16,12 +16,15 @@ import {
 import type { PathLookupFn } from "./target-path-resolver";
 
 const CLOSED_SET_POS: ReadonlySet<LexicalPos> = new Set<LexicalPos>([
-	"Pronoun",
-	"Article",
-	"Preposition",
-	"Conjunction",
-	"Particle",
-	"InteractionalUnit",
+	"ADP",
+	"AUX",
+	"CCONJ",
+	"DET",
+	"INTJ",
+	"NUM",
+	"PART",
+	"PRON",
+	"SCONJ",
 ]);
 const UNKNOWN_WORKING_SEGMENT = "unknown";
 
@@ -48,7 +51,7 @@ type PrePromptTargetParams = {
 
 type FinalTargetParams = {
 	lemma: string;
-	linguisticUnit: "Lexem" | "Phrasem";
+	linguisticUnit: "Lexeme" | "Phraseme";
 	posLikeKind: LexicalPos | null;
 	surfaceKind: SurfaceKind;
 	targetLanguage: TargetLanguage;
@@ -58,7 +61,7 @@ type FinalTargetParams = {
 
 type PolicyDestinationParams = {
 	lemma: string;
-	linguisticUnit: "Lexem" | "Phrasem";
+	linguisticUnit: "Lexeme" | "Phraseme";
 	posLikeKind: LexicalPos | null;
 	surfaceKind: SurfaceKind;
 	targetLanguage: TargetLanguage;
@@ -71,7 +74,7 @@ export function isClosedSetPos(pos: LexicalPos): boolean {
 function buildOpenClassWorterPath(
 	lemma: string,
 	targetLanguage: TargetLanguage,
-	linguisticUnit: "Lexem" | "Phrasem",
+	linguisticUnit: "Lexeme" | "Phraseme",
 	surfaceKind: SurfaceKind,
 ): SplitPathToMdFile {
 	return {
@@ -252,8 +255,8 @@ export function computeFinalTarget(
 		lookupInLibrary,
 	} = params;
 
-	const isClosedSetLexem =
-		linguisticUnit === "Lexem" &&
+	const isClosedSetLexeme =
+		linguisticUnit === "Lexeme" &&
 		posLikeKind !== null &&
 		isClosedSetPos(posLikeKind);
 
@@ -263,7 +266,7 @@ export function computeFinalTarget(
 		targetLanguage,
 	);
 
-	if (isClosedSetLexem && posLikeKind !== null) {
+	if (isClosedSetLexeme && posLikeKind !== null) {
 		const libraryMatch = resolveClosedSetLibraryTarget({
 			candidates: [
 				...existingMatches.filter(isLibraryPath),

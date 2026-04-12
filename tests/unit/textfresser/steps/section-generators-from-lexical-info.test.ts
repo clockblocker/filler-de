@@ -2,13 +2,14 @@ import { describe, expect, it } from "bun:test";
 import { generateInflectionSection } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generators/inflection-section-generator";
 import { generateRelationSection } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generators/relation-section-generator";
 import { generateTagsSection } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generators/tags-section-generator";
-import type { LexicalInfo } from "@textfresser/lexical-generation";
+import {
+	makeLexemeLexicalInfo,
+	makeNounInflections,
+	makeRelations,
+} from "../helpers/native-fixtures";
 
-function makeVerbLexicalInfo(): Extract<
-	LexicalInfo,
-	{ lemma: { linguisticUnit: "Lexem" } }
-> {
-	return {
+function makeVerbLexicalInfo() {
+	return makeLexemeLexicalInfo({
 		core: {
 			status: "ready",
 			value: {
@@ -19,12 +20,9 @@ function makeVerbLexicalInfo(): Extract<
 		features: {
 			status: "ready",
 			value: {
-				conjugation: "Regular",
-				kind: "verb",
-				valency: {
-					governedPreposition: "auf",
-					reflexivity: "OptionalReflexive",
-					separability: "Separable",
+				inherentFeatures: {
+					reflex: true,
+					separable: true,
 				},
 			},
 		},
@@ -40,27 +38,14 @@ function makeVerbLexicalInfo(): Extract<
 				],
 			},
 		},
-		lemma: {
-			lemma: "gehen",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Verb",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: {
-			status: "ready",
-			value: {
-				relations: [{ kind: "Synonym", words: ["laufen"] }],
-			},
-		},
-	};
+		lemma: "gehen",
+		pos: "VERB",
+		relations: makeRelations([{ kind: "Synonym", words: ["laufen"] }]),
+	});
 }
 
-function makeNounLexicalInfo(): Extract<
-	LexicalInfo,
-	{ lemma: { linguisticUnit: "Lexem" } }
-> {
-	return {
+function makeNounLexicalInfo() {
+	return makeLexemeLexicalInfo({
 		core: {
 			status: "ready",
 			value: {
@@ -71,49 +56,38 @@ function makeNounLexicalInfo(): Extract<
 		features: {
 			status: "ready",
 			value: {
-				genus: "Neutrum",
-				kind: "noun",
-				nounClass: "Common",
-				tags: ["industry", "energy"],
+				inherentFeatures: {
+					gender: "Neut",
+				},
 			},
 		},
 		inflections: {
 			status: "ready",
-			value: {
+			value: makeNounInflections({
 				cells: [
 					{
 						article: "das",
-						case: "Nominative",
+						case: "Nom",
 						form: "Kraftwerk",
-						number: "Singular",
+						number: "Sing",
 					},
 					{
 						article: "die",
-						case: "Nominative",
+						case: "Nom",
 						form: "Kraftwerke",
-						number: "Plural",
+						number: "Plur",
 					},
 				],
-				genus: "Neutrum",
-				kind: "noun",
-			},
+				gender: "Neut",
+			}),
 		},
-		lemma: {
-			lemma: "Kraftwerk",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Noun",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: { status: "not_applicable" },
-	};
+		lemma: "Kraftwerk",
+		pos: "NOUN",
+	});
 }
 
-function makeAdjectiveLexicalInfo(): Extract<
-	LexicalInfo,
-	{ lemma: { linguisticUnit: "Lexem" } }
-> {
-	return {
+function makeAdjectiveLexicalInfo() {
+	return makeLexemeLexicalInfo({
 		core: {
 			status: "ready",
 			value: {
@@ -124,45 +98,27 @@ function makeAdjectiveLexicalInfo(): Extract<
 		features: {
 			status: "ready",
 			value: {
-				classification: "Qualitative",
-				distribution: "AttributiveOnly",
-				gradability: "Gradable",
-				kind: "adjective",
-				valency: {
-					governedPattern: "Prepositional",
-					governedPreposition: "zu",
-				},
+				inherentFeatures: {},
 			},
 		},
-		inflections: { status: "not_applicable" },
-		lemma: {
-			lemma: "schnell",
-			linguisticUnit: "Lexem",
-			posLikeKind: "Adjective",
-			surfaceKind: "Lemma",
-		},
-		morphemicBreakdown: { status: "not_applicable" },
-		relations: { status: "not_applicable" },
-	};
+		lemma: "schnell",
+		pos: "ADJ",
+	});
 }
 
 describe("section generators from LexicalInfo", () => {
-	it("renders tags from lexical features", () => {
+	it("renders tags from inherent lexical features", () => {
 		const verbSection = generateTagsSection({
 			lexicalInfo: makeVerbLexicalInfo(),
 			targetLang: "German",
 		});
-		expect(verbSection?.content).toBe(
-			"#verb/conjugation-regular/separability-separable/reflexivity-optionalreflexive/prep-auf",
-		);
+		expect(verbSection?.content).toBe("#verb/reflex-yes/separable-yes");
 
 		const adjectiveSection = generateTagsSection({
 			lexicalInfo: makeAdjectiveLexicalInfo(),
 			targetLang: "German",
 		});
-		expect(adjectiveSection?.content).toBe(
-			"#adjective/classification-qualitative/gradability-gradable/distribution-attributiveonly/valency-prepositional/prep-zu",
-		);
+		expect(adjectiveSection).toBeNull();
 	});
 
 	it("renders relation section and parsed relations from lexical relations", () => {
@@ -189,8 +145,6 @@ describe("section generators from LexicalInfo", () => {
 			lexicalInfo: makeVerbLexicalInfo(),
 			targetLang: "German",
 		});
-		expect(genericResult.section?.content).toBe(
-			"Prasens: [[gehe]], [[gehst]]",
-		);
+		expect(genericResult.section?.content).toBe("Prasens: [[gehe]], [[gehst]]");
 	});
 });
