@@ -1,10 +1,7 @@
-import type { Prettify } from "src/types/helpers";
+import type { Prettify } from "../../../../../types/helpers";
 import type { IsClosedSet } from "./enums/core/meta";
 import type { LemmaKind } from "./enums/core/selection";
-import type {
-	DISCOURSE_FORMULA_ROLE_KEY,
-	DiscourseFormulaRole,
-} from "./enums/feature/custom/discourse-formula-role";
+import type { DiscourseFormulaRole } from "./enums/feature/custom/discourse-formula-role";
 import type { AbstractFeatures } from "./enums/feature/feature";
 import type { MorphemeKind } from "./enums/kind/morpheme-kind";
 import type {
@@ -35,7 +32,7 @@ type AbstractPhrasemLemma = Prettify<
 		  }
 		| {
 				[PHRASEME_KIND_KEY]: typeof PhrasemeKind.enum.DiscourseFormula;
-				[DISCOURSE_FORMULA_ROLE_KEY]?: DiscourseFormulaRole;
+				discourseFormulaRole?: DiscourseFormulaRole;
 		  }
 	)
 >;

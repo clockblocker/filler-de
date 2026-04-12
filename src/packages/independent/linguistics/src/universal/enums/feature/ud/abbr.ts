@@ -4,7 +4,6 @@ import { z } from "zod/v3";
 
 export const IsAbbr = z.boolean();
 export type IsAbbr = z.infer<typeof IsAbbr>;
-export const IS_ABBR_KEY = "abbr";
 
 export function getReprForIsAbbr(isAbbr: IsAbbr) {
 	const reprForIsAbbr = "abbreviation";

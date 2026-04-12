@@ -1,7 +1,6 @@
 import { z } from "zod/v3";
 
 // Source: https://universaldependencies.org/u/feat/Foreign.html
-export const IS_FOREIGN_KEY = "foreign";
 export const IsForeign = z.boolean();
 export type IsForeign = z.infer<typeof IsForeign>;
 

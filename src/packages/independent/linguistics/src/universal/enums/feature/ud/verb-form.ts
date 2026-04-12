@@ -14,7 +14,6 @@ const verbFormValues = [
 // Source: https://universaldependencies.org/u/feat/VerbForm.html
 export const VerbForm = z.enum(verbFormValues);
 export type VerbForm = z.infer<typeof VerbForm>;
-export const VERB_FORM_KEY = "verbForm";
 
 const reprForVerbForm = {
 	Conv: "converb", // transgressive, adverbial participle, verbal adverb

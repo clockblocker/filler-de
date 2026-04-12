@@ -41,7 +41,6 @@ const nounClassValues = [
 // Source: https://universaldependencies.org/u/feat/NounClass.html
 export const NounClass = z.enum(nounClassValues);
 export type NounClass = z.infer<typeof NounClass>;
-export const NOUN_CLASS_KEY = "nounClass";
 
 const reprForNounClass = {
 	Bantu1: "singular, persons",

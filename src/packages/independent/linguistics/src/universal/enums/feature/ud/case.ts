@@ -37,7 +37,6 @@ const caseValues = [
 // Source: https://universaldependencies.org/u/feat/Case.html
 export const Case = z.enum(caseValues);
 export type Case = z.infer<typeof Case>;
-export const CASE_KEY = "case";
 
 const reprForCase = {
 	Abe: "abessive", // caritive | privative

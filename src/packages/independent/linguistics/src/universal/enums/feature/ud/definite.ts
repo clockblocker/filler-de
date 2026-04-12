@@ -5,7 +5,6 @@ const definiteValues = ["Com", "Cons", "Def", "Ind", "Spec"] as const;
 // Source: https://universaldependencies.org/u/feat/Definite.html
 export const Definite = z.enum(definiteValues);
 export type Definite = z.infer<typeof Definite>;
-export const DEFINITE_KEY = "definite";
 
 const reprForDefinite = {
 	Com: "complex",

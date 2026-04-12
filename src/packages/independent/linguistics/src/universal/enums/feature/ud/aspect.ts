@@ -5,7 +5,6 @@ const aspectValues = ["Hab", "Imp", "Iter", "Perf", "Prog", "Prosp"] as const;
 // Source: https://universaldependencies.org/u/feat/Aspect.html
 export const Aspect = z.enum(aspectValues);
 export type Aspect = z.infer<typeof Aspect>;
-export const ASPECT_KEY = "aspect";
 
 const reprForAspect = {
 	Hab: "habitual",

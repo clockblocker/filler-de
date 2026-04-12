@@ -13,7 +13,6 @@ const numTypeValues = [
 // Source: https://universaldependencies.org/u/feat/NumType.html
 export const NumType = z.enum(numTypeValues);
 export type NumType = z.infer<typeof NumType>;
-export const NUM_TYPE_KEY = "numType";
 
 const reprForNumType = {
 	Card: "cardinal number or corresponding interrogative / relative / indefinite / demonstrative word",

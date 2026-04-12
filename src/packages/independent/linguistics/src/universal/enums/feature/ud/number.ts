@@ -17,7 +17,6 @@ const numberValues = [
 // Source: https://universaldependencies.org/u/feat/Number.html
 export const GrammaticalNumber = z.enum(numberValues);
 export type GrammaticalNumber = z.infer<typeof GrammaticalNumber>;
-export const NUMBER_KEY = "number";
 
 const reprForNumber = {
 	Coll: "collective", // mass / singulare tantum
