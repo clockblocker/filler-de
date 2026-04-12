@@ -3,6 +3,8 @@ import {
 	GermanVerbInflectionSelectionSchema,
 	GermanVerbLemmaSchema,
 } from "../src/german/lu/lexeme/pos/german-verb";
+import { getInverseLexicalRelation } from "../src/universal/enums/relation/lexical";
+import { getInverseMorphologicalRelation } from "../src/universal/enums/relation/morphological";
 
 describe("German verb schemas", () => {
 	it("accepts supported German verb inflectional features", () => {
@@ -59,6 +61,14 @@ describe("German verb schemas", () => {
 				reflex: true,
 				separable: false,
 			},
+			lexicalRelations: {
+				hypernym: ["Fortbewegung"],
+				synonym: ["laufen"],
+			},
+			morphologicalRelations: {
+				derivedFrom: ["Gang"],
+				sourceFor: ["Ausgang"],
+			},
 			pos: "VERB",
 		});
 
@@ -70,9 +80,33 @@ describe("German verb schemas", () => {
 			inherentFeatures: {
 				mood: "Ind",
 			},
+			lexicalRelations: {},
+			morphologicalRelations: {},
 			pos: "VERB",
 		});
 
 		expect(result.success).toBe(false);
+	});
+
+	it("rejects duplicate relation targets", () => {
+		const result = GermanVerbLemmaSchema.safeParse({
+			inherentFeatures: {},
+			lexicalRelations: {
+				synonym: ["laufen", "laufen"],
+			},
+			morphologicalRelations: {},
+			pos: "VERB",
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("exposes total inverse relation helpers", () => {
+		expect(getInverseLexicalRelation("hypernym")).toBe("hyponym");
+		expect(getInverseLexicalRelation("synonym")).toBe("synonym");
+		expect(getInverseMorphologicalRelation("derivedFrom")).toBe(
+			"sourceFor",
+		);
+		expect(getInverseMorphologicalRelation("usedIn")).toBe("consistsOf");
 	});
 });

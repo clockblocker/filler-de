@@ -9,6 +9,10 @@ import { Person } from "../../../../universal/enums/feature/ud/person";
 import { IsReflex } from "../../../../universal/enums/feature/ud/reflex";
 import { Tense } from "../../../../universal/enums/feature/ud/tense";
 import { VerbForm } from "../../../../universal/enums/feature/ud/verb-form";
+import {
+	AbstractLexicalRelationsSchema,
+	AbstractMorphologicalRelationsSchema,
+} from "../../../../universal/enums/relation/relation";
 import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 
@@ -34,14 +38,16 @@ const GermanVerbVerbForm = z.enum([
 	VerbForm.enum.Part,
 ]);
 
-const GermanVerbInflectionalFeaturesSchema = z.object({
-	gender: GermanVerbGender.optional(),
-	mood: GermanVerbMood.optional(),
-	number: GermanVerbNumber.optional(),
-	person: GermanVerbPerson.optional(),
-	tense: GermanVerbTense.optional(),
-	verbForm: GermanVerbVerbForm.optional(),
-}).strict() satisfies z.ZodType<
+const GermanVerbInflectionalFeaturesSchema = z
+	.object({
+		gender: GermanVerbGender.optional(),
+		mood: GermanVerbMood.optional(),
+		number: GermanVerbNumber.optional(),
+		person: GermanVerbPerson.optional(),
+		tense: GermanVerbTense.optional(),
+		verbForm: GermanVerbVerbForm.optional(),
+	})
+	.strict() satisfies z.ZodType<
 	AbstractSelectionFor<
 		"Standard",
 		"Inflection",
@@ -49,12 +55,12 @@ const GermanVerbInflectionalFeaturesSchema = z.object({
 	>["surface"]["inflectionalFeatures"]
 >;
 
-const GermanVerbInherentFeaturesSchema = z.object({
-	reflex: IsReflex.optional(),
-	separable: IsSeparable.optional(),
-}).strict() satisfies z.ZodType<
-	AbstractLemma<"Lexeme">["inherentFeatures"]
->;
+const GermanVerbInherentFeaturesSchema = z
+	.object({
+		reflex: IsReflex.optional(),
+		separable: IsSeparable.optional(),
+	})
+	.strict() satisfies z.ZodType<AbstractLemma<"Lexeme">["inherentFeatures"]>;
 
 const GermanVerbLemmaIdentityShape = {
 	lemmaKind: z.literal("Lexeme"),
@@ -74,5 +80,7 @@ export const GermanVerbLemmaSelectionSchema = buildLemmaSelection({
 
 export const GermanVerbLemmaSchema = z.object({
 	inherentFeatures: GermanVerbInherentFeaturesSchema,
+	lexicalRelations: AbstractLexicalRelationsSchema,
+	morphologicalRelations: AbstractMorphologicalRelationsSchema,
 	pos: z.literal("VERB"),
 }) satisfies z.ZodType<AbstractLemma<"Lexeme">>;

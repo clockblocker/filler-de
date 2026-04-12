@@ -9,20 +9,28 @@ import type {
 	PhrasemeKind,
 } from "./enums/kind/phraseme-kind";
 import type { Pos } from "./enums/kind/pos";
+import type {
+	AbstractLexicalRelations,
+	AbstractMorphologicalRelations,
+} from "./enums/relation/relation";
 
 type AbstractLexemeLemma = Prettify<{
 	pos: Pos;
 	inherentFeatures: Partial<AbstractFeatures>;
+	lexicalRelations: AbstractLexicalRelations;
+	morphologicalRelations: AbstractMorphologicalRelations;
 	isClosedSet?: IsClosedSet;
 }>;
 
 type AbstractMorphemLemma = Prettify<{
 	morphemeKind: MorphemeKind;
+	lexicalRelations: AbstractLexicalRelations;
 	isClosedSet?: IsClosedSet;
 }>;
 
 type AbstractPhrasemLemma = Prettify<
 	{
+		lexicalRelations: AbstractLexicalRelations;
 		[PHRASEME_KIND_KEY]: PhrasemeKind;
 	} & (
 		| {
