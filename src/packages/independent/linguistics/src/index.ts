@@ -6,13 +6,13 @@ import type {
 	SelectionSchemaLanguageShape,
 } from "./registry-shapes";
 
-const supportedTargetLanguages = ["German"] as const;
+const supportedLanguages = ["German"] as const;
 
-const TargetLang = z.enum(supportedTargetLanguages);
-type TargetLang = z.infer<typeof TargetLang>;
+const SupportedLanguage = z.enum(supportedLanguages);
+type SupportedLanguage = z.infer<typeof SupportedLanguage>;
 
 type SelectionSchemaShape = {
-	[L in TargetLang]: SelectionSchemaLanguageShape;
+	[L in SupportedLanguage]: SelectionSchemaLanguageShape;
 };
 
 export const SelectionSchema = {
@@ -24,13 +24,13 @@ export const LemmaSchema = {
 } satisfies LemmaSchemaShape;
 
 export type Lemma<
-	L extends Language,
+	L extends TargetLanguage,
 	LK extends LemmaKindFor<L>,
 	D extends LemmaDiscriminatorFor<L, LK>,
 > = InferSchema<(typeof LemmaSchema)[L][LK][D]>;
 
 export type Selection<
-	L extends Language,
+	L extends TargetLanguage,
 	OS extends SelectionOrthographicStatusFor<L>,
 	SK extends SelectionSurfaceKindArg<L, OS> = SelectionSurfaceKindArg<L, OS>,
 	LK extends SelectionLemmaKindArg<L, OS, SK> = SelectionLemmaKindArg<
@@ -47,53 +47,53 @@ export type Selection<
 > = InferSchema<SelectionSchemaFor<L, OS, SK, LK, D>>;
 
 type LemmaSchemaShape = {
-	[L in TargetLang]: LemmaSchemaLanguageShape;
+	[L in SupportedLanguage]: LemmaSchemaLanguageShape;
 };
 
-type Language = keyof typeof LemmaSchema;
+type TargetLanguage = keyof typeof LemmaSchema;
 
-type LemmaKindFor<L extends Language> = keyof (typeof LemmaSchema)[L];
+type LemmaKindFor<L extends TargetLanguage> = keyof (typeof LemmaSchema)[L];
 
 type LemmaDiscriminatorFor<
-	L extends Language,
+	L extends TargetLanguage,
 	LK extends LemmaKindFor<L>,
 > = keyof (typeof LemmaSchema)[L][LK];
 
-type SelectionOrthographicStatusFor<L extends Language> =
+type SelectionOrthographicStatusFor<L extends TargetLanguage> =
 	keyof (typeof SelectionSchema)[L];
 
-type KnownSelectionOrthographicStatusFor<L extends Language> = Exclude<
+type KnownSelectionOrthographicStatusFor<L extends TargetLanguage> = Exclude<
 	SelectionOrthographicStatusFor<L>,
 	"Unknown"
 >;
 
 type SelectionSurfaceKindFor<
-	L extends Language,
+	L extends TargetLanguage,
 	OS extends KnownSelectionOrthographicStatusFor<L>,
 > = keyof (typeof SelectionSchema)[L][OS];
 
 type SelectionLemmaKindFor<
-	L extends Language,
+	L extends TargetLanguage,
 	OS extends KnownSelectionOrthographicStatusFor<L>,
 	SK extends SelectionSurfaceKindFor<L, OS>,
 > = keyof (typeof SelectionSchema)[L][OS][SK];
 
 type SelectionDiscriminatorFor<
-	L extends Language,
+	L extends TargetLanguage,
 	OS extends KnownSelectionOrthographicStatusFor<L>,
 	SK extends SelectionSurfaceKindFor<L, OS>,
 	LK extends SelectionLemmaKindFor<L, OS, SK>,
 > = keyof (typeof SelectionSchema)[L][OS][SK][LK];
 
 type SelectionSurfaceKindArg<
-	L extends Language,
+	L extends TargetLanguage,
 	OS extends SelectionOrthographicStatusFor<L>,
 > = OS extends KnownSelectionOrthographicStatusFor<L>
 	? SelectionSurfaceKindFor<L, OS>
 	: any;
 
 type SelectionLemmaKindArg<
-	L extends Language,
+	L extends TargetLanguage,
 	OS extends SelectionOrthographicStatusFor<L>,
 	SK extends SelectionSurfaceKindArg<L, OS>,
 > = OS extends KnownSelectionOrthographicStatusFor<L>
@@ -103,7 +103,7 @@ type SelectionLemmaKindArg<
 	: any;
 
 type SelectionDiscriminatorArg<
-	L extends Language,
+	L extends TargetLanguage,
 	OS extends SelectionOrthographicStatusFor<L>,
 	SK extends SelectionSurfaceKindArg<L, OS>,
 	LK extends SelectionLemmaKindArg<L, OS, SK>,
@@ -116,7 +116,7 @@ type SelectionDiscriminatorArg<
 	: any;
 
 type SelectionSchemaFor<
-	L extends Language,
+	L extends TargetLanguage,
 	OS extends SelectionOrthographicStatusFor<L>,
 	SK extends SelectionSurfaceKindArg<L, OS>,
 	LK extends SelectionLemmaKindArg<L, OS, SK>,
