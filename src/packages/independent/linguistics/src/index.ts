@@ -23,6 +23,8 @@ export const LemmaSchema = {
 	German: GermanLemmaSchema,
 } satisfies LemmaSchemaShape;
 
+export type TargetLanguage = keyof typeof LemmaSchema;
+
 export type Lemma<
 	L extends TargetLanguage,
 	LK extends LemmaKindFor<L>,
@@ -49,8 +51,6 @@ export type Selection<
 type LemmaSchemaShape = {
 	[L in SupportedLanguage]: LemmaSchemaLanguageShape;
 };
-
-type TargetLanguage = keyof typeof LemmaSchema;
 
 type LemmaKindFor<L extends TargetLanguage> = keyof (typeof LemmaSchema)[L];
 
@@ -90,7 +90,7 @@ type SelectionSurfaceKindArg<
 	OS extends SelectionOrthographicStatusFor<L>,
 > = OS extends KnownSelectionOrthographicStatusFor<L>
 	? SelectionSurfaceKindFor<L, OS>
-	: any;
+	: unknown;
 
 type SelectionLemmaKindArg<
 	L extends TargetLanguage,
@@ -100,7 +100,7 @@ type SelectionLemmaKindArg<
 	? SK extends SelectionSurfaceKindFor<L, OS>
 		? SelectionLemmaKindFor<L, OS, SK>
 		: never
-	: any;
+	: unknown;
 
 type SelectionDiscriminatorArg<
 	L extends TargetLanguage,
@@ -113,7 +113,7 @@ type SelectionDiscriminatorArg<
 			? SelectionDiscriminatorFor<L, OS, SK, LK>
 			: never
 		: never
-	: any;
+	: unknown;
 
 type SelectionSchemaFor<
 	L extends TargetLanguage,
