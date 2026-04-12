@@ -1,6 +1,7 @@
 import { z } from "zod/v3";
 
 const caseValues = [
+	"Acc",
 	"Abe",
 	"Ben",
 	"Cau",
@@ -25,6 +26,7 @@ const caseValues = [
 	"Ine",
 	"Lat",
 	"Loc",
+	"Nom",
 	"Per",
 	"Sbe",
 	"Sbl",
@@ -39,6 +41,7 @@ export const Case = z.enum(caseValues);
 export type Case = z.infer<typeof Case>;
 
 const reprForCase = {
+	Acc: "accusative",
 	Abe: "abessive", // caritive | privative
 	Abl: "ablative", // adelative
 	Add: "additive",
@@ -61,6 +64,7 @@ const reprForCase = {
 	Ins: "instrumental", // instructive
 	Lat: "lative", // directional allative
 	Loc: "locative",
+	Nom: "nominative",
 	Par: "partitive",
 	Per: "perlative",
 	Sbe: "subelative",

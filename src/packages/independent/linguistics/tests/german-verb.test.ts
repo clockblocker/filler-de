@@ -163,7 +163,7 @@ describe("German verb schemas", () => {
 		expect(getInverseMorphologicalRelation("usedIn")).toBe("consistsOf");
 	});
 
-	it("exposes nested registry access for German verbs", () => {
+	it("exposes registry access for German verbs", () => {
 		expect(SelectionSchema.German.Standard.Inflection.Lexeme.VERB).toBe(
 			GermanVerbInflectionSelectionSchema,
 		);
@@ -173,7 +173,7 @@ describe("German verb schemas", () => {
 		expect(SelectionSchema.German.Typo.Inflection.Lexeme.VERB).toBe(
 			GermanVerbTypoInflectionSelectionSchema,
 		);
-		expect(SelectionSchema.German.Unknown.Variant.Lexeme.VERB).toBe(
+		expect(SelectionSchema.German.Unknown).toBe(
 			GermanVerbUnknownSelectionSchema,
 		);
 		expect(LemmaSchema.German.Lexeme.VERB).toBe(GermanVerbLemmaSchema);

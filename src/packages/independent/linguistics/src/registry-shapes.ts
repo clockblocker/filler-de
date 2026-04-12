@@ -9,7 +9,7 @@ import type {
 import type { LemmaDiscriminatorFor } from "./universal/lemma-discriminator";
 
 export type SelectionSchemaLanguageShape = {
-	[OS in OrthographicStatus]: {
+	[OS in Exclude<OrthographicStatus, "Unknown">]: {
 		[SK in SurfaceKind]: {
 			[LK in LemmaKind]: {
 				[D in LemmaDiscriminatorFor<LK>]: z.ZodType<
@@ -18,6 +18,8 @@ export type SelectionSchemaLanguageShape = {
 			};
 		};
 	};
+} & {
+	Unknown: z.ZodType<AbstractSelectionFor<"Unknown">>;
 };
 
 export type LemmaSchemaLanguageShape = {

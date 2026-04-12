@@ -115,7 +115,7 @@ export const GermanVerbTypoVariantSelectionSchema = buildLemmaSelection({
 
 export const GermanVerbUnknownSelectionSchema = z.object({
 	orthographicStatus: z.literal("Unknown"),
-}) satisfies z.ZodType<AbstractSelectionFor<"Unknown", "Inflection", "Lexeme">>;
+}) satisfies z.ZodType<AbstractSelectionFor<"Unknown">>;
 
 export const GermanVerbLemmaSchema = z.object({
 	inherentFeatures: GermanVerbInherentFeaturesSchema,
