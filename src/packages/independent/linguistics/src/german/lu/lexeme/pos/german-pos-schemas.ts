@@ -32,7 +32,7 @@ import {
 	GermanVerbTypoPartialSelectionSchema,
 	GermanVerbTypoVariantSelectionSchema,
 	GermanVerbUnknownSelectionSchema,
-} from "./german-verb";
+} from "../verb/german-verb-bundle";
 
 const EmptyFeaturesSchema = z.object({}).strict();
 export const GermanUnknownSelectionSchema = GermanVerbUnknownSelectionSchema;
