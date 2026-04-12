@@ -1,15 +1,19 @@
 import z from "zod/v3";
+import type { OrthographicStatus } from "../enums/core/selection";
 
 type EmptyZodRawShape = Record<never, never>;
+type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
 
 type BuildInflectionSelectionArgs<
 	InflectionalFeaturesSchema extends z.ZodTypeAny,
 	LemmaIdentityShape extends z.ZodRawShape,
+	OrthographicStatusLiteral extends KnownOrthographicStatus = "Standard",
 	LemmaExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 > = {
 	inflectionalFeaturesSchema: InflectionalFeaturesSchema;
 	lemmaIdentityShape: LemmaIdentityShape;
+	orthographicStatus?: OrthographicStatusLiteral;
 	lemmaExtraShape?: LemmaExtraShape;
 	surfaceExtraShape?: SurfaceExtraShape;
 };
@@ -17,16 +21,19 @@ type BuildInflectionSelectionArgs<
 export function buildInflectionSelection<
 	InflectionalFeaturesSchema extends z.ZodTypeAny,
 	LemmaIdentityShape extends z.ZodRawShape,
+	OrthographicStatusLiteral extends KnownOrthographicStatus = "Standard",
 	LemmaExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 >({
 	inflectionalFeaturesSchema,
 	lemmaIdentityShape,
+	orthographicStatus = "Standard" as OrthographicStatusLiteral,
 	lemmaExtraShape = {} as LemmaExtraShape,
 	surfaceExtraShape = {} as SurfaceExtraShape,
 }: BuildInflectionSelectionArgs<
 	InflectionalFeaturesSchema,
 	LemmaIdentityShape,
+	OrthographicStatusLiteral,
 	LemmaExtraShape,
 	SurfaceExtraShape
 >) {
@@ -45,7 +52,7 @@ export function buildInflectionSelection<
 	});
 
 	return z.object({
-		orthographicStatus: z.literal("Standard"),
+		orthographicStatus: z.literal(orthographicStatus),
 		surface: surfaceSchema,
 	});
 }

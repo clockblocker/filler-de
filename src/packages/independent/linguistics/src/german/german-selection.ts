@@ -3,6 +3,13 @@ import type { SelectionSchemaLanguageShape } from "../registry-shapes";
 import {
 	GermanVerbInflectionSelectionSchema,
 	GermanVerbLemmaSelectionSchema,
+	GermanVerbStandardPartialSelectionSchema,
+	GermanVerbStandardVariantSelectionSchema,
+	GermanVerbTypoInflectionSelectionSchema,
+	GermanVerbTypoLemmaSelectionSchema,
+	GermanVerbTypoPartialSelectionSchema,
+	GermanVerbTypoVariantSelectionSchema,
+	GermanVerbUnknownSelectionSchema,
 } from "./lu/lexeme/pos/german-verb";
 
 const AnySchema = z.any();
@@ -104,7 +111,7 @@ export const GermanSelectionSchema = {
 				PUNCT: AnySchema,
 				SCONJ: AnySchema,
 				SYM: AnySchema,
-				VERB: AnySchema,
+				VERB: GermanVerbStandardPartialSelectionSchema,
 				X: AnySchema,
 			},
 			Morpheme: {
@@ -143,7 +150,7 @@ export const GermanSelectionSchema = {
 				PUNCT: AnySchema,
 				SCONJ: AnySchema,
 				SYM: AnySchema,
-				VERB: AnySchema,
+				VERB: GermanVerbStandardVariantSelectionSchema,
 				X: AnySchema,
 			},
 			Morpheme: {
@@ -184,7 +191,7 @@ export const GermanSelectionSchema = {
 				PUNCT: AnySchema,
 				SCONJ: AnySchema,
 				SYM: AnySchema,
-				VERB: AnySchema,
+				VERB: GermanVerbTypoInflectionSelectionSchema,
 				X: AnySchema,
 			},
 			Morpheme: {
@@ -223,7 +230,7 @@ export const GermanSelectionSchema = {
 				PUNCT: AnySchema,
 				SCONJ: AnySchema,
 				SYM: AnySchema,
-				VERB: AnySchema,
+				VERB: GermanVerbTypoLemmaSelectionSchema,
 				X: AnySchema,
 			},
 			Morpheme: {
@@ -262,7 +269,7 @@ export const GermanSelectionSchema = {
 				PUNCT: AnySchema,
 				SCONJ: AnySchema,
 				SYM: AnySchema,
-				VERB: AnySchema,
+				VERB: GermanVerbTypoPartialSelectionSchema,
 				X: AnySchema,
 			},
 			Morpheme: {
@@ -301,7 +308,7 @@ export const GermanSelectionSchema = {
 				PUNCT: AnySchema,
 				SCONJ: AnySchema,
 				SYM: AnySchema,
-				VERB: AnySchema,
+				VERB: GermanVerbTypoVariantSelectionSchema,
 				X: AnySchema,
 			},
 			Morpheme: {
@@ -342,7 +349,7 @@ export const GermanSelectionSchema = {
 				PUNCT: AnySchema,
 				SCONJ: AnySchema,
 				SYM: AnySchema,
-				VERB: AnySchema,
+				VERB: GermanVerbUnknownSelectionSchema,
 				X: AnySchema,
 			},
 			Morpheme: {
@@ -381,7 +388,7 @@ export const GermanSelectionSchema = {
 				PUNCT: AnySchema,
 				SCONJ: AnySchema,
 				SYM: AnySchema,
-				VERB: AnySchema,
+				VERB: GermanVerbUnknownSelectionSchema,
 				X: AnySchema,
 			},
 			Morpheme: {
@@ -420,7 +427,7 @@ export const GermanSelectionSchema = {
 				PUNCT: AnySchema,
 				SCONJ: AnySchema,
 				SYM: AnySchema,
-				VERB: AnySchema,
+				VERB: GermanVerbUnknownSelectionSchema,
 				X: AnySchema,
 			},
 			Morpheme: {
@@ -459,7 +466,7 @@ export const GermanSelectionSchema = {
 				PUNCT: AnySchema,
 				SCONJ: AnySchema,
 				SYM: AnySchema,
-				VERB: AnySchema,
+				VERB: GermanVerbUnknownSelectionSchema,
 				X: AnySchema,
 			},
 			Morpheme: {
