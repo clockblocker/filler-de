@@ -1,0 +1,38 @@
+import { buildEnglishLexemeBundle } from "../shared/build-english-lexeme-bundle";
+import {
+	EnglishCoordinatingConjunctionInflectionalFeaturesSchema,
+	EnglishCoordinatingConjunctionInherentFeaturesSchema,
+} from "./parts/english-coordinating-conjunction-features";
+import {
+	EnglishCoordinatingConjunctionLexicalRelationsSchema,
+	EnglishCoordinatingConjunctionMorphologicalRelationsSchema,
+} from "./parts/english-coordinating-conjunction-relations";
+
+const EnglishCoordinatingConjunctionSchemas = buildEnglishLexemeBundle({
+	inflectionalFeaturesSchema:
+		EnglishCoordinatingConjunctionInflectionalFeaturesSchema,
+	inherentFeaturesSchema: EnglishCoordinatingConjunctionInherentFeaturesSchema,
+	lexicalRelationsSchema: EnglishCoordinatingConjunctionLexicalRelationsSchema,
+	morphologicalRelationsSchema:
+		EnglishCoordinatingConjunctionMorphologicalRelationsSchema,
+	pos: "CCONJ",
+});
+
+export const EnglishCoordinatingConjunctionInflectionSelectionSchema =
+	EnglishCoordinatingConjunctionSchemas.InflectionSelectionSchema;
+export const EnglishCoordinatingConjunctionLemmaSelectionSchema =
+	EnglishCoordinatingConjunctionSchemas.LemmaSelectionSchema;
+export const EnglishCoordinatingConjunctionStandardPartialSelectionSchema =
+	EnglishCoordinatingConjunctionSchemas.StandardPartialSelectionSchema;
+export const EnglishCoordinatingConjunctionStandardVariantSelectionSchema =
+	EnglishCoordinatingConjunctionSchemas.StandardVariantSelectionSchema;
+export const EnglishCoordinatingConjunctionTypoInflectionSelectionSchema =
+	EnglishCoordinatingConjunctionSchemas.TypoInflectionSelectionSchema;
+export const EnglishCoordinatingConjunctionTypoLemmaSelectionSchema =
+	EnglishCoordinatingConjunctionSchemas.TypoLemmaSelectionSchema;
+export const EnglishCoordinatingConjunctionTypoPartialSelectionSchema =
+	EnglishCoordinatingConjunctionSchemas.TypoPartialSelectionSchema;
+export const EnglishCoordinatingConjunctionTypoVariantSelectionSchema =
+	EnglishCoordinatingConjunctionSchemas.TypoVariantSelectionSchema;
+export const EnglishCoordinatingConjunctionLemmaSchema =
+	EnglishCoordinatingConjunctionSchemas.LemmaSchema;

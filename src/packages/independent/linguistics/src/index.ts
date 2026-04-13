@@ -1,4 +1,6 @@
 import z, { type ZodTypeAny } from "zod/v3";
+import { EnglishLemmaSchema } from "./english/english-lemma";
+import { EnglishSelectionSchema } from "./english/english-selection";
 import { GermanLemmaSchema } from "./german/german-lemma";
 import { GermanSelectionSchema } from "./german/german-selection";
 import type {
@@ -41,15 +43,17 @@ export type Pos = z.infer<typeof PosSchema>;
 export type InherentFeatures = AbstractLemma<"Lexeme">["inherentFeatures"];
 export type UnknownSelection = AbstractSelectionFor<"Unknown">;
 
-export const TARGET_LANGUAGES = ["German"] as const;
+export const TARGET_LANGUAGES = ["German", "English"] as const;
 export const TargetLanguageSchema = z.enum(TARGET_LANGUAGES);
 export type TargetLanguage = keyof typeof LemmaSchema;
 
 export const SelectionSchema = {
+	English: EnglishSelectionSchema,
 	German: GermanSelectionSchema,
 } satisfies SelectionSchemaShape;
 
 export const LemmaSchema = {
+	English: EnglishLemmaSchema,
 	German: GermanLemmaSchema,
 } satisfies LemmaSchemaShape;
 

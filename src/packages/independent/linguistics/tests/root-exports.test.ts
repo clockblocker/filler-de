@@ -19,8 +19,9 @@ import {
 
 describe("root exports", () => {
 	it("exposes the curated native root surface", () => {
-		expect(TARGET_LANGUAGES).toEqual(["German"]);
+		expect(TARGET_LANGUAGES).toEqual(["German", "English"]);
 		expect(TargetLanguageSchema.parse("German")).toBe("German");
+		expect(TargetLanguageSchema.parse("English")).toBe("English");
 		expect(OrthographicStatus.Standard).toBe("Standard");
 		expect(SurfaceKind.Inflection).toBe("Inflection");
 		expect(LemmaKind.Lexeme).toBe("Lexeme");
@@ -34,6 +35,12 @@ describe("root exports", () => {
 		expect(LemmaSchema.German.Lexeme.NOUN).toBe(
 			LemmaSchema.German.Lexeme.NOUN,
 		);
+		expect(SelectionSchema.English.Standard.Inflection.Lexeme.NOUN).toBe(
+			SelectionSchema.English.Standard.Inflection.Lexeme.NOUN,
+		);
+		expect(LemmaSchema.English.Lexeme.NOUN).toBe(
+			LemmaSchema.English.Lexeme.NOUN,
+		);
 	});
 
 	it("supports ergonomic broad type aliases", () => {
@@ -44,6 +51,21 @@ describe("root exports", () => {
 			pos: "NOUN",
 		};
 		const unknownSelection: AnySelection<"German"> = {
+			orthographicStatus: "Unknown",
+		} satisfies UnknownSelection;
+
+		expect(lemma.pos).toBe("NOUN");
+		expect(unknownSelection.orthographicStatus).toBe("Unknown");
+	});
+
+	it("supports English in the broad type aliases", () => {
+		const lemma: AnyLemma<"English"> = {
+			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
+			lexicalRelations: {},
+			morphologicalRelations: {},
+			pos: "NOUN",
+		};
+		const unknownSelection: AnySelection<"English"> = {
 			orthographicStatus: "Unknown",
 		} satisfies UnknownSelection;
 
