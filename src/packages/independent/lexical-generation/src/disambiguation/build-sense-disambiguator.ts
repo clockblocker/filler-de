@@ -71,13 +71,13 @@ export function buildSenseDisambiguator(
 					parsedMetaTag,
 				};
 			})
-				.filter((candidate) => candidate !== null)
-				.filter(
-					(candidate) => candidate.parsedMetaTag.surfaceKind === "Lemma",
-				)
-				.filter((candidate) =>
-					matchesLemma(selection, candidate.parsedMetaTag),
-				);
+			.filter((candidate) => candidate !== null)
+			.filter(
+				(candidate) => candidate.parsedMetaTag.surfaceKind === "Lemma",
+			)
+			.filter((candidate) =>
+				matchesLemma(selection, candidate.parsedMetaTag),
+			);
 
 		if (matchingCandidates.length === 0) {
 			return ok<SenseMatchResult>({ kind: "new" });
@@ -98,31 +98,32 @@ export function buildSenseDisambiguator(
 			return ok<SenseMatchResult>({ kind: "new" });
 		}
 
-			const promptResult = await executePrompt(deps, "Disambiguate", {
-				context: attestation,
-				lemma: getSpelledLemma(selection) ?? "",
-				senses: promptCandidates.map((candidate) => ({
-					emojiDescription: candidate.emojiDescription ?? [],
-					genus: undefined,
-					index: candidate.promptIndex,
-					ipa: undefined,
-					pos:
-						candidate.parsedMetaTag.lemmaKind === "Lexeme"
-							? candidate.parsedMetaTag.discriminator
-							: undefined,
-					phrasemeKind:
-						candidate.parsedMetaTag.lemmaKind === "Phraseme"
-							? LEGACY_PHRASEME_KIND_FROM_NATIVE[
-									candidate.parsedMetaTag.discriminator as keyof typeof LEGACY_PHRASEME_KIND_FROM_NATIVE
-								]
-							: undefined,
-					senseGloss: undefined,
-					unitKind:
-						LEGACY_UNIT_KIND_FROM_NATIVE[
-							candidate.parsedMetaTag.lemmaKind
-						],
-				})),
-			});
+		const promptResult = await executePrompt(deps, "Disambiguate", {
+			context: attestation,
+			lemma: getSpelledLemma(selection) ?? "",
+			senses: promptCandidates.map((candidate) => ({
+				emojiDescription: candidate.emojiDescription ?? [],
+				genus: undefined,
+				index: candidate.promptIndex,
+				ipa: undefined,
+				phrasemeKind:
+					candidate.parsedMetaTag.lemmaKind === "Phraseme"
+						? LEGACY_PHRASEME_KIND_FROM_NATIVE[
+								candidate.parsedMetaTag
+									.discriminator as keyof typeof LEGACY_PHRASEME_KIND_FROM_NATIVE
+							]
+						: undefined,
+				pos:
+					candidate.parsedMetaTag.lemmaKind === "Lexeme"
+						? candidate.parsedMetaTag.discriminator
+						: undefined,
+				senseGloss: undefined,
+				unitKind:
+					LEGACY_UNIT_KIND_FROM_NATIVE[
+						candidate.parsedMetaTag.lemmaKind
+					],
+			})),
+		});
 		if (promptResult.isErr()) {
 			return err(promptResult.error);
 		}

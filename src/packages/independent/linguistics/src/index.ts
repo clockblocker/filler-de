@@ -21,9 +21,6 @@ export { MorphemeKind } from "./universal/enums/kind/morpheme-kind";
 import { PhrasemeKind as PhrasemeKindSchema } from "./universal/enums/kind/phraseme-kind";
 import { Pos as PosSchema } from "./universal/enums/kind/pos";
 
-export const TARGET_LANGUAGES = ["German"] as const;
-
-export const TargetLanguageSchema = z.enum(TARGET_LANGUAGES);
 export const OrthographicStatus = OrthographicStatusSchema.enum;
 export const SurfaceKind = SurfaceKindSchema.enum;
 export const LemmaKind = LemmaKindSchema.enum;
@@ -33,7 +30,6 @@ export const GrammaticalNumber = GrammaticalNumberSchema.enum;
 export const PhrasemeKind = PhrasemeKindSchema.enum;
 export const Pos = PosSchema.enum;
 
-export type TargetLanguage = keyof typeof LemmaSchema;
 export type OrthographicStatus = z.infer<typeof OrthographicStatusSchema>;
 export type SurfaceKind = z.infer<typeof SurfaceKindSchema>;
 export type LemmaKind = z.infer<typeof LemmaKindSchema>;
@@ -44,6 +40,10 @@ export type PhrasemeKind = z.infer<typeof PhrasemeKindSchema>;
 export type Pos = z.infer<typeof PosSchema>;
 export type InherentFeatures = AbstractLemma<"Lexeme">["inherentFeatures"];
 export type UnknownSelection = AbstractSelectionFor<"Unknown">;
+
+export const TARGET_LANGUAGES = ["German"] as const;
+export const TargetLanguageSchema = z.enum(TARGET_LANGUAGES);
+export type TargetLanguage = keyof typeof LemmaSchema;
 
 export const SelectionSchema = {
 	German: GermanSelectionSchema,

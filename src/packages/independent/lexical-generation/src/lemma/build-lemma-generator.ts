@@ -1,5 +1,5 @@
-import { err, ok } from "neverthrow";
 import { SelectionSchema } from "@textfresser/linguistics";
+import { err, ok } from "neverthrow";
 import { executePrompt } from "../internal/prompt-executor";
 import type {
 	CreateLexicalGenerationModuleParams,
@@ -58,12 +58,16 @@ function toResolvedSelection(output: {
 	};
 
 	if (output.linguisticUnit === "Lexem") {
-		const pos = POS_FROM_LEGACY[output.posLikeKind as keyof typeof POS_FROM_LEGACY];
+		const pos =
+			POS_FROM_LEGACY[output.posLikeKind as keyof typeof POS_FROM_LEGACY];
+
 		const rawSelection = {
 			...base,
 			surface: {
 				...base.surface,
-				...(surfaceKind === "Inflection" ? { inflectionalFeatures: {} } : {}),
+				...(surfaceKind === "Inflection"
+					? { inflectionalFeatures: {} }
+					: {}),
 				lemma: {
 					lemmaKind: "Lexeme" as const,
 					pos,
@@ -83,8 +87,10 @@ function toResolvedSelection(output: {
 		PHRASEME_KIND_FROM_LEGACY[
 			output.posLikeKind as keyof typeof PHRASEME_KIND_FROM_LEGACY
 		];
+
 	const phrasemeSurfaceKind =
 		surfaceKind === "Inflection" ? "Lemma" : surfaceKind;
+
 	const rawSelection = {
 		...base,
 		surface: {
@@ -154,15 +160,13 @@ export function buildSelectionResolver(
 		});
 
 		return ok(
-			toResolvedSelection(
-				{
-					...chooseBestEffortLemmaOutput({
-						first: firstEvaluation,
-						second: secondEvaluation,
-					}).output,
-					spelledSurface: selection,
-				},
-			),
+			toResolvedSelection({
+				...chooseBestEffortLemmaOutput({
+					first: firstEvaluation,
+					second: secondEvaluation,
+				}).output,
+				spelledSurface: selection,
+			}),
 		);
 	};
 }
