@@ -27,7 +27,7 @@ It relies on:
 ```ts
 type LingId = string & { readonly __brand: "LingId" };
 
-function toLingId(input: AnyLemma | AnySelection): LingId;
+function toLingId(input: AnyLemma | AnySelection): LingId | null;
 ```
 
 `LingId` is semantic and recomputable for the current identity policy generation.

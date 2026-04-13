@@ -1,4 +1,5 @@
 import z from "zod/v3";
+import type { TargetLanguage } from "../enums/core/language";
 import type {
 	OrthographicStatus,
 	SurfaceKind,
@@ -16,6 +17,7 @@ type BuildLemmaSelectionArgs<
 	LemmaExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 > = {
+	language: TargetLanguage;
 	lemmaIdentityShape: LemmaIdentityShape;
 	orthographicStatus?: OrthographicStatusLiteral;
 	surfaceKind?: SurfaceKindLiteral;
@@ -30,6 +32,7 @@ export function buildLemmaSelection<
 	LemmaExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 >({
+	language,
 	lemmaIdentityShape,
 	orthographicStatus = "Standard" as OrthographicStatusLiteral,
 	surfaceKind = "Lemma" as SurfaceKindLiteral,
@@ -46,6 +49,7 @@ export function buildLemmaSelection<
 		.object(lemmaIdentityShape)
 		.extend({
 			emojiDescription: EmojiDescriptionSchema.optional(),
+			language: z.literal(language),
 			spelledLemma: z.string(),
 		})
 		.extend(lemmaExtraShape);
@@ -57,6 +61,7 @@ export function buildLemmaSelection<
 	});
 
 	return z.object({
+		language: z.literal(language),
 		orthographicStatus: z.literal(orthographicStatus),
 		surface: surfaceSchema,
 	});

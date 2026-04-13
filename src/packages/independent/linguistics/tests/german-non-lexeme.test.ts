@@ -7,8 +7,10 @@ import { GermanPhrasemeLemmaSchemas } from "../src/german/lu/phraseme/german-phr
 describe("German non-lexeme schemas", () => {
 	it("exposes inferred morpheme and phraseme lemma types from the registry", () => {
 		const morpheme: Lemma<"German", "Morpheme", "Prefix"> = {
+			language: "German",
 			lexicalRelations: {},
 			morphemeKind: "Prefix",
+			spelledLemma: "ab-",
 		};
 		const phraseme: Selection<
 			"German",
@@ -17,10 +19,12 @@ describe("German non-lexeme schemas", () => {
 			"Phraseme",
 			"DiscourseFormula"
 		> = {
+			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
 				lemma: {
 					lemmaKind: "Phraseme",
+					language: "German",
 					phrasemeKind: "DiscourseFormula",
 					spelledLemma: "auf jeden Fall",
 				},
@@ -37,10 +41,12 @@ describe("German non-lexeme schemas", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
 			emojiDescription: ["🧩"],
 			isClosedSet: false,
+			language: "German",
 			lexicalRelations: {
 				synonym: ["ab-"],
 			},
 			morphemeKind: "Prefix",
+			spelledLemma: "ab-",
 		});
 
 		expect(result.success).toBe(true);
@@ -48,8 +54,10 @@ describe("German non-lexeme schemas", () => {
 
 	it("rejects wrong discriminants for German morpheme lemmas", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
+			language: "German",
 			lexicalRelations: {},
 			morphemeKind: "Suffix",
+			spelledLemma: "ab-",
 		});
 
 		expect(result.success).toBe(false);
@@ -59,13 +67,17 @@ describe("German non-lexeme schemas", () => {
 		const discourseFormulaResult =
 			GermanPhrasemeLemmaSchemas.DiscourseFormula.safeParse({
 				discourseFormulaRole: "Reaction",
+				language: "German",
 				lexicalRelations: {},
 				phrasemeKind: "DiscourseFormula",
+				spelledLemma: "auf jeden Fall",
 			});
 		const aphorismResult = GermanPhrasemeLemmaSchemas.Aphorism.safeParse({
 			discourseFormulaRole: "Reaction",
+			language: "German",
 			lexicalRelations: {},
 			phrasemeKind: "Aphorism",
+			spelledLemma: "Zeit ist Geld",
 		});
 
 		expect(discourseFormulaResult.success).toBe(true);
@@ -94,11 +106,13 @@ describe("German non-lexeme schemas", () => {
 	it("accepts German typo lemma selections for morphemes and phrasemes", () => {
 		const morphemeResult =
 			SelectionSchema.German.Typo.Lemma.Morpheme.Suffix.safeParse({
+				language: "German",
 				orthographicStatus: "Typo",
 				surface: {
 					lemma: {
 						emojiDescription: ["🧩"],
 						lemmaKind: "Morpheme",
+						language: "German",
 						morphemeKind: "Suffix",
 						spelledLemma: "-heit",
 					},
@@ -108,11 +122,13 @@ describe("German non-lexeme schemas", () => {
 			});
 		const phrasemeResult =
 			SelectionSchema.German.Typo.Lemma.Phraseme.Cliché.safeParse({
+				language: "German",
 				orthographicStatus: "Typo",
 				surface: {
 					lemma: {
 						emojiDescription: ["💬"],
 						lemmaKind: "Phraseme",
+						language: "German",
 						phrasemeKind: "Cliché",
 						spelledLemma: "Zeit ist Geld",
 					},

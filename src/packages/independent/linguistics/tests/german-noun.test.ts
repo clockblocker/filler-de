@@ -15,9 +15,11 @@ describe("German noun schemas", () => {
 			inherentFeatures: {
 				gender: "Neut",
 			},
+			language: "German",
 			lexicalRelations: {},
 			morphologicalRelations: {},
 			pos: "NOUN",
+			spelledLemma: "Kind",
 		};
 
 		expect(lemma.pos).toBe("NOUN");
@@ -25,6 +27,7 @@ describe("German noun schemas", () => {
 
 	it("accepts supported German noun inflectional features", () => {
 		const result = GermanNounInflectionSelectionSchema.safeParse({
+			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
 				inflectionalFeatures: {
@@ -34,6 +37,7 @@ describe("German noun schemas", () => {
 				lemma: {
 					emojiDescription: ["👶"],
 					lemmaKind: "Lexeme",
+					language: "German",
 					pos: "NOUN",
 					spelledLemma: "Kind",
 				},
@@ -47,6 +51,7 @@ describe("German noun schemas", () => {
 
 	it("rejects unsupported UD values for German noun inflection", () => {
 		const result = GermanNounInflectionSelectionSchema.safeParse({
+			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
 				inflectionalFeatures: {
@@ -55,6 +60,7 @@ describe("German noun schemas", () => {
 				},
 				lemma: {
 					lemmaKind: "Lexeme",
+					language: "German",
 					pos: "NOUN",
 					spelledLemma: "Kind",
 				},
@@ -72,6 +78,7 @@ describe("German noun schemas", () => {
 			inherentFeatures: {
 				gender: "Neut",
 			},
+			language: "German",
 			lexicalRelations: {
 				hypernym: ["Lebewesen"],
 				synonym: ["Nachkomme"],
@@ -81,6 +88,7 @@ describe("German noun schemas", () => {
 				sourceFor: ["Kindheit"],
 			},
 			pos: "NOUN",
+			spelledLemma: "Kind",
 		});
 
 		expect(result.success).toBe(true);
@@ -90,16 +98,20 @@ describe("German noun schemas", () => {
 		const lemmaResult = GermanNounLemmaSchema.safeParse({
 			emojiDescription: [],
 			inherentFeatures: {},
+			language: "German",
 			lexicalRelations: {},
 			morphologicalRelations: {},
 			pos: "NOUN",
+			spelledLemma: "Haus",
 		});
 		const selectionResult = GermanNounLemmaSelectionSchema.safeParse({
+			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
 				lemma: {
 					emojiDescription: ["house"],
 					lemmaKind: "Lexeme",
+					language: "German",
 					pos: "NOUN",
 					spelledLemma: "Haus",
 				},
@@ -117,9 +129,11 @@ describe("German noun schemas", () => {
 			inherentFeatures: {
 				case: "Nom",
 			},
+			language: "German",
 			lexicalRelations: {},
 			morphologicalRelations: {},
 			pos: "NOUN",
+			spelledLemma: "Kind",
 		});
 
 		expect(result.success).toBe(false);
@@ -127,10 +141,12 @@ describe("German noun schemas", () => {
 
 	it("accepts partial selections without inflectional features", () => {
 		const result = GermanNounStandardPartialSelectionSchema.safeParse({
+			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
 				lemma: {
 					lemmaKind: "Lexeme",
+					language: "German",
 					pos: "NOUN",
 					spelledLemma: "Hauptbahnhof",
 				},
@@ -144,6 +160,7 @@ describe("German noun schemas", () => {
 
 	it("accepts typo inflection selections with the typo discriminant", () => {
 		const result = GermanNounTypoInflectionSelectionSchema.safeParse({
+			language: "German",
 			orthographicStatus: "Typo",
 			surface: {
 				inflectionalFeatures: {
@@ -152,6 +169,7 @@ describe("German noun schemas", () => {
 				},
 				lemma: {
 					lemmaKind: "Lexeme",
+					language: "German",
 					pos: "NOUN",
 					spelledLemma: "Hund",
 				},
@@ -166,11 +184,13 @@ describe("German noun schemas", () => {
 	it("rejects duplicate relation targets", () => {
 		const result = GermanNounLemmaSchema.safeParse({
 			inherentFeatures: {},
+			language: "German",
 			lexicalRelations: {
 				synonym: ["Auto", "Auto"],
 			},
 			morphologicalRelations: {},
 			pos: "NOUN",
+			spelledLemma: "Auto",
 		});
 
 		expect(result.success).toBe(false);

@@ -21,6 +21,7 @@ import {
 } from "./lu/phraseme/german-phrasemes";
 
 const GermanUnknownSelectionSchema = z.object({
+	language: z.literal("German"),
 	orthographicStatus: z.literal("Unknown"),
 }) satisfies z.ZodType<AbstractSelectionFor<"Unknown">>;
 

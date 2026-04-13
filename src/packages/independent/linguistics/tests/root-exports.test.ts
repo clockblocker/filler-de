@@ -46,11 +46,14 @@ describe("root exports", () => {
 	it("supports ergonomic broad type aliases", () => {
 		const lemma: AnyLemma<"German"> = {
 			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
+			language: "German",
 			lexicalRelations: {},
 			morphologicalRelations: {},
 			pos: "NOUN",
+			spelledLemma: "Kind",
 		};
 		const unknownSelection: AnySelection<"German"> = {
+			language: "German",
 			orthographicStatus: "Unknown",
 		} satisfies UnknownSelection;
 
@@ -61,11 +64,14 @@ describe("root exports", () => {
 	it("supports English in the broad type aliases", () => {
 		const lemma: AnyLemma<"English"> = {
 			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
+			language: "English",
 			lexicalRelations: {},
 			morphologicalRelations: {},
 			pos: "NOUN",
+			spelledLemma: "dog",
 		};
 		const unknownSelection: AnySelection<"English"> = {
+			language: "English",
 			orthographicStatus: "Unknown",
 		} satisfies UnknownSelection;
 

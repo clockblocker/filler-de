@@ -18,20 +18,34 @@ const GermanNounLemmaIdentityShape = {
 	pos: z.literal("NOUN"),
 } satisfies z.ZodRawShape;
 
+export const GermanNounIdentityFeatureKeys = ["gender"] as const;
+
 export const GermanNounInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: GermanNounInflectionalFeaturesSchema,
+	language: "German",
+	lemmaExtraShape: {
+		inherentFeatures: GermanNounInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 }) satisfies z.ZodType<
 	AbstractSelectionFor<"Standard", "Inflection", "Lexeme", "NOUN">
 >;
 
 export const GermanNounLemmaSelectionSchema = buildLemmaSelection({
+	language: "German",
+	lemmaExtraShape: {
+		inherentFeatures: GermanNounInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 }) satisfies z.ZodType<
 	AbstractSelectionFor<"Standard", "Lemma", "Lexeme", "NOUN">
 >;
 
 export const GermanNounStandardPartialSelectionSchema = buildLemmaSelection({
+	language: "German",
+	lemmaExtraShape: {
+		inherentFeatures: GermanNounInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	surfaceKind: "Partial",
 }) satisfies z.ZodType<
@@ -39,6 +53,10 @@ export const GermanNounStandardPartialSelectionSchema = buildLemmaSelection({
 >;
 
 export const GermanNounStandardVariantSelectionSchema = buildLemmaSelection({
+	language: "German",
+	lemmaExtraShape: {
+		inherentFeatures: GermanNounInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	surfaceKind: "Variant",
 }) satisfies z.ZodType<
@@ -48,6 +66,10 @@ export const GermanNounStandardVariantSelectionSchema = buildLemmaSelection({
 export const GermanNounTypoInflectionSelectionSchema = buildInflectionSelection(
 	{
 		inflectionalFeaturesSchema: GermanNounInflectionalFeaturesSchema,
+		language: "German",
+		lemmaExtraShape: {
+			inherentFeatures: GermanNounInherentFeaturesSchema.optional(),
+		},
 		lemmaIdentityShape: GermanNounLemmaIdentityShape,
 		orthographicStatus: "Typo",
 	},
@@ -56,11 +78,19 @@ export const GermanNounTypoInflectionSelectionSchema = buildInflectionSelection(
 >;
 
 export const GermanNounTypoLemmaSelectionSchema = buildLemmaSelection({
+	language: "German",
+	lemmaExtraShape: {
+		inherentFeatures: GermanNounInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	orthographicStatus: "Typo",
 }) satisfies z.ZodType<AbstractSelectionFor<"Typo", "Lemma", "Lexeme", "NOUN">>;
 
 export const GermanNounTypoPartialSelectionSchema = buildLemmaSelection({
+	language: "German",
+	lemmaExtraShape: {
+		inherentFeatures: GermanNounInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	orthographicStatus: "Typo",
 	surfaceKind: "Partial",
@@ -69,6 +99,10 @@ export const GermanNounTypoPartialSelectionSchema = buildLemmaSelection({
 >;
 
 export const GermanNounTypoVariantSelectionSchema = buildLemmaSelection({
+	language: "German",
+	lemmaExtraShape: {
+		inherentFeatures: GermanNounInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	orthographicStatus: "Typo",
 	surfaceKind: "Variant",
@@ -79,7 +113,9 @@ export const GermanNounTypoVariantSelectionSchema = buildLemmaSelection({
 export const GermanNounLemmaSchema = z.object({
 	emojiDescription: EmojiDescriptionSchema.optional(),
 	inherentFeatures: GermanNounInherentFeaturesSchema,
+	language: z.literal("German"),
 	lexicalRelations: GermanNounLexicalRelationsSchema,
 	morphologicalRelations: GermanNounMorphologicalRelationsSchema,
 	pos: z.literal("NOUN"),
+	spelledLemma: z.string(),
 }) satisfies z.ZodType<AbstractLemma<"Lexeme", "NOUN">>;

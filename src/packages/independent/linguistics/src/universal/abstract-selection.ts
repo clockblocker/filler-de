@@ -1,9 +1,12 @@
 import type { Prettify } from "../../../../../types/helpers";
+import type { TargetLanguage } from "./enums/core/language";
 import type {
 	LemmaKind,
 	OrthographicStatus,
 	SurfaceKind,
 } from "./enums/core/selection";
+import type { IsSeparable } from "./enums/feature/custom/separable";
+import type { DiscourseFormulaRole } from "./enums/feature/custom/discourse-formula-role";
 import type { AbstractFeatures } from "./enums/feature/feature";
 import type {
 	LemmaDiscriminatorFor,
@@ -17,7 +20,11 @@ type LemmaFor<
 	? Prettify<
 			LemmaIdentityFieldsFor<LK, D> & {
 				emojiDescription?: string[];
+				discourseFormulaRole?: DiscourseFormulaRole;
+				inherentFeatures?: Partial<AbstractFeatures>;
+				language: TargetLanguage;
 				lemmaKind: LK;
+				separable?: IsSeparable;
 				spelledLemma: string;
 			}
 		>
@@ -50,6 +57,7 @@ export type AbstractSelectionFor<
 > = OS extends OrthographicStatus
 	? Prettify<
 			{
+				language: TargetLanguage;
 				orthographicStatus: OS;
 			} & (OS extends "Unknown"
 				? Record<never, never>

@@ -37,7 +37,7 @@ The public interface is intentionally small.
 ```ts
 export type LingId = string & { readonly __brand: "LingId" };
 
-export function toLingId(input: AnyLemma | AnySelection): LingId;
+export function toLingId(input: AnyLemma | AnySelection): LingId | null;
 ```
 
 Rules:
@@ -47,7 +47,7 @@ Rules:
 3. Callers must not parse, split, or interpret the returned string.
 4. The exact serialized string format is package-owned and may change during the clean-break phase.
 5. `toLingId` preserves the actual `surfaceKind`; it does not normalize everything to lemma identity.
-6. `toLingId` must fail loudly if the input is unknown or lacks identity-critical data.
+6. `toLingId` returns `null` if the input is unknown or lacks identity-critical data.
 
 Clean-break rule:
 
@@ -96,6 +96,18 @@ Source fields:
 
 For `AnySelection`, identity is derived from the selection surface plus its embedded lemma identity fields.
 
+## Runtime DTO prerequisites
+
+V1 requires identity-critical fields to exist in runtime DTO data.
+
+Rules:
+
+1. `toLingId` must not attempt to infer language from TypeScript generics.
+2. `toLingId` must not infer language from schema shape heuristics.
+3. `AnyLemma` must carry runtime `language` and `spelledLemma` in v1.
+4. `AnySelection` must carry runtime `language` in v1.
+5. If those runtime fields are absent, `toLingId` returns `null`.
+
 ## Surface normalization
 
 Surface normalization is intentionally minimal in v1.
@@ -109,6 +121,13 @@ Rules:
 5. No punctuation stripping is applied.
 6. No language-specific folding is applied.
 7. The normalized spelled surface is used for identity.
+8. If normalization produces the empty string, `toLingId` returns `null`.
+
+Typo-selection rule:
+
+1. Typo selections use the typo surface exactly as carried in `selection.surface.spelledSurface`.
+2. Typo selections do not normalize to a corrected standard form.
+3. A typo selection and a standard selection therefore produce different `LingId` values when their normalized surfaces differ.
 
 ## Emoji semantics
 
@@ -160,12 +179,19 @@ type IdentityFeaturePolicy = {
 };
 ```
 
-Examples:
+Declaration rule:
 
-1. German lexeme noun may include `gender`.
-2. German lexeme verb may include `separable`.
-3. English packs may declare no extra identity features for many discriminators.
-4. Future language packs may introduce different identity feature subsets without changing the public API.
+1. Each language/discriminator bundle should declare `identityFeatureKeys` next to its feature schema definition.
+2. `@textfresser/linguistics` assembles an internal registry from those bundle exports.
+3. There is no separate public policy API in v1.
+
+Initial v1 policy:
+
+1. German `Lexeme` + `NOUN` => `gender`
+2. German `Lexeme` + `VERB` => `separable`
+3. German `Morpheme` + `Prefix` => `separable`
+4. Everything else => no identity features
+5. `discourseFormulaRole` does not participate in identity in v1
 
 ## Normalization pipeline
 
@@ -175,11 +201,12 @@ Examples:
 2. Normalize the spelled surface.
 3. Extract the internal normalized identity primitive.
 4. For `AnySelection`, use selection `surface` and `surfaceKind`, and use embedded lemma data for `unitKind`, discriminator, `emojiDescription`, and identity-feature source.
-5. If selection surface data and embedded lemma identity data are structurally inconsistent, fail.
-6. Normalize `emojiDescription` as a set.
-7. Pick only the pack-declared identity feature subset.
-8. Canonicalize identity-feature key ordering.
-9. Serialize the normalized primitive into an opaque `LingId`.
+5. If `orthographicStatus === "Standard"` and `surfaceKind === "Lemma"` and normalized `selection.surface.spelledSurface !== selection.surface.lemma.spelledLemma`, return `null`.
+6. Differences between surface and lemma are otherwise allowed and expected for inflections, variants, partials, and typo selections.
+7. Normalize `emojiDescription` as a set.
+8. Pick only the pack-declared identity feature subset.
+9. Canonicalize identity-feature key ordering.
+10. Serialize the normalized primitive into an opaque `LingId`.
 
 The public function is the only supported normalization boundary in v1.
 
@@ -206,29 +233,17 @@ That excludes:
 5. raw metadata carrier format
 6. non-declared linguistic features
 
-## Failure behavior
+## Null-return behavior
 
-`toLingId` must fail loudly rather than inventing partial identity.
+`toLingId` returns `null` rather than inventing partial identity.
 
-V1 failure cases include:
+V1 null-return cases include:
 
 1. unknown selections
 2. missing discriminator data
 3. missing surface data
 4. malformed identity-feature values after normalization
-
-API rule:
-
-1. `toLingId` throws `LinguisticIdentityError`.
-2. The error should carry a stable machine-readable reason code.
-
-Minimum v1 reason codes:
-
-1. `unknown_selection`
-2. `missing_surface`
-3. `missing_discriminator`
-4. `inconsistent_selection_identity`
-5. `invalid_identity_feature`
+5. inconsistent selection identity
 
 Unknown-selection rule:
 

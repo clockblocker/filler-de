@@ -14,16 +14,26 @@ import {
 	OrthographicStatus as OrthographicStatusSchema,
 	SurfaceKind as SurfaceKindSchema,
 } from "./universal/enums/core/selection";
+import {
+	TARGET_LANGUAGES,
+	TargetLanguageSchema,
+	type TargetLanguage,
+} from "./universal/enums/core/language";
 import { Case as CaseSchema } from "./universal/enums/feature/ud/case";
 import { Gender as GenderSchema } from "./universal/enums/feature/ud/gender";
 import { GrammaticalNumber as GrammaticalNumberSchema } from "./universal/enums/feature/ud/number";
 import { MorphemeKindSchema } from "./universal/enums/kind/morpheme-kind";
 import { PhrasemeKind as PhrasemeKindSchema } from "./universal/enums/kind/phraseme-kind";
 import { Pos as PosSchema } from "./universal/enums/kind/pos";
+export { toLingId, type LingId } from "./ling-id";
 
 export {
 	Case as CaseSchema,
 } from "./universal/enums/feature/ud/case";
+export {
+	TARGET_LANGUAGES,
+	TargetLanguageSchema,
+} from "./universal/enums/core/language";
 export {
 	Gender as GenderSchema,
 } from "./universal/enums/feature/ud/gender";
@@ -65,10 +75,6 @@ export const NativeDiscriminatorSchema = z.union([
 	PhrasemeKindSchema,
 	MorphemeKindSchema,
 ]);
-
-export const TARGET_LANGUAGES = ["German", "English"] as const;
-export const TargetLanguageSchema = z.enum(TARGET_LANGUAGES);
-export type TargetLanguage = keyof typeof LemmaSchema;
 
 export const SelectionSchema = {
 	English: EnglishSelectionSchema,

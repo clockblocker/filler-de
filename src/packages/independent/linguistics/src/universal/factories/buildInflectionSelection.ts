@@ -1,4 +1,5 @@
 import z from "zod/v3";
+import type { TargetLanguage } from "../enums/core/language";
 import type { OrthographicStatus } from "../enums/core/selection";
 import { EmojiDescriptionSchema } from "../emoji-description";
 
@@ -13,6 +14,7 @@ type BuildInflectionSelectionArgs<
 	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 > = {
 	inflectionalFeaturesSchema: InflectionalFeaturesSchema;
+	language: TargetLanguage;
 	lemmaIdentityShape: LemmaIdentityShape;
 	orthographicStatus?: OrthographicStatusLiteral;
 	lemmaExtraShape?: LemmaExtraShape;
@@ -27,6 +29,7 @@ export function buildInflectionSelection<
 	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 >({
 	inflectionalFeaturesSchema,
+	language,
 	lemmaIdentityShape,
 	orthographicStatus = "Standard" as OrthographicStatusLiteral,
 	lemmaExtraShape = {} as LemmaExtraShape,
@@ -42,6 +45,7 @@ export function buildInflectionSelection<
 		.object(lemmaIdentityShape)
 		.extend({
 			emojiDescription: EmojiDescriptionSchema.optional(),
+			language: z.literal(language),
 			spelledLemma: z.string(),
 		})
 		.extend(lemmaExtraShape);
@@ -54,6 +58,7 @@ export function buildInflectionSelection<
 	});
 
 	return z.object({
+		language: z.literal(language),
 		orthographicStatus: z.literal(orthographicStatus),
 		surface: surfaceSchema,
 	});

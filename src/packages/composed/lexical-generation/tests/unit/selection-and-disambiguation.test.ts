@@ -171,6 +171,7 @@ describe("lexical-generation-next selection/disambiguation", () => {
 		const result = createLexicalMeta({
 			emojiDescription: ["❓"],
 			selection: {
+				language: "German",
 				orthographicStatus: "Unknown",
 			},
 		});

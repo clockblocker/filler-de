@@ -33,6 +33,7 @@ describe("English schema specificity", () => {
 	it("keeps English adjective inflection to degree and adpositions uninflected", () => {
 		expect(
 			EnglishAdjectiveInflectionSelectionSchema.safeParse({
+				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
 					inflectionalFeatures: {
@@ -40,6 +41,7 @@ describe("English schema specificity", () => {
 					},
 					lemma: {
 						lemmaKind: "Lexeme",
+						language: "English",
 						pos: "ADJ",
 						spelledLemma: "small",
 					},
@@ -51,6 +53,7 @@ describe("English schema specificity", () => {
 
 		expect(
 			EnglishAdjectiveInflectionSelectionSchema.safeParse({
+				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
 					inflectionalFeatures: {
@@ -58,6 +61,7 @@ describe("English schema specificity", () => {
 					},
 					lemma: {
 						lemmaKind: "Lexeme",
+						language: "English",
 						pos: "ADJ",
 						spelledLemma: "small",
 					},
@@ -69,6 +73,7 @@ describe("English schema specificity", () => {
 
 		expect(
 			EnglishAdpositionInflectionSelectionSchema.safeParse({
+				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
 					inflectionalFeatures: {
@@ -76,6 +81,7 @@ describe("English schema specificity", () => {
 					},
 					lemma: {
 						lemmaKind: "Lexeme",
+						language: "English",
 						pos: "ADP",
 						spelledLemma: "to",
 					},
@@ -89,6 +95,7 @@ describe("English schema specificity", () => {
 	it("limits English NOUN and PROPN case to genitive and drops grammatical gender", () => {
 		expect(
 			EnglishNounInflectionSelectionSchema.safeParse({
+				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
 					inflectionalFeatures: {
@@ -97,6 +104,7 @@ describe("English schema specificity", () => {
 					},
 					lemma: {
 						lemmaKind: "Lexeme",
+						language: "English",
 						pos: "NOUN",
 						spelledLemma: "dog",
 					},
@@ -108,6 +116,7 @@ describe("English schema specificity", () => {
 
 		expect(
 			EnglishNounInflectionSelectionSchema.safeParse({
+				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
 					inflectionalFeatures: {
@@ -115,6 +124,7 @@ describe("English schema specificity", () => {
 					},
 					lemma: {
 						lemmaKind: "Lexeme",
+						language: "English",
 						pos: "NOUN",
 						spelledLemma: "dog",
 					},
@@ -126,6 +136,7 @@ describe("English schema specificity", () => {
 
 		expect(
 			EnglishProperNounInflectionSelectionSchema.safeParse({
+				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
 					inflectionalFeatures: {
@@ -133,6 +144,7 @@ describe("English schema specificity", () => {
 					},
 					lemma: {
 						lemmaKind: "Lexeme",
+						language: "English",
 						pos: "PROPN",
 						spelledLemma: "Anna",
 					},
@@ -147,9 +159,11 @@ describe("English schema specificity", () => {
 				inherentFeatures: {
 					gender: "Masc",
 				},
+				language: "English",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "NOUN",
+				spelledLemma: "dog",
 			}).success,
 		).toBe(false);
 
@@ -158,9 +172,11 @@ describe("English schema specificity", () => {
 				inherentFeatures: {
 					gender: "Fem",
 				},
+				language: "English",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "PROPN",
+				spelledLemma: "Anna",
 			}).success,
 		).toBe(false);
 	});
@@ -168,6 +184,7 @@ describe("English schema specificity", () => {
 	it("removes German-specific verb and auxiliary morphology from English", () => {
 		expect(
 			EnglishVerbInflectionSelectionSchema.safeParse({
+				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
 					inflectionalFeatures: {
@@ -175,6 +192,7 @@ describe("English schema specificity", () => {
 					},
 					lemma: {
 						lemmaKind: "Lexeme",
+						language: "English",
 						pos: "VERB",
 						spelledLemma: "wash",
 					},
@@ -186,6 +204,7 @@ describe("English schema specificity", () => {
 
 		expect(
 			EnglishAuxiliaryInflectionSelectionSchema.safeParse({
+				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
 					inflectionalFeatures: {
@@ -193,6 +212,7 @@ describe("English schema specificity", () => {
 					},
 					lemma: {
 						lemmaKind: "Lexeme",
+						language: "English",
 						pos: "AUX",
 						spelledLemma: "be",
 					},
@@ -207,9 +227,11 @@ describe("English schema specificity", () => {
 				inherentFeatures: {
 					reflex: true,
 				},
+				language: "English",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "VERB",
+				spelledLemma: "wash",
 			}).success,
 		).toBe(false);
 
@@ -218,9 +240,11 @@ describe("English schema specificity", () => {
 				inherentFeatures: {
 					separable: true,
 				},
+				language: "English",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "VERB",
+				spelledLemma: "wash",
 			}).success,
 		).toBe(false);
 	});
@@ -228,6 +252,7 @@ describe("English schema specificity", () => {
 	it("keeps English pronoun case narrow and rejects polite pronoun or determiner features", () => {
 		expect(
 			EnglishPronounInflectionSelectionSchema.safeParse({
+				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
 					inflectionalFeatures: {
@@ -235,6 +260,7 @@ describe("English schema specificity", () => {
 					},
 					lemma: {
 						lemmaKind: "Lexeme",
+						language: "English",
 						pos: "PRON",
 						spelledLemma: "him",
 					},
@@ -246,6 +272,7 @@ describe("English schema specificity", () => {
 
 		expect(
 			EnglishPronounInflectionSelectionSchema.safeParse({
+				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
 					inflectionalFeatures: {
@@ -253,6 +280,7 @@ describe("English schema specificity", () => {
 					},
 					lemma: {
 						lemmaKind: "Lexeme",
+						language: "English",
 						pos: "PRON",
 						spelledLemma: "him",
 					},
@@ -267,9 +295,11 @@ describe("English schema specificity", () => {
 				inherentFeatures: {
 					polite: "Form",
 				},
+				language: "English",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "PRON",
+				spelledLemma: "him",
 			}).success,
 		).toBe(false);
 
@@ -278,14 +308,17 @@ describe("English schema specificity", () => {
 				inherentFeatures: {
 					polite: "Form",
 				},
+				language: "English",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "DET",
+				spelledLemma: "this",
 			}).success,
 		).toBe(false);
 
 		expect(
 			EnglishDeterminerInflectionSelectionSchema.safeParse({
+				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
 					inflectionalFeatures: {
@@ -293,6 +326,7 @@ describe("English schema specificity", () => {
 					},
 					lemma: {
 						lemmaKind: "Lexeme",
+						language: "English",
 						pos: "DET",
 						spelledLemma: "this",
 					},

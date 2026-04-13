@@ -1,6 +1,7 @@
 import z from "zod/v3";
 import type { AbstractLemma } from "../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
+import { IsSeparable } from "../../../../universal/enums/feature/custom/separable";
 import type { MorphemeKind } from "../../../../universal/enums/kind/morpheme-kind";
 import { EmojiDescriptionSchema } from "../../../../universal/emoji-description";
 import { AbstractLexicalRelationsSchema } from "../../../../universal/enums/relation/relation";
@@ -31,14 +32,32 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 			.object({
 				emojiDescription: EmojiDescriptionSchema.optional(),
 				isClosedSet: z.boolean().optional(),
+				language: z.literal("German"),
 				lexicalRelations: AbstractLexicalRelationsSchema,
 				morphemeKind: z.literal(morphemeKind),
+				separable:
+					morphemeKind === "Prefix" ? IsSeparable.optional() : z.undefined().optional(),
+				spelledLemma: z.string(),
 			})
 			.strict() as unknown as GermanMorphemeBundle<MK>["LemmaSchema"],
 		StandardLemmaSelectionSchema: buildLemmaSelection({
+			language: "German",
+			lemmaExtraShape:
+				morphemeKind === "Prefix"
+					? {
+							separable: IsSeparable.optional(),
+						}
+					: {},
 			lemmaIdentityShape,
 		}) as unknown as GermanMorphemeBundle<MK>["StandardLemmaSelectionSchema"],
 		TypoLemmaSelectionSchema: buildLemmaSelection({
+			language: "German",
+			lemmaExtraShape:
+				morphemeKind === "Prefix"
+					? {
+							separable: IsSeparable.optional(),
+						}
+					: {},
 			lemmaIdentityShape,
 			orthographicStatus: "Typo",
 		}) as unknown as GermanMorphemeBundle<MK>["TypoLemmaSelectionSchema"],

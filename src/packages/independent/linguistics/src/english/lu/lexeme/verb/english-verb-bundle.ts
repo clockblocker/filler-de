@@ -20,18 +20,30 @@ const EnglishVerbLemmaIdentityShape = {
 
 export const EnglishVerbInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: EnglishVerbInflectionalFeaturesSchema,
+	language: "English",
+	lemmaExtraShape: {
+		inherentFeatures: EnglishVerbInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: EnglishVerbLemmaIdentityShape,
 }) satisfies z.ZodType<
 	AbstractSelectionFor<"Standard", "Inflection", "Lexeme", "VERB">
 >;
 
 export const EnglishVerbLemmaSelectionSchema = buildLemmaSelection({
+	language: "English",
+	lemmaExtraShape: {
+		inherentFeatures: EnglishVerbInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: EnglishVerbLemmaIdentityShape,
 }) satisfies z.ZodType<
 	AbstractSelectionFor<"Standard", "Lemma", "Lexeme", "VERB">
 >;
 
 export const EnglishVerbStandardPartialSelectionSchema = buildLemmaSelection({
+	language: "English",
+	lemmaExtraShape: {
+		inherentFeatures: EnglishVerbInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: EnglishVerbLemmaIdentityShape,
 	surfaceKind: "Partial",
 }) satisfies z.ZodType<
@@ -39,6 +51,10 @@ export const EnglishVerbStandardPartialSelectionSchema = buildLemmaSelection({
 >;
 
 export const EnglishVerbStandardVariantSelectionSchema = buildLemmaSelection({
+	language: "English",
+	lemmaExtraShape: {
+		inherentFeatures: EnglishVerbInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: EnglishVerbLemmaIdentityShape,
 	surfaceKind: "Variant",
 }) satisfies z.ZodType<
@@ -48,6 +64,10 @@ export const EnglishVerbStandardVariantSelectionSchema = buildLemmaSelection({
 export const EnglishVerbTypoInflectionSelectionSchema = buildInflectionSelection(
 	{
 		inflectionalFeaturesSchema: EnglishVerbInflectionalFeaturesSchema,
+		language: "English",
+		lemmaExtraShape: {
+			inherentFeatures: EnglishVerbInherentFeaturesSchema.optional(),
+		},
 		lemmaIdentityShape: EnglishVerbLemmaIdentityShape,
 		orthographicStatus: "Typo",
 	},
@@ -56,6 +76,10 @@ export const EnglishVerbTypoInflectionSelectionSchema = buildInflectionSelection
 >;
 
 export const EnglishVerbTypoLemmaSelectionSchema = buildLemmaSelection({
+	language: "English",
+	lemmaExtraShape: {
+		inherentFeatures: EnglishVerbInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: EnglishVerbLemmaIdentityShape,
 	orthographicStatus: "Typo",
 }) satisfies z.ZodType<
@@ -63,6 +87,10 @@ export const EnglishVerbTypoLemmaSelectionSchema = buildLemmaSelection({
 >;
 
 export const EnglishVerbTypoPartialSelectionSchema = buildLemmaSelection({
+	language: "English",
+	lemmaExtraShape: {
+		inherentFeatures: EnglishVerbInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: EnglishVerbLemmaIdentityShape,
 	orthographicStatus: "Typo",
 	surfaceKind: "Partial",
@@ -71,6 +99,10 @@ export const EnglishVerbTypoPartialSelectionSchema = buildLemmaSelection({
 >;
 
 export const EnglishVerbTypoVariantSelectionSchema = buildLemmaSelection({
+	language: "English",
+	lemmaExtraShape: {
+		inherentFeatures: EnglishVerbInherentFeaturesSchema.optional(),
+	},
 	lemmaIdentityShape: EnglishVerbLemmaIdentityShape,
 	orthographicStatus: "Typo",
 	surfaceKind: "Variant",
@@ -81,7 +113,9 @@ export const EnglishVerbTypoVariantSelectionSchema = buildLemmaSelection({
 export const EnglishVerbLemmaSchema = z.object({
 	emojiDescription: EmojiDescriptionSchema.optional(),
 	inherentFeatures: EnglishVerbInherentFeaturesSchema,
+	language: z.literal("English"),
 	lexicalRelations: EnglishVerbLexicalRelationsSchema,
 	morphologicalRelations: EnglishVerbMorphologicalRelationsSchema,
 	pos: z.literal("VERB"),
+	spelledLemma: z.string(),
 }) satisfies z.ZodType<AbstractLemma<"Lexeme", "VERB">>;

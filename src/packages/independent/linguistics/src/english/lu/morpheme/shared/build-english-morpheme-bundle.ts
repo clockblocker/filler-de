@@ -31,14 +31,18 @@ export function buildEnglishMorphemeBundle<MK extends MorphemeKind>({
 			.object({
 				emojiDescription: EmojiDescriptionSchema.optional(),
 				isClosedSet: z.boolean().optional(),
+				language: z.literal("English"),
 				lexicalRelations: AbstractLexicalRelationsSchema,
 				morphemeKind: z.literal(morphemeKind),
+				spelledLemma: z.string(),
 			})
 			.strict() as unknown as EnglishMorphemeBundle<MK>["LemmaSchema"],
 		StandardLemmaSelectionSchema: buildLemmaSelection({
+			language: "English",
 			lemmaIdentityShape,
 		}) as unknown as EnglishMorphemeBundle<MK>["StandardLemmaSelectionSchema"],
 		TypoLemmaSelectionSchema: buildLemmaSelection({
+			language: "English",
 			lemmaIdentityShape,
 			orthographicStatus: "Typo",
 		}) as unknown as EnglishMorphemeBundle<MK>["TypoLemmaSelectionSchema"],

@@ -104,6 +104,7 @@ function toResolvedSelection(
 	if (output.orthographicStatus === "Unknown") {
 		return {
 			contextWithLinkedParts: output.contextWithLinkedParts ?? attestation,
+			language: "German",
 			orthographicStatus: "Unknown",
 		};
 	}
@@ -115,6 +116,7 @@ function toResolvedSelection(
 	const orthographicStatus = (output.orthographicStatus ?? "Standard") as KnownOrthographicStatus;
 	const base = {
 		contextWithLinkedParts: output.contextWithLinkedParts ?? attestation,
+		language: "German" as const,
 		orthographicStatus,
 		surface: {
 			spelledSurface: selection,
@@ -136,6 +138,7 @@ function toResolvedSelection(
 					: {}),
 				lemma: {
 					lemmaKind: "Lexeme" as const,
+					language: "German" as const,
 					pos: output.discriminator,
 					spelledLemma: output.spelledLemma,
 				},
@@ -166,6 +169,7 @@ function toResolvedSelection(
 				...base.surface,
 				lemma: {
 					lemmaKind: "Phraseme" as const,
+					language: "German" as const,
 					phrasemeKind: output.discriminator,
 					spelledLemma: output.spelledLemma,
 				},

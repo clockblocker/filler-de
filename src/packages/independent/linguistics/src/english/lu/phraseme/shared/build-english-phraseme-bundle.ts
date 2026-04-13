@@ -23,8 +23,10 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 			.object({
 				discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
 				emojiDescription: EmojiDescriptionSchema.optional(),
+				language: z.literal("English"),
 				lexicalRelations: AbstractLexicalRelationsSchema,
 				phrasemeKind: z.literal(phrasemeKind),
+				spelledLemma: z.string(),
 			})
 			.strict() as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
 	}
@@ -32,8 +34,10 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 	return z
 		.object({
 			emojiDescription: EmojiDescriptionSchema.optional(),
+			language: z.literal("English"),
 			lexicalRelations: AbstractLexicalRelationsSchema,
 			phrasemeKind: z.literal(phrasemeKind),
+			spelledLemma: z.string(),
 		})
 		.strict() as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
 }
@@ -51,9 +55,11 @@ export function buildEnglishPhrasemeBundle<PK extends PhrasemeKind>({
 	return {
 		LemmaSchema: buildPhrasemeLemmaSchema(phrasemeKind),
 		StandardLemmaSelectionSchema: buildLemmaSelection({
+			language: "English",
 			lemmaIdentityShape,
 		}) as unknown as EnglishPhrasemeBundle<PK>["StandardLemmaSelectionSchema"],
 		TypoLemmaSelectionSchema: buildLemmaSelection({
+			language: "English",
 			lemmaIdentityShape,
 			orthographicStatus: "Typo",
 		}) as unknown as EnglishPhrasemeBundle<PK>["TypoLemmaSelectionSchema"],

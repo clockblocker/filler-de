@@ -67,11 +67,13 @@ export function makeLexemeSelection(params: {
 	const spelledSurface = params.spelledSurface ?? lemma;
 	const rawSelection = {
 		contextWithLinkedParts: params.contextWithLinkedParts,
+		language: "German" as const,
 		orthographicStatus: "Standard" as const,
 		surface: {
 			...(surfaceKind === "Inflection" ? { inflectionalFeatures: {} } : {}),
 			lemma: {
 				lemmaKind: "Lexeme" as const,
+				language: "German" as const,
 				pos,
 				spelledLemma: lemma,
 			},
@@ -96,10 +98,12 @@ export function makePhrasemeSelection(params: {
 	const spelledSurface = params.spelledSurface ?? lemma;
 	const rawSelection = {
 		contextWithLinkedParts: params.contextWithLinkedParts,
+		language: "German" as const,
 		orthographicStatus: "Standard" as const,
 		surface: {
 			lemma: {
 				lemmaKind: "Phraseme" as const,
+				language: "German" as const,
 				phrasemeKind,
 				spelledLemma: lemma,
 			},

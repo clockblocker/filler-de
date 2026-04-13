@@ -12,6 +12,7 @@ import { getInverseMorphologicalRelation } from "../src/universal/enums/relation
 describe("German verb schemas", () => {
 	it("accepts supported German verb inflectional features", () => {
 		const result = GermanVerbInflectionSelectionSchema.safeParse({
+			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
 				inflectionalFeatures: {
@@ -23,6 +24,7 @@ describe("German verb schemas", () => {
 				},
 				lemma: {
 					lemmaKind: "Lexeme",
+					language: "German",
 					pos: "VERB",
 					spelledLemma: "gehen",
 				},
@@ -36,6 +38,7 @@ describe("German verb schemas", () => {
 
 	it("rejects unsupported UD values for German verb inflection", () => {
 		const result = GermanVerbInflectionSelectionSchema.safeParse({
+			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
 				inflectionalFeatures: {
@@ -47,6 +50,7 @@ describe("German verb schemas", () => {
 				},
 				lemma: {
 					lemmaKind: "Lexeme",
+					language: "German",
 					pos: "VERB",
 					spelledLemma: "gehen",
 				},
@@ -64,6 +68,7 @@ describe("German verb schemas", () => {
 				reflex: true,
 				separable: false,
 			},
+			language: "German",
 			lexicalRelations: {
 				hypernym: ["Fortbewegung"],
 				synonym: ["laufen"],
@@ -73,6 +78,7 @@ describe("German verb schemas", () => {
 				sourceFor: ["Ausgang"],
 			},
 			pos: "VERB",
+			spelledLemma: "gehen",
 		});
 
 		expect(result.success).toBe(true);
@@ -83,9 +89,11 @@ describe("German verb schemas", () => {
 			inherentFeatures: {
 				mood: "Ind",
 			},
+			language: "German",
 			lexicalRelations: {},
 			morphologicalRelations: {},
 			pos: "VERB",
+			spelledLemma: "gehen",
 		});
 
 		expect(result.success).toBe(false);
@@ -93,10 +101,12 @@ describe("German verb schemas", () => {
 
 	it("accepts partial selections without inflectional features", () => {
 		const result = GermanVerbStandardPartialSelectionSchema.safeParse({
+			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
 				lemma: {
 					lemmaKind: "Lexeme",
+					language: "German",
 					pos: "VERB",
 					spelledLemma: "spazieren gehen",
 				},
@@ -110,6 +120,7 @@ describe("German verb schemas", () => {
 
 	it("accepts typo inflection selections with the typo discriminant", () => {
 		const result = GermanVerbTypoInflectionSelectionSchema.safeParse({
+			language: "German",
 			orthographicStatus: "Typo",
 			surface: {
 				inflectionalFeatures: {
@@ -121,6 +132,7 @@ describe("German verb schemas", () => {
 				},
 				lemma: {
 					lemmaKind: "Lexeme",
+					language: "German",
 					pos: "VERB",
 					spelledLemma: "gehen",
 				},
@@ -134,6 +146,7 @@ describe("German verb schemas", () => {
 
 	it("accepts unknown selections without a surface", () => {
 		const result = SelectionSchema.German.Unknown.safeParse({
+			language: "German",
 			orthographicStatus: "Unknown",
 		});
 
@@ -143,11 +156,13 @@ describe("German verb schemas", () => {
 	it("rejects duplicate relation targets", () => {
 		const result = GermanVerbLemmaSchema.safeParse({
 			inherentFeatures: {},
+			language: "German",
 			lexicalRelations: {
 				synonym: ["laufen", "laufen"],
 			},
 			morphologicalRelations: {},
 			pos: "VERB",
+			spelledLemma: "laufen",
 		});
 
 		expect(result.success).toBe(false);

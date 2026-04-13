@@ -18,11 +18,13 @@ export function makeLexemeSelection(params: {
 	const spelledSurface = params.spelledSurface ?? params.lemma;
 	const rawSelection = {
 		contextWithLinkedParts: `${spelledSurface} im Kontext`,
+		language: "German" as const,
 		orthographicStatus: "Standard" as const,
 		surface: {
 			...(surfaceKind === "Inflection" ? { inflectionalFeatures: {} } : {}),
 			lemma: {
 				lemmaKind: "Lexeme" as const,
+				language: "German" as const,
 				pos: params.pos,
 				spelledLemma: params.lemma,
 			},

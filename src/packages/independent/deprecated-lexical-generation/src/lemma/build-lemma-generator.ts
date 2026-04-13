@@ -50,6 +50,7 @@ function toResolvedSelection(output: {
 	const surfaceKind = SURFACE_KIND_FROM_LEGACY[output.surfaceKind];
 	const base = {
 		contextWithLinkedParts: output.contextWithLinkedParts,
+		language: "German" as const,
 		orthographicStatus: "Standard" as const,
 		surface: {
 			spelledSurface: output.spelledSurface,
@@ -70,6 +71,7 @@ function toResolvedSelection(output: {
 					: {}),
 				lemma: {
 					lemmaKind: "Lexeme" as const,
+					language: "German" as const,
 					pos,
 					spelledLemma: output.lemma,
 				},
@@ -94,6 +96,7 @@ function toResolvedSelection(output: {
 			...base.surface,
 			lemma: {
 				lemmaKind: "Phraseme" as const,
+				language: "German" as const,
 				phrasemeKind,
 				spelledLemma: output.lemma,
 			},
