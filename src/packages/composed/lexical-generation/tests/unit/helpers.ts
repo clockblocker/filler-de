@@ -47,5 +47,5 @@ export function makeLexemeMeta(params: {
 			lemma: params.lemma,
 			pos: params.pos,
 		}),
-	});
+	})._unsafeUnwrap();
 }

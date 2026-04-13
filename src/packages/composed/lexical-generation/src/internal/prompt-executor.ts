@@ -1,5 +1,4 @@
-import { err, type Result } from "neverthrow";
-import type { z } from "zod/v3";
+import { err, ok, type Result } from "neverthrow";
 import {
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,
@@ -55,13 +54,31 @@ export async function executePrompt<TInput, TOutput>(
 	input: TInput,
 ): Promise<Result<TOutput, import("../errors").LexicalGenerationError>> {
 	try {
-		return await deps.fetchStructured<TOutput>({
+		const transportResult = await deps.fetchStructured({
 			requestLabel: prompt.requestLabel,
-			schema: prompt.outputSchema as z.ZodType<TOutput>,
 			systemPrompt: prompt.systemPrompt,
 			userInput: JSON.stringify(input),
 			withCache: true,
 		});
+		if (transportResult.isErr()) {
+			return err(transportResult.error);
+		}
+
+		const parsed = prompt.outputSchema.safeParse(transportResult.value);
+		if (!parsed.success) {
+			return err(
+				lexicalGenerationError(
+					LexicalGenerationFailureKind.InvalidModelOutput,
+					`Invalid model output for ${prompt.requestLabel}`,
+					{
+						issues: parsed.error.issues,
+						requestLabel: prompt.requestLabel,
+					},
+				),
+			);
+		}
+
+		return ok(parsed.data);
 	} catch (error) {
 		return err(
 			lexicalGenerationError(

@@ -1,3 +1,9 @@
+import { err, ok, type Result } from "neverthrow";
+import {
+	LexicalGenerationFailureKind,
+	lexicalGenerationError,
+	type LexicalGenerationError,
+} from "./errors";
 import type { LexicalIdentity, LexicalMeta, ResolvedSelection } from "./public-types";
 import {
 	getLemmaKind,
@@ -33,17 +39,22 @@ export function createLexicalMeta(params: {
 	emojiDescription: string[];
 	selection: ResolvedSelection;
 	options?: { normalizeToLemma?: boolean };
-}): LexicalMeta {
+}): Result<LexicalMeta, LexicalGenerationError> {
 	const identity = createLexicalIdentityFromSelection(
 		params.selection,
 		params.options,
 	);
 	if (!identity) {
-		throw new Error("Cannot create LexicalMeta from an unknown selection");
+		return err(
+			lexicalGenerationError(
+				LexicalGenerationFailureKind.InvalidSelection,
+				"Cannot create LexicalMeta from an unknown selection",
+			),
+		);
 	}
 
-	return {
+	return ok({
 		emojiDescription: params.emojiDescription,
 		identity,
-	};
+	});
 }

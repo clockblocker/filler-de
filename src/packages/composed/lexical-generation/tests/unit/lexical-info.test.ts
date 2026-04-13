@@ -8,37 +8,37 @@ import {
 } from "../../src";
 import { makeLexemeSelection } from "./helpers";
 
-function okValue<T>(value: unknown) {
-	return ok(value as T);
+function okValue(value: unknown) {
+	return ok(value);
 }
 
-function errValue<T>(error: ReturnType<typeof lexicalGenerationError>) {
-	return err<T, ReturnType<typeof lexicalGenerationError>>(error);
+function errValue(error: ReturnType<typeof lexicalGenerationError>) {
+	return err<unknown, ReturnType<typeof lexicalGenerationError>>(error);
 }
 
 describe("lexical-generation-next lexical info", () => {
 	it("returns ready lexical info for a noun", async () => {
 		const calls: string[] = [];
 		const client = createLexicalGenerationClient({
-			fetchStructured: async <T>({
+			fetchStructured: async ({
 				requestLabel,
 			}: Parameters<StructuredFetchFn>[0]) => {
 				calls.push(requestLabel);
 				switch (requestLabel) {
 					case "GenerateCoreNoun":
-						return okValue<T>({
+						return okValue({
 							emojiDescription: ["🏦"],
 							ipa: "baŋk",
 							senseGloss: "financial institution",
 						});
 					case "GenerateFeaturesNoun":
-						return okValue<T>({
+						return okValue({
 							inherentFeatures: {
 								gender: "Fem",
 							},
 						});
 					case "GenerateInflectionsNoun":
-						return okValue<T>({
+						return okValue({
 							cells: [
 								{
 									article: "die",
@@ -50,11 +50,11 @@ describe("lexical-generation-next lexical info", () => {
 							gender: "Fem",
 						});
 					case "GenerateMorphemicBreakdown":
-						return okValue<T>({
+						return okValue({
 							morphemes: [],
 						});
 					case "GenerateRelations":
-						return okValue<T>({
+						return okValue({
 							relations: [{ kind: "Hypernym", words: ["Institut"] }],
 						});
 					default:
@@ -129,22 +129,22 @@ describe("lexical-generation-next lexical info", () => {
 	it("marks inflections as disabled when aggregate settings turn them off", async () => {
 		const calls: string[] = [];
 		const client = createLexicalGenerationClient({
-			fetchStructured: async <T>({
+			fetchStructured: async ({
 				requestLabel,
 			}: Parameters<StructuredFetchFn>[0]) => {
 				calls.push(requestLabel);
 				switch (requestLabel) {
 					case "GenerateCoreNoun":
-						return okValue<T>({
+						return okValue({
 							emojiDescription: ["🏦"],
 							ipa: "baŋk",
 						});
 					case "GenerateFeaturesNoun":
-						return okValue<T>({ inherentFeatures: { gender: "Fem" } });
+						return okValue({ inherentFeatures: { gender: "Fem" } });
 					case "GenerateMorphemicBreakdown":
-						return okValue<T>({ morphemes: [] });
+						return okValue({ morphemes: [] });
 					case "GenerateRelations":
-						return okValue<T>({ relations: [] });
+						return okValue({ relations: [] });
 					default:
 						throw new Error(`unexpected requestLabel ${requestLabel}`);
 				}
@@ -168,26 +168,26 @@ describe("lexical-generation-next lexical info", () => {
 
 	it("returns field-level error for partial failures", async () => {
 		const client = createLexicalGenerationClient({
-			fetchStructured: async <T>({
+			fetchStructured: async ({
 				requestLabel,
 			}: Parameters<StructuredFetchFn>[0]) => {
 				switch (requestLabel) {
 					case "GenerateCoreLexeme":
-						return okValue<T>({
+						return okValue({
 							emojiDescription: ["🚶"],
 							ipa: "ɡeːən",
 							senseGloss: "to walk",
 						});
 					case "GenerateFeaturesVerb":
-						return okValue<T>({
+						return okValue({
 							inherentFeatures: { verbForm: "Inf" },
 						});
 					case "GenerateInflectionsGeneric":
-						return okValue<T>({ rows: [] });
+						return okValue({ rows: [] });
 					case "GenerateRelations":
-						return okValue<T>({ relations: [] });
+						return okValue({ relations: [] });
 					case "GenerateMorphemicBreakdown":
-						return errValue<T>(
+						return errValue(
 							lexicalGenerationError(
 								LexicalGenerationFailureKind.FetchFailed,
 								"morphemic breakdown failed",
@@ -218,23 +218,23 @@ describe("lexical-generation-next lexical info", () => {
 
 	it("preserves precomputed emoji description in aggregate core output", async () => {
 		const client = createLexicalGenerationClient({
-			fetchStructured: async <T>({
+			fetchStructured: async ({
 				requestLabel,
 			}: Parameters<StructuredFetchFn>[0]) => {
 				switch (requestLabel) {
 					case "GenerateCoreNoun":
-						return okValue<T>({
+						return okValue({
 							emojiDescription: ["🏦"],
 							ipa: "baŋk",
 						});
 					case "GenerateFeaturesNoun":
-						return okValue<T>({ inherentFeatures: { gender: "Fem" } });
+						return okValue({ inherentFeatures: { gender: "Fem" } });
 					case "GenerateInflectionsNoun":
-						return okValue<T>({ cells: [], gender: "Fem" });
+						return okValue({ cells: [], gender: "Fem" });
 					case "GenerateMorphemicBreakdown":
-						return okValue<T>({ morphemes: [] });
+						return okValue({ morphemes: [] });
 					case "GenerateRelations":
-						return okValue<T>({ relations: [] });
+						return okValue({ relations: [] });
 					default:
 						throw new Error(`unexpected requestLabel ${requestLabel}`);
 				}
@@ -264,49 +264,30 @@ describe("lexical-generation-next lexical info", () => {
 
 	it("surfaces invalid feature payloads as field errors instead of native data", async () => {
 		const client = createLexicalGenerationClient({
-			fetchStructured: async <T>({
+			fetchStructured: async ({
 				requestLabel,
-				schema,
 			}: Parameters<StructuredFetchFn>[0]) => {
-				let value: unknown;
 				switch (requestLabel) {
 					case "GenerateCoreNoun":
-						value = {
+						return okValue({
 							emojiDescription: ["🏦"],
 							ipa: "baŋk",
-						};
-						break;
+						});
 					case "GenerateFeaturesNoun":
-						value = {
+						return okValue({
 							inherentFeatures: {
 								gender: "NotAGender",
 							},
-						};
-						break;
+						});
 					case "GenerateInflectionsNoun":
-						value = { cells: [], gender: "Fem" };
-						break;
+						return okValue({ cells: [], gender: "Fem" });
 					case "GenerateMorphemicBreakdown":
-						value = { morphemes: [] };
-						break;
+						return okValue({ morphemes: [] });
 					case "GenerateRelations":
-						value = { relations: [] };
-						break;
+						return okValue({ relations: [] });
 					default:
 						throw new Error(`unexpected requestLabel ${requestLabel}`);
 				}
-
-				const parsed = schema.safeParse(value);
-				if (!parsed.success) {
-					return errValue<T>(
-						lexicalGenerationError(
-							LexicalGenerationFailureKind.InvalidModelOutput,
-							"schema validation failed",
-						),
-					);
-				}
-
-				return ok(parsed.data as T);
 			},
 			knownLanguage: "English",
 			settings: { generateInflections: true },

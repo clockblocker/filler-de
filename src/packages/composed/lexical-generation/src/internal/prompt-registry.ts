@@ -1,31 +1,21 @@
+import {
+	CaseSchema,
+	GenderSchema,
+	GermanInherentFeaturesSchemaByPos,
+	GrammaticalNumberSchema,
+	type InherentFeatures,
+	MorphemeKindSchema,
+	NativeDiscriminatorSchema,
+	PosSchema,
+} from "@textfresser/linguistics";
 import type {
+	Case,
+	Gender,
+	GrammaticalNumber,
 	MorphemeKind,
 	PhrasemeKind,
 	Pos,
 } from "@textfresser/linguistics";
-import { GermanAdjectiveInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/adjective/parts/german-adjective-features";
-import { GermanAdpositionInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/adposition/parts/german-adposition-features";
-import { GermanAdverbInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/adverb/parts/german-adverb-features";
-import { GermanAuxiliaryInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/auxiliary/parts/german-auxiliary-features";
-import { GermanCoordinatingConjunctionInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/coordinating-conjunction/parts/german-coordinating-conjunction-features";
-import { GermanDeterminerInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/determiner/parts/german-determiner-features";
-import { GermanInterjectionInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/interjection/parts/german-interjection-features";
-import { GermanNounInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/noun/parts/german-noun-features";
-import { GermanNumeralInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/numeral/parts/german-numeral-features";
-import { GermanOtherInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/other/parts/german-other-features";
-import { GermanParticleInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/particle/parts/german-particle-features";
-import { GermanPronounInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/pronoun/parts/german-pronoun-features";
-import { GermanProperNounInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/proper-noun/parts/german-proper-noun-features";
-import { GermanPunctuationInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/punctuation/parts/german-punctuation-features";
-import { GermanSubordinatingConjunctionInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/subordinating-conjunction/parts/german-subordinating-conjunction-features";
-import { GermanSymbolInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/symbol/parts/german-symbol-features";
-import { GermanVerbInherentFeaturesSchema } from "../../../../independent/linguistics/src/german/lu/lexeme/verb/parts/german-verb-features";
-import { MorphemeKindSchema } from "../../../../independent/linguistics/src/universal/enums/kind/morpheme-kind";
-import { PhrasemeKind as PhrasemeKindSchema } from "../../../../independent/linguistics/src/universal/enums/kind/phraseme-kind";
-import { Pos as PosSchema } from "../../../../independent/linguistics/src/universal/enums/kind/pos";
-import { Case as CaseSchema } from "../../../../independent/linguistics/src/universal/enums/feature/ud/case";
-import { Gender as GenderSchema } from "../../../../independent/linguistics/src/universal/enums/feature/ud/gender";
-import { GrammaticalNumber as GrammaticalNumberSchema } from "../../../../independent/linguistics/src/universal/enums/feature/ud/number";
 import { z } from "zod/v3";
 import type { LexicalRelationKind } from "../public-types";
 
@@ -56,9 +46,9 @@ export type DisambiguationPromptInput = {
 	senses: Array<{
 		emojiDescription: string[];
 		identity: {
-			discriminator: string;
-			lemmaKind: string;
-			surfaceKind: string;
+			discriminator: Pos | PhrasemeKind | MorphemeKind;
+			lemmaKind: "Lexeme" | "Phraseme" | "Morpheme";
+			surfaceKind: "Lemma" | "Inflection" | "Variant" | "Partial";
 		};
 		index: number;
 	}>;
@@ -88,7 +78,7 @@ export type FeaturesPromptInput = {
 };
 
 export type FeaturesPromptOutput = {
-	inherentFeatures: Record<string, unknown>;
+	inherentFeatures: InherentFeatures;
 };
 
 export type GenericInflectionsPromptOutput = {
@@ -101,11 +91,11 @@ export type GenericInflectionsPromptOutput = {
 export type NounInflectionsPromptOutput = {
 	cells: Array<{
 		article: string;
-		case: z.infer<typeof CaseSchema>;
+		case: Case;
 		form: string;
-		number: z.infer<typeof GrammaticalNumberSchema>;
+		number: GrammaticalNumber;
 	}>;
-	gender?: z.infer<typeof GenderSchema> | null;
+	gender?: Gender | null;
 };
 
 export type MorphemicBreakdownPromptOutput = {
@@ -121,12 +111,6 @@ export type MorphemicBreakdownPromptOutput = {
 		surface: string;
 	}>;
 };
-
-const nativeDiscriminatorSchema = z.union([
-	PosSchema,
-	PhrasemeKindSchema,
-	MorphemeKindSchema,
-]);
 
 export type RelationsPromptOutput = {
 	relations: Array<{
@@ -145,7 +129,7 @@ const resolveSelectionPrompt: PromptSpec<
 	}).strict(),
 	outputSchema: z.object({
 		contextWithLinkedParts: z.string().optional(),
-		discriminator: nativeDiscriminatorSchema.nullable().optional(),
+		discriminator: NativeDiscriminatorSchema.nullable().optional(),
 		lemmaKind: z
 			.enum(["Lexeme", "Phraseme", "Morpheme"])
 			.nullable()
@@ -176,9 +160,9 @@ const disambiguationPrompt: PromptSpec<
 			z.object({
 				emojiDescription: z.array(z.string()),
 				identity: z.object({
-					discriminator: z.string(),
-					lemmaKind: z.string(),
-					surfaceKind: z.string(),
+					discriminator: NativeDiscriminatorSchema,
+					lemmaKind: z.enum(["Lexeme", "Phraseme", "Morpheme"]),
+					surfaceKind: z.enum(["Lemma", "Inflection", "Variant", "Partial"]),
 				}),
 				index: z.number().int().positive(),
 			}),
@@ -284,11 +268,9 @@ function createFeaturesPromptWithSchema(
 ) {
 	return {
 		inputSchema: featuresPromptInputSchema,
-		outputSchema: z
-			.object({
-				inherentFeatures: inherentFeaturesSchema,
-			})
-			.strict(),
+		outputSchema: z.object({
+			inherentFeatures: inherentFeaturesSchema,
+		}).strict() as z.ZodType<FeaturesPromptOutput>,
 		requestLabel,
 		systemPrompt,
 	} satisfies PromptSpec<FeaturesPromptInput, FeaturesPromptOutput>;
@@ -314,87 +296,87 @@ export const operationRegistry = {
 		ADJ: createFeaturesPromptWithSchema(
 			"GenerateFeaturesAdjective",
 			"Generate native inherent features for a German adjective.",
-			GermanAdjectiveInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.ADJ,
 		),
 		ADP: createFeaturesPromptWithSchema(
 			"GenerateFeaturesPreposition",
 			"Generate native inherent features for a German adposition.",
-			GermanAdpositionInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.ADP,
 		),
 		ADV: createFeaturesPromptWithSchema(
 			"GenerateFeaturesAdverb",
 			"Generate native inherent features for a German adverb.",
-			GermanAdverbInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.ADV,
 		),
 		AUX: createFeaturesPromptWithSchema(
 			"GenerateFeaturesVerb",
 			"Generate native inherent features for a German auxiliary.",
-			GermanAuxiliaryInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.AUX,
 		),
 		CCONJ: createFeaturesPromptWithSchema(
 			"GenerateFeaturesConjunction",
 			"Generate native inherent features for a German coordinating conjunction.",
-			GermanCoordinatingConjunctionInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.CCONJ,
 		),
 		DET: createFeaturesPromptWithSchema(
 			"GenerateFeaturesArticle",
 			"Generate native inherent features for a German determiner.",
-			GermanDeterminerInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.DET,
 		),
 		INTJ: createFeaturesPromptWithSchema(
 			"GenerateFeaturesInteractionalUnit",
 			"Generate native inherent features for a German interactional unit.",
-			GermanInterjectionInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.INTJ,
 		),
 		NOUN: createFeaturesPromptWithSchema(
 			"GenerateFeaturesNoun",
 			"Generate native inherent features for a German noun.",
-			GermanNounInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.NOUN,
 		),
 		NUM: createFeaturesPromptWithSchema(
 			"GenerateFeaturesNoun",
 			"Generate native inherent features for a German numeral.",
-			GermanNumeralInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.NUM,
 		),
 		PART: createFeaturesPromptWithSchema(
 			"GenerateFeaturesParticle",
 			"Generate native inherent features for a German particle.",
-			GermanParticleInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.PART,
 		),
 		PRON: createFeaturesPromptWithSchema(
 			"GenerateFeaturesPronoun",
 			"Generate native inherent features for a German pronoun.",
-			GermanPronounInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.PRON,
 		),
 		PROPN: createFeaturesPromptWithSchema(
 			"GenerateFeaturesNoun",
 			"Generate native inherent features for a German proper noun.",
-			GermanProperNounInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.PROPN,
 		),
 		PUNCT: createFeaturesPromptWithSchema(
 			"GenerateFeaturesInteractionalUnit",
 			"Generate native inherent features for a German punctuation token.",
-			GermanPunctuationInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.PUNCT,
 		),
 		SCONJ: createFeaturesPromptWithSchema(
 			"GenerateFeaturesConjunction",
 			"Generate native inherent features for a German subordinating conjunction.",
-			GermanSubordinatingConjunctionInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.SCONJ,
 		),
 		SYM: createFeaturesPromptWithSchema(
 			"GenerateFeaturesInteractionalUnit",
 			"Generate native inherent features for a German symbol.",
-			GermanSymbolInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.SYM,
 		),
 		VERB: createFeaturesPromptWithSchema(
 			"GenerateFeaturesVerb",
 			"Generate native inherent features for a German verb.",
-			GermanVerbInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.VERB,
 		),
 		X: createFeaturesPromptWithSchema(
 			"GenerateFeaturesInteractionalUnit",
 			"Generate native inherent features for a German other token.",
-			GermanOtherInherentFeaturesSchema,
+			GermanInherentFeaturesSchemaByPos.X,
 		),
 	} satisfies Record<Pos, PromptSpec<FeaturesPromptInput, FeaturesPromptOutput>>,
 	genericInflections: {

@@ -1,6 +1,7 @@
 import { ok } from "neverthrow";
 import type {
 	CreateLexicalGenerationClientParams,
+	LexicalGenerationClient,
 	LexicalGenerationClientResult,
 } from "./public-types";
 import { buildSenseDisambiguator } from "./disambiguation";
@@ -20,7 +21,7 @@ export function createLexicalGenerationClient(
 	const disambiguateSense = buildSenseDisambiguator(params);
 	const generators = buildPartGenerators(params);
 
-	return ok({
+	const client: LexicalGenerationClient = {
 		disambiguateSense,
 		generateCore: generators.generateCore,
 		generateFeatures: generators.generateFeatures,
@@ -29,5 +30,7 @@ export function createLexicalGenerationClient(
 		generateMorphemicBreakdown: generators.generateMorphemicBreakdown,
 		generateRelations: generators.generateRelations,
 		resolveSelection,
-	});
+	};
+
+	return ok(client);
 }

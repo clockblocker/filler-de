@@ -37,6 +37,5 @@ export type {
 	SenseMatchResult,
 	SelectionResolver,
 	StructuredFetchFn,
-	ZodSchemaLike,
 } from "./public-types";
 export type { LexicalGenerationSettings } from "./settings";

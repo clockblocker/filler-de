@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { err, ok } from "neverthrow";
 import {
+	createLexicalMeta,
 	createLexicalGenerationClient,
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,
@@ -164,5 +165,19 @@ describe("lexical-generation-next selection/disambiguation", () => {
 		});
 
 		expect(meta.identity.surfaceKind).toBe("Lemma");
+	});
+
+	it("returns Err when lexical metadata is requested for an unknown selection", () => {
+		const result = createLexicalMeta({
+			emojiDescription: ["❓"],
+			selection: {
+				orthographicStatus: "Unknown",
+			},
+		});
+
+		expect(result.isErr()).toBe(true);
+		expect(result._unsafeUnwrapErr().kind).toBe(
+			LexicalGenerationFailureKind.InvalidSelection,
+		);
 	});
 });

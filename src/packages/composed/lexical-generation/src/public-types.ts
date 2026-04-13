@@ -12,7 +12,6 @@ import type {
 	UnknownSelection,
 } from "@textfresser/linguistics";
 import type { Result } from "neverthrow";
-import type { z } from "zod/v3";
 import type {
 	LexicalGenerationError,
 	LexicalGenerationFailureKind,
@@ -20,15 +19,12 @@ import type {
 import type { KnownLanguage, TargetLanguage } from "./internal/languages";
 import type { LexicalGenerationSettings } from "./settings";
 
-export type ZodSchemaLike<T> = z.ZodType<T>;
-
-export type StructuredFetchFn = <T>(params: {
+export type StructuredFetchFn = (params: {
 	requestLabel: string;
 	systemPrompt: string;
 	userInput: string;
-	schema: ZodSchemaLike<T>;
 	withCache?: boolean;
-}) => Promise<Result<T, LexicalGenerationError>>;
+}) => Promise<Result<unknown, LexicalGenerationError>>;
 
 type ResolvedSelectionContext = {
 	contextWithLinkedParts?: string;

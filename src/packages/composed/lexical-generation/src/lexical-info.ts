@@ -26,6 +26,7 @@ import type {
 	LexicalFeatures,
 	LexicalInfo,
 	LexicalInfoField,
+	LexicalRelations,
 	LexemeInflections,
 	MorphemicBreakdown,
 	ResolvedSelection,
@@ -195,6 +196,12 @@ async function collectField<T>(
 	return result;
 }
 
+function disabledField<T>(): Promise<
+	Result<LexicalInfoField<T>, LexicalGenerationError>
+> {
+	return Promise.resolve(ok({ status: "disabled" } as LexicalInfoField<T>));
+}
+
 export function buildPartGenerators(deps: PromptDeps) {
 	const generateCore = async (
 		selection: ResolvedSelection,
@@ -348,7 +355,7 @@ export function buildPartGenerators(deps: PromptDeps) {
 	const generateRelations = async (
 		selection: ResolvedSelection,
 		attestation: string,
-	) => {
+	): Promise<Result<LexicalInfoField<LexicalRelations>, LexicalGenerationError>> => {
 		const known = ensureKnownSelection(selection);
 		if (known.isErr()) {
 			return err(known.error);
@@ -388,7 +395,7 @@ export function buildPartGenerators(deps: PromptDeps) {
 
 		const disabled = options?.disabledParts ?? {};
 		const corePromise = disabled.core
-			? Promise.resolve(ok({ status: "disabled" } as const))
+			? disabledField<LexicalCore>()
 			: collectField(
 					generateCore(selection, attestation, {
 						precomputedEmojiDescription:
@@ -396,22 +403,17 @@ export function buildPartGenerators(deps: PromptDeps) {
 					}),
 				);
 		const featuresPromise = disabled.features
-			? Promise.resolve(ok({ status: "disabled" } as const))
+			? disabledField<LexicalFeatures>()
 			: collectField(generateFeatures(selection, attestation));
 		const inflectionsPromise =
 			disabled.inflections || !deps.settings.generateInflections
-				? Promise.resolve(
-						ok({
-							status:
-								disabled.inflections ? "disabled" : "disabled",
-						} as const),
-					)
+				? disabledField<LexemeInflections>()
 				: collectField(generateInflections(selection, attestation));
 		const morphemicBreakdownPromise = disabled.morphemicBreakdown
-			? Promise.resolve(ok({ status: "disabled" } as const))
+			? disabledField<MorphemicBreakdown>()
 			: collectField(generateMorphemicBreakdown(selection, attestation));
 		const relationsPromise = disabled.relations
-			? Promise.resolve(ok({ status: "disabled" } as const))
+			? disabledField<LexicalRelations>()
 			: collectField(generateRelations(selection, attestation));
 
 		const [core, features, inflections, morphemicBreakdown, relations] =
@@ -430,11 +432,11 @@ export function buildPartGenerators(deps: PromptDeps) {
 		}
 
 		return ok({
-			core: core.value,
-			features: features.value,
-			inflections: inflections.value,
-			morphemicBreakdown: morphemicBreakdown.value,
-			relations: relations.value,
+			core: core._unsafeUnwrap(),
+			features: features._unsafeUnwrap(),
+			inflections: inflections._unsafeUnwrap(),
+			morphemicBreakdown: morphemicBreakdown._unsafeUnwrap(),
+			relations: relations._unsafeUnwrap(),
 			selection,
 		});
 	};
