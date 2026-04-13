@@ -10,5 +10,13 @@ export * from "./tree";
 export * from "./tree/actions";
 export * from "./tree/canonical";
 export * from "./tree/library-scope";
-export * from "./tree/utils";
-export * from "./types";
+export {
+	buildCanonicalLeafSplitPath,
+	buildObservedLeafSplitPath,
+	computeScrollSplitPath,
+	extractScrollStatusActions,
+	findInvalidCodexFiles,
+	getRootBaseName,
+	resolveNextAvailableNameInSection,
+} from "./tree/utils";
+export { PREFIX_OF_CODEX, type NodeName } from "./types";

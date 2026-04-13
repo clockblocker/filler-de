@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import { LemmaSchema, SelectionSchema } from "../src";
 import {
 	GermanVerbInflectionSelectionSchema,
 	GermanVerbLemmaSchema,
 	GermanVerbStandardPartialSelectionSchema,
 	GermanVerbTypoInflectionSelectionSchema,
 } from "../src/german/lu/lexeme/verb/german-verb-bundle";
-import { LemmaSchema, SelectionSchema } from "../src";
 import { getInverseLexicalRelation } from "../src/universal/enums/relation/lexical";
 import { getInverseMorphologicalRelation } from "../src/universal/enums/relation/morphological";
 
@@ -23,8 +23,8 @@ describe("German verb schemas", () => {
 					verbForm: "Fin",
 				},
 				lemma: {
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "VERB",
 					spelledLemma: "gehen",
 				},
@@ -49,8 +49,8 @@ describe("German verb schemas", () => {
 					verbForm: "Ger",
 				},
 				lemma: {
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "VERB",
 					spelledLemma: "gehen",
 				},
@@ -68,8 +68,8 @@ describe("German verb schemas", () => {
 				reflex: true,
 				separable: false,
 			},
-			lemmaKind: "Lexeme",
 			language: "German",
+			lemmaKind: "Lexeme",
 			lexicalRelations: {
 				hypernym: ["Fortbewegung"],
 				synonym: ["laufen"],
@@ -90,8 +90,8 @@ describe("German verb schemas", () => {
 			inherentFeatures: {
 				mood: "Ind",
 			},
-			lemmaKind: "Lexeme",
 			language: "German",
+			lemmaKind: "Lexeme",
 			lexicalRelations: {},
 			morphologicalRelations: {},
 			pos: "VERB",
@@ -107,8 +107,8 @@ describe("German verb schemas", () => {
 			orthographicStatus: "Standard",
 			surface: {
 				lemma: {
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "VERB",
 					spelledLemma: "spazieren gehen",
 				},
@@ -133,8 +133,8 @@ describe("German verb schemas", () => {
 					verbForm: "Fin",
 				},
 				lemma: {
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "VERB",
 					spelledLemma: "gehen",
 				},
@@ -158,8 +158,8 @@ describe("German verb schemas", () => {
 	it("rejects duplicate relation targets", () => {
 		const result = GermanVerbLemmaSchema.safeParse({
 			inherentFeatures: {},
-			lemmaKind: "Lexeme",
 			language: "German",
+			lemmaKind: "Lexeme",
 			lexicalRelations: {
 				synonym: ["laufen", "laufen"],
 			},
