@@ -1,4 +1,4 @@
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { MD } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
 import {
 	FileExtensionSchema,

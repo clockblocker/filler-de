@@ -3,8 +3,8 @@ import {
 	formatChildSectionLine,
 	formatFileLine,
 	formatScrollLine,
-} from "@textfresser/library-core/healer/library-tree/codex/format-codex-line";
-import { TreeNodeStatus } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
+} from "../../../../../src/healer/library-tree/codex/format-codex-line";
+import { TreeNodeStatus } from "../../../../../src/healer/library-tree/tree-node/types/atoms";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;

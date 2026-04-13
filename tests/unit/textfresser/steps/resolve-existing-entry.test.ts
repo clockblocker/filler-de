@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { resolveExistingEntry } from "../../../../src/commanders/textfresser/commands/generate/steps/resolve-existing-entry";
 import type { CommandStateWithLemma } from "../../../../src/commanders/textfresser/commands/types";
 import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";

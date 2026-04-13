@@ -3,7 +3,7 @@ import type {
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import type { ResultAsync } from "neverthrow";
 import {
 	splitPathsEqual,

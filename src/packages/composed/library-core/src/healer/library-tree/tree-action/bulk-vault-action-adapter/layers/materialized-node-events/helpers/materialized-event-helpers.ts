@@ -2,8 +2,8 @@
  * Materialized Event Helpers - SplitPathKind to TreeNodeKind mapping.
  */
 
-import type { AnySplitPath } from "@textfresser/vault-action-manager/types/split-path";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import type { AnySplitPath } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { TreeNodeKind } from "../../../../../tree-node/types/atoms";
 
 /**

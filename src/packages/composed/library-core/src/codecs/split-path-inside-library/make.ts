@@ -1,4 +1,4 @@
-import type { AnySplitPath } from "@textfresser/vault-action-manager/types/split-path";
+import type { AnySplitPath } from "@textfresser/vault-action-manager";
 import type { Result } from "neverthrow";
 import type { CodecError } from "../errors";
 import type { CodecRules } from "../rules";

@@ -7,7 +7,7 @@ import type {
 	FolderDeletedVaultEvent,
 	FolderRenamedVaultEvent,
 	VaultEventKind,
-} from "@textfresser/vault-action-manager/types/vault-event";
+} from "@textfresser/vault-action-manager";
 import type {
 	LibraryScopedVaultEvent,
 	ScopedFileCreatedVaultEventInside,

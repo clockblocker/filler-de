@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { TreeNodeStatus } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+import { TreeNodeStatus } from "../../../../src/healer/library-tree/tree-node/types/atoms";
+import type { NodeName } from "../../../../src/types/schemas/node-name";
 import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
 import {
 	makeScrollLocator,

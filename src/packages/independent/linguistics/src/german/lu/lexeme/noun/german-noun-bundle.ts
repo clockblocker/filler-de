@@ -113,6 +113,7 @@ export const GermanNounTypoVariantSelectionSchema = buildLemmaSelection({
 export const GermanNounLemmaSchema = z.object({
 	emojiDescription: EmojiDescriptionSchema.optional(),
 	inherentFeatures: GermanNounInherentFeaturesSchema,
+	lemmaKind: z.literal("Lexeme"),
 	language: z.literal("German"),
 	lexicalRelations: GermanNounLexicalRelationsSchema,
 	morphologicalRelations: GermanNounMorphologicalRelationsSchema,

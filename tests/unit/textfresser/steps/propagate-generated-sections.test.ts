@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type {
 	GenerateSectionsResult,
 	ParsedRelation,

@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from "bun:test";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core/codecs";
-import { makeCodexBasename } from "@textfresser/library-core/codex";
+} from "@textfresser/library-core";
+import { makeCodexBasename } from "@textfresser/library-core";
 import { listCommandsExecutableIn } from "../../../src/commanders/librarian/navigation/list-commands-executable";
-import type { NodeName } from "@textfresser/library-core/types";
+import type { NodeName } from "@textfresser/library-core";
 import { CommandKind } from "../../../src/managers/obsidian/command-executor";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpyWithHooks } from "../common-utils/setup-spy";

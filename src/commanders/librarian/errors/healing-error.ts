@@ -12,12 +12,12 @@
  * - Enables transaction-based healing with rollback
  */
 
-import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
+import type { VaultAction } from "@textfresser/vault-action-manager";
 import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-} from "@textfresser/library-core/codecs";
-import type { HealingAction } from "@textfresser/library-core/healing";
+} from "@textfresser/library-core";
+import type { HealingAction } from "@textfresser/library-core";
 
 // ─── Error Types ───
 

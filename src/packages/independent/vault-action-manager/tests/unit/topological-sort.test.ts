@@ -2,18 +2,18 @@ import { describe, expect, it } from "bun:test";
 import {
 	buildDependencyGraph,
 	makeGraphKey,
-} from "@textfresser/vault-action-manager/impl/actions-processing/dependency-detector";
-import { topologicalSort } from "@textfresser/vault-action-manager/impl/actions-processing/topological-sort";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+} from "../../src/impl/actions-processing/dependency-detector";
+import { topologicalSort } from "../../src/impl/actions-processing/topological-sort";
+import { MD } from "../../src/types/literals";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+} from "../../src/types/split-path";
+import { SplitPathKind } from "../../src/types/split-path";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "@textfresser/vault-action-manager/types/vault-action";
+} from "../../src/types/vault-action";
 
 const folder = (
 	basename: string,

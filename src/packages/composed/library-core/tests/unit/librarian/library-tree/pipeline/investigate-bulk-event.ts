@@ -10,10 +10,10 @@
  */
 
 import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
-import type { CodexImpact } from "@textfresser/library-core/healer/library-tree/codex/compute-codex-impact";
-import type { CodexAction } from "@textfresser/library-core/healer/library-tree/codex/types/codex-action";
-import type { CreateTreeLeafAction, TreeAction } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
-import type { HealingAction } from "@textfresser/library-core/healer/library-tree/types/healing-action";
+import type { CodexImpact } from "../../../../../src/healer/library-tree/codex/compute-codex-impact";
+import type { CodexAction } from "../../../../../src/healer/library-tree/codex/types/codex-action";
+import type { CreateTreeLeafAction, TreeAction } from "../../../../../src/healer/library-tree/tree-action/types/tree-action";
+import type { HealingAction } from "../../../../../src/healer/library-tree/types/healing-action";
 import {
 	createPipelineFromCreateActions,
 	type PipelineResult,

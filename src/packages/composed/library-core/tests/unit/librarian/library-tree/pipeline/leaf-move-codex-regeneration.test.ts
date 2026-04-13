@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
-import type { PossibleRootVaultEvent } from "@textfresser/vault-action-manager/impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import type { PossibleRootVaultEvent } from "@textfresser/vault-action-manager";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import type {
 	FileRenamedVaultEvent,
 	VaultEvent,
-} from "@textfresser/vault-action-manager/types/vault-event";
-import { VaultEventKind } from "@textfresser/vault-action-manager/types/vault-event";
-import { generateChildrenList } from "@textfresser/library-core/healer/library-tree/codex/generate-codex-content";
-import type { ProcessCodexAction } from "@textfresser/library-core/healer/library-tree/codex/types/codex-action";
-import { TreeActionType } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
+} from "@textfresser/vault-action-manager";
+import { VaultEventKind } from "@textfresser/vault-action-manager";
+import { generateChildrenList } from "../../../../../src/healer/library-tree/codex/generate-codex-content";
+import type { ProcessCodexAction } from "../../../../../src/healer/library-tree/codex/types/codex-action";
+import { TreeActionType } from "../../../../../src/healer/library-tree/tree-action/types/tree-action";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 import type { TreeShape } from "../tree-test-helpers";
 import { createPersistentPipeline, processBulkEvent } from "./helpers";

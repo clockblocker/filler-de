@@ -1,10 +1,10 @@
 import type { VaultAction } from "@textfresser/vault-action-manager";
-import type { ReadContentError } from "@textfresser/vault-action-manager/types/read-content-error";
+import type { ReadContentError } from "@textfresser/vault-action-manager";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
 import type { Result } from "neverthrow";
 
 export type ReadManyMdFilesOutcome =

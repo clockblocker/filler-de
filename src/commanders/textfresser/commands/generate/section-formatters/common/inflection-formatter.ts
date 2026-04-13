@@ -1,5 +1,5 @@
 import type { LexemeInflections } from "@textfresser/lexical-generation";
-import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing";
 
 type GenericInflectionSectionInput = {
 	rows: Array<{

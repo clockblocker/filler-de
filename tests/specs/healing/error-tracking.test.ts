@@ -7,21 +7,21 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core/codecs";
-import { Healer } from "@textfresser/library-core/healing";
+} from "@textfresser/library-core";
+import { Healer } from "@textfresser/library-core";
 import {
 	getHealingAuditLog,
 	resetHealingAuditLog,
 } from "../../../src/commanders/librarian/runtime/healing-audit-log";
 import { HealingTransaction } from "../../../src/commanders/librarian/runtime/healing-transaction";
-import { Tree, TreeNodeStatus } from "@textfresser/library-core/tree";
-import { TreeActionType } from "@textfresser/library-core/tree/actions";
-import type { NodeName } from "@textfresser/library-core/types";
+import { Tree, TreeNodeStatus } from "@textfresser/library-core";
+import { TreeActionType } from "@textfresser/library-core";
+import type { NodeName } from "@textfresser/library-core";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import {

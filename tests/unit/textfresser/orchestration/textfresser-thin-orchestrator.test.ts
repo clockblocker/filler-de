@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { ok, okAsync } from "neverthrow";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";

@@ -5,7 +5,7 @@
  * Decode: ClipboardPayload → clipboard data
  */
 
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import type { UserEffectFor } from "../../contracts";
 import { createEventCodec } from "../codec-factory";
 import type { ClipboardPayload } from "./payload";

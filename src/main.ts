@@ -4,13 +4,13 @@ import {
 	VaultActionKind,
 	VaultActionManagerImpl,
 } from "@textfresser/vault-action-manager";
-import { ActiveFileService } from "@textfresser/vault-action-manager/file-services/active-view/active-file-service";
-import { TFileHelper } from "@textfresser/vault-action-manager/file-services/background/helpers/tfile-helper";
-import { TFolderHelper } from "@textfresser/vault-action-manager/file-services/background/helpers/tfolder-helper";
-import { logError } from "@textfresser/vault-action-manager/helpers/issue-handlers";
-import { pathfinder } from "@textfresser/vault-action-manager/helpers/pathfinder";
-import { VaultReader } from "@textfresser/vault-action-manager/impl/vault-reader";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import { ActiveFileService } from "@textfresser/vault-action-manager";
+import { TFileHelper } from "@textfresser/vault-action-manager";
+import { TFolderHelper } from "@textfresser/vault-action-manager";
+import { logError } from "@textfresser/vault-action-manager";
+import { pathfinder } from "@textfresser/vault-action-manager";
+import { VaultReader } from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { Modal, Notice, Plugin, TFile } from "obsidian";
 import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { pathfinder } from "@textfresser/vault-action-manager/helpers/pathfinder";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { pathfinder } from "../../src/helpers/pathfinder";
+import { MD } from "../../src/types/literals";
 import {
 	SplitPathKind,
 	type SplitPathToFile,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "../../src/types/split-path";
 
 describe("pathfinder.systemPathFromSplitPath | pathfinder.splitPathFromSystemPath", () => {
 	describe("decode (string → SplitPath)", () => {

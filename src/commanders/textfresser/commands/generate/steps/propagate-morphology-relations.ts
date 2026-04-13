@@ -1,7 +1,7 @@
 import type { VaultAction } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
-import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import { canonicalizeTargetForComparison } from "../../../common/target-comparison";
 import {

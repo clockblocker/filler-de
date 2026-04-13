@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import { propagateInflections } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-inflections";
 import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";

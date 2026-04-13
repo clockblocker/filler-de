@@ -1,4 +1,4 @@
-import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing";
 import {
 	ARTICLE_BY_GENUS,
 	type LexicalGenus,

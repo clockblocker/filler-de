@@ -1,5 +1,5 @@
 import { VaultEventKind } from "@textfresser/vault-action-manager";
-import type { AnySplitPath } from "@textfresser/vault-action-manager/types/split-path";
+import type { AnySplitPath } from "@textfresser/vault-action-manager";
 import { TreeNodeKind } from "../../../../tree-node/types/atoms";
 import {
 	type LibraryScopedBulkVaultEvent,

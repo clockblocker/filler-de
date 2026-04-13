@@ -1,7 +1,7 @@
 import {
 	SplitPathKind,
 	type SplitPathKind as SplitPathKindType,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
 import { NodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";

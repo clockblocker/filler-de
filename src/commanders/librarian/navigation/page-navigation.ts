@@ -1,14 +1,14 @@
-import type { Codecs } from "@textfresser/library-core/codecs";
-import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id";
-import { isCodexSplitPath } from "@textfresser/library-core/codex";
-import { sortTreeNodesForDisplay } from "@textfresser/library-core/display-name-sort";
-import type { Healer } from "@textfresser/library-core/healing";
-import type { ScrollNode, SectionNode } from "@textfresser/library-core/tree";
-import { TreeNodeKind } from "@textfresser/library-core/tree";
+import type { Codecs } from "@textfresser/library-core";
+import type { SectionNodeSegmentId } from "@textfresser/library-core";
+import { isCodexSplitPath } from "@textfresser/library-core";
+import { sortTreeNodesForDisplay } from "@textfresser/library-core";
+import type { Healer } from "@textfresser/library-core";
+import type { ScrollNode, SectionNode } from "@textfresser/library-core";
+import { TreeNodeKind } from "@textfresser/library-core";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
 
 /**
  * Get previous library scroll using the tree's display order.

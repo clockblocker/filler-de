@@ -3,9 +3,9 @@
  * Provides a cleaner abstraction over SplitPath for internal use.
  */
 
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import type { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
-import { SplitPathKind as SplitPathKindEnum } from "@textfresser/vault-action-manager/types/split-path";
+import { MD } from "@textfresser/vault-action-manager";
+import type { SplitPathKind } from "@textfresser/vault-action-manager";
+import { SplitPathKind as SplitPathKindEnum } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
 import type { CodecError } from "../errors";
 import type { SegmentIdCodecs } from "../segment-id";

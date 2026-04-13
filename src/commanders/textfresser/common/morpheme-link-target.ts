@@ -6,7 +6,7 @@
  */
 
 import type { LexicalMorpheme } from "@textfresser/lexical-generation";
-import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing";
 import type { TargetLanguage } from "../../../types";
 import type { MorphemeItem } from "../domain/morpheme/morpheme-formatter";
 

@@ -10,25 +10,25 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { MD } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core/codecs";
+} from "@textfresser/library-core";
 import {
 	pathPartsToSuffixParts,
 	pathPartsWithRootToSuffixParts,
 	serializeSeparatedSuffix,
 	serializeSeparatedSuffixUnchecked,
 	suffixPartsToPathParts,
-} from "@textfresser/library-core/codecs/suffix";
+} from "@textfresser/library-core";
 import {
 	type ScrollNode,
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "@textfresser/library-core/tree";
-import { buildObservedLeafSplitPath } from "@textfresser/library-core/tree/utils";
-import type { NodeName } from "@textfresser/library-core/types";
+} from "@textfresser/library-core";
+import { buildObservedLeafSplitPath } from "@textfresser/library-core";
+import type { NodeName } from "@textfresser/library-core";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 

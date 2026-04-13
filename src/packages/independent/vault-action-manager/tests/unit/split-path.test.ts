@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
-} from "@textfresser/vault-action-manager";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+} from "../../src";
+import { MD } from "../../src/types/literals";
 import { TFile, TFolder } from "obsidian";
 
 describe("obsidian-vault-action-manager splitPath helpers", () => {

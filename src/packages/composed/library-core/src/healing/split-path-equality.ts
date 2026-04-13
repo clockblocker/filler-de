@@ -1,4 +1,4 @@
-import type { AnySplitPath } from "@textfresser/vault-action-manager/types/split-path";
+import type { AnySplitPath } from "@textfresser/vault-action-manager";
 
 export function splitPathsEqual(a: AnySplitPath, b: AnySplitPath): boolean {
 	if (a.kind !== b.kind) return false;

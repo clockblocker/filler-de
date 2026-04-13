@@ -1,4 +1,4 @@
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { type App, MarkdownView } from "obsidian";
 
 export function getCurrentFilePath(app: App): SplitPathToMdFile | undefined {

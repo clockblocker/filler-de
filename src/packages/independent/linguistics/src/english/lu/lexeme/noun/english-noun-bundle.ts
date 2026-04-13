@@ -111,6 +111,7 @@ export const EnglishNounTypoVariantSelectionSchema = buildLemmaSelection({
 export const EnglishNounLemmaSchema = z.object({
 	emojiDescription: EmojiDescriptionSchema.optional(),
 	inherentFeatures: EnglishNounInherentFeaturesSchema,
+	lemmaKind: z.literal("Lexeme"),
 	language: z.literal("English"),
 	lexicalRelations: EnglishNounLexicalRelationsSchema,
 	morphologicalRelations: EnglishNounMorphologicalRelationsSchema,

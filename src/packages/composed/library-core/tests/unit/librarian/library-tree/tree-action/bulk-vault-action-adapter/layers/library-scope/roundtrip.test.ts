@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
-import type { VaultEvent } from "@textfresser/vault-action-manager/types/vault-event";
-import { VaultEventKind } from "@textfresser/vault-action-manager/types/vault-event";
-import { makeCodecRulesFromSettings } from "@textfresser/library-core/codecs";
-import { makeEventLibraryScoped } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-libray-scoped";
-import { makeEventVaultScoped } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-vault-scoped";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
+import type { VaultEvent } from "@textfresser/vault-action-manager";
+import { VaultEventKind } from "@textfresser/vault-action-manager";
+import { makeCodecRulesFromSettings } from "../../../../../../../../src/codecs";
+import { makeEventLibraryScoped } from "../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-libray-scoped";
+import { makeEventVaultScoped } from "../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-vault-scoped";
 import { defaultSettingsForUnitTests } from "../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../common-utils/setup-spy";
 

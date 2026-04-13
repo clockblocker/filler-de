@@ -1,5 +1,5 @@
 import type { VaultAction } from "@textfresser/vault-action-manager";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { errAsync, ok, ResultAsync } from "neverthrow";
 
 import type { CommandError, CommandInput, CommandState } from "../types";

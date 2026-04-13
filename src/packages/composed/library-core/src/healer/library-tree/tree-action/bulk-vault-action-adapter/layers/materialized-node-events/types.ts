@@ -2,10 +2,10 @@ import {
 	CREATE,
 	DELETE,
 	RENAME,
-} from "@textfresser/vault-action-manager/types/literals";
-import type { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
+import type { SplitPathKind } from "@textfresser/vault-action-manager";
 import z from "zod";
-import type { Prettify } from "@textfresser/library-core/internal/root/type-helpers";
+import type { Prettify } from "../../../../../../internal/root/type-helpers";
 import type {
 	SplitPathInsideLibraryOf,
 	SplitPathToFileInsideLibrary,

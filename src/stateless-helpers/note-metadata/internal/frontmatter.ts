@@ -3,11 +3,11 @@
  * Not exported from the module - use public API instead.
  */
 
-import type { Transform } from "@textfresser/vault-action-manager/types/vault-action";
+import type { Transform } from "@textfresser/vault-action-manager";
 import {
 	TreeNodeStatus,
 	type TreeNodeStatus as TreeNodeStatusType,
-} from "@textfresser/library-core/tree";
+} from "@textfresser/library-core";
 
 // ─── Constants ───
 

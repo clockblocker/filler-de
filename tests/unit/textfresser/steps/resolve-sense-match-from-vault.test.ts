@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
 import { resolveSenseMatchFromVault } from "../../../../src/commanders/textfresser/commands/lemma/steps/resolve-sense-match-from-vault";
 import {

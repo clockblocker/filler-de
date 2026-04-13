@@ -5,7 +5,7 @@
  * with action buttons that can be clicked to trigger commands.
  */
 
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { DomSelectors } from "../../../utils/dom-selectors";
 import type {
 	ActionConfig,

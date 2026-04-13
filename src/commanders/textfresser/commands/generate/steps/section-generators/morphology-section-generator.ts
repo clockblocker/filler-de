@@ -1,5 +1,5 @@
 import type { LexicalInfo } from "@textfresser/lexical-generation";
-import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing";
 import { morphologyRelationHelper } from "../../../../../../stateless-helpers/morphology-relation";
 import { resolveMorphemeItems } from "../../../../common/morpheme-link-target";
 import { canonicalizeTargetForComparison } from "../../../../common/target-comparison";

@@ -1,4 +1,4 @@
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { stringifySplitPath } from "../../../stateless-helpers/split-path-comparison";
 import type { TargetLanguage } from "../../../types";
 import {

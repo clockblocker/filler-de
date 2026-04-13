@@ -7,17 +7,17 @@ import {
 	type BulkVaultEvent,
 	VaultEventKind,
 } from "@textfresser/vault-action-manager";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { err, ok } from "neverthrow";
-import { logger } from "@textfresser/library-core/internal/root/logger";
+import { logger } from "../../../internal/root/logger";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
 import {
 	computeCodexSuffix,
 	parseSectionChainToNodeNames,
-} from "@textfresser/library-core/path-finder";
+} from "../../../path-finder";
 import type { TreeReader } from "../tree-interfaces";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";

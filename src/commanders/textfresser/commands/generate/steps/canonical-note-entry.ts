@@ -1,4 +1,4 @@
-import { goBackLinkHelper } from "@textfresser/note-addressing/go-back-link";
+import { goBackLinkHelper } from "@textfresser/note-addressing";
 import type { LinguisticWikilinkDto } from "../../../domain/linguistic-wikilink";
 import { parseLinguisticWikilinks } from "../../../domain/linguistic-wikilink";
 import type {

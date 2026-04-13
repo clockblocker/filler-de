@@ -4,7 +4,7 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
-import { getParsedUserSettings } from "@textfresser/library-core/internal/root/global-state";
+import { getParsedUserSettings } from "../../../internal/root/global-state";
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { NodeSegmentIdSeparator } from "../../../codecs/segment-id/types/segment-id";

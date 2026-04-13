@@ -1,20 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { MD } from "@textfresser/vault-action-manager";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	type CodecRules,
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core/codecs";
-import { RenameIntent } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
-import { ChangePolicy } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
-import { tryCanonicalizeSplitPathToDestination } from "@textfresser/library-core/healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
+} from "../../../../../../../../../../src/codecs";
+import { RenameIntent } from "../../../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
+import { ChangePolicy } from "../../../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
+import { tryCanonicalizeSplitPathToDestination } from "../../../../../../../../../../src/healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
 import { defaultSettingsForUnitTests } from "../../../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";
 

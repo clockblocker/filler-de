@@ -7,8 +7,8 @@
  * @see PathFinder in `@textfresser/library-core/path-finder.ts`
  */
 
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
 import type {
 	Codecs,

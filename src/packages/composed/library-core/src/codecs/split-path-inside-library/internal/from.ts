@@ -1,4 +1,4 @@
-import type { AnySplitPath } from "@textfresser/vault-action-manager/types/split-path";
+import type { AnySplitPath } from "@textfresser/vault-action-manager";
 import type { CodecRules } from "../../rules";
 import type { AnySplitPathInsideLibrary } from "../types/split-path-inside-library";
 

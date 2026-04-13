@@ -3,7 +3,7 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";

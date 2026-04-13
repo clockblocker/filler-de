@@ -70,6 +70,7 @@ export function buildEnglishLexemeBundle<
 		LemmaSchema: z.object({
 			emojiDescription: EmojiDescriptionSchema.optional(),
 			inherentFeatures: inherentFeaturesSchema,
+			lemmaKind: z.literal("Lexeme"),
 			language: z.literal("English"),
 			lexicalRelations: lexicalRelationsSchema,
 			morphologicalRelations: morphologicalRelationsSchema,

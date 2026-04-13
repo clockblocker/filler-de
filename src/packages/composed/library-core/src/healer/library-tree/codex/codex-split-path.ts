@@ -4,7 +4,7 @@
 
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
-import { buildCodexSplitPath } from "@textfresser/library-core/path-finder";
+import { buildCodexSplitPath } from "../../../path-finder";
 import { PREFIX_OF_CODEX } from "./literals";
 
 /**

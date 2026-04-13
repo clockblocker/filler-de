@@ -10,8 +10,8 @@ import type { VaultAction } from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type { TargetLanguage } from "../../../types";
 import {
 	type LinguisticUnitKind,

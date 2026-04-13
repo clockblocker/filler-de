@@ -9,7 +9,7 @@ import {
 	type SectionNode,
 } from "../../tree";
 import { sectionChainToPathParts } from "../../tree/utils";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { computeDescendantSuffixHealing } from "./descendant-suffix-healing";
 
 export type SectionMoveParams = {

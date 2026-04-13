@@ -4,12 +4,7 @@
 		"zod": "4.3.6"
 	},
 	"exports": {
-		".": "./src/index.ts",
-		"./file-services/*": "./src/file-services/*.ts",
-		"./helpers/issue-handlers": "./src/helpers/issue-handlers.ts",
-		"./helpers/pathfinder": "./src/helpers/pathfinder/index.ts",
-		"./impl/*": "./src/impl/*.ts",
-		"./types/*": "./src/types/*.ts"
+		".": "./src/index.ts"
 	},
 	"name": "@textfresser/vault-action-manager",
 	"peerDependencies": {

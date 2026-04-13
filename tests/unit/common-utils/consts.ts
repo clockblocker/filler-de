@@ -1,4 +1,4 @@
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import type { ParsedUserSettings } from "../../../src/global-state/parsed-settings";
 import {
 	buildCanonicalDelimiter,

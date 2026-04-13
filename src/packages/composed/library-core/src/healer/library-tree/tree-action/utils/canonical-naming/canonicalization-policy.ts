@@ -1,4 +1,4 @@
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
 import type { CodecError } from "../../../../../codecs/errors";
 import { makeSplitPathError } from "../../../../../codecs/errors";

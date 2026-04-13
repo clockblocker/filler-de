@@ -3,10 +3,10 @@
  * Used by ProcessMdFile actions to update codex content and backlinks.
  */
 
-import type { Transform } from "@textfresser/vault-action-manager/types/vault-action";
-import { goBackLinkHelper } from "@textfresser/note-addressing/go-back-link";
-import { noteMetadataHelper } from "@textfresser/library-core/internal/root/note-metadata";
-import { LINE_BREAK } from "@textfresser/library-core/internal/root/ui";
+import type { Transform } from "@textfresser/vault-action-manager";
+import { goBackLinkHelper } from "@textfresser/note-addressing";
+import { noteMetadataHelper } from "../../../../internal/root/note-metadata";
+import { LINE_BREAK } from "../../../../internal/root/ui";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
 import type { SectionNode } from "../../tree-node/types/tree-node";

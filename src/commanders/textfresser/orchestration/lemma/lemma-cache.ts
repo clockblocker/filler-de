@@ -1,5 +1,5 @@
-import type { ReadContentError } from "@textfresser/vault-action-manager/types/read-content-error";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { ReadContentError } from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
 import { stringifySplitPath } from "../../../../stateless-helpers/split-path-comparison";
 import { logger } from "../../../../utils/logger";

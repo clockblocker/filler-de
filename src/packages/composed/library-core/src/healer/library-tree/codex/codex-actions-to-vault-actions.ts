@@ -2,12 +2,12 @@
  * Convert CodexAction[] to VaultAction[].
  */
 
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "@textfresser/vault-action-manager/types/vault-action";
-import { noteMetadataHelper } from "@textfresser/library-core/internal/root/note-metadata";
+} from "@textfresser/vault-action-manager";
+import { noteMetadataHelper } from "../../../internal/root/note-metadata";
 import type { Codecs } from "../../../codecs";
 import type { CodecRules } from "../../../codecs/rules";
 import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";

@@ -1,5 +1,5 @@
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import type { CreateTreeLeafAction } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
+import { MD } from "@textfresser/vault-action-manager";
+import type { CreateTreeLeafAction } from "../../../../../../src/healer/library-tree/tree-action/types/tree-action";
 
 export const createActions: CreateTreeLeafAction[] = [
 	{

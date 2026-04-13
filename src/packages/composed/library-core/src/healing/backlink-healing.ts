@@ -13,11 +13,11 @@ import {
 import type { TreeReader } from "../tree";
 import { makeVaultScopedSplitPath } from "../tree/library-scope";
 import { computeScrollSplitPath } from "../tree/utils";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "@textfresser/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager";
 
 /**
  * Produce VaultAction[] to set or strip go-back links for all library md files

@@ -1,5 +1,5 @@
 import type { EditorView } from "@codemirror/view";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import type { UserEffectFor } from "../../contracts";
 import { createEventCodec } from "../codec-factory";
 import type { InternalSelectAllPayload } from "./payload";

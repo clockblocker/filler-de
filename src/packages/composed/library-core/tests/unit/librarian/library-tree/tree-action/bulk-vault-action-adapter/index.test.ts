@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
-import type { PossibleRootVaultEvent } from "@textfresser/vault-action-manager/impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import type { PossibleRootVaultEvent } from "@textfresser/vault-action-manager";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import type {
 	FileCreatedVaultEvent,
 	FileDeletedVaultEvent,
@@ -11,18 +11,18 @@ import type {
 	FolderDeletedVaultEvent,
 	FolderRenamedVaultEvent,
 	VaultEvent,
-} from "@textfresser/vault-action-manager/types/vault-event";
-import { VaultEventKind } from "@textfresser/vault-action-manager/types/vault-event";
+} from "@textfresser/vault-action-manager";
+import { VaultEventKind } from "@textfresser/vault-action-manager";
 import {
 	type CodecRules,
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core/codecs";
-import { buildTreeActions } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
-import { TreeActionType } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
-import { getNodeName } from "@textfresser/library-core/healer/library-tree/tree-action/utils/locator/locator-utils";
-import { TreeNodeKind } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
+} from "../../../../../../src/codecs";
+import { buildTreeActions } from "../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter";
+import { TreeActionType } from "../../../../../../src/healer/library-tree/tree-action/types/tree-action";
+import { getNodeName } from "../../../../../../src/healer/library-tree/tree-action/utils/locator/locator-utils";
+import { TreeNodeKind } from "../../../../../../src/healer/library-tree/tree-node/types/atoms";
 import { defaultSettingsForUnitTests } from "../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../common-utils/setup-spy";
 

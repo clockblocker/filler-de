@@ -6,7 +6,7 @@ import {
 	buildObservedLeafSplitPath,
 	sectionChainToPathParts,
 } from "../../tree/utils";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	computeLeafHealingForFile,
 	computeLeafHealingForScroll,

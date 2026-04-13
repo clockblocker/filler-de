@@ -1,21 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { MD } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core/codecs";
-import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
-import { generateCodexContent } from "@textfresser/library-core/healer/library-tree/codex/generate-codex-content";
+} from "../../../../../src/codecs";
+import type { SectionNodeSegmentId } from "../../../../../src/codecs/segment-id/types/segment-id";
+import { generateCodexContent } from "../../../../../src/healer/library-tree/codex/generate-codex-content";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
+} from "../../../../../src/healer/library-tree/tree-node/types/atoms";
 import type {
 	FileNode,
 	ScrollNode,
 	SectionNode,
-} from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+} from "../../../../../src/healer/library-tree/tree-node/types/tree-node";
+import type { NodeName } from "../../../../../src/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 

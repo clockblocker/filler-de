@@ -1,5 +1,5 @@
 import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { MD } from "@textfresser/vault-action-manager";
 
 export const bulkEvent: BulkVaultEvent = {
 	debug: {

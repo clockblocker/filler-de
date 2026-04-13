@@ -1,4 +1,4 @@
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { z } from "zod";
 import { PayloadKind } from "../../../types/payload-base";
 import { toSourcePath } from "../../source-path";

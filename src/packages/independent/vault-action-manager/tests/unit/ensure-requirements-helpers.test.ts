@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { ExistenceChecker } from "@textfresser/vault-action-manager/impl/actions-processing/dispatcher";
+import type { ExistenceChecker } from "../../src/impl/actions-processing/dispatcher";
 import {
 	buildActionKeyIndex,
 	buildEnsureExistKeys,
@@ -9,15 +9,15 @@ import {
 	ensureDestinationsExist,
 	getDestinationsToCheck,
 	hasActionForKey,
-} from "@textfresser/vault-action-manager/impl/actions-processing/ensure-requirements-helpers";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+} from "../../src/impl/actions-processing/ensure-requirements-helpers";
+import { MD } from "../../src/types/literals";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
-import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+} from "../../src/types/split-path";
+import { SplitPathKind } from "../../src/types/split-path";
+import type { VaultAction } from "../../src/types/vault-action";
+import { VaultActionKind } from "../../src/types/vault-action";
 
 const folder = (
 	basename: string,

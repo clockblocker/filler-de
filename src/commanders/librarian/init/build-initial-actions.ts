@@ -2,18 +2,18 @@ import type {
 	AnySplitPathInsideLibrary,
 	CodecRules,
 	Codecs,
-} from "@textfresser/library-core/codecs";
-import { isCodexSplitPath } from "@textfresser/library-core/codex";
-import { TreeNodeKind, TreeNodeStatus } from "@textfresser/library-core/tree";
-import type { CreateTreeLeafAction } from "@textfresser/library-core/tree/actions";
+} from "@textfresser/library-core";
+import { isCodexSplitPath } from "@textfresser/library-core";
+import { TreeNodeKind, TreeNodeStatus } from "@textfresser/library-core";
+import type { CreateTreeLeafAction } from "@textfresser/library-core";
 import {
 	inferCreatePolicy,
 	tryCanonicalizeSplitPathToDestination,
-} from "@textfresser/library-core/tree/canonical";
-import { tryParseAsInsideLibrarySplitPath } from "@textfresser/library-core/tree/library-scope";
-import type { MD } from "@textfresser/vault-action-manager/types/literals";
-import type { SplitPathWithReader } from "@textfresser/vault-action-manager/types/split-path";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/library-core";
+import { tryParseAsInsideLibrarySplitPath } from "@textfresser/library-core";
+import type { MD } from "@textfresser/vault-action-manager";
+import type { SplitPathWithReader } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { z } from "zod";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import { logger } from "../../../utils/logger";

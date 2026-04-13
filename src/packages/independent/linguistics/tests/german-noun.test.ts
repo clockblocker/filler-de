@@ -15,6 +15,7 @@ describe("German noun schemas", () => {
 			inherentFeatures: {
 				gender: "Neut",
 			},
+			lemmaKind: "Lexeme",
 			language: "German",
 			lexicalRelations: {},
 			morphologicalRelations: {},
@@ -78,6 +79,7 @@ describe("German noun schemas", () => {
 			inherentFeatures: {
 				gender: "Neut",
 			},
+			lemmaKind: "Lexeme",
 			language: "German",
 			lexicalRelations: {
 				hypernym: ["Lebewesen"],
@@ -98,6 +100,7 @@ describe("German noun schemas", () => {
 		const lemmaResult = GermanNounLemmaSchema.safeParse({
 			emojiDescription: [],
 			inherentFeatures: {},
+			lemmaKind: "Lexeme",
 			language: "German",
 			lexicalRelations: {},
 			morphologicalRelations: {},
@@ -129,6 +132,7 @@ describe("German noun schemas", () => {
 			inherentFeatures: {
 				case: "Nom",
 			},
+			lemmaKind: "Lexeme",
 			language: "German",
 			lexicalRelations: {},
 			morphologicalRelations: {},
@@ -184,6 +188,7 @@ describe("German noun schemas", () => {
 	it("rejects duplicate relation targets", () => {
 		const result = GermanNounLemmaSchema.safeParse({
 			inherentFeatures: {},
+			lemmaKind: "Lexeme",
 			language: "German",
 			lexicalRelations: {
 				synonym: ["Auto", "Auto"],

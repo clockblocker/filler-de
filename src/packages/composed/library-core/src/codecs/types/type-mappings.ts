@@ -1,6 +1,6 @@
-import type { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
-import type { InvertRecord } from "@textfresser/library-core/internal/root/type-helpers";
+import type { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
+import type { InvertRecord } from "../../internal/root/type-helpers";
 import type { FileExtension } from "../../healer/library-tree/tree-node/types/atoms";
 import { TreeNodeKind } from "../../healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../types/schemas/node-name";
@@ -22,7 +22,7 @@ export type CorrespondingTreeNodeKind<SK extends SplitPathKind> =
 	SplitPathKindToTreeNodeKind[SK];
 
 export type SplitPathForTreeNodeKind<T extends TreeNodeKind> =
-	import("@textfresser/vault-action-manager/types/split-path").SplitPath<
+	import("@textfresser/vault-action-manager").SplitPath<
 		CorrespondingSplitPathKind<T>
 	>;
 

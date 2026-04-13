@@ -1,10 +1,10 @@
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { makeSplitPath } from "@textfresser/vault-action-manager/impl/common/split-path-and-system-path";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import { makeSplitPath } from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "@textfresser/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager";
 import type { App, TFile } from "obsidian";
 import { getMdFilesInLibrary } from "../../../stateless-helpers/library-files";
 import type { SuffixDelimiterConfig } from "../../../types";

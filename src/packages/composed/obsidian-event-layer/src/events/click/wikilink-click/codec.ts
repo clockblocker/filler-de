@@ -2,7 +2,7 @@
  * WikilinkClickCodec - encodes wikilink click data into payload.
  */
 
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { createEventCodec } from "../../codec-factory";
 import type { WikilinkClickPayload, WikiTarget } from "./payload";
 import { createWikilinkClickPayload } from "./payload";

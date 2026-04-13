@@ -1,5 +1,5 @@
 import { multiSpanHelper } from "../../../../stateless-helpers/multi-span";
-import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
+import { wikilinkHelper } from "@textfresser/note-addressing";
 import type { PromptOutput } from "../../llm/prompt-catalog";
 
 type LemmaPromptOutput = PromptOutput<"Lemma">;

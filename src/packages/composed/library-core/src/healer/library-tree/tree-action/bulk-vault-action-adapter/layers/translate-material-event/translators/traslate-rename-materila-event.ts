@@ -1,4 +1,4 @@
-import { logger } from "@textfresser/library-core/internal/root/logger";
+import { logger } from "../../../../../../../internal/root/logger";
 import type { Codecs } from "../../../../../../../codecs";
 import {
 	type MoveNodeAction,

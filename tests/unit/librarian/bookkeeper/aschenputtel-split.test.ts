@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import { segmentContent } from "../../../../src/commanders/librarian/pages/segmenter";
 import { DEFAULT_SEGMENTATION_CONFIG } from "../../../../src/commanders/librarian/pages/types";
-import type { SeparatedSuffixedBasename } from "@textfresser/library-core/codecs/suffix";
+import type { SeparatedSuffixedBasename } from "@textfresser/library-core";
 import { LOG_DIR } from "../../../tracing/consts";
 import { ASCHENPUTTEL_CONTENT } from "./testcases/aschenputtel";
 

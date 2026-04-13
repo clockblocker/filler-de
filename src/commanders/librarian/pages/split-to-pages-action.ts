@@ -4,21 +4,21 @@
  */
 
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import type { ActiveFileService } from "@textfresser/vault-action-manager/file-services/active-view/active-file-service";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { ActiveFileService } from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
 import { Notice } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { goBackLinkHelper } from "@textfresser/note-addressing/go-back-link";
+import { goBackLinkHelper } from "@textfresser/note-addressing";
 import {
 	type CodecRules,
 	makeCodecRulesFromSettings,
-} from "@textfresser/library-core/codecs";
+} from "@textfresser/library-core";
 import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-} from "@textfresser/library-core/codecs/segment-id";
-import { parseSeparatedSuffix } from "@textfresser/library-core/codecs/suffix";
+} from "@textfresser/library-core";
+import { parseSeparatedSuffix } from "@textfresser/library-core";
 import { buildPageSplitActions } from "./build-actions";
 import {
 	handleSplitToPagesError,

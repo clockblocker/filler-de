@@ -2,7 +2,7 @@ import { morphologyRelationHelper } from "../../../../stateless-helpers/morpholo
 import {
 	type ParsedWikilink,
 	wikilinkHelper,
-} from "@textfresser/note-addressing/wikilink";
+} from "@textfresser/note-addressing";
 import type { TargetLanguage } from "../../../../types";
 import { logger } from "../../../../utils/logger";
 import { extractHashTags } from "../../../../utils/text-utils";

@@ -1,6 +1,6 @@
 import { err, ok, type Result } from "neverthrow";
-import type { NonEmptyArray } from "@textfresser/library-core/internal/root/type-helpers";
-import { nonEmptyArrayResult } from "@textfresser/library-core/internal/root/type-utils";
+import type { NonEmptyArray } from "../../../internal/root/type-helpers";
+import { nonEmptyArrayResult } from "../../../internal/root/type-utils";
 import {
 	type NodeName,
 	NodeNameSchema,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import { propagateRelations } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-relations";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";

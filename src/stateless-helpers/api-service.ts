@@ -1,7 +1,7 @@
 import {
 	formatError,
 	logError,
-} from "@textfresser/vault-action-manager/helpers/issue-handlers";
+} from "@textfresser/vault-action-manager";
 import { errAsync, ResultAsync } from "neverthrow";
 import { Notice, requestUrl } from "obsidian";
 import OpenAI, { APIConnectionError, APIError } from "openai";

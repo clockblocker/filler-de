@@ -3,7 +3,7 @@ import type {
 	SenseDisambiguator,
 } from "@textfresser/lexical-generation";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
 import { logger } from "../../../../../utils/logger";
 import { getSpelledLemma } from "../../../domain/native-selection";

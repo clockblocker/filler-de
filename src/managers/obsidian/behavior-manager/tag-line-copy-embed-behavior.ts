@@ -1,5 +1,5 @@
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { logError } from "@textfresser/vault-action-manager/helpers/issue-handlers";
+import { logError } from "@textfresser/vault-action-manager";
 import { type App, MarkdownView, Notice } from "obsidian";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import { getErrorMessage } from "../../../utils/get-error-message";

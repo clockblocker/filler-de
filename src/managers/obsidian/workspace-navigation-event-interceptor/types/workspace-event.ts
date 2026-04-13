@@ -7,7 +7,7 @@
 import type {
 	SplitPathToFile,
 	SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
 import { z } from "zod";
 
 const WorkspaceEventKindSchema = z.enum([

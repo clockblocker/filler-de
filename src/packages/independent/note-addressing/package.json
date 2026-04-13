@@ -4,9 +4,7 @@
 	"version": "0.0.0",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts",
-		"./go-back-link": "./src/go-back-link.ts",
-		"./wikilink": "./src/wikilink.ts"
+		".": "./src/index.ts"
 	},
 	"scripts": {
 		"build": "bun ../../../../scripts/build-workspace-package.ts"

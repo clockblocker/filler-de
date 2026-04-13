@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type {
 	SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { errAsync, ok, okAsync, ResultAsync } from "neverthrow";
 import {
 	createBackgroundGenerateCoordinator,

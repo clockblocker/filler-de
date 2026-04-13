@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type { GenerateSectionsResult } from "../../../../src/commanders/textfresser/commands/generate/steps/generate-sections";
 import { propagateMorphemes } from "../../../../src/commanders/textfresser/commands/generate/steps/propagate-morphemes";
 import type { MorphologyPayload } from "../../../../src/commanders/textfresser/commands/generate/steps/section-generation-types";

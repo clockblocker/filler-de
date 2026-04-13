@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { computeLineChanges } from "@textfresser/vault-action-manager/file-services/active-view/writer/compute-line-changes";
+import { computeLineChanges } from "../../../src/file-services/active-view/writer/compute-line-changes";
 
 describe("computeLineChanges", () => {
 	describe("no-op scenarios", () => {

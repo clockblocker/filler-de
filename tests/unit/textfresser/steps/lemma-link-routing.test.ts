@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
 	computeFinalTarget,
 	computePrePromptTarget,

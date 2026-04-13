@@ -7,18 +7,18 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
-import type { SplitPathToMdFileInsideLibrary } from "@textfresser/library-core/codecs";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFileInsideLibrary } from "@textfresser/library-core";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core/codecs";
+} from "@textfresser/library-core";
 import {
 	OrphanCodexScanner,
 	scanAndGenerateOrphanActions,
-} from "@textfresser/library-core/healing";
-import type { NodeName } from "@textfresser/library-core/types";
+} from "@textfresser/library-core";
+import type { NodeName } from "@textfresser/library-core";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import { makeTree } from "../../unit/librarian/library-tree/tree-test-helpers";

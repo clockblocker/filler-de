@@ -1,15 +1,15 @@
 import { describe, expect, it } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { computeSectionStatus } from "@textfresser/library-core/healer/library-tree/codex/compute-section-status";
+import { MD } from "@textfresser/vault-action-manager";
+import { computeSectionStatus } from "../../../../../src/healer/library-tree/codex/compute-section-status";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
+} from "../../../../../src/healer/library-tree/tree-node/types/atoms";
 import type {
 	ScrollNode,
 	SectionNode,
-} from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+} from "../../../../../src/healer/library-tree/tree-node/types/tree-node";
+import type { NodeName } from "../../../../../src/types/schemas/node-name";
 
 // Helpers
 const scroll = (

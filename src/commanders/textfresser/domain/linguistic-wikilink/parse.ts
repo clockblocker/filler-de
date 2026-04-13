@@ -1,9 +1,9 @@
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { stringifySplitPath } from "../../../../stateless-helpers/split-path-comparison";
 import {
 	type ParsedWikilink,
 	wikilinkHelper,
-} from "@textfresser/note-addressing/wikilink";
+} from "@textfresser/note-addressing";
 import { resolveSectionLinkPolicyForCssKind } from "../../common/linguistic-wikilink-context";
 import type {
 	LibraryBasenameParser,

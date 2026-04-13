@@ -1,6 +1,6 @@
-import type { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathKind } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
-import { getParsedUserSettings } from "@textfresser/library-core/internal/root/global-state";
+import { getParsedUserSettings } from "../../../../../internal/root/global-state";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
 	AnySplitPathInsideLibrary,

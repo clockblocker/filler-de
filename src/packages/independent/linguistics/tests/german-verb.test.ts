@@ -68,6 +68,7 @@ describe("German verb schemas", () => {
 				reflex: true,
 				separable: false,
 			},
+			lemmaKind: "Lexeme",
 			language: "German",
 			lexicalRelations: {
 				hypernym: ["Fortbewegung"],
@@ -89,6 +90,7 @@ describe("German verb schemas", () => {
 			inherentFeatures: {
 				mood: "Ind",
 			},
+			lemmaKind: "Lexeme",
 			language: "German",
 			lexicalRelations: {},
 			morphologicalRelations: {},
@@ -156,6 +158,7 @@ describe("German verb schemas", () => {
 	it("rejects duplicate relation targets", () => {
 		const result = GermanVerbLemmaSchema.safeParse({
 			inherentFeatures: {},
+			lemmaKind: "Lexeme",
 			language: "German",
 			lexicalRelations: {
 				synonym: ["laufen", "laufen"],

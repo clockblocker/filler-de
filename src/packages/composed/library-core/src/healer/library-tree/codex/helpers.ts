@@ -1,4 +1,4 @@
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import type { CodecRules } from "../../../codecs";
 import { tryParseAsInsideLibrarySplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import { PREFIX_OF_CODEX } from "./literals";

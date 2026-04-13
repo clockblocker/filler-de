@@ -1,5 +1,5 @@
 import z from "zod";
-import { getParsedUserSettings } from "@textfresser/library-core/internal/root/global-state";
+import { getParsedUserSettings } from "../../internal/root/global-state";
 import { CUSTOM_ERROR_CODE } from "../consts/literals";
 import { NamingError } from "./errors";
 

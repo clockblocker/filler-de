@@ -3,7 +3,7 @@
  * Pure functions that produce markdown strings for codex entries.
  */
 
-import { getParsedUserSettings } from "@textfresser/library-core/internal/root/global-state";
+import { getParsedUserSettings } from "../../../internal/root/global-state";
 import {
 	DASH,
 	DONE_CHECKBOX,
@@ -12,9 +12,9 @@ import {
 	OBSIDIAN_LINK_OPEN,
 	PIPE,
 	SPACE_F,
-} from "@textfresser/library-core/internal/root/ui";
+} from "../../../internal/root/ui";
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../codecs";
-import { computeCodexSuffix } from "@textfresser/library-core/path-finder";
+import { computeCodexSuffix } from "../../../path-finder";
 import type { TreeNodeStatus } from "../tree-node/types/atoms";
 import { TreeNodeStatus as Status } from "../tree-node/types/atoms";
 import { PREFIX_OF_CODEX } from "./literals";

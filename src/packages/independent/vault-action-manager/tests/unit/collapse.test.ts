@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { collapseActions } from "@textfresser/vault-action-manager/impl/actions-processing/collapse";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import { collapseActions } from "../../src/impl/actions-processing/collapse";
+import { MD } from "../../src/types/literals";
+import type { SplitPathToMdFile } from "../../src/types/split-path";
+import { VaultActionKind } from "../../src/types/vault-action";
 
 const mdFile = (
 	basename: string,

@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { MD } from "@textfresser/vault-action-manager";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	makeRegularSplitPathInsideLibrary,
 	tryParseCanonicalSplitPathInsideLibrary,
-} from "@textfresser/library-core/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec";
+} from "../../../../../../../src/healer/library-tree/tree-action/utils/canonical-naming/canonical-split-path-codec";
 import { defaultSettingsForUnitTests } from "../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../common-utils/setup-spy";
 

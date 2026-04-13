@@ -1,5 +1,5 @@
 import type { Result } from "neverthrow";
-import type { NonEmptyArray } from "@textfresser/library-core/internal/root/type-helpers";
+import type { NonEmptyArray } from "../../../internal/root/type-helpers";
 import type { NodeName } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import type { CodecRules } from "../../rules";

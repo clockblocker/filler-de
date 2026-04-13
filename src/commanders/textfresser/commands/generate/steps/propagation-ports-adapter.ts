@@ -8,8 +8,8 @@ import {
 	readContentErrorToReason,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import type { ReadContentError } from "@textfresser/vault-action-manager/types/read-content-error";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { ReadContentError } from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
 import type { PathLookupFn } from "../../../common/target-path-resolver";
 import type {

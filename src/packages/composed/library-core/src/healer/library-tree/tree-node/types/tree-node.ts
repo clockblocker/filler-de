@@ -1,4 +1,4 @@
-import type { Prettify } from "@textfresser/library-core/internal/root/type-helpers";
+import type { Prettify } from "../../../../internal/root/type-helpers";
 import type { TreeNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
 import type { NodeName } from "../../../../types/schemas/node-name";
 import type {

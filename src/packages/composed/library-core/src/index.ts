@@ -1,3 +1,14 @@
 export * from "./codecs";
+export * from "./codecs/locator";
+export * from "./codecs/segment-id";
+export * from "./codecs/suffix";
 export * from "./path-finder";
-export { Tree } from "./healer/library-tree/tree";
+export * from "./codex";
+export * from "./display-name-sort";
+export * from "./healing";
+export * from "./tree";
+export * from "./tree/actions";
+export * from "./tree/canonical";
+export * from "./tree/library-scope";
+export * from "./tree/utils";
+export * from "./types";

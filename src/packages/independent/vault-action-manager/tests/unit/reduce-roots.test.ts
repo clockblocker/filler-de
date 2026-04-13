@@ -1,14 +1,14 @@
 import { describe, expect, it } from "bun:test";
-import { makeSystemPathForSplitPath } from "@textfresser/vault-action-manager";
-import { reduceRoots } from "@textfresser/vault-action-manager/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/reduce-roots";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { makeSystemPathForSplitPath } from "../../src";
+import { reduceRoots } from "../../src/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/reduce-roots";
+import { MD } from "../../src/types/literals";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
-import type { VaultEvent } from "@textfresser/vault-action-manager/types/vault-event";
-import { VaultEventKind } from "@textfresser/vault-action-manager/types/vault-event";
+} from "../../src/types/split-path";
+import type { VaultEvent } from "../../src/types/vault-event";
+import { VaultEventKind } from "../../src/types/vault-event";
 
 // Helper: build split paths
 const F = (path: string): SplitPathToFolder => {

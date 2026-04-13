@@ -3,8 +3,8 @@ import type { NonEmptyArray } from "../../../types/helpers";
 import {
 	TreeNodeStatus,
 	type TreeNodeStatus as TreeNodeStatusType,
-} from "@textfresser/library-core/tree";
-import type { NodeName } from "@textfresser/library-core/types";
+} from "@textfresser/library-core";
+import type { NodeName } from "@textfresser/library-core";
 
 // ─── Zod Enums ───
 

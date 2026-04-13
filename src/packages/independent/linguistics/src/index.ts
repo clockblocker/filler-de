@@ -1,4 +1,5 @@
-import z, { type ZodTypeAny } from "zod/v3";
+import type z from "zod/v3";
+import type { ZodTypeAny } from "zod/v3";
 import { EnglishLemmaSchema } from "./english/english-lemma";
 import { EnglishSelectionSchema } from "./english/english-selection";
 import { GermanLemmaSchema } from "./german/german-lemma";
@@ -9,44 +10,27 @@ import type {
 } from "./registry-shapes";
 import type { AbstractLemma } from "./universal/abstract-lemma";
 import type { AbstractSelectionFor } from "./universal/abstract-selection";
+import type {
+	TargetLanguage,
+	TargetLanguageSchema,
+} from "./universal/enums/core/language";
 import {
 	LemmaKind as LemmaKindSchema,
 	OrthographicStatus as OrthographicStatusSchema,
 	SurfaceKind as SurfaceKindSchema,
 } from "./universal/enums/core/selection";
-import {
-	TARGET_LANGUAGES,
-	TargetLanguageSchema,
-	type TargetLanguage,
-} from "./universal/enums/core/language";
 import { Case as CaseSchema } from "./universal/enums/feature/ud/case";
 import { Gender as GenderSchema } from "./universal/enums/feature/ud/gender";
 import { GrammaticalNumber as GrammaticalNumberSchema } from "./universal/enums/feature/ud/number";
 import { MorphemeKindSchema } from "./universal/enums/kind/morpheme-kind";
 import { PhrasemeKind as PhrasemeKindSchema } from "./universal/enums/kind/phraseme-kind";
 import { Pos as PosSchema } from "./universal/enums/kind/pos";
-export { toLingId, type LingId } from "./ling-id";
 
-export {
-	Case as CaseSchema,
-} from "./universal/enums/feature/ud/case";
+export { type LingId, toLingId } from "./ling-id";
 export {
 	TARGET_LANGUAGES,
 	TargetLanguageSchema,
 } from "./universal/enums/core/language";
-export {
-	Gender as GenderSchema,
-} from "./universal/enums/feature/ud/gender";
-export {
-	GrammaticalNumber as GrammaticalNumberSchema,
-} from "./universal/enums/feature/ud/number";
-export {
-	MorphemeKindSchema,
-} from "./universal/enums/kind/morpheme-kind";
-export {
-	PhrasemeKind as PhrasemeKindSchema,
-} from "./universal/enums/kind/phraseme-kind";
-export { Pos as PosSchema } from "./universal/enums/kind/pos";
 
 export const OrthographicStatus = OrthographicStatusSchema.enum;
 export const SurfaceKind = SurfaceKindSchema.enum;
@@ -70,12 +54,6 @@ export type Pos = z.infer<typeof PosSchema>;
 export type InherentFeatures = AbstractLemma<"Lexeme">["inherentFeatures"];
 export type UnknownSelection = AbstractSelectionFor<"Unknown">;
 
-export const NativeDiscriminatorSchema = z.union([
-	PosSchema,
-	PhrasemeKindSchema,
-	MorphemeKindSchema,
-]);
-
 export const SelectionSchema = {
 	English: EnglishSelectionSchema,
 	German: GermanSelectionSchema,
@@ -85,61 +63,6 @@ export const LemmaSchema = {
 	English: EnglishLemmaSchema,
 	German: GermanLemmaSchema,
 } satisfies LemmaSchemaShape;
-
-function getObjectFieldSchema(
-	schema: ZodTypeAny,
-	field: string,
-): ZodTypeAny {
-	const shape = (schema as z.AnyZodObject).shape;
-	return shape[field] as ZodTypeAny;
-}
-
-export const GermanInherentFeaturesSchemaByPos = {
-	ADJ: getObjectFieldSchema(GermanLemmaSchema.Lexeme.ADJ, "inherentFeatures"),
-	ADP: getObjectFieldSchema(GermanLemmaSchema.Lexeme.ADP, "inherentFeatures"),
-	ADV: getObjectFieldSchema(GermanLemmaSchema.Lexeme.ADV, "inherentFeatures"),
-	AUX: getObjectFieldSchema(GermanLemmaSchema.Lexeme.AUX, "inherentFeatures"),
-	CCONJ: getObjectFieldSchema(
-		GermanLemmaSchema.Lexeme.CCONJ,
-		"inherentFeatures",
-	),
-	DET: getObjectFieldSchema(GermanLemmaSchema.Lexeme.DET, "inherentFeatures"),
-	INTJ: getObjectFieldSchema(
-		GermanLemmaSchema.Lexeme.INTJ,
-		"inherentFeatures",
-	),
-	NOUN: getObjectFieldSchema(
-		GermanLemmaSchema.Lexeme.NOUN,
-		"inherentFeatures",
-	),
-	NUM: getObjectFieldSchema(GermanLemmaSchema.Lexeme.NUM, "inherentFeatures"),
-	PART: getObjectFieldSchema(
-		GermanLemmaSchema.Lexeme.PART,
-		"inherentFeatures",
-	),
-	PRON: getObjectFieldSchema(
-		GermanLemmaSchema.Lexeme.PRON,
-		"inherentFeatures",
-	),
-	PROPN: getObjectFieldSchema(
-		GermanLemmaSchema.Lexeme.PROPN,
-		"inherentFeatures",
-	),
-	PUNCT: getObjectFieldSchema(
-		GermanLemmaSchema.Lexeme.PUNCT,
-		"inherentFeatures",
-	),
-	SCONJ: getObjectFieldSchema(
-		GermanLemmaSchema.Lexeme.SCONJ,
-		"inherentFeatures",
-	),
-	SYM: getObjectFieldSchema(GermanLemmaSchema.Lexeme.SYM, "inherentFeatures"),
-	VERB: getObjectFieldSchema(
-		GermanLemmaSchema.Lexeme.VERB,
-		"inherentFeatures",
-	),
-	X: getObjectFieldSchema(GermanLemmaSchema.Lexeme.X, "inherentFeatures"),
-} satisfies Record<Pos, ZodTypeAny>;
 
 export type Lemma<
 	L extends TargetLanguage,
@@ -163,6 +86,14 @@ export type Selection<
 		LK
 	> = SelectionDiscriminatorArg<L, OS, SK, LK>,
 > = InferSchema<SelectionSchemaFor<L, OS, SK, LK, D>>;
+
+export type AnyLemma<L extends TargetLanguage = TargetLanguage> = {
+	[LL in L]: LanguageLemmaUnion<LL>;
+}[L];
+
+export type AnySelection<L extends TargetLanguage = TargetLanguage> = {
+	[LL in L]: KnownSelectionUnionForLanguage<LL> | UnknownSelection;
+}[L];
 
 type SupportedLanguage = z.infer<typeof TargetLanguageSchema>;
 
@@ -189,14 +120,6 @@ type KnownSelectionUnionForLanguage<L extends TargetLanguage> = ValueOf<{
 		}>;
 	}>;
 }>;
-
-export type AnyLemma<L extends TargetLanguage = TargetLanguage> = {
-	[LL in L]: LanguageLemmaUnion<LL>;
-}[L];
-
-export type AnySelection<L extends TargetLanguage = TargetLanguage> = {
-	[LL in L]: KnownSelectionUnionForLanguage<LL> | UnknownSelection;
-}[L];
 
 type LemmaSchemaShape = {
 	[L in SupportedLanguage]: LemmaSchemaLanguageShape;

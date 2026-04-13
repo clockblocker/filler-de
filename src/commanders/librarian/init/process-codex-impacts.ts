@@ -1,4 +1,4 @@
-import type { Codecs } from "@textfresser/library-core/codecs";
+import type { Codecs } from "@textfresser/library-core";
 import {
 	type CodexAction,
 	type CodexImpact,
@@ -6,8 +6,8 @@ import {
 	codexImpactToIncrementalRecreations,
 	codexImpactToRecreations,
 	mergeCodexImpacts,
-} from "@textfresser/library-core/codex";
-import type { Healer, HealingAction } from "@textfresser/library-core/healing";
+} from "@textfresser/library-core";
+import type { Healer, HealingAction } from "@textfresser/library-core";
 
 export type ProcessCodexImpactsResult = {
 	/** Healing actions for codex deletions */

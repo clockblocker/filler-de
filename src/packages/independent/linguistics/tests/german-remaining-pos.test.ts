@@ -202,6 +202,7 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					pronType: "Dem",
 				},
+				lemmaKind: "Lexeme",
 				language: "German",
 				lexicalRelations: {},
 				morphologicalRelations: {},
@@ -216,6 +217,7 @@ describe("German remaining POS schemas", () => {
 					definite: "Def",
 					pronType: "Art",
 				},
+				lemmaKind: "Lexeme",
 				language: "German",
 				lexicalRelations: {},
 				morphologicalRelations: {},
@@ -229,6 +231,7 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					numType: "Card",
 				},
+				lemmaKind: "Lexeme",
 				language: "German",
 				lexicalRelations: {},
 				morphologicalRelations: {},
@@ -242,6 +245,7 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					polarity: "Neg",
 				},
+				lemmaKind: "Lexeme",
 				language: "German",
 				lexicalRelations: {},
 				morphologicalRelations: {},
@@ -255,6 +259,7 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					gender: "Masc",
 				},
+				lemmaKind: "Lexeme",
 				language: "German",
 				lexicalRelations: {},
 				morphologicalRelations: {},
@@ -268,6 +273,7 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					numType: "Range",
 				},
+				lemmaKind: "Lexeme",
 				language: "German",
 				lexicalRelations: {},
 				morphologicalRelations: {},
@@ -281,6 +287,7 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					foreign: true,
 				},
+				lemmaKind: "Lexeme",
 				language: "German",
 				lexicalRelations: {},
 				morphologicalRelations: {},
@@ -368,6 +375,7 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					case: "Nom",
 				},
+				lemmaKind: "Lexeme",
 				language: "German",
 				lexicalRelations: {},
 				morphologicalRelations: {},
@@ -383,6 +391,7 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					pronType: "Prs",
 				},
+				lemmaKind: "Lexeme",
 				language: "German",
 				lexicalRelations: {},
 				morphologicalRelations: {},

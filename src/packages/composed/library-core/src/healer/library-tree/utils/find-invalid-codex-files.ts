@@ -1,6 +1,6 @@
-import { pathfinder } from "@textfresser/vault-action-manager/helpers/pathfinder";
-import type { SplitPathWithReader } from "@textfresser/vault-action-manager/types/split-path";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { pathfinder } from "@textfresser/vault-action-manager";
+import type { SplitPathWithReader } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import type { CodecRules, Codecs } from "../../../codecs";
 import { isCodexSplitPath } from "../codex/helpers";
 import { tryParseAsInsideLibrarySplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";

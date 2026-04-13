@@ -2,7 +2,7 @@ import z from "zod";
 import {
 	SMALL_EM_DASH,
 	SmallEmDashSchema,
-} from "@textfresser/library-core/internal/root/ui";
+} from "../../../internal/root/ui";
 import {
 	FileExtensionSchema,
 	MdExtensionSchema,

@@ -7,8 +7,8 @@ import {
 	SplitPathKind,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { err, ok } from "neverthrow";
 import {
 	createPropagationPortsAdapter,

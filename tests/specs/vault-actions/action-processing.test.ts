@@ -13,18 +13,18 @@ import { describe, expect, it } from "bun:test";
 import {
 	buildDependencyGraph,
 	makeGraphKey,
-} from "@textfresser/vault-action-manager/impl/actions-processing/dependency-detector";
-import { topologicalSort } from "@textfresser/vault-action-manager/impl/actions-processing/topological-sort";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+} from "@textfresser/vault-action-manager";
+import { topologicalSort } from "@textfresser/vault-action-manager";
+import { MD } from "@textfresser/vault-action-manager";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "@textfresser/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager";
 
 // ─── Test Helpers ───
 

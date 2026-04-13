@@ -5,7 +5,7 @@
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
 
 /**
  * Build a SplitPath from a file path string.

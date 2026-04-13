@@ -2,7 +2,7 @@ import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
 import type { Result } from "neverthrow";
 import { ok } from "neverthrow";
 import type { NodeName } from "../../../types/schemas/node-name";

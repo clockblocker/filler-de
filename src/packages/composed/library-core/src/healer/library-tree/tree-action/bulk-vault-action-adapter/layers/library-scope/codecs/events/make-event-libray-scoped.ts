@@ -9,7 +9,7 @@ import type {
 	FolderCreatedVaultEvent,
 	FolderDeletedVaultEvent,
 	FolderRenamedVaultEvent,
-} from "@textfresser/vault-action-manager/types/vault-event";
+} from "@textfresser/vault-action-manager";
 import type { CodecRules } from "../../../../../../../../codecs/rules";
 import type { LibraryScopedVaultEvent } from "../../types/scoped-event";
 import { Scope } from "../../types/scoped-event";

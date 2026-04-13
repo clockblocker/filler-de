@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
+import * as linguistics from "../src";
 import {
+	type AnyLemma,
+	type AnySelection,
 	Case,
+	type InherentFeatures,
 	LemmaKind,
 	LemmaSchema,
 	MorphemeKind,
@@ -11,9 +15,7 @@ import {
 	SurfaceKind,
 	TARGET_LANGUAGES,
 	TargetLanguageSchema,
-	type AnyLemma,
-	type AnySelection,
-	type InherentFeatures,
+	toLingId,
 	type UnknownSelection,
 } from "../src";
 
@@ -25,6 +27,7 @@ describe("root exports", () => {
 		expect(OrthographicStatus.Standard).toBe("Standard");
 		expect(SurfaceKind.Inflection).toBe("Inflection");
 		expect(LemmaKind.Lexeme).toBe("Lexeme");
+		expect(typeof toLingId).toBe("function");
 		expect(Pos.NOUN).toBe("NOUN");
 		expect(PhrasemeKind.Aphorism).toBe("Aphorism");
 		expect(MorphemeKind.Root).toBe("Root");
@@ -47,6 +50,7 @@ describe("root exports", () => {
 		const lemma: AnyLemma<"German"> = {
 			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
 			language: "German",
+			lemmaKind: "Lexeme",
 			lexicalRelations: {},
 			morphologicalRelations: {},
 			pos: "NOUN",
@@ -65,6 +69,7 @@ describe("root exports", () => {
 		const lemma: AnyLemma<"English"> = {
 			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
 			language: "English",
+			lemmaKind: "Lexeme",
 			lexicalRelations: {},
 			morphologicalRelations: {},
 			pos: "NOUN",
@@ -77,5 +82,16 @@ describe("root exports", () => {
 
 		expect(lemma.pos).toBe("NOUN");
 		expect(unknownSelection.orthographicStatus).toBe("Unknown");
+	});
+
+	it("hides internal schema helpers from the root surface", () => {
+		expect("CaseSchema" in linguistics).toBeFalse();
+		expect("GenderSchema" in linguistics).toBeFalse();
+		expect("GermanInherentFeaturesSchemaByPos" in linguistics).toBeFalse();
+		expect("GrammaticalNumberSchema" in linguistics).toBeFalse();
+		expect("MorphemeKindSchema" in linguistics).toBeFalse();
+		expect("NativeDiscriminatorSchema" in linguistics).toBeFalse();
+		expect("PosSchema" in linguistics).toBeFalse();
+		expect("PhrasemeKindSchema" in linguistics).toBeFalse();
 	});
 });

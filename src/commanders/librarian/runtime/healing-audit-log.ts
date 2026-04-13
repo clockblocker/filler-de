@@ -9,7 +9,7 @@
  * The log is in-memory only (not persisted) to avoid performance impact.
  */
 
-import type { HealingAction, TreeAction } from "@textfresser/library-core/healing";
+import type { HealingAction, TreeAction } from "@textfresser/library-core";
 import type { HealingError } from "../errors/healing-error";
 import { formatHealingError } from "../errors/healing-error";
 

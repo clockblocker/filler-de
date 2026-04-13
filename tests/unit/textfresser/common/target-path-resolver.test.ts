@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import {
 	buildPropagationActionPair,
 	type PathLookupFn,

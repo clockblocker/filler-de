@@ -1,8 +1,8 @@
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
 	type VaultAction,
 	VaultActionKind,
-} from "@textfresser/vault-action-manager/types/vault-action";
+} from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
 import { buildPolicyDestinationPath } from "../../../common/lemma-link-routing";
 import type { CommandError, CommandStateWithLemma } from "../../types";

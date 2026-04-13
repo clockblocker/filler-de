@@ -13,7 +13,7 @@ import {
 	type ScrollNode,
 	TreeNodeKind,
 } from "../../tree";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	computeLeafHealingForFile,
 	computeLeafHealingForScroll,

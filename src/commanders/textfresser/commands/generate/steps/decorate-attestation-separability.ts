@@ -12,8 +12,8 @@
  * Produces a ProcessMdFile action for the source reading note (attestation.source.path).
  */
 
-import { wikilinkHelper } from "@textfresser/note-addressing/wikilink";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import { wikilinkHelper } from "@textfresser/note-addressing";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";

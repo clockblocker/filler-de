@@ -3,12 +3,12 @@ import {
 	SplitPathKind,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
 import {
 	serializeSeparatedSuffix,
-} from "@textfresser/library-core/codecs/suffix";
-import type { CodecRules } from "@textfresser/library-core/codecs";
-import type { NodeName } from "@textfresser/library-core/types";
+} from "@textfresser/library-core";
+import type { CodecRules } from "@textfresser/library-core";
+import type { NodeName } from "@textfresser/library-core";
 import { PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
 
 const MAX_PAGE_INDEX = 10 ** PAGE_INDEX_DIGITS - 1; // 999 for 3 digits

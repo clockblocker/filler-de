@@ -2,7 +2,7 @@ import { makeSplitPath } from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToFolder,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
 import type { SuffixDelimiterConfig, TextEaterSettings } from "../types";
 import type { Prettify } from "../types/helpers";
 import {

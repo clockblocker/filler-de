@@ -14,15 +14,16 @@ describe("LingId", () => {
 			pos: "NOUN",
 			spelledLemma: " Burg ",
 		};
+
 		const selection: AnySelection<"German"> = {
 			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
 				lemma: {
-					emojiDescription: ["👑", "🏰", "🏰"],
+					emojiDescription: ["👑", "🏰"],
 					inherentFeatures: { gender: "Fem" },
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "NOUN",
 					spelledLemma: "Burg",
 				},
@@ -41,8 +42,8 @@ describe("LingId", () => {
 			surface: {
 				lemma: {
 					inherentFeatures: { separable: true },
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "VERB",
 					spelledLemma: "aufgehen",
 				},
@@ -56,8 +57,8 @@ describe("LingId", () => {
 			surface: {
 				lemma: {
 					inherentFeatures: { separable: true },
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "VERB",
 					spelledLemma: "aufgehen",
 				},
@@ -89,8 +90,8 @@ describe("LingId", () => {
 			orthographicStatus: "Standard",
 			surface: {
 				lemma: {
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "NOUN",
 					spelledLemma: "Hund",
 				},
@@ -111,8 +112,8 @@ describe("LingId", () => {
 			surface: {
 				lemma: {
 					inherentFeatures: { gender: "Masc" },
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "NOUN",
 					spelledLemma: "Hund",
 				},
@@ -126,8 +127,8 @@ describe("LingId", () => {
 			surface: {
 				lemma: {
 					inherentFeatures: { gender: "Masc" },
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "NOUN",
 					spelledLemma: "Hund",
 				},
@@ -151,7 +152,7 @@ describe("LingId", () => {
 			spelledLemma: "Burg",
 		};
 		const right: AnyLemma<"German"> = {
-			emojiDescription: ["👑", "🏰", "🏰"],
+			emojiDescription: ["👑", "🏰"],
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",

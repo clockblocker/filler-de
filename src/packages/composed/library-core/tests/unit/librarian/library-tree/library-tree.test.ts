@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
-import { makeCodecRulesFromSettings, makeCodecs } from "@textfresser/library-core/codecs";
-import { Healer } from "@textfresser/library-core/healing";
-import { codexImpactToIncrementalRecreations } from "@textfresser/library-core/healer/library-tree/codex/codex-impact-to-actions";
-import { generateChildrenList } from "@textfresser/library-core/healer/library-tree/codex/generate-codex-content";
-import { mergeCodexImpacts } from "@textfresser/library-core/healer/library-tree/codex/merge-codex-impacts";
-import { TreeActionType } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
-import { TreeNodeStatus } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { makeCodecRulesFromSettings, makeCodecs } from "../../../../src/codecs";
+import { Healer } from "../../../../src/healing";
+import { codexImpactToIncrementalRecreations } from "../../../../src/healer/library-tree/codex/codex-impact-to-actions";
+import { generateChildrenList } from "../../../../src/healer/library-tree/codex/generate-codex-content";
+import { mergeCodexImpacts } from "../../../../src/healer/library-tree/codex/merge-codex-impacts";
+import { TreeActionType } from "../../../../src/healer/library-tree/tree-action/types/tree-action";
+import { TreeNodeStatus } from "../../../../src/healer/library-tree/tree-node/types/atoms";
+import type { NodeName } from "../../../../src/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
 import {

@@ -1,12 +1,12 @@
-import type { CodecRules, Codecs } from "@textfresser/library-core/codecs";
+import type { CodecRules, Codecs } from "@textfresser/library-core";
 import {
 	type CodexAction,
 	codexActionsToVaultActions,
-} from "@textfresser/library-core/codex";
+} from "@textfresser/library-core";
 import {
 	type HealingAction,
 	healingActionsToVaultActions,
-} from "@textfresser/library-core/healing";
+} from "@textfresser/library-core";
 import type { VaultAction } from "@textfresser/vault-action-manager";
 
 /**

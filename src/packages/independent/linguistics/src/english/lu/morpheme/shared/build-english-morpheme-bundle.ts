@@ -31,6 +31,7 @@ export function buildEnglishMorphemeBundle<MK extends MorphemeKind>({
 			.object({
 				emojiDescription: EmojiDescriptionSchema.optional(),
 				isClosedSet: z.boolean().optional(),
+				lemmaKind: z.literal("Morpheme"),
 				language: z.literal("English"),
 				lexicalRelations: AbstractLexicalRelationsSchema,
 				morphemeKind: z.literal(morphemeKind),

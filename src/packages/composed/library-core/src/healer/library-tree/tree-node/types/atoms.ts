@@ -1,7 +1,7 @@
 import {
 	EmptyStringSchema,
 	MdSchema,
-} from "@textfresser/vault-action-manager/types/literals";
+} from "@textfresser/vault-action-manager";
 import z from "zod";
 import {
 	DONE_STATUS,

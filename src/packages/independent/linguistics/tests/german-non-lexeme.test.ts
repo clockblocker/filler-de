@@ -7,6 +7,7 @@ import { GermanPhrasemeLemmaSchemas } from "../src/german/lu/phraseme/german-phr
 describe("German non-lexeme schemas", () => {
 	it("exposes inferred morpheme and phraseme lemma types from the registry", () => {
 		const morpheme: Lemma<"German", "Morpheme", "Prefix"> = {
+			lemmaKind: "Morpheme",
 			language: "German",
 			lexicalRelations: {},
 			morphemeKind: "Prefix",
@@ -41,6 +42,7 @@ describe("German non-lexeme schemas", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
 			emojiDescription: ["🧩"],
 			isClosedSet: false,
+			lemmaKind: "Morpheme",
 			language: "German",
 			lexicalRelations: {
 				synonym: ["ab-"],
@@ -54,6 +56,7 @@ describe("German non-lexeme schemas", () => {
 
 	it("rejects wrong discriminants for German morpheme lemmas", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
+			lemmaKind: "Morpheme",
 			language: "German",
 			lexicalRelations: {},
 			morphemeKind: "Suffix",
@@ -67,6 +70,7 @@ describe("German non-lexeme schemas", () => {
 		const discourseFormulaResult =
 			GermanPhrasemeLemmaSchemas.DiscourseFormula.safeParse({
 				discourseFormulaRole: "Reaction",
+				lemmaKind: "Phraseme",
 				language: "German",
 				lexicalRelations: {},
 				phrasemeKind: "DiscourseFormula",
@@ -74,6 +78,7 @@ describe("German non-lexeme schemas", () => {
 			});
 		const aphorismResult = GermanPhrasemeLemmaSchemas.Aphorism.safeParse({
 			discourseFormulaRole: "Reaction",
+			lemmaKind: "Phraseme",
 			language: "German",
 			lexicalRelations: {},
 			phrasemeKind: "Aphorism",

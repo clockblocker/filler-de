@@ -2,7 +2,7 @@
  * Utilities for computing action placements.
  */
 
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { SelectionActionPlacement } from "../../../types";

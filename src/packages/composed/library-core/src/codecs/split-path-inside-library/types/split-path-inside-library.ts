@@ -3,7 +3,7 @@ import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
 
 export type SplitPathToFolderInsideLibrary = SplitPathToFolder & {
 	kind: typeof SplitPathKind.Folder;

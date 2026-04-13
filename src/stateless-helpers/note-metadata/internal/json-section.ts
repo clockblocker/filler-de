@@ -3,7 +3,7 @@
  * Not exported from the module - use public API instead.
  */
 
-import type { Transform } from "@textfresser/vault-action-manager/types/vault-action";
+import type { Transform } from "@textfresser/vault-action-manager";
 import type { z } from "zod";
 
 // ─── Constants ───

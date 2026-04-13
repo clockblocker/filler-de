@@ -3,12 +3,12 @@
  * Produces markdown content for a section's codex file.
  */
 
-import { getParsedUserSettings } from "@textfresser/library-core/internal/root/global-state";
-import { LINE_BREAK, SPACE_F, TAB } from "@textfresser/library-core/internal/root/ui";
+import { getParsedUserSettings } from "../../../internal/root/global-state";
+import { LINE_BREAK, SPACE_F, TAB } from "../../../internal/root/ui";
 import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
-import { sortTreeNodesForDisplay } from "@textfresser/library-core/display-name-sort";
-import { sectionChainToPathParts } from "@textfresser/library-core/path-finder";
+import { sortTreeNodesForDisplay } from "../../../display-name-sort";
+import { sectionChainToPathParts } from "../../../path-finder";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";
 import { computeSectionStatus } from "./compute-section-status";

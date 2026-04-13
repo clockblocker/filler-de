@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
-import type { FileNodeSegmentId, ScrollNodeSegmentId, SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
+import type { FileNodeSegmentId, ScrollNodeSegmentId, SectionNodeSegmentId } from "../../../../../src/codecs/segment-id/types/segment-id";
 import {
 	type CodexImpact,
 	computeCodexImpact,
-} from "@textfresser/library-core/healer/library-tree/codex/compute-codex-impact";
-import { TreeActionType } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
-import { TreeNodeKind, TreeNodeStatus } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+} from "../../../../../src/healer/library-tree/codex/compute-codex-impact";
+import { TreeActionType } from "../../../../../src/healer/library-tree/tree-action/types/tree-action";
+import { TreeNodeKind, TreeNodeStatus } from "../../../../../src/healer/library-tree/tree-node/types/atoms";
+import type { NodeName } from "../../../../../src/types/schemas/node-name";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;

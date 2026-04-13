@@ -1,7 +1,7 @@
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
 import type { TargetLanguage } from "../../../types";
 import {
 	TARGET_LANGUAGE_CODE,

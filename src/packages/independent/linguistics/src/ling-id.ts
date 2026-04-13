@@ -1,5 +1,5 @@
-import type { AnyLemma, AnySelection, LemmaKind, SurfaceKind } from "./index";
 import { identityFeatureRegistry } from "./identity-feature-registry";
+import type { AnyLemma, AnySelection, LemmaKind, SurfaceKind } from "./index";
 import type { AbstractFeatures } from "./universal/enums/feature/feature";
 
 export type LingId = string & { readonly __brand: "LingId" };
@@ -132,6 +132,8 @@ function getDiscriminator(lemma: LemmaLike): IdentityDiscriminator | null {
 		case "Phraseme":
 			return "phrasemeKind" in lemma ? lemma.phrasemeKind : null;
 	}
+
+	return null;
 }
 
 function getIdentityFeatureKeys(
@@ -139,7 +141,10 @@ function getIdentityFeatureKeys(
 	unitKind: LemmaKind,
 	discriminator: IdentityDiscriminator,
 ): readonly IdentityFeatureKey[] {
-	const languageRegistry = identityFeatureRegistry[language as keyof typeof identityFeatureRegistry];
+	const languageRegistry =
+		identityFeatureRegistry[
+			language as keyof typeof identityFeatureRegistry
+		];
 	if (!languageRegistry) {
 		return [];
 	}
@@ -149,9 +154,8 @@ function getIdentityFeatureKeys(
 		return [];
 	}
 
-	return (
-		unitRegistry[discriminator as keyof typeof unitRegistry] ?? []
-	) as readonly IdentityFeatureKey[];
+	return (unitRegistry[discriminator as keyof typeof unitRegistry] ??
+		[]) as readonly IdentityFeatureKey[];
 }
 
 function normalizeSurface(surface: unknown): string | null {
@@ -168,7 +172,11 @@ function normalizeEmojiDescription(emojiDescription: unknown): string[] {
 		return [];
 	}
 
-	return [...new Set(emojiDescription.map((emoji) => String(emoji).normalize("NFC")))].sort();
+	return [
+		...new Set(
+			emojiDescription.map((emoji) => String(emoji).normalize("NFC")),
+		),
+	].sort();
 }
 
 function normalizeIdentityFeatures(
@@ -204,7 +212,9 @@ function normalizeIdentityFeatures(
 
 	return Object.fromEntries(
 		normalizedEntries.filter(
-			(entry): entry is readonly [IdentityFeatureKey, IdentityFeatureValue] =>
+			(
+				entry,
+			): entry is readonly [IdentityFeatureKey, IdentityFeatureValue] =>
 				entry !== null,
 		),
 	);
@@ -215,7 +225,9 @@ function getIdentityFeatureValue(
 	key: IdentityFeatureKey,
 ): unknown {
 	if ("inherentFeatures" in lemma && isRecord(lemma.inherentFeatures)) {
-		const inherentValue = lemma.inherentFeatures[key];
+		const inherentFeatures =
+			lemma.inherentFeatures as Partial<Record<IdentityFeatureKey, unknown>>;
+		const inherentValue = inherentFeatures[key];
 		if (inherentValue !== undefined) {
 			return inherentValue;
 		}

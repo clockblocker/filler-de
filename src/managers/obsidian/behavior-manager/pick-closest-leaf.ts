@@ -3,7 +3,7 @@
  * Uses longest common path prefix with the active file to determine proximity.
  */
 
-import type { LeafMatch } from "@textfresser/library-core/tree";
+import type { LeafMatch } from "@textfresser/library-core";
 import type { NonEmptyArray } from "../../../types/helpers";
 
 /**

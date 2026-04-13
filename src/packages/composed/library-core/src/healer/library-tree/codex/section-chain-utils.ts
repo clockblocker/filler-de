@@ -2,7 +2,7 @@
  * Utilities for working with section chains in codex generation.
  */
 
-import { dedupeByKeyFirst as dedupeByKey } from "@textfresser/library-core/internal/root/array-utils";
+import { dedupeByKeyFirst as dedupeByKey } from "../../../internal/root/array-utils";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 
 export { dedupeByKey };

@@ -1,10 +1,10 @@
 import { describe, expect, it, mock } from "bun:test";
-import { ActionQueue } from "@textfresser/vault-action-manager/impl/actions-processing/action-queue";
-import type { Dispatcher } from "@textfresser/vault-action-manager/impl/actions-processing/dispatcher";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
-import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import { ActionQueue } from "../../src/impl/actions-processing/action-queue";
+import type { Dispatcher } from "../../src/impl/actions-processing/dispatcher";
+import { MD } from "../../src/types/literals";
+import type { SplitPathToMdFile } from "../../src/types/split-path";
+import type { VaultAction } from "../../src/types/vault-action";
+import { VaultActionKind } from "../../src/types/vault-action";
 import { ok } from "neverthrow";
 
 const mdFile = (

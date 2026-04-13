@@ -1,22 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core/codecs";
+} from "../../../../../src/codecs";
 import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-} from "@textfresser/library-core/codecs/segment-id/types/segment-id";
-import { Healer } from "@textfresser/library-core/healing";
-import { codexImpactToRecreations } from "@textfresser/library-core/healer/library-tree/codex/codex-impact-to-actions";
-import { mergeCodexImpacts } from "@textfresser/library-core/healer/library-tree/codex/merge-codex-impacts";
-import { Tree } from "@textfresser/library-core/healer/library-tree/tree";
+} from "../../../../../src/codecs/segment-id/types/segment-id";
+import { Healer } from "../../../../../src/healing";
+import { codexImpactToRecreations } from "../../../../../src/healer/library-tree/codex/codex-impact-to-actions";
+import { mergeCodexImpacts } from "../../../../../src/healer/library-tree/codex/merge-codex-impacts";
+import { Tree } from "../../../../../src/healer/library-tree/tree";
 import {
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
+} from "../../../../../src/healer/library-tree/tree-node/types/atoms";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 

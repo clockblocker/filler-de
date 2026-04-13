@@ -16,9 +16,9 @@
  *   tx.commit(); // or tx.rollback() on error
  */
 
-import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
-import type { CodexImpact } from "@textfresser/library-core/codex";
-import type { HealingAction, TreeAction } from "@textfresser/library-core/healing";
+import type { VaultAction } from "@textfresser/vault-action-manager";
+import type { CodexImpact } from "@textfresser/library-core";
+import type { HealingAction, TreeAction } from "@textfresser/library-core";
 import { err, ok, type Result } from "neverthrow";
 import { logger } from "../../../utils/logger";
 import {
@@ -27,7 +27,7 @@ import {
 	makeInternalError,
 	makeVaultOperationError,
 } from "../errors/healing-error";
-import type { Healer, HealerApplyResult } from "@textfresser/library-core/healing";
+import type { Healer, HealerApplyResult } from "@textfresser/library-core";
 import { getHealingAuditLog } from "./healing-audit-log";
 
 // ─── Types ───

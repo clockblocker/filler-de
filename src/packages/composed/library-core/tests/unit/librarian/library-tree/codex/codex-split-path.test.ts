@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core/codecs";
-import type { SectionNodeSegmentId } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
-import { computeCodexSplitPath } from "@textfresser/library-core/healer/library-tree/codex/codex-split-path";
+} from "../../../../../src/codecs";
+import type { SectionNodeSegmentId } from "../../../../../src/codecs/segment-id/types/segment-id";
+import { computeCodexSplitPath } from "../../../../../src/healer/library-tree/codex/codex-split-path";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 

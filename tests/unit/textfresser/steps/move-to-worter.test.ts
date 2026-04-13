@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { moveToWorter } from "../../../../src/commanders/textfresser/commands/generate/steps/move-to-worter";
 import type { CommandStateWithLemma } from "../../../../src/commanders/textfresser/commands/types";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";

@@ -1,5 +1,5 @@
 import type { SelectionInfo } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { z } from "zod";
 import { ALL_LIBRARIAN_COMMAND_KINDS } from "../../../commanders/librarian/commands/types";
 import { ALL_TEXTFRESSER_COMMAND_KINDS } from "../../../commanders/textfresser/commands/types";

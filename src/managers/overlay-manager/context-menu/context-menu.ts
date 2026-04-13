@@ -3,7 +3,7 @@
  */
 
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { makeCodecRulesFromSettings } from "@textfresser/library-core/codecs";
+import { makeCodecRulesFromSettings } from "@textfresser/library-core";
 import type { App, Menu, Plugin } from "obsidian";
 import { z } from "zod";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/pages/split-to-pages-action";

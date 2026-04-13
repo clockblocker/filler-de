@@ -1,16 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	type CodecRules,
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core/codecs";
-import { MaterializedEventKind } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
-import { inferRenameIntent } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/infer-intent";
-import { RenameIntent } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
-import { TreeNodeKind } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
+} from "../../../../../../../../../../src/codecs";
+import { MaterializedEventKind } from "../../../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/materialized-node-events/types";
+import { inferRenameIntent } from "../../../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/infer-intent";
+import { RenameIntent } from "../../../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
+import { TreeNodeKind } from "../../../../../../../../../../src/healer/library-tree/tree-node/types/atoms";
 import { defaultSettingsForUnitTests } from "../../../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";
 

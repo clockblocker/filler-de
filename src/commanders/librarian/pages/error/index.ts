@@ -2,7 +2,7 @@
  * Error types for the split-to-pages action.
  */
 
-import { logError } from "@textfresser/vault-action-manager/helpers/issue-handlers";
+import { logError } from "@textfresser/vault-action-manager";
 import { Notice } from "obsidian";
 import { z } from "zod";
 

@@ -2,7 +2,7 @@
  * CheckboxCodec - encodes checkbox click data into payload.
  */
 
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { createEventCodec } from "../../codec-factory";
 import type { CheckboxPayload } from "./payload";
 import { createCheckboxPayload } from "./payload";

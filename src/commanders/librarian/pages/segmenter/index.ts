@@ -1,4 +1,4 @@
-import type { SeparatedSuffixedBasename } from "@textfresser/library-core/codecs";
+import type { SeparatedSuffixedBasename } from "@textfresser/library-core";
 import {
 	offsetMapperHelper,
 	type RemovedItem,

@@ -9,17 +9,17 @@ import {
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core/codecs";
-import type { Healer } from "@textfresser/library-core/healing";
+} from "../../../../../src/codecs";
+import type { Healer } from "../../../../../src/healing";
 import {
 	extractInvalidCodexesFromBulk,
-} from "@textfresser/library-core/healer/library-tree/codex/codex-impact-to-actions";
-import type { CodexImpact } from "@textfresser/library-core/healer/library-tree/codex/compute-codex-impact";
-import { mergeCodexImpacts } from "@textfresser/library-core/healer/library-tree/codex/merge-codex-impacts";
-import type { CodexAction } from "@textfresser/library-core/healer/library-tree/codex/types/codex-action";
-import { buildTreeActions } from "@textfresser/library-core/healer/library-tree/tree-action/bulk-vault-action-adapter/index";
-import type { CreateTreeLeafAction, TreeAction } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
-import type { HealingAction } from "@textfresser/library-core/healer/library-tree/types/healing-action";
+} from "../../../../../src/healer/library-tree/codex/codex-impact-to-actions";
+import type { CodexImpact } from "../../../../../src/healer/library-tree/codex/compute-codex-impact";
+import { mergeCodexImpacts } from "../../../../../src/healer/library-tree/codex/merge-codex-impacts";
+import type { CodexAction } from "../../../../../src/healer/library-tree/codex/types/codex-action";
+import { buildTreeActions } from "../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter";
+import type { CreateTreeLeafAction, TreeAction } from "../../../../../src/healer/library-tree/tree-action/types/tree-action";
+import type { HealingAction } from "../../../../../src/healer/library-tree/types/healing-action";
 import { processCodexImpacts } from "../../../../src/commanders/librarian/init/process-codex-impacts";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { makeTree, type TreeShape } from "../tree-test-helpers";

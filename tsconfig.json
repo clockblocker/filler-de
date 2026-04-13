@@ -33,20 +33,11 @@
 			"@textfresser/vault-action-manager": [
 				"./src/packages/independent/vault-action-manager/src/index.ts"
 			],
-			"@textfresser/vault-action-manager/*": [
-				"./src/packages/independent/vault-action-manager/src/*"
-			],
 			"@textfresser/lexical-generation": [
 				"./src/packages/independent/deprecated-lexical-generation/src/index.ts"
 			],
-			"@textfresser/lexical-generation/*": [
-				"./src/packages/independent/deprecated-lexical-generation/src/*"
-			],
 			"@textfresser/lexical-generation-next": [
 				"./src/packages/composed/lexical-generation/src/index.ts"
-			],
-			"@textfresser/lexical-generation-next/*": [
-				"./src/packages/composed/lexical-generation/src/*"
 			],
 			"@textfresser/linguistics": [
 				"./src/packages/independent/linguistics/src/index.ts"
@@ -54,20 +45,11 @@
 			"@textfresser/library-core": [
 				"./src/packages/composed/library-core/src/index.ts"
 			],
-			"@textfresser/library-core/*": [
-				"./src/packages/composed/library-core/src/*"
-			],
 			"@textfresser/note-addressing": [
 				"./src/packages/independent/note-addressing/src/index.ts"
 			],
-			"@textfresser/note-addressing/*": [
-				"./src/packages/independent/note-addressing/src/*"
-			],
 			"@textfresser/obsidian-event-layer": [
 				"./src/packages/composed/obsidian-event-layer/src/index.ts"
-			],
-			"@textfresser/obsidian-event-layer/*": [
-				"./src/packages/composed/obsidian-event-layer/src/*"
 			]
 		}
 	},

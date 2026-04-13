@@ -1,7 +1,7 @@
-import type { Codecs } from "@textfresser/library-core/codecs";
-import { isCodexSplitPath } from "@textfresser/library-core/codex";
-import type { Healer } from "@textfresser/library-core/healing";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { Codecs } from "@textfresser/library-core";
+import { isCodexSplitPath } from "@textfresser/library-core";
+import type { Healer } from "@textfresser/library-core";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
 	CommandKind,
 	type CommandKind as CommandKindType,

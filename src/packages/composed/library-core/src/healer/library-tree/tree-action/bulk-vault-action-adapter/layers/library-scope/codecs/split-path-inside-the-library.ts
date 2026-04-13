@@ -1,4 +1,4 @@
-import type { AnySplitPath } from "@textfresser/vault-action-manager/types/split-path";
+import type { AnySplitPath } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
 import type {
 	AnySplitPathInsideLibrary,

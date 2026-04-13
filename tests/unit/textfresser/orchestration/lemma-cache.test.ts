@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { ok } from "neverthrow";
 import type { LemmaResult } from "../../../../src/commanders/textfresser/commands/lemma/types";
 import type { Attestation } from "../../../../src/commanders/textfresser/common/attestation/types";

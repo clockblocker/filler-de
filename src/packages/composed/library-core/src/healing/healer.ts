@@ -33,7 +33,7 @@ import {
 	getRootBaseName,
 	resolveNextAvailableNameInSection,
 } from "../tree/utils";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { splitPathsEqual } from "./split-path-equality";
 import {
 	computeDescendantSuffixHealing,

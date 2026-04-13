@@ -6,7 +6,7 @@ import {
 import type { SegmentationResult } from "../../../../src/commanders/librarian/pages/types";
 import {
 	makeCodecRulesFromSettings,
-} from "@textfresser/library-core/codecs";
+} from "@textfresser/library-core";
 import { noteMetadataHelper } from "../../../../src/stateless-helpers/note-metadata";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";

@@ -3,28 +3,28 @@
  * Provides factory and snapshot utilities for easy testing.
  */
 
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { MD } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core/codecs";
+} from "../../../../src/codecs";
 import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
 	SectionNodeLocator,
-} from "@textfresser/library-core/codecs/locator/types";
+} from "../../../../src/codecs/locator/types";
 import type {
 	FileNodeSegmentId,
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-} from "@textfresser/library-core/codecs/segment-id/types/segment-id";
-import { NodeSegmentIdSeparator } from "@textfresser/library-core/codecs/segment-id/types/segment-id";
-import { Healer } from "@textfresser/library-core/healing";
-import { Tree } from "@textfresser/library-core/healer/library-tree/tree";
-import { makeNodeSegmentId } from "@textfresser/library-core/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import { TreeNodeKind, TreeNodeStatus } from "@textfresser/library-core/healer/library-tree/tree-node/types/atoms";
-import type { LeafNode, SectionNode } from "@textfresser/library-core/healer/library-tree/tree-node/types/tree-node";
-import type { NodeName } from "@textfresser/library-core/types/schemas/node-name";
+} from "../../../../src/codecs/segment-id/types/segment-id";
+import { NodeSegmentIdSeparator } from "../../../../src/codecs/segment-id/types/segment-id";
+import { Healer } from "../../../../src/healing";
+import { Tree } from "../../../../src/healer/library-tree/tree";
+import { makeNodeSegmentId } from "../../../../src/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
+import { TreeNodeKind, TreeNodeStatus } from "../../../../src/healer/library-tree/tree-node/types/atoms";
+import type { LeafNode, SectionNode } from "../../../../src/healer/library-tree/tree-node/types/tree-node";
+import type { NodeName } from "../../../../src/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";
 
 // ─── Shape Types ───

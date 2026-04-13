@@ -7,14 +7,14 @@
 
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
-import type { PossibleRootVaultEvent } from "@textfresser/vault-action-manager/impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import type { PossibleRootVaultEvent } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import type {
 	FolderRenamedVaultEvent,
 	VaultEvent,
-} from "@textfresser/vault-action-manager/types/vault-event";
-import { VaultEventKind } from "@textfresser/vault-action-manager/types/vault-event";
-import { TreeActionType } from "@textfresser/library-core/healer/library-tree/tree-action/types/tree-action";
+} from "@textfresser/vault-action-manager";
+import { VaultEventKind } from "@textfresser/vault-action-manager";
+import { TreeActionType } from "../../../../../src/healer/library-tree/tree-action/types/tree-action";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 import type { TreeShape } from "../tree-test-helpers";
 import {

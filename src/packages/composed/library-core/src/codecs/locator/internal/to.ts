@@ -1,5 +1,5 @@
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
+import { MD } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
 import { sectionChainToPathParts } from "../../../healer/library-tree/utils/section-chain-utils";

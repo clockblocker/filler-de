@@ -4,11 +4,11 @@ import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
 	type SplitPathToMdFileInsideLibrary,
-} from "@textfresser/library-core/codecs";
+} from "@textfresser/library-core";
 import type {
 	ScrollNodeLocator,
 	SectionNodeLocator,
-} from "@textfresser/library-core/codecs/locator";
+} from "@textfresser/library-core";
 import {
 	type CodexClickTarget,
 	type CodexImpact,
@@ -16,7 +16,7 @@ import {
 	isCodexInsideLibrary as isCodexInsideLibraryHelper,
 	isCodexSplitPath,
 	parseCodexClickLineContent,
-} from "@textfresser/library-core/codex";
+} from "@textfresser/library-core";
 import {
 	type ChangeNodeStatusAction,
 	getBacklinkHealingVaultActions,
@@ -24,34 +24,34 @@ import {
 	type HealingAction,
 	scanAndGenerateOrphanActions,
 	type TreeAction,
-} from "@textfresser/library-core/healing";
-import type { LeafMatch } from "@textfresser/library-core/tree";
+} from "@textfresser/library-core";
+import type { LeafMatch } from "@textfresser/library-core";
 import {
 	Tree,
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "@textfresser/library-core/tree";
-import { buildTreeActions } from "@textfresser/library-core/tree/actions";
+} from "@textfresser/library-core";
+import { buildTreeActions } from "@textfresser/library-core";
 import {
 	extractScrollStatusActions,
 	findInvalidCodexFiles,
-} from "@textfresser/library-core/tree/utils";
+} from "@textfresser/library-core";
 import {
 	type NodeName,
 	PREFIX_OF_CODEX,
-} from "@textfresser/library-core/types";
+} from "@textfresser/library-core";
 import type { PayloadFor } from "@textfresser/obsidian-event-layer";
 import type {
 	BulkVaultEvent,
 	VaultAction,
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
-import { MD } from "@textfresser/vault-action-manager/types/literals";
+import { MD } from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
 	type SplitPathToMdFileWithReader,
-} from "@textfresser/vault-action-manager/types/split-path";
+} from "@textfresser/vault-action-manager";
 import { errAsync, okAsync, type ResultAsync } from "neverthrow";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {

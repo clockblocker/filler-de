@@ -2,23 +2,23 @@
  * Builds VaultActions for page splitting operation.
  */
 
-import { MD } from "@textfresser/vault-action-manager/types/literals";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager/types/split-path";
-import { SplitPathKind } from "@textfresser/vault-action-manager/types/split-path";
-import type { VaultAction } from "@textfresser/vault-action-manager/types/vault-action";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import { MD } from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
+import type { VaultAction } from "@textfresser/vault-action-manager";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
-import type { CodecRules } from "@textfresser/library-core/codecs";
+import type { CodecRules } from "@textfresser/library-core";
 import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-} from "@textfresser/library-core/codecs/segment-id";
+} from "@textfresser/library-core";
 import {
 	makeNodeSegmentId,
 	TreeNodeKind,
 	TreeNodeStatus,
-} from "@textfresser/library-core/tree";
-import type { NodeName } from "@textfresser/library-core/types";
+} from "@textfresser/library-core";
+import type { NodeName } from "@textfresser/library-core";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
 import type { SegmentationResult } from "./types";
 import { PAGE_FRONTMATTER, PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";

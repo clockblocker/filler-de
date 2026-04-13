@@ -6,7 +6,13 @@ import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
 } from "./impl/common/split-path-and-system-path";
+import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
+import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
+import type { PossibleRootVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
+import { dependencyDetector } from "./impl/actions-processing/dependency-detector";
+import { topologicalSort } from "./impl/actions-processing/topological-sort";
+import { VaultReader } from "./impl/vault-reader";
 import type { ReadContentError } from "./types/read-content-error";
 import type {
 	AnySplitPath,
@@ -75,15 +81,23 @@ export interface VaultActionManager {
 
 export { makeSystemPathForSplitPath };
 export { makeSplitPath };
+export { TFileHelper, TFolderHelper, VaultReader };
+export { dependencyDetector, topologicalSort };
 
 export { VaultActionManagerImpl } from "./facade";
+export * from "./helpers/issue-handlers";
+export * from "./helpers/pathfinder";
+export type { ActiveFileService } from "./file-services/active-view/active-file-service";
 export type { SelectionInfo } from "./file-services/active-view/selection-service";
+export type { SelectionService } from "./file-services/active-view/selection-service";
 export type {
 	DebugTraceEntry,
 	DispatchError,
 	DispatcherDebugState,
 	DispatchResult,
 } from "./impl/actions-processing/dispatcher";
+export type { PossibleRootVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
+export * from "./types/literals";
 export {
 	classifyReadContentError,
 	isReadContentFileNotFound,
@@ -91,3 +105,6 @@ export {
 	ReadContentErrorKind,
 	readContentErrorToReason,
 } from "./types/read-content-error";
+export * from "./types/split-path";
+export * from "./types/vault-action";
+export * from "./types/vault-event";

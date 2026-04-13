@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { VaultActionKind } from "@textfresser/vault-action-manager/types/vault-action";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { ok, okAsync } from "neverthrow";
 import { generateCommand } from "../../../../src/commanders/textfresser/commands/generate/generate-command";
 import { buildPolicyDestinationPath } from "../../../../src/commanders/textfresser/common/lemma-link-routing";
