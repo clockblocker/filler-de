@@ -2,11 +2,11 @@ import {
 	Case,
 	Gender,
 	GrammaticalNumber,
+	type InherentFeatures,
 	LemmaSchema,
 	MorphemeKind,
-	Pos,
 	PhrasemeKind,
-	type InherentFeatures,
+	Pos,
 } from "@textfresser/linguistics";
 import { z } from "zod/v3";
 import type { LexicalRelationKind } from "../public-types";
@@ -123,21 +123,39 @@ const NativeDiscriminatorSchema = z.union([
 	MorphemeKindSchema,
 ]);
 
-function getObjectFieldSchema(schema: z.ZodTypeAny, field: string): z.ZodTypeAny {
+function getObjectFieldSchema(
+	schema: z.ZodTypeAny,
+	field: string,
+): z.ZodTypeAny {
 	const shape = (schema as z.AnyZodObject).shape;
 	return shape[field] as z.ZodTypeAny;
 }
 
 const germanInherentFeaturesSchemaByPos = {
-	ADJ: getObjectFieldSchema(LemmaSchema.German.Lexeme.ADJ, "inherentFeatures"),
-	ADP: getObjectFieldSchema(LemmaSchema.German.Lexeme.ADP, "inherentFeatures"),
-	ADV: getObjectFieldSchema(LemmaSchema.German.Lexeme.ADV, "inherentFeatures"),
-	AUX: getObjectFieldSchema(LemmaSchema.German.Lexeme.AUX, "inherentFeatures"),
+	ADJ: getObjectFieldSchema(
+		LemmaSchema.German.Lexeme.ADJ,
+		"inherentFeatures",
+	),
+	ADP: getObjectFieldSchema(
+		LemmaSchema.German.Lexeme.ADP,
+		"inherentFeatures",
+	),
+	ADV: getObjectFieldSchema(
+		LemmaSchema.German.Lexeme.ADV,
+		"inherentFeatures",
+	),
+	AUX: getObjectFieldSchema(
+		LemmaSchema.German.Lexeme.AUX,
+		"inherentFeatures",
+	),
 	CCONJ: getObjectFieldSchema(
 		LemmaSchema.German.Lexeme.CCONJ,
 		"inherentFeatures",
 	),
-	DET: getObjectFieldSchema(LemmaSchema.German.Lexeme.DET, "inherentFeatures"),
+	DET: getObjectFieldSchema(
+		LemmaSchema.German.Lexeme.DET,
+		"inherentFeatures",
+	),
 	INTJ: getObjectFieldSchema(
 		LemmaSchema.German.Lexeme.INTJ,
 		"inherentFeatures",
@@ -146,7 +164,10 @@ const germanInherentFeaturesSchemaByPos = {
 		LemmaSchema.German.Lexeme.NOUN,
 		"inherentFeatures",
 	),
-	NUM: getObjectFieldSchema(LemmaSchema.German.Lexeme.NUM, "inherentFeatures"),
+	NUM: getObjectFieldSchema(
+		LemmaSchema.German.Lexeme.NUM,
+		"inherentFeatures",
+	),
 	PART: getObjectFieldSchema(
 		LemmaSchema.German.Lexeme.PART,
 		"inherentFeatures",
@@ -167,7 +188,10 @@ const germanInherentFeaturesSchemaByPos = {
 		LemmaSchema.German.Lexeme.SCONJ,
 		"inherentFeatures",
 	),
-	SYM: getObjectFieldSchema(LemmaSchema.German.Lexeme.SYM, "inherentFeatures"),
+	SYM: getObjectFieldSchema(
+		LemmaSchema.German.Lexeme.SYM,
+		"inherentFeatures",
+	),
 	VERB: getObjectFieldSchema(
 		LemmaSchema.German.Lexeme.VERB,
 		"inherentFeatures",
@@ -179,27 +203,31 @@ const resolveSelectionPrompt: PromptSpec<
 	ResolveSelectionPromptInput,
 	ResolveSelectionPromptOutput
 > = {
-	inputSchema: z.object({
-		attestation: z.string(),
-		selection: z.string(),
-	}).strict(),
-	outputSchema: z.object({
-		contextWithLinkedParts: z.string().optional(),
-		discriminator: NativeDiscriminatorSchema.nullable().optional(),
-		lemmaKind: z
-			.enum(["Lexeme", "Phraseme", "Morpheme"])
-			.nullable()
-			.optional(),
-		orthographicStatus: z
-			.enum(["Standard", "Typo", "Unknown"])
-			.optional()
-			.default("Standard"),
-		spelledLemma: z.string().nullable().optional(),
-		surfaceKind: z
-			.enum(["Lemma", "Inflection", "Variant", "Partial"])
-			.nullable()
-			.optional(),
-	}).strict(),
+	inputSchema: z
+		.object({
+			attestation: z.string(),
+			selection: z.string(),
+		})
+		.strict(),
+	outputSchema: z
+		.object({
+			contextWithLinkedParts: z.string().optional(),
+			discriminator: NativeDiscriminatorSchema.nullable().optional(),
+			lemmaKind: z
+				.enum(["Lexeme", "Phraseme", "Morpheme"])
+				.nullable()
+				.optional(),
+			orthographicStatus: z
+				.enum(["Standard", "Typo", "Unknown"])
+				.optional()
+				.default("Standard"),
+			spelledLemma: z.string().nullable().optional(),
+			surfaceKind: z
+				.enum(["Lemma", "Inflection", "Variant", "Partial"])
+				.nullable()
+				.optional(),
+		})
+		.strict(),
 	requestLabel: "ResolveSelection",
 	systemPrompt:
 		"Resolve the selected German surface to native lemma-kind, discriminator, and surface-kind fields.",
@@ -209,104 +237,127 @@ const disambiguationPrompt: PromptSpec<
 	DisambiguationPromptInput,
 	DisambiguationPromptOutput
 > = {
-	inputSchema: z.object({
-		attestation: z.string(),
-		lemma: z.string(),
-		senses: z.array(
-			z.object({
-				emojiDescription: z.array(z.string()),
-				identity: z.object({
-					discriminator: NativeDiscriminatorSchema,
-					lemmaKind: z.enum(["Lexeme", "Phraseme", "Morpheme"]),
-					surfaceKind: z.enum(["Lemma", "Inflection", "Variant", "Partial"]),
+	inputSchema: z
+		.object({
+			attestation: z.string(),
+			lemma: z.string(),
+			senses: z.array(
+				z.object({
+					emojiDescription: z.array(z.string()),
+					identity: z.object({
+						discriminator: NativeDiscriminatorSchema,
+						lemmaKind: z.enum(["Lexeme", "Phraseme", "Morpheme"]),
+						surfaceKind: z.enum([
+							"Lemma",
+							"Inflection",
+							"Variant",
+							"Partial",
+						]),
+					}),
+					index: z.number().int().positive(),
 				}),
-				index: z.number().int().positive(),
-			}),
-		),
-	}).strict(),
-	outputSchema: z.object({
-		emojiDescription: z.array(z.string()).nullable().optional(),
-		matchedIndex: z.number().int().positive().nullable(),
-	}).strict(),
+			),
+		})
+		.strict(),
+	outputSchema: z
+		.object({
+			emojiDescription: z.array(z.string()).nullable().optional(),
+			matchedIndex: z.number().int().positive().nullable(),
+		})
+		.strict(),
 	requestLabel: "DisambiguateSense",
 	systemPrompt:
 		"Match the attested German lemma against structured candidate senses and return the best index or a fresh emoji description.",
 };
 
-const corePromptOutputSchema = z.object({
-	emojiDescription: z.array(z.string()),
-	ipa: z.string(),
-	senseGloss: z.string().nullable().optional(),
-}).strict();
+const corePromptOutputSchema = z
+	.object({
+		emojiDescription: z.array(z.string()),
+		ipa: z.string(),
+		senseGloss: z.string().nullable().optional(),
+	})
+	.strict();
 
-const corePromptInputSchema = z.object({
-	attestation: z.string(),
-	discriminator: z.string().optional(),
-	lemma: z.string(),
-}).strict();
+const corePromptInputSchema = z
+	.object({
+		attestation: z.string(),
+		discriminator: z.string().optional(),
+		lemma: z.string(),
+	})
+	.strict();
 
-const featuresPromptInputSchema = z.object({
-	attestation: z.string(),
-	lemma: z.string(),
-	pos: PosSchema,
-}).strict();
+const featuresPromptInputSchema = z
+	.object({
+		attestation: z.string(),
+		lemma: z.string(),
+		pos: PosSchema,
+	})
+	.strict();
 
-const genericInflectionsPromptOutputSchema = z.object({
-	rows: z.array(
-		z.object({
-			forms: z.array(z.string()),
-			label: z.string(),
-		}),
-	),
-}).strict();
+const genericInflectionsPromptOutputSchema = z
+	.object({
+		rows: z.array(
+			z.object({
+				forms: z.array(z.string()),
+				label: z.string(),
+			}),
+		),
+	})
+	.strict();
 
-const nounInflectionsPromptOutputSchema = z.object({
-	cells: z.array(
-		z.object({
-			article: z.string(),
-			case: CaseSchema,
-			form: z.string(),
-			number: GrammaticalNumberSchema,
-		}),
-	),
-	gender: GenderSchema.nullable().optional(),
-}).strict();
+const nounInflectionsPromptOutputSchema = z
+	.object({
+		cells: z.array(
+			z.object({
+				article: z.string(),
+				case: CaseSchema,
+				form: z.string(),
+				number: GrammaticalNumberSchema,
+			}),
+		),
+		gender: GenderSchema.nullable().optional(),
+	})
+	.strict();
 
-const morphemicBreakdownPromptOutputSchema = z.object({
-	compoundedFrom: z.array(z.string()).nullable().optional(),
-	derivedFrom: z
-		.object({
-			derivationType: z.string(),
-			lemma: z.string(),
-		})
-		.nullable()
-		.optional(),
-	morphemes: z.array(
-		z.object({
-			isSeparable: z.boolean().nullable().optional(),
-			kind: MorphemeKindSchema,
-			lemma: z.string().nullable().optional(),
-			surface: z.string(),
-		}),
-	),
-}).strict();
+const morphemicBreakdownPromptOutputSchema = z
+	.object({
+		compoundedFrom: z.array(z.string()).nullable().optional(),
+		derivedFrom: z
+			.object({
+				derivationType: z.string(),
+				lemma: z.string(),
+			})
+			.nullable()
+			.optional(),
+		morphemes: z.array(
+			z.object({
+				isSeparable: z.boolean().nullable().optional(),
+				kind: MorphemeKindSchema,
+				lemma: z.string().nullable().optional(),
+				surface: z.string(),
+			}),
+		),
+	})
+	.strict();
 
-const relationsPromptOutputSchema = z.object({
-	relations: z.array(
-		z.object({
-			kind: z.enum([
-				"Synonym",
-				"NearSynonym",
-				"Antonym",
-				"Hypernym",
-				"Hyponym",
-				"Meronym",
-				"Holonym",
-			]),
-			words: z.array(z.string()),
-		}),
-	),
-}).strict();
+const relationsPromptOutputSchema = z
+	.object({
+		relations: z.array(
+			z.object({
+				kind: z.enum([
+					"Synonym",
+					"NearSynonym",
+					"Antonym",
+					"Hypernym",
+					"Hyponym",
+					"Meronym",
+					"Holonym",
+				]),
+				words: z.array(z.string()),
+			}),
+		),
+	})
+	.strict();
 
 function createCorePrompt(requestLabel: string, systemPrompt: string) {
 	return {
@@ -324,9 +375,11 @@ function createFeaturesPromptWithSchema(
 ) {
 	return {
 		inputSchema: featuresPromptInputSchema,
-		outputSchema: z.object({
-			inherentFeatures: inherentFeaturesSchema,
-		}).strict() as z.ZodType<FeaturesPromptOutput>,
+		outputSchema: z
+			.object({
+				inherentFeatures: inherentFeaturesSchema,
+			})
+			.strict() as z.ZodType<FeaturesPromptOutput>,
 		requestLabel,
 		systemPrompt,
 	} satisfies PromptSpec<FeaturesPromptInput, FeaturesPromptOutput>;
@@ -434,7 +487,10 @@ export const operationRegistry = {
 			"Generate native inherent features for a German other token.",
 			germanInherentFeaturesSchemaByPos.X,
 		),
-	} satisfies Record<Pos, PromptSpec<FeaturesPromptInput, FeaturesPromptOutput>>,
+	} satisfies Record<
+		Pos,
+		PromptSpec<FeaturesPromptInput, FeaturesPromptOutput>
+	>,
 	genericInflections: {
 		inputSchema: corePromptInputSchema,
 		outputSchema: genericInflectionsPromptOutputSchema,
