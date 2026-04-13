@@ -8,13 +8,33 @@ Last updated: 2026-02-21
 
 Textfresser currently has multiple markdown-to-note adapters with overlapping responsibilities:
 
-1. `dict-note` handles legacy dictionary entry parsing/serialization.
+1. `dict-note` handles legacy dictionary entry parsing and serialization.
 2. `propagation/note-adapter` handles a narrower typed propagation shape.
 3. `core/notes/note-codec` already provides a structural typed-vs-raw section codec.
 
-The new linguistics module and the upcoming generation shape require a single dedicated package that owns linguistic note markdown as a first-class boundary.
+The new linguistics module and the upcoming generation shape require one dedicated package that owns linguistic note markdown as a first-class boundary.
 
 This spec defines that package.
+
+## Dependency on linguistics identity
+
+This package depends on the linguistics-owned identity contract defined in [linguistic-identity-spec.md](./linguistic-identity-spec.md).
+
+The codec does not define semantic linguistic identity itself.
+
+It relies on:
+
+```ts
+type LingId = string & { readonly __brand: "LingId" };
+
+function toLingId(input: AnyLemma | AnySelection): LingId;
+```
+
+`LingId` is semantic and recomputable.
+
+`stableId` is note-local and durable.
+
+They solve different problems and must not be conflated.
 
 ## Goals
 
@@ -26,7 +46,7 @@ This spec defines that package.
    - note DTO -> full note text
 3. Keep the package independent from filesystem, vault lookup, and generation orchestration.
 4. Preserve user-authored content losslessly when it is outside the claimed typed contract.
-5. Make canonical block identity explicit rather than implicitly reconstructed from old ids or rendered headers.
+5. Roundtrip explicit semantic identity through `LingId` rather than reconstructing identity from rendered headers.
 
 ## Non-goals
 
@@ -35,10 +55,11 @@ This spec defines that package.
 3. No sense matching or “should this be a new sense” decisions.
 4. No generation logic.
 5. No migration of old adapters in this step.
+6. No codec-owned replacement for linguistics identity.
 
 ## Package boundary
 
-The new module is a new composed workspace package with its own test suite.
+The new module is a composed workspace package with its own test suite.
 
 Proposed package name:
 
@@ -46,8 +67,8 @@ Proposed package name:
 
 Why composed:
 
-1. It composes pure `@textfresser/linguistics` DTOs with markdown/note rendering policy.
-2. It owns Textfresser-specific decorations, section claiming, and metadata shape.
+1. It composes pure `@textfresser/linguistics` DTOs with markdown and note rendering policy.
+2. It owns Textfresser-specific section claiming, metadata shape, and wire-format rendering.
 3. It must remain independent from filesystem and Obsidian runtime concerns.
 
 ## Design principles
@@ -57,7 +78,8 @@ Why composed:
 3. The note envelope extends pure linguistics payloads instead of replacing them.
 4. Raw and unknown content must roundtrip losslessly.
 5. Rendered header text is decoration, not source of truth.
-6. Canonical identity must roundtrip explicitly and must not be inferred from header text.
+6. Semantic identity comes from explicit `LingId`, not from header text, emoji order, or codec-owned discriminator logic.
+7. Note-local durability comes from `stableId`, not from `LingId`.
 
 ## Layered architecture
 
@@ -65,32 +87,29 @@ Why composed:
 
 This layer owns:
 
-1. Entry/block splitting.
-2. Header line and block-id placement.
-3. Section marker parsing and serialization.
-4. Frontmatter decomposition, ownership, merge, and recomposition.
-5. Raw passthrough for unclaimed sections and loose text.
+1. entry and block splitting
+2. header line and block-id placement
+3. section marker parsing and serialization
+4. metadata-carrier decomposition, ownership, merge, and recomposition
+5. raw passthrough for unclaimed sections and loose text
 
 ### Layer 2: Linguistic typed codecs
 
 This layer owns:
 
-1. Block DTO decoding/encoding for lemma and selection blocks.
-2. Typed section decoding/encoding for the supported section set.
-3. Decorations such as header rendering, localized titles, and note-owned metadata.
-4. Diagnostics for schema mismatches without destroying raw content.
+1. block DTO decoding and encoding for lemma and selection blocks
+2. typed section decoding and encoding for the supported section set
+3. note rendering policy such as localized titles and header wire format
+4. diagnostics for schema mismatches without destroying raw content
 
 ## File-level DTO
 
 ```ts
 type LinguisticMarkdownNote = {
-	noteSurface: string;
+	hostSurfaceHint?: string;
 	blocks: LinguisticMarkdownBlock[];
 	diagnostics: LinguisticNoteDiagnostic[];
-	frontmatter: {
-		entries: Record<string, LinguisticBlockMeta>;
-		passthrough: Record<string, unknown>;
-	};
+	metadata: MetadataEnvelope;
 };
 ```
 
@@ -98,11 +117,53 @@ Notes:
 
 1. One markdown file may contain multiple lemma and selection blocks.
 2. Example: one `schloss.md` file may contain two lemma senses and one inflection block.
-3. `noteSurface` is the host-note surface string, not a filesystem concern.
-4. The package owns full note text, including frontmatter merge for the `entries` map.
-5. `frontmatter.passthrough` preserves unrelated parseable frontmatter keys that are not owned by this package.
-6. The package owns the `entries` frontmatter key.
-7. If frontmatter is unreadable as structured data, parse emits diagnostics and preserves the raw note text structurally, but normalized frontmatter merge is unavailable until the caller repairs or migrates it.
+3. `hostSurfaceHint` is optional and is not authoritative.
+4. Block-level `linguisticId` is the explicit semantic identity carrier.
+5. The package owns full note text, including metadata-carrier merge for the `entries` map.
+
+## Metadata boundary
+
+The package owns the existing format-agnostic note-metadata boundary, not “frontmatter only”.
+
+V1 supported carriers:
+
+1. YAML frontmatter
+2. hidden trailing JSON metadata section
+3. no metadata
+
+The package owns the `entries` metadata key across both carriers.
+
+```ts
+type MetadataEnvelope =
+	| {
+			kind: "StructuredMetadata";
+			carrier: "Frontmatter" | "HiddenJson" | "None";
+			entries: Record<string, LinguisticBlockMeta>;
+			passthrough: Record<string, unknown>;
+			raw: {
+				frontmatter?: string;
+				jsonSection?: string;
+			};
+	  }
+	| {
+			kind: "UnreadableMetadata";
+			carrier: "Frontmatter" | "HiddenJson" | "Unknown";
+			raw: {
+				frontmatter?: string;
+				jsonSection?: string;
+			};
+			diagnostics: LinguisticNoteDiagnostic[];
+	  };
+```
+
+Rules:
+
+1. `StructuredMetadata` preserves parseable non-owned keys in `passthrough`.
+2. `UnreadableMetadata` preserves raw metadata carrier text verbatim.
+3. The package must support reading notes that use either metadata carrier.
+4. The package must not silently discard hidden JSON metadata.
+5. A no-op roundtrip of unreadable metadata must preserve raw carrier text verbatim.
+6. A caller cannot mutate owned metadata through normalized serialization while `metadata.kind === "UnreadableMetadata"`; that must fail loudly.
 
 ## Block DTO
 
@@ -118,12 +179,12 @@ type LinguisticMarkdownBlock =
 type BlockCommon = {
 	blockKind: "LemmaNote" | "SelectionNote";
 	stableId: string;
-	canonicalKey: CanonicalKey;
+	linguisticId: LingId;
 	header: {
+		raw: string;
 		rendered: string;
 	};
 	decorations: {
-		emojiDescription?: string[];
 		ipa?: string;
 	};
 	sections: LinguisticNoteSection[];
@@ -145,13 +206,12 @@ type SelectionNoteBlock = BlockCommon & {
 type RawNoteBlock = {
 	blockKind: "RawNote";
 	rawBlock: string;
-	meta?: Record<string, unknown>;
 };
 
 type InvalidTypedBlock = {
 	blockKind: "InvalidTypedNote";
 	stableId?: string;
-	canonicalKey?: CanonicalKey;
+	linguisticId?: LingId;
 	header: {
 		raw: string;
 		rendered?: string;
@@ -164,66 +224,21 @@ type InvalidTypedBlock = {
 };
 ```
 
-## Canonical identity
+## Identity and addressing
 
-Canonical identity is a first-class DTO field. It must be explicitly serialized and parsed back. It must not be reconstructed from rendered header text.
+Canonical identity is a first-class field, but it is imported from `@textfresser/linguistics` as `LingId`.
 
-### CanonicalKey
+Rules:
 
-```ts
-type CanonicalKey = {
-	language: TargetLanguage;
-	surface: string;
-	unitKind: "Lexeme" | "Phraseme" | "Morpheme";
-	surfaceKind: "Lemma" | "Inflection" | "Variant" | "Partial";
-	discriminator: string;
-	discriminator2?: string;
-	senseOrdinal?: number;
-};
-```
-
-### Identity rules
-
-1. `discriminator` is:
-   - lexeme -> `pos`
-   - phraseme -> `phrasemeKind`
-   - morpheme -> `morphemeKind`
-2. `discriminator2` is language-dependent and optional.
-3. `stableId` is the serialized durable block identity used in markdown block anchors.
-4. `stableId` is durable once persisted.
-5. `stableId` is not re-derived during parse from the current `canonicalKey`.
-6. `stableId` may be initially generated from canonical identity at block-creation time, but afterwards it is preserved unless an explicit migration rewrites both metadata key and anchor.
-7. `canonicalKey` is the source of truth for note identity semantics.
-8. `emojiDescription` is not canonical identity.
-9. A change from `["🏰"]` to `["🏰", "👑"]` must not change canonical identity by itself.
-10. The parser/serializer is agnostic about whether a block should be reused or a new sense should be created. That decision belongs to generation/orchestration.
-
-### V1 discriminator2 matrix
-
-V1 supports the following `discriminator2` values:
-
-1. German lexeme noun -> `gender`
-2. German lexeme verb -> `separability`
-3. German morpheme prefix -> `separability`
-4. Everything else -> absent
-
-### Collision handling
-
-If `surface + unitKind + surfaceKind + discriminator + discriminator2` still collides, the block may carry `senseOrdinal`.
-
-This gives the package a deterministic final collision breaker without making rendered decorations part of identity.
-
-## Stable id
-
-`stableId` is the durable markdown block id emitted as `^stableId`.
-
-V1 policy:
-
-1. The new package stores explicit `canonicalKey` in metadata.
-2. `stableId` is used as the metadata key in `frontmatter.entries`.
-3. `stableId` remains stable across ordinary enrichment and canonical-key-preserving updates.
-4. `stableId` changes only during explicit migration or explicit identity rewrite.
-5. The exact stable-id string format may continue to resemble the current compact id style, but callers must not rely on it as the only identity carrier.
+1. `linguisticId` must be explicitly serialized and parsed back.
+2. `linguisticId` must not be reconstructed from rendered header text.
+3. The codec must not define or expose a parallel semantic identity model.
+4. `stableId` is the durable markdown block id emitted as `^stableId`.
+5. `stableId` is durable once persisted.
+6. `stableId` is not re-derived during parse from the current `linguisticId`.
+7. `stableId` may initially be generated at block-creation time, but afterwards it is preserved unless an explicit migration rewrites both metadata key and anchor.
+8. The parser and serializer are agnostic about whether a block should be reused or a new block should be created.
+9. Multiple blocks may share the same `linguisticId`; uniqueness within a note is provided by `stableId`, not by the semantic id.
 
 ## Supported block kinds
 
@@ -247,13 +262,13 @@ type LinguisticNoteSection =
 
 ```ts
 type TypedSection =
-	| { kind: "Attestation"; payload: AttestationSectionDto; title: string; marker: string }
-	| { kind: "FreeNote"; payload: FreeNoteSectionDto; title: string; marker: string }
-	| { kind: "Meaning"; payload: MeaningSectionDto; title: string; marker: string }
-	| { kind: "Morphology"; payload: MorphologySectionDto; title: string; marker: string }
-	| { kind: "Relation"; payload: RelationSectionDto; title: string; marker: string }
-	| { kind: "Inflection"; payload: InflectionSectionDto; title: string; marker: string }
-	| { kind: "Translation"; payload: TranslationSectionDto; title: string; marker: string };
+	| { kind: "Attestation"; payload: AttestationSectionDto; title: string; marker: string; rawBlock?: string }
+	| { kind: "FreeNote"; payload: FreeNoteSectionDto; title: string; marker: string; rawBlock?: string }
+	| { kind: "Meaning"; payload: MeaningSectionDto; title: string; marker: string; rawBlock?: string }
+	| { kind: "Morphology"; payload: MorphologySectionDto; title: string; marker: string; rawBlock?: string }
+	| { kind: "Relation"; payload: RelationSectionDto; title: string; marker: string; rawBlock?: string }
+	| { kind: "Inflection"; payload: InflectionSectionDto; title: string; marker: string; rawBlock?: string }
+	| { kind: "Translation"; payload: TranslationSectionDto; title: string; marker: string; rawBlock?: string };
 ```
 
 ```ts
@@ -293,7 +308,7 @@ Everything else remains raw until a later spec explicitly claims it.
 V1 provides:
 
 1. one canonical typed `FreeNote` section
-2. raw passthrough for arbitrary custom/manual sections
+2. raw passthrough for arbitrary custom and manual sections
 
 This keeps a typed path for managed free notes without destroying user-authored custom structures.
 
@@ -309,46 +324,44 @@ V1 canonical multiplicity:
 
 ## Decorations
 
-The package owns note decorations.
+The package owns note decorations and wire format.
 
 Decorations include:
 
 1. rendered header strings
 2. localized section titles
-3. emoji rendering
-4. IPA decoration
-5. note-owned title/marker policy
+3. section markers
+4. note-owned title and marker policy
 
-Decorations are projections from block DTOs and must not become the primary source of identity.
+Decoration rules:
 
-Roundtrip policy:
-
-1. parse preserves observed wire-format decoration fields needed for roundtrip fidelity
-2. `title`, `marker`, and rendered header text are preserved from the source note when parsing existing notes
+1. header rendering is package-owned decoration
+2. parsed `header.raw` preserves source wire format for no-op roundtrip
 3. canonical decoration rendering is used when creating new typed content or when a caller explicitly requests normalization
 4. unchanged parsed notes must not be silently canonicalized on write
+5. semantic identity does not come from decoration text
 
 ## Metadata contract
 
-Per-block canonical metadata must be serialized explicitly in per-entry metadata, keyed by block id.
+Per-block canonical metadata must be serialized explicitly in package-owned note metadata, keyed by block id.
 
 V1 storage model:
 
-1. file-level frontmatter continues to carry an `entries` map keyed by `stableId`
-2. each entry metadata object carries explicit canonical note metadata
-3. block parsing reads canonical metadata from this map first
-4. header text and section text are never the only source of identity
-5. unrelated parseable frontmatter keys are preserved under `frontmatter.passthrough`
-6. serializer merges package-owned `entries` with preserved `frontmatter.passthrough` into full note text
+1. the package-owned `entries` map is keyed by `stableId`
+2. the same `entries` map shape is used regardless of whether the carrier is YAML frontmatter or hidden JSON
+3. each entry metadata object carries explicit note-owned metadata, including `linguisticId`
+4. block parsing reads `linguisticId` from this map first
+5. header text and section text are never the only source of identity
+6. unrelated parseable metadata keys are preserved under `metadata.passthrough`
+7. serializer merges package-owned `entries` with preserved metadata passthrough into full note text using the original carrier when possible
 
 Illustrative shape:
 
 ```ts
 type LinguisticBlockMeta = {
-	canonicalKey: CanonicalKey;
+	linguisticId: LingId;
 	blockKind: "LemmaNote" | "SelectionNote";
 	decorations?: {
-		emojiDescription?: string[];
 		ipa?: string;
 	};
 	extensions?: Record<string, unknown>;
@@ -381,25 +394,38 @@ type LinguisticNoteDiagnostic = {
 3. If a typed payload fails validation, the parser preserves the envelope and raw content as `InvalidTypedBlock` and emits diagnostics.
 4. If a section marker is known but not claimable, it remains raw.
 5. Go-back links, library lookup, and path resolution are outside this package.
-6. If `frontmatter.entries[stableId]` is missing or malformed, the parser emits an `InvalidTypedBlock` when a structural block envelope exists.
-7. The parser does not best-effort infer `canonicalKey` from header text in v1.
-8. If frontmatter itself is unreadable, parse emits diagnostics and preserves the note structurally, but serialize of a normalized note may fail until frontmatter is repaired.
+6. If `metadata.entries[stableId]` is missing or malformed, the parser emits an `InvalidTypedBlock` when a structural block envelope exists.
+7. The parser does not best-effort infer `linguisticId` from header text in v1.
+8. If note metadata itself is unreadable, parse emits diagnostics and preserves the raw metadata carrier in `UnreadableMetadata`.
+9. The primary v1 parse path is canonical-note-first, not legacy-note inference.
+
+### Legacy compatibility
+
+V1 is not a transparent drop-in parser for current legacy Textfresser notes.
+
+Rules:
+
+1. legacy notes that only carry old entry metadata such as `lexicalMeta` are not valid typed notes for the primary v1 parse path
+2. such notes may parse as `RawNoteBlock` and or `InvalidTypedBlock` plus diagnostics
+3. explicit legacy import and upgrade APIs belong to the migration step and are not part of the primary v1 codec contract
+4. if callers need typed access to legacy notes before migration, they must continue using legacy adapters
 
 ### Block splitting rules
 
-The parser owns structural block splitting for the full note body after frontmatter is removed.
+The parser owns structural block splitting for the full note body after package metadata is removed.
 
 V1 rules:
 
-1. Any prose before the first structurally valid anchored block becomes a `RawNoteBlock`.
-2. Any prose between blocks becomes a `RawNoteBlock`.
-3. Any trailing prose after the last block becomes a `RawNoteBlock`.
-4. A structurally valid anchored block requires a header line ending in `^stableId`.
-5. If such a block has valid owned metadata and valid typed payload, it becomes `LemmaNoteBlock` or `SelectionNoteBlock`.
-6. If such a block has a structural envelope but invalid or missing owned metadata, it becomes `InvalidTypedBlock`.
-7. Chunks that do not form a structurally valid anchored block remain `RawNoteBlock`.
-8. Canonical separator lines are a serialization detail, not the only parse delimiter.
-9. Malformed separators or separator-like prose are preserved inside surrounding raw blocks unless they sit inside a structurally claimed block body.
+1. top-level candidate block chunking is driven by the canonical entry separator
+2. separator recognition applies only at top-level body text, not inside fenced code blocks or preserved raw metadata carriers
+3. within each separator-delimited chunk, the first non-blank line ending in `^stableId` is the only valid typed-block header candidate
+4. any prose before that header inside the same chunk becomes a preceding `RawNoteBlock`
+5. any prose after the typed block body inside the same chunk becomes a trailing `RawNoteBlock`
+6. if a separator-delimited chunk has no valid anchored header candidate, the entire chunk remains `RawNoteBlock`
+7. if a chunk has a structural anchored header plus valid owned metadata and valid payload, it becomes `LemmaNoteBlock` or `SelectionNoteBlock`
+8. if a chunk has a structural anchored header but invalid or missing owned metadata, it becomes `InvalidTypedBlock`
+9. header-like text inside arbitrary prose, pasted examples, embeds, or code fences does not start a typed block unless it appears in a separator-delimited top-level chunk and satisfies rule 3
+10. canonical separator output is mandatory for normalized serialization in v1
 
 ## Serialize result
 
@@ -411,31 +437,32 @@ type SerializeLinguisticMarkdownResult = {
 
 ### Serialize behavior
 
-1. Serialization emits full note text, including frontmatter.
-2. Block ids are emitted as markdown anchors using `^stableId`.
-3. Claimed typed sections are rendered from DTOs.
-4. Raw blocks and raw sections are preserved verbatim where possible.
-5. Serialization must not require generation context, filesystem context, or lookup services.
-6. The package merges owned `entries` metadata with preserved frontmatter passthrough keys.
-7. Advanced fragment serializers such as `{ body, entriesMeta }` are non-primary APIs and must not be the public ownership boundary.
-8. If the note carries unreadable frontmatter and the caller requests normalized full-note serialization, serialization must fail loudly rather than silently discarding unknown frontmatter content.
+1. serialization emits full note text, including metadata carrier content
+2. block ids are emitted as markdown anchors using `^stableId`
+3. claimed typed sections are rendered from DTOs
+4. raw blocks and raw sections are preserved verbatim where possible
+5. serialization must not require generation context, filesystem context, or lookup services
+6. the package merges owned `entries` metadata with preserved metadata passthrough keys
+7. advanced fragment serializers such as `{ body, entriesMeta }` are non-primary APIs and must not be the public ownership boundary
+8. if the note carries `UnreadableMetadata`, no-op serialization must preserve raw metadata verbatim
+9. if the note carries `UnreadableMetadata` and the caller requests normalized serialization or owned metadata mutation, serialization must fail loudly rather than silently discarding raw metadata content
 
 ## Markdown contract
 
 ### Structural rules
 
-1. A note contains zero or more linguistic blocks.
-2. Each block may contain typed sections and raw sections.
-3. Block header rendering is package-owned decoration.
-4. Section markers and localized titles are package-owned decoration.
-5. Lossless raw passthrough is required for unsupported sections and loose text.
-6. Exact canonical separator output is package-owned on fresh serialization of normalized notes.
-7. Parsed notes preserve observed raw inter-block material unless the caller explicitly normalizes the note.
+1. a note contains zero or more linguistic blocks
+2. each block may contain typed sections and raw sections
+3. block header rendering is package-owned decoration
+4. section markers and localized titles are package-owned decoration
+5. lossless raw passthrough is required for unsupported sections and loose text
+6. exact canonical separator output is package-owned on fresh serialization of normalized notes
+7. parsed notes preserve observed raw inter-block material unless the caller explicitly normalizes the note
 
 ### Example note
 
 ```md
-🏰 [[Schloss]] ^lx-lm-noun-neut-1
+🏰 [[Schloss]] ^lx-lm-noun-1
 
 <span class="entry_section_title entry_section_title_translations">Ubersetzung</span>
 castle
@@ -448,7 +475,7 @@ castle
 ---
 
 
-🔒 [[Schloss]] ^lx-lm-noun-neut-2
+🔒 [[Schloss]] ^lx-lm-noun-2
 
 <span class="entry_section_title entry_section_title_translations">Ubersetzung</span>
 lock
@@ -458,7 +485,7 @@ lock
 ---
 
 
-🧪 [[schloss]] ^lx-in-verb-separable-1
+🧪 [[schloss]] ^lx-in-verb-1
 
 <span class="entry_section_title entry_section_title_kontexte">Kontexte</span>
 ![[source-note#^def|^]]
@@ -476,6 +503,16 @@ Rules:
 2. selection blocks embed `AnySelection`
 3. note-level identity, decorations, and sections remain package-owned
 4. generation-specific DTOs and old lexical-generation metadata do not belong here
+
+## Section DTO ownership
+
+The typed section DTOs named in this spec are package-owned contracts.
+
+Rules:
+
+1. v1 does not import these DTO contracts from the current propagation package
+2. existing propagation payloads may be adapted into the new package-owned DTOs later
+3. shared subset shapes can be extracted after the package contract stabilizes
 
 ## Relationship to old adapters
 
@@ -508,9 +545,11 @@ Minimum v1 coverage:
    - verb separability
    - prefix separability
 10. missing/corrupt `entries[stableId]` metadata behavior
-11. raw preamble, inter-block prose, malformed headers, and trailing junk
-12. repeated typed section handling
-13. corpus fixtures taken from current note shapes where compatibility matters
+11. hidden JSON metadata roundtrip
+12. unreadable metadata-carrier preservation
+13. raw preamble, inter-block prose, malformed headers, code fences, and trailing junk
+14. repeated typed section handling
+15. corpus fixtures taken from current canonical note shapes where compatibility matters
 
 ## Explicit exclusions for v1
 
@@ -520,6 +559,7 @@ Minimum v1 coverage:
 4. generation-time sense matching
 5. migration helpers
 6. propagation intent building
+7. legacy-note typed inference in the primary parse path
 
 ## Summary
 
