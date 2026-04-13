@@ -1,10 +1,7 @@
 import z from "zod/v3";
 import type { AbstractLemma } from "../../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../../universal/abstract-selection";
-import { IsSeparable } from "../../../../../universal/enums/feature/custom/separable";
-import { IsReflex } from "../../../../../universal/enums/feature/ud/reflex";
 import {
-	EnglishVerbGender,
 	EnglishVerbMood,
 	EnglishVerbNumber,
 	EnglishVerbPerson,
@@ -14,7 +11,6 @@ import {
 
 export const EnglishVerbInflectionalFeaturesSchema = z
 	.object({
-		gender: EnglishVerbGender.optional(),
 		mood: EnglishVerbMood.optional(),
 		number: EnglishVerbNumber.optional(),
 		person: EnglishVerbPerson.optional(),
@@ -31,10 +27,7 @@ export const EnglishVerbInflectionalFeaturesSchema = z
 >;
 
 export const EnglishVerbInherentFeaturesSchema = z
-	.object({
-		reflex: IsReflex.optional(),
-		separable: IsSeparable.optional(),
-	})
+	.object({})
 	.strict() satisfies z.ZodType<
 	AbstractLemma<"Lexeme", "VERB">["inherentFeatures"]
 >;

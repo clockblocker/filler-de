@@ -4,19 +4,13 @@ import type { AbstractSelectionFor } from "../../../../../universal/abstract-sel
 import { IsAbbr } from "../../../../../universal/enums/feature/ud/abbr";
 import { IsForeign } from "../../../../../universal/enums/feature/ud/foreign";
 import {
-	EnglishAdjectiveCase,
 	EnglishAdjectiveDegree,
-	EnglishAdjectiveGender,
-	EnglishAdjectiveNumber,
 	EnglishAdjectiveNumType,
 } from "./english-adjective-enums";
 
 export const EnglishAdjectiveInflectionalFeaturesSchema = z
 	.object({
-		case: EnglishAdjectiveCase.optional(),
 		degree: EnglishAdjectiveDegree.optional(),
-		gender: EnglishAdjectiveGender.optional(),
-		number: EnglishAdjectiveNumber.optional(),
 	})
 	.strict() satisfies z.ZodType<
 	AbstractSelectionFor<

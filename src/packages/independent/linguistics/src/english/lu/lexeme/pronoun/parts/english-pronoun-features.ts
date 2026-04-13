@@ -8,7 +8,6 @@ import {
 	EnglishPronounGender,
 	EnglishPronounNumber,
 	EnglishPronounPerson,
-	EnglishPronounPolite,
 	EnglishPronounPronType,
 } from "./english-pronoun-enums";
 
@@ -31,7 +30,6 @@ export const EnglishPronounInflectionalFeaturesSchema = z
 export const EnglishPronounInherentFeaturesSchema = z
 	.object({
 		person: EnglishPronounPerson.optional(),
-		polite: EnglishPronounPolite.optional(),
 		poss: IsPoss.optional(),
 		pronType: EnglishPronounPronType.optional(),
 	})

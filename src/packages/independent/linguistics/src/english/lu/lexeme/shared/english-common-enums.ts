@@ -7,13 +7,11 @@ import { Mood } from "../../../../universal/enums/feature/ud/mood";
 import { GrammaticalNumber } from "../../../../universal/enums/feature/ud/number";
 import { Person } from "../../../../universal/enums/feature/ud/person";
 import { Polarity } from "../../../../universal/enums/feature/ud/polarity";
-import { Polite } from "../../../../universal/enums/feature/ud/polite";
 import { Tense } from "../../../../universal/enums/feature/ud/tense";
 import { VerbForm } from "../../../../universal/enums/feature/ud/verb-form";
 
 export const EnglishCase = z.enum([
 	Case.enum.Acc,
-	Case.enum.Dat,
 	Case.enum.Gen,
 	Case.enum.Nom,
 ]);
@@ -46,8 +44,6 @@ export const EnglishPerson = z.enum([
 ]);
 
 export const EnglishPolarity = z.enum([Polarity.enum.Neg, Polarity.enum.Pos]);
-
-export const EnglishPolite = z.enum([Polite.enum.Form]);
 
 export const EnglishTense = z.enum([Tense.enum.Past, Tense.enum.Pres]);
 

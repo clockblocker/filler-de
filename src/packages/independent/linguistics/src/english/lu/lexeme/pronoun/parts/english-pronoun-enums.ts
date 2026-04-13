@@ -5,14 +5,12 @@ import {
 	EnglishGender,
 	EnglishNumber,
 	EnglishPerson,
-	EnglishPolite,
 } from "../../shared/english-common-enums";
 
 export const EnglishPronounCase = EnglishCase;
 export const EnglishPronounGender = EnglishGender;
 export const EnglishPronounNumber = EnglishNumber;
 export const EnglishPronounPerson = EnglishPerson;
-export const EnglishPronounPolite = EnglishPolite;
 
 export const EnglishPronounPronType = z.enum([
 	PronType.enum.Dem,

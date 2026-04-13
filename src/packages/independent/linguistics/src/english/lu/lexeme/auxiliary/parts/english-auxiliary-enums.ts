@@ -1,5 +1,4 @@
 import {
-	EnglishGender,
 	EnglishMood,
 	EnglishNumber,
 	EnglishPerson,
@@ -7,7 +6,6 @@ import {
 	EnglishVerbForm,
 } from "../../shared/english-common-enums";
 
-export const EnglishAuxiliaryGender = EnglishGender;
 export const EnglishAuxiliaryMood = EnglishMood;
 export const EnglishAuxiliaryNumber = EnglishNumber;
 export const EnglishAuxiliaryPerson = EnglishPerson;

@@ -88,9 +88,6 @@ function toResolvedSelection(output: {
 			output.posLikeKind as keyof typeof PHRASEME_KIND_FROM_LEGACY
 		];
 
-	const phrasemeSurfaceKind =
-		surfaceKind === "Inflection" ? "Lemma" : surfaceKind;
-
 	const rawSelection = {
 		...base,
 		surface: {

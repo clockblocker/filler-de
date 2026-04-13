@@ -1,9 +1,6 @@
-import {
-	EnglishCase,
-	EnglishGender,
-	EnglishNumber,
-} from "../../shared/english-common-enums";
+import z from "zod/v3";
+import { Case } from "../../../../../universal/enums/feature/ud/case";
+import { EnglishNumber } from "../../shared/english-common-enums";
 
-export const EnglishProperNounCase = EnglishCase;
-export const EnglishProperNounGender = EnglishGender;
+export const EnglishProperNounCase = z.enum([Case.enum.Gen]);
 export const EnglishProperNounNumber = EnglishNumber;

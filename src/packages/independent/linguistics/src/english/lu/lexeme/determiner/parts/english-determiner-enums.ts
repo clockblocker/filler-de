@@ -2,22 +2,14 @@ import z from "zod/v3";
 import { NumType } from "../../../../../universal/enums/feature/ud/num-type";
 import { PronType } from "../../../../../universal/enums/feature/ud/pron-type";
 import {
-	EnglishCase,
 	EnglishDefinite,
-	EnglishDegree,
-	EnglishGender,
 	EnglishNumber,
 	EnglishPerson,
-	EnglishPolite,
 } from "../../shared/english-common-enums";
 
-export const EnglishDeterminerCase = EnglishCase;
 export const EnglishDeterminerDefinite = EnglishDefinite;
-export const EnglishDeterminerDegree = EnglishDegree;
-export const EnglishDeterminerGender = EnglishGender;
 export const EnglishDeterminerNumber = EnglishNumber;
 export const EnglishDeterminerPerson = EnglishPerson;
-export const EnglishDeterminerPolite = EnglishPolite;
 
 export const EnglishDeterminerNumType = z.enum([
 	NumType.enum.Card,

@@ -1,16 +1,9 @@
 import z from "zod/v3";
-import { Gender } from "../../../../../universal/enums/feature/ud/gender";
 import { Mood } from "../../../../../universal/enums/feature/ud/mood";
 import { GrammaticalNumber } from "../../../../../universal/enums/feature/ud/number";
 import { Person } from "../../../../../universal/enums/feature/ud/person";
 import { Tense } from "../../../../../universal/enums/feature/ud/tense";
 import { VerbForm } from "../../../../../universal/enums/feature/ud/verb-form";
-
-export const EnglishVerbGender = z.enum([
-	Gender.enum.Fem,
-	Gender.enum.Masc,
-	Gender.enum.Neut,
-]);
 
 export const EnglishVerbMood = z.enum([
 	Mood.enum.Imp,

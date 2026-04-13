@@ -5,7 +5,6 @@ import { IsAbbr } from "../../../../../universal/enums/feature/ud/abbr";
 import { IsForeign } from "../../../../../universal/enums/feature/ud/foreign";
 import {
 	EnglishProperNounCase,
-	EnglishProperNounGender,
 	EnglishProperNounNumber,
 } from "./english-proper-noun-enums";
 
@@ -27,7 +26,6 @@ export const EnglishProperNounInherentFeaturesSchema = z
 	.object({
 		abbr: IsAbbr.optional(),
 		foreign: IsForeign.optional(),
-		gender: EnglishProperNounGender.optional(),
 	})
 	.strict() satisfies z.ZodType<
 	AbstractLemma<"Lexeme", "PROPN">["inherentFeatures"]

@@ -12,7 +12,6 @@ import {
 	getLemmaKind,
 	getSelectionDiscriminator,
 	getSpelledLemma,
-	getSurfaceKind,
 	isKnownSelection,
 } from "../selection-helpers";
 
