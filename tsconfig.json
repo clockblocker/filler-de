@@ -37,10 +37,16 @@
 				"./src/packages/independent/vault-action-manager/src/*"
 			],
 			"@textfresser/lexical-generation": [
-				"./src/packages/independent/lexical-generation/src/index.ts"
+				"./src/packages/independent/deprecated-lexical-generation/src/index.ts"
 			],
 			"@textfresser/lexical-generation/*": [
-				"./src/packages/independent/lexical-generation/src/*"
+				"./src/packages/independent/deprecated-lexical-generation/src/*"
+			],
+			"@textfresser/lexical-generation-next": [
+				"./src/packages/composed/lexical-generation/src/index.ts"
+			],
+			"@textfresser/lexical-generation-next/*": [
+				"./src/packages/composed/lexical-generation/src/*"
 			],
 			"@textfresser/linguistics": [
 				"./src/packages/independent/linguistics/src/index.ts"

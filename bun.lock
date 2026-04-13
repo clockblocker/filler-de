@@ -41,6 +41,15 @@
         "typescript": "^5.9.3",
       },
     },
+    "src/packages/composed/lexical-generation": {
+      "name": "@textfresser/lexical-generation-next",
+      "version": "0.0.0",
+      "dependencies": {
+        "@textfresser/linguistics": "workspace:*",
+        "neverthrow": "^8.2.0",
+        "zod": "3.25.76",
+      },
+    },
     "src/packages/composed/library-core": {
       "name": "@textfresser/library-core",
       "version": "0.0.0",
@@ -61,7 +70,7 @@
         "zod": "4.3.6",
       },
     },
-    "src/packages/independent/lexical-generation": {
+    "src/packages/independent/deprecated-lexical-generation": {
       "name": "@textfresser/lexical-generation",
       "version": "0.0.0",
       "dependencies": {
@@ -268,7 +277,9 @@
 
     "@so-ric/colorspace": ["@so-ric/colorspace@1.1.6", "", { "dependencies": { "color": "^5.0.2", "text-hex": "1.0.x" } }, "sha512-/KiKkpHNOBgkFJwu9sh48LkHSMYGyuTcSFK/qMBdnOAlrRJzRSXAOFB5qwzaVQuDl8wAvHVMkaASQDReTahxuw=="],
 
-    "@textfresser/lexical-generation": ["@textfresser/lexical-generation@workspace:src/packages/independent/lexical-generation"],
+    "@textfresser/lexical-generation": ["@textfresser/lexical-generation@workspace:src/packages/independent/deprecated-lexical-generation"],
+
+    "@textfresser/lexical-generation-next": ["@textfresser/lexical-generation-next@workspace:src/packages/composed/lexical-generation"],
 
     "@textfresser/library-core": ["@textfresser/library-core@workspace:src/packages/composed/library-core"],
 
@@ -651,6 +662,8 @@
     "@eslint/eslintrc/strip-json-comments": ["strip-json-comments@3.1.1", "", {}, "sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig=="],
 
     "@textfresser/lexical-generation/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+
+    "@textfresser/lexical-generation-next/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 
     "@textfresser/linguistics/zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
 

@@ -1,4 +1,5 @@
 {
+	"description": "Deprecated legacy lexical generation runtime kept live during the lexical-generation-next rebuild.",
 	"dependencies": {
 		"@textfresser/linguistics": "workspace:*",
 		"neverthrow": "8.2.0",

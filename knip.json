@@ -5,7 +5,7 @@
 	"ignoreDependencies": ["obsidian", "electron", "@codemirror/*", "tslib"],
 	"ignoreUnresolved": ["./tests/unit/setup.ts"],
 	"ignoreIssues": {
-		"src/packages/independent/lexical-generation/internal/prompt-smith/prompt-parts/**/*.ts": [
+		"src/packages/independent/deprecated-lexical-generation/internal/prompt-smith/prompt-parts/**/*.ts": [
 			"files"
 		]
 	},
@@ -15,13 +15,17 @@
 			"entry": ["src/index.ts"],
 			"project": ["src/**/*.ts"]
 		},
-		"src/packages/independent/lexical-generation": {
+		"src/packages/independent/deprecated-lexical-generation": {
 			"entry": [
 				"index.ts",
 				"internal/prompt-smith/codegen/skript/run.ts",
 				"tests/**/*.ts"
 			],
 			"project": ["**/*.ts"]
+		},
+		"src/packages/composed/lexical-generation": {
+			"entry": ["src/index.ts", "tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
 		"src/packages/independent/vault-action-manager": {
 			"entry": ["src/index.ts", "tests/**/*.ts"],
