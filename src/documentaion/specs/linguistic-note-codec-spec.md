@@ -30,11 +30,17 @@ type LingId = string & { readonly __brand: "LingId" };
 function toLingId(input: AnyLemma | AnySelection): LingId;
 ```
 
-`LingId` is semantic and recomputable.
+`LingId` is semantic and recomputable for the current identity policy generation.
 
 `stableId` is note-local and durable.
 
 They solve different problems and must not be conflated.
+
+Clean-break rule:
+
+1. This codec may store and roundtrip `LingId`.
+2. That storage does not imply cross-version compatibility for `LingId`.
+3. If linguistics identity policy changes, old stored `LingId` values are treated as legacy data.
 
 ## Goals
 
@@ -80,6 +86,7 @@ Why composed:
 5. Rendered header text is decoration, not source of truth.
 6. Semantic identity comes from explicit `LingId`, not from header text, emoji order, or codec-owned discriminator logic.
 7. Note-local durability comes from `stableId`, not from `LingId`.
+8. Stored `LingId` values are treated as current-generation metadata, not as a long-term stable persistence contract.
 
 ## Layered architecture
 
@@ -120,6 +127,7 @@ Notes:
 3. `hostSurfaceHint` is optional and is not authoritative.
 4. Block-level `linguisticId` is the explicit semantic identity carrier.
 5. The package owns full note text, including metadata-carrier merge for the `entries` map.
+6. `linguisticId` must be treated as opaque stored metadata from the current clean-break identity generation.
 
 ## Metadata boundary
 
@@ -239,6 +247,7 @@ Rules:
 7. `stableId` may initially be generated at block-creation time, but afterwards it is preserved unless an explicit migration rewrites both metadata key and anchor.
 8. The parser and serializer are agnostic about whether a block should be reused or a new block should be created.
 9. Multiple blocks may share the same `linguisticId`; uniqueness within a note is provided by `stableId`, not by the semantic id.
+10. The codec must not assume that a stored `linguisticId` from an older clean-break generation still matches the current `toLingId` output.
 
 ## Supported block kinds
 
@@ -354,6 +363,7 @@ V1 storage model:
 5. header text and section text are never the only source of identity
 6. unrelated parseable metadata keys are preserved under `metadata.passthrough`
 7. serializer merges package-owned `entries` with preserved metadata passthrough into full note text using the original carrier when possible
+8. the codec does not promise stored `linguisticId` compatibility across identity-policy changes
 
 Illustrative shape:
 
@@ -406,7 +416,7 @@ V1 is not a transparent drop-in parser for current legacy Textfresser notes.
 Rules:
 
 1. legacy notes that only carry old entry metadata such as `lexicalMeta` are not valid typed notes for the primary v1 parse path
-2. such notes may parse as `RawNoteBlock` and or `InvalidTypedBlock` plus diagnostics
+2. such notes may parse as `RawNoteBlock` and/or `InvalidTypedBlock` plus diagnostics
 3. explicit legacy import and upgrade APIs belong to the migration step and are not part of the primary v1 codec contract
 4. if callers need typed access to legacy notes before migration, they must continue using legacy adapters
 
@@ -501,7 +511,7 @@ Rules:
 
 1. lemma blocks embed `AnyLemma`
 2. selection blocks embed `AnySelection`
-3. note-level identity, decorations, and sections remain package-owned
+3. note-level addressing, decorations, and sections remain package-owned
 4. generation-specific DTOs and old lexical-generation metadata do not belong here
 
 ## Section DTO ownership
@@ -535,21 +545,19 @@ Minimum v1 coverage:
 1. markdown -> DTO -> markdown roundtrip for typed notes
 2. lossless raw-section preservation
 3. lossless raw-block preservation
-4. metadata roundtrip for canonical identity
+4. metadata roundtrip for stored `LingId`
 5. lemma block encode/decode
 6. selection block encode/decode
 7. mixed note with multiple blocks for same surface
 8. diagnostics for schema-invalid typed payloads
-9. German discriminator2 matrix coverage:
-   - noun gender
-   - verb separability
-   - prefix separability
+9. `LingId`-backed identity metadata roundtrip, including language-pack identity-feature cases
 10. missing/corrupt `entries[stableId]` metadata behavior
 11. hidden JSON metadata roundtrip
 12. unreadable metadata-carrier preservation
 13. raw preamble, inter-block prose, malformed headers, code fences, and trailing junk
 14. repeated typed section handling
 15. corpus fixtures taken from current canonical note shapes where compatibility matters
+16. explicit current-generation / legacy-`LingId` handling behavior
 
 ## Explicit exclusions for v1
 
@@ -570,7 +578,7 @@ It owns:
 1. lossless note structure
 2. typed lemma/selection block codecs
 3. typed section codecs for the v1 section set
-4. canonical identity metadata
+4. canonical identity metadata carriage
 5. note decorations and markdown rendering policy
 
 It does not own:
@@ -578,4 +586,5 @@ It does not own:
 1. filesystem access
 2. library lookup
 3. generation policy
-4. sense-matching decisions
+4. semantic linguistic identity definition
+5. sense-matching decisions

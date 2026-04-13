@@ -28,6 +28,7 @@ The public surface should let callers compute and compare linguistic identity wi
 2. No filesystem, vault, or Obsidian concerns.
 3. No public API for parsing or inspecting identity internals.
 4. No sense-slot allocation or note-level collision handling.
+5. No cross-version persistence guarantee for `LingId` during the clean-break phase.
 
 ## Public API
 
@@ -44,9 +45,15 @@ Rules:
 1. `LingId` is opaque.
 2. Callers compare `LingId` values with plain string equality.
 3. Callers must not parse, split, or interpret the returned string.
-4. The exact serialized string format is package-owned and may change behind the opaque contract.
+4. The exact serialized string format is package-owned and may change during the clean-break phase.
 5. `toLingId` preserves the actual `surfaceKind`; it does not normalize everything to lemma identity.
 6. `toLingId` must fail loudly if the input is unknown or lacks identity-critical data.
+
+Clean-break rule:
+
+1. `LingId` is a current-generation semantic id, not a long-term persistence format.
+2. Stored `LingId` values are only expected to match ids produced by the same current identity policy.
+3. Changing serialization, normalization, or language-pack identity policy is allowed without migration support in this phase.
 
 No public companion APIs such as `parseLingId`, `compareLingId`, or `getLinguisticIdentity` are exposed in v1.
 
@@ -89,6 +96,20 @@ Source fields:
 
 For `AnySelection`, identity is derived from the selection surface plus its embedded lemma identity fields.
 
+## Surface normalization
+
+Surface normalization is intentionally minimal in v1.
+
+Rules:
+
+1. Surface is normalized with Unicode NFC.
+2. Leading and trailing whitespace is trimmed.
+3. Internal whitespace runs are collapsed to a single ASCII space.
+4. No case folding is applied.
+5. No punctuation stripping is applied.
+6. No language-specific folding is applied.
+7. The normalized spelled surface is used for identity.
+
 ## Emoji semantics
 
 `emojiDescription` is part of linguistic identity.
@@ -96,10 +117,17 @@ For `AnySelection`, identity is derived from the selection surface plus its embe
 Normalization rules:
 
 1. `emojiDescription` is treated as a semantic set, not an ordered list.
-2. Duplicate emojis are removed.
-3. Canonical serialization uses deterministic ordering.
-4. `["🏰", "👑"]` and `["👑", "🏰", "🏰"]` produce the same `LingId`.
-5. Missing emoji description is normalized as an empty set.
+2. Each emoji string is normalized with Unicode NFC.
+3. Duplicate normalized emoji strings are removed.
+4. Canonical serialization sorts normalized emoji strings by plain code-unit order.
+5. `["🏰", "👑"]` and `["👑", "🏰", "🏰"]` produce the same `LingId`.
+6. Missing emoji description is normalized as an empty set.
+
+V1 interpretation:
+
+1. `emojiDescription` is a list of literal emoji strings already carried by DTOs.
+2. It is not a list of semantic labels.
+3. ZWJ sequences, skin tones, and variation selectors are preserved as part of the normalized string.
 
 ## Identity feature subset
 
@@ -114,6 +142,15 @@ Rules:
 3. The subset may vary by target language, lemma kind, and discriminator.
 4. Only declared identity features participate in `LingId`.
 5. All other features remain linguistically valid but non-identifying.
+
+V1 value-shape restriction:
+
+1. Identity features must be flat scalar values already represented by feature schemas.
+2. Arrays do not participate in identity.
+3. Nested objects do not participate in identity.
+4. `undefined` values are omitted rather than serialized.
+5. Missing and omitted mean the same thing for identity.
+6. Implicit defaults are not added during identity normalization.
 
 Illustrative internal policy shape:
 
@@ -135,11 +172,14 @@ Examples:
 `toLingId` is implemented as a pure normalization and serialization pipeline:
 
 1. Validate that the input has enough identity information.
-2. Extract the internal normalized identity primitive.
-3. Normalize `emojiDescription` as a set.
-4. Pick only the pack-declared identity feature subset.
-5. Canonicalize identity-feature key ordering.
-6. Serialize the normalized primitive into an opaque `LingId`.
+2. Normalize the spelled surface.
+3. Extract the internal normalized identity primitive.
+4. For `AnySelection`, use selection `surface` and `surfaceKind`, and use embedded lemma data for `unitKind`, discriminator, `emojiDescription`, and identity-feature source.
+5. If selection surface data and embedded lemma identity data are structurally inconsistent, fail.
+6. Normalize `emojiDescription` as a set.
+7. Pick only the pack-declared identity feature subset.
+8. Canonicalize identity-feature key ordering.
+9. Serialize the normalized primitive into an opaque `LingId`.
 
 The public function is the only supported normalization boundary in v1.
 
@@ -177,6 +217,23 @@ V1 failure cases include:
 3. missing surface data
 4. malformed identity-feature values after normalization
 
+API rule:
+
+1. `toLingId` throws `LinguisticIdentityError`.
+2. The error should carry a stable machine-readable reason code.
+
+Minimum v1 reason codes:
+
+1. `unknown_selection`
+2. `missing_surface`
+3. `missing_discriminator`
+4. `inconsistent_selection_identity`
+5. `invalid_identity_feature`
+
+Unknown-selection rule:
+
+1. An unknown selection is any `AnySelection` with `orthographicStatus === "Unknown"`.
+
 ## Design constraints for downstream packages
 
 Downstream packages such as the note codec may:
@@ -184,6 +241,11 @@ Downstream packages such as the note codec may:
 1. store `LingId`
 2. compare `LingId`
 3. roundtrip `LingId`
+
+Storage rule:
+
+1. Storing `LingId` is allowed as a convenience within the clean-break phase.
+2. Such storage does not create a compatibility guarantee across identity-policy changes.
 
 Downstream packages may not:
 
