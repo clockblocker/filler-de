@@ -6,6 +6,7 @@ import {
 	LexicalRelationsSchema,
 	MorphologicalRelationsSchema,
 	SelectionSchema,
+	toLingId,
 } from "../src";
 import {
 	GermanVerbInflectionSelectionSchema,
@@ -15,6 +16,19 @@ import {
 } from "../src/lu/german/lu/lexeme/verb/german-verb-bundle";
 
 describe("German verb schemas", () => {
+	const germanNounLingId = (spelledLemma: string) => {
+		const lingId = toLingId({
+			inherentFeatures: { gender: "Neut" },
+			language: "German",
+			lemmaKind: "Lexeme",
+			pos: "NOUN",
+			spelledLemma,
+		});
+
+		expect(lingId).not.toBeNull();
+		return lingId!;
+	};
+
 	it("accepts supported German verb inflectional features", () => {
 		const result = GermanVerbInflectionSelectionSchema.safeParse({
 			language: "German",
@@ -112,16 +126,21 @@ describe("German verb schemas", () => {
 	});
 
 	it("validates relation payloads via the dedicated relation schemas", () => {
+		const fortbewegung = germanNounLingId("Fortbewegung");
+		const laufen = germanNounLingId("Laufen");
+		const gang = germanNounLingId("Gang");
+		const ausgang = germanNounLingId("Ausgang");
+
 		expect(
 			LexicalRelationsSchema.safeParse({
-				hypernym: ["Fortbewegung"],
-				synonym: ["laufen"],
+				hypernym: [fortbewegung],
+				synonym: [laufen],
 			}).success,
 		).toBe(true);
 		expect(
 			MorphologicalRelationsSchema.safeParse({
-				derivedFrom: ["Gang"],
-				sourceFor: ["Ausgang"],
+				derivedFrom: [gang],
+				sourceFor: [ausgang],
 			}).success,
 		).toBe(true);
 	});
@@ -194,9 +213,19 @@ describe("German verb schemas", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("rejects duplicate relation targets", () => {
+	it("accepts duplicate relation lemma ids", () => {
+		const laufen = germanNounLingId("Laufen");
+
 		const result = LexicalRelationsSchema.safeParse({
-			synonym: ["laufen", "laufen"],
+			synonym: [laufen, laufen],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects raw lemma strings in relation payloads", () => {
+		const result = LexicalRelationsSchema.safeParse({
+			synonym: ["laufen"],
 		});
 
 		expect(result.success).toBe(false);

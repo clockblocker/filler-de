@@ -4,7 +4,7 @@ import { identityFeatureRegistry } from "./identity-feature-registry";
 import type { AbstractFeatures } from "./universal/enums/feature/feature";
 
 export type LingId = string & { readonly __brand: "LingId" };
-const lingIdPrefix = "ling:v1:";
+const lingIdPrefix = "ling:v2:";
 
 export const LingIdSchema = z.custom<LingId>(isLingId);
 

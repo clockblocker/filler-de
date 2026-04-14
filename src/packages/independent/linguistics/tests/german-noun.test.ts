@@ -5,6 +5,7 @@ import {
 	LexicalRelationsSchema,
 	MorphologicalRelationsSchema,
 	SelectionSchema,
+	toLingId,
 } from "../src";
 import {
 	GermanNounInflectionSelectionSchema,
@@ -15,6 +16,19 @@ import {
 } from "../src/lu/german/lu/lexeme/noun/german-noun-bundle";
 
 describe("German noun schemas", () => {
+	const germanNounLingId = (spelledLemma: string) => {
+		const lingId = toLingId({
+			inherentFeatures: { gender: "Neut" },
+			language: "German",
+			lemmaKind: "Lexeme",
+			pos: "NOUN",
+			spelledLemma,
+		});
+
+		expect(lingId).not.toBeNull();
+		return lingId!;
+	};
+
 	it("exposes inferred lemma types from the registry", () => {
 		const lemma: Lemma<"German", "Lexeme", "NOUN"> = {
 			inherentFeatures: {
@@ -92,21 +106,26 @@ describe("German noun schemas", () => {
 	});
 
 	it("validates relation payloads via the dedicated relation schemas", () => {
+		const lebewesen = germanNounLingId("Lebewesen");
+		const nachkomme = germanNounLingId("Nachkomme");
+		const kind = germanNounLingId("Kind");
+		const kindheit = germanNounLingId("Kindheit");
+
 		expect(
 			LexicalRelationsSchema.safeParse({
-				hypernym: ["Lebewesen"],
-				synonym: ["Nachkomme"],
+				hypernym: [lebewesen],
+				synonym: [nachkomme],
 			}).success,
 		).toBe(true);
 		expect(
 			MorphologicalRelationsSchema.safeParse({
-				derivedFrom: ["kind"],
-				sourceFor: ["Kindheit"],
+				derivedFrom: [kind],
+				sourceFor: [kindheit],
 			}).success,
 		).toBe(true);
 	});
 
-	it("rejects invalid emoji descriptions", () => {
+	it("rejects invalid sense emoji payloads", () => {
 		const lemmaResult = GermanNounLemmaSchema.safeParse({
 			inherentFeatures: {},
 			language: "German",
@@ -191,9 +210,19 @@ describe("German noun schemas", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("rejects duplicate relation targets", () => {
+	it("accepts duplicate relation lemma ids", () => {
+		const auto = germanNounLingId("Auto");
+
 		const result = LexicalRelationsSchema.safeParse({
-			synonym: ["Auto", "Auto"],
+			synonym: [auto, auto],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects raw lemma strings in relation payloads", () => {
+		const result = LexicalRelationsSchema.safeParse({
+			synonym: ["Auto"],
 		});
 
 		expect(result.success).toBe(false);

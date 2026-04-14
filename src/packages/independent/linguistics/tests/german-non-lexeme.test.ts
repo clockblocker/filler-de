@@ -39,11 +39,11 @@ describe("German non-lexeme schemas", () => {
 
 	it("accepts German morpheme lemmas", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
-			senseEmojis: ["🧩"],
 			isClosedSet: false,
 			language: "German",
 			lemmaKind: "Morpheme",
 			morphemeKind: "Prefix",
+			senseEmojis: ["🧩"],
 			spelledLemma: "ab-",
 		});
 
@@ -110,10 +110,10 @@ describe("German non-lexeme schemas", () => {
 				orthographicStatus: "Typo",
 				surface: {
 					lemma: {
-						senseEmojis: ["🧩"],
 						language: "German",
 						lemmaKind: "Morpheme",
 						morphemeKind: "Suffix",
+						senseEmojis: ["🧩"],
 						spelledLemma: "-heit",
 					},
 					spelledSurface: "-hait",
@@ -126,10 +126,10 @@ describe("German non-lexeme schemas", () => {
 				orthographicStatus: "Typo",
 				surface: {
 					lemma: {
-						senseEmojis: ["💬"],
 						language: "German",
 						lemmaKind: "Phraseme",
 						phrasemeKind: "Cliché",
+						senseEmojis: ["💬"],
 						spelledLemma: "Zeit ist Geld",
 					},
 					spelledSurface: "Zeit ist Gelt",

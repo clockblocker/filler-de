@@ -35,7 +35,9 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 				language: z.literal("German"),
 				morphemeKind: z.literal(morphemeKind),
 				separable:
-					morphemeKind === "Prefix" ? IsSeparable.optional() : z.undefined().optional(),
+					morphemeKind === "Prefix"
+						? IsSeparable.optional()
+						: z.undefined().optional(),
 				spelledLemma: z.string(),
 			})
 			.strict() as unknown as GermanMorphemeBundle<MK>["LemmaSchema"],

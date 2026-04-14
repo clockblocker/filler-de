@@ -136,7 +136,7 @@ describe("LingId", () => {
 		expect(toLingId(standardSelection)).not.toBe(toLingId(typoSelection));
 	});
 
-	it("treats emoji descriptions as an unordered set", () => {
+	it("treats sense emojis as an unordered set", () => {
 		const left: AnyLemma<"German"> = {
 			inherentFeatures: {},
 			language: "German",

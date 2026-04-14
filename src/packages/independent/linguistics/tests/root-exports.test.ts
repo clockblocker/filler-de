@@ -16,6 +16,7 @@ import {
 	PhrasemeKind,
 	Pos,
 	Relations,
+	RelationTargetLingIdsSchema,
 	SelectionSchema,
 	SurfaceKind,
 	TARGET_LANGUAGES,
@@ -25,6 +26,19 @@ import {
 } from "../src";
 
 describe("root exports", () => {
+	const englishNounLingId = (spelledLemma: string) => {
+		const lingId = toLingId({
+			inherentFeatures: {},
+			language: "English",
+			lemmaKind: "Lexeme",
+			pos: "NOUN",
+			spelledLemma,
+		} satisfies AnyLemma<"English">);
+
+		expect(lingId).not.toBeNull();
+		return lingId!;
+	};
+
 	it("exposes the curated native root surface", () => {
 		expect(TARGET_LANGUAGES).toEqual(["German", "English"]);
 		expect(TargetLanguageSchema.parse("German")).toBe("German");
@@ -110,25 +124,34 @@ describe("root exports", () => {
 	});
 
 	it("exposes a dedicated relations api", () => {
+		const dog = englishNounLingId("dog");
+		const cat = englishNounLingId("cat");
+
 		expect(LexicalRelation.synonym).toBe("synonym");
 		expect(MorphologicalRelation.derivedFrom).toBe("derivedFrom");
-		expect(RelationTargetsSchema.safeParse(["laufen"]).success).toBe(true);
-		expect(RelationTargetsSchema.safeParse([]).success).toBe(true);
-		expect(
-			RelationTargetsSchema.safeParse(["laufen", "laufen"]).success,
-		).toBe(true);
+		expect(RelationTargetLingIdsSchema.safeParse([dog]).success).toBe(true);
+		expect(RelationTargetLingIdsSchema.safeParse([]).success).toBe(true);
+		expect(RelationTargetLingIdsSchema.safeParse([dog, dog]).success).toBe(
+			true,
+		);
+		expect(RelationTargetLingIdsSchema.safeParse(["laufen"]).success).toBe(
+			false,
+		);
 		expect(
 			LexicalRelationsSchema.safeParse({
-				synonym: ["laufen"],
+				synonym: [dog],
 			}).success,
 		).toBe(true);
 		expect(
 			MorphologicalRelationsSchema.safeParse({
-				derivedFrom: ["Gang"],
+				derivedFrom: [cat],
 			}).success,
 		).toBe(true);
 		expect(Relations.Lexical.getInverse("hypernym")).toBe("hyponym");
 		expect(Relations.Morphological.getRepr("derivedFrom")).toBe("<-");
+		expect(Relations.targetLingIdsSchema.safeParse([dog]).success).toBe(
+			true,
+		);
 	});
 
 	it("hides internal schema helpers from the root surface", () => {
