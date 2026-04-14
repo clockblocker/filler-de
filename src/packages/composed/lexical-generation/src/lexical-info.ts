@@ -109,14 +109,14 @@ function shouldGenerateMorphemicBreakdown(selection: ResolvedSelection) {
 
 function mapCoreOutput(
 	output: CorePromptOutput,
-	precomputedEmojiDescription?: string[],
+	precomputedSenseEmojis?: string[],
 ): LexicalCore {
 	return {
-		emojiDescription:
-			precomputedEmojiDescription &&
-			precomputedEmojiDescription.length > 0
-				? precomputedEmojiDescription
-				: output.emojiDescription,
+		senseEmojis:
+			precomputedSenseEmojis &&
+			precomputedSenseEmojis.length > 0
+				? precomputedSenseEmojis
+				: output.senseEmojis,
 		ipa: output.ipa,
 		...(output.senseGloss ? { senseGloss: output.senseGloss } : {}),
 	};
@@ -245,7 +245,7 @@ export function buildPartGenerators(deps: PromptDeps) {
 			status: "ready",
 			value: mapCoreOutput(
 				promptResult.value,
-				options?.precomputedEmojiDescription,
+				options?.precomputedSenseEmojis,
 			),
 		});
 	};
@@ -434,8 +434,8 @@ export function buildPartGenerators(deps: PromptDeps) {
 			? disabledField<LexicalCore>()
 			: collectField(
 					generateCore(selection, attestation, {
-						precomputedEmojiDescription:
-							options?.precomputedEmojiDescription,
+						precomputedSenseEmojis:
+							options?.precomputedSenseEmojis,
 					}),
 				);
 		const featuresPromise = disabled.features

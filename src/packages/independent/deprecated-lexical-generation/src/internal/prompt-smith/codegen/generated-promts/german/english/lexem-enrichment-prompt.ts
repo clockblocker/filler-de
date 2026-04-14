@@ -13,7 +13,7 @@ You receive:
 
 Return:
 - ipa: IPA pronunciation for the lemma
-- emojiDescription: 1-3 emojis for the current sense
+- senseEmojis: 1-3 emojis for the current sense
 - senseGloss: short sense label (2-8 words) that distinguishes this sense from homonyms
 
 Rules:
@@ -27,7 +27,7 @@ Rules:
 {"context":"Er ging gestern in den Park.","pos":"Verb","word":"gehen"}
 </input>
 <output>
-{"emojiDescription":["🚶"],"ipa":"ˈɡeːən","senseGloss":"to walk"}
+{"senseEmojis":["🚶"],"ipa":"ˈɡeːən","senseGloss":"to walk"}
 </output>
 </example-1>
 
@@ -36,7 +36,7 @@ Rules:
 {"context":"Er ist stolz auf seine Arbeit.","pos":"Adjective","word":"stolz"}
 </input>
 <output>
-{"emojiDescription":["😌"],"ipa":"ʃtɔlts","senseGloss":"feeling pride"}
+{"senseEmojis":["😌"],"ipa":"ʃtɔlts","senseGloss":"feeling pride"}
 </output>
 </example-2>
 </examples>

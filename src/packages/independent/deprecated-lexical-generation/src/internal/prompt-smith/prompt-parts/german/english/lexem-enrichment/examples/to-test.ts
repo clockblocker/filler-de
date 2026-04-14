@@ -8,7 +8,7 @@ export const testExamples = [
 			word: "stolz",
 		},
 		output: {
-			emojiDescription: ["😌"],
+			senseEmojis: ["😌"],
 			ipa: "ʃtɔlts",
 			senseGloss: "feeling pride",
 		},

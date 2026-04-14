@@ -7,7 +7,7 @@ export const examples = [
 			lemma: "Bank",
 			senses: [
 				{
-					emojiDescription: ["🏦"],
+					senseEmojis: ["🏦"],
 					genus: "Femininum",
 					index: 1,
 					pos: "Noun",
@@ -17,7 +17,7 @@ export const examples = [
 			],
 		},
 		output: {
-			emojiDescription: ["🪑", "🌳"],
+			senseEmojis: ["🪑", "🌳"],
 			matchedIndex: null,
 		},
 	},
@@ -27,7 +27,7 @@ export const examples = [
 			lemma: "Bank",
 			senses: [
 				{
-					emojiDescription: ["🏦"],
+					senseEmojis: ["🏦"],
 					genus: "Femininum",
 					index: 1,
 					pos: "Noun",
@@ -35,7 +35,7 @@ export const examples = [
 					unitKind: "Lexem",
 				},
 				{
-					emojiDescription: ["🪑", "🌳"],
+					senseEmojis: ["🪑", "🌳"],
 					genus: "Femininum",
 					index: 2,
 					pos: "Noun",
@@ -54,7 +54,7 @@ export const examples = [
 			lemma: "Schloss",
 			senses: [
 				{
-					emojiDescription: ["🏰"],
+					senseEmojis: ["🏰"],
 					genus: "Neutrum",
 					index: 1,
 					pos: "Noun",
@@ -64,7 +64,7 @@ export const examples = [
 			],
 		},
 		output: {
-			emojiDescription: ["🔒"],
+			senseEmojis: ["🔒"],
 			matchedIndex: null,
 		},
 	},
@@ -74,7 +74,7 @@ export const examples = [
 			lemma: "Schloss",
 			senses: [
 				{
-					emojiDescription: ["🏰"],
+					senseEmojis: ["🏰"],
 					genus: "Neutrum",
 					index: 1,
 					pos: "Noun",
@@ -82,7 +82,7 @@ export const examples = [
 					unitKind: "Lexem",
 				},
 				{
-					emojiDescription: ["🔒"],
+					senseEmojis: ["🔒"],
 					genus: "Neutrum",
 					index: 2,
 					pos: "Noun",
@@ -101,7 +101,7 @@ export const examples = [
 			lemma: "Schloss",
 			senses: [
 				{
-					emojiDescription: ["🏰"],
+					senseEmojis: ["🏰"],
 					genus: "Neutrum",
 					index: 1,
 					pos: "Noun",
@@ -111,7 +111,7 @@ export const examples = [
 			],
 		},
 		output: {
-			emojiDescription: ["🔒"],
+			senseEmojis: ["🔒"],
 			matchedIndex: null,
 		},
 	},
@@ -121,14 +121,14 @@ export const examples = [
 			lemma: "auf jeden Fall",
 			senses: [
 				{
-					emojiDescription: ["✅"],
+					senseEmojis: ["✅"],
 					index: 1,
 					phrasemeKind: "DiscourseFormula",
 					senseGloss: "certainly definitely",
 					unitKind: "Phrasem",
 				},
 				{
-					emojiDescription: ["📚"],
+					senseEmojis: ["📚"],
 					index: 2,
 					phrasemeKind: "Collocation",
 					senseGloss: "legal case",

@@ -5,7 +5,7 @@ You receive:
 - context: the sentence where the word was encountered
 - senses: array of existing sense descriptors, each with:
   - index: numeric identifier of the existing entry
-  - emojiDescription: 1-3 emojis capturing the core semantic concept of that sense
+  - senseEmojis: 1-3 emojis capturing the core semantic concept of that sense
   - senseGloss: short textual gloss for the sense (optional)
   - unitKind: the linguistic unit type ("Lexem", "Phrasem", "Morphem")
   - pos: part of speech (optional, e.g. "Noun", "Verb")
@@ -14,11 +14,11 @@ You receive:
 
 Return:
 - matchedIndex: the index of the matching sense, or null if the word in context represents a NEW sense not covered by any existing entry
-- emojiDescription: when matchedIndex is null (new sense), provide 1-3 emojis that capture the core semantic concept of this new sense, distinguishing it from the existing ones. When matchedIndex is not null, omit or set to null.
+- senseEmojis: when matchedIndex is null (new sense), provide 1-3 emojis that capture the core semantic concept of this new sense, distinguishing it from the existing ones. When matchedIndex is not null, omit or set to null.
 
 Rules:
-- Compare the contextual meaning against each sense's emojiDescription + senseGloss + linguistic features (unitKind, pos, genus, phrasemeKind)
+- Compare the contextual meaning against each sense's senseEmojis + senseGloss + linguistic features (unitKind, pos, genus, phrasemeKind)
 - Return the index of the best-matching sense if the meaning clearly aligns
 - Return null only when the word in context has a genuinely different meaning from ALL listed senses
 - When in doubt between a close match and a new sense, prefer the existing match
-- The emojiDescription should capture the general meaning of the sense, not the specific context`;
+- The senseEmojis should capture the general meaning of the sense, not the specific context`;

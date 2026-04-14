@@ -4,7 +4,7 @@ export const taskDescription = `You receive:
 
 Return:
 - ipa: IPA pronunciation for the lemma
-- emojiDescription: 1-3 emojis for the current sense
+- senseEmojis: 1-3 emojis for the current sense
 - senseGloss: short sense label (2-8 words) that distinguishes this sense from homonyms
 - genus: optional noun genus (Maskulinum | Femininum | Neutrum)
 - nounClass: optional noun class (Common | Proper)

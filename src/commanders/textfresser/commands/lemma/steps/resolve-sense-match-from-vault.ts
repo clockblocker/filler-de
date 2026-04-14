@@ -13,7 +13,7 @@ import { loadStoredSenseCandidates } from "./load-stored-sense-candidates";
 
 export type SenseMatchFromVault =
 	| { matchedIndex: number }
-	| { matchedIndex: null; precomputedEmojiDescription?: string[] }
+	| { matchedIndex: null; precomputedSenseEmojis?: string[] }
 	| null;
 
 export async function resolveSenseMatchFromVault(
@@ -78,7 +78,7 @@ export async function resolveSenseMatchFromVault(
 
 	return ok({
 		matchedIndex: null,
-		precomputedEmojiDescription:
-			moduleResult.value.precomputedEmojiDescription,
+		precomputedSenseEmojis:
+			moduleResult.value.precomputedSenseEmojis,
 	});
 }

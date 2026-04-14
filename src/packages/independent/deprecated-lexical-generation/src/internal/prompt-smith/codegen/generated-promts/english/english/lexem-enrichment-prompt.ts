@@ -13,7 +13,7 @@ You receive:
 
 Return:
 - ipa: IPA pronunciation for the lemma
-- emojiDescription: 1-3 emojis for the current sense
+- senseEmojis: 1-3 emojis for the current sense
 - senseGloss: optional short sense label (2-8 words)
 
 Rules:
@@ -26,7 +26,7 @@ Rules:
 {"context":"She runs every morning before work.","pos":"Verb","word":"run"}
 </input>
 <output>
-{"emojiDescription":["🏃"],"ipa":"rʌn"}
+{"senseEmojis":["🏃"],"ipa":"rʌn"}
 </output>
 </example-1>
 
@@ -35,7 +35,7 @@ Rules:
 {"context":"She finished the task quickly.","pos":"Adverb","word":"quickly"}
 </input>
 <output>
-{"emojiDescription":["⚡"],"ipa":"ˈkwɪkli"}
+{"senseEmojis":["⚡"],"ipa":"ˈkwɪkli"}
 </output>
 </example-2>
 
@@ -44,7 +44,7 @@ Rules:
 {"context":"The ancient temple stands on the hill.","pos":"Adjective","word":"ancient"}
 </input>
 <output>
-{"emojiDescription":["🏛️"],"ipa":"ˈeɪnʃənt"}
+{"senseEmojis":["🏛️"],"ipa":"ˈeɪnʃənt"}
 </output>
 </example-3>
 </examples>

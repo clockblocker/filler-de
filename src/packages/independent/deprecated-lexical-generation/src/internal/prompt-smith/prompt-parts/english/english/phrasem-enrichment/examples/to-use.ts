@@ -8,7 +8,7 @@ export const examples = [
 			word: "by and large",
 		},
 		output: {
-			emojiDescription: ["📊", "👍"],
+			senseEmojis: ["📊", "👍"],
 			ipa: "baɪ ən lɑːrdʒ",
 			senseGloss: "generally speaking",
 		},
@@ -20,7 +20,7 @@ export const examples = [
 			word: "call it a day",
 		},
 		output: {
-			emojiDescription: ["🛑", "📅"],
+			senseEmojis: ["🛑", "📅"],
 			ipa: "kɔːl ɪt ə deɪ",
 			senseGloss: "stop for now",
 		},

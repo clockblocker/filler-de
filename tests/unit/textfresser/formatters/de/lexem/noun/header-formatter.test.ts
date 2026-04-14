@@ -4,7 +4,7 @@ import { formatHeaderLine } from "../../../../../../../src/commanders/textfresse
 describe("noun formatHeaderLine", () => {
 	it("formats Maskulinum noun with der article", () => {
 		const result = formatHeaderLine(
-			{ emojiDescription: ["☁️"], ipa: "ˈhɪml̩" },
+			{ senseEmojis: ["☁️"], ipa: "ˈhɪml̩" },
 			"Himmel",
 			"German",
 			"Masc",
@@ -16,7 +16,7 @@ describe("noun formatHeaderLine", () => {
 
 	it("formats Femininum noun with die article", () => {
 		const result = formatHeaderLine(
-			{ emojiDescription: ["🏦"], ipa: "baŋk" },
+			{ senseEmojis: ["🏦"], ipa: "baŋk" },
 			"Bank",
 			"German",
 			"Fem",
@@ -26,7 +26,7 @@ describe("noun formatHeaderLine", () => {
 
 	it("formats Neutrum noun with das article", () => {
 		const result = formatHeaderLine(
-			{ emojiDescription: ["🏠"], ipa: "haʊ̯s" },
+			{ senseEmojis: ["🏠"], ipa: "haʊ̯s" },
 			"Haus",
 			"German",
 			"Neut",
@@ -36,7 +36,7 @@ describe("noun formatHeaderLine", () => {
 
 	it("formats noun header with all emojis in sequence", () => {
 		const result = formatHeaderLine(
-			{ emojiDescription: ["💨", "✨"], ipa: "ˈʃtaʊ̯p" },
+			{ senseEmojis: ["💨", "✨"], ipa: "ˈʃtaʊ̯p" },
 			"Staub",
 			"German",
 			"Masc",
@@ -48,7 +48,7 @@ describe("noun formatHeaderLine", () => {
 
 	it("normalizes vault-path lemma targets to basename", () => {
 		const result = formatHeaderLine(
-			{ emojiDescription: ["🚗"], ipa: "ˈfaːʁən" },
+			{ senseEmojis: ["🚗"], ipa: "ˈfaːʁən" },
 			"Worter/de/lexem/lemma/f/fah/fahre/Fahren",
 			"German",
 			"Masc",

@@ -123,7 +123,7 @@ export function makeLexemeLemmaResult(params: {
 	disambiguationResult?: { matchedIndex: number } | null;
 	lemma?: string;
 	pos?: LexemePos;
-	precomputedEmojiDescription?: string[];
+	precomputedSenseEmojis?: string[];
 	spelledSurface?: string;
 	surfaceKind?: Exclude<SurfaceKind, "Unknown">;
 } = {}): LexemeLemmaResult {
@@ -139,8 +139,8 @@ export function makeLexemeLemmaResult(params: {
 		lemma,
 		linguisticUnit: "Lexeme",
 		posLikeKind: pos,
-		...(params.precomputedEmojiDescription
-			? { precomputedEmojiDescription: params.precomputedEmojiDescription }
+		...(params.precomputedSenseEmojis
+			? { precomputedSenseEmojis: params.precomputedSenseEmojis }
 			: {}),
 		surfaceKind,
 	};
@@ -152,7 +152,7 @@ export function makePhrasemeLemmaResult(params: {
 	disambiguationResult?: { matchedIndex: number } | null;
 	lemma?: string;
 	phrasemeKind?: PhrasemeKind;
-	precomputedEmojiDescription?: string[];
+	precomputedSenseEmojis?: string[];
 	spelledSurface?: string;
 } = {}): PhrasemeLemmaResult {
 	const selection = makePhrasemeSelection(params);
@@ -165,8 +165,8 @@ export function makePhrasemeLemmaResult(params: {
 		lemma,
 		linguisticUnit: "Phraseme",
 		posLikeKind: null,
-		...(params.precomputedEmojiDescription
-			? { precomputedEmojiDescription: params.precomputedEmojiDescription }
+		...(params.precomputedSenseEmojis
+			? { precomputedSenseEmojis: params.precomputedSenseEmojis }
 			: {}),
 		surfaceKind: "Lemma",
 	};
@@ -189,7 +189,7 @@ export function makeLexemeLexicalInfo(params: {
 		core: params.core ?? {
 			status: "ready",
 			value: {
-				emojiDescription: ["🔧"],
+				senseEmojis: ["🔧"],
 				ipa: "tɛst",
 			},
 		},
@@ -230,7 +230,7 @@ export function makePhrasemeLexicalInfo(params: {
 		core: params.core ?? {
 			status: "ready",
 			value: {
-				emojiDescription: ["💬"],
+				senseEmojis: ["💬"],
 				ipa: "tɛst",
 			},
 		},
@@ -250,24 +250,24 @@ export function makePhrasemeLexicalInfo(params: {
 }
 
 export function makeLexemeMeta(params: {
-	emojiDescription: string[];
+	senseEmojis: string[];
 	lemma: string;
 	pos?: LexemePos;
 	surfaceKind?: Exclude<SurfaceKind, "Unknown">;
 }): LexicalMeta {
 	return createLexicalMeta({
-		emojiDescription: params.emojiDescription,
+		senseEmojis: params.senseEmojis,
 		selection: makeLexemeSelection(params),
 	});
 }
 
 export function makePhrasemeMeta(params: {
-	emojiDescription: string[];
+	senseEmojis: string[];
 	lemma: string;
 	phrasemeKind?: PhrasemeKind;
 }): LexicalMeta {
 	return createLexicalMeta({
-		emojiDescription: params.emojiDescription,
+		senseEmojis: params.senseEmojis,
 		selection: makePhrasemeSelection(params),
 	});
 }

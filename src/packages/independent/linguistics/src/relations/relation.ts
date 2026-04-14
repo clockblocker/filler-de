@@ -1,65 +1,45 @@
 import { z } from "zod/v3";
 import type { Prettify } from "../../../../../types/helpers";
+import { LingIdSchema, type LingId } from "../lu/ling-id";
 import type { LexicalRelation } from "./lexical";
 import type { MorphologicalRelation } from "./morphological";
 
-function buildRelationTargetsSchema() {
-	return z
-		.array(z.string())
-		.min(1)
-		.superRefine((targets, ctx) => {
-			const seen = new Set<string>();
+export const RelationTargetLingIdsSchema = z.array(LingIdSchema);
 
-			for (const target of targets) {
-				if (seen.has(target)) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						message: "Relation targets must be unique",
-					});
-					return;
-				}
-
-				seen.add(target);
-			}
-		});
-}
-
-export const RelationTargetsSchema = buildRelationTargetsSchema();
-
-export type RelationTargets = z.infer<typeof RelationTargetsSchema>;
+export type RelationTargetLingIds = LingId[];
 
 export type LexicalRelations = Prettify<
-	Partial<Record<LexicalRelation, RelationTargets>>
+	Partial<Record<LexicalRelation, RelationTargetLingIds>>
 >;
 
 export type MorphologicalRelations = Prettify<
-	Partial<Record<MorphologicalRelation, RelationTargets>>
+	Partial<Record<MorphologicalRelation, RelationTargetLingIds>>
 >;
 
 export type AbstractLexicalRelations = LexicalRelations;
 export type AbstractMorphologicalRelations = MorphologicalRelations;
 
 const lexicalRelationsShape = {
-	antonym: RelationTargetsSchema.optional(),
-	holonym: RelationTargetsSchema.optional(),
-	hypernym: RelationTargetsSchema.optional(),
-	hyponym: RelationTargetsSchema.optional(),
-	meronym: RelationTargetsSchema.optional(),
-	nearSynonym: RelationTargetsSchema.optional(),
-	synonym: RelationTargetsSchema.optional(),
+	antonym: RelationTargetLingIdsSchema.optional(),
+	holonym: RelationTargetLingIdsSchema.optional(),
+	hypernym: RelationTargetLingIdsSchema.optional(),
+	hyponym: RelationTargetLingIdsSchema.optional(),
+	meronym: RelationTargetLingIdsSchema.optional(),
+	nearSynonym: RelationTargetLingIdsSchema.optional(),
+	synonym: RelationTargetLingIdsSchema.optional(),
 } satisfies Record<
 	LexicalRelation,
-	z.ZodOptional<typeof RelationTargetsSchema>
+	z.ZodOptional<typeof RelationTargetLingIdsSchema>
 >;
 
 const morphologicalRelationsShape = {
-	consistsOf: RelationTargetsSchema.optional(),
-	derivedFrom: RelationTargetsSchema.optional(),
-	sourceFor: RelationTargetsSchema.optional(),
-	usedIn: RelationTargetsSchema.optional(),
+	consistsOf: RelationTargetLingIdsSchema.optional(),
+	derivedFrom: RelationTargetLingIdsSchema.optional(),
+	sourceFor: RelationTargetLingIdsSchema.optional(),
+	usedIn: RelationTargetLingIdsSchema.optional(),
 } satisfies Record<
 	MorphologicalRelation,
-	z.ZodOptional<typeof RelationTargetsSchema>
+	z.ZodOptional<typeof RelationTargetLingIdsSchema>
 >;
 
 export const LexicalRelationsSchema = z

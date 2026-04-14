@@ -11,7 +11,7 @@ const userInputSchema = z.object({
 
 const agentOutputSchema = z
 	.object({
-		emojiDescription: z.array(z.string().min(1).max(20)).min(1).max(3),
+		senseEmojis: z.array(z.string().min(1).max(20)).min(1).max(3),
 		genus: LexicalGenusSchema.nullable().optional(),
 		ipa: z.string().min(1),
 		nounClass: LexicalNounClassSchema.nullable().optional(),

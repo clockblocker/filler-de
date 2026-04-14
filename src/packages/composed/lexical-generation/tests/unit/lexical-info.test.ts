@@ -27,7 +27,7 @@ describe("lexical-generation-next lexical info", () => {
 				switch (requestLabel) {
 					case "GenerateCoreNoun":
 						return okValue({
-							emojiDescription: ["🏦"],
+							senseEmojis: ["🏦"],
 							ipa: "baŋk",
 							senseGloss: "financial institution",
 						});
@@ -80,7 +80,7 @@ describe("lexical-generation-next lexical info", () => {
 			core: {
 				status: "ready",
 				value: {
-					emojiDescription: ["🏦"],
+					senseEmojis: ["🏦"],
 					ipa: "baŋk",
 					senseGloss: "financial institution",
 				},
@@ -140,7 +140,7 @@ describe("lexical-generation-next lexical info", () => {
 				switch (requestLabel) {
 					case "GenerateCoreNoun":
 						return okValue({
-							emojiDescription: ["🏦"],
+							senseEmojis: ["🏦"],
 							ipa: "baŋk",
 						});
 					case "GenerateFeaturesNoun":
@@ -180,7 +180,7 @@ describe("lexical-generation-next lexical info", () => {
 				switch (requestLabel) {
 					case "GenerateCoreLexeme":
 						return okValue({
-							emojiDescription: ["🚶"],
+							senseEmojis: ["🚶"],
 							ipa: "ɡeːən",
 							senseGloss: "to walk",
 						});
@@ -232,7 +232,7 @@ describe("lexical-generation-next lexical info", () => {
 				switch (requestLabel) {
 					case "GenerateCoreNoun":
 						return okValue({
-							emojiDescription: ["🏦"],
+							senseEmojis: ["🏦"],
 							ipa: "baŋk",
 						});
 					case "GenerateFeaturesNoun":
@@ -258,7 +258,7 @@ describe("lexical-generation-next lexical info", () => {
 			makeLexemeSelection({ lemma: "Bank", pos: "NOUN" }),
 			"Ich sitze auf der Bank",
 			{
-				precomputedEmojiDescription: ["🪑", "🌳"],
+				precomputedSenseEmojis: ["🪑", "🌳"],
 			},
 		);
 
@@ -266,7 +266,7 @@ describe("lexical-generation-next lexical info", () => {
 		expect(result._unsafeUnwrap().core).toMatchObject({
 			status: "ready",
 			value: {
-				emojiDescription: ["🪑", "🌳"],
+				senseEmojis: ["🪑", "🌳"],
 				ipa: "baŋk",
 			},
 		});
@@ -280,7 +280,7 @@ describe("lexical-generation-next lexical info", () => {
 				switch (requestLabel) {
 					case "GenerateCoreNoun":
 						return okValue({
-							emojiDescription: ["🏦"],
+							senseEmojis: ["🏦"],
 							ipa: "baŋk",
 						});
 					case "GenerateFeaturesNoun":

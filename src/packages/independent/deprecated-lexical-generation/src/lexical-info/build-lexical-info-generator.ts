@@ -160,7 +160,7 @@ function mapCoreOutputToCore(
 		| AgentOutput<"PhrasemEnrichment">,
 ): LexicalCore {
 	return {
-		emojiDescription: output.emojiDescription,
+		senseEmojis: output.senseEmojis,
 		ipa: output.ipa,
 		...(typeof output.senseGloss === "string" &&
 		output.senseGloss.length > 0
@@ -170,11 +170,11 @@ function mapCoreOutputToCore(
 }
 
 function coreWithFallbackEmoji(
-	precomputedEmojiDescription?: string[],
+	precomputedSenseEmojis?: string[],
 ): LexicalInfoField<LexicalCore> | null {
 	if (
-		!precomputedEmojiDescription ||
-		precomputedEmojiDescription.length === 0
+		!precomputedSenseEmojis ||
+		precomputedSenseEmojis.length === 0
 	) {
 		return null;
 	}
@@ -182,20 +182,20 @@ function coreWithFallbackEmoji(
 	return {
 		status: "ready",
 		value: {
-			emojiDescription: precomputedEmojiDescription,
+			senseEmojis: precomputedSenseEmojis,
 			ipa: "unknown",
 		},
 	};
 }
 
-function withPrecomputedEmojiDescription(
+function withPrecomputedSenseEmojis(
 	coreField: LexicalInfoField<LexicalCore>,
-	precomputedEmojiDescription?: string[],
+	precomputedSenseEmojis?: string[],
 ): LexicalInfoField<LexicalCore> {
 	if (
 		coreField.status !== "ready" ||
-		!precomputedEmojiDescription ||
-		precomputedEmojiDescription.length === 0
+		!precomputedSenseEmojis ||
+		precomputedSenseEmojis.length === 0
 	) {
 		return coreField;
 	}
@@ -204,7 +204,7 @@ function withPrecomputedEmojiDescription(
 		status: "ready",
 		value: {
 			...coreField.value,
-			emojiDescription: precomputedEmojiDescription,
+			senseEmojis: precomputedSenseEmojis,
 		},
 	};
 }
@@ -515,19 +515,19 @@ export function buildLexicalInfoGenerator(
 			return err(coreResult.error);
 		}
 
-		const coreField = withPrecomputedEmojiDescription(
+		const coreField = withPrecomputedSenseEmojis(
 			coreResult.isOk()
 				? ({
 						status: "ready",
 						value: mapCoreOutputToCore(coreResult.value),
 					} as const)
 				: (coreWithFallbackEmoji(
-						options.precomputedEmojiDescription,
+						options.precomputedSenseEmojis,
 					) ?? {
 						error: coreResult.error,
 						status: "error",
 						}),
-				options.precomputedEmojiDescription,
+				options.precomputedSenseEmojis,
 			);
 			const coreOutput = coreResult.isOk() ? coreResult.value : null;
 			const isProperNoun = isProperNounSelection(lemma);

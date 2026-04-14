@@ -7,7 +7,7 @@ export const examples = [
 			word: "Deutsche Bank",
 		},
 		output: {
-			emojiDescription: ["🏦"],
+			senseEmojis: ["🏦"],
 			genus: "Femininum",
 			ipa: "ˈdɔʏ̯tʃə baŋk",
 			nounClass: "Proper",
@@ -20,7 +20,7 @@ export const examples = [
 			word: "Haus",
 		},
 		output: {
-			emojiDescription: ["🏠"],
+			senseEmojis: ["🏠"],
 			genus: "Neutrum",
 			ipa: "haʊ̯s",
 			nounClass: "Common",

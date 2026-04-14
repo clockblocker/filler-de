@@ -40,7 +40,7 @@ export function createLexicalIdentityFromSelection(
 }
 
 export function createLexicalMeta(params: {
-	emojiDescription: string[];
+	senseEmojis: string[];
 	selection: ResolvedSelection;
 	options?: { normalizeToLemma?: boolean };
 }): Result<LexicalMeta, LexicalGenerationError> {
@@ -58,7 +58,7 @@ export function createLexicalMeta(params: {
 	}
 
 	return ok({
-		emojiDescription: params.emojiDescription,
+		senseEmojis: params.senseEmojis,
 		identity,
 	});
 }

@@ -2,9 +2,9 @@ import { describe, expect, it } from "bun:test";
 import { formatHeaderLine } from "../../../../../src/commanders/textfresser/commands/generate/section-formatters/common/header-formatter";
 
 describe("formatHeaderLine", () => {
-	it("formats header with emoji sequence from emojiDescription", () => {
+	it("formats header with emoji sequence from senseEmojis", () => {
 		const result = formatHeaderLine(
-			{ emojiDescription: ["🏭"], ipa: "ˈkoːləˌkraftvɛɐ̯k" },
+			{ senseEmojis: ["🏭"], ipa: "ˈkoːləˌkraftvɛɐ̯k" },
 			"Kohlekraftwerk",
 			"German",
 		);
@@ -15,7 +15,7 @@ describe("formatHeaderLine", () => {
 
 	it("formats header for a verb (no article)", () => {
 		const result = formatHeaderLine(
-			{ emojiDescription: ["🏃"], ipa: "ˈlaʊ̯fn̩" },
+			{ senseEmojis: ["🏃"], ipa: "ˈlaʊ̯fn̩" },
 			"laufen",
 			"German",
 		);
@@ -26,7 +26,7 @@ describe("formatHeaderLine", () => {
 
 	it("uses all emojis from multi-emoji description", () => {
 		const result = formatHeaderLine(
-			{ emojiDescription: ["⚡", "💨"], ipa: "ʃnɛl" },
+			{ senseEmojis: ["⚡", "💨"], ipa: "ʃnɛl" },
 			"schnell",
 			"German",
 		);
@@ -37,7 +37,7 @@ describe("formatHeaderLine", () => {
 
 	it("encodes special characters in youglish URL", () => {
 		const result = formatHeaderLine(
-			{ emojiDescription: ["🏠"], ipa: "ˈʃtʁaːsə" },
+			{ senseEmojis: ["🏠"], ipa: "ˈʃtʁaːsə" },
 			"Straße",
 			"German",
 		);
@@ -46,7 +46,7 @@ describe("formatHeaderLine", () => {
 
 	it("uses lowercase target language in URL", () => {
 		const result = formatHeaderLine(
-			{ emojiDescription: ["🌍"], ipa: "test" },
+			{ senseEmojis: ["🌍"], ipa: "test" },
 			"hello",
 			"English",
 		);
@@ -55,7 +55,7 @@ describe("formatHeaderLine", () => {
 
 	it("normalizes vault-path lemma targets to basename", () => {
 		const result = formatHeaderLine(
-			{ emojiDescription: ["🚗"], ipa: "ˈfaːʁən" },
+			{ senseEmojis: ["🚗"], ipa: "ˈfaːʁən" },
 			"Worter/de/lexem/lemma/f/fah/fahre/Fahren",
 			"German",
 		);

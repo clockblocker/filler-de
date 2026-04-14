@@ -65,7 +65,7 @@ function makeSenseDisambiguator(params: {
 }
 
 function buildLexemeMeta(params: {
-	emojiDescription: string[];
+	senseEmojis: string[];
 	index: number;
 	pos?: "NOUN" | "VERB";
 	surfaceKind?: "Lemma" | "Inflection";
@@ -77,7 +77,7 @@ function buildLexemeMeta(params: {
 	return {
 		id: `LX-${surfaceKind === "Lemma" ? "LM" : "IN"}-${posToken}-${params.index}`,
 		lexicalMeta: makeLexemeMeta({
-			emojiDescription: params.emojiDescription,
+			senseEmojis: params.senseEmojis,
 			lemma: pos === "NOUN" ? "Bank" : "fahren",
 			pos,
 			surfaceKind,
@@ -86,14 +86,14 @@ function buildLexemeMeta(params: {
 }
 
 function buildPhrasemeMeta(params: {
-	emojiDescription: string[];
+	senseEmojis: string[];
 	index: number;
 	phrasemeKind?: "DiscourseFormula";
 }): { id: string; lexicalMeta: LexicalMeta } {
 	return {
 		id: `PH-LM-${params.index}`,
 		lexicalMeta: makePhrasemeMeta({
-			emojiDescription: params.emojiDescription,
+			senseEmojis: params.senseEmojis,
 			lemma: "auf jeden Fall",
 			phrasemeKind: params.phrasemeKind ?? "DiscourseFormula",
 		}),
@@ -134,8 +134,8 @@ describe("resolveSenseMatchFromVault", () => {
 
 	it("passes stored lexical meta through to lexical-generation unchanged", async () => {
 		const content = buildNoteContent([
-			buildLexemeMeta({ emojiDescription: ["🏦"], index: 1 }),
-			buildLexemeMeta({ emojiDescription: ["🪑"], index: 2 }),
+			buildLexemeMeta({ senseEmojis: ["🏦"], index: 1 }),
+			buildLexemeMeta({ senseEmojis: ["🪑"], index: 2 }),
 		]);
 		let capturedCache: LexicalMeta[] | undefined;
 
@@ -157,12 +157,12 @@ describe("resolveSenseMatchFromVault", () => {
 		expect(result.isOk()).toBe(true);
 		expect(capturedCache).toEqual([
 			makeLexemeMeta({
-				emojiDescription: ["🏦"],
+				senseEmojis: ["🏦"],
 				lemma: "Bank",
 				pos: "NOUN",
 			}),
 			makeLexemeMeta({
-				emojiDescription: ["🪑"],
+				senseEmojis: ["🪑"],
 				lemma: "Bank",
 				pos: "NOUN",
 			}),
@@ -172,7 +172,7 @@ describe("resolveSenseMatchFromVault", () => {
 
 	it("maps new-sense results through with precomputed emoji", async () => {
 		const content = buildNoteContent([
-			buildLexemeMeta({ emojiDescription: ["🏦"], index: 1 }),
+			buildLexemeMeta({ senseEmojis: ["🏦"], index: 1 }),
 		]);
 
 		const result = await resolveSenseMatchFromVault(
@@ -184,7 +184,7 @@ describe("resolveSenseMatchFromVault", () => {
 				disambiguateWith: makeSenseDisambiguator({
 					result: ok({
 						kind: "new",
-						precomputedEmojiDescription: ["🪑", "🌳"],
+						precomputedSenseEmojis: ["🪑", "🌳"],
 					}),
 				}),
 			},
@@ -193,13 +193,13 @@ describe("resolveSenseMatchFromVault", () => {
 		expect(result.isOk()).toBe(true);
 		expect(result._unsafeUnwrap()).toEqual({
 			matchedIndex: null,
-			precomputedEmojiDescription: ["🪑", "🌳"],
+			precomputedSenseEmojis: ["🪑", "🌳"],
 		});
 	});
 
 	it("treats out-of-range cache indices as a new sense", async () => {
 		const content = buildNoteContent([
-			buildLexemeMeta({ emojiDescription: ["🏦"], index: 1 }),
+			buildLexemeMeta({ senseEmojis: ["🏦"], index: 1 }),
 		]);
 
 		const result = await resolveSenseMatchFromVault(
@@ -249,7 +249,7 @@ describe("resolveSenseMatchFromVault", () => {
 				entries: {
 					"INVALID-ID-FORMAT": {
 						lexicalMeta: buildLexemeMeta({
-							emojiDescription: ["🏦"],
+							senseEmojis: ["🏦"],
 							index: 1,
 						}).lexicalMeta,
 					},
@@ -280,7 +280,7 @@ describe("resolveSenseMatchFromVault", () => {
 
 	it("supports phraseme lexical meta candidates", async () => {
 		const content = buildNoteContent([
-			buildPhrasemeMeta({ emojiDescription: ["✅"], index: 1 }),
+			buildPhrasemeMeta({ senseEmojis: ["✅"], index: 1 }),
 		]);
 		let capturedCache: LexicalMeta[] | undefined;
 
@@ -309,7 +309,7 @@ describe("resolveSenseMatchFromVault", () => {
 
 	it("returns lexical-generation failures as command errors", async () => {
 		const content = buildNoteContent([
-			buildLexemeMeta({ emojiDescription: ["🏦"], index: 1 }),
+			buildLexemeMeta({ senseEmojis: ["🏦"], index: 1 }),
 		]);
 
 		const result = await resolveSenseMatchFromVault(
@@ -342,10 +342,10 @@ describe("resolveSenseMatchFromVault", () => {
 			pathParts: ["Library", "de", "noun"],
 		};
 		const fallbackContent = buildNoteContent([
-			buildLexemeMeta({ emojiDescription: ["🏦"], index: 1 }),
+			buildLexemeMeta({ senseEmojis: ["🏦"], index: 1 }),
 		]);
 		const preferredContent = buildNoteContent([
-			buildLexemeMeta({ emojiDescription: ["💺"], index: 2 }),
+			buildLexemeMeta({ senseEmojis: ["💺"], index: 2 }),
 		]);
 
 		const result = await resolveSenseMatchFromVault(

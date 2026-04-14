@@ -7,7 +7,7 @@ export const examples = [
 			lemma: "bank",
 			senses: [
 				{
-					emojiDescription: ["🏞️", "🌊"],
+					senseEmojis: ["🏞️", "🌊"],
 					index: 1,
 					pos: "Noun",
 					unitKind: "Lexem",
@@ -15,7 +15,7 @@ export const examples = [
 			],
 		},
 		output: {
-			emojiDescription: ["🏦"],
+			senseEmojis: ["🏦"],
 			matchedIndex: null,
 		},
 	},
@@ -25,13 +25,13 @@ export const examples = [
 			lemma: "bank",
 			senses: [
 				{
-					emojiDescription: ["🏞️", "🌊"],
+					senseEmojis: ["🏞️", "🌊"],
 					index: 1,
 					pos: "Noun",
 					unitKind: "Lexem",
 				},
 				{
-					emojiDescription: ["🏦"],
+					senseEmojis: ["🏦"],
 					index: 2,
 					pos: "Noun",
 					unitKind: "Lexem",
@@ -48,13 +48,13 @@ export const examples = [
 			lemma: "to be honest",
 			senses: [
 				{
-					emojiDescription: ["🗣️"],
+					senseEmojis: ["🗣️"],
 					index: 1,
 					phrasemeKind: "DiscourseFormula",
 					unitKind: "Phrasem",
 				},
 				{
-					emojiDescription: ["🤝"],
+					senseEmojis: ["🤝"],
 					index: 2,
 					phrasemeKind: "Collocation",
 					unitKind: "Phrasem",

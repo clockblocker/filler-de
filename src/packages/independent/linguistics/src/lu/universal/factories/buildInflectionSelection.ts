@@ -1,5 +1,8 @@
 import z from "zod/v3";
-import { EmojiDescriptionSchema } from "../emoji-description";
+import {
+	SenseEmojisSchema,
+	withLegacySenseEmojisAlias,
+} from "../sense-emojis";
 import type { TargetLanguage } from "../enums/core/language";
 import type { OrthographicStatus } from "../enums/core/selection";
 
@@ -41,14 +44,16 @@ export function buildInflectionSelection<
 	LemmaExtraShape,
 	SurfaceExtraShape
 >) {
-	const lemmaSchema = z
-		.object(lemmaIdentityShape)
-		.extend({
-			emojiDescription: EmojiDescriptionSchema.optional(),
-			language: z.literal(language),
-			spelledLemma: z.string(),
-		})
-		.extend(lemmaExtraShape);
+	const lemmaSchema = withLegacySenseEmojisAlias(
+		z
+			.object(lemmaIdentityShape)
+			.extend({
+				senseEmojis: SenseEmojisSchema.optional(),
+				language: z.literal(language),
+				spelledLemma: z.string(),
+			})
+			.extend(lemmaExtraShape),
+	);
 
 	const surfaceSchema = z.object(surfaceExtraShape).extend({
 		inflectionalFeatures: inflectionalFeaturesSchema,

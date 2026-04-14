@@ -7,7 +7,7 @@ export const testExamples = [
 			word: "Haus",
 		},
 		output: {
-			emojiDescription: ["🏠"],
+			senseEmojis: ["🏠"],
 			genus: "Neutrum",
 			ipa: "haʊ̯s",
 			nounClass: "Common",

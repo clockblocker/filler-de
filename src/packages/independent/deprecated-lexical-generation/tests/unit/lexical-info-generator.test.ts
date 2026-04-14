@@ -27,7 +27,7 @@ describe("lexical-generation lexical info", () => {
 				switch (requestLabel) {
 					case "NounEnrichment":
 						return okValue<T>({
-							emojiDescription: ["🏦"],
+							senseEmojis: ["🏦"],
 							genus: "Femininum",
 							ipa: "baŋk",
 							nounClass: "Common",
@@ -80,7 +80,7 @@ describe("lexical-generation lexical info", () => {
 			core: {
 				status: "ready",
 				value: {
-					emojiDescription: ["🏦"],
+					senseEmojis: ["🏦"],
 					ipa: "baŋk",
 					senseGloss: "financial institution",
 				},
@@ -152,7 +152,7 @@ describe("lexical-generation lexical info", () => {
 				switch (requestLabel) {
 					case "NounEnrichment":
 						return okValue<T>({
-							emojiDescription: ["🏦"],
+							senseEmojis: ["🏦"],
 							genus: "Femininum",
 							ipa: "baŋk",
 							nounClass: "Common",
@@ -198,7 +198,7 @@ describe("lexical-generation lexical info", () => {
 				switch (requestLabel) {
 					case "LexemEnrichment":
 						return okValue<T>({
-							emojiDescription: ["🚶"],
+							senseEmojis: ["🚶"],
 							ipa: "ɡeːən",
 							senseGloss: "to walk",
 						});
@@ -257,7 +257,7 @@ describe("lexical-generation lexical info", () => {
 				switch (requestLabel) {
 					case "NounEnrichment":
 						return okValue<T>({
-							emojiDescription: ["🏦"],
+							senseEmojis: ["🏦"],
 							genus: "Femininum",
 							ipa: "baŋk",
 							nounClass: "Common",
@@ -292,7 +292,7 @@ describe("lexical-generation lexical info", () => {
 			makeLexemeSelection({ lemma: "Bank", pos: "NOUN" }),
 			"Ich sitze auf der Bank",
 			{
-				precomputedEmojiDescription: ["🪑", "🌳"],
+				precomputedSenseEmojis: ["🪑", "🌳"],
 			},
 		);
 
@@ -300,7 +300,7 @@ describe("lexical-generation lexical info", () => {
 		expect(result._unsafeUnwrap().core).toMatchObject({
 			status: "ready",
 			value: {
-				emojiDescription: ["🪑", "🌳"],
+				senseEmojis: ["🪑", "🌳"],
 				ipa: "baŋk",
 			},
 		});
@@ -314,7 +314,7 @@ describe("lexical-generation lexical info", () => {
 				switch (requestLabel) {
 					case "NounEnrichment":
 						return okValue<T>({
-							emojiDescription: ["🏛️"],
+							senseEmojis: ["🏛️"],
 							genus: "Neutrum",
 							ipa: "bɛʁˈliːn",
 							nounClass: "Proper",
@@ -360,7 +360,7 @@ describe("lexical-generation lexical info", () => {
 			core: {
 				status: "ready",
 				value: {
-					emojiDescription: ["🏛️"],
+					senseEmojis: ["🏛️"],
 					ipa: "bɛʁˈliːn",
 				},
 			},
@@ -396,7 +396,7 @@ describe("lexical-generation lexical info", () => {
 				switch (requestLabel) {
 					case "LexemEnrichment":
 						return okValue<T>({
-							emojiDescription: ["🚶"],
+							senseEmojis: ["🚶"],
 							ipa: "ɡeːən",
 						});
 					case "FeaturesVerb":
@@ -497,7 +497,7 @@ describe("lexical-generation lexical info", () => {
 				switch (requestLabel) {
 					case "LexemEnrichment":
 						return okValue<T>({
-							emojiDescription: ["🚶"],
+							senseEmojis: ["🚶"],
 							ipa: "ɡeːən",
 							senseGloss: "to walk",
 						});

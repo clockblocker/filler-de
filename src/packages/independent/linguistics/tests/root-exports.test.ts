@@ -15,7 +15,6 @@ import {
 	OrthographicStatus,
 	PhrasemeKind,
 	Pos,
-	RelationTargetsSchema,
 	Relations,
 	SelectionSchema,
 	SurfaceKind,
@@ -114,6 +113,10 @@ describe("root exports", () => {
 		expect(LexicalRelation.synonym).toBe("synonym");
 		expect(MorphologicalRelation.derivedFrom).toBe("derivedFrom");
 		expect(RelationTargetsSchema.safeParse(["laufen"]).success).toBe(true);
+		expect(RelationTargetsSchema.safeParse([]).success).toBe(true);
+		expect(
+			RelationTargetsSchema.safeParse(["laufen", "laufen"]).success,
+		).toBe(true);
 		expect(
 			LexicalRelationsSchema.safeParse({
 				synonym: ["laufen"],

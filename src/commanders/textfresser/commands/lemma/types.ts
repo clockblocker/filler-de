@@ -19,7 +19,7 @@ type LemmaLocalState = {
 	/** null = new sense or first encounter */
 	disambiguationResult: { matchedIndex: number } | null;
 	/** Emoji description precomputed by Disambiguate prompt when it detects a new sense. */
-	precomputedEmojiDescription?: string[];
+	precomputedSenseEmojis?: string[];
 };
 
 type KnownSelection = Exclude<ResolvedSelection, { orthographicStatus: "Unknown" }>;

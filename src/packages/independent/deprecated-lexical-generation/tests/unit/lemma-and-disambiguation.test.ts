@@ -64,7 +64,7 @@ describe("lexical-generation lemma/disambiguation", () => {
 				}
 
 				return ok({
-					emojiDescription: null,
+					senseEmojis: null,
 					matchedIndex: 2,
 				});
 			}) as StructuredFetchFn,
@@ -78,12 +78,12 @@ describe("lexical-generation lemma/disambiguation", () => {
 			"Ich gehe zur Bank",
 			[
 				makeLexemeMeta({
-					emojiDescription: ["🪑"],
+					senseEmojis: ["🪑"],
 					lemma: "Bank",
 					pos: "NOUN",
 				}),
 				makeLexemeMeta({
-					emojiDescription: ["🏦"],
+					senseEmojis: ["🏦"],
 					lemma: "Bank",
 					pos: "NOUN",
 				}),
@@ -103,7 +103,7 @@ describe("lexical-generation lemma/disambiguation", () => {
 				}
 
 				return ok({
-					emojiDescription: ["🔒"],
+					senseEmojis: ["🔒"],
 					matchedIndex: null,
 				});
 			}) as StructuredFetchFn,
@@ -117,7 +117,7 @@ describe("lexical-generation lemma/disambiguation", () => {
 			"Das Schloss an der Tur war kaputt.",
 			[
 				makeLexemeMeta({
-					emojiDescription: ["🏰"],
+					senseEmojis: ["🏰"],
 					lemma: "Schloss",
 					pos: "NOUN",
 				}),
@@ -127,7 +127,7 @@ describe("lexical-generation lemma/disambiguation", () => {
 		expect(fresh.isOk()).toBe(true);
 		expect(fresh._unsafeUnwrap()).toEqual({
 			kind: "new",
-			precomputedEmojiDescription: ["🔒"],
+			precomputedSenseEmojis: ["🔒"],
 		});
 	});
 
@@ -154,7 +154,7 @@ describe("lexical-generation lemma/disambiguation", () => {
 			"Ich gehe zur Bank",
 			[
 				makeLexemeMeta({
-					emojiDescription: ["🏦"],
+					senseEmojis: ["🏦"],
 					lemma: "Bank",
 					pos: "NOUN",
 				}),

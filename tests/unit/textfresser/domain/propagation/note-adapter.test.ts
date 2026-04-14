@@ -617,7 +617,7 @@ describe("propagation note adapter", () => {
 			JSON.stringify({
 				entries: {
 					"raw-1": {
-						emojiDescription: ["🧪"],
+						senseEmojis: ["🧪"],
 						ipa: "ipa",
 						semantics: "legacy semantics",
 						senseGloss: "legacy gloss",
@@ -631,7 +631,7 @@ describe("propagation note adapter", () => {
 		const parsed = parsePropagationNote(noteWithLegacyMeta);
 		expect(parsed).toHaveLength(1);
 		expect(parsed[0]?.meta).toEqual({
-			emojiDescription: ["🧪"],
+			senseEmojis: ["🧪"],
 			ipa: "ipa",
 			semantics: "legacy semantics",
 			senseGloss: "legacy gloss",

@@ -92,7 +92,7 @@ function makeHarness(options: HarnessOptions) {
 				});
 			}
 
-			return okAsync({ emojiDescription: null, matchedIndex: null });
+			return okAsync({ senseEmojis: null, matchedIndex: null });
 		},
 	} as unknown as ApiService;
 
@@ -133,7 +133,7 @@ function makeHarness(options: HarnessOptions) {
 					surfaceKind: "Lemma",
 				});
 			}
-			return okAsync({ emojiDescription: null, matchedIndex: null });
+			return okAsync({ senseEmojis: null, matchedIndex: null });
 		},
 	} as unknown as PromptRunner;
 

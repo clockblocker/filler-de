@@ -7,7 +7,7 @@ export const examples = [
 			word: "London",
 		},
 		output: {
-			emojiDescription: ["🏙️"],
+			senseEmojis: ["🏙️"],
 			ipa: "ˈlʌndən",
 			nounClass: "Proper",
 			senseGloss: "capital city",
@@ -19,7 +19,7 @@ export const examples = [
 			word: "house",
 		},
 		output: {
-			emojiDescription: ["🏠"],
+			senseEmojis: ["🏠"],
 			ipa: "haʊs",
 			nounClass: "Common",
 			senseGloss: "dwelling building",

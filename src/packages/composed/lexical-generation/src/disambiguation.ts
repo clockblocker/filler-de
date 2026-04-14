@@ -46,8 +46,8 @@ function normalizeCandidates(
 		)
 		.filter(
 			(candidate) =>
-				Array.isArray(candidate.emojiDescription) &&
-				candidate.emojiDescription.length > 0,
+				Array.isArray(candidate.senseEmojis) &&
+				candidate.senseEmojis.length > 0,
 		)
 		.map((candidate, index) => ({
 			...candidate,
@@ -86,7 +86,7 @@ export function buildSenseDisambiguator(
 				attestation,
 				lemma: getSpelledLemma(selection) ?? "",
 				senses: matchingCandidates.map((candidate) => ({
-					emojiDescription: candidate.emojiDescription,
+					senseEmojis: candidate.senseEmojis,
 					identity: {
 						discriminator: candidate.identity.discriminator,
 						lemmaKind: candidate.identity.lemmaKind,
@@ -115,8 +115,8 @@ export function buildSenseDisambiguator(
 
 		return ok<SenseMatchResult>({
 			kind: "new",
-			precomputedEmojiDescription:
-				promptResult.value.emojiDescription ?? undefined,
+			precomputedSenseEmojis:
+				promptResult.value.senseEmojis ?? undefined,
 		});
 	};
 }

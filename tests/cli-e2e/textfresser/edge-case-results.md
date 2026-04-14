@@ -146,7 +146,7 @@ D: dem [[Schloss]], den [[Schlössern]]
 
 
 <section id="textfresser_meta_keep_me_invisible">
-{"entries":{"LX-LM-NOUN-1":{"entity":{"emojiDescription":["🏰"],"ipa":"ʃlɔs","language":"German","lemma":"Schloss","linguisticUnit":"Lexem","posLikeKind":"Noun","surfaceKind":"Lemma","features":{"inflectional":{},"lexical":{"pos":"Noun"}}},"emojiDescription":["🏰"]}},"noteKind":"DictEntry"}
+{"entries":{"LX-LM-NOUN-1":{"entity":{"senseEmojis":["🏰"],"ipa":"ʃlɔs","language":"German","lemma":"Schloss","linguisticUnit":"Lexem","posLikeKind":"Noun","surfaceKind":"Lemma","features":{"inflectional":{},"lexical":{"pos":"Noun"}}},"senseEmojis":["🏰"]}},"noteKind":"DictEntry"}
 </section>
 ```
 

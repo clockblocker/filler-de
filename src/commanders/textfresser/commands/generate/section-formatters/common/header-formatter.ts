@@ -13,14 +13,14 @@ export function buildYouglishUrl(
  * Format header line from Lemma output fields.
  * Format: `{emoji} [[{lemma}]], [{ipa}](youglish_url)`
  *
- * Emoji sequence is derived from emojiDescription in order.
+ * Emoji sequence is derived from senseEmojis in order.
  */
 export function formatHeaderLine(
-	output: { emojiDescription: string[]; ipa: string },
+	output: { senseEmojis: string[]; ipa: string },
 	lemma: string,
 	targetLanguage: string,
 ): string {
-	const emoji = output.emojiDescription.join(" ");
+	const emoji = output.senseEmojis.join(" ");
 	const normalizedLemma = wikilinkHelper.normalizeLinkTarget(lemma);
 	const youglishUrl = buildYouglishUrl(normalizedLemma, targetLanguage);
 

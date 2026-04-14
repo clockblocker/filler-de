@@ -129,7 +129,7 @@ function makePhrasemLexicalInfo(): LexicalInfo {
 		core: {
 			status: "ready",
 			value: {
-				emojiDescription: ["💬"],
+				senseEmojis: ["💬"],
 				ipa: "ipa",
 			},
 		},
@@ -143,7 +143,7 @@ function makePronounLexicalInfo(): LexicalInfo {
 		core: {
 			status: "ready",
 			value: {
-				emojiDescription: ["👥"],
+				senseEmojis: ["👥"],
 				ipa: "viːɐ̯",
 			},
 		},
@@ -345,7 +345,7 @@ describe("generateSections re-encounter behavior", () => {
 				promptCalls.push(kind);
 				if (kind === "PhrasemEnrichment") {
 					return okAsync({
-						emojiDescription: ["💬"],
+						senseEmojis: ["💬"],
 						ipa: "ipa",
 					});
 				}
@@ -382,7 +382,7 @@ describe("generateSections re-encounter behavior", () => {
 				promptCalls.push(kind);
 				if (kind === "PhrasemEnrichment") {
 					return okAsync({
-						emojiDescription: ["💬"],
+						senseEmojis: ["💬"],
 						ipa: "ipa",
 					});
 				}
@@ -472,7 +472,7 @@ describe("generateSections re-encounter behavior", () => {
 							core: {
 								status: "ready",
 								value: {
-									emojiDescription: ["🏙️"],
+									senseEmojis: ["🏙️"],
 									ipa: "bɛʁˈliːn",
 								},
 							},
@@ -584,7 +584,7 @@ describe("generateSections re-encounter behavior", () => {
 									core: {
 										status: "ready",
 										value: {
-											emojiDescription: ["🏙️"],
+											senseEmojis: ["🏙️"],
 											ipa: "bɛʁˈliːn",
 										},
 									},
@@ -687,7 +687,7 @@ describe("generateSections re-encounter behavior", () => {
 						switch (kind) {
 							case "NounEnrichment":
 								return okAsync({
-									emojiDescription: ["🏙️"],
+									senseEmojis: ["🏙️"],
 									genus: "Neut",
 									ipa: "bɛʁˈliːn",
 									nounClass: "Proper",

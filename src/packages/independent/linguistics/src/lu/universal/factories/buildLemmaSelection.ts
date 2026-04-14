@@ -1,7 +1,10 @@
 import z from "zod/v3";
-import { EmojiDescriptionSchema } from "../emoji-description";
 import type { TargetLanguage } from "../enums/core/language";
 import type { OrthographicStatus, SurfaceKind } from "../enums/core/selection";
+import {
+	SenseEmojisSchema,
+	withLegacySenseEmojisAlias,
+} from "../sense-emojis";
 
 type EmptyZodRawShape = Record<never, never>;
 type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
@@ -42,14 +45,16 @@ export function buildLemmaSelection<
 	LemmaExtraShape,
 	SurfaceExtraShape
 >) {
-	const lemmaSchema = z
-		.object(lemmaIdentityShape)
-		.extend({
-			emojiDescription: EmojiDescriptionSchema.optional(),
-			language: z.literal(language),
-			spelledLemma: z.string(),
-		})
-		.extend(lemmaExtraShape);
+	const lemmaSchema = withLegacySenseEmojisAlias(
+		z
+			.object(lemmaIdentityShape)
+			.extend({
+				language: z.literal(language),
+				senseEmojis: SenseEmojisSchema.optional(),
+				spelledLemma: z.string(),
+			})
+			.extend(lemmaExtraShape),
+	);
 
 	const surfaceSchema = z.object(surfaceExtraShape).extend({
 		lemma: lemmaSchema,

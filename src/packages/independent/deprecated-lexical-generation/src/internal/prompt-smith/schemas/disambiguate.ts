@@ -9,7 +9,7 @@ const userInputSchema = z.object({
 	lemma: z.string(),
 	senses: z.array(
 		z.object({
-			emojiDescription: z.array(z.string()),
+			senseEmojis: z.array(z.string()),
 			genus: z.string().optional(),
 			index: z.number(),
 			ipa: z.string().min(1).optional(),
@@ -23,7 +23,7 @@ const userInputSchema = z.object({
 
 const agentOutputSchema = z.object({
 	/** When matchedIndex is null (new sense), 1-3 emojis distinguishing this sense. */
-	emojiDescription: z
+	senseEmojis: z
 		.array(z.string().min(1).max(4))
 		.min(1)
 		.max(3)

@@ -63,7 +63,7 @@ describe("lexical-generation-next selection/disambiguation", () => {
 				}
 
 				return ok({
-					emojiDescription: null,
+					senseEmojis: null,
 					matchedIndex: 1,
 				});
 			}) as StructuredFetchFn,
@@ -82,7 +82,7 @@ describe("lexical-generation-next selection/disambiguation", () => {
 			"Die Banken sind geschlossen.",
 			[
 				makeLexemeMeta({
-					emojiDescription: ["🏦"],
+					senseEmojis: ["🏦"],
 					lemma: "Bank",
 					pos: "NOUN",
 				}),
@@ -119,7 +119,7 @@ describe("lexical-generation-next selection/disambiguation", () => {
 			"Ich gehe zur Bank",
 			[
 				makeLexemeMeta({
-					emojiDescription: ["🏦"],
+					senseEmojis: ["🏦"],
 					lemma: "Bank",
 					pos: "NOUN",
 				}),
@@ -162,7 +162,7 @@ describe("lexical-generation-next selection/disambiguation", () => {
 
 	it("normalizes lexical metadata to lemma identity by default", () => {
 		const meta = makeLexemeMeta({
-			emojiDescription: ["🏦"],
+			senseEmojis: ["🏦"],
 			lemma: "Bank",
 			pos: "NOUN",
 		});
@@ -172,7 +172,7 @@ describe("lexical-generation-next selection/disambiguation", () => {
 
 	it("returns Err when lexical metadata is requested for an unknown selection", () => {
 		const result = createLexicalMeta({
-			emojiDescription: ["❓"],
+			senseEmojis: ["❓"],
 			selection: {
 				language: "German",
 				orthographicStatus: "Unknown",

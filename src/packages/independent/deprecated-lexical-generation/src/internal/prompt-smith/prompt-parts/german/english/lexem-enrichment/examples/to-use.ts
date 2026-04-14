@@ -8,7 +8,7 @@ export const examples = [
 			word: "gehen",
 		},
 		output: {
-			emojiDescription: ["🚶"],
+			senseEmojis: ["🚶"],
 			ipa: "ˈɡeːən",
 			senseGloss: "to walk",
 		},
@@ -20,7 +20,7 @@ export const examples = [
 			word: "stolz",
 		},
 		output: {
-			emojiDescription: ["😌"],
+			senseEmojis: ["😌"],
 			ipa: "ʃtɔlts",
 			senseGloss: "feeling pride",
 		},

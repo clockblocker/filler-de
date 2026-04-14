@@ -5,11 +5,11 @@ import { toLingId } from "../src";
 describe("LingId", () => {
 	it("matches lemma ids with structurally consistent standard lemma selections", () => {
 		const lemma: AnyLemma<"German"> = {
-			emojiDescription: ["🏰", "👑"],
 			inherentFeatures: { gender: "Fem" },
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
+			senseEmojis: ["🏰", "👑"],
 			spelledLemma: " Burg ",
 		};
 
@@ -18,11 +18,11 @@ describe("LingId", () => {
 			orthographicStatus: "Standard",
 			surface: {
 				lemma: {
-					emojiDescription: ["👑", "🏰"],
 					inherentFeatures: { gender: "Fem" },
 					language: "German",
 					lemmaKind: "Lexeme",
 					pos: "NOUN",
+					senseEmojis: ["👑", "🏰"],
 					spelledLemma: "Burg",
 				},
 				spelledSurface: "Burg",
@@ -74,11 +74,11 @@ describe("LingId", () => {
 			orthographicStatus: "Unknown",
 		};
 		const emptyLemma = {
-			emojiDescription: [],
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
+			senseEmojis: [],
 			spelledLemma: " \n\t ",
 		} as AnyLemma<"German">;
 		const inconsistentSelection: AnySelection<"German"> = {
@@ -138,19 +138,19 @@ describe("LingId", () => {
 
 	it("treats emoji descriptions as an unordered set", () => {
 		const left: AnyLemma<"German"> = {
-			emojiDescription: ["🏰", "👑"],
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
+			senseEmojis: ["🏰", "👑"],
 			spelledLemma: "Burg",
 		};
 		const right: AnyLemma<"German"> = {
-			emojiDescription: ["👑", "🏰"],
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
+			senseEmojis: ["👑", "🏰"],
 			spelledLemma: "Burg",
 		};
 

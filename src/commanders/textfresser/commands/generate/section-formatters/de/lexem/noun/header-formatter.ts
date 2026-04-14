@@ -11,12 +11,12 @@ import { buildYouglishUrl } from "../../../common/header-formatter";
  * `genus` is non-optional — pipeline guarantees it for nouns.
  */
 export function formatHeaderLine(
-	output: { emojiDescription: string[]; ipa: string },
+	output: { senseEmojis: string[]; ipa: string },
 	lemma: string,
 	targetLanguage: string,
 	genus: LexicalGenus,
 ): string {
-	const emoji = output.emojiDescription.join(" ");
+	const emoji = output.senseEmojis.join(" ");
 	const article = ARTICLE_BY_GENUS[genus];
 	const normalizedLemma = wikilinkHelper.normalizeLinkTarget(lemma);
 	const youglishUrl = buildYouglishUrl(normalizedLemma, targetLanguage);

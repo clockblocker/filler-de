@@ -5,7 +5,7 @@ import { EnglishSelectionSchema } from "./english/english-selection";
 import { GermanLemmaSchema } from "./german/german-lemma";
 import { GermanSelectionSchema } from "./german/german-selection";
 
-export { type LingId, toLingId } from "./ling-id";
+export { isLingId, LingIdSchema, type LingId, toLingId } from "./ling-id";
 
 import type {
 	LemmaSchemaLanguageShape,

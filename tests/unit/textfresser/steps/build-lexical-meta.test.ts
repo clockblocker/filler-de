@@ -20,7 +20,7 @@ describe("buildLexicalMeta", () => {
 					core: {
 						status: "ready",
 						value: {
-							emojiDescription: ["🏠"],
+							senseEmojis: ["🏠"],
 							ipa: "haʊ̯s",
 						},
 					},
@@ -29,7 +29,7 @@ describe("buildLexicalMeta", () => {
 				}),
 			),
 		).toEqual({
-			emojiDescription: ["🏠"],
+			senseEmojis: ["🏠"],
 			metaTag: "Lexeme|NOUN|Lemma",
 		});
 	});
@@ -47,14 +47,14 @@ describe("buildLexicalMeta", () => {
 					core: {
 						status: "ready",
 						value: {
-							emojiDescription: ["✅"],
+							senseEmojis: ["✅"],
 							ipa: "aʊ̯f ˈjeːdn̩ fal",
 						},
 					},
 				}),
 			),
 		).toEqual({
-			emojiDescription: ["✅"],
+			senseEmojis: ["✅"],
 			metaTag: "Phraseme|DiscourseFormula|Lemma",
 		});
 	});
@@ -76,7 +76,7 @@ describe("buildLexicalMeta", () => {
 				}),
 			),
 		).toEqual({
-			emojiDescription: ["🔧"],
+			senseEmojis: ["🔧"],
 			metaTag: "Lexeme|VERB|Inflection",
 		});
 	});
@@ -98,7 +98,7 @@ describe("buildLexicalMeta", () => {
 				}),
 			),
 		).toEqual({
-			emojiDescription: ["❓"],
+			senseEmojis: ["❓"],
 			metaTag: "Lexeme|NOUN|Lemma",
 		});
 	});

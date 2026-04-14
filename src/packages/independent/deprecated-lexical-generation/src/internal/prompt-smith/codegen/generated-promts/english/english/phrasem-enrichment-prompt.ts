@@ -13,7 +13,7 @@ You receive:
 
 Return:
 - ipa: IPA pronunciation for the lemma
-- emojiDescription: 1-3 emojis for the current sense
+- senseEmojis: 1-3 emojis for the current sense
 - senseGloss: optional short sense label (2-8 words)
 </task-description>
 
@@ -23,7 +23,7 @@ Return:
 {"context":"By and large, the rollout was successful.","kind":"DiscourseFormula","word":"by and large"}
 </input>
 <output>
-{"emojiDescription":["📊","👍"],"ipa":"baɪ ən lɑːrdʒ","senseGloss":"generally speaking"}
+{"senseEmojis":["📊","👍"],"ipa":"baɪ ən lɑːrdʒ","senseGloss":"generally speaking"}
 </output>
 </example-1>
 
@@ -32,7 +32,7 @@ Return:
 {"context":"After three hours of meetings, we called it a day.","kind":"Idiom","word":"call it a day"}
 </input>
 <output>
-{"emojiDescription":["🛑","📅"],"ipa":"kɔːl ɪt ə deɪ","senseGloss":"stop for now"}
+{"senseEmojis":["🛑","📅"],"ipa":"kɔːl ɪt ə deɪ","senseGloss":"stop for now"}
 </output>
 </example-2>
 </examples>

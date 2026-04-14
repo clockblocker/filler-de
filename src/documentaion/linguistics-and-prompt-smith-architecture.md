@@ -322,7 +322,7 @@ GermanLinguisticUnitSchema = z.discriminatedUnion("kind", [
 
 Type: `GermanLinguisticUnit` — legacy compatibility DTO.
 
-Canonical propagation DTO: `DeEntity<U,S> = Entity<"German", U, S, DePosLikeDiscriminator<U>>`, with top-level `emojiDescription` + `ipa` + optional `senseGloss` and split features:
+Canonical propagation DTO: `DeEntity<U,S> = Entity<"German", U, S, DePosLikeDiscriminator<U>>`, with top-level `senseEmojis` + `ipa` + optional `senseGloss` and split features:
 - `features.lexical` — inherent lexical properties (`genus`, `nounClass`, valency, etc.)
 - `features.inflectional` — realized/variable inflectional data (lemma entries are typically empty here)
 
@@ -654,9 +654,9 @@ type AgentOutput<K extends PromptKind> = z.infer<SchemasFor[K]["agentOutputSchem
 #### Runtime schema catalog (cutover)
 
 - `Lemma`: minimal classifier result (`lemma`, `linguisticUnit`, `posLikeKind`, `surfaceKind`, optional `contextWithLinkedParts`).
-- `LexemEnrichment`: lightweight non-noun lexical metadata (`word` + `pos` input; output `emojiDescription`, `ipa`, optional `senseGloss`).
-- `NounEnrichment`: noun-only metadata (`word` input; output `emojiDescription`, `ipa`, optional `senseGloss`, optional `genus` + `nounClass`).
-- `PhrasemEnrichment`: lightweight phrasem metadata (`word` + `kind` input; output `emojiDescription`, `ipa`, optional `senseGloss`).
+- `LexemEnrichment`: lightweight non-noun lexical metadata (`word` + `pos` input; output `senseEmojis`, `ipa`, optional `senseGloss`).
+- `NounEnrichment`: noun-only metadata (`word` input; output `senseEmojis`, `ipa`, optional `senseGloss`, optional `genus` + `nounClass`).
+- `PhrasemEnrichment`: lightweight phrasem metadata (`word` + `kind` input; output `senseEmojis`, `ipa`, optional `senseGloss`).
 - `Features*` (10 prompt kinds): POS-specific lexical tag extraction (`tags: string[]`).
 - `Disambiguate`: senses payload includes optional `senseGloss` (`3..120` chars) in addition to emoji, IPA, and grammatical hints.
 - Existing `Morphem`, `Relation`, `Inflection`, `NounInflection`, `Disambiguate`, `WordTranslation`, `Translate` remain.

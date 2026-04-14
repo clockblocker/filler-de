@@ -52,7 +52,7 @@ describe("De generate contracts", () => {
 
 	it("accepts noun enrichment output with nounClass + genus", () => {
 		const result = DeEnrichmentOutputSchema.safeParse({
-			emojiDescription: ["🏠"],
+			senseEmojis: ["🏠"],
 			genus: "Neutrum",
 			ipa: "haʊ̯s",
 			linguisticUnit: "Lexem",
@@ -65,7 +65,7 @@ describe("De generate contracts", () => {
 
 	it("accepts noun enrichment output without genus (best-effort metadata)", () => {
 		const result = DeEnrichmentOutputSchema.safeParse({
-			emojiDescription: ["🏠"],
+			senseEmojis: ["🏠"],
 			ipa: "haʊ̯s",
 			linguisticUnit: "Lexem",
 			nounClass: "Common",
@@ -77,7 +77,7 @@ describe("De generate contracts", () => {
 
 	it("accepts noun enrichment output without nounClass (best-effort metadata)", () => {
 		const result = DeEnrichmentOutputSchema.safeParse({
-			emojiDescription: ["🏠"],
+			senseEmojis: ["🏠"],
 			genus: "Neutrum",
 			ipa: "haʊ̯s",
 			linguisticUnit: "Lexem",
@@ -89,7 +89,7 @@ describe("De generate contracts", () => {
 
 	it("rejects non-noun enrichment output with noun fields", () => {
 		const result = DeEnrichmentOutputSchema.safeParse({
-			emojiDescription: ["🏃"],
+			senseEmojis: ["🏃"],
 			genus: "Maskulinum",
 			ipa: "ˈlaʊ̯fn̩",
 			linguisticUnit: "Lexem",
@@ -102,7 +102,7 @@ describe("De generate contracts", () => {
 
 	it("accepts phrasem enrichment output", () => {
 		const result = DeEnrichmentOutputSchema.safeParse({
-			emojiDescription: ["✅"],
+			senseEmojis: ["✅"],
 			ipa: "aʊ̯f ˈjeːdn̩ fal",
 			linguisticUnit: "Phrasem",
 			posLikeKind: "DiscourseFormula",

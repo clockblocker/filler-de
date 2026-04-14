@@ -39,10 +39,10 @@ describe("German noun schemas", () => {
 					number: "Plur",
 				},
 				lemma: {
-					emojiDescription: ["👶"],
 					language: "German",
 					lemmaKind: "Lexeme",
 					pos: "NOUN",
+					senseEmojis: ["👶"],
 					spelledLemma: "Kind",
 				},
 				spelledSurface: "Kindern",
@@ -78,13 +78,13 @@ describe("German noun schemas", () => {
 
 	it("accepts lexical inherent features for German nouns", () => {
 		const result = GermanNounLemmaSchema.safeParse({
-			emojiDescription: ["👶"],
 			inherentFeatures: {
 				gender: "Neut",
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
+			senseEmojis: ["👶"],
 			spelledLemma: "Kind",
 		});
 
@@ -108,11 +108,11 @@ describe("German noun schemas", () => {
 
 	it("rejects invalid emoji descriptions", () => {
 		const lemmaResult = GermanNounLemmaSchema.safeParse({
-			emojiDescription: [],
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
+			senseEmojis: [],
 			spelledLemma: "Haus",
 		});
 		const selectionResult = GermanNounLemmaSelectionSchema.safeParse({
@@ -120,10 +120,10 @@ describe("German noun schemas", () => {
 			orthographicStatus: "Standard",
 			surface: {
 				lemma: {
-					emojiDescription: ["house"],
 					language: "German",
 					lemmaKind: "Lexeme",
 					pos: "NOUN",
+					senseEmojis: ["house"],
 					spelledLemma: "Haus",
 				},
 				spelledSurface: "Haus",

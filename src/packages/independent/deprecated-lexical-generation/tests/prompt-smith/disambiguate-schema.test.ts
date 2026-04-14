@@ -10,7 +10,7 @@ describe("Disambiguate schema", () => {
 			lemma: "auf jeden Fall",
 			senses: [
 				{
-					emojiDescription: ["✅"],
+					senseEmojis: ["✅"],
 					index: 1,
 					phrasemeKind: "DiscourseFormula",
 					senseGloss: "certainly definitely",
@@ -28,14 +28,14 @@ describe("Disambiguate schema", () => {
 			lemma: "замок",
 			senses: [
 				{
-					emojiDescription: ["🔒"],
+					senseEmojis: ["🔒"],
 					index: 1,
 					ipa: "zɐˈmok",
 					pos: "Noun",
 					unitKind: "Lexem",
 				},
 				{
-					emojiDescription: ["🏰"],
+					senseEmojis: ["🏰"],
 					index: 2,
 					ipa: "ˈzamək",
 					pos: "Noun",
@@ -53,14 +53,14 @@ describe("Disambiguate schema", () => {
 			lemma: "Schloss",
 			senses: [
 				{
-					emojiDescription: ["🏰"],
+					senseEmojis: ["🏰"],
 					index: 1,
 					pos: "Noun",
 					senseGloss: "castle palace",
 					unitKind: "Lexem",
 				},
 				{
-					emojiDescription: ["🔒"],
+					senseEmojis: ["🔒"],
 					index: 2,
 					pos: "Noun",
 					senseGloss: "door lock",
@@ -78,7 +78,7 @@ describe("Disambiguate schema", () => {
 			lemma: "auf jeden Fall",
 			senses: [
 				{
-					emojiDescription: ["✅"],
+					senseEmojis: ["✅"],
 					index: 1,
 					phrasemeKind: "UnknownKind",
 					unitKind: "Phrasem",

@@ -8,7 +8,7 @@ export const testExamples = [
 			word: "auf jeden Fall",
 		},
 		output: {
-			emojiDescription: ["✅"],
+			senseEmojis: ["✅"],
 			ipa: "aʊ̯f ˈjeːdn̩ fal",
 			senseGloss: "definitely / certainly",
 		},

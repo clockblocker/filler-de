@@ -41,12 +41,12 @@ export function makeLexemeSelection(params: {
 }
 
 export function makeLexemeMeta(params: {
-	emojiDescription: string[];
+	senseEmojis: string[];
 	lemma: string;
 	pos: LexemePos;
 }): LexicalMeta {
 	return createLexicalMeta({
-		emojiDescription: params.emojiDescription,
+		senseEmojis: params.senseEmojis,
 		selection: makeLexemeSelection({
 			lemma: params.lemma,
 			pos: params.pos,

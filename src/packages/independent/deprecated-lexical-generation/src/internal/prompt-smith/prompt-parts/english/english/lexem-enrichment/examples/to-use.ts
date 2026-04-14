@@ -8,7 +8,7 @@ export const examples = [
 			word: "run",
 		},
 		output: {
-			emojiDescription: ["🏃"],
+			senseEmojis: ["🏃"],
 			ipa: "rʌn",
 		},
 	},
@@ -19,7 +19,7 @@ export const examples = [
 			word: "quickly",
 		},
 		output: {
-			emojiDescription: ["⚡"],
+			senseEmojis: ["⚡"],
 			ipa: "ˈkwɪkli",
 		},
 	},
@@ -30,7 +30,7 @@ export const examples = [
 			word: "ancient",
 		},
 		output: {
-			emojiDescription: ["🏛️"],
+			senseEmojis: ["🏛️"],
 			ipa: "ˈeɪnʃənt",
 		},
 	},

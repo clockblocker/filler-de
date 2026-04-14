@@ -5,9 +5,9 @@ import {
 } from "@textfresser/lexical-generation";
 import type { LemmaResult } from "../../lemma/types";
 
-function resolveEmojiDescription(lexicalInfo: LexicalInfo): string[] {
+function resolveSenseEmojis(lexicalInfo: LexicalInfo): string[] {
 	if (lexicalInfo.core.status === "ready") {
-		return lexicalInfo.core.value.emojiDescription;
+		return lexicalInfo.core.value.senseEmojis;
 	}
 
 	return ["❓"];
@@ -18,7 +18,7 @@ export function buildLexicalMeta(
 	lexicalInfo: LexicalInfo,
 ): LexicalMeta {
 	return createLexicalMeta({
-		emojiDescription: resolveEmojiDescription(lexicalInfo),
+		senseEmojis: resolveSenseEmojis(lexicalInfo),
 		selection: lemmaResult,
 	});
 }

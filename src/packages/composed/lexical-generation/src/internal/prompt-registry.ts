@@ -36,7 +36,7 @@ export type DisambiguationPromptInput = {
 	attestation: string;
 	lemma: string;
 	senses: Array<{
-		emojiDescription: string[];
+		senseEmojis: string[];
 		identity: {
 			discriminator: Pos | PhrasemeKind | MorphemeKind;
 			lemmaKind: "Lexeme" | "Phraseme" | "Morpheme";
@@ -47,7 +47,7 @@ export type DisambiguationPromptInput = {
 };
 
 export type DisambiguationPromptOutput = {
-	emojiDescription?: string[] | null;
+	senseEmojis?: string[] | null;
 	matchedIndex: number | null;
 };
 
@@ -58,7 +58,7 @@ export type CorePromptInput = {
 };
 
 export type CorePromptOutput = {
-	emojiDescription: string[];
+	senseEmojis: string[];
 	ipa: string;
 	senseGloss?: string | null;
 };
@@ -243,7 +243,7 @@ const disambiguationPrompt: PromptSpec<
 			lemma: z.string(),
 			senses: z.array(
 				z.object({
-					emojiDescription: z.array(z.string()),
+					senseEmojis: z.array(z.string()),
 					identity: z.object({
 						discriminator: NativeDiscriminatorSchema,
 						lemmaKind: z.enum(["Lexeme", "Phraseme", "Morpheme"]),
@@ -261,7 +261,7 @@ const disambiguationPrompt: PromptSpec<
 		.strict(),
 	outputSchema: z
 		.object({
-			emojiDescription: z.array(z.string()).nullable().optional(),
+			senseEmojis: z.array(z.string()).nullable().optional(),
 			matchedIndex: z.number().int().positive().nullable(),
 		})
 		.strict(),
@@ -272,7 +272,7 @@ const disambiguationPrompt: PromptSpec<
 
 const corePromptOutputSchema = z
 	.object({
-		emojiDescription: z.array(z.string()),
+		senseEmojis: z.array(z.string()),
 		ipa: z.string(),
 		senseGloss: z.string().nullable().optional(),
 	})

@@ -137,7 +137,7 @@ type ResolvedLinguisticWikilinkDto = LinguisticWikilinkDto & {
 7. Markdown rendering uses compact serialized form:
    - `^<posTag>-<featureTags...>-<senseIndex>`
    - examples: `^noun-n-1`, `^verb-1`, `^prep-2`.
-8. LLM-facing disambiguation payloads should use expanded objects (`id -> { pos, features, emojiDescription, ... }`) rather than raw compact IDs.
+8. LLM-facing disambiguation payloads should use expanded objects (`id -> { pos, features, senseEmojis, ... }`) rather than raw compact IDs.
 9. Go-back links are excluded from linguistic-wikilink DTO scope (Librarian navigation concern).
 10. Parser/reader pipelines should strip/ignore go-back links before linguistic DTO extraction.
 11. Dict-entry wikilinks (attestation, relation, inflection, morpheme) are in DTO scope.

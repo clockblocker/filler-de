@@ -7,7 +7,7 @@ export const testExamples = [
 			word: "London",
 		},
 		output: {
-			emojiDescription: ["🏙️"],
+			senseEmojis: ["🏙️"],
 			ipa: "ˈlʌndən",
 			nounClass: "Proper",
 		},

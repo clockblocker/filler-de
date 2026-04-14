@@ -13,7 +13,7 @@ describe("Enrichment schemas", () => {
 		expect(inResult.success).toBe(true);
 
 		const outResult = lexemEnrichmentSchemas.agentOutputSchema.safeParse({
-			emojiDescription: ["🏠"],
+			senseEmojis: ["🏠"],
 			ipa: "haʊ̯s",
 			senseGloss: "dwelling building",
 		});
@@ -28,7 +28,7 @@ describe("Enrichment schemas", () => {
 		expect(inResult.success).toBe(true);
 
 		const outResult = nounEnrichmentSchemas.agentOutputSchema.safeParse({
-			emojiDescription: ["🏠"],
+			senseEmojis: ["🏠"],
 			genus: "Neutrum",
 			ipa: "haʊ̯s",
 			nounClass: "Common",
@@ -45,7 +45,7 @@ describe("Enrichment schemas", () => {
 		expect(inResult.success).toBe(true);
 
 		const outResult = phrasemEnrichmentSchemas.agentOutputSchema.safeParse({
-			emojiDescription: ["✅"],
+			senseEmojis: ["✅"],
 			ipa: "aʊ̯f ˈjeːdn̩ fal",
 			senseGloss: "definitely / certainly",
 		});

@@ -142,9 +142,9 @@ async function generateLexicalInfoForEntry(
 		ctx.textfresserState.latestLemmaResult.attestation.source
 			.textWithOnlyTargetMarked,
 		{
-			precomputedEmojiDescription:
+			precomputedSenseEmojis:
 				ctx.textfresserState.latestLemmaResult
-					.precomputedEmojiDescription,
+					.precomputedSenseEmojis,
 		},
 	);
 	if (lexicalInfoResult.isErr()) {

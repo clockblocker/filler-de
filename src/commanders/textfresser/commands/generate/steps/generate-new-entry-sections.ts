@@ -166,8 +166,8 @@ export async function generateNewEntrySections(
 			lemmaResult,
 			context,
 			{
-				precomputedEmojiDescription:
-					lemmaResult.precomputedEmojiDescription,
+				precomputedSenseEmojis:
+					lemmaResult.precomputedSenseEmojis,
 			},
 		);
 		if (lexicalInfoResult.isErr()) {

@@ -39,7 +39,7 @@ describe("German non-lexeme schemas", () => {
 
 	it("accepts German morpheme lemmas", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
-			emojiDescription: ["🧩"],
+			senseEmojis: ["🧩"],
 			isClosedSet: false,
 			language: "German",
 			lemmaKind: "Morpheme",
@@ -110,7 +110,7 @@ describe("German non-lexeme schemas", () => {
 				orthographicStatus: "Typo",
 				surface: {
 					lemma: {
-						emojiDescription: ["🧩"],
+						senseEmojis: ["🧩"],
 						language: "German",
 						lemmaKind: "Morpheme",
 						morphemeKind: "Suffix",
@@ -126,7 +126,7 @@ describe("German non-lexeme schemas", () => {
 				orthographicStatus: "Typo",
 				surface: {
 					lemma: {
-						emojiDescription: ["💬"],
+						senseEmojis: ["💬"],
 						language: "German",
 						lemmaKind: "Phraseme",
 						phrasemeKind: "Cliché",

@@ -50,13 +50,13 @@ export type LexicalIdentity = {
 };
 
 export type LexicalMeta = {
-	emojiDescription: string[];
+	senseEmojis: string[];
 	identity: LexicalIdentity;
 };
 
 export type SenseMatchResult =
 	| { kind: "matched"; cacheIndex: number }
-	| { kind: "new"; precomputedEmojiDescription?: string[] };
+	| { kind: "new"; precomputedSenseEmojis?: string[] };
 
 export type LexicalInfoField<T> =
 	| { status: "ready"; value: T }
@@ -65,7 +65,7 @@ export type LexicalInfoField<T> =
 	| { status: "error"; error: LexicalGenerationError };
 
 export type LexicalCore = {
-	emojiDescription: string[];
+	senseEmojis: string[];
 	ipa: string;
 	senseGloss?: string;
 };
@@ -143,7 +143,7 @@ export type LexicalInfoPart =
 	| "relations";
 
 export type GenerateCoreOptions = {
-	precomputedEmojiDescription?: string[];
+	precomputedSenseEmojis?: string[];
 };
 
 export type GenerateLexicalInfoOptions = GenerateCoreOptions & {

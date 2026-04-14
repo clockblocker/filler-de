@@ -32,7 +32,7 @@ function makeProperNounLexicalInfo(): LexicalInfo {
 		core: {
 			status: "ready",
 			value: {
-				emojiDescription: ["🏙️"],
+				senseEmojis: ["🏙️"],
 				ipa: "bɛʁˈliːn",
 			},
 		},
@@ -53,7 +53,7 @@ function makePhrasemLexicalInfo(): LexicalInfo {
 		core: {
 			status: "ready",
 			value: {
-				emojiDescription: ["💬"],
+				senseEmojis: ["💬"],
 				ipa: "ipa",
 			},
 		},
@@ -272,7 +272,7 @@ describe("generateCommand proper-noun fallback", () => {
 
 		const entry = entries[0];
 		expect(entry?.meta.lexicalMeta).toEqual({
-			emojiDescription: ["🏙️"],
+			senseEmojis: ["🏙️"],
 			metaTag: "Lexeme|PROPN|Lemma",
 		});
 

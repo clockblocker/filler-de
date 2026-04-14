@@ -1,21 +1,22 @@
-import type z from "zod/v3";
 import {
 	getInverseLexicalRelation,
 	getReprForLexicalRelation,
 	LexicalRelation as LexicalRelationSchema,
+	type LexicalRelation as LexicalRelationShape,
 } from "./lexical";
 import {
 	getInverseMorphologicalRelation,
 	getReprForMorphologicalRelation,
 	MorphologicalRelation as MorphologicalRelationSchema,
+	type MorphologicalRelation as MorphologicalRelationShape,
 } from "./morphological";
 import {
 	LexicalRelationsSchema as LexicalRelationsSchemaInternal,
 	type LexicalRelations as LexicalRelationsShape,
 	MorphologicalRelationsSchema as MorphologicalRelationsSchemaInternal,
 	type MorphologicalRelations as MorphologicalRelationsShape,
-	RelationTargetsSchema as RelationTargetsSchemaInternal,
-	type RelationTargets as RelationTargetsShape,
+	RelationTargetLingIdsSchema as RelationTargetLingIdsSchemaInternal,
+	type RelationTargetLingIds as RelationTargetLingIdsShape,
 } from "./relation";
 
 export {
@@ -29,7 +30,7 @@ export {
 
 export const LexicalRelation = LexicalRelationSchema.enum;
 export const MorphologicalRelation = MorphologicalRelationSchema.enum;
-export const RelationTargetsSchema = RelationTargetsSchemaInternal;
+export const RelationTargetLingIdsSchema = RelationTargetLingIdsSchemaInternal;
 export const LexicalRelationsSchema = LexicalRelationsSchemaInternal;
 export const MorphologicalRelationsSchema =
 	MorphologicalRelationsSchemaInternal;
@@ -47,11 +48,11 @@ export const Relations = {
 		getRepr: getReprForMorphologicalRelation,
 		schema: MorphologicalRelationsSchema,
 	},
-	targetsSchema: RelationTargetsSchema,
+	targetLingIdsSchema: RelationTargetLingIdsSchema,
 } as const;
 
-export type LexicalRelation = z.infer<typeof LexicalRelationSchema>;
-export type MorphologicalRelation = z.infer<typeof MorphologicalRelationSchema>;
-export type RelationTargets = RelationTargetsShape;
+export type LexicalRelation = LexicalRelationShape;
+export type MorphologicalRelation = MorphologicalRelationShape;
+export type RelationTargetLingIds = RelationTargetLingIdsShape;
 export type LexicalRelations = LexicalRelationsShape;
 export type MorphologicalRelations = MorphologicalRelationsShape;

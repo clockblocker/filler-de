@@ -13,7 +13,7 @@ You receive:
 - context: the sentence where the word was encountered
 - senses: array of existing sense descriptors, each with:
   - index: numeric identifier of the existing entry
-  - emojiDescription: 1-3 emojis capturing the core semantic concept of that sense
+  - senseEmojis: 1-3 emojis capturing the core semantic concept of that sense
   - senseGloss: short textual gloss for the sense (optional)
   - unitKind: the linguistic unit type ("Lexem", "Phrasem", "Morphem")
   - pos: part of speech (optional, e.g. "Noun", "Verb")
@@ -22,29 +22,29 @@ You receive:
 
 Return:
 - matchedIndex: the index of the matching sense, or null if the word in context represents a NEW sense not covered by any existing entry
-- emojiDescription: when matchedIndex is null (new sense), provide 1-3 emojis that capture the core semantic concept of this new sense, distinguishing it from the existing ones. When matchedIndex is not null, omit or set to null.
+- senseEmojis: when matchedIndex is null (new sense), provide 1-3 emojis that capture the core semantic concept of this new sense, distinguishing it from the existing ones. When matchedIndex is not null, omit or set to null.
 
 Rules:
-- Compare the contextual meaning against each sense's emojiDescription + senseGloss + linguistic features (unitKind, pos, genus, phrasemeKind)
+- Compare the contextual meaning against each sense's senseEmojis + senseGloss + linguistic features (unitKind, pos, genus, phrasemeKind)
 - Return the index of the best-matching sense if the meaning clearly aligns
 - Return null only when the word in context has a genuinely different meaning from ALL listed senses
 - When in doubt between a close match and a new sense, prefer the existing match
-- The emojiDescription should capture the general meaning of the sense, not the specific context
+- The senseEmojis should capture the general meaning of the sense, not the specific context
 </task-description>
 
 <examples>
 <example-1>
 <input>
-{"context":"Er setzte sich auf die Bank im Park.","lemma":"Bank","senses":[{"emojiDescription":["🏦"],"genus":"Femininum","index":1,"pos":"Noun","senseGloss":"financial institution","unitKind":"Lexem"}]}
+{"context":"Er setzte sich auf die Bank im Park.","lemma":"Bank","senses":[{"senseEmojis":["🏦"],"genus":"Femininum","index":1,"pos":"Noun","senseGloss":"financial institution","unitKind":"Lexem"}]}
 </input>
 <output>
-{"emojiDescription":["🪑","🌳"],"matchedIndex":null}
+{"senseEmojis":["🪑","🌳"],"matchedIndex":null}
 </output>
 </example-1>
 
 <example-2>
 <input>
-{"context":"Ich muss zur Bank, um Geld abzuheben.","lemma":"Bank","senses":[{"emojiDescription":["🏦"],"genus":"Femininum","index":1,"pos":"Noun","senseGloss":"financial institution","unitKind":"Lexem"},{"emojiDescription":["🪑","🌳"],"genus":"Femininum","index":2,"pos":"Noun","senseGloss":"bench seat","unitKind":"Lexem"}]}
+{"context":"Ich muss zur Bank, um Geld abzuheben.","lemma":"Bank","senses":[{"senseEmojis":["🏦"],"genus":"Femininum","index":1,"pos":"Noun","senseGloss":"financial institution","unitKind":"Lexem"},{"senseEmojis":["🪑","🌳"],"genus":"Femininum","index":2,"pos":"Noun","senseGloss":"bench seat","unitKind":"Lexem"}]}
 </input>
 <output>
 {"matchedIndex":1}
@@ -53,16 +53,16 @@ Rules:
 
 <example-3>
 <input>
-{"context":"Das Schloss an der Tür war kaputt.","lemma":"Schloss","senses":[{"emojiDescription":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","senseGloss":"castle palace","unitKind":"Lexem"}]}
+{"context":"Das Schloss an der Tür war kaputt.","lemma":"Schloss","senses":[{"senseEmojis":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","senseGloss":"castle palace","unitKind":"Lexem"}]}
 </input>
 <output>
-{"emojiDescription":["🔒"],"matchedIndex":null}
+{"senseEmojis":["🔒"],"matchedIndex":null}
 </output>
 </example-3>
 
 <example-4>
 <input>
-{"context":"Wir besichtigten das Schloss am Rhein.","lemma":"Schloss","senses":[{"emojiDescription":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","senseGloss":"castle palace","unitKind":"Lexem"},{"emojiDescription":["🔒"],"genus":"Neutrum","index":2,"pos":"Noun","senseGloss":"door lock","unitKind":"Lexem"}]}
+{"context":"Wir besichtigten das Schloss am Rhein.","lemma":"Schloss","senses":[{"senseEmojis":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","senseGloss":"castle palace","unitKind":"Lexem"},{"senseEmojis":["🔒"],"genus":"Neutrum","index":2,"pos":"Noun","senseGloss":"door lock","unitKind":"Lexem"}]}
 </input>
 <output>
 {"matchedIndex":1}
@@ -71,16 +71,16 @@ Rules:
 
 <example-5>
 <input>
-{"context":"Das Schloss am Fahrrad war aufgebrochen.","lemma":"Schloss","senses":[{"emojiDescription":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","senseGloss":"castle palace","unitKind":"Lexem"}]}
+{"context":"Das Schloss am Fahrrad war aufgebrochen.","lemma":"Schloss","senses":[{"senseEmojis":["🏰"],"genus":"Neutrum","index":1,"pos":"Noun","senseGloss":"castle palace","unitKind":"Lexem"}]}
 </input>
 <output>
-{"emojiDescription":["🔒"],"matchedIndex":null}
+{"senseEmojis":["🔒"],"matchedIndex":null}
 </output>
 </example-5>
 
 <example-6>
 <input>
-{"context":"Auf jeden Fall komme ich mit.","lemma":"auf jeden Fall","senses":[{"emojiDescription":["✅"],"index":1,"phrasemeKind":"DiscourseFormula","senseGloss":"certainly definitely","unitKind":"Phrasem"},{"emojiDescription":["📚"],"index":2,"phrasemeKind":"Collocation","senseGloss":"legal case","unitKind":"Phrasem"}]}
+{"context":"Auf jeden Fall komme ich mit.","lemma":"auf jeden Fall","senses":[{"senseEmojis":["✅"],"index":1,"phrasemeKind":"DiscourseFormula","senseGloss":"certainly definitely","unitKind":"Phrasem"},{"senseEmojis":["📚"],"index":2,"phrasemeKind":"Collocation","senseGloss":"legal case","unitKind":"Phrasem"}]}
 </input>
 <output>
 {"matchedIndex":1}

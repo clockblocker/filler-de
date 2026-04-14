@@ -38,6 +38,7 @@ const simpleWalkSelection = SelectionSchema.English.Standard.Inflection.Lexeme.V
 				verbForm: "Fin",
 			},
 			lemma: {
+				senseEmojis: ["🚶"],
 				inherentFeatures: {},
 				language: "English",
 				lemmaKind: "Lexeme",
@@ -53,10 +54,13 @@ const simpleWalkSelection = SelectionSchema.English.Standard.Inflection.Lexeme.V
 
 And the assigned lemma can be validated independently:
 
+`senseEmojis` is part of lemma identity and should be carried on lemma payloads, not treated as optional presentation-only metadata.
+
 ```ts
 import { LemmaSchema } from "@textfresser/linguistics";
 
 const simpleWalkLemma = LemmaSchema.English.Lexeme.VERB.parse({
+	senseEmojis: ["🚶"],
 	inherentFeatures: {},
 	language: "English",
 	lemmaKind: "Lexeme",
@@ -81,6 +85,7 @@ const idiomPartSelection = SelectionSchema.English.Standard.Partial.Phraseme.Idi
 		orthographicStatus: "Standard",
 		surface: {
 			lemma: {
+				senseEmojis: ["🚶", "🌳"],
 				language: "English",
 				lemmaKind: "Phraseme",
 				phrasemeKind: "Idiom",

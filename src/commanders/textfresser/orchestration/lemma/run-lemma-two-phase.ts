@@ -183,10 +183,10 @@ export async function runLemmaTwoPhase(params: {
 	}
 
 	const disambiguationResult = disambiguation.value;
-	const precomputedEmojiDescription =
+	const precomputedSenseEmojis =
 		disambiguationResult &&
-		"precomputedEmojiDescription" in disambiguationResult
-			? disambiguationResult.precomputedEmojiDescription
+		"precomputedSenseEmojis" in disambiguationResult
+			? disambiguationResult.precomputedSenseEmojis
 			: undefined;
 	const normalizedDisambiguation =
 		disambiguationResult === null ||
@@ -305,7 +305,7 @@ export async function runLemmaTwoPhase(params: {
 				lemma: spelledLemma,
 				linguisticUnit: "Lexeme",
 				posLikeKind: resolvedLemma.surface.lemma.pos,
-				precomputedEmojiDescription,
+				precomputedSenseEmojis,
 				surfaceKind,
 			}
 		: {
@@ -315,7 +315,7 @@ export async function runLemmaTwoPhase(params: {
 				lemma: spelledLemma,
 				linguisticUnit: "Phraseme",
 				posLikeKind: null,
-				precomputedEmojiDescription,
+				precomputedSenseEmojis,
 				surfaceKind,
 			};
 	state.latestResolvedLemmaTargetPath = finalTarget.splitPath;

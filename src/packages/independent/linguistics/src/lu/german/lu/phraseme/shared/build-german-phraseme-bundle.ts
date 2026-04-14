@@ -3,7 +3,7 @@ import type { AbstractLemma } from "../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
 import { DiscourseFormulaRoleSchema } from "../../../../universal/enums/feature/custom/discourse-formula-role";
 import type { PhrasemeKind } from "../../../../universal/enums/kind/phraseme-kind";
-import { EmojiDescriptionSchema } from "../../../../universal/emoji-description";
+import { SenseEmojisSchema } from "../../../../universal/sense-emojis";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 
 type GermanPhrasemeBundle<PK extends PhrasemeKind> = {
@@ -27,7 +27,7 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 		return z
 			.object({
 				discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
-				emojiDescription: EmojiDescriptionSchema.optional(),
+				senseEmojis: SenseEmojisSchema.optional(),
 				lemmaKind: z.literal("Phraseme"),
 				language: z.literal("German"),
 				phrasemeKind: z.literal(phrasemeKind),
@@ -38,7 +38,7 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 
 	return z
 		.object({
-			emojiDescription: EmojiDescriptionSchema.optional(),
+			senseEmojis: SenseEmojisSchema.optional(),
 			lemmaKind: z.literal("Phraseme"),
 			language: z.literal("German"),
 			phrasemeKind: z.literal(phrasemeKind),

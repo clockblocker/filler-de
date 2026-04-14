@@ -85,8 +85,8 @@ export function buildSenseDisambiguator(
 		const promptCandidates = matchingCandidates
 			.filter(
 				(candidate) =>
-					Array.isArray(candidate.emojiDescription) &&
-					candidate.emojiDescription.length > 0,
+					Array.isArray(candidate.senseEmojis) &&
+					candidate.senseEmojis.length > 0,
 			)
 			.map((candidate, index) => ({
 				...candidate,
@@ -101,7 +101,7 @@ export function buildSenseDisambiguator(
 			context: attestation,
 			lemma: getSpelledLemma(selection) ?? "",
 			senses: promptCandidates.map((candidate) => ({
-				emojiDescription: candidate.emojiDescription ?? [],
+				senseEmojis: candidate.senseEmojis ?? [],
 				genus: undefined,
 				index: candidate.promptIndex,
 				ipa: undefined,
@@ -140,8 +140,8 @@ export function buildSenseDisambiguator(
 
 		return ok<SenseMatchResult>({
 			kind: "new",
-			precomputedEmojiDescription:
-				promptResult.value.emojiDescription ?? undefined,
+			precomputedSenseEmojis:
+				promptResult.value.senseEmojis ?? undefined,
 		});
 	};
 }

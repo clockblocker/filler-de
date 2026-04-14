@@ -14,7 +14,7 @@ import type { Pos } from "./enums/kind/pos";
 import type { LemmaDiscriminatorFor } from "./lemma-discriminator";
 
 type AbstractLexemeLemma<P extends Pos = Pos> = Prettify<{
-	emojiDescription?: string[];
+	senseEmojis?: string[];
 	lemmaKind: "Lexeme";
 	language: TargetLanguage;
 	pos: P;
@@ -24,7 +24,7 @@ type AbstractLexemeLemma<P extends Pos = Pos> = Prettify<{
 }>;
 
 type AbstractMorphemLemma<MK extends MorphemeKind = MorphemeKind> = Prettify<{
-	emojiDescription?: string[];
+	senseEmojis?: string[];
 	lemmaKind: "Morpheme";
 	language: TargetLanguage;
 	morphemeKind: MK;
@@ -35,7 +35,7 @@ type AbstractMorphemLemma<MK extends MorphemeKind = MorphemeKind> = Prettify<{
 
 type AbstractPhrasemLemma<PK extends PhrasemeKind = PhrasemeKind> = Prettify<
 	{
-		emojiDescription?: string[];
+		senseEmojis?: string[];
 		lemmaKind: "Phraseme";
 		language: TargetLanguage;
 		[PHRASEME_KIND_KEY]: PK;

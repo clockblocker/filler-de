@@ -35,11 +35,11 @@ export function createMetaTagFromSelection(selection: ResolvedSelection): string
 }
 
 export function createLexicalMeta(params: {
-	emojiDescription: string[];
+	senseEmojis: string[];
 	selection: ResolvedSelection;
 }): LexicalMeta {
 	return {
-		emojiDescription: params.emojiDescription,
+		senseEmojis: params.senseEmojis,
 		metaTag: createMetaTagFromSelection(params.selection),
 	};
 }

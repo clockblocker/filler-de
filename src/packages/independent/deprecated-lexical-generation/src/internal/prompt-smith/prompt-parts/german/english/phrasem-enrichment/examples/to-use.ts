@@ -8,7 +8,7 @@ export const examples = [
 			word: "auf jeden Fall",
 		},
 		output: {
-			emojiDescription: ["✅"],
+			senseEmojis: ["✅"],
 			ipa: "aʊ̯f ˈjeːdn̩ fal",
 			senseGloss: "definitely / certainly",
 		},
@@ -20,7 +20,7 @@ export const examples = [
 			word: "den Löffel abgeben",
 		},
 		output: {
-			emojiDescription: ["💀"],
+			senseEmojis: ["💀"],
 			ipa: "deːn ˈlœfl̩ ˈapɡeːbn̩",
 			senseGloss: "to die",
 		},

@@ -13,7 +13,7 @@ function makeVerbLexicalInfo() {
 		core: {
 			status: "ready",
 			value: {
-				emojiDescription: ["🚶"],
+				senseEmojis: ["🚶"],
 				ipa: "ɡeːən",
 			},
 		},
@@ -49,7 +49,7 @@ function makeNounLexicalInfo() {
 		core: {
 			status: "ready",
 			value: {
-				emojiDescription: ["🏭"],
+				senseEmojis: ["🏭"],
 				ipa: "kraftvɛʁk",
 			},
 		},
@@ -91,7 +91,7 @@ function makeAdjectiveLexicalInfo() {
 		core: {
 			status: "ready",
 			value: {
-				emojiDescription: ["✨"],
+				senseEmojis: ["✨"],
 				ipa: "ʃnɛl",
 			},
 		},

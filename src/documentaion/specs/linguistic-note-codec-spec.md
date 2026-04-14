@@ -224,7 +224,7 @@ type IdentityBlock =
 ```ts
 type RootMetaBlock = {
 	block: "root_meta";
-	emojiDescription?: string[];
+	senseEmojis?: string[];
 	isClosedSet?: boolean;
 	separable?: IsSeparable;
 	discourseFormulaRole?: DiscourseFormulaRole;
@@ -503,7 +503,7 @@ Illustrative entry shape:
 :::
 
 :::root_meta
-{"emojiDescription":["🔒"]}
+{"senseEmojis":["🔒"]}
 :::
 
 :::header

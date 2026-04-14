@@ -130,7 +130,7 @@ describe("dictNoteHelper.parse", () => {
 		const note = makeNoteWithMeta(KOHLEKRAFTWERK_ENTRY, {
 			entries: {
 				"l-nom-n-m1": {
-					emojiDescription: ["🏭", "⚡"],
+					senseEmojis: ["🏭", "⚡"],
 					ipa: "ˈkoːləˌkraftvɛɐ̯k",
 					semantics: "legacy semantics",
 					senseGloss: "legacy gloss",
@@ -142,7 +142,7 @@ describe("dictNoteHelper.parse", () => {
 		const entries = dictNoteHelper.parse(note);
 		expect(entries).toHaveLength(1);
 		expect(entries[0]?.meta).toEqual({
-			emojiDescription: ["🏭", "⚡"],
+			senseEmojis: ["🏭", "⚡"],
 			ipa: "ˈkoːləˌkraftvɛɐ̯k",
 			semantics: "legacy semantics",
 			senseGloss: "legacy gloss",

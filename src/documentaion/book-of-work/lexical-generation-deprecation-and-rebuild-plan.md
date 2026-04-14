@@ -214,13 +214,13 @@ Keep package-owned:
 Do not leak app policy into those DTOs.
 
 Locked direction:
-- `LexicalMeta` should no longer be `{ emojiDescription, metaTag }`
+- `LexicalMeta` should no longer be `{ senseEmojis, metaTag }`
 - replace public string tag identity with structured identity DTOs
 - do not publish both structured and string identity from the rebuilt package during build-out
 - if app storage later still requires a string tag, that serialization belongs outside this package boundary unless a later concrete need proves otherwise
 
 Recommended identity shape:
-- `LexicalMeta = { emojiDescription: string[]; identity: LexicalIdentity }`
+- `LexicalMeta = { senseEmojis: string[]; identity: LexicalIdentity }`
 - where `LexicalIdentity` is a structured canonical note-identity DTO derived from native discriminators
 
 Minimum required `LexicalIdentity` shape:

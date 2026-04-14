@@ -1,8 +1,12 @@
+import { z } from "zod/v3";
 import type { AnyLemma, AnySelection, LemmaKind, SurfaceKind } from "../index";
 import { identityFeatureRegistry } from "./identity-feature-registry";
 import type { AbstractFeatures } from "./universal/enums/feature/feature";
 
 export type LingId = string & { readonly __brand: "LingId" };
+const lingIdPrefix = "ling:v1:";
+
+export const LingIdSchema = z.custom<LingId>(isLingId);
 
 type IdentityFeatureKey = keyof AbstractFeatures;
 
@@ -12,7 +16,7 @@ type IdentityDiscriminator = string;
 
 type NormalizedLinguisticIdentity = {
 	discriminator: IdentityDiscriminator;
-	emojiDescription: string[];
+	senseEmojis: string[];
 	identityFeatures: Partial<Record<IdentityFeatureKey, IdentityFeatureValue>>;
 	language: string;
 	surface: string;
@@ -54,9 +58,9 @@ export function toLingId(input: AnyLemma | AnySelection): LingId | null {
 		}
 
 		const normalized = buildNormalizedIdentity({
-			emojiDescription: input.surface.lemma.emojiDescription,
 			language: input.language,
 			lemma: input.surface.lemma,
+			senseEmojis: input.surface.lemma.senseEmojis,
 			surface,
 			surfaceKind: input.surface.surfaceKind,
 		});
@@ -73,17 +77,30 @@ export function toLingId(input: AnyLemma | AnySelection): LingId | null {
 	}
 
 	const normalized = buildNormalizedIdentity({
-		emojiDescription: input.emojiDescription,
 		language: input.language,
 		lemma: input,
+		senseEmojis: input.senseEmojis,
 		surface,
 		surfaceKind: "Lemma",
 	});
 	return normalized ? serializeLingId(normalized) : null;
 }
 
+export function isLingId(value: unknown): value is LingId {
+	if (typeof value !== "string" || !value.startsWith(lingIdPrefix)) {
+		return false;
+	}
+
+	try {
+		const parsed = JSON.parse(value.slice(lingIdPrefix.length));
+		return isRecord(parsed);
+	} catch {
+		return false;
+	}
+}
+
 function buildNormalizedIdentity(params: {
-	emojiDescription?: string[];
+	senseEmojis?: string[];
 	language: string;
 	lemma: LemmaLike;
 	surface: string;
@@ -110,9 +127,9 @@ function buildNormalizedIdentity(params: {
 
 	return {
 		discriminator,
-		emojiDescription: normalizeEmojiDescription(params.emojiDescription),
 		identityFeatures,
 		language: params.language,
+		senseEmojis: normalizeSenseEmojis(params.senseEmojis),
 		surface: params.surface,
 		surfaceKind: params.surfaceKind,
 		unitKind,
@@ -167,15 +184,13 @@ function normalizeSurface(surface: unknown): string | null {
 	return normalized.length > 0 ? normalized : null;
 }
 
-function normalizeEmojiDescription(emojiDescription: unknown): string[] {
-	if (!Array.isArray(emojiDescription)) {
+function normalizeSenseEmojis(senseEmojis: unknown): string[] {
+	if (!Array.isArray(senseEmojis)) {
 		return [];
 	}
 
 	return [
-		...new Set(
-			emojiDescription.map((emoji) => String(emoji).normalize("NFC")),
-		),
+		...new Set(senseEmojis.map((emoji) => String(emoji).normalize("NFC"))),
 	].sort();
 }
 
@@ -256,5 +271,5 @@ function isScalarIdentityFeatureValue(
 }
 
 function serializeLingId(identity: NormalizedLinguisticIdentity): LingId {
-	return `ling:v1:${JSON.stringify(identity)}` as LingId;
+	return `${lingIdPrefix}${JSON.stringify(identity)}` as LingId;
 }

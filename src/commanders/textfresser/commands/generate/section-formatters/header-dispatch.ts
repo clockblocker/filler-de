@@ -10,18 +10,18 @@ import { formatHeaderLine as formatCommonHeader } from "./common/header-formatte
 import { formatHeaderLine as formatNounHeader } from "./de/lexem/noun/header-formatter";
 
 function resolveHeaderCore(lexicalInfo: LexicalInfo): {
-	emojiDescription: string[];
+	senseEmojis: string[];
 	ipa: string;
 } {
 	if (lexicalInfo.core.status === "ready") {
 		return {
-			emojiDescription: lexicalInfo.core.value.emojiDescription,
+			senseEmojis: lexicalInfo.core.value.senseEmojis,
 			ipa: lexicalInfo.core.value.ipa,
 		};
 	}
 
 	return {
-		emojiDescription: ["❓"],
+		senseEmojis: ["❓"],
 		ipa: "unknown",
 	};
 }
