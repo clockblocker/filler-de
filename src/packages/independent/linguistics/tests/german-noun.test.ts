@@ -26,7 +26,7 @@ describe("German noun schemas", () => {
 		});
 
 		expect(lingId).not.toBeNull();
-		return lingId!;
+		return lingId;
 	};
 
 	it("exposes inferred lemma types from the registry", () => {
