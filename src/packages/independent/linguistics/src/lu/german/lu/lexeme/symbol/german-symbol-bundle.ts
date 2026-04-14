@@ -20,16 +20,12 @@ export const GermanSymbolInflectionSelectionSchema =
 	GermanSymbolSchemas.InflectionSelectionSchema;
 export const GermanSymbolLemmaSelectionSchema =
 	GermanSymbolSchemas.LemmaSelectionSchema;
-export const GermanSymbolStandardPartialSelectionSchema =
-	GermanSymbolSchemas.StandardPartialSelectionSchema;
 export const GermanSymbolStandardVariantSelectionSchema =
 	GermanSymbolSchemas.StandardVariantSelectionSchema;
 export const GermanSymbolTypoInflectionSelectionSchema =
 	GermanSymbolSchemas.TypoInflectionSelectionSchema;
 export const GermanSymbolTypoLemmaSelectionSchema =
 	GermanSymbolSchemas.TypoLemmaSelectionSchema;
-export const GermanSymbolTypoPartialSelectionSchema =
-	GermanSymbolSchemas.TypoPartialSelectionSchema;
 export const GermanSymbolTypoVariantSelectionSchema =
 	GermanSymbolSchemas.TypoVariantSelectionSchema;
 export const GermanSymbolLemmaSchema = GermanSymbolSchemas.LemmaSchema;

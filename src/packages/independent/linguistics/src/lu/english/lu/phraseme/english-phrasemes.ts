@@ -36,13 +36,6 @@ export const EnglishStandardLemmaPhrasemeSelectionSchemas = {
 	Proverb: EnglishProverbBundle.StandardLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Standard"]["Lemma"]["Phraseme"];
 
-export const EnglishStandardPartialPhrasemeSelectionSchemas = {
-	Aphorism: EnglishAphorismBundle.StandardPartialSelectionSchema,
-	Cliché: EnglishClicheBundle.StandardPartialSelectionSchema,
-	DiscourseFormula: EnglishDiscourseFormulaBundle.StandardPartialSelectionSchema,
-	Idiom: EnglishIdiomBundle.StandardPartialSelectionSchema,
-	Proverb: EnglishProverbBundle.StandardPartialSelectionSchema,
-} satisfies SelectionSchemaLanguageShape["Standard"]["Partial"]["Phraseme"];
 
 export const EnglishTypoLemmaPhrasemeSelectionSchemas = {
 	Aphorism: EnglishAphorismBundle.TypoLemmaSelectionSchema,
@@ -52,10 +45,3 @@ export const EnglishTypoLemmaPhrasemeSelectionSchemas = {
 	Proverb: EnglishProverbBundle.TypoLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Typo"]["Lemma"]["Phraseme"];
 
-export const EnglishTypoPartialPhrasemeSelectionSchemas = {
-	Aphorism: EnglishAphorismBundle.TypoPartialSelectionSchema,
-	Cliché: EnglishClicheBundle.TypoPartialSelectionSchema,
-	DiscourseFormula: EnglishDiscourseFormulaBundle.TypoPartialSelectionSchema,
-	Idiom: EnglishIdiomBundle.TypoPartialSelectionSchema,
-	Proverb: EnglishProverbBundle.TypoPartialSelectionSchema,
-} satisfies SelectionSchemaLanguageShape["Typo"]["Partial"]["Phraseme"];

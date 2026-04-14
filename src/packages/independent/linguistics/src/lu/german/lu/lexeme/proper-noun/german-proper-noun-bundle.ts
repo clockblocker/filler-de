@@ -20,16 +20,12 @@ export const GermanProperNounInflectionSelectionSchema =
 	GermanProperNounSchemas.InflectionSelectionSchema;
 export const GermanProperNounLemmaSelectionSchema =
 	GermanProperNounSchemas.LemmaSelectionSchema;
-export const GermanProperNounStandardPartialSelectionSchema =
-	GermanProperNounSchemas.StandardPartialSelectionSchema;
 export const GermanProperNounStandardVariantSelectionSchema =
 	GermanProperNounSchemas.StandardVariantSelectionSchema;
 export const GermanProperNounTypoInflectionSelectionSchema =
 	GermanProperNounSchemas.TypoInflectionSelectionSchema;
 export const GermanProperNounTypoLemmaSelectionSchema =
 	GermanProperNounSchemas.TypoLemmaSelectionSchema;
-export const GermanProperNounTypoPartialSelectionSchema =
-	GermanProperNounSchemas.TypoPartialSelectionSchema;
 export const GermanProperNounTypoVariantSelectionSchema =
 	GermanProperNounSchemas.TypoVariantSelectionSchema;
 export const GermanProperNounLemmaSchema = GermanProperNounSchemas.LemmaSchema;

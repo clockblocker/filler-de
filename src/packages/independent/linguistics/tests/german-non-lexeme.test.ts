@@ -7,10 +7,10 @@ import { GermanPhrasemeLemmaSchemas } from "../src/lu/german/lu/phraseme/german-
 describe("German non-lexeme schemas", () => {
 	it("exposes inferred morpheme and phraseme lemma types from the registry", () => {
 		const morpheme: Lemma<"German", "Morpheme", "Prefix"> = {
+			canonicalLemma: "ab-",
 			language: "German",
 			lemmaKind: "Morpheme",
 			morphemeKind: "Prefix",
-			spelledLemma: "ab-",
 		};
 		const phraseme: Selection<
 			"German",
@@ -21,15 +21,16 @@ describe("German non-lexeme schemas", () => {
 		> = {
 			language: "German",
 			orthographicStatus: "Standard",
+			spelledSelection: "auf jeden Fall",
 			surface: {
 				discriminators: {
 					lemmaKind: "Phraseme",
 					lemmaSubKind: "DiscourseFormula",
 				},
-				spelledSurface: "auf jeden Fall",
+				normalizedFullSurface: "auf jeden Fall",
 				surfaceKind: "Lemma",
 				target: {
-					spelledLemma: "auf jeden Fall",
+					canonicalLemma: "auf jeden Fall",
 				},
 			},
 		};
@@ -42,12 +43,12 @@ describe("German non-lexeme schemas", () => {
 
 	it("accepts German morpheme lemmas", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
+			canonicalLemma: "ab-",
 			isClosedSet: false,
 			language: "German",
 			lemmaKind: "Morpheme",
-			morphemeKind: "Prefix",
 			meaningInEmojis: "🧩",
-			spelledLemma: "ab-",
+			morphemeKind: "Prefix",
 		});
 
 		expect(result.success).toBe(true);
@@ -55,10 +56,10 @@ describe("German non-lexeme schemas", () => {
 
 	it("rejects wrong discriminants for German morpheme lemmas", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
+			canonicalLemma: "ab-",
 			language: "German",
 			lemmaKind: "Morpheme",
 			morphemeKind: "Suffix",
-			spelledLemma: "ab-",
 		});
 
 		expect(result.success).toBe(false);
@@ -67,18 +68,18 @@ describe("German non-lexeme schemas", () => {
 	it("accepts discourse formula phraseme roles and rejects them for other kinds", () => {
 		const discourseFormulaResult =
 			GermanPhrasemeLemmaSchemas.DiscourseFormula.safeParse({
+				canonicalLemma: "auf jeden Fall",
 				discourseFormulaRole: "Reaction",
 				language: "German",
 				lemmaKind: "Phraseme",
 				phrasemeKind: "DiscourseFormula",
-				spelledLemma: "auf jeden Fall",
 			});
 		const aphorismResult = GermanPhrasemeLemmaSchemas.Aphorism.safeParse({
+			canonicalLemma: "Zeit ist Geld",
 			discourseFormulaRole: "Reaction",
 			language: "German",
 			lemmaKind: "Phraseme",
 			phrasemeKind: "Aphorism",
-			spelledLemma: "Zeit ist Geld",
 		});
 
 		expect(discourseFormulaResult.success).toBe(true);
@@ -93,7 +94,7 @@ describe("German non-lexeme schemas", () => {
 			SelectionSchema.German.Typo.Lemma.Phraseme.DiscourseFormula,
 		).toBeDefined();
 		expect(
-			SelectionSchema.German.Standard.Partial.Phraseme.Cliché,
+			SelectionSchema.German.Standard.Lemma.Phraseme.Cliché,
 		).toBeDefined();
 		expect("Morpheme" in SelectionSchema.German.Standard.Inflection).toBe(
 			false,
@@ -111,15 +112,16 @@ describe("German non-lexeme schemas", () => {
 			SelectionSchema.German.Typo.Lemma.Morpheme.Suffix.safeParse({
 				language: "German",
 				orthographicStatus: "Typo",
+				spelledSelection: "-hait",
 				surface: {
 					discriminators: {
 						lemmaKind: "Morpheme",
 						lemmaSubKind: "Suffix",
 					},
-					spelledSurface: "-hait",
+					normalizedFullSurface: "-hait",
 					surfaceKind: "Lemma",
 					target: {
-						spelledLemma: "-heit",
+						canonicalLemma: "-heit",
 					},
 				},
 			});
@@ -127,15 +129,16 @@ describe("German non-lexeme schemas", () => {
 			SelectionSchema.German.Typo.Lemma.Phraseme.Cliché.safeParse({
 				language: "German",
 				orthographicStatus: "Typo",
+				spelledSelection: "Zeit ist Gelt",
 				surface: {
 					discriminators: {
 						lemmaKind: "Phraseme",
 						lemmaSubKind: "Cliché",
 					},
-					spelledSurface: "Zeit ist Gelt",
+					normalizedFullSurface: "Zeit ist Gelt",
 					surfaceKind: "Lemma",
 					target: {
-						spelledLemma: "Zeit ist Geld",
+						canonicalLemma: "Zeit ist Geld",
 					},
 				},
 			});
@@ -144,30 +147,31 @@ describe("German non-lexeme schemas", () => {
 		expect(phrasemeResult.success).toBe(true);
 	});
 
-	it("accepts German partial phraseme selections", () => {
+	it("accepts German lemma selections with a narrower spelled selection", () => {
 		const phraseme: Selection<
 			"German",
 			"Standard",
-			"Partial",
+			"Lemma",
 			"Phraseme",
 			"Cliché"
 		> = {
 			language: "German",
 			orthographicStatus: "Standard",
+			spelledSelection: "Spaziergang",
 			surface: {
 				discriminators: {
 					lemmaKind: "Phraseme",
 					lemmaSubKind: "Cliché",
 				},
-				spelledSurface: "Spaziergang",
-				surfaceKind: "Partial",
+				normalizedFullSurface: "ein Spaziergang im Park",
+				surfaceKind: "Lemma",
 				target: {
-					spelledLemma: "ein Spaziergang im Park",
+					canonicalLemma: "ein Spaziergang im Park",
 				},
 			},
 		};
 		const result =
-			SelectionSchema.German.Standard.Partial.Phraseme.Cliché.safeParse(
+			SelectionSchema.German.Standard.Lemma.Phraseme.Cliché.safeParse(
 				phraseme,
 			);
 

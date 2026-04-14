@@ -21,16 +21,12 @@ export const EnglishInterjectionInflectionSelectionSchema =
 	EnglishInterjectionSchemas.InflectionSelectionSchema;
 export const EnglishInterjectionLemmaSelectionSchema =
 	EnglishInterjectionSchemas.LemmaSelectionSchema;
-export const EnglishInterjectionStandardPartialSelectionSchema =
-	EnglishInterjectionSchemas.StandardPartialSelectionSchema;
 export const EnglishInterjectionStandardVariantSelectionSchema =
 	EnglishInterjectionSchemas.StandardVariantSelectionSchema;
 export const EnglishInterjectionTypoInflectionSelectionSchema =
 	EnglishInterjectionSchemas.TypoInflectionSelectionSchema;
 export const EnglishInterjectionTypoLemmaSelectionSchema =
 	EnglishInterjectionSchemas.TypoLemmaSelectionSchema;
-export const EnglishInterjectionTypoPartialSelectionSchema =
-	EnglishInterjectionSchemas.TypoPartialSelectionSchema;
 export const EnglishInterjectionTypoVariantSelectionSchema =
 	EnglishInterjectionSchemas.TypoVariantSelectionSchema;
 export const EnglishInterjectionLemmaSchema =

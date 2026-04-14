@@ -1,9 +1,9 @@
 import z from "zod/v3";
 import type { AbstractLemma } from "../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
-import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
+import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import {
 	GermanVerbInflectionalFeaturesSchema,
 	GermanVerbInherentFeaturesSchema,
@@ -22,7 +22,7 @@ export const GermanVerbLemmaSchema = z.object({
 	lemmaKind: z.literal("Lexeme"),
 	language: z.literal("German"),
 	pos: z.literal("VERB"),
-	spelledLemma: z.string(),
+	canonicalLemma: z.string(),
 }) satisfies z.ZodType<AbstractLemma<"Lexeme">>;
 
 export const GermanVerbInflectionSelectionSchema = buildInflectionSelection({
@@ -39,13 +39,6 @@ export const GermanVerbLemmaSelectionSchema = buildLemmaSelection({
 	lemmaSchema: GermanVerbLemmaSchema,
 	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
 }) satisfies z.ZodType<AbstractSelectionFor<"Standard", "Lemma", "Lexeme">>;
-
-export const GermanVerbStandardPartialSelectionSchema = buildLemmaSelection({
-	language: "German",
-	lemmaSchema: GermanVerbLemmaSchema,
-	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
-	surfaceKind: "Partial",
-}) satisfies z.ZodType<AbstractSelectionFor<"Standard", "Partial", "Lexeme">>;
 
 export const GermanVerbStandardVariantSelectionSchema = buildLemmaSelection({
 	language: "German",
@@ -70,14 +63,6 @@ export const GermanVerbTypoLemmaSelectionSchema = buildLemmaSelection({
 	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
 	orthographicStatus: "Typo",
 }) satisfies z.ZodType<AbstractSelectionFor<"Typo", "Lemma", "Lexeme">>;
-
-export const GermanVerbTypoPartialSelectionSchema = buildLemmaSelection({
-	language: "German",
-	lemmaSchema: GermanVerbLemmaSchema,
-	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
-	orthographicStatus: "Typo",
-	surfaceKind: "Partial",
-}) satisfies z.ZodType<AbstractSelectionFor<"Typo", "Partial", "Lexeme">>;
 
 export const GermanVerbTypoVariantSelectionSchema = buildLemmaSelection({
 	language: "German",

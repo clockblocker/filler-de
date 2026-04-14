@@ -20,16 +20,12 @@ export const GermanPunctuationInflectionSelectionSchema =
 	GermanPunctuationSchemas.InflectionSelectionSchema;
 export const GermanPunctuationLemmaSelectionSchema =
 	GermanPunctuationSchemas.LemmaSelectionSchema;
-export const GermanPunctuationStandardPartialSelectionSchema =
-	GermanPunctuationSchemas.StandardPartialSelectionSchema;
 export const GermanPunctuationStandardVariantSelectionSchema =
 	GermanPunctuationSchemas.StandardVariantSelectionSchema;
 export const GermanPunctuationTypoInflectionSelectionSchema =
 	GermanPunctuationSchemas.TypoInflectionSelectionSchema;
 export const GermanPunctuationTypoLemmaSelectionSchema =
 	GermanPunctuationSchemas.TypoLemmaSelectionSchema;
-export const GermanPunctuationTypoPartialSelectionSchema =
-	GermanPunctuationSchemas.TypoPartialSelectionSchema;
 export const GermanPunctuationTypoVariantSelectionSchema =
 	GermanPunctuationSchemas.TypoVariantSelectionSchema;
 export const GermanPunctuationLemmaSchema =

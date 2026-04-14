@@ -11,14 +11,8 @@ type EnglishPhrasemeBundle<PK extends PhrasemeKind> = {
 	StandardLemmaSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Standard", "Lemma", "Phraseme", PK>
 	>;
-	StandardPartialSelectionSchema: z.ZodType<
-		AbstractSelectionFor<"Standard", "Partial", "Phraseme", PK>
-	>;
 	TypoLemmaSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Typo", "Lemma", "Phraseme", PK>
-	>;
-	TypoPartialSelectionSchema: z.ZodType<
-		AbstractSelectionFor<"Typo", "Partial", "Phraseme", PK>
 	>;
 };
 
@@ -31,7 +25,7 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 				lemmaKind: z.literal("Phraseme"),
 				language: z.literal("English"),
 				phrasemeKind: z.literal(phrasemeKind),
-				spelledLemma: z.string(),
+				canonicalLemma: z.string(),
 			})
 			.strict() as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
 	}
@@ -42,7 +36,7 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 			lemmaKind: z.literal("Phraseme"),
 			language: z.literal("English"),
 			phrasemeKind: z.literal(phrasemeKind),
-			spelledLemma: z.string(),
+			canonicalLemma: z.string(),
 		})
 		.strict() as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
 }
@@ -65,24 +59,11 @@ export function buildEnglishPhrasemeBundle<PK extends PhrasemeKind>({
 			lemmaSchema,
 			lemmaIdentityShape,
 		}) as unknown as EnglishPhrasemeBundle<PK>["StandardLemmaSelectionSchema"],
-		StandardPartialSelectionSchema: buildLemmaSelection({
-			language: "English",
-			lemmaSchema,
-			lemmaIdentityShape,
-			surfaceKind: "Partial",
-		}) as unknown as EnglishPhrasemeBundle<PK>["StandardPartialSelectionSchema"],
 		TypoLemmaSelectionSchema: buildLemmaSelection({
 			language: "English",
 			lemmaSchema,
 			lemmaIdentityShape,
 			orthographicStatus: "Typo",
 		}) as unknown as EnglishPhrasemeBundle<PK>["TypoLemmaSelectionSchema"],
-		TypoPartialSelectionSchema: buildLemmaSelection({
-			language: "English",
-			lemmaSchema,
-			lemmaIdentityShape,
-			orthographicStatus: "Typo",
-			surfaceKind: "Partial",
-		}) as unknown as EnglishPhrasemeBundle<PK>["TypoPartialSelectionSchema"],
 	};
 }

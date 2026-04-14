@@ -20,16 +20,12 @@ export const EnglishParticleInflectionSelectionSchema =
 	EnglishParticleSchemas.InflectionSelectionSchema;
 export const EnglishParticleLemmaSelectionSchema =
 	EnglishParticleSchemas.LemmaSelectionSchema;
-export const EnglishParticleStandardPartialSelectionSchema =
-	EnglishParticleSchemas.StandardPartialSelectionSchema;
 export const EnglishParticleStandardVariantSelectionSchema =
 	EnglishParticleSchemas.StandardVariantSelectionSchema;
 export const EnglishParticleTypoInflectionSelectionSchema =
 	EnglishParticleSchemas.TypoInflectionSelectionSchema;
 export const EnglishParticleTypoLemmaSelectionSchema =
 	EnglishParticleSchemas.TypoLemmaSelectionSchema;
-export const EnglishParticleTypoPartialSelectionSchema =
-	EnglishParticleSchemas.TypoPartialSelectionSchema;
 export const EnglishParticleTypoVariantSelectionSchema =
 	EnglishParticleSchemas.TypoVariantSelectionSchema;
 export const EnglishParticleLemmaSchema = EnglishParticleSchemas.LemmaSchema;

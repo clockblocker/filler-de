@@ -20,7 +20,7 @@ type AbstractLexemeLemma<P extends Pos = Pos> = Prettify<{
 	pos: P;
 	inherentFeatures: Partial<AbstractFeatures>;
 	isClosedSet?: IsClosedSet;
-	spelledLemma: string;
+	canonicalLemma: string;
 }>;
 
 type AbstractMorphemLemma<MK extends MorphemeKind = MorphemeKind> = Prettify<{
@@ -30,7 +30,7 @@ type AbstractMorphemLemma<MK extends MorphemeKind = MorphemeKind> = Prettify<{
 	morphemeKind: MK;
 	isClosedSet?: IsClosedSet;
 	separable?: IsSeparable;
-	spelledLemma: string;
+	canonicalLemma: string;
 }>;
 
 type AbstractPhrasemLemma<PK extends PhrasemeKind = PhrasemeKind> = Prettify<
@@ -39,7 +39,7 @@ type AbstractPhrasemLemma<PK extends PhrasemeKind = PhrasemeKind> = Prettify<
 		lemmaKind: "Phraseme";
 		language: TargetLanguage;
 		[PHRASEME_KIND_KEY]: PK;
-		spelledLemma: string;
+		canonicalLemma: string;
 	} & (
 		| {
 				[PHRASEME_KIND_KEY]:

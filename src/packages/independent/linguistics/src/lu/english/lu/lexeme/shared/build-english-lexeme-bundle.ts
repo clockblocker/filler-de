@@ -14,9 +14,6 @@ type EnglishLexemeBundle<P extends Pos> = {
 	LemmaSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Standard", "Lemma", "Lexeme", P>
 	>;
-	StandardPartialSelectionSchema: z.ZodType<
-		AbstractSelectionFor<"Standard", "Partial", "Lexeme", P>
-	>;
 	StandardVariantSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Standard", "Variant", "Lexeme", P>
 	>;
@@ -25,9 +22,6 @@ type EnglishLexemeBundle<P extends Pos> = {
 	>;
 	TypoLemmaSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Typo", "Lemma", "Lexeme", P>
-	>;
-	TypoPartialSelectionSchema: z.ZodType<
-		AbstractSelectionFor<"Typo", "Partial", "Lexeme", P>
 	>;
 	TypoVariantSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Typo", "Variant", "Lexeme", P>
@@ -61,7 +55,7 @@ export function buildEnglishLexemeBundle<
 		lemmaKind: z.literal("Lexeme"),
 		language: z.literal("English"),
 		pos: z.literal(pos),
-		spelledLemma: z.string(),
+		canonicalLemma: z.string(),
 	}) as unknown as EnglishLexemeBundle<P>["LemmaSchema"];
 
 	return {
@@ -77,12 +71,6 @@ export function buildEnglishLexemeBundle<
 			lemmaSchema,
 			lemmaIdentityShape,
 		}) as unknown as EnglishLexemeBundle<P>["LemmaSelectionSchema"],
-		StandardPartialSelectionSchema: buildLemmaSelection({
-			language: "English",
-			lemmaSchema,
-			lemmaIdentityShape,
-			surfaceKind: "Partial",
-		}) as unknown as EnglishLexemeBundle<P>["StandardPartialSelectionSchema"],
 		StandardVariantSelectionSchema: buildLemmaSelection({
 			language: "English",
 			lemmaSchema,
@@ -102,13 +90,6 @@ export function buildEnglishLexemeBundle<
 			lemmaIdentityShape,
 			orthographicStatus: "Typo",
 		}) as unknown as EnglishLexemeBundle<P>["TypoLemmaSelectionSchema"],
-		TypoPartialSelectionSchema: buildLemmaSelection({
-			language: "English",
-			lemmaSchema,
-			lemmaIdentityShape,
-			orthographicStatus: "Typo",
-			surfaceKind: "Partial",
-		}) as unknown as EnglishLexemeBundle<P>["TypoPartialSelectionSchema"],
 		TypoVariantSelectionSchema: buildLemmaSelection({
 			language: "English",
 			lemmaSchema,

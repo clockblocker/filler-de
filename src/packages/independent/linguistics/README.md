@@ -32,21 +32,28 @@ const simpleWalkSelection = SelectionSchema.English.Standard.Inflection.Lexeme.V
 	{
 		language: "English",
 		orthographicStatus: "Standard",
+		spelledSelection: "walk",
 		surface: {
+			discriminators: {
+				lemmaKind: "Lexeme",
+				lemmaSubKind: "VERB",
+			},
 			inflectionalFeatures: {
 				tense: "Pres",
 				verbForm: "Fin",
 			},
-			lemma: {
-				meaningInEmojis: "🚶",
-				inherentFeatures: {},
-				language: "English",
-				lemmaKind: "Lexeme",
-				pos: "VERB",
-				spelledLemma: "walk",
+			target: {
+				lemma: {
+					meaningInEmojis: "🚶",
+					inherentFeatures: {},
+					language: "English",
+					lemmaKind: "Lexeme",
+					pos: "VERB",
+					canonicalLemma: "walk",
+				},
 			},
-			spelledSurface: "walk",
-			surfaceKind: "Lemma", // inflectionalFeatures match the base form for eng verbs
+			normalizedFullSurface: "walk",
+			surfaceKind: "Inflection",
 		},
 	},
 );
@@ -65,7 +72,7 @@ const simpleWalkLemma = LemmaSchema.English.Lexeme.VERB.parse({
 	language: "English",
 	lemmaKind: "Lexeme",
 	pos: "VERB",
-	spelledLemma: "walk",
+	canonicalLemma: "walk",
 });
 ```
 
@@ -79,20 +86,69 @@ This game was a [walk] in the park
 as a part of Idiom "a walk in the park":
 
 ```ts
-const idiomPartSelection = SelectionSchema.English.Standard.Partial.Phraseme.Idiom.parse(
+const idiomPartSelection = SelectionSchema.English.Standard.Lemma.Phraseme.Idiom.parse(
 	{
 		language: "English",
 		orthographicStatus: "Standard",
+		spelledSelection: "walk",
 		surface: {
-			lemma: {
-				meaningInEmojis: "😌👌",
-				language: "English",
+			discriminators: {
 				lemmaKind: "Phraseme",
-				phrasemeKind: "Idiom",
-				spelledLemma: "a walk in the park",
+				lemmaSubKind: "Idiom",
 			},
-			spelledSurface: "walk",
-			surfaceKind: "Partial",
+			target: {
+				lemma: {
+					meaningInEmojis: "😌👌",
+					language: "English",
+					lemmaKind: "Phraseme",
+					phrasemeKind: "Idiom",
+					canonicalLemma: "a walk in the park",
+				},
+			},
+			normalizedFullSurface: "a walk in the park",
+			surfaceKind: "Lemma",
+		},
+	},
+);
+```
+
+The DTO now separates the actual highlighted text from the full orthographically normalized surface:
+
+```ts
+const gaveUpSelection = SelectionSchema.English.Standard.Lemma.Lexeme.VERB.parse(
+	{
+		language: "English",
+		orthographicStatus: "Standard",
+		spelledSelection: "gave",
+		surface: {
+			discriminators: {
+				lemmaKind: "Lexeme",
+				lemmaSubKind: "VERB",
+			},
+			target: {
+				canonicalLemma: "give up",
+			},
+			normalizedFullSurface: "gave up",
+			surfaceKind: "Lemma",
+		},
+	},
+);
+
+const passAufSelection = SelectionSchema.German.Standard.Lemma.Lexeme.VERB.parse(
+	{
+		language: "German",
+		orthographicStatus: "Standard",
+		spelledSelection: "Pass",
+		surface: {
+			discriminators: {
+				lemmaKind: "Lexeme",
+				lemmaSubKind: "VERB",
+			},
+			target: {
+				canonicalLemma: "aufpassen",
+			},
+			normalizedFullSurface: "pass auf",
+			surfaceKind: "Lemma",
 		},
 	},
 );

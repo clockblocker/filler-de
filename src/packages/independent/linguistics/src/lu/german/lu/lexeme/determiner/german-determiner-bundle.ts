@@ -20,16 +20,12 @@ export const GermanDeterminerInflectionSelectionSchema =
 	GermanDeterminerSchemas.InflectionSelectionSchema;
 export const GermanDeterminerLemmaSelectionSchema =
 	GermanDeterminerSchemas.LemmaSelectionSchema;
-export const GermanDeterminerStandardPartialSelectionSchema =
-	GermanDeterminerSchemas.StandardPartialSelectionSchema;
 export const GermanDeterminerStandardVariantSelectionSchema =
 	GermanDeterminerSchemas.StandardVariantSelectionSchema;
 export const GermanDeterminerTypoInflectionSelectionSchema =
 	GermanDeterminerSchemas.TypoInflectionSelectionSchema;
 export const GermanDeterminerTypoLemmaSelectionSchema =
 	GermanDeterminerSchemas.TypoLemmaSelectionSchema;
-export const GermanDeterminerTypoPartialSelectionSchema =
-	GermanDeterminerSchemas.TypoPartialSelectionSchema;
 export const GermanDeterminerTypoVariantSelectionSchema =
 	GermanDeterminerSchemas.TypoVariantSelectionSchema;
 export const GermanDeterminerLemmaSchema = GermanDeterminerSchemas.LemmaSchema;

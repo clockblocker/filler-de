@@ -17,17 +17,17 @@ export type SelectionLemmaIdentityShapeFor<
 	? {
 			lemmaKind: z.ZodLiteral<LK>;
 			pos: z.ZodLiteral<D>;
-	  }
+		}
 	: LK extends "Morpheme"
 		? {
 				lemmaKind: z.ZodLiteral<LK>;
 				morphemeKind: z.ZodLiteral<D>;
-		  }
+			}
 		: LK extends "Phraseme"
 			? {
 					lemmaKind: z.ZodLiteral<LK>;
 					phrasemeKind: z.ZodLiteral<D>;
-			  }
+				}
 			: never;
 
 type BuildSelectionSurfaceArgs = {
@@ -44,6 +44,9 @@ export function buildSelectionSurfaceSchema({
 	surfaceShape,
 }: BuildSelectionSurfaceArgs) {
 	const lemmaSubKindKey = getLemmaSubKindKey(lemmaIdentityShape);
+	const lemmaSubKindSchema = lemmaIdentityShape[
+		lemmaSubKindKey
+	] as z.ZodTypeAny;
 
 	return z
 		.object(surfaceShape)
@@ -51,33 +54,47 @@ export function buildSelectionSurfaceSchema({
 			discriminators: z
 				.object({
 					lemmaKind: lemmaIdentityShape.lemmaKind,
-					lemmaSubKind: lemmaIdentityShape[lemmaSubKindKey],
+					lemmaSubKind: lemmaSubKindSchema,
 				})
 				.strict(),
-			spelledSurface: z.string(),
+			normalizedFullSurface: z.string(),
 			target: z.union([
-				z.object({ spelledLemma: z.string() }).strict(),
+				z.object({ canonicalLemma: z.string() }).strict(),
 				z.object({ lemma: lemmaSchema }).strict(),
 			]),
 		})
 		.strict()
 		.superRefine((surface, ctx) => {
-			if (!("lemma" in surface.target)) {
+			const typedSurface = surface as {
+				discriminators: {
+					lemmaKind: unknown;
+					lemmaSubKind: unknown;
+				};
+				target:
+					| { canonicalLemma: string }
+					| { lemma: Record<string, unknown> };
+			};
+
+			if (!("lemma" in typedSurface.target)) {
 				return;
 			}
 
-			const hydratedLemma = surface.target.lemma as Record<string, unknown>;
+			const hydratedLemma = typedSurface.target.lemma;
 			if (hydratedLemma.language !== language) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
-					message: "hydrated lemma language must match selection language",
+					message:
+						"hydrated lemma language must match selection language",
 					path: ["target", "lemma", "language"],
 				});
 			}
 
 			const lemmaSubKind = hydratedLemma[lemmaSubKindKey];
 
-			if (hydratedLemma.lemmaKind !== surface.discriminators.lemmaKind) {
+			if (
+				hydratedLemma.lemmaKind !==
+				typedSurface.discriminators.lemmaKind
+			) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					message: "hydrated lemmaKind must match discriminators",
@@ -85,7 +102,7 @@ export function buildSelectionSurfaceSchema({
 				});
 			}
 
-			if (lemmaSubKind !== surface.discriminators.lemmaSubKind) {
+			if (lemmaSubKind !== typedSurface.discriminators.lemmaSubKind) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					message: "hydrated lemmaSubKind must match discriminators",
@@ -98,12 +115,14 @@ export function buildSelectionSurfaceSchema({
 function getLemmaSubKindKey(
 	lemmaIdentityShape: SelectionLemmaIdentityShape,
 ): LemmaSubKindKey {
-	const matchingKeys = lemmaSubKindKeys.filter((key) => key in lemmaIdentityShape);
+	const matchingKeys = lemmaSubKindKeys.filter(
+		(key) => key in lemmaIdentityShape,
+	);
 	if (matchingKeys.length !== 1) {
 		throw new Error(
 			"lemmaIdentityShape must include exactly one of pos, morphemeKind, or phrasemeKind",
 		);
 	}
 
-	return matchingKeys[0];
+	return matchingKeys[0]!;
 }

@@ -27,6 +27,7 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 	} satisfies z.ZodRawShape;
 	const lemmaSchema = z
 		.object({
+			canonicalLemma: z.string(),
 			isClosedSet: z.boolean().optional(),
 			language: z.literal("German"),
 			lemmaKind: z.literal("Morpheme"),
@@ -36,7 +37,6 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 				morphemeKind === "Prefix"
 					? IsSeparable.optional()
 					: z.undefined().optional(),
-			spelledLemma: z.string(),
 		})
 		.strict() as unknown as GermanMorphemeBundle<MK>["LemmaSchema"];
 

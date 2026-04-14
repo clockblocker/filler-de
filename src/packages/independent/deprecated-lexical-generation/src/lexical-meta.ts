@@ -63,7 +63,6 @@ export function parseLexicalMetaTag(
 			lemmaKind !== "Morpheme") ||
 		(surfaceKind !== "Inflection" &&
 			surfaceKind !== "Lemma" &&
-			surfaceKind !== "Partial" &&
 			surfaceKind !== "Variant")
 	) {
 		return null;

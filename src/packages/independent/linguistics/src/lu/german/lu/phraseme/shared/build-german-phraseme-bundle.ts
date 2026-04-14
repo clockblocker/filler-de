@@ -11,14 +11,8 @@ type GermanPhrasemeBundle<PK extends PhrasemeKind> = {
 	StandardLemmaSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Standard", "Lemma", "Phraseme", PK>
 	>;
-	StandardPartialSelectionSchema: z.ZodType<
-		AbstractSelectionFor<"Standard", "Partial", "Phraseme", PK>
-	>;
 	TypoLemmaSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Typo", "Lemma", "Phraseme", PK>
-	>;
-	TypoPartialSelectionSchema: z.ZodType<
-		AbstractSelectionFor<"Typo", "Partial", "Phraseme", PK>
 	>;
 };
 
@@ -26,23 +20,23 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 	if (phrasemeKind === "DiscourseFormula") {
 		return z
 			.object({
+				canonicalLemma: z.string(),
 				discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
 				language: z.literal("German"),
 				lemmaKind: z.literal("Phraseme"),
 				meaningInEmojis: MeaningInEmojisSchema.optional(),
 				phrasemeKind: z.literal(phrasemeKind),
-				spelledLemma: z.string(),
 			})
 			.strict() as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
 	}
 
 	return z
 		.object({
+			canonicalLemma: z.string(),
 			language: z.literal("German"),
 			lemmaKind: z.literal("Phraseme"),
 			meaningInEmojis: MeaningInEmojisSchema.optional(),
 			phrasemeKind: z.literal(phrasemeKind),
-			spelledLemma: z.string(),
 		})
 		.strict() as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
 }
@@ -65,24 +59,11 @@ export function buildGermanPhrasemeBundle<PK extends PhrasemeKind>({
 			lemmaIdentityShape,
 			lemmaSchema,
 		}) as unknown as GermanPhrasemeBundle<PK>["StandardLemmaSelectionSchema"],
-		StandardPartialSelectionSchema: buildLemmaSelection({
-			language: "German",
-			lemmaIdentityShape,
-			lemmaSchema,
-			surfaceKind: "Partial",
-		}) as unknown as GermanPhrasemeBundle<PK>["StandardPartialSelectionSchema"],
 		TypoLemmaSelectionSchema: buildLemmaSelection({
 			language: "German",
 			lemmaIdentityShape,
 			lemmaSchema,
 			orthographicStatus: "Typo",
 		}) as unknown as GermanPhrasemeBundle<PK>["TypoLemmaSelectionSchema"],
-		TypoPartialSelectionSchema: buildLemmaSelection({
-			language: "German",
-			lemmaIdentityShape,
-			lemmaSchema,
-			orthographicStatus: "Typo",
-			surfaceKind: "Partial",
-		}) as unknown as GermanPhrasemeBundle<PK>["TypoPartialSelectionSchema"],
 	};
 }

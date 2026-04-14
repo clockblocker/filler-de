@@ -35,7 +35,6 @@ const PHRASEME_KIND_FROM_LEGACY = {
 const SURFACE_KIND_FROM_LEGACY = {
 	Inflected: "Inflection",
 	Lemma: "Lemma",
-	Partial: "Partial",
 	Variant: "Variant",
 } as const;
 
@@ -47,13 +46,19 @@ function toResolvedSelection(output: {
 	surfaceKind: "Lemma" | "Inflected" | "Variant" | "Partial";
 	spelledSurface: string;
 }): ResolvedSelection {
-	const surfaceKind = SURFACE_KIND_FROM_LEGACY[output.surfaceKind];
+	const surfaceKind =
+		output.surfaceKind === "Partial"
+			? "Lemma"
+			: SURFACE_KIND_FROM_LEGACY[output.surfaceKind];
+	const normalizedFullSurface =
+		output.surfaceKind === "Partial" ? output.lemma : output.spelledSurface;
 	const base = {
 		contextWithLinkedParts: output.contextWithLinkedParts,
 		language: "German" as const,
 		orthographicStatus: "Standard" as const,
+		spelledSelection: output.spelledSurface,
 		surface: {
-			spelledSurface: output.spelledSurface,
+			normalizedFullSurface,
 			surfaceKind,
 		},
 	};
@@ -73,7 +78,7 @@ function toResolvedSelection(output: {
 					language: "German" as const,
 					lemmaKind: "Lexeme" as const,
 					pos,
-					spelledLemma: output.lemma,
+					canonicalLemma: output.lemma,
 				},
 			},
 		};
@@ -98,7 +103,7 @@ function toResolvedSelection(output: {
 				language: "German" as const,
 				lemmaKind: "Phraseme" as const,
 				phrasemeKind,
-				spelledLemma: output.lemma,
+				canonicalLemma: output.lemma,
 			},
 		},
 	};

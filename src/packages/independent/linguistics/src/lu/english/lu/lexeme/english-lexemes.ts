@@ -6,187 +6,153 @@ import {
 	EnglishAdjectiveInflectionSelectionSchema,
 	EnglishAdjectiveLemmaSchema,
 	EnglishAdjectiveLemmaSelectionSchema,
-	EnglishAdjectiveStandardPartialSelectionSchema,
 	EnglishAdjectiveStandardVariantSelectionSchema,
 	EnglishAdjectiveTypoInflectionSelectionSchema,
 	EnglishAdjectiveTypoLemmaSelectionSchema,
-	EnglishAdjectiveTypoPartialSelectionSchema,
 	EnglishAdjectiveTypoVariantSelectionSchema,
 } from "./adjective/english-adjective-bundle";
 import {
 	EnglishAdpositionInflectionSelectionSchema,
 	EnglishAdpositionLemmaSchema,
 	EnglishAdpositionLemmaSelectionSchema,
-	EnglishAdpositionStandardPartialSelectionSchema,
 	EnglishAdpositionStandardVariantSelectionSchema,
 	EnglishAdpositionTypoInflectionSelectionSchema,
 	EnglishAdpositionTypoLemmaSelectionSchema,
-	EnglishAdpositionTypoPartialSelectionSchema,
 	EnglishAdpositionTypoVariantSelectionSchema,
 } from "./adposition/english-adposition-bundle";
 import {
 	EnglishAdverbInflectionSelectionSchema,
 	EnglishAdverbLemmaSchema,
 	EnglishAdverbLemmaSelectionSchema,
-	EnglishAdverbStandardPartialSelectionSchema,
 	EnglishAdverbStandardVariantSelectionSchema,
 	EnglishAdverbTypoInflectionSelectionSchema,
 	EnglishAdverbTypoLemmaSelectionSchema,
-	EnglishAdverbTypoPartialSelectionSchema,
 	EnglishAdverbTypoVariantSelectionSchema,
 } from "./adverb/english-adverb-bundle";
 import {
 	EnglishAuxiliaryInflectionSelectionSchema,
 	EnglishAuxiliaryLemmaSchema,
 	EnglishAuxiliaryLemmaSelectionSchema,
-	EnglishAuxiliaryStandardPartialSelectionSchema,
 	EnglishAuxiliaryStandardVariantSelectionSchema,
 	EnglishAuxiliaryTypoInflectionSelectionSchema,
 	EnglishAuxiliaryTypoLemmaSelectionSchema,
-	EnglishAuxiliaryTypoPartialSelectionSchema,
 	EnglishAuxiliaryTypoVariantSelectionSchema,
 } from "./auxiliary/english-auxiliary-bundle";
 import {
 	EnglishCoordinatingConjunctionInflectionSelectionSchema,
 	EnglishCoordinatingConjunctionLemmaSchema,
 	EnglishCoordinatingConjunctionLemmaSelectionSchema,
-	EnglishCoordinatingConjunctionStandardPartialSelectionSchema,
 	EnglishCoordinatingConjunctionStandardVariantSelectionSchema,
 	EnglishCoordinatingConjunctionTypoInflectionSelectionSchema,
 	EnglishCoordinatingConjunctionTypoLemmaSelectionSchema,
-	EnglishCoordinatingConjunctionTypoPartialSelectionSchema,
 	EnglishCoordinatingConjunctionTypoVariantSelectionSchema,
 } from "./coordinating-conjunction/english-coordinating-conjunction-bundle";
 import {
 	EnglishDeterminerInflectionSelectionSchema,
 	EnglishDeterminerLemmaSchema,
 	EnglishDeterminerLemmaSelectionSchema,
-	EnglishDeterminerStandardPartialSelectionSchema,
 	EnglishDeterminerStandardVariantSelectionSchema,
 	EnglishDeterminerTypoInflectionSelectionSchema,
 	EnglishDeterminerTypoLemmaSelectionSchema,
-	EnglishDeterminerTypoPartialSelectionSchema,
 	EnglishDeterminerTypoVariantSelectionSchema,
 } from "./determiner/english-determiner-bundle";
 import {
 	EnglishInterjectionInflectionSelectionSchema,
 	EnglishInterjectionLemmaSchema,
 	EnglishInterjectionLemmaSelectionSchema,
-	EnglishInterjectionStandardPartialSelectionSchema,
 	EnglishInterjectionStandardVariantSelectionSchema,
 	EnglishInterjectionTypoInflectionSelectionSchema,
 	EnglishInterjectionTypoLemmaSelectionSchema,
-	EnglishInterjectionTypoPartialSelectionSchema,
 	EnglishInterjectionTypoVariantSelectionSchema,
 } from "./interjection/english-interjection-bundle";
 import {
 	EnglishNounInflectionSelectionSchema,
 	EnglishNounLemmaSchema,
 	EnglishNounLemmaSelectionSchema,
-	EnglishNounStandardPartialSelectionSchema,
 	EnglishNounStandardVariantSelectionSchema,
 	EnglishNounTypoInflectionSelectionSchema,
 	EnglishNounTypoLemmaSelectionSchema,
-	EnglishNounTypoPartialSelectionSchema,
 	EnglishNounTypoVariantSelectionSchema,
 } from "./noun/english-noun-bundle";
 import {
 	EnglishNumeralInflectionSelectionSchema,
 	EnglishNumeralLemmaSchema,
 	EnglishNumeralLemmaSelectionSchema,
-	EnglishNumeralStandardPartialSelectionSchema,
 	EnglishNumeralStandardVariantSelectionSchema,
 	EnglishNumeralTypoInflectionSelectionSchema,
 	EnglishNumeralTypoLemmaSelectionSchema,
-	EnglishNumeralTypoPartialSelectionSchema,
 	EnglishNumeralTypoVariantSelectionSchema,
 } from "./numeral/english-numeral-bundle";
 import {
 	EnglishOtherInflectionSelectionSchema,
 	EnglishOtherLemmaSchema,
 	EnglishOtherLemmaSelectionSchema,
-	EnglishOtherStandardPartialSelectionSchema,
 	EnglishOtherStandardVariantSelectionSchema,
 	EnglishOtherTypoInflectionSelectionSchema,
 	EnglishOtherTypoLemmaSelectionSchema,
-	EnglishOtherTypoPartialSelectionSchema,
 	EnglishOtherTypoVariantSelectionSchema,
 } from "./other/english-other-bundle";
 import {
 	EnglishParticleInflectionSelectionSchema,
 	EnglishParticleLemmaSchema,
 	EnglishParticleLemmaSelectionSchema,
-	EnglishParticleStandardPartialSelectionSchema,
 	EnglishParticleStandardVariantSelectionSchema,
 	EnglishParticleTypoInflectionSelectionSchema,
 	EnglishParticleTypoLemmaSelectionSchema,
-	EnglishParticleTypoPartialSelectionSchema,
 	EnglishParticleTypoVariantSelectionSchema,
 } from "./particle/english-particle-bundle";
 import {
 	EnglishPronounInflectionSelectionSchema,
 	EnglishPronounLemmaSchema,
 	EnglishPronounLemmaSelectionSchema,
-	EnglishPronounStandardPartialSelectionSchema,
 	EnglishPronounStandardVariantSelectionSchema,
 	EnglishPronounTypoInflectionSelectionSchema,
 	EnglishPronounTypoLemmaSelectionSchema,
-	EnglishPronounTypoPartialSelectionSchema,
 	EnglishPronounTypoVariantSelectionSchema,
 } from "./pronoun/english-pronoun-bundle";
 import {
 	EnglishProperNounInflectionSelectionSchema,
 	EnglishProperNounLemmaSchema,
 	EnglishProperNounLemmaSelectionSchema,
-	EnglishProperNounStandardPartialSelectionSchema,
 	EnglishProperNounStandardVariantSelectionSchema,
 	EnglishProperNounTypoInflectionSelectionSchema,
 	EnglishProperNounTypoLemmaSelectionSchema,
-	EnglishProperNounTypoPartialSelectionSchema,
 	EnglishProperNounTypoVariantSelectionSchema,
 } from "./proper-noun/english-proper-noun-bundle";
 import {
 	EnglishPunctuationInflectionSelectionSchema,
 	EnglishPunctuationLemmaSchema,
 	EnglishPunctuationLemmaSelectionSchema,
-	EnglishPunctuationStandardPartialSelectionSchema,
 	EnglishPunctuationStandardVariantSelectionSchema,
 	EnglishPunctuationTypoInflectionSelectionSchema,
 	EnglishPunctuationTypoLemmaSelectionSchema,
-	EnglishPunctuationTypoPartialSelectionSchema,
 	EnglishPunctuationTypoVariantSelectionSchema,
 } from "./punctuation/english-punctuation-bundle";
 import {
 	EnglishSubordinatingConjunctionInflectionSelectionSchema,
 	EnglishSubordinatingConjunctionLemmaSchema,
 	EnglishSubordinatingConjunctionLemmaSelectionSchema,
-	EnglishSubordinatingConjunctionStandardPartialSelectionSchema,
 	EnglishSubordinatingConjunctionStandardVariantSelectionSchema,
 	EnglishSubordinatingConjunctionTypoInflectionSelectionSchema,
 	EnglishSubordinatingConjunctionTypoLemmaSelectionSchema,
-	EnglishSubordinatingConjunctionTypoPartialSelectionSchema,
 	EnglishSubordinatingConjunctionTypoVariantSelectionSchema,
 } from "./subordinating-conjunction/english-subordinating-conjunction-bundle";
 import {
 	EnglishSymbolInflectionSelectionSchema,
 	EnglishSymbolLemmaSchema,
 	EnglishSymbolLemmaSelectionSchema,
-	EnglishSymbolStandardPartialSelectionSchema,
 	EnglishSymbolStandardVariantSelectionSchema,
 	EnglishSymbolTypoInflectionSelectionSchema,
 	EnglishSymbolTypoLemmaSelectionSchema,
-	EnglishSymbolTypoPartialSelectionSchema,
 	EnglishSymbolTypoVariantSelectionSchema,
 } from "./symbol/english-symbol-bundle";
 import {
 	EnglishVerbInflectionSelectionSchema,
 	EnglishVerbLemmaSchema,
 	EnglishVerbLemmaSelectionSchema,
-	EnglishVerbStandardPartialSelectionSchema,
 	EnglishVerbStandardVariantSelectionSchema,
 	EnglishVerbTypoInflectionSelectionSchema,
 	EnglishVerbTypoLemmaSelectionSchema,
-	EnglishVerbTypoPartialSelectionSchema,
 	EnglishVerbTypoVariantSelectionSchema,
 } from "./verb/english-verb-bundle";
 
@@ -250,25 +216,6 @@ export const EnglishStandardLemmaLexemeSelectionSchemas = {
 	X: EnglishOtherLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Standard"]["Lemma"]["Lexeme"];
 
-export const EnglishStandardPartialLexemeSelectionSchemas = {
-	ADJ: EnglishAdjectiveStandardPartialSelectionSchema,
-	ADP: EnglishAdpositionStandardPartialSelectionSchema,
-	ADV: EnglishAdverbStandardPartialSelectionSchema,
-	AUX: EnglishAuxiliaryStandardPartialSelectionSchema,
-	CCONJ: EnglishCoordinatingConjunctionStandardPartialSelectionSchema,
-	DET: EnglishDeterminerStandardPartialSelectionSchema,
-	INTJ: EnglishInterjectionStandardPartialSelectionSchema,
-	NOUN: EnglishNounStandardPartialSelectionSchema,
-	NUM: EnglishNumeralStandardPartialSelectionSchema,
-	PART: EnglishParticleStandardPartialSelectionSchema,
-	PRON: EnglishPronounStandardPartialSelectionSchema,
-	PROPN: EnglishProperNounStandardPartialSelectionSchema,
-	PUNCT: EnglishPunctuationStandardPartialSelectionSchema,
-	SCONJ: EnglishSubordinatingConjunctionStandardPartialSelectionSchema,
-	SYM: EnglishSymbolStandardPartialSelectionSchema,
-	VERB: EnglishVerbStandardPartialSelectionSchema,
-	X: EnglishOtherStandardPartialSelectionSchema,
-} satisfies SelectionSchemaLanguageShape["Standard"]["Partial"]["Lexeme"];
 
 export const EnglishStandardVariantLexemeSelectionSchemas = {
 	ADJ: EnglishAdjectiveStandardVariantSelectionSchema,
@@ -330,25 +277,6 @@ export const EnglishTypoLemmaLexemeSelectionSchemas = {
 	X: EnglishOtherTypoLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Typo"]["Lemma"]["Lexeme"];
 
-export const EnglishTypoPartialLexemeSelectionSchemas = {
-	ADJ: EnglishAdjectiveTypoPartialSelectionSchema,
-	ADP: EnglishAdpositionTypoPartialSelectionSchema,
-	ADV: EnglishAdverbTypoPartialSelectionSchema,
-	AUX: EnglishAuxiliaryTypoPartialSelectionSchema,
-	CCONJ: EnglishCoordinatingConjunctionTypoPartialSelectionSchema,
-	DET: EnglishDeterminerTypoPartialSelectionSchema,
-	INTJ: EnglishInterjectionTypoPartialSelectionSchema,
-	NOUN: EnglishNounTypoPartialSelectionSchema,
-	NUM: EnglishNumeralTypoPartialSelectionSchema,
-	PART: EnglishParticleTypoPartialSelectionSchema,
-	PRON: EnglishPronounTypoPartialSelectionSchema,
-	PROPN: EnglishProperNounTypoPartialSelectionSchema,
-	PUNCT: EnglishPunctuationTypoPartialSelectionSchema,
-	SCONJ: EnglishSubordinatingConjunctionTypoPartialSelectionSchema,
-	SYM: EnglishSymbolTypoPartialSelectionSchema,
-	VERB: EnglishVerbTypoPartialSelectionSchema,
-	X: EnglishOtherTypoPartialSelectionSchema,
-} satisfies SelectionSchemaLanguageShape["Typo"]["Partial"]["Lexeme"];
 
 export const EnglishTypoVariantLexemeSelectionSchemas = {
 	ADJ: EnglishAdjectiveTypoVariantSelectionSchema,

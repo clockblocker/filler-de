@@ -25,7 +25,7 @@ type KnownOrthographicStatus = Exclude<
 
 function getLexemeSelectionSchema(
 	orthographicStatus: KnownOrthographicStatus,
-	surfaceKind: "Lemma" | "Inflection" | "Variant" | "Partial",
+	surfaceKind: "Lemma" | "Inflection" | "Variant",
 	discriminator: ResolveSelectionPromptOutput["discriminator"],
 ): z.ZodTypeAny | null {
 	if (typeof discriminator !== "string") {
@@ -108,6 +108,7 @@ function toResolvedSelection(
 				output.contextWithLinkedParts ?? attestation,
 			language: "German",
 			orthographicStatus: "Unknown",
+			spelledSelection: selection,
 		};
 	}
 
@@ -117,13 +118,18 @@ function toResolvedSelection(
 
 	const orthographicStatus = (output.orthographicStatus ??
 		"Standard") as KnownOrthographicStatus;
+	const surfaceKind =
+		output.surfaceKind === "Partial" ? "Lemma" : output.surfaceKind;
+	const normalizedFullSurface =
+		output.surfaceKind === "Partial" ? output.spelledLemma : selection;
 	const base = {
 		contextWithLinkedParts: output.contextWithLinkedParts ?? attestation,
 		language: "German" as const,
 		orthographicStatus,
+		spelledSelection: selection,
 		surface: {
-			spelledSurface: selection,
-			surfaceKind: output.surfaceKind,
+			normalizedFullSurface,
+			surfaceKind,
 		},
 	};
 
@@ -143,14 +149,14 @@ function toResolvedSelection(
 					language: "German" as const,
 					lemmaKind: "Lexeme" as const,
 					pos: output.discriminator,
-					spelledLemma: output.spelledLemma,
+					canonicalLemma: output.spelledLemma,
 				},
 			},
 		};
 
 		const schema = getLexemeSelectionSchema(
 			orthographicStatus,
-			output.surfaceKind,
+			surfaceKind,
 			output.discriminator,
 		);
 		if (!schema) {
@@ -162,7 +168,7 @@ function toResolvedSelection(
 	}
 
 	if (output.lemmaKind === "Phraseme") {
-		if (!output.discriminator || output.surfaceKind !== "Lemma") {
+		if (!output.discriminator || surfaceKind !== "Lemma") {
 			return null;
 		}
 
@@ -174,7 +180,7 @@ function toResolvedSelection(
 					language: "German" as const,
 					lemmaKind: "Phraseme" as const,
 					phrasemeKind: output.discriminator,
-					spelledLemma: output.spelledLemma,
+					canonicalLemma: output.spelledLemma,
 				},
 			},
 		};

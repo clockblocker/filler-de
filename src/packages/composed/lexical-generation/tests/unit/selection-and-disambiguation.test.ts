@@ -176,6 +176,7 @@ describe("lexical-generation-next selection/disambiguation", () => {
 			selection: {
 				language: "German",
 				orthographicStatus: "Unknown",
+				spelledSelection: "???",
 			},
 		});
 

@@ -6,187 +6,153 @@ import {
 	GermanAdjectiveInflectionSelectionSchema,
 	GermanAdjectiveLemmaSchema,
 	GermanAdjectiveLemmaSelectionSchema,
-	GermanAdjectiveStandardPartialSelectionSchema,
 	GermanAdjectiveStandardVariantSelectionSchema,
 	GermanAdjectiveTypoInflectionSelectionSchema,
 	GermanAdjectiveTypoLemmaSelectionSchema,
-	GermanAdjectiveTypoPartialSelectionSchema,
 	GermanAdjectiveTypoVariantSelectionSchema,
 } from "./adjective/german-adjective-bundle";
 import {
 	GermanAdpositionInflectionSelectionSchema,
 	GermanAdpositionLemmaSchema,
 	GermanAdpositionLemmaSelectionSchema,
-	GermanAdpositionStandardPartialSelectionSchema,
 	GermanAdpositionStandardVariantSelectionSchema,
 	GermanAdpositionTypoInflectionSelectionSchema,
 	GermanAdpositionTypoLemmaSelectionSchema,
-	GermanAdpositionTypoPartialSelectionSchema,
 	GermanAdpositionTypoVariantSelectionSchema,
 } from "./adposition/german-adposition-bundle";
 import {
 	GermanAdverbInflectionSelectionSchema,
 	GermanAdverbLemmaSchema,
 	GermanAdverbLemmaSelectionSchema,
-	GermanAdverbStandardPartialSelectionSchema,
 	GermanAdverbStandardVariantSelectionSchema,
 	GermanAdverbTypoInflectionSelectionSchema,
 	GermanAdverbTypoLemmaSelectionSchema,
-	GermanAdverbTypoPartialSelectionSchema,
 	GermanAdverbTypoVariantSelectionSchema,
 } from "./adverb/german-adverb-bundle";
 import {
 	GermanAuxiliaryInflectionSelectionSchema,
 	GermanAuxiliaryLemmaSchema,
 	GermanAuxiliaryLemmaSelectionSchema,
-	GermanAuxiliaryStandardPartialSelectionSchema,
 	GermanAuxiliaryStandardVariantSelectionSchema,
 	GermanAuxiliaryTypoInflectionSelectionSchema,
 	GermanAuxiliaryTypoLemmaSelectionSchema,
-	GermanAuxiliaryTypoPartialSelectionSchema,
 	GermanAuxiliaryTypoVariantSelectionSchema,
 } from "./auxiliary/german-auxiliary-bundle";
 import {
 	GermanCoordinatingConjunctionInflectionSelectionSchema,
 	GermanCoordinatingConjunctionLemmaSchema,
 	GermanCoordinatingConjunctionLemmaSelectionSchema,
-	GermanCoordinatingConjunctionStandardPartialSelectionSchema,
 	GermanCoordinatingConjunctionStandardVariantSelectionSchema,
 	GermanCoordinatingConjunctionTypoInflectionSelectionSchema,
 	GermanCoordinatingConjunctionTypoLemmaSelectionSchema,
-	GermanCoordinatingConjunctionTypoPartialSelectionSchema,
 	GermanCoordinatingConjunctionTypoVariantSelectionSchema,
 } from "./coordinating-conjunction/german-coordinating-conjunction-bundle";
 import {
 	GermanDeterminerInflectionSelectionSchema,
 	GermanDeterminerLemmaSchema,
 	GermanDeterminerLemmaSelectionSchema,
-	GermanDeterminerStandardPartialSelectionSchema,
 	GermanDeterminerStandardVariantSelectionSchema,
 	GermanDeterminerTypoInflectionSelectionSchema,
 	GermanDeterminerTypoLemmaSelectionSchema,
-	GermanDeterminerTypoPartialSelectionSchema,
 	GermanDeterminerTypoVariantSelectionSchema,
 } from "./determiner/german-determiner-bundle";
 import {
 	GermanInterjectionInflectionSelectionSchema,
 	GermanInterjectionLemmaSchema,
 	GermanInterjectionLemmaSelectionSchema,
-	GermanInterjectionStandardPartialSelectionSchema,
 	GermanInterjectionStandardVariantSelectionSchema,
 	GermanInterjectionTypoInflectionSelectionSchema,
 	GermanInterjectionTypoLemmaSelectionSchema,
-	GermanInterjectionTypoPartialSelectionSchema,
 	GermanInterjectionTypoVariantSelectionSchema,
 } from "./interjection/german-interjection-bundle";
 import {
 	GermanNounInflectionSelectionSchema,
 	GermanNounLemmaSchema,
 	GermanNounLemmaSelectionSchema,
-	GermanNounStandardPartialSelectionSchema,
 	GermanNounStandardVariantSelectionSchema,
 	GermanNounTypoInflectionSelectionSchema,
 	GermanNounTypoLemmaSelectionSchema,
-	GermanNounTypoPartialSelectionSchema,
 	GermanNounTypoVariantSelectionSchema,
 } from "./noun/german-noun-bundle";
 import {
 	GermanNumeralInflectionSelectionSchema,
 	GermanNumeralLemmaSchema,
 	GermanNumeralLemmaSelectionSchema,
-	GermanNumeralStandardPartialSelectionSchema,
 	GermanNumeralStandardVariantSelectionSchema,
 	GermanNumeralTypoInflectionSelectionSchema,
 	GermanNumeralTypoLemmaSelectionSchema,
-	GermanNumeralTypoPartialSelectionSchema,
 	GermanNumeralTypoVariantSelectionSchema,
 } from "./numeral/german-numeral-bundle";
 import {
 	GermanOtherInflectionSelectionSchema,
 	GermanOtherLemmaSchema,
 	GermanOtherLemmaSelectionSchema,
-	GermanOtherStandardPartialSelectionSchema,
 	GermanOtherStandardVariantSelectionSchema,
 	GermanOtherTypoInflectionSelectionSchema,
 	GermanOtherTypoLemmaSelectionSchema,
-	GermanOtherTypoPartialSelectionSchema,
 	GermanOtherTypoVariantSelectionSchema,
 } from "./other/german-other-bundle";
 import {
 	GermanParticleInflectionSelectionSchema,
 	GermanParticleLemmaSchema,
 	GermanParticleLemmaSelectionSchema,
-	GermanParticleStandardPartialSelectionSchema,
 	GermanParticleStandardVariantSelectionSchema,
 	GermanParticleTypoInflectionSelectionSchema,
 	GermanParticleTypoLemmaSelectionSchema,
-	GermanParticleTypoPartialSelectionSchema,
 	GermanParticleTypoVariantSelectionSchema,
 } from "./particle/german-particle-bundle";
 import {
 	GermanPronounInflectionSelectionSchema,
 	GermanPronounLemmaSchema,
 	GermanPronounLemmaSelectionSchema,
-	GermanPronounStandardPartialSelectionSchema,
 	GermanPronounStandardVariantSelectionSchema,
 	GermanPronounTypoInflectionSelectionSchema,
 	GermanPronounTypoLemmaSelectionSchema,
-	GermanPronounTypoPartialSelectionSchema,
 	GermanPronounTypoVariantSelectionSchema,
 } from "./pronoun/german-pronoun-bundle";
 import {
 	GermanProperNounInflectionSelectionSchema,
 	GermanProperNounLemmaSchema,
 	GermanProperNounLemmaSelectionSchema,
-	GermanProperNounStandardPartialSelectionSchema,
 	GermanProperNounStandardVariantSelectionSchema,
 	GermanProperNounTypoInflectionSelectionSchema,
 	GermanProperNounTypoLemmaSelectionSchema,
-	GermanProperNounTypoPartialSelectionSchema,
 	GermanProperNounTypoVariantSelectionSchema,
 } from "./proper-noun/german-proper-noun-bundle";
 import {
 	GermanPunctuationInflectionSelectionSchema,
 	GermanPunctuationLemmaSchema,
 	GermanPunctuationLemmaSelectionSchema,
-	GermanPunctuationStandardPartialSelectionSchema,
 	GermanPunctuationStandardVariantSelectionSchema,
 	GermanPunctuationTypoInflectionSelectionSchema,
 	GermanPunctuationTypoLemmaSelectionSchema,
-	GermanPunctuationTypoPartialSelectionSchema,
 	GermanPunctuationTypoVariantSelectionSchema,
 } from "./punctuation/german-punctuation-bundle";
 import {
 	GermanSubordinatingConjunctionInflectionSelectionSchema,
 	GermanSubordinatingConjunctionLemmaSchema,
 	GermanSubordinatingConjunctionLemmaSelectionSchema,
-	GermanSubordinatingConjunctionStandardPartialSelectionSchema,
 	GermanSubordinatingConjunctionStandardVariantSelectionSchema,
 	GermanSubordinatingConjunctionTypoInflectionSelectionSchema,
 	GermanSubordinatingConjunctionTypoLemmaSelectionSchema,
-	GermanSubordinatingConjunctionTypoPartialSelectionSchema,
 	GermanSubordinatingConjunctionTypoVariantSelectionSchema,
 } from "./subordinating-conjunction/german-subordinating-conjunction-bundle";
 import {
 	GermanSymbolInflectionSelectionSchema,
 	GermanSymbolLemmaSchema,
 	GermanSymbolLemmaSelectionSchema,
-	GermanSymbolStandardPartialSelectionSchema,
 	GermanSymbolStandardVariantSelectionSchema,
 	GermanSymbolTypoInflectionSelectionSchema,
 	GermanSymbolTypoLemmaSelectionSchema,
-	GermanSymbolTypoPartialSelectionSchema,
 	GermanSymbolTypoVariantSelectionSchema,
 } from "./symbol/german-symbol-bundle";
 import {
 	GermanVerbInflectionSelectionSchema,
 	GermanVerbLemmaSchema,
 	GermanVerbLemmaSelectionSchema,
-	GermanVerbStandardPartialSelectionSchema,
 	GermanVerbStandardVariantSelectionSchema,
 	GermanVerbTypoInflectionSelectionSchema,
 	GermanVerbTypoLemmaSelectionSchema,
-	GermanVerbTypoPartialSelectionSchema,
 	GermanVerbTypoVariantSelectionSchema,
 } from "./verb/german-verb-bundle";
 
@@ -250,25 +216,6 @@ export const GermanStandardLemmaLexemeSelectionSchemas = {
 	X: GermanOtherLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Standard"]["Lemma"]["Lexeme"];
 
-export const GermanStandardPartialLexemeSelectionSchemas = {
-	ADJ: GermanAdjectiveStandardPartialSelectionSchema,
-	ADP: GermanAdpositionStandardPartialSelectionSchema,
-	ADV: GermanAdverbStandardPartialSelectionSchema,
-	AUX: GermanAuxiliaryStandardPartialSelectionSchema,
-	CCONJ: GermanCoordinatingConjunctionStandardPartialSelectionSchema,
-	DET: GermanDeterminerStandardPartialSelectionSchema,
-	INTJ: GermanInterjectionStandardPartialSelectionSchema,
-	NOUN: GermanNounStandardPartialSelectionSchema,
-	NUM: GermanNumeralStandardPartialSelectionSchema,
-	PART: GermanParticleStandardPartialSelectionSchema,
-	PRON: GermanPronounStandardPartialSelectionSchema,
-	PROPN: GermanProperNounStandardPartialSelectionSchema,
-	PUNCT: GermanPunctuationStandardPartialSelectionSchema,
-	SCONJ: GermanSubordinatingConjunctionStandardPartialSelectionSchema,
-	SYM: GermanSymbolStandardPartialSelectionSchema,
-	VERB: GermanVerbStandardPartialSelectionSchema,
-	X: GermanOtherStandardPartialSelectionSchema,
-} satisfies SelectionSchemaLanguageShape["Standard"]["Partial"]["Lexeme"];
 
 export const GermanStandardVariantLexemeSelectionSchemas = {
 	ADJ: GermanAdjectiveStandardVariantSelectionSchema,
@@ -330,25 +277,6 @@ export const GermanTypoLemmaLexemeSelectionSchemas = {
 	X: GermanOtherTypoLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Typo"]["Lemma"]["Lexeme"];
 
-export const GermanTypoPartialLexemeSelectionSchemas = {
-	ADJ: GermanAdjectiveTypoPartialSelectionSchema,
-	ADP: GermanAdpositionTypoPartialSelectionSchema,
-	ADV: GermanAdverbTypoPartialSelectionSchema,
-	AUX: GermanAuxiliaryTypoPartialSelectionSchema,
-	CCONJ: GermanCoordinatingConjunctionTypoPartialSelectionSchema,
-	DET: GermanDeterminerTypoPartialSelectionSchema,
-	INTJ: GermanInterjectionTypoPartialSelectionSchema,
-	NOUN: GermanNounTypoPartialSelectionSchema,
-	NUM: GermanNumeralTypoPartialSelectionSchema,
-	PART: GermanParticleTypoPartialSelectionSchema,
-	PRON: GermanPronounTypoPartialSelectionSchema,
-	PROPN: GermanProperNounTypoPartialSelectionSchema,
-	PUNCT: GermanPunctuationTypoPartialSelectionSchema,
-	SCONJ: GermanSubordinatingConjunctionTypoPartialSelectionSchema,
-	SYM: GermanSymbolTypoPartialSelectionSchema,
-	VERB: GermanVerbTypoPartialSelectionSchema,
-	X: GermanOtherTypoPartialSelectionSchema,
-} satisfies SelectionSchemaLanguageShape["Typo"]["Partial"]["Lexeme"];
 
 export const GermanTypoVariantLexemeSelectionSchemas = {
 	ADJ: GermanAdjectiveTypoVariantSelectionSchema,

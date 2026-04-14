@@ -10,7 +10,6 @@ import type { LemmaDiscriminatorFor } from "./universal/lemma-discriminator";
 type SupportedSelectionLemmaKindsBySurface = {
 	Inflection: "Lexeme";
 	Lemma: LemmaKind;
-	Partial: "Lexeme" | "Phraseme";
 	Variant: "Lexeme";
 };
 

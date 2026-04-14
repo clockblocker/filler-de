@@ -23,14 +23,14 @@ import {
 	EnglishVerbLemmaSchema,
 } from "../src/lu/english/lu/lexeme/verb/english-verb-bundle";
 
-function lexemeSurface(pos: string, spelledLemma: string) {
+function lexemeSurface(pos: string, canonicalLemma: string) {
 	return {
 		discriminators: {
 			lemmaKind: "Lexeme" as const,
 			lemmaSubKind: pos,
 		},
 		target: {
-			spelledLemma,
+			canonicalLemma,
 		},
 	};
 }
@@ -41,12 +41,13 @@ describe("English schema specificity", () => {
 			EnglishAdjectiveInflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				spelledSelection: "smaller",
 				surface: {
 					...lexemeSurface("ADJ", "small"),
 					inflectionalFeatures: {
 						degree: "Cmp",
 					},
-					spelledSurface: "smaller",
+					normalizedFullSurface: "smaller",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -56,12 +57,13 @@ describe("English schema specificity", () => {
 			EnglishAdjectiveInflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				spelledSelection: "small",
 				surface: {
 					...lexemeSurface("ADJ", "small"),
 					inflectionalFeatures: {
 						case: "Dat",
 					},
-					spelledSurface: "small",
+					normalizedFullSurface: "small",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -71,12 +73,13 @@ describe("English schema specificity", () => {
 			EnglishAdpositionInflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				spelledSelection: "to",
 				surface: {
 					...lexemeSurface("ADP", "to"),
 					inflectionalFeatures: {
 						case: "Acc",
 					},
-					spelledSurface: "to",
+					normalizedFullSurface: "to",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -88,13 +91,14 @@ describe("English schema specificity", () => {
 			EnglishNounInflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				spelledSelection: "dog's",
 				surface: {
 					...lexemeSurface("NOUN", "dog"),
 					inflectionalFeatures: {
 						case: "Gen",
 						number: "Sing",
 					},
-					spelledSurface: "dog's",
+					normalizedFullSurface: "dog's",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -104,12 +108,13 @@ describe("English schema specificity", () => {
 			EnglishNounInflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				spelledSelection: "dog",
 				surface: {
 					...lexemeSurface("NOUN", "dog"),
 					inflectionalFeatures: {
 						case: "Dat",
 					},
-					spelledSurface: "dog",
+					normalizedFullSurface: "dog",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -119,12 +124,13 @@ describe("English schema specificity", () => {
 			EnglishProperNounInflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				spelledSelection: "Anna",
 				surface: {
 					...lexemeSurface("PROPN", "Anna"),
 					inflectionalFeatures: {
 						case: "Nom",
 					},
-					spelledSurface: "Anna",
+					normalizedFullSurface: "Anna",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -132,25 +138,25 @@ describe("English schema specificity", () => {
 
 		expect(
 			EnglishNounLemmaSchema.safeParse({
+				canonicalLemma: "dog",
 				inherentFeatures: {
 					gender: "Masc",
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
 				pos: "NOUN",
-				spelledLemma: "dog",
 			}).success,
 		).toBe(false);
 
 		expect(
 			EnglishProperNounLemmaSchema.safeParse({
+				canonicalLemma: "Anna",
 				inherentFeatures: {
 					gender: "Fem",
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
 				pos: "PROPN",
-				spelledLemma: "Anna",
 			}).success,
 		).toBe(false);
 	});
@@ -160,12 +166,13 @@ describe("English schema specificity", () => {
 			EnglishVerbInflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				spelledSelection: "washed",
 				surface: {
 					...lexemeSurface("VERB", "wash"),
 					inflectionalFeatures: {
 						gender: "Neut",
 					},
-					spelledSurface: "washed",
+					normalizedFullSurface: "washed",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -175,12 +182,13 @@ describe("English schema specificity", () => {
 			EnglishAuxiliaryInflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				spelledSelection: "is",
 				surface: {
 					...lexemeSurface("AUX", "be"),
 					inflectionalFeatures: {
 						gender: "Fem",
 					},
-					spelledSurface: "is",
+					normalizedFullSurface: "is",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -188,6 +196,7 @@ describe("English schema specificity", () => {
 
 		expect(
 			EnglishVerbLemmaSchema.safeParse({
+				canonicalLemma: "look",
 				inherentFeatures: {
 					governedPreposition: "to",
 					isPhrasal: true,
@@ -195,43 +204,42 @@ describe("English schema specificity", () => {
 				language: "English",
 				lemmaKind: "Lexeme",
 				pos: "VERB",
-				spelledLemma: "look",
 			}).success,
 		).toBe(true);
 
 		expect(
 			EnglishVerbLemmaSchema.safeParse({
+				canonicalLemma: "wash",
 				inherentFeatures: {
 					reflex: true,
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
 				pos: "VERB",
-				spelledLemma: "wash",
 			}).success,
 		).toBe(false);
 
 		expect(
 			EnglishVerbLemmaSchema.safeParse({
+				canonicalLemma: "wash",
 				inherentFeatures: {
 					separable: true,
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
 				pos: "VERB",
-				spelledLemma: "wash",
 			}).success,
 		).toBe(false);
 
 		expect(
 			EnglishVerbLemmaSchema.safeParse({
+				canonicalLemma: "look",
 				inherentFeatures: {
 					governedPreposition: "",
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
 				pos: "VERB",
-				spelledLemma: "look",
 			}).success,
 		).toBe(false);
 	});
@@ -241,12 +249,13 @@ describe("English schema specificity", () => {
 			EnglishPronounInflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				spelledSelection: "him",
 				surface: {
 					...lexemeSurface("PRON", "him"),
 					inflectionalFeatures: {
 						case: "Acc",
 					},
-					spelledSurface: "him",
+					normalizedFullSurface: "him",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -256,12 +265,13 @@ describe("English schema specificity", () => {
 			EnglishPronounInflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				spelledSelection: "him",
 				surface: {
 					...lexemeSurface("PRON", "him"),
 					inflectionalFeatures: {
 						case: "Dat",
 					},
-					spelledSurface: "him",
+					normalizedFullSurface: "him",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -269,25 +279,25 @@ describe("English schema specificity", () => {
 
 		expect(
 			EnglishPronounLemmaSchema.safeParse({
+				canonicalLemma: "him",
 				inherentFeatures: {
 					polite: "Form",
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
 				pos: "PRON",
-				spelledLemma: "him",
 			}).success,
 		).toBe(false);
 
 		expect(
 			EnglishDeterminerLemmaSchema.safeParse({
+				canonicalLemma: "this",
 				inherentFeatures: {
 					polite: "Form",
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
 				pos: "DET",
-				spelledLemma: "this",
 			}).success,
 		).toBe(false);
 
@@ -295,12 +305,13 @@ describe("English schema specificity", () => {
 			EnglishDeterminerInflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				spelledSelection: "this",
 				surface: {
 					...lexemeSurface("DET", "this"),
 					inflectionalFeatures: {
 						case: "Gen",
 					},
-					spelledSurface: "this",
+					normalizedFullSurface: "this",
 					surfaceKind: "Inflection",
 				},
 			}).success,

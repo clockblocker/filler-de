@@ -1,9 +1,9 @@
 import z from "zod/v3";
 import type { AbstractLemma } from "../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
-import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
+import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import {
 	EnglishNounInflectionalFeaturesSchema,
 	EnglishNounInherentFeaturesSchema,
@@ -20,7 +20,7 @@ export const EnglishNounLemmaSchema = z.object({
 	lemmaKind: z.literal("Lexeme"),
 	language: z.literal("English"),
 	pos: z.literal("NOUN"),
-	spelledLemma: z.string(),
+	canonicalLemma: z.string(),
 }) satisfies z.ZodType<AbstractLemma<"Lexeme", "NOUN">>;
 
 export const EnglishNounInflectionSelectionSchema = buildInflectionSelection({
@@ -38,15 +38,6 @@ export const EnglishNounLemmaSelectionSchema = buildLemmaSelection({
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 }) satisfies z.ZodType<
 	AbstractSelectionFor<"Standard", "Lemma", "Lexeme", "NOUN">
->;
-
-export const EnglishNounStandardPartialSelectionSchema = buildLemmaSelection({
-	language: "English",
-	lemmaSchema: EnglishNounLemmaSchema,
-	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
-	surfaceKind: "Partial",
-}) satisfies z.ZodType<
-	AbstractSelectionFor<"Standard", "Partial", "Lexeme", "NOUN">
 >;
 
 export const EnglishNounStandardVariantSelectionSchema = buildLemmaSelection({
@@ -76,16 +67,6 @@ export const EnglishNounTypoLemmaSelectionSchema = buildLemmaSelection({
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 	orthographicStatus: "Typo",
 }) satisfies z.ZodType<AbstractSelectionFor<"Typo", "Lemma", "Lexeme", "NOUN">>;
-
-export const EnglishNounTypoPartialSelectionSchema = buildLemmaSelection({
-	language: "English",
-	lemmaSchema: EnglishNounLemmaSchema,
-	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
-	orthographicStatus: "Typo",
-	surfaceKind: "Partial",
-}) satisfies z.ZodType<
-	AbstractSelectionFor<"Typo", "Partial", "Lexeme", "NOUN">
->;
 
 export const EnglishNounTypoVariantSelectionSchema = buildLemmaSelection({
 	language: "English",

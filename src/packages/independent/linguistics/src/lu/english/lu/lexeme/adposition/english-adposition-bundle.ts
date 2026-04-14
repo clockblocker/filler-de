@@ -20,16 +20,12 @@ export const EnglishAdpositionInflectionSelectionSchema =
 	EnglishAdpositionSchemas.InflectionSelectionSchema;
 export const EnglishAdpositionLemmaSelectionSchema =
 	EnglishAdpositionSchemas.LemmaSelectionSchema;
-export const EnglishAdpositionStandardPartialSelectionSchema =
-	EnglishAdpositionSchemas.StandardPartialSelectionSchema;
 export const EnglishAdpositionStandardVariantSelectionSchema =
 	EnglishAdpositionSchemas.StandardVariantSelectionSchema;
 export const EnglishAdpositionTypoInflectionSelectionSchema =
 	EnglishAdpositionSchemas.TypoInflectionSelectionSchema;
 export const EnglishAdpositionTypoLemmaSelectionSchema =
 	EnglishAdpositionSchemas.TypoLemmaSelectionSchema;
-export const EnglishAdpositionTypoPartialSelectionSchema =
-	EnglishAdpositionSchemas.TypoPartialSelectionSchema;
 export const EnglishAdpositionTypoVariantSelectionSchema =
 	EnglishAdpositionSchemas.TypoVariantSelectionSchema;
 export const EnglishAdpositionLemmaSchema = EnglishAdpositionSchemas.LemmaSchema;

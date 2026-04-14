@@ -20,16 +20,12 @@ export const GermanParticleInflectionSelectionSchema =
 	GermanParticleSchemas.InflectionSelectionSchema;
 export const GermanParticleLemmaSelectionSchema =
 	GermanParticleSchemas.LemmaSelectionSchema;
-export const GermanParticleStandardPartialSelectionSchema =
-	GermanParticleSchemas.StandardPartialSelectionSchema;
 export const GermanParticleStandardVariantSelectionSchema =
 	GermanParticleSchemas.StandardVariantSelectionSchema;
 export const GermanParticleTypoInflectionSelectionSchema =
 	GermanParticleSchemas.TypoInflectionSelectionSchema;
 export const GermanParticleTypoLemmaSelectionSchema =
 	GermanParticleSchemas.TypoLemmaSelectionSchema;
-export const GermanParticleTypoPartialSelectionSchema =
-	GermanParticleSchemas.TypoPartialSelectionSchema;
 export const GermanParticleTypoVariantSelectionSchema =
 	GermanParticleSchemas.TypoVariantSelectionSchema;
 export const GermanParticleLemmaSchema = GermanParticleSchemas.LemmaSchema;

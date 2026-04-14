@@ -54,15 +54,16 @@ describe("root exports", () => {
 
 	it("supports ergonomic broad type aliases", () => {
 		const lemma: AnyLemma<"German"> = {
+			canonicalLemma: "Kind",
 			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
-			spelledLemma: "Kind",
 		};
 		const unknownSelection: AnySelection<"German"> = {
 			language: "German",
 			orthographicStatus: "Unknown",
+			spelledSelection: "unknown",
 		} satisfies UnknownSelection;
 
 		expect(lemma.pos).toBe("NOUN");
@@ -71,41 +72,47 @@ describe("root exports", () => {
 
 	it("supports English in the broad type aliases", () => {
 		const lemma: AnyLemma<"English"> = {
+			canonicalLemma: "dog",
 			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
 			language: "English",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
-			spelledLemma: "dog",
 		};
 		const unknownSelection: AnySelection<"English"> = {
 			language: "English",
 			orthographicStatus: "Unknown",
+			spelledSelection: "unknown",
 		} satisfies UnknownSelection;
 
 		expect(lemma.pos).toBe("NOUN");
 		expect(unknownSelection.orthographicStatus).toBe("Unknown");
 	});
 
-	it("supports partial phraseme selections in the broad type aliases", () => {
+	it("supports lemma phraseme selections where the spelled selection is narrower than the full surface", () => {
 		const selection: AnySelection<"English"> = {
 			language: "English",
 			orthographicStatus: "Standard",
+			spelledSelection: "walk",
 			surface: {
 				discriminators: {
 					lemmaKind: "Phraseme",
 					lemmaSubKind: "Cliché",
 				},
-				spelledSurface: "walk",
-				surfaceKind: "Partial",
+				normalizedFullSurface: "a walk in the park",
+				surfaceKind: "Lemma",
 				target: {
-					spelledLemma: "a walk in the park",
+					canonicalLemma: "a walk in the park",
 				},
 			},
 		};
 
+		if (!("surface" in selection)) {
+			throw new Error("expected known selection");
+		}
+
 		expect(selection.surface.discriminators.lemmaKind).toBe("Phraseme");
 		expect(
-			SelectionSchema.English.Standard.Partial.Phraseme.Cliché.safeParse(
+			SelectionSchema.English.Standard.Lemma.Phraseme.Cliché.safeParse(
 				selection,
 			).success,
 		).toBe(true);

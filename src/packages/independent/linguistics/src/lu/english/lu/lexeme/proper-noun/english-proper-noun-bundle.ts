@@ -20,16 +20,12 @@ export const EnglishProperNounInflectionSelectionSchema =
 	EnglishProperNounSchemas.InflectionSelectionSchema;
 export const EnglishProperNounLemmaSelectionSchema =
 	EnglishProperNounSchemas.LemmaSelectionSchema;
-export const EnglishProperNounStandardPartialSelectionSchema =
-	EnglishProperNounSchemas.StandardPartialSelectionSchema;
 export const EnglishProperNounStandardVariantSelectionSchema =
 	EnglishProperNounSchemas.StandardVariantSelectionSchema;
 export const EnglishProperNounTypoInflectionSelectionSchema =
 	EnglishProperNounSchemas.TypoInflectionSelectionSchema;
 export const EnglishProperNounTypoLemmaSelectionSchema =
 	EnglishProperNounSchemas.TypoLemmaSelectionSchema;
-export const EnglishProperNounTypoPartialSelectionSchema =
-	EnglishProperNounSchemas.TypoPartialSelectionSchema;
 export const EnglishProperNounTypoVariantSelectionSchema =
 	EnglishProperNounSchemas.TypoVariantSelectionSchema;
 export const EnglishProperNounLemmaSchema = EnglishProperNounSchemas.LemmaSchema;

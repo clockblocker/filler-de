@@ -14,9 +14,6 @@ type GermanLexemeBundle<P extends Pos> = {
 	LemmaSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Standard", "Lemma", "Lexeme", P>
 	>;
-	StandardPartialSelectionSchema: z.ZodType<
-		AbstractSelectionFor<"Standard", "Partial", "Lexeme", P>
-	>;
 	StandardVariantSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Standard", "Variant", "Lexeme", P>
 	>;
@@ -25,9 +22,6 @@ type GermanLexemeBundle<P extends Pos> = {
 	>;
 	TypoLemmaSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Typo", "Lemma", "Lexeme", P>
-	>;
-	TypoPartialSelectionSchema: z.ZodType<
-		AbstractSelectionFor<"Typo", "Partial", "Lexeme", P>
 	>;
 	TypoVariantSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Typo", "Variant", "Lexeme", P>
@@ -61,7 +55,7 @@ export function buildGermanLexemeBundle<
 		lemmaKind: z.literal("Lexeme"),
 		meaningInEmojis: MeaningInEmojisSchema.optional(),
 		pos: z.literal(pos),
-		spelledLemma: z.string(),
+		canonicalLemma: z.string(),
 	}) as unknown as GermanLexemeBundle<P>["LemmaSchema"];
 
 	return {
@@ -77,12 +71,6 @@ export function buildGermanLexemeBundle<
 			lemmaIdentityShape,
 			lemmaSchema,
 		}) as unknown as GermanLexemeBundle<P>["LemmaSelectionSchema"],
-		StandardPartialSelectionSchema: buildLemmaSelection({
-			language: "German",
-			lemmaIdentityShape,
-			lemmaSchema,
-			surfaceKind: "Partial",
-		}) as unknown as GermanLexemeBundle<P>["StandardPartialSelectionSchema"],
 		StandardVariantSelectionSchema: buildLemmaSelection({
 			language: "German",
 			lemmaIdentityShape,
@@ -102,13 +90,6 @@ export function buildGermanLexemeBundle<
 			lemmaSchema,
 			orthographicStatus: "Typo",
 		}) as unknown as GermanLexemeBundle<P>["TypoLemmaSelectionSchema"],
-		TypoPartialSelectionSchema: buildLemmaSelection({
-			language: "German",
-			lemmaIdentityShape,
-			lemmaSchema,
-			orthographicStatus: "Typo",
-			surfaceKind: "Partial",
-		}) as unknown as GermanLexemeBundle<P>["TypoPartialSelectionSchema"],
 		TypoVariantSelectionSchema: buildLemmaSelection({
 			language: "German",
 			lemmaIdentityShape,

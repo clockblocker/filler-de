@@ -20,16 +20,12 @@ export const EnglishAdverbInflectionSelectionSchema =
 	EnglishAdverbSchemas.InflectionSelectionSchema;
 export const EnglishAdverbLemmaSelectionSchema =
 	EnglishAdverbSchemas.LemmaSelectionSchema;
-export const EnglishAdverbStandardPartialSelectionSchema =
-	EnglishAdverbSchemas.StandardPartialSelectionSchema;
 export const EnglishAdverbStandardVariantSelectionSchema =
 	EnglishAdverbSchemas.StandardVariantSelectionSchema;
 export const EnglishAdverbTypoInflectionSelectionSchema =
 	EnglishAdverbSchemas.TypoInflectionSelectionSchema;
 export const EnglishAdverbTypoLemmaSelectionSchema =
 	EnglishAdverbSchemas.TypoLemmaSelectionSchema;
-export const EnglishAdverbTypoPartialSelectionSchema =
-	EnglishAdverbSchemas.TypoPartialSelectionSchema;
 export const EnglishAdverbTypoVariantSelectionSchema =
 	EnglishAdverbSchemas.TypoVariantSelectionSchema;
 export const EnglishAdverbLemmaSchema = EnglishAdverbSchemas.LemmaSchema;

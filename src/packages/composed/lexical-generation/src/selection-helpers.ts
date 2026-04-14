@@ -68,14 +68,14 @@ export function getSpelledLemma(selection: GermanSelection): string | null {
 		return null;
 	}
 
-	return "spelledLemma" in selection.surface.target
-		? selection.surface.target.spelledLemma
-		: selection.surface.target.lemma.spelledLemma;
+	return "lemma" in selection.surface.target
+		? selection.surface.target.lemma.canonicalLemma
+		: selection.surface.target.canonicalLemma;
 }
 
 export function getSpelledSurface(selection: GermanSelection): string | null {
 	return isKnownSelection(selection)
-		? selection.surface.spelledSurface
+		? selection.surface.normalizedFullSurface
 		: null;
 }
 

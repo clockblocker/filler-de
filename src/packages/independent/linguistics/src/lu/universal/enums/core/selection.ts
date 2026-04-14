@@ -26,8 +26,7 @@ export function getReprForOrthographicStatus(
 // -- SurfaceKind --
 
 // Variant is like color vs colour, email vs e-mail.
-// Partial means the selected surface covers only part of a multi-word lemma.
-const surfaceKinds = ["Inflection", "Lemma", "Variant", "Partial"] as const;
+const surfaceKinds = ["Inflection", "Lemma", "Variant"] as const;
 
 export const SurfaceKind = z.enum(surfaceKinds);
 export type SurfaceKind = z.infer<typeof SurfaceKind>;
@@ -35,7 +34,6 @@ export type SurfaceKind = z.infer<typeof SurfaceKind>;
 const reprForSurfaceKind = {
 	Inflection: "inflection",
 	Lemma: "lemma",
-	Partial: "partial",
 	Variant: "variant",
 } as const satisfies Record<SurfaceKind, string>;
 

@@ -25,7 +25,7 @@ type SurfaceTargetFor<
 	LK extends LemmaKind = LemmaKind,
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > =
-	| { spelledLemma: string }
+	| { canonicalLemma: string }
 	| {
 			lemma: AbstractLemma<LK, D>;
 	  };
@@ -38,7 +38,7 @@ type SurfaceFor<
 	? Prettify<
 			{
 				surfaceKind: SK;
-				spelledSurface: string;
+				normalizedFullSurface: string;
 			} & SurfaceFieldsFor<SK> & {
 					discriminators: DiscriminatorsFor<LK, D>;
 					target: SurfaceTargetFor<LK, D>;
@@ -56,6 +56,7 @@ export type AbstractSelectionFor<
 			{
 				language: TargetLanguage;
 				orthographicStatus: OS;
+				spelledSelection: string;
 			} & (OS extends "Unknown"
 				? Record<never, never>
 				: { surface: SurfaceFor<SK, LK, D> })

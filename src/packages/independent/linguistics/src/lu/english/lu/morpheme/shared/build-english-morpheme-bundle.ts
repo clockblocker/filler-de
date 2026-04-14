@@ -31,7 +31,7 @@ export function buildEnglishMorphemeBundle<MK extends MorphemeKind>({
 			lemmaKind: z.literal("Morpheme"),
 			language: z.literal("English"),
 			morphemeKind: z.literal(morphemeKind),
-			spelledLemma: z.string(),
+			canonicalLemma: z.string(),
 		})
 		.strict() as unknown as EnglishMorphemeBundle<MK>["LemmaSchema"];
 

@@ -61,14 +61,14 @@ import {
 	GermanSymbolLemmaSchema,
 } from "../src/lu/german/lu/lexeme/symbol/german-symbol-bundle";
 
-function lexemeSurface(pos: string, spelledLemma: string) {
+function lexemeSurface(pos: string, canonicalLemma: string) {
 	return {
 		discriminators: {
 			lemmaKind: "Lexeme" as const,
 			lemmaSubKind: pos,
 		},
 		target: {
-			spelledLemma,
+			canonicalLemma,
 		},
 	};
 }
@@ -79,6 +79,7 @@ describe("German remaining POS schemas", () => {
 			GermanAdjectiveInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				spelledSelection: "kleiner",
 				surface: {
 					...lexemeSurface("ADJ", "klein"),
 					inflectionalFeatures: {
@@ -87,7 +88,7 @@ describe("German remaining POS schemas", () => {
 						gender: "Fem",
 						number: "Sing",
 					},
-					spelledSurface: "kleiner",
+					normalizedFullSurface: "kleiner",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -97,12 +98,13 @@ describe("German remaining POS schemas", () => {
 			GermanAdpositionInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				spelledSelection: "zur",
 				surface: {
 					...lexemeSurface("ADP", "zu"),
 					inflectionalFeatures: {
 						case: "Dat",
 					},
-					spelledSurface: "zur",
+					normalizedFullSurface: "zur",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -112,6 +114,7 @@ describe("German remaining POS schemas", () => {
 			GermanAuxiliaryInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				spelledSelection: "war",
 				surface: {
 					...lexemeSurface("AUX", "sein"),
 					inflectionalFeatures: {
@@ -121,7 +124,7 @@ describe("German remaining POS schemas", () => {
 						tense: "Past",
 						verbForm: "Fin",
 					},
-					spelledSurface: "war",
+					normalizedFullSurface: "war",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -131,6 +134,7 @@ describe("German remaining POS schemas", () => {
 			GermanDeterminerInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				spelledSelection: "dieser",
 				surface: {
 					...lexemeSurface("DET", "dies"),
 					inflectionalFeatures: {
@@ -138,7 +142,7 @@ describe("German remaining POS schemas", () => {
 						gender: "Masc",
 						number: "Sing",
 					},
-					spelledSurface: "dieser",
+					normalizedFullSurface: "dieser",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -148,6 +152,7 @@ describe("German remaining POS schemas", () => {
 			GermanPronounInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				spelledSelection: "sich",
 				surface: {
 					...lexemeSurface("PRON", "sich"),
 					inflectionalFeatures: {
@@ -155,7 +160,7 @@ describe("German remaining POS schemas", () => {
 						number: "Sing",
 						reflex: true,
 					},
-					spelledSurface: "sich",
+					normalizedFullSurface: "sich",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -165,13 +170,14 @@ describe("German remaining POS schemas", () => {
 			GermanProperNounInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				spelledSelection: "Angelas",
 				surface: {
 					...lexemeSurface("PROPN", "Angela"),
 					inflectionalFeatures: {
 						case: "Gen",
 						number: "Sing",
 					},
-					spelledSurface: "Angelas",
+					normalizedFullSurface: "Angelas",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -181,18 +187,19 @@ describe("German remaining POS schemas", () => {
 	it("accepts lexical feature bundles for the richer POS classes", () => {
 		expect(
 			GermanAdverbLemmaSchema.safeParse({
+				canonicalLemma: "gern",
 				inherentFeatures: {
 					pronType: "Dem",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
 				pos: "ADV",
-				spelledLemma: "gern",
 			}).success,
 		).toBe(true);
 
 		expect(
 			GermanDeterminerLemmaSchema.safeParse({
+				canonicalLemma: "dies",
 				inherentFeatures: {
 					definite: "Def",
 					pronType: "Art",
@@ -200,67 +207,66 @@ describe("German remaining POS schemas", () => {
 				language: "German",
 				lemmaKind: "Lexeme",
 				pos: "DET",
-				spelledLemma: "dies",
 			}).success,
 		).toBe(true);
 
 		expect(
 			GermanNumeralLemmaSchema.safeParse({
+				canonicalLemma: "eins",
 				inherentFeatures: {
 					numType: "Card",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
 				pos: "NUM",
-				spelledLemma: "eins",
 			}).success,
 		).toBe(true);
 
 		expect(
 			GermanParticleLemmaSchema.safeParse({
+				canonicalLemma: "nicht",
 				inherentFeatures: {
 					polarity: "Neg",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
 				pos: "PART",
-				spelledLemma: "nicht",
 			}).success,
 		).toBe(true);
 
 		expect(
 			GermanProperNounLemmaSchema.safeParse({
+				canonicalLemma: "Angela",
 				inherentFeatures: {
 					gender: "Masc",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
 				pos: "PROPN",
-				spelledLemma: "Angela",
 			}).success,
 		).toBe(true);
 
 		expect(
 			GermanSymbolLemmaSchema.safeParse({
+				canonicalLemma: "%",
 				inherentFeatures: {
 					numType: "Range",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
 				pos: "SYM",
-				spelledLemma: "%",
 			}).success,
 		).toBe(true);
 
 		expect(
 			GermanOtherLemmaSchema.safeParse({
+				canonicalLemma: "foobar",
 				inherentFeatures: {
 					foreign: true,
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
 				pos: "X",
-				spelledLemma: "foobar",
 			}).success,
 		).toBe(true);
 	});
@@ -270,10 +276,11 @@ describe("German remaining POS schemas", () => {
 			GermanCoordinatingConjunctionInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				spelledSelection: "und",
 				surface: {
 					...lexemeSurface("CCONJ", "und"),
 					inflectionalFeatures: {},
-					spelledSurface: "und",
+					normalizedFullSurface: "und",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -283,10 +290,11 @@ describe("German remaining POS schemas", () => {
 			GermanInterjectionInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				spelledSelection: "ach",
 				surface: {
 					...lexemeSurface("INTJ", "ach"),
 					inflectionalFeatures: {},
-					spelledSurface: "ach",
+					normalizedFullSurface: "ach",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -296,10 +304,11 @@ describe("German remaining POS schemas", () => {
 			GermanPunctuationInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				spelledSelection: ",",
 				surface: {
 					...lexemeSurface("PUNCT", ","),
 					inflectionalFeatures: {},
-					spelledSurface: ",",
+					normalizedFullSurface: ",",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -309,10 +318,11 @@ describe("German remaining POS schemas", () => {
 			GermanSubordinatingConjunctionInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				spelledSelection: "weil",
 				surface: {
 					...lexemeSurface("SCONJ", "weil"),
 					inflectionalFeatures: {},
-					spelledSurface: "weil",
+					normalizedFullSurface: "weil",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -320,13 +330,13 @@ describe("German remaining POS schemas", () => {
 
 		expect(
 			GermanCoordinatingConjunctionLemmaSchema.safeParse({
+				canonicalLemma: "und",
 				inherentFeatures: {
 					case: "Nom",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
 				pos: "CCONJ",
-				spelledLemma: "und",
 			}).success,
 		).toBe(false);
 	});
@@ -334,13 +344,13 @@ describe("German remaining POS schemas", () => {
 	it("rejects unsupported feature values where subsets matter", () => {
 		expect(
 			GermanAdverbLemmaSchema.safeParse({
+				canonicalLemma: "gern",
 				inherentFeatures: {
 					pronType: "Prs",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
 				pos: "ADV",
-				spelledLemma: "gern",
 			}).success,
 		).toBe(false);
 
@@ -348,12 +358,13 @@ describe("German remaining POS schemas", () => {
 			GermanOtherInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				spelledSelection: "foobar",
 				surface: {
 					...lexemeSurface("X", "foobar"),
 					inflectionalFeatures: {
 						tense: "Past",
 					},
-					spelledSurface: "foobar",
+					normalizedFullSurface: "foobar",
 					surfaceKind: "Inflection",
 				},
 			}).success,

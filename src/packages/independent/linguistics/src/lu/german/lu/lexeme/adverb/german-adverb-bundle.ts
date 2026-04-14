@@ -20,16 +20,12 @@ export const GermanAdverbInflectionSelectionSchema =
 	GermanAdverbSchemas.InflectionSelectionSchema;
 export const GermanAdverbLemmaSelectionSchema =
 	GermanAdverbSchemas.LemmaSelectionSchema;
-export const GermanAdverbStandardPartialSelectionSchema =
-	GermanAdverbSchemas.StandardPartialSelectionSchema;
 export const GermanAdverbStandardVariantSelectionSchema =
 	GermanAdverbSchemas.StandardVariantSelectionSchema;
 export const GermanAdverbTypoInflectionSelectionSchema =
 	GermanAdverbSchemas.TypoInflectionSelectionSchema;
 export const GermanAdverbTypoLemmaSelectionSchema =
 	GermanAdverbSchemas.TypoLemmaSelectionSchema;
-export const GermanAdverbTypoPartialSelectionSchema =
-	GermanAdverbSchemas.TypoPartialSelectionSchema;
 export const GermanAdverbTypoVariantSelectionSchema =
 	GermanAdverbSchemas.TypoVariantSelectionSchema;
 export const GermanAdverbLemmaSchema = GermanAdverbSchemas.LemmaSchema;

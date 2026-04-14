@@ -9,20 +9,20 @@ import {
 import {
 	GermanVerbInflectionSelectionSchema,
 	GermanVerbLemmaSchema,
-	GermanVerbStandardPartialSelectionSchema,
+	GermanVerbLemmaSelectionSchema,
 	GermanVerbTypoInflectionSelectionSchema,
 } from "../src/lu/german/lu/lexeme/verb/german-verb-bundle";
 
 const relationId = (label: string) => `rel:${label}`;
 
-function verbSurface(spelledLemma: string) {
+function verbSurface(canonicalLemma: string) {
 	return {
 		discriminators: {
 			lemmaKind: "Lexeme" as const,
 			lemmaSubKind: "VERB" as const,
 		},
 		target: {
-			spelledLemma,
+			canonicalLemma,
 		},
 	};
 }
@@ -32,6 +32,7 @@ describe("German verb schemas", () => {
 		const result = GermanVerbInflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			spelledSelection: "ging",
 			surface: {
 				...verbSurface("gehen"),
 				inflectionalFeatures: {
@@ -41,7 +42,7 @@ describe("German verb schemas", () => {
 					tense: "Past",
 					verbForm: "Fin",
 				},
-				spelledSurface: "ging",
+				normalizedFullSurface: "ging",
 				surfaceKind: "Inflection",
 			},
 		});
@@ -53,6 +54,7 @@ describe("German verb schemas", () => {
 		const result = GermanVerbInflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			spelledSelection: "gehend",
 			surface: {
 				...verbSurface("gehen"),
 				inflectionalFeatures: {
@@ -62,7 +64,7 @@ describe("German verb schemas", () => {
 					tense: "Fut",
 					verbForm: "Ger",
 				},
-				spelledSurface: "gehend",
+				normalizedFullSurface: "gehend",
 				surfaceKind: "Inflection",
 			},
 		});
@@ -72,6 +74,7 @@ describe("German verb schemas", () => {
 
 	it("accepts lexical inherent features for German verbs", () => {
 		const result = GermanVerbLemmaSchema.safeParse({
+			canonicalLemma: "gehen",
 			inherentFeatures: {
 				governedPreposition: "auf",
 				isPhrasal: false,
@@ -81,7 +84,6 @@ describe("German verb schemas", () => {
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "VERB",
-			spelledLemma: "gehen",
 		});
 
 		expect(result.success).toBe(true);
@@ -90,6 +92,7 @@ describe("German verb schemas", () => {
 	it("accepts the new verb-specific lexical features and rejects empty governed prepositions", () => {
 		expect(
 			GermanVerbLemmaSchema.safeParse({
+				canonicalLemma: "mitkommen",
 				inherentFeatures: {
 					governedPreposition: "mit",
 					isPhrasal: true,
@@ -97,19 +100,18 @@ describe("German verb schemas", () => {
 				language: "German",
 				lemmaKind: "Lexeme",
 				pos: "VERB",
-				spelledLemma: "mitkommen",
 			}).success,
 		).toBe(true);
 
 		expect(
 			GermanVerbLemmaSchema.safeParse({
+				canonicalLemma: "warten",
 				inherentFeatures: {
 					governedPreposition: "",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
 				pos: "VERB",
-				spelledLemma: "warten",
 			}).success,
 		).toBe(false);
 	});
@@ -131,26 +133,27 @@ describe("German verb schemas", () => {
 
 	it("rejects unsupported inherent feature keys", () => {
 		const result = GermanVerbLemmaSchema.safeParse({
+			canonicalLemma: "gehen",
 			inherentFeatures: {
 				mood: "Ind",
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "VERB",
-			spelledLemma: "gehen",
 		});
 
 		expect(result.success).toBe(false);
 	});
 
-	it("accepts partial selections without inflectional features", () => {
-		const result = GermanVerbStandardPartialSelectionSchema.safeParse({
+	it("accepts lemma selections where the spelled selection covers only part of the full surface", () => {
+		const result = GermanVerbLemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			spelledSelection: "gehen",
 			surface: {
 				...verbSurface("spazieren gehen"),
-				spelledSurface: "gehen",
-				surfaceKind: "Partial",
+				normalizedFullSurface: "spazieren gehen",
+				surfaceKind: "Lemma",
 			},
 		});
 
@@ -161,6 +164,7 @@ describe("German verb schemas", () => {
 		const result = GermanVerbTypoInflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Typo",
+			spelledSelection: "geheh",
 			surface: {
 				...verbSurface("gehen"),
 				inflectionalFeatures: {
@@ -170,7 +174,7 @@ describe("German verb schemas", () => {
 					tense: "Pres",
 					verbForm: "Fin",
 				},
-				spelledSurface: "geheh",
+				normalizedFullSurface: "geheh",
 				surfaceKind: "Inflection",
 			},
 		});
@@ -182,6 +186,7 @@ describe("German verb schemas", () => {
 		const result = SelectionSchema.German.Unknown.safeParse({
 			language: "German",
 			orthographicStatus: "Unknown",
+			spelledSelection: "unknown",
 		});
 
 		expect(result.success).toBe(true);

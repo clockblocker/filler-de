@@ -4,11 +4,9 @@ import type { AbstractSelectionFor } from "../universal/abstract-selection";
 import {
 	EnglishStandardInflectionLexemeSelectionSchemas,
 	EnglishStandardLemmaLexemeSelectionSchemas,
-	EnglishStandardPartialLexemeSelectionSchemas,
 	EnglishStandardVariantLexemeSelectionSchemas,
 	EnglishTypoInflectionLexemeSelectionSchemas,
 	EnglishTypoLemmaLexemeSelectionSchemas,
-	EnglishTypoPartialLexemeSelectionSchemas,
 	EnglishTypoVariantLexemeSelectionSchemas,
 } from "./lu/lexeme/english-lexemes";
 import {
@@ -17,14 +15,13 @@ import {
 } from "./lu/morpheme/english-morphemes";
 import {
 	EnglishStandardLemmaPhrasemeSelectionSchemas,
-	EnglishStandardPartialPhrasemeSelectionSchemas,
 	EnglishTypoLemmaPhrasemeSelectionSchemas,
-	EnglishTypoPartialPhrasemeSelectionSchemas,
 } from "./lu/phraseme/english-phrasemes";
 
 const EnglishUnknownSelectionSchema = z.object({
 	language: z.literal("English"),
 	orthographicStatus: z.literal("Unknown"),
+	spelledSelection: z.string(),
 }) satisfies z.ZodType<AbstractSelectionFor<"Unknown">>;
 
 export const EnglishSelectionSchema = {
@@ -36,10 +33,6 @@ export const EnglishSelectionSchema = {
 			Lexeme: EnglishStandardLemmaLexemeSelectionSchemas,
 			Morpheme: EnglishStandardLemmaMorphemeSelectionSchemas,
 			Phraseme: EnglishStandardLemmaPhrasemeSelectionSchemas,
-		},
-		Partial: {
-			Lexeme: EnglishStandardPartialLexemeSelectionSchemas,
-			Phraseme: EnglishStandardPartialPhrasemeSelectionSchemas,
 		},
 		Variant: {
 			Lexeme: EnglishStandardVariantLexemeSelectionSchemas,
@@ -53,10 +46,6 @@ export const EnglishSelectionSchema = {
 			Lexeme: EnglishTypoLemmaLexemeSelectionSchemas,
 			Morpheme: EnglishTypoLemmaMorphemeSelectionSchemas,
 			Phraseme: EnglishTypoLemmaPhrasemeSelectionSchemas,
-		},
-		Partial: {
-			Lexeme: EnglishTypoPartialLexemeSelectionSchemas,
-			Phraseme: EnglishTypoPartialPhrasemeSelectionSchemas,
 		},
 		Variant: {
 			Lexeme: EnglishTypoVariantLexemeSelectionSchemas,

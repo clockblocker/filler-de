@@ -21,16 +21,12 @@ export const GermanInterjectionInflectionSelectionSchema =
 	GermanInterjectionSchemas.InflectionSelectionSchema;
 export const GermanInterjectionLemmaSelectionSchema =
 	GermanInterjectionSchemas.LemmaSelectionSchema;
-export const GermanInterjectionStandardPartialSelectionSchema =
-	GermanInterjectionSchemas.StandardPartialSelectionSchema;
 export const GermanInterjectionStandardVariantSelectionSchema =
 	GermanInterjectionSchemas.StandardVariantSelectionSchema;
 export const GermanInterjectionTypoInflectionSelectionSchema =
 	GermanInterjectionSchemas.TypoInflectionSelectionSchema;
 export const GermanInterjectionTypoLemmaSelectionSchema =
 	GermanInterjectionSchemas.TypoLemmaSelectionSchema;
-export const GermanInterjectionTypoPartialSelectionSchema =
-	GermanInterjectionSchemas.TypoPartialSelectionSchema;
 export const GermanInterjectionTypoVariantSelectionSchema =
 	GermanInterjectionSchemas.TypoVariantSelectionSchema;
 export const GermanInterjectionLemmaSchema =

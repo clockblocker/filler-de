@@ -22,7 +22,7 @@ export const GermanNounLemmaSchema = z.object({
 	lemmaKind: z.literal("Lexeme"),
 	meaningInEmojis: MeaningInEmojisSchema.optional(),
 	pos: z.literal("NOUN"),
-	spelledLemma: z.string(),
+	canonicalLemma: z.string(),
 }) satisfies z.ZodType<AbstractLemma<"Lexeme", "NOUN">>;
 
 export const GermanNounInflectionSelectionSchema = buildInflectionSelection({
@@ -40,15 +40,6 @@ export const GermanNounLemmaSelectionSchema = buildLemmaSelection({
 	lemmaSchema: GermanNounLemmaSchema,
 }) satisfies z.ZodType<
 	AbstractSelectionFor<"Standard", "Lemma", "Lexeme", "NOUN">
->;
-
-export const GermanNounStandardPartialSelectionSchema = buildLemmaSelection({
-	language: "German",
-	lemmaIdentityShape: GermanNounLemmaIdentityShape,
-	lemmaSchema: GermanNounLemmaSchema,
-	surfaceKind: "Partial",
-}) satisfies z.ZodType<
-	AbstractSelectionFor<"Standard", "Partial", "Lexeme", "NOUN">
 >;
 
 export const GermanNounStandardVariantSelectionSchema = buildLemmaSelection({
@@ -78,16 +69,6 @@ export const GermanNounTypoLemmaSelectionSchema = buildLemmaSelection({
 	lemmaSchema: GermanNounLemmaSchema,
 	orthographicStatus: "Typo",
 }) satisfies z.ZodType<AbstractSelectionFor<"Typo", "Lemma", "Lexeme", "NOUN">>;
-
-export const GermanNounTypoPartialSelectionSchema = buildLemmaSelection({
-	language: "German",
-	lemmaIdentityShape: GermanNounLemmaIdentityShape,
-	lemmaSchema: GermanNounLemmaSchema,
-	orthographicStatus: "Typo",
-	surfaceKind: "Partial",
-}) satisfies z.ZodType<
-	AbstractSelectionFor<"Typo", "Partial", "Lexeme", "NOUN">
->;
 
 export const GermanNounTypoVariantSelectionSchema = buildLemmaSelection({
 	language: "German",
