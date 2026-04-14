@@ -22,6 +22,9 @@
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
 		"paths": {
+			"@textfresser/dictionary": [
+				"./src/packages/composed/dictionary/src/index.ts"
+			],
 			"@textfresser/lexical-generation": [
 				"./src/packages/independent/deprecated-lexical-generation/src/index.ts"
 			],

@@ -70,6 +70,8 @@ describe("German verb schemas", () => {
 	it("accepts lexical inherent features for German verbs", () => {
 		const result = GermanVerbLemmaSchema.safeParse({
 			inherentFeatures: {
+				governedPreposition: "auf",
+				isPhrasal: false,
 				reflex: true,
 				separable: false,
 			},
@@ -80,6 +82,33 @@ describe("German verb schemas", () => {
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("accepts the new verb-specific lexical features and rejects empty governed prepositions", () => {
+		expect(
+			GermanVerbLemmaSchema.safeParse({
+				inherentFeatures: {
+					governedPreposition: "mit",
+					isPhrasal: true,
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				pos: "VERB",
+				spelledLemma: "mitkommen",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanVerbLemmaSchema.safeParse({
+				inherentFeatures: {
+					governedPreposition: "",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				pos: "VERB",
+				spelledLemma: "warten",
+			}).success,
+		).toBe(false);
 	});
 
 	it("validates relation payloads via the dedicated relation schemas", () => {

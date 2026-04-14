@@ -1,0 +1,2 @@
+type Page = "title";
+

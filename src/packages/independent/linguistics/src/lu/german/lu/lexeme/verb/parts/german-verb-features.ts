@@ -1,6 +1,8 @@
 import z from "zod/v3";
 import type { AbstractLemma } from "../../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../../universal/abstract-selection";
+import { GovernedPreposition } from "../../../../../universal/enums/feature/custom/governed-preposition";
+import { IsPhrasal } from "../../../../../universal/enums/feature/custom/is-phrasal";
 import { IsSeparable } from "../../../../../universal/enums/feature/custom/separable";
 import { IsReflex } from "../../../../../universal/enums/feature/ud/reflex";
 import {
@@ -31,6 +33,8 @@ export const GermanVerbInflectionalFeaturesSchema = z
 
 export const GermanVerbInherentFeaturesSchema = z
 	.object({
+		governedPreposition: GovernedPreposition.optional(),
+		isPhrasal: IsPhrasal.optional(),
 		reflex: IsReflex.optional(),
 		separable: IsSeparable.optional(),
 	})

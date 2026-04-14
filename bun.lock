@@ -41,6 +41,10 @@
         "typescript": "^5.9.3",
       },
     },
+    "src/packages/composed/dictionary": {
+      "name": "@textfresser/dictionary",
+      "version": "0.0.0",
+    },
     "src/packages/composed/lexical-generation": {
       "name": "@textfresser/lexical-generation-next",
       "version": "0.0.0",
@@ -276,6 +280,8 @@
     "@rollup/rollup-linux-x64-gnu": ["@rollup/rollup-linux-x64-gnu@4.53.3", "", { "os": "linux", "cpu": "x64" }, "sha512-3EhFi1FU6YL8HTUJZ51imGJWEX//ajQPfqWLI3BQq4TlvHy4X0MOr5q3D2Zof/ka0d5FNdPwZXm3Yyib/UEd+w=="],
 
     "@so-ric/colorspace": ["@so-ric/colorspace@1.1.6", "", { "dependencies": { "color": "^5.0.2", "text-hex": "1.0.x" } }, "sha512-/KiKkpHNOBgkFJwu9sh48LkHSMYGyuTcSFK/qMBdnOAlrRJzRSXAOFB5qwzaVQuDl8wAvHVMkaASQDReTahxuw=="],
+
+    "@textfresser/dictionary": ["@textfresser/dictionary@workspace:src/packages/composed/dictionary"],
 
     "@textfresser/lexical-generation": ["@textfresser/lexical-generation@workspace:src/packages/independent/deprecated-lexical-generation"],
 

@@ -1,6 +1,8 @@
 import z from "zod/v3";
 import type { AbstractLemma } from "../../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../../universal/abstract-selection";
+import { GovernedPreposition } from "../../../../../universal/enums/feature/custom/governed-preposition";
+import { IsPhrasal } from "../../../../../universal/enums/feature/custom/is-phrasal";
 import {
 	EnglishVerbMood,
 	EnglishVerbNumber,
@@ -27,7 +29,10 @@ export const EnglishVerbInflectionalFeaturesSchema = z
 >;
 
 export const EnglishVerbInherentFeaturesSchema = z
-	.object({})
+	.object({
+		governedPreposition: GovernedPreposition.optional(),
+		isPhrasal: IsPhrasal.optional(),
+	})
 	.strict() satisfies z.ZodType<
 	AbstractLemma<"Lexeme", "VERB">["inherentFeatures"]
 >;

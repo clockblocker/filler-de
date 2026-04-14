@@ -1,0 +1,12 @@
+{
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"name": "@textfresser/dictionary",
+	"private": true,
+	"scripts": {
+		"build": "bun ../../../../scripts/build-workspace-package.ts"
+	},
+	"type": "module",
+	"version": "0.0.0"
+}

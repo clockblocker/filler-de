@@ -1,4 +1,6 @@
 import type { Prettify } from "../../../../../../../../types/helpers";
+import type { GovernedPreposition } from "./custom/governed-preposition";
+import type { IsPhrasal } from "./custom/is-phrasal";
 import type { IsSeparable } from "./custom/separable";
 import type { IsAbbr } from "./ud/abbr";
 import type { Animacy } from "./ud/animacy";
@@ -41,6 +43,8 @@ export type AbstractFeatures = Prettify<{
 	extPos: ExtPos;
 	foreign: IsForeign;
 	gender: Gender;
+	governedPreposition: GovernedPreposition;
+	isPhrasal: IsPhrasal;
 	mood: Mood;
 	nounClass: NounClass;
 	number: GrammaticalNumber;

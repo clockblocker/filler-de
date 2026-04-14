@@ -217,6 +217,19 @@ describe("English schema specificity", () => {
 		expect(
 			EnglishVerbLemmaSchema.safeParse({
 				inherentFeatures: {
+					governedPreposition: "to",
+					isPhrasal: true,
+				},
+				language: "English",
+				lemmaKind: "Lexeme",
+				pos: "VERB",
+				spelledLemma: "look",
+			}).success,
+		).toBe(true);
+
+		expect(
+			EnglishVerbLemmaSchema.safeParse({
+				inherentFeatures: {
 					reflex: true,
 				},
 				language: "English",
@@ -235,6 +248,18 @@ describe("English schema specificity", () => {
 				lemmaKind: "Lexeme",
 				pos: "VERB",
 				spelledLemma: "wash",
+			}).success,
+		).toBe(false);
+
+		expect(
+			EnglishVerbLemmaSchema.safeParse({
+				inherentFeatures: {
+					governedPreposition: "",
+				},
+				language: "English",
+				lemmaKind: "Lexeme",
+				pos: "VERB",
+				spelledLemma: "look",
 			}).success,
 		).toBe(false);
 	});
