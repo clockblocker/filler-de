@@ -1,5 +1,5 @@
 import { z } from "zod/v3";
-import type { Prettify } from "../../../../../../../../types/helpers";
+import type { Prettify } from "../../../types/helpers";
 import type { LexicalRelation } from "./lexical";
 import type { MorphologicalRelation } from "./morphological";
 
@@ -71,4 +71,5 @@ export const MorphologicalRelationsSchema = z
 	.strict() satisfies z.ZodType<MorphologicalRelations>;
 
 export const AbstractLexicalRelationsSchema = LexicalRelationsSchema;
-export const AbstractMorphologicalRelationsSchema = MorphologicalRelationsSchema;
+export const AbstractMorphologicalRelationsSchema =
+	MorphologicalRelationsSchema;

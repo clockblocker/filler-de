@@ -1,10 +1,7 @@
 import z from "zod/v3";
-import type { TargetLanguage } from "../enums/core/language";
-import type {
-	OrthographicStatus,
-	SurfaceKind,
-} from "../enums/core/selection";
 import { EmojiDescriptionSchema } from "../emoji-description";
+import type { TargetLanguage } from "../enums/core/language";
+import type { OrthographicStatus, SurfaceKind } from "../enums/core/selection";
 
 type EmptyZodRawShape = Record<never, never>;
 type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;

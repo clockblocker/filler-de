@@ -1,9 +1,9 @@
 import type { Prettify } from "../../../../../../types/helpers";
-import type { IsClosedSet } from "./enums/core/meta";
 import type { TargetLanguage } from "./enums/core/language";
+import type { IsClosedSet } from "./enums/core/meta";
 import type { LemmaKind } from "./enums/core/selection";
-import type { IsSeparable } from "./enums/feature/custom/separable";
 import type { DiscourseFormulaRole } from "./enums/feature/custom/discourse-formula-role";
+import type { IsSeparable } from "./enums/feature/custom/separable";
 import type { AbstractFeatures } from "./enums/feature/feature";
 import type { MorphemeKind } from "./enums/kind/morpheme-kind";
 import type {
@@ -59,11 +59,10 @@ type AbstractPhrasemLemma<PK extends PhrasemeKind = PhrasemeKind> = Prettify<
 export type AbstractLemma<
 	LK extends LemmaKind = LemmaKind,
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
-> =
-	LK extends "Lexeme"
-		? AbstractLexemeLemma<Extract<D, Pos>>
-		: LK extends "Morpheme"
-			? AbstractMorphemLemma<Extract<D, MorphemeKind>>
-			: LK extends "Phraseme"
-				? AbstractPhrasemLemma<Extract<D, PhrasemeKind>>
-				: never;
+> = LK extends "Lexeme"
+	? AbstractLexemeLemma<Extract<D, Pos>>
+	: LK extends "Morpheme"
+		? AbstractMorphemLemma<Extract<D, MorphemeKind>>
+		: LK extends "Phraseme"
+			? AbstractPhrasemLemma<Extract<D, PhrasemeKind>>
+			: never;

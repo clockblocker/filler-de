@@ -5,8 +5,8 @@ import type {
 	OrthographicStatus,
 	SurfaceKind,
 } from "./enums/core/selection";
-import type { IsSeparable } from "./enums/feature/custom/separable";
 import type { DiscourseFormulaRole } from "./enums/feature/custom/discourse-formula-role";
+import type { IsSeparable } from "./enums/feature/custom/separable";
 import type { AbstractFeatures } from "./enums/feature/feature";
 import type {
 	LemmaDiscriminatorFor,

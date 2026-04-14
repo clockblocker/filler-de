@@ -1,7 +1,7 @@
 import {
 	AbstractLexicalRelationsSchema,
 	AbstractMorphologicalRelationsSchema,
-} from "../../../../../universal/enums/relation/relation";
+} from "../../../../../../relations/relation";
 
 export const GermanAdjectiveLexicalRelationsSchema =
 	AbstractLexicalRelationsSchema;

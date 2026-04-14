@@ -1,5 +1,5 @@
-import { identityFeatureRegistry } from "./identity-feature-registry";
 import type { AnyLemma, AnySelection, LemmaKind, SurfaceKind } from "../index";
+import { identityFeatureRegistry } from "./identity-feature-registry";
 import type { AbstractFeatures } from "./universal/enums/feature/feature";
 
 export type LingId = string & { readonly __brand: "LingId" };
@@ -225,8 +225,9 @@ function getIdentityFeatureValue(
 	key: IdentityFeatureKey,
 ): unknown {
 	if ("inherentFeatures" in lemma && isRecord(lemma.inherentFeatures)) {
-		const inherentFeatures =
-			lemma.inherentFeatures as Partial<Record<IdentityFeatureKey, unknown>>;
+		const inherentFeatures = lemma.inherentFeatures as Partial<
+			Record<IdentityFeatureKey, unknown>
+		>;
 		const inherentValue = inherentFeatures[key];
 		if (inherentValue !== undefined) {
 			return inherentValue;

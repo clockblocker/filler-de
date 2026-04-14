@@ -29,12 +29,12 @@ import {
 	getInverseLexicalRelation,
 	getReprForLexicalRelation,
 	LexicalRelation as LexicalRelationSchema,
-} from "./lu/universal/enums/relation/lexical";
+} from "./relations/lexical";
 import {
 	getInverseMorphologicalRelation,
 	getReprForMorphologicalRelation,
 	MorphologicalRelation as MorphologicalRelationSchema,
-} from "./lu/universal/enums/relation/morphological";
+} from "./relations/morphological";
 import {
 	LexicalRelationsSchema as LexicalRelationsSchemaInternal,
 	type LexicalRelations as LexicalRelationsShape,
@@ -42,7 +42,7 @@ import {
 	type MorphologicalRelations as MorphologicalRelationsShape,
 	RelationTargetsSchema as RelationTargetsSchemaInternal,
 	type RelationTargets as RelationTargetsShape,
-} from "./lu/universal/enums/relation/relation";
+} from "./relations/relation";
 
 export { type LingId, toLingId } from "./lu/ling-id";
 export {
@@ -52,11 +52,11 @@ export {
 export {
 	getInverseLexicalRelation,
 	getReprForLexicalRelation,
-} from "./lu/universal/enums/relation/lexical";
+} from "./relations/lexical";
 export {
 	getInverseMorphologicalRelation,
 	getReprForMorphologicalRelation,
-} from "./lu/universal/enums/relation/morphological";
+} from "./relations/morphological";
 
 export const OrthographicStatus = OrthographicStatusSchema.enum;
 export const SurfaceKind = SurfaceKindSchema.enum;
