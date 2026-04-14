@@ -21,6 +21,32 @@
 		// Some stricter flags (disabled by default)
 		"noUnusedLocals": false,
 		"noUnusedParameters": false,
+		"paths": {
+			"@textfresser/lexical-generation": [
+				"./src/packages/independent/deprecated-lexical-generation/src/index.ts"
+			],
+			"@textfresser/lexical-generation-next": [
+				"./src/packages/composed/lexical-generation/src/index.ts"
+			],
+			"@textfresser/library-core": [
+				"./src/packages/composed/library-core/src/index.ts"
+			],
+			"@textfresser/linguistic-note-codec": [
+				"./src/packages/composed/linguistic-note-codec/src/index.ts"
+			],
+			"@textfresser/linguistics": [
+				"./src/packages/independent/linguistics/src/index.ts"
+			],
+			"@textfresser/note-addressing": [
+				"./src/packages/independent/note-addressing/src/index.ts"
+			],
+			"@textfresser/obsidian-event-layer": [
+				"./src/packages/composed/obsidian-event-layer/src/index.ts"
+			],
+			"@textfresser/vault-action-manager": [
+				"./src/packages/independent/vault-action-manager/src/index.ts"
+			]
+		},
 		"skipLibCheck": true,
 		"strictNullChecks": true,
 
@@ -28,30 +54,7 @@
 		"strictPropertyInitialization": false,
 		"target": "ESNext",
 		"types": ["obsidian", "bun-types", "mocha"],
-		"verbatimModuleSyntax": true,
-		"paths": {
-			"@textfresser/vault-action-manager": [
-				"./src/packages/independent/vault-action-manager/src/index.ts"
-			],
-			"@textfresser/lexical-generation": [
-				"./src/packages/independent/deprecated-lexical-generation/src/index.ts"
-			],
-			"@textfresser/lexical-generation-next": [
-				"./src/packages/composed/lexical-generation/src/index.ts"
-			],
-			"@textfresser/linguistics": [
-				"./src/packages/independent/linguistics/src/index.ts"
-			],
-			"@textfresser/library-core": [
-				"./src/packages/composed/library-core/src/index.ts"
-			],
-			"@textfresser/note-addressing": [
-				"./src/packages/independent/note-addressing/src/index.ts"
-			],
-			"@textfresser/obsidian-event-layer": [
-				"./src/packages/composed/obsidian-event-layer/src/index.ts"
-			]
-		}
+		"verbatimModuleSyntax": true
 	},
 	"plugins": [
 		{

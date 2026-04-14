@@ -112,6 +112,14 @@ type PartialEntryData =
 	| {
 			kind: "invalid";
 			blocks: EntryBlock[];
+			partialRoot?: {
+				entryKind?: "lemma" | "selection";
+				language?: string;
+				lemmaKind?: string;
+				discriminator?: string;
+				spelledLemma?: string;
+				spelledSurface?: string;
+			};
 			partialPayload?: Partial<EntryPayload>;
 			reconstructionTarget: "lemma" | "selection" | "unknown";
 	  };
@@ -123,6 +131,7 @@ Rationale:
 2. the data layer owns reconstructed semantic content
 3. the two layers must round-trip through explicit codecs
 4. loose semantic reconstruction needs a partial-invalid representation and must not lie with `NoteData`
+5. partial-invalid entries should retain enough structured root summary for diagnostics and tooling without forcing block re-parsing
 
 ## Invariants
 
@@ -135,6 +144,7 @@ These are non-negotiable.
 5. Freeform/manual content must survive parse and serialize.
 6. Known typed block order is not semantically meaningful during parse.
 7. Serialization uses canonical block ordering by default.
+8. `document -> data -> document` is intentionally lossy for freeform interleaving unless callers stay on the document layer.
 
 ## Root block model
 
@@ -356,6 +366,12 @@ Healing is an explicit step, not an implicit side effect of parse.
 
 `parseData*` is a convenience composition of `parseDocument*` and `documentToData*`.
 
+Strict-failure boundary:
+
+1. `parseDocumentStrict` fails on markdown syntax and block-structure failures
+2. `documentToDataStrict` fails on semantic ownership conflicts, duplicate required blocks, and root DTO validation failures
+3. `parseDataStrict` fails on either class because it composes both steps
+
 Parse is not responsible for:
 
 1. deduping relation items
@@ -399,8 +415,15 @@ Loose mode must:
 2. keep parseable typed blocks
 3. report ambiguity, duplication, and validation failures as `CodecIssue[]`
 4. avoid inventing canonical values from projections
+5. preserve enough information to surface partial-invalid entries without pretending they are valid semantic data
 
 Loose semantic reconstruction must return `PartialNoteData`, not `NoteData`.
+
+`parseDataLoose` is a convenience API for callers that want partial semantic output plus issues.
+
+It is not sufficient for document-layer repair by itself because it does not return `NoteDocument`.
+
+Callers that need normalization or structural repair must start from `parseDocumentLoose`, then run `documentToDataLoose` after any document-layer normalization.
 
 Rationale:
 
@@ -443,6 +466,11 @@ Rules:
 3. `serializeDocument` may preserve original interleaving
 4. `serializeData` emits canonical ordering and treats freeform as trailing by default unless an explicit layout policy is provided
 
+Consequence:
+
+1. `document -> data -> document` is intentionally lossy for interleaved freeform positioning
+2. callers that need byte-faithful interleaving preservation must stay on the document layer
+
 ## Structured markdown model
 
 The persisted format is structured markdown, not raw JSON note dumps.
@@ -457,6 +485,42 @@ The canonical note representation is:
 2. separated by a stable entry separator owned by this package
 
 The exact separator token is package-owned. It must be deterministic and unambiguous.
+
+For v1, note-level markdown outside entry boundaries is unsupported.
+
+Policy:
+
+1. `parseDocumentStrict` must fail if non-whitespace content appears before the first entry, between entries outside the separator grammar, or after the final entry
+2. `parseDocumentLoose` must report a package-owned issue and may drop that content because `NoteDocument` has no field to preserve it
+3. preserving such top-level content is deferred until the note-level model grows an explicit home for it
+
+Illustrative entry shape:
+
+````md
+:::entry
+:::identity
+{"entryKind":"lemma","language":"German","lemmaKind":"Lexeme","pos":"VERB","spelledLemma":"schloss"}
+:::
+
+:::root_meta
+{"emojiDescription":["🔒"]}
+:::
+
+:::header
+🔒 [[schloss]]
+:::
+
+:::translation
+castle; lock
+:::
+
+Manual note the user wrote.
+:::
+````
+
+In this illustration, the final bare `:::` closes the surrounding `entry` chunk.
+
+This example is illustrative only. The final marker syntax is still an implementation choice.
 
 ### Block boundaries
 
@@ -492,6 +556,7 @@ For v1:
 1. `meta` is an opaque transport field on `NoteDocument` and `NoteData`
 2. this package may pass it through unchanged
 3. its wire format and ownership rules are intentionally unspecified here
+4. note-level content outside entry boundaries is unsupported in v1 and is not represented in `meta`
 
 ## Public API
 
@@ -539,6 +604,14 @@ Default policy:
 2. if projections are absent, omit them
 3. regeneration of projection blocks must be opt-in via explicit serializer options or policy hooks
 
+Repair flow:
+
+1. `parseDocumentLoose` identifies structural and block-level issues on the document layer
+2. callers that need document-layer repair normalize from that `NoteDocument`
+3. callers run `documentToDataLoose` or `documentToDataStrict` after document normalization
+4. `parseDataLoose` is a convenience when callers only need partial semantic output plus issues and do not need document-layer normalization
+5. `normalizeData` is only for already-valid `NoteData`, not partial-invalid loose results
+
 ## Validation rules
 
 The conversion from root blocks to `Lemma` or `Selection` must validate against the native linguistics schemas.
@@ -549,6 +622,7 @@ Rules:
 2. `identity + root_meta + inherent_features + relation + inflection` reconstruct selection roots
 3. `surface.inflectionalFeatures` belong only in `inflection.canonical` and only on selection roots
 4. if `surfaceKind !== "Inflection"`, the `inflection` block may still carry `rendered` payload but must not invent canonical `inflectionalFeatures`
+5. lemma entries may carry `inflection.rendered` payload as note content, but must not carry `inflection.canonical`
 
 ## Error and issue model
 
@@ -563,8 +637,9 @@ Recommended issue families:
 5. `InvalidRootDto`
 6. `UnknownTypedBlock`
 7. `UnclaimedStructuredBlock`
-8. `OrderingNormalized`
-9. `SemanticBlockMerged`
+8. `UnsupportedTopLevelContent`
+9. `OrderingNormalized`
+10. `SemanticBlockMerged`
 
 Issue reporting should remain structured enough for future tooling and tests.
 
@@ -572,6 +647,12 @@ Block-recognition issue terms:
 
 1. `UnknownTypedBlock`: typed marker syntax is recognized, but the block id is unsupported by this codec
 2. `UnclaimedStructuredBlock`: the block id is known, but the payload is invalid, ambiguous, or not ownable in the current mode
+
+Preservation rule:
+
+1. unknown or unclaimed structured blocks must be preserved on the document layer
+2. unless the implementation defines a safer internal raw representation, their markdown payload should round-trip byte-for-byte through `parseDocument*` and `serializeDocument`
+3. semantic reconstruction must not discard them when it cannot claim them
 
 ## Testing requirements
 

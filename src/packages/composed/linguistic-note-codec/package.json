@@ -1,0 +1,16 @@
+{
+	"name": "@textfresser/linguistic-note-codec",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"dependencies": {
+		"@textfresser/linguistics": "workspace:*"
+	},
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "bun ../../../../scripts/build-workspace-package.ts",
+		"test": "bun test --reporter=dot --preload ../../../../tests/unit/setup.ts ./tests/"
+	}
+}

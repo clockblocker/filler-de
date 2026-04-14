@@ -1,0 +1,40 @@
+export type {
+	AttestationBlock,
+	AttestationPayload,
+	EntryBlock,
+	FreeformBlock,
+	FreeformBlockPayload,
+	HeaderBlock,
+	HeaderPayload,
+	IdentityBlock,
+	InherentFeaturesBlock,
+	InherentFeaturesPayload,
+	InflectionBlock,
+	InflectionPayload,
+	KnownSelection,
+	RelationBlock,
+	RelationPayload,
+	RootMetaBlock,
+	SourceTracked,
+	StructuredRawBlock,
+	TagsBlock,
+	TagsPayload,
+	TranslationBlock,
+	TranslationPayload,
+} from "./blocks";
+export {
+	LinguisticNoteCodecError,
+	type CodecIssue,
+	type CodecIssueCode,
+} from "./issues";
+export type {
+	EntryData,
+	EntryDocument,
+	EntryPayload,
+	NoteData,
+	NoteDocument,
+	PartialEntryData,
+	PartialNoteData,
+	PartialRootSummary,
+} from "./note";
+export type { ParseOptions, SerializeOptions } from "./options";
