@@ -40,19 +40,7 @@ export type {
 
 export { parseLingId };
 
-export function buildToLingIdFor<L extends TargetLanguage>(
-	lang: L,
-): {
-	(
-		value: AnyLemma<L> | ParsedLemmaDtoFor<L> | ParsedLemmaDto,
-	): ObservedSurfaceLingId;
-	(
-		value:
-			| LingIdSurfaceInput<L>
-			| ParsedSurfaceDtoFor<L>
-			| ParsedSurfaceDto,
-	): SurfaceLingId | ObservedSurfaceLingId;
-} {
+export function buildToLingIdFor<L extends TargetLanguage>(lang: L) {
 	return buildToSurfaceLingIdFor(lang);
 }
 
@@ -69,22 +57,12 @@ export function buildToSurfaceLingIdFor<L extends TargetLanguage>(
 			| ParsedSurfaceDto,
 	): SurfaceLingId | ObservedSurfaceLingId;
 } {
-	return ((value) => {
+	return (value) => {
 		const serializer = getSerializerForValue(lang, getValueLanguage(value));
 
 		return isSurfaceValue(value)
 			? serializer.toSurfaceLingId(value as SerializableSurface)
 			: serializer.toSurfaceLingId(value as SerializableLemma);
-	}) as {
-		(
-			value: AnyLemma<L> | ParsedLemmaDtoFor<L> | ParsedLemmaDto,
-		): ObservedSurfaceLingId;
-		(
-			value:
-				| LingIdSurfaceInput<L>
-				| ParsedSurfaceDtoFor<L>
-				| ParsedSurfaceDto,
-		): SurfaceLingId | ObservedSurfaceLingId;
 	};
 }
 

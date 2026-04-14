@@ -113,6 +113,7 @@ export type SerializableLemma = AnyLemma | ParsedLemmaDto;
 export type SerializableTargetedSurface =
 	| LingIdSurfaceInput
 	| ParsedTargetedSurfaceDto;
+
 export type SerializableSurface =
 	| SerializableTargetedSurface
 	| ParsedObservedSurfaceDto;
