@@ -1,27 +1,27 @@
 import { describe, expect, it } from "bun:test";
-import { EnglishAdjectiveInflectionSelectionSchema } from "../src/lu/english/lu/lexeme/adjective/english-adjective-bundle";
-import { EnglishAdpositionInflectionSelectionSchema } from "../src/lu/english/lu/lexeme/adposition/english-adposition-bundle";
-import { EnglishAuxiliaryInflectionSelectionSchema } from "../src/lu/english/lu/lexeme/auxiliary/english-auxiliary-bundle";
+import { EnglishAdjectiveInflectionSelectionSchema } from "../../src/lu/english/lu/lexeme/adjective/english-adjective-bundle";
+import { EnglishAdpositionInflectionSelectionSchema } from "../../src/lu/english/lu/lexeme/adposition/english-adposition-bundle";
+import { EnglishAuxiliaryInflectionSelectionSchema } from "../../src/lu/english/lu/lexeme/auxiliary/english-auxiliary-bundle";
 import {
 	EnglishDeterminerInflectionSelectionSchema,
 	EnglishDeterminerLemmaSchema,
-} from "../src/lu/english/lu/lexeme/determiner/english-determiner-bundle";
+} from "../../src/lu/english/lu/lexeme/determiner/english-determiner-bundle";
 import {
 	EnglishNounInflectionSelectionSchema,
 	EnglishNounLemmaSchema,
-} from "../src/lu/english/lu/lexeme/noun/english-noun-bundle";
+} from "../../src/lu/english/lu/lexeme/noun/english-noun-bundle";
 import {
 	EnglishPronounInflectionSelectionSchema,
 	EnglishPronounLemmaSchema,
-} from "../src/lu/english/lu/lexeme/pronoun/english-pronoun-bundle";
+} from "../../src/lu/english/lu/lexeme/pronoun/english-pronoun-bundle";
 import {
 	EnglishProperNounInflectionSelectionSchema,
 	EnglishProperNounLemmaSchema,
-} from "../src/lu/english/lu/lexeme/proper-noun/english-proper-noun-bundle";
+} from "../../src/lu/english/lu/lexeme/proper-noun/english-proper-noun-bundle";
 import {
 	EnglishVerbInflectionSelectionSchema,
 	EnglishVerbLemmaSchema,
-} from "../src/lu/english/lu/lexeme/verb/english-verb-bundle";
+} from "../../src/lu/english/lu/lexeme/verb/english-verb-bundle";
 
 function lexemeSurface(pos: string, canonicalLemma: string) {
 	return {

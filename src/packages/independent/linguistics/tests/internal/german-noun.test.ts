@@ -1,17 +1,17 @@
 import { describe, expect, it } from "bun:test";
-import type { Lemma } from "../src";
+import type { Lemma } from "../../src";
 import {
 	LemmaSchema,
 	LexicalRelationsSchema,
 	MorphologicalRelationsSchema,
 	SelectionSchema,
-} from "../src";
+} from "../../src";
 import {
 	GermanNounInflectionSelectionSchema,
 	GermanNounLemmaSchema,
 	GermanNounLemmaSelectionSchema,
 	GermanNounTypoInflectionSelectionSchema,
-} from "../src/lu/german/lu/lexeme/noun/german-noun-bundle";
+} from "../../src/lu/german/lu/lexeme/noun/german-noun-bundle";
 
 const relationId = (label: string) => `rel:${label}`;
 

@@ -5,13 +5,13 @@ import {
 	LexicalRelationsSchema,
 	MorphologicalRelationsSchema,
 	SelectionSchema,
-} from "../src";
+} from "../../src";
 import {
 	GermanVerbInflectionSelectionSchema,
 	GermanVerbLemmaSchema,
 	GermanVerbLemmaSelectionSchema,
 	GermanVerbTypoInflectionSelectionSchema,
-} from "../src/lu/german/lu/lexeme/verb/german-verb-bundle";
+} from "../../src/lu/german/lu/lexeme/verb/german-verb-bundle";
 
 const relationId = (label: string) => `rel:${label}`;
 

@@ -1,65 +1,65 @@
 import { describe, expect, it } from "bun:test";
-import { LemmaSchema, SelectionSchema } from "../src";
+import { LemmaSchema, SelectionSchema } from "../../src";
 import {
 	GermanAdjectiveInflectionSelectionSchema,
 	GermanAdjectiveLemmaSchema,
-} from "../src/lu/german/lu/lexeme/adjective/german-adjective-bundle";
+} from "../../src/lu/german/lu/lexeme/adjective/german-adjective-bundle";
 import {
 	GermanAdpositionInflectionSelectionSchema,
 	GermanAdpositionLemmaSchema,
-} from "../src/lu/german/lu/lexeme/adposition/german-adposition-bundle";
+} from "../../src/lu/german/lu/lexeme/adposition/german-adposition-bundle";
 import {
 	GermanAdverbInflectionSelectionSchema,
 	GermanAdverbLemmaSchema,
-} from "../src/lu/german/lu/lexeme/adverb/german-adverb-bundle";
+} from "../../src/lu/german/lu/lexeme/adverb/german-adverb-bundle";
 import {
 	GermanAuxiliaryInflectionSelectionSchema,
 	GermanAuxiliaryLemmaSchema,
-} from "../src/lu/german/lu/lexeme/auxiliary/german-auxiliary-bundle";
+} from "../../src/lu/german/lu/lexeme/auxiliary/german-auxiliary-bundle";
 import {
 	GermanCoordinatingConjunctionInflectionSelectionSchema,
 	GermanCoordinatingConjunctionLemmaSchema,
-} from "../src/lu/german/lu/lexeme/coordinating-conjunction/german-coordinating-conjunction-bundle";
+} from "../../src/lu/german/lu/lexeme/coordinating-conjunction/german-coordinating-conjunction-bundle";
 import {
 	GermanDeterminerInflectionSelectionSchema,
 	GermanDeterminerLemmaSchema,
-} from "../src/lu/german/lu/lexeme/determiner/german-determiner-bundle";
+} from "../../src/lu/german/lu/lexeme/determiner/german-determiner-bundle";
 import {
 	GermanInterjectionInflectionSelectionSchema,
 	GermanInterjectionLemmaSchema,
-} from "../src/lu/german/lu/lexeme/interjection/german-interjection-bundle";
+} from "../../src/lu/german/lu/lexeme/interjection/german-interjection-bundle";
 import {
 	GermanNumeralInflectionSelectionSchema,
 	GermanNumeralLemmaSchema,
-} from "../src/lu/german/lu/lexeme/numeral/german-numeral-bundle";
+} from "../../src/lu/german/lu/lexeme/numeral/german-numeral-bundle";
 import {
 	GermanOtherInflectionSelectionSchema,
 	GermanOtherLemmaSchema,
-} from "../src/lu/german/lu/lexeme/other/german-other-bundle";
+} from "../../src/lu/german/lu/lexeme/other/german-other-bundle";
 import {
 	GermanParticleInflectionSelectionSchema,
 	GermanParticleLemmaSchema,
-} from "../src/lu/german/lu/lexeme/particle/german-particle-bundle";
+} from "../../src/lu/german/lu/lexeme/particle/german-particle-bundle";
 import {
 	GermanPronounInflectionSelectionSchema,
 	GermanPronounLemmaSchema,
-} from "../src/lu/german/lu/lexeme/pronoun/german-pronoun-bundle";
+} from "../../src/lu/german/lu/lexeme/pronoun/german-pronoun-bundle";
 import {
 	GermanProperNounInflectionSelectionSchema,
 	GermanProperNounLemmaSchema,
-} from "../src/lu/german/lu/lexeme/proper-noun/german-proper-noun-bundle";
+} from "../../src/lu/german/lu/lexeme/proper-noun/german-proper-noun-bundle";
 import {
 	GermanPunctuationInflectionSelectionSchema,
 	GermanPunctuationLemmaSchema,
-} from "../src/lu/german/lu/lexeme/punctuation/german-punctuation-bundle";
+} from "../../src/lu/german/lu/lexeme/punctuation/german-punctuation-bundle";
 import {
 	GermanSubordinatingConjunctionInflectionSelectionSchema,
 	GermanSubordinatingConjunctionLemmaSchema,
-} from "../src/lu/german/lu/lexeme/subordinating-conjunction/german-subordinating-conjunction-bundle";
+} from "../../src/lu/german/lu/lexeme/subordinating-conjunction/german-subordinating-conjunction-bundle";
 import {
 	GermanSymbolInflectionSelectionSchema,
 	GermanSymbolLemmaSchema,
-} from "../src/lu/german/lu/lexeme/symbol/german-symbol-bundle";
+} from "../../src/lu/german/lu/lexeme/symbol/german-symbol-bundle";
 
 function lexemeSurface(pos: string, canonicalLemma: string) {
 	return {

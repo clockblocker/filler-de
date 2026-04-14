@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import * as linguistics from "../src";
+import * as linguistics from "../../src";
 import {
 	type AnyLemma,
 	type AnySelection,
@@ -24,10 +24,10 @@ import {
 	TARGET_LANGUAGES,
 	TargetLanguageSchema,
 	type UnknownSelection,
-} from "../src";
+} from "../../src";
 
-describe("root exports", () => {
-	it("exposes the curated native root surface", () => {
+describe("public API usage", () => {
+	it("exposes the curated root API surface", () => {
 		expect(TARGET_LANGUAGES).toEqual(["German", "English"]);
 		expect(TargetLanguageSchema.parse("German")).toBe("German");
 		expect(TargetLanguageSchema.parse("English")).toBe("English");
@@ -64,7 +64,7 @@ describe("root exports", () => {
 		expect("LingIdSchema" in linguistics).toBe(false);
 	});
 
-	it("supports ergonomic broad type aliases", () => {
+	it("supports ergonomic broad type aliases for German consumers", () => {
 		const lemma = {
 			canonicalLemma: "Kind",
 			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
@@ -102,7 +102,7 @@ describe("root exports", () => {
 		expect(unknownSelection.orthographicStatus).toBe("Unknown");
 	});
 
-	it("supports surface-only schemas and broad type aliases", () => {
+	it("validates surfaces through the exported root schemas", () => {
 		const surface: AnySurface<"English"> = {
 			discriminators: {
 				lemmaKind: "Lexeme",
@@ -133,7 +133,7 @@ describe("root exports", () => {
 		).toBe(true);
 	});
 
-	it("supports lemma phraseme selections where the spelled selection is narrower than the full surface", () => {
+	it("validates selections where the spelled selection is narrower than the full surface", () => {
 		const selection: AnySelection<"English"> = {
 			language: "English",
 			orthographicStatus: "Standard",
@@ -163,7 +163,7 @@ describe("root exports", () => {
 		).toBe(true);
 	});
 
-	it("exposes a dedicated relations api", () => {
+	it("exposes a dedicated relations API", () => {
 		const dog = "rel:dog";
 		const cat = "rel:cat";
 
@@ -192,7 +192,7 @@ describe("root exports", () => {
 		);
 	});
 
-	it("hides internal schema helpers from the root surface", () => {
+	it("keeps internal schema helpers off the root export surface", () => {
 		expect("AbstractLexicalRelationsSchema" in linguistics).toBeFalse();
 		expect("CaseSchema" in linguistics).toBeFalse();
 		expect("GenderSchema" in linguistics).toBeFalse();

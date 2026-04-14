@@ -5,16 +5,16 @@ import type {
 	ParsedObservedSurfaceDto,
 	ParsedSurfaceDto,
 	ParsedTargetedSurfaceDto,
-} from "../src";
+} from "../../src";
 import {
 	buildToLingIdFor,
 	buildToShallowSurfaceLingIdFor,
 	buildToSurfaceLingIdFor,
 	parseLingId,
 	SurfaceSchema,
-} from "../src";
+} from "../../src";
 
-describe("Ling IDs", () => {
+describe("Ling ID usage", () => {
 	const toGermanSurfaceLingId = buildToSurfaceLingIdFor("German");
 	const toGermanShallowSurfaceLingId =
 		buildToShallowSurfaceLingIdFor("German");
