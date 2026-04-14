@@ -3,17 +3,12 @@ import type {
 	Lemma,
 	OrthographicStatus,
 	ParsedObservedSurfaceDto,
+	ParsedShallowSurfaceDto,
 	ParsedSurfaceDto,
 	ParsedTargetedSurfaceDto,
 	Surface,
 } from "../../src";
-import {
-	buildToLingIdFor,
-	buildToShallowSurfaceLingIdFor,
-	buildToSurfaceLingIdFor,
-	parseLingId,
-	SurfaceSchema,
-} from "../../src";
+import { buildToLingConverters, SurfaceSchema } from "../../src";
 
 type TestLanguage = "German" | "English";
 
@@ -29,12 +24,19 @@ type ParsedSurface<L extends TestLanguage = TestLanguage> = ParsedSurfaceDto & {
 };
 
 describe("Ling ID usage", () => {
-	const toGermanSurfaceLingId = buildToSurfaceLingIdFor("German");
-	const toGermanShallowSurfaceLingId =
-		buildToShallowSurfaceLingIdFor("German");
-	const toEnglishSurfaceLingId = buildToSurfaceLingIdFor("English");
-	const toEnglishShallowSurfaceLingId =
-		buildToShallowSurfaceLingIdFor("English");
+	const germanLingConverters = buildToLingConverters("German");
+	const englishLingConverters = buildToLingConverters("English");
+	const {
+		getShallowSurfaceLingId: toGermanShallowSurfaceLingId,
+		getSurfaceLingId: toGermanSurfaceLingId,
+		parseShallowSurface: parseGermanShallowSurface,
+		parseSurface: parseGermanSurface,
+	} = germanLingConverters;
+	const {
+		getShallowSurfaceLingId: toEnglishShallowSurfaceLingId,
+		getSurfaceLingId: toEnglishSurfaceLingId,
+		parseSurface: parseEnglishSurface,
+	} = englishLingConverters;
 
 	it("serializes lemma input as observed surface identity", () => {
 		const separableVerb = {
@@ -267,7 +269,7 @@ describe("Ling ID usage", () => {
 
 		const id = toGermanSurfaceLingId(morpheme);
 
-		const parsed = parseLingId(id) as ParsedObservedSurfaceDto;
+		const parsed = parseGermanSurface(id) as ParsedObservedSurfaceDto;
 
 		expect(parsed.observationMode).toBe("observed");
 		expect(parsed.target.lemmaKind).toBe("Morpheme");
@@ -304,7 +306,7 @@ describe("Ling ID usage", () => {
 	});
 
 	it("canonicalizes observed surface dto shells on reserialization", () => {
-		const observed = parseLingId(
+		const observed = parseGermanSurface(
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
 		) as ParsedObservedSurfaceDto;
 
@@ -356,11 +358,11 @@ describe("Ling ID usage", () => {
 
 		const shallowId = toGermanSurfaceLingId(shallowSurface);
 
-		const parsedFull = parseLingId(
+		const parsedFull = parseGermanSurface(
 			fullId,
 		) as ParsedTargetedSurface<"German">;
 
-		const parsedShallow = parseLingId(
+		const parsedShallow = parseGermanSurface(
 			shallowId,
 		) as ParsedTargetedSurface<"German">;
 
@@ -509,8 +511,6 @@ describe("Ling ID usage", () => {
 	});
 
 	it("supports the convenience dispatcher with observed-surface semantics", () => {
-		const toGermanLingId = buildToLingIdFor("German");
-
 		const lemma = {
 			canonicalLemma: "See",
 			inherentFeatures: {
@@ -535,8 +535,12 @@ describe("Ling ID usage", () => {
 			},
 		};
 
-		expect(toGermanLingId(lemma)).toBe(toGermanSurfaceLingId(lemma));
-		expect(toGermanLingId(surface)).toBe(toGermanSurfaceLingId(surface));
+		expect(germanLingConverters.getSurfaceLingId(lemma)).toBe(
+			toGermanSurfaceLingId(lemma),
+		);
+		expect(germanLingConverters.getSurfaceLingId(surface)).toBe(
+			toGermanSurfaceLingId(surface),
+		);
 	});
 
 	it("rejects nested full target lemmas with a mismatched language", () => {
@@ -575,7 +579,7 @@ describe("Ling ID usage", () => {
 			pos: "NOUN",
 		} satisfies Lemma<"German", "Lexeme", "NOUN">;
 
-		const observedSurface = parseLingId(
+		const observedSurface = parseGermanSurface(
 			toGermanSurfaceLingId(lemma),
 		) as ParsedObservedSurfaceDto;
 
@@ -593,8 +597,32 @@ describe("Ling ID usage", () => {
 
 	it("does not preserve compatibility with the removed top-level lemma format", () => {
 		expect(() =>
-			parseLingId("ling:v1:DE:LEM;See;Lexeme;NOUN;gender=Fem;-"),
+			parseGermanSurface("ling:v1:DE:LEM;See;Lexeme;NOUN;gender=Fem;-"),
 		).toThrow(/Unsupported Ling ID kind: LEM/);
+	});
+
+	it("round-trips shallow surface ids as plain dto objects", () => {
+		const shallowId =
+			"ling:v1:DE:SURF-SHALLOW;See;Standard;Lemma;Lexeme;NOUN;-";
+
+		const parsedShallowSurface = parseGermanShallowSurface(
+			shallowId,
+		) as ParsedShallowSurfaceDto;
+
+		expect({ ...parsedShallowSurface }).toEqual({
+			discriminators: {
+				lemmaKind: "Lexeme",
+				lemmaSubKind: "NOUN",
+			},
+			language: "German",
+			lingKind: "Surface",
+			normalizedFullSurface: "See",
+			orthographicStatus: "Standard",
+			surfaceKind: "Lemma",
+		});
+		expect(toGermanShallowSurfaceLingId(parsedShallowSurface)).toBe(
+			shallowId,
+		);
 	});
 
 	it("parses reserialized dto objects across both surface branches", () => {
@@ -604,11 +632,11 @@ describe("Ling ID usage", () => {
 		const observedId =
 			"ling:v1:EN:SURF;walk;Standard;Lemma;Lexeme;VERB;-;observed;walk;Lexeme;VERB;-;-";
 
-		const parsedTargeted = parseLingId(
+		const parsedTargeted = parseEnglishSurface(
 			targetedId,
 		) as ParsedSurface<"English">;
 
-		const parsedObserved = parseLingId(
+		const parsedObserved = parseEnglishSurface(
 			observedId,
 		) as ParsedSurface<"English">;
 

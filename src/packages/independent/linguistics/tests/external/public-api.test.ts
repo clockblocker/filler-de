@@ -31,12 +31,17 @@ describe("public API usage", () => {
 		expect(TARGET_LANGUAGES).toEqual(["German", "English"]);
 		expect(TargetLanguageSchema.parse("German")).toBe("German");
 		expect(TargetLanguageSchema.parse("English")).toBe("English");
-		expect(typeof linguistics.buildToLingIdFor).toBe("function");
-		expect(typeof linguistics.buildToSurfaceLingIdFor).toBe("function");
-		expect(typeof linguistics.buildToShallowSurfaceLingIdFor).toBe(
+		expect(typeof linguistics.buildToLingConverters).toBe("function");
+		const germanLingConverters =
+			linguistics.buildToLingConverters("German");
+		expect(typeof germanLingConverters.getSurfaceLingId).toBe("function");
+		expect(typeof germanLingConverters.getShallowSurfaceLingId).toBe(
 			"function",
 		);
-		expect(typeof linguistics.parseLingId).toBe("function");
+		expect(typeof germanLingConverters.parseSurface).toBe("function");
+		expect(typeof germanLingConverters.parseShallowSurface).toBe(
+			"function",
+		);
 		expect(OrthographicStatus.Standard).toBe("Standard");
 		expect(SurfaceKind.Inflection).toBe("Inflection");
 		expect(LemmaKind.Lexeme).toBe("Lexeme");
@@ -62,6 +67,10 @@ describe("public API usage", () => {
 		expect(SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN).toBe(
 			SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN,
 		);
+		expect("buildToLingIdFor" in linguistics).toBe(false);
+		expect("buildToSurfaceLingIdFor" in linguistics).toBe(false);
+		expect("buildToShallowSurfaceLingIdFor" in linguistics).toBe(false);
+		expect("parseLingId" in linguistics).toBe(false);
 		expect("toLingId" in linguistics).toBe(false);
 		expect("buildToLemmaLingIdFor" in linguistics).toBe(false);
 		expect("LingIdSchema" in linguistics).toBe(false);

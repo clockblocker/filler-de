@@ -5,8 +5,10 @@ import type {
 	ObservedSurfaceLingId,
 	ParsedLemmaDto,
 	ParsedObservedSurfaceDto,
+	ParsedShallowSurfaceDto,
 	SerializableLemma,
 	SerializableSurface,
+	SerializableSurfaceShell,
 	ShallowSurfaceLingId,
 	SurfaceLingId,
 } from "./types";
@@ -59,7 +61,7 @@ export function serializeSurface(
 
 export function serializeShallowSurface(
 	language: TargetLanguage,
-	value: SerializableSurface,
+	value: SerializableSurfaceShell,
 ): ShallowSurfaceLingId {
 	return joinLingId([
 		buildHeader(language, "SURF-SHALLOW"),
@@ -104,7 +106,9 @@ export function normalizeObservedSurface(
 	};
 }
 
-function serializeSurfaceShell(value: SerializableSurface): string[] {
+function serializeSurfaceShell(
+	value: SerializableSurfaceShell | ParsedShallowSurfaceDto,
+): string[] {
 	return [
 		escapeToken(value.normalizedFullSurface),
 		value.orthographicStatus,
@@ -244,11 +248,12 @@ function hasObservedIdentityMode(
 
 function isObservedSurfaceTarget(
 	target: SerializableSurface["target"],
-): target is Exclude<SerializableSurface["target"], { canonicalLemma: string }> {
+): target is Exclude<
+	SerializableSurface["target"],
+	{ canonicalLemma: string }
+> {
 	return (
-		typeof target === "object" &&
-		target !== null &&
-		"lemmaKind" in target
+		typeof target === "object" && target !== null && "lemmaKind" in target
 	);
 }
 

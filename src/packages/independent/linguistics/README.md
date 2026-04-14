@@ -183,7 +183,7 @@ lemma ID format.
 
 ```ts
 import {
-	buildToSurfaceLingIdFor,
+	buildToLingConverters,
 	LemmaSchema,
 } from "@textfresser/linguistics";
 
@@ -196,7 +196,8 @@ const walkLemma = LemmaSchema.English.Lexeme.VERB.parse({
 	canonicalLemma: "walk",
 });
 
-const toEnglishSurfaceLingId = buildToSurfaceLingIdFor("English");
+const { getSurfaceLingId: toEnglishSurfaceLingId } =
+	buildToLingConverters("English");
 
 const walkLemmaId = toEnglishSurfaceLingId(walkLemma);
 // "ling:v1:EN:SURF;walk;Standard;Lemma;Lexeme;VERB;-;observed;walk;Lexeme;VERB;-;🚶"
@@ -206,11 +207,12 @@ Observed-surface identity still includes inherent lemma features:
 
 ```ts
 import {
-	buildToSurfaceLingIdFor,
+	buildToLingConverters,
 	LemmaSchema,
 } from "@textfresser/linguistics";
 
-const toGermanSurfaceLingId = buildToSurfaceLingIdFor("German");
+const { getSurfaceLingId: toGermanSurfaceLingId } =
+	buildToLingConverters("German");
 
 const feminineSee = LemmaSchema.German.Lexeme.NOUN.parse({
 	canonicalLemma: "See",
@@ -240,9 +242,10 @@ toGermanSurfaceLingId(neuterSee);
 Full surface IDs preserve target richness.
 
 ```ts
-import { buildToSurfaceLingIdFor } from "@textfresser/linguistics";
+import { buildToLingConverters } from "@textfresser/linguistics";
 
-const toEnglishSurfaceLingId = buildToSurfaceLingIdFor("English");
+const { getSurfaceLingId: toEnglishSurfaceLingId } =
+	buildToLingConverters("English");
 
 const walkSurfaceId = toEnglishSurfaceLingId({
 	discriminators: {
@@ -292,9 +295,10 @@ target richness. Shallow IDs only accept targeted surfaces, not lemmas or
 observed-surface DTOs.
 
 ```ts
-import { buildToShallowSurfaceLingIdFor } from "@textfresser/linguistics";
+import { buildToLingConverters } from "@textfresser/linguistics";
 
-const toGermanShallowSurfaceLingId = buildToShallowSurfaceLingIdFor("German");
+const { getShallowSurfaceLingId: toGermanShallowSurfaceLingId } =
+	buildToLingConverters("German");
 
 const seeSurface = {
 	discriminators: {
@@ -323,24 +327,25 @@ toGermanShallowSurfaceLingId(seeSurface) ===
 
 ### Parsing IDs
 
-`parseLingId()` returns a surface DTO. For targeted surfaces you can validate
-the parsed value with `SurfaceSchema`. For observed surfaces, you can serialize
-the DTO again directly.
+`buildToLingConverters()` also exposes language-bound parsers. `parseSurface()`
+returns a full surface DTO, and `parseShallowSurface()` returns a shallow
+surface shell DTO.
 
 ```ts
 import {
-	buildToSurfaceLingIdFor,
-	parseLingId,
+	buildToLingConverters,
 	SurfaceSchema,
 } from "@textfresser/linguistics";
 
-const parsedWalkSurface = parseLingId(walkSurfaceId);
+const { getSurfaceLingId, parseSurface } = buildToLingConverters("English");
+
+const parsedWalkSurface = parseSurface(walkSurfaceId);
 
 SurfaceSchema.English.Standard.Inflection.Lexeme.VERB.parse(parsedWalkSurface);
-buildToSurfaceLingIdFor("English")(parsedWalkSurface) === walkSurfaceId;
+getSurfaceLingId(parsedWalkSurface) === walkSurfaceId;
 // true
 
-const parsedWalkLemmaIdentity = parseLingId(walkLemmaId);
-buildToSurfaceLingIdFor("English")(parsedWalkLemmaIdentity) === walkLemmaId;
+const parsedWalkLemmaIdentity = parseSurface(walkLemmaId);
+getSurfaceLingId(parsedWalkLemmaIdentity) === walkLemmaId;
 // true
 ```

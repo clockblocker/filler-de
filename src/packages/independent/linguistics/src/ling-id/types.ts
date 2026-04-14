@@ -78,9 +78,16 @@ export type ParsedObservedSurfaceDto = ParsedSurfaceBaseDto & {
 	observationMode: "observed";
 };
 
-export type ParsedSurfaceDto = ParsedTargetedSurfaceDto | ParsedObservedSurfaceDto;
+export type ParsedShallowSurfaceDto = ParsedSurfaceBaseDto & {
+	target?: never;
+	observationMode?: never;
+};
 
-export type ParsedLingDto = ParsedSurfaceDto;
+export type ParsedSurfaceDto =
+	| ParsedTargetedSurfaceDto
+	| ParsedObservedSurfaceDto;
+
+export type ParsedLingDto = ParsedSurfaceDto | ParsedShallowSurfaceDto;
 
 export type ParsedLingDtoFor<L extends TargetLanguage> = ParsedLingDto & {
 	language: L;
@@ -104,6 +111,11 @@ export type ParsedObservedSurfaceDtoFor<L extends TargetLanguage> =
 		language: L;
 	};
 
+export type ParsedShallowSurfaceDtoFor<L extends TargetLanguage> =
+	ParsedShallowSurfaceDto & {
+		language: L;
+	};
+
 export type SerializableLemma = Lemma | ParsedLemmaDto;
 export type SerializableTargetedSurface =
 	| LingIdSurfaceInput
@@ -112,3 +124,7 @@ export type SerializableTargetedSurface =
 export type SerializableSurface =
 	| SerializableTargetedSurface
 	| ParsedObservedSurfaceDto;
+
+export type SerializableSurfaceShell =
+	| SerializableSurface
+	| ParsedShallowSurfaceDto;

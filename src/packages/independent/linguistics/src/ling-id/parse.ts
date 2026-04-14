@@ -14,8 +14,10 @@ import type {
 	LingId,
 	ParsedLemmaDto,
 	ParsedObservedSurfaceDto,
+	ParsedShallowSurfaceDto,
 	ParsedSurfaceDto,
 	ParsedTargetedSurfaceDto,
+	ShallowSurfaceLingId,
 } from "./types";
 import { parseHeader } from "./wire";
 
@@ -24,6 +26,18 @@ export function parseLingId(id: LingId): ParsedSurfaceDto {
 
 	if (kind === "SURF") {
 		return parseSurfaceBody(language, body);
+	}
+
+	throw new Error(`Unsupported Ling ID kind: ${kind}`);
+}
+
+export function parseShallowSurfaceLingId(
+	id: ShallowSurfaceLingId,
+): ParsedShallowSurfaceDto {
+	const { body, kind, language } = parseHeader(id);
+
+	if (kind === "SURF-SHALLOW") {
+		return parseShallowSurfaceBody(language, body);
 	}
 
 	throw new Error(`Unsupported Ling ID kind: ${kind}`);
@@ -192,6 +206,48 @@ function parseSurfaceBody(
 	} satisfies ParsedTargetedSurfaceDto;
 }
 
+function parseShallowSurfaceBody(
+	language: TargetLanguage,
+	body: string,
+): ParsedShallowSurfaceDto {
+	const parts = splitSurfaceBody(body, 6);
+
+	if (parts.length !== 6) {
+		throw new Error(`Malformed shallow surface Ling ID: ${body}`);
+	}
+
+	const [
+		normalizedFullSurfaceToken,
+		orthographicStatus,
+		surfaceKind,
+		lemmaKind,
+		lemmaSubKind,
+		inflectionalFeaturesToken,
+	] = parts as [string, string, string, string, string, string];
+
+	return {
+		discriminators: {
+			lemmaKind: lemmaKind as LemmaKind,
+			lemmaSubKind,
+		},
+		...(surfaceKind === "Inflection"
+			? {
+					inflectionalFeatures: parseFeatureBag(
+						inflectionalFeaturesToken,
+					),
+				}
+			: {}),
+		language,
+		lingKind: "Surface",
+		normalizedFullSurface: unescapeToken(normalizedFullSurfaceToken),
+		orthographicStatus: orthographicStatus as Exclude<
+			OrthographicStatus,
+			"Unknown"
+		>,
+		surfaceKind: surfaceKind as SurfaceKind,
+	} satisfies ParsedShallowSurfaceDto;
+}
+
 function parseObservedSurfaceBody(
 	language: TargetLanguage,
 	body: string,
@@ -236,11 +292,11 @@ function unsupportedTargetMode(targetMode: string): never {
 	throw new Error(`Unsupported target mode in Ling ID: ${targetMode}`);
 }
 
-function splitSurfaceBody(body: string): string[] {
+function splitSurfaceBody(body: string, partCount = 8): string[] {
 	const parts: string[] = [];
 	let remainder = body;
 
-	for (let index = 0; index < 7; index += 1) {
+	for (let index = 0; index < partCount - 1; index += 1) {
 		const separatorIndex = remainder.indexOf(";");
 
 		if (separatorIndex === -1) {
