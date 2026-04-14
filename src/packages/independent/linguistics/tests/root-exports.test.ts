@@ -86,6 +86,30 @@ describe("root exports", () => {
 		expect(unknownSelection.orthographicStatus).toBe("Unknown");
 	});
 
+	it("supports partial phraseme selections in the broad type aliases", () => {
+		const selection: AnySelection<"English"> = {
+			language: "English",
+			orthographicStatus: "Standard",
+			surface: {
+				lemma: {
+					language: "English",
+					lemmaKind: "Phraseme",
+					phrasemeKind: "Cliché",
+					spelledLemma: "a walk in the park",
+				},
+				spelledSurface: "walk",
+				surfaceKind: "Partial",
+			},
+		};
+
+		expect(selection.surface.lemma.lemmaKind).toBe("Phraseme");
+		expect(
+			SelectionSchema.English.Standard.Partial.Phraseme.Cliché.safeParse(
+				selection,
+			).success,
+		).toBe(true);
+	});
+
 	it("exposes a dedicated relations api", () => {
 		expect(LexicalRelation.synonym).toBe("synonym");
 		expect(MorphologicalRelation.derivedFrom).toBe("derivedFrom");

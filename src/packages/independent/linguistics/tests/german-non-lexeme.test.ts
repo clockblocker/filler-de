@@ -89,10 +89,10 @@ describe("German non-lexeme schemas", () => {
 		expect(
 			SelectionSchema.German.Typo.Lemma.Phraseme.DiscourseFormula,
 		).toBeDefined();
+		expect(
+			SelectionSchema.German.Standard.Partial.Phraseme.Cliché,
+		).toBeDefined();
 		expect("Morpheme" in SelectionSchema.German.Standard.Inflection).toBe(
-			false,
-		);
-		expect("Phraseme" in SelectionSchema.German.Standard.Partial).toBe(
 			false,
 		);
 		expect(LemmaSchema.German.Morpheme.Prefix).toBe(
@@ -139,5 +139,34 @@ describe("German non-lexeme schemas", () => {
 
 		expect(morphemeResult.success).toBe(true);
 		expect(phrasemeResult.success).toBe(true);
+	});
+
+	it("accepts German partial phraseme selections", () => {
+		const phraseme: Selection<
+			"German",
+			"Standard",
+			"Partial",
+			"Phraseme",
+			"Cliché"
+		> = {
+			language: "German",
+			orthographicStatus: "Standard",
+			surface: {
+				lemma: {
+					language: "German",
+					lemmaKind: "Phraseme",
+					phrasemeKind: "Cliché",
+					spelledLemma: "ein Spaziergang im Park",
+				},
+				spelledSurface: "Spaziergang",
+				surfaceKind: "Partial",
+			},
+		};
+		const result =
+			SelectionSchema.German.Standard.Partial.Phraseme.Cliché.safeParse(
+				phraseme,
+			);
+
+		expect(result.success).toBe(true);
 	});
 });

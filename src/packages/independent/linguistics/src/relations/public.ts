@@ -33,6 +33,7 @@ export const RelationTargetsSchema = RelationTargetsSchemaInternal;
 export const LexicalRelationsSchema = LexicalRelationsSchemaInternal;
 export const MorphologicalRelationsSchema =
 	MorphologicalRelationsSchemaInternal;
+
 export const Relations = {
 	Lexical: {
 		enum: LexicalRelation,

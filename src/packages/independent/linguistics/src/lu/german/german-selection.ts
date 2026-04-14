@@ -17,7 +17,9 @@ import {
 } from "./lu/morpheme/german-morphemes";
 import {
 	GermanStandardLemmaPhrasemeSelectionSchemas,
+	GermanStandardPartialPhrasemeSelectionSchemas,
 	GermanTypoLemmaPhrasemeSelectionSchemas,
+	GermanTypoPartialPhrasemeSelectionSchemas,
 } from "./lu/phraseme/german-phrasemes";
 
 const GermanUnknownSelectionSchema = z.object({
@@ -37,6 +39,7 @@ export const GermanSelectionSchema = {
 		},
 		Partial: {
 			Lexeme: GermanStandardPartialLexemeSelectionSchemas,
+			Phraseme: GermanStandardPartialPhrasemeSelectionSchemas,
 		},
 		Variant: {
 			Lexeme: GermanStandardVariantLexemeSelectionSchemas,
@@ -53,6 +56,7 @@ export const GermanSelectionSchema = {
 		},
 		Partial: {
 			Lexeme: GermanTypoPartialLexemeSelectionSchemas,
+			Phraseme: GermanTypoPartialPhrasemeSelectionSchemas,
 		},
 		Variant: {
 			Lexeme: GermanTypoVariantLexemeSelectionSchemas,

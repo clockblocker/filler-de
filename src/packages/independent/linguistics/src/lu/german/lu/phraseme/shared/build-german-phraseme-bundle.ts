@@ -11,8 +11,14 @@ type GermanPhrasemeBundle<PK extends PhrasemeKind> = {
 	StandardLemmaSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Standard", "Lemma", "Phraseme", PK>
 	>;
+	StandardPartialSelectionSchema: z.ZodType<
+		AbstractSelectionFor<"Standard", "Partial", "Phraseme", PK>
+	>;
 	TypoLemmaSelectionSchema: z.ZodType<
 		AbstractSelectionFor<"Typo", "Lemma", "Phraseme", PK>
+	>;
+	TypoPartialSelectionSchema: z.ZodType<
+		AbstractSelectionFor<"Typo", "Partial", "Phraseme", PK>
 	>;
 };
 
@@ -57,10 +63,21 @@ export function buildGermanPhrasemeBundle<PK extends PhrasemeKind>({
 			language: "German",
 			lemmaIdentityShape,
 		}) as unknown as GermanPhrasemeBundle<PK>["StandardLemmaSelectionSchema"],
+		StandardPartialSelectionSchema: buildLemmaSelection({
+			language: "German",
+			lemmaIdentityShape,
+			surfaceKind: "Partial",
+		}) as unknown as GermanPhrasemeBundle<PK>["StandardPartialSelectionSchema"],
 		TypoLemmaSelectionSchema: buildLemmaSelection({
 			language: "German",
 			lemmaIdentityShape,
 			orthographicStatus: "Typo",
 		}) as unknown as GermanPhrasemeBundle<PK>["TypoLemmaSelectionSchema"],
+		TypoPartialSelectionSchema: buildLemmaSelection({
+			language: "German",
+			lemmaIdentityShape,
+			orthographicStatus: "Typo",
+			surfaceKind: "Partial",
+		}) as unknown as GermanPhrasemeBundle<PK>["TypoPartialSelectionSchema"],
 	};
 }

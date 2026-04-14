@@ -44,7 +44,9 @@ type AbstractPhrasemLemma<PK extends PhrasemeKind = PhrasemeKind> = Prettify<
 		| {
 				[PHRASEME_KIND_KEY]:
 					| Extract<PK, typeof PhrasemeKind.enum.Aphorism>
-					| Extract<PK, typeof PhrasemeKind.enum.Cliché>;
+					| Extract<PK, typeof PhrasemeKind.enum.Cliché>
+					| Extract<PK, typeof PhrasemeKind.enum.Idiom>
+					| Extract<PK, typeof PhrasemeKind.enum.Proverb>;
 		  }
 		| {
 				[PHRASEME_KIND_KEY]: Extract<

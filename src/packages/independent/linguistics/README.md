@@ -28,7 +28,7 @@ That selection can be represented as a typed surface form:
 ```ts
 import { SelectionSchema } from "@textfresser/linguistics";
 
-const walkSelection = SelectionSchema.English.Standard.Inflection.Lexeme.VERB.parse(
+const simpleWalkSelection = SelectionSchema.English.Standard.Inflection.Lexeme.VERB.parse(
 	{
 		language: "English",
 		orthographicStatus: "Standard",
@@ -56,7 +56,7 @@ And the assigned lemma can be validated independently:
 ```ts
 import { LemmaSchema } from "@textfresser/linguistics";
 
-const walkLemma = LemmaSchema.English.Lexeme.VERB.parse({
+const simpleWalkLemma = LemmaSchema.English.Lexeme.VERB.parse({
 	inherentFeatures: {},
 	language: "English",
 	lemmaKind: "Lexeme",
@@ -67,8 +67,28 @@ const walkLemma = LemmaSchema.English.Lexeme.VERB.parse({
 
 Altough mainly based on the work of UD, this model has a human student of a new language in mind and hence differs from UD in compoumeded ling units.
 
-For example, the model allows to classify selection of "walk" in
+For example, the model allows to classify the idiom in
 ```text
 This game was a [[walk]] in the park
 ```
-as a part of a Phraseme:
+
+as a part of Idiom "a walk in the park":
+
+```ts
+const idiomPartSelection = SelectionSchema.English.Standard.Partial.Phraseme.Idiom.parse(
+	{
+		language: "English",
+		orthographicStatus: "Standard",
+		surface: {
+			lemma: {
+				language: "English",
+				lemmaKind: "Phraseme",
+				phrasemeKind: "Idiom",
+				spelledLemma: "a walk in the park",
+			},
+			spelledSurface: "walk",
+			surfaceKind: "Partial",
+		},
+	},
+);
+```

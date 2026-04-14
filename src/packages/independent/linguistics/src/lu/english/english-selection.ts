@@ -17,7 +17,9 @@ import {
 } from "./lu/morpheme/english-morphemes";
 import {
 	EnglishStandardLemmaPhrasemeSelectionSchemas,
+	EnglishStandardPartialPhrasemeSelectionSchemas,
 	EnglishTypoLemmaPhrasemeSelectionSchemas,
+	EnglishTypoPartialPhrasemeSelectionSchemas,
 } from "./lu/phraseme/english-phrasemes";
 
 const EnglishUnknownSelectionSchema = z.object({
@@ -37,6 +39,7 @@ export const EnglishSelectionSchema = {
 		},
 		Partial: {
 			Lexeme: EnglishStandardPartialLexemeSelectionSchemas,
+			Phraseme: EnglishStandardPartialPhrasemeSelectionSchemas,
 		},
 		Variant: {
 			Lexeme: EnglishStandardVariantLexemeSelectionSchemas,
@@ -53,6 +56,7 @@ export const EnglishSelectionSchema = {
 		},
 		Partial: {
 			Lexeme: EnglishTypoPartialLexemeSelectionSchemas,
+			Phraseme: EnglishTypoPartialPhrasemeSelectionSchemas,
 		},
 		Variant: {
 			Lexeme: EnglishTypoVariantLexemeSelectionSchemas,
