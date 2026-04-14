@@ -124,5 +124,5 @@ function getLemmaSubKindKey(
 		);
 	}
 
-	return matchingKeys[0]!;
+	return matchingKeys[0];
 }
