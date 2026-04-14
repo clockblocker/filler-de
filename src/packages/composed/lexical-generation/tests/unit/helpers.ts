@@ -5,7 +5,7 @@ import {
 	type ResolvedSelection,
 } from "../../src";
 
-type LexemePos = keyof (typeof SelectionSchema.German.Standard.Lemma.Lexeme);
+type LexemePos = keyof typeof SelectionSchema.German.Standard.Lemma.Lexeme;
 type SurfaceKind = keyof typeof SelectionSchema.German.Standard;
 
 export function makeLexemeSelection(params: {
@@ -21,10 +21,12 @@ export function makeLexemeSelection(params: {
 		language: "German" as const,
 		orthographicStatus: "Standard" as const,
 		surface: {
-			...(surfaceKind === "Inflection" ? { inflectionalFeatures: {} } : {}),
+			...(surfaceKind === "Inflection"
+				? { inflectionalFeatures: {} }
+				: {}),
 			lemma: {
-				lemmaKind: "Lexeme" as const,
 				language: "German" as const,
+				lemmaKind: "Lexeme" as const,
 				pos: params.pos,
 				spelledLemma: params.lemma,
 			},

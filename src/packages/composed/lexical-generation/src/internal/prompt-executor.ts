@@ -34,7 +34,11 @@ export function validatePromptAvailability(
 	}
 
 	for (const prompt of getRequiredPromptSpecs()) {
-		if (!prompt.requestLabel || !prompt.systemPrompt || !prompt.outputSchema) {
+		if (
+			!prompt.requestLabel ||
+			!prompt.systemPrompt ||
+			!prompt.outputSchema
+		) {
 			return err(
 				lexicalGenerationError(
 					LexicalGenerationFailureKind.PromptNotAvailable,

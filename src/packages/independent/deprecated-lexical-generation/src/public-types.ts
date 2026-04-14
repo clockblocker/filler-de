@@ -7,16 +7,16 @@ import type {
 	MorphemeKind,
 	UnknownSelection,
 } from "@textfresser/linguistics";
-import type {
-	KnownLanguage,
-	TargetLanguage,
-} from "./internal/shared/languages";
 import type { Result } from "neverthrow";
 import type { z } from "zod/v3";
 import type {
 	LexicalGenerationError,
 	LexicalGenerationFailureKind,
 } from "./errors";
+import type {
+	KnownLanguage,
+	TargetLanguage,
+} from "./internal/shared/languages";
 import type { LexicalGenerationSettings } from "./settings";
 
 export type ZodSchemaLike<T> = z.ZodType<T>;
@@ -121,15 +121,14 @@ export type LexicalRelations = {
 	}>;
 };
 
-export type LexicalInfo =
-	{
-		core: LexicalInfoField<LexicalCore>;
-		features: LexicalInfoField<LexicalFeatures>;
-		inflections: LexicalInfoField<LexemeInflections>;
-		morphemicBreakdown: LexicalInfoField<MorphemicBreakdown>;
-		relations: LexicalInfoField<LexicalRelations>;
-		selection: ResolvedSelection;
-	};
+export type LexicalInfo = {
+	core: LexicalInfoField<LexicalCore>;
+	features: LexicalInfoField<LexicalFeatures>;
+	inflections: LexicalInfoField<LexemeInflections>;
+	morphemicBreakdown: LexicalInfoField<MorphemicBreakdown>;
+	relations: LexicalInfoField<LexicalRelations>;
+	selection: ResolvedSelection;
+};
 
 export type GenerateLexicalInfoOptions = {
 	precomputedEmojiDescription?: string[];

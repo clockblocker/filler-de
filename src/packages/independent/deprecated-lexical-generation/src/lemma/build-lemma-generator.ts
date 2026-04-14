@@ -70,8 +70,8 @@ function toResolvedSelection(output: {
 					? { inflectionalFeatures: {} }
 					: {}),
 				lemma: {
-					lemmaKind: "Lexeme" as const,
 					language: "German" as const,
+					lemmaKind: "Lexeme" as const,
 					pos,
 					spelledLemma: output.lemma,
 				},
@@ -95,8 +95,8 @@ function toResolvedSelection(output: {
 		surface: {
 			...base.surface,
 			lemma: {
-				lemmaKind: "Phraseme" as const,
 				language: "German" as const,
+				lemmaKind: "Phraseme" as const,
 				phrasemeKind,
 				spelledLemma: output.lemma,
 			},

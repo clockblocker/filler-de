@@ -1,8 +1,5 @@
 import { err, ok } from "neverthrow";
-import {
-	LexicalGenerationFailureKind,
-	lexicalGenerationError,
-} from "./errors";
+import { LexicalGenerationFailureKind, lexicalGenerationError } from "./errors";
 import { executePrompt } from "./internal/prompt-executor";
 import { operationRegistry } from "./internal/prompt-registry";
 import { createLexicalIdentityFromSelection } from "./lexical-meta";
@@ -44,7 +41,9 @@ function normalizeCandidates(
 
 	return candidateSenses
 		.map((candidate, cacheIndex) => ({ ...candidate, cacheIndex }))
-		.filter((candidate) => sameIdentity(candidate.identity, selectionIdentity))
+		.filter((candidate) =>
+			sameIdentity(candidate.identity, selectionIdentity),
+		)
 		.filter(
 			(candidate) =>
 				Array.isArray(candidate.emojiDescription) &&
@@ -72,7 +71,10 @@ export function buildSenseDisambiguator(
 			);
 		}
 
-		const matchingCandidates = normalizeCandidates(selection, candidateSenses);
+		const matchingCandidates = normalizeCandidates(
+			selection,
+			candidateSenses,
+		);
 		if (!matchingCandidates || matchingCandidates.length === 0) {
 			return ok<SenseMatchResult>({ kind: "new" });
 		}
@@ -100,7 +102,8 @@ export function buildSenseDisambiguator(
 
 		if (promptResult.value.matchedIndex !== null) {
 			const matched = matchingCandidates.find(
-				(candidate) => candidate.promptIndex === promptResult.value.matchedIndex,
+				(candidate) =>
+					candidate.promptIndex === promptResult.value.matchedIndex,
 			);
 			if (matched) {
 				return ok<SenseMatchResult>({

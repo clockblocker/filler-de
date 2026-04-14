@@ -1,8 +1,4 @@
 {
-	"name": "@textfresser/lexical-generation-next",
-	"private": true,
-	"version": "0.0.0",
-	"type": "module",
 	"dependencies": {
 		"@textfresser/linguistics": "workspace:*",
 		"neverthrow": "^8.2.0",
@@ -11,9 +7,13 @@
 	"exports": {
 		".": "./src/index.ts"
 	},
+	"name": "@textfresser/lexical-generation-next",
+	"private": true,
 	"scripts": {
 		"build": "bun ../../../../scripts/build-workspace-package.ts",
 		"codegen:prompts": "bun ./src/internal/validate-prompt-assets.ts",
 		"test": "bun test --reporter=dot --preload ../../../../tests/unit/setup.ts ./tests/"
-	}
+	},
+	"type": "module",
+	"version": "0.0.0"
 }

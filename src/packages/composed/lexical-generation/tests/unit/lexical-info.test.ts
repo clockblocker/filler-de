@@ -55,10 +55,14 @@ describe("lexical-generation-next lexical info", () => {
 						});
 					case "GenerateRelations":
 						return okValue({
-							relations: [{ kind: "Hypernym", words: ["Institut"] }],
+							relations: [
+								{ kind: "Hypernym", words: ["Institut"] },
+							],
 						});
 					default:
-						throw new Error(`unexpected requestLabel ${requestLabel}`);
+						throw new Error(
+							`unexpected requestLabel ${requestLabel}`,
+						);
 				}
 			},
 			knownLanguage: "English",
@@ -92,8 +96,6 @@ describe("lexical-generation-next lexical info", () => {
 			inflections: {
 				status: "ready",
 				value: {
-					kind: "noun",
-					gender: "Fem",
 					cells: [
 						{
 							article: "die",
@@ -102,6 +104,8 @@ describe("lexical-generation-next lexical info", () => {
 							number: "Sing",
 						},
 					],
+					gender: "Fem",
+					kind: "noun",
 				},
 			},
 			morphemicBreakdown: {
@@ -146,7 +150,9 @@ describe("lexical-generation-next lexical info", () => {
 					case "GenerateRelations":
 						return okValue({ relations: [] });
 					default:
-						throw new Error(`unexpected requestLabel ${requestLabel}`);
+						throw new Error(
+							`unexpected requestLabel ${requestLabel}`,
+						);
 				}
 			},
 			knownLanguage: "English",
@@ -194,7 +200,9 @@ describe("lexical-generation-next lexical info", () => {
 							),
 						);
 					default:
-						throw new Error(`unexpected requestLabel ${requestLabel}`);
+						throw new Error(
+							`unexpected requestLabel ${requestLabel}`,
+						);
 				}
 			},
 			knownLanguage: "English",
@@ -236,7 +244,9 @@ describe("lexical-generation-next lexical info", () => {
 					case "GenerateRelations":
 						return okValue({ relations: [] });
 					default:
-						throw new Error(`unexpected requestLabel ${requestLabel}`);
+						throw new Error(
+							`unexpected requestLabel ${requestLabel}`,
+						);
 				}
 			},
 			knownLanguage: "English",
@@ -286,7 +296,9 @@ describe("lexical-generation-next lexical info", () => {
 					case "GenerateRelations":
 						return okValue({ relations: [] });
 					default:
-						throw new Error(`unexpected requestLabel ${requestLabel}`);
+						throw new Error(
+							`unexpected requestLabel ${requestLabel}`,
+						);
 				}
 			},
 			knownLanguage: "English",

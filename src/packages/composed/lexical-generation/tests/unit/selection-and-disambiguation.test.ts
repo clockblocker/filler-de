@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { err, ok } from "neverthrow";
 import {
-	createLexicalMeta,
 	createLexicalGenerationClient,
+	createLexicalMeta,
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,
 	type StructuredFetchFn,
@@ -149,7 +149,10 @@ describe("lexical-generation-next selection/disambiguation", () => {
 			targetLanguage: "German",
 		})._unsafeUnwrap();
 
-		const result = await client.resolveSelection("Bank", "Ich sehe die Bank");
+		const result = await client.resolveSelection(
+			"Bank",
+			"Ich sehe die Bank",
+		);
 
 		expect(result.isErr()).toBe(true);
 		expect(result._unsafeUnwrapErr().kind).toBe(
