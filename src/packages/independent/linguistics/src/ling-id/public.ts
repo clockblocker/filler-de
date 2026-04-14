@@ -23,16 +23,6 @@ import type {
 	SurfaceLingId,
 } from "./types";
 
-type LanguageSerializer = {
-	toSurfaceLingId: {
-		(value: SerializableLemma): ObservedSurfaceLingId;
-		(value: SerializableSurface): SurfaceLingId | ObservedSurfaceLingId;
-	};
-	toShallowSurfaceLingId: (
-		value: SerializableTargetedSurface,
-	) => ShallowSurfaceLingId;
-};
-
 export type {
 	LingId,
 	LingIdSurfaceInput,
@@ -126,6 +116,16 @@ export function buildToShallowSurfaceLingIdFor<L extends TargetLanguage>(
 	};
 }
 
+type LanguageSerializer = {
+	toSurfaceLingId: {
+		(value: SerializableLemma): ObservedSurfaceLingId;
+		(value: SerializableSurface): SurfaceLingId | ObservedSurfaceLingId;
+	};
+	toShallowSurfaceLingId: (
+		value: SerializableTargetedSurface,
+	) => ShallowSurfaceLingId;
+};
+
 function isSurfaceValue(
 	value: unknown,
 ): value is SerializableSurface | ParsedObservedSurfaceDto {
@@ -137,7 +137,26 @@ function isSurfaceValue(
 function isObservedSurfaceValue(
 	value: SerializableSurface | ParsedSurfaceDto | ParsedObservedSurfaceDto,
 ): value is ParsedObservedSurfaceDto {
-	return value.target === "Lemma";
+	return hasObservedLemma(value) || hasObservedLemmaTarget(value);
+}
+
+function hasObservedLemma(
+	value: unknown,
+): value is { observedLemma: ParsedObservedSurfaceDto["observedLemma"] } {
+	return (
+		typeof value === "object" && value !== null && "observedLemma" in value
+	);
+}
+
+function hasObservedLemmaTarget(
+	value: unknown,
+): value is { target: ParsedObservedSurfaceDto["target"] } {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"target" in value &&
+		(value as { target: unknown }).target === "Lemma"
+	);
 }
 
 function getValueLanguage(value: unknown): TargetLanguage | undefined {

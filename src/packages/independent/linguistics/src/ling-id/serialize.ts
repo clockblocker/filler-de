@@ -238,11 +238,25 @@ function getLemmaFeatures(value: ParsedLemmaDto) {
 function isObservedSurfaceDto(
 	value: SerializableLemma | SerializableSurface | ParsedObservedSurfaceDto,
 ): value is ParsedObservedSurfaceDto {
+	return hasObservedLemma(value) || hasObservedLemmaTarget(value);
+}
+
+function hasObservedLemma(
+	value: unknown,
+): value is { observedLemma: ParsedObservedSurfaceDto["observedLemma"] } {
+	return (
+		typeof value === "object" && value !== null && "observedLemma" in value
+	);
+}
+
+function hasObservedLemmaTarget(
+	value: unknown,
+): value is { target: ParsedObservedSurfaceDto["target"] } {
 	return (
 		typeof value === "object" &&
 		value !== null &&
 		"target" in value &&
-		value.target === "Lemma"
+		(value as { target: unknown }).target === "Lemma"
 	);
 }
 

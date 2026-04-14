@@ -296,6 +296,22 @@ describe("Ling IDs", () => {
 		);
 	});
 
+	it("canonicalizes observed dto reserialization even if the target branch is mutated", () => {
+		const observed = parseLingId(
+			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
+		) as ParsedObservedSurfaceDto;
+		const mutatedObserved = {
+			...observed,
+			target: {
+				canonicalLemma: "Bogus",
+			},
+		} as unknown as ParsedObservedSurfaceDto;
+
+		expect(toGermanSurfaceLingId(mutatedObserved)).toBe(
+			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
+		);
+	});
+
 	it("round-trips targeted surface ids as plain dto objects and preserves target branches", () => {
 		const feminineSeeLemma: AnyLemma<"German"> = {
 			canonicalLemma: "See",
@@ -549,6 +565,16 @@ describe("Ling IDs", () => {
 		expect(() =>
 			toGermanShallowSurfaceLingId(
 				observedSurface as unknown as ParsedTargetedSurfaceDto,
+			),
+		).toThrow(/do not support observed surfaces/);
+		expect(() =>
+			toGermanShallowSurfaceLingId(
+				{
+					...observedSurface,
+					target: {
+						canonicalLemma: "Bogus",
+					},
+				} as unknown as ParsedTargetedSurfaceDto,
 			),
 		).toThrow(/do not support observed surfaces/);
 	});
