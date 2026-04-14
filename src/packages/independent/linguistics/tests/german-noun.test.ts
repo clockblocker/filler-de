@@ -56,7 +56,7 @@ describe("German noun schemas", () => {
 					language: "German",
 					lemmaKind: "Lexeme",
 					pos: "NOUN",
-					senseEmojis: ["👶"],
+					meaningInEmojis: "👶",
 					spelledLemma: "Kind",
 				},
 				spelledSurface: "Kindern",
@@ -98,7 +98,7 @@ describe("German noun schemas", () => {
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
-			senseEmojis: ["👶"],
+			meaningInEmojis: "👶",
 			spelledLemma: "Kind",
 		});
 
@@ -125,13 +125,13 @@ describe("German noun schemas", () => {
 		).toBe(true);
 	});
 
-	it("rejects invalid sense emoji payloads", () => {
+	it("rejects invalid meaningInEmojis payloads", () => {
 		const lemmaResult = GermanNounLemmaSchema.safeParse({
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
-			senseEmojis: [],
+			meaningInEmojis: "",
 			spelledLemma: "Haus",
 		});
 		const selectionResult = GermanNounLemmaSelectionSchema.safeParse({
@@ -142,7 +142,7 @@ describe("German noun schemas", () => {
 					language: "German",
 					lemmaKind: "Lexeme",
 					pos: "NOUN",
-					senseEmojis: ["house"],
+					meaningInEmojis: "house",
 					spelledLemma: "Haus",
 				},
 				spelledSurface: "Haus",

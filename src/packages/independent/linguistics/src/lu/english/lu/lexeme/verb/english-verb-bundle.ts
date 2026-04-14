@@ -1,7 +1,7 @@
 import z from "zod/v3";
 import type { AbstractLemma } from "../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
-import { SenseEmojisSchema } from "../../../../universal/sense-emojis";
+import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 import {
@@ -107,7 +107,7 @@ export const EnglishVerbTypoVariantSelectionSchema = buildLemmaSelection({
 >;
 
 export const EnglishVerbLemmaSchema = z.object({
-	senseEmojis: SenseEmojisSchema.optional(),
+	meaningInEmojis: MeaningInEmojisSchema.optional(),
 	inherentFeatures: EnglishVerbInherentFeaturesSchema,
 	lemmaKind: z.literal("Lexeme"),
 	language: z.literal("English"),

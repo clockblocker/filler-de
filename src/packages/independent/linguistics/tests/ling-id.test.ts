@@ -9,7 +9,7 @@ describe("LingId", () => {
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
-			senseEmojis: ["🏰", "👑"],
+			meaningInEmojis: "👑🏰",
 			spelledLemma: " Burg ",
 		};
 
@@ -22,7 +22,7 @@ describe("LingId", () => {
 					language: "German",
 					lemmaKind: "Lexeme",
 					pos: "NOUN",
-					senseEmojis: ["👑", "🏰"],
+					meaningInEmojis: "👑🏰",
 					spelledLemma: "Burg",
 				},
 				spelledSurface: "Burg",
@@ -78,7 +78,7 @@ describe("LingId", () => {
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
-			senseEmojis: [],
+			meaningInEmojis: "",
 			spelledLemma: " \n\t ",
 		} as AnyLemma<"German">;
 		const inconsistentSelection: AnySelection<"German"> = {
@@ -136,25 +136,25 @@ describe("LingId", () => {
 		expect(toLingId(standardSelection)).not.toBe(toLingId(typoSelection));
 	});
 
-	it("treats sense emojis as an unordered set", () => {
+	it("treats meaningInEmojis as an ordered identity string", () => {
 		const left: AnyLemma<"German"> = {
-			inherentFeatures: {},
+			inherentFeatures: { gender: "Fem" },
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
-			senseEmojis: ["🏰", "👑"],
+			meaningInEmojis: "🏰👑",
 			spelledLemma: "Burg",
 		};
 		const right: AnyLemma<"German"> = {
-			inherentFeatures: {},
+			inherentFeatures: { gender: "Fem" },
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
-			senseEmojis: ["👑", "🏰"],
+			meaningInEmojis: "👑🏰",
 			spelledLemma: "Burg",
 		};
 
-		expect(toLingId(left)).toBe(toLingId(right));
+		expect(toLingId(left)).not.toBe(toLingId(right));
 	});
 
 	it("applies the initial identity-feature policy for German noun, verb, and prefix morpheme bundles", () => {

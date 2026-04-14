@@ -16,7 +16,7 @@ type IdentityDiscriminator = string;
 
 type NormalizedLinguisticIdentity = {
 	discriminator: IdentityDiscriminator;
-	senseEmojis: string[];
+	meaningInEmojis: string;
 	identityFeatures: Partial<Record<IdentityFeatureKey, IdentityFeatureValue>>;
 	language: string;
 	surface: string;
@@ -60,7 +60,7 @@ export function toLingId(input: AnyLemma | AnySelection): LingId | null {
 		const normalized = buildNormalizedIdentity({
 			language: input.language,
 			lemma: input.surface.lemma,
-			senseEmojis: input.surface.lemma.senseEmojis,
+			meaningInEmojis: input.surface.lemma.meaningInEmojis,
 			surface,
 			surfaceKind: input.surface.surfaceKind,
 		});
@@ -79,7 +79,7 @@ export function toLingId(input: AnyLemma | AnySelection): LingId | null {
 	const normalized = buildNormalizedIdentity({
 		language: input.language,
 		lemma: input,
-		senseEmojis: input.senseEmojis,
+		meaningInEmojis: input.meaningInEmojis,
 		surface,
 		surfaceKind: "Lemma",
 	});
@@ -100,7 +100,7 @@ export function isLingId(value: unknown): value is LingId {
 }
 
 function buildNormalizedIdentity(params: {
-	senseEmojis?: string[];
+	meaningInEmojis?: string;
 	language: string;
 	lemma: LemmaLike;
 	surface: string;
@@ -129,7 +129,7 @@ function buildNormalizedIdentity(params: {
 		discriminator,
 		identityFeatures,
 		language: params.language,
-		senseEmojis: normalizeSenseEmojis(params.senseEmojis),
+		meaningInEmojis: normalizeMeaningInEmojis(params.meaningInEmojis),
 		surface: params.surface,
 		surfaceKind: params.surfaceKind,
 		unitKind,
@@ -184,14 +184,12 @@ function normalizeSurface(surface: unknown): string | null {
 	return normalized.length > 0 ? normalized : null;
 }
 
-function normalizeSenseEmojis(senseEmojis: unknown): string[] {
-	if (!Array.isArray(senseEmojis)) {
-		return [];
+function normalizeMeaningInEmojis(meaningInEmojis: unknown): string {
+	if (typeof meaningInEmojis !== "string") {
+		return "";
 	}
 
-	return [
-		...new Set(senseEmojis.map((emoji) => String(emoji).normalize("NFC"))),
-	].sort();
+	return meaningInEmojis.normalize("NFC");
 }
 
 function normalizeIdentityFeatures(

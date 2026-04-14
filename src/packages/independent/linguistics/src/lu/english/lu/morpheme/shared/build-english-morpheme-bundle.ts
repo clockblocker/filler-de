@@ -2,7 +2,7 @@ import z from "zod/v3";
 import type { AbstractLemma } from "../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
 import type { MorphemeKind } from "../../../../universal/enums/kind/morpheme-kind";
-import { SenseEmojisSchema } from "../../../../universal/sense-emojis";
+import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 
 type EnglishMorphemeBundle<MK extends MorphemeKind> = {
@@ -28,7 +28,7 @@ export function buildEnglishMorphemeBundle<MK extends MorphemeKind>({
 	return {
 		LemmaSchema: z
 			.object({
-				senseEmojis: SenseEmojisSchema.optional(),
+				meaningInEmojis: MeaningInEmojisSchema.optional(),
 				isClosedSet: z.boolean().optional(),
 				lemmaKind: z.literal("Morpheme"),
 				language: z.literal("English"),

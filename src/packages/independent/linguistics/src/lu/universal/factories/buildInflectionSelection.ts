@@ -1,5 +1,5 @@
 import z from "zod/v3";
-import { SenseEmojisSchema } from "../sense-emojis";
+import { MeaningInEmojisSchema } from "../meaning-in-emojis";
 import type { TargetLanguage } from "../enums/core/language";
 import type { OrthographicStatus } from "../enums/core/selection";
 
@@ -44,7 +44,7 @@ export function buildInflectionSelection<
 	const lemmaSchema = z
 		.object(lemmaIdentityShape)
 		.extend({
-			senseEmojis: SenseEmojisSchema.optional(),
+			meaningInEmojis: MeaningInEmojisSchema.optional(),
 			language: z.literal(language),
 			spelledLemma: z.string(),
 		})

@@ -43,7 +43,7 @@ describe("German non-lexeme schemas", () => {
 			language: "German",
 			lemmaKind: "Morpheme",
 			morphemeKind: "Prefix",
-			senseEmojis: ["🧩"],
+			meaningInEmojis: "🧩",
 			spelledLemma: "ab-",
 		});
 
@@ -113,7 +113,7 @@ describe("German non-lexeme schemas", () => {
 						language: "German",
 						lemmaKind: "Morpheme",
 						morphemeKind: "Suffix",
-						senseEmojis: ["🧩"],
+						meaningInEmojis: "🧩",
 						spelledLemma: "-heit",
 					},
 					spelledSurface: "-hait",
@@ -129,7 +129,7 @@ describe("German non-lexeme schemas", () => {
 						language: "German",
 						lemmaKind: "Phraseme",
 						phrasemeKind: "Cliché",
-						senseEmojis: ["💬"],
+						meaningInEmojis: "💬",
 						spelledLemma: "Zeit ist Geld",
 					},
 					spelledSurface: "Zeit ist Gelt",

@@ -20,7 +20,7 @@ I walk in the park
 They select:
 
 ```text
-I [[walk]] in the park
+I [walk] in the park
 ```
 
 That selection can be represented as a typed surface form:
@@ -38,7 +38,7 @@ const simpleWalkSelection = SelectionSchema.English.Standard.Inflection.Lexeme.V
 				verbForm: "Fin",
 			},
 			lemma: {
-				senseEmojis: ["🚶"],
+				meaningInEmojis: "🚶",
 				inherentFeatures: {},
 				language: "English",
 				lemmaKind: "Lexeme",
@@ -54,13 +54,13 @@ const simpleWalkSelection = SelectionSchema.English.Standard.Inflection.Lexeme.V
 
 And the assigned lemma can be validated independently:
 
-`senseEmojis` is part of lemma identity and should describe the sense itself, not the literal imagery of the written form.
+`meaningInEmojis` is part of lemma identity and should describe the sense itself, not the literal imagery of the written form.
 
 ```ts
 import { LemmaSchema } from "@textfresser/linguistics";
 
 const simpleWalkLemma = LemmaSchema.English.Lexeme.VERB.parse({
-	senseEmojis: ["🚶"],
+	meaningInEmojis: "🚶",
 	inherentFeatures: {},
 	language: "English",
 	lemmaKind: "Lexeme",
@@ -73,7 +73,7 @@ Altough mainly based on the work of UD, this model has a human student of a new 
 
 For example, the model allows to classify the idiom in
 ```text
-This game was a [[walk]] in the park
+This game was a [walk] in the park
 ```
 
 as a part of Idiom "a walk in the park":
@@ -85,7 +85,7 @@ const idiomPartSelection = SelectionSchema.English.Standard.Partial.Phraseme.Idi
 		orthographicStatus: "Standard",
 		surface: {
 			lemma: {
-				senseEmojis: ["😌👌"],
+				meaningInEmojis: "😌👌",
 				language: "English",
 				lemmaKind: "Phraseme",
 				phrasemeKind: "Idiom",
@@ -96,4 +96,23 @@ const idiomPartSelection = SelectionSchema.English.Standard.Partial.Phraseme.Idi
 		},
 	},
 );
+```
+
+This allows for both: 
+1) pointing the user to the most meaninful target in the actual sentenes:
+```
+(text reading mode on)
+Hans, [Pass] auf dich auf! -> aufpassen
+Hans, Pass [auf] dich auf! -> aufpassen
+Hans, Pass auf [dich] auf! -> du
+Hans, Pass auf dich [auf]! -> aufpassen
+```
+
+2) drilling down for the actual linguistics:
+```
+(linguistic investigation mode on)
+Hans, [Pass] auf dich auf! -> 
+Hans, Pass [auf] dich auf! -> 
+Hans, Pass auf [dich] auf! -> 
+Hans, Pass auf dich [auf]! -> 
 ```

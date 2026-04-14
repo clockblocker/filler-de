@@ -19,7 +19,7 @@ type LemmaFor<
 > = LK extends LemmaKind
 	? Prettify<
 			LemmaIdentityFieldsFor<LK, D> & {
-				senseEmojis?: string[];
+				meaningInEmojis?: string;
 				discourseFormulaRole?: DiscourseFormulaRole;
 				inherentFeatures?: Partial<AbstractFeatures>;
 				language: TargetLanguage;
