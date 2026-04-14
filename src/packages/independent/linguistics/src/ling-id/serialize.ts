@@ -3,6 +3,7 @@ import { escapeToken, serializeOptionalToken } from "./escape";
 import { compactFeatureBag, serializeFeatureBag } from "./features";
 import type {
 	LemmaLingId,
+	ParsedLemmaDto,
 	SerializableLemma,
 	SerializableSurface,
 	ShallowSurfaceLingId,
@@ -37,7 +38,9 @@ export function serializeSurface(
 
 	if ("lemma" in value.target) {
 		targetMode = "lemma";
-		targetPayload = serializeNestedLemma(value.target.lemma);
+		targetPayload = serializeNestedLemma(
+			normalizeNestedLemmaTarget(value.target.lemma),
+		);
 	} else {
 		targetMode = "canon";
 		targetPayload = value.target.canonicalLemma;
@@ -72,6 +75,51 @@ function serializeSurfaceShell(value: SerializableSurface): string[] {
 			? serializeFeatureBag(value.inflectionalFeatures ?? {})
 			: "-",
 	];
+}
+
+function normalizeNestedLemmaTarget(
+	value: Extract<SerializableSurface["target"], { lemma: unknown }>["lemma"],
+): ParsedLemmaDto {
+	if ("lingKind" in value) {
+		return value;
+	}
+
+	switch (value.lemmaKind) {
+		case "Lexeme":
+			return {
+				canonicalLemma: value.canonicalLemma,
+				inherentFeatures: compactFeatureBag(value.inherentFeatures),
+				lingKind: "Lemma",
+				language: value.language,
+				lemmaKind: value.lemmaKind,
+				meaningInEmojis: value.meaningInEmojis,
+				pos: value.pos,
+			};
+		case "Morpheme":
+			return {
+				canonicalLemma: value.canonicalLemma,
+				isClosedSet: value.isClosedSet,
+				lingKind: "Lemma",
+				language: value.language,
+				lemmaKind: value.lemmaKind,
+				meaningInEmojis: value.meaningInEmojis,
+				morphemeKind: value.morphemeKind,
+				separable: value.separable,
+			};
+		case "Phraseme":
+			return {
+				canonicalLemma: value.canonicalLemma,
+				discourseFormulaRole:
+					"discourseFormulaRole" in value
+						? value.discourseFormulaRole
+						: undefined,
+				lingKind: "Lemma",
+				language: value.language,
+				lemmaKind: value.lemmaKind,
+				meaningInEmojis: value.meaningInEmojis,
+				phrasemeKind: value.phrasemeKind,
+			};
+	}
 }
 
 function getLemmaSubKind(value: SerializableLemma): string {
