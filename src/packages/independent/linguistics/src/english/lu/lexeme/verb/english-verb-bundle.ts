@@ -8,10 +8,6 @@ import {
 	EnglishVerbInflectionalFeaturesSchema,
 	EnglishVerbInherentFeaturesSchema,
 } from "./parts/english-verb-features";
-import {
-	EnglishVerbLexicalRelationsSchema,
-	EnglishVerbMorphologicalRelationsSchema,
-} from "./parts/english-verb-relations";
 
 const EnglishVerbLemmaIdentityShape = {
 	lemmaKind: z.literal("Lexeme"),
@@ -115,8 +111,6 @@ export const EnglishVerbLemmaSchema = z.object({
 	inherentFeatures: EnglishVerbInherentFeaturesSchema,
 	lemmaKind: z.literal("Lexeme"),
 	language: z.literal("English"),
-	lexicalRelations: EnglishVerbLexicalRelationsSchema,
-	morphologicalRelations: EnglishVerbMorphologicalRelationsSchema,
 	pos: z.literal("VERB"),
 	spelledLemma: z.string(),
 }) satisfies z.ZodType<AbstractLemma<"Lexeme", "VERB">>;

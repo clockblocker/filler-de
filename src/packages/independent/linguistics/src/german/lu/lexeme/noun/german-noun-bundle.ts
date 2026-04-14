@@ -8,10 +8,6 @@ import {
 	GermanNounInflectionalFeaturesSchema,
 	GermanNounInherentFeaturesSchema,
 } from "./parts/german-noun-features";
-import {
-	GermanNounLexicalRelationsSchema,
-	GermanNounMorphologicalRelationsSchema,
-} from "./parts/german-noun-relations";
 
 const GermanNounLemmaIdentityShape = {
 	lemmaKind: z.literal("Lexeme"),
@@ -115,8 +111,6 @@ export const GermanNounLemmaSchema = z.object({
 	inherentFeatures: GermanNounInherentFeaturesSchema,
 	lemmaKind: z.literal("Lexeme"),
 	language: z.literal("German"),
-	lexicalRelations: GermanNounLexicalRelationsSchema,
-	morphologicalRelations: GermanNounMorphologicalRelationsSchema,
 	pos: z.literal("NOUN"),
 	spelledLemma: z.string(),
 }) satisfies z.ZodType<AbstractLemma<"Lexeme", "NOUN">>;

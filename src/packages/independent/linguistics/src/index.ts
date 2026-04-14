@@ -25,12 +25,38 @@ import { GrammaticalNumber as GrammaticalNumberSchema } from "./universal/enums/
 import { MorphemeKindSchema } from "./universal/enums/kind/morpheme-kind";
 import { PhrasemeKind as PhrasemeKindSchema } from "./universal/enums/kind/phraseme-kind";
 import { Pos as PosSchema } from "./universal/enums/kind/pos";
+import {
+	type LexicalRelations as LexicalRelationsShape,
+	type MorphologicalRelations as MorphologicalRelationsShape,
+	type RelationTargets as RelationTargetsShape,
+	LexicalRelationsSchema as LexicalRelationsSchemaInternal,
+	MorphologicalRelationsSchema as MorphologicalRelationsSchemaInternal,
+	RelationTargetsSchema as RelationTargetsSchemaInternal,
+} from "./universal/enums/relation/relation";
+import {
+	LexicalRelation as LexicalRelationSchema,
+	getInverseLexicalRelation,
+	getReprForLexicalRelation,
+} from "./universal/enums/relation/lexical";
+import {
+	MorphologicalRelation as MorphologicalRelationSchema,
+	getInverseMorphologicalRelation,
+	getReprForMorphologicalRelation,
+} from "./universal/enums/relation/morphological";
 
 export { type LingId, toLingId } from "./ling-id";
 export {
 	TARGET_LANGUAGES,
 	TargetLanguageSchema,
 } from "./universal/enums/core/language";
+export {
+	getInverseLexicalRelation,
+	getReprForLexicalRelation,
+} from "./universal/enums/relation/lexical";
+export {
+	getInverseMorphologicalRelation,
+	getReprForMorphologicalRelation,
+} from "./universal/enums/relation/morphological";
 
 export const OrthographicStatus = OrthographicStatusSchema.enum;
 export const SurfaceKind = SurfaceKindSchema.enum;
@@ -41,6 +67,27 @@ export const GrammaticalNumber = GrammaticalNumberSchema.enum;
 export const MorphemeKind = MorphemeKindSchema.enum;
 export const PhrasemeKind = PhrasemeKindSchema.enum;
 export const Pos = PosSchema.enum;
+export const LexicalRelation = LexicalRelationSchema.enum;
+export const MorphologicalRelation = MorphologicalRelationSchema.enum;
+export const RelationTargetsSchema = RelationTargetsSchemaInternal;
+export const LexicalRelationsSchema = LexicalRelationsSchemaInternal;
+export const MorphologicalRelationsSchema =
+	MorphologicalRelationsSchemaInternal;
+export const Relations = {
+	Lexical: {
+		enum: LexicalRelation,
+		getInverse: getInverseLexicalRelation,
+		getRepr: getReprForLexicalRelation,
+		schema: LexicalRelationsSchema,
+	},
+	Morphological: {
+		enum: MorphologicalRelation,
+		getInverse: getInverseMorphologicalRelation,
+		getRepr: getReprForMorphologicalRelation,
+		schema: MorphologicalRelationsSchema,
+	},
+	targetsSchema: RelationTargetsSchema,
+} as const;
 
 export type OrthographicStatus = z.infer<typeof OrthographicStatusSchema>;
 export type SurfaceKind = z.infer<typeof SurfaceKindSchema>;
@@ -51,6 +98,11 @@ export type GrammaticalNumber = z.infer<typeof GrammaticalNumberSchema>;
 export type MorphemeKind = z.infer<typeof MorphemeKindSchema>;
 export type PhrasemeKind = z.infer<typeof PhrasemeKindSchema>;
 export type Pos = z.infer<typeof PosSchema>;
+export type LexicalRelation = z.infer<typeof LexicalRelationSchema>;
+export type MorphologicalRelation = z.infer<typeof MorphologicalRelationSchema>;
+export type RelationTargets = RelationTargetsShape;
+export type LexicalRelations = LexicalRelationsShape;
+export type MorphologicalRelations = MorphologicalRelationsShape;
 export type InherentFeatures = AbstractLemma<"Lexeme">["inherentFeatures"];
 export type UnknownSelection = AbstractSelectionFor<"Unknown">;
 

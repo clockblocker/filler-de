@@ -8,10 +8,6 @@ import {
 	EnglishNounInflectionalFeaturesSchema,
 	EnglishNounInherentFeaturesSchema,
 } from "./parts/english-noun-features";
-import {
-	EnglishNounLexicalRelationsSchema,
-	EnglishNounMorphologicalRelationsSchema,
-} from "./parts/english-noun-relations";
 
 const EnglishNounLemmaIdentityShape = {
 	lemmaKind: z.literal("Lexeme"),
@@ -113,8 +109,6 @@ export const EnglishNounLemmaSchema = z.object({
 	inherentFeatures: EnglishNounInherentFeaturesSchema,
 	lemmaKind: z.literal("Lexeme"),
 	language: z.literal("English"),
-	lexicalRelations: EnglishNounLexicalRelationsSchema,
-	morphologicalRelations: EnglishNounMorphologicalRelationsSchema,
 	pos: z.literal("NOUN"),
 	spelledLemma: z.string(),
 }) satisfies z.ZodType<AbstractLemma<"Lexeme", "NOUN">>;

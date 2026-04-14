@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import type { Lemma } from "../src";
-import { LemmaSchema, SelectionSchema } from "../src";
+import {
+	LemmaSchema,
+	LexicalRelationsSchema,
+	MorphologicalRelationsSchema,
+	SelectionSchema,
+} from "../src";
 import {
 	GermanNounInflectionSelectionSchema,
 	GermanNounLemmaSchema,
@@ -17,8 +22,6 @@ describe("German noun schemas", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: "Kind",
 		};
@@ -81,19 +84,26 @@ describe("German noun schemas", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {
-				hypernym: ["Lebewesen"],
-				synonym: ["Nachkomme"],
-			},
-			morphologicalRelations: {
-				derivedFrom: ["kind"],
-				sourceFor: ["Kindheit"],
-			},
 			pos: "NOUN",
 			spelledLemma: "Kind",
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("validates relation payloads via the dedicated relation schemas", () => {
+		expect(
+			LexicalRelationsSchema.safeParse({
+				hypernym: ["Lebewesen"],
+				synonym: ["Nachkomme"],
+			}).success,
+		).toBe(true);
+		expect(
+			MorphologicalRelationsSchema.safeParse({
+				derivedFrom: ["kind"],
+				sourceFor: ["Kindheit"],
+			}).success,
+		).toBe(true);
 	});
 
 	it("rejects invalid emoji descriptions", () => {
@@ -102,8 +112,6 @@ describe("German noun schemas", () => {
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: "Haus",
 		});
@@ -134,8 +142,6 @@ describe("German noun schemas", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: "Kind",
 		});
@@ -186,16 +192,8 @@ describe("German noun schemas", () => {
 	});
 
 	it("rejects duplicate relation targets", () => {
-		const result = GermanNounLemmaSchema.safeParse({
-			inherentFeatures: {},
-			language: "German",
-			lemmaKind: "Lexeme",
-			lexicalRelations: {
-				synonym: ["Auto", "Auto"],
-			},
-			morphologicalRelations: {},
-			pos: "NOUN",
-			spelledLemma: "Auto",
+		const result = LexicalRelationsSchema.safeParse({
+			synonym: ["Auto", "Auto"],
 		});
 
 		expect(result.success).toBe(false);

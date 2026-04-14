@@ -9,8 +9,6 @@ describe("LingId", () => {
 			inherentFeatures: { gender: "Fem" },
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: " Burg ",
 		};
@@ -80,8 +78,6 @@ describe("LingId", () => {
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: " \n\t ",
 		} as AnyLemma<"German">;
@@ -146,8 +142,6 @@ describe("LingId", () => {
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: "Burg",
 		};
@@ -156,8 +150,6 @@ describe("LingId", () => {
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: "Burg",
 		};
@@ -170,8 +162,6 @@ describe("LingId", () => {
 			inherentFeatures: { gender: "Fem" },
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: "Burg",
 		};
@@ -179,8 +169,6 @@ describe("LingId", () => {
 			inherentFeatures: { gender: "Neut" },
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: "Burg",
 		};
@@ -188,8 +176,6 @@ describe("LingId", () => {
 			inherentFeatures: { separable: true },
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "VERB",
 			spelledLemma: "aufgehen",
 		};
@@ -197,15 +183,12 @@ describe("LingId", () => {
 			inherentFeatures: { separable: false },
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "VERB",
 			spelledLemma: "aufgehen",
 		};
 		const separablePrefix: AnyLemma<"German"> = {
 			language: "German",
 			lemmaKind: "Morpheme",
-			lexicalRelations: {},
 			morphemeKind: "Prefix",
 			separable: true,
 			spelledLemma: "ab-",
@@ -213,7 +196,6 @@ describe("LingId", () => {
 		const inseparablePrefix: AnyLemma<"German"> = {
 			language: "German",
 			lemmaKind: "Morpheme",
-			lexicalRelations: {},
 			morphemeKind: "Prefix",
 			separable: false,
 			spelledLemma: "ab-",
@@ -229,8 +211,6 @@ describe("LingId", () => {
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: "Burg",
 		};
@@ -238,15 +218,12 @@ describe("LingId", () => {
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "VERB",
 			spelledLemma: "aufgehen",
 		};
 		const prefixWithoutSeparable: AnyLemma<"German"> = {
 			language: "German",
 			lemmaKind: "Morpheme",
-			lexicalRelations: {},
 			morphemeKind: "Prefix",
 			spelledLemma: "ab-",
 		};
@@ -261,7 +238,6 @@ describe("LingId", () => {
 			discourseFormulaRole: "Greeting",
 			language: "German",
 			lemmaKind: "Phraseme",
-			lexicalRelations: {},
 			phrasemeKind: "DiscourseFormula",
 			spelledLemma: "na klar",
 		};
@@ -269,7 +245,6 @@ describe("LingId", () => {
 			discourseFormulaRole: "Reaction",
 			language: "German",
 			lemmaKind: "Phraseme",
-			lexicalRelations: {},
 			phrasemeKind: "DiscourseFormula",
 			spelledLemma: "na klar",
 		};
@@ -281,8 +256,6 @@ describe("LingId", () => {
 		const missingLanguage = {
 			inherentFeatures: {},
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: "Burg",
 		} as AnyLemma<"German">;
@@ -290,8 +263,6 @@ describe("LingId", () => {
 			inherentFeatures: {},
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 		} as AnyLemma<"German">;
 

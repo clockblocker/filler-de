@@ -24,45 +24,51 @@ function buildRelationTargetsSchema() {
 		});
 }
 
-const relationTargetsSchema = buildRelationTargetsSchema();
+export const RelationTargetsSchema = buildRelationTargetsSchema();
 
-export type RelationTargets = z.infer<typeof relationTargetsSchema>;
+export type RelationTargets = z.infer<typeof RelationTargetsSchema>;
 
-export type AbstractLexicalRelations = Prettify<
+export type LexicalRelations = Prettify<
 	Partial<Record<LexicalRelation, RelationTargets>>
 >;
 
-export type AbstractMorphologicalRelations = Prettify<
+export type MorphologicalRelations = Prettify<
 	Partial<Record<MorphologicalRelation, RelationTargets>>
 >;
 
+export type AbstractLexicalRelations = LexicalRelations;
+export type AbstractMorphologicalRelations = MorphologicalRelations;
+
 const lexicalRelationsShape = {
-	antonym: relationTargetsSchema.optional(),
-	holonym: relationTargetsSchema.optional(),
-	hypernym: relationTargetsSchema.optional(),
-	hyponym: relationTargetsSchema.optional(),
-	meronym: relationTargetsSchema.optional(),
-	nearSynonym: relationTargetsSchema.optional(),
-	synonym: relationTargetsSchema.optional(),
+	antonym: RelationTargetsSchema.optional(),
+	holonym: RelationTargetsSchema.optional(),
+	hypernym: RelationTargetsSchema.optional(),
+	hyponym: RelationTargetsSchema.optional(),
+	meronym: RelationTargetsSchema.optional(),
+	nearSynonym: RelationTargetsSchema.optional(),
+	synonym: RelationTargetsSchema.optional(),
 } satisfies Record<
 	LexicalRelation,
-	z.ZodOptional<typeof relationTargetsSchema>
+	z.ZodOptional<typeof RelationTargetsSchema>
 >;
 
 const morphologicalRelationsShape = {
-	consistsOf: relationTargetsSchema.optional(),
-	derivedFrom: relationTargetsSchema.optional(),
-	sourceFor: relationTargetsSchema.optional(),
-	usedIn: relationTargetsSchema.optional(),
+	consistsOf: RelationTargetsSchema.optional(),
+	derivedFrom: RelationTargetsSchema.optional(),
+	sourceFor: RelationTargetsSchema.optional(),
+	usedIn: RelationTargetsSchema.optional(),
 } satisfies Record<
 	MorphologicalRelation,
-	z.ZodOptional<typeof relationTargetsSchema>
+	z.ZodOptional<typeof RelationTargetsSchema>
 >;
 
-export const AbstractLexicalRelationsSchema = z
+export const LexicalRelationsSchema = z
 	.object(lexicalRelationsShape)
-	.strict() satisfies z.ZodType<AbstractLexicalRelations>;
+	.strict() satisfies z.ZodType<LexicalRelations>;
 
-export const AbstractMorphologicalRelationsSchema = z
+export const MorphologicalRelationsSchema = z
 	.object(morphologicalRelationsShape)
-	.strict() satisfies z.ZodType<AbstractMorphologicalRelations>;
+	.strict() satisfies z.ZodType<MorphologicalRelations>;
+
+export const AbstractLexicalRelationsSchema = LexicalRelationsSchema;
+export const AbstractMorphologicalRelationsSchema = MorphologicalRelationsSchema;

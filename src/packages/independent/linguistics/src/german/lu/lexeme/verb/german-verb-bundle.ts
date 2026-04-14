@@ -8,10 +8,6 @@ import {
 	GermanVerbInflectionalFeaturesSchema,
 	GermanVerbInherentFeaturesSchema,
 } from "./parts/german-verb-features";
-import {
-	GermanVerbLexicalRelationsSchema,
-	GermanVerbMorphologicalRelationsSchema,
-} from "./parts/german-verb-relations";
 
 const GermanVerbLemmaIdentityShape = {
 	lemmaKind: z.literal("Lexeme"),
@@ -103,8 +99,6 @@ export const GermanVerbLemmaSchema = z.object({
 	inherentFeatures: GermanVerbInherentFeaturesSchema,
 	lemmaKind: z.literal("Lexeme"),
 	language: z.literal("German"),
-	lexicalRelations: GermanVerbLexicalRelationsSchema,
-	morphologicalRelations: GermanVerbMorphologicalRelationsSchema,
 	pos: z.literal("VERB"),
 	spelledLemma: z.string(),
 }) satisfies z.ZodType<AbstractLemma<"Lexeme">>;

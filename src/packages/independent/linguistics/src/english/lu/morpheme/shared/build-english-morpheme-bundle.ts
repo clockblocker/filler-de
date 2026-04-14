@@ -3,7 +3,6 @@ import type { AbstractLemma } from "../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
 import type { MorphemeKind } from "../../../../universal/enums/kind/morpheme-kind";
 import { EmojiDescriptionSchema } from "../../../../universal/emoji-description";
-import { AbstractLexicalRelationsSchema } from "../../../../universal/enums/relation/relation";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 
 type EnglishMorphemeBundle<MK extends MorphemeKind> = {
@@ -33,7 +32,6 @@ export function buildEnglishMorphemeBundle<MK extends MorphemeKind>({
 				isClosedSet: z.boolean().optional(),
 				lemmaKind: z.literal("Morpheme"),
 				language: z.literal("English"),
-				lexicalRelations: AbstractLexicalRelationsSchema,
 				morphemeKind: z.literal(morphemeKind),
 				spelledLemma: z.string(),
 			})

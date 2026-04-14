@@ -4,7 +4,6 @@ import type { AbstractSelectionFor } from "../../../../universal/abstract-select
 import { IsSeparable } from "../../../../universal/enums/feature/custom/separable";
 import type { MorphemeKind } from "../../../../universal/enums/kind/morpheme-kind";
 import { EmojiDescriptionSchema } from "../../../../universal/emoji-description";
-import { AbstractLexicalRelationsSchema } from "../../../../universal/enums/relation/relation";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 
 type GermanMorphemeBundle<MK extends MorphemeKind> = {
@@ -34,7 +33,6 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 				isClosedSet: z.boolean().optional(),
 				lemmaKind: z.literal("Morpheme"),
 				language: z.literal("German"),
-				lexicalRelations: AbstractLexicalRelationsSchema,
 				morphemeKind: z.literal(morphemeKind),
 				separable:
 					morphemeKind === "Prefix" ? IsSeparable.optional() : z.undefined().optional(),

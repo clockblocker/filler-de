@@ -11,10 +11,6 @@ import type {
 	PhrasemeKind,
 } from "./enums/kind/phraseme-kind";
 import type { Pos } from "./enums/kind/pos";
-import type {
-	AbstractLexicalRelations,
-	AbstractMorphologicalRelations,
-} from "./enums/relation/relation";
 import type { LemmaDiscriminatorFor } from "./lemma-discriminator";
 
 type AbstractLexemeLemma<P extends Pos = Pos> = Prettify<{
@@ -23,8 +19,6 @@ type AbstractLexemeLemma<P extends Pos = Pos> = Prettify<{
 	language: TargetLanguage;
 	pos: P;
 	inherentFeatures: Partial<AbstractFeatures>;
-	lexicalRelations: AbstractLexicalRelations;
-	morphologicalRelations: AbstractMorphologicalRelations;
 	isClosedSet?: IsClosedSet;
 	spelledLemma: string;
 }>;
@@ -34,7 +28,6 @@ type AbstractMorphemLemma<MK extends MorphemeKind = MorphemeKind> = Prettify<{
 	lemmaKind: "Morpheme";
 	language: TargetLanguage;
 	morphemeKind: MK;
-	lexicalRelations: AbstractLexicalRelations;
 	isClosedSet?: IsClosedSet;
 	separable?: IsSeparable;
 	spelledLemma: string;
@@ -45,7 +38,6 @@ type AbstractPhrasemLemma<PK extends PhrasemeKind = PhrasemeKind> = Prettify<
 		emojiDescription?: string[];
 		lemmaKind: "Phraseme";
 		language: TargetLanguage;
-		lexicalRelations: AbstractLexicalRelations;
 		[PHRASEME_KIND_KEY]: PK;
 		spelledLemma: string;
 	} & (

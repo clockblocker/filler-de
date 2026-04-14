@@ -7,10 +7,16 @@ import {
 	type InherentFeatures,
 	LemmaKind,
 	LemmaSchema,
+	LexicalRelation,
+	LexicalRelationsSchema,
 	MorphemeKind,
+	MorphologicalRelation,
+	MorphologicalRelationsSchema,
 	OrthographicStatus,
 	PhrasemeKind,
 	Pos,
+	RelationTargetsSchema,
+	Relations,
 	SelectionSchema,
 	SurfaceKind,
 	TARGET_LANGUAGES,
@@ -51,8 +57,6 @@ describe("root exports", () => {
 			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: "Kind",
 		};
@@ -70,8 +74,6 @@ describe("root exports", () => {
 			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
 			language: "English",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "NOUN",
 			spelledLemma: "dog",
 		};
@@ -84,7 +86,26 @@ describe("root exports", () => {
 		expect(unknownSelection.orthographicStatus).toBe("Unknown");
 	});
 
+	it("exposes a dedicated relations api", () => {
+		expect(LexicalRelation.synonym).toBe("synonym");
+		expect(MorphologicalRelation.derivedFrom).toBe("derivedFrom");
+		expect(RelationTargetsSchema.safeParse(["laufen"]).success).toBe(true);
+		expect(
+			LexicalRelationsSchema.safeParse({
+				synonym: ["laufen"],
+			}).success,
+		).toBe(true);
+		expect(
+			MorphologicalRelationsSchema.safeParse({
+				derivedFrom: ["Gang"],
+			}).success,
+		).toBe(true);
+		expect(Relations.Lexical.getInverse("hypernym")).toBe("hyponym");
+		expect(Relations.Morphological.getRepr("derivedFrom")).toBe("<-");
+	});
+
 	it("hides internal schema helpers from the root surface", () => {
+		expect("AbstractLexicalRelationsSchema" in linguistics).toBeFalse();
 		expect("CaseSchema" in linguistics).toBeFalse();
 		expect("GenderSchema" in linguistics).toBeFalse();
 		expect("GermanInherentFeaturesSchemaByPos" in linguistics).toBeFalse();

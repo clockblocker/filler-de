@@ -1,13 +1,18 @@
 import { describe, expect, it } from "bun:test";
-import { LemmaSchema, SelectionSchema } from "../src";
+import {
+	getInverseLexicalRelation,
+	getInverseMorphologicalRelation,
+	LemmaSchema,
+	LexicalRelationsSchema,
+	MorphologicalRelationsSchema,
+	SelectionSchema,
+} from "../src";
 import {
 	GermanVerbInflectionSelectionSchema,
 	GermanVerbLemmaSchema,
 	GermanVerbStandardPartialSelectionSchema,
 	GermanVerbTypoInflectionSelectionSchema,
 } from "../src/german/lu/lexeme/verb/german-verb-bundle";
-import { getInverseLexicalRelation } from "../src/universal/enums/relation/lexical";
-import { getInverseMorphologicalRelation } from "../src/universal/enums/relation/morphological";
 
 describe("German verb schemas", () => {
 	it("accepts supported German verb inflectional features", () => {
@@ -70,19 +75,26 @@ describe("German verb schemas", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {
-				hypernym: ["Fortbewegung"],
-				synonym: ["laufen"],
-			},
-			morphologicalRelations: {
-				derivedFrom: ["Gang"],
-				sourceFor: ["Ausgang"],
-			},
 			pos: "VERB",
 			spelledLemma: "gehen",
 		});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("validates relation payloads via the dedicated relation schemas", () => {
+		expect(
+			LexicalRelationsSchema.safeParse({
+				hypernym: ["Fortbewegung"],
+				synonym: ["laufen"],
+			}).success,
+		).toBe(true);
+		expect(
+			MorphologicalRelationsSchema.safeParse({
+				derivedFrom: ["Gang"],
+				sourceFor: ["Ausgang"],
+			}).success,
+		).toBe(true);
 	});
 
 	it("rejects unsupported inherent feature keys", () => {
@@ -92,8 +104,6 @@ describe("German verb schemas", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
-			lexicalRelations: {},
-			morphologicalRelations: {},
 			pos: "VERB",
 			spelledLemma: "gehen",
 		});
@@ -156,16 +166,8 @@ describe("German verb schemas", () => {
 	});
 
 	it("rejects duplicate relation targets", () => {
-		const result = GermanVerbLemmaSchema.safeParse({
-			inherentFeatures: {},
-			language: "German",
-			lemmaKind: "Lexeme",
-			lexicalRelations: {
-				synonym: ["laufen", "laufen"],
-			},
-			morphologicalRelations: {},
-			pos: "VERB",
-			spelledLemma: "laufen",
+		const result = LexicalRelationsSchema.safeParse({
+			synonym: ["laufen", "laufen"],
 		});
 
 		expect(result.success).toBe(false);

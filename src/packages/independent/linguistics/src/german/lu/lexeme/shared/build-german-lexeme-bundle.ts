@@ -38,19 +38,17 @@ export function buildGermanLexemeBundle<
 	P extends Pos,
 	InflectionalFeaturesSchema extends z.ZodTypeAny,
 	InherentFeaturesSchema extends z.ZodTypeAny,
-	LexicalRelationsSchema extends z.ZodTypeAny,
-	MorphologicalRelationsSchema extends z.ZodTypeAny,
 >({
 	inflectionalFeaturesSchema,
 	inherentFeaturesSchema,
-	lexicalRelationsSchema,
-	morphologicalRelationsSchema,
+	lexicalRelationsSchema: _lexicalRelationsSchema,
+	morphologicalRelationsSchema: _morphologicalRelationsSchema,
 	pos,
 }: {
 	inflectionalFeaturesSchema: InflectionalFeaturesSchema;
 	inherentFeaturesSchema: InherentFeaturesSchema;
-	lexicalRelationsSchema: LexicalRelationsSchema;
-	morphologicalRelationsSchema: MorphologicalRelationsSchema;
+	lexicalRelationsSchema: z.ZodTypeAny;
+	morphologicalRelationsSchema: z.ZodTypeAny;
 	pos: P;
 }): GermanLexemeBundle<P> {
 	const lemmaIdentityShape = {
@@ -72,8 +70,6 @@ export function buildGermanLexemeBundle<
 			inherentFeatures: inherentFeaturesSchema,
 			lemmaKind: z.literal("Lexeme"),
 			language: z.literal("German"),
-			lexicalRelations: lexicalRelationsSchema,
-			morphologicalRelations: morphologicalRelationsSchema,
 			pos: z.literal(pos),
 			spelledLemma: z.string(),
 		}) as unknown as GermanLexemeBundle<P>["LemmaSchema"],

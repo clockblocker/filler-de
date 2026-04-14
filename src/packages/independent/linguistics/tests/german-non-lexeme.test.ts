@@ -9,7 +9,6 @@ describe("German non-lexeme schemas", () => {
 		const morpheme: Lemma<"German", "Morpheme", "Prefix"> = {
 			language: "German",
 			lemmaKind: "Morpheme",
-			lexicalRelations: {},
 			morphemeKind: "Prefix",
 			spelledLemma: "ab-",
 		};
@@ -38,15 +37,12 @@ describe("German non-lexeme schemas", () => {
 		expect(phraseme.surface.lemma.phrasemeKind).toBe("DiscourseFormula");
 	});
 
-	it("accepts German morpheme lemmas with lexical relations", () => {
+	it("accepts German morpheme lemmas", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
 			emojiDescription: ["🧩"],
 			isClosedSet: false,
 			language: "German",
 			lemmaKind: "Morpheme",
-			lexicalRelations: {
-				synonym: ["ab-"],
-			},
 			morphemeKind: "Prefix",
 			spelledLemma: "ab-",
 		});
@@ -58,7 +54,6 @@ describe("German non-lexeme schemas", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
 			language: "German",
 			lemmaKind: "Morpheme",
-			lexicalRelations: {},
 			morphemeKind: "Suffix",
 			spelledLemma: "ab-",
 		});
@@ -72,7 +67,6 @@ describe("German non-lexeme schemas", () => {
 				discourseFormulaRole: "Reaction",
 				language: "German",
 				lemmaKind: "Phraseme",
-				lexicalRelations: {},
 				phrasemeKind: "DiscourseFormula",
 				spelledLemma: "auf jeden Fall",
 			});
@@ -80,7 +74,6 @@ describe("German non-lexeme schemas", () => {
 			discourseFormulaRole: "Reaction",
 			language: "German",
 			lemmaKind: "Phraseme",
-			lexicalRelations: {},
 			phrasemeKind: "Aphorism",
 			spelledLemma: "Zeit ist Geld",
 		});

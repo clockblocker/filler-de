@@ -4,7 +4,6 @@ import type { AbstractSelectionFor } from "../../../../universal/abstract-select
 import { DiscourseFormulaRoleSchema } from "../../../../universal/enums/feature/custom/discourse-formula-role";
 import type { PhrasemeKind } from "../../../../universal/enums/kind/phraseme-kind";
 import { EmojiDescriptionSchema } from "../../../../universal/emoji-description";
-import { AbstractLexicalRelationsSchema } from "../../../../universal/enums/relation/relation";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 
 type GermanPhrasemeBundle<PK extends PhrasemeKind> = {
@@ -25,7 +24,6 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 				emojiDescription: EmojiDescriptionSchema.optional(),
 				lemmaKind: z.literal("Phraseme"),
 				language: z.literal("German"),
-				lexicalRelations: AbstractLexicalRelationsSchema,
 				phrasemeKind: z.literal(phrasemeKind),
 				spelledLemma: z.string(),
 			})
@@ -37,7 +35,6 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 			emojiDescription: EmojiDescriptionSchema.optional(),
 			lemmaKind: z.literal("Phraseme"),
 			language: z.literal("German"),
-			lexicalRelations: AbstractLexicalRelationsSchema,
 			phrasemeKind: z.literal(phrasemeKind),
 			spelledLemma: z.string(),
 		})
