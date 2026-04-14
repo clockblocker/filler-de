@@ -8,6 +8,7 @@ import { GermanSelectionSchema } from "./german/german-selection";
 import type {
 	LemmaSchemaLanguageShape,
 	SelectionSchemaLanguageShape,
+	SurfaceSchemaLanguageShape,
 } from "./registry-shapes";
 import type { AbstractLemma } from "./universal/abstract-lemma";
 import type { AbstractSelectionFor } from "./universal/abstract-selection";
@@ -57,6 +58,11 @@ export const SelectionSchema = {
 	German: GermanSelectionSchema,
 } satisfies SelectionSchemaShape;
 
+export const SurfaceSchema = {
+	English: buildSurfaceSchemaForLanguage(EnglishSelectionSchema),
+	German: buildSurfaceSchemaForLanguage(GermanSelectionSchema),
+} satisfies SurfaceSchemaShape;
+
 export const LemmaSchema = {
 	English: EnglishLemmaSchema,
 	German: GermanLemmaSchema,
@@ -85,6 +91,14 @@ export type Selection<
 	> = SelectionDiscriminatorArg<L, OS, SK, LK>,
 > = InferSchema<SelectionSchemaFor<L, OS, SK, LK, D>>;
 
+export type Surface<
+	L extends TargetLanguage,
+	OS extends SurfaceOrthographicStatusFor<L>,
+	SK extends SurfaceSurfaceKindFor<L, OS>,
+	LK extends SurfaceLemmaKindFor<L, OS, SK>,
+	D extends SurfaceDiscriminatorFor<L, OS, SK, LK>,
+> = InferSchema<SurfaceSchemaFor<L, OS, SK, LK, D>>;
+
 export type AnyLemma<L extends TargetLanguage = TargetLanguage> = {
 	[LL in L]: LanguageLemmaUnion<LL>;
 }[L];
@@ -93,10 +107,18 @@ export type AnySelection<L extends TargetLanguage = TargetLanguage> = {
 	[LL in L]: KnownSelectionUnionForLanguage<LL> | UnknownSelection;
 }[L];
 
+export type AnySurface<L extends TargetLanguage = TargetLanguage> = {
+	[LL in L]: KnownSurfaceUnionForLanguage<LL>;
+}[L];
+
 type SupportedLanguage = z.infer<typeof TargetLanguageSchema>;
 
 type SelectionSchemaShape = {
 	[L in SupportedLanguage]: SelectionSchemaLanguageShape;
+};
+
+type SurfaceSchemaShape = {
+	[L in SupportedLanguage]: SurfaceSchemaLanguageShape;
 };
 
 type LanguageLemmaUnion<L extends TargetLanguage> = {
@@ -118,6 +140,9 @@ type KnownSelectionUnionForLanguage<L extends TargetLanguage> = ValueOf<{
 		}>;
 	}>;
 }>;
+
+type KnownSurfaceUnionForLanguage<L extends TargetLanguage> =
+	KnownSelectionUnionForLanguage<L>["surface"];
 
 type LemmaSchemaShape = {
 	[L in SupportedLanguage]: LemmaSchemaLanguageShape;
@@ -202,6 +227,105 @@ type SelectionSchemaFor<
 					: never
 				: never
 			: never
-		: never;
+			: never;
+
+type SurfaceOrthographicStatusFor<L extends TargetLanguage> =
+	keyof (typeof SurfaceSchema)[L];
+
+type SurfaceSurfaceKindFor<
+	L extends TargetLanguage,
+	OS extends SurfaceOrthographicStatusFor<L>,
+> = keyof (typeof SurfaceSchema)[L][OS];
+
+type SurfaceLemmaKindFor<
+	L extends TargetLanguage,
+	OS extends SurfaceOrthographicStatusFor<L>,
+	SK extends SurfaceSurfaceKindFor<L, OS>,
+> = keyof (typeof SurfaceSchema)[L][OS][SK];
+
+type SurfaceDiscriminatorFor<
+	L extends TargetLanguage,
+	OS extends SurfaceOrthographicStatusFor<L>,
+	SK extends SurfaceSurfaceKindFor<L, OS>,
+	LK extends SurfaceLemmaKindFor<L, OS, SK>,
+> = keyof (typeof SurfaceSchema)[L][OS][SK][LK];
+
+type SurfaceSchemaFor<
+	L extends TargetLanguage,
+	OS extends SurfaceOrthographicStatusFor<L>,
+	SK extends SurfaceSurfaceKindFor<L, OS>,
+	LK extends SurfaceLemmaKindFor<L, OS, SK>,
+	D extends SurfaceDiscriminatorFor<L, OS, SK, LK>,
+> = (typeof SurfaceSchema)[L][OS][SK][LK][D];
 
 type InferSchema<T> = T extends ZodTypeAny ? z.infer<T> : never;
+
+type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
+
+type KnownSelectionSchemaByOrthographicStatus<
+	OS extends KnownOrthographicStatus = KnownOrthographicStatus,
+> = SelectionSchemaLanguageShape[OS];
+type KnownSurfaceSchemaByOrthographicStatus<
+	OS extends KnownOrthographicStatus = KnownOrthographicStatus,
+> = SurfaceSchemaLanguageShape[OS];
+
+type SurfaceSchemaFromSelectionSchema<T extends ZodTypeAny> =
+	T extends z.ZodType<infer SelectionShape>
+		? SelectionShape extends { surface: infer SurfaceShape }
+			? z.ZodType<SurfaceShape>
+			: never
+		: never;
+
+function buildSurfaceSchemaForLanguage(
+	selectionSchema: SelectionSchemaLanguageShape,
+): SurfaceSchemaLanguageShape {
+	return {
+		Standard: buildSurfaceSchemaForOrthographicStatus(
+			selectionSchema.Standard,
+		),
+		Typo: buildSurfaceSchemaForOrthographicStatus(selectionSchema.Typo),
+	};
+}
+
+function buildSurfaceSchemaForOrthographicStatus<
+	OS extends KnownOrthographicStatus,
+>(
+	orthographicStatusSchema: KnownSelectionSchemaByOrthographicStatus<OS>,
+): KnownSurfaceSchemaByOrthographicStatus<OS> {
+	return Object.fromEntries(
+		Object.entries(orthographicStatusSchema).map(([surfaceKind, lemmaKinds]) => [
+			surfaceKind,
+			buildSurfaceSchemaForSurfaceKind(
+				lemmaKinds as Record<string, Record<string, ZodTypeAny>>,
+			),
+		]),
+	) as KnownSurfaceSchemaByOrthographicStatus<OS>;
+}
+
+function buildSurfaceSchemaForSurfaceKind(
+	surfaceKindSchema: Record<string, Record<string, ZodTypeAny>>,
+) {
+	return Object.fromEntries(
+		Object.entries(surfaceKindSchema).map(([lemmaKind, discriminators]) => [
+			lemmaKind,
+			Object.fromEntries(
+				Object.entries(discriminators).map(([discriminator, selectionSchema]) => [
+					discriminator,
+					getSurfaceSchemaFromSelectionSchema(selectionSchema),
+				]),
+			),
+		]),
+	);
+}
+
+function getSurfaceSchemaFromSelectionSchema<T extends ZodTypeAny>(
+	selectionSchema: T,
+): SurfaceSchemaFromSelectionSchema<T> {
+	return (
+		selectionSchema as unknown as {
+			shape: {
+				surface: SurfaceSchemaFromSelectionSchema<T>;
+			};
+		}
+	).shape.surface;
+}

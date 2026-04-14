@@ -33,6 +33,18 @@ export type SelectionSchemaLanguageShape = {
 	Unknown: z.ZodType<AbstractSelectionFor<"Unknown">>;
 };
 
+export type SurfaceSchemaLanguageShape = {
+	[OS in Exclude<OrthographicStatus, "Unknown">]: {
+		[SK in SupportedSelectionSurfaceKind]: {
+			[LK in SupportedSelectionLemmaKindFor<SK>]: {
+				[D in LemmaDiscriminatorFor<LK>]: z.ZodType<
+					AbstractSelectionFor<OS, SK, LK, D>["surface"]
+				>;
+			};
+		};
+	};
+};
+
 export type LemmaSchemaLanguageShape = {
 	[LK in LemmaKind]: {
 		[D in LemmaDiscriminatorFor<LK>]: z.ZodType<AbstractLemma<LK, D>>;

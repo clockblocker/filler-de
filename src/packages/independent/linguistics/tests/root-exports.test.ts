@@ -3,6 +3,7 @@ import * as linguistics from "../src";
 import {
 	type AnyLemma,
 	type AnySelection,
+	type AnySurface,
 	Case,
 	type InherentFeatures,
 	LemmaKind,
@@ -18,6 +19,7 @@ import {
 	Relations,
 	RelationTargetLingIdsSchema,
 	SelectionSchema,
+	SurfaceSchema,
 	SurfaceKind,
 	TARGET_LANGUAGES,
 	TargetLanguageSchema,
@@ -47,6 +49,9 @@ describe("root exports", () => {
 		);
 		expect(LemmaSchema.English.Lexeme.NOUN).toBe(
 			LemmaSchema.English.Lexeme.NOUN,
+		);
+		expect(SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN).toBe(
+			SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN,
 		);
 		expect("toLingId" in linguistics).toBe(false);
 		expect("LingIdSchema" in linguistics).toBe(false);
@@ -86,6 +91,37 @@ describe("root exports", () => {
 
 		expect(lemma.pos).toBe("NOUN");
 		expect(unknownSelection.orthographicStatus).toBe("Unknown");
+	});
+
+	it("supports surface-only schemas and broad type aliases", () => {
+		const surface: AnySurface<"English"> = {
+			discriminators: {
+				lemmaKind: "Lexeme",
+				lemmaSubKind: "VERB",
+			},
+			inflectionalFeatures: {
+				tense: "Pres",
+				verbForm: "Fin",
+			},
+			normalizedFullSurface: "walk",
+			surfaceKind: "Inflection",
+			target: {
+				lemma: {
+					canonicalLemma: "walk",
+					inherentFeatures: {},
+					language: "English",
+					lemmaKind: "Lexeme",
+					meaningInEmojis: "🚶",
+					pos: "VERB",
+				},
+			},
+		};
+
+		expect(
+			SurfaceSchema.English.Standard.Inflection.Lexeme.VERB.safeParse(
+				surface,
+			).success,
+		).toBe(true);
 	});
 
 	it("supports lemma phraseme selections where the spelled selection is narrower than the full surface", () => {

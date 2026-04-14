@@ -62,5 +62,3 @@ export type AbstractSelectionFor<
 				: { surface: SurfaceFor<SK, LK, D> })
 		>
 	: never;
-
-// type InfCheck1 = AbstractSelectionFor<"Standard", "Lemma", "Lexeme">;
