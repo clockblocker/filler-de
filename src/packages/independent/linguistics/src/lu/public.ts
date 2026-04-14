@@ -4,6 +4,10 @@ import { EnglishLemmaSchema } from "./english/english-lemma";
 import { EnglishSelectionSchema } from "./english/english-selection";
 import { GermanLemmaSchema } from "./german/german-lemma";
 import { GermanSelectionSchema } from "./german/german-selection";
+import {
+	buildObservedSurfaceSchemaForLanguage,
+	type ObservedSurfaceSchemaLanguageShape,
+} from "./observed-surface-schema";
 
 import type {
 	LemmaSchemaLanguageShape,
@@ -52,7 +56,7 @@ export type MorphemeKind = z.infer<typeof MorphemeKindSchema>;
 export type PhrasemeKind = z.infer<typeof PhrasemeKindSchema>;
 export type Pos = z.infer<typeof PosSchema>;
 export type InherentFeatures = AbstractLemma<"Lexeme">["inherentFeatures"];
-type UnknownSelection = AbstractSelectionFor<"Unknown">;
+export type UnknownSelection = AbstractSelectionFor<"Unknown">;
 
 export const SelectionSchema = {
 	English: EnglishSelectionSchema,
@@ -63,6 +67,11 @@ export const SurfaceSchema = {
 	English: buildSurfaceSchemaForLanguage("English", EnglishSelectionSchema),
 	German: buildSurfaceSchemaForLanguage("German", GermanSelectionSchema),
 } satisfies SurfaceSchemaShape;
+
+export const ObservedSurfaceSchema = {
+	English: buildObservedSurfaceSchemaForLanguage(SurfaceSchema.English),
+	German: buildObservedSurfaceSchemaForLanguage(SurfaceSchema.German),
+} satisfies ObservedSurfaceSchemaShape;
 
 export const LemmaSchema = {
 	English: EnglishLemmaSchema,
@@ -79,7 +88,8 @@ export type Lemma<
 
 export type Selection<
 	L extends TargetLanguage = TargetLanguage,
-	OS extends SelectionOrthographicStatusFor<L> = SelectionOrthographicStatusFor<L>,
+	OS extends
+		SelectionOrthographicStatusFor<L> = SelectionOrthographicStatusFor<L>,
 	SK extends SelectionSurfaceKindArg<L, OS> = SelectionSurfaceKindArg<L, OS>,
 	LK extends SelectionLemmaKindArg<L, OS, SK> = SelectionLemmaKindArg<
 		L,
@@ -96,9 +106,10 @@ export type Selection<
 	? KnownSelectionUnionForLanguage<L> | UnknownSelection
 	: InferSchema<SelectionSchemaFor<L, OS, SK, LK, D>>;
 
-export type Surface<
+type SurfaceValue<
 	L extends TargetLanguage = TargetLanguage,
-	OS extends SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
+	OS extends
+		SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
 	SK extends SurfaceSurfaceKindFor<L, OS> = SurfaceSurfaceKindFor<L, OS>,
 	LK extends SurfaceLemmaKindFor<L, OS, SK> = SurfaceLemmaKindFor<L, OS, SK>,
 	D extends SurfaceDiscriminatorFor<L, OS, SK, LK> = SurfaceDiscriminatorFor<
@@ -111,6 +122,54 @@ export type Surface<
 	? KnownSurfaceUnionForLanguage<L>
 	: InferSchema<SurfaceSchemaFor<L, OS, SK, LK, D>>;
 
+export type Surface<
+	L extends TargetLanguage = TargetLanguage,
+	OS extends
+		SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
+	SK extends SurfaceSurfaceKindFor<L, OS> = SurfaceSurfaceKindFor<L, OS>,
+	LK extends SurfaceLemmaKindFor<L, OS, SK> = SurfaceLemmaKindFor<L, OS, SK>,
+	D extends SurfaceDiscriminatorFor<L, OS, SK, LK> = SurfaceDiscriminatorFor<
+		L,
+		OS,
+		SK,
+		LK
+	>,
+> = SurfaceValue<L, OS, SK, LK, D>;
+
+export type LooseSurface<
+	L extends TargetLanguage = TargetLanguage,
+	OS extends
+		SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
+	SK extends SurfaceSurfaceKindFor<L, OS> = SurfaceSurfaceKindFor<L, OS>,
+	LK extends SurfaceLemmaKindFor<L, OS, SK> = SurfaceLemmaKindFor<L, OS, SK>,
+	D extends SurfaceDiscriminatorFor<L, OS, SK, LK> = SurfaceDiscriminatorFor<
+		L,
+		OS,
+		SK,
+		LK
+	>,
+> = Extract<
+	SurfaceValue<L, OS, SK, LK, D>,
+	{ target: { canonicalLemma: string } }
+>;
+
+export type ObservedSurface<
+	L extends TargetLanguage = TargetLanguage,
+	OS extends
+		SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
+	SK extends SurfaceSurfaceKindFor<L, OS> = SurfaceSurfaceKindFor<L, OS>,
+	LK extends SurfaceLemmaKindFor<L, OS, SK> = SurfaceLemmaKindFor<L, OS, SK>,
+	D extends SurfaceDiscriminatorFor<L, OS, SK, LK> = SurfaceDiscriminatorFor<
+		L,
+		OS,
+		SK,
+		LK
+	>,
+> = Exclude<
+	SurfaceValue<L, OS, SK, LK, D>,
+	{ target: { canonicalLemma: string } }
+>;
+
 type SupportedLanguage = z.infer<typeof TargetLanguageSchema>;
 
 type SelectionSchemaShape = {
@@ -119,6 +178,10 @@ type SelectionSchemaShape = {
 
 type SurfaceSchemaShape = {
 	[L in SupportedLanguage]: SurfaceSchemaLanguageShape;
+};
+
+type ObservedSurfaceSchemaShape = {
+	[L in SupportedLanguage]: ObservedSurfaceSchemaLanguageShape;
 };
 
 type ValueOf<T> = T[keyof T];

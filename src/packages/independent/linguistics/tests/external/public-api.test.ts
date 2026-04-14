@@ -56,9 +56,9 @@ describe("public API usage", () => {
 		expect(LemmaSchema.English.Lexeme.NOUN).toBe(
 			LemmaSchema.English.Lexeme.NOUN,
 		);
-		expect(ObservedSurfaceSchema.English.Lexeme.VERB).toBe(
-			ObservedSurfaceSchema.English.Lexeme.VERB,
-		);
+		expect(
+			ObservedSurfaceSchema.English.Standard.Inflection.Lexeme.VERB,
+		).toBe(ObservedSurfaceSchema.English.Standard.Inflection.Lexeme.VERB);
 		expect(SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN).toBe(
 			SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN,
 		);
@@ -76,6 +76,7 @@ describe("public API usage", () => {
 			meaningInEmojis: "👶",
 			pos: "NOUN",
 		} satisfies Lemma<"German">;
+
 		const unknownSelection: Selection<"German"> = {
 			language: "German",
 			orthographicStatus: "Unknown",
@@ -95,6 +96,7 @@ describe("public API usage", () => {
 			meaningInEmojis: "🐕",
 			pos: "NOUN",
 		} satisfies Lemma<"English">;
+
 		const unknownSelection: Selection<"English"> = {
 			language: "English",
 			orthographicStatus: "Unknown",
@@ -118,14 +120,12 @@ describe("public API usage", () => {
 			normalizedFullSurface: "walk",
 			surfaceKind: "Inflection",
 			target: {
-				lemma: {
-					canonicalLemma: "walk",
-					inherentFeatures: {},
-					language: "English",
-					lemmaKind: "Lexeme",
-					meaningInEmojis: "🚶",
-					pos: "VERB",
-				},
+				canonicalLemma: "walk",
+				inherentFeatures: {},
+				language: "English",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🚶",
+				pos: "VERB",
 			},
 		};
 
@@ -168,34 +168,30 @@ describe("public API usage", () => {
 
 	it("validates observed surfaces through the exported observed-surface schemas", () => {
 		expect(
-			ObservedSurfaceSchema.German.Lexeme.NOUN.safeParse({
+			ObservedSurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
 				discriminators: {
 					lemmaKind: "Lexeme",
 					lemmaSubKind: "NOUN",
 				},
-				language: "German",
-				lingKind: "Surface",
 				normalizedFullSurface: "See",
-				observedLemma: {
+				surfaceKind: "Lemma",
+				target: {
 					canonicalLemma: "See",
 					inherentFeatures: {
 						gender: "Fem",
 					},
 					language: "German",
 					lemmaKind: "Lexeme",
-					lingKind: "Lemma",
 					meaningInEmojis: "🌊",
 					pos: "NOUN",
 				},
-				orthographicStatus: "Standard",
-				surfaceKind: "Lemma",
-				target: "Lemma",
 			}).success,
 		).toBe(true);
 	});
 
 	it("exposes a dedicated relations API", () => {
 		const dog = "rel:dog";
+
 		const cat = "rel:cat";
 
 		expect(LexicalRelation.synonym).toBe("synonym");

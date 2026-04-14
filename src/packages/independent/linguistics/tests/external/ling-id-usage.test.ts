@@ -1,8 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import type {
 	Lemma,
-	ObservedSurface,
 	OrthographicStatus,
+	ParsedObservedSurfaceDto,
+	ParsedSurfaceDto,
+	ParsedTargetedSurfaceDto,
 	Surface,
 } from "../../src";
 import {
@@ -20,17 +22,11 @@ type LingIdSurfaceInput<L extends TestLanguage> = Surface<L> & {
 };
 
 type ParsedTargetedSurface<L extends TestLanguage = TestLanguage> =
-	Omit<LingIdSurfaceInput<L>, "target"> & {
-		language: L;
-		lingKind: "Surface";
-		target:
-			| { canonicalLemma: string }
-			| { lemma: Lemma<L> & { lingKind: "Lemma" } };
-	};
+	ParsedTargetedSurfaceDto & { language: L };
 
-type ParsedSurface<L extends TestLanguage = TestLanguage> =
-	| ParsedTargetedSurface<L>
-	| ObservedSurface;
+type ParsedSurface<L extends TestLanguage = TestLanguage> = ParsedSurfaceDto & {
+	language: L;
+};
 
 describe("Ling ID usage", () => {
 	const toGermanSurfaceLingId = buildToSurfaceLingIdFor("German");
@@ -145,9 +141,7 @@ describe("Ling ID usage", () => {
 			normalizedFullSurface: "walk",
 			orthographicStatus: "Standard",
 			surfaceKind: "Inflection",
-			target: {
-				lemma: walkLemma,
-			},
+			target: walkLemma,
 		};
 
 		const shallowSurface: LingIdSurfaceInput<"English"> = {
@@ -216,16 +210,12 @@ describe("Ling ID usage", () => {
 
 		const feminineSurface: LingIdSurfaceInput<"German"> = {
 			...canonicalSurface,
-			target: {
-				lemma: feminineSeeLemma,
-			},
+			target: feminineSeeLemma,
 		};
 
 		const neuterSurface: LingIdSurfaceInput<"German"> = {
 			...canonicalSurface,
-			target: {
-				lemma: neuterSeeLemma,
-			},
+			target: neuterSeeLemma,
 		};
 
 		const walkPres: LingIdSurfaceInput<"English"> = {
@@ -277,10 +267,10 @@ describe("Ling ID usage", () => {
 
 		const id = toGermanSurfaceLingId(morpheme);
 
-		const parsed = parseLingId(id) as ObservedSurface;
+		const parsed = parseLingId(id) as ParsedObservedSurfaceDto;
 
-		expect(parsed.target).toBe("Lemma");
-		expect(parsed.observedLemma.lemmaKind).toBe("Morpheme");
+		expect(parsed.observationMode).toBe("observed");
+		expect(parsed.target.lemmaKind).toBe("Morpheme");
 		expect({ ...parsed }).toEqual({
 			discriminators: {
 				lemmaKind: "Morpheme",
@@ -289,7 +279,10 @@ describe("Ling ID usage", () => {
 			language: "German",
 			lingKind: "Surface",
 			normalizedFullSurface: "ab-",
-			observedLemma: {
+			observationMode: "observed",
+			orthographicStatus: "Standard",
+			surfaceKind: "Lemma",
+			target: {
 				canonicalLemma: "ab-",
 				isClosedSet: false,
 				language: "German",
@@ -299,9 +292,6 @@ describe("Ling ID usage", () => {
 				morphemeKind: "Prefix",
 				separable: true,
 			},
-			orthographicStatus: "Standard",
-			surfaceKind: "Lemma",
-			target: "Lemma",
 		});
 		expect(JSON.parse(JSON.stringify(parsed))).toEqual({ ...parsed });
 		expect(structuredClone(parsed)).toEqual(parsed);
@@ -316,9 +306,9 @@ describe("Ling ID usage", () => {
 	it("canonicalizes observed surface dto shells on reserialization", () => {
 		const observed = parseLingId(
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
-		) as ObservedSurface;
+		) as ParsedObservedSurfaceDto;
 
-		const mutatedObserved: ObservedSurface = {
+		const mutatedObserved: ParsedObservedSurfaceDto = {
 			...observed,
 			discriminators: {
 				lemmaKind: "Lexeme",
@@ -326,23 +316,6 @@ describe("Ling ID usage", () => {
 			},
 			normalizedFullSurface: "Bogus",
 		};
-
-		expect(toGermanSurfaceLingId(mutatedObserved)).toBe(
-			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
-		);
-	});
-
-	it("canonicalizes observed dto reserialization even if the target branch is mutated", () => {
-		const observed = parseLingId(
-			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
-		) as ObservedSurface;
-
-		const mutatedObserved = {
-			...observed,
-			target: {
-				canonicalLemma: "Bogus",
-			},
-		} as unknown as ObservedSurface;
 
 		expect(toGermanSurfaceLingId(mutatedObserved)).toBe(
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
@@ -369,9 +342,7 @@ describe("Ling ID usage", () => {
 			normalizedFullSurface: "See",
 			orthographicStatus: "Standard",
 			surfaceKind: "Lemma",
-			target: {
-				lemma: feminineSeeLemma,
-			},
+			target: feminineSeeLemma,
 		};
 
 		const shallowSurface: LingIdSurfaceInput<"German"> = {
@@ -393,10 +364,10 @@ describe("Ling ID usage", () => {
 			shallowId,
 		) as ParsedTargetedSurface<"German">;
 
-		expect("lemma" in parsedFull.target).toBe(true);
-		if ("lemma" in parsedFull.target) {
-			expect(parsedFull.target.lemma.lingKind).toBe("Lemma");
-			expect(parsedFull.target.lemma.canonicalLemma).toBe("See");
+		expect("lemmaKind" in parsedFull.target).toBe(true);
+		if ("lemmaKind" in parsedFull.target) {
+			expect(parsedFull.target.lingKind).toBe("Lemma");
+			expect(parsedFull.target.canonicalLemma).toBe("See");
 		}
 		expect("canonicalLemma" in parsedShallow.target).toBe(true);
 		expect({ ...parsedFull }).toEqual({
@@ -410,17 +381,15 @@ describe("Ling ID usage", () => {
 			orthographicStatus: "Standard",
 			surfaceKind: "Lemma",
 			target: {
-				lemma: {
-					canonicalLemma: "See",
-					inherentFeatures: {
-						gender: "Fem",
-					},
-					language: "German",
-					lemmaKind: "Lexeme",
-					lingKind: "Lemma",
-					meaningInEmojis: "🌊",
-					pos: "NOUN",
+				canonicalLemma: "See",
+				inherentFeatures: {
+					gender: "Fem",
 				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				lingKind: "Lemma",
+				meaningInEmojis: "🌊",
+				pos: "NOUN",
 			},
 		});
 		expect(JSON.parse(JSON.stringify(parsedFull))).toEqual({
@@ -493,23 +462,17 @@ describe("Ling ID usage", () => {
 
 		const fullFemSurface: LingIdSurfaceInput<"German"> = {
 			...shallowSurface,
-			target: {
-				lemma: feminineSeeLemma,
-			},
+			target: feminineSeeLemma,
 		};
 
 		const sameFullFemSurface: LingIdSurfaceInput<"German"> = {
 			...shallowSurface,
-			target: {
-				lemma: feminineSeeLemma,
-			},
+			target: feminineSeeLemma,
 		};
 
 		const fullNeuterSurface: LingIdSurfaceInput<"German"> = {
 			...shallowSurface,
-			target: {
-				lemma: neuterSeeLemma,
-			},
+			target: neuterSeeLemma,
 		};
 
 		const observedFemSurface = toGermanSurfaceLingId(feminineSeeLemma);
@@ -586,14 +549,12 @@ describe("Ling ID usage", () => {
 			orthographicStatus: "Standard",
 			surfaceKind: "Lemma",
 			target: {
-				lemma: {
-					canonicalLemma: "walk",
-					inherentFeatures: {},
-					language: "English",
-					lemmaKind: "Lexeme",
-					meaningInEmojis: "🚶",
-					pos: "VERB",
-				},
+				canonicalLemma: "walk",
+				inherentFeatures: {},
+				language: "English",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🚶",
+				pos: "VERB",
 			},
 		};
 
@@ -602,7 +563,7 @@ describe("Ling ID usage", () => {
 		);
 	});
 
-	it("rejects observed surfaces and lemma input in the shallow surface serializer", () => {
+	it("accepts observed surfaces and rejects lemma input in the shallow surface serializer", () => {
 		const lemma = {
 			canonicalLemma: "See",
 			inherentFeatures: {
@@ -616,26 +577,18 @@ describe("Ling ID usage", () => {
 
 		const observedSurface = parseLingId(
 			toGermanSurfaceLingId(lemma),
-		) as ObservedSurface;
+		) as ParsedObservedSurfaceDto;
 
 		expect(() =>
 			toGermanShallowSurfaceLingId(
 				lemma as unknown as LingIdSurfaceInput<"German">,
 			),
-		).toThrow(/targeted surface input/);
-		expect(() =>
+		).toThrow(/surface input/);
+		expect(
 			toGermanShallowSurfaceLingId(
 				observedSurface as unknown as ParsedTargetedSurface<"German">,
 			),
-		).toThrow(/do not support observed surfaces/);
-		expect(() =>
-			toGermanShallowSurfaceLingId({
-				...observedSurface,
-				target: {
-					canonicalLemma: "Bogus",
-				},
-			} as unknown as ParsedTargetedSurface<"German">),
-		).toThrow(/do not support observed surfaces/);
+		).toBe("ling:v1:DE:SURF-SHALLOW;See;Standard;Lemma;Lexeme;NOUN;-");
 	});
 
 	it("does not preserve compatibility with the removed top-level lemma format", () => {

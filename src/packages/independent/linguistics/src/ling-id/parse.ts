@@ -13,6 +13,7 @@ import { normalizeObservedSurface } from "./serialize";
 import type {
 	LingId,
 	ParsedLemmaDto,
+	ParsedObservedSurfaceDto,
 	ParsedSurfaceDto,
 	ParsedTargetedSurfaceDto,
 } from "./types";
@@ -105,7 +106,7 @@ export function parseLemmaBody(
 				canonicalLemma,
 				...(discourseFormulaRole === undefined
 					? {}
-					: { discourseFormulaRole }),
+					: { discourseFormulaRole: discourseFormulaRole as string }),
 				language,
 				lemmaKind,
 				lingKind: "Lemma",
@@ -164,7 +165,7 @@ function parseSurfaceBody(
 		targetMode === "canon"
 			? { canonicalLemma: targetPayloadToken }
 			: targetMode === "lemma"
-				? { lemma: parseLemmaBody(language, targetPayloadToken) }
+				? parseLemmaBody(language, targetPayloadToken)
 				: unsupportedTargetMode(targetMode);
 
 	return {
@@ -228,7 +229,7 @@ function parseObservedSurfaceBody(
 		throw new Error(`Malformed observed surface Ling ID: ${body}`);
 	}
 
-	return normalizedObservedSurface;
+	return normalizedObservedSurface satisfies ParsedObservedSurfaceDto;
 }
 
 function unsupportedTargetMode(targetMode: string): never {

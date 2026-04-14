@@ -73,8 +73,8 @@ export function getSpelledLemma(selection: GermanSelection): string | null {
 		return null;
 	}
 
-	return "lemma" in selection.surface.target
-		? selection.surface.target.lemma.canonicalLemma
+	return hasHydratedLemmaTarget(selection.surface.target)
+		? selection.surface.target.canonicalLemma
 		: selection.surface.target.canonicalLemma;
 }
 
@@ -104,4 +104,14 @@ export function getSelectionDiscriminator(
 	}
 
 	return selection.surface.discriminators.lemmaSubKind;
+}
+
+function hasHydratedLemmaTarget(
+	target: KnownGermanSelection["surface"]["target"],
+): target is Extract<KnownGermanSelection["surface"]["target"], { lemmaKind: unknown }> {
+	return (
+		typeof target === "object" &&
+		target !== null &&
+		"lemmaKind" in target
+	);
 }

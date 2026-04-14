@@ -61,8 +61,8 @@ export function getSpelledLemma(selection: ResolvedSelection): string | undefine
 		return undefined;
 	}
 
-	return "lemma" in selection.surface.target
-		? selection.surface.target.lemma.canonicalLemma
+	return hasHydratedLemmaTarget(selection.surface.target)
+		? selection.surface.target.canonicalLemma
 		: selection.surface.target.canonicalLemma;
 }
 
@@ -74,4 +74,17 @@ export function getSelectionDiscriminator(
 	}
 
 	return selection.surface.discriminators.lemmaSubKind;
+}
+
+function hasHydratedLemmaTarget(
+	target: Exclude<ResolvedSelection, { orthographicStatus: "Unknown" }>["surface"]["target"],
+): target is Extract<
+	Exclude<ResolvedSelection, { orthographicStatus: "Unknown" }>["surface"]["target"],
+	{ lemmaKind: unknown }
+> {
+	return (
+		typeof target === "object" &&
+		target !== null &&
+		"lemmaKind" in target
+	);
 }

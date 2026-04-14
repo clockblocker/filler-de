@@ -53,37 +53,32 @@ export type ParsedLemmaDto =
 			discourseFormulaRole?: string;
 	  };
 
-export type ParsedObservedSurfaceDto = {
-	lingKind: "Surface";
-	language: TargetLanguage;
-	orthographicStatus: "Standard";
-	surfaceKind: "Lemma";
-	normalizedFullSurface: string;
-	discriminators: {
-		lemmaKind: LemmaKind;
-		lemmaSubKind: string;
-	};
-	target: "Lemma";
-	observedLemma: ParsedLemmaDto;
-};
-
-export type ParsedTargetedSurfaceDto = {
+type ParsedSurfaceBaseDto = {
 	lingKind: "Surface";
 	language: TargetLanguage;
 	orthographicStatus: Exclude<OrthographicStatus, "Unknown">;
-	surfaceKind: Exclude<SurfaceKind, never>;
+	surfaceKind: SurfaceKind;
 	normalizedFullSurface: string;
 	discriminators: {
 		lemmaKind: LemmaKind;
 		lemmaSubKind: string;
 	};
-	target: { canonicalLemma: string } | { lemma: ParsedLemmaDto };
 	inflectionalFeatures?: ParsedFeatureBag;
 };
 
-export type ParsedSurfaceDto =
-	| ParsedObservedSurfaceDto
-	| ParsedTargetedSurfaceDto;
+export type ParsedTargetedSurfaceDto = ParsedSurfaceBaseDto & {
+	target: { canonicalLemma: string } | ParsedLemmaDto;
+	observationMode?: never;
+};
+
+export type ParsedObservedSurfaceDto = ParsedSurfaceBaseDto & {
+	orthographicStatus: "Standard";
+	surfaceKind: "Lemma";
+	target: ParsedLemmaDto;
+	observationMode: "observed";
+};
+
+export type ParsedSurfaceDto = ParsedTargetedSurfaceDto | ParsedObservedSurfaceDto;
 
 export type ParsedLingDto = ParsedSurfaceDto;
 
@@ -108,8 +103,6 @@ export type ParsedObservedSurfaceDtoFor<L extends TargetLanguage> =
 	ParsedObservedSurfaceDto & {
 		language: L;
 	};
-
-export type ObservedSurface = ParsedObservedSurfaceDto;
 
 export type SerializableLemma = Lemma | ParsedLemmaDto;
 export type SerializableTargetedSurface =

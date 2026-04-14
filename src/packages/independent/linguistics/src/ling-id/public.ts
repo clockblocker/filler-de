@@ -1,6 +1,5 @@
 import type { Lemma } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
-import { ObservedSurfaceSchema } from "./observed-surface-schema";
 import { parseLingId } from "./parse";
 import {
 	serializeObservedSurface,
@@ -15,24 +14,23 @@ import type {
 	ParsedObservedSurfaceDto,
 	ParsedSurfaceDto,
 	ParsedSurfaceDtoFor,
-	ParsedTargetedSurfaceDto,
-	ParsedTargetedSurfaceDtoFor,
 	SerializableLemma,
 	SerializableSurface,
-	SerializableTargetedSurface,
 	ShallowSurfaceLingId,
 	SurfaceLingId,
 } from "./types";
 
 export type {
 	LingId,
-	ObservedSurface,
 	ObservedSurfaceLingId,
+	ParsedObservedSurfaceDto,
+	ParsedSurfaceDto,
+	ParsedTargetedSurfaceDto,
 	ShallowSurfaceLingId,
 	SurfaceLingId,
 } from "./types";
 
-export { ObservedSurfaceSchema, parseLingId };
+export { parseLingId };
 
 export function buildToLingIdFor<L extends TargetLanguage>(lang: L) {
 	return buildToSurfaceLingIdFor(lang);
@@ -63,28 +61,17 @@ export function buildToSurfaceLingIdFor<L extends TargetLanguage>(
 export function buildToShallowSurfaceLingIdFor<L extends TargetLanguage>(
 	lang: L,
 ): (
-	value:
-		| LingIdSurfaceInput<L>
-		| ParsedTargetedSurfaceDtoFor<L>
-		| ParsedTargetedSurfaceDto,
+	value: LingIdSurfaceInput<L> | ParsedSurfaceDtoFor<L> | ParsedSurfaceDto,
 ) => ShallowSurfaceLingId {
 	return (value) => {
 		if (!isSurfaceValue(value)) {
-			throw new Error(
-				"Shallow surface Ling IDs require a targeted surface input",
-			);
-		}
-
-		if (isObservedSurfaceValue(value)) {
-			throw new Error(
-				"Shallow surface Ling IDs do not support observed surfaces",
-			);
+			throw new Error("Shallow surface Ling IDs require a surface input");
 		}
 
 		return getSerializerForValue(
 			lang,
 			getValueLanguage(value),
-		).toShallowSurfaceLingId(value as SerializableTargetedSurface);
+		).toShallowSurfaceLingId(value as SerializableSurface);
 	};
 }
 
@@ -94,7 +81,7 @@ type LanguageSerializer = {
 		(value: SerializableSurface): SurfaceLingId | ObservedSurfaceLingId;
 	};
 	toShallowSurfaceLingId: (
-		value: SerializableTargetedSurface,
+		value: SerializableSurface,
 	) => ShallowSurfaceLingId;
 };
 
@@ -109,25 +96,17 @@ function isSurfaceValue(
 function isObservedSurfaceValue(
 	value: SerializableSurface | ParsedSurfaceDto | ParsedObservedSurfaceDto,
 ): value is ParsedObservedSurfaceDto {
-	return hasObservedLemma(value) || hasObservedLemmaTarget(value);
+	return hasObservedIdentityMode(value);
 }
 
-function hasObservedLemma(
+function hasObservedIdentityMode(
 	value: unknown,
-): value is { observedLemma: ParsedObservedSurfaceDto["observedLemma"] } {
-	return (
-		typeof value === "object" && value !== null && "observedLemma" in value
-	);
-}
-
-function hasObservedLemmaTarget(
-	value: unknown,
-): value is { target: ParsedObservedSurfaceDto["target"] } {
+): value is { observationMode: ParsedObservedSurfaceDto["observationMode"] } {
 	return (
 		typeof value === "object" &&
 		value !== null &&
-		"target" in value &&
-		(value as { target: unknown }).target === "Lemma"
+		"observationMode" in value &&
+		(value as { observationMode: unknown }).observationMode === "observed"
 	);
 }
 

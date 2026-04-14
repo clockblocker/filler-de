@@ -58,10 +58,7 @@ export function buildSelectionSurfaceSchema({
 				})
 				.strict(),
 			normalizedFullSurface: z.string(),
-			target: z.union([
-				z.object({ canonicalLemma: z.string() }).strict(),
-				z.object({ lemma: lemmaSchema }).strict(),
-			]),
+			target: z.union([z.object({ canonicalLemma: z.string() }).strict(), lemmaSchema]),
 		})
 		.strict()
 		.superRefine((surface, ctx) => {
@@ -70,16 +67,14 @@ export function buildSelectionSurfaceSchema({
 					lemmaKind: unknown;
 					lemmaSubKind: unknown;
 				};
-				target:
-					| { canonicalLemma: string }
-					| { lemma: Record<string, unknown> };
+				target: { canonicalLemma: string } | Record<string, unknown>;
 			};
 
-			if (!("lemma" in typedSurface.target)) {
+			if (isLooseSurfaceTarget(typedSurface.target)) {
 				return;
 			}
 
-			const hydratedLemma = typedSurface.target.lemma;
+			const hydratedLemma = typedSurface.target;
 			if (hydratedLemma.language !== language) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
@@ -131,4 +126,10 @@ function getLemmaSubKindKey(
 	}
 
 	return matchingKey;
+}
+
+function isLooseSurfaceTarget(
+	target: { canonicalLemma: string } | Record<string, unknown>,
+): target is { canonicalLemma: string } {
+	return "canonicalLemma" in target && !("lemmaKind" in target);
 }

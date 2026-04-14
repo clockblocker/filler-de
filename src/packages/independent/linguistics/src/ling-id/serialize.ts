@@ -7,7 +7,6 @@ import type {
 	ParsedObservedSurfaceDto,
 	SerializableLemma,
 	SerializableSurface,
-	SerializableTargetedSurface,
 	ShallowSurfaceLingId,
 	SurfaceLingId,
 } from "./types";
@@ -15,10 +14,7 @@ import { buildHeader, joinLingId } from "./wire";
 
 type SerializableNestedLemma =
 	| SerializableLemma
-	| Extract<
-			SerializableTargetedSurface["target"],
-			{ lemma: unknown }
-	  >["lemma"];
+	| Exclude<SerializableSurface["target"], { canonicalLemma: string }>;
 
 export function serializeObservedSurface(
 	language: TargetLanguage,
@@ -27,7 +23,7 @@ export function serializeObservedSurface(
 	return serializeSurface(
 		language,
 		isObservedSurfaceDto(value)
-			? normalizeObservedSurface(value.observedLemma)
+			? normalizeObservedSurface(value.target)
 			: normalizeObservedSurface(value),
 	);
 }
@@ -37,23 +33,17 @@ export function serializeSurface(
 	value: SerializableSurface,
 ): SurfaceLingId | ObservedSurfaceLingId {
 	const normalizedValue = isObservedSurfaceDto(value)
-		? normalizeObservedSurface(value.observedLemma)
+		? normalizeObservedSurface(value.target)
 		: value;
 	let targetMode: "canon" | "lemma" | "observed";
 	let targetPayload: string;
 
 	if (isObservedSurfaceDto(normalizedValue)) {
 		targetMode = "observed";
-		targetPayload = serializeLemmaBody(
-			language,
-			normalizedValue.observedLemma,
-		);
-	} else if ("lemma" in normalizedValue.target) {
+		targetPayload = serializeLemmaBody(language, normalizedValue.target);
+	} else if (isObservedSurfaceTarget(normalizedValue.target)) {
 		targetMode = "lemma";
-		targetPayload = serializeLemmaBody(
-			language,
-			normalizedValue.target.lemma,
-		);
+		targetPayload = serializeLemmaBody(language, normalizedValue.target);
 	} else {
 		targetMode = "canon";
 		targetPayload = normalizedValue.target.canonicalLemma;
@@ -69,7 +59,7 @@ export function serializeSurface(
 
 export function serializeShallowSurface(
 	language: TargetLanguage,
-	value: SerializableTargetedSurface,
+	value: SerializableSurface,
 ): ShallowSurfaceLingId {
 	return joinLingId([
 		buildHeader(language, "SURF-SHALLOW"),
@@ -107,10 +97,10 @@ export function normalizeObservedSurface(
 		language: observedLemma.language,
 		lingKind: "Surface",
 		normalizedFullSurface: observedLemma.canonicalLemma,
-		observedLemma,
+		observationMode: "observed",
 		orthographicStatus: "Standard",
 		surfaceKind: "Lemma",
-		target: "Lemma",
+		target: observedLemma,
 	};
 }
 
@@ -238,25 +228,27 @@ function getLemmaFeatures(value: ParsedLemmaDto) {
 function isObservedSurfaceDto(
 	value: SerializableLemma | SerializableSurface | ParsedObservedSurfaceDto,
 ): value is ParsedObservedSurfaceDto {
-	return hasObservedLemma(value) || hasObservedLemmaTarget(value);
+	return hasObservedIdentityMode(value);
 }
 
-function hasObservedLemma(
+function hasObservedIdentityMode(
 	value: unknown,
-): value is { observedLemma: ParsedObservedSurfaceDto["observedLemma"] } {
-	return (
-		typeof value === "object" && value !== null && "observedLemma" in value
-	);
-}
-
-function hasObservedLemmaTarget(
-	value: unknown,
-): value is { target: ParsedObservedSurfaceDto["target"] } {
+): value is { observationMode: ParsedObservedSurfaceDto["observationMode"] } {
 	return (
 		typeof value === "object" &&
 		value !== null &&
-		"target" in value &&
-		(value as { target: unknown }).target === "Lemma"
+		"observationMode" in value &&
+		(value as { observationMode: unknown }).observationMode === "observed"
+	);
+}
+
+function isObservedSurfaceTarget(
+	target: SerializableSurface["target"],
+): target is Exclude<SerializableSurface["target"], { canonicalLemma: string }> {
+	return (
+		typeof target === "object" &&
+		target !== null &&
+		"lemmaKind" in target
 	);
 }
 

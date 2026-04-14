@@ -21,14 +21,58 @@ type SurfaceFieldsFor<SK extends SurfaceKind> = SK extends "Inflection"
 	? { inflectionalFeatures: Partial<AbstractFeatures> }
 	: Record<never, never>;
 
-type SurfaceTargetFor<
+type LooseSurfaceTargetFor<
 	LK extends LemmaKind = LemmaKind,
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
-> =
-	| Pick<AbstractLemma<LK, D>, "canonicalLemma">
-	| {
-			lemma: AbstractLemma<LK, D>;
-	  };
+> = Pick<AbstractLemma<LK, D>, "canonicalLemma">;
+
+type ObservedSurfaceTargetFor<
+	LK extends LemmaKind = LemmaKind,
+	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
+> = AbstractLemma<LK, D>;
+
+type SurfaceBaseFor<
+	SK extends SurfaceKind = SurfaceKind,
+	LK extends LemmaKind = LemmaKind,
+	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
+> = Prettify<
+	{
+		surfaceKind: SK;
+		normalizedFullSurface: string;
+	} & SurfaceFieldsFor<SK> & {
+			discriminators: DiscriminatorsFor<LK, D>;
+		}
+>;
+
+export type AbstractLooseSurfaceFor<
+	SK extends SurfaceKind = SurfaceKind,
+	LK extends LemmaKind = LemmaKind,
+	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
+> = SK extends SurfaceKind
+	? Prettify<
+			SurfaceBaseFor<SK, LK, D> & {
+				target: LooseSurfaceTargetFor<LK, D>;
+			}
+		>
+	: never;
+
+export type AbstractObservedSurfaceFor<
+	SK extends SurfaceKind = SurfaceKind,
+	LK extends LemmaKind = LemmaKind,
+	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
+> = SK extends SurfaceKind
+	? Prettify<
+			SurfaceBaseFor<SK, LK, D> & {
+				target: ObservedSurfaceTargetFor<LK, D>;
+			}
+		>
+	: never;
+
+export type AbstractSurfaceFor<
+	SK extends SurfaceKind = SurfaceKind,
+	LK extends LemmaKind = LemmaKind,
+	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
+> = AbstractLooseSurfaceFor<SK, LK, D> | AbstractObservedSurfaceFor<SK, LK, D>;
 
 type SurfaceFor<
 	SK extends SurfaceKind = SurfaceKind,
@@ -37,12 +81,10 @@ type SurfaceFor<
 > = SK extends SurfaceKind
 	? Prettify<
 			{
-				surfaceKind: SK;
-				normalizedFullSurface: string;
-			} & SurfaceFieldsFor<SK> & {
-					discriminators: DiscriminatorsFor<LK, D>;
-					target: SurfaceTargetFor<LK, D>;
-				}
+				target:
+					| LooseSurfaceTargetFor<LK, D>
+					| ObservedSurfaceTargetFor<LK, D>;
+			} & SurfaceBaseFor<SK, LK, D>
 		>
 	: never;
 

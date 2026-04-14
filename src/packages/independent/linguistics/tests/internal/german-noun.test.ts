@@ -132,14 +132,12 @@ describe("German noun schemas", () => {
 				normalizedFullSurface: "Haus",
 				surfaceKind: "Lemma",
 				target: {
-					lemma: {
-						canonicalLemma: "Haus",
-						inherentFeatures: {},
-						language: "German",
-						lemmaKind: "Lexeme",
-						meaningInEmojis: "house",
-						pos: "NOUN",
-					},
+					canonicalLemma: "Haus",
+					inherentFeatures: {},
+					language: "German",
+					lemmaKind: "Lexeme",
+					meaningInEmojis: "house",
+					pos: "NOUN",
 				},
 			},
 		});
@@ -233,16 +231,14 @@ describe("German noun schemas", () => {
 				normalizedFullSurface: "Haus",
 				surfaceKind: "Lemma",
 				target: {
-					lemma: {
-						canonicalLemma: "Haus",
-						inherentFeatures: {
-							gender: "Neut",
-						},
-						language: "German",
-						lemmaKind: "Lexeme",
-						meaningInEmojis: "🏠",
-						pos: "NOUN",
+					canonicalLemma: "Haus",
+					inherentFeatures: {
+						gender: "Neut",
 					},
+					language: "German",
+					lemmaKind: "Lexeme",
+					meaningInEmojis: "🏠",
+					pos: "NOUN",
 				},
 			},
 		});
@@ -264,14 +260,12 @@ describe("German noun schemas", () => {
 				normalizedFullSurface: "Haus",
 				surfaceKind: "Lemma",
 				target: {
-					lemma: {
-						canonicalLemma: "Haus",
-						inherentFeatures: {},
-						language: "English",
-						lemmaKind: "Lexeme",
-						meaningInEmojis: "🏠",
-						pos: "NOUN",
-					},
+					canonicalLemma: "Haus",
+					inherentFeatures: {},
+					language: "English",
+					lemmaKind: "Lexeme",
+					meaningInEmojis: "🏠",
+					pos: "NOUN",
 				},
 			},
 		});
@@ -287,13 +281,11 @@ describe("German noun schemas", () => {
 				normalizedFullSurface: "Haus",
 				surfaceKind: "Lemma",
 				target: {
-					lemma: {
-						canonicalLemma: "Haus",
-						language: "German",
-						lemmaKind: "Phraseme",
-						meaningInEmojis: "🏠",
-						phrasemeKind: "Cliché",
-					},
+					canonicalLemma: "Haus",
+					language: "German",
+					lemmaKind: "Phraseme",
+					meaningInEmojis: "🏠",
+					phrasemeKind: "Cliché",
 				},
 			},
 		});
@@ -309,14 +301,12 @@ describe("German noun schemas", () => {
 				normalizedFullSurface: "Haus",
 				surfaceKind: "Lemma",
 				target: {
-					lemma: {
-						canonicalLemma: "Haus",
-						inherentFeatures: {},
-						language: "German",
-						lemmaKind: "Lexeme",
-						meaningInEmojis: "🏠",
-						pos: "VERB",
-					},
+					canonicalLemma: "Haus",
+					inherentFeatures: {},
+					language: "German",
+					lemmaKind: "Lexeme",
+					meaningInEmojis: "🏠",
+					pos: "VERB",
 				},
 			},
 		});
@@ -337,16 +327,7 @@ describe("German noun schemas", () => {
 				surfaceKind: "Lemma",
 				target: {
 					canonicalLemma: "Haus",
-					lemma: {
-						canonicalLemma: "Haus",
-						inherentFeatures: {
-							gender: "Neut",
-						},
-						language: "German",
-						lemmaKind: "Lexeme",
-						meaningInEmojis: "🏠",
-						pos: "NOUN",
-					},
+					lemmaKind: "Lexeme",
 				},
 			},
 		});
