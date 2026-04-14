@@ -260,7 +260,7 @@ const walkSurfaceId = toEnglishSurfaceLingId({
 		lemma: walkLemma,
 	},
 });
-// "ling:v1:EN:SURF;walk;Standard;Inflection;Lexeme;VERB;tense=Pres,verbForm=Fin;lemma;ling:v1:EN:LEM;walk;Lexeme;VERB;-;🚶"
+// "ling:v1:EN:SURF;walk;Standard;Inflection;Lexeme;VERB;tense=Pres,verbForm=Fin;lemma;ling%3Av1%3AEN%3ALEM%3Bwalk%3BLexeme%3BVERB%3B%2D%3B%F0%9F%9A%B6"
 ```
 
 If the target is shallow, the full surface ID changes:
