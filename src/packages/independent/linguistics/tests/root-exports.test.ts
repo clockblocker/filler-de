@@ -31,6 +31,13 @@ describe("root exports", () => {
 		expect(TARGET_LANGUAGES).toEqual(["German", "English"]);
 		expect(TargetLanguageSchema.parse("German")).toBe("German");
 		expect(TargetLanguageSchema.parse("English")).toBe("English");
+		expect(typeof linguistics.buildToLingIdFor).toBe("function");
+		expect(typeof linguistics.buildToLemmaLingIdFor).toBe("function");
+		expect(typeof linguistics.buildToSurfaceLingIdFor).toBe("function");
+		expect(typeof linguistics.buildToShallowSurfaceLingIdFor).toBe(
+			"function",
+		);
+		expect(typeof linguistics.parseLingId).toBe("function");
 		expect(OrthographicStatus.Standard).toBe("Standard");
 		expect(SurfaceKind.Inflection).toBe("Inflection");
 		expect(LemmaKind.Lexeme).toBe("Lexeme");

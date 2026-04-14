@@ -51,6 +51,7 @@ Important constraints:
 - the ID system must preserve that branch exactly
 - the parser must not auto-upgrade a shallow target into a full target
 - the parser must not collapse a full target into a shallow target
+- morpheme lemma extras such as `isClosedSet?` and `separable?` are in scope for v1 and must be preserved by full lemma IDs and by `parseLingId`
 
 ## Public API To Add
 
@@ -61,21 +62,29 @@ type LemmaLingId = string;
 type SurfaceLingId = string;
 type ShallowSurfaceLingId = string;
 type LingId = LemmaLingId | SurfaceLingId;
+type LingIdSurfaceInput<L extends TargetLanguage = TargetLanguage> =
+	AnySurface<L> & {
+		orthographicStatus: "Standard" | "Typo";
+	};
 
 function buildToLingIdFor<L extends TargetLanguage>(lang: L): (
-	value: AnyLemma<L> | AnySurface<L>,
+	value:
+		| AnyLemma<L>
+		| LingIdSurfaceInput<L>
+		| ParsedLemmaDto
+		| ParsedSurfaceDto,
 ) => LingId;
 
 function buildToLemmaLingIdFor<L extends TargetLanguage>(lang: L): (
-	value: AnyLemma<L>,
+	value: AnyLemma<L> | ParsedLemmaDto,
 ) => LemmaLingId;
 
 function buildToSurfaceLingIdFor<L extends TargetLanguage>(lang: L): (
-	value: AnySurface<L>,
+	value: LingIdSurfaceInput<L> | ParsedSurfaceDto,
 ) => SurfaceLingId;
 
 function buildToShallowSurfaceLingIdFor<L extends TargetLanguage>(lang: L): (
-	value: AnySurface<L>,
+	value: LingIdSurfaceInput<L> | ParsedSurfaceDto,
 ) => ShallowSurfaceLingId;
 
 function parseLingId(id: LingId): ParsedLingDto;
@@ -112,12 +121,14 @@ type ParsedLemmaDto =
 			inherentFeatures: Record<string, string>;
 			meaningInEmojis?: string;
 	  }
-	| {
+		| {
 			lingKind: "Lemma";
 			language: TargetLanguage;
 			canonicalLemma: string;
 			lemmaKind: "Morpheme";
 			morphemeKind: MorphemeKind;
+			isClosedSet?: boolean;
+			separable?: boolean;
 			meaningInEmojis?: string;
 	  }
 	| {
@@ -153,9 +164,10 @@ type ParsedSurfaceDto = {
 
 Requirements:
 
-- parser output must be schema-feedable, but not schema-validated
+- parser output must be a plain serializable DTO
 - parser output must preserve branch choice for `target`
 - parser output for nested full lemma targets must recursively parse the nested lemma ID into a distilled lemma DTO
+- parser output must not hide DTO fields via non-enumerable properties
 
 ## Wire Format
 
@@ -177,7 +189,7 @@ Where:
 ### Lemma Wire Format
 
 ```text
-ling:v1:<LANG>:LEM;<canonicalLemma>;<lemmaKind>;<lemmaSubKind>;<inherentFeatures>;<meaningInEmojis>
+ling:v1:<LANG>:LEM;<canonicalLemma>;<lemmaKind>;<lemmaSubKind>;<lemmaFeatures>;<meaningInEmojis>
 ```
 
 Examples:
@@ -187,6 +199,7 @@ ling:v1:DE:LEM;untergehen;Lexeme;VERB;separable=Yes;-
 ling:v1:DE:LEM;untergehen;Lexeme;VERB;separable=No;-
 ling:v1:DE:LEM;See;Lexeme;NOUN;gender=Fem;-
 ling:v1:DE:LEM;See;Lexeme;NOUN;gender=Neut;-
+ling:v1:DE:LEM;ab-;Morpheme;Prefix;separable=Yes;-
 ling:v1:EN:LEM;walk;Lexeme;VERB;-;🚶
 ```
 
@@ -232,12 +245,23 @@ For lemma IDs:
   - `pos`
   - `morphemeKind`
   - `phrasemeKind`
-- serialize all present inherent features
+- serialize `lemmaFeatures`
 - serialize `meaningInEmojis` or `-`
 
 Important rule:
 
+- for lexemes, `lemmaFeatures` is the full `inherentFeatures` bag
+- for morphemes, `lemmaFeatures` is the bag of present top-level morpheme extras, currently:
+  - `isClosedSet`
+  - `separable`
+- for phrasemes, `lemmaFeatures` is the bag of present top-level identity-relevant extras, currently:
+  - `discourseFormulaRole` when present
+
+Identity rule:
+
 - for lexemes, all present `inherentFeatures` are identity-breaking
+- for morphemes, all present supported top-level morpheme extras are identity-breaking in v1
+- for phrasemes, all present supported top-level phraseme extras are identity-breaking in v1
 
 This is not a selected subset.
 
@@ -281,10 +305,19 @@ These rules are mandatory.
 
 Feature keys must be serialized in deterministic order.
 
-Responsibility:
+V1 rule:
 
-- each language pack owns feature key ordering
+- sort feature keys alphabetically by serialized key name
+- do this for:
+  - lemma feature bags
+  - inflectional feature bags
 - implementation must not rely on object insertion order
+
+Architecture rule:
+
+- keep the serialization code language-specific
+- do not add explicit per-language order tables in this implementation unless needed for correctness
+- future language-specific ordering can override alphabetical ordering later without changing the wire grammar
 
 ### Empty Feature Bundles
 
@@ -368,10 +401,11 @@ For two German surfaces with `normalizedFullSurface = "See"`:
 Each language pack must own:
 
 - language code mapping, e.g. `German -> DE`, `English -> EN`
-- serialization order for:
-  - inherent features
-  - inflectional features
 - any language-specific normalization of feature names or values
+- language-specific serializer entrypoints
+
+For v1, feature ordering itself is not a per-language table.
+Use the global alphabetical rule above.
 
 Global shared code may own:
 
@@ -439,6 +473,7 @@ The implementation is not complete until these tests exist.
 
 - German `untergehen` with `separable=Yes` and `separable=No` serialize differently
 - German `See` with `gender=Fem` and `gender=Neut` serialize differently
+- German prefix morphemes with and without `separable` serialize differently
 - English `walk` lemma with empty inherent features serializes with `-`
 
 ### Surface Identity
@@ -474,10 +509,12 @@ expect(toSurfaceLingId(parseLingId(id))).toBe(id);
 - parser preserves full target branch
 - parser recursively parses nested lemma IDs in full surface targets
 
-### Feedability
+### DTO Behavior
 
-- parsed lemma DTO can be fed into the relevant `LemmaSchema...parse(...)`
-- parsed surface DTO can be fed into the relevant `SurfaceSchema...parse(...)`
+- parsed lemma DTO survives spread / `JSON.stringify` / `structuredClone`
+- parsed surface DTO survives spread / `JSON.stringify` / `structuredClone`
+- parsed lemma DTO can be passed directly to `buildToLemmaLingIdFor(...)`
+- parsed surface DTO can be passed directly to `buildToSurfaceLingIdFor(...)`
 
 ## Acceptance Criteria
 
