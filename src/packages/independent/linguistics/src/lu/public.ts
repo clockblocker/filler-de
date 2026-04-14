@@ -17,7 +17,6 @@ import {
 	type TargetLanguage,
 	TargetLanguageSchema,
 } from "./universal/enums/core/language";
-import { withLingIdSurfaceDtoCompatibility } from "./universal/ling-id-schema-compat";
 import {
 	LemmaKind as LemmaKindSchema,
 	OrthographicStatus as OrthographicStatusSchema,
@@ -29,6 +28,7 @@ import { GrammaticalNumber as GrammaticalNumberSchema } from "./universal/enums/
 import { MorphemeKindSchema } from "./universal/enums/kind/morpheme-kind";
 import { PhrasemeKind as PhrasemeKindSchema } from "./universal/enums/kind/phraseme-kind";
 import { Pos as PosSchema } from "./universal/enums/kind/pos";
+import { withLingIdSurfaceDtoCompatibility } from "./universal/ling-id-schema-compat";
 
 export { TARGET_LANGUAGES, TargetLanguageSchema };
 
@@ -228,7 +228,7 @@ type SelectionSchemaFor<
 					: never
 				: never
 			: never
-			: never;
+		: never;
 
 type SurfaceOrthographicStatusFor<L extends TargetLanguage> =
 	keyof (typeof SurfaceSchema)[L];
@@ -303,14 +303,16 @@ function buildSurfaceSchemaForOrthographicStatus<
 	orthographicStatusSchema: KnownSelectionSchemaByOrthographicStatus<OS>,
 ): KnownSurfaceSchemaByOrthographicStatus<OS> {
 	return Object.fromEntries(
-		Object.entries(orthographicStatusSchema).map(([surfaceKind, lemmaKinds]) => [
-			surfaceKind,
-			buildSurfaceSchemaForSurfaceKind(
-				language,
-				orthographicStatus,
-				lemmaKinds as Record<string, Record<string, ZodTypeAny>>,
-			),
-		]),
+		Object.entries(orthographicStatusSchema).map(
+			([surfaceKind, lemmaKinds]) => [
+				surfaceKind,
+				buildSurfaceSchemaForSurfaceKind(
+					language,
+					orthographicStatus,
+					lemmaKinds as Record<string, Record<string, ZodTypeAny>>,
+				),
+			],
+		),
 	) as KnownSurfaceSchemaByOrthographicStatus<OS>;
 }
 
@@ -323,14 +325,18 @@ function buildSurfaceSchemaForSurfaceKind(
 		Object.entries(surfaceKindSchema).map(([lemmaKind, discriminators]) => [
 			lemmaKind,
 			Object.fromEntries(
-				Object.entries(discriminators).map(([discriminator, selectionSchema]) => [
-					discriminator,
-					withLingIdSurfaceDtoCompatibility({
-						language,
-						orthographicStatus,
-						schema: getSurfaceSchemaFromSelectionSchema(selectionSchema),
-					}),
-				]),
+				Object.entries(discriminators).map(
+					([discriminator, selectionSchema]) => [
+						discriminator,
+						withLingIdSurfaceDtoCompatibility({
+							language,
+							orthographicStatus,
+							schema: getSurfaceSchemaFromSelectionSchema(
+								selectionSchema,
+							),
+						}),
+					],
+				),
 			),
 		]),
 	);

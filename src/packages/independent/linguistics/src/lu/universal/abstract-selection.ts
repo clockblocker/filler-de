@@ -25,7 +25,7 @@ type SurfaceTargetFor<
 	LK extends LemmaKind = LemmaKind,
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > =
-	| { canonicalLemma: string }
+	| Pick<AbstractLemma<LK, D>, "canonicalLemma">
 	| {
 			lemma: AbstractLemma<LK, D>;
 	  };
