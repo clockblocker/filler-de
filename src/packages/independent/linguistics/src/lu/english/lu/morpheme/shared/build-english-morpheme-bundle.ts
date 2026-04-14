@@ -28,7 +28,7 @@ export function buildEnglishMorphemeBundle<MK extends MorphemeKind>({
 	const lemmaSchema = withLingIdLemmaDtoCompatibility(
 		z
 			.object({
-				meaningInEmojis: MeaningInEmojisSchema.optional(),
+				meaningInEmojis: MeaningInEmojisSchema,
 				isClosedSet: z.boolean().optional(),
 				lemmaKind: z.literal("Morpheme"),
 				language: z.literal("English"),

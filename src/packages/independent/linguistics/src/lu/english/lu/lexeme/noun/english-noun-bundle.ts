@@ -17,7 +17,7 @@ const EnglishNounLemmaIdentityShape = {
 
 export const EnglishNounLemmaSchema = withLingIdLemmaDtoCompatibility(
 	z.object({
-		meaningInEmojis: MeaningInEmojisSchema.optional(),
+		meaningInEmojis: MeaningInEmojisSchema,
 		inherentFeatures: EnglishNounInherentFeaturesSchema,
 		lemmaKind: z.literal("Lexeme"),
 		language: z.literal("English"),

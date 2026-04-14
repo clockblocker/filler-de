@@ -6,12 +6,13 @@ import { GermanPhrasemeLemmaSchemas } from "../src/lu/german/lu/phraseme/german-
 
 describe("German non-lexeme schemas", () => {
 	it("exposes inferred morpheme and phraseme lemma types from the registry", () => {
-		const morpheme: Lemma<"German", "Morpheme", "Prefix"> = {
+		const morpheme = {
 			canonicalLemma: "ab-",
 			language: "German",
 			lemmaKind: "Morpheme",
+			meaningInEmojis: "🧩",
 			morphemeKind: "Prefix",
-		};
+		} satisfies Lemma<"German", "Morpheme", "Prefix">;
 		const phraseme: Selection<
 			"German",
 			"Standard",
@@ -72,6 +73,7 @@ describe("German non-lexeme schemas", () => {
 				discourseFormulaRole: "Reaction",
 				language: "German",
 				lemmaKind: "Phraseme",
+				meaningInEmojis: "✅",
 				phrasemeKind: "DiscourseFormula",
 			});
 		const aphorismResult = GermanPhrasemeLemmaSchemas.Aphorism.safeParse({
@@ -79,6 +81,7 @@ describe("German non-lexeme schemas", () => {
 			discourseFormulaRole: "Reaction",
 			language: "German",
 			lemmaKind: "Phraseme",
+			meaningInEmojis: "⏳💰",
 			phrasemeKind: "Aphorism",
 		});
 

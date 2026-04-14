@@ -83,6 +83,7 @@ describe("German verb schemas", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "🚶",
 			pos: "VERB",
 		});
 
@@ -99,6 +100,7 @@ describe("German verb schemas", () => {
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "🚶",
 				pos: "VERB",
 			}).success,
 		).toBe(true);
@@ -111,6 +113,7 @@ describe("German verb schemas", () => {
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "⏳",
 				pos: "VERB",
 			}).success,
 		).toBe(false);
@@ -139,6 +142,7 @@ describe("German verb schemas", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "🚶",
 			pos: "VERB",
 		});
 

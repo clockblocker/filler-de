@@ -23,7 +23,7 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 			z
 				.object({
 					discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
-					meaningInEmojis: MeaningInEmojisSchema.optional(),
+					meaningInEmojis: MeaningInEmojisSchema,
 					lemmaKind: z.literal("Phraseme"),
 					language: z.literal("English"),
 					phrasemeKind: z.literal(phrasemeKind),
@@ -36,7 +36,7 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 	return withLingIdLemmaDtoCompatibility(
 		z
 			.object({
-				meaningInEmojis: MeaningInEmojisSchema.optional(),
+				meaningInEmojis: MeaningInEmojisSchema,
 				lemmaKind: z.literal("Phraseme"),
 				language: z.literal("English"),
 				phrasemeKind: z.literal(phrasemeKind),

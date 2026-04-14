@@ -29,15 +29,16 @@ function nounSurface(canonicalLemma: string) {
 
 describe("German noun schemas", () => {
 	it("exposes inferred lemma types from the registry", () => {
-		const lemma: Lemma<"German", "Lexeme", "NOUN"> = {
+		const lemma = {
 			canonicalLemma: "Kind",
 			inherentFeatures: {
 				gender: "Neut",
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "👶",
 			pos: "NOUN",
-		};
+		} satisfies Lemma<"German", "Lexeme", "NOUN">;
 
 		expect(lemma.pos).toBe("NOUN");
 	});
@@ -155,6 +156,7 @@ describe("German noun schemas", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "👶",
 			pos: "NOUN",
 		});
 
@@ -238,6 +240,7 @@ describe("German noun schemas", () => {
 						},
 						language: "German",
 						lemmaKind: "Lexeme",
+						meaningInEmojis: "🏠",
 						pos: "NOUN",
 					},
 				},
@@ -266,6 +269,7 @@ describe("German noun schemas", () => {
 						inherentFeatures: {},
 						language: "English",
 						lemmaKind: "Lexeme",
+						meaningInEmojis: "🏠",
 						pos: "NOUN",
 					},
 				},
@@ -287,6 +291,7 @@ describe("German noun schemas", () => {
 						canonicalLemma: "Haus",
 						language: "German",
 						lemmaKind: "Phraseme",
+						meaningInEmojis: "🏠",
 						phrasemeKind: "Cliché",
 					},
 				},
@@ -309,6 +314,7 @@ describe("German noun schemas", () => {
 						inherentFeatures: {},
 						language: "German",
 						lemmaKind: "Lexeme",
+						meaningInEmojis: "🏠",
 						pos: "VERB",
 					},
 				},
@@ -338,6 +344,7 @@ describe("German noun schemas", () => {
 						},
 						language: "German",
 						lemmaKind: "Lexeme",
+						meaningInEmojis: "🏠",
 						pos: "NOUN",
 					},
 				},

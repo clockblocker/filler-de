@@ -52,7 +52,7 @@ export function buildEnglishLexemeBundle<
 	} satisfies z.ZodRawShape;
 	const lemmaSchema = withLingIdLemmaDtoCompatibility(
 		z.object({
-			meaningInEmojis: MeaningInEmojisSchema.optional(),
+			meaningInEmojis: MeaningInEmojisSchema,
 			inherentFeatures: inherentFeaturesSchema,
 			lemmaKind: z.literal("Lexeme"),
 			language: z.literal("English"),

@@ -55,7 +55,7 @@ export function buildGermanLexemeBundle<
 			inherentFeatures: inherentFeaturesSchema,
 			language: z.literal("German"),
 			lemmaKind: z.literal("Lexeme"),
-			meaningInEmojis: MeaningInEmojisSchema.optional(),
+			meaningInEmojis: MeaningInEmojisSchema,
 			pos: z.literal(pos),
 			canonicalLemma: z.string(),
 		}),

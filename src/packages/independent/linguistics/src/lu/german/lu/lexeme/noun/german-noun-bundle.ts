@@ -22,7 +22,7 @@ export const GermanNounLemmaSchema = withLingIdLemmaDtoCompatibility(
 		inherentFeatures: GermanNounInherentFeaturesSchema,
 		language: z.literal("German"),
 		lemmaKind: z.literal("Lexeme"),
-		meaningInEmojis: MeaningInEmojisSchema.optional(),
+		meaningInEmojis: MeaningInEmojisSchema,
 		pos: z.literal("NOUN"),
 		canonicalLemma: z.string(),
 	}),

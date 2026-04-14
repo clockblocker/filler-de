@@ -193,6 +193,7 @@ describe("German remaining POS schemas", () => {
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "😊",
 				pos: "ADV",
 			}).success,
 		).toBe(true);
@@ -206,6 +207,7 @@ describe("German remaining POS schemas", () => {
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "👉",
 				pos: "DET",
 			}).success,
 		).toBe(true);
@@ -218,6 +220,7 @@ describe("German remaining POS schemas", () => {
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "🔢",
 				pos: "NUM",
 			}).success,
 		).toBe(true);
@@ -230,6 +233,7 @@ describe("German remaining POS schemas", () => {
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "🚫",
 				pos: "PART",
 			}).success,
 		).toBe(true);
@@ -242,6 +246,7 @@ describe("German remaining POS schemas", () => {
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "👤",
 				pos: "PROPN",
 			}).success,
 		).toBe(true);
@@ -254,6 +259,7 @@ describe("German remaining POS schemas", () => {
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "📊",
 				pos: "SYM",
 			}).success,
 		).toBe(true);
@@ -266,6 +272,7 @@ describe("German remaining POS schemas", () => {
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "❓",
 				pos: "X",
 			}).success,
 		).toBe(true);
@@ -336,6 +343,7 @@ describe("German remaining POS schemas", () => {
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "➕",
 				pos: "CCONJ",
 			}).success,
 		).toBe(false);
@@ -350,6 +358,7 @@ describe("German remaining POS schemas", () => {
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "😊",
 				pos: "ADV",
 			}).success,
 		).toBe(false);

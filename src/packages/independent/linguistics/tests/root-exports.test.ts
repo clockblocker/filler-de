@@ -65,13 +65,14 @@ describe("root exports", () => {
 	});
 
 	it("supports ergonomic broad type aliases", () => {
-		const lemma: AnyLemma<"German"> = {
+		const lemma = {
 			canonicalLemma: "Kind",
 			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
 			language: "German",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "👶",
 			pos: "NOUN",
-		};
+		} satisfies AnyLemma<"German">;
 		const unknownSelection: AnySelection<"German"> = {
 			language: "German",
 			orthographicStatus: "Unknown",
@@ -83,13 +84,14 @@ describe("root exports", () => {
 	});
 
 	it("supports English in the broad type aliases", () => {
-		const lemma: AnyLemma<"English"> = {
+		const lemma = {
 			canonicalLemma: "dog",
 			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
 			language: "English",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "🐕",
 			pos: "NOUN",
-		};
+		} satisfies AnyLemma<"English">;
 		const unknownSelection: AnySelection<"English"> = {
 			language: "English",
 			orthographicStatus: "Unknown",

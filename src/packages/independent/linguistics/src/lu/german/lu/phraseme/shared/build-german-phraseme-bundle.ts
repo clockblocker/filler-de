@@ -26,7 +26,7 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 					discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
 					language: z.literal("German"),
 					lemmaKind: z.literal("Phraseme"),
-					meaningInEmojis: MeaningInEmojisSchema.optional(),
+					meaningInEmojis: MeaningInEmojisSchema,
 					phrasemeKind: z.literal(phrasemeKind),
 				})
 				.strict(),
@@ -39,7 +39,7 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 				canonicalLemma: z.string(),
 				language: z.literal("German"),
 				lemmaKind: z.literal("Phraseme"),
-				meaningInEmojis: MeaningInEmojisSchema.optional(),
+				meaningInEmojis: MeaningInEmojisSchema,
 				phrasemeKind: z.literal(phrasemeKind),
 			})
 			.strict(),

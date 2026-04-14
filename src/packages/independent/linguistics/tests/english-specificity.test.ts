@@ -144,6 +144,7 @@ describe("English schema specificity", () => {
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "🐕",
 				pos: "NOUN",
 			}).success,
 		).toBe(false);
@@ -156,6 +157,7 @@ describe("English schema specificity", () => {
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "👤",
 				pos: "PROPN",
 			}).success,
 		).toBe(false);
@@ -203,6 +205,7 @@ describe("English schema specificity", () => {
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "👀",
 				pos: "VERB",
 			}).success,
 		).toBe(true);
@@ -215,6 +218,7 @@ describe("English schema specificity", () => {
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "🧼",
 				pos: "VERB",
 			}).success,
 		).toBe(false);
@@ -227,6 +231,7 @@ describe("English schema specificity", () => {
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "🧼",
 				pos: "VERB",
 			}).success,
 		).toBe(false);
@@ -239,6 +244,7 @@ describe("English schema specificity", () => {
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "👀",
 				pos: "VERB",
 			}).success,
 		).toBe(false);
@@ -285,6 +291,7 @@ describe("English schema specificity", () => {
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "👤",
 				pos: "PRON",
 			}).success,
 		).toBe(false);
@@ -297,6 +304,7 @@ describe("English schema specificity", () => {
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
+				meaningInEmojis: "👉",
 				pos: "DET",
 			}).success,
 		).toBe(false);

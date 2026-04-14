@@ -30,6 +30,7 @@ describe("Ling IDs", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "🌅",
 			pos: "VERB",
 		} satisfies Lemma<"German", "Lexeme", "VERB">;
 
@@ -47,6 +48,7 @@ describe("Ling IDs", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "🌊",
 			pos: "NOUN",
 		} satisfies Lemma<"German", "Lexeme", "NOUN">;
 
@@ -61,6 +63,7 @@ describe("Ling IDs", () => {
 			canonicalLemma: "ab-",
 			language: "German",
 			lemmaKind: "Morpheme",
+			meaningInEmojis: "🧩",
 			morphemeKind: "Prefix",
 			separable: true,
 		} satisfies Lemma<"German", "Morpheme", "Prefix">;
@@ -75,14 +78,15 @@ describe("Ling IDs", () => {
 			inherentFeatures: {},
 			language: "English",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "🚶",
 			pos: "VERB",
 		} satisfies Lemma<"English", "Lexeme", "VERB">;
 
 		expect(toGermanSurfaceLingId(separableVerb)).toBe(
-			"ling:v1:DE:SURF;untergehen;Standard;Lemma;Lexeme;VERB;-;observed;untergehen;Lexeme;VERB;separable=Yes;-",
+			"ling:v1:DE:SURF;untergehen;Standard;Lemma;Lexeme;VERB;-;observed;untergehen;Lexeme;VERB;separable=Yes;🌅",
 		);
 		expect(toGermanSurfaceLingId(inseparableVerb)).toBe(
-			"ling:v1:DE:SURF;untergehen;Standard;Lemma;Lexeme;VERB;-;observed;untergehen;Lexeme;VERB;separable=No;-",
+			"ling:v1:DE:SURF;untergehen;Standard;Lemma;Lexeme;VERB;-;observed;untergehen;Lexeme;VERB;separable=No;🌅",
 		);
 		expect(toGermanSurfaceLingId(separableVerb)).not.toBe(
 			toGermanSurfaceLingId(inseparableVerb),
@@ -91,13 +95,13 @@ describe("Ling IDs", () => {
 			toGermanSurfaceLingId(neuterSee),
 		);
 		expect(toGermanSurfaceLingId(prefixWithSeparable)).toBe(
-			"ling:v1:DE:SURF;ab%2D;Standard;Lemma;Morpheme;Prefix;-;observed;ab%2D;Morpheme;Prefix;separable=Yes;-",
+			"ling:v1:DE:SURF;ab%2D;Standard;Lemma;Morpheme;Prefix;-;observed;ab%2D;Morpheme;Prefix;separable=Yes;🧩",
 		);
 		expect(toGermanSurfaceLingId(prefixWithSeparable)).not.toBe(
 			toGermanSurfaceLingId(prefixWithoutSeparable),
 		);
 		expect(toEnglishSurfaceLingId(englishWalk)).toBe(
-			"ling:v1:EN:SURF;walk;Standard;Lemma;Lexeme;VERB;-;observed;walk;Lexeme;VERB;-;-",
+			"ling:v1:EN:SURF;walk;Standard;Lemma;Lexeme;VERB;-;observed;walk;Lexeme;VERB;-;🚶",
 		);
 	});
 
@@ -168,6 +172,7 @@ describe("Ling IDs", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "🌊",
 			pos: "NOUN",
 		} satisfies Lemma<"German", "Lexeme", "NOUN">;
 
@@ -334,6 +339,7 @@ describe("Ling IDs", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "🌊",
 			pos: "NOUN",
 		} satisfies Lemma<"German", "Lexeme", "NOUN">;
 
@@ -392,6 +398,7 @@ describe("Ling IDs", () => {
 					language: "German",
 					lemmaKind: "Lexeme",
 					lingKind: "Lemma",
+					meaningInEmojis: "🌊",
 					pos: "NOUN",
 				},
 			},
@@ -440,6 +447,7 @@ describe("Ling IDs", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "🌊",
 			pos: "NOUN",
 		} satisfies Lemma<"German", "Lexeme", "NOUN">;
 
@@ -527,6 +535,7 @@ describe("Ling IDs", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "🌊",
 			pos: "NOUN",
 		} satisfies Lemma<"German", "Lexeme", "NOUN">;
 
@@ -562,6 +571,7 @@ describe("Ling IDs", () => {
 					inherentFeatures: {},
 					language: "English",
 					lemmaKind: "Lexeme",
+					meaningInEmojis: "🚶",
 					pos: "VERB",
 				},
 			},
@@ -580,6 +590,7 @@ describe("Ling IDs", () => {
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
+			meaningInEmojis: "🌊",
 			pos: "NOUN",
 		} satisfies Lemma<"German", "Lexeme", "NOUN">;
 

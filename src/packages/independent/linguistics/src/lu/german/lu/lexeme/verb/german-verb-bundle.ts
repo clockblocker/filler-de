@@ -19,7 +19,7 @@ export const GermanVerbIdentityFeatureKeys = ["separable"] as const;
 
 export const GermanVerbLemmaSchema = withLingIdLemmaDtoCompatibility(
 	z.object({
-		meaningInEmojis: MeaningInEmojisSchema.optional(),
+		meaningInEmojis: MeaningInEmojisSchema,
 		inherentFeatures: GermanVerbInherentFeaturesSchema,
 		lemmaKind: z.literal("Lexeme"),
 		language: z.literal("German"),

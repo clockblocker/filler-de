@@ -33,7 +33,7 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 				isClosedSet: z.boolean().optional(),
 				language: z.literal("German"),
 				lemmaKind: z.literal("Morpheme"),
-				meaningInEmojis: MeaningInEmojisSchema.optional(),
+				meaningInEmojis: MeaningInEmojisSchema,
 				morphemeKind: z.literal(morphemeKind),
 				separable:
 					morphemeKind === "Prefix"
