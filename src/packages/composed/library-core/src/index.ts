@@ -2,10 +2,10 @@ export * from "./codecs";
 export * from "./codecs/locator";
 export * from "./codecs/segment-id";
 export * from "./codecs/suffix";
-export * from "./path-finder";
 export * from "./codex";
 export * from "./display-name-sort";
 export * from "./healing";
+export * from "./path-finder";
 export * from "./tree";
 export * from "./tree/actions";
 export * from "./tree/canonical";
@@ -19,4 +19,4 @@ export {
 	getRootBaseName,
 	resolveNextAvailableNameInSection,
 } from "./tree/utils";
-export { PREFIX_OF_CODEX, type NodeName } from "./types";
+export { type NodeName, PREFIX_OF_CODEX } from "./types";
