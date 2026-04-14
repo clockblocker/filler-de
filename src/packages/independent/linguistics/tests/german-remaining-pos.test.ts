@@ -75,8 +75,8 @@ describe("German remaining POS schemas", () => {
 						number: "Sing",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "German",
+						lemmaKind: "Lexeme",
 						pos: "ADJ",
 						spelledLemma: "klein",
 					},
@@ -95,8 +95,8 @@ describe("German remaining POS schemas", () => {
 						case: "Dat",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "German",
+						lemmaKind: "Lexeme",
 						pos: "ADP",
 						spelledLemma: "zu",
 					},
@@ -119,8 +119,8 @@ describe("German remaining POS schemas", () => {
 						verbForm: "Fin",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "German",
+						lemmaKind: "Lexeme",
 						pos: "AUX",
 						spelledLemma: "sein",
 					},
@@ -141,8 +141,8 @@ describe("German remaining POS schemas", () => {
 						number: "Sing",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "German",
+						lemmaKind: "Lexeme",
 						pos: "DET",
 						spelledLemma: "dies",
 					},
@@ -163,8 +163,8 @@ describe("German remaining POS schemas", () => {
 						reflex: true,
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "German",
+						lemmaKind: "Lexeme",
 						pos: "PRON",
 						spelledLemma: "sich",
 					},
@@ -184,8 +184,8 @@ describe("German remaining POS schemas", () => {
 						number: "Sing",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "German",
+						lemmaKind: "Lexeme",
 						pos: "PROPN",
 						spelledLemma: "Angela",
 					},
@@ -202,8 +202,8 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					pronType: "Dem",
 				},
-				lemmaKind: "Lexeme",
 				language: "German",
+				lemmaKind: "Lexeme",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "ADV",
@@ -217,8 +217,8 @@ describe("German remaining POS schemas", () => {
 					definite: "Def",
 					pronType: "Art",
 				},
-				lemmaKind: "Lexeme",
 				language: "German",
+				lemmaKind: "Lexeme",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "DET",
@@ -231,8 +231,8 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					numType: "Card",
 				},
-				lemmaKind: "Lexeme",
 				language: "German",
+				lemmaKind: "Lexeme",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "NUM",
@@ -245,8 +245,8 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					polarity: "Neg",
 				},
-				lemmaKind: "Lexeme",
 				language: "German",
+				lemmaKind: "Lexeme",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "PART",
@@ -259,8 +259,8 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					gender: "Masc",
 				},
-				lemmaKind: "Lexeme",
 				language: "German",
+				lemmaKind: "Lexeme",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "PROPN",
@@ -273,8 +273,8 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					numType: "Range",
 				},
-				lemmaKind: "Lexeme",
 				language: "German",
+				lemmaKind: "Lexeme",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "SYM",
@@ -287,8 +287,8 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					foreign: true,
 				},
-				lemmaKind: "Lexeme",
 				language: "German",
+				lemmaKind: "Lexeme",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "X",
@@ -305,8 +305,8 @@ describe("German remaining POS schemas", () => {
 				surface: {
 					inflectionalFeatures: {},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "German",
+						lemmaKind: "Lexeme",
 						pos: "CCONJ",
 						spelledLemma: "und",
 					},
@@ -323,8 +323,8 @@ describe("German remaining POS schemas", () => {
 				surface: {
 					inflectionalFeatures: {},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "German",
+						lemmaKind: "Lexeme",
 						pos: "INTJ",
 						spelledLemma: "ach",
 					},
@@ -341,8 +341,8 @@ describe("German remaining POS schemas", () => {
 				surface: {
 					inflectionalFeatures: {},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "German",
+						lemmaKind: "Lexeme",
 						pos: "PUNCT",
 						spelledLemma: ",",
 					},
@@ -359,8 +359,8 @@ describe("German remaining POS schemas", () => {
 				surface: {
 					inflectionalFeatures: {},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "German",
+						lemmaKind: "Lexeme",
 						pos: "SCONJ",
 						spelledLemma: "weil",
 					},
@@ -375,8 +375,8 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					case: "Nom",
 				},
-				lemmaKind: "Lexeme",
 				language: "German",
+				lemmaKind: "Lexeme",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "CCONJ",
@@ -391,8 +391,8 @@ describe("German remaining POS schemas", () => {
 				inherentFeatures: {
 					pronType: "Prs",
 				},
-				lemmaKind: "Lexeme",
 				language: "German",
+				lemmaKind: "Lexeme",
 				lexicalRelations: {},
 				morphologicalRelations: {},
 				pos: "ADV",
@@ -409,8 +409,8 @@ describe("German remaining POS schemas", () => {
 						tense: "Past",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "German",
+						lemmaKind: "Lexeme",
 						pos: "X",
 						spelledLemma: "foobar",
 					},

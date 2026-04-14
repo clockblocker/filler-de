@@ -1,13 +1,7 @@
 import { describe, expect, it } from "bun:test";
-import {
-	EnglishAdjectiveInflectionSelectionSchema,
-} from "../src/english/lu/lexeme/adjective/english-adjective-bundle";
-import {
-	EnglishAdpositionInflectionSelectionSchema,
-} from "../src/english/lu/lexeme/adposition/english-adposition-bundle";
-import {
-	EnglishAuxiliaryInflectionSelectionSchema,
-} from "../src/english/lu/lexeme/auxiliary/english-auxiliary-bundle";
+import { EnglishAdjectiveInflectionSelectionSchema } from "../src/english/lu/lexeme/adjective/english-adjective-bundle";
+import { EnglishAdpositionInflectionSelectionSchema } from "../src/english/lu/lexeme/adposition/english-adposition-bundle";
+import { EnglishAuxiliaryInflectionSelectionSchema } from "../src/english/lu/lexeme/auxiliary/english-auxiliary-bundle";
 import {
 	EnglishDeterminerInflectionSelectionSchema,
 	EnglishDeterminerLemmaSchema,
@@ -40,8 +34,8 @@ describe("English schema specificity", () => {
 						degree: "Cmp",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "English",
+						lemmaKind: "Lexeme",
 						pos: "ADJ",
 						spelledLemma: "small",
 					},
@@ -60,8 +54,8 @@ describe("English schema specificity", () => {
 						case: "Dat",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "English",
+						lemmaKind: "Lexeme",
 						pos: "ADJ",
 						spelledLemma: "small",
 					},
@@ -80,8 +74,8 @@ describe("English schema specificity", () => {
 						case: "Acc",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "English",
+						lemmaKind: "Lexeme",
 						pos: "ADP",
 						spelledLemma: "to",
 					},
@@ -103,8 +97,8 @@ describe("English schema specificity", () => {
 						number: "Sing",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "English",
+						lemmaKind: "Lexeme",
 						pos: "NOUN",
 						spelledLemma: "dog",
 					},
@@ -123,8 +117,8 @@ describe("English schema specificity", () => {
 						case: "Dat",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "English",
+						lemmaKind: "Lexeme",
 						pos: "NOUN",
 						spelledLemma: "dog",
 					},
@@ -143,8 +137,8 @@ describe("English schema specificity", () => {
 						case: "Nom",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "English",
+						lemmaKind: "Lexeme",
 						pos: "PROPN",
 						spelledLemma: "Anna",
 					},
@@ -191,8 +185,8 @@ describe("English schema specificity", () => {
 						gender: "Neut",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "English",
+						lemmaKind: "Lexeme",
 						pos: "VERB",
 						spelledLemma: "wash",
 					},
@@ -211,8 +205,8 @@ describe("English schema specificity", () => {
 						gender: "Fem",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "English",
+						lemmaKind: "Lexeme",
 						pos: "AUX",
 						spelledLemma: "be",
 					},
@@ -259,8 +253,8 @@ describe("English schema specificity", () => {
 						case: "Acc",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "English",
+						lemmaKind: "Lexeme",
 						pos: "PRON",
 						spelledLemma: "him",
 					},
@@ -279,8 +273,8 @@ describe("English schema specificity", () => {
 						case: "Dat",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "English",
+						lemmaKind: "Lexeme",
 						pos: "PRON",
 						spelledLemma: "him",
 					},
@@ -325,8 +319,8 @@ describe("English schema specificity", () => {
 						case: "Gen",
 					},
 					lemma: {
-						lemmaKind: "Lexeme",
 						language: "English",
+						lemmaKind: "Lexeme",
 						pos: "DET",
 						spelledLemma: "this",
 					},

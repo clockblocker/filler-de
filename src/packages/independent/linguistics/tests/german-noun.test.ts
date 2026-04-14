@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { LemmaSchema, SelectionSchema } from "../src";
 import type { Lemma } from "../src";
+import { LemmaSchema, SelectionSchema } from "../src";
 import {
 	GermanNounInflectionSelectionSchema,
 	GermanNounLemmaSchema,
@@ -15,8 +15,8 @@ describe("German noun schemas", () => {
 			inherentFeatures: {
 				gender: "Neut",
 			},
-			lemmaKind: "Lexeme",
 			language: "German",
+			lemmaKind: "Lexeme",
 			lexicalRelations: {},
 			morphologicalRelations: {},
 			pos: "NOUN",
@@ -37,8 +37,8 @@ describe("German noun schemas", () => {
 				},
 				lemma: {
 					emojiDescription: ["👶"],
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "NOUN",
 					spelledLemma: "Kind",
 				},
@@ -60,8 +60,8 @@ describe("German noun schemas", () => {
 					number: "Dual",
 				},
 				lemma: {
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "NOUN",
 					spelledLemma: "Kind",
 				},
@@ -79,8 +79,8 @@ describe("German noun schemas", () => {
 			inherentFeatures: {
 				gender: "Neut",
 			},
-			lemmaKind: "Lexeme",
 			language: "German",
+			lemmaKind: "Lexeme",
 			lexicalRelations: {
 				hypernym: ["Lebewesen"],
 				synonym: ["Nachkomme"],
@@ -100,8 +100,8 @@ describe("German noun schemas", () => {
 		const lemmaResult = GermanNounLemmaSchema.safeParse({
 			emojiDescription: [],
 			inherentFeatures: {},
-			lemmaKind: "Lexeme",
 			language: "German",
+			lemmaKind: "Lexeme",
 			lexicalRelations: {},
 			morphologicalRelations: {},
 			pos: "NOUN",
@@ -113,8 +113,8 @@ describe("German noun schemas", () => {
 			surface: {
 				lemma: {
 					emojiDescription: ["house"],
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "NOUN",
 					spelledLemma: "Haus",
 				},
@@ -132,8 +132,8 @@ describe("German noun schemas", () => {
 			inherentFeatures: {
 				case: "Nom",
 			},
-			lemmaKind: "Lexeme",
 			language: "German",
+			lemmaKind: "Lexeme",
 			lexicalRelations: {},
 			morphologicalRelations: {},
 			pos: "NOUN",
@@ -149,8 +149,8 @@ describe("German noun schemas", () => {
 			orthographicStatus: "Standard",
 			surface: {
 				lemma: {
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "NOUN",
 					spelledLemma: "Hauptbahnhof",
 				},
@@ -172,8 +172,8 @@ describe("German noun schemas", () => {
 					number: "Sing",
 				},
 				lemma: {
-					lemmaKind: "Lexeme",
 					language: "German",
+					lemmaKind: "Lexeme",
 					pos: "NOUN",
 					spelledLemma: "Hund",
 				},
@@ -188,8 +188,8 @@ describe("German noun schemas", () => {
 	it("rejects duplicate relation targets", () => {
 		const result = GermanNounLemmaSchema.safeParse({
 			inherentFeatures: {},
-			lemmaKind: "Lexeme",
 			language: "German",
+			lemmaKind: "Lexeme",
 			lexicalRelations: {
 				synonym: ["Auto", "Auto"],
 			},
