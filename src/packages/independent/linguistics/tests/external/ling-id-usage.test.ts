@@ -1,10 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import type {
 	Lemma,
-	LingIdSurfaceInput,
-	ParsedObservedSurfaceDto,
-	ParsedSurfaceDto,
-	ParsedTargetedSurfaceDto,
+	ObservedSurface,
+	OrthographicStatus,
+	Surface,
 } from "../../src";
 import {
 	buildToLingIdFor,
@@ -13,6 +12,25 @@ import {
 	parseLingId,
 	SurfaceSchema,
 } from "../../src";
+
+type TestLanguage = "German" | "English";
+
+type LingIdSurfaceInput<L extends TestLanguage> = Surface<L> & {
+	orthographicStatus: Exclude<OrthographicStatus, "Unknown">;
+};
+
+type ParsedTargetedSurface<L extends TestLanguage = TestLanguage> =
+	Omit<LingIdSurfaceInput<L>, "target"> & {
+		language: L;
+		lingKind: "Surface";
+		target:
+			| { canonicalLemma: string }
+			| { lemma: Lemma<L> & { lingKind: "Lemma" } };
+	};
+
+type ParsedSurface<L extends TestLanguage = TestLanguage> =
+	| ParsedTargetedSurface<L>
+	| ObservedSurface;
 
 describe("Ling ID usage", () => {
 	const toGermanSurfaceLingId = buildToSurfaceLingIdFor("German");
@@ -259,7 +277,7 @@ describe("Ling ID usage", () => {
 
 		const id = toGermanSurfaceLingId(morpheme);
 
-		const parsed = parseLingId(id) as ParsedObservedSurfaceDto;
+		const parsed = parseLingId(id) as ObservedSurface;
 
 		expect(parsed.target).toBe("Lemma");
 		expect(parsed.observedLemma.lemmaKind).toBe("Morpheme");
@@ -298,9 +316,9 @@ describe("Ling ID usage", () => {
 	it("canonicalizes observed surface dto shells on reserialization", () => {
 		const observed = parseLingId(
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
-		) as ParsedObservedSurfaceDto;
+		) as ObservedSurface;
 
-		const mutatedObserved: ParsedObservedSurfaceDto = {
+		const mutatedObserved: ObservedSurface = {
 			...observed,
 			discriminators: {
 				lemmaKind: "Lexeme",
@@ -317,14 +335,14 @@ describe("Ling ID usage", () => {
 	it("canonicalizes observed dto reserialization even if the target branch is mutated", () => {
 		const observed = parseLingId(
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
-		) as ParsedObservedSurfaceDto;
+		) as ObservedSurface;
 
 		const mutatedObserved = {
 			...observed,
 			target: {
 				canonicalLemma: "Bogus",
 			},
-		} as unknown as ParsedObservedSurfaceDto;
+		} as unknown as ObservedSurface;
 
 		expect(toGermanSurfaceLingId(mutatedObserved)).toBe(
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
@@ -367,11 +385,13 @@ describe("Ling ID usage", () => {
 
 		const shallowId = toGermanSurfaceLingId(shallowSurface);
 
-		const parsedFull = parseLingId(fullId) as ParsedTargetedSurfaceDto;
+		const parsedFull = parseLingId(
+			fullId,
+		) as ParsedTargetedSurface<"German">;
 
 		const parsedShallow = parseLingId(
 			shallowId,
-		) as ParsedTargetedSurfaceDto;
+		) as ParsedTargetedSurface<"German">;
 
 		expect("lemma" in parsedFull.target).toBe(true);
 		if ("lemma" in parsedFull.target) {
@@ -596,7 +616,7 @@ describe("Ling ID usage", () => {
 
 		const observedSurface = parseLingId(
 			toGermanSurfaceLingId(lemma),
-		) as ParsedObservedSurfaceDto;
+		) as ObservedSurface;
 
 		expect(() =>
 			toGermanShallowSurfaceLingId(
@@ -605,7 +625,7 @@ describe("Ling ID usage", () => {
 		).toThrow(/targeted surface input/);
 		expect(() =>
 			toGermanShallowSurfaceLingId(
-				observedSurface as unknown as ParsedTargetedSurfaceDto,
+				observedSurface as unknown as ParsedTargetedSurface<"German">,
 			),
 		).toThrow(/do not support observed surfaces/);
 		expect(() =>
@@ -614,7 +634,7 @@ describe("Ling ID usage", () => {
 				target: {
 					canonicalLemma: "Bogus",
 				},
-			} as unknown as ParsedTargetedSurfaceDto),
+			} as unknown as ParsedTargetedSurface<"German">),
 		).toThrow(/do not support observed surfaces/);
 	});
 
@@ -631,9 +651,13 @@ describe("Ling ID usage", () => {
 		const observedId =
 			"ling:v1:EN:SURF;walk;Standard;Lemma;Lexeme;VERB;-;observed;walk;Lexeme;VERB;-;-";
 
-		const parsedTargeted = parseLingId(targetedId) as ParsedSurfaceDto;
+		const parsedTargeted = parseLingId(
+			targetedId,
+		) as ParsedSurface<"English">;
 
-		const parsedObserved = parseLingId(observedId) as ParsedSurfaceDto;
+		const parsedObserved = parseLingId(
+			observedId,
+		) as ParsedSurface<"English">;
 
 		expect(toEnglishSurfaceLingId(parsedTargeted)).toBe(targetedId);
 		expect(toEnglishSurfaceLingId(parsedObserved)).toBe(observedId);

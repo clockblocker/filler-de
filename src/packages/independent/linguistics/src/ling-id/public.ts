@@ -1,5 +1,6 @@
-import type { AnyLemma } from "../lu/public";
+import type { Lemma } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
+import { ObservedSurfaceSchema } from "./observed-surface-schema";
 import { parseLingId } from "./parse";
 import {
 	serializeObservedSurface,
@@ -25,20 +26,13 @@ import type {
 
 export type {
 	LingId,
-	LingIdSurfaceInput,
+	ObservedSurface,
 	ObservedSurfaceLingId,
-	ParsedFeatureBag,
-	ParsedFeatureValue,
-	ParsedLemmaDto,
-	ParsedLingDto,
-	ParsedObservedSurfaceDto,
-	ParsedSurfaceDto,
-	ParsedTargetedSurfaceDto,
 	ShallowSurfaceLingId,
 	SurfaceLingId,
 } from "./types";
 
-export { parseLingId };
+export { ObservedSurfaceSchema, parseLingId };
 
 export function buildToLingIdFor<L extends TargetLanguage>(lang: L) {
 	return buildToSurfaceLingIdFor(lang);
@@ -48,7 +42,7 @@ export function buildToSurfaceLingIdFor<L extends TargetLanguage>(
 	lang: L,
 ): {
 	(
-		value: AnyLemma<L> | ParsedLemmaDtoFor<L> | ParsedLemmaDto,
+		value: Lemma<L> | ParsedLemmaDtoFor<L> | ParsedLemmaDto,
 	): ObservedSurfaceLingId;
 	(
 		value:

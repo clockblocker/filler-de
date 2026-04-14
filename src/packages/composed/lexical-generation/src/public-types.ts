@@ -1,5 +1,4 @@
 import type {
-	AnySelection,
 	Case,
 	Gender,
 	GrammaticalNumber,
@@ -8,8 +7,8 @@ import type {
 	MorphemeKind,
 	PhrasemeKind,
 	Pos,
+	Selection,
 	SurfaceKind,
-	UnknownSelection,
 } from "@textfresser/linguistics";
 import type { Result } from "neverthrow";
 import type {
@@ -30,8 +29,14 @@ type ResolvedSelectionContext = {
 	contextWithLinkedParts?: string;
 };
 
+type GermanSelection = Selection<"German">;
+type UnknownSelection = Extract<
+	GermanSelection,
+	{ orthographicStatus: "Unknown" }
+>;
+
 export type ResolvedKnownSelection = Exclude<
-	AnySelection<"German">,
+	GermanSelection,
 	UnknownSelection
 > &
 	ResolvedSelectionContext;

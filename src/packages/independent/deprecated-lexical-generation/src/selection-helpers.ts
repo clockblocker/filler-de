@@ -1,14 +1,17 @@
 import type {
-	AnySelection,
 	LemmaKind,
 	MorphemeKind,
 	PhrasemeKind,
 	Pos,
-	UnknownSelection,
+	Selection,
 } from "@textfresser/linguistics";
 
-export type GermanSelection = AnySelection<"German">;
+export type GermanSelection = Selection<"German">;
 export type KnownGermanSelection = Exclude<
+	GermanSelection,
+	{ orthographicStatus: "Unknown" }
+>;
+type UnknownSelection = Extract<
 	GermanSelection,
 	{ orthographicStatus: "Unknown" }
 >;

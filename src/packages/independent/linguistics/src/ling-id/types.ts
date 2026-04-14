@@ -1,11 +1,11 @@
 import type {
-	AnyLemma,
-	AnySurface,
+	Lemma,
 	LemmaKind,
 	MorphemeKind,
 	OrthographicStatus,
 	PhrasemeKind,
 	Pos,
+	Surface,
 	SurfaceKind,
 } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
@@ -16,7 +16,7 @@ export type ShallowSurfaceLingId = string;
 export type LingId = SurfaceLingId | ObservedSurfaceLingId;
 
 export type LingIdSurfaceInput<L extends TargetLanguage = TargetLanguage> =
-	AnySurface<L> & {
+	Surface<L> & {
 		orthographicStatus: Exclude<OrthographicStatus, "Unknown">;
 	};
 
@@ -109,7 +109,9 @@ export type ParsedObservedSurfaceDtoFor<L extends TargetLanguage> =
 		language: L;
 	};
 
-export type SerializableLemma = AnyLemma | ParsedLemmaDto;
+export type ObservedSurface = ParsedObservedSurfaceDto;
+
+export type SerializableLemma = Lemma | ParsedLemmaDto;
 export type SerializableTargetedSurface =
 	| LingIdSurfaceInput
 	| ParsedTargetedSurfaceDto;
