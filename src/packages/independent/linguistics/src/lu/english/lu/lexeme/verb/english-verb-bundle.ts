@@ -4,6 +4,7 @@ import type { AbstractSelectionFor } from "../../../../universal/abstract-select
 import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
+import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
 import {
 	EnglishVerbInflectionalFeaturesSchema,
 	EnglishVerbInherentFeaturesSchema,
@@ -14,14 +15,16 @@ const EnglishVerbLemmaIdentityShape = {
 	pos: z.literal("VERB"),
 } satisfies z.ZodRawShape;
 
-export const EnglishVerbLemmaSchema = z.object({
-	meaningInEmojis: MeaningInEmojisSchema.optional(),
-	inherentFeatures: EnglishVerbInherentFeaturesSchema,
-	lemmaKind: z.literal("Lexeme"),
-	language: z.literal("English"),
-	pos: z.literal("VERB"),
-	canonicalLemma: z.string(),
-}) satisfies z.ZodType<AbstractLemma<"Lexeme", "VERB">>;
+export const EnglishVerbLemmaSchema = withLingIdLemmaDtoCompatibility(
+	z.object({
+		meaningInEmojis: MeaningInEmojisSchema.optional(),
+		inherentFeatures: EnglishVerbInherentFeaturesSchema,
+		lemmaKind: z.literal("Lexeme"),
+		language: z.literal("English"),
+		pos: z.literal("VERB"),
+		canonicalLemma: z.string(),
+	}),
+) satisfies z.ZodType<AbstractLemma<"Lexeme", "VERB">>;
 
 export const EnglishVerbInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: EnglishVerbInflectionalFeaturesSchema,

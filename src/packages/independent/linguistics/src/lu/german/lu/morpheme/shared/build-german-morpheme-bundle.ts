@@ -4,6 +4,7 @@ import type { AbstractSelectionFor } from "../../../../universal/abstract-select
 import { IsSeparable } from "../../../../universal/enums/feature/custom/separable";
 import type { MorphemeKind } from "../../../../universal/enums/kind/morpheme-kind";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
+import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
 import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 
 type GermanMorphemeBundle<MK extends MorphemeKind> = {
@@ -25,20 +26,22 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 		lemmaKind: z.literal("Morpheme"),
 		morphemeKind: z.literal(morphemeKind),
 	} satisfies z.ZodRawShape;
-	const lemmaSchema = z
-		.object({
-			canonicalLemma: z.string(),
-			isClosedSet: z.boolean().optional(),
-			language: z.literal("German"),
-			lemmaKind: z.literal("Morpheme"),
-			meaningInEmojis: MeaningInEmojisSchema.optional(),
-			morphemeKind: z.literal(morphemeKind),
-			separable:
-				morphemeKind === "Prefix"
-					? IsSeparable.optional()
-					: z.undefined().optional(),
-		})
-		.strict() as unknown as GermanMorphemeBundle<MK>["LemmaSchema"];
+	const lemmaSchema = withLingIdLemmaDtoCompatibility(
+		z
+			.object({
+				canonicalLemma: z.string(),
+				isClosedSet: z.boolean().optional(),
+				language: z.literal("German"),
+				lemmaKind: z.literal("Morpheme"),
+				meaningInEmojis: MeaningInEmojisSchema.optional(),
+				morphemeKind: z.literal(morphemeKind),
+				separable:
+					morphemeKind === "Prefix"
+						? IsSeparable.optional()
+						: z.undefined().optional(),
+			})
+			.strict(),
+	) as unknown as GermanMorphemeBundle<MK>["LemmaSchema"];
 
 	return {
 		LemmaSchema: lemmaSchema,

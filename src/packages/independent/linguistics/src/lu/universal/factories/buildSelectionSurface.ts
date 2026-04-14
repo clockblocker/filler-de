@@ -124,5 +124,11 @@ function getLemmaSubKindKey(
 		);
 	}
 
-	return matchingKeys[0];
+	const [matchingKey] = matchingKeys;
+
+	if (matchingKey === undefined) {
+		throw new Error("lemmaIdentityShape must resolve to a lemma subkind key");
+	}
+
+	return matchingKey;
 }

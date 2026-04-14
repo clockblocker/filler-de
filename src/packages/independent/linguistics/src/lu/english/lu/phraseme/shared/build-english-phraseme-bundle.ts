@@ -5,6 +5,7 @@ import { DiscourseFormulaRoleSchema } from "../../../../universal/enums/feature/
 import type { PhrasemeKind } from "../../../../universal/enums/kind/phraseme-kind";
 import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
+import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
 
 type EnglishPhrasemeBundle<PK extends PhrasemeKind> = {
 	LemmaSchema: z.ZodType<AbstractLemma<"Phraseme", PK>>;
@@ -18,27 +19,31 @@ type EnglishPhrasemeBundle<PK extends PhrasemeKind> = {
 
 function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 	if (phrasemeKind === "DiscourseFormula") {
-		return z
+		return withLingIdLemmaDtoCompatibility(
+			z
+				.object({
+					discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
+					meaningInEmojis: MeaningInEmojisSchema.optional(),
+					lemmaKind: z.literal("Phraseme"),
+					language: z.literal("English"),
+					phrasemeKind: z.literal(phrasemeKind),
+					canonicalLemma: z.string(),
+				})
+				.strict(),
+		) as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
+	}
+
+	return withLingIdLemmaDtoCompatibility(
+		z
 			.object({
-				discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
 				meaningInEmojis: MeaningInEmojisSchema.optional(),
 				lemmaKind: z.literal("Phraseme"),
 				language: z.literal("English"),
 				phrasemeKind: z.literal(phrasemeKind),
 				canonicalLemma: z.string(),
 			})
-			.strict() as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
-	}
-
-	return z
-		.object({
-			meaningInEmojis: MeaningInEmojisSchema.optional(),
-			lemmaKind: z.literal("Phraseme"),
-			language: z.literal("English"),
-			phrasemeKind: z.literal(phrasemeKind),
-			canonicalLemma: z.string(),
-		})
-		.strict() as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
+			.strict(),
+	) as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
 }
 
 export function buildEnglishPhrasemeBundle<PK extends PhrasemeKind>({

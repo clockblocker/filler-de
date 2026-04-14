@@ -1,0 +1,91 @@
+import type { ParsedFeatureBag, ParsedFeatureValue } from "./types";
+import { escapeToken, unescapeToken } from "./escape";
+
+const BOOLEAN_FEATURE_KEYS = new Set([
+	"abbr",
+	"foreign",
+	"isClosedSet",
+	"isPhrasal",
+	"poss",
+	"reflex",
+	"separable",
+]);
+
+export function compactFeatureBag(
+	bag: Record<string, ParsedFeatureValue | undefined>,
+): ParsedFeatureBag {
+	return Object.fromEntries(
+		Object.entries(bag).filter(([, value]) => value !== undefined),
+	) as ParsedFeatureBag;
+}
+
+export function serializeFeatureBag(features: ParsedFeatureBag): string {
+	const entries = Object.entries(features)
+		.filter(([, value]) => value !== undefined)
+		.sort(([left], [right]) => left.localeCompare(right));
+
+	if (entries.length === 0) {
+		return "-";
+	}
+
+	return entries
+		.map(
+			([key, value]) =>
+				`${escapeToken(key)}=${escapeToken(serializeFeatureValue(value))}`,
+		)
+		.join(",");
+}
+
+export function parseFeatureBag(token: string): ParsedFeatureBag {
+	if (token === "-") {
+		return {};
+	}
+
+	return Object.fromEntries(
+		token.split(",").map((entry) => {
+			const separatorIndex = entry.indexOf("=");
+
+			if (separatorIndex === -1) {
+				throw new Error(`Malformed feature entry in Ling ID: ${entry}`);
+			}
+
+			const key = unescapeToken(entry.slice(0, separatorIndex));
+			const value = unescapeToken(entry.slice(separatorIndex + 1));
+
+			return [key, parseFeatureValue(key, value)];
+		}),
+	) as ParsedFeatureBag;
+}
+
+export function expectBooleanFeature(
+	key: "isClosedSet" | "separable",
+	features: ParsedFeatureBag,
+): boolean {
+	const value = features[key];
+
+	if (typeof value !== "boolean") {
+		throw new Error(`Expected ${key} to deserialize as a boolean`);
+	}
+
+	return value;
+}
+
+function serializeFeatureValue(value: ParsedFeatureValue): string {
+	return typeof value === "boolean" ? (value ? "Yes" : "No") : value;
+}
+
+function parseFeatureValue(key: string, value: string): ParsedFeatureValue {
+	if (!BOOLEAN_FEATURE_KEYS.has(key)) {
+		return value;
+	}
+
+	if (value === "Yes" || value === "true") {
+		return true;
+	}
+
+	if (value === "No" || value === "false") {
+		return false;
+	}
+
+	throw new Error(`Malformed boolean feature value for ${key}: ${value}`);
+}

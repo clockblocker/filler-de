@@ -118,7 +118,7 @@ type ParsedLemmaDto =
 			canonicalLemma: string;
 			lemmaKind: "Lexeme";
 			pos: Pos;
-			inherentFeatures: Record<string, string>;
+			inherentFeatures: Record<string, string | boolean>;
 			meaningInEmojis?: string;
 	  }
 		| {
@@ -158,13 +158,14 @@ type ParsedSurfaceDto = {
 	target:
 		| { canonicalLemma: string }
 		| { lemma: ParsedLemmaDto };
-	inflectionalFeatures?: Record<string, string>;
+	inflectionalFeatures?: Record<string, string | boolean>;
 };
 ```
 
 Requirements:
 
 - parser output must be a plain serializable DTO
+- parser output must be feedable into the relevant strict exported schemas
 - parser output must preserve branch choice for `target`
 - parser output for nested full lemma targets must recursively parse the nested lemma ID into a distilled lemma DTO
 - parser output must not hide DTO fields via non-enumerable properties
@@ -199,7 +200,7 @@ ling:v1:DE:LEM;untergehen;Lexeme;VERB;separable=Yes;-
 ling:v1:DE:LEM;untergehen;Lexeme;VERB;separable=No;-
 ling:v1:DE:LEM;See;Lexeme;NOUN;gender=Fem;-
 ling:v1:DE:LEM;See;Lexeme;NOUN;gender=Neut;-
-ling:v1:DE:LEM;ab-;Morpheme;Prefix;separable=Yes;-
+ling:v1:DE:LEM;ab%2D;Morpheme;Prefix;separable=Yes;-
 ling:v1:EN:LEM;walk;Lexeme;VERB;-;🚶
 ```
 
@@ -426,6 +427,7 @@ Reserved separators currently include:
 - `;`
 - `,`
 - `=`
+- `-` when it appears in a serialized dynamic token
 
 At minimum, escaping must work for:
 

@@ -10,7 +10,9 @@ import {
 	buildToLingIdFor,
 	buildToShallowSurfaceLingIdFor,
 	buildToSurfaceLingIdFor,
+	LemmaSchema,
 	parseLingId,
+	SurfaceSchema,
 } from "../src";
 
 describe("Ling IDs", () => {
@@ -263,6 +265,15 @@ describe("Ling IDs", () => {
 		expect(JSON.parse(JSON.stringify(parsed))).toEqual({ ...parsed });
 		expect(structuredClone(parsed)).toEqual(parsed);
 		expect(toGermanLemmaLingId(parsed)).toBe(id);
+		expect(LemmaSchema.German.Morpheme.Prefix.safeParse(parsed).success).toBe(
+			true,
+		);
+		expect(
+			LemmaSchema.German.Morpheme.Prefix.safeParse({
+				...parsed,
+				lingKind: "Surface",
+			}).success,
+		).toBe(false);
 	});
 
 	it("round-trips surface ids as plain dto objects and preserves target branches", () => {
@@ -332,6 +343,32 @@ describe("Ling IDs", () => {
 		expect(structuredClone(parsedFull)).toEqual(parsedFull);
 		expect(toGermanSurfaceLingId(parsedFull)).toBe(fullId);
 		expect(toGermanSurfaceLingId(parsedShallow)).toBe(shallowId);
+		expect(
+			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse(parsedFull)
+				.success,
+		).toBe(true);
+		expect(
+			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse(parsedShallow)
+				.success,
+		).toBe(true);
+		expect(
+			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
+				...parsedFull,
+				language: "English",
+			}).success,
+		).toBe(false);
+		expect(
+			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
+				...parsedFull,
+				orthographicStatus: "Typo",
+			}).success,
+		).toBe(false);
+		expect(
+			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
+				...parsedFull,
+				lingKind: "Lemma",
+			}).success,
+		).toBe(false);
 	});
 
 	it("implements the required See ambiguity matrix", () => {
@@ -434,6 +471,32 @@ describe("Ling IDs", () => {
 
 		expect(toGermanLingId(lemma)).toBe(toGermanLemmaLingId(lemma));
 		expect(toGermanLingId(surface)).toBe(toGermanSurfaceLingId(surface));
+	});
+
+	it("rejects nested full target lemmas with a mismatched language", () => {
+		const toGermanSurfaceLingId = buildToSurfaceLingIdFor("German");
+		const malformedSurface: LingIdSurfaceInput<"German"> = {
+			discriminators: {
+				lemmaKind: "Lexeme",
+				lemmaSubKind: "VERB",
+			},
+			normalizedFullSurface: "walk",
+			orthographicStatus: "Standard",
+			surfaceKind: "Lemma",
+			target: {
+				lemma: {
+					canonicalLemma: "walk",
+					inherentFeatures: {},
+					language: "English",
+					lemmaKind: "Lexeme",
+					pos: "VERB",
+				},
+			},
+		};
+
+		expect(() => toGermanSurfaceLingId(malformedSurface)).toThrow(
+			/Ling ID builder language mismatch/,
+		);
 	});
 });
 

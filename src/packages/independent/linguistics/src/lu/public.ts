@@ -17,6 +17,7 @@ import {
 	type TargetLanguage,
 	TargetLanguageSchema,
 } from "./universal/enums/core/language";
+import { withLingIdSurfaceDtoCompatibility } from "./universal/ling-id-schema-compat";
 import {
 	LemmaKind as LemmaKindSchema,
 	OrthographicStatus as OrthographicStatusSchema,
@@ -59,8 +60,8 @@ export const SelectionSchema = {
 } satisfies SelectionSchemaShape;
 
 export const SurfaceSchema = {
-	English: buildSurfaceSchemaForLanguage(EnglishSelectionSchema),
-	German: buildSurfaceSchemaForLanguage(GermanSelectionSchema),
+	English: buildSurfaceSchemaForLanguage("English", EnglishSelectionSchema),
+	German: buildSurfaceSchemaForLanguage("German", GermanSelectionSchema),
 } satisfies SurfaceSchemaShape;
 
 export const LemmaSchema = {
@@ -277,25 +278,36 @@ type SurfaceSchemaFromSelectionSchema<T extends ZodTypeAny> =
 		: never;
 
 function buildSurfaceSchemaForLanguage(
+	language: SupportedLanguage,
 	selectionSchema: SelectionSchemaLanguageShape,
 ): SurfaceSchemaLanguageShape {
 	return {
 		Standard: buildSurfaceSchemaForOrthographicStatus(
+			language,
+			"Standard",
 			selectionSchema.Standard,
 		),
-		Typo: buildSurfaceSchemaForOrthographicStatus(selectionSchema.Typo),
+		Typo: buildSurfaceSchemaForOrthographicStatus(
+			language,
+			"Typo",
+			selectionSchema.Typo,
+		),
 	};
 }
 
 function buildSurfaceSchemaForOrthographicStatus<
 	OS extends KnownOrthographicStatus,
 >(
+	language: SupportedLanguage,
+	orthographicStatus: OS,
 	orthographicStatusSchema: KnownSelectionSchemaByOrthographicStatus<OS>,
 ): KnownSurfaceSchemaByOrthographicStatus<OS> {
 	return Object.fromEntries(
 		Object.entries(orthographicStatusSchema).map(([surfaceKind, lemmaKinds]) => [
 			surfaceKind,
 			buildSurfaceSchemaForSurfaceKind(
+				language,
+				orthographicStatus,
 				lemmaKinds as Record<string, Record<string, ZodTypeAny>>,
 			),
 		]),
@@ -303,6 +315,8 @@ function buildSurfaceSchemaForOrthographicStatus<
 }
 
 function buildSurfaceSchemaForSurfaceKind(
+	language: SupportedLanguage,
+	orthographicStatus: KnownOrthographicStatus,
 	surfaceKindSchema: Record<string, Record<string, ZodTypeAny>>,
 ) {
 	return Object.fromEntries(
@@ -311,7 +325,11 @@ function buildSurfaceSchemaForSurfaceKind(
 			Object.fromEntries(
 				Object.entries(discriminators).map(([discriminator, selectionSchema]) => [
 					discriminator,
-					getSurfaceSchemaFromSelectionSchema(selectionSchema),
+					withLingIdSurfaceDtoCompatibility({
+						language,
+						orthographicStatus,
+						schema: getSurfaceSchemaFromSelectionSchema(selectionSchema),
+					}),
 				]),
 			),
 		]),

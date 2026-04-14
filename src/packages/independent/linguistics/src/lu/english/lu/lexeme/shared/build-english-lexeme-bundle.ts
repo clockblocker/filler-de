@@ -5,6 +5,7 @@ import type { Pos } from "../../../../universal/enums/kind/pos";
 import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
+import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
 
 type EnglishLexemeBundle<P extends Pos> = {
 	InflectionSelectionSchema: z.ZodType<
@@ -49,14 +50,16 @@ export function buildEnglishLexemeBundle<
 		lemmaKind: z.literal("Lexeme"),
 		pos: z.literal(pos),
 	} satisfies z.ZodRawShape;
-	const lemmaSchema = z.object({
-		meaningInEmojis: MeaningInEmojisSchema.optional(),
-		inherentFeatures: inherentFeaturesSchema,
-		lemmaKind: z.literal("Lexeme"),
-		language: z.literal("English"),
-		pos: z.literal(pos),
-		canonicalLemma: z.string(),
-	}) as unknown as EnglishLexemeBundle<P>["LemmaSchema"];
+	const lemmaSchema = withLingIdLemmaDtoCompatibility(
+		z.object({
+			meaningInEmojis: MeaningInEmojisSchema.optional(),
+			inherentFeatures: inherentFeaturesSchema,
+			lemmaKind: z.literal("Lexeme"),
+			language: z.literal("English"),
+			pos: z.literal(pos),
+			canonicalLemma: z.string(),
+		}),
+	) as unknown as EnglishLexemeBundle<P>["LemmaSchema"];
 
 	return {
 		InflectionSelectionSchema: buildInflectionSelection({

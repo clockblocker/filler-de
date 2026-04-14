@@ -4,6 +4,7 @@ import type { AbstractSelectionFor } from "../../../../universal/abstract-select
 import { DiscourseFormulaRoleSchema } from "../../../../universal/enums/feature/custom/discourse-formula-role";
 import type { PhrasemeKind } from "../../../../universal/enums/kind/phraseme-kind";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
+import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
 import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 
 type GermanPhrasemeBundle<PK extends PhrasemeKind> = {
@@ -18,27 +19,31 @@ type GermanPhrasemeBundle<PK extends PhrasemeKind> = {
 
 function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 	if (phrasemeKind === "DiscourseFormula") {
-		return z
+		return withLingIdLemmaDtoCompatibility(
+			z
+				.object({
+					canonicalLemma: z.string(),
+					discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
+					language: z.literal("German"),
+					lemmaKind: z.literal("Phraseme"),
+					meaningInEmojis: MeaningInEmojisSchema.optional(),
+					phrasemeKind: z.literal(phrasemeKind),
+				})
+				.strict(),
+		) as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
+	}
+
+	return withLingIdLemmaDtoCompatibility(
+		z
 			.object({
 				canonicalLemma: z.string(),
-				discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
 				language: z.literal("German"),
 				lemmaKind: z.literal("Phraseme"),
 				meaningInEmojis: MeaningInEmojisSchema.optional(),
 				phrasemeKind: z.literal(phrasemeKind),
 			})
-			.strict() as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
-	}
-
-	return z
-		.object({
-			canonicalLemma: z.string(),
-			language: z.literal("German"),
-			lemmaKind: z.literal("Phraseme"),
-			meaningInEmojis: MeaningInEmojisSchema.optional(),
-			phrasemeKind: z.literal(phrasemeKind),
-		})
-		.strict() as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
+			.strict(),
+	) as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
 }
 
 export function buildGermanPhrasemeBundle<PK extends PhrasemeKind>({

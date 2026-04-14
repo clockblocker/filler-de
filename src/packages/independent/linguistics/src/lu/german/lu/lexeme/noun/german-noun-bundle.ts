@@ -4,6 +4,7 @@ import type { AbstractSelectionFor } from "../../../../universal/abstract-select
 import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
+import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
 import {
 	GermanNounInflectionalFeaturesSchema,
 	GermanNounInherentFeaturesSchema,
@@ -16,14 +17,16 @@ const GermanNounLemmaIdentityShape = {
 
 export const GermanNounIdentityFeatureKeys = ["gender"] as const;
 
-export const GermanNounLemmaSchema = z.object({
-	inherentFeatures: GermanNounInherentFeaturesSchema,
-	language: z.literal("German"),
-	lemmaKind: z.literal("Lexeme"),
-	meaningInEmojis: MeaningInEmojisSchema.optional(),
-	pos: z.literal("NOUN"),
-	canonicalLemma: z.string(),
-}) satisfies z.ZodType<AbstractLemma<"Lexeme", "NOUN">>;
+export const GermanNounLemmaSchema = withLingIdLemmaDtoCompatibility(
+	z.object({
+		inherentFeatures: GermanNounInherentFeaturesSchema,
+		language: z.literal("German"),
+		lemmaKind: z.literal("Lexeme"),
+		meaningInEmojis: MeaningInEmojisSchema.optional(),
+		pos: z.literal("NOUN"),
+		canonicalLemma: z.string(),
+	}),
+) satisfies z.ZodType<AbstractLemma<"Lexeme", "NOUN">>;
 
 export const GermanNounInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: GermanNounInflectionalFeaturesSchema,

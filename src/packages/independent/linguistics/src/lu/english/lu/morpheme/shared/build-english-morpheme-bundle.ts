@@ -4,6 +4,7 @@ import type { AbstractSelectionFor } from "../../../../universal/abstract-select
 import type { MorphemeKind } from "../../../../universal/enums/kind/morpheme-kind";
 import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
+import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
 
 type EnglishMorphemeBundle<MK extends MorphemeKind> = {
 	LemmaSchema: z.ZodType<AbstractLemma<"Morpheme", MK>>;
@@ -24,16 +25,18 @@ export function buildEnglishMorphemeBundle<MK extends MorphemeKind>({
 		lemmaKind: z.literal("Morpheme"),
 		morphemeKind: z.literal(morphemeKind),
 	} satisfies z.ZodRawShape;
-	const lemmaSchema = z
-		.object({
-			meaningInEmojis: MeaningInEmojisSchema.optional(),
-			isClosedSet: z.boolean().optional(),
-			lemmaKind: z.literal("Morpheme"),
-			language: z.literal("English"),
-			morphemeKind: z.literal(morphemeKind),
-			canonicalLemma: z.string(),
-		})
-		.strict() as unknown as EnglishMorphemeBundle<MK>["LemmaSchema"];
+	const lemmaSchema = withLingIdLemmaDtoCompatibility(
+		z
+			.object({
+				meaningInEmojis: MeaningInEmojisSchema.optional(),
+				isClosedSet: z.boolean().optional(),
+				lemmaKind: z.literal("Morpheme"),
+				language: z.literal("English"),
+				morphemeKind: z.literal(morphemeKind),
+				canonicalLemma: z.string(),
+			})
+			.strict(),
+	) as unknown as EnglishMorphemeBundle<MK>["LemmaSchema"];
 
 	return {
 		LemmaSchema: lemmaSchema,
