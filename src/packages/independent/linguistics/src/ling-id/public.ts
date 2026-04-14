@@ -182,7 +182,9 @@ function createLanguageSerializer(
 			serializeShallowSurface(language, value),
 		toSurfaceLingId: ((value: SerializableLemma | SerializableSurface) =>
 			isSurfaceValue(value)
-				? serializeSurface(language, value)
+				? isObservedSurfaceValue(value)
+					? serializeObservedSurface(language, value)
+					: serializeSurface(language, value)
 				: serializeObservedSurface(
 						language,
 						value,

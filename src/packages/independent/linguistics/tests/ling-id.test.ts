@@ -278,6 +278,24 @@ describe("Ling IDs", () => {
 		).toBe(false);
 	});
 
+	it("canonicalizes observed surface dto shells on reserialization", () => {
+		const observed = parseLingId(
+			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
+		) as ParsedObservedSurfaceDto;
+		const mutatedObserved: ParsedObservedSurfaceDto = {
+			...observed,
+			discriminators: {
+				lemmaKind: "Lexeme",
+				lemmaSubKind: "VERB",
+			},
+			normalizedFullSurface: "Bogus",
+		};
+
+		expect(toGermanSurfaceLingId(mutatedObserved)).toBe(
+			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
+		);
+	});
+
 	it("round-trips targeted surface ids as plain dto objects and preserves target branches", () => {
 		const feminineSeeLemma: AnyLemma<"German"> = {
 			canonicalLemma: "See",

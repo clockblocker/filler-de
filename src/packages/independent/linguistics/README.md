@@ -175,13 +175,15 @@ Hans, Pass auf dich [auf]! -> `auf` (PRT)
 
 ## Ling IDs
 
-The package can also serialize lemmas and surfaces into stable Ling IDs.
+The package serializes stable surface-shaped Ling IDs. Lemma input is
+normalized into an observed-surface identity, so there is no separate top-level
+lemma ID format.
 
-### Lemma IDs
+### Observed Surface IDs
 
 ```ts
 import {
-	buildToLemmaLingIdFor,
+	buildToSurfaceLingIdFor,
 	LemmaSchema,
 } from "@textfresser/linguistics";
 
@@ -194,21 +196,21 @@ const walkLemma = LemmaSchema.English.Lexeme.VERB.parse({
 	canonicalLemma: "walk",
 });
 
-const toEnglishLemmaLingId = buildToLemmaLingIdFor("English");
+const toEnglishSurfaceLingId = buildToSurfaceLingIdFor("English");
 
-const walkLemmaId = toEnglishLemmaLingId(walkLemma);
-// "ling:v1:EN:LEM;walk;Lexeme;VERB;-;🚶"
+const walkLemmaId = toEnglishSurfaceLingId(walkLemma);
+// "ling:v1:EN:SURF;walk;Standard;Lemma;Lexeme;VERB;-;observed;walk;Lexeme;VERB;-;🚶"
 ```
 
-German lemma identity includes inherent features:
+Observed-surface identity still includes inherent lemma features:
 
 ```ts
 import {
-	buildToLemmaLingIdFor,
+	buildToSurfaceLingIdFor,
 	LemmaSchema,
 } from "@textfresser/linguistics";
 
-const toGermanLemmaLingId = buildToLemmaLingIdFor("German");
+const toGermanSurfaceLingId = buildToSurfaceLingIdFor("German");
 
 const feminineSee = LemmaSchema.German.Lexeme.NOUN.parse({
 	canonicalLemma: "See",
@@ -226,11 +228,11 @@ const neuterSee = LemmaSchema.German.Lexeme.NOUN.parse({
 	pos: "NOUN",
 });
 
-toGermanLemmaLingId(feminineSee);
-// "ling:v1:DE:LEM;See;Lexeme;NOUN;gender=Fem;-"
+toGermanSurfaceLingId(feminineSee);
+// "ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-"
 
-toGermanLemmaLingId(neuterSee);
-// "ling:v1:DE:LEM;See;Lexeme;NOUN;gender=Neut;-"
+toGermanSurfaceLingId(neuterSee);
+// "ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Neut;-"
 ```
 
 ### Full Surface IDs
@@ -238,9 +240,7 @@ toGermanLemmaLingId(neuterSee);
 Full surface IDs preserve target richness.
 
 ```ts
-import {
-	buildToSurfaceLingIdFor,
-} from "@textfresser/linguistics";
+import { buildToSurfaceLingIdFor } from "@textfresser/linguistics";
 
 const toEnglishSurfaceLingId = buildToSurfaceLingIdFor("English");
 
@@ -260,7 +260,7 @@ const walkSurfaceId = toEnglishSurfaceLingId({
 		lemma: walkLemma,
 	},
 });
-// "ling:v1:EN:SURF;walk;Standard;Inflection;Lexeme;VERB;tense=Pres,verbForm=Fin;lemma;ling%3Av1%3AEN%3ALEM%3Bwalk%3BLexeme%3BVERB%3B%2D%3B%F0%9F%9A%B6"
+// "ling:v1:EN:SURF;walk;Standard;Inflection;Lexeme;VERB;tense=Pres,verbForm=Fin;lemma;walk;Lexeme;VERB;-;🚶"
 ```
 
 If the target is shallow, the full surface ID changes:
@@ -288,12 +288,11 @@ const walkSurfaceWithCanonicalTargetId = toEnglishSurfaceLingId({
 ### Shallow Surface IDs
 
 Use shallow surface IDs when you want to compare form identity while ignoring
-target richness.
+target richness. Shallow IDs only accept targeted surfaces, not lemmas or
+observed-surface DTOs.
 
 ```ts
-import {
-	buildToShallowSurfaceLingIdFor,
-} from "@textfresser/linguistics";
+import { buildToShallowSurfaceLingIdFor } from "@textfresser/linguistics";
 
 const toGermanShallowSurfaceLingId = buildToShallowSurfaceLingIdFor("German");
 
@@ -324,20 +323,24 @@ toGermanShallowSurfaceLingId(seeSurface) ===
 
 ### Parsing IDs
 
-`parseLingId()` returns a plain distilled DTO. You can serialize it again
-directly, or feed it into the exported schemas.
+`parseLingId()` returns a surface DTO. For targeted surfaces you can validate
+the parsed value with `SurfaceSchema`. For observed surfaces, you can serialize
+the DTO again directly.
 
 ```ts
 import {
-	buildToLemmaLingIdFor,
-	LemmaSchema,
+	buildToSurfaceLingIdFor,
 	parseLingId,
+	SurfaceSchema,
 } from "@textfresser/linguistics";
 
-const parsedWalkLemma = parseLingId(walkLemmaId);
+const parsedWalkSurface = parseLingId(walkSurfaceId);
 
-const reparsedWalkLemma = LemmaSchema.English.Lexeme.VERB.parse(parsedWalkLemma);
+SurfaceSchema.English.Standard.Inflection.Lexeme.VERB.parse(parsedWalkSurface);
+buildToSurfaceLingIdFor("English")(parsedWalkSurface) === walkSurfaceId;
+// true
 
-buildToLemmaLingIdFor("English")(reparsedWalkLemma) === walkLemmaId;
+const parsedWalkLemmaIdentity = parseLingId(walkLemmaId);
+buildToSurfaceLingIdFor("English")(parsedWalkLemmaIdentity) === walkLemmaId;
 // true
 ```

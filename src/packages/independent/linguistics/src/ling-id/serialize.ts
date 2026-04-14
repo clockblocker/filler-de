@@ -36,23 +36,32 @@ export function serializeSurface(
 	language: TargetLanguage,
 	value: SerializableSurface,
 ): SurfaceLingId | ObservedSurfaceLingId {
+	const normalizedValue = isObservedSurfaceDto(value)
+		? normalizeObservedSurface(value.observedLemma)
+		: value;
 	let targetMode: "canon" | "lemma" | "observed";
 	let targetPayload: string;
 
-	if (isObservedSurfaceDto(value)) {
+	if (isObservedSurfaceDto(normalizedValue)) {
 		targetMode = "observed";
-		targetPayload = serializeLemmaBody(language, value.observedLemma);
-	} else if ("lemma" in value.target) {
+		targetPayload = serializeLemmaBody(
+			language,
+			normalizedValue.observedLemma,
+		);
+	} else if ("lemma" in normalizedValue.target) {
 		targetMode = "lemma";
-		targetPayload = serializeLemmaBody(language, value.target.lemma);
+		targetPayload = serializeLemmaBody(
+			language,
+			normalizedValue.target.lemma,
+		);
 	} else {
 		targetMode = "canon";
-		targetPayload = value.target.canonicalLemma;
+		targetPayload = normalizedValue.target.canonicalLemma;
 	}
 
 	return joinLingId([
 		buildHeader(language, "SURF"),
-		...serializeSurfaceShell(value),
+		...serializeSurfaceShell(normalizedValue),
 		targetMode,
 		targetPayload,
 	]);
