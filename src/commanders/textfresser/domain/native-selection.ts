@@ -15,10 +15,11 @@ export function isLexemeSelection(
 	selection: ResolvedSelection,
 ): selection is Extract<
 	Exclude<ResolvedSelection, { orthographicStatus: "Unknown" }>,
-	{ surface: { lemma: { lemmaKind: "Lexeme" } } }
+	{ surface: { discriminators: { lemmaKind: "Lexeme" } } }
 > {
 	return (
-		isKnownSelection(selection) && selection.surface.lemma.lemmaKind === "Lexeme"
+		isKnownSelection(selection) &&
+		selection.surface.discriminators.lemmaKind === "Lexeme"
 	);
 }
 
@@ -26,11 +27,11 @@ export function isPhrasemeSelection(
 	selection: ResolvedSelection,
 ): selection is Extract<
 	Exclude<ResolvedSelection, { orthographicStatus: "Unknown" }>,
-	{ surface: { lemma: { lemmaKind: "Phraseme" } } }
+	{ surface: { discriminators: { lemmaKind: "Phraseme" } } }
 > {
 	return (
 		isKnownSelection(selection) &&
-		selection.surface.lemma.lemmaKind === "Phraseme"
+		selection.surface.discriminators.lemmaKind === "Phraseme"
 	);
 }
 
@@ -46,15 +47,23 @@ export function getSelectionUnitKind(
 	if (!isKnownSelection(selection)) {
 		return undefined;
 	}
-	return selection.surface.lemma.lemmaKind;
+	return selection.surface.discriminators.lemmaKind;
 }
 
 export function getSelectionPos(selection: ResolvedSelection): POS | undefined {
-	return isLexemeSelection(selection) ? selection.surface.lemma.pos : undefined;
+	return isLexemeSelection(selection)
+		? (selection.surface.discriminators.lemmaSubKind as POS)
+		: undefined;
 }
 
 export function getSpelledLemma(selection: ResolvedSelection): string | undefined {
-	return isKnownSelection(selection) ? selection.surface.lemma.spelledLemma : undefined;
+	if (!isKnownSelection(selection)) {
+		return undefined;
+	}
+
+	return "spelledLemma" in selection.surface.target
+		? selection.surface.target.spelledLemma
+		: selection.surface.target.lemma.spelledLemma;
 }
 
 export function getSelectionDiscriminator(
@@ -64,12 +73,5 @@ export function getSelectionDiscriminator(
 		return undefined;
 	}
 
-	switch (selection.surface.lemma.lemmaKind) {
-		case "Lexeme":
-			return selection.surface.lemma.pos;
-		case "Phraseme":
-			return selection.surface.lemma.phrasemeKind;
-		case "Morpheme":
-			return selection.surface.lemma.morphemeKind;
-	}
+	return selection.surface.discriminators.lemmaSubKind;
 }

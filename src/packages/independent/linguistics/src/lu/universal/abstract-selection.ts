@@ -1,38 +1,34 @@
 import type { Prettify } from "../../../../../../types/helpers";
+import type { AbstractLemma } from "./abstract-lemma";
 import type { TargetLanguage } from "./enums/core/language";
 import type {
 	LemmaKind,
 	OrthographicStatus,
 	SurfaceKind,
 } from "./enums/core/selection";
-import type { DiscourseFormulaRole } from "./enums/feature/custom/discourse-formula-role";
-import type { IsSeparable } from "./enums/feature/custom/separable";
 import type { AbstractFeatures } from "./enums/feature/feature";
-import type {
-	LemmaDiscriminatorFor,
-	LemmaIdentityFieldsFor,
-} from "./lemma-discriminator";
+import type { LemmaDiscriminatorFor } from "./lemma-discriminator";
 
-type LemmaFor<
+type DiscriminatorsFor<
 	LK extends LemmaKind = LemmaKind,
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
-> = LK extends LemmaKind
-	? Prettify<
-			LemmaIdentityFieldsFor<LK, D> & {
-				meaningInEmojis?: string;
-				discourseFormulaRole?: DiscourseFormulaRole;
-				inherentFeatures?: Partial<AbstractFeatures>;
-				language: TargetLanguage;
-				lemmaKind: LK;
-				separable?: IsSeparable;
-				spelledLemma: string;
-			}
-		>
-	: never;
+> = Prettify<{
+	lemmaKind: LK;
+	lemmaSubKind: D;
+}>;
 
 type SurfaceFieldsFor<SK extends SurfaceKind> = SK extends "Inflection"
 	? { inflectionalFeatures: Partial<AbstractFeatures> }
 	: Record<never, never>;
+
+type SurfaceTargetFor<
+	LK extends LemmaKind = LemmaKind,
+	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
+> =
+	| { spelledLemma: string }
+	| {
+			lemma: AbstractLemma<LK, D>;
+	  };
 
 type SurfaceFor<
 	SK extends SurfaceKind = SurfaceKind,
@@ -44,7 +40,8 @@ type SurfaceFor<
 				surfaceKind: SK;
 				spelledSurface: string;
 			} & SurfaceFieldsFor<SK> & {
-					lemma: LemmaFor<LK, D>;
+					discriminators: DiscriminatorsFor<LK, D>;
+					target: SurfaceTargetFor<LK, D>;
 				}
 		>
 	: never;

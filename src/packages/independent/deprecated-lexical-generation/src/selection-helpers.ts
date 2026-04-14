@@ -31,9 +31,13 @@ export function isKnownSelection(
 
 export function isLexemeSelection(
 	selection: GermanSelection,
-): selection is Extract<KnownGermanSelection, { surface: { lemma: { lemmaKind: "Lexeme" } } }> {
+): selection is Extract<
+	KnownGermanSelection,
+	{ surface: { discriminators: { lemmaKind: "Lexeme" } } }
+> {
 	return (
-		isKnownSelection(selection) && selection.surface.lemma.lemmaKind === "Lexeme"
+		isKnownSelection(selection) &&
+		selection.surface.discriminators.lemmaKind === "Lexeme"
 	);
 }
 
@@ -41,11 +45,11 @@ export function isPhrasemeSelection(
 	selection: GermanSelection,
 ): selection is Extract<
 	KnownGermanSelection,
-	{ surface: { lemma: { lemmaKind: "Phraseme" } } }
+	{ surface: { discriminators: { lemmaKind: "Phraseme" } } }
 > {
 	return (
 		isKnownSelection(selection) &&
-		selection.surface.lemma.lemmaKind === "Phraseme"
+		selection.surface.discriminators.lemmaKind === "Phraseme"
 	);
 }
 
@@ -53,16 +57,22 @@ export function isMorphemeSelection(
 	selection: GermanSelection,
 ): selection is Extract<
 	KnownGermanSelection,
-	{ surface: { lemma: { lemmaKind: "Morpheme" } } }
+	{ surface: { discriminators: { lemmaKind: "Morpheme" } } }
 > {
 	return (
 		isKnownSelection(selection) &&
-		selection.surface.lemma.lemmaKind === "Morpheme"
+		selection.surface.discriminators.lemmaKind === "Morpheme"
 	);
 }
 
 export function getSpelledLemma(selection: GermanSelection): string | null {
-	return isKnownSelection(selection) ? selection.surface.lemma.spelledLemma : null;
+	if (!isKnownSelection(selection)) {
+		return null;
+	}
+
+	return "spelledLemma" in selection.surface.target
+		? selection.surface.target.spelledLemma
+		: selection.surface.target.lemma.spelledLemma;
 }
 
 export function getSpelledSurface(selection: GermanSelection): string | null {
@@ -70,7 +80,9 @@ export function getSpelledSurface(selection: GermanSelection): string | null {
 }
 
 export function getLemmaKind(selection: GermanSelection): LemmaKind | null {
-	return isKnownSelection(selection) ? selection.surface.lemma.lemmaKind : null;
+	return isKnownSelection(selection)
+		? selection.surface.discriminators.lemmaKind
+		: null;
 }
 
 export function getSurfaceKind(
@@ -86,12 +98,5 @@ export function getSelectionDiscriminator(
 		return null;
 	}
 
-	switch (selection.surface.lemma.lemmaKind) {
-		case "Lexeme":
-			return selection.surface.lemma.pos;
-		case "Phraseme":
-			return selection.surface.lemma.phrasemeKind;
-		case "Morpheme":
-			return selection.surface.lemma.morphemeKind;
-	}
+	return selection.surface.discriminators.lemmaSubKind;
 }

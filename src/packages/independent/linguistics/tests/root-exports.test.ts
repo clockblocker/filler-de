@@ -21,24 +21,10 @@ import {
 	SurfaceKind,
 	TARGET_LANGUAGES,
 	TargetLanguageSchema,
-	toLingId,
 	type UnknownSelection,
 } from "../src";
 
 describe("root exports", () => {
-	const englishNounLingId = (spelledLemma: string) => {
-		const lingId = toLingId({
-			inherentFeatures: {},
-			language: "English",
-			lemmaKind: "Lexeme",
-			pos: "NOUN",
-			spelledLemma,
-		} satisfies AnyLemma<"English">);
-
-		expect(lingId).not.toBeNull();
-		return lingId!;
-	};
-
 	it("exposes the curated native root surface", () => {
 		expect(TARGET_LANGUAGES).toEqual(["German", "English"]);
 		expect(TargetLanguageSchema.parse("German")).toBe("German");
@@ -46,7 +32,6 @@ describe("root exports", () => {
 		expect(OrthographicStatus.Standard).toBe("Standard");
 		expect(SurfaceKind.Inflection).toBe("Inflection");
 		expect(LemmaKind.Lexeme).toBe("Lexeme");
-		expect(typeof toLingId).toBe("function");
 		expect(Pos.NOUN).toBe("NOUN");
 		expect(PhrasemeKind.Aphorism).toBe("Aphorism");
 		expect(MorphemeKind.Root).toBe("Root");
@@ -63,6 +48,8 @@ describe("root exports", () => {
 		expect(LemmaSchema.English.Lexeme.NOUN).toBe(
 			LemmaSchema.English.Lexeme.NOUN,
 		);
+		expect("toLingId" in linguistics).toBe(false);
+		expect("LingIdSchema" in linguistics).toBe(false);
 	});
 
 	it("supports ergonomic broad type aliases", () => {
@@ -104,18 +91,19 @@ describe("root exports", () => {
 			language: "English",
 			orthographicStatus: "Standard",
 			surface: {
-				lemma: {
-					language: "English",
+				discriminators: {
 					lemmaKind: "Phraseme",
-					phrasemeKind: "Cliché",
-					spelledLemma: "a walk in the park",
+					lemmaSubKind: "Cliché",
 				},
 				spelledSurface: "walk",
 				surfaceKind: "Partial",
+				target: {
+					spelledLemma: "a walk in the park",
+				},
 			},
 		};
 
-		expect(selection.surface.lemma.lemmaKind).toBe("Phraseme");
+		expect(selection.surface.discriminators.lemmaKind).toBe("Phraseme");
 		expect(
 			SelectionSchema.English.Standard.Partial.Phraseme.Cliché.safeParse(
 				selection,
@@ -124,8 +112,8 @@ describe("root exports", () => {
 	});
 
 	it("exposes a dedicated relations api", () => {
-		const dog = englishNounLingId("dog");
-		const cat = englishNounLingId("cat");
+		const dog = "rel:dog";
+		const cat = "rel:cat";
 
 		expect(LexicalRelation.synonym).toBe("synonym");
 		expect(MorphologicalRelation.derivedFrom).toBe("derivedFrom");
@@ -134,9 +122,7 @@ describe("root exports", () => {
 		expect(RelationTargetLingIdsSchema.safeParse([dog, dog]).success).toBe(
 			true,
 		);
-		expect(RelationTargetLingIdsSchema.safeParse(["laufen"]).success).toBe(
-			false,
-		);
+		expect(RelationTargetLingIdsSchema.safeParse([12]).success).toBe(false);
 		expect(
 			LexicalRelationsSchema.safeParse({
 				synonym: [dog],

@@ -1,12 +1,11 @@
 import { z } from "zod/v3";
 import type { Prettify } from "../../../../../types/helpers";
-import { LingIdSchema, type LingId } from "../lu/ling-id";
 import type { LexicalRelation } from "./lexical";
 import type { MorphologicalRelation } from "./morphological";
 
-export const RelationTargetLingIdsSchema = z.array(LingIdSchema);
+export const RelationTargetLingIdsSchema = z.array(z.string());
 
-export type RelationTargetLingIds = LingId[];
+export type RelationTargetLingIds = string[];
 
 export type LexicalRelations = Prettify<
 	Partial<Record<LexicalRelation, RelationTargetLingIds>>

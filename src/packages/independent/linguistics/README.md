@@ -46,7 +46,7 @@ const simpleWalkSelection = SelectionSchema.English.Standard.Inflection.Lexeme.V
 				spelledLemma: "walk",
 			},
 			spelledSurface: "walk",
-			surfaceKind: "Inflection",
+			surfaceKind: "Lemma", // inflectionalFeatures match the base form for eng verbs
 		},
 	},
 );

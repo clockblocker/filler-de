@@ -2,11 +2,9 @@ import { describe, expect, it } from "bun:test";
 import {
 	getInverseLexicalRelation,
 	getInverseMorphologicalRelation,
-	LemmaSchema,
 	LexicalRelationsSchema,
 	MorphologicalRelationsSchema,
 	SelectionSchema,
-	toLingId,
 } from "../src";
 import {
 	GermanVerbInflectionSelectionSchema,
@@ -15,37 +13,33 @@ import {
 	GermanVerbTypoInflectionSelectionSchema,
 } from "../src/lu/german/lu/lexeme/verb/german-verb-bundle";
 
-describe("German verb schemas", () => {
-	const germanNounLingId = (spelledLemma: string) => {
-		const lingId = toLingId({
-			inherentFeatures: { gender: "Neut" },
-			language: "German",
-			lemmaKind: "Lexeme",
-			pos: "NOUN",
+const relationId = (label: string) => `rel:${label}`;
+
+function verbSurface(spelledLemma: string) {
+	return {
+		discriminators: {
+			lemmaKind: "Lexeme" as const,
+			lemmaSubKind: "VERB" as const,
+		},
+		target: {
 			spelledLemma,
-		});
-
-		expect(lingId).not.toBeNull();
-		return lingId!;
+		},
 	};
+}
 
+describe("German verb schemas", () => {
 	it("accepts supported German verb inflectional features", () => {
 		const result = GermanVerbInflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
+				...verbSurface("gehen"),
 				inflectionalFeatures: {
 					mood: "Sub",
 					number: "Sing",
 					person: "3",
 					tense: "Past",
 					verbForm: "Fin",
-				},
-				lemma: {
-					language: "German",
-					lemmaKind: "Lexeme",
-					pos: "VERB",
-					spelledLemma: "gehen",
 				},
 				spelledSurface: "ging",
 				surfaceKind: "Inflection",
@@ -60,18 +54,13 @@ describe("German verb schemas", () => {
 			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
+				...verbSurface("gehen"),
 				inflectionalFeatures: {
 					mood: "Cnd",
 					number: "Dual",
 					person: "4",
 					tense: "Fut",
 					verbForm: "Ger",
-				},
-				lemma: {
-					language: "German",
-					lemmaKind: "Lexeme",
-					pos: "VERB",
-					spelledLemma: "gehen",
 				},
 				spelledSurface: "gehend",
 				surfaceKind: "Inflection",
@@ -126,21 +115,16 @@ describe("German verb schemas", () => {
 	});
 
 	it("validates relation payloads via the dedicated relation schemas", () => {
-		const fortbewegung = germanNounLingId("Fortbewegung");
-		const laufen = germanNounLingId("Laufen");
-		const gang = germanNounLingId("Gang");
-		const ausgang = germanNounLingId("Ausgang");
-
 		expect(
 			LexicalRelationsSchema.safeParse({
-				hypernym: [fortbewegung],
-				synonym: [laufen],
+				hypernym: [relationId("Fortbewegung")],
+				synonym: [relationId("Laufen")],
 			}).success,
 		).toBe(true);
 		expect(
 			MorphologicalRelationsSchema.safeParse({
-				derivedFrom: [gang],
-				sourceFor: [ausgang],
+				derivedFrom: [relationId("Gang")],
+				sourceFor: [relationId("Ausgang")],
 			}).success,
 		).toBe(true);
 	});
@@ -164,12 +148,7 @@ describe("German verb schemas", () => {
 			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
-				lemma: {
-					language: "German",
-					lemmaKind: "Lexeme",
-					pos: "VERB",
-					spelledLemma: "spazieren gehen",
-				},
+				...verbSurface("spazieren gehen"),
 				spelledSurface: "gehen",
 				surfaceKind: "Partial",
 			},
@@ -183,18 +162,13 @@ describe("German verb schemas", () => {
 			language: "German",
 			orthographicStatus: "Typo",
 			surface: {
+				...verbSurface("gehen"),
 				inflectionalFeatures: {
 					mood: "Ind",
 					number: "Sing",
 					person: "1",
 					tense: "Pres",
 					verbForm: "Fin",
-				},
-				lemma: {
-					language: "German",
-					lemmaKind: "Lexeme",
-					pos: "VERB",
-					spelledLemma: "gehen",
 				},
 				spelledSurface: "geheh",
 				surfaceKind: "Inflection",
@@ -213,22 +187,17 @@ describe("German verb schemas", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("accepts duplicate relation lemma ids", () => {
-		const laufen = germanNounLingId("Laufen");
-
-		const result = LexicalRelationsSchema.safeParse({
-			synonym: [laufen, laufen],
-		});
-
-		expect(result.success).toBe(true);
-	});
-
-	it("rejects raw lemma strings in relation payloads", () => {
-		const result = LexicalRelationsSchema.safeParse({
-			synonym: ["laufen"],
-		});
-
-		expect(result.success).toBe(false);
+	it("accepts duplicate relation ids and rejects non-string relation payloads", () => {
+		expect(
+			LexicalRelationsSchema.safeParse({
+				synonym: [relationId("Laufen"), relationId("Laufen")],
+			}).success,
+		).toBe(true);
+		expect(
+			LexicalRelationsSchema.safeParse({
+				synonym: [false],
+			}).success,
+		).toBe(false);
 	});
 
 	it("exposes total inverse relation helpers", () => {
@@ -238,18 +207,5 @@ describe("German verb schemas", () => {
 			"sourceFor",
 		);
 		expect(getInverseMorphologicalRelation("usedIn")).toBe("consistsOf");
-	});
-
-	it("exposes registry access for German verbs", () => {
-		expect(SelectionSchema.German.Standard.Inflection.Lexeme.VERB).toBe(
-			GermanVerbInflectionSelectionSchema,
-		);
-		expect(SelectionSchema.German.Standard.Partial.Lexeme.VERB).toBe(
-			GermanVerbStandardPartialSelectionSchema,
-		);
-		expect(SelectionSchema.German.Typo.Inflection.Lexeme.VERB).toBe(
-			GermanVerbTypoInflectionSelectionSchema,
-		);
-		expect(LemmaSchema.German.Lexeme.VERB).toBe(GermanVerbLemmaSchema);
 	});
 });

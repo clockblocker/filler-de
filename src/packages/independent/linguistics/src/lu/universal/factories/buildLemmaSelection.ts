@@ -1,65 +1,79 @@
 import z from "zod/v3";
+import type { AbstractLemma } from "../abstract-lemma";
+import type { AbstractSelectionFor } from "../abstract-selection";
 import type { TargetLanguage } from "../enums/core/language";
-import type { OrthographicStatus, SurfaceKind } from "../enums/core/selection";
-import { MeaningInEmojisSchema } from "../meaning-in-emojis";
+import type {
+	LemmaKind,
+	OrthographicStatus,
+	SurfaceKind,
+} from "../enums/core/selection";
+import type { LemmaDiscriminatorFor } from "../lemma-discriminator";
+import {
+	buildSelectionSurfaceSchema,
+	type SelectionLemmaIdentityShapeFor,
+} from "./buildSelectionSurface";
 
 type EmptyZodRawShape = Record<never, never>;
 type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
 type NonInflectionSurfaceKind = Exclude<SurfaceKind, "Inflection">;
 
 type BuildLemmaSelectionArgs<
-	LemmaIdentityShape extends z.ZodRawShape,
+	LK extends LemmaKind,
+	D extends LemmaDiscriminatorFor<LK>,
 	OrthographicStatusLiteral extends KnownOrthographicStatus = "Standard",
 	SurfaceKindLiteral extends NonInflectionSurfaceKind = "Lemma",
-	LemmaExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 > = {
 	language: TargetLanguage;
-	lemmaIdentityShape: LemmaIdentityShape;
+	lemmaSchema: z.ZodType<AbstractLemma<LK, D>>;
+	lemmaIdentityShape: SelectionLemmaIdentityShapeFor<LK, D>;
 	orthographicStatus?: OrthographicStatusLiteral;
 	surfaceKind?: SurfaceKindLiteral;
-	lemmaExtraShape?: LemmaExtraShape;
 	surfaceExtraShape?: SurfaceExtraShape;
 };
 
 export function buildLemmaSelection<
-	LemmaIdentityShape extends z.ZodRawShape,
+	LK extends LemmaKind,
+	D extends LemmaDiscriminatorFor<LK>,
 	OrthographicStatusLiteral extends KnownOrthographicStatus = "Standard",
 	SurfaceKindLiteral extends NonInflectionSurfaceKind = "Lemma",
-	LemmaExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 >({
 	language,
+	lemmaSchema,
 	lemmaIdentityShape,
 	orthographicStatus = "Standard" as OrthographicStatusLiteral,
 	surfaceKind = "Lemma" as SurfaceKindLiteral,
-	lemmaExtraShape = {} as LemmaExtraShape,
 	surfaceExtraShape = {} as SurfaceExtraShape,
 }: BuildLemmaSelectionArgs<
-	LemmaIdentityShape,
+	LK,
+	D,
 	OrthographicStatusLiteral,
 	SurfaceKindLiteral,
-	LemmaExtraShape,
 	SurfaceExtraShape
->) {
-	const lemmaSchema = z
-		.object(lemmaIdentityShape)
-		.extend({
-			language: z.literal(language),
-			meaningInEmojis: MeaningInEmojisSchema.optional(),
-			spelledLemma: z.string(),
-		})
-		.extend(lemmaExtraShape);
-
-	const surfaceSchema = z.object(surfaceExtraShape).extend({
-		lemma: lemmaSchema,
-		spelledSurface: z.string(),
-		surfaceKind: z.literal(surfaceKind),
+>): z.ZodType<
+	AbstractSelectionFor<OrthographicStatusLiteral, SurfaceKindLiteral, LK, D>
+> {
+	const surfaceSchema = buildSelectionSurfaceSchema({
+		language,
+		lemmaIdentityShape,
+		lemmaSchema,
+		surfaceShape: {
+			...surfaceExtraShape,
+			surfaceKind: z.literal(surfaceKind),
+		},
 	});
 
 	return z.object({
 		language: z.literal(language),
 		orthographicStatus: z.literal(orthographicStatus),
 		surface: surfaceSchema,
-	});
+	}) as unknown as z.ZodType<
+		AbstractSelectionFor<
+			OrthographicStatusLiteral,
+			SurfaceKindLiteral,
+			LK,
+			D
+		>
+	>;
 }

@@ -75,10 +75,11 @@ function isProperNounSelection(
 	selection: ResolvedSelection,
 ): selection is Extract<
 	ResolvedSelection,
-	{ surface: { lemma: { lemmaKind: "Lexeme"; pos: "PROPN" } } }
+	{ surface: { discriminators: { lemmaKind: "Lexeme"; lemmaSubKind: "PROPN" } } }
 > {
 	return (
-		isLexemeSelection(selection) && selection.surface.lemma.pos === "PROPN"
+		isLexemeSelection(selection) &&
+		selection.surface.discriminators.lemmaSubKind === "PROPN"
 	);
 }
 
@@ -90,7 +91,7 @@ function shouldGenerateRelations(selection: ResolvedSelection) {
 		return false;
 	}
 
-	switch (selection.surface.lemma.pos) {
+	switch (selection.surface.discriminators.lemmaSubKind) {
 		case "ADJ":
 		case "ADP":
 		case "ADV":
@@ -223,17 +224,17 @@ export function buildPartGenerators(deps: PromptDeps) {
 		const route = isPhrasemeSelection(selection)
 			? operationRegistry.core.phraseme
 			: isLexemeSelection(selection) &&
-					(selection.surface.lemma.pos === "NOUN" ||
-						selection.surface.lemma.pos === "PROPN")
+					(selection.surface.discriminators.lemmaSubKind === "NOUN" ||
+						selection.surface.discriminators.lemmaSubKind === "PROPN")
 				? operationRegistry.core.noun
 				: operationRegistry.core.lexeme;
 
 		const promptResult = await executePrompt(deps, route, {
 			attestation,
 			...(isLexemeSelection(selection)
-				? { discriminator: selection.surface.lemma.pos }
+				? { discriminator: selection.surface.discriminators.lemmaSubKind }
 				: isPhrasemeSelection(selection)
-					? { discriminator: selection.surface.lemma.phrasemeKind }
+					? { discriminator: selection.surface.discriminators.lemmaSubKind }
 					: {}),
 			lemma: getSpelledLemma(selection) ?? "",
 		});
@@ -264,12 +265,12 @@ export function buildPartGenerators(deps: PromptDeps) {
 			return ok({ status: "not_applicable" });
 		}
 
-		const route =
-			operationRegistry.featuresByPos[selection.surface.lemma.pos];
+		const pos = selection.surface.discriminators.lemmaSubKind as keyof typeof operationRegistry.featuresByPos;
+		const route = operationRegistry.featuresByPos[pos];
 		const promptResult = await executePrompt(deps, route, {
 			attestation,
-			lemma: selection.surface.lemma.spelledLemma,
-			pos: selection.surface.lemma.pos,
+			lemma: getSpelledLemma(selection) ?? "",
+			pos,
 		});
 		if (promptResult.isErr()) {
 			return err(promptResult.error);
@@ -295,7 +296,7 @@ export function buildPartGenerators(deps: PromptDeps) {
 			return ok({ status: "not_applicable" });
 		}
 
-		const pos = selection.surface.lemma.pos;
+		const pos = selection.surface.discriminators.lemmaSubKind;
 		const nounLike = pos === "NOUN";
 		const genericAllowed =
 			pos === "ADJ" ||
@@ -314,7 +315,7 @@ export function buildPartGenerators(deps: PromptDeps) {
 				{
 					attestation,
 					discriminator: pos,
-					lemma: selection.surface.lemma.spelledLemma,
+					lemma: getSpelledLemma(selection) ?? "",
 				},
 			);
 			if (promptResult.isErr()) {
@@ -332,7 +333,7 @@ export function buildPartGenerators(deps: PromptDeps) {
 			{
 				attestation,
 				discriminator: pos,
-				lemma: selection.surface.lemma.spelledLemma,
+				lemma: getSpelledLemma(selection) ?? "",
 			},
 		);
 		if (promptResult.isErr()) {
@@ -364,7 +365,7 @@ export function buildPartGenerators(deps: PromptDeps) {
 			{
 				attestation,
 				...(isLexemeSelection(selection)
-					? { discriminator: selection.surface.lemma.pos }
+					? { discriminator: selection.surface.discriminators.lemmaSubKind }
 					: {}),
 				lemma: getSpelledLemma(selection) ?? "",
 			},
@@ -399,11 +400,11 @@ export function buildPartGenerators(deps: PromptDeps) {
 			{
 				attestation,
 				...(isLexemeSelection(selection)
-					? { discriminator: selection.surface.lemma.pos }
+					? { discriminator: selection.surface.discriminators.lemmaSubKind }
 					: isPhrasemeSelection(selection)
 						? {
 								discriminator:
-									selection.surface.lemma.phrasemeKind,
+									selection.surface.discriminators.lemmaSubKind,
 							}
 						: {}),
 				lemma: getSpelledLemma(selection) ?? "",

@@ -23,6 +23,18 @@ import {
 	EnglishVerbLemmaSchema,
 } from "../src/lu/english/lu/lexeme/verb/english-verb-bundle";
 
+function lexemeSurface(pos: string, spelledLemma: string) {
+	return {
+		discriminators: {
+			lemmaKind: "Lexeme" as const,
+			lemmaSubKind: pos,
+		},
+		target: {
+			spelledLemma,
+		},
+	};
+}
+
 describe("English schema specificity", () => {
 	it("keeps English adjective inflection to degree and adpositions uninflected", () => {
 		expect(
@@ -30,14 +42,9 @@ describe("English schema specificity", () => {
 				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("ADJ", "small"),
 					inflectionalFeatures: {
 						degree: "Cmp",
-					},
-					lemma: {
-						language: "English",
-						lemmaKind: "Lexeme",
-						pos: "ADJ",
-						spelledLemma: "small",
 					},
 					spelledSurface: "smaller",
 					surfaceKind: "Inflection",
@@ -50,14 +57,9 @@ describe("English schema specificity", () => {
 				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("ADJ", "small"),
 					inflectionalFeatures: {
 						case: "Dat",
-					},
-					lemma: {
-						language: "English",
-						lemmaKind: "Lexeme",
-						pos: "ADJ",
-						spelledLemma: "small",
 					},
 					spelledSurface: "small",
 					surfaceKind: "Inflection",
@@ -70,14 +72,9 @@ describe("English schema specificity", () => {
 				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("ADP", "to"),
 					inflectionalFeatures: {
 						case: "Acc",
-					},
-					lemma: {
-						language: "English",
-						lemmaKind: "Lexeme",
-						pos: "ADP",
-						spelledLemma: "to",
 					},
 					spelledSurface: "to",
 					surfaceKind: "Inflection",
@@ -92,15 +89,10 @@ describe("English schema specificity", () => {
 				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("NOUN", "dog"),
 					inflectionalFeatures: {
 						case: "Gen",
 						number: "Sing",
-					},
-					lemma: {
-						language: "English",
-						lemmaKind: "Lexeme",
-						pos: "NOUN",
-						spelledLemma: "dog",
 					},
 					spelledSurface: "dog's",
 					surfaceKind: "Inflection",
@@ -113,14 +105,9 @@ describe("English schema specificity", () => {
 				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("NOUN", "dog"),
 					inflectionalFeatures: {
 						case: "Dat",
-					},
-					lemma: {
-						language: "English",
-						lemmaKind: "Lexeme",
-						pos: "NOUN",
-						spelledLemma: "dog",
 					},
 					spelledSurface: "dog",
 					surfaceKind: "Inflection",
@@ -133,14 +120,9 @@ describe("English schema specificity", () => {
 				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("PROPN", "Anna"),
 					inflectionalFeatures: {
 						case: "Nom",
-					},
-					lemma: {
-						language: "English",
-						lemmaKind: "Lexeme",
-						pos: "PROPN",
-						spelledLemma: "Anna",
 					},
 					spelledSurface: "Anna",
 					surfaceKind: "Inflection",
@@ -179,14 +161,9 @@ describe("English schema specificity", () => {
 				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("VERB", "wash"),
 					inflectionalFeatures: {
 						gender: "Neut",
-					},
-					lemma: {
-						language: "English",
-						lemmaKind: "Lexeme",
-						pos: "VERB",
-						spelledLemma: "wash",
 					},
 					spelledSurface: "washed",
 					surfaceKind: "Inflection",
@@ -199,14 +176,9 @@ describe("English schema specificity", () => {
 				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("AUX", "be"),
 					inflectionalFeatures: {
 						gender: "Fem",
-					},
-					lemma: {
-						language: "English",
-						lemmaKind: "Lexeme",
-						pos: "AUX",
-						spelledLemma: "be",
 					},
 					spelledSurface: "is",
 					surfaceKind: "Inflection",
@@ -270,14 +242,9 @@ describe("English schema specificity", () => {
 				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("PRON", "him"),
 					inflectionalFeatures: {
 						case: "Acc",
-					},
-					lemma: {
-						language: "English",
-						lemmaKind: "Lexeme",
-						pos: "PRON",
-						spelledLemma: "him",
 					},
 					spelledSurface: "him",
 					surfaceKind: "Inflection",
@@ -290,14 +257,9 @@ describe("English schema specificity", () => {
 				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("PRON", "him"),
 					inflectionalFeatures: {
 						case: "Dat",
-					},
-					lemma: {
-						language: "English",
-						lemmaKind: "Lexeme",
-						pos: "PRON",
-						spelledLemma: "him",
 					},
 					spelledSurface: "him",
 					surfaceKind: "Inflection",
@@ -334,14 +296,9 @@ describe("English schema specificity", () => {
 				language: "English",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("DET", "this"),
 					inflectionalFeatures: {
 						case: "Gen",
-					},
-					lemma: {
-						language: "English",
-						lemmaKind: "Lexeme",
-						pos: "DET",
-						spelledLemma: "this",
 					},
 					spelledSurface: "this",
 					surfaceKind: "Inflection",

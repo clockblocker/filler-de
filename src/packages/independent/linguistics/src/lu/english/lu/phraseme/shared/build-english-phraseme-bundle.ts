@@ -56,25 +56,30 @@ export function buildEnglishPhrasemeBundle<PK extends PhrasemeKind>({
 		lemmaKind: z.literal("Phraseme"),
 		phrasemeKind: z.literal(phrasemeKind),
 	} satisfies z.ZodRawShape;
+	const lemmaSchema = buildPhrasemeLemmaSchema(phrasemeKind);
 
 	return {
-		LemmaSchema: buildPhrasemeLemmaSchema(phrasemeKind),
+		LemmaSchema: lemmaSchema,
 		StandardLemmaSelectionSchema: buildLemmaSelection({
 			language: "English",
+			lemmaSchema,
 			lemmaIdentityShape,
 		}) as unknown as EnglishPhrasemeBundle<PK>["StandardLemmaSelectionSchema"],
 		StandardPartialSelectionSchema: buildLemmaSelection({
 			language: "English",
+			lemmaSchema,
 			lemmaIdentityShape,
 			surfaceKind: "Partial",
 		}) as unknown as EnglishPhrasemeBundle<PK>["StandardPartialSelectionSchema"],
 		TypoLemmaSelectionSchema: buildLemmaSelection({
 			language: "English",
+			lemmaSchema,
 			lemmaIdentityShape,
 			orthographicStatus: "Typo",
 		}) as unknown as EnglishPhrasemeBundle<PK>["TypoLemmaSelectionSchema"],
 		TypoPartialSelectionSchema: buildLemmaSelection({
 			language: "English",
+			lemmaSchema,
 			lemmaIdentityShape,
 			orthographicStatus: "Typo",
 			surfaceKind: "Partial",

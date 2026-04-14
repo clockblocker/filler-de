@@ -24,24 +24,27 @@ export function buildEnglishMorphemeBundle<MK extends MorphemeKind>({
 		lemmaKind: z.literal("Morpheme"),
 		morphemeKind: z.literal(morphemeKind),
 	} satisfies z.ZodRawShape;
+	const lemmaSchema = z
+		.object({
+			meaningInEmojis: MeaningInEmojisSchema.optional(),
+			isClosedSet: z.boolean().optional(),
+			lemmaKind: z.literal("Morpheme"),
+			language: z.literal("English"),
+			morphemeKind: z.literal(morphemeKind),
+			spelledLemma: z.string(),
+		})
+		.strict() as unknown as EnglishMorphemeBundle<MK>["LemmaSchema"];
 
 	return {
-		LemmaSchema: z
-			.object({
-				meaningInEmojis: MeaningInEmojisSchema.optional(),
-				isClosedSet: z.boolean().optional(),
-				lemmaKind: z.literal("Morpheme"),
-				language: z.literal("English"),
-				morphemeKind: z.literal(morphemeKind),
-				spelledLemma: z.string(),
-			})
-			.strict() as unknown as EnglishMorphemeBundle<MK>["LemmaSchema"],
+		LemmaSchema: lemmaSchema,
 		StandardLemmaSelectionSchema: buildLemmaSelection({
 			language: "English",
+			lemmaSchema,
 			lemmaIdentityShape,
 		}) as unknown as EnglishMorphemeBundle<MK>["StandardLemmaSelectionSchema"],
 		TypoLemmaSelectionSchema: buildLemmaSelection({
 			language: "English",
+			lemmaSchema,
 			lemmaIdentityShape,
 			orthographicStatus: "Typo",
 		}) as unknown as EnglishMorphemeBundle<MK>["TypoLemmaSelectionSchema"],

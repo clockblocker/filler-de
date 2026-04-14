@@ -61,6 +61,18 @@ import {
 	GermanSymbolLemmaSchema,
 } from "../src/lu/german/lu/lexeme/symbol/german-symbol-bundle";
 
+function lexemeSurface(pos: string, spelledLemma: string) {
+	return {
+		discriminators: {
+			lemmaKind: "Lexeme" as const,
+			lemmaSubKind: pos,
+		},
+		target: {
+			spelledLemma,
+		},
+	};
+}
+
 describe("German remaining POS schemas", () => {
 	it("accepts core inflectional schemas across the richer POS classes", () => {
 		expect(
@@ -68,17 +80,12 @@ describe("German remaining POS schemas", () => {
 				language: "German",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("ADJ", "klein"),
 					inflectionalFeatures: {
 						case: "Dat",
 						degree: "Cmp",
 						gender: "Fem",
 						number: "Sing",
-					},
-					lemma: {
-						language: "German",
-						lemmaKind: "Lexeme",
-						pos: "ADJ",
-						spelledLemma: "klein",
 					},
 					spelledSurface: "kleiner",
 					surfaceKind: "Inflection",
@@ -91,14 +98,9 @@ describe("German remaining POS schemas", () => {
 				language: "German",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("ADP", "zu"),
 					inflectionalFeatures: {
 						case: "Dat",
-					},
-					lemma: {
-						language: "German",
-						lemmaKind: "Lexeme",
-						pos: "ADP",
-						spelledLemma: "zu",
 					},
 					spelledSurface: "zur",
 					surfaceKind: "Inflection",
@@ -111,18 +113,13 @@ describe("German remaining POS schemas", () => {
 				language: "German",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("AUX", "sein"),
 					inflectionalFeatures: {
 						mood: "Ind",
 						number: "Sing",
 						person: "3",
 						tense: "Past",
 						verbForm: "Fin",
-					},
-					lemma: {
-						language: "German",
-						lemmaKind: "Lexeme",
-						pos: "AUX",
-						spelledLemma: "sein",
 					},
 					spelledSurface: "war",
 					surfaceKind: "Inflection",
@@ -135,16 +132,11 @@ describe("German remaining POS schemas", () => {
 				language: "German",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("DET", "dies"),
 					inflectionalFeatures: {
 						case: "Nom",
 						gender: "Masc",
 						number: "Sing",
-					},
-					lemma: {
-						language: "German",
-						lemmaKind: "Lexeme",
-						pos: "DET",
-						spelledLemma: "dies",
 					},
 					spelledSurface: "dieser",
 					surfaceKind: "Inflection",
@@ -157,16 +149,11 @@ describe("German remaining POS schemas", () => {
 				language: "German",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("PRON", "sich"),
 					inflectionalFeatures: {
 						case: "Dat",
 						number: "Sing",
 						reflex: true,
-					},
-					lemma: {
-						language: "German",
-						lemmaKind: "Lexeme",
-						pos: "PRON",
-						spelledLemma: "sich",
 					},
 					spelledSurface: "sich",
 					surfaceKind: "Inflection",
@@ -179,15 +166,10 @@ describe("German remaining POS schemas", () => {
 				language: "German",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("PROPN", "Angela"),
 					inflectionalFeatures: {
 						case: "Gen",
 						number: "Sing",
-					},
-					lemma: {
-						language: "German",
-						lemmaKind: "Lexeme",
-						pos: "PROPN",
-						spelledLemma: "Angela",
 					},
 					spelledSurface: "Angelas",
 					surfaceKind: "Inflection",
@@ -289,13 +271,8 @@ describe("German remaining POS schemas", () => {
 				language: "German",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("CCONJ", "und"),
 					inflectionalFeatures: {},
-					lemma: {
-						language: "German",
-						lemmaKind: "Lexeme",
-						pos: "CCONJ",
-						spelledLemma: "und",
-					},
 					spelledSurface: "und",
 					surfaceKind: "Inflection",
 				},
@@ -307,13 +284,8 @@ describe("German remaining POS schemas", () => {
 				language: "German",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("INTJ", "ach"),
 					inflectionalFeatures: {},
-					lemma: {
-						language: "German",
-						lemmaKind: "Lexeme",
-						pos: "INTJ",
-						spelledLemma: "ach",
-					},
 					spelledSurface: "ach",
 					surfaceKind: "Inflection",
 				},
@@ -325,13 +297,8 @@ describe("German remaining POS schemas", () => {
 				language: "German",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("PUNCT", ","),
 					inflectionalFeatures: {},
-					lemma: {
-						language: "German",
-						lemmaKind: "Lexeme",
-						pos: "PUNCT",
-						spelledLemma: ",",
-					},
 					spelledSurface: ",",
 					surfaceKind: "Inflection",
 				},
@@ -343,13 +310,8 @@ describe("German remaining POS schemas", () => {
 				language: "German",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("SCONJ", "weil"),
 					inflectionalFeatures: {},
-					lemma: {
-						language: "German",
-						lemmaKind: "Lexeme",
-						pos: "SCONJ",
-						spelledLemma: "weil",
-					},
 					spelledSurface: "weil",
 					surfaceKind: "Inflection",
 				},
@@ -387,14 +349,9 @@ describe("German remaining POS schemas", () => {
 				language: "German",
 				orthographicStatus: "Standard",
 				surface: {
+					...lexemeSurface("X", "foobar"),
 					inflectionalFeatures: {
 						tense: "Past",
-					},
-					lemma: {
-						language: "German",
-						lemmaKind: "Lexeme",
-						pos: "X",
-						spelledLemma: "foobar",
 					},
 					spelledSurface: "foobar",
 					surfaceKind: "Inflection",

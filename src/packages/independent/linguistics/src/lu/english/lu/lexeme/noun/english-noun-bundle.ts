@@ -14,12 +14,19 @@ const EnglishNounLemmaIdentityShape = {
 	pos: z.literal("NOUN"),
 } satisfies z.ZodRawShape;
 
+export const EnglishNounLemmaSchema = z.object({
+	meaningInEmojis: MeaningInEmojisSchema.optional(),
+	inherentFeatures: EnglishNounInherentFeaturesSchema,
+	lemmaKind: z.literal("Lexeme"),
+	language: z.literal("English"),
+	pos: z.literal("NOUN"),
+	spelledLemma: z.string(),
+}) satisfies z.ZodType<AbstractLemma<"Lexeme", "NOUN">>;
+
 export const EnglishNounInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: EnglishNounInflectionalFeaturesSchema,
 	language: "English",
-	lemmaExtraShape: {
-		inherentFeatures: EnglishNounInherentFeaturesSchema.optional(),
-	},
+	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 }) satisfies z.ZodType<
 	AbstractSelectionFor<"Standard", "Inflection", "Lexeme", "NOUN">
@@ -27,9 +34,7 @@ export const EnglishNounInflectionSelectionSchema = buildInflectionSelection({
 
 export const EnglishNounLemmaSelectionSchema = buildLemmaSelection({
 	language: "English",
-	lemmaExtraShape: {
-		inherentFeatures: EnglishNounInherentFeaturesSchema.optional(),
-	},
+	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 }) satisfies z.ZodType<
 	AbstractSelectionFor<"Standard", "Lemma", "Lexeme", "NOUN">
@@ -37,9 +42,7 @@ export const EnglishNounLemmaSelectionSchema = buildLemmaSelection({
 
 export const EnglishNounStandardPartialSelectionSchema = buildLemmaSelection({
 	language: "English",
-	lemmaExtraShape: {
-		inherentFeatures: EnglishNounInherentFeaturesSchema.optional(),
-	},
+	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 	surfaceKind: "Partial",
 }) satisfies z.ZodType<
@@ -48,9 +51,7 @@ export const EnglishNounStandardPartialSelectionSchema = buildLemmaSelection({
 
 export const EnglishNounStandardVariantSelectionSchema = buildLemmaSelection({
 	language: "English",
-	lemmaExtraShape: {
-		inherentFeatures: EnglishNounInherentFeaturesSchema.optional(),
-	},
+	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 	surfaceKind: "Variant",
 }) satisfies z.ZodType<
@@ -61,9 +62,7 @@ export const EnglishNounTypoInflectionSelectionSchema = buildInflectionSelection
 	{
 		inflectionalFeaturesSchema: EnglishNounInflectionalFeaturesSchema,
 		language: "English",
-		lemmaExtraShape: {
-			inherentFeatures: EnglishNounInherentFeaturesSchema.optional(),
-		},
+		lemmaSchema: EnglishNounLemmaSchema,
 		lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 		orthographicStatus: "Typo",
 	},
@@ -73,18 +72,14 @@ export const EnglishNounTypoInflectionSelectionSchema = buildInflectionSelection
 
 export const EnglishNounTypoLemmaSelectionSchema = buildLemmaSelection({
 	language: "English",
-	lemmaExtraShape: {
-		inherentFeatures: EnglishNounInherentFeaturesSchema.optional(),
-	},
+	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 	orthographicStatus: "Typo",
 }) satisfies z.ZodType<AbstractSelectionFor<"Typo", "Lemma", "Lexeme", "NOUN">>;
 
 export const EnglishNounTypoPartialSelectionSchema = buildLemmaSelection({
 	language: "English",
-	lemmaExtraShape: {
-		inherentFeatures: EnglishNounInherentFeaturesSchema.optional(),
-	},
+	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 	orthographicStatus: "Typo",
 	surfaceKind: "Partial",
@@ -94,21 +89,10 @@ export const EnglishNounTypoPartialSelectionSchema = buildLemmaSelection({
 
 export const EnglishNounTypoVariantSelectionSchema = buildLemmaSelection({
 	language: "English",
-	lemmaExtraShape: {
-		inherentFeatures: EnglishNounInherentFeaturesSchema.optional(),
-	},
+	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 	orthographicStatus: "Typo",
 	surfaceKind: "Variant",
 }) satisfies z.ZodType<
 	AbstractSelectionFor<"Typo", "Variant", "Lexeme", "NOUN">
 >;
-
-export const EnglishNounLemmaSchema = z.object({
-	meaningInEmojis: MeaningInEmojisSchema.optional(),
-	inherentFeatures: EnglishNounInherentFeaturesSchema,
-	lemmaKind: z.literal("Lexeme"),
-	language: z.literal("English"),
-	pos: z.literal("NOUN"),
-	spelledLemma: z.string(),
-}) satisfies z.ZodType<AbstractLemma<"Lexeme", "NOUN">>;

@@ -22,19 +22,22 @@ describe("German non-lexeme schemas", () => {
 			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
-				lemma: {
-					language: "German",
+				discriminators: {
 					lemmaKind: "Phraseme",
-					phrasemeKind: "DiscourseFormula",
-					spelledLemma: "auf jeden Fall",
+					lemmaSubKind: "DiscourseFormula",
 				},
 				spelledSurface: "auf jeden Fall",
 				surfaceKind: "Lemma",
+				target: {
+					spelledLemma: "auf jeden Fall",
+				},
 			},
 		};
 
 		expect(morpheme.morphemeKind).toBe("Prefix");
-		expect(phraseme.surface.lemma.phrasemeKind).toBe("DiscourseFormula");
+		expect(phraseme.surface.discriminators.lemmaSubKind).toBe(
+			"DiscourseFormula",
+		);
 	});
 
 	it("accepts German morpheme lemmas", () => {
@@ -109,15 +112,15 @@ describe("German non-lexeme schemas", () => {
 				language: "German",
 				orthographicStatus: "Typo",
 				surface: {
-					lemma: {
-						language: "German",
+					discriminators: {
 						lemmaKind: "Morpheme",
-						morphemeKind: "Suffix",
-						meaningInEmojis: "🧩",
-						spelledLemma: "-heit",
+						lemmaSubKind: "Suffix",
 					},
 					spelledSurface: "-hait",
 					surfaceKind: "Lemma",
+					target: {
+						spelledLemma: "-heit",
+					},
 				},
 			});
 		const phrasemeResult =
@@ -125,15 +128,15 @@ describe("German non-lexeme schemas", () => {
 				language: "German",
 				orthographicStatus: "Typo",
 				surface: {
-					lemma: {
-						language: "German",
+					discriminators: {
 						lemmaKind: "Phraseme",
-						phrasemeKind: "Cliché",
-						meaningInEmojis: "💬",
-						spelledLemma: "Zeit ist Geld",
+						lemmaSubKind: "Cliché",
 					},
 					spelledSurface: "Zeit ist Gelt",
 					surfaceKind: "Lemma",
+					target: {
+						spelledLemma: "Zeit ist Geld",
+					},
 				},
 			});
 
@@ -152,14 +155,15 @@ describe("German non-lexeme schemas", () => {
 			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
-				lemma: {
-					language: "German",
+				discriminators: {
 					lemmaKind: "Phraseme",
-					phrasemeKind: "Cliché",
-					spelledLemma: "ein Spaziergang im Park",
+					lemmaSubKind: "Cliché",
 				},
 				spelledSurface: "Spaziergang",
 				surfaceKind: "Partial",
+				target: {
+					spelledLemma: "ein Spaziergang im Park",
+				},
 			},
 		};
 		const result =

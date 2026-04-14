@@ -2,9 +2,9 @@ import z from "zod/v3";
 import type { AbstractLemma } from "../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
 import type { Pos } from "../../../../universal/enums/kind/pos";
-import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
+import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 
 type GermanLexemeBundle<P extends Pos> = {
 	InflectionSelectionSchema: z.ZodType<
@@ -55,79 +55,64 @@ export function buildGermanLexemeBundle<
 		lemmaKind: z.literal("Lexeme"),
 		pos: z.literal(pos),
 	} satisfies z.ZodRawShape;
+	const lemmaSchema = z.object({
+		inherentFeatures: inherentFeaturesSchema,
+		language: z.literal("German"),
+		lemmaKind: z.literal("Lexeme"),
+		meaningInEmojis: MeaningInEmojisSchema.optional(),
+		pos: z.literal(pos),
+		spelledLemma: z.string(),
+	}) as unknown as GermanLexemeBundle<P>["LemmaSchema"];
 
 	return {
 		InflectionSelectionSchema: buildInflectionSelection({
 			inflectionalFeaturesSchema,
 			language: "German",
-			lemmaExtraShape: {
-				inherentFeatures: inherentFeaturesSchema.optional(),
-			},
 			lemmaIdentityShape,
+			lemmaSchema,
 		}) as unknown as GermanLexemeBundle<P>["InflectionSelectionSchema"],
-		LemmaSchema: z.object({
-			meaningInEmojis: MeaningInEmojisSchema.optional(),
-			inherentFeatures: inherentFeaturesSchema,
-			lemmaKind: z.literal("Lexeme"),
-			language: z.literal("German"),
-			pos: z.literal(pos),
-			spelledLemma: z.string(),
-		}) as unknown as GermanLexemeBundle<P>["LemmaSchema"],
+		LemmaSchema: lemmaSchema,
 		LemmaSelectionSchema: buildLemmaSelection({
 			language: "German",
-			lemmaExtraShape: {
-				inherentFeatures: inherentFeaturesSchema.optional(),
-			},
 			lemmaIdentityShape,
+			lemmaSchema,
 		}) as unknown as GermanLexemeBundle<P>["LemmaSelectionSchema"],
 		StandardPartialSelectionSchema: buildLemmaSelection({
 			language: "German",
-			lemmaExtraShape: {
-				inherentFeatures: inherentFeaturesSchema.optional(),
-			},
 			lemmaIdentityShape,
+			lemmaSchema,
 			surfaceKind: "Partial",
 		}) as unknown as GermanLexemeBundle<P>["StandardPartialSelectionSchema"],
 		StandardVariantSelectionSchema: buildLemmaSelection({
 			language: "German",
-			lemmaExtraShape: {
-				inherentFeatures: inherentFeaturesSchema.optional(),
-			},
 			lemmaIdentityShape,
+			lemmaSchema,
 			surfaceKind: "Variant",
 		}) as unknown as GermanLexemeBundle<P>["StandardVariantSelectionSchema"],
 		TypoInflectionSelectionSchema: buildInflectionSelection({
 			inflectionalFeaturesSchema,
 			language: "German",
-			lemmaExtraShape: {
-				inherentFeatures: inherentFeaturesSchema.optional(),
-			},
 			lemmaIdentityShape,
+			lemmaSchema,
 			orthographicStatus: "Typo",
 		}) as unknown as GermanLexemeBundle<P>["TypoInflectionSelectionSchema"],
 		TypoLemmaSelectionSchema: buildLemmaSelection({
 			language: "German",
-			lemmaExtraShape: {
-				inherentFeatures: inherentFeaturesSchema.optional(),
-			},
 			lemmaIdentityShape,
+			lemmaSchema,
 			orthographicStatus: "Typo",
 		}) as unknown as GermanLexemeBundle<P>["TypoLemmaSelectionSchema"],
 		TypoPartialSelectionSchema: buildLemmaSelection({
 			language: "German",
-			lemmaExtraShape: {
-				inherentFeatures: inherentFeaturesSchema.optional(),
-			},
 			lemmaIdentityShape,
+			lemmaSchema,
 			orthographicStatus: "Typo",
 			surfaceKind: "Partial",
 		}) as unknown as GermanLexemeBundle<P>["TypoPartialSelectionSchema"],
 		TypoVariantSelectionSchema: buildLemmaSelection({
 			language: "German",
-			lemmaExtraShape: {
-				inherentFeatures: inherentFeaturesSchema.optional(),
-			},
 			lemmaIdentityShape,
+			lemmaSchema,
 			orthographicStatus: "Typo",
 			surfaceKind: "Variant",
 		}) as unknown as GermanLexemeBundle<P>["TypoVariantSelectionSchema"],

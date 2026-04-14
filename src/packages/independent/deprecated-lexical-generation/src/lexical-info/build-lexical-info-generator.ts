@@ -99,8 +99,8 @@ function buildCorePrompt(lemma: ResolvedSelection): {
 		return {
 			input: {
 				context: "",
-				kind: lemma.surface.lemma.phrasemeKind,
-				word: lemma.surface.lemma.spelledLemma,
+				kind: lemma.surface.discriminators.lemmaSubKind,
+				word: getSpelledLemma(lemma) ?? "",
 			},
 			kind: "PhrasemEnrichment",
 		};
@@ -108,12 +108,13 @@ function buildCorePrompt(lemma: ResolvedSelection): {
 
 	if (
 		isLexemeSelection(lemma) &&
-		(lemma.surface.lemma.pos === "NOUN" || lemma.surface.lemma.pos === "PROPN")
+		(lemma.surface.discriminators.lemmaSubKind === "NOUN" ||
+			lemma.surface.discriminators.lemmaSubKind === "PROPN")
 	) {
 		return {
 			input: {
 				context: "",
-				word: lemma.surface.lemma.spelledLemma,
+				word: getSpelledLemma(lemma) ?? "",
 			},
 			kind: "NounEnrichment",
 		};
@@ -126,8 +127,8 @@ function buildCorePrompt(lemma: ResolvedSelection): {
 	return {
 		input: {
 			context: "",
-			pos: lemma.surface.lemma.pos,
-			word: lemma.surface.lemma.spelledLemma,
+			pos: lemma.surface.discriminators.lemmaSubKind,
+			word: getSpelledLemma(lemma) ?? "",
 		},
 		kind: "LexemEnrichment",
 	};
@@ -212,10 +213,10 @@ function withPrecomputedSenseEmojis(
 function resolveFeaturesPromptKind(
 	lemma: Extract<
 		ResolvedSelection,
-		{ surface: { lemma: { lemmaKind: "Lexeme" } } }
+		{ surface: { discriminators: { lemmaKind: "Lexeme" } } }
 	>,
 ): FeaturePromptKind | null {
-	switch (lemma.surface.lemma.pos) {
+	switch (lemma.surface.discriminators.lemmaSubKind) {
 		case "ADJ":
 			return "FeaturesAdjective";
 		case "ADV":
@@ -248,9 +249,12 @@ function isProperNounSelection(
 	selection: ResolvedSelection,
 ): selection is Extract<
 	ResolvedSelection,
-	{ surface: { lemma: { lemmaKind: "Lexeme"; pos: "PROPN" } } }
+	{ surface: { discriminators: { lemmaKind: "Lexeme"; lemmaSubKind: "PROPN" } } }
 > {
-	return isLexemeSelection(selection) && selection.surface.lemma.pos === "PROPN";
+	return (
+		isLexemeSelection(selection) &&
+		selection.surface.discriminators.lemmaSubKind === "PROPN"
+	);
 }
 
 const NATIVE_GENDER_FROM_LEGACY = {
@@ -291,7 +295,7 @@ function shouldGenerateRelations(
 		return false;
 	}
 
-	switch (lemma.surface.lemma.pos) {
+	switch (lemma.surface.discriminators.lemmaSubKind) {
 		case "ADJ":
 		case "ADP":
 		case "ADV":
@@ -327,7 +331,7 @@ function shouldGenerateInflections(
 		return "not_applicable";
 	}
 
-	switch (lemma.surface.lemma.pos) {
+	switch (lemma.surface.discriminators.lemmaSubKind) {
 		case "ADJ":
 		case "DET":
 		case "NOUN":
@@ -363,7 +367,7 @@ function mapFeaturesField(
 	}
 
 	if (
-		lemma.surface.lemma.pos === "VERB" &&
+		lemma.surface.discriminators.lemmaSubKind === "VERB" &&
 		featuresResult &&
 		featuresResult.isOk()
 	) {
@@ -549,16 +553,16 @@ export function buildLexicalInfoGenerator(
 			const featuresPromise = isLexemeSelection(lemma) && featurePromptKind
 				? executePrompt(deps, featurePromptKind, {
 						context: attestation,
-						word: lemma.surface.lemma.spelledLemma,
+						word: getSpelledLemma(lemma) ?? "",
 					})
 				: Promise.resolve(null);
 			const relationPromise = relationApplicable
 				? executePrompt(deps, "Relation", {
 						context: attestation,
 						pos: isLexemeSelection(lemma)
-							? lemma.surface.lemma.pos
+							? lemma.surface.discriminators.lemmaSubKind
 							: isPhrasemeSelection(lemma)
-								? lemma.surface.lemma.phrasemeKind
+								? lemma.surface.discriminators.lemmaSubKind
 								: "unknown",
 						word: getSpelledLemma(lemma) ?? "",
 					})
@@ -571,15 +575,15 @@ export function buildLexicalInfoGenerator(
 				: Promise.resolve(null);
 			const inflectionPromise =
 				isLexemeSelection(lemma) && inflectionMode === "generate"
-					? lemma.surface.lemma.pos === "NOUN"
+					? lemma.surface.discriminators.lemmaSubKind === "NOUN"
 						? executePrompt(deps, "NounInflection", {
 								context: attestation,
-								word: lemma.surface.lemma.spelledLemma,
+								word: getSpelledLemma(lemma) ?? "",
 							})
 						: executePrompt(deps, "Inflection", {
 								context: attestation,
-								pos: lemma.surface.lemma.pos,
-								word: lemma.surface.lemma.spelledLemma,
+								pos: lemma.surface.discriminators.lemmaSubKind,
+								word: getSpelledLemma(lemma) ?? "",
 							})
 					: Promise.resolve(null);
 

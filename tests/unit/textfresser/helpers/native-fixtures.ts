@@ -20,11 +20,11 @@ type PhrasemeKind = keyof typeof SelectionSchema.German.Standard.Lemma.Phraseme;
 type SurfaceKind = keyof typeof SelectionSchema.German.Standard;
 type LexemeSelection = Extract<
 	Exclude<ResolvedSelection, { orthographicStatus: "Unknown" }>,
-	{ surface: { lemma: { lemmaKind: "Lexeme" } } }
+	{ surface: { discriminators: { lemmaKind: "Lexeme" } } }
 >;
 type PhrasemeSelection = Extract<
 	Exclude<ResolvedSelection, { orthographicStatus: "Unknown" }>,
-	{ surface: { lemma: { lemmaKind: "Phraseme" } } }
+	{ surface: { discriminators: { lemmaKind: "Phraseme" } } }
 >;
 
 export function makeAttestation(params: {
@@ -71,14 +71,15 @@ export function makeLexemeSelection(params: {
 		orthographicStatus: "Standard" as const,
 		surface: {
 			...(surfaceKind === "Inflection" ? { inflectionalFeatures: {} } : {}),
-			lemma: {
+			discriminators: {
 				lemmaKind: "Lexeme" as const,
-				language: "German" as const,
-				pos,
-				spelledLemma: lemma,
+				lemmaSubKind: pos,
 			},
 			spelledSurface,
 			surfaceKind,
+			target: {
+				spelledLemma: lemma,
+			},
 		},
 	};
 
@@ -101,14 +102,15 @@ export function makePhrasemeSelection(params: {
 		language: "German" as const,
 		orthographicStatus: "Standard" as const,
 		surface: {
-			lemma: {
+			discriminators: {
 				lemmaKind: "Phraseme" as const,
-				language: "German" as const,
-				phrasemeKind,
-				spelledLemma: lemma,
+				lemmaSubKind: phrasemeKind,
 			},
 			spelledSurface,
 			surfaceKind: "Lemma" as const,
+			target: {
+				spelledLemma: lemma,
+			},
 		},
 	};
 

@@ -3,8 +3,8 @@ import type { AbstractLemma } from "../../../../universal/abstract-lemma";
 import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
 import { DiscourseFormulaRoleSchema } from "../../../../universal/enums/feature/custom/discourse-formula-role";
 import type { PhrasemeKind } from "../../../../universal/enums/kind/phraseme-kind";
-import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
+import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 
 type GermanPhrasemeBundle<PK extends PhrasemeKind> = {
 	LemmaSchema: z.ZodType<AbstractLemma<"Phraseme", PK>>;
@@ -27,9 +27,9 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 		return z
 			.object({
 				discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
-				meaningInEmojis: MeaningInEmojisSchema.optional(),
-				lemmaKind: z.literal("Phraseme"),
 				language: z.literal("German"),
+				lemmaKind: z.literal("Phraseme"),
+				meaningInEmojis: MeaningInEmojisSchema.optional(),
 				phrasemeKind: z.literal(phrasemeKind),
 				spelledLemma: z.string(),
 			})
@@ -38,9 +38,9 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 
 	return z
 		.object({
-			meaningInEmojis: MeaningInEmojisSchema.optional(),
-			lemmaKind: z.literal("Phraseme"),
 			language: z.literal("German"),
+			lemmaKind: z.literal("Phraseme"),
+			meaningInEmojis: MeaningInEmojisSchema.optional(),
 			phrasemeKind: z.literal(phrasemeKind),
 			spelledLemma: z.string(),
 		})
@@ -56,26 +56,31 @@ export function buildGermanPhrasemeBundle<PK extends PhrasemeKind>({
 		lemmaKind: z.literal("Phraseme"),
 		phrasemeKind: z.literal(phrasemeKind),
 	} satisfies z.ZodRawShape;
+	const lemmaSchema = buildPhrasemeLemmaSchema(phrasemeKind);
 
 	return {
-		LemmaSchema: buildPhrasemeLemmaSchema(phrasemeKind),
+		LemmaSchema: lemmaSchema,
 		StandardLemmaSelectionSchema: buildLemmaSelection({
 			language: "German",
 			lemmaIdentityShape,
+			lemmaSchema,
 		}) as unknown as GermanPhrasemeBundle<PK>["StandardLemmaSelectionSchema"],
 		StandardPartialSelectionSchema: buildLemmaSelection({
 			language: "German",
 			lemmaIdentityShape,
+			lemmaSchema,
 			surfaceKind: "Partial",
 		}) as unknown as GermanPhrasemeBundle<PK>["StandardPartialSelectionSchema"],
 		TypoLemmaSelectionSchema: buildLemmaSelection({
 			language: "German",
 			lemmaIdentityShape,
+			lemmaSchema,
 			orthographicStatus: "Typo",
 		}) as unknown as GermanPhrasemeBundle<PK>["TypoLemmaSelectionSchema"],
 		TypoPartialSelectionSchema: buildLemmaSelection({
 			language: "German",
 			lemmaIdentityShape,
+			lemmaSchema,
 			orthographicStatus: "Typo",
 			surfaceKind: "Partial",
 		}) as unknown as GermanPhrasemeBundle<PK>["TypoPartialSelectionSchema"],

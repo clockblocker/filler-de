@@ -25,11 +25,11 @@ type LemmaLocalState = {
 type KnownSelection = Exclude<ResolvedSelection, { orthographicStatus: "Unknown" }>;
 type LexemeSelection = Extract<
 	KnownSelection,
-	{ surface: { lemma: { lemmaKind: "Lexeme" } } }
+	{ surface: { discriminators: { lemmaKind: "Lexeme" } } }
 >;
 type PhrasemeSelection = Extract<
 	KnownSelection,
-	{ surface: { lemma: { lemmaKind: "Phraseme" } } }
+	{ surface: { discriminators: { lemmaKind: "Phraseme" } } }
 >;
 
 export type LexemeLemmaResult = LexemeSelection &

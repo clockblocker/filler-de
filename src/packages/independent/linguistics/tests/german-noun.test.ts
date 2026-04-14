@@ -5,7 +5,6 @@ import {
 	LexicalRelationsSchema,
 	MorphologicalRelationsSchema,
 	SelectionSchema,
-	toLingId,
 } from "../src";
 import {
 	GermanNounInflectionSelectionSchema,
@@ -15,20 +14,21 @@ import {
 	GermanNounTypoInflectionSelectionSchema,
 } from "../src/lu/german/lu/lexeme/noun/german-noun-bundle";
 
-describe("German noun schemas", () => {
-	const germanNounLingId = (spelledLemma: string) => {
-		const lingId = toLingId({
-			inherentFeatures: { gender: "Neut" },
-			language: "German",
-			lemmaKind: "Lexeme",
-			pos: "NOUN",
+const relationId = (label: string) => `rel:${label}`;
+
+function nounSurface(spelledLemma: string) {
+	return {
+		discriminators: {
+			lemmaKind: "Lexeme" as const,
+			lemmaSubKind: "NOUN" as const,
+		},
+		target: {
 			spelledLemma,
-		});
-
-		expect(lingId).not.toBeNull();
-		return lingId;
+		},
 	};
+}
 
+describe("German noun schemas", () => {
 	it("exposes inferred lemma types from the registry", () => {
 		const lemma: Lemma<"German", "Lexeme", "NOUN"> = {
 			inherentFeatures: {
@@ -48,16 +48,10 @@ describe("German noun schemas", () => {
 			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
+				...nounSurface("Kind"),
 				inflectionalFeatures: {
 					case: "Dat",
 					number: "Plur",
-				},
-				lemma: {
-					language: "German",
-					lemmaKind: "Lexeme",
-					pos: "NOUN",
-					meaningInEmojis: "👶",
-					spelledLemma: "Kind",
 				},
 				spelledSurface: "Kindern",
 				surfaceKind: "Inflection",
@@ -72,15 +66,10 @@ describe("German noun schemas", () => {
 			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
+				...nounSurface("Kind"),
 				inflectionalFeatures: {
 					case: "Ins",
 					number: "Dual",
-				},
-				lemma: {
-					language: "German",
-					lemmaKind: "Lexeme",
-					pos: "NOUN",
-					spelledLemma: "Kind",
 				},
 				spelledSurface: "Kindern",
 				surfaceKind: "Inflection",
@@ -106,21 +95,16 @@ describe("German noun schemas", () => {
 	});
 
 	it("validates relation payloads via the dedicated relation schemas", () => {
-		const lebewesen = germanNounLingId("Lebewesen");
-		const nachkomme = germanNounLingId("Nachkomme");
-		const kind = germanNounLingId("Kind");
-		const kindheit = germanNounLingId("Kindheit");
-
 		expect(
 			LexicalRelationsSchema.safeParse({
-				hypernym: [lebewesen],
-				synonym: [nachkomme],
+				hypernym: [relationId("Lebewesen")],
+				synonym: [relationId("Nachkomme")],
 			}).success,
 		).toBe(true);
 		expect(
 			MorphologicalRelationsSchema.safeParse({
-				derivedFrom: [kind],
-				sourceFor: [kindheit],
+				derivedFrom: [relationId("Kind")],
+				sourceFor: [relationId("Kindheit")],
 			}).success,
 		).toBe(true);
 	});
@@ -138,15 +122,22 @@ describe("German noun schemas", () => {
 			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
-				lemma: {
-					language: "German",
+				discriminators: {
 					lemmaKind: "Lexeme",
-					pos: "NOUN",
-					meaningInEmojis: "house",
-					spelledLemma: "Haus",
+					lemmaSubKind: "NOUN",
 				},
 				spelledSurface: "Haus",
 				surfaceKind: "Lemma",
+				target: {
+					lemma: {
+						inherentFeatures: {},
+						language: "German",
+						lemmaKind: "Lexeme",
+						meaningInEmojis: "house",
+						pos: "NOUN",
+						spelledLemma: "Haus",
+					},
+				},
 			},
 		});
 
@@ -173,12 +164,7 @@ describe("German noun schemas", () => {
 			language: "German",
 			orthographicStatus: "Standard",
 			surface: {
-				lemma: {
-					language: "German",
-					lemmaKind: "Lexeme",
-					pos: "NOUN",
-					spelledLemma: "Hauptbahnhof",
-				},
+				...nounSurface("Hauptbahnhof"),
 				spelledSurface: "Bahnhof",
 				surfaceKind: "Partial",
 			},
@@ -192,15 +178,10 @@ describe("German noun schemas", () => {
 			language: "German",
 			orthographicStatus: "Typo",
 			surface: {
+				...nounSurface("Hund"),
 				inflectionalFeatures: {
 					case: "Gen",
 					number: "Sing",
-				},
-				lemma: {
-					language: "German",
-					lemmaKind: "Lexeme",
-					pos: "NOUN",
-					spelledLemma: "Hund",
 				},
 				spelledSurface: "Hun des",
 				surfaceKind: "Inflection",
@@ -210,22 +191,176 @@ describe("German noun schemas", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("accepts duplicate relation lemma ids", () => {
-		const auto = germanNounLingId("Auto");
-
-		const result = LexicalRelationsSchema.safeParse({
-			synonym: [auto, auto],
-		});
-
-		expect(result.success).toBe(true);
+	it("accepts duplicate relation ids and rejects non-string relation payloads", () => {
+		expect(
+			LexicalRelationsSchema.safeParse({
+				synonym: [relationId("Auto"), relationId("Auto")],
+			}).success,
+		).toBe(true);
+		expect(
+			LexicalRelationsSchema.safeParse({
+				synonym: [123],
+			}).success,
+		).toBe(false);
 	});
 
-	it("rejects raw lemma strings in relation payloads", () => {
-		const result = LexicalRelationsSchema.safeParse({
-			synonym: ["Auto"],
+	it("accepts detached and hydrated lemma targets", () => {
+		const detached = GermanNounLemmaSelectionSchema.safeParse({
+			language: "German",
+			orthographicStatus: "Standard",
+			surface: {
+				...nounSurface("Haus"),
+				spelledSurface: "Haus",
+				surfaceKind: "Lemma",
+			},
+		});
+		const hydrated = GermanNounLemmaSelectionSchema.safeParse({
+			language: "German",
+			orthographicStatus: "Standard",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "NOUN",
+				},
+				spelledSurface: "Haus",
+				surfaceKind: "Lemma",
+				target: {
+					lemma: {
+						inherentFeatures: {
+							gender: "Neut",
+						},
+						language: "German",
+						lemmaKind: "Lexeme",
+						pos: "NOUN",
+						spelledLemma: "Haus",
+					},
+				},
+			},
 		});
 
-		expect(result.success).toBe(false);
+		expect(detached.success).toBe(true);
+		expect(hydrated.success).toBe(true);
+	});
+
+	it("rejects hydrated lemma mismatches on language, lemmaKind, and lemmaSubKind", () => {
+		const wrongLanguage = GermanNounLemmaSelectionSchema.safeParse({
+			language: "German",
+			orthographicStatus: "Standard",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "NOUN",
+				},
+				spelledSurface: "Haus",
+				surfaceKind: "Lemma",
+				target: {
+					lemma: {
+						inherentFeatures: {},
+						language: "English",
+						lemmaKind: "Lexeme",
+						pos: "NOUN",
+						spelledLemma: "Haus",
+					},
+				},
+			},
+		});
+		const wrongKind = GermanNounLemmaSelectionSchema.safeParse({
+			language: "German",
+			orthographicStatus: "Standard",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "NOUN",
+				},
+				spelledSurface: "Haus",
+				surfaceKind: "Lemma",
+				target: {
+					lemma: {
+						language: "German",
+						lemmaKind: "Phraseme",
+						phrasemeKind: "Cliché",
+						spelledLemma: "Haus",
+					},
+				},
+			},
+		});
+		const wrongSubKind = GermanNounLemmaSelectionSchema.safeParse({
+			language: "German",
+			orthographicStatus: "Standard",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "NOUN",
+				},
+				spelledSurface: "Haus",
+				surfaceKind: "Lemma",
+				target: {
+					lemma: {
+						inherentFeatures: {},
+						language: "German",
+						lemmaKind: "Lexeme",
+						pos: "VERB",
+						spelledLemma: "Haus",
+					},
+				},
+			},
+		});
+
+		expect(wrongLanguage.success).toBe(false);
+		expect(wrongKind.success).toBe(false);
+		expect(wrongSubKind.success).toBe(false);
+	});
+
+	it("rejects invalid target unions and non-inflectional feature leakage", () => {
+		const bothTargetFields = GermanNounLemmaSelectionSchema.safeParse({
+			language: "German",
+			orthographicStatus: "Standard",
+			surface: {
+				...nounSurface("Haus"),
+				spelledSurface: "Haus",
+				surfaceKind: "Lemma",
+				target: {
+					lemma: {
+						inherentFeatures: {
+							gender: "Neut",
+						},
+						language: "German",
+						lemmaKind: "Lexeme",
+						pos: "NOUN",
+						spelledLemma: "Haus",
+					},
+					spelledLemma: "Haus",
+				},
+			},
+		});
+		const missingTarget = GermanNounLemmaSelectionSchema.safeParse({
+			language: "German",
+			orthographicStatus: "Standard",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "NOUN",
+				},
+				spelledSurface: "Haus",
+				surfaceKind: "Lemma",
+			},
+		});
+		const leakedFeatures = GermanNounLemmaSelectionSchema.safeParse({
+			language: "German",
+			orthographicStatus: "Standard",
+			surface: {
+				...nounSurface("Haus"),
+				inflectionalFeatures: {
+					case: "Nom",
+				},
+				spelledSurface: "Haus",
+				surfaceKind: "Lemma",
+			},
+		});
+
+		expect(bothTargetFields.success).toBe(false);
+		expect(missingTarget.success).toBe(false);
+		expect(leakedFeatures.success).toBe(false);
 	});
 
 	it("exposes registry access for German nouns", () => {

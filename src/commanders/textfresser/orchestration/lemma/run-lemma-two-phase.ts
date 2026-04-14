@@ -304,7 +304,7 @@ export async function runLemmaTwoPhase(params: {
 				disambiguationResult: normalizedDisambiguation,
 				lemma: spelledLemma,
 				linguisticUnit: "Lexeme",
-				posLikeKind: resolvedLemma.surface.lemma.pos,
+				posLikeKind: resolvedLemma.surface.discriminators.lemmaSubKind,
 				precomputedSenseEmojis,
 				surfaceKind,
 			}
