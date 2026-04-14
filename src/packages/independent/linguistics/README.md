@@ -102,17 +102,17 @@ This allows for both:
 1) pointing the user to the most meaninful target in the actual sentenes:
 ```
 (text reading mode on)
-Hans, [Pass] auf dich auf! -> aufpassen
-Hans, Pass [auf] dich auf! -> aufpassen
-Hans, Pass auf [dich] auf! -> du
+Hans, [Pass] auf dich auf! -> aufpassen (VERB)
+Hans, Pass [auf] dich auf! -> aufpassen (VERB)
+Hans, Pass auf [dich] auf! -> du (PRON)
 Hans, Pass auf dich [auf]! -> aufpassen
 ```
 
 2) drilling down for the actual linguistics:
-```
+``` 
 (linguistic investigation mode on)
-Hans, [Pass] auf dich auf! -> 
-Hans, Pass [auf] dich auf! -> 
-Hans, Pass auf [dich] auf! -> 
-Hans, Pass auf dich [auf]! -> 
+Hans, [Pass] auf dich auf! -> `root` (VERB)
+Hans, Pass [auf] dich auf! -> `auf` (ADP)
+Hans, Pass auf [dich] auf! -> `du` (PRON)
+Hans, Pass auf dich [auf]! -> `auf` (PRT)
 ```
