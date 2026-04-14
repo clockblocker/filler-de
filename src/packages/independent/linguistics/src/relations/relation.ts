@@ -1,5 +1,5 @@
 import { z } from "zod/v3";
-import type { Prettify } from "../../../types/helpers";
+import type { Prettify } from "../../../../../types/helpers";
 import type { LexicalRelation } from "./lexical";
 import type { MorphologicalRelation } from "./morphological";
 
