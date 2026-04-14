@@ -19,8 +19,8 @@ import {
 	Relations,
 	RelationTargetLingIdsSchema,
 	SelectionSchema,
-	SurfaceSchema,
 	SurfaceKind,
+	SurfaceSchema,
 	TARGET_LANGUAGES,
 	TargetLanguageSchema,
 	type UnknownSelection,
@@ -32,7 +32,6 @@ describe("root exports", () => {
 		expect(TargetLanguageSchema.parse("German")).toBe("German");
 		expect(TargetLanguageSchema.parse("English")).toBe("English");
 		expect(typeof linguistics.buildToLingIdFor).toBe("function");
-		expect(typeof linguistics.buildToLemmaLingIdFor).toBe("function");
 		expect(typeof linguistics.buildToSurfaceLingIdFor).toBe("function");
 		expect(typeof linguistics.buildToShallowSurfaceLingIdFor).toBe(
 			"function",
@@ -61,6 +60,7 @@ describe("root exports", () => {
 			SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN,
 		);
 		expect("toLingId" in linguistics).toBe(false);
+		expect("buildToLemmaLingIdFor" in linguistics).toBe(false);
 		expect("LingIdSchema" in linguistics).toBe(false);
 	});
 

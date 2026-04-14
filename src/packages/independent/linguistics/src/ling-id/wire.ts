@@ -1,6 +1,6 @@
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
 
-export type LingIdKind = "LEM" | "SURF" | "SURF-SHALLOW";
+export type LingIdKind = "SURF" | "SURF-SHALLOW";
 
 const LANGUAGE_TO_CODE = {
 	English: "EN",
@@ -49,15 +49,17 @@ export function parseHeader(id: string): {
 		throw new Error(`Unsupported Ling ID prefix: ${header}`);
 	}
 
-	const language = (CODE_TO_LANGUAGE as Record<string, TargetLanguage | undefined>)[
-		languageCode
-	];
+	const language = (
+		CODE_TO_LANGUAGE as Record<string, TargetLanguage | undefined>
+	)[languageCode];
 
 	if (language === undefined) {
-		throw new Error(`Unsupported language code in Ling ID: ${languageCode}`);
+		throw new Error(
+			`Unsupported language code in Ling ID: ${languageCode}`,
+		);
 	}
 
-	if (kind !== "LEM" && kind !== "SURF" && kind !== "SURF-SHALLOW") {
+	if (kind !== "SURF" && kind !== "SURF-SHALLOW") {
 		throw new Error(`Unsupported Ling ID kind: ${kind}`);
 	}
 

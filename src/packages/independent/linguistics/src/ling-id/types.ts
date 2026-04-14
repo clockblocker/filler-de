@@ -10,10 +10,10 @@ import type {
 } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
 
-export type LemmaLingId = string;
+export type ObservedSurfaceLingId = string;
 export type SurfaceLingId = string;
 export type ShallowSurfaceLingId = string;
-export type LingId = LemmaLingId | SurfaceLingId;
+export type LingId = SurfaceLingId | ObservedSurfaceLingId;
 
 export type LingIdSurfaceInput<L extends TargetLanguage = TargetLanguage> =
 	AnySurface<L> & {
@@ -53,7 +53,21 @@ export type ParsedLemmaDto =
 			discourseFormulaRole?: string;
 	  };
 
-export type ParsedSurfaceDto = {
+export type ParsedObservedSurfaceDto = {
+	lingKind: "Surface";
+	language: TargetLanguage;
+	orthographicStatus: "Standard";
+	surfaceKind: "Lemma";
+	normalizedFullSurface: string;
+	discriminators: {
+		lemmaKind: LemmaKind;
+		lemmaSubKind: string;
+	};
+	target: "Lemma";
+	observedLemma: ParsedLemmaDto;
+};
+
+export type ParsedTargetedSurfaceDto = {
 	lingKind: "Surface";
 	language: TargetLanguage;
 	orthographicStatus: Exclude<OrthographicStatus, "Unknown">;
@@ -67,7 +81,11 @@ export type ParsedSurfaceDto = {
 	inflectionalFeatures?: ParsedFeatureBag;
 };
 
-export type ParsedLingDto = ParsedLemmaDto | ParsedSurfaceDto;
+export type ParsedSurfaceDto =
+	| ParsedObservedSurfaceDto
+	| ParsedTargetedSurfaceDto;
+
+export type ParsedLingDto = ParsedSurfaceDto;
 
 export type ParsedLingDtoFor<L extends TargetLanguage> = ParsedLingDto & {
 	language: L;
@@ -81,5 +99,20 @@ export type ParsedSurfaceDtoFor<L extends TargetLanguage> = ParsedSurfaceDto & {
 	language: L;
 };
 
+export type ParsedTargetedSurfaceDtoFor<L extends TargetLanguage> =
+	ParsedTargetedSurfaceDto & {
+		language: L;
+	};
+
+export type ParsedObservedSurfaceDtoFor<L extends TargetLanguage> =
+	ParsedObservedSurfaceDto & {
+		language: L;
+	};
+
 export type SerializableLemma = AnyLemma | ParsedLemmaDto;
-export type SerializableSurface = LingIdSurfaceInput | ParsedSurfaceDto;
+export type SerializableTargetedSurface =
+	| LingIdSurfaceInput
+	| ParsedTargetedSurfaceDto;
+export type SerializableSurface =
+	| SerializableTargetedSurface
+	| ParsedObservedSurfaceDto;

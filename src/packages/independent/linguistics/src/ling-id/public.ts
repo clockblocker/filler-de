@@ -2,137 +2,142 @@ import type { AnyLemma } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
 import { parseLingId } from "./parse";
 import {
-	serializeLemma,
+	serializeObservedSurface,
 	serializeShallowSurface,
 	serializeSurface,
 } from "./serialize";
 import type {
-	LemmaLingId,
-	LingId,
 	LingIdSurfaceInput,
+	ObservedSurfaceLingId,
 	ParsedLemmaDto,
 	ParsedLemmaDtoFor,
-	ParsedLingDtoFor,
+	ParsedObservedSurfaceDto,
 	ParsedSurfaceDto,
 	ParsedSurfaceDtoFor,
+	ParsedTargetedSurfaceDto,
+	ParsedTargetedSurfaceDtoFor,
 	SerializableLemma,
 	SerializableSurface,
+	SerializableTargetedSurface,
 	ShallowSurfaceLingId,
 	SurfaceLingId,
 } from "./types";
 
 type LanguageSerializer = {
-	toLemmaLingId: (value: SerializableLemma) => LemmaLingId;
-	toSurfaceLingId: (value: SerializableSurface) => SurfaceLingId;
+	toSurfaceLingId: {
+		(value: SerializableLemma): ObservedSurfaceLingId;
+		(value: SerializableSurface): SurfaceLingId | ObservedSurfaceLingId;
+	};
 	toShallowSurfaceLingId: (
-		value: SerializableSurface,
+		value: SerializableTargetedSurface,
 	) => ShallowSurfaceLingId;
 };
 
 export type {
-	LemmaLingId,
 	LingId,
 	LingIdSurfaceInput,
+	ObservedSurfaceLingId,
 	ParsedFeatureBag,
 	ParsedFeatureValue,
 	ParsedLemmaDto,
 	ParsedLingDto,
+	ParsedObservedSurfaceDto,
 	ParsedSurfaceDto,
+	ParsedTargetedSurfaceDto,
 	ShallowSurfaceLingId,
 	SurfaceLingId,
 } from "./types";
 
 export { parseLingId };
 
-/**
- * Builds a language-specific Ling ID serializer.
- *
- * The returned function accepts either a lemma or a surface-like DTO and
- * dispatches to the corresponding full Ling ID serializer.
- *
- * Parsed Ling ID DTOs are accepted as well, as long as their embedded
- * `language` matches the requested builder language.
- */
 export function buildToLingIdFor<L extends TargetLanguage>(
 	lang: L,
-): (
-	value:
-		| AnyLemma<L>
-		| LingIdSurfaceInput<L>
-		| ParsedLingDtoFor<L>
-		| ParsedLemmaDto
-		| ParsedSurfaceDto,
-) => LingId {
-	return (value) => {
+): {
+	(
+		value: AnyLemma<L> | ParsedLemmaDtoFor<L> | ParsedLemmaDto,
+	): ObservedSurfaceLingId;
+	(
+		value:
+			| LingIdSurfaceInput<L>
+			| ParsedSurfaceDtoFor<L>
+			| ParsedSurfaceDto,
+	): SurfaceLingId | ObservedSurfaceLingId;
+} {
+	return buildToSurfaceLingIdFor(lang);
+}
+
+export function buildToSurfaceLingIdFor<L extends TargetLanguage>(
+	lang: L,
+): {
+	(
+		value: AnyLemma<L> | ParsedLemmaDtoFor<L> | ParsedLemmaDto,
+	): ObservedSurfaceLingId;
+	(
+		value:
+			| LingIdSurfaceInput<L>
+			| ParsedSurfaceDtoFor<L>
+			| ParsedSurfaceDto,
+	): SurfaceLingId | ObservedSurfaceLingId;
+} {
+	return ((value) => {
 		const serializer = getSerializerForValue(lang, getValueLanguage(value));
 
 		return isSurfaceValue(value)
 			? serializer.toSurfaceLingId(value as SerializableSurface)
-			: serializer.toLemmaLingId(value as SerializableLemma);
+			: serializer.toSurfaceLingId(value as SerializableLemma);
+	}) as {
+		(
+			value: AnyLemma<L> | ParsedLemmaDtoFor<L> | ParsedLemmaDto,
+		): ObservedSurfaceLingId;
+		(
+			value:
+				| LingIdSurfaceInput<L>
+				| ParsedSurfaceDtoFor<L>
+				| ParsedSurfaceDto,
+		): SurfaceLingId | ObservedSurfaceLingId;
 	};
 }
 
-/**
- * Builds a language-specific lemma Ling ID serializer.
- *
- * Use this when the input is definitely lemma-shaped and you want the full
- * lemma identity string.
- *
- * Parsed lemma DTOs are accepted as input.
- */
-export function buildToLemmaLingIdFor<L extends TargetLanguage>(
-	lang: L,
-): (value: AnyLemma<L> | ParsedLemmaDtoFor<L> | ParsedLemmaDto) => LemmaLingId {
-	return (value) =>
-		getSerializerForValue(lang, getValueLanguage(value)).toLemmaLingId(
-			value as SerializableLemma,
-		);
-}
-
-/**
- * Builds a language-specific full surface Ling ID serializer.
- *
- * The resulting ID includes the surface shell plus the target branch:
- * shallow `{ canonicalLemma }` targets and full `{ lemma }` targets produce
- * different full surface IDs.
- *
- * Parsed surface DTOs are accepted as input.
- */
-export function buildToSurfaceLingIdFor<L extends TargetLanguage>(
-	lang: L,
-): (
-	value: LingIdSurfaceInput<L> | ParsedSurfaceDtoFor<L> | ParsedSurfaceDto,
-) => SurfaceLingId {
-	return (value) =>
-		getSerializerForValue(lang, getValueLanguage(value)).toSurfaceLingId(
-			value as SerializableSurface,
-		);
-}
-
-/**
- * Builds a language-specific shallow surface Ling ID serializer.
- *
- * This comparison-oriented ID keeps the surface shell but ignores target
- * richness and nested lemma identity.
- *
- * Parsed surface DTOs are accepted as input.
- */
 export function buildToShallowSurfaceLingIdFor<L extends TargetLanguage>(
 	lang: L,
 ): (
-	value: LingIdSurfaceInput<L> | ParsedSurfaceDtoFor<L> | ParsedSurfaceDto,
+	value:
+		| LingIdSurfaceInput<L>
+		| ParsedTargetedSurfaceDtoFor<L>
+		| ParsedTargetedSurfaceDto,
 ) => ShallowSurfaceLingId {
-	return (value) =>
-		getSerializerForValue(
+	return (value) => {
+		if (!isSurfaceValue(value)) {
+			throw new Error(
+				"Shallow surface Ling IDs require a targeted surface input",
+			);
+		}
+
+		if (isObservedSurfaceValue(value)) {
+			throw new Error(
+				"Shallow surface Ling IDs do not support observed surfaces",
+			);
+		}
+
+		return getSerializerForValue(
 			lang,
 			getValueLanguage(value),
-		).toShallowSurfaceLingId(value as SerializableSurface);
+		).toShallowSurfaceLingId(value as SerializableTargetedSurface);
+	};
 }
 
-function isSurfaceValue(value: unknown): value is SerializableSurface {
+function isSurfaceValue(
+	value: unknown,
+): value is SerializableSurface | ParsedObservedSurfaceDto {
 	return (
 		typeof value === "object" && value !== null && "surfaceKind" in value
 	);
+}
+
+function isObservedSurfaceValue(
+	value: SerializableSurface | ParsedSurfaceDto | ParsedObservedSurfaceDto,
+): value is ParsedObservedSurfaceDto {
+	return value.target === "Lemma";
 }
 
 function getValueLanguage(value: unknown): TargetLanguage | undefined {
@@ -173,14 +178,14 @@ function createLanguageSerializer(
 	language: TargetLanguage,
 ): LanguageSerializer {
 	return {
-		toLemmaLingId: (value) => serializeLemma(language, value),
 		toShallowSurfaceLingId: (value) =>
 			serializeShallowSurface(language, value),
-		toSurfaceLingId: (value) =>
-			serializeSurface(language, value, (lemma) =>
-				getSerializerForValue(language, lemma.language).toLemmaLingId(
-					lemma,
-				),
-			),
+		toSurfaceLingId: ((value: SerializableLemma | SerializableSurface) =>
+			isSurfaceValue(value)
+				? serializeSurface(language, value)
+				: serializeObservedSurface(
+						language,
+						value,
+					)) as LanguageSerializer["toSurfaceLingId"],
 	};
 }

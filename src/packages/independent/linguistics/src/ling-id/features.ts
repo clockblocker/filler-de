@@ -1,5 +1,5 @@
-import type { ParsedFeatureBag, ParsedFeatureValue } from "./types";
 import { escapeToken, unescapeToken } from "./escape";
+import type { ParsedFeatureBag, ParsedFeatureValue } from "./types";
 
 const BOOLEAN_FEATURE_KEYS = new Set([
 	"abbr",

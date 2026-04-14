@@ -2,45 +2,49 @@ import type { TargetLanguage } from "../lu/universal/enums/core/language";
 import { escapeToken, serializeOptionalToken } from "./escape";
 import { compactFeatureBag, serializeFeatureBag } from "./features";
 import type {
-	LemmaLingId,
+	ObservedSurfaceLingId,
 	ParsedLemmaDto,
+	ParsedObservedSurfaceDto,
 	SerializableLemma,
 	SerializableSurface,
+	SerializableTargetedSurface,
 	ShallowSurfaceLingId,
 	SurfaceLingId,
 } from "./types";
 import { buildHeader, joinLingId } from "./wire";
 
-export function serializeLemma(
-	language: TargetLanguage,
-	value: SerializableLemma,
-): LemmaLingId {
-	const subKind = getLemmaSubKind(value);
-	const lemmaFeatures = serializeFeatureBag(getLemmaFeatures(value));
+type SerializableNestedLemma =
+	| SerializableLemma
+	| Extract<
+			SerializableTargetedSurface["target"],
+			{ lemma: unknown }
+	  >["lemma"];
 
-	return joinLingId([
-		buildHeader(language, "LEM"),
-		escapeToken(value.canonicalLemma),
-		value.lemmaKind,
-		subKind,
-		lemmaFeatures,
-		serializeOptionalToken(value.meaningInEmojis),
-	]);
+export function serializeObservedSurface(
+	language: TargetLanguage,
+	value: SerializableLemma | ParsedObservedSurfaceDto,
+): ObservedSurfaceLingId {
+	return serializeSurface(
+		language,
+		isObservedSurfaceDto(value)
+			? normalizeObservedSurface(value.observedLemma)
+			: normalizeObservedSurface(value),
+	);
 }
 
 export function serializeSurface(
 	language: TargetLanguage,
 	value: SerializableSurface,
-	serializeNestedLemma: (value: SerializableLemma) => LemmaLingId,
-): SurfaceLingId {
-	let targetMode: "canon" | "lemma";
+): SurfaceLingId | ObservedSurfaceLingId {
+	let targetMode: "canon" | "lemma" | "observed";
 	let targetPayload: string;
 
-	if ("lemma" in value.target) {
+	if (isObservedSurfaceDto(value)) {
+		targetMode = "observed";
+		targetPayload = serializeLemmaBody(language, value.observedLemma);
+	} else if ("lemma" in value.target) {
 		targetMode = "lemma";
-		targetPayload = serializeNestedLemma(
-			normalizeNestedLemmaTarget(value.target.lemma),
-		);
+		targetPayload = serializeLemmaBody(language, value.target.lemma);
 	} else {
 		targetMode = "canon";
 		targetPayload = value.target.canonicalLemma;
@@ -56,12 +60,49 @@ export function serializeSurface(
 
 export function serializeShallowSurface(
 	language: TargetLanguage,
-	value: SerializableSurface,
+	value: SerializableTargetedSurface,
 ): ShallowSurfaceLingId {
 	return joinLingId([
 		buildHeader(language, "SURF-SHALLOW"),
 		...serializeSurfaceShell(value),
 	]);
+}
+
+export function serializeLemmaBody(
+	language: TargetLanguage,
+	value: SerializableNestedLemma,
+): string {
+	const normalizedLemma = normalizeLemma(value);
+
+	assertLemmaLanguageMatch(language, normalizedLemma.language);
+
+	return joinLingId([
+		escapeToken(normalizedLemma.canonicalLemma),
+		normalizedLemma.lemmaKind,
+		getLemmaSubKind(normalizedLemma),
+		serializeFeatureBag(getLemmaFeatures(normalizedLemma)),
+		serializeOptionalToken(normalizedLemma.meaningInEmojis),
+	]);
+}
+
+export function normalizeObservedSurface(
+	value: SerializableLemma,
+): ParsedObservedSurfaceDto {
+	const observedLemma = normalizeLemma(value);
+
+	return {
+		discriminators: {
+			lemmaKind: observedLemma.lemmaKind,
+			lemmaSubKind: getLemmaSubKind(observedLemma),
+		},
+		language: observedLemma.language,
+		lingKind: "Surface",
+		normalizedFullSurface: observedLemma.canonicalLemma,
+		observedLemma,
+		orthographicStatus: "Standard",
+		surfaceKind: "Lemma",
+		target: "Lemma",
+	};
 }
 
 function serializeSurfaceShell(value: SerializableSurface): string[] {
@@ -77,11 +118,44 @@ function serializeSurfaceShell(value: SerializableSurface): string[] {
 	];
 }
 
-function normalizeNestedLemmaTarget(
-	value: Extract<SerializableSurface["target"], { lemma: unknown }>["lemma"],
-): ParsedLemmaDto {
+function normalizeLemma(value: SerializableNestedLemma): ParsedLemmaDto {
 	if ("lingKind" in value) {
-		return value;
+		switch (value.lemmaKind) {
+			case "Lexeme":
+				return {
+					canonicalLemma: value.canonicalLemma,
+					inherentFeatures: compactFeatureBag(value.inherentFeatures),
+					language: value.language,
+					lemmaKind: value.lemmaKind,
+					lingKind: "Lemma",
+					meaningInEmojis: value.meaningInEmojis,
+					pos: value.pos,
+				};
+			case "Morpheme":
+				return {
+					canonicalLemma: value.canonicalLemma,
+					isClosedSet: value.isClosedSet,
+					language: value.language,
+					lemmaKind: value.lemmaKind,
+					lingKind: "Lemma",
+					meaningInEmojis: value.meaningInEmojis,
+					morphemeKind: value.morphemeKind,
+					separable: value.separable,
+				};
+			case "Phraseme":
+				return {
+					canonicalLemma: value.canonicalLemma,
+					discourseFormulaRole:
+						"discourseFormulaRole" in value
+							? value.discourseFormulaRole
+							: undefined,
+					language: value.language,
+					lemmaKind: value.lemmaKind,
+					lingKind: "Lemma",
+					meaningInEmojis: value.meaningInEmojis,
+					phrasemeKind: value.phrasemeKind,
+				};
+		}
 	}
 
 	switch (value.lemmaKind) {
@@ -89,9 +163,9 @@ function normalizeNestedLemmaTarget(
 			return {
 				canonicalLemma: value.canonicalLemma,
 				inherentFeatures: compactFeatureBag(value.inherentFeatures),
-				lingKind: "Lemma",
 				language: value.language,
 				lemmaKind: value.lemmaKind,
+				lingKind: "Lemma",
 				meaningInEmojis: value.meaningInEmojis,
 				pos: value.pos,
 			};
@@ -99,9 +173,9 @@ function normalizeNestedLemmaTarget(
 			return {
 				canonicalLemma: value.canonicalLemma,
 				isClosedSet: value.isClosedSet,
-				lingKind: "Lemma",
 				language: value.language,
 				lemmaKind: value.lemmaKind,
+				lingKind: "Lemma",
 				meaningInEmojis: value.meaningInEmojis,
 				morphemeKind: value.morphemeKind,
 				separable: value.separable,
@@ -113,16 +187,16 @@ function normalizeNestedLemmaTarget(
 					"discourseFormulaRole" in value
 						? value.discourseFormulaRole
 						: undefined,
-				lingKind: "Lemma",
 				language: value.language,
 				lemmaKind: value.lemmaKind,
+				lingKind: "Lemma",
 				meaningInEmojis: value.meaningInEmojis,
 				phrasemeKind: value.phrasemeKind,
 			};
 	}
 }
 
-function getLemmaSubKind(value: SerializableLemma): string {
+function getLemmaSubKind(value: ParsedLemmaDto): string {
 	switch (value.lemmaKind) {
 		case "Lexeme":
 			return value.pos;
@@ -133,7 +207,7 @@ function getLemmaSubKind(value: SerializableLemma): string {
 	}
 }
 
-function getLemmaFeatures(value: SerializableLemma) {
+function getLemmaFeatures(value: ParsedLemmaDto) {
 	switch (value.lemmaKind) {
 		case "Lexeme":
 			return value.inherentFeatures;
@@ -149,5 +223,27 @@ function getLemmaFeatures(value: SerializableLemma) {
 						? value.discourseFormulaRole
 						: undefined,
 			});
+	}
+}
+
+function isObservedSurfaceDto(
+	value: SerializableLemma | SerializableSurface | ParsedObservedSurfaceDto,
+): value is ParsedObservedSurfaceDto {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		"target" in value &&
+		value.target === "Lemma"
+	);
+}
+
+function assertLemmaLanguageMatch(
+	expected: TargetLanguage,
+	actual: TargetLanguage,
+) {
+	if (expected !== actual) {
+		throw new Error(
+			`Ling ID builder language mismatch: expected ${expected}, received ${actual}`,
+		);
 	}
 }
