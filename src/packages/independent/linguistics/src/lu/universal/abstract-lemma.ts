@@ -1,4 +1,4 @@
-import type { Prettify } from "../../../../../types/helpers";
+import type { Prettify } from "../../../../../../types/helpers";
 import type { IsClosedSet } from "./enums/core/meta";
 import type { TargetLanguage } from "./enums/core/language";
 import type { LemmaKind } from "./enums/core/selection";

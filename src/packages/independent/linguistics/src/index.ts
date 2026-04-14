@@ -1,62 +1,62 @@
 import type z from "zod/v3";
 import type { ZodTypeAny } from "zod/v3";
-import { EnglishLemmaSchema } from "./english/english-lemma";
-import { EnglishSelectionSchema } from "./english/english-selection";
-import { GermanLemmaSchema } from "./german/german-lemma";
-import { GermanSelectionSchema } from "./german/german-selection";
+import { EnglishLemmaSchema } from "./lu/english/english-lemma";
+import { EnglishSelectionSchema } from "./lu/english/english-selection";
+import { GermanLemmaSchema } from "./lu/german/german-lemma";
+import { GermanSelectionSchema } from "./lu/german/german-selection";
 import type {
 	LemmaSchemaLanguageShape,
 	SelectionSchemaLanguageShape,
-} from "./registry-shapes";
-import type { AbstractLemma } from "./universal/abstract-lemma";
-import type { AbstractSelectionFor } from "./universal/abstract-selection";
+} from "./lu/registry-shapes";
+import type { AbstractLemma } from "./lu/universal/abstract-lemma";
+import type { AbstractSelectionFor } from "./lu/universal/abstract-selection";
 import type {
 	TargetLanguage,
 	TargetLanguageSchema,
-} from "./universal/enums/core/language";
+} from "./lu/universal/enums/core/language";
 import {
 	LemmaKind as LemmaKindSchema,
 	OrthographicStatus as OrthographicStatusSchema,
 	SurfaceKind as SurfaceKindSchema,
-} from "./universal/enums/core/selection";
-import { Case as CaseSchema } from "./universal/enums/feature/ud/case";
-import { Gender as GenderSchema } from "./universal/enums/feature/ud/gender";
-import { GrammaticalNumber as GrammaticalNumberSchema } from "./universal/enums/feature/ud/number";
-import { MorphemeKindSchema } from "./universal/enums/kind/morpheme-kind";
-import { PhrasemeKind as PhrasemeKindSchema } from "./universal/enums/kind/phraseme-kind";
-import { Pos as PosSchema } from "./universal/enums/kind/pos";
+} from "./lu/universal/enums/core/selection";
+import { Case as CaseSchema } from "./lu/universal/enums/feature/ud/case";
+import { Gender as GenderSchema } from "./lu/universal/enums/feature/ud/gender";
+import { GrammaticalNumber as GrammaticalNumberSchema } from "./lu/universal/enums/feature/ud/number";
+import { MorphemeKindSchema } from "./lu/universal/enums/kind/morpheme-kind";
+import { PhrasemeKind as PhrasemeKindSchema } from "./lu/universal/enums/kind/phraseme-kind";
+import { Pos as PosSchema } from "./lu/universal/enums/kind/pos";
 import {
-	type LexicalRelations as LexicalRelationsShape,
-	type MorphologicalRelations as MorphologicalRelationsShape,
-	type RelationTargets as RelationTargetsShape,
-	LexicalRelationsSchema as LexicalRelationsSchemaInternal,
-	MorphologicalRelationsSchema as MorphologicalRelationsSchemaInternal,
-	RelationTargetsSchema as RelationTargetsSchemaInternal,
-} from "./universal/enums/relation/relation";
-import {
-	LexicalRelation as LexicalRelationSchema,
 	getInverseLexicalRelation,
 	getReprForLexicalRelation,
-} from "./universal/enums/relation/lexical";
+	LexicalRelation as LexicalRelationSchema,
+} from "./lu/universal/enums/relation/lexical";
 import {
-	MorphologicalRelation as MorphologicalRelationSchema,
 	getInverseMorphologicalRelation,
 	getReprForMorphologicalRelation,
-} from "./universal/enums/relation/morphological";
+	MorphologicalRelation as MorphologicalRelationSchema,
+} from "./lu/universal/enums/relation/morphological";
+import {
+	LexicalRelationsSchema as LexicalRelationsSchemaInternal,
+	type LexicalRelations as LexicalRelationsShape,
+	MorphologicalRelationsSchema as MorphologicalRelationsSchemaInternal,
+	type MorphologicalRelations as MorphologicalRelationsShape,
+	RelationTargetsSchema as RelationTargetsSchemaInternal,
+	type RelationTargets as RelationTargetsShape,
+} from "./lu/universal/enums/relation/relation";
 
-export { type LingId, toLingId } from "./ling-id";
+export { type LingId, toLingId } from "./lu/ling-id";
 export {
 	TARGET_LANGUAGES,
 	TargetLanguageSchema,
-} from "./universal/enums/core/language";
+} from "./lu/universal/enums/core/language";
 export {
 	getInverseLexicalRelation,
 	getReprForLexicalRelation,
-} from "./universal/enums/relation/lexical";
+} from "./lu/universal/enums/relation/lexical";
 export {
 	getInverseMorphologicalRelation,
 	getReprForMorphologicalRelation,
-} from "./universal/enums/relation/morphological";
+} from "./lu/universal/enums/relation/morphological";
 
 export const OrthographicStatus = OrthographicStatusSchema.enum;
 export const SurfaceKind = SurfaceKindSchema.enum;

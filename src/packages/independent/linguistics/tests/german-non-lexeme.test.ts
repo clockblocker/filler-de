@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import type { Lemma, Selection } from "../src";
 import { LemmaSchema, SelectionSchema } from "../src";
-import { GermanMorphemeLemmaSchemas } from "../src/german/lu/morpheme/german-morphemes";
-import { GermanPhrasemeLemmaSchemas } from "../src/german/lu/phraseme/german-phrasemes";
+import { GermanMorphemeLemmaSchemas } from "../src/lu/german/lu/morpheme/german-morphemes";
+import { GermanPhrasemeLemmaSchemas } from "../src/lu/german/lu/phraseme/german-phrasemes";
 
 describe("German non-lexeme schemas", () => {
 	it("exposes inferred morpheme and phraseme lemma types from the registry", () => {

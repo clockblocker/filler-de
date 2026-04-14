@@ -1,5 +1,5 @@
 import { identityFeatureRegistry } from "./identity-feature-registry";
-import type { AnyLemma, AnySelection, LemmaKind, SurfaceKind } from "./index";
+import type { AnyLemma, AnySelection, LemmaKind, SurfaceKind } from "../index";
 import type { AbstractFeatures } from "./universal/enums/feature/feature";
 
 export type LingId = string & { readonly __brand: "LingId" };

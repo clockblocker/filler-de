@@ -12,7 +12,7 @@ import {
 	GermanVerbLemmaSchema,
 	GermanVerbStandardPartialSelectionSchema,
 	GermanVerbTypoInflectionSelectionSchema,
-} from "../src/german/lu/lexeme/verb/german-verb-bundle";
+} from "../src/lu/german/lu/lexeme/verb/german-verb-bundle";
 
 describe("German verb schemas", () => {
 	it("accepts supported German verb inflectional features", () => {

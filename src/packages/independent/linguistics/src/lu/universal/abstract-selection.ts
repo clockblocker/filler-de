@@ -1,4 +1,4 @@
-import type { Prettify } from "../../../../../types/helpers";
+import type { Prettify } from "../../../../../../types/helpers";
 import type { TargetLanguage } from "./enums/core/language";
 import type {
 	LemmaKind,

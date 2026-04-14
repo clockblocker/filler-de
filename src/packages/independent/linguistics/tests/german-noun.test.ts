@@ -12,7 +12,7 @@ import {
 	GermanNounLemmaSelectionSchema,
 	GermanNounStandardPartialSelectionSchema,
 	GermanNounTypoInflectionSelectionSchema,
-} from "../src/german/lu/lexeme/noun/german-noun-bundle";
+} from "../src/lu/german/lu/lexeme/noun/german-noun-bundle";
 
 describe("German noun schemas", () => {
 	it("exposes inferred lemma types from the registry", () => {

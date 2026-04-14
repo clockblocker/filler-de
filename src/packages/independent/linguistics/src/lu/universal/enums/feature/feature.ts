@@ -1,4 +1,4 @@
-import type { Prettify } from "../../../../../../../types/helpers";
+import type { Prettify } from "../../../../../../../../types/helpers";
 import type { IsSeparable } from "./custom/separable";
 import type { IsAbbr } from "./ud/abbr";
 import type { Animacy } from "./ud/animacy";
