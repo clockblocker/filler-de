@@ -420,7 +420,7 @@ Global shared code may own:
 
 This is required for implementation, not optional.
 
-Any dynamic field that can contain reserved separators must be escaped before serialization and unescaped during parse.
+Any dynamic field that can contain reserved separators must be escaped before serialization and unescaped during parse, except for the final `targetPayload` field of a surface ID.
 
 Reserved separators currently include:
 
@@ -435,7 +435,13 @@ At minimum, escaping must work for:
 - `normalizedFullSurface`
 - `meaningInEmojis`
 - feature values
-- nested IDs in target payload
+
+Special case:
+
+- surface `targetPayload` is the final field and must remain raw
+- for `targetMode = canon`, it is the raw canonical lemma string
+- for `targetMode = lemma`, it is the raw nested full lemma ID
+- parsing must therefore split the surface body only through `targetMode` and treat the remainder as `targetPayload`
 
 The exact escaping scheme is up to the implementation agent, but it must be:
 

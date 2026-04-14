@@ -172,3 +172,172 @@ Hans, Pass [auf] dich auf! -> `auf` (ADP)
 Hans, Pass auf [dich] auf! -> `du` (PRON)
 Hans, Pass auf dich [auf]! -> `auf` (PRT)
 ```
+
+## Ling IDs
+
+The package can also serialize lemmas and surfaces into stable Ling IDs.
+
+### Lemma IDs
+
+```ts
+import {
+	buildToLemmaLingIdFor,
+	LemmaSchema,
+} from "@textfresser/linguistics";
+
+const walkLemma = LemmaSchema.English.Lexeme.VERB.parse({
+	meaningInEmojis: "🚶",
+	inherentFeatures: {},
+	language: "English",
+	lemmaKind: "Lexeme",
+	pos: "VERB",
+	canonicalLemma: "walk",
+});
+
+const toEnglishLemmaLingId = buildToLemmaLingIdFor("English");
+
+const walkLemmaId = toEnglishLemmaLingId(walkLemma);
+// "ling:v1:EN:LEM;walk;Lexeme;VERB;-;🚶"
+```
+
+German lemma identity includes inherent features:
+
+```ts
+import {
+	buildToLemmaLingIdFor,
+	LemmaSchema,
+} from "@textfresser/linguistics";
+
+const toGermanLemmaLingId = buildToLemmaLingIdFor("German");
+
+const feminineSee = LemmaSchema.German.Lexeme.NOUN.parse({
+	canonicalLemma: "See",
+	inherentFeatures: { gender: "Fem" },
+	language: "German",
+	lemmaKind: "Lexeme",
+	pos: "NOUN",
+});
+
+const neuterSee = LemmaSchema.German.Lexeme.NOUN.parse({
+	canonicalLemma: "See",
+	inherentFeatures: { gender: "Neut" },
+	language: "German",
+	lemmaKind: "Lexeme",
+	pos: "NOUN",
+});
+
+toGermanLemmaLingId(feminineSee);
+// "ling:v1:DE:LEM;See;Lexeme;NOUN;gender=Fem;-"
+
+toGermanLemmaLingId(neuterSee);
+// "ling:v1:DE:LEM;See;Lexeme;NOUN;gender=Neut;-"
+```
+
+### Full Surface IDs
+
+Full surface IDs preserve target richness.
+
+```ts
+import {
+	buildToSurfaceLingIdFor,
+} from "@textfresser/linguistics";
+
+const toEnglishSurfaceLingId = buildToSurfaceLingIdFor("English");
+
+const walkSurfaceId = toEnglishSurfaceLingId({
+	discriminators: {
+		lemmaKind: "Lexeme",
+		lemmaSubKind: "VERB",
+	},
+	inflectionalFeatures: {
+		tense: "Pres",
+		verbForm: "Fin",
+	},
+	normalizedFullSurface: "walk",
+	orthographicStatus: "Standard",
+	surfaceKind: "Inflection",
+	target: {
+		lemma: walkLemma,
+	},
+});
+// "ling:v1:EN:SURF;walk;Standard;Inflection;Lexeme;VERB;tense=Pres,verbForm=Fin;lemma;ling:v1:EN:LEM;walk;Lexeme;VERB;-;🚶"
+```
+
+If the target is shallow, the full surface ID changes:
+
+```ts
+const walkSurfaceWithCanonicalTargetId = toEnglishSurfaceLingId({
+	discriminators: {
+		lemmaKind: "Lexeme",
+		lemmaSubKind: "VERB",
+	},
+	inflectionalFeatures: {
+		tense: "Pres",
+		verbForm: "Fin",
+	},
+	normalizedFullSurface: "walk",
+	orthographicStatus: "Standard",
+	surfaceKind: "Inflection",
+	target: {
+		canonicalLemma: "walk",
+	},
+});
+// "ling:v1:EN:SURF;walk;Standard;Inflection;Lexeme;VERB;tense=Pres,verbForm=Fin;canon;walk"
+```
+
+### Shallow Surface IDs
+
+Use shallow surface IDs when you want to compare form identity while ignoring
+target richness.
+
+```ts
+import {
+	buildToShallowSurfaceLingIdFor,
+} from "@textfresser/linguistics";
+
+const toGermanShallowSurfaceLingId = buildToShallowSurfaceLingIdFor("German");
+
+const seeSurface = {
+	discriminators: {
+		lemmaKind: "Lexeme",
+		lemmaSubKind: "NOUN",
+	},
+	normalizedFullSurface: "See",
+	orthographicStatus: "Standard",
+	surfaceKind: "Lemma",
+	target: {
+		canonicalLemma: "See",
+	},
+};
+
+const seeSurfaceWithFullTarget = {
+	...seeSurface,
+	target: {
+		lemma: feminineSee,
+	},
+};
+
+toGermanShallowSurfaceLingId(seeSurface) ===
+	toGermanShallowSurfaceLingId(seeSurfaceWithFullTarget);
+// true
+```
+
+### Parsing IDs
+
+`parseLingId()` returns a plain distilled DTO. You can serialize it again
+directly, or feed it into the exported schemas.
+
+```ts
+import {
+	buildToLemmaLingIdFor,
+	LemmaSchema,
+	parseLingId,
+} from "@textfresser/linguistics";
+
+const parsedWalkLemma = parseLingId(walkLemmaId);
+
+const reparsedWalkLemma = LemmaSchema.English.Lexeme.VERB.parse(parsedWalkLemma);
+
+buildToLemmaLingIdFor("English")(reparsedWalkLemma) === walkLemmaId;
+// true
+```

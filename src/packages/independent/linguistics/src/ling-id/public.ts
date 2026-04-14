@@ -1,14 +1,17 @@
 import type { AnyLemma } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
 import { parseLingId } from "./parse";
-import { serializeLemma, serializeShallowSurface, serializeSurface } from "./serialize";
+import {
+	serializeLemma,
+	serializeShallowSurface,
+	serializeSurface,
+} from "./serialize";
 import type {
 	LemmaLingId,
 	LingId,
 	LingIdSurfaceInput,
 	ParsedLemmaDto,
 	ParsedLemmaDtoFor,
-	ParsedLingDto,
 	ParsedLingDtoFor,
 	ParsedSurfaceDto,
 	ParsedSurfaceDtoFor,
@@ -41,6 +44,15 @@ export type {
 
 export { parseLingId };
 
+/**
+ * Builds a language-specific Ling ID serializer.
+ *
+ * The returned function accepts either a lemma or a surface-like DTO and
+ * dispatches to the corresponding full Ling ID serializer.
+ *
+ * Parsed Ling ID DTOs are accepted as well, as long as their embedded
+ * `language` matches the requested builder language.
+ */
 export function buildToLingIdFor<L extends TargetLanguage>(
 	lang: L,
 ): (
@@ -60,6 +72,14 @@ export function buildToLingIdFor<L extends TargetLanguage>(
 	};
 }
 
+/**
+ * Builds a language-specific lemma Ling ID serializer.
+ *
+ * Use this when the input is definitely lemma-shaped and you want the full
+ * lemma identity string.
+ *
+ * Parsed lemma DTOs are accepted as input.
+ */
 export function buildToLemmaLingIdFor<L extends TargetLanguage>(
 	lang: L,
 ): (value: AnyLemma<L> | ParsedLemmaDtoFor<L> | ParsedLemmaDto) => LemmaLingId {
@@ -69,6 +89,15 @@ export function buildToLemmaLingIdFor<L extends TargetLanguage>(
 		);
 }
 
+/**
+ * Builds a language-specific full surface Ling ID serializer.
+ *
+ * The resulting ID includes the surface shell plus the target branch:
+ * shallow `{ canonicalLemma }` targets and full `{ lemma }` targets produce
+ * different full surface IDs.
+ *
+ * Parsed surface DTOs are accepted as input.
+ */
 export function buildToSurfaceLingIdFor<L extends TargetLanguage>(
 	lang: L,
 ): (
@@ -80,6 +109,14 @@ export function buildToSurfaceLingIdFor<L extends TargetLanguage>(
 		);
 }
 
+/**
+ * Builds a language-specific shallow surface Ling ID serializer.
+ *
+ * This comparison-oriented ID keeps the surface shell but ignores target
+ * richness and nested lemma identity.
+ *
+ * Parsed surface DTOs are accepted as input.
+ */
 export function buildToShallowSurfaceLingIdFor<L extends TargetLanguage>(
 	lang: L,
 ): (
@@ -132,14 +169,18 @@ function assertLanguageMatch(expected: TargetLanguage, actual: TargetLanguage) {
 	}
 }
 
-function createLanguageSerializer(language: TargetLanguage): LanguageSerializer {
+function createLanguageSerializer(
+	language: TargetLanguage,
+): LanguageSerializer {
 	return {
 		toLemmaLingId: (value) => serializeLemma(language, value),
 		toShallowSurfaceLingId: (value) =>
 			serializeShallowSurface(language, value),
 		toSurfaceLingId: (value) =>
 			serializeSurface(language, value, (lemma) =>
-				getSerializerForValue(language, lemma.language).toLemmaLingId(lemma),
+				getSerializerForValue(language, lemma.language).toLemmaLingId(
+					lemma,
+				),
 			),
 	};
 }

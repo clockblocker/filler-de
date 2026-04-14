@@ -37,10 +37,10 @@ export function serializeSurface(
 
 	if ("lemma" in value.target) {
 		targetMode = "lemma";
-		targetPayload = escapeToken(serializeNestedLemma(value.target.lemma));
+		targetPayload = serializeNestedLemma(value.target.lemma);
 	} else {
 		targetMode = "canon";
-		targetPayload = escapeToken(value.target.canonicalLemma);
+		targetPayload = value.target.canonicalLemma;
 	}
 
 	return joinLingId([

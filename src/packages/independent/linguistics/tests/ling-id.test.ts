@@ -18,14 +18,15 @@ import {
 describe("Ling IDs", () => {
 	const toGermanLemmaLingId = buildToLemmaLingIdFor("German");
 	const toGermanSurfaceLingId = buildToSurfaceLingIdFor("German");
-	const toGermanShallowSurfaceLingId = buildToShallowSurfaceLingIdFor("German");
+	const toGermanShallowSurfaceLingId =
+		buildToShallowSurfaceLingIdFor("German");
 	const toEnglishLemmaLingId = buildToLemmaLingIdFor("English");
 	const toEnglishSurfaceLingId = buildToSurfaceLingIdFor("English");
 	const toEnglishShallowSurfaceLingId =
 		buildToShallowSurfaceLingIdFor("English");
 
 	it("serializes lemma identity with full feature bags and morpheme extras", () => {
-		const separableVerb: AnyLemma<"German"> = {
+		const separableVerb = {
 			canonicalLemma: "untergehen",
 			inherentFeatures: {
 				separable: true,
@@ -33,14 +34,16 @@ describe("Ling IDs", () => {
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "VERB",
-		};
-		const inseparableVerb: AnyLemma<"German"> = {
+		} satisfies AnyLemma<"German">;
+
+		const inseparableVerb = {
 			...separableVerb,
 			inherentFeatures: {
 				separable: false,
 			},
-		};
-		const feminineSee: AnyLemma<"German"> = {
+		} satisfies AnyLemma<"German">;
+
+		const feminineSee = {
 			canonicalLemma: "See",
 			inherentFeatures: {
 				gender: "Fem",
@@ -48,33 +51,37 @@ describe("Ling IDs", () => {
 			language: "German",
 			lemmaKind: "Lexeme",
 			pos: "NOUN",
-		};
-		const neuterSee: AnyLemma<"German"> = {
+		} satisfies AnyLemma<"German">;
+
+		const neuterSee = {
 			...feminineSee,
 			inherentFeatures: {
 				gender: "Neut",
 			},
-		};
-		const prefixWithSeparable: AnyLemma<"German"> = {
+		} satisfies AnyLemma<"German">;
+
+		const prefixWithSeparable = {
 			canonicalLemma: "ab-",
 			language: "German",
 			lemmaKind: "Morpheme",
 			morphemeKind: "Prefix",
 			separable: true,
-		};
-		const prefixWithoutSeparable: AnyLemma<"German"> = {
+		} satisfies AnyLemma<"German">;
+
+		const prefixWithoutSeparable = {
 			canonicalLemma: "ab-",
 			language: "German",
 			lemmaKind: "Morpheme",
 			morphemeKind: "Prefix",
-		};
-		const englishWalk: AnyLemma<"English"> = {
+		} satisfies AnyLemma<"German">;
+
+		const englishWalk = {
 			canonicalLemma: "walk",
 			inherentFeatures: {},
 			language: "English",
 			lemmaKind: "Lexeme",
 			pos: "VERB",
-		};
+		} satisfies AnyLemma<"English">;
 
 		expect(toGermanLemmaLingId(separableVerb)).toBe(
 			"ling:v1:DE:LEM;untergehen;Lexeme;VERB;separable=Yes;-",
@@ -114,8 +121,8 @@ describe("Ling IDs", () => {
 				lemmaSubKind: "VERB",
 			},
 			inflectionalFeatures: {
-				verbForm: "Fin",
 				tense: "Pres",
+				verbForm: "Fin",
 			},
 			normalizedFullSurface: "walk",
 			orthographicStatus: "Standard",
@@ -146,12 +153,10 @@ describe("Ling IDs", () => {
 		const fullSurfaceId = toEnglishSurfaceLingId(fullSurface);
 
 		expect(fullSurfaceId).toBe(
-			`ling:v1:EN:SURF;walk;Standard;Inflection;Lexeme;VERB;tense=Pres,verbForm=Fin;lemma;${encodeNestedLingId(nestedLemmaId)}`,
+			`ling:v1:EN:SURF;walk;Standard;Inflection;Lexeme;VERB;tense=Pres,verbForm=Fin;lemma;${nestedLemmaId}`,
 		);
 		expect(toEnglishSurfaceLingId(shallowSurface)).not.toBe(fullSurfaceId);
-		expect(decodeURIComponent(fullSurfaceId.split(";lemma;")[1]!)).toBe(
-			nestedLemmaId,
-		);
+		expect(fullSurfaceId.split(";lemma;")[1]).toBe(nestedLemmaId);
 		expect(toGermanSurfaceLingId(lemmaSurface)).toBe(
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;canon;See",
 		);
@@ -265,9 +270,9 @@ describe("Ling IDs", () => {
 		expect(JSON.parse(JSON.stringify(parsed))).toEqual({ ...parsed });
 		expect(structuredClone(parsed)).toEqual(parsed);
 		expect(toGermanLemmaLingId(parsed)).toBe(id);
-		expect(LemmaSchema.German.Morpheme.Prefix.safeParse(parsed).success).toBe(
-			true,
-		);
+		expect(
+			LemmaSchema.German.Morpheme.Prefix.safeParse(parsed).success,
+		).toBe(true);
 		expect(
 			LemmaSchema.German.Morpheme.Prefix.safeParse({
 				...parsed,
@@ -339,17 +344,21 @@ describe("Ling IDs", () => {
 				},
 			},
 		});
-		expect(JSON.parse(JSON.stringify(parsedFull))).toEqual({ ...parsedFull });
+		expect(JSON.parse(JSON.stringify(parsedFull))).toEqual({
+			...parsedFull,
+		});
 		expect(structuredClone(parsedFull)).toEqual(parsedFull);
 		expect(toGermanSurfaceLingId(parsedFull)).toBe(fullId);
 		expect(toGermanSurfaceLingId(parsedShallow)).toBe(shallowId);
 		expect(
-			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse(parsedFull)
-				.success,
+			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse(
+				parsedFull,
+			).success,
 		).toBe(true);
 		expect(
-			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse(parsedShallow)
-				.success,
+			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse(
+				parsedShallow,
+			).success,
 		).toBe(true);
 		expect(
 			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
@@ -499,9 +508,3 @@ describe("Ling IDs", () => {
 		);
 	});
 });
-
-function encodeNestedLingId(value: string): string {
-	return value.replace(/[%;,=\-]/g, (char) =>
-		char === "-" ? "%2D" : encodeURIComponent(char),
-	);
-}

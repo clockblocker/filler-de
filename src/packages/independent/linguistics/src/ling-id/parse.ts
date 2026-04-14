@@ -117,7 +117,7 @@ function parseSurfaceBody(
 	language: TargetLanguage,
 	body: string,
 ): ParsedSurfaceDto {
-	const parts = body.split(";");
+	const parts = splitSurfaceBody(body);
 
 	if (parts.length !== 8) {
 		throw new Error(`Malformed surface Ling ID: ${body}`);
@@ -136,9 +136,9 @@ function parseSurfaceBody(
 
 	const target =
 		targetMode === "canon"
-			? { canonicalLemma: unescapeToken(targetPayloadToken) }
+			? { canonicalLemma: targetPayloadToken }
 			: targetMode === "lemma"
-				? { lemma: expectParsedLemma(parseLingId(unescapeToken(targetPayloadToken))) }
+				? { lemma: expectParsedLemma(parseLingId(targetPayloadToken)) }
 				: unsupportedTargetMode(targetMode);
 
 	return {
@@ -173,4 +173,24 @@ function expectParsedLemma(parsed: ParsedLingDto): ParsedLemmaDto {
 
 function unsupportedTargetMode(targetMode: string): never {
 	throw new Error(`Unsupported target mode in Ling ID: ${targetMode}`);
+}
+
+function splitSurfaceBody(body: string): string[] {
+	const parts: string[] = [];
+	let remainder = body;
+
+	for (let index = 0; index < 7; index += 1) {
+		const separatorIndex = remainder.indexOf(";");
+
+		if (separatorIndex === -1) {
+			throw new Error(`Malformed surface Ling ID: ${body}`);
+		}
+
+		parts.push(remainder.slice(0, separatorIndex));
+		remainder = remainder.slice(separatorIndex + 1);
+	}
+
+	parts.push(remainder);
+
+	return parts;
 }
