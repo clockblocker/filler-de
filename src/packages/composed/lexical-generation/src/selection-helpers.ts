@@ -34,7 +34,8 @@ export function isLexemeSelection(
 	{ surface: { lemma: { lemmaKind: "Lexeme" } } }
 > {
 	return (
-		isKnownSelection(selection) && selection.surface.lemma.lemmaKind === "Lexeme"
+		isKnownSelection(selection) &&
+		selection.surface.lemma.lemmaKind === "Lexeme"
 	);
 }
 
@@ -63,20 +64,24 @@ export function isMorphemeSelection(
 }
 
 export function getSpelledLemma(selection: GermanSelection): string | null {
-	return isKnownSelection(selection) ? selection.surface.lemma.spelledLemma : null;
+	return isKnownSelection(selection)
+		? selection.surface.lemma.spelledLemma
+		: null;
 }
 
 export function getSpelledSurface(selection: GermanSelection): string | null {
-	return isKnownSelection(selection) ? selection.surface.spelledSurface : null;
+	return isKnownSelection(selection)
+		? selection.surface.spelledSurface
+		: null;
 }
 
 export function getLemmaKind(selection: GermanSelection): LemmaKind | null {
-	return isKnownSelection(selection) ? selection.surface.lemma.lemmaKind : null;
+	return isKnownSelection(selection)
+		? selection.surface.lemma.lemmaKind
+		: null;
 }
 
-export function getSurfaceKind(
-	selection: GermanSelection,
-): SurfaceKind | null {
+export function getSurfaceKind(selection: GermanSelection): SurfaceKind | null {
 	return isKnownSelection(selection) ? selection.surface.surfaceKind : null;
 }
 

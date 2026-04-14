@@ -1,10 +1,7 @@
 import { SelectionSchema } from "@textfresser/linguistics";
-import type { z } from "zod/v3";
 import { err, ok } from "neverthrow";
-import {
-	LexicalGenerationFailureKind,
-	lexicalGenerationError,
-} from "./errors";
+import type { z } from "zod/v3";
+import { LexicalGenerationFailureKind, lexicalGenerationError } from "./errors";
 import { executePrompt } from "./internal/prompt-executor";
 import {
 	operationRegistry,
@@ -35,14 +32,15 @@ function getLexemeSelectionSchema(
 		return null;
 	}
 
-	const surfaceBranch = SelectionSchema.German[orthographicStatus][surfaceKind];
+	const surfaceBranch =
+		SelectionSchema.German[orthographicStatus][surfaceKind];
 	if (!surfaceBranch || !("Lexeme" in surfaceBranch)) {
 		return null;
 	}
 
-	const schema = (surfaceBranch.Lexeme as Record<string, z.ZodTypeAny | undefined>)[
-		discriminator
-	];
+	const schema = (
+		surfaceBranch.Lexeme as Record<string, z.ZodTypeAny | undefined>
+	)[discriminator];
 	return schema ?? null;
 }
 
@@ -59,9 +57,9 @@ function getPhrasemeSelectionSchema(
 		return null;
 	}
 
-	const schema = (lemmaBranch.Phraseme as Record<string, z.ZodTypeAny | undefined>)[
-		discriminator
-	];
+	const schema = (
+		lemmaBranch.Phraseme as Record<string, z.ZodTypeAny | undefined>
+	)[discriminator];
 	return schema ?? null;
 }
 
@@ -78,7 +76,10 @@ function evaluateSelectionOutput(
 		if (output.lemmaKind === "Lexeme" && !output.discriminator) {
 			issueCount += 10;
 		}
-		if (output.surfaceKind !== "Lemma" && output.spelledLemma === selection) {
+		if (
+			output.surfaceKind !== "Lemma" &&
+			output.spelledLemma === selection
+		) {
 			issueCount += 1;
 		}
 	}
@@ -103,7 +104,8 @@ function toResolvedSelection(
 ): ResolvedSelection | null {
 	if (output.orthographicStatus === "Unknown") {
 		return {
-			contextWithLinkedParts: output.contextWithLinkedParts ?? attestation,
+			contextWithLinkedParts:
+				output.contextWithLinkedParts ?? attestation,
 			language: "German",
 			orthographicStatus: "Unknown",
 		};
@@ -113,7 +115,8 @@ function toResolvedSelection(
 		return null;
 	}
 
-	const orthographicStatus = (output.orthographicStatus ?? "Standard") as KnownOrthographicStatus;
+	const orthographicStatus = (output.orthographicStatus ??
+		"Standard") as KnownOrthographicStatus;
 	const base = {
 		contextWithLinkedParts: output.contextWithLinkedParts ?? attestation,
 		language: "German" as const,
@@ -137,8 +140,8 @@ function toResolvedSelection(
 					? { inflectionalFeatures: {} }
 					: {}),
 				lemma: {
-					lemmaKind: "Lexeme" as const,
 					language: "German" as const,
+					lemmaKind: "Lexeme" as const,
 					pos: output.discriminator,
 					spelledLemma: output.spelledLemma,
 				},
@@ -168,8 +171,8 @@ function toResolvedSelection(
 			surface: {
 				...base.surface,
 				lemma: {
-					lemmaKind: "Phraseme" as const,
 					language: "German" as const,
+					lemmaKind: "Phraseme" as const,
 					phrasemeKind: output.discriminator,
 					spelledLemma: output.spelledLemma,
 				},

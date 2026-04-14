@@ -184,17 +184,23 @@ export type FeaturesGenerator = (
 export type InflectionsGenerator = (
 	selection: ResolvedSelection,
 	attestation: string,
-) => Promise<Result<LexicalInfoField<LexemeInflections>, LexicalGenerationError>>;
+) => Promise<
+	Result<LexicalInfoField<LexemeInflections>, LexicalGenerationError>
+>;
 
 export type MorphemicBreakdownGenerator = (
 	selection: ResolvedSelection,
 	attestation: string,
-) => Promise<Result<LexicalInfoField<MorphemicBreakdown>, LexicalGenerationError>>;
+) => Promise<
+	Result<LexicalInfoField<MorphemicBreakdown>, LexicalGenerationError>
+>;
 
 export type RelationsGenerator = (
 	selection: ResolvedSelection,
 	attestation: string,
-) => Promise<Result<LexicalInfoField<LexicalRelations>, LexicalGenerationError>>;
+) => Promise<
+	Result<LexicalInfoField<LexicalRelations>, LexicalGenerationError>
+>;
 
 export type LexicalInfoGenerator = (
 	selection: ResolvedSelection,

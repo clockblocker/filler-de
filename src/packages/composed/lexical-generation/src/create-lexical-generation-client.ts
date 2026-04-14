@@ -1,13 +1,13 @@
 import { ok } from "neverthrow";
+import { buildSenseDisambiguator } from "./disambiguation";
+import { validatePromptAvailability } from "./internal/prompt-executor";
+import { buildPartGenerators } from "./lexical-info";
 import type {
 	CreateLexicalGenerationClientParams,
 	LexicalGenerationClient,
 	LexicalGenerationClientResult,
 } from "./public-types";
-import { buildSenseDisambiguator } from "./disambiguation";
-import { buildPartGenerators } from "./lexical-info";
 import { buildSelectionResolver } from "./resolve-selection";
-import { validatePromptAvailability } from "./internal/prompt-executor";
 
 export function createLexicalGenerationClient(
 	params: CreateLexicalGenerationClientParams,

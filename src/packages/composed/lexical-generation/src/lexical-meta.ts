@@ -1,10 +1,14 @@
 import { err, ok, type Result } from "neverthrow";
 import {
+	type LexicalGenerationError,
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,
-	type LexicalGenerationError,
 } from "./errors";
-import type { LexicalIdentity, LexicalMeta, ResolvedSelection } from "./public-types";
+import type {
+	LexicalIdentity,
+	LexicalMeta,
+	ResolvedSelection,
+} from "./public-types";
 import {
 	getLemmaKind,
 	getSelectionDiscriminator,

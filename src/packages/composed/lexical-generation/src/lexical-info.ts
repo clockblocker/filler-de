@@ -1,33 +1,30 @@
+import type { MorphemeKind } from "@textfresser/linguistics";
 import { err, ok, type Result } from "neverthrow";
 import {
-	type MorphemeKind,
-	type Pos,
-} from "@textfresser/linguistics";
-import {
+	type LexicalGenerationError,
 	LexicalGenerationFailureKind,
 	lexicalGenerationError,
-	type LexicalGenerationError,
 } from "./errors";
 import { executePrompt } from "./internal/prompt-executor";
 import {
-	operationRegistry,
 	type CorePromptOutput,
 	type FeaturesPromptOutput,
 	type GenericInflectionsPromptOutput,
 	type MorphemicBreakdownPromptOutput,
 	type NounInflectionsPromptOutput,
+	operationRegistry,
 	type RelationsPromptOutput,
 } from "./internal/prompt-registry";
 import type {
 	CreateLexicalGenerationClientParams,
 	GenerateCoreOptions,
 	GenerateLexicalInfoOptions,
+	LexemeInflections,
 	LexicalCore,
 	LexicalFeatures,
 	LexicalInfo,
 	LexicalInfoField,
 	LexicalRelations,
-	LexemeInflections,
 	MorphemicBreakdown,
 	ResolvedSelection,
 } from "./public-types";
@@ -80,7 +77,9 @@ function isProperNounSelection(
 	ResolvedSelection,
 	{ surface: { lemma: { lemmaKind: "Lexeme"; pos: "PROPN" } } }
 > {
-	return isLexemeSelection(selection) && selection.surface.lemma.pos === "PROPN";
+	return (
+		isLexemeSelection(selection) && selection.surface.lemma.pos === "PROPN"
+	);
 }
 
 function shouldGenerateRelations(selection: ResolvedSelection) {
@@ -114,7 +113,8 @@ function mapCoreOutput(
 ): LexicalCore {
 	return {
 		emojiDescription:
-			precomputedEmojiDescription && precomputedEmojiDescription.length > 0
+			precomputedEmojiDescription &&
+			precomputedEmojiDescription.length > 0
 				? precomputedEmojiDescription
 				: output.emojiDescription,
 		ipa: output.ipa,
@@ -124,7 +124,8 @@ function mapCoreOutput(
 
 function mapFeaturesOutput(output: FeaturesPromptOutput): LexicalFeatures {
 	return {
-		inherentFeatures: output.inherentFeatures as LexicalFeatures["inherentFeatures"],
+		inherentFeatures:
+			output.inherentFeatures as LexicalFeatures["inherentFeatures"],
 	};
 }
 
@@ -140,7 +141,9 @@ function mapGenericInflections(
 	};
 }
 
-function mapNounInflections(output: NounInflectionsPromptOutput): LexemeInflections {
+function mapNounInflections(
+	output: NounInflectionsPromptOutput,
+): LexemeInflections {
 	return {
 		cells: output.cells,
 		...(output.gender ? { gender: output.gender } : {}),
@@ -152,7 +155,9 @@ function mapMorphemicBreakdown(
 	output: MorphemicBreakdownPromptOutput,
 ): MorphemicBreakdown {
 	return {
-		...(output.compoundedFrom ? { compoundedFrom: output.compoundedFrom } : {}),
+		...(output.compoundedFrom
+			? { compoundedFrom: output.compoundedFrom }
+			: {}),
 		...(output.derivedFrom ? { derivedFrom: output.derivedFrom } : {}),
 		morphemes: output.morphemes.map((morpheme) => ({
 			...(morpheme.isSeparable === true
@@ -207,7 +212,9 @@ export function buildPartGenerators(deps: PromptDeps) {
 		selection: ResolvedSelection,
 		attestation: string,
 		options?: GenerateCoreOptions,
-	): Promise<Result<LexicalInfoField<LexicalCore>, LexicalGenerationError>> => {
+	): Promise<
+		Result<LexicalInfoField<LexicalCore>, LexicalGenerationError>
+	> => {
 		const known = ensureKnownSelection(selection);
 		if (known.isErr()) {
 			return err(known.error);
@@ -216,7 +223,7 @@ export function buildPartGenerators(deps: PromptDeps) {
 		const route = isPhrasemeSelection(selection)
 			? operationRegistry.core.phraseme
 			: isLexemeSelection(selection) &&
-				  (selection.surface.lemma.pos === "NOUN" ||
+					(selection.surface.lemma.pos === "NOUN" ||
 						selection.surface.lemma.pos === "PROPN")
 				? operationRegistry.core.noun
 				: operationRegistry.core.lexeme;
@@ -246,7 +253,9 @@ export function buildPartGenerators(deps: PromptDeps) {
 	const generateFeatures = async (
 		selection: ResolvedSelection,
 		attestation: string,
-	): Promise<Result<LexicalInfoField<LexicalFeatures>, LexicalGenerationError>> => {
+	): Promise<
+		Result<LexicalInfoField<LexicalFeatures>, LexicalGenerationError>
+	> => {
 		const known = ensureKnownSelection(selection);
 		if (known.isErr()) {
 			return err(known.error);
@@ -255,7 +264,8 @@ export function buildPartGenerators(deps: PromptDeps) {
 			return ok({ status: "not_applicable" });
 		}
 
-		const route = operationRegistry.featuresByPos[selection.surface.lemma.pos];
+		const route =
+			operationRegistry.featuresByPos[selection.surface.lemma.pos];
 		const promptResult = await executePrompt(deps, route, {
 			attestation,
 			lemma: selection.surface.lemma.spelledLemma,
@@ -274,7 +284,9 @@ export function buildPartGenerators(deps: PromptDeps) {
 	const generateInflections = async (
 		selection: ResolvedSelection,
 		attestation: string,
-	): Promise<Result<LexicalInfoField<LexemeInflections>, LexicalGenerationError>> => {
+	): Promise<
+		Result<LexicalInfoField<LexemeInflections>, LexicalGenerationError>
+	> => {
 		const known = ensureKnownSelection(selection);
 		if (known.isErr()) {
 			return err(known.error);
@@ -285,17 +297,26 @@ export function buildPartGenerators(deps: PromptDeps) {
 
 		const pos = selection.surface.lemma.pos;
 		const nounLike = pos === "NOUN";
-		const genericAllowed = pos === "ADJ" || pos === "AUX" || pos === "DET" || pos === "PRON" || pos === "VERB";
+		const genericAllowed =
+			pos === "ADJ" ||
+			pos === "AUX" ||
+			pos === "DET" ||
+			pos === "PRON" ||
+			pos === "VERB";
 		if (!nounLike && !genericAllowed) {
 			return ok({ status: "not_applicable" });
 		}
 
 		if (nounLike) {
-			const promptResult = await executePrompt(deps, operationRegistry.nounInflections, {
-				attestation,
-				discriminator: pos,
-				lemma: selection.surface.lemma.spelledLemma,
-			});
+			const promptResult = await executePrompt(
+				deps,
+				operationRegistry.nounInflections,
+				{
+					attestation,
+					discriminator: pos,
+					lemma: selection.surface.lemma.spelledLemma,
+				},
+			);
 			if (promptResult.isErr()) {
 				return err(promptResult.error);
 			}
@@ -305,11 +326,15 @@ export function buildPartGenerators(deps: PromptDeps) {
 			});
 		}
 
-		const promptResult = await executePrompt(deps, operationRegistry.genericInflections, {
-			attestation,
-			discriminator: pos,
-			lemma: selection.surface.lemma.spelledLemma,
-		});
+		const promptResult = await executePrompt(
+			deps,
+			operationRegistry.genericInflections,
+			{
+				attestation,
+				discriminator: pos,
+				lemma: selection.surface.lemma.spelledLemma,
+			},
+		);
 		if (promptResult.isErr()) {
 			return err(promptResult.error);
 		}
@@ -322,7 +347,9 @@ export function buildPartGenerators(deps: PromptDeps) {
 	const generateMorphemicBreakdown = async (
 		selection: ResolvedSelection,
 		attestation: string,
-	): Promise<Result<LexicalInfoField<MorphemicBreakdown>, LexicalGenerationError>> => {
+	): Promise<
+		Result<LexicalInfoField<MorphemicBreakdown>, LexicalGenerationError>
+	> => {
 		const known = ensureKnownSelection(selection);
 		if (known.isErr()) {
 			return err(known.error);
@@ -355,7 +382,9 @@ export function buildPartGenerators(deps: PromptDeps) {
 	const generateRelations = async (
 		selection: ResolvedSelection,
 		attestation: string,
-	): Promise<Result<LexicalInfoField<LexicalRelations>, LexicalGenerationError>> => {
+	): Promise<
+		Result<LexicalInfoField<LexicalRelations>, LexicalGenerationError>
+	> => {
 		const known = ensureKnownSelection(selection);
 		if (known.isErr()) {
 			return err(known.error);
@@ -364,15 +393,22 @@ export function buildPartGenerators(deps: PromptDeps) {
 			return ok({ status: "not_applicable" } as const);
 		}
 
-		const promptResult = await executePrompt(deps, operationRegistry.relations, {
-			attestation,
-			...(isLexemeSelection(selection)
-				? { discriminator: selection.surface.lemma.pos }
-				: isPhrasemeSelection(selection)
-					? { discriminator: selection.surface.lemma.phrasemeKind }
-					: {}),
-			lemma: getSpelledLemma(selection) ?? "",
-		});
+		const promptResult = await executePrompt(
+			deps,
+			operationRegistry.relations,
+			{
+				attestation,
+				...(isLexemeSelection(selection)
+					? { discriminator: selection.surface.lemma.pos }
+					: isPhrasemeSelection(selection)
+						? {
+								discriminator:
+									selection.surface.lemma.phrasemeKind,
+							}
+						: {}),
+				lemma: getSpelledLemma(selection) ?? "",
+			},
+		);
 		if (promptResult.isErr()) {
 			return err(promptResult.error);
 		}
@@ -425,7 +461,13 @@ export function buildPartGenerators(deps: PromptDeps) {
 				relationsPromise,
 			]);
 
-		for (const result of [core, features, inflections, morphemicBreakdown, relations]) {
+		for (const result of [
+			core,
+			features,
+			inflections,
+			morphemicBreakdown,
+			relations,
+		]) {
 			if (result.isErr()) {
 				return err(result.error);
 			}
