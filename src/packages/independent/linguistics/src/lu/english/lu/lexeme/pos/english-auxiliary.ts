@@ -1,13 +1,14 @@
 import { UniversalFeature } from "../../../../universal/enums/feature";
 import { featureSchema } from "../../../../universal/helpers/schema-targets";
-import { EnglishFeature } from "../shared/english-common-enums";
 import { buildEnglishLexemeBundle } from "../shared/build-english-lexeme-bundle";
+import { EnglishFeature } from "../shared/english-common-enums";
 
 // https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-Number.html
 const EnglishAuxiliaryNumber = EnglishFeature.Number.extract(["Plur", "Sing"]);
 
 // https://universaldependencies.org/u/feat/Style.html
 const EnglishAuxiliaryStyle = EnglishFeature.Style.extract(["Arch", "Vrnc"]);
+
 // https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-VerbForm.html
 const EnglishAuxiliaryVerbForm = EnglishFeature.VerbForm.extract([
 	"Fin",

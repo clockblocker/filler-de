@@ -3,8 +3,8 @@ import {
 	featureSchema,
 	featureValueSet,
 } from "../../../../universal/helpers/schema-targets";
-import { EnglishFeature } from "../shared/english-common-enums";
 import { buildEnglishLexemeBundle } from "../shared/build-english-lexeme-bundle";
+import { EnglishFeature } from "../shared/english-common-enums";
 
 // https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-PRON.html
 const EnglishPronounExtPos = UniversalFeature.ExtPos.extract(["ADV", "PRON"]);

@@ -1,7 +1,7 @@
 import { UniversalFeature } from "../../../../universal/enums/feature";
 import { featureSchema } from "../../../../universal/helpers/schema-targets";
-import { EnglishFeature } from "../shared/english-common-enums";
 import { buildEnglishLexemeBundle } from "../shared/build-english-lexeme-bundle";
+import { EnglishFeature } from "../shared/english-common-enums";
 
 const EnglishCoordinatingConjunctionInflectionalFeaturesSchema = featureSchema(
 	{},
