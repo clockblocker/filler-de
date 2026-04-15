@@ -1,16 +1,22 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
 import { EnglishFeature } from "../../../shared/english-common-enums";
-import { EnglishNumeralNumType } from "./english-numeral-enums";
+import {
+	EnglishNumeralExtPos,
+	EnglishNumeralNumForm,
+	EnglishNumeralNumType,
+} from "./english-numeral-enums";
 
-export const EnglishNumeralInflectionalFeaturesSchema = featureSchema({
-	case: EnglishFeature.Case.optional(),
-	gender: EnglishFeature.Gender.optional(),
-	number: EnglishFeature.Number.optional(),
-});
+// Sources:
+// - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-NUM.html
+// - https://universaldependencies.org/u/feat/NumForm.html
+// - https://universaldependencies.org/u/feat/Typo.html
+export const EnglishNumeralInflectionalFeaturesSchema = featureSchema({});
 
 export const EnglishNumeralInherentFeaturesSchema = featureSchema({
 	abbr: UniversalFeature.Abbr.optional(),
-	foreign: UniversalFeature.Foreign.optional(),
+	extPos: EnglishNumeralExtPos.optional(),
+	numForm: EnglishNumeralNumForm.optional(),
 	numType: EnglishNumeralNumType.optional(),
+	typo: EnglishFeature.Typo.optional(),
 });

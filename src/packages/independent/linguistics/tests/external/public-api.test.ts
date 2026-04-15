@@ -147,7 +147,7 @@ describe("public API usage", () => {
 	it("supports English in the broad type aliases", () => {
 		const lemma = {
 			canonicalLemma: "dog",
-			inherentFeatures: { gender: "Neut" },
+			inherentFeatures: { numType: "Card" },
 			language: "English",
 			lemmaKind: "Lexeme",
 			meaningInEmojis: "🐕",
@@ -169,7 +169,7 @@ describe("public API usage", () => {
 			canonicalLemma: "small",
 			inherentFeatures: {
 				abbr: "Yes",
-				numType: "Card",
+				numType: "Ord",
 			},
 			language: "English",
 			lemmaKind: "Lexeme",

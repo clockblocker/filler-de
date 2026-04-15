@@ -22,6 +22,7 @@ import { Foreign } from "./ud/foreign";
 import { Gender } from "./ud/gender";
 import { Mood } from "./ud/mood";
 import { NounClass } from "./ud/noun-class";
+import { NumForm } from "./ud/num-form";
 import { NumType } from "./ud/num-type";
 import { GrammaticalNumber } from "./ud/number";
 import { Person } from "./ud/person";
@@ -30,7 +31,9 @@ import { Polite } from "./ud/polite";
 import { Poss } from "./ud/poss";
 import { PronType } from "./ud/pron-type";
 import { Reflex } from "./ud/reflex";
+import { Style } from "./ud/style";
 import { Tense } from "./ud/tense";
+import { Typo } from "./ud/typo";
 import { VerbForm } from "./ud/verb-form";
 import { Voice } from "./ud/voice";
 
@@ -55,6 +58,7 @@ export const UniversalFeature = {
 	LexicallyReflexive,
 	Mood,
 	NounClass,
+	NumForm,
 	NumType,
 	Person,
 	Phrasal,
@@ -64,7 +68,9 @@ export const UniversalFeature = {
 	PronType,
 	Reflex,
 	Separable,
+	Style,
 	Tense,
+	Typo,
 	VerbForm,
 	Voice,
 } as const;
@@ -95,6 +101,7 @@ export type AbstractFeatures = Prettify<{
 	phrasal: UniversalFeatureValue<"Phrasal">;
 	mood: UniversalFeatureValue<"Mood">;
 	nounClass: UniversalFeatureValue<"NounClass">;
+	numForm: UniversalFeatureValue<"NumForm">;
 	number: UniversalFeatureValue<"GrammaticalNumber">;
 	numType: UniversalFeatureValue<"NumType">;
 	person: UniversalFeatureValue<"Person">;
@@ -103,7 +110,9 @@ export type AbstractFeatures = Prettify<{
 	poss: UniversalFeatureValue<"Poss">;
 	pronType: UniversalFeatureValue<"PronType">;
 	reflex: UniversalFeatureValue<"Reflex">;
+	style: UniversalFeatureValue<"Style">;
 	tense: UniversalFeatureValue<"Tense">;
+	typo: UniversalFeatureValue<"Typo">;
 	verbForm: UniversalFeatureValue<"VerbForm">;
 	voice: UniversalFeatureValue<"Voice">;
 	separable: UniversalFeatureValue<"Separable">;

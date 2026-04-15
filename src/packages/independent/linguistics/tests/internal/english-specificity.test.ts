@@ -4,9 +4,14 @@ import { EnglishAdpositionSchemas } from "../../src/lu/english/lu/lexeme/pos/adp
 import { EnglishAuxiliarySchemas } from "../../src/lu/english/lu/lexeme/pos/auxiliary/english-auxiliary-bundle";
 import { EnglishDeterminerSchemas } from "../../src/lu/english/lu/lexeme/pos/determiner/english-determiner-bundle";
 import { EnglishNounSchemas } from "../../src/lu/english/lu/lexeme/pos/noun/english-noun-bundle";
+import { EnglishNumeralSchemas } from "../../src/lu/english/lu/lexeme/pos/numeral/english-numeral-bundle";
+import { EnglishOtherSchemas } from "../../src/lu/english/lu/lexeme/pos/other/english-other-bundle";
+import { EnglishParticleSchemas } from "../../src/lu/english/lu/lexeme/pos/particle/english-particle-bundle";
 import { EnglishPronounSchemas } from "../../src/lu/english/lu/lexeme/pos/pronoun/english-pronoun-bundle";
 import { EnglishProperNounSchemas } from "../../src/lu/english/lu/lexeme/pos/proper-noun/english-proper-noun-bundle";
+import { EnglishSymbolSchemas } from "../../src/lu/english/lu/lexeme/pos/symbol/english-symbol-bundle";
 import { EnglishVerbSchemas } from "../../src/lu/english/lu/lexeme/pos/verb/english-verb-bundle";
+import { EnglishCoordinatingConjunctionSchemas } from "../../src/lu/english/lu/lexeme/pos/coordinating-conjunction/english-coordinating-conjunction-bundle";
 
 function lexemeSurface(pos: string, canonicalLemma: string) {
 	return {
@@ -71,19 +76,18 @@ describe("English schema specificity", () => {
 		).toBe(false);
 	});
 
-	it("limits English NOUN and PROPN case to genitive and drops grammatical gender", () => {
+	it("keeps English NOUN and PROPN to UD-style number features and drops grammatical gender", () => {
 		expect(
 			EnglishNounSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
-				spelledSelection: "dog's",
+				spelledSelection: "scissors",
 				surface: {
-					...lexemeSurface("NOUN", "dog"),
+					...lexemeSurface("NOUN", "scissors"),
 					inflectionalFeatures: {
-						case: "Gen",
-						number: "Sing",
+						number: "Ptan",
 					},
-					normalizedFullSurface: "dog's",
+					normalizedFullSurface: "scissors",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -97,7 +101,7 @@ describe("English schema specificity", () => {
 				surface: {
 					...lexemeSurface("NOUN", "dog"),
 					inflectionalFeatures: {
-						case: "Dat",
+						case: "Gen",
 					},
 					normalizedFullSurface: "dog",
 					surfaceKind: "Inflection",
@@ -113,13 +117,13 @@ describe("English schema specificity", () => {
 				surface: {
 					...lexemeSurface("PROPN", "Anna"),
 					inflectionalFeatures: {
-						case: "Nom",
+						number: "Ptan",
 					},
 					normalizedFullSurface: "Anna",
 					surfaceKind: "Inflection",
 				},
 			}).success,
-		).toBe(false);
+		).toBe(true);
 
 		expect(
 			EnglishNounSchemas.LemmaSchema.safeParse({
@@ -183,6 +187,67 @@ describe("English schema specificity", () => {
 
 		expect(
 			EnglishVerbSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "wash",
+				inherentFeatures: {
+					typo: "Yes",
+				},
+				language: "English",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🧼",
+				pos: "VERB",
+			}).success,
+		).toBe(true);
+
+		expect(
+			EnglishVerbSchemas.InflectionSelectionSchema.safeParse({
+				language: "English",
+				orthographicStatus: "Standard",
+				spelledSelection: "washing",
+				surface: {
+					...lexemeSurface("VERB", "wash"),
+					inflectionalFeatures: {
+						verbForm: "Ger",
+					},
+					normalizedFullSurface: "washing",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(true);
+
+		expect(
+			EnglishVerbSchemas.InflectionSelectionSchema.safeParse({
+				language: "English",
+				orthographicStatus: "Standard",
+				spelledSelection: "washed",
+				surface: {
+					...lexemeSurface("VERB", "wash"),
+					inflectionalFeatures: {
+						voice: "Pass",
+					},
+					normalizedFullSurface: "washed",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(true);
+
+		expect(
+			EnglishAuxiliarySchemas.InflectionSelectionSchema.safeParse({
+				language: "English",
+				orthographicStatus: "Standard",
+				spelledSelection: "being",
+				surface: {
+					...lexemeSurface("AUX", "be"),
+					inflectionalFeatures: {
+						verbForm: "Ger",
+					},
+					normalizedFullSurface: "being",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(false);
+
+		expect(
+			EnglishVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "look",
 				inherentFeatures: {
 					governedPreposition: "to",
@@ -235,7 +300,7 @@ describe("English schema specificity", () => {
 		).toBe(false);
 	});
 
-	it("keeps English pronoun case narrow and rejects polite pronoun or determiner features", () => {
+	it("aligns English pronoun and determiner features with UD English EWT", () => {
 		expect(
 			EnglishPronounSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
@@ -270,6 +335,20 @@ describe("English schema specificity", () => {
 
 		expect(
 			EnglishPronounSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "self",
+				inherentFeatures: {
+					pronType: "Emp",
+					style: "Expr",
+				},
+				language: "English",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "👤",
+				pos: "PRON",
+			}).success,
+		).toBe(true);
+
+		expect(
+			EnglishPronounSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "him",
 				inherentFeatures: {
 					polite: "Form",
@@ -283,9 +362,28 @@ describe("English schema specificity", () => {
 
 		expect(
 			EnglishDeterminerSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "half",
+				inherentFeatures: {
+					abbr: "Yes",
+					extPos: "ADV",
+					numForm: "Word",
+					numType: "Frac",
+					pronType: "Rcp",
+					style: "Vrnc",
+					typo: "Yes",
+				},
+				language: "English",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🧮",
+				pos: "DET",
+			}).success,
+		).toBe(true);
+
+		expect(
+			EnglishDeterminerSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "this",
 				inherentFeatures: {
-					polite: "Form",
+					poss: "Yes",
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
@@ -307,6 +405,155 @@ describe("English schema specificity", () => {
 					normalizedFullSurface: "this",
 					surfaceKind: "Inflection",
 				},
+			}).success,
+		).toBe(false);
+	});
+
+	it("aligns English NUM, SYM, and X with UD English EWT", () => {
+		expect(
+			EnglishNumeralSchemas.InflectionSelectionSchema.safeParse({
+				language: "English",
+				orthographicStatus: "Standard",
+				spelledSelection: "two",
+				surface: {
+					...lexemeSurface("NUM", "two"),
+					inflectionalFeatures: {
+						case: "Acc",
+					},
+					normalizedFullSurface: "two",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(false);
+
+		expect(
+			EnglishNumeralSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "II",
+				inherentFeatures: {
+					abbr: "Yes",
+					extPos: "PROPN",
+					numForm: "Roman",
+					numType: "Frac",
+					typo: "Yes",
+				},
+				language: "English",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🧮",
+				pos: "NUM",
+			}).success,
+		).toBe(true);
+
+		expect(
+			EnglishSymbolSchemas.InflectionSelectionSchema.safeParse({
+				language: "English",
+				orthographicStatus: "Standard",
+				spelledSelection: "%",
+				surface: {
+					...lexemeSurface("SYM", "%"),
+					inflectionalFeatures: {
+						number: "Sing",
+					},
+					normalizedFullSurface: "%",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(true);
+
+		expect(
+			EnglishSymbolSchemas.InflectionSelectionSchema.safeParse({
+				language: "English",
+				orthographicStatus: "Standard",
+				spelledSelection: "%",
+				surface: {
+					...lexemeSurface("SYM", "%"),
+					inflectionalFeatures: {
+						case: "Acc",
+					},
+					normalizedFullSurface: "%",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(false);
+
+		expect(
+			EnglishOtherSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "etc",
+				inherentFeatures: {
+					extPos: "PROPN",
+					foreign: "Yes",
+					typo: "Yes",
+				},
+				language: "English",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "❓",
+				pos: "X",
+			}).success,
+		).toBe(true);
+
+		expect(
+			EnglishOtherSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "etc",
+				inherentFeatures: {
+					numType: "Card",
+				},
+				language: "English",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "❓",
+				pos: "X",
+			}).success,
+		).toBe(false);
+	});
+
+	it("limits English PART and CCONJ polarity to Neg in UD English EWT", () => {
+		expect(
+			EnglishParticleSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "not",
+				inherentFeatures: {
+					polarity: "Neg",
+				},
+				language: "English",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🚫",
+				pos: "PART",
+			}).success,
+		).toBe(true);
+
+		expect(
+			EnglishParticleSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "not",
+				inherentFeatures: {
+					polarity: "Pos",
+				},
+				language: "English",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🚫",
+				pos: "PART",
+			}).success,
+		).toBe(false);
+
+		expect(
+			EnglishCoordinatingConjunctionSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "nor",
+				inherentFeatures: {
+					polarity: "Neg",
+				},
+				language: "English",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🔗",
+				pos: "CCONJ",
+			}).success,
+		).toBe(true);
+
+		expect(
+			EnglishCoordinatingConjunctionSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "and",
+				inherentFeatures: {
+					polarity: "Pos",
+				},
+				language: "English",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🔗",
+				pos: "CCONJ",
 			}).success,
 		).toBe(false);
 	});

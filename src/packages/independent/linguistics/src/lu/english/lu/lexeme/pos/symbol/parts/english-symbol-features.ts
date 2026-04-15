@@ -1,15 +1,20 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
-import { EnglishFeature } from "../../../shared/english-common-enums";
-import { EnglishSymbolNumType } from "./english-symbol-enums";
+import { EnglishSymbolExtPos } from "./english-symbol-enums";
 
+const EnglishSymbolNumber = UniversalFeature.GrammaticalNumber.extract([
+	"Plur",
+	"Sing",
+]);
+
+// Sources:
+// - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-SYM.html
+// - https://universaldependencies.org/u/feat/ExtPos.html
 export const EnglishSymbolInflectionalFeaturesSchema = featureSchema({
-	case: EnglishFeature.Case.optional(),
-	gender: EnglishFeature.Gender.optional(),
-	number: EnglishFeature.Number.optional(),
+	number: EnglishSymbolNumber.optional(),
 });
 
 export const EnglishSymbolInherentFeaturesSchema = featureSchema({
-	foreign: UniversalFeature.Foreign.optional(),
-	numType: EnglishSymbolNumType.optional(),
+	abbr: UniversalFeature.Abbr.optional(),
+	extPos: EnglishSymbolExtPos.optional(),
 });

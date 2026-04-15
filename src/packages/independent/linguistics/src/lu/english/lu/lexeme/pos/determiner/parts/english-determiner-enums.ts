@@ -1,18 +1,28 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 
+// Source: https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-DET.html
+export const EnglishDeterminerExtPos = UniversalFeature.ExtPos.extract([
+	"ADV",
+	"PRON",
+]);
+
+export const EnglishDeterminerNumForm = UniversalFeature.NumForm.extract([
+	"Word",
+]);
+
 export const EnglishDeterminerNumType = UniversalFeature.NumType.extract([
-	"Card",
-	"Ord",
+	"Frac",
 ]);
 
 export const EnglishDeterminerPronType = UniversalFeature.PronType.extract([
 	"Art",
 	"Dem",
-	"Exc",
 	"Ind",
 	"Int",
 	"Neg",
-	"Prs",
+	"Rcp",
 	"Rel",
 	"Tot",
 ]);
+
+export const EnglishDeterminerStyle = UniversalFeature.Style.extract(["Vrnc"]);

@@ -1,6 +1,7 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 
-export const EnglishSymbolNumType = UniversalFeature.NumType.extract([
-	"Card",
-	"Range",
+// Source: https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-SYM.html
+export const EnglishSymbolExtPos = UniversalFeature.ExtPos.extract([
+	"ADP",
+	"PROPN",
 ]);
