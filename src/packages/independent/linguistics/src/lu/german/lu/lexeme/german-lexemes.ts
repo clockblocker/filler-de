@@ -2,23 +2,23 @@ import type {
 	LemmaSchemaLanguageShape,
 	SelectionSchemaLanguageShape,
 } from "../../../registry-shapes";
-import { GermanAdjectiveSchemas } from "./pos/adjective/german-adjective-bundle";
-import { GermanAdpositionSchemas } from "./pos/adposition/german-adposition-bundle";
-import { GermanAdverbSchemas } from "./pos/adverb/german-adverb-bundle";
-import { GermanAuxiliarySchemas } from "./pos/auxiliary/german-auxiliary-bundle";
-import { GermanCoordinatingConjunctionSchemas } from "./pos/coordinating-conjunction/german-coordinating-conjunction-bundle";
-import { GermanDeterminerSchemas } from "./pos/determiner/german-determiner-bundle";
-import { GermanInterjectionSchemas } from "./pos/interjection/german-interjection-bundle";
-import { GermanNounSchemas } from "./pos/noun/german-noun-bundle";
-import { GermanNumeralSchemas } from "./pos/numeral/german-numeral-bundle";
-import { GermanOtherSchemas } from "./pos/other/german-other-bundle";
-import { GermanParticleSchemas } from "./pos/particle/german-particle-bundle";
-import { GermanPronounSchemas } from "./pos/pronoun/german-pronoun-bundle";
-import { GermanProperNounSchemas } from "./pos/proper-noun/german-proper-noun-bundle";
-import { GermanPunctuationSchemas } from "./pos/punctuation/german-punctuation-bundle";
-import { GermanSubordinatingConjunctionSchemas } from "./pos/subordinating-conjunction/german-subordinating-conjunction-bundle";
-import { GermanSymbolSchemas } from "./pos/symbol/german-symbol-bundle";
-import { GermanVerbSchemas } from "./pos/verb/german-verb-bundle";
+import { GermanAdjectiveSchemas } from "./pos/german-adjective";
+import { GermanAdpositionSchemas } from "./pos/german-adposition";
+import { GermanAdverbSchemas } from "./pos/german-adverb";
+import { GermanAuxiliarySchemas } from "./pos/german-auxiliary";
+import { GermanCoordinatingConjunctionSchemas } from "./pos/german-coordinating-conjunction";
+import { GermanDeterminerSchemas } from "./pos/german-determiner";
+import { GermanInterjectionSchemas } from "./pos/german-interjection";
+import { GermanNounSchemas } from "./pos/german-noun";
+import { GermanNumeralSchemas } from "./pos/german-numeral";
+import { GermanOtherSchemas } from "./pos/german-other";
+import { GermanParticleSchemas } from "./pos/german-particle";
+import { GermanPronounSchemas } from "./pos/german-pronoun";
+import { GermanProperNounSchemas } from "./pos/german-proper-noun";
+import { GermanPunctuationSchemas } from "./pos/german-punctuation";
+import { GermanSubordinatingConjunctionSchemas } from "./pos/german-subordinating-conjunction";
+import { GermanSymbolSchemas } from "./pos/german-symbol";
+import { GermanVerbSchemas } from "./pos/german-verb";
 
 export const GermanLexemeLemmaSchemas = {
 	ADJ: GermanAdjectiveSchemas.LemmaSchema,

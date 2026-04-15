@@ -2,23 +2,23 @@ import type {
 	LemmaSchemaLanguageShape,
 	SelectionSchemaLanguageShape,
 } from "../../../registry-shapes";
-import { EnglishAdjectiveSchemas } from "./pos/adjective/english-adjective-bundle";
-import { EnglishAdpositionSchemas } from "./pos/adposition/english-adposition-bundle";
-import { EnglishAdverbSchemas } from "./pos/adverb/english-adverb-bundle";
-import { EnglishAuxiliarySchemas } from "./pos/auxiliary/english-auxiliary-bundle";
-import { EnglishCoordinatingConjunctionSchemas } from "./pos/coordinating-conjunction/english-coordinating-conjunction-bundle";
-import { EnglishDeterminerSchemas } from "./pos/determiner/english-determiner-bundle";
-import { EnglishInterjectionSchemas } from "./pos/interjection/english-interjection-bundle";
-import { EnglishNounSchemas } from "./pos/noun/english-noun-bundle";
-import { EnglishNumeralSchemas } from "./pos/numeral/english-numeral-bundle";
-import { EnglishOtherSchemas } from "./pos/other/english-other-bundle";
-import { EnglishParticleSchemas } from "./pos/particle/english-particle-bundle";
-import { EnglishPronounSchemas } from "./pos/pronoun/english-pronoun-bundle";
-import { EnglishProperNounSchemas } from "./pos/proper-noun/english-proper-noun-bundle";
-import { EnglishPunctuationSchemas } from "./pos/punctuation/english-punctuation-bundle";
-import { EnglishSubordinatingConjunctionSchemas } from "./pos/subordinating-conjunction/english-subordinating-conjunction-bundle";
-import { EnglishSymbolSchemas } from "./pos/symbol/english-symbol-bundle";
-import { EnglishVerbSchemas } from "./pos/verb/english-verb-bundle";
+import { EnglishAdjectiveSchemas } from "./pos/english-adjective";
+import { EnglishAdpositionSchemas } from "./pos/english-adposition";
+import { EnglishAdverbSchemas } from "./pos/english-adverb";
+import { EnglishAuxiliarySchemas } from "./pos/english-auxiliary";
+import { EnglishCoordinatingConjunctionSchemas } from "./pos/english-coordinating-conjunction";
+import { EnglishDeterminerSchemas } from "./pos/english-determiner";
+import { EnglishInterjectionSchemas } from "./pos/english-interjection";
+import { EnglishNounSchemas } from "./pos/english-noun";
+import { EnglishNumeralSchemas } from "./pos/english-numeral";
+import { EnglishOtherSchemas } from "./pos/english-other";
+import { EnglishParticleSchemas } from "./pos/english-particle";
+import { EnglishPronounSchemas } from "./pos/english-pronoun";
+import { EnglishProperNounSchemas } from "./pos/english-proper-noun";
+import { EnglishPunctuationSchemas } from "./pos/english-punctuation";
+import { EnglishSubordinatingConjunctionSchemas } from "./pos/english-subordinating-conjunction";
+import { EnglishSymbolSchemas } from "./pos/english-symbol";
+import { EnglishVerbSchemas } from "./pos/english-verb";
 
 export const EnglishLexemeLemmaSchemas = {
 	ADJ: EnglishAdjectiveSchemas.LemmaSchema,

@@ -1,17 +1,17 @@
 import { describe, expect, it } from "bun:test";
-import { EnglishAdjectiveSchemas } from "../../src/lu/english/lu/lexeme/pos/adjective/english-adjective-bundle";
-import { EnglishAdpositionSchemas } from "../../src/lu/english/lu/lexeme/pos/adposition/english-adposition-bundle";
-import { EnglishAuxiliarySchemas } from "../../src/lu/english/lu/lexeme/pos/auxiliary/english-auxiliary-bundle";
-import { EnglishDeterminerSchemas } from "../../src/lu/english/lu/lexeme/pos/determiner/english-determiner-bundle";
-import { EnglishNounSchemas } from "../../src/lu/english/lu/lexeme/pos/noun/english-noun-bundle";
-import { EnglishNumeralSchemas } from "../../src/lu/english/lu/lexeme/pos/numeral/english-numeral-bundle";
-import { EnglishOtherSchemas } from "../../src/lu/english/lu/lexeme/pos/other/english-other-bundle";
-import { EnglishParticleSchemas } from "../../src/lu/english/lu/lexeme/pos/particle/english-particle-bundle";
-import { EnglishPronounSchemas } from "../../src/lu/english/lu/lexeme/pos/pronoun/english-pronoun-bundle";
-import { EnglishProperNounSchemas } from "../../src/lu/english/lu/lexeme/pos/proper-noun/english-proper-noun-bundle";
-import { EnglishSymbolSchemas } from "../../src/lu/english/lu/lexeme/pos/symbol/english-symbol-bundle";
-import { EnglishVerbSchemas } from "../../src/lu/english/lu/lexeme/pos/verb/english-verb-bundle";
-import { EnglishCoordinatingConjunctionSchemas } from "../../src/lu/english/lu/lexeme/pos/coordinating-conjunction/english-coordinating-conjunction-bundle";
+import { EnglishAdjectiveSchemas } from "../../src/lu/english/lu/lexeme/pos/english-adjective";
+import { EnglishAdpositionSchemas } from "../../src/lu/english/lu/lexeme/pos/english-adposition";
+import { EnglishAuxiliarySchemas } from "../../src/lu/english/lu/lexeme/pos/english-auxiliary";
+import { EnglishDeterminerSchemas } from "../../src/lu/english/lu/lexeme/pos/english-determiner";
+import { EnglishNounSchemas } from "../../src/lu/english/lu/lexeme/pos/english-noun";
+import { EnglishNumeralSchemas } from "../../src/lu/english/lu/lexeme/pos/english-numeral";
+import { EnglishOtherSchemas } from "../../src/lu/english/lu/lexeme/pos/english-other";
+import { EnglishParticleSchemas } from "../../src/lu/english/lu/lexeme/pos/english-particle";
+import { EnglishPronounSchemas } from "../../src/lu/english/lu/lexeme/pos/english-pronoun";
+import { EnglishProperNounSchemas } from "../../src/lu/english/lu/lexeme/pos/english-proper-noun";
+import { EnglishSymbolSchemas } from "../../src/lu/english/lu/lexeme/pos/english-symbol";
+import { EnglishVerbSchemas } from "../../src/lu/english/lu/lexeme/pos/english-verb";
+import { EnglishCoordinatingConjunctionSchemas } from "../../src/lu/english/lu/lexeme/pos/english-coordinating-conjunction";
 
 function lexemeSurface(pos: string, canonicalLemma: string) {
 	return {
