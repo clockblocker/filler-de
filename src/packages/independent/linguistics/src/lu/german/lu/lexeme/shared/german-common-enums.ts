@@ -1,6 +1,7 @@
 import { UniversalFeature } from "../../../../universal/enums/feature";
 
 export const GermanFeature = {
+	Aspect: UniversalFeature.Aspect.extract(["Perf"]),
 	Case: UniversalFeature.Case.extract(["Acc", "Dat", "Gen", "Nom"]),
 	Definite: UniversalFeature.Definite.extract(["Def", "Ind"]),
 	Degree: UniversalFeature.Degree.extract(["Cmp", "Pos", "Sup"]),

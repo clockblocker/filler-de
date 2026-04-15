@@ -73,6 +73,7 @@ describe("German verb schemas", () => {
 			inherentFeatures: {
 				governedPreposition: "auf",
 				lexicallyReflexive: "Yes",
+				verbType: "Mod",
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
@@ -148,6 +149,23 @@ describe("German verb schemas", () => {
 				pos: "VERB",
 			}).success,
 		).toBe(false);
+
+		expect(
+			GermanVerbSchemas.InflectionSelectionSchema.safeParse({
+				language: "German",
+				orthographicStatus: "Standard",
+				spelledSelection: "gegangen",
+				surface: {
+					...verbSurface("gehen"),
+					inflectionalFeatures: {
+						aspect: "Perf",
+						verbForm: "Part",
+					},
+					normalizedFullSurface: "gegangen",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(true);
 	});
 
 	it("validates relation payloads via the dedicated relation schemas", () => {

@@ -7,12 +7,13 @@ import { GovernedPreposition } from "./custom/governed-preposition";
 import { LexicallyReflexive } from "./custom/lexically-reflexive";
 import { Phrasal } from "./custom/phrasal";
 import { Separable } from "./custom/separable";
-import { AdpType } from "./ud/adp-type";
 import { Abbr } from "./ud/abbr";
+import { AdpType } from "./ud/adp-type";
 import { Animacy } from "./ud/animacy";
 import { Aspect } from "./ud/aspect";
 import { Case } from "./ud/case";
 import { Clusivity } from "./ud/clusivity";
+import { ConjType } from "./ud/conj-type";
 import { Definite } from "./ud/definite";
 import { Degree } from "./ud/degree";
 import { Deixis } from "./ud/deixis";
@@ -26,8 +27,8 @@ import { Mood } from "./ud/mood";
 import { NounClass } from "./ud/noun-class";
 import { NumForm } from "./ud/num-form";
 import { NumType } from "./ud/num-type";
-import { PartType } from "./ud/part-type";
 import { GrammaticalNumber } from "./ud/number";
+import { PartType } from "./ud/part-type";
 import { Person } from "./ud/person";
 import { Polarity } from "./ud/polarity";
 import { Polite } from "./ud/polite";
@@ -39,15 +40,17 @@ import { Style } from "./ud/style";
 import { Tense } from "./ud/tense";
 import { Variant } from "./ud/variant";
 import { VerbForm } from "./ud/verb-form";
+import { VerbType } from "./ud/verb-type";
 import { Voice } from "./ud/voice";
 
 export const UniversalFeature = {
-	AdpType,
 	Abbr,
+	AdpType,
 	Animacy,
 	Aspect,
 	Case,
 	Clusivity,
+	ConjType,
 	Definite,
 	Degree,
 	Deixis,
@@ -57,10 +60,10 @@ export const UniversalFeature = {
 	ExtPos,
 	Foreign,
 	Gender,
-	Hyph,
 	GovernedCase,
 	GovernedPreposition,
 	GrammaticalNumber,
+	Hyph,
 	LexicallyReflexive,
 	Mood,
 	NounClass,
@@ -81,6 +84,7 @@ export const UniversalFeature = {
 	// Typo is exluded from the list of features, because in this system, Selections are responsible forhandeling typos
 	Variant,
 	VerbForm,
+	VerbType,
 	Voice,
 } as const;
 
@@ -99,6 +103,7 @@ export type AbstractFeatures = Prettify<{
 	aspect: UniversalFeatureValue<"Aspect">;
 	case: UniversalFeatureValue<"Case">;
 	clusivity: UniversalFeatureValue<"Clusivity">;
+	conjType: UniversalFeatureValue<"ConjType">;
 	definite: UniversalFeatureValue<"Definite">;
 	degree: UniversalFeatureValue<"Degree">;
 	deixis: UniversalFeatureValue<"Deixis">;
@@ -131,6 +136,7 @@ export type AbstractFeatures = Prettify<{
 	tense: UniversalFeatureValue<"Tense">;
 	variant: UniversalFeatureValue<"Variant">;
 	verbForm: UniversalFeatureValue<"VerbForm">;
+	verbType: UniversalFeatureValue<"VerbType">;
 	voice: UniversalFeatureValue<"Voice">;
 	separable: UniversalFeatureValue<"Separable">;
 }>;

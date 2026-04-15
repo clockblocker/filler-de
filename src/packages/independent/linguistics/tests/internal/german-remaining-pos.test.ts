@@ -271,6 +271,7 @@ describe("German remaining POS schemas", () => {
 					...lexemeSurface("AUX", "werden"),
 					inflectionalFeatures: {
 						verbForm: "Part",
+						aspect: "Perf",
 						voice: "Pass",
 					},
 					normalizedFullSurface: "worden",
@@ -379,6 +380,32 @@ describe("German remaining POS schemas", () => {
 				lemmaKind: "Lexeme",
 				meaningInEmojis: "➕",
 				pos: "PART",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanSubordinatingConjunctionSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "als",
+				inherentFeatures: {
+					conjType: "Comp",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🔗",
+				pos: "SCONJ",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanCoordinatingConjunctionSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "wie",
+				inherentFeatures: {
+					conjType: "Comp",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🔗",
+				pos: "CCONJ",
 			}).success,
 		).toBe(true);
 
@@ -588,6 +615,35 @@ describe("German remaining POS schemas", () => {
 				canonicalLemma: "wer",
 				inherentFeatures: {
 					pronType: ["Neg", "Rel"],
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "❓",
+				pos: "PRON",
+			}).success,
+		).toBe(false);
+
+		expect(
+			GermanDeterminerSchemas.InflectionSelectionSchema.safeParse({
+				language: "German",
+				orthographicStatus: "Standard",
+				spelledSelection: "dessen",
+				surface: {
+					...lexemeSurface("DET", "dessen"),
+					inflectionalFeatures: {
+						gender: ["Masc", "Neut", "Neut"],
+					},
+					normalizedFullSurface: "dessen",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(false);
+
+		expect(
+			GermanPronounSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "wer",
+				inherentFeatures: {
+					pronType: ["Int", "Rel", "Rel"],
 				},
 				language: "German",
 				lemmaKind: "Lexeme",

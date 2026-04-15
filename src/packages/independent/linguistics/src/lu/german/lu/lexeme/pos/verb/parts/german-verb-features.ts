@@ -9,4 +9,5 @@ export const GermanVerbInherentFeaturesSchema = featureSchema({
 	governedPreposition: UniversalFeature.GovernedPreposition,
 	lexicallyReflexive: UniversalFeature.LexicallyReflexive,
 	separable: UniversalFeature.Separable,
+	verbType: UniversalFeature.VerbType.extract(["Mod"]),
 });

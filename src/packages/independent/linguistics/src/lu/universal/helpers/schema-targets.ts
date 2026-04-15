@@ -58,7 +58,19 @@ type OptionalizedFeatureSchemaShape<Shape extends z.ZodRawShape> = {
 };
 
 export function featureValueSet<Schema extends z.ZodTypeAny>(schema: Schema) {
-	return z.union([schema, z.array(schema).nonempty()]);
+	return z.union([
+		schema,
+		z.array(schema)
+			.nonempty()
+			.superRefine((values, ctx) => {
+				if (new Set(values).size !== values.length) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						message: "Duplicate feature values are not allowed",
+					});
+				}
+			}),
+	]);
 }
 
 export function featureSpecificValueSets<
@@ -68,7 +80,15 @@ export function featureSpecificValueSets<
 	>[]])[],
 >(schema: Schema, allowedValueSets: Allowed) {
 	const exactSetSchema = z.array(schema).nonempty().superRefine((values, ctx) => {
-		const normalizedValues = [...new Set(values)].sort();
+		if (new Set(values).size !== values.length) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "Duplicate feature values are not allowed",
+			});
+			return;
+		}
+
+		const normalizedValues = [...values].sort();
 		const isAllowed = allowedValueSets.some((allowedValues) => {
 			const normalizedAllowedValues = [...allowedValues].sort();
 

@@ -4,6 +4,7 @@ import { featureSchema } from "../../../../universal/helpers/schema-targets";
 import { GermanFeature } from "./german-common-enums";
 
 export const GermanVerbalInflectionalFeaturesSchema = featureSchema({
+	aspect: GermanFeature.Aspect,
 	gender: GermanFeature.Gender,
 	mood: GermanFeature.Mood,
 	number: GermanFeature.Number,
@@ -12,6 +13,14 @@ export const GermanVerbalInflectionalFeaturesSchema = featureSchema({
 	verbForm: GermanFeature.VerbForm,
 	voice: UniversalFeature.Voice.extract(["Pass"]),
 }).superRefine((features, ctx) => {
+	if (features.aspect !== undefined && features.verbForm !== "Part") {
+		ctx.addIssue({
+			code: z.ZodIssueCode.custom,
+			message: "German verbal aspect is only valid on participles",
+			path: ["aspect"],
+		});
+	}
+
 	if (features.gender !== undefined && features.verbForm !== "Part") {
 		ctx.addIssue({
 			code: z.ZodIssueCode.custom,
