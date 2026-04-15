@@ -1,9 +1,5 @@
-import z from "zod/v3";
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
-import type {
-	InflectionalFeaturesSchemaFor,
-	InherentFeaturesSchemaFor,
-} from "../../../../../../universal/helpers/schema-targets";
+import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
 import {
 	EnglishCase,
 	EnglishGender,
@@ -12,19 +8,15 @@ import {
 } from "../../../shared/english-common-enums";
 import { EnglishPronounPronType } from "./english-pronoun-enums";
 
-export const EnglishPronounInflectionalFeaturesSchema = z
-	.object({
-		case: EnglishCase.optional(),
-		gender: EnglishGender.optional(),
-		number: EnglishNumber.optional(),
-		reflex: UniversalFeature.Reflex.optional(),
-	})
-	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "PRON">;
+export const EnglishPronounInflectionalFeaturesSchema = featureSchema({
+	case: EnglishCase.optional(),
+	gender: EnglishGender.optional(),
+	number: EnglishNumber.optional(),
+	reflex: UniversalFeature.Reflex.optional(),
+});
 
-export const EnglishPronounInherentFeaturesSchema = z
-	.object({
-		person: EnglishPerson.optional(),
-		poss: UniversalFeature.Poss.optional(),
-		pronType: EnglishPronounPronType.optional(),
-	})
-	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "PRON">;
+export const EnglishPronounInherentFeaturesSchema = featureSchema({
+	person: EnglishPerson.optional(),
+	poss: UniversalFeature.Poss.optional(),
+	pronType: EnglishPronounPronType.optional(),
+});

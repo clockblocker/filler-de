@@ -1,13 +1,7 @@
-import z from "zod/v3";
-import type {
-	InflectionalFeaturesSchemaFor,
-	InherentFeaturesSchemaFor,
-} from "../../../../../../universal/helpers/schema-targets";
+import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
 
-export const EnglishSubordinatingConjunctionInflectionalFeaturesSchema = z
-	.object({})
-	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "SCONJ">;
+export const EnglishSubordinatingConjunctionInflectionalFeaturesSchema =
+	featureSchema({});
 
-export const EnglishSubordinatingConjunctionInherentFeaturesSchema = z
-	.object({})
-	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "SCONJ">;
+export const EnglishSubordinatingConjunctionInherentFeaturesSchema =
+	featureSchema({});

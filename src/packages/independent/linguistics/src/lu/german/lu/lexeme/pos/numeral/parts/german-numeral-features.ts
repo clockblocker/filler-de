@@ -1,30 +1,20 @@
-import z from "zod/v3";
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
-import type {
-	InflectionalFeaturesSchemaFor,
-	InherentFeaturesSchemaFor,
-} from "../../../../../../universal/helpers/schema-targets";
+import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
 import {
 	GermanCase,
 	GermanGender,
 	GermanNumber,
 } from "../../../shared/german-common-enums";
-import {
-	GermanNumeralNumType,
-} from "./german-numeral-enums";
+import { GermanNumeralNumType } from "./german-numeral-enums";
 
-export const GermanNumeralInflectionalFeaturesSchema = z
-	.object({
-		case: GermanCase.optional(),
-		gender: GermanGender.optional(),
-		number: GermanNumber.optional(),
-	})
-	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "NUM">;
+export const GermanNumeralInflectionalFeaturesSchema = featureSchema({
+	case: GermanCase.optional(),
+	gender: GermanGender.optional(),
+	number: GermanNumber.optional(),
+});
 
-export const GermanNumeralInherentFeaturesSchema = z
-	.object({
-		abbr: UniversalFeature.Abbr.optional(),
-		foreign: UniversalFeature.Foreign.optional(),
-		numType: GermanNumeralNumType.optional(),
-	})
-	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "NUM">;
+export const GermanNumeralInherentFeaturesSchema = featureSchema({
+	abbr: UniversalFeature.Abbr.optional(),
+	foreign: UniversalFeature.Foreign.optional(),
+	numType: GermanNumeralNumType.optional(),
+});

@@ -1,37 +1,24 @@
 import { describe, expect, it } from "bun:test";
 import * as linguistics from "../../src";
 import {
-	Case,
-	type InherentFeatures,
 	type Lemma,
-	LemmaKind,
 	LemmaSchema,
 	LexicalRelation,
 	LexicalRelationsSchema,
 	LingId,
-	MorphemeKind,
 	MorphologicalRelation,
 	MorphologicalRelationsSchema,
-	OrthographicStatus,
-	PhrasemeKind,
-	Pos,
 	Relations,
-	ResolvedSurfaceSchema,
 	RelationTargetLingIdsSchema,
+	ResolvedSurfaceSchema,
 	type Selection,
 	SelectionSchema,
 	type Surface,
-	SurfaceKind,
 	SurfaceSchema,
-	TARGET_LANGUAGES,
-	TargetLanguageSchema,
 } from "../../src";
 
 describe("public API usage", () => {
 	it("exposes the curated root API surface", () => {
-		expect(TARGET_LANGUAGES).toEqual(["German", "English"]);
-		expect(TargetLanguageSchema.parse("German")).toBe("German");
-		expect(TargetLanguageSchema.parse("English")).toBe("English");
 		expect(typeof linguistics.buildToLingConverters).toBe("function");
 		expect(typeof linguistics.LingId.forLanguage).toBe("function");
 
@@ -45,13 +32,6 @@ describe("public API usage", () => {
 		expect(typeof germanLingConverters.parseShallowSurface).toBe(
 			"function",
 		);
-		expect(OrthographicStatus.Standard).toBe("Standard");
-		expect(SurfaceKind.Inflection).toBe("Inflection");
-		expect(LemmaKind.Lexeme).toBe("Lexeme");
-		expect(Pos.NOUN).toBe("NOUN");
-		expect(PhrasemeKind.Aphorism).toBe("Aphorism");
-		expect(MorphemeKind.Root).toBe("Root");
-		expect(Case.Nom).toBe("Nom");
 		expect(SelectionSchema.German.Standard.Inflection.Lexeme.NOUN).toBe(
 			SelectionSchema.German.Standard.Inflection.Lexeme.NOUN,
 		);
@@ -77,6 +57,17 @@ describe("public API usage", () => {
 		expect("toLingId" in linguistics).toBe(false);
 		expect("buildToLemmaLingIdFor" in linguistics).toBe(false);
 		expect("LingIdSchema" in linguistics).toBe(false);
+		expect("TARGET_LANGUAGES" in linguistics).toBe(false);
+		expect("TargetLanguageSchema" in linguistics).toBe(false);
+		expect("OrthographicStatus" in linguistics).toBe(false);
+		expect("SurfaceKind" in linguistics).toBe(false);
+		expect("LemmaKind" in linguistics).toBe(false);
+		expect("Case" in linguistics).toBe(false);
+		expect("Gender" in linguistics).toBe(false);
+		expect("GrammaticalNumber" in linguistics).toBe(false);
+		expect("MorphemeKind" in linguistics).toBe(false);
+		expect("PhrasemeKind" in linguistics).toBe(false);
+		expect("Pos" in linguistics).toBe(false);
 	});
 
 	it("supports LingId and Relations namespace-style type access", () => {
@@ -136,7 +127,7 @@ describe("public API usage", () => {
 	it("supports ergonomic broad type aliases for German consumers", () => {
 		const lemma = {
 			canonicalLemma: "Kind",
-			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
+			inherentFeatures: { gender: "Neut" },
 			language: "German",
 			lemmaKind: "Lexeme",
 			meaningInEmojis: "👶",
@@ -156,7 +147,7 @@ describe("public API usage", () => {
 	it("supports English in the broad type aliases", () => {
 		const lemma = {
 			canonicalLemma: "dog",
-			inherentFeatures: { gender: "Neut" } satisfies InherentFeatures,
+			inherentFeatures: { gender: "Neut" },
 			language: "English",
 			lemmaKind: "Lexeme",
 			meaningInEmojis: "🐕",

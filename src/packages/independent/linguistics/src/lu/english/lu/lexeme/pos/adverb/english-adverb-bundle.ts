@@ -3,6 +3,7 @@ import {
 	EnglishAdverbInflectionalFeaturesSchema,
 	EnglishAdverbInherentFeaturesSchema,
 } from "./parts/english-adverb-features";
+
 export const EnglishAdverbSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishAdverbInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishAdverbInherentFeaturesSchema,

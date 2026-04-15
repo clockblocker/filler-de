@@ -3,6 +3,7 @@ import {
 	EnglishCoordinatingConjunctionInflectionalFeaturesSchema,
 	EnglishCoordinatingConjunctionInherentFeaturesSchema,
 } from "./parts/english-coordinating-conjunction-features";
+
 export const EnglishCoordinatingConjunctionSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema:
 		EnglishCoordinatingConjunctionInflectionalFeaturesSchema,

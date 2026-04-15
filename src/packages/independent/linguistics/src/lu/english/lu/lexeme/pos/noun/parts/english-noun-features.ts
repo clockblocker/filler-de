@@ -1,18 +1,10 @@
-import z from "zod/v3";
-import type {
-	InflectionalFeaturesSchemaFor,
-	InherentFeaturesSchemaFor,
-} from "../../../../../../universal/helpers/schema-targets";
+import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
 import { EnglishNumber } from "../../../shared/english-common-enums";
 import { EnglishNounCase } from "./english-noun-enums";
 
-export const EnglishNounInflectionalFeaturesSchema = z
-	.object({
-		case: EnglishNounCase.optional(),
-		number: EnglishNumber.optional(),
-	})
-	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "NOUN">;
+export const EnglishNounInflectionalFeaturesSchema = featureSchema({
+	case: EnglishNounCase.optional(),
+	number: EnglishNumber.optional(),
+});
 
-export const EnglishNounInherentFeaturesSchema = z
-	.object({})
-	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "NOUN">;
+export const EnglishNounInherentFeaturesSchema = featureSchema({});

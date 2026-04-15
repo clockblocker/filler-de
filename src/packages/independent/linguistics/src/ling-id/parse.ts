@@ -1,13 +1,13 @@
-import type {
-	Lemma,
-	LemmaKind,
-	MorphemeKind,
-	OrthographicStatus,
-	PhrasemeKind,
-	Pos,
-	SurfaceKind,
-} from "../lu/public";
+import type { Lemma } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
+import type {
+	LemmaKind,
+	OrthographicStatus,
+	SurfaceKind,
+} from "../lu/universal/enums/core/selection";
+import type { MorphemeKind } from "../lu/universal/enums/kind/morpheme-kind";
+import type { PhrasemeKind } from "../lu/universal/enums/kind/phraseme-kind";
+import type { Pos } from "../lu/universal/enums/kind/pos";
 import { parseOptionalToken, unescapeToken } from "./escape";
 import {
 	expectBooleanFeature,

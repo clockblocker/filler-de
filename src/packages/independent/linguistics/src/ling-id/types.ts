@@ -1,10 +1,6 @@
-import type {
-	Lemma,
-	ResolvedSurface,
-	OrthographicStatus,
-	Selection,
-} from "../lu/public";
+import type { Lemma, ResolvedSurface, Selection } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
+import type { OrthographicStatus } from "../lu/universal/enums/core/selection";
 
 export type ResolvedSurfaceLingId = string;
 export type SurfaceLingId = string;
