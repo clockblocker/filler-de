@@ -18,17 +18,15 @@ const EnglishAuxiliaryVerbForm = UniversalFeature.VerbForm.extract([
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-AUX.html
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-VerbForm.html
 // - https://universaldependencies.org/u/feat/Style.html
-// - https://universaldependencies.org/u/feat/Typo.html
 export const EnglishAuxiliaryInflectionalFeaturesSchema = featureSchema({
-	mood: EnglishFeature.Mood.optional(),
-	number: EnglishAuxiliaryNumber.optional(),
-	person: EnglishFeature.Person.optional(),
-	tense: EnglishFeature.Tense.optional(),
-	verbForm: EnglishAuxiliaryVerbForm.optional(),
+	mood: EnglishFeature.Mood,
+	number: EnglishAuxiliaryNumber,
+	person: EnglishFeature.Person,
+	tense: EnglishFeature.Tense,
+	verbForm: EnglishAuxiliaryVerbForm,
 });
 
 export const EnglishAuxiliaryInherentFeaturesSchema = featureSchema({
-	abbr: UniversalFeature.Abbr.optional(),
-	style: EnglishAuxiliaryStyle.optional(),
-	typo: EnglishFeature.Typo.optional(),
+	abbr: UniversalFeature.Abbr,
+	style: EnglishAuxiliaryStyle,
 });

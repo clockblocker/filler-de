@@ -7,17 +7,17 @@ import {
 } from "./german-determiner-enums";
 
 export const GermanDeterminerInflectionalFeaturesSchema = featureSchema({
-	case: GermanFeature.Case.optional(),
-	degree: GermanFeature.Degree.optional(),
-	gender: GermanFeature.Gender.optional(),
-	number: GermanFeature.Number.optional(),
+	case: GermanFeature.Case,
+	degree: GermanFeature.Degree,
+	gender: GermanFeature.Gender,
+	number: GermanFeature.Number,
 });
 
 export const GermanDeterminerInherentFeaturesSchema = featureSchema({
-	definite: GermanFeature.Definite.optional(),
-	numType: GermanDeterminerNumType.optional(),
-	person: GermanFeature.Person.optional(),
-	polite: GermanFeature.Polite.optional(),
-	poss: UniversalFeature.Poss.optional(),
-	pronType: GermanDeterminerPronType.optional(),
+	definite: GermanFeature.Definite,
+	numType: GermanDeterminerNumType,
+	person: GermanFeature.Person,
+	polite: GermanFeature.Polite,
+	poss: UniversalFeature.Poss,
+	pronType: GermanDeterminerPronType,
 });

@@ -11,10 +11,10 @@ const EnglishSymbolNumber = UniversalFeature.GrammaticalNumber.extract([
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-SYM.html
 // - https://universaldependencies.org/u/feat/ExtPos.html
 export const EnglishSymbolInflectionalFeaturesSchema = featureSchema({
-	number: EnglishSymbolNumber.optional(),
+	number: EnglishSymbolNumber,
 });
 
 export const EnglishSymbolInherentFeaturesSchema = featureSchema({
-	abbr: UniversalFeature.Abbr.optional(),
-	extPos: EnglishSymbolExtPos.optional(),
+	abbr: UniversalFeature.Abbr,
+	extPos: EnglishSymbolExtPos,
 });

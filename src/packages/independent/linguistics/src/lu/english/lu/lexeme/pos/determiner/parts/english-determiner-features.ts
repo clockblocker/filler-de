@@ -19,18 +19,16 @@ const EnglishDeterminerNumber = UniversalFeature.GrammaticalNumber.extract([
 // - https://universaldependencies.org/docs/en/feat/PronType.html
 // - https://universaldependencies.org/u/feat/NumForm.html
 // - https://universaldependencies.org/u/feat/Style.html
-// - https://universaldependencies.org/u/feat/Typo.html
 export const EnglishDeterminerInflectionalFeaturesSchema = featureSchema({
-	number: EnglishDeterminerNumber.optional(),
+	number: EnglishDeterminerNumber,
 });
 
 export const EnglishDeterminerInherentFeaturesSchema = featureSchema({
-	abbr: UniversalFeature.Abbr.optional(),
-	definite: EnglishFeature.Definite.optional(),
-	extPos: EnglishDeterminerExtPos.optional(),
-	numForm: EnglishDeterminerNumForm.optional(),
-	numType: EnglishDeterminerNumType.optional(),
-	pronType: EnglishDeterminerPronType.optional(),
-	style: EnglishDeterminerStyle.optional(),
-	typo: EnglishFeature.Typo.optional(),
+	abbr: UniversalFeature.Abbr,
+	definite: EnglishFeature.Definite,
+	extPos: EnglishDeterminerExtPos,
+	numForm: EnglishDeterminerNumForm,
+	numType: EnglishDeterminerNumType,
+	pronType: EnglishDeterminerPronType,
+	style: EnglishDeterminerStyle,
 });

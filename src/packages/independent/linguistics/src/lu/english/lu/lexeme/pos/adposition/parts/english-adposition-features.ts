@@ -10,11 +10,9 @@ const EnglishAdpositionExtPos = UniversalFeature.ExtPos.extract([
 // Sources:
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-ADP.html
 // - https://universaldependencies.org/u/feat/ExtPos.html
-// - https://universaldependencies.org/u/feat/Typo.html
 export const EnglishAdpositionInflectionalFeaturesSchema = featureSchema({});
 
 export const EnglishAdpositionInherentFeaturesSchema = featureSchema({
-	abbr: UniversalFeature.Abbr.optional(),
-	extPos: EnglishAdpositionExtPos.optional(),
-	typo: UniversalFeature.Typo.optional(),
+	abbr: UniversalFeature.Abbr,
+	extPos: EnglishAdpositionExtPos,
 });

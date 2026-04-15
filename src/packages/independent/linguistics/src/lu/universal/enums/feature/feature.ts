@@ -33,7 +33,6 @@ import { PronType } from "./ud/pron-type";
 import { Reflex } from "./ud/reflex";
 import { Style } from "./ud/style";
 import { Tense } from "./ud/tense";
-import { Typo } from "./ud/typo";
 import { VerbForm } from "./ud/verb-form";
 import { Voice } from "./ud/voice";
 
@@ -70,7 +69,7 @@ export const UniversalFeature = {
 	Separable,
 	Style,
 	Tense,
-	Typo,
+	// Typo is exluded from the list of features, because in this system, Selections are responsible forhandeling typos
 	VerbForm,
 	Voice,
 } as const;
@@ -112,7 +111,6 @@ export type AbstractFeatures = Prettify<{
 	reflex: UniversalFeatureValue<"Reflex">;
 	style: UniversalFeatureValue<"Style">;
 	tense: UniversalFeatureValue<"Tense">;
-	typo: UniversalFeatureValue<"Typo">;
 	verbForm: UniversalFeatureValue<"VerbForm">;
 	voice: UniversalFeatureValue<"Voice">;
 	separable: UniversalFeatureValue<"Separable">;

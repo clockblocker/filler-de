@@ -33,26 +33,40 @@ export type SelectionSchemaFor<
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > = z.ZodType<SelectionFor<OS, SK, LK, D>>;
 
-type RestrictableFeatureSchemaFor<K extends keyof AbstractFeatures> = z.ZodType<
-	AbstractFeatures[K] | undefined,
+type FeatureSchemaFor<K extends keyof AbstractFeatures> = z.ZodType<
+	AbstractFeatures[K],
 	z.ZodTypeDef,
-	AbstractFeatures[K] | undefined
+	AbstractFeatures[K]
 >;
 
 export type RestrictableFeatureSchemaShape = Partial<{
-	[K in keyof AbstractFeatures]: RestrictableFeatureSchemaFor<K>;
+	[K in keyof AbstractFeatures]: FeatureSchemaFor<K>;
 }>;
 
 type ValidFeatureSchemaShape<Shape extends z.ZodRawShape> = {
 	[K in keyof Shape]: K extends keyof AbstractFeatures
-		? Shape[K] extends RestrictableFeatureSchemaFor<K>
+		? Shape[K] extends FeatureSchemaFor<K>
 			? Shape[K]
 			: never
 		: never;
 };
 
+type OptionalizedFeatureSchemaShape<Shape extends z.ZodRawShape> = {
+	[K in keyof Shape]: Shape[K] extends z.ZodTypeAny
+		? z.ZodOptional<Shape[K]>
+		: never;
+};
+
+function makeFeatureSchemaShapeOptional<const Shape extends z.ZodRawShape>(
+	shape: Shape,
+): OptionalizedFeatureSchemaShape<Shape> {
+	return Object.fromEntries(
+		Object.entries(shape).map(([key, schema]) => [key, schema.optional()]),
+	) as OptionalizedFeatureSchemaShape<Shape>;
+}
+
 export function featureSchema<const Shape extends z.ZodRawShape>(
 	shape: Shape & ValidFeatureSchemaShape<Shape>,
-): z.ZodObject<Shape, "strict"> {
-	return z.object(shape).strict();
+): z.ZodObject<OptionalizedFeatureSchemaShape<Shape>, "strict"> {
+	return z.object(makeFeatureSchemaShapeOptional(shape)).strict();
 }

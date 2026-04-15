@@ -3,12 +3,12 @@ import { featureSchema } from "../../../../../../universal/helpers/schema-target
 import { GermanFeature } from "../../../shared/german-common-enums";
 
 export const GermanProperNounInflectionalFeaturesSchema = featureSchema({
-	case: GermanFeature.Case.optional(),
-	number: GermanFeature.Number.optional(),
+	case: GermanFeature.Case,
+	number: GermanFeature.Number,
 });
 
 export const GermanProperNounInherentFeaturesSchema = featureSchema({
-	abbr: UniversalFeature.Abbr.optional(),
-	foreign: UniversalFeature.Foreign.optional(),
-	gender: GermanFeature.Gender.optional(),
+	abbr: UniversalFeature.Abbr,
+	foreign: UniversalFeature.Foreign,
+	gender: GermanFeature.Gender,
 });

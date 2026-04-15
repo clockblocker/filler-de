@@ -4,12 +4,12 @@ import { GermanFeature } from "../../../shared/german-common-enums";
 import { GermanSymbolNumType } from "./german-symbol-enums";
 
 export const GermanSymbolInflectionalFeaturesSchema = featureSchema({
-	case: GermanFeature.Case.optional(),
-	gender: GermanFeature.Gender.optional(),
-	number: GermanFeature.Number.optional(),
+	case: GermanFeature.Case,
+	gender: GermanFeature.Gender,
+	number: GermanFeature.Number,
 });
 
 export const GermanSymbolInherentFeaturesSchema = featureSchema({
-	foreign: UniversalFeature.Foreign.optional(),
-	numType: GermanSymbolNumType.optional(),
+	foreign: UniversalFeature.Foreign,
+	numType: GermanSymbolNumType,
 });

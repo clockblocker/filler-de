@@ -5,7 +5,6 @@ import { UniversalFeature } from "../../../../universal/enums/feature";
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-VerbForm.html
 // - https://universaldependencies.org/u/feat/NumForm.html
 // - https://universaldependencies.org/u/feat/Style.html
-// - https://universaldependencies.org/u/feat/Typo.html
 export const EnglishFeature = {
 	Case: UniversalFeature.Case.extract(["Acc", "Gen", "Nom"]),
 	Definite: UniversalFeature.Definite.extract(["Def", "Ind"]),
@@ -33,6 +32,5 @@ export const EnglishFeature = {
 		"Vrnc",
 	]),
 	Tense: UniversalFeature.Tense.extract(["Past", "Pres"]),
-	Typo: UniversalFeature.Typo,
 	VerbForm: UniversalFeature.VerbForm.extract(["Fin", "Ger", "Inf", "Part"]),
 };

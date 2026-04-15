@@ -4,13 +4,13 @@ import { GermanFeature } from "../../../shared/german-common-enums";
 import { GermanNumeralNumType } from "./german-numeral-enums";
 
 export const GermanNumeralInflectionalFeaturesSchema = featureSchema({
-	case: GermanFeature.Case.optional(),
-	gender: GermanFeature.Gender.optional(),
-	number: GermanFeature.Number.optional(),
+	case: GermanFeature.Case,
+	gender: GermanFeature.Gender,
+	number: GermanFeature.Number,
 });
 
 export const GermanNumeralInherentFeaturesSchema = featureSchema({
-	abbr: UniversalFeature.Abbr.optional(),
-	foreign: UniversalFeature.Foreign.optional(),
-	numType: GermanNumeralNumType.optional(),
+	abbr: UniversalFeature.Abbr,
+	foreign: UniversalFeature.Foreign,
+	numType: GermanNumeralNumType,
 });

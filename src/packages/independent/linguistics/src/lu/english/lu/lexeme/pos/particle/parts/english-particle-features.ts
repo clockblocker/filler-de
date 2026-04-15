@@ -7,12 +7,10 @@ const EnglishParticleExtPos = UniversalFeature.ExtPos.extract(["CCONJ"]);
 // Sources:
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-PART.html
 // - https://universaldependencies.org/u/feat/ExtPos.html
-// - https://universaldependencies.org/u/feat/Typo.html
 export const EnglishParticleInflectionalFeaturesSchema = featureSchema({});
 
 export const EnglishParticleInherentFeaturesSchema = featureSchema({
-	abbr: UniversalFeature.Abbr.optional(),
-	extPos: EnglishParticleExtPos.optional(),
-	polarity: UniversalFeature.Polarity.extract(["Neg"]).optional(),
-	typo: EnglishFeature.Typo.optional(),
+	abbr: UniversalFeature.Abbr,
+	extPos: EnglishParticleExtPos,
+	polarity: UniversalFeature.Polarity.extract(["Neg"]),
 });

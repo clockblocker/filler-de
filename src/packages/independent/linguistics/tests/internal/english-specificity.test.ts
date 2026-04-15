@@ -188,9 +188,7 @@ describe("English schema specificity", () => {
 		expect(
 			EnglishVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "wash",
-				inherentFeatures: {
-					typo: "Yes",
-				},
+				inherentFeatures: {},
 				language: "English",
 				lemmaKind: "Lexeme",
 				meaningInEmojis: "🧼",
@@ -370,7 +368,6 @@ describe("English schema specificity", () => {
 					numType: "Frac",
 					pronType: "Rcp",
 					style: "Vrnc",
-					typo: "Yes",
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
@@ -434,7 +431,6 @@ describe("English schema specificity", () => {
 					extPos: "PROPN",
 					numForm: "Roman",
 					numType: "Frac",
-					typo: "Yes",
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
@@ -481,7 +477,6 @@ describe("English schema specificity", () => {
 				inherentFeatures: {
 					extPos: "PROPN",
 					foreign: "Yes",
-					typo: "Yes",
 				},
 				language: "English",
 				lemmaKind: "Lexeme",

@@ -16,20 +16,18 @@ const EnglishPronounNumber = UniversalFeature.GrammaticalNumber.extract([
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-PRON.html
 // - https://universaldependencies.org/docs/en/feat/PronType.html
 // - https://universaldependencies.org/u/feat/Style.html
-// - https://universaldependencies.org/u/feat/Typo.html
 export const EnglishPronounInflectionalFeaturesSchema = featureSchema({
-	case: EnglishFeature.Case.optional(),
-	gender: EnglishFeature.Gender.optional(),
-	number: EnglishPronounNumber.optional(),
-	reflex: UniversalFeature.Reflex.optional(),
+	case: EnglishFeature.Case,
+	gender: EnglishFeature.Gender,
+	number: EnglishPronounNumber,
+	reflex: UniversalFeature.Reflex,
 });
 
 export const EnglishPronounInherentFeaturesSchema = featureSchema({
-	abbr: UniversalFeature.Abbr.optional(),
-	extPos: EnglishPronounExtPos.optional(),
-	person: EnglishFeature.Person.optional(),
-	poss: UniversalFeature.Poss.optional(),
-	pronType: EnglishPronounPronType.optional(),
-	style: EnglishPronounStyle.optional(),
-	typo: EnglishFeature.Typo.optional(),
+	abbr: UniversalFeature.Abbr,
+	extPos: EnglishPronounExtPos,
+	person: EnglishFeature.Person,
+	poss: UniversalFeature.Poss,
+	pronType: EnglishPronounPronType,
+	style: EnglishPronounStyle,
 });

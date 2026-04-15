@@ -9,14 +9,12 @@ const EnglishProperNounStyle = EnglishFeature.Style.extract(["Expr"]);
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-PROPN.html
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-Number.html
 // - https://universaldependencies.org/u/feat/Style.html
-// - https://universaldependencies.org/u/feat/Typo.html
 export const EnglishProperNounInflectionalFeaturesSchema = featureSchema({
-	number: EnglishFeature.Number.optional(),
+	number: EnglishFeature.Number,
 });
 
 export const EnglishProperNounInherentFeaturesSchema = featureSchema({
-	abbr: UniversalFeature.Abbr.optional(),
-	extPos: EnglishProperNounExtPos.optional(),
-	style: EnglishProperNounStyle.optional(),
-	typo: EnglishFeature.Typo.optional(),
+	abbr: UniversalFeature.Abbr,
+	extPos: EnglishProperNounExtPos,
+	style: EnglishProperNounStyle,
 });

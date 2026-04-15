@@ -3,12 +3,12 @@ import { featureSchema } from "../../../../universal/helpers/schema-targets";
 import { GermanFeature } from "./german-common-enums";
 
 export const GermanVerbalInflectionalFeaturesSchema = featureSchema({
-	gender: GermanFeature.Gender.optional(),
-	mood: GermanFeature.Mood.optional(),
-	number: GermanFeature.Number.optional(),
-	person: GermanFeature.Person.optional(),
-	tense: GermanFeature.Tense.optional(),
-	verbForm: GermanFeature.VerbForm.optional(),
+	gender: GermanFeature.Gender,
+	mood: GermanFeature.Mood,
+	number: GermanFeature.Number,
+	person: GermanFeature.Person,
+	tense: GermanFeature.Tense,
+	verbForm: GermanFeature.VerbForm,
 }).superRefine((features, ctx) => {
 	if (features.gender !== undefined && features.verbForm !== "Part") {
 		ctx.addIssue({

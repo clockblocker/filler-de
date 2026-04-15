@@ -26,21 +26,19 @@ const EnglishVerbVerbForm = UniversalFeature.VerbForm.extract([
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-VerbForm.html
 // - https://universaldependencies.org/en/feat/Voice.html
 // - https://universaldependencies.org/u/feat/Style.html
-// - https://universaldependencies.org/u/feat/Typo.html
 export const EnglishVerbInflectionalFeaturesSchema = featureSchema({
-	mood: EnglishFeature.Mood.optional(),
-	number: EnglishVerbNumber.optional(),
-	person: EnglishFeature.Person.optional(),
-	tense: EnglishFeature.Tense.optional(),
-	verbForm: EnglishVerbVerbForm.optional(),
-	voice: UniversalFeature.Voice.extract(["Pass"]).optional(),
+	mood: EnglishFeature.Mood,
+	number: EnglishVerbNumber,
+	person: EnglishFeature.Person,
+	tense: EnglishFeature.Tense,
+	verbForm: EnglishVerbVerbForm,
+	voice: UniversalFeature.Voice.extract(["Pass"]),
 });
 
 export const EnglishVerbInherentFeaturesSchema = featureSchema({
-	abbr: UniversalFeature.Abbr.optional(),
-	extPos: EnglishVerbExtPos.optional(),
-	governedPreposition: UniversalFeature.GovernedPreposition.optional(),
-	phrasal: UniversalFeature.Phrasal.optional(),
-	style: EnglishVerbStyle.optional(),
-	typo: EnglishFeature.Typo.optional(),
+	abbr: UniversalFeature.Abbr,
+	extPos: EnglishVerbExtPos,
+	governedPreposition: UniversalFeature.GovernedPreposition,
+	phrasal: UniversalFeature.Phrasal,
+	style: EnglishVerbStyle,
 });

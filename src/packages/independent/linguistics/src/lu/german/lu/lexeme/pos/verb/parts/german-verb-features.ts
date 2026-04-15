@@ -6,7 +6,7 @@ export const GermanVerbInflectionalFeaturesSchema =
 	GermanVerbalInflectionalFeaturesSchema;
 
 export const GermanVerbInherentFeaturesSchema = featureSchema({
-	governedPreposition: UniversalFeature.GovernedPreposition.optional(),
-	lexicallyReflexive: UniversalFeature.LexicallyReflexive.optional(),
-	separable: UniversalFeature.Separable.optional(),
+	governedPreposition: UniversalFeature.GovernedPreposition,
+	lexicallyReflexive: UniversalFeature.LexicallyReflexive,
+	separable: UniversalFeature.Separable,
 });

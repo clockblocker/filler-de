@@ -14,14 +14,12 @@ const EnglishSubordinatingConjunctionStyle = UniversalFeature.Style.extract([
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-SCONJ.html
 // - https://universaldependencies.org/u/feat/ExtPos.html
 // - https://universaldependencies.org/u/feat/Style.html
-// - https://universaldependencies.org/u/feat/Typo.html
 export const EnglishSubordinatingConjunctionInflectionalFeaturesSchema =
 	featureSchema({});
 
 export const EnglishSubordinatingConjunctionInherentFeaturesSchema =
 	featureSchema({
-		abbr: UniversalFeature.Abbr.optional(),
-		extPos: EnglishSubordinatingConjunctionExtPos.optional(),
-		style: EnglishSubordinatingConjunctionStyle.optional(),
-		typo: UniversalFeature.Typo.optional(),
+		abbr: UniversalFeature.Abbr,
+		extPos: EnglishSubordinatingConjunctionExtPos,
+		style: EnglishSubordinatingConjunctionStyle,
 	});

@@ -7,11 +7,11 @@ import {
 } from "./german-adverb-enums";
 
 export const GermanAdverbInflectionalFeaturesSchema = featureSchema({
-	degree: GermanFeature.Degree.optional(),
+	degree: GermanFeature.Degree,
 });
 
 export const GermanAdverbInherentFeaturesSchema = featureSchema({
-	foreign: UniversalFeature.Foreign.optional(),
-	numType: GermanAdverbNumType.optional(),
-	pronType: GermanAdverbPronType.optional(),
+	foreign: UniversalFeature.Foreign,
+	numType: GermanAdverbNumType,
+	pronType: GermanAdverbPronType,
 });

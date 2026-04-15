@@ -5,7 +5,7 @@ import { GermanFeature } from "../../../shared/german-common-enums";
 export const GermanParticleInflectionalFeaturesSchema = featureSchema({});
 
 export const GermanParticleInherentFeaturesSchema = featureSchema({
-	abbr: UniversalFeature.Abbr.optional(),
-	foreign: UniversalFeature.Foreign.optional(),
-	polarity: GermanFeature.Polarity.optional(),
+	abbr: UniversalFeature.Abbr,
+	foreign: UniversalFeature.Foreign,
+	polarity: GermanFeature.Polarity,
 });

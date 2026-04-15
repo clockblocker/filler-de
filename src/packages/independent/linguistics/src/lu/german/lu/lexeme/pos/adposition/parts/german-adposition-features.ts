@@ -4,7 +4,7 @@ import { featureSchema } from "../../../../../../universal/helpers/schema-target
 export const GermanAdpositionInflectionalFeaturesSchema = featureSchema({});
 
 export const GermanAdpositionInherentFeaturesSchema = featureSchema({
-	abbr: UniversalFeature.Abbr.optional(),
-	foreign: UniversalFeature.Foreign.optional(),
-	governedCase: UniversalFeature.GovernedCase.optional(),
+	abbr: UniversalFeature.Abbr,
+	foreign: UniversalFeature.Foreign,
+	governedCase: UniversalFeature.GovernedCase,
 });
