@@ -1,23 +1,19 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
-import {
-	EnglishDefinite,
-	EnglishNumber,
-	EnglishPerson,
-} from "../../../shared/english-common-enums";
+import { EnglishFeature } from "../../../shared/english-common-enums";
 import {
 	EnglishDeterminerNumType,
 	EnglishDeterminerPronType,
 } from "./english-determiner-enums";
 
 export const EnglishDeterminerInflectionalFeaturesSchema = featureSchema({
-	number: EnglishNumber.optional(),
+	number: EnglishFeature.Number.optional(),
 });
 
 export const EnglishDeterminerInherentFeaturesSchema = featureSchema({
-	definite: EnglishDefinite.optional(),
+	definite: EnglishFeature.Definite.optional(),
 	numType: EnglishDeterminerNumType.optional(),
-	person: EnglishPerson.optional(),
+	person: EnglishFeature.Person.optional(),
 	poss: UniversalFeature.Poss.optional(),
 	pronType: EnglishDeterminerPronType.optional(),
 });

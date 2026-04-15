@@ -1,16 +1,12 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
-import {
-	EnglishCase,
-	EnglishGender,
-	EnglishNumber,
-} from "../../../shared/english-common-enums";
+import { EnglishFeature } from "../../../shared/english-common-enums";
 import { EnglishSymbolNumType } from "./english-symbol-enums";
 
 export const EnglishSymbolInflectionalFeaturesSchema = featureSchema({
-	case: EnglishCase.optional(),
-	gender: EnglishGender.optional(),
-	number: EnglishNumber.optional(),
+	case: EnglishFeature.Case.optional(),
+	gender: EnglishFeature.Gender.optional(),
+	number: EnglishFeature.Number.optional(),
 });
 
 export const EnglishSymbolInherentFeaturesSchema = featureSchema({

@@ -3,6 +3,7 @@ import {
 	EnglishSymbolInflectionalFeaturesSchema,
 	EnglishSymbolInherentFeaturesSchema,
 } from "./parts/english-symbol-features";
+
 export const EnglishSymbolSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishSymbolInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishSymbolInherentFeaturesSchema,

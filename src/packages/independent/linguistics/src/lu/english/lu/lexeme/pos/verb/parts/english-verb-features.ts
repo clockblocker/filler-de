@@ -1,19 +1,13 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
-import {
-	EnglishMood,
-	EnglishNumber,
-	EnglishPerson,
-	EnglishTense,
-	EnglishVerbForm,
-} from "../../../shared/english-common-enums";
+import { EnglishFeature } from "../../../shared/english-common-enums";
 
 export const EnglishVerbInflectionalFeaturesSchema = featureSchema({
-	mood: EnglishMood.optional(),
-	number: EnglishNumber.optional(),
-	person: EnglishPerson.optional(),
-	tense: EnglishTense.optional(),
-	verbForm: EnglishVerbForm.optional(),
+	mood: EnglishFeature.Mood.optional(),
+	number: EnglishFeature.Number.optional(),
+	person: EnglishFeature.Person.optional(),
+	tense: EnglishFeature.Tense.optional(),
+	verbForm: EnglishFeature.VerbForm.optional(),
 });
 
 export const EnglishVerbInherentFeaturesSchema = featureSchema({

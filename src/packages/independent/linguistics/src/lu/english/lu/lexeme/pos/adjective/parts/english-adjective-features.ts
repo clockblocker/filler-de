@@ -1,10 +1,10 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
-import { EnglishDegree } from "../../../shared/english-common-enums";
+import { EnglishFeature } from "../../../shared/english-common-enums";
 import { EnglishAdjectiveNumType } from "./english-adjective-enums";
 
 export const EnglishAdjectiveInflectionalFeaturesSchema = featureSchema({
-	degree: EnglishDegree.optional(),
+	degree: EnglishFeature.Degree.optional(),
 });
 
 export const EnglishAdjectiveInherentFeaturesSchema = featureSchema({

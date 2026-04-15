@@ -1,11 +1,9 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
-import { EnglishNumber } from "../../../shared/english-common-enums";
-import { EnglishProperNounCase } from "./english-proper-noun-enums";
+import { EnglishFeature } from "../../../shared/english-common-enums";
 
 export const EnglishProperNounInflectionalFeaturesSchema = featureSchema({
-	case: EnglishProperNounCase.optional(),
-	number: EnglishNumber.optional(),
+	number: EnglishFeature.Number.optional(),
 });
 
 export const EnglishProperNounInherentFeaturesSchema = featureSchema({
