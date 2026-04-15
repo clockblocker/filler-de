@@ -1,6 +1,8 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
+import type {
+	LemmaSchemaFor,
+	SelectionSchemaFor,
+} from "../../../../universal/helpers/schema-targets";
 import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
@@ -26,33 +28,27 @@ export const GermanNounLemmaSchema = withLingIdLemmaDtoCompatibility(
 		pos: z.literal("NOUN"),
 		canonicalLemma: z.string(),
 	}),
-) satisfies z.ZodType<AbstractLemma<"Lexeme", "NOUN">>;
+) satisfies LemmaSchemaFor<"Lexeme", "NOUN">;
 
 export const GermanNounInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: GermanNounInflectionalFeaturesSchema,
 	language: "German",
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	lemmaSchema: GermanNounLemmaSchema,
-}) satisfies z.ZodType<
-	AbstractSelectionFor<"Standard", "Inflection", "Lexeme", "NOUN">
->;
+}) satisfies SelectionSchemaFor<"Standard", "Inflection", "Lexeme", "NOUN">;
 
 export const GermanNounLemmaSelectionSchema = buildLemmaSelection({
 	language: "German",
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	lemmaSchema: GermanNounLemmaSchema,
-}) satisfies z.ZodType<
-	AbstractSelectionFor<"Standard", "Lemma", "Lexeme", "NOUN">
->;
+}) satisfies SelectionSchemaFor<"Standard", "Lemma", "Lexeme", "NOUN">;
 
 export const GermanNounStandardVariantSelectionSchema = buildLemmaSelection({
 	language: "German",
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	lemmaSchema: GermanNounLemmaSchema,
 	surfaceKind: "Variant",
-}) satisfies z.ZodType<
-	AbstractSelectionFor<"Standard", "Variant", "Lexeme", "NOUN">
->;
+}) satisfies SelectionSchemaFor<"Standard", "Variant", "Lexeme", "NOUN">;
 
 export const GermanNounTypoInflectionSelectionSchema = buildInflectionSelection(
 	{
@@ -62,16 +58,14 @@ export const GermanNounTypoInflectionSelectionSchema = buildInflectionSelection(
 		lemmaSchema: GermanNounLemmaSchema,
 		orthographicStatus: "Typo",
 	},
-) satisfies z.ZodType<
-	AbstractSelectionFor<"Typo", "Inflection", "Lexeme", "NOUN">
->;
+) satisfies SelectionSchemaFor<"Typo", "Inflection", "Lexeme", "NOUN">;
 
 export const GermanNounTypoLemmaSelectionSchema = buildLemmaSelection({
 	language: "German",
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	lemmaSchema: GermanNounLemmaSchema,
 	orthographicStatus: "Typo",
-}) satisfies z.ZodType<AbstractSelectionFor<"Typo", "Lemma", "Lexeme", "NOUN">>;
+}) satisfies SelectionSchemaFor<"Typo", "Lemma", "Lexeme", "NOUN">;
 
 export const GermanNounTypoVariantSelectionSchema = buildLemmaSelection({
 	language: "German",
@@ -79,6 +73,4 @@ export const GermanNounTypoVariantSelectionSchema = buildLemmaSelection({
 	lemmaSchema: GermanNounLemmaSchema,
 	orthographicStatus: "Typo",
 	surfaceKind: "Variant",
-}) satisfies z.ZodType<
-	AbstractSelectionFor<"Typo", "Variant", "Lexeme", "NOUN">
->;
+}) satisfies SelectionSchemaFor<"Typo", "Variant", "Lexeme", "NOUN">;

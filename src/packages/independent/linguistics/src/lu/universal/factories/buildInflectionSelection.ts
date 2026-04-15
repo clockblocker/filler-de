@@ -1,4 +1,5 @@
 import z from "zod/v3";
+import type { AbstractSelectionFor } from "../abstract-selection";
 import type { TargetLanguage } from "../enums/core/language";
 import type { LemmaKind, OrthographicStatus } from "../enums/core/selection";
 import type { LemmaDiscriminatorFor } from "../lemma-discriminator";
@@ -67,5 +68,12 @@ export function buildInflectionSelection<
 		orthographicStatus: z.literal(orthographicStatus),
 		spelledSelection: z.string(),
 		surface: surfaceSchema,
-	});
+	}) as unknown as z.ZodType<
+		AbstractSelectionFor<
+			OrthographicStatusLiteral,
+			"Inflection",
+			LK,
+			D
+		>
+	>;
 }

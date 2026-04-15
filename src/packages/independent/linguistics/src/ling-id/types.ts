@@ -1,12 +1,8 @@
 import type {
 	Lemma,
-	LemmaKind,
-	MorphemeKind,
+	ObservedSurface,
 	OrthographicStatus,
-	PhrasemeKind,
-	Pos,
-	Surface,
-	SurfaceKind,
+	Selection,
 } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
 
@@ -15,116 +11,46 @@ export type SurfaceLingId = string;
 export type ShallowSurfaceLingId = string;
 export type LingId = SurfaceLingId | ObservedSurfaceLingId;
 
+type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
+
+export type LingIdSelection<L extends TargetLanguage = TargetLanguage> =
+	Selection<L, KnownOrthographicStatus>;
+
+export type LingIdObservedSurface<L extends TargetLanguage = TargetLanguage> =
+	Extract<ObservedSurface, { surfaceKind: "Lemma"; target: Lemma<L> }>;
+
 export type LingIdSurfaceInput<L extends TargetLanguage = TargetLanguage> =
-	Surface<L> & {
-		orthographicStatus: Exclude<OrthographicStatus, "Unknown">;
-	};
+	LingIdSelection<L>;
+
+export type ParsedSurfaceResult<L extends TargetLanguage = TargetLanguage> =
+	| LingIdSelection<L>
+	| LingIdObservedSurface<L>;
 
 export type ParsedFeatureValue = string | boolean;
 export type ParsedFeatureBag = Record<string, ParsedFeatureValue>;
 
-export type ParsedLemmaDto =
-	| {
-			lingKind: "Lemma";
-			language: TargetLanguage;
-			canonicalLemma: string;
-			lemmaKind: "Lexeme";
-			pos: Pos;
-			inherentFeatures: ParsedFeatureBag;
-			meaningInEmojis?: string;
-	  }
-	| {
-			lingKind: "Lemma";
-			language: TargetLanguage;
-			canonicalLemma: string;
-			lemmaKind: "Morpheme";
-			morphemeKind: MorphemeKind;
-			isClosedSet?: boolean;
-			separable?: boolean;
-			meaningInEmojis?: string;
-	  }
-	| {
-			lingKind: "Lemma";
-			language: TargetLanguage;
-			canonicalLemma: string;
-			lemmaKind: "Phraseme";
-			phrasemeKind: PhrasemeKind;
-			meaningInEmojis?: string;
-			discourseFormulaRole?: string;
-	  };
-
-type ParsedSurfaceBaseDto = {
-	lingKind: "Surface";
+export type ParsedShallowSurfaceDto = {
 	language: TargetLanguage;
-	orthographicStatus: Exclude<OrthographicStatus, "Unknown">;
-	surfaceKind: SurfaceKind;
-	normalizedFullSurface: string;
-	discriminators: {
-		lemmaKind: LemmaKind;
-		lemmaSubKind: string;
+	orthographicStatus: KnownOrthographicStatus;
+	surface: {
+		normalizedFullSurface: string;
+		surfaceKind: "Lemma" | "Inflection" | "Variant";
+		discriminators: {
+			lemmaKind: "Lexeme" | "Morpheme" | "Phraseme";
+			lemmaSubKind: string;
+		};
+		inflectionalFeatures?: ParsedFeatureBag;
 	};
-	inflectionalFeatures?: ParsedFeatureBag;
-};
-
-export type ParsedTargetedSurfaceDto = ParsedSurfaceBaseDto & {
-	target: { canonicalLemma: string } | ParsedLemmaDto;
-	observationMode?: never;
-};
-
-export type ParsedObservedSurfaceDto = ParsedSurfaceBaseDto & {
-	orthographicStatus: "Standard";
-	surfaceKind: "Lemma";
-	target: ParsedLemmaDto;
-	observationMode: "observed";
-};
-
-export type ParsedShallowSurfaceDto = ParsedSurfaceBaseDto & {
 	target?: never;
-	observationMode?: never;
 };
-
-export type ParsedSurfaceDto =
-	| ParsedTargetedSurfaceDto
-	| ParsedObservedSurfaceDto;
-
-export type ParsedLingDto = ParsedSurfaceDto | ParsedShallowSurfaceDto;
-
-export type ParsedLingDtoFor<L extends TargetLanguage> = ParsedLingDto & {
-	language: L;
-};
-
-export type ParsedLemmaDtoFor<L extends TargetLanguage> = ParsedLemmaDto & {
-	language: L;
-};
-
-export type ParsedSurfaceDtoFor<L extends TargetLanguage> = ParsedSurfaceDto & {
-	language: L;
-};
-
-export type ParsedTargetedSurfaceDtoFor<L extends TargetLanguage> =
-	ParsedTargetedSurfaceDto & {
-		language: L;
-	};
-
-export type ParsedObservedSurfaceDtoFor<L extends TargetLanguage> =
-	ParsedObservedSurfaceDto & {
-		language: L;
-	};
 
 export type ParsedShallowSurfaceDtoFor<L extends TargetLanguage> =
 	ParsedShallowSurfaceDto & {
 		language: L;
 	};
 
-export type SerializableLemma = Lemma | ParsedLemmaDto;
-export type SerializableTargetedSurface =
-	| LingIdSurfaceInput
-	| ParsedTargetedSurfaceDto;
-
-export type SerializableSurface =
-	| SerializableTargetedSurface
-	| ParsedObservedSurfaceDto;
-
+export type SerializableLemma = Lemma;
+export type SerializableSurface = LingIdSelection | LingIdObservedSurface;
 export type SerializableSurfaceShell =
 	| SerializableSurface
 	| ParsedShallowSurfaceDto;

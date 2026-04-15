@@ -1,6 +1,8 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
+import type {
+	LemmaSchemaFor,
+	SelectionSchemaFor,
+} from "../../../../universal/helpers/schema-targets";
 import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
@@ -24,33 +26,27 @@ export const EnglishNounLemmaSchema = withLingIdLemmaDtoCompatibility(
 		pos: z.literal("NOUN"),
 		canonicalLemma: z.string(),
 	}),
-) satisfies z.ZodType<AbstractLemma<"Lexeme", "NOUN">>;
+) satisfies LemmaSchemaFor<"Lexeme", "NOUN">;
 
 export const EnglishNounInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: EnglishNounInflectionalFeaturesSchema,
 	language: "English",
 	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
-}) satisfies z.ZodType<
-	AbstractSelectionFor<"Standard", "Inflection", "Lexeme", "NOUN">
->;
+}) satisfies SelectionSchemaFor<"Standard", "Inflection", "Lexeme", "NOUN">;
 
 export const EnglishNounLemmaSelectionSchema = buildLemmaSelection({
 	language: "English",
 	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
-}) satisfies z.ZodType<
-	AbstractSelectionFor<"Standard", "Lemma", "Lexeme", "NOUN">
->;
+}) satisfies SelectionSchemaFor<"Standard", "Lemma", "Lexeme", "NOUN">;
 
 export const EnglishNounStandardVariantSelectionSchema = buildLemmaSelection({
 	language: "English",
 	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 	surfaceKind: "Variant",
-}) satisfies z.ZodType<
-	AbstractSelectionFor<"Standard", "Variant", "Lexeme", "NOUN">
->;
+}) satisfies SelectionSchemaFor<"Standard", "Variant", "Lexeme", "NOUN">;
 
 export const EnglishNounTypoInflectionSelectionSchema = buildInflectionSelection(
 	{
@@ -60,16 +56,14 @@ export const EnglishNounTypoInflectionSelectionSchema = buildInflectionSelection
 		lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 		orthographicStatus: "Typo",
 	},
-) satisfies z.ZodType<
-	AbstractSelectionFor<"Typo", "Inflection", "Lexeme", "NOUN">
->;
+) satisfies SelectionSchemaFor<"Typo", "Inflection", "Lexeme", "NOUN">;
 
 export const EnglishNounTypoLemmaSelectionSchema = buildLemmaSelection({
 	language: "English",
 	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 	orthographicStatus: "Typo",
-}) satisfies z.ZodType<AbstractSelectionFor<"Typo", "Lemma", "Lexeme", "NOUN">>;
+}) satisfies SelectionSchemaFor<"Typo", "Lemma", "Lexeme", "NOUN">;
 
 export const EnglishNounTypoVariantSelectionSchema = buildLemmaSelection({
 	language: "English",
@@ -77,6 +71,4 @@ export const EnglishNounTypoVariantSelectionSchema = buildLemmaSelection({
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 	orthographicStatus: "Typo",
 	surfaceKind: "Variant",
-}) satisfies z.ZodType<
-	AbstractSelectionFor<"Typo", "Variant", "Lexeme", "NOUN">
->;
+}) satisfies SelectionSchemaFor<"Typo", "Variant", "Lexeme", "NOUN">;

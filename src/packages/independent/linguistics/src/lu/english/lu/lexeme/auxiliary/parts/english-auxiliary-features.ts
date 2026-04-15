@@ -1,6 +1,8 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../../universal/abstract-selection";
+import type {
+	InherentFeaturesSchemaFor,
+	InflectionalFeaturesSchemaFor,
+} from "../../../../../universal/helpers/schema-targets";
 import {
 	EnglishAuxiliaryMood,
 	EnglishAuxiliaryNumber,
@@ -17,17 +19,8 @@ export const EnglishAuxiliaryInflectionalFeaturesSchema = z
 		tense: EnglishAuxiliaryTense.optional(),
 		verbForm: EnglishAuxiliaryVerbForm.optional(),
 	})
-	.strict() satisfies z.ZodType<
-	AbstractSelectionFor<
-		"Standard",
-		"Inflection",
-		"Lexeme",
-		"AUX"
-	>["surface"]["inflectionalFeatures"]
->;
+	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "AUX">;
 
 export const EnglishAuxiliaryInherentFeaturesSchema = z
 	.object({})
-	.strict() satisfies z.ZodType<
-	AbstractLemma<"Lexeme", "AUX">["inherentFeatures"]
->;
+	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "AUX">;

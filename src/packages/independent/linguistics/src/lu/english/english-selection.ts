@@ -1,6 +1,6 @@
 import z from "zod/v3";
 import type { SelectionSchemaLanguageShape } from "../registry-shapes";
-import type { AbstractSelectionFor } from "../universal/abstract-selection";
+import type { SelectionSchemaFor } from "../universal/helpers/schema-targets";
 import {
 	EnglishStandardInflectionLexemeSelectionSchemas,
 	EnglishStandardLemmaLexemeSelectionSchemas,
@@ -22,7 +22,7 @@ const EnglishUnknownSelectionSchema = z.object({
 	language: z.literal("English"),
 	orthographicStatus: z.literal("Unknown"),
 	spelledSelection: z.string(),
-}) satisfies z.ZodType<AbstractSelectionFor<"Unknown">>;
+}) satisfies SelectionSchemaFor<"Unknown">;
 
 export const EnglishSelectionSchema = {
 	Standard: {

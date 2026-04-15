@@ -1,4 +1,5 @@
 import z from "zod/v3";
+import type { AbstractSelectionFor } from "../abstract-selection";
 import type { TargetLanguage } from "../enums/core/language";
 import type {
 	LemmaKind,
@@ -71,5 +72,12 @@ export function buildLemmaSelection<
 		orthographicStatus: z.literal(orthographicStatus),
 		spelledSelection: z.string(),
 		surface: surfaceSchema,
-	});
+	}) as unknown as z.ZodType<
+		AbstractSelectionFor<
+			OrthographicStatusLiteral,
+			SurfaceKindLiteral,
+			LK,
+			D
+		>
+	>;
 }

@@ -20,31 +20,44 @@ describe("Ling ID usage", () => {
 		const neuterSeeLemma = buildGermanNeuterSeeLemma();
 
 		const shallowSurface = {
-			discriminators: {
-				lemmaKind: "Lexeme",
-				lemmaSubKind: "NOUN",
-			},
-			normalizedFullSurface: "See",
+			language: "German",
 			orthographicStatus: "Standard",
-			surfaceKind: "Lemma",
-			target: {
-				canonicalLemma: "See",
+			spelledSelection: "See",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "NOUN",
+				},
+				normalizedFullSurface: "See",
+				surfaceKind: "Lemma",
+				target: {
+					canonicalLemma: "See",
+				},
 			},
 		} satisfies LingIdSurfaceInput<"German">;
 
 		const fullFemSurface = {
 			...shallowSurface,
-			target: feminineSeeLemma,
+			surface: {
+				...shallowSurface.surface,
+				target: feminineSeeLemma,
+			},
 		} satisfies LingIdSurfaceInput<"German">;
 
 		const sameFullFemSurface = {
 			...shallowSurface,
-			target: feminineSeeLemma,
+			surface: {
+				...shallowSurface.surface,
+				target: feminineSeeLemma,
+			},
 		} satisfies LingIdSurfaceInput<"German">;
 
 		const fullNeuterSurface = {
 			...shallowSurface,
-			target: neuterSeeLemma,
+			surface: {
+				...shallowSurface.surface,
+				target: neuterSeeLemma,
+			},
 		} satisfies LingIdSurfaceInput<"German">;
 
 		const observedFemSurface = toGermanSurfaceLingId(feminineSeeLemma);
@@ -60,8 +73,11 @@ describe("Ling ID usage", () => {
 		expect(toGermanSurfaceLingId(shallowSurface)).toBe(
 			toGermanSurfaceLingId({
 				...shallowSurface,
-				target: {
-					canonicalLemma: "See",
+				surface: {
+					...shallowSurface.surface,
+					target: {
+						canonicalLemma: "See",
+					},
 				},
 			}),
 		);
@@ -84,15 +100,19 @@ describe("Ling ID usage", () => {
 		const lemma = buildGermanFeminineSeeLemma();
 
 		const surface = {
-			discriminators: {
-				lemmaKind: "Lexeme",
-				lemmaSubKind: "NOUN",
-			},
-			normalizedFullSurface: "See",
+			language: "German",
 			orthographicStatus: "Standard",
-			surfaceKind: "Lemma",
-			target: {
-				canonicalLemma: "See",
+			spelledSelection: "See",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "NOUN",
+				},
+				normalizedFullSurface: "See",
+				surfaceKind: "Lemma",
+				target: {
+					canonicalLemma: "See",
+				},
 			},
 		} satisfies LingIdSurfaceInput<"German">;
 
@@ -108,18 +128,22 @@ describe("Ling ID usage", () => {
 		const walkLemma = buildEnglishWalkLemma();
 
 		const walkSurface = {
-			discriminators: {
-				lemmaKind: "Lexeme",
-				lemmaSubKind: "VERB",
-			},
-			inflectionalFeatures: {
-				tense: "Past",
-				verbForm: "Fin",
-			},
-			normalizedFullSurface: "walked",
+			language: "English",
 			orthographicStatus: "Standard",
-			surfaceKind: "Inflection",
-			target: walkLemma,
+			spelledSelection: "walked",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "VERB",
+				},
+				inflectionalFeatures: {
+					tense: "Past",
+					verbForm: "Fin",
+				},
+				normalizedFullSurface: "walked",
+				surfaceKind: "Inflection",
+				target: walkLemma,
+			},
 		} satisfies LingIdSurfaceInput<"English">;
 
 		const fullId = toEnglishSurfaceLingId(walkSurface);
@@ -133,19 +157,20 @@ describe("Ling ID usage", () => {
 		expect(toEnglishSurfaceLingId(parsedFullSurface)).toBe(fullId);
 		expect(shallowIdFromParsedFull).toBe(shallowIdFromSurface);
 		expect(parsedShallowSurface).toEqual({
-			discriminators: {
-				lemmaKind: "Lexeme",
-				lemmaSubKind: "VERB",
-			},
-			inflectionalFeatures: {
-				tense: "Past",
-				verbForm: "Fin",
-			},
 			language: "English",
-			lingKind: "Surface",
-			normalizedFullSurface: "walked",
 			orthographicStatus: "Standard",
-			surfaceKind: "Inflection",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "VERB",
+				},
+				inflectionalFeatures: {
+					tense: "Past",
+					verbForm: "Fin",
+				},
+				normalizedFullSurface: "walked",
+				surfaceKind: "Inflection",
+			},
 		});
 		expect(
 			toEnglishShallowSurfaceLingId(

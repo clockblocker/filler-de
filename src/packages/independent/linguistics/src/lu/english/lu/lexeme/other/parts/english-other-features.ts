@@ -1,6 +1,8 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../../universal/abstract-selection";
+import type {
+	InherentFeaturesSchemaFor,
+	InflectionalFeaturesSchemaFor,
+} from "../../../../../universal/helpers/schema-targets";
 import { IsAbbr } from "../../../../../universal/enums/feature/ud/abbr";
 import { IsForeign } from "../../../../../universal/enums/feature/ud/foreign";
 import {
@@ -20,14 +22,7 @@ export const EnglishOtherInflectionalFeaturesSchema = z
 		number: EnglishOtherNumber.optional(),
 		verbForm: EnglishOtherVerbForm.optional(),
 	})
-	.strict() satisfies z.ZodType<
-	AbstractSelectionFor<
-		"Standard",
-		"Inflection",
-		"Lexeme",
-		"X"
-	>["surface"]["inflectionalFeatures"]
->;
+	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "X">;
 
 export const EnglishOtherInherentFeaturesSchema = z
 	.object({
@@ -35,6 +30,4 @@ export const EnglishOtherInherentFeaturesSchema = z
 		foreign: IsForeign.optional(),
 		numType: EnglishOtherNumType.optional(),
 	})
-	.strict() satisfies z.ZodType<
-	AbstractLemma<"Lexeme", "X">["inherentFeatures"]
->;
+	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "X">;

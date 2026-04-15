@@ -1,15 +1,16 @@
 import { describe, expect, it } from "bun:test";
 import type {
 	Lemma,
-	ParsedObservedSurfaceDto,
 	ParsedShallowSurfaceDto,
 } from "../../../src";
-import { SurfaceSchema } from "../../../src";
+import {
+	ObservedSurfaceSchema,
+	SelectionSchema,
+} from "../../../src";
 import {
 	buildEnglishWalkLemma,
 	buildGermanFeminineSeeLemma,
 	type LingIdSurfaceInput,
-	type ParsedObservedSurface,
 	type ParsedSurface,
 	type ParsedTargetedSurface,
 	parseEnglishShallowSurface,
@@ -23,7 +24,7 @@ import {
 } from "./ling-id-test-helpers";
 
 describe("Ling ID parsing", () => {
-	it("round-trips observed surface ids as plain dto objects", () => {
+	it("round-trips observed surface ids as plain observed surfaces", () => {
 		const morpheme = {
 			canonicalLemma: "ab-",
 			isClosedSet: false,
@@ -35,60 +36,67 @@ describe("Ling ID parsing", () => {
 		} satisfies Lemma<"German", "Morpheme", "Prefix">;
 
 		const id = toGermanSurfaceLingId(morpheme);
-		const parsed = parseGermanSurface(
-			id,
-		) as ParsedObservedSurface<"German">;
+		const parsed = parseGermanSurface(id);
 
-		expect(parsed.observationMode).toBe("observed");
-		expect(parsed.target.lemmaKind).toBe("Morpheme");
-		expect({ ...parsed }).toEqual({
+		if (!("target" in parsed)) {
+			throw new Error("Expected an observed surface");
+		}
+
+		const observed = parsed as typeof parsed & {
+			target: { lemmaKind: string };
+		};
+
+		expect(observed.target.lemmaKind).toBe("Morpheme");
+		expect(observed as unknown).toEqual({
 			discriminators: {
 				lemmaKind: "Morpheme",
 				lemmaSubKind: "Prefix",
 			},
-			language: "German",
-			lingKind: "Surface",
 			normalizedFullSurface: "ab-",
-			observationMode: "observed",
-			orthographicStatus: "Standard",
 			surfaceKind: "Lemma",
 			target: {
 				canonicalLemma: "ab-",
 				isClosedSet: false,
 				language: "German",
 				lemmaKind: "Morpheme",
-				lingKind: "Lemma",
 				meaningInEmojis: "🧩",
 				morphemeKind: "Prefix",
 				separable: true,
 			},
 		});
-		expect(JSON.parse(JSON.stringify(parsed))).toEqual({ ...parsed });
-		expect(structuredClone(parsed)).toEqual(parsed);
-		expect(toGermanSurfaceLingId(parsed)).toBe(id);
+		expect(JSON.parse(JSON.stringify(observed))).toEqual(observed);
+		expect(structuredClone(observed)).toEqual(observed);
+		expect(toGermanSurfaceLingId(observed)).toBe(id);
 		expect(
-			SurfaceSchema.German.Standard.Lemma.Morpheme.Prefix.safeParse(
-				parsed,
+			ObservedSurfaceSchema.German.Standard.Lemma.Morpheme.Prefix.safeParse(
+				observed,
 			).success,
-		).toBe(false);
+		).toBe(true);
 	});
 
-	it("round-trips targeted surface ids as plain dto objects and preserves target branches", () => {
+	it("round-trips targeted surface ids as selections and preserves target branches", () => {
 		const fullSurface = {
-			discriminators: {
-				lemmaKind: "Lexeme",
-				lemmaSubKind: "NOUN",
-			},
-			normalizedFullSurface: "See",
+			language: "German",
 			orthographicStatus: "Standard",
-			surfaceKind: "Lemma",
-			target: buildGermanFeminineSeeLemma(),
+			spelledSelection: "See",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "NOUN",
+				},
+				normalizedFullSurface: "See",
+				surfaceKind: "Lemma",
+				target: buildGermanFeminineSeeLemma(),
+			},
 		} satisfies LingIdSurfaceInput<"German">;
 
 		const shallowSurface = {
 			...fullSurface,
-			target: {
-				canonicalLemma: "See",
+			surface: {
+				...fullSurface.surface,
+				target: {
+					canonicalLemma: "See",
+				},
 			},
 		} satisfies LingIdSurfaceInput<"German">;
 
@@ -101,75 +109,69 @@ describe("Ling ID parsing", () => {
 			shallowId,
 		) as ParsedTargetedSurface<"German">;
 
-		expect("lemmaKind" in parsedFull.target).toBe(true);
-		if ("lemmaKind" in parsedFull.target) {
-			expect(parsedFull.target.lingKind).toBe("Lemma");
-			expect(parsedFull.target.canonicalLemma).toBe("See");
+		expect("lemmaKind" in parsedFull.surface.target).toBe(true);
+		if ("lemmaKind" in parsedFull.surface.target) {
+			expect(parsedFull.surface.target.canonicalLemma).toBe("See");
 		}
-		expect("canonicalLemma" in parsedShallow.target).toBe(true);
-		expect({ ...parsedFull }).toEqual({
-			discriminators: {
-				lemmaKind: "Lexeme",
-				lemmaSubKind: "NOUN",
-			},
+		expect("canonicalLemma" in parsedShallow.surface.target).toBe(true);
+		expect(parsedFull).toEqual({
 			language: "German",
-			lingKind: "Surface",
-			normalizedFullSurface: "See",
 			orthographicStatus: "Standard",
-			surfaceKind: "Lemma",
-			target: {
-				canonicalLemma: "See",
-				inherentFeatures: {
-					gender: "Fem",
+			spelledSelection: "See",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "NOUN",
 				},
-				language: "German",
-				lemmaKind: "Lexeme",
-				lingKind: "Lemma",
-				meaningInEmojis: "🌊",
-				pos: "NOUN",
+				normalizedFullSurface: "See",
+				surfaceKind: "Lemma",
+				target: {
+					canonicalLemma: "See",
+					inherentFeatures: {
+						gender: "Fem",
+					},
+					language: "German",
+					lemmaKind: "Lexeme",
+					meaningInEmojis: "🌊",
+					pos: "NOUN",
+				},
 			},
 		});
-		expect(JSON.parse(JSON.stringify(parsedFull))).toEqual({
-			...parsedFull,
-		});
+		expect(JSON.parse(JSON.stringify(parsedFull))).toEqual(parsedFull);
 		expect(structuredClone(parsedFull)).toEqual(parsedFull);
 		expect(toGermanSurfaceLingId(parsedFull)).toBe(fullId);
 		expect(toGermanSurfaceLingId(parsedShallow)).toBe(shallowId);
 		expect(
-			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse(
+			SelectionSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse(
 				parsedFull,
 			).success,
 		).toBe(true);
 		expect(
-			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse(
+			SelectionSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse(
 				parsedShallow,
 			).success,
 		).toBe(true);
 		expect(
-			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
+			SelectionSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
 				...parsedFull,
 				language: "English",
 			}).success,
 		).toBe(false);
 		expect(
-			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
+			SelectionSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
 				...parsedFull,
 				orthographicStatus: "Typo",
-			}).success,
-		).toBe(false);
-		expect(
-			SurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
-				...parsedFull,
-				lingKind: "Lemma",
 			}).success,
 		).toBe(false);
 	});
 
 	it("round-trips observed lemma identities through the builder parsers", () => {
 		const observedId = toEnglishSurfaceLingId(buildEnglishWalkLemma());
-		const parsedObservedSurface = parseEnglishSurface(
-			observedId,
-		) as ParsedObservedSurfaceDto;
+		const parsedObservedSurface = parseEnglishSurface(observedId);
+
+		if (!("target" in parsedObservedSurface)) {
+			throw new Error("Expected an observed surface");
+		}
 		const shallowId = toEnglishShallowSurfaceLingId(parsedObservedSurface);
 		const parsedShallowSurface = parseEnglishShallowSurface(shallowId);
 
@@ -178,15 +180,16 @@ describe("Ling ID parsing", () => {
 			"ling:v1:EN:SURF-SHALLOW;walk;Standard;Lemma;Lexeme;VERB;-",
 		);
 		expect(parsedShallowSurface).toEqual({
-			discriminators: {
-				lemmaKind: "Lexeme",
-				lemmaSubKind: "VERB",
-			},
 			language: "English",
-			lingKind: "Surface",
-			normalizedFullSurface: "walk",
 			orthographicStatus: "Standard",
-			surfaceKind: "Lemma",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "VERB",
+				},
+				normalizedFullSurface: "walk",
+				surfaceKind: "Lemma",
+			},
 		});
 		expect(
 			toEnglishShallowSurfaceLingId(
@@ -195,34 +198,35 @@ describe("Ling ID parsing", () => {
 		).toBe(shallowId);
 	});
 
-	it("round-trips shallow surface ids as plain dto objects", () => {
+	it("round-trips shallow surface ids as nested surface shells", () => {
 		const shallowId =
 			"ling:v1:DE:SURF-SHALLOW;See;Standard;Lemma;Lexeme;NOUN;-";
 		const parsedShallowSurface = parseGermanShallowSurface(
 			shallowId,
 		) as ParsedShallowSurfaceDto;
 
-		expect({ ...parsedShallowSurface }).toEqual({
-			discriminators: {
-				lemmaKind: "Lexeme",
-				lemmaSubKind: "NOUN",
-			},
+		expect(parsedShallowSurface).toEqual({
 			language: "German",
-			lingKind: "Surface",
-			normalizedFullSurface: "See",
 			orthographicStatus: "Standard",
-			surfaceKind: "Lemma",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "NOUN",
+				},
+				normalizedFullSurface: "See",
+				surfaceKind: "Lemma",
+			},
 		});
 		expect(toGermanShallowSurfaceLingId(parsedShallowSurface)).toBe(
 			shallowId,
 		);
 	});
 
-	it("parses reserialized dto objects across both surface branches", () => {
+	it("parses reserialized values across both surface branches", () => {
 		const targetedId =
 			"ling:v1:EN:SURF;walk;Standard;Lemma;Lexeme;VERB;-;canon;walk";
 		const observedId =
-			"ling:v1:EN:SURF;walk;Standard;Lemma;Lexeme;VERB;-;observed;walk;Lexeme;VERB;-;-";
+			"ling:v1:EN:SURF;walk;Standard;Lemma;Lexeme;VERB;-;observed;walk;Lexeme;VERB;-;🚶";
 		const parsedTargeted = parseEnglishSurface(
 			targetedId,
 		) as ParsedSurface<"English">;

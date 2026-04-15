@@ -94,18 +94,22 @@ describe("public API usage", () => {
 			pos: "NOUN",
 		} satisfies Lemma<"German", "Lexeme", "NOUN">;
 
-		const surface = {
-			discriminators: {
-				lemmaKind: "Lexeme",
-				lemmaSubKind: "NOUN",
-			},
-			normalizedFullSurface: "See",
-			orthographicStatus: "Standard",
-			surfaceKind: "Lemma",
-			target: {
-				canonicalLemma: "See",
-			},
-		} satisfies LingId.Input<"German">;
+			const surface = {
+				language: "German",
+				orthographicStatus: "Standard",
+				spelledSelection: "See",
+				surface: {
+					discriminators: {
+						lemmaKind: "Lexeme",
+						lemmaSubKind: "NOUN",
+					},
+					normalizedFullSurface: "See",
+					surfaceKind: "Lemma",
+					target: {
+						canonicalLemma: "See",
+					},
+				},
+			} satisfies LingId.Input<"German">;
 
 		const observedId: LingId.Value =
 			germanLingConverters.getSurfaceLingId(lemma);
@@ -121,10 +125,10 @@ describe("public API usage", () => {
 
 		const targetLingIds = [observedId] satisfies Relations.TargetLingIds;
 
-		expect(
-			germanLingConverters.parseSurface(observedId).observationMode,
-		).toBe("observed");
-		expect(shallowId.startsWith("ling:v1:DE:SURF-SHALLOW;")).toBe(true);
+			expect("target" in germanLingConverters.parseSurface(observedId)).toBe(
+				true,
+			);
+			expect(shallowId.startsWith("ling:v1:DE:SURF-SHALLOW;")).toBe(true);
 		expect(lexicalRelation).toBe("synonym");
 		expect(lexicalRelations.synonym).toEqual(targetLingIds);
 	});

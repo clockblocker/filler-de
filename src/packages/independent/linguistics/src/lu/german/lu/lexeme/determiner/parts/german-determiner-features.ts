@@ -1,6 +1,8 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../../universal/abstract-selection";
+import type {
+	InherentFeaturesSchemaFor,
+	InflectionalFeaturesSchemaFor,
+} from "../../../../../universal/helpers/schema-targets";
 import { IsPoss } from "../../../../../universal/enums/feature/ud/poss";
 import {
 	GermanDeterminerCase,
@@ -21,14 +23,7 @@ export const GermanDeterminerInflectionalFeaturesSchema = z
 		gender: GermanDeterminerGender.optional(),
 		number: GermanDeterminerNumber.optional(),
 	})
-	.strict() satisfies z.ZodType<
-	AbstractSelectionFor<
-		"Standard",
-		"Inflection",
-		"Lexeme",
-		"DET"
-	>["surface"]["inflectionalFeatures"]
->;
+	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "DET">;
 
 export const GermanDeterminerInherentFeaturesSchema = z
 	.object({
@@ -39,6 +34,4 @@ export const GermanDeterminerInherentFeaturesSchema = z
 		poss: IsPoss.optional(),
 		pronType: GermanDeterminerPronType.optional(),
 	})
-	.strict() satisfies z.ZodType<
-	AbstractLemma<"Lexeme", "DET">["inherentFeatures"]
->;
+	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "DET">;

@@ -1,20 +1,13 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../../universal/abstract-selection";
+import type {
+	InherentFeaturesSchemaFor,
+	InflectionalFeaturesSchemaFor,
+} from "../../../../../universal/helpers/schema-targets";
 
 export const EnglishInterjectionInflectionalFeaturesSchema = z
 	.object({})
-	.strict() satisfies z.ZodType<
-	AbstractSelectionFor<
-		"Standard",
-		"Inflection",
-		"Lexeme",
-		"INTJ"
-	>["surface"]["inflectionalFeatures"]
->;
+	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "INTJ">;
 
 export const EnglishInterjectionInherentFeaturesSchema = z
 	.object({})
-	.strict() satisfies z.ZodType<
-	AbstractLemma<"Lexeme", "INTJ">["inherentFeatures"]
->;
+	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "INTJ">;

@@ -1,4 +1,5 @@
 import type {
+	Lemma,
 	LemmaKind,
 	MorphemeKind,
 	OrthographicStatus,
@@ -12,16 +13,17 @@ import { expectBooleanFeature, parseFeatureBag } from "./features";
 import { normalizeObservedSurface } from "./serialize";
 import type {
 	LingId,
-	ParsedLemmaDto,
-	ParsedObservedSurfaceDto,
+	LingIdObservedSurface,
+	LingIdSelection,
 	ParsedShallowSurfaceDto,
-	ParsedSurfaceDto,
-	ParsedTargetedSurfaceDto,
+	ParsedSurfaceResult,
 	ShallowSurfaceLingId,
 } from "./types";
 import { parseHeader } from "./wire";
 
-export function parseLingId(id: LingId): ParsedSurfaceDto {
+type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
+
+export function parseLingId(id: LingId): ParsedSurfaceResult {
 	const { body, kind, language } = parseHeader(id);
 
 	if (kind === "SURF") {
@@ -46,7 +48,7 @@ export function parseShallowSurfaceLingId(
 export function parseLemmaBody(
 	language: TargetLanguage,
 	body: string,
-): ParsedLemmaDto {
+): Lemma {
 	const parts = body.split(";");
 
 	if (parts.length !== 5) {
@@ -71,10 +73,11 @@ export function parseLemmaBody(
 				inherentFeatures: parseFeatureBag(featuresToken),
 				language,
 				lemmaKind,
-				lingKind: "Lemma",
-				meaningInEmojis,
+				...(meaningInEmojis === undefined
+					? {}
+					: { meaningInEmojis }),
 				pos: lemmaSubKind as Pos,
-			};
+			} as Lemma;
 		case "Morpheme": {
 			const lemmaFeatures = parseFeatureBag(featuresToken);
 
@@ -90,8 +93,9 @@ export function parseLemmaBody(
 						}),
 				language,
 				lemmaKind,
-				lingKind: "Lemma",
-				meaningInEmojis,
+				...(meaningInEmojis === undefined
+					? {}
+					: { meaningInEmojis }),
 				morphemeKind: lemmaSubKind as MorphemeKind,
 				...(lemmaFeatures.separable === undefined
 					? {}
@@ -99,9 +103,9 @@ export function parseLemmaBody(
 							separable: expectBooleanFeature(
 								"separable",
 								lemmaFeatures,
-							),
-						}),
-			};
+								),
+							}),
+			} as Lemma;
 		}
 		case "Phraseme": {
 			const lemmaFeatures = parseFeatureBag(featuresToken);
@@ -116,18 +120,19 @@ export function parseLemmaBody(
 				);
 			}
 
-			return {
-				canonicalLemma,
-				...(discourseFormulaRole === undefined
-					? {}
-					: { discourseFormulaRole: discourseFormulaRole as string }),
-				language,
-				lemmaKind,
-				lingKind: "Lemma",
-				meaningInEmojis,
-				phrasemeKind: lemmaSubKind as PhrasemeKind,
-			};
-		}
+				return {
+					canonicalLemma,
+					...(discourseFormulaRole === undefined
+						? {}
+						: { discourseFormulaRole: discourseFormulaRole as string }),
+					language,
+					lemmaKind,
+					...(meaningInEmojis === undefined
+						? {}
+						: { meaningInEmojis }),
+					phrasemeKind: lemmaSubKind as PhrasemeKind,
+				} as Lemma;
+			}
 		default:
 			throw new Error(`Unsupported lemma kind in Ling ID: ${lemmaKind}`);
 	}
@@ -136,7 +141,7 @@ export function parseLemmaBody(
 function parseSurfaceBody(
 	language: TargetLanguage,
 	body: string,
-): ParsedSurfaceDto {
+): ParsedSurfaceResult {
 	const parts = splitSurfaceBody(body);
 
 	if (parts.length !== 8) {
@@ -175,6 +180,7 @@ function parseSurfaceBody(
 		});
 	}
 
+	const normalizedFullSurface = unescapeToken(normalizedFullSurfaceToken);
 	const target =
 		targetMode === "canon"
 			? { canonicalLemma: targetPayloadToken }
@@ -183,27 +189,26 @@ function parseSurfaceBody(
 				: unsupportedTargetMode(targetMode);
 
 	return {
-		discriminators: {
-			lemmaKind: lemmaKind as LemmaKind,
-			lemmaSubKind,
-		},
-		...(surfaceKind === "Inflection"
-			? {
-					inflectionalFeatures: parseFeatureBag(
-						inflectionalFeaturesToken,
-					),
-				}
-			: {}),
 		language,
-		lingKind: "Surface",
-		normalizedFullSurface: unescapeToken(normalizedFullSurfaceToken),
-		orthographicStatus: orthographicStatus as Exclude<
-			OrthographicStatus,
-			"Unknown"
-		>,
-		surfaceKind: surfaceKind as SurfaceKind,
-		target,
-	} satisfies ParsedTargetedSurfaceDto;
+		orthographicStatus: orthographicStatus as KnownOrthographicStatus,
+		spelledSelection: normalizedFullSurface,
+		surface: {
+			discriminators: {
+				lemmaKind: lemmaKind as LemmaKind,
+				lemmaSubKind,
+			},
+			...(surfaceKind === "Inflection"
+				? {
+						inflectionalFeatures: parseFeatureBag(
+							inflectionalFeaturesToken,
+						),
+					}
+				: {}),
+			normalizedFullSurface,
+			surfaceKind: surfaceKind as SurfaceKind,
+			target,
+		},
+	} as LingIdSelection;
 }
 
 function parseShallowSurfaceBody(
@@ -226,26 +231,24 @@ function parseShallowSurfaceBody(
 	] = parts as [string, string, string, string, string, string];
 
 	return {
-		discriminators: {
-			lemmaKind: lemmaKind as LemmaKind,
-			lemmaSubKind,
-		},
-		...(surfaceKind === "Inflection"
-			? {
-					inflectionalFeatures: parseFeatureBag(
-						inflectionalFeaturesToken,
-					),
-				}
-			: {}),
 		language,
-		lingKind: "Surface",
-		normalizedFullSurface: unescapeToken(normalizedFullSurfaceToken),
-		orthographicStatus: orthographicStatus as Exclude<
-			OrthographicStatus,
-			"Unknown"
-		>,
-		surfaceKind: surfaceKind as SurfaceKind,
-	} satisfies ParsedShallowSurfaceDto;
+		orthographicStatus: orthographicStatus as KnownOrthographicStatus,
+		surface: {
+			discriminators: {
+				lemmaKind: lemmaKind as LemmaKind,
+				lemmaSubKind,
+			},
+			...(surfaceKind === "Inflection"
+				? {
+						inflectionalFeatures: parseFeatureBag(
+							inflectionalFeaturesToken,
+						),
+					}
+				: {}),
+			normalizedFullSurface: unescapeToken(normalizedFullSurfaceToken),
+			surfaceKind: surfaceKind as SurfaceKind,
+		},
+	};
 }
 
 function parseObservedSurfaceBody(
@@ -268,12 +271,12 @@ function parseObservedSurfaceBody(
 		surfaceKind: string;
 		targetPayloadToken: string;
 	},
-): ParsedSurfaceDto {
+): LingIdObservedSurface {
 	const observedLemma = parseLemmaBody(language, targetPayloadToken);
 	const normalizedObservedSurface = normalizeObservedSurface(observedLemma);
 
 	if (
-		orthographicStatus !== normalizedObservedSurface.orthographicStatus ||
+		orthographicStatus !== "Standard" ||
 		surfaceKind !== normalizedObservedSurface.surfaceKind ||
 		unescapeToken(normalizedFullSurfaceToken) !==
 			normalizedObservedSurface.normalizedFullSurface ||
@@ -285,7 +288,7 @@ function parseObservedSurfaceBody(
 		throw new Error(`Malformed observed surface Ling ID: ${body}`);
 	}
 
-	return normalizedObservedSurface satisfies ParsedObservedSurfaceDto;
+	return normalizedObservedSurface as LingIdObservedSurface;
 }
 
 function unsupportedTargetMode(targetMode: string): never {

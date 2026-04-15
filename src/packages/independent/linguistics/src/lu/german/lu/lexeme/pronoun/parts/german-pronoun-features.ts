@@ -1,6 +1,8 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../../universal/abstract-selection";
+import type {
+	InherentFeaturesSchemaFor,
+	InflectionalFeaturesSchemaFor,
+} from "../../../../../universal/helpers/schema-targets";
 import { IsPoss } from "../../../../../universal/enums/feature/ud/poss";
 import { IsReflex } from "../../../../../universal/enums/feature/ud/reflex";
 import {
@@ -19,14 +21,7 @@ export const GermanPronounInflectionalFeaturesSchema = z
 		number: GermanPronounNumber.optional(),
 		reflex: IsReflex.optional(),
 	})
-	.strict() satisfies z.ZodType<
-	AbstractSelectionFor<
-		"Standard",
-		"Inflection",
-		"Lexeme",
-		"PRON"
-	>["surface"]["inflectionalFeatures"]
->;
+	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "PRON">;
 
 export const GermanPronounInherentFeaturesSchema = z
 	.object({
@@ -35,6 +30,4 @@ export const GermanPronounInherentFeaturesSchema = z
 		poss: IsPoss.optional(),
 		pronType: GermanPronounPronType.optional(),
 	})
-	.strict() satisfies z.ZodType<
-	AbstractLemma<"Lexeme", "PRON">["inherentFeatures"]
->;
+	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "PRON">;

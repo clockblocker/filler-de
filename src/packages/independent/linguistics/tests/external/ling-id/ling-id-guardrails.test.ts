@@ -1,10 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import type { ParsedObservedSurfaceDto } from "../../../src";
 import {
 	buildEnglishWalkLemma,
 	buildGermanFeminineSeeLemma,
 	type LingIdSurfaceInput,
-	type ParsedTargetedSurface,
 	parseGermanSurface,
 	toGermanShallowSurfaceLingId,
 	toGermanSurfaceLingId,
@@ -13,14 +11,18 @@ import {
 describe("Ling ID guardrails", () => {
 	it("rejects nested full target lemmas with a mismatched language", () => {
 		const malformedSurface = {
-			discriminators: {
-				lemmaKind: "Lexeme",
-				lemmaSubKind: "VERB",
-			},
-			normalizedFullSurface: "walk",
+			language: "German",
 			orthographicStatus: "Standard",
-			surfaceKind: "Lemma",
-			target: buildEnglishWalkLemma(),
+			spelledSelection: "walk",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "VERB",
+				},
+				normalizedFullSurface: "walk",
+				surfaceKind: "Lemma",
+				target: buildEnglishWalkLemma(),
+			},
 		} satisfies LingIdSurfaceInput<"German">;
 
 		expect(() => toGermanSurfaceLingId(malformedSurface)).toThrow(
@@ -32,18 +34,16 @@ describe("Ling ID guardrails", () => {
 		const lemma = buildGermanFeminineSeeLemma();
 		const observedSurface = parseGermanSurface(
 			toGermanSurfaceLingId(lemma),
-		) as ParsedObservedSurfaceDto;
+		);
 
 		expect(() =>
 			toGermanShallowSurfaceLingId(
 				lemma as unknown as LingIdSurfaceInput<"German">,
 			),
 		).toThrow(/surface input/);
-		expect(
-			toGermanShallowSurfaceLingId(
-				observedSurface as unknown as ParsedTargetedSurface<"German">,
-			),
-		).toBe("ling:v1:DE:SURF-SHALLOW;See;Standard;Lemma;Lexeme;NOUN;-");
+		expect(toGermanShallowSurfaceLingId(observedSurface)).toBe(
+			"ling:v1:DE:SURF-SHALLOW;See;Standard;Lemma;Lexeme;NOUN;-",
+		);
 	});
 
 	it("does not preserve compatibility with the removed top-level lemma format", () => {

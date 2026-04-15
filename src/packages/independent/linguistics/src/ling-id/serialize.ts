@@ -1,10 +1,11 @@
+import type { Lemma, OrthographicStatus } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
 import { escapeToken, serializeOptionalToken } from "./escape";
 import { compactFeatureBag, serializeFeatureBag } from "./features";
 import type {
+	LingIdObservedSurface,
+	LingIdSelection,
 	ObservedSurfaceLingId,
-	ParsedLemmaDto,
-	ParsedObservedSurfaceDto,
 	ParsedShallowSurfaceDto,
 	SerializableLemma,
 	SerializableSurface,
@@ -14,46 +15,67 @@ import type {
 } from "./types";
 import { buildHeader, joinLingId } from "./wire";
 
-type SerializableNestedLemma =
-	| SerializableLemma
-	| Exclude<SerializableSurface["target"], { canonicalLemma: string }>;
+type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
+
+type SerializableNestedLemma = Lemma;
+
+type NormalizedObservedSurface = {
+	discriminators: {
+		lemmaKind: Lemma["lemmaKind"];
+		lemmaSubKind: string;
+	};
+	normalizedFullSurface: string;
+	surfaceKind: "Lemma";
+	target: Lemma;
+};
+
+type SerializedSurfaceShell = {
+	orthographicStatus: KnownOrthographicStatus;
+	surface:
+		| LingIdSelection["surface"]
+		| ParsedShallowSurfaceDto["surface"]
+		| NormalizedObservedSurface;
+};
 
 export function serializeObservedSurface(
 	language: TargetLanguage,
-	value: SerializableLemma | ParsedObservedSurfaceDto,
+	value: SerializableLemma | LingIdObservedSurface,
 ): ObservedSurfaceLingId {
-	return serializeSurface(
-		language,
-		isObservedSurfaceDto(value)
-			? normalizeObservedSurface(value.target)
-			: normalizeObservedSurface(value),
-	);
+	const normalizedValue = normalizeObservedSurface(value);
+
+	return joinLingId([
+		buildHeader(language, "SURF"),
+		...serializeSurfaceShell({
+			orthographicStatus: "Standard",
+			surface: normalizedValue,
+		}),
+		"observed",
+		serializeLemmaBody(language, normalizedValue.target),
+	]);
 }
 
 export function serializeSurface(
 	language: TargetLanguage,
 	value: SerializableSurface,
 ): SurfaceLingId | ObservedSurfaceLingId {
-	const normalizedValue = isObservedSurfaceDto(value)
-		? normalizeObservedSurface(value.target)
-		: value;
-	let targetMode: "canon" | "lemma" | "observed";
+	if (!isSelectionValue(value)) {
+		return serializeObservedSurface(language, value);
+	}
+
+	let targetMode: "canon" | "lemma";
 	let targetPayload: string;
 
-	if (isObservedSurfaceDto(normalizedValue)) {
-		targetMode = "observed";
-		targetPayload = serializeLemmaBody(language, normalizedValue.target);
-	} else if (isObservedSurfaceTarget(normalizedValue.target)) {
+	if (isObservedSurfaceTarget(value.surface.target)) {
 		targetMode = "lemma";
-		targetPayload = serializeLemmaBody(language, normalizedValue.target);
+		targetPayload = serializeLemmaBody(language, value.surface.target);
 	} else {
 		targetMode = "canon";
-		targetPayload = normalizedValue.target.canonicalLemma;
+		targetPayload = value.surface.target.canonicalLemma;
 	}
 
 	return joinLingId([
 		buildHeader(language, "SURF"),
-		...serializeSurfaceShell(normalizedValue),
+		...serializeSurfaceShell(value),
 		targetMode,
 		targetPayload,
 	]);
@@ -65,7 +87,7 @@ export function serializeShallowSurface(
 ): ShallowSurfaceLingId {
 	return joinLingId([
 		buildHeader(language, "SURF-SHALLOW"),
-		...serializeSurfaceShell(value),
+		...serializeSurfaceShell(getSurfaceShell(value)),
 	]);
 }
 
@@ -87,80 +109,37 @@ export function serializeLemmaBody(
 }
 
 export function normalizeObservedSurface(
-	value: SerializableLemma,
-): ParsedObservedSurfaceDto {
-	const observedLemma = normalizeLemma(value);
+	value: SerializableLemma | LingIdObservedSurface,
+): NormalizedObservedSurface {
+	const observedLemma = normalizeLemma(
+		isObservedSurfaceValue(value) ? value.target : value,
+	);
 
 	return {
 		discriminators: {
 			lemmaKind: observedLemma.lemmaKind,
 			lemmaSubKind: getLemmaSubKind(observedLemma),
 		},
-		language: observedLemma.language,
-		lingKind: "Surface",
 		normalizedFullSurface: observedLemma.canonicalLemma,
-		observationMode: "observed",
-		orthographicStatus: "Standard",
 		surfaceKind: "Lemma",
 		target: observedLemma,
 	};
 }
 
-function serializeSurfaceShell(
-	value: SerializableSurfaceShell | ParsedShallowSurfaceDto,
-): string[] {
+function serializeSurfaceShell(value: SerializedSurfaceShell): string[] {
 	return [
-		escapeToken(value.normalizedFullSurface),
+		escapeToken(value.surface.normalizedFullSurface),
 		value.orthographicStatus,
-		value.surfaceKind,
-		value.discriminators.lemmaKind,
-		value.discriminators.lemmaSubKind,
-		value.surfaceKind === "Inflection"
-			? serializeFeatureBag(value.inflectionalFeatures ?? {})
+		value.surface.surfaceKind,
+		value.surface.discriminators.lemmaKind,
+		value.surface.discriminators.lemmaSubKind,
+		value.surface.surfaceKind === "Inflection"
+			? serializeFeatureBag(value.surface.inflectionalFeatures ?? {})
 			: "-",
 	];
 }
 
-function normalizeLemma(value: SerializableNestedLemma): ParsedLemmaDto {
-	if ("lingKind" in value) {
-		switch (value.lemmaKind) {
-			case "Lexeme":
-				return {
-					canonicalLemma: value.canonicalLemma,
-					inherentFeatures: compactFeatureBag(value.inherentFeatures),
-					language: value.language,
-					lemmaKind: value.lemmaKind,
-					lingKind: "Lemma",
-					meaningInEmojis: value.meaningInEmojis,
-					pos: value.pos,
-				};
-			case "Morpheme":
-				return {
-					canonicalLemma: value.canonicalLemma,
-					isClosedSet: value.isClosedSet,
-					language: value.language,
-					lemmaKind: value.lemmaKind,
-					lingKind: "Lemma",
-					meaningInEmojis: value.meaningInEmojis,
-					morphemeKind: value.morphemeKind,
-					separable: value.separable,
-				};
-			case "Phraseme":
-				return {
-					canonicalLemma: value.canonicalLemma,
-					discourseFormulaRole:
-						"discourseFormulaRole" in value
-							? value.discourseFormulaRole
-							: undefined,
-					language: value.language,
-					lemmaKind: value.lemmaKind,
-					lingKind: "Lemma",
-					meaningInEmojis: value.meaningInEmojis,
-					phrasemeKind: value.phrasemeKind,
-				};
-		}
-	}
-
+function normalizeLemma(value: SerializableNestedLemma): Lemma {
 	switch (value.lemmaKind) {
 		case "Lexeme":
 			return {
@@ -168,38 +147,43 @@ function normalizeLemma(value: SerializableNestedLemma): ParsedLemmaDto {
 				inherentFeatures: compactFeatureBag(value.inherentFeatures),
 				language: value.language,
 				lemmaKind: value.lemmaKind,
-				lingKind: "Lemma",
-				meaningInEmojis: value.meaningInEmojis,
+				...(value.meaningInEmojis === undefined
+					? {}
+					: { meaningInEmojis: value.meaningInEmojis }),
 				pos: value.pos,
-			};
+			} as Lemma;
 		case "Morpheme":
 			return {
 				canonicalLemma: value.canonicalLemma,
 				isClosedSet: value.isClosedSet,
 				language: value.language,
 				lemmaKind: value.lemmaKind,
-				lingKind: "Lemma",
-				meaningInEmojis: value.meaningInEmojis,
+				...(value.meaningInEmojis === undefined
+					? {}
+					: { meaningInEmojis: value.meaningInEmojis }),
 				morphemeKind: value.morphemeKind,
-				separable: value.separable,
-			};
+				...(!("separable" in value) || value.separable === undefined
+					? {}
+					: { separable: value.separable }),
+			} as Lemma;
 		case "Phraseme":
 			return {
 				canonicalLemma: value.canonicalLemma,
-				discourseFormulaRole:
-					"discourseFormulaRole" in value
-						? value.discourseFormulaRole
-						: undefined,
+				...("discourseFormulaRole" in value &&
+				value.discourseFormulaRole !== undefined
+					? { discourseFormulaRole: value.discourseFormulaRole }
+					: {}),
 				language: value.language,
 				lemmaKind: value.lemmaKind,
-				lingKind: "Lemma",
-				meaningInEmojis: value.meaningInEmojis,
+				...(value.meaningInEmojis === undefined
+					? {}
+					: { meaningInEmojis: value.meaningInEmojis }),
 				phrasemeKind: value.phrasemeKind,
-			};
+			} as Lemma;
 	}
 }
 
-function getLemmaSubKind(value: ParsedLemmaDto): string {
+function getLemmaSubKind(value: Lemma): string {
 	switch (value.lemmaKind) {
 		case "Lexeme":
 			return value.pos;
@@ -210,14 +194,14 @@ function getLemmaSubKind(value: ParsedLemmaDto): string {
 	}
 }
 
-function getLemmaFeatures(value: ParsedLemmaDto) {
+function getLemmaFeatures(value: Lemma) {
 	switch (value.lemmaKind) {
 		case "Lexeme":
 			return value.inherentFeatures;
 		case "Morpheme":
 			return compactFeatureBag({
 				isClosedSet: value.isClosedSet,
-				separable: value.separable,
+				separable: "separable" in value ? value.separable : undefined,
 			});
 		case "Phraseme":
 			return compactFeatureBag({
@@ -229,27 +213,45 @@ function getLemmaFeatures(value: ParsedLemmaDto) {
 	}
 }
 
-function isObservedSurfaceDto(
-	value: SerializableLemma | SerializableSurface | ParsedObservedSurfaceDto,
-): value is ParsedObservedSurfaceDto {
-	return hasObservedIdentityMode(value);
+function isSelectionValue(
+	value: unknown,
+): value is LingIdSelection {
+	return typeof value === "object" && value !== null && "surface" in value;
 }
 
-function hasObservedIdentityMode(
+function isObservedSurfaceValue(
 	value: unknown,
-): value is { observationMode: ParsedObservedSurfaceDto["observationMode"] } {
+): value is LingIdObservedSurface {
 	return (
 		typeof value === "object" &&
 		value !== null &&
-		"observationMode" in value &&
-		(value as { observationMode: unknown }).observationMode === "observed"
+		"target" in value &&
+		"surfaceKind" in value &&
+		!("surface" in value)
 	);
 }
 
+function getSurfaceShell(
+	value: SerializableSurfaceShell,
+): SerializedSurfaceShell {
+	if (isSelectionValue(value)) {
+		return value;
+	}
+
+	if (isObservedSurfaceValue(value)) {
+		return {
+			orthographicStatus: "Standard",
+			surface: value,
+		};
+	}
+
+	return value;
+}
+
 function isObservedSurfaceTarget(
-	target: SerializableSurface["target"],
+	target: LingIdSelection["surface"]["target"],
 ): target is Exclude<
-	SerializableSurface["target"],
+	LingIdSelection["surface"]["target"],
 	{ canonicalLemma: string }
 > {
 	return (

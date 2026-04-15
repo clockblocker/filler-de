@@ -1,20 +1,15 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../../universal/abstract-selection";
+import type {
+	InherentFeaturesSchemaFor,
+	InflectionalFeaturesSchemaFor,
+} from "../../../../../universal/helpers/schema-targets";
 import { IsAbbr } from "../../../../../universal/enums/feature/ud/abbr";
 import { IsForeign } from "../../../../../universal/enums/feature/ud/foreign";
 import { EnglishPolarity } from "../../shared/english-common-enums";
 
 export const EnglishParticleInflectionalFeaturesSchema = z
 	.object({})
-	.strict() satisfies z.ZodType<
-	AbstractSelectionFor<
-		"Standard",
-		"Inflection",
-		"Lexeme",
-		"PART"
-	>["surface"]["inflectionalFeatures"]
->;
+	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "PART">;
 
 export const EnglishParticleInherentFeaturesSchema = z
 	.object({
@@ -22,6 +17,4 @@ export const EnglishParticleInherentFeaturesSchema = z
 		foreign: IsForeign.optional(),
 		polarity: EnglishPolarity.optional(),
 	})
-	.strict() satisfies z.ZodType<
-	AbstractLemma<"Lexeme", "PART">["inherentFeatures"]
->;
+	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "PART">;

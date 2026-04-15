@@ -1,6 +1,8 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../../universal/abstract-selection";
+import type {
+	InherentFeaturesSchemaFor,
+	InflectionalFeaturesSchemaFor,
+} from "../../../../../universal/helpers/schema-targets";
 import { IsForeign } from "../../../../../universal/enums/feature/ud/foreign";
 import {
 	EnglishSymbolCase,
@@ -15,20 +17,11 @@ export const EnglishSymbolInflectionalFeaturesSchema = z
 		gender: EnglishSymbolGender.optional(),
 		number: EnglishSymbolNumber.optional(),
 	})
-	.strict() satisfies z.ZodType<
-	AbstractSelectionFor<
-		"Standard",
-		"Inflection",
-		"Lexeme",
-		"SYM"
-	>["surface"]["inflectionalFeatures"]
->;
+	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "SYM">;
 
 export const EnglishSymbolInherentFeaturesSchema = z
 	.object({
 		foreign: IsForeign.optional(),
 		numType: EnglishSymbolNumType.optional(),
 	})
-	.strict() satisfies z.ZodType<
-	AbstractLemma<"Lexeme", "SYM">["inherentFeatures"]
->;
+	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "SYM">;

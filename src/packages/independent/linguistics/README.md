@@ -328,24 +328,28 @@ toGermanShallowSurfaceLingId(seeSurface) ===
 ### Parsing IDs
 
 `buildToLingConverters()` also exposes language-bound parsers. `parseSurface()`
-returns a full surface DTO, and `parseShallowSurface()` returns a shallow
-surface shell DTO.
+returns either a `Selection` for full surface IDs or an `ObservedSurface` for
+observed lemma IDs. `parseShallowSurface()` returns the shallow shell payload.
 
 ```ts
 import {
 	buildToLingConverters,
-	SurfaceSchema,
+	ObservedSurfaceSchema,
+	SelectionSchema,
 } from "@textfresser/linguistics";
 
 const { getSurfaceLingId, parseSurface } = buildToLingConverters("English");
 
 const parsedWalkSurface = parseSurface(walkSurfaceId);
 
-SurfaceSchema.English.Standard.Inflection.Lexeme.VERB.parse(parsedWalkSurface);
+SelectionSchema.English.Standard.Inflection.Lexeme.VERB.parse(parsedWalkSurface);
 getSurfaceLingId(parsedWalkSurface) === walkSurfaceId;
 // true
 
 const parsedWalkLemmaIdentity = parseSurface(walkLemmaId);
+ObservedSurfaceSchema.English.Standard.Lemma.Lexeme.VERB.parse(
+	parsedWalkLemmaIdentity,
+);
 getSurfaceLingId(parsedWalkLemmaIdentity) === walkLemmaId;
 // true
 ```

@@ -1,6 +1,8 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../../universal/abstract-selection";
+import type {
+	InherentFeaturesSchemaFor,
+	InflectionalFeaturesSchemaFor,
+} from "../../../../../universal/helpers/schema-targets";
 import { EnglishNounCase, EnglishNounNumber } from "./english-noun-enums";
 
 export const EnglishNounInflectionalFeaturesSchema = z
@@ -8,17 +10,8 @@ export const EnglishNounInflectionalFeaturesSchema = z
 		case: EnglishNounCase.optional(),
 		number: EnglishNounNumber.optional(),
 	})
-	.strict() satisfies z.ZodType<
-	AbstractSelectionFor<
-		"Standard",
-		"Inflection",
-		"Lexeme",
-		"NOUN"
-	>["surface"]["inflectionalFeatures"]
->;
+	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "NOUN">;
 
 export const EnglishNounInherentFeaturesSchema = z
 	.object({})
-	.strict() satisfies z.ZodType<
-	AbstractLemma<"Lexeme", "NOUN">["inherentFeatures"]
->;
+	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "NOUN">;

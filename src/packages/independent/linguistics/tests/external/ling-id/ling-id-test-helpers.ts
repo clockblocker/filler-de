@@ -1,27 +1,23 @@
 import type {
 	Lemma,
-	OrthographicStatus,
-	ParsedObservedSurfaceDto,
-	ParsedSurfaceDto,
-	ParsedTargetedSurfaceDto,
-	Surface,
+	LingIdObservedSurface,
+	LingIdSelection,
+	ParsedSurfaceResult,
 } from "../../../src";
 import { buildToLingConverters } from "../../../src";
 
 export type TestLanguage = "German" | "English";
 
-export type LingIdSurfaceInput<L extends TestLanguage> = Surface<L> & {
-	orthographicStatus: Exclude<OrthographicStatus, "Unknown">;
-};
+export type LingIdSurfaceInput<L extends TestLanguage> = LingIdSelection<L>;
 
 export type ParsedObservedSurface<L extends TestLanguage = TestLanguage> =
-	ParsedObservedSurfaceDto & { language: L };
+	LingIdObservedSurface<L>;
 
 export type ParsedTargetedSurface<L extends TestLanguage = TestLanguage> =
-	ParsedTargetedSurfaceDto & { language: L };
+	LingIdSelection<L>;
 
 export type ParsedSurface<L extends TestLanguage = TestLanguage> =
-	ParsedSurfaceDto & { language: L };
+	ParsedSurfaceResult<L>;
 
 export const germanLingConverters = buildToLingConverters("German");
 export const englishLingConverters = buildToLingConverters("English");

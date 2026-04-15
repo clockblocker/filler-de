@@ -1,6 +1,8 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../../universal/abstract-selection";
+import type {
+	InherentFeaturesSchemaFor,
+	InflectionalFeaturesSchemaFor,
+} from "../../../../../universal/helpers/schema-targets";
 import { GovernedPreposition } from "../../../../../universal/enums/feature/custom/governed-preposition";
 import { IsPhrasal } from "../../../../../universal/enums/feature/custom/is-phrasal";
 import { IsSeparable } from "../../../../../universal/enums/feature/custom/separable";
@@ -23,13 +25,7 @@ export const GermanVerbInflectionalFeaturesSchema = z
 		tense: GermanVerbTense.optional(),
 		verbForm: GermanVerbVerbForm.optional(),
 	})
-	.strict() satisfies z.ZodType<
-	AbstractSelectionFor<
-		"Standard",
-		"Inflection",
-		"Lexeme"
-	>["surface"]["inflectionalFeatures"]
->;
+	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme">;
 
 export const GermanVerbInherentFeaturesSchema = z
 	.object({
@@ -38,4 +34,4 @@ export const GermanVerbInherentFeaturesSchema = z
 		reflex: IsReflex.optional(),
 		separable: IsSeparable.optional(),
 	})
-	.strict() satisfies z.ZodType<AbstractLemma<"Lexeme">["inherentFeatures"]>;
+	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme">;
