@@ -5,7 +5,7 @@ import type {
 import { EnglishAdjectiveSchemas } from "./pos/adjective/english-adjective-bundle";
 import { EnglishAdpositionSchemas } from "./pos/adposition/english-adposition-bundle";
 import { EnglishAdverbSchemas } from "./pos/adverb/english-adverb-bundle";
-import { EnglishAuxiliarySchemas } from "./pos/coordinating-conjunction/auxiliary/english-auxiliary-bundle";
+import { EnglishAuxiliarySchemas } from "./pos/auxiliary/english-auxiliary-bundle";
 import { EnglishCoordinatingConjunctionSchemas } from "./pos/coordinating-conjunction/english-coordinating-conjunction-bundle";
 import { EnglishDeterminerSchemas } from "./pos/determiner/english-determiner-bundle";
 import { EnglishInterjectionSchemas } from "./pos/interjection/english-interjection-bundle";
