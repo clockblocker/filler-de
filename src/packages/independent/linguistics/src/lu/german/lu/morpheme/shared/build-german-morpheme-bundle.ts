@@ -1,27 +1,15 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
 import { IsSeparable } from "../../../../universal/enums/feature/custom/separable";
 import type { MorphemeKind } from "../../../../universal/enums/kind/morpheme-kind";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
 import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 
-type GermanMorphemeBundle<MK extends MorphemeKind> = {
-	LemmaSchema: z.ZodType<AbstractLemma<"Morpheme", MK>>;
-	StandardLemmaSelectionSchema: z.ZodType<
-		AbstractSelectionFor<"Standard", "Lemma", "Morpheme", MK>
-	>;
-	TypoLemmaSelectionSchema: z.ZodType<
-		AbstractSelectionFor<"Typo", "Lemma", "Morpheme", MK>
-	>;
-};
-
 export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 	morphemeKind,
 }: {
 	morphemeKind: MK;
-}): GermanMorphemeBundle<MK> {
+}) {
 	const lemmaIdentityShape = {
 		lemmaKind: z.literal("Morpheme"),
 		morphemeKind: z.literal(morphemeKind),
@@ -41,7 +29,7 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 						: z.undefined().optional(),
 			})
 			.strict(),
-	) as unknown as GermanMorphemeBundle<MK>["LemmaSchema"];
+	);
 
 	return {
 		LemmaSchema: lemmaSchema,
@@ -49,12 +37,12 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 			language: "German",
 			lemmaIdentityShape,
 			lemmaSchema,
-		}) as unknown as GermanMorphemeBundle<MK>["StandardLemmaSelectionSchema"],
+		}),
 		TypoLemmaSelectionSchema: buildLemmaSelection({
 			language: "German",
 			lemmaIdentityShape,
 			lemmaSchema,
 			orthographicStatus: "Typo",
-		}) as unknown as GermanMorphemeBundle<MK>["TypoLemmaSelectionSchema"],
+		}),
 	};
 }

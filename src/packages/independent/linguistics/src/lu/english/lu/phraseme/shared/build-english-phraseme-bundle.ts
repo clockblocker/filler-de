@@ -1,56 +1,44 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../../../../universal/abstract-lemma";
-import type { AbstractSelectionFor } from "../../../../universal/abstract-selection";
 import { DiscourseFormulaRoleSchema } from "../../../../universal/enums/feature/custom/discourse-formula-role";
 import type { PhrasemeKind } from "../../../../universal/enums/kind/phraseme-kind";
-import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
-
-type EnglishPhrasemeBundle<PK extends PhrasemeKind> = {
-	LemmaSchema: z.ZodType<AbstractLemma<"Phraseme", PK>>;
-	StandardLemmaSelectionSchema: z.ZodType<
-		AbstractSelectionFor<"Standard", "Lemma", "Phraseme", PK>
-	>;
-	TypoLemmaSelectionSchema: z.ZodType<
-		AbstractSelectionFor<"Typo", "Lemma", "Phraseme", PK>
-	>;
-};
+import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 
 function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 	if (phrasemeKind === "DiscourseFormula") {
 		return withLingIdLemmaDtoCompatibility(
 			z
 				.object({
-					discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
-					meaningInEmojis: MeaningInEmojisSchema,
-					lemmaKind: z.literal("Phraseme"),
-					language: z.literal("English"),
-					phrasemeKind: z.literal(phrasemeKind),
 					canonicalLemma: z.string(),
+					discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
+					language: z.literal("English"),
+					lemmaKind: z.literal("Phraseme"),
+					meaningInEmojis: MeaningInEmojisSchema,
+					phrasemeKind: z.literal(phrasemeKind),
 				})
 				.strict(),
-		) as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
+		);
 	}
 
 	return withLingIdLemmaDtoCompatibility(
 		z
 			.object({
-				meaningInEmojis: MeaningInEmojisSchema,
-				lemmaKind: z.literal("Phraseme"),
-				language: z.literal("English"),
-				phrasemeKind: z.literal(phrasemeKind),
 				canonicalLemma: z.string(),
+				language: z.literal("English"),
+				lemmaKind: z.literal("Phraseme"),
+				meaningInEmojis: MeaningInEmojisSchema,
+				phrasemeKind: z.literal(phrasemeKind),
 			})
 			.strict(),
-	) as unknown as z.ZodType<AbstractLemma<"Phraseme", PK>>;
+	);
 }
 
 export function buildEnglishPhrasemeBundle<PK extends PhrasemeKind>({
 	phrasemeKind,
 }: {
 	phrasemeKind: PK;
-}): EnglishPhrasemeBundle<PK> {
+}) {
 	const lemmaIdentityShape = {
 		lemmaKind: z.literal("Phraseme"),
 		phrasemeKind: z.literal(phrasemeKind),
@@ -61,14 +49,14 @@ export function buildEnglishPhrasemeBundle<PK extends PhrasemeKind>({
 		LemmaSchema: lemmaSchema,
 		StandardLemmaSelectionSchema: buildLemmaSelection({
 			language: "English",
-			lemmaSchema,
 			lemmaIdentityShape,
-		}) as unknown as EnglishPhrasemeBundle<PK>["StandardLemmaSelectionSchema"],
+			lemmaSchema,
+		}),
 		TypoLemmaSelectionSchema: buildLemmaSelection({
 			language: "English",
-			lemmaSchema,
 			lemmaIdentityShape,
+			lemmaSchema,
 			orthographicStatus: "Typo",
-		}) as unknown as EnglishPhrasemeBundle<PK>["TypoLemmaSelectionSchema"],
+		}),
 	};
 }

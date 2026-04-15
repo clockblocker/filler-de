@@ -1,6 +1,4 @@
 import type z from "zod/v3";
-import type { AbstractLemma } from "./universal/abstract-lemma";
-import type { AbstractSelectionFor } from "./universal/abstract-selection";
 import type {
 	LemmaKind,
 	OrthographicStatus,
@@ -23,23 +21,19 @@ export type SelectionSchemaLanguageShape = {
 	[OS in Exclude<OrthographicStatus, "Unknown">]: {
 		[SK in SupportedSelectionSurfaceKind]: {
 			[LK in SupportedSelectionLemmaKindFor<SK>]: {
-				[D in LemmaDiscriminatorFor<LK>]: z.ZodType<
-					AbstractSelectionFor<OS, SK, LK, D>
-				>;
+				[D in LemmaDiscriminatorFor<LK>]: z.ZodTypeAny;
 			};
 		};
 	};
 } & {
-	Unknown: z.ZodType<AbstractSelectionFor<"Unknown">>;
+	Unknown: z.ZodTypeAny;
 };
 
 export type SurfaceSchemaLanguageShape = {
 	[OS in Exclude<OrthographicStatus, "Unknown">]: {
 		[SK in SupportedSelectionSurfaceKind]: {
 			[LK in SupportedSelectionLemmaKindFor<SK>]: {
-				[D in LemmaDiscriminatorFor<LK>]: z.ZodType<
-					AbstractSelectionFor<OS, SK, LK, D>["surface"]
-				>;
+				[D in LemmaDiscriminatorFor<LK>]: z.ZodTypeAny;
 			};
 		};
 	};
@@ -47,6 +41,6 @@ export type SurfaceSchemaLanguageShape = {
 
 export type LemmaSchemaLanguageShape = {
 	[LK in LemmaKind]: {
-		[D in LemmaDiscriminatorFor<LK>]: z.ZodType<AbstractLemma<LK, D>>;
+		[D in LemmaDiscriminatorFor<LK>]: z.ZodTypeAny;
 	};
 };

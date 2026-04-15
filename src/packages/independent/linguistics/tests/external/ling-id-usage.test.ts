@@ -19,7 +19,7 @@ describe("Ling ID usage", () => {
 		const feminineSeeLemma = buildGermanFeminineSeeLemma();
 		const neuterSeeLemma = buildGermanNeuterSeeLemma();
 
-		const shallowSurface: LingIdSurfaceInput<"German"> = {
+		const shallowSurface = {
 			discriminators: {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "NOUN",
@@ -30,22 +30,22 @@ describe("Ling ID usage", () => {
 			target: {
 				canonicalLemma: "See",
 			},
-		};
+		} satisfies LingIdSurfaceInput<"German">;
 
-		const fullFemSurface: LingIdSurfaceInput<"German"> = {
+		const fullFemSurface = {
 			...shallowSurface,
 			target: feminineSeeLemma,
-		};
+		} satisfies LingIdSurfaceInput<"German">;
 
-		const sameFullFemSurface: LingIdSurfaceInput<"German"> = {
+		const sameFullFemSurface = {
 			...shallowSurface,
 			target: feminineSeeLemma,
-		};
+		} satisfies LingIdSurfaceInput<"German">;
 
-		const fullNeuterSurface: LingIdSurfaceInput<"German"> = {
+		const fullNeuterSurface = {
 			...shallowSurface,
 			target: neuterSeeLemma,
-		};
+		} satisfies LingIdSurfaceInput<"German">;
 
 		const observedFemSurface = toGermanSurfaceLingId(feminineSeeLemma);
 
@@ -83,7 +83,7 @@ describe("Ling ID usage", () => {
 	it("supports the convenience dispatcher with observed-surface semantics", () => {
 		const lemma = buildGermanFeminineSeeLemma();
 
-		const surface: LingIdSurfaceInput<"German"> = {
+		const surface = {
 			discriminators: {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "NOUN",
@@ -94,7 +94,7 @@ describe("Ling ID usage", () => {
 			target: {
 				canonicalLemma: "See",
 			},
-		};
+		} satisfies LingIdSurfaceInput<"German">;
 
 		expect(germanLingConverters.getSurfaceLingId(lemma)).toBe(
 			toGermanSurfaceLingId(lemma),
@@ -107,7 +107,7 @@ describe("Ling ID usage", () => {
 	it("round-trips targeted inflections across full and shallow builder methods", () => {
 		const walkLemma = buildEnglishWalkLemma();
 
-		const walkSurface: LingIdSurfaceInput<"English"> = {
+		const walkSurface = {
 			discriminators: {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "VERB",
@@ -120,7 +120,7 @@ describe("Ling ID usage", () => {
 			orthographicStatus: "Standard",
 			surfaceKind: "Inflection",
 			target: walkLemma,
-		};
+		} satisfies LingIdSurfaceInput<"English">;
 
 		const fullId = toEnglishSurfaceLingId(walkSurface);
 		const parsedFullSurface = parseEnglishSurface(fullId);

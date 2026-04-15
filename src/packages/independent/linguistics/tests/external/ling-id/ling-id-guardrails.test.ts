@@ -12,7 +12,7 @@ import {
 
 describe("Ling ID guardrails", () => {
 	it("rejects nested full target lemmas with a mismatched language", () => {
-		const malformedSurface: LingIdSurfaceInput<"German"> = {
+		const malformedSurface = {
 			discriminators: {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "VERB",
@@ -21,7 +21,7 @@ describe("Ling ID guardrails", () => {
 			orthographicStatus: "Standard",
 			surfaceKind: "Lemma",
 			target: buildEnglishWalkLemma(),
-		};
+		} satisfies LingIdSurfaceInput<"German">;
 
 		expect(() => toGermanSurfaceLingId(malformedSurface)).toThrow(
 			/Ling ID builder language mismatch/,

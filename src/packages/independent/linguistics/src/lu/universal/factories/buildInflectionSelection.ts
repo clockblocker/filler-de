@@ -1,6 +1,4 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../abstract-lemma";
-import type { AbstractSelectionFor } from "../abstract-selection";
 import type { TargetLanguage } from "../enums/core/language";
 import type { LemmaKind, OrthographicStatus } from "../enums/core/selection";
 import type { LemmaDiscriminatorFor } from "../lemma-discriminator";
@@ -14,14 +12,16 @@ type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
 
 type BuildInflectionSelectionArgs<
 	InflectionalFeaturesSchema extends z.ZodTypeAny,
+	LanguageLiteral extends TargetLanguage,
+	LemmaSchema extends z.ZodTypeAny,
 	LK extends LemmaKind,
 	D extends LemmaDiscriminatorFor<LK>,
 	OrthographicStatusLiteral extends KnownOrthographicStatus = "Standard",
 	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 > = {
 	inflectionalFeaturesSchema: InflectionalFeaturesSchema;
-	language: TargetLanguage;
-	lemmaSchema: z.ZodType<AbstractLemma<LK, D>>;
+	language: LanguageLiteral;
+	lemmaSchema: LemmaSchema;
 	lemmaIdentityShape: SelectionLemmaIdentityShapeFor<LK, D>;
 	orthographicStatus?: OrthographicStatusLiteral;
 	surfaceExtraShape?: SurfaceExtraShape;
@@ -29,6 +29,8 @@ type BuildInflectionSelectionArgs<
 
 export function buildInflectionSelection<
 	InflectionalFeaturesSchema extends z.ZodTypeAny,
+	LanguageLiteral extends TargetLanguage,
+	LemmaSchema extends z.ZodTypeAny,
 	LK extends LemmaKind,
 	D extends LemmaDiscriminatorFor<LK>,
 	OrthographicStatusLiteral extends KnownOrthographicStatus = "Standard",
@@ -42,13 +44,13 @@ export function buildInflectionSelection<
 	surfaceExtraShape = {} as SurfaceExtraShape,
 }: BuildInflectionSelectionArgs<
 	InflectionalFeaturesSchema,
+	LanguageLiteral,
+	LemmaSchema,
 	LK,
 	D,
 	OrthographicStatusLiteral,
 	SurfaceExtraShape
->): z.ZodType<
-	AbstractSelectionFor<OrthographicStatusLiteral, "Inflection", LK, D>
-> {
+>) {
 	const surfaceSchema = buildSelectionSurfaceSchema({
 		language,
 		lemmaIdentityShape,
@@ -65,7 +67,5 @@ export function buildInflectionSelection<
 		orthographicStatus: z.literal(orthographicStatus),
 		spelledSelection: z.string(),
 		surface: surfaceSchema,
-	}) as unknown as z.ZodType<
-		AbstractSelectionFor<OrthographicStatusLiteral, "Inflection", LK, D>
-	>;
+	});
 }

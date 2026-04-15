@@ -30,19 +30,21 @@ export type SelectionLemmaIdentityShapeFor<
 				}
 			: never;
 
-type BuildSelectionSurfaceArgs = {
-	language: string;
-	lemmaIdentityShape: SelectionLemmaIdentityShape;
-	lemmaSchema: z.ZodTypeAny;
-	surfaceShape: z.ZodRawShape;
-};
-
-export function buildSelectionSurfaceSchema({
+export function buildSelectionSurfaceSchema<
+	LemmaIdentityShape extends SelectionLemmaIdentityShape,
+	LemmaSchema extends z.ZodTypeAny,
+	SurfaceShape extends z.ZodRawShape,
+>({
 	language,
 	lemmaIdentityShape,
 	lemmaSchema,
 	surfaceShape,
-}: BuildSelectionSurfaceArgs) {
+}: {
+	language: string;
+	lemmaIdentityShape: LemmaIdentityShape;
+	lemmaSchema: LemmaSchema;
+	surfaceShape: SurfaceShape;
+}) {
 	const lemmaSubKindKey = getLemmaSubKindKey(lemmaIdentityShape);
 	const lemmaSubKindSchema = lemmaIdentityShape[
 		lemmaSubKindKey
@@ -58,7 +60,10 @@ export function buildSelectionSurfaceSchema({
 				})
 				.strict(),
 			normalizedFullSurface: z.string(),
-			target: z.union([z.object({ canonicalLemma: z.string() }).strict(), lemmaSchema]),
+			target: z.union([
+				z.object({ canonicalLemma: z.string() }).strict(),
+				lemmaSchema,
+			]),
 		})
 		.strict()
 		.superRefine((surface, ctx) => {
@@ -122,7 +127,9 @@ function getLemmaSubKindKey(
 	const [matchingKey] = matchingKeys;
 
 	if (matchingKey === undefined) {
-		throw new Error("lemmaIdentityShape must resolve to a lemma subkind key");
+		throw new Error(
+			"lemmaIdentityShape must resolve to a lemma subkind key",
+		);
 	}
 
 	return matchingKey;

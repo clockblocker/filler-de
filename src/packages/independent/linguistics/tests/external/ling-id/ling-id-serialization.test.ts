@@ -73,7 +73,7 @@ describe("Ling ID serialization", () => {
 	});
 
 	it("serializes targeted surface identity with nested lemma payloads and sorted inflectional features", () => {
-		const fullSurface: LingIdSurfaceInput<"English"> = {
+		const fullSurface = {
 			discriminators: {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "VERB",
@@ -86,16 +86,16 @@ describe("Ling ID serialization", () => {
 			orthographicStatus: "Standard",
 			surfaceKind: "Inflection",
 			target: buildEnglishWalkLemma(),
-		};
+		} satisfies LingIdSurfaceInput<"English">;
 
-		const shallowSurface: LingIdSurfaceInput<"English"> = {
+		const shallowSurface = {
 			...fullSurface,
 			target: {
 				canonicalLemma: "walk",
 			},
-		};
+		} satisfies LingIdSurfaceInput<"English">;
 
-		const lemmaSurface: LingIdSurfaceInput<"German"> = {
+		const lemmaSurface = {
 			discriminators: {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "NOUN",
@@ -106,7 +106,7 @@ describe("Ling ID serialization", () => {
 			target: {
 				canonicalLemma: "See",
 			},
-		};
+		} satisfies LingIdSurfaceInput<"German">;
 
 		const fullSurfaceId = toEnglishSurfaceLingId(fullSurface);
 
@@ -121,7 +121,7 @@ describe("Ling ID serialization", () => {
 	});
 
 	it("keeps shallow surface ids stable across target richness but sensitive to shell changes", () => {
-		const canonicalSurface: LingIdSurfaceInput<"German"> = {
+		const canonicalSurface = {
 			discriminators: {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "NOUN",
@@ -132,19 +132,19 @@ describe("Ling ID serialization", () => {
 			target: {
 				canonicalLemma: "See",
 			},
-		};
+		} satisfies LingIdSurfaceInput<"German">;
 
-		const feminineSurface: LingIdSurfaceInput<"German"> = {
+		const feminineSurface = {
 			...canonicalSurface,
 			target: buildGermanFeminineSeeLemma(),
-		};
+		} satisfies LingIdSurfaceInput<"German">;
 
-		const neuterSurface: LingIdSurfaceInput<"German"> = {
+		const neuterSurface = {
 			...canonicalSurface,
 			target: buildGermanNeuterSeeLemma(),
-		};
+		} satisfies LingIdSurfaceInput<"German">;
 
-		const walkPres: LingIdSurfaceInput<"English"> = {
+		const walkPres = {
 			discriminators: {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "VERB",
@@ -159,15 +159,15 @@ describe("Ling ID serialization", () => {
 			target: {
 				canonicalLemma: "walk",
 			},
-		};
+		} satisfies LingIdSurfaceInput<"English">;
 
-		const walkPast: LingIdSurfaceInput<"English"> = {
+		const walkPast = {
 			...walkPres,
 			inflectionalFeatures: {
 				tense: "Past",
 				verbForm: "Fin",
 			},
-		};
+		} satisfies LingIdSurfaceInput<"English">;
 
 		expect(toGermanShallowSurfaceLingId(canonicalSurface)).toBe(
 			toGermanShallowSurfaceLingId(feminineSurface),
@@ -185,14 +185,14 @@ describe("Ling ID serialization", () => {
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
 		) as ParsedObservedSurfaceDto;
 
-		const mutatedObserved: ParsedObservedSurfaceDto = {
+		const mutatedObserved = {
 			...observed,
 			discriminators: {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "VERB",
 			},
 			normalizedFullSurface: "Bogus",
-		};
+		} satisfies ParsedObservedSurfaceDto;
 
 		expect(toGermanSurfaceLingId(mutatedObserved)).toBe(
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",

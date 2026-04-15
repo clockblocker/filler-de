@@ -74,7 +74,7 @@ describe("Ling ID parsing", () => {
 	});
 
 	it("round-trips targeted surface ids as plain dto objects and preserves target branches", () => {
-		const fullSurface: LingIdSurfaceInput<"German"> = {
+		const fullSurface = {
 			discriminators: {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "NOUN",
@@ -83,14 +83,14 @@ describe("Ling ID parsing", () => {
 			orthographicStatus: "Standard",
 			surfaceKind: "Lemma",
 			target: buildGermanFeminineSeeLemma(),
-		};
+		} satisfies LingIdSurfaceInput<"German">;
 
-		const shallowSurface: LingIdSurfaceInput<"German"> = {
+		const shallowSurface = {
 			...fullSurface,
 			target: {
 				canonicalLemma: "See",
 			},
-		};
+		} satisfies LingIdSurfaceInput<"German">;
 
 		const fullId = toGermanSurfaceLingId(fullSurface);
 		const shallowId = toGermanSurfaceLingId(shallowSurface);

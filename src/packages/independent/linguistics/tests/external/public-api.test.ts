@@ -86,11 +86,11 @@ describe("public API usage", () => {
 			pos: "NOUN",
 		} satisfies Lemma<"German">;
 
-		const unknownSelection: Selection<"German"> = {
+		const unknownSelection = {
 			language: "German",
 			orthographicStatus: "Unknown",
 			spelledSelection: "unknown",
-		};
+		} satisfies Selection<"German">;
 
 		expect(lemma.pos).toBe("NOUN");
 		expect(unknownSelection.orthographicStatus).toBe("Unknown");
@@ -106,18 +106,100 @@ describe("public API usage", () => {
 			pos: "NOUN",
 		} satisfies Lemma<"English">;
 
-		const unknownSelection: Selection<"English"> = {
+		const unknownSelection = {
 			language: "English",
 			orthographicStatus: "Unknown",
 			spelledSelection: "unknown",
-		};
+		} satisfies Selection<"English">;
 
 		expect(lemma.pos).toBe("NOUN");
 		expect(unknownSelection.orthographicStatus).toBe("Unknown");
 	});
 
+	it("keeps narrow public aliases for concrete English adjective types", () => {
+		const lemma = {
+			canonicalLemma: "small",
+			inherentFeatures: {
+				abbr: true,
+				numType: "Card",
+			},
+			language: "English",
+			lemmaKind: "Lexeme",
+			meaningInEmojis: "🤏",
+			pos: "ADJ",
+		} satisfies Lemma<"English", "Lexeme", "ADJ">;
+
+		const selection = {
+			language: "English",
+			orthographicStatus: "Standard",
+			spelledSelection: "smaller",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "ADJ",
+				},
+				inflectionalFeatures: {
+					degree: "Cmp",
+				},
+				normalizedFullSurface: "smaller",
+				surfaceKind: "Inflection",
+				target: {
+					canonicalLemma: "small",
+				},
+			},
+		} satisfies Selection<
+			"English",
+			"Standard",
+			"Inflection",
+			"Lexeme",
+			"ADJ"
+		>;
+
+		expect(lemma.pos).toBe("ADJ");
+		expect(selection.surface.discriminators.lemmaSubKind).toBe("ADJ");
+
+		const _invalidLemma = {
+			canonicalLemma: "small",
+			inherentFeatures: {
+				// @ts-expect-error English adjective lemmas should not expose unrelated inherent features
+				gender: "Fem",
+			},
+			language: "English",
+			lemmaKind: "Lexeme",
+			meaningInEmojis: "🤏",
+			pos: "ADJ",
+		} satisfies Lemma<"English", "Lexeme", "ADJ">;
+
+		const _invalidSelection = {
+			language: "English",
+			orthographicStatus: "Standard",
+			spelledSelection: "small",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "ADJ",
+				},
+				inflectionalFeatures: {
+					// @ts-expect-error English adjective inflections should not expose unrelated inflectional features
+					case: "Dat",
+				},
+				normalizedFullSurface: "small",
+				surfaceKind: "Inflection",
+				target: {
+					canonicalLemma: "small",
+				},
+			},
+		} satisfies Selection<
+			"English",
+			"Standard",
+			"Inflection",
+			"Lexeme",
+			"ADJ"
+		>;
+	});
+
 	it("validates surfaces through the exported root schemas", () => {
-		const surface: Surface<"English"> = {
+		const surface = {
 			discriminators: {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "VERB",
@@ -136,7 +218,7 @@ describe("public API usage", () => {
 				meaningInEmojis: "🚶",
 				pos: "VERB",
 			},
-		};
+		} satisfies Surface<"English">;
 
 		expect(
 			SurfaceSchema.English.Standard.Inflection.Lexeme.VERB.safeParse(
@@ -146,7 +228,7 @@ describe("public API usage", () => {
 	});
 
 	it("validates selections where the spelled selection is narrower than the full surface", () => {
-		const selection: Selection<"English"> = {
+		const selection = {
 			language: "English",
 			orthographicStatus: "Standard",
 			spelledSelection: "walk",
@@ -161,7 +243,7 @@ describe("public API usage", () => {
 					canonicalLemma: "a walk in the park",
 				},
 			},
-		};
+		} satisfies Selection<"English">;
 
 		if (!("surface" in selection)) {
 			throw new Error("expected known selection");

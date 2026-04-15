@@ -1,6 +1,4 @@
 import z from "zod/v3";
-import type { AbstractLemma } from "../abstract-lemma";
-import type { AbstractSelectionFor } from "../abstract-selection";
 import type { TargetLanguage } from "../enums/core/language";
 import type {
 	LemmaKind,
@@ -18,14 +16,16 @@ type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
 type NonInflectionSurfaceKind = Exclude<SurfaceKind, "Inflection">;
 
 type BuildLemmaSelectionArgs<
+	LanguageLiteral extends TargetLanguage,
+	LemmaSchema extends z.ZodTypeAny,
 	LK extends LemmaKind,
 	D extends LemmaDiscriminatorFor<LK>,
 	OrthographicStatusLiteral extends KnownOrthographicStatus = "Standard",
 	SurfaceKindLiteral extends NonInflectionSurfaceKind = "Lemma",
 	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 > = {
-	language: TargetLanguage;
-	lemmaSchema: z.ZodType<AbstractLemma<LK, D>>;
+	language: LanguageLiteral;
+	lemmaSchema: LemmaSchema;
 	lemmaIdentityShape: SelectionLemmaIdentityShapeFor<LK, D>;
 	orthographicStatus?: OrthographicStatusLiteral;
 	surfaceKind?: SurfaceKindLiteral;
@@ -33,6 +33,8 @@ type BuildLemmaSelectionArgs<
 };
 
 export function buildLemmaSelection<
+	LanguageLiteral extends TargetLanguage,
+	LemmaSchema extends z.ZodTypeAny,
 	LK extends LemmaKind,
 	D extends LemmaDiscriminatorFor<LK>,
 	OrthographicStatusLiteral extends KnownOrthographicStatus = "Standard",
@@ -46,14 +48,14 @@ export function buildLemmaSelection<
 	surfaceKind = "Lemma" as SurfaceKindLiteral,
 	surfaceExtraShape = {} as SurfaceExtraShape,
 }: BuildLemmaSelectionArgs<
+	LanguageLiteral,
+	LemmaSchema,
 	LK,
 	D,
 	OrthographicStatusLiteral,
 	SurfaceKindLiteral,
 	SurfaceExtraShape
->): z.ZodType<
-	AbstractSelectionFor<OrthographicStatusLiteral, SurfaceKindLiteral, LK, D>
-> {
+>) {
 	const surfaceSchema = buildSelectionSurfaceSchema({
 		language,
 		lemmaIdentityShape,
@@ -69,12 +71,5 @@ export function buildLemmaSelection<
 		orthographicStatus: z.literal(orthographicStatus),
 		spelledSelection: z.string(),
 		surface: surfaceSchema,
-	}) as unknown as z.ZodType<
-		AbstractSelectionFor<
-			OrthographicStatusLiteral,
-			SurfaceKindLiteral,
-			LK,
-			D
-		>
-	>;
+	});
 }
