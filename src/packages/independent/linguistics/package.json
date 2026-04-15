@@ -14,6 +14,7 @@
 	"scripts": {
 		"build": "bun ../../../../scripts/build-workspace-package.ts",
 		"fix": "bun x biome check --write --unsafe . 2>/dev/null || true",
+		"generate:readme": "bun generate-readme/generate-readme.ts",
 		"test": "bun test --reporter=dot --preload ../../../../tests/unit/setup.ts ./tests/"
 	},
 	"type": "module",
