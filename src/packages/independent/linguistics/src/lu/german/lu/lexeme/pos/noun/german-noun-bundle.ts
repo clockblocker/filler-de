@@ -17,8 +17,6 @@ const GermanNounLemmaIdentityShape = {
 	pos: z.literal("NOUN"),
 } satisfies z.ZodRawShape;
 
-export const GermanNounIdentityFeatureKeys = ["gender"] as const;
-
 const GermanNounLemmaSchema = withLingIdLemmaDtoCompatibility(
 	z.object({
 		canonicalLemma: z.string(),

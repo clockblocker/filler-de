@@ -6,6 +6,7 @@ const YES_LITERAL_FEATURE_KEYS = new Set([
 	"abbr",
 	"foreign",
 	"isPhrasal",
+	"lexicallyReflexive",
 	"phrasal",
 	"poss",
 	"reflex",
@@ -74,11 +75,12 @@ export function expectBooleanFeature(
 export function expectYesLiteralFeature(
 	key:
 		| "abbr"
-		| "foreign"
-		| "isPhrasal"
-		| "phrasal"
-		| "poss"
-		| "reflex"
+			| "foreign"
+			| "isPhrasal"
+			| "lexicallyReflexive"
+			| "phrasal"
+			| "poss"
+			| "reflex"
 		| "separable",
 	features: ParsedFeatureBag,
 ): "Yes" {

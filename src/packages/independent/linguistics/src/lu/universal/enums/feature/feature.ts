@@ -2,7 +2,9 @@ import type * as z from "zod/v3";
 
 import type { Prettify } from "../../../../../../../../types/helpers";
 import { DiscourseFormulaRoleSchema } from "./custom/discourse-formula-role";
+import { GovernedCase } from "./custom/governed-case";
 import { GovernedPreposition } from "./custom/governed-preposition";
+import { LexicallyReflexive } from "./custom/lexically-reflexive";
 import { Phrasal } from "./custom/phrasal";
 import { Separable } from "./custom/separable";
 import { Abbr } from "./ud/abbr";
@@ -47,8 +49,10 @@ export const UniversalFeature = {
 	ExtPos,
 	Foreign,
 	Gender,
+	GovernedCase,
 	GovernedPreposition,
 	GrammaticalNumber,
+	LexicallyReflexive,
 	Mood,
 	NounClass,
 	NumType,
@@ -85,7 +89,9 @@ export type AbstractFeatures = Prettify<{
 	extPos: UniversalFeatureValue<"ExtPos">;
 	foreign: UniversalFeatureValue<"Foreign">;
 	gender: UniversalFeatureValue<"Gender">;
+	governedCase: UniversalFeatureValue<"GovernedCase">;
 	governedPreposition: UniversalFeatureValue<"GovernedPreposition">;
+	lexicallyReflexive: UniversalFeatureValue<"LexicallyReflexive">;
 	phrasal: UniversalFeatureValue<"Phrasal">;
 	mood: UniversalFeatureValue<"Mood">;
 	nounClass: UniversalFeatureValue<"NounClass">;

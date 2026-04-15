@@ -4,31 +4,15 @@ import type {
 	InflectionalFeaturesSchemaFor,
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
-import {
-	GermanGender,
-	GermanMood,
-	GermanNumber,
-	GermanPerson,
-	GermanTense,
-	GermanVerbForm,
-} from "../../../shared/german-common-enums";
+import { GermanVerbalInflectionalFeaturesSchema } from "../../../shared/german-verbal-inflection-features";
 
-export const GermanVerbInflectionalFeaturesSchema = z
-	.object({
-		gender: GermanGender.optional(),
-		mood: GermanMood.optional(),
-		number: GermanNumber.optional(),
-		person: GermanPerson.optional(),
-		tense: GermanTense.optional(),
-		verbForm: GermanVerbForm.optional(),
-	})
-	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme">;
+export const GermanVerbInflectionalFeaturesSchema =
+	GermanVerbalInflectionalFeaturesSchema satisfies InflectionalFeaturesSchemaFor<"Lexeme">;
 
 export const GermanVerbInherentFeaturesSchema = z
 	.object({
 		governedPreposition: UniversalFeature.GovernedPreposition.optional(),
-		phrasal: UniversalFeature.Phrasal.optional(),
-		reflex: UniversalFeature.Reflex.optional(),
+		lexicallyReflexive: UniversalFeature.LexicallyReflexive.optional(),
 		separable: UniversalFeature.Separable.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme">;

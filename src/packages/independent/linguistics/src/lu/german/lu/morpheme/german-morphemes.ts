@@ -38,10 +38,6 @@ const GermanTransfixBundle = buildGermanMorphemeBundle({
 	morphemeKind: "Transfix",
 });
 
-export const GermanMorphemeIdentityFeatureKeysByKind = {
-	Prefix: ["separable"],
-} as const;
-
 export const GermanMorphemeLemmaSchemas = {
 	Circumfix: GermanCircumfixBundle.LemmaSchema,
 	Clitic: GermanCliticBundle.LemmaSchema,

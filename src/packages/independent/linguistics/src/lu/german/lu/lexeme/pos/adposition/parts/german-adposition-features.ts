@@ -4,17 +4,15 @@ import type {
 	InflectionalFeaturesSchemaFor,
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
-import { GermanCase } from "../../../shared/german-common-enums";
 
 export const GermanAdpositionInflectionalFeaturesSchema = z
-	.object({
-		case: GermanCase.optional(),
-	})
+	.object({})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "ADP">;
 
 export const GermanAdpositionInherentFeaturesSchema = z
 	.object({
 		abbr: UniversalFeature.Abbr.optional(),
 		foreign: UniversalFeature.Foreign.optional(),
+		governedCase: UniversalFeature.GovernedCase.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "ADP">;

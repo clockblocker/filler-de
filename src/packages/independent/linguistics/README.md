@@ -112,7 +112,15 @@ const idiomPartSelection = SelectionSchema.English.Standard.Lemma.Phraseme.Idiom
 );
 ```
 
-The DTO now separates the actual highlighted text from the full orthographically normalized surface:
+The DTO separates three distinct things:
+
+- the actual highlighted text in the note: `spelledSelection`
+- the full orthographically normalized surface that the highlighted text belongs to: `normalizedFullSurface`
+- the lexical target that the surface resolves to: `target.canonicalLemma`
+
+In the examples below, the selections target the lemmas `give up` and `aufpassen`, while the realized normalized surfaces are `gave up` and `pass auf`.
+
+`surfaceKind: "Lemma"` means that the selection resolves directly to a lemma target. It does not mean that `normalizedFullSurface` itself is a lemma string.
 
 ```ts
 const gaveUpSelection = SelectionSchema.English.Standard.Lemma.Lexeme.VERB.parse(
@@ -154,8 +162,8 @@ const passAufSelection = SelectionSchema.German.Standard.Lemma.Lexeme.VERB.parse
 );
 ```
 
-This allows for both: 
-1) pointing the user to the most meaninful target in the actual sentenes:
+This allows for both:
+1) pointing the user to the most meaningful target in the actual sentences:
 ```
 (text reading mode on)
 Hans, [Pass] auf dich auf! -> aufpassen (VERB)
@@ -167,7 +175,7 @@ Hans, Pass auf dich [auf]! -> aufpassen
 2) drilling down for the actual linguistics:
 ``` 
 (linguistic investigation mode on)
-Hans, [Pass] auf dich auf! -> `root` (VERB)
+Hans, [Pass] auf dich auf! -> `passen` (VERB)
 Hans, Pass [auf] dich auf! -> `auf` (ADP)
 Hans, Pass auf [dich] auf! -> `du` (PRON)
 Hans, Pass auf dich [auf]! -> `auf` (PRT)

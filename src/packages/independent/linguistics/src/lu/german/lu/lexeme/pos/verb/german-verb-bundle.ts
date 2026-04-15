@@ -17,8 +17,6 @@ const GermanVerbLemmaIdentityShape = {
 	pos: z.literal("VERB"),
 } satisfies z.ZodRawShape;
 
-export const GermanVerbIdentityFeatureKeys = ["separable"] as const;
-
 const GermanVerbLemmaSchema = withLingIdLemmaDtoCompatibility(
 	z.object({
 		canonicalLemma: z.string(),

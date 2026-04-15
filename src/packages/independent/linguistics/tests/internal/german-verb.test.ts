@@ -72,7 +72,7 @@ describe("German verb schemas", () => {
 			canonicalLemma: "gehen",
 			inherentFeatures: {
 				governedPreposition: "auf",
-				reflex: "Yes",
+				lexicallyReflexive: "Yes",
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
@@ -83,17 +83,29 @@ describe("German verb schemas", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("accepts the new verb-specific lexical features and rejects empty governed prepositions", () => {
+	it("accepts the new verb-specific lexical features and rejects English-only or empty values", () => {
 		expect(
 			GermanVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "mitkommen",
 				inherentFeatures: {
-					governedPreposition: "mit",
-					phrasal: "Yes",
+					separable: "Yes",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
 				meaningInEmojis: "🚶",
+				pos: "VERB",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanVerbSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "warten",
+				inherentFeatures: {
+					governedPreposition: "auf",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "⏳",
 				pos: "VERB",
 			}).success,
 		).toBe(true);
@@ -107,6 +119,32 @@ describe("German verb schemas", () => {
 				language: "German",
 				lemmaKind: "Lexeme",
 				meaningInEmojis: "⏳",
+				pos: "VERB",
+			}).success,
+		).toBe(false);
+
+		expect(
+			GermanVerbSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "mitkommen",
+				inherentFeatures: {
+					phrasal: "Yes",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🚶",
+				pos: "VERB",
+			}).success,
+		).toBe(false);
+
+		expect(
+			GermanVerbSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "sich beeilen",
+				inherentFeatures: {
+					reflex: "Yes",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🏃",
 				pos: "VERB",
 			}).success,
 		).toBe(false);
@@ -178,6 +216,47 @@ describe("German verb schemas", () => {
 			});
 
 		expect(result.success).toBe(true);
+	});
+
+	it("rejects impossible German verb feature combinations", () => {
+		expect(
+			GermanVerbSchemas.InflectionSelectionSchema.safeParse({
+				language: "German",
+				orthographicStatus: "Standard",
+				spelledSelection: "geht",
+				surface: {
+					...verbSurface("gehen"),
+					inflectionalFeatures: {
+						gender: "Fem",
+						mood: "Ind",
+						number: "Sing",
+						person: "3",
+						tense: "Pres",
+						verbForm: "Fin",
+					},
+					normalizedFullSurface: "geht",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(false);
+
+		expect(
+			GermanVerbSchemas.InflectionSelectionSchema.safeParse({
+				language: "German",
+				orthographicStatus: "Standard",
+				spelledSelection: "geh",
+				surface: {
+					...verbSurface("gehen"),
+					inflectionalFeatures: {
+						mood: "Imp",
+						tense: "Past",
+						verbForm: "Fin",
+					},
+					normalizedFullSurface: "geh",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(false);
 	});
 
 	it("accepts unknown selections without a surface", () => {

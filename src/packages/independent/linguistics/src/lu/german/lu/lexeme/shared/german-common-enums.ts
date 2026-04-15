@@ -32,7 +32,7 @@ export const GermanPerson = UniversalFeature.Person.extract(["1", "2", "3"]);
 
 export const GermanPolarity = UniversalFeature.Polarity.extract(["Neg", "Pos"]);
 
-export const GermanPolite = UniversalFeature.Polite.extract(["Form"]);
+export const GermanPolite = UniversalFeature.Polite.extract(["Form", "Infm"]);
 
 export const GermanTense = UniversalFeature.Tense.extract(["Past", "Pres"]);
 

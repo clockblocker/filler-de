@@ -53,13 +53,11 @@ describe("German remaining POS schemas", () => {
 			GermanAdpositionSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
-				spelledSelection: "zur",
+				spelledSelection: "zu",
 				surface: {
 					...lexemeSurface("ADP", "zu"),
-					inflectionalFeatures: {
-						case: "Dat",
-					},
-					normalizedFullSurface: "zur",
+					inflectionalFeatures: {},
+					normalizedFullSurface: "zu",
 					surfaceKind: "Inflection",
 				},
 			}).success,
@@ -158,12 +156,26 @@ describe("German remaining POS schemas", () => {
 				canonicalLemma: "dies",
 				inherentFeatures: {
 					definite: "Def",
+					polite: "Infm",
 					pronType: "Art",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
 				meaningInEmojis: "👉",
 				pos: "DET",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanAdpositionSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "zu",
+				inherentFeatures: {
+					governedCase: "Dat",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "➡️",
+				pos: "ADP",
 			}).success,
 		).toBe(true);
 
@@ -190,6 +202,21 @@ describe("German remaining POS schemas", () => {
 				lemmaKind: "Lexeme",
 				meaningInEmojis: "🚫",
 				pos: "PART",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanPronounSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "du",
+				inherentFeatures: {
+					person: "2",
+					polite: "Infm",
+					pronType: "Prs",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "👤",
+				pos: "PRON",
 			}).success,
 		).toBe(true);
 
@@ -333,6 +360,42 @@ describe("German remaining POS schemas", () => {
 						tense: "Past",
 					},
 					normalizedFullSurface: "foobar",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(false);
+
+		expect(
+			GermanAdpositionSchemas.InflectionSelectionSchema.safeParse({
+				language: "German",
+				orthographicStatus: "Standard",
+				spelledSelection: "zu",
+				surface: {
+					...lexemeSurface("ADP", "zu"),
+					inflectionalFeatures: {
+						case: "Dat",
+					},
+					normalizedFullSurface: "zu",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(false);
+	});
+
+	it("rejects impossible German auxiliary feature combinations", () => {
+		expect(
+			GermanAuxiliarySchemas.InflectionSelectionSchema.safeParse({
+				language: "German",
+				orthographicStatus: "Standard",
+				spelledSelection: "sei",
+				surface: {
+					...lexemeSurface("AUX", "sein"),
+					inflectionalFeatures: {
+						mood: "Sub",
+						person: "3",
+						verbForm: "Inf",
+					},
+					normalizedFullSurface: "sei",
 					surfaceKind: "Inflection",
 				},
 			}).success,
