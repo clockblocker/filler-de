@@ -41,9 +41,9 @@ export const Case = z.enum(caseValues);
 export type Case = z.infer<typeof Case>;
 
 const reprForCase = {
-	Acc: "accusative",
 	Abe: "abessive", // caritive | privative
 	Abl: "ablative", // adelative
+	Acc: "accusative",
 	Add: "additive",
 	Ade: "adessive",
 	All: "allative", // adlative

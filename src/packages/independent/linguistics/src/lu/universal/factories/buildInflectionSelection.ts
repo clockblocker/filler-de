@@ -69,11 +69,6 @@ export function buildInflectionSelection<
 		spelledSelection: z.string(),
 		surface: surfaceSchema,
 	}) as unknown as z.ZodType<
-		AbstractSelectionFor<
-			OrthographicStatusLiteral,
-			"Inflection",
-			LK,
-			D
-		>
+		AbstractSelectionFor<OrthographicStatusLiteral, "Inflection", LK, D>
 	>;
 }

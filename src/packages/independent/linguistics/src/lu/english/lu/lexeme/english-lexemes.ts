@@ -80,7 +80,6 @@ export const EnglishStandardLemmaLexemeSelectionSchemas = {
 	X: EnglishOtherSchemas.LemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Standard"]["Lemma"]["Lexeme"];
 
-
 export const EnglishStandardVariantLexemeSelectionSchemas = {
 	ADJ: EnglishAdjectiveSchemas.StandardVariantSelectionSchema,
 	ADP: EnglishAdpositionSchemas.StandardVariantSelectionSchema,
@@ -140,7 +139,6 @@ export const EnglishTypoLemmaLexemeSelectionSchemas = {
 	VERB: EnglishVerbSchemas.TypoLemmaSelectionSchema,
 	X: EnglishOtherSchemas.TypoLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Typo"]["Lemma"]["Lexeme"];
-
 
 export const EnglishTypoVariantLexemeSelectionSchemas = {
 	ADJ: EnglishAdjectiveSchemas.TypoVariantSelectionSchema,

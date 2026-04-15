@@ -1,9 +1,9 @@
 import z from "zod/v3";
-import type {
-	InherentFeaturesSchemaFor,
-	InflectionalFeaturesSchemaFor,
-} from "../../../../../../universal/helpers/schema-targets";
 import { IsPoss } from "../../../../../../universal/enums/feature/ud/poss";
+import type {
+	InflectionalFeaturesSchemaFor,
+	InherentFeaturesSchemaFor,
+} from "../../../../../../universal/helpers/schema-targets";
 import {
 	GermanDeterminerCase,
 	GermanDeterminerDefinite,

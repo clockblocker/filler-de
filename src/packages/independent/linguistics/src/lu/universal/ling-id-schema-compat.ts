@@ -58,10 +58,7 @@ function stripLingIdMetadata(
 		return input;
 	}
 
-	if (
-		expectedLanguage !== undefined &&
-		input.language !== expectedLanguage
-	) {
+	if (expectedLanguage !== undefined && input.language !== expectedLanguage) {
 		return input;
 	}
 

@@ -1,12 +1,12 @@
 import z from "zod/v3";
-import type {
-	InherentFeaturesSchemaFor,
-	InflectionalFeaturesSchemaFor,
-} from "../../../../../../universal/helpers/schema-targets";
 import { GovernedPreposition } from "../../../../../../universal/enums/feature/custom/governed-preposition";
 import { IsPhrasal } from "../../../../../../universal/enums/feature/custom/is-phrasal";
 import { IsSeparable } from "../../../../../../universal/enums/feature/custom/separable";
 import { IsReflex } from "../../../../../../universal/enums/feature/ud/reflex";
+import type {
+	InflectionalFeaturesSchemaFor,
+	InherentFeaturesSchemaFor,
+} from "../../../../../../universal/helpers/schema-targets";
 import {
 	GermanVerbGender,
 	GermanVerbMood,

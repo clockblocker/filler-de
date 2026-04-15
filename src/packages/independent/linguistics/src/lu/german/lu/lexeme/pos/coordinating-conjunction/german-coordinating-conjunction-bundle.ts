@@ -9,9 +9,11 @@ import {
 } from "./parts/german-coordinating-conjunction-relations";
 
 export const GermanCoordinatingConjunctionSchemas = buildGermanLexemeBundle({
-	inflectionalFeaturesSchema: GermanCoordinatingConjunctionInflectionalFeaturesSchema,
+	inflectionalFeaturesSchema:
+		GermanCoordinatingConjunctionInflectionalFeaturesSchema,
 	inherentFeaturesSchema: GermanCoordinatingConjunctionInherentFeaturesSchema,
 	lexicalRelationsSchema: GermanCoordinatingConjunctionLexicalRelationsSchema,
-	morphologicalRelationsSchema: GermanCoordinatingConjunctionMorphologicalRelationsSchema,
+	morphologicalRelationsSchema:
+		GermanCoordinatingConjunctionMorphologicalRelationsSchema,
 	pos: "CCONJ",
 });

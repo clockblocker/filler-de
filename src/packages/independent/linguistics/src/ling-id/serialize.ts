@@ -215,9 +215,7 @@ function getLemmaFeatures(value: Lemma) {
 	}
 }
 
-function isSelectionValue(
-	value: unknown,
-): value is LingIdSelection {
+function isSelectionValue(value: unknown): value is LingIdSelection {
 	return typeof value === "object" && value !== null && "surface" in value;
 }
 

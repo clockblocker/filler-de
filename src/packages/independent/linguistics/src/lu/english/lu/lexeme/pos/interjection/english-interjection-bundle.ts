@@ -12,6 +12,7 @@ export const EnglishInterjectionSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishInterjectionInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishInterjectionInherentFeaturesSchema,
 	lexicalRelationsSchema: EnglishInterjectionLexicalRelationsSchema,
-	morphologicalRelationsSchema: EnglishInterjectionMorphologicalRelationsSchema,
+	morphologicalRelationsSchema:
+		EnglishInterjectionMorphologicalRelationsSchema,
 	pos: "INTJ",
 });

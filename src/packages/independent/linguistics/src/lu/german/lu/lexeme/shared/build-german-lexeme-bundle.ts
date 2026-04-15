@@ -28,12 +28,12 @@ export function buildGermanLexemeBundle<
 	} satisfies z.ZodRawShape;
 	const lemmaSchema = withLingIdLemmaDtoCompatibility(
 		z.object({
+			canonicalLemma: z.string(),
 			inherentFeatures: inherentFeaturesSchema,
 			language: z.literal("German"),
 			lemmaKind: z.literal("Lexeme"),
 			meaningInEmojis: MeaningInEmojisSchema,
 			pos: z.literal(pos),
-			canonicalLemma: z.string(),
 		}),
 	);
 

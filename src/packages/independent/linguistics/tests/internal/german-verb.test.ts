@@ -160,23 +160,24 @@ describe("German verb schemas", () => {
 	});
 
 	it("accepts typo inflection selections with the typo discriminant", () => {
-		const result = GermanVerbSchemas.TypoInflectionSelectionSchema.safeParse({
-			language: "German",
-			orthographicStatus: "Typo",
-			spelledSelection: "geheh",
-			surface: {
-				...verbSurface("gehen"),
-				inflectionalFeatures: {
-					mood: "Ind",
-					number: "Sing",
-					person: "1",
-					tense: "Pres",
-					verbForm: "Fin",
+		const result =
+			GermanVerbSchemas.TypoInflectionSelectionSchema.safeParse({
+				language: "German",
+				orthographicStatus: "Typo",
+				spelledSelection: "geheh",
+				surface: {
+					...verbSurface("gehen"),
+					inflectionalFeatures: {
+						mood: "Ind",
+						number: "Sing",
+						person: "1",
+						tense: "Pres",
+						verbForm: "Fin",
+					},
+					normalizedFullSurface: "geheh",
+					surfaceKind: "Inflection",
 				},
-				normalizedFullSurface: "geheh",
-				surfaceKind: "Inflection",
-			},
-		});
+			});
 
 		expect(result.success).toBe(true);
 	});

@@ -31,11 +31,11 @@ export const EnglishPhrasemeLemmaSchemas = {
 export const EnglishStandardLemmaPhrasemeSelectionSchemas = {
 	Aphorism: EnglishAphorismBundle.StandardLemmaSelectionSchema,
 	Cliché: EnglishClicheBundle.StandardLemmaSelectionSchema,
-	DiscourseFormula: EnglishDiscourseFormulaBundle.StandardLemmaSelectionSchema,
+	DiscourseFormula:
+		EnglishDiscourseFormulaBundle.StandardLemmaSelectionSchema,
 	Idiom: EnglishIdiomBundle.StandardLemmaSelectionSchema,
 	Proverb: EnglishProverbBundle.StandardLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Standard"]["Lemma"]["Phraseme"];
-
 
 export const EnglishTypoLemmaPhrasemeSelectionSchemas = {
 	Aphorism: EnglishAphorismBundle.TypoLemmaSelectionSchema,
@@ -44,4 +44,3 @@ export const EnglishTypoLemmaPhrasemeSelectionSchemas = {
 	Idiom: EnglishIdiomBundle.TypoLemmaSelectionSchema,
 	Proverb: EnglishProverbBundle.TypoLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Typo"]["Lemma"]["Phraseme"];
-

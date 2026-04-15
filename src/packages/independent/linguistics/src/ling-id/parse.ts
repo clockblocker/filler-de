@@ -45,10 +45,7 @@ export function parseShallowSurfaceLingId(
 	throw new Error(`Unsupported Ling ID kind: ${kind}`);
 }
 
-export function parseLemmaBody(
-	language: TargetLanguage,
-	body: string,
-): Lemma {
+export function parseLemmaBody(language: TargetLanguage, body: string): Lemma {
 	const parts = body.split(";");
 
 	if (parts.length !== 5) {
@@ -73,9 +70,7 @@ export function parseLemmaBody(
 				inherentFeatures: parseFeatureBag(featuresToken),
 				language,
 				lemmaKind,
-				...(meaningInEmojis === undefined
-					? {}
-					: { meaningInEmojis }),
+				...(meaningInEmojis === undefined ? {} : { meaningInEmojis }),
 				pos: lemmaSubKind as Pos,
 			} as Lemma;
 		case "Morpheme": {
@@ -93,9 +88,7 @@ export function parseLemmaBody(
 						}),
 				language,
 				lemmaKind,
-				...(meaningInEmojis === undefined
-					? {}
-					: { meaningInEmojis }),
+				...(meaningInEmojis === undefined ? {} : { meaningInEmojis }),
 				morphemeKind: lemmaSubKind as MorphemeKind,
 				...(lemmaFeatures.separable === undefined
 					? {}
@@ -103,8 +96,8 @@ export function parseLemmaBody(
 							separable: expectBooleanFeature(
 								"separable",
 								lemmaFeatures,
-								),
-							}),
+							),
+						}),
 			} as Lemma;
 		}
 		case "Phraseme": {
@@ -120,19 +113,17 @@ export function parseLemmaBody(
 				);
 			}
 
-				return {
-					canonicalLemma,
-					...(discourseFormulaRole === undefined
-						? {}
-						: { discourseFormulaRole: discourseFormulaRole as string }),
-					language,
-					lemmaKind,
-					...(meaningInEmojis === undefined
-						? {}
-						: { meaningInEmojis }),
-					phrasemeKind: lemmaSubKind as PhrasemeKind,
-				} as Lemma;
-			}
+			return {
+				canonicalLemma,
+				...(discourseFormulaRole === undefined
+					? {}
+					: { discourseFormulaRole: discourseFormulaRole as string }),
+				language,
+				lemmaKind,
+				...(meaningInEmojis === undefined ? {} : { meaningInEmojis }),
+				phrasemeKind: lemmaSubKind as PhrasemeKind,
+			} as Lemma;
+		}
 		default:
 			throw new Error(`Unsupported lemma kind in Ling ID: ${lemmaKind}`);
 	}

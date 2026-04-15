@@ -80,7 +80,6 @@ export const GermanStandardLemmaLexemeSelectionSchemas = {
 	X: GermanOtherSchemas.LemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Standard"]["Lemma"]["Lexeme"];
 
-
 export const GermanStandardVariantLexemeSelectionSchemas = {
 	ADJ: GermanAdjectiveSchemas.StandardVariantSelectionSchema,
 	ADP: GermanAdpositionSchemas.StandardVariantSelectionSchema,
@@ -140,7 +139,6 @@ export const GermanTypoLemmaLexemeSelectionSchemas = {
 	VERB: GermanVerbSchemas.TypoLemmaSelectionSchema,
 	X: GermanOtherSchemas.TypoLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Typo"]["Lemma"]["Lexeme"];
-
 
 export const GermanTypoVariantLexemeSelectionSchemas = {
 	ADJ: GermanAdjectiveSchemas.TypoVariantSelectionSchema,

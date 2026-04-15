@@ -36,7 +36,6 @@ export const GermanStandardLemmaPhrasemeSelectionSchemas = {
 	Proverb: GermanProverbBundle.StandardLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Standard"]["Lemma"]["Phraseme"];
 
-
 export const GermanTypoLemmaPhrasemeSelectionSchemas = {
 	Aphorism: GermanAphorismBundle.TypoLemmaSelectionSchema,
 	Cliché: GermanClicheBundle.TypoLemmaSelectionSchema,
@@ -44,4 +43,3 @@ export const GermanTypoLemmaPhrasemeSelectionSchemas = {
 	Idiom: GermanIdiomBundle.TypoLemmaSelectionSchema,
 	Proverb: GermanProverbBundle.TypoLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Typo"]["Lemma"]["Phraseme"];
-

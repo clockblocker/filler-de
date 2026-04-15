@@ -12,6 +12,7 @@ export const GermanInterjectionSchemas = buildGermanLexemeBundle({
 	inflectionalFeaturesSchema: GermanInterjectionInflectionalFeaturesSchema,
 	inherentFeaturesSchema: GermanInterjectionInherentFeaturesSchema,
 	lexicalRelationsSchema: GermanInterjectionLexicalRelationsSchema,
-	morphologicalRelationsSchema: GermanInterjectionMorphologicalRelationsSchema,
+	morphologicalRelationsSchema:
+		GermanInterjectionMorphologicalRelationsSchema,
 	pos: "INTJ",
 });

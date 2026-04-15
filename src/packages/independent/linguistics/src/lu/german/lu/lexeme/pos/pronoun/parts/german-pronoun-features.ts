@@ -1,10 +1,10 @@
 import z from "zod/v3";
-import type {
-	InherentFeaturesSchemaFor,
-	InflectionalFeaturesSchemaFor,
-} from "../../../../../../universal/helpers/schema-targets";
 import { IsPoss } from "../../../../../../universal/enums/feature/ud/poss";
 import { IsReflex } from "../../../../../../universal/enums/feature/ud/reflex";
+import type {
+	InflectionalFeaturesSchemaFor,
+	InherentFeaturesSchemaFor,
+} from "../../../../../../universal/helpers/schema-targets";
 import {
 	GermanPronounCase,
 	GermanPronounGender,

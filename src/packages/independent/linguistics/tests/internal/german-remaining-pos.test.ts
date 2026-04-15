@@ -235,17 +235,19 @@ describe("German remaining POS schemas", () => {
 
 	it("keeps the non-inflecting classes strict", () => {
 		expect(
-			GermanCoordinatingConjunctionSchemas.InflectionSelectionSchema.safeParse({
-				language: "German",
-				orthographicStatus: "Standard",
-				spelledSelection: "und",
-				surface: {
-					...lexemeSurface("CCONJ", "und"),
-					inflectionalFeatures: {},
-					normalizedFullSurface: "und",
-					surfaceKind: "Inflection",
+			GermanCoordinatingConjunctionSchemas.InflectionSelectionSchema.safeParse(
+				{
+					language: "German",
+					orthographicStatus: "Standard",
+					spelledSelection: "und",
+					surface: {
+						...lexemeSurface("CCONJ", "und"),
+						inflectionalFeatures: {},
+						normalizedFullSurface: "und",
+						surfaceKind: "Inflection",
+					},
 				},
-			}).success,
+			).success,
 		).toBe(true);
 
 		expect(
@@ -277,17 +279,19 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanSubordinatingConjunctionSchemas.InflectionSelectionSchema.safeParse({
-				language: "German",
-				orthographicStatus: "Standard",
-				spelledSelection: "weil",
-				surface: {
-					...lexemeSurface("SCONJ", "weil"),
-					inflectionalFeatures: {},
-					normalizedFullSurface: "weil",
-					surfaceKind: "Inflection",
+			GermanSubordinatingConjunctionSchemas.InflectionSelectionSchema.safeParse(
+				{
+					language: "German",
+					orthographicStatus: "Standard",
+					spelledSelection: "weil",
+					surface: {
+						...lexemeSurface("SCONJ", "weil"),
+						inflectionalFeatures: {},
+						normalizedFullSurface: "weil",
+						surfaceKind: "Inflection",
+					},
 				},
-			}).success,
+			).success,
 		).toBe(true);
 
 		expect(
@@ -341,7 +345,10 @@ describe("German remaining POS schemas", () => {
 			["ADP", GermanAdpositionSchemas.InflectionSelectionSchema],
 			["ADV", GermanAdverbSchemas.InflectionSelectionSchema],
 			["AUX", GermanAuxiliarySchemas.InflectionSelectionSchema],
-			["CCONJ", GermanCoordinatingConjunctionSchemas.InflectionSelectionSchema],
+			[
+				"CCONJ",
+				GermanCoordinatingConjunctionSchemas.InflectionSelectionSchema,
+			],
 			["DET", GermanDeterminerSchemas.InflectionSelectionSchema],
 			["INTJ", GermanInterjectionSchemas.InflectionSelectionSchema],
 			["NUM", GermanNumeralSchemas.InflectionSelectionSchema],
@@ -349,7 +356,10 @@ describe("German remaining POS schemas", () => {
 			["PRON", GermanPronounSchemas.InflectionSelectionSchema],
 			["PROPN", GermanProperNounSchemas.InflectionSelectionSchema],
 			["PUNCT", GermanPunctuationSchemas.InflectionSelectionSchema],
-			["SCONJ", GermanSubordinatingConjunctionSchemas.InflectionSelectionSchema],
+			[
+				"SCONJ",
+				GermanSubordinatingConjunctionSchemas.InflectionSelectionSchema,
+			],
 			["SYM", GermanSymbolSchemas.InflectionSelectionSchema],
 			["X", GermanOtherSchemas.InflectionSelectionSchema],
 		] as const;

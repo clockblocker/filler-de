@@ -12,6 +12,7 @@ export const EnglishPunctuationSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishPunctuationInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishPunctuationInherentFeaturesSchema,
 	lexicalRelationsSchema: EnglishPunctuationLexicalRelationsSchema,
-	morphologicalRelationsSchema: EnglishPunctuationMorphologicalRelationsSchema,
+	morphologicalRelationsSchema:
+		EnglishPunctuationMorphologicalRelationsSchema,
 	pos: "PUNCT",
 });

@@ -9,9 +9,13 @@ import {
 } from "./parts/english-coordinating-conjunction-relations";
 
 export const EnglishCoordinatingConjunctionSchemas = buildEnglishLexemeBundle({
-	inflectionalFeaturesSchema: EnglishCoordinatingConjunctionInflectionalFeaturesSchema,
-	inherentFeaturesSchema: EnglishCoordinatingConjunctionInherentFeaturesSchema,
-	lexicalRelationsSchema: EnglishCoordinatingConjunctionLexicalRelationsSchema,
-	morphologicalRelationsSchema: EnglishCoordinatingConjunctionMorphologicalRelationsSchema,
+	inflectionalFeaturesSchema:
+		EnglishCoordinatingConjunctionInflectionalFeaturesSchema,
+	inherentFeaturesSchema:
+		EnglishCoordinatingConjunctionInherentFeaturesSchema,
+	lexicalRelationsSchema:
+		EnglishCoordinatingConjunctionLexicalRelationsSchema,
+	morphologicalRelationsSchema:
+		EnglishCoordinatingConjunctionMorphologicalRelationsSchema,
 	pos: "CCONJ",
 });

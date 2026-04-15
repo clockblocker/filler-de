@@ -115,27 +115,28 @@ describe("German noun schemas", () => {
 			meaningInEmojis: "",
 			pos: "NOUN",
 		});
-		const selectionResult = GermanNounSchemas.LemmaSelectionSchema.safeParse({
-			language: "German",
-			orthographicStatus: "Standard",
-			spelledSelection: "Haus",
-			surface: {
-				discriminators: {
-					lemmaKind: "Lexeme",
-					lemmaSubKind: "NOUN",
+		const selectionResult =
+			GermanNounSchemas.LemmaSelectionSchema.safeParse({
+				language: "German",
+				orthographicStatus: "Standard",
+				spelledSelection: "Haus",
+				surface: {
+					discriminators: {
+						lemmaKind: "Lexeme",
+						lemmaSubKind: "NOUN",
+					},
+					normalizedFullSurface: "Haus",
+					surfaceKind: "Lemma",
+					target: {
+						canonicalLemma: "Haus",
+						inherentFeatures: {},
+						language: "German",
+						lemmaKind: "Lexeme",
+						meaningInEmojis: "house",
+						pos: "NOUN",
+					},
 				},
-				normalizedFullSurface: "Haus",
-				surfaceKind: "Lemma",
-				target: {
-					canonicalLemma: "Haus",
-					inherentFeatures: {},
-					language: "German",
-					lemmaKind: "Lexeme",
-					meaningInEmojis: "house",
-					pos: "NOUN",
-				},
-			},
-		});
+			});
 
 		expect(lemmaResult.success).toBe(false);
 		expect(selectionResult.success).toBe(false);
@@ -172,20 +173,21 @@ describe("German noun schemas", () => {
 	});
 
 	it("accepts typo inflection selections with the typo discriminant", () => {
-		const result = GermanNounSchemas.TypoInflectionSelectionSchema.safeParse({
-			language: "German",
-			orthographicStatus: "Typo",
-			spelledSelection: "Hun des",
-			surface: {
-				...nounSurface("Hund"),
-				inflectionalFeatures: {
-					case: "Gen",
-					number: "Sing",
+		const result =
+			GermanNounSchemas.TypoInflectionSelectionSchema.safeParse({
+				language: "German",
+				orthographicStatus: "Typo",
+				spelledSelection: "Hun des",
+				surface: {
+					...nounSurface("Hund"),
+					inflectionalFeatures: {
+						case: "Gen",
+						number: "Sing",
+					},
+					normalizedFullSurface: "Hun des",
+					surfaceKind: "Inflection",
 				},
-				normalizedFullSurface: "Hun des",
-				surfaceKind: "Inflection",
-			},
-		});
+			});
 
 		expect(result.success).toBe(true);
 	});
@@ -312,20 +314,21 @@ describe("German noun schemas", () => {
 	});
 
 	it("rejects invalid target unions and non-inflectional feature leakage", () => {
-		const bothTargetFields = GermanNounSchemas.LemmaSelectionSchema.safeParse({
-			language: "German",
-			orthographicStatus: "Standard",
-			spelledSelection: "Haus",
-			surface: {
-				...nounSurface("Haus"),
-				normalizedFullSurface: "Haus",
-				surfaceKind: "Lemma",
-				target: {
-					canonicalLemma: "Haus",
-					lemmaKind: "Lexeme",
+		const bothTargetFields =
+			GermanNounSchemas.LemmaSelectionSchema.safeParse({
+				language: "German",
+				orthographicStatus: "Standard",
+				spelledSelection: "Haus",
+				surface: {
+					...nounSurface("Haus"),
+					normalizedFullSurface: "Haus",
+					surfaceKind: "Lemma",
+					target: {
+						canonicalLemma: "Haus",
+						lemmaKind: "Lexeme",
+					},
 				},
-			},
-		});
+			});
 		const missingTarget = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
@@ -339,19 +342,21 @@ describe("German noun schemas", () => {
 				surfaceKind: "Lemma",
 			},
 		});
-		const leakedFeatures = GermanNounSchemas.LemmaSelectionSchema.safeParse({
-			language: "German",
-			orthographicStatus: "Standard",
-			spelledSelection: "Haus",
-			surface: {
-				...nounSurface("Haus"),
-				inflectionalFeatures: {
-					case: "Nom",
+		const leakedFeatures = GermanNounSchemas.LemmaSelectionSchema.safeParse(
+			{
+				language: "German",
+				orthographicStatus: "Standard",
+				spelledSelection: "Haus",
+				surface: {
+					...nounSurface("Haus"),
+					inflectionalFeatures: {
+						case: "Nom",
+					},
+					normalizedFullSurface: "Haus",
+					surfaceKind: "Lemma",
 				},
-				normalizedFullSurface: "Haus",
-				surfaceKind: "Lemma",
 			},
-		});
+		);
 
 		expect(bothTargetFields.success).toBe(false);
 		expect(missingTarget.success).toBe(false);
@@ -368,6 +373,8 @@ describe("German noun schemas", () => {
 		expect(SelectionSchema.German.Typo.Inflection.Lexeme.NOUN).toBe(
 			GermanNounSchemas.TypoInflectionSelectionSchema,
 		);
-		expect(LemmaSchema.German.Lexeme.NOUN).toBe(GermanNounSchemas.LemmaSchema);
+		expect(LemmaSchema.German.Lexeme.NOUN).toBe(
+			GermanNounSchemas.LemmaSchema,
+		);
 	});
 });

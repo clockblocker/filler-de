@@ -1,7 +1,7 @@
 import z from "zod/v3";
 import type {
-	InherentFeaturesSchemaFor,
 	InflectionalFeaturesSchemaFor,
+	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 
 export const EnglishInterjectionInflectionalFeaturesSchema = z

@@ -8,4 +8,3 @@ export function getReprForIsPhrasal(isPhrasal: IsPhrasal) {
 
 	return isPhrasal ? reprForIsPhrasal : `not ${reprForIsPhrasal}`;
 }
-

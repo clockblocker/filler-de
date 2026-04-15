@@ -1,9 +1,9 @@
 import z from "zod/v3";
-import type {
-	InherentFeaturesSchemaFor,
-	InflectionalFeaturesSchemaFor,
-} from "../../../../../../universal/helpers/schema-targets";
 import { IsForeign } from "../../../../../../universal/enums/feature/ud/foreign";
+import type {
+	InflectionalFeaturesSchemaFor,
+	InherentFeaturesSchemaFor,
+} from "../../../../../../universal/helpers/schema-targets";
 import {
 	GermanSymbolCase,
 	GermanSymbolGender,

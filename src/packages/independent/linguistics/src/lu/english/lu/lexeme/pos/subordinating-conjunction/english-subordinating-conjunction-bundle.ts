@@ -9,9 +9,13 @@ import {
 } from "./parts/english-subordinating-conjunction-relations";
 
 export const EnglishSubordinatingConjunctionSchemas = buildEnglishLexemeBundle({
-	inflectionalFeaturesSchema: EnglishSubordinatingConjunctionInflectionalFeaturesSchema,
-	inherentFeaturesSchema: EnglishSubordinatingConjunctionInherentFeaturesSchema,
-	lexicalRelationsSchema: EnglishSubordinatingConjunctionLexicalRelationsSchema,
-	morphologicalRelationsSchema: EnglishSubordinatingConjunctionMorphologicalRelationsSchema,
+	inflectionalFeaturesSchema:
+		EnglishSubordinatingConjunctionInflectionalFeaturesSchema,
+	inherentFeaturesSchema:
+		EnglishSubordinatingConjunctionInherentFeaturesSchema,
+	lexicalRelationsSchema:
+		EnglishSubordinatingConjunctionLexicalRelationsSchema,
+	morphologicalRelationsSchema:
+		EnglishSubordinatingConjunctionMorphologicalRelationsSchema,
 	pos: "SCONJ",
 });

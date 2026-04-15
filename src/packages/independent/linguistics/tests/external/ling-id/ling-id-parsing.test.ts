@@ -1,12 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import type {
-	Lemma,
-	ParsedShallowSurfaceDto,
-} from "../../../src";
-import {
-	ObservedSurfaceSchema,
-	SelectionSchema,
-} from "../../../src";
+import type { Lemma, ParsedShallowSurfaceDto } from "../../../src";
+import { ObservedSurfaceSchema, SelectionSchema } from "../../../src";
 import {
 	buildEnglishWalkLemma,
 	buildGermanFeminineSeeLemma,

@@ -15,29 +15,35 @@ export function buildObservedSurfaceSchemaForLanguage(
 	surfaceSchema: SurfaceSchemaLanguageShape,
 ): ObservedSurfaceSchemaLanguageShape {
 	return Object.fromEntries(
-		Object.entries(surfaceSchema).map(([orthographicStatus, surfaceKinds]) => [
-			orthographicStatus,
-			Object.fromEntries(
-				Object.entries(surfaceKinds).map(([surfaceKind, lemmaKinds]) => [
-					surfaceKind,
-					Object.fromEntries(
-						Object.entries(lemmaKinds).map(
-							([lemmaKind, discriminators]) => [
-								lemmaKind,
-								Object.fromEntries(
-						Object.entries(discriminators).map(
-							([discriminator, schema]) => [
-								discriminator,
-								buildObservedSurfaceSchema(schema as ZodTypeAny),
-							],
-						),
+		Object.entries(surfaceSchema).map(
+			([orthographicStatus, surfaceKinds]) => [
+				orthographicStatus,
+				Object.fromEntries(
+					Object.entries(surfaceKinds).map(
+						([surfaceKind, lemmaKinds]) => [
+							surfaceKind,
+							Object.fromEntries(
+								Object.entries(lemmaKinds).map(
+									([lemmaKind, discriminators]) => [
+										lemmaKind,
+										Object.fromEntries(
+											Object.entries(discriminators).map(
+												([discriminator, schema]) => [
+													discriminator,
+													buildObservedSurfaceSchema(
+														schema as ZodTypeAny,
+													),
+												],
+											),
+										),
+									],
+								),
+							),
+						],
 					),
-							],
-						),
-					),
-				]),
-			),
-		]),
+				),
+			],
+		),
 	) as ObservedSurfaceSchemaLanguageShape;
 }
 
