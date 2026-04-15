@@ -4,6 +4,7 @@ import { ResolvedSurfaceSchema, SelectionSchema } from "../../../src";
 import {
 	buildEnglishWalkLemma,
 	buildGermanFeminineSeeLemma,
+	buildHebrewKatavLemma,
 	type LingIdSurfaceInput,
 	type ParsedSurface,
 	type ParsedTargetedSurface,
@@ -11,10 +12,12 @@ import {
 	parseEnglishSurface,
 	parseGermanShallowSurface,
 	parseGermanSurface,
+	parseHebrewSurface,
 	toEnglishShallowSurfaceLingId,
 	toEnglishSurfaceLingId,
 	toGermanShallowSurfaceLingId,
 	toGermanSurfaceLingId,
+	toHebrewSurfaceLingId,
 } from "./ling-id-test-helpers";
 
 describe("Ling ID parsing", () => {
@@ -256,5 +259,31 @@ describe("Ling ID parsing", () => {
 			"gender[psor]": ["Neut"],
 			"number[psor]": "Sing",
 		});
+	});
+
+	it("parses Hebrew Ling IDs with the HE header and multi-valued person features", () => {
+		const resolved = parseHebrewSurface(
+			toHebrewSurfaceLingId(buildHebrewKatavLemma()),
+		);
+		const targeted = parseHebrewSurface(
+			"ling:v1:HE:SURF;katvu;Standard;Inflection;Lexeme;VERB;number=Plur,person=~1|2|3,tense=Past;canon;katav",
+		) as ParsedTargetedSurface<"Hebrew">;
+
+		if (!("target" in resolved)) {
+			throw new Error("Expected a resolved surface");
+		}
+
+		expect(resolved.target).toEqual(buildHebrewKatavLemma());
+		if (targeted.surface.surfaceKind !== "Inflection") {
+			throw new Error("Expected an inflectional targeted surface");
+		}
+		expect(targeted.surface.inflectionalFeatures).toEqual({
+			number: "Plur",
+			person: ["1", "2", "3"],
+			tense: "Past",
+		});
+		expect(toHebrewSurfaceLingId(targeted)).toBe(
+			"ling:v1:HE:SURF;katvu;Standard;Inflection;Lexeme;VERB;number=Plur,person=~1|2|3,tense=Past;canon;katav",
+		);
 	});
 });

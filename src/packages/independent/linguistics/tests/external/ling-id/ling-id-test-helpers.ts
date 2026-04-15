@@ -6,7 +6,7 @@ import type {
 } from "../../../src";
 import { buildToLingConverters } from "../../../src";
 
-export type TestLanguage = "German" | "English";
+export type TestLanguage = "German" | "English" | "Hebrew";
 
 export type LingIdSurfaceInput<L extends TestLanguage> = LingIdSelection<L>;
 
@@ -21,6 +21,7 @@ export type ParsedSurface<L extends TestLanguage = TestLanguage> =
 
 export const germanLingConverters = buildToLingConverters("German");
 export const englishLingConverters = buildToLingConverters("English");
+export const hebrewLingConverters = buildToLingConverters("Hebrew");
 
 export const {
 	getShallowSurfaceLingId: toGermanShallowSurfaceLingId,
@@ -35,6 +36,13 @@ export const {
 	parseShallowSurface: parseEnglishShallowSurface,
 	parseSurface: parseEnglishSurface,
 } = englishLingConverters;
+
+export const {
+	getShallowSurfaceLingId: toHebrewShallowSurfaceLingId,
+	getSurfaceLingId: toHebrewSurfaceLingId,
+	parseShallowSurface: parseHebrewShallowSurface,
+	parseSurface: parseHebrewSurface,
+} = hebrewLingConverters;
 
 export function buildGermanFeminineSeeLemma() {
 	return {
@@ -67,4 +75,17 @@ export function buildEnglishWalkLemma() {
 		meaningInEmojis: "🚶",
 		pos: "VERB",
 	} satisfies Lemma<"English", "Lexeme", "VERB">;
+}
+
+export function buildHebrewKatavLemma() {
+	return {
+		canonicalLemma: "katav",
+		inherentFeatures: {
+			hebBinyan: "PAAL",
+		},
+		language: "Hebrew",
+		lemmaKind: "Lexeme",
+		meaningInEmojis: "✍️",
+		pos: "VERB",
+	} satisfies Lemma<"Hebrew", "Lexeme", "VERB">;
 }

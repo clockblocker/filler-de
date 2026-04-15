@@ -195,6 +195,8 @@ function getLemmaSubKind(value: Lemma): string {
 		case "Phraseme":
 			return value.phrasemeKind;
 	}
+
+	throw new Error(`Unsupported lemma kind: ${(value as Lemma).lemmaKind}`);
 }
 
 function getLemmaFeatures(value: Lemma) {

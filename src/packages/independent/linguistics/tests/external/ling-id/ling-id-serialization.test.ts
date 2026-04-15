@@ -4,12 +4,14 @@ import {
 	buildEnglishWalkLemma,
 	buildGermanFeminineSeeLemma,
 	buildGermanNeuterSeeLemma,
+	buildHebrewKatavLemma,
 	type LingIdSurfaceInput,
 	parseGermanSurface,
 	toEnglishShallowSurfaceLingId,
 	toEnglishSurfaceLingId,
 	toGermanShallowSurfaceLingId,
 	toGermanSurfaceLingId,
+	toHebrewSurfaceLingId,
 } from "./ling-id-test-helpers";
 
 describe("Ling ID serialization", () => {
@@ -270,6 +272,39 @@ describe("Ling ID serialization", () => {
 		);
 		expect(toGermanSurfaceLingId(possessiveSelection)).toBe(
 			"ling:v1:DE:SURF;dessen;Standard;Inflection;Lexeme;DET;gender=~Masc|Neut,gender[psor]=~Neut,number[psor]=Sing;canon;dessen",
+		);
+	});
+
+	it("serializes Hebrew lemmas and multi-valued verbal features with the HE header", () => {
+		const katav = buildHebrewKatavLemma();
+
+		const selection = {
+			language: "Hebrew",
+			orthographicStatus: "Standard",
+			spelledSelection: "katvu",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "VERB",
+				},
+				inflectionalFeatures: {
+					number: "Plur",
+					person: ["1", "2", "3"],
+					tense: "Past",
+				},
+				normalizedFullSurface: "katvu",
+				surfaceKind: "Inflection",
+				target: {
+					canonicalLemma: "katav",
+				},
+			},
+		} satisfies LingIdSurfaceInput<"Hebrew">;
+
+		expect(toHebrewSurfaceLingId(katav)).toBe(
+			"ling:v1:HE:SURF;katav;Standard;Lemma;Lexeme;VERB;-;observed;katav;Lexeme;VERB;hebBinyan=PAAL;✍️",
+		);
+		expect(toHebrewSurfaceLingId(selection)).toBe(
+			"ling:v1:HE:SURF;katvu;Standard;Inflection;Lexeme;VERB;number=Plur,person=~1|2|3,tense=Past;canon;katav",
 		);
 	});
 });

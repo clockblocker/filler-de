@@ -13,9 +13,12 @@ const YES_LITERAL_FEATURE_KEYS = new Set([
 	"reflex",
 	"separable",
 ]);
+
 const MULTI_VALUE_FEATURE_KEYS = new Set([
 	"gender",
 	"gender[psor]",
+	"number",
+	"person",
 	"pronType",
 ]);
 

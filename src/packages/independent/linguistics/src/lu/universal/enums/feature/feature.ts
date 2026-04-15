@@ -22,6 +22,8 @@ import { Evident } from "./ud/evident";
 import { ExtPos } from "./ud/ext-pos";
 import { Foreign } from "./ud/foreign";
 import { Gender } from "./ud/gender";
+import { HebBinyan } from "./ud/heb-binyan";
+import { HebExistential } from "./ud/heb-existential";
 import { Hyph } from "./ud/hyph";
 import { Mood } from "./ud/mood";
 import { NounClass } from "./ud/noun-class";
@@ -33,6 +35,7 @@ import { Person } from "./ud/person";
 import { Polarity } from "./ud/polarity";
 import { Polite } from "./ud/polite";
 import { Poss } from "./ud/poss";
+import { Prefix } from "./ud/prefix";
 import { PronType } from "./ud/pron-type";
 import { PunctType } from "./ud/punct-type";
 import { Reflex } from "./ud/reflex";
@@ -63,6 +66,8 @@ export const UniversalFeature = {
 	GovernedCase,
 	GovernedPreposition,
 	GrammaticalNumber,
+	HebBinyan,
+	HebExistential,
 	Hyph,
 	LexicallyReflexive,
 	Mood,
@@ -75,6 +80,7 @@ export const UniversalFeature = {
 	Polarity,
 	Polite,
 	Poss,
+	Prefix,
 	PronType,
 	PunctType,
 	Reflex,
@@ -115,20 +121,23 @@ export type AbstractFeatures = Prettify<{
 	"gender[psor]": FeatureValueSet<UniversalFeatureValue<"Gender">>;
 	governedCase: UniversalFeatureValue<"GovernedCase">;
 	governedPreposition: UniversalFeatureValue<"GovernedPreposition">;
+	hebBinyan: UniversalFeatureValue<"HebBinyan">;
+	hebExistential: UniversalFeatureValue<"HebExistential">;
 	hyph: UniversalFeatureValue<"Hyph">;
 	lexicallyReflexive: UniversalFeatureValue<"LexicallyReflexive">;
 	phrasal: UniversalFeatureValue<"Phrasal">;
 	mood: UniversalFeatureValue<"Mood">;
 	nounClass: UniversalFeatureValue<"NounClass">;
 	numForm: UniversalFeatureValue<"NumForm">;
-	number: UniversalFeatureValue<"GrammaticalNumber">;
+	number: FeatureValueSet<UniversalFeatureValue<"GrammaticalNumber">>;
 	"number[psor]": UniversalFeatureValue<"GrammaticalNumber">;
 	numType: UniversalFeatureValue<"NumType">;
 	partType: UniversalFeatureValue<"PartType">;
-	person: UniversalFeatureValue<"Person">;
+	person: FeatureValueSet<UniversalFeatureValue<"Person">>;
 	polarity: UniversalFeatureValue<"Polarity">;
 	polite: UniversalFeatureValue<"Polite">;
 	poss: UniversalFeatureValue<"Poss">;
+	prefix: UniversalFeatureValue<"Prefix">;
 	pronType: FeatureValueSet<UniversalFeatureValue<"PronType">>;
 	punctType: UniversalFeatureValue<"PunctType">;
 	reflex: UniversalFeatureValue<"Reflex">;

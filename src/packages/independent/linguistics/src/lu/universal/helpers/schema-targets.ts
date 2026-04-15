@@ -33,19 +33,13 @@ export type SelectionSchemaFor<
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > = z.ZodType<SelectionFor<OS, SK, LK, D>>;
 
-type FeatureSchemaFor<K extends keyof AbstractFeatures> = z.ZodType<
-	AbstractFeatures[K],
-	z.ZodTypeDef,
-	AbstractFeatures[K]
->;
-
 export type RestrictableFeatureSchemaShape = Partial<{
-	[K in keyof AbstractFeatures]: FeatureSchemaFor<K>;
+	[K in keyof AbstractFeatures]: z.ZodTypeAny;
 }>;
 
 type ValidFeatureSchemaShape<Shape extends z.ZodRawShape> = {
 	[K in keyof Shape]: K extends keyof AbstractFeatures
-		? Shape[K] extends FeatureSchemaFor<K>
+		? z.infer<Shape[K]> extends AbstractFeatures[K]
 			? Shape[K]
 			: never
 		: never;
@@ -60,7 +54,8 @@ type OptionalizedFeatureSchemaShape<Shape extends z.ZodRawShape> = {
 export function featureValueSet<Schema extends z.ZodTypeAny>(schema: Schema) {
 	return z.union([
 		schema,
-		z.array(schema)
+		z
+			.array(schema)
 			.nonempty()
 			.superRefine((values, ctx) => {
 				if (new Set(values).size !== values.length) {
@@ -75,38 +70,44 @@ export function featureValueSet<Schema extends z.ZodTypeAny>(schema: Schema) {
 
 export function featureSpecificValueSets<
 	Schema extends z.ZodTypeAny,
-	const Allowed extends readonly (readonly [z.infer<Schema>, ...z.infer<
-		Schema
-	>[]])[],
+	const Allowed extends readonly (readonly [
+		z.infer<Schema>,
+		...z.infer<Schema>[],
+	])[],
 >(schema: Schema, allowedValueSets: Allowed) {
-	const exactSetSchema = z.array(schema).nonempty().superRefine((values, ctx) => {
-		if (new Set(values).size !== values.length) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				message: "Duplicate feature values are not allowed",
+	const exactSetSchema = z
+		.array(schema)
+		.nonempty()
+		.superRefine((values, ctx) => {
+			if (new Set(values).size !== values.length) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: "Duplicate feature values are not allowed",
+				});
+				return;
+			}
+
+			const normalizedValues = [...values].sort();
+			const isAllowed = allowedValueSets.some((allowedValues) => {
+				const normalizedAllowedValues = [...allowedValues].sort();
+
+				return (
+					normalizedAllowedValues.length ===
+						normalizedValues.length &&
+					normalizedAllowedValues.every(
+						(allowedValue, index) =>
+							allowedValue === normalizedValues[index],
+					)
+				);
 			});
-			return;
-		}
 
-		const normalizedValues = [...values].sort();
-		const isAllowed = allowedValueSets.some((allowedValues) => {
-			const normalizedAllowedValues = [...allowedValues].sort();
-
-			return (
-				normalizedAllowedValues.length === normalizedValues.length &&
-				normalizedAllowedValues.every(
-					(allowedValue, index) => allowedValue === normalizedValues[index],
-				)
-			);
+			if (!isAllowed) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					message: "Unsupported feature value combination",
+				});
+			}
 		});
-
-		if (!isAllowed) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				message: "Unsupported feature value combination",
-			});
-		}
-	});
 
 	return z.union([schema, exactSetSchema]);
 }

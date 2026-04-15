@@ -44,6 +44,12 @@ describe("public API usage", () => {
 		expect(LemmaSchema.English.Lexeme.NOUN).toBe(
 			LemmaSchema.English.Lexeme.NOUN,
 		);
+		expect(SelectionSchema.Hebrew.Standard.Inflection.Lexeme.VERB).toBe(
+			SelectionSchema.Hebrew.Standard.Inflection.Lexeme.VERB,
+		);
+		expect(LemmaSchema.Hebrew.Lexeme.VERB).toBe(
+			LemmaSchema.Hebrew.Lexeme.VERB,
+		);
 		expect(
 			ResolvedSurfaceSchema.English.Standard.Inflection.Lexeme.VERB,
 		).toBe(ResolvedSurfaceSchema.English.Standard.Inflection.Lexeme.VERB);
@@ -162,6 +168,29 @@ describe("public API usage", () => {
 
 		expect(lemma.pos).toBe("NOUN");
 		expect(unknownSelection.orthographicStatus).toBe("Unknown");
+	});
+
+	it("supports Hebrew in the broad type aliases", () => {
+		const lemma = {
+			canonicalLemma: "katav",
+			inherentFeatures: { hebBinyan: "PAAL" },
+			language: "Hebrew",
+			lemmaKind: "Lexeme",
+			meaningInEmojis: "✍️",
+			pos: "VERB",
+		} satisfies Lemma<"Hebrew">;
+
+		const unknownSelection = {
+			language: "Hebrew",
+			orthographicStatus: "Unknown",
+			spelledSelection: "unknown",
+		} satisfies Selection<"Hebrew">;
+
+		expect(lemma.pos).toBe("VERB");
+		expect(unknownSelection.orthographicStatus).toBe("Unknown");
+		expect("PART" in SelectionSchema.Hebrew.Standard.Inflection.Lexeme).toBe(
+			false,
+		);
 	});
 
 	it("keeps narrow public aliases for concrete English adjective types", () => {

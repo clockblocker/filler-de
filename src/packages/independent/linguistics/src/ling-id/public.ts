@@ -1,5 +1,8 @@
 import type { Lemma } from "../lu/public";
-import type { TargetLanguage } from "../lu/universal/enums/core/language";
+import {
+	TARGET_LANGUAGES,
+	type TargetLanguage,
+} from "../lu/universal/enums/core/language";
 import { parseLingId, parseShallowSurfaceLingId } from "./parse";
 import {
 	serializeResolvedSurface,
@@ -175,9 +178,10 @@ function getValueLanguage(value: unknown): TargetLanguage | undefined {
 		typeof value === "object" &&
 		value !== null &&
 		"language" in value &&
-		(value.language === "German" || value.language === "English")
+		typeof value.language === "string" &&
+		(TARGET_LANGUAGES as readonly string[]).includes(value.language)
 	) {
-		return value.language;
+		return value.language as TargetLanguage;
 	}
 
 	return undefined;

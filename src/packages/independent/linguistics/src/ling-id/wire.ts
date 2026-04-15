@@ -5,11 +5,13 @@ export type LingIdKind = "SURF" | "SURF-SHALLOW";
 const LANGUAGE_TO_CODE = {
 	English: "EN",
 	German: "DE",
+	Hebrew: "HE",
 } as const satisfies Record<TargetLanguage, string>;
 
 const CODE_TO_LANGUAGE = {
 	DE: "German",
 	EN: "English",
+	HE: "Hebrew",
 } as const satisfies Record<string, TargetLanguage>;
 
 export function buildHeader(

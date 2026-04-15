@@ -4,6 +4,8 @@ import { EnglishLemmaSchema } from "./english/english-lemma";
 import { EnglishSelectionSchema } from "./english/english-selection";
 import { GermanLemmaSchema } from "./german/german-lemma";
 import { GermanSelectionSchema } from "./german/german-selection";
+import { HebrewLemmaSchema } from "./hebrew/hebrew-lemma";
+import { HebrewSelectionSchema } from "./hebrew/hebrew-selection";
 import type {
 	LemmaSchemaLanguageShape,
 	SelectionSchemaLanguageShape,
@@ -20,21 +22,25 @@ import { withLingIdSurfaceDtoCompatibility } from "./universal/ling-id-schema-co
 export const SelectionSchema = {
 	English: EnglishSelectionSchema,
 	German: GermanSelectionSchema,
+	Hebrew: HebrewSelectionSchema,
 } satisfies SelectionSchemaShape;
 
 export const SurfaceSchema = {
 	English: buildSurfaceSchemaForLanguage("English", EnglishSelectionSchema),
 	German: buildSurfaceSchemaForLanguage("German", GermanSelectionSchema),
+	Hebrew: buildSurfaceSchemaForLanguage("Hebrew", HebrewSelectionSchema),
 } satisfies SurfaceSchemaShape;
 
 export const ResolvedSurfaceSchema = {
 	English: buildResolvedSurfaceSchemaForLanguage(SurfaceSchema.English),
 	German: buildResolvedSurfaceSchemaForLanguage(SurfaceSchema.German),
+	Hebrew: buildResolvedSurfaceSchemaForLanguage(SurfaceSchema.Hebrew),
 } satisfies ResolvedSurfaceSchemaShape;
 
 export const LemmaSchema = {
 	English: EnglishLemmaSchema,
 	German: GermanLemmaSchema,
+	Hebrew: HebrewLemmaSchema,
 } satisfies LemmaSchemaShape;
 
 export type Lemma<
