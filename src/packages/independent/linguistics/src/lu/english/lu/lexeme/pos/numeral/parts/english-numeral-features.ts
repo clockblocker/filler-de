@@ -23,8 +23,8 @@ export const EnglishNumeralInflectionalFeaturesSchema = z
 
 export const EnglishNumeralInherentFeaturesSchema = z
 	.object({
-		abbr: UniversalFeature.IsAbbr.optional(),
-		foreign: UniversalFeature.IsForeign.optional(),
+		abbr: UniversalFeature.Abbr.optional(),
+		foreign: UniversalFeature.Foreign.optional(),
 		numType: EnglishNumeralNumType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "NUM">;

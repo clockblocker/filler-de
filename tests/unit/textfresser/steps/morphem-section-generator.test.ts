@@ -15,8 +15,7 @@ function makeLexicalInfo() {
 			status: "ready",
 			value: {
 				inherentFeatures: {
-					reflex: false,
-					separable: true,
+					separable: "Yes",
 				},
 			},
 		},

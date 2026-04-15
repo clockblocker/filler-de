@@ -18,7 +18,7 @@ export const GermanAdverbInflectionalFeaturesSchema = z
 
 export const GermanAdverbInherentFeaturesSchema = z
 	.object({
-		foreign: UniversalFeature.IsForeign.optional(),
+		foreign: UniversalFeature.Foreign.optional(),
 		numType: GermanAdverbNumType.optional(),
 		pronType: GermanAdverbPronType.optional(),
 	})

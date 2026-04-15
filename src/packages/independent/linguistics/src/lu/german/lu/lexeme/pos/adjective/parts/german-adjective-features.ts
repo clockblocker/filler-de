@@ -25,8 +25,8 @@ export const GermanAdjectiveInflectionalFeaturesSchema = z
 
 export const GermanAdjectiveInherentFeaturesSchema = z
 	.object({
-		abbr: UniversalFeature.IsAbbr.optional(),
-		foreign: UniversalFeature.IsForeign.optional(),
+		abbr: UniversalFeature.Abbr.optional(),
+		foreign: UniversalFeature.Foreign.optional(),
 		numType: GermanAdjectiveNumType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "ADJ">;

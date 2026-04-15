@@ -23,7 +23,7 @@ export const GermanSymbolInflectionalFeaturesSchema = z
 
 export const GermanSymbolInherentFeaturesSchema = z
 	.object({
-		foreign: UniversalFeature.IsForeign.optional(),
+		foreign: UniversalFeature.Foreign.optional(),
 		numType: GermanSymbolNumType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "SYM">;

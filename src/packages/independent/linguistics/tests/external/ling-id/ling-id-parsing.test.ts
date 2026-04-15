@@ -26,7 +26,7 @@ describe("Ling ID parsing", () => {
 			lemmaKind: "Morpheme",
 			meaningInEmojis: "🧩",
 			morphemeKind: "Prefix",
-			separable: true,
+			separable: "Yes",
 		} satisfies Lemma<"German", "Morpheme", "Prefix">;
 
 		const id = toGermanSurfaceLingId(morpheme);
@@ -55,7 +55,7 @@ describe("Ling ID parsing", () => {
 				lemmaKind: "Morpheme",
 				meaningInEmojis: "🧩",
 				morphemeKind: "Prefix",
-				separable: true,
+				separable: "Yes",
 			},
 		});
 		expect(JSON.parse(JSON.stringify(observed))).toEqual(observed);

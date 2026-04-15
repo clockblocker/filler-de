@@ -1,11 +1,11 @@
 import { z } from "zod/v3";
 
 // Source: https://universaldependencies.org/u/feat/Foreign.html
-export const IsForeign = z.boolean();
-export type IsForeign = z.infer<typeof IsForeign>;
+export const Foreign = z.literal("Yes");
+export type Foreign = z.infer<typeof Foreign>;
 
-export function getReprForIsForeign(isForeign: IsForeign) {
-	const reprForIsForeign = "foreign";
+export function getReprForForeign(_foreign: Foreign) {
+	const reprForForeign = "foreign";
 
-	return isForeign ? reprForIsForeign : `not ${reprForIsForeign}`;
+	return reprForForeign;
 }

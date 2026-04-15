@@ -33,7 +33,7 @@ export const GermanDeterminerInherentFeaturesSchema = z
 		numType: GermanDeterminerNumType.optional(),
 		person: GermanPerson.optional(),
 		polite: GermanPolite.optional(),
-		poss: UniversalFeature.IsPoss.optional(),
+		poss: UniversalFeature.Poss.optional(),
 		pronType: GermanDeterminerPronType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "DET">;

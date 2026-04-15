@@ -12,8 +12,8 @@ export const EnglishParticleInflectionalFeaturesSchema = z
 
 export const EnglishParticleInherentFeaturesSchema = z
 	.object({
-		abbr: UniversalFeature.IsAbbr.optional(),
-		foreign: UniversalFeature.IsForeign.optional(),
+		abbr: UniversalFeature.Abbr.optional(),
+		foreign: UniversalFeature.Foreign.optional(),
 		polarity: EnglishPolarity.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "PART">;

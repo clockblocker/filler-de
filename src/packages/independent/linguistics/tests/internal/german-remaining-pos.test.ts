@@ -113,7 +113,7 @@ describe("German remaining POS schemas", () => {
 					inflectionalFeatures: {
 						case: "Dat",
 						number: "Sing",
-						reflex: true,
+						reflex: "Yes",
 					},
 					normalizedFullSurface: "sich",
 					surfaceKind: "Inflection",
@@ -223,7 +223,7 @@ describe("German remaining POS schemas", () => {
 			GermanOtherSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "foobar",
 				inherentFeatures: {
-					foreign: true,
+					foreign: "Yes",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",

@@ -25,6 +25,6 @@ export const EnglishVerbInflectionalFeaturesSchema = z
 export const EnglishVerbInherentFeaturesSchema = z
 	.object({
 		governedPreposition: UniversalFeature.GovernedPreposition.optional(),
-		isPhrasal: UniversalFeature.IsPhrasal.optional(),
+		phrasal: UniversalFeature.Phrasal.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "VERB">;

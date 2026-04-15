@@ -23,8 +23,8 @@ export const GermanNumeralInflectionalFeaturesSchema = z
 
 export const GermanNumeralInherentFeaturesSchema = z
 	.object({
-		abbr: UniversalFeature.IsAbbr.optional(),
-		foreign: UniversalFeature.IsForeign.optional(),
+		abbr: UniversalFeature.Abbr.optional(),
+		foreign: UniversalFeature.Foreign.optional(),
 		numType: GermanNumeralNumType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "NUM">;

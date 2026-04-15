@@ -18,7 +18,7 @@ export const GermanPronounInflectionalFeaturesSchema = z
 		case: GermanCase.optional(),
 		gender: GermanGender.optional(),
 		number: GermanNumber.optional(),
-		reflex: UniversalFeature.IsReflex.optional(),
+		reflex: UniversalFeature.Reflex.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "PRON">;
 
@@ -26,7 +26,7 @@ export const GermanPronounInherentFeaturesSchema = z
 	.object({
 		person: GermanPerson.optional(),
 		polite: GermanPolite.optional(),
-		poss: UniversalFeature.IsPoss.optional(),
+		poss: UniversalFeature.Poss.optional(),
 		pronType: GermanPronounPronType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "PRON">;

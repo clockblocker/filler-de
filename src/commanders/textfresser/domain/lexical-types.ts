@@ -143,13 +143,11 @@ export function buildVerbEntryIdentity(profile: {
 	inherentFeatures: Pick<InherentFeatures, "reflex" | "separable">;
 }): string {
 	return [
-		`reflex:${profile.inherentFeatures.reflex === true ? "yes" : "no"}`,
+		`reflex:${profile.inherentFeatures.reflex === "Yes" ? "yes" : "no"}`,
 		`separable:${
 			profile.inherentFeatures.separable === undefined
 				? "unknown"
-				: profile.inherentFeatures.separable
-					? "yes"
-					: "no"
+				: "yes"
 		}`,
 	].join("|");
 }

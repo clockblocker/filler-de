@@ -17,7 +17,7 @@ describe("Ling ID serialization", () => {
 		const separableVerb = {
 			canonicalLemma: "untergehen",
 			inherentFeatures: {
-				separable: true,
+				separable: "Yes",
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
@@ -25,10 +25,10 @@ describe("Ling ID serialization", () => {
 			pos: "VERB",
 		} satisfies Lemma<"German", "Lexeme", "VERB">;
 
-		const inseparableVerb = {
+		const verbWithoutSeparable = {
 			...separableVerb,
 			inherentFeatures: {
-				separable: false,
+				separable: undefined,
 			},
 		} satisfies Lemma<"German", "Lexeme", "VERB">;
 
@@ -41,7 +41,7 @@ describe("Ling ID serialization", () => {
 			lemmaKind: "Morpheme",
 			meaningInEmojis: "🧩",
 			morphemeKind: "Prefix",
-			separable: true,
+			separable: "Yes",
 		} satisfies Lemma<"German", "Morpheme", "Prefix">;
 
 		const prefixWithoutSeparable = {
@@ -52,11 +52,11 @@ describe("Ling ID serialization", () => {
 		expect(toGermanSurfaceLingId(separableVerb)).toBe(
 			"ling:v1:DE:SURF;untergehen;Standard;Lemma;Lexeme;VERB;-;observed;untergehen;Lexeme;VERB;separable=Yes;🌅",
 		);
-		expect(toGermanSurfaceLingId(inseparableVerb)).toBe(
-			"ling:v1:DE:SURF;untergehen;Standard;Lemma;Lexeme;VERB;-;observed;untergehen;Lexeme;VERB;separable=No;🌅",
+		expect(toGermanSurfaceLingId(verbWithoutSeparable)).toBe(
+			"ling:v1:DE:SURF;untergehen;Standard;Lemma;Lexeme;VERB;-;observed;untergehen;Lexeme;VERB;-;🌅",
 		);
 		expect(toGermanSurfaceLingId(separableVerb)).not.toBe(
-			toGermanSurfaceLingId(inseparableVerb),
+			toGermanSurfaceLingId(verbWithoutSeparable),
 		);
 		expect(toGermanSurfaceLingId(feminineSee)).not.toBe(
 			toGermanSurfaceLingId(neuterSee),

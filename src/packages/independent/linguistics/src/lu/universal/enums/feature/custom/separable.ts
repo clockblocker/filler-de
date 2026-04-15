@@ -1,10 +1,10 @@
 import { z } from "zod/v3";
 
-export const IsSeparable = z.boolean();
-export type IsSeparable = z.infer<typeof IsSeparable>;
+export const Separable = z.literal("Yes");
+export type Separable = z.infer<typeof Separable>;
 
-export function getReprForIsSeparable(isSeparable: IsSeparable) {
-	const reprForIsSeparable = "separable";
+export function getReprForSeparable(_separable: Separable) {
+	const reprForSeparable = "separable";
 
-	return isSeparable ? reprForIsSeparable : `not ${reprForIsSeparable}`;
+	return reprForSeparable;
 }

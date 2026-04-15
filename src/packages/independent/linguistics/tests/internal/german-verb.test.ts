@@ -72,9 +72,7 @@ describe("German verb schemas", () => {
 			canonicalLemma: "gehen",
 			inherentFeatures: {
 				governedPreposition: "auf",
-				isPhrasal: false,
-				reflex: true,
-				separable: false,
+				reflex: "Yes",
 			},
 			language: "German",
 			lemmaKind: "Lexeme",
@@ -91,7 +89,7 @@ describe("German verb schemas", () => {
 				canonicalLemma: "mitkommen",
 				inherentFeatures: {
 					governedPreposition: "mit",
-					isPhrasal: true,
+					phrasal: "Yes",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",

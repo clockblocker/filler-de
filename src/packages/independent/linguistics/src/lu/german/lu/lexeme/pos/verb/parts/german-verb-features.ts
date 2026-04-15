@@ -27,8 +27,8 @@ export const GermanVerbInflectionalFeaturesSchema = z
 export const GermanVerbInherentFeaturesSchema = z
 	.object({
 		governedPreposition: UniversalFeature.GovernedPreposition.optional(),
-		isPhrasal: UniversalFeature.IsPhrasal.optional(),
-		reflex: UniversalFeature.IsReflex.optional(),
-		separable: UniversalFeature.IsSeparable.optional(),
+		phrasal: UniversalFeature.Phrasal.optional(),
+		reflex: UniversalFeature.Reflex.optional(),
+		separable: UniversalFeature.Separable.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme">;

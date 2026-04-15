@@ -25,7 +25,7 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 				morphemeKind: z.literal(morphemeKind),
 				separable:
 					morphemeKind === "Prefix"
-						? UniversalFeature.IsSeparable.optional()
+						? UniversalFeature.Separable.optional()
 						: z.undefined().optional(),
 			})
 			.strict(),

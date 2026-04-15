@@ -372,13 +372,10 @@ function mapFeaturesField(
 		featuresResult.isOk()
 	) {
 		const value = featuresResult.value as AgentOutput<"FeaturesVerb">;
-		inherentFeatures.reflex = value.valency.reflexivity !== "NonReflexive";
+		inherentFeatures.reflex =
+			value.valency.reflexivity !== "NonReflexive" ? "Yes" : undefined;
 		inherentFeatures.separable =
-			value.valency.separability === "Separable"
-				? true
-				: value.valency.separability === "Inseparable"
-					? false
-					: undefined;
+			value.valency.separability === "Separable" ? "Yes" : undefined;
 	}
 
 	return {

@@ -11,7 +11,7 @@ export const EnglishAdpositionInflectionalFeaturesSchema = z
 
 export const EnglishAdpositionInherentFeaturesSchema = z
 	.object({
-		abbr: UniversalFeature.IsAbbr.optional(),
-		foreign: UniversalFeature.IsForeign.optional(),
+		abbr: UniversalFeature.Abbr.optional(),
+		foreign: UniversalFeature.Foreign.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "ADP">;

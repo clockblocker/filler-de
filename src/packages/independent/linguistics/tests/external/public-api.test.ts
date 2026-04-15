@@ -177,7 +177,7 @@ describe("public API usage", () => {
 		const lemma = {
 			canonicalLemma: "small",
 			inherentFeatures: {
-				abbr: true,
+				abbr: "Yes",
 				numType: "Card",
 			},
 			language: "English",
@@ -361,9 +361,7 @@ describe("public API usage", () => {
 		).toBe(true);
 		expect(Relations.Lexical.getInverse("hypernym")).toBe("hyponym");
 		expect(Relations.Morphological.getRepr("derivedFrom")).toBe("<-");
-		expect(Relations.targetLingIdsSchema.safeParse([dog]).success).toBe(
-			true,
-		);
+		expect("targetLingIdsSchema" in Relations).toBe(false);
 	});
 
 	it("keeps internal schema helpers off the root export surface", () => {

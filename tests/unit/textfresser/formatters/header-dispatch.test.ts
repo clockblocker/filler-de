@@ -19,8 +19,6 @@ function makeVerbLexicalInfo(params: {
 			status: "ready",
 			value: {
 				inherentFeatures: {
-					reflex: false,
-					separable: false,
 				},
 			},
 		},

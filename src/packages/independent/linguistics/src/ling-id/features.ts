@@ -1,11 +1,12 @@
 import { escapeToken, unescapeToken } from "./escape";
 import type { ParsedFeatureBag, ParsedFeatureValue } from "./types";
 
-const BOOLEAN_FEATURE_KEYS = new Set([
+const BOOLEAN_FEATURE_KEYS = new Set(["isClosedSet"]);
+const YES_LITERAL_FEATURE_KEYS = new Set([
 	"abbr",
 	"foreign",
-	"isClosedSet",
 	"isPhrasal",
+	"phrasal",
 	"poss",
 	"reflex",
 	"separable",
@@ -58,7 +59,7 @@ export function parseFeatureBag(token: string): ParsedFeatureBag {
 }
 
 export function expectBooleanFeature(
-	key: "isClosedSet" | "separable",
+	key: "isClosedSet",
 	features: ParsedFeatureBag,
 ): boolean {
 	const value = features[key];
@@ -70,22 +71,50 @@ export function expectBooleanFeature(
 	return value;
 }
 
+export function expectYesLiteralFeature(
+	key:
+		| "abbr"
+		| "foreign"
+		| "isPhrasal"
+		| "phrasal"
+		| "poss"
+		| "reflex"
+		| "separable",
+	features: ParsedFeatureBag,
+): "Yes" {
+	const value = features[key];
+
+	if (value !== "Yes") {
+		throw new Error(`Expected ${key} to deserialize as "Yes"`);
+	}
+
+	return value;
+}
+
 function serializeFeatureValue(value: ParsedFeatureValue): string {
 	return typeof value === "boolean" ? (value ? "Yes" : "No") : value;
 }
 
 function parseFeatureValue(key: string, value: string): ParsedFeatureValue {
-	if (!BOOLEAN_FEATURE_KEYS.has(key)) {
-		return value;
+	if (BOOLEAN_FEATURE_KEYS.has(key)) {
+		if (value === "Yes" || value === "true") {
+			return true;
+		}
+
+		if (value === "No" || value === "false") {
+			return false;
+		}
+
+		throw new Error(`Malformed boolean feature value for ${key}: ${value}`);
 	}
 
-	if (value === "Yes" || value === "true") {
-		return true;
+	if (YES_LITERAL_FEATURE_KEYS.has(key)) {
+		if (value === "Yes") {
+			return value;
+		}
+
+		throw new Error(`Malformed yes-literal feature value for ${key}: ${value}`);
 	}
 
-	if (value === "No" || value === "false") {
-		return false;
-	}
-
-	throw new Error(`Malformed boolean feature value for ${key}: ${value}`);
+	return value;
 }

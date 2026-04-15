@@ -9,7 +9,11 @@ import type {
 } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
 import { parseOptionalToken, unescapeToken } from "./escape";
-import { expectBooleanFeature, parseFeatureBag } from "./features";
+import {
+	expectBooleanFeature,
+	expectYesLiteralFeature,
+	parseFeatureBag,
+} from "./features";
 import { normalizeObservedSurface } from "./serialize";
 import type {
 	LingId,
@@ -93,7 +97,7 @@ export function parseLemmaBody(language: TargetLanguage, body: string): Lemma {
 				...(lemmaFeatures.separable === undefined
 					? {}
 					: {
-							separable: expectBooleanFeature(
+							separable: expectYesLiteralFeature(
 								"separable",
 								lemmaFeatures,
 							),

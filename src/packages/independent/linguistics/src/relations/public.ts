@@ -48,7 +48,6 @@ export const Relations = {
 		getRepr: getReprForMorphologicalRelation,
 		schema: MorphologicalRelationsSchema,
 	},
-	targetLingIdsSchema: RelationTargetLingIdsSchema,
 } as const;
 
 export declare namespace Relations {
@@ -58,9 +57,3 @@ export declare namespace Relations {
 	export type LexicalRelations = LexicalRelationsShape;
 	export type MorphologicalRelations = MorphologicalRelationsShape;
 }
-
-export type LexicalRelation = LexicalRelationShape;
-export type MorphologicalRelation = MorphologicalRelationShape;
-export type RelationTargetLingIds = RelationTargetLingIdsShape;
-export type LexicalRelations = LexicalRelationsShape;
-export type MorphologicalRelations = MorphologicalRelationsShape;

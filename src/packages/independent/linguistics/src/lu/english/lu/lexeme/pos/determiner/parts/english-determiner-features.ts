@@ -25,7 +25,7 @@ export const EnglishDeterminerInherentFeaturesSchema = z
 		definite: EnglishDefinite.optional(),
 		numType: EnglishDeterminerNumType.optional(),
 		person: EnglishPerson.optional(),
-		poss: UniversalFeature.IsPoss.optional(),
+		poss: UniversalFeature.Poss.optional(),
 		pronType: EnglishDeterminerPronType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "DET">;

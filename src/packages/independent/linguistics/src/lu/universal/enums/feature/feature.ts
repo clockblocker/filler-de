@@ -3,9 +3,9 @@ import type * as z from "zod/v3";
 import type { Prettify } from "../../../../../../../../types/helpers";
 import { DiscourseFormulaRoleSchema } from "./custom/discourse-formula-role";
 import { GovernedPreposition } from "./custom/governed-preposition";
-import { IsPhrasal } from "./custom/is-phrasal";
-import { IsSeparable } from "./custom/separable";
-import { IsAbbr } from "./ud/abbr";
+import { Phrasal } from "./custom/phrasal";
+import { Separable } from "./custom/separable";
+import { Abbr } from "./ud/abbr";
 import { Animacy } from "./ud/animacy";
 import { Aspect } from "./ud/aspect";
 import { Case } from "./ud/case";
@@ -16,7 +16,7 @@ import { Deixis } from "./ud/deixis";
 import { DeixisRef } from "./ud/deixis-ref";
 import { Evident } from "./ud/evident";
 import { ExtPos } from "./ud/ext-pos";
-import { IsForeign } from "./ud/foreign";
+import { Foreign } from "./ud/foreign";
 import { Gender } from "./ud/gender";
 import { Mood } from "./ud/mood";
 import { NounClass } from "./ud/noun-class";
@@ -25,14 +25,15 @@ import { GrammaticalNumber } from "./ud/number";
 import { Person } from "./ud/person";
 import { Polarity } from "./ud/polarity";
 import { Polite } from "./ud/polite";
-import { IsPoss } from "./ud/poss";
+import { Poss } from "./ud/poss";
 import { PronType } from "./ud/pron-type";
-import { IsReflex } from "./ud/reflex";
+import { Reflex } from "./ud/reflex";
 import { Tense } from "./ud/tense";
 import { VerbForm } from "./ud/verb-form";
 import { Voice } from "./ud/voice";
 
 export const UniversalFeature = {
+	Abbr,
 	Animacy,
 	Aspect,
 	Case,
@@ -44,22 +45,21 @@ export const UniversalFeature = {
 	DiscourseFormulaRole: DiscourseFormulaRoleSchema,
 	Evident,
 	ExtPos,
+	Foreign,
 	Gender,
 	GovernedPreposition,
 	GrammaticalNumber,
-	IsAbbr,
-	IsForeign,
-	IsPhrasal,
-	IsPoss,
-	IsReflex,
-	IsSeparable,
 	Mood,
 	NounClass,
 	NumType,
 	Person,
+	Phrasal,
 	Polarity,
 	Polite,
+	Poss,
 	PronType,
+	Reflex,
+	Separable,
 	Tense,
 	VerbForm,
 	Voice,
@@ -72,7 +72,7 @@ export type UniversalFeatureValue<
 > = z.infer<(typeof UniversalFeature)[K]>;
 
 export type AbstractFeatures = Prettify<{
-	abbr: UniversalFeatureValue<"IsAbbr">;
+	abbr: UniversalFeatureValue<"Abbr">;
 	animacy: UniversalFeatureValue<"Animacy">;
 	aspect: UniversalFeatureValue<"Aspect">;
 	case: UniversalFeatureValue<"Case">;
@@ -83,10 +83,10 @@ export type AbstractFeatures = Prettify<{
 	deixisRef: UniversalFeatureValue<"DeixisRef">;
 	evident: UniversalFeatureValue<"Evident">;
 	extPos: UniversalFeatureValue<"ExtPos">;
-	foreign: UniversalFeatureValue<"IsForeign">;
+	foreign: UniversalFeatureValue<"Foreign">;
 	gender: UniversalFeatureValue<"Gender">;
 	governedPreposition: UniversalFeatureValue<"GovernedPreposition">;
-	isPhrasal: UniversalFeatureValue<"IsPhrasal">;
+	phrasal: UniversalFeatureValue<"Phrasal">;
 	mood: UniversalFeatureValue<"Mood">;
 	nounClass: UniversalFeatureValue<"NounClass">;
 	number: UniversalFeatureValue<"GrammaticalNumber">;
@@ -94,11 +94,11 @@ export type AbstractFeatures = Prettify<{
 	person: UniversalFeatureValue<"Person">;
 	polarity: UniversalFeatureValue<"Polarity">;
 	polite: UniversalFeatureValue<"Polite">;
-	poss: UniversalFeatureValue<"IsPoss">;
+	poss: UniversalFeatureValue<"Poss">;
 	pronType: UniversalFeatureValue<"PronType">;
-	reflex: UniversalFeatureValue<"IsReflex">;
+	reflex: UniversalFeatureValue<"Reflex">;
 	tense: UniversalFeatureValue<"Tense">;
 	verbForm: UniversalFeatureValue<"VerbForm">;
 	voice: UniversalFeatureValue<"Voice">;
-	separable: UniversalFeatureValue<"IsSeparable">;
+	separable: UniversalFeatureValue<"Separable">;
 }>;

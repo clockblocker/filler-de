@@ -18,7 +18,7 @@ export const EnglishAdverbInflectionalFeaturesSchema = z
 
 export const EnglishAdverbInherentFeaturesSchema = z
 	.object({
-		foreign: UniversalFeature.IsForeign.optional(),
+		foreign: UniversalFeature.Foreign.optional(),
 		numType: EnglishAdverbNumType.optional(),
 		pronType: EnglishAdverbPronType.optional(),
 	})

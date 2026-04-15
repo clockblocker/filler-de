@@ -17,14 +17,14 @@ export const EnglishPronounInflectionalFeaturesSchema = z
 		case: EnglishCase.optional(),
 		gender: EnglishGender.optional(),
 		number: EnglishNumber.optional(),
-		reflex: UniversalFeature.IsReflex.optional(),
+		reflex: UniversalFeature.Reflex.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "PRON">;
 
 export const EnglishPronounInherentFeaturesSchema = z
 	.object({
 		person: EnglishPerson.optional(),
-		poss: UniversalFeature.IsPoss.optional(),
+		poss: UniversalFeature.Poss.optional(),
 		pronType: EnglishPronounPronType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "PRON">;

@@ -19,8 +19,8 @@ export const GermanProperNounInflectionalFeaturesSchema = z
 
 export const GermanProperNounInherentFeaturesSchema = z
 	.object({
-		abbr: UniversalFeature.IsAbbr.optional(),
-		foreign: UniversalFeature.IsForeign.optional(),
+		abbr: UniversalFeature.Abbr.optional(),
+		foreign: UniversalFeature.Foreign.optional(),
 		gender: GermanGender.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "PROPN">;

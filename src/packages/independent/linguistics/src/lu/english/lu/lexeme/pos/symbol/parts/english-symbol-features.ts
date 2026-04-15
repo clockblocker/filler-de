@@ -23,7 +23,7 @@ export const EnglishSymbolInflectionalFeaturesSchema = z
 
 export const EnglishSymbolInherentFeaturesSchema = z
 	.object({
-		foreign: UniversalFeature.IsForeign.optional(),
+		foreign: UniversalFeature.Foreign.optional(),
 		numType: EnglishSymbolNumType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "SYM">;

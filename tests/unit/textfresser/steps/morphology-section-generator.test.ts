@@ -88,8 +88,7 @@ describe("generateMorphologySection", () => {
 					status: "ready",
 					value: {
 						inherentFeatures: {
-							reflex: false,
-							separable: true,
+							separable: "Yes",
 						},
 					},
 				},
@@ -129,8 +128,6 @@ describe("generateMorphologySection", () => {
 					status: "ready",
 					value: {
 						inherentFeatures: {
-							reflex: false,
-							separable: false,
 						},
 					},
 				},
@@ -254,8 +251,7 @@ describe("generateMorphologySection", () => {
 					status: "ready",
 					value: {
 						inherentFeatures: {
-							reflex: false,
-							separable: true,
+							separable: "Yes",
 						},
 					},
 				},
