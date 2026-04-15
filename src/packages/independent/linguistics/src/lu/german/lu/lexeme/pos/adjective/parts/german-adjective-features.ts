@@ -1,18 +1,13 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
-import {
-	GermanCase,
-	GermanDegree,
-	GermanGender,
-	GermanNumber,
-} from "../../../shared/german-common-enums";
+import { GermanFeature } from "../../../shared/german-common-enums";
 import { GermanAdjectiveNumType } from "./german-adjective-enums";
 
 export const GermanAdjectiveInflectionalFeaturesSchema = featureSchema({
-	case: GermanCase.optional(),
-	degree: GermanDegree.optional(),
-	gender: GermanGender.optional(),
-	number: GermanNumber.optional(),
+	case: GermanFeature.Case.optional(),
+	degree: GermanFeature.Degree.optional(),
+	gender: GermanFeature.Gender.optional(),
+	number: GermanFeature.Number.optional(),
 });
 
 export const GermanAdjectiveInherentFeaturesSchema = featureSchema({

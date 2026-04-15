@@ -3,6 +3,7 @@ import {
 	GermanCoordinatingConjunctionInflectionalFeaturesSchema,
 	GermanCoordinatingConjunctionInherentFeaturesSchema,
 } from "./parts/german-coordinating-conjunction-features";
+
 export const GermanCoordinatingConjunctionSchemas = buildGermanLexemeBundle({
 	inflectionalFeaturesSchema:
 		GermanCoordinatingConjunctionInflectionalFeaturesSchema,

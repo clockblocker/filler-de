@@ -3,6 +3,7 @@ import {
 	EnglishDeterminerInflectionalFeaturesSchema,
 	EnglishDeterminerInherentFeaturesSchema,
 } from "./parts/english-determiner-features";
+
 export const EnglishDeterminerSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishDeterminerInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishDeterminerInherentFeaturesSchema,

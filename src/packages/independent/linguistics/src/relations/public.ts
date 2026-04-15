@@ -23,6 +23,7 @@ export {
 	getInverseLexicalRelation,
 	getReprForLexicalRelation,
 } from "./lexical";
+
 export {
 	getInverseMorphologicalRelation,
 	getReprForMorphologicalRelation,

@@ -75,12 +75,12 @@ export function expectBooleanFeature(
 export function expectYesLiteralFeature(
 	key:
 		| "abbr"
-			| "foreign"
-			| "isPhrasal"
-			| "lexicallyReflexive"
-			| "phrasal"
-			| "poss"
-			| "reflex"
+		| "foreign"
+		| "isPhrasal"
+		| "lexicallyReflexive"
+		| "phrasal"
+		| "poss"
+		| "reflex"
 		| "separable",
 	features: ParsedFeatureBag,
 ): "Yes" {
@@ -115,7 +115,9 @@ function parseFeatureValue(key: string, value: string): ParsedFeatureValue {
 			return value;
 		}
 
-		throw new Error(`Malformed yes-literal feature value for ${key}: ${value}`);
+		throw new Error(
+			`Malformed yes-literal feature value for ${key}: ${value}`,
+		);
 	}
 
 	return value;

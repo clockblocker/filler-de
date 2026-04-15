@@ -12,6 +12,7 @@ const phrasemeKindValues = [
 export const PhrasemeKind = z.enum(phrasemeKindValues);
 export type PhrasemeKind = z.infer<typeof PhrasemeKind>;
 export const PHRASEME_KIND_KEY = "phrasemeKind";
+
 export const PHRASEME_KINDS = PhrasemeKind.options;
 
 const reprForPhrasemeKind = {

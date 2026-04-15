@@ -1,21 +1,14 @@
 import z from "zod/v3";
 import { featureSchema } from "../../../../universal/helpers/schema-targets";
-import {
-	GermanGender,
-	GermanMood,
-	GermanNumber,
-	GermanPerson,
-	GermanTense,
-	GermanVerbForm,
-} from "./german-common-enums";
+import { GermanFeature } from "./german-common-enums";
 
 export const GermanVerbalInflectionalFeaturesSchema = featureSchema({
-	gender: GermanGender.optional(),
-	mood: GermanMood.optional(),
-	number: GermanNumber.optional(),
-	person: GermanPerson.optional(),
-	tense: GermanTense.optional(),
-	verbForm: GermanVerbForm.optional(),
+	gender: GermanFeature.Gender.optional(),
+	mood: GermanFeature.Mood.optional(),
+	number: GermanFeature.Number.optional(),
+	person: GermanFeature.Person.optional(),
+	tense: GermanFeature.Tense.optional(),
+	verbForm: GermanFeature.VerbForm.optional(),
 }).superRefine((features, ctx) => {
 	if (features.gender !== undefined && features.verbForm !== "Part") {
 		ctx.addIssue({

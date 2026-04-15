@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 
-import { buildReadme, collectExampleBlocks } from "../../generate-readme/generate-readme";
+import {
+	buildReadme,
+	collectExampleBlocks,
+} from "../../generate-readme/generate-readme";
 
 test("README examples expose all named blocks used by the template", () => {
 	const blocks = collectExampleBlocks();

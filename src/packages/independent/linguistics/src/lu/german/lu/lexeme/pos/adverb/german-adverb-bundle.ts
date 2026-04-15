@@ -3,6 +3,7 @@ import {
 	GermanAdverbInflectionalFeaturesSchema,
 	GermanAdverbInherentFeaturesSchema,
 } from "./parts/german-adverb-features";
+
 export const GermanAdverbSchemas = buildGermanLexemeBundle({
 	inflectionalFeaturesSchema: GermanAdverbInflectionalFeaturesSchema,
 	inherentFeaturesSchema: GermanAdverbInherentFeaturesSchema,

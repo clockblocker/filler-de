@@ -10,10 +10,10 @@ import type {
 	LingIdResolvedSurface,
 	LingIdSelection,
 	LingId as LingIdValue,
-	ResolvedSurfaceLingId,
 	ParsedShallowSurfaceDto,
 	ParsedShallowSurfaceDtoFor,
 	ParsedSurfaceResult,
+	ResolvedSurfaceLingId,
 	SerializableLemma,
 	SerializableSurface,
 	SerializableSurfaceShell,
@@ -25,9 +25,9 @@ import { parseHeader } from "./wire";
 export type {
 	LingIdResolvedSurface,
 	LingIdSelection,
-	ResolvedSurfaceLingId,
 	ParsedShallowSurfaceDto,
 	ParsedSurfaceResult,
+	ResolvedSurfaceLingId,
 	ShallowSurfaceLingId,
 	SurfaceLingId,
 } from "./types";

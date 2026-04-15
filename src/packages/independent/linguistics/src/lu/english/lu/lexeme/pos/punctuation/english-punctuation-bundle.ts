@@ -3,6 +3,7 @@ import {
 	EnglishPunctuationInflectionalFeaturesSchema,
 	EnglishPunctuationInherentFeaturesSchema,
 } from "./parts/english-punctuation-features";
+
 export const EnglishPunctuationSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishPunctuationInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishPunctuationInherentFeaturesSchema,

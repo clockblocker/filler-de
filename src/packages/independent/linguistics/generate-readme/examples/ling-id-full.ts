@@ -1,6 +1,7 @@
 /** biome-ignore-all lint/correctness/noUnusedVariables: README example file */
-import { buildToLingConverters } from "../../src";
+
 import type { Lemma, Selection } from "../../src";
+import { buildToLingConverters } from "../../src";
 
 // README_BLOCK:ling-id-full-walk:start
 const walkLemma = {

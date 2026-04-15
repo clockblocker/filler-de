@@ -3,4 +3,5 @@ export type {
 	UniversalFeatureKey,
 	UniversalFeatureValue,
 } from "./feature";
+
 export { UniversalFeature } from "./feature";

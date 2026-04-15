@@ -1,15 +1,11 @@
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
-import {
-	GermanCase,
-	GermanGender,
-	GermanNumber,
-} from "../../../shared/german-common-enums";
+import { GermanFeature } from "../../../shared/german-common-enums";
 
 export const GermanNounInflectionalFeaturesSchema = featureSchema({
-	case: GermanCase.optional(),
-	number: GermanNumber.optional(),
+	case: GermanFeature.Case.optional(),
+	number: GermanFeature.Number.optional(),
 });
 
 export const GermanNounInherentFeaturesSchema = featureSchema({
-	gender: GermanGender.optional(),
+	gender: GermanFeature.Gender.optional(),
 });

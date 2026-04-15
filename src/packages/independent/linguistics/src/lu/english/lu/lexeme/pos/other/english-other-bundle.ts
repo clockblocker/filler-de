@@ -3,6 +3,7 @@ import {
 	EnglishOtherInflectionalFeaturesSchema,
 	EnglishOtherInherentFeaturesSchema,
 } from "./parts/english-other-features";
+
 export const EnglishOtherSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishOtherInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishOtherInherentFeaturesSchema,

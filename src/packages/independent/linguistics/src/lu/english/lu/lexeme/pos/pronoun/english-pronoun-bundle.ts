@@ -3,6 +3,7 @@ import {
 	EnglishPronounInflectionalFeaturesSchema,
 	EnglishPronounInherentFeaturesSchema,
 } from "./parts/english-pronoun-features";
+
 export const EnglishPronounSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishPronounInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishPronounInherentFeaturesSchema,

@@ -3,6 +3,7 @@ import {
 	GermanPronounInflectionalFeaturesSchema,
 	GermanPronounInherentFeaturesSchema,
 } from "./parts/german-pronoun-features";
+
 export const GermanPronounSchemas = buildGermanLexemeBundle({
 	inflectionalFeaturesSchema: GermanPronounInflectionalFeaturesSchema,
 	inherentFeaturesSchema: GermanPronounInherentFeaturesSchema,

@@ -3,6 +3,7 @@ import {
 	GermanPunctuationInflectionalFeaturesSchema,
 	GermanPunctuationInherentFeaturesSchema,
 } from "./parts/german-punctuation-features";
+
 export const GermanPunctuationSchemas = buildGermanLexemeBundle({
 	inflectionalFeaturesSchema: GermanPunctuationInflectionalFeaturesSchema,
 	inherentFeaturesSchema: GermanPunctuationInherentFeaturesSchema,

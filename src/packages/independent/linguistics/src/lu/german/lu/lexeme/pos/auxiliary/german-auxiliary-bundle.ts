@@ -3,6 +3,7 @@ import {
 	GermanAuxiliaryInflectionalFeaturesSchema,
 	GermanAuxiliaryInherentFeaturesSchema,
 } from "./parts/german-auxiliary-features";
+
 export const GermanAuxiliarySchemas = buildGermanLexemeBundle({
 	inflectionalFeaturesSchema: GermanAuxiliaryInflectionalFeaturesSchema,
 	inherentFeaturesSchema: GermanAuxiliaryInherentFeaturesSchema,

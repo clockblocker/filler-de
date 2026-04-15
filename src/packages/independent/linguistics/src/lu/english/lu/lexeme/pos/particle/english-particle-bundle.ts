@@ -3,6 +3,7 @@ import {
 	EnglishParticleInflectionalFeaturesSchema,
 	EnglishParticleInherentFeaturesSchema,
 } from "./parts/english-particle-features";
+
 export const EnglishParticleSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishParticleInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishParticleInherentFeaturesSchema,

@@ -1,24 +1,18 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
-import {
-	GermanCase,
-	GermanGender,
-	GermanNumber,
-	GermanPerson,
-	GermanPolite,
-} from "../../../shared/german-common-enums";
+import { GermanFeature } from "../../../shared/german-common-enums";
 import { GermanPronounPronType } from "./german-pronoun-enums";
 
 export const GermanPronounInflectionalFeaturesSchema = featureSchema({
-	case: GermanCase.optional(),
-	gender: GermanGender.optional(),
-	number: GermanNumber.optional(),
+	case: GermanFeature.Case.optional(),
+	gender: GermanFeature.Gender.optional(),
+	number: GermanFeature.Number.optional(),
 	reflex: UniversalFeature.Reflex.optional(),
 });
 
 export const GermanPronounInherentFeaturesSchema = featureSchema({
-	person: GermanPerson.optional(),
-	polite: GermanPolite.optional(),
+	person: GermanFeature.Person.optional(),
+	polite: GermanFeature.Polite.optional(),
 	poss: UniversalFeature.Poss.optional(),
 	pronType: GermanPronounPronType.optional(),
 });
