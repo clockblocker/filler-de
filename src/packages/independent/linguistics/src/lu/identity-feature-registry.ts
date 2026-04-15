@@ -1,5 +1,5 @@
-import { GermanNounIdentityFeatureKeys } from "./german/lu/lexeme/noun/german-noun-bundle";
-import { GermanVerbIdentityFeatureKeys } from "./german/lu/lexeme/verb/german-verb-bundle";
+import { GermanNounIdentityFeatureKeys } from "./german/lu/lexeme/pos/noun/german-noun-bundle";
+import { GermanVerbIdentityFeatureKeys } from "./german/lu/lexeme/pos/verb/german-verb-bundle";
 import { GermanMorphemeIdentityFeatureKeysByKind } from "./german/lu/morpheme/german-morphemes";
 import type { AbstractFeatures } from "./universal/enums/feature/feature";
 

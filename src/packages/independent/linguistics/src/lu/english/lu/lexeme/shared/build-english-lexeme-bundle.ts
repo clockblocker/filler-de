@@ -1,9 +1,9 @@
 import z from "zod/v3";
 import type { Pos } from "../../../../universal/enums/kind/pos";
-import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
+import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 
 export function buildEnglishLexemeBundle<
 	P extends Pos,
@@ -26,14 +26,15 @@ export function buildEnglishLexemeBundle<
 		lemmaKind: z.literal("Lexeme"),
 		pos: z.literal(pos),
 	} satisfies z.ZodRawShape;
+
 	const lemmaSchema = withLingIdLemmaDtoCompatibility(
 		z.object({
-			meaningInEmojis: MeaningInEmojisSchema,
-			inherentFeatures: inherentFeaturesSchema,
-			lemmaKind: z.literal("Lexeme"),
-			language: z.literal("English"),
-			pos: z.literal(pos),
 			canonicalLemma: z.string(),
+			inherentFeatures: inherentFeaturesSchema,
+			language: z.literal("English"),
+			lemmaKind: z.literal("Lexeme"),
+			meaningInEmojis: MeaningInEmojisSchema,
+			pos: z.literal(pos),
 		}),
 	);
 
@@ -41,38 +42,38 @@ export function buildEnglishLexemeBundle<
 		InflectionSelectionSchema: buildInflectionSelection({
 			inflectionalFeaturesSchema,
 			language: "English",
-			lemmaSchema,
 			lemmaIdentityShape,
+			lemmaSchema,
 		}),
 		LemmaSchema: lemmaSchema,
 		LemmaSelectionSchema: buildLemmaSelection({
 			language: "English",
-			lemmaSchema,
 			lemmaIdentityShape,
+			lemmaSchema,
 		}),
 		StandardVariantSelectionSchema: buildLemmaSelection({
 			language: "English",
-			lemmaSchema,
 			lemmaIdentityShape,
+			lemmaSchema,
 			surfaceKind: "Variant",
 		}),
 		TypoInflectionSelectionSchema: buildInflectionSelection({
 			inflectionalFeaturesSchema,
 			language: "English",
-			lemmaSchema,
 			lemmaIdentityShape,
+			lemmaSchema,
 			orthographicStatus: "Typo",
 		}),
 		TypoLemmaSelectionSchema: buildLemmaSelection({
 			language: "English",
-			lemmaSchema,
 			lemmaIdentityShape,
+			lemmaSchema,
 			orthographicStatus: "Typo",
 		}),
 		TypoVariantSelectionSchema: buildLemmaSelection({
 			language: "English",
-			lemmaSchema,
 			lemmaIdentityShape,
+			lemmaSchema,
 			orthographicStatus: "Typo",
 			surfaceKind: "Variant",
 		}),

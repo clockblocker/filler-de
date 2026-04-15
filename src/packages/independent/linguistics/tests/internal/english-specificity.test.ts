@@ -1,12 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { EnglishAdjectiveSchemas } from "../../src/lu/english/lu/lexeme/adjective/english-adjective-bundle";
-import { EnglishAdpositionSchemas } from "../../src/lu/english/lu/lexeme/adposition/english-adposition-bundle";
-import { EnglishAuxiliarySchemas } from "../../src/lu/english/lu/lexeme/auxiliary/english-auxiliary-bundle";
-import { EnglishDeterminerSchemas } from "../../src/lu/english/lu/lexeme/determiner/english-determiner-bundle";
-import { EnglishNounSchemas } from "../../src/lu/english/lu/lexeme/noun/english-noun-bundle";
-import { EnglishPronounSchemas } from "../../src/lu/english/lu/lexeme/pronoun/english-pronoun-bundle";
-import { EnglishProperNounSchemas } from "../../src/lu/english/lu/lexeme/proper-noun/english-proper-noun-bundle";
-import { EnglishVerbSchemas } from "../../src/lu/english/lu/lexeme/verb/english-verb-bundle";
+import { EnglishAdjectiveSchemas } from "../../src/lu/english/lu/lexeme/pos/adjective/english-adjective-bundle";
+import { EnglishAdpositionSchemas } from "../../src/lu/english/lu/lexeme/pos/adposition/english-adposition-bundle";
+import { EnglishAuxiliarySchemas } from "../../src/lu/english/lu/lexeme/pos/auxiliary/english-auxiliary-bundle";
+import { EnglishDeterminerSchemas } from "../../src/lu/english/lu/lexeme/pos/determiner/english-determiner-bundle";
+import { EnglishNounSchemas } from "../../src/lu/english/lu/lexeme/pos/noun/english-noun-bundle";
+import { EnglishPronounSchemas } from "../../src/lu/english/lu/lexeme/pos/pronoun/english-pronoun-bundle";
+import { EnglishProperNounSchemas } from "../../src/lu/english/lu/lexeme/pos/proper-noun/english-proper-noun-bundle";
+import { EnglishVerbSchemas } from "../../src/lu/english/lu/lexeme/pos/verb/english-verb-bundle";
 
 function lexemeSurface(pos: string, canonicalLemma: string) {
 	return {

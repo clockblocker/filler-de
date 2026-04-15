@@ -6,7 +6,7 @@ import {
 	MorphologicalRelationsSchema,
 	SelectionSchema,
 } from "../../src";
-import { GermanNounSchemas } from "../../src/lu/german/lu/lexeme/noun/german-noun-bundle";
+import { GermanNounSchemas } from "../../src/lu/german/lu/lexeme/pos/noun/german-noun-bundle";
 
 const relationId = (label: string) => `rel:${label}`;
 

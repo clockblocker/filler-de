@@ -1,1 +1,1 @@
-export { GermanVerbSchemas } from "../verb/german-verb-bundle";
+export { GermanVerbSchemas } from "./verb/german-verb-bundle";

@@ -1,0 +1,16 @@
+import { NumType } from "../../../../../../universal/enums/feature/ud/num-type";
+import {
+	GermanCase,
+	GermanGender,
+	GermanMood,
+	GermanNumber,
+	GermanVerbForm,
+} from "../../../shared/german-common-enums";
+
+export const GermanOtherCase = GermanCase;
+export const GermanOtherGender = GermanGender;
+export const GermanOtherMood = GermanMood;
+export const GermanOtherNumber = GermanNumber;
+export const GermanOtherVerbForm = GermanVerbForm;
+
+export const GermanOtherNumType = NumType.extract(["Card", "Mult", "Range"]);
