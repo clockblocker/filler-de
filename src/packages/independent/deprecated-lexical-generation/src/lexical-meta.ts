@@ -4,7 +4,7 @@ import type {
 	PhrasemeKind,
 	Pos,
 	SurfaceKind,
-} from "@textfresser/linguistics";
+} from "../../../../deprecated-linguistic-enums";
 import type { LexicalMeta, ResolvedSelection } from "./public-types";
 import {
 	getLemmaKind,

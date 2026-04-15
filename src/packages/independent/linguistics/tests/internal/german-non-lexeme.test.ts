@@ -13,6 +13,7 @@ describe("German non-lexeme schemas", () => {
 			meaningInEmojis: "🧩",
 			morphemeKind: "Prefix",
 		} satisfies Lemma<"German", "Morpheme", "Prefix">;
+
 		const phraseme: Selection<
 			"German",
 			"Standard",
@@ -76,6 +77,7 @@ describe("German non-lexeme schemas", () => {
 				meaningInEmojis: "✅",
 				phrasemeKind: "DiscourseFormula",
 			});
+
 		const aphorismResult = GermanPhrasemeLemmaSchemas.Aphorism.safeParse({
 			canonicalLemma: "Zeit ist Geld",
 			discourseFormulaRole: "Reaction",

@@ -3,7 +3,7 @@
  * Converts structured LLM morpheme output into wikilink display strings.
  */
 
-import type { MorphemeKind } from "@textfresser/linguistics";
+import type { MorphemeKind } from "../../../../deprecated-linguistic-enums";
 import { wikilinkHelper } from "@textfresser/note-addressing";
 import type { TargetLanguage } from "../../../../types";
 

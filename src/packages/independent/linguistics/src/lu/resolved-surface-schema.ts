@@ -1,7 +1,7 @@
 import z, { type ZodTypeAny } from "zod/v3";
 import type { SurfaceSchemaLanguageShape } from "./registry-shapes";
 
-export type ObservedSurfaceSchemaLanguageShape = {
+export type ResolvedSurfaceSchemaLanguageShape = {
 	[OS in keyof SurfaceSchemaLanguageShape]: {
 		[SK in keyof SurfaceSchemaLanguageShape[OS]]: {
 			[LK in keyof SurfaceSchemaLanguageShape[OS][SK]]: {
@@ -11,9 +11,9 @@ export type ObservedSurfaceSchemaLanguageShape = {
 	};
 };
 
-export function buildObservedSurfaceSchemaForLanguage(
+export function buildResolvedSurfaceSchemaForLanguage(
 	surfaceSchema: SurfaceSchemaLanguageShape,
-): ObservedSurfaceSchemaLanguageShape {
+): ResolvedSurfaceSchemaLanguageShape {
 	return Object.fromEntries(
 		Object.entries(surfaceSchema).map(
 			([orthographicStatus, surfaceKinds]) => [
@@ -30,7 +30,7 @@ export function buildObservedSurfaceSchemaForLanguage(
 											Object.entries(discriminators).map(
 												([discriminator, schema]) => [
 													discriminator,
-													buildObservedSurfaceSchema(
+													buildResolvedSurfaceSchema(
 														schema as ZodTypeAny,
 													),
 												],
@@ -44,22 +44,22 @@ export function buildObservedSurfaceSchemaForLanguage(
 				),
 			],
 		),
-	) as ObservedSurfaceSchemaLanguageShape;
+	) as ResolvedSurfaceSchemaLanguageShape;
 }
 
-function buildObservedSurfaceSchema(schema: ZodTypeAny): ZodTypeAny {
+function buildResolvedSurfaceSchema(schema: ZodTypeAny): ZodTypeAny {
 	return schema.superRefine((value, ctx) => {
-		if (!hasObservedSurfaceTarget(value)) {
+		if (!hasResolvedSurfaceTarget(value)) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
-				message: "Observed surfaces require a full lemma target",
+				message: "Resolved surfaces require a full lemma target",
 				path: ["target"],
 			});
 		}
 	});
 }
 
-function hasObservedSurfaceTarget(value: unknown): boolean {
+function hasResolvedSurfaceTarget(value: unknown): boolean {
 	return (
 		typeof value === "object" &&
 		value !== null &&

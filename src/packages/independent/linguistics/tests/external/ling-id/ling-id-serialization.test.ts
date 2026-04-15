@@ -13,7 +13,7 @@ import {
 } from "./ling-id-test-helpers";
 
 describe("Ling ID serialization", () => {
-	it("serializes lemma input as observed surface identity", () => {
+	it("serializes lemma input as resolved surface identity", () => {
 		const separableVerb = {
 			canonicalLemma: "untergehen",
 			inherentFeatures: {
@@ -208,17 +208,17 @@ describe("Ling ID serialization", () => {
 		);
 	});
 
-	it("canonicalizes observed surface shells on reserialization", () => {
-		const observed = parseGermanSurface(
+	it("canonicalizes resolved surface shells on reserialization", () => {
+		const resolved = parseGermanSurface(
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
 		);
 
-		if (!("target" in observed)) {
-			throw new Error("Expected an observed surface");
+		if (!("target" in resolved)) {
+			throw new Error("Expected a resolved surface");
 		}
 
-		const mutatedObserved = {
-			...observed,
+		const mutatedResolved = {
+			...resolved,
 			discriminators: {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "VERB",
@@ -226,7 +226,7 @@ describe("Ling ID serialization", () => {
 			normalizedFullSurface: "Bogus",
 		};
 
-		expect(toGermanSurfaceLingId(mutatedObserved)).toBe(
+		expect(toGermanSurfaceLingId(mutatedResolved)).toBe(
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
 		);
 	});

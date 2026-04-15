@@ -2,15 +2,15 @@ import type { Lemma } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
 import { parseLingId, parseShallowSurfaceLingId } from "./parse";
 import {
-	serializeObservedSurface,
+	serializeResolvedSurface,
 	serializeShallowSurface,
 	serializeSurface,
 } from "./serialize";
 import type {
-	LingIdObservedSurface,
+	LingIdResolvedSurface,
 	LingIdSelection,
 	LingId as LingIdValue,
-	ObservedSurfaceLingId,
+	ResolvedSurfaceLingId,
 	ParsedShallowSurfaceDto,
 	ParsedShallowSurfaceDtoFor,
 	ParsedSurfaceResult,
@@ -23,9 +23,9 @@ import type {
 import { parseHeader } from "./wire";
 
 export type {
-	LingIdObservedSurface,
+	LingIdResolvedSurface,
 	LingIdSelection,
-	ObservedSurfaceLingId,
+	ResolvedSurfaceLingId,
 	ParsedShallowSurfaceDto,
 	ParsedSurfaceResult,
 	ShallowSurfaceLingId,
@@ -34,23 +34,23 @@ export type {
 
 export type LingConverters<L extends TargetLanguage> = {
 	getSurfaceLingId: {
-		(value: Lemma<L> | SerializableLemma): ObservedSurfaceLingId;
+		(value: Lemma<L> | SerializableLemma): ResolvedSurfaceLingId;
 		(
 			value:
 				| LingIdSelection<L>
-				| LingIdObservedSurface<L>
+				| LingIdResolvedSurface<L>
 				| SerializableSurface,
-		): SurfaceLingId | ObservedSurfaceLingId;
+		): SurfaceLingId | ResolvedSurfaceLingId;
 	};
 	getShallowSurfaceLingId: (
 		value:
 			| LingIdSelection<L>
-			| LingIdObservedSurface<L>
+			| LingIdResolvedSurface<L>
 			| ParsedShallowSurfaceDtoFor<L>
 			| SerializableSurfaceShell,
 	) => ShallowSurfaceLingId;
 	parseSurface: (
-		id: SurfaceLingId | ObservedSurfaceLingId,
+		id: SurfaceLingId | ResolvedSurfaceLingId,
 	) => ParsedSurfaceResult<L>;
 	parseShallowSurface: (
 		id: ShallowSurfaceLingId,
@@ -65,10 +65,10 @@ export declare namespace LingId {
 	export type Value = LingIdValue;
 	export type Input<L extends TargetLanguage = TargetLanguage> =
 		| LingIdSelection<L>
-		| LingIdObservedSurface<L>;
+		| LingIdResolvedSurface<L>;
 	export type Converters<L extends TargetLanguage> = LingConverters<L>;
 	export type SurfaceId = SurfaceLingId;
-	export type ObservedId = ObservedSurfaceLingId;
+	export type ResolvedId = ResolvedSurfaceLingId;
 	export type ShallowId = ShallowSurfaceLingId;
 }
 
@@ -117,8 +117,8 @@ export function buildToLingConverters<L extends TargetLanguage>(
 
 type LanguageSerializer = {
 	toSurfaceLingId: {
-		(value: SerializableLemma): ObservedSurfaceLingId;
-		(value: SerializableSurface): SurfaceLingId | ObservedSurfaceLingId;
+		(value: SerializableLemma): ResolvedSurfaceLingId;
+		(value: SerializableSurface): SurfaceLingId | ResolvedSurfaceLingId;
 	};
 	toShallowSurfaceLingId: (
 		value: SerializableSurfaceShell,
@@ -128,13 +128,13 @@ type LanguageSerializer = {
 function isSurfaceValue(value: unknown): value is SerializableSurfaceShell {
 	return (
 		isSelectionValue(value) ||
-		isObservedSurfaceValue(value) ||
+		isResolvedSurfaceValue(value) ||
 		isShallowSurfaceValue(value)
 	);
 }
 
 function isFullSurfaceValue(value: unknown): value is SerializableSurface {
-	return isSelectionValue(value) || isObservedSurfaceValue(value);
+	return isSelectionValue(value) || isResolvedSurfaceValue(value);
 }
 
 function isSelectionValue(value: unknown): value is LingIdSelection {
@@ -146,9 +146,9 @@ function isSelectionValue(value: unknown): value is LingIdSelection {
 	);
 }
 
-function isObservedSurfaceValue(
+function isResolvedSurfaceValue(
 	value: unknown,
-): value is LingIdObservedSurface {
+): value is LingIdResolvedSurface {
 	return (
 		typeof value === "object" &&
 		value !== null &&
@@ -212,10 +212,10 @@ function createLanguageSerializer(
 			serializeShallowSurface(language, value),
 		toSurfaceLingId: ((value: SerializableLemma | SerializableSurface) =>
 			isFullSurfaceValue(value)
-				? isObservedSurfaceValue(value)
-					? serializeObservedSurface(language, value)
+				? isResolvedSurfaceValue(value)
+					? serializeResolvedSurface(language, value)
 					: serializeSurface(language, value)
-				: serializeObservedSurface(
+				: serializeResolvedSurface(
 						language,
 						value,
 					)) as LanguageSerializer["toSurfaceLingId"],

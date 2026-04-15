@@ -3,9 +3,9 @@ import type { TargetLanguage } from "../lu/universal/enums/core/language";
 import { escapeToken, serializeOptionalToken } from "./escape";
 import { compactFeatureBag, serializeFeatureBag } from "./features";
 import type {
-	LingIdObservedSurface,
+	LingIdResolvedSurface,
 	LingIdSelection,
-	ObservedSurfaceLingId,
+	ResolvedSurfaceLingId,
 	ParsedShallowSurfaceDto,
 	SerializableLemma,
 	SerializableSurface,
@@ -19,7 +19,7 @@ type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
 
 type SerializableNestedLemma = Lemma;
 
-type NormalizedObservedSurface = {
+type NormalizedResolvedSurface = {
 	discriminators: {
 		lemmaKind: Lemma["lemmaKind"];
 		lemmaSubKind: string;
@@ -34,14 +34,14 @@ type SerializedSurfaceShell = {
 	surface:
 		| LingIdSelection["surface"]
 		| ParsedShallowSurfaceDto["surface"]
-		| NormalizedObservedSurface;
+		| NormalizedResolvedSurface;
 };
 
-export function serializeObservedSurface(
+export function serializeResolvedSurface(
 	language: TargetLanguage,
-	value: SerializableLemma | LingIdObservedSurface,
-): ObservedSurfaceLingId {
-	const normalizedValue = normalizeObservedSurface(value);
+	value: SerializableLemma | LingIdResolvedSurface,
+): ResolvedSurfaceLingId {
+	const normalizedValue = normalizeResolvedSurface(value);
 
 	return joinLingId([
 		buildHeader(language, "SURF"),
@@ -57,15 +57,15 @@ export function serializeObservedSurface(
 export function serializeSurface(
 	language: TargetLanguage,
 	value: SerializableSurface,
-): SurfaceLingId | ObservedSurfaceLingId {
+): SurfaceLingId | ResolvedSurfaceLingId {
 	if (!isSelectionValue(value)) {
-		return serializeObservedSurface(language, value);
+		return serializeResolvedSurface(language, value);
 	}
 
 	let targetMode: "canon" | "lemma";
 	let targetPayload: string;
 
-	if (isObservedSurfaceTarget(value.surface.target)) {
+	if (isResolvedSurfaceTarget(value.surface.target)) {
 		targetMode = "lemma";
 		targetPayload = serializeLemmaBody(language, value.surface.target);
 	} else {
@@ -108,10 +108,10 @@ export function serializeLemmaBody(
 	]);
 }
 
-export function normalizeObservedSurface(
-	value: SerializableLemma | LingIdObservedSurface,
-): NormalizedObservedSurface {
-	const observedLemma = normalizeLemma(
+export function normalizeResolvedSurface(
+	value: SerializableLemma | LingIdResolvedSurface,
+): NormalizedResolvedSurface {
+	const resolvedLemma = normalizeLemma(
 		typeof value === "object" && value !== null && "target" in value
 			? (value as { target: Lemma }).target
 			: value,
@@ -119,12 +119,12 @@ export function normalizeObservedSurface(
 
 	return {
 		discriminators: {
-			lemmaKind: observedLemma.lemmaKind,
-			lemmaSubKind: getLemmaSubKind(observedLemma),
+			lemmaKind: resolvedLemma.lemmaKind,
+			lemmaSubKind: getLemmaSubKind(resolvedLemma),
 		},
-		normalizedFullSurface: observedLemma.canonicalLemma,
+		normalizedFullSurface: resolvedLemma.canonicalLemma,
 		surfaceKind: "Lemma",
-		target: observedLemma,
+		target: resolvedLemma,
 	};
 }
 
@@ -219,9 +219,9 @@ function isSelectionValue(value: unknown): value is LingIdSelection {
 	return typeof value === "object" && value !== null && "surface" in value;
 }
 
-function isObservedSurfaceValue(
+function isResolvedSurfaceValue(
 	value: unknown,
-): value is LingIdObservedSurface {
+): value is LingIdResolvedSurface {
 	return (
 		typeof value === "object" &&
 		value !== null &&
@@ -238,7 +238,7 @@ function getSurfaceShell(
 		return value;
 	}
 
-	if (isObservedSurfaceValue(value)) {
+	if (isResolvedSurfaceValue(value)) {
 		return {
 			orthographicStatus: "Standard",
 			surface: value,
@@ -248,7 +248,7 @@ function getSurfaceShell(
 	return value;
 }
 
-function isObservedSurfaceTarget(
+function isResolvedSurfaceTarget(
 	target: LingIdSelection["surface"]["target"],
 ): target is Exclude<
 	LingIdSelection["surface"]["target"],

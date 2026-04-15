@@ -1,4 +1,4 @@
-import type { MorphemeKind } from "@textfresser/linguistics";
+import type { MorphemeKind } from "../../../../deprecated-linguistic-enums";
 import { err, ok, type Result } from "neverthrow";
 import {
 	type LexicalGenerationError,

@@ -30,9 +30,9 @@ describe("Ling ID guardrails", () => {
 		);
 	});
 
-	it("accepts observed surfaces and rejects lemma input in the shallow surface serializer", () => {
+	it("accepts resolved surfaces and rejects lemma input in the shallow surface serializer", () => {
 		const lemma = buildGermanFeminineSeeLemma();
-		const observedSurface = parseGermanSurface(
+		const resolvedSurface = parseGermanSurface(
 			toGermanSurfaceLingId(lemma),
 		);
 
@@ -41,7 +41,7 @@ describe("Ling ID guardrails", () => {
 				lemma as unknown as LingIdSurfaceInput<"German">,
 			),
 		).toThrow(/surface input/);
-		expect(toGermanShallowSurfaceLingId(observedSurface)).toBe(
+		expect(toGermanShallowSurfaceLingId(resolvedSurface)).toBe(
 			"ling:v1:DE:SURF-SHALLOW;See;Standard;Lemma;Lexeme;NOUN;-",
 		);
 	});

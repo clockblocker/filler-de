@@ -1,30 +1,30 @@
 import type {
 	Lemma,
-	ObservedSurface,
+	ResolvedSurface,
 	OrthographicStatus,
 	Selection,
 } from "../lu/public";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
 
-export type ObservedSurfaceLingId = string;
+export type ResolvedSurfaceLingId = string;
 export type SurfaceLingId = string;
 export type ShallowSurfaceLingId = string;
-export type LingId = SurfaceLingId | ObservedSurfaceLingId;
+export type LingId = SurfaceLingId | ResolvedSurfaceLingId;
 
 type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
 
 export type LingIdSelection<L extends TargetLanguage = TargetLanguage> =
 	Selection<L, KnownOrthographicStatus>;
 
-export type LingIdObservedSurface<L extends TargetLanguage = TargetLanguage> =
-	Extract<ObservedSurface, { surfaceKind: "Lemma"; target: Lemma<L> }>;
+export type LingIdResolvedSurface<L extends TargetLanguage = TargetLanguage> =
+	Extract<ResolvedSurface, { surfaceKind: "Lemma"; target: Lemma<L> }>;
 
 export type LingIdSurfaceInput<L extends TargetLanguage = TargetLanguage> =
 	LingIdSelection<L>;
 
 export type ParsedSurfaceResult<L extends TargetLanguage = TargetLanguage> =
 	| LingIdSelection<L>
-	| LingIdObservedSurface<L>;
+	| LingIdResolvedSurface<L>;
 
 export type ParsedFeatureValue = string | boolean;
 export type ParsedFeatureBag = Record<string, ParsedFeatureValue>;
@@ -50,7 +50,7 @@ export type ParsedShallowSurfaceDtoFor<L extends TargetLanguage> =
 	};
 
 export type SerializableLemma = Lemma;
-export type SerializableSurface = LingIdSelection | LingIdObservedSurface;
+export type SerializableSurface = LingIdSelection | LingIdResolvedSurface;
 export type SerializableSurfaceShell =
 	| SerializableSurface
 	| ParsedShallowSurfaceDto;

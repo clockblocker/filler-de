@@ -60,9 +60,9 @@ describe("Ling ID usage", () => {
 			},
 		} satisfies LingIdSurfaceInput<"German">;
 
-		const observedFemSurface = toGermanSurfaceLingId(feminineSeeLemma);
+		const resolvedFemSurface = toGermanSurfaceLingId(feminineSeeLemma);
 
-		const observedNeuterSurface = toGermanSurfaceLingId(neuterSeeLemma);
+		const resolvedNeuterSurface = toGermanSurfaceLingId(neuterSeeLemma);
 
 		expect(toGermanSurfaceLingId(fullFemSurface)).toBe(
 			toGermanSurfaceLingId(sameFullFemSurface),
@@ -84,7 +84,7 @@ describe("Ling ID usage", () => {
 		expect(toGermanSurfaceLingId(shallowSurface)).not.toBe(
 			toGermanSurfaceLingId(fullFemSurface),
 		);
-		expect(observedFemSurface).not.toBe(observedNeuterSurface);
+		expect(resolvedFemSurface).not.toBe(resolvedNeuterSurface);
 
 		const shallowIds = [
 			toGermanShallowSurfaceLingId(shallowSurface),
@@ -96,7 +96,7 @@ describe("Ling ID usage", () => {
 		expect(new Set(shallowIds).size).toBe(1);
 	});
 
-	it("supports the convenience dispatcher with observed-surface semantics", () => {
+	it("supports the convenience dispatcher with resolved-surface semantics", () => {
 		const lemma = buildGermanFeminineSeeLemma();
 
 		const surface = {

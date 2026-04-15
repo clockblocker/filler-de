@@ -4,8 +4,8 @@ import type {
 	GrammaticalNumber,
 	InherentFeatures,
 	MorphemeKind,
-	Selection,
-} from "@textfresser/linguistics";
+} from "../../../../deprecated-linguistic-enums";
+import type { Selection } from "@textfresser/linguistics";
 import type { Result } from "neverthrow";
 import type { z } from "zod/v3";
 import type {

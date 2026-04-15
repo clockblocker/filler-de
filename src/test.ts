@@ -1,6 +1,6 @@
 import type {
 	MorphemeKind,
-} from "@textfresser/linguistics";
+} from "./deprecated-linguistic-enums";
 import type { LinguisticUnitKind } from "./commanders/textfresser/domain/note-linguistic-policy";
 
 type Prettify<T> = {

@@ -1,11 +1,13 @@
 import type {
+	LexemeInflections,
+	LexicalRelationKind,
+} from "@textfresser/lexical-generation";
+import type {
 	Case,
 	Gender,
 	GrammaticalNumber,
 	InherentFeatures,
-	LexemeInflections,
-	LexicalRelationKind,
-} from "@textfresser/lexical-generation";
+} from "../../../deprecated-linguistic-enums";
 import type { TargetLanguage } from "../../../types";
 import type { POS } from "./note-linguistic-policy";
 

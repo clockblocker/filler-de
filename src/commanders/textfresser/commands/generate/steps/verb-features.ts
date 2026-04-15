@@ -1,4 +1,5 @@
-import type { InherentFeatures, LexicalInfo } from "@textfresser/lexical-generation";
+import type { LexicalInfo } from "@textfresser/lexical-generation";
+import type { InherentFeatures } from "../../../../../deprecated-linguistic-enums";
 import { getLexicalInfoInherentFeatures, getLexicalInfoPos } from "../../../domain/lexical-info-view";
 import { buildVerbEntryIdentity } from "../../../domain/lexical-types";
 

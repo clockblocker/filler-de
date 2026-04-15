@@ -173,7 +173,7 @@ Hans, Pass auf dich [auf]! -> `auf` (PRT)
 
 ## Ling IDs
 
-The package serializes stable surface-shaped Ling IDs. Lemma input is normalized into an observed-surface identity, so there is no separate top-level lemma ID format.
+The package serializes stable surface-shaped Ling IDs. Lemma input is normalized into a resolved-surface identity, so there is no separate top-level lemma ID format.
 
 ### Observed Surface IDs
 
@@ -295,7 +295,7 @@ const walkSurfaceWithCanonicalTargetId = toEnglishSurfaceLingId(
 
 ### Shallow Surface IDs
 
-Use shallow surface IDs when you want to compare form identity while ignoring target richness. Shallow IDs accept surface inputs such as selections, observed surfaces, and shallow shells, but not bare lemmas.
+Use shallow surface IDs when you want to compare form identity while ignoring target richness. Shallow IDs accept surface inputs such as selections, resolved surfaces, and shallow shells, but not bare lemmas.
 
 ```ts
 const feminineSee = {
@@ -347,7 +347,7 @@ const seeShallowIdsMatch =
 
 ### Parsing IDs
 
-`buildToLingConverters()` also exposes language-bound parsers. `parseSurface()` returns either a `Selection` for full surface IDs or an `ObservedSurface` for observed lemma IDs. `parseShallowSurface()` returns the shallow shell payload.
+`buildToLingConverters()` also exposes language-bound parsers. `parseSurface()` returns either a `Selection` for full surface IDs or a `ResolvedSurface` for resolved lemma IDs. `parseShallowSurface()` returns the shallow shell payload.
 
 ```ts
 const walkLemma = {

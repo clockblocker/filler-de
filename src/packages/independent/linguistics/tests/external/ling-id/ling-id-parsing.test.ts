@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { Lemma, ParsedShallowSurfaceDto } from "../../../src";
-import { ObservedSurfaceSchema, SelectionSchema } from "../../../src";
+import { ResolvedSurfaceSchema, SelectionSchema } from "../../../src";
 import {
 	buildEnglishWalkLemma,
 	buildGermanFeminineSeeLemma,
@@ -18,7 +18,7 @@ import {
 } from "./ling-id-test-helpers";
 
 describe("Ling ID parsing", () => {
-	it("round-trips observed surface ids as plain observed surfaces", () => {
+	it("round-trips resolved surface ids as plain resolved surfaces", () => {
 		const morpheme = {
 			canonicalLemma: "ab-",
 			isClosedSet: false,
@@ -33,15 +33,15 @@ describe("Ling ID parsing", () => {
 		const parsed = parseGermanSurface(id);
 
 		if (!("target" in parsed)) {
-			throw new Error("Expected an observed surface");
+			throw new Error("Expected a resolved surface");
 		}
 
-		const observed = parsed as typeof parsed & {
+		const resolved = parsed as typeof parsed & {
 			target: { lemmaKind: string };
 		};
 
-		expect(observed.target.lemmaKind).toBe("Morpheme");
-		expect(observed as unknown).toEqual({
+		expect(resolved.target.lemmaKind).toBe("Morpheme");
+		expect(resolved as unknown).toEqual({
 			discriminators: {
 				lemmaKind: "Morpheme",
 				lemmaSubKind: "Prefix",
@@ -58,12 +58,12 @@ describe("Ling ID parsing", () => {
 				separable: "Yes",
 			},
 		});
-		expect(JSON.parse(JSON.stringify(observed))).toEqual(observed);
-		expect(structuredClone(observed)).toEqual(observed);
-		expect(toGermanSurfaceLingId(observed)).toBe(id);
+		expect(JSON.parse(JSON.stringify(resolved))).toEqual(resolved);
+		expect(structuredClone(resolved)).toEqual(resolved);
+		expect(toGermanSurfaceLingId(resolved)).toBe(id);
 		expect(
-			ObservedSurfaceSchema.German.Standard.Lemma.Morpheme.Prefix.safeParse(
-				observed,
+			ResolvedSurfaceSchema.German.Standard.Lemma.Morpheme.Prefix.safeParse(
+				resolved,
 			).success,
 		).toBe(true);
 	});
@@ -159,17 +159,17 @@ describe("Ling ID parsing", () => {
 		).toBe(false);
 	});
 
-	it("round-trips observed lemma identities through the builder parsers", () => {
+	it("round-trips resolved lemma identities through the builder parsers", () => {
 		const observedId = toEnglishSurfaceLingId(buildEnglishWalkLemma());
-		const parsedObservedSurface = parseEnglishSurface(observedId);
+		const parsedResolvedSurface = parseEnglishSurface(observedId);
 
-		if (!("target" in parsedObservedSurface)) {
-			throw new Error("Expected an observed surface");
+		if (!("target" in parsedResolvedSurface)) {
+			throw new Error("Expected a resolved surface");
 		}
-		const shallowId = toEnglishShallowSurfaceLingId(parsedObservedSurface);
+		const shallowId = toEnglishShallowSurfaceLingId(parsedResolvedSurface);
 		const parsedShallowSurface = parseEnglishShallowSurface(shallowId);
 
-		expect(toEnglishSurfaceLingId(parsedObservedSurface)).toBe(observedId);
+		expect(toEnglishSurfaceLingId(parsedResolvedSurface)).toBe(observedId);
 		expect(shallowId).toBe(
 			"ling:v1:EN:SURF-SHALLOW;walk;Standard;Lemma;Lexeme;VERB;-",
 		);
@@ -224,11 +224,11 @@ describe("Ling ID parsing", () => {
 		const parsedTargeted = parseEnglishSurface(
 			targetedId,
 		) as ParsedSurface<"English">;
-		const parsedObserved = parseEnglishSurface(
+		const parsedResolved = parseEnglishSurface(
 			observedId,
 		) as ParsedSurface<"English">;
 
 		expect(toEnglishSurfaceLingId(parsedTargeted)).toBe(targetedId);
-		expect(toEnglishSurfaceLingId(parsedObserved)).toBe(observedId);
+		expect(toEnglishSurfaceLingId(parsedResolved)).toBe(observedId);
 	});
 });

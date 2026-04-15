@@ -75,7 +75,7 @@ export function buildSelectionSurfaceSchema<
 				target: { canonicalLemma: string } | Record<string, unknown>;
 			};
 
-			if (isLooseSurfaceTarget(typedSurface.target)) {
+			if (isUnresolvedSurfaceTarget(typedSurface.target)) {
 				return;
 			}
 
@@ -135,7 +135,7 @@ function getLemmaSubKindKey(
 	return matchingKey;
 }
 
-function isLooseSurfaceTarget(
+function isUnresolvedSurfaceTarget(
 	target: { canonicalLemma: string } | Record<string, unknown>,
 ): target is { canonicalLemma: string } {
 	return "canonicalLemma" in target && !("lemmaKind" in target);

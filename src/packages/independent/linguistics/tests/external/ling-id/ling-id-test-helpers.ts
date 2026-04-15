@@ -1,6 +1,6 @@
 import type {
 	Lemma,
-	LingIdObservedSurface,
+	LingIdResolvedSurface,
 	LingIdSelection,
 	ParsedSurfaceResult,
 } from "../../../src";
@@ -10,8 +10,8 @@ export type TestLanguage = "German" | "English";
 
 export type LingIdSurfaceInput<L extends TestLanguage> = LingIdSelection<L>;
 
-export type ParsedObservedSurface<L extends TestLanguage = TestLanguage> =
-	LingIdObservedSurface<L>;
+export type ParsedResolvedSurface<L extends TestLanguage = TestLanguage> =
+	LingIdResolvedSurface<L>;
 
 export type ParsedTargetedSurface<L extends TestLanguage = TestLanguage> =
 	LingIdSelection<L>;

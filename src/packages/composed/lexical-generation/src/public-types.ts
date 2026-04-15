@@ -7,9 +7,9 @@ import type {
 	MorphemeKind,
 	PhrasemeKind,
 	Pos,
-	Selection,
 	SurfaceKind,
-} from "@textfresser/linguistics";
+} from "../../../../deprecated-linguistic-enums";
+import type { Selection } from "@textfresser/linguistics";
 import type { Result } from "neverthrow";
 import type {
 	LexicalGenerationError,

@@ -1,4 +1,4 @@
-import type { InherentFeatures } from "@textfresser/lexical-generation";
+import type { InherentFeatures } from "../../../../../deprecated-linguistic-enums";
 import { normalizeTagPart } from "./tag-normalization";
 
 export function buildInherentFeatureTags(

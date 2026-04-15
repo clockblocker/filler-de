@@ -4,15 +4,15 @@ import { EnglishLemmaSchema } from "./english/english-lemma";
 import { EnglishSelectionSchema } from "./english/english-selection";
 import { GermanLemmaSchema } from "./german/german-lemma";
 import { GermanSelectionSchema } from "./german/german-selection";
-import {
-	buildObservedSurfaceSchemaForLanguage,
-	type ObservedSurfaceSchemaLanguageShape,
-} from "./observed-surface-schema";
 import type {
 	LemmaSchemaLanguageShape,
 	SelectionSchemaLanguageShape,
 	SurfaceSchemaLanguageShape,
 } from "./registry-shapes";
+import {
+	buildResolvedSurfaceSchemaForLanguage,
+	type ResolvedSurfaceSchemaLanguageShape,
+} from "./resolved-surface-schema";
 import type { AbstractLemma } from "./universal/abstract-lemma";
 import type { AbstractSelectionFor } from "./universal/abstract-selection";
 import {
@@ -67,10 +67,10 @@ export const SurfaceSchema = {
 	German: buildSurfaceSchemaForLanguage("German", GermanSelectionSchema),
 } satisfies SurfaceSchemaShape;
 
-export const ObservedSurfaceSchema = {
-	English: buildObservedSurfaceSchemaForLanguage(SurfaceSchema.English),
-	German: buildObservedSurfaceSchemaForLanguage(SurfaceSchema.German),
-} satisfies ObservedSurfaceSchemaShape;
+export const ResolvedSurfaceSchema = {
+	English: buildResolvedSurfaceSchemaForLanguage(SurfaceSchema.English),
+	German: buildResolvedSurfaceSchemaForLanguage(SurfaceSchema.German),
+} satisfies ResolvedSurfaceSchemaShape;
 
 export const LemmaSchema = {
 	English: EnglishLemmaSchema,
@@ -135,7 +135,7 @@ export type Surface<
 	>,
 > = SurfaceValue<L, OS, SK, LK, D>;
 
-export type LooseSurface<
+export type UnresolvedSurface<
 	L extends TargetLanguage = TargetLanguage,
 	OS extends
 		SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
@@ -152,7 +152,7 @@ export type LooseSurface<
 	{ target: { canonicalLemma: string } }
 >;
 
-export type ObservedSurface<
+export type ResolvedSurface<
 	L extends TargetLanguage = TargetLanguage,
 	OS extends
 		SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
@@ -179,8 +179,8 @@ type SurfaceSchemaShape = {
 	[L in SupportedLanguage]: SurfaceSchemaLanguageShape;
 };
 
-type ObservedSurfaceSchemaShape = {
-	[L in SupportedLanguage]: ObservedSurfaceSchemaLanguageShape;
+type ResolvedSurfaceSchemaShape = {
+	[L in SupportedLanguage]: ResolvedSurfaceSchemaLanguageShape;
 };
 
 type ValueOf<T> = T[keyof T];

@@ -3,11 +3,11 @@ import {
 	Gender,
 	GrammaticalNumber,
 	type InherentFeatures,
-	LemmaSchema,
 	MorphemeKind,
 	PhrasemeKind,
 	Pos,
-} from "@textfresser/linguistics";
+} from "../../../../../deprecated-linguistic-enums";
+import { LemmaSchema } from "@textfresser/linguistics";
 import { z } from "zod/v3";
 import type { LexicalRelationKind } from "../public-types";
 

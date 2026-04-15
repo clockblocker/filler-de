@@ -12,11 +12,11 @@ import {
 	MorphemeKind,
 	MorphologicalRelation,
 	MorphologicalRelationsSchema,
-	ObservedSurfaceSchema,
 	OrthographicStatus,
 	PhrasemeKind,
 	Pos,
 	Relations,
+	ResolvedSurfaceSchema,
 	RelationTargetLingIdsSchema,
 	type Selection,
 	SelectionSchema,
@@ -65,8 +65,8 @@ describe("public API usage", () => {
 			LemmaSchema.English.Lexeme.NOUN,
 		);
 		expect(
-			ObservedSurfaceSchema.English.Standard.Inflection.Lexeme.VERB,
-		).toBe(ObservedSurfaceSchema.English.Standard.Inflection.Lexeme.VERB);
+			ResolvedSurfaceSchema.English.Standard.Inflection.Lexeme.VERB,
+		).toBe(ResolvedSurfaceSchema.English.Standard.Inflection.Lexeme.VERB);
 		expect(SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN).toBe(
 			SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN,
 		);
@@ -111,7 +111,7 @@ describe("public API usage", () => {
 			},
 		} satisfies LingId.Input<"German">;
 
-		const observedId: LingId.Value =
+		const resolvedId: LingId.Value =
 			germanLingConverters.getSurfaceLingId(lemma);
 
 		const shallowId: LingId.ShallowId =
@@ -120,12 +120,12 @@ describe("public API usage", () => {
 		const lexicalRelation = "synonym" satisfies Relations.LexicalRelation;
 
 		const lexicalRelations = {
-			synonym: [observedId],
+			synonym: [resolvedId],
 		} satisfies Relations.LexicalRelations;
 
-		const targetLingIds = [observedId] satisfies Relations.TargetLingIds;
+		const targetLingIds = [resolvedId] satisfies Relations.TargetLingIds;
 
-		expect("target" in germanLingConverters.parseSurface(observedId)).toBe(
+		expect("target" in germanLingConverters.parseSurface(resolvedId)).toBe(
 			true,
 		);
 		expect(shallowId.startsWith("ling:v1:DE:SURF-SHALLOW;")).toBe(true);
@@ -313,9 +313,9 @@ describe("public API usage", () => {
 		).toBe(true);
 	});
 
-	it("validates observed surfaces through the exported observed-surface schemas", () => {
+	it("validates resolved surfaces through the exported resolved-surface schemas", () => {
 		expect(
-			ObservedSurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
+			ResolvedSurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
 				discriminators: {
 					lemmaKind: "Lexeme",
 					lemmaSubKind: "NOUN",

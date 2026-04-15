@@ -3,9 +3,9 @@ import type {
 	MorphemeKind,
 	PhrasemeKind,
 	Pos,
-	Selection,
 	SurfaceKind,
-} from "@textfresser/linguistics";
+} from "../../../../deprecated-linguistic-enums";
+import type { Selection } from "@textfresser/linguistics";
 
 export type GermanSelection = Selection<"German">;
 export type KnownGermanSelection = Exclude<

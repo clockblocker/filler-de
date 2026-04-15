@@ -14,10 +14,10 @@ import {
 	expectYesLiteralFeature,
 	parseFeatureBag,
 } from "./features";
-import { normalizeObservedSurface } from "./serialize";
+import { normalizeResolvedSurface } from "./serialize";
 import type {
 	LingId,
-	LingIdObservedSurface,
+	LingIdResolvedSurface,
 	LingIdSelection,
 	ParsedShallowSurfaceDto,
 	ParsedSurfaceResult,
@@ -164,7 +164,7 @@ function parseSurfaceBody(
 	];
 
 	if (targetMode === "observed") {
-		return parseObservedSurfaceBody(language, body, {
+		return parseResolvedSurfaceBody(language, body, {
 			inflectionalFeaturesToken,
 			lemmaKind,
 			lemmaSubKind,
@@ -246,7 +246,7 @@ function parseShallowSurfaceBody(
 	};
 }
 
-function parseObservedSurfaceBody(
+function parseResolvedSurfaceBody(
 	language: TargetLanguage,
 	body: string,
 	{
@@ -266,24 +266,24 @@ function parseObservedSurfaceBody(
 		surfaceKind: string;
 		targetPayloadToken: string;
 	},
-): LingIdObservedSurface {
-	const observedLemma = parseLemmaBody(language, targetPayloadToken);
-	const normalizedObservedSurface = normalizeObservedSurface(observedLemma);
+): LingIdResolvedSurface {
+	const resolvedLemma = parseLemmaBody(language, targetPayloadToken);
+	const normalizedResolvedSurface = normalizeResolvedSurface(resolvedLemma);
 
 	if (
 		orthographicStatus !== "Standard" ||
-		surfaceKind !== normalizedObservedSurface.surfaceKind ||
+		surfaceKind !== normalizedResolvedSurface.surfaceKind ||
 		unescapeToken(normalizedFullSurfaceToken) !==
-			normalizedObservedSurface.normalizedFullSurface ||
-		lemmaKind !== normalizedObservedSurface.discriminators.lemmaKind ||
+			normalizedResolvedSurface.normalizedFullSurface ||
+		lemmaKind !== normalizedResolvedSurface.discriminators.lemmaKind ||
 		lemmaSubKind !==
-			normalizedObservedSurface.discriminators.lemmaSubKind ||
+			normalizedResolvedSurface.discriminators.lemmaSubKind ||
 		inflectionalFeaturesToken !== "-"
 	) {
-		throw new Error(`Malformed observed surface Ling ID: ${body}`);
+		throw new Error(`Malformed resolved surface Ling ID: ${body}`);
 	}
 
-	return normalizedObservedSurface as LingIdObservedSurface;
+	return normalizedResolvedSurface as LingIdResolvedSurface;
 }
 
 function unsupportedTargetMode(targetMode: string): never {

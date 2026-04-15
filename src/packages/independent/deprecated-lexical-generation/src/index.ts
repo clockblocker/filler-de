@@ -9,7 +9,7 @@ export type {
 	Gender,
 	GrammaticalNumber,
 	InherentFeatures,
-} from "@textfresser/linguistics";
+} from "../../../../deprecated-linguistic-enums";
 export {
 	createLexicalMeta,
 	createMetaTagFromSelection,
