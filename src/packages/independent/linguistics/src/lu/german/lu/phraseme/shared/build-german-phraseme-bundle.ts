@@ -1,5 +1,5 @@
 import z from "zod/v3";
-import { DiscourseFormulaRoleSchema } from "../../../../universal/enums/feature/custom/discourse-formula-role";
+import { UniversalFeature } from "../../../../universal/enums/feature";
 import type { PhrasemeKind } from "../../../../universal/enums/kind/phraseme-kind";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
@@ -11,7 +11,8 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 			z
 				.object({
 					canonicalLemma: z.string(),
-					discourseFormulaRole: DiscourseFormulaRoleSchema.optional(),
+					discourseFormulaRole:
+						UniversalFeature.DiscourseFormulaRole.optional(),
 					language: z.literal("German"),
 					lemmaKind: z.literal("Phraseme"),
 					meaningInEmojis: MeaningInEmojisSchema,

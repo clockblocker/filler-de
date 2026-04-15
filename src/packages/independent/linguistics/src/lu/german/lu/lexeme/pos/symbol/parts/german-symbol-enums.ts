@@ -1,4 +1,4 @@
-import { NumType } from "../../../../../../universal/enums/feature/ud/num-type";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import {
 	GermanCase,
 	GermanGender,
@@ -9,4 +9,7 @@ export const GermanSymbolCase = GermanCase;
 export const GermanSymbolGender = GermanGender;
 export const GermanSymbolNumber = GermanNumber;
 
-export const GermanSymbolNumType = NumType.extract(["Card", "Range"]);
+export const GermanSymbolNumType = UniversalFeature.NumType.extract([
+	"Card",
+	"Range",
+]);

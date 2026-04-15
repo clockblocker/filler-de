@@ -8,7 +8,6 @@ import {
 	buildObservedSurfaceSchemaForLanguage,
 	type ObservedSurfaceSchemaLanguageShape,
 } from "./observed-surface-schema";
-
 import type {
 	LemmaSchemaLanguageShape,
 	SelectionSchemaLanguageShape,
@@ -26,9 +25,7 @@ import {
 	OrthographicStatus as OrthographicStatusSchema,
 	SurfaceKind as SurfaceKindSchema,
 } from "./universal/enums/core/selection";
-import { Case as CaseSchema } from "./universal/enums/feature/ud/case";
-import { Gender as GenderSchema } from "./universal/enums/feature/ud/gender";
-import { GrammaticalNumber as GrammaticalNumberSchema } from "./universal/enums/feature/ud/number";
+import { UniversalFeature } from "./universal/enums/feature";
 import { MorphemeKindSchema } from "./universal/enums/kind/morpheme-kind";
 import { PhrasemeKind as PhrasemeKindSchema } from "./universal/enums/kind/phraseme-kind";
 import { Pos as PosSchema } from "./universal/enums/kind/pos";
@@ -39,9 +36,9 @@ export { TARGET_LANGUAGES, TargetLanguageSchema };
 export const OrthographicStatus = OrthographicStatusSchema.enum;
 export const SurfaceKind = SurfaceKindSchema.enum;
 export const LemmaKind = LemmaKindSchema.enum;
-export const Case = CaseSchema.enum;
-export const Gender = GenderSchema.enum;
-export const GrammaticalNumber = GrammaticalNumberSchema.enum;
+export const Case = UniversalFeature.Case.enum;
+export const Gender = UniversalFeature.Gender.enum;
+export const GrammaticalNumber = UniversalFeature.GrammaticalNumber.enum;
 export const MorphemeKind = MorphemeKindSchema.enum;
 export const PhrasemeKind = PhrasemeKindSchema.enum;
 export const Pos = PosSchema.enum;
@@ -49,9 +46,11 @@ export const Pos = PosSchema.enum;
 export type OrthographicStatus = z.infer<typeof OrthographicStatusSchema>;
 export type SurfaceKind = z.infer<typeof SurfaceKindSchema>;
 export type LemmaKind = z.infer<typeof LemmaKindSchema>;
-export type Case = z.infer<typeof CaseSchema>;
-export type Gender = z.infer<typeof GenderSchema>;
-export type GrammaticalNumber = z.infer<typeof GrammaticalNumberSchema>;
+export type Case = z.infer<typeof UniversalFeature.Case>;
+export type Gender = z.infer<typeof UniversalFeature.Gender>;
+export type GrammaticalNumber = z.infer<
+	typeof UniversalFeature.GrammaticalNumber
+>;
 export type MorphemeKind = z.infer<typeof MorphemeKindSchema>;
 export type PhrasemeKind = z.infer<typeof PhrasemeKindSchema>;
 export type Pos = z.infer<typeof PosSchema>;

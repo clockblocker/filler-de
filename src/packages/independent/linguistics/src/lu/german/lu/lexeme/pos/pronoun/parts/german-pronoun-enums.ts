@@ -1,4 +1,4 @@
-import { PronType } from "../../../../../../universal/enums/feature/ud/pron-type";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import {
 	GermanCase,
 	GermanGender,
@@ -13,7 +13,7 @@ export const GermanPronounNumber = GermanNumber;
 export const GermanPronounPerson = GermanPerson;
 export const GermanPronounPolite = GermanPolite;
 
-export const GermanPronounPronType = PronType.extract([
+export const GermanPronounPronType = UniversalFeature.PronType.extract([
 	"Dem",
 	"Ind",
 	"Int",

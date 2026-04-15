@@ -1,9 +1,15 @@
-import { NumType } from "../../../../../../universal/enums/feature/ud/num-type";
-import { PronType } from "../../../../../../universal/enums/feature/ud/pron-type";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { EnglishDegree } from "../../../shared/english-common-enums";
 
 export const EnglishAdverbDegree = EnglishDegree;
 
-export const EnglishAdverbNumType = NumType.extract(["Card", "Mult"]);
+export const EnglishAdverbNumType = UniversalFeature.NumType.extract([
+	"Card",
+	"Mult",
+]);
 
-export const EnglishAdverbPronType = PronType.extract(["Dem", "Int", "Rel"]);
+export const EnglishAdverbPronType = UniversalFeature.PronType.extract([
+	"Dem",
+	"Int",
+	"Rel",
+]);

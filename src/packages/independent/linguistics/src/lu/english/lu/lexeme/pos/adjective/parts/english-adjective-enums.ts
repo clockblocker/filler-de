@@ -1,6 +1,9 @@
-import { NumType } from "../../../../../../universal/enums/feature/ud/num-type";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { EnglishDegree } from "../../../shared/english-common-enums";
 
 export const EnglishAdjectiveDegree = EnglishDegree;
 
-export const EnglishAdjectiveNumType = NumType.extract(["Card", "Ord"]);
+export const EnglishAdjectiveNumType = UniversalFeature.NumType.extract([
+	"Card",
+	"Ord",
+]);

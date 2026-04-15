@@ -1,6 +1,5 @@
 import z from "zod/v3";
-import { IsPoss } from "../../../../../../universal/enums/feature/ud/poss";
-import { IsReflex } from "../../../../../../universal/enums/feature/ud/reflex";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import type {
 	InflectionalFeaturesSchemaFor,
 	InherentFeaturesSchemaFor,
@@ -19,7 +18,7 @@ export const GermanPronounInflectionalFeaturesSchema = z
 		case: GermanPronounCase.optional(),
 		gender: GermanPronounGender.optional(),
 		number: GermanPronounNumber.optional(),
-		reflex: IsReflex.optional(),
+		reflex: UniversalFeature.IsReflex.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "PRON">;
 
@@ -27,7 +26,7 @@ export const GermanPronounInherentFeaturesSchema = z
 	.object({
 		person: GermanPronounPerson.optional(),
 		polite: GermanPronounPolite.optional(),
-		poss: IsPoss.optional(),
+		poss: UniversalFeature.IsPoss.optional(),
 		pronType: GermanPronounPronType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "PRON">;

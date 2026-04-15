@@ -1,5 +1,5 @@
 import z from "zod/v3";
-import { IsForeign } from "../../../../../../universal/enums/feature/ud/foreign";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import type {
 	InflectionalFeaturesSchemaFor,
 	InherentFeaturesSchemaFor,
@@ -18,7 +18,7 @@ export const GermanAdverbInflectionalFeaturesSchema = z
 
 export const GermanAdverbInherentFeaturesSchema = z
 	.object({
-		foreign: IsForeign.optional(),
+		foreign: UniversalFeature.IsForeign.optional(),
 		numType: GermanAdverbNumType.optional(),
 		pronType: GermanAdverbPronType.optional(),
 	})

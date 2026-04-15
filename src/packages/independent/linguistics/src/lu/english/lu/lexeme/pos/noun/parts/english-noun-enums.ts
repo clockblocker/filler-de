@@ -1,6 +1,8 @@
-import { Case } from "../../../../../../universal/enums/feature/ud/case";
-import { GrammaticalNumber } from "../../../../../../universal/enums/feature/ud/number";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 
-export const EnglishNounCase = Case.extract(["Gen"]);
+export const EnglishNounCase = UniversalFeature.Case.extract(["Gen"]);
 
-export const EnglishNounNumber = GrammaticalNumber.extract(["Plur", "Sing"]);
+export const EnglishNounNumber = UniversalFeature.GrammaticalNumber.extract([
+	"Plur",
+	"Sing",
+]);

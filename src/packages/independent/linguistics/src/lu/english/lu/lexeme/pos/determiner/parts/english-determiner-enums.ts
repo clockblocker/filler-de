@@ -1,5 +1,4 @@
-import { NumType } from "../../../../../../universal/enums/feature/ud/num-type";
-import { PronType } from "../../../../../../universal/enums/feature/ud/pron-type";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import {
 	EnglishDefinite,
 	EnglishNumber,
@@ -10,9 +9,12 @@ export const EnglishDeterminerDefinite = EnglishDefinite;
 export const EnglishDeterminerNumber = EnglishNumber;
 export const EnglishDeterminerPerson = EnglishPerson;
 
-export const EnglishDeterminerNumType = NumType.extract(["Card", "Ord"]);
+export const EnglishDeterminerNumType = UniversalFeature.NumType.extract([
+	"Card",
+	"Ord",
+]);
 
-export const EnglishDeterminerPronType = PronType.extract([
+export const EnglishDeterminerPronType = UniversalFeature.PronType.extract([
 	"Art",
 	"Dem",
 	"Exc",

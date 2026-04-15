@@ -2,9 +2,7 @@ import type { Prettify } from "../../../../../../types/helpers";
 import type { TargetLanguage } from "./enums/core/language";
 import type { IsClosedSet } from "./enums/core/meta";
 import type { LemmaKind } from "./enums/core/selection";
-import type { DiscourseFormulaRole } from "./enums/feature/custom/discourse-formula-role";
-import type { IsSeparable } from "./enums/feature/custom/separable";
-import type { AbstractFeatures } from "./enums/feature/feature";
+import type { AbstractFeatures, UniversalFeatureValue } from "./enums/feature";
 import type { MorphemeKind } from "./enums/kind/morpheme-kind";
 import type {
 	PHRASEME_KIND_KEY,
@@ -29,7 +27,7 @@ type AbstractMorphemLemma<MK extends MorphemeKind = MorphemeKind> = Prettify<{
 	language: TargetLanguage;
 	morphemeKind: MK;
 	isClosedSet?: IsClosedSet;
-	separable?: IsSeparable;
+	separable?: UniversalFeatureValue<"IsSeparable">;
 	canonicalLemma: string;
 }>;
 
@@ -53,7 +51,7 @@ type AbstractPhrasemLemma<PK extends PhrasemeKind = PhrasemeKind> = Prettify<
 					PK,
 					typeof PhrasemeKind.enum.DiscourseFormula
 				>;
-				discourseFormulaRole?: DiscourseFormulaRole;
+				discourseFormulaRole?: UniversalFeatureValue<"DiscourseFormulaRole">;
 		  }
 	)
 >;

@@ -1,5 +1,5 @@
 import z from "zod/v3";
-import { IsPoss } from "../../../../../../universal/enums/feature/ud/poss";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import type {
 	InflectionalFeaturesSchemaFor,
 	InherentFeaturesSchemaFor,
@@ -31,7 +31,7 @@ export const GermanDeterminerInherentFeaturesSchema = z
 		numType: GermanDeterminerNumType.optional(),
 		person: GermanDeterminerPerson.optional(),
 		polite: GermanDeterminerPolite.optional(),
-		poss: IsPoss.optional(),
+		poss: UniversalFeature.IsPoss.optional(),
 		pronType: GermanDeterminerPronType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "DET">;

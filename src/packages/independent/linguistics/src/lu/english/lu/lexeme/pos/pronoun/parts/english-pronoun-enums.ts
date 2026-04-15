@@ -1,4 +1,4 @@
-import { PronType } from "../../../../../../universal/enums/feature/ud/pron-type";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import {
 	EnglishCase,
 	EnglishGender,
@@ -11,7 +11,7 @@ export const EnglishPronounGender = EnglishGender;
 export const EnglishPronounNumber = EnglishNumber;
 export const EnglishPronounPerson = EnglishPerson;
 
-export const EnglishPronounPronType = PronType.extract([
+export const EnglishPronounPronType = UniversalFeature.PronType.extract([
 	"Dem",
 	"Ind",
 	"Int",

@@ -1,6 +1,5 @@
 import z from "zod/v3";
-import { GovernedPreposition } from "../../../../../../universal/enums/feature/custom/governed-preposition";
-import { IsPhrasal } from "../../../../../../universal/enums/feature/custom/is-phrasal";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import type {
 	InflectionalFeaturesSchemaFor,
 	InherentFeaturesSchemaFor,
@@ -25,7 +24,7 @@ export const EnglishVerbInflectionalFeaturesSchema = z
 
 export const EnglishVerbInherentFeaturesSchema = z
 	.object({
-		governedPreposition: GovernedPreposition.optional(),
-		isPhrasal: IsPhrasal.optional(),
+		governedPreposition: UniversalFeature.GovernedPreposition.optional(),
+		isPhrasal: UniversalFeature.IsPhrasal.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "VERB">;

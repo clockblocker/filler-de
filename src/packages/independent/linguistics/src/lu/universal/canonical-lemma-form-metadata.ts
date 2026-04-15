@@ -1,5 +1,5 @@
 import type { TargetLanguage } from "./enums/core/language";
-import type { AbstractFeatures } from "./enums/feature/feature";
+import type { AbstractFeatures } from "./enums/feature";
 import type { Pos } from "./enums/kind/pos";
 
 type CanonicalLemmaForm = Partial<

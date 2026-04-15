@@ -6,7 +6,7 @@ import type {
 	OrthographicStatus,
 	SurfaceKind,
 } from "./enums/core/selection";
-import type { AbstractFeatures } from "./enums/feature/feature";
+import type { AbstractFeatures } from "./enums/feature";
 import type { LemmaDiscriminatorFor } from "./lemma-discriminator";
 
 type DiscriminatorsFor<

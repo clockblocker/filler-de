@@ -1,8 +1,5 @@
 import z from "zod/v3";
-import { GovernedPreposition } from "../../../../../../universal/enums/feature/custom/governed-preposition";
-import { IsPhrasal } from "../../../../../../universal/enums/feature/custom/is-phrasal";
-import { IsSeparable } from "../../../../../../universal/enums/feature/custom/separable";
-import { IsReflex } from "../../../../../../universal/enums/feature/ud/reflex";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import type {
 	InflectionalFeaturesSchemaFor,
 	InherentFeaturesSchemaFor,
@@ -29,9 +26,9 @@ export const GermanVerbInflectionalFeaturesSchema = z
 
 export const GermanVerbInherentFeaturesSchema = z
 	.object({
-		governedPreposition: GovernedPreposition.optional(),
-		isPhrasal: IsPhrasal.optional(),
-		reflex: IsReflex.optional(),
-		separable: IsSeparable.optional(),
+		governedPreposition: UniversalFeature.GovernedPreposition.optional(),
+		isPhrasal: UniversalFeature.IsPhrasal.optional(),
+		reflex: UniversalFeature.IsReflex.optional(),
+		separable: UniversalFeature.IsSeparable.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme">;

@@ -1,4 +1,4 @@
-import { NumType } from "../../../../../../universal/enums/feature/ud/num-type";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import {
 	GermanCase,
 	GermanDegree,
@@ -11,4 +11,7 @@ export const GermanAdjectiveDegree = GermanDegree;
 export const GermanAdjectiveGender = GermanGender;
 export const GermanAdjectiveNumber = GermanNumber;
 
-export const GermanAdjectiveNumType = NumType.extract(["Card", "Ord"]);
+export const GermanAdjectiveNumType = UniversalFeature.NumType.extract([
+	"Card",
+	"Ord",
+]);

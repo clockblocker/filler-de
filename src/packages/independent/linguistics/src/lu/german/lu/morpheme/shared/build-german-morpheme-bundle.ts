@@ -1,5 +1,5 @@
 import z from "zod/v3";
-import { IsSeparable } from "../../../../universal/enums/feature/custom/separable";
+import { UniversalFeature } from "../../../../universal/enums/feature";
 import type { MorphemeKind } from "../../../../universal/enums/kind/morpheme-kind";
 import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
@@ -25,7 +25,7 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 				morphemeKind: z.literal(morphemeKind),
 				separable:
 					morphemeKind === "Prefix"
-						? IsSeparable.optional()
+						? UniversalFeature.IsSeparable.optional()
 						: z.undefined().optional(),
 			})
 			.strict(),

@@ -1,6 +1,5 @@
 import z from "zod/v3";
-import { IsPoss } from "../../../../../../universal/enums/feature/ud/poss";
-import { IsReflex } from "../../../../../../universal/enums/feature/ud/reflex";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import type {
 	InflectionalFeaturesSchemaFor,
 	InherentFeaturesSchemaFor,
@@ -18,14 +17,14 @@ export const EnglishPronounInflectionalFeaturesSchema = z
 		case: EnglishPronounCase.optional(),
 		gender: EnglishPronounGender.optional(),
 		number: EnglishPronounNumber.optional(),
-		reflex: IsReflex.optional(),
+		reflex: UniversalFeature.IsReflex.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "PRON">;
 
 export const EnglishPronounInherentFeaturesSchema = z
 	.object({
 		person: EnglishPronounPerson.optional(),
-		poss: IsPoss.optional(),
+		poss: UniversalFeature.IsPoss.optional(),
 		pronType: EnglishPronounPronType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "PRON">;

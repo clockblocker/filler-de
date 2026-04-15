@@ -1,4 +1,4 @@
-import { NumType } from "../../../../../../universal/enums/feature/ud/num-type";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import {
 	EnglishCase,
 	EnglishGender,
@@ -9,7 +9,7 @@ export const EnglishNumeralCase = EnglishCase;
 export const EnglishNumeralGender = EnglishGender;
 export const EnglishNumeralNumber = EnglishNumber;
 
-export const EnglishNumeralNumType = NumType.extract([
+export const EnglishNumeralNumType = UniversalFeature.NumType.extract([
 	"Card",
 	"Frac",
 	"Mult",

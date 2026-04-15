@@ -1,6 +1,5 @@
 import z from "zod/v3";
-import { IsAbbr } from "../../../../../../universal/enums/feature/ud/abbr";
-import { IsForeign } from "../../../../../../universal/enums/feature/ud/foreign";
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import type {
 	InflectionalFeaturesSchemaFor,
 	InherentFeaturesSchemaFor,
@@ -26,8 +25,8 @@ export const EnglishOtherInflectionalFeaturesSchema = z
 
 export const EnglishOtherInherentFeaturesSchema = z
 	.object({
-		abbr: IsAbbr.optional(),
-		foreign: IsForeign.optional(),
+		abbr: UniversalFeature.IsAbbr.optional(),
+		foreign: UniversalFeature.IsForeign.optional(),
 		numType: EnglishOtherNumType.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "X">;
