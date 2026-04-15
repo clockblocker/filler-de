@@ -2,29 +2,27 @@ import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
 import { EnglishFeature } from "../../../shared/english-common-enums";
 
+// https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-VERB.html
 const EnglishVerbExtPos = UniversalFeature.ExtPos.extract([
 	"ADP",
 	"CCONJ",
 	"PROPN",
 ]);
 
+// https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-Number.html
 const EnglishVerbNumber = EnglishFeature.Number.extract(["Plur", "Sing"]);
 
+// https://universaldependencies.org/u/feat/Style.html
 const EnglishVerbStyle = EnglishFeature.Style.extract(["Expr", "Vrnc"]);
 const EnglishVerbVerbForm = EnglishFeature.VerbForm;
 
-// Sources:
-// - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-VERB.html
-// - https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-VerbForm.html
-// - https://universaldependencies.org/en/feat/Voice.html
-// - https://universaldependencies.org/u/feat/Style.html
 export const EnglishVerbInflectionalFeaturesSchema = featureSchema({
-	mood: EnglishFeature.Mood,
+	mood: EnglishFeature.Mood, // https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-Mood.html
 	number: EnglishVerbNumber,
-	person: EnglishFeature.Person,
-	tense: EnglishFeature.Tense,
-	verbForm: EnglishVerbVerbForm,
-	voice: UniversalFeature.Voice.extract(["Pass"]),
+	person: EnglishFeature.Person, // https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-Person.html
+	tense: EnglishFeature.Tense, // https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-Tense.html
+	verbForm: EnglishVerbVerbForm, // https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-VerbForm.html
+	voice: UniversalFeature.Voice.extract(["Pass"]), // https://universaldependencies.org/en/feat/Voice.html
 });
 
 export const EnglishVerbInherentFeaturesSchema = featureSchema({

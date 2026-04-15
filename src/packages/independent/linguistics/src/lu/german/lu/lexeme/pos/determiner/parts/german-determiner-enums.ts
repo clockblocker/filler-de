@@ -8,6 +8,7 @@ export const GermanDeterminerNumType = UniversalFeature.NumType.extract([
 export const GermanDeterminerPronType = UniversalFeature.PronType.extract([
 	"Art",
 	"Dem",
+	"Emp",
 	"Exc",
 	"Ind",
 	"Int",

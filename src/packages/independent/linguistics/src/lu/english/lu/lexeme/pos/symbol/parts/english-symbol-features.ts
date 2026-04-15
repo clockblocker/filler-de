@@ -3,16 +3,14 @@ import { featureSchema } from "../../../../../../universal/helpers/schema-target
 import { EnglishFeature } from "../../../shared/english-common-enums";
 import { EnglishSymbolExtPos } from "./english-symbol-enums";
 
+// https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-Number.html
 const EnglishSymbolNumber = EnglishFeature.Number.extract(["Plur", "Sing"]);
 
-// Sources:
-// - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-SYM.html
-// - https://universaldependencies.org/u/feat/ExtPos.html
 export const EnglishSymbolInflectionalFeaturesSchema = featureSchema({
 	number: EnglishSymbolNumber,
 });
 
 export const EnglishSymbolInherentFeaturesSchema = featureSchema({
 	abbr: UniversalFeature.Abbr,
-	extPos: EnglishSymbolExtPos,
+	extPos: EnglishSymbolExtPos, // https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-SYM.html
 });

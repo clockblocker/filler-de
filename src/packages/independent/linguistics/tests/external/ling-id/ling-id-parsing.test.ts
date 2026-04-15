@@ -231,4 +231,30 @@ describe("Ling ID parsing", () => {
 		expect(toEnglishSurfaceLingId(parsedTargeted)).toBe(targetedId);
 		expect(toEnglishSurfaceLingId(parsedResolved)).toBe(observedId);
 	});
+
+	it("parses multi-valued and layered feature bags", () => {
+		const resolved = parseGermanSurface(
+			"ling:v1:DE:SURF;welch;Standard;Lemma;Lexeme;DET;-;observed;welch;Lexeme;DET;pronType=~Int|Rel;❓",
+		);
+		const targeted = parseGermanSurface(
+			"ling:v1:DE:SURF;dessen;Standard;Inflection;Lexeme;DET;gender=~Masc|Neut,gender[psor]=~Neut,number[psor]=Sing;canon;dessen",
+		) as ParsedTargetedSurface<"German">;
+
+		if (!("target" in resolved)) {
+			throw new Error("Expected a resolved surface");
+		}
+
+		expect((resolved.target as Lemma<"German", "Lexeme", "DET">).inherentFeatures)
+			.toEqual({
+				pronType: ["Int", "Rel"],
+			});
+		if (targeted.surface.surfaceKind !== "Inflection") {
+			throw new Error("Expected an inflectional targeted surface");
+		}
+		expect(targeted.surface.inflectionalFeatures).toEqual({
+			gender: ["Masc", "Neut"],
+			"gender[psor]": ["Neut"],
+			"number[psor]": "Sing",
+		});
+	});
 });

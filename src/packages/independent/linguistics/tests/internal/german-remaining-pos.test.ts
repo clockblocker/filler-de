@@ -7,6 +7,7 @@ import { GermanAuxiliarySchemas } from "../../src/lu/german/lu/lexeme/pos/auxili
 import { GermanCoordinatingConjunctionSchemas } from "../../src/lu/german/lu/lexeme/pos/coordinating-conjunction/german-coordinating-conjunction-bundle";
 import { GermanDeterminerSchemas } from "../../src/lu/german/lu/lexeme/pos/determiner/german-determiner-bundle";
 import { GermanInterjectionSchemas } from "../../src/lu/german/lu/lexeme/pos/interjection/german-interjection-bundle";
+import { GermanNounSchemas } from "../../src/lu/german/lu/lexeme/pos/noun/german-noun-bundle";
 import { GermanNumeralSchemas } from "../../src/lu/german/lu/lexeme/pos/numeral/german-numeral-bundle";
 import { GermanOtherSchemas } from "../../src/lu/german/lu/lexeme/pos/other/german-other-bundle";
 import { GermanParticleSchemas } from "../../src/lu/german/lu/lexeme/pos/particle/german-particle-bundle";
@@ -260,6 +261,181 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 	});
 
+	it("accepts restored UD German feature families and multi-valued feature bags", () => {
+		expect(
+			GermanAuxiliarySchemas.InflectionSelectionSchema.safeParse({
+				language: "German",
+				orthographicStatus: "Standard",
+				spelledSelection: "worden",
+				surface: {
+					...lexemeSurface("AUX", "werden"),
+					inflectionalFeatures: {
+						verbForm: "Part",
+						voice: "Pass",
+					},
+					normalizedFullSurface: "worden",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanDeterminerSchemas.InflectionSelectionSchema.safeParse({
+				language: "German",
+				orthographicStatus: "Standard",
+				spelledSelection: "dessen",
+				surface: {
+					...lexemeSurface("DET", "dessen"),
+					inflectionalFeatures: {
+						gender: ["Masc", "Neut"],
+						"gender[psor]": ["Masc", "Neut"],
+						"number[psor]": "Sing",
+					},
+					normalizedFullSurface: "dessen",
+					surfaceKind: "Inflection",
+				},
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanDeterminerSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "welch",
+				inherentFeatures: {
+					extPos: "ADV",
+					foreign: "Yes",
+					pronType: ["Int", "Rel"],
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "❓",
+				pos: "DET",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanPronounSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "wer",
+				inherentFeatures: {
+					extPos: "DET",
+					pronType: ["Dem", "Rel"],
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "❓",
+				pos: "PRON",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanPronounSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "wer",
+				inherentFeatures: {
+					extPos: "DET",
+					pronType: ["Int", "Rel"],
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "❓",
+				pos: "PRON",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanAdverbSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "nirgends",
+				inherentFeatures: {
+					pronType: "Neg",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🚫",
+				pos: "ADV",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanAdpositionSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "mit",
+				inherentFeatures: {
+					adpType: "Prep",
+					extPos: "SCONJ",
+					governedCase: "Dat",
+					partType: "Vbp",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "➡️",
+				pos: "ADP",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanParticleSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "zu",
+				inherentFeatures: {
+					partType: "Inf",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "➕",
+				pos: "PART",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanInterjectionSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "hm",
+				inherentFeatures: {
+					partType: "Res",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🤔",
+				pos: "INTJ",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanPunctuationSchemas.LemmaSchema.safeParse({
+				canonicalLemma: ".",
+				inherentFeatures: {
+					punctType: "Peri",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "⏹️",
+				pos: "PUNCT",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanAdjectiveSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "nix",
+				inherentFeatures: {
+					variant: "Short",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "✂️",
+				pos: "ADJ",
+			}).success,
+		).toBe(true);
+
+		expect(
+			GermanNounSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "S-Bahn-",
+				inherentFeatures: {
+					gender: "Fem",
+					hyph: "Yes",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "➖",
+				pos: "NOUN",
+			}).success,
+		).toBe(true);
+	});
+
 	it("keeps the non-inflecting classes strict", () => {
 		expect(
 			GermanCoordinatingConjunctionSchemas.InflectionSelectionSchema.safeParse(
@@ -378,6 +554,45 @@ describe("German remaining POS schemas", () => {
 					normalizedFullSurface: "zu",
 					surfaceKind: "Inflection",
 				},
+			}).success,
+		).toBe(false);
+
+		expect(
+			GermanParticleSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "hm",
+				inherentFeatures: {
+					partType: "Res",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🤔",
+				pos: "PART",
+			}).success,
+		).toBe(false);
+
+		expect(
+			GermanDeterminerSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "welch",
+				inherentFeatures: {
+					pronType: ["Emp", "Rel"],
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "❓",
+				pos: "DET",
+			}).success,
+		).toBe(false);
+
+		expect(
+			GermanPronounSchemas.LemmaSchema.safeParse({
+				canonicalLemma: "wer",
+				inherentFeatures: {
+					pronType: ["Neg", "Rel"],
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "❓",
+				pos: "PRON",
 			}).success,
 		).toBe(false);
 	});

@@ -1,4 +1,5 @@
 import z from "zod/v3";
+import { UniversalFeature } from "../../../../universal/enums/feature";
 import { featureSchema } from "../../../../universal/helpers/schema-targets";
 import { GermanFeature } from "./german-common-enums";
 
@@ -9,6 +10,7 @@ export const GermanVerbalInflectionalFeaturesSchema = featureSchema({
 	person: GermanFeature.Person,
 	tense: GermanFeature.Tense,
 	verbForm: GermanFeature.VerbForm,
+	voice: UniversalFeature.Voice.extract(["Pass"]),
 }).superRefine((features, ctx) => {
 	if (features.gender !== undefined && features.verbForm !== "Part") {
 		ctx.addIssue({

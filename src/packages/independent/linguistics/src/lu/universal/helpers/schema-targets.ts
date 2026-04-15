@@ -57,6 +57,40 @@ type OptionalizedFeatureSchemaShape<Shape extends z.ZodRawShape> = {
 		: never;
 };
 
+export function featureValueSet<Schema extends z.ZodTypeAny>(schema: Schema) {
+	return z.union([schema, z.array(schema).nonempty()]);
+}
+
+export function featureSpecificValueSets<
+	Schema extends z.ZodTypeAny,
+	const Allowed extends readonly (readonly [z.infer<Schema>, ...z.infer<
+		Schema
+	>[]])[],
+>(schema: Schema, allowedValueSets: Allowed) {
+	const exactSetSchema = z.array(schema).nonempty().superRefine((values, ctx) => {
+		const normalizedValues = [...new Set(values)].sort();
+		const isAllowed = allowedValueSets.some((allowedValues) => {
+			const normalizedAllowedValues = [...allowedValues].sort();
+
+			return (
+				normalizedAllowedValues.length === normalizedValues.length &&
+				normalizedAllowedValues.every(
+					(allowedValue, index) => allowedValue === normalizedValues[index],
+				)
+			);
+		});
+
+		if (!isAllowed) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "Unsupported feature value combination",
+			});
+		}
+	});
+
+	return z.union([schema, exactSetSchema]);
+}
+
 function makeFeatureSchemaShapeOptional<const Shape extends z.ZodRawShape>(
 	shape: Shape,
 ): OptionalizedFeatureSchemaShape<Shape> {

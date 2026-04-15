@@ -8,18 +8,14 @@ import {
 	EnglishAdjectiveStyle,
 } from "./english-adjective-enums";
 
-// Sources:
-// - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-ADJ.html
-// - https://universaldependencies.org/u/feat/NumForm.html
-// - https://universaldependencies.org/u/feat/Style.html
 export const EnglishAdjectiveInflectionalFeaturesSchema = featureSchema({
-	degree: EnglishFeature.Degree,
+	degree: EnglishFeature.Degree, // https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-Degree.html
 });
 
 export const EnglishAdjectiveInherentFeaturesSchema = featureSchema({
 	abbr: UniversalFeature.Abbr,
-	extPos: EnglishAdjectiveExtPos,
-	numForm: EnglishAdjectiveNumForm,
-	numType: EnglishAdjectiveNumType,
-	style: EnglishAdjectiveStyle,
+	extPos: EnglishAdjectiveExtPos, // https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-ADJ.html
+	numForm: EnglishAdjectiveNumForm, // https://universaldependencies.org/u/feat/NumForm.html
+	numType: EnglishAdjectiveNumType, // https://universaldependencies.org/u/feat/NumType.html
+	style: EnglishAdjectiveStyle, // https://universaldependencies.org/u/feat/Style.html
 });

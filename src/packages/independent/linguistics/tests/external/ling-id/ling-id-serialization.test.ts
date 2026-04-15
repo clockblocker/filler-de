@@ -230,4 +230,46 @@ describe("Ling ID serialization", () => {
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",
 		);
 	});
+
+	it("serializes multi-valued and layered feature bags canonically", () => {
+		const relativeDeterminer = {
+			canonicalLemma: "welch",
+			inherentFeatures: {
+				pronType: ["Rel", "Int"],
+			},
+			language: "German",
+			lemmaKind: "Lexeme",
+			meaningInEmojis: "❓",
+			pos: "DET",
+		} satisfies Lemma<"German", "Lexeme", "DET">;
+
+		const possessiveSelection = {
+			language: "German",
+			orthographicStatus: "Standard",
+			spelledSelection: "dessen",
+			surface: {
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "DET",
+				},
+				inflectionalFeatures: {
+					gender: ["Neut", "Masc"],
+					"gender[psor]": ["Neut"],
+					"number[psor]": "Sing",
+				},
+				normalizedFullSurface: "dessen",
+				surfaceKind: "Inflection",
+				target: {
+					canonicalLemma: "dessen",
+				},
+			},
+		} satisfies LingIdSurfaceInput<"German">;
+
+		expect(toGermanSurfaceLingId(relativeDeterminer)).toBe(
+			"ling:v1:DE:SURF;welch;Standard;Lemma;Lexeme;DET;-;observed;welch;Lexeme;DET;pronType=~Int|Rel;❓",
+		);
+		expect(toGermanSurfaceLingId(possessiveSelection)).toBe(
+			"ling:v1:DE:SURF;dessen;Standard;Inflection;Lexeme;DET;gender=~Masc|Neut,gender[psor]=~Neut,number[psor]=Sing;canon;dessen",
+		);
+	});
 });

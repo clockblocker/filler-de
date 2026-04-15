@@ -7,6 +7,8 @@ export const GermanAdverbNumType = UniversalFeature.NumType.extract([
 
 export const GermanAdverbPronType = UniversalFeature.PronType.extract([
 	"Dem",
+	"Ind",
 	"Int",
+	"Neg",
 	"Rel",
 ]);

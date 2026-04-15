@@ -2,26 +2,25 @@ import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
 import { EnglishFeature } from "../../../shared/english-common-enums";
 
+// https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-NOUN.html
 const EnglishNounExtPos = UniversalFeature.ExtPos.extract(["ADV", "PROPN"]);
+// https://universaldependencies.org/u/feat/NumForm.html
 const EnglishNounNumForm = EnglishFeature.NumForm.extract([
 	"Combi",
 	"Digit",
 	"Word",
 ]);
+// https://universaldependencies.org/u/feat/NumType.html
 const EnglishNounNumType = EnglishFeature.NumType.extract([
 	"Card",
 	"Frac",
 	"Ord",
 ]);
+// https://universaldependencies.org/u/feat/Style.html
 const EnglishNounStyle = EnglishFeature.Style.extract(["Expr", "Vrnc"]);
 
-// Sources:
-// - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-NOUN.html
-// - https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-Number.html
-// - https://universaldependencies.org/u/feat/NumForm.html
-// - https://universaldependencies.org/u/feat/Style.html
 export const EnglishNounInflectionalFeaturesSchema = featureSchema({
-	number: EnglishFeature.Number,
+	number: EnglishFeature.Number, // https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-Number.html
 });
 
 export const EnglishNounInherentFeaturesSchema = featureSchema({

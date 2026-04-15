@@ -7,5 +7,6 @@ export const GermanParticleInflectionalFeaturesSchema = featureSchema({});
 export const GermanParticleInherentFeaturesSchema = featureSchema({
 	abbr: UniversalFeature.Abbr,
 	foreign: UniversalFeature.Foreign,
+	partType: UniversalFeature.PartType.extract(["Inf"]),
 	polarity: GermanFeature.Polarity,
 });

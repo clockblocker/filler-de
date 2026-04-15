@@ -22,7 +22,7 @@ export type ParsedSurfaceResult<L extends TargetLanguage = TargetLanguage> =
 	| LingIdSelection<L>
 	| LingIdResolvedSurface<L>;
 
-export type ParsedFeatureValue = string | boolean;
+export type ParsedFeatureValue = string | boolean | readonly string[];
 export type ParsedFeatureBag = Record<string, ParsedFeatureValue>;
 
 export type ParsedShallowSurfaceDto = {

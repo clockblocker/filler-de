@@ -14,4 +14,5 @@ export const GermanAdjectiveInherentFeaturesSchema = featureSchema({
 	abbr: UniversalFeature.Abbr,
 	foreign: UniversalFeature.Foreign,
 	numType: GermanAdjectiveNumType,
+	variant: UniversalFeature.Variant,
 });

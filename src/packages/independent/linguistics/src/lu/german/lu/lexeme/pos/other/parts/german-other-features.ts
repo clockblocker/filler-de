@@ -14,5 +14,6 @@ export const GermanOtherInflectionalFeaturesSchema = featureSchema({
 export const GermanOtherInherentFeaturesSchema = featureSchema({
 	abbr: UniversalFeature.Abbr,
 	foreign: UniversalFeature.Foreign,
+	hyph: UniversalFeature.Hyph,
 	numType: GermanOtherNumType,
 });

@@ -1,3 +1,4 @@
+import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
 import { GermanFeature } from "../../../shared/german-common-enums";
 
@@ -8,4 +9,5 @@ export const GermanNounInflectionalFeaturesSchema = featureSchema({
 
 export const GermanNounInherentFeaturesSchema = featureSchema({
 	gender: GermanFeature.Gender,
+	hyph: UniversalFeature.Hyph,
 });

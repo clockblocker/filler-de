@@ -5,12 +5,18 @@ const BOOLEAN_FEATURE_KEYS = new Set(["isClosedSet"]);
 const YES_LITERAL_FEATURE_KEYS = new Set([
 	"abbr",
 	"foreign",
+	"hyph",
 	"isPhrasal",
 	"lexicallyReflexive",
 	"phrasal",
 	"poss",
 	"reflex",
 	"separable",
+]);
+const MULTI_VALUE_FEATURE_KEYS = new Set([
+	"gender",
+	"gender[psor]",
+	"pronType",
 ]);
 
 export function compactFeatureBag(
@@ -33,7 +39,7 @@ export function serializeFeatureBag(features: ParsedFeatureBag): string {
 	return entries
 		.map(
 			([key, value]) =>
-				`${escapeToken(key)}=${escapeToken(serializeFeatureValue(value))}`,
+				`${escapeToken(key)}=${serializeFeatureValue(value)}`,
 		)
 		.join(",");
 }
@@ -76,6 +82,7 @@ export function expectYesLiteralFeature(
 	key:
 		| "abbr"
 		| "foreign"
+		| "hyph"
 		| "isPhrasal"
 		| "lexicallyReflexive"
 		| "phrasal"
@@ -94,7 +101,18 @@ export function expectYesLiteralFeature(
 }
 
 function serializeFeatureValue(value: ParsedFeatureValue): string {
-	return typeof value === "boolean" ? (value ? "Yes" : "No") : value;
+	if (typeof value === "boolean") {
+		return escapeToken(value ? "Yes" : "No");
+	}
+
+	if (Array.isArray(value)) {
+		return `~${[...value]
+			.sort()
+			.map((part) => escapeToken(part))
+			.join("|")}`;
+	}
+
+	return escapeToken(value as string);
 }
 
 function parseFeatureValue(key: string, value: string): ParsedFeatureValue {
@@ -118,6 +136,10 @@ function parseFeatureValue(key: string, value: string): ParsedFeatureValue {
 		throw new Error(
 			`Malformed yes-literal feature value for ${key}: ${value}`,
 		);
+	}
+
+	if (MULTI_VALUE_FEATURE_KEYS.has(key) && value.startsWith("~")) {
+		return value.slice(1).split("|");
 	}
 
 	return value;
