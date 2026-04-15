@@ -12,14 +12,10 @@ export function buildGermanLexemeBundle<
 >({
 	inflectionalFeaturesSchema,
 	inherentFeaturesSchema,
-	lexicalRelationsSchema: _lexicalRelationsSchema,
-	morphologicalRelationsSchema: _morphologicalRelationsSchema,
 	pos,
 }: {
 	inflectionalFeaturesSchema: InflectionalFeaturesSchema;
 	inherentFeaturesSchema: InherentFeaturesSchema;
-	lexicalRelationsSchema: z.ZodTypeAny;
-	morphologicalRelationsSchema: z.ZodTypeAny;
 	pos: P;
 }) {
 	const lemmaIdentityShape = {

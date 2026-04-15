@@ -5,25 +5,25 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	EnglishPronounCase,
-	EnglishPronounGender,
-	EnglishPronounNumber,
-	EnglishPronounPerson,
-	EnglishPronounPronType,
-} from "./english-pronoun-enums";
+	EnglishCase,
+	EnglishGender,
+	EnglishNumber,
+	EnglishPerson,
+} from "../../../shared/english-common-enums";
+import { EnglishPronounPronType } from "./english-pronoun-enums";
 
 export const EnglishPronounInflectionalFeaturesSchema = z
 	.object({
-		case: EnglishPronounCase.optional(),
-		gender: EnglishPronounGender.optional(),
-		number: EnglishPronounNumber.optional(),
+		case: EnglishCase.optional(),
+		gender: EnglishGender.optional(),
+		number: EnglishNumber.optional(),
 		reflex: UniversalFeature.IsReflex.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "PRON">;
 
 export const EnglishPronounInherentFeaturesSchema = z
 	.object({
-		person: EnglishPronounPerson.optional(),
+		person: EnglishPerson.optional(),
 		poss: UniversalFeature.IsPoss.optional(),
 		pronType: EnglishPronounPronType.optional(),
 	})

@@ -4,20 +4,20 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	GermanNounCase,
-	GermanNounGender,
-	GermanNounNumber,
-} from "./german-noun-enums";
+	GermanCase,
+	GermanGender,
+	GermanNumber,
+} from "../../../shared/german-common-enums";
 
 export const GermanNounInflectionalFeaturesSchema = z
 	.object({
-		case: GermanNounCase.optional(),
-		number: GermanNounNumber.optional(),
+		case: GermanCase.optional(),
+		number: GermanNumber.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "NOUN">;
 
 export const GermanNounInherentFeaturesSchema = z
 	.object({
-		gender: GermanNounGender.optional(),
+		gender: GermanGender.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "NOUN">;

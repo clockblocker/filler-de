@@ -4,15 +4,13 @@ import type {
 	InflectionalFeaturesSchemaFor,
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
-import {
-	EnglishProperNounCase,
-	EnglishProperNounNumber,
-} from "./english-proper-noun-enums";
+import { EnglishNumber } from "../../../shared/english-common-enums";
+import { EnglishProperNounCase } from "./english-proper-noun-enums";
 
 export const EnglishProperNounInflectionalFeaturesSchema = z
 	.object({
 		case: EnglishProperNounCase.optional(),
-		number: EnglishProperNounNumber.optional(),
+		number: EnglishNumber.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "PROPN">;
 

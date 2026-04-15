@@ -4,15 +4,15 @@ import type {
 	InflectionalFeaturesSchemaFor,
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
+import { EnglishDegree } from "../../../shared/english-common-enums";
 import {
-	EnglishAdverbDegree,
 	EnglishAdverbNumType,
 	EnglishAdverbPronType,
 } from "./english-adverb-enums";
 
 export const EnglishAdverbInflectionalFeaturesSchema = z
 	.object({
-		degree: EnglishAdverbDegree.optional(),
+		degree: EnglishDegree.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "ADV">;
 

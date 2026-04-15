@@ -5,17 +5,19 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	EnglishNumeralCase,
-	EnglishNumeralGender,
-	EnglishNumeralNumber,
+	EnglishCase,
+	EnglishGender,
+	EnglishNumber,
+} from "../../../shared/english-common-enums";
+import {
 	EnglishNumeralNumType,
 } from "./english-numeral-enums";
 
 export const EnglishNumeralInflectionalFeaturesSchema = z
 	.object({
-		case: EnglishNumeralCase.optional(),
-		gender: EnglishNumeralGender.optional(),
-		number: EnglishNumeralNumber.optional(),
+		case: EnglishCase.optional(),
+		gender: EnglishGender.optional(),
+		number: EnglishNumber.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "NUM">;
 

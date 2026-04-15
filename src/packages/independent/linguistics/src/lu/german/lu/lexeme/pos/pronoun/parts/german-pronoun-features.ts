@@ -5,27 +5,27 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	GermanPronounCase,
-	GermanPronounGender,
-	GermanPronounNumber,
-	GermanPronounPerson,
-	GermanPronounPolite,
-	GermanPronounPronType,
-} from "./german-pronoun-enums";
+	GermanCase,
+	GermanGender,
+	GermanNumber,
+	GermanPerson,
+	GermanPolite,
+} from "../../../shared/german-common-enums";
+import { GermanPronounPronType } from "./german-pronoun-enums";
 
 export const GermanPronounInflectionalFeaturesSchema = z
 	.object({
-		case: GermanPronounCase.optional(),
-		gender: GermanPronounGender.optional(),
-		number: GermanPronounNumber.optional(),
+		case: GermanCase.optional(),
+		gender: GermanGender.optional(),
+		number: GermanNumber.optional(),
 		reflex: UniversalFeature.IsReflex.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "PRON">;
 
 export const GermanPronounInherentFeaturesSchema = z
 	.object({
-		person: GermanPronounPerson.optional(),
-		polite: GermanPronounPolite.optional(),
+		person: GermanPerson.optional(),
+		polite: GermanPolite.optional(),
 		poss: UniversalFeature.IsPoss.optional(),
 		pronType: GermanPronounPronType.optional(),
 	})

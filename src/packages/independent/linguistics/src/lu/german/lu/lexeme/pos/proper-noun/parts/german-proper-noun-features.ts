@@ -5,15 +5,15 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	GermanProperNounCase,
-	GermanProperNounGender,
-	GermanProperNounNumber,
-} from "./german-proper-noun-enums";
+	GermanCase,
+	GermanGender,
+	GermanNumber,
+} from "../../../shared/german-common-enums";
 
 export const GermanProperNounInflectionalFeaturesSchema = z
 	.object({
-		case: GermanProperNounCase.optional(),
-		number: GermanProperNounNumber.optional(),
+		case: GermanCase.optional(),
+		number: GermanNumber.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "PROPN">;
 
@@ -21,6 +21,6 @@ export const GermanProperNounInherentFeaturesSchema = z
 	.object({
 		abbr: UniversalFeature.IsAbbr.optional(),
 		foreign: UniversalFeature.IsForeign.optional(),
-		gender: GermanProperNounGender.optional(),
+		gender: GermanGender.optional(),
 	})
 	.strict() satisfies InherentFeaturesSchemaFor<"Lexeme", "PROPN">;

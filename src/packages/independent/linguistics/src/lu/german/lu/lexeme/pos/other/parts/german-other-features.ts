@@ -5,21 +5,23 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	GermanOtherCase,
-	GermanOtherGender,
-	GermanOtherMood,
-	GermanOtherNumber,
+	GermanCase,
+	GermanGender,
+	GermanMood,
+	GermanNumber,
+	GermanVerbForm,
+} from "../../../shared/german-common-enums";
+import {
 	GermanOtherNumType,
-	GermanOtherVerbForm,
 } from "./german-other-enums";
 
 export const GermanOtherInflectionalFeaturesSchema = z
 	.object({
-		case: GermanOtherCase.optional(),
-		gender: GermanOtherGender.optional(),
-		mood: GermanOtherMood.optional(),
-		number: GermanOtherNumber.optional(),
-		verbForm: GermanOtherVerbForm.optional(),
+		case: GermanCase.optional(),
+		gender: GermanGender.optional(),
+		mood: GermanMood.optional(),
+		number: GermanNumber.optional(),
+		verbForm: GermanVerbForm.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "X">;
 

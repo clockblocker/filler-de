@@ -5,17 +5,19 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	GermanSymbolCase,
-	GermanSymbolGender,
-	GermanSymbolNumber,
+	GermanCase,
+	GermanGender,
+	GermanNumber,
+} from "../../../shared/german-common-enums";
+import {
 	GermanSymbolNumType,
 } from "./german-symbol-enums";
 
 export const GermanSymbolInflectionalFeaturesSchema = z
 	.object({
-		case: GermanSymbolCase.optional(),
-		gender: GermanSymbolGender.optional(),
-		number: GermanSymbolNumber.optional(),
+		case: GermanCase.optional(),
+		gender: GermanGender.optional(),
+		number: GermanNumber.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "SYM">;
 

@@ -5,19 +5,21 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	GermanAdjectiveCase,
-	GermanAdjectiveDegree,
-	GermanAdjectiveGender,
-	GermanAdjectiveNumber,
+	GermanCase,
+	GermanDegree,
+	GermanGender,
+	GermanNumber,
+} from "../../../shared/german-common-enums";
+import {
 	GermanAdjectiveNumType,
 } from "./german-adjective-enums";
 
 export const GermanAdjectiveInflectionalFeaturesSchema = z
 	.object({
-		case: GermanAdjectiveCase.optional(),
-		degree: GermanAdjectiveDegree.optional(),
-		gender: GermanAdjectiveGender.optional(),
-		number: GermanAdjectiveNumber.optional(),
+		case: GermanCase.optional(),
+		degree: GermanDegree.optional(),
+		gender: GermanGender.optional(),
+		number: GermanNumber.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "ADJ">;
 

@@ -5,17 +5,19 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	GermanNumeralCase,
-	GermanNumeralGender,
-	GermanNumeralNumber,
+	GermanCase,
+	GermanGender,
+	GermanNumber,
+} from "../../../shared/german-common-enums";
+import {
 	GermanNumeralNumType,
 } from "./german-numeral-enums";
 
 export const GermanNumeralInflectionalFeaturesSchema = z
 	.object({
-		case: GermanNumeralCase.optional(),
-		gender: GermanNumeralGender.optional(),
-		number: GermanNumeralNumber.optional(),
+		case: GermanCase.optional(),
+		gender: GermanGender.optional(),
+		number: GermanNumber.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "NUM">;
 

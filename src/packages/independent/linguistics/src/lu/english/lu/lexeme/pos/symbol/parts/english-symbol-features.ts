@@ -5,17 +5,19 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	EnglishSymbolCase,
-	EnglishSymbolGender,
-	EnglishSymbolNumber,
+	EnglishCase,
+	EnglishGender,
+	EnglishNumber,
+} from "../../../shared/english-common-enums";
+import {
 	EnglishSymbolNumType,
 } from "./english-symbol-enums";
 
 export const EnglishSymbolInflectionalFeaturesSchema = z
 	.object({
-		case: EnglishSymbolCase.optional(),
-		gender: EnglishSymbolGender.optional(),
-		number: EnglishSymbolNumber.optional(),
+		case: EnglishCase.optional(),
+		gender: EnglishGender.optional(),
+		number: EnglishNumber.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "SYM">;
 

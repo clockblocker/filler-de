@@ -3,12 +3,13 @@ import type {
 	InflectionalFeaturesSchemaFor,
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
-import { EnglishNounCase, EnglishNounNumber } from "./english-noun-enums";
+import { EnglishNumber } from "../../../shared/english-common-enums";
+import { EnglishNounCase } from "./english-noun-enums";
 
 export const EnglishNounInflectionalFeaturesSchema = z
 	.object({
 		case: EnglishNounCase.optional(),
-		number: EnglishNounNumber.optional(),
+		number: EnglishNumber.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "NOUN">;
 

@@ -5,32 +5,34 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	GermanDeterminerCase,
-	GermanDeterminerDefinite,
-	GermanDeterminerDegree,
-	GermanDeterminerGender,
-	GermanDeterminerNumber,
+	GermanCase,
+	GermanDefinite,
+	GermanDegree,
+	GermanGender,
+	GermanNumber,
+	GermanPerson,
+	GermanPolite,
+} from "../../../shared/german-common-enums";
+import {
 	GermanDeterminerNumType,
-	GermanDeterminerPerson,
-	GermanDeterminerPolite,
 	GermanDeterminerPronType,
 } from "./german-determiner-enums";
 
 export const GermanDeterminerInflectionalFeaturesSchema = z
 	.object({
-		case: GermanDeterminerCase.optional(),
-		degree: GermanDeterminerDegree.optional(),
-		gender: GermanDeterminerGender.optional(),
-		number: GermanDeterminerNumber.optional(),
+		case: GermanCase.optional(),
+		degree: GermanDegree.optional(),
+		gender: GermanGender.optional(),
+		number: GermanNumber.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "DET">;
 
 export const GermanDeterminerInherentFeaturesSchema = z
 	.object({
-		definite: GermanDeterminerDefinite.optional(),
+		definite: GermanDefinite.optional(),
 		numType: GermanDeterminerNumType.optional(),
-		person: GermanDeterminerPerson.optional(),
-		polite: GermanDeterminerPolite.optional(),
+		person: GermanPerson.optional(),
+		polite: GermanPolite.optional(),
 		poss: UniversalFeature.IsPoss.optional(),
 		pronType: GermanDeterminerPronType.optional(),
 	})

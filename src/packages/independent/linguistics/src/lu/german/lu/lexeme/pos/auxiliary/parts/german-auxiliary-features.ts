@@ -4,22 +4,22 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	GermanAuxiliaryGender,
-	GermanAuxiliaryMood,
-	GermanAuxiliaryNumber,
-	GermanAuxiliaryPerson,
-	GermanAuxiliaryTense,
-	GermanAuxiliaryVerbForm,
-} from "./german-auxiliary-enums";
+	GermanGender,
+	GermanMood,
+	GermanNumber,
+	GermanPerson,
+	GermanTense,
+	GermanVerbForm,
+} from "../../../shared/german-common-enums";
 
 export const GermanAuxiliaryInflectionalFeaturesSchema = z
 	.object({
-		gender: GermanAuxiliaryGender.optional(),
-		mood: GermanAuxiliaryMood.optional(),
-		number: GermanAuxiliaryNumber.optional(),
-		person: GermanAuxiliaryPerson.optional(),
-		tense: GermanAuxiliaryTense.optional(),
-		verbForm: GermanAuxiliaryVerbForm.optional(),
+		gender: GermanGender.optional(),
+		mood: GermanMood.optional(),
+		number: GermanNumber.optional(),
+		person: GermanPerson.optional(),
+		tense: GermanTense.optional(),
+		verbForm: GermanVerbForm.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "AUX">;
 

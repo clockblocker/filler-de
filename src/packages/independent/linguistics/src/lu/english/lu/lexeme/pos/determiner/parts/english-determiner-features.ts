@@ -5,24 +5,26 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	EnglishDeterminerDefinite,
-	EnglishDeterminerNumber,
+	EnglishDefinite,
+	EnglishNumber,
+	EnglishPerson,
+} from "../../../shared/english-common-enums";
+import {
 	EnglishDeterminerNumType,
-	EnglishDeterminerPerson,
 	EnglishDeterminerPronType,
 } from "./english-determiner-enums";
 
 export const EnglishDeterminerInflectionalFeaturesSchema = z
 	.object({
-		number: EnglishDeterminerNumber.optional(),
+		number: EnglishNumber.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "DET">;
 
 export const EnglishDeterminerInherentFeaturesSchema = z
 	.object({
-		definite: EnglishDeterminerDefinite.optional(),
+		definite: EnglishDefinite.optional(),
 		numType: EnglishDeterminerNumType.optional(),
-		person: EnglishDeterminerPerson.optional(),
+		person: EnglishPerson.optional(),
 		poss: UniversalFeature.IsPoss.optional(),
 		pronType: EnglishDeterminerPronType.optional(),
 	})

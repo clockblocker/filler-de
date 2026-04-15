@@ -5,20 +5,20 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	EnglishVerbMood,
-	EnglishVerbNumber,
-	EnglishVerbPerson,
-	EnglishVerbTense,
-	EnglishVerbVerbForm,
-} from "./english-verb-enums";
+	EnglishMood,
+	EnglishNumber,
+	EnglishPerson,
+	EnglishTense,
+	EnglishVerbForm,
+} from "../../../shared/english-common-enums";
 
 export const EnglishVerbInflectionalFeaturesSchema = z
 	.object({
-		mood: EnglishVerbMood.optional(),
-		number: EnglishVerbNumber.optional(),
-		person: EnglishVerbPerson.optional(),
-		tense: EnglishVerbTense.optional(),
-		verbForm: EnglishVerbVerbForm.optional(),
+		mood: EnglishMood.optional(),
+		number: EnglishNumber.optional(),
+		person: EnglishPerson.optional(),
+		tense: EnglishTense.optional(),
+		verbForm: EnglishVerbForm.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme", "VERB">;
 

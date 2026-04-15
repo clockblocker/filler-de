@@ -5,22 +5,22 @@ import type {
 	InherentFeaturesSchemaFor,
 } from "../../../../../../universal/helpers/schema-targets";
 import {
-	GermanVerbGender,
-	GermanVerbMood,
-	GermanVerbNumber,
-	GermanVerbPerson,
-	GermanVerbTense,
-	GermanVerbVerbForm,
-} from "./german-verb-enums";
+	GermanGender,
+	GermanMood,
+	GermanNumber,
+	GermanPerson,
+	GermanTense,
+	GermanVerbForm,
+} from "../../../shared/german-common-enums";
 
 export const GermanVerbInflectionalFeaturesSchema = z
 	.object({
-		gender: GermanVerbGender.optional(),
-		mood: GermanVerbMood.optional(),
-		number: GermanVerbNumber.optional(),
-		person: GermanVerbPerson.optional(),
-		tense: GermanVerbTense.optional(),
-		verbForm: GermanVerbVerbForm.optional(),
+		gender: GermanGender.optional(),
+		mood: GermanMood.optional(),
+		number: GermanNumber.optional(),
+		person: GermanPerson.optional(),
+		tense: GermanTense.optional(),
+		verbForm: GermanVerbForm.optional(),
 	})
 	.strict() satisfies InflectionalFeaturesSchemaFor<"Lexeme">;
 
