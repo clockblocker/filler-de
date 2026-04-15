@@ -18,14 +18,20 @@ const EnglishAdjectiveSchemas = buildEnglishLexemeBundle({
 
 export const EnglishAdjectiveInflectionSelectionSchema =
 	EnglishAdjectiveSchemas.InflectionSelectionSchema;
+
 export const EnglishAdjectiveLemmaSelectionSchema =
 	EnglishAdjectiveSchemas.LemmaSelectionSchema;
+
 export const EnglishAdjectiveStandardVariantSelectionSchema =
 	EnglishAdjectiveSchemas.StandardVariantSelectionSchema;
+
 export const EnglishAdjectiveTypoInflectionSelectionSchema =
 	EnglishAdjectiveSchemas.TypoInflectionSelectionSchema;
+
 export const EnglishAdjectiveTypoLemmaSelectionSchema =
 	EnglishAdjectiveSchemas.TypoLemmaSelectionSchema;
+
 export const EnglishAdjectiveTypoVariantSelectionSchema =
 	EnglishAdjectiveSchemas.TypoVariantSelectionSchema;
+
 export const EnglishAdjectiveLemmaSchema = EnglishAdjectiveSchemas.LemmaSchema;

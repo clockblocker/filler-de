@@ -51,6 +51,14 @@ export const Relations = {
 	targetLingIdsSchema: RelationTargetLingIdsSchema,
 } as const;
 
+export declare namespace Relations {
+	export type LexicalRelation = LexicalRelationShape;
+	export type MorphologicalRelation = MorphologicalRelationShape;
+	export type TargetLingIds = RelationTargetLingIdsShape;
+	export type LexicalRelations = LexicalRelationsShape;
+	export type MorphologicalRelations = MorphologicalRelationsShape;
+}
+
 export type LexicalRelation = LexicalRelationShape;
 export type MorphologicalRelation = MorphologicalRelationShape;
 export type RelationTargetLingIds = RelationTargetLingIdsShape;

@@ -5,5 +5,6 @@ import {
 
 export const EnglishAdjectiveLexicalRelationsSchema =
 	AbstractLexicalRelationsSchema;
+
 export const EnglishAdjectiveMorphologicalRelationsSchema =
 	AbstractMorphologicalRelationsSchema;

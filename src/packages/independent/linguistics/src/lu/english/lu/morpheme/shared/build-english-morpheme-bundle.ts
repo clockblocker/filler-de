@@ -13,6 +13,7 @@ export function buildEnglishMorphemeBundle<MK extends MorphemeKind>({
 		lemmaKind: z.literal("Morpheme"),
 		morphemeKind: z.literal(morphemeKind),
 	} satisfies z.ZodRawShape;
+
 	const lemmaSchema = withLingIdLemmaDtoCompatibility(
 		z
 			.object({

@@ -4,9 +4,9 @@ import type { LingId } from "../ling-id/types";
 import type { LexicalRelation } from "./lexical";
 import type { MorphologicalRelation } from "./morphological";
 
-export const RelationTargetLingIdsSchema = z.array(z.string()) satisfies z.ZodType<
-	RelationTargetLingIds
->;
+export const RelationTargetLingIdsSchema = z.array(
+	z.string(),
+) satisfies z.ZodType<RelationTargetLingIds>;
 
 export type RelationTargetLingIds = LingId[];
 

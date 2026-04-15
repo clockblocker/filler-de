@@ -8,6 +8,7 @@ import {
 	LemmaSchema,
 	LexicalRelation,
 	LexicalRelationsSchema,
+	LingId,
 	MorphemeKind,
 	MorphologicalRelation,
 	MorphologicalRelationsSchema,
@@ -32,6 +33,8 @@ describe("public API usage", () => {
 		expect(TargetLanguageSchema.parse("German")).toBe("German");
 		expect(TargetLanguageSchema.parse("English")).toBe("English");
 		expect(typeof linguistics.buildToLingConverters).toBe("function");
+		expect(typeof linguistics.LingId.forLanguage).toBe("function");
+
 		const germanLingConverters =
 			linguistics.buildToLingConverters("German");
 		expect(typeof germanLingConverters.getSurfaceLingId).toBe("function");
@@ -74,6 +77,56 @@ describe("public API usage", () => {
 		expect("toLingId" in linguistics).toBe(false);
 		expect("buildToLemmaLingIdFor" in linguistics).toBe(false);
 		expect("LingIdSchema" in linguistics).toBe(false);
+	});
+
+	it("supports LingId and Relations namespace-style type access", () => {
+		const germanLingConverters: LingId.Converters<"German"> =
+			LingId.forLanguage("German");
+
+		const lemma = {
+			canonicalLemma: "See",
+			inherentFeatures: {
+				gender: "Fem",
+			},
+			language: "German",
+			lemmaKind: "Lexeme",
+			meaningInEmojis: "🌊",
+			pos: "NOUN",
+		} satisfies Lemma<"German", "Lexeme", "NOUN">;
+
+		const surface = {
+			discriminators: {
+				lemmaKind: "Lexeme",
+				lemmaSubKind: "NOUN",
+			},
+			normalizedFullSurface: "See",
+			orthographicStatus: "Standard",
+			surfaceKind: "Lemma",
+			target: {
+				canonicalLemma: "See",
+			},
+		} satisfies LingId.Input<"German">;
+
+		const observedId: LingId.Value =
+			germanLingConverters.getSurfaceLingId(lemma);
+
+		const shallowId: LingId.ShallowId =
+			germanLingConverters.getShallowSurfaceLingId(surface);
+
+		const lexicalRelation = "synonym" satisfies Relations.LexicalRelation;
+
+		const lexicalRelations = {
+			synonym: [observedId],
+		} satisfies Relations.LexicalRelations;
+
+		const targetLingIds = [observedId] satisfies Relations.TargetLingIds;
+
+		expect(
+			germanLingConverters.parseSurface(observedId).observationMode,
+		).toBe("observed");
+		expect(shallowId.startsWith("ling:v1:DE:SURF-SHALLOW;")).toBe(true);
+		expect(lexicalRelation).toBe("synonym");
+		expect(lexicalRelations.synonym).toEqual(targetLingIds);
 	});
 
 	it("supports ergonomic broad type aliases for German consumers", () => {

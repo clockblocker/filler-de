@@ -18,14 +18,20 @@ const EnglishAdverbSchemas = buildEnglishLexemeBundle({
 
 export const EnglishAdverbInflectionSelectionSchema =
 	EnglishAdverbSchemas.InflectionSelectionSchema;
+
 export const EnglishAdverbLemmaSelectionSchema =
 	EnglishAdverbSchemas.LemmaSelectionSchema;
+
 export const EnglishAdverbStandardVariantSelectionSchema =
 	EnglishAdverbSchemas.StandardVariantSelectionSchema;
+
 export const EnglishAdverbTypoInflectionSelectionSchema =
 	EnglishAdverbSchemas.TypoInflectionSelectionSchema;
+
 export const EnglishAdverbTypoLemmaSelectionSchema =
 	EnglishAdverbSchemas.TypoLemmaSelectionSchema;
+
 export const EnglishAdverbTypoVariantSelectionSchema =
 	EnglishAdverbSchemas.TypoVariantSelectionSchema;
+
 export const EnglishAdverbLemmaSchema = EnglishAdverbSchemas.LemmaSchema;

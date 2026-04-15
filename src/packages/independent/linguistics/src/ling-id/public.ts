@@ -7,6 +7,7 @@ import {
 	serializeSurface,
 } from "./serialize";
 import type {
+	LingId as LingIdValue,
 	LingIdSurfaceInput,
 	ObservedSurfaceLingId,
 	ParsedLemmaDto,
@@ -61,6 +62,20 @@ export type LingConverters<L extends TargetLanguage> = {
 		id: ShallowSurfaceLingId,
 	) => ParsedShallowSurfaceDtoFor<L>;
 };
+
+export const LingId = {
+	forLanguage: buildToLingConverters,
+} as const;
+
+export declare namespace LingId {
+	export type Value = LingIdValue;
+	export type Input<L extends TargetLanguage = TargetLanguage> =
+		LingIdSurfaceInput<L>;
+	export type Converters<L extends TargetLanguage> = LingConverters<L>;
+	export type SurfaceId = SurfaceLingId;
+	export type ObservedId = ObservedSurfaceLingId;
+	export type ShallowId = ShallowSurfaceLingId;
+}
 
 export function buildToLingConverters<L extends TargetLanguage>(
 	lang: L,
