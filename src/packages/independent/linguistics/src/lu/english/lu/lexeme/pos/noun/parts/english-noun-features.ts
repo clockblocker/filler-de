@@ -8,7 +8,7 @@ const EnglishNounNumForm = EnglishFeature.NumForm.extract([
 	"Digit",
 	"Word",
 ]);
-const EnglishNounNumType = UniversalFeature.NumType.extract([
+const EnglishNounNumType = EnglishFeature.NumType.extract([
 	"Card",
 	"Frac",
 	"Ord",

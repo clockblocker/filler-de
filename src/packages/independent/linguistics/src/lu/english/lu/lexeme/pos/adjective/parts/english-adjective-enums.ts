@@ -1,4 +1,5 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
+import { EnglishFeature } from "../../../shared/english-common-enums";
 
 // Source: https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-ADJ.html
 export const EnglishAdjectiveExtPos = UniversalFeature.ExtPos.extract([
@@ -7,14 +8,14 @@ export const EnglishAdjectiveExtPos = UniversalFeature.ExtPos.extract([
 	"SCONJ",
 ]);
 
-export const EnglishAdjectiveNumForm = UniversalFeature.NumForm.extract([
+export const EnglishAdjectiveNumForm = EnglishFeature.NumForm.extract([
 	"Combi",
 	"Word",
 ]);
 
-export const EnglishAdjectiveNumType = UniversalFeature.NumType.extract([
+export const EnglishAdjectiveNumType = EnglishFeature.NumType.extract([
 	"Frac",
 	"Ord",
 ]);
 
-export const EnglishAdjectiveStyle = UniversalFeature.Style.extract(["Expr"]);
+export const EnglishAdjectiveStyle = EnglishFeature.Style.extract(["Expr"]);

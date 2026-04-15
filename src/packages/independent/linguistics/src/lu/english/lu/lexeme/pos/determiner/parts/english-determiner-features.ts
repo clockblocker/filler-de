@@ -9,10 +9,7 @@ import {
 	EnglishDeterminerStyle,
 } from "./english-determiner-enums";
 
-const EnglishDeterminerNumber = UniversalFeature.GrammaticalNumber.extract([
-	"Plur",
-	"Sing",
-]);
+const EnglishDeterminerNumber = EnglishFeature.Number.extract(["Plur", "Sing"]);
 
 // Sources:
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-DET.html

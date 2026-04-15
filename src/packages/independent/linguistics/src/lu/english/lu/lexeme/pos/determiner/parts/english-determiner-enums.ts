@@ -1,4 +1,5 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
+import { EnglishFeature } from "../../../shared/english-common-enums";
 
 // Source: https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-DET.html
 export const EnglishDeterminerExtPos = UniversalFeature.ExtPos.extract([
@@ -6,15 +7,15 @@ export const EnglishDeterminerExtPos = UniversalFeature.ExtPos.extract([
 	"PRON",
 ]);
 
-export const EnglishDeterminerNumForm = UniversalFeature.NumForm.extract([
+export const EnglishDeterminerNumForm = EnglishFeature.NumForm.extract([
 	"Word",
 ]);
 
-export const EnglishDeterminerNumType = UniversalFeature.NumType.extract([
+export const EnglishDeterminerNumType = EnglishFeature.NumType.extract([
 	"Frac",
 ]);
 
-export const EnglishDeterminerPronType = UniversalFeature.PronType.extract([
+export const EnglishDeterminerPronType = EnglishFeature.PronType.extract([
 	"Art",
 	"Dem",
 	"Ind",
@@ -25,4 +26,4 @@ export const EnglishDeterminerPronType = UniversalFeature.PronType.extract([
 	"Tot",
 ]);
 
-export const EnglishDeterminerStyle = UniversalFeature.Style.extract(["Vrnc"]);
+export const EnglishDeterminerStyle = EnglishFeature.Style.extract(["Vrnc"]);

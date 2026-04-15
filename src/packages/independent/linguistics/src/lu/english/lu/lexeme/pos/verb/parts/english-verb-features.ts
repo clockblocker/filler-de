@@ -8,18 +8,10 @@ const EnglishVerbExtPos = UniversalFeature.ExtPos.extract([
 	"PROPN",
 ]);
 
-const EnglishVerbNumber = UniversalFeature.GrammaticalNumber.extract([
-	"Plur",
-	"Sing",
-]);
+const EnglishVerbNumber = EnglishFeature.Number.extract(["Plur", "Sing"]);
 
 const EnglishVerbStyle = EnglishFeature.Style.extract(["Expr", "Vrnc"]);
-const EnglishVerbVerbForm = UniversalFeature.VerbForm.extract([
-	"Fin",
-	"Ger",
-	"Inf",
-	"Part",
-]);
+const EnglishVerbVerbForm = EnglishFeature.VerbForm;
 
 // Sources:
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-VERB.html

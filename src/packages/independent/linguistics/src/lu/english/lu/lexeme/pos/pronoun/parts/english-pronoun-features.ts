@@ -7,10 +7,7 @@ import {
 	EnglishPronounStyle,
 } from "./english-pronoun-enums";
 
-const EnglishPronounNumber = UniversalFeature.GrammaticalNumber.extract([
-	"Plur",
-	"Sing",
-]);
+const EnglishPronounNumber = EnglishFeature.Number.extract(["Plur", "Sing"]);
 
 // Sources:
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-PRON.html

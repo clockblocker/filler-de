@@ -1,11 +1,9 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
+import { EnglishFeature } from "../../../shared/english-common-enums";
 import { EnglishSymbolExtPos } from "./english-symbol-enums";
 
-const EnglishSymbolNumber = UniversalFeature.GrammaticalNumber.extract([
-	"Plur",
-	"Sing",
-]);
+const EnglishSymbolNumber = EnglishFeature.Number.extract(["Plur", "Sing"]);
 
 // Sources:
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-SYM.html

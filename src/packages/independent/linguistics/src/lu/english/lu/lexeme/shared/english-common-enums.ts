@@ -4,6 +4,8 @@ import { UniversalFeature } from "../../../../universal/enums/feature";
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-Number.html
 // - https://universaldependencies.org/treebanks/en_ewt/en_ewt-feat-VerbForm.html
 // - https://universaldependencies.org/u/feat/NumForm.html
+// - https://universaldependencies.org/u/feat/NumType.html
+// - https://universaldependencies.org/u/feat/PronType.html
 // - https://universaldependencies.org/u/feat/Style.html
 export const EnglishFeature = {
 	Case: UniversalFeature.Case.extract(["Acc", "Gen", "Nom"]),
@@ -22,8 +24,21 @@ export const EnglishFeature = {
 		"Roman",
 		"Word",
 	]),
+	NumType: UniversalFeature.NumType.extract(["Card", "Frac", "Mult", "Ord"]),
 	Person: UniversalFeature.Person.extract(["1", "2", "3"]),
 	Polarity: UniversalFeature.Polarity.extract(["Neg", "Pos"]),
+	PronType: UniversalFeature.PronType.extract([
+		"Art",
+		"Dem",
+		"Emp",
+		"Ind",
+		"Int",
+		"Neg",
+		"Prs",
+		"Rcp",
+		"Rel",
+		"Tot",
+	]),
 	Style: UniversalFeature.Style.extract([
 		"Arch",
 		"Coll",

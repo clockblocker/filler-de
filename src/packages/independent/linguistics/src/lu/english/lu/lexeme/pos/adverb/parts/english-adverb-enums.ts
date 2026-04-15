@@ -1,4 +1,5 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
+import { EnglishFeature } from "../../../shared/english-common-enums";
 
 // Source: https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-ADV.html
 export const EnglishAdverbExtPos = UniversalFeature.ExtPos.extract([
@@ -8,15 +9,15 @@ export const EnglishAdverbExtPos = UniversalFeature.ExtPos.extract([
 	"SCONJ",
 ]);
 
-export const EnglishAdverbNumForm = UniversalFeature.NumForm.extract(["Word"]);
+export const EnglishAdverbNumForm = EnglishFeature.NumForm.extract(["Word"]);
 
-export const EnglishAdverbNumType = UniversalFeature.NumType.extract([
+export const EnglishAdverbNumType = EnglishFeature.NumType.extract([
 	"Frac",
 	"Mult",
 	"Ord",
 ]);
 
-export const EnglishAdverbPronType = UniversalFeature.PronType.extract([
+export const EnglishAdverbPronType = EnglishFeature.PronType.extract([
 	"Dem",
 	"Ind",
 	"Int",
@@ -25,7 +26,7 @@ export const EnglishAdverbPronType = UniversalFeature.PronType.extract([
 	"Tot",
 ]);
 
-export const EnglishAdverbStyle = UniversalFeature.Style.extract([
+export const EnglishAdverbStyle = EnglishFeature.Style.extract([
 	"Expr",
 	"Slng",
 ]);

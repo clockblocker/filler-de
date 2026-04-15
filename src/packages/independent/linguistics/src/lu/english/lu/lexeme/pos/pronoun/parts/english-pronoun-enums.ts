@@ -1,4 +1,5 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
+import { EnglishFeature } from "../../../shared/english-common-enums";
 
 // Source: https://universaldependencies.org/treebanks/en_ewt/en_ewt-pos-PRON.html
 export const EnglishPronounExtPos = UniversalFeature.ExtPos.extract([
@@ -6,7 +7,7 @@ export const EnglishPronounExtPos = UniversalFeature.ExtPos.extract([
 	"PRON",
 ]);
 
-export const EnglishPronounPronType = UniversalFeature.PronType.extract([
+export const EnglishPronounPronType = EnglishFeature.PronType.extract([
 	"Dem",
 	"Emp",
 	"Ind",
@@ -18,7 +19,7 @@ export const EnglishPronounPronType = UniversalFeature.PronType.extract([
 	"Tot",
 ]);
 
-export const EnglishPronounStyle = UniversalFeature.Style.extract([
+export const EnglishPronounStyle = EnglishFeature.Style.extract([
 	"Arch",
 	"Coll",
 	"Expr",

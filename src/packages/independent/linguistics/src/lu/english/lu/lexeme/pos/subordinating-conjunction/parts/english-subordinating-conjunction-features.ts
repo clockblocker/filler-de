@@ -1,12 +1,13 @@
 import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
+import { EnglishFeature } from "../../../shared/english-common-enums";
 
 const EnglishSubordinatingConjunctionExtPos = UniversalFeature.ExtPos.extract([
 	"ADP",
 	"SCONJ",
 ]);
 
-const EnglishSubordinatingConjunctionStyle = UniversalFeature.Style.extract([
+const EnglishSubordinatingConjunctionStyle = EnglishFeature.Style.extract([
 	"Vrnc",
 ]);
 

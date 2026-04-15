@@ -2,13 +2,10 @@ import { UniversalFeature } from "../../../../../../universal/enums/feature";
 import { featureSchema } from "../../../../../../universal/helpers/schema-targets";
 import { EnglishFeature } from "../../../shared/english-common-enums";
 
-const EnglishAuxiliaryNumber = UniversalFeature.GrammaticalNumber.extract([
-	"Plur",
-	"Sing",
-]);
+const EnglishAuxiliaryNumber = EnglishFeature.Number.extract(["Plur", "Sing"]);
 
 const EnglishAuxiliaryStyle = EnglishFeature.Style.extract(["Arch", "Vrnc"]);
-const EnglishAuxiliaryVerbForm = UniversalFeature.VerbForm.extract([
+const EnglishAuxiliaryVerbForm = EnglishFeature.VerbForm.extract([
 	"Fin",
 	"Inf",
 	"Part",

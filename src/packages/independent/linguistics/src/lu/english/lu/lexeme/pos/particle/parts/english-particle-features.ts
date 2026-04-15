@@ -12,5 +12,5 @@ export const EnglishParticleInflectionalFeaturesSchema = featureSchema({});
 export const EnglishParticleInherentFeaturesSchema = featureSchema({
 	abbr: UniversalFeature.Abbr,
 	extPos: EnglishParticleExtPos,
-	polarity: UniversalFeature.Polarity.extract(["Neg"]),
+	polarity: EnglishFeature.Polarity.extract(["Neg"]),
 });
