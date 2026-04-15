@@ -8,24 +8,10 @@ import {
 	EnglishNumeralMorphologicalRelationsSchema,
 } from "./parts/english-numeral-relations";
 
-const EnglishNumeralSchemas = buildEnglishLexemeBundle({
+export const EnglishNumeralSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishNumeralInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishNumeralInherentFeaturesSchema,
 	lexicalRelationsSchema: EnglishNumeralLexicalRelationsSchema,
 	morphologicalRelationsSchema: EnglishNumeralMorphologicalRelationsSchema,
 	pos: "NUM",
 });
-
-export const EnglishNumeralInflectionSelectionSchema =
-	EnglishNumeralSchemas.InflectionSelectionSchema;
-export const EnglishNumeralLemmaSelectionSchema =
-	EnglishNumeralSchemas.LemmaSelectionSchema;
-export const EnglishNumeralStandardVariantSelectionSchema =
-	EnglishNumeralSchemas.StandardVariantSelectionSchema;
-export const EnglishNumeralTypoInflectionSelectionSchema =
-	EnglishNumeralSchemas.TypoInflectionSelectionSchema;
-export const EnglishNumeralTypoLemmaSelectionSchema =
-	EnglishNumeralSchemas.TypoLemmaSelectionSchema;
-export const EnglishNumeralTypoVariantSelectionSchema =
-	EnglishNumeralSchemas.TypoVariantSelectionSchema;
-export const EnglishNumeralLemmaSchema = EnglishNumeralSchemas.LemmaSchema;

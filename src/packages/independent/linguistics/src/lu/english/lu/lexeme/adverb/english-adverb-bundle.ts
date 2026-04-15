@@ -8,30 +8,10 @@ import {
 	EnglishAdverbMorphologicalRelationsSchema,
 } from "./parts/english-adverb-relations";
 
-const EnglishAdverbSchemas = buildEnglishLexemeBundle({
+export const EnglishAdverbSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishAdverbInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishAdverbInherentFeaturesSchema,
 	lexicalRelationsSchema: EnglishAdverbLexicalRelationsSchema,
 	morphologicalRelationsSchema: EnglishAdverbMorphologicalRelationsSchema,
 	pos: "ADV",
 });
-
-export const EnglishAdverbInflectionSelectionSchema =
-	EnglishAdverbSchemas.InflectionSelectionSchema;
-
-export const EnglishAdverbLemmaSelectionSchema =
-	EnglishAdverbSchemas.LemmaSelectionSchema;
-
-export const EnglishAdverbStandardVariantSelectionSchema =
-	EnglishAdverbSchemas.StandardVariantSelectionSchema;
-
-export const EnglishAdverbTypoInflectionSelectionSchema =
-	EnglishAdverbSchemas.TypoInflectionSelectionSchema;
-
-export const EnglishAdverbTypoLemmaSelectionSchema =
-	EnglishAdverbSchemas.TypoLemmaSelectionSchema;
-
-export const EnglishAdverbTypoVariantSelectionSchema =
-	EnglishAdverbSchemas.TypoVariantSelectionSchema;
-
-export const EnglishAdverbLemmaSchema = EnglishAdverbSchemas.LemmaSchema;

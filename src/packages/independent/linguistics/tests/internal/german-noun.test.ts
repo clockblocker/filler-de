@@ -6,12 +6,7 @@ import {
 	MorphologicalRelationsSchema,
 	SelectionSchema,
 } from "../../src";
-import {
-	GermanNounInflectionSelectionSchema,
-	GermanNounLemmaSchema,
-	GermanNounLemmaSelectionSchema,
-	GermanNounTypoInflectionSelectionSchema,
-} from "../../src/lu/german/lu/lexeme/noun/german-noun-bundle";
+import { GermanNounSchemas } from "../../src/lu/german/lu/lexeme/noun/german-noun-bundle";
 
 const relationId = (label: string) => `rel:${label}`;
 
@@ -44,7 +39,7 @@ describe("German noun schemas", () => {
 	});
 
 	it("accepts supported German noun inflectional features", () => {
-		const result = GermanNounInflectionSelectionSchema.safeParse({
+		const result = GermanNounSchemas.InflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "Kindern",
@@ -63,7 +58,7 @@ describe("German noun schemas", () => {
 	});
 
 	it("rejects unsupported UD values for German noun inflection", () => {
-		const result = GermanNounInflectionSelectionSchema.safeParse({
+		const result = GermanNounSchemas.InflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "Kindern",
@@ -82,7 +77,7 @@ describe("German noun schemas", () => {
 	});
 
 	it("accepts lexical inherent features for German nouns", () => {
-		const result = GermanNounLemmaSchema.safeParse({
+		const result = GermanNounSchemas.LemmaSchema.safeParse({
 			canonicalLemma: "Kind",
 			inherentFeatures: {
 				gender: "Neut",
@@ -112,7 +107,7 @@ describe("German noun schemas", () => {
 	});
 
 	it("rejects invalid meaningInEmojis payloads", () => {
-		const lemmaResult = GermanNounLemmaSchema.safeParse({
+		const lemmaResult = GermanNounSchemas.LemmaSchema.safeParse({
 			canonicalLemma: "Haus",
 			inherentFeatures: {},
 			language: "German",
@@ -120,7 +115,7 @@ describe("German noun schemas", () => {
 			meaningInEmojis: "",
 			pos: "NOUN",
 		});
-		const selectionResult = GermanNounLemmaSelectionSchema.safeParse({
+		const selectionResult = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "Haus",
@@ -147,7 +142,7 @@ describe("German noun schemas", () => {
 	});
 
 	it("rejects unsupported inherent feature keys", () => {
-		const result = GermanNounLemmaSchema.safeParse({
+		const result = GermanNounSchemas.LemmaSchema.safeParse({
 			canonicalLemma: "Kind",
 			inherentFeatures: {
 				case: "Nom",
@@ -162,7 +157,7 @@ describe("German noun schemas", () => {
 	});
 
 	it("accepts lemma selections where the spelled selection covers only part of the full surface", () => {
-		const result = GermanNounLemmaSelectionSchema.safeParse({
+		const result = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "Bahnhof",
@@ -177,7 +172,7 @@ describe("German noun schemas", () => {
 	});
 
 	it("accepts typo inflection selections with the typo discriminant", () => {
-		const result = GermanNounTypoInflectionSelectionSchema.safeParse({
+		const result = GermanNounSchemas.TypoInflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Typo",
 			spelledSelection: "Hun des",
@@ -209,7 +204,7 @@ describe("German noun schemas", () => {
 	});
 
 	it("accepts detached and hydrated lemma targets", () => {
-		const detached = GermanNounLemmaSelectionSchema.safeParse({
+		const detached = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "Haus",
@@ -219,7 +214,7 @@ describe("German noun schemas", () => {
 				surfaceKind: "Lemma",
 			},
 		});
-		const hydrated = GermanNounLemmaSelectionSchema.safeParse({
+		const hydrated = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "Haus",
@@ -248,7 +243,7 @@ describe("German noun schemas", () => {
 	});
 
 	it("rejects hydrated lemma mismatches on language, lemmaKind, and lemmaSubKind", () => {
-		const wrongLanguage = GermanNounLemmaSelectionSchema.safeParse({
+		const wrongLanguage = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "Haus",
@@ -269,7 +264,7 @@ describe("German noun schemas", () => {
 				},
 			},
 		});
-		const wrongKind = GermanNounLemmaSelectionSchema.safeParse({
+		const wrongKind = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "Haus",
@@ -289,7 +284,7 @@ describe("German noun schemas", () => {
 				},
 			},
 		});
-		const wrongSubKind = GermanNounLemmaSelectionSchema.safeParse({
+		const wrongSubKind = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "Haus",
@@ -317,7 +312,7 @@ describe("German noun schemas", () => {
 	});
 
 	it("rejects invalid target unions and non-inflectional feature leakage", () => {
-		const bothTargetFields = GermanNounLemmaSelectionSchema.safeParse({
+		const bothTargetFields = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "Haus",
@@ -331,7 +326,7 @@ describe("German noun schemas", () => {
 				},
 			},
 		});
-		const missingTarget = GermanNounLemmaSelectionSchema.safeParse({
+		const missingTarget = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "Haus",
@@ -344,7 +339,7 @@ describe("German noun schemas", () => {
 				surfaceKind: "Lemma",
 			},
 		});
-		const leakedFeatures = GermanNounLemmaSelectionSchema.safeParse({
+		const leakedFeatures = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "Haus",
@@ -365,14 +360,14 @@ describe("German noun schemas", () => {
 
 	it("exposes registry access for German nouns", () => {
 		expect(SelectionSchema.German.Standard.Inflection.Lexeme.NOUN).toBe(
-			GermanNounInflectionSelectionSchema,
+			GermanNounSchemas.InflectionSelectionSchema,
 		);
 		expect(SelectionSchema.German.Standard.Lemma.Lexeme.NOUN).toBe(
-			GermanNounLemmaSelectionSchema,
+			GermanNounSchemas.LemmaSelectionSchema,
 		);
 		expect(SelectionSchema.German.Typo.Inflection.Lexeme.NOUN).toBe(
-			GermanNounTypoInflectionSelectionSchema,
+			GermanNounSchemas.TypoInflectionSelectionSchema,
 		);
-		expect(LemmaSchema.German.Lexeme.NOUN).toBe(GermanNounLemmaSchema);
+		expect(LemmaSchema.German.Lexeme.NOUN).toBe(GermanNounSchemas.LemmaSchema);
 	});
 });

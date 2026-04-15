@@ -8,24 +8,10 @@ import {
 	GermanAdjectiveMorphologicalRelationsSchema,
 } from "./parts/german-adjective-relations";
 
-const GermanAdjectiveSchemas = buildGermanLexemeBundle({
+export const GermanAdjectiveSchemas = buildGermanLexemeBundle({
 	inflectionalFeaturesSchema: GermanAdjectiveInflectionalFeaturesSchema,
 	inherentFeaturesSchema: GermanAdjectiveInherentFeaturesSchema,
 	lexicalRelationsSchema: GermanAdjectiveLexicalRelationsSchema,
 	morphologicalRelationsSchema: GermanAdjectiveMorphologicalRelationsSchema,
 	pos: "ADJ",
 });
-
-export const GermanAdjectiveInflectionSelectionSchema =
-	GermanAdjectiveSchemas.InflectionSelectionSchema;
-export const GermanAdjectiveLemmaSelectionSchema =
-	GermanAdjectiveSchemas.LemmaSelectionSchema;
-export const GermanAdjectiveStandardVariantSelectionSchema =
-	GermanAdjectiveSchemas.StandardVariantSelectionSchema;
-export const GermanAdjectiveTypoInflectionSelectionSchema =
-	GermanAdjectiveSchemas.TypoInflectionSelectionSchema;
-export const GermanAdjectiveTypoLemmaSelectionSchema =
-	GermanAdjectiveSchemas.TypoLemmaSelectionSchema;
-export const GermanAdjectiveTypoVariantSelectionSchema =
-	GermanAdjectiveSchemas.TypoVariantSelectionSchema;
-export const GermanAdjectiveLemmaSchema = GermanAdjectiveSchemas.LemmaSchema;

@@ -8,27 +8,10 @@ import {
 	EnglishCoordinatingConjunctionMorphologicalRelationsSchema,
 } from "./parts/english-coordinating-conjunction-relations";
 
-const EnglishCoordinatingConjunctionSchemas = buildEnglishLexemeBundle({
-	inflectionalFeaturesSchema:
-		EnglishCoordinatingConjunctionInflectionalFeaturesSchema,
+export const EnglishCoordinatingConjunctionSchemas = buildEnglishLexemeBundle({
+	inflectionalFeaturesSchema: EnglishCoordinatingConjunctionInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishCoordinatingConjunctionInherentFeaturesSchema,
 	lexicalRelationsSchema: EnglishCoordinatingConjunctionLexicalRelationsSchema,
-	morphologicalRelationsSchema:
-		EnglishCoordinatingConjunctionMorphologicalRelationsSchema,
+	morphologicalRelationsSchema: EnglishCoordinatingConjunctionMorphologicalRelationsSchema,
 	pos: "CCONJ",
 });
-
-export const EnglishCoordinatingConjunctionInflectionSelectionSchema =
-	EnglishCoordinatingConjunctionSchemas.InflectionSelectionSchema;
-export const EnglishCoordinatingConjunctionLemmaSelectionSchema =
-	EnglishCoordinatingConjunctionSchemas.LemmaSelectionSchema;
-export const EnglishCoordinatingConjunctionStandardVariantSelectionSchema =
-	EnglishCoordinatingConjunctionSchemas.StandardVariantSelectionSchema;
-export const EnglishCoordinatingConjunctionTypoInflectionSelectionSchema =
-	EnglishCoordinatingConjunctionSchemas.TypoInflectionSelectionSchema;
-export const EnglishCoordinatingConjunctionTypoLemmaSelectionSchema =
-	EnglishCoordinatingConjunctionSchemas.TypoLemmaSelectionSchema;
-export const EnglishCoordinatingConjunctionTypoVariantSelectionSchema =
-	EnglishCoordinatingConjunctionSchemas.TypoVariantSelectionSchema;
-export const EnglishCoordinatingConjunctionLemmaSchema =
-	EnglishCoordinatingConjunctionSchemas.LemmaSchema;

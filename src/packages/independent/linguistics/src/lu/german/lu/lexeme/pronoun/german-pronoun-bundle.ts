@@ -8,24 +8,10 @@ import {
 	GermanPronounMorphologicalRelationsSchema,
 } from "./parts/german-pronoun-relations";
 
-const GermanPronounSchemas = buildGermanLexemeBundle({
+export const GermanPronounSchemas = buildGermanLexemeBundle({
 	inflectionalFeaturesSchema: GermanPronounInflectionalFeaturesSchema,
 	inherentFeaturesSchema: GermanPronounInherentFeaturesSchema,
 	lexicalRelationsSchema: GermanPronounLexicalRelationsSchema,
 	morphologicalRelationsSchema: GermanPronounMorphologicalRelationsSchema,
 	pos: "PRON",
 });
-
-export const GermanPronounInflectionSelectionSchema =
-	GermanPronounSchemas.InflectionSelectionSchema;
-export const GermanPronounLemmaSelectionSchema =
-	GermanPronounSchemas.LemmaSelectionSchema;
-export const GermanPronounStandardVariantSelectionSchema =
-	GermanPronounSchemas.StandardVariantSelectionSchema;
-export const GermanPronounTypoInflectionSelectionSchema =
-	GermanPronounSchemas.TypoInflectionSelectionSchema;
-export const GermanPronounTypoLemmaSelectionSchema =
-	GermanPronounSchemas.TypoLemmaSelectionSchema;
-export const GermanPronounTypoVariantSelectionSchema =
-	GermanPronounSchemas.TypoVariantSelectionSchema;
-export const GermanPronounLemmaSchema = GermanPronounSchemas.LemmaSchema;

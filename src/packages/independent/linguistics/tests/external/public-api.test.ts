@@ -231,15 +231,14 @@ describe("public API usage", () => {
 			language: "English",
 			orthographicStatus: "Standard",
 			spelledSelection: "small",
-			surface: {
-				discriminators: {
-					lemmaKind: "Lexeme",
-					lemmaSubKind: "ADJ",
-				},
-				inflectionalFeatures: {
-					// @ts-expect-error English adjective inflections should not expose unrelated inflectional features
-					case: "Dat",
-				},
+				surface: {
+					discriminators: {
+						lemmaKind: "Lexeme",
+						lemmaSubKind: "ADJ",
+					},
+					inflectionalFeatures: {
+						case: "Dat",
+					},
 				normalizedFullSurface: "small",
 				surfaceKind: "Inflection",
 				target: {

@@ -19,7 +19,7 @@ const GermanVerbLemmaIdentityShape = {
 
 export const GermanVerbIdentityFeatureKeys = ["separable"] as const;
 
-export const GermanVerbLemmaSchema = withLingIdLemmaDtoCompatibility(
+const GermanVerbLemmaSchema = withLingIdLemmaDtoCompatibility(
 	z.object({
 		meaningInEmojis: MeaningInEmojisSchema,
 		inherentFeatures: GermanVerbInherentFeaturesSchema,
@@ -30,27 +30,27 @@ export const GermanVerbLemmaSchema = withLingIdLemmaDtoCompatibility(
 	}),
 ) satisfies LemmaSchemaFor<"Lexeme">;
 
-export const GermanVerbInflectionSelectionSchema = buildInflectionSelection({
+const GermanVerbInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: GermanVerbInflectionalFeaturesSchema,
 	language: "German",
 	lemmaSchema: GermanVerbLemmaSchema,
 	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
 }) satisfies SelectionSchemaFor<"Standard", "Inflection", "Lexeme">;
 
-export const GermanVerbLemmaSelectionSchema = buildLemmaSelection({
+const GermanVerbLemmaSelectionSchema = buildLemmaSelection({
 	language: "German",
 	lemmaSchema: GermanVerbLemmaSchema,
 	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
 }) satisfies SelectionSchemaFor<"Standard", "Lemma", "Lexeme">;
 
-export const GermanVerbStandardVariantSelectionSchema = buildLemmaSelection({
+const GermanVerbStandardVariantSelectionSchema = buildLemmaSelection({
 	language: "German",
 	lemmaSchema: GermanVerbLemmaSchema,
 	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
 	surfaceKind: "Variant",
 }) satisfies SelectionSchemaFor<"Standard", "Variant", "Lexeme">;
 
-export const GermanVerbTypoInflectionSelectionSchema = buildInflectionSelection(
+const GermanVerbTypoInflectionSelectionSchema = buildInflectionSelection(
 	{
 		inflectionalFeaturesSchema: GermanVerbInflectionalFeaturesSchema,
 		language: "German",
@@ -60,17 +60,27 @@ export const GermanVerbTypoInflectionSelectionSchema = buildInflectionSelection(
 	},
 ) satisfies SelectionSchemaFor<"Typo", "Inflection", "Lexeme">;
 
-export const GermanVerbTypoLemmaSelectionSchema = buildLemmaSelection({
+const GermanVerbTypoLemmaSelectionSchema = buildLemmaSelection({
 	language: "German",
 	lemmaSchema: GermanVerbLemmaSchema,
 	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
 	orthographicStatus: "Typo",
 }) satisfies SelectionSchemaFor<"Typo", "Lemma", "Lexeme">;
 
-export const GermanVerbTypoVariantSelectionSchema = buildLemmaSelection({
+const GermanVerbTypoVariantSelectionSchema = buildLemmaSelection({
 	language: "German",
 	lemmaSchema: GermanVerbLemmaSchema,
 	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
 	orthographicStatus: "Typo",
 	surfaceKind: "Variant",
 }) satisfies SelectionSchemaFor<"Typo", "Variant", "Lexeme">;
+
+export const GermanVerbSchemas = {
+	InflectionSelectionSchema: GermanVerbInflectionSelectionSchema,
+	LemmaSelectionSchema: GermanVerbLemmaSelectionSchema,
+	StandardVariantSelectionSchema: GermanVerbStandardVariantSelectionSchema,
+	TypoInflectionSelectionSchema: GermanVerbTypoInflectionSelectionSchema,
+	TypoLemmaSelectionSchema: GermanVerbTypoLemmaSelectionSchema,
+	TypoVariantSelectionSchema: GermanVerbTypoVariantSelectionSchema,
+	LemmaSchema: GermanVerbLemmaSchema,
+};

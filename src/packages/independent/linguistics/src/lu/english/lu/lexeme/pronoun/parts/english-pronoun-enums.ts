@@ -1,4 +1,3 @@
-import z from "zod/v3";
 import { PronType } from "../../../../../universal/enums/feature/ud/pron-type";
 import {
 	EnglishCase,
@@ -12,13 +11,13 @@ export const EnglishPronounGender = EnglishGender;
 export const EnglishPronounNumber = EnglishNumber;
 export const EnglishPronounPerson = EnglishPerson;
 
-export const EnglishPronounPronType = z.enum([
-	PronType.enum.Dem,
-	PronType.enum.Ind,
-	PronType.enum.Int,
-	PronType.enum.Neg,
-	PronType.enum.Prs,
-	PronType.enum.Rcp,
-	PronType.enum.Rel,
-	PronType.enum.Tot,
+export const EnglishPronounPronType = PronType.extract([
+	"Dem",
+	"Ind",
+	"Int",
+	"Neg",
+	"Prs",
+	"Rcp",
+	"Rel",
+	"Tot",
 ]);

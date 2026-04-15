@@ -8,24 +8,10 @@ import {
 	GermanAuxiliaryMorphologicalRelationsSchema,
 } from "./parts/german-auxiliary-relations";
 
-const GermanAuxiliarySchemas = buildGermanLexemeBundle({
+export const GermanAuxiliarySchemas = buildGermanLexemeBundle({
 	inflectionalFeaturesSchema: GermanAuxiliaryInflectionalFeaturesSchema,
 	inherentFeaturesSchema: GermanAuxiliaryInherentFeaturesSchema,
 	lexicalRelationsSchema: GermanAuxiliaryLexicalRelationsSchema,
 	morphologicalRelationsSchema: GermanAuxiliaryMorphologicalRelationsSchema,
 	pos: "AUX",
 });
-
-export const GermanAuxiliaryInflectionSelectionSchema =
-	GermanAuxiliarySchemas.InflectionSelectionSchema;
-export const GermanAuxiliaryLemmaSelectionSchema =
-	GermanAuxiliarySchemas.LemmaSelectionSchema;
-export const GermanAuxiliaryStandardVariantSelectionSchema =
-	GermanAuxiliarySchemas.StandardVariantSelectionSchema;
-export const GermanAuxiliaryTypoInflectionSelectionSchema =
-	GermanAuxiliarySchemas.TypoInflectionSelectionSchema;
-export const GermanAuxiliaryTypoLemmaSelectionSchema =
-	GermanAuxiliarySchemas.TypoLemmaSelectionSchema;
-export const GermanAuxiliaryTypoVariantSelectionSchema =
-	GermanAuxiliarySchemas.TypoVariantSelectionSchema;
-export const GermanAuxiliaryLemmaSchema = GermanAuxiliarySchemas.LemmaSchema;

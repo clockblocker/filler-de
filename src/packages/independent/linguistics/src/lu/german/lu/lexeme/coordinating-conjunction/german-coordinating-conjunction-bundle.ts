@@ -8,27 +8,10 @@ import {
 	GermanCoordinatingConjunctionMorphologicalRelationsSchema,
 } from "./parts/german-coordinating-conjunction-relations";
 
-const GermanCoordinatingConjunctionSchemas = buildGermanLexemeBundle({
-	inflectionalFeaturesSchema:
-		GermanCoordinatingConjunctionInflectionalFeaturesSchema,
+export const GermanCoordinatingConjunctionSchemas = buildGermanLexemeBundle({
+	inflectionalFeaturesSchema: GermanCoordinatingConjunctionInflectionalFeaturesSchema,
 	inherentFeaturesSchema: GermanCoordinatingConjunctionInherentFeaturesSchema,
 	lexicalRelationsSchema: GermanCoordinatingConjunctionLexicalRelationsSchema,
-	morphologicalRelationsSchema:
-		GermanCoordinatingConjunctionMorphologicalRelationsSchema,
+	morphologicalRelationsSchema: GermanCoordinatingConjunctionMorphologicalRelationsSchema,
 	pos: "CCONJ",
 });
-
-export const GermanCoordinatingConjunctionInflectionSelectionSchema =
-	GermanCoordinatingConjunctionSchemas.InflectionSelectionSchema;
-export const GermanCoordinatingConjunctionLemmaSelectionSchema =
-	GermanCoordinatingConjunctionSchemas.LemmaSelectionSchema;
-export const GermanCoordinatingConjunctionStandardVariantSelectionSchema =
-	GermanCoordinatingConjunctionSchemas.StandardVariantSelectionSchema;
-export const GermanCoordinatingConjunctionTypoInflectionSelectionSchema =
-	GermanCoordinatingConjunctionSchemas.TypoInflectionSelectionSchema;
-export const GermanCoordinatingConjunctionTypoLemmaSelectionSchema =
-	GermanCoordinatingConjunctionSchemas.TypoLemmaSelectionSchema;
-export const GermanCoordinatingConjunctionTypoVariantSelectionSchema =
-	GermanCoordinatingConjunctionSchemas.TypoVariantSelectionSchema;
-export const GermanCoordinatingConjunctionLemmaSchema =
-	GermanCoordinatingConjunctionSchemas.LemmaSchema;

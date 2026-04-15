@@ -8,7 +8,7 @@ export type Definite = z.infer<typeof Definite>;
 
 const reprForDefinite = {
 	Com: "complex",
-	Cons: "construct state / reduced definiteness",
+	Cons: "construct state", // reduced definiteness
 	Def: "definite",
 	Ind: "indefinite",
 	Spec: "specific indefinite",

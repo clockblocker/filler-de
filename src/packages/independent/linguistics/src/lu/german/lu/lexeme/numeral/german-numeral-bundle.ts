@@ -8,24 +8,10 @@ import {
 	GermanNumeralMorphologicalRelationsSchema,
 } from "./parts/german-numeral-relations";
 
-const GermanNumeralSchemas = buildGermanLexemeBundle({
+export const GermanNumeralSchemas = buildGermanLexemeBundle({
 	inflectionalFeaturesSchema: GermanNumeralInflectionalFeaturesSchema,
 	inherentFeaturesSchema: GermanNumeralInherentFeaturesSchema,
 	lexicalRelationsSchema: GermanNumeralLexicalRelationsSchema,
 	morphologicalRelationsSchema: GermanNumeralMorphologicalRelationsSchema,
 	pos: "NUM",
 });
-
-export const GermanNumeralInflectionSelectionSchema =
-	GermanNumeralSchemas.InflectionSelectionSchema;
-export const GermanNumeralLemmaSelectionSchema =
-	GermanNumeralSchemas.LemmaSelectionSchema;
-export const GermanNumeralStandardVariantSelectionSchema =
-	GermanNumeralSchemas.StandardVariantSelectionSchema;
-export const GermanNumeralTypoInflectionSelectionSchema =
-	GermanNumeralSchemas.TypoInflectionSelectionSchema;
-export const GermanNumeralTypoLemmaSelectionSchema =
-	GermanNumeralSchemas.TypoLemmaSelectionSchema;
-export const GermanNumeralTypoVariantSelectionSchema =
-	GermanNumeralSchemas.TypoVariantSelectionSchema;
-export const GermanNumeralLemmaSchema = GermanNumeralSchemas.LemmaSchema;

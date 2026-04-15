@@ -8,24 +8,10 @@ import {
 	EnglishProperNounMorphologicalRelationsSchema,
 } from "./parts/english-proper-noun-relations";
 
-const EnglishProperNounSchemas = buildEnglishLexemeBundle({
+export const EnglishProperNounSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishProperNounInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishProperNounInherentFeaturesSchema,
 	lexicalRelationsSchema: EnglishProperNounLexicalRelationsSchema,
 	morphologicalRelationsSchema: EnglishProperNounMorphologicalRelationsSchema,
 	pos: "PROPN",
 });
-
-export const EnglishProperNounInflectionSelectionSchema =
-	EnglishProperNounSchemas.InflectionSelectionSchema;
-export const EnglishProperNounLemmaSelectionSchema =
-	EnglishProperNounSchemas.LemmaSelectionSchema;
-export const EnglishProperNounStandardVariantSelectionSchema =
-	EnglishProperNounSchemas.StandardVariantSelectionSchema;
-export const EnglishProperNounTypoInflectionSelectionSchema =
-	EnglishProperNounSchemas.TypoInflectionSelectionSchema;
-export const EnglishProperNounTypoLemmaSelectionSchema =
-	EnglishProperNounSchemas.TypoLemmaSelectionSchema;
-export const EnglishProperNounTypoVariantSelectionSchema =
-	EnglishProperNounSchemas.TypoVariantSelectionSchema;
-export const EnglishProperNounLemmaSchema = EnglishProperNounSchemas.LemmaSchema;

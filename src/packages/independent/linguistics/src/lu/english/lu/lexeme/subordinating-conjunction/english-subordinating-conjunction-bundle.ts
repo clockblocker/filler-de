@@ -8,29 +8,10 @@ import {
 	EnglishSubordinatingConjunctionMorphologicalRelationsSchema,
 } from "./parts/english-subordinating-conjunction-relations";
 
-const EnglishSubordinatingConjunctionSchemas = buildEnglishLexemeBundle({
-	inflectionalFeaturesSchema:
-		EnglishSubordinatingConjunctionInflectionalFeaturesSchema,
-	inherentFeaturesSchema:
-		EnglishSubordinatingConjunctionInherentFeaturesSchema,
-	lexicalRelationsSchema:
-		EnglishSubordinatingConjunctionLexicalRelationsSchema,
-	morphologicalRelationsSchema:
-		EnglishSubordinatingConjunctionMorphologicalRelationsSchema,
+export const EnglishSubordinatingConjunctionSchemas = buildEnglishLexemeBundle({
+	inflectionalFeaturesSchema: EnglishSubordinatingConjunctionInflectionalFeaturesSchema,
+	inherentFeaturesSchema: EnglishSubordinatingConjunctionInherentFeaturesSchema,
+	lexicalRelationsSchema: EnglishSubordinatingConjunctionLexicalRelationsSchema,
+	morphologicalRelationsSchema: EnglishSubordinatingConjunctionMorphologicalRelationsSchema,
 	pos: "SCONJ",
 });
-
-export const EnglishSubordinatingConjunctionInflectionSelectionSchema =
-	EnglishSubordinatingConjunctionSchemas.InflectionSelectionSchema;
-export const EnglishSubordinatingConjunctionLemmaSelectionSchema =
-	EnglishSubordinatingConjunctionSchemas.LemmaSelectionSchema;
-export const EnglishSubordinatingConjunctionStandardVariantSelectionSchema =
-	EnglishSubordinatingConjunctionSchemas.StandardVariantSelectionSchema;
-export const EnglishSubordinatingConjunctionTypoInflectionSelectionSchema =
-	EnglishSubordinatingConjunctionSchemas.TypoInflectionSelectionSchema;
-export const EnglishSubordinatingConjunctionTypoLemmaSelectionSchema =
-	EnglishSubordinatingConjunctionSchemas.TypoLemmaSelectionSchema;
-export const EnglishSubordinatingConjunctionTypoVariantSelectionSchema =
-	EnglishSubordinatingConjunctionSchemas.TypoVariantSelectionSchema;
-export const EnglishSubordinatingConjunctionLemmaSchema =
-	EnglishSubordinatingConjunctionSchemas.LemmaSchema;

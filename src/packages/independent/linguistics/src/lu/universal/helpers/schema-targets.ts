@@ -19,12 +19,12 @@ export type LemmaSchemaFor<
 > = z.ZodType<LemmaFor<LK, D>>;
 
 export type InherentFeaturesFor<
-	LK extends LemmaKind = LemmaKind,
+	LK extends "Lexeme" = "Lexeme",
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > = LemmaFor<LK, D>["inherentFeatures"];
 
 export type InherentFeaturesSchemaFor<
-	LK extends LemmaKind = LemmaKind,
+	LK extends "Lexeme" = "Lexeme",
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > = z.ZodType<InherentFeaturesFor<LK, D>>;
 
@@ -45,7 +45,12 @@ export type SelectionSchemaFor<
 export type InflectionalFeaturesFor<
 	LK extends LemmaKind = LemmaKind,
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
-> = SelectionFor<"Standard", "Inflection", LK, D>["surface"]["inflectionalFeatures"];
+> = SelectionFor<
+	"Standard",
+	"Inflection",
+	LK,
+	D
+>["surface"]["inflectionalFeatures"];
 
 export type InflectionalFeaturesSchemaFor<
 	LK extends LemmaKind = LemmaKind,

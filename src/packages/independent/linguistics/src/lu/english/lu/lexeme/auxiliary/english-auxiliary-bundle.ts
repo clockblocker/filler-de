@@ -8,24 +8,10 @@ import {
 	EnglishAuxiliaryMorphologicalRelationsSchema,
 } from "./parts/english-auxiliary-relations";
 
-const EnglishAuxiliarySchemas = buildEnglishLexemeBundle({
+export const EnglishAuxiliarySchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishAuxiliaryInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishAuxiliaryInherentFeaturesSchema,
 	lexicalRelationsSchema: EnglishAuxiliaryLexicalRelationsSchema,
 	morphologicalRelationsSchema: EnglishAuxiliaryMorphologicalRelationsSchema,
 	pos: "AUX",
 });
-
-export const EnglishAuxiliaryInflectionSelectionSchema =
-	EnglishAuxiliarySchemas.InflectionSelectionSchema;
-export const EnglishAuxiliaryLemmaSelectionSchema =
-	EnglishAuxiliarySchemas.LemmaSelectionSchema;
-export const EnglishAuxiliaryStandardVariantSelectionSchema =
-	EnglishAuxiliarySchemas.StandardVariantSelectionSchema;
-export const EnglishAuxiliaryTypoInflectionSelectionSchema =
-	EnglishAuxiliarySchemas.TypoInflectionSelectionSchema;
-export const EnglishAuxiliaryTypoLemmaSelectionSchema =
-	EnglishAuxiliarySchemas.TypoLemmaSelectionSchema;
-export const EnglishAuxiliaryTypoVariantSelectionSchema =
-	EnglishAuxiliarySchemas.TypoVariantSelectionSchema;
-export const EnglishAuxiliaryLemmaSchema = EnglishAuxiliarySchemas.LemmaSchema;

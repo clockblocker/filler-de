@@ -9,11 +9,11 @@ export type Degree = z.infer<typeof Degree>;
 const reprForDegree = {
 	Abs: "absolute superlative",
 	Aug: "augmentative",
-	Cmp: "comparative, second degree",
+	Cmp: "comparative", // second degree
 	Dim: "diminutive",
 	Equ: "equative",
-	Pos: "positive, first degree",
-	Sup: "superlative, third degree",
+	Pos: "positive", // first degree
+	Sup: "superlative", // third degree
 } satisfies Record<Degree, string>;
 
 export function getReprForDegree(degree: Degree) {

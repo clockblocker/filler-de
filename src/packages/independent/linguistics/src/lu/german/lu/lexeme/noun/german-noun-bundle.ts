@@ -1,12 +1,12 @@
 import z from "zod/v3";
+import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
+import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
 import type {
 	LemmaSchemaFor,
 	SelectionSchemaFor,
 } from "../../../../universal/helpers/schema-targets";
-import { buildInflectionSelection } from "../../../../universal/factories/buildInflectionSelection";
-import { buildLemmaSelection } from "../../../../universal/factories/buildLemmaSelection";
-import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import { withLingIdLemmaDtoCompatibility } from "../../../../universal/ling-id-schema-compat";
+import { MeaningInEmojisSchema } from "../../../../universal/meaning-in-emojis";
 import {
 	GermanNounInflectionalFeaturesSchema,
 	GermanNounInherentFeaturesSchema,
@@ -19,58 +19,66 @@ const GermanNounLemmaIdentityShape = {
 
 export const GermanNounIdentityFeatureKeys = ["gender"] as const;
 
-export const GermanNounLemmaSchema = withLingIdLemmaDtoCompatibility(
+const GermanNounLemmaSchema = withLingIdLemmaDtoCompatibility(
 	z.object({
+		canonicalLemma: z.string(),
 		inherentFeatures: GermanNounInherentFeaturesSchema,
 		language: z.literal("German"),
 		lemmaKind: z.literal("Lexeme"),
 		meaningInEmojis: MeaningInEmojisSchema,
 		pos: z.literal("NOUN"),
-		canonicalLemma: z.string(),
 	}),
 ) satisfies LemmaSchemaFor<"Lexeme", "NOUN">;
 
-export const GermanNounInflectionSelectionSchema = buildInflectionSelection({
+const GermanNounInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: GermanNounInflectionalFeaturesSchema,
 	language: "German",
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	lemmaSchema: GermanNounLemmaSchema,
 }) satisfies SelectionSchemaFor<"Standard", "Inflection", "Lexeme", "NOUN">;
 
-export const GermanNounLemmaSelectionSchema = buildLemmaSelection({
+const GermanNounLemmaSelectionSchema = buildLemmaSelection({
 	language: "German",
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	lemmaSchema: GermanNounLemmaSchema,
 }) satisfies SelectionSchemaFor<"Standard", "Lemma", "Lexeme", "NOUN">;
 
-export const GermanNounStandardVariantSelectionSchema = buildLemmaSelection({
+const GermanNounStandardVariantSelectionSchema = buildLemmaSelection({
 	language: "German",
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	lemmaSchema: GermanNounLemmaSchema,
 	surfaceKind: "Variant",
 }) satisfies SelectionSchemaFor<"Standard", "Variant", "Lexeme", "NOUN">;
 
-export const GermanNounTypoInflectionSelectionSchema = buildInflectionSelection(
-	{
-		inflectionalFeaturesSchema: GermanNounInflectionalFeaturesSchema,
-		language: "German",
-		lemmaIdentityShape: GermanNounLemmaIdentityShape,
-		lemmaSchema: GermanNounLemmaSchema,
-		orthographicStatus: "Typo",
-	},
-) satisfies SelectionSchemaFor<"Typo", "Inflection", "Lexeme", "NOUN">;
+const GermanNounTypoInflectionSelectionSchema = buildInflectionSelection({
+	inflectionalFeaturesSchema: GermanNounInflectionalFeaturesSchema,
+	language: "German",
+	lemmaIdentityShape: GermanNounLemmaIdentityShape,
+	lemmaSchema: GermanNounLemmaSchema,
+	orthographicStatus: "Typo",
+}) satisfies SelectionSchemaFor<"Typo", "Inflection", "Lexeme", "NOUN">;
 
-export const GermanNounTypoLemmaSelectionSchema = buildLemmaSelection({
+const GermanNounTypoLemmaSelectionSchema = buildLemmaSelection({
 	language: "German",
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	lemmaSchema: GermanNounLemmaSchema,
 	orthographicStatus: "Typo",
 }) satisfies SelectionSchemaFor<"Typo", "Lemma", "Lexeme", "NOUN">;
 
-export const GermanNounTypoVariantSelectionSchema = buildLemmaSelection({
+const GermanNounTypoVariantSelectionSchema = buildLemmaSelection({
 	language: "German",
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
 	lemmaSchema: GermanNounLemmaSchema,
 	orthographicStatus: "Typo",
 	surfaceKind: "Variant",
 }) satisfies SelectionSchemaFor<"Typo", "Variant", "Lexeme", "NOUN">;
+
+export const GermanNounSchemas = {
+	InflectionSelectionSchema: GermanNounInflectionSelectionSchema,
+	LemmaSchema: GermanNounLemmaSchema,
+	LemmaSelectionSchema: GermanNounLemmaSelectionSchema,
+	StandardVariantSelectionSchema: GermanNounStandardVariantSelectionSchema,
+	TypoInflectionSelectionSchema: GermanNounTypoInflectionSelectionSchema,
+	TypoLemmaSelectionSchema: GermanNounTypoLemmaSelectionSchema,
+	TypoVariantSelectionSchema: GermanNounTypoVariantSelectionSchema,
+};

@@ -1,4 +1,3 @@
-import z from "zod/v3";
 import { Case } from "../../../../universal/enums/feature/ud/case";
 import { Definite } from "../../../../universal/enums/feature/ud/definite";
 import { Degree } from "../../../../universal/enums/feature/ud/degree";
@@ -11,48 +10,24 @@ import { Polite } from "../../../../universal/enums/feature/ud/polite";
 import { Tense } from "../../../../universal/enums/feature/ud/tense";
 import { VerbForm } from "../../../../universal/enums/feature/ud/verb-form";
 
-export const GermanCase = z.enum([
-	Case.enum.Acc,
-	Case.enum.Dat,
-	Case.enum.Gen,
-	Case.enum.Nom,
-]);
+export const GermanCase = Case.extract(["Acc", "Dat", "Gen", "Nom"]);
 
-export const GermanDefinite = z.enum([Definite.enum.Def, Definite.enum.Ind]);
+export const GermanDefinite = Definite.extract(["Def", "Ind"]);
 
-export const GermanDegree = z.enum([
-	Degree.enum.Cmp,
-	Degree.enum.Pos,
-	Degree.enum.Sup,
-]);
+export const GermanDegree = Degree.extract(["Cmp", "Pos", "Sup"]);
 
-export const GermanGender = z.enum([
-	Gender.enum.Fem,
-	Gender.enum.Masc,
-	Gender.enum.Neut,
-]);
+export const GermanGender = Gender.extract(["Fem", "Masc", "Neut"]);
 
-export const GermanMood = z.enum([Mood.enum.Imp, Mood.enum.Ind, Mood.enum.Sub]);
+export const GermanMood = Mood.extract(["Imp", "Ind", "Sub"]);
 
-export const GermanNumber = z.enum([
-	GrammaticalNumber.enum.Plur,
-	GrammaticalNumber.enum.Sing,
-]);
+export const GermanNumber = GrammaticalNumber.extract(["Plur", "Sing"]);
 
-export const GermanPerson = z.enum([
-	Person.enum["1"],
-	Person.enum["2"],
-	Person.enum["3"],
-]);
+export const GermanPerson = Person.extract(["1", "2", "3"]);
 
-export const GermanPolarity = z.enum([Polarity.enum.Neg, Polarity.enum.Pos]);
+export const GermanPolarity = Polarity.extract(["Neg", "Pos"]);
 
-export const GermanPolite = z.enum([Polite.enum.Form]);
+export const GermanPolite = Polite.extract(["Form"]);
 
-export const GermanTense = z.enum([Tense.enum.Past, Tense.enum.Pres]);
+export const GermanTense = Tense.extract(["Past", "Pres"]);
 
-export const GermanVerbForm = z.enum([
-	VerbForm.enum.Fin,
-	VerbForm.enum.Inf,
-	VerbForm.enum.Part,
-]);
+export const GermanVerbForm = VerbForm.extract(["Fin", "Inf", "Part"]);

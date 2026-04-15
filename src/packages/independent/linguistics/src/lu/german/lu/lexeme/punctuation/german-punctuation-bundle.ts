@@ -8,25 +8,10 @@ import {
 	GermanPunctuationMorphologicalRelationsSchema,
 } from "./parts/german-punctuation-relations";
 
-const GermanPunctuationSchemas = buildGermanLexemeBundle({
+export const GermanPunctuationSchemas = buildGermanLexemeBundle({
 	inflectionalFeaturesSchema: GermanPunctuationInflectionalFeaturesSchema,
 	inherentFeaturesSchema: GermanPunctuationInherentFeaturesSchema,
 	lexicalRelationsSchema: GermanPunctuationLexicalRelationsSchema,
 	morphologicalRelationsSchema: GermanPunctuationMorphologicalRelationsSchema,
 	pos: "PUNCT",
 });
-
-export const GermanPunctuationInflectionSelectionSchema =
-	GermanPunctuationSchemas.InflectionSelectionSchema;
-export const GermanPunctuationLemmaSelectionSchema =
-	GermanPunctuationSchemas.LemmaSelectionSchema;
-export const GermanPunctuationStandardVariantSelectionSchema =
-	GermanPunctuationSchemas.StandardVariantSelectionSchema;
-export const GermanPunctuationTypoInflectionSelectionSchema =
-	GermanPunctuationSchemas.TypoInflectionSelectionSchema;
-export const GermanPunctuationTypoLemmaSelectionSchema =
-	GermanPunctuationSchemas.TypoLemmaSelectionSchema;
-export const GermanPunctuationTypoVariantSelectionSchema =
-	GermanPunctuationSchemas.TypoVariantSelectionSchema;
-export const GermanPunctuationLemmaSchema =
-	GermanPunctuationSchemas.LemmaSchema;

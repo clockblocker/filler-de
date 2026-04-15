@@ -6,12 +6,7 @@ import {
 	MorphologicalRelationsSchema,
 	SelectionSchema,
 } from "../../src";
-import {
-	GermanVerbInflectionSelectionSchema,
-	GermanVerbLemmaSchema,
-	GermanVerbLemmaSelectionSchema,
-	GermanVerbTypoInflectionSelectionSchema,
-} from "../../src/lu/german/lu/lexeme/verb/german-verb-bundle";
+import { GermanVerbSchemas } from "../../src/lu/german/lu/lexeme/verb/german-verb-bundle";
 
 const relationId = (label: string) => `rel:${label}`;
 
@@ -29,7 +24,7 @@ function verbSurface(canonicalLemma: string) {
 
 describe("German verb schemas", () => {
 	it("accepts supported German verb inflectional features", () => {
-		const result = GermanVerbInflectionSelectionSchema.safeParse({
+		const result = GermanVerbSchemas.InflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "ging",
@@ -51,7 +46,7 @@ describe("German verb schemas", () => {
 	});
 
 	it("rejects unsupported UD values for German verb inflection", () => {
-		const result = GermanVerbInflectionSelectionSchema.safeParse({
+		const result = GermanVerbSchemas.InflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "gehend",
@@ -73,7 +68,7 @@ describe("German verb schemas", () => {
 	});
 
 	it("accepts lexical inherent features for German verbs", () => {
-		const result = GermanVerbLemmaSchema.safeParse({
+		const result = GermanVerbSchemas.LemmaSchema.safeParse({
 			canonicalLemma: "gehen",
 			inherentFeatures: {
 				governedPreposition: "auf",
@@ -92,7 +87,7 @@ describe("German verb schemas", () => {
 
 	it("accepts the new verb-specific lexical features and rejects empty governed prepositions", () => {
 		expect(
-			GermanVerbLemmaSchema.safeParse({
+			GermanVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "mitkommen",
 				inherentFeatures: {
 					governedPreposition: "mit",
@@ -106,7 +101,7 @@ describe("German verb schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanVerbLemmaSchema.safeParse({
+			GermanVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "warten",
 				inherentFeatures: {
 					governedPreposition: "",
@@ -135,7 +130,7 @@ describe("German verb schemas", () => {
 	});
 
 	it("rejects unsupported inherent feature keys", () => {
-		const result = GermanVerbLemmaSchema.safeParse({
+		const result = GermanVerbSchemas.LemmaSchema.safeParse({
 			canonicalLemma: "gehen",
 			inherentFeatures: {
 				mood: "Ind",
@@ -150,7 +145,7 @@ describe("German verb schemas", () => {
 	});
 
 	it("accepts lemma selections where the spelled selection covers only part of the full surface", () => {
-		const result = GermanVerbLemmaSelectionSchema.safeParse({
+		const result = GermanVerbSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
 			spelledSelection: "gehen",
@@ -165,7 +160,7 @@ describe("German verb schemas", () => {
 	});
 
 	it("accepts typo inflection selections with the typo discriminant", () => {
-		const result = GermanVerbTypoInflectionSelectionSchema.safeParse({
+		const result = GermanVerbSchemas.TypoInflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Typo",
 			spelledSelection: "geheh",

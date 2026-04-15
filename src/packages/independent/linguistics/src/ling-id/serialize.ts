@@ -112,7 +112,9 @@ export function normalizeObservedSurface(
 	value: SerializableLemma | LingIdObservedSurface,
 ): NormalizedObservedSurface {
 	const observedLemma = normalizeLemma(
-		isObservedSurfaceValue(value) ? value.target : value,
+		typeof value === "object" && value !== null && "target" in value
+			? (value as { target: Lemma }).target
+			: value,
 	);
 
 	return {
@@ -207,7 +209,7 @@ function getLemmaFeatures(value: Lemma) {
 			return compactFeatureBag({
 				discourseFormulaRole:
 					"discourseFormulaRole" in value
-						? value.discourseFormulaRole
+						? (value.discourseFormulaRole as string | undefined)
 						: undefined,
 			});
 	}

@@ -1,27 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import { EnglishAdjectiveInflectionSelectionSchema } from "../../src/lu/english/lu/lexeme/adjective/english-adjective-bundle";
-import { EnglishAdpositionInflectionSelectionSchema } from "../../src/lu/english/lu/lexeme/adposition/english-adposition-bundle";
-import { EnglishAuxiliaryInflectionSelectionSchema } from "../../src/lu/english/lu/lexeme/auxiliary/english-auxiliary-bundle";
-import {
-	EnglishDeterminerInflectionSelectionSchema,
-	EnglishDeterminerLemmaSchema,
-} from "../../src/lu/english/lu/lexeme/determiner/english-determiner-bundle";
-import {
-	EnglishNounInflectionSelectionSchema,
-	EnglishNounLemmaSchema,
-} from "../../src/lu/english/lu/lexeme/noun/english-noun-bundle";
-import {
-	EnglishPronounInflectionSelectionSchema,
-	EnglishPronounLemmaSchema,
-} from "../../src/lu/english/lu/lexeme/pronoun/english-pronoun-bundle";
-import {
-	EnglishProperNounInflectionSelectionSchema,
-	EnglishProperNounLemmaSchema,
-} from "../../src/lu/english/lu/lexeme/proper-noun/english-proper-noun-bundle";
-import {
-	EnglishVerbInflectionSelectionSchema,
-	EnglishVerbLemmaSchema,
-} from "../../src/lu/english/lu/lexeme/verb/english-verb-bundle";
+import { EnglishAdjectiveSchemas } from "../../src/lu/english/lu/lexeme/adjective/english-adjective-bundle";
+import { EnglishAdpositionSchemas } from "../../src/lu/english/lu/lexeme/adposition/english-adposition-bundle";
+import { EnglishAuxiliarySchemas } from "../../src/lu/english/lu/lexeme/auxiliary/english-auxiliary-bundle";
+import { EnglishDeterminerSchemas } from "../../src/lu/english/lu/lexeme/determiner/english-determiner-bundle";
+import { EnglishNounSchemas } from "../../src/lu/english/lu/lexeme/noun/english-noun-bundle";
+import { EnglishPronounSchemas } from "../../src/lu/english/lu/lexeme/pronoun/english-pronoun-bundle";
+import { EnglishProperNounSchemas } from "../../src/lu/english/lu/lexeme/proper-noun/english-proper-noun-bundle";
+import { EnglishVerbSchemas } from "../../src/lu/english/lu/lexeme/verb/english-verb-bundle";
 
 function lexemeSurface(pos: string, canonicalLemma: string) {
 	return {
@@ -38,7 +23,7 @@ function lexemeSurface(pos: string, canonicalLemma: string) {
 describe("English schema specificity", () => {
 	it("keeps English adjective inflection to degree and adpositions uninflected", () => {
 		expect(
-			EnglishAdjectiveInflectionSelectionSchema.safeParse({
+			EnglishAdjectiveSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
 				spelledSelection: "smaller",
@@ -54,7 +39,7 @@ describe("English schema specificity", () => {
 		).toBe(true);
 
 		expect(
-			EnglishAdjectiveInflectionSelectionSchema.safeParse({
+			EnglishAdjectiveSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
 				spelledSelection: "small",
@@ -70,7 +55,7 @@ describe("English schema specificity", () => {
 		).toBe(false);
 
 		expect(
-			EnglishAdpositionInflectionSelectionSchema.safeParse({
+			EnglishAdpositionSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
 				spelledSelection: "to",
@@ -88,7 +73,7 @@ describe("English schema specificity", () => {
 
 	it("limits English NOUN and PROPN case to genitive and drops grammatical gender", () => {
 		expect(
-			EnglishNounInflectionSelectionSchema.safeParse({
+			EnglishNounSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
 				spelledSelection: "dog's",
@@ -105,7 +90,7 @@ describe("English schema specificity", () => {
 		).toBe(true);
 
 		expect(
-			EnglishNounInflectionSelectionSchema.safeParse({
+			EnglishNounSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
 				spelledSelection: "dog",
@@ -121,7 +106,7 @@ describe("English schema specificity", () => {
 		).toBe(false);
 
 		expect(
-			EnglishProperNounInflectionSelectionSchema.safeParse({
+			EnglishProperNounSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
 				spelledSelection: "Anna",
@@ -137,7 +122,7 @@ describe("English schema specificity", () => {
 		).toBe(false);
 
 		expect(
-			EnglishNounLemmaSchema.safeParse({
+			EnglishNounSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "dog",
 				inherentFeatures: {
 					gender: "Masc",
@@ -150,7 +135,7 @@ describe("English schema specificity", () => {
 		).toBe(false);
 
 		expect(
-			EnglishProperNounLemmaSchema.safeParse({
+			EnglishProperNounSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "Anna",
 				inherentFeatures: {
 					gender: "Fem",
@@ -165,7 +150,7 @@ describe("English schema specificity", () => {
 
 	it("removes German-specific verb and auxiliary morphology from English", () => {
 		expect(
-			EnglishVerbInflectionSelectionSchema.safeParse({
+			EnglishVerbSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
 				spelledSelection: "washed",
@@ -181,7 +166,7 @@ describe("English schema specificity", () => {
 		).toBe(false);
 
 		expect(
-			EnglishAuxiliaryInflectionSelectionSchema.safeParse({
+			EnglishAuxiliarySchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
 				spelledSelection: "is",
@@ -197,7 +182,7 @@ describe("English schema specificity", () => {
 		).toBe(false);
 
 		expect(
-			EnglishVerbLemmaSchema.safeParse({
+			EnglishVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "look",
 				inherentFeatures: {
 					governedPreposition: "to",
@@ -211,7 +196,7 @@ describe("English schema specificity", () => {
 		).toBe(true);
 
 		expect(
-			EnglishVerbLemmaSchema.safeParse({
+			EnglishVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "wash",
 				inherentFeatures: {
 					reflex: true,
@@ -224,7 +209,7 @@ describe("English schema specificity", () => {
 		).toBe(false);
 
 		expect(
-			EnglishVerbLemmaSchema.safeParse({
+			EnglishVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "wash",
 				inherentFeatures: {
 					separable: true,
@@ -237,7 +222,7 @@ describe("English schema specificity", () => {
 		).toBe(false);
 
 		expect(
-			EnglishVerbLemmaSchema.safeParse({
+			EnglishVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "look",
 				inherentFeatures: {
 					governedPreposition: "",
@@ -252,7 +237,7 @@ describe("English schema specificity", () => {
 
 	it("keeps English pronoun case narrow and rejects polite pronoun or determiner features", () => {
 		expect(
-			EnglishPronounInflectionSelectionSchema.safeParse({
+			EnglishPronounSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
 				spelledSelection: "him",
@@ -268,7 +253,7 @@ describe("English schema specificity", () => {
 		).toBe(true);
 
 		expect(
-			EnglishPronounInflectionSelectionSchema.safeParse({
+			EnglishPronounSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
 				spelledSelection: "him",
@@ -284,7 +269,7 @@ describe("English schema specificity", () => {
 		).toBe(false);
 
 		expect(
-			EnglishPronounLemmaSchema.safeParse({
+			EnglishPronounSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "him",
 				inherentFeatures: {
 					polite: "Form",
@@ -297,7 +282,7 @@ describe("English schema specificity", () => {
 		).toBe(false);
 
 		expect(
-			EnglishDeterminerLemmaSchema.safeParse({
+			EnglishDeterminerSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "this",
 				inherentFeatures: {
 					polite: "Form",
@@ -310,7 +295,7 @@ describe("English schema specificity", () => {
 		).toBe(false);
 
 		expect(
-			EnglishDeterminerInflectionSelectionSchema.safeParse({
+			EnglishDeterminerSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
 				spelledSelection: "this",

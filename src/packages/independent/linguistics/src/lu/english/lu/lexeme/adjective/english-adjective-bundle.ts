@@ -8,30 +8,10 @@ import {
 	EnglishAdjectiveMorphologicalRelationsSchema,
 } from "./parts/english-adjective-relations";
 
-const EnglishAdjectiveSchemas = buildEnglishLexemeBundle({
+export const EnglishAdjectiveSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishAdjectiveInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishAdjectiveInherentFeaturesSchema,
 	lexicalRelationsSchema: EnglishAdjectiveLexicalRelationsSchema,
 	morphologicalRelationsSchema: EnglishAdjectiveMorphologicalRelationsSchema,
 	pos: "ADJ",
 });
-
-export const EnglishAdjectiveInflectionSelectionSchema =
-	EnglishAdjectiveSchemas.InflectionSelectionSchema;
-
-export const EnglishAdjectiveLemmaSelectionSchema =
-	EnglishAdjectiveSchemas.LemmaSelectionSchema;
-
-export const EnglishAdjectiveStandardVariantSelectionSchema =
-	EnglishAdjectiveSchemas.StandardVariantSelectionSchema;
-
-export const EnglishAdjectiveTypoInflectionSelectionSchema =
-	EnglishAdjectiveSchemas.TypoInflectionSelectionSchema;
-
-export const EnglishAdjectiveTypoLemmaSelectionSchema =
-	EnglishAdjectiveSchemas.TypoLemmaSelectionSchema;
-
-export const EnglishAdjectiveTypoVariantSelectionSchema =
-	EnglishAdjectiveSchemas.TypoVariantSelectionSchema;
-
-export const EnglishAdjectiveLemmaSchema = EnglishAdjectiveSchemas.LemmaSchema;

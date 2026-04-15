@@ -17,7 +17,7 @@ const EnglishNounLemmaIdentityShape = {
 	pos: z.literal("NOUN"),
 } satisfies z.ZodRawShape;
 
-export const EnglishNounLemmaSchema = withLingIdLemmaDtoCompatibility(
+const EnglishNounLemmaSchema = withLingIdLemmaDtoCompatibility(
 	z.object({
 		meaningInEmojis: MeaningInEmojisSchema,
 		inherentFeatures: EnglishNounInherentFeaturesSchema,
@@ -28,27 +28,27 @@ export const EnglishNounLemmaSchema = withLingIdLemmaDtoCompatibility(
 	}),
 ) satisfies LemmaSchemaFor<"Lexeme", "NOUN">;
 
-export const EnglishNounInflectionSelectionSchema = buildInflectionSelection({
+const EnglishNounInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: EnglishNounInflectionalFeaturesSchema,
 	language: "English",
 	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 }) satisfies SelectionSchemaFor<"Standard", "Inflection", "Lexeme", "NOUN">;
 
-export const EnglishNounLemmaSelectionSchema = buildLemmaSelection({
+const EnglishNounLemmaSelectionSchema = buildLemmaSelection({
 	language: "English",
 	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 }) satisfies SelectionSchemaFor<"Standard", "Lemma", "Lexeme", "NOUN">;
 
-export const EnglishNounStandardVariantSelectionSchema = buildLemmaSelection({
+const EnglishNounStandardVariantSelectionSchema = buildLemmaSelection({
 	language: "English",
 	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 	surfaceKind: "Variant",
 }) satisfies SelectionSchemaFor<"Standard", "Variant", "Lexeme", "NOUN">;
 
-export const EnglishNounTypoInflectionSelectionSchema = buildInflectionSelection(
+const EnglishNounTypoInflectionSelectionSchema = buildInflectionSelection(
 	{
 		inflectionalFeaturesSchema: EnglishNounInflectionalFeaturesSchema,
 		language: "English",
@@ -58,17 +58,27 @@ export const EnglishNounTypoInflectionSelectionSchema = buildInflectionSelection
 	},
 ) satisfies SelectionSchemaFor<"Typo", "Inflection", "Lexeme", "NOUN">;
 
-export const EnglishNounTypoLemmaSelectionSchema = buildLemmaSelection({
+const EnglishNounTypoLemmaSelectionSchema = buildLemmaSelection({
 	language: "English",
 	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 	orthographicStatus: "Typo",
 }) satisfies SelectionSchemaFor<"Typo", "Lemma", "Lexeme", "NOUN">;
 
-export const EnglishNounTypoVariantSelectionSchema = buildLemmaSelection({
+const EnglishNounTypoVariantSelectionSchema = buildLemmaSelection({
 	language: "English",
 	lemmaSchema: EnglishNounLemmaSchema,
 	lemmaIdentityShape: EnglishNounLemmaIdentityShape,
 	orthographicStatus: "Typo",
 	surfaceKind: "Variant",
 }) satisfies SelectionSchemaFor<"Typo", "Variant", "Lexeme", "NOUN">;
+
+export const EnglishNounSchemas = {
+	InflectionSelectionSchema: EnglishNounInflectionSelectionSchema,
+	LemmaSelectionSchema: EnglishNounLemmaSelectionSchema,
+	StandardVariantSelectionSchema: EnglishNounStandardVariantSelectionSchema,
+	TypoInflectionSelectionSchema: EnglishNounTypoInflectionSelectionSchema,
+	TypoLemmaSelectionSchema: EnglishNounTypoLemmaSelectionSchema,
+	TypoVariantSelectionSchema: EnglishNounTypoVariantSelectionSchema,
+	LemmaSchema: EnglishNounLemmaSchema,
+};

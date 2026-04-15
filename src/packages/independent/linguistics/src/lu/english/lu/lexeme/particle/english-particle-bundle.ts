@@ -8,24 +8,10 @@ import {
 	EnglishParticleMorphologicalRelationsSchema,
 } from "./parts/english-particle-relations";
 
-const EnglishParticleSchemas = buildEnglishLexemeBundle({
+export const EnglishParticleSchemas = buildEnglishLexemeBundle({
 	inflectionalFeaturesSchema: EnglishParticleInflectionalFeaturesSchema,
 	inherentFeaturesSchema: EnglishParticleInherentFeaturesSchema,
 	lexicalRelationsSchema: EnglishParticleLexicalRelationsSchema,
 	morphologicalRelationsSchema: EnglishParticleMorphologicalRelationsSchema,
 	pos: "PART",
 });
-
-export const EnglishParticleInflectionSelectionSchema =
-	EnglishParticleSchemas.InflectionSelectionSchema;
-export const EnglishParticleLemmaSelectionSchema =
-	EnglishParticleSchemas.LemmaSelectionSchema;
-export const EnglishParticleStandardVariantSelectionSchema =
-	EnglishParticleSchemas.StandardVariantSelectionSchema;
-export const EnglishParticleTypoInflectionSelectionSchema =
-	EnglishParticleSchemas.TypoInflectionSelectionSchema;
-export const EnglishParticleTypoLemmaSelectionSchema =
-	EnglishParticleSchemas.TypoLemmaSelectionSchema;
-export const EnglishParticleTypoVariantSelectionSchema =
-	EnglishParticleSchemas.TypoVariantSelectionSchema;
-export const EnglishParticleLemmaSchema = EnglishParticleSchemas.LemmaSchema;

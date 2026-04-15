@@ -1,4 +1,3 @@
-import z from "zod/v3";
 import { NumType } from "../../../../../universal/enums/feature/ud/num-type";
 import {
 	GermanCase,
@@ -14,8 +13,4 @@ export const GermanOtherMood = GermanMood;
 export const GermanOtherNumber = GermanNumber;
 export const GermanOtherVerbForm = GermanVerbForm;
 
-export const GermanOtherNumType = z.enum([
-	NumType.enum.Card,
-	NumType.enum.Mult,
-	NumType.enum.Range,
-]);
+export const GermanOtherNumType = NumType.extract(["Card", "Mult", "Range"]);

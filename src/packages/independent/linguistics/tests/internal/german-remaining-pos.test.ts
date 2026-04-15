@@ -1,65 +1,20 @@
 import { describe, expect, it } from "bun:test";
 import { LemmaSchema, SelectionSchema } from "../../src";
-import {
-	GermanAdjectiveInflectionSelectionSchema,
-	GermanAdjectiveLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/adjective/german-adjective-bundle";
-import {
-	GermanAdpositionInflectionSelectionSchema,
-	GermanAdpositionLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/adposition/german-adposition-bundle";
-import {
-	GermanAdverbInflectionSelectionSchema,
-	GermanAdverbLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/adverb/german-adverb-bundle";
-import {
-	GermanAuxiliaryInflectionSelectionSchema,
-	GermanAuxiliaryLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/auxiliary/german-auxiliary-bundle";
-import {
-	GermanCoordinatingConjunctionInflectionSelectionSchema,
-	GermanCoordinatingConjunctionLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/coordinating-conjunction/german-coordinating-conjunction-bundle";
-import {
-	GermanDeterminerInflectionSelectionSchema,
-	GermanDeterminerLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/determiner/german-determiner-bundle";
-import {
-	GermanInterjectionInflectionSelectionSchema,
-	GermanInterjectionLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/interjection/german-interjection-bundle";
-import {
-	GermanNumeralInflectionSelectionSchema,
-	GermanNumeralLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/numeral/german-numeral-bundle";
-import {
-	GermanOtherInflectionSelectionSchema,
-	GermanOtherLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/other/german-other-bundle";
-import {
-	GermanParticleInflectionSelectionSchema,
-	GermanParticleLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/particle/german-particle-bundle";
-import {
-	GermanPronounInflectionSelectionSchema,
-	GermanPronounLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/pronoun/german-pronoun-bundle";
-import {
-	GermanProperNounInflectionSelectionSchema,
-	GermanProperNounLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/proper-noun/german-proper-noun-bundle";
-import {
-	GermanPunctuationInflectionSelectionSchema,
-	GermanPunctuationLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/punctuation/german-punctuation-bundle";
-import {
-	GermanSubordinatingConjunctionInflectionSelectionSchema,
-	GermanSubordinatingConjunctionLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/subordinating-conjunction/german-subordinating-conjunction-bundle";
-import {
-	GermanSymbolInflectionSelectionSchema,
-	GermanSymbolLemmaSchema,
-} from "../../src/lu/german/lu/lexeme/symbol/german-symbol-bundle";
+import { GermanAdjectiveSchemas } from "../../src/lu/german/lu/lexeme/adjective/german-adjective-bundle";
+import { GermanAdpositionSchemas } from "../../src/lu/german/lu/lexeme/adposition/german-adposition-bundle";
+import { GermanAdverbSchemas } from "../../src/lu/german/lu/lexeme/adverb/german-adverb-bundle";
+import { GermanAuxiliarySchemas } from "../../src/lu/german/lu/lexeme/auxiliary/german-auxiliary-bundle";
+import { GermanCoordinatingConjunctionSchemas } from "../../src/lu/german/lu/lexeme/coordinating-conjunction/german-coordinating-conjunction-bundle";
+import { GermanDeterminerSchemas } from "../../src/lu/german/lu/lexeme/determiner/german-determiner-bundle";
+import { GermanInterjectionSchemas } from "../../src/lu/german/lu/lexeme/interjection/german-interjection-bundle";
+import { GermanNumeralSchemas } from "../../src/lu/german/lu/lexeme/numeral/german-numeral-bundle";
+import { GermanOtherSchemas } from "../../src/lu/german/lu/lexeme/other/german-other-bundle";
+import { GermanParticleSchemas } from "../../src/lu/german/lu/lexeme/particle/german-particle-bundle";
+import { GermanPronounSchemas } from "../../src/lu/german/lu/lexeme/pronoun/german-pronoun-bundle";
+import { GermanProperNounSchemas } from "../../src/lu/german/lu/lexeme/proper-noun/german-proper-noun-bundle";
+import { GermanPunctuationSchemas } from "../../src/lu/german/lu/lexeme/punctuation/german-punctuation-bundle";
+import { GermanSubordinatingConjunctionSchemas } from "../../src/lu/german/lu/lexeme/subordinating-conjunction/german-subordinating-conjunction-bundle";
+import { GermanSymbolSchemas } from "../../src/lu/german/lu/lexeme/symbol/german-symbol-bundle";
 
 function lexemeSurface(pos: string, canonicalLemma: string) {
 	return {
@@ -76,7 +31,7 @@ function lexemeSurface(pos: string, canonicalLemma: string) {
 describe("German remaining POS schemas", () => {
 	it("accepts core inflectional schemas across the richer POS classes", () => {
 		expect(
-			GermanAdjectiveInflectionSelectionSchema.safeParse({
+			GermanAdjectiveSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
 				spelledSelection: "kleiner",
@@ -95,7 +50,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanAdpositionInflectionSelectionSchema.safeParse({
+			GermanAdpositionSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
 				spelledSelection: "zur",
@@ -111,7 +66,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanAuxiliaryInflectionSelectionSchema.safeParse({
+			GermanAuxiliarySchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
 				spelledSelection: "war",
@@ -131,7 +86,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanDeterminerInflectionSelectionSchema.safeParse({
+			GermanDeterminerSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
 				spelledSelection: "dieser",
@@ -149,7 +104,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanPronounInflectionSelectionSchema.safeParse({
+			GermanPronounSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
 				spelledSelection: "sich",
@@ -167,7 +122,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanProperNounInflectionSelectionSchema.safeParse({
+			GermanProperNounSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
 				spelledSelection: "Angelas",
@@ -186,7 +141,7 @@ describe("German remaining POS schemas", () => {
 
 	it("accepts lexical feature bundles for the richer POS classes", () => {
 		expect(
-			GermanAdverbLemmaSchema.safeParse({
+			GermanAdverbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "gern",
 				inherentFeatures: {
 					pronType: "Dem",
@@ -199,7 +154,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanDeterminerLemmaSchema.safeParse({
+			GermanDeterminerSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "dies",
 				inherentFeatures: {
 					definite: "Def",
@@ -213,7 +168,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanNumeralLemmaSchema.safeParse({
+			GermanNumeralSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "eins",
 				inherentFeatures: {
 					numType: "Card",
@@ -226,7 +181,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanParticleLemmaSchema.safeParse({
+			GermanParticleSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "nicht",
 				inherentFeatures: {
 					polarity: "Neg",
@@ -239,7 +194,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanProperNounLemmaSchema.safeParse({
+			GermanProperNounSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "Angela",
 				inherentFeatures: {
 					gender: "Masc",
@@ -252,7 +207,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanSymbolLemmaSchema.safeParse({
+			GermanSymbolSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "%",
 				inherentFeatures: {
 					numType: "Range",
@@ -265,7 +220,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanOtherLemmaSchema.safeParse({
+			GermanOtherSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "foobar",
 				inherentFeatures: {
 					foreign: true,
@@ -280,7 +235,7 @@ describe("German remaining POS schemas", () => {
 
 	it("keeps the non-inflecting classes strict", () => {
 		expect(
-			GermanCoordinatingConjunctionInflectionSelectionSchema.safeParse({
+			GermanCoordinatingConjunctionSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
 				spelledSelection: "und",
@@ -294,7 +249,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanInterjectionInflectionSelectionSchema.safeParse({
+			GermanInterjectionSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
 				spelledSelection: "ach",
@@ -308,7 +263,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanPunctuationInflectionSelectionSchema.safeParse({
+			GermanPunctuationSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
 				spelledSelection: ",",
@@ -322,7 +277,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanSubordinatingConjunctionInflectionSelectionSchema.safeParse({
+			GermanSubordinatingConjunctionSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
 				spelledSelection: "weil",
@@ -336,7 +291,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(true);
 
 		expect(
-			GermanCoordinatingConjunctionLemmaSchema.safeParse({
+			GermanCoordinatingConjunctionSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "und",
 				inherentFeatures: {
 					case: "Nom",
@@ -351,7 +306,7 @@ describe("German remaining POS schemas", () => {
 
 	it("rejects unsupported feature values where subsets matter", () => {
 		expect(
-			GermanAdverbLemmaSchema.safeParse({
+			GermanAdverbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "gern",
 				inherentFeatures: {
 					pronType: "Prs",
@@ -364,7 +319,7 @@ describe("German remaining POS schemas", () => {
 		).toBe(false);
 
 		expect(
-			GermanOtherInflectionSelectionSchema.safeParse({
+			GermanOtherSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
 				spelledSelection: "foobar",
@@ -382,21 +337,21 @@ describe("German remaining POS schemas", () => {
 
 	it("exposes registry access for the newly implemented POSes", () => {
 		const standardInflectionChecks = [
-			["ADJ", GermanAdjectiveInflectionSelectionSchema],
-			["ADP", GermanAdpositionInflectionSelectionSchema],
-			["ADV", GermanAdverbInflectionSelectionSchema],
-			["AUX", GermanAuxiliaryInflectionSelectionSchema],
-			["CCONJ", GermanCoordinatingConjunctionInflectionSelectionSchema],
-			["DET", GermanDeterminerInflectionSelectionSchema],
-			["INTJ", GermanInterjectionInflectionSelectionSchema],
-			["NUM", GermanNumeralInflectionSelectionSchema],
-			["PART", GermanParticleInflectionSelectionSchema],
-			["PRON", GermanPronounInflectionSelectionSchema],
-			["PROPN", GermanProperNounInflectionSelectionSchema],
-			["PUNCT", GermanPunctuationInflectionSelectionSchema],
-			["SCONJ", GermanSubordinatingConjunctionInflectionSelectionSchema],
-			["SYM", GermanSymbolInflectionSelectionSchema],
-			["X", GermanOtherInflectionSelectionSchema],
+			["ADJ", GermanAdjectiveSchemas.InflectionSelectionSchema],
+			["ADP", GermanAdpositionSchemas.InflectionSelectionSchema],
+			["ADV", GermanAdverbSchemas.InflectionSelectionSchema],
+			["AUX", GermanAuxiliarySchemas.InflectionSelectionSchema],
+			["CCONJ", GermanCoordinatingConjunctionSchemas.InflectionSelectionSchema],
+			["DET", GermanDeterminerSchemas.InflectionSelectionSchema],
+			["INTJ", GermanInterjectionSchemas.InflectionSelectionSchema],
+			["NUM", GermanNumeralSchemas.InflectionSelectionSchema],
+			["PART", GermanParticleSchemas.InflectionSelectionSchema],
+			["PRON", GermanPronounSchemas.InflectionSelectionSchema],
+			["PROPN", GermanProperNounSchemas.InflectionSelectionSchema],
+			["PUNCT", GermanPunctuationSchemas.InflectionSelectionSchema],
+			["SCONJ", GermanSubordinatingConjunctionSchemas.InflectionSelectionSchema],
+			["SYM", GermanSymbolSchemas.InflectionSelectionSchema],
+			["X", GermanOtherSchemas.InflectionSelectionSchema],
 		] as const;
 
 		for (const [pos, schema] of standardInflectionChecks) {
@@ -406,21 +361,21 @@ describe("German remaining POS schemas", () => {
 		}
 
 		const lemmaChecks = [
-			["ADJ", GermanAdjectiveLemmaSchema],
-			["ADP", GermanAdpositionLemmaSchema],
-			["ADV", GermanAdverbLemmaSchema],
-			["AUX", GermanAuxiliaryLemmaSchema],
-			["CCONJ", GermanCoordinatingConjunctionLemmaSchema],
-			["DET", GermanDeterminerLemmaSchema],
-			["INTJ", GermanInterjectionLemmaSchema],
-			["NUM", GermanNumeralLemmaSchema],
-			["PART", GermanParticleLemmaSchema],
-			["PRON", GermanPronounLemmaSchema],
-			["PROPN", GermanProperNounLemmaSchema],
-			["PUNCT", GermanPunctuationLemmaSchema],
-			["SCONJ", GermanSubordinatingConjunctionLemmaSchema],
-			["SYM", GermanSymbolLemmaSchema],
-			["X", GermanOtherLemmaSchema],
+			["ADJ", GermanAdjectiveSchemas.LemmaSchema],
+			["ADP", GermanAdpositionSchemas.LemmaSchema],
+			["ADV", GermanAdverbSchemas.LemmaSchema],
+			["AUX", GermanAuxiliarySchemas.LemmaSchema],
+			["CCONJ", GermanCoordinatingConjunctionSchemas.LemmaSchema],
+			["DET", GermanDeterminerSchemas.LemmaSchema],
+			["INTJ", GermanInterjectionSchemas.LemmaSchema],
+			["NUM", GermanNumeralSchemas.LemmaSchema],
+			["PART", GermanParticleSchemas.LemmaSchema],
+			["PRON", GermanPronounSchemas.LemmaSchema],
+			["PROPN", GermanProperNounSchemas.LemmaSchema],
+			["PUNCT", GermanPunctuationSchemas.LemmaSchema],
+			["SCONJ", GermanSubordinatingConjunctionSchemas.LemmaSchema],
+			["SYM", GermanSymbolSchemas.LemmaSchema],
+			["X", GermanOtherSchemas.LemmaSchema],
 		] as const;
 
 		for (const [pos, schema] of lemmaChecks) {

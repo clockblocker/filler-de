@@ -1,4 +1,3 @@
-import z from "zod/v3";
 import { Case } from "../../../../universal/enums/feature/ud/case";
 import { Definite } from "../../../../universal/enums/feature/ud/definite";
 import { Degree } from "../../../../universal/enums/feature/ud/degree";
@@ -10,45 +9,22 @@ import { Polarity } from "../../../../universal/enums/feature/ud/polarity";
 import { Tense } from "../../../../universal/enums/feature/ud/tense";
 import { VerbForm } from "../../../../universal/enums/feature/ud/verb-form";
 
-export const EnglishCase = z.enum([
-	Case.enum.Acc,
-	Case.enum.Gen,
-	Case.enum.Nom,
-]);
+export const EnglishCase = Case.extract(["Acc", "Gen", "Nom"]);
 
-export const EnglishDefinite = z.enum([Definite.enum.Def, Definite.enum.Ind]);
+export const EnglishDefinite = Definite.extract(["Def", "Ind"]);
 
-export const EnglishDegree = z.enum([
-	Degree.enum.Cmp,
-	Degree.enum.Pos,
-	Degree.enum.Sup,
-]);
+export const EnglishDegree = Degree.extract(["Cmp", "Pos", "Sup"]);
 
-export const EnglishGender = z.enum([
-	Gender.enum.Fem,
-	Gender.enum.Masc,
-	Gender.enum.Neut,
-]);
+export const EnglishGender = Gender.extract(["Fem", "Masc", "Neut"]);
 
-export const EnglishMood = z.enum([Mood.enum.Imp, Mood.enum.Ind, Mood.enum.Sub]);
+export const EnglishMood = Mood.extract(["Imp", "Ind", "Sub"]);
 
-export const EnglishNumber = z.enum([
-	GrammaticalNumber.enum.Plur,
-	GrammaticalNumber.enum.Sing,
-]);
+export const EnglishNumber = GrammaticalNumber.extract(["Plur", "Sing"]);
 
-export const EnglishPerson = z.enum([
-	Person.enum["1"],
-	Person.enum["2"],
-	Person.enum["3"],
-]);
+export const EnglishPerson = Person.extract(["1", "2", "3"]);
 
-export const EnglishPolarity = z.enum([Polarity.enum.Neg, Polarity.enum.Pos]);
+export const EnglishPolarity = Polarity.extract(["Neg", "Pos"]);
 
-export const EnglishTense = z.enum([Tense.enum.Past, Tense.enum.Pres]);
+export const EnglishTense = Tense.extract(["Past", "Pres"]);
 
-export const EnglishVerbForm = z.enum([
-	VerbForm.enum.Fin,
-	VerbForm.enum.Inf,
-	VerbForm.enum.Part,
-]);
+export const EnglishVerbForm = VerbForm.extract(["Fin", "Inf", "Part"]);
