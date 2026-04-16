@@ -1,10 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-	lingOperation,
-	lingSchemaFor,
-	type Selection,
-	type Surface,
-} from "../../src";
+import { lingOperation, lingSchemaFor, type Selection } from "../../src";
 import {
 	englishWalkLemma,
 	englishWalkResolvedLemmaSelection,
