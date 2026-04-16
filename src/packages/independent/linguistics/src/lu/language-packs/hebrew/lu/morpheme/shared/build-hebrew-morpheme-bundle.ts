@@ -3,6 +3,7 @@ import type { MorphemeKind } from "../../../../../universal/enums/kind/morpheme-
 import { buildLemmaSelection } from "../../../../../universal/factories/buildLemmaSelection";
 import { defineLemmaSchemaDescriptor } from "../../../../../universal/factories/lemma-schema-descriptor";
 import { MeaningInEmojisSchema } from "../../../../../universal/meaning-in-emojis";
+import { MorphemeCanonicalLemmaSchema } from "../../../../../universal/morpheme-canonical-lemma";
 
 export function buildHebrewMorphemeBundle<MK extends MorphemeKind>({
 	morphemeKind,
@@ -18,7 +19,7 @@ export function buildHebrewMorphemeBundle<MK extends MorphemeKind>({
 		language: "Hebrew",
 		schema: z
 			.object({
-				canonicalLemma: z.string(),
+				canonicalLemma: MorphemeCanonicalLemmaSchema,
 				isClosedSet: z.boolean().optional(),
 				language: z.literal("Hebrew"),
 				lemmaKind: z.literal("Morpheme"),

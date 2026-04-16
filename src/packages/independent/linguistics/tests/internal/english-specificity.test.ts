@@ -12,7 +12,7 @@ import { EnglishPronounSchemas } from "../../src/lu/language-packs/english/lu/le
 import { EnglishProperNounSchemas } from "../../src/lu/language-packs/english/lu/lexeme/pos/english-proper-noun";
 import { EnglishSymbolSchemas } from "../../src/lu/language-packs/english/lu/lexeme/pos/english-symbol";
 import { EnglishVerbSchemas } from "../../src/lu/language-packs/english/lu/lexeme/pos/english-verb";
-import { makeLexemeSurfaceReference } from "../attested-entities";
+import { makeLexemeSurfaceReference } from "../helpers";
 
 describe("English schema specificity", () => {
 	it("keeps English adjective inflection to degree and adpositions uninflected", () => {

@@ -7,7 +7,7 @@ import {
 	germanAbPrefixLemma,
 	germanAufJedenFallDiscourseFormulaSelection,
 	germanEinSpaziergangImParkClichePartialSelection,
-} from "../attested-entities";
+} from "../helpers";
 
 const { Lemma: LemmaSchema, Selection: SelectionSchema } = lingSchemaFor;
 
@@ -34,7 +34,7 @@ describe("German non-lexeme schemas", () => {
 
 	it("accepts German morpheme lemmas", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
-			canonicalLemma: "ab-",
+			canonicalLemma: "ab",
 			isClosedSet: false,
 			language: "German",
 			lemmaKind: "Morpheme",
@@ -47,13 +47,33 @@ describe("German non-lexeme schemas", () => {
 
 	it("rejects wrong discriminants for German morpheme lemmas", () => {
 		const result = GermanMorphemeLemmaSchemas.Prefix.safeParse({
-			canonicalLemma: "ab-",
+			canonicalLemma: "ab",
 			language: "German",
 			lemmaKind: "Morpheme",
 			morphemeKind: "Suffix",
 		});
 
 		expect(result.success).toBe(false);
+	});
+
+	it("rejects decorated morpheme lemmas", () => {
+		const prefixResult = GermanMorphemeLemmaSchemas.Prefix.safeParse({
+			canonicalLemma: "ab-",
+			language: "German",
+			lemmaKind: "Morpheme",
+			meaningInEmojis: "🧩",
+			morphemeKind: "Prefix",
+		});
+		const suffixResult = GermanMorphemeLemmaSchemas.Suffix.safeParse({
+			canonicalLemma: "-heit",
+			language: "German",
+			lemmaKind: "Morpheme",
+			meaningInEmojis: "🧩",
+			morphemeKind: "Suffix",
+		});
+
+		expect(prefixResult.success).toBe(false);
+		expect(suffixResult.success).toBe(false);
 	});
 
 	it("accepts discourse formula phraseme roles and rejects them for other kinds", () => {
@@ -107,17 +127,17 @@ describe("German non-lexeme schemas", () => {
 				language: "German",
 				orthographicStatus: "Typo",
 				selectionCoverage: "Full",
-				spelledSelection: "-hait",
+				spelledSelection: "hait",
 				surface: {
 					discriminators: {
 						lemmaKind: "Morpheme",
 						lemmaSubKind: "Suffix",
 					},
 					language: "German",
-					normalizedFullSurface: "-hait",
+					normalizedFullSurface: "hait",
 					surfaceKind: "Lemma",
 					target: {
-						canonicalLemma: "-heit",
+						canonicalLemma: "heit",
 					},
 				},
 			});
@@ -143,6 +163,30 @@ describe("German non-lexeme schemas", () => {
 
 		expect(morphemeResult.success).toBe(true);
 		expect(phrasemeResult.success).toBe(true);
+	});
+
+	it("rejects decorated unresolved morpheme targets", () => {
+		const result =
+			SelectionSchema.German.Typo.Lemma.Morpheme.Suffix.safeParse({
+				language: "German",
+				orthographicStatus: "Typo",
+				selectionCoverage: "Full",
+				spelledSelection: "hait",
+				surface: {
+					discriminators: {
+						lemmaKind: "Morpheme",
+						lemmaSubKind: "Suffix",
+					},
+					language: "German",
+					normalizedFullSurface: "hait",
+					surfaceKind: "Lemma",
+					target: {
+						canonicalLemma: "-heit",
+					},
+				},
+			});
+
+		expect(result.success).toBe(false);
 	});
 
 	it("accepts German lemma selections with a narrower spelled selection", () => {

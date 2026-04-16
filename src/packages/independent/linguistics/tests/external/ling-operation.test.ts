@@ -6,7 +6,7 @@ import {
 	englishWalkResolvedLemmaSurface,
 	englishWalkUnresolvedLemmaSurface,
 	germanFeminineSeeLemma,
-} from "../attested-entities";
+} from "../helpers";
 
 describe("lingOperation", () => {
 	it("extracts null from unknown selections", () => {

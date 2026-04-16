@@ -13,7 +13,7 @@ import {
 	RelationTargetLingIdsSchema,
 	type Selection,
 } from "../../src";
-import { englishWalkLemma } from "../attested-entities";
+import { englishWalkLemma } from "../helpers";
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
 	? 1

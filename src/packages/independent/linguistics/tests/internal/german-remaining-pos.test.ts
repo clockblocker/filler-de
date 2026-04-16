@@ -16,7 +16,7 @@ import { GermanProperNounSchemas } from "../../src/lu/language-packs/german/lu/l
 import { GermanPunctuationSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-punctuation";
 import { GermanSubordinatingConjunctionSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-subordinating-conjunction";
 import { GermanSymbolSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-symbol";
-import { makeLexemeSurfaceReference } from "../attested-entities";
+import { makeLexemeSurfaceReference } from "../helpers";
 
 const { Lemma: LemmaSchema, Selection: SelectionSchema } = lingSchemaFor;
 

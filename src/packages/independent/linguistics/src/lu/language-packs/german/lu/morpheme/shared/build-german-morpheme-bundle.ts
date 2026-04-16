@@ -4,6 +4,7 @@ import type { MorphemeKind } from "../../../../../universal/enums/kind/morpheme-
 import { buildLemmaSelection } from "../../../../../universal/factories/buildLemmaSelection";
 import { defineLemmaSchemaDescriptor } from "../../../../../universal/factories/lemma-schema-descriptor";
 import { MeaningInEmojisSchema } from "../../../../../universal/meaning-in-emojis";
+import { MorphemeCanonicalLemmaSchema } from "../../../../../universal/morpheme-canonical-lemma";
 
 export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 	morphemeKind,
@@ -18,7 +19,7 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 		language: "German",
 		schema: z
 			.object({
-				canonicalLemma: z.string(),
+				canonicalLemma: MorphemeCanonicalLemmaSchema,
 				hasSepPrefix:
 					morphemeKind === "Prefix"
 						? UniversalFeature.HasSepPrefix.optional()

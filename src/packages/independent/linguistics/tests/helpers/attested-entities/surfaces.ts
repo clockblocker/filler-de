@@ -1,57 +1,5 @@
-import type {
-	ResolvedSurface,
-	Surface,
-	UnresolvedSurface,
-} from "../../src";
-import {
-	englishWalkLemma,
-	germanHausLemma,
-} from "./lemmas";
-
-export function makeLexemeSurfaceReference<lemmaSubKind extends string>(
-	lemmaSubKind: lemmaSubKind,
-	canonicalLemma: string,
-) {
-	return {
-		discriminators: {
-			lemmaKind: "Lexeme" as const,
-			lemmaSubKind,
-		},
-		target: {
-			canonicalLemma,
-		},
-	};
-}
-
-export function makeMorphemeSurfaceReference<lemmaSubKind extends string>(
-	lemmaSubKind: lemmaSubKind,
-	canonicalLemma: string,
-) {
-	return {
-		discriminators: {
-			lemmaKind: "Morpheme" as const,
-			lemmaSubKind,
-		},
-		target: {
-			canonicalLemma,
-		},
-	};
-}
-
-export function makePhrasemeSurfaceReference<lemmaSubKind extends string>(
-	lemmaSubKind: lemmaSubKind,
-	canonicalLemma: string,
-) {
-	return {
-		discriminators: {
-			lemmaKind: "Phraseme" as const,
-			lemmaSubKind,
-		},
-		target: {
-			canonicalLemma,
-		},
-	};
-}
+import type { ResolvedSurface, Surface, UnresolvedSurface } from "../../../src";
+import { englishWalkLemma, germanHausLemma } from "./lemmas";
 
 // Attestation: "They [walk] home together."
 export const englishWalkResolvedInflectionSurface = {
@@ -109,13 +57,7 @@ export const englishWalkResolvedLemmaSurface = {
 	normalizedFullSurface: "walk",
 	surfaceKind: "Lemma",
 	target: englishWalkLemma,
-} satisfies ResolvedSurface<
-	"English",
-	"Standard",
-	"Lemma",
-	"Lexeme",
-	"VERB"
->;
+} satisfies ResolvedSurface<"English", "Standard", "Lemma", "Lexeme", "VERB">;
 
 // Attestation: "They [walk] home together."
 export const englishWalkUnresolvedLemmaSurface = {
@@ -165,10 +107,4 @@ export const germanHausResolvedLemmaSurface = {
 	normalizedFullSurface: "Haus",
 	surfaceKind: "Lemma",
 	target: germanHausLemma,
-} satisfies ResolvedSurface<
-	"German",
-	"Standard",
-	"Lemma",
-	"Lexeme",
-	"NOUN"
->;
+} satisfies ResolvedSurface<"German", "Standard", "Lemma", "Lexeme", "NOUN">;

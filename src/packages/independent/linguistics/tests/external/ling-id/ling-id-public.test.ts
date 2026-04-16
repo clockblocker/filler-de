@@ -14,7 +14,7 @@ import {
 	englishWalkStandardFullSelection,
 	englishWalkUnresolvedInflectionSurface,
 	germanFeminineSeeLemma,
-} from "../../attested-entities";
+} from "../../helpers";
 
 describe("LingIdCodec", () => {
 	it("encodes and decodes each concrete entity kind", () => {

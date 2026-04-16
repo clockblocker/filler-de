@@ -8,7 +8,7 @@ import {
 	MorphologicalRelationsSchema,
 } from "../../src";
 import { GermanVerbSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-verb";
-import { makeLexemeSurfaceReference } from "../attested-entities";
+import { makeLexemeSurfaceReference } from "../helpers";
 
 const { Selection: SelectionSchema } = lingSchemaFor;
 

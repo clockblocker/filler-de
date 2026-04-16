@@ -124,7 +124,11 @@ export function buildSelectionSurfaceSchema<
 			language: z.literal(language),
 			normalizedFullSurface: z.string(),
 			target: z.union([
-				z.object({ canonicalLemma: z.string() }).strict(),
+				z
+					.object({
+						canonicalLemma: getCanonicalLemmaSchema(lemmaSchema),
+					})
+					.strict(),
 				lemmaSchema,
 			]),
 		})
@@ -213,4 +217,16 @@ function isUnresolvedSurfaceTarget(
 	target: { canonicalLemma: string } | Record<string, unknown>,
 ): target is { canonicalLemma: string } {
 	return "canonicalLemma" in target && !("lemmaKind" in target);
+}
+
+function getCanonicalLemmaSchema(lemmaSchema: z.ZodTypeAny): z.ZodTypeAny {
+	if (lemmaSchema instanceof z.ZodObject) {
+		const shape = lemmaSchema.shape;
+		const canonicalLemmaSchema = shape.canonicalLemma;
+		if (canonicalLemmaSchema !== undefined) {
+			return canonicalLemmaSchema;
+		}
+	}
+
+	return z.string();
 }

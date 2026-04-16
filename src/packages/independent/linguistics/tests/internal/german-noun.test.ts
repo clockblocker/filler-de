@@ -11,7 +11,7 @@ import {
 	germanHausLemma,
 	germanKindLemma,
 	makeLexemeSurfaceReference,
-} from "../attested-entities";
+} from "../helpers";
 
 const { Lemma: LemmaSchema, Selection: SelectionSchema } = lingSchemaFor;
 

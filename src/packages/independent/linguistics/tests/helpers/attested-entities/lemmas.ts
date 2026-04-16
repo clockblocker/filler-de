@@ -1,4 +1,4 @@
-import type { Lemma } from "../../src";
+import type { Lemma } from "../../../src";
 
 // Attestation: "They [walk] home together."
 export const englishWalkLemma = {
@@ -56,9 +56,9 @@ export const germanGehenLemma = {
 	pos: "VERB",
 } satisfies Lemma<"German", "Lexeme", "VERB">;
 
-// Attestation: "[Ab]-fahrt nur am Gleis 3."
+// Attestation: "[Ab]fahrt nur am Gleis 3."
 export const germanAbPrefixLemma = {
-	canonicalLemma: "ab-",
+	canonicalLemma: "ab",
 	language: "German",
 	lemmaKind: "Morpheme",
 	meaningInEmojis: "🧩",

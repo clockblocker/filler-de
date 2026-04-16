@@ -1,9 +1,9 @@
-import type { KnownSelection, Selection } from "../../src";
+import type { KnownSelection, Selection } from "../../../src";
+import { makePhrasemeSurfaceReference } from "../functions/builders";
 import {
 	englishGiveUpTypoUnresolvedInflectionSurface,
 	englishWalkResolvedLemmaSurface,
 	englishWalkUnresolvedInflectionSurface,
-	makePhrasemeSurfaceReference,
 } from "./surfaces";
 
 // Attestation: "They [walk] home together."
@@ -31,13 +31,7 @@ export const englishGiveUpTypoPartialUpSelection = {
 	selectionCoverage: "Partial",
 	spelledSelection: "up",
 	surface: englishGiveUpTypoUnresolvedInflectionSurface,
-} satisfies Selection<
-	"English",
-	"Typo",
-	"Inflection",
-	"Lexeme",
-	"VERB"
->;
+} satisfies Selection<"English", "Typo", "Inflection", "Lexeme", "VERB">;
 
 // Attestation: "Mark [gvae] up on it."
 export const englishGiveUpTypoPartialGvaeSelection = {
@@ -46,13 +40,7 @@ export const englishGiveUpTypoPartialGvaeSelection = {
 	selectionCoverage: "Partial",
 	spelledSelection: "gvae",
 	surface: englishGiveUpTypoUnresolvedInflectionSurface,
-} satisfies Selection<
-	"English",
-	"Typo",
-	"Inflection",
-	"Lexeme",
-	"VERB"
->;
+} satisfies Selection<"English", "Typo", "Inflection", "Lexeme", "VERB">;
 
 // Attestation: "[Auf jeden Fall] komme ich morgen."
 export const germanAufJedenFallDiscourseFormulaSelection = {
@@ -81,10 +69,7 @@ export const germanEinSpaziergangImParkClichePartialSelection = {
 	selectionCoverage: "Partial",
 	spelledSelection: "Spaziergang",
 	surface: {
-		...makePhrasemeSurfaceReference(
-			"Cliché",
-			"ein Spaziergang im Park",
-		),
+		...makePhrasemeSurfaceReference("Cliché", "ein Spaziergang im Park"),
 		language: "German",
 		normalizedFullSurface: "ein Spaziergang im Park",
 		surfaceKind: "Lemma",
