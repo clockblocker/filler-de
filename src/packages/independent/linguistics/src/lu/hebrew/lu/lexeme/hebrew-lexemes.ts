@@ -36,7 +36,7 @@ export const HebrewLexemeLemmaSchemas = {
 	SYM: HebrewSymbolSchemas.LemmaSchema,
 	VERB: HebrewVerbSchemas.LemmaSchema,
 	X: HebrewOtherSchemas.LemmaSchema,
-} as unknown as LemmaSchemaLanguageShape["Lexeme"];
+} satisfies LemmaSchemaLanguageShape["Lexeme"];
 
 export const HebrewStandardInflectionLexemeSelectionSchemas = {
 	ADJ: HebrewAdjectiveSchemas.InflectionSelectionSchema,
@@ -55,7 +55,7 @@ export const HebrewStandardInflectionLexemeSelectionSchemas = {
 	SYM: HebrewSymbolSchemas.InflectionSelectionSchema,
 	VERB: HebrewVerbSchemas.InflectionSelectionSchema,
 	X: HebrewOtherSchemas.InflectionSelectionSchema,
-} as unknown as SelectionSchemaLanguageShape["Standard"]["Inflection"]["Lexeme"];
+} satisfies SelectionSchemaLanguageShape["Standard"]["Inflection"]["Lexeme"];
 
 export const HebrewStandardLemmaLexemeSelectionSchemas = {
 	ADJ: HebrewAdjectiveSchemas.LemmaSelectionSchema,
@@ -74,7 +74,7 @@ export const HebrewStandardLemmaLexemeSelectionSchemas = {
 	SYM: HebrewSymbolSchemas.LemmaSelectionSchema,
 	VERB: HebrewVerbSchemas.LemmaSelectionSchema,
 	X: HebrewOtherSchemas.LemmaSelectionSchema,
-} as unknown as SelectionSchemaLanguageShape["Standard"]["Lemma"]["Lexeme"];
+} satisfies SelectionSchemaLanguageShape["Standard"]["Lemma"]["Lexeme"];
 
 export const HebrewStandardVariantLexemeSelectionSchemas = {
 	ADJ: HebrewAdjectiveSchemas.StandardVariantSelectionSchema,
@@ -93,7 +93,7 @@ export const HebrewStandardVariantLexemeSelectionSchemas = {
 	SYM: HebrewSymbolSchemas.StandardVariantSelectionSchema,
 	VERB: HebrewVerbSchemas.StandardVariantSelectionSchema,
 	X: HebrewOtherSchemas.StandardVariantSelectionSchema,
-} as unknown as SelectionSchemaLanguageShape["Standard"]["Variant"]["Lexeme"];
+} satisfies SelectionSchemaLanguageShape["Standard"]["Variant"]["Lexeme"];
 
 export const HebrewTypoInflectionLexemeSelectionSchemas = {
 	ADJ: HebrewAdjectiveSchemas.TypoInflectionSelectionSchema,
@@ -112,7 +112,7 @@ export const HebrewTypoInflectionLexemeSelectionSchemas = {
 	SYM: HebrewSymbolSchemas.TypoInflectionSelectionSchema,
 	VERB: HebrewVerbSchemas.TypoInflectionSelectionSchema,
 	X: HebrewOtherSchemas.TypoInflectionSelectionSchema,
-} as unknown as SelectionSchemaLanguageShape["Typo"]["Inflection"]["Lexeme"];
+} satisfies SelectionSchemaLanguageShape["Typo"]["Inflection"]["Lexeme"];
 
 export const HebrewTypoLemmaLexemeSelectionSchemas = {
 	ADJ: HebrewAdjectiveSchemas.TypoLemmaSelectionSchema,
@@ -131,7 +131,7 @@ export const HebrewTypoLemmaLexemeSelectionSchemas = {
 	SYM: HebrewSymbolSchemas.TypoLemmaSelectionSchema,
 	VERB: HebrewVerbSchemas.TypoLemmaSelectionSchema,
 	X: HebrewOtherSchemas.TypoLemmaSelectionSchema,
-} as unknown as SelectionSchemaLanguageShape["Typo"]["Lemma"]["Lexeme"];
+} satisfies SelectionSchemaLanguageShape["Typo"]["Lemma"]["Lexeme"];
 
 export const HebrewTypoVariantLexemeSelectionSchemas = {
 	ADJ: HebrewAdjectiveSchemas.TypoVariantSelectionSchema,
@@ -150,4 +150,4 @@ export const HebrewTypoVariantLexemeSelectionSchemas = {
 	SYM: HebrewSymbolSchemas.TypoVariantSelectionSchema,
 	VERB: HebrewVerbSchemas.TypoVariantSelectionSchema,
 	X: HebrewOtherSchemas.TypoVariantSelectionSchema,
-} as unknown as SelectionSchemaLanguageShape["Typo"]["Variant"]["Lexeme"];
+} satisfies SelectionSchemaLanguageShape["Typo"]["Variant"]["Lexeme"];

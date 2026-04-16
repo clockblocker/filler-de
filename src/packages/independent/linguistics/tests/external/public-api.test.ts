@@ -10,12 +10,51 @@ import {
 	MorphologicalRelationsSchema,
 	Relations,
 	RelationTargetLingIdsSchema,
+	type ResolvedSurface,
 	ResolvedSurfaceSchema,
 	type Selection,
 	SelectionSchema,
 	type Surface,
 	SurfaceSchema,
 } from "../../src";
+
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <
+	T,
+>() => T extends B ? 1 : 2
+	? true
+	: false;
+
+type IsAny<T> = 0 extends 1 & T ? true : false;
+
+type Assert<T extends true> = T;
+
+type _selectionLanguageStaysNarrow = Assert<
+	Equal<
+		Selection<
+			"English",
+			"Standard",
+			"Inflection",
+			"Lexeme",
+			"ADJ"
+		>["language"],
+		"English"
+	>
+>;
+
+type _resolvedSurfaceDoesNotCollapseToAny = Assert<
+	Equal<
+		IsAny<
+			ResolvedSurface<
+				"English",
+				"Standard",
+				"Inflection",
+				"Lexeme",
+				"ADJ"
+			>
+		>,
+		false
+	>
+>;
 
 describe("public API usage", () => {
 	it("exposes the curated root API surface", () => {
@@ -257,6 +296,7 @@ describe("public API usage", () => {
 					lemmaSubKind: "ADJ",
 				},
 				inflectionalFeatures: {
+					// @ts-expect-error English adjective inflections should not expose unrelated features
 					case: "Dat",
 				},
 				normalizedFullSurface: "small",
@@ -334,25 +374,48 @@ describe("public API usage", () => {
 	});
 
 	it("validates resolved surfaces through the exported resolved-surface schemas", () => {
+		const resolvedSurface = {
+			discriminators: {
+				lemmaKind: "Lexeme",
+				lemmaSubKind: "NOUN",
+			},
+			normalizedFullSurface: "See",
+			surfaceKind: "Lemma",
+			target: {
+				canonicalLemma: "See",
+				inherentFeatures: {
+					gender: "Fem",
+				},
+				language: "German",
+				lemmaKind: "Lexeme",
+				meaningInEmojis: "🌊",
+				pos: "NOUN",
+			},
+		} satisfies ResolvedSurface<"German", "Standard", "Lemma", "Lexeme", "NOUN">;
+
+		const _invalidResolvedSurface = {
+			discriminators: {
+				lemmaKind: "Lexeme",
+				lemmaSubKind: "NOUN",
+			},
+			normalizedFullSurface: "See",
+			surfaceKind: "Lemma",
+			// @ts-expect-error resolved surfaces require a hydrated lemma target
+			target: {
+				canonicalLemma: "See",
+			},
+		} satisfies ResolvedSurface<
+			"German",
+			"Standard",
+			"Lemma",
+			"Lexeme",
+			"NOUN"
+		>;
+
 		expect(
-			ResolvedSurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse({
-				discriminators: {
-					lemmaKind: "Lexeme",
-					lemmaSubKind: "NOUN",
-				},
-				normalizedFullSurface: "See",
-				surfaceKind: "Lemma",
-				target: {
-					canonicalLemma: "See",
-					inherentFeatures: {
-						gender: "Fem",
-					},
-					language: "German",
-					lemmaKind: "Lexeme",
-					meaningInEmojis: "🌊",
-					pos: "NOUN",
-				},
-			}).success,
+			ResolvedSurfaceSchema.German.Standard.Lemma.Lexeme.NOUN.safeParse(
+				resolvedSurface,
+			).success,
 		).toBe(true);
 	});
 

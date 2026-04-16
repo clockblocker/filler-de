@@ -7,4 +7,4 @@ export const HebrewLemmaSchema = {
 	Lexeme: HebrewLexemeLemmaSchemas,
 	Morpheme: HebrewMorphemeLemmaSchemas,
 	Phraseme: HebrewPhrasemeLemmaSchemas,
-} as unknown as LemmaSchemaLanguageShape;
+} satisfies LemmaSchemaLanguageShape;

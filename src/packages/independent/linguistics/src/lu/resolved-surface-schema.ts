@@ -1,19 +1,44 @@
-import z, { type ZodTypeAny } from "zod/v3";
-import type { SurfaceSchemaLanguageShape } from "./registry-shapes";
+import z from "zod/v3";
 
-export type ResolvedSurfaceSchemaLanguageShape = {
-	[OS in keyof SurfaceSchemaLanguageShape]: {
-		[SK in keyof SurfaceSchemaLanguageShape[OS]]: {
-			[LK in keyof SurfaceSchemaLanguageShape[OS][SK]]: {
-				[D in keyof SurfaceSchemaLanguageShape[OS][SK][LK]]: z.ZodTypeAny;
+type SurfaceSchemaLeaf = z.ZodTypeAny;
+
+type SurfaceSchemaByLemmaKind = Record<string, Record<string, SurfaceSchemaLeaf>>;
+
+type SurfaceSchemaBySurfaceKind = Record<string, SurfaceSchemaByLemmaKind>;
+
+type SurfaceSchemaLanguageLike = Record<string, SurfaceSchemaBySurfaceKind>;
+
+type ResolvedTargetFor<T> = Extract<T, { lemmaKind: unknown }>;
+
+type ResolvedSurfaceValueFor<T> = T extends { target: infer Target }
+	? [ResolvedTargetFor<Target>] extends [never]
+		? never
+		: Omit<T, "target"> & {
+				target: ResolvedTargetFor<Target>;
+			}
+	: never;
+
+type ResolvedSurfaceSchemaFor<T extends SurfaceSchemaLeaf> = z.ZodType<
+	ResolvedSurfaceValueFor<z.infer<T>>,
+	z.ZodTypeDef,
+	z.input<T>
+>;
+
+type ResolvedSurfaceSchemaLanguageFor<T extends SurfaceSchemaLanguageLike> = {
+	[OS in keyof T]: {
+		[SK in keyof T[OS]]: {
+			[LK in keyof T[OS][SK]]: {
+				[D in keyof T[OS][SK][LK]]: ResolvedSurfaceSchemaFor<
+					T[OS][SK][LK][D]
+				>;
 			};
 		};
 	};
 };
 
-export function buildResolvedSurfaceSchemaForLanguage(
-	surfaceSchema: SurfaceSchemaLanguageShape,
-): ResolvedSurfaceSchemaLanguageShape {
+export function buildResolvedSurfaceSchemaForLanguage<
+	const T extends SurfaceSchemaLanguageLike,
+>(surfaceSchema: T): ResolvedSurfaceSchemaLanguageFor<T> {
 	return Object.fromEntries(
 		Object.entries(surfaceSchema).map(
 			([orthographicStatus, surfaceKinds]) => [
@@ -31,7 +56,7 @@ export function buildResolvedSurfaceSchemaForLanguage(
 												([discriminator, schema]) => [
 													discriminator,
 													buildResolvedSurfaceSchema(
-														schema as ZodTypeAny,
+														schema,
 													),
 												],
 											),
@@ -44,10 +69,12 @@ export function buildResolvedSurfaceSchemaForLanguage(
 				),
 			],
 		),
-	) as ResolvedSurfaceSchemaLanguageShape;
+	) as ResolvedSurfaceSchemaLanguageFor<T>;
 }
 
-function buildResolvedSurfaceSchema(schema: ZodTypeAny): ZodTypeAny {
+function buildResolvedSurfaceSchema<T extends SurfaceSchemaLeaf>(
+	schema: T,
+): ResolvedSurfaceSchemaFor<T> {
 	return schema.superRefine((value, ctx) => {
 		if (!hasResolvedSurfaceTarget(value)) {
 			ctx.addIssue({
@@ -56,7 +83,7 @@ function buildResolvedSurfaceSchema(schema: ZodTypeAny): ZodTypeAny {
 				path: ["target"],
 			});
 		}
-	});
+	}) as unknown as ResolvedSurfaceSchemaFor<T>;
 }
 
 function hasResolvedSurfaceTarget(value: unknown): boolean {

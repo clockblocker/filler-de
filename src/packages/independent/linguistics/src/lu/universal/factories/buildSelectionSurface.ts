@@ -6,6 +6,10 @@ const lemmaSubKindKeys = ["morphemeKind", "phrasemeKind", "pos"] as const;
 
 type LemmaSubKindKey = (typeof lemmaSubKindKeys)[number];
 
+type InferShape<Shape extends z.ZodRawShape> = {
+	[K in keyof Shape]: z.infer<Shape[K]>;
+};
+
 export type SelectionLemmaIdentityShape = z.ZodRawShape & {
 	lemmaKind: z.ZodTypeAny;
 };
@@ -30,6 +34,34 @@ export type SelectionLemmaIdentityShapeFor<
 				}
 			: never;
 
+type LemmaSubKindKeyFor<Shape extends SelectionLemmaIdentityShape> = Extract<
+	keyof Shape,
+	LemmaSubKindKey
+>;
+
+export type SelectionSurfaceValueFor<
+	LemmaIdentityShape extends SelectionLemmaIdentityShape,
+	LemmaSchema extends z.ZodTypeAny,
+	SurfaceShape extends z.ZodRawShape,
+> = InferShape<SurfaceShape> & {
+	discriminators: {
+		lemmaKind: z.infer<LemmaIdentityShape["lemmaKind"]>;
+		lemmaSubKind: z.infer<
+			LemmaIdentityShape[LemmaSubKindKeyFor<LemmaIdentityShape>]
+		>;
+	};
+	normalizedFullSurface: string;
+	target: { canonicalLemma: string } | z.infer<LemmaSchema>;
+};
+
+export type SelectionSurfaceSchemaFor<
+	LemmaIdentityShape extends SelectionLemmaIdentityShape,
+	LemmaSchema extends z.ZodTypeAny,
+	SurfaceShape extends z.ZodRawShape,
+> = z.ZodType<
+	SelectionSurfaceValueFor<LemmaIdentityShape, LemmaSchema, SurfaceShape>
+>;
+
 export function buildSelectionSurfaceSchema<
 	LemmaIdentityShape extends SelectionLemmaIdentityShape,
 	LemmaSchema extends z.ZodTypeAny,
@@ -44,7 +76,7 @@ export function buildSelectionSurfaceSchema<
 	lemmaIdentityShape: LemmaIdentityShape;
 	lemmaSchema: LemmaSchema;
 	surfaceShape: SurfaceShape;
-}) {
+}): SelectionSurfaceSchemaFor<LemmaIdentityShape, LemmaSchema, SurfaceShape> {
 	const lemmaSubKindKey = getLemmaSubKindKey(lemmaIdentityShape);
 	const lemmaSubKindSchema = lemmaIdentityShape[
 		lemmaSubKindKey
@@ -109,7 +141,11 @@ export function buildSelectionSurfaceSchema<
 					path: ["target", "lemma", lemmaSubKindKey],
 				});
 			}
-		});
+		}) as SelectionSurfaceSchemaFor<
+		LemmaIdentityShape,
+		LemmaSchema,
+		SurfaceShape
+	>;
 }
 
 function getLemmaSubKindKey(

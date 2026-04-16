@@ -1,5 +1,4 @@
 import z from "zod/v3";
-import type { AbstractSelectionFor } from "../abstract-selection";
 import type { TargetLanguage } from "../enums/core/language";
 import type {
 	LemmaKind,
@@ -9,12 +8,39 @@ import type {
 import type { LemmaDiscriminatorFor } from "../lemma-discriminator";
 import {
 	buildSelectionSurfaceSchema,
+	type SelectionSurfaceSchemaFor,
 	type SelectionLemmaIdentityShapeFor,
 } from "./buildSelectionSurface";
 
 type EmptyZodRawShape = Record<never, never>;
 type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
 type NonInflectionSurfaceKind = Exclude<SurfaceKind, "Inflection">;
+
+type SelectionValueFor<
+	LanguageLiteral extends TargetLanguage,
+	OrthographicStatusLiteral extends KnownOrthographicStatus,
+	SurfaceSchema extends z.ZodTypeAny,
+> = {
+	language: LanguageLiteral;
+	orthographicStatus: OrthographicStatusLiteral;
+	spelledSelection: string;
+	surface: z.infer<SurfaceSchema>;
+};
+
+type SelectionSchemaFor<
+	LanguageLiteral extends TargetLanguage,
+	OrthographicStatusLiteral extends KnownOrthographicStatus,
+	SurfaceSchema extends z.ZodTypeAny,
+> = z.ZodType<
+	SelectionValueFor<LanguageLiteral, OrthographicStatusLiteral, SurfaceSchema>
+> & {
+	shape: {
+		language: z.ZodLiteral<LanguageLiteral>;
+		orthographicStatus: z.ZodLiteral<OrthographicStatusLiteral>;
+		spelledSelection: z.ZodString;
+		surface: SurfaceSchema;
+	};
+};
 
 type BuildLemmaSelectionArgs<
 	LanguageLiteral extends TargetLanguage,
@@ -31,6 +57,13 @@ type BuildLemmaSelectionArgs<
 	orthographicStatus?: OrthographicStatusLiteral;
 	surfaceKind?: SurfaceKindLiteral;
 	surfaceExtraShape?: SurfaceExtraShape;
+};
+
+type LemmaSurfaceShape<
+	SurfaceKindLiteral extends NonInflectionSurfaceKind,
+	SurfaceExtraShape extends z.ZodRawShape,
+> = SurfaceExtraShape & {
+	surfaceKind: z.ZodLiteral<SurfaceKindLiteral>;
 };
 
 export function buildLemmaSelection<
@@ -56,7 +89,21 @@ export function buildLemmaSelection<
 	OrthographicStatusLiteral,
 	SurfaceKindLiteral,
 	SurfaceExtraShape
->) {
+>): SelectionSchemaFor<
+	LanguageLiteral,
+	OrthographicStatusLiteral,
+	SelectionSurfaceSchemaFor<
+		SelectionLemmaIdentityShapeFor<LK, D>,
+		LemmaSchema,
+		LemmaSurfaceShape<SurfaceKindLiteral, SurfaceExtraShape>
+	>
+> {
+	type SurfaceSchema = SelectionSurfaceSchemaFor<
+		SelectionLemmaIdentityShapeFor<LK, D>,
+		LemmaSchema,
+		LemmaSurfaceShape<SurfaceKindLiteral, SurfaceExtraShape>
+	>;
+
 	const surfaceSchema = buildSelectionSurfaceSchema({
 		language,
 		lemmaIdentityShape,
@@ -72,12 +119,9 @@ export function buildLemmaSelection<
 		orthographicStatus: z.literal(orthographicStatus),
 		spelledSelection: z.string(),
 		surface: surfaceSchema,
-	}) as unknown as z.ZodType<
-		AbstractSelectionFor<
-			OrthographicStatusLiteral,
-			SurfaceKindLiteral,
-			LK,
-			D
-		>
+	}) as SelectionSchemaFor<
+		LanguageLiteral,
+		OrthographicStatusLiteral,
+		SurfaceSchema
 	>;
 }

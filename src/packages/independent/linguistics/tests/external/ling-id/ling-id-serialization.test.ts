@@ -226,7 +226,7 @@ describe("Ling ID serialization", () => {
 				lemmaSubKind: "VERB",
 			},
 			normalizedFullSurface: "Bogus",
-		};
+		} as unknown as Parameters<typeof toGermanSurfaceLingId>[0];
 
 		expect(toGermanSurfaceLingId(mutatedResolved)).toBe(
 			"ling:v1:DE:SURF;See;Standard;Lemma;Lexeme;NOUN;-;observed;See;Lexeme;NOUN;gender=Fem;-",

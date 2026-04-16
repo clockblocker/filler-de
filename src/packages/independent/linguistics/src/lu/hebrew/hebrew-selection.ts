@@ -52,4 +52,4 @@ export const HebrewSelectionSchema = {
 		},
 	},
 	Unknown: HebrewUnknownSelectionSchema,
-} as unknown as SelectionSchemaLanguageShape;
+} satisfies SelectionSchemaLanguageShape;

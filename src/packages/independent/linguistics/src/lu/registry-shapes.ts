@@ -17,12 +17,14 @@ type SupportedSelectionSurfaceKind =
 type SupportedSelectionLemmaKindFor<SK extends SupportedSelectionSurfaceKind> =
 	SupportedSelectionLemmaKindsBySurface[SK];
 
+type DiscriminatorSchemaShape<LK extends LemmaKind> = Partial<{
+	[D in LemmaDiscriminatorFor<LK>]: z.ZodTypeAny;
+}>;
+
 export type SelectionSchemaLanguageShape = {
 	[OS in Exclude<OrthographicStatus, "Unknown">]: {
 		[SK in SupportedSelectionSurfaceKind]: {
-			[LK in SupportedSelectionLemmaKindFor<SK>]: {
-				[D in LemmaDiscriminatorFor<LK>]: z.ZodTypeAny;
-			};
+			[LK in SupportedSelectionLemmaKindFor<SK>]: DiscriminatorSchemaShape<LK>;
 		};
 	};
 } & {
@@ -32,15 +34,11 @@ export type SelectionSchemaLanguageShape = {
 export type SurfaceSchemaLanguageShape = {
 	[OS in Exclude<OrthographicStatus, "Unknown">]: {
 		[SK in SupportedSelectionSurfaceKind]: {
-			[LK in SupportedSelectionLemmaKindFor<SK>]: {
-				[D in LemmaDiscriminatorFor<LK>]: z.ZodTypeAny;
-			};
+			[LK in SupportedSelectionLemmaKindFor<SK>]: DiscriminatorSchemaShape<LK>;
 		};
 	};
 };
 
 export type LemmaSchemaLanguageShape = {
-	[LK in LemmaKind]: {
-		[D in LemmaDiscriminatorFor<LK>]: z.ZodTypeAny;
-	};
+	[LK in LemmaKind]: DiscriminatorSchemaShape<LK>;
 };
