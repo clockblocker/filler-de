@@ -7,6 +7,19 @@ import {
 
 type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
 
+type SelectionShapeFor<
+	LanguageLiteral extends TargetLanguage,
+	OrthographicStatusLiteral extends KnownOrthographicStatus,
+	SurfaceSchema extends z.ZodTypeAny,
+> = {
+	language: z.ZodLiteral<LanguageLiteral>;
+	orthographicStatus: z.ZodLiteral<OrthographicStatusLiteral>;
+	spelledSelection: z.ZodString;
+	selectionCoverage: typeof SelectionCoverage;
+	surface: SurfaceSchema;
+	normalizedSelectedSurface?: z.ZodOptional<z.ZodString>;
+};
+
 type StandardSelectionValueFor<
 	LanguageLiteral extends TargetLanguage,
 	SurfaceSchema extends z.ZodTypeAny,
@@ -14,16 +27,16 @@ type StandardSelectionValueFor<
 	| {
 			language: LanguageLiteral;
 			orthographicStatus: "Standard";
-			spelledSelection: string;
 			selectionCoverage: "Full";
+			spelledSelection: string;
 			surface: z.infer<SurfaceSchema>;
 	  }
 	| {
 			language: LanguageLiteral;
-			orthographicStatus: "Standard";
-			spelledSelection: string;
-			selectionCoverage: "Partial";
 			normalizedSelectedSurface: string;
+			orthographicStatus: "Standard";
+			selectionCoverage: "Partial";
+			spelledSelection: string;
 			surface: z.infer<SurfaceSchema>;
 	  };
 
@@ -33,8 +46,8 @@ type TypoSelectionValueFor<
 > = {
 	language: LanguageLiteral;
 	orthographicStatus: "Typo";
-	spelledSelection: string;
 	selectionCoverage: z.infer<typeof SelectionCoverage>;
+	spelledSelection: string;
 	surface: z.infer<SurfaceSchema>;
 };
 
@@ -57,19 +70,41 @@ export type KnownSelectionSchemaFor<
 		SurfaceSchema
 	>
 > & {
-	shape: {
-		language: z.ZodLiteral<LanguageLiteral>;
-		orthographicStatus: z.ZodLiteral<OrthographicStatusLiteral>;
-		spelledSelection: z.ZodString;
-		selectionCoverage: typeof SelectionCoverage;
-		surface: SurfaceSchema;
-		normalizedSelectedSurface?: z.ZodOptional<z.ZodString>;
-	};
+	shape: SelectionShapeFor<
+		LanguageLiteral,
+		OrthographicStatusLiteral,
+		SurfaceSchema
+	>;
 };
 
 export function buildKnownSelectionSchema<
 	LanguageLiteral extends TargetLanguage,
-	OrthographicStatusLiteral extends KnownOrthographicStatus,
+	SurfaceSchema extends z.ZodTypeAny,
+>(args: {
+	language: LanguageLiteral;
+	orthographicStatus: KnownOrthographicStatus;
+	surfaceSchema: SurfaceSchema;
+}):
+	| KnownSelectionSchemaFor<LanguageLiteral, "Standard", SurfaceSchema>
+	| KnownSelectionSchemaFor<LanguageLiteral, "Typo", SurfaceSchema>;
+export function buildKnownSelectionSchema<
+	LanguageLiteral extends TargetLanguage,
+	SurfaceSchema extends z.ZodTypeAny,
+>(args: {
+	language: LanguageLiteral;
+	orthographicStatus: "Standard";
+	surfaceSchema: SurfaceSchema;
+}): KnownSelectionSchemaFor<LanguageLiteral, "Standard", SurfaceSchema>;
+export function buildKnownSelectionSchema<
+	LanguageLiteral extends TargetLanguage,
+	SurfaceSchema extends z.ZodTypeAny,
+>(args: {
+	language: LanguageLiteral;
+	orthographicStatus: "Typo";
+	surfaceSchema: SurfaceSchema;
+}): KnownSelectionSchemaFor<LanguageLiteral, "Typo", SurfaceSchema>;
+export function buildKnownSelectionSchema<
+	LanguageLiteral extends TargetLanguage,
 	SurfaceSchema extends z.ZodTypeAny,
 >({
 	language,
@@ -77,68 +112,88 @@ export function buildKnownSelectionSchema<
 	surfaceSchema,
 }: {
 	language: LanguageLiteral;
-	orthographicStatus: OrthographicStatusLiteral;
+	orthographicStatus: KnownOrthographicStatus;
 	surfaceSchema: SurfaceSchema;
-}): KnownSelectionSchemaFor<
-	LanguageLiteral,
-	OrthographicStatusLiteral,
-	SurfaceSchema
-> {
+}) {
 	if (orthographicStatus === "Standard") {
-		const baseSchema = z
-			.object({
-				language: z.literal(language),
-				normalizedSelectedSurface: z.string().optional(),
-				orthographicStatus: z.literal(orthographicStatus),
-				selectionCoverage: SelectionCoverage,
-				spelledSelection: z.string(),
-				surface: surfaceSchema,
-			})
-			.strict()
-			.strict();
-		const refinedSchema = baseSchema.superRefine((selection, ctx) => {
-			if (selection.selectionCoverage === "Full") {
-				if (selection.normalizedSelectedSurface !== undefined) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						message:
-							'normalizedSelectedSurface must be omitted when selectionCoverage is "Full"',
-						path: ["normalizedSelectedSurface"],
-					});
-				}
-				return;
-			}
-
-			if (selection.normalizedSelectedSurface === undefined) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					message:
-						'normalizedSelectedSurface is required when selectionCoverage is "Partial"',
-					path: ["normalizedSelectedSurface"],
-				});
-			}
+		return buildStandardKnownSelectionSchema({
+			language,
+			surfaceSchema,
 		});
-
-		return Object.assign(refinedSchema, {
-			shape: baseSchema.shape,
-		}) as KnownSelectionSchemaFor<
-			LanguageLiteral,
-			OrthographicStatusLiteral,
-			SurfaceSchema
-		>;
 	}
 
+	return buildTypoKnownSelectionSchema({
+		language,
+		surfaceSchema,
+	});
+}
+
+function buildStandardKnownSelectionSchema<
+	LanguageLiteral extends TargetLanguage,
+	SurfaceSchema extends z.ZodTypeAny,
+>({
+	language,
+	surfaceSchema,
+}: {
+	language: LanguageLiteral;
+	surfaceSchema: SurfaceSchema;
+}): KnownSelectionSchemaFor<LanguageLiteral, "Standard", SurfaceSchema> {
+	const sharedShape = {
+		language: z.literal(language),
+		orthographicStatus: z.literal("Standard"),
+		spelledSelection: z.string(),
+		surface: surfaceSchema,
+	};
+
+	const fullSchema = z
+		.object({
+			...sharedShape,
+			selectionCoverage: z.literal("Full"),
+		})
+		.strict();
+	const partialSchema = z
+		.object({
+			...sharedShape,
+			normalizedSelectedSurface: z.string(),
+			selectionCoverage: z.literal("Partial"),
+		})
+		.strict();
+
+	return withShape(z.union([fullSchema, partialSchema]), {
+		...sharedShape,
+		normalizedSelectedSurface: z.string().optional(),
+		selectionCoverage: SelectionCoverage,
+	}) as KnownSelectionSchemaFor<LanguageLiteral, "Standard", SurfaceSchema>;
+}
+
+function buildTypoKnownSelectionSchema<
+	LanguageLiteral extends TargetLanguage,
+	SurfaceSchema extends z.ZodTypeAny,
+>({
+	language,
+	surfaceSchema,
+}: {
+	language: LanguageLiteral;
+	surfaceSchema: SurfaceSchema;
+}): KnownSelectionSchemaFor<LanguageLiteral, "Typo", SurfaceSchema> {
 	return z
 		.object({
 			language: z.literal(language),
-			orthographicStatus: z.literal(orthographicStatus),
+			orthographicStatus: z.literal("Typo"),
 			selectionCoverage: SelectionCoverage,
 			spelledSelection: z.string(),
 			surface: surfaceSchema,
 		})
 		.strict() as KnownSelectionSchemaFor<
 		LanguageLiteral,
-		OrthographicStatusLiteral,
+		"Typo",
 		SurfaceSchema
 	>;
+}
+
+function withShape<
+	Schema extends z.ZodTypeAny,
+	Shape extends Record<string, z.ZodTypeAny>,
+>(schema: Schema, shape: Shape): Schema & { shape: Shape } {
+	return Object.assign(schema, { shape });
 }
