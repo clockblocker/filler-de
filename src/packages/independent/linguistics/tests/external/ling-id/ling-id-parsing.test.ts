@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { Lemma, ParsedShallowSurfaceDto } from "../../../src";
-import { LingSchemaFor } from "../../../src";
+import { lingSchemaFor } from "../../../src";
 import {
 	buildEnglishWalkLemma,
 	buildGermanFeminineSeeLemma,
@@ -21,7 +21,7 @@ import {
 } from "./ling-id-test-helpers";
 
 const { ResolvedSurface: ResolvedSurfaceSchema, Selection: SelectionSchema } =
-	LingSchemaFor;
+	lingSchemaFor;
 
 describe("Ling ID parsing", () => {
 	it("round-trips resolved surface ids as plain resolved surfaces", () => {

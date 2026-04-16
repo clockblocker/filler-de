@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { LingSchemaFor } from "../../src";
+import { lingSchemaFor } from "../../src";
 import { HebrewNounSchemas } from "../../src/lu/language-packs/hebrew/lu/lexeme/pos/hebrew-noun";
 import { HebrewVerbSchemas } from "../../src/lu/language-packs/hebrew/lu/lexeme/pos/hebrew-verb";
 
-const { Lemma: LemmaSchema, Selection: SelectionSchema } = LingSchemaFor;
+const { Lemma: LemmaSchema, Selection: SelectionSchema } = lingSchemaFor;
 
 describe("Hebrew schema specificity", () => {
 	it("accepts Hebrew-specific lexical and inflectional features", () => {

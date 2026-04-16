@@ -1,4 +1,4 @@
-# Implementation Plan: `src/ling-id/public.ts`
+# Spec + Implementation Plan: `src/ling-id/public.ts`
 
 ## Status
 
@@ -6,312 +6,435 @@ Proposed
 
 ## Summary
 
-Implement `src/ling-id/public.ts` as a fresh Ling ID public API and codec
-layer. `src/old-ling-id/` is reference material only while designing the new
-system; it is not the source of truth, not a compatibility target, and not a
-module to "move out of".
+`src/ling-id/public.ts` should define a new external Ling ID API.
 
-Unlike `lu/public-operations.ts`, the Ling ID layer should stay almost entirely
-universal. For the current ID format, language packs should not own parsing or
-serialization logic. The wire format is structural and derived from the entity
-model; the only language-specific datum in the wire format is the language code
-in the header, which belongs in a tiny universal registry, not in per-language
-packs.
+`src/old-ling-id/` is reference-only and should not constrain:
 
-## Goals
+- public API shape
+- wire format
+- internal folder layout
+- naming
 
-- Define the new Ling ID public API in `src/ling-id/public.ts`.
-- Use `src/old-ling-id/` only as reference while designing the new layer.
-- Centralize universal codec mechanics under `src/ling-id/internal/`.
-- Avoid introducing language packs unless a real wire-format divergence appears.
-- Reduce duplication with `lu/public-operations.ts` where normalization and
-  resolved lemma-surface construction are already defined.
+If the old wire format contains obvious baggage, change it.
 
-## Non-Goals
+The new public API should be entity-based, typed, and small:
 
-- Preserving the old public API just because it exists today.
-- Guaranteeing wire-format compatibility with `src/old-ling-id/` during design.
-- Rebranding IDs from `string` to opaque/branded strings in this step.
-- Adding new Ling ID kinds.
-- Making Ling ID parsing schema-driven.
-- Introducing per-language customization without a concrete need.
+- `LingId<LIK, L>` as the public Ling ID type
+- `makeLingIdFor(...)` to encode real entities
+- `tryToDecode(...)` to decode into real entities via `Result`
+- `LingIdCodec.forLanguage(language)` plus optional per-language static entries
 
-## Proposed Public API
+Legacy public concepts like `LingConverters` and `ShallowSurfaceDto` should not
+survive into the new API.
 
-`src/ling-id/public.ts` should expose a small curated surface. The old module is
-useful as a reference point for ergonomics, but it should not constrain the new
-API if a cleaner shape is better.
+## Design Rules
+
+1. Public API should talk in terms of actual entities, not transport DTOs.
+2. The codec should encode and decode `Lemma`, `Selection`, `ResolvedSurface`,
+   and `UnresolvedSurface`.
+3. `Surface` may exist as a convenience union type, but it should not force a
+   separate wire kind.
+4. Decoding should return `Result`, not throw, for malformed or mismatched IDs.
+5. Language packs should not exist unless the wire format truly diverges by
+   language.
+
+## Public API
+
+Recommended public surface:
 
 ```ts
-export type {
-  LingIdResolvedSurface,
-  LingIdSelection,
-  ParsedShallowSurfaceDto,
-  ParsedSurfaceResult,
-  ResolvedSurfaceLingId,
-  ShallowSurfaceLingId,
-  SurfaceLingId,
-} from "./types";
+import type { Result } from "neverthrow";
 
-export type LingConverters<L extends TargetLanguage> = {
-  getSurfaceLingId: {
-    (value: Lemma<L>): ResolvedSurfaceLingId;
-    (
-      value:
-        | LingIdSelection<L>
-        | LingIdResolvedSurface<L>
-        | SerializableSurface,
-    ): SurfaceLingId | ResolvedSurfaceLingId;
-  };
-  getShallowSurfaceLingId: (
-    value:
-      | LingIdSelection<L>
-      | LingIdResolvedSurface<L>
-      | ParsedShallowSurfaceDtoFor<L>
-      | SerializableSurfaceShell,
-  ) => ShallowSurfaceLingId;
-  parseSurface: (
-    id: SurfaceLingId | ResolvedSurfaceLingId,
-  ) => ParsedSurfaceResult<L>;
-  parseShallowSurface: (
-    id: ShallowSurfaceLingId,
-  ) => ParsedShallowSurfaceDtoFor<L>;
+export type LingId<
+  LIK extends LingEntity = LingEntity,
+  L extends TargetLanguage = TargetLanguage,
+> = string & {
+  readonly __lingIdBrand: unique symbol;
+  readonly __lingEntity?: LIK;
+  readonly __language?: L;
 };
 
-export const LingId = {
-  forLanguage: buildToLingConverters,
-} as const;
+export type LingIdValueFor<
+  LIK extends LingEntity,
+  L extends TargetLanguage,
+> =
+  LIK extends "Lemma" ? Lemma<L> :
+  LIK extends "Selection" ? Selection<L> :
+  LIK extends "ResolvedSurface" ? ResolvedSurface<L> :
+  LIK extends "UnresolvedSurface" ? UnresolvedSurface<L> :
+  LIK extends "Surface" ? Surface<L> :
+  never;
+
+export type LingIdDecodeErrorCode =
+  | "MalformedLingId"
+  | "UnsupportedVersion"
+  | "UnsupportedLanguage"
+  | "UnsupportedEntityKind"
+  | "LanguageMismatch"
+  | "EntityMismatch"
+  | "PayloadDecodeFailed";
+
+export type LingIdDecodeError = {
+  code: LingIdDecodeErrorCode;
+  message: string;
+  input: string;
+  cause?: unknown;
+};
+
+export type LingIdCodecFor<L extends TargetLanguage> = {
+  makeLingIdFor: {
+    (value: Lemma<L>): LingId<"Lemma", L>;
+    (value: Selection<L>): LingId<"Selection", L>;
+    (value: ResolvedSurface<L>): LingId<"ResolvedSurface", L>;
+    (value: UnresolvedSurface<L>): LingId<"UnresolvedSurface", L>;
+    (value: Surface<L>): LingId<"Surface", L>;
+  };
+  tryToDecode: {
+    (id: LingId<"Lemma", L>): Result<Lemma<L>, LingIdDecodeError>;
+    (id: LingId<"Selection", L>): Result<Selection<L>, LingIdDecodeError>;
+    (
+      id: LingId<"ResolvedSurface", L>,
+    ): Result<ResolvedSurface<L>, LingIdDecodeError>;
+    (
+      id: LingId<"UnresolvedSurface", L>,
+    ): Result<UnresolvedSurface<L>, LingIdDecodeError>;
+    (id: LingId<"Surface", L>): Result<Surface<L>, LingIdDecodeError>;
+    (id: string): Result<LingIdValueFor<LingEntity, L>, LingIdDecodeError>;
+  };
+};
+
+export const LingIdCodec = {
+  forLanguage,
+  English: forLanguage("English"),
+  German: forLanguage("German"),
+  Hebrew: forLanguage("Hebrew"),
+} satisfies {
+  forLanguage<L extends TargetLanguage>(language: L): LingIdCodecFor<L>;
+} & {
+  [L in TargetLanguage]: LingIdCodecFor<L>;
+};
 ```
 
-Notes:
+## What Dies
 
-- `LingId.forLanguage(...)` is still a good fit because it matches
-  `LingOperation.forLanguage(...)`.
-- `buildToLingConverters(...)` is optional. Keep it only if it still improves
-  ergonomics after the redesign.
-- Namespace-exported types on `LingId` are optional. Keep them only if they make
-  consumption materially clearer.
-- `public.ts` should be a facade only. Parsing, serialization, guards, and
-  header handling should live below `internal/`.
+These are legacy artifacts and should not appear in the new external API:
 
-## Ownership Split
-
-### Universal
-
-Universal code should own:
-
-- public API construction in `public.ts`
-- all parsing and serialization of the current wire format
-- token escaping/unescaping
-- feature bag compaction and parsing
-- header construction and parsing
-- language mismatch guardrails
-- structural narrowing of lemma vs full surface vs shallow surface inputs
-- conversion from `Lemma` to resolved lemma surface for serialization
-- parsing of wire payloads back into `Selection`, `ResolvedSurface`, and shallow
-  DTOs
-- the mapping between `TargetLanguage` and the short wire header code
-
-### Language packs
-
-For the current format: none.
+- `LingConverters`
+- `buildToLingConverters(...)`
+- `getSurfaceLingId(...)`
+- `getShallowSurfaceLingId(...)`
+- `parseSurface(...)`
+- `parseShallowSurface(...)`
+- `ParsedShallowSurfaceDto`
+- `SerializableSurfaceShell`
 
 Reason:
 
-- lemma body serialization uses universal entity fields
-- surface body serialization uses universal entity fields
-- feature bags already serialize structurally as key/value pairs
-- the parser already reconstructs entities from universal shapes
-- no language currently needs special tokenization, feature aliases, or custom
-  escaping
+- they describe transport mechanics instead of domain entities
+- they expose old encoding accidents
+- they force users to understand special cases like "shallow"
 
-### Optional future language-pack hooks
+## What Replaces "Shallow"
 
-Do not add these now, but if the format ever diverges by language, the only
-pack-owned pieces should be narrow wire concerns such as:
+Nothing public.
 
-- language-specific stable aliases for discriminator values
-- language-specific stable aliases for feature keys or feature values
-- language-specific normalization if a wire payload must differ from the
-  canonical entity representation
+The old "shallow surface" concept is an implementation artifact. The real
+domain distinction is:
 
-If such hooks become necessary, they should live behind a tiny
-`LanguageLingIdPack` registry and should not absorb the generic parser or
-serializer.
+- `ResolvedSurface<L>`
+- `UnresolvedSurface<L>`
+
+If a target is absent, that is an unresolved surface. That should be encoded as
+`LingId<"UnresolvedSurface", L>`, not via a DTO-only API.
+
+If we still want an internal helper that strips targets before serializing some
+payload, keep it internal and do not expose it from `public.ts`.
+
+## Wire Format Direction
+
+The wire format may change.
+
+Recommended direction:
+
+- versioned prefix, for example `ling:v2`
+- explicit language code
+- explicit concrete entity kind
+- payload encoding per concrete entity kind
+
+Avoid these old-format ideas:
+
+- one overloaded `SURF` kind with extra target-mode flags
+- a separate `SURF-SHALLOW` kind
+- public semantics that depend on DTO-only transport shapes
+
+Recommended concrete entity kinds:
+
+- `LEM`
+- `SEL`
+- `SURF-RES`
+- `SURF-UNRES`
+
+`Surface` should remain a type-level union convenience. It does not need its
+own distinct wire kind.
+
+## Universal vs Language-Pack Ownership
+
+### Universal
+
+Universal code should own all of this:
+
+- the public API in `public.ts`
+- Ling ID branding types
+- mapping from `LingEntity` to entity value types
+- encode/decode dispatch
+- wire headers and versioning
+- language-code registry
+- payload tokenization
+- feature bag encoding/decoding
+- decode error construction
+- runtime language/entity validation
+- entity-kind inference for `makeLingIdFor(...)`
+
+### Language packs
+
+For now: none.
+
+The current entity model is already sufficiently structural:
+
+- lemma kind names are universal
+- surface kind names are universal
+- orthographic status values are universal
+- feature keys are already modeled structurally
+- discriminator axes are already modeled structurally
+
+There is no good reason to make each language own its own Ling ID encoder or
+decoder.
+
+### If language packs ever become necessary
+
+Keep them tiny. Only allow pack hooks for genuine wire divergences, such as:
+
+- stable language-specific aliases for payload atoms
+- stable language-specific compression tables
+- stable language-specific normalization needed only for wire output
+
+Even then:
+
+- the parser and serializer stay universal
+- header parsing stays universal
+- error types stay universal
+- public API stays universal
 
 ## Folder Structure
 
-Recommended structure:
+Recommended layout:
 
 ```text
 src/ling-id/
   public.ts
   types.ts
   internal/
-    api-shapes.ts
+    entity-value-map.ts
+    errors.ts
     guards.ts
-    language-registry.ts
-    parse.ts
-    serialize.ts
+    codec/
+      encode.ts
+      decode.ts
+      infer-kind.ts
     wire/
-      escape.ts
-      feature-bag.ts
       header.ts
+      language-codes.ts
+      tokens.ts
+      feature-bag.ts
 ```
 
-Responsibilities:
+### File roles
 
 - `public.ts`
-  Thin facade. Exports public types, builds the language-bound helpers, and
-  exposes the `LingId` namespace object.
+  Exports the branded `LingId` type, decode-error types, `LingIdCodec`, and the
+  minimal namespace-level public surface.
 - `types.ts`
-  Public aliases and DTO types currently defined in `old-ling-id/types.ts`.
-- `internal/api-shapes.ts`
-  Internal structural input/output helper types such as
-  `SerializableSurface`, `SerializableSurfaceShell`, and any internal helper
-  unions that should not leak publicly.
+  Public helper types only, such as `LingIdValueFor` and maybe
+  `ConcreteLingEntity` if needed.
+- `internal/entity-value-map.ts`
+  Maps `LingEntity` to `Lemma`, `Selection`, `ResolvedSurface`,
+  `UnresolvedSurface`, or `Surface`.
+- `internal/errors.ts`
+  Defines `LingIdDecodeError` builders and internal error normalization.
 - `internal/guards.ts`
-  Runtime type guards like `isSelectionValue`, `isResolvedSurfaceValue`,
-  `isShallowSurfaceValue`, plus `assertLanguageMatch(...)`.
-- `internal/language-registry.ts`
-  Universal mapping between `TargetLanguage` and wire header codes like `EN`,
-  `DE`, `HE`.
-- `internal/parse.ts`
-  Public-format parsing entry points and body-level parsers.
-- `internal/serialize.ts`
-  Public-format serializers and normalization helpers.
-- `internal/wire/escape.ts`
-  Token escaping/unescaping helpers.
-- `internal/wire/feature-bag.ts`
-  Feature bag compaction and parse/serialize helpers.
+  Runtime guards for entity-shape detection and language checks.
+- `internal/codec/infer-kind.ts`
+  Infers which concrete entity kind is being encoded from the runtime value.
+- `internal/codec/encode.ts`
+  Encodes actual entities into Ling IDs.
+- `internal/codec/decode.ts`
+  Decodes Ling IDs into actual entities, returning `Result`.
 - `internal/wire/header.ts`
-  `buildHeader(...)`, `parseHeader(...)`, and `joinLingId(...)`.
+  Builds and parses `ling:vN:<lang>:<entity-kind>` headers.
+- `internal/wire/language-codes.ts`
+  Universal language-code mapping.
+- `internal/wire/tokens.ts`
+  Escaping and token join/split helpers.
+- `internal/wire/feature-bag.ts`
+  Feature serialization and parse helpers.
 
-This keeps `src/ling-id/public.ts` small and mirrors the successful pattern
-already used by `src/lu/public-operations.ts`.
+There should be no `language-packs/` subtree under `src/ling-id/` unless a real
+need appears.
 
 ## API Semantics
 
-### `getSurfaceLingId`
-
-Input:
-
-- `Lemma<L>` returns a `ResolvedSurfaceLingId`
-- `LingIdSelection<L>` returns a `SurfaceLingId | ResolvedSurfaceLingId`
-- `LingIdResolvedSurface<L>` returns a `ResolvedSurfaceLingId`
+### `makeLingIdFor(...)`
 
 Behavior:
 
-- if input is a lemma, first materialize the resolved lemma surface
-- if input is a selection, preserve the distinction between unresolved-target
-  and resolved-target surfaces
-- if input already carries a language, the bound builder must reject a mismatch
+- accepts actual entities only
+- infers the concrete Ling entity kind
+- returns a branded `LingId<LIK, L>`
+- never exposes DTO-only intermediate shapes
 
-Implementation note:
+Encoding rules:
 
-- use `LingOperation.convert.lemma.toResolvedLemmaSurface(...)` or extract the
-  same normalization logic into a shared universal helper so Ling ID and
-  operations do not drift
+- `Lemma<L>` -> `LingId<"Lemma", L>`
+- `Selection<L>` -> `LingId<"Selection", L>`
+- `ResolvedSurface<L>` -> `LingId<"ResolvedSurface", L>`
+- `UnresolvedSurface<L>` -> `LingId<"UnresolvedSurface", L>`
+- `Surface<L>` -> `LingId<"Surface", L>`
 
-### `getShallowSurfaceLingId`
-
-Input:
-
-- any full Ling ID surface input
-- shallow parsed DTO
+### `tryToDecode(...)`
 
 Behavior:
 
-- require a surface-shaped input
-- erase target information
-- keep language, orthographic status, normalized surface, discriminators, and
-  inflectional features
+- never throws for malformed input
+- returns `Result`
+- validates header version, language, entity kind, and payload shape
+- returns a real entity, not a parser DTO
 
-### `parseSurface`
+Mismatch behavior:
 
-Behavior:
+- decoding an ID with the wrong bound language returns `err`
+- decoding an ID whose concrete kind conflicts with the requested generic kind
+  returns `err`
 
-- parse header
-- reject unsupported kind
-- return either:
-  - `LingIdSelection<L>` for targeted/full surface IDs
-  - `LingIdResolvedSurface<L>` for resolved lemma-surface IDs
+### `LingId<"Surface", L>`
 
-### `parseShallowSurface`
+This should decode to `Surface<L>`, meaning either:
 
-Behavior:
+- `ResolvedSurface<L>`
+- `UnresolvedSurface<L>`
 
-- parse header
-- reject unsupported kind
-- return `ParsedShallowSurfaceDtoFor<L>`
+But the actual wire payload should still use a concrete kind.
 
 ## Implementation Plan
 
-1. Define public Ling ID types in `src/ling-id/types.ts`.
+1. Lock the external shape first.
 
-   Start from the old shapes only where they are still useful. This is a new
-   design pass, so type aliases and DTOs may be renamed, narrowed, or dropped.
+   Finalize:
 
-2. Build universal helpers under `src/ling-id/internal/`.
+   - whether the public entry point is only `LingIdCodec` or also named helpers
+   - whether we want static `LingIdCodec.English` entries in addition to
+     `forLanguage(...)`
+   - the exact error object shape
 
-   Use the old helpers as reference, but recompose them around the new folder
-   structure instead of doing a mechanical move. Split `wire.ts` into
-   `language-registry.ts` and `wire/header.ts`.
+2. Define the new public types in `src/ling-id/types.ts`.
 
-3. Avoid duplicate resolved-surface normalization.
+   Add:
 
-   `old-ling-id/serialize.ts` currently builds lemma surfaces directly and
-   assumes `normalizedFullSurface = canonicalLemma`. The new code should call
-   the same normalization path used by `LingOperation.convert.lemma` so both
-   subsystems stay aligned.
+   - `LingId<LIK, L>`
+   - `LingIdValueFor<LIK, L>`
+   - `LingIdDecodeErrorCode`
+   - `LingIdDecodeError`
+   - `LingIdCodecFor<L>`
 
-4. Implement `src/ling-id/public.ts` as a thin facade.
+3. Implement universal wire primitives.
 
-   The file should mostly delegate to `internal/serialize.ts`,
-   `internal/parse.ts`, and shared guards. Reuse old overloads only where they
-   still fit the new API.
+   Add:
 
-5. Switch root exports and imports once the new API is acceptable.
+   - language-code registry
+   - header builder/parser
+   - token escaping and splitting
+   - feature-bag encoding/decoding
 
-   - point `src/index.ts` at `./ling-id/public`
-   - update internal imports such as `src/relations/relation.ts` to consume the
-     new Ling ID type location
+4. Implement encode kind inference.
 
-6. Rewrite tests around the new API shape.
+   Build runtime guards that distinguish:
 
-   Existing Ling ID tests are reference coverage, not a compatibility contract.
-   Keep the behavior worth preserving, but update the suites to reflect the new
-   public surface.
+   - lemma
+   - selection
+   - resolved surface
+   - unresolved surface
 
-   At minimum, cover:
+   Do not use DTO-shape names in the public layer.
 
-   - serialization semantics
-   - parsing semantics
-   - language guardrails
+5. Implement `internal/codec/encode.ts`.
+
+   Encode actual entities by concrete kind. If helpful, reuse existing
+   normalization helpers from `lu/public-operations.ts`, but do not inherit the
+   old Ling ID API surface.
+
+6. Implement `internal/codec/decode.ts`.
+
+   Parse the new header and concrete entity kind, decode the payload, and return
+   `ok(value)` / `err(error)`.
+
+7. Implement `src/ling-id/public.ts`.
+
+   It should be thin:
+
+   - create language-bound codecs
+   - export `LingIdCodec`
+   - export public types
+
+8. Switch root exports.
+
+   Point `src/index.ts` at `./ling-id/public`.
+
+9. Update dependents.
+
+   `relations/` and any external tests should depend on the new `LingId` public
+   type instead of `old-ling-id`.
+
+10. Rewrite tests around the new API.
+
+   Cover:
+
+   - typed encode results by entity kind
+   - successful decode by entity kind
+   - malformed header handling
+   - language mismatch handling
+   - entity mismatch handling
    - public API exposure
 
-7. Remove `src/old-ling-id/` once the new implementation is accepted.
+11. Delete `src/old-ling-id/`.
 
-## Migration Notes
+## Recommendations
 
-- `src/old-ling-id/` should be treated as disposable reference code.
-- Compatibility with the old public API should be an explicit decision, not a
-  default assumption.
-- `RelationTargetLingIds` should continue to depend on the Ling ID public type,
-  but the import path should move from `old-ling-id/types` to `ling-id/types`.
+### Keep
 
-## Open Decisions
+- `Result`-based decode
+- branded `LingId<LIK, L>`
+- entity-based API
+- universal codec internals
 
-1. `LingId` string branding
+### Do not keep
 
-   Recommendation: defer. It adds churn without helping the migration.
+- shallow public concepts
+- converter-style public naming
+- old API compatibility as a goal
+- per-language codec implementations
 
-2. Parser result strictness
+## Open Questions
 
-   Recommendation: keep the current DTO-returning behavior. Do not validate via
-   Zod in this step.
+1. Do we want `makeLingIdFor(...)` only on bound codecs, or also as a top-level
+   generic helper?
 
-3. Language packs for Ling ID
+   Recommendation: bound codecs only.
 
-   Recommendation: do not introduce them now. Add a registry only if a real
-   wire-format divergence appears.
+2. Do we want `LingIdCodec.English` style statics?
+
+   Recommendation: yes, if you want discoverability; otherwise `forLanguage(...)`
+   is enough.
+
+3. Should lemma IDs exist in v1 of the new API?
+
+   Recommendation: yes. If the public type is `LingId<LIK, L>`, it should cover
+   actual entities symmetrically instead of starting with a surface-only bias.

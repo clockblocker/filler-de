@@ -5,7 +5,7 @@ import {
 	LexicalRelation,
 	LexicalRelationsSchema,
 	LingId,
-	LingSchemaFor,
+	lingSchemaFor,
 	MorphologicalRelation,
 	MorphologicalRelationsSchema,
 	Relations,
@@ -21,7 +21,7 @@ const {
 	Selection: SelectionSchema,
 	Surface: SurfaceSchema,
 	UnresolvedSurface: UnresolvedSurfaceSchema,
-} = LingSchemaFor;
+} = lingSchemaFor;
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
 	? 1
@@ -140,7 +140,7 @@ describe("public API usage", () => {
 		expect(typeof germanLingConverters.parseShallowSurface).toBe(
 			"function",
 		);
-		expect(linguistics.LingSchemaFor).toBe(LingSchemaFor);
+		expect(linguistics.lingSchemaFor).toBe(lingSchemaFor);
 		expect(SelectionSchema.German.Standard.Inflection.Lexeme.NOUN).toBe(
 			SelectionSchema.German.Standard.Inflection.Lexeme.NOUN,
 		);
@@ -165,21 +165,21 @@ describe("public API usage", () => {
 		expect(SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN).toBe(
 			SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN,
 		);
-		expect(LingSchemaFor.Selection.German.Standard.Lemma.Lexeme.NOUN).toBe(
+		expect(lingSchemaFor.Selection.German.Standard.Lemma.Lexeme.NOUN).toBe(
 			SelectionSchema.German.Standard.Lemma.Lexeme.NOUN,
 		);
 		expect(
-			LingSchemaFor.Surface.English.Standard.Inflection.Lexeme.NOUN,
+			lingSchemaFor.Surface.English.Standard.Inflection.Lexeme.NOUN,
 		).toBe(SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN);
 		expect(
-			LingSchemaFor.ResolvedSurface.English.Standard.Inflection.Lexeme
+			lingSchemaFor.ResolvedSurface.English.Standard.Inflection.Lexeme
 				.VERB,
 		).toBe(ResolvedSurfaceSchema.English.Standard.Inflection.Lexeme.VERB);
 		expect(
-			LingSchemaFor.UnresolvedSurface.English.Standard.Inflection.Lexeme
+			lingSchemaFor.UnresolvedSurface.English.Standard.Inflection.Lexeme
 				.NOUN,
 		).toBe(UnresolvedSurfaceSchema.English.Standard.Inflection.Lexeme.NOUN);
-		expect(LingSchemaFor.Lemma.Hebrew.Lexeme.VERB).toBe(
+		expect(lingSchemaFor.Lemma.Hebrew.Lexeme.VERB).toBe(
 			LemmaSchema.Hebrew.Lexeme.VERB,
 		);
 		expect("buildToLingIdFor" in linguistics).toBe(false);

@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	type Lemma,
 	LingOperation,
-	LingSchemaFor,
+	lingSchemaFor,
 	type Selection,
 	type Surface,
 } from "../../src";
@@ -123,7 +123,7 @@ describe("LingOperation", () => {
 			target: lemma,
 		});
 		expect(
-			LingSchemaFor.ResolvedSurface.English.Standard.Lemma.Lexeme.VERB.safeParse(
+			lingSchemaFor.ResolvedSurface.English.Standard.Lemma.Lexeme.VERB.safeParse(
 				resolvedSurface,
 			).success,
 		).toBe(true);
@@ -150,7 +150,7 @@ describe("LingOperation", () => {
 			surface: resolvedSurface,
 		});
 		expect(
-			LingSchemaFor.Selection.English.Standard.Lemma.Lexeme.VERB.safeParse(
+			lingSchemaFor.Selection.English.Standard.Lemma.Lexeme.VERB.safeParse(
 				selection,
 			).success,
 		).toBe(true);

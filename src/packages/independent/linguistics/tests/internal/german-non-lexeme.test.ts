@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import type { Lemma, Selection } from "../../src";
-import { LingSchemaFor } from "../../src";
+import { lingSchemaFor } from "../../src";
 import { GermanMorphemeLemmaSchemas } from "../../src/lu/language-packs/german/lu/morpheme/german-morphemes";
 import { GermanPhrasemeLemmaSchemas } from "../../src/lu/language-packs/german/lu/phraseme/german-phrasemes";
 
-const { Lemma: LemmaSchema, Selection: SelectionSchema } = LingSchemaFor;
+const { Lemma: LemmaSchema, Selection: SelectionSchema } = lingSchemaFor;
 
 describe("German non-lexeme schemas", () => {
 	it("exposes inferred morpheme and phraseme lemma types from the registry", () => {

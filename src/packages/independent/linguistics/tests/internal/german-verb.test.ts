@@ -3,12 +3,12 @@ import {
 	getInverseLexicalRelation,
 	getInverseMorphologicalRelation,
 	LexicalRelationsSchema,
-	LingSchemaFor,
+	lingSchemaFor,
 	MorphologicalRelationsSchema,
 } from "../../src";
 import { GermanVerbSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-verb";
 
-const { Selection: SelectionSchema } = LingSchemaFor;
+const { Selection: SelectionSchema } = lingSchemaFor;
 
 const relationId = (label: string) => `rel:${label}`;
 

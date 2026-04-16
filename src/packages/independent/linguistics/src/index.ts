@@ -5,7 +5,15 @@ import {
 	SurfaceSchema,
 	UnresolvedSurfaceSchema,
 } from "./lu/public-entities";
-import { LingOperation } from "./lu/public-operations";
+import {
+	extractLemmaFromSurface,
+	extractSurfaceFromSelection,
+	forLanguage,
+	toResolvedLemmaSurface,
+	toStandardFullSelection,
+	toStandardFullSelectionFromLemma,
+} from "./lu/public-operations";
+
 import type { TargetLanguage } from "./lu/universal/enums/core/language";
 import type { LingEntity } from "./lu/universal/enums/core/ling-entity";
 
@@ -22,7 +30,29 @@ export const lingSchemaFor = {
 };
 
 export const LingSchemaFor = lingSchemaFor;
-export { LingOperation };
+
+export const lingOperation = {
+	convert: {
+		lemma: {
+			toResolvedLemmaSurface,
+			toStandardFullSelection: toStandardFullSelectionFromLemma,
+		},
+		surface: {
+			toStandardFullSelection,
+		},
+	},
+	extract: {
+		lemma: {
+			fromSurface: extractLemmaFromSurface,
+		},
+		surface: {
+			fromSelection: extractSurfaceFromSelection,
+		},
+	},
+	forLanguage,
+} as const;
+
+export const LingOperation = lingOperation;
 
 export type {
 	Lemma,

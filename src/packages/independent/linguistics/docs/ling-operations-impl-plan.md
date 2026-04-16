@@ -92,7 +92,7 @@ export const LingOperation = {
 
 Notes:
 
-- Prefer `LingOperation`, matching `LingSchemaFor` and `LingId`.
+- Prefer `LingOperation`, matching `lingSchemaFor` and `LingId`.
 - Prefer `toResolvedLemmaSurface` over `toResolvedSurfaceOfLemma`.
 - Expose both top-level generic functions and `forLanguage(language)` bound
   helpers.
