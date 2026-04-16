@@ -8,15 +8,16 @@ import {
 	type KnownSelectionLikeFor,
 	type LemmaLike,
 	type LemmaOfSurface,
-	type ResolvedSurfaceWithLemma,
 	type ResolvedLemmaSurfaceFor,
 	type ResolvedSurfaceLikeFor,
+	type ResolvedSurfaceWithLemma,
 	type StandardFullSelectionForLemma,
 	type StandardFullSelectionForSurface,
 	type SurfaceLike,
 	type SurfaceOfSelection,
 	type UnknownSelectionLikeFor,
 	type UnresolvedSurfaceLikeFor,
+	type UnresolvedSurfaceOf,
 } from "./internal/operations/shared";
 import type { TargetLanguage } from "./universal/enums/core/language";
 
@@ -86,6 +87,16 @@ export const resolveUnresolvedSurfaceWithLemma = ((
 	};
 }) as ResolveUnresolvedSurfaceWithLemmaFn;
 
+export const unresolveSurface = ((surface: SurfaceLike) =>
+	hasResolvedSurfaceTarget(surface)
+		? {
+				...surface,
+				target: {
+					canonicalLemma: surface.target.canonicalLemma,
+				},
+			}
+		: surface) as UnresolveSurfaceFn;
+
 export function operationForLanguage<L extends TargetLanguage>(language: L) {
 	function boundToResolvedLemmaSurface<T extends LemmaLike<L>>(
 		lemma: T,
@@ -121,6 +132,20 @@ export function operationForLanguage<L extends TargetLanguage>(language: L) {
 		assertLanguageMatch(language, lemma.language);
 
 		return resolveUnresolvedSurfaceWithLemma(surface, lemma);
+	}
+
+	function boundUnresolveSurface<S extends ResolvedSurfaceLikeFor<L>>(
+		surface: S,
+	): UnresolvedSurfaceOf<S>;
+	function boundUnresolveSurface<S extends UnresolvedSurfaceLikeFor<L>>(
+		surface: S,
+	): S;
+	function boundUnresolveSurface<S extends SurfaceLike<L>>(
+		surface: S,
+	): UnresolvedSurfaceOf<S> {
+		assertLanguageMatch(language, surface.language);
+
+		return unresolveSurface(surface);
 	}
 
 	function boundExtractLemmaFromSurface<S extends ResolvedSurfaceLikeFor<L>>(
@@ -164,11 +189,6 @@ export function operationForLanguage<L extends TargetLanguage>(language: L) {
 					boundToStandardFullSelectionFromSurface,
 			},
 		},
-		resolve: {
-			unresolvedSurface: {
-				withLemma: boundResolveUnresolvedSurfaceWithLemma,
-			},
-		},
 		extract: {
 			lemma: {
 				fromSurface: boundExtractLemmaFromSurface,
@@ -176,6 +196,14 @@ export function operationForLanguage<L extends TargetLanguage>(language: L) {
 			surface: {
 				fromSelection: boundExtractSurfaceFromSelection,
 			},
+		},
+		resolve: {
+			unresolvedSurface: {
+				withLemma: boundResolveUnresolvedSurfaceWithLemma,
+			},
+		},
+		unresolve: {
+			surface: boundUnresolveSurface,
 		},
 	} satisfies lingOperationApi<L>;
 
@@ -230,6 +258,12 @@ type ResolveUnresolvedSurfaceWithLemmaFn<
 	lemma: T,
 ) => ResolvedSurfaceWithLemma<S, T>;
 
+type UnresolveSurfaceFn<L extends TargetLanguage = TargetLanguage> = {
+	<S extends ResolvedSurfaceLikeFor<L>>(surface: S): UnresolvedSurfaceOf<S>;
+	<S extends UnresolvedSurfaceLikeFor<L>>(surface: S): S;
+	<S extends SurfaceLike<L>>(surface: S): UnresolvedSurfaceOf<S>;
+};
+
 type lingOperationApi<L extends TargetLanguage = TargetLanguage> = {
 	convert: {
 		surface: {
@@ -244,6 +278,9 @@ type lingOperationApi<L extends TargetLanguage = TargetLanguage> = {
 		unresolvedSurface: {
 			withLemma: ResolveUnresolvedSurfaceWithLemmaFn<L>;
 		};
+	};
+	unresolve: {
+		surface: UnresolveSurfaceFn<L>;
 	};
 	extract: {
 		lemma: {

@@ -81,6 +81,10 @@ export type ResolvedSurfaceWithLemma<
 	T extends CompatibleLemmaForSurface<S>,
 > = Omit<S, "target"> & { target: T };
 
+export type UnresolvedSurfaceOf<S extends SurfaceLike> = Omit<S, "target"> & {
+	target: Pick<S["target"], "canonicalLemma">;
+};
+
 export type LemmaOfSurface<S extends { target: unknown }> = S extends {
 	target: infer SurfaceTarget;
 }

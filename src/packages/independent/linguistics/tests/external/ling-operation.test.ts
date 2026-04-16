@@ -114,6 +114,28 @@ describe("lingOperation", () => {
 		});
 	});
 
+	it("unresolves resolved surfaces and leaves unresolved ones alone", () => {
+		const lemma = buildEnglishWalkLemma();
+		const resolvedSurface =
+			lingOperation.convert.lemma.toResolvedLemmaSurface(lemma);
+		const unresolvedSurface = lingOperation.unresolve.surface(
+			resolvedSurface,
+		);
+
+		expect(unresolvedSurface).toEqual({
+			...resolvedSurface,
+			target: {
+				canonicalLemma: "walk",
+			},
+		});
+		expect(lingOperation.extract.lemma.fromSurface(unresolvedSurface)).toBe(
+			null,
+		);
+		expect(
+			lingOperation.unresolve.surface(unresolvedSurface),
+		).toBe(unresolvedSurface);
+	});
+
 	it("rejects resolving unresolved surfaces with non-matching lemmas", () => {
 		const unresolvedSurface = {
 			discriminators: {
@@ -221,6 +243,9 @@ describe("lingOperation", () => {
 		type GermanResolvedLemmaInput = Parameters<
 			typeof germanOps.resolve.unresolvedSurface.withLemma
 		>[1];
+		type GermanSurfaceForUnresolve = Parameters<
+			typeof germanOps.unresolve.surface
+		>[0];
 
 		expect(() =>
 			germanOps.convert.lemma.toResolvedLemmaSurface(
@@ -257,6 +282,15 @@ describe("lingOperation", () => {
 		).toThrow(
 			"lingOperation language mismatch: expected German, received English",
 		);
+		expect(() =>
+			germanOps.unresolve.surface(
+				lingOperation.convert.lemma.toResolvedLemmaSurface(
+					buildEnglishWalkLemma(),
+				) as unknown as GermanSurfaceForUnresolve,
+			),
+		).toThrow(
+			"lingOperation language mismatch: expected German, received English",
+		);
 	});
 
 	it("returns language-bound results with the same structural behavior", () => {
@@ -274,6 +308,22 @@ describe("lingOperation", () => {
 			normalizedFullSurface: "See",
 			surfaceKind: "Lemma",
 			target: germanLemma,
+		});
+		expect(
+			germanOps.unresolve.surface(
+				germanOps.convert.lemma.toResolvedLemmaSurface(germanLemma),
+			),
+		).toEqual({
+			discriminators: {
+				lemmaKind: "Lexeme",
+				lemmaSubKind: "NOUN",
+			},
+			language: "German",
+			normalizedFullSurface: "See",
+			surfaceKind: "Lemma",
+			target: {
+				canonicalLemma: "See",
+			},
 		});
 	});
 });

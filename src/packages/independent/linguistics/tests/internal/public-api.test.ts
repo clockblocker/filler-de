@@ -51,6 +51,9 @@ describe("public API usage", () => {
 		expect(
 			typeof linguistics.lingOperation.resolve.unresolvedSurface.withLemma,
 		).toBe("function");
+		expect(typeof linguistics.lingOperation.unresolve.surface).toBe(
+			"function",
+		);
 		expect(linguistics.LingIdCodec).toBe(LingIdCodec);
 		expect(linguistics.lingOperation).toBe(lingOperation);
 		expect(linguistics.lingSchemaFor).toBe(lingSchemaFor);

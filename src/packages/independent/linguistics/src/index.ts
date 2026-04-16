@@ -15,6 +15,7 @@ import {
 	toResolvedLemmaSurface,
 	toStandardFullSelection,
 	toStandardFullSelectionFromLemma,
+	unresolveSurface,
 } from "./lu/public-operations";
 
 export const lingSchemaFor = {
@@ -52,6 +53,9 @@ export const lingOperation = {
 		unresolvedSurface: {
 			withLemma: resolveUnresolvedSurfaceWithLemma,
 		},
+	},
+	unresolve: {
+		surface: unresolveSurface,
 	},
 } as const;
 
