@@ -36,6 +36,7 @@ describe("Hebrew schema specificity", () => {
 						person: ["1", "2", "3"],
 						tense: "Past",
 					},
+					language: "Hebrew",
 					normalizedFullSurface: "katvu",
 					surfaceKind: "Inflection",
 					target: {
@@ -59,6 +60,7 @@ describe("Hebrew schema specificity", () => {
 					inflectionalFeatures: {
 						number: ["Dual", "Plur"],
 					},
+					language: "Hebrew",
 					normalizedFullSurface: "shnatayim",
 					surfaceKind: "Inflection",
 					target: {

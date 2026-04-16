@@ -1,16 +1,7 @@
 // import Result from "neverthrow";
 
-// import type { TargetLanguage } from "../lu/universal/enums/core/language";
-
-// export type LingIdKind =
-// 	| "Selection"
-// 	| "ResolvedSurface"
-// 	| "UnresolvedSurface"
-// 	| "Surface"
-// 	| "Lemma";
-
 // export type LingId<
-// 	LIK extends LingIdKind = LingIdKind,
+// 	LIK extends LingEntity = LingEntity,
 // 	L extends TargetLanguage = TargetLanguage,
 // > =  //...
 
@@ -22,9 +13,16 @@
 
 // }
 
-// // ...
+// ...
 
-// export const LingIdCodec = {
+// export const LingIdCodec = { 
+// English: {
 // 	makeLingIdFor: // all makeLingIdFor... overloaded
 // 	tryToDecode: // all tryToDecode... overloaded
+// } 
+// } satisfies { 
+// 		L in TargetLanguage: {
+// 			makeLingIdFor: ...
+// 			tryToDecode: ...
+// 		} 
 // }

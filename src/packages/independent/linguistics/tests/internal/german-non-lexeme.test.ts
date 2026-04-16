@@ -32,6 +32,7 @@ describe("German non-lexeme schemas", () => {
 					lemmaKind: "Phraseme",
 					lemmaSubKind: "DiscourseFormula",
 				},
+				language: "German",
 				normalizedFullSurface: "auf jeden Fall",
 				surfaceKind: "Lemma",
 				target: {
@@ -127,6 +128,7 @@ describe("German non-lexeme schemas", () => {
 						lemmaKind: "Morpheme",
 						lemmaSubKind: "Suffix",
 					},
+					language: "German",
 					normalizedFullSurface: "-hait",
 					surfaceKind: "Lemma",
 					target: {
@@ -145,6 +147,7 @@ describe("German non-lexeme schemas", () => {
 						lemmaKind: "Phraseme",
 						lemmaSubKind: "Cliché",
 					},
+					language: "German",
 					normalizedFullSurface: "Zeit ist Gelt",
 					surfaceKind: "Lemma",
 					target: {
@@ -175,6 +178,7 @@ describe("German non-lexeme schemas", () => {
 					lemmaKind: "Phraseme",
 					lemmaSubKind: "Cliché",
 				},
+				language: "German",
 				normalizedFullSurface: "ein Spaziergang im Park",
 				surfaceKind: "Lemma",
 				target: {

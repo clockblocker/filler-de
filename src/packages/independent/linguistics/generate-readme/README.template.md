@@ -57,6 +57,7 @@ Here, `surfaceKind: "Lemma"` is appropriate because the selection is attached di
 
 The DTO keeps the learner-facing selection separate from the deeper linguistic layers:
 
+- the language shared by the selection, surface, and lemma: `language`
 - the actual highlighted text in the note: `spelledSelection`
 - whether the user highlighted the whole surface or only part of it: `selectionCoverage`
 - for standard partial selections, the normalized highlighted fragment: `normalizedSelectedSurface`

@@ -69,6 +69,7 @@ type EnglishAdjectiveInflectionSurface = {
 	inflectionalFeatures: {
 		degree?: "Cmp" | "Pos" | "Sup" | undefined;
 	};
+	language: "English";
 	normalizedFullSurface: string;
 	surfaceKind: "Inflection";
 	target:
@@ -110,6 +111,7 @@ type ExpectedEnglishAdjectiveResolvedSurface = {
 	inflectionalFeatures: {
 		degree?: "Cmp" | "Pos" | "Sup" | undefined;
 	};
+	language: "English";
 	normalizedFullSurface: string;
 	surfaceKind: "Inflection";
 	target: Lemma<"English", "Lexeme", "ADJ">;
@@ -229,6 +231,7 @@ describe("public API usage", () => {
 					lemmaKind: "Lexeme",
 					lemmaSubKind: "NOUN",
 				},
+				language: "German",
 				normalizedFullSurface: "See",
 				surfaceKind: "Lemma",
 				target: {
@@ -348,6 +351,7 @@ describe("public API usage", () => {
 				inflectionalFeatures: {
 					degree: "Cmp",
 				},
+				language: "English",
 				normalizedFullSurface: "smaller",
 				surfaceKind: "Inflection",
 				target: {
@@ -391,6 +395,7 @@ describe("public API usage", () => {
 					// @ts-expect-error English adjective inflections should not expose unrelated features
 					case: "Dat",
 				},
+				language: "English",
 				normalizedFullSurface: "small",
 				surfaceKind: "Inflection",
 				target: {
@@ -416,6 +421,7 @@ describe("public API usage", () => {
 				tense: "Pres",
 				verbForm: "Fin",
 			},
+			language: "English",
 			normalizedFullSurface: "walk",
 			surfaceKind: "Inflection",
 			target: {
@@ -447,6 +453,7 @@ describe("public API usage", () => {
 					lemmaKind: "Phraseme",
 					lemmaSubKind: "Cliché",
 				},
+				language: "English",
 				normalizedFullSurface: "a walk in the park",
 				surfaceKind: "Lemma",
 				target: {
@@ -479,6 +486,7 @@ describe("public API usage", () => {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "NOUN",
 			},
+			language: "German",
 			normalizedFullSurface: "See",
 			surfaceKind: "Lemma",
 			target: {
@@ -504,6 +512,7 @@ describe("public API usage", () => {
 				lemmaKind: "Lexeme",
 				lemmaSubKind: "NOUN",
 			},
+			language: "German",
 			normalizedFullSurface: "See",
 			surfaceKind: "Lemma",
 			// @ts-expect-error resolved surfaces require a hydrated lemma target

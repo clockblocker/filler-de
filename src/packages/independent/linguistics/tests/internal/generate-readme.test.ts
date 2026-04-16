@@ -11,7 +11,9 @@ test("README examples expose all named blocks used by the template", () => {
 
 	expect(blocks.size).toBeGreaterThan(0);
 	expect(blocks.has("core-simple-selection")).toBe(true);
-	expect(blocks.has("ling-id-parse")).toBe(true);
+	expect(blocks.has("core-simple-lemma")).toBe(true);
+	expect(blocks.has("core-idiom-selection")).toBe(true);
+	expect(blocks.has("core-lemma-surface-distinction")).toBe(true);
 });
 
 test("generated README matches the committed README", () => {

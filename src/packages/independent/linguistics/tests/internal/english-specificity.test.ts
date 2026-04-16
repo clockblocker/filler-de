@@ -38,6 +38,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						degree: "Cmp",
 					},
+					language: "English",
 					normalizedFullSurface: "smaller",
 					surfaceKind: "Inflection",
 				},
@@ -55,6 +56,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						case: "Dat",
 					},
+					language: "English",
 					normalizedFullSurface: "small",
 					surfaceKind: "Inflection",
 				},
@@ -72,6 +74,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						case: "Acc",
 					},
+					language: "English",
 					normalizedFullSurface: "to",
 					surfaceKind: "Inflection",
 				},
@@ -91,6 +94,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						number: "Ptan",
 					},
+					language: "English",
 					normalizedFullSurface: "scissors",
 					surfaceKind: "Inflection",
 				},
@@ -108,6 +112,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						case: "Gen",
 					},
+					language: "English",
 					normalizedFullSurface: "dog",
 					surfaceKind: "Inflection",
 				},
@@ -125,6 +130,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						number: "Ptan",
 					},
+					language: "English",
 					normalizedFullSurface: "Anna",
 					surfaceKind: "Inflection",
 				},
@@ -170,6 +176,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						gender: "Neut",
 					},
+					language: "English",
 					normalizedFullSurface: "washed",
 					surfaceKind: "Inflection",
 				},
@@ -187,6 +194,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						gender: "Fem",
 					},
+					language: "English",
 					normalizedFullSurface: "is",
 					surfaceKind: "Inflection",
 				},
@@ -215,6 +223,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						verbForm: "Ger",
 					},
+					language: "English",
 					normalizedFullSurface: "washing",
 					surfaceKind: "Inflection",
 				},
@@ -232,6 +241,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						voice: "Pass",
 					},
+					language: "English",
 					normalizedFullSurface: "washed",
 					surfaceKind: "Inflection",
 				},
@@ -249,6 +259,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						verbForm: "Ger",
 					},
+					language: "English",
 					normalizedFullSurface: "being",
 					surfaceKind: "Inflection",
 				},
@@ -321,6 +332,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						case: "Acc",
 					},
+					language: "English",
 					normalizedFullSurface: "him",
 					surfaceKind: "Inflection",
 				},
@@ -338,6 +350,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						case: "Dat",
 					},
+					language: "English",
 					normalizedFullSurface: "him",
 					surfaceKind: "Inflection",
 				},
@@ -413,6 +426,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						case: "Gen",
 					},
+					language: "English",
 					normalizedFullSurface: "this",
 					surfaceKind: "Inflection",
 				},
@@ -432,6 +446,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						case: "Acc",
 					},
+					language: "English",
 					normalizedFullSurface: "two",
 					surfaceKind: "Inflection",
 				},
@@ -465,6 +480,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						number: "Sing",
 					},
+					language: "English",
 					normalizedFullSurface: "%",
 					surfaceKind: "Inflection",
 				},
@@ -482,6 +498,7 @@ describe("English schema specificity", () => {
 					inflectionalFeatures: {
 						case: "Acc",
 					},
+					language: "English",
 					normalizedFullSurface: "%",
 					surfaceKind: "Inflection",
 				},

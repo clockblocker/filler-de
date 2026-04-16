@@ -20,6 +20,7 @@ describe("Ling ID guardrails", () => {
 					lemmaKind: "Lexeme",
 					lemmaSubKind: "VERB",
 				},
+				language: "German",
 				normalizedFullSurface: "walk",
 				surfaceKind: "Lemma",
 				target: buildEnglishWalkLemma(),

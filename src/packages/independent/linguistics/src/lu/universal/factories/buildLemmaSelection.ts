@@ -71,12 +71,14 @@ export function buildLemmaSelection<
 	LanguageLiteral,
 	OrthographicStatusLiteral,
 	SelectionSurfaceSchemaFor<
+		LanguageLiteral,
 		SelectionLemmaIdentityShapeFor<LK, D>,
 		LemmaSchema,
 		LemmaSurfaceShape<SurfaceKindLiteral, SurfaceExtraShape>
 	>
 > {
 	type SurfaceSchema = SelectionSurfaceSchemaFor<
+		LanguageLiteral,
 		SelectionLemmaIdentityShapeFor<LK, D>,
 		LemmaSchema,
 		LemmaSurfaceShape<SurfaceKindLiteral, SurfaceExtraShape>

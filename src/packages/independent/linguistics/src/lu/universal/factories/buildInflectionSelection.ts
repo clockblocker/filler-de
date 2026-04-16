@@ -67,12 +67,14 @@ export function buildInflectionSelection<
 	LanguageLiteral,
 	OrthographicStatusLiteral,
 	SelectionSurfaceSchemaFor<
+		LanguageLiteral,
 		SelectionLemmaIdentityShapeFor<LK, D>,
 		LemmaSchema,
 		InflectionSurfaceShape<InflectionalFeaturesSchema, SurfaceExtraShape>
 	>
 > {
 	type SurfaceSchema = SelectionSurfaceSchemaFor<
+		LanguageLiteral,
 		SelectionLemmaIdentityShapeFor<LK, D>,
 		LemmaSchema,
 		InflectionSurfaceShape<InflectionalFeaturesSchema, SurfaceExtraShape>

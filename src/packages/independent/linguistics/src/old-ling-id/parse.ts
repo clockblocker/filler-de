@@ -200,6 +200,7 @@ function parseSurfaceBody(
 						),
 					}
 				: {}),
+			language,
 			normalizedFullSurface,
 			surfaceKind: surfaceKind as SurfaceKind,
 			target,
@@ -241,6 +242,7 @@ function parseShallowSurfaceBody(
 						),
 					}
 				: {}),
+			language,
 			normalizedFullSurface: unescapeToken(normalizedFullSurfaceToken),
 			surfaceKind: surfaceKind as SurfaceKind,
 		},

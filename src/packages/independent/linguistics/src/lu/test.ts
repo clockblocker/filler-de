@@ -36,6 +36,7 @@ const simpleWalkSelection = {
 			tense: "Pres",
 			verbForm: "Fin",
 		},
+		language: "English",
 		normalizedFullSurface: "walk",
 		surfaceKind: "Inflection",
 		target: {

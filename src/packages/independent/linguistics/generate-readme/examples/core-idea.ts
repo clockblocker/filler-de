@@ -17,6 +17,7 @@ const giveUpPartialSelection = {
 			tense: "Past",
 			verbForm: "Fin",
 		},
+		language: "English",
 		normalizedFullSurface: "gave up",
 		surfaceKind: "Inflection",
 		target: {
@@ -58,6 +59,7 @@ const idiomPartSelection = {
 			lemmaKind: "Phraseme",
 			lemmaSubKind: "Idiom",
 		},
+		language: "English",
 		normalizedFullSurface: "a walk in the park",
 		surfaceKind: "Lemma",
 		target: {
@@ -87,6 +89,7 @@ const gaveUpSelection = {
 			tense: "Past",
 			verbForm: "Fin",
 		},
+		language: "English",
 		normalizedFullSurface: "gave up",
 		surfaceKind: "Inflection",
 		target: {
@@ -110,6 +113,7 @@ const passAufSelection = {
 			mood: "Imp",
 			verbForm: "Fin",
 		},
+		language: "German",
 		normalizedFullSurface: "pass auf",
 		surfaceKind: "Inflection",
 		target: {

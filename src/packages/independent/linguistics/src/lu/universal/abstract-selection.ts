@@ -114,11 +114,12 @@ type SurfaceBaseFor<
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > = Prettify<
 	{
+		language: TargetLanguage;
 		surfaceKind: SK;
 		normalizedFullSurface: string;
 	} & SurfaceFieldsFor<SK> & {
 			discriminators: DiscriminatorsFor<LK, D>;
-		}
+	}
 >;
 
 type SurfaceFor<

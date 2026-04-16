@@ -29,6 +29,7 @@ export type ParsedShallowSurfaceDto = {
 	language: TargetLanguage;
 	orthographicStatus: KnownOrthographicStatus;
 	surface: {
+		language: TargetLanguage;
 		normalizedFullSurface: string;
 		surfaceKind: "Lemma" | "Inflection" | "Variant";
 		discriminators: {

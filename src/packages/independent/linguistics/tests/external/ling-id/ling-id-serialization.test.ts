@@ -89,6 +89,7 @@ describe("Ling ID serialization", () => {
 					tense: "Pres",
 					verbForm: "Fin",
 				},
+				language: "English",
 				normalizedFullSurface: "walk",
 				surfaceKind: "Inflection",
 				target: buildEnglishWalkLemma(),
@@ -115,6 +116,7 @@ describe("Ling ID serialization", () => {
 					lemmaKind: "Lexeme",
 					lemmaSubKind: "NOUN",
 				},
+				language: "German",
 				normalizedFullSurface: "See",
 				surfaceKind: "Lemma",
 				target: {
@@ -146,6 +148,7 @@ describe("Ling ID serialization", () => {
 					lemmaKind: "Lexeme",
 					lemmaSubKind: "NOUN",
 				},
+				language: "German",
 				normalizedFullSurface: "See",
 				surfaceKind: "Lemma",
 				target: {
@@ -184,6 +187,7 @@ describe("Ling ID serialization", () => {
 					tense: "Pres",
 					verbForm: "Fin",
 				},
+				language: "English",
 				normalizedFullSurface: "walk",
 				surfaceKind: "Inflection",
 				target: {
@@ -264,6 +268,7 @@ describe("Ling ID serialization", () => {
 					"gender[psor]": ["Neut"],
 					"number[psor]": "Sing",
 				},
+				language: "German",
 				normalizedFullSurface: "dessen",
 				surfaceKind: "Inflection",
 				target: {
@@ -298,6 +303,7 @@ describe("Ling ID serialization", () => {
 					person: ["1", "2", "3"],
 					tense: "Past",
 				},
+				language: "Hebrew",
 				normalizedFullSurface: "katvu",
 				surfaceKind: "Inflection",
 				target: {

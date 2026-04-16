@@ -29,6 +29,7 @@ describe("Ling ID usage", () => {
 					lemmaKind: "Lexeme",
 					lemmaSubKind: "NOUN",
 				},
+				language: "German",
 				normalizedFullSurface: "See",
 				surfaceKind: "Lemma",
 				target: {
@@ -110,6 +111,7 @@ describe("Ling ID usage", () => {
 					lemmaKind: "Lexeme",
 					lemmaSubKind: "NOUN",
 				},
+				language: "German",
 				normalizedFullSurface: "See",
 				surfaceKind: "Lemma",
 				target: {
@@ -143,6 +145,7 @@ describe("Ling ID usage", () => {
 					tense: "Past",
 					verbForm: "Fin",
 				},
+				language: "English",
 				normalizedFullSurface: "walked",
 				surfaceKind: "Inflection",
 				target: walkLemma,
@@ -171,6 +174,7 @@ describe("Ling ID usage", () => {
 					tense: "Past",
 					verbForm: "Fin",
 				},
+				language: "English",
 				normalizedFullSurface: "walked",
 				surfaceKind: "Inflection",
 			},

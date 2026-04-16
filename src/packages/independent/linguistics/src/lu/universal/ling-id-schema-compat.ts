@@ -30,7 +30,7 @@ export function withLingIdSurfaceDtoCompatibility<T extends z.ZodTypeAny>({
 				expectedLanguage: language,
 				expectedLingKind: "Surface",
 				expectedOrthographicStatus: orthographicStatus,
-				keys: ["language", "lingKind", "orthographicStatus"],
+				keys: ["lingKind", "orthographicStatus"],
 			}),
 		schema,
 	) as unknown as T;

@@ -44,6 +44,7 @@ type LemmaSubKindKeyForValue<T extends { lemmaKind: unknown }> = Extract<
 >;
 
 export type SelectionSurfaceValueFor<
+	LanguageLiteral extends string,
 	LemmaIdentity extends { lemmaKind: unknown },
 	Lemma,
 	Surface,
@@ -53,17 +54,20 @@ export type SelectionSurfaceValueFor<
 			lemmaKind: LemmaIdentity["lemmaKind"];
 			lemmaSubKind: LemmaIdentity[LemmaSubKindKeyForValue<LemmaIdentity>];
 		};
+		language: LanguageLiteral;
 		normalizedFullSurface: string;
 		target: { canonicalLemma: string } | Lemma;
 	}
 >;
 
 export type SelectionSurfaceSchemaFor<
+	LanguageLiteral extends string,
 	LemmaIdentityShape extends SelectionLemmaIdentityShape,
 	LemmaSchema extends z.ZodTypeAny,
 	SurfaceShape extends z.ZodRawShape,
 > = z.ZodType<
 	SelectionSurfaceValueFor<
+		LanguageLiteral,
 		InferredLemmaIdentityFor<LemmaIdentityShape>,
 		z.infer<LemmaSchema>,
 		InferShape<SurfaceShape>
@@ -71,6 +75,7 @@ export type SelectionSurfaceSchemaFor<
 >;
 
 export function buildSelectionSurfaceSchema<
+	LanguageLiteral extends string,
 	LemmaIdentityShape extends SelectionLemmaIdentityShape,
 	LemmaSchema extends z.ZodTypeAny,
 	SurfaceShape extends z.ZodRawShape,
@@ -80,11 +85,16 @@ export function buildSelectionSurfaceSchema<
 	lemmaSchema,
 	surfaceShape,
 }: {
-	language: string;
+	language: LanguageLiteral;
 	lemmaIdentityShape: LemmaIdentityShape;
 	lemmaSchema: LemmaSchema;
 	surfaceShape: SurfaceShape;
-}): SelectionSurfaceSchemaFor<LemmaIdentityShape, LemmaSchema, SurfaceShape> {
+}): SelectionSurfaceSchemaFor<
+	LanguageLiteral,
+	LemmaIdentityShape,
+	LemmaSchema,
+	SurfaceShape
+> {
 	const lemmaSubKindKey = getLemmaSubKindKey(lemmaIdentityShape);
 	const lemmaSubKindSchema = lemmaIdentityShape[
 		lemmaSubKindKey
@@ -99,6 +109,7 @@ export function buildSelectionSurfaceSchema<
 					lemmaSubKind: lemmaSubKindSchema,
 				})
 				.strict(),
+			language: z.literal(language),
 			normalizedFullSurface: z.string(),
 			target: z.union([
 				z.object({ canonicalLemma: z.string() }).strict(),
@@ -112,6 +123,7 @@ export function buildSelectionSurfaceSchema<
 					lemmaKind: unknown;
 					lemmaSubKind: unknown;
 				};
+				language: string;
 				target: { canonicalLemma: string } | Record<string, unknown>;
 			};
 
@@ -120,12 +132,11 @@ export function buildSelectionSurfaceSchema<
 			}
 
 			const hydratedLemma = typedSurface.target;
-			if (hydratedLemma.language !== language) {
+			if (hydratedLemma.language !== typedSurface.language) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
-					message:
-						"hydrated lemma language must match selection language",
-					path: ["target", "lemma", "language"],
+					message: "hydrated lemma language must match surface language",
+					path: ["target", "language"],
 				});
 			}
 
@@ -150,6 +161,7 @@ export function buildSelectionSurfaceSchema<
 				});
 			}
 		}) as SelectionSurfaceSchemaFor<
+		LanguageLiteral,
 		LemmaIdentityShape,
 		LemmaSchema,
 		SurfaceShape

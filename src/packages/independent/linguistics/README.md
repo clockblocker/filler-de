@@ -44,6 +44,7 @@ const giveUpPartialSelection = {
 			tense: "Past",
 			verbForm: "Fin",
 		},
+		language: "English",
 		normalizedFullSurface: "gave up",
 		surfaceKind: "Inflection",
 		target: {
@@ -106,6 +107,7 @@ const idiomPartSelection = {
 			lemmaKind: "Phraseme",
 			lemmaSubKind: "Idiom",
 		},
+		language: "English",
 		normalizedFullSurface: "a walk in the park",
 		surfaceKind: "Lemma",
 		target: {
@@ -123,6 +125,7 @@ Here, `surfaceKind: "Lemma"` is appropriate because the selection is attached di
 
 The DTO keeps the learner-facing selection separate from the deeper linguistic layers:
 
+- the language shared by the selection, surface, and lemma: `language`
 - the actual highlighted text in the note: `spelledSelection`
 - whether the user highlighted the whole surface or only part of it: `selectionCoverage`
 - for standard partial selections, the normalized highlighted fragment: `normalizedSelectedSurface`
@@ -149,6 +152,7 @@ const gaveUpSelection = {
 			tense: "Past",
 			verbForm: "Fin",
 		},
+		language: "English",
 		normalizedFullSurface: "gave up",
 		surfaceKind: "Inflection",
 		target: {
@@ -172,6 +176,7 @@ const passAufSelection = {
 			mood: "Imp",
 			verbForm: "Fin",
 		},
+		language: "German",
 		normalizedFullSurface: "pass auf",
 		surfaceKind: "Inflection",
 		target: {

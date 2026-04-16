@@ -25,6 +25,7 @@ type NormalizedResolvedSurface = {
 		lemmaKind: Lemma["lemmaKind"];
 		lemmaSubKind: string;
 	};
+	language: TargetLanguage;
 	normalizedFullSurface: string;
 	surfaceKind: "Lemma";
 	target: Lemma;
@@ -123,6 +124,7 @@ export function normalizeResolvedSurface(
 			lemmaKind: resolvedLemma.lemmaKind,
 			lemmaSubKind: getLemmaSubKind(resolvedLemma),
 		},
+		language: resolvedLemma.language,
 		normalizedFullSurface: resolvedLemma.canonicalLemma,
 		surfaceKind: "Lemma",
 		target: resolvedLemma,
