@@ -6,7 +6,7 @@ import {
 	LexicalRelationsSchema,
 	MorphologicalRelationsSchema,
 } from "../../src";
-import { GermanVerbSchemas } from "../../src/lu/german/lu/lexeme/pos/german-verb";
+import { GermanVerbSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-verb";
 
 const { Selection: SelectionSchema } = LingSchemaFor;
 

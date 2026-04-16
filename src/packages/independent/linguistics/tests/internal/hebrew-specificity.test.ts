@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { LingSchemaFor } from "../../src";
-import { HebrewNounSchemas } from "../../src/lu/hebrew/lu/lexeme/pos/hebrew-noun";
-import { HebrewVerbSchemas } from "../../src/lu/hebrew/lu/lexeme/pos/hebrew-verb";
+import { HebrewNounSchemas } from "../../src/lu/language-packs/hebrew/lu/lexeme/pos/hebrew-noun";
+import { HebrewVerbSchemas } from "../../src/lu/language-packs/hebrew/lu/lexeme/pos/hebrew-verb";
 
 const { Lemma: LemmaSchema, Selection: SelectionSchema } = LingSchemaFor;
 

@@ -1,4 +1,4 @@
-import type { Lemma, ResolvedSurface, Selection } from "../lu/public";
+import type { Lemma, ResolvedSurface, Selection } from "../lu/public-entities";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
 import type { OrthographicStatus } from "../lu/universal/enums/core/selection";
 

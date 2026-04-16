@@ -1,4 +1,4 @@
-import type { Lemma } from "../lu/public";
+import type { Lemma } from "../lu/public-entities";
 import {
 	TARGET_LANGUAGES,
 	type TargetLanguage,

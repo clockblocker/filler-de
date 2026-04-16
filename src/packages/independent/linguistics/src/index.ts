@@ -4,11 +4,11 @@ import {
 	SelectionSchema,
 	SurfaceSchema,
 	UnresolvedSurfaceSchema,
-} from "./lu/public";
+} from "./lu/public-entities";
 import type { TargetLanguage } from "./lu/universal/enums/core/language";
 import type { LingEntity } from "./lu/universal/enums/core/ling-entity";
 
-export const LingSchemaFor = {
+export const lingSchemaFor = {
 	Lemma: LemmaSchema,
 	ResolvedSurface: ResolvedSurfaceSchema,
 	Selection: SelectionSchema,
@@ -20,13 +20,38 @@ export const LingSchemaFor = {
 	};
 };
 
+export const LingSchemaFor = lingSchemaFor;
+
+// const lingOperation = {
+// 	convert: {
+// 		surface: {
+// 			toStandardFullSelection: // Surface -> Selection
+// 		},
+// 		lemma: {
+// 			toResolvedSurfaceOfLemma: // Lemma -> ResolvedSurface<SurfaceKind = "Lemma">
+// 			toResolvedSurfaceOfInflection: // Lemma -> ResolvedSurface<SurfaceKind = "Inflection"> we need to inject the default inflection features for poarticullar pos of particullar lang
+// 			toStandardFullSelection: // chain lemma.toResolvedSurfaceOfLemma and surface.toStandardFullSelection
+// 		},
+// 	},
+// 	extract: {
+// 		lemma: {
+// 			fromSurface: // ResolvedSurface -> Lemma; Surface -> Lemma | null; UnresolvedSurface -> null
+// 		},
+// 		surface: {
+// 			fromSelection: // Selection -> Surface | null (null is when selection orph status is Unknown)
+// 		}
+// 	}
+// }
+
+// ResolvedSurface -> Lemma
+
 export type {
 	Lemma,
 	ResolvedSurface,
 	Selection,
 	Surface,
 	UnresolvedSurface,
-} from "./lu/public";
+} from "./lu/public-entities";
 
 export * from "./old-ling-id/public";
 

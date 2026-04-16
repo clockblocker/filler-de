@@ -5,7 +5,7 @@ import {
 	LexicalRelationsSchema,
 	MorphologicalRelationsSchema,
 } from "../../src";
-import { GermanNounSchemas } from "../../src/lu/german/lu/lexeme/pos/german-noun";
+import { GermanNounSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-noun";
 
 const { Lemma: LemmaSchema, Selection: SelectionSchema } = LingSchemaFor;
 

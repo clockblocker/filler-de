@@ -1,4 +1,4 @@
-import type { Lemma } from "../lu/public";
+import type { Lemma } from "../lu/public-entities";
 import type { TargetLanguage } from "../lu/universal/enums/core/language";
 import type {
 	LemmaKind,

@@ -1,21 +1,21 @@
 import { describe, expect, it } from "bun:test";
 import { LingSchemaFor } from "../../src";
-import { GermanAdjectiveSchemas } from "../../src/lu/german/lu/lexeme/pos/german-adjective";
-import { GermanAdpositionSchemas } from "../../src/lu/german/lu/lexeme/pos/german-adposition";
-import { GermanAdverbSchemas } from "../../src/lu/german/lu/lexeme/pos/german-adverb";
-import { GermanAuxiliarySchemas } from "../../src/lu/german/lu/lexeme/pos/german-auxiliary";
-import { GermanCoordinatingConjunctionSchemas } from "../../src/lu/german/lu/lexeme/pos/german-coordinating-conjunction";
-import { GermanDeterminerSchemas } from "../../src/lu/german/lu/lexeme/pos/german-determiner";
-import { GermanInterjectionSchemas } from "../../src/lu/german/lu/lexeme/pos/german-interjection";
-import { GermanNounSchemas } from "../../src/lu/german/lu/lexeme/pos/german-noun";
-import { GermanNumeralSchemas } from "../../src/lu/german/lu/lexeme/pos/german-numeral";
-import { GermanOtherSchemas } from "../../src/lu/german/lu/lexeme/pos/german-other";
-import { GermanParticleSchemas } from "../../src/lu/german/lu/lexeme/pos/german-particle";
-import { GermanPronounSchemas } from "../../src/lu/german/lu/lexeme/pos/german-pronoun";
-import { GermanProperNounSchemas } from "../../src/lu/german/lu/lexeme/pos/german-proper-noun";
-import { GermanPunctuationSchemas } from "../../src/lu/german/lu/lexeme/pos/german-punctuation";
-import { GermanSubordinatingConjunctionSchemas } from "../../src/lu/german/lu/lexeme/pos/german-subordinating-conjunction";
-import { GermanSymbolSchemas } from "../../src/lu/german/lu/lexeme/pos/german-symbol";
+import { GermanAdjectiveSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-adjective";
+import { GermanAdpositionSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-adposition";
+import { GermanAdverbSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-adverb";
+import { GermanAuxiliarySchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-auxiliary";
+import { GermanCoordinatingConjunctionSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-coordinating-conjunction";
+import { GermanDeterminerSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-determiner";
+import { GermanInterjectionSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-interjection";
+import { GermanNounSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-noun";
+import { GermanNumeralSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-numeral";
+import { GermanOtherSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-other";
+import { GermanParticleSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-particle";
+import { GermanPronounSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-pronoun";
+import { GermanProperNounSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-proper-noun";
+import { GermanPunctuationSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-punctuation";
+import { GermanSubordinatingConjunctionSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-subordinating-conjunction";
+import { GermanSymbolSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-symbol";
 
 const { Lemma: LemmaSchema, Selection: SelectionSchema } = LingSchemaFor;
 
