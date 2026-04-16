@@ -270,7 +270,7 @@ describe("English schema specificity", () => {
 			EnglishVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "look",
 				inherentFeatures: {
-					governedPreposition: "to",
+					hasGovPrep: "to",
 					phrasal: "Yes",
 				},
 				language: "English",
@@ -297,7 +297,7 @@ describe("English schema specificity", () => {
 			EnglishVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "wash",
 				inherentFeatures: {
-					separable: "Yes",
+					hasSepPrefix: "up",
 				},
 				language: "English",
 				lemmaKind: "Lexeme",
@@ -310,7 +310,7 @@ describe("English schema specificity", () => {
 			EnglishVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "look",
 				inherentFeatures: {
-					governedPreposition: "",
+					hasGovPrep: "",
 				},
 				language: "English",
 				lemmaKind: "Lexeme",

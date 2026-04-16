@@ -86,7 +86,7 @@ describe("German verb schemas", () => {
 		const result = GermanVerbSchemas.LemmaSchema.safeParse({
 			canonicalLemma: "gehen",
 			inherentFeatures: {
-				governedPreposition: "auf",
+				hasGovPrep: "auf",
 				lexicallyReflexive: "Yes",
 				verbType: "Mod",
 			},
@@ -104,7 +104,7 @@ describe("German verb schemas", () => {
 			GermanVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "mitkommen",
 				inherentFeatures: {
-					separable: "Yes",
+					hasSepPrefix: "mit",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
@@ -117,7 +117,7 @@ describe("German verb schemas", () => {
 			GermanVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "warten",
 				inherentFeatures: {
-					governedPreposition: "auf",
+					hasGovPrep: "auf",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",
@@ -130,7 +130,7 @@ describe("German verb schemas", () => {
 			GermanVerbSchemas.LemmaSchema.safeParse({
 				canonicalLemma: "warten",
 				inherentFeatures: {
-					governedPreposition: "",
+					hasGovPrep: "",
 				},
 				language: "German",
 				lemmaKind: "Lexeme",

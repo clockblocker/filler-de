@@ -210,6 +210,9 @@ function normalizeLemma(value: Lemma): Lemma {
 		case "Morpheme":
 			return {
 				canonicalLemma: value.canonicalLemma,
+				...("hasSepPrefix" in value && value.hasSepPrefix !== undefined
+					? { hasSepPrefix: value.hasSepPrefix }
+					: {}),
 				...("isClosedSet" in value && value.isClosedSet !== undefined
 					? { isClosedSet: value.isClosedSet }
 					: {}),
@@ -219,9 +222,6 @@ function normalizeLemma(value: Lemma): Lemma {
 					? {}
 					: { meaningInEmojis: value.meaningInEmojis }),
 				morphemeKind: value.morphemeKind,
-				...("separable" in value && value.separable !== undefined
-					? { separable: value.separable }
-					: {}),
 			} as Lemma;
 		case "Phraseme":
 			return {
@@ -257,10 +257,12 @@ function getLemmaFeatures(value: Lemma): ParsedFeatureBag {
 			return value.inherentFeatures as ParsedFeatureBag;
 		case "Morpheme":
 			return compactFeatureBag({
+				...("hasSepPrefix" in value
+					? { hasSepPrefix: value.hasSepPrefix }
+					: {}),
 				...("isClosedSet" in value
 					? { isClosedSet: value.isClosedSet }
 					: {}),
-				...("separable" in value ? { separable: value.separable } : {}),
 			});
 		case "Phraseme":
 			return compactFeatureBag({

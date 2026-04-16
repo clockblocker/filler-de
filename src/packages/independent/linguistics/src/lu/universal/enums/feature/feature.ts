@@ -3,10 +3,10 @@ import type * as z from "zod/v3";
 import type { Prettify } from "../../../../../../../../types/helpers";
 import { DiscourseFormulaRoleSchema } from "./custom/discourse-formula-role";
 import { GovernedCase } from "./custom/governed-case";
-import { GovernedPreposition } from "./custom/governed-preposition";
+import { HasGovPrep } from "./custom/governed-preposition";
+import { HasSepPrefix } from "./custom/separable";
 import { LexicallyReflexive } from "./custom/lexically-reflexive";
 import { Phrasal } from "./custom/phrasal";
-import { Separable } from "./custom/separable";
 import { Abbr } from "./ud/abbr";
 import { AdpType } from "./ud/adp-type";
 import { Animacy } from "./ud/animacy";
@@ -64,7 +64,8 @@ export const UniversalFeature = {
 	Foreign,
 	Gender,
 	GovernedCase,
-	GovernedPreposition,
+	HasGovPrep,
+	HasSepPrefix,
 	GrammaticalNumber,
 	HebBinyan,
 	HebExistential,
@@ -84,7 +85,6 @@ export const UniversalFeature = {
 	PronType,
 	PunctType,
 	Reflex,
-	Separable,
 	Style,
 	Tense,
 	// Typo is exluded from the list of features, because in this system, Selections are responsible forhandeling typos
@@ -120,7 +120,8 @@ export type AbstractFeatures = Prettify<{
 	gender: FeatureValueSet<UniversalFeatureValue<"Gender">>;
 	"gender[psor]": FeatureValueSet<UniversalFeatureValue<"Gender">>;
 	governedCase: UniversalFeatureValue<"GovernedCase">;
-	governedPreposition: UniversalFeatureValue<"GovernedPreposition">;
+	hasGovPrep: UniversalFeatureValue<"HasGovPrep">;
+	hasSepPrefix: UniversalFeatureValue<"HasSepPrefix">;
 	hebBinyan: UniversalFeatureValue<"HebBinyan">;
 	hebExistential: UniversalFeatureValue<"HebExistential">;
 	hyph: UniversalFeatureValue<"Hyph">;
@@ -147,5 +148,4 @@ export type AbstractFeatures = Prettify<{
 	verbForm: UniversalFeatureValue<"VerbForm">;
 	verbType: UniversalFeatureValue<"VerbType">;
 	voice: UniversalFeatureValue<"Voice">;
-	separable: UniversalFeatureValue<"Separable">;
 }>;

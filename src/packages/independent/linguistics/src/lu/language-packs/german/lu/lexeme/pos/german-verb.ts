@@ -15,9 +15,9 @@ const GermanVerbInflectionalFeaturesSchema =
 	GermanVerbalInflectionalFeaturesSchema;
 
 const GermanVerbInherentFeaturesSchema = featureSchema({
-	governedPreposition: UniversalFeature.GovernedPreposition,
+	hasGovPrep: UniversalFeature.HasGovPrep,
+	hasSepPrefix: UniversalFeature.HasSepPrefix,
 	lexicallyReflexive: UniversalFeature.LexicallyReflexive,
-	separable: UniversalFeature.Separable,
 	verbType: UniversalFeature.VerbType.extract(["Mod"]),
 });
 

@@ -38,7 +38,7 @@ type AbstractMorphemLemma<MK extends MorphemeKind = MorphemeKind> = Prettify<{
 	language: TargetLanguage;
 	morphemeKind: MK;
 	isClosedSet?: IsClosedSet;
-	separable?: UniversalFeatureValue<"Separable">;
+	hasSepPrefix?: UniversalFeatureValue<"HasSepPrefix">;
 	canonicalLemma: string;
 }>;
 

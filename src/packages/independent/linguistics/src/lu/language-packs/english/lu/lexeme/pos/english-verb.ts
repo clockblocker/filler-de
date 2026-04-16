@@ -29,7 +29,7 @@ const EnglishVerbInflectionalFeaturesSchema = featureSchema({
 const EnglishVerbInherentFeaturesSchema = featureSchema({
 	abbr: UniversalFeature.Abbr,
 	extPos: EnglishVerbExtPos,
-	governedPreposition: UniversalFeature.GovernedPreposition,
+	hasGovPrep: UniversalFeature.HasGovPrep,
 	phrasal: UniversalFeature.Phrasal,
 	style: EnglishVerbStyle,
 });

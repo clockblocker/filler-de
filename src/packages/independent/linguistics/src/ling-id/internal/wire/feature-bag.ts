@@ -11,7 +11,6 @@ const YES_LITERAL_FEATURE_KEYS = new Set([
 	"phrasal",
 	"poss",
 	"reflex",
-	"separable",
 ]);
 
 const MULTI_VALUE_FEATURE_KEYS = new Set([

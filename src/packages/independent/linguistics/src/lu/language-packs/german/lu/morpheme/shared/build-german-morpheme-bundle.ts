@@ -19,15 +19,15 @@ export function buildGermanMorphemeBundle<MK extends MorphemeKind>({
 		schema: z
 			.object({
 				canonicalLemma: z.string(),
+				hasSepPrefix:
+					morphemeKind === "Prefix"
+						? UniversalFeature.HasSepPrefix.optional()
+						: z.undefined().optional(),
 				isClosedSet: z.boolean().optional(),
 				language: z.literal("German"),
 				lemmaKind: z.literal("Morpheme"),
 				meaningInEmojis: MeaningInEmojisSchema,
 				morphemeKind: z.literal(morphemeKind),
-				separable:
-					morphemeKind === "Prefix"
-						? UniversalFeature.Separable.optional()
-						: z.undefined().optional(),
 			})
 			.strict(),
 	});

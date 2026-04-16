@@ -1,10 +1,10 @@
 import { z } from "zod/v3";
 
-export const Separable = z.literal("Yes");
-export type Separable = z.infer<typeof Separable>;
+export const HasSepPrefix = z.string().min(1);
+export type HasSepPrefix = z.infer<typeof HasSepPrefix>;
 
-export function getReprForSeparable(_separable: Separable) {
-	const reprForSeparable = "separable";
+export function getReprForHasSepPrefix(_hasSepPrefix: HasSepPrefix) {
+	const reprForHasSepPrefix = "has separable prefix";
 
-	return reprForSeparable;
+	return reprForHasSepPrefix;
 }

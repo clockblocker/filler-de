@@ -327,14 +327,14 @@ function parseLemmaPayload(language: TargetLanguage, body: string): Lemma {
 			const features = parseFeatureBag(featuresToken);
 			return {
 				...base,
+				...("hasSepPrefix" in features
+					? { hasSepPrefix: features.hasSepPrefix as string }
+					: {}),
 				...("isClosedSet" in features
 					? { isClosedSet: features.isClosedSet }
 					: {}),
 				lemmaKind,
 				morphemeKind: lemmaSubKind,
-				...("separable" in features
-					? { separable: features.separable }
-					: {}),
 			} as Lemma;
 		}
 		case "Phraseme": {
