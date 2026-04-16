@@ -96,6 +96,8 @@ Notes:
 - Prefer `toResolvedLemmaSurface` over `toResolvedSurfaceOfLemma`.
 - Expose both top-level generic functions and `forLanguage(language)` bound
   helpers.
+- Bound helpers should throw on language mismatch, mirroring
+  `LingId.forLanguage(...)`.
 - Do not expose a public `LingOperation.English/...` style namespace for now.
 
 ## Ownership Split
@@ -288,6 +290,10 @@ fromSurface<
 
 Avoid overloads that introduce multiple semantic modes into one function.
 
+These helper types do not need to become part of the public API. The operations
+layer can define its own internal utility types instead of re-exporting private
+type machinery from `public-entities.ts`.
+
 ## Internal Module Layout
 
 Recommended files:
@@ -303,6 +309,10 @@ Recommended files:
 - `src/lu/language-packs/hebrew/hebrew-operations.ts`
 
 Then re-export from `src/index.ts`.
+
+Create the per-language operation-pack files in the first implementation pass
+even if all three initially share the same `canonicalLemma` normalization
+behavior. The seam is part of the design, not a later refactor.
 
 ## Implementation Phases
 
@@ -334,6 +344,12 @@ Implement:
 
 - `convert.surface.toStandardFullSelection`
 - `convert.lemma.toStandardFullSelection`
+
+Use an options bag from day one:
+
+```ts
+toStandardFullSelection(surface, options?: { spelledSelection?: string })
+```
 
 Default `spelledSelection` to `surface.normalizedFullSurface` unless a language
 hook or explicit option overrides it.
@@ -407,6 +423,8 @@ Guidelines:
 - generic top-level calls are best for values that already carry `language`
 - `forLanguage(language)` is best for pipelines that are already language-scoped
 - both should share the same underlying implementation
+- bound helpers should assert that input values match the bound language and
+  throw on mismatch
 
 ## Risks
 
@@ -469,12 +487,24 @@ bun run typecheck:changed
 - Top-level and language-bound APIs both work.
 - Tests cover nullability, narrowing, and synthetic-conversion behavior.
 
+## Resolved Decisions
+
+1. `LingOperation.forLanguage(language)` should throw on language mismatch.
+   This keeps the bound API honest and catches invalid mixed-language pipelines
+   early.
+2. The operations layer should keep its own internal helper types rather than
+   expanding the public type surface with new exports from `public-entities.ts`.
+3. `convert.surface.toStandardFullSelection` should accept an options bag from
+   day one, starting with `{ spelledSelection?: string }`.
+4. Per-language operation-pack files should exist from the first pass even if
+   their initial implementations are nearly identical.
+5. Synthetic selections should not be marked as synthetic in this pass because
+   that would require entity-shape changes.
+6. Initial lemma-surface normalization should default to
+   `lemma.canonicalLemma` for all current languages unless a concrete need
+   appears during implementation.
+
 ## Open Questions
 
-1. Should synthetic selections carry metadata marking them as synthetic?
-2. Should `toStandardFullSelection` accept an explicit `spelledSelection`
-   override from day one?
-3. Should default lemma-surface normalization always be `canonicalLemma`, or do
-   any current languages need a different normalized lemma surface immediately?
-4. When default inflection synthesis arrives, should unsupported POS return
+1. When default inflection synthesis arrives, should unsupported POS return
    `null` or a result object with a reason?

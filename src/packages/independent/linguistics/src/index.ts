@@ -5,6 +5,7 @@ import {
 	SurfaceSchema,
 	UnresolvedSurfaceSchema,
 } from "./lu/public-entities";
+import { LingOperation } from "./lu/public-operations";
 import type { TargetLanguage } from "./lu/universal/enums/core/language";
 import type { LingEntity } from "./lu/universal/enums/core/ling-entity";
 
@@ -21,26 +22,7 @@ export const lingSchemaFor = {
 };
 
 export const LingSchemaFor = lingSchemaFor;
-
-// const lingOperation = {
-// 	convert: {
-// 		surface: {
-// 			toStandardFullSelection: // Surface -> Selection
-// 		},
-// 		lemma: {
-// 			toResolvedSurfaceOfLemma: // Lemma -> ResolvedSurface<SurfaceKind = "Lemma">
-// 			toStandardFullSelection: // chain lemma.toResolvedSurfaceOfLemma and surface.toStandardFullSelection
-// 		},
-// 	},
-// 	extract: {
-// 		lemma: {
-// 			fromSurface: // ResolvedSurface -> Lemma; Surface -> Lemma | null; UnresolvedSurface -> null
-// 		},
-// 		surface: {
-// 			fromSelection: // Selection -> Surface | null (null is when selection orph status is Unknown)
-// 		}
-// 	}
-// }
+export { LingOperation };
 
 export type {
 	Lemma,

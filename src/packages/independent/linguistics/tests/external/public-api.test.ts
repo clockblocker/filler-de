@@ -128,6 +128,7 @@ describe("public API usage", () => {
 	it("exposes the curated root API surface", () => {
 		expect(typeof linguistics.buildToLingConverters).toBe("function");
 		expect(typeof linguistics.LingId.forLanguage).toBe("function");
+		expect(typeof linguistics.LingOperation.forLanguage).toBe("function");
 
 		const germanLingConverters =
 			linguistics.buildToLingConverters("German");
