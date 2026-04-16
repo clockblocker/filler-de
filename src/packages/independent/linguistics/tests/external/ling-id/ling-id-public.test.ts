@@ -3,7 +3,7 @@ import {
 	type KnownSelection,
 	type Lemma,
 	LingIdCodec,
-	LingOperation,
+	lingOperation,
 	type ResolvedSurface,
 	type UnresolvedSurface,
 } from "../../../src";
@@ -70,11 +70,11 @@ function buildEnglishUnresolvedInflectionSurface() {
 function buildEnglishSelection(
 	surface = buildEnglishUnresolvedInflectionSurface(),
 ) {
-	return LingOperation.forLanguage(
-		"English",
-	).convert.surface.toStandardFullSelection(surface, {
-		spelledSelection: "walk",
-	}) satisfies KnownSelection<"English">;
+	return lingOperation
+		.forLanguage("English")
+		.convert.surface.toStandardFullSelection(surface, {
+			spelledSelection: "walk",
+		}) satisfies KnownSelection<"English">;
 }
 
 describe("LingIdCodec", () => {
@@ -95,7 +95,10 @@ describe("LingIdCodec", () => {
 		expect(unresolvedId.startsWith("ling:v2:EN:SURF-UNRES;")).toBe(true);
 		expect(selectionId.startsWith("ling:v2:EN:SEL;")).toBe(true);
 
-		const decodedLemma = LingIdCodec.English.tryToDecodeAs("Lemma", lemmaId);
+		const decodedLemma = LingIdCodec.English.tryToDecodeAs(
+			"Lemma",
+			lemmaId,
+		);
 		const decodedResolved = LingIdCodec.English.tryToDecodeAs(
 			"ResolvedSurface",
 			resolvedId,

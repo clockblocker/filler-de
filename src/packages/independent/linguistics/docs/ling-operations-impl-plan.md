@@ -68,7 +68,7 @@ It must construct a synthetic selection.
 ## Proposed Public API
 
 ```ts
-export const LingOperation = {
+export const lingOperation = {
   forLanguage,
   convert: {
     surface: {
@@ -92,13 +92,13 @@ export const LingOperation = {
 
 Notes:
 
-- Prefer `LingOperation`, matching `lingSchemaFor` and `LingId`.
+- Prefer `lingOperation`, matching `lingSchemaFor` and `LingId`.
 - Prefer `toResolvedLemmaSurface` over `toResolvedSurfaceOfLemma`.
 - Expose both top-level generic functions and `forLanguage(language)` bound
   helpers.
 - Bound helpers should throw on language mismatch, mirroring
   `LingId.forLanguage(...)`.
-- Do not expose a public `LingOperation.English/...` style namespace for now.
+- Do not expose a public `lingOperation.English/...` style namespace for now.
 
 ## Ownership Split
 
@@ -228,8 +228,8 @@ Reason:
 The later API should likely be:
 
 ```ts
-LingOperation.convert.lemma.toResolvedDefaultInflectionSurface(...)
-LingOperation.convert.lemma.toStandardFullDefaultInflectionSelection(...)
+lingOperation.convert.lemma.toResolvedDefaultInflectionSurface(...)
+lingOperation.convert.lemma.toStandardFullDefaultInflectionSelection(...)
 ```
 
 Both should return `null` when no default inflection policy exists.
@@ -414,8 +414,8 @@ clear need for it.
 Support both styles:
 
 ```ts
-LingOperation.extract.surface.fromSelection(selection)
-LingOperation.forLanguage("German").extract.surface.fromSelection(selection)
+lingOperation.extract.surface.fromSelection(selection)
+lingOperation.forLanguage("German").extract.surface.fromSelection(selection)
 ```
 
 Guidelines:
@@ -480,7 +480,7 @@ bun run typecheck:changed
 
 ## Acceptance Criteria
 
-- `LingOperation` is exported from the root API.
+- `lingOperation` is exported from the root API.
 - The first five structural operations are implemented.
 - Language-specific logic is accessed only through internal operation packs.
 - No entity shape changes are required.
@@ -489,7 +489,7 @@ bun run typecheck:changed
 
 ## Resolved Decisions
 
-1. `LingOperation.forLanguage(language)` should throw on language mismatch.
+1. `lingOperation.forLanguage(language)` should throw on language mismatch.
    This keeps the bound API honest and catches invalid mixed-language pipelines
    early.
 2. The operations layer should keep its own internal helper types rather than

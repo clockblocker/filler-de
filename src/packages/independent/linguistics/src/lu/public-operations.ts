@@ -144,7 +144,7 @@ export function forLanguage<L extends TargetLanguage>(language: L) {
 				fromSelection: boundExtractSurfaceFromSelection,
 			},
 		},
-	} satisfies LingOperationApi<L>;
+	} satisfies lingOperationApi<L>;
 
 	return api;
 }
@@ -187,7 +187,7 @@ type ToStandardFullSelectionFromLemmaFn<
 	options?: StandardFullSelectionOptions,
 ) => StandardFullSelectionForLemma<T>;
 
-type LingOperationApi<L extends TargetLanguage = TargetLanguage> = {
+type lingOperationApi<L extends TargetLanguage = TargetLanguage> = {
 	convert: {
 		surface: {
 			toStandardFullSelection: ToStandardFullSelectionFromSurfaceFn<L>;

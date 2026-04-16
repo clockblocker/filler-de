@@ -6,7 +6,7 @@ import {
 	type LingId,
 	LingIdCodec,
 	type LingIdValueFor,
-	LingOperation,
+	lingOperation,
 	lingSchemaFor,
 	MorphologicalRelationsSchema,
 	type Relations,
@@ -47,9 +47,9 @@ type _selectionStillIncludesUnknownOutsideLingIdApi = Assert<
 describe("public API usage", () => {
 	it("exposes the curated root API surface", () => {
 		expect(typeof linguistics.LingIdCodec.forLanguage).toBe("function");
-		expect(typeof linguistics.LingOperation.forLanguage).toBe("function");
+		expect(typeof linguistics.lingOperation.forLanguage).toBe("function");
 		expect(linguistics.LingIdCodec).toBe(LingIdCodec);
-		expect(linguistics.LingOperation).toBe(LingOperation);
+		expect(linguistics.lingOperation).toBe(lingOperation);
 		expect(linguistics.lingSchemaFor).toBe(lingSchemaFor);
 		expect(linguistics.LingIdCodec.English).toBeDefined();
 		expect(linguistics.LingIdCodec.German).toBeDefined();

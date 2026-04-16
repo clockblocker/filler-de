@@ -110,7 +110,7 @@ export function assertLanguageMatch(
 ): void {
 	if (expected !== actual) {
 		throw new Error(
-			`LingOperation language mismatch: expected ${expected}, received ${actual}`,
+			`lingOperation language mismatch: expected ${expected}, received ${actual}`,
 		);
 	}
 }
