@@ -154,4 +154,25 @@ describe("LingIdCodec", () => {
 			LingIdCodec.English.makeLingIdFor(gvaeSurface),
 		);
 	});
+
+	it("keeps canonical and variant selections distinct in Ling IDs", () => {
+		const canonicalSelection = englishWalkStandardFullSelection;
+		const variantSelection = {
+			...englishWalkStandardFullSelection,
+			spelledSelection: "walk",
+			spellingRelation: "Variant" as const,
+		};
+
+		const canonicalId =
+			LingIdCodec.English.makeLingIdFor(canonicalSelection);
+		const variantId = LingIdCodec.English.makeLingIdFor(variantSelection);
+
+		expect(canonicalId).not.toBe(variantId);
+		expect(
+			LingIdCodec.English.tryToDecodeAs(
+				"Selection",
+				variantId,
+			)._unsafeUnwrap().spellingRelation,
+		).toBe("Variant");
+	});
 });

@@ -46,6 +46,20 @@ export const germanGehenLemma = {
 	pos: "VERB",
 } satisfies Lemma<"German", "Lexeme", "VERB">;
 
+// Attestation: "In Berlin sowie im Umland (Agglomeration Berlin) betreibt die [BVG] die U-Bahn Berlin, die Straßenbahn Berlin, den Busverkehr in Berlin und den Fährverkehr in Berlin, nicht jedoch die S-Bahn."
+// UD-style: multi-word abbreviations keep the abbreviated form as canonicalLemma and mark Abbr=Yes.
+// We intentionally do not model a built-in link from "BVG" to "Berliner Verkehrsbetriebe" here.
+export const germanBVGLemma = {
+	canonicalLemma: "BVG",
+	inherentFeatures: {
+		abbr: "Yes",
+	},
+	language: "German",
+	lemmaKind: "Lexeme",
+	meaningInEmojis: "🚇",
+	pos: "PROPN",
+} satisfies Lemma<"German", "Lexeme", "PROPN">;
+
 // Attestation: "[Ab]fahrt nur am Gleis 3."
 export const germanAbPrefixLemma = {
 	canonicalLemma: "ab",

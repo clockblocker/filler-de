@@ -4,10 +4,8 @@ import type { SelectionSchemaFor } from "../../universal/helpers/schema-targets"
 import {
 	HebrewStandardInflectionLexemeSelectionSchemas,
 	HebrewStandardLemmaLexemeSelectionSchemas,
-	HebrewStandardVariantLexemeSelectionSchemas,
 	HebrewTypoInflectionLexemeSelectionSchemas,
 	HebrewTypoLemmaLexemeSelectionSchemas,
-	HebrewTypoVariantLexemeSelectionSchemas,
 } from "./lu/lexeme/hebrew-lexemes";
 import {
 	HebrewStandardLemmaMorphemeSelectionSchemas,
@@ -18,11 +16,13 @@ import {
 	HebrewTypoLemmaPhrasemeSelectionSchemas,
 } from "./lu/phraseme/hebrew-phrasemes";
 
-const HebrewUnknownSelectionSchema = z.object({
-	language: z.literal("Hebrew"),
-	orthographicStatus: z.literal("Unknown"),
-	spelledSelection: z.string(),
-}) satisfies SelectionSchemaFor<"Unknown">;
+const HebrewUnknownSelectionSchema = z
+	.object({
+		language: z.literal("Hebrew"),
+		orthographicStatus: z.literal("Unknown"),
+		spelledSelection: z.string(),
+	})
+	.strict() satisfies SelectionSchemaFor<"Unknown">;
 
 export const HebrewSelectionSchema = {
 	Standard: {
@@ -34,9 +34,6 @@ export const HebrewSelectionSchema = {
 			Morpheme: HebrewStandardLemmaMorphemeSelectionSchemas,
 			Phraseme: HebrewStandardLemmaPhrasemeSelectionSchemas,
 		},
-		Variant: {
-			Lexeme: HebrewStandardVariantLexemeSelectionSchemas,
-		},
 	},
 	Typo: {
 		Inflection: {
@@ -46,9 +43,6 @@ export const HebrewSelectionSchema = {
 			Lexeme: HebrewTypoLemmaLexemeSelectionSchemas,
 			Morpheme: HebrewTypoLemmaMorphemeSelectionSchemas,
 			Phraseme: HebrewTypoLemmaPhrasemeSelectionSchemas,
-		},
-		Variant: {
-			Lexeme: HebrewTypoVariantLexemeSelectionSchemas,
 		},
 	},
 	Unknown: HebrewUnknownSelectionSchema,

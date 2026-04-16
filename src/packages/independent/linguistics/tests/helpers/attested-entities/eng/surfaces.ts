@@ -1,4 +1,8 @@
-import type { ResolvedSurface, Surface, UnresolvedSurface } from "../../../../src";
+import type {
+	ResolvedSurface,
+	Surface,
+	UnresolvedSurface,
+} from "../../../../src";
 import { englishWalkLemma } from "./lemmas";
 
 // Attestation: "They [walk] home together."

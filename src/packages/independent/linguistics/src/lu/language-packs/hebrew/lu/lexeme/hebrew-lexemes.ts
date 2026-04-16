@@ -76,25 +76,6 @@ export const HebrewStandardLemmaLexemeSelectionSchemas = {
 	X: HebrewOtherSchemas.LemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Standard"]["Lemma"]["Lexeme"];
 
-export const HebrewStandardVariantLexemeSelectionSchemas = {
-	ADJ: HebrewAdjectiveSchemas.StandardVariantSelectionSchema,
-	ADP: HebrewAdpositionSchemas.StandardVariantSelectionSchema,
-	ADV: HebrewAdverbSchemas.StandardVariantSelectionSchema,
-	AUX: HebrewAuxiliarySchemas.StandardVariantSelectionSchema,
-	CCONJ: HebrewCoordinatingConjunctionSchemas.StandardVariantSelectionSchema,
-	DET: HebrewDeterminerSchemas.StandardVariantSelectionSchema,
-	INTJ: HebrewInterjectionSchemas.StandardVariantSelectionSchema,
-	NOUN: HebrewNounSchemas.StandardVariantSelectionSchema,
-	NUM: HebrewNumeralSchemas.StandardVariantSelectionSchema,
-	PRON: HebrewPronounSchemas.StandardVariantSelectionSchema,
-	PROPN: HebrewProperNounSchemas.StandardVariantSelectionSchema,
-	PUNCT: HebrewPunctuationSchemas.StandardVariantSelectionSchema,
-	SCONJ: HebrewSubordinatingConjunctionSchemas.StandardVariantSelectionSchema,
-	SYM: HebrewSymbolSchemas.StandardVariantSelectionSchema,
-	VERB: HebrewVerbSchemas.StandardVariantSelectionSchema,
-	X: HebrewOtherSchemas.StandardVariantSelectionSchema,
-} satisfies SelectionSchemaLanguageShape["Standard"]["Variant"]["Lexeme"];
-
 export const HebrewTypoInflectionLexemeSelectionSchemas = {
 	ADJ: HebrewAdjectiveSchemas.TypoInflectionSelectionSchema,
 	ADP: HebrewAdpositionSchemas.TypoInflectionSelectionSchema,
@@ -132,22 +113,3 @@ export const HebrewTypoLemmaLexemeSelectionSchemas = {
 	VERB: HebrewVerbSchemas.TypoLemmaSelectionSchema,
 	X: HebrewOtherSchemas.TypoLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Typo"]["Lemma"]["Lexeme"];
-
-export const HebrewTypoVariantLexemeSelectionSchemas = {
-	ADJ: HebrewAdjectiveSchemas.TypoVariantSelectionSchema,
-	ADP: HebrewAdpositionSchemas.TypoVariantSelectionSchema,
-	ADV: HebrewAdverbSchemas.TypoVariantSelectionSchema,
-	AUX: HebrewAuxiliarySchemas.TypoVariantSelectionSchema,
-	CCONJ: HebrewCoordinatingConjunctionSchemas.TypoVariantSelectionSchema,
-	DET: HebrewDeterminerSchemas.TypoVariantSelectionSchema,
-	INTJ: HebrewInterjectionSchemas.TypoVariantSelectionSchema,
-	NOUN: HebrewNounSchemas.TypoVariantSelectionSchema,
-	NUM: HebrewNumeralSchemas.TypoVariantSelectionSchema,
-	PRON: HebrewPronounSchemas.TypoVariantSelectionSchema,
-	PROPN: HebrewProperNounSchemas.TypoVariantSelectionSchema,
-	PUNCT: HebrewPunctuationSchemas.TypoVariantSelectionSchema,
-	SCONJ: HebrewSubordinatingConjunctionSchemas.TypoVariantSelectionSchema,
-	SYM: HebrewSymbolSchemas.TypoVariantSelectionSchema,
-	VERB: HebrewVerbSchemas.TypoVariantSelectionSchema,
-	X: HebrewOtherSchemas.TypoVariantSelectionSchema,
-} satisfies SelectionSchemaLanguageShape["Typo"]["Variant"]["Lexeme"];

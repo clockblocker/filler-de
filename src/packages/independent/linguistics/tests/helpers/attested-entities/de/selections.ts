@@ -3,6 +3,7 @@ import {
 	makeLexemeSurfaceReference,
 	makePhrasemeSurfaceReference,
 } from "../../functions/builders";
+import { germanBVGLemma } from "./lemmas";
 
 // Attestation: "[Auf jeden Fall] komme ich morgen."
 export const germanAufJedenFallDiscourseFormulaSelection = {
@@ -10,6 +11,7 @@ export const germanAufJedenFallDiscourseFormulaSelection = {
 	orthographicStatus: "Standard",
 	selectionCoverage: "Full",
 	spelledSelection: "auf jeden Fall",
+	spellingRelation: "Canonical",
 	surface: {
 		...makePhrasemeSurfaceReference("DiscourseFormula", "auf jeden Fall"),
 		language: "German",
@@ -30,6 +32,7 @@ export const germanEinSpaziergangImParkClichePartialSelection = {
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "Spaziergang",
+	spellingRelation: "Canonical",
 	surface: {
 		...makePhrasemeSurfaceReference("Cliché", "ein Spaziergang im Park"),
 		language: "German",
@@ -39,15 +42,16 @@ export const germanEinSpaziergangImParkClichePartialSelection = {
 } satisfies Selection<"German", "Standard", "Lemma", "Phraseme", "Cliché">;
 
 // Attestation: "In Berlin sowie im Umland (Agglomeration Berlin) betreibt die [BVG] die U-Bahn Berlin, die Straßenbahn Berlin, den Busverkehr in Berlin und den Fährverkehr in Berlin, nicht jedoch die S-Bahn."
-export const germanBVGAbbreviationVariantSelection = {
+export const germanBVGAbbreviationSelection = {
 	language: "German",
 	orthographicStatus: "Standard",
 	selectionCoverage: "Full",
 	spelledSelection: "BVG",
+	spellingRelation: "Canonical",
 	surface: {
-		...makeLexemeSurfaceReference("PROPN", "Berliner Verkehrsbetriebe"),
+		...makeLexemeSurfaceReference("PROPN", germanBVGLemma.canonicalLemma),
 		language: "German",
 		normalizedFullSurface: "BVG",
-		surfaceKind: "Variant",
+		surfaceKind: "Lemma",
 	},
-} satisfies Selection<"German", "Standard", "Variant", "Lexeme", "PROPN">;
+} satisfies Selection<"German", "Standard", "Lemma", "Lexeme", "PROPN">;

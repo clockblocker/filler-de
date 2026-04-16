@@ -32,6 +32,7 @@ That is still a valid classification. The selection is partial, but the deeper l
 const giveUpPartialSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
+	spellingRelation: "Canonical",
 	selectionCoverage: "Partial",
 	spelledSelection: "up",
 	surface: {
@@ -77,12 +78,15 @@ const giveUpLemma = {
 } satisfies Lemma<"English", "Lexeme", "VERB">;
 ```
 
-This gives you two orthogonal axes of strictness:
+This gives you three orthogonal axes of strictness:
 
 - `orthographicStatus`: whether the spelling is standard, a recognized typo, or unknown
+- `spellingRelation`: whether a known spelling is the canonical one or an accepted variant
 - `selectionCoverage`: whether the user highlighted the whole surface or only part of it
 
 A recognized typo does not need to break deeper classification if the surface is still recognizable, and a partial selection does not need to discard the full surface or its lemma.
+
+Selection-level `spellingRelation` is separate from the UD feature `variant`. The former links obvious spelling alternants such as `armor` / `armour`; the latter stays a lexical feature where UD needs it.
 
 Although mainly based on the work of UD, this model has a human student of a new language in mind and hence differs from UD in compounded linguistic units.
 
@@ -98,6 +102,7 @@ as part of the idiom "a walk in the park", directly at the lemma-surface layer:
 const idiomPartSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
+	spellingRelation: "Canonical",
 	selectionCoverage: "Partial",
 	spelledSelection: "walk",
 	surface: {
@@ -121,10 +126,66 @@ const idiomPartSelection = {
 
 Here, `surfaceKind: "Lemma"` is appropriate because the selection is attached directly to the idiom lemma instead of to a separate inflected surface.
 
+Spelling variants now live on the selection, not on `surfaceKind`. The surface stays structural (`Lemma` or `Inflection`), while the selection records whether the observed spelling is canonical or an accepted variant.
+
+For plain spelling alternants such as `armor` / `armour`:
+
+```ts
+const armourSelection = {
+	language: "English",
+	orthographicStatus: "Standard",
+	spellingRelation: "Variant",
+	selectionCoverage: "Full",
+	spelledSelection: "armour",
+	surface: {
+		discriminators: {
+			lemmaKind: "Lexeme",
+			lemmaSubKind: "NOUN",
+		},
+		language: "English",
+		normalizedFullSurface: "armour",
+		surfaceKind: "Lemma",
+		target: {
+			canonicalLemma: "armor",
+		},
+	},
+} satisfies Selection<"English", "Standard", "Lemma", "Lexeme", "NOUN">;
+```
+
+And the same mechanism works for inflected Hebrew forms, including pointed vs unpointed spellings:
+
+```ts
+const pointedHebrewSelection = {
+	language: "Hebrew",
+	orthographicStatus: "Standard",
+	spellingRelation: "Variant",
+	selectionCoverage: "Full",
+	spelledSelection: "כָּתְבוּ",
+	surface: {
+		discriminators: {
+			lemmaKind: "Lexeme",
+			lemmaSubKind: "VERB",
+		},
+		inflectionalFeatures: {
+			number: "Plur",
+			person: ["1", "2", "3"],
+			tense: "Past",
+		},
+		language: "Hebrew",
+		normalizedFullSurface: "כָּתְבוּ",
+		surfaceKind: "Inflection",
+		target: {
+			canonicalLemma: "כתב",
+		},
+	},
+} satisfies Selection<"Hebrew", "Standard", "Inflection", "Lexeme", "VERB">;
+```
+
 The DTO keeps the learner-facing selection separate from the deeper linguistic layers:
 
 - the language shared by the selection, surface, and lemma: `language`
 - the actual highlighted text in the note: `spelledSelection`
+- whether that spelling is canonical or an accepted variant: `spellingRelation`
 - whether the user highlighted the whole surface or only part of it: `selectionCoverage`
 - the full orthographically normalized surface that the highlighted text belongs to: `normalizedFullSurface`
 - the lexical target that the surface resolves to: `target.canonicalLemma`
@@ -137,6 +198,7 @@ The selections target the lemmas `give up` and `aufpassen`, while the realized n
 const gaveUpSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
+	spellingRelation: "Canonical",
 	selectionCoverage: "Partial",
 	spelledSelection: "up",
 	surface: {
@@ -160,6 +222,7 @@ const gaveUpSelection = {
 const passAufSelection = {
 	language: "German",
 	orthographicStatus: "Standard",
+	spellingRelation: "Canonical",
 	selectionCoverage: "Partial",
 	spelledSelection: "auf",
 	surface: {

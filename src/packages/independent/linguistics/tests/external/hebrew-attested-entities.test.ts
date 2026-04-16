@@ -50,7 +50,9 @@ describe("Hebrew attested entities", () => {
 			),
 		).toEqual(hebrewKatvuResolvedInflectionSurface);
 		expect(
-			lingOperation.unresolve.surface(hebrewKatvuResolvedInflectionSurface),
+			lingOperation.unresolve.surface(
+				hebrewKatvuResolvedInflectionSurface,
+			),
 		).toEqual(hebrewKatvuUnresolvedInflectionSurface);
 		expect(
 			lingOperation.extract.surface.fromSelection(
@@ -92,7 +94,10 @@ describe("Hebrew attested entities", () => {
 			)._unsafeUnwrap(),
 		).toEqual(hebrewKatvuUnresolvedInflectionSurface);
 		expect(
-			LingIdCodec.Hebrew.tryToDecodeAs("Selection", selectionId)._unsafeUnwrap(),
+			LingIdCodec.Hebrew.tryToDecodeAs(
+				"Selection",
+				selectionId,
+			)._unsafeUnwrap(),
 		).toEqual(hebrewKatvuStandardFullSelection);
 	});
 });

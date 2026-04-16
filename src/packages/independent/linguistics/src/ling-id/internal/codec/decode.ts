@@ -10,7 +10,11 @@ import { lingIdDecodeError } from "../errors";
 import { getRuntimeSchema } from "../guards";
 import { parseFeatureBag } from "../wire/feature-bag";
 import { decodeWireKind, parseHeader } from "../wire/header";
-import { parseOptionalToken, splitLeadingTokens, unescapeToken } from "../wire/tokens";
+import {
+	parseOptionalToken,
+	splitLeadingTokens,
+	unescapeToken,
+} from "../wire/tokens";
 
 export function decodeLingId<L extends TargetLanguage>(
 	language: L,
@@ -19,7 +23,10 @@ export function decodeLingId<L extends TargetLanguage>(
 	return decodeLingIdInternal(language, input);
 }
 
-export function decodeLingIdAs<L extends TargetLanguage, K extends ConcreteLingIdKind>(
+export function decodeLingIdAs<
+	L extends TargetLanguage,
+	K extends ConcreteLingIdKind,
+>(
 	language: L,
 	expectedKind: K,
 	input: string,
@@ -49,7 +56,7 @@ function decodeLingIdInternal<L extends TargetLanguage>(
 	language: L,
 	input: string,
 ): Result<LingIdValueFor<ConcreteLingIdKind, L>, LingIdDecodeError> {
-	let header;
+	let header: ReturnType<typeof parseHeader>;
 
 	try {
 		header = parseHeader(input);
@@ -145,31 +152,27 @@ function parseSelectionPayload(
 	language: TargetLanguage,
 	body: string,
 ): unknown {
-	const parts = splitLeadingTokens(body, 5, "selection");
+	const parts = splitLeadingTokens(body, 6, "selection");
 
-	if (parts.length !== 5) {
+	if (parts.length !== 6) {
 		throw new Error(`Malformed selection payload in Ling ID: ${body}`);
 	}
 
 	const [
 		orthographicStatus,
+		spellingRelation,
 		selectionCoverage,
 		spelledSelectionToken,
 		surfaceKindToken,
 		surfacePayload,
-	] = parts as [
-		string,
-		string,
-		string,
-		string,
-		string,
-	];
+	] = parts as [string, string, string, string, string, string];
 
 	return {
 		language,
 		orthographicStatus,
 		selectionCoverage,
 		spelledSelection: unescapeToken(spelledSelectionToken),
+		spellingRelation,
 		surface: parseSelectionSurfacePayload(
 			language,
 			surfaceKindToken,
@@ -259,7 +262,11 @@ function parseSelectionSurfacePayload(
 	}
 
 	if (kind === "UnresolvedSurface") {
-		return parseSurfacePayload(language, "UnresolvedSurface", surfacePayload);
+		return parseSurfacePayload(
+			language,
+			"UnresolvedSurface",
+			surfacePayload,
+		);
 	}
 
 	throw new Error(

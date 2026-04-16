@@ -34,12 +34,15 @@ And the assigned lemma can be validated independently:
 
 <!-- README_BLOCK:core-simple-lemma -->
 
-This gives you two orthogonal axes of strictness:
+This gives you three orthogonal axes of strictness:
 
 - `orthographicStatus`: whether the spelling is standard, a recognized typo, or unknown
+- `spellingRelation`: whether a known spelling is the canonical one or an accepted variant
 - `selectionCoverage`: whether the user highlighted the whole surface or only part of it
 
 A recognized typo does not need to break deeper classification if the surface is still recognizable, and a partial selection does not need to discard the full surface or its lemma.
+
+Selection-level `spellingRelation` is separate from the UD feature `variant`. The former links obvious spelling alternants such as `armor` / `armour`; the latter stays a lexical feature where UD needs it.
 
 Although mainly based on the work of UD, this model has a human student of a new language in mind and hence differs from UD in compounded linguistic units.
 
@@ -55,10 +58,21 @@ as part of the idiom "a walk in the park", directly at the lemma-surface layer:
 
 Here, `surfaceKind: "Lemma"` is appropriate because the selection is attached directly to the idiom lemma instead of to a separate inflected surface.
 
+Spelling variants now live on the selection, not on `surfaceKind`. The surface stays structural (`Lemma` or `Inflection`), while the selection records whether the observed spelling is canonical or an accepted variant.
+
+For plain spelling alternants such as `armor` / `armour`:
+
+<!-- README_BLOCK:core-spelling-variant-selection -->
+
+And the same mechanism works for inflected Hebrew forms, including pointed vs unpointed spellings:
+
+<!-- README_BLOCK:core-hebrew-pointed-variant-selection -->
+
 The DTO keeps the learner-facing selection separate from the deeper linguistic layers:
 
 - the language shared by the selection, surface, and lemma: `language`
 - the actual highlighted text in the note: `spelledSelection`
+- whether that spelling is canonical or an accepted variant: `spellingRelation`
 - whether the user highlighted the whole surface or only part of it: `selectionCoverage`
 - the full orthographically normalized surface that the highlighted text belongs to: `normalizedFullSurface`
 - the lexical target that the surface resolves to: `target.canonicalLemma`

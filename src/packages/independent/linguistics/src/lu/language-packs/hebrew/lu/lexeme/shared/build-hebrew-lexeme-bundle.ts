@@ -48,11 +48,6 @@ export function buildHebrewLexemeBundle<
 			lemma,
 			lemmaIdentityShape,
 		}),
-		StandardVariantSelectionSchema: buildLemmaSelection({
-			lemma,
-			lemmaIdentityShape,
-			surfaceKind: "Variant",
-		}),
 		TypoInflectionSelectionSchema: buildInflectionSelection({
 			inflectionalFeaturesSchema,
 			lemma,
@@ -63,12 +58,6 @@ export function buildHebrewLexemeBundle<
 			lemma,
 			lemmaIdentityShape,
 			orthographicStatus: "Typo",
-		}),
-		TypoVariantSelectionSchema: buildLemmaSelection({
-			lemma,
-			lemmaIdentityShape,
-			orthographicStatus: "Typo",
-			surfaceKind: "Variant",
 		}),
 	};
 }

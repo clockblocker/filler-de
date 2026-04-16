@@ -59,6 +59,7 @@ export const toStandardFullSelection = ((
 			options.spelledSelection ??
 			operationPack.defaultSpelledSelectionFromSurface?.(surface) ??
 			surface.normalizedFullSurface,
+		spellingRelation: "Canonical",
 		surface,
 	};
 }) as ToStandardFullSelectionFromSurfaceFn;

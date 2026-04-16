@@ -67,10 +67,7 @@ export type LingIdApiFor<L extends TargetLanguage> = {
 		id: string,
 	) => Result<LingIdValueFor<ConcreteLingIdKind, L>, LingIdDecodeError>;
 	tryToDecodeAs: {
-		(
-			kind: "Lemma",
-			id: string,
-		): Result<Lemma<L>, LingIdDecodeError>;
+		(kind: "Lemma", id: string): Result<Lemma<L>, LingIdDecodeError>;
 		(
 			kind: "Selection",
 			id: string,

@@ -4,6 +4,7 @@ import type {
 	UnresolvedSurface,
 } from "../../../lu/public-entities";
 import type { TargetLanguage } from "../../../lu/universal/enums/core/language";
+import type { SpellingRelation } from "../../../lu/universal/enums/core/selection";
 import type { ConcreteLingIdKind, KnownSelection, LingId } from "../../types";
 import {
 	getRuntimeSchema,
@@ -111,11 +112,16 @@ function serializeSelectionPayload(value: KnownSelection): string {
 
 	return joinTokens([
 		value.orthographicStatus,
+		getSelectionSpellingRelation(value),
 		value.selectionCoverage,
 		escapeToken(value.spelledSelection),
 		encodeWireKind(surfaceKind),
 		serializeSurfacePayload(value.surface, surfaceKind),
 	]);
+}
+
+function getSelectionSpellingRelation(value: KnownSelection): SpellingRelation {
+	return value.spellingRelation ?? "Canonical";
 }
 
 function serializeSurfacePayload(

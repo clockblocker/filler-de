@@ -166,8 +166,8 @@ function buildStandardKnownSelectionSchema<
 	const sharedShape = {
 		language: z.literal(language),
 		orthographicStatus: z.literal("Standard"),
-		spellingRelation: spellingRelationSchema,
 		spelledSelection: z.string(),
+		spellingRelation: spellingRelationSchema,
 		surface: surfaceSchema,
 	};
 
@@ -210,9 +210,9 @@ function buildTypoKnownSelectionSchema<
 		.object({
 			language: z.literal(language),
 			orthographicStatus: z.literal("Typo"),
-			spellingRelation: spellingRelationSchema,
 			selectionCoverage: SelectionCoverage,
 			spelledSelection: z.string(),
+			spellingRelation: spellingRelationSchema,
 			surface: surfaceSchema,
 		})
 		.strict() as KnownSelectionSchemaFor<

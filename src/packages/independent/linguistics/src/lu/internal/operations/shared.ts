@@ -41,6 +41,7 @@ export type UnknownSelectionLikeFor<L extends TargetLanguage = TargetLanguage> =
 export type KnownSelectionLikeFor<L extends TargetLanguage = TargetLanguage> = {
 	language: L;
 	orthographicStatus: "Standard" | "Typo";
+	spellingRelation?: "Canonical" | "Variant";
 	surface: SurfaceLike<L>;
 };
 
@@ -66,12 +67,12 @@ export type CompatibleLemmaForSurface<S extends SurfaceLike> = S extends {
 		: D extends {
 					lemmaKind: "Morpheme";
 					lemmaSubKind: infer K extends string;
-			  }
+				}
 			? LemmaLike<L> & { lemmaKind: "Morpheme"; morphemeKind: K }
 			: D extends {
 						lemmaKind: "Phraseme";
 						lemmaSubKind: infer K extends string;
-				  }
+					}
 				? LemmaLike<L> & { lemmaKind: "Phraseme"; phrasemeKind: K }
 				: never
 	: never;
@@ -124,6 +125,7 @@ export type StandardFullSelectionForSurface<
 > = {
 	language: T["language"];
 	orthographicStatus: "Standard";
+	spellingRelation: "Canonical";
 	selectionCoverage: "Full";
 	spelledSelection: string;
 	surface: T;

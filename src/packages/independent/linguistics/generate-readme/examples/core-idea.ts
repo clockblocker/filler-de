@@ -7,6 +7,7 @@ const giveUpPartialSelection = {
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "up",
+	spellingRelation: "Canonical",
 	surface: {
 		discriminators: {
 			lemmaKind: "Lexeme",
@@ -52,6 +53,7 @@ const idiomPartSelection = {
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "walk",
+	spellingRelation: "Canonical",
 	surface: {
 		discriminators: {
 			lemmaKind: "Phraseme",
@@ -77,6 +79,7 @@ const gaveUpSelection = {
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "up",
+	spellingRelation: "Canonical",
 	surface: {
 		discriminators: {
 			lemmaKind: "Lexeme",
@@ -100,6 +103,7 @@ const passAufSelection = {
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "auf",
+	spellingRelation: "Canonical",
 	surface: {
 		discriminators: {
 			lemmaKind: "Lexeme",
@@ -118,3 +122,52 @@ const passAufSelection = {
 	},
 } satisfies Selection<"German", "Standard", "Inflection", "Lexeme", "VERB">;
 // README_BLOCK:core-lemma-surface-distinction:end
+
+// README_BLOCK:core-spelling-variant-selection:start
+const armourSelection = {
+	language: "English",
+	orthographicStatus: "Standard",
+	selectionCoverage: "Full",
+	spelledSelection: "armour",
+	spellingRelation: "Variant",
+	surface: {
+		discriminators: {
+			lemmaKind: "Lexeme",
+			lemmaSubKind: "NOUN",
+		},
+		language: "English",
+		normalizedFullSurface: "armour",
+		surfaceKind: "Lemma",
+		target: {
+			canonicalLemma: "armor",
+		},
+	},
+} satisfies Selection<"English", "Standard", "Lemma", "Lexeme", "NOUN">;
+// README_BLOCK:core-spelling-variant-selection:end
+
+// README_BLOCK:core-hebrew-pointed-variant-selection:start
+const pointedHebrewSelection = {
+	language: "Hebrew",
+	orthographicStatus: "Standard",
+	selectionCoverage: "Full",
+	spelledSelection: "כָּתְבוּ",
+	spellingRelation: "Variant",
+	surface: {
+		discriminators: {
+			lemmaKind: "Lexeme",
+			lemmaSubKind: "VERB",
+		},
+		inflectionalFeatures: {
+			number: "Plur",
+			person: ["1", "2", "3"],
+			tense: "Past",
+		},
+		language: "Hebrew",
+		normalizedFullSurface: "כָּתְבוּ",
+		surfaceKind: "Inflection",
+		target: {
+			canonicalLemma: "כתב",
+		},
+	},
+} satisfies Selection<"Hebrew", "Standard", "Inflection", "Lexeme", "VERB">;
+// README_BLOCK:core-hebrew-pointed-variant-selection:end

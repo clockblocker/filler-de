@@ -47,11 +47,6 @@ export function buildGermanLexemeBundle<
 			lemma,
 			lemmaIdentityShape,
 		}),
-		StandardVariantSelectionSchema: buildLemmaSelection({
-			lemma,
-			lemmaIdentityShape,
-			surfaceKind: "Variant",
-		}),
 		TypoInflectionSelectionSchema: buildInflectionSelection({
 			inflectionalFeaturesSchema,
 			lemma,
@@ -62,12 +57,6 @@ export function buildGermanLexemeBundle<
 			lemma,
 			lemmaIdentityShape,
 			orthographicStatus: "Typo",
-		}),
-		TypoVariantSelectionSchema: buildLemmaSelection({
-			lemma,
-			lemmaIdentityShape,
-			orthographicStatus: "Typo",
-			surfaceKind: "Variant",
 		}),
 	};
 }

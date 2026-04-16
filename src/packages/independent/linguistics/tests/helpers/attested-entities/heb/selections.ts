@@ -10,6 +10,7 @@ export const hebrewKatvuStandardFullSelection = {
 	orthographicStatus: "Standard",
 	selectionCoverage: "Full",
 	spelledSelection: "כתבו",
+	spellingRelation: "Canonical",
 	surface: hebrewKatvuUnresolvedInflectionSurface,
 } satisfies KnownSelection<"Hebrew">;
 
@@ -19,5 +20,6 @@ export const hebrewShanaResolvedLemmaSelection = {
 	orthographicStatus: "Standard",
 	selectionCoverage: "Full",
 	spelledSelection: "שנה",
+	spellingRelation: "Canonical",
 	surface: hebrewShanaResolvedLemmaSurface,
 } satisfies Selection<"Hebrew", "Standard", "Lemma", "Lexeme", "NOUN">;

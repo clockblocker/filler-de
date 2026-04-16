@@ -54,12 +54,6 @@ const GermanVerbLemmaSelectionSchema = buildLemmaSelection({
 	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
 }) satisfies SelectionSchemaFor<"Standard", "Lemma", "Lexeme">;
 
-const GermanVerbStandardVariantSelectionSchema = buildLemmaSelection({
-	lemma: GermanVerbLemma,
-	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
-	surfaceKind: "Variant",
-}) satisfies SelectionSchemaFor<"Standard", "Variant", "Lexeme">;
-
 const GermanVerbTypoInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: GermanVerbInflectionalFeaturesSchema,
 	lemma: GermanVerbLemma,
@@ -73,19 +67,10 @@ const GermanVerbTypoLemmaSelectionSchema = buildLemmaSelection({
 	orthographicStatus: "Typo",
 }) satisfies SelectionSchemaFor<"Typo", "Lemma", "Lexeme">;
 
-const GermanVerbTypoVariantSelectionSchema = buildLemmaSelection({
-	lemma: GermanVerbLemma,
-	lemmaIdentityShape: GermanVerbLemmaIdentityShape,
-	orthographicStatus: "Typo",
-	surfaceKind: "Variant",
-}) satisfies SelectionSchemaFor<"Typo", "Variant", "Lexeme">;
-
 export const GermanVerbSchemas = {
 	InflectionSelectionSchema: GermanVerbInflectionSelectionSchema,
 	LemmaSchema: GermanVerbLemmaSchema,
 	LemmaSelectionSchema: GermanVerbLemmaSelectionSchema,
-	StandardVariantSelectionSchema: GermanVerbStandardVariantSelectionSchema,
 	TypoInflectionSelectionSchema: GermanVerbTypoInflectionSelectionSchema,
 	TypoLemmaSelectionSchema: GermanVerbTypoLemmaSelectionSchema,
-	TypoVariantSelectionSchema: GermanVerbTypoVariantSelectionSchema,
 };

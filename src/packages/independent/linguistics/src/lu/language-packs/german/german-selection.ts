@@ -4,10 +4,8 @@ import type { SelectionSchemaFor } from "../../universal/helpers/schema-targets"
 import {
 	GermanStandardInflectionLexemeSelectionSchemas,
 	GermanStandardLemmaLexemeSelectionSchemas,
-	GermanStandardVariantLexemeSelectionSchemas,
 	GermanTypoInflectionLexemeSelectionSchemas,
 	GermanTypoLemmaLexemeSelectionSchemas,
-	GermanTypoVariantLexemeSelectionSchemas,
 } from "./lu/lexeme/german-lexemes";
 import {
 	GermanStandardLemmaMorphemeSelectionSchemas,
@@ -18,11 +16,13 @@ import {
 	GermanTypoLemmaPhrasemeSelectionSchemas,
 } from "./lu/phraseme/german-phrasemes";
 
-const GermanUnknownSelectionSchema = z.object({
-	language: z.literal("German"),
-	orthographicStatus: z.literal("Unknown"),
-	spelledSelection: z.string(),
-}) satisfies SelectionSchemaFor<"Unknown">;
+const GermanUnknownSelectionSchema = z
+	.object({
+		language: z.literal("German"),
+		orthographicStatus: z.literal("Unknown"),
+		spelledSelection: z.string(),
+	})
+	.strict() satisfies SelectionSchemaFor<"Unknown">;
 
 export const GermanSelectionSchema = {
 	Standard: {
@@ -34,9 +34,6 @@ export const GermanSelectionSchema = {
 			Morpheme: GermanStandardLemmaMorphemeSelectionSchemas,
 			Phraseme: GermanStandardLemmaPhrasemeSelectionSchemas,
 		},
-		Variant: {
-			Lexeme: GermanStandardVariantLexemeSelectionSchemas,
-		},
 	},
 	Typo: {
 		Inflection: {
@@ -46,9 +43,6 @@ export const GermanSelectionSchema = {
 			Lexeme: GermanTypoLemmaLexemeSelectionSchemas,
 			Morpheme: GermanTypoLemmaMorphemeSelectionSchemas,
 			Phraseme: GermanTypoLemmaPhrasemeSelectionSchemas,
-		},
-		Variant: {
-			Lexeme: GermanTypoVariantLexemeSelectionSchemas,
 		},
 	},
 	Unknown: GermanUnknownSelectionSchema,

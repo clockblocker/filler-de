@@ -4,9 +4,9 @@ import type { Prettify } from "../../../../../../../../types/helpers";
 import { DiscourseFormulaRoleSchema } from "./custom/discourse-formula-role";
 import { GovernedCase } from "./custom/governed-case";
 import { HasGovPrep } from "./custom/governed-preposition";
-import { HasSepPrefix } from "./custom/separable";
 import { LexicallyReflexive } from "./custom/lexically-reflexive";
 import { Phrasal } from "./custom/phrasal";
+import { HasSepPrefix } from "./custom/separable";
 import { Abbr } from "./ud/abbr";
 import { AdpType } from "./ud/adp-type";
 import { Animacy } from "./ud/animacy";
@@ -64,9 +64,9 @@ export const UniversalFeature = {
 	Foreign,
 	Gender,
 	GovernedCase,
+	GrammaticalNumber,
 	HasGovPrep,
 	HasSepPrefix,
-	GrammaticalNumber,
 	HebBinyan,
 	HebExistential,
 	Hyph,

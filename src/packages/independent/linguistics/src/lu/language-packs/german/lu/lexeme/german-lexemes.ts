@@ -80,26 +80,6 @@ export const GermanStandardLemmaLexemeSelectionSchemas = {
 	X: GermanOtherSchemas.LemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Standard"]["Lemma"]["Lexeme"];
 
-export const GermanStandardVariantLexemeSelectionSchemas = {
-	ADJ: GermanAdjectiveSchemas.StandardVariantSelectionSchema,
-	ADP: GermanAdpositionSchemas.StandardVariantSelectionSchema,
-	ADV: GermanAdverbSchemas.StandardVariantSelectionSchema,
-	AUX: GermanAuxiliarySchemas.StandardVariantSelectionSchema,
-	CCONJ: GermanCoordinatingConjunctionSchemas.StandardVariantSelectionSchema,
-	DET: GermanDeterminerSchemas.StandardVariantSelectionSchema,
-	INTJ: GermanInterjectionSchemas.StandardVariantSelectionSchema,
-	NOUN: GermanNounSchemas.StandardVariantSelectionSchema,
-	NUM: GermanNumeralSchemas.StandardVariantSelectionSchema,
-	PART: GermanParticleSchemas.StandardVariantSelectionSchema,
-	PRON: GermanPronounSchemas.StandardVariantSelectionSchema,
-	PROPN: GermanProperNounSchemas.StandardVariantSelectionSchema,
-	PUNCT: GermanPunctuationSchemas.StandardVariantSelectionSchema,
-	SCONJ: GermanSubordinatingConjunctionSchemas.StandardVariantSelectionSchema,
-	SYM: GermanSymbolSchemas.StandardVariantSelectionSchema,
-	VERB: GermanVerbSchemas.StandardVariantSelectionSchema,
-	X: GermanOtherSchemas.StandardVariantSelectionSchema,
-} satisfies SelectionSchemaLanguageShape["Standard"]["Variant"]["Lexeme"];
-
 export const GermanTypoInflectionLexemeSelectionSchemas = {
 	ADJ: GermanAdjectiveSchemas.TypoInflectionSelectionSchema,
 	ADP: GermanAdpositionSchemas.TypoInflectionSelectionSchema,
@@ -139,23 +119,3 @@ export const GermanTypoLemmaLexemeSelectionSchemas = {
 	VERB: GermanVerbSchemas.TypoLemmaSelectionSchema,
 	X: GermanOtherSchemas.TypoLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Typo"]["Lemma"]["Lexeme"];
-
-export const GermanTypoVariantLexemeSelectionSchemas = {
-	ADJ: GermanAdjectiveSchemas.TypoVariantSelectionSchema,
-	ADP: GermanAdpositionSchemas.TypoVariantSelectionSchema,
-	ADV: GermanAdverbSchemas.TypoVariantSelectionSchema,
-	AUX: GermanAuxiliarySchemas.TypoVariantSelectionSchema,
-	CCONJ: GermanCoordinatingConjunctionSchemas.TypoVariantSelectionSchema,
-	DET: GermanDeterminerSchemas.TypoVariantSelectionSchema,
-	INTJ: GermanInterjectionSchemas.TypoVariantSelectionSchema,
-	NOUN: GermanNounSchemas.TypoVariantSelectionSchema,
-	NUM: GermanNumeralSchemas.TypoVariantSelectionSchema,
-	PART: GermanParticleSchemas.TypoVariantSelectionSchema,
-	PRON: GermanPronounSchemas.TypoVariantSelectionSchema,
-	PROPN: GermanProperNounSchemas.TypoVariantSelectionSchema,
-	PUNCT: GermanPunctuationSchemas.TypoVariantSelectionSchema,
-	SCONJ: GermanSubordinatingConjunctionSchemas.TypoVariantSelectionSchema,
-	SYM: GermanSymbolSchemas.TypoVariantSelectionSchema,
-	VERB: GermanVerbSchemas.TypoVariantSelectionSchema,
-	X: GermanOtherSchemas.TypoVariantSelectionSchema,
-} satisfies SelectionSchemaLanguageShape["Typo"]["Variant"]["Lexeme"];

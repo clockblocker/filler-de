@@ -1,8 +1,8 @@
 import { z } from "zod/v3";
 import type { Prettify } from "../../../../../types/helpers";
-import type { LingId } from "../ling-id/public";
 import { decodeLingId } from "../ling-id/internal/codec/decode";
 import { parseHeader } from "../ling-id/internal/wire/header";
+import type { LingId } from "../ling-id/public";
 import type { LexicalRelation } from "./lexical";
 import type { MorphologicalRelation } from "./morphological";
 
@@ -30,7 +30,9 @@ const LemmaLingIdSchema = z.string().superRefine((value, ctx) => {
 		ctx.addIssue({
 			code: z.ZodIssueCode.custom,
 			message:
-				error instanceof Error ? error.message : "Malformed relation Ling ID",
+				error instanceof Error
+					? error.message
+					: "Malformed relation Ling ID",
 		});
 	}
 }) as unknown as z.ZodType<LingId<"Lemma">>;

@@ -80,26 +80,6 @@ export const EnglishStandardLemmaLexemeSelectionSchemas = {
 	X: EnglishOtherSchemas.LemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Standard"]["Lemma"]["Lexeme"];
 
-export const EnglishStandardVariantLexemeSelectionSchemas = {
-	ADJ: EnglishAdjectiveSchemas.StandardVariantSelectionSchema,
-	ADP: EnglishAdpositionSchemas.StandardVariantSelectionSchema,
-	ADV: EnglishAdverbSchemas.StandardVariantSelectionSchema,
-	AUX: EnglishAuxiliarySchemas.StandardVariantSelectionSchema,
-	CCONJ: EnglishCoordinatingConjunctionSchemas.StandardVariantSelectionSchema,
-	DET: EnglishDeterminerSchemas.StandardVariantSelectionSchema,
-	INTJ: EnglishInterjectionSchemas.StandardVariantSelectionSchema,
-	NOUN: EnglishNounSchemas.StandardVariantSelectionSchema,
-	NUM: EnglishNumeralSchemas.StandardVariantSelectionSchema,
-	PART: EnglishParticleSchemas.StandardVariantSelectionSchema,
-	PRON: EnglishPronounSchemas.StandardVariantSelectionSchema,
-	PROPN: EnglishProperNounSchemas.StandardVariantSelectionSchema,
-	PUNCT: EnglishPunctuationSchemas.StandardVariantSelectionSchema,
-	SCONJ: EnglishSubordinatingConjunctionSchemas.StandardVariantSelectionSchema,
-	SYM: EnglishSymbolSchemas.StandardVariantSelectionSchema,
-	VERB: EnglishVerbSchemas.StandardVariantSelectionSchema,
-	X: EnglishOtherSchemas.StandardVariantSelectionSchema,
-} satisfies SelectionSchemaLanguageShape["Standard"]["Variant"]["Lexeme"];
-
 export const EnglishTypoInflectionLexemeSelectionSchemas = {
 	ADJ: EnglishAdjectiveSchemas.TypoInflectionSelectionSchema,
 	ADP: EnglishAdpositionSchemas.TypoInflectionSelectionSchema,
@@ -139,23 +119,3 @@ export const EnglishTypoLemmaLexemeSelectionSchemas = {
 	VERB: EnglishVerbSchemas.TypoLemmaSelectionSchema,
 	X: EnglishOtherSchemas.TypoLemmaSelectionSchema,
 } satisfies SelectionSchemaLanguageShape["Typo"]["Lemma"]["Lexeme"];
-
-export const EnglishTypoVariantLexemeSelectionSchemas = {
-	ADJ: EnglishAdjectiveSchemas.TypoVariantSelectionSchema,
-	ADP: EnglishAdpositionSchemas.TypoVariantSelectionSchema,
-	ADV: EnglishAdverbSchemas.TypoVariantSelectionSchema,
-	AUX: EnglishAuxiliarySchemas.TypoVariantSelectionSchema,
-	CCONJ: EnglishCoordinatingConjunctionSchemas.TypoVariantSelectionSchema,
-	DET: EnglishDeterminerSchemas.TypoVariantSelectionSchema,
-	INTJ: EnglishInterjectionSchemas.TypoVariantSelectionSchema,
-	NOUN: EnglishNounSchemas.TypoVariantSelectionSchema,
-	NUM: EnglishNumeralSchemas.TypoVariantSelectionSchema,
-	PART: EnglishParticleSchemas.TypoVariantSelectionSchema,
-	PRON: EnglishPronounSchemas.TypoVariantSelectionSchema,
-	PROPN: EnglishProperNounSchemas.TypoVariantSelectionSchema,
-	PUNCT: EnglishPunctuationSchemas.TypoVariantSelectionSchema,
-	SCONJ: EnglishSubordinatingConjunctionSchemas.TypoVariantSelectionSchema,
-	SYM: EnglishSymbolSchemas.TypoVariantSelectionSchema,
-	VERB: EnglishVerbSchemas.TypoVariantSelectionSchema,
-	X: EnglishOtherSchemas.TypoVariantSelectionSchema,
-} satisfies SelectionSchemaLanguageShape["Typo"]["Variant"]["Lexeme"];

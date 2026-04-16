@@ -4,10 +4,8 @@ import type { SelectionSchemaFor } from "../../universal/helpers/schema-targets"
 import {
 	EnglishStandardInflectionLexemeSelectionSchemas,
 	EnglishStandardLemmaLexemeSelectionSchemas,
-	EnglishStandardVariantLexemeSelectionSchemas,
 	EnglishTypoInflectionLexemeSelectionSchemas,
 	EnglishTypoLemmaLexemeSelectionSchemas,
-	EnglishTypoVariantLexemeSelectionSchemas,
 } from "./lu/lexeme/english-lexemes";
 import {
 	EnglishStandardLemmaMorphemeSelectionSchemas,
@@ -18,11 +16,13 @@ import {
 	EnglishTypoLemmaPhrasemeSelectionSchemas,
 } from "./lu/phraseme/english-phrasemes";
 
-const EnglishUnknownSelectionSchema = z.object({
-	language: z.literal("English"),
-	orthographicStatus: z.literal("Unknown"),
-	spelledSelection: z.string(),
-}) satisfies SelectionSchemaFor<"Unknown">;
+const EnglishUnknownSelectionSchema = z
+	.object({
+		language: z.literal("English"),
+		orthographicStatus: z.literal("Unknown"),
+		spelledSelection: z.string(),
+	})
+	.strict() satisfies SelectionSchemaFor<"Unknown">;
 
 export const EnglishSelectionSchema = {
 	Standard: {
@@ -34,9 +34,6 @@ export const EnglishSelectionSchema = {
 			Morpheme: EnglishStandardLemmaMorphemeSelectionSchemas,
 			Phraseme: EnglishStandardLemmaPhrasemeSelectionSchemas,
 		},
-		Variant: {
-			Lexeme: EnglishStandardVariantLexemeSelectionSchemas,
-		},
 	},
 	Typo: {
 		Inflection: {
@@ -46,9 +43,6 @@ export const EnglishSelectionSchema = {
 			Lexeme: EnglishTypoLemmaLexemeSelectionSchemas,
 			Morpheme: EnglishTypoLemmaMorphemeSelectionSchemas,
 			Phraseme: EnglishTypoLemmaPhrasemeSelectionSchemas,
-		},
-		Variant: {
-			Lexeme: EnglishTypoVariantLexemeSelectionSchemas,
 		},
 	},
 	Unknown: EnglishUnknownSelectionSchema,

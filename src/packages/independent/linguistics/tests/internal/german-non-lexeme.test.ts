@@ -18,13 +18,14 @@ describe("German non-lexeme schemas", () => {
 			"Morpheme",
 			"Prefix"
 		>;
-		const phraseme = germanAufJedenFallDiscourseFormulaSelection satisfies Selection<
-			"German",
-			"Standard",
-			"Lemma",
-			"Phraseme",
-			"DiscourseFormula"
-		>;
+		const phraseme =
+			germanAufJedenFallDiscourseFormulaSelection satisfies Selection<
+				"German",
+				"Standard",
+				"Lemma",
+				"Phraseme",
+				"DiscourseFormula"
+			>;
 
 		expect(morpheme.morphemeKind).toBe("Prefix");
 		expect(phraseme.surface.discriminators.lemmaSubKind).toBe(

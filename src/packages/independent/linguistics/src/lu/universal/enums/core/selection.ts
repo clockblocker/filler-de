@@ -36,9 +36,7 @@ const reprForSpellingRelation = {
 	Variant: "variant",
 } as const satisfies Record<SpellingRelation, string>;
 
-export function getReprForSpellingRelation(
-	spellingRelation: SpellingRelation,
-) {
+export function getReprForSpellingRelation(spellingRelation: SpellingRelation) {
 	return reprForSpellingRelation[spellingRelation];
 }
 

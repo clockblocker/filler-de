@@ -11,6 +11,7 @@ export const englishWalkStandardFullSelection = {
 	orthographicStatus: "Standard",
 	selectionCoverage: "Full",
 	spelledSelection: "walk",
+	spellingRelation: "Canonical",
 	surface: englishWalkUnresolvedInflectionSurface,
 } satisfies KnownSelection<"English">;
 
@@ -20,6 +21,7 @@ export const englishWalkResolvedLemmaSelection = {
 	orthographicStatus: "Standard",
 	selectionCoverage: "Full",
 	spelledSelection: "walk",
+	spellingRelation: "Canonical",
 	surface: englishWalkResolvedLemmaSurface,
 } satisfies Selection<"English", "Standard", "Lemma", "Lexeme", "VERB">;
 
@@ -29,6 +31,7 @@ export const englishGiveUpTypoPartialUpSelection = {
 	orthographicStatus: "Typo",
 	selectionCoverage: "Partial",
 	spelledSelection: "up",
+	spellingRelation: "Canonical",
 	surface: englishGiveUpTypoUnresolvedInflectionSurface,
 } satisfies Selection<"English", "Typo", "Inflection", "Lexeme", "VERB">;
 
@@ -38,5 +41,6 @@ export const englishGiveUpTypoPartialGvaeSelection = {
 	orthographicStatus: "Typo",
 	selectionCoverage: "Partial",
 	spelledSelection: "gvae",
+	spellingRelation: "Canonical",
 	surface: englishGiveUpTypoUnresolvedInflectionSurface,
 } satisfies Selection<"English", "Typo", "Inflection", "Lexeme", "VERB">;

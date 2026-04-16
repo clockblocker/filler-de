@@ -154,6 +154,7 @@ describe("lingOperation", () => {
 			orthographicStatus: "Standard",
 			selectionCoverage: "Full",
 			spelledSelection: "Walk",
+			spellingRelation: "Canonical",
 			surface: resolvedSurface,
 		});
 		expect(
