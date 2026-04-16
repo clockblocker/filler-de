@@ -2,7 +2,7 @@ import type { TargetLanguage } from "../../../lu/universal/enums/core/language";
 import type { ConcreteLingIdKind } from "../../types";
 import { codeToLanguage, languageToCode } from "./language-codes";
 
-type WireKindCode = "LEM" | "SEL" | "SURF-RES" | "SURF-UNRES";
+export type WireKindCode = "LEM" | "SEL" | "SURF-RES" | "SURF-UNRES";
 
 const KIND_TO_WIRE = {
 	Lemma: "LEM",
@@ -18,11 +18,23 @@ const WIRE_TO_KIND = {
 	"SURF-UNRES": "UnresolvedSurface",
 } as const satisfies Record<WireKindCode, ConcreteLingIdKind>;
 
+export function encodeWireKind(kind: ConcreteLingIdKind): WireKindCode {
+	return KIND_TO_WIRE[kind];
+}
+
+export function decodeWireKind(
+	wireKind: string,
+): ConcreteLingIdKind | undefined {
+	return (WIRE_TO_KIND as Record<string, ConcreteLingIdKind | undefined>)[
+		wireKind
+	];
+}
+
 export function buildHeader(
 	language: TargetLanguage,
 	kind: ConcreteLingIdKind,
 ): string {
-	return `ling:v1:${languageToCode(language)}:${KIND_TO_WIRE[kind]}`;
+	return `ling:v1:${languageToCode(language)}:${encodeWireKind(kind)}`;
 }
 
 export function parseHeader(id: string): {
@@ -67,9 +79,7 @@ export function parseHeader(id: string): {
 		);
 	}
 
-	const kind = (
-		WIRE_TO_KIND as Record<string, ConcreteLingIdKind | undefined>
-	)[wireKind];
+	const kind = decodeWireKind(wireKind);
 
 	if (kind === undefined) {
 		throw new Error(`Unsupported Ling ID kind: ${wireKind}`);

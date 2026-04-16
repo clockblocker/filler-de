@@ -62,7 +62,6 @@ export type AbstractSelectionFor<
 						  }
 						| {
 								selectionCoverage: "Partial";
-								normalizedSelectedSurface: string;
 						  }
 					)
 			>

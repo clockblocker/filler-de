@@ -167,9 +167,8 @@ describe("German non-lexeme schemas", () => {
 			"Lemma",
 			"Phraseme",
 			"Cliché"
-		> = {
+	> = {
 			language: "German",
-			normalizedSelectedSurface: "Spaziergang",
 			orthographicStatus: "Standard",
 			selectionCoverage: "Partial",
 			spelledSelection: "Spaziergang",

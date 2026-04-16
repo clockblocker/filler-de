@@ -4,7 +4,6 @@ import type { Lemma, Selection } from "../../src";
 // README_BLOCK:core-simple-selection:start
 const giveUpPartialSelection = {
 	language: "English",
-	normalizedSelectedSurface: "up",
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "up",
@@ -50,7 +49,6 @@ const giveUpLemma = {
 // README_BLOCK:core-idiom-selection:start
 const idiomPartSelection = {
 	language: "English",
-	normalizedSelectedSurface: "walk",
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "walk",
@@ -76,7 +74,6 @@ const idiomPartSelection = {
 // README_BLOCK:core-lemma-surface-distinction:start
 const gaveUpSelection = {
 	language: "English",
-	normalizedSelectedSurface: "up",
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "up",
@@ -100,7 +97,6 @@ const gaveUpSelection = {
 
 const passAufSelection = {
 	language: "German",
-	normalizedSelectedSurface: "auf",
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "auf",

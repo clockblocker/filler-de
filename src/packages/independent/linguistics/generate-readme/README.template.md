@@ -60,7 +60,6 @@ The DTO keeps the learner-facing selection separate from the deeper linguistic l
 - the language shared by the selection, surface, and lemma: `language`
 - the actual highlighted text in the note: `spelledSelection`
 - whether the user highlighted the whole surface or only part of it: `selectionCoverage`
-- for standard partial selections, the normalized highlighted fragment: `normalizedSelectedSurface`
 - the full orthographically normalized surface that the highlighted text belongs to: `normalizedFullSurface`
 - the lexical target that the surface resolves to: `target.canonicalLemma`
 

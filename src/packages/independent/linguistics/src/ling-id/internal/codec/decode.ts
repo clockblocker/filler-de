@@ -9,12 +9,8 @@ import type {
 import { lingIdDecodeError } from "../errors";
 import { getRuntimeSchema } from "../guards";
 import { parseFeatureBag } from "../wire/feature-bag";
-import { parseHeader } from "../wire/header";
-import {
-	parseOptionalToken,
-	splitLeadingTokens,
-	unescapeToken,
-} from "../wire/tokens";
+import { decodeWireKind, parseHeader } from "../wire/header";
+import { parseOptionalToken, splitLeadingTokens, unescapeToken } from "../wire/tokens";
 
 export function decodeLingId<L extends TargetLanguage>(
 	language: L,
@@ -149,9 +145,9 @@ function parseSelectionPayload(
 	language: TargetLanguage,
 	body: string,
 ): unknown {
-	const parts = splitLeadingTokens(body, 11, "selection");
+	const parts = splitLeadingTokens(body, 5, "selection");
 
-	if (parts.length !== 11) {
+	if (parts.length !== 5) {
 		throw new Error(`Malformed selection payload in Ling ID: ${body}`);
 	}
 
@@ -159,50 +155,26 @@ function parseSelectionPayload(
 		orthographicStatus,
 		selectionCoverage,
 		spelledSelectionToken,
-		normalizedSelectedSurfaceToken,
-		normalizedFullSurfaceToken,
-		surfaceKind,
-		lemmaKind,
-		lemmaSubKind,
-		inflectionalFeaturesToken,
-		targetMode,
-		targetPayload,
+		surfaceKindToken,
+		surfacePayload,
 	] = parts as [
 		string,
 		string,
 		string,
 		string,
 		string,
-		string,
-		string,
-		string,
-		string,
-		string,
-		string,
 	];
-	const normalizedSelectedSurface =
-		normalizedSelectedSurfaceToken === "-"
-			? undefined
-			: parseOptionalToken(normalizedSelectedSurfaceToken);
 
 	return {
 		language,
-		...(normalizedSelectedSurface === undefined
-			? {}
-			: { normalizedSelectedSurface }),
 		orthographicStatus,
 		selectionCoverage,
 		spelledSelection: unescapeToken(spelledSelectionToken),
-		surface: {
-			...parseSurfaceCore(language, {
-				inflectionalFeaturesToken,
-				lemmaKind,
-				lemmaSubKind,
-				normalizedFullSurfaceToken,
-				surfaceKind,
-			}),
-			target: parseSelectionTarget(language, targetMode, targetPayload),
-		},
+		surface: parseSelectionSurfacePayload(
+			language,
+			surfaceKindToken,
+			surfacePayload,
+		),
 	};
 }
 
@@ -275,21 +247,23 @@ function parseSurfaceCore(
 	};
 }
 
-function parseSelectionTarget(
+function parseSelectionSurfacePayload(
 	language: TargetLanguage,
-	targetMode: string,
-	targetPayload: string,
+	surfaceKindToken: string,
+	surfacePayload: string,
 ) {
-	if (targetMode === "canon") {
-		return { canonicalLemma: unescapeToken(targetPayload) };
+	const kind = decodeWireKind(surfaceKindToken);
+
+	if (kind === "ResolvedSurface") {
+		return parseSurfacePayload(language, "ResolvedSurface", surfacePayload);
 	}
 
-	if (targetMode === "lemma") {
-		return parseLemmaPayload(language, targetPayload);
+	if (kind === "UnresolvedSurface") {
+		return parseSurfacePayload(language, "UnresolvedSurface", surfacePayload);
 	}
 
 	throw new Error(
-		`Unsupported selection target mode in Ling ID: ${targetMode}`,
+		`Selection payload must contain a surface wire kind: ${surfaceKindToken}`,
 	);
 }
 

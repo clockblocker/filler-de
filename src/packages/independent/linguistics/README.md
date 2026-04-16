@@ -31,7 +31,6 @@ That is still a valid classification. The selection is partial, but the deeper l
 ```ts
 const giveUpPartialSelection = {
 	language: "English",
-	normalizedSelectedSurface: "up",
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "up",
@@ -98,7 +97,6 @@ as part of the idiom "a walk in the park", directly at the lemma-surface layer:
 ```ts
 const idiomPartSelection = {
 	language: "English",
-	normalizedSelectedSurface: "walk",
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "walk",
@@ -128,7 +126,6 @@ The DTO keeps the learner-facing selection separate from the deeper linguistic l
 - the language shared by the selection, surface, and lemma: `language`
 - the actual highlighted text in the note: `spelledSelection`
 - whether the user highlighted the whole surface or only part of it: `selectionCoverage`
-- for standard partial selections, the normalized highlighted fragment: `normalizedSelectedSurface`
 - the full orthographically normalized surface that the highlighted text belongs to: `normalizedFullSurface`
 - the lexical target that the surface resolves to: `target.canonicalLemma`
 
@@ -139,7 +136,6 @@ The selections target the lemmas `give up` and `aufpassen`, while the realized n
 ```ts
 const gaveUpSelection = {
 	language: "English",
-	normalizedSelectedSurface: "up",
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "up",
@@ -163,7 +159,6 @@ const gaveUpSelection = {
 
 const passAufSelection = {
 	language: "German",
-	normalizedSelectedSurface: "auf",
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
 	spelledSelection: "auf",

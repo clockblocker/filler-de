@@ -218,7 +218,6 @@ describe("German verb schemas", () => {
 	it("accepts lemma selections where the spelled selection covers only part of the full surface", () => {
 		const result = GermanVerbSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
-			normalizedSelectedSurface: "gehen",
 			orthographicStatus: "Standard",
 			selectionCoverage: "Partial",
 			spelledSelection: "gehen",
@@ -258,18 +257,18 @@ describe("German verb schemas", () => {
 		expect(result.success).toBe(true);
 	});
 
-	it("rejects normalizedSelectedSurface outside standard partial selections", () => {
+	it("rejects normalizedSelectedSurface on all selection variants", () => {
 		expect(
 			GermanVerbSchemas.LemmaSelectionSchema.safeParse({
 				language: "German",
 				normalizedSelectedSurface: "gehen",
 				orthographicStatus: "Standard",
-				selectionCoverage: "Full",
+				selectionCoverage: "Partial",
 				spelledSelection: "gehen",
 				surface: {
-					...verbSurface("gehen"),
+					...verbSurface("spazieren gehen"),
 					language: "German",
-					normalizedFullSurface: "gehen",
+					normalizedFullSurface: "spazieren gehen",
 					surfaceKind: "Lemma",
 				},
 			}).success,

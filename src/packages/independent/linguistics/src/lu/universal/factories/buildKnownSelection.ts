@@ -17,7 +17,6 @@ type SelectionShapeFor<
 	spelledSelection: z.ZodString;
 	selectionCoverage: typeof SelectionCoverage;
 	surface: SurfaceSchema;
-	normalizedSelectedSurface?: z.ZodOptional<z.ZodString>;
 };
 
 type StandardSelectionValueFor<
@@ -33,7 +32,6 @@ type StandardSelectionValueFor<
 	  }
 	| {
 			language: LanguageLiteral;
-			normalizedSelectedSurface: string;
 			orthographicStatus: "Standard";
 			selectionCoverage: "Partial";
 			spelledSelection: string;
@@ -163,14 +161,12 @@ function buildStandardKnownSelectionSchema<
 	const partialSchema = z
 		.object({
 			...sharedShape,
-			normalizedSelectedSurface: z.string(),
 			selectionCoverage: z.literal("Partial"),
 		})
 		.strict();
 
 	return withShape(z.union([fullSchema, partialSchema]), {
 		...sharedShape,
-		normalizedSelectedSurface: z.string().optional(),
 		selectionCoverage: SelectionCoverage,
 	}) as KnownSelectionSchemaFor<LanguageLiteral, "Standard", SurfaceSchema>;
 }

@@ -12,7 +12,7 @@ import {
 } from "../guards";
 import type { ParsedFeatureBag, ParsedFeatureValue } from "../wire/feature-bag";
 import { compactFeatureBag, serializeFeatureBag } from "../wire/feature-bag";
-import { buildHeader } from "../wire/header";
+import { buildHeader, encodeWireKind } from "../wire/header";
 import {
 	escapeToken,
 	joinTokens,
@@ -107,16 +107,14 @@ function serializePayload(
 }
 
 function serializeSelectionPayload(value: KnownSelection): string {
+	const surfaceKind = inferSurfaceLingIdKind(value.surface);
+
 	return joinTokens([
 		value.orthographicStatus,
 		value.selectionCoverage,
 		escapeToken(value.spelledSelection),
-		serializeOptionalToken(
-			"normalizedSelectedSurface" in value
-				? value.normalizedSelectedSurface
-				: undefined,
-		),
-		...serializeSurfaceParts(value.surface),
+		encodeWireKind(surfaceKind),
+		serializeSurfacePayload(value.surface, surfaceKind),
 	]);
 }
 
@@ -139,24 +137,14 @@ function serializeSurfacePayload(
 	]);
 }
 
-function serializeSurfaceParts(
+function inferSurfaceLingIdKind(
 	value: {
 		target: { canonicalLemma: string } | Lemma;
 	} & (ResolvedSurface | UnresolvedSurface),
-): string[] {
-	if (hasResolvedSurfaceTarget(value.target)) {
-		return [
-			...serializeSurfaceBase(value),
-			"lemma",
-			serializeLemmaPayload(value.target as Lemma),
-		];
-	}
-
-	return [
-		...serializeSurfaceBase(value),
-		"canon",
-		escapeToken(value.target.canonicalLemma),
-	];
+): "ResolvedSurface" | "UnresolvedSurface" {
+	return hasResolvedSurfaceTarget(value.target)
+		? "ResolvedSurface"
+		: "UnresolvedSurface";
 }
 
 function serializeSurfaceBase(

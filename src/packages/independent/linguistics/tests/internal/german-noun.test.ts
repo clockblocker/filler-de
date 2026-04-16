@@ -190,7 +190,6 @@ describe("German noun schemas", () => {
 	it("accepts lemma selections where the spelled selection covers only part of the full surface", () => {
 		const result = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
-			normalizedSelectedSurface: "Bahnhof",
 			orthographicStatus: "Standard",
 			selectionCoverage: "Partial",
 			spelledSelection: "Bahnhof",
