@@ -1,12 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import {
+	type KnownSelection,
 	type Lemma,
 	LingIdCodec,
 	lingOperation,
 	type ResolvedSurface,
 	type UnresolvedSurface,
 } from "../../../src";
-import type { KnownSelection } from "../../../src/ling-id/types";
 
 function buildEnglishWalkLemma() {
 	return {

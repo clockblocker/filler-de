@@ -17,17 +17,6 @@ import {
 	toStandardFullSelectionFromLemma,
 } from "./lu/public-operations";
 
-import type { TargetLanguage } from "./lu/universal/enums/core/language";
-import type { LingEntity } from "./lu/universal/enums/core/ling-entity";
-
-export type {
-	Lemma,
-	ResolvedSurface,
-	Selection,
-	Surface,
-	UnresolvedSurface,
-} from "./lu/public-entities";
-
 export const lingSchemaFor = {
 	Lemma: LemmaSchema,
 	ResolvedSurface: ResolvedSurfaceSchema,
@@ -76,5 +65,25 @@ export const LingIdCodec = {
 } & {
 	[L in TargetLanguage]: LingIdApiFor<L>;
 };
+
+import type { TargetLanguage } from "./lu/universal/enums/core/language";
+import type { LingEntity } from "./lu/universal/enums/core/ling-entity";
+
+export type {
+	ConcreteLingIdKind,
+	KnownSelection,
+	LingId,
+	LingIdDecodeError,
+	LingIdDecodeErrorCode,
+	LingIdValueFor,
+} from "./ling-id/public";
+
+export type {
+	Lemma,
+	ResolvedSurface,
+	Selection,
+	Surface,
+	UnresolvedSurface,
+} from "./lu/public-entities";
 
 export * from "./relations/public";
