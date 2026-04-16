@@ -187,17 +187,17 @@ This allows for both:
 
 ```text
 (text reading mode on)
-Hans, [Pass] auf dich auf! -> aufpassen (VERB)
-Hans, Pass [auf] dich auf! -> aufpassen (VERB)
+Hans, [Pass] auf dich auf! -> aufpassen (VERB | separable | with governed prep)
+Hans, Pass [auf] dich auf! -> aufpassen (VERB | separable | with governed prep)
 Hans, Pass auf [dich] auf! -> du (PRON)
-Hans, Pass auf dich [auf]! -> aufpassen
+Hans, Pass auf dich [auf]! -> aufpassen (VERB | separable | with governed prep)
 ```
 
 2. drilling down for the actual linguistics:
 
 ```text
 (linguistic investigation mode on)
-Hans, [Pass] auf dich auf! -> `passen` (VERB)
+Hans, [Pass] auf dich auf! -> `aufpassen` (VERB | separable | with governed prep)
 Hans, Pass [auf] dich auf! -> `auf` (ADP)
 Hans, Pass auf [dich] auf! -> `du` (PRON)
 Hans, Pass auf dich [auf]! -> `auf` (PRT)

@@ -43,7 +43,6 @@ export const LingSchemaFor = lingSchemaFor;
 // 	}
 // }
 
-// ResolvedSurface -> Lemma
 
 export type {
 	Lemma,
