@@ -23,6 +23,25 @@ export function getReprForOrthographicStatus(
 	return reprForOrthographicStatus[orthographicStatus];
 }
 
+// -- SpellingRelation --
+
+// This is selection-level spelling metadata, not the UD Variant feature.
+const spellingRelationValues = ["Canonical", "Variant"] as const;
+
+export const SpellingRelation = z.enum(spellingRelationValues);
+export type SpellingRelation = z.infer<typeof SpellingRelation>;
+
+const reprForSpellingRelation = {
+	Canonical: "canonical",
+	Variant: "variant",
+} as const satisfies Record<SpellingRelation, string>;
+
+export function getReprForSpellingRelation(
+	spellingRelation: SpellingRelation,
+) {
+	return reprForSpellingRelation[spellingRelation];
+}
+
 // -- SelectionCoverage --
 
 const selectionCoverageValues = ["Full", "Partial"] as const;
@@ -43,8 +62,7 @@ export function getReprForSelectionCoverage(
 
 // -- SurfaceKind --
 
-// Variant is like color vs colour, email vs e-mail.
-const surfaceKinds = ["Inflection", "Lemma", "Variant"] as const;
+const surfaceKinds = ["Inflection", "Lemma"] as const;
 
 export const SurfaceKind = z.enum(surfaceKinds);
 export type SurfaceKind = z.infer<typeof SurfaceKind>;
@@ -52,7 +70,6 @@ export type SurfaceKind = z.infer<typeof SurfaceKind>;
 const reprForSurfaceKind = {
 	Inflection: "inflection",
 	Lemma: "lemma",
-	Variant: "variant",
 } as const satisfies Record<SurfaceKind, string>;
 
 export function getReprForSurfaceKind(morphologicalForm: SurfaceKind) {

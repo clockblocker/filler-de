@@ -8,7 +8,6 @@ import type { LemmaDiscriminatorFor } from "./universal/lemma-discriminator";
 type SupportedSelectionLemmaKindsBySurface = {
 	Inflection: "Lexeme";
 	Lemma: LemmaKind;
-	Variant: "Lexeme";
 };
 
 type SupportedSelectionSurfaceKind =

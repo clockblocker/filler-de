@@ -5,6 +5,7 @@ import type {
 	LemmaKind,
 	OrthographicStatus,
 	SelectionCoverage,
+	SpellingRelation,
 	SurfaceKind,
 } from "./enums/core/selection";
 import type { AbstractFeatures } from "./enums/feature";
@@ -93,6 +94,7 @@ type KnownSelectionBaseFor<
 > = {
 	language: TargetLanguage;
 	orthographicStatus: OS;
+	spellingRelation?: SpellingRelation;
 	spelledSelection: string;
 	surface: SurfaceFor<SK, LK, D>;
 };

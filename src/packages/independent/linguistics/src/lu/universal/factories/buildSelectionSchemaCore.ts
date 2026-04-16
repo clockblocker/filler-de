@@ -1,5 +1,9 @@
 import type z from "zod/v3";
-import type { LemmaKind, OrthographicStatus } from "../enums/core/selection";
+import type {
+	LemmaKind,
+	OrthographicStatus,
+	SpellingRelation,
+} from "../enums/core/selection";
 import type { LemmaDiscriminatorFor } from "../lemma-discriminator";
 import {
 	buildKnownSelectionSchema,
@@ -36,6 +40,7 @@ type BuildSelectionSchemaCoreArgs<
 	lemma: LemmaDescriptor;
 	lemmaIdentityShape: SelectionLemmaIdentityShapeFor<LK, D>;
 	orthographicStatus?: OrthographicStatusLiteral;
+	spellingRelation?: SpellingRelation;
 	surfaceShape: SurfaceShape;
 };
 
@@ -49,6 +54,7 @@ export function buildSelectionSchemaCore<
 	lemma,
 	lemmaIdentityShape,
 	orthographicStatus = "Standard" as OrthographicStatusLiteral,
+	spellingRelation,
 	surfaceShape,
 }: BuildSelectionSchemaCoreArgs<
 	LemmaDescriptor,
@@ -76,6 +82,7 @@ export function buildSelectionSchemaCore<
 
 	return buildKnownSelectionSchema({
 		orthographicStatus,
+		spellingRelation,
 		surface,
 	}) as KnownSelectionSchemaFor<
 		LemmaDescriptor["language"],

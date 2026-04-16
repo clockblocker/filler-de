@@ -3,6 +3,7 @@ import type { TargetLanguage } from "../enums/core/language";
 import {
 	type OrthographicStatus,
 	SelectionCoverage,
+	SpellingRelation,
 } from "../enums/core/selection";
 
 type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
@@ -14,6 +15,7 @@ type SelectionShapeFor<
 > = {
 	language: z.ZodLiteral<LanguageLiteral>;
 	orthographicStatus: z.ZodLiteral<OrthographicStatusLiteral>;
+	spellingRelation: z.ZodOptional<typeof SpellingRelation>;
 	spelledSelection: z.ZodString;
 	selectionCoverage: typeof SelectionCoverage;
 	surface: SurfaceSchema;
@@ -26,6 +28,7 @@ type StandardSelectionValueFor<
 	| {
 			language: LanguageLiteral;
 			orthographicStatus: "Standard";
+			spellingRelation?: z.infer<typeof SpellingRelation>;
 			selectionCoverage: "Full";
 			spelledSelection: string;
 			surface: z.infer<SurfaceSchema>;
@@ -33,6 +36,7 @@ type StandardSelectionValueFor<
 	| {
 			language: LanguageLiteral;
 			orthographicStatus: "Standard";
+			spellingRelation?: z.infer<typeof SpellingRelation>;
 			selectionCoverage: "Partial";
 			spelledSelection: string;
 			surface: z.infer<SurfaceSchema>;
@@ -44,6 +48,7 @@ type TypoSelectionValueFor<
 > = {
 	language: LanguageLiteral;
 	orthographicStatus: "Typo";
+	spellingRelation?: z.infer<typeof SpellingRelation>;
 	selectionCoverage: z.infer<typeof SelectionCoverage>;
 	spelledSelection: string;
 	surface: z.infer<SurfaceSchema>;
@@ -80,6 +85,7 @@ export function buildKnownSelectionSchema<
 	SurfaceSchema extends z.ZodTypeAny,
 >(args: {
 	orthographicStatus: KnownOrthographicStatus;
+	spellingRelation?: z.infer<typeof SpellingRelation>;
 	surface: {
 		language: LanguageLiteral;
 		schema: SurfaceSchema;
@@ -92,6 +98,7 @@ export function buildKnownSelectionSchema<
 	SurfaceSchema extends z.ZodTypeAny,
 >(args: {
 	orthographicStatus: "Standard";
+	spellingRelation?: z.infer<typeof SpellingRelation>;
 	surface: {
 		language: LanguageLiteral;
 		schema: SurfaceSchema;
@@ -102,6 +109,7 @@ export function buildKnownSelectionSchema<
 	SurfaceSchema extends z.ZodTypeAny,
 >(args: {
 	orthographicStatus: "Typo";
+	spellingRelation?: z.infer<typeof SpellingRelation>;
 	surface: {
 		language: LanguageLiteral;
 		schema: SurfaceSchema;
@@ -112,9 +120,11 @@ export function buildKnownSelectionSchema<
 	SurfaceSchema extends z.ZodTypeAny,
 >({
 	orthographicStatus,
+	spellingRelation,
 	surface,
 }: {
 	orthographicStatus: KnownOrthographicStatus;
+	spellingRelation?: z.infer<typeof SpellingRelation>;
 	surface: {
 		language: LanguageLiteral;
 		schema: SurfaceSchema;
@@ -125,12 +135,14 @@ export function buildKnownSelectionSchema<
 	if (orthographicStatus === "Standard") {
 		return buildStandardKnownSelectionSchema({
 			language,
+			spellingRelation,
 			surfaceSchema,
 		});
 	}
 
 	return buildTypoKnownSelectionSchema({
 		language,
+		spellingRelation,
 		surfaceSchema,
 	});
 }
@@ -140,14 +152,21 @@ function buildStandardKnownSelectionSchema<
 	SurfaceSchema extends z.ZodTypeAny,
 >({
 	language,
+	spellingRelation,
 	surfaceSchema,
 }: {
 	language: LanguageLiteral;
+	spellingRelation?: z.infer<typeof SpellingRelation>;
 	surfaceSchema: SurfaceSchema;
 }): KnownSelectionSchemaFor<LanguageLiteral, "Standard", SurfaceSchema> {
+	const spellingRelationSchema =
+		spellingRelation === undefined
+			? SpellingRelation.optional()
+			: z.literal(spellingRelation).optional();
 	const sharedShape = {
 		language: z.literal(language),
 		orthographicStatus: z.literal("Standard"),
+		spellingRelation: spellingRelationSchema,
 		spelledSelection: z.string(),
 		surface: surfaceSchema,
 	};
@@ -176,15 +195,22 @@ function buildTypoKnownSelectionSchema<
 	SurfaceSchema extends z.ZodTypeAny,
 >({
 	language,
+	spellingRelation,
 	surfaceSchema,
 }: {
 	language: LanguageLiteral;
+	spellingRelation?: z.infer<typeof SpellingRelation>;
 	surfaceSchema: SurfaceSchema;
 }): KnownSelectionSchemaFor<LanguageLiteral, "Typo", SurfaceSchema> {
+	const spellingRelationSchema =
+		spellingRelation === undefined
+			? SpellingRelation.optional()
+			: z.literal(spellingRelation).optional();
 	return z
 		.object({
 			language: z.literal(language),
 			orthographicStatus: z.literal("Typo"),
+			spellingRelation: spellingRelationSchema,
 			selectionCoverage: SelectionCoverage,
 			spelledSelection: z.string(),
 			surface: surfaceSchema,

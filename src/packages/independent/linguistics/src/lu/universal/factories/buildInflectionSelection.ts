@@ -1,5 +1,9 @@
 import z from "zod/v3";
-import type { LemmaKind, OrthographicStatus } from "../enums/core/selection";
+import type {
+	LemmaKind,
+	OrthographicStatus,
+	SpellingRelation,
+} from "../enums/core/selection";
 import type { LemmaDiscriminatorFor } from "../lemma-discriminator";
 import type { KnownSelectionSchemaFor } from "./buildKnownSelection";
 import { buildSelectionSchemaCore } from "./buildSelectionSchemaCore";
@@ -24,6 +28,7 @@ type BuildInflectionSelectionArgs<
 	lemma: LemmaDescriptor;
 	lemmaIdentityShape: SelectionLemmaIdentityShapeFor<LK, D>;
 	orthographicStatus?: OrthographicStatusLiteral;
+	spellingRelation?: SpellingRelation;
 	surfaceExtraShape?: SurfaceExtraShape;
 };
 
@@ -47,6 +52,7 @@ export function buildInflectionSelection<
 	lemma,
 	lemmaIdentityShape,
 	orthographicStatus = "Standard" as OrthographicStatusLiteral,
+	spellingRelation,
 	surfaceExtraShape = {} as SurfaceExtraShape,
 }: BuildInflectionSelectionArgs<
 	InflectionalFeaturesSchema,
@@ -69,6 +75,7 @@ export function buildInflectionSelection<
 		lemma,
 		lemmaIdentityShape,
 		orthographicStatus,
+		spellingRelation,
 		surfaceShape: {
 			...surfaceExtraShape,
 			inflectionalFeatures: inflectionalFeaturesSchema,

@@ -1,5 +1,8 @@
 import type { Selection } from "../../../../src";
-import { makePhrasemeSurfaceReference } from "../../functions/builders";
+import {
+	makeLexemeSurfaceReference,
+	makePhrasemeSurfaceReference,
+} from "../../functions/builders";
 
 // Attestation: "[Auf jeden Fall] komme ich morgen."
 export const germanAufJedenFallDiscourseFormulaSelection = {
@@ -34,3 +37,17 @@ export const germanEinSpaziergangImParkClichePartialSelection = {
 		surfaceKind: "Lemma",
 	},
 } satisfies Selection<"German", "Standard", "Lemma", "Phraseme", "Cliché">;
+
+// Attestation: "In Berlin sowie im Umland (Agglomeration Berlin) betreibt die [BVG] die U-Bahn Berlin, die Straßenbahn Berlin, den Busverkehr in Berlin und den Fährverkehr in Berlin, nicht jedoch die S-Bahn."
+export const germanBVGAbbreviationVariantSelection = {
+	language: "German",
+	orthographicStatus: "Standard",
+	selectionCoverage: "Full",
+	spelledSelection: "BVG",
+	surface: {
+		...makeLexemeSurfaceReference("PROPN", "Berliner Verkehrsbetriebe"),
+		language: "German",
+		normalizedFullSurface: "BVG",
+		surfaceKind: "Variant",
+	},
+} satisfies Selection<"German", "Standard", "Variant", "Lexeme", "PROPN">;
