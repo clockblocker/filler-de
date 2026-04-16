@@ -37,6 +37,9 @@ survive into the new API.
 4. Decoding should return `Result`, not throw, for malformed or mismatched IDs.
 5. Language packs should not exist unless the wire format truly diverges by
    language.
+6. Unknown selections are part of the general entity model, but they are not
+   valid Ling ID inputs.
+7. Concrete wire/entity kinds are preferred over union-level Ling ID brands.
 
 ## Public API
 
@@ -84,10 +87,9 @@ export type LingIdDecodeError = {
 export type LingIdCodecFor<L extends TargetLanguage> = {
   makeLingIdFor: {
     (value: Lemma<L>): LingId<"Lemma", L>;
-    (value: Selection<L>): LingId<"Selection", L>;
+    (value: KnownSelection<L>): LingId<"Selection", L>;
     (value: ResolvedSurface<L>): LingId<"ResolvedSurface", L>;
     (value: UnresolvedSurface<L>): LingId<"UnresolvedSurface", L>;
-    (value: Surface<L>): LingId<"Surface", L>;
   };
   tryToDecode: {
     (id: LingId<"Lemma", L>): Result<Lemma<L>, LingIdDecodeError>;
@@ -98,8 +100,18 @@ export type LingIdCodecFor<L extends TargetLanguage> = {
     (
       id: LingId<"UnresolvedSurface", L>,
     ): Result<UnresolvedSurface<L>, LingIdDecodeError>;
-    (id: LingId<"Surface", L>): Result<Surface<L>, LingIdDecodeError>;
-    (id: string): Result<LingIdValueFor<LingEntity, L>, LingIdDecodeError>;
+    (
+      id: LingId<"ResolvedSurface" | "UnresolvedSurface", L>,
+    ): Result<Surface<L>, LingIdDecodeError>;
+    (
+      id: string,
+    ): Result<
+      LingIdValueFor<
+        "Lemma" | "Selection" | "ResolvedSurface" | "UnresolvedSurface",
+        L
+      >,
+      LingIdDecodeError
+    >;
   };
 };
 
@@ -144,8 +156,10 @@ domain distinction is:
 - `ResolvedSurface<L>`
 - `UnresolvedSurface<L>`
 
-If a target is absent, that is an unresolved surface. That should be encoded as
-`LingId<"UnresolvedSurface", L>`, not via a DTO-only API.
+An unresolved surface is one whose target is not hydrated as a full lemma. In
+the current model that means a partial target like `{ canonicalLemma: "See" }`,
+not target absence. That should be encoded as `LingId<"UnresolvedSurface", L>`,
+not via a DTO-only API.
 
 If we still want an internal helper that strips targets before serializing some
 payload, keep it internal and do not expose it from `public.ts`.
@@ -194,6 +208,7 @@ Universal code should own all of this:
 - decode error construction
 - runtime language/entity validation
 - entity-kind inference for `makeLingIdFor(...)`
+- canonical serialization ordering
 
 ### Language packs
 
@@ -291,14 +306,14 @@ Behavior:
 - infers the concrete Ling entity kind
 - returns a branded `LingId<LIK, L>`
 - never exposes DTO-only intermediate shapes
+- rejects `Selection<L>` values whose `orthographicStatus` is `"Unknown"`
 
 Encoding rules:
 
 - `Lemma<L>` -> `LingId<"Lemma", L>`
-- `Selection<L>` -> `LingId<"Selection", L>`
+- `KnownSelection<L>` -> `LingId<"Selection", L>`
 - `ResolvedSurface<L>` -> `LingId<"ResolvedSurface", L>`
 - `UnresolvedSurface<L>` -> `LingId<"UnresolvedSurface", L>`
-- `Surface<L>` -> `LingId<"Surface", L>`
 
 ### `tryToDecode(...)`
 
@@ -315,14 +330,46 @@ Mismatch behavior:
 - decoding an ID whose concrete kind conflicts with the requested generic kind
   returns `err`
 
-### `LingId<"Surface", L>`
+### `Surface<L>`
 
-This should decode to `Surface<L>`, meaning either:
+`Surface<L>` remains a useful decode result union, meaning either:
 
 - `ResolvedSurface<L>`
 - `UnresolvedSurface<L>`
 
-But the actual wire payload should still use a concrete kind.
+But the actual wire payload should still use a concrete kind, and the public
+encode API should not expose a separate `LingId<"Surface", L>` brand.
+
+### Kind inference
+
+Runtime kind inference should be specified before implementation.
+
+Encode-time guards should work like this:
+
+- lemma: has `lemmaKind` and does not have `surface`
+- selection: has `orthographicStatus` and `surface`
+- resolved surface: has `surfaceKind` and a hydrated lemma target
+- unresolved surface: has `surfaceKind` and a non-hydrated target
+- unknown selection: reject
+
+Hydration rule:
+
+- resolved target: `target` has `lemmaKind`
+- unresolved target: `target` does not have `lemmaKind`
+
+### Canonical serialization ordering
+
+Deterministic serialization must be locked in the spec before coding.
+
+Canonical rules:
+
+- entity payload fields serialize in a fixed order per entity kind
+- feature bag keys serialize in sorted lexicographic order
+- multi-valued feature arrays serialize with sorted values
+- absent optional values are omitted or encoded with one fixed sentinel,
+  consistently per field
+- escaping and unescaping rules are centralized in one wire helper
+- equivalent entities must always serialize to byte-identical Ling IDs
 
 ## Implementation Plan
 
@@ -334,6 +381,7 @@ But the actual wire payload should still use a concrete kind.
    - whether we want static `LingIdCodec.English` entries in addition to
      `forLanguage(...)`
    - the exact error object shape
+   - whether `KnownSelection<L>` should be publicly exported or kept internal
 
 2. Define the new public types in `src/ling-id/types.ts`.
 
@@ -359,17 +407,20 @@ But the actual wire payload should still use a concrete kind.
    Build runtime guards that distinguish:
 
    - lemma
-   - selection
+   - known selection
    - resolved surface
    - unresolved surface
 
-   Do not use DTO-shape names in the public layer.
+   Explicitly reject unknown selections. Do not use DTO-shape names in the
+   public layer.
 
 5. Implement `internal/codec/encode.ts`.
 
    Encode actual entities by concrete kind. If helpful, reuse existing
    normalization helpers from `lu/public-operations.ts`, but do not inherit the
    old Ling ID API surface.
+   Lock deterministic ordering at the same time instead of discovering it in
+   tests later.
 
 6. Implement `internal/codec/decode.ts`.
 
@@ -386,7 +437,9 @@ But the actual wire payload should still use a concrete kind.
 
 8. Switch root exports.
 
-   Point `src/index.ts` at `./ling-id/public`.
+   Point `src/index.ts` at `./ling-id/public`. This is an intentional package
+   root breaking change, so exports, tests, and migration should land in the
+   same PR.
 
 9. Update dependents.
 
@@ -398,10 +451,12 @@ But the actual wire payload should still use a concrete kind.
    Cover:
 
    - typed encode results by entity kind
+   - rejection of unknown selections
    - successful decode by entity kind
    - malformed header handling
    - language mismatch handling
    - entity mismatch handling
+   - deterministic serialization ordering
    - public API exposure
 
 11. Delete `src/old-ling-id/`.
@@ -414,6 +469,7 @@ But the actual wire payload should still use a concrete kind.
 - branded `LingId<LIK, L>`
 - entity-based API
 - universal codec internals
+- explicit deterministic ordering rules
 
 ### Do not keep
 
@@ -421,6 +477,7 @@ But the actual wire payload should still use a concrete kind.
 - converter-style public naming
 - old API compatibility as a goal
 - per-language codec implementations
+- union-level surface Ling ID brands in the public encode API
 
 ## Open Questions
 
@@ -438,3 +495,8 @@ But the actual wire payload should still use a concrete kind.
 
    Recommendation: yes. If the public type is `LingId<LIK, L>`, it should cover
    actual entities symmetrically instead of starting with a surface-only bias.
+
+4. Should `KnownSelection<L>` be public?
+
+   Recommendation: probably yes, if callers are expected to encode selections
+   directly; otherwise keep it internal and let overload errors do the work.

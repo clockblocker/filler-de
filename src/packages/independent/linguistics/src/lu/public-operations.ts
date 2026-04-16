@@ -41,7 +41,10 @@ export const toResolvedLemmaSurface = ((lemma: LemmaLike) => {
 	};
 }) as ToResolvedLemmaSurfaceFn;
 
-export const toStandardFullSelection = ((surface: SurfaceLike, options = {}) => {
+export const toStandardFullSelection = ((
+	surface: SurfaceLike,
+	options = {},
+) => {
 	const operationPack = getOperationPack(surface.language);
 
 	return {
@@ -56,7 +59,10 @@ export const toStandardFullSelection = ((surface: SurfaceLike, options = {}) => 
 	};
 }) as ToStandardFullSelectionFromSurfaceFn;
 
-export const toStandardFullSelectionFromLemma = ((lemma: LemmaLike, options = {}) =>
+export const toStandardFullSelectionFromLemma = ((
+	lemma: LemmaLike,
+	options = {},
+) =>
 	toStandardFullSelection(
 		toResolvedLemmaSurface(lemma),
 		options,

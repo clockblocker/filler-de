@@ -31,17 +31,14 @@ export type SurfaceLike<L extends TargetLanguage = TargetLanguage> = {
 	target: { canonicalLemma: string } | LemmaLike<L>;
 };
 
-export type UnknownSelectionLikeFor<
-	L extends TargetLanguage = TargetLanguage,
-> = {
-	language: L;
-	orthographicStatus: "Unknown";
-	spelledSelection: string;
-};
+export type UnknownSelectionLikeFor<L extends TargetLanguage = TargetLanguage> =
+	{
+		language: L;
+		orthographicStatus: "Unknown";
+		spelledSelection: string;
+	};
 
-export type KnownSelectionLikeFor<
-	L extends TargetLanguage = TargetLanguage,
-> = {
+export type KnownSelectionLikeFor<L extends TargetLanguage = TargetLanguage> = {
 	language: L;
 	orthographicStatus: "Standard" | "Typo";
 	surface: SurfaceLike<L>;
@@ -53,9 +50,8 @@ export type SurfaceOfSelection<S extends { surface: unknown }> = S extends {
 	? SelectionSurface
 	: never;
 
-export type ResolvedSurfaceLikeFor<
-	L extends TargetLanguage = TargetLanguage,
-> = SurfaceLike<L> & { target: LemmaLike<L> };
+export type ResolvedSurfaceLikeFor<L extends TargetLanguage = TargetLanguage> =
+	SurfaceLike<L> & { target: LemmaLike<L> };
 
 export type UnresolvedSurfaceLikeFor<
 	L extends TargetLanguage = TargetLanguage,
@@ -95,8 +91,9 @@ export type ResolvedLemmaSurfaceFor<T extends LemmaLike> = {
 	target: T;
 };
 
-export type StandardFullSelectionForSurface<T extends { language: TargetLanguage }> =
-	{
+export type StandardFullSelectionForSurface<
+	T extends { language: TargetLanguage },
+> = {
 	language: T["language"];
 	orthographicStatus: "Standard";
 	selectionCoverage: "Full";

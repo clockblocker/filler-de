@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	getInverseLexicalRelation,
 	getInverseMorphologicalRelation,
+	LingIdCodec,
 	LexicalRelationsSchema,
 	lingSchemaFor,
 	MorphologicalRelationsSchema,
@@ -10,7 +11,15 @@ import { GermanVerbSchemas } from "../../src/lu/language-packs/german/lu/lexeme/
 
 const { Selection: SelectionSchema } = lingSchemaFor;
 
-const relationId = (label: string) => `rel:${label}`;
+const relationId = (canonicalLemma: string) =>
+	LingIdCodec.German.makeLingIdFor({
+		canonicalLemma,
+		inherentFeatures: {},
+		language: "German",
+		lemmaKind: "Lexeme",
+		meaningInEmojis: "🔗",
+		pos: "VERB",
+	});
 
 function verbSurface(canonicalLemma: string) {
 	return {

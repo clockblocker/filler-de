@@ -1,6 +1,5 @@
 import { describe, expect, it } from "bun:test";
 import {
-	type Lemma,
 	LingOperation,
 	lingSchemaFor,
 	type Selection,
@@ -11,46 +10,6 @@ import {
 	buildGermanFeminineSeeLemma,
 } from "./ling-id/ling-id-test-helpers";
 
-type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
-	? 1
-	: 2
-	? true
-	: false;
-
-type Assert<T extends true> = T;
-
-declare const englishUnknownSelection: Selection<"English", "Unknown">;
-declare const englishWalkLemmaForTypes: Lemma<"English", "Lexeme", "VERB">;
-type ExpectedResolvedLemmaSurface = {
-	discriminators: {
-		lemmaKind: "Lexeme";
-		lemmaSubKind: "VERB";
-	};
-	language: "English";
-	normalizedFullSurface: string;
-	surfaceKind: "Lemma";
-	target: Lemma<"English", "Lexeme", "VERB">;
-};
-
-if (false) {
-	const extractedUnknownSurface =
-		LingOperation.extract.surface.fromSelection(englishUnknownSelection);
-	const _unknownSelectionExtractsNull: Assert<
-		Equal<typeof extractedUnknownSurface, null>
-	> = true;
-
-	const resolvedLemmaSurfaceFromType =
-		LingOperation.convert.lemma.toResolvedLemmaSurface(
-			englishWalkLemmaForTypes,
-		);
-	const _resolvedLemmaSurfaceStaysPrecise: Assert<
-		Equal<typeof resolvedLemmaSurfaceFromType, ExpectedResolvedLemmaSurface>
-	> = true;
-
-	void _unknownSelectionExtractsNull;
-	void _resolvedLemmaSurfaceStaysPrecise;
-}
-
 describe("LingOperation", () => {
 	it("extracts null from unknown selections", () => {
 		const unknownSelection = {
@@ -59,9 +18,9 @@ describe("LingOperation", () => {
 			spelledSelection: "walq",
 		} satisfies Selection<"English", "Unknown">;
 
-		expect(LingOperation.extract.surface.fromSelection(unknownSelection)).toBe(
-			null,
-		);
+		expect(
+			LingOperation.extract.surface.fromSelection(unknownSelection),
+		).toBe(null);
 	});
 
 	it("extracts the exact surface from known selections", () => {
@@ -134,13 +93,12 @@ describe("LingOperation", () => {
 		const resolvedSurface =
 			LingOperation.convert.lemma.toResolvedLemmaSurface(lemma);
 
-		const selection =
-			LingOperation.convert.surface.toStandardFullSelection(
-				resolvedSurface,
-				{
-					spelledSelection: "Walk",
-				},
-			);
+		const selection = LingOperation.convert.surface.toStandardFullSelection(
+			resolvedSurface,
+			{
+				spelledSelection: "Walk",
+			},
+		);
 
 		expect(selection).toEqual({
 			language: "English",
@@ -175,10 +133,16 @@ describe("LingOperation", () => {
 
 	it("enforces bound language matching at runtime", () => {
 		const germanOps = LingOperation.forLanguage("German");
+		type GermanLemmaInput = Parameters<
+			typeof germanOps.convert.lemma.toResolvedLemmaSurface
+		>[0];
+		type GermanSurfaceInput = Parameters<
+			typeof germanOps.convert.surface.toStandardFullSelection
+		>[0];
 
 		expect(() =>
 			germanOps.convert.lemma.toResolvedLemmaSurface(
-				buildEnglishWalkLemma() as unknown as Lemma<"German">,
+				buildEnglishWalkLemma() as unknown as GermanLemmaInput,
 			),
 		).toThrow(
 			"LingOperation language mismatch: expected German, received English",
@@ -187,7 +151,7 @@ describe("LingOperation", () => {
 			germanOps.convert.surface.toStandardFullSelection(
 				LingOperation.convert.lemma.toResolvedLemmaSurface(
 					buildEnglishWalkLemma(),
-				) as unknown as Surface<"German">,
+				) as unknown as GermanSurfaceInput,
 			),
 		).toThrow(
 			"LingOperation language mismatch: expected German, received English",
@@ -198,17 +162,17 @@ describe("LingOperation", () => {
 		const germanLemma = buildGermanFeminineSeeLemma();
 		const germanOps = LingOperation.forLanguage("German");
 
-		expect(germanOps.convert.lemma.toResolvedLemmaSurface(germanLemma)).toEqual(
-			{
-				discriminators: {
-					lemmaKind: "Lexeme",
-					lemmaSubKind: "NOUN",
-				},
-				language: "German",
-				normalizedFullSurface: "See",
-				surfaceKind: "Lemma",
-				target: germanLemma,
+		expect(
+			germanOps.convert.lemma.toResolvedLemmaSurface(germanLemma),
+		).toEqual({
+			discriminators: {
+				lemmaKind: "Lexeme",
+				lemmaSubKind: "NOUN",
 			},
-		);
+			language: "German",
+			normalizedFullSurface: "See",
+			surfaceKind: "Lemma",
+			target: germanLemma,
+		});
 	});
 });

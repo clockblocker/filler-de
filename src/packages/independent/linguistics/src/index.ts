@@ -30,6 +30,13 @@ export const lingSchemaFor = {
 };
 
 export const LingSchemaFor = lingSchemaFor;
+export {
+	LemmaSchema,
+	ResolvedSurfaceSchema,
+	SelectionSchema,
+	SurfaceSchema,
+	UnresolvedSurfaceSchema,
+};
 
 export const lingOperation = {
 	convert: {
@@ -54,6 +61,7 @@ export const lingOperation = {
 
 export const LingOperation = lingOperation;
 
+export * from "./ling-id/public";
 export type {
 	Lemma,
 	ResolvedSurface,
@@ -61,7 +69,5 @@ export type {
 	Surface,
 	UnresolvedSurface,
 } from "./lu/public-entities";
-
-export * from "./old-ling-id/public";
 
 export * from "./relations/public";

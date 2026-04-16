@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { Lemma } from "../../src";
 import {
+	LingIdCodec,
 	LexicalRelationsSchema,
 	lingSchemaFor,
 	MorphologicalRelationsSchema,
@@ -9,7 +10,15 @@ import { GermanNounSchemas } from "../../src/lu/language-packs/german/lu/lexeme/
 
 const { Lemma: LemmaSchema, Selection: SelectionSchema } = lingSchemaFor;
 
-const relationId = (label: string) => `rel:${label}`;
+const relationId = (canonicalLemma: string) =>
+	LingIdCodec.German.makeLingIdFor({
+		canonicalLemma,
+		inherentFeatures: {},
+		language: "German",
+		lemmaKind: "Lexeme",
+		meaningInEmojis: "🔗",
+		pos: "NOUN",
+	});
 
 function nounSurface(canonicalLemma: string) {
 	return {

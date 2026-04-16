@@ -1,28 +1,38 @@
-// import Result from "neverthrow";
+import type { TargetLanguage } from "../lu/universal/enums/core/language";
+import { decodeLingId, decodeLingIdAs } from "./internal/codec/decode";
+import { encodeLingId } from "./internal/codec/encode";
+import type { LingIdCodecFor } from "./types";
 
-// export type LingId<
-// 	LIK extends LingEntity = LingEntity,
-// 	L extends TargetLanguage = TargetLanguage,
-// > =  //...
+export type {
+	ConcreteLingIdKind,
+	KnownSelection,
+	LingId,
+	LingIdCodecFor,
+	LingIdDecodeError,
+	LingIdDecodeErrorCode,
+	LingIdValueFor,
+} from "./types";
 
-// function makeLingIdForSelection<L extends TargetLanguage = TargetLanguage>(selection: Selection<L>): LingId<'Selection', L> {
+function forLanguage<L extends TargetLanguage>(language: L): LingIdCodecFor<L> {
+	return {
+		makeLingIdFor: ((value) =>
+			encodeLingId(
+				language,
+				value,
+			)) as LingIdCodecFor<L>["makeLingIdFor"],
+		tryToDecode: (id: string) => decodeLingId(language, id),
+		tryToDecodeAs: ((kind, id: string) =>
+			decodeLingIdAs(language, kind, id)) as LingIdCodecFor<L>["tryToDecodeAs"],
+	};
+}
 
-// }
-
-// function tryToDecodeSelectionFromLingId<L extends TargetLanguage = TargetLanguage>(LingId<'Selection', L>): Result<Selection<L>> {
-
-// }
-
-// ...
-
-// export const LingIdCodec = {
-// English: {
-// 	makeLingIdFor: // all makeLingIdFor... overloaded
-// 	tryToDecode: // all tryToDecode... overloaded
-// }
-// } satisfies {
-// 		L in TargetLanguage: {
-// 			makeLingIdFor: ...
-// 			tryToDecode: ...
-// 		}
-// }
+export const LingIdCodec = {
+	English: forLanguage("English"),
+	forLanguage,
+	German: forLanguage("German"),
+	Hebrew: forLanguage("Hebrew"),
+} satisfies {
+	forLanguage<L extends TargetLanguage>(language: L): LingIdCodecFor<L>;
+} & {
+	[L in TargetLanguage]: LingIdCodecFor<L>;
+};
