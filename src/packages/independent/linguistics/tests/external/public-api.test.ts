@@ -5,6 +5,7 @@ import {
 	LemmaSchema,
 	LexicalRelation,
 	LexicalRelationsSchema,
+	LingSchemaFor,
 	LingId,
 	MorphologicalRelation,
 	MorphologicalRelationsSchema,
@@ -143,6 +144,21 @@ describe("public API usage", () => {
 		).toBe(ResolvedSurfaceSchema.English.Standard.Inflection.Lexeme.VERB);
 		expect(SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN).toBe(
 			SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN,
+		);
+		expect(LingSchemaFor.Selection.German.Standard.Lemma.Lexeme.NOUN).toBe(
+			SelectionSchema.German.Standard.Lemma.Lexeme.NOUN,
+		);
+		expect(LingSchemaFor.Surface.English.Standard.Inflection.Lexeme.NOUN).toBe(
+			SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN,
+		);
+		expect(
+			LingSchemaFor.ResolvedSurface.English.Standard.Inflection.Lexeme.VERB,
+		).toBe(ResolvedSurfaceSchema.English.Standard.Inflection.Lexeme.VERB);
+		expect(
+			LingSchemaFor.UnresolvedSurface.English.Standard.Inflection.Lexeme.NOUN,
+		).toBe(SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN);
+		expect(LingSchemaFor.Lemma.Hebrew.Lexeme.VERB).toBe(
+			LemmaSchema.Hebrew.Lexeme.VERB,
 		);
 		expect("buildToLingIdFor" in linguistics).toBe(false);
 		expect("buildToSurfaceLingIdFor" in linguistics).toBe(false);

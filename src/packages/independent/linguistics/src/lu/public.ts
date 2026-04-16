@@ -33,6 +33,8 @@ export const ResolvedSurfaceSchema = {
 	Hebrew: buildResolvedSurfaceSchemaForLanguage(SurfaceSchema.Hebrew),
 };
 
+export const UnresolvedSurfaceSchema = SurfaceSchema;
+
 export const LemmaSchema = {
 	English: EnglishLemmaSchema,
 	German: GermanLemmaSchema,
@@ -46,6 +48,54 @@ export type Lemma<
 > = LemmaKindFor<L> extends LK
 	? LanguageLemmaUnion<L>
 	: InferSchema<LemmaSchemaFor<L, LK, D>>;
+
+export type ResolvedSurface<
+	L extends TargetLanguage = TargetLanguage,
+	OS extends
+		SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
+	SK extends SurfaceSurfaceKindFor<L, OS> = SurfaceSurfaceKindFor<L, OS>,
+	LK extends SurfaceLemmaKindFor<L, OS, SK> = SurfaceLemmaKindFor<L, OS, SK>,
+	D extends SurfaceDiscriminatorFor<L, OS, SK, LK> = SurfaceDiscriminatorFor<
+		L,
+		OS,
+		SK,
+		LK
+	>,
+> = SurfaceOrthographicStatusFor<L> extends OS
+	? ResolvedSurfaceValueFor<SurfaceValue<L, OS, SK, LK, D>>
+	: PrettifyDeep<ResolvedSurfaceValueFor<SurfaceValue<L, OS, SK, LK, D>>>;
+
+export type UnresolvedSurface<
+	L extends TargetLanguage = TargetLanguage,
+	OS extends
+		SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
+	SK extends SurfaceSurfaceKindFor<L, OS> = SurfaceSurfaceKindFor<L, OS>,
+	LK extends SurfaceLemmaKindFor<L, OS, SK> = SurfaceLemmaKindFor<L, OS, SK>,
+	D extends SurfaceDiscriminatorFor<L, OS, SK, LK> = SurfaceDiscriminatorFor<
+		L,
+		OS,
+		SK,
+		LK
+	>,
+> = SurfaceOrthographicStatusFor<L> extends OS
+	? UnresolvedSurfaceValueFor<SurfaceValue<L, OS, SK, LK, D>>
+	: PrettifyDeep<UnresolvedSurfaceValueFor<SurfaceValue<L, OS, SK, LK, D>>>;
+
+export type Surface<
+	L extends TargetLanguage = TargetLanguage,
+	OS extends
+		SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
+	SK extends SurfaceSurfaceKindFor<L, OS> = SurfaceSurfaceKindFor<L, OS>,
+	LK extends SurfaceLemmaKindFor<L, OS, SK> = SurfaceLemmaKindFor<L, OS, SK>,
+	D extends SurfaceDiscriminatorFor<L, OS, SK, LK> = SurfaceDiscriminatorFor<
+		L,
+		OS,
+		SK,
+		LK
+	>,
+> = SurfaceOrthographicStatusFor<L> extends OS
+	? SurfaceValue<L, OS, SK, LK, D>
+	: PrettifyDeep<SurfaceValue<L, OS, SK, LK, D>>;
 
 export type Selection<
 	L extends TargetLanguage = TargetLanguage,
@@ -66,54 +116,6 @@ export type Selection<
 > = SelectionOrthographicStatusFor<L> extends OS
 	? SelectionUnionForLanguage<L>
 	: PrettifyDeep<InferSchema<SelectionSchemaFor<L, OS, SK, LK, D>>>;
-
-export type Surface<
-	L extends TargetLanguage = TargetLanguage,
-	OS extends
-		SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
-	SK extends SurfaceSurfaceKindFor<L, OS> = SurfaceSurfaceKindFor<L, OS>,
-	LK extends SurfaceLemmaKindFor<L, OS, SK> = SurfaceLemmaKindFor<L, OS, SK>,
-	D extends SurfaceDiscriminatorFor<L, OS, SK, LK> = SurfaceDiscriminatorFor<
-		L,
-		OS,
-		SK,
-		LK
-	>,
-> = SurfaceOrthographicStatusFor<L> extends OS
-	? SurfaceValue<L, OS, SK, LK, D>
-	: PrettifyDeep<SurfaceValue<L, OS, SK, LK, D>>;
-
-export type UnresolvedSurface<
-	L extends TargetLanguage = TargetLanguage,
-	OS extends
-		SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
-	SK extends SurfaceSurfaceKindFor<L, OS> = SurfaceSurfaceKindFor<L, OS>,
-	LK extends SurfaceLemmaKindFor<L, OS, SK> = SurfaceLemmaKindFor<L, OS, SK>,
-	D extends SurfaceDiscriminatorFor<L, OS, SK, LK> = SurfaceDiscriminatorFor<
-		L,
-		OS,
-		SK,
-		LK
-	>,
-> = SurfaceOrthographicStatusFor<L> extends OS
-	? UnresolvedSurfaceValueFor<SurfaceValue<L, OS, SK, LK, D>>
-	: PrettifyDeep<UnresolvedSurfaceValueFor<SurfaceValue<L, OS, SK, LK, D>>>;
-
-export type ResolvedSurface<
-	L extends TargetLanguage = TargetLanguage,
-	OS extends
-		SurfaceOrthographicStatusFor<L> = SurfaceOrthographicStatusFor<L>,
-	SK extends SurfaceSurfaceKindFor<L, OS> = SurfaceSurfaceKindFor<L, OS>,
-	LK extends SurfaceLemmaKindFor<L, OS, SK> = SurfaceLemmaKindFor<L, OS, SK>,
-	D extends SurfaceDiscriminatorFor<L, OS, SK, LK> = SurfaceDiscriminatorFor<
-		L,
-		OS,
-		SK,
-		LK
-	>,
-> = SurfaceOrthographicStatusFor<L> extends OS
-	? ResolvedSurfaceValueFor<SurfaceValue<L, OS, SK, LK, D>>
-	: PrettifyDeep<ResolvedSurfaceValueFor<SurfaceValue<L, OS, SK, LK, D>>>;
 
 type ValueOf<T> = T[keyof T];
 

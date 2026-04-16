@@ -93,6 +93,7 @@
       "name": "@textfresser/linguistics",
       "version": "0.0.0",
       "dependencies": {
+        "neverthrow": "^8.2.0",
         "zod": "3.25.76",
       },
       "devDependencies": {
