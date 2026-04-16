@@ -1,29 +1,30 @@
 # `@textfresser/linguistics`
 
-Typesafe schemas and types for classifying linguistic units in text.
+Typesafe schemas and types for practical, learner-facing segmentation of text.
 
-The package models two closely related things:
+The package models a layered analysis:
 
-- `Selection`: a concrete surface form selected in text
-- `Lemma`: the normalized dictionary form assigned to that selection
+- `Selection`: what the user actually highlighted
+- `Surface`: the normalized full form that highlight belongs to
+- `Lemma`: the normalized dictionary form assigned to that surface
 
 It currently exposes curated registries for `German` and `English`, plus a small relations API for lexical and morphological links.
 
 ## Core idea
 
-User reads:
+A learner reads:
 
 ```text
-I walk in the park
+Mark gave up on it
 ```
 
-They select:
+They select only part of the expression:
 
 ```text
-I [walk] in the park
+Mark gave [up] on it
 ```
 
-That selection can be represented as a typed surface form:
+That is still a valid classification. The selection is partial, but the deeper layers stay intact: the full surface is the inflected form `gave up`, and the lemma is `give up`.
 
 <!-- README_BLOCK:core-simple-selection -->
 
@@ -33,19 +34,28 @@ And the assigned lemma can be validated independently:
 
 <!-- README_BLOCK:core-simple-lemma -->
 
+This gives you two orthogonal axes of strictness:
+
+- `orthographicStatus`: whether the spelling is standard, a recognized typo, or unknown
+- `selectionCoverage`: whether the user highlighted the whole surface or only part of it
+
+A recognized typo does not need to break deeper classification if the surface is still recognizable, and a partial selection does not need to discard the full surface or its lemma.
+
 Although mainly based on the work of UD, this model has a human student of a new language in mind and hence differs from UD in compounded linguistic units.
 
-For example, the model allows classifying the idiom in
+For example, the same separation also allows classifying the idiom in
 
 ```text
 This game was a [walk] in the park
 ```
 
-as part of the idiom "a walk in the park":
+as part of the idiom "a walk in the park", directly at the lemma-surface layer:
 
 <!-- README_BLOCK:core-idiom-selection -->
 
-The DTO separates three distinct things:
+Here, `surfaceKind: "Lemma"` is appropriate because the selection is attached directly to the idiom lemma instead of to a separate inflected surface.
+
+The DTO keeps the learner-facing selection separate from the deeper linguistic layers:
 
 - the actual highlighted text in the note: `spelledSelection`
 - whether the user highlighted the whole surface or only part of it: `selectionCoverage`
@@ -53,9 +63,9 @@ The DTO separates three distinct things:
 - the full orthographically normalized surface that the highlighted text belongs to: `normalizedFullSurface`
 - the lexical target that the surface resolves to: `target.canonicalLemma`
 
-In the examples below, the selections target the lemmas `give up` and `aufpassen`, while the realized normalized surfaces are `gave up` and `pass auf`.
+In the examples below, the user highlights only one piece of an inflected multi-token surface, but the model still preserves the full surface and lemma.
 
-`surfaceKind: "Lemma"` means that the selection resolves directly to a lemma target. It does not mean that `normalizedFullSurface` itself is a lemma string.
+The selections target the lemmas `give up` and `aufpassen`, while the realized normalized surfaces are `gave up` and `pass auf`.
 
 <!-- README_BLOCK:core-lemma-surface-distinction -->
 
@@ -80,37 +90,3 @@ Hans, Pass [auf] dich auf! -> `auf` (ADP)
 Hans, Pass auf [dich] auf! -> `du` (PRON)
 Hans, Pass auf dich [auf]! -> `auf` (PRT)
 ```
-
-## Ling IDs
-
-The package serializes stable surface-shaped Ling IDs. Lemma input is normalized into a resolved-surface identity, so there is no separate top-level lemma ID format.
-
-### Observed Surface IDs
-
-<!-- README_BLOCK:ling-id-resolved-walk -->
-
-Observed-surface identity still includes inherent lemma features:
-
-<!-- README_BLOCK:ling-id-resolved-see -->
-
-### Full Surface IDs
-
-Full surface IDs preserve target richness.
-
-<!-- README_BLOCK:ling-id-full-walk -->
-
-If the target is shallow, the full surface ID changes:
-
-<!-- README_BLOCK:ling-id-full-canonical-target -->
-
-### Shallow Surface IDs
-
-Use shallow surface IDs when you want to compare form identity while ignoring target richness. Shallow IDs accept surface inputs such as selections, resolved surfaces, and shallow shells, but not bare lemmas.
-
-<!-- README_BLOCK:ling-id-shallow-see -->
-
-### Parsing IDs
-
-`buildToLingConverters()` also exposes language-bound parsers. `parseSurface()` returns either a `Selection` for full surface IDs or a `ResolvedSurface` for resolved lemma IDs. `parseShallowSurface()` returns the shallow shell payload.
-
-<!-- README_BLOCK:ling-id-parse -->

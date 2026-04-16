@@ -2,28 +2,31 @@
 import type { Lemma, Selection } from "../../src";
 
 // README_BLOCK:core-simple-selection:start
-const simpleWalkSelection = {
+const giveUpPartialSelection = {
 	language: "English",
+	normalizedSelectedSurface: "up",
 	orthographicStatus: "Standard",
-	selectionCoverage: "Full",
-	spelledSelection: "walk",
+	selectionCoverage: "Partial",
+	spelledSelection: "up",
 	surface: {
 		discriminators: {
 			lemmaKind: "Lexeme",
 			lemmaSubKind: "VERB",
 		},
 		inflectionalFeatures: {
-			tense: "Pres",
+			tense: "Past",
 			verbForm: "Fin",
 		},
-		normalizedFullSurface: "walk",
+		normalizedFullSurface: "gave up",
 		surfaceKind: "Inflection",
 		target: {
-			canonicalLemma: "walk",
-			inherentFeatures: {},
+			canonicalLemma: "give up",
+			inherentFeatures: {
+				phrasal: "Yes",
+			},
 			language: "English",
 			lemmaKind: "Lexeme",
-			meaningInEmojis: "🚶",
+			meaningInEmojis: "🏳️",
 			pos: "VERB",
 		},
 	},
@@ -31,12 +34,14 @@ const simpleWalkSelection = {
 // README_BLOCK:core-simple-selection:end
 
 // README_BLOCK:core-simple-lemma:start
-const simpleWalkLemma = {
-	canonicalLemma: "walk",
-	inherentFeatures: {},
+const giveUpLemma = {
+	canonicalLemma: "give up",
+	inherentFeatures: {
+		phrasal: "Yes",
+	},
 	language: "English",
 	lemmaKind: "Lexeme",
-	meaningInEmojis: "🚶",
+	meaningInEmojis: "🏳️",
 	pos: "VERB",
 } satisfies Lemma<"English", "Lexeme", "VERB">;
 // README_BLOCK:core-simple-lemma:end
@@ -69,39 +74,47 @@ const idiomPartSelection = {
 // README_BLOCK:core-lemma-surface-distinction:start
 const gaveUpSelection = {
 	language: "English",
-	normalizedSelectedSurface: "gave",
+	normalizedSelectedSurface: "up",
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
-	spelledSelection: "gave",
+	spelledSelection: "up",
 	surface: {
 		discriminators: {
 			lemmaKind: "Lexeme",
 			lemmaSubKind: "VERB",
 		},
+		inflectionalFeatures: {
+			tense: "Past",
+			verbForm: "Fin",
+		},
 		normalizedFullSurface: "gave up",
-		surfaceKind: "Lemma",
+		surfaceKind: "Inflection",
 		target: {
 			canonicalLemma: "give up",
 		},
 	},
-} satisfies Selection<"English", "Standard", "Lemma", "Lexeme", "VERB">;
+} satisfies Selection<"English", "Standard", "Inflection", "Lexeme", "VERB">;
 
 const passAufSelection = {
 	language: "German",
-	normalizedSelectedSurface: "pass",
+	normalizedSelectedSurface: "auf",
 	orthographicStatus: "Standard",
 	selectionCoverage: "Partial",
-	spelledSelection: "Pass",
+	spelledSelection: "auf",
 	surface: {
 		discriminators: {
 			lemmaKind: "Lexeme",
 			lemmaSubKind: "VERB",
 		},
+		inflectionalFeatures: {
+			mood: "Imp",
+			verbForm: "Fin",
+		},
 		normalizedFullSurface: "pass auf",
-		surfaceKind: "Lemma",
+		surfaceKind: "Inflection",
 		target: {
 			canonicalLemma: "aufpassen",
 		},
 	},
-} satisfies Selection<"German", "Standard", "Lemma", "Lexeme", "VERB">;
+} satisfies Selection<"German", "Standard", "Inflection", "Lexeme", "VERB">;
 // README_BLOCK:core-lemma-surface-distinction:end
