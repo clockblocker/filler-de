@@ -1,5 +1,5 @@
-import type { ResolvedSurface, Surface, UnresolvedSurface } from "../../../src";
-import { englishWalkLemma, germanHausLemma } from "./lemmas";
+import type { ResolvedSurface, Surface, UnresolvedSurface } from "../../../../src";
+import { englishWalkLemma } from "./lemmas";
 
 // Attestation: "They [walk] home together."
 export const englishWalkResolvedInflectionSurface = {
@@ -96,15 +96,3 @@ export const englishGiveUpTypoUnresolvedInflectionSurface = {
 	"Lexeme",
 	"VERB"
 >;
-
-// Attestation: "Das [Haus] steht leer."
-export const germanHausResolvedLemmaSurface = {
-	discriminators: {
-		lemmaKind: "Lexeme",
-		lemmaSubKind: "NOUN",
-	},
-	language: "German",
-	normalizedFullSurface: "Haus",
-	surfaceKind: "Lemma",
-	target: germanHausLemma,
-} satisfies ResolvedSurface<"German", "Standard", "Lemma", "Lexeme", "NOUN">;
