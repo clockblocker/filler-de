@@ -30,6 +30,6 @@ const reprForVoice = {
 	Rcp: "reciprocal",
 } satisfies Record<Voice, string>;
 
-export function getReprForVoice(voice: Voice) {
+function getReprForVoice(voice: Voice) {
 	return reprForVoice[voice];
 }

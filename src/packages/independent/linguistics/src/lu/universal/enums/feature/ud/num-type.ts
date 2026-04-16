@@ -24,6 +24,6 @@ const reprForNumType = {
 	Sets: "number of sets of things", // collective numeral
 } satisfies Record<NumType, string>;
 
-export function getReprForNumType(numType: NumType) {
+function getReprForNumType(numType: NumType) {
 	return reprForNumType[numType];
 }

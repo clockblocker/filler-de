@@ -7,7 +7,6 @@ export type {
 	ConcreteLingIdKind,
 	KnownSelection,
 	LingId,
-	LingIdApiFor as LingIdCodecFor,
 	LingIdDecodeError,
 	LingIdDecodeErrorCode,
 	LingIdValueFor,

@@ -14,6 +14,6 @@ const reprForTense = {
 	Pres: "present", // non-past / aorist
 } satisfies Record<Tense, string>;
 
-export function getReprForTense(tense: Tense) {
+function getReprForTense(tense: Tense) {
 	return reprForTense[tense];
 }

@@ -16,6 +16,6 @@ const reprForDegree = {
 	Sup: "superlative", // third degree
 } satisfies Record<Degree, string>;
 
-export function getReprForDegree(degree: Degree) {
+function getReprForDegree(degree: Degree) {
 	return reprForDegree[degree];
 }

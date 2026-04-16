@@ -32,6 +32,6 @@ const reprForNumber = {
 	Tri: "trial",
 } satisfies Record<GrammaticalNumber, string>;
 
-export function getReprForNumber(number: GrammaticalNumber) {
+function getReprForNumber(number: GrammaticalNumber) {
 	return reprForNumber[number];
 }

@@ -26,6 +26,6 @@ const reprForVerbForm = {
 	Vnoun: "verbal noun", // masdar
 } satisfies Record<VerbForm, string>;
 
-export function getReprForVerbForm(verbForm: VerbForm) {
+function getReprForVerbForm(verbForm: VerbForm) {
 	return reprForVerbForm[verbForm];
 }

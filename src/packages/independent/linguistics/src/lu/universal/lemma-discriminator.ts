@@ -11,7 +11,7 @@ export type LemmaDiscriminatorFor<LK extends LemmaKind> = LK extends "Lexeme"
 			? PhrasemeKind
 			: never;
 
-export type LemmaIdentityFieldsFor<
+type LemmaIdentityFieldsFor<
 	LK extends LemmaKind,
 	D extends LemmaDiscriminatorFor<LK>,
 > = LK extends "Lexeme"

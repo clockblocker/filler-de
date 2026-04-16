@@ -13,6 +13,6 @@ const reprForGender = {
 	Neut: "neuter",
 } satisfies Record<Gender, string>;
 
-export function getReprForGender(gender: Gender) {
+function getReprForGender(gender: Gender) {
 	return reprForGender[gender];
 }

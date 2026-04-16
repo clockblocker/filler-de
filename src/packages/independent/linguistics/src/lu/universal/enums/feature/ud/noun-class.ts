@@ -80,6 +80,6 @@ const reprForNounClass = {
 	Wol12: "Wolof noun class 12/n (manner)",
 } satisfies Record<NounClass, string>;
 
-export function getReprForNounClass(nounClass: NounClass) {
+function getReprForNounClass(nounClass: NounClass) {
 	return reprForNounClass[nounClass];
 }

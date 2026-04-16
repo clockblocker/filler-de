@@ -11,6 +11,6 @@ const reprForEvident = {
 	Nfh: "non-firsthand",
 } satisfies Record<Evident, string>;
 
-export function getReprForEvident(evident: Evident) {
+function getReprForEvident(evident: Evident) {
 	return reprForEvident[evident];
 }

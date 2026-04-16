@@ -11,7 +11,7 @@ import type {
 import type { AbstractFeatures } from "./enums/feature";
 import type { LemmaDiscriminatorFor } from "./lemma-discriminator";
 
-export type AbstractUnresolvedSurfaceFor<
+type AbstractUnresolvedSurfaceFor<
 	SK extends SurfaceKind = SurfaceKind,
 	LK extends LemmaKind = LemmaKind,
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
@@ -23,7 +23,7 @@ export type AbstractUnresolvedSurfaceFor<
 		>
 	: never;
 
-export type AbstractResolvedSurfaceFor<
+type AbstractResolvedSurfaceFor<
 	SK extends SurfaceKind = SurfaceKind,
 	LK extends LemmaKind = LemmaKind,
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
@@ -35,7 +35,7 @@ export type AbstractResolvedSurfaceFor<
 		>
 	: never;
 
-export type AbstractSurfaceFor<
+type AbstractSurfaceFor<
 	SK extends SurfaceKind = SurfaceKind,
 	LK extends LemmaKind = LemmaKind,
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,

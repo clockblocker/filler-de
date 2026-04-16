@@ -26,6 +26,6 @@ const reprForStyle = {
 	Vulg: "vulgar",
 } satisfies Record<Style, string>;
 
-export function getReprForStyle(style: Style) {
+function getReprForStyle(style: Style) {
 	return reprForStyle[style];
 }

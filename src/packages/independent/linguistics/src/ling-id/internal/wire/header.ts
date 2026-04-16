@@ -2,7 +2,7 @@ import type { TargetLanguage } from "../../../lu/universal/enums/core/language";
 import type { ConcreteLingIdKind } from "../../types";
 import { codeToLanguage, languageToCode } from "./language-codes";
 
-export type WireKindCode = "LEM" | "SEL" | "SURF-RES" | "SURF-UNRES";
+type WireKindCode = "LEM" | "SEL" | "SURF-RES" | "SURF-UNRES";
 
 const KIND_TO_WIRE = {
 	Lemma: "LEM",

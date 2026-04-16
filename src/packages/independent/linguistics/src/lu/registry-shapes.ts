@@ -30,7 +30,7 @@ export type SelectionSchemaLanguageShape = {
 	Unknown: z.ZodTypeAny;
 };
 
-export type SurfaceSchemaLanguageShape = {
+type SurfaceSchemaLanguageShape = {
 	[OS in Exclude<OrthographicStatus, "Unknown">]: {
 		[SK in SupportedSelectionSurfaceKind]: {
 			[LK in SupportedSelectionLemmaKindFor<SK>]: DiscriminatorSchemaShape<LK>;

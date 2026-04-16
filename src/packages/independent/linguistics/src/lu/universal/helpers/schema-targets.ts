@@ -33,7 +33,7 @@ export type SelectionSchemaFor<
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > = z.ZodType<SelectionFor<OS, SK, LK, D>>;
 
-export type RestrictableFeatureSchemaShape = Partial<{
+type RestrictableFeatureSchemaShape = Partial<{
 	[K in keyof AbstractFeatures]: z.ZodTypeAny;
 }>;
 

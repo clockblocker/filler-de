@@ -19,4 +19,4 @@ export const MorphemeKindSchema = z.enum(morphemeKinds);
 export type MorphemeKind = z.infer<typeof MorphemeKindSchema>;
 
 export const MorphemeKind = MorphemeKindSchema.enum;
-export const MORPHEME_KINDS = MorphemeKindSchema.options;
+const MORPHEME_KINDS = MorphemeKindSchema.options;

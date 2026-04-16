@@ -11,6 +11,6 @@ const reprForDeixisRef = {
 	"2": "deixis relative to the second person participant (hearer)",
 } satisfies Record<DeixisRef, string>;
 
-export function getReprForDeixisRef(deixisRef: DeixisRef) {
+function getReprForDeixisRef(deixisRef: DeixisRef) {
 	return reprForDeixisRef[deixisRef];
 }

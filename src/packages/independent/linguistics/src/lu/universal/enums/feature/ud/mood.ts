@@ -38,6 +38,6 @@ const reprForMood = {
 	Sub: "subjunctive", // or conjunctive
 } satisfies Record<Mood, string>;
 
-export function getReprForMood(mood: Mood) {
+function getReprForMood(mood: Mood) {
 	return reprForMood[mood];
 }

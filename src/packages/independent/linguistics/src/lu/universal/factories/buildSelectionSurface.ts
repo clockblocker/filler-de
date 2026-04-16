@@ -75,7 +75,7 @@ export type SelectionSurfaceSchemaFor<
 	>
 >;
 
-export type SelectionSurfaceSchemaDescriptorFor<
+type SelectionSurfaceSchemaDescriptorFor<
 	LemmaDescriptor extends LemmaSchemaDescriptor<z.ZodTypeAny>,
 	LemmaIdentityShape extends SelectionLemmaIdentityShape,
 	SurfaceShape extends z.ZodRawShape,

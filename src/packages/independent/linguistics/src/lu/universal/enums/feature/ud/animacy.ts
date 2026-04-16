@@ -13,6 +13,6 @@ const reprForAnimacy = {
 	Nhum: "non-human",
 } satisfies Record<Animacy, string>;
 
-export function getReprForAnimacy(animacy: Animacy) {
+function getReprForAnimacy(animacy: Animacy) {
 	return reprForAnimacy[animacy];
 }

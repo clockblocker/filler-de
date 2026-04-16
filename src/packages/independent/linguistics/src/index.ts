@@ -5,7 +5,6 @@ import {
 	ResolvedSurfaceSchema,
 	SelectionSchema,
 	SurfaceSchema,
-	UnresolvedSurfaceSchema,
 } from "./lu/public-entities";
 import {
 	extractLemmaFromSurface,
@@ -23,7 +22,7 @@ export const lingSchemaFor = {
 	ResolvedSurface: ResolvedSurfaceSchema,
 	Selection: SelectionSchema,
 	Surface: SurfaceSchema,
-	UnresolvedSurface: UnresolvedSurfaceSchema,
+	UnresolvedSurface: SurfaceSchema,
 } satisfies {
 	[Entity in LingEntity]: {
 		[Language in TargetLanguage]: unknown;

@@ -13,6 +13,6 @@ const reprForPolite = {
 	Infm: "informal register",
 } satisfies Record<Polite, string>;
 
-export function getReprForPolite(polite: Polite) {
+function getReprForPolite(polite: Polite) {
 	return reprForPolite[polite];
 }

@@ -11,6 +11,6 @@ const reprForClusivity = {
 	In: "inclusive",
 } satisfies Record<Clusivity, string>;
 
-export function getReprForClusivity(clusivity: Clusivity) {
+function getReprForClusivity(clusivity: Clusivity) {
 	return reprForClusivity[clusivity];
 }

@@ -1,6 +1,5 @@
 export type {
 	AbstractFeatures,
-	UniversalFeatureKey,
 	UniversalFeatureValue,
 } from "./feature";
 

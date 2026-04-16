@@ -76,6 +76,6 @@ const reprForCase = {
 	Ter: "terminative", // terminal allative
 } satisfies Record<Case, string>;
 
-export function getReprForCase(caseValue: Case) {
+function getReprForCase(caseValue: Case) {
 	return reprForCase[caseValue];
 }

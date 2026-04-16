@@ -15,6 +15,6 @@ const reprForAspect = {
 	Prosp: "prospective",
 } satisfies Record<Aspect, string>;
 
-export function getReprForAspect(aspect: Aspect) {
+function getReprForAspect(aspect: Aspect) {
 	return reprForAspect[aspect];
 }

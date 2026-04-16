@@ -14,6 +14,6 @@ const reprForDefinite = {
 	Spec: "specific indefinite",
 } satisfies Record<Definite, string>;
 
-export function getReprForDefinite(definite: Definite) {
+function getReprForDefinite(definite: Definite) {
 	return reprForDefinite[definite];
 }

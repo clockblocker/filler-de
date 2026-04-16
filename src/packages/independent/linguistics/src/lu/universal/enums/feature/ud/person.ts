@@ -14,6 +14,6 @@ const reprForPerson = {
 	"4": "fourth",
 } satisfies Record<Person, string>;
 
-export function getReprForPerson(person: Person) {
+function getReprForPerson(person: Person) {
 	return reprForPerson[person];
 }

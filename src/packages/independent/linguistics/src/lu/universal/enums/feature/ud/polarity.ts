@@ -11,6 +11,6 @@ const reprForPolarity = {
 	Pos: "positive, affirmative",
 } satisfies Record<Polarity, string>;
 
-export function getReprForPolarity(polarity: Polarity) {
+function getReprForPolarity(polarity: Polarity) {
 	return reprForPolarity[polarity];
 }

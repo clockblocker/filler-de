@@ -4,10 +4,10 @@ import { z } from "zod/v3";
 export const Poss = z.literal("Yes");
 export type Poss = z.infer<typeof Poss>;
 
-export function getReprForPoss(_poss: Poss) {
+function getReprForPoss(_poss: Poss) {
 	const reprForPoss = "possessive";
 
 	return reprForPoss;
 }
 
-export const PossPart = z.object({ poss: Poss });
+const PossPart = z.object({ poss: Poss });

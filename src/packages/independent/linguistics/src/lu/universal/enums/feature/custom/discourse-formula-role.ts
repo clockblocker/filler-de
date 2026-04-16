@@ -15,6 +15,6 @@ const discourseFormulaRoles = [
 
 export const DiscourseFormulaRoleSchema = z.enum(discourseFormulaRoles);
 
-export type DiscourseFormulaRole = z.infer<typeof DiscourseFormulaRoleSchema>;
-export const DiscourseFormulaRole = DiscourseFormulaRoleSchema.enum;
-export const DISCOURSE_FORMULA_ROLES = DiscourseFormulaRoleSchema.options;
+type DiscourseFormulaRole = z.infer<typeof DiscourseFormulaRoleSchema>;
+const DiscourseFormulaRole = DiscourseFormulaRoleSchema.enum;
+const DISCOURSE_FORMULA_ROLES = DiscourseFormulaRoleSchema.options;

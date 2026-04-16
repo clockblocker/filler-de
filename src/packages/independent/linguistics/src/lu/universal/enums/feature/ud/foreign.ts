@@ -4,7 +4,7 @@ import { z } from "zod/v3";
 export const Foreign = z.literal("Yes");
 export type Foreign = z.infer<typeof Foreign>;
 
-export function getReprForForeign(_foreign: Foreign) {
+function getReprForForeign(_foreign: Foreign) {
 	const reprForForeign = "foreign";
 
 	return reprForForeign;

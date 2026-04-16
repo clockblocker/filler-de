@@ -30,6 +30,6 @@ const reprForExtPos = {
 	SCONJ: "subordinator-like",
 } satisfies Record<ExtPos, string>;
 
-export function getReprForExtPos(extPos: ExtPos) {
+function getReprForExtPos(extPos: ExtPos) {
 	return reprForExtPos[extPos];
 }

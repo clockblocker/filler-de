@@ -24,6 +24,6 @@ const reprForDeixis = {
 	Remt: "remote, distal",
 } satisfies Record<Deixis, string>;
 
-export function getReprForDeixis(deixis: Deixis) {
+function getReprForDeixis(deixis: Deixis) {
 	return reprForDeixis[deixis];
 }

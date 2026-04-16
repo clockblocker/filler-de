@@ -33,8 +33,6 @@ export const ResolvedSurfaceSchema = {
 	Hebrew: buildResolvedSurfaceSchemaForLanguage(SurfaceSchema.Hebrew),
 };
 
-export const UnresolvedSurfaceSchema = SurfaceSchema;
-
 export const LemmaSchema = {
 	English: EnglishLemmaSchema,
 	German: GermanLemmaSchema,

@@ -13,6 +13,6 @@ const reprForNumForm = {
 	Word: "word-based numeric form",
 } satisfies Record<NumForm, string>;
 
-export function getReprForNumForm(numForm: NumForm) {
+function getReprForNumForm(numForm: NumForm) {
 	return reprForNumForm[numForm];
 }

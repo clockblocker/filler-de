@@ -17,7 +17,7 @@ const reprForOrthographicStatus = {
 	Unknown: "unknown",
 } as const satisfies Record<OrthographicStatus, string>;
 
-export function getReprForOrthographicStatus(
+function getReprForOrthographicStatus(
 	orthographicStatus: OrthographicStatus,
 ) {
 	return reprForOrthographicStatus[orthographicStatus];
@@ -36,7 +36,7 @@ const reprForSpellingRelation = {
 	Variant: "variant",
 } as const satisfies Record<SpellingRelation, string>;
 
-export function getReprForSpellingRelation(spellingRelation: SpellingRelation) {
+function getReprForSpellingRelation(spellingRelation: SpellingRelation) {
 	return reprForSpellingRelation[spellingRelation];
 }
 
@@ -52,7 +52,7 @@ const reprForSelectionCoverage = {
 	Partial: "partial",
 } as const satisfies Record<SelectionCoverage, string>;
 
-export function getReprForSelectionCoverage(
+function getReprForSelectionCoverage(
 	selectionCoverage: SelectionCoverage,
 ) {
 	return reprForSelectionCoverage[selectionCoverage];
@@ -70,7 +70,7 @@ const reprForSurfaceKind = {
 	Lemma: "lemma",
 } as const satisfies Record<SurfaceKind, string>;
 
-export function getReprForSurfaceKind(morphologicalForm: SurfaceKind) {
+function getReprForSurfaceKind(morphologicalForm: SurfaceKind) {
 	return reprForSurfaceKind[morphologicalForm];
 }
 
@@ -87,6 +87,6 @@ const reprForLemmaKind = {
 	Phraseme: "phraseme",
 } as const satisfies Record<LemmaKind, string>;
 
-export function getReprForLemmaKind(lu: LemmaKind) {
+function getReprForLemmaKind(lu: LemmaKind) {
 	return reprForLemmaKind[lu];
 }

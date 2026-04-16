@@ -51,9 +51,6 @@ export type MorphologicalRelations = Prettify<
 	Partial<Record<MorphologicalRelation, RelationTargetLingIds>>
 >;
 
-export type AbstractLexicalRelations = LexicalRelations;
-export type AbstractMorphologicalRelations = MorphologicalRelations;
-
 const lexicalRelationsShape = {
 	antonym: RelationTargetLingIdsSchema.optional(),
 	holonym: RelationTargetLingIdsSchema.optional(),
@@ -84,7 +81,3 @@ export const LexicalRelationsSchema = z
 export const MorphologicalRelationsSchema = z
 	.object(morphologicalRelationsShape)
 	.strict() as unknown as z.ZodType<MorphologicalRelations>;
-
-export const AbstractLexicalRelationsSchema = LexicalRelationsSchema;
-export const AbstractMorphologicalRelationsSchema =
-	MorphologicalRelationsSchema;

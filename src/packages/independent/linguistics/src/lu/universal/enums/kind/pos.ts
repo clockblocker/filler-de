@@ -21,20 +21,20 @@ const closedClassPosValues = [
 ] as const;
 
 const otherPosValues = ["PUNCT", "SYM", "X"] as const;
-export const POS_VALUES = [
+const POS_VALUES = [
 	...openClassPosValues,
 	...closedClassPosValues,
 	...otherPosValues,
 ] as const;
 
-export const OpenClassPos = z.enum(openClassPosValues);
-export type OpenClassPos = z.infer<typeof OpenClassPos>;
+const OpenClassPos = z.enum(openClassPosValues);
+type OpenClassPos = z.infer<typeof OpenClassPos>;
 
-export const ClosedClassPos = z.enum(closedClassPosValues);
-export type ClosedClassPos = z.infer<typeof ClosedClassPos>;
+const ClosedClassPos = z.enum(closedClassPosValues);
+type ClosedClassPos = z.infer<typeof ClosedClassPos>;
 
-export const OtherPos = z.enum(otherPosValues);
-export type OtherPos = z.infer<typeof OtherPos>;
+const OtherPos = z.enum(otherPosValues);
+type OtherPos = z.infer<typeof OtherPos>;
 
 // Source: https://universaldependencies.org/u/pos/index.html
 export const Pos = z.enum(POS_VALUES);
@@ -60,6 +60,6 @@ const reprForPos = {
 	X: "other",
 } satisfies Record<Pos, string>;
 
-export function getReprForPos(pos: Pos) {
+function getReprForPos(pos: Pos) {
 	return reprForPos[pos];
 }

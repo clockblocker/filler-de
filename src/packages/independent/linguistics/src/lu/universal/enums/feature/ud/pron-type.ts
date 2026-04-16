@@ -32,6 +32,6 @@ const reprForPronType = {
 	Tot: "total",
 } satisfies Record<PronType, string>;
 
-export function getReprForPronType(pronType: PronType) {
+function getReprForPronType(pronType: PronType) {
 	return reprForPronType[pronType];
 }
