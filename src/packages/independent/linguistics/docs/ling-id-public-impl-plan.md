@@ -6,12 +6,10 @@ Proposed
 
 ## Summary
 
-Implement `src/ling-id/public.ts` as the new public home of the Ling ID API,
-with the same external ergonomics as the current `src/old-ling-id/public.ts`:
-
-- `LingId.forLanguage(language)`
-- `buildToLingConverters(language)`
-- namespace-style public types on `LingId`
+Implement `src/ling-id/public.ts` as a fresh Ling ID public API and codec
+layer. `src/old-ling-id/` is reference material only while designing the new
+system; it is not the source of truth, not a compatibility target, and not a
+module to "move out of".
 
 Unlike `lu/public-operations.ts`, the Ling ID layer should stay almost entirely
 universal. For the current ID format, language packs should not own parsing or
@@ -22,8 +20,8 @@ packs.
 
 ## Goals
 
-- Move the Ling ID implementation out of `src/old-ling-id/`.
-- Keep the current public API shape stable.
+- Define the new Ling ID public API in `src/ling-id/public.ts`.
+- Use `src/old-ling-id/` only as reference while designing the new layer.
 - Centralize universal codec mechanics under `src/ling-id/internal/`.
 - Avoid introducing language packs unless a real wire-format divergence appears.
 - Reduce duplication with `lu/public-operations.ts` where normalization and
@@ -31,7 +29,8 @@ packs.
 
 ## Non-Goals
 
-- Changing the Ling ID wire format.
+- Preserving the old public API just because it exists today.
+- Guaranteeing wire-format compatibility with `src/old-ling-id/` during design.
 - Rebranding IDs from `string` to opaque/branded strings in this step.
 - Adding new Ling ID kinds.
 - Making Ling ID parsing schema-driven.
@@ -39,8 +38,9 @@ packs.
 
 ## Proposed Public API
 
-`src/ling-id/public.ts` should export the same curated surface as the legacy
-module.
+`src/ling-id/public.ts` should expose a small curated surface. The old module is
+useful as a reference point for ergonomics, but it should not constrain the new
+API if a cleaner shape is better.
 
 ```ts
 export type {
@@ -85,12 +85,12 @@ export const LingId = {
 
 Notes:
 
-- Keep `buildToLingConverters(...)` as the concrete function export because the
-  test suite already asserts it.
-- Keep `LingId.forLanguage(...)` for namespace-style use, matching
+- `LingId.forLanguage(...)` is still a good fit because it matches
   `LingOperation.forLanguage(...)`.
-- Keep `LingId.Value`, `LingId.Input`, `LingId.Converters`, `LingId.SurfaceId`,
-  `LingId.ResolvedId`, and `LingId.ShallowId` as namespace-exported types.
+- `buildToLingConverters(...)` is optional. Keep it only if it still improves
+  ergonomics after the redesign.
+- Namespace-exported types on `LingId` are optional. Keep them only if they make
+  consumption materially clearer.
 - `public.ts` should be a facade only. Parsing, serialization, guards, and
   header handling should live below `internal/`.
 
@@ -247,18 +247,18 @@ Behavior:
 
 ## Implementation Plan
 
-1. Extract public Ling ID types into `src/ling-id/types.ts`.
+1. Define public Ling ID types in `src/ling-id/types.ts`.
 
-   Move the type aliases and DTO types from `src/old-ling-id/types.ts` with no
-   semantic changes.
+   Start from the old shapes only where they are still useful. This is a new
+   design pass, so type aliases and DTOs may be renamed, narrowed, or dropped.
 
-2. Extract universal helpers into `src/ling-id/internal/`.
+2. Build universal helpers under `src/ling-id/internal/`.
 
-   Move `escape.ts`, `features.ts`, `wire.ts`, `parse.ts`, and `serialize.ts`
-   into the new structure, splitting `wire.ts` into `language-registry.ts` and
-   `wire/header.ts`.
+   Use the old helpers as reference, but recompose them around the new folder
+   structure instead of doing a mechanical move. Split `wire.ts` into
+   `language-registry.ts` and `wire/header.ts`.
 
-3. Replace duplicate resolved-surface normalization.
+3. Avoid duplicate resolved-surface normalization.
 
    `old-ling-id/serialize.ts` currently builds lemma surfaces directly and
    assumes `normalizedFullSurface = canonicalLemma`. The new code should call
@@ -267,35 +267,36 @@ Behavior:
 
 4. Implement `src/ling-id/public.ts` as a thin facade.
 
-   Keep the current overloads and namespace-style type exports. The file should
-   mostly delegate to `internal/serialize.ts`, `internal/parse.ts`, and shared
-   guards.
+   The file should mostly delegate to `internal/serialize.ts`,
+   `internal/parse.ts`, and shared guards. Reuse old overloads only where they
+   still fit the new API.
 
-5. Switch root exports and imports.
+5. Switch root exports and imports once the new API is acceptable.
 
-   - change `src/index.ts` from `./old-ling-id/public` to `./ling-id/public`
+   - point `src/index.ts` at `./ling-id/public`
    - update internal imports such as `src/relations/relation.ts` to consume the
      new Ling ID type location
 
-6. Preserve test parity before cleanup.
+6. Rewrite tests around the new API shape.
 
-   The following suites should pass unchanged:
+   Existing Ling ID tests are reference coverage, not a compatibility contract.
+   Keep the behavior worth preserving, but update the suites to reflect the new
+   public surface.
 
-   - `tests/external/ling-id-serialization.test.ts`
-   - `tests/external/ling-id-parsing.test.ts`
-   - `tests/external/ling-id-guardrails.test.ts`
-   - `tests/external/ling-id-usage.test.ts`
-   - `tests/external/public-api.test.ts`
+   At minimum, cover:
 
-7. Remove `src/old-ling-id/` after parity is confirmed.
+   - serialization semantics
+   - parsing semantics
+   - language guardrails
+   - public API exposure
+
+7. Remove `src/old-ling-id/` once the new implementation is accepted.
 
 ## Migration Notes
 
-- Keep all runtime behavior identical first; rename and restructure before any
-  format cleanup.
-- Do not rename `buildToLingConverters(...)` in the same change.
-- Do not widen the root export surface. The public API tests explicitly guard
-  against that.
+- `src/old-ling-id/` should be treated as disposable reference code.
+- Compatibility with the old public API should be an explicit decision, not a
+  default assumption.
 - `RelationTargetLingIds` should continue to depend on the Ling ID public type,
   but the import path should move from `old-ling-id/types` to `ling-id/types`.
 

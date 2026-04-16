@@ -3,9 +3,9 @@ import {
 	assertLanguageMatch,
 	getLemmaDiscriminators,
 	hasResolvedSurfaceTarget,
-	type LemmaOfSurface,
-	type LemmaLike,
 	type KnownSelectionLikeFor,
+	type LemmaLike,
+	type LemmaOfSurface,
 	type ResolvedLemmaSurfaceFor,
 	type ResolvedSurfaceLikeFor,
 	type StandardFullSelectionForLemma,
@@ -17,6 +17,87 @@ import {
 } from "./internal/operations/shared";
 import type { TargetLanguage } from "./universal/enums/core/language";
 
+export function forLanguage<L extends TargetLanguage>(language: L) {
+	function boundToResolvedLemmaSurface<T extends LemmaLike<L>>(
+		lemma: T,
+	): ResolvedLemmaSurfaceFor<T> {
+		assertLanguageMatch(language, lemma.language);
+
+		return toResolvedLemmaSurface(lemma);
+	}
+
+	function boundToStandardFullSelectionFromLemma<T extends LemmaLike<L>>(
+		lemma: T,
+		options?: StandardFullSelectionOptions,
+	): StandardFullSelectionForLemma<T> {
+		assertLanguageMatch(language, lemma.language);
+
+		return toStandardFullSelectionFromLemma(lemma, options);
+	}
+
+	function boundToStandardFullSelectionFromSurface<S extends SurfaceLike<L>>(
+		surface: S,
+		options?: StandardFullSelectionOptions,
+	): StandardFullSelectionForSurface<S> {
+		assertLanguageMatch(language, surface.language);
+
+		return toStandardFullSelection(surface, options);
+	}
+
+	function boundExtractLemmaFromSurface<S extends ResolvedSurfaceLikeFor<L>>(
+		surface: S,
+	): LemmaOfSurface<S>;
+	function boundExtractLemmaFromSurface<
+		S extends UnresolvedSurfaceLikeFor<L>,
+	>(surface: S): null;
+	function boundExtractLemmaFromSurface<S extends SurfaceLike<L>>(
+		surface: S,
+	): LemmaOfSurface<S> | null {
+		assertLanguageMatch(language, surface.language);
+
+		return extractLemmaFromSurface(surface);
+	}
+
+	function boundExtractSurfaceFromSelection(
+		selection: UnknownSelectionLikeFor<L>,
+	): null;
+	function boundExtractSurfaceFromSelection<
+		S extends KnownSelectionLikeFor<L>,
+	>(selection: S): SurfaceOfSelection<S>;
+	function boundExtractSurfaceFromSelection(
+		selection: UnknownSelectionLikeFor<L> | KnownSelectionLikeFor<L>,
+	) {
+		assertLanguageMatch(language, selection.language);
+
+		return selection.orthographicStatus === "Unknown"
+			? null
+			: selection.surface;
+	}
+
+	const api = {
+		convert: {
+			lemma: {
+				toResolvedLemmaSurface: boundToResolvedLemmaSurface,
+				toStandardFullSelection: boundToStandardFullSelectionFromLemma,
+			},
+			surface: {
+				toStandardFullSelection:
+					boundToStandardFullSelectionFromSurface,
+			},
+		},
+		extract: {
+			lemma: {
+				fromSurface: boundExtractLemmaFromSurface,
+			},
+			surface: {
+				fromSelection: boundExtractSurfaceFromSelection,
+			},
+		},
+	} satisfies LingOperationApi<L>;
+
+	return api;
+}
+
 type StandardFullSelectionOptions = {
 	spelledSelection?: string;
 };
@@ -24,7 +105,9 @@ type StandardFullSelectionOptions = {
 type ExtractSurfaceFromSelectionFn<L extends TargetLanguage = TargetLanguage> =
 	{
 		(selection: UnknownSelectionLikeFor<L>): null;
-		<S extends KnownSelectionLikeFor<L>>(selection: S): SurfaceOfSelection<S>;
+		<S extends KnownSelectionLikeFor<L>>(
+			selection: S,
+		): SurfaceOfSelection<S>;
 	};
 
 type ExtractLemmaFromSurfaceFn<L extends TargetLanguage = TargetLanguage> = {
@@ -117,50 +200,6 @@ const toStandardFullSelectionFromLemma = ((lemma: LemmaLike, options = {}) =>
 		toResolvedLemmaSurface(lemma),
 		options,
 	)) as ToStandardFullSelectionFromLemmaFn;
-
-export function forLanguage<L extends TargetLanguage>(
-	language: L,
-): LingOperationApi<L> {
-	return {
-		convert: {
-			lemma: {
-				toResolvedLemmaSurface: ((lemma) => {
-					assertLanguageMatch(language, lemma.language);
-
-					return toResolvedLemmaSurface(lemma);
-				}) as ToResolvedLemmaSurfaceFn<L>,
-				toStandardFullSelection: ((lemma, options = {}) => {
-					assertLanguageMatch(language, lemma.language);
-
-					return toStandardFullSelectionFromLemma(lemma, options);
-				}) as ToStandardFullSelectionFromLemmaFn<L>,
-			},
-			surface: {
-				toStandardFullSelection: ((surface, options = {}) => {
-					assertLanguageMatch(language, surface.language);
-
-					return toStandardFullSelection(surface, options);
-				}) as ToStandardFullSelectionFromSurfaceFn<L>,
-			},
-		},
-		extract: {
-			lemma: {
-				fromSurface: ((surface) => {
-					assertLanguageMatch(language, surface.language);
-
-					return extractLemmaFromSurface(surface);
-				}) as ExtractLemmaFromSurfaceFn<L>,
-			},
-			surface: {
-				fromSelection: ((selection) => {
-					assertLanguageMatch(language, selection.language);
-
-					return extractSurfaceFromSelection(selection);
-				}) as ExtractSurfaceFromSelectionFn<L>,
-			},
-		},
-	};
-}
 
 export const LingOperation = {
 	convert: {
