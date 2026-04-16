@@ -66,9 +66,9 @@ describe("Hebrew schema specificity", () => {
 	});
 
 	it("keeps Hebrew aligned with the UD source inventory and omits PART", () => {
-		expect("PART" in SelectionSchema.Hebrew.Standard.Inflection.Lexeme).toBe(
-			false,
-		);
+		expect(
+			"PART" in SelectionSchema.Hebrew.Standard.Inflection.Lexeme,
+		).toBe(false);
 		expect("PART" in LemmaSchema.Hebrew.Lexeme).toBe(false);
 	});
 });

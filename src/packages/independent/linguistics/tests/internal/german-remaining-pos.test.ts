@@ -270,8 +270,8 @@ describe("German remaining POS schemas", () => {
 				surface: {
 					...lexemeSurface("AUX", "werden"),
 					inflectionalFeatures: {
-						verbForm: "Part",
 						aspect: "Perf",
+						verbForm: "Part",
 						voice: "Pass",
 					},
 					normalizedFullSurface: "worden",

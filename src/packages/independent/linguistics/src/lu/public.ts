@@ -128,7 +128,7 @@ type ResolvedSurfaceValueFor<T> = T extends { target: infer Target }
 		? never
 		: Prettify<
 				Omit<T, "target"> & {
-				target: ResolvedTargetFor<Target>;
+					target: ResolvedTargetFor<Target>;
 				}
 			>
 	: never;
@@ -138,7 +138,7 @@ type UnresolvedSurfaceValueFor<T> = T extends { target: infer Target }
 		? never
 		: Prettify<
 				Omit<T, "target"> & {
-				target: UnresolvedTargetFor<Target>;
+					target: UnresolvedTargetFor<Target>;
 				}
 			>
 	: never;

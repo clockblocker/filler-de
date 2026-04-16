@@ -1,6 +1,6 @@
 import { z } from "zod/v3";
 import type { Prettify } from "../../../../../types/helpers";
-import type { LingId } from "../ling-id/types";
+import type { LingId } from "../old-ling-id/types";
 import type { LexicalRelation } from "./lexical";
 import type { MorphologicalRelation } from "./morphological";
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { EnglishAdjectiveSchemas } from "../../src/lu/english/lu/lexeme/pos/english-adjective";
 import { EnglishAdpositionSchemas } from "../../src/lu/english/lu/lexeme/pos/english-adposition";
 import { EnglishAuxiliarySchemas } from "../../src/lu/english/lu/lexeme/pos/english-auxiliary";
+import { EnglishCoordinatingConjunctionSchemas } from "../../src/lu/english/lu/lexeme/pos/english-coordinating-conjunction";
 import { EnglishDeterminerSchemas } from "../../src/lu/english/lu/lexeme/pos/english-determiner";
 import { EnglishNounSchemas } from "../../src/lu/english/lu/lexeme/pos/english-noun";
 import { EnglishNumeralSchemas } from "../../src/lu/english/lu/lexeme/pos/english-numeral";
@@ -11,7 +12,6 @@ import { EnglishPronounSchemas } from "../../src/lu/english/lu/lexeme/pos/englis
 import { EnglishProperNounSchemas } from "../../src/lu/english/lu/lexeme/pos/english-proper-noun";
 import { EnglishSymbolSchemas } from "../../src/lu/english/lu/lexeme/pos/english-symbol";
 import { EnglishVerbSchemas } from "../../src/lu/english/lu/lexeme/pos/english-verb";
-import { EnglishCoordinatingConjunctionSchemas } from "../../src/lu/english/lu/lexeme/pos/english-coordinating-conjunction";
 
 function lexemeSurface(pos: string, canonicalLemma: string) {
 	return {

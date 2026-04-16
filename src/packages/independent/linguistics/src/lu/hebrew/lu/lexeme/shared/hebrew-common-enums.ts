@@ -7,7 +7,11 @@ export const HebrewFeature = {
 	HebBinyan: UniversalFeature.HebBinyan,
 	HebExistential: UniversalFeature.HebExistential,
 	Mood: UniversalFeature.Mood.extract(["Imp"]),
-	Number: UniversalFeature.GrammaticalNumber.extract(["Dual", "Plur", "Sing"]),
+	Number: UniversalFeature.GrammaticalNumber.extract([
+		"Dual",
+		"Plur",
+		"Sing",
+	]),
 	Person: UniversalFeature.Person.extract(["1", "2", "3"]),
 	Polarity: UniversalFeature.Polarity.extract(["Neg", "Pos"]),
 	Prefix: UniversalFeature.Prefix,

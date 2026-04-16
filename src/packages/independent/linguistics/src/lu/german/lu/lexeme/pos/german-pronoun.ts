@@ -3,8 +3,8 @@ import {
 	featureSchema,
 	featureSpecificValueSets,
 } from "../../../../universal/helpers/schema-targets";
-import { GermanFeature } from "../shared/german-common-enums";
 import { buildGermanLexemeBundle } from "../shared/build-german-lexeme-bundle";
+import { GermanFeature } from "../shared/german-common-enums";
 
 const GermanPronounPronType = UniversalFeature.PronType.extract([
 	"Dem",

@@ -4,8 +4,8 @@ import type { LemmaKind, OrthographicStatus } from "../enums/core/selection";
 import type { LemmaDiscriminatorFor } from "../lemma-discriminator";
 import {
 	buildSelectionSurfaceSchema,
-	type SelectionSurfaceSchemaFor,
 	type SelectionLemmaIdentityShapeFor,
+	type SelectionSurfaceSchemaFor,
 } from "./buildSelectionSurface";
 
 type EmptyZodRawShape = Record<never, never>;

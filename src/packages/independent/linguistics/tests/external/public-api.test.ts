@@ -18,9 +18,9 @@ import {
 	SurfaceSchema,
 } from "../../src";
 
-type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <
-	T,
->() => T extends B ? 1 : 2
+type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
+	? 1
+	: 2
 	? true
 	: false;
 
@@ -80,13 +80,7 @@ type ExpectedEnglishAdjectiveInflectionSelection = {
 
 type _selectionConcreteEnglishAdjShapeStaysReadable = Assert<
 	Equal<
-		Selection<
-			"English",
-			"Standard",
-			"Inflection",
-			"Lexeme",
-			"ADJ"
-		>,
+		Selection<"English", "Standard", "Inflection", "Lexeme", "ADJ">,
 		ExpectedEnglishAdjectiveInflectionSelection
 	>
 >;
@@ -106,13 +100,7 @@ type ExpectedEnglishAdjectiveResolvedSurface = {
 
 type _resolvedSurfaceConcreteEnglishAdjShapeStaysReadable = Assert<
 	Equal<
-		ResolvedSurface<
-			"English",
-			"Standard",
-			"Inflection",
-			"Lexeme",
-			"ADJ"
-		>,
+		ResolvedSurface<"English", "Standard", "Inflection", "Lexeme", "ADJ">,
 		ExpectedEnglishAdjectiveResolvedSurface
 	>
 >;
@@ -288,9 +276,9 @@ describe("public API usage", () => {
 
 		expect(lemma.pos).toBe("VERB");
 		expect(unknownSelection.orthographicStatus).toBe("Unknown");
-		expect("PART" in SelectionSchema.Hebrew.Standard.Inflection.Lexeme).toBe(
-			false,
-		);
+		expect(
+			"PART" in SelectionSchema.Hebrew.Standard.Inflection.Lexeme,
+		).toBe(false);
 	});
 
 	it("keeps narrow public aliases for concrete English adjective types", () => {
@@ -452,7 +440,13 @@ describe("public API usage", () => {
 				meaningInEmojis: "🌊",
 				pos: "NOUN",
 			},
-		} satisfies ResolvedSurface<"German", "Standard", "Lemma", "Lexeme", "NOUN">;
+		} satisfies ResolvedSurface<
+			"German",
+			"Standard",
+			"Lemma",
+			"Lexeme",
+			"NOUN"
+		>;
 
 		const _invalidResolvedSurface = {
 			discriminators: {

@@ -247,10 +247,12 @@ describe("Ling ID parsing", () => {
 			throw new Error("Expected a resolved surface");
 		}
 
-		expect((resolved.target as Lemma<"German", "Lexeme", "DET">).inherentFeatures)
-			.toEqual({
-				pronType: ["Int", "Rel"],
-			});
+		expect(
+			(resolved.target as Lemma<"German", "Lexeme", "DET">)
+				.inherentFeatures,
+		).toEqual({
+			pronType: ["Int", "Rel"],
+		});
 		if (targeted.surface.surfaceKind !== "Inflection") {
 			throw new Error("Expected an inflectional targeted surface");
 		}

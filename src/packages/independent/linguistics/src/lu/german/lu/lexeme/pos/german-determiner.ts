@@ -4,8 +4,8 @@ import {
 	featureSpecificValueSets,
 	featureValueSet,
 } from "../../../../universal/helpers/schema-targets";
-import { GermanFeature } from "../shared/german-common-enums";
 import { buildGermanLexemeBundle } from "../shared/build-german-lexeme-bundle";
+import { GermanFeature } from "../shared/german-common-enums";
 
 const GermanDeterminerNumType = UniversalFeature.NumType.extract([
 	"Card",

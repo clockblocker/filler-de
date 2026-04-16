@@ -2,7 +2,10 @@ import z from "zod/v3";
 
 type SurfaceSchemaLeaf = z.ZodTypeAny;
 
-type SurfaceSchemaByLemmaKind = Record<string, Record<string, SurfaceSchemaLeaf>>;
+type SurfaceSchemaByLemmaKind = Record<
+	string,
+	Record<string, SurfaceSchemaLeaf>
+>;
 
 type SurfaceSchemaBySurfaceKind = Record<string, SurfaceSchemaByLemmaKind>;
 

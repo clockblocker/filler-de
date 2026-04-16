@@ -1,8 +1,8 @@
+import { UniversalFeature } from "../../../../universal/enums/feature";
 import {
 	featureSchema,
 	featureSpecificValueSets,
 } from "../../../../universal/helpers/schema-targets";
-import { UniversalFeature } from "../../../../universal/enums/feature";
 import { buildHebrewLexemeBundle } from "../shared/build-hebrew-lexeme-bundle";
 import { HebrewFeature } from "../shared/hebrew-common-enums";
 
