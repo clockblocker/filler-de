@@ -61,27 +61,39 @@ type _resolvedSurfaceDoesNotCollapseToAny = Assert<
 	>
 >;
 
-type ExpectedEnglishAdjectiveInflectionSelection = {
-	language: "English";
-	orthographicStatus: "Standard";
-	spelledSelection: string;
-	surface: {
-		discriminators: {
-			lemmaKind: "Lexeme";
-			lemmaSubKind: "ADJ";
-		};
-		inflectionalFeatures: {
-			degree?: "Cmp" | "Pos" | "Sup" | undefined;
-		};
-		normalizedFullSurface: string;
-		surfaceKind: "Inflection";
-		target:
-			| {
-					canonicalLemma: string;
-			  }
-			| Lemma<"English", "Lexeme", "ADJ">;
+type EnglishAdjectiveInflectionSurface = {
+	discriminators: {
+		lemmaKind: "Lexeme";
+		lemmaSubKind: "ADJ";
 	};
+	inflectionalFeatures: {
+		degree?: "Cmp" | "Pos" | "Sup" | undefined;
+	};
+	normalizedFullSurface: string;
+	surfaceKind: "Inflection";
+	target:
+		| {
+				canonicalLemma: string;
+		  }
+		| Lemma<"English", "Lexeme", "ADJ">;
 };
+
+type ExpectedEnglishAdjectiveInflectionSelection =
+	| {
+			language: "English";
+			orthographicStatus: "Standard";
+			selectionCoverage: "Full";
+			spelledSelection: string;
+			surface: EnglishAdjectiveInflectionSurface;
+	  }
+	| {
+			language: "English";
+			normalizedSelectedSurface: string;
+			orthographicStatus: "Standard";
+			selectionCoverage: "Partial";
+			spelledSelection: string;
+			surface: EnglishAdjectiveInflectionSurface;
+	  };
 
 type _selectionConcreteEnglishAdjShapeStaysReadable = Assert<
 	Equal<
@@ -210,6 +222,7 @@ describe("public API usage", () => {
 		const surface = {
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "See",
 			surface: {
 				discriminators: {
@@ -325,6 +338,7 @@ describe("public API usage", () => {
 		const selection = {
 			language: "English",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "smaller",
 			surface: {
 				discriminators: {
@@ -366,6 +380,7 @@ describe("public API usage", () => {
 		const _invalidSelection = {
 			language: "English",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "small",
 			surface: {
 				discriminators: {
@@ -423,7 +438,9 @@ describe("public API usage", () => {
 	it("validates selections where the spelled selection is narrower than the full surface", () => {
 		const selection = {
 			language: "English",
+			normalizedSelectedSurface: "walk",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Partial",
 			spelledSelection: "walk",
 			surface: {
 				discriminators: {
@@ -448,6 +465,12 @@ describe("public API usage", () => {
 				selection,
 			).success,
 		).toBe(true);
+		expect(
+			SelectionSchema.English.Standard.Lemma.Phraseme.Cliché.safeParse({
+				...selection,
+				selectionCoverage: "Full",
+			}).success,
+		).toBe(false);
 	});
 
 	it("validates resolved surfaces through the exported resolved-surface schemas", () => {

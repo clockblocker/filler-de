@@ -37,6 +37,7 @@ describe("German remaining POS schemas", () => {
 			GermanAdjectiveSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "kleiner",
 				surface: {
 					...lexemeSurface("ADJ", "klein"),
@@ -56,6 +57,7 @@ describe("German remaining POS schemas", () => {
 			GermanAdpositionSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "zu",
 				surface: {
 					...lexemeSurface("ADP", "zu"),
@@ -70,6 +72,7 @@ describe("German remaining POS schemas", () => {
 			GermanAuxiliarySchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "war",
 				surface: {
 					...lexemeSurface("AUX", "sein"),
@@ -90,6 +93,7 @@ describe("German remaining POS schemas", () => {
 			GermanDeterminerSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "dieser",
 				surface: {
 					...lexemeSurface("DET", "dies"),
@@ -108,6 +112,7 @@ describe("German remaining POS schemas", () => {
 			GermanPronounSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "sich",
 				surface: {
 					...lexemeSurface("PRON", "sich"),
@@ -126,6 +131,7 @@ describe("German remaining POS schemas", () => {
 			GermanProperNounSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "Angelas",
 				surface: {
 					...lexemeSurface("PROPN", "Angela"),
@@ -268,6 +274,7 @@ describe("German remaining POS schemas", () => {
 			GermanAuxiliarySchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "worden",
 				surface: {
 					...lexemeSurface("AUX", "werden"),
@@ -286,6 +293,7 @@ describe("German remaining POS schemas", () => {
 			GermanDeterminerSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "dessen",
 				surface: {
 					...lexemeSurface("DET", "dessen"),
@@ -471,6 +479,7 @@ describe("German remaining POS schemas", () => {
 				{
 					language: "German",
 					orthographicStatus: "Standard",
+					selectionCoverage: "Full",
 					spelledSelection: "und",
 					surface: {
 						...lexemeSurface("CCONJ", "und"),
@@ -486,6 +495,7 @@ describe("German remaining POS schemas", () => {
 			GermanInterjectionSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "ach",
 				surface: {
 					...lexemeSurface("INTJ", "ach"),
@@ -500,6 +510,7 @@ describe("German remaining POS schemas", () => {
 			GermanPunctuationSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: ",",
 				surface: {
 					...lexemeSurface("PUNCT", ","),
@@ -515,6 +526,7 @@ describe("German remaining POS schemas", () => {
 				{
 					language: "German",
 					orthographicStatus: "Standard",
+					selectionCoverage: "Full",
 					spelledSelection: "weil",
 					surface: {
 						...lexemeSurface("SCONJ", "weil"),
@@ -558,6 +570,7 @@ describe("German remaining POS schemas", () => {
 			GermanOtherSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "foobar",
 				surface: {
 					...lexemeSurface("X", "foobar"),
@@ -574,6 +587,7 @@ describe("German remaining POS schemas", () => {
 			GermanAdpositionSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "zu",
 				surface: {
 					...lexemeSurface("ADP", "zu"),
@@ -629,6 +643,7 @@ describe("German remaining POS schemas", () => {
 			GermanDeterminerSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "dessen",
 				surface: {
 					...lexemeSurface("DET", "dessen"),
@@ -660,6 +675,7 @@ describe("German remaining POS schemas", () => {
 			GermanAuxiliarySchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "sei",
 				surface: {
 					...lexemeSurface("AUX", "sein"),

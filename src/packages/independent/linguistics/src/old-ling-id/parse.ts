@@ -186,6 +186,7 @@ function parseSurfaceBody(
 	return {
 		language,
 		orthographicStatus: orthographicStatus as KnownOrthographicStatus,
+		selectionCoverage: "Full",
 		spelledSelection: normalizedFullSurface,
 		surface: {
 			discriminators: {

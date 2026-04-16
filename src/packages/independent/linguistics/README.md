@@ -31,6 +31,7 @@ That selection can be represented as a typed surface form:
 const simpleWalkSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Full",
 	spelledSelection: "walk",
 	surface: {
 		discriminators: {
@@ -83,7 +84,9 @@ as part of the idiom "a walk in the park":
 ```ts
 const idiomPartSelection = {
 	language: "English",
+	normalizedSelectedSurface: "walk",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Partial",
 	spelledSelection: "walk",
 	surface: {
 		discriminators: {
@@ -106,6 +109,8 @@ const idiomPartSelection = {
 The DTO separates three distinct things:
 
 - the actual highlighted text in the note: `spelledSelection`
+- whether the user highlighted the whole surface or only part of it: `selectionCoverage`
+- for standard partial selections, the normalized highlighted fragment: `normalizedSelectedSurface`
 - the full orthographically normalized surface that the highlighted text belongs to: `normalizedFullSurface`
 - the lexical target that the surface resolves to: `target.canonicalLemma`
 
@@ -116,7 +121,9 @@ In the examples below, the selections target the lemmas `give up` and `aufpassen
 ```ts
 const gaveUpSelection = {
 	language: "English",
+	normalizedSelectedSurface: "gave",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Partial",
 	spelledSelection: "gave",
 	surface: {
 		discriminators: {
@@ -133,7 +140,9 @@ const gaveUpSelection = {
 
 const passAufSelection = {
 	language: "German",
+	normalizedSelectedSurface: "pass",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Partial",
 	spelledSelection: "Pass",
 	surface: {
 		discriminators: {
@@ -242,6 +251,7 @@ const walkLemma = {
 const walkSurfaceSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Full",
 	spelledSelection: "walk",
 	surface: {
 		discriminators: {
@@ -270,6 +280,7 @@ If the target is shallow, the full surface ID changes:
 const walkSurfaceWithCanonicalTargetSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Full",
 	spelledSelection: "walk",
 	surface: {
 		discriminators: {
@@ -325,6 +336,7 @@ const seeSurface = {
 const seeSurfaceWithFullTarget = {
 	language: "German",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Full",
 	spelledSelection: "See",
 	surface: {
 		discriminators: {
@@ -362,6 +374,7 @@ const walkLemma = {
 const walkSurfaceSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Full",
 	spelledSelection: "walk",
 	surface: {
 		discriminators: {

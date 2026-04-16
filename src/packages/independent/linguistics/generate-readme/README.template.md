@@ -48,6 +48,8 @@ as part of the idiom "a walk in the park":
 The DTO separates three distinct things:
 
 - the actual highlighted text in the note: `spelledSelection`
+- whether the user highlighted the whole surface or only part of it: `selectionCoverage`
+- for standard partial selections, the normalized highlighted fragment: `normalizedSelectedSurface`
 - the full orthographically normalized surface that the highlighted text belongs to: `normalizedFullSurface`
 - the lexical target that the surface resolves to: `target.canonicalLemma`
 

@@ -23,6 +23,24 @@ export function getReprForOrthographicStatus(
 	return reprForOrthographicStatus[orthographicStatus];
 }
 
+// -- SelectionCoverage --
+
+const selectionCoverageValues = ["Full", "Partial"] as const;
+
+export const SelectionCoverage = z.enum(selectionCoverageValues);
+export type SelectionCoverage = z.infer<typeof SelectionCoverage>;
+
+const reprForSelectionCoverage = {
+	Full: "full",
+	Partial: "partial",
+} as const satisfies Record<SelectionCoverage, string>;
+
+export function getReprForSelectionCoverage(
+	selectionCoverage: SelectionCoverage,
+) {
+	return reprForSelectionCoverage[selectionCoverage];
+}
+
 // -- SurfaceKind --
 
 // Variant is like color vs colour, email vs e-mail.

@@ -24,6 +24,7 @@ describe("Hebrew schema specificity", () => {
 			HebrewVerbSchemas.InflectionSelectionSchema.safeParse({
 				language: "Hebrew",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "katvu",
 				surface: {
 					discriminators: {
@@ -48,6 +49,7 @@ describe("Hebrew schema specificity", () => {
 			HebrewNounSchemas.InflectionSelectionSchema.safeParse({
 				language: "Hebrew",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "shnatayim",
 				surface: {
 					discriminators: {

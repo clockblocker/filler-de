@@ -13,6 +13,7 @@ describe("Ling ID guardrails", () => {
 		const malformedSurface = {
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "walk",
 			surface: {
 				discriminators: {

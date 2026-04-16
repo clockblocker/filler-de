@@ -22,6 +22,7 @@ describe("Ling ID usage", () => {
 		const shallowSurface = {
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "See",
 			surface: {
 				discriminators: {
@@ -102,6 +103,7 @@ describe("Ling ID usage", () => {
 		const surface = {
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "See",
 			surface: {
 				discriminators: {
@@ -130,6 +132,7 @@ describe("Ling ID usage", () => {
 		const walkSurface = {
 			language: "English",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "walked",
 			surface: {
 				discriminators: {

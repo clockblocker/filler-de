@@ -1,8 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import type { Lemma } from "../../src";
 import {
-	LingSchemaFor,
 	LexicalRelationsSchema,
+	LingSchemaFor,
 	MorphologicalRelationsSchema,
 } from "../../src";
 import { GermanNounSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-noun";
@@ -43,6 +43,7 @@ describe("German noun schemas", () => {
 		const result = GermanNounSchemas.InflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "Kindern",
 			surface: {
 				...nounSurface("Kind"),
@@ -62,6 +63,7 @@ describe("German noun schemas", () => {
 		const result = GermanNounSchemas.InflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "Kindern",
 			surface: {
 				...nounSurface("Kind"),
@@ -120,6 +122,7 @@ describe("German noun schemas", () => {
 			GermanNounSchemas.LemmaSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "Haus",
 				surface: {
 					discriminators: {
@@ -161,7 +164,9 @@ describe("German noun schemas", () => {
 	it("accepts lemma selections where the spelled selection covers only part of the full surface", () => {
 		const result = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
+			normalizedSelectedSurface: "Bahnhof",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Partial",
 			spelledSelection: "Bahnhof",
 			surface: {
 				...nounSurface("Hauptbahnhof"),
@@ -178,6 +183,7 @@ describe("German noun schemas", () => {
 			GermanNounSchemas.TypoInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Typo",
+				selectionCoverage: "Full",
 				spelledSelection: "Hun des",
 				surface: {
 					...nounSurface("Hund"),
@@ -210,6 +216,7 @@ describe("German noun schemas", () => {
 		const detached = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "Haus",
 			surface: {
 				...nounSurface("Haus"),
@@ -220,6 +227,7 @@ describe("German noun schemas", () => {
 		const hydrated = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "Haus",
 			surface: {
 				discriminators: {
@@ -249,6 +257,7 @@ describe("German noun schemas", () => {
 		const wrongLanguage = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "Haus",
 			surface: {
 				discriminators: {
@@ -270,6 +279,7 @@ describe("German noun schemas", () => {
 		const wrongKind = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "Haus",
 			surface: {
 				discriminators: {
@@ -290,6 +300,7 @@ describe("German noun schemas", () => {
 		const wrongSubKind = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "Haus",
 			surface: {
 				discriminators: {
@@ -319,6 +330,7 @@ describe("German noun schemas", () => {
 			GermanNounSchemas.LemmaSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "Haus",
 				surface: {
 					...nounSurface("Haus"),
@@ -333,6 +345,7 @@ describe("German noun schemas", () => {
 		const missingTarget = GermanNounSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "Haus",
 			surface: {
 				discriminators: {
@@ -347,6 +360,7 @@ describe("German noun schemas", () => {
 			{
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "Haus",
 				surface: {
 					...nounSurface("Haus"),

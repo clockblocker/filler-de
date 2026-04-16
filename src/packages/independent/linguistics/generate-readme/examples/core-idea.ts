@@ -5,6 +5,7 @@ import type { Lemma, Selection } from "../../src";
 const simpleWalkSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Full",
 	spelledSelection: "walk",
 	surface: {
 		discriminators: {
@@ -43,7 +44,9 @@ const simpleWalkLemma = {
 // README_BLOCK:core-idiom-selection:start
 const idiomPartSelection = {
 	language: "English",
+	normalizedSelectedSurface: "walk",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Partial",
 	spelledSelection: "walk",
 	surface: {
 		discriminators: {
@@ -66,7 +69,9 @@ const idiomPartSelection = {
 // README_BLOCK:core-lemma-surface-distinction:start
 const gaveUpSelection = {
 	language: "English",
+	normalizedSelectedSurface: "gave",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Partial",
 	spelledSelection: "gave",
 	surface: {
 		discriminators: {
@@ -83,7 +88,9 @@ const gaveUpSelection = {
 
 const passAufSelection = {
 	language: "German",
+	normalizedSelectedSurface: "pass",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Partial",
 	spelledSelection: "Pass",
 	surface: {
 		discriminators: {

@@ -20,10 +20,8 @@ import {
 	toHebrewSurfaceLingId,
 } from "./ling-id-test-helpers";
 
-const {
-	ResolvedSurface: ResolvedSurfaceSchema,
-	Selection: SelectionSchema,
-} = LingSchemaFor;
+const { ResolvedSurface: ResolvedSurfaceSchema, Selection: SelectionSchema } =
+	LingSchemaFor;
 
 describe("Ling ID parsing", () => {
 	it("round-trips resolved surface ids as plain resolved surfaces", () => {
@@ -80,6 +78,7 @@ describe("Ling ID parsing", () => {
 		const fullSurface = {
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "See",
 			surface: {
 				discriminators: {
@@ -119,6 +118,7 @@ describe("Ling ID parsing", () => {
 		expect(parsedFull).toEqual({
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "See",
 			surface: {
 				discriminators: {

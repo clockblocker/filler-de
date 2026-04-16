@@ -16,6 +16,7 @@ const walkLemma = {
 const walkSurfaceSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Full",
 	spelledSelection: "walk",
 	surface: {
 		discriminators: {

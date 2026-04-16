@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test";
 import {
 	getInverseLexicalRelation,
 	getInverseMorphologicalRelation,
-	LingSchemaFor,
 	LexicalRelationsSchema,
+	LingSchemaFor,
 	MorphologicalRelationsSchema,
 } from "../../src";
 import { GermanVerbSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-verb";
@@ -29,6 +29,7 @@ describe("German verb schemas", () => {
 		const result = GermanVerbSchemas.InflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "ging",
 			surface: {
 				...verbSurface("gehen"),
@@ -51,6 +52,7 @@ describe("German verb schemas", () => {
 		const result = GermanVerbSchemas.InflectionSelectionSchema.safeParse({
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "gehend",
 			surface: {
 				...verbSurface("gehen"),
@@ -156,6 +158,7 @@ describe("German verb schemas", () => {
 			GermanVerbSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "gegangen",
 				surface: {
 					...verbSurface("gehen"),
@@ -203,7 +206,9 @@ describe("German verb schemas", () => {
 	it("accepts lemma selections where the spelled selection covers only part of the full surface", () => {
 		const result = GermanVerbSchemas.LemmaSelectionSchema.safeParse({
 			language: "German",
+			normalizedSelectedSurface: "gehen",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Partial",
 			spelledSelection: "gehen",
 			surface: {
 				...verbSurface("spazieren gehen"),
@@ -220,6 +225,7 @@ describe("German verb schemas", () => {
 			GermanVerbSchemas.TypoInflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Typo",
+				selectionCoverage: "Full",
 				spelledSelection: "geheh",
 				surface: {
 					...verbSurface("gehen"),
@@ -238,11 +244,44 @@ describe("German verb schemas", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("rejects normalizedSelectedSurface outside standard partial selections", () => {
+		expect(
+			GermanVerbSchemas.LemmaSelectionSchema.safeParse({
+				language: "German",
+				normalizedSelectedSurface: "gehen",
+				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
+				spelledSelection: "gehen",
+				surface: {
+					...verbSurface("gehen"),
+					normalizedFullSurface: "gehen",
+					surfaceKind: "Lemma",
+				},
+			}).success,
+		).toBe(false);
+
+		expect(
+			GermanVerbSchemas.TypoLemmaSelectionSchema.safeParse({
+				language: "German",
+				normalizedSelectedSurface: "gehen",
+				orthographicStatus: "Typo",
+				selectionCoverage: "Partial",
+				spelledSelection: "geheh",
+				surface: {
+					...verbSurface("gehen"),
+					normalizedFullSurface: "geheh",
+					surfaceKind: "Lemma",
+				},
+			}).success,
+		).toBe(false);
+	});
+
 	it("rejects impossible German verb feature combinations", () => {
 		expect(
 			GermanVerbSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "geht",
 				surface: {
 					...verbSurface("gehen"),
@@ -264,6 +303,7 @@ describe("German verb schemas", () => {
 			GermanVerbSchemas.InflectionSelectionSchema.safeParse({
 				language: "German",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "geh",
 				surface: {
 					...verbSurface("gehen"),

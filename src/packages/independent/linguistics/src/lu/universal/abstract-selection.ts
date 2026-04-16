@@ -4,6 +4,7 @@ import type { TargetLanguage } from "./enums/core/language";
 import type {
 	LemmaKind,
 	OrthographicStatus,
+	SelectionCoverage,
 	SurfaceKind,
 } from "./enums/core/selection";
 import type { AbstractFeatures } from "./enums/feature";
@@ -46,17 +47,32 @@ export type AbstractSelectionFor<
 	SK extends SurfaceKind = SurfaceKind,
 	LK extends LemmaKind = LemmaKind,
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
-> = OS extends OrthographicStatus
-	? Prettify<
-			{
-				language: TargetLanguage;
-				orthographicStatus: OS;
-				spelledSelection: string;
-			} & (OS extends "Unknown"
-				? Record<never, never>
-				: { surface: SurfaceFor<SK, LK, D> })
-		>
-	: never;
+> = OS extends "Unknown"
+	? {
+			language: TargetLanguage;
+			orthographicStatus: OS;
+			spelledSelection: string;
+		}
+	: OS extends "Standard"
+		? Prettify<
+				KnownSelectionBaseFor<OS, SK, LK, D> &
+					(
+						| {
+								selectionCoverage: "Full";
+						  }
+						| {
+								selectionCoverage: "Partial";
+								normalizedSelectedSurface: string;
+						  }
+					)
+			>
+		: OS extends "Typo"
+			? Prettify<
+					KnownSelectionBaseFor<OS, SK, LK, D> & {
+						selectionCoverage: SelectionCoverage;
+					}
+				>
+			: never;
 
 type DiscriminatorsFor<
 	LK extends LemmaKind = LemmaKind,
@@ -69,6 +85,18 @@ type DiscriminatorsFor<
 type SurfaceFieldsFor<SK extends SurfaceKind> = SK extends "Inflection"
 	? { inflectionalFeatures: Partial<AbstractFeatures> }
 	: Record<never, never>;
+
+type KnownSelectionBaseFor<
+	OS extends Exclude<OrthographicStatus, "Unknown">,
+	SK extends SurfaceKind = SurfaceKind,
+	LK extends LemmaKind = LemmaKind,
+	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
+> = {
+	language: TargetLanguage;
+	orthographicStatus: OS;
+	spelledSelection: string;
+	surface: SurfaceFor<SK, LK, D>;
+};
 
 type UnresolvedSurfaceTargetFor<
 	LK extends LemmaKind = LemmaKind,

@@ -31,6 +31,7 @@ describe("English schema specificity", () => {
 			EnglishAdjectiveSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "smaller",
 				surface: {
 					...lexemeSurface("ADJ", "small"),
@@ -47,6 +48,7 @@ describe("English schema specificity", () => {
 			EnglishAdjectiveSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "small",
 				surface: {
 					...lexemeSurface("ADJ", "small"),
@@ -63,6 +65,7 @@ describe("English schema specificity", () => {
 			EnglishAdpositionSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "to",
 				surface: {
 					...lexemeSurface("ADP", "to"),
@@ -81,6 +84,7 @@ describe("English schema specificity", () => {
 			EnglishNounSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "scissors",
 				surface: {
 					...lexemeSurface("NOUN", "scissors"),
@@ -97,6 +101,7 @@ describe("English schema specificity", () => {
 			EnglishNounSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "dog",
 				surface: {
 					...lexemeSurface("NOUN", "dog"),
@@ -113,6 +118,7 @@ describe("English schema specificity", () => {
 			EnglishProperNounSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "Anna",
 				surface: {
 					...lexemeSurface("PROPN", "Anna"),
@@ -157,6 +163,7 @@ describe("English schema specificity", () => {
 			EnglishVerbSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "washed",
 				surface: {
 					...lexemeSurface("VERB", "wash"),
@@ -173,6 +180,7 @@ describe("English schema specificity", () => {
 			EnglishAuxiliarySchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "is",
 				surface: {
 					...lexemeSurface("AUX", "be"),
@@ -200,6 +208,7 @@ describe("English schema specificity", () => {
 			EnglishVerbSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "washing",
 				surface: {
 					...lexemeSurface("VERB", "wash"),
@@ -216,6 +225,7 @@ describe("English schema specificity", () => {
 			EnglishVerbSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "washed",
 				surface: {
 					...lexemeSurface("VERB", "wash"),
@@ -232,6 +242,7 @@ describe("English schema specificity", () => {
 			EnglishAuxiliarySchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "being",
 				surface: {
 					...lexemeSurface("AUX", "be"),
@@ -303,6 +314,7 @@ describe("English schema specificity", () => {
 			EnglishPronounSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "him",
 				surface: {
 					...lexemeSurface("PRON", "him"),
@@ -319,6 +331,7 @@ describe("English schema specificity", () => {
 			EnglishPronounSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "him",
 				surface: {
 					...lexemeSurface("PRON", "him"),
@@ -393,6 +406,7 @@ describe("English schema specificity", () => {
 			EnglishDeterminerSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "this",
 				surface: {
 					...lexemeSurface("DET", "this"),
@@ -411,6 +425,7 @@ describe("English schema specificity", () => {
 			EnglishNumeralSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "two",
 				surface: {
 					...lexemeSurface("NUM", "two"),
@@ -443,6 +458,7 @@ describe("English schema specificity", () => {
 			EnglishSymbolSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "%",
 				surface: {
 					...lexemeSurface("SYM", "%"),
@@ -459,6 +475,7 @@ describe("English schema specificity", () => {
 			EnglishSymbolSchemas.InflectionSelectionSchema.safeParse({
 				language: "English",
 				orthographicStatus: "Standard",
+				selectionCoverage: "Full",
 				spelledSelection: "%",
 				surface: {
 					...lexemeSurface("SYM", "%"),

@@ -35,11 +35,6 @@ export type SelectionLemmaIdentityShapeFor<
 				}
 			: never;
 
-type LemmaSubKindKeyFor<Shape extends SelectionLemmaIdentityShape> = Extract<
-	keyof Shape,
-	LemmaSubKindKey
->;
-
 type InferredLemmaIdentityFor<Shape extends SelectionLemmaIdentityShape> =
 	InferShape<Shape>;
 

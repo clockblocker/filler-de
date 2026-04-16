@@ -78,6 +78,7 @@ describe("Ling ID serialization", () => {
 		const fullSurface = {
 			language: "English",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "walk",
 			surface: {
 				discriminators: {
@@ -107,6 +108,7 @@ describe("Ling ID serialization", () => {
 		const lemmaSurface = {
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "See",
 			surface: {
 				discriminators: {
@@ -137,6 +139,7 @@ describe("Ling ID serialization", () => {
 		const canonicalSurface = {
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "See",
 			surface: {
 				discriminators: {
@@ -170,6 +173,7 @@ describe("Ling ID serialization", () => {
 		const walkPres = {
 			language: "English",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "walked",
 			surface: {
 				discriminators: {
@@ -248,6 +252,7 @@ describe("Ling ID serialization", () => {
 		const possessiveSelection = {
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "dessen",
 			surface: {
 				discriminators: {
@@ -281,6 +286,7 @@ describe("Ling ID serialization", () => {
 		const selection = {
 			language: "Hebrew",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "katvu",
 			surface: {
 				discriminators: {

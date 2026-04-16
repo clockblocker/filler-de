@@ -31,6 +31,7 @@ const seeSurface = {
 const seeSurfaceWithFullTarget = {
 	language: "German",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Full",
 	spelledSelection: "See",
 	surface: {
 		discriminators: {

@@ -25,6 +25,7 @@ describe("German non-lexeme schemas", () => {
 		> = {
 			language: "German",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Full",
 			spelledSelection: "auf jeden Fall",
 			surface: {
 				discriminators: {
@@ -119,6 +120,7 @@ describe("German non-lexeme schemas", () => {
 			SelectionSchema.German.Typo.Lemma.Morpheme.Suffix.safeParse({
 				language: "German",
 				orthographicStatus: "Typo",
+				selectionCoverage: "Full",
 				spelledSelection: "-hait",
 				surface: {
 					discriminators: {
@@ -136,6 +138,7 @@ describe("German non-lexeme schemas", () => {
 			SelectionSchema.German.Typo.Lemma.Phraseme.Cliché.safeParse({
 				language: "German",
 				orthographicStatus: "Typo",
+				selectionCoverage: "Full",
 				spelledSelection: "Zeit ist Gelt",
 				surface: {
 					discriminators: {
@@ -163,7 +166,9 @@ describe("German non-lexeme schemas", () => {
 			"Cliché"
 		> = {
 			language: "German",
+			normalizedSelectedSurface: "Spaziergang",
 			orthographicStatus: "Standard",
+			selectionCoverage: "Partial",
 			spelledSelection: "Spaziergang",
 			surface: {
 				discriminators: {

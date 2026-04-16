@@ -25,6 +25,7 @@ type Test3 = Lemma<"German", "Lexeme", "CCONJ">;
 const simpleWalkSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
+	selectionCoverage: "Full",
 	spelledSelection: "walk",
 	surface: {
 		discriminators: {

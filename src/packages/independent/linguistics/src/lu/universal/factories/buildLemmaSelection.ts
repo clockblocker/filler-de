@@ -7,6 +7,10 @@ import type {
 } from "../enums/core/selection";
 import type { LemmaDiscriminatorFor } from "../lemma-discriminator";
 import {
+	buildKnownSelectionSchema,
+	type KnownSelectionSchemaFor,
+} from "./buildKnownSelection";
+import {
 	buildSelectionSurfaceSchema,
 	type SelectionLemmaIdentityShapeFor,
 	type SelectionSurfaceSchemaFor,
@@ -15,32 +19,6 @@ import {
 type EmptyZodRawShape = Record<never, never>;
 type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
 type NonInflectionSurfaceKind = Exclude<SurfaceKind, "Inflection">;
-
-type SelectionValueFor<
-	LanguageLiteral extends TargetLanguage,
-	OrthographicStatusLiteral extends KnownOrthographicStatus,
-	SurfaceSchema extends z.ZodTypeAny,
-> = {
-	language: LanguageLiteral;
-	orthographicStatus: OrthographicStatusLiteral;
-	spelledSelection: string;
-	surface: z.infer<SurfaceSchema>;
-};
-
-type SelectionSchemaFor<
-	LanguageLiteral extends TargetLanguage,
-	OrthographicStatusLiteral extends KnownOrthographicStatus,
-	SurfaceSchema extends z.ZodTypeAny,
-> = z.ZodType<
-	SelectionValueFor<LanguageLiteral, OrthographicStatusLiteral, SurfaceSchema>
-> & {
-	shape: {
-		language: z.ZodLiteral<LanguageLiteral>;
-		orthographicStatus: z.ZodLiteral<OrthographicStatusLiteral>;
-		spelledSelection: z.ZodString;
-		surface: SurfaceSchema;
-	};
-};
 
 type BuildLemmaSelectionArgs<
 	LanguageLiteral extends TargetLanguage,
@@ -89,7 +67,7 @@ export function buildLemmaSelection<
 	OrthographicStatusLiteral,
 	SurfaceKindLiteral,
 	SurfaceExtraShape
->): SelectionSchemaFor<
+>): KnownSelectionSchemaFor<
 	LanguageLiteral,
 	OrthographicStatusLiteral,
 	SelectionSurfaceSchemaFor<
@@ -114,12 +92,11 @@ export function buildLemmaSelection<
 		},
 	});
 
-	return z.object({
-		language: z.literal(language),
-		orthographicStatus: z.literal(orthographicStatus),
-		spelledSelection: z.string(),
-		surface: surfaceSchema,
-	}) as SelectionSchemaFor<
+	return buildKnownSelectionSchema({
+		language,
+		orthographicStatus,
+		surfaceSchema,
+	}) as KnownSelectionSchemaFor<
 		LanguageLiteral,
 		OrthographicStatusLiteral,
 		SurfaceSchema
