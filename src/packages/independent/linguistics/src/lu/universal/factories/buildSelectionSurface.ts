@@ -1,4 +1,5 @@
 import z from "zod/v3";
+import type { Prettify } from "../../../../../../../types/helpers";
 import type { LemmaKind } from "../enums/core/selection";
 import type { LemmaDiscriminatorFor } from "../lemma-discriminator";
 
@@ -39,27 +40,39 @@ type LemmaSubKindKeyFor<Shape extends SelectionLemmaIdentityShape> = Extract<
 	LemmaSubKindKey
 >;
 
+type InferredLemmaIdentityFor<Shape extends SelectionLemmaIdentityShape> =
+	InferShape<Shape>;
+
+type LemmaSubKindKeyForValue<T extends { lemmaKind: unknown }> = Extract<
+	keyof T,
+	LemmaSubKindKey
+>;
+
 export type SelectionSurfaceValueFor<
-	LemmaIdentityShape extends SelectionLemmaIdentityShape,
-	LemmaSchema extends z.ZodTypeAny,
-	SurfaceShape extends z.ZodRawShape,
-> = InferShape<SurfaceShape> & {
-	discriminators: {
-		lemmaKind: z.infer<LemmaIdentityShape["lemmaKind"]>;
-		lemmaSubKind: z.infer<
-			LemmaIdentityShape[LemmaSubKindKeyFor<LemmaIdentityShape>]
-		>;
-	};
-	normalizedFullSurface: string;
-	target: { canonicalLemma: string } | z.infer<LemmaSchema>;
-};
+	LemmaIdentity extends { lemmaKind: unknown },
+	Lemma,
+	Surface,
+> = Prettify<
+	Surface & {
+		discriminators: {
+			lemmaKind: LemmaIdentity["lemmaKind"];
+			lemmaSubKind: LemmaIdentity[LemmaSubKindKeyForValue<LemmaIdentity>];
+		};
+		normalizedFullSurface: string;
+		target: { canonicalLemma: string } | Lemma;
+	}
+>;
 
 export type SelectionSurfaceSchemaFor<
 	LemmaIdentityShape extends SelectionLemmaIdentityShape,
 	LemmaSchema extends z.ZodTypeAny,
 	SurfaceShape extends z.ZodRawShape,
 > = z.ZodType<
-	SelectionSurfaceValueFor<LemmaIdentityShape, LemmaSchema, SurfaceShape>
+	SelectionSurfaceValueFor<
+		InferredLemmaIdentityFor<LemmaIdentityShape>,
+		z.infer<LemmaSchema>,
+		InferShape<SurfaceShape>
+	>
 >;
 
 export function buildSelectionSurfaceSchema<

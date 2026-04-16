@@ -56,6 +56,67 @@ type _resolvedSurfaceDoesNotCollapseToAny = Assert<
 	>
 >;
 
+type ExpectedEnglishAdjectiveInflectionSelection = {
+	language: "English";
+	orthographicStatus: "Standard";
+	spelledSelection: string;
+	surface: {
+		discriminators: {
+			lemmaKind: "Lexeme";
+			lemmaSubKind: "ADJ";
+		};
+		inflectionalFeatures: {
+			degree?: "Cmp" | "Pos" | "Sup" | undefined;
+		};
+		normalizedFullSurface: string;
+		surfaceKind: "Inflection";
+		target:
+			| {
+					canonicalLemma: string;
+			  }
+			| Lemma<"English", "Lexeme", "ADJ">;
+	};
+};
+
+type _selectionConcreteEnglishAdjShapeStaysReadable = Assert<
+	Equal<
+		Selection<
+			"English",
+			"Standard",
+			"Inflection",
+			"Lexeme",
+			"ADJ"
+		>,
+		ExpectedEnglishAdjectiveInflectionSelection
+	>
+>;
+
+type ExpectedEnglishAdjectiveResolvedSurface = {
+	discriminators: {
+		lemmaKind: "Lexeme";
+		lemmaSubKind: "ADJ";
+	};
+	inflectionalFeatures: {
+		degree?: "Cmp" | "Pos" | "Sup" | undefined;
+	};
+	normalizedFullSurface: string;
+	surfaceKind: "Inflection";
+	target: Lemma<"English", "Lexeme", "ADJ">;
+};
+
+type _resolvedSurfaceConcreteEnglishAdjShapeStaysReadable = Assert<
+	Equal<
+		ResolvedSurface<
+			"English",
+			"Standard",
+			"Inflection",
+			"Lexeme",
+			"ADJ"
+		>,
+		ExpectedEnglishAdjectiveResolvedSurface
+	>
+>;
+
 describe("public API usage", () => {
 	it("exposes the curated root API surface", () => {
 		expect(typeof linguistics.buildToLingConverters).toBe("function");

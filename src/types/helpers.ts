@@ -2,6 +2,26 @@ export type Prettify<T> = {
 	[K in keyof T]: T[K];
 } & {};
 
+export type PrettifyDeep<T> = T extends
+	| string
+	| number
+	| boolean
+	| bigint
+	| symbol
+	| null
+	| undefined
+	| Function
+	? T
+	: T extends readonly unknown[]
+		? {
+				[K in keyof T]: PrettifyDeep<T[K]>;
+			}
+		: T extends object
+			? {
+					[K in keyof T]: PrettifyDeep<T[K]>;
+				} & {}
+			: T;
+
 export type Merge<A, B> = Prettify<Omit<A, keyof B> & B>;
 
 export type MergeByKey<A, B> = Prettify<{
