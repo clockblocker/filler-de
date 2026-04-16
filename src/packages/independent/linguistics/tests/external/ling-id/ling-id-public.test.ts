@@ -90,10 +90,10 @@ describe("LingIdCodec", () => {
 			LingIdCodec.English.makeLingIdFor(unresolvedSurface);
 		const selectionId = LingIdCodec.English.makeLingIdFor(selection);
 
-		expect(lemmaId.startsWith("ling:v2:EN:LEM;")).toBe(true);
-		expect(resolvedId.startsWith("ling:v2:EN:SURF-RES;")).toBe(true);
-		expect(unresolvedId.startsWith("ling:v2:EN:SURF-UNRES;")).toBe(true);
-		expect(selectionId.startsWith("ling:v2:EN:SEL;")).toBe(true);
+		expect(lemmaId.startsWith("ling:v1:EN:LEM;")).toBe(true);
+		expect(resolvedId.startsWith("ling:v1:EN:SURF-RES;")).toBe(true);
+		expect(unresolvedId.startsWith("ling:v1:EN:SURF-UNRES;")).toBe(true);
+		expect(selectionId.startsWith("ling:v1:EN:SEL;")).toBe(true);
 
 		const decodedLemma = LingIdCodec.English.tryToDecodeAs(
 			"Lemma",

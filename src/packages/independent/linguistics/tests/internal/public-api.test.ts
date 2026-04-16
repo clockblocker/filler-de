@@ -94,7 +94,7 @@ describe("public API usage", () => {
 		).toEqual([lemmaId] as LingId<"Lemma">[]);
 		expect(() =>
 			RelationTargetLingIdsSchema.parse([
-				"ling:v2:EN:SURF-RES;walk;Inflection;Lexeme;VERB;tense=Pres,verbForm=Fin;walk;Lexeme;VERB;-;%F0%9F%9A%B6",
+				"ling:v1:EN:SURF-RES;walk;Inflection;Lexeme;VERB;tense=Pres,verbForm=Fin;walk;Lexeme;VERB;-;%F0%9F%9A%B6",
 			]),
 		).toThrow();
 		expect(LexicalRelationsSchema.parse({ synonym: [] })).toEqual({

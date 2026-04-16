@@ -22,7 +22,7 @@ export function buildHeader(
 	language: TargetLanguage,
 	kind: ConcreteLingIdKind,
 ): string {
-	return `ling:v2:${languageToCode(language)}:${KIND_TO_WIRE[kind]}`;
+	return `ling:v1:${languageToCode(language)}:${KIND_TO_WIRE[kind]}`;
 }
 
 export function parseHeader(id: string): {
@@ -55,7 +55,7 @@ export function parseHeader(id: string): {
 		throw new Error(`Malformed Ling ID namespace: ${namespace}`);
 	}
 
-	if (version !== "v2") {
+	if (version !== "v1") {
 		throw new Error(`Unsupported Ling ID version: ${version}`);
 	}
 

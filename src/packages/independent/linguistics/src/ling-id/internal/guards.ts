@@ -32,7 +32,13 @@ function unionLeafSchemas(value: unknown): z.ZodTypeAny {
 	}
 
 	if (leaves.length === 1) {
-		return leaves[0];
+		const onlyLeaf = leaves[0];
+
+		if (onlyLeaf === undefined) {
+			throw new Error("Expected exactly one schema leaf");
+		}
+
+		return onlyLeaf;
 	}
 
 	const [first, second, ...rest] = leaves;
