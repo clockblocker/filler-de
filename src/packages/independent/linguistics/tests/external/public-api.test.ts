@@ -2,22 +2,26 @@ import { describe, expect, it } from "bun:test";
 import * as linguistics from "../../src";
 import {
 	type Lemma,
-	LemmaSchema,
 	LexicalRelation,
 	LexicalRelationsSchema,
-	LingSchemaFor,
 	LingId,
+	LingSchemaFor,
 	MorphologicalRelation,
 	MorphologicalRelationsSchema,
 	Relations,
 	RelationTargetLingIdsSchema,
 	type ResolvedSurface,
-	ResolvedSurfaceSchema,
 	type Selection,
-	SelectionSchema,
 	type Surface,
-	SurfaceSchema,
 } from "../../src";
+
+const {
+	Lemma: LemmaSchema,
+	ResolvedSurface: ResolvedSurfaceSchema,
+	Selection: SelectionSchema,
+	Surface: SurfaceSchema,
+	UnresolvedSurface: UnresolvedSurfaceSchema,
+} = LingSchemaFor;
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
 	? 1
@@ -121,6 +125,7 @@ describe("public API usage", () => {
 		expect(typeof germanLingConverters.parseShallowSurface).toBe(
 			"function",
 		);
+		expect(linguistics.LingSchemaFor).toBe(LingSchemaFor);
 		expect(SelectionSchema.German.Standard.Inflection.Lexeme.NOUN).toBe(
 			SelectionSchema.German.Standard.Inflection.Lexeme.NOUN,
 		);
@@ -148,15 +153,17 @@ describe("public API usage", () => {
 		expect(LingSchemaFor.Selection.German.Standard.Lemma.Lexeme.NOUN).toBe(
 			SelectionSchema.German.Standard.Lemma.Lexeme.NOUN,
 		);
-		expect(LingSchemaFor.Surface.English.Standard.Inflection.Lexeme.NOUN).toBe(
-			SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN,
-		);
 		expect(
-			LingSchemaFor.ResolvedSurface.English.Standard.Inflection.Lexeme.VERB,
+			LingSchemaFor.Surface.English.Standard.Inflection.Lexeme.NOUN,
+		).toBe(SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN);
+		expect(
+			LingSchemaFor.ResolvedSurface.English.Standard.Inflection.Lexeme
+				.VERB,
 		).toBe(ResolvedSurfaceSchema.English.Standard.Inflection.Lexeme.VERB);
 		expect(
-			LingSchemaFor.UnresolvedSurface.English.Standard.Inflection.Lexeme.NOUN,
-		).toBe(SurfaceSchema.English.Standard.Inflection.Lexeme.NOUN);
+			LingSchemaFor.UnresolvedSurface.English.Standard.Inflection.Lexeme
+				.NOUN,
+		).toBe(UnresolvedSurfaceSchema.English.Standard.Inflection.Lexeme.NOUN);
 		expect(LingSchemaFor.Lemma.Hebrew.Lexeme.VERB).toBe(
 			LemmaSchema.Hebrew.Lexeme.VERB,
 		);
@@ -172,6 +179,11 @@ describe("public API usage", () => {
 		expect("OrthographicStatus" in linguistics).toBe(false);
 		expect("SurfaceKind" in linguistics).toBe(false);
 		expect("LemmaKind" in linguistics).toBe(false);
+		expect("SelectionSchema" in linguistics).toBe(false);
+		expect("SurfaceSchema" in linguistics).toBe(false);
+		expect("ResolvedSurfaceSchema" in linguistics).toBe(false);
+		expect("UnresolvedSurfaceSchema" in linguistics).toBe(false);
+		expect("LemmaSchema" in linguistics).toBe(false);
 		expect("Case" in linguistics).toBe(false);
 		expect("Gender" in linguistics).toBe(false);
 		expect("GrammaticalNumber" in linguistics).toBe(false);

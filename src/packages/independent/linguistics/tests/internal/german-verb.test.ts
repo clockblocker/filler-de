@@ -2,11 +2,13 @@ import { describe, expect, it } from "bun:test";
 import {
 	getInverseLexicalRelation,
 	getInverseMorphologicalRelation,
+	LingSchemaFor,
 	LexicalRelationsSchema,
 	MorphologicalRelationsSchema,
-	SelectionSchema,
 } from "../../src";
 import { GermanVerbSchemas } from "../../src/lu/german/lu/lexeme/pos/german-verb";
+
+const { Selection: SelectionSchema } = LingSchemaFor;
 
 const relationId = (label: string) => `rel:${label}`;
 

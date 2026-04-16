@@ -1,12 +1,13 @@
 import { describe, expect, it } from "bun:test";
 import type { Lemma } from "../../src";
 import {
-	LemmaSchema,
+	LingSchemaFor,
 	LexicalRelationsSchema,
 	MorphologicalRelationsSchema,
-	SelectionSchema,
 } from "../../src";
 import { GermanNounSchemas } from "../../src/lu/german/lu/lexeme/pos/german-noun";
+
+const { Lemma: LemmaSchema, Selection: SelectionSchema } = LingSchemaFor;
 
 const relationId = (label: string) => `rel:${label}`;
 

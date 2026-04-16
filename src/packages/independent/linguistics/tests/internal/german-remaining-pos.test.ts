@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { LemmaSchema, SelectionSchema } from "../../src";
+import { LingSchemaFor } from "../../src";
 import { GermanAdjectiveSchemas } from "../../src/lu/german/lu/lexeme/pos/german-adjective";
 import { GermanAdpositionSchemas } from "../../src/lu/german/lu/lexeme/pos/german-adposition";
 import { GermanAdverbSchemas } from "../../src/lu/german/lu/lexeme/pos/german-adverb";
@@ -16,6 +16,8 @@ import { GermanProperNounSchemas } from "../../src/lu/german/lu/lexeme/pos/germa
 import { GermanPunctuationSchemas } from "../../src/lu/german/lu/lexeme/pos/german-punctuation";
 import { GermanSubordinatingConjunctionSchemas } from "../../src/lu/german/lu/lexeme/pos/german-subordinating-conjunction";
 import { GermanSymbolSchemas } from "../../src/lu/german/lu/lexeme/pos/german-symbol";
+
+const { Lemma: LemmaSchema, Selection: SelectionSchema } = LingSchemaFor;
 
 function lexemeSurface(pos: string, canonicalLemma: string) {
 	return {
