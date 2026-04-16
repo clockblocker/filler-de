@@ -13,6 +13,7 @@ import {
 	RelationTargetLingIdsSchema,
 	type Selection,
 } from "../../src";
+import { englishWalkLemma } from "../attested-entities";
 
 type Equal<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B
 	? 1
@@ -74,14 +75,7 @@ describe("public API usage", () => {
 	});
 
 	it("keeps schemas and relations available from the package root", () => {
-		const lemmaId = LingIdCodec.English.makeLingIdFor({
-			canonicalLemma: "walk",
-			inherentFeatures: {},
-			language: "English",
-			lemmaKind: "Lexeme",
-			meaningInEmojis: "🚶",
-			pos: "VERB",
-		});
+		const lemmaId = LingIdCodec.English.makeLingIdFor(englishWalkLemma);
 
 		expect(
 			lingSchemaFor.Selection.English.Standard.Inflection.Lexeme.VERB,

@@ -4,127 +4,24 @@ import {
 	type Lemma,
 	LingIdCodec,
 	lingOperation,
-	type ResolvedSurface,
-	type Selection,
 	type UnresolvedSurface,
 } from "../../../src";
-
-function buildEnglishWalkLemma() {
-	return {
-		canonicalLemma: "walk",
-		inherentFeatures: {},
-		language: "English",
-		lemmaKind: "Lexeme",
-		meaningInEmojis: "🚶",
-		pos: "VERB",
-	} satisfies Lemma<"English", "Lexeme", "VERB">;
-}
-
-function buildEnglishResolvedInflectionSurface() {
-	return {
-		discriminators: {
-			lemmaKind: "Lexeme",
-			lemmaSubKind: "VERB",
-		},
-		inflectionalFeatures: {
-			tense: "Pres",
-			verbForm: "Fin",
-		},
-		language: "English",
-		normalizedFullSurface: "walk",
-		surfaceKind: "Inflection",
-		target: buildEnglishWalkLemma(),
-	} satisfies ResolvedSurface<
-		"English",
-		"Standard",
-		"Inflection",
-		"Lexeme",
-		"VERB"
-	>;
-}
-
-function buildEnglishUnresolvedInflectionSurface() {
-	return {
-		discriminators: {
-			lemmaKind: "Lexeme",
-			lemmaSubKind: "VERB",
-		},
-		inflectionalFeatures: {
-			tense: "Pres",
-			verbForm: "Fin",
-		},
-		language: "English",
-		normalizedFullSurface: "walk",
-		surfaceKind: "Inflection",
-		target: {
-			canonicalLemma: "walk",
-		},
-	} satisfies UnresolvedSurface<
-		"English",
-		"Standard",
-		"Inflection",
-		"Lexeme",
-		"VERB"
-	>;
-}
-
-function buildEnglishSelection(
-	surface = buildEnglishUnresolvedInflectionSurface(),
-) {
-	return lingOperation
-		.forLanguage("English")
-		.convert.surface.toStandardFullSelection(surface, {
-			spelledSelection: "walk",
-		}) satisfies KnownSelection<"English">;
-}
-
-function buildEnglishGiveUpTypoSurface() {
-	return {
-		discriminators: {
-			lemmaKind: "Lexeme",
-			lemmaSubKind: "VERB",
-		},
-		inflectionalFeatures: {
-			tense: "Past",
-			verbForm: "Fin",
-		},
-		language: "English",
-		normalizedFullSurface: "gave up",
-		surfaceKind: "Inflection",
-		target: {
-			canonicalLemma: "give up",
-		},
-	} satisfies UnresolvedSurface<
-		"English",
-		"Typo",
-		"Inflection",
-		"Lexeme",
-		"VERB"
-	>;
-}
-
-function buildEnglishGiveUpTypoSelection(spelledSelection: "gvae" | "up") {
-	return {
-		language: "English",
-		orthographicStatus: "Typo",
-		selectionCoverage: "Partial",
-		spelledSelection,
-		surface: buildEnglishGiveUpTypoSurface(),
-	} satisfies Selection<
-		"English",
-		"Typo",
-		"Inflection",
-		"Lexeme",
-		"VERB"
-	>;
-}
+import {
+	englishGiveUpTypoPartialGvaeSelection,
+	englishGiveUpTypoPartialUpSelection,
+	englishWalkLemma,
+	englishWalkResolvedInflectionSurface,
+	englishWalkStandardFullSelection,
+	englishWalkUnresolvedInflectionSurface,
+	germanFeminineSeeLemma,
+} from "../../attested-entities";
 
 describe("LingIdCodec", () => {
 	it("encodes and decodes each concrete entity kind", () => {
-		const lemma = buildEnglishWalkLemma();
-		const resolvedSurface = buildEnglishResolvedInflectionSurface();
-		const unresolvedSurface = buildEnglishUnresolvedInflectionSurface();
-		const selection = buildEnglishSelection();
+		const lemma = englishWalkLemma;
+		const resolvedSurface = englishWalkResolvedInflectionSurface;
+		const unresolvedSurface = englishWalkUnresolvedInflectionSurface;
+		const selection = englishWalkStandardFullSelection;
 
 		const lemmaId = LingIdCodec.English.makeLingIdFor(lemma);
 		const resolvedId = LingIdCodec.English.makeLingIdFor(resolvedSurface);
@@ -183,16 +80,9 @@ describe("LingIdCodec", () => {
 
 	it("returns structured errors for malformed ids and language mismatch", () => {
 		const malformed = LingIdCodec.English.tryToDecode("not-a-ling-id");
-		const germanLemmaId = LingIdCodec.German.makeLingIdFor({
-			canonicalLemma: "See",
-			inherentFeatures: {
-				gender: "Fem",
-			},
-			language: "German",
-			lemmaKind: "Lexeme",
-			meaningInEmojis: "🌊",
-			pos: "NOUN",
-		} satisfies Lemma<"German", "Lexeme", "NOUN">);
+		const germanLemmaId = LingIdCodec.German.makeLingIdFor(
+			germanFeminineSeeLemma satisfies Lemma<"German", "Lexeme", "NOUN">,
+		);
 		const mismatch = LingIdCodec.English.tryToDecode(germanLemmaId);
 
 		expect(malformed.isErr()).toBe(true);
@@ -203,7 +93,7 @@ describe("LingIdCodec", () => {
 
 	it("returns entity mismatch for kind-specific decode requests", () => {
 		const resolvedId = LingIdCodec.English.makeLingIdFor(
-			buildEnglishResolvedInflectionSurface(),
+			englishWalkResolvedInflectionSurface,
 		);
 
 		const mismatch = LingIdCodec.English.tryToDecodeAs("Lemma", resolvedId);
@@ -214,7 +104,7 @@ describe("LingIdCodec", () => {
 
 	it("serializes feature bags canonically", () => {
 		const left = {
-			...buildEnglishUnresolvedInflectionSurface(),
+			...englishWalkUnresolvedInflectionSurface,
 			inflectionalFeatures: {
 				tense: "Pres",
 				verbForm: "Fin",
@@ -227,7 +117,7 @@ describe("LingIdCodec", () => {
 			"VERB"
 		>;
 		const right = {
-			...buildEnglishUnresolvedInflectionSurface(),
+			...englishWalkUnresolvedInflectionSurface,
 			inflectionalFeatures: {
 				tense: "Pres",
 				verbForm: "Fin",
@@ -246,8 +136,8 @@ describe("LingIdCodec", () => {
 	});
 
 	it("keeps partial typo selections distinct while preserving shared surface identity", () => {
-		const upSelection = buildEnglishGiveUpTypoSelection("up");
-		const gvaeSelection = buildEnglishGiveUpTypoSelection("gvae");
+		const upSelection = englishGiveUpTypoPartialUpSelection;
+		const gvaeSelection = englishGiveUpTypoPartialGvaeSelection;
 
 		const upSelectionId = LingIdCodec.English.makeLingIdFor(upSelection);
 		const gvaeSelectionId =

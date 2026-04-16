@@ -3,43 +3,28 @@ import type { Lemma, Selection } from "../../src";
 import { lingSchemaFor } from "../../src";
 import { GermanMorphemeLemmaSchemas } from "../../src/lu/language-packs/german/lu/morpheme/german-morphemes";
 import { GermanPhrasemeLemmaSchemas } from "../../src/lu/language-packs/german/lu/phraseme/german-phrasemes";
+import {
+	germanAbPrefixLemma,
+	germanAufJedenFallDiscourseFormulaSelection,
+	germanEinSpaziergangImParkClichePartialSelection,
+} from "../attested-entities";
 
 const { Lemma: LemmaSchema, Selection: SelectionSchema } = lingSchemaFor;
 
 describe("German non-lexeme schemas", () => {
 	it("exposes inferred morpheme and phraseme lemma types from the registry", () => {
-		const morpheme = {
-			canonicalLemma: "ab-",
-			language: "German",
-			lemmaKind: "Morpheme",
-			meaningInEmojis: "🧩",
-			morphemeKind: "Prefix",
-		} satisfies Lemma<"German", "Morpheme", "Prefix">;
-
-		const phraseme: Selection<
+		const morpheme = germanAbPrefixLemma satisfies Lemma<
+			"German",
+			"Morpheme",
+			"Prefix"
+		>;
+		const phraseme = germanAufJedenFallDiscourseFormulaSelection satisfies Selection<
 			"German",
 			"Standard",
 			"Lemma",
 			"Phraseme",
 			"DiscourseFormula"
-		> = {
-			language: "German",
-			orthographicStatus: "Standard",
-			selectionCoverage: "Full",
-			spelledSelection: "auf jeden Fall",
-			surface: {
-				discriminators: {
-					lemmaKind: "Phraseme",
-					lemmaSubKind: "DiscourseFormula",
-				},
-				language: "German",
-				normalizedFullSurface: "auf jeden Fall",
-				surfaceKind: "Lemma",
-				target: {
-					canonicalLemma: "auf jeden Fall",
-				},
-			},
-		};
+		>;
 
 		expect(morpheme.morphemeKind).toBe("Prefix");
 		expect(phraseme.surface.discriminators.lemmaSubKind).toBe(
@@ -161,33 +146,9 @@ describe("German non-lexeme schemas", () => {
 	});
 
 	it("accepts German lemma selections with a narrower spelled selection", () => {
-		const phraseme: Selection<
-			"German",
-			"Standard",
-			"Lemma",
-			"Phraseme",
-			"Cliché"
-	> = {
-			language: "German",
-			orthographicStatus: "Standard",
-			selectionCoverage: "Partial",
-			spelledSelection: "Spaziergang",
-			surface: {
-				discriminators: {
-					lemmaKind: "Phraseme",
-					lemmaSubKind: "Cliché",
-				},
-				language: "German",
-				normalizedFullSurface: "ein Spaziergang im Park",
-				surfaceKind: "Lemma",
-				target: {
-					canonicalLemma: "ein Spaziergang im Park",
-				},
-			},
-		};
 		const result =
 			SelectionSchema.German.Standard.Lemma.Phraseme.Cliché.safeParse(
-				phraseme,
+				germanEinSpaziergangImParkClichePartialSelection,
 			);
 
 		expect(result.success).toBe(true);

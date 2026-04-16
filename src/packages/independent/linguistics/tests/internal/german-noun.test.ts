@@ -1,12 +1,17 @@
 import { describe, expect, it } from "bun:test";
 import type { Lemma } from "../../src";
 import {
-	LingIdCodec,
 	LexicalRelationsSchema,
+	LingIdCodec,
 	lingSchemaFor,
 	MorphologicalRelationsSchema,
 } from "../../src";
 import { GermanNounSchemas } from "../../src/lu/language-packs/german/lu/lexeme/pos/german-noun";
+import {
+	germanHausLemma,
+	germanKindLemma,
+	makeLexemeSurfaceReference,
+} from "../attested-entities";
 
 const { Lemma: LemmaSchema, Selection: SelectionSchema } = lingSchemaFor;
 
@@ -20,30 +25,13 @@ const relationId = (canonicalLemma: string) =>
 		pos: "NOUN",
 	});
 
-function nounSurface(canonicalLemma: string) {
-	return {
-		discriminators: {
-			lemmaKind: "Lexeme" as const,
-			lemmaSubKind: "NOUN" as const,
-		},
-		target: {
-			canonicalLemma,
-		},
-	};
-}
-
 describe("German noun schemas", () => {
 	it("exposes inferred lemma types from the registry", () => {
-		const lemma = {
-			canonicalLemma: "Kind",
-			inherentFeatures: {
-				gender: "Neut",
-			},
-			language: "German",
-			lemmaKind: "Lexeme",
-			meaningInEmojis: "👶",
-			pos: "NOUN",
-		} satisfies Lemma<"German", "Lexeme", "NOUN">;
+		const lemma = germanKindLemma satisfies Lemma<
+			"German",
+			"Lexeme",
+			"NOUN"
+		>;
 
 		expect(lemma.pos).toBe("NOUN");
 	});
@@ -55,7 +43,7 @@ describe("German noun schemas", () => {
 			selectionCoverage: "Full",
 			spelledSelection: "Kindern",
 			surface: {
-				...nounSurface("Kind"),
+				...makeLexemeSurfaceReference("NOUN", "Kind"),
 				inflectionalFeatures: {
 					case: "Dat",
 					number: "Plur",
@@ -76,7 +64,7 @@ describe("German noun schemas", () => {
 			selectionCoverage: "Full",
 			spelledSelection: "Kindern",
 			surface: {
-				...nounSurface("Kind"),
+				...makeLexemeSurfaceReference("NOUN", "Kind"),
 				inflectionalFeatures: {
 					case: "Ins",
 					number: "Dual",
@@ -91,16 +79,7 @@ describe("German noun schemas", () => {
 	});
 
 	it("accepts lexical inherent features for German nouns", () => {
-		const result = GermanNounSchemas.LemmaSchema.safeParse({
-			canonicalLemma: "Kind",
-			inherentFeatures: {
-				gender: "Neut",
-			},
-			language: "German",
-			lemmaKind: "Lexeme",
-			meaningInEmojis: "👶",
-			pos: "NOUN",
-		});
+		const result = GermanNounSchemas.LemmaSchema.safeParse(germanKindLemma);
 
 		expect(result.success).toBe(true);
 	});
@@ -194,7 +173,7 @@ describe("German noun schemas", () => {
 			selectionCoverage: "Partial",
 			spelledSelection: "Bahnhof",
 			surface: {
-				...nounSurface("Hauptbahnhof"),
+				...makeLexemeSurfaceReference("NOUN", "Hauptbahnhof"),
 				language: "German",
 				normalizedFullSurface: "Hauptbahnhof",
 				surfaceKind: "Lemma",
@@ -212,7 +191,7 @@ describe("German noun schemas", () => {
 				selectionCoverage: "Full",
 				spelledSelection: "Hun des",
 				surface: {
-					...nounSurface("Hund"),
+					...makeLexemeSurfaceReference("NOUN", "Hund"),
 					inflectionalFeatures: {
 						case: "Gen",
 						number: "Sing",
@@ -246,7 +225,7 @@ describe("German noun schemas", () => {
 			selectionCoverage: "Full",
 			spelledSelection: "Haus",
 			surface: {
-				...nounSurface("Haus"),
+				...makeLexemeSurfaceReference("NOUN", "Haus"),
 				language: "German",
 				normalizedFullSurface: "Haus",
 				surfaceKind: "Lemma",
@@ -266,14 +245,7 @@ describe("German noun schemas", () => {
 				normalizedFullSurface: "Haus",
 				surfaceKind: "Lemma",
 				target: {
-					canonicalLemma: "Haus",
-					inherentFeatures: {
-						gender: "Neut",
-					},
-					language: "German",
-					lemmaKind: "Lexeme",
-					meaningInEmojis: "🏠",
-					pos: "NOUN",
+					...germanHausLemma,
 				},
 			},
 		});
@@ -297,12 +269,8 @@ describe("German noun schemas", () => {
 				normalizedFullSurface: "Haus",
 				surfaceKind: "Lemma",
 				target: {
-					canonicalLemma: "Haus",
-					inherentFeatures: {},
+					...germanHausLemma,
 					language: "English",
-					lemmaKind: "Lexeme",
-					meaningInEmojis: "🏠",
-					pos: "NOUN",
 				},
 			},
 		});
@@ -365,7 +333,7 @@ describe("German noun schemas", () => {
 				selectionCoverage: "Full",
 				spelledSelection: "Haus",
 				surface: {
-					...nounSurface("Haus"),
+					...makeLexemeSurfaceReference("NOUN", "Haus"),
 					language: "German",
 					normalizedFullSurface: "Haus",
 					surfaceKind: "Lemma",
@@ -397,7 +365,7 @@ describe("German noun schemas", () => {
 				selectionCoverage: "Full",
 				spelledSelection: "Haus",
 				surface: {
-					...nounSurface("Haus"),
+					...makeLexemeSurfaceReference("NOUN", "Haus"),
 					inflectionalFeatures: {
 						case: "Nom",
 					},
