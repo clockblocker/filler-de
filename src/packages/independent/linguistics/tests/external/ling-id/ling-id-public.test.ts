@@ -5,6 +5,7 @@ import {
 	LingIdCodec,
 	lingOperation,
 	type ResolvedSurface,
+	type Selection,
 	type UnresolvedSurface,
 } from "../../../src";
 
@@ -75,6 +76,47 @@ function buildEnglishSelection(
 		.convert.surface.toStandardFullSelection(surface, {
 			spelledSelection: "walk",
 		}) satisfies KnownSelection<"English">;
+}
+
+function buildEnglishGiveUpTypoSurface() {
+	return {
+		discriminators: {
+			lemmaKind: "Lexeme",
+			lemmaSubKind: "VERB",
+		},
+		inflectionalFeatures: {
+			tense: "Past",
+			verbForm: "Fin",
+		},
+		language: "English",
+		normalizedFullSurface: "gave up",
+		surfaceKind: "Inflection",
+		target: {
+			canonicalLemma: "give up",
+		},
+	} satisfies UnresolvedSurface<
+		"English",
+		"Typo",
+		"Inflection",
+		"Lexeme",
+		"VERB"
+	>;
+}
+
+function buildEnglishGiveUpTypoSelection(spelledSelection: "gvae" | "up") {
+	return {
+		language: "English",
+		orthographicStatus: "Typo",
+		selectionCoverage: "Partial",
+		spelledSelection,
+		surface: buildEnglishGiveUpTypoSurface(),
+	} satisfies Selection<
+		"English",
+		"Typo",
+		"Inflection",
+		"Lexeme",
+		"VERB"
+	>;
 }
 
 describe("LingIdCodec", () => {
@@ -200,6 +242,26 @@ describe("LingIdCodec", () => {
 
 		expect(LingIdCodec.English.makeLingIdFor(left)).toBe(
 			LingIdCodec.English.makeLingIdFor(right),
+		);
+	});
+
+	it("keeps partial typo selections distinct while preserving shared surface identity", () => {
+		const upSelection = buildEnglishGiveUpTypoSelection("up");
+		const gvaeSelection = buildEnglishGiveUpTypoSelection("gvae");
+
+		const upSelectionId = LingIdCodec.English.makeLingIdFor(upSelection);
+		const gvaeSelectionId =
+			LingIdCodec.English.makeLingIdFor(gvaeSelection);
+
+		expect(upSelectionId).not.toBe(gvaeSelectionId);
+
+		const upSurface =
+			lingOperation.extract.surface.fromSelection(upSelection);
+		const gvaeSurface =
+			lingOperation.extract.surface.fromSelection(gvaeSelection);
+
+		expect(LingIdCodec.English.makeLingIdFor(upSurface)).toBe(
+			LingIdCodec.English.makeLingIdFor(gvaeSurface),
 		);
 	});
 });
