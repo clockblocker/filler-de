@@ -5,6 +5,7 @@
 	},
 	"devDependencies": {
 		"@types/bun": "1.3.0",
+		"knip": "^5.82.1",
 		"typescript": "5.9.3"
 	},
 	"exports": {
@@ -16,6 +17,7 @@
 		"build": "bun ../../../../scripts/build-workspace-package.ts",
 		"fix": "bun x biome check --write --unsafe . 2>/dev/null || true",
 		"generate:readme": "bun generate-readme/generate-readme.ts",
+		"knip": "knip",
 		"test": "bun test --reporter=dot --preload ../../../../tests/unit/setup.ts ./tests/"
 	},
 	"type": "module",

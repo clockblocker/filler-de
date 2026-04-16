@@ -292,7 +292,7 @@ describe("German noun schemas", () => {
 					language: "German",
 					lemmaKind: "Phraseme",
 					meaningInEmojis: "🏠",
-					phrasemeKind: "Cliché",
+					phrasemeKind: "Idiom",
 				},
 			},
 		});

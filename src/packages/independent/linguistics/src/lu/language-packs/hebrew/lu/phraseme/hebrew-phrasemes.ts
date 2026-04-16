@@ -7,9 +7,6 @@ import { buildHebrewPhrasemeBundle } from "./shared/build-hebrew-phraseme-bundle
 const HebrewAphorismBundle = buildHebrewPhrasemeBundle({
 	phrasemeKind: "Aphorism",
 });
-const HebrewClicheBundle = buildHebrewPhrasemeBundle({
-	phrasemeKind: "Cliché",
-});
 const HebrewDiscourseFormulaBundle = buildHebrewPhrasemeBundle({
 	phrasemeKind: "DiscourseFormula",
 });
@@ -22,7 +19,6 @@ const HebrewProverbBundle = buildHebrewPhrasemeBundle({
 
 export const HebrewPhrasemeLemmaSchemas = {
 	Aphorism: HebrewAphorismBundle.LemmaSchema,
-	Cliché: HebrewClicheBundle.LemmaSchema,
 	DiscourseFormula: HebrewDiscourseFormulaBundle.LemmaSchema,
 	Idiom: HebrewIdiomBundle.LemmaSchema,
 	Proverb: HebrewProverbBundle.LemmaSchema,
@@ -30,7 +26,6 @@ export const HebrewPhrasemeLemmaSchemas = {
 
 export const HebrewStandardLemmaPhrasemeSelectionSchemas = {
 	Aphorism: HebrewAphorismBundle.StandardLemmaSelectionSchema,
-	Cliché: HebrewClicheBundle.StandardLemmaSelectionSchema,
 	DiscourseFormula: HebrewDiscourseFormulaBundle.StandardLemmaSelectionSchema,
 	Idiom: HebrewIdiomBundle.StandardLemmaSelectionSchema,
 	Proverb: HebrewProverbBundle.StandardLemmaSelectionSchema,
@@ -38,7 +33,6 @@ export const HebrewStandardLemmaPhrasemeSelectionSchemas = {
 
 export const HebrewTypoLemmaPhrasemeSelectionSchemas = {
 	Aphorism: HebrewAphorismBundle.TypoLemmaSelectionSchema,
-	Cliché: HebrewClicheBundle.TypoLemmaSelectionSchema,
 	DiscourseFormula: HebrewDiscourseFormulaBundle.TypoLemmaSelectionSchema,
 	Idiom: HebrewIdiomBundle.TypoLemmaSelectionSchema,
 	Proverb: HebrewProverbBundle.TypoLemmaSelectionSchema,

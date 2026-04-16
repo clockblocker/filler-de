@@ -41,6 +41,6 @@ export const englishGiveUpTypoPartialGvaeSelection = {
 	orthographicStatus: "Typo",
 	selectionCoverage: "Partial",
 	spelledSelection: "gvae",
-	spellingRelation: "Canonical",
+	spellingRelation: "Variant",
 	surface: englishGiveUpTypoUnresolvedInflectionSurface,
 } satisfies Selection<"English", "Typo", "Inflection", "Lexeme", "VERB">;

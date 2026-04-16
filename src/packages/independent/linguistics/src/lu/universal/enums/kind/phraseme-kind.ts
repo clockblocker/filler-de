@@ -2,7 +2,6 @@ import { z } from "zod/v3";
 
 const phrasemeKindValues = [
 	"DiscourseFormula",
-	"Cliché",
 	"Aphorism",
 	"Proverb",
 	"Idiom",
@@ -17,7 +16,6 @@ export const PHRASEME_KINDS = PhrasemeKind.options;
 
 const reprForPhrasemeKind = {
 	Aphorism: "aphorism",
-	Cliché: "cliché",
 	DiscourseFormula: "discourse formula",
 	Idiom: "idiom",
 	Proverb: "proverb",

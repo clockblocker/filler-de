@@ -13,7 +13,7 @@ export const hebrewKatvuResolvedInflectionSurface = {
 	},
 	inflectionalFeatures: {
 		number: "Plur",
-		person: ["1", "2", "3"],
+		person: "3",
 		tense: "Past",
 	},
 	language: "Hebrew",
@@ -36,7 +36,7 @@ export const hebrewKatvuUnresolvedInflectionSurface = {
 	},
 	inflectionalFeatures: {
 		number: "Plur",
-		person: ["1", "2", "3"],
+		person: "3",
 		tense: "Past",
 	},
 	language: "Hebrew",

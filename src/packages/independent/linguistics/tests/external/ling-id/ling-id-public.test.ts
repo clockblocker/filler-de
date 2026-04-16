@@ -13,7 +13,7 @@ import {
 	englishWalkResolvedInflectionSurface,
 	englishWalkStandardFullSelection,
 	englishWalkUnresolvedInflectionSurface,
-	germanFeminineSeeLemma,
+	germanMasculineSeeLemma,
 } from "../../helpers";
 
 describe("LingIdCodec", () => {
@@ -81,7 +81,7 @@ describe("LingIdCodec", () => {
 	it("returns structured errors for malformed ids and language mismatch", () => {
 		const malformed = LingIdCodec.English.tryToDecode("not-a-ling-id");
 		const germanLemmaId = LingIdCodec.German.makeLingIdFor(
-			germanFeminineSeeLemma satisfies Lemma<"German", "Lexeme", "NOUN">,
+			germanMasculineSeeLemma satisfies Lemma<"German", "Lexeme", "NOUN">,
 		);
 		const mismatch = LingIdCodec.English.tryToDecode(germanLemmaId);
 

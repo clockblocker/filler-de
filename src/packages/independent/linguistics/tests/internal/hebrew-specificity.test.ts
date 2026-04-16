@@ -33,7 +33,7 @@ describe("Hebrew schema specificity", () => {
 					},
 					inflectionalFeatures: {
 						number: "Plur",
-						person: ["1", "2", "3"],
+						person: "3",
 						tense: "Past",
 					},
 					language: "Hebrew",

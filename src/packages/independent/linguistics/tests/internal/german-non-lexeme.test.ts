@@ -6,7 +6,7 @@ import { GermanPhrasemeLemmaSchemas } from "../../src/lu/language-packs/german/l
 import {
 	germanAbPrefixLemma,
 	germanAufJedenFallDiscourseFormulaSelection,
-	germanEinSpaziergangImParkClichePartialSelection,
+	germanAufJedenFallPartialSelection,
 } from "../helpers";
 
 const { Lemma: LemmaSchema, Selection: SelectionSchema } = lingSchemaFor;
@@ -109,8 +109,11 @@ describe("German non-lexeme schemas", () => {
 			SelectionSchema.German.Typo.Lemma.Phraseme.DiscourseFormula,
 		).toBeDefined();
 		expect(
-			SelectionSchema.German.Standard.Lemma.Phraseme.Cliché,
+			SelectionSchema.German.Standard.Lemma.Phraseme.Idiom,
 		).toBeDefined();
+		expect("Cliché" in SelectionSchema.German.Standard.Lemma.Phraseme).toBe(
+			false,
+		);
 		expect("Morpheme" in SelectionSchema.German.Standard.Inflection).toBe(
 			false,
 		);
@@ -143,21 +146,21 @@ describe("German non-lexeme schemas", () => {
 				},
 			});
 		const phrasemeResult =
-			SelectionSchema.German.Typo.Lemma.Phraseme.Cliché.safeParse({
+			SelectionSchema.German.Typo.Lemma.Phraseme.Idiom.safeParse({
 				language: "German",
 				orthographicStatus: "Typo",
 				selectionCoverage: "Full",
-				spelledSelection: "Zeit ist Gelt",
+				spelledSelection: "ins Graß beißen",
 				surface: {
 					discriminators: {
 						lemmaKind: "Phraseme",
-						lemmaSubKind: "Cliché",
+						lemmaSubKind: "Idiom",
 					},
 					language: "German",
-					normalizedFullSurface: "Zeit ist Gelt",
+					normalizedFullSurface: "ins Gras beißen",
 					surfaceKind: "Lemma",
 					target: {
-						canonicalLemma: "Zeit ist Geld",
+						canonicalLemma: "ins Gras beißen",
 					},
 				},
 			});
@@ -192,8 +195,8 @@ describe("German non-lexeme schemas", () => {
 
 	it("accepts German lemma selections with a narrower spelled selection", () => {
 		const result =
-			SelectionSchema.German.Standard.Lemma.Phraseme.Cliché.safeParse(
-				germanEinSpaziergangImParkClichePartialSelection,
+			SelectionSchema.German.Standard.Lemma.Phraseme.DiscourseFormula.safeParse(
+				germanAufJedenFallPartialSelection,
 			);
 
 		expect(result.success).toBe(true);

@@ -5,7 +5,7 @@ import {
 	englishWalkResolvedLemmaSelection,
 	englishWalkResolvedLemmaSurface,
 	englishWalkUnresolvedLemmaSurface,
-	germanFeminineSeeLemma,
+	germanMasculineSeeLemma,
 } from "../helpers";
 
 describe("lingOperation", () => {
@@ -104,7 +104,7 @@ describe("lingOperation", () => {
 		expect(() =>
 			lingOperation.resolve.unresolvedSurface.withLemma(
 				unresolvedSurface,
-				germanFeminineSeeLemma as never,
+				germanMasculineSeeLemma as never,
 			),
 		).toThrow(
 			"lingOperation language mismatch: expected English, received German",
@@ -229,7 +229,7 @@ describe("lingOperation", () => {
 						canonicalLemma: "walk",
 					},
 				} as unknown as GermanUnresolvedSurfaceInput,
-				germanFeminineSeeLemma as unknown as GermanResolvedLemmaInput,
+				germanMasculineSeeLemma as unknown as GermanResolvedLemmaInput,
 			),
 		).toThrow(
 			"lingOperation language mismatch: expected German, received English",
@@ -246,7 +246,7 @@ describe("lingOperation", () => {
 	});
 
 	it("returns language-bound results with the same structural behavior", () => {
-		const germanLemma = germanFeminineSeeLemma;
+		const germanLemma = germanMasculineSeeLemma;
 		const germanOps = lingOperation.forLanguage("German");
 
 		expect(

@@ -7,9 +7,6 @@ import { buildEnglishPhrasemeBundle } from "./shared/build-english-phraseme-bund
 const EnglishAphorismBundle = buildEnglishPhrasemeBundle({
 	phrasemeKind: "Aphorism",
 });
-const EnglishClicheBundle = buildEnglishPhrasemeBundle({
-	phrasemeKind: "Cliché",
-});
 const EnglishDiscourseFormulaBundle = buildEnglishPhrasemeBundle({
 	phrasemeKind: "DiscourseFormula",
 });
@@ -22,7 +19,6 @@ const EnglishProverbBundle = buildEnglishPhrasemeBundle({
 
 export const EnglishPhrasemeLemmaSchemas = {
 	Aphorism: EnglishAphorismBundle.LemmaSchema,
-	Cliché: EnglishClicheBundle.LemmaSchema,
 	DiscourseFormula: EnglishDiscourseFormulaBundle.LemmaSchema,
 	Idiom: EnglishIdiomBundle.LemmaSchema,
 	Proverb: EnglishProverbBundle.LemmaSchema,
@@ -30,7 +26,6 @@ export const EnglishPhrasemeLemmaSchemas = {
 
 export const EnglishStandardLemmaPhrasemeSelectionSchemas = {
 	Aphorism: EnglishAphorismBundle.StandardLemmaSelectionSchema,
-	Cliché: EnglishClicheBundle.StandardLemmaSelectionSchema,
 	DiscourseFormula:
 		EnglishDiscourseFormulaBundle.StandardLemmaSelectionSchema,
 	Idiom: EnglishIdiomBundle.StandardLemmaSelectionSchema,
@@ -39,7 +34,6 @@ export const EnglishStandardLemmaPhrasemeSelectionSchemas = {
 
 export const EnglishTypoLemmaPhrasemeSelectionSchemas = {
 	Aphorism: EnglishAphorismBundle.TypoLemmaSelectionSchema,
-	Cliché: EnglishClicheBundle.TypoLemmaSelectionSchema,
 	DiscourseFormula: EnglishDiscourseFormulaBundle.TypoLemmaSelectionSchema,
 	Idiom: EnglishIdiomBundle.TypoLemmaSelectionSchema,
 	Proverb: EnglishProverbBundle.TypoLemmaSelectionSchema,

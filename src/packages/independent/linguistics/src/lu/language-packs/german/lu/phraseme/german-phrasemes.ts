@@ -7,9 +7,6 @@ import { buildGermanPhrasemeBundle } from "./shared/build-german-phraseme-bundle
 const GermanAphorismBundle = buildGermanPhrasemeBundle({
 	phrasemeKind: "Aphorism",
 });
-const GermanClicheBundle = buildGermanPhrasemeBundle({
-	phrasemeKind: "Cliché",
-});
 const GermanDiscourseFormulaBundle = buildGermanPhrasemeBundle({
 	phrasemeKind: "DiscourseFormula",
 });
@@ -22,7 +19,6 @@ const GermanProverbBundle = buildGermanPhrasemeBundle({
 
 export const GermanPhrasemeLemmaSchemas = {
 	Aphorism: GermanAphorismBundle.LemmaSchema,
-	Cliché: GermanClicheBundle.LemmaSchema,
 	DiscourseFormula: GermanDiscourseFormulaBundle.LemmaSchema,
 	Idiom: GermanIdiomBundle.LemmaSchema,
 	Proverb: GermanProverbBundle.LemmaSchema,
@@ -30,7 +26,6 @@ export const GermanPhrasemeLemmaSchemas = {
 
 export const GermanStandardLemmaPhrasemeSelectionSchemas = {
 	Aphorism: GermanAphorismBundle.StandardLemmaSelectionSchema,
-	Cliché: GermanClicheBundle.StandardLemmaSelectionSchema,
 	DiscourseFormula: GermanDiscourseFormulaBundle.StandardLemmaSelectionSchema,
 	Idiom: GermanIdiomBundle.StandardLemmaSelectionSchema,
 	Proverb: GermanProverbBundle.StandardLemmaSelectionSchema,
@@ -38,7 +33,6 @@ export const GermanStandardLemmaPhrasemeSelectionSchemas = {
 
 export const GermanTypoLemmaPhrasemeSelectionSchemas = {
 	Aphorism: GermanAphorismBundle.TypoLemmaSelectionSchema,
-	Cliché: GermanClicheBundle.TypoLemmaSelectionSchema,
 	DiscourseFormula: GermanDiscourseFormulaBundle.TypoLemmaSelectionSchema,
 	Idiom: GermanIdiomBundle.TypoLemmaSelectionSchema,
 	Proverb: GermanProverbBundle.TypoLemmaSelectionSchema,

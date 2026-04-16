@@ -1,14 +1,14 @@
 import type { Lemma } from "../../../../src";
 
 // Attestation: "Am Ufer des [Sees] war es still."
-export const germanFeminineSeeLemma = {
+export const germanMasculineSeeLemma = {
 	canonicalLemma: "See",
 	inherentFeatures: {
-		gender: "Fem",
+		gender: "Masc",
 	},
 	language: "German",
 	lemmaKind: "Lexeme",
-	meaningInEmojis: "🌊",
+	meaningInEmojis: "🏞️",
 	pos: "NOUN",
 } satisfies Lemma<"German", "Lexeme", "NOUN">;
 
