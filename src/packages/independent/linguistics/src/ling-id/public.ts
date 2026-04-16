@@ -15,14 +15,14 @@
 
 // ...
 
-// export const LingIdCodec = { 
+// export const LingIdCodec = {
 // English: {
 // 	makeLingIdFor: // all makeLingIdFor... overloaded
 // 	tryToDecode: // all tryToDecode... overloaded
-// } 
-// } satisfies { 
+// }
+// } satisfies {
 // 		L in TargetLanguage: {
 // 			makeLingIdFor: ...
 // 			tryToDecode: ...
-// 		} 
+// 		}
 // }

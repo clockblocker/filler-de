@@ -2,19 +2,6 @@ import z from "zod/v3";
 import type { TargetLanguage } from "./enums/core/language";
 import type { OrthographicStatus } from "./enums/core/selection";
 
-export function withLingIdLemmaDtoCompatibility<T extends z.ZodTypeAny>(
-	schema: T,
-): T {
-	return z.preprocess(
-		(input) =>
-			stripLingIdMetadata(input, {
-				expectedLingKind: "Lemma",
-				keys: ["lingKind"],
-			}),
-		schema,
-	) as unknown as T;
-}
-
 export function withLingIdSurfaceDtoCompatibility<T extends z.ZodTypeAny>({
 	language,
 	orthographicStatus,

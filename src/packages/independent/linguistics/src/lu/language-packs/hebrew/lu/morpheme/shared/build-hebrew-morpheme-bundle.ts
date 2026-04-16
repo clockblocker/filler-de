@@ -1,7 +1,7 @@
 import z from "zod/v3";
 import type { MorphemeKind } from "../../../../../universal/enums/kind/morpheme-kind";
 import { buildLemmaSelection } from "../../../../../universal/factories/buildLemmaSelection";
-import { withLingIdLemmaDtoCompatibility } from "../../../../../universal/ling-id-schema-compat";
+import { defineLemmaSchemaDescriptor } from "../../../../../universal/factories/lemma-schema-descriptor";
 import { MeaningInEmojisSchema } from "../../../../../universal/meaning-in-emojis";
 
 export function buildHebrewMorphemeBundle<MK extends MorphemeKind>({
@@ -14,8 +14,9 @@ export function buildHebrewMorphemeBundle<MK extends MorphemeKind>({
 		morphemeKind: z.literal(morphemeKind),
 	} satisfies z.ZodRawShape;
 
-	const lemmaSchema = withLingIdLemmaDtoCompatibility(
-		z
+	const lemma = defineLemmaSchemaDescriptor({
+		language: "Hebrew",
+		schema: z
 			.object({
 				canonicalLemma: z.string(),
 				isClosedSet: z.boolean().optional(),
@@ -25,19 +26,17 @@ export function buildHebrewMorphemeBundle<MK extends MorphemeKind>({
 				morphemeKind: z.literal(morphemeKind),
 			})
 			.strict(),
-	);
+	});
 
 	return {
-		LemmaSchema: lemmaSchema,
+		LemmaSchema: lemma.schema,
 		StandardLemmaSelectionSchema: buildLemmaSelection({
-			language: "Hebrew",
+			lemma,
 			lemmaIdentityShape,
-			lemmaSchema,
 		}),
 		TypoLemmaSelectionSchema: buildLemmaSelection({
-			language: "Hebrew",
+			lemma,
 			lemmaIdentityShape,
-			lemmaSchema,
 			orthographicStatus: "Typo",
 		}),
 	};

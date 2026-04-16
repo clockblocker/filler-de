@@ -119,7 +119,7 @@ type SurfaceBaseFor<
 		normalizedFullSurface: string;
 	} & SurfaceFieldsFor<SK> & {
 			discriminators: DiscriminatorsFor<LK, D>;
-	}
+		}
 >;
 
 type SurfaceFor<

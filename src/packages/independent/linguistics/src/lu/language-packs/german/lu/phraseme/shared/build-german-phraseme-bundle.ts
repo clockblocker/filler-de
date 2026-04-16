@@ -2,13 +2,16 @@ import z from "zod/v3";
 import { UniversalFeature } from "../../../../../universal/enums/feature";
 import type { PhrasemeKind } from "../../../../../universal/enums/kind/phraseme-kind";
 import { buildLemmaSelection } from "../../../../../universal/factories/buildLemmaSelection";
-import { withLingIdLemmaDtoCompatibility } from "../../../../../universal/ling-id-schema-compat";
+import { defineLemmaSchemaDescriptor } from "../../../../../universal/factories/lemma-schema-descriptor";
 import { MeaningInEmojisSchema } from "../../../../../universal/meaning-in-emojis";
 
-function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
+function buildPhrasemeLemmaDescriptor<PK extends PhrasemeKind>(
+	phrasemeKind: PK,
+) {
 	if (phrasemeKind === "DiscourseFormula") {
-		return withLingIdLemmaDtoCompatibility(
-			z
+		return defineLemmaSchemaDescriptor({
+			language: "German",
+			schema: z
 				.object({
 					canonicalLemma: z.string(),
 					discourseFormulaRole:
@@ -19,11 +22,12 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 					phrasemeKind: z.literal(phrasemeKind),
 				})
 				.strict(),
-		);
+		});
 	}
 
-	return withLingIdLemmaDtoCompatibility(
-		z
+	return defineLemmaSchemaDescriptor({
+		language: "German",
+		schema: z
 			.object({
 				canonicalLemma: z.string(),
 				language: z.literal("German"),
@@ -32,7 +36,7 @@ function buildPhrasemeLemmaSchema<PK extends PhrasemeKind>(phrasemeKind: PK) {
 				phrasemeKind: z.literal(phrasemeKind),
 			})
 			.strict(),
-	);
+	});
 }
 
 export function buildGermanPhrasemeBundle<PK extends PhrasemeKind>({
@@ -44,19 +48,17 @@ export function buildGermanPhrasemeBundle<PK extends PhrasemeKind>({
 		lemmaKind: z.literal("Phraseme"),
 		phrasemeKind: z.literal(phrasemeKind),
 	} satisfies z.ZodRawShape;
-	const lemmaSchema = buildPhrasemeLemmaSchema(phrasemeKind);
+	const lemma = buildPhrasemeLemmaDescriptor(phrasemeKind);
 
 	return {
-		LemmaSchema: lemmaSchema,
+		LemmaSchema: lemma.schema,
 		StandardLemmaSelectionSchema: buildLemmaSelection({
-			language: "German",
+			lemma,
 			lemmaIdentityShape,
-			lemmaSchema,
 		}),
 		TypoLemmaSelectionSchema: buildLemmaSelection({
-			language: "German",
+			lemma,
 			lemmaIdentityShape,
-			lemmaSchema,
 			orthographicStatus: "Typo",
 		}),
 	};

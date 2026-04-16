@@ -29,7 +29,6 @@ export const LingSchemaFor = lingSchemaFor;
 // 		},
 // 		lemma: {
 // 			toResolvedSurfaceOfLemma: // Lemma -> ResolvedSurface<SurfaceKind = "Lemma">
-// 			toResolvedSurfaceOfInflection: // Lemma -> ResolvedSurface<SurfaceKind = "Inflection"> we need to inject the default inflection features for poarticullar pos of particullar lang
 // 			toStandardFullSelection: // chain lemma.toResolvedSurfaceOfLemma and surface.toStandardFullSelection
 // 		},
 // 	},
@@ -42,7 +41,6 @@ export const LingSchemaFor = lingSchemaFor;
 // 		}
 // 	}
 // }
-
 
 export type {
 	Lemma,

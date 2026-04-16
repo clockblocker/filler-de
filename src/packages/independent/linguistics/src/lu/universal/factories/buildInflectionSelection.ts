@@ -1,32 +1,27 @@
 import z from "zod/v3";
-import type { TargetLanguage } from "../enums/core/language";
 import type { LemmaKind, OrthographicStatus } from "../enums/core/selection";
 import type { LemmaDiscriminatorFor } from "../lemma-discriminator";
-import {
-	buildKnownSelectionSchema,
-	type KnownSelectionSchemaFor,
-} from "./buildKnownSelection";
-import {
-	buildSelectionSurfaceSchema,
-	type SelectionLemmaIdentityShapeFor,
-	type SelectionSurfaceSchemaFor,
+import type { KnownSelectionSchemaFor } from "./buildKnownSelection";
+import { buildSelectionSchemaCore } from "./buildSelectionSchemaCore";
+import type {
+	SelectionLemmaIdentityShapeFor,
+	SelectionSurfaceSchemaFor,
 } from "./buildSelectionSurface";
+import type { LemmaSchemaDescriptor } from "./lemma-schema-descriptor";
 
 type EmptyZodRawShape = Record<never, never>;
 type KnownOrthographicStatus = Exclude<OrthographicStatus, "Unknown">;
 
 type BuildInflectionSelectionArgs<
 	InflectionalFeaturesSchema extends z.ZodTypeAny,
-	LanguageLiteral extends TargetLanguage,
-	LemmaSchema extends z.ZodTypeAny,
+	LemmaDescriptor extends LemmaSchemaDescriptor<z.ZodTypeAny>,
 	LK extends LemmaKind,
 	D extends LemmaDiscriminatorFor<LK>,
 	OrthographicStatusLiteral extends KnownOrthographicStatus = "Standard",
 	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 > = {
 	inflectionalFeaturesSchema: InflectionalFeaturesSchema;
-	language: LanguageLiteral;
-	lemmaSchema: LemmaSchema;
+	lemma: LemmaDescriptor;
 	lemmaIdentityShape: SelectionLemmaIdentityShapeFor<LK, D>;
 	orthographicStatus?: OrthographicStatusLiteral;
 	surfaceExtraShape?: SurfaceExtraShape;
@@ -42,62 +37,42 @@ type InflectionSurfaceShape<
 
 export function buildInflectionSelection<
 	InflectionalFeaturesSchema extends z.ZodTypeAny,
-	LanguageLiteral extends TargetLanguage,
-	LemmaSchema extends z.ZodTypeAny,
+	LemmaDescriptor extends LemmaSchemaDescriptor<z.ZodTypeAny>,
 	LK extends LemmaKind,
 	D extends LemmaDiscriminatorFor<LK>,
 	OrthographicStatusLiteral extends KnownOrthographicStatus = "Standard",
 	SurfaceExtraShape extends z.ZodRawShape = EmptyZodRawShape,
 >({
 	inflectionalFeaturesSchema,
-	language,
-	lemmaSchema,
+	lemma,
 	lemmaIdentityShape,
 	orthographicStatus = "Standard" as OrthographicStatusLiteral,
 	surfaceExtraShape = {} as SurfaceExtraShape,
 }: BuildInflectionSelectionArgs<
 	InflectionalFeaturesSchema,
-	LanguageLiteral,
-	LemmaSchema,
+	LemmaDescriptor,
 	LK,
 	D,
 	OrthographicStatusLiteral,
 	SurfaceExtraShape
 >): KnownSelectionSchemaFor<
-	LanguageLiteral,
+	LemmaDescriptor["language"],
 	OrthographicStatusLiteral,
 	SelectionSurfaceSchemaFor<
-		LanguageLiteral,
+		LemmaDescriptor["language"],
 		SelectionLemmaIdentityShapeFor<LK, D>,
-		LemmaSchema,
+		LemmaDescriptor["schema"],
 		InflectionSurfaceShape<InflectionalFeaturesSchema, SurfaceExtraShape>
 	>
 > {
-	type SurfaceSchema = SelectionSurfaceSchemaFor<
-		LanguageLiteral,
-		SelectionLemmaIdentityShapeFor<LK, D>,
-		LemmaSchema,
-		InflectionSurfaceShape<InflectionalFeaturesSchema, SurfaceExtraShape>
-	>;
-
-	const surfaceSchema = buildSelectionSurfaceSchema({
-		language,
+	return buildSelectionSchemaCore({
+		lemma,
 		lemmaIdentityShape,
-		lemmaSchema,
+		orthographicStatus,
 		surfaceShape: {
 			...surfaceExtraShape,
 			inflectionalFeatures: inflectionalFeaturesSchema,
 			surfaceKind: z.literal("Inflection"),
 		},
 	});
-
-	return buildKnownSelectionSchema({
-		language,
-		orthographicStatus,
-		surfaceSchema,
-	}) as KnownSelectionSchemaFor<
-		LanguageLiteral,
-		OrthographicStatusLiteral,
-		SurfaceSchema
-	>;
 }

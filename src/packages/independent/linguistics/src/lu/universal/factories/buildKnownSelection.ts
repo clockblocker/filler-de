@@ -81,9 +81,11 @@ export function buildKnownSelectionSchema<
 	LanguageLiteral extends TargetLanguage,
 	SurfaceSchema extends z.ZodTypeAny,
 >(args: {
-	language: LanguageLiteral;
 	orthographicStatus: KnownOrthographicStatus;
-	surfaceSchema: SurfaceSchema;
+	surface: {
+		language: LanguageLiteral;
+		schema: SurfaceSchema;
+	};
 }):
 	| KnownSelectionSchemaFor<LanguageLiteral, "Standard", SurfaceSchema>
 	| KnownSelectionSchemaFor<LanguageLiteral, "Typo", SurfaceSchema>;
@@ -91,30 +93,37 @@ export function buildKnownSelectionSchema<
 	LanguageLiteral extends TargetLanguage,
 	SurfaceSchema extends z.ZodTypeAny,
 >(args: {
-	language: LanguageLiteral;
 	orthographicStatus: "Standard";
-	surfaceSchema: SurfaceSchema;
+	surface: {
+		language: LanguageLiteral;
+		schema: SurfaceSchema;
+	};
 }): KnownSelectionSchemaFor<LanguageLiteral, "Standard", SurfaceSchema>;
 export function buildKnownSelectionSchema<
 	LanguageLiteral extends TargetLanguage,
 	SurfaceSchema extends z.ZodTypeAny,
 >(args: {
-	language: LanguageLiteral;
 	orthographicStatus: "Typo";
-	surfaceSchema: SurfaceSchema;
+	surface: {
+		language: LanguageLiteral;
+		schema: SurfaceSchema;
+	};
 }): KnownSelectionSchemaFor<LanguageLiteral, "Typo", SurfaceSchema>;
 export function buildKnownSelectionSchema<
 	LanguageLiteral extends TargetLanguage,
 	SurfaceSchema extends z.ZodTypeAny,
 >({
-	language,
 	orthographicStatus,
-	surfaceSchema,
+	surface,
 }: {
-	language: LanguageLiteral;
 	orthographicStatus: KnownOrthographicStatus;
-	surfaceSchema: SurfaceSchema;
+	surface: {
+		language: LanguageLiteral;
+		schema: SurfaceSchema;
+	};
 }) {
+	const { language, schema: surfaceSchema } = surface;
+
 	if (orthographicStatus === "Standard") {
 		return buildStandardKnownSelectionSchema({
 			language,

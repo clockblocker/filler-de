@@ -2,12 +2,12 @@ import z from "zod/v3";
 import { UniversalFeature } from "../../../../../universal/enums/feature";
 import { buildInflectionSelection } from "../../../../../universal/factories/buildInflectionSelection";
 import { buildLemmaSelection } from "../../../../../universal/factories/buildLemmaSelection";
+import { defineLemmaSchemaDescriptor } from "../../../../../universal/factories/lemma-schema-descriptor";
 import type {
 	LemmaSchemaFor,
 	SelectionSchemaFor,
 } from "../../../../../universal/helpers/schema-targets";
 import { featureSchema } from "../../../../../universal/helpers/schema-targets";
-import { withLingIdLemmaDtoCompatibility } from "../../../../../universal/ling-id-schema-compat";
 import { MeaningInEmojisSchema } from "../../../../../universal/meaning-in-emojis";
 import { GermanFeature } from "../shared/german-common-enums";
 
@@ -26,56 +26,58 @@ const GermanNounLemmaIdentityShape = {
 	pos: z.literal("NOUN"),
 } satisfies z.ZodRawShape;
 
-const GermanNounLemmaSchema = withLingIdLemmaDtoCompatibility(
-	z.object({
-		canonicalLemma: z.string(),
-		inherentFeatures: GermanNounInherentFeaturesSchema,
-		language: z.literal("German"),
-		lemmaKind: z.literal("Lexeme"),
-		meaningInEmojis: MeaningInEmojisSchema,
-		pos: z.literal("NOUN"),
-	}),
-) satisfies LemmaSchemaFor<"Lexeme", "NOUN">;
+const GermanNounLemma = defineLemmaSchemaDescriptor({
+	language: "German",
+	schema: z
+		.object({
+			canonicalLemma: z.string(),
+			inherentFeatures: GermanNounInherentFeaturesSchema,
+			language: z.literal("German"),
+			lemmaKind: z.literal("Lexeme"),
+			meaningInEmojis: MeaningInEmojisSchema,
+			pos: z.literal("NOUN"),
+		})
+		.strict(),
+});
+
+const GermanNounLemmaSchema = GermanNounLemma.schema satisfies LemmaSchemaFor<
+	"Lexeme",
+	"NOUN"
+>;
 
 const GermanNounInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: GermanNounInflectionalFeaturesSchema,
-	language: "German",
+	lemma: GermanNounLemma,
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
-	lemmaSchema: GermanNounLemmaSchema,
 }) satisfies SelectionSchemaFor<"Standard", "Inflection", "Lexeme", "NOUN">;
 
 const GermanNounLemmaSelectionSchema = buildLemmaSelection({
-	language: "German",
+	lemma: GermanNounLemma,
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
-	lemmaSchema: GermanNounLemmaSchema,
 }) satisfies SelectionSchemaFor<"Standard", "Lemma", "Lexeme", "NOUN">;
 
 const GermanNounStandardVariantSelectionSchema = buildLemmaSelection({
-	language: "German",
+	lemma: GermanNounLemma,
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
-	lemmaSchema: GermanNounLemmaSchema,
 	surfaceKind: "Variant",
 }) satisfies SelectionSchemaFor<"Standard", "Variant", "Lexeme", "NOUN">;
 
 const GermanNounTypoInflectionSelectionSchema = buildInflectionSelection({
 	inflectionalFeaturesSchema: GermanNounInflectionalFeaturesSchema,
-	language: "German",
+	lemma: GermanNounLemma,
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
-	lemmaSchema: GermanNounLemmaSchema,
 	orthographicStatus: "Typo",
 }) satisfies SelectionSchemaFor<"Typo", "Inflection", "Lexeme", "NOUN">;
 
 const GermanNounTypoLemmaSelectionSchema = buildLemmaSelection({
-	language: "German",
+	lemma: GermanNounLemma,
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
-	lemmaSchema: GermanNounLemmaSchema,
 	orthographicStatus: "Typo",
 }) satisfies SelectionSchemaFor<"Typo", "Lemma", "Lexeme", "NOUN">;
 
 const GermanNounTypoVariantSelectionSchema = buildLemmaSelection({
-	language: "German",
+	lemma: GermanNounLemma,
 	lemmaIdentityShape: GermanNounLemmaIdentityShape,
-	lemmaSchema: GermanNounLemmaSchema,
 	orthographicStatus: "Typo",
 	surfaceKind: "Variant",
 }) satisfies SelectionSchemaFor<"Typo", "Variant", "Lexeme", "NOUN">;

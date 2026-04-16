@@ -96,6 +96,20 @@ describe("German noun schemas", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("rejects legacy lingKind-decorated lemma DTOs", () => {
+		const result = GermanNounSchemas.LemmaSchema.safeParse({
+			canonicalLemma: "Haus",
+			inherentFeatures: {},
+			language: "German",
+			lemmaKind: "Lexeme",
+			lingKind: "Lemma",
+			meaningInEmojis: "🏠",
+			pos: "NOUN",
+		});
+
+		expect(result.success).toBe(false);
+	});
+
 	it("validates relation payloads via the dedicated relation schemas", () => {
 		expect(
 			LexicalRelationsSchema.safeParse({

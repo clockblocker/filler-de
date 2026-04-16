@@ -2,6 +2,7 @@ import z from "zod/v3";
 import type { Prettify } from "../../../../../../../types/helpers";
 import type { LemmaKind } from "../enums/core/selection";
 import type { LemmaDiscriminatorFor } from "../lemma-discriminator";
+import type { LemmaSchemaDescriptor } from "./lemma-schema-descriptor";
 
 const lemmaSubKindKeys = ["morphemeKind", "phrasemeKind", "pos"] as const;
 
@@ -74,33 +75,44 @@ export type SelectionSurfaceSchemaFor<
 	>
 >;
 
-export function buildSelectionSurfaceSchema<
-	LanguageLiteral extends string,
+export type SelectionSurfaceSchemaDescriptorFor<
+	LemmaDescriptor extends LemmaSchemaDescriptor<z.ZodTypeAny>,
 	LemmaIdentityShape extends SelectionLemmaIdentityShape,
-	LemmaSchema extends z.ZodTypeAny,
+	SurfaceShape extends z.ZodRawShape,
+> = {
+	language: LemmaDescriptor["language"];
+	schema: SelectionSurfaceSchemaFor<
+		LemmaDescriptor["language"],
+		LemmaIdentityShape,
+		LemmaDescriptor["schema"],
+		SurfaceShape
+	>;
+};
+
+export function buildSelectionSurfaceSchema<
+	LemmaDescriptor extends LemmaSchemaDescriptor<z.ZodTypeAny>,
+	LemmaIdentityShape extends SelectionLemmaIdentityShape,
 	SurfaceShape extends z.ZodRawShape,
 >({
-	language,
+	lemma,
 	lemmaIdentityShape,
-	lemmaSchema,
 	surfaceShape,
 }: {
-	language: LanguageLiteral;
+	lemma: LemmaDescriptor;
 	lemmaIdentityShape: LemmaIdentityShape;
-	lemmaSchema: LemmaSchema;
 	surfaceShape: SurfaceShape;
-}): SelectionSurfaceSchemaFor<
-	LanguageLiteral,
+}): SelectionSurfaceSchemaDescriptorFor<
+	LemmaDescriptor,
 	LemmaIdentityShape,
-	LemmaSchema,
 	SurfaceShape
 > {
+	const { language, schema: lemmaSchema } = lemma;
 	const lemmaSubKindKey = getLemmaSubKindKey(lemmaIdentityShape);
 	const lemmaSubKindSchema = lemmaIdentityShape[
 		lemmaSubKindKey
 	] as z.ZodTypeAny;
 
-	return z
+	const schema = z
 		.object(surfaceShape)
 		.extend({
 			discriminators: z
@@ -135,7 +147,8 @@ export function buildSelectionSurfaceSchema<
 			if (hydratedLemma.language !== typedSurface.language) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
-					message: "hydrated lemma language must match surface language",
+					message:
+						"hydrated lemma language must match surface language",
 					path: ["target", "language"],
 				});
 			}
@@ -161,11 +174,16 @@ export function buildSelectionSurfaceSchema<
 				});
 			}
 		}) as SelectionSurfaceSchemaFor<
-		LanguageLiteral,
+		LemmaDescriptor["language"],
 		LemmaIdentityShape,
-		LemmaSchema,
+		LemmaDescriptor["schema"],
 		SurfaceShape
 	>;
+
+	return {
+		language,
+		schema,
+	};
 }
 
 function getLemmaSubKindKey(
