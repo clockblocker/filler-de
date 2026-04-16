@@ -57,6 +57,30 @@ export type UnresolvedSurfaceLikeFor<
 	L extends TargetLanguage = TargetLanguage,
 > = SurfaceLike<L> & { target: { canonicalLemma: string } };
 
+export type CompatibleLemmaForSurface<S extends SurfaceLike> = S extends {
+	discriminators: infer D;
+	language: infer L extends TargetLanguage;
+}
+	? D extends { lemmaKind: "Lexeme"; lemmaSubKind: infer K extends string }
+		? LemmaLike<L> & { lemmaKind: "Lexeme"; pos: K }
+		: D extends {
+					lemmaKind: "Morpheme";
+					lemmaSubKind: infer K extends string;
+			  }
+			? LemmaLike<L> & { lemmaKind: "Morpheme"; morphemeKind: K }
+			: D extends {
+						lemmaKind: "Phraseme";
+						lemmaSubKind: infer K extends string;
+				  }
+				? LemmaLike<L> & { lemmaKind: "Phraseme"; phrasemeKind: K }
+				: never
+	: never;
+
+export type ResolvedSurfaceWithLemma<
+	S extends UnresolvedSurfaceLikeFor,
+	T extends CompatibleLemmaForSurface<S>,
+> = Omit<S, "target"> & { target: T };
+
 export type LemmaOfSurface<S extends { target: unknown }> = S extends {
 	target: infer SurfaceTarget;
 }
@@ -144,5 +168,29 @@ export function getLemmaDiscriminators<T extends LemmaLike>(
 				lemmaKind: lemma.lemmaKind,
 				lemmaSubKind: lemma.phrasemeKind,
 			} as ResolvedLemmaSurfaceFor<T>["discriminators"];
+	}
+}
+
+export function assertSurfaceMatchesLemma<
+	S extends UnresolvedSurfaceLikeFor,
+	T extends CompatibleLemmaForSurface<S>,
+>(surface: S, lemma: T): void {
+	assertLanguageMatch(surface.language, lemma.language);
+
+	if (surface.target.canonicalLemma !== lemma.canonicalLemma) {
+		throw new Error(
+			`lingOperation canonical lemma mismatch: expected ${surface.target.canonicalLemma}, received ${lemma.canonicalLemma}`,
+		);
+	}
+
+	const lemmaDiscriminators = getLemmaDiscriminators(lemma);
+
+	if (
+		surface.discriminators.lemmaKind !== lemmaDiscriminators.lemmaKind ||
+		surface.discriminators.lemmaSubKind !== lemmaDiscriminators.lemmaSubKind
+	) {
+		throw new Error(
+			`lingOperation surface/lemma discriminator mismatch: expected ${surface.discriminators.lemmaKind}/${surface.discriminators.lemmaSubKind}, received ${lemmaDiscriminators.lemmaKind}/${lemmaDiscriminators.lemmaSubKind}`,
+		);
 	}
 }

@@ -56,7 +56,7 @@ export type LingIdDecodeError = {
 	cause?: unknown;
 };
 
-export type LingIdCodecFor<L extends TargetLanguage> = {
+export type LingIdApiFor<L extends TargetLanguage> = {
 	makeLingIdFor: {
 		(value: Lemma<L>): LingId<"Lemma", L>;
 		(value: KnownSelection<L>): LingId<"Selection", L>;

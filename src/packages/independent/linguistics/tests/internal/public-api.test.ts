@@ -48,6 +48,9 @@ describe("public API usage", () => {
 	it("exposes the curated root API surface", () => {
 		expect(typeof linguistics.LingIdCodec.forLanguage).toBe("function");
 		expect(typeof linguistics.lingOperation.forLanguage).toBe("function");
+		expect(
+			typeof linguistics.lingOperation.resolve.unresolvedSurface.withLemma,
+		).toBe("function");
 		expect(linguistics.LingIdCodec).toBe(LingIdCodec);
 		expect(linguistics.lingOperation).toBe(lingOperation);
 		expect(linguistics.lingSchemaFor).toBe(lingSchemaFor);

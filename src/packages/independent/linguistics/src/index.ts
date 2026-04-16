@@ -1,3 +1,5 @@
+import { lingIdApiForLanguage } from "./ling-id/public";
+import type { LingIdApiFor } from "./ling-id/types";
 import {
 	LemmaSchema,
 	ResolvedSurfaceSchema,
@@ -8,6 +10,8 @@ import {
 import {
 	extractLemmaFromSurface,
 	extractSurfaceFromSelection,
+	operationForLanguage,
+	resolveUnresolvedSurfaceWithLemma,
 	toResolvedLemmaSurface,
 	toStandardFullSelection,
 	toStandardFullSelectionFromLemma,
@@ -54,8 +58,23 @@ export const lingOperation = {
 			fromSelection: extractSurfaceFromSelection,
 		},
 	},
+	forLanguage: operationForLanguage,
+	resolve: {
+		unresolvedSurface: {
+			withLemma: resolveUnresolvedSurfaceWithLemma,
+		},
+	},
 } as const;
 
-export * from "./ling-id/public";
+export const LingIdCodec = {
+	English: lingIdApiForLanguage("English"),
+	forLanguage: lingIdApiForLanguage,
+	German: lingIdApiForLanguage("German"),
+	Hebrew: lingIdApiForLanguage("Hebrew"),
+} satisfies {
+	forLanguage<L extends TargetLanguage>(language: L): LingIdApiFor<L>;
+} & {
+	[L in TargetLanguage]: LingIdApiFor<L>;
+};
 
 export * from "./relations/public";
