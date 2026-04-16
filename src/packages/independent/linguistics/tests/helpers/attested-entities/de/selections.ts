@@ -55,3 +55,4 @@ export const germanBVGAbbreviationSelection = {
 		surfaceKind: "Lemma",
 	},
 } satisfies Selection<"German", "Standard", "Lemma", "Lexeme", "PROPN">;
+3

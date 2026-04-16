@@ -48,6 +48,7 @@ export const germanGehenLemma = {
 
 // Attestation: "In Berlin sowie im Umland (Agglomeration Berlin) betreibt die [BVG] die U-Bahn Berlin, die Straßenbahn Berlin, den Busverkehr in Berlin und den Fährverkehr in Berlin, nicht jedoch die S-Bahn."
 // UD-style: multi-word abbreviations keep the abbreviated form as canonicalLemma and mark Abbr=Yes.
+// See https://universaldependencies.org/u/overview/morphology.html
 // We intentionally do not model a built-in link from "BVG" to "Berliner Verkehrsbetriebe" here.
 export const germanBVGLemma = {
 	canonicalLemma: "BVG",

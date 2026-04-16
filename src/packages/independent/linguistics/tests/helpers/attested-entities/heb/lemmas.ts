@@ -23,3 +23,17 @@ export const hebrewShanaLemma = {
 	meaningInEmojis: "📅",
 	pos: "NOUN",
 } satisfies Lemma<"Hebrew", "Lexeme", "NOUN">;
+
+// Attestation: "[ארה״ב] הודיעה על צעד חדש."
+// UD-style: multi-word abbreviations keep the abbreviated form as canonicalLemma and mark Abbr=Yes.
+// See https://universaldependencies.org/u/overview/morphology.html
+export const hebrewUsAbbreviationLemma = {
+	canonicalLemma: "ארה״ב",
+	inherentFeatures: {
+		abbr: "Yes",
+	},
+	language: "Hebrew",
+	lemmaKind: "Lexeme",
+	meaningInEmojis: "🇺🇸",
+	pos: "PROPN",
+} satisfies Lemma<"Hebrew", "Lexeme", "PROPN">;

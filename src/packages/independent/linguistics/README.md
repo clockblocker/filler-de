@@ -32,9 +32,9 @@ That is still a valid classification. The selection is partial, but the deeper l
 const giveUpPartialSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
-	spellingRelation: "Canonical",
 	selectionCoverage: "Partial",
 	spelledSelection: "up",
+	spellingRelation: "Canonical",
 	surface: {
 		discriminators: {
 			lemmaKind: "Lexeme",
@@ -102,9 +102,9 @@ as part of the idiom "a walk in the park", directly at the lemma-surface layer:
 const idiomPartSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
-	spellingRelation: "Canonical",
 	selectionCoverage: "Partial",
 	spelledSelection: "walk",
+	spellingRelation: "Canonical",
 	surface: {
 		discriminators: {
 			lemmaKind: "Phraseme",
@@ -134,9 +134,9 @@ For plain spelling alternants such as `armor` / `armour`:
 const armourSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
-	spellingRelation: "Variant",
 	selectionCoverage: "Full",
 	spelledSelection: "armour",
+	spellingRelation: "Variant",
 	surface: {
 		discriminators: {
 			lemmaKind: "Lexeme",
@@ -158,9 +158,9 @@ And the same mechanism works for inflected Hebrew forms, including pointed vs un
 const pointedHebrewSelection = {
 	language: "Hebrew",
 	orthographicStatus: "Standard",
-	spellingRelation: "Variant",
 	selectionCoverage: "Full",
 	spelledSelection: "כָּתְבוּ",
+	spellingRelation: "Variant",
 	surface: {
 		discriminators: {
 			lemmaKind: "Lexeme",
@@ -198,9 +198,9 @@ The selections target the lemmas `give up` and `aufpassen`, while the realized n
 const gaveUpSelection = {
 	language: "English",
 	orthographicStatus: "Standard",
-	spellingRelation: "Canonical",
 	selectionCoverage: "Partial",
 	spelledSelection: "up",
+	spellingRelation: "Canonical",
 	surface: {
 		discriminators: {
 			lemmaKind: "Lexeme",
@@ -222,9 +222,9 @@ const gaveUpSelection = {
 const passAufSelection = {
 	language: "German",
 	orthographicStatus: "Standard",
-	spellingRelation: "Canonical",
 	selectionCoverage: "Partial",
 	spelledSelection: "auf",
+	spellingRelation: "Canonical",
 	surface: {
 		discriminators: {
 			lemmaKind: "Lexeme",
