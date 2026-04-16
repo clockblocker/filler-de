@@ -8,7 +8,6 @@ import {
 import {
 	extractLemmaFromSurface,
 	extractSurfaceFromSelection,
-	forLanguage,
 	toResolvedLemmaSurface,
 	toStandardFullSelection,
 	toStandardFullSelectionFromLemma,
@@ -37,14 +36,6 @@ export const lingSchemaFor = {
 	};
 };
 
-export {
-	LemmaSchema,
-	ResolvedSurfaceSchema,
-	SelectionSchema,
-	SurfaceSchema,
-	UnresolvedSurfaceSchema,
-};
-
 export const lingOperation = {
 	convert: {
 		lemma: {
@@ -63,7 +54,6 @@ export const lingOperation = {
 			fromSelection: extractSurfaceFromSelection,
 		},
 	},
-	forLanguage,
 } as const;
 
 export * from "./ling-id/public";

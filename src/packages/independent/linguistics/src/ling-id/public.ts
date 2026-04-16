@@ -22,7 +22,11 @@ function forLanguage<L extends TargetLanguage>(language: L): LingIdCodecFor<L> {
 			)) as LingIdCodecFor<L>["makeLingIdFor"],
 		tryToDecode: (id: string) => decodeLingId(language, id),
 		tryToDecodeAs: ((kind, id: string) =>
-			decodeLingIdAs(language, kind, id)) as LingIdCodecFor<L>["tryToDecodeAs"],
+			decodeLingIdAs(
+				language,
+				kind,
+				id,
+			)) as LingIdCodecFor<L>["tryToDecodeAs"],
 	};
 }
 

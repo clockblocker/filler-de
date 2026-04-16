@@ -60,8 +60,11 @@ describe("public API usage", () => {
 		expect("parseLingId" in linguistics).toBe(false);
 		expect("parseShallowSurfaceLingId" in linguistics).toBe(false);
 		expect("LingConverters" in linguistics).toBe(false);
-		expect("SelectionSchema" in linguistics).toBe(true);
-		expect("LemmaSchema" in linguistics).toBe(true);
+		expect("SelectionSchema" in linguistics).toBe(false);
+		expect("LemmaSchema" in linguistics).toBe(false);
+		expect("ResolvedSurfaceSchema" in linguistics).toBe(false);
+		expect("SurfaceSchema" in linguistics).toBe(false);
+		expect("UnresolvedSurfaceSchema" in linguistics).toBe(false);
 	});
 
 	it("keeps schemas and relations available from the package root", () => {
