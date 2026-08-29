@@ -5,12 +5,14 @@
 > **Compatibility Policy (Dev Mode, 2026-02-20)**:
 > - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
 > - Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
+>
+> **Decisions**: [ADR-0001](../../docs/adr/0001-use-vam-as-the-librarians-obsidian-boundary.md), [ADR-0002](../../docs/adr/0002-coalesce-obsidian-callbacks-into-bulk-vault-events.md)
 
 ---
 
 ## 1. Purpose
 
-VaultActionManager is a **transactional file system abstraction** over Obsidian's Vault API. It solves three core problems:
+VaultActionManager is a **dependency-aware file system coordination boundary** over Obsidian's Vault API. It solves three core problems:
 
 1. **Batched, dependency-aware execution** — callers submit a batch of file operations; VAM collapses redundant ops, sorts by dependency, and executes sequentially.
 2. **Feedback loop prevention** — when we dispatch actions, Obsidian emits events. VAM filters its own events out so downstream subscribers only see user-triggered changes.

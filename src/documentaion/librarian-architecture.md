@@ -5,6 +5,8 @@
 > **Compatibility Policy (Dev Mode, 2026-02-20)**:
 > - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
 > - Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
+>
+> **Decisions**: [ADR-0001](../../docs/adr/0001-use-vam-as-the-librarians-obsidian-boundary.md), [ADR-0002](../../docs/adr/0002-coalesce-obsidian-callbacks-into-bulk-vault-events.md), [ADR-0003](../../docs/adr/0003-translate-vault-observations-before-healing.md)
 
 ---
 
@@ -20,7 +22,7 @@ The Librarian manages a **hierarchical library** of user content inside an Obsid
 2. **Auto-indexed** — each section folder gets a codex file listing its children with checkboxes
 3. **Progress-tracked** — scroll status (Done/NotStarted) propagates through the tree
 4. **Idempotent** — re-processing the same event produces no duplicate side effects
-5. **Transactional** — healing actions are batched and dispatched atomically
+5. **Coordinated** — healing actions are batched, dependency-ordered, and dispatched sequentially through VAM
 
 ---
 
