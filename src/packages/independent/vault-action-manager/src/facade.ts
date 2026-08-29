@@ -28,7 +28,6 @@ import { splitPathFromAbstractInternal } from "./helpers/pathfinder/path-codecs/
 import {
 	DispatchBatchCoordinator,
 	type DispatchBatchEffectFailure,
-	type ExistenceChecker,
 } from "./impl/actions-processing/dispatch-batch";
 import { Executor } from "./impl/actions-processing/executor";
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
@@ -105,9 +104,6 @@ export class VaultActionManager {
 			"initialize Vault observation",
 		);
 
-		const existenceChecker: ExistenceChecker = {
-			exists: (splitPath) => Effect.runPromise(this.exists(splitPath)),
-		};
 		const executor = new Executor(
 			tfileHelper,
 			tfolderHelper,
@@ -116,7 +112,6 @@ export class VaultActionManager {
 		this.dispatches = new DispatchBatchCoordinator(
 			executor,
 			this.selfEvents,
-			existenceChecker,
 			this.runtime,
 		);
 		this.testing = new VaultActionManagerTestingAdapter(

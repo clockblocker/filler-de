@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { Cause, Effect, Exit, Layer, Option, Tracer } from "effect";
+import { type TAbstractFile, TFile, TFolder } from "obsidian";
 import {
 	VamDispatchError,
 	VamPlanningError,
 	type VamSetupError,
 	VamShutdownError,
+	VamVaultIoError,
 } from "../../src/effect/errors";
-import type { VamLiveServices } from "../../src/effect/ports";
+import { type VamLiveServices, VaultIo } from "../../src/effect/ports";
 import { createVamRuntime, type VamRuntime } from "../../src/effect/runtime";
 import {
 	DispatchBatchCoordinator,
@@ -55,10 +57,49 @@ function actionBasename(action: VaultAction): string {
 	return action.payload.splitPath.basename;
 }
 
-const emptyVamLayer = Layer.empty as unknown as Layer.Layer<
-	VamLiveServices,
-	VamSetupError
->;
+type AbstractFileLookup = (
+	path: string,
+) => Effect.Effect<TAbstractFile | null, VamVaultIoError>;
+
+function makeFolder(path: string): TFolder {
+	const value = new TFolder();
+	value.path = path;
+	value.name = path.split("/").at(-1) ?? path;
+	value.children = [];
+	return value;
+}
+
+function makeFile(path: string): TFile {
+	const value = new TFile();
+	value.path = path;
+	const name = path.split("/").at(-1) ?? path;
+	value.basename = name.replace(/\.[^.]+$/, "");
+	value.extension = name.includes(".") ? (name.split(".").at(-1) ?? "") : "";
+	return value;
+}
+
+const defaultLookup: AbstractFileLookup = (path) =>
+	Effect.succeed(path.endsWith(".md") ? makeFile(path) : makeFolder(path));
+
+function makeVamLayer(
+	lookup: AbstractFileLookup = defaultLookup,
+): Layer.Layer<VamLiveServices, VamSetupError> {
+	const vault = VaultIo.of({
+		create: () => Effect.die("not used"),
+		createFolder: () => Effect.die("not used"),
+		getAbstractFileByPath: lookup,
+		getMarkdownFiles: Effect.die("not used"),
+		modify: () => Effect.die("not used"),
+		read: () => Effect.die("not used"),
+		rename: () => Effect.die("not used"),
+		resolveLinkpathDest: () => Effect.die("not used"),
+		trash: () => Effect.die("not used"),
+	});
+	return Layer.succeed(VaultIo, vault) as unknown as Layer.Layer<
+		VamLiveServices,
+		VamSetupError
+	>;
+}
 
 function makeCoordinator(
 	execute: (
@@ -66,7 +107,7 @@ function makeCoordinator(
 	) => Promise<unknown> | Effect.Effect<unknown, unknown>,
 	options?: DispatchBatchOptions,
 	register: (actions: readonly VaultAction[]) => void = () => {},
-	runtime: VamRuntime = createVamRuntime(emptyVamLayer),
+	runtime: VamRuntime = createVamRuntime(makeVamLayer()),
 ) {
 	const executor = {
 		execute: (action: VaultAction) =>
@@ -87,7 +128,6 @@ function makeCoordinator(
 	const coordinator = new DispatchBatchCoordinator(
 		executor,
 		selfEvents,
-		{ exists: () => true },
 		runtime,
 		options,
 	);
@@ -111,6 +151,22 @@ function runNative<A, E>(
 function firstFailure(exit: Exit.Exit<unknown, unknown>): unknown {
 	if (Exit.isSuccess(exit)) return undefined;
 	return Option.getOrUndefined(Cause.findErrorOption(exit.cause));
+}
+
+function isDescendantOf(
+	spans: readonly Tracer.NativeSpan[],
+	span: Tracer.NativeSpan,
+	ancestor: Tracer.NativeSpan,
+): boolean {
+	let current = span;
+	while (Option.isSome(current.parent)) {
+		const parentId = current.parent.value.spanId;
+		if (parentId === ancestor.spanId) return true;
+		const parent = spans.find((candidate) => candidate.spanId === parentId);
+		if (!parent) return false;
+		current = parent;
+	}
+	return false;
 }
 
 async function dispatch(
@@ -356,9 +412,9 @@ describe("DispatchBatchCoordinator", () => {
 				return span;
 			},
 		});
-		const tracerLayer = Layer.succeed(
-			Tracer.Tracer,
-			tracer,
+		const tracerLayer = Layer.merge(
+			makeVamLayer(),
+			Layer.succeed(Tracer.Tracer, tracer),
 		) as unknown as Layer.Layer<VamLiveServices, VamSetupError>;
 		const runtime = createVamRuntime(tracerLayer);
 		const action = makeAction("traced");
@@ -375,8 +431,14 @@ describe("DispatchBatchCoordinator", () => {
 		const planningSpan = spans.find(
 			(span) => span.name === "vam.dispatch.plan",
 		);
+		const dispatchSpan = spans.find(
+			(span) => span.name === "DispatchBatch.dispatch",
+		);
 		const actionSpan = spans.find(
 			(span) => span.name === "vam.dispatch.action",
+		);
+		const existenceSpan = spans.find(
+			(span) => span.name === "vam.dispatch.exists",
 		);
 		expect(planningSpan?.attributes.get("action.kind")).toBe(
 			VaultActionKind.UpsertMdFile,
@@ -390,6 +452,58 @@ describe("DispatchBatchCoordinator", () => {
 		expect(actionSpan?.attributes.get("action.path")).toBe(
 			"Library/traced.md",
 		);
+		expect(existenceSpan?.attributes.get("path")).toBe("Library");
+		if (!dispatchSpan || !planningSpan || !actionSpan || !existenceSpan) {
+			throw new Error(
+				"Expected dispatch, planning, action, and existence spans",
+			);
+		}
+		expect(isDescendantOf(spans, existenceSpan, planningSpan)).toBe(true);
+		expect(isDescendantOf(spans, planningSpan, dispatchSpan)).toBe(true);
+		expect(isDescendantOf(spans, actionSpan, dispatchSpan)).toBe(true);
+	});
+
+	it("treats wrong-kind vault entries as missing prerequisites", async () => {
+		const action: VaultAction = {
+			kind: VaultActionKind.ProcessMdFile,
+			payload: {
+				splitPath: mdFile("wrong-kind"),
+				transform: (content) => content,
+			},
+		};
+		const runtime = createVamRuntime(
+			makeVamLayer((path) => {
+				if (path === "Library") return Effect.succeed(makeFile(path));
+				if (path === "Library/wrong-kind.md") {
+					return Effect.succeed(makeFolder(path));
+				}
+				return Effect.succeed(null);
+			}),
+		);
+		const executed: VaultAction[] = [];
+		const coordinator = makeCoordinator(
+			async (planned) => {
+				executed.push(planned);
+			},
+			undefined,
+			undefined,
+			runtime,
+		);
+
+		const processResult = await dispatch(coordinator, [action]);
+		const trashResult = await dispatch(coordinator, [
+			{
+				kind: VaultActionKind.TrashMdFile,
+				payload: { splitPath: mdFile("wrong-kind") },
+			},
+		]);
+
+		expect(Exit.isSuccess(processResult)).toBe(true);
+		expect(Exit.isSuccess(trashResult)).toBe(true);
+		expect(executed.map((planned) => planned.kind)).toEqual([
+			VaultActionKind.CreateFolder,
+			VaultActionKind.ProcessMdFile,
+		]);
 	});
 
 	it("attributes thrown exceptions to the submitted action", async () => {
@@ -413,7 +527,7 @@ describe("DispatchBatchCoordinator", () => {
 			cause,
 			operation: "execute.UpsertMdFile",
 		});
-		const runtime = createVamRuntime(emptyVamLayer);
+		const runtime = createVamRuntime(makeVamLayer());
 		const coordinator = new DispatchBatchCoordinator(
 			{
 				execute: () => Effect.fail(executorFailure),
@@ -421,7 +535,6 @@ describe("DispatchBatchCoordinator", () => {
 			{
 				registerEffect: () => Effect.void,
 			} as unknown as SelfEventTracker,
-			{ exists: () => true },
 			runtime,
 		);
 		runtimes.set(coordinator, runtime);
@@ -453,7 +566,7 @@ describe("DispatchBatchCoordinator", () => {
 		const laterAction = makeAction("after-defect");
 		const cause = new Error("native defect");
 		const executed: VaultAction[] = [];
-		const runtime = createVamRuntime(emptyVamLayer);
+		const runtime = createVamRuntime(makeVamLayer());
 		const coordinator = new DispatchBatchCoordinator(
 			{
 				execute: (action: VaultAction) => {
@@ -466,7 +579,6 @@ describe("DispatchBatchCoordinator", () => {
 			{
 				registerEffect: () => Effect.void,
 			} as unknown as SelfEventTracker,
-			{ exists: () => true },
 			runtime,
 		);
 		runtimes.set(coordinator, runtime);
@@ -528,6 +640,8 @@ describe("DispatchBatchCoordinator", () => {
 		if (failure instanceof VamPlanningError) {
 			expect(failure.action).toBe(action);
 			expect(failure.cause).toEqual(new Error("planning failed"));
+			expect(failure.operation).toBe("planDispatchBatch");
+			expect(failure.path).toBe("Library/planning.md");
 		}
 		expect(executeCount).toBe(0);
 		expect(registerCount).toBe(0);
@@ -565,7 +679,49 @@ describe("DispatchBatchCoordinator", () => {
 			expect(failure.action).toBe(action);
 			expect(failure.cause).toBe(cause);
 			expect(failure.operation).toBe("planDispatchBatch");
+			expect(failure.path).toBe("Library/typed-planning.md");
 		}
+	});
+
+	it("attributes vault existence failures to planning without side effects", async () => {
+		const action = makeAction("vault-failure");
+		const cause = new Error("vault lookup failed");
+		const vaultFailure = new VamVaultIoError({
+			cause,
+			operation: "getAbstractFileByPath",
+			path: "Library",
+		});
+		const runtime = createVamRuntime(
+			makeVamLayer(() => Effect.fail(vaultFailure)),
+		);
+		let executeCount = 0;
+		let registerCount = 0;
+		const coordinator = makeCoordinator(
+			async () => {
+				executeCount++;
+			},
+			undefined,
+			() => {
+				registerCount++;
+			},
+			runtime,
+		);
+
+		const result = await dispatch(coordinator, [action]);
+
+		const failure = firstFailure(result);
+		expect(failure).toBeInstanceOf(VamPlanningError);
+		if (failure instanceof VamPlanningError) {
+			expect(failure.action).toBe(action);
+			expect(failure.cause).toBe(vaultFailure);
+			expect(failure.operation).toBe("planDispatchBatch");
+			expect(failure.path).toBe("Library");
+		}
+		expect(vaultFailure.cause).toBe(cause);
+		expect(vaultFailure.operation).toBe("getAbstractFileByPath");
+		expect(vaultFailure.path).toBe("Library");
+		expect(executeCount).toBe(0);
+		expect(registerCount).toBe(0);
 	});
 
 	it("keeps whenIdle pending until the active and queued batches finish", async () => {

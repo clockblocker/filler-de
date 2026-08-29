@@ -1,11 +1,12 @@
 import { describe, expect, it } from "bun:test";
-import type { ExistenceChecker } from "../../src/impl/actions-processing/dispatch-batch";
+import { Effect } from "effect";
 import {
 	buildActionKeyIndex,
 	buildEnsureExistKeys,
 	buildParentFolderKeys,
 	collectRequirements,
 	collectTrashPaths,
+	type ExistenceCheck,
 	ensureDestinationsExist,
 	getDestinationsToCheck,
 } from "../../src/impl/actions-processing/ensure-requirements-helpers";
@@ -364,16 +365,17 @@ describe("ensureDestinationsExist", () => {
 			ensureExistFolderKeys: new Set<string>(["root/parent"]),
 		};
 
-		const existenceChecker: ExistenceChecker = {
-			exists: () => false, // Doesn't exist
-		};
+		const existenceCheck: ExistenceCheck<never> = () =>
+			Effect.succeed(false); // Doesn't exist
 
-		const result = await ensureDestinationsExist(
-			destinations,
-			existenceChecker,
-			pathToSplitPathToFolder,
-			keyToSplitPathToMdFile,
-			[],
+		const result = await Effect.runPromise(
+			ensureDestinationsExist(
+				destinations,
+				existenceCheck,
+				pathToSplitPathToFolder,
+				keyToSplitPathToMdFile,
+				[],
+			),
 		);
 
 		expect(result.length).toBe(1);
@@ -391,16 +393,17 @@ describe("ensureDestinationsExist", () => {
 			ensureExistFolderKeys: new Set<string>(["root/parent"]),
 		};
 
-		const existenceChecker: ExistenceChecker = {
-			exists: () => true, // Exists
-		};
+		const existenceCheck: ExistenceCheck<never> = () =>
+			Effect.succeed(true); // Exists
 
-		const result = await ensureDestinationsExist(
-			destinations,
-			existenceChecker,
-			pathToSplitPathToFolder,
-			keyToSplitPathToMdFile,
-			[],
+		const result = await Effect.runPromise(
+			ensureDestinationsExist(
+				destinations,
+				existenceCheck,
+				pathToSplitPathToFolder,
+				keyToSplitPathToMdFile,
+				[],
+			),
 		);
 
 		expect(result.length).toBe(0);
@@ -414,16 +417,17 @@ describe("ensureDestinationsExist", () => {
 			ensureExistFolderKeys: new Set<string>(),
 		};
 
-		const existenceChecker: ExistenceChecker = {
-			exists: () => false, // Doesn't exist
-		};
+		const existenceCheck: ExistenceCheck<never> = () =>
+			Effect.succeed(false); // Doesn't exist
 
-		const result = await ensureDestinationsExist(
-			destinations,
-			existenceChecker,
-			pathToSplitPathToFolder,
-			keyToSplitPathToMdFile,
-			[],
+		const result = await Effect.runPromise(
+			ensureDestinationsExist(
+				destinations,
+				existenceCheck,
+				pathToSplitPathToFolder,
+				keyToSplitPathToMdFile,
+				[],
+			),
 		);
 
 		expect(result.length).toBe(1);
@@ -448,16 +452,17 @@ describe("ensureDestinationsExist", () => {
 			},
 		];
 
-		const existenceChecker: ExistenceChecker = {
-			exists: () => false,
-		};
+		const existenceCheck: ExistenceCheck<never> = () =>
+			Effect.succeed(false);
 
-		const result = await ensureDestinationsExist(
-			destinations,
-			existenceChecker,
-			pathToSplitPathToFolder,
-			keyToSplitPathToMdFile,
-			existingActions,
+		const result = await Effect.runPromise(
+			ensureDestinationsExist(
+				destinations,
+				existenceCheck,
+				pathToSplitPathToFolder,
+				keyToSplitPathToMdFile,
+				existingActions,
+			),
 		);
 
 		expect(result.length).toBe(0); // Already in batch
@@ -475,19 +480,20 @@ describe("ensureDestinationsExist", () => {
 		};
 
 		let callCount = 0;
-		const existenceChecker: ExistenceChecker = {
-			exists: () => {
+		const existenceCheck: ExistenceCheck<never> = () =>
+			Effect.sync(() => {
 				callCount++;
 				return false;
-			},
-		};
+			});
 
-		await ensureDestinationsExist(
-			destinations,
-			existenceChecker,
-			pathToSplitPathToFolder,
-			keyToSplitPathToMdFile,
-			[],
+		await Effect.runPromise(
+			ensureDestinationsExist(
+				destinations,
+				existenceCheck,
+				pathToSplitPathToFolder,
+				keyToSplitPathToMdFile,
+				[],
+			),
 		);
 
 		// Should only check once per unique key (not twice for "root/parent")
@@ -502,16 +508,17 @@ describe("ensureDestinationsExist", () => {
 			ensureExistFolderKeys: new Set<string>(),
 		};
 
-		const existenceChecker: ExistenceChecker = {
-			exists: () => false,
-		};
+		const existenceCheck: ExistenceCheck<never> = () =>
+			Effect.succeed(false);
 
-		const result = await ensureDestinationsExist(
-			destinations,
-			existenceChecker,
-			pathToSplitPathToFolder,
-			keyToSplitPathToMdFile,
-			[],
+		const result = await Effect.runPromise(
+			ensureDestinationsExist(
+				destinations,
+				existenceCheck,
+				pathToSplitPathToFolder,
+				keyToSplitPathToMdFile,
+				[],
+			),
 		);
 
 		expect(result.length).toBe(1);
@@ -526,16 +533,17 @@ describe("ensureDestinationsExist", () => {
 			ensureExistFolderKeys: new Set<string>(),
 		};
 
-		const existenceChecker: ExistenceChecker = {
-			exists: () => false,
-		};
+		const existenceCheck: ExistenceCheck<never> = () =>
+			Effect.succeed(false);
 
-		const result = await ensureDestinationsExist(
-			destinations,
-			existenceChecker,
-			pathToSplitPathToFolder,
-			keyToSplitPathToMdFile,
-			[],
+		const result = await Effect.runPromise(
+			ensureDestinationsExist(
+				destinations,
+				existenceCheck,
+				pathToSplitPathToFolder,
+				keyToSplitPathToMdFile,
+				[],
+			),
 		);
 
 		expect(result.length).toBe(1);

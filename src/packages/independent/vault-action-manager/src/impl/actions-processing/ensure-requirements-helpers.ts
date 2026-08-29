@@ -1,12 +1,19 @@
+import { Effect } from "effect";
+import type { VamVaultIoError } from "../../effect/errors";
+import type { VamLiveServices } from "../../effect/ports";
 import { pathfinder } from "../../helpers/pathfinder";
 import { splitPathCodec } from "../../split-path-codec";
 import type {
+	AnySplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../types/split-path";
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionKind } from "../../types/vault-action";
-import type { ExistenceChecker } from "./dispatch-batch";
+
+export type ExistenceCheck<R = VamLiveServices> = (
+	splitPath: AnySplitPath,
+) => Effect.Effect<boolean, VamVaultIoError, R>;
 
 /**
  * Collect trash paths from actions.
@@ -309,15 +316,17 @@ export function getDestinationsToCheck(
 
 /**
  * Ensure destinations exist by checking existence and returning actions to add.
- * Pure function that handles caching internally.
+ * The supplied Effect check keeps vault I/O and its typed failures in planning.
  */
-export async function ensureDestinationsExist(
+export const ensureDestinationsExist = Effect.fn(
+	"DispatchBatch.ensureDestinationsExist",
+)(function* <R>(
 	destinations: DestinationsToCheck,
-	existenceChecker: ExistenceChecker,
+	exists: ExistenceCheck<R>,
 	pathToSplitPathToFolder: (path: string) => SplitPathToFolder | null,
 	keyToSplitPathToMdFile: (key: string) => SplitPathToMdFile | null,
 	existingActions: readonly VaultAction[],
-): Promise<VaultAction[]> {
+) {
 	const actionsToAdd: VaultAction[] = [];
 
 	// Pre-compute index for O(1) "already in batch" lookups
@@ -342,7 +351,7 @@ export async function ensureDestinationsExist(
 		} else {
 			// Check existence (file op)
 			checkedFolders.add(folderKey);
-			if (await existenceChecker.exists(folderSplitPath)) {
+			if (yield* exists(folderSplitPath)) {
 				existingFolders.add(folderKey);
 				continue; // Already exists, skip EnsureExist
 			}
@@ -369,7 +378,7 @@ export async function ensureDestinationsExist(
 		} else {
 			// Check existence (file op)
 			checkedFiles.add(fileKey);
-			if (await existenceChecker.exists(fileSplitPath)) {
+			if (yield* exists(fileSplitPath)) {
 				existingFiles.add(fileKey);
 				continue; // Already exists, skip EnsureExist
 			}
@@ -398,7 +407,7 @@ export async function ensureDestinationsExist(
 		} else {
 			// Check existence (file op)
 			checkedFolders.add(folderKey);
-			if (await existenceChecker.exists(folderSplitPath)) {
+			if (yield* exists(folderSplitPath)) {
 				existingFolders.add(folderKey);
 				continue; // Already exists
 			}
@@ -426,7 +435,7 @@ export async function ensureDestinationsExist(
 		} else {
 			// Check existence (file op)
 			checkedFiles.add(fileKey);
-			if (await existenceChecker.exists(fileSplitPath)) {
+			if (yield* exists(fileSplitPath)) {
 				existingFiles.add(fileKey);
 				continue; // File exists, no need to create
 			}
@@ -444,4 +453,4 @@ export async function ensureDestinationsExist(
 	}
 
 	return actionsToAdd;
-}
+});

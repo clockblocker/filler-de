@@ -3,13 +3,36 @@ import {
 	Deferred,
 	Effect,
 	Fiber,
+	Option,
 	Queue,
 	SynchronizedRef,
 	type Tracer,
 } from "effect";
+import { TFile, TFolder } from "obsidian";
+import { collapseActions } from "../impl/actions-processing/collapse";
+import { buildDependencyGraph } from "../impl/actions-processing/dependency-detector";
+import {
+	ensureDestinationsExist,
+	getDestinationsToCheck,
+} from "../impl/actions-processing/ensure-requirements-helpers";
+import type { Executor } from "../impl/actions-processing/executor";
+import { topologicalSort } from "../impl/actions-processing/topological-sort";
+import type { SelfEventTracker } from "../impl/event-processing/self-event-tracker";
+import { splitPathCodec } from "../split-path-codec";
+import type {
+	AnySplitPath,
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
-import { VamDispatchError, VamPlanningError, VamShutdownError } from "./errors";
-import type { VamLiveServices } from "./ports";
+import { VaultActionKind } from "../types/vault-action";
+import {
+	VamDispatchError,
+	VamPlanningError,
+	VamShutdownError,
+	VamVaultIoError,
+} from "./errors";
+import { type VamLiveServices, VaultIo } from "./ports";
 import type { VamRuntime } from "./runtime";
 
 export type DispatchEffectFailure =
@@ -17,20 +40,7 @@ export type DispatchEffectFailure =
 	| VamShutdownError
 	| readonly VamDispatchError[];
 
-type DispatchCoordinatorPorts = {
-	readonly describePath: (action: VaultAction) => string;
-	readonly execute: (
-		action: VaultAction,
-	) => Effect.Effect<unknown, VamDispatchError, VamLiveServices>;
-	readonly plan: (
-		actions: readonly VaultAction[],
-	) => Promise<readonly VaultAction[]>;
-	readonly registerSelfEvents: (
-		actions: readonly VaultAction[],
-	) => Effect.Effect<void, never, VamLiveServices>;
-};
-
-type EffectDispatchCoordinatorOptions = {
+type DispatchBatchWorkerOptions = {
 	readonly maxBatches?: number;
 };
 
@@ -38,6 +48,7 @@ type BatchMessage = {
 	readonly _tag: "Batch";
 	readonly actions: readonly VaultAction[];
 	readonly completion: Deferred.Deferred<void, DispatchEffectFailure>;
+	readonly parentSpan: Option.Option<Tracer.Span>;
 };
 
 type ShutdownMessage = { readonly _tag: "Shutdown" };
@@ -62,10 +73,9 @@ const shutdownMessage: ShutdownMessage = { _tag: "Shutdown" };
  * Effect-native single-consumer Dispatch Batch coordinator.
  *
  * This class never creates or runs its own runtime. Its worker and all public
- * programs are attached to the VAM runtime supplied by the compatibility
- * facade.
+ * programs are attached to the runtime supplied by the VAM composition root.
  */
-export class EffectDispatchCoordinator {
+export class DispatchBatchWorker {
 	private readonly idleSeed = Deferred.makeUnsafe<void>();
 	private readonly maxBatches: number;
 	private readonly queueReady =
@@ -78,7 +88,7 @@ export class EffectDispatchCoordinator {
 	private readonly workerDone = Deferred.makeUnsafe<void>();
 
 	private readonly worker = Effect.fn("DispatchBatch.worker")(function* (
-		self: EffectDispatchCoordinator,
+		self: DispatchBatchWorker,
 	) {
 		const queue = yield* Queue.unbounded<DispatchMessage>();
 		yield* Deferred.succeed(self.queueReady, queue);
@@ -122,7 +132,7 @@ export class EffectDispatchCoordinator {
 
 	private readonly beginShutdown = Effect.fn("DispatchBatch.beginShutdown")(
 		function* (
-			self: EffectDispatchCoordinator,
+			self: DispatchBatchWorker,
 			queue: Queue.Queue<DispatchMessage>,
 			state: CoordinationState,
 		) {
@@ -150,8 +160,9 @@ export class EffectDispatchCoordinator {
 
 	constructor(
 		private readonly runtime: VamRuntime,
-		private readonly ports: DispatchCoordinatorPorts,
-		options: EffectDispatchCoordinatorOptions = {},
+		private readonly executor: Executor,
+		private readonly selfEventTracker: SelfEventTracker,
+		options: DispatchBatchWorkerOptions = {},
 	) {
 		this.maxBatches = options.maxBatches ?? 10;
 		const scopedWorker = Effect.scoped(
@@ -169,9 +180,10 @@ export class EffectDispatchCoordinator {
 		const representative = submitted[0];
 
 		return Effect.fn("DispatchBatch.dispatch")(function* (
-			self: EffectDispatchCoordinator,
+			self: DispatchBatchWorker,
 		) {
 			const queue = yield* Deferred.await(self.queueReady);
+			const parentSpan = yield* Effect.option(Effect.currentSpan);
 			const completion = yield* Deferred.make<
 				void,
 				DispatchEffectFailure
@@ -180,6 +192,7 @@ export class EffectDispatchCoordinator {
 				_tag: "Batch",
 				actions: submitted,
 				completion,
+				parentSpan,
 			};
 
 			yield* SynchronizedRef.modifyEffect(self.state, (state) => {
@@ -224,7 +237,7 @@ export class EffectDispatchCoordinator {
 
 	shutdownEffect(): Effect.Effect<void, VamShutdownError> {
 		return Effect.fn("DispatchBatch.shutdown")(function* (
-			self: EffectDispatchCoordinator,
+			self: DispatchBatchWorker,
 		) {
 			const queue = yield* Deferred.await(self.queueReady);
 			const waitForWorker = yield* SynchronizedRef.modifyEffect(
@@ -248,7 +261,12 @@ export class EffectDispatchCoordinator {
 	private completeBatch(
 		batch: BatchMessage,
 	): Effect.Effect<void, never, VamLiveServices> {
-		return Effect.exit(this.executeBatch(batch.actions)).pipe(
+		const execution = Option.match(batch.parentSpan, {
+			onNone: () => this.executeBatch(batch.actions),
+			onSome: (span) =>
+				Effect.withParentSpan(this.executeBatch(batch.actions), span),
+		});
+		return Effect.exit(execution).pipe(
 			Effect.flatMap((exit) => Deferred.done(batch.completion, exit)),
 			Effect.asVoid,
 		);
@@ -260,34 +278,12 @@ export class EffectDispatchCoordinator {
 		if (actions.length === 0) return Effect.void;
 
 		const representative = actions[0];
-		const planningAttributes = this.spanAttributes(representative);
-		const planning = Effect.tryPromise({
-			catch: (cause) =>
-				new VamPlanningError({
-					action: representative,
-					cause,
-					operation: "planDispatchBatch",
-				}),
-			try: () => this.ports.plan(actions),
-		}).pipe(
-			Effect.tapError((failure) =>
-				Effect.logError("[DispatchBatch] Planning failed", {
-					error: this.causeMessage(failure.cause),
-				}),
-			),
-			Effect.withSpan("vam.dispatch.plan", {
-				attributes: {
-					...planningAttributes,
-					"action.count": actions.length,
-				},
-			}),
-		);
 
 		return Effect.fn("DispatchBatch.executeBatch")(function* (
-			self: EffectDispatchCoordinator,
+			self: DispatchBatchWorker,
 		) {
-			const planned = yield* planning;
-			yield* self.ports.registerSelfEvents(planned).pipe(
+			const planned = yield* self.plan(actions);
+			yield* self.selfEventTracker.registerEffect(planned).pipe(
 				Effect.mapError(
 					(cause) =>
 						[
@@ -310,10 +306,111 @@ export class EffectDispatchCoordinator {
 		})(this);
 	}
 
+	private readonly plan = Effect.fn("DispatchBatch.plan")(function* (
+		this: DispatchBatchWorker,
+		actions: readonly VaultAction[],
+	) {
+		const self = this;
+		const representative = actions[0];
+		const representativePath = representative
+			? self.describePath(representative)
+			: undefined;
+		const program = Effect.gen(function* () {
+			const withRequirements = yield* self.ensureRequirements(actions);
+			const collapsed = yield* collapseActions(withRequirements);
+			const graph = buildDependencyGraph(collapsed);
+			return topologicalSort(collapsed, graph);
+		}).pipe(
+			Effect.mapError(
+				(cause) =>
+					new VamPlanningError({
+						action: representative,
+						cause,
+						operation: "planDispatchBatch",
+						path:
+							cause instanceof VamVaultIoError
+								? (cause.path ?? representativePath)
+								: representativePath,
+					}),
+			),
+			Effect.catchDefect((cause) =>
+				Effect.fail(
+					new VamPlanningError({
+						action: representative,
+						cause,
+						operation: "planDispatchBatch",
+						path: representativePath,
+					}),
+				),
+			),
+			Effect.tapError((failure) =>
+				Effect.logError("[DispatchBatch] Planning failed", {
+					error: self.causeMessage(
+						self.unwrapTaggedCause(failure.cause),
+					),
+				}),
+			),
+			Effect.withSpan("vam.dispatch.plan", {
+				attributes: {
+					...self.spanAttributes(representative),
+					"action.count": actions.length,
+				},
+			}),
+		);
+
+		return yield* program;
+	});
+
+	private readonly ensureRequirements = Effect.fn(
+		"DispatchBatch.ensureRequirements",
+	)(function* (this: DispatchBatchWorker, actions: readonly VaultAction[]) {
+		const executable: VaultAction[] = [];
+		for (const action of actions) {
+			switch (action.kind) {
+				case VaultActionKind.TrashFolder:
+				case VaultActionKind.TrashFile:
+				case VaultActionKind.TrashMdFile:
+					if (yield* this.exists(action.payload.splitPath)) {
+						executable.push(action);
+					}
+					break;
+				default:
+					executable.push(action);
+			}
+		}
+
+		const destinations = getDestinationsToCheck(
+			executable,
+			(path) => this.toFolder(path),
+			(key) => this.toMdFile(key),
+		);
+		const requiredActions = yield* ensureDestinationsExist(
+			destinations,
+			(splitPath) => this.exists(splitPath),
+			(path) => this.toFolder(path),
+			(key) => this.toMdFile(key),
+			executable,
+		);
+
+		return [...executable, ...requiredActions];
+	});
+
+	private readonly exists = Effect.fn("vam.dispatch.exists")(function* (
+		splitPath: AnySplitPath,
+	) {
+		const path = splitPathCodec.format(splitPath);
+		yield* Effect.annotateCurrentSpan({ path });
+		const vault = yield* VaultIo;
+		const entry = yield* vault.getAbstractFileByPath(path);
+		return splitPath.kind === "Folder"
+			? entry instanceof TFolder
+			: entry instanceof TFile;
+	});
+
 	private executeAction(
 		action: VaultAction,
 	): Effect.Effect<VamDispatchError | undefined, never, VamLiveServices> {
-		const execute = this.ports.execute(action).pipe(
+		const execute = this.executor.execute(action).pipe(
 			Effect.matchCause({
 				onFailure: (cause) =>
 					new VamDispatchError({
@@ -335,7 +432,7 @@ export class EffectDispatchCoordinator {
 									this.unwrapTaggedCause(failure.cause),
 								),
 								kind: action.kind,
-								path: this.ports.describePath(action),
+								path: this.describePath(action),
 							},
 						)
 					: Effect.void,
@@ -480,13 +577,34 @@ export class EffectDispatchCoordinator {
 		});
 	}
 
+	private toFolder(path: string): SplitPathToFolder | null {
+		const parsed = splitPathCodec.parse(path);
+		return parsed.kind === "Folder" ? parsed : null;
+	}
+
+	private toMdFile(path: string): SplitPathToMdFile | null {
+		const parsed = splitPathCodec.parse(path);
+		return parsed.kind === "MdFile" ? parsed : null;
+	}
+
+	private describePath(action: VaultAction): string {
+		switch (action.kind) {
+			case VaultActionKind.RenameFile:
+			case VaultActionKind.RenameMdFile:
+			case VaultActionKind.RenameFolder:
+				return `${splitPathCodec.format(action.payload.from)} → ${splitPathCodec.format(action.payload.to)}`;
+			default:
+				return splitPathCodec.format(action.payload.splitPath);
+		}
+	}
+
 	private spanAttributes(
 		action: VaultAction | undefined,
 	): Tracer.SpanOptions["attributes"] {
 		if (!action) return {};
 		return {
 			"action.kind": action.kind,
-			"action.path": this.ports.describePath(action),
+			"action.path": this.describePath(action),
 		};
 	}
 

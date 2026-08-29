@@ -1,8 +1,15 @@
 import { describe, expect, it } from "bun:test";
-import { collapseActions } from "../../src/impl/actions-processing/collapse";
+import { Effect } from "effect";
+import { collapseActions as collapseActionsEffect } from "../../src/impl/actions-processing/collapse";
 import { MD } from "../../src/types/literals";
 import type { SplitPathToMdFile } from "../../src/types/split-path";
-import { VaultActionKind } from "../../src/types/vault-action";
+import {
+	type VaultAction,
+	VaultActionKind,
+} from "../../src/types/vault-action";
+
+const collapseActions = (actions: readonly VaultAction[]) =>
+	Effect.runPromise(collapseActionsEffect(actions));
 
 const mdFile = (
 	basename: string,

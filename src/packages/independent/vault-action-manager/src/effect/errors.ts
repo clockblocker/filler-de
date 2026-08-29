@@ -76,6 +76,7 @@ export class VamPlanningError extends Schema.TaggedError<VamPlanningError>()(
 		action: Schema.optional(Schema.Unknown),
 		cause: Schema.Defect(),
 		operation: Schema.String,
+		path: Schema.optional(Schema.String),
 	},
 ) {}
 
