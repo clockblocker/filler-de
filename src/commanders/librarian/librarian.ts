@@ -32,9 +32,9 @@ import {
 import type { PayloadFor } from "@textfresser/obsidian-event-layer";
 import type {
 	BulkVaultEvent,
+	VamScanError,
 	VaultAction,
 	VaultActionManager,
-	VaultActionManagerReadableMdPath,
 	VaultActionManagerSubscription,
 } from "@textfresser/vault-action-manager";
 import {
@@ -42,7 +42,7 @@ import {
 	SplitPathKind,
 	type SplitPathToMdFile,
 } from "@textfresser/vault-action-manager";
-import { Effect, Result } from "effect";
+import { Effect } from "effect";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
 	CommandContext,
@@ -80,8 +80,18 @@ type LibrarianQueueItem = {
 	invalidCodexActions: HealingAction[];
 };
 
+export type LibrarianVam = Pick<
+	VaultActionManager,
+	| "cd"
+	| "dispatch"
+	| "getOpenedContent"
+	| "mdPwd"
+	| "scan"
+	| "subscribeToBulk"
+>;
+
 type LibrarianDispatchFailure = Effect.Error<
-	ReturnType<VaultActionManager["dispatch"]>
+	ReturnType<LibrarianVam["dispatch"]>
 >;
 
 // ─── Librarian ───
@@ -101,8 +111,9 @@ export class Librarian {
 	public _debugLastTreeActions: TreeAction[] = [];
 	public _debugLastHealingActions: HealingAction[] = [];
 	public _debugLastVaultActions: VaultAction[] = [];
+	public _debugLastScanDiagnostics: readonly VamScanError[] = [];
 
-	constructor(private readonly vam: VaultActionManager) {}
+	constructor(private readonly vam: LibrarianVam) {}
 
 	/**
 	 * Initialize librarian: read tree and heal mismatches.
@@ -114,6 +125,9 @@ export class Librarian {
 			() =>
 				Effect.gen(function* () {
 					const settings = getParsedUserSettings();
+					self.healer = null;
+					self.actionQueue = null;
+					self._debugLastScanDiagnostics = [];
 					self.codecs = makeCodecs(
 						makeCodecRulesFromSettings(settings),
 					);
@@ -121,7 +135,29 @@ export class Librarian {
 					const rootSplitPath = settings.splitPathToLibraryRoot;
 					const libraryRoot = rootSplitPath.basename;
 
-					// Create empty tree and healer
+					const scan = yield* self.vam
+						.scan(rootSplitPath)
+						.pipe(
+							Effect.tapError((failure) =>
+								Effect.sync(() =>
+									logger.error(
+										"[Librarian] Vault scan failed:",
+										failure,
+									),
+								),
+							),
+						);
+					self._debugLastScanDiagnostics = scan.diagnostics;
+					if (scan.kind === "Partial") {
+						for (const diagnostic of scan.diagnostics) {
+							logger.warn(
+								`[Librarian] Partial vault scan at ${diagnostic.path}:`,
+								diagnostic,
+							);
+						}
+					}
+
+					// Create the live model only after the root scan succeeds.
 					self.healer = new Healer(
 						new Tree(libraryRoot, self.codecs),
 						self.codecs,
@@ -136,21 +172,7 @@ export class Librarian {
 						),
 					);
 
-					// Read all files from library
-					const allFilesResult = yield* self.vam
-						.listAllFilesWithMdReaders(rootSplitPath)
-						.pipe(Effect.result);
-
-					if (Result.isFailure(allFilesResult)) {
-						logger.error(
-							"[Librarian] Failed to list files from vault:",
-							allFilesResult.failure,
-						);
-						yield* self.subscribeToVaultEvents();
-						return;
-					}
-
-					const allFiles = allFilesResult.success;
+					const allFiles = scan.entries;
 
 					// Build Create actions for each file
 					const { createActions } = yield* buildInitialCreateActions(
@@ -186,15 +208,11 @@ export class Librarian {
 					allHealingActions.push(...invalidCodexActions);
 
 					// Scan for orphaned codexes (wrong suffix, duplicates)
-					const mdPaths = allFiles
-						.filter(
-							(f): f is VaultActionManagerReadableMdPath =>
-								f.kind === SplitPathKind.MdFile,
-						)
-						.map(
-							({ read, ...path }) =>
-								path as SplitPathToMdFileInsideLibrary,
-						);
+					const mdPaths = allFiles.flatMap((file) => {
+						if (file.kind !== SplitPathKind.MdFile) return [];
+						const { read: _read, ...path } = file;
+						return [path as SplitPathToMdFileInsideLibrary];
+					});
 					const { cleanupActions } = scanAndGenerateOrphanActions(
 						self.healer,
 						self.codecs,

@@ -14,6 +14,7 @@ import {
 describe("VaultActionManager Effect facade", () => {
 	it("exposes the Effect facade and keeps runtime construction internal", () => {
 		expect(publicApi).toHaveProperty("createVaultActionManager");
+		expect(publicApi).toHaveProperty("VamScanError");
 		expect(publicApi).toHaveProperty("VamVaultIoError");
 		expect(publicApi).not.toHaveProperty("VamRuntime");
 		expect(publicApi).not.toHaveProperty("createVamRuntime");
@@ -50,9 +51,8 @@ describe("VaultActionManager Effect facade", () => {
 					mdPath,
 				);
 				const listed = yield* manager.list(folderPath);
-				const readablePaths =
-					yield* manager.listAllFilesWithMdReaders(folderPath);
-				const readable = readablePaths.find((path) => "read" in path);
+				const scan = yield* manager.scan(folderPath);
+				const readable = scan.entries.find((path) => "read" in path);
 				const readBack =
 					readable && "read" in readable
 						? yield* readable.read()
@@ -74,6 +74,7 @@ describe("VaultActionManager Effect facade", () => {
 					opened,
 					readBack,
 					resolved,
+					scan,
 					selection,
 					selectionText,
 				};
@@ -86,6 +87,12 @@ describe("VaultActionManager Effect facade", () => {
 		expect(result.resolved).toEqual(mdPath);
 		expect(result.listed).toEqual([mdPath]);
 		expect(result.readBack).toBe("content");
+		expect(result.scan.kind).toBe("Complete");
+		expect(result.scan.counts).toEqual({
+			folderCount: 1,
+			markdownFileCount: 1,
+			otherFileCount: 0,
+		});
 		expect(result.activePath).toEqual(mdPath);
 		expect(result.opened).toBe("content");
 		expect(result.selection?.text).toBe("content");

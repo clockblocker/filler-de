@@ -4,14 +4,13 @@ export {
 	VamDispatchError,
 	type VamEffectError,
 	VamPlanningError,
+	VamScanError,
 	VamSetupError,
 	VamShutdownError,
 	VamSubscriptionError,
 	VamVaultIoError,
 	type VaultActionManager,
 	type VaultActionManagerFactoryResult,
-	type VaultActionManagerReadableMdPath,
-	type VaultActionManagerReadablePath,
 	type VaultActionManagerSubscription,
 } from "./facade";
 export type { SelectionInfo } from "./file-services/active-view/selection-service";
@@ -48,3 +47,9 @@ export * from "./types/vault-action";
 export { type VaultAction, VaultActionKind } from "./types/vault-action";
 export * from "./types/vault-event";
 export { type VaultEvent, VaultEventKind } from "./types/vault-event";
+export type {
+	VaultScanCounts,
+	VaultScanPath,
+	VaultScanReadableMdPath,
+	VaultScanResult,
+} from "./vault-scan";

@@ -11,12 +11,12 @@ import {
 	TreeNodeStatus,
 	tryCanonicalizeSplitPathToDestination,
 } from "@textfresser/library-core";
-import type {
-	MD,
-	VaultActionManagerReadablePath,
+import type { MD, VaultScanPath } from "@textfresser/vault-action-manager";
+import {
+	SplitPathKind,
+	splitPathCodec,
 } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
-import { Effect, Option } from "effect";
+import { Effect, Result } from "effect";
 import { z } from "zod";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import { logger } from "../../../utils/logger";
@@ -43,7 +43,7 @@ type BuildInitialActionsResult = {
  */
 export const buildInitialCreateActions = Effect.fn("buildInitialCreateActions")(
 	function* (
-		files: readonly VaultActionManagerReadablePath[],
+		files: readonly VaultScanPath[],
 		codecs: Codecs,
 	): Effect.fn.Return<BuildInitialActionsResult> {
 		const createActions: CreateTreeLeafAction[] = [];
@@ -100,16 +100,21 @@ export const buildInitialCreateActions = Effect.fn("buildInitialCreateActions")(
 			// Read status for md files
 			let status: TreeNodeStatus = TreeNodeStatus.NotStarted;
 			if (file.kind === SplitPathKind.MdFile) {
-				const content = yield* Effect.option(file.read());
-				if (Option.isSome(content)) {
+				const content = yield* Effect.result(file.read());
+				if (Result.isSuccess(content)) {
 					// Read metadata using unified API (tries JSON first, then YAML)
 					const meta = noteMetadataHelper.read(
-						content.value,
+						content.success,
 						ScrollMetadataSchema,
 					);
 					if (meta?.status === "Done") {
 						status = TreeNodeStatus.Done;
 					}
+				} else {
+					logger.warn(
+						`[Librarian] Failed to read startup status at ${splitPathCodec.format(file)}:`,
+						content.failure,
+					);
 				}
 			}
 

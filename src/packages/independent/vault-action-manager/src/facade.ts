@@ -1,6 +1,7 @@
 import { Cause, Effect, Exit } from "effect";
 import type { App } from "obsidian";
 import {
+	type VamScanError,
 	VamShutdownError,
 	type VamSubscriptionError,
 	VamVaultIoError,
@@ -27,16 +28,16 @@ import { Executor } from "./impl/actions-processing/executor";
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { VaultObservation } from "./impl/event-processing/vault-observation";
-import { VaultReader, type VaultReaderReadablePath } from "./impl/vault-reader";
+import { VaultReader } from "./impl/vault-reader";
 import { splitPathCodec } from "./split-path-codec";
 import { VaultActionManagerTestingAdapter } from "./testing-adapter";
 import type {
 	AnySplitPath,
-	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "./types/split-path";
 import type { VaultAction } from "./types/vault-action";
+import type { VaultScanResult } from "./vault-scan";
 
 export type BulkVaultEventHandler<E = never> = (
 	event: BulkVaultEvent,
@@ -45,17 +46,6 @@ export type BulkVaultEventHandler<E = never> = (
 export type VaultActionManagerSubscription = {
 	readonly close: Effect.Effect<void, VamRuntimeFailure<never>>;
 };
-
-export type VaultActionManagerReadableMdPath = SplitPathToMdFile & {
-	readonly read: () => Effect.Effect<
-		string,
-		VamRuntimeFailure<VamVaultIoError>
-	>;
-};
-
-export type VaultActionManagerReadablePath =
-	| VaultActionManagerReadableMdPath
-	| SplitPathToFile;
 
 function successOrThrow<A>(exit: Exit.Exit<A, unknown>, operation: string): A {
 	if (Exit.isSuccess(exit)) return exit.value;
@@ -96,6 +86,7 @@ export class VaultActionManager {
 			this.markdownFiles,
 			tfileHelper,
 			tfolderHelper,
+			(effect) => this.runtime.provide(effect),
 		);
 		this.selfEvents = successOrThrow(
 			this.runtime.runSyncExit(SelfEventTracker.makeEffect()),
@@ -234,19 +225,10 @@ export class VaultActionManager {
 		return this.runtime.provide(this.reader.list(splitPath));
 	}
 
-	listAllFilesWithMdReaders(
+	scan(
 		splitPath: SplitPathToFolder,
-	): Effect.Effect<
-		VaultActionManagerReadablePath[],
-		VamRuntimeFailure<VamVaultIoError>
-	> {
-		return this.runtime
-			.provide(this.reader.listAllFilesWithMdReaders(splitPath))
-			.pipe(
-				Effect.map((paths) =>
-					paths.map((path) => this.provideReader(path)),
-				),
-			);
+	): Effect.Effect<VaultScanResult, VamRuntimeFailure<VamScanError>> {
+		return this.runtime.provide(this.reader.scan(splitPath));
 	}
 
 	mdPwd(): Effect.Effect<SplitPathToMdFile | null, VamRuntimeFailure<never>> {
@@ -291,16 +273,6 @@ export class VaultActionManager {
 				new VamShutdownError({ cause, operation: "dispose" }),
 			try: () => this.dispose(),
 		});
-	}
-
-	private provideReader(
-		path: VaultReaderReadablePath,
-	): VaultActionManagerReadablePath {
-		if (!("read" in path)) return path;
-		return {
-			...path,
-			read: () => this.runtime.provide(path.read()),
-		};
 	}
 
 	private dispose(): Promise<void> {
@@ -348,6 +320,7 @@ export {
 	VamDispatchError,
 	type VamEffectError,
 	VamPlanningError,
+	VamScanError,
 	VamSetupError,
 	VamShutdownError,
 	VamSubscriptionError,

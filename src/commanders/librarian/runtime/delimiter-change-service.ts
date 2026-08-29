@@ -16,9 +16,9 @@ export type DelimiterMigrationVam = {
 	readonly dispatch: (
 		actions: readonly VaultAction[],
 	) => ReturnType<VaultActionManager["dispatch"]>;
-	readonly listAllFilesWithMdReaders: (
+	readonly scan: (
 		root: SplitPathToFolder,
-	) => ReturnType<VaultActionManager["listAllFilesWithMdReaders"]>;
+	) => ReturnType<VaultActionManager["scan"]>;
 };
 
 export type DelimiterActionFailure = {
@@ -65,8 +65,11 @@ export class DelimiterChangeService {
 		});
 		if (configOnlyPlan.kind === "NoOp") return configOnlyPlan;
 
-		const paths = yield* this.vam.listAllFilesWithMdReaders(libraryRoot);
-		const candidates = paths.flatMap((candidate) => {
+		const scan = yield* this.vam.scan(libraryRoot);
+		if (scan.kind === "Partial") {
+			return yield* Effect.fail(scan.diagnostics);
+		}
+		const candidates = scan.entries.flatMap((candidate) => {
 			if (candidate.kind !== "MdFile") return [];
 			const { read: _read, ...path } = candidate;
 			return [path];

@@ -45,7 +45,10 @@ export type SplitHealingInfo = {
 };
 
 type SplitToPagesContext<E = never> = {
-	vam: VaultActionManager;
+	vam: Pick<
+		VaultActionManager,
+		"cd" | "dispatch" | "getOpenedContent" | "mdPwd"
+	>;
 	/** Called after pages are created, bypasses self-event filtering */
 	onSectionCreated?: (info: SplitHealingInfo) => Effect.Effect<void, E>;
 };
@@ -120,7 +123,7 @@ type DispatchResult =
 
 const executeDispatch = Effect.fn("Librarian.splitToPages.executeDispatch")(
 	function* (
-		vam: VaultActionManager,
+		vam: SplitToPagesContext["vam"],
 		input: SplitInput,
 	): Effect.fn.Return<DispatchResult, SplitToPagesError> {
 		const { sourcePath, rules, segmentation } = input;

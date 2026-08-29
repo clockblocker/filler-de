@@ -2,12 +2,11 @@
  * Types for Librarian commands.
  */
 
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { Effect } from "effect";
 import { z } from "zod";
 import type { CommandContext } from "../../../managers/obsidian/command-executor";
 import type { CommandError } from "../errors";
-import type { Librarian } from "../librarian";
+import type { Librarian, LibrarianVam } from "../librarian";
 
 // Re-export for convenience
 export type { CommandError } from "../errors";
@@ -29,7 +28,7 @@ export const ALL_LIBRARIAN_COMMAND_KINDS = LibrarianCommandKindSchema.options;
 // ─── Command State ───
 
 type LibrarianState = {
-	vam: VaultActionManager;
+	vam: LibrarianVam;
 	librarian: Librarian;
 	notify: (message: string) => void;
 };

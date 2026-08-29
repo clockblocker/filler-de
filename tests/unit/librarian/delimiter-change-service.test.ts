@@ -4,9 +4,9 @@ import {
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
 	VamDispatchError,
-	VamVaultIoError,
+	VamScanError,
 	type VaultAction,
-	type VaultActionManagerReadablePath,
+	type VaultScanPath,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import {
@@ -96,7 +96,7 @@ describe("delimiter migration lifecycle", () => {
 		);
 
 		expect(outcome.kind).toBe("NoOp");
-		expect(harness.listCalls).toBe(0);
+		expect(harness.scanCalls).toBe(0);
 		expect(harness.confirmCalls).toBe(0);
 		expect(harness.pauseCalls).toBe(0);
 		expect(harness.restoreCalls).toBe(0);
@@ -120,7 +120,7 @@ describe("delimiter migration lifecycle", () => {
 		);
 
 		expect(outcome.kind).toBe("Completed");
-		expect(harness.listCalls).toBe(1);
+		expect(harness.scanCalls).toBe(1);
 		expect(harness.dispatchCalls).toBe(1);
 		expect(harness.dispatchedActions).toBe(confirmedPlan?.actions);
 		expect(harness.restoredConfigs).toEqual([newConfig]);
@@ -192,9 +192,9 @@ describe("delimiter migration lifecycle", () => {
 		expect(harness.restoredConfigs).toEqual([oldConfig]);
 	});
 
-	test("a listing defect leaves the active lifecycle untouched", async () => {
+	test("a scan defect leaves the active lifecycle untouched", async () => {
 		const harness = makeHarness([]);
-		harness.list = () => Effect.die(new Error("listing exploded"));
+		harness.scan = () => Effect.die(new Error("listing exploded"));
 		const coordinator = new DelimiterMigrationCoordinator(
 			harness.service,
 			harness.lifecycle(),
@@ -212,14 +212,14 @@ describe("delimiter migration lifecycle", () => {
 		expect(harness.restoreCalls).toBe(0);
 	});
 
-	test("a typed listing failure reaches the UI boundary unchanged", async () => {
+	test("a typed root scan failure reaches the UI boundary unchanged", async () => {
 		const harness = makeHarness([]);
-		const listingFailure = new VamVaultIoError({
+		const scanFailure = new VamScanError({
 			cause: new Error("folder unavailable"),
-			operation: "list",
+			operation: "scanRoot",
 			path: "Library",
 		});
-		harness.list = () => Effect.fail(listingFailure);
+		harness.scan = () => Effect.fail(scanFailure);
 		const coordinator = new DelimiterMigrationCoordinator(
 			harness.service,
 			harness.lifecycle(),
@@ -231,9 +231,44 @@ describe("delimiter migration lifecycle", () => {
 
 		expect(outcome.kind).toBe("Failed");
 		if (outcome.kind !== "Failed") return;
-		expect(outcome.problem.cause).toBe(listingFailure);
-		expect(outcome.problem.operation).toBe("list");
+		expect(outcome.problem.cause).toBe(scanFailure);
+		expect(outcome.problem.operation).toBe("scanRoot");
 		expect(harness.pauseCalls).toBe(0);
+	});
+
+	test("a partial scan cannot become an incomplete rename plan", async () => {
+		const harness = makeHarness([readableMdPath("alpha-beta")]);
+		const diagnostic = new VamScanError({
+			cause: new Error("nested folder unavailable"),
+			operation: "scanFolder",
+			path: "Library/Unavailable",
+		});
+		harness.scan = () =>
+			Effect.succeed({
+				counts: {
+					folderCount: 2,
+					markdownFileCount: 1,
+					otherFileCount: 0,
+				},
+				diagnostics: [diagnostic],
+				entries: [readableMdPath("alpha-beta")],
+				kind: "Partial",
+			});
+		const coordinator = new DelimiterMigrationCoordinator(
+			harness.service,
+			harness.lifecycle(),
+		);
+
+		const outcome = await Effect.runPromise(
+			coordinator.migrate(oldConfig, newConfig, root),
+		);
+
+		expect(outcome.kind).toBe("Failed");
+		if (outcome.kind !== "Failed") return;
+		expect(outcome.problem.stage).toBe("Planning");
+		expect(outcome.problem.cause).toEqual([diagnostic]);
+		expect(harness.pauseCalls).toBe(0);
+		expect(harness.dispatchCalls).toBe(0);
 	});
 
 	test("a dispatch defect restores the old config after pausing", async () => {
@@ -310,19 +345,33 @@ function mdPath(
 
 function readableMdPath(
 	basename: string,
-): Extract<VaultActionManagerReadablePath, { kind: "MdFile" }> {
+): Extract<VaultScanPath, { kind: "MdFile" }> {
 	return { ...mdPath(basename), read: () => Effect.succeed("") };
 }
 
-function makeHarness(paths: readonly VaultActionManagerReadablePath[]) {
+function makeHarness(paths: readonly VaultScanPath[]) {
 	let dispatchImpl: DelimiterMigrationVam["dispatch"] = (
 		_actions: readonly VaultAction[],
 	) => Effect.void;
-	let listImpl: DelimiterMigrationVam["listAllFilesWithMdReaders"] = (
+	let scanImpl: DelimiterMigrationVam["scan"] = (
 		_root: SplitPathToFolder,
-	) => Effect.succeed([...paths]);
+	) =>
+		Effect.succeed({
+			counts: {
+				folderCount: 1,
+				markdownFileCount: paths.filter(
+					(path) => path.kind === SplitPathKind.MdFile,
+				).length,
+				otherFileCount: paths.filter(
+					(path) => path.kind === SplitPathKind.File,
+				).length,
+			},
+			diagnostics: [],
+			entries: [...paths],
+			kind: "Complete",
+		});
 	let dispatchCalls = 0;
-	let listCalls = 0;
+	let scanCalls = 0;
 	let pauseCalls = 0;
 	let restoreCalls = 0;
 	let confirmCalls = 0;
@@ -337,9 +386,9 @@ function makeHarness(paths: readonly VaultActionManagerReadablePath[]) {
 			dispatchedActions = actions;
 			return dispatchImpl(actions);
 		},
-		listAllFilesWithMdReaders: (libraryRoot) => {
-			listCalls += 1;
-			return listImpl(libraryRoot);
+		scan: (libraryRoot) => {
+			scanCalls += 1;
+			return scanImpl(libraryRoot);
 		},
 	};
 	const service = new DelimiterChangeService(vam);
@@ -377,12 +426,6 @@ function makeHarness(paths: readonly VaultActionManagerReadablePath[]) {
 				},
 			};
 		},
-		set list(implementation: typeof listImpl) {
-			listImpl = implementation;
-		},
-		get listCalls() {
-			return listCalls;
-		},
 		get pauseCalls() {
 			return pauseCalls;
 		},
@@ -391,6 +434,12 @@ function makeHarness(paths: readonly VaultActionManagerReadablePath[]) {
 		},
 		restoreContexts,
 		restoredConfigs,
+		set scan(implementation: typeof scanImpl) {
+			scanImpl = implementation;
+		},
+		get scanCalls() {
+			return scanCalls;
+		},
 		service,
 	};
 }

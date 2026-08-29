@@ -17,6 +17,15 @@ export class VamVaultIoError extends Schema.TaggedError<VamVaultIoError>()(
 	},
 ) {}
 
+export class VamScanError extends Schema.TaggedError<VamScanError>()(
+	"VamScanError",
+	{
+		cause: Schema.Defect(),
+		operation: Schema.Literals(["scanRoot", "scanFolder"]),
+		path: Schema.String,
+	},
+) {}
+
 export class VamPlanningError extends Schema.TaggedError<VamPlanningError>()(
 	"VamPlanningError",
 	{
@@ -53,6 +62,7 @@ export class VamShutdownError extends Schema.TaggedError<VamShutdownError>()(
 
 export type VamEffectError =
 	| VamSetupError
+	| VamScanError
 	| VamVaultIoError
 	| VamPlanningError
 	| VamDispatchError

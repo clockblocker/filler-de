@@ -13,7 +13,7 @@ import {
 	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { logError } from "@textfresser/vault-action-manager/issue-handlers";
-import { Effect, Exit } from "effect";
+import { Effect, Exit, Predicate } from "effect";
 import { Modal, Notice, Plugin, TFile } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
 import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
@@ -694,7 +694,7 @@ export default class TextEaterPlugin extends Plugin {
 			logger.error(
 				"[TextEaterPlugin] Delimiter migration did not complete:",
 				outcome.kind === "Failed"
-					? `${outcome.problem.stage}/${outcome.problem.operation}: ${getErrorMessage(outcome.problem.cause)}${actionFailures ? `; ${actionFailures}` : ""}`
+					? `${outcome.problem.stage}/${outcome.problem.operation}: ${describeDelimiterMigrationCause(outcome.problem.cause)}${actionFailures ? `; ${actionFailures}` : ""}`
 					: actionFailures,
 			);
 		}
@@ -806,6 +806,28 @@ export default class TextEaterPlugin extends Plugin {
 	private clearLibrarianLookup(): void {
 		this.textfresser?.clearLibrarianLookup();
 	}
+}
+
+function describeDelimiterMigrationCause(cause: unknown): string {
+	if (!Array.isArray(cause)) return getErrorMessage(cause);
+	return cause
+		.map((item) => {
+			const operation =
+				Predicate.hasProperty(item, "operation") &&
+				Predicate.isString(item.operation)
+					? item.operation
+					: "scan";
+			const path =
+				Predicate.hasProperty(item, "path") &&
+				Predicate.isString(item.path)
+					? ` ${item.path}`
+					: "";
+			const itemCause = Predicate.hasProperty(item, "cause")
+				? item.cause
+				: item;
+			return `${operation}${path}: ${getErrorMessage(itemCause)}`;
+		})
+		.join(", ");
 }
 
 /**

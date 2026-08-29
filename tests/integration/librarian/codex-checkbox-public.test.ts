@@ -6,10 +6,7 @@ import {
 	type SectionNodeSegmentId,
 } from "@textfresser/library-core";
 import { UserEventKind } from "@textfresser/obsidian-event-layer";
-import type {
-	VaultActionManager,
-	VaultActionManagerReadablePath,
-} from "@textfresser/vault-action-manager";
+import type { VaultScanPath } from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToFile,
@@ -18,7 +15,10 @@ import {
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
-import { Librarian } from "../../../src/commanders/librarian/librarian";
+import {
+	Librarian,
+	type LibrarianVam,
+} from "../../../src/commanders/librarian/librarian";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 
@@ -41,7 +41,7 @@ function sectionChain(...names: string[]): SectionNodeSegmentId[] {
 function scroll(
 	pathParts: string[],
 	basename: string,
-): VaultActionManagerReadablePath {
+): VaultScanPath {
 	return {
 		basename,
 		extension: "md",
@@ -59,16 +59,33 @@ function file(
 	return { basename, extension, kind: SplitPathKind.File, pathParts };
 }
 
-function makeHarness(initialFiles: VaultActionManagerReadablePath[]) {
+function makeHarness(initialFiles: VaultScanPath[]) {
 	const dispatches: VaultAction[][] = [];
-	const vam = {
+	const vam: LibrarianVam = {
+		cd: () => Effect.void,
 		dispatch: (actions: readonly VaultAction[]) =>
 			Effect.sync(() => {
 				dispatches.push([...actions]);
 			}),
-		listAllFilesWithMdReaders: () => Effect.succeed(initialFiles),
+		getOpenedContent: () => Effect.succeed(""),
+		mdPwd: () => Effect.succeed(null),
+		scan: () =>
+			Effect.succeed({
+				counts: {
+					folderCount: 1,
+					markdownFileCount: initialFiles.filter(
+						(path) => path.kind === SplitPathKind.MdFile,
+					).length,
+					otherFileCount: initialFiles.filter(
+						(path) => path.kind === SplitPathKind.File,
+					).length,
+				},
+				diagnostics: [],
+				entries: initialFiles,
+				kind: "Complete",
+			}),
 		subscribeToBulk: () => Effect.succeed({ close: Effect.void }),
-	} as unknown as VaultActionManager;
+	};
 
 	return { dispatches, librarian: new Librarian(vam) };
 }

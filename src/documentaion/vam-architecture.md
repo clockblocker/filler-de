@@ -42,8 +42,14 @@ The API has four groups:
 | --- | --- |
 | Dispatch | `dispatch` |
 | Observation | `startListening`, `subscribeToBulk` |
-| Vault reads | `readContent`, `exists`, `findByBasename`, `list`, `listAllFilesWithMdReaders` |
+| Vault reads | `readContent`, `exists`, `findByBasename`, `list`, `scan` |
 | Active editor | `mdPwd`, `getOpenedContent`, `getSelectionInfo`, `cd`, `scrollOpenedFileToLine` |
+
+`scan` owns recursive traversal. A resolved root returns a `Complete` or
+`Partial` result; partial results retain successful file paths and typed
+diagnostics for failed nested folders. A root-resolution failure stays in the
+Effect error channel. Markdown entries expose lazy, environment-free read
+Effects and never expose live Obsidian file references.
 
 Do not import internal ports, the runtime, or helper classes.
 

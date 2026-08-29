@@ -1,31 +1,27 @@
-import { Effect, Result } from "effect";
-import type { TFile, TFolder } from "obsidian";
-import { VamVaultIoError } from "../effect/errors";
+import { Clock, Effect, Result } from "effect";
+import { VamScanError, VamVaultIoError } from "../effect/errors";
+import type { VamLiveServices } from "../effect/ports";
 import { VaultIo } from "../effect/ports";
+import type { VamRuntimeFailure } from "../effect/runtime";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
 import type { MarkdownFileAccess } from "../file-services/markdown-file-access";
 import { pathfinder } from "../helpers/pathfinder";
-import type { DiscriminatedTAbstractFile } from "../helpers/pathfinder/types";
 import { getErrorMessage } from "../internal/get-error-message";
 import type {
 	AnySplitPath,
-	SplitPathToFile,
-	SplitPathToFileWithTRef,
 	SplitPathToFolder,
-	SplitPathToFolderWithTRef,
 	SplitPathToMdFile,
-	SplitPathToMdFileWithTRef,
-	SplitPathWithTRef,
 } from "../types/split-path";
+import type {
+	VaultScanCounts,
+	VaultScanPath,
+	VaultScanResult,
+} from "../vault-scan";
 
-type VaultReaderReadableMdPath = SplitPathToMdFile & {
-	read: () => ReturnType<MarkdownFileAccess["readContent"]>;
-};
-
-export type VaultReaderReadablePath =
-	| VaultReaderReadableMdPath
-	| SplitPathToFile;
+type ProvideRead = <A, E>(
+	effect: Effect.Effect<A, E, VamLiveServices>,
+) => Effect.Effect<A, VamRuntimeFailure<E>>;
 
 function readerFailure(
 	operation: string,
@@ -48,6 +44,7 @@ export class VaultReader {
 		private readonly markdownFiles: MarkdownFileAccess,
 		private readonly tfileHelper: TFileHelper,
 		private readonly tfolderHelper: TFolderHelper,
+		private readonly provideRead: ProvideRead,
 	) {}
 
 	readContent(target: SplitPathToMdFile) {
@@ -97,89 +94,6 @@ export class VaultReader {
 		);
 	}
 
-	listAll(folder: SplitPathToFolder) {
-		return Effect.gen({ self: this }, function* () {
-			const all: SplitPathWithTRef[] = [];
-			const stack: SplitPathToFolder[] = [folder];
-
-			while (stack.length > 0) {
-				const current = stack.pop();
-				if (!current) continue;
-				const childrenResult = yield* Effect.result(this.list(current));
-				if (Result.isFailure(childrenResult)) {
-					yield* Effect.logWarning(
-						"[VaultReader] Failed to list folder:",
-						current,
-						getErrorMessage(childrenResult.failure.cause),
-					);
-					continue;
-				}
-
-				for (const child of childrenResult.success) {
-					const tRefResult = yield* Effect.result(
-						this.getAbstractFile(child),
-					);
-					if (Result.isFailure(tRefResult)) {
-						yield* Effect.logWarning(
-							"[VaultReader] Skipping unresolvable path:",
-							child,
-							getErrorMessage(tRefResult.failure.cause),
-						);
-						continue;
-					}
-					if (child.kind === "Folder") {
-						all.push({
-							...child,
-							tRef: tRefResult.success as TFolder,
-						} as SplitPathToFolderWithTRef);
-						stack.push(child);
-					} else if (child.kind === "MdFile") {
-						all.push({
-							...child,
-							tRef: tRefResult.success as TFile,
-						} as SplitPathToMdFileWithTRef);
-					} else {
-						all.push({
-							...child,
-							tRef: tRefResult.success as TFile,
-						} as SplitPathToFileWithTRef);
-					}
-				}
-			}
-
-			return all;
-		});
-	}
-
-	getAbstractFile<SP extends AnySplitPath>(target: SP) {
-		type ReturnT = DiscriminatedTAbstractFile<SP>;
-		const path = pathfinder.systemPathFromSplitPath(target);
-		if (target.kind === "Folder") {
-			return this.tfolderHelper.getFolder(target).pipe(
-				Effect.mapError((error) =>
-					readerFailure(
-						"getAbstractFile",
-						path,
-						`Folder not found: ${getErrorMessage(error.cause)}`,
-						error,
-					),
-				),
-				Effect.map((value) => value as ReturnT),
-			);
-		}
-		return this.tfileHelper.getFile(target).pipe(
-			Effect.mapError((error) =>
-				readerFailure(
-					"getAbstractFile",
-					path,
-					`File not found: ${getErrorMessage(error.cause)}`,
-					error,
-				),
-			),
-			Effect.map((value) => value as ReturnT),
-		);
-	}
-
 	findByBasename(basename: string, opts?: { folder?: SplitPathToFolder }) {
 		return Effect.gen(function* () {
 			const folderPrefix = opts?.folder
@@ -213,30 +127,124 @@ export class VaultReader {
 		});
 	}
 
-	listAllFilesWithMdReaders(folder: SplitPathToFolder) {
-		return Effect.gen({ self: this }, function* () {
-			const all: VaultReaderReadablePath[] = [];
-			const stack: SplitPathToFolder[] = [folder];
+	readonly scan = Effect.fn("VaultReader.scan")(function* (
+		this: VaultReader,
+		folder: SplitPathToFolder,
+	) {
+		const rootPath = pathfinder.systemPathFromSplitPath(folder);
+		const startedAt = yield* Clock.currentTimeMillis;
+		const entries: VaultScanPath[] = [];
+		const diagnostics: VamScanError[] = [];
+		const mutableCounts = {
+			folderCount: 1,
+			markdownFileCount: 0,
+			otherFileCount: 0,
+		};
+
+		const traversal = Effect.gen({ self: this }, function* () {
+			const rootChildren = yield* this.list(folder).pipe(
+				Effect.mapError((cause) => {
+					const failure = scanFailure("scanRoot", rootPath, cause);
+					diagnostics.push(failure);
+					return failure;
+				}),
+			);
+			const stack: AnySplitPath[] = sortPaths(rootChildren).reverse();
 
 			while (stack.length > 0) {
 				const current = stack.pop();
 				if (!current) continue;
-				const children = yield* this.list(current);
-				for (const child of children) {
-					if (child.kind === "Folder") {
-						stack.push(child);
-					} else if (child.kind === "MdFile") {
-						all.push({
-							...child,
-							read: () => this.readContent(child),
-						});
-					} else {
-						all.push(child);
+				if (current.kind === "Folder") {
+					mutableCounts.folderCount += 1;
+					const childrenResult = yield* Effect.result(
+						this.list(current),
+					);
+					if (Result.isFailure(childrenResult)) {
+						diagnostics.push(
+							scanFailure(
+								"scanFolder",
+								pathfinder.systemPathFromSplitPath(current),
+								childrenResult.failure,
+							),
+						);
+						continue;
 					}
+					stack.push(...sortPaths(childrenResult.success).reverse());
+				} else if (current.kind === "MdFile") {
+					mutableCounts.markdownFileCount += 1;
+					entries.push({
+						...current,
+						read: () => this.provideRead(this.readContent(current)),
+					});
+				} else {
+					mutableCounts.otherFileCount += 1;
+					entries.push(current);
 				}
 			}
 
-			return all;
+			return scanResult(entries, diagnostics, mutableCounts);
+		});
+
+		return yield* traversal.pipe(
+			Effect.ensuring(
+				Effect.gen(function* () {
+					const finishedAt = yield* Clock.currentTimeMillis;
+					yield* Effect.annotateCurrentSpan({
+						"duration.ms": finishedAt - startedAt,
+						"failure.count": diagnostics.length,
+						"file.markdown.count": mutableCounts.markdownFileCount,
+						"file.other.count": mutableCounts.otherFileCount,
+						"folder.count": mutableCounts.folderCount,
+					});
+				}),
+			),
+			Effect.withSpan("vam.vault.scan", {
+				attributes: { root: rootPath },
+			}),
+		);
+	});
+}
+
+function sortPaths(paths: readonly AnySplitPath[]): AnySplitPath[] {
+	return [...paths].sort((left, right) => {
+		const leftPath = pathfinder.systemPathFromSplitPath(left);
+		const rightPath = pathfinder.systemPathFromSplitPath(right);
+		return leftPath < rightPath ? -1 : leftPath > rightPath ? 1 : 0;
+	});
+}
+
+function scanFailure(
+	operation: VamScanError["operation"],
+	path: string,
+	cause: unknown,
+): VamScanError {
+	return new VamScanError({ cause, operation, path });
+}
+
+function scanResult(
+	entries: readonly VaultScanPath[],
+	diagnostics: readonly VamScanError[],
+	counts: VaultScanCounts,
+): VaultScanResult {
+	const frozenCounts = Object.freeze({ ...counts });
+	const frozenEntries = Object.freeze([...entries]);
+	const [firstDiagnostic, ...rest] = diagnostics;
+	if (firstDiagnostic) {
+		const nonEmptyDiagnostics: [VamScanError, ...VamScanError[]] = [
+			firstDiagnostic,
+			...rest,
+		];
+		return Object.freeze({
+			counts: frozenCounts,
+			diagnostics: Object.freeze(nonEmptyDiagnostics),
+			entries: frozenEntries,
+			kind: "Partial" as const,
 		});
 	}
+	return Object.freeze({
+		counts: frozenCounts,
+		diagnostics: Object.freeze([]) as readonly [],
+		entries: frozenEntries,
+		kind: "Complete" as const,
+	});
 }

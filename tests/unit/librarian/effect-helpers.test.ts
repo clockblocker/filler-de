@@ -10,11 +10,16 @@ import {
 import {
 	MD,
 	SplitPathKind,
+	VamScanError,
 	VamVaultIoError,
-	type VaultActionManagerReadableMdPath,
+	type VaultScanReadableMdPath,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import { buildInitialCreateActions } from "../../../src/commanders/librarian/init/build-initial-actions";
+import {
+	Librarian,
+	type LibrarianVam,
+} from "../../../src/commanders/librarian/librarian";
 import { triggerSectionHealing } from "../../../src/commanders/librarian/runtime/section-healing";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { makeTree } from "./library-tree/tree-test-helpers";
@@ -28,8 +33,8 @@ const codecs = makeCodecs(
 );
 
 function readableScroll(
-	read: VaultActionManagerReadableMdPath["read"],
-): VaultActionManagerReadableMdPath {
+	read: VaultScanReadableMdPath["read"],
+): VaultScanReadableMdPath {
 	return {
 		basename: "Story",
 		extension: MD,
@@ -40,6 +45,60 @@ function readableScroll(
 }
 
 describe("Librarian Effect helpers", () => {
+	it("records partial scan diagnostics and starts from successful entries", async () => {
+		const diagnostic = new VamScanError({
+			cause: new Error("nested folder unavailable"),
+			operation: "scanFolder",
+			path: "Library/Unavailable",
+		});
+		let subscriptions = 0;
+		const librarian = new Librarian(
+			makeLibrarianVam(
+				Effect.succeed({
+					counts: {
+						folderCount: 2,
+						markdownFileCount: 0,
+						otherFileCount: 0,
+					},
+					diagnostics: [diagnostic],
+					entries: [],
+					kind: "Partial",
+				}),
+				() => {
+					subscriptions += 1;
+				},
+			),
+		);
+
+		await Effect.runPromise(librarian.init());
+
+		expect(librarian.getHealer()).not.toBeNull();
+		expect(librarian._debugLastScanDiagnostics).toEqual([diagnostic]);
+		expect(subscriptions).toBe(1);
+		await Effect.runPromise(librarian.unsubscribe());
+	});
+
+	it("fails startup without creating an empty model when the root scan fails", async () => {
+		const scanFailure = new VamScanError({
+			cause: new Error("missing root"),
+			operation: "scanRoot",
+			path: "Library",
+		});
+		let subscriptions = 0;
+		const librarian = new Librarian(
+			makeLibrarianVam(Effect.fail(scanFailure), () => {
+				subscriptions += 1;
+			}),
+		);
+
+		const exit = await Effect.runPromiseExit(librarian.init());
+
+		expect(exit._tag).toBe("Failure");
+		expect(librarian.getHealer()).toBeNull();
+		expect(librarian._debugLastScanDiagnostics).toEqual([]);
+		expect(subscriptions).toBe(0);
+	});
+
 	it("defers initial markdown reads and extracts completed status", async () => {
 		let reads = 0;
 		const program = buildInitialCreateActions(
@@ -134,3 +193,21 @@ describe("Librarian Effect helpers", () => {
 		expect(result).toBe(dispatchFailure);
 	});
 });
+
+function makeLibrarianVam(
+	scan: ReturnType<LibrarianVam["scan"]>,
+	onSubscribe: () => void,
+): LibrarianVam {
+	return {
+		cd: () => Effect.void,
+		dispatch: () => Effect.void,
+		getOpenedContent: () => Effect.succeed(""),
+		mdPwd: () => Effect.succeed(null),
+		scan: () => scan,
+		subscribeToBulk: () =>
+			Effect.sync(() => {
+				onSubscribe();
+				return { close: Effect.void };
+			}),
+	};
+}
