@@ -5,6 +5,7 @@ import {
 } from "@textfresser/obsidian-event-layer";
 import {
 	createVaultActionManager,
+	SplitPathKind,
 	type SplitPathToMdFile,
 	splitPathCodec,
 	type VamShutdownError,
@@ -16,6 +17,10 @@ import { Effect, Exit } from "effect";
 import { Modal, Notice, Plugin, TFile } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
 import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
+import {
+	DelimiterMigrationCoordinator,
+	type DelimiterMigrationOutcome,
+} from "./commanders/librarian/runtime/delimiter-migration-coordinator";
 import { cleanupDictNote } from "./commanders/textfresser/common/cleanup/cleanup-dict-note";
 import { DICT_ENTRY_NOTE_KIND } from "./commanders/textfresser/common/metadata";
 import { Textfresser } from "./commanders/textfresser/textfresser";
@@ -36,16 +41,12 @@ import {
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
 import { ApiService } from "./stateless-helpers/api-service";
-import { getMdFilesInLibrary } from "./stateless-helpers/library-files";
 import {
 	DEFAULT_SETTINGS,
 	type SuffixDelimiterConfig,
 	type TextEaterSettings,
 } from "./types";
-import {
-	buildCanonicalDelimiter,
-	buildFlexibleDelimiterPattern,
-} from "./utils/delimiter";
+import { buildCanonicalDelimiter } from "./utils/delimiter";
 import { getErrorMessage } from "./utils/get-error-message";
 import {
 	decrementPending,
@@ -237,10 +238,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.userEventInterceptor.start();
 
 		// Initialize delimiter change service (does not require librarian)
-		this.delimiterChangeService = new DelimiterChangeService(
-			this.app,
-			this.vam,
-		);
+		this.delimiterChangeService = new DelimiterChangeService(this.vam);
 
 		// Initialize librarian: read tree, heal mismatches, regenerate codexes
 		if (this.librarian) {
@@ -515,6 +513,7 @@ export default class TextEaterPlugin extends Plugin {
 		const curr = this.settings;
 
 		if (prev) {
+			let delimiterLifecycleReinitialized = false;
 			// Compare delimiter configs
 			const symbolChanged =
 				prev.suffixDelimiter.symbol !== curr.suffixDelimiter.symbol;
@@ -536,24 +535,31 @@ export default class TextEaterPlugin extends Plugin {
 				prev.languages.target !== curr.languages.target;
 
 			if (delimiterChanged) {
-				const confirmed = await this.handleDelimiterChange(
+				const outcome = await this.handleDelimiterChange(
 					prev.suffixDelimiter,
 					curr.suffixDelimiter,
 				);
-				if (!confirmed) {
-					// User cancelled - restore old delimiter
+				if (
+					outcome.kind === "Cancelled" ||
+					outcome.kind === "Failed" ||
+					outcome.kind === "PartiallyFailed"
+				) {
 					this.settings.suffixDelimiter = { ...prev.suffixDelimiter };
+					updateParsedSettings(this.settings);
 					return;
 				}
+				delimiterLifecycleReinitialized =
+					outcome.kind === "Completed" && !lexicalGenerationChanged;
 			}
 
 			if (
-				delimiterChanged ||
-				depthChanged ||
-				rootChanged ||
-				backlinksChanged ||
-				hideMetadataChanged ||
-				lexicalGenerationChanged
+				(delimiterChanged ||
+					depthChanged ||
+					rootChanged ||
+					backlinksChanged ||
+					hideMetadataChanged ||
+					lexicalGenerationChanged) &&
+				!delimiterLifecycleReinitialized
 			) {
 				// Update global state BEFORE reinit so librarian uses new settings
 				updateParsedSettings(this.settings);
@@ -587,83 +593,113 @@ export default class TextEaterPlugin extends Plugin {
 
 	/**
 	 * Handle delimiter change by renaming files with suffixes.
-	 * Uses DelimiterChangeService for safe bulk operations with proper event synchronization.
-	 * Returns true if user confirmed, false if cancelled.
+	 * The coordinator owns planning, confirmation, dispatch, and restoration.
 	 */
 	private async handleDelimiterChange(
 		oldConfig: SuffixDelimiterConfig,
 		newConfig: SuffixDelimiterConfig,
-	): Promise<boolean> {
-		const oldDelim = buildCanonicalDelimiter(oldConfig);
-		const newDelim = buildCanonicalDelimiter(newConfig);
-		const oldPattern = buildFlexibleDelimiterPattern(oldConfig);
-
-		if (oldDelim === newDelim) return true;
-
-		// Get all .md files in library for counting
-		const libraryRoot = this.settings.libraryRoot;
-		const rootFolder = this.app.vault.getAbstractFileByPath(libraryRoot);
-		if (!rootFolder) {
-			new Notice(`Library folder "${libraryRoot}" not found`);
-			return false;
-		}
-
-		// Count files that will be affected
-		const mdFiles = getMdFilesInLibrary(this.app.vault, libraryRoot);
-
-		const filesToRename = mdFiles.filter((f) =>
-			oldPattern.test(f.basename),
-		);
-
-		const newPattern = buildFlexibleDelimiterPattern(newConfig);
-		const filesNeedingEscape = mdFiles.filter((f) =>
-			newPattern.test(f.basename),
-		);
-
-		const totalAffected = new Set([
-			...filesToRename.map((f) => f.path),
-			...filesNeedingEscape.map((f) => f.path),
-		]).size;
-
-		if (totalAffected === 0) {
-			return true;
-		}
-
-		// Show confirmation dialog
-		const confirmed = await this.showConfirmDialog(
-			"Rename files?",
-			`Changing suffix delimiter from "${oldDelim}" to "${newDelim}" will rename ${totalAffected} file(s). Continue?`,
-		);
-
-		if (!confirmed) return false;
-
-		// Use DelimiterChangeService for safe bulk operations
+	): Promise<DelimiterMigrationOutcome> {
 		if (!this.delimiterChangeService || !this.librarian) {
-			logger.error(
-				"[TextEaterPlugin] DelimiterChangeService or Librarian not initialized",
+			const cause = new Error(
+				"DelimiterChangeService or Librarian not initialized",
 			);
-			return false;
+			return {
+				failures: [],
+				kind: "Failed",
+				problem: {
+					cause,
+					operation: "delimiterMigration.initialize",
+					stage: "Planning",
+				},
+			};
 		}
 
-		const result = await Effect.runPromise(
-			this.delimiterChangeService.changeDelimiter(
-				oldConfig,
-				newConfig,
-				libraryRoot,
-				this.librarian,
-			),
+		const libraryRoot = splitPathCodec.parse(this.settings.libraryRoot);
+		if (libraryRoot.kind !== SplitPathKind.Folder) {
+			const cause = new Error(
+				`Library root "${this.settings.libraryRoot}" is not a folder path`,
+			);
+			return {
+				failures: [],
+				kind: "Failed",
+				problem: {
+					cause,
+					operation: "delimiterMigration.parseLibraryRoot",
+					stage: "Planning",
+				},
+			};
+		}
+
+		const oldDelimiter = buildCanonicalDelimiter(oldConfig);
+		const newDelimiter = buildCanonicalDelimiter(newConfig);
+		const librarianToPause = this.librarian;
+		const coordinator = new DelimiterMigrationCoordinator(
+			this.delimiterChangeService,
+			{
+				confirm: (plan) =>
+					Effect.tryPromise({
+						catch: (cause) => cause,
+						try: () =>
+							this.showConfirmDialog(
+								"Rename files?",
+								`Changing suffix delimiter from "${oldDelimiter}" to "${newDelimiter}" will rename ${plan.previewCount} file(s). Continue?`,
+							),
+					}),
+				pause: () => librarianToPause.unsubscribe(),
+				restore: (config, { currentAlreadyPaused }) =>
+					Effect.tryPromise({
+						catch: (cause) => cause,
+						try: async () => {
+							this.settings.suffixDelimiter = { ...config };
+							updateParsedSettings(this.settings);
+							await this.reinitLibrarian({
+								propagateFailure: true,
+								unsubscribeCurrent: !currentAlreadyPaused,
+							});
+						},
+					}),
+			},
+		);
+		const outcome = await Effect.runPromise(
+			coordinator.migrate(oldConfig, newConfig, libraryRoot),
 		);
 
-		new Notice(`Renamed ${result.renamedCount} file(s)`);
+		switch (outcome.kind) {
+			case "Completed":
+				new Notice(`Renamed ${outcome.renamedCount} file(s)`);
+				break;
+			case "PartiallyFailed":
+				new Notice(
+					`Renamed ${outcome.renamedCount} file(s); ${outcome.failures.length} failed. Previous delimiter retained.`,
+				);
+				break;
+			case "Failed":
+				new Notice(
+					"Delimiter change failed. Previous delimiter retained.",
+				);
+				break;
+			case "Cancelled":
+			case "NoOp":
+				break;
+		}
 
-		if (result.errors.length > 0) {
+		if (outcome.kind === "PartiallyFailed" || outcome.kind === "Failed") {
+			const actionFailures = outcome.failures
+				.slice(0, 10)
+				.map(
+					(failure) =>
+						`${failure.operation} ${failure.path}: ${getErrorMessage(failure.cause)}`,
+				)
+				.join(", ");
 			logger.error(
-				"[TextEaterPlugin] Delimiter change errors:",
-				result.errors.slice(0, 10).join(", "),
+				"[TextEaterPlugin] Delimiter migration did not complete:",
+				outcome.kind === "Failed"
+					? `${outcome.problem.stage}/${outcome.problem.operation}: ${getErrorMessage(outcome.problem.cause)}${actionFailures ? `; ${actionFailures}` : ""}`
+					: actionFailures,
 			);
 		}
 
-		return result.success;
+		return outcome;
 	}
 
 	/**
@@ -682,7 +718,12 @@ export default class TextEaterPlugin extends Plugin {
 	/**
 	 * Reinitialize the librarian with current settings.
 	 */
-	private async reinitLibrarian(): Promise<void> {
+	private async reinitLibrarian(
+		options: {
+			readonly propagateFailure?: boolean;
+			readonly unsubscribeCurrent?: boolean;
+		} = {},
+	): Promise<void> {
 		// Unregister old handlers
 		for (const teardown of this.handlerTeardowns) {
 			teardown();
@@ -690,7 +731,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.handlerTeardowns = [];
 		this.clearLibrarianLookup();
 
-		if (this.librarian) {
+		if (this.librarian && options.unsubscribeCurrent !== false) {
 			await Effect.runPromise(this.librarian.unsubscribe());
 		}
 		this.librarian = new Librarian(this.vam);
@@ -715,6 +756,7 @@ export default class TextEaterPlugin extends Plugin {
 				"[TextEaterPlugin] Failed to reinitialize librarian:",
 				getErrorMessage(error),
 			);
+			if (options.propagateFailure) throw error;
 		}
 	}
 

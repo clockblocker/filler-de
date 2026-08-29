@@ -1,205 +1,188 @@
 import type {
-	SplitPathToMdFile,
+	SplitPathToFolder,
+	VaultAction,
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
-import {
-	splitPathCodec,
-	type VaultAction,
-	VaultActionKind,
-} from "@textfresser/vault-action-manager";
-import { Effect, Result } from "effect";
-import type { App, TFile } from "obsidian";
-import { getMdFilesInLibrary } from "../../../stateless-helpers/library-files";
+import { splitPathCodec } from "@textfresser/vault-action-manager";
+import { Cause, Effect, Exit, Predicate } from "effect";
 import type { SuffixDelimiterConfig } from "../../../types";
 import {
-	buildCanonicalDelimiter,
-	buildFlexibleDelimiterPattern,
-} from "../../../utils/delimiter";
-import { getErrorMessage } from "../../../utils/get-error-message";
-import { logger } from "../../../utils/logger";
-import type { Librarian } from "../librarian";
+	type DelimiterMigrationPlan,
+	type DelimiterRenameAction,
+	planDelimiterMigration,
+} from "./delimiter-migration-plan";
 
-/**
- * Service for safely changing the suffix delimiter across all library files.
- * Routes renames through VaultActionManager as caller-attributed batches.
- */
+export type DelimiterMigrationVam = {
+	readonly dispatch: (
+		actions: readonly VaultAction[],
+	) => ReturnType<VaultActionManager["dispatch"]>;
+	readonly listAllFilesWithMdReaders: (
+		root: SplitPathToFolder,
+	) => ReturnType<VaultActionManager["listAllFilesWithMdReaders"]>;
+};
+
+export type DelimiterActionFailure = {
+	readonly action: DelimiterRenameAction;
+	readonly cause: unknown;
+	readonly operation: string;
+	readonly path: string;
+};
+
+export type DelimiterMigrationExecution =
+	| {
+			readonly kind: "Completed";
+			readonly renamedCount: number;
+			readonly succeeded: readonly DelimiterRenameAction[];
+	  }
+	| {
+			readonly failures: readonly DelimiterActionFailure[];
+			readonly kind: "Failed";
+			readonly renamedCount: 0;
+			readonly succeeded: readonly [];
+	  }
+	| {
+			readonly failures: readonly DelimiterActionFailure[];
+			readonly kind: "PartiallyFailed";
+			readonly renamedCount: number;
+			readonly succeeded: readonly DelimiterRenameAction[];
+	  };
+
+/** Plans and executes delimiter renames exclusively through the public VAM. */
 export class DelimiterChangeService {
-	constructor(
-		private readonly app: App,
-		private readonly vam: VaultActionManager,
-	) {}
+	constructor(private readonly vam: DelimiterMigrationVam) {}
 
-	/**
-	 * Change the suffix delimiter for all files in the library.
-	 *
-	 * @param oldConfig - Previous delimiter configuration
-	 * @param newConfig - New delimiter configuration
-	 * @param libraryRoot - Path to the library root folder
-	 * @param librarian - Current Librarian instance to pause during rename
-	 * @returns Result with success status, count of renamed files, and any errors
-	 */
-	readonly changeDelimiter = Effect.fn(
-		"DelimiterChangeService.changeDelimiter",
-	)(function* (
+	readonly plan = Effect.fn("DelimiterChangeService.plan")(function* (
 		this: DelimiterChangeService,
 		oldConfig: SuffixDelimiterConfig,
 		newConfig: SuffixDelimiterConfig,
-		libraryRoot: string,
-		librarian: Librarian,
+		libraryRoot: SplitPathToFolder,
 	) {
-		const oldDelim = buildCanonicalDelimiter(oldConfig);
-		const newDelim = buildCanonicalDelimiter(newConfig);
+		const configOnlyPlan = planDelimiterMigration({
+			candidates: [],
+			libraryRoot,
+			newConfig,
+			oldConfig,
+		});
+		if (configOnlyPlan.kind === "NoOp") return configOnlyPlan;
 
-		if (oldDelim === newDelim) {
-			return { errors: [], renamedCount: 0, success: true };
-		}
+		const paths = yield* this.vam.listAllFilesWithMdReaders(libraryRoot);
+		const candidates = paths.flatMap((candidate) => {
+			if (candidate.kind !== "MdFile") return [];
+			const { read: _read, ...path } = candidate;
+			return [path];
+		});
 
-		// Collect files to rename
-		const mdFiles = this.collectMdFilesInLibrary(libraryRoot);
-		const actions = this.buildRenameActions(mdFiles, oldConfig, newConfig);
-
-		if (actions.length === 0) {
-			return { errors: [], renamedCount: 0, success: true };
-		}
-
-		// 1. Pause librarian (unsubscribe from events)
-		yield* librarian.unsubscribe();
-
-		// 2. Dispatch in chunks of 50
-		const errors: string[] = [];
-		const chunkSize = 50;
-		const chunks = this.chunkArray(actions, chunkSize);
-
-		for (const [_i, chunk] of chunks.entries()) {
-			const result = yield* this.vam.dispatch(chunk).pipe(Effect.result);
-			if (Result.isFailure(result)) {
-				if (Array.isArray(result.failure)) {
-					for (const failure of result.failure) {
-						const action = failure.action as
-							| VaultAction
-							| undefined;
-						errors.push(
-							`${action?.kind ?? failure.operation}: ${getErrorMessage(failure.cause)}`,
-						);
-					}
-				} else {
-					for (const action of chunk) {
-						errors.push(
-							`${action.kind}: ${getErrorMessage(result.failure)}`,
-						);
-					}
-				}
-			}
-		}
-
-		const renamedCount = actions.length - errors.length;
-
-		if (errors.length > 0) {
-			logger.error(
-				`[DelimiterChangeService] Completed with ${errors.length} errors:`,
-				errors.slice(0, 5).join(", "),
-			);
-		}
-
-		return {
-			errors,
-			renamedCount,
-			success: errors.length === 0,
-		};
+		return planDelimiterMigration({
+			candidates,
+			libraryRoot,
+			newConfig,
+			oldConfig,
+		});
 	});
 
-	private collectMdFilesInLibrary(libraryRoot: string): TFile[] {
-		const rootFolder = this.app.vault.getAbstractFileByPath(libraryRoot);
-		if (!rootFolder) {
-			logger.warn(
-				`[DelimiterChangeService] Library folder "${libraryRoot}" not found`,
-			);
-			return [];
+	readonly execute = Effect.fn("DelimiterChangeService.execute")(function* (
+		this: DelimiterChangeService,
+		plan: DelimiterMigrationPlan,
+	) {
+		if (plan.actions.length === 0) {
+			return completed([]);
 		}
 
-		return getMdFilesInLibrary(this.app.vault, libraryRoot);
-	}
+		const exit = yield* Effect.exit(this.vam.dispatch(plan.actions));
+		if (Exit.isSuccess(exit)) return completed(plan.actions);
 
-	/**
-	 * Build rename actions for files that need delimiter changes.
-	 */
-	private buildRenameActions(
-		files: TFile[],
-		oldConfig: SuffixDelimiterConfig,
-		newConfig: SuffixDelimiterConfig,
-	): VaultAction[] {
-		const oldPattern = buildFlexibleDelimiterPattern(oldConfig);
-		const newDelim = buildCanonicalDelimiter(newConfig);
-		const symbolChanged = oldConfig.symbol !== newConfig.symbol;
+		const dispatchFailure = failureFromCause(exit.cause);
+		const failures = correlateFailures(plan.actions, dispatchFailure);
+		const failedActions = new Set(failures.map(({ action }) => action));
+		const succeeded = plan.actions.filter(
+			(action) => !failedActions.has(action),
+		);
 
-		// Find escape char not present in either delimiter symbol
-		const escapeCandidates = ["_", "~", ".", " ", "-", "+", "="];
-		const escapeChar =
-			escapeCandidates.find(
-				(c) =>
-					!oldConfig.symbol.includes(c) &&
-					!newConfig.symbol.includes(c),
-			) ?? "_";
-
-		const actions: VaultAction[] = [];
-
-		for (const file of files) {
-			// Check if file needs renaming (has old delimiter pattern)
-			if (!oldPattern.test(file.basename)) {
-				continue;
-			}
-
-			const parts = file.basename.split(oldPattern);
-			if (parts.length <= 1) {
-				continue;
-			}
-
-			// Escape new symbol in each part (node name) if symbol is changing
-			let escapedParts = parts;
-			if (symbolChanged) {
-				const newSymbolRegex = new RegExp(
-					newConfig.symbol.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-					"g",
-				);
-				escapedParts = parts.map((part) =>
-					part.replace(newSymbolRegex, escapeChar),
-				);
-			}
-
-			const newBasename = escapedParts.join(newDelim);
-			if (newBasename === file.basename) {
-				continue;
-			}
-
-			// Build from/to split paths
-			const fromSplitPath = splitPathCodec.parse(
-				file.path,
-			) as SplitPathToMdFile;
-			const toSplitPath: SplitPathToMdFile = {
-				...fromSplitPath,
-				basename: newBasename,
-			};
-
-			actions.push({
-				kind: VaultActionKind.RenameMdFile,
-				payload: {
-					from: fromSplitPath,
-					to: toSplitPath,
-				},
+		if (succeeded.length === 0) {
+			return Object.freeze({
+				failures: Object.freeze(failures),
+				kind: "Failed" as const,
+				renamedCount: 0 as const,
+				succeeded: Object.freeze([]) as readonly [],
 			});
 		}
 
-		return actions;
+		return Object.freeze({
+			failures: Object.freeze(failures),
+			kind: "PartiallyFailed" as const,
+			renamedCount: succeeded.length,
+			succeeded: Object.freeze(succeeded),
+		});
+	});
+}
+
+function completed(
+	succeeded: readonly DelimiterRenameAction[],
+): DelimiterMigrationExecution {
+	return Object.freeze({
+		kind: "Completed" as const,
+		renamedCount: succeeded.length,
+		succeeded: Object.freeze([...succeeded]),
+	});
+}
+
+function failureFromCause(cause: Cause.Cause<unknown>): unknown {
+	const reason = cause.reasons.find(Cause.isFailReason);
+	return reason ? reason.error : Cause.squash(cause);
+}
+
+function correlateFailures(
+	actions: readonly DelimiterRenameAction[],
+	failure: unknown,
+): DelimiterActionFailure[] {
+	if (!Array.isArray(failure) || isBatchWideFailure(failure)) {
+		return actions.map((action) => describeFailure(action, failure));
 	}
 
-	/**
-	 * Split an array into chunks of specified size.
-	 */
-	private chunkArray<T>(arr: T[], size: number): T[][] {
-		const chunks: T[][] = [];
-		for (let i = 0; i < arr.length; i += size) {
-			chunks.push(arr.slice(i, i + size));
-		}
-		return chunks;
-	}
+	const correlated = failure.flatMap((item) => {
+		const action = findFailedAction(actions, item);
+		return action ? [describeFailure(action, item)] : [];
+	});
+
+	return correlated.length > 0
+		? correlated
+		: actions.map((action) => describeFailure(action, failure));
+}
+
+function isBatchWideFailure(failure: readonly unknown[]): boolean {
+	return failure.some(
+		(item) =>
+			Predicate.hasProperty(item, "operation") &&
+			item.operation === "registerSelfEvents",
+	);
+}
+
+function findFailedAction(
+	actions: readonly DelimiterRenameAction[],
+	failure: unknown,
+): DelimiterRenameAction | undefined {
+	if (!Predicate.hasProperty(failure, "action")) return undefined;
+	const action = failure.action;
+	return actions.find((candidate) => candidate === action);
+}
+
+function describeFailure(
+	action: DelimiterRenameAction,
+	failure: unknown,
+): DelimiterActionFailure {
+	const operation =
+		Predicate.hasProperty(failure, "operation") &&
+		Predicate.isString(failure.operation)
+			? failure.operation
+			: "dispatch";
+	const cause = Predicate.hasProperty(failure, "cause")
+		? failure.cause
+		: failure;
+
+	return Object.freeze({
+		action,
+		cause,
+		operation,
+		path: `${splitPathCodec.format(action.payload.from)} → ${splitPathCodec.format(action.payload.to)}`,
+	});
 }
