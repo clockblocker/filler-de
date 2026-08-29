@@ -58,33 +58,6 @@ function sectionChildren(
 
 describe("Healing Scenarios", () => {
 	describe("Create Leaf -> Healing Generates Correct Path", () => {
-		it("creates leaf at Library root with no suffix", () => {
-			const healer = makeTree({ libraryRoot: "Library" as NodeName });
-			const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
-			const codecs = makeCodecs(rules);
-
-			const locator = makeScrollLocator(
-				["Library" as NodeName],
-				"Note" as NodeName,
-			);
-
-			const result = healer.getHealingActionsFor({
-				actionType: TreeActionType.Create,
-				observedSplitPath: {
-					basename: "Note",
-					extension: MD,
-					kind: SplitPathKind.MdFile,
-					pathParts: ["Library"],
-				},
-				targetLocator: locator,
-			});
-
-			// Create action should generate healing to ensure correct path
-			// For root-level leaf, basename should be just "Note" (no suffix)
-			expect(result.healingActions).toBeDefined();
-			expect(result.codexImpact).toBeDefined();
-		});
-
 		it("creates leaf at depth 1 with single-part suffix", () => {
 			const healer = makeTree({
 				children: {
@@ -550,35 +523,6 @@ describe("Healing Scenarios", () => {
 					targetLocator: locator,
 				});
 			}).not.toThrow();
-		});
-
-		it("rename on non-existent node behavior", () => {
-			const healer = makeTree({
-				children: {
-					recipes: {},
-				},
-				libraryRoot: "Library" as NodeName,
-			});
-
-			const locator = makeScrollLocator(
-				["Library" as NodeName, "recipes" as NodeName],
-				"NonExistent" as NodeName,
-			);
-
-			// Current behavior: may throw or return empty
-			// This test documents what happens
-			try {
-				const result = healer.getHealingActionsFor({
-					actionType: TreeActionType.Rename,
-					newNodeName: "NewName" as NodeName,
-					targetLocator: locator,
-				});
-				// If it doesn't throw, document what we got
-				expect(result.healingActions).toBeDefined();
-			} catch (e) {
-				// If it throws, document that this is expected
-				expect(e).toBeInstanceOf(Error);
-			}
 		});
 	});
 

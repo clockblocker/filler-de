@@ -268,59 +268,6 @@ describe("Suffix Computation", () => {
 		});
 	});
 
-	describe("Codex suffix computation (critical pattern)", () => {
-		/**
-		 * This test captures the CRITICAL suffix computation logic that appears
-		 * in codex-impact-to-actions.ts and descendant-suffix-healing.ts.
-		 *
-		 * For a codex at section X with nodeNames chain [a, b, c]:
-		 * - If chain has 1 element: suffix = [a]
-		 * - If chain has 2+ elements: suffix = reversed(chain.slice(1))
-		 *
-		 * This is the logic that was recently fixed in "fix changing suffixes" commit.
-		 */
-		const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
-
-		function computeCodexSuffix(nodeNames: string[]): string[] {
-			// This is the EXACT pattern from codex-impact-to-actions.ts:624-626
-			// and descendant-suffix-healing.ts:53-54
-			if (nodeNames.length === 1) {
-				return nodeNames;
-			}
-			return nodeNames.slice(1).reverse();
-		}
-
-		it("single node: suffix is the node itself", () => {
-			expect(computeCodexSuffix(["root"])).toEqual(["root"]);
-		});
-
-		it("two nodes: suffix is second node only", () => {
-			expect(computeCodexSuffix(["root", "child"])).toEqual(["child"]);
-		});
-
-		it("three nodes: suffix is reversed tail", () => {
-			// Chain: [a, b, c] -> suffix from [b, c] reversed = [c, b]
-			expect(computeCodexSuffix(["a", "b", "c"])).toEqual(["c", "b"]);
-		});
-
-		it("four nodes: suffix is reversed tail", () => {
-			// Chain: [a, b, c, d] -> suffix from [b, c, d] reversed = [d, c, b]
-			expect(computeCodexSuffix(["a", "b", "c", "d"])).toEqual(["d", "c", "b"]);
-		});
-
-		it("deeply nested: suffix is fully reversed tail", () => {
-			const chain = ["Library", "recipes", "soup", "ramen", "spicy"];
-			// Tail: [recipes, soup, ramen, spicy]
-			// Reversed: [spicy, ramen, soup, recipes]
-			expect(computeCodexSuffix(chain)).toEqual([
-				"spicy",
-				"ramen",
-				"soup",
-				"recipes",
-			]);
-		});
-	});
-
 	describe("Edge cases and potential corruption scenarios", () => {
 		const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 		const codecs = makeCodecs(rules);

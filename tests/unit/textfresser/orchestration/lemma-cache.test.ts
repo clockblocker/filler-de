@@ -144,13 +144,13 @@ describe("lemma cache", () => {
 		expect(cache).toBeTruthy();
 		if (!cache) return;
 
-		expect(getValidLemmaInvocationCache(state, cache.key)).not.toBeNull();
+		expect(getValidLemmaInvocationCache(state, cache.key, now)).not.toBeNull();
 
 		state.latestLemmaInvocationCache = {
 			...cache,
 			cachedAtMs: now - (LEMMA_IDEMPOTENCE_WINDOW_MS + 1),
 		};
-		expect(getValidLemmaInvocationCache(state, cache.key)).toBeNull();
+		expect(getValidLemmaInvocationCache(state, cache.key, now)).toBeNull();
 	});
 
 	it("cache-hit complete entry stays silent", async () => {

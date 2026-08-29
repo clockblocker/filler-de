@@ -568,14 +568,6 @@ describe("DispatchBatchCoordinator", () => {
 		}
 	});
 
-	it("resolves whenIdle immediately when no batch is active or queued", async () => {
-		const coordinator = makeCoordinator(async () => {});
-
-		await whenIdle(coordinator);
-
-		expect(true).toBe(true);
-	});
-
 	it("keeps whenIdle pending until the active and queued batches finish", async () => {
 		const firstStarted = deferred();
 		const releaseFirst = deferred();

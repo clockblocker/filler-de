@@ -59,14 +59,6 @@ describe("Tree Mutations", () => {
 			expect(root.kind).toBe(TreeNodeKind.Section);
 			expect(Object.keys(root.children)).toHaveLength(0);
 		});
-
-		it("root node is a SectionNode", () => {
-			const tree = createTree("Library");
-			const root = tree.getRoot();
-
-			expect(root.kind).toBe(TreeNodeKind.Section);
-			expect("children" in root).toBe(true);
-		});
 	});
 
 	describe("apply Create", () => {
@@ -728,9 +720,11 @@ describe("Tree Mutations", () => {
 			let note = Object.values(root.children).find(
 				(c) => c.nodeName === "Note",
 			);
-			if (note?.kind === TreeNodeKind.Scroll) {
-				expect(note.status).toBe(TreeNodeStatus.NotStarted);
+			expect(note?.kind).toBe(TreeNodeKind.Scroll);
+			if (note?.kind !== TreeNodeKind.Scroll) {
+				throw new Error("Expected Note to be a scroll");
 			}
+			expect(note.status).toBe(TreeNodeStatus.NotStarted);
 
 			// Change status
 			tree.apply({
@@ -745,9 +739,11 @@ describe("Tree Mutations", () => {
 			// Verify changed
 			root = tree.getRoot();
 			note = Object.values(root.children).find((c) => c.nodeName === "Note");
-			if (note?.kind === TreeNodeKind.Scroll) {
-				expect(note.status).toBe(TreeNodeStatus.Done);
+			expect(note?.kind).toBe(TreeNodeKind.Scroll);
+			if (note?.kind !== TreeNodeKind.Scroll) {
+				throw new Error("Expected Note to remain a scroll");
 			}
+			expect(note.status).toBe(TreeNodeStatus.Done);
 		});
 
 		it("propagates status change to all descendants", () => {
@@ -798,62 +794,15 @@ describe("Tree Mutations", () => {
 				(c) => c.nodeName === "recipes",
 			) as SectionNode;
 
-			for (const child of Object.values(recipes.children)) {
-				if (child.kind === TreeNodeKind.Scroll) {
-					expect(child.status).toBe(TreeNodeStatus.Done);
+			const children = Object.values(recipes.children);
+			expect(children).toHaveLength(2);
+			for (const child of children) {
+				expect(child.kind).toBe(TreeNodeKind.Scroll);
+				if (child.kind !== TreeNodeKind.Scroll) {
+					throw new Error("Expected every recipe child to be a scroll");
 				}
+				expect(child.status).toBe(TreeNodeStatus.Done);
 			}
-		});
-	});
-
-	describe("findSection Navigation", () => {
-		it("finds root section", () => {
-			const tree = createTree();
-			const root = tree.getRoot();
-
-			// Root is accessible via getRoot()
-			expect(root.nodeName).toBe("Library");
-		});
-
-		it("finds nested section", () => {
-			const tree = createTree();
-
-			// Create nested structure
-			tree.apply({
-				actionType: TreeActionType.Create,
-				observedSplitPath: {
-					basename: "Note-c-b-a",
-					extension: MD,
-					kind: SplitPathKind.MdFile,
-					pathParts: ["Library", "a", "b", "c"],
-				},
-				targetLocator: makeScrollLocator(
-					[
-						"Library" as NodeName,
-						"a" as NodeName,
-						"b" as NodeName,
-						"c" as NodeName,
-					],
-					"Note" as NodeName,
-				),
-			});
-
-			// Navigate to find sections
-			const root = tree.getRoot();
-			const a = Object.values(root.children).find(
-				(c) => c.nodeName === "a",
-			) as SectionNode;
-			expect(a).toBeDefined();
-
-			const b = Object.values(a.children).find(
-				(c) => c.nodeName === "b",
-			) as SectionNode;
-			expect(b).toBeDefined();
-
-			const c = Object.values(b.children).find(
-				(c) => c.nodeName === "c",
-			) as SectionNode;
-			expect(c).toBeDefined();
 		});
 	});
 
@@ -880,8 +829,8 @@ describe("Tree Mutations", () => {
 			tree.apply(action);
 
 			const root = tree.getRoot();
-			// Should still have just one node (or replace, depending on impl)
-			expect(Object.keys(root.children).length).toBeGreaterThanOrEqual(1);
+			expect(Object.values(root.children)).toHaveLength(1);
+			expect(Object.values(root.children)[0]?.nodeName).toBe("Note");
 		});
 
 		it("handles operations on non-existent nodes", () => {

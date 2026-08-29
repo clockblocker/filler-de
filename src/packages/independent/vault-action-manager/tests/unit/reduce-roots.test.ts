@@ -304,16 +304,5 @@ describe("reduceRoots", () => {
 				expect(eventKeys.has(key)).toBe(true);
 			}
 		});
-
-		it("no new events invented", () => {
-			const events = [
-				folderRenamed("A", "B"),
-				fileRenamed("A/x.md", "B/x.md"),
-			];
-			const roots = reduceRoots(events);
-			const eventKeys = new Set(events.map(eventKey));
-			const rootKeys = new Set(roots.map(eventKey));
-			expect(rootKeys.size).toBeLessThanOrEqual(eventKeys.size);
-		});
 	});
 });

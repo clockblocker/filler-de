@@ -42,29 +42,6 @@ afterEach(() => {
 
 describe("HealingTransaction Error Tracking", () => {
 	describe("apply() captures healer exceptions", () => {
-		it("returns error Result when healer throws", () => {
-			const healer = makeTree({ libraryRoot: "Library" as NodeName });
-			const tx = new HealingTransaction(healer);
-
-			// Create a locator for a scroll that doesn't exist
-			const locator = makeScrollLocator(
-				["Library" as NodeName, "recipes" as NodeName],
-				"NonExistent" as NodeName,
-			);
-
-			// Try to rename a non-existent node - this may throw
-			const result = tx.apply({
-				actionType: TreeActionType.Rename,
-				newNodeName: "NewName" as NodeName,
-				targetLocator: locator,
-			});
-
-			// The result should capture error OR succeed (depends on healer behavior)
-			// What's important is that tx.apply() never throws
-			expect(result).toBeDefined();
-			expect(result.isOk() || result.isErr()).toBe(true);
-		});
-
 		it("prevents apply() after transaction is committed", () => {
 			const healer = makeTree({ libraryRoot: "Library" as NodeName });
 			const tx = new HealingTransaction(healer);
@@ -369,10 +346,8 @@ describe("HealingTransaction Error Tracking", () => {
 			const healingActions = tx.getHealingActions();
 			const codexImpacts = tx.getCodexImpacts();
 
-			// Should have healing actions (rename to fix suffix)
-			expect(healingActions.length).toBeGreaterThanOrEqual(0);
-			// Should have codex impacts (created impact)
-			expect(codexImpacts.length).toBe(1);
+			expect(healingActions).toHaveLength(1);
+			expect(codexImpacts).toHaveLength(1);
 		});
 	});
 });

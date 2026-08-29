@@ -8,7 +8,6 @@ import {
 	collectTrashPaths,
 	ensureDestinationsExist,
 	getDestinationsToCheck,
-	hasActionForKey,
 } from "../../src/impl/actions-processing/ensure-requirements-helpers";
 import { MD } from "../../src/types/literals";
 import type {
@@ -263,46 +262,6 @@ describe("buildEnsureExistKeys", () => {
 		expect(result.folderKeys.has("root")).toBe(true);
 		expect(result.folderKeys.has("root/notes")).toBe(true);
 		expect(result.fileKeys.has("root/notes/file.md")).toBe(true);
-	});
-});
-
-describe("hasActionForKey", () => {
-	it("returns true if CreateFolder exists for folder key", () => {
-		const actions: VaultAction[] = [
-			{
-				kind: VaultActionKind.CreateFolder,
-				payload: { splitPath: folder("a", ["root"]) },
-			},
-		];
-
-		expect(hasActionForKey(actions, "root/a", "folder")).toBe(true);
-		expect(hasActionForKey(actions, "root/b", "folder")).toBe(false);
-	});
-
-	it("returns true if UpsertMdFile exists for file key", () => {
-		const actions: VaultAction[] = [
-			{
-				kind: VaultActionKind.UpsertMdFile,
-				payload: { splitPath: mdFile("file", ["root"]) },
-			},
-		];
-
-		expect(hasActionForKey(actions, "root/file.md", "file")).toBe(true);
-		expect(hasActionForKey(actions, "root/other.md", "file")).toBe(false);
-	});
-
-	it("returns true if ProcessMdFile exists for file key", () => {
-		const actions: VaultAction[] = [
-			{
-				kind: VaultActionKind.ProcessMdFile,
-				payload: {
-					splitPath: mdFile("file", ["root"]),
-					transform: (c) => c,
-				},
-			},
-		];
-
-		expect(hasActionForKey(actions, "root/file.md", "file")).toBe(true);
 	});
 });
 
@@ -678,56 +637,5 @@ describe("buildActionKeyIndex", () => {
 
 		expect(index.folderKeys.size).toBe(0);
 		expect(index.fileKeys.size).toBe(0);
-	});
-
-	it("matches hasActionForKey results for all existing test scenarios", () => {
-		const actions: VaultAction[] = [
-			{
-				kind: VaultActionKind.CreateFolder,
-				payload: { splitPath: folder("a", ["root"]) },
-			},
-			{
-				kind: VaultActionKind.UpsertMdFile,
-				payload: { splitPath: mdFile("file", ["root"]) },
-			},
-			{
-				kind: VaultActionKind.ProcessMdFile,
-				payload: {
-					splitPath: mdFile("processed", ["root"]),
-					transform: (c) => c,
-				},
-			},
-			{
-				kind: VaultActionKind.RenameFolder,
-				payload: {
-					from: folder("old", ["root"]),
-					to: folder("new", ["root"]),
-				},
-			},
-		];
-
-		const index = buildActionKeyIndex(actions);
-
-		// Folder checks — behavioral equivalence with hasActionForKey
-		expect(index.folderKeys.has("root/a")).toBe(
-			hasActionForKey(actions, "root/a", "folder"),
-		);
-		expect(index.folderKeys.has("root/b")).toBe(
-			hasActionForKey(actions, "root/b", "folder"),
-		);
-		expect(index.folderKeys.has("root/new")).toBe(
-			hasActionForKey(actions, "root/new", "folder"),
-		);
-
-		// File checks — behavioral equivalence with hasActionForKey
-		expect(index.fileKeys.has("root/file.md")).toBe(
-			hasActionForKey(actions, "root/file.md", "file"),
-		);
-		expect(index.fileKeys.has("root/processed.md")).toBe(
-			hasActionForKey(actions, "root/processed.md", "file"),
-		);
-		expect(index.fileKeys.has("root/other.md")).toBe(
-			hasActionForKey(actions, "root/other.md", "file"),
-		);
 	});
 });

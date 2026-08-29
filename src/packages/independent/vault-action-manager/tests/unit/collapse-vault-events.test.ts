@@ -100,6 +100,7 @@ describe("collapseVaultEvents", () => {
 		const result = collapseVaultEvents([folderRename, fileRename]);
 
 		// Should remain unchanged (both still present)
+		expect(result).toHaveLength(2);
 		assertEventSets(result, [folderRename, fileRename]);
 	});
 

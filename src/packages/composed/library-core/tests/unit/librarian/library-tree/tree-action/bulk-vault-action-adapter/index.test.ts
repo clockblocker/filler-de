@@ -244,12 +244,10 @@ describe("makeBulkInterpreter", () => {
 
 			const actions = interpretBulk(bulkEvent).treeActions;
 
-			expect(actions.length).toBeGreaterThanOrEqual(0);
-			if (actions.length > 0) {
-				const action = actions[0];
-				if (!action) throw new Error("Expected action");
-				expect(action.actionType).toBe(TreeActionType.Delete);
-			}
+			expect(actions).toHaveLength(1);
+			const action = actions[0];
+			if (!action) throw new Error("Expected action");
+			expect(action.actionType).toBe(TreeActionType.Delete);
 		});
 
 		it("FolderDeleted inside root => Delete", () => {

@@ -241,12 +241,15 @@ describe("tryParseCanonicalSplitPath", () => {
 				basename: "MyNote-Section1-Section2",
 				extension: MD,
 				kind: SplitPathKind.MdFile,
-				pathParts: ["Section1", "Section2"],
+				pathParts: ["Library", "Section1", "Section2"],
 			};
 
 			const result = tryParseCanonicalSplitPathInsideLibrary(sp);
 
 			expect(result.isErr()).toBe(true);
+			if (result.isErr()) {
+				expect(result.error).toContain("Basename does not match canonical format");
+			}
 		});
 
 		it("handles custom suffix delimiter", () => {
@@ -364,4 +367,3 @@ describe("tryParseCanonicalSplitPath", () => {
 		});
 	});
 });
-
