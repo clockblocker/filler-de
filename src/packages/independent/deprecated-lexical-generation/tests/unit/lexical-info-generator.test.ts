@@ -123,13 +123,12 @@ describe("lexical-generation lexical info", () => {
 			selection: {
 				orthographicStatus: "Standard",
 				surface: {
-					lemma: {
+					discriminators: {
 						lemmaKind: "Lexeme",
-						pos: "NOUN",
-						spelledLemma: "Bank",
+						lemmaSubKind: "NOUN",
 					},
-					spelledSurface: "Bank",
 					surfaceKind: "Lemma",
+					target: { canonicalLemma: "Bank" },
 				},
 			},
 		});
@@ -379,10 +378,11 @@ describe("lexical-generation lexical info", () => {
 			},
 			selection: {
 				surface: {
-					lemma: {
-						pos: "NOUN",
-						spelledLemma: "Berlin",
+					discriminators: {
+						lemmaKind: "Lexeme",
+						lemmaSubKind: "NOUN",
 					},
+					target: { canonicalLemma: "Berlin" },
 				},
 			},
 		});

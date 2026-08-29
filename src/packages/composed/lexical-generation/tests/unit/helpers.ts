@@ -1,9 +1,11 @@
-import { SelectionSchema } from "@textfresser/linguistics";
+import { lingSchemaFor } from "@textfresser/linguistics";
 import {
 	createLexicalMeta,
 	type LexicalMeta,
 	type ResolvedSelection,
 } from "../../src";
+
+const SelectionSchema = lingSchemaFor.Selection;
 
 type LexemePos = keyof typeof SelectionSchema.German.Standard.Lemma.Lexeme;
 type SurfaceKind = keyof typeof SelectionSchema.German.Standard;
@@ -17,27 +19,32 @@ export function makeLexemeSelection(params: {
 	const surfaceKind = params.surfaceKind ?? "Lemma";
 	const spelledSurface = params.spelledSurface ?? params.lemma;
 	const rawSelection = {
-		contextWithLinkedParts: `${spelledSurface} im Kontext`,
 		language: "German" as const,
 		orthographicStatus: "Standard" as const,
+		selectionCoverage: "Full" as const,
+		spelledSelection: spelledSurface,
 		surface: {
 			...(surfaceKind === "Inflection"
 				? { inflectionalFeatures: {} }
 				: {}),
-			lemma: {
-				language: "German" as const,
+			discriminators: {
 				lemmaKind: "Lexeme" as const,
-				pos: params.pos,
-				spelledLemma: params.lemma,
+				lemmaSubKind: params.pos,
 			},
-			spelledSurface,
+			language: "German" as const,
+			normalizedFullSurface: spelledSurface,
 			surfaceKind,
+			target: { canonicalLemma: params.lemma },
 		},
 	};
 
-	return SelectionSchema.German.Standard[surfaceKind].Lexeme[
+	const parsed = SelectionSchema.German.Standard[surfaceKind].Lexeme[
 		params.pos
 	].parse(rawSelection);
+	return {
+		...parsed,
+		contextWithLinkedParts: `${spelledSurface} im Kontext`,
+	};
 }
 
 export function makeLexemeMeta(params: {

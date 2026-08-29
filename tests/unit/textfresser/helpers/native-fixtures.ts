@@ -1,4 +1,4 @@
-import { SelectionSchema } from "@textfresser/linguistics";
+import { lingSchemaFor } from "@textfresser/linguistics";
 import {
 	createLexicalMeta,
 	type LexemeInflections,
@@ -14,6 +14,8 @@ import type {
 	PhrasemeLemmaResult,
 } from "../../../../src/commanders/textfresser/commands/lemma/types";
 import type { Attestation } from "../../../../src/commanders/textfresser/common/attestation/types";
+
+const SelectionSchema = lingSchemaFor.Selection;
 
 type LexemePos = keyof (typeof SelectionSchema.German.Standard.Lemma.Lexeme);
 type PhrasemeKind = keyof typeof SelectionSchema.German.Standard.Lemma.Phraseme;
@@ -66,26 +68,27 @@ export function makeLexemeSelection(params: {
 	const surfaceKind = params.surfaceKind ?? "Lemma";
 	const spelledSurface = params.spelledSurface ?? lemma;
 	const rawSelection = {
-		contextWithLinkedParts: params.contextWithLinkedParts,
 		language: "German" as const,
 		orthographicStatus: "Standard" as const,
+		selectionCoverage: "Full" as const,
+		spelledSelection: spelledSurface,
 		surface: {
 			...(surfaceKind === "Inflection" ? { inflectionalFeatures: {} } : {}),
 			discriminators: {
 				lemmaKind: "Lexeme" as const,
 				lemmaSubKind: pos,
 			},
-			spelledSurface,
+			language: "German" as const,
+			normalizedFullSurface: spelledSurface,
 			surfaceKind,
-			target: {
-				spelledLemma: lemma,
-			},
+			target: { canonicalLemma: lemma },
 		},
 	};
 
-	return SelectionSchema.German.Standard[surfaceKind].Lexeme[pos].parse(
+	const parsed = SelectionSchema.German.Standard[surfaceKind].Lexeme[pos].parse(
 		rawSelection,
-	) as LexemeSelection;
+	);
+	return { ...parsed, contextWithLinkedParts: params.contextWithLinkedParts };
 }
 
 export function makePhrasemeSelection(params: {
@@ -98,25 +101,28 @@ export function makePhrasemeSelection(params: {
 	const phrasemeKind = params.phrasemeKind ?? "DiscourseFormula";
 	const spelledSurface = params.spelledSurface ?? lemma;
 	const rawSelection = {
-		contextWithLinkedParts: params.contextWithLinkedParts,
 		language: "German" as const,
 		orthographicStatus: "Standard" as const,
+		selectionCoverage: "Full" as const,
+		spelledSelection: spelledSurface,
 		surface: {
 			discriminators: {
 				lemmaKind: "Phraseme" as const,
 				lemmaSubKind: phrasemeKind,
 			},
-			spelledSurface,
+			language: "German" as const,
+			normalizedFullSurface: spelledSurface,
 			surfaceKind: "Lemma" as const,
-			target: {
-				spelledLemma: lemma,
-			},
+			target: { canonicalLemma: lemma },
 		},
 	};
 
-	return SelectionSchema.German.Standard.Lemma.Phraseme[phrasemeKind].parse(
+	const parsed = SelectionSchema.German.Standard.Lemma.Phraseme[
+		phrasemeKind
+	].parse(
 		rawSelection,
-	) as PhrasemeSelection;
+	);
+	return { ...parsed, contextWithLinkedParts: params.contextWithLinkedParts };
 }
 
 export function makeLexemeLemmaResult(params: {

@@ -59,6 +59,7 @@
 		"types": ["obsidian", "bun-types", "mocha"],
 		"verbatimModuleSyntax": true
 	},
+	"exclude": ["repos-for-reference"],
 	"plugins": [
 		{
 			"moveDownPatterns": ["dist"],

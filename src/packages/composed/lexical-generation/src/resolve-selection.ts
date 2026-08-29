@@ -1,4 +1,4 @@
-import { SelectionSchema } from "@textfresser/linguistics";
+import { lingSchemaFor } from "@textfresser/linguistics";
 import { err, ok } from "neverthrow";
 import type { z } from "zod/v3";
 import { LexicalGenerationFailureKind, lexicalGenerationError } from "./errors";
@@ -13,6 +13,8 @@ import type {
 	SelectionResolver,
 } from "./public-types";
 
+const SelectionSchema = lingSchemaFor.Selection;
+
 type EvaluatedSelectionOutput = {
 	issueCount: number;
 	output: ResolveSelectionPromptOutput;
@@ -25,7 +27,7 @@ type KnownOrthographicStatus = Exclude<
 
 function getLexemeSelectionSchema(
 	orthographicStatus: KnownOrthographicStatus,
-	surfaceKind: "Lemma" | "Inflection" | "Variant",
+	surfaceKind: "Lemma" | "Inflection",
 	discriminator: ResolveSelectionPromptOutput["discriminator"],
 ): z.ZodTypeAny | null {
 	if (typeof discriminator !== "string") {
@@ -119,15 +121,19 @@ function toResolvedSelection(
 	const orthographicStatus = (output.orthographicStatus ??
 		"Standard") as KnownOrthographicStatus;
 	const surfaceKind =
-		output.surfaceKind === "Partial" ? "Lemma" : output.surfaceKind;
+		output.surfaceKind === "Inflection" ? "Inflection" : "Lemma";
 	const normalizedFullSurface =
 		output.surfaceKind === "Partial" ? output.spelledLemma : selection;
+	const contextWithLinkedParts =
+		output.contextWithLinkedParts ?? attestation;
 	const base = {
-		contextWithLinkedParts: output.contextWithLinkedParts ?? attestation,
 		language: "German" as const,
 		orthographicStatus,
+		selectionCoverage:
+			output.surfaceKind === "Partial" ? ("Partial" as const) : ("Full" as const),
 		spelledSelection: selection,
 		surface: {
+			language: "German" as const,
 			normalizedFullSurface,
 			surfaceKind,
 		},
@@ -145,10 +151,11 @@ function toResolvedSelection(
 				...(output.surfaceKind === "Inflection"
 					? { inflectionalFeatures: {} }
 					: {}),
-				lemma: {
-					language: "German" as const,
+				discriminators: {
 					lemmaKind: "Lexeme" as const,
-					pos: output.discriminator,
+					lemmaSubKind: output.discriminator,
+				},
+				target: {
 					canonicalLemma: output.spelledLemma,
 				},
 			},
@@ -164,7 +171,9 @@ function toResolvedSelection(
 		}
 
 		const parsed = schema.safeParse(rawSelection);
-		return parsed.success ? (parsed.data as ResolvedSelection) : null;
+		return parsed.success
+			? ({ ...parsed.data, contextWithLinkedParts } as ResolvedSelection)
+			: null;
 	}
 
 	if (output.lemmaKind === "Phraseme") {
@@ -176,10 +185,11 @@ function toResolvedSelection(
 			...base,
 			surface: {
 				...base.surface,
-				lemma: {
-					language: "German" as const,
+				discriminators: {
 					lemmaKind: "Phraseme" as const,
-					phrasemeKind: output.discriminator,
+					lemmaSubKind: output.discriminator,
+				},
+				target: {
 					canonicalLemma: output.spelledLemma,
 				},
 			},
@@ -194,7 +204,9 @@ function toResolvedSelection(
 		}
 
 		const parsed = schema.safeParse(rawSelection);
-		return parsed.success ? (parsed.data as ResolvedSelection) : null;
+		return parsed.success
+			? ({ ...parsed.data, contextWithLinkedParts } as ResolvedSelection)
+			: null;
 	}
 
 	return null;

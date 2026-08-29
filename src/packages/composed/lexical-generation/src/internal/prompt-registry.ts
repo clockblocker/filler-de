@@ -7,9 +7,11 @@ import {
 	PhrasemeKind,
 	Pos,
 } from "../../../../../deprecated-linguistic-enums";
-import { LemmaSchema } from "@textfresser/linguistics";
+import { lingSchemaFor } from "@textfresser/linguistics";
 import { z } from "zod/v3";
 import type { LexicalRelationKind } from "../public-types";
+
+const LemmaSchema = lingSchemaFor.Lemma;
 
 export type PromptSpec<TInput, TOutput> = {
 	inputSchema: z.ZodType<TInput>;

@@ -1,4 +1,4 @@
-import { SelectionSchema } from "@textfresser/linguistics";
+import { lingSchemaFor } from "@textfresser/linguistics";
 import { err, ok } from "neverthrow";
 import { executePrompt } from "../internal/prompt-executor";
 import type {
@@ -10,6 +10,8 @@ import {
 	chooseBestEffortLemmaOutput,
 	evaluateLemmaOutputGuardrails,
 } from "./guardrails";
+
+const SelectionSchema = lingSchemaFor.Selection;
 
 const POS_FROM_LEGACY = {
 	Adjective: "ADJ",
@@ -25,17 +27,17 @@ const POS_FROM_LEGACY = {
 } as const;
 
 const PHRASEME_KIND_FROM_LEGACY = {
-	Collocation: "Cliché",
+	Collocation: "Idiom",
 	CulturalQuotation: "Aphorism",
 	DiscourseFormula: "DiscourseFormula",
-	Idiom: "Cliché",
-	Proverb: "Aphorism",
+	Idiom: "Idiom",
+	Proverb: "Proverb",
 } as const;
 
 const SURFACE_KIND_FROM_LEGACY = {
 	Inflected: "Inflection",
 	Lemma: "Lemma",
-	Variant: "Variant",
+	Variant: "Lemma",
 } as const;
 
 function toResolvedSelection(output: {
@@ -53,11 +55,13 @@ function toResolvedSelection(output: {
 	const normalizedFullSurface =
 		output.surfaceKind === "Partial" ? output.lemma : output.spelledSurface;
 	const base = {
-		contextWithLinkedParts: output.contextWithLinkedParts,
 		language: "German" as const,
 		orthographicStatus: "Standard" as const,
+		selectionCoverage:
+			output.surfaceKind === "Partial" ? ("Partial" as const) : ("Full" as const),
 		spelledSelection: output.spelledSurface,
 		surface: {
+			language: "German" as const,
 			normalizedFullSurface,
 			surfaceKind,
 		},
@@ -74,18 +78,21 @@ function toResolvedSelection(output: {
 				...(surfaceKind === "Inflection"
 					? { inflectionalFeatures: {} }
 					: {}),
-				lemma: {
-					language: "German" as const,
+				discriminators: {
 					lemmaKind: "Lexeme" as const,
-					pos,
+					lemmaSubKind: pos,
+				},
+				target: {
 					canonicalLemma: output.lemma,
 				},
 			},
 		};
-		return {
-			...SelectionSchema.German.Standard[surfaceKind].Lexeme[pos].parse(
+		const parsed =
+			SelectionSchema.German.Standard[surfaceKind].Lexeme[pos].parse(
 				rawSelection,
-			),
+			);
+		return {
+			...parsed,
 			contextWithLinkedParts: output.contextWithLinkedParts,
 		};
 	}
@@ -99,18 +106,21 @@ function toResolvedSelection(output: {
 		...base,
 		surface: {
 			...base.surface,
-			lemma: {
-				language: "German" as const,
+			discriminators: {
 				lemmaKind: "Phraseme" as const,
-				phrasemeKind,
+				lemmaSubKind: phrasemeKind,
+			},
+			target: {
 				canonicalLemma: output.lemma,
 			},
 		},
 	};
-	return {
-		...SelectionSchema.German.Standard.Lemma.Phraseme[phrasemeKind].parse(
+	const parsed =
+		SelectionSchema.German.Standard.Lemma.Phraseme[phrasemeKind].parse(
 			rawSelection,
-		),
+		);
+	return {
+		...parsed,
 		contextWithLinkedParts: output.contextWithLinkedParts,
 	};
 }

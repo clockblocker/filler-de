@@ -49,8 +49,12 @@ describe("lexical-generation lemma/disambiguation", () => {
 		expect(result.isOk()).toBe(true);
 		expect(result._unsafeUnwrap()).toMatchObject({
 			surface: {
-				lemma: { pos: "VERB", spelledLemma: "aufgehen" },
+				discriminators: {
+					lemmaKind: "Lexeme",
+					lemmaSubKind: "VERB",
+				},
 				surfaceKind: "Lemma",
+				target: { canonicalLemma: "aufgehen" },
 			},
 		});
 		expect(calls).toEqual(["Lemma", "Lemma"]);

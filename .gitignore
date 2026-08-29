@@ -38,3 +38,6 @@ prompt.ts
 
 # Bun
 bun.lockb
+
+# Local reference repositories
+/repos-for-reference/

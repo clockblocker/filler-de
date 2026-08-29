@@ -1,10 +1,16 @@
 {
-	"skills": {
-		"grill-me": {
-			"computedHash": "f343ef02aa0ada0f8b13a77b6db7fb6a11f88d8067128215585500ef4fd3b5e0",
-			"source": "mattpocock/skills",
-			"sourceType": "github"
-		}
-	},
-	"version": 1
+  "version": 1,
+  "skills": {
+    "effect-ts": {
+      "source": "Effect-TS/skills",
+      "sourceType": "github",
+      "skillPath": "skills/effect-ts/SKILL.md",
+      "computedHash": "6bdb9b95aa83071eca2f67ae947b7d398a22e9e6e08f6cfa35de9516b03efa6e"
+    },
+    "grill-me": {
+      "computedHash": "f343ef02aa0ada0f8b13a77b6db7fb6a11f88d8067128215585500ef4fd3b5e0",
+      "source": "mattpocock/skills",
+      "sourceType": "github"
+    }
+  }
 }
