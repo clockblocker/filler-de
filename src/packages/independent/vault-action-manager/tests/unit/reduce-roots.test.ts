@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { makeSystemPathForSplitPath } from "../../src";
+import { splitPathCodec } from "../../src";
 import { reduceRoots } from "../../src/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/reduce-roots";
 import { MD } from "../../src/types/literals";
 import type {
@@ -68,15 +68,15 @@ const eventKey = (e: VaultEvent): string => {
 		e.kind === VaultEventKind.FileRenamed ||
 		e.kind === VaultEventKind.FolderRenamed
 	) {
-		const from = makeSystemPathForSplitPath(e.from);
-		const to = makeSystemPathForSplitPath(e.to);
+		const from = splitPathCodec.format(e.from);
+		const to = splitPathCodec.format(e.to);
 		return `${e.kind}:${from}→${to}`;
 	}
 	if (
 		e.kind === VaultEventKind.FileDeleted ||
 		e.kind === VaultEventKind.FolderDeleted
 	) {
-		const path = makeSystemPathForSplitPath(e.splitPath);
+		const path = splitPathCodec.format(e.splitPath);
 		return `${e.kind}:${path}`;
 	}
 	return `${e.kind}:unknown`;

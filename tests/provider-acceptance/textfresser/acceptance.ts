@@ -12,7 +12,7 @@ import type {
 	ProviderAcceptanceCase,
 } from "./corpus";
 
-export interface AcceptanceCheck {
+interface AcceptanceCheck {
 	readonly actual: unknown;
 	readonly expected: unknown;
 	readonly name: string;

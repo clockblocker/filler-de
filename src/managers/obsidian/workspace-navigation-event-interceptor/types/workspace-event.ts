@@ -4,10 +4,6 @@
  * Unlike UserEvents, workspace events are notifications (no action callbacks).
  */
 
-import type {
-	SplitPathToFile,
-	SplitPathToMdFile,
-} from "@textfresser/vault-action-manager";
 import { z } from "zod";
 
 const WorkspaceEventKindSchema = z.enum([
@@ -25,37 +21,37 @@ export const WorkspaceEventKind = WorkspaceEventKindSchema.enum;
 /**
  * Emitted once when Obsidian layout is fully ready. Normally, it's fired only on plugin init.
  */
-export type LayoutReadyEvent = {
+type LayoutReadyEvent = {
 	kind: typeof WorkspaceEventKind.LayoutReady;
 };
 
 /**
  * Emitted when workspace layout changes (panes opened/closed/moved).
  */
-export type LayoutChangeEvent = {
+type LayoutChangeEvent = {
 	kind: typeof WorkspaceEventKind.LayoutChange;
 };
 
 /**
  * Emitted when a file is opened (user opens/switches to a file).
  */
-export type FileOpenEvent = {
+type FileOpenEvent = {
 	kind: typeof WorkspaceEventKind.FileOpen;
-	/** The opened file, or null if no file (e.g., empty pane) */
-	file: SplitPathToFile | SplitPathToMdFile | null;
+	/** The opened system path, or null if no file (e.g., empty pane). */
+	file: string | null;
 };
 
 /**
  * Emitted when workspace is resized.
  */
-export type ResizeEvent = {
+type ResizeEvent = {
 	kind: typeof WorkspaceEventKind.Resize;
 };
 
 /**
  * Emitted when user scrolls within any pane.
  */
-export type ScrollEvent = {
+type ScrollEvent = {
 	kind: typeof WorkspaceEventKind.Scroll;
 };
 

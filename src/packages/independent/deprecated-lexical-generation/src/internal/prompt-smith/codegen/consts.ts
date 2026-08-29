@@ -24,7 +24,7 @@ const supportedPromptKinds = [
 	"FeaturesInteractionalUnit",
 ] as const;
 
-export const PromptKindSchema = z.enum(supportedPromptKinds);
+const PromptKindSchema = z.enum(supportedPromptKinds);
 
 export type PromptKind = z.infer<typeof PromptKindSchema>;
 export const PromptKind = PromptKindSchema.enum;

@@ -44,7 +44,7 @@ type LemmaSubKindKeyForValue<T extends { lemmaKind: unknown }> = Extract<
 	LemmaSubKindKey
 >;
 
-export type SelectionSurfaceValueFor<
+type SelectionSurfaceValueFor<
 	LanguageLiteral extends string,
 	LemmaIdentity extends { lemmaKind: unknown },
 	Lemma,

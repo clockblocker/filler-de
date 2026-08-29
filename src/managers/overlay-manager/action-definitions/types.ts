@@ -16,7 +16,7 @@ const OVERLAY_ACTION_KINDS = [
 	"GoToNextPage",
 ] as const satisfies readonly (keyof typeof CommandKind)[];
 
-export const OverlayActionKindSchema = z.enum(OVERLAY_ACTION_KINDS);
+const OverlayActionKindSchema = z.enum(OVERLAY_ACTION_KINDS);
 export type OverlayActionKind = z.infer<typeof OverlayActionKindSchema>;
 export const OverlayActionKind = OverlayActionKindSchema.enum;
 
@@ -26,7 +26,7 @@ const OVERLAY_PLACEMENT_LITERALS = [
 	"ShortcutOnly",
 ] as const;
 
-export const OverlayPlacementSchema = z.enum(OVERLAY_PLACEMENT_LITERALS);
+const OverlayPlacementSchema = z.enum(OVERLAY_PLACEMENT_LITERALS);
 export type OverlayPlacement = z.infer<typeof OverlayPlacementSchema>;
 export const OverlayPlacement = OverlayPlacementSchema.enum;
 

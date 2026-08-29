@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { PayloadKind } from "../../../types/payload-base";
 
-export const ActionElementPayloadSchema = z.object({
+const ActionElementPayloadSchema = z.object({
 	/** The action ID from the data-action attribute */
 	actionId: z.string(),
 	kind: z.literal(PayloadKind.ActionElementClicked),

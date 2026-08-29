@@ -1,4 +1,4 @@
-export const SECTION_KEYS = [
+const SECTION_KEYS = [
 	"header",
 	"attestation",
 	"translation",

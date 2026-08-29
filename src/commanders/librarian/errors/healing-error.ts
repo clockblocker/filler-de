@@ -24,7 +24,7 @@ import type { HealingAction } from "@textfresser/library-core";
 /**
  * Error when parsing a segment ID fails.
  */
-export type ParseError = {
+type ParseError = {
 	kind: "ParseFailed";
 	segmentId: string;
 	reason: string;
@@ -34,7 +34,7 @@ export type ParseError = {
 /**
  * Error when expected and actual paths don't match.
  */
-export type PathMismatchError = {
+type PathMismatchError = {
 	kind: "PathMismatch";
 	expected:
 		| SplitPathToMdFileInsideLibrary
@@ -60,7 +60,7 @@ export type VaultOperationError = {
 /**
  * Error when tree state is inconsistent.
  */
-export type TreeInconsistencyError = {
+type TreeInconsistencyError = {
 	kind: "TreeInconsistent";
 	details: string;
 	nodeLocator?: string;
@@ -69,7 +69,7 @@ export type TreeInconsistencyError = {
 /**
  * Error when a node is not found.
  */
-export type NodeNotFoundError = {
+type NodeNotFoundError = {
 	kind: "NodeNotFound";
 	locator: string;
 	reason: string;
@@ -78,7 +78,7 @@ export type NodeNotFoundError = {
 /**
  * Error when a chain is empty or invalid.
  */
-export type InvalidChainError = {
+type InvalidChainError = {
 	kind: "InvalidChain";
 	chain: string[];
 	reason: string;
@@ -87,7 +87,7 @@ export type InvalidChainError = {
 /**
  * Error when codex computation fails.
  */
-export type CodexComputationError = {
+type CodexComputationError = {
 	kind: "CodexComputationFailed";
 	sectionChain: string[];
 	reason: string;
@@ -96,7 +96,7 @@ export type CodexComputationError = {
 /**
  * Error when validation fails.
  */
-export type ValidationError = {
+type ValidationError = {
 	kind: "ValidationFailed";
 	field: string;
 	value: unknown;

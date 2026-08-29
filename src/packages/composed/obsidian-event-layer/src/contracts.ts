@@ -82,7 +82,7 @@ type UserEffectByKey = {
 
 export type UserEffectFor<K extends keyof UserEffectByKey> = UserEffectByKey[K];
 
-export type UserEventEffectMap = {
+type UserEventEffectMap = {
 	[K in keyof UserEffectByKey as (typeof UserEventKind)[K]]: UserEffectFor<K>;
 };
 

@@ -2,7 +2,6 @@
  * WorkspaceListener - wraps Obsidian workspace event registration.
  */
 
-import { makeSplitPath } from "@textfresser/vault-action-manager";
 import type { App, EventRef, TFile } from "obsidian";
 import {
 	type WorkspaceEvent,
@@ -41,7 +40,7 @@ export class WorkspaceListener implements Listener {
 
 		this.fileOpenRef = workspace.on("file-open", (file: TFile | null) => {
 			this.emit?.({
-				file: file ? makeSplitPath(file) : null,
+				file: file?.path ?? null,
 				kind: WorkspaceEventKind.FileOpen,
 			});
 		});

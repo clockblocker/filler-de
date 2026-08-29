@@ -7,7 +7,7 @@ import type { Result } from "neverthrow";
 /**
  * Parsed suffix result.
  */
-export type ParsedSuffix = {
+type ParsedSuffix = {
 	coreName: string;
 	suffixParts: string[];
 };

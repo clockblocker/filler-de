@@ -1,19 +1,15 @@
 import type { TargetLanguage } from "../../../../types";
 import type { SectionKey } from "./section-key";
 
-export type LinguisticWikilinkSource = "UserAuthored" | "TextfresserCommand";
+type LinguisticWikilinkSource = "UserAuthored" | "TextfresserCommand";
 
-export type LinguisticWikilinkIntent =
+type LinguisticWikilinkIntent =
 	| "ManualSurfaceLookup"
 	| "LemmaSemanticAttestation"
 	| "GenerateSectionLink"
 	| "PropagationLink";
 
-export type LinguisticWikilinkTargetKind =
-	| "Lemma"
-	| "Inflection"
-	| "Surface"
-	| "None";
+type LinguisticWikilinkTargetKind = "Lemma" | "Inflection" | "Surface" | "None";
 
 export type SectionLinkPolicy = {
 	source: LinguisticWikilinkSource;
@@ -29,7 +25,7 @@ type SectionClaimInput = {
 	occurrence: number;
 };
 
-export type SectionClaimFallbackPolicy = {
+type SectionClaimFallbackPolicy = {
 	fallback: "raw";
 	canClaim(input: SectionClaimInput): boolean;
 };

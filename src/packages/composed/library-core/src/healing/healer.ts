@@ -43,10 +43,7 @@ import {
 	computeSectionMoveHealing,
 } from "./healing-computers";
 import { parseOldSectionPath } from "./utils/old-section-path";
-
 // ─── Result Type ───
-
-export type { CodexImpact };
 
 export type HealerApplyResult = {
 	healingActions: HealingAction[];

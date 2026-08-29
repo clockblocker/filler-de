@@ -1,12 +1,13 @@
 import type { TAbstractFile } from "obsidian";
 import type { VaultEvent } from "../..";
-import { makeSplitPath } from "../common/split-path-and-system-path";
+import { splitPathFromAbstractInternal } from "../../helpers/pathfinder/path-codecs/split-and-abstract/split-path-from-abstract";
+import { splitPathCodec } from "../../split-path-codec";
 import { EventProcessingErrorMessage } from "./errors";
 
 export function makeVaultEventForFileCreated(
 	tAbstractFile: TAbstractFile,
 ): VaultEvent {
-	const split = makeSplitPath(tAbstractFile);
+	const split = splitPathFromAbstractInternal(tAbstractFile);
 	if (split.kind === "Folder") {
 		return {
 			kind: "FolderCreated",
@@ -26,8 +27,8 @@ export function tryMakeVaultEventForFileRenamed(
 ):
 	| { readonly event: VaultEvent; readonly success: true }
 	| { readonly error: string; readonly success: false } {
-	const split = makeSplitPath(tAbstractFile);
-	const from = makeSplitPath(oldPath);
+	const split = splitPathFromAbstractInternal(tAbstractFile);
+	const from = splitPathCodec.parse(oldPath);
 
 	if (split.kind === "Folder" && from.kind === "Folder") {
 		return {
@@ -59,7 +60,7 @@ export function tryMakeVaultEventForFileRenamed(
 export function makeVaultEventForFileDeleted(
 	tAbstractFile: TAbstractFile,
 ): VaultEvent {
-	const split = makeSplitPath(tAbstractFile);
+	const split = splitPathFromAbstractInternal(tAbstractFile);
 	if (split.kind === "Folder") {
 		return {
 			kind: "FolderDeleted",

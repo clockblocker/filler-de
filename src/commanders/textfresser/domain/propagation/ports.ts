@@ -28,7 +28,7 @@ export type FindCandidateTargetsParams = {
 	folder?: SplitPathToFolder;
 };
 
-export type BuildTargetWriteActionsParams = {
+type BuildTargetWriteActionsParams = {
 	splitPath: SplitPathToMdFile;
 	transform: (content: string) => string;
 };

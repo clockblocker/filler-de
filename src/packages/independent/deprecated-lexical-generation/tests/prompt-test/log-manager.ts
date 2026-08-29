@@ -4,7 +4,7 @@ import * as path from "node:path";
 const LOGS_DIR = path.resolve(import.meta.dir, "logs");
 const MAX_RUNS = 10;
 
-export type ExampleResult = {
+type ExampleResult = {
 	input: unknown;
 	expectedOutput: unknown;
 	actualOutput: unknown;

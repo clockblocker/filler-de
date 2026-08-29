@@ -3,10 +3,7 @@ import {
 	systemPathFromSplitPathInternal,
 } from "./helpers/pathfinder/path-codecs/system-and-any-split/system-path-and-split-path-codec";
 import { SPLIT_PATH_TO_ROOT_FOLDER } from "./helpers/pathfinder/path-utils";
-import type {
-	AnySplitPath,
-	SplitPathToFolder,
-} from "./types/split-path";
+import type { AnySplitPath, SplitPathToFolder } from "./types/split-path";
 
 /**
  * The public seam for translating vault-scoped identities to and from system

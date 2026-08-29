@@ -19,7 +19,7 @@ const WikilinkPayloadSchemaPartial = z.object({
 	sourcePath: z.string().optional(),
 });
 
-export type WikilinkPayload = z.infer<typeof WikilinkPayloadSchemaPartial>;
+type WikilinkPayload = z.infer<typeof WikilinkPayloadSchemaPartial>;
 
 export type InternalWikilinkPayload = WikilinkPayload & {
 	/** Position before ]] */

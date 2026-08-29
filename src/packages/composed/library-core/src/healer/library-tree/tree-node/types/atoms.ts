@@ -9,7 +9,7 @@ import {
 	UNKNOWN_STATUS,
 } from "../../../../types/consts/literals";
 
-export const TreeNodeStatusSchema = z.enum([
+const TreeNodeStatusSchema = z.enum([
 	DONE_STATUS,
 	NOT_STARTED_STATUS,
 	UNKNOWN_STATUS,
@@ -33,5 +33,3 @@ export const FileExtensionSchema = z.string().min(1);
 export type FileExtension = z.infer<typeof FileExtensionSchema>;
 
 export const SectionExtensionSchema = EmptyStringSchema;
-
-

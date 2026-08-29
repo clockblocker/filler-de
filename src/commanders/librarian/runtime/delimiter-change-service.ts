@@ -3,7 +3,7 @@ import type {
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import {
-	makeSplitPath,
+	splitPathCodec,
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
@@ -18,7 +18,6 @@ import {
 import { getErrorMessage } from "../../../utils/get-error-message";
 import { logger } from "../../../utils/logger";
 import type { Librarian } from "../librarian";
-
 
 /**
  * Service for safely changing the suffix delimiter across all library files.
@@ -173,7 +172,9 @@ export class DelimiterChangeService {
 			}
 
 			// Build from/to split paths
-			const fromSplitPath = makeSplitPath(file) as SplitPathToMdFile;
+			const fromSplitPath = splitPathCodec.parse(
+				file.path,
+			) as SplitPathToMdFile;
 			const toSplitPath: SplitPathToMdFile = {
 				...fromSplitPath,
 				basename: newBasename,

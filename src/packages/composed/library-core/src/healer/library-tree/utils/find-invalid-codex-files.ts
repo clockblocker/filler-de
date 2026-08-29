@@ -1,5 +1,8 @@
 import type { AnySplitPath } from "@textfresser/vault-action-manager";
-import { pathfinder, SplitPathKind } from "@textfresser/vault-action-manager";
+import {
+	SplitPathKind,
+	splitPathCodec,
+} from "@textfresser/vault-action-manager";
 import type { Codecs } from "../../../codecs";
 import { makeLibraryScope } from "../../../tree/library-scope";
 import { isCodexSplitPath } from "../codex/helpers";
@@ -33,9 +36,7 @@ export function findInvalidCodexFiles(
 		const libraryScopedResult = libraryScope.toLibraryPath(file);
 		if (libraryScopedResult.isErr()) continue;
 
-		const filePath = pathfinder.systemPathFromSplitPath(
-			libraryScopedResult.value,
-		);
+		const filePath = splitPathCodec.format(libraryScopedResult.value);
 
 		if (!validCodexPaths.has(filePath)) {
 			deleteActions.push({

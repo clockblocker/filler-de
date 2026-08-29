@@ -35,7 +35,9 @@ export type DiscriminatedTAbstractFile<SP extends AnySplitPath> = SP extends {
  */
 export type DiscriminatedSplitPath<T extends TAbstractFile> = T extends TFolder
 	? SplitPathToFolder
-	: SplitPathToAnyFile;
+	: T extends TFile
+		? SplitPathToAnyFile
+		: AnySplitPath;
 
 export type MdFileWithContentDto = {
 	splitPath: SplitPathToMdFile;

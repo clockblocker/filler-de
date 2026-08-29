@@ -1,4 +1,4 @@
-import { pathfinder } from "@textfresser/vault-action-manager";
+import { splitPathCodec } from "@textfresser/vault-action-manager";
 import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
 import { computeCodexSplitPath } from "../codex/codex-split-path";
@@ -21,7 +21,7 @@ export function collectValidCodexPaths(
 
 	// Compute codex path for this section
 	const codexSplitPath = computeCodexSplitPath(currentChain, codecs);
-	const codexPath = pathfinder.systemPathFromSplitPath(codexSplitPath);
+	const codexPath = splitPathCodec.format(codexSplitPath);
 	paths.add(codexPath);
 
 	// Recurse into child sections

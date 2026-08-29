@@ -11,9 +11,7 @@ import type {
 } from "../../../../deprecated-linguistic-enums";
 import type { Selection } from "@textfresser/linguistics";
 import type { Result } from "neverthrow";
-import type {
-	LexicalGenerationError,
-} from "./errors";
+import type { LexicalGenerationError } from "./errors";
 import type { KnownLanguage, TargetLanguage } from "./internal/languages";
 import type { LexicalGenerationSettings } from "./settings";
 
@@ -34,13 +32,9 @@ type UnknownSelection = Extract<
 	{ orthographicStatus: "Unknown" }
 >;
 
-export type ResolvedKnownSelection = Exclude<
-	GermanSelection,
-	UnknownSelection
-> &
+type ResolvedKnownSelection = Exclude<GermanSelection, UnknownSelection> &
 	ResolvedSelectionContext;
-export type ResolvedUnknownSelection = UnknownSelection &
-	ResolvedSelectionContext;
+type ResolvedUnknownSelection = UnknownSelection & ResolvedSelectionContext;
 export type ResolvedSelection =
 	| ResolvedKnownSelection
 	| ResolvedUnknownSelection;
@@ -206,7 +200,7 @@ export type RelationsGenerator = (
 	Result<LexicalInfoField<LexicalRelations>, LexicalGenerationError>
 >;
 
-export type LexicalInfoGenerator = (
+type LexicalInfoGenerator = (
 	selection: ResolvedSelection,
 	attestation: string,
 	options?: GenerateLexicalInfoOptions,
@@ -227,5 +221,3 @@ export type LexicalGenerationClientResult = Result<
 	LexicalGenerationClient,
 	LexicalGenerationError
 >;
-
-export type { LexicalGenerationError, LexicalGenerationSettings };

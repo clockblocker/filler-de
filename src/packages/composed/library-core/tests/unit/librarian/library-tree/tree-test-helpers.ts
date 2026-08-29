@@ -4,10 +4,7 @@
  */
 
 import { MD } from "@textfresser/vault-action-manager";
-import {
-	makeCodecRulesFromSettings,
-	makeCodecs,
-} from "../../../../src/codecs";
+import { makeCodecRulesFromSettings, makeCodecs } from "../../../../src/codecs";
 import type {
 	FileNodeLocator,
 	ScrollNodeLocator,
@@ -22,20 +19,26 @@ import { NodeSegmentIdSeparator } from "../../../../src/codecs/segment-id/types/
 import { Healer } from "../../../../src/healing";
 import { Tree } from "../../../../src/healer/library-tree/tree";
 import { makeNodeSegmentId } from "../../../../src/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
-import { TreeNodeKind, TreeNodeStatus } from "../../../../src/healer/library-tree/tree-node/types/atoms";
-import type { LeafNode, SectionNode } from "../../../../src/healer/library-tree/tree-node/types/tree-node";
+import {
+	TreeNodeKind,
+	TreeNodeStatus,
+} from "../../../../src/healer/library-tree/tree-node/types/atoms";
+import type {
+	LeafNode,
+	SectionNode,
+} from "../../../../src/healer/library-tree/tree-node/types/tree-node";
 import type { NodeName } from "../../../../src/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";
 
 // ─── Shape Types ───
 
-export type LeafShape = {
+type LeafShape = {
 	kind: "Scroll" | "File";
 	status?: TreeNodeStatus;
 	extension?: string;
 };
 
-export type SectionShape = {
+type SectionShape = {
 	children?: Record<string, SectionShape | LeafShape>;
 };
 

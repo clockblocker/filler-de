@@ -23,8 +23,4 @@ export const pathfinder = {
 } as const;
 
 // Types
-export type {
-	DiscriminatedSplitPath,
-	DiscriminatedTAbstractFile,
-	MdFileWithContentDto,
-} from "./types";
+export type { MdFileWithContentDto } from "./types";

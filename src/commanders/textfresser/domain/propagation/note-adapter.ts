@@ -65,7 +65,7 @@ type AnyPropagationTypedSection =
 	| PropagationTypedSection<"Inflection">
 	| PropagationTypedSection<"Tags">;
 
-export type PropagationRawSection = {
+type PropagationRawSection = {
 	kind: "Raw";
 	key?: SectionKey;
 	cssKind?: string;
@@ -1105,8 +1105,6 @@ function serializeTypedSectionContent(
 			return serializeTagsSection(section.payload);
 	}
 }
-
-
 
 function serializeTypedSection(section: AnyPropagationTypedSection): string {
 	const key = resolvePropagationSectionKey(section);

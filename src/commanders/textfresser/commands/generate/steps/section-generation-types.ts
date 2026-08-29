@@ -1,6 +1,4 @@
-import type {
-	LexicalRelationKind,
-} from "@textfresser/lexical-generation";
+import type { LexicalRelationKind } from "@textfresser/lexical-generation";
 import type { TargetLanguage } from "../../../../../types";
 import type { LexicalGenus } from "../../../domain/lexical-types";
 import type { TextfresserNounInflectionCell } from "../../../domain/lexical-types";
@@ -11,7 +9,7 @@ export type ParsedRelation = {
 	words: string[];
 };
 
-export type PrefixEquationPayload = {
+type PrefixEquationPayload = {
 	baseLemma: string;
 	prefixDisplay: string;
 	prefixTarget: string;

@@ -7,7 +7,7 @@ import type {
 	UserEventHandler,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
-import { makeSplitPath } from "@textfresser/vault-action-manager";
+import { splitPathCodec } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import type { Librarian } from "../../../commanders/librarian/librarian";
 
@@ -22,7 +22,7 @@ export function createCodexCheckboxHandler(
 		doesApply: (payload) =>
 			payload.sourcePath !== undefined &&
 			librarian.isCodexInsideLibrary(
-				makeSplitPath(payload.sourcePath) as {
+				splitPathCodec.parse(payload.sourcePath) as {
 					basename: string;
 					extension: "md";
 					kind: "MdFile";

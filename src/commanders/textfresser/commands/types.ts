@@ -22,9 +22,7 @@ const TEXTFRESSER_COMMAND_KIND_STR = [
 	"TranslateSelection",
 ] as const;
 
-export const TextfresserCommandKindSchema = z.enum(
-	TEXTFRESSER_COMMAND_KIND_STR,
-);
+const TextfresserCommandKindSchema = z.enum(TEXTFRESSER_COMMAND_KIND_STR);
 export type TextfresserCommandKind = z.infer<
 	typeof TextfresserCommandKindSchema
 >;
@@ -66,4 +64,3 @@ export type CommandFn = (
 export const EligibilitySchema = z.looseObject({
 	noteKind: z.string().optional(),
 });
-

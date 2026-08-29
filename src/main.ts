@@ -5,8 +5,8 @@ import {
 } from "@textfresser/obsidian-event-layer";
 import {
 	createVaultActionManager,
-	makeSplitPath,
 	type SplitPathToMdFile,
+	splitPathCodec,
 	type VamShutdownError,
 	VaultActionKind,
 	type VaultActionManager,
@@ -194,8 +194,8 @@ export default class TextEaterPlugin extends Plugin {
 								kind: VaultActionKind.ProcessMdFile,
 								payload: {
 									// Safe cast: file.extension === "md" verified above
-									splitPath: makeSplitPath(
-										file,
+									splitPath: splitPathCodec.parse(
+										file.path,
 									) as SplitPathToMdFile,
 									transform: () => cleaned,
 								},
@@ -473,7 +473,7 @@ export default class TextEaterPlugin extends Plugin {
 				);
 			},
 			librarian: this.librarian,
-			makeSplitPath,
+			splitPathCodec,
 		};
 	}
 

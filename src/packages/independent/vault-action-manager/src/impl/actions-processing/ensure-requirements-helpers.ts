@@ -1,11 +1,11 @@
 import { pathfinder } from "../../helpers/pathfinder";
+import { splitPathCodec } from "../../split-path-codec";
 import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../types/split-path";
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionKind } from "../../types/vault-action";
-import { makeSystemPathForSplitPath } from "../common/split-path-and-system-path";
 import type { ExistenceChecker } from "./dispatch-batch";
 
 /**
@@ -21,14 +21,12 @@ export function collectTrashPaths(actions: readonly VaultAction[]): {
 
 	for (const action of actions) {
 		if (action.kind === VaultActionKind.TrashFolder) {
-			folderKeys.add(
-				makeSystemPathForSplitPath(action.payload.splitPath),
-			);
+			folderKeys.add(splitPathCodec.format(action.payload.splitPath));
 		} else if (
 			action.kind === VaultActionKind.TrashFile ||
 			action.kind === VaultActionKind.TrashMdFile
 		) {
-			fileKeys.add(makeSystemPathForSplitPath(action.payload.splitPath));
+			fileKeys.add(splitPathCodec.format(action.payload.splitPath));
 		}
 	}
 
@@ -65,7 +63,7 @@ export function collectRequirements(actions: readonly VaultAction[]): {
 				}
 				// For ProcessMdFile, ensure the file exists
 				if (action.kind === VaultActionKind.ProcessMdFile) {
-					const fileKey = makeSystemPathForSplitPath(
+					const fileKey = splitPathCodec.format(
 						splitPath as SplitPathToMdFile,
 					);
 					fileKeys.add(fileKey);
@@ -112,7 +110,7 @@ export function buildParentFolderKeys(splitPath: SplitPathToFolder): string[] {
 			kind: "Folder",
 			pathParts: parentPathParts,
 		};
-		keys.push(makeSystemPathForSplitPath(parentSplitPath));
+		keys.push(splitPathCodec.format(parentSplitPath));
 	}
 
 	return keys;
@@ -141,7 +139,7 @@ export function buildEnsureExistKeys(
 		const folderSplitPath = pathToSplitPathToFolder(folderPath);
 		if (!folderSplitPath) continue;
 
-		const folderKey = makeSystemPathForSplitPath(folderSplitPath);
+		const folderKey = splitPathCodec.format(folderSplitPath);
 		// Skip if Trash exists for this path
 		if (trashFolderKeys.has(folderKey)) {
 			continue; // Trash wins, skip EnsureExist
@@ -180,7 +178,7 @@ export function buildEnsureExistKeys(
 				kind: "Folder",
 				pathParts: parentPathParts,
 			};
-			const parentKey = makeSystemPathForSplitPath(parentSplitPath);
+			const parentKey = splitPathCodec.format(parentSplitPath);
 			if (!trashFolderKeys.has(parentKey)) {
 				ensureExistFolderKeys.add(parentKey);
 			}
@@ -212,10 +210,10 @@ export function hasActionForKey(
 			(a) =>
 				// CreateFolder directly creates the folder
 				(a.kind === VaultActionKind.CreateFolder &&
-					makeSystemPathForSplitPath(a.payload.splitPath) === key) ||
+					splitPathCodec.format(a.payload.splitPath) === key) ||
 				// RenameFolder creates the folder at the destination
 				(a.kind === VaultActionKind.RenameFolder &&
-					makeSystemPathForSplitPath(a.payload.to) === key),
+					splitPathCodec.format(a.payload.to) === key),
 		);
 	}
 
@@ -223,9 +221,9 @@ export function hasActionForKey(
 	return actions.some(
 		(a) =>
 			(a.kind === VaultActionKind.UpsertMdFile &&
-				makeSystemPathForSplitPath(a.payload.splitPath) === key) ||
+				splitPathCodec.format(a.payload.splitPath) === key) ||
 			(a.kind === VaultActionKind.ProcessMdFile &&
-				makeSystemPathForSplitPath(a.payload.splitPath) === key),
+				splitPathCodec.format(a.payload.splitPath) === key),
 	);
 }
 
@@ -243,18 +241,14 @@ export function buildActionKeyIndex(actions: readonly VaultAction[]): {
 	for (const action of actions) {
 		switch (action.kind) {
 			case VaultActionKind.CreateFolder:
-				folderKeys.add(
-					makeSystemPathForSplitPath(action.payload.splitPath),
-				);
+				folderKeys.add(splitPathCodec.format(action.payload.splitPath));
 				break;
 			case VaultActionKind.RenameFolder:
-				folderKeys.add(makeSystemPathForSplitPath(action.payload.to));
+				folderKeys.add(splitPathCodec.format(action.payload.to));
 				break;
 			case VaultActionKind.UpsertMdFile:
 			case VaultActionKind.ProcessMdFile:
-				fileKeys.add(
-					makeSystemPathForSplitPath(action.payload.splitPath),
-				);
+				fileKeys.add(splitPathCodec.format(action.payload.splitPath));
 				break;
 		}
 	}
@@ -395,7 +389,7 @@ export async function ensureDestinationsExist(
 		const folderSplitPath = pathToSplitPathToFolder(folderPath);
 		if (!folderSplitPath) continue;
 
-		const folderKey = makeSystemPathForSplitPath(folderSplitPath);
+		const folderKey = splitPathCodec.format(folderSplitPath);
 		// Check cache first (O(1))
 		if (checkedFolders.has(folderKey)) {
 			if (existingFolders.has(folderKey)) {

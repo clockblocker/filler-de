@@ -1,7 +1,4 @@
-import {
-	CREATE,
-	DELETE,
-} from "@textfresser/vault-action-manager";
+import { CREATE, DELETE } from "@textfresser/vault-action-manager";
 import z from "zod";
 import type { Prettify } from "../../../../internal/root/type-helpers";
 import type {
@@ -142,7 +139,7 @@ export const TreeActionType = TreeActionTypeSchema.enum;
 
 // --- Create
 
-export type CreateFileNodeAction = {
+type CreateFileNodeAction = {
 	actionType: typeof TreeActionType.Create;
 	targetLocator: FileNodeLocator;
 	initialStatus?: FileNode["status"];
@@ -150,7 +147,7 @@ export type CreateFileNodeAction = {
 	observedSplitPath: SplitPathToFileInsideLibrary;
 };
 
-export type CreateScrollNodeAction = {
+type CreateScrollNodeAction = {
 	actionType: typeof TreeActionType.Create;
 	targetLocator: ScrollNodeLocator;
 	initialStatus?: ScrollNode["status"];
@@ -160,36 +157,36 @@ export type CreateScrollNodeAction = {
 
 // --- Delete
 
-export type DeleteFileNodeAction = {
+type DeleteFileNodeAction = {
 	actionType: typeof TreeActionType.Delete;
 	targetLocator: FileNodeLocator;
 };
 
-export type DeleteSectionNodeAction = {
+type DeleteSectionNodeAction = {
 	actionType: typeof TreeActionType.Delete;
 	targetLocator: SectionNodeLocator;
 };
 
-export type DeleteScrollNodeAction = {
+type DeleteScrollNodeAction = {
 	actionType: typeof TreeActionType.Delete;
 	targetLocator: ScrollNodeLocator;
 };
 
 // --- Change Name
 
-export type RenameFileNodeAction = {
+type RenameFileNodeAction = {
 	actionType: typeof TreeActionType.Rename;
 	targetLocator: FileNodeLocator;
 	newNodeName: NodeName;
 };
 
-export type RenameSectionNodeAction = {
+type RenameSectionNodeAction = {
 	actionType: typeof TreeActionType.Rename;
 	targetLocator: SectionNodeLocator;
 	newNodeName: NodeName;
 };
 
-export type RenameScrollNodeAction = {
+type RenameScrollNodeAction = {
 	actionType: typeof TreeActionType.Rename;
 	targetLocator: ScrollNodeLocator;
 	newNodeName: NodeName;
@@ -197,7 +194,7 @@ export type RenameScrollNodeAction = {
 
 // --- Move
 
-export type MoveFileNodeAction = {
+type MoveFileNodeAction = {
 	actionType: typeof TreeActionType.Move;
 	targetLocator: FileNodeLocator;
 	newParentLocator: SectionNodeLocator;
@@ -206,7 +203,7 @@ export type MoveFileNodeAction = {
 	observedSplitPath: SplitPathToFileInsideLibrary;
 };
 
-export type MoveSectionNodeAction = {
+type MoveSectionNodeAction = {
 	actionType: typeof TreeActionType.Move;
 	targetLocator: SectionNodeLocator;
 	newParentLocator: SectionNodeLocator;
@@ -215,7 +212,7 @@ export type MoveSectionNodeAction = {
 	observedSplitPath: SplitPathToFolderInsideLibrary;
 };
 
-export type MoveScrollNodeAction = {
+type MoveScrollNodeAction = {
 	actionType: typeof TreeActionType.Move;
 	targetLocator: ScrollNodeLocator;
 	newParentLocator: SectionNodeLocator;
@@ -226,19 +223,19 @@ export type MoveScrollNodeAction = {
 
 // --- Change Status
 
-export type ChangeFileNodeStatusAction = {
+type ChangeFileNodeStatusAction = {
 	actionType: typeof TreeActionType.ChangeStatus;
 	targetLocator: FileNodeLocator;
 	newStatus: FileNode["status"];
 };
 
-export type ChangeScrollNodeStatusAction = {
+type ChangeScrollNodeStatusAction = {
 	actionType: typeof TreeActionType.ChangeStatus;
 	targetLocator: ScrollNodeLocator;
 	newStatus: ScrollNode["status"];
 };
 
-export type ChangeSectionNodeStatusAction = {
+type ChangeSectionNodeStatusAction = {
 	actionType: typeof TreeActionType.ChangeStatus;
 	targetLocator: SectionNodeLocator;
 	/**

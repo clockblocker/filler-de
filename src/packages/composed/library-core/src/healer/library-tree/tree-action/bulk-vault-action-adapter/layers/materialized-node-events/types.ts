@@ -1,8 +1,4 @@
-import {
-	CREATE,
-	DELETE,
-	RENAME,
-} from "@textfresser/vault-action-manager";
+import { CREATE, DELETE, RENAME } from "@textfresser/vault-action-manager";
 import type { SplitPathKind } from "@textfresser/vault-action-manager";
 import z from "zod";
 import type { Prettify } from "../../../../../../internal/root/type-helpers";
@@ -58,13 +54,13 @@ export type MaterializedEventKind = z.infer<typeof MaterializedEventKindSchema>;
 
 // --- Create
 
-export type CreateFileNodeMaterializedEvent = {
+type CreateFileNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Create;
 	nodeKind: typeof TreeNodeKind.File;
 	splitPath: SplitPathToFileInsideLibrary;
 };
 
-export type CreateScrollNodeMaterializedEvent = {
+type CreateScrollNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Create;
 	nodeKind: typeof TreeNodeKind.Scroll;
 	splitPath: SplitPathToMdFileInsideLibrary;
@@ -72,19 +68,19 @@ export type CreateScrollNodeMaterializedEvent = {
 
 // -- Delete
 
-export type DeleteFileNodeMaterializedEvent = {
+type DeleteFileNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Delete;
 	nodeKind: typeof TreeNodeKind.File;
 	splitPath: SplitPathToFileInsideLibrary;
 };
 
-export type DeleteScrollNodeMaterializedEvent = {
+type DeleteScrollNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Delete;
 	nodeKind: typeof TreeNodeKind.Scroll;
 	splitPath: SplitPathToMdFileInsideLibrary;
 };
 
-export type DeleteSectionNodeMaterializedEvent = {
+type DeleteSectionNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Delete;
 	nodeKind: typeof TreeNodeKind.Section;
 	splitPath: SplitPathToFolderInsideLibrary;
@@ -92,21 +88,21 @@ export type DeleteSectionNodeMaterializedEvent = {
 
 // --- Rename
 
-export type RenameFileNodeMaterializedEvent = {
+type RenameFileNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Rename;
 	nodeKind: typeof TreeNodeKind.File;
 	from: SplitPathToFileInsideLibrary;
 	to: SplitPathToFileInsideLibrary;
 };
 
-export type RenameScrollNodeMaterializedEvent = {
+type RenameScrollNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Rename;
 	nodeKind: typeof TreeNodeKind.Scroll;
 	from: SplitPathToMdFileInsideLibrary;
 	to: SplitPathToMdFileInsideLibrary;
 };
 
-export type RenameSectionNodeMaterializedEvent = {
+type RenameSectionNodeMaterializedEvent = {
 	kind: typeof MaterializedEventKind.Rename;
 	nodeKind: typeof TreeNodeKind.Section;
 	from: SplitPathToFolderInsideLibrary;
@@ -131,7 +127,7 @@ export type RenameTreeNodeNodeMaterializedEvent =
 
 // -- Gropped by File Type
 
-export type LeafMaterializedEvent =
+type LeafMaterializedEvent =
 	| CreateFileNodeMaterializedEvent
 	| CreateScrollNodeMaterializedEvent
 	| DeleteFileNodeMaterializedEvent
@@ -139,7 +135,7 @@ export type LeafMaterializedEvent =
 	| RenameFileNodeMaterializedEvent
 	| RenameScrollNodeMaterializedEvent;
 
-export type SectionMaterializedEvent =
+type SectionMaterializedEvent =
 	| DeleteSectionNodeMaterializedEvent
 	| RenameSectionNodeMaterializedEvent;
 

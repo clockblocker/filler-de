@@ -1,5 +1,5 @@
+import { splitPathCodec } from "../../split-path-codec";
 import type { AnySplitPath } from "../../types/split-path";
-import { makeSystemPathForSplitPath } from "./split-path-and-system-path";
 
 // --- keys ---
 
@@ -11,13 +11,13 @@ export function makeKeyFor(
 ): string {
 	if (typeof arg === "object" && arg !== null) {
 		if ("from" in arg) {
-			return makeSystemPathForSplitPath(arg.from);
+			return splitPathCodec.format(arg.from);
 		}
 		if ("splitPath" in arg) {
-			return makeSystemPathForSplitPath(arg.splitPath);
+			return splitPathCodec.format(arg.splitPath);
 		}
 	}
-	return makeSystemPathForSplitPath(arg);
+	return splitPathCodec.format(arg);
 }
 
 // optional, logs only
@@ -29,13 +29,11 @@ export function sameRename(
 	b: { from: AnySplitPath; to: AnySplitPath },
 ): boolean {
 	return (
-		makeSystemPathForSplitPath(a.from) ===
-			makeSystemPathForSplitPath(b.from) &&
-		makeSystemPathForSplitPath(a.to) === makeSystemPathForSplitPath(b.to)
+		splitPathCodec.format(a.from) === splitPathCodec.format(b.from) &&
+		splitPathCodec.format(a.to) === splitPathCodec.format(b.to)
 	);
 }
 
 // --- generic dedupe helpers ---
 
 export { dedupeByKeyLast as dedupeByKey } from "../../internal/collections";
-

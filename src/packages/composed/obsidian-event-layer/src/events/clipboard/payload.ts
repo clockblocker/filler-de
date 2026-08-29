@@ -3,7 +3,7 @@ import { z } from "zod";
 import { PayloadKind } from "../../types/payload-base";
 import { toSourcePath } from "../source-path";
 
-export const ClipboardPayloadSchema = z.object({
+const ClipboardPayloadSchema = z.object({
 	/** True if cut, false if copy */
 	isCut: z.boolean(),
 	kind: z.literal(PayloadKind.ClipboardCopy),

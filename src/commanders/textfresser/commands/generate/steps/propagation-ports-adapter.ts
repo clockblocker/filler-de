@@ -6,8 +6,8 @@ import type {
 } from "@textfresser/vault-action-manager";
 import {
 	classifyReadContentError,
-	makeSystemPathForSplitPath,
 	ReadContentErrorKind,
+	splitPathCodec,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
 import { Effect, Result } from "effect";
@@ -176,7 +176,7 @@ function dedupeSplitPaths(
 ): SplitPathToMdFile[] {
 	const bySystemPath = new Map<string, SplitPathToMdFile>();
 	for (const path of paths) {
-		const key = makeSystemPathForSplitPath(path);
+		const key = splitPathCodec.format(path);
 		if (!bySystemPath.has(key)) {
 			bySystemPath.set(key, path);
 		}

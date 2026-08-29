@@ -7,7 +7,7 @@ import { z } from "zod";
 import { PayloadKind } from "../../../types/payload-base";
 import { toSourcePath } from "../../source-path";
 
-export const CheckboxPayloadSchema = z.object({
+const CheckboxPayloadSchema = z.object({
 	/** New state after click (checkbox.checked) */
 	checked: z.boolean(),
 	kind: z.literal(PayloadKind.CheckboxClicked),

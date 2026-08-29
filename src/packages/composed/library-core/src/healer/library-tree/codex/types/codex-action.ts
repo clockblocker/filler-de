@@ -8,7 +8,6 @@ import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
 import type { TreeNodeStatus } from "../../tree-node/types/atoms";
 import type { SectionNode } from "../../tree-node/types/tree-node";
 
-
 // ─── Payloads ───
 
 /** Create or update codex file content */
@@ -21,9 +20,8 @@ type UpsertCodexPayload = {
 	content: string;
 };
 
-
 /** Write status to scroll metadata */
-export type WriteScrollStatusPayload = {
+type WriteScrollStatusPayload = {
 	/** Target scroll path */
 	splitPath: SplitPathToMdFileInsideLibrary;
 	/** Status to write */
@@ -31,13 +29,13 @@ export type WriteScrollStatusPayload = {
 };
 
 /** Ensure codex file exists (creates if missing, no overwrite) */
-export type EnsureCodexFileExistsPayload = {
+type EnsureCodexFileExistsPayload = {
 	/** Target codex path */
 	splitPath: SplitPathToMdFileInsideLibrary;
 };
 
 /** Process codex (children list only; backlink from backlink-healing) */
-export type ProcessCodexPayload = {
+type ProcessCodexPayload = {
 	/** Target codex path */
 	splitPath: SplitPathToMdFileInsideLibrary;
 	/** Section node for content generation */

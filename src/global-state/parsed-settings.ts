@@ -1,7 +1,7 @@
-import { makeSplitPath } from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToFolder,
+	splitPathCodec,
 } from "@textfresser/vault-action-manager";
 import type { SuffixDelimiterConfig, TextEaterSettings } from "../types";
 import type { Prettify } from "../types/helpers";
@@ -20,7 +20,7 @@ export type ParsedUserSettings = Prettify<
 >;
 
 export function parseSettings(settings: TextEaterSettings): ParsedUserSettings {
-	const splitPathResult = makeSplitPath(settings.libraryRoot);
+	const splitPathResult = splitPathCodec.parse(settings.libraryRoot);
 	if (splitPathResult.kind !== SplitPathKind.Folder) {
 		throw new Error(
 			`Library root must be a folder, got: ${splitPathResult.kind}`,

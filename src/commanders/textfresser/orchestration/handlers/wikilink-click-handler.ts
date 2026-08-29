@@ -3,7 +3,7 @@ import type {
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { makeSplitPath } from "@textfresser/vault-action-manager";
+import { splitPathCodec } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import { buildAttestationFromWikilinkClickPayload } from "../../common/attestation/builders/build-from-wikilink-click-payload";
@@ -34,7 +34,7 @@ export function createWikilinkClickHandler(params: {
 				const clickedTargetProgram = vam
 					.resolveLinkpathDest(
 						payload.target.basename,
-						makeSplitPath(payload.sourcePath) as {
+						splitPathCodec.parse(payload.sourcePath) as {
 							basename: string;
 							extension: "md";
 							kind: "MdFile";

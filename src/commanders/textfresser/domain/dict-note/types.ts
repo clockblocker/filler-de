@@ -7,7 +7,7 @@ export type EntrySection = {
 	content: string; // Section body (trimmed)
 };
 
-export type DictEntryMeta = {
+type DictEntryMeta = {
 	lexicalMeta?: LexicalMeta;
 } & Record<string, unknown>;
 

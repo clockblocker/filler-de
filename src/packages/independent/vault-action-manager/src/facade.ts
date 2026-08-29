@@ -17,20 +17,18 @@ import type { SelectionInfo } from "./file-services/active-view/selection-servic
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { MarkdownFileAccess } from "./file-services/markdown-file-access";
+import { splitPathFromAbstractInternal } from "./helpers/pathfinder/path-codecs/split-and-abstract/split-path-from-abstract";
 import {
 	DispatchBatchCoordinator,
 	type DispatchBatchEffectFailure,
 	type ExistenceChecker,
 } from "./impl/actions-processing/dispatch-batch";
 import { Executor } from "./impl/actions-processing/executor";
-import {
-	makeSplitPath,
-	makeSystemPathForSplitPath,
-} from "./impl/common/split-path-and-system-path";
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { VaultObservation } from "./impl/event-processing/vault-observation";
 import { VaultReader, type VaultReaderReadablePath } from "./impl/vault-reader";
+import { splitPathCodec } from "./split-path-codec";
 import { VaultActionManagerTestingAdapter } from "./testing-adapter";
 import type {
 	AnySplitPath,
@@ -203,7 +201,7 @@ export class VaultActionManager {
 		SplitPathToMdFile | null,
 		VamRuntimeFailure<VamVaultIoError>
 	> {
-		const sourcePath = makeSystemPathForSplitPath(from);
+		const sourcePath = splitPathCodec.format(from);
 		const program = VaultIo.use((vault) =>
 			vault.resolveLinkpathDest(linkpath, sourcePath),
 		).pipe(
@@ -217,7 +215,8 @@ export class VaultActionManager {
 									path: sourcePath,
 								}),
 							try: () => {
-								const splitPath = makeSplitPath(file);
+								const splitPath =
+									splitPathFromAbstractInternal(file);
 								return splitPath.kind === "MdFile"
 									? splitPath
 									: null;

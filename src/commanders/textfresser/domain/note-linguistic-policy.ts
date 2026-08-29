@@ -8,13 +8,13 @@ export const TARGET_LANGUAGE_CODE: Record<TargetLanguage, string> = {
 
 const noteUnitKinds = ["Lexeme", "Phraseme", "Morpheme"] as const;
 
-export const LinguisticUnitKindSchema = z.enum(noteUnitKinds);
+const LinguisticUnitKindSchema = z.enum(noteUnitKinds);
 export type LinguisticUnitKind = z.infer<typeof LinguisticUnitKindSchema>;
 export const LinguisticUnitKind = LinguisticUnitKindSchema.enum;
 
 const noteSurfaceKinds = ["Lemma", "Inflection", "Variant", "Partial"] as const;
 
-export const SurfaceKindSchema = z.enum(noteSurfaceKinds);
+const SurfaceKindSchema = z.enum(noteSurfaceKinds);
 export type SurfaceKind = z.infer<typeof SurfaceKindSchema>;
 export const SurfaceKind = SurfaceKindSchema.enum;
 
@@ -38,7 +38,7 @@ const partsOfSpeech = [
 	"X",
 ] as const;
 
-export const POSSchema = z.enum(partsOfSpeech);
+const POSSchema = z.enum(partsOfSpeech);
 export type POS = z.infer<typeof POSSchema>;
 export const POS = POSSchema.enum;
 

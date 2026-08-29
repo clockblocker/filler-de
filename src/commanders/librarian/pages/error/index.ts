@@ -14,8 +14,8 @@ const SplitToPagesErrorKindSchema = z.enum([
 	"ParseFailed",
 	"DispatchFailed",
 ]);
-export type SplitToPagesErrorKind = z.infer<typeof SplitToPagesErrorKindSchema>;
-export const SplitToPagesErrorKind = SplitToPagesErrorKindSchema.enum;
+type SplitToPagesErrorKind = z.infer<typeof SplitToPagesErrorKindSchema>;
+const SplitToPagesErrorKind = SplitToPagesErrorKindSchema.enum;
 
 // ─── Error Type ───
 

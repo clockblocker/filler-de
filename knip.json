@@ -1,18 +1,18 @@
 {
 	"$schema": "https://unpkg.com/knip@5/schema.json",
-	"ignoreDependencies": ["ts-plugin-sort-import-suggestions"],
-	"ignoreUnresolved": ["./tests/unit/setup.ts"],
 	"ignoreIssues": {
+		"src/packages/independent/deprecated-lexical-generation/src/internal/prompt-smith/codegen/generated-promts/**/*.ts": [
+			"exports"
+		],
 		"src/packages/independent/deprecated-lexical-generation/src/internal/prompt-smith/prompt-parts/**/*.ts": [
 			"files"
 		],
 		"src/packages/independent/linguistics/generate-readme/examples/**/*.ts": [
 			"files"
 		],
-		"tests/obsidian-e2e/driver/dist/**/*.js": [
-			"files"
-		]
+		"tests/obsidian-e2e/driver/dist/**/*.js": ["files"]
 	},
+	"ignoreUnresolved": ["./tests/unit/setup.ts"],
 	"workspaces": {
 		".": {
 			"entry": [
@@ -32,6 +32,10 @@
 		"src/packages/composed/dictionary": {
 			"project": ["src/**/*.ts"]
 		},
+		"src/packages/composed/lexical-generation": {
+			"entry": ["tests/**/*.test.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
+		},
 		"src/packages/composed/library-core": {
 			"entry": [
 				"tests/**/*.test.ts",
@@ -46,13 +50,13 @@
 			"entry": ["tests/**/*.test.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
-		"src/packages/composed/lexical-generation": {
-			"entry": ["tests/**/*.test.ts"],
-			"project": ["src/**/*.ts", "tests/**/*.ts"]
-		},
 		"src/packages/independent/linguistics": {
 			"entry": ["tests/**/*.test.ts"],
-			"project": ["src/**/*.ts", "generate-readme/**/*.ts", "tests/**/*.ts"]
+			"project": [
+				"src/**/*.ts",
+				"generate-readme/**/*.ts",
+				"tests/**/*.ts"
+			]
 		},
 		"src/packages/independent/note-addressing": {
 			"project": ["src/**/*.ts"]

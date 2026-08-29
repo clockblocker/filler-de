@@ -54,7 +54,7 @@ type TypoSelectionValueFor<
 	surface: z.infer<SurfaceSchema>;
 };
 
-export type KnownSelectionValueFor<
+type KnownSelectionValueFor<
 	LanguageLiteral extends TargetLanguage,
 	OrthographicStatusLiteral extends KnownOrthographicStatus,
 	SurfaceSchema extends z.ZodTypeAny,

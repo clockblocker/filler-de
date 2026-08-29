@@ -14,7 +14,7 @@ const DICT_SECTION_KIND_STR = [
 	"Tags",
 ] as const;
 
-export const DictSectionKindSchema = z.enum(DICT_SECTION_KIND_STR);
+const DictSectionKindSchema = z.enum(DICT_SECTION_KIND_STR);
 export type DictSectionKind = z.infer<typeof DictSectionKindSchema>;
 export const DictSectionKind = DictSectionKindSchema.enum;
 export const ALL_DICT_SECTION_KINDS = DictSectionKindSchema.options;

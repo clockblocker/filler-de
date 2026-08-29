@@ -22,11 +22,4 @@ export type NodeLocatorOf<NK extends TreeNodeKind> = Extract<
 	TreeNodeLocator,
 	{ targetKind: NK }
 >;
-
 // Re-export schemas
-export {
-	FileNodeLocatorSchema,
-	ScrollNodeLocatorSchema,
-	SectionNodeLocatorSchema,
-	TreeNodeLocatorSchema,
-} from "./schemas";

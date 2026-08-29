@@ -1,6 +1,6 @@
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
-	makeSystemPathForSplitPath,
+	splitPathCodec,
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
@@ -66,7 +66,7 @@ function appendTransformToPlan(params: {
 	transform: ProcessTransform;
 }): void {
 	const { splitPath, transform, writePlansByPath } = params;
-	const targetPath = makeSystemPathForSplitPath(splitPath);
+	const targetPath = splitPathCodec.format(splitPath);
 	const existing = writePlansByPath.get(targetPath);
 	if (existing) {
 		existing.transforms.push(transform);
@@ -81,8 +81,8 @@ function appendTransformToPlan(params: {
 function buildRenameActionKey(
 	action: Extract<VaultAction, { kind: typeof VaultActionKind.RenameMdFile }>,
 ): string {
-	const from = makeSystemPathForSplitPath(action.payload.from);
-	const to = makeSystemPathForSplitPath(action.payload.to);
+	const from = splitPathCodec.format(action.payload.from);
+	const to = splitPathCodec.format(action.payload.to);
 	return `${from}=>${to}`;
 }
 

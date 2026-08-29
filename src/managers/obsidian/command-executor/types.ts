@@ -13,7 +13,7 @@ const COMMAND_KIND_STR = [
 	...ALL_LIBRARIAN_COMMAND_KINDS,
 ] as const;
 
-export const CommandKindSchema = z.enum(COMMAND_KIND_STR);
+const CommandKindSchema = z.enum(COMMAND_KIND_STR);
 export type CommandKind = z.infer<typeof CommandKindSchema>;
 export const CommandKind = CommandKindSchema.enum;
 

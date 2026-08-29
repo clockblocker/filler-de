@@ -19,7 +19,7 @@ export type RawNoteSection = {
 
 export type NoteSection = TypedNoteSection | RawNoteSection;
 
-export type DictEntryMeta = {
+type DictEntryMeta = {
 	lexicalMeta?: LexicalMeta;
 } & Record<string, unknown>;
 

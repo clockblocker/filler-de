@@ -5,7 +5,7 @@ import type {
 	SurfaceKind,
 } from "./note-linguistic-policy";
 
-export function isKnownSelection(
+function isKnownSelection(
 	selection: ResolvedSelection,
 ): selection is Exclude<ResolvedSelection, { orthographicStatus: "Unknown" }> {
 	return selection.orthographicStatus !== "Unknown";
@@ -38,7 +38,9 @@ export function isPhrasemeSelection(
 export function getSelectionSurfaceKind(
 	selection: ResolvedSelection,
 ): SurfaceKind | undefined {
-	return isKnownSelection(selection) ? selection.surface.surfaceKind : undefined;
+	return isKnownSelection(selection)
+		? selection.surface.surfaceKind
+		: undefined;
 }
 
 export function getSelectionUnitKind(
@@ -56,7 +58,9 @@ export function getSelectionPos(selection: ResolvedSelection): POS | undefined {
 		: undefined;
 }
 
-export function getSpelledLemma(selection: ResolvedSelection): string | undefined {
+export function getSpelledLemma(
+	selection: ResolvedSelection,
+): string | undefined {
 	if (!isKnownSelection(selection)) {
 		return undefined;
 	}
@@ -66,25 +70,19 @@ export function getSpelledLemma(selection: ResolvedSelection): string | undefine
 		: selection.surface.target.canonicalLemma;
 }
 
-export function getSelectionDiscriminator(
-	selection: ResolvedSelection,
-): string | undefined {
-	if (!isKnownSelection(selection)) {
-		return undefined;
-	}
-
-	return selection.surface.discriminators.lemmaSubKind;
-}
-
 function hasHydratedLemmaTarget(
-	target: Exclude<ResolvedSelection, { orthographicStatus: "Unknown" }>["surface"]["target"],
+	target: Exclude<
+		ResolvedSelection,
+		{ orthographicStatus: "Unknown" }
+	>["surface"]["target"],
 ): target is Extract<
-	Exclude<ResolvedSelection, { orthographicStatus: "Unknown" }>["surface"]["target"],
+	Exclude<
+		ResolvedSelection,
+		{ orthographicStatus: "Unknown" }
+	>["surface"]["target"],
 	{ lemmaKind: unknown }
 > {
 	return (
-		typeof target === "object" &&
-		target !== null &&
-		"lemmaKind" in target
+		typeof target === "object" && target !== null && "lemmaKind" in target
 	);
 }

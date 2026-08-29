@@ -94,13 +94,13 @@ export const UniversalFeature = {
 	Voice,
 } as const;
 
-export type UniversalFeatureKey = keyof typeof UniversalFeature;
+type UniversalFeatureKey = keyof typeof UniversalFeature;
 
 export type UniversalFeatureValue<
 	K extends UniversalFeatureKey = UniversalFeatureKey,
 > = z.infer<(typeof UniversalFeature)[K]>;
 
-export type FeatureValueSet<T> = T | readonly [T, ...T[]];
+type FeatureValueSet<T> = T | readonly [T, ...T[]];
 
 export type AbstractFeatures = Prettify<{
 	adpType: UniversalFeatureValue<"AdpType">;

@@ -1,14 +1,11 @@
-export type StableEntryId = string;
+type StableEntryId = string;
 export type IntentKey = string;
-export type CreationKey = string;
+type CreationKey = string;
 
 type LangCode = string & { readonly __brand: "LangCode" };
 type UnitKindCode = string & { readonly __brand: "UnitKindCode" };
 type SurfaceKindCode = string & { readonly __brand: "SurfaceKindCode" };
 type PosCode = string & { readonly __brand: "PosCode" };
-
-
-
 
 export type RelationItemDto = {
 	relationKind: string;
@@ -64,7 +61,7 @@ type NewEntryTemplate = {
 	meta?: Record<string, unknown>;
 };
 
-export type EntryMatchCriteria =
+type EntryMatchCriteria =
 	| { strategy: "byStableId"; stableId: StableEntryId }
 	| {
 			strategy: "byDeterministicKey";
@@ -125,7 +122,3 @@ export type PropagationIntent = {
 	creationKey?: CreationKey;
 	intentKey: IntentKey;
 };
-
-
-
-

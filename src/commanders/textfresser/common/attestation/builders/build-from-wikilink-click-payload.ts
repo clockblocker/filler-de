@@ -2,9 +2,9 @@
  * Build Attestation from wikilink click data.
  */
 
-import { makeSplitPath } from "@textfresser/vault-action-manager";
-import { ok, type Result } from "neverthrow";
 import type { PayloadFor } from "@textfresser/obsidian-event-layer";
+import { splitPathCodec } from "@textfresser/vault-action-manager";
+import { ok, type Result } from "neverthrow";
 import type { AttestationParsingError } from "../../../errors";
 import type { Attestation } from "../types";
 import { buildSourceFields } from "./build-source-fields";
@@ -17,7 +17,7 @@ import { buildSourceFields } from "./build-source-fields";
 export function buildAttestationFromWikilinkClickPayload(
 	input: PayloadFor<"WikilinkClicked">,
 ): Result<Attestation, AttestationParsingError> {
-	const splitPath = makeSplitPath(input.sourcePath) as {
+	const splitPath = splitPathCodec.parse(input.sourcePath) as {
 		basename: string;
 		extension: "md";
 		kind: "MdFile";

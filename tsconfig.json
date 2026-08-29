@@ -62,12 +62,5 @@
 		"types": ["obsidian", "bun-types"],
 		"verbatimModuleSyntax": true
 	},
-	"exclude": ["repos-for-reference"],
-	"plugins": [
-		{
-			"moveDownPatterns": ["dist"],
-			"moveUpPatterns": ["@/", "\\.{1,2}/"],
-			"name": "ts-plugin-sort-import-suggestions"
-		}
-	]
+	"exclude": ["repos-for-reference"]
 }

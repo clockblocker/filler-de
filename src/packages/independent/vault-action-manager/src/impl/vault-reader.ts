@@ -19,7 +19,7 @@ import type {
 	SplitPathWithTRef,
 } from "../types/split-path";
 
-export type VaultReaderReadableMdPath = SplitPathToMdFile & {
+type VaultReaderReadableMdPath = SplitPathToMdFile & {
 	read: () => ReturnType<MarkdownFileAccess["readContent"]>;
 };
 

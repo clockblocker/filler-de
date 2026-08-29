@@ -5,17 +5,13 @@ import {
 } from "../../effect/dispatch-coordinator";
 import type { VamShutdownError } from "../../effect/errors";
 import type { VamRuntime } from "../../effect/runtime";
+import { splitPathCodec } from "../../split-path-codec";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../types/split-path";
-
 import { type VaultAction, VaultActionKind } from "../../types/vault-action";
-import {
-	makeSplitPath,
-	makeSystemPathForSplitPath,
-} from "../common/split-path-and-system-path";
 import type { SelfEventTracker } from "../event-processing/self-event-tracker";
 import { collapseActions } from "./collapse";
 import { buildDependencyGraph } from "./dependency-detector";
@@ -129,12 +125,12 @@ export class DispatchBatchCoordinator {
 	}
 
 	private toFolder(path: string): SplitPathToFolder | null {
-		const parsed = makeSplitPath(path);
+		const parsed = splitPathCodec.parse(path);
 		return parsed.kind === "Folder" ? parsed : null;
 	}
 
 	private toMdFile(path: string): SplitPathToMdFile | null {
-		const parsed = makeSplitPath(path);
+		const parsed = splitPathCodec.parse(path);
 		return parsed.kind === "MdFile" ? parsed : null;
 	}
 
@@ -143,9 +139,9 @@ export class DispatchBatchCoordinator {
 			case VaultActionKind.RenameFile:
 			case VaultActionKind.RenameMdFile:
 			case VaultActionKind.RenameFolder:
-				return `${makeSystemPathForSplitPath(action.payload.from)} → ${makeSystemPathForSplitPath(action.payload.to)}`;
+				return `${splitPathCodec.format(action.payload.from)} → ${splitPathCodec.format(action.payload.to)}`;
 			default:
-				return makeSystemPathForSplitPath(action.payload.splitPath);
+				return splitPathCodec.format(action.payload.splitPath);
 		}
 	}
 }

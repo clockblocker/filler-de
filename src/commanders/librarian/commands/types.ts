@@ -21,14 +21,14 @@ const LIBRARIAN_COMMAND_KIND_STR = [
 	"SplitToPages",
 ] as const;
 
-export const LibrarianCommandKindSchema = z.enum(LIBRARIAN_COMMAND_KIND_STR);
+const LibrarianCommandKindSchema = z.enum(LIBRARIAN_COMMAND_KIND_STR);
 export type LibrarianCommandKind = z.infer<typeof LibrarianCommandKindSchema>;
 export const LibrarianCommandKind = LibrarianCommandKindSchema.enum;
 export const ALL_LIBRARIAN_COMMAND_KINDS = LibrarianCommandKindSchema.options;
 
 // ─── Command State ───
 
-export type LibrarianState = {
+type LibrarianState = {
 	vam: VaultActionManager;
 	librarian: Librarian;
 	notify: (message: string) => void;

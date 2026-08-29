@@ -34,7 +34,7 @@ type UnresolvedTargetRef = {
 	target: string;
 };
 
-export type LinguisticWikilinkTargetRef =
+type LinguisticWikilinkTargetRef =
 	| LibraryLeafTargetRef
 	| WorterNoteTargetRef
 	| UnresolvedTargetRef;

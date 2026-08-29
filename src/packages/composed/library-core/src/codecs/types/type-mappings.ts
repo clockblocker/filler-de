@@ -5,7 +5,7 @@ import type { FileExtension } from "../../healer/library-tree/tree-node/types/at
 import { TreeNodeKind } from "../../healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../types/schemas/node-name";
 
-export const TreeNodeKindToSplitPathKind = {
+const TreeNodeKindToSplitPathKind = {
 	[TreeNodeKind.Section]: SplitPathKind.Folder,
 	[TreeNodeKind.Scroll]: SplitPathKind.MdFile,
 	[TreeNodeKind.File]: SplitPathKind.File,
@@ -20,8 +20,6 @@ export type CorrespondingSplitPathKind<NK extends TreeNodeKind> =
 
 export type CorrespondingTreeNodeKind<SK extends SplitPathKind> =
 	SplitPathKindToTreeNodeKind[SK];
-
-
 
 type SegmentIdComponentsMap = {
 	[TreeNodeKind.Section]: {

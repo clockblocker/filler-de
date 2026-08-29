@@ -3,7 +3,7 @@ export type ProviderSuite = (typeof PROVIDER_SUITES)[number];
 
 export type ExpectedSenseOutcome = "matched" | "new";
 
-export interface ExpectedClassification {
+interface ExpectedClassification {
 	readonly canonicalLemma: string;
 	readonly discriminator: string;
 	readonly lemmaKind: "Lexeme" | "Phraseme";

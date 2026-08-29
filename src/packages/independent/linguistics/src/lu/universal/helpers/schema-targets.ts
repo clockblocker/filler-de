@@ -9,7 +9,7 @@ import type {
 import type { AbstractFeatures } from "../enums/feature";
 import type { LemmaDiscriminatorFor } from "../lemma-discriminator";
 
-export type LemmaFor<
+type LemmaFor<
 	LK extends LemmaKind = LemmaKind,
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > = AbstractLemma<LK, D>;
@@ -19,7 +19,7 @@ export type LemmaSchemaFor<
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > = z.ZodType<LemmaFor<LK, D>>;
 
-export type SelectionFor<
+type SelectionFor<
 	OS extends OrthographicStatus = OrthographicStatus,
 	SK extends SurfaceKind = SurfaceKind,
 	LK extends LemmaKind = LemmaKind,
@@ -32,10 +32,6 @@ export type SelectionSchemaFor<
 	LK extends LemmaKind = LemmaKind,
 	D extends LemmaDiscriminatorFor<LK> = LemmaDiscriminatorFor<LK>,
 > = z.ZodType<SelectionFor<OS, SK, LK, D>>;
-
-type RestrictableFeatureSchemaShape = Partial<{
-	[K in keyof AbstractFeatures]: z.ZodTypeAny;
-}>;
 
 type ValidFeatureSchemaShape<Shape extends z.ZodRawShape> = {
 	[K in keyof Shape]: K extends keyof AbstractFeatures

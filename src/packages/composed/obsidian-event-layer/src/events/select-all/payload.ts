@@ -19,7 +19,7 @@ const SelectAllPayloadSchemaPartial = z.object({
 	sourcePath: z.string().optional(),
 });
 
-export type SelectAllPayload = z.infer<typeof SelectAllPayloadSchemaPartial>;
+type SelectAllPayload = z.infer<typeof SelectAllPayloadSchemaPartial>;
 
 export type InternalSelectAllPayload = SelectAllPayload & {
 	/** CodeMirror view for dispatching selection changes */

@@ -1,72 +1,51 @@
+// biome-ignore-all assist/source/organizeImports: Individual negative type-export assertions require adjacent suppression comments.
 import { describe, expect, it } from "bun:test";
-import {
-	makeSplitPath,
-	makeSystemPathForSplitPath,
-} from "../../src";
-import { MD } from "../../src/types/literals";
-import { TFile, TFolder } from "obsidian";
+import type { TFile } from "obsidian";
+import * as publicApi from "../../src";
+import { splitPathCodec } from "../../src";
 
-describe("obsidian-vault-action-manager splitPath helpers", () => {
-	it("splits md file paths from strings", () => {
-		const split = makeSplitPath("root/notes/file.md");
+// @ts-expect-error -- live Obsidian references are intentionally internal.
+import type { SplitPathToFileWithTRef } from "../../src";
+// @ts-expect-error -- live Obsidian references are intentionally internal.
+import type { SplitPathToFolderWithTRef } from "../../src";
+// @ts-expect-error -- live Obsidian references are intentionally internal.
+import type { SplitPathToMdFileWithTRef } from "../../src";
+// @ts-expect-error -- live Obsidian references are intentionally internal.
+import type { SplitPathWithTRef } from "../../src";
 
-		expect(split).toEqual({
-			basename: "file",
-			extension: MD,
+type PublicCodecInput = Parameters<typeof splitPathCodec.parse>[0];
+type PublicCodecAcceptsTFile = TFile extends PublicCodecInput ? true : false;
+const publicCodecAcceptsTFile: PublicCodecAcceptsTFile = false;
+
+describe("Split Path package interface", () => {
+	it("exports one immutable parse/format interface", () => {
+		expect(Object.keys(splitPathCodec).sort()).toEqual([
+			"format",
+			"parse",
+			"root",
+		]);
+		expect(Object.isFrozen(splitPathCodec)).toBe(true);
+		expect(Object.isFrozen(splitPathCodec.root)).toBe(true);
+	});
+
+	it("does not export the old parallel interfaces", () => {
+		expect("pathfinder" in publicApi).toBe(false);
+		expect("makeSplitPath" in publicApi).toBe(false);
+		expect("makeSystemPathForSplitPath" in publicApi).toBe(false);
+	});
+
+	it("accepts domain path strings rather than live Obsidian files", () => {
+		expect(publicCodecAcceptsTFile).toBe(false);
+		expect(splitPathCodec.parse("Library/Note.md")).toEqual({
+			basename: "Note",
+			extension: "md",
 			kind: "MdFile",
-			pathParts: ["root", "notes"],
-		});
-		expect(makeSystemPathForSplitPath(split)).toBe("root/notes/file.md");
-	});
-
-	it("splits non-md file paths from strings", () => {
-		const split = makeSplitPath("root/assets/image.png");
-
-		expect(split).toEqual({
-			basename: "image",
-			extension: "png",
-			kind: "File",
-			pathParts: ["root", "assets"],
-		});
-		expect(makeSystemPathForSplitPath(split)).toBe("root/assets/image.png");
-	});
-
-	it("splits folder paths from strings without extension", () => {
-		const split = makeSplitPath("root/library/Section");
-
-		expect(split).toEqual({
-			basename: "Section",
-			kind: "Folder",
-			pathParts: ["root", "library"],
-		});
-		expect(makeSystemPathForSplitPath(split)).toBe("root/library/Section");
-	});
-
-	it("splits TFile instances", () => {
-		const file = new TFile();
-		file.path = "root/notes/file.md";
-		file.extension = "md";
-
-		const split = makeSplitPath(file);
-
-		expect(split).toEqual({
-			basename: "file",
-			extension: MD,
-			kind: "MdFile",
-			pathParts: ["root", "notes"],
-		});
-	});
-
-	it("splits TFolder instances", () => {
-		const folder = new TFolder();
-		folder.path = "root/library";
-
-		const split = makeSplitPath(folder);
-
-		expect(split).toEqual({
-			basename: "library",
-			kind: "Folder",
-			pathParts: ["root"],
+			pathParts: ["Library"],
 		});
 	});
 });
+
+void (0 as unknown as SplitPathToFileWithTRef);
+void (0 as unknown as SplitPathToFolderWithTRef);
+void (0 as unknown as SplitPathToMdFileWithTRef);
+void (0 as unknown as SplitPathWithTRef);

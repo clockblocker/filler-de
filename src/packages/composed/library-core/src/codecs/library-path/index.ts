@@ -37,7 +37,7 @@ export type LibraryPath = {
  * Suffix = segments excluding root, reversed.
  * E.g., ["Library", "grandpa", "father"] → ["father", "grandpa"]
  */
-export function getSuffixParts(p: LibraryPath): string[] {
+function getSuffixParts(p: LibraryPath): string[] {
 	if (p.segments.length <= 1) {
 		return [...p.segments]; // Root only
 	}
@@ -47,14 +47,14 @@ export function getSuffixParts(p: LibraryPath): string[] {
 /**
  * Get the basename (last segment) of a library path.
  */
-export function getBasename(p: LibraryPath): string {
+function getBasename(p: LibraryPath): string {
 	return p.segments[p.segments.length - 1] ?? "";
 }
 
 /**
  * Get parent path parts (all segments except the last).
  */
-export function getParentPathParts(p: LibraryPath): string[] {
+function getParentPathParts(p: LibraryPath): string[] {
 	return p.segments.slice(0, -1);
 }
 
@@ -62,10 +62,10 @@ export function getParentPathParts(p: LibraryPath): string[] {
  * Convert LibraryPath to AnySplitPathInsideLibrary.
  * Used at boundaries when interfacing with VaultActionManager.
  */
-export function toSplitPath<SK extends SplitPathKind>(
+function toSplitPath<SK extends SplitPathKind>(
 	p: LibraryPath & { kind: SK },
 ): SplitPathInsideLibraryOf<SK>;
-export function toSplitPath(p: LibraryPath): AnySplitPathInsideLibrary {
+function toSplitPath(p: LibraryPath): AnySplitPathInsideLibrary {
 	const pathParts = getParentPathParts(p);
 	const basename = getBasename(p);
 
@@ -96,7 +96,7 @@ export function toSplitPath(p: LibraryPath): AnySplitPathInsideLibrary {
 /**
  * Create LibraryPath from SplitPath.
  */
-export function fromSplitPath(sp: AnySplitPathInsideLibrary): LibraryPath {
+function fromSplitPath(sp: AnySplitPathInsideLibrary): LibraryPath {
 	const segments = [...sp.pathParts, sp.basename];
 	return {
 		extension: "extension" in sp ? sp.extension : undefined,
@@ -108,7 +108,7 @@ export function fromSplitPath(sp: AnySplitPathInsideLibrary): LibraryPath {
 /**
  * Create LibraryPath from section chain.
  */
-export function fromSectionChain(
+function fromSectionChain(
 	chain: SectionNodeSegmentId[],
 	segmentIdCodecs: SegmentIdCodecs,
 ): Result<LibraryPath, CodecError> {
@@ -132,7 +132,7 @@ export function fromSectionChain(
 /**
  * Create a LibraryPath for a leaf (scroll/file) in a section.
  */
-export function makeLeafPath(
+function makeLeafPath(
 	parentSegments: readonly string[],
 	leafName: string,
 	extension: string,
@@ -148,7 +148,7 @@ export function makeLeafPath(
 /**
  * Create a LibraryPath for a section/folder.
  */
-export function makeSectionPath(segments: readonly string[]): LibraryPath {
+function makeSectionPath(segments: readonly string[]): LibraryPath {
 	return {
 		extension: undefined,
 		kind: SplitPathKindEnum.Folder,

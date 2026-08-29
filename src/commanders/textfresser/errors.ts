@@ -13,7 +13,7 @@ const COMMAND_ERROR_KIND_STR = [
 	"UNUSED_STUB",
 ] as const;
 
-export const CommandErrorKindSchema = z.enum(COMMAND_ERROR_KIND_STR);
+const CommandErrorKindSchema = z.enum(COMMAND_ERROR_KIND_STR);
 export type CommandErrorKind = z.infer<typeof CommandErrorKindSchema>;
 export const CommandErrorKind = CommandErrorKindSchema.enum;
 
@@ -25,7 +25,7 @@ type TextfresserSpecificCommandError =
 	  }
 	| { kind: typeof CommandErrorKind.UNUSED_STUB };
 
-export type TextfresserCommandError =
+type TextfresserCommandError =
 	| BaseCommandError
 	| TextfresserSpecificCommandError;
 export type CommandError = TextfresserCommandError;
@@ -51,9 +51,6 @@ const ATT_PARSING_ERROR_KIND_STR = [
 ] as const;
 
 const AttestationParsingErrorKindSchema = z.enum(ATT_PARSING_ERROR_KIND_STR);
-type AttestationParsingErrorKind = z.infer<
-	typeof AttestationParsingErrorKindSchema
->;
 const AttestationParsingErrorKind = AttestationParsingErrorKindSchema.enum;
 
 export type AttestationParsingError =

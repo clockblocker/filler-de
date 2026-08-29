@@ -8,9 +8,7 @@ import type {
 import type { Selection } from "@textfresser/linguistics";
 import type { Result } from "neverthrow";
 import type { z } from "zod/v3";
-import type {
-	LexicalGenerationError,
-} from "./errors";
+import type { LexicalGenerationError } from "./errors";
 import type {
 	KnownLanguage,
 	TargetLanguage,
@@ -46,13 +44,9 @@ type UnknownSelection = Extract<
 	{ orthographicStatus: "Unknown" }
 >;
 
-export type ResolvedKnownSelection = Exclude<
-	GermanSelection,
-	UnknownSelection
-> &
+type ResolvedKnownSelection = Exclude<GermanSelection, UnknownSelection> &
 	ResolvedSelectionContext;
-export type ResolvedUnknownSelection = UnknownSelection &
-	ResolvedSelectionContext;
+type ResolvedUnknownSelection = UnknownSelection & ResolvedSelectionContext;
 export type ResolvedSelection =
 	| ResolvedKnownSelection
 	| ResolvedUnknownSelection;
@@ -175,4 +169,4 @@ export type LexicalGenerationModuleResult = Result<
 	LexicalGenerationError
 >;
 
-export type { LexicalGenerationError, LexicalGenerationSettings };
+export type { LexicalGenerationSettings };

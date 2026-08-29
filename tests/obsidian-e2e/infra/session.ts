@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { HarnessError } from "./errors";
 
-export const SESSION_PROTOCOL_VERSION = 1 as const;
+const SESSION_PROTOCOL_VERSION = 1 as const;
 export const DRIVER_COMMAND = "textfresser-e2e";
 
 export type SessionMode = "attached" | "managed";

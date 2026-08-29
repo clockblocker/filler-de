@@ -3,14 +3,14 @@ import { z } from "zod";
 import { PayloadKind } from "../../../types/payload-base";
 import { toSourcePath } from "../../source-path";
 
-export const WikiTargetSchema = z.object({
+const WikiTargetSchema = z.object({
 	alias: z.string().optional(),
 	basename: z.string(),
 });
 
 export type WikiTarget = z.infer<typeof WikiTargetSchema>;
 
-export const WikilinkClickPayloadSchema = z.object({
+const WikilinkClickPayloadSchema = z.object({
 	blockContent: z.string(),
 	kind: z.literal(PayloadKind.WikilinkClicked),
 	sourcePath: z.string(),
