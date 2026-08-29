@@ -2,10 +2,12 @@
 
 Textfresser turns a word or phrase from a source note into a linked vocabulary entry. The current runtime is German-first.
 
-Related decisions:
+Related decisions and proposals:
 
 - [ADR-0006: Separate linguistic truth, lexical generation, and note policy](../../docs/adr/0006-separate-linguistic-truth-generation-and-note-policy.md)
 - [ADR-0008: Route unconfirmed closed-set links through a surface host](../../docs/adr/0008-route-unconfirmed-closed-set-links-through-a-surface-host.md)
+- [ADR-0010: Return field-level results from aggregate lexical generation](../../docs/adr/0010-return-field-level-results-from-aggregate-lexical-generation.md)
+- [ADR-0011: Use different compatibility policies for domain and infrastructure](../../docs/adr/0011-use-different-compatibility-policies-for-domain-and-infrastructure.md)
 
 ## Current package state
 
@@ -103,7 +105,7 @@ Textfresser uses two storage families:
 | `Library` | Closed-set grammar and function-word leaves managed by the Librarian. |
 | `Worter` | Surface-host notes for open-set Entries and unconfirmed lookups. |
 
-Routing rules:
+The accepted target policy is:
 
 - A user-authored `[[surface]]` link opens the `Worter` surface host.
 - A model-confirmed closed-set attestation can link to the exact `Library` leaf.
@@ -113,6 +115,8 @@ Routing rules:
 - Unknown slash-separated targets must remain unchanged.
 
 The Librarian parses Library suffixes. Textfresser must not duplicate the separator rules.
+
+Current gap: the wikilink-completion behavior still rewrites one unresolved Core Name to a unique Library leaf. It leaves multiple matches unchanged. This unique-match behavior does not conform to the surface-host policy and must be reconciled before the routing migration is complete.
 
 ## Propagation
 

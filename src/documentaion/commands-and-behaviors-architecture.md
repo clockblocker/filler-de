@@ -50,9 +50,9 @@ doesApply(payload): boolean
 handle(payload, context): HandleResult
 ```
 
-`doesApply` must be synchronous because it controls event cancellation. `handle` can return `Handled`, `Modified`, or `Passthrough`.
+`doesApply` must be synchronous because it controls event cancellation. `handle` returns an outcome of `handled`, `effect`, or `passthrough`. An `effect` outcome carries a typed editor change.
 
-`chainHandlers` uses the first handler for which `doesApply` returns `true`. A handler must return `Passthrough` when it cannot make a safe choice. For example, wikilink completion must not select an ambiguous Library leaf.
+`chainHandlers` uses the first handler for which `doesApply` returns `true`. A handler must return `passthrough` when it cannot make a safe choice. For example, wikilink completion must not select an ambiguous Library leaf.
 
 ## Boundaries
 

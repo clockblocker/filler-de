@@ -1,33 +1,28 @@
-# Error Contract Book of Work
+# Error contract work
 
-Track error-shape debt where APIs currently return unstable string messages and callers must infer semantics from text.
+Status: One open item.
 
-## Compatibility Policy (Dev Mode, 2026-02-20)
-
-- Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
-- Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
+Use this file only for APIs where callers still infer error meaning from message text.
 
 ## Cases
 
-| ID | Area | Current Contract | Current Workaround | Desired Contract | Priority | Status |
-|---|---|---|---|---|---|---|
-| EC-001 | VAM markdown read APIs (`readContent`) | `Result<string, ReadContentError>` discriminated by `kind` | None (callers switch on typed kinds) | Keep typed/discriminated error kinds (`FileNotFound`, `PermissionDenied`, `Unknown`) and avoid message-substring logic in callers | P1 | Completed (February 18, 2026) |
+| ID | Boundary | State |
+| --- | --- | --- |
+| EC-001 | VAM `readContent` | Partial. VAM has typed failures, but one propagation adapter still classifies the nested cause from message text. |
 
-## EC-001 Notes
+## EC-001 completion
 
-Primary landing points:
+VAM already returns tagged I/O failures. Remove this remaining pattern:
 
+```ts
+classifyReadContentError(getErrorMessage(reason.cause))
+```
+
+The propagation adapter must classify a missing file from a typed cause. It must keep the race-safe `exists` check for a file that disappears between lookup and read.
+
+Main files:
+
+- `src/packages/independent/vault-action-manager/src/types/read-content-error.ts`
 - `src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter.ts`
-- `src/managers/obsidian/vault-action-manager/impl/vault-reader.ts`
 
-Rationale:
-
-- String-message matching was fragile (localization/wording drift).
-- Propagation keeps race-safe behavior (`exists` true, then vanished file) by mapping typed `FileNotFound` reads to `Missing`.
-
-Landed shape:
-
-1. `ReadContentError` union added in VAM boundary types.
-2. VAM read paths emit typed kinds instead of raw strings.
-3. Propagation adapter classifies missing files via error kind, not substring matching.
-4. Unit tests assert discriminant handling in propagation adapter paths.
+The item is complete when source code has no message-based read classification and tests assert typed error cases.

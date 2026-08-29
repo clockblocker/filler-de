@@ -8,6 +8,7 @@ Related decisions:
 - [ADR-0002: Coalesce Obsidian callbacks into Bulk Vault Events](../../docs/adr/0002-coalesce-obsidian-callbacks-into-bulk-vault-events.md)
 - [ADR-0003: Translate vault observations before Healing](../../docs/adr/0003-translate-vault-observations-before-healing.md)
 - [ADR-0004: Encode the Section path in each leaf name](../../docs/adr/0004-encode-the-section-path-in-each-leaf-name.md)
+- [ADR-0011: Use different compatibility policies for domain and infrastructure](../../docs/adr/0011-use-different-compatibility-policies-for-domain-and-infrastructure.md)
 
 ## Core model
 
@@ -94,7 +95,7 @@ Empty Sections stay in the tree until an explicit Section action removes them. T
 
 A Healing Transaction groups tree changes, Healing Actions, and Codex impact for one event batch. It is an audit and coordination unit. It is not a rollback transaction.
 
-## Codex and Reading Status
+## Codex and reading status
 
 Each Section can have one generated Codex. A Codex lists direct and nested children in deterministic display order.
 

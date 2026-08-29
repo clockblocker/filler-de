@@ -5,6 +5,7 @@ This document defines the boundary between linguistic data, model generation, an
 Related decision:
 
 - [ADR-0006: Separate linguistic truth, lexical generation, and note policy](../../docs/adr/0006-separate-linguistic-truth-generation-and-note-policy.md)
+- [ADR-0010: Return field-level results from aggregate lexical generation](../../docs/adr/0010-return-field-level-results-from-aggregate-lexical-generation.md)
 
 ## Package ownership
 
