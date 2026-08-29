@@ -58,6 +58,18 @@ type AnySplitPath =
 	| { kind: "MdFile"; pathParts: string[]; basename: string; extension: "md" };
 ```
 
+Callers parse and format these identities through one package-root interface:
+
+```ts
+import { splitPathCodec } from "@textfresser/vault-action-manager";
+
+const splitPath = splitPathCodec.parse("Library/Section/Note.md");
+const systemPath = splitPathCodec.format(splitPath);
+const vaultRoot = splitPathCodec.root;
+```
+
+The codec accepts domain values only. Conversion to or from Obsidian `TFile`, `TFolder`, `TAbstractFile`, and `Vault` objects is an internal adapter concern and is not exported from the package root.
+
 A `VaultAction` requests a vault change. Supported operations are:
 
 | Target | Operations |
