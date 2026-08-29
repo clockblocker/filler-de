@@ -1,171 +1,71 @@
-# Commands & Behaviors — Architecture
+# Command and behavior architecture
 
-> **Scope**: This document covers `command-executor/` and `behavior-manager/` — the layer between raw user events and the two commanders (Librarian, Textfresser). For the event detection layer, see `@textfresser/obsidian-event-layer`. For the file system layer, see `vam-architecture.md`.
->
-> **Compatibility Policy (Dev Mode, 2026-02-20)**:
-> - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
-> - Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
+This document describes the boundary between user input and the Librarian or Textfresser commanders.
 
----
+## Entry paths
 
-## 1. Purpose
+| Path | Trigger | Responsibility |
+| --- | --- | --- |
+| Command executor | Command palette, menu, or toolbar | Collect one context snapshot and route a `CommandKind`. |
+| Behavior manager | Editor or DOM event | Check whether a handler applies and process the event. |
 
-These two sibling modules bridge **user intent** (menu clicks, keyboard shortcuts, DOM events) to **commander logic** (Librarian tree ops, Textfresser vocabulary ops):
+The two paths do not call each other.
 
-1. **`command-executor/`** — palette/menu-triggered actions dispatched by `CommandKind` to the right commander.
-2. **`behavior-manager/`** — DOM-event-driven handlers registered with `@textfresser/obsidian-event-layer`, implementing the two-phase `doesApply` / `handle` protocol.
+## Commands
 
-The two modules have zero cross-references — they are fully independent concerns.
+`createCommandExecutor({ librarian, textfresser, vam })` returns `executeCommand(kind)`.
 
----
+For each command, the executor:
 
-## 2. Directory Structure
+1. Reads the active Markdown path and content from VAM.
+2. Reads the current selection from VAM.
+3. Routes Librarian commands to `Librarian.executeCommand`.
+4. Routes vocabulary commands to `Textfresser.executeCommand`.
+5. Runs the returned Effect at the Obsidian boundary.
 
-```
-src/managers/obsidian/
-├── command-executor/
-│   ├── index.ts                   (barrel)
-│   ├── types.ts                   (CommandKind, CommandContext)
-│   └── create-command-executor.ts (factory → executeCommand closure)
-├── behavior-manager/
-│   ├── index.ts                   (barrel)
-│   ├── create-handlers.ts         (HandlerDef[] factory for main.ts registration)
-│   ├── chain-utils.ts             (chainHandlers — first-match combinator)
-│   ├── clipboard-behavior.ts      (strip metadata from clipboard copy)
-│   ├── select-all-behavior.ts     (smart select-all excluding frontmatter/metadata)
-│   ├── checkbox-behavior.ts       (frontmatter property checkbox → Librarian)
-│   ├── codex-checkbox-behavior.ts (codex task checkbox → Librarian)
-│   ├── wikilink-complition-behavior.ts (wikilink auto-completion → Librarian)
-│   ├── tag-line-copy-embed-behavior.ts (tag line with block ID, copy embed)
-│   └── pick-closest-leaf.ts       (helper: disambiguate multiple wikilink targets by path proximity)
-├── ../../packages/obsidian-event-layer/ (workspace package — event detection layer)
-├── vault-action-manager/          (unchanged — FS abstraction layer)
-└── workspace-navigation-event-interceptor/ (unchanged)
-```
+The context is a snapshot. A commander must not read the editor again to reconstruct the same input.
 
----
+| Owner | Commands |
+| --- | --- |
+| Librarian | `GoToPrevPage`, `GoToNextPage`, `SplitToPages`, `SplitInBlocks` |
+| Textfresser | `TranslateSelection`, `Generate`, `Lemma` |
 
-## 3. Commands
+## Behaviors
 
-**Source**: `command-executor/`
+`createHandlers(librarian, textfresser?)` creates the handlers that `main.ts` registers with `UserEventInterceptor`.
 
-### 3.1 CommandKind
+| Event | Handler behavior |
+| --- | --- |
+| `ClipboardCopy` | Remove Librarian metadata from copied text. |
+| `SelectAll` | Exclude frontmatter, go-back links, and metadata. |
+| `WikilinkCompleted` | Ask the Librarian to resolve a Library target. |
+| `CheckboxFrontmatterClicked` | Route the status change to the Librarian. |
+| `CheckboxClicked` | Route a Codex status change to the Librarian. |
+| `WikilinkClicked` | Let Textfresser track attestation and deferred navigation. |
 
-`CommandKind` is a Zod enum merging all Librarian and Textfresser command kind strings:
+A handler has two stages:
 
-```
-Librarian:   GoToPrevPage, GoToNextPage, SplitToPages, SplitInBlocks
-Textfresser: TranslateSelection, Generate, Lemma
+```ts
+doesApply(payload): boolean
+handle(payload, context): HandleResult
 ```
 
-There are currently no explorer-only Librarian actions outside `CommandKind`.
+`doesApply` must be synchronous because it controls event cancellation. `handle` can return `Handled`, `Modified`, or `Passthrough`.
 
-### 3.2 CommandContext
+`chainHandlers` uses the first handler for which `doesApply` returns `true`. A handler must return `Passthrough` when it cannot make a safe choice. For example, wikilink completion must not select an ambiguous Library leaf.
 
-Collected once per invocation by `collectContext()`:
+## Boundaries
 
-| Field | Type | Source |
-|-------|------|--------|
-| `activeFile` | `{ splitPath, content } \| null` | `vam.mdPwd()` + `vam.getOpenedContent()` |
-| `selection` | `SelectionInfo \| null` | `vam.selection.getInfo()` |
+- `@textfresser/obsidian-event-layer` detects events. It does not own application policy.
+- The command executor and behavior manager only collect input and route it.
+- Librarian and Textfresser own domain decisions.
+- VAM owns vault and active-editor access.
 
-### 3.3 createCommandExecutor
+## Source map
 
-Factory that closes over `{ librarian, textfresser, vam }` and returns an `executeCommand(kind)` function. Internally:
-
-1. Calls `collectContext()` to snapshot active file + selection.
-2. Switches on `CommandKind`, delegating to the appropriate commander's `executeCommand(kind, context, notify)`.
-3. Exhaustive `never` check on default branch.
-
-**Consumers**: `main.ts` (creates executor at init), `OverlayManager` (holds executor ref for toolbar/menu clicks).
-
----
-
-## 4. Behaviors
-
-**Source**: `behavior-manager/`
-
-Behaviors implement the `UserEventHandler<K>` protocol from `@textfresser/obsidian-event-layer`:
-
-```typescript
-interface EventHandler<P> {
-    doesApply(payload: P): boolean;       // SYNC — gates preventDefault
-    handle(payload: P, ctx): HandleResult; // ASYNC — performs the action
-}
-```
-
-Three possible outcomes: `Handled` (consumed), `Passthrough` (native behavior), `Modified` (transform payload).
-
-### 4.1 Handler Registration
-
-`createHandlers(librarian, textfresser?)` builds the `HandlerDef[]` array that `main.ts` registers with `UserEventInterceptor`. Each def maps a `PayloadKind` to its handler.
-
-### 4.2 Stateless Behaviors (no commander dependency)
-
-| Behavior | PayloadKind | What it does |
-|----------|-------------|-------------|
-| **clipboard** | `ClipboardCopy` | Strips go-back links and metadata sections from copied text. Returns `Modified` with `modifiedText` if anything was stripped, `Passthrough` otherwise. |
-| **select-all** | `SelectAll` | Computes a "smart" selection range excluding YAML frontmatter, go-back links, and the metadata section. Returns `Modified` with `customSelection: { from, to }`. |
-
-### 4.3 Librarian Behaviors (thin routing)
-
-| Behavior | PayloadKind | Guard (`doesApply`) | Delegation |
-|----------|-------------|---------------------|------------|
-| **codex-checkbox** | `CheckboxClicked` | `librarian.isCodexInsideLibrary(splitPath)` | `librarian.handleCodexCheckboxClick(payload)` |
-| **checkbox-frontmatter** | `CheckboxInFrontmatterClicked` | Always applies | `librarian.handlePropertyCheckboxClick(payload)` |
-| **wikilink-completion** | `WikilinkCompleted` | Always applies | Three-step resolution: suffix alias → Obsidian resolve → corename tree lookup. On a single match, auto-resolves via `pickClosestLeaf`; on ambiguous matches, returns passthrough (no silent auto-pick). |
-
-### 4.4 Textfresser Behavior
-
-| Behavior | PayloadKind | Source |
-|----------|-------------|--------|
-| **wikilink-click** | `WikilinkClicked` | Registered only if `textfresser` is provided. `textfresser.createHandler()` delegates to `orchestration/handlers/wikilink-click-handler.ts`. Tracks wikilink clicks for attestation context and triggers deferred scroll via background-generate coordinator when the clicked target matches the in-flight Generate target. |
-
-### 4.5 Standalone Behavior
-
-| Behavior | Trigger | What it does |
-|----------|---------|-------------|
-| **tag-line-copy-embed** | Command palette (not a `PayloadKind` handler) | Adds a `^blockId` marker to the current line if missing, copies `![[basename#^blockId]]` embed to clipboard. |
-
-### 4.6 Utilities
-
-| Utility | Purpose |
-|---------|---------|
-| `chainHandlers(...handlers)` | Combines multiple `EventHandler<P>` into one — first handler whose `doesApply` returns true wins. |
-| `pickClosestLeaf(matches, currentPathParts)` | Picks the best wikilink target from multiple tree matches by longest common path prefix. Tie-break: shallower depth. |
-
----
-
-## 5. Data Flow
-
-```
-                          ┌──────────────────────────────┐
-                          │        main.ts (init)        │
-                          │                              │
-                          │  executor = createCommand-   │
-                          │    Executor({librarian,      │
-                          │     textfresser, vam})       │
-                          │                              │
-                          │  handlers = createHandlers(  │
-                          │    librarian, textfresser)   │
-                          └──────┬──────────┬────────────┘
-                                 │          │
-              ┌──────────────────┘          └──────────────────┐
-              ▼                                                ▼
-   ┌─────────────────────┐                     ┌──────────────────────────┐
-   │   Commands path     │                     │   Behaviors path         │
-   │  (command-executor/) │                     │  (behavior-manager/)     │
-   │                     │                     │                          │
-   │ Menu/palette click  │                     │ DOM event detected by    │
-   │        │            │                     │ UserEventInterceptor     │
-   │        ▼            │                     │        │                 │
-   │ executor(kind)      │                     │        ▼                 │
-   │   collectContext()  │                     │ handler.doesApply(p)     │
-   │   switch(kind)      │                     │   │ true → handle(p)    │
-   │        │            │                     │   │ false → next handler │
-   │   ┌────┴────┐       │                     │        │                 │
-   │   ▼         ▼       │                     │   ┌────┴────┐            │
-   │ librarian textfresser                     │ Handled  Modified        │
-   └─────────────────────┘                     │         Passthrough      │
-                                               └──────────────────────────┘
-```
+| Area | Location |
+| --- | --- |
+| Command routing | `src/managers/obsidian/command-executor/` |
+| Behavior routing | `src/managers/obsidian/behavior-manager/` |
+| Event detection | `src/packages/composed/obsidian-event-layer/` |
+| Plugin wiring | `src/main.ts` |
