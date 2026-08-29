@@ -1,17 +1,14 @@
 import type {
-	AnySplitPathInsideLibrary,
 	Codecs,
+	CreateObservationDiagnostic,
 	CreateTreeLeafAction,
 } from "@textfresser/library-core";
 import {
-	inferCreatePolicy,
-	isCodexSplitPath,
 	makeLibraryScope,
-	TreeNodeKind,
 	TreeNodeStatus,
-	tryCanonicalizeSplitPathToDestination,
+	translateCreateObservation,
 } from "@textfresser/library-core";
-import type { MD, VaultScanPath } from "@textfresser/vault-action-manager";
+import type { VaultScanPath } from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	splitPathCodec,
@@ -31,6 +28,7 @@ const ScrollMetadataSchema = z
 
 type BuildInitialActionsResult = {
 	createActions: CreateTreeLeafAction[];
+	createDiagnostics: CreateObservationDiagnostic[];
 };
 
 /**
@@ -47,16 +45,17 @@ export const buildInitialCreateActions = Effect.fn("buildInitialCreateActions")(
 		codecs: Codecs,
 	): Effect.fn.Return<BuildInitialActionsResult> {
 		const createActions: CreateTreeLeafAction[] = [];
+		const createDiagnostics: CreateObservationDiagnostic[] = [];
 		const libraryScope = makeLibraryScope(codecs.rules);
 
 		for (const file of files) {
-			// Skip codex files (basename starts with __)
-			if (isCodexSplitPath(file)) {
-				continue;
-			}
-
+			const observedFile =
+				file.kind === SplitPathKind.MdFile
+					? (({ read: _read, ...path }) => path)(file)
+					: file;
 			// Convert to library-scoped path
-			const libraryScopedResult = libraryScope.toLibraryPath(file);
+			const libraryScopedResult =
+				libraryScope.toLibraryPath(observedFile);
 			if (libraryScopedResult.isErr()) {
 				logger.warn(
 					`[Librarian] Skipping file outside library: ${file.basename}`,
@@ -64,38 +63,16 @@ export const buildInitialCreateActions = Effect.fn("buildInitialCreateActions")(
 				continue;
 			}
 			const observedPath = libraryScopedResult.value;
-
-			// Apply policy to get canonical destination
-			// NameKing for root-level files, PathKing for nested
-			const policy = inferCreatePolicy(observedPath);
-			const canonicalResult = tryCanonicalizeSplitPathToDestination(
-				observedPath,
-				policy,
-				undefined, // no rename intent for create
-				codecs,
-			);
-			if (canonicalResult.isErr()) {
-				logger.error(
-					`[Librarian] Failed to parse file: ${file.basename}`,
-					canonicalResult.error,
-				);
+			const preflight = translateCreateObservation(observedPath, codecs);
+			if (preflight.kind === "IgnoredGeneratedCodex") continue;
+			if (preflight.kind === "Invalid") {
+				createDiagnostics.push(preflight.diagnostic);
 				continue;
 			}
-			const canonicalPath = canonicalResult.value;
-
-			// Build locator from canonical path
-			const locatorResult =
-				codecs.locator.canonicalSplitPathInsideLibraryToLocator(
-					canonicalPath,
-				);
-			if (locatorResult.isErr()) {
-				logger.error(
-					`[Librarian] Failed to build locator: ${file.basename}`,
-					locatorResult.error,
-				);
+			if (file.kind === SplitPathKind.File) {
+				createActions.push(preflight.action);
 				continue;
 			}
-			const locator = locatorResult.value;
 
 			// Read status for md files
 			let status: TreeNodeStatus = TreeNodeStatus.NotStarted;
@@ -118,30 +95,18 @@ export const buildInitialCreateActions = Effect.fn("buildInitialCreateActions")(
 				}
 			}
 
-			if (locator.targetKind === TreeNodeKind.Scroll) {
-				createActions.push({
-					actionType: "Create",
-					initialStatus: status,
-					observedSplitPath:
-						observedPath as AnySplitPathInsideLibrary & {
-							kind: typeof SplitPathKind.MdFile;
-							extension: MD;
-						},
-					targetLocator: locator,
-				});
-			} else if (locator.targetKind === TreeNodeKind.File) {
-				createActions.push({
-					actionType: "Create",
-					observedSplitPath:
-						observedPath as AnySplitPathInsideLibrary & {
-							kind: typeof SplitPathKind.File;
-							extension: string;
-						},
-					targetLocator: locator,
-				});
+			const translation = translateCreateObservation(
+				observedPath,
+				codecs,
+				status,
+			);
+			if (translation.kind === "Translated") {
+				createActions.push(translation.action);
+			} else if (translation.kind === "Invalid") {
+				createDiagnostics.push(translation.diagnostic);
 			}
 		}
 
-		return { createActions };
+		return { createActions, createDiagnostics };
 	},
 );

@@ -1,6 +1,5 @@
 import type { SplitPathKind } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
-import { getParsedUserSettings } from "../../../../../internal/root/global-state";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
 	AnySplitPathInsideLibrary,
@@ -9,9 +8,10 @@ import type {
 	SplitPathInsideLibraryOf,
 	SplitPathInsideLibraryWithSeparatedSuffixOf,
 } from "../../../../../codecs";
+import { getParsedUserSettings } from "../../../../../internal/root/global-state";
+import { ChangePolicy } from "../../../../../tree/change-policy";
 import type { NodeName } from "../../../../../types/schemas/node-name";
 import { RenameIntent } from "../../bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
-import { ChangePolicy } from "../../bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
 import {
 	buildCanonicalSeparatedSuffixedBasename,
 	canonizeSplitPathWithSeparatedSuffix,

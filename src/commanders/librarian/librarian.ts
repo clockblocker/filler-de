@@ -209,6 +209,16 @@ export class Librarian {
 		}
 
 		return buildInitialCreateActions(scan.entries, this.codecs).pipe(
+			Effect.tap(({ createDiagnostics }) =>
+				Effect.sync(() => {
+					for (const diagnostic of createDiagnostics) {
+						logger.warn(
+							"[Librarian] Invalid startup Create observation:",
+							diagnostic,
+						);
+					}
+				}),
+			),
 			Effect.map(({ createActions }) => ({
 				healer: new Healer(
 					new Tree(libraryRoot, this.codecs),
@@ -378,8 +388,14 @@ export class Librarian {
 				return;
 			}
 
-			const { treeActions, invalidCodexActions } =
+			const { createDiagnostics, treeActions, invalidCodexActions } =
 				this.interpretBulk(bulk);
+			for (const diagnostic of createDiagnostics) {
+				logger.warn(
+					"[Librarian] Invalid live Create observation:",
+					diagnostic,
+				);
+			}
 
 			if (treeActions.length === 0 && invalidCodexActions.length === 0) {
 				return;

@@ -1,11 +1,16 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
 import type {
-	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	type CodecRules,
 	type Codecs,
@@ -13,8 +18,8 @@ import {
 	makeCodecs,
 } from "../../../../../../../../../../src/codecs";
 import { RenameIntent } from "../../../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/intent/types";
-import { ChangePolicy } from "../../../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/translate-material-event/policy-and-intent/policy/types";
 import { tryCanonicalizeSplitPathToDestination } from "../../../../../../../../../../src/healer/library-tree/tree-action/utils/canonical-naming/canonicalize-to-destination";
+import { ChangePolicy } from "../../../../../../../../../../src/tree/change-policy";
 import { defaultSettingsForUnitTests } from "../../../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../../../common-utils/setup-spy";
 
@@ -54,17 +59,6 @@ const spFolder = (
 	pathParts,
 });
 
-const spFile = (
-	pathParts: string[],
-	basename: string,
-	extension = "txt",
-): SplitPathToFile => ({
-	basename,
-	extension,
-	kind: SplitPathKind.File,
-	pathParts,
-});
-
 describe("tryCanonicalizeSplitPathToDestination", () => {
 	describe("A) Create-like (intent undefined) — NameKing vs PathKing", () => {
 		it("1. NameKing, flat import", () => {
@@ -78,9 +72,17 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note");
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["Child", "Parent"]);
-				expect(result.value.pathParts).toEqual(["Library", "Parent", "Child"]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"Note",
+				);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["Child", "Parent"]);
+				expect(result.value.pathParts).toEqual([
+					"Library",
+					"Parent",
+					"Child",
+				]);
 			}
 		});
 
@@ -95,15 +97,22 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("pie");
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"pie",
+				);
 				// suffixParts=["sweet"] → reversed → ["sweet"]
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["sweet"]);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["sweet"]);
 				expect(result.value.pathParts).toEqual(["Library", "sweet"]);
 			}
 		});
 
 		it("3. PathKing, nested", () => {
-			const sp = spMdFile(["Library", "Parent", "Child"], "Note-Child-Parent");
+			const sp = spMdFile(
+				["Library", "Parent", "Child"],
+				"Note-Child-Parent",
+			);
 			const result = tryCanonicalizeSplitPathToDestination(
 				sp,
 				ChangePolicy.PathKing,
@@ -113,13 +122,18 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note");
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"Note",
+				);
 				// PathKing: sectionNames from pathParts (Library included)
-				expect(result.value.pathParts).toEqual(["Library", "Parent", "Child"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([
-					"Child",
+				expect(result.value.pathParts).toEqual([
+					"Library",
 					"Parent",
+					"Child",
 				]);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["Child", "Parent"]);
 			}
 		});
 	});
@@ -136,10 +150,14 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note");
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"Note",
+				);
 				// Rename forces PathKing: sectionNames from pathParts
 				expect(result.value.pathParts).toEqual(["Library", "Parent"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["Parent"]);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["Parent"]);
 			}
 		});
 
@@ -154,9 +172,13 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("pies");
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"pies",
+				);
 				expect(result.value.pathParts).toEqual(["Library"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual([]);
 			}
 		});
 	});
@@ -178,8 +200,12 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("sweet");
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"sweet",
+				);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual([]);
 				expect(result.value.pathParts).toEqual(["Library", "pie"]);
 			}
 		});
@@ -197,9 +223,13 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("sweet");
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"sweet",
+				);
 				expect(result.value.pathParts).toEqual(["Library", "pie"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["pie"]);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["pie"]);
 			}
 		});
 
@@ -216,9 +246,17 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("sweet");
-				expect(result.value.pathParts).toEqual(["Library", "pie", "berry"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["berry", "pie"]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"sweet",
+				);
+				expect(result.value.pathParts).toEqual([
+					"Library",
+					"pie",
+					"berry",
+				]);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["berry", "pie"]);
 			}
 		});
 
@@ -232,11 +270,15 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 				RenameIntent.Move,
 				codecs,
 			);
-	
+
 			expect(r.isOk()).toBe(true);
 			if (r.isOk()) {
-				expect(r.value.separatedSuffixedBasename.coreName).toBe("sweet");
-				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(r.value.separatedSuffixedBasename.coreName).toBe(
+					"sweet",
+				);
+				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual(
+					[],
+				);
 				expect(r.value.pathParts).toEqual(["Library", "pie", "berry"]);
 			}
 		});
@@ -254,9 +296,18 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(r.isOk()).toBe(true);
 			if (r.isOk()) {
-				expect(r.value.separatedSuffixedBasename.coreName).toBe("sweet");
-				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual([]);
-				expect(r.value.pathParts).toEqual(["Library", "pie", "berry", "very"]);
+				expect(r.value.separatedSuffixedBasename.coreName).toBe(
+					"sweet",
+				);
+				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual(
+					[],
+				);
+				expect(r.value.pathParts).toEqual([
+					"Library",
+					"pie",
+					"berry",
+					"very",
+				]);
 			}
 		});
 
@@ -274,8 +325,12 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(r.isOk()).toBe(true);
 			if (r.isOk()) {
-				expect(r.value.separatedSuffixedBasename.coreName).toBe("Berry");
-				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(r.value.separatedSuffixedBasename.coreName).toBe(
+					"Berry",
+				);
+				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual(
+					[],
+				);
 				// For folders, suffix is relative: ["Library", "Recipe"] + ["Pie"] = ["Library", "Recipe", "Pie"]
 				expect(r.value.pathParts).toEqual(["Library", "Recipe", "Pie"]);
 			}
@@ -295,7 +350,9 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 			expect(r.isOk()).toBe(true);
 			if (r.isOk()) {
 				expect(r.value.separatedSuffixedBasename.coreName).toBe("Fish");
-				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(r.value.separatedSuffixedBasename.suffixParts).toEqual(
+					[],
+				);
 				expect(r.value.pathParts).toEqual(["Library", "Recipe", "Pie"]);
 			}
 		});
@@ -311,8 +368,12 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("sweet");
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"sweet",
+				);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual([]);
 				expect(result.value.pathParts).toEqual(["Library"]);
 			}
 		});
@@ -333,13 +394,18 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				// Suffix is interpreted as reversed path since suffix root "Test" matches pathParts[1]
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note");
-				expect(result.value.pathParts).toEqual(["Library", "Test", "parent", "child2"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([
-					"child2",
-					"parent",
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"Note",
+				);
+				expect(result.value.pathParts).toEqual([
+					"Library",
 					"Test",
+					"parent",
+					"child2",
 				]);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["child2", "parent", "Test"]);
 			}
 		});
 
@@ -360,9 +426,13 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 			if (result.isOk()) {
 				// Suffix root "Test" matches pathParts[1], so interpret as reversed
 				// suffixParts=["Test"] reversed = ["Test"] → path = Library/Test
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note");
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"Note",
+				);
 				expect(result.value.pathParts).toEqual(["Library", "Test"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["Test"]);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["Test"]);
 			}
 		});
 
@@ -382,13 +452,18 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				// PathKing: path stays, suffix is rebuilt from path
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note");
-				expect(result.value.pathParts).toEqual(["Library", "Test", "parent", "child1"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([
-					"child1",
-					"parent",
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"Note",
+				);
+				expect(result.value.pathParts).toEqual([
+					"Library",
 					"Test",
+					"parent",
+					"child1",
 				]);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["child1", "parent", "Test"]);
 			}
 		});
 	});
@@ -406,9 +481,13 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
 				// Duplicate marker " 1" should be attached to coreName
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note 1");
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"Note 1",
+				);
 				expect(result.value.pathParts).toEqual(["Library", "A"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["A"]);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["A"]);
 			}
 		});
 
@@ -426,13 +505,18 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("Note 1");
-				expect(result.value.pathParts).toEqual(["Library", "Test", "parent", "child"]);
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([
-					"child",
-					"parent",
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"Note 1",
+				);
+				expect(result.value.pathParts).toEqual([
+					"Library",
 					"Test",
+					"parent",
+					"child",
 				]);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["child", "parent", "Test"]);
 			}
 		});
 	});
@@ -495,4 +579,3 @@ describe("tryCanonicalizeSplitPathToDestination", () => {
 		});
 	});
 });
-

@@ -18,6 +18,15 @@ The `bulk-vault-action-adapter` is the semantic boundary between VAM's `BulkVaul
 - Changes crossing the Library boundary become semantic creates or deletes; inside-Library changes can become renames or moves according to `NameKing` and `PathKing` policy.
 - Tree Actions carry an Observed Split Path only when later Healing needs the actual post-operation vault location.
 - The adapter performs no filesystem I/O and is not an Obsidian `DataAdapter`; its source name must not be abbreviated as BAM.
+- Startup snapshots and materialized live Create events share Library Core's
+  synchronous Create-observation translator. It owns generated-Codex
+  recognition, NameKing/PathKing selection, canonicalization, locator
+  construction, and the final Create Tree Action. Startup alone reads Markdown
+  metadata and may supply an initial Reading Status.
+- Create translation returns an explicit translated, ignored generated-Codex,
+  or invalid-diagnostic result. The Bulk adapter exposes invalid diagnostics to
+  the Librarian for source-aware logging; it never silently represents invalid
+  observations as an unexplained empty action list.
 - The observation translator remains outside `LibraryReconciler`. It submits
   semantic Tree Actions plus source-specific supplemental observations, such as
   invalid Codex deletions, in one reconciliation request.

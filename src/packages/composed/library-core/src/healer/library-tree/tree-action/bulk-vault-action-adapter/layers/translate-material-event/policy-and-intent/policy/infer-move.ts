@@ -1,5 +1,5 @@
+import { ChangePolicy } from "../../../../../../../../tree/change-policy";
 import type { RenameTreeNodeNodeMaterializedEvent } from "../../../materialized-node-events/types";
-import { ChangePolicy } from "./types";
 
 /**
  * Infers canonicalization policy for a Rename (rename/move) event.

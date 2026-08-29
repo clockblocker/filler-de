@@ -1,13 +1,21 @@
 import type { Codecs } from "../../../../../../codecs";
+import {
+	type CreateObservationDiagnostic,
+	translateCreateObservation,
+} from "../../../../../../tree/create-observation";
 import { PREFIX_OF_CODEX } from "../../../../codex/literals";
 import type { TreeAction } from "../../../types/tree-action";
 import {
 	MaterializedEventKind as MaterializedEventType,
 	type MaterializedNodeEvent,
 } from "../materialized-node-events/types";
-import { traslateCreateMaterializedEvent } from "./translators/translate-create-material-event";
 import { traslateDeleteMaterializedEvent } from "./translators/translate-delete-material-event";
 import { traslateRenameMaterializedEvent } from "./translators/traslate-rename-materila-event";
+
+export type MaterializedEventTranslation = {
+	readonly createDiagnostics: readonly CreateObservationDiagnostic[];
+	readonly treeActions: readonly TreeAction[];
+};
 
 /**
  * Converts `MaterializedNodeEvent[]` into semantic `TreeAction[]`.
@@ -35,23 +43,32 @@ import { traslateRenameMaterializedEvent } from "./translators/traslate-rename-m
 export const translateMaterializedEvents = (
 	events: MaterializedNodeEvent[],
 	codecs: Codecs,
-): TreeAction[] => {
+): MaterializedEventTranslation => {
+	const createDiagnostics: CreateObservationDiagnostic[] = [];
 	const out: TreeAction[] = [];
 
 	for (const ev of events) {
-		if (isCodexEvent(ev, codecs)) continue;
-
 		switch (ev.kind) {
 			case MaterializedEventType.Create: {
-				out.push(...traslateCreateMaterializedEvent(ev, codecs));
+				const translation = translateCreateObservation(
+					ev.splitPath,
+					codecs,
+				);
+				if (translation.kind === "Translated") {
+					out.push(translation.action);
+				} else if (translation.kind === "Invalid") {
+					createDiagnostics.push(translation.diagnostic);
+				}
 				break;
 			}
 			case MaterializedEventType.Delete: {
+				if (isCodexEvent(ev, codecs)) break;
 				out.push(...traslateDeleteMaterializedEvent(ev, codecs));
 				break;
 			}
 
 			case MaterializedEventType.Rename: {
+				if (isCodexEvent(ev, codecs)) break;
 				out.push(...traslateRenameMaterializedEvent(ev, codecs));
 				break;
 			}
@@ -62,11 +79,11 @@ export const translateMaterializedEvents = (
 		}
 	}
 
-	return out;
+	return { createDiagnostics, treeActions: out };
 };
 
 /**
- * Check if event targets a codex file (coreName === "__").
+ * Check if an observed event targets a generated Codex basename.
  */
 function isCodexEvent(ev: MaterializedNodeEvent, codecs: Codecs): boolean {
 	const splitPath =

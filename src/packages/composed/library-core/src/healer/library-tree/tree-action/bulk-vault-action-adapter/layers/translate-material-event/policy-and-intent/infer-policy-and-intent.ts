@@ -1,13 +1,13 @@
 import type { Codecs } from "../../../../../../../codecs";
+import { ChangePolicy } from "../../../../../../../tree/change-policy";
+import { inferCreatePolicy } from "../../../../../../../tree/create-policy";
 import {
 	MaterializedEventKind as MaterializedEventType,
 	type MaterializedNodeEvent,
 } from "../../materialized-node-events/types";
 import { inferRenameIntent } from "./intent/infer-intent";
 import { RenameIntent } from "./intent/types";
-import { inferCreatePolicy } from "./policy/infer-create";
 import { inferMovePolicy } from "./policy/infer-move";
-import { ChangePolicy } from "./policy/types";
 
 export const inferPolicyAndIntent = (
 	e: MaterializedNodeEvent,

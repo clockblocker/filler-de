@@ -9,6 +9,7 @@ export * from "./path-finder";
 export * from "./tree";
 export * from "./tree/actions";
 export * from "./tree/canonical";
+export * from "./tree/create-observation";
 export * from "./tree/library-scope";
 export {
 	buildCanonicalLeafSplitPath,

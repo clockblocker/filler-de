@@ -1,4 +1,5 @@
 import type { Codecs } from "../../../../codecs";
+import type { CreateObservationDiagnostic } from "../../../../tree/create-observation";
 import {
 	type LibraryBulk,
 	makeLibraryScope,
@@ -10,8 +11,9 @@ import { materializeScopedBulk } from "./layers/materialized-node-events/materia
 import { translateMaterializedEvents } from "./layers/translate-material-event/translate-material-events";
 
 export type BulkInterpretation = {
+	createDiagnostics: readonly CreateObservationDiagnostic[];
 	invalidCodexActions: HealingAction[];
-	treeActions: TreeAction[];
+	treeActions: readonly TreeAction[];
 };
 
 export type BulkInterpreter = (bulk: LibraryBulk) => BulkInterpretation;
@@ -28,16 +30,18 @@ export function makeBulkInterpreter(codecs: Codecs): BulkInterpreter {
 
 	return (bulk) => {
 		const scopedBulk = libraryScope.toLibraryBulk(bulk);
+		const translation = translateMaterializedEvents(
+			materializeScopedBulk(scopedBulk),
+			codecs,
+		);
 
 		return {
+			createDiagnostics: translation.createDiagnostics,
 			invalidCodexActions: extractInvalidCodexesFromScopedBulk(
 				scopedBulk,
 				codecs,
 			),
-			treeActions: translateMaterializedEvents(
-				materializeScopedBulk(scopedBulk),
-				codecs,
-			),
+			treeActions: translation.treeActions,
 		};
 	};
 }

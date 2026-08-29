@@ -20,7 +20,9 @@ import {
 	SplitPathKind,
 	VaultEventKind,
 } from "@textfresser/vault-action-manager";
+import { err } from "neverthrow";
 import {
+	type CodecError,
 	type CodecRules,
 	type Codecs,
 	makeCodecRulesFromSettings,
@@ -32,7 +34,12 @@ import {
 } from "../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter";
 import { TreeActionType } from "../../../../../../src/healer/library-tree/tree-action/types/tree-action";
 import { getNodeName } from "../../../../../../src/healer/library-tree/tree-action/utils/locator/locator-utils";
-import { TreeNodeKind } from "../../../../../../src/healer/library-tree/tree-node/types/atoms";
+import {
+	TreeNodeKind,
+	TreeNodeStatus,
+} from "../../../../../../src/healer/library-tree/tree-node/types/atoms";
+import { ChangePolicy } from "../../../../../../src/tree/canonical";
+import { translateCreateObservation } from "../../../../../../src/tree/create-observation";
 import type { LibraryBulk } from "../../../../../../src/tree/library-scope";
 import { defaultSettingsForUnitTests } from "../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../common-utils/setup-spy";
@@ -160,6 +167,7 @@ describe("makeBulkInterpreter", () => {
 			}),
 		);
 
+		expect(interpretation.createDiagnostics).toEqual([]);
 		expect(interpretation.treeActions).toHaveLength(1);
 		expect(interpretation.invalidCodexActions).toEqual([
 			{
@@ -229,6 +237,23 @@ describe("makeBulkInterpreter", () => {
 			expect(action.actionType).toBe(TreeActionType.Create);
 			expect(getNodeName(action.targetLocator)).toBe("a");
 			expect(action.targetLocator.targetKind).toBe(TreeNodeKind.Scroll);
+		});
+
+		it("surfaces invalid Create observations as structured diagnostics", () => {
+			const interpretation = interpretBulk(
+				bulk({
+					events: [evFileCreated(spMdFile(["Library"], ""))],
+				}),
+			);
+
+			expect(interpretation.treeActions).toEqual([]);
+			expect(interpretation.createDiagnostics).toEqual([
+				expect.objectContaining({
+					kind: "CanonicalizationFailed",
+					observedSplitPath: spMdFile(["Library"], ""),
+					policy: ChangePolicy.NameKing,
+				}),
+			]);
 		});
 	});
 
@@ -462,6 +487,129 @@ describe("makeBulkInterpreter", () => {
 			if (!action) throw new Error("Expected action");
 			expect(action.actionType).toBe(TreeActionType.Move);
 			expect(getNodeName(action.targetLocator)).toBe("parent");
+		});
+	});
+});
+
+describe("translateCreateObservation", () => {
+	it("translates root, nested, and non-Markdown observations with their policies", () => {
+		const cases = [
+			{
+				expectedKind: TreeNodeKind.Scroll,
+				expectedName: "Story",
+				expectedPolicy: ChangePolicy.NameKing,
+				path: spMdFile(["Library"], "Story-Chapter"),
+			},
+			{
+				expectedKind: TreeNodeKind.Scroll,
+				expectedName: "Story",
+				expectedPolicy: ChangePolicy.PathKing,
+				path: spMdFile(
+					["Library", "Parent", "Child"],
+					"Story-Wrong-Suffix",
+				),
+			},
+			{
+				expectedKind: TreeNodeKind.File,
+				expectedName: "Cover",
+				expectedPolicy: ChangePolicy.PathKing,
+				path: spFile(["Library", "Assets"], "Cover-Wrong", "png"),
+			},
+		] as const;
+
+		for (const testCase of cases) {
+			const translation = translateCreateObservation(
+				testCase.path,
+				codecs,
+			);
+			expect(translation.kind).toBe("Translated");
+			if (translation.kind !== "Translated") continue;
+			expect(translation.policy).toBe(testCase.expectedPolicy);
+			expect(translation.action.actionType).toBe(TreeActionType.Create);
+			expect(translation.action.observedSplitPath).toBe(testCase.path);
+			expect(translation.action.targetLocator.targetKind).toBe(
+				testCase.expectedKind,
+			);
+			expect(getNodeName(translation.action.targetLocator)).toBe(
+				testCase.expectedName,
+			);
+			expect("initialStatus" in translation.action).toBe(false);
+		}
+	});
+
+	it("distinguishes generated Codexes and invalid basenames or suffixes", () => {
+		const codexPath = spMdFile(["Library", "Chapter"], "__-Chapter");
+		const codex = translateCreateObservation(codexPath, codecs);
+		expect(codex).toEqual({
+			kind: "IgnoredGeneratedCodex",
+			observedSplitPath: codexPath,
+		});
+
+		for (const invalidPath of [
+			spMdFile(["Library"], ""),
+			spMdFile(["Library"], "Story--Chapter"),
+		]) {
+			const invalid = translateCreateObservation(invalidPath, codecs);
+			expect(invalid).toEqual({
+				diagnostic: expect.objectContaining({
+					kind: "CanonicalizationFailed",
+					observedSplitPath: invalidPath,
+					policy: ChangePolicy.NameKing,
+				}),
+				kind: "Invalid",
+			});
+		}
+	});
+
+	it("preserves an explicitly supplied startup status", () => {
+		for (const initialStatus of [
+			TreeNodeStatus.Done,
+			TreeNodeStatus.NotStarted,
+		]) {
+			const translation = translateCreateObservation(
+				spMdFile(["Library"], "Story"),
+				codecs,
+				initialStatus,
+			);
+			expect(translation.kind).toBe("Translated");
+			if (translation.kind === "Translated") {
+				expect(translation.action.initialStatus).toBe(initialStatus);
+			}
+		}
+	});
+
+	it("returns locator construction failures as typed diagnostics", () => {
+		const locatorFailure: CodecError = {
+			context: { input: "test" },
+			kind: "LocatorError",
+			message: "invalid locator input",
+			reason: "InvalidSegmentId",
+		};
+		const failingLocator = (() =>
+			err(
+				locatorFailure,
+			)) as Codecs["locator"]["canonicalSplitPathInsideLibraryToLocator"];
+		const failingCodecs: Codecs = {
+			...codecs,
+			locator: {
+				...codecs.locator,
+				canonicalSplitPathInsideLibraryToLocator: failingLocator,
+			},
+		};
+		const observedSplitPath = spMdFile(["Library"], "Story");
+
+		const translation = translateCreateObservation(
+			observedSplitPath,
+			failingCodecs,
+		);
+
+		expect(translation).toEqual({
+			diagnostic: expect.objectContaining({
+				cause: locatorFailure,
+				kind: "LocatorConstructionFailed",
+				observedSplitPath,
+			}),
+			kind: "Invalid",
 		});
 	});
 });
