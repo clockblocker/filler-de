@@ -59,7 +59,7 @@
 		// Best practices
 		"strictPropertyInitialization": false,
 		"target": "ESNext",
-		"types": ["obsidian", "bun-types", "mocha"],
+		"types": ["obsidian", "bun-types"],
 		"verbatimModuleSyntax": true
 	},
 	"exclude": ["repos-for-reference"],
