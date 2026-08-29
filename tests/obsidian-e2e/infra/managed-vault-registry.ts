@@ -90,6 +90,33 @@ export function managedVaultId(vaultPath: string): string {
 	return createHash("sha256").update(resolve(vaultPath)).digest("hex").slice(0, 16);
 }
 
+export async function findRegisteredVaultId(
+	vaultPath: string,
+	registryPath = managedVaultRegistryPath(),
+): Promise<string> {
+	const absoluteVaultPath = resolve(vaultPath);
+	const registry = parseRegistry(
+		await readFile(resolve(registryPath), "utf8"),
+		resolve(registryPath),
+	);
+	const matches = Object.entries(registry.vaults).flatMap(([vaultId, entry]) =>
+		entryPath(entry) === absoluteVaultPath ? [vaultId] : [],
+	);
+	if (matches.length === 0) {
+		throw new HarnessError(
+			"SESSION_INVALID",
+			`Attached E2E vault ${absoluteVaultPath} is not registered in Obsidian; open that folder as a vault once before running the harness`,
+		);
+	}
+	if (matches.length > 1) {
+		throw new HarnessError(
+			"SESSION_INVALID",
+			`Attached E2E vault ${absoluteVaultPath} has multiple Obsidian vault IDs`,
+		);
+	}
+	return matches[0] as string;
+}
+
 export async function registerManagedVault(
 	options: ManagedVaultRegistrationOptions,
 ): Promise<ManagedVaultRegistration> {

@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
-import { registerManagedVault } from "./managed-vault-registry";
+import {
+	findRegisteredVaultId,
+	registerManagedVault,
+} from "./managed-vault-registry";
 
 let temporaryRoot: string | undefined;
 
@@ -12,6 +15,35 @@ afterEach(async () => {
 });
 
 describe("managed Obsidian vault registration", () => {
+	it("resolves an already-registered attached vault by absolute path", async () => {
+		temporaryRoot = await mkdtemp(resolve(tmpdir(), "textfresser-vault-registry-test-"));
+		const registryPath = resolve(temporaryRoot, "obsidian.json");
+		const vaultPath = resolve(temporaryRoot, "attached-vault");
+		await mkdir(vaultPath);
+		await writeFile(
+			registryPath,
+			JSON.stringify({
+				vaults: {
+					aaaaaaaaaaaaaaaa: { path: vaultPath, ts: 1 },
+				},
+			}),
+		);
+
+		await expect(findRegisteredVaultId(vaultPath, registryPath)).resolves.toBe(
+			"aaaaaaaaaaaaaaaa",
+		);
+	});
+
+	it("rejects an attached folder Obsidian does not know as a vault", async () => {
+		temporaryRoot = await mkdtemp(resolve(tmpdir(), "textfresser-vault-registry-test-"));
+		const registryPath = resolve(temporaryRoot, "obsidian.json");
+		await writeFile(registryPath, JSON.stringify({ vaults: {} }));
+
+		await expect(
+			findRegisteredVaultId(resolve(temporaryRoot, "missing-vault"), registryPath),
+		).rejects.toThrow("is not registered in Obsidian");
+	});
+
 	it("registers the disposable folder before launching it by vault ID", async () => {
 		temporaryRoot = await mkdtemp(resolve(tmpdir(), "textfresser-vault-registry-test-"));
 		const registryPath = resolve(temporaryRoot, "obsidian.json");

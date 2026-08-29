@@ -58,7 +58,7 @@ import { sleep } from "./utils/sleep";
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
-	effectVam: VaultActionManager;
+	vam: VaultActionManager;
 	vamTesting: VaultActionManager["testing"];
 	userEventInterceptor: ObsidianEventLayer;
 	overlayManager: OverlayManager | null = null;
@@ -161,7 +161,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.apiService = new ApiService(this.settings);
 
 		const vaultActions = createVaultActionManager(this.app);
-		this.effectVam = vaultActions.manager;
+		this.vam = vaultActions.manager;
 		this.vamTesting = vaultActions.testing;
 		this.disposeVam = vaultActions.dispose;
 
@@ -189,7 +189,7 @@ export default class TextEaterPlugin extends Plugin {
 					const cleaned = cleanupDictNote(content);
 					if (cleaned === null) return;
 					void Effect.runPromise(
-						this.effectVam.dispatch([
+						this.vam.dispatch([
 							{
 								kind: VaultActionKind.ProcessMdFile,
 								payload: {
@@ -218,7 +218,7 @@ export default class TextEaterPlugin extends Plugin {
 			selectionTextSource: {
 				getSelectionText: () => {
 					const exit = Effect.runSyncExit(
-						this.effectVam.getSelectionText(),
+						this.vam.getSelectionText(),
 					);
 					return Exit.isSuccess(exit) ? exit.value : null;
 				},
@@ -226,12 +226,12 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		// New Librarian (healing modes)
-		this.librarian = new Librarian(this.effectVam);
+		this.librarian = new Librarian(this.vam);
 
 		// Start listening to file system events
 		// VaultActionManager will convert events to VaultEvent, filter self-events,
 		// and notify subscribers (e.g., Librarian)
-		await Effect.runPromise(this.effectVam.startListening());
+		await Effect.runPromise(this.vam.startListening());
 
 		// Start listening to user events (clicks, clipboard, select-all, wikilinks)
 		this.userEventInterceptor.start();
@@ -239,7 +239,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Initialize delimiter change service (does not require librarian)
 		this.delimiterChangeService = new DelimiterChangeService(
 			this.app,
-			this.effectVam,
+			this.vam,
 		);
 
 		// Initialize librarian: read tree, heal mismatches, regenerate codexes
@@ -278,7 +278,7 @@ export default class TextEaterPlugin extends Plugin {
 		const executeCommand = createCommandExecutor({
 			librarian: this.librarian,
 			textfresser: this.textfresser,
-			vam: this.effectVam,
+			vam: this.vam,
 		});
 		this.commandExecutor = async (kind) => {
 			incrementPending();
@@ -296,7 +296,7 @@ export default class TextEaterPlugin extends Plugin {
 			librarian: this.librarian,
 			plugin: this,
 			userEventInterceptor: this.userEventInterceptor,
-			vam: this.effectVam,
+			vam: this.vam,
 		});
 		this.overlayManager.init();
 	}
@@ -389,10 +389,10 @@ export default class TextEaterPlugin extends Plugin {
 		this.addCommand({
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
-					if (!this.effectVam) return true;
+					if (!this.vam) return true;
 					// Check if there's a selection via VAM
 					const selection = Effect.runSyncExit(
-						this.effectVam.getSelectionInfo(),
+						this.vam.getSelectionInfo(),
 					);
 					if (Exit.isSuccess(selection) && selection.value) {
 						// Selection is collected by CommandContext in executor
@@ -400,7 +400,7 @@ export default class TextEaterPlugin extends Plugin {
 					} else {
 						tagLineCopyEmbedBehavior({
 							app: this.app,
-							vam: this.effectVam,
+							vam: this.vam,
 						});
 					}
 				}
@@ -482,7 +482,9 @@ export default class TextEaterPlugin extends Plugin {
 	 * Resolves when all queues are drained, pending tasks are done, and Obsidian has registered all actions.
 	 */
 	async whenIdle(): Promise<void> {
-		return whenIdleTracker(() => this.vamTesting.whenSettled());
+		return whenIdleTracker(() =>
+			Effect.runPromise(this.vamTesting.whenSettled()),
+		);
 	}
 
 	/**
@@ -691,7 +693,7 @@ export default class TextEaterPlugin extends Plugin {
 		if (this.librarian) {
 			await Effect.runPromise(this.librarian.unsubscribe());
 		}
-		this.librarian = new Librarian(this.effectVam);
+		this.librarian = new Librarian(this.vam);
 		try {
 			await Effect.runPromise(this.librarian.init());
 			this.wireLibrarianLookup();
@@ -718,7 +720,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	private rebuildTextfresser(): void {
 		this.textfresser = new Textfresser(
-			this.effectVam,
+			this.vam,
 			this.settings.languages,
 			this.apiService,
 			{

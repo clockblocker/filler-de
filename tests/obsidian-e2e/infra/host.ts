@@ -7,6 +7,7 @@ import { deployPlugins } from "./artifacts";
 import { ObsidianCli } from "./cli";
 import { HarnessError } from "./errors";
 import {
+	findRegisteredVaultId,
 	type ManagedVaultRegistration,
 	registerManagedVault,
 } from "./managed-vault-registry";
@@ -172,20 +173,29 @@ export async function prepareAttachedHost(options: {
 	readonly sessionId: string;
 	readonly sources: ArtifactSources;
 }): Promise<HostDescription> {
-	const vaultName =
-		process.env.OBSIDIAN_E2E_VAULT?.trim() ??
-		process.env.CLI_E2E_VAULT?.trim();
 	const vaultPath =
 		process.env.OBSIDIAN_E2E_VAULT_PATH?.trim() ??
 		process.env.CLI_E2E_VAULT_PATH?.trim();
-	if (!vaultName || !vaultPath) {
+	if (!vaultPath) {
 		throw new HarnessError(
 			"SESSION_INVALID",
-			"Attached mode requires OBSIDIAN_E2E_VAULT and OBSIDIAN_E2E_VAULT_PATH",
+			"Attached mode requires OBSIDIAN_E2E_VAULT_PATH",
 		);
 	}
 	const absoluteVaultPath = resolve(vaultPath);
-	const cli = new ObsidianCli({ cliPath: options.cliPath, vaultName });
+	const vaultId = await findRegisteredVaultId(absoluteVaultPath);
+	const opened = await runProcess(
+		"/usr/bin/open",
+		[`obsidian://open?vault=${encodeURIComponent(vaultId)}`],
+		{ timeoutMs: 10_000 },
+	);
+	if (opened.exitCode !== 0) {
+		throw new HarnessError("PROCESS_FAILED", "Could not open the attached E2E vault", {
+			command: "/usr/bin/open",
+			...opened,
+		});
+	}
+	const cli = new ObsidianCli({ cliPath: options.cliPath, vaultName: vaultId });
 	await waitForVault(cli, absoluteVaultPath);
 	const pluginIds = [
 		options.sources.driverId,
@@ -230,7 +240,7 @@ export async function prepareAttachedHost(options: {
 	return {
 		cleanup: async () => undefined,
 		cli,
-		vaultName,
+		vaultName: vaultId,
 		vaultPath: absoluteVaultPath,
 	};
 }

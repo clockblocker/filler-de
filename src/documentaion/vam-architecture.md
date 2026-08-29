@@ -695,8 +695,8 @@ The production interface contains no mutable traces, private-map inspection, eve
 ```typescript
 const { manager, testing } = createVaultActionManager(app);
 
-await manager.dispatch(actions); // production outcome
-await testing.whenSettled();     // running-Obsidian readiness
+await Effect.runPromise(manager.dispatch(actions)); // production outcome
+await Effect.runPromise(testing.whenSettled());     // readiness
 ```
 
 `whenSettled()` runs one Effect program on the production VAM runtime. It

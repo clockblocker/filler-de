@@ -40,7 +40,7 @@ import type {
 } from "./types/split-path";
 import type { VaultAction } from "./types/vault-action";
 
-export type EffectBulkVaultEventHandler<E = never> = (
+export type BulkVaultEventHandler<E = never> = (
 	event: BulkVaultEvent,
 ) => Effect.Effect<void, E>;
 
@@ -140,7 +140,7 @@ export class VaultActionManager {
 	}
 
 	subscribeToBulk<E>(
-		handler: EffectBulkVaultEventHandler<E>,
+		handler: BulkVaultEventHandler<E>,
 	): Effect.Effect<
 		VaultActionManagerSubscription,
 		VamRuntimeFailure<VamSubscriptionError>

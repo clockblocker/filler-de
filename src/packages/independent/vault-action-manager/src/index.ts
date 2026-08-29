@@ -1,6 +1,6 @@
 export {
+	type BulkVaultEventHandler,
 	createVaultActionManager,
-	type EffectBulkVaultEventHandler,
 	VamDispatchError,
 	type VamEffectError,
 	VamPlanningError,

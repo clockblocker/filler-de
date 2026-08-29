@@ -1,4 +1,4 @@
-import { Cause, Clock, Effect, Exit } from "effect";
+import { Clock, Effect } from "effect";
 import { VaultIo } from "./effect/ports";
 import type { VamRuntime } from "./effect/runtime";
 import type { DispatchBatchCoordinator } from "./impl/actions-processing/dispatch-batch";
@@ -16,15 +16,14 @@ export class VaultActionManagerTestingAdapter {
 		private readonly selfEvents: SelfEventTracker,
 	) {}
 
-	async whenSettled(): Promise<void> {
-		const exit = await this.runtime.runPromiseExit(
-			this.whenSettledEffect(),
-		);
-		if (Exit.isFailure(exit)) throw Cause.squash(exit.cause);
-	}
-
-	private readonly whenSettledEffect = Effect.fn(
+	readonly whenSettled = Effect.fn(
 		"VaultActionManagerTestingAdapter.whenSettled",
+	)(function* (this: VaultActionManagerTestingAdapter) {
+		yield* this.runtime.provide(this.awaitSettled());
+	});
+
+	private readonly awaitSettled = Effect.fn(
+		"VaultActionManagerTestingAdapter.awaitSettled",
 	)(function* (this: VaultActionManagerTestingAdapter) {
 		yield* this.dispatches.whenIdleEffect();
 
