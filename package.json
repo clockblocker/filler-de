@@ -23,6 +23,7 @@
 		"effect": "4.0.0-rc.112",
 		"knip": "^6.33.0",
 		"obsidian": "^1.10.2",
+		"ts-plugin-sort-import-suggestions": "github:clockblocker/ts7-plugin-sort-import-suggestions",
 		"typescript": "^7.0.2"
 	},
 	"keywords": [],
