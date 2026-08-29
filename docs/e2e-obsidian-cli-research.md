@@ -2,9 +2,17 @@
 
 Research date: 2026-08-29. Local app under test: Obsidian 1.13.7 with installer 1.12.7 on macOS.
 
+> Implementation status (2026-08-29): the recommended runner, test-only
+> driver, lifecycle fencing, scenario isolation, failure diagnostics, and
+> managed/attached modes are implemented under `tests/obsidian-e2e`. All
+> former behavior has been reassigned to desktop, deterministic integration,
+> or provider acceptance, and both former harness directories have been
+> removed. Historical references below describe the retired system that this
+> investigation measured.
+
 ## Executive findings
 
-1. **The current harness is not using the new official CLI executable.** It invokes `/Applications/Obsidian.app/Contents/MacOS/Obsidian`, the GUI executable. Obsidian's current macOS CLI registration instead points `obsidian` at `/Applications/Obsidian.app/Contents/MacOS/obsidian-cli`. The official documentation explicitly describes that symlink. This is not a cosmetic path difference: in a local probe the GUI executable returned before a Promise from `eval` settled, whereas `obsidian-cli` awaited it and returned the resolved value.
+1. **The retired harness did not use the new official CLI executable.** It invoked `/Applications/Obsidian.app/Contents/MacOS/Obsidian`, the GUI executable. Obsidian's current macOS CLI registration instead points `obsidian` at `/Applications/Obsidian.app/Contents/MacOS/obsidian-cli`. The official documentation explicitly describes that symlink. This is not a cosmetic path difference: in a local probe the GUI executable returned before a Promise from `eval` settled, whereas `obsidian-cli` awaited it and returned the resolved value.
 2. **The real CLI removes the need for the renderer-global Promise state/polling workaround.** The official plugin API also supports first-class plugin CLI handlers whose return type is `string | Promise<string>`. A test-only CLI control plane can therefore expose `ready`, `reset`, `idle`, `act`, and `diagnostics` as awaited commands instead of repeatedly injecting arbitrary JavaScript through `eval`.
 3. **A zero exit code is not a success contract for `eval`.** Both synchronous throws and rejected Promises were printed as `Error: ...` on stdout while the process exited `0`. A harness must parse a structured response or at least treat an `Error:` result as failure.
 4. **`plugin:reload` is a lifecycle operation, not a complete application-readiness barrier.** It reloads the plugin, but it cannot know about async work that the plugin deliberately starts without awaiting from `onload`. Textfresser currently does exactly that in `src/main.ts`. Readiness must be an explicit plugin-owned Promise/state transition.
@@ -232,7 +240,7 @@ Normal output should be one line per failed step, not a transcript of polling. O
 - Sharing the test vault with unrelated plugins, Sync, manual editing, or overlapping suites.
 - Assuming Obsidian Headless can run community plugins.
 
-## Minimal migration order
+## Implemented migration order
 
 1. Switch the wrapper from `.../MacOS/Obsidian` to the registered `obsidian-cli` binary and add an async/error contract test.
 2. Delete the renderer-global Promise polling workaround after the contract test passes.
@@ -243,7 +251,7 @@ Normal output should be one line per failed step, not a transcript of polling. O
 
 ## Textfresser-specific architecture synthesis
 
-### Why the current harness is intrinsically noisy
+### Why the retired harness was intrinsically noisy
 
 The present harness combines six different responsibilities inside Bun hooks:
 
@@ -460,7 +468,8 @@ Playwright or raw CDP can be added later for the tiny UI lane. The official CLI 
 4. Add reset/generation fencing and port a small host-contract matrix.
 5. Add the dedicated reload test and verify the old generation cannot emit observations after unload.
 6. Move the long semantic chain to deterministic in-process integration tests.
-7. Delete `tests/cli-e2e/setup.ts`, the generic `eval` wrapper, per-test reloads, fixed wait ladders, monkey-patched live state, and the duplicate fast harness.
+7. Deleted the old setup module, generic `eval` wrapper, per-test reloads,
+   fixed wait ladders, monkey-patched live state, and duplicate fast harness.
 8. Rewrite `AGENTS.md` and `docs/obsidian-ci.md` only after the replacement command is green on the dedicated host.
 
 The defining rule for the new environment is: **cold-build and cold-install before launch; own the host and vault; run independent stories; use reload only when reload itself is under test.**

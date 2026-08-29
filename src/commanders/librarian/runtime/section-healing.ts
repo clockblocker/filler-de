@@ -11,16 +11,17 @@ import {
 } from "@textfresser/library-core";
 import type { VaultAction } from "@textfresser/vault-action-manager";
 import { MD } from "@textfresser/vault-action-manager";
+import { Effect } from "effect";
 import { assembleVaultActions, processCodexImpacts } from "../init";
 import type { SplitHealingInfo } from "../pages/split-to-pages-action";
 
 /**
  * Dependencies for section healing.
  */
-export type SectionHealingDeps = {
+export type SectionHealingDeps<E = never> = {
 	healer: Healer;
 	codecs: Codecs;
-	dispatch: (actions: VaultAction[]) => Promise<void>;
+	dispatch: (actions: VaultAction[]) => Effect.Effect<void, E>;
 };
 
 /**
@@ -30,78 +31,80 @@ export type SectionHealingDeps = {
  * @param deps - Dependencies for healing (healer, codecs, dispatch)
  * @param info - Contains section chain, deleted scroll, and page node names
  */
-export async function triggerSectionHealing(
-	deps: SectionHealingDeps,
-	info: SplitHealingInfo,
-): Promise<void> {
-	const { healer, codecs, dispatch } = deps;
-	const { sectionChain, deletedScrollSegmentId, pageNodeNames } = info;
+export const triggerSectionHealing = Effect.fn("triggerSectionHealing")(
+	function* <E>(
+		deps: SectionHealingDeps<E>,
+		info: SplitHealingInfo,
+	): Effect.fn.Return<void, E> {
+		const { healer, codecs, dispatch } = deps;
+		const { sectionChain, deletedScrollSegmentId, pageNodeNames } = info;
 
-	// Delete the old scroll from the tree (self-event filtering blocked the Delete event)
-	// The scroll was in the parent section
-	if (sectionChain.length > 1) {
-		const parentChain = sectionChain.slice(0, -1);
-		const parentSection = healer.findSection(parentChain);
-		if (parentSection) {
-			delete parentSection.children[deletedScrollSegmentId];
+		// Delete the old scroll from the tree (self-event filtering blocked the Delete event)
+		// The scroll was in the parent section
+		if (sectionChain.length > 1) {
+			const parentChain = sectionChain.slice(0, -1);
+			const parentSection = healer.findSection(parentChain);
+			if (parentSection) {
+				delete parentSection.children[deletedScrollSegmentId];
+			}
 		}
-	}
 
-	// Ensure the section chain exists in the tree
-	// (self-event filtering blocked the normal Create events)
-	const section = healer.ensureSectionChain(sectionChain);
+		// Ensure the section chain exists in the tree
+		// (self-event filtering blocked the normal Create events)
+		const section = healer.ensureSectionChain(sectionChain);
 
-	// Populate section with page scroll nodes BEFORE codex generation
-	// (self-event filtering will block the page Create events, so we add them here)
-	for (const pageName of pageNodeNames) {
-		const scrollSegId = codecs.segmentId.serializeSegmentId({
-			coreName: pageName,
-			extension: MD,
-			targetKind: TreeNodeKind.Scroll,
-		}) as ScrollNodeSegmentId;
+		// Populate section with page scroll nodes BEFORE codex generation
+		// (self-event filtering will block the page Create events, so we add them here)
+		for (const pageName of pageNodeNames) {
+			const scrollSegId = codecs.segmentId.serializeSegmentId({
+				coreName: pageName,
+				extension: MD,
+				targetKind: TreeNodeKind.Scroll,
+			}) as ScrollNodeSegmentId;
 
-		section.children[scrollSegId] = {
-			extension: MD,
-			kind: TreeNodeKind.Scroll,
-			nodeName: pageName,
-			status: TreeNodeStatus.NotStarted,
+			section.children[scrollSegId] = {
+				extension: MD,
+				kind: TreeNodeKind.Scroll,
+				nodeName: pageName,
+				status: TreeNodeStatus.NotStarted,
+			};
+		}
+
+		// Build impacted chains: the new section + its parent (for codex content update)
+		const chainKey = sectionChain.join("/");
+		const impactedChains = new Set([chainKey]);
+
+		// Parent section also needs codex regeneration (its children changed)
+		if (sectionChain.length > 1) {
+			const parentChain = sectionChain.slice(0, -1);
+			impactedChains.add(parentChain.join("/"));
+		}
+
+		// Create synthetic CodexImpact for the impacted sections
+		const codexImpact: CodexImpact = {
+			contentChanged: [],
+			deleted: [],
+			descendantsChanged: [],
+			impactedChains,
+			renamed: [],
 		};
-	}
 
-	// Build impacted chains: the new section + its parent (for codex content update)
-	const chainKey = sectionChain.join("/");
-	const impactedChains = new Set([chainKey]);
+		// Process codex impact to generate vault actions
+		const { codexRecreations } = processCodexImpacts(
+			[codexImpact],
+			healer,
+			codecs,
+		);
 
-	// Parent section also needs codex regeneration (its children changed)
-	if (sectionChain.length > 1) {
-		const parentChain = sectionChain.slice(0, -1);
-		impactedChains.add(parentChain.join("/"));
-	}
+		// Assemble and dispatch vault actions
+		const vaultActions = assembleVaultActions([], codexRecreations, codecs);
 
-	// Create synthetic CodexImpact for the impacted sections
-	const codexImpact: CodexImpact = {
-		contentChanged: [],
-		deleted: [],
-		descendantsChanged: [],
-		impactedChains,
-		renamed: [],
-	};
+		// Generate backlink healing for all affected scrolls/codexes
+		const backlinkActions = getBacklinkHealingVaultActions(healer, codecs);
 
-	// Process codex impact to generate vault actions
-	const { codexRecreations } = processCodexImpacts(
-		[codexImpact],
-		healer,
-		codecs,
-	);
-
-	// Assemble and dispatch vault actions
-	const vaultActions = assembleVaultActions([], codexRecreations, codecs);
-
-	// Generate backlink healing for all affected scrolls/codexes
-	const backlinkActions = getBacklinkHealingVaultActions(healer, codecs);
-
-	const allActions = [...vaultActions, ...backlinkActions];
-	if (allActions.length > 0) {
-		await dispatch(allActions);
-	}
-}
+		const allActions = [...vaultActions, ...backlinkActions];
+		if (allActions.length > 0) {
+			yield* dispatch(allActions);
+		}
+	},
+);

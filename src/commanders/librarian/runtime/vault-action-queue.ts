@@ -1,94 +1,47 @@
+import { Effect, Semaphore } from "effect";
+
 import {
 	decrementPending,
 	incrementPending,
 } from "../../../utils/idle-tracker";
-import { logger } from "../../../utils/logger";
 
 /**
- * Item in the processing queue.
- * @template T - Type of item to process
- */
-export type QueueItem<T> = {
-	item: T;
-	resolve: () => void;
-};
-
-/**
- * VaultActionQueue serializes asynchronous processing of items.
- * Used for file system operations that must not interleave.
+ * Serializes effectful vault work that must not interleave.
  *
- * @template T - Type of item to process
+ * Each enqueue waits for its own item to finish and preserves the processor's
+ * typed error. A failed item releases the permit, so subsequent work can
+ * continue normally.
  */
-export class VaultActionQueue<T> {
-	private queue: QueueItem<T>[] = [];
-	private processing = false;
-	private drainResolvers: Set<() => void> = new Set();
-
-	constructor(
-		private readonly processor: (item: T) => Promise<void>,
-		private readonly logTag: string = "[VaultActionQueue]",
+export class VaultActionQueue<T, E> {
+	private constructor(
+		private readonly processor: (item: T) => Effect.Effect<void, E>,
+		private readonly semaphore: Semaphore.Semaphore,
 	) {}
 
-	/**
-	 * Enqueue an item for processing.
-	 * Returns a promise that resolves when the item has been processed.
-	 */
-	enqueue(item: T): Promise<void> {
-		return new Promise((resolve) => {
-			this.queue.push({ item, resolve });
-			this.processQueue();
-		});
-	}
+	static readonly make = Effect.fn("VaultActionQueue.make")(function* <T, E>(
+		processor: (item: T) => Effect.Effect<void, E>,
+	): Effect.fn.Return<VaultActionQueue<T, E>> {
+		const semaphore = yield* Semaphore.make(1);
+		return new VaultActionQueue(processor, semaphore);
+	});
 
-	/**
-	 * Process queued items one at a time.
-	 */
-	private async processQueue(): Promise<void> {
-		if (this.processing) return;
-		this.processing = true;
-		incrementPending();
+	readonly enqueue = Effect.fn("VaultActionQueue.enqueue")(function* (
+		this: VaultActionQueue<T, E>,
+		item: T,
+	): Effect.fn.Return<void, E> {
+		yield* this.semaphore.withPermit(
+			Effect.acquireUseRelease(
+				Effect.sync(incrementPending),
+				() => this.processor(item),
+				() => Effect.sync(decrementPending),
+			),
+		);
+	});
 
-		try {
-			while (this.queue.length > 0) {
-				const entry = this.queue.shift();
-				if (!entry) continue;
-
-				try {
-					await this.processor(entry.item);
-				} catch (error) {
-					logger.error(
-						`${this.logTag} Error processing item:`,
-						error,
-					);
-				}
-
-				entry.resolve();
-			}
-		} finally {
-			this.processing = false;
-			decrementPending();
-			this.signalQueueDrained();
-		}
-	}
-
-	/**
-	 * Wait for the queue to drain and all processing to complete.
-	 * Uses event-based signaling instead of polling.
-	 */
-	waitForDrain(): Promise<void> {
-		if (this.queue.length === 0 && !this.processing) {
-			return Promise.resolve();
-		}
-		return new Promise((resolve) => this.drainResolvers.add(resolve));
-	}
-
-	/**
-	 * Signal all waiters that the queue has drained.
-	 */
-	private signalQueueDrained(): void {
-		for (const resolve of this.drainResolvers) {
-			resolve();
-		}
-		this.drainResolvers.clear();
-	}
+	/** Waits for all enqueues registered before this effect to finish. */
+	readonly waitForDrain = Effect.fn("VaultActionQueue.waitForDrain")(
+		function* (this: VaultActionQueue<T, E>): Effect.fn.Return<void> {
+			yield* this.semaphore.withPermit(Effect.void);
+		},
+	);
 }

@@ -3,6 +3,9 @@
 Manual sanity checks for how Lemma/Generate commands interact with vault state.
 Run against `cli-e2e-test-vault`.
 
+This is an exploratory human runbook, not an automated test harness. Automated
+desktop coverage belongs in `tests/obsidian-e2e`.
+
 ---
 
 ## Philosophy
@@ -43,7 +46,7 @@ defaults read /Applications/Obsidian.app/Contents/Info.plist CFBundleShortVersio
 ### Shell Variables
 
 ```bash
-OBS="/Applications/Obsidian.app/Contents/MacOS/Obsidian"
+OBS="${OBSIDIAN_BIN:-obsidian}"
 VAULT="cli-e2e-test-vault"
 PLUGIN="cbcr-text-eater-de"
 SRC="Outside/Textfresser-Lemma-Manual.md"
@@ -397,11 +400,17 @@ If missing: check `community-plugins.json` and that `main.js` + `manifest.json` 
 
 ### Deploy Fresh Build
 
+For automated verification, use `bun run test:obsidian-e2e`; its runner owns
+safe deployment and readiness. For an intentional manual runbook session,
+disable before copying and reload the window once before re-enabling:
+
 ```bash
 bun run build
+$OBS vault=$VAULT plugin:disable id=$PLUGIN
 cp main.js /Users/annagorelova/work/obsidian/cli-e2e-test-vault/.obsidian/plugins/cbcr-text-eater-de/main.js
 cp manifest.json /Users/annagorelova/work/obsidian/cli-e2e-test-vault/.obsidian/plugins/cbcr-text-eater-de/manifest.json
-$OBS vault=$VAULT plugin:reload id=$PLUGIN
+$OBS vault=$VAULT reload
+$OBS vault=$VAULT plugin:enable id=$PLUGIN
 ```
 
 ---

@@ -32,6 +32,7 @@ prompt.ts
 .obsidian-cache
 .env
 .env.cli-e2e
+.env.obsidian-e2e
 
 /tests/prompt-test/logs
 /src/packages/independent/lexical-generation/tests/prompt-test/logs

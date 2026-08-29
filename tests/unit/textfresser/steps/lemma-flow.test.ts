@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type {
 	SplitPathToMdFile,
+	VaultAction,
 } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
@@ -197,7 +198,58 @@ function runLemmaCommand(
 	);
 }
 
+async function applySourceTransforms(
+	dispatches: readonly (readonly unknown[])[],
+	content: string,
+): Promise<string> {
+	let transformed = content;
+	for (const batch of dispatches) {
+		for (const candidate of batch) {
+			const action = candidate as VaultAction;
+			if (
+				action.kind === VaultActionKind.ProcessMdFile &&
+				action.payload.splitPath.basename === SOURCE_PATH.basename &&
+				"transform" in action.payload
+			) {
+				transformed = await action.payload.transform(transformed);
+			}
+		}
+	}
+	return transformed;
+}
+
 describe("lemma two-phase flow", () => {
+	it("rewrites a selected noun surface through the public Lemma command", async () => {
+		const rawBlock =
+			"Da begegnete ihm ein alter Mann, dem reichen Manne ähnlich. ^1";
+		const { dispatches, textfresser } = makeHarness({
+			lemma: "Mann",
+			lemmaOutputs: [
+				{
+					contextWithLinkedParts:
+						"Da begegnete ihm ein alter Mann, dem reichen [Manne] ähnlich. ^1",
+					lemma: "Mann",
+					linguisticUnit: "Lexem",
+					posLikeKind: "Noun",
+					surfaceKind: "Inflected",
+				},
+			],
+		});
+
+		const result = await runLemmaCommand(
+			textfresser,
+			makeLemmaContextFor(rawBlock, "Manne"),
+			() => {},
+		);
+		expect(Result.isSuccess(result)).toBe(true);
+
+		const source = await applySourceTransforms(
+			dispatches,
+			`A\n${rawBlock}\nB`,
+		);
+		expect(source).toMatch(/reichen \[\[(?:[^\]|]+\|)?Manne\]\] ähnlich/u);
+	});
+
 	it("precreates Worter placeholder when selected surface is unresolved", async () => {
 		const { dispatches, textfresser } = makeHarness({ lemma: "gehen" });
 		const result = await runLemmaCommand(textfresser, makeLemmaContext(), () => {});

@@ -1,497 +1,196 @@
-# E2E Testing — Architecture (CLI-Based)
+# End-to-end test architecture
 
-> **Scope**: This document covers the CLI-based end-to-end testing infrastructure for the Textfresser plugin. For the file system abstraction layer, see `vam-architecture.md`. For vocabulary/dictionary commands, see `textfresser-architecture.md`.
->
-> **Compatibility Policy (Dev Mode, 2026-02-20)**:
-> - Textfresser is treated as green-field. Breaking changes are allowed; no backward-compatibility guarantees for Textfresser note formats, schemas, or intermediate contracts.
-> - Librarian and VAM are stability-critical infrastructure. Changes there require conservative rollout, migration planning when persisted contracts change, and explicit regression coverage.
+Textfresser has three test lanes. Each lane owns a different source of
+uncertainty; none is a cheaper imitation of another.
 
----
+| Lane | Owns | Command |
+| --- | --- | --- |
+| Deterministic | Library interpretation/healing, Librarian composition, Textfresser orchestration | `bun run test:unit`, `bun run test:integration` |
+| Obsidian desktop | Real plugin lifecycle, vault/file-manager callbacks, event timing, official CLI transport | `bun run test:obsidian-e2e` |
+| Provider acceptance | Live Gemini prompt and schema quality | `bun run test:provider-acceptance --suite=<budget>` |
 
-## 1. Purpose
+The former shared-vault chain, duplicate fast harness, arbitrary renderer-eval
+RPC, per-test reloads, and fixed wait ladders have been deleted. The completed
+behavior map is in `tests/obsidian-e2e/scenarios/COVERAGE.md`.
 
-The E2E test suite validates the Textfresser plugin **running inside a real Obsidian instance**, exercising the full stack: vault mutations → plugin event pipeline → healing/codex generation → file system state. The suite uses Obsidian's CLI interface (`Obsidian --vault=X command`) to drive operations from an external Bun test process.
+## Desktop topology
 
-**Test targets**: Librarian healing, codex generation, suffix healing, status propagation, file/folder deletion cleanup.
-
-**Current coverage**: the legacy chain suite still covers 24 tests across 12 chain steps (000–011), covering init healing, file creation, folder rename, create+rename, single file delete, folder delete, corename rename, basename healing, checkbox propagation, lemma command integration, and file move codex regeneration.
-
-**Fast-path coverage**: `tests/cli-fast/` provides a lighter harness for focused CLI scenarios. It keeps the same real-Obsidian execution model, but skips the full fixture reload cycle from `setupTestVault()` and instead prepares only the minimal subtree needed by the test.
-
-The fast harness does not use plugin-side `whenIdle()` as its primary sync primitive. It uses explicit settling waits plus polling assertions:
-- `waitFor("short")` = `100ms`
-- `waitFor("medium")` = `500ms`
-- `waitFor("medium-long")` = `1000ms`
-- `waitFor("long")` = `2000ms`
-
-**Migrated fast scenarios so far**:
-- `004-delete-file` via `tests/cli-fast/librarian/delete-file-fast.test.ts`
-- `003-create-and-rename-a-file` via `tests/cli-fast/librarian/create-and-rename-file-fast.test.ts`
-- `007-create-file-basename-healing` via `tests/cli-fast/librarian/create-file-basename-healing-fast.test.ts`
-- `006-rename-corename` via `tests/cli-fast/librarian/rename-corename-fast.test.ts`
-- `002-rename-files` via `tests/cli-fast/librarian/rename-files-fast.test.ts`
-
-**Not yet ported** (deferred):
-- Checkbox clicking (old chain-0/004) — requires `eval`-based DOM manipulation
-- Page metadata preservation — requires separate vault fixture
-- Text spitter — was deprecated in the old suite
-
----
-
-## 2. Architecture Overview
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│  Bun Test Runner                                                     │
-│    bun test --env-file=.env.cli-e2e tests/cli-e2e/ --timeout 60000  │
-├──────────────────────────────────────────────────────────────────────┤
-│  Test Suite (librarian.test.ts)                                      │
-│    beforeAll → setupTestVault()                                      │
-│    it() blocks: mutation → waitForIdle → assertions                  │
-├──────────────────────────────────────────────────────────────────────┤
-│  Chain Files (per-step decomposition)                                │
-│    ├─ mutations.ts         → vault ops (create, rename, delete)      │
-│    ├─ assertions.ts        → expectPostHealing()                     │
-│    └─ vault-expectations.ts → expected codexes, files, content       │
-├──────────────────────────────────────────────────────────────────────┤
-│  Utils Layer (tests/cli-e2e/utils/)                                  │
-│    ├─ cli.ts       → obsidian() + obsidianEval() CLI wrappers       │
-│    ├─ vault-ops.ts → file CRUD via CLI + eval                        │
-│    ├─ idle.ts      → waitForIdle() + reloadPlugin()                  │
-│    ├─ assertions.ts → polling assertions, content checks             │
-│    ├─ types.ts     → CliResult, PostHealingExpectations              │
-│    └─ index.ts     → re-exports                                      │
-├──────────────────────────────────────────────────────────────────────┤
-│  Setup (tests/cli-e2e/setup.ts)                                      │
-│    deployBuildArtifacts → ensureVaultOpen → reloadPlugin             │
-│    → clean Library/Outside → create fixtures → reload → waitForIdle  │
-├──────────────────────────────────────────────────────────────────────┤
-│  Fast Harness (tests/cli-fast/)                                      │
-│    prepareFastSuite() → deploy build → ensure vault open             │
-│    → reload once → waitFor("short")                                  │
-│    focused fixture helpers → direct CLI file ops                     │
-├──────────────────────────────────────────────────────────────────────┤
-│  Plugin-Side (src/)                                                   │
-│    ├─ utils/idle-tracker.ts  → pendingCount + whenIdle()             │
-│    └─ main.ts                → plugin.whenIdle() hook                │
-└──────────────────────────────────────────────────────────────────────┘
+```text
+tests/obsidian-e2e/runner.ts
+  acquire exclusive lease
+  resolve official obsidian-cli
+  disable both plugins
+  deploy Textfresser + test driver once
+  establish one renderer/session boundary
+  enable driver, then Textfresser
+  await versioned readiness
+  run independent Bun scenarios serially
+  collect diagnostics on failure
+  clean session and owned host in finally
+              |
+              | serialized official CLI calls
+              v
+Obsidian desktop + dedicated vault
+  production Textfresser artifact
+  test-only driver plugin
+    textfresser-e2e request=<base64url JSON>
 ```
 
-### How it works
+Obsidian Headless is not used: it does not host community plugins. Managed E2E
+therefore needs a logged-in macOS desktop session. Attached mode borrows one
+dedicated test vault but still holds the repository-wide lease and owns plugin
+deployment for the duration of the run.
 
-1. **Bun test** spawns as a normal test process (no Electron, no WDIO)
-2. **CLI wrapper** (`cli.ts`) invokes Obsidian's CLI binary via `Bun.spawn` to run commands in the running Obsidian instance
-3. **Vault ops** use either CLI commands (for files) or `eval` (for folders and complex operations)
-4. **Synchronization** uses one of two paths:
-   - legacy chain suite: `waitForIdle()` via plugin `whenIdle()`
-   - fast suite: explicit `waitFor(...)` settle windows plus polling assertions
-5. **Assertions** poll the vault state until expectations are met or timeout
+## Control plane
 
-The fast harness uses the same low-level CLI primitives, but narrows the setup to a minimal fixture and exact `path=` operations. This is useful when a scenario only needs one subtree and the full chain bootstrap dominates runtime. Synchronization there is intentionally explicit: apply an operation, wait at the chosen ladder level, then let polling assertions prove the final state.
+The driver registers one CLI command through Obsidian's awaited
+`registerCliHandler` API. Requests and responses use a versioned JSON envelope
+with a session ID, request ID, Textfresser instance ID, and generation.
 
----
+Mutations are fenced. If Textfresser reloads or the generation changes, the
+request fails rather than silently continuing against a replacement instance.
+The driver caches bounded responses by request ID, but the controller never
+replays an ambiguous create, rename, delete, or modify operation.
 
-## 3. CLI Interface
+Supported protocol methods are `status`, `ready`, `beginScenario`, `act`,
+`settle`, `snapshot`, `diagnostics`, and `cleanupSession`. Scenario authors do
+not call those methods directly; `withObsidianScenario` is the public seam.
 
-### 3.1 `obsidian(command)` — Shell-Based CLI
+## Scenario lifecycle
 
-Runs a CLI command via `sh -c` for commands that don't contain special characters:
+Every scenario is one independent story:
 
-```typescript
-obsidian('create name="Library/Foo.md" content="" silent')
-obsidian('files folder="Library" ext=md')
-obsidian('read path="Library/Foo.md"')
-obsidian('plugin:reload id=cbcr-text-eater-de')
-```
+```ts
+await withObsidianScenario(
+	{
+		id: "new-scroll-healing",
+		fixture: [{ path: "Soup/Ramen/Anchor.md", content: "# Anchor" }],
+	},
+	async ({ act, snapshot }) => {
+		await act({
+			kind: "createFile",
+			path: "Soup/Ramen/NewScroll.md",
+			content: "# NewScroll",
+		});
 
-### 3.2 `obsidianEval(code)` — Direct Spawn (No Shell)
-
-Runs JavaScript code inside Obsidian via `eval`. Uses `Bun.spawn` with array args (no shell) to avoid zsh special character mangling:
-
-```typescript
-obsidianEval(`(async()=>{
-  await app.vault.createFolder('Library/New');
-  return 'ok'
-})()`)
-```
-
-**Why two modes**: `sh -c` is convenient for simple CLI commands, but zsh mangles `!`, `$`, and other special characters inside double quotes. `eval` code goes through `Bun.spawn` array args to bypass the shell entirely.
-
----
-
-## 4. Key Gotchas
-
-### 4.1 Obsidian CLI Always Returns Exit 0
-
-The CLI returns exit code 0 for **all** outcomes — success, "file not found", eval errors. Error detection must parse stdout:
-
-```typescript
-// eval errors are prefixed with "Error:"
-if (meaningful.startsWith("Error:")) {
-    throw new Error(`eval failed: ${meaningful}`);
-}
-```
-
-### 4.2 macOS `sh -c` Mangles Special Characters
-
-Bash/zsh inside `sh -c "..."` expands `!` (history expansion) and `$` (variable expansion). Example:
-
-```bash
-# ❌ This breaks: ! gets expanded by zsh
-sh -c '/path/to/Obsidian vault=X eval code="if(!x){...}"'
-
-# ✅ obsidianEval uses Bun.spawn array args — no shell involved
-Bun.spawn([OBSIDIAN_BIN, 'vault=X', 'eval', 'code=if(!x){...}'])
-```
-
-### 4.3 CLI `create`/`rename`/`move`/`delete` Only Work for Files
-
-CLI file commands don't handle folders. Folder operations must use `eval`:
-
-```typescript
-// Create folder
-obsidianEval("app.vault.createFolder('Library/New')")
-
-// Delete folder
-obsidianEval("const f=app.vault.getAbstractFileByPath('Library/Old'); app.vault.trash(f,true)")
-
-// Rename folder (uses fileManager for proper event emission)
-obsidianEval("const f=app.vault.getAbstractFileByPath('Library/Old'); app.fileManager.renameFile(f,'Library/New')")
-```
-
-### 4.4 `file path=X` in the Fast Harness
-
-The fast harness currently uses `file path=...` for exact existence checks and treats `stdout` starting with `Error:` as missing. This keeps the common path on direct CLI commands and has been stable in migrated scenarios so far.
-
-If this starts flaking on future ports, fall back to `eval` for the affected helper rather than changing scenario code.
-
-```typescript
-const command = `file path=${quoteCli(path)}`;
-const result = await obsidian(command);
-return !result.stdout.startsWith("Error:");
-```
-
-The legacy harness originally avoided relying on this command and used `eval` instead:
-
-```typescript
-const result = await obsidianEval(
-    `app.vault.getAbstractFileByPath('${path}') ? 'yes' : 'no'`
+		expect((await snapshot()).files).toContainEqual({
+			kind: "md",
+			path: "Soup/Ramen/NewScroll-Ramen-Soup.md",
+		});
+	},
 );
-return result === "yes";
 ```
 
----
+The driver allocates `E2E/<session>/<scenario>/Library`, seeds the fixture
+through Obsidian's Vault API, reinitializes the Librarian against that root,
+and waits for real pending work to settle. Fixture/action paths are Library
+relative. `snapshot` returns a sorted view of files plus all Markdown contents.
+The scenario root is removed in `finally`, including when assertions fail.
 
-## 5. Synchronization
+Available actions are `createFile`, `createBinary`, `modifyFile`, `renamePath`,
+and `deletePath`. Add a new typed action only for a genuine host boundary that
+cannot be tested in-process. Never expose raw `app`, `eval`, VAM, Librarian, or
+a plugin instance to scenario code.
 
-### 5.1 Plugin-Side: Idle Tracker
+## Completion and isolation
 
-`src/utils/idle-tracker.ts` tracks in-flight async work via a `pendingCount` counter. This now includes Textfresser background Generate lifecycle (increment on launch, decrement in `finally`). `whenIdle()` waits for the counter to reach 0, then applies a 1000ms grace period to catch cascading work (healing → more events → more healing, or Lemma → background Generate).
+The runner deploys only while both plugins are disabled and performs one
+session-boundary reload in attached mode. Ordinary scenarios never reload.
 
-### 5.2 Legacy Chain Sync: `waitForIdle()`
+`act` awaits Textfresser's owned idle barrier after the Obsidian mutation.
+Tests do not sleep or poll individual files. This barrier includes active
+Textfresser work and VAM settlement; a timeout is a failure with diagnostics,
+not permission to retry the mutation.
 
-Calls `plugin.whenIdle()` inside Obsidian via `eval`:
+Normal runs are quiet. On failure the harness preserves the session manifest,
+structured driver status/snapshot, Obsidian errors, recent warning/error
+console messages, screenshot, and the runner error. Temporary artifacts from a
+successful run are removed.
 
-```typescript
-export async function waitForIdle(timeoutMs = 15_000): Promise<void> {
-    const code = `(async()=>{await app.plugins.plugins['${PLUGIN_ID}'].whenIdle();return 'idle'})()`;
-    await obsidianEval(code, timeoutMs);
-}
+## Attached mode
+
+Create `.env.obsidian-e2e`:
+
+```dotenv
+OBSIDIAN_E2E_VAULT=dedicated-test-vault
+OBSIDIAN_E2E_VAULT_PATH=/absolute/path/to/dedicated-test-vault
 ```
 
-### 5.3 Fast Suite Sync: `waitFor(...)`
-
-The fast suite deliberately avoids plugin-side idle hooks. It settles briefly after each operation, then relies on polling assertions to prove the final state:
-
-```typescript
-await createExactFile(path, content);
-await waitFor("short");
-await renameExactFile(path, "Renamed.md");
-await waitFor("short");
-await expectFastHealing(expectations);
-```
-
-### 5.4 Combined Flow
-
-```
-Test mutation (createFile, renamePath, deletePath)
-    ↓
-waitForIdle()
-    ├─ eval → plugin.whenIdle()
-    │   ├─ idle-tracker: wait for pendingCount === 0
-    │   ├─ 1000ms grace period (resets on new work)
-    │   └─ waitForObsidianEvents() drain
-    ↓
-Assertion phase (poll-based)
-    ├─ expectFilesToExist(paths)
-    ├─ expectFilesToBeGone(paths)
-    ├─ expectExactCodexes(expected)
-    └─ content checks (substring match)
-```
-
----
-
-## 6. Assertion Framework
-
-### 6.1 Polling Engine
-
-All assertions use `pollUntilPass()` — retries the assertion function until it passes or timeout is reached. The legacy and fast harnesses use the same shape with different intervals/timeouts tuned to their needs.
-
-```typescript
-async function pollUntilPass(fn: () => Promise<void>, timeoutMs = 15_000)
-```
-
-### 6.2 PostHealingExpectations
-
-The primary assertion type for healing tests:
-
-```typescript
-type PostHealingExpectations = {
-    codexes: readonly string[];           // __-*.md files that must exist
-    files: readonly string[];             // all expected file paths
-    goneFiles?: readonly string[];        // files that must NOT exist
-    contentChecks?: readonly [path, lines][]; // each file must contain these lines
-    contentMustNotContain?: readonly [path, forbidden][]; // negative checks
-};
-```
-
-`expectPostHealing(expectations)` runs checks in order: existence → gone → content → negative content.
-
-### 6.3 Orphan Codex Detection
-
-`expectExactCodexes(expected)` lists all `__-*.md` files under `Library/` and fails if any unexpected ones exist.
-
----
-
-## 7. Test Vault Setup
-
-### 7.1 Environment Variables
-
-Set in `.env.cli-e2e` (gitignored):
-
-| Variable | Purpose | Example |
-|----------|---------|---------|
-| `CLI_E2E_VAULT` | Obsidian vault name (for CLI commands) | `cli-e2e-test` |
-| `CLI_E2E_VAULT_PATH` | Absolute path to vault folder on disk | `/Users/me/vaults/cli-e2e-test` |
-| `OBSIDIAN_CLI_PATH` | Path to Obsidian binary (optional) | `/Applications/Obsidian.app/Contents/MacOS/Obsidian` |
-
-### 7.2 One-Time Setup
-
-1. Create a vault in Obsidian (e.g., `cli-e2e-test`)
-2. Install the plugin in that vault (create `.obsidian/plugins/cbcr-text-eater-de/` with `manifest.json`)
-3. Enable the plugin in Obsidian settings
-4. Create `.env.cli-e2e` with the vault name and path
-
-### 7.3 Per-Run Setup (`setupTestVault()`)
-
-Runs in `beforeAll`:
-
-```
-1. Deploy build artifacts (main.js, manifest.json) → vault's plugin dir
-2. Ensure vault is open (try CLI health check; if fail, open via obsidian:// URI)
-3. Reload plugin to pick up new code
-4. Delete Library/ and Outside/ (clean slate)
-5. Create fixture files (7 files matching librarian-chain-0 structure)
-6. Reload plugin again (discovers new vault from scratch)
-7. Wait for initial healing to complete
-```
-
-The fixture vault structure:
-```
-Library/
-  Recipe/
-    Pie/
-      Ingredients.md
-      Steps.md
-      Result_picture.jpg
-    Soup/
-      Pho_Bo/
-        Ingredients.md
-        Steps.md
-        Result_picture.jpg
-Outside/
-  Avatar-S1-E1.md
-```
-
-### 7.4 Fast Setup (`tests/cli-fast/`)
-
-The fast harness keeps the vault open and deploys the latest build, but avoids the full fixture recreation cycle:
-
-```
-1. Deploy build artifacts (main.js, manifest.json)
-2. Ensure vault is open in Obsidian
-3. Reload plugin once and wait for `waitFor("short")`
-4. Delete only the subtree owned by the focused test, usually under a unique path like `Library/CliFast/<ScenarioName>/...`
-5. Create the minimal fixture for that test
-6. Apply explicit `waitFor(...)` settles around the mutation
-7. Let polling assertions verify the healed result
-```
-
-Guideline:
-- Use `tests/cli-e2e/` for chain-style regression tests that need the historical fixture.
-- Use `tests/cli-fast/` for isolated CLI scenarios where the expensive part is harness setup, not the mutation itself.
-
-### 7.5 Fast Migration Timings
-
-Measured on `cli-e2e-test-vault` on March 12, 2026.
-
-`Fast path time` is the dedicated `tests/cli-fast/` scenario runtime from local fixture reset through assertion.
-
-For `003` and `004`, `legacy path time` is the original chain-style run: `setupTestVault()` plus the prerequisite legacy mutations needed to reach the scenario step.
-
-For `002`, `006`, and `007`, the original legacy mutations are no longer a stable stopwatch target on the current vault. Their `legacy path time` below uses the old `setupTestVault()` bootstrap plus an equivalent focused scenario run under that harness, which is the comparison that matters for setup-overhead reduction.
-
-| Scenario | Legacy path time | Fast path time | Setup cost removed |
-|----------|------------------|----------------|--------------------|
-| `004-delete-file` | `16184ms` | `3484ms` | Full `setupTestVault()` bootstrap, whole-vault cleanup, and prerequisite chain state only needed to reach one Fish codex delete |
-| `003-create-and-rename-a-file` | `15014ms` | `3871ms` | Full `setupTestVault()` bootstrap plus historical `001` and `002` setup used only to reach one Berry codex rename |
-| `007-create-file-basename-healing` | `10901ms` | `4688ms` | Full `setupTestVault()` bootstrap for a single unsuffixed scroll create plus go-back-link assertion |
-| `006-rename-corename` | `15864ms` | `9770ms` | Full `setupTestVault()` bootstrap for one Ramen subtree plus three same-folder renames |
-| `002-rename-files` | `19467ms` | `14029ms` | Full `setupTestVault()` bootstrap for one focused Recipe subtree plus the two folder renames that trigger descendant healing |
-
----
-
-## 8. Test Organization
-
-### 8.1 Mutation Chain Pattern
-
-Tests run as sequential state mutations on one vault. State carries forward — each test's mutation becomes the baseline for the next test's assertions.
-
-```
-beforeAll → setupTestVault() (clean + fixtures + init healing)
-    ↓
-it("assert 000")   → validate init healing state
-it("mutation 001") → createFiles() + waitForIdle()
-it("assert 001")   → validate cumulative state after 001
-it("mutation 002") → renamePath() + waitForIdle()
-it("assert 002")   → validate cumulative state after 000+001+002
-    ...
-```
-
-### 8.2 Chain File Structure
-
-Each step is a directory with 3 files:
-
-```
-chains/0-chain/001-create-more-files/
-├── index.ts              → re-exports { performMutation001, testPostHealing001 }
-├── mutations.ts          → async function performing vault operations
-└── vault-expectations.ts → static data: expected codexes, files, content checks
-```
-
-Assertions live inline or import from vault-expectations. Each step's expectations import from the previous step and append new files/remove deleted ones:
-
-```typescript
-import { EXPECTED_FILES_AFTER_000 } from "../000-init/vault-expectations";
-const EXPECTED_FILES_AFTER_001 = [...EXPECTED_FILES_AFTER_000, ...NEW_FILES];
-```
-
-### 8.3 Current Chain Steps
-
-| Step | Chain | Mutation | Validates |
-|------|-------|----------|-----------|
-| 000 | 0 | None (init) | Codex files created, files renamed to canonical suffixes |
-| 001 | 0 | Create 8 files | New codexes, suffix-implied files moved correctly |
-| 002 | 0 | Rename 2 folders | Suffix healing cascades to all descendants |
-| 003 | 0 | Create + rename file | Codex reflects final name |
-| 004 | 1 | Delete single file | Codex no longer references deleted file |
-| 005 | 1 | Delete folder | Folder's codex + descendants gone, parent codex updated |
-| 006 | 1 | Create + rename ×3 | Codex shows final corename, no intermediate traces |
-| 007 | 1 | Create file without suffix | File renamed with suffix, go-back link added |
-| 008 | 2 | Toggle scroll checkbox | Scroll and ancestor codex checkbox states update |
-| 009 | 2 | Toggle section checkbox | Descendant statuses propagate and section codexes update |
-| 010 | 3 | Lemma command on selected text | Command integration rewrites the selected text in-place |
-| 011 | 3 | Move file via CLI `move` | Old and new section codexes regenerate after file relocation |
-
----
-
-## 9. How to Add a New Chain Step
-
-1. Create a new directory under the appropriate chain:
-   ```
-   tests/cli-e2e/librarian/chains/1-chain/008-my-new-test/
-   ```
-
-2. Create `vault-expectations.ts` — import previous step's expectations, add/remove:
-   ```typescript
-   import { EXPECTED_FILES_AFTER_007, EXPECTED_CODEXES_AFTER_007 } from "../007-.../vault-expectations";
-
-   export const EXPECTED_FILES_AFTER_008 = [...EXPECTED_FILES_AFTER_007, "Library/New/File-New.md"];
-   export const EXPECTED_CODEXES_AFTER_008 = [...EXPECTED_CODEXES_AFTER_007, "Library/New/__-New.md"];
-
-   export const VAULT_EXPECTATIONS_008: PostHealingExpectations = {
-       codexes: EXPECTED_CODEXES_AFTER_008,
-       files: EXPECTED_FILES_AFTER_008,
-       contentChecks: [["Library/New/__-New.md", ["[[File-New|File]]"]]],
-   };
-   ```
-
-3. Create `mutations.ts`:
-   ```typescript
-   import { createFile } from "../../../utils";
-   export async function performMutation008(): Promise<void> {
-       await createFile("Library/New/File.md", "# Content");
-   }
-   ```
-
-4. Create `index.ts`:
-   ```typescript
-   export { performMutation008 } from "./mutations";
-   export { VAULT_EXPECTATIONS_008 } from "./vault-expectations";
-   import { expectPostHealing } from "../../../utils";
-   import { VAULT_EXPECTATIONS_008 } from "./vault-expectations";
-   export async function testPostHealing008(): Promise<void> {
-       await expectPostHealing(VAULT_EXPECTATIONS_008);
-   }
-   ```
-
-5. Add to `librarian.test.ts`:
-   ```typescript
-   import { performMutation008, testPostHealing008 } from "./chains/1-chain/008-my-new-test";
-
-   it("mutation description for 008", async () => {
-       await performMutation008();
-       await waitForIdle();
-   });
-   it("assertion description for 008", testPostHealing008);
-   ```
-
----
-
-## 10. Running Tests
+Open that vault in Obsidian, enable the official CLI in Obsidian settings, and
+run:
 
 ```bash
-# Run CLI E2E suite (builds first)
-bun run test:cli-e2e
-
-# Run with verbose output
-bun test --env-file=.env.cli-e2e tests/cli-e2e/ --timeout 60000
-
-# Run just unit tests (no E2E)
-bun run test:unit
+bun run test:obsidian-e2e
+bun run test:obsidian-e2e --scenario=folder-rename-healing
 ```
 
-**Prerequisites**: Obsidian must be running with the test vault open. The test suite will attempt to open the vault via URI scheme if it's not already open, but Obsidian itself must be running.
+An existing local `.env.cli-e2e` is loaded only as a configuration
+compatibility fallback. New setup uses the `OBSIDIAN_E2E_*` names.
 
----
+## Managed mode
 
-## 11. Key File Index
+```bash
+bun run test:obsidian-e2e:managed
+```
 
-| File | Purpose |
-|------|---------|
-| **Setup** | |
-| `tests/cli-e2e/setup.ts` | Vault setup: deploy artifacts, clean, create fixtures, reload |
-| `.env.cli-e2e` | Env vars: vault name, vault path (gitignored) |
-| **Utils** | |
-| `tests/cli-e2e/utils/cli.ts` | `obsidian()` + `obsidianEval()` CLI wrappers |
-| `tests/cli-e2e/utils/vault-ops.ts` | File CRUD: create, read, rename, delete, list, exists |
-| `tests/cli-e2e/utils/idle.ts` | `waitForIdle()` + `reloadPlugin()` |
-| `tests/cli-e2e/utils/assertions.ts` | Polling assertions: existence, content, orphan codex |
-| `tests/cli-e2e/utils/types.ts` | `CliResult`, `PostHealingExpectations` |
-| `tests/cli-e2e/utils/index.ts` | Re-exports |
-| **Test Suite** | |
-| `tests/cli-e2e/librarian/librarian.test.ts` | Main test suite (16 tests) |
-| `tests/cli-e2e/librarian/chains/0-chain/` | Steps 000–003: init, create, rename, create+rename |
-| `tests/cli-e2e/librarian/chains/1-chain/` | Steps 004–007: delete, folder delete, corename, basename |
-| **Plugin-Side** | |
-| `src/utils/idle-tracker.ts` | `pendingCount` + `whenIdle()` + grace period |
+Managed mode is the reference CI topology. It refuses to run while Obsidian is
+already open, creates/restores the dedicated test vault before launch, installs
+both plugins before startup, owns the process it starts, and cleans the vault
+afterward. `OBSIDIAN_E2E_KEEP_VAULT=1` retains a failed vault;
+`OBSIDIAN_E2E_VAULT_TEMPLATE=/absolute/path` supplies an immutable starting
+template.
+
+The host needs Obsidian 1.12.2 or newer with its current installer and CLI
+enabled. `OBSIDIAN_CLI_PATH` may select the official binary. The runner rejects
+`/Applications/Obsidian.app/Contents/MacOS/Obsidian`; that GUI executable does
+not provide the required awaited async contract.
+
+## Deterministic integration
+
+Use an in-process public module boundary when the uncertainty is domain logic,
+not Obsidian. Current examples include:
+
+- Bulk Vault Event to Tree Action to Healing policy;
+- repeated Core Name changes and Codex rendering;
+- `Librarian.handleCodexCheckboxClick` status propagation;
+- `Textfresser.executeCommand("Lemma", context)` source transformation;
+- background Generate scheduling and cleanup.
+
+These tests use deterministic adapters and assert semantic actions/output.
+They must not reproduce Obsidian objects, CLI process behavior, or private
+implementation call order.
+
+## Provider acceptance
+
+Provider tests call the public lexical-generation module without starting
+Obsidian. A run requires all three explicit inputs: the opt-in flag, provider
+key, and suite budget.
+
+```bash
+bun run test:provider-acceptance:preflight
+
+TEXTFRESSER_PROVIDER_ACCEPTANCE=1 \
+GEMINI_API_KEY=... \
+bun run test:provider-acceptance --suite=smoke
+```
+
+`--suite=edge` and `--suite=all` are larger budgets; `--case=<id>` focuses one
+case and automatically includes its ordered sense prerequisites. Reports are
+written beneath `tests/provider-acceptance/artifacts/textfresser` unless
+`TEXTFRESSER_PROVIDER_ARTIFACT_DIR` overrides the destination.
+
+Provider acceptance owns canonical lemma, lexical classification,
+disambiguation, and schema-valid generation. It does not own source rewriting,
+wikilink idempotency, or note persistence; deterministic Textfresser tests do.
+
+## Adding coverage
+
+1. Identify the uncertainty before choosing a lane.
+2. Put Library/Textfresser semantics at a public deterministic seam.
+3. Use desktop E2E only when real Obsidian behavior is part of the claim.
+4. Use provider acceptance only when model output itself is the claim.
+5. Make every desktop story independent and minimal.
+6. Verify locally with the narrow command, then the relevant aggregate suite.
+
+The architectural rule is simple: one lifecycle owner, one typed control
+plane, independent scenarios, and no synchronization by accident.

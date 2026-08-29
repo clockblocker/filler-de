@@ -4,50 +4,60 @@ bun run build        # production
 bun run dev          # watch mode
 bun run build:dev    # dev + typecheck
 
-# Test
-bun test             # unit tests
-bun run test:unit    # unit only (same as above)
-bun run test:obsidian-e2e # new isolated desktop E2E; attached test vault
+# Deterministic tests
+bun test             # Bun discovery; desktop/provider suites are excluded
+bun run test:unit    # repository unit, spec, and in-process integration tests
+bun run test:integration # focused Library/Librarian integration tests
+bun test path/to/test.test.ts
+
+# Obsidian desktop E2E
+bun run test:obsidian-e2e # attached dedicated vault
+bun run test:obsidian-e2e --scenario=basename-healing
 bun run test:obsidian-e2e:managed # disposable vault; Obsidian must be closed
-bun run test:obsidian-e2e:infra # no Obsidian required
-bun run test:cli-e2e # CLI-based E2E (requires running Obsidian + .env.cli-e2e)
-bun test path/to/test.test.ts  # single file
+bun run test:obsidian-e2e:infra # driver/transport only; no Obsidian required
+
+# Provider acceptance (live Gemini is always explicit)
+bun run test:provider-acceptance:preflight
+TEXTFRESSER_PROVIDER_ACCEPTANCE=1 bun run test:provider-acceptance --suite=smoke
 
 # Code quality
-bun run lint         # check only
-bun fix              # fix lint + format
-bun run typecheck    # full TypeScript 7 typecheck
-bun run typecheck:changed  # typecheck vs master (RUN BEFORE FINISHING WORK)
-
-# Legacy CLI E2E (migration only; requires running Obsidian + .env.cli-e2e)
-bun run test:cli-e2e                                          # full suite
-CLI_E2E_VAULT=cli-e2e-test-vault CLI_E2E_VAULT_PATH=... bun run tests/cli-e2e/textfresser/edge-case-runner.ts  # edge cases
+bun run lint
+bun fix
+bun run typecheck
+bun run typecheck:changed  # RUN BEFORE FINISHING WORK
 ```
 
 # Learning more about Effect
 
-This repository uses the Effect Typescript library.
+This repository uses the Effect TypeScript library.
 
 Before writing any Effect code, first read `node_modules/effect/AGENTS.md`
 **completely**, and follow the links in the file when required.
 
-If you need to learn more about particular Effect apis and concepts that the
-guide doesn't cover, search through the source code in `node_modules/effect/src`.
+If you need to learn more about particular Effect APIs and concepts that the
+guide does not cover, search through `node_modules/effect/src`.
 
-### Obsidian CLI
+## Obsidian desktop E2E
 
-New E2E tests use Obsidian's official CLI binary, normally
+The only supported desktop harness is `tests/obsidian-e2e`. It uses Obsidian's
+official CLI binary, normally
 `/Applications/Obsidian.app/Contents/MacOS/obsidian-cli` or the registered
 `obsidian` command. Never substitute the GUI executable
-`/Applications/Obsidian.app/Contents/MacOS/Obsidian`: it returns before async
-renderer work settles.
+`/Applications/Obsidian.app/Contents/MacOS/Obsidian`: it does not provide the
+required awaited CLI contract.
 
-Run `bun run test:obsidian-e2e`; the runner builds, deploys while plugins are
-disabled, enables the E2E driver before Textfresser, waits for explicit
-readiness, and cleans up. Do not manually copy or reload artifacts between
-scenarios.
+Attached mode reads `OBSIDIAN_E2E_VAULT` and `OBSIDIAN_E2E_VAULT_PATH` from
+`.env.obsidian-e2e`. Existing local `.env.cli-e2e` files are accepted as a
+configuration compatibility fallback only. The runner owns deployment,
+readiness, isolation, diagnostics, and cleanup; do not manually copy or reload
+artifacts between scenarios.
 
-Scenario authors use only `withObsidianScenario({ id, fixture }, callback)`
-from `tests/obsidian-e2e/harness.ts`. The callback receives `act`, `snapshot`,
-and `status`; raw `eval`, plugin internals, sleeps, and reloads are forbidden in
-new desktop scenarios. See `tests/obsidian-e2e/README.md`.
+Scenario authors use only
+`withObsidianScenario({ id, fixture }, callback)` from
+`tests/obsidian-e2e/harness.ts`. The callback receives `act`, `snapshot`, and
+`status`; raw `eval`, plugin internals, sleeps, reloads, and network stubs do
+not belong in desktop scenarios. See `tests/obsidian-e2e/README.md`.
+
+Live model-quality checks live in `tests/provider-acceptance`; they require an
+explicit suite budget, opt-in flag, and provider key. They never share the
+desktop E2E lifecycle.

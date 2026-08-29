@@ -2,8 +2,8 @@
  * Types for Librarian commands.
  */
 
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import type { ResultAsync } from "neverthrow";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import type { Effect } from "effect";
 import { z } from "zod";
 import type { CommandContext } from "../../../managers/obsidian/command-executor";
 import type { CommandError } from "../errors";
@@ -48,4 +48,4 @@ export type LibrarianCommandInput = {
 
 export type LibrarianCommandFn = (
 	input: LibrarianCommandInput,
-) => ResultAsync<void, CommandError>;
+) => Effect.Effect<void, CommandError>;

@@ -1,4 +1,4 @@
-import type { SplitPathWithReader } from "@textfresser/vault-action-manager";
+import type { AnySplitPath } from "@textfresser/vault-action-manager";
 import { pathfinder, SplitPathKind } from "@textfresser/vault-action-manager";
 import type { Codecs } from "../../../codecs";
 import { makeLibraryScope } from "../../../tree/library-scope";
@@ -11,7 +11,7 @@ import { collectValidCodexPaths } from "./collect-codex-paths";
  * Find invalid codex files (__ prefix but not valid codexes) and return delete actions.
  */
 export function findInvalidCodexFiles(
-	allFiles: SplitPathWithReader[],
+	allFiles: readonly AnySplitPath[],
 	healer: TreeReader,
 	codecs: Codecs,
 ): HealingAction[] {

@@ -3,12 +3,13 @@
  * Delegates to Librarian for all logic.
  */
 
-import { makeSplitPath } from "@textfresser/vault-action-manager";
-import type { Librarian } from "../../../commanders/librarian/librarian";
-import {
-	type UserEventHandler,
+import type {
+	UserEventHandler,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
+import { makeSplitPath } from "@textfresser/vault-action-manager";
+import { Effect } from "effect";
+import type { Librarian } from "../../../commanders/librarian/librarian";
 
 /**
  * Create a handler for task checkbox clicks in codex files.
@@ -29,7 +30,9 @@ export function createCodexCheckboxHandler(
 				},
 			),
 		handle: async (payload) => {
-			await librarian.handleCodexCheckboxClick(payload);
+			await Effect.runPromise(
+				librarian.handleCodexCheckboxClick(payload),
+			);
 			return { outcome: "handled" } as const;
 		},
 	};

@@ -302,8 +302,9 @@ increase of 802,375 bytes (21.8%) from the 3,677,505-byte baseline.
 - `bun run typecheck:vam` passes.
 - `bun run typecheck:changed` passes.
 - `bun run build` succeeds and the bundle-size change is recorded.
-- With Obsidian running, `bun run test:cli-e2e` passes after copying `main.js`
-  into the test vault and reloading the plugin.
+- `bun run test:obsidian-e2e` builds and deploys the current artifact through
+  the official CLI, then passes the VAM/Librarian desktop scenarios without a
+  manual copy or reload step.
 
 ## Sealed Effect migration seam
 
@@ -340,3 +341,30 @@ Keep the two facades only for the migration window. Delete
 VAM's final `neverthrow` dependency once no consumer imports the compatibility
 contract. Promote the Effect facade only as part of the explicit native Effect
 cutover.
+
+## Library consumer cutover
+
+Library is the first feature boundary to consume the unstable Effect facade
+directly. `Librarian`, its commands, initial vault scan, page splitting,
+section healing, delimiter migration, and checkbox handling all compose
+environment-free Effects from
+`@textfresser/vault-action-manager/facade`. They do not adapt VAM operations
+back to Promises or `neverthrow`.
+
+Library-core remains synchronous TypeScript. Bulk interpretation, scoping,
+tree mutation planning, codex generation, validation, and action translation
+do not depend on Effect. Only Library orchestration and vault I/O use Effect.
+The initial scan accepts the facade's Effect-backed markdown readers, while
+invalid-codex validation now depends only on split paths because it never reads
+content.
+
+The Librarian serializes concurrent healing through an Effect `Semaphore`.
+Queue failures retain their typed error channel, release the permit, and do
+not prevent later items from running. Library creates no `ManagedRuntime`,
+calls no Effect runner, and defines no new `Context.Service`.
+
+The plugin remains the execution and lifecycle boundary. It runs Library
+programs for Obsidian callbacks and commands, closes the Librarian subscription
+before disposing VAM, and owns the single VAM disposal handle. The legacy
+facade remains available only at the explicit compatibility boundary; Library
+does not store or consume it.

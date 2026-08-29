@@ -20,7 +20,7 @@ const SRC = process.env.SRC ?? "Outside/Textfresser-Lemma-Manual.md";
 const PLUGIN_ID = process.env.PLUGIN_ID ?? "cbcr-text-eater-de";
 const BIN =
 	process.env.OBSIDIAN_BIN ??
-	"/Applications/Obsidian.app/Contents/MacOS/Obsidian";
+	"obsidian";
 const TIMEOUT_MS = Number(process.env.TIMEOUT_MS ?? "20000");
 const LINK_TIMEOUT_MS = Number(process.env.LINK_TIMEOUT_MS ?? "12000");
 

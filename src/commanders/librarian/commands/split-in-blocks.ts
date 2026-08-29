@@ -2,25 +2,28 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import { errAsync, okAsync, ResultAsync } from "neverthrow";
+import { Effect } from "effect";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import { type CommandError, CommandErrorKind } from "../errors";
 import { splitStrInBlocks } from "../pages/segmenter/block-marker/split-str-in-blocks";
 import type { LibrarianCommandFn } from "./types";
+import { vamFailureToCommandError } from "./vam-failure";
 
 /**
  * Splits selected text into blocks with Obsidian block markers (^N).
  * Finds highest existing block ID in file and continues numbering from there.
  * Dispatches ProcessMdFile action for replacement.
  */
-export const splitInBlocksCommand: LibrarianCommandFn = (input) => {
+export const splitInBlocksCommand: LibrarianCommandFn = Effect.fn(
+	"Librarian.splitInBlocksCommand",
+)(function* (input): Effect.fn.Return<void, CommandError> {
 	const { commandContext, librarianState } = input;
 	const { vam, notify } = librarianState;
 	const { selection, activeFile } = commandContext;
 
 	if (!selection?.text?.trim()) {
-		notify("No text selected");
-		return errAsync({ kind: CommandErrorKind.NoSelection });
+		yield* Effect.sync(() => notify("No text selected"));
+		return yield* Effect.fail({ kind: CommandErrorKind.NoSelection });
 	}
 
 	const highestBlockNumber = blockIdHelper.findHighestNumber(
@@ -41,20 +44,13 @@ export const splitInBlocksCommand: LibrarianCommandFn = (input) => {
 			splitPath: selection.splitPathToFileWithSelection,
 		},
 	};
+	const actions = [action];
 
-	return ResultAsync.fromPromise(vam.dispatch([action]), () => ({
-		kind: CommandErrorKind.DispatchFailed,
-		reason: "unknown",
-	})).andThen((result) => {
-		if (result.isErr()) {
-			const reason = result.error.map((e) => e.error).join(", ");
-			notify(`Error: ${reason}`);
-			return errAsync<void, CommandError>({
-				kind: CommandErrorKind.DispatchFailed,
-				reason,
-			});
-		}
-		notify(`Split into ${blockCount} blocks`);
-		return okAsync(undefined);
-	});
-};
+	yield* vam.dispatch(actions).pipe(
+		Effect.mapError((error) => vamFailureToCommandError(error, actions)),
+		Effect.tapError((error) =>
+			Effect.sync(() => notify(`Error: ${error.reason}`)),
+		),
+	);
+	yield* Effect.sync(() => notify(`Split into ${blockCount} blocks`));
+});

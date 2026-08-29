@@ -8,8 +8,9 @@ lives.
 
 ## Run it
 
-For the existing dedicated local test vault, keep `CLI_E2E_VAULT` and
-`CLI_E2E_VAULT_PATH` in `.env.cli-e2e`, open that vault in Obsidian, and run:
+For the existing dedicated local test vault, keep `OBSIDIAN_E2E_VAULT` and
+`OBSIDIAN_E2E_VAULT_PATH` in `.env.obsidian-e2e`, open that vault in Obsidian,
+and run:
 
 ```bash
 bun run test:obsidian-e2e
@@ -105,9 +106,13 @@ The runner never retries a mutation. Every mutation carries a request ID plus
 the expected Textfresser instance and generation; a reload or ambiguous
 lifecycle transition fails the story instead of replaying it.
 
-## Migration
+## Coverage ownership
 
-The old `tests/cli-e2e` and `tests/cli-fast` suites remain available while
-coverage moves gradually. `scenarios/MIGRATION.md` records which legacy cases
-stay as desktop E2E and which should move to deterministic integration or
-provider-acceptance tests. Do not add new cases to the legacy harness.
+The former reload/eval harnesses have been removed. `scenarios/COVERAGE.md`
+records where every former case now lives: representative Obsidian behavior in
+this suite, deterministic Library and Textfresser behavior in in-process tests,
+and live model quality in `tests/provider-acceptance`.
+
+Do not recreate a second desktop harness. If the existing `act` vocabulary
+cannot express a story honestly, place it at the public in-process seam that
+owns the behavior or propose one intentional typed driver action.

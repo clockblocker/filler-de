@@ -1,32 +1,40 @@
 ```bash
 # Build
-bun run build        # production
-bun run dev          # watch mode
-bun run build:dev    # dev + typecheck
+bun run build
+bun run dev
+bun run build:dev
 
 # Test
-bun test             # unit tests
-bun run test:unit    # unit only (same as above)
-bun run test:cli-e2e # CLI-based E2E (requires running Obsidian + .env.cli-e2e)
-bun test path/to/test.test.ts  # single file
+bun run test:unit
+bun run test:integration
+bun run test:obsidian-e2e
+bun run test:obsidian-e2e --scenario=basename-healing
+bun run test:obsidian-e2e:managed
+bun run test:obsidian-e2e:infra
+bun run test:provider-acceptance:preflight
 
 # Code quality
-bun run lint         # check only
-bun fix              # fix lint + format
-bun run typecheck    # full TypeScript 7 typecheck
-bun run typecheck:changed  # typecheck vs master (RUN BEFORE FINISHING WORK)
-
-# CLI E2E (requires running Obsidian + .env.cli-e2e)
-bun run test:cli-e2e                                          # full suite
-CLI_E2E_VAULT=cli-e2e-test-vault CLI_E2E_VAULT_PATH=... bun run tests/cli-e2e/textfresser/edge-case-runner.ts  # edge cases
+bun run lint
+bun fix
+bun run typecheck
+bun run typecheck:changed
 ```
 
-# Learning more about Effect
+# Effect
 
-This repository uses the Effect Typescript library.
+Before writing Effect code, read `node_modules/effect/AGENTS.md` completely and
+follow its required references. Search `node_modules/effect/src` for APIs not
+covered there.
 
-Before writing any Effect code, first read `node_modules/effect/AGENTS.md`
-**completely**, and follow the links in the file when required.
+# Obsidian E2E
 
-If you need to learn more about particular Effect apis and concepts that the
-guide doesn't cover, search through the source code in `node_modules/effect/src`.
+Use only `tests/obsidian-e2e` and the official `obsidian-cli` executable. The
+runner owns build deployment, plugin lifecycle, readiness, scenario isolation,
+failure diagnostics, and cleanup. Scenario code uses
+`withObsidianScenario()` with `fixture`, `act`, `snapshot`, and `status`; do not
+use arbitrary renderer `eval`, sleeps, reloads, or plugin internals.
+
+Attached configuration belongs in `.env.obsidian-e2e` as
+`OBSIDIAN_E2E_VAULT` and `OBSIDIAN_E2E_VAULT_PATH`. Provider acceptance is a
+separate opt-in suite under `tests/provider-acceptance` and must never be folded
+into desktop E2E.

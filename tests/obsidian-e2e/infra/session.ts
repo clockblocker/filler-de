@@ -73,8 +73,6 @@ export function sessionEnvironment(
 ): NodeJS.ProcessEnv {
 	return {
 		...process.env,
-		CLI_E2E_VAULT: manifest.vaultName,
-		CLI_E2E_VAULT_PATH: manifest.vaultPath,
 		OBSIDIAN_CLI_PATH: manifest.cliPath,
 		OBSIDIAN_E2E_ARTIFACT_DIR: manifest.artifactDir,
 		OBSIDIAN_E2E_CLI_PATH: manifest.cliPath,

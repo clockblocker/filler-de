@@ -61,7 +61,11 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 				const context = await Effect.runPromise(collectContext());
 				// Delegate to librarian - codex guard handled internally
 				const librarianKind = kind as LibrarianCommandKind;
-				await librarian.executeCommand(librarianKind, context, notify);
+				await Effect.runPromise(
+					librarian
+						.executeCommand(librarianKind, context, notify)
+						.pipe(Effect.ignore),
+				);
 				break;
 			}
 

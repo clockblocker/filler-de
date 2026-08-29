@@ -1,10 +1,8 @@
 # Obsidian desktop-host testing
 
 The supported E2E harness is `tests/obsidian-e2e`. It uses Obsidian's official
-`obsidian-cli` executable and a test-only driver plugin. The legacy
-`tests/cli-e2e` and `tests/cli-fast` suites remain temporarily for migration;
-do not use their GUI-executable wrapper, raw `eval`, reload hooks, or shared
-state chains for new tests.
+`obsidian-cli` executable and a test-only driver plugin. The former reload,
+raw-eval, shared-chain, and fast-wait harnesses have been removed.
 
 Local attached run:
 
@@ -31,6 +29,9 @@ E2E driver in the generated vault. Every scenario then owns
 `E2E/<session>/<scenario>/Library` and accesses it through fixture, `act`,
 `snapshot`, and `status` operations.
 
-See `tests/obsidian-e2e/README.md` for setup, authoring examples, diagnostics,
-and the gradual migration policy. The CLI behavior and architecture decisions
-behind the replacement are recorded in `docs/e2e-obsidian-cli-research.md`.
+See `tests/obsidian-e2e/README.md` for setup, authoring examples, and
+diagnostics. `tests/obsidian-e2e/scenarios/COVERAGE.md` records the completed
+cutover. Live model-quality checks run separately through the opt-in
+`tests/provider-acceptance/textfresser` suite. The CLI behavior and architecture
+decisions behind the harness are recorded in
+`docs/e2e-obsidian-cli-research.md`.

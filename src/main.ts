@@ -11,6 +11,7 @@ import {
 import {
 	createVaultActionManager as createEffectVaultActionManager,
 	type VaultActionManager as EffectVaultActionManager,
+	type VamShutdownError,
 } from "@textfresser/vault-action-manager/facade";
 import { logError } from "@textfresser/vault-action-manager/issue-handlers";
 import {
@@ -63,9 +64,9 @@ import { sleep } from "./utils/sleep";
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
-	/** Legacy view retained for Librarian, DelimiterChangeService, and E2E callers. */
-	vam: LegacyVaultActionManager;
-	/** Canonical Effect view consumed by Textfresser. */
+	/** Compatibility view retained only for the existing E2E testing hook. */
+	legacyVamForTesting: LegacyVaultActionManager;
+	/** Canonical Effect view consumed by application features. */
 	effectVam: EffectVaultActionManager;
 	vamTesting: EffectVaultActionManager["testing"];
 	userEventInterceptor: ObsidianEventLayer;
@@ -77,7 +78,7 @@ export default class TextEaterPlugin extends Plugin {
 	textfresser: Textfresser | null = null;
 
 	private commandExecutor: CommandExecutor | null = null;
-	private disposeVam: (() => Promise<void>) | null = null;
+	private disposeVam: Effect.Effect<void, VamShutdownError> | null = null;
 	private initialized = false;
 	private previousSettings: TextEaterSettings | null = null;
 	private handlerTeardowns: (() => void)[] = [];
@@ -170,9 +171,11 @@ export default class TextEaterPlugin extends Plugin {
 
 		const vaultActions = createEffectVaultActionManager(this.app);
 		this.effectVam = vaultActions.manager;
-		this.vam = adaptLegacyVaultActionManager(this.effectVam);
+		this.legacyVamForTesting = adaptLegacyVaultActionManager(
+			this.effectVam,
+		);
 		this.vamTesting = vaultActions.testing;
-		this.disposeVam = () => Effect.runPromise(vaultActions.dispose);
+		this.disposeVam = vaultActions.dispose;
 
 		this.rebuildTextfresser();
 
@@ -235,7 +238,7 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		// New Librarian (healing modes)
-		this.librarian = new Librarian(this.vam);
+		this.librarian = new Librarian(this.effectVam);
 
 		// Start listening to file system events
 		// VaultActionManager will convert events to VaultEvent, filter self-events,
@@ -248,13 +251,13 @@ export default class TextEaterPlugin extends Plugin {
 		// Initialize delimiter change service (does not require librarian)
 		this.delimiterChangeService = new DelimiterChangeService(
 			this.app,
-			this.vam,
+			this.effectVam,
 		);
 
 		// Initialize librarian: read tree, heal mismatches, regenerate codexes
 		if (this.librarian) {
 			try {
-				await this.librarian.init();
+				await Effect.runPromise(this.librarian.init());
 
 				// Wire librarian corename lookup into Textfresser for propagation path resolution
 				this.wireLibrarianLookup();
@@ -322,11 +325,27 @@ export default class TextEaterPlugin extends Plugin {
 		}
 		this.handlerTeardowns = [];
 		if (this.userEventInterceptor) this.userEventInterceptor.stop();
-		if (this.librarian) void this.librarian.unsubscribe();
+		const librarian = this.librarian;
+		this.librarian = null;
 		const disposeVam = this.disposeVam;
 		this.disposeVam = null;
-		if (disposeVam) {
-			void disposeVam().catch((error) => {
+		if (librarian || disposeVam) {
+			const unsubscribe = librarian
+				? librarian.unsubscribe().pipe(
+						Effect.catch((error) =>
+							Effect.sync(() => {
+								logger.error(
+									"[TextEaterPlugin] Failed to stop Librarian:",
+									getErrorMessage(error),
+								);
+							}),
+						),
+					)
+				: Effect.void;
+			const shutdown = disposeVam
+				? unsubscribe.pipe(Effect.andThen(disposeVam))
+				: unsubscribe;
+			void Effect.runPromise(shutdown).catch((error) => {
 				logger.error(
 					"[TextEaterPlugin] Failed to dispose VaultActionManager:",
 					getErrorMessage(error),
@@ -458,13 +477,21 @@ export default class TextEaterPlugin extends Plugin {
 	getVaultActionManagerTestingApi() {
 		return {
 			makeSplitPath,
-			manager: this.vam,
+			manager: this.legacyVamForTesting,
 			testing: this.vamTesting,
 		};
 	}
 
 	getLibrarianTestingApi() {
 		return {
+			handleCodexCheckboxClick: (
+				payload: Parameters<Librarian["handleCodexCheckboxClick"]>[0],
+			) => {
+				if (!this.librarian) return Promise.resolve();
+				return Effect.runPromise(
+					this.librarian.handleCodexCheckboxClick(payload),
+				);
+			},
 			librarian: this.librarian,
 			makeSplitPath,
 		};
@@ -636,11 +663,13 @@ export default class TextEaterPlugin extends Plugin {
 			return false;
 		}
 
-		const result = await this.delimiterChangeService.changeDelimiter(
-			oldConfig,
-			newConfig,
-			libraryRoot,
-			this.librarian,
+		const result = await Effect.runPromise(
+			this.delimiterChangeService.changeDelimiter(
+				oldConfig,
+				newConfig,
+				libraryRoot,
+				this.librarian,
+			),
 		);
 
 		new Notice(`Renamed ${result.renamedCount} file(s)`);
@@ -680,11 +709,11 @@ export default class TextEaterPlugin extends Plugin {
 		this.clearLibrarianLookup();
 
 		if (this.librarian) {
-			await this.librarian.unsubscribe();
+			await Effect.runPromise(this.librarian.unsubscribe());
 		}
-		this.librarian = new Librarian(this.vam);
+		this.librarian = new Librarian(this.effectVam);
 		try {
-			await this.librarian.init();
+			await Effect.runPromise(this.librarian.init());
 			this.wireLibrarianLookup();
 
 			// Register new handlers

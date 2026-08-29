@@ -168,12 +168,16 @@ export async function prepareAttachedHost(options: {
 	readonly sessionId: string;
 	readonly sources: ArtifactSources;
 }): Promise<HostDescription> {
-	const vaultName = process.env.CLI_E2E_VAULT?.trim();
-	const vaultPath = process.env.CLI_E2E_VAULT_PATH?.trim();
+	const vaultName =
+		process.env.OBSIDIAN_E2E_VAULT?.trim() ??
+		process.env.CLI_E2E_VAULT?.trim();
+	const vaultPath =
+		process.env.OBSIDIAN_E2E_VAULT_PATH?.trim() ??
+		process.env.CLI_E2E_VAULT_PATH?.trim();
 	if (!vaultName || !vaultPath) {
 		throw new HarnessError(
 			"SESSION_INVALID",
-			"Attached mode requires CLI_E2E_VAULT and CLI_E2E_VAULT_PATH",
+			"Attached mode requires OBSIDIAN_E2E_VAULT and OBSIDIAN_E2E_VAULT_PATH",
 		);
 	}
 	const absoluteVaultPath = resolve(vaultPath);

@@ -5,4 +5,4 @@
 export VAULT="${VAULT:-cli-e2e-test-vault}"
 export PLUGIN_ID="${PLUGIN_ID:-cbcr-text-eater-de}"
 export SRC="${SRC:-Outside/Textfresser-Lemma-Manual.md}"
-export OBSIDIAN_BIN="${OBSIDIAN_BIN:-/Applications/Obsidian.app/Contents/MacOS/Obsidian}"
+export OBSIDIAN_BIN="${OBSIDIAN_BIN:-obsidian}"

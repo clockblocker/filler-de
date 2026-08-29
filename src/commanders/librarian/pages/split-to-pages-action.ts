@@ -13,13 +13,15 @@ import {
 	parseSeparatedSuffix,
 } from "@textfresser/library-core";
 import { goBackLinkHelper } from "@textfresser/note-addressing";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import type {
-	SplitPathToMdFile,
+	VamEffectError,
 	VaultActionManager,
-} from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
+} from "@textfresser/vault-action-manager/facade";
+import { Effect } from "effect";
 import { Notice } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
+import { describeLibrarianVamFailure } from "../commands/vam-failure";
 import { buildPageSplitActions } from "./build-actions";
 import {
 	handleSplitToPagesError,
@@ -42,10 +44,10 @@ export type SplitHealingInfo = {
 	pageNodeNames: string[];
 };
 
-export type SplitToPagesContext = {
+export type SplitToPagesContext<E = never> = {
 	vam: VaultActionManager;
 	/** Called after pages are created, bypasses self-event filtering */
-	onSectionCreated?: (info: SplitHealingInfo) => void;
+	onSectionCreated?: (info: SplitHealingInfo) => Effect.Effect<void, E>;
 };
 
 type SplitInput = {
@@ -57,31 +59,39 @@ type SplitInput = {
 
 // ─── Core Logic ───
 
-async function gatherInput(
-	context: SplitToPagesContext,
+const gatherInput = Effect.fn("Librarian.splitToPages.gatherInput")(function* (
+	context: SplitToPagesContext<unknown>,
 	config: SegmentationConfig,
-): Promise<Result<SplitInput, SplitToPagesError>> {
-	const sourcePath = context.vam.mdPwd();
+): Effect.fn.Return<SplitInput, SplitToPagesError> {
+	const sourcePath = yield* context.vam
+		.mdPwd()
+		.pipe(
+			Effect.mapError((error) =>
+				makeSplitToPagesError.noPwd(describeLibrarianVamFailure(error)),
+			),
+		);
 	if (!sourcePath) {
-		return err(
+		return yield* Effect.fail(
 			makeSplitToPagesError.noPwd("Active file is not a markdown file"),
 		);
 	}
 
-	const contentResult = context.vam.getOpenedContent();
-	if (contentResult.isErr()) {
-		return err(
-			makeSplitToPagesError.noContent(String(contentResult.error)),
+	const content = yield* context.vam
+		.getOpenedContent()
+		.pipe(
+			Effect.mapError((error) =>
+				makeSplitToPagesError.noContent(
+					describeLibrarianVamFailure(error),
+				),
+			),
 		);
-	}
-	const content = contentResult.value;
 
 	const settings = getParsedUserSettings();
 	const rules = makeCodecRulesFromSettings(settings);
 
 	const basenameResult = parseSeparatedSuffix(rules, sourcePath.basename);
 	if (basenameResult.isErr()) {
-		return err(
+		return yield* Effect.fail(
 			makeSplitToPagesError.parseFailed(basenameResult.error.message),
 		);
 	}
@@ -94,8 +104,8 @@ async function gatherInput(
 		config,
 	);
 
-	return ok({ content, rules, segmentation, sourcePath });
-}
+	return { content, rules, segmentation, sourcePath };
+});
 
 type DispatchResult =
 	| { tooShort: true }
@@ -108,77 +118,83 @@ type DispatchResult =
 			pageNodeNames: string[];
 	  };
 
-async function executeDispatch(
-	vam: VaultActionManager,
-	input: SplitInput,
-): Promise<Result<DispatchResult, SplitToPagesError>> {
-	const { sourcePath, rules, segmentation } = input;
+const executeDispatch = Effect.fn("Librarian.splitToPages.executeDispatch")(
+	function* (
+		vam: VaultActionManager,
+		input: SplitInput,
+	): Effect.fn.Return<DispatchResult, SplitToPagesError> {
+		const { sourcePath, rules, segmentation } = input;
 
-	if (segmentation.tooShortToSplit) {
-		return ok({ tooShort: true });
-	}
+		if (segmentation.tooShortToSplit) {
+			return { tooShort: true };
+		}
 
-	const {
-		actions,
-		deletedScrollSegmentId,
-		firstPagePath,
-		pageNodeNames,
-		sectionChain,
-	} = buildPageSplitActions(segmentation, sourcePath, rules);
-	const result = await vam.dispatch(actions);
-	if (result.isErr()) {
-		return err(makeSplitToPagesError.dispatchFailed(String(result.error)));
-	}
+		const {
+			actions,
+			deletedScrollSegmentId,
+			firstPagePath,
+			pageNodeNames,
+			sectionChain,
+		} = buildPageSplitActions(segmentation, sourcePath, rules);
+		yield* vam
+			.dispatch(actions)
+			.pipe(
+				Effect.mapError((error) =>
+					makeSplitToPagesError.dispatchFailed(
+						describeLibrarianVamFailure(error, actions),
+					),
+				),
+			);
 
-	return ok({
-		deletedScrollSegmentId,
-		firstPagePath,
-		pageCount: segmentation.pages.length,
-		pageNodeNames,
-		sectionChain,
-		tooShort: false,
-	});
-}
+		return {
+			deletedScrollSegmentId,
+			firstPagePath,
+			pageCount: segmentation.pages.length,
+			pageNodeNames,
+			sectionChain,
+			tooShort: false,
+		};
+	},
+);
 
 // ─── Public API ───
 
-export async function splitToPagesAction(
-	context: SplitToPagesContext,
-	config: SegmentationConfig = DEFAULT_SEGMENTATION_CONFIG,
-): Promise<void> {
-	const inputResult = await gatherInput(context, config);
-	if (inputResult.isErr()) {
-		handleSplitToPagesError(inputResult.error);
-		return;
-	}
+export const splitToPagesAction = Effect.fn("Librarian.splitToPagesAction")(
+	function* <E>(
+		context: SplitToPagesContext<E>,
+		config: SegmentationConfig = DEFAULT_SEGMENTATION_CONFIG,
+	): Effect.fn.Return<void, SplitToPagesError | VamEffectError | E> {
+		const input = yield* gatherInput(context, config).pipe(
+			Effect.tapError((error) =>
+				Effect.sync(() => handleSplitToPagesError(error)),
+			),
+		);
 
-	const dispatchResult = await executeDispatch(
-		context.vam,
-		inputResult.value,
-	);
-	if (dispatchResult.isErr()) {
-		handleSplitToPagesError(dispatchResult.error);
-		return;
-	}
+		const result = yield* executeDispatch(context.vam, input).pipe(
+			Effect.tapError((error) =>
+				Effect.sync(() => handleSplitToPagesError(error)),
+			),
+		);
+		if (result.tooShort) {
+			// Should not happen because UI only exposes the action for multi-page content.
+			return;
+		}
 
-	const result = dispatchResult.value;
-	if (result.tooShort) {
-		// Should not happen because UI only exposes the action for multi-page content.
-		return;
-	}
+		// Notify Librarian about the new section (bypasses self-event filtering)
+		if (context.onSectionCreated) {
+			yield* context.onSectionCreated({
+				deletedScrollSegmentId: result.deletedScrollSegmentId,
+				pageNodeNames: result.pageNodeNames,
+				sectionChain: result.sectionChain,
+			});
+		}
 
-	// Notify Librarian about the new section (bypasses self-event filtering)
-	if (context.onSectionCreated) {
-		context.onSectionCreated({
-			deletedScrollSegmentId: result.deletedScrollSegmentId,
-			pageNodeNames: result.pageNodeNames,
-			sectionChain: result.sectionChain,
-		});
-	}
-
-	new Notice(`Split into ${result.pageCount} pages`);
-	await context.vam.cd(result.firstPagePath);
-}
+		yield* Effect.sync(
+			() => new Notice(`Split into ${result.pageCount} pages`),
+		);
+		yield* context.vam.cd(result.firstPagePath);
+	},
+);
 
 /**
  * Quick check if content would segment into multiple pages.

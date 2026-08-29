@@ -44,7 +44,8 @@ function selectMode(): SessionMode {
 			`Unknown mode ${explicit}; expected attached or managed`,
 		);
 	}
-	return process.env.CLI_E2E_VAULT && process.env.CLI_E2E_VAULT_PATH
+	return (process.env.OBSIDIAN_E2E_VAULT || process.env.CLI_E2E_VAULT) &&
+		(process.env.OBSIDIAN_E2E_VAULT_PATH || process.env.CLI_E2E_VAULT_PATH)
 		? "attached"
 		: "managed";
 }
@@ -87,6 +88,8 @@ async function main(): Promise<void> {
 			[
 				"test",
 				scenarioTarget,
+				"--path-ignore-patterns",
+				"__textfresser_no_ignored_test_paths__/**",
 				"--timeout",
 				"240000",
 				"--parallel=1",

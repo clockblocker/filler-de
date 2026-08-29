@@ -1,12 +1,11 @@
-import type {
-	SplitPathToMdFile,
-	VaultActionManager,
-} from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
 	makeSplitPath,
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Effect, Result } from "effect";
 import type { App, TFile } from "obsidian";
 import { getMdFilesInLibrary } from "../../../stateless-helpers/library-files";
 import type { SuffixDelimiterConfig } from "../../../types";
@@ -14,6 +13,7 @@ import {
 	buildCanonicalDelimiter,
 	buildFlexibleDelimiterPattern,
 } from "../../../utils/delimiter";
+import { getErrorMessage } from "../../../utils/get-error-message";
 import { logger } from "../../../utils/logger";
 import type { Librarian } from "../librarian";
 
@@ -42,12 +42,15 @@ export class DelimiterChangeService {
 	 * @param librarian - Current Librarian instance to pause during rename
 	 * @returns Result with success status, count of renamed files, and any errors
 	 */
-	async changeDelimiter(
+	readonly changeDelimiter = Effect.fn(
+		"DelimiterChangeService.changeDelimiter",
+	)(function* (
+		this: DelimiterChangeService,
 		oldConfig: SuffixDelimiterConfig,
 		newConfig: SuffixDelimiterConfig,
 		libraryRoot: string,
 		librarian: Librarian,
-	): Promise<DelimiterChangeResult> {
+	) {
 		const oldDelim = buildCanonicalDelimiter(oldConfig);
 		const newDelim = buildCanonicalDelimiter(newConfig);
 
@@ -64,7 +67,7 @@ export class DelimiterChangeService {
 		}
 
 		// 1. Pause librarian (unsubscribe from events)
-		await librarian.unsubscribe();
+		yield* librarian.unsubscribe();
 
 		// 2. Dispatch in chunks of 50
 		const errors: string[] = [];
@@ -72,11 +75,24 @@ export class DelimiterChangeService {
 		const chunks = this.chunkArray(actions, chunkSize);
 
 		for (const [_i, chunk] of chunks.entries()) {
-			const result = await this.vam.dispatch(chunk);
-			if (result.isErr()) {
-				errors.push(
-					...result.error.map((e) => `${e.action.kind}: ${e.error}`),
-				);
+			const result = yield* this.vam.dispatch(chunk).pipe(Effect.result);
+			if (Result.isFailure(result)) {
+				if (Array.isArray(result.failure)) {
+					for (const failure of result.failure) {
+						const action = failure.action as
+							| VaultAction
+							| undefined;
+						errors.push(
+							`${action?.kind ?? failure.operation}: ${getErrorMessage(failure.cause)}`,
+						);
+					}
+				} else {
+					for (const action of chunk) {
+						errors.push(
+							`${action.kind}: ${getErrorMessage(result.failure)}`,
+						);
+					}
+				}
 			}
 		}
 
@@ -94,7 +110,7 @@ export class DelimiterChangeService {
 			renamedCount,
 			success: errors.length === 0,
 		};
-	}
+	});
 
 	private collectMdFilesInLibrary(libraryRoot: string): TFile[] {
 		const rootFolder = this.app.vault.getAbstractFileByPath(libraryRoot);
