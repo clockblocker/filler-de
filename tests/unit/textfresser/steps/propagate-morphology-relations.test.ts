@@ -133,16 +133,9 @@ describe("propagateMorphologyRelations", () => {
 			kind: "MdFile",
 			pathParts: ["Worter", "de", "lexeme", "lemma", "f", "fah", "fahre"],
 		};
-		(
-			ctx.textfresserState as unknown as {
-				vam: { findByBasename: (word: string) => SplitPathToMdFile[] };
-			}
-		).vam = {
-			findByBasename: (word: string) =>
-				word === "fahren" ? [fahrenPath] : [],
-		};
-
-		const result = propagateMorphologyRelations(ctx);
+		const result = propagateMorphologyRelations(ctx, (word) =>
+			word === "fahren" ? [fahrenPath] : [],
+		);
 		expect(result.isOk()).toBe(true);
 		const actions = result._unsafeUnwrap().actions;
 		const upsertAction = actions[0];
@@ -196,16 +189,9 @@ describe("propagateMorphologyRelations", () => {
 			kind: "MdFile" as const,
 			pathParts: ["Worter", "de", "lexeme", "inflection", "a", "anl", "anlag"],
 		};
-		(
-			ctx.textfresserState as unknown as {
-				vam: { findByBasename: (word: string) => unknown[] };
-			}
-		).vam = {
-			findByBasename: (word: string) =>
-				word === "Anlage" ? [inflectedPath] : [],
-		};
-
-		const result = propagateMorphologyRelations(ctx);
+		const result = propagateMorphologyRelations(ctx, (word) =>
+			word === "Anlage" ? [inflectedPath] : [],
+		);
 		expect(result.isOk()).toBe(true);
 		const actions = result._unsafeUnwrap().actions;
 		expect(actions).toHaveLength(2);

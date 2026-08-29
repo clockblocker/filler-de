@@ -15,7 +15,6 @@ import {
 	incrementPending,
 } from "../../../../utils/idle-tracker";
 import { logger } from "../../../../utils/logger";
-import { sleep } from "../../../../utils/sleep";
 import type { LemmaResult } from "../../commands/lemma/types";
 import type { CommandError, CommandInput } from "../../commands/types";
 import { buildPolicyDestinationPath } from "../../common/lemma-link-routing";
@@ -286,13 +285,16 @@ export function createBackgroundGenerateCoordinator(params: {
 	const awaitGenerateAndScroll = Effect.fn(
 		"Textfresser.awaitGenerateAndScroll",
 	)(function* (inFlight: InFlightGenerate) {
-		const completed = yield* Effect.promise(() => inFlight.promise).pipe(
+		const completed = yield* Effect.tryPromise({
+			catch: () => undefined,
+			try: () => inFlight.promise,
+		}).pipe(
 			Effect.as(true),
 			Effect.catch(() => Effect.succeed(false)),
 		);
 		if (!completed) return;
 
-		yield* Effect.promise(() => sleep(300));
+		yield* Effect.sleep(300);
 
 		const currentFile = yield* vam.mdPwd().pipe(Effect.option);
 		if (

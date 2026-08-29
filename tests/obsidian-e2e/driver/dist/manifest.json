@@ -1,0 +1,9 @@
+{
+	"id": "cbcr-text-eater-de-e2e-driver",
+	"name": "Textfresser E2E Driver",
+	"version": "0.1.0",
+	"minAppVersion": "1.12.2",
+	"description": "Test-only typed CLI control plane for managed Textfresser E2E vaults.",
+	"author": "Textfresser contributors",
+	"isDesktopOnly": true
+}

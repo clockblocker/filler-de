@@ -1,15 +1,15 @@
 import { describe, expect, it } from "bun:test";
 import {
-	ReadContentErrorKind,
-	type VaultActionManager,
-} from "@textfresser/vault-action-manager";
-import {
 	SplitPathKind,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
+	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import { VaultActionKind } from "@textfresser/vault-action-manager";
-import { err, ok } from "neverthrow";
+import {
+	VamVaultIoError,
+	type VaultActionManager,
+} from "@textfresser/vault-action-manager/facade";
+import { Effect, Result } from "effect";
 import {
 	createPropagationPortsAdapter,
 } from "../../../../src/commanders/textfresser/commands/generate/steps/propagation-ports-adapter";
@@ -31,25 +31,11 @@ function makePath(
 	};
 }
 
-function fileNotFoundError(reason: string) {
-	return {
-		kind: ReadContentErrorKind.FileNotFound,
-		reason,
-	} as const;
-}
-
-function unknownReadError(reason: string) {
-	return {
-		kind: ReadContentErrorKind.Unknown,
-		reason,
-	} as const;
-}
-
-function permissionReadError(reason: string) {
-	return {
-		kind: ReadContentErrorKind.PermissionDenied,
-		reason,
-	} as const;
+function readError(reason: string) {
+	return new VamVaultIoError({
+		cause: new Error(reason),
+		operation: "readContent",
+	});
 }
 
 describe("propagation-ports-adapter", () => {
@@ -61,14 +47,16 @@ describe("propagation-ports-adapter", () => {
 
 		const vam: VamPortDependency = {
 			exists: (splitPath) => {
-				existsCalls.push(splitPath.basename);
-				return true;
+				return Effect.sync(() => {
+					existsCalls.push(splitPath.basename);
+					return true;
+				});
 			},
-			findByBasename: () => [],
-			readContent: async (splitPath) => {
-				readCalls.push(splitPath.basename);
-				return ok(`content:${splitPath.basename}`);
-			},
+			findByBasename: () => Effect.succeed([]),
+			readContent: (splitPath) => Effect.sync(() => {
+					readCalls.push(splitPath.basename);
+					return `content:${splitPath.basename}`;
+				}),
 		};
 
 		const ports = createPropagationPortsAdapter({
@@ -76,12 +64,12 @@ describe("propagation-ports-adapter", () => {
 			vam,
 		});
 
-		const results = await ports.vault.readManyMdFiles([
+		const results = await Effect.runPromise(ports.vault.readManyMdFiles([
 			beta,
 			alpha,
 			beta,
 			alpha,
-		]);
+		]));
 
 		expect(results).toHaveLength(2);
 		expect(results[0]?.kind).toBe("Found");
@@ -97,12 +85,12 @@ describe("propagation-ports-adapter", () => {
 		let readAttempted = false;
 
 		const vam: VamPortDependency = {
-			exists: () => false,
-			findByBasename: () => [],
-			readContent: async () => {
-				readAttempted = true;
-				return err(unknownReadError("read should not be called"));
-			},
+			exists: () => Effect.succeed(false),
+			findByBasename: () => Effect.succeed([]),
+			readContent: () => Effect.sync(() => {
+					readAttempted = true;
+					return "unreachable";
+				}),
 		};
 
 		const ports = createPropagationPortsAdapter({
@@ -110,7 +98,7 @@ describe("propagation-ports-adapter", () => {
 			vam,
 		});
 
-		const results = await ports.vault.readManyMdFiles([alpha]);
+		const results = await Effect.runPromise(ports.vault.readManyMdFiles([alpha]));
 		expect(results).toHaveLength(1);
 		expect(results[0]).toEqual({
 			kind: "Missing",
@@ -123,10 +111,9 @@ describe("propagation-ports-adapter", () => {
 		const alpha = makePath("alpha");
 
 		const vam: VamPortDependency = {
-			exists: () => true,
-			findByBasename: () => [],
-			readContent: async () =>
-				err(fileNotFoundError("File not found: alpha")),
+			exists: () => Effect.succeed(true),
+			findByBasename: () => Effect.succeed([]),
+			readContent: () => Effect.fail(readError("File not found: alpha")),
 		};
 
 		const ports = createPropagationPortsAdapter({
@@ -134,7 +121,7 @@ describe("propagation-ports-adapter", () => {
 			vam,
 		});
 
-		const results = await ports.vault.readManyMdFiles([alpha]);
+		const results = await Effect.runPromise(ports.vault.readManyMdFiles([alpha]));
 		expect(results).toEqual([{ kind: "Missing", splitPath: alpha }]);
 	});
 
@@ -144,11 +131,13 @@ describe("propagation-ports-adapter", () => {
 
 		const vam: VamPortDependency = {
 			exists: () => {
-				existsCalls++;
-				return existsCalls === 1;
+				return Effect.sync(() => {
+					existsCalls++;
+					return existsCalls === 1;
+				});
 			},
-			findByBasename: () => [],
-			readContent: async () => err(unknownReadError("random io issue")),
+			findByBasename: () => Effect.succeed([]),
+			readContent: () => Effect.fail(readError("random io issue")),
 		};
 
 		const ports = createPropagationPortsAdapter({
@@ -156,18 +145,18 @@ describe("propagation-ports-adapter", () => {
 			vam,
 		});
 
-		const results = await ports.vault.readManyMdFiles([alpha]);
+		const results = await Effect.runPromise(ports.vault.readManyMdFiles([alpha]));
 		expect(results).toEqual([{ kind: "Missing", splitPath: alpha }]);
 	});
 
 	it("readManyMdFiles returns Error for non-missing read failures", async () => {
 		const alpha = makePath("alpha");
+		const permissionError = readError("permission denied");
 
 		const vam: VamPortDependency = {
-			exists: () => true,
-			findByBasename: () => [],
-			readContent: async () =>
-				err(permissionReadError("permission denied")),
+			exists: () => Effect.succeed(true),
+			findByBasename: () => Effect.succeed([]),
+			readContent: () => Effect.fail(permissionError),
 		};
 
 		const ports = createPropagationPortsAdapter({
@@ -175,11 +164,11 @@ describe("propagation-ports-adapter", () => {
 			vam,
 		});
 
-		const results = await ports.vault.readManyMdFiles([alpha]);
+		const results = await Effect.runPromise(ports.vault.readManyMdFiles([alpha]));
 		expect(results).toEqual([
 			{
 				kind: "Error",
-				reason: permissionReadError("permission denied"),
+				reason: permissionError,
 				splitPath: alpha,
 			},
 		]);
@@ -190,43 +179,45 @@ describe("propagation-ports-adapter", () => {
 		const beta = makePath("beta");
 
 		const vamMissing: VamPortDependency = {
-			exists: () => false,
-			findByBasename: () => [],
-			readContent: async () => err(unknownReadError("unreachable")),
+			exists: () => Effect.succeed(false),
+			findByBasename: () => Effect.succeed([]),
+			readContent: () => Effect.fail(readError("unreachable")),
 		};
 		const portsMissing = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [],
 			vam: vamMissing,
 		});
-		const missingResult = await portsMissing.vault.readNoteOrEmpty(alpha);
-		expect(missingResult.isOk()).toBe(true);
-		if (missingResult.isErr()) return;
-		expect(missingResult.value).toBe("");
+		const missingResult = await Effect.runPromise(
+			portsMissing.vault.readNoteOrEmpty(alpha).pipe(Effect.result),
+		);
+		expect(Result.isSuccess(missingResult)).toBe(true);
+		if (Result.isFailure(missingResult)) return;
+		expect(missingResult.success).toBe("");
 
 		const vamRace: VamPortDependency = {
-			exists: () => true,
-			findByBasename: () => [],
-			readContent: async () =>
-				err(fileNotFoundError("File not found: beta")),
+			exists: () => Effect.succeed(true),
+			findByBasename: () => Effect.succeed([]),
+			readContent: () => Effect.fail(readError("File not found: beta")),
 		};
 		const portsRace = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [],
 			vam: vamRace,
 		});
-		const raceResult = await portsRace.vault.readNoteOrEmpty(beta);
-		expect(raceResult.isOk()).toBe(true);
-		if (raceResult.isErr()) return;
-		expect(raceResult.value).toBe("");
+		const raceResult = await Effect.runPromise(
+			portsRace.vault.readNoteOrEmpty(beta).pipe(Effect.result),
+		);
+		expect(Result.isSuccess(raceResult)).toBe(true);
+		if (Result.isFailure(raceResult)) return;
+		expect(raceResult.success).toBe("");
 	});
 
 	it("readNoteOrEmpty returns Err for non-missing read failures", async () => {
 		const alpha = makePath("alpha");
 
 		const vam: VamPortDependency = {
-			exists: () => true,
-			findByBasename: () => [],
-			readContent: async () =>
-				err(permissionReadError("permission denied")),
+			exists: () => Effect.succeed(true),
+			findByBasename: () => Effect.succeed([]),
+			readContent: () => Effect.fail(readError("permission denied")),
 		};
 
 		const ports = createPropagationPortsAdapter({
@@ -234,13 +225,15 @@ describe("propagation-ports-adapter", () => {
 			vam,
 		});
 
-		const result = await ports.vault.readNoteOrEmpty(alpha);
-		expect(result.isErr()).toBe(true);
-		if (result.isOk()) return;
-		expect(result.error).toBe("permission denied");
+		const result = await Effect.runPromise(
+			ports.vault.readNoteOrEmpty(alpha).pipe(Effect.result),
+		);
+		expect(Result.isFailure(result)).toBe(true);
+		if (Result.isSuccess(result)) return;
+		expect(result.failure).toContain("permission denied");
 	});
 
-	it("findCandidateTargets uses only basename + library core-name lookup and dedupes", () => {
+	it("findCandidateTargets uses only basename + library core-name lookup and dedupes", async () => {
 		const folder: SplitPathToFolder = {
 			basename: "lemma",
 			kind: SplitPathKind.Folder,
@@ -253,13 +246,15 @@ describe("propagation-ports-adapter", () => {
 		let capturedFolder: SplitPathToFolder | undefined;
 
 		const vam: VamPortDependency = {
-			exists: () => true,
+			exists: () => Effect.succeed(true),
 			findByBasename: (basename, opts) => {
-				capturedBasename = basename;
-				capturedFolder = opts?.folder;
-				return [shared, fromVamOnly];
+				return Effect.sync(() => {
+					capturedBasename = basename;
+					capturedFolder = opts?.folder;
+					return [shared, fromVamOnly];
+				});
 			},
-			readContent: async () => ok(""),
+			readContent: () => Effect.succeed(""),
 		};
 
 		const ports = createPropagationPortsAdapter({
@@ -267,10 +262,10 @@ describe("propagation-ports-adapter", () => {
 			vam,
 		});
 
-		const targets = ports.vault.findCandidateTargets({
+		const targets = await Effect.runPromise(ports.vault.findCandidateTargets({
 			basename: "machen",
 			folder,
-		});
+		}));
 
 		if (!capturedBasename) {
 			throw new Error("findByBasename was not called");
@@ -285,9 +280,9 @@ describe("propagation-ports-adapter", () => {
 		const ports = createPropagationPortsAdapter({
 			lookupInLibraryByCoreName: () => [],
 			vam: {
-				exists: () => true,
-				findByBasename: () => [],
-				readContent: async () => ok(""),
+				exists: () => Effect.succeed(true),
+				findByBasename: () => Effect.succeed([]),
+				readContent: () => Effect.succeed(""),
 			},
 		});
 

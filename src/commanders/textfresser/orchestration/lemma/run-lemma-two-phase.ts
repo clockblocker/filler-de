@@ -78,7 +78,7 @@ export const runLemmaTwoPhase = Effect.fn("Textfresser.runLemmaTwoPhase")(
 		const prePromptTarget = computePrePromptTarget({
 			findByBasename: (basename) =>
 				prePromptByCandidate.get(basename)?.byBasename ?? [],
-		resolveLinkpathDest: (linkpath, _from) =>
+			resolveLinkpathDest: (linkpath, _from) =>
 				prePromptByCandidate.get(linkpath)?.resolved ?? null,
 			sourcePath: attestation.source.path,
 			surface,

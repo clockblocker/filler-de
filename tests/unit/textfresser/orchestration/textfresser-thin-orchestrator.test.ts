@@ -1,13 +1,14 @@
 import { describe, expect, it } from "bun:test";
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import { LexicalGenerationFailureKind } from "@textfresser/lexical-generation";
+import { UserEventKind } from "@textfresser/obsidian-event-layer";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
-import { ok, okAsync } from "neverthrow";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Effect, Result } from "effect";
+import { okAsync } from "neverthrow";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
-import { LexicalGenerationFailureKind } from "@textfresser/lexical-generation";
 import type { CommandContext } from "../../../../src/managers/obsidian/command-executor";
-import { UserEventKind } from "@textfresser/obsidian-event-layer";
 import type { ApiService } from "../../../../src/stateless-helpers/api-service";
 
 const SOURCE_PATH: SplitPathToMdFile = {
@@ -21,22 +22,20 @@ function makeHarness() {
 	const dispatches: Array<readonly unknown[]> = [];
 	const scrollCalls: number[] = [];
 	const vam = {
-		activeFileService: {
-			getContent: () => ok("line\nentry ^ID-1"),
-			scrollToLine: (line: number) => {
-				scrollCalls.push(line);
-			},
-		},
-		dispatch: async (actions: readonly unknown[]) => {
+		dispatch: (actions: readonly unknown[]) => Effect.sync(() => {
 			dispatches.push(actions);
-			return ok(undefined);
-		},
-		exists: () => false,
-		findByBasename: () => [],
-		mdPwd: () => null,
-		readContent: async () => ok(""),
-		resolveLinkpathDest: () => null,
-		selection: { getInfo: () => null },
+		}),
+		exists: () => Effect.succeed(false),
+		findByBasename: () => Effect.succeed([]),
+		getOpenedContent: () => Effect.succeed("line\nentry ^ID-1"),
+		getSelectionInfo: () => Effect.succeed(null),
+		mdPwd: () => Effect.succeed(null),
+		readContent: () => Effect.succeed(""),
+		resolveLinkpathDest: () => Effect.succeed(null),
+		scrollOpenedFileToLine: (line: number) =>
+			Effect.sync(() => {
+				scrollCalls.push(line);
+			}),
 	} as unknown as VaultActionManager;
 
 	const textfresser = new Textfresser(
@@ -81,13 +80,13 @@ describe("Textfresser thin orchestrator", () => {
 			generate: () => okAsync("Good morning"),
 		} as unknown as PromptRunner;
 
-		const result = await textfresser.executeCommand(
+		const result = await Effect.runPromise(textfresser.executeCommand(
 			"TranslateSelection",
 			makeTranslateContext(),
 			() => {},
-		);
+		).pipe(Effect.result));
 
-		expect(result.isOk()).toBe(true);
+		expect(Result.isSuccess(result)).toBe(true);
 		expect(dispatches).toHaveLength(1);
 		const actions = dispatches[0] as Array<{ kind?: string }> | undefined;
 		expect(actions?.[0]?.kind).toBe(VaultActionKind.ProcessMdFile);
@@ -122,20 +121,20 @@ describe("Textfresser thin orchestrator", () => {
 			message: "Unsupported language pair: English -> Russian",
 		};
 
-		const result = await textfresser.executeCommand(
+		const result = await Effect.runPromise(textfresser.executeCommand(
 			"Lemma",
 			makeTranslateContext(),
 			(message) => notifications.push(message),
-		);
+		).pipe(Effect.result));
 
-		expect(result.isErr()).toBe(true);
+		expect(Result.isFailure(result)).toBe(true);
 		expect(dispatches).toHaveLength(0);
-		if (result.isErr()) {
-			expect("reason" in result.error && result.error.reason).toContain(
+		if (Result.isFailure(result)) {
+			expect("reason" in result.failure && result.failure.reason).toContain(
 				"Unsupported language pair",
 			);
 		}
-		expect(notifications).toHaveLength(0);
+		expect(notifications[0]).toContain("Unsupported language pair");
 	});
 
 	it("fails Generate immediately when lexical generation init is unsupported", async () => {
@@ -148,13 +147,13 @@ describe("Textfresser thin orchestrator", () => {
 			message: "Unsupported language pair: English -> Russian",
 		};
 
-		const result = await textfresser.executeCommand(
+		const result = await Effect.runPromise(textfresser.executeCommand(
 			"Generate",
 			makeGenerateContext(),
 			(message) => notifications.push(message),
-		);
+		).pipe(Effect.result));
 
-		expect(result.isErr()).toBe(true);
+		expect(Result.isFailure(result)).toBe(true);
 		expect(dispatches).toHaveLength(0);
 		expect(notifications[0]).toContain("Unsupported language pair");
 	});

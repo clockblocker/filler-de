@@ -37,18 +37,18 @@ function makeAttestation(): Attestation {
 function makeLemmaResult(): LemmaResult {
 	return makeLexemeLemmaResult({
 		attestation: makeAttestation(),
+		disambiguationResult: { matchedIndex: 1 },
 		lemma: "gehen",
 		pos: "VERB",
-		disambiguationResult: { matchedIndex: 1 },
 	});
 }
 
 function makeProperNounLemmaResult(): LemmaResult {
 	return makeLexemeLemmaResult({
 		attestation: makeAttestation(),
+		disambiguationResult: { matchedIndex: 1 },
 		lemma: "Berlin",
 		pos: "NOUN",
-		disambiguationResult: { matchedIndex: 1 },
 	});
 }
 

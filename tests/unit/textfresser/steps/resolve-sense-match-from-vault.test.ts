@@ -1,8 +1,4 @@
 import { describe, expect, it } from "bun:test";
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
-import { resolveSenseMatchFromVault } from "../../../../src/commanders/textfresser/commands/lemma/steps/resolve-sense-match-from-vault";
 import {
 	type LexicalGenerationError,
 	LexicalGenerationFailureKind,
@@ -11,6 +7,11 @@ import {
 	type SenseDisambiguator,
 	type SenseMatchResult,
 } from "@textfresser/lexical-generation";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Effect, Result as EffectResult } from "effect";
+import { err, type Result as NeverthrowResult, ok } from "neverthrow";
+import { resolveSenseMatchFromVault } from "../../../../src/commanders/textfresser/commands/lemma/steps/resolve-sense-match-from-vault";
 import {
 	makeLexemeMeta,
 	makeLexemeSelection,
@@ -45,18 +46,18 @@ function makeVam(opts: {
 	contentByPath?: Record<string, string>;
 }): VaultActionManager {
 	return {
-		findByBasename: () => opts.files ?? [],
+		findByBasename: () => Effect.succeed(opts.files ?? []),
 		readContent: (splitPath: SplitPathToMdFile) => {
 			const key = splitPathKey(splitPath);
 			const mapped = opts.contentByPath?.[key];
-			return Promise.resolve(ok(mapped ?? opts.content ?? ""));
+			return Effect.succeed(mapped ?? opts.content ?? "");
 		},
 	} as unknown as VaultActionManager;
 }
 
 function makeSenseDisambiguator(params: {
 	onCall?: (cache: LexicalMeta[]) => void;
-	result: Result<SenseMatchResult, LexicalGenerationError>;
+	result: NeverthrowResult<SenseMatchResult, LexicalGenerationError>;
 }): SenseDisambiguator {
 	return async (_lemma, _attestation, cache) => {
 		params.onCall?.(cache);
@@ -77,9 +78,9 @@ function buildLexemeMeta(params: {
 	return {
 		id: `LX-${surfaceKind === "Lemma" ? "LM" : "IN"}-${posToken}-${params.index}`,
 		lexicalMeta: makeLexemeMeta({
-			senseEmojis: params.senseEmojis,
 			lemma: pos === "NOUN" ? "Bank" : "fahren",
 			pos,
+			senseEmojis: params.senseEmojis,
 			surfaceKind,
 		}),
 	};
@@ -93,9 +94,9 @@ function buildPhrasemeMeta(params: {
 	return {
 		id: `PH-LM-${params.index}`,
 		lexicalMeta: makePhrasemeMeta({
-			senseEmojis: params.senseEmojis,
 			lemma: "auf jeden Fall",
 			phrasemeKind: params.phrasemeKind ?? "DiscourseFormula",
+			senseEmojis: params.senseEmojis,
 		}),
 	};
 }
@@ -122,24 +123,25 @@ function buildNoteContent(
 
 describe("resolveSenseMatchFromVault", () => {
 	it("returns null when no files found", async () => {
-		const result = await resolveSenseMatchFromVault(
+		const result = await Effect.runPromise(resolveSenseMatchFromVault(
 			makeVam({ files: [] }),
 			API_RESULT_NOUN,
 			"context",
-		);
+		).pipe(Effect.result));
 
-		expect(result.isOk()).toBe(true);
-		expect(result._unsafeUnwrap()).toBeNull();
+		expect(EffectResult.isSuccess(result)).toBe(true);
+		if (EffectResult.isFailure(result)) return;
+		expect(result.success).toBeNull();
 	});
 
 	it("passes stored lexical meta through to lexical-generation unchanged", async () => {
 		const content = buildNoteContent([
-			buildLexemeMeta({ senseEmojis: ["🏦"], index: 1 }),
-			buildLexemeMeta({ senseEmojis: ["🪑"], index: 2 }),
+			buildLexemeMeta({ index: 1, senseEmojis: ["🏦"] }),
+			buildLexemeMeta({ index: 2, senseEmojis: ["🪑"] }),
 		]);
 		let capturedCache: LexicalMeta[] | undefined;
 
-		const result = await resolveSenseMatchFromVault(
+		const result = await Effect.runPromise(resolveSenseMatchFromVault(
 			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
 			"context",
@@ -152,30 +154,31 @@ describe("resolveSenseMatchFromVault", () => {
 					result: ok({ cacheIndex: 1, kind: "matched" }),
 				}),
 			},
-		);
+		).pipe(Effect.result));
 
-		expect(result.isOk()).toBe(true);
+		expect(EffectResult.isSuccess(result)).toBe(true);
+		if (EffectResult.isFailure(result)) return;
 		expect(capturedCache).toEqual([
 			makeLexemeMeta({
-				senseEmojis: ["🏦"],
 				lemma: "Bank",
 				pos: "NOUN",
+				senseEmojis: ["🏦"],
 			}),
 			makeLexemeMeta({
-				senseEmojis: ["🪑"],
 				lemma: "Bank",
 				pos: "NOUN",
+				senseEmojis: ["🪑"],
 			}),
 		]);
-		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: 2 });
+		expect(result.success).toEqual({ matchedIndex: 2 });
 	});
 
 	it("maps new-sense results through with precomputed emoji", async () => {
 		const content = buildNoteContent([
-			buildLexemeMeta({ senseEmojis: ["🏦"], index: 1 }),
+			buildLexemeMeta({ index: 1, senseEmojis: ["🏦"] }),
 		]);
 
-		const result = await resolveSenseMatchFromVault(
+		const result = await Effect.runPromise(resolveSenseMatchFromVault(
 			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
 			"Sitz auf der Bank",
@@ -188,10 +191,11 @@ describe("resolveSenseMatchFromVault", () => {
 					}),
 				}),
 			},
-		);
+		).pipe(Effect.result));
 
-		expect(result.isOk()).toBe(true);
-		expect(result._unsafeUnwrap()).toEqual({
+		expect(EffectResult.isSuccess(result)).toBe(true);
+		if (EffectResult.isFailure(result)) return;
+		expect(result.success).toEqual({
 			matchedIndex: null,
 			precomputedSenseEmojis: ["🪑", "🌳"],
 		});
@@ -199,10 +203,10 @@ describe("resolveSenseMatchFromVault", () => {
 
 	it("treats out-of-range cache indices as a new sense", async () => {
 		const content = buildNoteContent([
-			buildLexemeMeta({ senseEmojis: ["🏦"], index: 1 }),
+			buildLexemeMeta({ index: 1, senseEmojis: ["🏦"] }),
 		]);
 
-		const result = await resolveSenseMatchFromVault(
+		const result = await Effect.runPromise(resolveSenseMatchFromVault(
 			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
 			"context",
@@ -212,17 +216,18 @@ describe("resolveSenseMatchFromVault", () => {
 					result: ok({ cacheIndex: 99, kind: "matched" }),
 				}),
 			},
-		);
+		).pipe(Effect.result));
 
-		expect(result.isOk()).toBe(true);
-		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: null });
+		expect(EffectResult.isSuccess(result)).toBe(true);
+		if (EffectResult.isFailure(result)) return;
+		expect(result.success).toEqual({ matchedIndex: null });
 	});
 
 	it("ignores entries without lexical meta and still lets lexical-generation decide", async () => {
 		const content = buildNoteContent([{ id: "LX-LM-NOUN-1" }]);
 		let capturedCache: LexicalMeta[] | undefined;
 
-		const result = await resolveSenseMatchFromVault(
+		const result = await Effect.runPromise(resolveSenseMatchFromVault(
 			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
 			"context",
@@ -235,11 +240,12 @@ describe("resolveSenseMatchFromVault", () => {
 					result: ok({ kind: "new" }),
 				}),
 			},
-		);
+		).pipe(Effect.result));
 
-		expect(result.isOk()).toBe(true);
+		expect(EffectResult.isSuccess(result)).toBe(true);
+		if (EffectResult.isFailure(result)) return;
 		expect(capturedCache).toEqual([]);
-		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: null });
+		expect(result.success).toEqual({ matchedIndex: null });
 	});
 
 	it("ignores invalid entry ids when assembling lexical meta cache", async () => {
@@ -249,8 +255,8 @@ describe("resolveSenseMatchFromVault", () => {
 				entries: {
 					"INVALID-ID-FORMAT": {
 						lexicalMeta: buildLexemeMeta({
-							senseEmojis: ["🏦"],
 							index: 1,
+							senseEmojis: ["🏦"],
 						}).lexicalMeta,
 					},
 				},
@@ -258,7 +264,7 @@ describe("resolveSenseMatchFromVault", () => {
 			"\n</section>";
 		let capturedCache: LexicalMeta[] | undefined;
 
-		const result = await resolveSenseMatchFromVault(
+		const result = await Effect.runPromise(resolveSenseMatchFromVault(
 			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
 			"context",
@@ -271,20 +277,21 @@ describe("resolveSenseMatchFromVault", () => {
 					result: ok({ kind: "new" }),
 				}),
 			},
-		);
+		).pipe(Effect.result));
 
-		expect(result.isOk()).toBe(true);
+		expect(EffectResult.isSuccess(result)).toBe(true);
+		if (EffectResult.isFailure(result)) return;
 		expect(capturedCache).toEqual([]);
-		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: null });
+		expect(result.success).toEqual({ matchedIndex: null });
 	});
 
 	it("supports phraseme lexical meta candidates", async () => {
 		const content = buildNoteContent([
-			buildPhrasemeMeta({ senseEmojis: ["✅"], index: 1 }),
+			buildPhrasemeMeta({ index: 1, senseEmojis: ["✅"] }),
 		]);
 		let capturedCache: LexicalMeta[] | undefined;
 
-		const result = await resolveSenseMatchFromVault(
+		const result = await Effect.runPromise(resolveSenseMatchFromVault(
 			makeVam({
 				content,
 				files: [{ ...MOCK_SPLIT_PATH, basename: "auf jeden Fall" }],
@@ -300,19 +307,20 @@ describe("resolveSenseMatchFromVault", () => {
 					result: ok({ cacheIndex: 0, kind: "matched" }),
 				}),
 			},
-		);
+		).pipe(Effect.result));
 
-		expect(result.isOk()).toBe(true);
+		expect(EffectResult.isSuccess(result)).toBe(true);
+		if (EffectResult.isFailure(result)) return;
 		expect(capturedCache?.[0]?.metaTag).toBe("Phraseme|DiscourseFormula|Lemma");
-		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: 1 });
+		expect(result.success).toEqual({ matchedIndex: 1 });
 	});
 
 	it("returns lexical-generation failures as command errors", async () => {
 		const content = buildNoteContent([
-			buildLexemeMeta({ senseEmojis: ["🏦"], index: 1 }),
+			buildLexemeMeta({ index: 1, senseEmojis: ["🏦"] }),
 		]);
 
-		const result = await resolveSenseMatchFromVault(
+		const result = await Effect.runPromise(resolveSenseMatchFromVault(
 			makeVam({ content, files: [MOCK_SPLIT_PATH] }),
 			API_RESULT_NOUN,
 			"context",
@@ -327,9 +335,9 @@ describe("resolveSenseMatchFromVault", () => {
 					),
 				}),
 			},
-		);
+		).pipe(Effect.result));
 
-		expect(result.isErr()).toBe(true);
+		expect(EffectResult.isFailure(result)).toBe(true);
 	});
 
 	it("uses preferred target path before basename fallback", async () => {
@@ -342,13 +350,13 @@ describe("resolveSenseMatchFromVault", () => {
 			pathParts: ["Library", "de", "noun"],
 		};
 		const fallbackContent = buildNoteContent([
-			buildLexemeMeta({ senseEmojis: ["🏦"], index: 1 }),
+			buildLexemeMeta({ index: 1, senseEmojis: ["🏦"] }),
 		]);
 		const preferredContent = buildNoteContent([
-			buildLexemeMeta({ senseEmojis: ["💺"], index: 2 }),
+			buildLexemeMeta({ index: 2, senseEmojis: ["💺"] }),
 		]);
 
-		const result = await resolveSenseMatchFromVault(
+		const result = await Effect.runPromise(resolveSenseMatchFromVault(
 			makeVam({
 				contentByPath: {
 					[splitPathKey(fallbackPath)]: fallbackContent,
@@ -364,9 +372,10 @@ describe("resolveSenseMatchFromVault", () => {
 					result: ok({ cacheIndex: 0, kind: "matched" }),
 				}),
 			},
-		);
+		).pipe(Effect.result));
 
-		expect(result.isOk()).toBe(true);
-		expect(result._unsafeUnwrap()).toEqual({ matchedIndex: 2 });
+		expect(EffectResult.isSuccess(result)).toBe(true);
+		if (EffectResult.isFailure(result)) return;
+		expect(result.success).toEqual({ matchedIndex: 2 });
 	});
 });

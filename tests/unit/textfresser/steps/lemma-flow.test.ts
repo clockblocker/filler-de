@@ -1,10 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type {
 	SplitPathToMdFile,
 } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
-import { errAsync, ok, okAsync } from "neverthrow";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Effect, Result } from "effect";
+import { errAsync, okAsync } from "neverthrow";
 import type { PromptOutput } from "../../../../src/commanders/textfresser/llm/prompt-catalog";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
@@ -37,31 +38,27 @@ function makeHarness(options: HarnessOptions) {
 	let lemmaCallCount = 0;
 
 	const vam = {
-		activeFileService: {
-			getContent: () => ok(""),
-			scrollToLine: () => {},
-		},
-		cd: async (splitPath: SplitPathToMdFile) => {
+		cd: (splitPath: SplitPathToMdFile) => Effect.sync(() => {
 			cdCalls.push(splitPath);
-			return ok(undefined);
-		},
-		dispatch: async (actions: readonly unknown[]) => {
+		}),
+		dispatch: (actions: readonly unknown[]) => Effect.sync(() => {
 			dispatches.push(actions);
-			return ok(undefined);
-		},
+		}),
 		exists: (splitPath: SplitPathToMdFile) =>
-			options.finalExists === true && splitPath.basename === options.lemma,
-		findByBasename: () => [],
-		mdPwd: () => options.mdPwd ?? null,
-		readContent: async (splitPath: SplitPathToMdFile) =>
-			ok(
+			Effect.succeed(options.finalExists === true && splitPath.basename === options.lemma),
+		findByBasename: () => Effect.succeed([]),
+		getOpenedContent: () => Effect.succeed(""),
+		getSelectionInfo: () => Effect.succeed(null),
+		mdPwd: () => Effect.succeed(options.mdPwd ?? null),
+		readContent: (splitPath: SplitPathToMdFile) =>
+			Effect.succeed(
 				options.readContent?.(splitPath) ??
 					(splitPath.basename === "geht"
 						? options.placeholderContent ?? ""
 						: ""),
 			),
-		resolveLinkpathDest: () => null,
-		selection: { getInfo: () => null },
+		resolveLinkpathDest: () => Effect.succeed(null),
+		scrollOpenedFileToLine: () => Effect.void,
 	} as unknown as VaultActionManager;
 
 	const apiService = {
@@ -92,7 +89,7 @@ function makeHarness(options: HarnessOptions) {
 				});
 			}
 
-			return okAsync({ senseEmojis: null, matchedIndex: null });
+			return okAsync({ matchedIndex: null, senseEmojis: null });
 		},
 	} as unknown as ApiService;
 
@@ -133,7 +130,7 @@ function makeHarness(options: HarnessOptions) {
 					surfaceKind: "Lemma",
 				});
 			}
-			return okAsync({ senseEmojis: null, matchedIndex: null });
+			return okAsync({ matchedIndex: null, senseEmojis: null });
 		},
 	} as unknown as PromptRunner;
 
@@ -190,15 +187,21 @@ function makeLemmaContextFor(
 	};
 }
 
+function runLemmaCommand(
+	textfresser: Textfresser,
+	context: CommandContext,
+	notify: (message: string) => void,
+) {
+	return Effect.runPromise(
+		textfresser.executeCommand("Lemma", context, notify).pipe(Effect.result),
+	);
+}
+
 describe("lemma two-phase flow", () => {
 	it("precreates Worter placeholder when selected surface is unresolved", async () => {
 		const { dispatches, textfresser } = makeHarness({ lemma: "gehen" });
-		const result = await textfresser.executeCommand(
-			"Lemma",
-			makeLemmaContext(),
-			() => {},
-		);
-		expect(result.isOk()).toBe(true);
+		const result = await runLemmaCommand(textfresser, makeLemmaContext(), () => {});
+		expect(Result.isSuccess(result)).toBe(true);
 
 		const phaseA = dispatches[0];
 		expect(phaseA).toBeDefined();
@@ -212,12 +215,8 @@ describe("lemma two-phase flow", () => {
 
 	it("renames placeholder to final target when lemma differs and final note is missing", async () => {
 		const { dispatches, textfresser } = makeHarness({ lemma: "gehen" });
-		const result = await textfresser.executeCommand(
-			"Lemma",
-			makeLemmaContext(),
-			() => {},
-		);
-		expect(result.isOk()).toBe(true);
+		const result = await runLemmaCommand(textfresser, makeLemmaContext(), () => {});
+		expect(Result.isSuccess(result)).toBe(true);
 
 		const phaseB = dispatches[1];
 		expect(phaseB).toBeDefined();
@@ -241,12 +240,8 @@ describe("lemma two-phase flow", () => {
 
 	it("synchronizes attestation after semantic resolution", async () => {
 		const { textfresser } = makeHarness({ lemma: "gehen" });
-		const result = await textfresser.executeCommand(
-			"Lemma",
-			makeLemmaContext(),
-			() => {},
-		);
-		expect(result.isOk()).toBe(true);
+		const result = await runLemmaCommand(textfresser, makeLemmaContext(), () => {});
+		expect(Result.isSuccess(result)).toBe(true);
 
 		const attestation = textfresser.getState().latestLemmaResult?.attestation;
 		expect(attestation?.target.lemma).toBe("gehen");
@@ -259,12 +254,8 @@ describe("lemma two-phase flow", () => {
 			lemma: "gehen",
 			placeholderContent: "   ",
 		});
-		const result = await textfresser.executeCommand(
-			"Lemma",
-			makeLemmaContext(),
-			() => {},
-		);
-		expect(result.isOk()).toBe(true);
+		const result = await runLemmaCommand(textfresser, makeLemmaContext(), () => {});
+		expect(Result.isSuccess(result)).toBe(true);
 
 		const phaseB = dispatches[1];
 		expect(phaseB).toBeDefined();
@@ -311,13 +302,9 @@ describe("lemma two-phase flow", () => {
 			"Du fängst morgen mit der Arbeit an. ^1",
 			"fängst",
 		);
-		const result = await textfresser.executeCommand(
-			"Lemma",
-			context,
-			() => {},
-		);
+		const result = await runLemmaCommand(textfresser, context, () => {});
 
-		expect(result.isOk()).toBe(true);
+		expect(Result.isSuccess(result)).toBe(true);
 		expect(getLemmaCallCount()).toBe(2);
 		expect(textfresser.getState().latestLemmaResult?.lemma).toBe(
 			"anfangen",
@@ -343,13 +330,9 @@ describe("lemma two-phase flow", () => {
 			"Du fängst morgen mit der Arbeit an. ^1",
 			"fängst",
 		);
-		const result = await textfresser.executeCommand(
-			"Lemma",
-			context,
-			() => {},
-		);
+		const result = await runLemmaCommand(textfresser, context, () => {});
 
-		expect(result.isOk()).toBe(true);
+		expect(Result.isSuccess(result)).toBe(true);
 		expect(
 			textfresser.getState().latestLemmaResult?.attestation.source
 				.textWithOnlyTargetMarked,
@@ -367,12 +350,8 @@ describe("lemma two-phase flow", () => {
 			lemma: "gehen",
 			mdPwd: placeholderPath,
 		});
-		const result = await textfresser.executeCommand(
-			"Lemma",
-			makeLemmaContext(),
-			() => {},
-		);
-		expect(result.isOk()).toBe(true);
+		const result = await runLemmaCommand(textfresser, makeLemmaContext(), () => {});
+		expect(Result.isSuccess(result)).toBe(true);
 		expect(cdCalls).toHaveLength(1);
 		expect(cdCalls[0]?.basename).toBe("gehen");
 	});
@@ -381,20 +360,12 @@ describe("lemma two-phase flow", () => {
 		const { dispatches, textfresser } = makeHarness({ lemma: "gehen" });
 		const notify = () => {};
 
-		const first = await textfresser.executeCommand(
-			"Lemma",
-			makeLemmaContext(),
-			notify,
-		);
-		expect(first.isOk()).toBe(true);
+		const first = await runLemmaCommand(textfresser, makeLemmaContext(), notify);
+		expect(Result.isSuccess(first)).toBe(true);
 		expect(dispatches).toHaveLength(2);
 
-		const second = await textfresser.executeCommand(
-			"Lemma",
-			makeLemmaContext(),
-			notify,
-		);
-		expect(second.isOk()).toBe(true);
+		const second = await runLemmaCommand(textfresser, makeLemmaContext(), notify);
+		expect(Result.isSuccess(second)).toBe(true);
 		expect(dispatches).toHaveLength(2);
 	});
 
@@ -404,20 +375,12 @@ describe("lemma two-phase flow", () => {
 			lemmaFailuresBeforeSuccess: 1,
 		});
 
-		const failed = await textfresser.executeCommand(
-			"Lemma",
-			makeLemmaContext(),
-			() => {},
-		);
-		expect(failed.isErr()).toBe(true);
+		const failed = await runLemmaCommand(textfresser, makeLemmaContext(), () => {});
+		expect(Result.isFailure(failed)).toBe(true);
 		expect(dispatches).toHaveLength(1);
 
-		const succeeded = await textfresser.executeCommand(
-			"Lemma",
-			makeLemmaContext(),
-			() => {},
-		);
-		expect(succeeded.isOk()).toBe(true);
+		const succeeded = await runLemmaCommand(textfresser, makeLemmaContext(), () => {});
+		expect(Result.isSuccess(succeeded)).toBe(true);
 		expect(dispatches).toHaveLength(3);
 	});
 
@@ -442,12 +405,12 @@ describe("lemma two-phase flow", () => {
 				splitPath.basename === "gehen" ? completeEntry : undefined,
 		});
 
-		const first = await textfresser.executeCommand(
-			"Lemma",
+		const first = await runLemmaCommand(
+			textfresser,
 			makeLemmaContext(),
 			(message) => notifications.push(message),
 		);
-		expect(first.isOk()).toBe(true);
+		expect(Result.isSuccess(first)).toBe(true);
 
 		const cache = textfresser.getState().latestLemmaInvocationCache;
 		expect(cache).toBeTruthy();
@@ -459,12 +422,12 @@ describe("lemma two-phase flow", () => {
 		}
 
 		const beforeSecond = notifications.length;
-		const second = await textfresser.executeCommand(
-			"Lemma",
+		const second = await runLemmaCommand(
+			textfresser,
 			makeLemmaContext(),
 			(message) => notifications.push(message),
 		);
-		expect(second.isOk()).toBe(true);
+		expect(Result.isSuccess(second)).toBe(true);
 		expect(notifications.length).toBe(beforeSecond);
 		expect(dispatches).toHaveLength(2);
 	});

@@ -103,13 +103,10 @@ describe("propagateRelations", () => {
 		const ctx = makeCtx([
 			{ kind: "Synonym", words: ["Anlage"] },
 		]);
-		// Override vam to return inflected path
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(ctx.textfresserState as any).vam = {
-			findByBasename: (name: string) => name === "Anlage" ? [inflectedPath] : [],
-		};
 
-		const result = propagateRelations(ctx);
+		const result = propagateRelations(ctx, (name) =>
+			name === "Anlage" ? [inflectedPath] : [],
+		);
 		expect(result.isOk()).toBe(true);
 
 		const actions = result._unsafeUnwrap().actions;

@@ -217,12 +217,10 @@ describe("propagateInflections", () => {
 			},
 		];
 		const ctx = makeCtx(cells);
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		(ctx.textfresserState as any).vam = {
-			findByBasename: (name: string) => name === "Kraftwerke" ? [existingPath] : [],
-		};
 
-		const result = propagateInflections(ctx);
+		const result = propagateInflections(ctx, (name) =>
+			name === "Kraftwerke" ? [existingPath] : [],
+		);
 		expect(result.isOk()).toBe(true);
 
 		const actions = result._unsafeUnwrap().actions;

@@ -54,9 +54,11 @@ const executeLemmaFlowProgram = Effect.fn("Textfresser.executeLemmaFlow")(
 		}
 
 		const invocationKey = buildLemmaInvocationKey(attestation);
+		const nowMs = yield* Clock.currentTimeMillis;
 		const cachedInvocation = getValidLemmaInvocationCache(
 			state,
 			invocationKey,
+			nowMs,
 		);
 
 		if (cachedInvocation) {

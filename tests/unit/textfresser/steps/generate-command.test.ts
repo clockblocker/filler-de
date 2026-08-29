@@ -1,39 +1,40 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { VaultActionKind } from "@textfresser/vault-action-manager";
-import { ok, okAsync } from "neverthrow";
-import { generateCommand } from "../../../../src/commanders/textfresser/commands/generate/generate-command";
-import { buildPolicyDestinationPath } from "../../../../src/commanders/textfresser/common/lemma-link-routing";
-import { buildSectionMarker } from "../../../../src/commanders/textfresser/domain/dict-note/internal/constants";
-import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";
-import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
-import { clearState, initializeState } from "../../../../src/global-state/global-state";
 import {
 	LexicalGenerationFailureKind,
 	type LexicalGenerationModule,
 	type LexicalInfo,
 	lexicalGenerationError,
 } from "@textfresser/lexical-generation";
-import {
-	makeLexemeLexicalInfo,
-	makeLexemeLemmaResult,
-	makePhrasemeLexicalInfo,
-	makePhrasemeLemmaResult,
-	makeRelations,
-} from "../helpers/native-fixtures";
-import { DEFAULT_SETTINGS } from "../../../../src/types";
+import { VaultActionKind } from "@textfresser/vault-action-manager";
+import { Effect, Result } from "effect";
+import { ok, okAsync } from "neverthrow";
+import { generateCommand } from "../../../../src/commanders/textfresser/commands/generate/generate-command";
+import { buildPolicyDestinationPath } from "../../../../src/commanders/textfresser/common/lemma-link-routing";
+import { dictNoteHelper } from "../../../../src/commanders/textfresser/domain/dict-note";
+import { buildSectionMarker } from "../../../../src/commanders/textfresser/domain/dict-note/internal/constants";
+import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
+import { cssSuffixFor } from "../../../../src/commanders/textfresser/targets/de/sections/section-css-kind";
 import {
 	DictSectionKind,
 	TitleReprFor,
 } from "../../../../src/commanders/textfresser/targets/de/sections/section-kind";
-import { cssSuffixFor } from "../../../../src/commanders/textfresser/targets/de/sections/section-css-kind";
+import { clearState, initializeState } from "../../../../src/global-state/global-state";
+import { DEFAULT_SETTINGS } from "../../../../src/types";
+import {
+	makeLexemeLemmaResult,
+	makeLexemeLexicalInfo,
+	makePhrasemeLemmaResult,
+	makePhrasemeLexicalInfo,
+	makeRelations,
+} from "../helpers/native-fixtures";
 
 function makeProperNounLexicalInfo(): LexicalInfo {
 	return makeLexemeLexicalInfo({
 		core: {
 			status: "ready",
 			value: {
-				senseEmojis: ["🏙️"],
 				ipa: "bɛʁˈliːn",
+				senseEmojis: ["🏙️"],
 			},
 		},
 		features: {
@@ -53,8 +54,8 @@ function makePhrasemLexicalInfo(): LexicalInfo {
 		core: {
 			status: "ready",
 			value: {
-				senseEmojis: ["💬"],
 				ipa: "ipa",
+				senseEmojis: ["💬"],
 			},
 		},
 		lemma: "redensart",
@@ -170,7 +171,7 @@ function makePhrasemGenerateInput(params: {
 				},
 			},
 			vam: {
-				findByBasename: () => [],
+				findByBasename: () => Effect.succeed([]),
 			},
 		} as unknown as TextfresserState,
 	};
@@ -246,19 +247,19 @@ describe("generateCommand proper-noun fallback", () => {
 						return okAsync("Berlin");
 					},
 				},
-				vam: {},
+				vam: { findByBasename: () => Effect.succeed([]) },
 			} as unknown as TextfresserState,
 		};
 
-		const result = await generateCommand(input);
-		expect(result.isOk()).toBe(true);
-		if (result.isErr()) return;
+		const result = await Effect.runPromise(generateCommand(input).pipe(Effect.result));
+		expect(Result.isSuccess(result)).toBe(true);
+		if (Result.isFailure(result)) return;
 
 		expect(promptCalls).toEqual(["WordTranslation"]);
-		expect(result.value).toHaveLength(1);
-		expect(result.value[0]?.kind).toBe(VaultActionKind.ProcessMdFile);
+		expect(result.success).toHaveLength(1);
+		expect(result.success[0]?.kind).toBe(VaultActionKind.ProcessMdFile);
 
-		const writeAction = result.value[0];
+		const writeAction = result.success[0];
 		if (
 			!writeAction ||
 			writeAction.kind !== VaultActionKind.ProcessMdFile
@@ -266,14 +267,14 @@ describe("generateCommand proper-noun fallback", () => {
 			throw new Error("expected final ProcessMdFile write action");
 		}
 
-		const serialized = await extractFinalWrittenContent(result.value);
+		const serialized = await extractFinalWrittenContent(result.success);
 		const entries = dictNoteHelper.parse(serialized);
 		expect(entries).toHaveLength(1);
 
 		const entry = entries[0];
 		expect(entry?.meta.lexicalMeta).toEqual({
-			senseEmojis: ["🏙️"],
 			metaTag: "Lexeme|PROPN|Lemma",
+			senseEmojis: ["🏙️"],
 		});
 
 		const sectionKinds = new Set(entry?.sections.map((section) => section.kind));
@@ -359,17 +360,17 @@ describe("generateCommand proper-noun fallback", () => {
 						return okAsync("unused");
 					},
 				},
-				vam: {},
+				vam: { findByBasename: () => Effect.succeed([]) },
 			} as unknown as TextfresserState,
 		};
 
-		const result = await generateCommand(input);
-		expect(result.isOk()).toBe(true);
-		if (result.isErr()) return;
+		const result = await Effect.runPromise(generateCommand(input).pipe(Effect.result));
+		expect(Result.isSuccess(result)).toBe(true);
+		if (Result.isFailure(result)) return;
 
 		expect(promptCalls).toHaveLength(0);
 
-		const serialized = await extractFinalWrittenContent(result.value);
+		const serialized = await extractFinalWrittenContent(result.success);
 		expect(serialized).toContain("Loose manual intro");
 		expect(serialized).toContain(
 			'<span class="entry_section_title entry_section_title_translations">Custom Title</span>\nmanual translation',
@@ -446,17 +447,17 @@ describe("generateCommand proper-noun fallback", () => {
 						return okAsync("fresh translation");
 					},
 				},
-				vam: {},
+				vam: { findByBasename: () => Effect.succeed([]) },
 			} as unknown as TextfresserState,
 		};
 
-		const result = await generateCommand(input);
-		expect(result.isOk()).toBe(true);
-		if (result.isErr()) return;
+		const result = await Effect.runPromise(generateCommand(input).pipe(Effect.result));
+		expect(Result.isSuccess(result)).toBe(true);
+		if (Result.isFailure(result)) return;
 
 		expect(promptCalls).toEqual(["WordTranslation"]);
 
-		const serialized = await extractFinalWrittenContent(result.value);
+		const serialized = await extractFinalWrittenContent(result.success);
 		expect(serialized).toContain(
 			'<span class="entry_section_title entry_section_title_translations">Custom Title</span>\nmanual translation',
 		);
@@ -529,15 +530,15 @@ describe("generateCommand proper-noun fallback", () => {
 				promptRunner: {
 					generate: () => okAsync("unused"),
 				},
-				vam: {},
+				vam: { findByBasename: () => Effect.succeed([]) },
 			} as unknown as TextfresserState,
 		};
 
-		const result = await generateCommand(input);
-		expect(result.isOk()).toBe(true);
-		if (result.isErr()) return;
+		const result = await Effect.runPromise(generateCommand(input).pipe(Effect.result));
+		expect(Result.isSuccess(result)).toBe(true);
+		if (Result.isFailure(result)) return;
 
-		const serialized = await extractFinalWrittenContent(result.value);
+		const serialized = await extractFinalWrittenContent(result.success);
 		expect(serialized).toContain(
 			'<span class="entry_section_title entry_section_title_kontexte">Custom Title</span>\n![[Other#^2|^]]',
 		);
@@ -611,15 +612,15 @@ describe("generateCommand proper-noun fallback", () => {
 				promptRunner: {
 					generate: () => okAsync("unused"),
 				},
-				vam: {},
+				vam: { findByBasename: () => Effect.succeed([]) },
 			} as unknown as TextfresserState,
 		};
 
-		const result = await generateCommand(input);
-		expect(result.isOk()).toBe(true);
-		if (result.isErr()) return;
+		const result = await Effect.runPromise(generateCommand(input).pipe(Effect.result));
+		expect(Result.isSuccess(result)).toBe(true);
+		if (Result.isFailure(result)) return;
 
-		const serialized = await extractFinalWrittenContent(result.value);
+		const serialized = await extractFinalWrittenContent(result.success);
 		expect(
 			serialized.indexOf('entry_section_title_kontexte">Kontexte'),
 		).toBeLessThan(
@@ -645,18 +646,18 @@ describe("generateCommand proper-noun fallback", () => {
 			"Manual footer",
 		].join("\n");
 
-		const result = await generateCommand(
+		const result = await Effect.runPromise(generateCommand(
 			makePhrasemGenerateInput({
 				content,
 				promptCalls,
 			}),
-		);
-		expect(result.isOk()).toBe(true);
-		if (result.isErr()) return;
+		).pipe(Effect.result));
+		expect(Result.isSuccess(result)).toBe(true);
+		if (Result.isFailure(result)) return;
 
 		expect(promptCalls).toEqual(["WordTranslation"]);
 
-		const serialized = await extractFinalWrittenContent(result.value);
+		const serialized = await extractFinalWrittenContent(result.success);
 		expect(serialized).toContain("User note [[Haus]]");
 		expect(
 			serialized.indexOf('entry_section_title_translations">Übersetzung'),
@@ -686,18 +687,18 @@ describe("generateCommand proper-noun fallback", () => {
 			"User note [[Haus]]",
 		].join("\n");
 
-		const result = await generateCommand(
+		const result = await Effect.runPromise(generateCommand(
 			makePhrasemGenerateInput({
 				content,
 				promptCalls,
 			}),
-		);
-		expect(result.isOk()).toBe(true);
-		if (result.isErr()) return;
+		).pipe(Effect.result));
+		expect(Result.isSuccess(result)).toBe(true);
+		if (Result.isFailure(result)) return;
 
 		expect(promptCalls).toEqual(["WordTranslation"]);
 
-		const serialized = await extractFinalWrittenContent(result.value);
+		const serialized = await extractFinalWrittenContent(result.success);
 		expect(serialized).toContain(
 			'<span class="entry_section_title entry_section_title_translations">Custom Title</span>\nmanual translation',
 		);

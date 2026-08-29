@@ -32,11 +32,12 @@ export function buildLemmaInvocationKey(attestation: Attestation): string {
 export function getValidLemmaInvocationCache(
 	state: TextfresserState,
 	key: string,
+	nowMs = Date.now(),
 ): LemmaInvocationCache | null {
 	const cache = state.latestLemmaInvocationCache;
 	if (!cache) return null;
 	if (cache.key !== key) return null;
-	const elapsed = Date.now() - cache.cachedAtMs;
+	const elapsed = nowMs - cache.cachedAtMs;
 	return elapsed <= LEMMA_IDEMPOTENCE_WINDOW_MS ? cache : null;
 }
 
