@@ -15,9 +15,9 @@ TreeAction[] (Create/Delete/Rename/Move/ChangeStatus)
     ↓
 computeCodexImpact() → CodexImpact
     ↓
-processCodexImpacts()
+LibraryReconciler
   ├─ codexImpactToDeletions() → HealingAction[] (DeleteMdFile)
-  └─ codexImpactToIncrementalRecreations() → CodexAction[] (EnsureCodexFileExists + ProcessCodex + WriteScrollStatus)
+  └─ full startup or incremental runtime Codex recreation
     +
 extractScrollStatusActions() → WriteScrollStatusAction[] (from direct scroll changes)
     ↓

@@ -6,7 +6,9 @@ import type {
 import { getErrorMessage } from "../../../utils/get-error-message";
 import { type CommandError, CommandErrorKind } from "../errors";
 
-type LibrarianVamFailure = VamEffectError | readonly VamDispatchError[];
+type LibrarianVamFailure =
+	| Pick<VamEffectError, "cause" | "operation">
+	| readonly VamDispatchError[];
 type DispatchCommandError = Extract<
 	CommandError,
 	{ kind: typeof CommandErrorKind.DispatchFailed }

@@ -17,7 +17,8 @@ type ScenarioAction =
 	| { readonly bytes: readonly number[]; readonly kind: "createBinary"; readonly path: string }
 	| { readonly content: string; readonly kind: "modifyFile"; readonly path: string }
 	| { readonly from: string; readonly kind: "renamePath"; readonly to: string }
-	| { readonly kind: "deletePath"; readonly path: string };
+	| { readonly kind: "deletePath"; readonly path: string }
+	| { readonly kind: "runSplitToPages"; readonly path: string };
 
 interface ScenarioDefinition {
 	readonly fixture: readonly ScenarioFixture[];
@@ -268,6 +269,22 @@ function encodeBytes(bytes: readonly number[], label: string): string {
 	return Buffer.from(bytes).toString("base64");
 }
 
+function encodeFixture(
+	fixture: ScenarioFixture,
+): Readonly<Record<string, unknown>> {
+	if ("content" in fixture) {
+		return {
+			content: fixture.content,
+			encoding: "utf8",
+			path: fixture.path,
+		};
+	}
+	return {
+		content: encodeBytes(fixture.bytes, "fixture.bytes"),
+		encoding: "base64",
+		path: fixture.path,
+	};
+}
 
 function encodeAction(action: ScenarioAction): Readonly<Record<string, unknown>> {
 	switch (action.kind) {
@@ -296,6 +313,8 @@ function encodeAction(action: ScenarioAction): Readonly<Record<string, unknown>>
 			return { kind: "rename", path: action.from, to: action.to };
 		case "deletePath":
 			return { kind: "delete", path: action.path };
+		case "runSplitToPages":
+			return { kind: "splitToPages", path: action.path };
 	}
 }
 
@@ -372,6 +391,17 @@ export async function withObsidianScenario<T>(
 		client = new DriverClient(await loadManifest());
 		const ready = await client.request<unknown>("ready", {});
 		fence = ready.fence;
+		const begun = await client.request<unknown>(
+			"beginScenario",
+			{
+				fixtures: definition.fixture.map(encodeFixture),
+				scenarioId: definition.id,
+				settings: definition.settings ?? {},
+			},
+			fence,
+		);
+		fence = begun.fence;
+		validateActiveScenario(begun.value, definition.id);
 
 		return await run({
 			async act(action) {

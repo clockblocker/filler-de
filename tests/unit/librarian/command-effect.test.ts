@@ -8,8 +8,13 @@ import {
 import { Effect, Result } from "effect";
 import { goToNextPageCommand } from "../../../src/commanders/librarian/commands/navigate-pages";
 import { splitInBlocksCommand } from "../../../src/commanders/librarian/commands/split-in-blocks";
+import { splitToPagesCommand } from "../../../src/commanders/librarian/commands/split-to-pages";
 import type { LibrarianCommandInput } from "../../../src/commanders/librarian/commands/types";
-import type { Librarian } from "../../../src/commanders/librarian/librarian";
+import type {
+	Librarian,
+	LibrarianReconciliationOutcome,
+} from "../../../src/commanders/librarian/librarian";
+import type { PageSplitPlan } from "../../../src/commanders/librarian/pages/build-actions";
 import { getAdjacentPageInfo } from "../../../src/commanders/librarian/pages/page-codec";
 import { splitToPagesAction } from "../../../src/commanders/librarian/pages/split-to-pages-action";
 import { setupGetParsedUserSettingsSpyWithHooks } from "../common-utils/setup-spy";
@@ -139,6 +144,152 @@ describe("Librarian Effect commands", () => {
 		}
 		expect(notifications[0]).toContain("planning failed");
 	});
+
+	it("preserves split operation and recovery details at the command boundary", async () => {
+		const opened: SplitPathToMdFile[] = [];
+		const failure = new VamPlanningError({
+			cause: new Error("split planning failed"),
+			operation: "planDispatchBatch",
+		});
+		const dispatch = {
+			failure,
+			kind: "FailedBeforeExecution" as const,
+			submittedCount: 3,
+		};
+		const outcome: LibrarianReconciliationOutcome = {
+			derived: {
+				backlink: 0,
+				codexDeletion: 0,
+				codexRecreation: 0,
+				healing: 0,
+				statusProjection: 0,
+				supplemental: 0,
+				vault: 0,
+			},
+			dispatch,
+			durationMs: 1,
+			failure: { dispatch, kind: "DispatchFailed" },
+			id: "reconcile-1",
+			operationId: "split-1",
+			recovery: { kind: "NotNeeded" },
+			source: "CommandIntention",
+			stages: { applyMs: 0, deriveMs: 0, dispatchMs: 0, recoveryMs: 0 },
+			startedAt: 1,
+			status: "Failed",
+			treeActions: { changed: 0, failed: 0, noOp: 0, requested: 0 },
+		};
+		const librarian = {
+			executeSplitIntention: () =>
+				Effect.succeed({
+					failure,
+					kind: "VaultDispatchFailed" as const,
+					operationId: "split-1",
+					outcome,
+				}),
+		} as unknown as Librarian;
+		const content = Array.from(
+			{ length: 80 },
+			(_, index) => `Paragraph ${index}. This sentence has enough text to split.`,
+		).join("\n\n");
+		const input = makeInput({
+			librarian,
+			vam: {
+				cd: (path) =>
+					Effect.sync(() => {
+						opened.push(path);
+					}),
+				getOpenedContent: () => Effect.succeed(content),
+				mdPwd: () => Effect.succeed(SOURCE_PATH),
+			},
+		});
+
+		const result = await Effect.runPromise(
+			splitToPagesCommand(input).pipe(Effect.result),
+		);
+
+		expect(Result.isFailure(result)).toBe(true);
+		if (Result.isFailure(result)) {
+			expect(result.failure).toMatchObject({
+				execution: "FailedBeforeExecution",
+				kind: "DispatchFailed",
+				operationId: "split-1",
+				phase: "InitialVaultDispatch",
+				recovery: { kind: "NotNeeded" },
+			});
+		}
+		expect(opened).toEqual([]);
+	});
+
+	it("preserves reconciliation identity and status at the command boundary", async () => {
+		const failure = new VamPlanningError({
+			cause: new Error("derived planning failed"),
+			operation: "planDispatchBatch",
+		});
+		const dispatch = {
+			failure,
+			kind: "FailedBeforeExecution" as const,
+			submittedCount: 4,
+		};
+		const outcome: LibrarianReconciliationOutcome = {
+			derived: {
+				backlink: 2,
+				codexDeletion: 0,
+				codexRecreation: 2,
+				healing: 0,
+				statusProjection: 0,
+				supplemental: 0,
+				vault: 4,
+			},
+			dispatch,
+			durationMs: 1,
+			failure: { dispatch, kind: "DispatchFailed" },
+			id: "reconcile-2",
+			operationId: "split-1",
+			recovery: { kind: "Resynchronized" },
+			source: "CommandIntention",
+			stages: { applyMs: 0, deriveMs: 0, dispatchMs: 1, recoveryMs: 0 },
+			startedAt: 1,
+			status: "Failed",
+			treeActions: { changed: 3, failed: 0, noOp: 0, requested: 3 },
+		};
+		const librarian = {
+			executeSplitIntention: () =>
+				Effect.succeed({
+					initialDispatch: { kind: "Completed" as const, submittedCount: 3 },
+					kind: "ReconciliationFailed" as const,
+					operationId: "split-1",
+					outcome,
+				}),
+		} as unknown as Librarian;
+		const content = Array.from(
+			{ length: 80 },
+			(_, index) => `Paragraph ${index}. This sentence has enough text to split.`,
+		).join("\n\n");
+		const input = makeInput({
+			librarian,
+			vam: {
+				cd: () => Effect.die("navigation must be skipped"),
+				getOpenedContent: () => Effect.succeed(content),
+				mdPwd: () => Effect.succeed(SOURCE_PATH),
+			},
+		});
+
+		const result = await Effect.runPromise(
+			splitToPagesCommand(input).pipe(Effect.result),
+		);
+
+		expect(Result.isFailure(result)).toBe(true);
+		if (Result.isFailure(result)) {
+			expect(result.failure).toMatchObject({
+				kind: "DispatchFailed",
+				operationId: "split-1",
+				phase: "SemanticReconciliation",
+				reconciliationId: "reconcile-2",
+				recovery: { kind: "Resynchronized" },
+				status: "Failed",
+			});
+		}
+	});
 });
 
 describe("getAdjacentPageInfo", () => {
@@ -165,11 +316,11 @@ describe("getAdjacentPageInfo", () => {
 });
 
 describe("splitToPagesAction", () => {
-	it("sequences facade reads, dispatch, healing, and navigation in one Effect", async () => {
+	it("sequences reads, queued Library intention, and navigation in one Effect", async () => {
 		const order: string[] = [];
+		const intentions: PageSplitPlan[] = [];
 		const vam = {
 			cd: () => Effect.sync(() => order.push("cd")),
-			dispatch: () => Effect.sync(() => order.push("dispatch")),
 			getOpenedContent: () =>
 				Effect.sync(() => {
 					order.push("content");
@@ -181,12 +332,48 @@ describe("splitToPagesAction", () => {
 					return SOURCE_PATH;
 				}),
 		} as unknown as VaultActionManager;
+		const outcome: LibrarianReconciliationOutcome = {
+			derived: {
+				backlink: 2,
+				codexDeletion: 0,
+				codexRecreation: 4,
+				healing: 0,
+				statusProjection: 0,
+				supplemental: 0,
+				vault: 6,
+			},
+			dispatch: { kind: "Completed", submittedCount: 6 },
+			durationMs: 1,
+			id: "reconcile-2",
+			operationId: "split-1",
+			recovery: { kind: "NotNeeded" },
+			source: "CommandIntention",
+			stages: { applyMs: 0, deriveMs: 0, dispatchMs: 1, recoveryMs: 0 },
+			startedAt: 1,
+			status: "Success",
+			treeActions: { changed: 3, failed: 0, noOp: 0, requested: 3 },
+		};
+		const librarian = {
+			executeSplitIntention: (intention: PageSplitPlan) =>
+				Effect.sync(() => {
+					order.push("intention");
+					intentions.push(intention);
+					return {
+						initialDispatch: {
+							kind: "Completed" as const,
+							submittedCount: intention.vaultActions.length,
+						},
+						kind: "Completed" as const,
+						operationId: "split-1",
+						outcome,
+					};
+				}),
+		} as unknown as Librarian;
 
-		await Effect.runPromise(
+		const result = await Effect.runPromise(
 			splitToPagesAction(
 				{
-					onSectionCreated: () =>
-						Effect.sync(() => order.push("heal")),
+					librarian,
 					vam,
 				},
 				{
@@ -199,6 +386,15 @@ describe("splitToPagesAction", () => {
 			),
 		);
 
-		expect(order).toEqual(["pwd", "content", "dispatch", "heal", "cd"]);
+		expect(order).toEqual(["pwd", "content", "intention", "cd"]);
+		expect(intentions).toHaveLength(1);
+		expect(
+			intentions[0]?.treeActions.map((action) => action.actionType),
+		).toEqual(["Delete", "Create"]);
+		expect(result).toMatchObject({
+			kind: "Completed",
+			operationId: "split-1",
+			reconciliation: { id: "reconcile-2" },
+		});
 	});
 });

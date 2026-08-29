@@ -25,6 +25,7 @@ model quality is opt-in provider acceptance and never shares the desktop host.
 | `009-toggle-section-checkbox` | `tests/integration/librarian/codex-checkbox-public.test.ts` |
 | `010-lemma-manne` source rewrite | `tests/unit/textfresser/steps/lemma-flow.test.ts` through public `Textfresser.executeCommand` |
 | `011-move-file-cli-codex` | `move-scroll-between-sections.test.ts` |
+| Scroll split command, file lifecycle, and Codex projection | `split-to-pages.test.ts` plus `tests/integration/librarian/split-to-pages-public.test.ts` for deterministic failure and queue semantics |
 
 The initial fixture's out-of-Library file never had a direct assertion. Library
 scope rejection is covered explicitly by the `make-library-scoped` and bulk

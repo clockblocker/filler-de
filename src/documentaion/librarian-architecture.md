@@ -147,15 +147,27 @@ At startup, the Librarian:
 
 The event subscription starts before the initial dispatch. VAM filters the resulting Self Events.
 
-Runtime Bulk observations and Codex clicks enter the same serialized queue with
-different source discriminators. Full versus incremental Codex generation is an
-internal reconciliation policy, never a caller option.
+Runtime Bulk observations, Codex clicks, and explicit command intentions enter
+the same serialized queue with different source discriminators. Full versus
+incremental Codex generation is an internal reconciliation policy, never a
+caller option.
+
+Scroll splitting submits one branded split plan. The queue holds one permit
+while VAM writes the page files and trashes the source, then reconciles the
+ordered semantic actions: delete the original Scroll followed by one Create per
+page. The first Create materializes the destination Section through normal Tree
+semantics. Self Events from the file batch remain filtered, because the command
+supplies the semantic intent explicitly. Planning failures stop before Tree
+application; execution-uncertain failures rescan and resynchronize before the
+permit is released. Navigation and the success Notice happen only after both
+the file batch and reconciliation succeed. One `split-N` operation ID connects
+the file-batch record, reconciliation outcome, and navigation result.
 
 ## Commands
 
 | Command | Result |
 | --- | --- |
-| `SplitToPages` | Split one Scroll into a Section of page Scrolls. |
+| `SplitToPages` | Split one Scroll into a Section of page Scrolls through one queued, audited Library intention. |
 | `SplitInBlocks` | Add stable Obsidian block IDs. |
 | `GoToNextPage` | Open the next Scroll in Library display order. |
 | `GoToPrevPage` | Open the previous Scroll in Library display order. |
@@ -167,7 +179,7 @@ Navigation uses Library Tree order. It does not depend on stored next-page or pr
 - VAM owns typed vault paths, vault reads, dispatch, and event attribution.
 - Library Core owns codecs, the tree, Healing policy, and Codex calculation.
 - The Librarian commander owns startup reads, subscription lifecycle, event
-  serialization, command parsing, and navigation.
+  serialization, command parsing, split operation IDs, and navigation.
 - The reconciliation runtime owns staged Tree application, all projection
   derivation, VAM dispatch, truthful recovery, and the audit outcome.
 - Note metadata and go-back links are projections of Library state.

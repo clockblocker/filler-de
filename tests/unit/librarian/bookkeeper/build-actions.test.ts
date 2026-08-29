@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import {
+	makeCodecRulesFromSettings,
+} from "@textfresser/library-core";
 import { z } from "zod";
 import {
 	buildPageSplitActions,
 } from "../../../../src/commanders/librarian/pages/build-actions";
 import type { SegmentationResult } from "../../../../src/commanders/librarian/pages/types";
-import {
-	makeCodecRulesFromSettings,
-} from "@textfresser/library-core";
 import { noteMetadataHelper } from "../../../../src/stateless-helpers/note-metadata";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
@@ -43,7 +43,7 @@ describe("buildPageSplitActions", () => {
 			tooShortToSplit: false,
 		};
 
-		const split = buildPageSplitActions(
+		const splitResult = buildPageSplitActions(
 			result,
 			{
 				basename: "Story-LibrarySection",
@@ -53,8 +53,11 @@ describe("buildPageSplitActions", () => {
 			},
 			rules,
 		);
+		expect(splitResult.isOk()).toBe(true);
+		if (splitResult.isErr()) throw new Error("Expected valid split plan");
+		const split = splitResult.value;
 
-		const firstAction = split.actions[0];
+		const firstAction = split.vaultActions[0];
 		if (!firstAction || firstAction.kind !== "UpsertMdFile") {
 			throw new Error("Expected first action to upsert first page");
 		}
@@ -70,5 +73,68 @@ describe("buildPageSplitActions", () => {
 		expect(metadata?.status).toBe("NotStarted");
 		expect(metadata?.prevPageIdx).toBeUndefined();
 		expect(metadata?.nextPageIdx).toBeUndefined();
+		expect(split.treeActions.map((action) => action.actionType)).toEqual([
+			"Delete",
+			"Create",
+			"Create",
+		]);
+		expect(split.treeActions.slice(1).map((action) => {
+			if (action.actionType !== "Create") return null;
+			return {
+				path: action.observedSplitPath.pathParts,
+				status: action.initialStatus,
+			};
+		})).toEqual([
+			{ path: ["Library", "Story"], status: "NotStarted" },
+			{ path: ["Library", "Story"], status: "NotStarted" },
+		]);
+	});
+
+	it("keeps Tree paths Library-scoped below a nested vault prefix", () => {
+		const rules = makeCodecRulesFromSettings({
+			...defaultSettingsForUnitTests,
+			splitPathToLibraryRoot: {
+				basename: "Library",
+				kind: "Folder",
+				pathParts: ["Archive"],
+			},
+		});
+		const result: SegmentationResult = {
+			pages: [{ charCount: 10, content: "Page", pageIndex: 0 }],
+			sourceCoreName: "Story",
+			sourceSuffix: [],
+			tooShortToSplit: false,
+		};
+
+		const plan = buildPageSplitActions(
+			result,
+			{
+				basename: "Story",
+				extension: "md",
+				kind: "MdFile",
+				pathParts: ["Archive", "Library"],
+			},
+			rules,
+		);
+
+		expect(plan.isOk()).toBe(true);
+		if (plan.isErr()) throw new Error("Expected nested Library split plan");
+		const deleteAction = plan.value.treeActions[0];
+		const createAction = plan.value.treeActions[1];
+		expect(deleteAction?.targetLocator.segmentIdChainToParent).toHaveLength(1);
+		if (createAction?.actionType !== "Create") {
+			throw new Error("Expected page Create action");
+		}
+		expect(createAction.observedSplitPath.pathParts).toEqual([
+			"Library",
+			"Story",
+		]);
+		expect(
+			plan.value.vaultActions[0]?.payload,
+		).toMatchObject({
+			splitPath: {
+				pathParts: ["Archive", "Library", "Story"],
+			},
+		});
 	});
 });

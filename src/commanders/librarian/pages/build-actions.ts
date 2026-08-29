@@ -2,37 +2,51 @@
  * Builds VaultActions for page splitting operation.
  */
 
-import { MD } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
-import type { VaultAction } from "@textfresser/vault-action-manager";
-import { VaultActionKind } from "@textfresser/vault-action-manager";
-import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
-import type { CodecRules } from "@textfresser/library-core";
-import type {
-	ScrollNodeSegmentId,
-	SectionNodeSegmentId,
-} from "@textfresser/library-core";
 import {
+	type CodecRules,
+	makeLibraryScope,
 	makeNodeSegmentId,
+	type NodeName,
+	type SectionNodeSegmentId,
+	type TreeAction,
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "@textfresser/library-core";
-import type { NodeName } from "@textfresser/library-core";
+import {
+	MD,
+	SplitPathKind,
+	type SplitPathToMdFile,
+	type VaultAction,
+	VaultActionKind,
+} from "@textfresser/vault-action-manager";
+import { Schema } from "effect";
+import { err, ok, type Result } from "neverthrow";
+import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
 import type { SegmentationResult } from "./types";
 import { PAGE_FRONTMATTER, PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
 
-type PageSplitResult = {
-	actions: VaultAction[];
-	firstPagePath: SplitPathToMdFile;
-	/** Section chain for the newly created folder (for Librarian notification) */
-	sectionChain: SectionNodeSegmentId[];
-	/** Segment ID of the deleted scroll (for tree update) */
-	deletedScrollSegmentId: ScrollNodeSegmentId;
-	/** Node names of created pages (e.g., "Aschenputtel_Page_000") */
-	pageNodeNames: string[];
+const PageSplitPlanBrand: unique symbol = Symbol("PageSplitPlan");
+
+export type PageSplitPlan = {
+	readonly [PageSplitPlanBrand]: true;
+	readonly firstPagePath: SplitPathToMdFile;
+	readonly treeActions: readonly TreeAction[];
+	readonly vaultActions: readonly VaultAction[];
 };
+
+export class PageSplitPlanningError extends Schema.TaggedError<PageSplitPlanningError>()(
+	"PageSplitPlanningError",
+	{
+		kind: Schema.Literal("PathOutsideLibrary"),
+		path: Schema.Struct({
+			basename: Schema.String,
+			extension: Schema.Literal(MD),
+			kind: Schema.Literal(SplitPathKind.MdFile),
+			pathParts: Schema.Array(Schema.String),
+		}),
+	},
+) {}
 
 /**
  * Builds all VaultActions needed for page splitting.
@@ -46,23 +60,42 @@ export function buildPageSplitActions(
 	result: SegmentationResult,
 	sourcePath: SplitPathToMdFile,
 	rules: CodecRules,
-): PageSplitResult {
-	const actions: VaultAction[] = [];
+): Result<PageSplitPlan, PageSplitPlanningError> {
+	const vaultActions: VaultAction[] = [];
+	const libraryScope = makeLibraryScope(rules);
+	const librarySourcePath = libraryScope.toLibraryPath(sourcePath);
+	if (librarySourcePath.isErr()) {
+		return err(
+			new PageSplitPlanningError({
+				kind: "PathOutsideLibrary",
+				path: sourcePath,
+			}),
+		);
+	}
 
 	// Calculate folder path - VAM auto-creates folders
 	const folderBasename = buildPageFolderBasename(result.sourceCoreName);
 	const newPathParts = [...sourcePath.pathParts, folderBasename];
 
 	// Build section chain for the new folder (all path parts including the new folder)
-	const sectionChain = buildSectionChainFromPathParts(newPathParts);
-
-	// Build segment ID for the deleted scroll (same coreName, but Scroll kind)
 	const deletedScrollSegmentId = makeNodeSegmentId({
 		extension: MD,
 		kind: TreeNodeKind.Scroll,
 		nodeName: result.sourceCoreName,
 		status: TreeNodeStatus.NotStarted,
-	}) as ScrollNodeSegmentId;
+	});
+	const treeActions: TreeAction[] = [
+		{
+			actionType: "Delete",
+			targetLocator: {
+				segmentId: deletedScrollSegmentId,
+				segmentIdChainToParent: buildSectionChainFromPathParts(
+					librarySourcePath.value.pathParts,
+				),
+				targetKind: TreeNodeKind.Scroll,
+			},
+		},
+	];
 
 	// 1. Create pages (always at least one when this function is called)
 	// Note: VAM auto-creates folders when creating files inside them
@@ -89,38 +122,61 @@ export function buildPageSplitActions(
 						newPathParts,
 						rules,
 					);
+		const libraryPagePath = libraryScope.toLibraryPath(pagePath);
+		if (libraryPagePath.isErr()) {
+			return err(
+				new PageSplitPlanningError({
+					kind: "PathOutsideLibrary",
+					path: pagePath,
+				}),
+			);
+		}
 
-		actions.push({
+		vaultActions.push({
 			kind: VaultActionKind.UpsertMdFile,
 			payload: {
 				content: pageContent,
 				splitPath: pagePath,
 			},
 		});
-	}
 
-	// 3. Trash source file
-	actions.push({
-		kind: VaultActionKind.TrashMdFile,
-		payload: { splitPath: sourcePath },
-	});
-
-	// 4. Extract page node names for tree population
-	const pageNodeNames = result.pages.map((page) => {
 		const paddedIndex = String(page.pageIndex).padStart(
 			PAGE_INDEX_DIGITS,
 			"0",
 		);
-		return `${result.sourceCoreName}_${PAGE_PREFIX}_${paddedIndex}`;
+		const pageNodeName =
+			`${result.sourceCoreName}_${PAGE_PREFIX}_${paddedIndex}` as NodeName;
+		treeActions.push({
+			actionType: "Create",
+			initialStatus: TreeNodeStatus.NotStarted,
+			observedSplitPath: libraryPagePath.value,
+			targetLocator: {
+				segmentId: makeNodeSegmentId({
+					extension: MD,
+					kind: TreeNodeKind.Scroll,
+					nodeName: pageNodeName,
+					status: TreeNodeStatus.NotStarted,
+				}),
+				segmentIdChainToParent: buildSectionChainFromPathParts(
+					libraryPagePath.value.pathParts,
+				),
+				targetKind: TreeNodeKind.Scroll,
+			},
+		});
+	}
+
+	// 3. Trash source file
+	vaultActions.push({
+		kind: VaultActionKind.TrashMdFile,
+		payload: { splitPath: sourcePath },
 	});
 
-	return {
-		actions,
-		deletedScrollSegmentId,
+	return ok({
+		[PageSplitPlanBrand]: true,
 		firstPagePath,
-		pageNodeNames,
-		sectionChain,
-	};
+		treeActions,
+		vaultActions,
+	});
 }
 
 /**

@@ -942,10 +942,28 @@ class TextfresserE2EDriver extends Plugin {
 				await this.app.vault.delete(file, true);
 				break;
 			}
+			case "splitToPages": {
+				const file = this.app.vault.getAbstractFileByPath(source.resolved);
+				if (!file || !isFile(file) || file.extension?.toLowerCase() !== "md") {
+					throw new DriverError(
+						"FileNotFound",
+						`cannot split '${source.resolved}': markdown file not found`,
+					);
+				}
+				await this.app.workspace.getLeaf(false).openFile(file);
+				const commandId = `${TARGET_PLUGIN_ID}:split-to-pages`;
+				if (this.app.commands.executeCommandById(commandId) !== true) {
+					throw new DriverError(
+						"CommandUnavailable",
+						`Textfresser command '${commandId}' was not available`,
+					);
+				}
+				break;
+			}
 			default:
 				throw new DriverError(
 					"InvalidOperation",
-					"params.operation.kind must be create, modify, rename, or delete",
+					"params.operation.kind must be create, modify, rename, delete, or splitToPages",
 				);
 		}
 
@@ -1050,6 +1068,8 @@ class TextfresserE2EDriver extends Plugin {
 
 	diagnostics() {
 		const status = this.statusValue();
+		const plugin = this.observeTextfresser().plugin;
+		const librarian = plugin?.getLibrarianTestingApi?.().librarian ?? null;
 		const sessionPrefix = this.config ? `${this.config.sessionId}:` : "";
 		let sessionCacheEntries = 0;
 		let pendingCacheEntries = 0;
@@ -1064,6 +1084,8 @@ class TextfresserE2EDriver extends Plugin {
 			e2eMode: globalThis.__E2E_MODE === true,
 			obsidianApiVersion: apiVersion,
 			operationSequence: this.globalState.operationSequence,
+			recentReconciliations:
+				librarian?.getRecentReconciliationOutcomes?.(10) ?? [],
 			requestCache: {
 				limit: CACHE_LIMIT,
 				pendingEntries: pendingCacheEntries,

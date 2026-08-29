@@ -3,10 +3,6 @@
  * Splits a long markdown file into paginated folder structure.
  */
 
-import type {
-	ScrollNodeSegmentId,
-	SectionNodeSegmentId,
-} from "@textfresser/library-core";
 import {
 	type CodecRules,
 	makeCodecRulesFromSettings,
@@ -15,13 +11,17 @@ import {
 import { goBackLinkHelper } from "@textfresser/note-addressing";
 import type {
 	SplitPathToMdFile,
-	VamEffectError,
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import { Notice } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import { describeLibrarianVamFailure } from "../commands/vam-failure";
+import type {
+	Librarian,
+	LibrarianReconciliationOutcome,
+	LibraryCommandIntentionResult,
+} from "../librarian";
 import { buildPageSplitActions } from "./build-actions";
 import {
 	handleSplitToPagesError,
@@ -32,30 +32,33 @@ import { segmentContent, segmentContentWithBlockMarkers } from "./segmenter";
 import type { SegmentationConfig, SegmentationResult } from "./types";
 import { DEFAULT_SEGMENTATION_CONFIG } from "./types";
 
+export type { SplitToPagesError } from "./error";
+
 // ─── Types ───
 
-/** Info about the split operation for Librarian healing */
-export type SplitHealingInfo = {
-	/** Section chain for the newly created folder */
-	sectionChain: SectionNodeSegmentId[];
-	/** Segment ID of the deleted scroll (to remove from tree) */
-	deletedScrollSegmentId: ScrollNodeSegmentId;
-	/** Node names of created pages (e.g., "Aschenputtel_Page_000") */
-	pageNodeNames: string[];
+type SplitToPagesContext = {
+	librarian: Librarian;
+	vam: Pick<VaultActionManager, "cd" | "getOpenedContent" | "mdPwd">;
 };
 
-type SplitToPagesContext<E = never> = {
-	vam: Pick<
-		VaultActionManager,
-		"cd" | "dispatch" | "getOpenedContent" | "mdPwd"
-	>;
-	/** Called after pages are created, bypasses self-event filtering */
-	onSectionCreated?: (info: SplitHealingInfo) => Effect.Effect<void, E>;
-};
+export type SplitToPagesOutcome =
+	| { readonly kind: "TooShort" }
+	| {
+			readonly initialDispatch: Extract<
+				LibraryCommandIntentionResult,
+				{ kind: "Completed" }
+			>["initialDispatch"];
+			readonly kind: "Completed";
+			readonly navigation: {
+				readonly kind: "Completed";
+				readonly path: SplitPathToMdFile;
+			};
+			readonly operationId: string;
+			readonly reconciliation: LibrarianReconciliationOutcome;
+	  };
 
 type SplitInput = {
 	sourcePath: SplitPathToMdFile;
-	content: string;
 	rules: CodecRules;
 	segmentation: SegmentationResult;
 };
@@ -63,7 +66,7 @@ type SplitInput = {
 // ─── Core Logic ───
 
 const gatherInput = Effect.fn("Librarian.splitToPages.gatherInput")(function* (
-	context: SplitToPagesContext<unknown>,
+	context: SplitToPagesContext,
 	config: SegmentationConfig,
 ): Effect.fn.Return<SplitInput, SplitToPagesError> {
 	const sourcePath = yield* context.vam
@@ -107,54 +110,87 @@ const gatherInput = Effect.fn("Librarian.splitToPages.gatherInput")(function* (
 		config,
 	);
 
-	return { content, rules, segmentation, sourcePath };
+	return { rules, segmentation, sourcePath };
 });
 
-type DispatchResult =
+type SplitExecutionResult =
 	| { tooShort: true }
 	| {
+			execution: Extract<
+				LibraryCommandIntentionResult,
+				{ kind: "Completed" }
+			>;
 			tooShort: false;
 			pageCount: number;
 			firstPagePath: SplitPathToMdFile;
-			sectionChain: SectionNodeSegmentId[];
-			deletedScrollSegmentId: ScrollNodeSegmentId;
-			pageNodeNames: string[];
 	  };
 
-const executeDispatch = Effect.fn("Librarian.splitToPages.executeDispatch")(
+const executeIntention = Effect.fn("Librarian.splitToPages.executeIntention")(
 	function* (
-		vam: SplitToPagesContext["vam"],
+		context: SplitToPagesContext,
 		input: SplitInput,
-	): Effect.fn.Return<DispatchResult, SplitToPagesError> {
+	): Effect.fn.Return<SplitExecutionResult, SplitToPagesError> {
 		const { sourcePath, rules, segmentation } = input;
 
 		if (segmentation.tooShortToSplit) {
 			return { tooShort: true };
 		}
 
-		const {
-			actions,
-			deletedScrollSegmentId,
-			firstPagePath,
-			pageNodeNames,
-			sectionChain,
-		} = buildPageSplitActions(segmentation, sourcePath, rules);
-		yield* vam
-			.dispatch(actions)
+		const plan = buildPageSplitActions(segmentation, sourcePath, rules);
+		if (plan.isErr()) {
+			return yield* Effect.fail(
+				makeSplitToPagesError.intentionFailed(
+					`Source path is outside the configured Library: ${plan.error.path.pathParts.join("/")}/${plan.error.path.basename}`,
+				),
+			);
+		}
+
+		const execution = yield* context.librarian
+			.executeSplitIntention(plan.value)
 			.pipe(
-				Effect.mapError((error) =>
-					makeSplitToPagesError.dispatchFailed(
-						describeLibrarianVamFailure(error, actions),
+				Effect.mapError(() =>
+					makeSplitToPagesError.librarianUnavailable(
+						"Library reconciliation is not initialized",
 					),
 				),
 			);
+		const { operationId } = execution;
+
+		if (execution.kind === "VaultDispatchFailed") {
+			const dispatchKind = execution.outcome.dispatch.kind;
+			return yield* Effect.fail(
+				makeSplitToPagesError.dispatchFailed(
+					describeLibrarianVamFailure(
+						execution.failure,
+						plan.value.vaultActions,
+					),
+					operationId,
+					dispatchKind === "ExecutionUncertain"
+						? "ExecutionUncertain"
+						: "FailedBeforeExecution",
+					execution.outcome.recovery,
+				),
+			);
+		}
+		if (execution.kind === "ReconciliationFailed") {
+			return yield* Effect.fail(
+				makeSplitToPagesError.reconciliationFailed({
+					operationId,
+					reason: `Reconciliation ${execution.outcome.id} ended ${execution.outcome.status}; recovery ${execution.outcome.recovery.kind}`,
+					reconciliationId: execution.outcome.id,
+					recovery: execution.outcome.recovery,
+					status:
+						execution.outcome.status === "PartialFailure"
+							? "PartialFailure"
+							: "Failed",
+				}),
+			);
+		}
 
 		return {
-			deletedScrollSegmentId,
-			firstPagePath,
+			execution,
+			firstPagePath: plan.value.firstPagePath,
 			pageCount: segmentation.pages.length,
-			pageNodeNames,
-			sectionChain,
 			tooShort: false,
 		};
 	},
@@ -163,39 +199,48 @@ const executeDispatch = Effect.fn("Librarian.splitToPages.executeDispatch")(
 // ─── Public API ───
 
 export const splitToPagesAction = Effect.fn("Librarian.splitToPagesAction")(
-	function* <E>(
-		context: SplitToPagesContext<E>,
+	function* (
+		context: SplitToPagesContext,
 		config: SegmentationConfig = DEFAULT_SEGMENTATION_CONFIG,
-	): Effect.fn.Return<void, SplitToPagesError | VamEffectError | E> {
+	): Effect.fn.Return<SplitToPagesOutcome, SplitToPagesError> {
 		const input = yield* gatherInput(context, config).pipe(
 			Effect.tapError((error) =>
 				Effect.sync(() => handleSplitToPagesError(error)),
 			),
 		);
 
-		const result = yield* executeDispatch(context.vam, input).pipe(
+		const result = yield* executeIntention(context, input).pipe(
 			Effect.tapError((error) =>
 				Effect.sync(() => handleSplitToPagesError(error)),
 			),
 		);
 		if (result.tooShort) {
 			// Should not happen because UI only exposes the action for multi-page content.
-			return;
+			return { kind: "TooShort" };
 		}
 
-		// Notify Librarian about the new section (bypasses self-event filtering)
-		if (context.onSectionCreated) {
-			yield* context.onSectionCreated({
-				deletedScrollSegmentId: result.deletedScrollSegmentId,
-				pageNodeNames: result.pageNodeNames,
-				sectionChain: result.sectionChain,
-			});
-		}
-
-		yield* Effect.sync(
-			() => new Notice(`Split into ${result.pageCount} pages`),
+		const { operationId } = result.execution;
+		yield* context.vam.cd(result.firstPagePath).pipe(
+			Effect.mapError((error) =>
+				makeSplitToPagesError.navigationFailed(
+					describeLibrarianVamFailure(error),
+					operationId,
+				),
+			),
+			Effect.tapError((error) =>
+				Effect.sync(() => handleSplitToPagesError(error)),
+			),
 		);
-		yield* context.vam.cd(result.firstPagePath);
+		yield* Effect.sync(() => {
+			new Notice(`Split into ${result.pageCount} pages`);
+		});
+		return {
+			initialDispatch: result.execution.initialDispatch,
+			kind: "Completed",
+			navigation: { kind: "Completed", path: result.firstPagePath },
+			operationId,
+			reconciliation: result.execution.outcome,
+		};
 	},
 );
 

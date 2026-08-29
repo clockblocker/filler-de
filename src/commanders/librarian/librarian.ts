@@ -30,7 +30,7 @@ import type {
 	VaultScanResult,
 } from "@textfresser/vault-action-manager";
 import { MD, type SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import { Effect } from "effect";
+import { Cause, Effect, Result, Schema } from "effect";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
 	CommandContext,
@@ -51,7 +51,7 @@ import {
 	getPrevPage as getPrevPageImpl,
 } from "./navigation/page-navigation";
 import { resolveAliasFromSuffix } from "./navigation/wikilink-alias";
-import type { SplitHealingInfo } from "./pages/split-to-pages-action";
+import type { PageSplitPlan } from "./pages/build-actions";
 import {
 	classifyVamDispatchFailure,
 	LibraryReconciler,
@@ -60,15 +60,30 @@ import {
 	type ReconciliationRecoveryInput,
 	type ReconciliationRequest,
 } from "./runtime/library-reconciliation";
-import { triggerSectionHealing as triggerSectionHealingImpl } from "./runtime/section-healing";
 import { VaultActionQueue } from "./runtime/vault-action-queue";
 
 // ─── Queue Item ───
 
-type LibrarianQueueItem = {
-	request: ReconciliationRequest;
-	observe?: (outcome: LibrarianReconciliationOutcome) => void;
+type LibraryCommandIntention = Pick<
+	PageSplitPlan,
+	"treeActions" | "vaultActions"
+> & {
+	readonly operationId: string;
 };
+
+type ReconciliationQueueItem = {
+	readonly kind: "Reconciliation";
+	readonly request: ReconciliationRequest;
+	readonly observe?: (outcome: LibrarianReconciliationOutcome) => void;
+};
+
+type CommandIntentionQueueItem = {
+	readonly intention: LibraryCommandIntention;
+	readonly kind: "CommandIntention";
+	readonly observe: (result: LibraryCommandIntentionResult) => void;
+};
+
+type LibrarianQueueItem = ReconciliationQueueItem | CommandIntentionQueueItem;
 
 export type LibrarianVam = Pick<
 	VaultActionManager,
@@ -80,21 +95,77 @@ export type LibrarianVam = Pick<
 	| "subscribeToBulk"
 >;
 
-type LibrarianDispatchFailure = Effect.Error<
-	ReturnType<LibrarianVam["dispatch"]>
->;
+export class LibrarianUnexpectedDispatchError extends Schema.TaggedError<LibrarianUnexpectedDispatchError>()(
+	"LibrarianUnexpectedDispatchError",
+	{
+		cause: Schema.Defect(),
+		operation: Schema.Literal("dispatch"),
+	},
+) {}
+
+export class LibrarianUnexpectedRecoveryError extends Schema.TaggedError<LibrarianUnexpectedRecoveryError>()(
+	"LibrarianUnexpectedRecoveryError",
+	{
+		cause: Schema.Defect(),
+		operation: Schema.Literal("scan"),
+	},
+) {}
+
+type LibrarianDispatchFailure =
+	| Effect.Error<ReturnType<LibrarianVam["dispatch"]>>
+	| LibrarianUnexpectedDispatchError;
+
+function classifyLibrarianDispatchFailure(
+	failure: LibrarianDispatchFailure,
+): "FailedBeforeExecution" | "ExecutionUncertain" {
+	return failure instanceof LibrarianUnexpectedDispatchError
+		? "ExecutionUncertain"
+		: classifyVamDispatchFailure(failure);
+}
 
 type LibrarianRecoveryFailure =
 	| Effect.Error<ReturnType<LibrarianVam["scan"]>>
+	| LibrarianUnexpectedRecoveryError
 	| {
 			readonly diagnostics: VaultScanResult["diagnostics"];
 			readonly kind: "PartialVaultScan";
 	  };
 
-type LibrarianReconciliationOutcome = ReconciliationOutcome<
+export type LibrarianReconciliationOutcome = ReconciliationOutcome<
 	LibrarianDispatchFailure,
 	LibrarianRecoveryFailure
 >;
+
+export type LibraryCommandIntentionResult =
+	| {
+			readonly initialDispatch: {
+				readonly kind: "Completed";
+				readonly submittedCount: number;
+			};
+			readonly kind: "Completed";
+			readonly operationId: string;
+			readonly outcome: LibrarianReconciliationOutcome;
+	  }
+	| {
+			readonly initialDispatch: {
+				readonly kind: "Completed";
+				readonly submittedCount: number;
+			};
+			readonly kind: "ReconciliationFailed";
+			readonly operationId: string;
+			readonly outcome: LibrarianReconciliationOutcome;
+	  }
+	| {
+			readonly failure: LibrarianDispatchFailure;
+			readonly kind: "VaultDispatchFailed";
+			readonly operationId: string;
+			readonly outcome: LibrarianReconciliationOutcome;
+	  };
+
+export class LibraryCommandIntentionError extends Schema.TaggedError<LibraryCommandIntentionError>()(
+	"LibraryCommandIntentionError",
+	{ kind: Schema.Literal("LibrarianUnavailable") },
+) {}
 
 // ─── Librarian ───
 
@@ -111,6 +182,7 @@ export class Librarian {
 	private actionQueue: VaultActionQueue<LibrarianQueueItem, never> | null =
 		null;
 	private startupBulkBuffer: BulkVaultEvent[] | null = null;
+	private nextCommandOperationId = 0;
 	private codecs!: Codecs;
 	private interpretBulk!: BulkInterpreter;
 
@@ -170,9 +242,19 @@ export class Librarian {
 	): LibraryReconciler<LibrarianDispatchFailure, LibrarianRecoveryFailure> {
 		return new LibraryReconciler(healer, this.codecs, {
 			audit: this.reconciliationAudit,
-			classifyDispatchFailure: classifyVamDispatchFailure,
+			classifyDispatchFailure: classifyLibrarianDispatchFailure,
 			dispatch: (actions) => this.vam.dispatch(actions),
 			recover: () => this.prepareRecovery(),
+			unexpectedDispatchFailure: (cause) =>
+				new LibrarianUnexpectedDispatchError({
+					cause: Cause.squash(cause),
+					operation: "dispatch",
+				}),
+			unexpectedRecoveryFailure: (cause) =>
+				new LibrarianUnexpectedRecoveryError({
+					cause: Cause.squash(cause),
+					operation: "scan",
+				}),
 		});
 	}
 
@@ -229,7 +311,7 @@ export class Librarian {
 					self.actionQueue = yield* VaultActionQueue.make<
 						LibrarianQueueItem,
 						never
-					>((item) => self.processReconciliation(item));
+					>((item) => self.processQueueItem(item));
 
 					// Subscribe to vault events BEFORE dispatching actions
 					// This ensures we catch all events, including cascading healing from init actions
@@ -239,6 +321,7 @@ export class Librarian {
 						outcome?: LibrarianReconciliationOutcome;
 					} = {};
 					yield* self.actionQueue.enqueue({
+						kind: "Reconciliation",
 						observe: (outcome) => {
 							startupResult.outcome = outcome;
 						},
@@ -305,6 +388,7 @@ export class Librarian {
 			// Queue and process
 			if (!this.actionQueue) return;
 			yield* this.actionQueue.enqueue({
+				kind: "Reconciliation",
 				request: {
 					source: "ObservedBulk",
 					supplemental: {
@@ -316,18 +400,105 @@ export class Librarian {
 		},
 	);
 
-	private readonly processReconciliation = Effect.fn(
-		"Librarian.processReconciliation",
-	)(function* (this: Librarian, item: LibrarianQueueItem) {
+	private readonly processQueueItem = Effect.fn("Librarian.processQueueItem")(
+		function* (this: Librarian, item: LibrarianQueueItem) {
+			if (!this.reconciler) return;
+			if (item.kind === "CommandIntention") {
+				yield* this.processCommandIntention(item).pipe(
+					Effect.uninterruptible,
+				);
+				return;
+			}
+
+			const outcome = yield* this.reconciler.reconcile(item.request);
+			item.observe?.(outcome);
+			if (
+				outcome.status === "Failed" ||
+				outcome.status === "PartialFailure"
+			) {
+				logger.error("[Librarian] Reconciliation failed:", outcome);
+			}
+		},
+	);
+
+	private readonly processCommandIntention = Effect.fn(
+		"Librarian.processCommandIntention",
+	)(function* (this: Librarian, item: CommandIntentionQueueItem) {
 		if (!this.reconciler) return;
-		const outcome = yield* this.reconciler.reconcile(item.request);
-		item.observe?.(outcome);
+		const { intention } = item;
+		const dispatchResult = yield* this.vam
+			.dispatch(intention.vaultActions)
+			.pipe(
+				Effect.mapError((failure): LibrarianDispatchFailure => failure),
+				Effect.result,
+				Effect.catchCause((cause) =>
+					Effect.succeed<
+						Result.Result<void, LibrarianDispatchFailure>
+					>(
+						Result.fail(
+							new LibrarianUnexpectedDispatchError({
+								cause: Cause.squash(cause),
+								operation: "dispatch",
+							}),
+						),
+					),
+				),
+			);
+		if (Result.isFailure(dispatchResult)) {
+			const outcome =
+				yield* this.reconciler.reconcileExternalDispatchFailure({
+					failure: dispatchResult.failure,
+					operationId: intention.operationId,
+					source: "CommandIntention",
+					submittedCount: intention.vaultActions.length,
+				});
+			item.observe({
+				failure: dispatchResult.failure,
+				kind: "VaultDispatchFailed",
+				operationId: intention.operationId,
+				outcome,
+			});
+			logger.error(
+				"[Librarian] Command intention vault dispatch failed:",
+				outcome,
+			);
+			return;
+		}
+
+		const outcome = yield* this.reconciler.reconcile({
+			operationId: intention.operationId,
+			source: "CommandIntention",
+			supplemental: { invalidCodexDeletions: [] },
+			treeActions: intention.treeActions,
+		});
 		if (
 			outcome.status === "Failed" ||
 			outcome.status === "PartialFailure"
 		) {
-			logger.error("[Librarian] Reconciliation failed:", outcome);
+			item.observe({
+				initialDispatch: {
+					kind: "Completed",
+					submittedCount: intention.vaultActions.length,
+				},
+				kind: "ReconciliationFailed",
+				operationId: intention.operationId,
+				outcome,
+			});
+			logger.error(
+				"[Librarian] Command intention reconciliation failed:",
+				outcome,
+			);
+			return;
 		}
+		item.observe({
+			initialDispatch: {
+				kind: "Completed",
+				submittedCount: intention.vaultActions.length,
+			},
+			kind: "Completed",
+			operationId: intention.operationId,
+			outcome,
+		});
 	});
 
 	/**
@@ -362,31 +533,46 @@ export class Librarian {
 		return this.reconciliationAudit.getRecent(count);
 	}
 
-	/**
-	 * Trigger section healing for a newly created section.
-	 * Called by Bookkeeper to bypass self-event filtering.
-	 *
-	 * @param info - Contains section chain, deleted scroll, and page node names
-	 */
-	readonly triggerSectionHealing = Effect.fn(
-		"Librarian.triggerSectionHealing",
-	)(function* (this: Librarian, info: SplitHealingInfo) {
-		const healer = this.getHealer();
-		if (!healer) {
-			logger.warn(
-				"[Librarian.triggerSectionHealing] No healer, returning early",
+	/** Execute a validated page-split batch and its Tree intention under one permit. */
+	readonly executeSplitIntention = Effect.fn(
+		"Librarian.executeSplitIntention",
+	)(function* (
+		this: Librarian,
+		plan: PageSplitPlan,
+	): Effect.fn.Return<
+		LibraryCommandIntentionResult,
+		LibraryCommandIntentionError
+	> {
+		if (!this.reconciler || !this.actionQueue) {
+			return yield* Effect.fail(
+				new LibraryCommandIntentionError({
+					kind: "LibrarianUnavailable",
+				}),
 			);
-			return;
 		}
 
-		yield* triggerSectionHealingImpl(
-			{
-				codecs: this.codecs,
-				dispatch: (actions) => this.vam.dispatch(actions),
-				healer,
+		const observed: { result?: LibraryCommandIntentionResult } = {};
+		this.nextCommandOperationId += 1;
+		const intention: LibraryCommandIntention = {
+			operationId: `split-${this.nextCommandOperationId}`,
+			treeActions: plan.treeActions,
+			vaultActions: plan.vaultActions,
+		};
+		yield* this.actionQueue.enqueue({
+			intention,
+			kind: "CommandIntention",
+			observe: (result) => {
+				observed.result = result;
 			},
-			info,
-		);
+		});
+		if (!observed.result) {
+			return yield* Effect.fail(
+				new LibraryCommandIntentionError({
+					kind: "LibrarianUnavailable",
+				}),
+			);
+		}
+		return observed.result;
 	});
 
 	/**
@@ -535,6 +721,7 @@ export class Librarian {
 		// 4. Enqueue for processing
 		if (!this.actionQueue) return;
 		yield* this.actionQueue.enqueue({
+			kind: "Reconciliation",
 			request: {
 				source: "CodexClick",
 				supplemental: { invalidCodexDeletions: [] },

@@ -23,7 +23,7 @@ import {
 	type VaultAction,
 	type VaultScanPath,
 } from "@textfresser/vault-action-manager";
-import { Clock, Effect, Result } from "effect";
+import { type Cause, Clock, Effect, Result } from "effect";
 
 export type ReconciliationSource =
 	| "Startup"
@@ -36,6 +36,7 @@ type ReconciliationSupplementalObservations = {
 };
 
 type RuntimeReconciliationRequest = {
+	readonly operationId?: string;
 	readonly source: Exclude<ReconciliationSource, "Startup">;
 	readonly supplemental: ReconciliationSupplementalObservations;
 	readonly treeActions: readonly TreeAction[];
@@ -43,6 +44,7 @@ type RuntimeReconciliationRequest = {
 
 export type StartupReconciliationRequest = {
 	readonly observedVaultPaths: readonly VaultScanPath[];
+	readonly operationId?: string;
 	readonly source: "Startup";
 	readonly supplemental: ReconciliationSupplementalObservations;
 	readonly treeActions: readonly TreeAction[];
@@ -133,6 +135,7 @@ export type ReconciliationOutcome<E, R = unknown> = {
 	readonly durationMs: number;
 	readonly failure?: ReconciliationFailure<E>;
 	readonly id: string;
+	readonly operationId?: string;
 	readonly recovery: ReconciliationRecoveryRecord<R>;
 	readonly source: ReconciliationSource;
 	readonly stages: ReconciliationStageDurations;
@@ -154,6 +157,8 @@ type LibraryReconcilerOptions<E, R> = {
 		actions: readonly VaultAction[],
 	) => Effect.Effect<void, E>;
 	readonly recover?: () => Effect.Effect<ReconciliationRecoveryInput, R>;
+	readonly unexpectedDispatchFailure: (cause: Cause.Cause<never>) => E;
+	readonly unexpectedRecoveryFailure: (cause: Cause.Cause<never>) => R;
 	readonly audit?: ReconciliationAuditLog<E, R>;
 };
 
@@ -170,6 +175,13 @@ type DerivedActions = {
 type AttemptResult<E, R> = {
 	readonly candidate?: Healer;
 	readonly outcome: ReconciliationOutcome<E, R>;
+};
+
+export type ExternalDispatchFailureInput<E> = {
+	readonly failure: E;
+	readonly operationId: string;
+	readonly source: Exclude<ReconciliationSource, "Startup">;
+	readonly submittedCount: number;
 };
 
 const ZERO_DERIVED_COUNTS: ReconciliationDerivedCounts = {
@@ -259,6 +271,7 @@ export class LibraryReconciler<E, R = unknown> {
 					kind: "ReconciliationUnavailable",
 				},
 				id,
+				operationId: request.operationId,
 				recovery: { cause: this.unavailableCause, kind: "Failed" },
 				source: request.source,
 				stages: ZERO_STAGE_DURATIONS,
@@ -289,55 +302,8 @@ export class LibraryReconciler<E, R = unknown> {
 			return outcome;
 		}
 
-		const recover = this.options.recover;
-		const needsVaultRecovery = request.source !== "Startup" && recover;
-		if (needsVaultRecovery) {
-			const recoveryStartedAt = yield* Clock.currentTimeMillis;
-			const recoveryInput = yield* Effect.result(recover());
-
-			if (Result.isSuccess(recoveryInput)) {
-				const recoveryAttempt = yield* this.attempt(
-					`${id}:recovery`,
-					recoveryStartedAt,
-					recoveryInput.success.healer,
-					recoveryInput.success.request,
-				);
-				if (recoveryAttempt.candidate) {
-					this.healer = recoveryAttempt.candidate;
-					this.unavailableCause = undefined;
-					const endedAt = yield* Clock.currentTimeMillis;
-					outcome = {
-						...outcome,
-						durationMs: endedAt - startedAt,
-						recovery: { kind: "Resynchronized" },
-						stages: {
-							...outcome.stages,
-							recoveryMs: endedAt - recoveryStartedAt,
-						},
-					};
-					audit.record(outcome);
-					return outcome;
-				}
-
-				this.unavailableCause =
-					recoveryAttempt.outcome.failure ?? recoveryAttempt.outcome;
-			} else {
-				this.unavailableCause = recoveryInput.failure;
-			}
-
-			const endedAt = yield* Clock.currentTimeMillis;
-			outcome = {
-				...outcome,
-				durationMs: endedAt - startedAt,
-				recovery: {
-					cause: this.unavailableCause,
-					kind: "Failed",
-				},
-				stages: {
-					...outcome.stages,
-					recoveryMs: endedAt - recoveryStartedAt,
-				},
-			};
+		if (request.source !== "Startup" && this.options.recover) {
+			outcome = yield* this.resynchronize(outcome);
 		} else if (outcome.dispatch.kind === "ExecutionUncertain") {
 			this.unavailableCause = outcome.failure;
 			outcome = {
@@ -353,6 +319,131 @@ export class LibraryReconciler<E, R = unknown> {
 
 		audit.record(outcome);
 		return outcome;
+	});
+
+	/**
+	 * Audit and recover an execution-uncertain VAM batch that preceded semantic
+	 * Tree reconciliation, such as the page-file phase of a split command.
+	 */
+	readonly reconcileExternalDispatchFailure = Effect.fn(
+		"LibraryReconciler.reconcileExternalDispatchFailure",
+	)(function* (
+		this: LibraryReconciler<E, R>,
+		input: ExternalDispatchFailureInput<E>,
+	): Effect.fn.Return<ReconciliationOutcome<E, R>> {
+		const audit = this.getAuditLog();
+		const id = audit.allocateId();
+		const startedAt = yield* Clock.currentTimeMillis;
+		const dispatchKind = this.options.classifyDispatchFailure(
+			input.failure,
+		);
+		const dispatch: ReconciliationDispatchRecord<E> = {
+			failure: input.failure,
+			kind: dispatchKind,
+			submittedCount: input.submittedCount,
+		};
+		let outcome: ReconciliationOutcome<E, R> = {
+			derived: ZERO_DERIVED_COUNTS,
+			dispatch,
+			durationMs: 0,
+			failure: { dispatch, kind: "DispatchFailed" },
+			id,
+			operationId: input.operationId,
+			recovery: { kind: "NotNeeded" },
+			source: input.source,
+			stages: ZERO_STAGE_DURATIONS,
+			startedAt,
+			status:
+				dispatchKind === "ExecutionUncertain"
+					? "PartialFailure"
+					: "Failed",
+			treeActions: {
+				changed: 0,
+				failed: 0,
+				noOp: 0,
+				requested: 0,
+			},
+		};
+
+		if (dispatchKind === "ExecutionUncertain") {
+			outcome = yield* this.resynchronize(outcome);
+		} else {
+			const endedAt = yield* Clock.currentTimeMillis;
+			outcome = { ...outcome, durationMs: endedAt - startedAt };
+		}
+
+		audit.record(outcome);
+		return outcome;
+	});
+
+	private readonly resynchronize = Effect.fn(
+		"LibraryReconciler.resynchronize",
+	)(function* (
+		this: LibraryReconciler<E, R>,
+		outcome: ReconciliationOutcome<E, R>,
+	): Effect.fn.Return<ReconciliationOutcome<E, R>> {
+		const recoveryStartedAt = yield* Clock.currentTimeMillis;
+		const recover = this.options.recover;
+		if (!recover) {
+			this.unavailableCause = outcome.failure ?? outcome;
+			const endedAt = yield* Clock.currentTimeMillis;
+			return {
+				...outcome,
+				durationMs: endedAt - outcome.startedAt,
+				recovery: { cause: this.unavailableCause, kind: "Failed" },
+				stages: {
+					...outcome.stages,
+					recoveryMs: endedAt - recoveryStartedAt,
+				},
+			};
+		}
+
+		const recoveryInput = yield* recover().pipe(
+			Effect.result,
+			Effect.catchCause((cause) =>
+				Effect.succeed<Result.Result<ReconciliationRecoveryInput, R>>(
+					Result.fail(this.options.unexpectedRecoveryFailure(cause)),
+				),
+			),
+		);
+		if (Result.isSuccess(recoveryInput)) {
+			const recoveryAttempt = yield* this.attempt(
+				`${outcome.id}:recovery`,
+				recoveryStartedAt,
+				recoveryInput.success.healer,
+				recoveryInput.success.request,
+			);
+			if (recoveryAttempt.candidate) {
+				this.healer = recoveryAttempt.candidate;
+				this.unavailableCause = undefined;
+				const endedAt = yield* Clock.currentTimeMillis;
+				return {
+					...outcome,
+					durationMs: endedAt - outcome.startedAt,
+					recovery: { kind: "Resynchronized" },
+					stages: {
+						...outcome.stages,
+						recoveryMs: endedAt - recoveryStartedAt,
+					},
+				};
+			}
+
+			this.unavailableCause =
+				recoveryAttempt.outcome.failure ?? recoveryAttempt.outcome;
+		} else {
+			this.unavailableCause = recoveryInput.failure;
+		}
+
+		const endedAt = yield* Clock.currentTimeMillis;
+		return {
+			...outcome,
+			durationMs: endedAt - outcome.startedAt,
+			recovery: { cause: this.unavailableCause, kind: "Failed" },
+			stages: {
+				...outcome.stages,
+				recoveryMs: endedAt - recoveryStartedAt,
+			},
+		};
 	});
 
 	private readonly attempt = Effect.fn("LibraryReconciler.attempt")(
@@ -397,6 +488,7 @@ export class LibraryReconciler<E, R = unknown> {
 						durationMs: endedAt - startedAt,
 						failure: applyFailure,
 						id,
+						operationId: request.operationId,
 						recovery: { kind: "NotNeeded" },
 						source: request.source,
 						stages: {
@@ -423,6 +515,7 @@ export class LibraryReconciler<E, R = unknown> {
 						durationMs: deriveEndedAt - startedAt,
 						failure: { cause, kind: "DerivationFailed" },
 						id,
+						operationId: request.operationId,
 						recovery: { kind: "NotNeeded" },
 						source: request.source,
 						stages: {
@@ -448,6 +541,7 @@ export class LibraryReconciler<E, R = unknown> {
 						dispatch: { kind: "NotRequired" },
 						durationMs: endedAt - startedAt,
 						id,
+						operationId: request.operationId,
 						recovery: { kind: "NotNeeded" },
 						source: request.source,
 						stages: {
@@ -463,9 +557,18 @@ export class LibraryReconciler<E, R = unknown> {
 			}
 
 			const dispatchStartedAt = yield* Clock.currentTimeMillis;
-			const dispatchResult = yield* Effect.result(
-				this.options.dispatch(derived.vault),
-			);
+			const dispatchResult = yield* this.options
+				.dispatch(derived.vault)
+				.pipe(
+					Effect.result,
+					Effect.catchCause((cause) =>
+						Effect.succeed<Result.Result<void, E>>(
+							Result.fail(
+								this.options.unexpectedDispatchFailure(cause),
+							),
+						),
+					),
+				);
 			const dispatchEndedAt = yield* Clock.currentTimeMillis;
 
 			if (Result.isSuccess(dispatchResult)) {
@@ -479,6 +582,7 @@ export class LibraryReconciler<E, R = unknown> {
 						},
 						durationMs: dispatchEndedAt - startedAt,
 						id,
+						operationId: request.operationId,
 						recovery: { kind: "NotNeeded" },
 						source: request.source,
 						stages: {
@@ -510,6 +614,7 @@ export class LibraryReconciler<E, R = unknown> {
 					durationMs: dispatchEndedAt - startedAt,
 					failure: { dispatch, kind: "DispatchFailed" },
 					id,
+					operationId: request.operationId,
 					recovery: { kind: "NotNeeded" },
 					source: request.source,
 					stages: {

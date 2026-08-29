@@ -16,7 +16,7 @@ import {
 	VaultActionKind,
 	type VaultScanPath,
 } from "@textfresser/vault-action-manager";
-import { Effect } from "effect";
+import { Cause, Effect } from "effect";
 import {
 	classifyVamDispatchFailure,
 	LibraryReconciler,
@@ -33,8 +33,13 @@ import {
 	toShape,
 } from "../../unit/librarian/library-tree/tree-test-helpers";
 
-type DispatchFailure = VamPlanningError | readonly VamDispatchError[];
-type RecoveryFailure = { readonly kind: "RecoveryFailed" };
+type DispatchFailure =
+	| VamPlanningError
+	| readonly VamDispatchError[]
+	| { readonly cause: unknown; readonly kind: "UnexpectedDispatchFailure" };
+type RecoveryFailure =
+	| { readonly kind: "RecoveryFailed" }
+	| { readonly cause: unknown; readonly kind: "UnexpectedRecoveryFailure" };
 
 const codecs = makeCodecs(
 	makeCodecRulesFromSettings(defaultSettingsForUnitTests),
@@ -122,7 +127,11 @@ function makeHarness(options?: {
 		codecs,
 		{
 			audit,
-			classifyDispatchFailure: classifyVamDispatchFailure,
+			classifyDispatchFailure: (failure) =>
+				"kind" in failure &&
+				failure.kind === "UnexpectedDispatchFailure"
+					? "ExecutionUncertain"
+					: classifyVamDispatchFailure(failure),
 			dispatch: (actions) =>
 				dispatch(actions).pipe(
 					Effect.tap(() =>
@@ -130,6 +139,14 @@ function makeHarness(options?: {
 					),
 				),
 			recover: options?.recover,
+			unexpectedDispatchFailure: (cause) => ({
+				cause: Cause.squash(cause),
+				kind: "UnexpectedDispatchFailure" as const,
+			}),
+			unexpectedRecoveryFailure: (cause) => ({
+				cause: Cause.squash(cause),
+				kind: "UnexpectedRecoveryFailure" as const,
+			}),
 		},
 	);
 	return { audit, dispatches, reconciler };
@@ -464,6 +481,132 @@ describe("Library reconciliation interface", () => {
 		expect(outcome.dispatch.kind).toBe("FailedBeforeExecution");
 		expect(outcome.recovery.kind).toBe("StagedStateDiscarded");
 		expect(toShape(reconciler.getCommittedHealer()).children).toBeUndefined();
+	});
+
+	it("audits preceding split planning and registration failures without recovery", async () => {
+		const failures: DispatchFailure[] = [
+			new VamPlanningError({
+				action: undefined,
+				cause: new Error("planning failed"),
+				operation: "planDispatchBatch",
+			}),
+			[
+				new VamDispatchError({
+					action: undefined,
+					cause: new Error("registration failed"),
+					operation: "registerSelfEvents",
+				}),
+			],
+		];
+
+		for (const [index, failure] of failures.entries()) {
+			let recoveries = 0;
+			const { audit, reconciler } = makeHarness({
+				recover: () => {
+					recoveries += 1;
+					return Effect.succeed(startupRecovery([]));
+				},
+			});
+			const outcome = await Effect.runPromise(
+				reconciler.reconcileExternalDispatchFailure({
+					failure,
+					operationId: `split-${index + 1}`,
+					source: "CommandIntention",
+					submittedCount: 3,
+				}),
+			);
+
+			expect(outcome.status).toBe("Failed");
+			expect(outcome.dispatch.kind).toBe("FailedBeforeExecution");
+			expect(outcome.recovery.kind).toBe("NotNeeded");
+			expect(outcome.operationId).toBe(`split-${index + 1}`);
+			expect(outcome.source).toBe("CommandIntention");
+			expect(recoveries).toBe(0);
+			expect(audit.getRecent()).toEqual([outcome]);
+		}
+	});
+
+	it("resynchronizes an uncertain split file batch before accepting later work", async () => {
+		const partialFailures = [
+			new VamDispatchError({
+				action: undefined,
+				cause: new Error("page write failed"),
+				operation: "executeAction",
+			}),
+		] as const;
+		const recoveryPaths = [
+			scanScroll(["Library"], "Existing"),
+			scanScroll(["Library"], "New"),
+		];
+		const { audit, reconciler } = makeHarness({
+			healer: makeTree({
+				children: { Existing: { kind: "Scroll" } },
+				libraryRoot: "Library",
+			}),
+			recover: () => Effect.succeed(startupRecovery(recoveryPaths)),
+		});
+
+		const outcome = await Effect.runPromise(
+			reconciler.reconcileExternalDispatchFailure({
+				failure: partialFailures,
+				operationId: "split-42",
+				source: "CommandIntention",
+				submittedCount: 3,
+			}),
+		);
+
+		expect(outcome.status).toBe("PartialFailure");
+		expect(outcome.dispatch.kind).toBe("ExecutionUncertain");
+		expect(outcome.recovery.kind).toBe("Resynchronized");
+		expect(outcome.operationId).toBe("split-42");
+		expect(outcome.treeActions.requested).toBe(0);
+		expect(
+			Object.keys(toShape(reconciler.getCommittedHealer()).children ?? {}),
+		).toEqual(["Existing", "New"]);
+		expect(audit.getRecent()).toEqual([outcome]);
+	});
+
+	it("latches unavailable when uncertain split-batch recovery also fails", async () => {
+		const partialFailures = [
+			new VamDispatchError({
+				action: undefined,
+				cause: new Error("execution remained uncertain"),
+				operation: "executeAction",
+			}),
+		] as const;
+		let recoveryDispatches = 0;
+		const recoveryPaths = [
+			scanScroll(["Library"], "Existing"),
+			scanScroll(["Library"], "New"),
+		];
+		const { reconciler } = makeHarness({
+			dispatch: () => {
+				recoveryDispatches += 1;
+				return Effect.fail(partialFailures);
+			},
+			recover: () => Effect.succeed(startupRecovery(recoveryPaths)),
+		});
+
+		const external = await Effect.runPromise(
+			reconciler.reconcileExternalDispatchFailure({
+				failure: partialFailures,
+				operationId: "split-99",
+				source: "CommandIntention",
+				submittedCount: 3,
+			}),
+		);
+		const later = await Effect.runPromise(
+			reconciler.reconcile(
+				runtimeRequest([createScroll(["Library"], "Later")]),
+			),
+		);
+
+		expect(external.status).toBe("PartialFailure");
+		expect(external.recovery.kind).toBe("Failed");
+		expect(external.operationId).toBe("split-99");
+		expect(later.status).toBe("Failed");
+		expect(later.failure?.kind).toBe("ReconciliationUnavailable");
+		expect(recoveryDispatches).toBe(1);
 	});
 
 	it("records partial execution and resynchronizes before later work", async () => {

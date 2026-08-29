@@ -43,7 +43,8 @@ API is called.
 
 Supported methods are `status`, `ready`, `beginScenario`, `act`, `settle`,
 `snapshot`, `diagnostics`, and `cleanupSession`. `act` supports `create`,
-`modify`, `rename`, and `delete`; `create` also accepts
+`modify`, `rename`, `delete`, and the narrow `splitToPages` Textfresser command;
+`create` also accepts
 `"entryType": "folder"`. File content uses UTF-8 by default or canonical
 padded base64 with `"encoding": "base64"`.
 

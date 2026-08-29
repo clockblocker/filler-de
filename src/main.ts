@@ -273,15 +273,17 @@ export default class TextEaterPlugin extends Plugin {
 		}
 
 		// Initialize command executor after librarian
-		const executeCommand = createCommandExecutor({
-			librarian: this.librarian,
-			textfresser: this.textfresser,
-			vam: this.vam,
-		});
 		this.commandExecutor = async (kind) => {
 			incrementPending();
 			try {
-				await executeCommand(kind);
+				const librarian = this.librarian;
+				const textfresser = this.textfresser;
+				if (!librarian || !textfresser) return;
+				await createCommandExecutor({
+					librarian,
+					textfresser,
+					vam: this.vam,
+				})(kind);
 			} finally {
 				decrementPending();
 			}

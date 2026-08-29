@@ -24,3 +24,9 @@ The `bulk-vault-action-adapter` is the semantic boundary between VAM's `BulkVaul
 - Startup, observed Bulk Vault Events, and Codex clicks use the same
   reconciliation interface. Only their source discriminator differs; Codex
   scope, projection order, dispatch, recovery, and audit are internal policies.
+- Explicit command intentions use the same interface without pretending to be
+  observations. The Scroll-split translator validates vault paths, emits the
+  ordered Delete-and-Create Tree Actions before any page write, and submits the
+  branded plan through the Librarian queue. The initial VAM batch and semantic
+  reconciliation share one permit, so recovery completes before later Library
+  work can proceed.

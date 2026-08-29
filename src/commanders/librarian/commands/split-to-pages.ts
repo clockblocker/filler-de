@@ -1,16 +1,26 @@
-import { Effect, Predicate } from "effect";
-import { getErrorMessage } from "../../../utils/get-error-message";
+import { Effect } from "effect";
 import { type CommandError, CommandErrorKind } from "../errors";
-import { splitToPagesAction } from "../pages/split-to-pages-action";
+import {
+	type SplitToPagesError,
+	splitToPagesAction,
+} from "../pages/split-to-pages-action";
 import type { LibrarianCommandFn } from "./types";
 
-function splitToPagesFailureToCommandError(error: unknown): CommandError {
-	const reason =
-		Predicate.hasProperty(error, "reason") &&
-		Predicate.isString(error.reason)
-			? error.reason
-			: getErrorMessage(error);
-	return { kind: CommandErrorKind.DispatchFailed, reason };
+function splitToPagesFailureToCommandError(
+	error: SplitToPagesError,
+): CommandError {
+	return {
+		kind: CommandErrorKind.DispatchFailed,
+		reason: error.reason,
+		...("execution" in error ? { execution: error.execution } : {}),
+		...("operationId" in error ? { operationId: error.operationId } : {}),
+		...("phase" in error ? { phase: error.phase } : {}),
+		...("reconciliationId" in error
+			? { reconciliationId: error.reconciliationId }
+			: {}),
+		...("recovery" in error ? { recovery: error.recovery } : {}),
+		...("status" in error ? { status: error.status } : {}),
+	};
 }
 
 export const splitToPagesCommand: LibrarianCommandFn = Effect.fn(
@@ -20,10 +30,7 @@ export const splitToPagesCommand: LibrarianCommandFn = Effect.fn(
 	const { vam, librarian } = librarianState;
 
 	yield* splitToPagesAction({
-		onSectionCreated: (info) => {
-			// Notify librarian to create codex (bypasses self-event filtering)
-			return librarian.triggerSectionHealing(info);
-		},
+		librarian,
 		vam,
 	}).pipe(Effect.mapError(splitToPagesFailureToCommandError));
 });

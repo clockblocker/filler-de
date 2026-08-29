@@ -94,10 +94,10 @@ settled. `snapshot()` returns one sorted, normalized view of the Library:
 Markdown contents are in `markdown`, and file kinds are `md` or `file`.
 
 Available actions are `createFile`, `createBinary`, `modifyFile`,
-`renamePath`, and `deletePath`. If a test needs raw `app`, `eval`, VAM,
-Librarian, timing controls, or network monkey-patches, it belongs at an
-in-process integration seam or in the explicit provider-acceptance suite—not
-in desktop E2E.
+`renamePath`, `deletePath`, and the narrowly typed `runSplitToPages` command
+action. If a test needs raw `app`, `eval`, VAM, Librarian, timing controls, or
+network monkey-patches, it belongs at an in-process integration seam or in the
+explicit provider-acceptance suite—not in desktop E2E.
 
 ## Failure behavior
 

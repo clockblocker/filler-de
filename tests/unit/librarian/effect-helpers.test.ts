@@ -2,9 +2,6 @@ import { describe, expect, it, mock } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
-	type ScrollNodeSegmentId,
-	type SectionNodeSegmentId,
-	TreeNodeKind,
 	TreeNodeStatus,
 } from "@textfresser/library-core";
 import {
@@ -20,9 +17,7 @@ import {
 	Librarian,
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
-import { triggerSectionHealing } from "../../../src/commanders/librarian/runtime/section-healing";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
-import { makeTree } from "./library-tree/tree-test-helpers";
 
 mock.module("../../../src/global-state/global-state", () => ({
 	getParsedUserSettings: () => defaultSettingsForUnitTests,
@@ -145,53 +140,6 @@ describe("Librarian Effect helpers", () => {
 		);
 	});
 
-	it("composes section dispatch lazily and preserves its error channel", async () => {
-		const healer = makeTree({
-			children: { Source: { kind: "Scroll" } },
-			libraryRoot: "Library",
-		});
-		const rootSegmentId = codecs.segmentId.serializeSegmentId({
-			coreName: "Library",
-			targetKind: TreeNodeKind.Section,
-		}) as SectionNodeSegmentId;
-		const sectionSegmentId = codecs.segmentId.serializeSegmentId({
-			coreName: "Pages",
-			targetKind: TreeNodeKind.Section,
-		}) as SectionNodeSegmentId;
-		const sourceSegmentId = codecs.segmentId.serializeSegmentId({
-			coreName: "Source",
-			extension: MD,
-			targetKind: TreeNodeKind.Scroll,
-		}) as ScrollNodeSegmentId;
-		const dispatchFailure = { _tag: "DispatchFailure" } as const;
-		let dispatches = 0;
-
-		const program = triggerSectionHealing(
-			{
-				codecs,
-				dispatch: () => {
-					dispatches += 1;
-					return Effect.fail(dispatchFailure);
-				},
-				healer,
-			},
-			{
-				deletedScrollSegmentId: sourceSegmentId,
-				pageNodeNames: ["Page 1", "Page 2"],
-				sectionChain: [rootSegmentId, sectionSegmentId],
-			},
-		);
-
-		expect(Effect.isEffect(program)).toBe(true);
-		expect(dispatches).toBe(0);
-
-		const result = await Effect.runPromise(
-			program.pipe(Effect.catch((error) => Effect.succeed(error))),
-		);
-
-		expect(dispatches).toBe(1);
-		expect(result).toBe(dispatchFailure);
-	});
 });
 
 function makeLibrarianVam(

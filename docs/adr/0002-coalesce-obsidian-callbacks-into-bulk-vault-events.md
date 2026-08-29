@@ -15,5 +15,9 @@ VAM groups related Obsidian create, rename, and delete callbacks into a `BulkVau
 ## Consequences
 
 - The Librarian consumes `subscribeToBulk()` and does not reconstruct user operations from individual callbacks.
+- Commands whose VAM Dispatch Batch is attributed as Self Events submit their
+  semantic Library intention explicitly. Scroll splitting therefore queues its
+  page-file batch and Tree Actions together instead of waiting for filtered
+  callbacks or mutating the Tree through a callback.
 - `events` retains normalized evidence needed for creates and Library-boundary crossings, while `roots` identifies independent rename and delete intent.
 - Time-windowed coalescing introduces a small delay and makes the bulk window part of event semantics, but keeps Obsidian's callback shape and timing out of the Library model.
