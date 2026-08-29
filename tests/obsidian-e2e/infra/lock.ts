@@ -12,7 +12,7 @@ interface LockOwner {
 	readonly token: string;
 }
 
-export interface HarnessLock {
+interface HarnessLock {
 	readonly path: string;
 	release(): Promise<void>;
 }

@@ -13,7 +13,6 @@ import type { Selection } from "@textfresser/linguistics";
 import type { Result } from "neverthrow";
 import type {
 	LexicalGenerationError,
-	LexicalGenerationFailureKind,
 } from "./errors";
 import type { KnownLanguage, TargetLanguage } from "./internal/languages";
 import type { LexicalGenerationSettings } from "./settings";
@@ -229,8 +228,4 @@ export type LexicalGenerationClientResult = Result<
 	LexicalGenerationError
 >;
 
-export type {
-	LexicalGenerationError,
-	LexicalGenerationFailureKind,
-	LexicalGenerationSettings,
-};
+export type { LexicalGenerationError, LexicalGenerationSettings };

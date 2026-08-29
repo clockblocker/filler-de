@@ -23,7 +23,7 @@ import { createWikilinkCompletionHandler } from "./wikilink-complition-behavior"
 /**
  * Handler definition with kind and handler.
  */
-export type HandlerDef = {
+type HandlerDef = {
 	[K in UserEventKind]: {
 		handler: UserEventHandler<K>;
 		kind: K;

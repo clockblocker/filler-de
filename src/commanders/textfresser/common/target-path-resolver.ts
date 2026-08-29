@@ -30,7 +30,7 @@ const WORTER_ROOT = "Worter";
 /** Callback for looking up files by surface/corename. Returns SplitPathToMdFile[]. */
 export type PathLookupFn = (surface: string) => SplitPathToMdFile[];
 
-export type ResolvedTargetPath = {
+type ResolvedTargetPath = {
 	splitPath: SplitPathToMdFile;
 	/** RenameMdFile action if inflected→lemma healing is needed, otherwise empty. */
 	healingActions: VaultAction[];
@@ -159,7 +159,7 @@ export function buildPropagationActionPair(
  * Build a Library split path for a known German prefix.
  * Convention: `Library/de/prefix/{surf}.md`
  */
-export function buildPrefixLibraryPath(surf: string): SplitPathToMdFile {
+function buildPrefixLibraryPath(surf: string): SplitPathToMdFile {
 	return {
 		basename: surf.toLowerCase(),
 		extension: "md",

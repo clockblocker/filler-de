@@ -9,7 +9,7 @@ import {
 } from "@textfresser/library-core";
 import type { Healer, HealingAction } from "@textfresser/library-core";
 
-export type ProcessCodexImpactsResult = {
+type ProcessCodexImpactsResult = {
 	/** Healing actions for codex deletions */
 	deletionHealingActions: HealingAction[];
 	/** Codex recreation actions */

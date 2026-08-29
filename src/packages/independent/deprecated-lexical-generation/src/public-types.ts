@@ -10,7 +10,6 @@ import type { Result } from "neverthrow";
 import type { z } from "zod/v3";
 import type {
 	LexicalGenerationError,
-	LexicalGenerationFailureKind,
 } from "./errors";
 import type {
 	KnownLanguage,
@@ -176,8 +175,4 @@ export type LexicalGenerationModuleResult = Result<
 	LexicalGenerationError
 >;
 
-export type {
-	LexicalGenerationError,
-	LexicalGenerationFailureKind,
-	LexicalGenerationSettings,
-};
+export type { LexicalGenerationError, LexicalGenerationSettings };

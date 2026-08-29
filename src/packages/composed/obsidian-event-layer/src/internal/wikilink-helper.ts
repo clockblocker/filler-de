@@ -1,5 +1,1 @@
-export {
-	type ParsedWikilink,
-	type ParsedWikilinkRange,
-	wikilinkHelper,
-} from "@textfresser/note-addressing";
+export { wikilinkHelper } from "@textfresser/note-addressing";

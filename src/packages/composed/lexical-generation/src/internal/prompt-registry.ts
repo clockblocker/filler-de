@@ -20,7 +20,7 @@ export type PromptSpec<TInput, TOutput> = {
 	systemPrompt: string;
 };
 
-export type ResolveSelectionPromptInput = {
+type ResolveSelectionPromptInput = {
 	attestation: string;
 	selection: string;
 };
@@ -34,7 +34,7 @@ export type ResolveSelectionPromptOutput = {
 	surfaceKind?: "Lemma" | "Inflection" | "Variant" | "Partial" | null;
 };
 
-export type DisambiguationPromptInput = {
+type DisambiguationPromptInput = {
 	attestation: string;
 	lemma: string;
 	senses: Array<{
@@ -48,12 +48,12 @@ export type DisambiguationPromptInput = {
 	}>;
 };
 
-export type DisambiguationPromptOutput = {
+type DisambiguationPromptOutput = {
 	senseEmojis?: string[] | null;
 	matchedIndex: number | null;
 };
 
-export type CorePromptInput = {
+type CorePromptInput = {
 	attestation: string;
 	discriminator?: string;
 	lemma: string;
@@ -65,7 +65,7 @@ export type CorePromptOutput = {
 	senseGloss?: string | null;
 };
 
-export type FeaturesPromptInput = {
+type FeaturesPromptInput = {
 	attestation: string;
 	lemma: string;
 	pos: Pos;

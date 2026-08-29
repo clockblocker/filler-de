@@ -11,8 +11,6 @@ const BaseNodeLocatorSchema = z.object({
 	segmentIdChainToParent: SectionNodeSegmentIdChainSchema,
 });
 
-export { BaseNodeLocatorSchema };
-
 export const SectionNodeLocatorSchema = BaseNodeLocatorSchema.extend({
 	segmentId: SectionNodeSegmentIdSchema,
 	targetKind: z.literal(TreeNodeKind.Section),

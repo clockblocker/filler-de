@@ -1,34 +1,64 @@
 {
 	"$schema": "https://unpkg.com/knip@5/schema.json",
-	"ignore": ["**/*.d.ts"],
-	"ignoreBinaries": ["bun"],
-	"ignoreDependencies": ["obsidian", "electron", "@codemirror/*", "tslib"],
+	"ignoreDependencies": ["ts-plugin-sort-import-suggestions"],
 	"ignoreUnresolved": ["./tests/unit/setup.ts"],
 	"ignoreIssues": {
-		"src/packages/independent/deprecated-lexical-generation/internal/prompt-smith/prompt-parts/**/*.ts": [
+		"src/packages/independent/deprecated-lexical-generation/src/internal/prompt-smith/prompt-parts/**/*.ts": [
+			"files"
+		],
+		"src/packages/independent/linguistics/generate-readme/examples/**/*.ts": [
+			"files"
+		],
+		"tests/obsidian-e2e/driver/dist/**/*.js": [
 			"files"
 		]
 	},
-	"project": ["src/**/*.ts"],
 	"workspaces": {
+		".": {
+			"entry": [
+				"src/main.ts",
+				"scripts/**/*.ts",
+				"tests/**/*.test.ts",
+				"tests/**/*-runner.ts"
+			],
+			"project": [
+				"src/**/*.ts",
+				"scripts/**/*.ts",
+				"tests/**/*.ts",
+				"!src/packages/**",
+				"!tests/obsidian-e2e/driver/dist/**"
+			]
+		},
+		"src/packages/composed/dictionary": {
+			"project": ["src/**/*.ts"]
+		},
+		"src/packages/composed/library-core": {
+			"entry": [
+				"tests/**/*.test.ts",
+				"tests/unit/librarian/library-tree/pipeline/investigate-bulk-event.ts"
+			],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
+		},
 		"src/packages/composed/obsidian-event-layer": {
-			"entry": ["src/index.ts"],
 			"project": ["src/**/*.ts"]
 		},
 		"src/packages/independent/deprecated-lexical-generation": {
-			"entry": [
-				"index.ts",
-				"internal/prompt-smith/codegen/skript/run.ts",
-				"tests/**/*.ts"
-			],
-			"project": ["**/*.ts"]
-		},
-		"src/packages/composed/lexical-generation": {
-			"entry": ["src/index.ts", "tests/**/*.ts"],
+			"entry": ["tests/**/*.test.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
+		"src/packages/composed/lexical-generation": {
+			"entry": ["tests/**/*.test.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
+		},
+		"src/packages/independent/linguistics": {
+			"entry": ["tests/**/*.test.ts"],
+			"project": ["src/**/*.ts", "generate-readme/**/*.ts", "tests/**/*.ts"]
+		},
+		"src/packages/independent/note-addressing": {
+			"project": ["src/**/*.ts"]
+		},
 		"src/packages/independent/vault-action-manager": {
-			"entry": ["src/index.ts", "tests/**/*.ts"],
+			"entry": ["tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		}
 	}

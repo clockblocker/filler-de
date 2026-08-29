@@ -4,7 +4,7 @@ import {
 } from "@textfresser/lexical-generation";
 import type { POS as LexicalPos } from "../../../domain/note-linguistic-policy";
 
-export type FeaturesPromptKind = Extract<PromptKindType, `Features${string}`>;
+type FeaturesPromptKind = Extract<PromptKindType, `Features${string}`>;
 
 const FEATURES_PROMPT_KIND_BY_POS: Record<LexicalPos, FeaturesPromptKind> = {
 	ADJ: PromptKind.FeaturesAdjective,

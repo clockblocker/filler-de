@@ -15,7 +15,7 @@ interface DriverResponse {
 	readonly value?: unknown;
 }
 
-export interface ReadyReceipt {
+interface ReadyReceipt {
 	readonly generation: number;
 	readonly instanceId: string;
 	readonly value: unknown;

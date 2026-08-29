@@ -23,7 +23,7 @@ const CASE_ORDER_INDEX = new Map(
 
 const INFLECTION_TAG_RE = /^#([^/\s]+)\/([^/\s]+)$/;
 
-export type ParsedInflectionTag = {
+type ParsedInflectionTag = {
 	caseValue: LexicalCase;
 	numberValue: LexicalNumber;
 	tag: string;
@@ -102,7 +102,7 @@ export function isNounInflectionPropagationHeaderForLemma(
 	return re.test(header);
 }
 
-export function buildLocalizedInflectionTag(
+function buildLocalizedInflectionTag(
 	caseValue: LexicalCase,
 	numberValue: LexicalNumber,
 	targetLanguage: TargetLanguage,
@@ -115,7 +115,7 @@ export function buildLocalizedInflectionTag(
 	return `#${caseLabel}/${numberLabel}`;
 }
 
-export function parseLocalizedInflectionTag(
+function parseLocalizedInflectionTag(
 	tag: string,
 	targetLanguage: TargetLanguage,
 ): ParsedInflectionTag | null {

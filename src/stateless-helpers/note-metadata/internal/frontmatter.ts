@@ -16,7 +16,7 @@ const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 
 // ─── Types ───
 
-export type ScrollMetadataWithImport = {
+type ScrollMetadataWithImport = {
 	status: TreeNodeStatusType;
 } & Record<string, unknown>;
 

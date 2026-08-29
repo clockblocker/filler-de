@@ -10,32 +10,25 @@ import type {
 	SplitPathToMdFileInsideLibrary,
 } from "../../../codecs";
 
-// ─── Healing Action Types ───
-
-export type HealingActionType =
-	| "RenameFolder"
-	| "RenameFile"
-	| "RenameMdFile"
-	| "DeleteMdFile";
 
 // ─── Payloads ───
 
-export type RenameFolderHealingPayload = {
+type RenameFolderHealingPayload = {
 	from: SplitPathToFolderInsideLibrary;
 	to: SplitPathToFolderInsideLibrary;
 };
 
-export type RenameFileHealingPayload = {
+type RenameFileHealingPayload = {
 	from: SplitPathToFileInsideLibrary;
 	to: SplitPathToFileInsideLibrary;
 };
 
-export type RenameMdFileHealingPayload = {
+type RenameMdFileHealingPayload = {
 	from: SplitPathToMdFileInsideLibrary;
 	to: SplitPathToMdFileInsideLibrary;
 };
 
-export type DeleteMdFileHealingPayload = {
+type DeleteMdFileHealingPayload = {
 	splitPath: SplitPathToMdFileInsideLibrary;
 };
 

@@ -103,41 +103,6 @@ function countZwsBefore(positions: number[], index: number): number {
 	return count;
 }
 
-/**
- * Segments text preserving paragraph structure.
- * Returns sentences with paragraph boundary markers.
- */
-export function segmentWithParagraphs(
-	content: string,
-	config: LanguageConfig,
-): SentenceToken[] {
-	// Split on double newlines (paragraph breaks)
-	const paragraphs = content.split(/\n\n+/);
-	const sentences: SentenceToken[] = [];
-	let sourceOffset = 0;
-
-	for (let i = 0; i < paragraphs.length; i++) {
-		const para = paragraphs[i];
-		if (para === undefined) continue;
-
-		const paraSentences = segmentSentences(para, config);
-
-		for (const sent of paraSentences) {
-			sentences.push({
-				...sent,
-				sourceOffset: sourceOffset + sent.sourceOffset,
-			});
-		}
-
-		// Account for the paragraph text and paragraph break
-		sourceOffset += para.length;
-		if (i < paragraphs.length - 1) {
-			sourceOffset += 2; // "\n\n"
-		}
-	}
-
-	return sentences;
-}
 
 /**
  * Segments text into content tokens, emitting explicit paragraph break markers.

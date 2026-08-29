@@ -28,8 +28,5 @@ const agentOutputSchema = z.object({
 	),
 });
 
-export type LlmMorpheme = z.infer<
-	typeof agentOutputSchema
->["morphemes"][number];
 
 export const morphemSchemas = { agentOutputSchema, userInputSchema };

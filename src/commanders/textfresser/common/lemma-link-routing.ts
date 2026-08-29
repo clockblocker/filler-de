@@ -33,7 +33,7 @@ type LinkpathResolver = (
 	from: SplitPathToMdFile,
 ) => SplitPathToMdFile | null;
 
-export type ComputedLinkTarget = {
+type ComputedLinkTarget = {
 	splitPath: SplitPathToMdFile;
 	linkTarget: string;
 	linkTargetSplitPath: SplitPathToMdFile;

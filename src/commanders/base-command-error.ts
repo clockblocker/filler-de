@@ -5,7 +5,6 @@ export const BASE_COMMAND_ERROR_KIND_STR = [
 	"NoSelection",
 ] as const;
 
-export type BaseCommandErrorKind = (typeof BASE_COMMAND_ERROR_KIND_STR)[number];
 
 export type BaseCommandError =
 	| { kind: "NotMdFile" }

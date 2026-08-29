@@ -5,11 +5,11 @@ import { VamSetupError, VamVaultIoError } from "./errors";
 import { VamLoggerLive } from "./logger";
 import { ActiveEditorAccess, type VamLiveServices, VaultIo } from "./ports";
 
-export type VamLiveOptions = {
+type VamLiveOptions = {
 	readonly onFinalize?: () => void;
 };
 
-export function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
+function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 	return Layer.effect(
 		VaultIo,
 		Effect.try({
@@ -129,7 +129,7 @@ export function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 	);
 }
 
-export function makeActiveEditorAccessLive(
+function makeActiveEditorAccessLive(
 	app: App,
 ): Layer.Layer<ActiveEditorAccess, VamSetupError> {
 	return Layer.effect(

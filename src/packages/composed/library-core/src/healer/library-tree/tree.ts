@@ -27,8 +27,6 @@ import type {
 } from "./tree-node/types/tree-node";
 import type { LeafMatch } from "./types/leaf-match";
 
-export type { LeafMatch } from "./types/leaf-match";
-
 // ─── Helpers ───
 
 /** Helper to make segment ID with proper type narrowing */
@@ -70,7 +68,7 @@ function makeSegmentIdForNodeName(
  * `changed` indicates if the tree state was actually modified.
  * This enables idempotent healing - if tree already reflects the action, no healing needed.
  */
-export type ApplyResult = {
+type ApplyResult = {
 	changed: boolean;
 	node: TreeNode | null;
 };

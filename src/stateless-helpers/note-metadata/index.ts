@@ -103,7 +103,7 @@ function decompose(content: string): {
 /**
  * Status type for tree nodes.
  */
-export type StatusValue = "Done" | "NotStarted";
+type StatusValue = "Done" | "NotStarted";
 
 /**
  * Toggle status property in note metadata.

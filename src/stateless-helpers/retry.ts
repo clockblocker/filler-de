@@ -1,7 +1,7 @@
 import { ResultAsync } from "neverthrow";
 import { logger } from "../utils/logger";
 
-export type RetryConfig = {
+type RetryConfig = {
 	maxAttempts: number;
 	baseDelayMs: number;
 	multiplier: number;

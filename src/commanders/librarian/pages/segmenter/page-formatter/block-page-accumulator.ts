@@ -12,7 +12,7 @@ import type { Block } from "../block-marker/block-grouping";
 /**
  * A group of blocks to be formatted as a single page.
  */
-export type BlockPageGroup = {
+type BlockPageGroup = {
 	blocks: Block[];
 	/** Total character count of all blocks */
 	charCount: number;

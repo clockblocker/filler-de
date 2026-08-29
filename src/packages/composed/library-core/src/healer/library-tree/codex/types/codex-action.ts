@@ -8,18 +8,11 @@ import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
 import type { TreeNodeStatus } from "../../tree-node/types/atoms";
 import type { SectionNode } from "../../tree-node/types/tree-node";
 
-// ─── Action Types ───
-
-export type CodexActionType =
-	| "UpsertCodex"
-	| "WriteScrollStatus"
-	| "EnsureCodexFileExists"
-	| "ProcessCodex";
 
 // ─── Payloads ───
 
 /** Create or update codex file content */
-export type UpsertCodexPayload = {
+type UpsertCodexPayload = {
 	/** Section chain (for tree lookup) */
 	sectionChain: SectionNodeSegmentId[];
 	/** Target path for codex file */
@@ -28,11 +21,6 @@ export type UpsertCodexPayload = {
 	content: string;
 };
 
-/** Rename/move codex file */
-export type RenameCodexPayload = {
-	from: SplitPathToMdFileInsideLibrary;
-	to: SplitPathToMdFileInsideLibrary;
-};
 
 /** Write status to scroll metadata */
 export type WriteScrollStatusPayload = {

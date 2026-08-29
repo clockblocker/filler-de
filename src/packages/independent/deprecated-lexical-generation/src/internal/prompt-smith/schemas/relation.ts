@@ -1,6 +1,6 @@
 import { z } from "zod/v3";
 
-export const RelationSubKindSchema = z.enum([
+const RelationSubKindSchema = z.enum([
 	"Synonym",
 	"NearSynonym",
 	"Antonym",
@@ -10,7 +10,6 @@ export const RelationSubKindSchema = z.enum([
 	"Holonym",
 ]);
 
-export type RelationSubKind = z.infer<typeof RelationSubKindSchema>;
 
 const userInputSchema = z.object({
 	context: z.string(),

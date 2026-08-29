@@ -18,60 +18,25 @@ const buildContextualInputSchema = <T extends z.ZodTypeAny>(target: T) =>
 		target,
 	});
 
-export const DeLexemTargetSchema = DeLexemLemmaResultSchema.omit({
+const DeLexemTargetSchema = DeLexemLemmaResultSchema.omit({
 	contextWithLinkedParts: true,
 });
-export type DeLexemTarget = z.infer<typeof DeLexemTargetSchema>;
 
-export const DePhrasemTargetSchema = DePhrasemLemmaResultSchema.omit({
+const DePhrasemTargetSchema = DePhrasemLemmaResultSchema.omit({
 	contextWithLinkedParts: true,
 });
-export type DePhrasemTarget = z.infer<typeof DePhrasemTargetSchema>;
 
 export const DeLexicalTargetSchema = z.discriminatedUnion("linguisticUnit", [
 	DeLexemTargetSchema,
 	DePhrasemTargetSchema,
 ]);
-export type DeLexicalTarget = z.infer<typeof DeLexicalTargetSchema>;
 
-export function toDeLexicalTarget(result: DeLemmaResult): DeLexicalTarget {
-	if (result.linguisticUnit === "Lexem") {
-		return {
-			lemma: result.lemma,
-			linguisticUnit: "Lexem",
-			posLikeKind: result.posLikeKind as z.infer<
-				typeof DeLexemTargetSchema
-			>["posLikeKind"],
-			surfaceKind: result.surfaceKind,
-		};
-	}
 
-	return {
-		lemma: result.lemma,
-		linguisticUnit: "Phrasem",
-		posLikeKind: result.posLikeKind as z.infer<
-			typeof DePhrasemTargetSchema
-		>["posLikeKind"],
-		surfaceKind: result.surfaceKind,
-	};
-}
 
-export function isDeLexemTarget(
-	target: DeLexicalTarget,
-): target is DeLexemTarget {
-	return target.linguisticUnit === "Lexem";
-}
-
-export function isDePhrasemTarget(
-	target: DeLexicalTarget,
-): target is DePhrasemTarget {
-	return target.linguisticUnit === "Phrasem";
-}
 
 export const DeEnrichmentInputSchema = buildContextualInputSchema(
 	DeLexicalTargetSchema,
 );
-export type DeEnrichmentInput = z.infer<typeof DeEnrichmentInputSchema>;
 
 const senseEmojisSchema = z.array(z.string().min(1).max(4)).min(1).max(3);
 const senseGlossSchema = z.string().min(3).max(120);
@@ -84,43 +49,37 @@ const deEnrichmentOutputBaseSchema = z
 	})
 	.strict();
 
-export const DeLexemEnrichmentOutputSchema = z.discriminatedUnion(
-	"posLikeKind",
-	[
-		deEnrichmentOutputBaseSchema.extend({
-			genus: LexicalGenusSchema.nullable().optional(),
-			linguisticUnit: z.literal("Lexem"),
-			nounClass: LexicalNounClassSchema.nullable().optional(),
-			posLikeKind: z.literal("Noun"),
-		}),
-		...DeLexemPosSchema.options
-			.filter((pos) => pos !== "Noun")
-			.map((pos) =>
-				deEnrichmentOutputBaseSchema.extend({
-					linguisticUnit: z.literal("Lexem"),
-					posLikeKind: z.literal(pos),
-				}),
-			),
-	],
-);
-
-export const DePhrasemEnrichmentOutputSchema =
+const DeLexemEnrichmentOutputSchema = z.discriminatedUnion("posLikeKind", [
 	deEnrichmentOutputBaseSchema.extend({
-		linguisticUnit: z.literal("Phrasem"),
-		posLikeKind: DePhrasemTargetSchema.shape.posLikeKind,
-	});
+		genus: LexicalGenusSchema.nullable().optional(),
+		linguisticUnit: z.literal("Lexem"),
+		nounClass: LexicalNounClassSchema.nullable().optional(),
+		posLikeKind: z.literal("Noun"),
+	}),
+	...DeLexemPosSchema.options
+		.filter((pos) => pos !== "Noun")
+		.map((pos) =>
+			deEnrichmentOutputBaseSchema.extend({
+				linguisticUnit: z.literal("Lexem"),
+				posLikeKind: z.literal(pos),
+			}),
+		),
+]);
+
+const DePhrasemEnrichmentOutputSchema = deEnrichmentOutputBaseSchema.extend({
+	linguisticUnit: z.literal("Phrasem"),
+	posLikeKind: DePhrasemTargetSchema.shape.posLikeKind,
+});
 
 export const DeEnrichmentOutputSchema = z.union([
 	DeLexemEnrichmentOutputSchema,
 	DePhrasemEnrichmentOutputSchema,
 ]);
 
-export type DeEnrichmentOutput = z.infer<typeof DeEnrichmentOutputSchema>;
 
 export const DeRelationInputSchema = buildContextualInputSchema(
 	DeLexicalTargetSchema,
 );
-export type DeRelationInput = z.infer<typeof DeRelationInputSchema>;
 
 const relationSubKinds = [
 	"Synonym",
@@ -132,8 +91,7 @@ const relationSubKinds = [
 	"Holonym",
 ] as const;
 
-export const DeRelationSubKindSchema = z.enum(relationSubKinds);
-export type DeRelationSubKind = z.infer<typeof DeRelationSubKindSchema>;
+const DeRelationSubKindSchema = z.enum(relationSubKinds);
 
 export const DeRelationOutputSchema = z.object({
 	relations: z.array(
@@ -143,11 +101,9 @@ export const DeRelationOutputSchema = z.object({
 		}),
 	),
 });
-export type DeRelationOutput = z.infer<typeof DeRelationOutputSchema>;
 
 export const DeInflectionInputSchema =
 	buildContextualInputSchema(DeLexemTargetSchema);
-export type DeInflectionInput = z.infer<typeof DeInflectionInputSchema>;
 
 export const DeInflectionOutputSchema = z.object({
 	rows: z.array(
@@ -157,11 +113,9 @@ export const DeInflectionOutputSchema = z.object({
 		}),
 	),
 });
-export type DeInflectionOutput = z.infer<typeof DeInflectionOutputSchema>;
 
 export const DeFeaturesInputSchema =
 	buildContextualInputSchema(DeLexemTargetSchema);
-export type DeFeaturesInput = z.infer<typeof DeFeaturesInputSchema>;
 
 const deFeatureTagOutputSchema = z.object({
 	tags: z.array(z.string().min(1).max(30)).min(1).max(5),
@@ -177,18 +131,11 @@ export const DeFeaturesOutputSchema = z.union([
 	deFeatureTagOutputSchema,
 	deVerbFeatureOutputSchema,
 ]);
-export type DeFeaturesOutput = z.infer<typeof DeFeaturesOutputSchema>;
 
 export const DeWordTranslationInputSchema = buildContextualInputSchema(
 	DeLexicalTargetSchema,
 );
-export type DeWordTranslationInput = z.infer<
-	typeof DeWordTranslationInputSchema
->;
 
 export const DeWordTranslationOutputSchema = z
 	.string()
 	.describe("Translated word or phrase");
-export type DeWordTranslationOutput = z.infer<
-	typeof DeWordTranslationOutputSchema
->;

@@ -9,7 +9,6 @@ import {
 	type ResolvedSelection,
 } from "@textfresser/lexical-generation";
 import type {
-	LemmaResult,
 	LexemeLemmaResult,
 	PhrasemeLemmaResult,
 } from "../../../../src/commanders/textfresser/commands/lemma/types";
@@ -29,7 +28,7 @@ type PhrasemeSelection = Extract<
 	{ surface: { discriminators: { lemmaKind: "Phraseme" } } }
 >;
 
-export function makeAttestation(params: {
+function makeAttestation(params: {
 	ref?: string;
 	sourcePath?: Attestation["source"]["path"];
 	surface?: string;
@@ -306,4 +305,4 @@ export function makeMorphemicBreakdown(
 	};
 }
 
-export type { LemmaResult };
+;

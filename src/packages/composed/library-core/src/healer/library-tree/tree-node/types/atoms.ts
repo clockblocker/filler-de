@@ -1,7 +1,4 @@
-import {
-	EmptyStringSchema,
-	MdSchema,
-} from "@textfresser/vault-action-manager";
+import { EmptyStringSchema, MdSchema } from "@textfresser/vault-action-manager";
 import z from "zod";
 import {
 	DONE_STATUS,
@@ -36,12 +33,5 @@ export const FileExtensionSchema = z.string().min(1);
 export type FileExtension = z.infer<typeof FileExtensionSchema>;
 
 export const SectionExtensionSchema = EmptyStringSchema;
-export type SectionExtension = z.infer<typeof SectionExtensionSchema>;
 
-export const ExtensionSchema = z.union([
-	MdExtensionSchema,
-	FileExtensionSchema,
-	SectionExtensionSchema,
-]);
 
-export type Extension = z.infer<typeof ExtensionSchema>;

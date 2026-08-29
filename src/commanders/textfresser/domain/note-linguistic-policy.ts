@@ -11,14 +11,12 @@ const noteUnitKinds = ["Lexeme", "Phraseme", "Morpheme"] as const;
 export const LinguisticUnitKindSchema = z.enum(noteUnitKinds);
 export type LinguisticUnitKind = z.infer<typeof LinguisticUnitKindSchema>;
 export const LinguisticUnitKind = LinguisticUnitKindSchema.enum;
-export const LINGUISTIC_UNIT_KINDS = LinguisticUnitKindSchema.options;
 
 const noteSurfaceKinds = ["Lemma", "Inflection", "Variant", "Partial"] as const;
 
 export const SurfaceKindSchema = z.enum(noteSurfaceKinds);
 export type SurfaceKind = z.infer<typeof SurfaceKindSchema>;
 export const SurfaceKind = SurfaceKindSchema.enum;
-export const SURFACE_KINDS = SurfaceKindSchema.options;
 
 const partsOfSpeech = [
 	"ADJ",
@@ -43,7 +41,6 @@ const partsOfSpeech = [
 export const POSSchema = z.enum(partsOfSpeech);
 export type POS = z.infer<typeof POSSchema>;
 export const POS = POSSchema.enum;
-export const PARTS_OF_SPEECH = POSSchema.options;
 
 const posTags = partsOfSpeech;
 

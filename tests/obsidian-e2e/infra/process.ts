@@ -7,7 +7,7 @@ export interface ProcessResult {
 	readonly stdout: string;
 }
 
-export interface RunProcessOptions {
+interface RunProcessOptions {
 	readonly cwd?: string;
 	readonly env?: NodeJS.ProcessEnv;
 	readonly inherit?: boolean;

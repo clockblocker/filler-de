@@ -5,13 +5,4 @@
 
 export type { NodeLocatorOf } from "../locator/types/index";
 export type { SegmentIdOf } from "../segment-id/types";
-export type { CanonicalSplitPathInsideLibraryOf } from "../split-path-with-separated-suffix";
-export type {
-	CorrespondingSplitPathKind,
-	CorrespondingTreeNodeKind,
-	SegmentIdComponents,
-	SplitPathForTreeNodeKind,
-	TreeNodeKindForSplitPath,
-} from "./type-mappings";
-
-export { TreeNodeKindToSplitPathKind } from "./type-mappings";
+export type { SegmentIdComponents } from "./type-mappings";

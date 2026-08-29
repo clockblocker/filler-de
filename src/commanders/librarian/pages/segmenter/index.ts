@@ -420,5 +420,3 @@ function restoreGroupsContent(
 		}) as typeof group.sentences,
 	}));
 }
-
-export type { LanguageConfig } from "./language-config";

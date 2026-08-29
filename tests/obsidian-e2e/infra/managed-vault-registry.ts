@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { HarnessError } from "./errors";
 
-export interface ManagedVaultRegistrationOptions {
+interface ManagedVaultRegistrationOptions {
 	readonly now?: () => number;
 	readonly registryPath?: string;
 	readonly vaultId?: string;
@@ -82,11 +82,11 @@ async function updateRegistry(
 	}
 }
 
-export function managedVaultRegistryPath(): string {
+function managedVaultRegistryPath(): string {
 	return resolve(homedir(), "Library/Application Support/obsidian/obsidian.json");
 }
 
-export function managedVaultId(vaultPath: string): string {
+function managedVaultId(vaultPath: string): string {
 	return createHash("sha256").update(resolve(vaultPath)).digest("hex").slice(0, 16);
 }
 

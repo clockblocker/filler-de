@@ -1,9 +1,6 @@
 import type { TargetLanguage } from "../types";
 
-export type MorphologyRelationType =
-	| "derived_from"
-	| "compounded_from"
-	| "used_in";
+type MorphologyRelationType = "derived_from" | "compounded_from" | "used_in";
 
 type LocalisedMorphologyRelationLabel =
 	| "derived_from"

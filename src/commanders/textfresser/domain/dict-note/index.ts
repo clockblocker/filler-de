@@ -7,14 +7,6 @@ export {
 	fromLegacyDictEntry,
 } from "../../core/notes/legacy-dict-note-adapter";
 
-export type { SerializeResult } from "./internal/serialize";
-export type { ParseWithLinguisticWikilinksParams } from "./parse-with-linguistic-wikilinks";
-export type {
-	DictEntry,
-	DictEntryWithLinguisticWikilinks,
-	EntrySection,
-} from "./types";
-
 export const dictNoteHelper = {
 	parse,
 	parseWithLinguisticWikilinks,

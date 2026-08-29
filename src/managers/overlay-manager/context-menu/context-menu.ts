@@ -24,7 +24,7 @@ const FileTypeMetadataSchema = z.object({
 	noteKind: MdFileSubTypeSchema.optional(),
 });
 
-export type ContextMenuDeps = {
+type ContextMenuDeps = {
 	app: App;
 	plugin: Plugin;
 	commandExecutor: CommandExecutor | null;

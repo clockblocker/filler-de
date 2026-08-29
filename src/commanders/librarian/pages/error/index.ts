@@ -8,7 +8,7 @@ import { z } from "zod";
 
 // ─── Error Kind Enum ───
 
-export const SplitToPagesErrorKindSchema = z.enum([
+const SplitToPagesErrorKindSchema = z.enum([
 	"NoPwd",
 	"NoContent",
 	"ParseFailed",

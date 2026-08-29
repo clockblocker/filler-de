@@ -20,7 +20,7 @@ export interface ObsidianE2eSessionManifest {
 	readonly vaultPath: string;
 }
 
-export interface CreateSessionManifestOptions {
+interface CreateSessionManifestOptions {
 	readonly artifactDir: string;
 	readonly cliPath: string;
 	readonly mode: SessionMode;

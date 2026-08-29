@@ -7,7 +7,7 @@ import {
 import type { LemmaResult } from "../../../lemma/types";
 import type { GenerationTargetLanguage } from "../section-generation-types";
 
-export type AttestationSectionContext = {
+type AttestationSectionContext = {
 	lemmaResult: LemmaResult;
 	targetLang: GenerationTargetLanguage;
 };

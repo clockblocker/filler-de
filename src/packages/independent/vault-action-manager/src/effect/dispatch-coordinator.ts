@@ -17,7 +17,7 @@ export type DispatchEffectFailure =
 	| VamShutdownError
 	| readonly VamDispatchError[];
 
-export type DispatchCoordinatorPorts = {
+type DispatchCoordinatorPorts = {
 	readonly describePath: (action: VaultAction) => string;
 	readonly execute: (
 		action: VaultAction,
@@ -30,7 +30,7 @@ export type DispatchCoordinatorPorts = {
 	) => Effect.Effect<void, never, VamLiveServices>;
 };
 
-export type EffectDispatchCoordinatorOptions = {
+type EffectDispatchCoordinatorOptions = {
 	readonly maxBatches?: number;
 };
 

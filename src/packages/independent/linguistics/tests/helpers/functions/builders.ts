@@ -13,20 +13,6 @@ export function makeLexemeSurfaceReference<lemmaSubKind extends string>(
 	};
 }
 
-export function makeMorphemeSurfaceReference<lemmaSubKind extends string>(
-	lemmaSubKind: lemmaSubKind,
-	canonicalLemma: string,
-) {
-	return {
-		discriminators: {
-			lemmaKind: "Morpheme" as const,
-			lemmaSubKind,
-		},
-		target: {
-			canonicalLemma,
-		},
-	};
-}
 
 export function makePhrasemeSurfaceReference<lemmaSubKind extends string>(
 	lemmaSubKind: lemmaSubKind,

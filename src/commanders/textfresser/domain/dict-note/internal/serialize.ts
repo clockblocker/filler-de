@@ -1,7 +1,7 @@
 import type { DictEntry } from "../types";
 import { ENTRY_SECTION_CSS_CLASS, ENTRY_SEPARATOR } from "./constants";
 
-export type SerializeResult = {
+type SerializeResult = {
 	body: string;
 	meta: Record<string, unknown>;
 };

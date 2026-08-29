@@ -19,7 +19,7 @@ export type LinguisticWikilinkTargetKind =
 	| "Surface"
 	| "None";
 
-export type SectionLinkPolicy = {
+type SectionLinkPolicy = {
 	source: LinguisticWikilinkSource;
 	sectionIntent: Exclude<LinguisticWikilinkIntent, "PropagationLink">;
 	targetKind: LinguisticWikilinkTargetKind;

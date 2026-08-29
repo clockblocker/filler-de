@@ -29,7 +29,7 @@ const ScrollMetadataSchema = z
 	})
 	.passthrough();
 
-export type BuildInitialActionsResult = {
+type BuildInitialActionsResult = {
 	createActions: CreateTreeLeafAction[];
 };
 

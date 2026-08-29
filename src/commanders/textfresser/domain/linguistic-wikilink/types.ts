@@ -16,20 +16,20 @@ export type LibraryBasenameParser = (
 
 export type LibraryLookupByCoreName = (coreName: string) => SplitPathToMdFile[];
 
-export type LibraryLeafTargetRef = {
+type LibraryLeafTargetRef = {
 	kind: "LibraryLeaf";
 	basename: string;
 	coreName: string;
 	suffixParts: string[];
 };
 
-export type WorterNoteTargetRef = {
+type WorterNoteTargetRef = {
 	kind: "WorterNote";
 	basename: string;
 	surfaceKind: Exclude<LinguisticWikilinkTargetKind, "None">;
 };
 
-export type UnresolvedTargetRef = {
+type UnresolvedTargetRef = {
 	kind: "Unresolved";
 	target: string;
 };

@@ -1,11 +1,11 @@
-export type ParsedWikilink = {
+type ParsedWikilink = {
 	alias: string | null;
 	fullMatch: string;
 	surface: string;
 	target: string;
 };
 
-export type ParsedWikilinkRange = ParsedWikilink & {
+type ParsedWikilinkRange = ParsedWikilink & {
 	end: number;
 	start: number;
 };

@@ -11,7 +11,6 @@ import type { Librarian } from "../librarian";
 
 // Re-export for convenience
 export type { CommandError } from "../errors";
-export { CommandErrorKind } from "../errors";
 
 // ─── Command Kind ───
 

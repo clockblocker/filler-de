@@ -1,4 +1,4 @@
-export type HarnessErrorCode =
+type HarnessErrorCode =
 	| "ARTIFACT_INVALID"
 	| "CLI_INVALID"
 	| "CLI_NON_ZERO"
@@ -10,7 +10,7 @@ export type HarnessErrorCode =
 	| "PROCESS_FAILED"
 	| "SESSION_INVALID";
 
-export interface HarnessErrorDetails {
+interface HarnessErrorDetails {
 	readonly args?: readonly string[];
 	readonly cause?: unknown;
 	readonly command?: string;

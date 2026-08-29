@@ -1,12 +1,6 @@
 // Chain utility
-export { chainHandlers } from "./chain-utils";
-export { createCheckboxFrontmatterHandler } from "./checkbox-behavior";
 // Behavior factories
-export { createClipboardHandler } from "./clipboard-behavior";
-export { createCodexCheckboxHandler } from "./codex-checkbox-behavior";
 // Handler factory for main.ts registration
-export { createHandlers, type HandlerDef } from "./create-handlers";
-export { createSelectAllHandler } from "./select-all-behavior";
+export { createHandlers } from "./create-handlers";
 // Existing behavior
 export { tagLineCopyEmbedBehavior } from "./tag-line-copy-embed-behavior";
-export { createWikilinkCompletionHandler as createWikilinkHandler } from "./wikilink-complition-behavior";

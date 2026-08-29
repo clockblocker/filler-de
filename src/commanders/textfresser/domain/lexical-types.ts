@@ -1,5 +1,4 @@
 import type {
-	LexemeInflections,
 	LexicalRelationKind,
 } from "@textfresser/lexical-generation";
 import type {
@@ -14,7 +13,6 @@ import type { POS } from "./note-linguistic-policy";
 export type LexicalCase = Extract<Case, "Acc" | "Dat" | "Gen" | "Nom">;
 export type LexicalGenus = Extract<Gender, "Fem" | "Masc" | "Neut">;
 export type LexicalNumber = Extract<GrammaticalNumber, "Plur" | "Sing">;
-export type TextfresserLexemePos = POS;
 export type TextfresserRelationKind = LexicalRelationKind;
 export type TextfresserNounInflectionCell = {
 	article: string;
@@ -77,7 +75,9 @@ export const ARTICLE_BY_GENUS: Record<LexicalGenus, "der" | "die" | "das"> = {
 };
 
 export function isLexicalCase(value: Case): value is LexicalCase {
-	return value === "Nom" || value === "Acc" || value === "Gen" || value === "Dat";
+	return (
+		value === "Nom" || value === "Acc" || value === "Gen" || value === "Dat"
+	);
 }
 
 export function isLexicalGenus(value: Gender): value is LexicalGenus {
@@ -147,9 +147,7 @@ export function buildVerbEntryIdentity(profile: {
 	return [
 		`reflex:${profile.inherentFeatures.reflex === "Yes" ? "yes" : "no"}`,
 		`separable:${
-			profile.inherentFeatures.separable === undefined
-				? "unknown"
-				: "yes"
+			profile.inherentFeatures.separable === undefined ? "unknown" : "yes"
 		}`,
 	].join("|");
 }

@@ -18,7 +18,7 @@ import type { SplitHealingInfo } from "../pages/split-to-pages-action";
 /**
  * Dependencies for section healing.
  */
-export type SectionHealingDeps<E = never> = {
+type SectionHealingDeps<E = never> = {
 	healer: Healer;
 	codecs: Codecs;
 	dispatch: (actions: VaultAction[]) => Effect.Effect<void, E>;

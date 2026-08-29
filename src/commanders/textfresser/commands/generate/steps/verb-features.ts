@@ -1,9 +1,12 @@
 import type { LexicalInfo } from "@textfresser/lexical-generation";
 import type { InherentFeatures } from "../../../../../deprecated-linguistic-enums";
-import { getLexicalInfoInherentFeatures, getLexicalInfoPos } from "../../../domain/lexical-info-view";
+import {
+	getLexicalInfoInherentFeatures,
+	getLexicalInfoPos,
+} from "../../../domain/lexical-info-view";
 import { buildVerbEntryIdentity } from "../../../domain/lexical-types";
 
-export type VerbLexicalFeatures = Pick<InherentFeatures, "reflex" | "separable">;
+type VerbLexicalFeatures = Pick<InherentFeatures, "reflex" | "separable">;
 
 export function getVerbLexicalFeatures(
 	lexicalInfo: LexicalInfo,

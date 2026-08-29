@@ -35,7 +35,7 @@ export type TreeReader = {
  * Result of applying an action to the tree.
  * `changed` indicates if the tree state was actually modified.
  */
-export type TreeApplyResult = {
+type TreeApplyResult = {
 	changed: boolean;
 	node: TreeNode | null;
 };

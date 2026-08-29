@@ -1,4 +1,1 @@
-export {
-	setupGetParsedUserSettingsSpy,
-	setupGetParsedUserSettingsSpyWithHooks,
-} from "../librarian/common-utils/setup-spy";
+export { setupGetParsedUserSettingsSpy } from "../librarian/common-utils/setup-spy";

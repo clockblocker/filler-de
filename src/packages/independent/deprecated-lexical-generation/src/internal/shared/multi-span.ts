@@ -1,12 +1,12 @@
 import { logger } from "./logger";
 
-export type BracketedSpan = {
+type BracketedSpan = {
 	strippedEnd: number;
 	strippedStart: number;
 	text: string;
 };
 
-export type ResolvedSpan = {
+type ResolvedSpan = {
 	rawEnd: number;
 	rawStart: number;
 	text: string;

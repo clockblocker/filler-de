@@ -7,7 +7,7 @@ import {
 import { parse } from "./internal/parse";
 import type { DictEntryWithLinguisticWikilinks } from "./types";
 
-export type ParseWithLinguisticWikilinksParams = {
+type ParseWithLinguisticWikilinksParams = {
 	noteText: string;
 	lookupInLibraryByCoreName?: LibraryLookupByCoreName;
 	parseLibraryBasename?: LibraryBasenameParser;

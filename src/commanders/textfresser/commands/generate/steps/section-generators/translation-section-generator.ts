@@ -6,7 +6,7 @@ import {
 } from "../../../../targets/de/sections/section-kind";
 import type { GenerationTargetLanguage } from "../section-generation-types";
 
-export type TranslationSectionContext = {
+type TranslationSectionContext = {
 	output: string;
 	targetLang: GenerationTargetLanguage;
 };

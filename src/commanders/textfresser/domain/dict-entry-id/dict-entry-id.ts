@@ -38,7 +38,6 @@ export const DictEntryIdSchema = z.string().regex(DICT_ENTRY_ID_REGEX, {
 	message: "Invalid DictEntryId format",
 });
 
-export type DictEntryId = z.infer<typeof DictEntryIdSchema>;
 
 // -- Parsed type --
 

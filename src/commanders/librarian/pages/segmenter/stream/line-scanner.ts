@@ -12,7 +12,7 @@ const HEADING_PATTERN = /^#{1,6}(?:\s|(?=\*))/;
 /**
  * Creates an initial (empty) quote state.
  */
-export function createInitialQuoteState(): QuoteState {
+function createInitialQuoteState(): QuoteState {
 	return { depth: 0, openingMarks: [] };
 }
 

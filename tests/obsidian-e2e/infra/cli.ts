@@ -8,7 +8,7 @@ const CLI_NOISE = ["Loading updated app package", "Checking for updates"];
 const BUNDLED_MACOS_CLI =
 	"/Applications/Obsidian.app/Contents/MacOS/obsidian-cli";
 
-export interface ObsidianCliOptions {
+interface ObsidianCliOptions {
 	readonly cliPath: string;
 	readonly vaultName: string;
 }

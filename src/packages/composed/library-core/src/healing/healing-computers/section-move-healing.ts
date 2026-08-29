@@ -1,18 +1,12 @@
-import type {
-	Codecs,
-	SplitPathToFolderInsideLibrary,
-} from "../../codecs";
+import type { Codecs, SplitPathToFolderInsideLibrary } from "../../codecs";
 import type { SectionNodeSegmentId } from "../../codecs/segment-id";
 import type { HealingAction } from "../../healer/library-tree/types/healing-action";
-import {
-	makeNodeSegmentId,
-	type SectionNode,
-} from "../../tree";
+import { makeNodeSegmentId, type SectionNode } from "../../tree";
 import { sectionChainToPathParts } from "../../tree/utils";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { computeDescendantSuffixHealing } from "./descendant-suffix-healing";
 
-export type SectionMoveParams = {
+type SectionMoveParams = {
 	/** The section node after move */
 	section: SectionNode;
 	/** New parent chain (segment IDs) */

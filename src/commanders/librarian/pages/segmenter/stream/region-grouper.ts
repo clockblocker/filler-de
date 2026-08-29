@@ -95,70 +95,7 @@ function calculateGroupCharCount(
 	return sentences.reduce((sum, s) => sum + s.charCount, 0);
 }
 
-/**
- * Stage 4: Region Grouper
- * Groups sentences that should be kept together (poems, multiline quotes).
- */
-export function groupSentences(
-	sentences: AnnotatedSentence[],
-): SentenceGroup[] {
-	if (sentences.length === 0) return [];
 
-	const groups: SentenceGroup[] = [];
-	let currentGroup: AnnotatedSentence[] = [];
-
-	for (let i = 0; i < sentences.length; i++) {
-		const sentence = sentences[i];
-		if (!sentence) continue;
-
-		// First sentence always starts a group
-		if (currentGroup.length === 0) {
-			currentGroup.push(sentence);
-			continue;
-		}
-
-		const lastSentence = currentGroup[currentGroup.length - 1];
-		if (!lastSentence) {
-			currentGroup.push(sentence);
-			continue;
-		}
-
-		// Check if this sentence should be grouped with the previous
-		if (shouldGroupTogether(lastSentence, sentence)) {
-			currentGroup.push(sentence);
-		} else {
-			// Finish current group and start new one
-			const nonEmpty = nonEmptyArrayResult(currentGroup);
-			if (nonEmpty.isOk()) {
-				groups.push({
-					charCount: calculateGroupCharCount(nonEmpty.value),
-					isSplittable: isGroupSplittable(nonEmpty.value),
-					sentences: nonEmpty.value,
-				});
-			}
-			currentGroup = [sentence];
-		}
-	}
-
-	// Don't forget the last group
-	const nonEmpty = nonEmptyArrayResult(currentGroup);
-	if (nonEmpty.isOk()) {
-		groups.push({
-			charCount: calculateGroupCharCount(nonEmpty.value),
-			isSplittable: isGroupSplittable(nonEmpty.value),
-			sentences: nonEmpty.value,
-		});
-	}
-
-	return groups;
-}
-
-/**
- * Flattens groups back to sentences (for compatibility).
- */
-export function flattenGroups(groups: SentenceGroup[]): AnnotatedSentence[] {
-	return groups.flatMap((g) => g.sentences);
-}
 
 /**
  * Stage 4 (token-based): Region Grouper

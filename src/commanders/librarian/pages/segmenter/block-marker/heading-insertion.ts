@@ -28,7 +28,7 @@ export type CodeBlockInfo = {
 /**
  * Element that can be inserted: heading, horizontal rule, or code block.
  */
-export type InsertableElement = {
+type InsertableElement = {
 	kind: "heading" | "hr" | "codeblock";
 	text: string;
 	originalOffset: number; // Where it ends in original text (for headings) or where it is (for HRs/code blocks)
@@ -76,7 +76,7 @@ export function findPrecedingHeading(
  * Find all headings, HRs, and code blocks that precede a given offset and haven't been used yet.
  * Returns them sorted by position in original document.
  */
-export function findAllPrecedingElements(
+function findAllPrecedingElements(
 	sentenceOriginalOffset: number,
 	headings: ExtractedHeading[],
 	horizontalRules: HorizontalRuleInfo[],

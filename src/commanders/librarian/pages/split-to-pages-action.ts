@@ -44,7 +44,7 @@ export type SplitHealingInfo = {
 	pageNodeNames: string[];
 };
 
-export type SplitToPagesContext<E = never> = {
+type SplitToPagesContext<E = never> = {
 	vam: VaultActionManager;
 	/** Called after pages are created, bypasses self-event filtering */
 	onSectionCreated?: (info: SplitHealingInfo) => Effect.Effect<void, E>;

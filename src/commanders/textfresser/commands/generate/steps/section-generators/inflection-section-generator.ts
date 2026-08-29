@@ -10,12 +10,12 @@ import {
 import { formatInflection } from "../../section-formatters/de/lexem/noun/inflection-formatter";
 import type { GenerationTargetLanguage } from "../section-generation-types";
 
-export type InflectionSectionContext = {
+type InflectionSectionContext = {
 	lexicalInfo: LexicalInfo;
 	targetLang: GenerationTargetLanguage;
 };
 
-export type InflectionSectionResult = {
+type InflectionSectionResult = {
 	inflectionCells: TextfresserNounInflectionCell[];
 	section: EntrySection | null;
 };

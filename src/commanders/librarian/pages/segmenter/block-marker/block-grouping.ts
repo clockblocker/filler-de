@@ -28,7 +28,7 @@ export type Block = {
 /**
  * Create a new block with one sentence.
  */
-export function newBlock(
+function newBlock(
 	sentence: AnnotatedSentence,
 	pendingSpeechIntro = false,
 ): Block {
@@ -43,7 +43,7 @@ export function newBlock(
 /**
  * Append sentence to block.
  */
-export function appendToBlock(block: Block, sentence: AnnotatedSentence): void {
+function appendToBlock(block: Block, sentence: AnnotatedSentence): void {
 	block.sentences.push(sentence);
 	block.wordCount += countWords(sentence.text);
 	block.charCount += sentence.charCount;

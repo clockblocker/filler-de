@@ -15,13 +15,9 @@ export {
 	type VaultActionManagerSubscription,
 } from "./facade";
 export type { SelectionInfo } from "./file-services/active-view/selection-service";
-export * from "./helpers/pathfinder";
-export {
-	makeSplitPath,
-	makeSystemPathForSplitPath,
-} from "./impl/common/split-path-and-system-path";
 export type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 export type { PossibleRootVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
+export { splitPathCodec, type SplitPathCodec } from "./split-path-codec";
 export * from "./types/literals";
 export {
 	classifyReadContentError,
@@ -30,7 +26,24 @@ export {
 	ReadContentErrorKind,
 	readContentErrorToReason,
 } from "./types/read-content-error";
-export * from "./types/split-path";
+export {
+	type AnySplitPath,
+	type CommonSplitPath,
+	CoreSplitPathSchema,
+	type PathParts,
+	PathPartsSchema,
+	type SplitPath,
+	type SplitPathFromTo,
+	SplitPathKind,
+	SplitPathSchema,
+	type SplitPathToAnyFile,
+	type SplitPathToFile,
+	SplitPathToFileSchema,
+	type SplitPathToFolder,
+	SplitPathToFolderSchema,
+	type SplitPathToMdFile,
+	SplitPathToMdFileSchema,
+} from "./types/split-path";
 export * from "./types/vault-action";
 export { type VaultAction, VaultActionKind } from "./types/vault-action";
 export * from "./types/vault-event";

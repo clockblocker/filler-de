@@ -14,18 +14,18 @@ import { ALL_PROMPT_KINDS } from "../../src/internal/prompt-smith/codegen/consts
 import { callGemini, type ApiCallResult } from "./api-client";
 import type { z } from "zod/v3";
 
-export type PromptFixture = {
+type PromptFixture = {
 	input: unknown;
 	output: unknown;
 };
 
-export type StructuredPrompt<TSchema extends z.ZodTypeAny = z.ZodTypeAny> = {
+type StructuredPrompt<TSchema extends z.ZodTypeAny = z.ZodTypeAny> = {
 	name: string;
 	schema: TSchema;
 	systemPrompt: string;
 };
 
-export type LexicalPromptTarget = StructuredPrompt & {
+type LexicalPromptTarget = StructuredPrompt & {
 	knownLanguage: KnownLanguage;
 	promptKind: PromptKind;
 	targetLanguage: TargetLanguage;
@@ -38,7 +38,7 @@ export type StructuredPromptClient = <TSchema extends z.ZodTypeAny>(opts: {
 	userInput: string;
 }) => Promise<ApiCallResult<z.infer<TSchema>>>;
 
-export type PromptCaseResult = {
+type PromptCaseResult = {
 	actualOutput: unknown;
 	durationMs: number;
 	error?: string;
@@ -49,7 +49,7 @@ export type PromptCaseResult = {
 	schemaValid: boolean;
 };
 
-export type LivePromptSelection = {
+type LivePromptSelection = {
 	caseIndex: number;
 	knownLanguage: KnownLanguage;
 	promptKind: PromptKind;
@@ -109,7 +109,7 @@ function deepEqual(a: unknown, b: unknown): boolean {
 	);
 }
 
-export function formatPromptInput(input: unknown): string {
+function formatPromptInput(input: unknown): string {
 	return typeof input === "string" ? input : JSON.stringify(input);
 }
 
@@ -150,8 +150,11 @@ export function parseLivePromptSelection(
 export function parsePromptSelectionArgs(
 	args: string[],
 ): Omit<LivePromptSelection, "caseIndex"> {
-	const [promptKindArg, targetLanguageArg = "German", knownLanguageArg = "English"] =
-		args;
+	const [
+		promptKindArg,
+		targetLanguageArg = "German",
+		knownLanguageArg = "English",
+	] = args;
 
 	if (!promptKindArg) {
 		throw new Error(

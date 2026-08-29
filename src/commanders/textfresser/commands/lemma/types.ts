@@ -1,7 +1,6 @@
 import type { ResolvedSelection } from "@textfresser/lexical-generation";
 import type { Attestation } from "../../common/attestation/types";
 import {
-	getSelectionDiscriminator,
 	getSelectionPos,
 	getSelectionSurfaceKind,
 	getSelectionUnitKind,
@@ -9,10 +8,7 @@ import {
 	isLexemeSelection,
 	isPhrasemeSelection,
 } from "../../domain/native-selection";
-import type {
-	POS,
-	SurfaceKind,
-} from "../../domain/note-linguistic-policy";
+import type { POS, SurfaceKind } from "../../domain/note-linguistic-policy";
 
 type LemmaLocalState = {
 	attestation: Attestation;
@@ -22,7 +18,10 @@ type LemmaLocalState = {
 	precomputedSenseEmojis?: string[];
 };
 
-type KnownSelection = Exclude<ResolvedSelection, { orthographicStatus: "Unknown" }>;
+type KnownSelection = Exclude<
+	ResolvedSelection,
+	{ orthographicStatus: "Unknown" }
+>;
 type LexemeSelection = Extract<
 	KnownSelection,
 	{ surface: { discriminators: { lemmaKind: "Lexeme" } } }
@@ -50,9 +49,7 @@ export type PhrasemeLemmaResult = PhrasemeSelection &
 
 export type LemmaResult = LexemeLemmaResult | PhrasemeLemmaResult;
 
-export function getLexemePos(
-	result: LemmaResult,
-) {
+export function getLexemePos(result: LemmaResult) {
 	return getSelectionPos(result);
 }
 
@@ -68,9 +65,6 @@ export function getLemmaSurfaceKind(result: LemmaResult) {
 	return getSelectionSurfaceKind(result);
 }
 
-export function getLemmaDiscriminator(result: LemmaResult) {
-	return getSelectionDiscriminator(result);
-}
 
 export function isLexemeResult(result: LemmaResult) {
 	return isLexemeSelection(result);

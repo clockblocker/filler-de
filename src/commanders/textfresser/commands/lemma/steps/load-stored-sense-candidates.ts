@@ -10,7 +10,7 @@ import { dictNoteHelper } from "../../../domain/dict-note";
 import { vamIoFailureToCommandError } from "../../../orchestration/shared/vam-failure";
 import type { CommandError } from "../../types";
 
-export type StoredSenseCandidate = {
+type StoredSenseCandidate = {
 	entryIndex: number;
 	lexicalMeta: LexicalMeta;
 };

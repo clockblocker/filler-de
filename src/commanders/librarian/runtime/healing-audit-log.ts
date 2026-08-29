@@ -40,7 +40,7 @@ type AuditStats = {
 
 const DEFAULT_MAX_ENTRIES = 1000;
 
-export class HealingAuditLog {
+class HealingAuditLog {
 	private entries: AuditEntry[] = [];
 	private maxEntries: number;
 	private idCounter = 0;

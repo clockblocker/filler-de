@@ -10,7 +10,7 @@ export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite";
 const GEMINI_OPENAI_BASE_URL =
 	"https://generativelanguage.googleapis.com/v1beta/openai/";
 
-export interface GeminiProviderOptions {
+interface GeminiProviderOptions {
 	readonly apiKey: string;
 	readonly model?: string;
 }

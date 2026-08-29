@@ -14,7 +14,7 @@ import { buildFeatureTagPath } from "../features-prompt-dispatch";
 import { buildInherentFeatureTags } from "../inherent-feature-tags";
 import type { GenerationTargetLanguage } from "../section-generation-types";
 
-export type TagsSectionContext = {
+type TagsSectionContext = {
 	lexicalInfo: LexicalInfo;
 	targetLang: GenerationTargetLanguage;
 };

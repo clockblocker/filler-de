@@ -265,7 +265,7 @@ export function buildActionKeyIndex(actions: readonly VaultAction[]): {
 /**
  * Destinations that need to be checked for existence.
  */
-export type DestinationsToCheck = {
+type DestinationsToCheck = {
 	ensureExistFolderKeys: Set<string>;
 	ensureExistFileKeys: Set<string>;
 	createFolderKeys: Set<string>;

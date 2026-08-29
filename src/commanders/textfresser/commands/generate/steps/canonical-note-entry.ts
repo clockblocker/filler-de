@@ -10,7 +10,6 @@ import { buildSectionMarker } from "../../../domain/dict-note/internal/constants
 import { deLanguagePack } from "../../../languages/de/pack";
 import {
 	fromLegacyEntrySection,
-	fromLegacyDictEntries,
 } from "../../../domain/dict-note";
 import { createNoteCodec } from "../../../core/notes/note-codec";
 import type {
@@ -21,7 +20,7 @@ import type {
 
 const noteCodec = createNoteCodec(deLanguagePack);
 
-export type GenerateMatchableNoteEntry = NoteEntry & {
+type GenerateMatchableNoteEntry = NoteEntry & {
 	linguisticWikilinks: LinguisticWikilinkDto[];
 };
 
@@ -158,7 +157,10 @@ export function adaptLegacySectionsForEntry(
 		if (!marker) {
 			continue;
 		}
-		occurrenceByMarker.set(marker, (occurrenceByMarker.get(marker) ?? 0) + 1);
+		occurrenceByMarker.set(
+			marker,
+			(occurrenceByMarker.get(marker) ?? 0) + 1,
+		);
 	}
 
 	return sections.map((section) => {
@@ -168,14 +170,6 @@ export function adaptLegacySectionsForEntry(
 	});
 }
 
-export function adaptLegacyEntries(entries: readonly {
-	headerContent: string;
-	id: string;
-	meta: Record<string, unknown>;
-	sections: LegacyEntrySection[];
-}[]): NoteEntry[] {
-	return fromLegacyDictEntries(entries, deLanguagePack);
-}
 
 export function orderGenerateEntrySections(entry: NoteEntry): void {
 	let prefixEnd = 0;
@@ -230,7 +224,10 @@ export function orderGenerateEntrySections(entry: NoteEntry): void {
 
 	entry.sections = [
 		...prefix,
-		...sortedUnits.flatMap((unit) => [...unit.leadingLooseRaw, unit.section]),
+		...sortedUnits.flatMap((unit) => [
+			...unit.leadingLooseRaw,
+			unit.section,
+		]),
 		...pendingLooseRaw,
 		...suffix,
 	];

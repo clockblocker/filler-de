@@ -35,5 +35,3 @@ export const entryIdentity = {
 	nextIndex,
 	parse,
 } as const;
-
-export type { BuildDictEntryIdParts, ParsedDictEntryId };

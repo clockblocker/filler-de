@@ -12,7 +12,7 @@ import type {
 	ParsedLibraryBasename,
 } from "./types";
 
-export type ParseLinguisticWikilinksParams = {
+type ParseLinguisticWikilinksParams = {
 	content: string;
 	sectionCssKind: string;
 	lookupInLibraryByCoreName?: LibraryLookupByCoreName;

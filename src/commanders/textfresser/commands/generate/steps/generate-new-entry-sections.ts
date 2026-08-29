@@ -41,7 +41,7 @@ import {
 	generateTranslationSection,
 } from "./section-generators";
 
-export type GeneratedEntrySectionsData = GeneratedPropagationArtifacts & {
+type GeneratedEntrySectionsData = GeneratedPropagationArtifacts & {
 	entryId: string;
 	failedSections: string[];
 	headerContent: string;
@@ -166,8 +166,7 @@ export async function generateNewEntrySections(
 			lemmaResult,
 			context,
 			{
-				precomputedSenseEmojis:
-					lemmaResult.precomputedSenseEmojis,
+				precomputedSenseEmojis: lemmaResult.precomputedSenseEmojis,
 			},
 		);
 		if (lexicalInfoResult.isErr()) {
@@ -202,12 +201,12 @@ export async function generateNewEntrySections(
 	});
 	if (shouldGenerateMorpheme && !morphemSectionResult) {
 		logger.warn(
-				"[generateSections] Morpheme failed; skipping dependent outputs (Morphology section + morpheme/morphology propagation)",
-				{
-					lemma: getLemmaText(lemmaResult),
-					willSkipMorphologySection: sectionSet.has(
-						DictSectionKind.Morphology,
-					),
+			"[generateSections] Morpheme failed; skipping dependent outputs (Morphology section + morpheme/morphology propagation)",
+			{
+				lemma: getLemmaText(lemmaResult),
+				willSkipMorphologySection: sectionSet.has(
+					DictSectionKind.Morphology,
+				),
 			},
 		);
 	}
@@ -222,12 +221,12 @@ export async function generateNewEntrySections(
 				}),
 			);
 		} catch (error) {
-				failedSections.push("Translation");
-				logger.warn("[generateSections] Translation failed", {
-					error: getErrorMessage(error),
-					lemma: getLemmaText(lemmaResult),
-				});
-				translationOutput = null;
+			failedSections.push("Translation");
+			logger.warn("[generateSections] Translation failed", {
+				error: getErrorMessage(error),
+				lemma: getLemmaText(lemmaResult),
+			});
+			translationOutput = null;
 		}
 	} else {
 		translationOutput = null;
@@ -332,12 +331,12 @@ export async function generateNewEntrySections(
 		}
 	}
 
-		const entryId = buildEntryId(ctx.nextIndex, lemmaResult);
-		if (!entryId) {
-			throw new Error(
-				`Unexpected selection for entry ID: ${JSON.stringify(lemmaResult)}`,
-			);
-		}
+	const entryId = buildEntryId(ctx.nextIndex, lemmaResult);
+	if (!entryId) {
+		throw new Error(
+			`Unexpected selection for entry ID: ${JSON.stringify(lemmaResult)}`,
+		);
+	}
 
 	return {
 		entryId,

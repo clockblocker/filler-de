@@ -44,7 +44,7 @@ export function detectEditorPadding(
 /**
  * Layout observer that wraps ResizeObserver with rAF debounce.
  */
-export type LayoutObserver = {
+type LayoutObserver = {
 	/** Start observing the container */
 	observe(container: HTMLElement): void;
 	/** Stop observing */

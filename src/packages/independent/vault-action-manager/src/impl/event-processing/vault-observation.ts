@@ -66,9 +66,9 @@ type ObservationCore = {
 	readonly subscribers: Ref.Ref<ReadonlyMap<number, SubscriberState>>;
 };
 
-export type VaultObservationOptions = Partial<EventAccumulatorOptions>;
+type VaultObservationOptions = Partial<EventAccumulatorOptions>;
 
-export type VaultObservationSubscription = {
+type VaultObservationSubscription = {
 	readonly close: Effect.Effect<void>;
 };
 

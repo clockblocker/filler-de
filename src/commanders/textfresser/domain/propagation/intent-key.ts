@@ -75,7 +75,7 @@ function toCanonicalJsonValue(value: unknown): CanonicalJson {
 	return normalizedObject;
 }
 
-export function canonicalJsonStringify(value: unknown): string {
+function canonicalJsonStringify(value: unknown): string {
 	return JSON.stringify(toCanonicalJsonValue(value));
 }
 

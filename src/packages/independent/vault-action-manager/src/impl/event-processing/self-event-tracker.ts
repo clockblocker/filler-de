@@ -19,7 +19,7 @@ type SelfEventTrackerCore = {
 	readonly state: Ref.Ref<SelfEventState>;
 };
 
-export type SelfEventTrackerOptions = {
+type SelfEventTrackerOptions = {
 	readonly ttlMs?: number;
 };
 

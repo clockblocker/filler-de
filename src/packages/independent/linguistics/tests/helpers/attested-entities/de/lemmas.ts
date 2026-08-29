@@ -37,14 +37,6 @@ export const germanHausLemma = {
 } satisfies Lemma<"German", "Lexeme", "NOUN">;
 
 // Attestation: "Wir [gehen] nach Hause."
-export const germanGehenLemma = {
-	canonicalLemma: "gehen",
-	inherentFeatures: {},
-	language: "German",
-	lemmaKind: "Lexeme",
-	meaningInEmojis: "🚶",
-	pos: "VERB",
-} satisfies Lemma<"German", "Lexeme", "VERB">;
 
 // Attestation: "In Berlin sowie im Umland (Agglomeration Berlin) betreibt die [BVG] die U-Bahn Berlin, die Straßenbahn Berlin, den Busverkehr in Berlin und den Fährverkehr in Berlin, nicht jedoch die S-Bahn."
 // UD-style: multi-word abbreviations keep the abbreviated form as canonicalLemma and mark Abbr=Yes.

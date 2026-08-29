@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import type { Editor, MarkdownView, TFile, TFolder } from "obsidian";
+import type { MarkdownView, TFile, TFolder } from "obsidian";
 import { VamVaultIoError } from "../../../../effect/errors";
 import { ActiveEditorAccess, VaultIo } from "../../../../effect/ports";
 import {
@@ -15,7 +15,6 @@ import type {
 	SplitPathToMdFile,
 } from "../../../../types/split-path";
 
-export type EditorWithView = { editor: Editor; view: MarkdownView };
 
 function activeEditorFailure(
 	operation: string,

@@ -15,7 +15,7 @@ const REQUIRED_FILES = [
 /** Only xxx->English is required, other languages are optional */
 const REQUIRED_KNOWN_LANGUAGE = KnownLanguage.English;
 
-export interface MissingPart {
+interface MissingPart {
 	promptKind: string;
 	targetLanguage: string;
 	knownLanguage: string;

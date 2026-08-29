@@ -46,14 +46,12 @@ import type {
 
 type TypedSectionKind = keyof SectionPayloadByKind;
 
-export type WikilinkDto = {
+type WikilinkDto = {
 	target: string;
 	displayText?: string;
 };
 
-export type PropagationTypedSection<
-	K extends TypedSectionKind = TypedSectionKind,
-> = {
+type PropagationTypedSection<K extends TypedSectionKind = TypedSectionKind> = {
 	kind: K;
 	key?: SectionKey;
 	cssKind?: string;
@@ -86,7 +84,7 @@ export type PropagationNoteEntry = {
 	sections: PropagationSection[];
 };
 
-export type SerializePropagationNoteResult = {
+type SerializePropagationNoteResult = {
 	body: string;
 	meta: Record<string, unknown>;
 };
@@ -128,7 +126,9 @@ function createPropagationLanguagePack(): LanguagePack {
 					},
 				},
 	);
-	const sectionByKey = new Map(sections.map((section) => [section.key, section]));
+	const sectionByKey = new Map(
+		sections.map((section) => [section.key, section]),
+	);
 	const sectionByMarker = new Map(
 		sections.map((section) => [section.marker, section]),
 	);
@@ -169,7 +169,7 @@ const GERMAN_MORPHOLOGY_TITLE = deLanguagePack
 	.getSection("morphology")
 	.titleFor("German");
 
-export type ParsePropagationNoteOptions = {
+type ParsePropagationNoteOptions = {
 	lookupInLibraryByCoreName?: LibraryLookupByCoreName;
 	parseLibraryBasename?: LibraryBasenameParser;
 };
@@ -388,7 +388,7 @@ function resolveSemanticWikilinkToken(params: {
 	};
 }
 
-export function parseBasicWikilinkDto(raw: string): WikilinkDto | null {
+function parseBasicWikilinkDto(raw: string): WikilinkDto | null {
 	const trimmed = raw.trim();
 	const match = trimmed.match(BASIC_WIKILINK_RE);
 	if (!match) {
@@ -405,7 +405,7 @@ export function parseBasicWikilinkDto(raw: string): WikilinkDto | null {
 	});
 }
 
-export function serializeWikilinkDto(link: WikilinkDto): string {
+function serializeWikilinkDto(link: WikilinkDto): string {
 	const target = normalizeSpace(link.target);
 	if (target.length === 0) {
 		logSampledWarning({
@@ -974,7 +974,9 @@ function resolvePropagationSectionKey(
 	}
 	const key = sectionKeyByTypedSectionKind.get(section.kind);
 	if (!key) {
-		throw new Error(`Unsupported propagation section kind: ${section.kind}`);
+		throw new Error(
+			`Unsupported propagation section kind: ${section.kind}`,
+		);
 	}
 	return key;
 }
@@ -1047,14 +1049,16 @@ function adaptNoteSection(
 		cssKind: section.marker,
 		key: section.key,
 		kind: "Raw",
-		rawBlock: noteCodec.serialize([
-			{
-				headerContent: "placeholder",
-				id: "placeholder",
-				meta: {},
-				sections: [section],
-			},
-		]).body.replace(/^\nplaceholder \^placeholder\n\n?/, ""),
+		rawBlock: noteCodec
+			.serialize([
+				{
+					headerContent: "placeholder",
+					id: "placeholder",
+					meta: {},
+					sections: [section],
+				},
+			])
+			.body.replace(/^\nplaceholder \^placeholder\n\n?/, ""),
 		title: section.title,
 	};
 }
@@ -1102,36 +1106,7 @@ function serializeTypedSectionContent(
 	}
 }
 
-function adaptPropagationSection(section: PropagationSection): NoteSection {
-	if (section.kind === "Raw") {
-		return {
-			kind: "raw",
-			key: section.key,
-			marker: section.cssKind,
-			rawBlock: section.rawBlock,
-			title: section.title,
-		};
-	}
 
-	const key = resolvePropagationSectionKey(section);
-	const packSection = deLanguagePack.getSection(key);
-	return {
-		content: serializeTypedSectionContent(section),
-		key,
-		kind: "typed",
-		marker: packSection.marker,
-		title: section.title,
-	};
-}
-
-function adaptPropagationEntry(entry: PropagationNoteEntry): NoteEntry {
-	return {
-		headerContent: entry.headerContent,
-		id: entry.id,
-		meta: entry.meta,
-		sections: entry.sections.map(adaptPropagationSection),
-	};
-}
 
 function serializeTypedSection(section: AnyPropagationTypedSection): string {
 	const key = resolvePropagationSectionKey(section);
@@ -1190,7 +1165,9 @@ export function parsePropagationNote(
 export function serializePropagationNote(
 	entries: ReadonlyArray<PropagationNoteEntry>,
 ): SerializePropagationNoteResult {
-	const body = entries.map((entry) => serializeEntry(entry)).join("\n\n\n---\n---\n\n\n");
+	const body = entries
+		.map((entry) => serializeEntry(entry))
+		.join("\n\n\n---\n---\n\n\n");
 	const entriesMeta: Record<string, Record<string, unknown>> = {};
 	for (const entry of entries) {
 		if (Object.keys(entry.meta).length > 0) {

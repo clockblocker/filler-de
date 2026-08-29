@@ -28,16 +28,7 @@ export function isDelete(e: VaultEvent): e is TrashVaultEvent {
 	);
 }
 
-export type CreateVaultEvent =
-	| Extract<VaultEvent, { kind: typeof VaultEventKind.FileCreated }>
-	| Extract<VaultEvent, { kind: typeof VaultEventKind.FolderCreated }>;
 
-export function isCreate(e: VaultEvent): e is CreateVaultEvent {
-	return (
-		e.kind === VaultEventKind.FileCreated ||
-		e.kind === VaultEventKind.FolderCreated
-	);
-}
 
 export type PossibleRootVaultEvent = RenameVaultEvent | TrashVaultEvent;
 

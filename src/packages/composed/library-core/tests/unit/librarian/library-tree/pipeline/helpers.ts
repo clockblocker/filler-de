@@ -41,7 +41,7 @@ export type PipelineResult = {
 
 // ─── Persistent Pipeline State ───
 
-export type PersistentPipelineState = {
+type PersistentPipelineState = {
 	healer: Healer;
 	codecs: Codecs;
 	interpretBulk: BulkInterpreter;
@@ -51,23 +51,6 @@ export type PersistentPipelineState = {
 
 // ─── Main Pipeline Runner ───
 
-/**
- * Run full pipeline: LibraryBulk → TreeActions → Healer → CodexImpact → Deletions → Recreations
- * Creates a new healer instance (for single-event tests).
- */
-export function runPipeline(
-	initialTree: TreeShape,
-	bulkEvent: LibraryBulk,
-): PipelineResult {
-	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
-	const codecs = makeCodecs(rules);
-	const healer = makeTree(initialTree);
-
-	return processBulkEvent(
-		{ codecs, healer, interpretBulk: makeBulkInterpreter(codecs), rules },
-		bulkEvent,
-	);
-}
 
 /**
  * Create a persistent pipeline state for sequential event testing.

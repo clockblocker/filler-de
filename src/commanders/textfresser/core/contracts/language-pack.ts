@@ -22,7 +22,7 @@ export type SectionLinkPolicy = {
 	propagates: boolean;
 };
 
-export type SectionClaimInput = {
+type SectionClaimInput = {
 	marker: string;
 	title: string;
 	content: string;

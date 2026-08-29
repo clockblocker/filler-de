@@ -1,11 +1,5 @@
 type ValueOf<T> = T[keyof T];
 
-export const OrthographicStatus = {
-	Standard: "Standard",
-	Typo: "Typo",
-	Unknown: "Unknown",
-} as const;
-export type OrthographicStatus = ValueOf<typeof OrthographicStatus>;
 
 export const SurfaceKind = {
 	Inflection: "Inflection",
@@ -166,6 +160,3 @@ export type InherentFeatures = Partial<{
 }> &
 	Record<string, DeprecatedInherentFeatureValue>;
 
-export type UnknownSelection = {
-	orthographicStatus: typeof OrthographicStatus.Unknown;
-};

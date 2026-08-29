@@ -2,46 +2,13 @@ export type StableEntryId = string;
 export type IntentKey = string;
 export type CreationKey = string;
 
-export type LangCode = string & { readonly __brand: "LangCode" };
-export type UnitKindCode = string & { readonly __brand: "UnitKindCode" };
-export type SurfaceKindCode = string & { readonly __brand: "SurfaceKindCode" };
-export type PosCode = string & { readonly __brand: "PosCode" };
+type LangCode = string & { readonly __brand: "LangCode" };
+type UnitKindCode = string & { readonly __brand: "UnitKindCode" };
+type SurfaceKindCode = string & { readonly __brand: "SurfaceKindCode" };
+type PosCode = string & { readonly __brand: "PosCode" };
 
-export type SourceEntryKey = {
-	notePath: string;
-	stableId: StableEntryId;
-	lemma: string;
-	lang: LangCode;
-	unit: UnitKindCode;
-	surface: SurfaceKindCode;
-	pos: PosCode;
-};
 
-export type UnresolvedTargetRef<
-	TLang extends string,
-	TUnit extends string,
-	TSurface extends string,
-	TPos extends string,
-> = {
-	targetLemma: string;
-	lang: TLang;
-	unit: TUnit;
-	surface: TSurface;
-	pos: TPos;
-};
 
-export type TargetRef<
-	TLang extends string,
-	TUnit extends string,
-	TSurface extends string,
-	TPos extends string,
-> = {
-	targetPath: string;
-	lang: TLang;
-	unit: TUnit;
-	surface: TSurface;
-	pos: TPos;
-};
 
 export type RelationItemDto = {
 	relationKind: string;
@@ -92,7 +59,7 @@ export type SectionPayloadByKind = {
 	Tags: TagsSectionDto;
 };
 
-export type NewEntryTemplate = {
+type NewEntryTemplate = {
 	headerTemplate: string;
 	meta?: Record<string, unknown>;
 };
@@ -159,49 +126,6 @@ export type PropagationIntent = {
 	intentKey: IntentKey;
 };
 
-export type UnresolvedPropagationIntent = Omit<
-	PropagationIntent,
-	"targetPath"
-> & {
-	target: UnresolvedTargetRef<
-		LangCode,
-		UnitKindCode,
-		SurfaceKindCode,
-		PosCode
-	>;
-};
 
-export type TargetRefOf<TgtEntry> = TgtEntry extends {
-	lang: infer L extends string;
-	unit: infer U extends string;
-	surface: infer S extends string;
-	pos: infer P extends string;
-}
-	? TargetRef<L, U, S, P>
-	: never;
 
-export type UnresolvedTargetRefOf<TgtEntry> = TgtEntry extends {
-	lang: infer L extends string;
-	unit: infer U extends string;
-	surface: infer S extends string;
-	pos: infer P extends string;
-}
-	? UnresolvedTargetRef<L, U, S, P>
-	: never;
 
-export interface Propagator<
-	SrcEntry,
-	TgtEntry,
-	K extends keyof SectionPayloadByKind,
-> {
-	sectionKind: K;
-	resolveTargets(input: {
-		source: SrcEntry;
-		section: SectionPayloadByKind[K];
-	}): ReadonlyArray<UnresolvedTargetRefOf<TgtEntry>>;
-	buildIntents(input: {
-		source: SrcEntry;
-		section: SectionPayloadByKind[K];
-		target: UnresolvedTargetRefOf<TgtEntry>;
-	}): ReadonlyArray<UnresolvedPropagationIntent>;
-}

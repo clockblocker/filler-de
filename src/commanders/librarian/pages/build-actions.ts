@@ -23,7 +23,7 @@ import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
 import type { SegmentationResult } from "./types";
 import { PAGE_FRONTMATTER, PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
 
-export type PageSplitResult = {
+type PageSplitResult = {
 	actions: VaultAction[];
 	firstPagePath: SplitPathToMdFile;
 	/** Section chain for the newly created folder (for Librarian notification) */
@@ -159,7 +159,7 @@ function formatPageContent(content: string): string {
  * Builds section chain (segment IDs) from path parts (node names).
  * Each path part becomes a section segment ID.
  */
-export function buildSectionChainFromPathParts(
+function buildSectionChainFromPathParts(
 	pathParts: string[],
 ): SectionNodeSegmentId[] {
 	return pathParts.map(

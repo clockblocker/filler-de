@@ -1,7 +1,6 @@
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
-	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import type { NodeName } from "../../../types/schemas/node-name";
@@ -12,7 +11,7 @@ import type { SectionNode } from "../tree-node/types/tree-node";
  * Extracts duplicate marker (e.g., " 1", " 2") from end of string.
  * Returns the clean string and the marker (or empty string if none).
  */
-export const extractDuplicateMarker = (
+const extractDuplicateMarker = (
 	name: string,
 ): { cleanName: string; marker: string; number: number | null } => {
 	const match = name.match(/^(.+?)( (\d+))$/);
@@ -29,7 +28,7 @@ export const extractDuplicateMarker = (
 /**
  * Builds a name with a duplicate marker.
  */
-export const buildNameWithDuplicateMarker = (
+const buildNameWithDuplicateMarker = (
 	cleanName: string,
 	number: number,
 ): string => {
@@ -106,84 +105,5 @@ export function resolveNextAvailableNameInSection(
 	return buildNameWithDuplicateMarker(baseName, n) as NodeName;
 }
 
-/**
- * Given a target coreName and folder, finds the next available duplicate number.
- * Checks existing files in the folder to avoid conflicts.
- *
- * @param targetCoreName - The desired coreName (e.g., "Note 1" from duplicate)
- * @param folderPath - The folder to check for existing files
- * @param suffixParts - The suffix parts to append to the coreName
- * @param extension - The file extension (including dot, e.g., ".md")
- * @param suffixDelimiter - The delimiter used in suffixes
- * @param vam - Manager to list files
- * @returns The coreName to use (may have incremented duplicate number)
- */
-export const resolveUniqueDuplicateName = Effect.fn(
-	"resolveUniqueDuplicateName",
-)(function* (
-	targetCoreName: NodeName,
-	folderPath: SplitPathToFolder,
-	suffixParts: NodeName[],
-	extension: string,
-	suffixDelimiter: string,
-	vam: VaultActionManager,
-) {
-	// Extract duplicate marker from target coreName
-	const { cleanName, number } = extractDuplicateMarker(targetCoreName);
 
-	// If no duplicate marker, just return as-is
-	if (number === null) {
-		return targetCoreName;
-	}
 
-	// List files in the folder
-	const existingFiles = yield* vam
-		.list(folderPath)
-		.pipe(Effect.catch(() => Effect.succeed([])));
-
-	// Find existing duplicate numbers by matching basename pattern
-	const existingNumbers = new Set<number>();
-
-	// Build regex pattern for matching: "<cleanName> <N><suffix><extension>"
-	const suffixStr =
-		suffixParts.length > 0
-			? suffixDelimiter + suffixParts.join(suffixDelimiter)
-			: "";
-	const basenamePattern = new RegExp(
-		`^${escapeRegex(cleanName)} (\\d+)${escapeRegex(suffixStr)}$`,
-	);
-
-	for (const file of existingFiles) {
-		if (!isFileSplitPath(file)) continue;
-		if (file.extension !== extension) continue;
-
-		const match = file.basename.match(basenamePattern);
-		if (match?.[1]) {
-			existingNumbers.add(Number.parseInt(match[1], 10));
-		}
-	}
-
-	// Find the next available number starting from the target
-	let nextNumber = number;
-	while (existingNumbers.has(nextNumber)) {
-		nextNumber++;
-	}
-
-	// Build the final coreName
-	const finalCoreName = buildNameWithDuplicateMarker(
-		cleanName,
-		nextNumber,
-	) as NodeName;
-
-	return finalCoreName;
-});
-
-function escapeRegex(str: string): string {
-	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function isFileSplitPath(
-	sp: AnySplitPath,
-): sp is AnySplitPath & { basename: string; extension: string } {
-	return sp.kind === "File" || sp.kind === "MdFile";
-}

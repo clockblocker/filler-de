@@ -10,7 +10,7 @@ import { type CommandContext, CommandKind } from "./types";
 /**
  * Managers needed to build command executor.
  */
-export type CommandExecutorManagers = {
+type CommandExecutorManagers = {
 	librarian: Librarian;
 	textfresser: Textfresser;
 	vam: VaultActionManager;

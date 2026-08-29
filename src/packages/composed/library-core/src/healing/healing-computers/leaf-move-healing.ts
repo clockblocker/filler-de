@@ -19,7 +19,7 @@ import {
 	computeLeafHealingForScroll,
 } from "./compute-leaf-healing";
 
-export type LeafMoveParams = {
+type LeafMoveParams = {
 	/** The leaf node after move */
 	node: ScrollNode | FileNode;
 	/** New parent chain (segment IDs) */

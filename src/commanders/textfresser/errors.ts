@@ -50,14 +50,11 @@ const ATT_PARSING_ERROR_KIND_STR = [
 	"BlockIdNotFound",
 ] as const;
 
-export const AttestationParsingErrorKindSchema = z.enum(
-	ATT_PARSING_ERROR_KIND_STR,
-);
-export type AttestationParsingErrorKind = z.infer<
+const AttestationParsingErrorKindSchema = z.enum(ATT_PARSING_ERROR_KIND_STR);
+type AttestationParsingErrorKind = z.infer<
 	typeof AttestationParsingErrorKindSchema
 >;
-export const AttestationParsingErrorKind =
-	AttestationParsingErrorKindSchema.enum;
+const AttestationParsingErrorKind = AttestationParsingErrorKindSchema.enum;
 
 export type AttestationParsingError =
 	| { kind: typeof AttestationParsingErrorKind.WikilinkNotFound }

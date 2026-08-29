@@ -19,7 +19,7 @@ import type {
 	TagsSectionDto,
 } from "./types";
 
-export type MergeOutcome<TSection> = {
+type MergeOutcome<TSection> = {
 	section: TSection;
 	changed: boolean;
 };
@@ -35,7 +35,7 @@ type InflectionMutation = Extract<
 >;
 type TagsMutation = Extract<SectionMutation, { sectionKind: "Tags" }>;
 
-export type ApplySectionMutationInput =
+type ApplySectionMutationInput =
 	| {
 			section: RelationSectionDto;
 			mutation: RelationMutation;
@@ -53,7 +53,7 @@ export type ApplySectionMutationInput =
 			mutation: TagsMutation;
 	  };
 
-export type ApplySectionMutationResult =
+type ApplySectionMutationResult =
 	| MergeOutcome<RelationSectionDto>
 	| MergeOutcome<MorphologySectionDto>
 	| MergeOutcome<InflectionSectionDto>

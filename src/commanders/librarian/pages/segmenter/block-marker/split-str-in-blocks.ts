@@ -42,23 +42,14 @@ import {
 	DEFAULT_BLOCK_MARKER_CONFIG,
 } from "./types";
 
-export {
-	type FormatContext,
-	formatBlocksWithMarkers,
-} from "./block-formatting";
-export type { Block } from "./block-grouping";
+export { formatBlocksWithMarkers } from "./block-formatting";
 // Re-export types that are part of public API
-export type { ExtractedHeading } from "./heading-extraction";
-export { extractHeadings, filterHeadingsFromText } from "./heading-extraction";
-export { findPrecedingHeading } from "./heading-insertion";
-export type { BlockMarkerConfig, BlockSplitResult } from "./types";
-export { DEFAULT_BLOCK_MARKER_CONFIG } from "./types";
 
 /**
  * Extended result that includes intermediate blocks for page accumulation.
  * This enables the unified pipeline: blocks → pages → marked pages.
  */
-export type BlockSplitResultWithIntermediate = {
+type BlockSplitResultWithIntermediate = {
 	/** Text with block markers appended */
 	markedText: string;
 	/** Number of blocks created */
@@ -275,16 +266,3 @@ export function splitStrInBlocksWithIntermediate(
 	};
 }
 
-/**
- * Create an offset mapping from filtered text positions to original text positions.
- * This accounts for the removed heading content.
- *
- * @deprecated Use offsetMapperHelper.createRemovalMap instead
- */
-export function createOffsetMap(
-	headings: ExtractedHeading[],
-): (filtered: number) => number {
-	return offsetMapperHelper.createRemovalMap(
-		headingsToRemovedItems(headings),
-	);
-}

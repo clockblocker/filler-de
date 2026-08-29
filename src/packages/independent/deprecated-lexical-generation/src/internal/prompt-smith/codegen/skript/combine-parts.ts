@@ -54,7 +54,7 @@ function buildSystemPrompt(parts: PromptParts): string {
 	return sections.join("\n\n");
 }
 
-export interface CombinedPrompt {
+interface CombinedPrompt {
 	systemPrompt: string;
 }
 

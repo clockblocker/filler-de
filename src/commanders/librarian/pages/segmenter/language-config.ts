@@ -31,7 +31,7 @@ export type LanguageConfig = {
  * - U+00AB « (LEFT-POINTING DOUBLE ANGLE QUOTATION MARK) - French/German closing
  * - U+0022 " (QUOTATION MARK) - ASCII neutral
  */
-export const GERMAN_CONFIG: LanguageConfig = {
+const GERMAN_CONFIG: LanguageConfig = {
 	locale: "de",
 	poemIndicators: {
 		linePatterns: [/ {2}$/], // Markdown line break

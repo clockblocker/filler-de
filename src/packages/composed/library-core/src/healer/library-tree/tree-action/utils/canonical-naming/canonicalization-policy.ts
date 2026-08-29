@@ -51,7 +51,7 @@ export function buildCanonicalSeparatedSuffixedBasename(
  * Policy enforcement: actual suffixParts must match expected (from pathParts).
  * Folders must have empty suffixParts.
  */
-export function validateCanonicalFormat<SK extends SplitPathKind>(
+function validateCanonicalFormat<SK extends SplitPathKind>(
 	actual: SeparatedSuffixedBasename,
 	expected: SeparatedSuffixedBasename,
 	kind: SK,

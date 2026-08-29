@@ -21,7 +21,7 @@ import type { HRInfo } from "./types";
 /**
  * Checks if we should break the page after adding a group.
  */
-export function shouldBreakPage(
+function shouldBreakPage(
 	currentSize: number,
 	nextGroup: SentenceGroup | undefined,
 	config: SegmentationConfig,

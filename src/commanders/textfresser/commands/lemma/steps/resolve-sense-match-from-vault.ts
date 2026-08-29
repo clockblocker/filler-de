@@ -14,7 +14,7 @@ import { resultToEffect } from "../../../orchestration/shared/effect-result";
 import type { CommandError } from "../../types";
 import { loadStoredSenseCandidates } from "./load-stored-sense-candidates";
 
-export type SenseMatchFromVault =
+type SenseMatchFromVault =
 	| { matchedIndex: number }
 	| { matchedIndex: null; precomputedSenseEmojis?: string[] }
 	| null;

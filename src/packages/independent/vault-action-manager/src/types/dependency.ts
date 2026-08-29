@@ -24,8 +24,3 @@ export type ActionDependency = {
  */
 export type DependencyGraph = Map<string, ActionDependency>;
 
-/**
- * Action key for dependency tracking.
- * Uses same key format as getActionKey() for consistency.
- */
-export type ActionKey = string;

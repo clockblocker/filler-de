@@ -3,7 +3,6 @@ export enum LexicalGenerationFailureKind {
 	PromptNotAvailable = "PromptNotAvailable",
 	InvalidModelOutput = "InvalidModelOutput",
 	FetchFailed = "FetchFailed",
-	RetryExhausted = "RetryExhausted",
 	InternalContractViolation = "InternalContractViolation",
 }
 

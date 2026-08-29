@@ -14,8 +14,6 @@ import {
 } from "./writer/active-file-writer";
 import { ActiveFileReader } from "./writer/reader/active-file-reader";
 
-export type { SavedInlineTitleSelection, SavedSelection };
-
 /** Effect-native active editor service. Programs require ActiveEditorAccess/VaultIo. */
 export class ActiveFileService {
 	private readonly reader = new ActiveFileReader();

@@ -4,7 +4,7 @@ import { wikilinkHelper } from "../internal/shared/wikilink";
 
 type LemmaPromptOutput = AgentOutput<"Lemma">;
 
-export type LemmaOutputGuardrailEvaluation = {
+type LemmaOutputGuardrailEvaluation = {
 	coreIssues: string[];
 	droppedContextWithLinkedParts: boolean;
 	output: LemmaPromptOutput;
@@ -116,9 +116,7 @@ export function evaluateLemmaOutputGuardrails(params: {
 	let droppedContextWithLinkedParts = false;
 
 	const linkedParts = sanitizedOutput.contextWithLinkedParts;
-	if (
-		!contextWithLinkedPartsMatches(context, linkedParts)
-	) {
+	if (!contextWithLinkedPartsMatches(context, linkedParts)) {
 		sanitizedOutput = {
 			...sanitizedOutput,
 			contextWithLinkedParts: context,

@@ -1,6 +1,5 @@
 import type { Selection } from "../../../../src";
 import {
-	makeLexemeSurfaceReference,
 	makePhrasemeSurfaceReference,
 } from "../../functions/builders";
 import { germanBVGLemma } from "./lemmas";
@@ -48,16 +47,3 @@ export const germanAufJedenFallPartialSelection = {
 >;
 
 // Attestation: "In Berlin sowie im Umland (Agglomeration Berlin) betreibt die [BVG] die U-Bahn Berlin, die Straßenbahn Berlin, den Busverkehr in Berlin und den Fährverkehr in Berlin, nicht jedoch die S-Bahn."
-export const germanBVGAbbreviationSelection = {
-	language: "German",
-	orthographicStatus: "Standard",
-	selectionCoverage: "Full",
-	spelledSelection: "BVG",
-	spellingRelation: "Canonical",
-	surface: {
-		...makeLexemeSurfaceReference("PROPN", germanBVGLemma.canonicalLemma),
-		language: "German",
-		normalizedFullSurface: "BVG",
-		surfaceKind: "Lemma",
-	},
-} satisfies Selection<"German", "Standard", "Lemma", "Lexeme", "PROPN">;

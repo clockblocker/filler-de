@@ -19,11 +19,6 @@ import { getErrorMessage } from "../../../utils/get-error-message";
 import { logger } from "../../../utils/logger";
 import type { Librarian } from "../librarian";
 
-export interface DelimiterChangeResult {
-	success: boolean;
-	renamedCount: number;
-	errors: string[];
-}
 
 /**
  * Service for safely changing the suffix delimiter across all library files.

@@ -87,7 +87,3 @@ export const DomSelectors = {
 	WORKSPACE_LEAF: ".workspace-leaf",
 } as const;
 
-/**
- * Type for DOM selector keys.
- */
-export type DomSelectorKey = keyof typeof DomSelectors;

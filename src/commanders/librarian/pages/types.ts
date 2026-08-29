@@ -8,33 +8,8 @@ import type { NodeName } from "@textfresser/library-core";
 
 // ─── Zod Enums ───
 
-export const NoteKindSchema = z.enum([
-	"Codex",
-	"Page",
-	"Scroll",
-	"Unknown",
-	"DictEntry",
-]);
-export type NoteKind = z.infer<typeof NoteKindSchema>;
-export const NoteKind = NoteKindSchema.enum;
 
-export const TextBlockKindSchema = z.enum([
-	"Paragraph",
-	"Heading",
-	"Dialogue",
-	"Blank",
-]);
-export type TextBlockKind = z.infer<typeof TextBlockKindSchema>;
-export const TextBlockKind = TextBlockKindSchema.enum;
 
-export const DialoguePositionSchema = z.enum([
-	"Start",
-	"Middle",
-	"End",
-	"Single",
-]);
-export type DialoguePosition = z.infer<typeof DialoguePositionSchema>;
-export const DialoguePosition = DialoguePositionSchema.enum;
 
 // ─── Types ───
 
@@ -62,22 +37,6 @@ export const DEFAULT_SEGMENTATION_CONFIG: SegmentationConfig = {
 	targetPageSizeChars: 3000,
 };
 
-/**
- * A structural block of content.
- */
-export type TextBlock = {
-	kind: TextBlockKind;
-	lines: string[];
-	charCount: number;
-	/** For dialogue blocks: tracks if this is start/middle/end of dialogue exchange */
-	dialoguePosition?: DialoguePosition;
-	/** True if this block was created by sentence-level splitting */
-	isSentenceSplit?: boolean;
-	/** True if block ends with ':' and is followed by dialogue (speech intro) */
-	introducesSpeech?: boolean;
-	/** True if block is multi-line quoted content (poem, song) */
-	isQuotedContent?: boolean;
-};
 
 /**
  * A single page segment.
@@ -104,7 +63,7 @@ export type SegmentationResult = {
 /**
  * Frontmatter added to all page files.
  */
-export type PageFrontmatter = {
+type PageFrontmatter = {
 	noteKind: "Page";
 	status: TreeNodeStatusType;
 };

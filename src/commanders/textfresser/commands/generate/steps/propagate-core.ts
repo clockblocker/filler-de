@@ -91,7 +91,7 @@ type TargetWritePlan = {
 	transforms: ProcessTransform[];
 };
 
-export function foldScopedActionsToSingleWritePerTarget(
+function foldScopedActionsToSingleWritePerTarget(
 	actions: ReadonlyArray<VaultAction>,
 ): Result<VaultAction[], CommandError> {
 	// Fold contract:

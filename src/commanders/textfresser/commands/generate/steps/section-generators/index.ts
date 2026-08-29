@@ -1,32 +1,7 @@
-export {
-	type AttestationSectionContext,
-	generateAttestationSection,
-} from "./attestation-section-generator";
-export {
-	generateInflectionSection,
-	type InflectionSectionContext,
-	type InflectionSectionResult,
-} from "./inflection-section-generator";
-export {
-	generateMorphemeSection,
-	type MorphemeSectionContext,
-	type MorphemeSectionResult,
-} from "./morphem-section-generator";
-export {
-	generateMorphologySection,
-	type MorphologySectionContext,
-	type MorphologySectionResult,
-} from "./morphology-section-generator";
-export {
-	generateRelationSection,
-	type RelationSectionContext,
-	type RelationSectionResult,
-} from "./relation-section-generator";
-export {
-	generateTagsSection,
-	type TagsSectionContext,
-} from "./tags-section-generator";
-export {
-	generateTranslationSection,
-	type TranslationSectionContext,
-} from "./translation-section-generator";
+export { generateAttestationSection } from "./attestation-section-generator";
+export { generateInflectionSection } from "./inflection-section-generator";
+export { generateMorphemeSection } from "./morphem-section-generator";
+export { generateMorphologySection } from "./morphology-section-generator";
+export { generateRelationSection } from "./relation-section-generator";
+export { generateTagsSection } from "./tags-section-generator";
+export { generateTranslationSection } from "./translation-section-generator";

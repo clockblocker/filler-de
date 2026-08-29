@@ -9,9 +9,9 @@ import {
 	WorkspaceEventKind,
 } from "../types/workspace-event";
 
-export type WorkspaceEmitter = (event: WorkspaceEvent) => void;
+type WorkspaceEmitter = (event: WorkspaceEvent) => void;
 
-export interface Listener {
+interface Listener {
 	startListening(emit: WorkspaceEmitter): void;
 	stopListening(): void;
 }

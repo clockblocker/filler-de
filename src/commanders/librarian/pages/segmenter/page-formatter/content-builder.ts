@@ -12,76 +12,7 @@ import type { ProtectedContent } from "../stream/markdown-protector";
 import { findPrecedingHRs } from "./hr-insertion";
 import type { HRInfo } from "./types";
 
-/**
- * Reconstructs text from sentence groups, preserving paragraph spacing.
- */
-export function groupsToContent(groups: SentenceGroup[]): string {
-	const sentences = groups.flatMap((g) => g.sentences);
-	if (sentences.length === 0) return "";
 
-	const [first, ...rest] = sentences;
-	if (!first) return "";
-	let result = first.text;
-	for (const s of rest) {
-		if (s.startsNewParagraph) {
-			result += `\n\n${s.text.trimStart()}`;
-		} else {
-			result += s.text;
-		}
-	}
-	return result;
-}
-
-/**
- * Reconstructs text from sentence groups with headings inserted.
- */
-export function groupsToContentWithHeadings(
-	groups: SentenceGroup[],
-	headings: ExtractedHeading[],
-	offsetMap: (n: number) => number,
-	usedHeadings: Set<number>,
-): string {
-	const sentences = groups.flatMap((g) => g.sentences);
-	if (sentences.length === 0) return "";
-
-	const parts: string[] = [];
-
-	for (let i = 0; i < sentences.length; i++) {
-		const s = sentences[i];
-		if (!s) continue;
-
-		// Map filtered offset back to original to find preceding heading
-		const originalOffset = offsetMap(s.sourceOffset);
-		const heading = findPrecedingHeading(
-			originalOffset,
-			headings,
-			usedHeadings,
-		);
-
-		if (i === 0) {
-			if (heading) {
-				parts.push(`${heading.text}\n${s.text.trimStart()}`);
-			} else {
-				parts.push(s.text);
-			}
-		} else if (s.startsNewParagraph) {
-			if (heading) {
-				parts.push(`\n\n${heading.text}\n${s.text.trimStart()}`);
-			} else {
-				parts.push(`\n\n${s.text.trimStart()}`);
-			}
-		} else {
-			if (heading) {
-				// Heading in middle of paragraph - add newline before heading
-				parts.push(`\n${heading.text}\n${s.text.trimStart()}`);
-			} else {
-				parts.push(s.text);
-			}
-		}
-	}
-
-	return parts.join("");
-}
 
 /**
  * Reconstructs text from sentence groups with headings and HRs inserted.

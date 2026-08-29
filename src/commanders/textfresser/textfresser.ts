@@ -34,13 +34,6 @@ import {
 	type TextfresserState,
 } from "./state/textfresser-state";
 
-export type {
-	InFlightGenerate,
-	LemmaInvocationCache,
-	PendingGenerate,
-	TextfresserState,
-} from "./state/textfresser-state";
-
 const scrollToTargetBlockProgram = Effect.fn("Textfresser.scrollToTargetBlock")(
 	function* (state: TextfresserState, vam: VaultActionManager) {
 		const blockId = state.targetBlockId;

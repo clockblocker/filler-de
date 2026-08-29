@@ -23,14 +23,14 @@ import type {
 	MorphologyPayload,
 } from "../section-generation-types";
 
-export type MorphologySectionContext = {
+type MorphologySectionContext = {
 	lexicalInfo: LexicalInfo;
 	morphemes?: MorphemeItem[];
 	sourceTranslation?: string;
 	targetLang: GenerationTargetLanguage;
 };
 
-export type MorphologySectionResult = {
+type MorphologySectionResult = {
 	morphology?: MorphologyPayload;
 	section: EntrySection | null;
 };
@@ -158,7 +158,9 @@ export function generateMorphologySection(
 		return { section: null };
 	}
 
-	const sourceLemma = normalizeLemma(getLexicalInfoLemma(ctx.lexicalInfo) ?? "");
+	const sourceLemma = normalizeLemma(
+		getLexicalInfoLemma(ctx.lexicalInfo) ?? "",
+	);
 	if (!sourceLemma) {
 		return { section: null };
 	}

@@ -37,7 +37,7 @@ export type ProtectedContent = {
 /**
  * Result of protecting markdown syntax.
  */
-export type ProtectionResult = {
+type ProtectionResult = {
 	/** Text with placeholders substituted for protected content */
 	safeText: string;
 	/** List of protected items for later restoration */

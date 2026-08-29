@@ -12,12 +12,12 @@ import type {
 	ParsedRelation,
 } from "../section-generation-types";
 
-export type RelationSectionContext = {
+type RelationSectionContext = {
 	lexicalInfo: LexicalInfo;
 	targetLang: GenerationTargetLanguage;
 };
 
-export type RelationSectionResult = {
+type RelationSectionResult = {
 	relations: ParsedRelation[];
 	section: EntrySection | null;
 };

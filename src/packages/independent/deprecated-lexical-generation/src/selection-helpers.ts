@@ -6,25 +6,13 @@ import type {
 } from "../../../../deprecated-linguistic-enums";
 import type { Selection } from "@textfresser/linguistics";
 
-export type GermanSelection = Selection<"German">;
-export type KnownGermanSelection = Exclude<
+type GermanSelection = Selection<"German">;
+type KnownGermanSelection = Exclude<
 	GermanSelection,
 	{ orthographicStatus: "Unknown" }
 >;
-type UnknownSelection = Extract<
-	GermanSelection,
-	{ orthographicStatus: "Unknown" }
->;
-export type SelectionDiscriminator = Pos | PhrasemeKind | MorphemeKind;
-export type SelectionWithContext = GermanSelection & {
-	contextWithLinkedParts?: string;
-};
+type SelectionDiscriminator = Pos | PhrasemeKind | MorphemeKind;
 
-export function isUnknownSelection(
-	selection: GermanSelection,
-): selection is UnknownSelection {
-	return selection.orthographicStatus === "Unknown";
-}
 
 export function isKnownSelection(
 	selection: GermanSelection,
@@ -56,17 +44,6 @@ export function isPhrasemeSelection(
 	);
 }
 
-export function isMorphemeSelection(
-	selection: GermanSelection,
-): selection is Extract<
-	KnownGermanSelection,
-	{ surface: { discriminators: { lemmaKind: "Morpheme" } } }
-> {
-	return (
-		isKnownSelection(selection) &&
-		selection.surface.discriminators.lemmaKind === "Morpheme"
-	);
-}
 
 export function getSpelledLemma(selection: GermanSelection): string | null {
 	if (!isKnownSelection(selection)) {
@@ -78,11 +55,6 @@ export function getSpelledLemma(selection: GermanSelection): string | null {
 		: selection.surface.target.canonicalLemma;
 }
 
-export function getSpelledSurface(selection: GermanSelection): string | null {
-	return isKnownSelection(selection)
-		? selection.surface.normalizedFullSurface
-		: null;
-}
 
 export function getLemmaKind(selection: GermanSelection): LemmaKind | null {
 	return isKnownSelection(selection)
@@ -108,10 +80,11 @@ export function getSelectionDiscriminator(
 
 function hasHydratedLemmaTarget(
 	target: KnownGermanSelection["surface"]["target"],
-): target is Extract<KnownGermanSelection["surface"]["target"], { lemmaKind: unknown }> {
+): target is Extract<
+	KnownGermanSelection["surface"]["target"],
+	{ lemmaKind: unknown }
+> {
 	return (
-		typeof target === "object" &&
-		target !== null &&
-		"lemmaKind" in target
+		typeof target === "object" && target !== null && "lemmaKind" in target
 	);
 }

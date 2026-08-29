@@ -67,4 +67,3 @@ export const EligibilitySchema = z.looseObject({
 	noteKind: z.string().optional(),
 });
 
-export type Eligibility = z.infer<typeof EligibilitySchema>;

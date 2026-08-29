@@ -1,7 +1,7 @@
 /**
  * Line-based change representation compatible with Obsidian's editor.transaction().
  */
-export type LineChange = {
+type LineChange = {
 	from: { line: number; ch: number };
 	to?: { line: number; ch: number };
 	text: string;

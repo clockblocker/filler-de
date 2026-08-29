@@ -11,7 +11,7 @@ import { SchemasFor } from "../../schemas";
 import { ALL_PROMPT_KINDS, type PromptKind } from "../consts";
 import { getPartsPath, partsExist } from "./utils";
 
-export interface InvalidExample {
+interface InvalidExample {
 	targetLanguage: TargetLanguage;
 	knownLanguage: KnownLanguage;
 	promptKind: PromptKind;

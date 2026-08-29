@@ -25,12 +25,12 @@ type VamPortDependency = Pick<
 	"exists" | "findByBasename" | "readContent"
 >;
 
-export type CreatePropagationPortsAdapterParams = {
+type CreatePropagationPortsAdapterParams = {
 	vam: VamPortDependency;
 	lookupInLibraryByCoreName: PathLookupFn;
 };
 
-export type PropagationPortsAdapter = {
+type PropagationPortsAdapter = {
 	vault: PropagationVaultPort;
 	libraryLookup: PropagationLibraryLookupPort;
 };
@@ -48,7 +48,7 @@ export function createPropagationPortsAdapter(
 	return { libraryLookup, vault };
 }
 
-export function createPropagationLibraryLookupPort(
+function createPropagationLibraryLookupPort(
 	lookupInLibraryByCoreName: PathLookupFn,
 ): PropagationLibraryLookupPort {
 	return {
@@ -58,7 +58,7 @@ export function createPropagationLibraryLookupPort(
 	};
 }
 
-export function createPropagationVaultPort(params: {
+function createPropagationVaultPort(params: {
 	vam: VamPortDependency;
 	libraryLookup: PropagationLibraryLookupPort;
 }): PropagationVaultPort {

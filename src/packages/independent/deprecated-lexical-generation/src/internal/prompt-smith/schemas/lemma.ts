@@ -26,29 +26,3 @@ const agentOutputSchema = z.object({
 });
 
 export const lemmaSchemas = { agentOutputSchema, userInputSchema };
-export {
-	type DeEnrichmentInput,
-	DeEnrichmentInputSchema,
-	type DeEnrichmentOutput,
-	DeEnrichmentOutputSchema,
-	type DeFeaturesInput,
-	DeFeaturesInputSchema,
-	type DeFeaturesOutput,
-	DeFeaturesOutputSchema,
-	type DeInflectionInput,
-	DeInflectionInputSchema,
-	type DeInflectionOutput,
-	DeInflectionOutputSchema,
-	type DeLemmaResult,
-	DeLemmaResultSchema,
-	type DeLexicalTarget,
-	DeLexicalTargetSchema,
-	type DeRelationInput,
-	DeRelationInputSchema,
-	type DeRelationOutput,
-	DeRelationOutputSchema,
-	type DeWordTranslationInput,
-	DeWordTranslationInputSchema,
-	type DeWordTranslationOutput,
-	DeWordTranslationOutputSchema,
-} from "../../contracts/de";

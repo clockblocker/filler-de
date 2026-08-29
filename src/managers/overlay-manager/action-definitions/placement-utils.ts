@@ -14,7 +14,7 @@ import { OverlayPlacement } from "./types";
 /**
  * Computed actions for each toolbar placement.
  */
-export type ComputedActions = {
+type ComputedActions = {
 	selectionActions: ActionConfig[];
 	bottomActions: ActionConfig[];
 };

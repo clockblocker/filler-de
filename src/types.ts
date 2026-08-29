@@ -2,9 +2,9 @@ import { z } from "zod";
 
 // ===== Language Configuration =====
 
-export const LanguageSchema = z.enum(["Russian", "English", "German"]);
-export type Language = z.infer<typeof LanguageSchema>;
-export const Language = LanguageSchema.enum;
+const LanguageSchema = z.enum(["Russian", "English", "German"]);
+type Language = z.infer<typeof LanguageSchema>;
+const Language = LanguageSchema.enum;
 
 /** Display names for languages in settings UI */
 export const ReprForLanguage: Record<Language, string> = {
@@ -16,12 +16,10 @@ export const ReprForLanguage: Record<Language, string> = {
 export const KnownLanguageSchema = z.enum(["Russian", "English"]);
 export type KnownLanguage = z.infer<typeof KnownLanguageSchema>;
 export const KnownLanguage = KnownLanguageSchema.enum;
-export const ALL_KNOWN_LANGUAGES = KnownLanguageSchema.options;
 
 export const TargetLanguageSchema = z.enum(["English", "German"]);
 export type TargetLanguage = z.infer<typeof TargetLanguageSchema>;
 export const TargetLanguage = TargetLanguageSchema.enum;
-export const ALL_TARGET_LANGUAGES = TargetLanguageSchema.options;
 
 export type LanguagesConfig = {
 	known: KnownLanguage;
@@ -58,15 +56,6 @@ export type SelectionActionPlacement = z.infer<
 >;
 export const SelectionActionPlacement = SelectionActionPlacementSchema.enum;
 
-/** Display text for selection action placement options in settings UI */
-export const SELECTION_ACTION_PLACEMENT_TEXT: Record<
-	SelectionActionPlacement,
-	string
-> = {
-	AboveSelection: "Above selection",
-	Bottom: "In bottom toolbar",
-	ShortcutOnly: "Shortcut only",
-};
 
 export type TextEaterSettings = {
 	googleApiKey: string;

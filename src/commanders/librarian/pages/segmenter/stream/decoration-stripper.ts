@@ -69,7 +69,7 @@ export type DecorationSpan = {
 /**
  * Result of stripping decorations.
  */
-export type DecorationStrippingResult = {
+type DecorationStrippingResult = {
 	/** Text with decoration markers removed */
 	strippedText: string;
 	/** Tracked decoration regions */

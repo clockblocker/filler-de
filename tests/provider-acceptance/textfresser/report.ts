@@ -26,7 +26,7 @@ function markdownCell(value: unknown): string {
 		.replaceAll("\n", " ");
 }
 
-export function renderProviderAcceptanceMarkdown(
+function renderProviderAcceptanceMarkdown(
 	report: ProviderAcceptanceReport,
 ): string {
 	const lines = [

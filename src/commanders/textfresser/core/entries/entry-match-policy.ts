@@ -12,12 +12,14 @@ export type MatchableEntry = {
 	linguisticWikilinks: Array<{ intent: string }>;
 };
 
-export type EntryStubPolicy = {
-	getSectionKey(section: MatchableEntry["sections"][number]): SectionKey | undefined;
+type EntryStubPolicy = {
+	getSectionKey(
+		section: MatchableEntry["sections"][number],
+	): SectionKey | undefined;
 	propagationOnlyKeys: readonly SectionKey[];
 };
 
-export type ResolveEntryMatchParams<TEntry extends MatchableEntry> = {
+type ResolveEntryMatchParams<TEntry extends MatchableEntry> = {
 	disambiguationResult: { matchedIndex: number } | null;
 	existingEntries: readonly TEntry[];
 	linguisticUnit: LinguisticUnitKind;
@@ -26,7 +28,7 @@ export type ResolveEntryMatchParams<TEntry extends MatchableEntry> = {
 	surfaceKind: SurfaceKind;
 };
 
-export type ResolveEntryMatchResult<TEntry extends MatchableEntry> = {
+type ResolveEntryMatchResult<TEntry extends MatchableEntry> = {
 	existingEntries: TEntry[];
 	matchedEntry: TEntry | null;
 	nextIndex: number;
@@ -80,7 +82,8 @@ export function resolveEntryMatch<TEntry extends MatchableEntry>(
 				const parsed = entryIdentity.parse(entry.id);
 				return (
 					parsed !== undefined &&
-					parsed.index === params.disambiguationResult?.matchedIndex &&
+					parsed.index ===
+						params.disambiguationResult?.matchedIndex &&
 					parsed.unitKind === params.linguisticUnit &&
 					(params.linguisticUnit !== "Lexeme" ||
 						parsed.pos === params.posLikeKind)

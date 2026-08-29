@@ -21,9 +21,6 @@ export function makeKeyFor(
 }
 
 // optional, logs only
-export function formatRename(from: AnySplitPath, to: AnySplitPath): string {
-	return `${makeKeyFor(from)} → ${makeKeyFor(to)}`;
-}
 
 // --- rename comparator ---
 
@@ -42,22 +39,3 @@ export function sameRename(
 
 export { dedupeByKeyLast as dedupeByKey } from "../../internal/collections";
 
-/**
- * Dedupe items by a custom equality predicate.
- * Keeps the FIRST occurrence of each equivalence class by default.
- *
- * If you need "keep last", either reverse input, dedupe, then reverse back,
- * or add an options param later.
- */
-export function dedupeExact<T>(
-	items: readonly T[],
-	eq: (a: T, b: T) => boolean,
-): T[] {
-	const out: T[] = [];
-	for (const item of items) {
-		if (!out.some((x) => eq(x, item))) {
-			out.push(item);
-		}
-	}
-	return out;
-}

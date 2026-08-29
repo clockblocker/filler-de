@@ -11,14 +11,18 @@ function sectionMarkers(entry: NoteEntry): Set<string> {
 	return new Set(
 		entry.sections
 			.filter(
-				(section): section is Extract<NoteEntry["sections"][number], { kind: "typed" }> =>
-					section.kind === "typed",
+				(
+					section,
+				): section is Extract<
+					NoteEntry["sections"][number],
+					{ kind: "typed" }
+				> => section.kind === "typed",
 			)
 			.map((section) => section.marker),
 	);
 }
 
-export function resolveExpectedV3SectionKinds(params: {
+function resolveExpectedV3SectionKinds(params: {
 	lexicalInfo: LexicalInfo;
 }): DictSectionKind[] {
 	return getSectionsFor(buildSectionQuery(params.lexicalInfo)).filter(

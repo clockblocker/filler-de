@@ -1,4 +1,1 @@
-export {
-	processCodexImpacts,
-	processCodexImpactsForInit,
-} from "../../../../../../../../../src/commanders/librarian/init/process-codex-impacts";
+export { processCodexImpacts } from "../../../../../../../../../src/commanders/librarian/init/process-codex-impacts";

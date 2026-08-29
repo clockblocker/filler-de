@@ -21,13 +21,7 @@ export type CorrespondingSplitPathKind<NK extends TreeNodeKind> =
 export type CorrespondingTreeNodeKind<SK extends SplitPathKind> =
 	SplitPathKindToTreeNodeKind[SK];
 
-export type SplitPathForTreeNodeKind<T extends TreeNodeKind> =
-	import("@textfresser/vault-action-manager").SplitPath<
-		CorrespondingSplitPathKind<T>
-	>;
 
-export type TreeNodeKindForSplitPath<T extends SplitPathKind> =
-	CorrespondingTreeNodeKind<T>;
 
 type SegmentIdComponentsMap = {
 	[TreeNodeKind.Section]: {

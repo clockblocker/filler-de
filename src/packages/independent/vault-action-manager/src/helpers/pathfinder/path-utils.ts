@@ -9,11 +9,11 @@ export function pathToFolderFromPathParts(pathParts: string[]): string {
 	return cleaned.join("/");
 }
 
-export const SPLIT_PATH_TO_ROOT_FOLDER: SplitPathToFolder = {
+export const SPLIT_PATH_TO_ROOT_FOLDER: SplitPathToFolder = Object.freeze({
 	basename: "",
 	kind: SplitPathKind.Folder,
 	pathParts: [],
-} as const;
+});
 
 /**
  * Finds the first available indexed filename in the target folder.

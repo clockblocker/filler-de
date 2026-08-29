@@ -43,7 +43,7 @@ import { updateToolbarVisibility } from "./toolbar-lifecycle/manager";
 /**
  * Dependencies for OverlayManager.
  */
-export type OverlayManagerDeps = {
+type OverlayManagerDeps = {
 	app: App;
 	librarian: Librarian;
 	plugin?: Plugin;
