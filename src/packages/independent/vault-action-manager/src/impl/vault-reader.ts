@@ -1,16 +1,12 @@
-import { err, ok, type Result, ResultAsync } from "neverthrow";
+import { err, ok, type Result } from "neverthrow";
 import type { TFile, TFolder, Vault } from "obsidian";
-import type { ActiveFileService } from "../file-services/active-view/active-file-service";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
+import type { MarkdownFileAccess } from "../file-services/markdown-file-access";
 import { pathfinder } from "../helpers/pathfinder";
 import type { DiscriminatedTAbstractFile } from "../helpers/pathfinder/types";
-import { getErrorMessage } from "../internal/get-error-message";
 import { logger } from "../internal/logger";
-import {
-	classifyReadContentError,
-	type ReadContentError,
-} from "../types/read-content-error";
+import type { ReadContentError } from "../types/read-content-error";
 import type {
 	AnySplitPath,
 	SplitPathToFileWithTRef,
@@ -24,7 +20,7 @@ import type {
 
 export class VaultReader {
 	constructor(
-		private readonly active: ActiveFileService,
+		private readonly markdownFiles: MarkdownFileAccess,
 		private readonly tfileHelper: TFileHelper,
 		private readonly tfolderHelper: TFolderHelper,
 		private readonly vault: Vault,
@@ -33,22 +29,7 @@ export class VaultReader {
 	async readContent(
 		target: SplitPathToMdFile,
 	): Promise<Result<string, ReadContentError>> {
-		if (this.active.isInActiveView(target)) {
-			return this.active
-				.getContent()
-				.mapErr((reason) => classifyReadContentError(reason));
-		}
-		const immediateFileResult = this.tfileHelper.getFile(target);
-		const fileResult = immediateFileResult.isOk()
-			? immediateFileResult
-			: await this.tfileHelper.getFileWithRetry(target);
-		return fileResult
-			.mapErr((reason) => classifyReadContentError(reason))
-			.asyncAndThen((file) =>
-				ResultAsync.fromPromise(this.vault.read(file), (error) =>
-					classifyReadContentError(getErrorMessage(error)),
-				),
-			);
+		return this.markdownFiles.readContent(target);
 	}
 
 	exists(target: AnySplitPath): boolean {

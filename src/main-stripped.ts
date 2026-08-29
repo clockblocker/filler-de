@@ -3,7 +3,6 @@
  * Used by settings and utility modules that don't need the full plugin.
  */
 
-import type { ActiveFileService } from "@textfresser/vault-action-manager";
 import type { Plugin } from "obsidian";
 import type { TextEaterSettings } from "./types";
 
@@ -13,6 +12,5 @@ import type { TextEaterSettings } from "./types";
  */
 export default interface TextEaterPluginStripped extends Plugin {
 	settings: TextEaterSettings;
-	activeFileService?: ActiveFileService;
 	saveSettings(): Promise<void>;
 }

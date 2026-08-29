@@ -3,22 +3,23 @@
  * Splits a long markdown file into paginated folder structure.
  */
 
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import type { ActiveFileService } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
-import { Notice } from "obsidian";
-import { getParsedUserSettings } from "../../../global-state/global-state";
-import { goBackLinkHelper } from "@textfresser/note-addressing";
-import {
-	type CodecRules,
-	makeCodecRulesFromSettings,
-} from "@textfresser/library-core";
 import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "@textfresser/library-core";
-import { parseSeparatedSuffix } from "@textfresser/library-core";
+import {
+	type CodecRules,
+	makeCodecRulesFromSettings,
+	parseSeparatedSuffix,
+} from "@textfresser/library-core";
+import { goBackLinkHelper } from "@textfresser/note-addressing";
+import type {
+	SplitPathToMdFile,
+	VaultActionManager,
+} from "@textfresser/vault-action-manager";
+import { err, ok, type Result } from "neverthrow";
+import { Notice } from "obsidian";
+import { getParsedUserSettings } from "../../../global-state/global-state";
 import { buildPageSplitActions } from "./build-actions";
 import {
 	handleSplitToPagesError,
@@ -42,7 +43,6 @@ export type SplitHealingInfo = {
 };
 
 export type SplitToPagesContext = {
-	activeFileService: ActiveFileService;
 	vam: VaultActionManager;
 	/** Called after pages are created, bypasses self-event filtering */
 	onSectionCreated?: (info: SplitHealingInfo) => void;
@@ -61,21 +61,14 @@ async function gatherInput(
 	context: SplitToPagesContext,
 	config: SegmentationConfig,
 ): Promise<Result<SplitInput, SplitToPagesError>> {
-	const { activeFileService } = context;
-
-	const pwdResult = await activeFileService.pwd();
-	if (pwdResult.isErr()) {
-		return err(makeSplitToPagesError.noPwd(String(pwdResult.error)));
-	}
-	const maybePath = pwdResult.value;
-	if (maybePath.kind !== "MdFile") {
+	const sourcePath = context.vam.mdPwd();
+	if (!sourcePath) {
 		return err(
 			makeSplitToPagesError.noPwd("Active file is not a markdown file"),
 		);
 	}
-	const sourcePath = maybePath;
 
-	const contentResult = await activeFileService.getContent();
+	const contentResult = context.vam.getOpenedContent();
 	if (contentResult.isErr()) {
 		return err(
 			makeSplitToPagesError.noContent(String(contentResult.error)),
@@ -184,7 +177,7 @@ export async function splitToPagesAction(
 	}
 
 	new Notice(`Split into ${result.pageCount} pages`);
-	await context.activeFileService.cd(result.firstPagePath);
+	await context.vam.cd(result.firstPagePath);
 }
 
 /**

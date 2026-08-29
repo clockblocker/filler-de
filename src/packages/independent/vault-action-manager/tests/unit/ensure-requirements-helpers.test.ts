@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { ExistenceChecker } from "../../src/impl/actions-processing/dispatcher";
+import type { ExistenceChecker } from "../../src/impl/actions-processing/dispatch-batch";
 import {
 	buildActionKeyIndex,
 	buildEnsureExistKeys,

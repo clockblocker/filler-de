@@ -8,7 +8,6 @@ export const splitToPagesCommand: LibrarianCommandFn = (input) => {
 
 	return ResultAsync.fromSafePromise(
 		splitToPagesAction({
-			activeFileService: vam.activeFileService,
 			onSectionCreated: (info) => {
 				// Notify librarian to create codex (bypasses self-event filtering)
 				librarian.triggerSectionHealing(info);

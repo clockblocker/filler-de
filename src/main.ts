@@ -1,19 +1,22 @@
 import {
-	makeSplitPath,
-	makeSystemPathForSplitPath,
-	VaultActionKind,
-	VaultActionManagerImpl,
+	createObsidianEventLayer,
+	type ObsidianEventLayer,
+	type UserEventKind,
+} from "@textfresser/obsidian-event-layer";
+import type {
+	SplitPathToMdFile,
+	VaultActionManagerTestingAdapter,
 } from "@textfresser/vault-action-manager";
-import { ActiveFileService } from "@textfresser/vault-action-manager";
-import { TFileHelper } from "@textfresser/vault-action-manager";
-import { TFolderHelper } from "@textfresser/vault-action-manager";
-import { logError } from "@textfresser/vault-action-manager";
-import { pathfinder } from "@textfresser/vault-action-manager";
-import { VaultReader } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import {
+	createVaultActionManager,
+	logError,
+	makeSplitPath,
+	VaultActionKind,
+	type VaultActionManager,
+} from "@textfresser/vault-action-manager";
 import { Modal, Notice, Plugin, TFile } from "obsidian";
-import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
 import { Librarian } from "./commanders/librarian/librarian";
+import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
 import { cleanupDictNote } from "./commanders/textfresser/common/cleanup/cleanup-dict-note";
 import { DICT_ENTRY_NOTE_KIND } from "./commanders/textfresser/common/metadata";
 import { Textfresser } from "./commanders/textfresser/textfresser";
@@ -31,12 +34,6 @@ import {
 	CommandKind,
 	createCommandExecutor,
 } from "./managers/obsidian/command-executor";
-import {
-	createObsidianEventLayer,
-	type ObsidianEventLayer,
-	type UserEventHandler,
-	type UserEventKind,
-} from "@textfresser/obsidian-event-layer";
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
 import { ApiService } from "./stateless-helpers/api-service";
@@ -58,11 +55,8 @@ import { sleep } from "./utils/sleep";
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
-	testingActiveFileService: ActiveFileService;
-	testingReader: VaultReader;
-	testingTFileHelper: TFileHelper;
-	testingTFolderHelper: TFolderHelper;
-	vam: VaultActionManagerImpl;
+	vam: VaultActionManager;
+	vamTesting: VaultActionManagerTestingAdapter;
 	userEventInterceptor: ObsidianEventLayer;
 	overlayManager: OverlayManager | null = null;
 	delimiterChangeService: DelimiterChangeService | null = null;
@@ -88,7 +82,7 @@ export default class TextEaterPlugin extends Plugin {
 					while (!this.initialized) {
 						await sleep(100);
 					}
-					// Tests access APIs via: app.plugins.plugins["cbcr-text-eater-de"]?.getHelpersTestingApi?.()
+					// Tests access the real manager through getVaultActionManagerTestingApi().
 				},
 				id: "textfresser-testing-expose-opened-service",
 				name: "Testing: expose opened file service",
@@ -162,22 +156,9 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.apiService = new ApiService(this.settings);
 
-		this.testingActiveFileService = new ActiveFileService(this.app);
-		this.testingTFileHelper = new TFileHelper({
-			fileManager: this.app.fileManager,
-			vault: this.app.vault,
-		});
-		this.testingTFolderHelper = new TFolderHelper({
-			fileManager: this.app.fileManager,
-			vault: this.app.vault,
-		});
-		this.testingReader = new VaultReader(
-			this.testingActiveFileService,
-			this.testingTFileHelper,
-			this.testingTFolderHelper,
-			this.app.vault,
-		);
-		this.vam = new VaultActionManagerImpl(this.app);
+		const vaultActions = createVaultActionManager(this.app);
+		this.vam = vaultActions.manager;
+		this.vamTesting = vaultActions.testing;
 
 		this.rebuildTextfresser();
 
@@ -223,7 +204,7 @@ export default class TextEaterPlugin extends Plugin {
 			app: this.app,
 			plugin: this,
 			selectionTextSource: {
-				getSelectionText: () => this.vam.activeFileService.getSelection(),
+				getSelectionText: () => this.vam.getSelectionText(),
 			},
 		});
 
@@ -306,8 +287,7 @@ export default class TextEaterPlugin extends Plugin {
 			teardown();
 		}
 		this.handlerTeardowns = [];
-		if (this.userEventInterceptor)
-			this.userEventInterceptor.stop();
+		if (this.userEventInterceptor) this.userEventInterceptor.stop();
 		if (this.librarian) this.librarian.unsubscribe();
 		// Clear global state
 		clearState();
@@ -359,7 +339,7 @@ export default class TextEaterPlugin extends Plugin {
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
 					// Check if there's a selection via VAM
-					const selection = this.vam?.selection.getInfo();
+					const selection = this.vam?.getSelectionInfo();
 					if (selection) {
 						// Selection is collected by CommandContext in executor
 						void this.commandExecutor?.(CommandKind.SplitInBlocks);
@@ -428,41 +408,18 @@ export default class TextEaterPlugin extends Plugin {
 		});
 	}
 
-	getActiveFileServiceTestingApi() {
-		return {
-			activeFileService: this.testingActiveFileService,
-			makeSplitPath,
-			makeSystemPathForSplitPath,
-		};
-	}
-
-	getReaderTestingApi() {
-		return {
-			makeSplitPath,
-			makeSystemPathForSplitPath,
-			reader: this.testingReader,
-		};
-	}
-
 	getVaultActionManagerTestingApi() {
 		return {
 			makeSplitPath,
 			manager: this.vam,
+			testing: this.vamTesting,
 		};
 	}
 
 	getLibrarianTestingApi() {
 		return {
-			librarian: new Librarian(this.vam),
+			librarian: this.librarian,
 			makeSplitPath,
-		};
-	}
-
-	getHelpersTestingApi() {
-		return {
-			splitPath: pathfinder.splitPathFromSystemPath,
-			tfileHelper: this.testingTFileHelper,
-			tfolderHelper: this.testingTFolderHelper,
 		};
 	}
 
@@ -471,7 +428,7 @@ export default class TextEaterPlugin extends Plugin {
 	 * Resolves when all queues are drained, pending tasks are done, and Obsidian has registered all actions.
 	 */
 	async whenIdle(): Promise<void> {
-		return whenIdleTracker(() => this.vam.waitForObsidianEvents());
+		return whenIdleTracker(() => this.vamTesting.whenSettled());
 	}
 
 	/**

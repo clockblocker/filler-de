@@ -40,7 +40,7 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 		}
 		return {
 			activeFile,
-			selection: vam.selection.getInfo(),
+			selection: vam.getSelectionInfo(),
 		};
 	}
 

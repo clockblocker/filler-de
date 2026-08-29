@@ -27,26 +27,25 @@ VaultActionManager is a **dependency-aware file system coordination boundary** o
 ```
 ┌───────────────────────────────────────────────────────────────────────────┐
 │  Public Interface (VaultActionManager)                                    │
-│    dispatch() · subscribeToSingle() · subscribeToBulk()                  │
-│    readContent() · exists() · findByBasename() · resolveLinkpathDest()   │
-│    list() · cd()                                                          │
+│    dispatch() · subscribeToBulk()                                        │
+│    readContent() · exists() · selection intent · navigation intent       │
 ├───────────────────────────────────────────────────────────────────────────┤
 │  Facade (VaultActionManagerImpl)                                          │
-│    ├─ ActionQueue           → call-stack pattern, FIFO batching          │
-│    ├─ Dispatcher            → ensure → collapse → sort → execute         │
+│    ├─ DispatchBatchCoordinator → plan → schedule → execute → attribute   │
+│    ├─ VaultObservation      → attribute → window → collapse → roots      │
+│    ├─ MarkdownFileAccess    → active/background routing                  │
 │    ├─ SelfEventTracker      → shared by dispatch + event pipelines       │
-│    ├─ SingleEventEmmiter    → 1:1 event forwarding                       │
-│    ├─ BulkEventEmmiter      → time-windowed coalescing                   │
 │    ├─ VaultReader           → read-only vault operations                 │
-│    └─ ActiveFileService     → open-file operations                       │
+│    └─ TestingAdapter        → readiness over the real object graph       │
 ├───────────────────────────────────────────────────────────────────────────┤
 │  File Services                                                            │
-│    ├─ ActiveFileService     → reader + writer + navigation               │
+│    ├─ MarkdownFileAccess    → the routing module                         │
+│    ├─ ActiveFileService     → active-editor adapter                      │
 │    │   ├─ ActiveFileReader  → getContent, pwd, isFileActive              │
 │    │   ├─ ActiveFileWriter  → replaceAllContent, processContent          │
 │    │   ├─ SelectionService  → getInfo (text, surroundingBlock, path)     │
 │    │   └─ cd()              → navigate to file (open in editor)          │
-│    └─ Background Helpers                                                  │
+│    └─ Background-vault adapter                                            │
 │        ├─ TFileHelper       → create, rename, trash, read, upsert files  │
 │        └─ TFolderHelper     → create, rename, trash folders              │
 ├───────────────────────────────────────────────────────────────────────────┤
@@ -178,49 +177,36 @@ The heart of VAM. When a consumer calls `vam.dispatch(actions)`, the actions flo
 ```
 dispatch(actions[])
     ↓
-ActionQueue (call-stack + FIFO batching)
-    ↓
-Dispatcher.dispatch(batch)
+DispatchBatchCoordinator
     │
-    ├─ 1. ensureAllRequirementsMet()     [filter + expand]
+    ├─ 1. ensureRequirements()           [filter + expand]
     ├─ 2. collapseActions()              [dedupe + compose]
     ├─ 3. buildDependencyGraph()         [DAG construction]
     ├─ 4. topologicalSort()              [Kahn's algorithm]
     ├─ 5. selfEventTracker.register()    [mark paths before execution]
     └─ 6. sequential execution           [Executor → Obsidian API]
          ↓
-    DispatchResult (ok | err with DispatchError[])
+    caller-owned DispatchResult (ok | err with DispatchError[])
 ```
 
-### 6.1 ActionQueue — Call-Stack Pattern
+### 6.1 Dispatch Batch Coordination
 
-**Source**: `impl/actions-processing/action-queue.ts`
+**Source**: `impl/actions-processing/dispatch-batch.ts`
 
-The queue prevents reentrancy when dispatch triggers event handlers that dispatch more actions:
+`DispatchBatchCoordinator` is the deep module for outbound Vault Actions. Its interface is one method:
 
 ```typescript
-class ActionQueue {
-    private queue: VaultAction[] = [];
-    private isExecuting = false;
-    private batchCount = 0;
-    private readonly maxBatches: number;   // default 10, configurable via ActionQueueOpts
-    private drainWaiters: Array<() => void> = [];
-
-    constructor(dispatcher: Dispatcher, opts?: ActionQueueOpts);
-}
+dispatch(actions: readonly VaultAction[]): Promise<DispatchResult>
 ```
 
-**Flow**:
-1. `dispatch(actions)` pushes to queue
-2. If `!isExecuting` → `executeNextBatch()` immediately
-3. If `isExecuting` → `waitForDrain()` (returns Promise that resolves when queue empty)
-4. After each batch, checks queue for more → recursive call
-5. When queue empty → signals all drain waiters
+Planning helpers and the executor are internal seams. Callers do not coordinate queue state, requirement expansion, collapse, dependency ordering, Self Event registration, or partial-failure accounting.
 
 **Key properties**:
-- **Unlimited actions per batch**: entire queue taken as one batch
-- **Max batches** (default 10): safety valve. If exceeded, logs a warning, drops all queued actions, signals drain waiters, and returns `err(DispatchError[])` so callers know their actions were not applied.
-- **Pending tracking**: only outermost call increments/decrements the idle tracker (prevents double-counting nested calls). This enables E2E test synchronization via `whenIdle()`.
+- **Submission identity**: each `dispatch()` call remains a distinct batch, even when it queues behind another batch.
+- **Caller-owned results**: an error is returned to the caller whose submitted batch produced it. A later failure cannot turn an earlier result into an error, and queued callers never receive unconditional success.
+- **Serial execution**: submitted batches drain FIFO to avoid interleaving Vault mutations.
+- **Overflow accounting**: every dropped submitted batch receives its own `DispatchError`; no waiter is left unresolved.
+- **Observable idleness**: the testing adapter waits on the coordinator without exposing queue state on the production interface.
 
 ### 6.2 Stage 1: Ensure Requirements
 
@@ -361,36 +347,37 @@ For each action in sorted order, calls the appropriate Obsidian API:
 | `TrashFile`, `TrashMdFile` | `tfileHelper.trashFile()` |
 | `ProcessMdFile` | Normalize `before/after` to transform. If active → `active.processContent()`. Otherwise → `tfileHelper.processContent()`. |
 
-**Active file detection**: For `UpsertMdFile` and `ProcessMdFile`, executor checks if the target file is currently open in the editor. If so, uses the `ActiveFileService` path (which handles editor state correctly) instead of the background `TFileHelper` path.
+**Active file routing**: For `UpsertMdFile` and `ProcessMdFile`, executor asks `MarkdownFileAccess` to perform the operation. `MarkdownFileAccess` chooses the active-editor or background-vault adapter and owns selection preservation around renames.
 
-**Error handling**: Errors are **accumulated**, not thrown. Each action's result is recorded in `_debugExecutionTrace`. The batch returns `err(DispatchError[])` if any action fails, but all actions in the batch are attempted regardless.
+**Error handling**: Errors are **accumulated**, not thrown. The submitted batch returns `err(DispatchError[])` if any action fails, but all planned actions in that batch are attempted. Planning exceptions are also converted into an attributed `DispatchError`, so caller promises never hang.
 
 ---
 
 ## 7. The Event Pipeline
 
-VAM provides two event subscription channels. Both share the `SelfEventTracker` for filtering.
+VAM has one Vault callback intake and one observable output: `BulkVaultEvent`.
 
 ```
 Obsidian vault.on("create" | "rename" | "delete")
     ↓
 SelfEventTracker.shouldIgnore(path)  ─── filtered ───→ drop
     ↓ (not filtered)
-    ├──→ SingleEventEmmiter → VaultEventHandler (1:1, immediate)
-    └──→ BulkEventEmmiter → BulkEventAccumulator → processing chain → BulkVaultEventHandler
+VaultObservation → BulkEventAccumulator → collapse → semantic roots
+    ↓
+BulkVaultEventHandler
 ```
 
-### 7.1 Single Event Emitter
+### 7.1 Vault Observation
 
-**Source**: `impl/event-processing/single-event-emmiter.ts`
+**Source**: `impl/event-processing/vault-observation.ts`
 
-Forwards individual `VaultEvent` objects to subscribers with no buffering or coalescing. Each Obsidian event that passes the self-event filter is immediately dispatched.
+`VaultObservation` owns Obsidian listener lifecycle, Self Event attribution, buffering, normalization, Semantic Root inference, subscriber completion, and teardown. The retired single-event path had no repository caller and competed with bulk observation at the pop-on-match `SelfEventTracker` seam.
 
-**Rename handling**: evaluates `shouldIgnore()` for both `newPath` and `oldPath` into separate variables BEFORE the `if` check. Both paths are always checked (popping any matches from the tracker). The event is only filtered when **both** paths match (`&&`), confirming a genuine self-event rename. If only one path matches (e.g., from a stale or coincidental entry), the event passes through — the idempotent tree acts as a safety net.
+**Rename handling**: `shouldIgnore()` is evaluated once for each of `newPath` and `oldPath`. A rename is filtered only when both match, confirming a genuine Self Event rename. If only one path matches, the event passes through and the idempotent tree remains the safety net.
 
-### 7.2 Bulk Event Emitter
+### 7.2 Windowing and Semantic Roots
 
-**Source**: `impl/event-processing/bulk-event-emmiter/`
+**Source**: `impl/event-processing/bulk-event-emmiter/batteries/`
 
 Groups events into time-windowed batches, then collapses and reduces before delivering.
 
@@ -414,7 +401,7 @@ Buffers events with a dual-window strategy:
 
 #### 7.2.2 Processing Chain
 
-After accumulation, the `BulkEventEmmiter.onFlush` callback runs two stages:
+After accumulation, `VaultObservation` runs two stages:
 
 **Stage 1: Collapse** (`batteries/processing-chain/collapse.ts`)
 
@@ -468,20 +455,20 @@ type BulkVaultEvent = {
 
 ### 7.3 Subscription Lifecycle
 
-**Lazy initialization** — emitters are only started when both conditions are met:
+**Lazy initialization** — observation starts only when both conditions are met:
 1. `startListening()` has been called
 2. At least one subscriber exists
 
-**Teardown** — each `subscribe*()` returns a `Teardown` function. When the last subscriber unsubscribes, the emitter is stopped.
+**Teardown** — `subscribeToBulk()` returns a `Teardown` function. When the last subscriber unsubscribes, observation removes all three Obsidian listeners and clears the current window.
 
 ```
 startListening()
   ↓
-subscribeToBulk(handler) → starts BulkEventEmmiter if needed
+subscribeToBulk(handler) → starts VaultObservation if needed
   ↓
 [Obsidian events flow through pipeline]
   ↓
-teardown() → removes handler → stops emitter if no subscribers remain
+teardown() → removes handler → stops observation if no subscribers remain
 ```
 
 ---
@@ -498,7 +485,7 @@ As of the idempotent tree changes, `SelfEventTracker` is a **performance optimiz
 
 **Benefits of keeping it**:
 - Avoids processing self-events entirely (better performance)
-- Provides `waitForObsidianEvents()` for E2E test synchronization
+- Supplies internal readiness signals to `VaultActionManagerTestingAdapter`
 - Cleaner event logs (only user-triggered events appear)
 
 ### 8.2 Two-Level Matching
@@ -532,7 +519,7 @@ As of the idempotent tree changes, `SelfEventTracker` is a **performance optimiz
 
 ### 8.4 E2E Test Integration
 
-The tracker provides two APIs for test synchronization:
+The tracker keeps readiness primitives internal:
 
 ```typescript
 getRegisteredFilePaths(): readonly string[]
@@ -544,15 +531,16 @@ waitForAllRegistered(): Promise<void>
 // Returns immediately if no paths tracked
 ```
 
-This integrates with the idle tracker (`utils/idle-tracker.ts`) for E2E tests:
+`VaultActionManagerTestingAdapter` composes those primitives with the real dispatch and observation modules:
 ```
-ActionQueue increments pendingCount at batch start
-  → decrements at batch end
-BulkEventEmmiter increments pendingCount when handler starts
-  → decrements when handler completes
-whenIdle() polls until pendingCount === 0 + 1000ms grace period
-  → optionally calls waitForObsidianEvents()
+wait for DispatchBatchCoordinator
+  → flush any pending VaultObservation window
+  → wait for subscribers and any batches they submit
+  → wait for registered Self Events
+  → verify resulting files are queryable
 ```
+
+The adapter is returned alongside the manager by `createVaultActionManager(app)`. Production callers receive the `VaultActionManager` interface and do not learn readiness, polling, queue state, or diagnostics.
 
 ---
 
@@ -564,8 +552,7 @@ VaultReader provides read-only access without going through the dispatch pipelin
 
 ```typescript
 readContent(splitPath: SplitPathToMdFile): Promise<Result<string, ReadContentError>>
-// If file is in active view → reads from editor
-// Otherwise → reads from vault via TFileHelper
+// Delegates active/background routing to MarkdownFileAccess
 // Error type: ReadContentError { kind: FileNotFound | PermissionDenied | Unknown, reason }
 
 exists(target: AnySplitPath): boolean
@@ -590,95 +577,49 @@ listAllFilesWithMdReaders(folder: SplitPathToFolder): Result<SplitPathWithReader
 
 ---
 
-## 10. Active File Service
+## 10. Markdown File Access
 
-**Source**: `file-services/active-view/`
+**Source**: `file-services/markdown-file-access.ts`
 
-High-level API for the currently open file in the editor. Split into reader, writer, and navigation:
+`MarkdownFileAccess` is the deep module for Markdown-file content, selection, navigation, and route choice. It has no knowledge of higher-level Librarian document kinds. Callers express intent through `VaultActionManager`; they cannot obtain the active-editor implementation.
 
-### 10.1 Reader
+It has two adapters:
 
-```typescript
-pwd(): Result<SplitPathToAnyFile, string>   // Current file's SplitPath
-mdPwd(): SplitPathToMdFile | null           // Current file if markdown, null otherwise
-getContent(): Result<string, string>         // Editor content
-isFileActive(splitPath): Result<boolean>     // Is this file open?
-isInActiveView(splitPath): boolean           // Is this path visible?
-getSelection(): string | null                // Selected text
-getCursorOffset(): number | null             // Cursor position (char offset)
-```
+- `ActiveFileService`: active editor content, selection, navigation, and inline-title selection preservation.
+- `TFileHelper` plus `Vault`: background read/transform/write operations.
 
-### 10.2 Writer
+The routing policy is implemented once for reads and transforms. Rename selection preservation also stays inside this module rather than leaking the editor protocol into the action executor.
+
+The public intent-level methods are:
 
 ```typescript
-replaceAllContentInActiveFile(content: string): ResultAsync<string, string>
-processContent({ splitPath, transform }): ResultAsync<string, string>
-saveSelection() / restoreSelection(saved)           // Selection persistence across operations
-saveInlineTitleSelection() / restoreInlineTitleSelection(saved)  // For rename operations
-replaceSelection(text: string): void                 // Replace selected text
-insertBelowCursor(text: string): void                // Insert text after cursor line
+readContent(path)
+getOpenedContent()
+mdPwd()
+getSelectionInfo()
+getSelectionText()
+cd(path)
+scrollOpenedFileToLine(line)
 ```
 
-### 10.3 SelectionService
-
-```typescript
-type SelectionInfo = {
-    text: string | null;                    // Selected text (null = caret only)
-    splitPathToFileWithSelection: SplitPathToMdFile;
-    surroundingRawBlock: string;            // Line containing selection
-};
-
-getInfo(): SelectionInfo | null
-```
-
-Uses cursor offset (not `indexOf`) for position — handles duplicate text correctly.
+`SelectionInfo` continues to use cursor offsets rather than `indexOf`, so duplicate selected text is handled correctly.
 
 ---
 
-## 11. Debug & Testing API
+## 11. Testing Adapter
 
-VAM exposes comprehensive debug state for testing:
+**Source**: `testing-adapter.ts`
 
-### 11.1 Dispatcher Debug State
-
-```typescript
-type DispatcherDebugState = {
-    batchCounter: number;              // Dispatches since last reset
-    executionTrace: DebugTraceEntry[]; // Accumulated across all batches
-    allSortedActions: VaultAction[][];  // Sorted actions per batch
-    lastErrors: DispatchError[];        // Errors from latest batch only
-};
-
-type DebugTraceEntry = {
-    batch: number; index: number; kind: string; path: string;
-    result: "ok" | "err"; error?: string;
-};
-```
-
-### 11.2 Self-Event Tracker Debug State
+The production interface contains no mutable traces, private-map inspection, event waiters, or queryability polling. `createVaultActionManager(app)` returns two adapters over one object graph:
 
 ```typescript
-_getDebugSelfTrackerState(): {
-    trackedPaths: string[];
-    trackedPrefixes: string[];
-}
+const { manager, testing } = createVaultActionManager(app);
+
+await manager.dispatch(actions); // production outcome
+await testing.whenSettled();     // running-Obsidian readiness
 ```
 
-### 11.3 Bulk Event Debug
-
-```typescript
-_getDebugAllRawEvents(): Array<{
-    event: string;        // "onCreate: path" or "onRename: old → new"
-    ignored: boolean;
-    reason?: string;      // "selfEventTracker" or "makeEvent failed: ..."
-}>
-```
-
-The `_debugAllRawEvents` array is cleared when `resetDebugState()` is called on the facade (which delegates to both `Dispatcher.resetDebugState()` and `BulkEventEmmiter.resetDebugState()`).
-
-### 11.4 Queryability Verification
-
-After `waitForObsidianEvents()`, the facade polls Obsidian's `vault.getAbstractFileByPath()` to verify dispatched files are queryable. Uses exponential backoff (50ms → 200ms) with a 10-second timeout. This addresses Obsidian's eventual consistency — events fire before the API fully indexes the new file.
+`whenSettled()` observes the real Dispatch Batch coordinator, Vault observation module, and Self Event tracker. Queryability polling (50ms → 200ms exponential backoff, 10-second cap) lives here rather than in the production facade. Unit tests assert through the `dispatch`, `VaultObservation`, and `MarkdownFileAccess` interfaces instead of accumulated implementation traces.
 
 ---
 
@@ -707,9 +648,9 @@ All action paths are registered with `SelfEventTracker` before ANY action is exe
 
 Trash actions are terminal. If a path is being trashed, no other action for that path makes sense. This is enforced in both collapse (Trash replaces any existing action) and ensure-requirements (Trash paths skip EnsureExist). Trash actions have no dependencies.
 
-### Active File Detection in Executor
+### Route Once in MarkdownFileAccess
 
-The executor detects whether the target file is currently open in the editor. If so, it uses the `ActiveFileService` (which understands editor state, inline title selection, cursor position) instead of the `TFileHelper` (which modifies the file behind Obsidian's back). This prevents editor state corruption.
+The executor and reader do not independently choose between editor and Vault operations. `MarkdownFileAccess` owns that policy and its two adapters, preventing route drift and keeping editor state, inline-title selection, and navigation knowledge behind one internal interface.
 
 ---
 
@@ -719,7 +660,8 @@ The executor detects whether the target file is currently open in the editor. If
 |------|---------|
 | **Entry Points** | |
 | `index.ts` | Public interface, type exports, factory exports |
-| `facade.ts` | `VaultActionManagerImpl` — wires all components together |
+| `facade.ts` | Wires one production manager graph and its testing adapter |
+| `testing-adapter.ts` | Running-Obsidian readiness over the real graph |
 | **Types** | |
 | `types/split-path.ts` | SplitPath discriminated union + Zod schemas |
 | `types/read-content-error.ts` | Typed read error union (`ReadContentError`) + helpers |
@@ -728,8 +670,7 @@ The executor detects whether the target file is currently open in the editor. If
 | `types/literals.ts` | Zod literal schemas for action/event kind composition |
 | `types/dependency.ts` | ActionDependency, DependencyGraph |
 | **Dispatch Pipeline** | |
-| `impl/actions-processing/action-queue.ts` | Call-stack + FIFO queue pattern |
-| `impl/actions-processing/dispatcher.ts` | 6-stage pipeline orchestrator |
+| `impl/actions-processing/dispatch-batch.ts` | Deep Dispatch Batch coordination module |
 | `impl/actions-processing/ensure-requirements-helpers.ts` | Filter invalid deletes, auto-create parents |
 | `impl/actions-processing/collapse.ts` | Dedupe + compose transforms |
 | `impl/actions-processing/dependency-detector.ts` | Build DAG, folder-creator indexing |
@@ -738,8 +679,7 @@ The executor detects whether the target file is currently open in the editor. If
 | `impl/actions-processing/helpers/make-key-for-action.ts` | Action → path key for collapse |
 | **Event Pipeline** | |
 | `impl/event-processing/self-event-tracker.ts` | Exact + prefix path filtering, TTL, E2E support |
-| `impl/event-processing/single-event-emmiter.ts` | 1:1 event forwarding |
-| `impl/event-processing/bulk-event-emmiter/bulk-event-emmiter.ts` | Time-windowed event emitter |
+| `impl/event-processing/vault-observation.ts` | Single intake, lifecycle, attribution, buffering, Bulk output |
 | `impl/event-processing/bulk-event-emmiter/batteries/event-accumulator.ts` | Quiet/max window buffering |
 | `impl/event-processing/bulk-event-emmiter/batteries/processing-chain/collapse.ts` | Exact dedupe + rename chain collapse |
 | `impl/event-processing/bulk-event-emmiter/batteries/processing-chain/reduce-roots.ts` | Semantic root extraction |
@@ -750,7 +690,8 @@ The executor detects whether the target file is currently open in the editor. If
 | `impl/vault-reader.ts` | Content reading, existence, listing, basename search |
 | `impl/common/split-path-and-system-path.ts` | SplitPath ↔ system path codec |
 | `impl/common/collapse-helpers.ts` | makeKeyFor, sameRename, dedupeByKey |
-| **Active File Service** | |
+| **Markdown File Access** | |
+| `file-services/markdown-file-access.ts` | Owns active-editor/background-vault routing |
 | `file-services/active-view/active-file-service.ts` | Facade: reader + writer + navigation |
 | `file-services/active-view/writer/reader/active-file-reader.ts` | Read content, pwd, cursor |
 | `file-services/active-view/writer/active-file-writer.ts` | Write content, save/restore selection |
@@ -786,21 +727,21 @@ Each file has an explanatory comment documenting why it must stay v4. The latent
 
 ### 14.2 Typo: "Emmiter" → "Emitter"
 
-`SingleEventEmmiter`, `BulkEventEmmiter`, `BulkEventAccumulator`'s file name `single-event-emmiter.ts`, `bulk-event-emmiter.ts` — consistent double-m typo throughout. Not a bug, but noticeable.
+The historical `bulk-event-emmiter/` directory name remains around the accumulator and Bulk event types. The public module is correctly named `VaultObservation`; the remaining path typo is internal and can be migrated separately.
 
 ### 14.3 `collapseActions` is Async but Rarely Needs To Be
 
 `collapseActions()` is `async` and returns `Promise<VaultAction[]>` because the UpsertMdFile(content) + ProcessMdFile path eagerly applies the transform (`const transformed = await transform(upsertContent)`). This makes the entire function async even though most collapse paths are synchronous. The async overhead is negligible, but it's a slightly unusual signature for what's conceptually a pure data transform.
 
-### 14.4 ActionQueue Batch Overflow: Silent Drop — RESOLVED
+### 14.4 Dispatch Batch Overflow: Caller Attribution — RESOLVED
 
 The overflow path now:
-1. Logs a warning via `logger.warn("[ActionQueue] Batch limit (N) reached, dropping M queued actions")`
-2. Drops ALL queued actions (not just 50%)
-3. Returns `err(DispatchError[])` so callers know their actions were not applied
-4. Signals drain waiters so no promises hang indefinitely
+1. Logs a warning with submitted-batch and action counts.
+2. Drops all batches beyond the configured drain-cycle limit.
+3. Resolves every dropped submission with its own `err(DispatchError[])`.
+4. Leaves no shared drain waiter that can report unconditional success.
 
-The `maxBatches` limit (default 10) is configurable via `ActionQueueOpts` for testing.
+The `maxBatches` limit (default 10) is configurable via `DispatchBatchOptions` for testing.
 
 ### 14.5 Rename Event Filtering: OR→AND and ProcessMdFile Stale Paths — RESOLVED
 
@@ -808,7 +749,7 @@ Two interacting bugs caused user renames/moves to be silently dropped:
 
 1. **Stale ProcessMdFile entries**: `ProcessMdFile` calls `vault.modify()` which triggers `modify` events, but emitters only listen for `create`/`rename`/`delete`. Tracked paths were never popped and lingered for the 5s TTL, causing subsequent user events on the same path to be incorrectly filtered. **Fix**: `ProcessMdFile` paths are no longer registered in `extractPaths()`.
 
-2. **OR logic in rename handlers**: `if (newPathIgnored || oldPathIgnored)` was too aggressive — a single stale path match would drop the entire rename event. A genuine self-event rename has BOTH paths registered. **Fix**: Changed to `&&` in both `BulkEventEmmiter` and `SingleEventEmmiter`. If only one path matches (stale/coincidental), the event passes through. The idempotent tree (`changed: false` for already-applied actions) acts as a safety net.
+2. **OR logic in rename handlers**: `if (newPathIgnored || oldPathIgnored)` was too aggressive — a single stale path match would drop the entire rename event. A genuine Self Event rename has both paths registered. **Fix**: `VaultObservation` evaluates each path once and filters only when both match. The idempotent tree (`changed: false` for already-applied actions) acts as a safety net.
 
 Both `shouldIgnore()` calls are still evaluated into separate variables before the `if` check to ensure both paths are popped from the tracker regardless of the filter outcome.
 
@@ -816,17 +757,17 @@ Both `shouldIgnore()` calls are still evaluated into separate variables before t
 
 In `topological-sort.ts`, `sortQueue(queue)` is called every time a new zero-degree action is added to the queue (line 73). The sort operates on the entire remaining queue, not just the insertion point. For typical batch sizes (tens of actions) this is negligible, but it's O(k log k) per newly-unblocked action where k is the queue length — total O(n * k log k) in the worst case. A priority queue / binary heap would reduce this to O(n log n) total but is likely overkill for current workloads.
 
-### 14.7 BulkEventEmmiter's `_debugAllRawEvents` Grows Without Bound — RESOLVED
+### 14.7 Unbounded Mutable Event Diagnostics — RESOLVED
 
-Added `BulkEventEmmiter.resetDebugState()` which clears the `_debugAllRawEvents` array. The facade's `resetDebugState()` now delegates to both `Dispatcher.resetDebugState()` and `BulkEventEmmiter.resetDebugState()`, so calling it at the start of each E2E test clears all debug state including the raw events array.
+The mutable raw-event array and dispatcher traces were removed from the production implementation. Interface-level tests now feed callbacks and observe complete Bulk Vault Events.
 
-### 14.8 Executor's 50ms Sleep After Rename
+### 14.8 MarkdownFileAccess's 50ms Sleep After Rename
 
-`executor.ts` (lines 122-123) has a hardcoded `setTimeout(resolve, 50)` after file renames to "let Obsidian update view". This is a timing heuristic — it might be too short on slow machines or unnecessary on fast ones. A more robust approach would be to poll for the view update, but the current approach works in practice.
+`markdown-file-access.ts` has a hardcoded 50ms delay before restoring an inline-title selection after rename. The editor protocol is now local to the correct module, but the timing heuristic could still be replaced by an observable view-update signal.
 
-### 14.9 `verifyFilesQueryable` Polling in Production Code
+### 14.9 Queryability Polling in Production Code — RESOLVED
 
-`facade.ts`'s `verifyFilesQueryable()` (lines 192-246) runs polling with exponential backoff up to 10 seconds. This method is called from `waitForObsidianEvents()`, which is described as E2E-only in comments, but the code path doesn't gate on `isE2E()`. If `waitForObsidianEvents()` were accidentally called in production, it would block for up to 10 seconds. The `waitForAllRegistered()` call above it is gated by having tracked paths, but the polling loop itself has no E2E guard.
+Queryability polling moved to `VaultActionManagerTestingAdapter`. `VaultActionManager` no longer exposes `waitForObsidianEvents()`.
 
 ### 14.10 No Rollback on Partial Failure
 

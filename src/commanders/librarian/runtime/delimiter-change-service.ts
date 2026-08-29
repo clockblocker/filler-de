@@ -1,7 +1,9 @@
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { makeSplitPath } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import type {
+	SplitPathToMdFile,
+	VaultActionManager,
+} from "@textfresser/vault-action-manager";
 import {
+	makeSplitPath,
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
@@ -23,7 +25,7 @@ export interface DelimiterChangeResult {
 
 /**
  * Service for safely changing the suffix delimiter across all library files.
- * Routes renames through VaultActionManager with chunked batches and proper event synchronization.
+ * Routes renames through VaultActionManager as caller-attributed batches.
  */
 export class DelimiterChangeService {
 	constructor(
@@ -76,9 +78,6 @@ export class DelimiterChangeService {
 					...result.error.map((e) => `${e.action.kind}: ${e.error}`),
 				);
 			}
-
-			// Wait for Obsidian to process all events from this chunk
-			await this.vam.waitForObsidianEvents();
 		}
 
 		const renamedCount = actions.length - errors.length;

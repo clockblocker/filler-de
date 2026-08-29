@@ -10,21 +10,21 @@
  */
 
 import { describe, expect, it } from "bun:test";
-import {
-	buildDependencyGraph,
-	makeGraphKey,
-} from "@textfresser/vault-action-manager";
-import { topologicalSort } from "@textfresser/vault-action-manager";
-import { MD } from "@textfresser/vault-action-manager";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "@textfresser/vault-action-manager";
 import {
+	MD,
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
+import {
+	buildDependencyGraph,
+	makeGraphKey,
+} from "../../../src/packages/independent/vault-action-manager/src/impl/actions-processing/dependency-detector";
+import { topologicalSort } from "../../../src/packages/independent/vault-action-manager/src/impl/actions-processing/topological-sort";
 
 // ─── Test Helpers ───
 

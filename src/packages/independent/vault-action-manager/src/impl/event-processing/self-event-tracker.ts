@@ -25,7 +25,7 @@ import { VaultActionKind } from "../../types/vault-action";
  *
  * Benefits of keeping SelfEventTracker:
  * - Avoids processing self-events entirely (better performance)
- * - Provides waitForObsidianEvents() for E2E test synchronization
+ * - Supplies readiness signals to the testing adapter
  * - Cleaner event logs (only user-triggered events appear)
  */
 export class SelfEventTracker {

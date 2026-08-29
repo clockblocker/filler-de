@@ -6,7 +6,7 @@ import type {
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionKind } from "../../types/vault-action";
 import { makeSystemPathForSplitPath } from "../common/split-path-and-system-path";
-import type { ExistenceChecker } from "./dispatcher";
+import type { ExistenceChecker } from "./dispatch-batch";
 
 /**
  * Collect trash paths from actions.

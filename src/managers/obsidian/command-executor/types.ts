@@ -1,5 +1,7 @@
-import type { SelectionInfo } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import type {
+	SelectionInfo,
+	SplitPathToMdFile,
+} from "@textfresser/vault-action-manager";
 import { z } from "zod";
 import { ALL_LIBRARIAN_COMMAND_KINDS } from "../../../commanders/librarian/commands/types";
 import { ALL_TEXTFRESSER_COMMAND_KINDS } from "../../../commanders/textfresser/commands/types";
@@ -22,6 +24,6 @@ export const CommandKind = CommandKindSchema.enum;
 export type CommandContext = {
 	/** Active file with content, or null if no md file open */
 	activeFile: { splitPath: SplitPathToMdFile; content: string } | null;
-	/** Selection info from vam.selection.getInfo() */
+	/** Selection info captured from the Vault Action Manager. */
 	selection: SelectionInfo | null;
 };

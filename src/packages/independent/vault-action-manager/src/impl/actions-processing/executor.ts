@@ -1,23 +1,21 @@
 import { err, ok } from "neverthrow";
 import type { Vault } from "obsidian";
-import type { ActiveFileService } from "../../file-services/active-view/active-file-service";
 import type { TFileHelper } from "../../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../../file-services/background/helpers/tfolder-helper";
+import type { MarkdownFileAccess } from "../../file-services/markdown-file-access";
 import {
 	type MdFileWithContentDto,
 	pathfinder,
 } from "../../helpers/pathfinder";
 import { getErrorMessage } from "../../internal/get-error-message";
 import { logger } from "../../internal/logger";
-import { sleep } from "../../internal/sleep";
-import type { SplitPathToMdFile } from "../../types/split-path";
 import { type VaultAction, VaultActionKind } from "../../types/vault-action";
 
 export class Executor {
 	constructor(
 		private readonly tfileHelper: TFileHelper,
 		private readonly tfolderHelper: TFolderHelper,
-		private readonly active: ActiveFileService,
+		private readonly markdownFiles: MarkdownFileAccess,
 		private readonly vault: Vault,
 	) {}
 
@@ -69,20 +67,10 @@ export class Executor {
 						// EnsureExist: don't overwrite existing content
 						return ok(fileResult.value);
 					}
-					// File exists - update content
-					const isActive = await this.checkFileActive(splitPath);
-					if (isActive) {
-						const result =
-							await this.active.replaceAllContentInActiveFile(
-								content,
-							);
-						return result.map(() => fileResult.value);
-					}
-					const result = await this.tfileHelper.replaceAllContent(
+					return this.markdownFiles.replaceContent(
 						splitPath,
 						content,
 					);
-					return result;
 				}
 
 				// File doesn't exist - create it
@@ -105,24 +93,10 @@ export class Executor {
 					action.payload.to,
 				);
 
-				// Save inline title selection (for newly created files being renamed)
-				const savedInlineTitleSelection = this.active
-					.saveInlineTitleSelection()
-					.unwrapOr(null);
-
-				const result = await this.tfileHelper.renameFile({
+				const result = await this.markdownFiles.renameFile({
 					from: action.payload.from,
 					to: action.payload.to,
 				});
-
-				// Restore inline title selection after rename
-				if (result.isOk() && savedInlineTitleSelection) {
-					// Small delay for Obsidian to update view after rename
-					await sleep(50);
-					this.active.restoreInlineTitleSelection(
-						savedInlineTitleSelection,
-					);
-				}
 
 				if (result.isErr()) {
 					logger.error("[Executor] RenameFile FAILED", {
@@ -162,27 +136,11 @@ export class Executor {
 						: (content: string) =>
 								content.replace(payload.before, payload.after);
 
-				const isActive = await this.checkFileActive(splitPath);
-				if (isActive) {
-					const result = await this.active.processContent({
-						splitPath,
-						transform,
-					});
-					return result;
-				}
-				const result = await this.tfileHelper.processContent({
+				return this.markdownFiles.processContent({
 					splitPath,
 					transform,
 				});
-				return result;
 			}
 		}
-	}
-
-	private async checkFileActive(
-		splitPath: SplitPathToMdFile,
-	): Promise<boolean> {
-		const result = await this.active.isFileActive(splitPath);
-		return result.isOk() && result.value;
 	}
 }

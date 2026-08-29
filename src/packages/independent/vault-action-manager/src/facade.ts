@@ -1,65 +1,48 @@
 import type { Result } from "neverthrow";
 import type { App } from "obsidian";
 import { ActiveFileService } from "./file-services/active-view/active-file-service";
-import { SelectionService } from "./file-services/active-view/selection-service";
+import type { SelectionInfo } from "./file-services/active-view/selection-service";
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
-import { ActionQueue } from "./impl/actions-processing/action-queue";
-import type {
-	DispatcherDebugState,
-	ExistenceChecker,
-} from "./impl/actions-processing/dispatcher";
-import { Dispatcher } from "./impl/actions-processing/dispatcher";
+import { MarkdownFileAccess } from "./file-services/markdown-file-access";
+import {
+	DispatchBatchCoordinator,
+	type ExistenceChecker,
+} from "./impl/actions-processing/dispatch-batch";
 import { Executor } from "./impl/actions-processing/executor";
 import {
 	makeSplitPath,
 	makeSystemPathForSplitPath,
 } from "./impl/common/split-path-and-system-path";
-import { BulkEventEmmiter } from "./impl/event-processing/bulk-event-emmiter/bulk-event-emmiter";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
-import { SingleEventEmmiter } from "./impl/event-processing/single-event-emmiter";
+import { VaultObservation } from "./impl/event-processing/vault-observation";
 import { VaultReader } from "./impl/vault-reader";
 import type {
 	BulkVaultEventHandler,
 	DispatchResult,
 	Teardown,
 	VaultActionManager,
-	VaultEventHandler,
 } from "./index";
-import { logger } from "./internal/logger";
-import { sleep } from "./internal/sleep";
+import { VaultActionManagerTestingAdapter } from "./testing-adapter";
 import type { ReadContentError } from "./types/read-content-error";
 import type {
 	AnySplitPath,
-	SplitPathToAnyFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 	SplitPathWithReader,
 } from "./types/split-path";
 import type { VaultAction } from "./types/vault-action";
 
-export class VaultActionManagerImpl implements VaultActionManager {
-	private readonly active: ActiveFileService;
+const testingAdapters = new WeakMap<object, VaultActionManagerTestingAdapter>();
+
+class VaultActionManagerImpl implements VaultActionManager {
+	private readonly markdownFiles: MarkdownFileAccess;
 	private readonly reader: VaultReader;
-	private readonly dispatcher: Dispatcher;
-	private readonly selfEventTracker: SelfEventTracker;
-	private readonly actionQueue: ActionQueue;
-	private readonly singleEventEmmiter: SingleEventEmmiter;
-	private readonly subscribers = new Set<VaultEventHandler>();
+	private readonly dispatches: DispatchBatchCoordinator;
+	private readonly observation: VaultObservation;
 
-	private readonly bulkEventEmmiter: BulkEventEmmiter;
-	private readonly bulkSubscribers = new Set<BulkVaultEventHandler>();
-
-	private isSingleListening = false;
-	private isBulkListening = false;
-	private listeningRequested = false;
-	private readonly app: App;
-
-	private readonly _selection: SelectionService;
-
-	constructor(app: App) {
-		this.app = app;
-		this.active = new ActiveFileService(app);
+	constructor(private readonly app: App) {
+		const activeEditor = new ActiveFileService(app);
 		const tfileHelper = new TFileHelper({
 			fileManager: app.fileManager,
 			vault: app.vault,
@@ -68,19 +51,20 @@ export class VaultActionManagerImpl implements VaultActionManager {
 			fileManager: app.fileManager,
 			vault: app.vault,
 		});
-		const executor = new Executor(
+
+		this.markdownFiles = new MarkdownFileAccess(
+			activeEditor,
 			tfileHelper,
-			tfolderHelper,
-			this.active,
 			app.vault,
 		);
 		this.reader = new VaultReader(
-			this.active,
+			this.markdownFiles,
 			tfileHelper,
 			tfolderHelper,
 			app.vault,
 		);
-		this.selfEventTracker = new SelfEventTracker();
+
+		const selfEvents = new SelfEventTracker();
 		const existenceChecker: ExistenceChecker = {
 			exists: (splitPath) => {
 				if (splitPath.kind === "Folder") {
@@ -89,183 +73,58 @@ export class VaultActionManagerImpl implements VaultActionManager {
 				return tfileHelper.getFile(splitPath).isOk();
 			},
 		};
-		this.dispatcher = new Dispatcher(
+		const executor = new Executor(
+			tfileHelper,
+			tfolderHelper,
+			this.markdownFiles,
+			app.vault,
+		);
+
+		this.dispatches = new DispatchBatchCoordinator(
 			executor,
-			this.selfEventTracker,
+			selfEvents,
 			existenceChecker,
 		);
-		this.actionQueue = new ActionQueue(this.dispatcher);
-		this.singleEventEmmiter = new SingleEventEmmiter(
-			app,
-			this.selfEventTracker,
+		this.observation = new VaultObservation(app, selfEvents);
+
+		testingAdapters.set(
+			this,
+			new VaultActionManagerTestingAdapter(
+				app,
+				this.dispatches,
+				this.observation,
+				selfEvents,
+			),
 		);
-		this.bulkEventEmmiter = new BulkEventEmmiter(
-			app,
-			this.selfEventTracker,
-		);
-		this._selection = new SelectionService(this.active);
 	}
 
 	startListening(): void {
-		this.listeningRequested = true;
-
-		// If subscriptions already exist, start immediately.
-		if (this.subscribers.size > 0) this.startSingleIfNeeded();
-		if (this.bulkSubscribers.size > 0) this.startBulkIfNeeded();
-	}
-
-	private startSingleIfNeeded() {
-		if (this.isSingleListening) return;
-		this.isSingleListening = true;
-		this.singleEventEmmiter.start(async (event) => {
-			for (const h of this.subscribers) await h(event);
-		});
-	}
-
-	private stopSingleIfNeeded() {
-		if (!this.isSingleListening) return;
-		if (this.subscribers.size > 0) return;
-		this.singleEventEmmiter.stop();
-		this.isSingleListening = false;
-	}
-
-	private startBulkIfNeeded() {
-		if (this.isBulkListening) return;
-		this.isBulkListening = true;
-
-		this.bulkEventEmmiter.start(async (bulk) => {
-			for (const h of this.bulkSubscribers) {
-				await h(bulk);
-			}
-		});
-	}
-
-	private stopBulkIfNeeded() {
-		if (!this.isBulkListening) return;
-		if (this.bulkSubscribers.size > 0) return;
-		this.bulkEventEmmiter.stop();
-		this.isBulkListening = false;
-	}
-
-	subscribeToSingle(handler: VaultEventHandler): Teardown {
-		this.subscribers.add(handler);
-		if (this.listeningRequested) this.startSingleIfNeeded();
-
-		return () => {
-			this.subscribers.delete(handler);
-			this.stopSingleIfNeeded();
-		};
+		this.observation.start();
 	}
 
 	subscribeToBulk(handler: BulkVaultEventHandler): Teardown {
-		this.bulkSubscribers.add(handler);
-		if (this.listeningRequested) this.startBulkIfNeeded();
-
-		return () => {
-			this.bulkSubscribers.delete(handler);
-			this.stopBulkIfNeeded();
-		};
+		return this.observation.subscribe(handler);
 	}
 
-	async dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
-		// Route through ActionQueue (call stack pattern)
-		// ActionQueue handles self-event registration and execution
-		return this.actionQueue.dispatch(actions);
-	}
-
-	/**
-	 * Wait until all registered paths have been processed by Obsidian (via events).
-	 * Used by E2E tests to ensure files are visible before assertions.
-	 * Also verifies files are queryable via vault API after events fire.
-	 */
-	async waitForObsidianEvents(): Promise<void> {
-		// Capture file paths NOW (before waiting) to ensure we get all files from all dispatches
-		const filePathsToVerify =
-			this.selfEventTracker.getRegisteredFilePaths();
-		await this.selfEventTracker.waitForAllRegistered();
-		// After events fired, verify files are queryable
-		if (filePathsToVerify.length > 0) {
-			await this.verifyFilesQueryable(filePathsToVerify);
-		}
-	}
-
-	/**
-	 * Verify that file paths are queryable via Obsidian vault API.
-	 * Polls with short intervals since events already fired.
-	 * Waits up to 10 seconds to allow Obsidian to fully register files.
-	 * Uses exponential backoff for efficiency.
-	 */
-	private async verifyFilesQueryable(
-		filePaths: readonly string[],
-	): Promise<void> {
-		if (filePaths.length === 0) {
-			return;
-		}
-
-		const initialDelayMs = 100;
-		const maxTimeoutMs = 10000;
-		const startTime = Date.now();
-
-		// Small initial delay to let Obsidian process events
-		await sleep(initialDelayMs);
-
-		let intervalMs = 50;
-		let consecutiveChecks = 0;
-
-		while (Date.now() - startTime < maxTimeoutMs) {
-			const missingPaths: string[] = [];
-			for (const path of filePaths) {
-				const file = this.app.vault.getAbstractFileByPath(path);
-				if (!file) {
-					missingPaths.push(path);
-				}
-			}
-
-			if (missingPaths.length === 0) {
-				return;
-			}
-
-			// Exponential backoff: start with 50ms, increase gradually
-			consecutiveChecks++;
-			if (consecutiveChecks > 10) {
-				intervalMs = Math.min(intervalMs * 1.2, 200);
-			}
-
-			await sleep(intervalMs);
-		}
-
-		// Final check - if still missing, log warning (tests will handle with their own polling)
-		const stillMissing: string[] = [];
-		for (const path of filePaths) {
-			const file = this.app.vault.getAbstractFileByPath(path);
-			if (!file) {
-				stillMissing.push(path);
-			}
-		}
-
-		if (stillMissing.length > 0) {
-			logger.warn(
-				`[VaultActionManager] Files not queryable after ${maxTimeoutMs}ms:`,
-				stillMissing,
-			);
-		}
+	dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
+		return this.dispatches.dispatch(actions);
 	}
 
 	readContent(
-		splitPathArg: SplitPathToMdFile,
+		splitPath: SplitPathToMdFile,
 	): Promise<Result<string, ReadContentError>> {
-		return this.reader.readContent(splitPathArg);
+		return this.reader.readContent(splitPath);
 	}
 
-	exists(splitPathArg: AnySplitPath): boolean {
-		return this.reader.exists(splitPathArg);
+	exists(splitPath: AnySplitPath): boolean {
+		return this.reader.exists(splitPath);
 	}
 
 	findByBasename(
 		basename: string,
-		opts?: { folder?: SplitPathToFolder },
+		options?: { folder?: SplitPathToFolder },
 	): SplitPathToMdFile[] {
-		return this.reader.findByBasename(basename, opts);
+		return this.reader.findByBasename(basename, options);
 	}
 
 	resolveLinkpathDest(
@@ -283,96 +142,50 @@ export class VaultActionManagerImpl implements VaultActionManager {
 		return splitPath.kind === "MdFile" ? splitPath : null;
 	}
 
-	isInActiveView(splitPathArg: AnySplitPath): boolean {
-		return this.active.isInActiveView(splitPathArg);
-	}
-
-	list(splitPathArg: SplitPathToFolder): Result<AnySplitPath[], string> {
-		return this.reader.list(splitPathArg);
+	list(splitPath: SplitPathToFolder): Result<AnySplitPath[], string> {
+		return this.reader.list(splitPath);
 	}
 
 	listAllFilesWithMdReaders(
-		splitPathArg: SplitPathToFolder,
+		splitPath: SplitPathToFolder,
 	): Result<SplitPathWithReader[], string> {
-		return this.reader.listAllFilesWithMdReaders(splitPathArg);
-	}
-
-	pwd(): Result<SplitPathToAnyFile, string> {
-		return this.active.pwd();
+		return this.reader.listAllFilesWithMdReaders(splitPath);
 	}
 
 	mdPwd(): SplitPathToMdFile | null {
-		return this.active.mdPwd();
+		return this.markdownFiles.activeMdPath();
 	}
-
-	// ─────────────────────────────────────────────────────────────────────────
-	// Active file operations (high-level, no TFile leakage)
-	// ─────────────────────────────────────────────────────────────────────────
 
 	getOpenedContent(): Result<string, string> {
-		return this.active.getContent();
+		return this.markdownFiles.openedContent();
 	}
 
-	async cd(splitPath: SplitPathToMdFile): Promise<Result<void, string>> {
-		const result = await this.active.cd(splitPath);
-		return result.map(() => undefined);
+	getSelectionInfo(): SelectionInfo | null {
+		return this.markdownFiles.selectionInfo();
 	}
 
-	get activeFileService(): ActiveFileService {
-		return this.active;
+	getSelectionText(): string | null {
+		return this.markdownFiles.selectionText();
 	}
 
-	get selection(): SelectionService {
-		return this._selection;
+	cd(splitPath: SplitPathToMdFile): Promise<Result<void, string>> {
+		return this.markdownFiles.open(splitPath);
 	}
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// Debug API - for testing multi-batch scenarios
-	// ─────────────────────────────────────────────────────────────────────────
-
-	/**
-	 * Reset all dispatcher debug state. Call at the start of each test
-	 * to get clean traces that don't include state from previous tests.
-	 */
-	resetDebugState(): void {
-		this.dispatcher.resetDebugState();
-		this.bulkEventEmmiter.resetDebugState();
+	scrollOpenedFileToLine(line: number): void {
+		this.markdownFiles.scrollOpenedFileToLine(line);
 	}
+}
 
-	/**
-	 * Get accumulated debug state across all dispatch batches since last reset.
-	 * Includes execution trace, sorted actions per batch, and error info.
-	 */
-	getDebugState(): DispatcherDebugState {
-		return this.dispatcher.getDebugState();
+/** Builds the production manager and its testing adapter over one object graph. */
+export function createVaultActionManager(app: App): {
+	manager: VaultActionManager;
+	testing: VaultActionManagerTestingAdapter;
+} {
+	const manager = new VaultActionManagerImpl(app);
+	const testing = testingAdapters.get(manager);
+	if (!testing) {
+		throw new Error("Vault Action Manager testing adapter was not created");
 	}
-
-	/**
-	 * Get self-event tracker state for debugging event filtering.
-	 */
-	_getDebugSelfTrackerState(): {
-		trackedPaths: string[];
-		trackedPrefixes: string[];
-	} {
-		// Accessing private Maps for debugging
-		const tracker = this.selfEventTracker as unknown as {
-			trackedPaths?: Map<string, unknown>;
-			trackedPrefixes?: Map<string, unknown>;
-		};
-		return {
-			trackedPaths: Array.from(tracker.trackedPaths?.keys() ?? []),
-			trackedPrefixes: Array.from(tracker.trackedPrefixes?.keys() ?? []),
-		};
-	}
-
-	/**
-	 * Get raw events from BulkEventEmmiter for debugging event processing.
-	 */
-	_getDebugAllRawEvents(): Array<{
-		event: string;
-		ignored: boolean;
-		reason?: string;
-	}> {
-		return this.bulkEventEmmiter._debugAllRawEvents ?? [];
-	}
+	return { manager, testing };
 }

@@ -2,14 +2,14 @@
  * Textfresser commander - thin orchestrator for vocabulary commands.
  */
 
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { errAsync } from "neverthrow";
 import type { LexicalGenerationSettings } from "@textfresser/lexical-generation";
-import type { CommandContext } from "../../managers/obsidian/command-executor";
-import {
-	type UserEventHandler,
+import type {
+	UserEventHandler,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import { errAsync } from "neverthrow";
+import type { CommandContext } from "../../managers/obsidian/command-executor";
 import type { ApiService } from "../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../types";
 import { logger } from "../../utils/logger";
@@ -155,7 +155,7 @@ export class Textfresser {
 		if (!blockId) return;
 		this.state.targetBlockId = undefined;
 
-		const contentResult = this.vam.activeFileService.getContent();
+		const contentResult = this.vam.getOpenedContent();
 		if (contentResult.isErr()) return;
 
 		const marker = `^${blockId}`;
@@ -164,6 +164,6 @@ export class Textfresser {
 			.findIndex((line) => line.includes(marker));
 		if (lineIndex < 0) return;
 
-		this.vam.activeFileService.scrollToLine(lineIndex);
+		this.vam.scrollOpenedFileToLine(lineIndex);
 	}
 }
