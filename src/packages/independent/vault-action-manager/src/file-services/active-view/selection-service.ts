@@ -1,6 +1,11 @@
 import { Effect } from "effect";
 import type { SplitPathToMdFile } from "../../types/split-path";
-import type { ActiveFileService } from "./active-file-service";
+import type {
+	ActiveEditorSnapshot,
+	SourceActiveEditorSnapshot,
+} from "./active-editor-snapshot";
+import { annotateFileAccessFailure } from "./tracing";
+import type { ActiveFileReader } from "./writer/reader/active-file-reader";
 
 /**
  * Selection information from the active editor.
@@ -21,41 +26,52 @@ export type SelectionInfo = {
  * Provides a VAM-level abstraction over direct editor access.
  */
 export class SelectionService {
-	constructor(private readonly activeFileService: ActiveFileService) {}
+	constructor(private readonly reader: ActiveFileReader) {}
 
 	/**
 	 * Get current selection info from the active editor.
 	 * Sync operation - just reads editor state.
 	 * @returns SelectionInfo or null if no active editor
 	 */
-	getInfo() {
-		return Effect.gen({ self: this }, function* () {
-			const splitPath = yield* this.activeFileService.mdPwd();
-			if (!splitPath) return null;
-			const content = yield* this.activeFileService.getContent();
-			const selection = yield* this.activeFileService.getSelection();
-			const position = yield* this.activeFileService.getCursorOffset();
-			if (position === null) return null;
+	getInfo(snapshot?: ActiveEditorSnapshot) {
+		const self = this;
+		return Effect.fn("vam.activeEditor.read.selection")(
+			function* () {
+				yield* Effect.annotateCurrentSpan({
+					operation: "read-selection",
+				});
+				const current = yield* self.reader.sourceSnapshot(snapshot);
+				yield* Effect.annotateCurrentSpan({ path: current.path });
+				return self.fromSnapshot(current);
+			},
+			Effect.catchTag("VamNoActiveEditorError", () =>
+				Effect.succeed(null),
+			),
+			Effect.tapError(annotateFileAccessFailure),
+		)();
+	}
 
-			const surroundingRawBlock = this.extractLine(content, position);
-			let selectionStartInBlock: number | null = null;
-			if (selection) {
-				const selectionStart =
-					yield* this.activeFileService.getSelectionStartOffset();
-				if (selectionStart !== null) {
-					let lineStart = content.lastIndexOf("\n", position);
-					lineStart = lineStart === -1 ? 0 : lineStart + 1;
-					selectionStartInBlock = selectionStart - lineStart;
-				}
-			}
+	fromSnapshot(current: SourceActiveEditorSnapshot): SelectionInfo {
+		const {
+			content,
+			cursorOffset: position,
+			selection,
+			selectionStartOffset: selectionStart,
+		} = current;
+		const surroundingRawBlock = this.extractLine(content, position);
+		let selectionStartInBlock: number | null = null;
+		if (selection && selectionStart !== null) {
+			let lineStart = content.lastIndexOf("\n", position);
+			lineStart = lineStart === -1 ? 0 : lineStart + 1;
+			selectionStartInBlock = selectionStart - lineStart;
+		}
 
-			return {
-				selectionStartInBlock,
-				splitPathToFileWithSelection: splitPath,
-				surroundingRawBlock,
-				text: selection,
-			} satisfies SelectionInfo;
-		}).pipe(Effect.orElseSucceed(() => null));
+		return {
+			selectionStartInBlock,
+			splitPathToFileWithSelection: current.splitPath,
+			surroundingRawBlock,
+			text: selection,
+		} satisfies SelectionInfo;
 	}
 
 	/**

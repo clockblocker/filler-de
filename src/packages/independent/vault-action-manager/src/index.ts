@@ -1,8 +1,13 @@
 export {
 	type BulkVaultEventHandler,
 	createVaultActionManager,
+	VamActiveEditorError,
+	type VamActiveEditorFailureReason,
+	VamActiveEditorFailureReasonSchema,
 	VamDispatchError,
 	type VamEffectError,
+	type VamFileAccessError,
+	VamNoActiveEditorError,
 	VamPlanningError,
 	VamScanError,
 	VamSetupError,
@@ -13,6 +18,7 @@ export {
 	type VaultActionManagerFactoryResult,
 	type VaultActionManagerSubscription,
 } from "./facade";
+export type { ActiveEditorContext } from "./file-services/active-view/active-file-service";
 export type { SelectionInfo } from "./file-services/active-view/selection-service";
 export type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 export type { PossibleRootVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/helpers";

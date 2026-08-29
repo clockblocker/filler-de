@@ -198,8 +198,8 @@ describe("Librarian Effect commands", () => {
 					Effect.sync(() => {
 						opened.push(path);
 					}),
-				getOpenedContent: () => Effect.succeed(content),
-				mdPwd: () => Effect.succeed(SOURCE_PATH),
+				getActiveEditorContext: () =>
+					Effect.succeed(makeActiveContext(content)),
 			},
 		});
 
@@ -269,8 +269,8 @@ describe("Librarian Effect commands", () => {
 			librarian,
 			vam: {
 				cd: () => Effect.die("navigation must be skipped"),
-				getOpenedContent: () => Effect.succeed(content),
-				mdPwd: () => Effect.succeed(SOURCE_PATH),
+				getActiveEditorContext: () =>
+					Effect.succeed(makeActiveContext(content)),
 			},
 		});
 
@@ -321,15 +321,12 @@ describe("splitToPagesAction", () => {
 		const intentions: PageSplitPlan[] = [];
 		const vam = {
 			cd: () => Effect.sync(() => order.push("cd")),
-			getOpenedContent: () =>
+			getActiveEditorContext: () =>
 				Effect.sync(() => {
-					order.push("content");
-					return "First sentence.\n\nSecond sentence.";
-				}),
-			mdPwd: () =>
-				Effect.sync(() => {
-					order.push("pwd");
-					return SOURCE_PATH;
+					order.push("context");
+					return makeActiveContext(
+						"First sentence.\n\nSecond sentence.",
+					);
 				}),
 		} as unknown as VaultActionManager;
 		const outcome: LibrarianReconciliationOutcome = {
@@ -386,7 +383,7 @@ describe("splitToPagesAction", () => {
 			),
 		);
 
-		expect(order).toEqual(["pwd", "content", "intention", "cd"]);
+		expect(order).toEqual(["context", "intention", "cd"]);
 		expect(intentions).toHaveLength(1);
 		expect(
 			intentions[0]?.treeActions.map((action) => action.actionType),
@@ -398,3 +395,18 @@ describe("splitToPagesAction", () => {
 		});
 	});
 });
+
+function makeActiveContext(content: string) {
+	return {
+		content,
+		currentLine: content.split("\n")[0] ?? "",
+		cursor: { ch: 0, line: 0 },
+		selection: {
+			selectionStartInBlock: null,
+			splitPathToFileWithSelection: SOURCE_PATH,
+			surroundingRawBlock: content.split("\n")[0] ?? "",
+			text: null,
+		},
+		splitPath: SOURCE_PATH,
+	};
+}

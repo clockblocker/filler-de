@@ -5,7 +5,7 @@ import type { LibrarianCommandKind } from "../../../commanders/librarian/command
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import type { Textfresser } from "../../../commanders/textfresser/textfresser";
 import { logger } from "../../../utils/logger";
-import { type CommandContext, CommandKind } from "./types";
+import { CommandKind } from "./types";
 
 /**
  * Managers needed to build command executor.
@@ -32,22 +32,15 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 	 */
 	const collectContext = Effect.fn("createCommandExecutor.collectContext")(
 		function* () {
-			const splitPath = yield* vam
-				.mdPwd()
-				.pipe(Effect.catch(() => Effect.succeed(null)));
-			let activeFile: CommandContext["activeFile"] = null;
-			if (splitPath) {
-				activeFile = yield* vam.getOpenedContent().pipe(
-					Effect.map((content) => ({ content, splitPath })),
-					Effect.catch(() => Effect.succeed(null)),
-				);
-			}
-			const selection = yield* vam
-				.getSelectionInfo()
-				.pipe(Effect.catch(() => Effect.succeed(null)));
+			const context = yield* vam.getActiveEditorContext();
 			return {
-				activeFile,
-				selection,
+				activeFile: context
+					? {
+							content: context.content,
+							splitPath: context.splitPath,
+						}
+					: null,
+				selection: context?.selection ?? null,
 			};
 		},
 	);

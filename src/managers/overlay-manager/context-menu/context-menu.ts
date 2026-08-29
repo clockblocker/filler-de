@@ -34,8 +34,9 @@ type ContextMenuDeps = {
 const getContextMenuFile = Effect.fn("getContextMenuFile")(function* (
 	vam: VaultActionManager,
 ) {
-	const splitPath = yield* vam.mdPwd();
-	if (!splitPath) return null;
+	const context = yield* vam.getActiveEditorContext();
+	if (!context) return null;
+	const { content, splitPath } = context;
 
 	let isInLibrary = false;
 	try {
@@ -51,7 +52,6 @@ const getContextMenuFile = Effect.fn("getContextMenuFile")(function* (
 	}
 	if (!isInLibrary) return null;
 
-	const content = yield* vam.getOpenedContent();
 	return { content, splitPath };
 });
 

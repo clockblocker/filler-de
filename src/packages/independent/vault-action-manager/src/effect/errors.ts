@@ -14,8 +14,52 @@ export class VamVaultIoError extends Schema.TaggedError<VamVaultIoError>()(
 		cause: Schema.Defect(),
 		operation: Schema.String,
 		path: Schema.optional(Schema.String),
+		stateChanged: Schema.optional(Schema.Boolean),
 	},
 ) {}
+
+export const VamActiveEditorFailureReasonSchema = Schema.Literals([
+	"AdapterFailure",
+	"DomFailure",
+	"IdentityMismatch",
+	"MissingFile",
+	"NavigationFailure",
+	"PathFailure",
+	"ReadFailure",
+	"ReadinessTimeout",
+	"StaleFile",
+	"WriteFailure",
+	"WrongMode",
+]);
+
+export type VamActiveEditorFailureReason =
+	typeof VamActiveEditorFailureReasonSchema.Type;
+
+export class VamActiveEditorError extends Schema.TaggedError<VamActiveEditorError>()(
+	"VamActiveEditorError",
+	{
+		cause: Schema.Defect(),
+		operation: Schema.String,
+		path: Schema.optional(Schema.String),
+		reason: VamActiveEditorFailureReasonSchema,
+		stateChanged: Schema.optional(Schema.Boolean),
+	},
+) {}
+
+/** Expected absence, kept separate from operational active-editor failures. */
+export class VamNoActiveEditorError extends Schema.TaggedError<VamNoActiveEditorError>()(
+	"VamNoActiveEditorError",
+	{
+		cause: Schema.Defect(),
+		operation: Schema.String,
+		stateChanged: Schema.optional(Schema.Boolean),
+	},
+) {}
+
+export type VamFileAccessError =
+	| VamActiveEditorError
+	| VamNoActiveEditorError
+	| VamVaultIoError;
 
 export class VamScanError extends Schema.TaggedError<VamScanError>()(
 	"VamScanError",
@@ -62,6 +106,8 @@ export class VamShutdownError extends Schema.TaggedError<VamShutdownError>()(
 
 export type VamEffectError =
 	| VamSetupError
+	| VamActiveEditorError
+	| VamNoActiveEditorError
 	| VamScanError
 	| VamVaultIoError
 	| VamPlanningError

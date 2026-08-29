@@ -127,8 +127,9 @@ function services(mode: "success" | "failure") {
 		Layer.succeed(
 			ActiveEditorAccess,
 			ActiveEditorAccess.of({
-				getActiveMarkdownView: Effect.succeed(null),
+				getActiveEditor: Effect.succeed(null),
 				openFile: () => Effect.void,
+				waitForActiveEditor: () => Effect.die("not used"),
 			}),
 		),
 	);

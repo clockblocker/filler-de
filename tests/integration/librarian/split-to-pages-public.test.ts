@@ -140,6 +140,19 @@ function makeHarness(input: {
 				order.push("dispatch");
 				dispatches.push([...actions]);
 			}).pipe(Effect.andThen(dispatchImpl(actions))),
+		getActiveEditorContext: () =>
+			Effect.succeed({
+				content: input.content ?? LONG_CONTENT,
+				currentLine: input.content ?? LONG_CONTENT,
+				cursor: { ch: 0, line: 0 },
+				selection: {
+					selectionStartInBlock: null,
+					splitPathToFileWithSelection: input.sourcePath,
+					surroundingRawBlock: "",
+					text: null,
+				},
+				splitPath: input.sourcePath,
+			}),
 		getOpenedContent: () => Effect.succeed(input.content ?? LONG_CONTENT),
 		mdPwd: () => Effect.succeed(input.sourcePath),
 		scan: () => scanImpl(),

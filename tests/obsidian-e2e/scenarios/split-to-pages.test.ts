@@ -9,7 +9,7 @@ const STORY_CONTENT = Array.from(
 ).join("\n\n");
 
 describe("Obsidian E2E - split to pages", () => {
-	it("splits the active Scroll with default settings and projects its Codexes", async () => {
+	it("reads and transforms one coherent active source editor before projecting its Codexes", async () => {
 		await withObsidianScenario(
 			{
 				fixture: [{ content: STORY_CONTENT, path: "Story.md" }],
@@ -30,9 +30,18 @@ describe("Obsidian E2E - split to pages", () => {
 				const pagePaths = paths.filter((path) =>
 					path.startsWith("Story/Story_Page_"),
 				);
+				const pageContents = pagePaths
+					.map((path) => vault.markdown[path])
+					.join("\n");
 
 				expect(paths).not.toContain(sourcePath);
 				expect(pagePaths.length).toBeGreaterThan(1);
+				expect(pageContents).toContain(
+					"Paragraph 0. This is a complete sentence in the desktop split story.",
+				);
+				expect(pageContents).toContain(
+					"Paragraph 119. This is a complete sentence in the desktop split story.",
+				);
 				expect(paths).toContain("Story/__-Story.md");
 				expect(vault.markdown["__-Library.md"]).toContain(
 					"[[__-Story|Story]]",

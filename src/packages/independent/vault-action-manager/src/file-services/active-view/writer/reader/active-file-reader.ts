@@ -1,259 +1,108 @@
 import { Effect } from "effect";
-import type { MarkdownView, TFile, TFolder } from "obsidian";
-import { VamVaultIoError } from "../../../../effect/errors";
-import { ActiveEditorAccess, VaultIo } from "../../../../effect/ports";
-import {
-	errorFileStale,
-	errorGetEditor,
-	errorNoActiveView,
-	errorNoFileParent,
-	errorNotInSourceMode,
-} from "../../../../errors";
-import { pathfinder } from "../../../../helpers/pathfinder";
+import type { TFolder } from "obsidian";
 import type {
 	AnySplitPath,
 	SplitPathToMdFile,
 } from "../../../../types/split-path";
-
-
-function activeEditorFailure(
-	operation: string,
-	message: string,
-	path?: string,
-	cause?: unknown,
-): VamVaultIoError {
-	return new VamVaultIoError({
-		cause:
-			cause === undefined
-				? new Error(message)
-				: new Error(message, { cause }),
-		operation,
-		path,
-	});
-}
+import {
+	type ActiveEditorSnapshot,
+	acquireActiveEditorSnapshot,
+	activeEditorFailure,
+	requireSourceMode,
+	snapshotMatches,
+} from "../../active-editor-snapshot";
+import { annotateFileAccessFailure } from "../../tracing";
 
 export class ActiveFileReader {
-	pwd() {
-		return this.getOpenedTFile().pipe(
-			Effect.flatMap((file) =>
-				Effect.try({
-					catch: (cause) =>
-						activeEditorFailure(
-							"splitActiveFilePath",
-							String(cause),
-							file.path,
-							cause,
-						),
-					try: () => pathfinder.splitPathFromAbstract(file),
-				}),
+	snapshot() {
+		return acquireActiveEditorSnapshot();
+	}
+
+	sourceSnapshot(snapshot?: ActiveEditorSnapshot) {
+		return (snapshot ? Effect.succeed(snapshot) : this.snapshot()).pipe(
+			Effect.flatMap(requireSourceMode),
+		);
+	}
+
+	pwd(snapshot?: ActiveEditorSnapshot) {
+		return snapshot
+			? Effect.succeed(snapshot.splitPath)
+			: this.snapshot().pipe(Effect.map((current) => current.splitPath));
+	}
+
+	mdPwd() {
+		return this.pwd().pipe(
+			Effect.catchTag("VamNoActiveEditorError", () =>
+				Effect.succeed(null),
 			),
 		);
 	}
 
-	getContent() {
-		return this.getEditor().pipe(
-			Effect.flatMap(({ editor, view }) =>
-				Effect.try({
-					catch: (cause) =>
-						activeEditorFailure(
-							"readActiveEditor",
-							String(cause),
-							view.file?.path,
-							cause,
-						),
-					try: () => editor.getValue() ?? "",
-				}),
+	getContent(snapshot?: ActiveEditorSnapshot) {
+		return this.sourceSnapshot(snapshot).pipe(
+			Effect.tap((current) =>
+				Effect.annotateCurrentSpan({ path: current.path }),
 			),
+			Effect.map((current) => current.content),
+			Effect.tapError(annotateFileAccessFailure),
+			Effect.withSpan("vam.activeEditor.read", {
+				attributes: { operation: "read" },
+			}),
 		);
 	}
 
-	getParent() {
-		return this.getOpenedTFile().pipe(
-			Effect.flatMap((file) =>
-				file.parent
-					? Effect.succeed(file.parent as TFolder)
+	getParent(snapshot?: ActiveEditorSnapshot) {
+		return (snapshot ? Effect.succeed(snapshot) : this.snapshot()).pipe(
+			Effect.flatMap((current) =>
+				current.file.parent
+					? Effect.succeed(current.file.parent as TFolder)
 					: Effect.fail(
 							activeEditorFailure(
+								"PathFailure",
 								"getActiveFileParent",
-								errorNoFileParent(),
-								file.path,
+								"Active file has no parent",
+								current.path,
 							),
 						),
 			),
 		);
 	}
 
-	getOpenedTFile() {
-		return this.getActiveView().pipe(
-			Effect.flatMap((view) =>
-				view.file
-					? this.validateFileInVault(view.file)
-					: Effect.fail(
-							activeEditorFailure(
-								"getOpenedTFile",
-								errorNoActiveView(),
-							),
-						),
+	getOpenedTFile(snapshot?: ActiveEditorSnapshot) {
+		return snapshot
+			? Effect.succeed(snapshot.file)
+			: this.snapshot().pipe(Effect.map((current) => current.file));
+	}
+
+	observeTarget(target: AnySplitPath) {
+		return this.snapshot().pipe(
+			Effect.map((snapshot) =>
+				snapshotMatches(snapshot, target) ? snapshot : null,
 			),
-		);
-	}
-
-	getEditor() {
-		return this.getActiveView().pipe(
-			Effect.flatMap((view) => this.validateFileExists(view)),
-			Effect.flatMap((view) => this.validateSourceMode(view)),
-			Effect.map((view) => ({ editor: view.editor, view })),
-		);
-	}
-
-	getEditorAnyMode() {
-		return this.getActiveView().pipe(
-			Effect.flatMap((view) =>
-				view.file
-					? Effect.succeed({ editor: view.editor, view })
-					: Effect.fail(
-							activeEditorFailure(
-								"getEditorAnyMode",
-								errorGetEditor(),
-							),
-						),
+			Effect.catchTag("VamNoActiveEditorError", () =>
+				Effect.succeed(null),
 			),
 		);
 	}
 
 	isFileActive(splitPath: SplitPathToMdFile) {
-		return this.pwd().pipe(
-			Effect.map(
-				(pwd) =>
-					pwd.pathParts.length === splitPath.pathParts.length &&
-					pwd.pathParts.every(
-						(part, index) => part === splitPath.pathParts[index],
-					) &&
-					pwd.basename === splitPath.basename,
-			),
+		return this.observeTarget(splitPath).pipe(
+			Effect.map((snapshot) => snapshot !== null),
 		);
 	}
 
 	isInActiveView(splitPath: AnySplitPath) {
-		if (splitPath.kind !== "MdFile") return Effect.succeed(false);
-		return this.isFileActive(splitPath).pipe(
-			Effect.orElseSucceed(() => false),
+		return this.observeTarget(splitPath).pipe(
+			Effect.map((snapshot) => snapshot !== null),
 		);
 	}
 
-	getSelection() {
-		return this.getEditor().pipe(
-			Effect.flatMap(({ editor, view }) =>
-				Effect.try({
-					catch: (cause) =>
-						activeEditorFailure(
-							"getSelection",
-							String(cause),
-							view.file?.path,
-							cause,
-						),
-					try: () => editor.getSelection() || null,
-				}),
+	getSelection(snapshot?: ActiveEditorSnapshot) {
+		return this.sourceSnapshot(snapshot).pipe(
+			Effect.map((current) => current.selection),
+			Effect.catchTag("VamNoActiveEditorError", () =>
+				Effect.succeed(null),
 			),
 		);
-	}
-
-	getCursorOffset() {
-		return this.getEditor().pipe(
-			Effect.flatMap(({ editor, view }) =>
-				Effect.try({
-					catch: (cause) =>
-						activeEditorFailure(
-							"getCursorOffset",
-							String(cause),
-							view.file?.path,
-							cause,
-						),
-					try: () => editor.posToOffset(editor.getCursor()),
-				}),
-			),
-		);
-	}
-
-	getSelectionStartOffset() {
-		return this.getEditor().pipe(
-			Effect.flatMap(({ editor, view }) =>
-				Effect.try({
-					catch: (cause) =>
-						activeEditorFailure(
-							"getSelectionStartOffset",
-							String(cause),
-							view.file?.path,
-							cause,
-						),
-					try: () => editor.posToOffset(editor.getCursor("from")),
-				}),
-			),
-		);
-	}
-
-	private getActiveView() {
-		return Effect.gen(function* () {
-			const activeEditor = yield* ActiveEditorAccess;
-			const view = yield* activeEditor.getActiveMarkdownView;
-			return view
-				? view
-				: yield* activeEditorFailure(
-						"getActiveMarkdownView",
-						errorNoActiveView(),
-					);
-		});
-	}
-
-	private validateFileExists(view: MarkdownView) {
-		if (!view.file) {
-			return Effect.fail(
-				activeEditorFailure("validateActiveFile", errorGetEditor()),
-			);
-		}
-		const path = view.file.path;
-		return Effect.gen(function* () {
-			const vault = yield* VaultIo;
-			const fileInVault = yield* vault.getAbstractFileByPath(path);
-			return fileInVault
-				? view
-				: yield* activeEditorFailure(
-						"validateActiveFile",
-						errorGetEditor(errorFileStale(path)),
-						path,
-					);
-		});
-	}
-
-	private validateSourceMode(view: MarkdownView) {
-		return Effect.try({
-			catch: (cause) =>
-				activeEditorFailure(
-					"validateSourceMode",
-					String(cause),
-					view.file?.path,
-					cause,
-				),
-			try: () => {
-				if (view.getMode() !== "source") {
-					throw new Error(errorGetEditor(errorNotInSourceMode()));
-				}
-				return view;
-			},
-		});
-	}
-
-	private validateFileInVault(file: TFile) {
-		return Effect.gen(function* () {
-			const vault = yield* VaultIo;
-			const fileInVault = yield* vault.getAbstractFileByPath(file.path);
-			return fileInVault
-				? file
-				: yield* activeEditorFailure(
-						"validateOpenedFile",
-						errorFileStale(file.path),
-						file.path,
-					);
-		});
 	}
 }

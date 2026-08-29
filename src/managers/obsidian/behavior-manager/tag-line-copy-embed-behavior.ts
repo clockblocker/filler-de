@@ -1,7 +1,7 @@
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { logError } from "@textfresser/vault-action-manager/issue-handlers";
 import { Effect } from "effect";
-import { type App, MarkdownView, Notice } from "obsidian";
+import { type App, Notice } from "obsidian";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import { getErrorMessage } from "../../../utils/get-error-message";
 
@@ -25,17 +25,15 @@ export async function tagLineCopyEmbedBehavior(
 	}
 
 	try {
-		const view = app.workspace.getActiveViewOfType(MarkdownView);
-		if (!view?.file) {
+		const context = await Effect.runPromise(vam.getActiveEditorContext());
+		if (!context) {
 			new Notice("No active markdown file");
 			return;
 		}
 
-		const editor = view.editor;
-		const basename = view.file.basename;
-		const cursor = editor.getCursor();
-		const lineNumber = cursor.line;
-		const lineText = editor.getLine(lineNumber);
+		const basename = context.splitPath.basename;
+		const lineNumber = context.cursor.line;
+		const lineText = context.currentLine;
 
 		// Skip empty/blank lines silently
 		if (!lineText.trim()) {
@@ -46,16 +44,22 @@ export async function tagLineCopyEmbedBehavior(
 
 		if (!blockId) {
 			// Need to add block marker - find highest existing number
-			const fileContent = await Effect.runPromise(vam.getOpenedContent());
-
-			const highestBlockNumber =
-				blockIdHelper.findHighestNumber(fileContent);
+			const highestBlockNumber = blockIdHelper.findHighestNumber(
+				context.content,
+			);
 			const newBlockNumber = highestBlockNumber + 1;
 			blockId = String(newBlockNumber);
 
 			// Append block marker to end of line
 			const newLineText = `${lineText} ^${blockId}`;
-			editor.setLine(lineNumber, newLineText);
+			await Effect.runPromise(
+				vam.replaceActiveLine({
+					after: newLineText,
+					before: lineText,
+					line: lineNumber,
+					splitPath: context.splitPath,
+				}),
+			);
 		}
 
 		// Format and copy embed to clipboard

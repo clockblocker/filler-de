@@ -103,6 +103,7 @@ function makeHarness(
 			Effect.sync(() => dispatches.push([...actions])).pipe(
 				Effect.andThen(dispatchImpl(actions)),
 			),
+		getActiveEditorContext: () => Effect.succeed(null),
 		getOpenedContent: () => Effect.succeed(""),
 		mdPwd: () => Effect.succeed(null),
 		scan: () =>

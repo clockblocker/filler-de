@@ -1,6 +1,9 @@
 import { Cause, Effect, Exit } from "effect";
 import type { App } from "obsidian";
 import {
+	type VamActiveEditorError,
+	type VamFileAccessError,
+	type VamNoActiveEditorError,
 	type VamScanError,
 	VamShutdownError,
 	type VamSubscriptionError,
@@ -13,7 +16,10 @@ import {
 	type VamRuntimeFailure,
 } from "./effect/runtime";
 import { makeVamLive } from "./effect/vam-live";
-import { ActiveFileService } from "./file-services/active-view/active-file-service";
+import {
+	type ActiveEditorContext,
+	ActiveFileService,
+} from "./file-services/active-view/active-file-service";
 import type { SelectionInfo } from "./file-services/active-view/selection-service";
 import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
@@ -166,7 +172,7 @@ export class VaultActionManager {
 
 	readContent(
 		splitPath: SplitPathToMdFile,
-	): Effect.Effect<string, VamRuntimeFailure<VamVaultIoError>> {
+	): Effect.Effect<string, VamRuntimeFailure<VamFileAccessError>> {
 		return this.runtime.provide(this.reader.readContent(splitPath));
 	}
 
@@ -231,37 +237,69 @@ export class VaultActionManager {
 		return this.runtime.provide(this.reader.scan(splitPath));
 	}
 
-	mdPwd(): Effect.Effect<SplitPathToMdFile | null, VamRuntimeFailure<never>> {
+	mdPwd(): Effect.Effect<
+		SplitPathToMdFile | null,
+		VamRuntimeFailure<VamVaultIoError | VamActiveEditorError>
+	> {
 		return this.runtime.provide(this.markdownFiles.activeMdPath());
+	}
+
+	getActiveEditorContext(): Effect.Effect<
+		ActiveEditorContext | null,
+		VamRuntimeFailure<VamVaultIoError | VamActiveEditorError>
+	> {
+		return this.runtime.provide(this.markdownFiles.activeContext());
 	}
 
 	getOpenedContent(): Effect.Effect<
 		string,
-		VamRuntimeFailure<VamVaultIoError>
+		VamRuntimeFailure<
+			VamVaultIoError | VamActiveEditorError | VamNoActiveEditorError
+		>
 	> {
 		return this.runtime.provide(this.markdownFiles.openedContent());
 	}
 
 	getSelectionInfo(): Effect.Effect<
 		SelectionInfo | null,
-		VamRuntimeFailure<never>
+		VamRuntimeFailure<VamVaultIoError | VamActiveEditorError>
 	> {
 		return this.runtime.provide(this.markdownFiles.selectionInfo());
 	}
 
-	getSelectionText(): Effect.Effect<string | null, VamRuntimeFailure<never>> {
+	getSelectionText(): Effect.Effect<
+		string | null,
+		VamRuntimeFailure<VamVaultIoError | VamActiveEditorError>
+	> {
 		return this.runtime.provide(this.markdownFiles.selectionText());
+	}
+
+	replaceActiveLine(args: {
+		readonly after: string;
+		readonly before: string;
+		readonly line: number;
+		readonly splitPath: SplitPathToMdFile;
+	}): Effect.Effect<void, VamRuntimeFailure<VamFileAccessError>> {
+		return this.runtime.provide(this.markdownFiles.replaceOpenedLine(args));
 	}
 
 	cd(
 		splitPath: SplitPathToMdFile,
-	): Effect.Effect<void, VamRuntimeFailure<VamVaultIoError>> {
+	): Effect.Effect<
+		void,
+		VamRuntimeFailure<VamVaultIoError | VamActiveEditorError>
+	> {
 		return this.runtime.provide(this.markdownFiles.open(splitPath));
 	}
 
 	scrollOpenedFileToLine(
 		line: number,
-	): Effect.Effect<void, VamRuntimeFailure<VamVaultIoError>> {
+	): Effect.Effect<
+		void,
+		VamRuntimeFailure<
+			VamVaultIoError | VamActiveEditorError | VamNoActiveEditorError
+		>
+	> {
 		return this.runtime.provide(
 			this.markdownFiles.scrollOpenedFileToLine(line),
 		);
@@ -317,8 +355,13 @@ export function createVaultActionManager(
 }
 
 export {
+	VamActiveEditorError,
+	type VamActiveEditorFailureReason,
+	VamActiveEditorFailureReasonSchema,
 	VamDispatchError,
 	type VamEffectError,
+	type VamFileAccessError,
+	VamNoActiveEditorError,
 	VamPlanningError,
 	VamScanError,
 	VamSetupError,

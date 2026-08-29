@@ -15,6 +15,8 @@ describe("VaultActionManager Effect facade", () => {
 	it("exposes the Effect facade and keeps runtime construction internal", () => {
 		expect(publicApi).toHaveProperty("createVaultActionManager");
 		expect(publicApi).toHaveProperty("VamScanError");
+		expect(publicApi).toHaveProperty("VamActiveEditorError");
+		expect(publicApi).toHaveProperty("VamNoActiveEditorError");
 		expect(publicApi).toHaveProperty("VamVaultIoError");
 		expect(publicApi).not.toHaveProperty("VamRuntime");
 		expect(publicApi).not.toHaveProperty("createVamRuntime");
@@ -58,14 +60,22 @@ describe("VaultActionManager Effect facade", () => {
 						? yield* readable.read()
 						: null;
 				const activePath = yield* manager.mdPwd();
+				const activeContext = yield* manager.getActiveEditorContext();
 				const opened = yield* manager.getOpenedContent();
 				const selection = yield* manager.getSelectionInfo();
 				const selectionText = yield* manager.getSelectionText();
+				yield* manager.replaceActiveLine({
+					after: "content",
+					before: "content",
+					line: 0,
+					splitPath: mdPath,
+				});
 				yield* manager.cd(mdPath);
 				yield* manager.scrollOpenedFileToLine(3);
 				yield* subscription.close;
 
 				return {
+					activeContext,
 					activePath,
 					content,
 					exists,
@@ -94,6 +104,18 @@ describe("VaultActionManager Effect facade", () => {
 			otherFileCount: 0,
 		});
 		expect(result.activePath).toEqual(mdPath);
+		expect(result.activeContext).toEqual({
+			content: "content",
+			currentLine: "content",
+			cursor: { ch: 0, line: 0 },
+			selection: {
+				selectionStartInBlock: 0,
+				splitPathToFileWithSelection: mdPath,
+				surroundingRawBlock: "content",
+				text: "content",
+			},
+			splitPath: mdPath,
+		});
 		expect(result.opened).toBe("content");
 		expect(result.selection?.text).toBe("content");
 		expect(result.selectionText).toBe("content");

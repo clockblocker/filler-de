@@ -359,6 +359,7 @@ function makeLibrarianVam(
 	return {
 		cd: () => Effect.void,
 		dispatch: () => Effect.void,
+		getActiveEditorContext: () => Effect.succeed(null),
 		getOpenedContent: () => Effect.succeed(""),
 		mdPwd: () => Effect.succeed(null),
 		scan: () => scan,

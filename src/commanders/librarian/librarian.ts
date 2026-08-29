@@ -89,6 +89,7 @@ export type LibrarianVam = Pick<
 	VaultActionManager,
 	| "cd"
 	| "dispatch"
+	| "getActiveEditorContext"
 	| "getOpenedContent"
 	| "mdPwd"
 	| "scan"

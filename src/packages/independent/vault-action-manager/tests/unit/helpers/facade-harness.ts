@@ -31,6 +31,7 @@ export function makeFacadeHarness() {
 
 	const editor = {
 		getCursor: () => ({ ch: 0, line: 0 }),
+		getLine: () => "content",
 		getSelection: () => "content",
 		getValue: () => "content",
 		listSelections: () => [
@@ -43,6 +44,7 @@ export function makeFacadeHarness() {
 		scrollIntoView: () => {
 			scrollCount++;
 		},
+		setLine: () => {},
 	};
 	const view = {
 		contentEl: { querySelector: () => ({}) },

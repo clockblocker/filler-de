@@ -1,6 +1,40 @@
 import { Context, type Effect } from "effect";
-import type { MarkdownView, TAbstractFile, TFile, TFolder } from "obsidian";
-import type { VamVaultIoError } from "./errors";
+import type { Editor, TAbstractFile, TFile, TFolder } from "obsidian";
+import type { VamActiveEditorError, VamVaultIoError } from "./errors";
+
+export type ActiveEditor = Pick<
+	Editor,
+	| "getCursor"
+	| "getLine"
+	| "getSelection"
+	| "getValue"
+	| "listSelections"
+	| "posToOffset"
+	| "replaceRange"
+	| "replaceSelection"
+	| "scrollIntoView"
+	| "setSelection"
+	| "setLine"
+	| "transaction"
+>;
+
+export type SavedInlineTitleSelection = {
+	readonly end: number;
+	readonly start: number;
+	readonly text: string;
+};
+
+/** Narrow production/test seam captured from one active Markdown view lookup. */
+export type ActiveEditorHandle = {
+	readonly editor: ActiveEditor;
+	readonly file: TFile | null;
+	readonly mode: string;
+	isCurrent(): boolean;
+	readInlineTitleSelection(): SavedInlineTitleSelection | null;
+	restoreInlineTitleSelection(saved: SavedInlineTitleSelection): void;
+};
+
+export type ActiveEditorReadiness = "editor" | "inline-title";
 
 export class VaultIo extends Context.Service<
 	VaultIo,
@@ -37,11 +71,16 @@ export class VaultIo extends Context.Service<
 export class ActiveEditorAccess extends Context.Service<
 	ActiveEditorAccess,
 	{
-		readonly getActiveMarkdownView: Effect.Effect<
-			MarkdownView | null,
-			VamVaultIoError
+		readonly getActiveEditor: Effect.Effect<
+			ActiveEditorHandle | null,
+			VamActiveEditorError
 		>;
-		openFile(file: TFile): Effect.Effect<void, VamVaultIoError>;
+		openFile(file: TFile): Effect.Effect<void, VamActiveEditorError>;
+		waitForActiveEditor(args: {
+			readonly expectedInlineTitleText?: string;
+			readonly path: string;
+			readonly readiness: ActiveEditorReadiness;
+		}): Effect.Effect<ActiveEditorHandle, VamActiveEditorError>;
 	}
 >()("@textfresser/vault-action-manager/ActiveEditorAccess") {}
 

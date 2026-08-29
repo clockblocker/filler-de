@@ -38,7 +38,7 @@ export type { SplitToPagesError } from "./error";
 
 type SplitToPagesContext = {
 	librarian: Librarian;
-	vam: Pick<VaultActionManager, "cd" | "getOpenedContent" | "mdPwd">;
+	vam: Pick<VaultActionManager, "cd" | "getActiveEditorContext">;
 };
 
 export type SplitToPagesOutcome =
@@ -69,28 +69,19 @@ const gatherInput = Effect.fn("Librarian.splitToPages.gatherInput")(function* (
 	context: SplitToPagesContext,
 	config: SegmentationConfig,
 ): Effect.fn.Return<SplitInput, SplitToPagesError> {
-	const sourcePath = yield* context.vam
-		.mdPwd()
+	const editorContext = yield* context.vam
+		.getActiveEditorContext()
 		.pipe(
 			Effect.mapError((error) =>
 				makeSplitToPagesError.noPwd(describeLibrarianVamFailure(error)),
 			),
 		);
-	if (!sourcePath) {
+	if (!editorContext) {
 		return yield* Effect.fail(
 			makeSplitToPagesError.noPwd("Active file is not a markdown file"),
 		);
 	}
-
-	const content = yield* context.vam
-		.getOpenedContent()
-		.pipe(
-			Effect.mapError((error) =>
-				makeSplitToPagesError.noContent(
-					describeLibrarianVamFailure(error),
-				),
-			),
-		);
+	const { content, splitPath: sourcePath } = editorContext;
 
 	const settings = getParsedUserSettings();
 	const rules = makeCodecRulesFromSettings(settings);
