@@ -3,7 +3,11 @@
  * Runs on init and on rename/move; uses only goBackLinkHelper for link building.
  */
 
-import type { CodecRules, Codecs } from "../codecs";
+import {
+	type VaultAction,
+	VaultActionKind,
+} from "@textfresser/vault-action-manager";
+import type { Codecs } from "../codecs";
 import {
 	collectTreeData,
 	computeCodexSplitPath,
@@ -11,13 +15,8 @@ import {
 	makeStripScrollBacklinkTransform,
 } from "../codex";
 import type { TreeReader } from "../tree";
-import { makeVaultScopedSplitPath } from "../tree/library-scope";
+import { makeLibraryScope } from "../tree/library-scope";
 import { computeScrollSplitPath } from "../tree/utils";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import {
-	type VaultAction,
-	VaultActionKind,
-} from "@textfresser/vault-action-manager";
 
 /**
  * Produce VaultAction[] to set or strip go-back links for all library md files
@@ -25,14 +24,14 @@ import {
  *
  * @param tree - Tree reader (e.g. healer)
  * @param codecs - Codec API
- * @param rules - Codec rules (showScrollBacklinks, vault path scoping)
  */
 export function getBacklinkHealingVaultActions(
 	tree: TreeReader,
 	codecs: Codecs,
-	rules: CodecRules,
 ): VaultAction[] {
 	const actions: VaultAction[] = [];
+	const { rules } = codecs;
+	const libraryScope = makeLibraryScope(rules);
 	const { sectionChains, scrollInfos } = collectTreeData(tree, codecs);
 
 	// Non-root codexes: set first line to go-back link
@@ -43,10 +42,7 @@ export function getBacklinkHealingVaultActions(
 		actions.push({
 			kind: VaultActionKind.ProcessMdFile,
 			payload: {
-				splitPath: makeVaultScopedSplitPath(
-					splitPath,
-					rules,
-				) as SplitPathToMdFile,
+				splitPath: libraryScope.toVaultPath(splitPath),
 				transform: makeBacklinkTransform(parentChain, codecs),
 			},
 		});
@@ -64,10 +60,7 @@ export function getBacklinkHealingVaultActions(
 		actions.push({
 			kind: VaultActionKind.ProcessMdFile,
 			payload: {
-				splitPath: makeVaultScopedSplitPath(
-					splitPath,
-					rules,
-				) as SplitPathToMdFile,
+				splitPath: libraryScope.toVaultPath(splitPath),
 				transform: rules.showScrollBacklinks
 					? makeBacklinkTransform(parentChain, codecs)
 					: makeStripScrollBacklinkTransform(),

@@ -64,20 +64,51 @@ export async function resolveArtifactSources(
 	};
 }
 
-async function deployDirectory(source: string, destination: string): Promise<void> {
-	await rm(destination, { force: true, recursive: true });
+async function writeBundledDriverMain(
+	source: string,
+	destination: string,
+): Promise<void> {
+	const build = await Bun.build({
+		entrypoints: [resolve(source, "main.js")],
+		external: ["obsidian"],
+		format: "cjs",
+		target: "node",
+	});
+	const output = build.outputs[0];
+	if (!build.success || !output || build.outputs.length !== 1) {
+		throw new HarnessError(
+			"ARTIFACT_INVALID",
+			"Could not bundle the E2E driver into one Obsidian-loadable main.js",
+			{ stderr: build.logs.map((log) => log.message).join("\n") },
+		);
+	}
+	await Bun.write(destination, output);
+}
+
+async function deployDirectory(
+	source: string,
+	destination: string,
+	options: { readonly bundleMain?: boolean } = {},
+): Promise<void> {
 	await mkdir(destination, { recursive: true });
+	const optionalFiles = new Set(["protocol.js", "styles.css"]);
 	await Promise.all(
-		["main.js", "manifest.json", "styles.css"].map(async (file) => {
+		["main.js", "manifest.json", "protocol.js", "styles.css"].map(async (file) => {
+			const destinationPath = resolve(destination, file);
 			try {
-				await cp(resolve(source, file), resolve(destination, file));
+				if (file === "main.js" && options.bundleMain) {
+					await writeBundledDriverMain(source, destinationPath);
+				} else {
+					await cp(resolve(source, file), destinationPath);
+				}
 			} catch (cause) {
 				if (
-					file !== "styles.css" ||
+					!optionalFiles.has(file) ||
 					(cause as NodeJS.ErrnoException).code !== "ENOENT"
 				) {
 					throw cause;
 				}
+				await rm(destinationPath, { force: true });
 			}
 		}),
 	);
@@ -96,7 +127,9 @@ export async function deployPlugins(options: {
 		options.sources.textfresserId,
 	);
 	try {
-		await deployDirectory(options.sources.driverDir, driverDestination);
+		await deployDirectory(options.sources.driverDir, driverDestination, {
+			bundleMain: true,
+		});
 		await writeFile(
 			resolve(driverDestination, "data.json"),
 			`${JSON.stringify({ protocol: 1, sessionId: options.sessionId }, null, 2)}\n`,

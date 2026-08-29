@@ -1,25 +1,7 @@
-import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
 import { MD } from "@textfresser/vault-action-manager";
+import type { LibraryBulk } from "../../../../../../src/tree/library-scope";
 
-export const bulkEvent: BulkVaultEvent = {
-	debug: {
-		collapsedCount: {
-			creates: 3,
-			deletes: 0,
-			renames: 0,
-		},
-		endedAt: 1768368050053,
-		reduced: {
-			rootDeletes: 0,
-			rootRenames: 0,
-		},
-		startedAt: 1768368049799,
-		trueCount: {
-			creates: 3,
-			deletes: 0,
-			renames: 0,
-		},
-	},
+export const bulkEvent: LibraryBulk = {
 	events: [
 		{
 			kind: "FolderCreated",

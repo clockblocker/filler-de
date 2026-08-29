@@ -1,16 +1,25 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
-import type { PossibleRootVaultEvent } from "@textfresser/vault-action-manager";
-import { MD } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
 import type {
 	FileRenamedVaultEvent,
+	PossibleRootVaultEvent,
 	VaultEvent,
 } from "@textfresser/vault-action-manager";
-import { VaultEventKind } from "@textfresser/vault-action-manager";
+import {
+	MD,
+	SplitPathKind,
+	VaultEventKind,
+} from "@textfresser/vault-action-manager";
 import { generateChildrenList } from "../../../../../src/healer/library-tree/codex/generate-codex-content";
 import type { ProcessCodexAction } from "../../../../../src/healer/library-tree/codex/types/codex-action";
 import { TreeActionType } from "../../../../../src/healer/library-tree/tree-action/types/tree-action";
+import type { LibraryBulk } from "../../../../../src/tree/library-scope";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 import type { TreeShape } from "../tree-test-helpers";
 import { createPersistentPipeline, processBulkEvent } from "./helpers";
@@ -55,14 +64,7 @@ const bulk = ({
 }: {
 	events?: VaultEvent[];
 	roots?: PossibleRootVaultEvent[];
-}): BulkVaultEvent => ({
-	debug: {
-		collapsedCount: { creates: 0, deletes: 0, renames: 0 },
-		endedAt: 0,
-		reduced: { rootDeletes: 0, rootRenames: 0 },
-		startedAt: 0,
-		trueCount: { creates: 0, deletes: 0, renames: 0 },
-	},
+}): LibraryBulk => ({
 	events: events ?? [],
 	roots: roots ?? [],
 });
@@ -153,6 +155,8 @@ describe("Leaf Move Codex Regeneration", () => {
 		);
 
 		expect(berryContent).not.toContain("MoveByCli");
-		expect(fishContent).toContain("[[MoveByCli-Fish-Pie-Recipe|MoveByCli]]");
+		expect(fishContent).toContain(
+			"[[MoveByCli-Fish-Pie-Recipe|MoveByCli]]",
+		);
 	});
 });

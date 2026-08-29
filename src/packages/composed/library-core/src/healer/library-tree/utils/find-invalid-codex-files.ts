@@ -1,9 +1,8 @@
-import { pathfinder } from "@textfresser/vault-action-manager";
 import type { SplitPathWithReader } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
-import type { CodecRules, Codecs } from "../../../codecs";
+import { pathfinder, SplitPathKind } from "@textfresser/vault-action-manager";
+import type { Codecs } from "../../../codecs";
+import { makeLibraryScope } from "../../../tree/library-scope";
 import { isCodexSplitPath } from "../codex/helpers";
-import { tryParseAsInsideLibrarySplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import type { TreeReader } from "../tree-interfaces";
 import type { HealingAction } from "../types/healing-action";
 import { collectValidCodexPaths } from "./collect-codex-paths";
@@ -15,8 +14,8 @@ export function findInvalidCodexFiles(
 	allFiles: SplitPathWithReader[],
 	healer: TreeReader,
 	codecs: Codecs,
-	rules: CodecRules,
 ): HealingAction[] {
+	const libraryScope = makeLibraryScope(codecs.rules);
 	// Collect all valid codex paths from tree
 	const validCodexPaths = new Set<string>();
 	collectValidCodexPaths(healer.getRoot(), [], validCodexPaths, codecs);
@@ -31,10 +30,7 @@ export function findInvalidCodexFiles(
 		if (!isCodexSplitPath(file)) continue;
 
 		// This is a __ file - check if it's valid
-		const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
-			file,
-			rules,
-		);
+		const libraryScopedResult = libraryScope.toLibraryPath(file);
 		if (libraryScopedResult.isErr()) continue;
 
 		const filePath = pathfinder.systemPathFromSplitPath(

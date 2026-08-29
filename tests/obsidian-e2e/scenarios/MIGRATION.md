@@ -56,7 +56,8 @@ individual files, or evaluate arbitrary renderer JavaScript.
 
 ## Harness assumptions encoded by these files
 
-- The outer runner exclusively owns one Obsidian host and session.
+- The outer runner holds the exclusive E2E lease for one vault and session;
+  managed mode also owns the Obsidian process.
 - `withObsidianScenario` allocates
   `E2E/<session>/<scenario>/Library`, changes the plugin's `libraryRoot`, seeds
   fixtures through Obsidian interfaces, and settles before entering the

@@ -3,12 +3,8 @@ import {
 	type ObsidianEventLayer,
 	type UserEventKind,
 } from "@textfresser/obsidian-event-layer";
-import type {
-	SplitPathToMdFile,
-	VaultActionManagerTestingAdapter,
-} from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
-	logError,
 	makeSplitPath,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
@@ -16,6 +12,7 @@ import {
 	createVaultActionManager as createEffectVaultActionManager,
 	type VaultActionManager as EffectVaultActionManager,
 } from "@textfresser/vault-action-manager/facade";
+import { logError } from "@textfresser/vault-action-manager/issue-handlers";
 import {
 	adaptLegacyVaultActionManager,
 	type LegacyVaultActionManager,
@@ -70,7 +67,7 @@ export default class TextEaterPlugin extends Plugin {
 	vam: LegacyVaultActionManager;
 	/** Canonical Effect view consumed by Textfresser. */
 	effectVam: EffectVaultActionManager;
-	vamTesting: VaultActionManagerTestingAdapter;
+	vamTesting: EffectVaultActionManager["testing"];
 	userEventInterceptor: ObsidianEventLayer;
 	overlayManager: OverlayManager | null = null;
 	delimiterChangeService: DelimiterChangeService | null = null;

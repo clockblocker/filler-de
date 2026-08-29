@@ -1,22 +1,36 @@
-### Obsidian CLI
+# Obsidian desktop-host testing
 
-The project uses Obsidian's built-in CLI (macOS binary at `/Applications/Obsidian.app/Contents/MacOS/Obsidian`) for E2E tests.
+The supported E2E harness is `tests/obsidian-e2e`. It uses Obsidian's official
+`obsidian-cli` executable and a test-only driver plugin. The legacy
+`tests/cli-e2e` and `tests/cli-fast` suites remain temporarily for migration;
+do not use their GUI-executable wrapper, raw `eval`, reload hooks, or shared
+state chains for new tests.
 
-**Usage**: `"/Applications/Obsidian.app/Contents/MacOS/Obsidian" vault=<vaultName> <command>`
+Local attached run:
 
-Key commands:
-- `create name="path" content="..." silent` — create a file
-- `read path="path"` — read file content
-- `files [folder="..."] [ext=md]` — list files
-- `plugin:reload id=<pluginId>` — reload a plugin
-- `eval code=<js>` — execute JavaScript in the running Obsidian context (accesses `app.*`)
-
-The `eval` command is the workhorse for E2E: it calls plugin methods directly via `app.plugins.plugins['cbcr-text-eater-de']`.
-
-**Important**: The test vault (`cli-e2e-test-vault`) has its **own copy** of `main.js` at `.obsidian/plugins/cbcr-text-eater-de/main.js`. After building, you must copy the build output to the test vault and reload:
 ```bash
-cp main.js /path/to/cli-e2e-test-vault/.obsidian/plugins/cbcr-text-eater-de/main.js
-"/Applications/Obsidian.app/Contents/MacOS/Obsidian" vault=cli-e2e-test-vault plugin:reload id=cbcr-text-eater-de
+bun run test:obsidian-e2e
 ```
 
-Wrapper utilities: `tests/cli-e2e/utils/` — `cli.ts` (obsidian/obsidianEval), `vault-ops.ts` (CRUD), `idle.ts` (waitForIdle).
+Clean managed run on a dedicated macOS desktop host:
+
+```bash
+bun run test:obsidian-e2e:managed
+```
+
+Managed mode is the authoritative CI shape. Obsidian CLI controls the desktop
+application; Obsidian Headless does not load community plugins and cannot run
+this suite. The host therefore needs a logged-in graphical session, Obsidian
+1.12.2 or newer, and CLI enabled. Managed mode refuses to take over an already
+running Obsidian process.
+
+The outer runner owns the entire session: exclusive lock, disposable vault,
+artifact deployment before launch, process startup, readiness, serialized Bun
+tests, failure diagnostics, and teardown. It installs only Textfresser and the
+E2E driver in the generated vault. Every scenario then owns
+`E2E/<session>/<scenario>/Library` and accesses it through fixture, `act`,
+`snapshot`, and `status` operations.
+
+See `tests/obsidian-e2e/README.md` for setup, authoring examples, diagnostics,
+and the gradual migration policy. The CLI behavior and architecture decisions
+behind the replacement are recorded in `docs/e2e-obsidian-cli-research.md`.

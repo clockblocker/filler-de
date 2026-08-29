@@ -219,12 +219,14 @@ describe("reduceRoots", () => {
 			assertRoots(roots, events);
 		});
 
-		it("duplicate folder renames - both filtered (should be deduplicated earlier)", () => {
-			const events = [folderRenamed("A", "B"), folderRenamed("A", "B")];
-			const roots = reduceRoots(events);
-			// Duplicates cover each other, resulting in 0 roots
-			// This indicates duplicates should be handled in earlier pipeline stage
-			expect(roots.length).toBe(0);
+		it("emits a duplicate folder rename exactly once", () => {
+			const first = folderRenamed("A", "B");
+			const last = folderRenamed("A", "B");
+
+			const roots = reduceRoots([first, last]);
+
+			expect(roots).toHaveLength(1);
+			expect(roots[0]).toBe(last);
 		});
 
 		it("file rename with different extension", () => {
@@ -266,6 +268,29 @@ describe("reduceRoots", () => {
 	});
 
 	describe("Invariants", () => {
+		it("emits every independent semantic operation exactly once", () => {
+			const independentOperations = [
+				fileRenamed("notes/draft.md", "notes/final.md"),
+				folderRenamed("inbox", "archive/inbox"),
+				fileTrashed("trash/loose.md"),
+				folderTrashed("old-project"),
+			];
+			const duplicateObservations = independentOperations.flatMap(
+				(event) => [{ ...event }, event],
+			);
+
+			const roots = reduceRoots(duplicateObservations);
+
+			assertRoots(roots, independentOperations);
+			for (const operation of independentOperations) {
+				expect(
+					roots.filter(
+						(root) => eventKey(root) === eventKey(operation),
+					),
+				).toHaveLength(1);
+			}
+		});
+
 		it("roots is always a subset of events", () => {
 			const events = [
 				folderRenamed("A", "B"),

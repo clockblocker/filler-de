@@ -184,13 +184,13 @@ function validateRequest(value) {
 	}
 
 	return {
-		protocol: PROTOCOL_VERSION,
-		sessionId,
-		requestId,
-		expectedInstanceId,
 		expectedGeneration,
+		expectedInstanceId,
 		method,
 		params,
+		protocol: PROTOCOL_VERSION,
+		requestId,
+		sessionId,
 	};
 }
 
@@ -278,8 +278,8 @@ function scenarioPaths(sessionIdValue, scenarioIdValue) {
 	);
 	const scenarioRoot = `E2E/${sessionId}/${scenarioId}`;
 	return {
-		scenarioRoot,
 		libraryRoot: `${scenarioRoot}/Library`,
+		scenarioRoot,
 	};
 }
 
@@ -314,14 +314,14 @@ function requestFingerprint(request) {
 }
 
 module.exports = {
+	decodeBase64UrlJson,
+	isRecord,
 	MAX_REQUEST_BYTES,
 	MUTATING_METHODS,
 	PROTOCOL_VERSION,
 	ProtocolError,
-	REQUEST_METHODS,
-	decodeBase64UrlJson,
-	isRecord,
 	parseEncodedRequest,
+	REQUEST_METHODS,
 	requestFingerprint,
 	resolveScopedPath,
 	scenarioPaths,

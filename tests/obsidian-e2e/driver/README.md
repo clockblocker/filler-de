@@ -1,7 +1,9 @@
 # Textfresser E2E driver
 
-This directory contains an install-ready, test-only Obsidian plugin. The outer
-E2E runner copies `dist/` into the managed vault and writes this `data.json`:
+This directory contains the test-only Obsidian driver source artifact. The
+outer E2E runner bundles `dist/main.js` and `dist/protocol.js` into one
+self-contained plugin entrypoint, installs it in the test vault, and writes
+this `data.json`:
 
 ```json
 { "protocol": 1, "sessionId": "<runner-owned-session-id>" }

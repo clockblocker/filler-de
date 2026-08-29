@@ -1,25 +1,28 @@
 /**
  * Test helpers for running the full pipeline:
- * BulkVaultEvent → TreeActions → Healer → CodexImpact → Deletions → Recreations → HealingActions
+ * LibraryBulk → TreeActions → Healer → CodexImpact → Deletions → Recreations → HealingActions
  */
 
-import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
 import {
 	type CodecRules,
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "../../../../../src/codecs";
-import type { Healer } from "../../../../../src/healing";
-import {
-	extractInvalidCodexesFromBulk,
-} from "../../../../../src/healer/library-tree/codex/codex-impact-to-actions";
 import type { CodexImpact } from "../../../../../src/healer/library-tree/codex/compute-codex-impact";
 import { mergeCodexImpacts } from "../../../../../src/healer/library-tree/codex/merge-codex-impacts";
 import type { CodexAction } from "../../../../../src/healer/library-tree/codex/types/codex-action";
-import { buildTreeActions } from "../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter";
-import type { CreateTreeLeafAction, TreeAction } from "../../../../../src/healer/library-tree/tree-action/types/tree-action";
+import {
+	type BulkInterpreter,
+	makeBulkInterpreter,
+} from "../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter";
+import type {
+	CreateTreeLeafAction,
+	TreeAction,
+} from "../../../../../src/healer/library-tree/tree-action/types/tree-action";
 import type { HealingAction } from "../../../../../src/healer/library-tree/types/healing-action";
+import type { Healer } from "../../../../../src/healing";
+import type { LibraryBulk } from "../../../../../src/tree/library-scope";
 import { processCodexImpacts } from "../../../../src/commanders/librarian/init/process-codex-impacts";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { makeTree, type TreeShape } from "../tree-test-helpers";
@@ -41,6 +44,7 @@ export type PipelineResult = {
 export type PersistentPipelineState = {
 	healer: Healer;
 	codecs: Codecs;
+	interpretBulk: BulkInterpreter;
 	rules: CodecRules;
 	history: PipelineResult[];
 };
@@ -48,18 +52,21 @@ export type PersistentPipelineState = {
 // ─── Main Pipeline Runner ───
 
 /**
- * Run full pipeline: BulkVaultEvent → TreeActions → Healer → CodexImpact → Deletions → Recreations
+ * Run full pipeline: LibraryBulk → TreeActions → Healer → CodexImpact → Deletions → Recreations
  * Creates a new healer instance (for single-event tests).
  */
 export function runPipeline(
 	initialTree: TreeShape,
-	bulkEvent: BulkVaultEvent,
+	bulkEvent: LibraryBulk,
 ): PipelineResult {
 	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 	const codecs = makeCodecs(rules);
 	const healer = makeTree(initialTree);
 
-	return processBulkEvent({ codecs, healer, rules }, bulkEvent);
+	return processBulkEvent(
+		{ codecs, healer, interpretBulk: makeBulkInterpreter(codecs), rules },
+		bulkEvent,
+	);
 }
 
 /**
@@ -77,6 +84,7 @@ export function createPersistentPipeline(
 		codecs,
 		healer,
 		history: [],
+		interpretBulk: makeBulkInterpreter(codecs),
 		rules,
 	};
 }
@@ -86,27 +94,20 @@ export function createPersistentPipeline(
  * Mutates the healer's tree state and records the result in history.
  */
 export function processBulkEvent(
-	state: PersistentPipelineState | { healer: Healer; codecs: Codecs; rules: CodecRules },
-	bulkEvent: BulkVaultEvent,
+	state:
+		| PersistentPipelineState
+		| {
+				healer: Healer;
+				codecs: Codecs;
+				interpretBulk: BulkInterpreter;
+				rules: CodecRules;
+		  },
+	bulkEvent: LibraryBulk,
 ): PipelineResult {
-	const { healer, codecs, rules } = state;
+	const { healer, codecs, interpretBulk } = state;
 
-	// Normalize bulk event to ensure required fields exist
-	const normalizedBulk: BulkVaultEvent = {
-		...bulkEvent,
-		debug: bulkEvent.debug ?? {
-			collapsedCount: { creates: 0, deletes: 0, renames: 0 },
-			endedAt: 0,
-			reduced: { rootDeletes: 0, rootRenames: 0 },
-			startedAt: 0,
-			trueCount: { creates: 0, deletes: 0, renames: 0 },
-		},
-		events: bulkEvent.events ?? [],
-		roots: bulkEvent.roots ?? [],
-	};
-
-	// Step 1: Build tree actions from bulk event
-	const treeActions = buildTreeActions(normalizedBulk, codecs, rules);
+	// Step 1: Interpret the semantic bulk once.
+	const { invalidCodexActions, treeActions } = interpretBulk(bulkEvent);
 
 	// Step 2: Process each action through healer (mutates tree state)
 	const codexImpacts: CodexImpact[] = [];
@@ -121,22 +122,12 @@ export function processBulkEvent(
 	// Step 3: Merge codex impacts
 	const mergedCodexImpact = mergeCodexImpacts(codexImpacts);
 
-	// Step 4: Extract invalid codexes from bulk event (after tree state updated)
-	const invalidCodexDeletions = extractInvalidCodexesFromBulk(
-		normalizedBulk,
-		codecs,
-	);
-
-	// Step 5: Use the same incremental codex path as Librarian.processActions.
+	// Step 4: Use the same incremental codex path as Librarian.processActions.
 	const {
 		codexRecreations: recreationActions,
 		deletionHealingActions: codexImpactDeletions,
-	} = processCodexImpacts(
-		codexImpacts,
-		healer,
-		codecs,
-	);
-	const deletionActions = [...invalidCodexDeletions, ...codexImpactDeletions];
+	} = processCodexImpacts(codexImpacts, healer, codecs);
+	const deletionActions = [...invalidCodexActions, ...codexImpactDeletions];
 
 	const result: PipelineResult = {
 		codexImpacts,
@@ -165,7 +156,7 @@ export function createPipelineFromCreateActions(
 ): PersistentPipelineState {
 	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 	const codecs = makeCodecs(rules);
-	
+
 	// Create empty tree
 	const libraryRoot = "Library" as const;
 	const healer = makeTree({ libraryRoot });
@@ -181,6 +172,7 @@ export function createPipelineFromCreateActions(
 		codecs,
 		healer,
 		history: [],
+		interpretBulk: makeBulkInterpreter(codecs),
 		rules,
 	};
 }

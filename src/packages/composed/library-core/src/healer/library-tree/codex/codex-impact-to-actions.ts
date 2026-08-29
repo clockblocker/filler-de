@@ -4,20 +4,20 @@
  */
 
 import {
-	type BulkVaultEvent,
+	MD,
+	SplitPathKind,
 	VaultEventKind,
 } from "@textfresser/vault-action-manager";
-import { MD } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { err, ok } from "neverthrow";
-import { logger } from "../../../internal/root/logger";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
+import { logger } from "../../../internal/root/logger";
 import {
 	computeCodexSuffix,
 	parseSectionChainToNodeNames,
 } from "../../../path-finder";
+import { type LibraryScopedBulk, Scope } from "../../../tree/library-scope";
 import type { TreeReader } from "../tree-interfaces";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";
@@ -379,8 +379,8 @@ export function codexImpactToIncrementalRecreations(
  * @param codecs - Codec API for parsing/constructing segment IDs
  * @returns Array of deletion actions for invalid codexes
  */
-export function extractInvalidCodexesFromBulk(
-	bulkEvent: BulkVaultEvent,
+export function extractInvalidCodexesFromScopedBulk(
+	bulkEvent: LibraryScopedBulk,
 	codecs: Codecs,
 ): HealingAction[] {
 	const actions: HealingAction[] = [];
@@ -388,6 +388,7 @@ export function extractInvalidCodexesFromBulk(
 	for (const event of bulkEvent.events) {
 		// Check FileCreated events
 		if (event.kind === VaultEventKind.FileCreated) {
+			if (event.scope !== Scope.Inside) continue;
 			if (event.splitPath.kind !== SplitPathKind.MdFile) continue;
 			if (!isCodexSplitPath(event.splitPath)) continue;
 
@@ -402,6 +403,12 @@ export function extractInvalidCodexesFromBulk(
 
 		// Check FileRenamed events (only "to" path)
 		if (event.kind === VaultEventKind.FileRenamed) {
+			if (
+				event.scope !== Scope.Inside &&
+				event.scope !== Scope.OutsideToInside
+			) {
+				continue;
+			}
 			if (event.to.kind !== SplitPathKind.MdFile) continue;
 			if (!isCodexSplitPath(event.to)) continue;
 

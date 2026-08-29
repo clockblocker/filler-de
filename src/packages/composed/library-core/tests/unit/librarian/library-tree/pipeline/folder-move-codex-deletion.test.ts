@@ -1,27 +1,32 @@
 /**
  * Unit tests for the full pipeline:
- * BulkVaultEvent → TreeActions → Healer → CodexImpact → Deletions → HealingActions
+ * LibraryBulk → TreeActions → Healer → CodexImpact → Deletions → HealingActions
  *
  * Focus: Folder moves and codex deletion actions
  */
 
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
-import type { PossibleRootVaultEvent } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
 import type {
 	FolderRenamedVaultEvent,
+	PossibleRootVaultEvent,
 	VaultEvent,
 } from "@textfresser/vault-action-manager";
-import { VaultEventKind } from "@textfresser/vault-action-manager";
+import {
+	SplitPathKind,
+	VaultEventKind,
+} from "@textfresser/vault-action-manager";
 import { TreeActionType } from "../../../../../src/healer/library-tree/tree-action/types/tree-action";
+import type { LibraryBulk } from "../../../../../src/tree/library-scope";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 import type { TreeShape } from "../tree-test-helpers";
-import {
-	createPersistentPipeline,
-	processBulkEvent,
-	runPipeline,
-} from "./helpers";
+import { createPersistentPipeline, processBulkEvent } from "./helpers";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
@@ -38,7 +43,11 @@ afterEach(() => {
 const spFolder = (
 	pathParts: string[],
 	basename: string,
-): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.Folder } => ({
+): {
+	basename: string;
+	pathParts: string[];
+	kind: typeof SplitPathKind.Folder;
+} => ({
 	basename,
 	kind: SplitPathKind.Folder,
 	pathParts,
@@ -59,15 +68,8 @@ const bulk = ({
 }: {
 	events?: VaultEvent[];
 	roots?: PossibleRootVaultEvent[];
-}): BulkVaultEvent => {
+}): LibraryBulk => {
 	return {
-		debug: {
-			collapsedCount: { creates: 0, deletes: 0, renames: 0 },
-			endedAt: 0,
-			reduced: { rootDeletes: 0, rootRenames: 0 },
-			startedAt: 0,
-			trueCount: { creates: 0, deletes: 0, renames: 0 },
-		},
 		events: events ?? [],
 		roots: roots ?? [],
 	};
@@ -192,7 +194,9 @@ describe("Folder Move → Codex Deletion Pipeline", () => {
 					"A",
 					"Child",
 				]);
-				expect(childDelete.payload.splitPath.basename).toBe("__-Child-A");
+				expect(childDelete.payload.splitPath.basename).toBe(
+					"__-Child-A",
+				);
 			}
 		});
 	});
@@ -350,7 +354,9 @@ describe("Folder Move → Codex Deletion Pipeline", () => {
 			);
 
 			expect(result1.treeActions.length).toBe(1);
-			expect(result1.treeActions[0]?.actionType).toBe(TreeActionType.Move);
+			expect(result1.treeActions[0]?.actionType).toBe(
+				TreeActionType.Move,
+			);
 
 			// Event 2: Rename B/A → B/NewName (rename after move)
 			const result2 = processBulkEvent(
@@ -370,5 +376,4 @@ describe("Folder Move → Codex Deletion Pipeline", () => {
 			expect(state.history.length).toBe(2);
 		});
 	});
-
 });

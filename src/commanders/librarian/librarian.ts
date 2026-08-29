@@ -1,44 +1,33 @@
-import {
-	type CodecRules,
-	type Codecs,
-	makeCodecRulesFromSettings,
-	makeCodecs,
-	type SplitPathToMdFileInsideLibrary,
-} from "@textfresser/library-core";
 import type {
+	LeafMatch,
 	ScrollNodeLocator,
 	SectionNodeLocator,
 } from "@textfresser/library-core";
 import {
+	type BulkInterpreter,
+	type ChangeNodeStatusAction,
+	type Codecs,
 	type CodexClickTarget,
 	type CodexImpact,
-	extractInvalidCodexesFromBulk,
-	isCodexInsideLibrary as isCodexInsideLibraryHelper,
-	isCodexSplitPath,
-	parseCodexClickLineContent,
-} from "@textfresser/library-core";
-import {
-	type ChangeNodeStatusAction,
+	extractScrollStatusActions,
+	findInvalidCodexFiles,
 	getBacklinkHealingVaultActions,
 	Healer,
 	type HealingAction,
-	scanAndGenerateOrphanActions,
-	type TreeAction,
-} from "@textfresser/library-core";
-import type { LeafMatch } from "@textfresser/library-core";
-import {
-	Tree,
-	TreeNodeKind,
-	TreeNodeStatus,
-} from "@textfresser/library-core";
-import { buildTreeActions } from "@textfresser/library-core";
-import {
-	extractScrollStatusActions,
-	findInvalidCodexFiles,
-} from "@textfresser/library-core";
-import {
+	isCodexInsideLibrary as isCodexInsideLibraryHelper,
+	isCodexSplitPath,
+	makeBulkInterpreter,
+	makeCodecRulesFromSettings,
+	makeCodecs,
 	type NodeName,
 	PREFIX_OF_CODEX,
+	parseCodexClickLineContent,
+	type SplitPathToMdFileInsideLibrary,
+	scanAndGenerateOrphanActions,
+	Tree,
+	type TreeAction,
+	TreeNodeKind,
+	TreeNodeStatus,
 } from "@textfresser/library-core";
 import type { PayloadFor } from "@textfresser/obsidian-event-layer";
 import type {
@@ -46,8 +35,8 @@ import type {
 	VaultAction,
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
-import { MD } from "@textfresser/vault-action-manager";
 import {
+	MD,
 	SplitPathKind,
 	type SplitPathToMdFile,
 	type SplitPathToMdFileWithReader,
@@ -60,14 +49,12 @@ import type {
 } from "../../managers/obsidian/command-executor";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
-import type { SplitHealingInfo } from "./pages/split-to-pages-action";
 import { commandFnForCommandKind } from "./commands";
 import type {
 	CommandError,
 	LibrarianCommandInput,
 	LibrarianCommandKind,
 } from "./commands/types";
-import { HealingTransaction } from "./runtime/healing-transaction";
 import {
 	assembleVaultActions,
 	buildInitialCreateActions,
@@ -79,9 +66,11 @@ import {
 	getNextPage as getNextPageImpl,
 	getPrevPage as getPrevPageImpl,
 } from "./navigation/page-navigation";
+import { resolveAliasFromSuffix } from "./navigation/wikilink-alias";
+import type { SplitHealingInfo } from "./pages/split-to-pages-action";
+import { HealingTransaction } from "./runtime/healing-transaction";
 import { triggerSectionHealing as triggerSectionHealingImpl } from "./runtime/section-healing";
 import { VaultActionQueue } from "./runtime/vault-action-queue";
-import { resolveAliasFromSuffix } from "./navigation/wikilink-alias";
 
 // ─── Queue Item ───
 
@@ -97,7 +86,7 @@ export class Librarian {
 	private eventTeardown: (() => void) | null = null;
 	private actionQueue: VaultActionQueue<LibrarianQueueItem>;
 	private codecs!: Codecs;
-	private rules!: CodecRules;
+	private interpretBulk!: BulkInterpreter;
 
 	// Debug: store last events and actions for testing
 	public _debugLastBulkEvent: BulkVaultEvent | null = null;
@@ -120,8 +109,8 @@ export class Librarian {
 		incrementPending();
 		try {
 			const settings = getParsedUserSettings();
-			this.rules = makeCodecRulesFromSettings(settings);
-			this.codecs = makeCodecs(this.rules);
+			this.codecs = makeCodecs(makeCodecRulesFromSettings(settings));
+			this.interpretBulk = makeBulkInterpreter(this.codecs);
 			const rootSplitPath = settings.splitPathToLibraryRoot;
 			const libraryRoot = rootSplitPath.basename;
 
@@ -150,7 +139,6 @@ export class Librarian {
 			const { createActions } = await buildInitialCreateActions(
 				allFiles,
 				this.codecs,
-				this.rules,
 			);
 
 			// Apply all create actions via HealingTransaction
@@ -176,7 +164,6 @@ export class Librarian {
 				allFiles,
 				this.healer,
 				this.codecs,
-				this.rules,
 			);
 			allHealingActions.push(...invalidCodexActions);
 
@@ -215,14 +202,9 @@ export class Librarian {
 				...assembleVaultActions(
 					allHealingActions,
 					codexRecreations,
-					this.rules,
 					this.codecs,
 				),
-				...getBacklinkHealingVaultActions(
-					this.healer,
-					this.codecs,
-					this.rules,
-				),
+				...getBacklinkHealingVaultActions(this.healer, this.codecs),
 			];
 
 			if (allVaultActions.length > 0) {
@@ -265,14 +247,7 @@ export class Librarian {
 			return;
 		}
 
-		// Build tree actions from bulk event
-		const treeActions = buildTreeActions(bulk, this.codecs, this.rules);
-
-		// Extract invalid codex deletions from bulk event
-		const invalidCodexActions = extractInvalidCodexesFromBulk(
-			bulk,
-			this.codecs,
-		);
+		const { treeActions, invalidCodexActions } = this.interpretBulk(bulk);
 
 		// Store for debugging
 		this._debugLastTreeActions = treeActions;
@@ -332,14 +307,9 @@ export class Librarian {
 			...assembleVaultActions(
 				allHealingActions,
 				[...codexRecreations, ...scrollStatusActions],
-				this.rules,
 				this.codecs,
 			),
-			...getBacklinkHealingVaultActions(
-				this.healer,
-				this.codecs,
-				this.rules,
-			),
+			...getBacklinkHealingVaultActions(this.healer, this.codecs),
 		];
 
 		// Store for debugging
@@ -394,7 +364,6 @@ export class Librarian {
 					await this.vam.dispatch(actions);
 				},
 				healer: this.healer,
-				rules: this.rules,
 			},
 			info,
 		);
@@ -463,7 +432,7 @@ export class Librarian {
 	}
 
 	isCodexInsideLibrary(splitPath: SplitPathToMdFile): boolean {
-		return isCodexInsideLibraryHelper(splitPath, this.rules);
+		return isCodexInsideLibraryHelper(splitPath, this.codecs.rules);
 	}
 
 	resolveWikilinkAlias(linkContent: string): string | null {

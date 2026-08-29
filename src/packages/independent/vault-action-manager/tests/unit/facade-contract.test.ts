@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import * as publicApi from "../../src";
 import { createVaultActionManager, ReadContentErrorKind } from "../../src";
 import {
 	folderPath,
@@ -7,6 +8,24 @@ import {
 } from "./helpers/facade-harness";
 
 describe("VaultActionManager compatibility facade", () => {
+	it("keeps Effect migration internals out of the package root", () => {
+		expect(publicApi).toHaveProperty("createVaultActionManager");
+		expect(publicApi).not.toHaveProperty("createEffectVaultActionManager");
+		expect(publicApi).not.toHaveProperty("EffectVaultActionManager");
+		expect(publicApi).not.toHaveProperty("VamRuntime");
+		expect(publicApi).not.toHaveProperty("createVamRuntime");
+		expect(publicApi).not.toHaveProperty("VaultIo");
+		expect(publicApi).not.toHaveProperty("ActiveEditorAccess");
+		expect(publicApi).not.toHaveProperty("makeVamLive");
+		expect(publicApi).not.toHaveProperty("VamVaultIoError");
+		expect(publicApi).not.toHaveProperty("adaptLegacyVaultActionManager");
+		expect(publicApi).not.toHaveProperty("createLegacyVaultActionManager");
+		expect(publicApi).not.toHaveProperty(
+			"VaultActionManagerTestingAdapter",
+		);
+		expect(publicApi).not.toHaveProperty("logError");
+	});
+
 	it("preserves every public method's return shape", async () => {
 		const harness = makeFacadeHarness();
 		const { dispose, manager } = createVaultActionManager(harness.app);

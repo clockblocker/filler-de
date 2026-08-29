@@ -6,55 +6,64 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import { makeVaultScopedSplitPath } from "../healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
 import type { HealingAction } from "../healer/library-tree/types/healing-action";
-import type { CodecRules } from "./rules";
+import { type LibraryScope, makeLibraryScope } from "../tree/library-scope";
+import type { Codecs } from ".";
 
-export function healingActionToVaultAction(
+function translateHealingAction(
 	action: HealingAction,
-	rules: CodecRules,
+	libraryScope: LibraryScope,
 ): VaultAction {
 	switch (action.kind) {
 		case "RenameFolder":
 			return {
 				kind: VaultActionKind.RenameFolder,
 				payload: {
-					from: makeVaultScopedSplitPath(action.payload.from, rules),
-					to: makeVaultScopedSplitPath(action.payload.to, rules),
+					from: libraryScope.toVaultPath(action.payload.from),
+					to: libraryScope.toVaultPath(action.payload.to),
 				},
 			};
 		case "RenameFile":
 			return {
 				kind: VaultActionKind.RenameFile,
 				payload: {
-					from: makeVaultScopedSplitPath(action.payload.from, rules),
-					to: makeVaultScopedSplitPath(action.payload.to, rules),
+					from: libraryScope.toVaultPath(action.payload.from),
+					to: libraryScope.toVaultPath(action.payload.to),
 				},
 			};
 		case "RenameMdFile":
 			return {
 				kind: VaultActionKind.RenameMdFile,
 				payload: {
-					from: makeVaultScopedSplitPath(action.payload.from, rules),
-					to: makeVaultScopedSplitPath(action.payload.to, rules),
+					from: libraryScope.toVaultPath(action.payload.from),
+					to: libraryScope.toVaultPath(action.payload.to),
 				},
 			};
 		case "DeleteMdFile":
 			return {
 				kind: VaultActionKind.TrashMdFile,
 				payload: {
-					splitPath: makeVaultScopedSplitPath(
+					splitPath: libraryScope.toVaultPath(
 						action.payload.splitPath,
-						rules,
 					),
 				},
 			};
 	}
 }
 
+export function healingActionToVaultAction(
+	action: HealingAction,
+	codecs: Codecs,
+): VaultAction {
+	return translateHealingAction(action, makeLibraryScope(codecs.rules));
+}
+
 export function healingActionsToVaultActions(
 	actions: HealingAction[],
-	rules: CodecRules,
+	codecs: Codecs,
 ): VaultAction[] {
-	return actions.map((action) => healingActionToVaultAction(action, rules));
+	const libraryScope = makeLibraryScope(codecs.rules);
+	return actions.map((action) =>
+		translateHealingAction(action, libraryScope),
+	);
 }

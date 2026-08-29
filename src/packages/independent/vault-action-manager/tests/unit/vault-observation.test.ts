@@ -2,10 +2,13 @@ import { describe, expect, it, mock, spyOn } from "bun:test";
 import { Effect, Fiber } from "effect";
 import { TestClock } from "effect/testing";
 import type { App, TAbstractFile } from "obsidian";
-import { TFile } from "obsidian";
+import { TFile, TFolder } from "obsidian";
+import { makeKeyForEvent } from "../../src/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/helpers/make-key-for-event";
 import type { BulkVaultEvent } from "../../src/impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import type { SelfEventTracker } from "../../src/impl/event-processing/self-event-tracker";
 import { VaultObservation } from "../../src/impl/event-processing/vault-observation";
+import type { VaultEvent } from "../../src/types/vault-event";
+import { VaultEventKind } from "../../src/types/vault-event";
 
 type VaultCallback = (...args: never[]) => void;
 
@@ -72,6 +75,19 @@ function mdFile(path: string): TAbstractFile {
 	file.basename = path.split("/").at(-1)?.replace(/\.md$/, "") ?? "";
 	file.extension = "md";
 	return file;
+}
+
+function folder(path: string): TAbstractFile {
+	const directory = new TFolder();
+	directory.path = path;
+	return directory;
+}
+
+function assertEventKeys(
+	actual: readonly VaultEvent[],
+	expected: readonly string[],
+): void {
+	expect(actual.map(makeKeyForEvent).sort()).toEqual([...expected].sort());
 }
 
 describe("VaultObservation", () => {
@@ -241,6 +257,120 @@ describe("VaultObservation", () => {
 		expect(observedPaths).toEqual(["Library/new.md", "Library/old.md"]);
 		expect(bulks).toHaveLength(1);
 		expect(bulks[0]?.events[0]?.kind).toBe("FileRenamed");
+	});
+
+	it("publishes a standalone rename exactly once as a semantic root", async () => {
+		const { callbacks, observation } = makeHarness(() => false);
+		const bulks: BulkVaultEvent[] = [];
+
+		observation.start();
+		observation.subscribe(async (bulk) => {
+			bulks.push(bulk);
+		});
+		callbacks.get("rename")?.(
+			mdFile("Library/final.md") as never,
+			"Library/draft.md" as never,
+		);
+		observation.flushPending();
+		await observation.whenIdle();
+
+		expect(bulks).toHaveLength(1);
+		const bulk = bulks[0];
+		expect(bulk).toBeDefined();
+		if (!bulk) return;
+		const renameKey = `${VaultEventKind.FileRenamed}:Library/draft.md→Library/final.md`;
+		assertEventKeys(bulk.events, [renameKey]);
+		assertEventKeys(bulk.roots, [renameKey]);
+		expect(bulk.roots).toHaveLength(1);
+	});
+
+	it("publishes a standalone delete exactly once as a semantic root", async () => {
+		const { callbacks, observation } = makeHarness(() => false);
+		const bulks: BulkVaultEvent[] = [];
+
+		observation.start();
+		observation.subscribe(async (bulk) => {
+			bulks.push(bulk);
+		});
+		callbacks.get("delete")?.(mdFile("Library/discarded.md") as never);
+		observation.flushPending();
+		await observation.whenIdle();
+
+		expect(bulks).toHaveLength(1);
+		const bulk = bulks[0];
+		expect(bulk).toBeDefined();
+		if (!bulk) return;
+		const deleteKey = `${VaultEventKind.FileDeleted}:Library/discarded.md`;
+		assertEventKeys(bulk.events, [deleteKey]);
+		assertEventKeys(bulk.roots, [deleteKey]);
+		expect(bulk.roots).toHaveLength(1);
+	});
+
+	it("publishes the complete event window and one root per independent mixed operation", async () => {
+		const { callbacks, observation } = makeHarness(() => false);
+		const bulks: BulkVaultEvent[] = [];
+
+		observation.start();
+		observation.subscribe(async (bulk) => {
+			bulks.push(bulk);
+		});
+
+		callbacks.get("rename")?.(
+			folder("Library/archive/parent") as never,
+			"Library/parent" as never,
+		);
+		callbacks.get("rename")?.(
+			mdFile("Library/archive/parent/child.md") as never,
+			"Library/parent/child.md" as never,
+		);
+		callbacks.get("rename")?.(
+			mdFile("Library/notes/final.md") as never,
+			"Library/notes/draft.md" as never,
+		);
+		callbacks.get("delete")?.(folder("Library/trash") as never);
+		callbacks.get("delete")?.(mdFile("Library/trash/nested.md") as never);
+		callbacks.get("delete")?.(mdFile("Library/loose-deletion.md") as never);
+		observation.flushPending();
+		await observation.whenIdle();
+
+		expect(bulks).toHaveLength(1);
+		const bulk = bulks[0];
+		expect(bulk).toBeDefined();
+		if (!bulk) return;
+
+		const folderRename = `${VaultEventKind.FolderRenamed}:Library/parent→Library/archive/parent`;
+		const descendantRename = `${VaultEventKind.FileRenamed}:Library/parent/child.md→Library/archive/parent/child.md`;
+		const independentRename = `${VaultEventKind.FileRenamed}:Library/notes/draft.md→Library/notes/final.md`;
+		const folderDelete = `${VaultEventKind.FolderDeleted}:Library/trash`;
+		const descendantDelete = `${VaultEventKind.FileDeleted}:Library/trash/nested.md`;
+		const independentDelete = `${VaultEventKind.FileDeleted}:Library/loose-deletion.md`;
+
+		assertEventKeys(bulk.events, [
+			folderRename,
+			descendantRename,
+			independentRename,
+			folderDelete,
+			descendantDelete,
+			independentDelete,
+		]);
+		assertEventKeys(bulk.roots, [
+			folderRename,
+			independentRename,
+			folderDelete,
+			independentDelete,
+		]);
+		expect(new Set(bulk.roots.map(makeKeyForEvent)).size).toBe(
+			bulk.roots.length,
+		);
+		expect(bulk.debug.collapsedCount).toEqual({
+			creates: 0,
+			deletes: 3,
+			renames: 3,
+		});
+		expect(bulk.debug.reduced).toEqual({
+			rootDeletes: 2,
+			rootRenames: 2,
+		});
 	});
 
 	it("attributes both rename paths once and filters a fully matched Self Event", async () => {

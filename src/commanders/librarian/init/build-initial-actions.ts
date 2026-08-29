@@ -1,18 +1,20 @@
 import type {
 	AnySplitPathInsideLibrary,
-	CodecRules,
 	Codecs,
+	CreateTreeLeafAction,
 } from "@textfresser/library-core";
-import { isCodexSplitPath } from "@textfresser/library-core";
-import { TreeNodeKind, TreeNodeStatus } from "@textfresser/library-core";
-import type { CreateTreeLeafAction } from "@textfresser/library-core";
 import {
 	inferCreatePolicy,
+	isCodexSplitPath,
+	makeLibraryScope,
+	TreeNodeKind,
+	TreeNodeStatus,
 	tryCanonicalizeSplitPathToDestination,
 } from "@textfresser/library-core";
-import { tryParseAsInsideLibrarySplitPath } from "@textfresser/library-core";
-import type { MD } from "@textfresser/vault-action-manager";
-import type { SplitPathWithReader } from "@textfresser/vault-action-manager";
+import type {
+	MD,
+	SplitPathWithReader,
+} from "@textfresser/vault-action-manager";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { z } from "zod";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
@@ -37,14 +39,13 @@ export type BuildInitialActionsResult = {
  *
  * @param files - Files from vault with readers
  * @param codecs - Codec API
- * @param rules - Codec rules
  */
 export async function buildInitialCreateActions(
 	files: SplitPathWithReader[],
 	codecs: Codecs,
-	rules: CodecRules,
 ): Promise<BuildInitialActionsResult> {
 	const createActions: CreateTreeLeafAction[] = [];
+	const libraryScope = makeLibraryScope(codecs.rules);
 
 	for (const file of files) {
 		// Skip codex files (basename starts with __)
@@ -53,10 +54,7 @@ export async function buildInitialCreateActions(
 		}
 
 		// Convert to library-scoped path
-		const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
-			file,
-			rules,
-		);
+		const libraryScopedResult = libraryScope.toLibraryPath(file);
 		if (libraryScopedResult.isErr()) {
 			logger.warn(
 				`[Librarian] Skipping file outside library: ${file.basename}`,

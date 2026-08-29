@@ -1,6 +1,6 @@
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import type { CodecRules } from "../../../codecs";
-import { tryParseAsInsideLibrarySplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
+import { makeLibraryScope } from "../../../tree/library-scope";
 import { PREFIX_OF_CODEX } from "./literals";
 
 /**
@@ -20,9 +20,7 @@ export function isCodexInsideLibrary(
 	rules: CodecRules,
 ): boolean {
 	if (!isCodexSplitPath(splitPath)) return false;
-	const libraryScopedResult = tryParseAsInsideLibrarySplitPath(
-		splitPath,
-		rules,
-	);
+	const libraryScopedResult =
+		makeLibraryScope(rules).toLibraryPath(splitPath);
 	return libraryScopedResult.isOk();
 }

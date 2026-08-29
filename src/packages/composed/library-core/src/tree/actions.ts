@@ -1,4 +1,8 @@
-export { buildTreeActions } from "../healer/library-tree/tree-action/bulk-vault-action-adapter";
+export {
+	type BulkInterpretation,
+	type BulkInterpreter,
+	makeBulkInterpreter,
+} from "../healer/library-tree/tree-action/bulk-vault-action-adapter";
 export type {
 	ChangeNodeStatusAction,
 	CreateTreeLeafAction,

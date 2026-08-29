@@ -1,33 +1,45 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
-import type { PossibleRootVaultEvent } from "@textfresser/vault-action-manager";
-import { MD } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
 import type {
 	FileCreatedVaultEvent,
 	FileDeletedVaultEvent,
 	FileRenamedVaultEvent,
-	FolderCreatedVaultEvent,
 	FolderDeletedVaultEvent,
 	FolderRenamedVaultEvent,
+	PossibleRootVaultEvent,
 	VaultEvent,
 } from "@textfresser/vault-action-manager";
-import { VaultEventKind } from "@textfresser/vault-action-manager";
+import {
+	MD,
+	SplitPathKind,
+	VaultEventKind,
+} from "@textfresser/vault-action-manager";
 import {
 	type CodecRules,
 	type Codecs,
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "../../../../../../src/codecs";
-import { buildTreeActions } from "../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter";
+import {
+	type BulkInterpreter,
+	makeBulkInterpreter,
+} from "../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter";
 import { TreeActionType } from "../../../../../../src/healer/library-tree/tree-action/types/tree-action";
 import { getNodeName } from "../../../../../../src/healer/library-tree/tree-action/utils/locator/locator-utils";
 import { TreeNodeKind } from "../../../../../../src/healer/library-tree/tree-node/types/atoms";
+import type { LibraryBulk } from "../../../../../../src/tree/library-scope";
 import { defaultSettingsForUnitTests } from "../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 let codecs: Codecs;
+let interpretBulk: BulkInterpreter;
 let rules: CodecRules;
 
 beforeEach(() => {
@@ -36,6 +48,7 @@ beforeEach(() => {
 	});
 	rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 	codecs = makeCodecs(rules);
+	interpretBulk = makeBulkInterpreter(codecs);
 });
 
 afterEach(() => {
@@ -45,8 +58,13 @@ afterEach(() => {
 const spFile = (
 	pathParts: string[],
 	basename: string,
-	ext: string = "txt",
-): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.File; extension: string } => ({
+	ext = "txt",
+): {
+	basename: string;
+	pathParts: string[];
+	kind: typeof SplitPathKind.File;
+	extension: string;
+} => ({
 	basename,
 	extension: ext,
 	kind: SplitPathKind.File,
@@ -56,7 +74,11 @@ const spFile = (
 const spFolder = (
 	pathParts: string[],
 	basename: string,
-): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.Folder } => ({
+): {
+	basename: string;
+	pathParts: string[];
+	kind: typeof SplitPathKind.Folder;
+} => ({
 	basename,
 	kind: SplitPathKind.Folder,
 	pathParts,
@@ -65,7 +87,12 @@ const spFolder = (
 const spMdFile = (
 	pathParts: string[],
 	basename: string,
-): { basename: string; pathParts: string[]; kind: typeof SplitPathKind.MdFile; extension: MD } => ({
+): {
+	basename: string;
+	pathParts: string[];
+	kind: typeof SplitPathKind.MdFile;
+	extension: MD;
+} => ({
 	basename,
 	extension: MD,
 	kind: SplitPathKind.MdFile,
@@ -95,12 +122,9 @@ const evFileRenamed = (
 	to,
 });
 
-const evFolderCreated = (sp: ReturnType<typeof spFolder>): FolderCreatedVaultEvent => ({
-	kind: VaultEventKind.FolderCreated,
-	splitPath: sp,
-});
-
-const evFolderDeleted = (sp: ReturnType<typeof spFolder>): FolderDeletedVaultEvent => ({
+const evFolderDeleted = (
+	sp: ReturnType<typeof spFolder>,
+): FolderDeletedVaultEvent => ({
 	kind: VaultEventKind.FolderDeleted,
 	splitPath: sp,
 });
@@ -120,26 +144,42 @@ const bulk = ({
 }: {
 	events?: VaultEvent[];
 	roots?: PossibleRootVaultEvent[];
-}): BulkVaultEvent => ({
-	debug: {
-		collapsedCount: { creates: 0, deletes: 0, renames: 0 },
-		endedAt: 0,
-		reduced: { rootDeletes: 0, rootRenames: 0 },
-		startedAt: 0,
-		trueCount: { creates: 0, deletes: 0, renames: 0 },
-	},
+}): LibraryBulk => ({
 	events: events ?? [],
 	roots: roots ?? [],
 });
 
-describe("buildTreeActions", () => {
+describe("makeBulkInterpreter", () => {
+	it("returns tree and invalid-codex outcomes from one interpretation", () => {
+		const interpretation = interpretBulk(
+			bulk({
+				events: [
+					evFileCreated(spMdFile(["Library", "A"], "Note-A")),
+					evFileCreated(spMdFile(["Library", "A"], "__-Wrong")),
+				],
+			}),
+		);
+
+		expect(interpretation.treeActions).toHaveLength(1);
+		expect(interpretation.invalidCodexActions).toEqual([
+			{
+				kind: "DeleteMdFile",
+				payload: {
+					splitPath: spMdFile(["Library", "A"], "__-Wrong"),
+				},
+			},
+		]);
+	});
+
 	describe("A) Create mapping", () => {
 		it("FileCreated inside flat => Create", () => {
 			const bulkEvent = bulk({
-				events: [evFileCreated(spMdFile(["Library"], "Note-Child-Parent"))],
+				events: [
+					evFileCreated(spMdFile(["Library"], "Note-Child-Parent")),
+				],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -151,10 +191,17 @@ describe("buildTreeActions", () => {
 
 		it("FileCreated inside nested => Create", () => {
 			const bulkEvent = bulk({
-				events: [evFileCreated(spMdFile(["Library", "Parent", "Child"], "Note-Child-Parent"))],
+				events: [
+					evFileCreated(
+						spMdFile(
+							["Library", "Parent", "Child"],
+							"Note-Child-Parent",
+						),
+					),
+				],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -174,7 +221,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -188,10 +235,14 @@ describe("buildTreeActions", () => {
 	describe("B) Delete mapping", () => {
 		it("FileDeleted inside => Delete", () => {
 			const bulkEvent = bulk({
-				roots: [evFileDeleted(spMdFile(["Library", "Section"], "Note-Section"))],
+				roots: [
+					evFileDeleted(
+						spMdFile(["Library", "Section"], "Note-Section"),
+					),
+				],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBeGreaterThanOrEqual(0);
 			if (actions.length > 0) {
@@ -206,7 +257,7 @@ describe("buildTreeActions", () => {
 				roots: [evFolderDeleted(spFolder(["Library"], "Section"))],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -217,23 +268,19 @@ describe("buildTreeActions", () => {
 		});
 
 		it("FileRenamed inside→outside => Delete", () => {
+			const rename = evFileRenamed(
+				spMdFile(["Library", "A"], "x-A"),
+				spMdFile(["Inbox"], "x"),
+			);
 			const bulkEvent = bulk({
-				events: [
-					evFileRenamed(
-						spMdFile(["Library", "A"], "x-A"),
-						spMdFile(["Inbox"], "x"),
-					),
-				],
+				events: [rename],
+				roots: [rename],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
-			expect(actions.length).toBeGreaterThanOrEqual(0);
-			if (actions.length > 0) {
-				const action = actions[0];
-				if (!action) throw new Error("Expected action");
-				expect(action.actionType).toBe(TreeActionType.Delete);
-			}
+			expect(actions).toHaveLength(1);
+			expect(actions[0]?.actionType).toBe(TreeActionType.Delete);
 		});
 	});
 
@@ -248,7 +295,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -272,7 +319,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -295,7 +342,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -318,7 +365,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -342,7 +389,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -365,7 +412,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -385,7 +432,7 @@ describe("buildTreeActions", () => {
 				events: [evFileCreated(spMdFile(["Inbox"], "a"))],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBe(0);
 		});
@@ -410,7 +457,7 @@ describe("buildTreeActions", () => {
 				],
 			});
 
-			const actions = buildTreeActions(bulkEvent, codecs, rules);
+			const actions = interpretBulk(bulkEvent).treeActions;
 
 			expect(actions.length).toBe(1);
 			const action = actions[0];
@@ -420,4 +467,3 @@ describe("buildTreeActions", () => {
 		});
 	});
 });
-

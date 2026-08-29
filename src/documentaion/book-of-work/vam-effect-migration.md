@@ -305,25 +305,38 @@ increase of 802,375 bytes (21.8%) from the 3,677,505-byte baseline.
 - With Obsidian running, `bun run test:cli-e2e` passes after copying `main.js`
   into the test vault and reloading the plugin.
 
-## Native Effect interface migration window
+## Sealed Effect migration seam
 
-The package now exposes two public subpaths over the same runtime and object
-graph:
+The package root is the supported compatibility boundary during the migration.
+It keeps the current `VaultActionManager` and `createVaultActionManager`
+Promise/Neverthrow contract, together with the domain types and values used by
+callers. It does not export the Effect runtime, live layers, Obsidian ports, or
+Effect-specific manager aliases.
 
-- `@textfresser/vault-action-manager/facade` is the canonical interface. Its
-  operations return environment-free Effects and retain typed VAM failures in
-  the error channel.
+The remaining subpaths have deliberately narrower roles:
+
+- `@textfresser/vault-action-manager/facade` is the unstable Effect migration
+  seam. Its operations return environment-free Effects and retain typed VAM
+  failures in the error channel. Existing migration callers remain
+  source-compatible, but new general consumers should use the package root
+  until the native Effect cutover.
 - `@textfresser/vault-action-manager/legacy-neverthrow-facade` preserves the
-  previous Promise and Neverthrow signatures by delegating to the canonical
-  facade.
+  compatibility contract under an explicit subpath for staged migrations.
 
-The package root remains backward compatible during the migration window and
-also exports discoverable `createEffectVaultActionManager` and
-`EffectVaultActionManager` aliases. Consumers can migrate independently by
-moving to the explicit legacy subpath first and then changing that import to
-`/facade` while converting their call sites to Effect composition.
+Effect errors, Obsidian ports, runtime construction, and live layers remain
+internal package modules. The unstable `/facade` seam re-exports only the typed
+errors already required by its unchanged contract; it does not expose ports,
+runtime construction, or live layers. `VaultIo` and `ActiveEditorAccess` are
+the only `Context.Service` definitions because they are genuine production/test
+substitution seams around Obsidian. Helper classes remain ordinary objects.
 
-Keep the two interfaces only for the migration window. Delete
-`legacy-neverthrow-facade.ts`, the root legacy aliases, structural Neverthrow
-reader/result types, and VAM's final `neverthrow` dependency once no consumer
-imports the legacy contract.
+`createVaultActionManager()` constructs one `ManagedRuntime`. The returned
+manager owns its idempotent shutdown sequence; the factory's `dispose` handle
+delegates to that same owner. Shutdown first closes subscriptions, observation,
+and dispatch coordination, then disposes the runtime exactly once.
+
+Keep the two facades only for the migration window. Delete
+`legacy-neverthrow-facade.ts`, structural Neverthrow reader/result types, and
+VAM's final `neverthrow` dependency once no consumer imports the compatibility
+contract. Promote the Effect facade only as part of the explicit native Effect
+cutover.

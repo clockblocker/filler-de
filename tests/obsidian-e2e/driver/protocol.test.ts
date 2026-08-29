@@ -17,11 +17,11 @@ function encode(value: unknown): string {
 
 function request(overrides: Record<string, unknown> = {}) {
 	return {
-		protocol: PROTOCOL_VERSION,
-		sessionId: "session-123",
-		requestId: "request-1",
 		method: "status",
 		params: {},
+		protocol: PROTOCOL_VERSION,
+		requestId: "request-1",
+		sessionId: "session-123",
 		...overrides,
 	};
 }
@@ -80,7 +80,13 @@ describe("driver protocol request parsing", () => {
 	});
 
 	it("uses a canonical fingerprint for idempotency conflicts", () => {
-		const left = request({ params: { b: 2, a: { d: 4, c: 3 } } });
+		const nested: Record<string, number> = {};
+		nested.d = 4;
+		nested.c = 3;
+		const params: Record<string, unknown> = {};
+		params.b = 2;
+		params.a = nested;
+		const left = request({ params });
 		const right = request({ params: { a: { c: 3, d: 4 }, b: 2 } });
 		expect(requestFingerprint(left)).toBe(requestFingerprint(right));
 	});
@@ -89,8 +95,8 @@ describe("driver protocol request parsing", () => {
 describe("driver protocol path confinement", () => {
 	it("builds an isolated scenario and library root", () => {
 		expect(scenarioPaths("session-123", "rename-folders")).toEqual({
-			scenarioRoot: "E2E/session-123/rename-folders",
 			libraryRoot: "E2E/session-123/rename-folders/Library",
+			scenarioRoot: "E2E/session-123/rename-folders",
 		});
 	});
 

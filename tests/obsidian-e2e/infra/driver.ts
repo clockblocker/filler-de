@@ -10,6 +10,7 @@ interface DriverResponse {
 	readonly instanceId?: unknown;
 	readonly ok?: unknown;
 	readonly protocol?: unknown;
+	readonly requestId?: unknown;
 	readonly sessionId?: unknown;
 	readonly value?: unknown;
 }
@@ -39,11 +40,12 @@ export async function awaitDriverReady(
 	if (
 		response.protocol !== 1 ||
 		response.ok !== true ||
+		response.requestId !== request.requestId ||
 		response.sessionId !== sessionId ||
 		typeof response.instanceId !== "string" ||
 		response.instanceId.length === 0 ||
 		!Number.isSafeInteger(response.generation) ||
-		(response.generation as number) < 0
+		(response.generation as number) < 1
 	) {
 		throw new HarnessError(
 			"CLI_PROTOCOL",

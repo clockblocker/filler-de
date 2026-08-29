@@ -1,4 +1,5 @@
-import { access, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { access, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, resolve } from "node:path";
 import type { ArtifactSources } from "./artifacts";
@@ -58,6 +59,110 @@ async function waitForVault(
 	);
 }
 
+async function waitForPluginManifests(
+	cli: ObsidianCli,
+	pluginIds: readonly string[],
+	timeoutMs = 30_000,
+): Promise<void> {
+	const deadline = Date.now() + timeoutMs;
+	let lastError: unknown;
+	while (Date.now() < deadline) {
+		try {
+			if (await pluginManifestsLoaded(cli, pluginIds)) return;
+			lastError = new Error("Plugin manifests are not loaded yet");
+		} catch (error) {
+			lastError = error;
+		}
+		await Bun.sleep(200);
+	}
+	throw new HarnessError(
+		"SESSION_INVALID",
+		"Obsidian reloaded but did not discover the installed E2E plugins",
+		{ cause: lastError },
+	);
+}
+
+async function pluginManifestsLoaded(
+	cli: ObsidianCli,
+	pluginIds: readonly string[],
+): Promise<boolean> {
+	const ids = JSON.stringify(pluginIds);
+	const result = await cli.call([
+		"eval",
+		`code=${ids}.every(id => Boolean(app.plugins.manifests[id]))`,
+	]);
+	return result.stdout.replace(/^=>\s*/u, "") === "true";
+}
+
+async function reloadAttachedVault(
+	cli: ObsidianCli,
+	expectedPath: string,
+	pluginIds: readonly string[],
+): Promise<void> {
+	const markerKey = "__TEXTFRESSER_E2E_RELOAD_MARKER_V1";
+	const marker = randomUUID();
+	await cli.call([
+		"eval",
+		`code=window[${JSON.stringify(markerKey)}]=${JSON.stringify(marker)}`,
+	]);
+	await cli.call(["reload"], { timeoutMs: 30_000 });
+
+	const deadline = Date.now() + 60_000;
+	let lastError: unknown;
+	let rendererReloaded = false;
+	while (Date.now() < deadline) {
+		try {
+			const result = await cli.call([
+				"eval",
+				`code=window[${JSON.stringify(markerKey)}]!==${JSON.stringify(marker)}`,
+			]);
+			if (result.stdout.replace(/^=>\s*/u, "") === "true") {
+				rendererReloaded = true;
+				break;
+			}
+			lastError = new Error("The pre-reload renderer is still active");
+		} catch (error) {
+			lastError = error;
+		}
+		await Bun.sleep(200);
+	}
+	if (!rendererReloaded) {
+		throw new HarnessError(
+			"SESSION_INVALID",
+			"Obsidian did not complete the attached-vault session reload",
+			{ cause: lastError },
+		);
+	}
+	await waitForVault(cli, expectedPath);
+	await waitForPluginManifests(cli, pluginIds);
+}
+
+async function waitForPersistedDisabled(
+	vaultPath: string,
+	pluginIds: readonly string[],
+	timeoutMs = 10_000,
+): Promise<void> {
+	const enabledPath = resolve(vaultPath, ".obsidian/community-plugins.json");
+	const deadline = Date.now() + timeoutMs;
+	let lastError: unknown;
+	while (Date.now() < deadline) {
+		try {
+			const value = JSON.parse(await readFile(enabledPath, "utf8")) as unknown;
+			if (!enabledPluginIds(value).some((id) => pluginIds.includes(id))) return;
+			lastError = new Error("community-plugins.json still contains E2E plugins");
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code === "ENOENT") return;
+			lastError = error;
+		}
+		await Bun.sleep(100);
+	}
+	throw new HarnessError(
+		"SESSION_INVALID",
+		"Obsidian reported the E2E plugins disabled but did not persist that state",
+		{ cause: lastError },
+	);
+}
+
 export async function prepareAttachedHost(options: {
 	readonly cliPath: string;
 	readonly sessionId: string;
@@ -74,6 +179,10 @@ export async function prepareAttachedHost(options: {
 	const absoluteVaultPath = resolve(vaultPath);
 	const cli = new ObsidianCli({ cliPath: options.cliPath, vaultName });
 	await waitForVault(cli, absoluteVaultPath);
+	const pluginIds = [
+		options.sources.driverId,
+		options.sources.textfresserId,
+	];
 
 	// Deployment is a session boundary: both plugins are disabled while their files
 	// are replaced, and are enabled in dependency order exactly once afterwards.
@@ -82,26 +191,31 @@ export async function prepareAttachedHost(options: {
 			allowErrorText: true,
 		})
 		.catch(() => undefined);
-	const enabledAfterDisable = await cli.json<unknown>([
-		"plugins:enabled",
-		"format=json",
-	]);
-	if (enabledPluginIds(enabledAfterDisable).includes(options.sources.textfresserId)) {
-		throw new HarnessError(
-			"SESSION_INVALID",
-			`Textfresser ${options.sources.textfresserId} remained enabled; refusing to deploy into a live plugin`,
-		);
-	}
 	await cli
 		.call(["plugin:disable", `id=${options.sources.driverId}`], {
 			allowErrorText: true,
 		})
 		.catch(() => undefined);
+	const enabledAfterDisable = enabledPluginIds(
+		await cli.json<unknown>(["plugins:enabled", "format=json"]),
+	);
+	const stillEnabled = pluginIds.filter((id) => enabledAfterDisable.includes(id));
+	if (stillEnabled.length > 0) {
+		throw new HarnessError(
+			"SESSION_INVALID",
+			`E2E plugins remained enabled (${stillEnabled.join(", ")}); refusing to deploy into live code`,
+		);
+	}
+	await waitForPersistedDisabled(absoluteVaultPath, pluginIds);
 	await deployPlugins({
 		sessionId: options.sessionId,
 		sources: options.sources,
 		vaultPath: absoluteVaultPath,
 	});
+	// A single renderer restart is the attached-mode session boundary. It makes
+	// new manifests discoverable and guarantees that callbacks orphaned by a
+	// prior fire-and-forget plugin unload cannot survive into this run.
+	await reloadAttachedVault(cli, absoluteVaultPath, pluginIds);
 	await cli.call(["plugin:enable", `id=${options.sources.driverId}`]);
 	await cli.call(["plugin:enable", `id=${options.sources.textfresserId}`]);
 
@@ -166,9 +280,12 @@ export async function prepareManagedHost(options: {
 		);
 	}
 
-	const vaultPath = await mkdtemp(
-		resolve(tmpdir(), "textfresser-obsidian-e2e-vault-"),
-	);
+	// Reuse one narrow path so Obsidian's global vault registry does not collect
+	// a new dead entry for every disposable run. The exclusive harness lock
+	// makes restoring this location safe.
+	const vaultPath = resolve(tmpdir(), "textfresser-obsidian-e2e-managed-vault");
+	await rm(vaultPath, { force: true, recursive: true });
+	await mkdir(vaultPath, { recursive: true });
 	const vaultName = basename(vaultPath);
 	let ownedPids: readonly number[] = [];
 	let launched = false;
@@ -243,4 +360,8 @@ async function quitOwnedObsidian(ownedPids: readonly number[]): Promise<void> {
 		if (!(await runningObsidianPids()).some((pid) => ownedPids.includes(pid))) return;
 		await Bun.sleep(200);
 	}
+	throw new HarnessError(
+		"PROCESS_FAILED",
+		`Obsidian did not exit; preserving its managed vault instead of deleting live files (pids ${ownedPids.join(", ")})`,
+	);
 }

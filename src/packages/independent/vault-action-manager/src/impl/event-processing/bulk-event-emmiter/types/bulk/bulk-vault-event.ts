@@ -69,10 +69,12 @@ export type BulkVaultEvent = {
 	 * ```
 	 *
 	 * ## Semantics
+	 * - Every independent rename or delete appears exactly once in `roots`.
 	 * - A `FolderRenamed` root implies that all descendant paths were renamed.
 	 * - Descendant rename events MUST NOT be treated as independent user intent.
 	 * - `FileRenamed` roots represent standalone renames not covered by any folder root.
 	 * - `FileDeleted` / `FolderDeleted` roots (if present) represent top-level deletions.
+	 * - Duplicate observations of the same semantic operation do not create duplicate roots.
 	 *
 	 * Downstream consumers should base their logic on `roots`,
 	 * not on the full `events` list.

@@ -1,12 +1,23 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
 import type { VaultEvent } from "@textfresser/vault-action-manager";
-import { VaultEventKind } from "@textfresser/vault-action-manager";
+import {
+	MD,
+	SplitPathKind,
+	VaultEventKind,
+} from "@textfresser/vault-action-manager";
 import { makeCodecRulesFromSettings } from "../../../../../../../../src/codecs";
-import { makeEventVaultScoped } from "../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/events/make-event-vault-scoped";
-import type { LibraryScopedVaultEvent } from "../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
-import { Scope } from "../../../../../../../../src/healer/library-tree/tree-action/bulk-vault-action-adapter/layers/library-scope/types/scoped-event";
+import {
+	type LibraryScopedVaultEvent,
+	makeEventVaultScoped,
+	Scope,
+} from "../../../../../../../../src/tree/library-scope";
 import { defaultSettingsForUnitTests } from "../../../../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../../../../common-utils/setup-spy";
 
@@ -50,7 +61,6 @@ describe("makeEventVaultScoped", () => {
 
 			expect(result).toEqual(event);
 		});
-
 	});
 
 	describe("InsideToInside scope", () => {
@@ -328,4 +338,3 @@ describe("makeEventVaultScoped", () => {
 		});
 	});
 });
-

@@ -1,15 +1,18 @@
-import type { CodecRules, Codecs } from "@textfresser/library-core";
-import type { ScrollNodeSegmentId } from "@textfresser/library-core";
-import type { CodexImpact } from "@textfresser/library-core";
+import type {
+	Codecs,
+	CodexImpact,
+	ScrollNodeSegmentId,
+} from "@textfresser/library-core";
 import {
 	getBacklinkHealingVaultActions,
 	type Healer,
+	TreeNodeKind,
+	TreeNodeStatus,
 } from "@textfresser/library-core";
-import { TreeNodeKind, TreeNodeStatus } from "@textfresser/library-core";
 import type { VaultAction } from "@textfresser/vault-action-manager";
 import { MD } from "@textfresser/vault-action-manager";
-import type { SplitHealingInfo } from "../pages/split-to-pages-action";
 import { assembleVaultActions, processCodexImpacts } from "../init";
+import type { SplitHealingInfo } from "../pages/split-to-pages-action";
 
 /**
  * Dependencies for section healing.
@@ -17,7 +20,6 @@ import { assembleVaultActions, processCodexImpacts } from "../init";
 export type SectionHealingDeps = {
 	healer: Healer;
 	codecs: Codecs;
-	rules: CodecRules;
 	dispatch: (actions: VaultAction[]) => Promise<void>;
 };
 
@@ -25,14 +27,14 @@ export type SectionHealingDeps = {
  * Trigger section healing for a newly created section.
  * Called by Bookkeeper to bypass self-event filtering.
  *
- * @param deps - Dependencies for healing (healer, codecs, rules, dispatch)
+ * @param deps - Dependencies for healing (healer, codecs, dispatch)
  * @param info - Contains section chain, deleted scroll, and page node names
  */
 export async function triggerSectionHealing(
 	deps: SectionHealingDeps,
 	info: SplitHealingInfo,
 ): Promise<void> {
-	const { healer, codecs, rules, dispatch } = deps;
+	const { healer, codecs, dispatch } = deps;
 	const { sectionChain, deletedScrollSegmentId, pageNodeNames } = info;
 
 	// Delete the old scroll from the tree (self-event filtering blocked the Delete event)
@@ -93,19 +95,10 @@ export async function triggerSectionHealing(
 	);
 
 	// Assemble and dispatch vault actions
-	const vaultActions = assembleVaultActions(
-		[],
-		codexRecreations,
-		rules,
-		codecs,
-	);
+	const vaultActions = assembleVaultActions([], codexRecreations, codecs);
 
 	// Generate backlink healing for all affected scrolls/codexes
-	const backlinkActions = getBacklinkHealingVaultActions(
-		healer,
-		codecs,
-		rules,
-	);
+	const backlinkActions = getBacklinkHealingVaultActions(healer, codecs);
 
 	const allActions = [...vaultActions, ...backlinkActions];
 	if (allActions.length > 0) {

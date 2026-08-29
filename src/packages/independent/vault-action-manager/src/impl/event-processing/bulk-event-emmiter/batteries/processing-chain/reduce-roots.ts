@@ -8,14 +8,19 @@ import {
 	type VaultEvent,
 	VaultEventKind,
 } from "../../../../../types/vault-event";
+import { dedupeByKey } from "../../../../common/collapse-helpers";
 import {
 	isPossibleRoot,
 	isRename,
 	type PossibleRootVaultEvent,
 } from "../../types/bulk/helpers";
+import { makeKeyForEvent } from "./helpers/make-key-for-event";
 
 export function reduceRoots(events: VaultEvent[]): PossibleRootVaultEvent[] {
-	const possibleRoots = events.filter(isPossibleRoot);
+	const possibleRoots = dedupeByKey(
+		events.filter(isPossibleRoot),
+		makeKeyForEvent,
+	);
 
 	// Folder renames can cover descendant renames.
 	const folderRenames = possibleRoots.filter(

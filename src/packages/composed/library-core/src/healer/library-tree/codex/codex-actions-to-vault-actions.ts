@@ -2,25 +2,26 @@
  * Convert CodexAction[] to VaultAction[].
  */
 
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import { noteMetadataHelper } from "../../../internal/root/note-metadata";
 import type { Codecs } from "../../../codecs";
-import type { CodecRules } from "../../../codecs/rules";
-import { makeVaultScopedSplitPath } from "../tree-action/bulk-vault-action-adapter/layers/library-scope/codecs/split-path-inside-the-library";
+import { noteMetadataHelper } from "../../../internal/root/note-metadata";
+import {
+	type LibraryScope,
+	makeLibraryScope,
+} from "../../../tree/library-scope";
 import { makeCodexTransform } from "./backlink-transforms";
 import type { CodexAction } from "./types/codex-action";
 
 /**
  * Convert a single CodexAction to VaultAction.
  */
-export function codexActionToVaultAction(
+function translateCodexAction(
 	action: CodexAction,
-	rules: CodecRules,
 	codecs: Codecs,
+	libraryScope: LibraryScope,
 ): VaultAction {
 	switch (action.kind) {
 		case "UpsertCodex":
@@ -28,11 +29,9 @@ export function codexActionToVaultAction(
 				kind: VaultActionKind.UpsertMdFile,
 				payload: {
 					content: action.payload.content,
-					// Type assertion: SplitPathToMdFileInsideLibrary → SplitPathToMdFile via EnscopedSplitPath
-					splitPath: makeVaultScopedSplitPath(
+					splitPath: libraryScope.toVaultPath(
 						action.payload.splitPath,
-						rules,
-					) as SplitPathToMdFile,
+					),
 				},
 			};
 
@@ -48,11 +47,9 @@ export function codexActionToVaultAction(
 			return {
 				kind: VaultActionKind.ProcessMdFile,
 				payload: {
-					// Type assertion: SplitPathToMdFileInsideLibrary → SplitPathToMdFile via EnscopedSplitPath
-					splitPath: makeVaultScopedSplitPath(
+					splitPath: libraryScope.toVaultPath(
 						action.payload.splitPath,
-						rules,
-					) as SplitPathToMdFile,
+					),
 					transform: noteMetadataHelper.toggleStatus(checked),
 				},
 			};
@@ -64,10 +61,9 @@ export function codexActionToVaultAction(
 				kind: VaultActionKind.UpsertMdFile,
 				payload: {
 					content: null,
-					splitPath: makeVaultScopedSplitPath(
+					splitPath: libraryScope.toVaultPath(
 						action.payload.splitPath,
-						rules,
-					) as SplitPathToMdFile,
+					),
 				},
 			};
 
@@ -75,10 +71,9 @@ export function codexActionToVaultAction(
 			return {
 				kind: VaultActionKind.ProcessMdFile,
 				payload: {
-					splitPath: makeVaultScopedSplitPath(
+					splitPath: libraryScope.toVaultPath(
 						action.payload.splitPath,
-						rules,
-					) as SplitPathToMdFile,
+					),
 					transform: makeCodexTransform(
 						action.payload.section,
 						action.payload.sectionChain,
@@ -89,15 +84,22 @@ export function codexActionToVaultAction(
 	}
 }
 
+export function codexActionToVaultAction(
+	action: CodexAction,
+	codecs: Codecs,
+): VaultAction {
+	return translateCodexAction(action, codecs, makeLibraryScope(codecs.rules));
+}
+
 /**
  * Convert CodexAction[] to VaultAction[].
  */
 export function codexActionsToVaultActions(
 	actions: CodexAction[],
-	rules: CodecRules,
 	codecs: Codecs,
 ): VaultAction[] {
+	const libraryScope = makeLibraryScope(codecs.rules);
 	return actions.map((action) =>
-		codexActionToVaultAction(action, rules, codecs),
+		translateCodexAction(action, codecs, libraryScope),
 	);
 }

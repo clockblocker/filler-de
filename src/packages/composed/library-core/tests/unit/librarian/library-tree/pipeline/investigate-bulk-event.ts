@@ -1,19 +1,22 @@
 /**
  * Investigation script for processing observed bulk events.
- * 
+ *
  * Usage:
  *   bun run tests/unit/librarian/library-tree/pipeline/investigate-bulk-event.ts <path-to-json>
- * 
+ *
  * Or import and use programmatically:
  *   import { investigateBulkEvent } from "./investigate-bulk-event";
  *   const result = investigateBulkEvent(createActions, bulkEvent);
  */
 
-import type { BulkVaultEvent } from "@textfresser/vault-action-manager";
 import type { CodexImpact } from "../../../../../src/healer/library-tree/codex/compute-codex-impact";
 import type { CodexAction } from "../../../../../src/healer/library-tree/codex/types/codex-action";
-import type { CreateTreeLeafAction, TreeAction } from "../../../../../src/healer/library-tree/tree-action/types/tree-action";
+import type {
+	CreateTreeLeafAction,
+	TreeAction,
+} from "../../../../../src/healer/library-tree/tree-action/types/tree-action";
 import type { HealingAction } from "../../../../../src/healer/library-tree/types/healing-action";
+import type { LibraryBulk } from "../../../../../src/tree/library-scope";
 import {
 	createPipelineFromCreateActions,
 	type PipelineResult,
@@ -24,7 +27,7 @@ import {
 
 export function investigateBulkEvent(
 	createActions: CreateTreeLeafAction[],
-	bulkEvent: BulkVaultEvent,
+	bulkEvent: LibraryBulk,
 ): PipelineResult {
 	// Initialize pipeline from createActions
 	const state = createPipelineFromCreateActions(createActions);
@@ -82,35 +85,38 @@ function formatTreeAction(action: TreeAction): string {
 	}
 }
 
-function logCodexImpacts(
-	impacts: CodexImpact[],
-	merged: CodexImpact,
-): void {
+function logCodexImpacts(impacts: CodexImpact[], merged: CodexImpact): void {
 	console.log("🔍 CODEX IMPACTS");
 	console.log("-".repeat(80));
 	console.log(`  Individual impacts: ${impacts.length}`);
-	console.log(`  Merged impact:`);
+	console.log("  Merged impact:");
 	console.log(`    - Deleted: ${merged.deleted.length} sections`);
 	console.log(`    - Renamed: ${merged.renamed.length} sections`);
-	console.log(`    - Content changed: ${merged.contentChanged.length} sections`);
-	console.log(`    - Descendants changed: ${merged.descendantsChanged.length} sections`);
-	
+	console.log(
+		`    - Content changed: ${merged.contentChanged.length} sections`,
+	);
+	console.log(
+		`    - Descendants changed: ${merged.descendantsChanged.length} sections`,
+	);
+
 	if (merged.deleted.length > 0) {
-		console.log(`    Deleted chains:`);
+		console.log("    Deleted chains:");
 		for (const chain of merged.deleted) {
-			console.log(`      - ${chain.map((s) => s.replace(/﹘.*$/, "")).join("/")}`);
+			console.log(
+				`      - ${chain.map((s) => s.replace(/﹘.*$/, "")).join("/")}`,
+			);
 		}
 	}
-	
+
 	if (merged.renamed.length > 0) {
-		console.log(`    Renamed chains:`);
+		console.log("    Renamed chains:");
 		for (const { oldChain, newChain } of merged.renamed) {
 			const old = oldChain.map((s) => s.replace(/﹘.*$/, "")).join("/");
 			const new_ = newChain.map((s) => s.replace(/﹘.*$/, "")).join("/");
 			console.log(`      - ${old} → ${new_}`);
 		}
 	}
-	
+
 	console.log();
 }
 
@@ -137,8 +143,10 @@ function logRecreations(actions: CodexAction[]): void {
 		console.log("  (none)");
 	} else {
 		const upserts = actions.filter((a) => a.kind === "UpsertCodex");
-		const statusWrites = actions.filter((a) => a.kind === "WriteScrollStatus");
-		
+		const statusWrites = actions.filter(
+			(a) => a.kind === "WriteScrollStatus",
+		);
+
 		if (upserts.length > 0) {
 			console.log(`  UpsertCodex (${upserts.length}):`);
 			for (const action of upserts) {
@@ -149,7 +157,7 @@ function logRecreations(actions: CodexAction[]): void {
 				console.log(`    - ${path} (section: ${chain})`);
 			}
 		}
-		
+
 		if (statusWrites.length > 0) {
 			console.log(`  WriteScrollStatus (${statusWrites.length}):`);
 			for (const action of statusWrites) {
@@ -166,7 +174,7 @@ function logOtherHealingActions(actions: HealingAction[]): void {
 	if (otherActions.length === 0) {
 		return;
 	}
-	
+
 	console.log("🔧 OTHER HEALING ACTIONS");
 	console.log("-".repeat(80));
 	for (const action of otherActions) {
@@ -191,20 +199,20 @@ function formatHealingAction(action: HealingAction): string {
 if (import.meta.main) {
 	const filePath = process.argv[2];
 	if (!filePath) {
-		console.error("Usage: bun run investigate-bulk-event.ts <path-to-json>");
+		console.error(
+			"Usage: bun run investigate-bulk-event.ts <path-to-json>",
+		);
 		console.error("\nJSON file should contain:");
 		console.error("  {");
-		console.error("    \"createActions\": [...],");
-		console.error("    \"bulkEvent\": {...}");
+		console.error('    "createActions": [...],');
+		console.error('    "bulkEvent": {...}');
 		console.error("  }");
 		process.exit(1);
 	}
 
-	const data = JSON.parse(
-		await Bun.file(filePath).text(),
-	) as {
+	const data = JSON.parse(await Bun.file(filePath).text()) as {
 		createActions: CreateTreeLeafAction[];
-		bulkEvent: BulkVaultEvent;
+		bulkEvent: LibraryBulk;
 	};
 
 	investigateBulkEvent(data.createActions, data.bulkEvent);
