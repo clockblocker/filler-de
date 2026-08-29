@@ -61,6 +61,19 @@ function makeSegmentIdForNodeName(
 	return makeNodeSegmentId({ ...node, nodeName });
 }
 
+function cloneTreeNode(node: TreeNode): TreeNode {
+	if (node.kind !== TreeNodeKind.Section) {
+		return { ...node };
+	}
+
+	const children: SectionNode["children"] = {};
+	for (const [segmentId, child] of Object.entries(node.children)) {
+		children[segmentId as TreeNodeSegmentId] = cloneTreeNode(child);
+	}
+
+	return { ...node, children };
+}
+
 // ─── Result Type ───
 
 /**
@@ -87,6 +100,18 @@ export class Tree implements TreeFacade {
 			kind: TreeNodeKind.Section,
 			nodeName: libraryRootName,
 		};
+	}
+
+	/**
+	 * Create an independent staged copy of the tree.
+	 *
+	 * Reconciliation applies speculative actions to this copy and publishes it
+	 * only after the corresponding vault dispatch succeeds.
+	 */
+	fork(): Tree {
+		const fork = new Tree(this.root.nodeName, this.codecs);
+		fork.root = cloneTreeNode(this.root) as SectionNode;
+		return fork;
 	}
 
 	/**

@@ -18,3 +18,9 @@ The `bulk-vault-action-adapter` is the semantic boundary between VAM's `BulkVaul
 - Changes crossing the Library boundary become semantic creates or deletes; inside-Library changes can become renames or moves according to `NameKing` and `PathKing` policy.
 - Tree Actions carry an Observed Split Path only when later Healing needs the actual post-operation vault location.
 - The adapter performs no filesystem I/O and is not an Obsidian `DataAdapter`; its source name must not be abbreviated as BAM.
+- The observation translator remains outside `LibraryReconciler`. It submits
+  semantic Tree Actions plus source-specific supplemental observations, such as
+  invalid Codex deletions, in one reconciliation request.
+- Startup, observed Bulk Vault Events, and Codex clicks use the same
+  reconciliation interface. Only their source discriminator differs; Codex
+  scope, projection order, dispatch, recovery, and audit are internal policies.

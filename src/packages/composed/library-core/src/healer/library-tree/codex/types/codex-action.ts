@@ -34,7 +34,7 @@ type EnsureCodexFileExistsPayload = {
 	splitPath: SplitPathToMdFileInsideLibrary;
 };
 
-/** Process codex (children list only; backlink from backlink-healing) */
+/** Process the complete codex projection, including its parent backlink. */
 type ProcessCodexPayload = {
 	/** Target codex path */
 	splitPath: SplitPathToMdFileInsideLibrary;

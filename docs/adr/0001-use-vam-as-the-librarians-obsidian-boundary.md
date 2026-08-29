@@ -17,4 +17,11 @@ The Librarian reads vault state, subscribes to vault changes, and requests files
 - Librarian and Library Core contracts use `SplitPath`, `VaultAction`, and `VaultEvent` instead of live `TFile` or `TFolder` references.
 - System paths cross the package seam through the single public `splitPathCodec`. Conversions involving live Obsidian file and folder references remain inside VAM's implementation.
 - Obsidian-specific coordination is centralized while VAM remains unaware of Sections, Scrolls, Codexes, and Healing.
-- A VAM Dispatch Batch is ordered and executed sequentially, not committed atomically. If a later action fails, already completed actions are not rolled back, and the returned `DispatchResult` reports accumulated errors.
+- A VAM Dispatch Batch is ordered and executed sequentially, not committed
+  atomically. Planning failures happen before execution; action failures are
+  returned as typed `VamDispatchError` values after all planned actions have
+  been attempted.
+- The Librarian's reconciliation boundary treats action failure as execution
+  uncertain. It records a partial outcome and completes a VAM-backed Tree
+  resynchronization before serialized work may continue. It never claims that
+  VAM or Tree work was rolled back when it was not.

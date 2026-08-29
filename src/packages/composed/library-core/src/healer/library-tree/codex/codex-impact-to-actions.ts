@@ -176,7 +176,7 @@ export function codexImpactToRecreations(
 		};
 		actions.push(ensureAction);
 
-		// 2b. Process codex (content only; backlink from backlink-healing)
+		// 2b. Process the complete Codex projection, including its backlink
 		const processAction: ProcessCodexAction = {
 			kind: "ProcessCodex",
 			payload: { section, sectionChain: chain, splitPath },
@@ -252,7 +252,7 @@ export function codexImpactToIncrementalRecreations(
 		};
 		actions.push(ensureAction);
 
-		// 1b. Process codex (content only; backlink from backlink-healing)
+		// 1b. Process the complete Codex projection, including its backlink
 		const processAction: ProcessCodexAction = {
 			kind: "ProcessCodex",
 			payload: { section, sectionChain: chain, splitPath },
@@ -286,7 +286,7 @@ export function codexImpactToIncrementalRecreations(
 			};
 			actions.push(ensureAction);
 
-			// Process codex (content only; backlink from backlink-healing)
+			// Process the complete Codex projection, including its backlink
 			const processAction: ProcessCodexAction = {
 				kind: "ProcessCodex",
 				payload: {

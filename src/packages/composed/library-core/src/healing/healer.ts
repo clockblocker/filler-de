@@ -1,3 +1,4 @@
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import type {
 	Codecs,
 	FileNodeLocator,
@@ -17,8 +18,8 @@ import type {
 	RenameNodeAction,
 	TreeAction,
 } from "../healer/library-tree/tree-action/types/tree-action";
-import type { HealingAction } from "../healer/library-tree/types/healing-action";
 import { TreeActionType } from "../healer/library-tree/tree-action/types/tree-action";
+import type { HealingAction } from "../healer/library-tree/types/healing-action";
 import {
 	type LeafMatch,
 	makeNodeSegmentId,
@@ -33,8 +34,6 @@ import {
 	getRootBaseName,
 	resolveNextAvailableNameInSection,
 } from "../tree/utils";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
-import { splitPathsEqual } from "./split-path-equality";
 import {
 	computeDescendantSuffixHealing,
 	computeLeafHealingForFile,
@@ -42,6 +41,7 @@ import {
 	computeLeafMoveHealing,
 	computeSectionMoveHealing,
 } from "./healing-computers";
+import { splitPathsEqual } from "./split-path-equality";
 import { parseOldSectionPath } from "./utils/old-section-path";
 // ─── Result Type ───
 
@@ -50,6 +50,8 @@ export type HealerApplyResult = {
 	codexImpact: CodexImpact;
 	/** True if tree state was actually modified */
 	changed: boolean;
+	/** The effective action after collision/canonical-name resolution. */
+	appliedAction: TreeAction;
 };
 
 // ─── Empty Impact (for no-op actions) ───
@@ -71,6 +73,11 @@ export class Healer implements TreeReader {
 	constructor(tree: Tree, codecs: Codecs) {
 		this.tree = tree;
 		this.codecs = codecs;
+	}
+
+	/** Create an independent staged healer for non-atomic reconciliation. */
+	fork(): Healer {
+		return new Healer(this.tree.fork(), this.codecs);
 	}
 
 	/**
@@ -197,6 +204,7 @@ export class Healer implements TreeReader {
 		// If tree didn't change, skip healing - action was already applied
 		if (!changed) {
 			return {
+				appliedAction: actionToApply,
 				changed: false,
 				codexImpact: EMPTY_CODEX_IMPACT,
 				healingActions: [],
@@ -212,7 +220,12 @@ export class Healer implements TreeReader {
 			mutatedNode,
 		);
 
-		return { changed: true, codexImpact, healingActions };
+		return {
+			appliedAction: actionToApply,
+			changed: true,
+			codexImpact,
+			healingActions,
+		};
 	}
 
 	// ─── TreeReader Implementation ───

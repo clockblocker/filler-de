@@ -63,14 +63,14 @@ The codex is still at `L3-L2/__-L2-L1.md` (intermediate location).
 
 **Solution**: `computeMoveImpact` captures `observedSplitPath` (intermediate location) and `codexImpactToDeletions` uses it for Move actions via `buildIntermediateCodexPath()`.
 
-**Phase 2: Recreations** (`codexImpactToIncrementalRecreations`, via `processCodexImpacts`)
+**Phase 2: Recreations** (`codexImpactToIncrementalRecreations`, selected by `LibraryReconciler`)
 - Uses **incremental regeneration** for event-driven updates:
   1. Starts from `impact.impactedChains`
   2. Regenerates only impacted sections plus descendant section codexes required by section renames/status propagation
   3. Generates `EnsureCodexFileExists` + `ProcessCodex` for those sections
   4. Generates `WriteScrollStatus` for descendant scrolls when status propagates
 
-**Init remains full regeneration**: `processCodexImpactsForInit()` still uses `codexImpactToRecreations()` to rebuild every codex from the fully constructed tree.
+**Init remains full regeneration**: a `Startup` reconciliation uses `codexImpactToRecreations()` to rebuild every codex from the fully staged tree. Runtime sources use the incremental conversion.
 
 Both phases are combined with healing actions and dispatched in a single batch. The `VaultActionManager`'s topological sort ensures correct ordering (deletes before creates when needed).
 
@@ -99,7 +99,7 @@ Computed from `TreeAction`, captures what changed:
 
 Impact always includes ancestors (status aggregates upward).
 
-**Note**: Direct scroll status changes (from checkbox clicks) are not tracked in `CodexImpact`. Instead, `Librarian.processActions()` extracts them directly from `TreeAction[]` and generates `WriteScrollStatusAction` separately before merging with codex actions.
+**Note**: Direct scroll status changes (from checkbox clicks) are not tracked in `CodexImpact`. `LibraryReconciler` extracts them from changed effective Tree Actions and merges the resulting `WriteScrollStatusAction`s with the other derived families.
 
 ## CodexAction Types
 
@@ -151,7 +151,7 @@ Children are sorted by display name before rendering at each depth:
 | `generateCodexContent` | SectionNode → markdown content |
 | `computeCodexSplitPath` | Section chain → codex file path |
 | `codexImpactToDeletions` | CodexImpact → HealingAction[] (DeleteMdFile) |
-| `processCodexImpacts` | Merge impacts, compute deletions, compute incremental recreations |
+| `LibraryReconciler` | Merge impacts and select full startup or incremental runtime derivation |
 | `codexImpactToIncrementalRecreations` | CodexImpact → CodexAction[] for impacted sections only |
 | `codexImpactToRecreations` | Full-tree codex recreation (used by init) |
 | `codexActionsToVaultActions` | CodexAction[] → VaultAction[] |
@@ -168,7 +168,7 @@ Section status computed from descendants:
 Status flows:
 - **Up**: leaf change → ancestors recalculate
 - **Down**: section status change → all descendant leaves update
-- **Direct**: scroll checkbox click → scroll metadata updated (via `extractScrollStatusActions` in `Librarian.processActions`)
+- **Direct**: scroll checkbox click → scroll metadata updated (via `extractScrollStatusActions` inside `LibraryReconciler`)
 
 ## Naming Convention
 

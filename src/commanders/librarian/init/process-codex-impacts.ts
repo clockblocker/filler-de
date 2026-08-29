@@ -1,13 +1,11 @@
-import type { Codecs } from "@textfresser/library-core";
+import type { Codecs, Healer, HealingAction } from "@textfresser/library-core";
 import {
 	type CodexAction,
 	type CodexImpact,
 	codexImpactToDeletions,
 	codexImpactToIncrementalRecreations,
-	codexImpactToRecreations,
 	mergeCodexImpacts,
 } from "@textfresser/library-core";
-import type { Healer, HealingAction } from "@textfresser/library-core";
 
 type ProcessCodexImpactsResult = {
 	/** Healing actions for codex deletions */
@@ -41,34 +39,6 @@ export function processCodexImpacts(
 
 	// Generate codex recreations (incremental - only impacted sections)
 	const codexRecreations = codexImpactToIncrementalRecreations(
-		mergedImpact,
-		healer,
-		codecs,
-	);
-
-	return { codexRecreations, deletionHealingActions };
-}
-
-/**
- * Process codex impacts for init: uses full recreations instead of incremental.
- */
-export function processCodexImpactsForInit(
-	impacts: CodexImpact[],
-	healer: Healer,
-	codecs: Codecs,
-): ProcessCodexImpactsResult {
-	// Merge all impacts
-	const mergedImpact = mergeCodexImpacts(impacts);
-
-	// Compute deletions
-	const deletionHealingActions = codexImpactToDeletions(
-		mergedImpact,
-		healer,
-		codecs,
-	);
-
-	// Generate full codex recreations (for init)
-	const codexRecreations = codexImpactToRecreations(
 		mergedImpact,
 		healer,
 		codecs,

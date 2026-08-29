@@ -4,18 +4,16 @@
  */
 
 import type { Transform } from "@textfresser/vault-action-manager";
-import { goBackLinkHelper } from "@textfresser/note-addressing";
-import { noteMetadataHelper } from "../../../../internal/root/note-metadata";
-import { LINE_BREAK } from "../../../../internal/root/ui";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
+import { noteMetadataHelper } from "../../../../internal/root/note-metadata";
 import type { SectionNode } from "../../tree-node/types/tree-node";
 import { generateChildrenList } from "../generate-codex-content";
+import { makeBacklinkTransform } from "./scroll-transforms";
 
 /**
- * Create a single transform that updates codex content (children list only).
- * Backlink line is added by backlink-healing flow, not here.
- * Also adds fileType: Codex metadata (respects hideMetadata setting).
+ * Create a single transform that writes the complete Codex projection:
+ * children, metadata, and (for non-root Codexes) the parent backlink.
  *
  * @param section - Section node to generate content for
  * @param sectionChain - Full chain including this section
@@ -29,13 +27,18 @@ export function makeCodexTransform(
 ): Transform {
 	const metaTransform = noteMetadataHelper.upsert({ fileType: "Codex" });
 
-	return (_content: string) => {
+	return async (_content: string) => {
 		const childrenContent = generateChildrenList(
 			section,
 			sectionChain,
 			codecs,
 		);
-		return metaTransform(childrenContent);
+		const withMetadata = await metaTransform(childrenContent);
+		return sectionChain.length > 1
+			? await makeBacklinkTransform(
+					sectionChain.slice(0, -1),
+					codecs,
+				)(withMetadata)
+			: withMetadata;
 	};
 }
-

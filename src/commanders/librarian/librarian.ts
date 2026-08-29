@@ -8,12 +8,7 @@ import {
 	type ChangeNodeStatusAction,
 	type Codecs,
 	type CodexClickTarget,
-	type CodexImpact,
-	extractScrollStatusActions,
-	findInvalidCodexFiles,
-	getBacklinkHealingVaultActions,
 	Healer,
-	type HealingAction,
 	isCodexInsideLibrary as isCodexInsideLibraryHelper,
 	isCodexSplitPath,
 	makeBulkInterpreter,
@@ -22,10 +17,7 @@ import {
 	type NodeName,
 	PREFIX_OF_CODEX,
 	parseCodexClickLineContent,
-	type SplitPathToMdFileInsideLibrary,
-	scanAndGenerateOrphanActions,
 	Tree,
-	type TreeAction,
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "@textfresser/library-core";
@@ -33,15 +25,11 @@ import type { PayloadFor } from "@textfresser/obsidian-event-layer";
 import type {
 	BulkVaultEvent,
 	VamScanError,
-	VaultAction,
 	VaultActionManager,
 	VaultActionManagerSubscription,
+	VaultScanResult,
 } from "@textfresser/vault-action-manager";
-import {
-	MD,
-	SplitPathKind,
-	type SplitPathToMdFile,
-} from "@textfresser/vault-action-manager";
+import { MD, type SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
@@ -56,12 +44,7 @@ import type {
 	LibrarianCommandInput,
 	LibrarianCommandKind,
 } from "./commands/types";
-import {
-	assembleVaultActions,
-	buildInitialCreateActions,
-	processCodexImpacts,
-	processCodexImpactsForInit,
-} from "./init";
+import { buildInitialCreateActions } from "./init";
 import { listCommandsExecutableIn as listCommandsExecutableInImpl } from "./navigation/list-commands-executable";
 import {
 	getNextPage as getNextPageImpl,
@@ -69,15 +52,22 @@ import {
 } from "./navigation/page-navigation";
 import { resolveAliasFromSuffix } from "./navigation/wikilink-alias";
 import type { SplitHealingInfo } from "./pages/split-to-pages-action";
-import { HealingTransaction } from "./runtime/healing-transaction";
+import {
+	classifyVamDispatchFailure,
+	LibraryReconciler,
+	ReconciliationAuditLog,
+	type ReconciliationOutcome,
+	type ReconciliationRecoveryInput,
+	type ReconciliationRequest,
+} from "./runtime/library-reconciliation";
 import { triggerSectionHealing as triggerSectionHealingImpl } from "./runtime/section-healing";
 import { VaultActionQueue } from "./runtime/vault-action-queue";
 
 // ─── Queue Item ───
 
 type LibrarianQueueItem = {
-	treeActions: TreeAction[];
-	invalidCodexActions: HealingAction[];
+	request: ReconciliationRequest;
+	observe?: (outcome: LibrarianReconciliationOutcome) => void;
 };
 
 export type LibrarianVam = Pick<
@@ -94,26 +84,97 @@ type LibrarianDispatchFailure = Effect.Error<
 	ReturnType<LibrarianVam["dispatch"]>
 >;
 
+type LibrarianRecoveryFailure =
+	| Effect.Error<ReturnType<LibrarianVam["scan"]>>
+	| {
+			readonly diagnostics: VaultScanResult["diagnostics"];
+			readonly kind: "PartialVaultScan";
+	  };
+
+type LibrarianReconciliationOutcome = ReconciliationOutcome<
+	LibrarianDispatchFailure,
+	LibrarianRecoveryFailure
+>;
+
 // ─── Librarian ───
 
 export class Librarian {
-	private healer: Healer | null = null;
-	private eventSubscription: VaultActionManagerSubscription | null = null;
-	private actionQueue: VaultActionQueue<
-		LibrarianQueueItem,
-		LibrarianDispatchFailure
+	private reconciler: LibraryReconciler<
+		LibrarianDispatchFailure,
+		LibrarianRecoveryFailure
 	> | null = null;
+	private reconciliationAudit = new ReconciliationAuditLog<
+		LibrarianDispatchFailure,
+		LibrarianRecoveryFailure
+	>();
+	private eventSubscription: VaultActionManagerSubscription | null = null;
+	private actionQueue: VaultActionQueue<LibrarianQueueItem, never> | null =
+		null;
+	private startupBulkBuffer: BulkVaultEvent[] | null = null;
 	private codecs!: Codecs;
 	private interpretBulk!: BulkInterpreter;
 
 	// Debug: store last events and actions for testing
 	public _debugLastBulkEvent: BulkVaultEvent | null = null;
-	public _debugLastTreeActions: TreeAction[] = [];
-	public _debugLastHealingActions: HealingAction[] = [];
-	public _debugLastVaultActions: VaultAction[] = [];
 	public _debugLastScanDiagnostics: readonly VamScanError[] = [];
 
+	get _debugLastReconciliationOutcome(): LibrarianReconciliationOutcome | null {
+		return this.reconciliationAudit.getRecent(1)[0] ?? null;
+	}
+
 	constructor(private readonly vam: LibrarianVam) {}
+
+	private prepareStartupReconciliation(
+		scan: VaultScanResult,
+		libraryRoot: NodeName,
+		allowPartial: boolean,
+	): Effect.Effect<ReconciliationRecoveryInput, LibrarianRecoveryFailure> {
+		if (!allowPartial && scan.kind === "Partial") {
+			return Effect.fail({
+				diagnostics: scan.diagnostics,
+				kind: "PartialVaultScan",
+			});
+		}
+
+		return buildInitialCreateActions(scan.entries, this.codecs).pipe(
+			Effect.map(({ createActions }) => ({
+				healer: new Healer(
+					new Tree(libraryRoot, this.codecs),
+					this.codecs,
+				),
+				request: {
+					observedVaultPaths: scan.entries,
+					source: "Startup",
+					supplemental: { invalidCodexDeletions: [] },
+					treeActions: createActions,
+				},
+			})),
+		);
+	}
+
+	private readonly prepareRecovery = Effect.fn("Librarian.prepareRecovery")(
+		function* (this: Librarian) {
+			const rootSplitPath =
+				getParsedUserSettings().splitPathToLibraryRoot;
+			const scan = yield* this.vam.scan(rootSplitPath);
+			return yield* this.prepareStartupReconciliation(
+				scan,
+				rootSplitPath.basename,
+				false,
+			);
+		},
+	);
+
+	private makeReconciler(
+		healer: Healer,
+	): LibraryReconciler<LibrarianDispatchFailure, LibrarianRecoveryFailure> {
+		return new LibraryReconciler(healer, this.codecs, {
+			audit: this.reconciliationAudit,
+			classifyDispatchFailure: classifyVamDispatchFailure,
+			dispatch: (actions) => this.vam.dispatch(actions),
+			recover: () => this.prepareRecovery(),
+		});
+	}
 
 	/**
 	 * Initialize librarian: read tree and heal mismatches.
@@ -125,8 +186,10 @@ export class Librarian {
 			() =>
 				Effect.gen(function* () {
 					const settings = getParsedUserSettings();
-					self.healer = null;
+					self.reconciler = null;
 					self.actionQueue = null;
+					self.startupBulkBuffer = [];
+					self.reconciliationAudit = new ReconciliationAuditLog();
 					self._debugLastScanDiagnostics = [];
 					self.codecs = makeCodecs(
 						makeCodecRulesFromSettings(settings),
@@ -157,101 +220,42 @@ export class Librarian {
 						}
 					}
 
-					// Create the live model only after the root scan succeeds.
-					self.healer = new Healer(
-						new Tree(libraryRoot, self.codecs),
-						self.codecs,
+					const startup = yield* self.prepareStartupReconciliation(
+						scan,
+						libraryRoot,
+						true,
 					);
+					self.reconciler = self.makeReconciler(startup.healer);
 					self.actionQueue = yield* VaultActionQueue.make<
 						LibrarianQueueItem,
-						LibrarianDispatchFailure
-					>((item) =>
-						self.processActions(
-							item.treeActions,
-							item.invalidCodexActions,
-						),
-					);
-
-					const allFiles = scan.entries;
-
-					// Build Create actions for each file
-					const { createActions } = yield* buildInitialCreateActions(
-						allFiles,
-						self.codecs,
-					);
-
-					// Apply all create actions via HealingTransaction
-					const tx = new HealingTransaction(self.healer);
-					for (const action of createActions) {
-						const result = tx.apply(action);
-						if (result.isErr()) {
-							tx.logSummary("error");
-							logger.error(
-								"[Librarian] Init transaction failed:",
-								result.error,
-							);
-							yield* self.subscribeToVaultEvents();
-							return;
-						}
-					}
-
-					const allHealingActions: HealingAction[] =
-						tx.getHealingActions();
-					const allCodexImpacts: CodexImpact[] = tx.getCodexImpacts();
-
-					// Delete invalid codex files (orphaned __ files)
-					const invalidCodexActions = findInvalidCodexFiles(
-						allFiles,
-						self.healer,
-						self.codecs,
-					);
-					allHealingActions.push(...invalidCodexActions);
-
-					// Scan for orphaned codexes (wrong suffix, duplicates)
-					const mdPaths = allFiles.flatMap((file) => {
-						if (file.kind !== SplitPathKind.MdFile) return [];
-						const { read: _read, ...path } = file;
-						return [path as SplitPathToMdFileInsideLibrary];
-					});
-					const { cleanupActions } = scanAndGenerateOrphanActions(
-						self.healer,
-						self.codecs,
-						mdPaths,
-					);
-					allHealingActions.push(...cleanupActions);
+						never
+					>((item) => self.processReconciliation(item));
 
 					// Subscribe to vault events BEFORE dispatching actions
 					// This ensures we catch all events, including cascading healing from init actions
 					yield* self.subscribeToVaultEvents();
 
-					// Process codex impacts: merge, compute deletions and recreations
-					const { deletionHealingActions, codexRecreations } =
-						processCodexImpactsForInit(
-							allCodexImpacts,
-							self.healer,
-							self.codecs,
-						);
-					allHealingActions.push(...deletionHealingActions);
-
-					// Combine all actions and dispatch once (healing → codex → backlink)
-					const allVaultActions = [
-						...assembleVaultActions(
-							allHealingActions,
-							codexRecreations,
-							self.codecs,
-						),
-						...getBacklinkHealingVaultActions(
-							self.healer,
-							self.codecs,
-						),
-					];
-
-					if (allVaultActions.length > 0) {
-						yield* self.vam.dispatch(allVaultActions);
+					const startupResult: {
+						outcome?: LibrarianReconciliationOutcome;
+					} = {};
+					yield* self.actionQueue.enqueue({
+						observe: (outcome) => {
+							startupResult.outcome = outcome;
+						},
+						request: startup.request,
+					});
+					if (
+						startupResult.outcome?.status === "Failed" ||
+						startupResult.outcome?.status === "PartialFailure"
+					) {
+						return yield* Effect.fail(startupResult.outcome);
 					}
 
-					// Commit transaction after successful dispatch
-					tx.commit();
+					const bufferedBulks = self.startupBulkBuffer;
+					self.startupBulkBuffer = null;
+					for (const bulk of bufferedBulks) {
+						yield* self.handleBulkEvent(bulk);
+					}
 
 					// Wait for queue to drain (events trigger handleBulkEvent which enqueues actions)
 					// This ensures all cascading healing is queued and processed
@@ -279,8 +283,12 @@ export class Librarian {
 		function* (this: Librarian, bulk: BulkVaultEvent) {
 			// Store for debugging
 			this._debugLastBulkEvent = bulk;
+			if (this.startupBulkBuffer !== null) {
+				this.startupBulkBuffer.push(bulk);
+				return;
+			}
 
-			if (!this.healer) {
+			if (!this.reconciler) {
 				logger.warn(
 					"[Librarian.handleBulkEvent] No healer, returning early",
 				);
@@ -290,9 +298,6 @@ export class Librarian {
 			const { treeActions, invalidCodexActions } =
 				this.interpretBulk(bulk);
 
-			// Store for debugging
-			this._debugLastTreeActions = treeActions;
-
 			if (treeActions.length === 0 && invalidCodexActions.length === 0) {
 				return;
 			}
@@ -300,78 +305,30 @@ export class Librarian {
 			// Queue and process
 			if (!this.actionQueue) return;
 			yield* this.actionQueue.enqueue({
-				invalidCodexActions,
-				treeActions,
+				request: {
+					source: "ObservedBulk",
+					supplemental: {
+						invalidCodexDeletions: invalidCodexActions,
+					},
+					treeActions,
+				},
 			});
 		},
 	);
 
-	/**
-	 * Process a batch of tree actions.
-	 */
-	private readonly processActions = Effect.fn("Librarian.processActions")(
-		function* (
-			this: Librarian,
-			treeActions: TreeAction[],
-			invalidCodexActions: HealingAction[],
+	private readonly processReconciliation = Effect.fn(
+		"Librarian.processReconciliation",
+	)(function* (this: Librarian, item: LibrarianQueueItem) {
+		if (!this.reconciler) return;
+		const outcome = yield* this.reconciler.reconcile(item.request);
+		item.observe?.(outcome);
+		if (
+			outcome.status === "Failed" ||
+			outcome.status === "PartialFailure"
 		) {
-			if (!this.healer) {
-				return;
-			}
-
-			// Apply all tree actions via HealingTransaction
-			const tx = new HealingTransaction(this.healer);
-			for (const action of treeActions) {
-				const result = tx.apply(action);
-				if (result.isErr()) {
-					tx.logSummary("error");
-					logger.error(
-						"[Librarian] Transaction failed:",
-						result.error,
-					);
-					return;
-				}
-			}
-
-			const allHealingActions: HealingAction[] = tx.getHealingActions();
-			const allCodexImpacts: CodexImpact[] = tx.getCodexImpacts();
-
-			// Add pre-extracted invalid codex deletions
-			allHealingActions.push(...invalidCodexActions);
-
-			// Process codex impacts: merge, compute deletions and recreations
-			const { deletionHealingActions, codexRecreations } =
-				processCodexImpacts(allCodexImpacts, this.healer, this.codecs);
-			allHealingActions.push(...deletionHealingActions);
-
-			// Extract scroll status changes from actions
-			const scrollStatusActions = extractScrollStatusActions(
-				treeActions,
-				this.codecs,
-			);
-
-			// Combine all actions and dispatch once (healing → codex → backlink → scroll status)
-			const allVaultActions = [
-				...assembleVaultActions(
-					allHealingActions,
-					[...codexRecreations, ...scrollStatusActions],
-					this.codecs,
-				),
-				...getBacklinkHealingVaultActions(this.healer, this.codecs),
-			];
-
-			// Store for debugging
-			this._debugLastHealingActions = allHealingActions;
-			this._debugLastVaultActions = allVaultActions;
-
-			if (allVaultActions.length > 0) {
-				yield* this.vam.dispatch(allVaultActions);
-			}
-
-			// Commit transaction after successful dispatch
-			tx.commit();
-		},
-	);
+			logger.error("[Librarian] Reconciliation failed:", outcome);
+		}
+	});
 
 	/**
 	 * Cleanup: unsubscribe from vault events.
@@ -379,6 +336,7 @@ export class Librarian {
 	readonly unsubscribe = Effect.fn("Librarian.unsubscribe")(function* (
 		this: Librarian,
 	) {
+		this.startupBulkBuffer = null;
 		const drain = this.actionQueue
 			? this.actionQueue.waitForDrain()
 			: Effect.void;
@@ -395,7 +353,13 @@ export class Librarian {
 	 * Get current healer (for testing).
 	 */
 	getHealer(): Healer | null {
-		return this.healer;
+		return this.reconciler?.getCommittedHealer() ?? null;
+	}
+
+	getRecentReconciliationOutcomes(
+		count = 10,
+	): readonly LibrarianReconciliationOutcome[] {
+		return this.reconciliationAudit.getRecent(count);
 	}
 
 	/**
@@ -407,7 +371,8 @@ export class Librarian {
 	readonly triggerSectionHealing = Effect.fn(
 		"Librarian.triggerSectionHealing",
 	)(function* (this: Librarian, info: SplitHealingInfo) {
-		if (!this.healer) {
+		const healer = this.getHealer();
+		if (!healer) {
 			logger.warn(
 				"[Librarian.triggerSectionHealing] No healer, returning early",
 			);
@@ -418,7 +383,7 @@ export class Librarian {
 			{
 				codecs: this.codecs,
 				dispatch: (actions) => this.vam.dispatch(actions),
-				healer: this.healer,
+				healer,
 			},
 			info,
 		);
@@ -429,8 +394,9 @@ export class Librarian {
 	 * Returns null if current is first page or not a page file.
 	 */
 	getPrevPage(currentFilePath: SplitPathToMdFile): SplitPathToMdFile | null {
-		if (!this.healer) return null;
-		return getPrevPageImpl(this.healer, this.codecs, currentFilePath);
+		const healer = this.getHealer();
+		if (!healer) return null;
+		return getPrevPageImpl(healer, this.codecs, currentFilePath);
 	}
 
 	/**
@@ -438,8 +404,9 @@ export class Librarian {
 	 * Returns null if current is last page or not a page file.
 	 */
 	getNextPage(currentFilePath: SplitPathToMdFile): SplitPathToMdFile | null {
-		if (!this.healer) return null;
-		return getNextPageImpl(this.healer, this.codecs, currentFilePath);
+		const healer = this.getHealer();
+		if (!healer) return null;
+		return getNextPageImpl(healer, this.codecs, currentFilePath);
 	}
 
 	/**
@@ -449,7 +416,7 @@ export class Librarian {
 	listCommandsExecutableIn(splitPath: SplitPathToMdFile): CommandKind[] {
 		return listCommandsExecutableInImpl(
 			this.codecs,
-			this.healer,
+			this.getHealer(),
 			splitPath,
 		);
 	}
@@ -507,8 +474,9 @@ export class Librarian {
 	 * Returns empty array if healer not initialized or no matches.
 	 */
 	findMatchingLeavesByCoreName(coreName: string): LeafMatch[] {
-		if (!this.healer) return [];
-		return this.healer.getLeavesByCoreName(coreName);
+		const healer = this.getHealer();
+		if (!healer) return [];
+		return healer.getLeavesByCoreName(coreName);
 	}
 
 	parseLibraryBasename(
@@ -532,7 +500,7 @@ export class Librarian {
 	readonly handleCodexCheckboxClick = Effect.fn(
 		"Librarian.handleCodexCheckboxClick",
 	)(function* (this: Librarian, payload: PayloadFor<"CheckboxClicked">) {
-		if (!this.healer) {
+		if (!this.reconciler) {
 			logger.warn("[Librarian.handleCodexCheckboxClick] No healer");
 			return;
 		}
@@ -567,8 +535,11 @@ export class Librarian {
 		// 4. Enqueue for processing
 		if (!this.actionQueue) return;
 		yield* this.actionQueue.enqueue({
-			invalidCodexActions: [],
-			treeActions: [action],
+			request: {
+				source: "CodexClick",
+				supplemental: { invalidCodexDeletions: [] },
+				treeActions: [action],
+			},
 		});
 	});
 

@@ -53,10 +53,12 @@ BulkVaultEvent
   -> materialize folder effects into node events
   -> infer policy and user intent
   -> TreeAction[]
-  -> update the Library Tree
-  -> compute Healing and Codex impact
-  -> VaultAction[]
-  -> VAM dispatch
+  -> LibraryReconciler
+       -> stage Tree changes on a fork
+       -> derive Healing, Codex, status, and bounded backlinks
+       -> assemble one VaultAction batch
+       -> VAM dispatch
+       -> publish the staged Tree only after success
 ```
 
 The translation boundary must run before Healing. VAM remains unaware of Sections, suffixes, Codexes, and Reading Status.
@@ -93,7 +95,25 @@ A duplicate Create gets a new Core Name. A Rename or Move that would overwrite a
 
 Empty Sections stay in the tree until an explicit Section action removes them. This permits Codex cleanup after the last leaf leaves a Section.
 
-A Healing Transaction groups tree changes, Healing Actions, and Codex impact for one event batch. It is an audit and coordination unit. It is not a rollback transaction.
+`LibraryReconciler.reconcile` is the single coordination boundary for startup,
+observed Bulk Vault Events, and Codex clicks. Callers provide the source,
+semantic Tree Actions, and translated supplemental observations such as invalid
+Codex deletions. They do not choose Codex scope, order derived action families,
+dispatch VAM work, or complete audit state.
+
+Reconciliation stages mutations on an independent Tree fork. A Tree or VAM
+planning failure discards that fork, so the last acknowledged Tree remains
+live. VAM execution is not atomic: an execution failure is recorded as a
+partial outcome with the exact typed VAM failures. Before the serialized queue
+continues, the Librarian scans the vault, rebuilds a fresh Tree, and runs a full
+startup-style reconciliation. If that recovery fails, reconciliation remains
+unavailable and later requests cannot touch the Tree or VAM.
+
+Each request records one outcome with its source and ID; total and per-stage
+durations; requested, changed, no-op, and failed Tree Action counts; derived
+counts by family; dispatch disposition; recovery disposition; and typed failure
+details. Success, no-op, failed, and partial requests all enter the same rolling
+audit journal.
 
 ## Codex and reading status
 
@@ -105,7 +125,11 @@ Each Section can have one generated Codex. A Codex lists direct and nested child
 - A Codex checkbox creates a `ChangeStatus` Tree Action.
 - Codex files are generated output. They are not Library nodes.
 
-The Librarian regenerates an affected Codex as a complete file. It does not patch individual list items.
+The Librarian regenerates an affected Codex as a complete projection, including
+children, metadata, and its parent backlink. It does not patch individual list
+items. Runtime Scroll backlink work is incremental: status and delete actions
+produce none; a created, renamed, or moved Scroll touches its final path; and a
+moved or renamed Section touches only descendant Scrolls in that subtree.
 
 ## Runtime and startup
 
@@ -117,11 +141,15 @@ At startup, the Librarian:
 2. Skips Codex files.
 3. Builds canonical Create actions.
 4. Reads Scroll status metadata.
-5. builds the Library Tree.
+5. stages the Library Tree through the reconciliation interface.
 6. Starts the Bulk Vault Event subscription.
-7. Dispatches initial Healing, Codex, and backlink actions.
+7. Dispatches one initial Healing, Codex, status, and full Scroll-backlink batch.
 
 The event subscription starts before the initial dispatch. VAM filters the resulting Self Events.
+
+Runtime Bulk observations and Codex clicks enter the same serialized queue with
+different source discriminators. Full versus incremental Codex generation is an
+internal reconciliation policy, never a caller option.
 
 ## Commands
 
@@ -138,7 +166,10 @@ Navigation uses Library Tree order. It does not depend on stored next-page or pr
 
 - VAM owns typed vault paths, vault reads, dispatch, and event attribution.
 - Library Core owns codecs, the tree, Healing policy, and Codex calculation.
-- The Librarian commander owns startup, serialization, commands, and VAM coordination.
+- The Librarian commander owns startup reads, subscription lifecycle, event
+  serialization, command parsing, and navigation.
+- The reconciliation runtime owns staged Tree application, all projection
+  derivation, VAM dispatch, truthful recovery, and the audit outcome.
 - Note metadata and go-back links are projections of Library state.
 
 ## Source map
