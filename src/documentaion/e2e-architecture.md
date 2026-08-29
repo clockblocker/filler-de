@@ -37,9 +37,10 @@ Obsidian desktop + dedicated vault
 ```
 
 Obsidian Headless is not used: it does not host community plugins. Managed E2E
-therefore needs a logged-in macOS desktop session. Attached mode borrows one
-dedicated test vault but still holds the repository-wide lease and owns plugin
-deployment for the duration of the run.
+therefore needs a logged-in macOS desktop session. Attached mode opens or
+focuses one registered dedicated test vault as a second window, but still holds
+the repository-wide lease and owns plugin deployment only for that vault. It
+does not close the user's existing vault.
 
 ## Control plane
 
@@ -112,12 +113,11 @@ successful run are removed.
 Create `.env.obsidian-e2e`:
 
 ```dotenv
-OBSIDIAN_E2E_VAULT=dedicated-test-vault
 OBSIDIAN_E2E_VAULT_PATH=/absolute/path/to/dedicated-test-vault
 ```
 
-Open that vault in Obsidian, enable the official CLI in Obsidian settings, and
-run:
+Open that folder as an Obsidian vault once so it has a registered vault ID,
+enable the official CLI in Obsidian settings, and run:
 
 ```bash
 bun run test:obsidian-e2e
@@ -126,6 +126,11 @@ bun run test:obsidian-e2e --scenario=folder-rename-healing
 
 An existing local `.env.cli-e2e` is loaded only as a configuration
 compatibility fallback. New setup uses the `OBSIDIAN_E2E_*` names.
+
+The runner resolves the registered ID from `OBSIDIAN_E2E_VAULT_PATH`, opens or
+focuses that vault as another window in the current Obsidian process, and
+targets every CLI command by ID. The user's existing vault remains open and is
+never used as a fallback target.
 
 ## Managed mode
 

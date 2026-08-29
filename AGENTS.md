@@ -46,11 +46,12 @@ official CLI binary, normally
 `/Applications/Obsidian.app/Contents/MacOS/Obsidian`: it does not provide the
 required awaited CLI contract.
 
-Attached mode reads `OBSIDIAN_E2E_VAULT` and `OBSIDIAN_E2E_VAULT_PATH` from
-`.env.obsidian-e2e`. Existing local `.env.cli-e2e` files are accepted as a
-configuration compatibility fallback only. The runner owns deployment,
-readiness, isolation, diagnostics, and cleanup; do not manually copy or reload
-artifacts between scenarios.
+Attached mode reads `OBSIDIAN_E2E_VAULT_PATH` from `.env.obsidian-e2e`, resolves
+that registered vault's ID, and opens or focuses it as a second window in the
+existing Obsidian process. Existing local `.env.cli-e2e` files are accepted as
+a configuration compatibility fallback only. The runner never closes the
+user's existing vault. It owns deployment, readiness, isolation, diagnostics,
+and cleanup; do not manually copy or reload artifacts between scenarios.
 
 Scenario authors use only
 `withObsidianScenario({ id, fixture }, callback)` from

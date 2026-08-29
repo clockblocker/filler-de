@@ -8,9 +8,8 @@ lives.
 
 ## Run it
 
-For the existing dedicated local test vault, keep `OBSIDIAN_E2E_VAULT` and
-`OBSIDIAN_E2E_VAULT_PATH` in `.env.obsidian-e2e`, open that vault in Obsidian,
-and run:
+For the existing dedicated local test vault, keep `OBSIDIAN_E2E_VAULT_PATH` in
+`.env.obsidian-e2e` and run:
 
 ```bash
 bun run test:obsidian-e2e
@@ -25,9 +24,12 @@ bun run test:obsidian-e2e --scenario=basename-healing
 The command builds Textfresser, takes the exclusive E2E lock, disables both
 plugins, installs the current Textfresser build and E2E driver, enables the
 driver before Textfresser, waits for the versioned readiness response, and
-runs scenarios serially. Attached mode performs one runner-owned window reload
-at this session boundary to discard stale renderer callbacks. There is no
-manual copy or per-test reload step.
+runs scenarios serially. Attached mode resolves the registered vault ID from
+the configured path and opens or focuses it as a second window in the existing
+Obsidian process. It never closes the user's current vault and leaves the
+dedicated test window open after the run. It performs one runner-owned reload
+of only that test window at the session boundary to discard stale renderer
+callbacks. There is no manual copy or per-test reload step.
 
 Managed mode is the clean reference environment:
 

@@ -10,6 +10,10 @@ Local attached run:
 bun run test:obsidian-e2e
 ```
 
+Attached mode resolves the registered dedicated vault by path, opens or
+focuses it as another window in the existing Obsidian process, and never closes
+the user's current vault.
+
 Clean managed run on a dedicated macOS desktop host:
 
 ```bash
