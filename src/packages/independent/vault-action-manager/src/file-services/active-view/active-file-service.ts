@@ -1,5 +1,5 @@
-import type { Result, ResultAsync } from "neverthrow";
-import type { App, TFile } from "obsidian";
+import { Effect } from "effect";
+import type { TFile } from "obsidian";
 import type {
 	AnySplitPath,
 	SplitPathToAnyFile,
@@ -16,121 +16,96 @@ import { ActiveFileReader } from "./writer/reader/active-file-reader";
 
 export type { SavedInlineTitleSelection, SavedSelection };
 
+/** Effect-native active editor service. Programs require ActiveEditorAccess/VaultIo. */
 export class ActiveFileService {
-	private readonly reader: ActiveFileReader;
-	private readonly writer: ActiveFileWriter;
+	private readonly reader = new ActiveFileReader();
+	private readonly writer = new ActiveFileWriter(this.reader);
 
-	constructor(private app: App) {
-		this.reader = new ActiveFileReader(app);
-		this.writer = new ActiveFileWriter(app, this.reader);
-	}
-
-	// ─────────────────────────────────────────────────────────────────────────
-	// Reader delegations
-	// ─────────────────────────────────────────────────────────────────────────
-
-	pwd(): Result<SplitPathToAnyFile, string> {
+	pwd() {
 		return this.reader.pwd();
 	}
 
-	mdPwd(): SplitPathToMdFile | null {
-		const result = this.reader.pwd();
-		if (result.isErr()) return null;
-		const path = result.value;
-		return path.kind === "MdFile" ? path : null;
+	mdPwd() {
+		return this.reader.pwd().pipe(
+			Effect.map((path) => (path.kind === "MdFile" ? path : null)),
+			Effect.orElseSucceed(() => null),
+		);
 	}
 
-	getOpenedTFile(): Result<TFile, string> {
+	getOpenedTFile() {
 		return this.reader.getOpenedTFile();
 	}
 
-	getContent(): Result<string, string> {
+	getContent() {
 		return this.reader.getContent();
 	}
 
-	isFileActive(splitPath: SplitPathToMdFile): Result<boolean, string> {
+	isFileActive(splitPath: SplitPathToMdFile) {
 		return this.reader.isFileActive(splitPath);
 	}
 
-	isInActiveView(splitPath: AnySplitPath): boolean {
+	isInActiveView(splitPath: AnySplitPath) {
 		return this.reader.isInActiveView(splitPath);
 	}
 
-	getSelection(): string | null {
-		return this.reader.getSelection();
+	getSelection() {
+		return this.reader
+			.getSelection()
+			.pipe(Effect.orElseSucceed(() => null));
 	}
 
-	getCursorOffset(): number | null {
-		return this.reader.getCursorOffset();
+	getCursorOffset() {
+		return this.reader
+			.getCursorOffset()
+			.pipe(Effect.orElseSucceed(() => null));
 	}
 
-	getSelectionStartOffset(): number | null {
-		return this.reader.getSelectionStartOffset();
+	getSelectionStartOffset() {
+		return this.reader
+			.getSelectionStartOffset()
+			.pipe(Effect.orElseSucceed(() => null));
 	}
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// Writer delegations
-	// ─────────────────────────────────────────────────────────────────────────
-
-	replaceAllContentInActiveFile(
-		content: string,
-	): ResultAsync<string, string> {
+	replaceAllContentInActiveFile(content: string) {
 		return this.writer.replaceAllContentInActiveFile(content);
 	}
 
-	saveSelection(): Result<SavedSelection | null, string> {
+	saveSelection() {
 		return this.writer.saveSelection();
 	}
 
-	restoreSelection(saved: SavedSelection): Result<void, string> {
+	restoreSelection(saved: SavedSelection) {
 		return this.writer.restoreSelection(saved);
 	}
 
-	saveInlineTitleSelection(): Result<
-		SavedInlineTitleSelection | null,
-		string
-	> {
+	saveInlineTitleSelection() {
 		return this.writer.saveInlineTitleSelection();
 	}
 
-	restoreInlineTitleSelection(
-		saved: SavedInlineTitleSelection,
-	): Result<void, string> {
+	restoreInlineTitleSelection(saved: SavedInlineTitleSelection) {
 		return this.writer.restoreInlineTitleSelection(saved);
 	}
 
-	replaceSelection(text: string): void {
-		this.writer.replaceSelection(text);
+	replaceSelection(text: string) {
+		return this.writer.replaceSelection(text);
 	}
 
-	insertBelowCursor(text: string): void {
-		this.writer.insertBelowCursor(text);
+	insertBelowCursor(text: string) {
+		return this.writer.insertBelowCursor(text);
 	}
 
 	processContent(args: {
 		splitPath: SplitPathToMdFile;
 		transform: Transform;
-	}): ResultAsync<string, string> {
+	}) {
 		return this.writer.processContent(args);
 	}
 
-	/** Scroll the editor to bring the given line into view. No-op if editor is unavailable. */
-	scrollToLine(line: number): void {
-		const result = this.reader.getEditorAnyMode();
-		if (result.isErr()) return;
-		const pos = { ch: 0, line };
-		result.value.editor.scrollIntoView({ from: pos, to: pos }, true);
+	scrollToLine(line: number) {
+		return this.writer.scrollToLine(line);
 	}
 
-	// ─────────────────────────────────────────────────────────────────────────
-	// Navigation
-	// ─────────────────────────────────────────────────────────────────────────
-
-	public async cd(file: TFile): Promise<Result<TFile, string>>;
-	public async cd(file: SplitPathToAnyFile): Promise<Result<TFile, string>>;
-	public async cd(
-		file: TFile | SplitPathToAnyFile,
-	): Promise<Result<TFile, string>> {
-		return cd(this.app, file);
+	cd(file: TFile | SplitPathToAnyFile) {
+		return cd(file);
 	}
 }

@@ -1,14 +1,18 @@
-import { err, ok, type Result } from "neverthrow";
+import type { Effect } from "effect";
 import {
-	decrementPending,
-	incrementPending,
-} from "../../internal/idle-tracker";
-import { logger } from "../../internal/logger";
+	type DispatchEffectFailure,
+	EffectDispatchCoordinator,
+} from "../../effect/dispatch-coordinator";
+import type { VamShutdownError } from "../../effect/errors";
+import type { VamRuntime } from "../../effect/runtime";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../types/split-path";
+
+export type { DispatchError, DispatchResult } from "../../types/dispatch";
+
 import { type VaultAction, VaultActionKind } from "../../types/vault-action";
 import {
 	makeSplitPath,
@@ -24,173 +28,64 @@ import {
 import type { Executor } from "./executor";
 import { topologicalSort } from "./topological-sort";
 
-export type DispatchResult = Result<void, DispatchError[]>;
-
-export type DispatchError = {
-	action: VaultAction;
-	error: string;
-};
+export type DispatchBatchEffectFailure = DispatchEffectFailure;
 
 export type ExistenceChecker = {
-	exists(splitPath: AnySplitPath): boolean;
+	exists(splitPath: AnySplitPath): boolean | Promise<boolean>;
 };
 
 export type DispatchBatchOptions = {
 	/** Maximum submitted batches processed in one drain cycle. */
-	maxBatches?: number;
-};
-
-type SubmittedBatch = {
-	actions: readonly VaultAction[];
-	resolve(result: DispatchResult): void;
+	readonly maxBatches?: number;
 };
 
 /**
- * Coordinates the complete lifecycle of submitted Vault Action batches.
- *
- * Planning, ordering, Self Event registration, execution, error attribution,
- * and scheduling all stay behind the `dispatch` interface. Each caller owns a
- * distinct submitted batch and receives the result for that batch only.
+ * Plans Dispatch Batches with ordinary TypeScript and delegates their
+ * coordination to the Effect-native single-consumer worker.
  */
 export class DispatchBatchCoordinator {
-	private readonly submitted: SubmittedBatch[] = [];
-	private readonly idleWaiters = new Set<() => void>();
-	private readonly maxBatches: number;
-	private draining = false;
+	private readonly effectCoordinator: EffectDispatchCoordinator;
 
 	constructor(
 		private readonly executor: Executor,
 		private readonly selfEventTracker: SelfEventTracker,
 		private readonly existenceChecker: ExistenceChecker,
+		runtime: VamRuntime,
 		options: DispatchBatchOptions = {},
 	) {
-		this.maxBatches = options.maxBatches ?? 10;
-	}
-
-	dispatch(actions: readonly VaultAction[]): Promise<DispatchResult> {
-		return new Promise((resolve) => {
-			this.submitted.push({ actions: [...actions], resolve });
-			void this.drain();
-		});
-	}
-
-	/** Used by the testing adapter to observe the real coordinator. */
-	whenIdle(): Promise<void> {
-		if (!this.draining && this.submitted.length === 0) {
-			return Promise.resolve();
-		}
-
-		return new Promise((resolve) => {
-			this.idleWaiters.add(resolve);
-		});
-	}
-
-	private async drain(): Promise<void> {
-		if (this.draining) return;
-
-		this.draining = true;
-		incrementPending();
-		let processedCount = 0;
-
-		try {
-			while (this.submitted.length > 0) {
-				if (processedCount >= this.maxBatches) {
-					this.rejectOverflowedBatches();
-					break;
-				}
-
-				const batch = this.submitted.shift();
-				if (!batch) break;
-
-				processedCount++;
-				batch.resolve(await this.execute(batch.actions));
-			}
-		} finally {
-			this.draining = false;
-			decrementPending();
-
-			if (this.submitted.length > 0) {
-				void this.drain();
-			} else {
-				const waiters = [...this.idleWaiters];
-				this.idleWaiters.clear();
-				for (const resolve of waiters) resolve();
-			}
-		}
-	}
-
-	private rejectOverflowedBatches(): void {
-		const overflowed = this.submitted.splice(0);
-		const droppedActionCount = overflowed.reduce(
-			(count, batch) => count + batch.actions.length,
-			0,
+		this.effectCoordinator = new EffectDispatchCoordinator(
+			runtime,
+			{
+				describePath: (action) => this.describePath(action),
+				execute: (action) => this.executor.execute(action),
+				plan: (actions) => this.plan(actions),
+				registerSelfEvents: (actions) =>
+					this.selfEventTracker.registerEffect(actions),
+			},
+			options,
 		);
-
-		logger.warn(
-			`[DispatchBatch] Batch limit (${this.maxBatches}) reached, dropping ${droppedActionCount} queued actions from ${overflowed.length} submitted batches`,
-		);
-
-		for (const batch of overflowed) {
-			const representative = batch.actions[0] ?? ({} as VaultAction);
-			batch.resolve(
-				err([
-					{
-						action: representative,
-						error: `Dispatch Batch overflow: batch limit ${this.maxBatches} reached, ${batch.actions.length} actions dropped`,
-					},
-				]),
-			);
-		}
 	}
 
-	private async execute(
+	/** Effect-native seam used by the compatibility facade. */
+	dispatchEffect(
 		actions: readonly VaultAction[],
-	): Promise<DispatchResult> {
-		if (actions.length === 0) return ok(undefined);
+	): Effect.Effect<void, DispatchEffectFailure> {
+		return this.effectCoordinator.dispatchEffect(actions);
+	}
 
-		let planned: VaultAction[];
-		try {
-			planned = await this.plan(actions);
-			this.selfEventTracker.register(planned);
-		} catch (error) {
-			const message =
-				error instanceof Error ? error.message : String(error);
-			const action = actions[0] ?? ({} as VaultAction);
-			logger.error("[DispatchBatch] Planning failed", { error: message });
-			return err([{ action, error: `EXCEPTION: ${message}` }]);
-		}
+	/** Effect-native idleness observation used by the testing adapter. */
+	whenIdleEffect(): Effect.Effect<void> {
+		return this.effectCoordinator.whenIdleEffect();
+	}
 
-		const errors: DispatchError[] = [];
-		for (const action of planned) {
-			try {
-				const result = await this.executor.execute(action);
-				if (result.isErr()) {
-					const failure = { action, error: result.error };
-					errors.push(failure);
-					logger.error("[DispatchBatch] Action failed", {
-						error: result.error,
-						kind: action.kind,
-						path: this.describePath(action),
-					});
-				}
-			} catch (error) {
-				const message =
-					error instanceof Error ? error.message : String(error);
-				errors.push({ action, error: `EXCEPTION: ${message}` });
-				logger.error("[DispatchBatch] Action threw exception", {
-					error: message,
-					kind: action.kind,
-					path: this.describePath(action),
-				});
-			}
-		}
-
-		return errors.length > 0 ? err(errors) : ok(undefined);
+	/** Effect-native finalizer. The active batch finishes; queued batches fail. */
+	shutdownEffect(): Effect.Effect<void, VamShutdownError> {
+		return this.effectCoordinator.shutdownEffect();
 	}
 
 	private async plan(
 		actions: readonly VaultAction[],
-	): Promise<VaultAction[]> {
+	): Promise<readonly VaultAction[]> {
 		const withRequirements = await this.ensureRequirements(actions);
 		const collapsed = await collapseActions(withRequirements);
 		const graph = buildDependencyGraph(collapsed);
@@ -200,18 +95,24 @@ export class DispatchBatchCoordinator {
 	private async ensureRequirements(
 		actions: readonly VaultAction[],
 	): Promise<VaultAction[]> {
-		const executable = actions.filter((action) => {
+		const executable: VaultAction[] = [];
+		for (const action of actions) {
 			switch (action.kind) {
 				case VaultActionKind.TrashFolder:
 				case VaultActionKind.TrashFile:
-				case VaultActionKind.TrashMdFile:
-					return this.existenceChecker.exists(
-						action.payload.splitPath,
-					);
+				case VaultActionKind.TrashMdFile: {
+					if (
+						await this.existenceChecker.exists(
+							action.payload.splitPath,
+						)
+					)
+						executable.push(action);
+					break;
+				}
 				default:
-					return true;
+					executable.push(action);
 			}
-		});
+		}
 
 		const destinations = getDestinationsToCheck(
 			executable,

@@ -1,4 +1,3 @@
-import { err, ok, type Result } from "neverthrow";
 import type { TAbstractFile } from "obsidian";
 import type { VaultEvent } from "../..";
 import { makeSplitPath } from "../common/split-path-and-system-path";
@@ -24,26 +23,37 @@ export function makeVaultEventForFileCreated(
 export function tryMakeVaultEventForFileRenamed(
 	tAbstractFile: TAbstractFile,
 	oldPath: string,
-): Result<VaultEvent, string> {
+):
+	| { readonly event: VaultEvent; readonly success: true }
+	| { readonly error: string; readonly success: false } {
 	const split = makeSplitPath(tAbstractFile);
 	const from = makeSplitPath(oldPath);
 
 	if (split.kind === "Folder" && from.kind === "Folder") {
-		return ok({
-			from: from,
-			kind: "FolderRenamed",
-			to: split,
-		});
+		return {
+			event: {
+				from: from,
+				kind: "FolderRenamed",
+				to: split,
+			},
+			success: true,
+		};
 	}
 	if (split.kind !== "Folder" && from.kind !== "Folder") {
-		return ok({
-			from: from,
-			kind: "FileRenamed",
-			to: split,
-		});
+		return {
+			event: {
+				from: from,
+				kind: "FileRenamed",
+				to: split,
+			},
+			success: true,
+		};
 	}
 
-	return err(EventProcessingErrorMessage.MixedFolderFileRename);
+	return {
+		error: EventProcessingErrorMessage.MixedFolderFileRename,
+		success: false,
+	};
 }
 
 export function makeVaultEventForFileDeleted(

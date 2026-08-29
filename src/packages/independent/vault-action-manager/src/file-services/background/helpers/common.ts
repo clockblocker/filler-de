@@ -1,52 +1,46 @@
-import { TFile, TFolder, type Vault } from "obsidian";
+import { Effect } from "effect";
+import { TFile, TFolder } from "obsidian";
+import { VaultIo } from "../../../effect/ports";
 import { pathfinder } from "../../../helpers/pathfinder";
 import { MD } from "../../../types/literals";
 import type { AnySplitPath } from "../../../types/split-path";
 import { SplitPathKind } from "../../../types/split-path";
 
-export async function getExistingBasenamesInFolder<SPF extends AnySplitPath>(
-	target: SPF,
-	vault: Vault,
-): Promise<Set<string>> {
+export const getExistingBasenamesInFolder = Effect.fn(
+	"getExistingBasenamesInFolder",
+)(function* <SPF extends AnySplitPath>(target: SPF) {
+	const vault = yield* VaultIo;
 	const folderPath = pathfinder.pathToFolderFromPathParts(target.pathParts);
-	const targetFolder = vault.getAbstractFileByPath(folderPath);
-
+	const targetFolder = yield* vault.getAbstractFileByPath(folderPath);
 	const existingBasenames = new Set<string>();
 
-	if (!targetFolder || !(targetFolder instanceof TFolder)) {
+	if (!(targetFolder instanceof TFolder)) return existingBasenames;
+
+	if (target.kind === SplitPathKind.Folder) {
+		for (const child of targetFolder.children) {
+			if (child instanceof TFolder) existingBasenames.add(child.name);
+		}
 		return existingBasenames;
 	}
 
-	if (target.kind === SplitPathKind.Folder) {
-		// For folders, collect all folder basenames
-		for (const child of targetFolder.children) {
-			if (child instanceof TFolder) {
-				existingBasenames.add(child.name);
-			}
-		}
-	} else {
-		// For files, collect basenames matching the extension
-		const targetExtension =
-			target.kind === SplitPathKind.MdFile
-				? MD
-				: target.kind === SplitPathKind.File
-					? target.extension
-					: undefined;
+	const targetExtension =
+		target.kind === SplitPathKind.MdFile
+			? MD
+			: target.kind === SplitPathKind.File
+				? target.extension
+				: undefined;
+	if (!targetExtension) return existingBasenames;
 
-		if (targetExtension) {
-			for (const child of targetFolder.children) {
-				if (
-					child instanceof TFile &&
-					child.extension.toLowerCase() ===
-						targetExtension.toLowerCase()
-				) {
-					existingBasenames.add(child.basename);
-				}
-			}
+	for (const child of targetFolder.children) {
+		if (
+			child instanceof TFile &&
+			child.extension.toLowerCase() === targetExtension.toLowerCase()
+		) {
+			existingBasenames.add(child.basename);
 		}
 	}
 
 	return existingBasenames;
-}
+});
 
 export type CollisionStrategy = "rename" | "skip";

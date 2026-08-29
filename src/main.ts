@@ -48,7 +48,11 @@ import {
 	buildFlexibleDelimiterPattern,
 } from "./utils/delimiter";
 import { getErrorMessage } from "./utils/get-error-message";
-import { whenIdle as whenIdleTracker } from "./utils/idle-tracker";
+import {
+	decrementPending,
+	incrementPending,
+	whenIdle as whenIdleTracker,
+} from "./utils/idle-tracker";
 import { logger } from "./utils/logger";
 import { sleep } from "./utils/sleep";
 
@@ -66,6 +70,7 @@ export default class TextEaterPlugin extends Plugin {
 	textfresser: Textfresser | null = null;
 
 	private commandExecutor: CommandExecutor | null = null;
+	private disposeVam: (() => Promise<void>) | null = null;
 	private initialized = false;
 	private previousSettings: TextEaterSettings | null = null;
 	private handlerTeardowns: (() => void)[] = [];
@@ -159,6 +164,7 @@ export default class TextEaterPlugin extends Plugin {
 		const vaultActions = createVaultActionManager(this.app);
 		this.vam = vaultActions.manager;
 		this.vamTesting = vaultActions.testing;
+		this.disposeVam = vaultActions.dispose;
 
 		this.rebuildTextfresser();
 
@@ -258,11 +264,19 @@ export default class TextEaterPlugin extends Plugin {
 		}
 
 		// Initialize command executor after librarian
-		this.commandExecutor = createCommandExecutor({
+		const executeCommand = createCommandExecutor({
 			librarian: this.librarian,
 			textfresser: this.textfresser,
 			vam: this.vam,
 		});
+		this.commandExecutor = async (kind) => {
+			incrementPending();
+			try {
+				await executeCommand(kind);
+			} finally {
+				decrementPending();
+			}
+		};
 
 		// Initialize OverlayManager with commandExecutor
 		this.overlayManager = new OverlayManager({
@@ -288,7 +302,17 @@ export default class TextEaterPlugin extends Plugin {
 		}
 		this.handlerTeardowns = [];
 		if (this.userEventInterceptor) this.userEventInterceptor.stop();
-		if (this.librarian) this.librarian.unsubscribe();
+		if (this.librarian) void this.librarian.unsubscribe();
+		const disposeVam = this.disposeVam;
+		this.disposeVam = null;
+		if (disposeVam) {
+			void disposeVam().catch((error) => {
+				logger.error(
+					"[TextEaterPlugin] Failed to dispose VaultActionManager:",
+					getErrorMessage(error),
+				);
+			});
+		}
 		// Clear global state
 		clearState();
 	}

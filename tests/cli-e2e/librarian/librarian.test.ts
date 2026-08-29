@@ -1,5 +1,6 @@
 import { beforeAll, describe, it } from "bun:test";
 import { setupTestVault } from "../setup";
+import { installTextfresserE2EStubs } from "../textfresser/helpers";
 import { waitForIdle } from "../utils";
 import {
 	testAllCodexesCreatedOnInit,
@@ -53,6 +54,7 @@ import {
 describe("Librarian CLI E2E", () => {
 	beforeAll(async () => {
 		await setupTestVault();
+		await installTextfresserE2EStubs();
 	});
 
 	// 000: Initial healing

@@ -26,7 +26,7 @@ async function ensureParentFolders(filePath: string): Promise<void> {
 	const escapedFolders = folders
 		.map((f) => `'${f.replace(/'/g, "\\'")}'`)
 		.join(",");
-	const code = `(async()=>{for(const f of [${escapedFolders}]){try{await app.vault.createFolder(f)}catch(e){}}return 'ok'})()`;
+	const code = `(async()=>{for(const f of [${escapedFolders}]){if(!(await app.vault.adapter.exists(f))){try{await app.vault.createFolder(f)}catch(e){}if(!(await app.vault.adapter.exists(f))){await app.vault.adapter.mkdir(f)}}}return 'ok'})()`;
 	await obsidianEval(code);
 }
 
@@ -40,15 +40,13 @@ export async function createFile(
 ): Promise<void> {
 	await ensureParentFolders(path);
 
-	if (content === "") {
-		await obsidian(`create name="${path}" content="" silent`);
-	} else {
-		const contentEscaped = escapeForSingleQuotedJs(content);
-		const pathEscaped = escapeForSingleQuotedJs(path);
-		await obsidianEval(
-			`(async()=>{await app.vault.create('${pathEscaped}','${contentEscaped}');return 'ok'})()`,
-		);
-	}
+	// Obsidian's `create ... content=""` CLI form exits successfully without
+	// creating a file. Use the Vault API for empty and non-empty fixtures alike.
+	const contentEscaped = escapeForSingleQuotedJs(content);
+	const pathEscaped = escapeForSingleQuotedJs(path);
+	await obsidianEval(
+		`(async()=>{await app.vault.create('${pathEscaped}','${contentEscaped}');return 'ok'})()`,
+	);
 }
 
 /**
@@ -177,7 +175,7 @@ export async function executeCommandOnSelection(params: {
 	const pathEscaped = escapeForSingleQuotedJs(path);
 	const selectedTextEscaped = escapeForSingleQuotedJs(selectedText);
 
-	const code = `(async()=>{const file=app.vault.getAbstractFileByPath('${pathEscaped}');if(!file)throw new Error('File not found: ${pathEscaped}');const leaf=app.workspace.getMostRecentLeaf()??app.workspace.getLeaf(true);await leaf.openFile(file,{active:true});const view=leaf.view;if(view&&typeof view.getMode==='function'&&typeof view.setMode==='function'&&view.getMode()!=='source'){await view.setMode('source')}const editor=(view&&'editor' in view&&view.editor)?view.editor:app.workspace.activeEditor?.editor;if(!editor)throw new Error('No active markdown editor for: ${pathEscaped}');const content=editor.getValue();const start=content.indexOf('${selectedTextEscaped}');if(start===-1)throw new Error('Selected text not found: ${selectedTextEscaped}');const offsetToPos=(offset)=>{const prefix=content.slice(0,offset);const lines=prefix.split('\\n');const line=lines.length-1;const ch=lines[line]?.length??0;return {line,ch}};const from=offsetToPos(start);const to=offsetToPos(start+'${selectedTextEscaped}'.length);editor.setSelection(from,to);if(typeof editor.focus==='function'){editor.focus()}await new Promise((resolve)=>setTimeout(resolve,50));const ok=app.commands.executeCommandById('${commandIdEscaped}');if(!ok)throw new Error('Command failed or not found: ${commandIdEscaped}');return 'ok'})()`;
+	const code = `(async()=>{const file=app.vault.getAbstractFileByPath('${pathEscaped}');if(!file)throw new Error('File not found: ${pathEscaped}');const leaf=app.workspace.getMostRecentLeaf()??app.workspace.getLeaf(true);await leaf.openFile(file,{active:true});app.workspace.setActiveLeaf(leaf,{focus:true});const view=leaf.view;if(view&&typeof view.getMode==='function'&&typeof view.setMode==='function'&&view.getMode()!=='source'){await view.setMode('source')}app.workspace.setActiveLeaf(leaf,{focus:true});const editor=(view&&'editor' in view&&view.editor)?view.editor:app.workspace.activeEditor?.editor;if(!editor)throw new Error('No active markdown editor for: ${pathEscaped}');const content=editor.getValue();const start=content.indexOf('${selectedTextEscaped}');if(start===-1)throw new Error('Selected text not found: ${selectedTextEscaped}');const offsetToPos=(offset)=>{const prefix=content.slice(0,offset);const lines=prefix.split('\\n');const line=lines.length-1;const ch=lines[line]?.length??0;return {line,ch}};const from=offsetToPos(start);const to=offsetToPos(start+'${selectedTextEscaped}'.length);editor.setSelection(from,to);if(typeof editor.focus==='function'){editor.focus()}const plugin=app.plugins.plugins['cbcr-text-eater-de'];let ready=false;for(let attempt=0;attempt<40;attempt++){const activePath=app.workspace.activeEditor?.file?.path;const selection=plugin.getVaultActionManagerTestingApi().manager.getSelectionInfo();if(activePath==='${pathEscaped}'&&selection?.text==='${selectedTextEscaped}'){ready=true;break}await new Promise(resolve=>setTimeout(resolve,50))}if(!ready)throw new Error('Active editor selection did not become visible to VAM: ${pathEscaped}');if('${commandIdEscaped}'!=='cbcr-text-eater-de:lemma'||typeof plugin.commandExecutor!=='function')throw new Error('Unsupported test command: ${commandIdEscaped}');await plugin.commandExecutor('Lemma');if(typeof view.save==='function'){await view.save()}return 'ok'})()`;
 
 	await obsidianEval(code);
 }

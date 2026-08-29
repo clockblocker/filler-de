@@ -34,9 +34,12 @@ export async function expectFilesToExist(
 	paths: readonly string[],
 ): Promise<void> {
 	await pollUntilPass(async () => {
-		const results = await Promise.all(
-			paths.map(async (p) => ({ exists: await fileExists(p), path: p })),
-		);
+		const results: { exists: boolean; path: string }[] = [];
+		// Obsidian's CLI transport can drop results when several eval requests
+		// arrive concurrently, so keep these probes deliberately sequential.
+		for (const path of paths) {
+			results.push({ exists: await fileExists(path), path });
+		}
 		const missing = results.filter((r) => !r.exists).map((r) => r.path);
 		if (missing.length > 0) {
 			const allFiles = await listFiles();
@@ -54,9 +57,10 @@ export async function expectFilesToBeGone(
 	paths: readonly string[],
 ): Promise<void> {
 	await pollUntilPass(async () => {
-		const results = await Promise.all(
-			paths.map(async (p) => ({ exists: await fileExists(p), path: p })),
-		);
+		const results: { exists: boolean; path: string }[] = [];
+		for (const path of paths) {
+			results.push({ exists: await fileExists(path), path });
+		}
 		const stillPresent = results
 			.filter((r) => r.exists)
 			.map((r) => r.path);

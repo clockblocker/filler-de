@@ -20,3 +20,13 @@ bun run typecheck:changed  # typecheck vs master (RUN BEFORE FINISHING WORK)
 bun run test:cli-e2e                                          # full suite
 CLI_E2E_VAULT=cli-e2e-test-vault CLI_E2E_VAULT_PATH=... bun run tests/cli-e2e/textfresser/edge-case-runner.ts  # edge cases
 ```
+
+# Learning more about Effect
+
+This repository uses the Effect Typescript library.
+
+Before writing any Effect code, first read `node_modules/effect/AGENTS.md`
+**completely**, and follow the links in the file when required.
+
+If you need to learn more about particular Effect apis and concepts that the
+guide doesn't cover, search through the source code in `node_modules/effect/src`.

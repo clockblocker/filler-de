@@ -1,5 +1,7 @@
-import { err, ok, type Result, ResultAsync } from "neverthrow";
-import { type FileManager, TFolder, type Vault } from "obsidian";
+import { Effect, Result } from "effect";
+import { TFolder } from "obsidian";
+import { VamVaultIoError } from "../../../effect/errors";
+import { VaultIo } from "../../../effect/ports";
 import {
 	errorBothSourceAndTargetNotFound,
 	errorCreateFailed,
@@ -11,203 +13,262 @@ import {
 } from "../../../errors";
 import { pathfinder } from "../../../helpers/pathfinder";
 import { getErrorMessage } from "../../../internal/get-error-message";
-import { logger } from "../../../internal/logger";
 import type {
 	SplitPathFromTo,
 	SplitPathToFolder,
 } from "../../../types/split-path";
 import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
 
-/**
- * Low-level folder operations.
- */
+function operationFailure(
+	operation: string,
+	path: string,
+	message: string,
+	cause?: unknown,
+): VamVaultIoError {
+	return new VamVaultIoError({
+		cause:
+			cause === undefined
+				? new Error(message)
+				: new Error(message, { cause }),
+		operation,
+		path,
+	});
+}
+
+function originalMessage(error: VamVaultIoError): string {
+	return getErrorMessage(error.cause);
+}
+
+function isLookupMiss(error: VamVaultIoError): boolean {
+	return error.operation === "getFolder";
+}
+
+/** Effect-native helper for low-level folder operations. */
 export class TFolderHelper {
-	private fileManager: FileManager;
-	private vault: Vault;
-
-	constructor({
-		vault,
-		fileManager,
-	}: { vault: Vault; fileManager: FileManager }) {
-		this.vault = vault;
-		this.fileManager = fileManager;
-	}
-
-	getFolder(splitPath: SplitPathToFolder): Result<TFolder, string> {
-		const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
-		const tAbstractFile = this.vault.getAbstractFileByPath(systemPath);
-		if (!tAbstractFile) {
-			return err(errorGetByPath("folder", systemPath));
-		}
-
-		if (tAbstractFile instanceof TFolder) {
-			return ok(tAbstractFile);
-		}
-
-		return err(errorTypeMismatch("folder", systemPath));
-	}
-
-	/**
-	 * Create a single folder.
-	 * Obsidian's vault.createFolder automatically creates parent folders if they don't exist.
-	 */
-	async createFolder(
-		splitPath: SplitPathToFolder,
-	): Promise<Result<TFolder, string>> {
-		const existing = this.getFolder(splitPath);
-		if (existing.isOk()) {
-			return existing;
-		}
-		return this.tryVaultCreateFolder(splitPath);
-	}
-
-	private async tryVaultCreateFolder(
-		splitPath: SplitPathToFolder,
-	): Promise<Result<TFolder, string>> {
-		const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
-		try {
-			const createdFolder = await this.vault.createFolder(systemPath);
-			return ok(createdFolder);
-		} catch (error) {
-			const message = getErrorMessage(error);
-			if (message.includes("already exists")) {
-				// Race condition: folder was created by another process
-				return this.getFolder(splitPath).mapErr((getErr) =>
-					errorCreationRaceCondition("folder", systemPath, getErr),
+	getFolder(splitPath: SplitPathToFolder) {
+		return Effect.gen(function* () {
+			const vault = yield* VaultIo;
+			const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
+			const abstractFile = yield* vault.getAbstractFileByPath(systemPath);
+			if (!abstractFile) {
+				return yield* operationFailure(
+					"getFolder",
+					systemPath,
+					errorGetByPath("folder", systemPath),
 				);
 			}
-			return err(errorCreateFailed("folder", systemPath, message));
-		}
+			if (abstractFile instanceof TFolder) return abstractFile;
+			return yield* operationFailure(
+				"getFolder",
+				systemPath,
+				errorTypeMismatch("folder", systemPath),
+			);
+		});
 	}
 
-	async trashFolder(
-		splitPath: SplitPathToFolder,
-	): Promise<Result<void, string>> {
-		const folderResult = this.getFolder(splitPath);
-		if (folderResult.isErr()) {
-			return ok(undefined); // Folder already gone
-		}
-		return ResultAsync.fromPromise(
-			this.fileManager.trashFile(folderResult.value),
-			() => "Failed to trash folder",
-		).map(() => undefined);
+	createFolder(splitPath: SplitPathToFolder) {
+		return Effect.gen({ self: this }, function* () {
+			const existing = yield* Effect.result(this.getFolder(splitPath));
+			if (Result.isSuccess(existing)) return existing.success;
+			if (!isLookupMiss(existing.failure)) return yield* existing.failure;
+			return yield* this.tryVaultCreateFolder(splitPath);
+		});
 	}
 
-	/**
-	 * Rename/move a folder.
-	 */
-	async renameFolder({
+	private tryVaultCreateFolder(splitPath: SplitPathToFolder) {
+		return Effect.gen({ self: this }, function* () {
+			const vault = yield* VaultIo;
+			const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
+			const created = yield* Effect.result(
+				vault.createFolder(systemPath),
+			);
+			if (Result.isSuccess(created)) return created.success;
+			const message = originalMessage(created.failure);
+			if (message.includes("already exists")) {
+				return yield* this.getFolder(splitPath).pipe(
+					Effect.mapError((error) =>
+						operationFailure(
+							"createFolder.race",
+							systemPath,
+							errorCreationRaceCondition(
+								"folder",
+								systemPath,
+								getErrorMessage(error.cause),
+							),
+							error,
+						),
+					),
+				);
+			}
+			return yield* operationFailure(
+				"createFolder",
+				systemPath,
+				errorCreateFailed("folder", systemPath, message),
+				created.failure,
+			);
+		});
+	}
+
+	trashFolder(splitPath: SplitPathToFolder) {
+		return Effect.gen({ self: this }, function* () {
+			const existing = yield* Effect.result(this.getFolder(splitPath));
+			if (Result.isFailure(existing)) {
+				return isLookupMiss(existing.failure)
+					? undefined
+					: yield* existing.failure;
+			}
+			const vault = yield* VaultIo;
+			yield* vault.trash(existing.success);
+		});
+	}
+
+	renameFolder({
 		from,
 		to,
 		collisionStrategy = "rename",
 	}: SplitPathFromTo<SplitPathToFolder> & {
 		collisionStrategy?: CollisionStrategy;
-	}): Promise<Result<TFolder, string>> {
-		const fromResult = this.getFolder(from);
-		const toResult = this.getFolder(to);
+	}) {
+		return Effect.gen({ self: this }, function* () {
+			const fromResult = yield* Effect.result(this.getFolder(from));
+			const toResult = yield* Effect.result(this.getFolder(to));
+			if (
+				Result.isFailure(fromResult) &&
+				!isLookupMiss(fromResult.failure)
+			) {
+				return yield* fromResult.failure;
+			}
+			if (Result.isFailure(toResult) && !isLookupMiss(toResult.failure)) {
+				return yield* toResult.failure;
+			}
 
-		if (fromResult.isErr()) {
-			if (toResult.isErr()) {
+			if (Result.isFailure(fromResult)) {
+				if (Result.isSuccess(toResult)) return toResult.success;
 				const fromPath = pathfinder.systemPathFromSplitPath(from);
 				const toPath = pathfinder.systemPathFromSplitPath(to);
-				return err(
+				return yield* operationFailure(
+					"renameFolder.resolve",
+					`${fromPath} -> ${toPath}`,
 					errorBothSourceAndTargetNotFound(
 						"folder",
 						fromPath,
 						toPath,
-						toResult.error,
+						getErrorMessage(toResult.failure.cause),
 					),
+					fromResult.failure,
 				);
 			}
-			// FromFolder not found, but ToFolder found. Assume already moved.
-			return ok(toResult.value);
-		}
 
-		// If source and target are the same folder, no-op
-		if (toResult.isOk() && fromResult.value === toResult.value) {
-			return ok(fromResult.value);
-		}
-
-		if (toResult.isOk()) {
-			// Target exists
-			if (collisionStrategy === "skip") {
-				return ok(toResult.value);
+			if (
+				Result.isSuccess(toResult) &&
+				fromResult.success === toResult.success
+			) {
+				return fromResult.success;
 			}
-			// collisionStrategy === "rename"
-			return this.renameToIndexedPath(fromResult.value, from, to);
-		}
-
-		return this.performRename(fromResult.value, to);
+			if (Result.isSuccess(toResult)) {
+				if (collisionStrategy === "skip") return toResult.success;
+				return yield* this.renameToIndexedPath(
+					fromResult.success,
+					from,
+					to,
+				);
+			}
+			return yield* this.performRename(fromResult.success, to);
+		});
 	}
 
-	private async renameToIndexedPath(
+	private renameToIndexedPath(
 		fromFolder: TFolder,
 		from: SplitPathToFolder,
 		to: SplitPathToFolder,
-	): Promise<Result<TFolder, string>> {
-		const existingBasenames = await getExistingBasenamesInFolder(
-			to,
-			this.vault,
-		);
-		const indexedPath = await pathfinder.findFirstAvailableIndexedPath(
-			to,
-			existingBasenames,
-		);
-
-		const renameResult = await this.tryVaultRename(
-			fromFolder,
-			indexedPath,
-			from,
-		);
-		if (renameResult.isErr()) {
-			return err(renameResult.error);
-		}
-
-		return this.getFolder(indexedPath).mapErr((getErr) =>
-			errorRetrieveRenamed(
-				"folder",
-				pathfinder.systemPathFromSplitPath(indexedPath),
-				getErr,
-			),
-		);
+	) {
+		return Effect.gen({ self: this }, function* () {
+			const existingBasenames = yield* getExistingBasenamesInFolder(to);
+			const indexedPath = yield* Effect.tryPromise({
+				catch: (cause) =>
+					operationFailure(
+						"findIndexedFolderPath",
+						pathfinder.systemPathFromSplitPath(to),
+						getErrorMessage(cause),
+						cause,
+					),
+				try: () =>
+					pathfinder.findFirstAvailableIndexedPath(
+						to,
+						existingBasenames,
+					),
+			});
+			yield* this.tryVaultRename(fromFolder, indexedPath, from);
+			return yield* this.getFolder(indexedPath).pipe(
+				Effect.mapError((error) =>
+					operationFailure(
+						"renameFolder.retrieve",
+						pathfinder.systemPathFromSplitPath(indexedPath),
+						errorRetrieveRenamed(
+							"folder",
+							pathfinder.systemPathFromSplitPath(indexedPath),
+							getErrorMessage(error.cause),
+						),
+						error,
+					),
+				),
+			);
+		});
 	}
 
-	private performRename(
-		fromFolder: TFolder,
-		to: SplitPathToFolder,
-	): ResultAsync<TFolder, string> {
-		return this.tryVaultRename(fromFolder, to, to).andThen(() =>
-			this.getFolder(to).mapErr((getErr) =>
-				errorRetrieveRenamed(
-					"folder",
-					pathfinder.systemPathFromSplitPath(to),
-					getErr,
+	private performRename(fromFolder: TFolder, to: SplitPathToFolder) {
+		return Effect.gen({ self: this }, function* () {
+			yield* this.tryVaultRename(fromFolder, to, to);
+			return yield* this.getFolder(to).pipe(
+				Effect.mapError((error) =>
+					operationFailure(
+						"renameFolder.retrieve",
+						pathfinder.systemPathFromSplitPath(to),
+						errorRetrieveRenamed(
+							"folder",
+							pathfinder.systemPathFromSplitPath(to),
+							getErrorMessage(error.cause),
+						),
+						error,
+					),
 				),
-			),
-		);
+			);
+		});
 	}
 
 	private tryVaultRename(
 		folder: TFolder,
 		to: SplitPathToFolder,
 		from: SplitPathToFolder,
-	): ResultAsync<void, string> {
+	) {
 		const toPath = pathfinder.systemPathFromSplitPath(to);
-		return ResultAsync.fromPromise(
-			this.fileManager.renameFile(folder, toPath),
-			(error) => {
-				const msg = getErrorMessage(error);
-				logger.error(
-					"[TFolderHelper.renameFolder] vault.rename threw",
-					JSON.stringify({ error: msg, to: toPath }),
-				);
-				return errorRenameFailed(
-					"folder",
-					pathfinder.systemPathFromSplitPath(from),
-					toPath,
-					msg,
-				);
-			},
-		);
+		const fromPath = pathfinder.systemPathFromSplitPath(from);
+		return Effect.gen(function* () {
+			const vault = yield* VaultIo;
+			yield* vault.rename(folder, toPath).pipe(
+				Effect.tapError((error) =>
+					Effect.logError(
+						"[TFolderHelper.renameFolder] vault.rename threw",
+						JSON.stringify({
+							error: originalMessage(error),
+							to: toPath,
+						}),
+					),
+				),
+				Effect.mapError((error) =>
+					operationFailure(
+						"renameFolder",
+						`${fromPath} -> ${toPath}`,
+						errorRenameFailed(
+							"folder",
+							fromPath,
+							toPath,
+							originalMessage(error),
+						),
+						error,
+					),
+				),
+			);
+		});
 	}
 }

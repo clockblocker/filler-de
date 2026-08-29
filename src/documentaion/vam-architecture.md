@@ -26,17 +26,21 @@ VaultActionManager is a **dependency-aware file system coordination boundary** o
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────┐
-│  Public Interface (VaultActionManager)                                    │
-│    dispatch() · subscribeToBulk()                                        │
-│    readContent() · exists() · selection intent · navigation intent       │
+│  Public Facades                                                           │
+│    facade.ts → composable Effect operations                              │
+│    legacy-neverthrow-facade.ts → Promise / neverthrow compatibility      │
+│    dispatch() · subscribeToBulk() · reads · selection · navigation       │
 ├───────────────────────────────────────────────────────────────────────────┤
-│  Facade (VaultActionManagerImpl)                                          │
-│    ├─ DispatchBatchCoordinator → plan → schedule → execute → attribute   │
-│    ├─ VaultObservation      → attribute → window → collapse → roots      │
-│    ├─ MarkdownFileAccess    → active/background routing                  │
-│    ├─ SelfEventTracker      → shared by dispatch + event pipelines       │
-│    ├─ VaultReader           → read-only vault operations                 │
-│    └─ TestingAdapter        → readiness over the real object graph       │
+│  One VAM ManagedRuntime + VamLive layer                                   │
+│    VaultIo · ActiveEditorAccess · VAM logger · lifecycle finalizers       │
+├───────────────────────────────────────────────────────────────────────────┤
+│  Effect Modules                                                           │
+│    ├─ DispatchCoordinator  → Queue + Deferred → plan → execute           │
+│    ├─ VaultObservation    → Queue + Clock + PubSub + scoped fibers       │
+│    ├─ SelfEventTracker    → Ref + Clock + Deferred                       │
+│    ├─ MarkdownFileAccess  → active/background routing                    │
+│    ├─ VaultReader         → read-only vault operations                   │
+│    └─ TestingAdapter      → readiness over the production graph          │
 ├───────────────────────────────────────────────────────────────────────────┤
 │  File Services                                                            │
 │    ├─ MarkdownFileAccess    → the routing module                         │
@@ -56,6 +60,66 @@ VaultActionManager is a **dependency-aware file system coordination boundary** o
 │    └─ DependencyGraph       → Kahn's algorithm input                     │
 └───────────────────────────────────────────────────────────────────────────┘
 ```
+
+### 2.1 Runtime and ports
+
+Either public factory creates exactly one `ManagedRuntime`. Its `VamLive` layer
+supplies two deliberately small Obsidian ports:
+
+- `VaultIo` owns vault, file-manager, and metadata-cache calls.
+- `ActiveEditorAccess` owns active Markdown view lookup and navigation.
+
+The same layer installs a VAM logger backed by the repository logging sink and
+owns runtime lifecycle finalizers. Internal Effect modules return programs;
+they do not create runtimes or call `Effect.runPromise`. `facade.ts` supplies
+the memoized runtime context to each operation and returns an environment-free
+Effect, so consumers can compose VAM programs before choosing where to run
+them. `legacy-neverthrow-facade.ts` is the only Promise/Neverthrow execution
+boundary. The synchronous Obsidian event callback bridge runs a captured
+runtime context because callbacks must return immediately.
+
+### 2.2 Public facade migration
+
+The package exposes two explicit subpaths with the same primary symbol names:
+
+```typescript
+// Existing contract
+import {
+  createVaultActionManager,
+  type VaultActionManager,
+} from "@textfresser/vault-action-manager/legacy-neverthrow-facade"
+
+// Effect contract
+import {
+  createVaultActionManager,
+  type VaultActionManager,
+} from "@textfresser/vault-action-manager/facade"
+```
+
+The package root remains mapped to the legacy symbols during the migration
+window. It also exports `createEffectVaultActionManager` and
+`EffectVaultActionManager` as discoverable aliases. New code should use the
+`/facade` subpath. A consumer migrates on its own schedule by changing the
+import and replacing Promise/Neverthrow handling with Effect composition.
+
+### 2.3 Error boundary
+
+Setup, vault I/O, planning, dispatch, subscription, and shutdown failures are
+`Schema.TaggedError` values. They retain `operation`, original `cause`, and,
+where relevant, `path` or `action`. The canonical facade preserves these values
+in the Effect error channel. Its returned Effects require no external VAM
+environment because the facade supplies its memoized live context. The legacy
+facade maps the same failures back to the existing Promise and `neverthrow`
+contracts.
+
+### 2.4 Shutdown order
+
+Disposal is idempotent. It closes public subscriptions, closes the observation
+scope and listeners, shuts down dispatch, and finally disposes the managed
+runtime. The active Dispatch Batch is allowed to finish; every queued caller is
+completed with a typed shutdown failure. Submitting work after disposal also
+returns a typed shutdown failure from `facade.ts` and the legacy mapped error
+from `legacy-neverthrow-facade.ts`.
 
 ---
 
@@ -193,9 +257,14 @@ DispatchBatchCoordinator
 
 **Source**: `impl/actions-processing/dispatch-batch.ts`
 
-`DispatchBatchCoordinator` is the deep module for outbound Vault Actions. Its interface is one method:
+`DispatchBatchCoordinator` is the deep module for outbound Vault Actions. The
+two facades present the same native program at different migration stages:
 
 ```typescript
+// facade.ts
+dispatch(actions: readonly VaultAction[]): Effect<void, VamRuntimeFailure<DispatchEffectFailure>>
+
+// legacy-neverthrow-facade.ts
 dispatch(actions: readonly VaultAction[]): Promise<DispatchResult>
 ```
 
@@ -203,10 +272,12 @@ Planning helpers and the executor are internal seams. Callers do not coordinate 
 
 **Key properties**:
 - **Submission identity**: each `dispatch()` call remains a distinct batch, even when it queues behind another batch.
+- **Effect-owned coordination**: each submission is a `Queue` message carrying a caller-owned `Deferred`; one scoped worker is the only consumer.
 - **Caller-owned results**: an error is returned to the caller whose submitted batch produced it. A later failure cannot turn an earlier result into an error, and queued callers never receive unconditional success.
 - **Serial execution**: submitted batches drain FIFO to avoid interleaving Vault mutations.
 - **Overflow accounting**: every dropped submitted batch receives its own `DispatchError`; no waiter is left unresolved.
-- **Observable idleness**: the testing adapter waits on the coordinator without exposing queue state on the production interface.
+- **Observable idleness**: an Effect-native idle `Deferred` resolves only after the queue and active worker are empty; the testing adapter observes it without exposing queue state publicly.
+- **Tracing**: planning and each action execution have named Effect spans with action kind/path attributes.
 
 ### 6.2 Stage 1: Ensure Requirements
 
@@ -371,7 +442,13 @@ BulkVaultEventHandler
 
 **Source**: `impl/event-processing/vault-observation.ts`
 
-`VaultObservation` owns Obsidian listener lifecycle, Self Event attribution, buffering, normalization, Semantic Root inference, subscriber completion, and teardown. The retired single-event path had no repository caller and competed with bulk observation at the pop-on-match `SelfEventTracker` seam.
+`VaultObservation` owns Obsidian listener lifecycle, Self Event attribution,
+buffering, normalization, Semantic Root inference, subscriber completion, and
+teardown. Listener refs are acquired with `Effect.acquireRelease` inside a
+session scope. Callbacks only attribute/encode the event and perform a
+non-blocking offer to an unbounded intake `Queue`; they never wait for a
+subscriber. The retired single-event path had no repository caller and
+competed with bulk observation at the pop-on-match `SelfEventTracker` seam.
 
 **Rename handling**: `shouldIgnore()` is evaluated once for each of `newPath` and `oldPath`. A rename is filtered only when both match, confirming a genuine Self Event rename. If only one path matches, the event passes through and the idempotent tree remains the safety net.
 
@@ -393,11 +470,15 @@ Buffers events with a dual-window strategy:
 | `maxWindowMs` | 2000ms | Safety cap: force flush even if events keep arriving |
 
 **Mechanics**:
-- First event starts a new window, records `windowStartedAt`
-- Each `push()` resets the quiet timer
-- If `maxWindow` exceeded on push → force flush immediately
-- On flush → emits `BulkWindow { allObsidianEvents[], debug { startedAt, endedAt } }`
-- `clear()` drops buffer and stops timers (used on teardown)
+- One scoped fiber is the only consumer of the intake queue.
+- The first event records `startedAt`; subsequent events retain FIFO order.
+- `Clock` and `Effect.timeoutOption` implement the quiet deadline and the
+  absolute maximum deadline. The maximum window therefore fires even without
+  another `push()`.
+- `Flush` and `Settled` queue commands carry `Deferred` acknowledgements used
+  by the testing adapter.
+- Closing the observation session scope shuts down the queue, interrupts the
+  worker, removes listeners, and drops its pending window.
 
 #### 7.2.2 Processing Chain
 
@@ -455,11 +536,19 @@ type BulkVaultEvent = {
 
 ### 7.3 Subscription Lifecycle
 
-**Lazy initialization** — observation starts only when both conditions are met:
+**Lazy initialization** — observation creates a scoped session only when both conditions are met:
 1. `startListening()` has been called
 2. At least one subscriber exists
 
-**Teardown** — `subscribeToBulk()` returns a `Teardown` function. When the last subscriber unsubscribes, observation removes all three Obsidian listeners and clears the current window.
+Each subscription owns a `PubSub` subscription and a serial scoped handler
+fiber. A handler failure is logged and isolated from the observation worker and
+other subscribers. `whenIdleEffect()` publishes barriers and waits until each
+current subscriber has processed earlier Bulk events.
+
+**Teardown** — `subscribeToBulk()` returns a `Teardown` function. Closing it
+closes that subscriber scope. When the final subscriber leaves, observation
+closes the session scope, removes all three Obsidian listeners, and clears the
+current window.
 
 ```
 startListening()
@@ -490,15 +579,19 @@ As of the idempotent tree changes, `SelfEventTracker` is a **performance optimiz
 
 ### 8.2 Two-Level Matching
 
-**Exact path tracking** (`tracked: Map<string, { timeout, isFilePath }>`):
+**Exact path tracking** (`tracked: Map<string, { expiresAt, isFilePath }>`):
 - **Pop-on-match**: `shouldIgnore(path)` removes the path from the map after first match
 - One-time use: each dispatched path is matched at most once
-- TTL: 5 seconds (auto-cleanup if Obsidian event never arrives)
+- TTL: 5 seconds; expired entries are pruned against Effect `Clock` during register, lookup, and readiness operations
 
-**Prefix tracking** (`trackedPrefixes: Map<string, timeout>`):
+**Prefix tracking** (`trackedPrefixes: Map<string, expiresAt>`):
 - **Persistent**: does NOT pop on match (allows many descendants to match)
 - Used for folder operations that cascade to children
 - TTL: 5 seconds
+
+Both maps live in a `Ref`. A changed-state `Deferred` wakes readiness waiters;
+waiting races that signal with the nearest expiration through Effect `Clock`,
+so no VAM-owned timer or waiter set is required.
 
 ### 8.3 Registration Rules by Action Kind
 
@@ -519,14 +612,14 @@ As of the idempotent tree changes, `SelfEventTracker` is a **performance optimiz
 
 ### 8.4 E2E Test Integration
 
-The tracker keeps readiness primitives internal:
+The tracker keeps Effect-native readiness primitives internal:
 
 ```typescript
-getRegisteredFilePaths(): readonly string[]
+getRegisteredFilePathsEffect(): Effect<readonly string[]>
 // Returns all currently tracked file paths (not folders, not trashed)
 // Called BEFORE waitForAllRegistered() to capture snapshot
 
-waitForAllRegistered(): Promise<void>
+waitForAllRegisteredEffect(): Effect<void>
 // Resolves when all tracked paths have been popped by Obsidian events
 // Returns immediately if no paths tracked
 ```
@@ -619,7 +712,13 @@ await manager.dispatch(actions); // production outcome
 await testing.whenSettled();     // running-Obsidian readiness
 ```
 
-`whenSettled()` observes the real Dispatch Batch coordinator, Vault observation module, and Self Event tracker. Queryability polling (50ms → 200ms exponential backoff, 10-second cap) lives here rather than in the production facade. Unit tests assert through the `dispatch`, `VaultObservation`, and `MarkdownFileAccess` interfaces instead of accumulated implementation traces.
+`whenSettled()` runs one Effect program on the production VAM runtime. It
+observes the real Dispatch Batch coordinator, Vault observation module, and
+Self Event tracker. Queryability polling (50ms → 200ms exponential backoff,
+10-second cap) uses `Clock`, `Effect.sleep`, and the production `VaultIo` port
+rather than `Date.now`, timers, or a parallel test object graph. Unit tests
+assert through the `dispatch`, `VaultObservation`, and `MarkdownFileAccess`
+interfaces instead of accumulated implementation traces.
 
 ---
 
@@ -652,6 +751,15 @@ Trash actions are terminal. If a path is being trashed, no other action for that
 
 The executor and reader do not independently choose between editor and Vault operations. `MarkdownFileAccess` owns that policy and its two adapters, preventing route drift and keeping editor state, inline-title selection, and navigation knowledge behind one internal interface.
 
+### One Runtime, Two Migration Edges
+
+VAM implementation modules expose Effect programs and rely on the shared live
+ports. `facade.ts` provides that runtime context and exposes the native Effect
+contract. `legacy-neverthrow-facade.ts` delegates to the Effect facade and maps
+only at its outer edge. `neverthrow` remains only in that compatibility module
+and structural legacy types. Both facades therefore share one implementation,
+one queue, one observation graph, and one lifecycle.
+
 ---
 
 ## 13. Key File Index
@@ -659,9 +767,17 @@ The executor and reader do not independently choose between editor and Vault ope
 | File | Purpose |
 |------|---------|
 | **Entry Points** | |
-| `index.ts` | Public interface, type exports, factory exports |
-| `facade.ts` | Wires one production manager graph and its testing adapter |
+| `index.ts` | Common exports, backward-compatible root, and named Effect aliases |
+| `facade.ts` | Canonical Effect-returning facade over one production manager graph |
+| `legacy-neverthrow-facade.ts` | Promise/Neverthrow adapter delegating to `facade.ts` |
 | `testing-adapter.ts` | Running-Obsidian readiness over the real graph |
+| **Effect Runtime** | |
+| `effect/errors.ts` | Tagged setup, I/O, planning, dispatch, subscription, and shutdown errors |
+| `effect/ports.ts` | `VaultIo` and `ActiveEditorAccess` Context services |
+| `effect/vam-live.ts` | Production Obsidian adapters and lifecycle layer |
+| `effect/logger.ts` | Effect logger layer backed by the repository logging sink |
+| `effect/runtime.ts` | The single managed VAM runtime and post-disposal guard |
+| `effect/dispatch-coordinator.ts` | Queue/Deferred single-consumer Dispatch Batch worker |
 | **Types** | |
 | `types/split-path.ts` | SplitPath discriminated union + Zod schemas |
 | `types/read-content-error.ts` | Typed read error union (`ReadContentError`) + helpers |
@@ -763,7 +879,10 @@ The mutable raw-event array and dispatcher traces were removed from the producti
 
 ### 14.8 MarkdownFileAccess's 50ms Sleep After Rename
 
-`markdown-file-access.ts` has a hardcoded 50ms delay before restoring an inline-title selection after rename. The editor protocol is now local to the correct module, but the timing heuristic could still be replaced by an observable view-update signal.
+`markdown-file-access.ts` retains the 50ms timing heuristic before restoring an
+inline-title selection after rename, now expressed with `Effect.sleep`. The
+editor protocol is local to the correct module, but the heuristic could still
+be replaced by an observable view-update signal.
 
 ### 14.9 Queryability Polling in Production Code — RESOLVED
 
@@ -781,6 +900,9 @@ If action #3 of 10 fails, actions #1 and #2 have already been executed. There's 
 
 Added `buildActionKeyIndex(actions)` which pre-computes `{ folderKeys: Set<string>, fileKeys: Set<string> }` in a single O(N) pass. All 4 call sites in `ensureDestinationsExist()` now use `actionIndex.folderKeys.has(key)` / `actionIndex.fileKeys.has(key)` for O(1) lookups. The original `hasActionForKey()` is kept (deprecated) for backward compatibility in existing tests.
 
-### 14.13 Event Accumulator's `maxWindow` Check Happens on `push()`
+### 14.13 Event Accumulator Maximum Window — RESOLVED
 
-In `event-accumulator.ts`, the max window check (`now - windowStartedAt >= maxWindowMs`) only runs when a new event arrives. If events stop arriving just before the max window, the quiet window timer (250ms) will flush instead — which is correct. But if events arrive at, say, 200ms intervals forever, the max window forces a flush only when the next `push()` happens after 2000ms from window start. Events arriving at exactly 250ms intervals would never trigger the max window because the quiet timer would flush first. This is fine behavior but somewhat non-obvious.
+The Effect accumulator computes both the quiet deadline and the absolute
+maximum deadline with `Clock` and waits for the earlier one. Continuous events
+can no longer postpone the flush beyond `maxWindowMs`, and `TestClock` covers
+the behavior without real sleeps.

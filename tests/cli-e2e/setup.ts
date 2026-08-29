@@ -1,7 +1,14 @@
-import { copyFileSync, existsSync } from "node:fs";
-import { resolve } from "node:path";
-import { createFiles, deleteAllUnder, reloadPlugin, waitForIdle } from "./utils";
-import { obsidian } from "./utils/cli";
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
+import { dirname, resolve } from "node:path";
+import { waitForIdle } from "./utils";
+import { obsidian, obsidianEval } from "./utils/cli";
 
 const PLUGIN_ID = "cbcr-text-eater-de";
 
@@ -35,7 +42,18 @@ const FIXTURE_FILES: readonly { content: string; path: string }[] = [
 /**
  * Step 0: Deploy latest build artifacts to the test vault's plugin directory.
  */
-function deployBuildArtifacts(): void {
+function copyIfChanged(source: string, destination: string): boolean {
+	if (
+		existsSync(destination) &&
+		readFileSync(source).equals(readFileSync(destination))
+	) {
+		return false;
+	}
+	copyFileSync(source, destination);
+	return true;
+}
+
+function deployBuildArtifacts(): boolean {
 	const vaultPath = getVaultPath();
 	const pluginDir = resolve(vaultPath, ".obsidian/plugins", PLUGIN_ID);
 
@@ -48,8 +66,12 @@ function deployBuildArtifacts(): void {
 		);
 	}
 
-	copyFileSync(mainJs, resolve(pluginDir, "main.js"));
-	copyFileSync(manifest, resolve(pluginDir, "manifest.json"));
+	const mainChanged = copyIfChanged(mainJs, resolve(pluginDir, "main.js"));
+	const manifestChanged = copyIfChanged(
+		manifest,
+		resolve(pluginDir, "manifest.json"),
+	);
+	return mainChanged || manifestChanged;
 }
 
 /**
@@ -91,35 +113,97 @@ async function ensureVaultOpen(): Promise<void> {
 	}
 }
 
+async function disablePluginWhileSeeding(): Promise<void> {
+	const loaded = await obsidianEval(
+		`app.plugins.plugins['${PLUGIN_ID}'] ? 'yes' : 'no'`,
+	);
+	if (loaded !== "yes") return;
+
+	// Finish the current instance's work before unloading it. Seeding while a
+	// listener is active can split the fixture into multiple healing windows.
+	await waitForIdle(20_000);
+	await obsidian(`plugin:disable id=${PLUGIN_ID}`);
+	await obsidianEval(
+		`(async()=>{const startedAt=Date.now();while(app.plugins.plugins['${PLUGIN_ID}']){if(Date.now()-startedAt>10000)throw new Error('Plugin disable timed out');await new Promise(resolve=>setTimeout(resolve,100));}return 'disabled'})()`,
+		12_000,
+	);
+}
+
+async function clearFixtureRoots(): Promise<void> {
+	const vaultPath = getVaultPath();
+	for (const root of ["Library", "Outside"] as const) {
+		rmSync(resolve(vaultPath, root), { force: true, recursive: true });
+	}
+
+	await obsidianEval(
+		`(async()=>{const roots=['Library','Outside'];let stable=0;for(let attempt=0;attempt<100;attempt++){await new Promise(resolve=>setTimeout(resolve,100));const indexIsClean=roots.every(path=>!app.vault.getAbstractFileByPath(path));const adapterIsClean=(await Promise.all(roots.map(path=>app.vault.adapter.exists(path)))).every(exists=>!exists);if(indexIsClean&&adapterIsClean){stable++;if(stable>=10)return 'clean'}else{stable=0}}throw new Error('Fixture roots did not stay deleted in the index and adapter')})()`,
+		12_000,
+	);
+}
+
+function seedFixtureFiles(): void {
+	const vaultPath = getVaultPath();
+	for (const fixture of FIXTURE_FILES) {
+		const absolutePath = resolve(vaultPath, fixture.path);
+		mkdirSync(dirname(absolutePath), { recursive: true });
+		writeFileSync(absolutePath, fixture.content, "utf8");
+	}
+}
+
+async function waitForFixtureIndex(): Promise<void> {
+	const paths = JSON.stringify(FIXTURE_FILES.map(({ path }) => path));
+	await obsidianEval(
+		`(async()=>{const paths=${paths};const startedAt=Date.now();while(!paths.every(path=>app.vault.getAbstractFileByPath(path))){if(Date.now()-startedAt>10000)throw new Error('Fixture indexing timed out');await new Promise(resolve=>setTimeout(resolve,100))}return 'indexed'})()`,
+		12_000,
+	);
+}
+
+async function enablePluginAndWaitUntilInitialized(): Promise<void> {
+	await obsidianEval(
+		"(()=>{window.__E2E_MODE=true;return 'e2e-enabled'})()",
+	);
+	await obsidian(`plugin:enable id=${PLUGIN_ID}`);
+	await obsidianEval(
+		`(async()=>{const startedAt=Date.now();let candidate=null;let stableSince=0;while(true){const plugin=app.plugins.plugins['${PLUGIN_ID}'];if(plugin?.initialized&&plugin===candidate){if(Date.now()-stableSince>=1000)return 'ready'}else{candidate=plugin?.initialized?plugin:null;stableSince=Date.now()}if(Date.now()-startedAt>20000)throw new Error('Plugin initialization timed out');await new Promise(resolve=>setTimeout(resolve,100));}})()`,
+		22_000,
+	);
+}
+
 /**
  * Set up the test vault:
- * 1. Deploy build artifacts (main.js, manifest.json)
- * 2. Ensure vault is open in Obsidian
- * 3. Reload plugin with new code
- * 4. Clean Library/ and Outside/
+ * 1. Ensure vault is open in Obsidian
+ * 2. Wait for and disable the currently loaded plugin
+ * 3. Deploy build artifacts (main.js, manifest.json)
+ * 4. Clean Library/ and Outside/ while no listener is active
  * 5. Create fixture files
- * 6. Reload plugin again and wait for healing
+ * 6. Enable the deployed plugin and wait for healing
  */
 export async function setupTestVault(): Promise<void> {
-	// Step 0: deploy latest build
-	deployBuildArtifacts();
-
 	// Ensure vault is open in Obsidian
 	await ensureVaultOpen();
 
-	// Reload plugin to pick up new main.js
-	await reloadPlugin();
-	await waitForIdle();
+	await disablePluginWhileSeeding();
 
-	// Clean up any leftover state
-	await deleteAllUnder("Library");
-	await deleteAllUnder("Outside");
+	// Copying main.js while the plugin is active schedules an additional
+	// file-watcher reload after the explicit lifecycle below has completed.
+	const buildChanged = deployBuildArtifacts();
+	if (buildChanged) {
+		// Obsidian debounces plugin-file changes for several seconds. Keep the
+		// plugin disabled until that watcher cycle has definitively elapsed.
+		await new Promise((resolve) => setTimeout(resolve, 6_000));
+	}
 
-	// Create fixture files
-	await createFiles(FIXTURE_FILES);
+	// Clean up any leftover state and wait for Obsidian's index to agree before
+	// recreating paths with the same names.
+	await clearFixtureRoots();
 
-	// Reload plugin so it discovers the new vault state from scratch
-	await reloadPlugin();
+	// Seed fixture files while the plugin is disabled, then wait for Obsidian's
+	// index before enabling listeners that heal them.
+	seedFixtureFiles();
+	await waitForFixtureIndex();
+
+	// Enable the deployed build so it discovers the fixture from scratch.
+	await enablePluginAndWaitUntilInitialized();
 
 	// Wait for initial healing to complete
 	await waitForIdle();

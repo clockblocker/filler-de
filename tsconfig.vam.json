@@ -1,0 +1,11 @@
+{
+	"compilerOptions": {
+		"allowJs": false,
+		"strict": true
+	},
+	"extends": "./tsconfig.json",
+	"include": [
+		"src/packages/independent/vault-action-manager/src/**/*.ts",
+		"src/packages/independent/vault-action-manager/tests/**/*.ts"
+	]
+}

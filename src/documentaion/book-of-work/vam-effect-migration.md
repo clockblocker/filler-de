@@ -66,6 +66,12 @@ rename the current object graph one class at a time.
 
 ## 1. Bootstrap Effect
 
+Implementation baseline: before adding the Effect runtime, the production
+`main.js` bundle was 3,677,505 bytes.
+
+The installed dependency is pinned to `effect@4.0.0-rc.112` in both
+`package.json` and `bun.lock`.
+
 ### Changes
 
 1. Add Effect at the monorepo root with Bun:
@@ -278,6 +284,9 @@ rename the current object graph one class at a time.
 6. Record the final `main.js` size and compare it with the pre-migration
    baseline.
 
+Implementation result: the final production `main.js` is 4,479,880 bytes, an
+increase of 802,375 bytes (21.8%) from the 3,677,505-byte baseline.
+
 ### Tests for this phase
 
 - `rg` finds no `neverthrow` imports in VAM implementation modules outside the
@@ -296,17 +305,25 @@ rename the current object graph one class at a time.
 - With Obsidian running, `bun run test:cli-e2e` passes after copying `main.js`
   into the test vault and reloading the plugin.
 
-## Later native Effect interface
+## Native Effect interface migration window
 
-Moving VAM's callers to Effect is a separate migration. Do it only after the
-internal migration above is stable.
+The package now exposes two public subpaths over the same runtime and object
+graph:
 
-The later cutover would move `ManagedRuntime` ownership to the plugin root,
-export an Effect-native VAM interface, and migrate callers in small groups. A
-small command flow should go first, followed by Librarian, Textfresser
-orchestration, and UI handlers. Delete the compatibility facade and VAM's final
-`neverthrow` dependency once no caller uses them.
+- `@textfresser/vault-action-manager/facade` is the canonical interface. Its
+  operations return environment-free Effects and retain typed VAM failures in
+  the error channel.
+- `@textfresser/vault-action-manager/legacy-neverthrow-facade` preserves the
+  previous Promise and Neverthrow signatures by delegating to the canonical
+  facade.
 
-Do not keep two permanent public VAM interfaces. The compatibility facade is a
-migration adapter with an explicit deletion condition.
+The package root remains backward compatible during the migration window and
+also exports discoverable `createEffectVaultActionManager` and
+`EffectVaultActionManager` aliases. Consumers can migrate independently by
+moving to the explicit legacy subpath first and then changing that import to
+`/facade` while converting their call sites to Effect composition.
 
+Keep the two interfaces only for the migration window. Delete
+`legacy-neverthrow-facade.ts`, the root legacy aliases, structural Neverthrow
+reader/result types, and VAM's final `neverthrow` dependency once no consumer
+imports the legacy contract.

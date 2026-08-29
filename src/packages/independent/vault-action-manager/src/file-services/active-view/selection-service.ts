@@ -1,3 +1,4 @@
+import { Effect } from "effect";
 import type { SplitPathToMdFile } from "../../types/split-path";
 import type { ActiveFileService } from "./active-file-service";
 
@@ -27,47 +28,34 @@ export class SelectionService {
 	 * Sync operation - just reads editor state.
 	 * @returns SelectionInfo or null if no active editor
 	 */
-	getInfo(): SelectionInfo | null {
-		// Get active md file path
-		const splitPath = this.activeFileService.mdPwd();
-		if (!splitPath) return null;
+	getInfo() {
+		return Effect.gen({ self: this }, function* () {
+			const splitPath = yield* this.activeFileService.mdPwd();
+			if (!splitPath) return null;
+			const content = yield* this.activeFileService.getContent();
+			const selection = yield* this.activeFileService.getSelection();
+			const position = yield* this.activeFileService.getCursorOffset();
+			if (position === null) return null;
 
-		// Get full content for position calculation
-		const contentResult = this.activeFileService.getContent();
-		if (contentResult.isErr()) return null;
-		const content = contentResult.value;
-
-		// Get selection text (may be null if just caret)
-		const selection = this.activeFileService.getSelection();
-
-		// Always use cursor offset for position — indexOf(selection) is
-		// wrong when the same text appears multiple times in the file.
-		const offset = this.activeFileService.getCursorOffset();
-		if (offset === null) return null;
-		const position = offset;
-
-		// Extract surrounding block
-		const surroundingRawBlock = this.extractLine(content, position);
-
-		// Compute selection start offset within the block
-		let selectionStartInBlock: number | null = null;
-		if (selection) {
-			const selStartOffset =
-				this.activeFileService.getSelectionStartOffset();
-			if (selStartOffset !== null) {
-				// Line start in the document
-				let lineStart = content.lastIndexOf("\n", position);
-				lineStart = lineStart === -1 ? 0 : lineStart + 1;
-				selectionStartInBlock = selStartOffset - lineStart;
+			const surroundingRawBlock = this.extractLine(content, position);
+			let selectionStartInBlock: number | null = null;
+			if (selection) {
+				const selectionStart =
+					yield* this.activeFileService.getSelectionStartOffset();
+				if (selectionStart !== null) {
+					let lineStart = content.lastIndexOf("\n", position);
+					lineStart = lineStart === -1 ? 0 : lineStart + 1;
+					selectionStartInBlock = selectionStart - lineStart;
+				}
 			}
-		}
 
-		return {
-			selectionStartInBlock,
-			splitPathToFileWithSelection: splitPath,
-			surroundingRawBlock,
-			text: selection,
-		};
+			return {
+				selectionStartInBlock,
+				splitPathToFileWithSelection: splitPath,
+				surroundingRawBlock,
+				text: selection,
+			} satisfies SelectionInfo;
+		}).pipe(Effect.orElseSucceed(() => null));
 	}
 
 	/**

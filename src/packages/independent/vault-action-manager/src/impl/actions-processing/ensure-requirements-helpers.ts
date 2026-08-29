@@ -348,7 +348,7 @@ export async function ensureDestinationsExist(
 		} else {
 			// Check existence (file op)
 			checkedFolders.add(folderKey);
-			if (existenceChecker.exists(folderSplitPath)) {
+			if (await existenceChecker.exists(folderSplitPath)) {
 				existingFolders.add(folderKey);
 				continue; // Already exists, skip EnsureExist
 			}
@@ -375,7 +375,7 @@ export async function ensureDestinationsExist(
 		} else {
 			// Check existence (file op)
 			checkedFiles.add(fileKey);
-			if (existenceChecker.exists(fileSplitPath)) {
+			if (await existenceChecker.exists(fileSplitPath)) {
 				existingFiles.add(fileKey);
 				continue; // Already exists, skip EnsureExist
 			}
@@ -404,7 +404,7 @@ export async function ensureDestinationsExist(
 		} else {
 			// Check existence (file op)
 			checkedFolders.add(folderKey);
-			if (existenceChecker.exists(folderSplitPath)) {
+			if (await existenceChecker.exists(folderSplitPath)) {
 				existingFolders.add(folderKey);
 				continue; // Already exists
 			}
@@ -432,7 +432,7 @@ export async function ensureDestinationsExist(
 		} else {
 			// Check existence (file op)
 			checkedFiles.add(fileKey);
-			if (existenceChecker.exists(fileSplitPath)) {
+			if (await existenceChecker.exists(fileSplitPath)) {
 				existingFiles.add(fileKey);
 				continue; // File exists, no need to create
 			}

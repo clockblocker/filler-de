@@ -1,4 +1,6 @@
 import { describe, expect, it } from "bun:test";
+import { Effect, Fiber } from "effect";
+import { TestClock } from "effect/testing";
 import { SelfEventTracker } from "../../src/impl/event-processing/self-event-tracker";
 import { MD } from "../../src/types/literals";
 import type {
@@ -28,9 +30,23 @@ const mdFile = (
 	pathParts,
 });
 
+function makeTracker() {
+	const tracker = Effect.runSync(SelfEventTracker.makeEffect());
+	return {
+		getRegisteredFilePaths: () =>
+			Effect.runSync(tracker.getRegisteredFilePathsEffect()),
+		register: (actions: readonly VaultAction[]) =>
+			Effect.runSync(tracker.registerEffect(actions)),
+		shouldIgnore: (path: string) =>
+			Effect.runSync(tracker.shouldIgnoreEffect(path)),
+		waitForAllRegistered: () =>
+			Effect.runPromise(tracker.waitForAllRegisteredEffect()),
+	};
+}
+
 describe("SelfEventTracker", () => {
 	it("shouldIgnore pops exact path on first match, returns false on second", () => {
-		const tracker = new SelfEventTracker();
+		const tracker = makeTracker();
 		const actions: VaultAction[] = [
 			{
 				kind: VaultActionKind.UpsertMdFile,
@@ -40,14 +56,50 @@ describe("SelfEventTracker", () => {
 
 		tracker.register(actions);
 
-		// First call: pops and returns true
-		expect(tracker.shouldIgnore("Library/note.md")).toBe(true);
+		// Matching normalizes leading, trailing, and Windows-style separators.
+		expect(tracker.shouldIgnore("\\Library\\note.md\\")).toBe(true);
 		// Second call: already popped, returns false
 		expect(tracker.shouldIgnore("Library/note.md")).toBe(false);
 	});
 
+	it("CreateFolder is an exact match and does not hide later descendants", () => {
+		const tracker = makeTracker();
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.CreateFolder,
+				payload: { splitPath: folder("Section", ["Library"]) },
+			},
+		];
+
+		tracker.register(actions);
+
+		expect(tracker.shouldIgnore("Library/Section")).toBe(true);
+		expect(tracker.shouldIgnore("Library/Section")).toBe(false);
+		expect(tracker.shouldIgnore("Library/Section/user-created.md")).toBe(
+			false,
+		);
+	});
+
+	it("UpsertMdFile tracks only the file and not its parent folders", () => {
+		const tracker = makeTracker();
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.UpsertMdFile,
+				payload: {
+					splitPath: mdFile("note", ["Library", "Section"]),
+				},
+			},
+		];
+
+		tracker.register(actions);
+
+		expect(tracker.shouldIgnore("Library")).toBe(false);
+		expect(tracker.shouldIgnore("Library/Section")).toBe(false);
+		expect(tracker.shouldIgnore("Library/Section/note.md")).toBe(true);
+	});
+
 	it("rename: both from and to paths are tracked and independently poppable", () => {
-		const tracker = new SelfEventTracker();
+		const tracker = makeTracker();
 		const actions: VaultAction[] = [
 			{
 				kind: VaultActionKind.RenameMdFile,
@@ -67,7 +119,7 @@ describe("SelfEventTracker", () => {
 	});
 
 	it("rename: popping oldPath first does not affect newPath", () => {
-		const tracker = new SelfEventTracker();
+		const tracker = makeTracker();
 		const actions: VaultAction[] = [
 			{
 				kind: VaultActionKind.RenameMdFile,
@@ -87,7 +139,7 @@ describe("SelfEventTracker", () => {
 	});
 
 	it("waitForAllRegistered resolves only after ALL rename paths are popped", async () => {
-		const tracker = new SelfEventTracker();
+		const tracker = makeTracker();
 		const actions: VaultAction[] = [
 			{
 				kind: VaultActionKind.RenameMdFile,
@@ -118,7 +170,7 @@ describe("SelfEventTracker", () => {
 	});
 
 	it("prefix tracking for TrashFolder does not pop on match", () => {
-		const tracker = new SelfEventTracker();
+		const tracker = makeTracker();
 		const actions: VaultAction[] = [
 			{
 				kind: VaultActionKind.TrashFolder,
@@ -140,8 +192,49 @@ describe("SelfEventTracker", () => {
 		);
 	});
 
+	it("RenameFolder keeps only the source prefix after exact paths pop", () => {
+		const tracker = makeTracker();
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.RenameFolder,
+				payload: {
+					from: folder("old", ["Library"]),
+					to: folder("new", ["Library"]),
+				},
+			},
+		];
+
+		tracker.register(actions);
+
+		// The exact source entry pops, but its prefix continues to cover descendants.
+		expect(tracker.shouldIgnore("Library/old")).toBe(true);
+		expect(tracker.shouldIgnore("Library/old/first.md")).toBe(true);
+		expect(tracker.shouldIgnore("Library/old/second.md")).toBe(true);
+
+		// The destination is exact-only so later user changes remain observable.
+		expect(tracker.shouldIgnore("Library/new")).toBe(true);
+		expect(tracker.shouldIgnore("Library/new")).toBe(false);
+		expect(tracker.shouldIgnore("Library/new/user-created.md")).toBe(false);
+	});
+
+	it("TrashMdFile tracks one exact path and no descendants", () => {
+		const tracker = makeTracker();
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.TrashMdFile,
+				payload: { splitPath: mdFile("note", ["Library"]) },
+			},
+		];
+
+		tracker.register(actions);
+
+		expect(tracker.shouldIgnore("Library/note.md")).toBe(true);
+		expect(tracker.shouldIgnore("Library/note.md")).toBe(false);
+		expect(tracker.shouldIgnore("Library/note.md/child")).toBe(false);
+	});
+
 	it("ProcessMdFile paths are NOT registered", () => {
-		const tracker = new SelfEventTracker();
+		const tracker = makeTracker();
 		const actions: VaultAction[] = [
 			{
 				kind: VaultActionKind.ProcessMdFile,
@@ -159,7 +252,7 @@ describe("SelfEventTracker", () => {
 	});
 
 	it("ProcessMdFile does not appear in registered file paths", () => {
-		const tracker = new SelfEventTracker();
+		const tracker = makeTracker();
 		const actions: VaultAction[] = [
 			{
 				kind: VaultActionKind.ProcessMdFile,
@@ -173,5 +266,135 @@ describe("SelfEventTracker", () => {
 		tracker.register(actions);
 
 		expect(tracker.getRegisteredFilePaths()).toEqual([]);
+	});
+
+	it("reports only file destinations that should become queryable", () => {
+		const tracker = makeTracker();
+		const actions: VaultAction[] = [
+			{
+				kind: VaultActionKind.UpsertMdFile,
+				payload: {
+					splitPath: mdFile("created", ["Library"]),
+				},
+			},
+			{
+				kind: VaultActionKind.RenameMdFile,
+				payload: {
+					from: mdFile("old", ["Library"]),
+					to: mdFile("new", ["Library"]),
+				},
+			},
+			{
+				kind: VaultActionKind.CreateFolder,
+				payload: { splitPath: folder("Section", ["Library"]) },
+			},
+			{
+				kind: VaultActionKind.TrashMdFile,
+				payload: { splitPath: mdFile("deleted", ["Library"]) },
+			},
+		];
+
+		tracker.register(actions);
+
+		expect([...tracker.getRegisteredFilePaths()].sort()).toEqual([
+			"Library/created.md",
+			"Library/new.md",
+		]);
+	});
+
+	it("expires exact entries and releases waiters through TestClock", async () => {
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const tracker = yield* SelfEventTracker.makeEffect({
+					ttlMs: 5000,
+				});
+				yield* tracker.registerEffect([
+					{
+						kind: VaultActionKind.UpsertMdFile,
+						payload: {
+							splitPath: mdFile("note", ["Library"]),
+						},
+					},
+				]);
+				const waiter = yield* tracker
+					.waitForAllRegisteredEffect()
+					.pipe(Effect.forkChild);
+
+				yield* TestClock.adjust(4999);
+				expect(yield* tracker.getRegisteredFilePathsEffect()).toEqual([
+					"Library/note.md",
+				]);
+
+				yield* TestClock.adjust(1);
+				yield* Fiber.join(waiter);
+				expect(yield* tracker.getRegisteredFilePathsEffect()).toEqual(
+					[],
+				);
+			}).pipe(Effect.provide(TestClock.layer())),
+		);
+	});
+
+	it("keeps folder prefixes until their TestClock expiration", async () => {
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const tracker = yield* SelfEventTracker.makeEffect({
+					ttlMs: 5000,
+				});
+				yield* tracker.registerEffect([
+					{
+						kind: VaultActionKind.TrashFolder,
+						payload: {
+							splitPath: folder("target", ["Library"]),
+						},
+					},
+				]);
+
+				yield* TestClock.adjust(4999);
+				expect(
+					yield* tracker.shouldIgnoreEffect(
+						"Library/target/first.md",
+					),
+				).toBe(true);
+				expect(
+					yield* tracker.shouldIgnoreEffect(
+						"Library/target/second.md",
+					),
+				).toBe(true);
+
+				yield* TestClock.adjust(1);
+				expect(
+					yield* tracker.shouldIgnoreEffect(
+						"Library/target/expired.md",
+					),
+				).toBe(false);
+			}).pipe(Effect.provide(TestClock.layer())),
+		);
+	});
+
+	it("wakes waitForAllRegistered when the final exact entry pops", async () => {
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const tracker = yield* SelfEventTracker.makeEffect({
+					ttlMs: 5000,
+				});
+				yield* tracker.registerEffect([
+					{
+						kind: VaultActionKind.UpsertMdFile,
+						payload: {
+							splitPath: mdFile("note", ["Library"]),
+						},
+					},
+				]);
+				const waiter = yield* tracker
+					.waitForAllRegisteredEffect()
+					.pipe(Effect.forkChild);
+				yield* Effect.yieldNow;
+
+				expect(
+					yield* tracker.shouldIgnoreEffect("Library/note.md"),
+				).toBe(true);
+				yield* Fiber.join(waiter);
+			}),
+		);
 	});
 });

@@ -48,6 +48,12 @@
 			],
 			"@textfresser/vault-action-manager": [
 				"./src/packages/independent/vault-action-manager/src/index.ts"
+			],
+			"@textfresser/vault-action-manager/facade": [
+				"./src/packages/independent/vault-action-manager/src/facade.ts"
+			],
+			"@textfresser/vault-action-manager/legacy-neverthrow-facade": [
+				"./src/packages/independent/vault-action-manager/src/legacy-neverthrow-facade.ts"
 			]
 		},
 		"skipLibCheck": true,

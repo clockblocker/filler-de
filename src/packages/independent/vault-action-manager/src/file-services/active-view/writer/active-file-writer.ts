@@ -1,19 +1,14 @@
-import { err, errAsync, ok, type Result, ResultAsync } from "neverthrow";
-import {
-	type App,
-	type Editor,
-	type EditorPosition,
-	MarkdownView,
-} from "obsidian";
+import { Effect } from "effect";
+import type { Editor, EditorPosition } from "obsidian";
+import { VamVaultIoError } from "../../../effect/errors";
+import { ActiveEditorAccess } from "../../../effect/ports";
 import { errorNoActiveView } from "../../../errors";
 import { DomSelectors } from "../../../internal/dom-selectors";
+import { getErrorMessage } from "../../../internal/get-error-message";
 import type { SplitPathToMdFile } from "../../../types/split-path";
 import type { Transform } from "../../../types/vault-action";
 import { computeLineChanges } from "./compute-line-changes";
-import type {
-	ActiveFileReader,
-	EditorWithView,
-} from "./reader/active-file-reader";
+import type { ActiveFileReader } from "./reader/active-file-reader";
 
 export type SavedSelection = {
 	anchor: EditorPosition;
@@ -26,81 +21,206 @@ export type SavedInlineTitleSelection = {
 	text: string;
 };
 
+function editorFailure(
+	operation: string,
+	message: string,
+	path?: string,
+	cause?: unknown,
+): VamVaultIoError {
+	return new VamVaultIoError({
+		cause:
+			cause === undefined
+				? new Error(message)
+				: new Error(message, { cause }),
+		operation,
+		path,
+	});
+}
+
 export class ActiveFileWriter {
-	constructor(
-		private app: App,
-		private reader: ActiveFileReader,
-	) {}
+	constructor(private readonly reader: ActiveFileReader) {}
 
-	replaceAllContentInActiveFile(
-		content: string,
-	): ResultAsync<string, string> {
-		return this.reader
-			.pwd()
-			.andThen((path) =>
+	replaceAllContentInActiveFile(content: string) {
+		return this.reader.pwd().pipe(
+			Effect.flatMap((path) =>
 				path.kind === "MdFile"
-					? ok(path)
-					: err("Active file is not a markdown file"),
-			)
-			.asyncAndThen((splitPath) =>
-				this.processContent({ splitPath, transform: () => content }),
-			);
+					? this.processContent({
+							splitPath: path,
+							transform: () => content,
+						})
+					: Effect.fail(
+							editorFailure(
+								"replaceActiveFileContent",
+								"Active file is not a markdown file",
+							),
+						),
+			),
+		);
 	}
 
-	saveSelection(): Result<SavedSelection | null, string> {
-		return this.reader
-			.getEditorAnyMode()
-			.andThen(({ editor }) => this.extractFirstSelection(editor))
-			.orElse(() => ok(null));
+	saveSelection() {
+		return this.reader.getEditorAnyMode().pipe(
+			Effect.flatMap(({ editor, view }) =>
+				Effect.try({
+					catch: (cause) =>
+						editorFailure(
+							"saveSelection",
+							getErrorMessage(cause),
+							view.file?.path,
+							cause,
+						),
+					try: () => {
+						const selection = editor.listSelections?.()[0];
+						if (!selection) throw new Error("No selections");
+						return {
+							anchor: selection.anchor,
+							head: selection.head,
+						};
+					},
+				}),
+			),
+			Effect.catch(() => Effect.succeed(null)),
+		);
 	}
 
-	restoreSelection(saved: SavedSelection): Result<void, string> {
-		return this.reader.getEditorAnyMode().map(({ editor }) => {
-			return editor.setSelection(saved.anchor, saved.head);
-		});
+	restoreSelection(saved: SavedSelection) {
+		return this.reader.getEditorAnyMode().pipe(
+			Effect.flatMap(({ editor, view }) =>
+				Effect.try({
+					catch: (cause) =>
+						editorFailure(
+							"restoreSelection",
+							getErrorMessage(cause),
+							view.file?.path,
+							cause,
+						),
+					try: () => editor.setSelection(saved.anchor, saved.head),
+				}),
+			),
+		);
 	}
 
-	saveInlineTitleSelection(): Result<
-		SavedInlineTitleSelection | null,
-		string
-	> {
-		return this.getMarkdownView()
-			.andThen((view) => this.getInlineTitleElement(view))
-			.andThen((el) => this.validateInlineTitleFocused(el))
-			.andThen((el) => this.getSelectionInElement(el))
-			.andThen(({ el, range }) =>
-				this.buildInlineTitleSelection(el, range),
-			)
-			.orElse(() => ok(null));
+	saveInlineTitleSelection() {
+		return this.getMarkdownView().pipe(
+			Effect.flatMap((view) =>
+				Effect.try({
+					catch: (cause) =>
+						editorFailure(
+							"saveInlineTitleSelection",
+							getErrorMessage(cause),
+							view.file?.path,
+							cause,
+						),
+					try: () => {
+						const element = view.contentEl.querySelector(
+							DomSelectors.INLINE_TITLE,
+						) as HTMLElement | null;
+						if (!element)
+							throw new Error("No inline title element");
+						if (document.activeElement !== element) {
+							throw new Error("Inline title not focused");
+						}
+						const selection = window.getSelection();
+						if (!selection || selection.rangeCount === 0) {
+							throw new Error("No selection");
+						}
+						const range = selection.getRangeAt(0);
+						if (!element.contains(range.commonAncestorContainer)) {
+							throw new Error("Selection not in element");
+						}
+						const text = element.textContent ?? "";
+						const selectAll =
+							range.startContainer === element ||
+							range.endContainer === element;
+						return {
+							end: selectAll ? text.length : range.endOffset,
+							start: selectAll ? 0 : range.startOffset,
+							text,
+						};
+					},
+				}),
+			),
+			Effect.catch(() => Effect.succeed(null)),
+		);
 	}
 
-	restoreInlineTitleSelection(
-		saved: SavedInlineTitleSelection,
-	): Result<void, string> {
-		return this.getMarkdownView()
-			.andThen((view) => this.getInlineTitleElement(view))
-			.andThen((el) => this.focusAndGetTextNode(el))
-			.andThen(({ textNode }) =>
-				this.applySelectionRange(textNode, saved),
-			);
+	restoreInlineTitleSelection(saved: SavedInlineTitleSelection) {
+		return this.getMarkdownView().pipe(
+			Effect.flatMap((view) =>
+				Effect.try({
+					catch: (cause) =>
+						editorFailure(
+							"restoreInlineTitleSelection",
+							getErrorMessage(cause),
+							view.file?.path,
+							cause,
+						),
+					try: () => {
+						const element = view.contentEl.querySelector(
+							DomSelectors.INLINE_TITLE,
+						) as HTMLElement | null;
+						if (!element)
+							throw new Error("No inline title element");
+						element.focus();
+						const selection = window.getSelection();
+						if (!selection) throw new Error("No selection API");
+						const textNode = element.firstChild;
+						if (!textNode)
+							throw new Error("No text node in inline title");
+						const range = document.createRange();
+						const textLength = textNode.textContent?.length ?? 0;
+						range.setStart(
+							textNode,
+							Math.min(saved.start, textLength),
+						);
+						range.setEnd(textNode, Math.min(saved.end, textLength));
+						selection.removeAllRanges();
+						selection.addRange(range);
+					},
+				}),
+			),
+		);
 	}
 
-	replaceSelection(text: string): Result<void, string> {
-		return this.reader
-			.getEditor()
-			.map(({ editor }) => editor.replaceSelection(text));
+	replaceSelection(text: string) {
+		return this.reader.getEditor().pipe(
+			Effect.flatMap(({ editor, view }) =>
+				Effect.try({
+					catch: (cause) =>
+						editorFailure(
+							"replaceSelection",
+							getErrorMessage(cause),
+							view.file?.path,
+							cause,
+						),
+					try: () => editor.replaceSelection(text),
+				}),
+			),
+		);
 	}
 
-	insertBelowCursor(text: string): Result<void, string> {
-		return this.reader.getEditor().map(({ editor }) => {
-			const sel = editor.listSelections?.()[0];
-			const cursor = sel?.head ?? editor.getCursor();
-			const insertLine = Math.max(cursor.line + 1, 0);
-			return editor.replaceRange(`\n${text}\n`, {
-				ch: 0,
-				line: insertLine,
-			});
-		});
+	insertBelowCursor(text: string) {
+		return this.reader.getEditor().pipe(
+			Effect.flatMap(({ editor, view }) =>
+				Effect.try({
+					catch: (cause) =>
+						editorFailure(
+							"insertBelowCursor",
+							getErrorMessage(cause),
+							view.file?.path,
+							cause,
+						),
+					try: () => {
+						const selection = editor.listSelections?.()[0];
+						const cursor = selection?.head ?? editor.getCursor();
+						return editor.replaceRange(`\n${text}\n`, {
+							ch: 0,
+							line: Math.max(cursor.line + 1, 0),
+						});
+					},
+				}),
+			),
+		);
 	}
 
 	processContent({
@@ -109,153 +229,106 @@ export class ActiveFileWriter {
 	}: {
 		splitPath: SplitPathToMdFile;
 		transform: Transform;
-	}): ResultAsync<string, string> {
-		const validated = this.validateFileIsActive(splitPath);
-		if (validated.isErr()) {
-			return errAsync(validated.error);
-		}
-		return this.applyTransformToEditor(validated.value.editor, transform);
+	}) {
+		return this.validateFileIsActive(splitPath).pipe(
+			Effect.flatMap(({ editor, view }) =>
+				this.applyTransformToEditor(editor, transform, view.file?.path),
+			),
+		);
 	}
 
-	// --- Validators for saveSelection ---
-
-	private extractFirstSelection(
-		editor: Editor,
-	): Result<SavedSelection, string> {
-		const selections = editor.listSelections?.();
-		if (!selections?.length) return err("No selections");
-		const sel = selections[0];
-		if (!sel) return err("No first selection");
-		return ok({ anchor: sel.anchor, head: sel.head });
+	scrollToLine(line: number) {
+		return this.reader.getEditorAnyMode().pipe(
+			Effect.flatMap(({ editor, view }) =>
+				Effect.try({
+					catch: (cause) =>
+						editorFailure(
+							"scrollToLine",
+							getErrorMessage(cause),
+							view.file?.path,
+							cause,
+						),
+					try: () => {
+						const pos = { ch: 0, line };
+						editor.scrollIntoView({ from: pos, to: pos }, true);
+					},
+				}),
+			),
+			Effect.catch(() => Effect.void),
+		);
 	}
 
-	// --- Validators for inline title selection ---
-
-	private getMarkdownView(): Result<MarkdownView, string> {
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		return view ? ok(view) : err(errorNoActiveView());
+	private getMarkdownView() {
+		return Effect.gen(function* () {
+			const activeEditor = yield* ActiveEditorAccess;
+			const view = yield* activeEditor.getActiveMarkdownView;
+			return view
+				? view
+				: yield* editorFailure(
+						"getActiveMarkdownView",
+						errorNoActiveView(),
+					);
+		});
 	}
 
-	private getInlineTitleElement(
-		view: MarkdownView,
-	): Result<HTMLElement, string> {
-		const el = view.contentEl.querySelector(
-			DomSelectors.INLINE_TITLE,
-		) as HTMLElement | null;
-		return el ? ok(el) : err("No inline title element");
-	}
-
-	private validateInlineTitleFocused(
-		el: HTMLElement,
-	): Result<HTMLElement, string> {
-		return document.activeElement === el
-			? ok(el)
-			: err("Inline title not focused");
-	}
-
-	private getSelectionInElement(
-		el: HTMLElement,
-	): Result<{ el: HTMLElement; range: Range }, string> {
-		const selection = window.getSelection();
-		if (!selection || selection.rangeCount === 0)
-			return err("No selection");
-
-		const range = selection.getRangeAt(0);
-		if (!el.contains(range.commonAncestorContainer))
-			return err("Selection not in element");
-
-		return ok({ el, range });
-	}
-
-	private buildInlineTitleSelection(
-		el: HTMLElement,
-		range: Range,
-	): Result<SavedInlineTitleSelection, string> {
-		const text = el.textContent ?? "";
-		let start = range.startOffset;
-		let end = range.endOffset;
-
-		if (range.startContainer === el || range.endContainer === el) {
-			start = 0;
-			end = text.length;
-		}
-
-		return ok({ end, start, text });
-	}
-
-	// --- Validators for restoreInlineTitleSelection ---
-
-	private focusAndGetTextNode(
-		el: HTMLElement,
-	): Result<{ textNode: ChildNode }, string> {
-		el.focus();
-		const selection = window.getSelection();
-		if (!selection) return err("No selection API");
-		const textNode = el.firstChild;
-		if (!textNode) return err("No text node in inline title");
-		return ok({ textNode });
-	}
-
-	private applySelectionRange(
-		textNode: ChildNode,
-		saved: SavedInlineTitleSelection,
-	): Result<void, string> {
-		try {
-			const selection = window.getSelection();
-			if (!selection) return err("No selection API");
-
-			const range = document.createRange();
-			const textLength = textNode.textContent?.length ?? 0;
-			const start = Math.min(saved.start, textLength);
-			const end = Math.min(saved.end, textLength);
-			range.setStart(textNode, start);
-			range.setEnd(textNode, end);
-			selection.removeAllRanges();
-			selection.addRange(range);
-			return ok(undefined);
-		} catch (e) {
-			return err(e instanceof Error ? e.message : String(e));
-		}
-	}
-
-	// --- Validators for processContent ---
-
-	private validateFileIsActive(
-		splitPath: SplitPathToMdFile,
-	): Result<EditorWithView, string> {
+	private validateFileIsActive(splitPath: SplitPathToMdFile) {
 		return this.reader
 			.isFileActive(splitPath)
-			.andThen((isActive) =>
-				isActive ? ok(undefined) : err("File is not active"),
-			)
-			.andThen(() => this.reader.getEditor());
+			.pipe(
+				Effect.flatMap((isActive) =>
+					isActive
+						? this.reader.getEditor()
+						: Effect.fail(
+								editorFailure(
+									"validateActiveFile",
+									"File is not active",
+								),
+							),
+				),
+			);
 	}
 
 	private applyTransformToEditor(
 		editor: Editor,
 		transform: Transform,
-	): ResultAsync<string, string> {
-		return ResultAsync.fromPromise(
-			this.doApplyTransform(editor, transform),
-			(e) => (e instanceof Error ? e.message : String(e)),
-		);
-	}
-
-	private async doApplyTransform(
-		editor: Editor,
-		transform: Transform,
-	): Promise<string> {
-		const before = editor.getValue();
-		const after = await transform(before);
-
-		if (after === before) return after;
-
-		const changes = computeLineChanges(before, after);
-
-		if (changes.length) {
-			editor.transaction({ changes });
-		}
-
-		return after;
+		path?: string,
+	) {
+		return Effect.gen(function* () {
+			const before = yield* Effect.try({
+				catch: (cause) =>
+					editorFailure(
+						"processActiveContent.read",
+						getErrorMessage(cause),
+						path,
+						cause,
+					),
+				try: () => editor.getValue(),
+			});
+			const after = yield* Effect.tryPromise({
+				catch: (cause) =>
+					editorFailure(
+						"processActiveContent.transform",
+						getErrorMessage(cause),
+						path,
+						cause,
+					),
+				try: async () => transform(before),
+			});
+			if (after === before) return after;
+			yield* Effect.try({
+				catch: (cause) =>
+					editorFailure(
+						"processActiveContent.write",
+						getErrorMessage(cause),
+						path,
+						cause,
+					),
+				try: () => {
+					const changes = computeLineChanges(before, after);
+					if (changes.length) editor.transaction({ changes });
+				},
+			});
+			return after;
+		});
 	}
 }

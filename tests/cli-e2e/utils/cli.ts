@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { CliResult } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 5_000;
@@ -92,7 +93,7 @@ export async function obsidian(
  * zsh special character mangling (!, $, etc. inside double quotes).
  * Also detects eval errors (Obsidian CLI returns exit 0 even on eval failure).
  */
-export async function obsidianEval(
+async function runEvalProcess(
 	code: string,
 	timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<string> {
@@ -112,7 +113,7 @@ export async function obsidianEval(
 		new Response(proc.stderr).text(),
 	]);
 
-	await proc.exited;
+	const exitCode = await proc.exited;
 	clearTimeout(timer);
 
 	// Without shell, "Loading..." noise may go to stdout — strip from both streams.
@@ -125,7 +126,76 @@ export async function obsidianEval(
 			`eval failed: ${meaningful}\nstderr: ${meaningfulStderr}\ncode: ${code}`,
 		);
 	}
+	if (exitCode !== 0) {
+		throw new Error(
+			`eval process failed with exit ${exitCode}: ${meaningfulStderr}\ncode: ${code}`,
+		);
+	}
 
 	// Successful eval output is prefixed with "=> "
 	return meaningful.replace(/^=> /, "");
+}
+
+type EvalState =
+	| { readonly status: "pending" }
+	| { readonly status: "fulfilled"; readonly value: string }
+	| { readonly reason: string; readonly status: "rejected" };
+
+/**
+ * Evaluate code in Obsidian and wait for both synchronous and Promise results.
+ *
+ * Obsidian's CLI prints a synchronous result but does not await a returned
+ * Promise. Keep the Promise state in the renderer and poll it through small,
+ * synchronous evals so callers get real completion and error semantics.
+ */
+export async function obsidianEval(
+	code: string,
+	timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<string> {
+	const key = randomUUID();
+	const keyLiteral = JSON.stringify(key);
+	const store = "window.__TEXTFRESSER_CLI_EVAL_STATE__";
+	const kickoff = `(()=>{const store=${store}??=Object.create(null);const key=${keyLiteral};store[key]={status:'pending'};Promise.resolve().then(()=>(${code})).then(value=>{let serialized='';try{serialized=typeof value==='string'?value:value===undefined?'':JSON.stringify(value)??String(value)}catch{serialized=String(value)}store[key]={status:'fulfilled',value:serialized}},error=>{const reason=error instanceof Error?(error.stack??error.message):String(error);store[key]={status:'rejected',reason}});return key})()`;
+	const deadline = Date.now() + timeoutMs;
+	const remaining = () => Math.max(250, deadline - Date.now());
+
+	const startedKey = await runEvalProcess(kickoff, remaining());
+	if (startedKey !== "" && startedKey !== key) {
+		throw new Error(
+			`eval did not return its completion key: ${startedKey}\ncode: ${code}`,
+		);
+	}
+
+	while (Date.now() < deadline) {
+		const stateJson = await runEvalProcess(
+			`(()=>JSON.stringify(${store}?.[${keyLiteral}]??{status:'missing'}))()`,
+			remaining(),
+		);
+		if (stateJson === "") {
+			await Bun.sleep(50);
+			continue;
+		}
+		const state = JSON.parse(stateJson) as EvalState | { status: "missing" };
+		if (state.status === "fulfilled") {
+			void runEvalProcess(`delete ${store}[${keyLiteral}]`, 1_000).catch(
+				() => undefined,
+			);
+			return state.value;
+		}
+		if (state.status === "rejected") {
+			void runEvalProcess(`delete ${store}[${keyLiteral}]`, 1_000).catch(
+				() => undefined,
+			);
+			throw new Error(`eval failed: ${state.reason}\ncode: ${code}`);
+		}
+		if (state.status === "missing") {
+			await runEvalProcess(kickoff, remaining());
+		}
+		await Bun.sleep(50);
+	}
+
+	void runEvalProcess(`delete ${store}?.[${keyLiteral}]`, 1_000).catch(
+		() => undefined,
+	);
+	throw new Error(`eval timed out after ${timeoutMs}ms\ncode: ${code}`);
 }
