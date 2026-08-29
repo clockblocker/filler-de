@@ -3,6 +3,7 @@ import { ok, type Result } from "neverthrow";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import {
 	buildPropagationActionPair,
+	type PathLookupFn,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
 import { buildSectionMarker } from "../../../domain/dict-note/internal/constants";
@@ -81,6 +82,7 @@ function collectInversePairs(
  */
 export function propagateRelations(
 	ctx: GenerateSectionsResult,
+	vamLookup: PathLookupFn = () => [],
 ): Result<GenerateSectionsResult, CommandError> {
 	const { relations } = ctx;
 	if (relations.length === 0) {
@@ -123,7 +125,7 @@ export function propagateRelations(
 			librarianLookup: ctx.textfresserState.lookupInLibrary,
 			targetLanguage: targetLang,
 			unitKind,
-			vamLookup: (w) => ctx.textfresserState.vam.findByBasename(w),
+			vamLookup,
 			word: targetWord,
 		});
 		const newLines = entries.map((e) => e.line);

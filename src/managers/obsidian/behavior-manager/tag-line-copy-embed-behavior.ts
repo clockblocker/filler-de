@@ -1,5 +1,6 @@
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { logError } from "@textfresser/vault-action-manager";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Effect } from "effect";
 import { type App, MarkdownView, Notice } from "obsidian";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import { getErrorMessage } from "../../../utils/get-error-message";
@@ -45,11 +46,7 @@ export async function tagLineCopyEmbedBehavior(
 
 		if (!blockId) {
 			// Need to add block marker - find highest existing number
-			const contentResult = await vam.getOpenedContent();
-			if (contentResult.isErr()) {
-				throw new Error(contentResult.error);
-			}
-			const fileContent = contentResult.value;
+			const fileContent = await Effect.runPromise(vam.getOpenedContent());
 
 			const highestBlockNumber =
 				blockIdHelper.findHighestNumber(fileContent);

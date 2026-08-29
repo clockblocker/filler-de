@@ -1,10 +1,11 @@
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
 	makeSystemPathForSplitPath,
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
+import type { PathLookupFn } from "../../../common/target-path-resolver";
 import type { CommandError } from "../../types";
 import type { GenerateSectionsResult } from "./generate-sections";
 import { propagateInflections } from "./propagate-inflections";
@@ -162,22 +163,24 @@ export function foldScopedActionsToSingleWritePerTarget(
 
 function collectScopedActions(
 	ctx: GenerateSectionsResult,
+	vamLookup: PathLookupFn,
 ): Result<ReadonlyArray<VaultAction>, CommandError> {
 	const scopedCtx: GenerateSectionsResult = {
 		...ctx,
 		actions: [],
 	};
-	return propagateRelations(scopedCtx)
-		.andThen(propagateMorphologyRelations)
-		.andThen(propagateMorphemes)
-		.andThen(propagateInflections)
+	return propagateRelations(scopedCtx, vamLookup)
+		.andThen((next) => propagateMorphologyRelations(next, vamLookup))
+		.andThen((next) => propagateMorphemes(next, vamLookup))
+		.andThen((next) => propagateInflections(next, vamLookup))
 		.map((result) => result.actions);
 }
 
 export function propagateCore(
 	ctx: GenerateSectionsResult,
+	vamLookup: PathLookupFn = () => [],
 ): Result<GenerateSectionsResult, CommandError> {
-	return collectScopedActions(ctx)
+	return collectScopedActions(ctx, vamLookup)
 		.andThen(foldScopedActionsToSingleWritePerTarget)
 		.map((foldedActions) => ({
 			...ctx,

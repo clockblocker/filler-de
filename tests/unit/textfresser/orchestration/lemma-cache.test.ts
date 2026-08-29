@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import { ok } from "neverthrow";
+import { Effect } from "effect";
 import type { LemmaResult } from "../../../../src/commanders/textfresser/commands/lemma/types";
 import type { Attestation } from "../../../../src/commanders/textfresser/common/attestation/types";
 import {
@@ -173,7 +173,7 @@ describe("lemma cache", () => {
 		});
 		let refetchCalls = 0;
 
-		const result = await handleLemmaCacheHit({
+		await Effect.runPromise(handleLemmaCacheHit({
 			cache: {
 				...cache,
 				generatedEntryId: "LX-LM-VERB-1",
@@ -181,11 +181,10 @@ describe("lemma cache", () => {
 			onRefetch: () => {
 				refetchCalls += 1;
 			},
-			readContent: async () => ok(content),
+			readContent: () => Effect.succeed(content),
 			state,
-		});
+		}));
 
-		expect(result.isOk()).toBe(true);
 		expect(refetchCalls).toBe(0);
 	});
 
@@ -201,7 +200,7 @@ describe("lemma cache", () => {
 		});
 		let refetchCalls = 0;
 
-		const result = await handleLemmaCacheHit({
+		await Effect.runPromise(handleLemmaCacheHit({
 			cache: {
 				...cache,
 				generatedEntryId: "LX-LM-VERB-1",
@@ -209,11 +208,10 @@ describe("lemma cache", () => {
 			onRefetch: () => {
 				refetchCalls += 1;
 			},
-			readContent: async () => ok(content),
+			readContent: () => Effect.succeed(content),
 			state,
-		});
+		}));
 
-		expect(result.isOk()).toBe(true);
 		expect(refetchCalls).toBe(1);
 	});
 
@@ -232,7 +230,7 @@ describe("lemma cache", () => {
 		});
 		let refetchCalls = 0;
 
-		const result = await handleLemmaCacheHit({
+		await Effect.runPromise(handleLemmaCacheHit({
 			cache: {
 				...cache,
 				generatedEntryId: "LX-LM-NOUN-1",
@@ -240,11 +238,10 @@ describe("lemma cache", () => {
 			onRefetch: () => {
 				refetchCalls += 1;
 			},
-			readContent: async () => ok(content),
+			readContent: () => Effect.succeed(content),
 			state,
-		});
+		}));
 
-		expect(result.isOk()).toBe(true);
 		expect(refetchCalls).toBe(1);
 	});
 });

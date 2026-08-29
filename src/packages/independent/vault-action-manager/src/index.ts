@@ -42,6 +42,7 @@ export {
 export type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 export type { PossibleRootVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
 export {
+	adaptLegacyVaultActionManager,
 	createLegacyVaultActionManager,
 	createVaultActionManager,
 	type LegacyBulkVaultEventHandler,

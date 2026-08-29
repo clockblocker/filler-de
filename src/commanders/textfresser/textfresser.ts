@@ -7,14 +7,18 @@ import type {
 	UserEventHandler,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { errAsync } from "neverthrow";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Effect, Option } from "effect";
 import type { CommandContext } from "../../managers/obsidian/command-executor";
 import type { ApiService } from "../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../types";
 import { logger } from "../../utils/logger";
 import { actionCommandFnForCommandKind } from "./commands";
-import type { CommandInput, TextfresserCommandKind } from "./commands/types";
+import type {
+	CommandError,
+	CommandInput,
+	TextfresserCommandKind,
+} from "./commands/types";
 import type { PathLookupFn } from "./common/target-path-resolver";
 import type { LibraryBasenameParser } from "./domain/linguistic-wikilink";
 import { CommandErrorKind } from "./errors";
@@ -36,6 +40,25 @@ export type {
 	PendingGenerate,
 	TextfresserState,
 } from "./state/textfresser-state";
+
+const scrollToTargetBlockProgram = Effect.fn("Textfresser.scrollToTargetBlock")(
+	function* (state: TextfresserState, vam: VaultActionManager) {
+		const blockId = state.targetBlockId;
+		if (!blockId) return;
+		state.targetBlockId = undefined;
+
+		const contentResult = yield* vam.getOpenedContent().pipe(Effect.option);
+		if (Option.isNone(contentResult)) return;
+
+		const marker = `^${blockId}`;
+		const lineIndex = contentResult.value
+			.split("\n")
+			.findIndex((line) => line.includes(marker));
+		if (lineIndex < 0) return;
+
+		yield* vam.scrollOpenedFileToLine(lineIndex).pipe(Effect.ignore);
+	},
+);
 
 export class Textfresser {
 	private state: TextfresserState;
@@ -67,9 +90,9 @@ export class Textfresser {
 		commandName: TextfresserCommandKind,
 		context: CommandContext,
 		notify: (message: string) => void,
-	) {
+	): Effect.Effect<void, CommandError> {
 		if (!context.activeFile) {
-			return errAsync({ kind: CommandErrorKind.NotMdFile });
+			return Effect.fail({ kind: CommandErrorKind.NotMdFile });
 		}
 
 		if (commandName === "Lemma") {
@@ -94,9 +117,9 @@ export class Textfresser {
 			textfresserState: this.state,
 		};
 
-		return commandFn(input)
-			.andThen((actions) => dispatchActions(this.vam, actions))
-			.map(() => {
+		return commandFn(input).pipe(
+			Effect.flatMap((actions) => dispatchActions(this.vam, actions)),
+			Effect.tap(() => {
 				const lemma = this.state.latestLemmaResult;
 				if (commandName === "Generate" && lemma) {
 					const failed = this.state.latestFailedSections;
@@ -107,19 +130,21 @@ export class Textfresser {
 					} else {
 						notify(`✓ Entry created for ${lemma.lemma}`);
 					}
-					this.scrollToTargetBlock();
+					return this.scrollToTargetBlock();
 				}
-				return undefined;
-			})
-			.mapErr((error) => {
-				const reason =
-					"reason" in error
-						? error.reason
-						: `Command failed: ${error.kind}`;
-				notify(`⚠ ${reason}`);
-				logger.warn(`[Textfresser.${commandName}] Failed:`, error);
-				return error;
-			});
+				return Effect.void;
+			}),
+			Effect.tapError((error) =>
+				Effect.sync(() => {
+					const reason =
+						"reason" in error
+							? error.reason
+							: `Command failed: ${error.kind}`;
+					notify(`⚠ ${reason}`);
+					logger.warn(`[Textfresser.${commandName}] Failed:`, error);
+				}),
+			),
+		);
 	}
 
 	createHandler(): UserEventHandler<typeof UserEventKind.WikilinkClicked> {
@@ -150,20 +175,7 @@ export class Textfresser {
 		this.state.isLibraryLookupAvailable = false;
 	}
 
-	private scrollToTargetBlock(): void {
-		const blockId = this.state.targetBlockId;
-		if (!blockId) return;
-		this.state.targetBlockId = undefined;
-
-		const contentResult = this.vam.getOpenedContent();
-		if (contentResult.isErr()) return;
-
-		const marker = `^${blockId}`;
-		const lineIndex = contentResult.value
-			.split("\n")
-			.findIndex((line) => line.includes(marker));
-		if (lineIndex < 0) return;
-
-		this.vam.scrollOpenedFileToLine(lineIndex);
+	private scrollToTargetBlock(): Effect.Effect<void> {
+		return scrollToTargetBlockProgram(this.state, this.vam);
 	}
 }

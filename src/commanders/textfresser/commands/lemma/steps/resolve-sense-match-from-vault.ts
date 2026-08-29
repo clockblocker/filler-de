@@ -2,12 +2,13 @@ import type {
 	ResolvedSelection,
 	SenseDisambiguator,
 } from "@textfresser/lexical-generation";
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Effect } from "effect";
 import { logger } from "../../../../../utils/logger";
 import { getSpelledLemma } from "../../../domain/native-selection";
 import { commandApiError } from "../../../errors";
+import { resultToEffect } from "../../../orchestration/shared/effect-result";
 import type { CommandError } from "../../types";
 import { loadStoredSenseCandidates } from "./load-stored-sense-candidates";
 
@@ -16,69 +17,66 @@ export type SenseMatchFromVault =
 	| { matchedIndex: null; precomputedSenseEmojis?: string[] }
 	| null;
 
-export async function resolveSenseMatchFromVault(
+export const resolveSenseMatchFromVault = Effect.fn(
+	"Textfresser.resolveSenseMatchFromVault",
+)(function* (
 	vam: VaultActionManager,
 	lemma: ResolvedSelection,
 	context: string,
 	preferredPath?: SplitPathToMdFile,
-	options?: {
-		disambiguateWith?: SenseDisambiguator;
-	},
-): Promise<Result<SenseMatchFromVault, CommandError>> {
+	options?: { disambiguateWith?: SenseDisambiguator },
+): Effect.fn.Return<SenseMatchFromVault, CommandError> {
 	const spelledLemma = getSpelledLemma(lemma);
 	if (!spelledLemma) {
-		return ok(null);
+		return null;
 	}
-	const candidatesResult = await loadStoredSenseCandidates({
+	const storedCandidates = yield* loadStoredSenseCandidates({
 		lemma: spelledLemma,
 		preferredPath,
 		vam,
 	});
-	if (candidatesResult.isErr()) {
-		return err(candidatesResult.error);
-	}
-
-	const storedCandidates = candidatesResult.value;
 	if (storedCandidates === null) {
-		return ok(null);
+		return null;
 	}
 
-	if (!options?.disambiguateWith) {
-		return ok({ matchedIndex: null });
+	const disambiguateWith = options?.disambiguateWith;
+	if (!disambiguateWith) {
+		return { matchedIndex: null };
 	}
 
-	const moduleResult = await options.disambiguateWith(
-		lemma,
-		context,
-		storedCandidates.map((candidate) => candidate.lexicalMeta),
+	const moduleResult = yield* Effect.promise(() =>
+		disambiguateWith(
+			lemma,
+			context,
+			storedCandidates.map((candidate) => candidate.lexicalMeta),
+		),
 	);
-	if (moduleResult.isErr()) {
-		return err(
+	const disambiguation = yield* resultToEffect(
+		moduleResult.mapErr((error) =>
 			commandApiError({
-				lexicalGenerationError: moduleResult.error,
-				reason: moduleResult.error.message,
+				lexicalGenerationError: error,
+				reason: error.message,
 			}),
-		);
-	}
+		),
+	);
 
-	if (moduleResult.value.kind === "matched") {
+	if (disambiguation.kind === "matched") {
 		const matchedCandidate =
-			storedCandidates[moduleResult.value.cacheIndex] ?? null;
+			storedCandidates[disambiguation.cacheIndex] ?? null;
 		if (!matchedCandidate) {
 			logger.warn(
-				`[sense-match] cacheIndex ${moduleResult.value.cacheIndex} out of range - treating as new sense`,
+				`[sense-match] cacheIndex ${disambiguation.cacheIndex} out of range - treating as new sense`,
 			);
-			return ok({ matchedIndex: null });
+			return { matchedIndex: null };
 		}
 
-		return ok({
+		return {
 			matchedIndex: matchedCandidate.entryIndex,
-		});
+		};
 	}
 
-	return ok({
+	return {
 		matchedIndex: null,
-		precomputedSenseEmojis:
-			moduleResult.value.precomputedSenseEmojis,
-	});
-}
+		precomputedSenseEmojis: disambiguation.precomputedSenseEmojis,
+	};
+});

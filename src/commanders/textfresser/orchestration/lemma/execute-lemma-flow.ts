@@ -1,5 +1,5 @@
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { errAsync, ResultAsync } from "neverthrow";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Clock, Effect } from "effect";
 import type { CommandContext } from "../../../../managers/obsidian/command-executor";
 import { logger } from "../../../../utils/logger";
 import { resolveAttestation } from "../../commands/lemma/lemma-command";
@@ -14,7 +14,7 @@ import {
 } from "./lemma-cache";
 import { runLemmaTwoPhase } from "./run-lemma-two-phase";
 
-export function executeLemmaFlow(params: {
+type ExecuteLemmaFlowParams = {
 	context: CommandContext & {
 		activeFile: NonNullable<CommandContext["activeFile"]>;
 	};
@@ -22,100 +22,101 @@ export function executeLemmaFlow(params: {
 	vam: VaultActionManager;
 	notify: (message: string) => void;
 	requestBackgroundGenerate: (notify: (message: string) => void) => void;
-}): ResultAsync<void, CommandError> {
-	const { context, notify, requestBackgroundGenerate, state, vam } = params;
-	if (state.lexicalGenerationInitError) {
-		return errAsync(
-			commandApiError({
-				lexicalGenerationError: state.lexicalGenerationInitError,
-				reason: state.lexicalGenerationInitError.message,
-			}),
+};
+
+const executeLemmaFlowProgram = Effect.fn("Textfresser.executeLemmaFlow")(
+	function* (
+		params: ExecuteLemmaFlowParams,
+	): Effect.fn.Return<void, CommandError> {
+		const { context, notify, requestBackgroundGenerate, state, vam } =
+			params;
+		if (state.lexicalGenerationInitError) {
+			return yield* Effect.fail(
+				commandApiError({
+					lexicalGenerationError: state.lexicalGenerationInitError,
+					reason: state.lexicalGenerationInitError.message,
+				}),
+			);
+		}
+
+		const input: CommandInput = {
+			commandContext: context,
+			resultingActions: [],
+			textfresserState: state,
+		};
+
+		const attestation = resolveAttestation(input);
+		if (!attestation) {
+			return yield* Effect.fail({
+				kind: CommandErrorKind.NotEligible,
+				reason: "No attestation context available — select a word or click a wikilink first",
+			});
+		}
+
+		const invocationKey = buildLemmaInvocationKey(attestation);
+		const cachedInvocation = getValidLemmaInvocationCache(
+			state,
+			invocationKey,
 		);
-	}
 
-	const input: CommandInput = {
-		commandContext: context,
-		resultingActions: [],
-		textfresserState: state,
-	};
-
-	const attestation = resolveAttestation(input);
-	if (!attestation) {
-		return errAsync({
-			kind: CommandErrorKind.NotEligible,
-			reason: "No attestation context available — select a word or click a wikilink first",
-		});
-	}
-
-	const invocationKey = buildLemmaInvocationKey(attestation);
-	const cachedInvocation = getValidLemmaInvocationCache(state, invocationKey);
-
-	if (cachedInvocation) {
-		return new ResultAsync(
-			handleLemmaCacheHit({
+		if (cachedInvocation) {
+			yield* handleLemmaCacheHit({
 				cache: cachedInvocation,
 				onRefetch: () => requestBackgroundGenerate(() => {}),
 				readContent: (splitPath) => vam.readContent(splitPath),
 				state,
-			}),
-		).mapErr((error) => {
-			const reason =
-				"reason" in error
-					? error.reason
-					: `Command failed: ${error.kind}`;
-			notify(`⚠ ${reason}`);
-			logger.warn("[Textfresser.Lemma] Failed:", error);
-			return error;
-		});
-	}
+			});
+			return;
+		}
 
-	return new ResultAsync(
-		runLemmaTwoPhase({
+		yield* runLemmaTwoPhase({
 			input,
 			preResolvedAttestation: attestation,
 			state,
 			vam,
-		}),
-	)
-		.map(() => {
-			const lemma = state.latestLemmaResult;
-			if (!lemma) {
-				return undefined;
-			}
-
-			state.latestLemmaInvocationCache = {
-				cachedAtMs: Date.now(),
-				key: invocationKey,
-				lemmaResult: lemma,
-				resolvedTargetPath:
-					state.latestResolvedLemmaTargetPath ??
-					buildPolicyDestinationPath({
-						lemma: lemma.lemma,
-						linguisticUnit: lemma.linguisticUnit,
-						posLikeKind:
-							lemma.linguisticUnit === "Lexeme"
-								? lemma.posLikeKind
-								: null,
-						surfaceKind: lemma.surfaceKind,
-						targetLanguage: state.languages.target,
-					}),
-			};
-
-			const pos =
-				lemma.linguisticUnit === "Lexeme"
-					? ` (${lemma.posLikeKind})`
-					: "";
-			notify(`✓ ${lemma.lemma}${pos}`);
-			requestBackgroundGenerate(notify);
-			return undefined;
-		})
-		.mapErr((error) => {
-			const reason =
-				"reason" in error
-					? error.reason
-					: `Command failed: ${error.kind}`;
-			notify(`⚠ ${reason}`);
-			logger.warn("[Textfresser.Lemma] Failed:", error);
-			return error;
 		});
+		const lemma = state.latestLemmaResult;
+		if (!lemma) return;
+		const cachedAtMs = yield* Clock.currentTimeMillis;
+
+		state.latestLemmaInvocationCache = {
+			cachedAtMs,
+			key: invocationKey,
+			lemmaResult: lemma,
+			resolvedTargetPath:
+				state.latestResolvedLemmaTargetPath ??
+				buildPolicyDestinationPath({
+					lemma: lemma.lemma,
+					linguisticUnit: lemma.linguisticUnit,
+					posLikeKind:
+						lemma.linguisticUnit === "Lexeme"
+							? lemma.posLikeKind
+							: null,
+					surfaceKind: lemma.surfaceKind,
+					targetLanguage: state.languages.target,
+				}),
+		};
+
+		const pos =
+			lemma.linguisticUnit === "Lexeme" ? ` (${lemma.posLikeKind})` : "";
+		notify(`✓ ${lemma.lemma}${pos}`);
+		requestBackgroundGenerate(notify);
+	},
+);
+
+export function executeLemmaFlow(
+	params: ExecuteLemmaFlowParams,
+): Effect.Effect<void, CommandError> {
+	return executeLemmaFlowProgram(params).pipe(
+		Effect.tapError((error) =>
+			Effect.sync(() => {
+				const reason =
+					"reason" in error
+						? error.reason
+						: `Command failed: ${error.kind}`;
+				params.notify(`⚠ ${reason}`);
+				logger.warn("[Textfresser.Lemma] Failed:", error);
+			}),
+		),
+	);
 }

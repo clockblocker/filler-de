@@ -1,16 +1,19 @@
 import type {
+	SplitPathToMdFile,
 	VaultAction,
-	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import {
-	isReadContentFileNotFound,
+	classifyReadContentError,
 	makeSystemPathForSplitPath,
-	readContentErrorToReason,
+	ReadContentErrorKind,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import type { ReadContentError } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
+import type {
+	VamEffectError,
+	VaultActionManager,
+} from "@textfresser/vault-action-manager/facade";
+import { Effect, Result } from "effect";
+import { getErrorMessage } from "../../../../../utils/get-error-message";
 import type { PathLookupFn } from "../../../common/target-path-resolver";
 import type {
 	FindCandidateTargetsParams,
@@ -84,86 +87,91 @@ export function createPropagationVaultPort(params: {
 			return vam.exists(path);
 		},
 
-		findCandidateTargets(
-			paramsArg: FindCandidateTargetsParams,
-		): ReadonlyArray<SplitPathToMdFile> {
+		findCandidateTargets(paramsArg: FindCandidateTargetsParams) {
 			const findByBasenameOptions = paramsArg.folder
 				? { folder: paramsArg.folder }
 				: undefined;
-			const byBasename = vam.findByBasename(
-				paramsArg.basename,
-				findByBasenameOptions,
-			);
 			const byCoreName = libraryLookup.findByLeafCoreName(
 				paramsArg.basename,
 			);
-
-			return dedupeSplitPaths([...byBasename, ...byCoreName]);
+			return vam
+				.findByBasename(paramsArg.basename, findByBasenameOptions)
+				.pipe(
+					Effect.map((byBasename) =>
+						dedupeSplitPaths([...byBasename, ...byCoreName]),
+					),
+				);
 		},
 
-		async readManyMdFiles(
-			paths: ReadonlyArray<SplitPathToMdFile>,
-		): Promise<ReadonlyArray<ReadManyMdFilesOutcome>> {
+		readManyMdFiles(paths: ReadonlyArray<SplitPathToMdFile>) {
 			const uniquePaths = dedupeSplitPaths(paths);
-			return Promise.all(
+			return Effect.all(
 				uniquePaths.map((splitPath) =>
 					readSinglePath({ splitPath, vam }),
 				),
 			);
 		},
-		async readNoteOrEmpty(
-			splitPath: SplitPathToMdFile,
-		): Promise<Result<string, string>> {
-			const readOutcome = await readSinglePath({
-				splitPath,
-				vam,
-			});
-			if (readOutcome.kind === "Found") {
-				return ok(readOutcome.content);
-			}
-			if (readOutcome.kind === "Missing") {
-				return ok("");
-			}
-			return err(readContentErrorToReason(readOutcome.reason));
+		readNoteOrEmpty(splitPath: SplitPathToMdFile) {
+			return readSinglePath({ splitPath, vam }).pipe(
+				Effect.flatMap((readOutcome) => {
+					if (readOutcome.kind === "Found") {
+						return Effect.succeed(readOutcome.content);
+					}
+					if (readOutcome.kind === "Missing") {
+						return Effect.succeed("");
+					}
+					return Effect.fail(describeReadFailure(readOutcome.reason));
+				}),
+			);
 		},
 	};
 }
 
-async function readSinglePath(params: {
-	splitPath: SplitPathToMdFile;
-	vam: VamPortDependency;
-}): Promise<ReadManyMdFilesOutcome> {
-	const { splitPath, vam } = params;
+const readSinglePath = Effect.fn("Textfresser.readPropagationPath")(
+	function* (params: {
+		splitPath: SplitPathToMdFile;
+		vam: VamPortDependency;
+	}): Effect.fn.Return<ReadManyMdFilesOutcome> {
+		const { splitPath, vam } = params;
 
-	if (!vam.exists(splitPath)) {
+		const existsResult = yield* vam.exists(splitPath).pipe(Effect.result);
+		if (Result.isFailure(existsResult)) {
+			return { kind: "Error", reason: existsResult.failure, splitPath };
+		}
+		if (!existsResult.success) {
+			return {
+				kind: "Missing",
+				splitPath,
+			};
+		}
+
+		const readResult = yield* vam
+			.readContent(splitPath)
+			.pipe(Effect.result);
+		if (Result.isSuccess(readResult)) {
+			return {
+				content: readResult.success,
+				kind: "Found",
+				splitPath,
+			};
+		}
+
+		if (
+			yield* isMissingAfterReadFailure(readResult.failure, splitPath, vam)
+		) {
+			return {
+				kind: "Missing",
+				splitPath,
+			};
+		}
+
 		return {
-			kind: "Missing",
+			kind: "Error",
+			reason: readResult.failure,
 			splitPath,
 		};
-	}
-
-	const readResult = await vam.readContent(splitPath);
-	if (readResult.isOk()) {
-		return {
-			content: readResult.value,
-			kind: "Found",
-			splitPath,
-		};
-	}
-
-	if (isMissingAfterReadFailure(readResult.error, splitPath, vam)) {
-		return {
-			kind: "Missing",
-			splitPath,
-		};
-	}
-
-	return {
-		kind: "Error",
-		reason: readResult.error,
-		splitPath,
-	};
-}
+	},
+);
 
 function dedupeSplitPaths(
 	paths: ReadonlyArray<SplitPathToMdFile>,
@@ -178,12 +186,25 @@ function dedupeSplitPaths(
 	return [...bySystemPath.values()];
 }
 
+function describeReadFailure(reason: VamEffectError): string {
+	return `${reason.operation}: ${getErrorMessage(reason.cause)}`;
+}
+
 function isMissingAfterReadFailure(
-	reason: ReadContentError,
+	reason: VamEffectError,
 	splitPath: SplitPathToMdFile,
 	vam: VamPortDependency,
-): boolean {
-	if (isReadContentFileNotFound(reason)) return true;
+): Effect.Effect<boolean> {
+	if (
+		reason._tag === "VamVaultIoError" &&
+		classifyReadContentError(getErrorMessage(reason.cause)).kind ===
+			ReadContentErrorKind.FileNotFound
+	) {
+		return Effect.succeed(true);
+	}
 	// Race-safe fallback: file can vanish between the pre-read exists() and readContent().
-	return !vam.exists(splitPath);
+	return vam.exists(splitPath).pipe(
+		Effect.map((exists) => !exists),
+		Effect.catch(() => Effect.succeed(false)),
+	);
 }

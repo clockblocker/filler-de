@@ -10,14 +10,14 @@ import type { VaultAction } from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,
+	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type { TargetLanguage } from "../../../types";
+import type { MorphemeItem } from "../domain/morpheme/morpheme-formatter";
 import {
 	type LinguisticUnitKind,
 	SurfaceKind,
 } from "../domain/note-linguistic-policy";
-import type { MorphemeItem } from "../domain/morpheme/morpheme-formatter";
 import { DictSectionKind } from "../targets/de/sections/section-kind";
 import { resolveDesiredSurfaceKindForPropagationSection } from "./linguistic-wikilink-context";
 import {
@@ -48,7 +48,7 @@ type ResolveTargetPathParams = {
 type ResolveMorphemePathParams = {
 	lookupInLibrary: PathLookupFn;
 	targetLang: TargetLanguage;
-	vam: { findByBasename: PathLookupFn };
+	vamLookup: PathLookupFn;
 };
 
 /**
@@ -123,7 +123,7 @@ function lookupWithCaseFallback(
 	return [];
 }
 
-function buildLookupCandidates(word: string): string[] {
+export function buildLookupCandidates(word: string): string[] {
 	const candidates = [word];
 	const firstChar = word.charAt(0);
 	if (firstChar.length === 0) {
@@ -179,7 +179,7 @@ export function resolveMorphemePath(
 	params: ResolveMorphemePathParams,
 ): ResolvedTargetPath {
 	if (item.linkTarget) {
-		const vamResults = params.vam.findByBasename(item.linkTarget);
+		const vamResults = params.vamLookup(item.linkTarget);
 		if (vamResults.length > 0) {
 			const existing = vamResults[0];
 			if (existing) {
@@ -211,7 +211,7 @@ export function resolveMorphemePath(
 		librarianLookup: params.lookupInLibrary,
 		targetLanguage: params.targetLang,
 		unitKind: "Morpheme",
-		vamLookup: (word) => params.vam.findByBasename(word),
+		vamLookup: params.vamLookup,
 		word: item.lemma ?? item.surf,
 	});
 }

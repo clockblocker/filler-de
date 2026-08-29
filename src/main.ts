@@ -8,12 +8,19 @@ import type {
 	VaultActionManagerTestingAdapter,
 } from "@textfresser/vault-action-manager";
 import {
-	createVaultActionManager,
 	logError,
 	makeSplitPath,
 	VaultActionKind,
-	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
+import {
+	createVaultActionManager as createEffectVaultActionManager,
+	type VaultActionManager as EffectVaultActionManager,
+} from "@textfresser/vault-action-manager/facade";
+import {
+	adaptLegacyVaultActionManager,
+	type LegacyVaultActionManager,
+} from "@textfresser/vault-action-manager/legacy-neverthrow-facade";
+import { Effect, Exit } from "effect";
 import { Modal, Notice, Plugin, TFile } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
 import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
@@ -59,7 +66,10 @@ import { sleep } from "./utils/sleep";
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
-	vam: VaultActionManager;
+	/** Legacy view retained for Librarian, DelimiterChangeService, and E2E callers. */
+	vam: LegacyVaultActionManager;
+	/** Canonical Effect view consumed by Textfresser. */
+	effectVam: EffectVaultActionManager;
 	vamTesting: VaultActionManagerTestingAdapter;
 	userEventInterceptor: ObsidianEventLayer;
 	overlayManager: OverlayManager | null = null;
@@ -161,10 +171,11 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.apiService = new ApiService(this.settings);
 
-		const vaultActions = createVaultActionManager(this.app);
-		this.vam = vaultActions.manager;
+		const vaultActions = createEffectVaultActionManager(this.app);
+		this.effectVam = vaultActions.manager;
+		this.vam = adaptLegacyVaultActionManager(this.effectVam);
 		this.vamTesting = vaultActions.testing;
-		this.disposeVam = vaultActions.dispose;
+		this.disposeVam = () => Effect.runPromise(vaultActions.dispose);
 
 		this.rebuildTextfresser();
 
@@ -189,18 +200,25 @@ export default class TextEaterPlugin extends Plugin {
 					}
 					const cleaned = cleanupDictNote(content);
 					if (cleaned === null) return;
-					void this.vam.dispatch([
-						{
-							kind: VaultActionKind.ProcessMdFile,
-							payload: {
-								// Safe cast: file.extension === "md" verified above
-								splitPath: makeSplitPath(
-									file,
-								) as SplitPathToMdFile,
-								transform: () => cleaned,
+					void Effect.runPromise(
+						this.effectVam.dispatch([
+							{
+								kind: VaultActionKind.ProcessMdFile,
+								payload: {
+									// Safe cast: file.extension === "md" verified above
+									splitPath: makeSplitPath(
+										file,
+									) as SplitPathToMdFile,
+									transform: () => cleaned,
+								},
 							},
-						},
-					]);
+						]),
+					).catch((error) => {
+						logger.error(
+							"[TextEaterPlugin] Failed to clean dictionary note:",
+							getErrorMessage(error),
+						);
+					});
 				});
 			}),
 		);
@@ -210,7 +228,12 @@ export default class TextEaterPlugin extends Plugin {
 			app: this.app,
 			plugin: this,
 			selectionTextSource: {
-				getSelectionText: () => this.vam.getSelectionText(),
+				getSelectionText: () => {
+					const exit = Effect.runSyncExit(
+						this.effectVam.getSelectionText(),
+					);
+					return Exit.isSuccess(exit) ? exit.value : null;
+				},
 			},
 		});
 
@@ -220,7 +243,7 @@ export default class TextEaterPlugin extends Plugin {
 		// Start listening to file system events
 		// VaultActionManager will convert events to VaultEvent, filter self-events,
 		// and notify subscribers (e.g., Librarian)
-		this.vam.startListening();
+		await Effect.runPromise(this.effectVam.startListening());
 
 		// Start listening to user events (clicks, clipboard, select-all, wikilinks)
 		this.userEventInterceptor.start();
@@ -267,7 +290,7 @@ export default class TextEaterPlugin extends Plugin {
 		const executeCommand = createCommandExecutor({
 			librarian: this.librarian,
 			textfresser: this.textfresser,
-			vam: this.vam,
+			vam: this.effectVam,
 		});
 		this.commandExecutor = async (kind) => {
 			incrementPending();
@@ -285,7 +308,7 @@ export default class TextEaterPlugin extends Plugin {
 			librarian: this.librarian,
 			plugin: this,
 			userEventInterceptor: this.userEventInterceptor,
-			vam: this.vam,
+			vam: this.effectVam,
 		});
 		this.overlayManager.init();
 	}
@@ -362,15 +385,18 @@ export default class TextEaterPlugin extends Plugin {
 		this.addCommand({
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
+					if (!this.effectVam) return true;
 					// Check if there's a selection via VAM
-					const selection = this.vam?.getSelectionInfo();
-					if (selection) {
+					const selection = Effect.runSyncExit(
+						this.effectVam.getSelectionInfo(),
+					);
+					if (Exit.isSuccess(selection) && selection.value) {
 						// Selection is collected by CommandContext in executor
 						void this.commandExecutor?.(CommandKind.SplitInBlocks);
 					} else {
 						tagLineCopyEmbedBehavior({
 							app: this.app,
-							vam: this.vam,
+							vam: this.effectVam,
 						});
 					}
 				}
@@ -686,7 +712,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	private rebuildTextfresser(): void {
 		this.textfresser = new Textfresser(
-			this.vam,
+			this.effectVam,
 			this.settings.languages,
 			this.apiService,
 			{

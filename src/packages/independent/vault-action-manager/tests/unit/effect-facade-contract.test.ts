@@ -3,7 +3,10 @@ import {
 	createVaultActionManager,
 	VamShutdownError,
 } from "@textfresser/vault-action-manager/facade";
-import { createVaultActionManager as createLegacyVaultActionManager } from "@textfresser/vault-action-manager/legacy-neverthrow-facade";
+import {
+	adaptLegacyVaultActionManager,
+	createVaultActionManager as createLegacyVaultActionManager,
+} from "@textfresser/vault-action-manager/legacy-neverthrow-facade";
 import { Cause, Effect, Exit, Option } from "effect";
 import {
 	folderPath,
@@ -106,5 +109,17 @@ describe("VaultActionManager Effect facade", () => {
 		expect(Effect.isEffect(read)).toBe(false);
 		expect((await read).isOk()).toBe(true);
 		await dispose();
+	});
+
+	it("adapts the canonical manager without owning a second runtime", async () => {
+		const harness = makeFacadeHarness();
+		const canonical = createVaultActionManager(harness.app);
+		const legacy = adaptLegacyVaultActionManager(canonical.manager);
+
+		expect((await legacy.readContent(mdPath)).isOk()).toBe(true);
+		await Effect.runPromise(canonical.dispose);
+
+		const readAfterCanonicalDisposal = await legacy.readContent(mdPath);
+		expect(readAfterCanonicalDisposal.isErr()).toBe(true);
 	});
 });

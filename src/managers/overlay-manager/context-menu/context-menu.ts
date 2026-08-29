@@ -2,8 +2,9 @@
  * Context menu integration for editor and file-explorer actions.
  */
 
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { makeCodecRulesFromSettings } from "@textfresser/library-core";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Effect, Exit } from "effect";
 import type { App, Menu, Plugin } from "obsidian";
 import { z } from "zod";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/pages/split-to-pages-action";
@@ -29,6 +30,30 @@ export type ContextMenuDeps = {
 	commandExecutor: CommandExecutor | null;
 	vam: VaultActionManager;
 };
+
+const getContextMenuFile = Effect.fn("getContextMenuFile")(function* (
+	vam: VaultActionManager,
+) {
+	const splitPath = yield* vam.mdPwd();
+	if (!splitPath) return null;
+
+	let isInLibrary = false;
+	try {
+		const { splitPathToLibraryRoot } = getParsedUserSettings();
+		const libraryPathParts = splitPathToLibraryRoot.pathParts;
+		isInLibrary =
+			splitPath.pathParts.length >= libraryPathParts.length &&
+			libraryPathParts.every(
+				(part, i) => splitPath.pathParts[i] === part,
+			);
+	} catch {
+		isInLibrary = false;
+	}
+	if (!isInLibrary) return null;
+
+	const content = yield* vam.getOpenedContent();
+	return { content, splitPath };
+});
 
 /**
  * Setup context menu for "Split into pages" action.
@@ -58,31 +83,9 @@ function handleEditorMenu(
 	vam: VaultActionManager,
 	commandExecutor: CommandExecutor | null,
 ): void {
-	const splitPath = vam.mdPwd();
-	if (!splitPath) return;
-
-	// Check if in library
-	let isInLibrary = false;
-	try {
-		const { splitPathToLibraryRoot } = getParsedUserSettings();
-		const libraryPathParts = splitPathToLibraryRoot.pathParts;
-		// Check if splitPath starts with library path parts
-		isInLibrary =
-			splitPath.pathParts.length >= libraryPathParts.length &&
-			libraryPathParts.every(
-				(part, i) => splitPath.pathParts[i] === part,
-			);
-	} catch {
-		isInLibrary = false;
-	}
-
-	if (!isInLibrary) return;
-
-	// Get file content from VAM
-	const contentResult = vam.getOpenedContent();
-	if (contentResult.isErr()) return;
-
-	const content = contentResult.value;
+	const activeFileExit = Effect.runSyncExit(getContextMenuFile(vam));
+	if (Exit.isFailure(activeFileExit) || !activeFileExit.value) return;
+	const { content, splitPath } = activeFileExit.value;
 
 	// Read file metadata to determine type
 	let fileType: FileType | null = null;
@@ -111,7 +114,6 @@ function handleEditorMenu(
 
 	// Show "Split into pages" when: in library AND (Scroll OR untyped) AND would split
 	const shouldShow =
-		isInLibrary &&
 		wouldSplitToMultiplePages &&
 		(fileType === null || fileType === FileType.Scroll);
 

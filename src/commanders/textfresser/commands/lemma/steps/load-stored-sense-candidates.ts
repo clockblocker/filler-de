@@ -1,35 +1,28 @@
 import type { LexicalMeta } from "@textfresser/lexical-generation";
-import {
-	readContentErrorToReason,
-	type VaultActionManager,
-} from "@textfresser/vault-action-manager";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Effect, Option } from "effect";
 import { logger } from "../../../../../utils/logger";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
 import { dictNoteHelper } from "../../../domain/dict-note";
+import { vamIoFailureToCommandError } from "../../../orchestration/shared/vam-failure";
 import type { CommandError } from "../../types";
-import { CommandErrorKind } from "../../types";
 
 export type StoredSenseCandidate = {
 	entryIndex: number;
 	lexicalMeta: LexicalMeta;
 };
 
-async function readExistingNote(params: {
-	vam: VaultActionManager;
-	filePath: SplitPathToMdFile;
-}): Promise<Result<string, CommandError>> {
-	const readResult = await params.vam.readContent(params.filePath);
-	if (readResult.isErr()) {
-		return err({
-			kind: CommandErrorKind.ApiError,
-			reason: readContentErrorToReason(readResult.error),
-		});
-	}
-
-	return ok(readResult.value);
-}
+const readExistingNote = Effect.fn("Textfresser.readExistingSenseNote")(
+	function* (params: {
+		vam: VaultActionManager;
+		filePath: SplitPathToMdFile;
+	}) {
+		return yield* params.vam
+			.readContent(params.filePath)
+			.pipe(Effect.mapError(vamIoFailureToCommandError));
+	},
+);
 
 function extractStoredSenseCandidates(params: {
 	content: string;
@@ -73,27 +66,29 @@ function extractStoredSenseCandidates(params: {
 	return lexicalMetaCandidates;
 }
 
-export async function loadStoredSenseCandidates(params: {
+export const loadStoredSenseCandidates = Effect.fn(
+	"Textfresser.loadStoredSenseCandidates",
+)(function* (params: {
 	vam: VaultActionManager;
 	lemma: string;
 	preferredPath?: SplitPathToMdFile;
-}): Promise<Result<StoredSenseCandidate[] | null, CommandError>> {
+}): Effect.fn.Return<StoredSenseCandidate[] | null, CommandError> {
 	const { lemma, preferredPath, vam } = params;
-	const files = vam.findByBasename(lemma);
+	const files = yield* vam
+		.findByBasename(lemma)
+		.pipe(Effect.mapError(vamIoFailureToCommandError));
 	logger.info(`[sense-match] Found ${files.length} files for "${lemma}"`);
 
 	if (preferredPath) {
-		const preferredContent = await readExistingNote({
+		const preferredContent = yield* readExistingNote({
 			filePath: preferredPath,
 			vam,
-		});
-		if (preferredContent.isOk()) {
-			return ok(
-				extractStoredSenseCandidates({
-					content: preferredContent.value,
-					lemma,
-				}),
-			);
+		}).pipe(Effect.option);
+		if (Option.isSome(preferredContent)) {
+			return extractStoredSenseCandidates({
+				content: preferredContent.value,
+				lemma,
+			});
 		}
 
 		logger.info(
@@ -108,21 +103,15 @@ export async function loadStoredSenseCandidates(params: {
 	const fallbackPath = files[0];
 	if (!fallbackPath) {
 		logger.info("[sense-match] First encounter - no existing note");
-		return ok(null);
+		return null;
 	}
 
-	const fallbackContent = await readExistingNote({
+	const fallbackContent = yield* readExistingNote({
 		filePath: fallbackPath,
 		vam,
 	});
-	if (fallbackContent.isErr()) {
-		return err(fallbackContent.error);
-	}
-
-	return ok(
-		extractStoredSenseCandidates({
-			content: fallbackContent.value,
-			lemma,
-		}),
-	);
-}
+	return extractStoredSenseCandidates({
+		content: fallbackContent,
+		lemma,
+	});
+});

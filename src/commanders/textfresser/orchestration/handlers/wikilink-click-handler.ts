@@ -1,9 +1,10 @@
-import { makeSplitPath } from "@textfresser/vault-action-manager";
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import {
-	type UserEventHandler,
+import type {
+	UserEventHandler,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
+import { makeSplitPath } from "@textfresser/vault-action-manager";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Effect } from "effect";
 import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import { buildAttestationFromWikilinkClickPayload } from "../../common/attestation/builders/build-from-wikilink-click-payload";
 import type {
@@ -12,7 +13,7 @@ import type {
 } from "../../state/textfresser-state";
 
 export function createWikilinkClickHandler(params: {
-	awaitGenerateAndScroll: (inFlight: InFlightGenerate) => Promise<void>;
+	awaitGenerateAndScroll: (inFlight: InFlightGenerate) => Effect.Effect<void>;
 	state: TextfresserState;
 	vam: VaultActionManager;
 }): UserEventHandler<typeof UserEventKind.WikilinkClicked> {
@@ -30,21 +31,32 @@ export function createWikilinkClickHandler(params: {
 
 			const inFlight = state.inFlightGenerate;
 			if (inFlight) {
-				const clickedTarget = vam.resolveLinkpathDest(
-					payload.target.basename,
-					makeSplitPath(payload.sourcePath) as {
-						basename: string;
-						extension: "md";
-						kind: "MdFile";
-						pathParts: string[];
-					},
-				);
-				const isInFlightTarget = clickedTarget
-					? splitPathsEqual(clickedTarget, inFlight.targetPath)
-					: payload.target.basename === inFlight.targetPath.basename;
-				if (isInFlightTarget) {
-					void awaitGenerateAndScroll(inFlight);
-				}
+				const clickedTargetProgram = vam
+					.resolveLinkpathDest(
+						payload.target.basename,
+						makeSplitPath(payload.sourcePath) as {
+							basename: string;
+							extension: "md";
+							kind: "MdFile";
+							pathParts: string[];
+						},
+					)
+					.pipe(
+						Effect.catch(() => Effect.succeed(null)),
+						Effect.flatMap((clickedTarget) => {
+							const isInFlightTarget = clickedTarget
+								? splitPathsEqual(
+										clickedTarget,
+										inFlight.targetPath,
+									)
+								: payload.target.basename ===
+									inFlight.targetPath.basename;
+							return isInFlightTarget
+								? awaitGenerateAndScroll(inFlight)
+								: Effect.void;
+						}),
+					);
+				void Effect.runPromise(clickedTargetProgram);
 			}
 
 			return { outcome: "passthrough" } as const;

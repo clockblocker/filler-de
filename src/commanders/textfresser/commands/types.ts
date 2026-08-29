@@ -3,7 +3,7 @@
  */
 
 import type { VaultAction } from "@textfresser/vault-action-manager";
-import type { ResultAsync } from "neverthrow";
+import type { Effect } from "effect";
 import { z } from "zod";
 import type { CommandContext } from "../../../managers/obsidian/command-executor";
 import type { CommandError } from "../errors";
@@ -59,7 +59,7 @@ export type CommandStateWithLemma = Omit<CommandState, "textfresserState"> & {
 /** Function signature for Textfresser commands */
 export type CommandFn = (
 	input: CommandInput,
-) => ResultAsync<VaultAction[], CommandError>;
+) => Effect.Effect<VaultAction[], CommandError>;
 
 // ─── Eligibility Schema ───
 

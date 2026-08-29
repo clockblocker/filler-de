@@ -1,4 +1,5 @@
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Effect } from "effect";
 import { Notice } from "obsidian";
 import type { LibrarianCommandKind } from "../../../commanders/librarian/commands/types";
 import type { Librarian } from "../../../commanders/librarian/librarian";
@@ -29,29 +30,35 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 	/**
 	 * Collect command context once at invocation.
 	 */
-	function collectContext(): CommandContext {
-		const splitPath = vam.mdPwd();
-		let activeFile: CommandContext["activeFile"] = null;
-		if (splitPath) {
-			const contentResult = vam.getOpenedContent();
-			if (contentResult.isOk()) {
-				activeFile = { content: contentResult.value, splitPath };
+	const collectContext = Effect.fn("createCommandExecutor.collectContext")(
+		function* () {
+			const splitPath = yield* vam
+				.mdPwd()
+				.pipe(Effect.catch(() => Effect.succeed(null)));
+			let activeFile: CommandContext["activeFile"] = null;
+			if (splitPath) {
+				activeFile = yield* vam.getOpenedContent().pipe(
+					Effect.map((content) => ({ content, splitPath })),
+					Effect.catch(() => Effect.succeed(null)),
+				);
 			}
-		}
-		return {
-			activeFile,
-			selection: vam.getSelectionInfo(),
-		};
-	}
+			const selection = yield* vam
+				.getSelectionInfo()
+				.pipe(Effect.catch(() => Effect.succeed(null)));
+			return {
+				activeFile,
+				selection,
+			};
+		},
+	);
 
 	return async function executeCommand(kind: CommandKind): Promise<void> {
-		const context = collectContext();
-
 		switch (kind) {
 			case CommandKind.GoToPrevPage:
 			case CommandKind.GoToNextPage:
 			case CommandKind.SplitToPages:
 			case CommandKind.SplitInBlocks: {
+				const context = await Effect.runPromise(collectContext());
 				// Delegate to librarian - codex guard handled internally
 				const librarianKind = kind as LibrarianCommandKind;
 				await librarian.executeCommand(librarianKind, context, notify);
@@ -61,7 +68,14 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 			case CommandKind.TranslateSelection:
 			case CommandKind.Generate:
 			case CommandKind.Lemma: {
-				await textfresser.executeCommand(kind, context, notify);
+				await Effect.runPromise(
+					collectContext().pipe(
+						Effect.flatMap((context) =>
+							textfresser.executeCommand(kind, context, notify),
+						),
+						Effect.ignore,
+					),
+				);
 				break;
 			}
 

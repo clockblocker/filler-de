@@ -1,11 +1,12 @@
+import { wikilinkHelper } from "@textfresser/note-addressing";
 import type { VaultAction } from "@textfresser/vault-action-manager";
 import { ok, type Result } from "neverthrow";
 import { morphologyRelationHelper } from "../../../../../stateless-helpers/morphology-relation";
-import { wikilinkHelper } from "@textfresser/note-addressing";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import { canonicalizeTargetForComparison } from "../../../common/target-comparison";
 import {
 	buildPropagationActionPair,
+	type PathLookupFn,
 	resolveMorphemePath,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
@@ -212,6 +213,7 @@ function groupTargets(
 
 export function propagateMorphologyRelations(
 	ctx: GenerateSectionsResult,
+	vamLookup: PathLookupFn = () => [],
 ): Result<GenerateSectionsResult, CommandError> {
 	const targets = buildTargets(ctx);
 	if (targets.length === 0) return ok(ctx);
@@ -243,15 +245,14 @@ export function propagateMorphologyRelations(
 				? resolveMorphemePath(target.prefixItem, {
 						lookupInLibrary: ctx.textfresserState.lookupInLibrary,
 						targetLang,
-						vam: ctx.textfresserState.vam,
+						vamLookup,
 					})
 				: resolveTargetPath({
 						desiredSurfaceKind,
 						librarianLookup: ctx.textfresserState.lookupInLibrary,
 						targetLanguage: targetLang,
 						unitKind: target.targetUnit,
-						vamLookup: (word) =>
-							ctx.textfresserState.vam.findByBasename(word),
+						vamLookup,
 						word: target.targetWord,
 					});
 

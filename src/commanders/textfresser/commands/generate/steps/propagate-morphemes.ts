@@ -15,6 +15,7 @@ import { morphologyRelationHelper } from "../../../../../stateless-helpers/morph
 import type { TargetLanguage } from "../../../../../types";
 import {
 	buildPropagationActionPair,
+	type PathLookupFn,
 	resolveMorphemePath,
 } from "../../../common/target-path-resolver";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
@@ -224,6 +225,7 @@ function findNextMorphologyMarkerOffset(text: string): number {
  */
 export function propagateMorphemes(
 	ctx: GenerateSectionsResult,
+	vamLookup: PathLookupFn = () => [],
 ): Result<GenerateSectionsResult, CommandError> {
 	const { morphemes } = ctx;
 	if (morphemes.length <= 1) {
@@ -256,7 +258,7 @@ export function propagateMorphemes(
 		const resolved = resolveMorphemePath(item, {
 			lookupInLibrary: ctx.textfresserState.lookupInLibrary,
 			targetLang,
-			vam: ctx.textfresserState.vam,
+			vamLookup,
 		});
 		const targetHeader = item.lemma ?? item.surf;
 

@@ -4,6 +4,7 @@ import { logger } from "../../../../../utils/logger";
 import { resolveDesiredSurfaceKindForPropagationSection } from "../../../common/linguistic-wikilink-context";
 import {
 	buildPropagationActionPair,
+	type PathLookupFn,
 	resolveTargetPath,
 } from "../../../common/target-path-resolver";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";
@@ -65,6 +66,7 @@ function findTagsSection(entry: DictEntry): EntrySection | undefined {
  */
 export function propagateInflections(
 	ctx: GenerateSectionsResult,
+	vamLookup: PathLookupFn = () => [],
 ): Result<GenerateSectionsResult, CommandError> {
 	const { inflectionCells } = ctx;
 	if (inflectionCells.length === 0) {
@@ -108,7 +110,7 @@ export function propagateInflections(
 			librarianLookup: ctx.textfresserState.lookupInLibrary,
 			targetLanguage,
 			unitKind: lemmaResult.linguisticUnit,
-			vamLookup: (w) => ctx.textfresserState.vam.findByBasename(w),
+			vamLookup,
 			word: form,
 		});
 

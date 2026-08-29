@@ -327,13 +327,23 @@ export type LegacyVaultActionManagerFactoryResult = {
 	readonly testing: VaultActionManagerTestingAdapter;
 };
 
+/**
+ * Presents the legacy Promise/Neverthrow contract over an existing canonical
+ * manager without allocating another VAM runtime or listener graph.
+ */
+export function adaptLegacyVaultActionManager(
+	manager: EffectVaultActionManager,
+): LegacyVaultActionManager {
+	return new LegacyVaultActionManagerImpl(manager);
+}
+
 export function createLegacyVaultActionManager(
 	app: App,
 ): LegacyVaultActionManagerFactoryResult {
 	const effectFacade = createEffectVaultActionManager(app);
 	return {
 		dispose: () => Effect.runPromise(effectFacade.dispose),
-		manager: new LegacyVaultActionManagerImpl(effectFacade.manager),
+		manager: adaptLegacyVaultActionManager(effectFacade.manager),
 		testing: effectFacade.testing,
 	};
 }

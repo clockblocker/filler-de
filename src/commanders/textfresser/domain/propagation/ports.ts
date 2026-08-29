@@ -1,11 +1,11 @@
-import type { VaultAction } from "@textfresser/vault-action-manager";
-import type { ReadContentError } from "@textfresser/vault-action-manager";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
+	VaultAction,
 } from "@textfresser/vault-action-manager";
-import type { Result } from "neverthrow";
+import type { VamEffectError } from "@textfresser/vault-action-manager/facade";
+import type { Effect } from "effect";
 
 export type ReadManyMdFilesOutcome =
 	| {
@@ -20,7 +20,7 @@ export type ReadManyMdFilesOutcome =
 	| {
 			kind: "Error";
 			splitPath: SplitPathToMdFile;
-			reason: ReadContentError;
+			reason: VamEffectError;
 	  };
 
 export type FindCandidateTargetsParams = {
@@ -36,14 +36,14 @@ export type BuildTargetWriteActionsParams = {
 export interface PropagationVaultPort {
 	readNoteOrEmpty(
 		splitPath: SplitPathToMdFile,
-	): Promise<Result<string, string>>;
+	): Effect.Effect<string, string>;
 	readManyMdFiles(
 		paths: ReadonlyArray<SplitPathToMdFile>,
-	): Promise<ReadonlyArray<ReadManyMdFilesOutcome>>;
+	): Effect.Effect<ReadonlyArray<ReadManyMdFilesOutcome>>;
 	findCandidateTargets(
 		params: FindCandidateTargetsParams,
-	): ReadonlyArray<SplitPathToMdFile>;
-	exists(path: AnySplitPath): boolean;
+	): Effect.Effect<ReadonlyArray<SplitPathToMdFile>, VamEffectError>;
+	exists(path: AnySplitPath): Effect.Effect<boolean, VamEffectError>;
 	buildTargetWriteActions(
 		params: BuildTargetWriteActionsParams,
 	): readonly VaultAction[];

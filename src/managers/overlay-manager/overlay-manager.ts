@@ -10,15 +10,15 @@
  * See about.md for responsibility boundary documentation.
  */
 
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import type { App, Plugin } from "obsidian";
-import type { Librarian } from "../../commanders/librarian/librarian";
-import type { CommandExecutor } from "../obsidian/command-executor";
 import {
 	type ObsidianEventLayer,
 	type PayloadFor,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import type { App, Plugin } from "obsidian";
+import type { Librarian } from "../../commanders/librarian/librarian";
+import type { CommandExecutor } from "../obsidian/command-executor";
 import type {
 	Teardown,
 	WorkspaceEvent,
@@ -94,7 +94,9 @@ export class OverlayManager {
 					UserEventKind.SelectionChanged,
 					{
 						doesApply: () => true,
-						handle: async (payload: PayloadFor<"SelectionChanged">) => {
+						handle: async (
+							payload: PayloadFor<"SelectionChanged">,
+						) => {
 							const result = handleSelectionChanged(payload, {
 								activeLeafId: this.activeLeafId,
 								app: this.app,
@@ -111,13 +113,14 @@ export class OverlayManager {
 				this.userEventInterceptor.setHandler(
 					UserEventKind.ActionElementClicked,
 					{
-						doesApply: (payload: PayloadFor<"ActionElementClicked">) =>
-							KNOWN_ACTION_IDS.has(payload.actionId),
-						handle: async (payload: PayloadFor<"ActionElementClicked">) => {
+						doesApply: (
+							payload: PayloadFor<"ActionElementClicked">,
+						) => KNOWN_ACTION_IDS.has(payload.actionId),
+						handle: async (
+							payload: PayloadFor<"ActionElementClicked">,
+						) => {
 							await dispatchActionClick(payload.actionId, {
-								app: this.app,
 								commandExecutor: this.commandExecutor,
-								vam: this.vam,
 							});
 							return { outcome: "handled" } as const;
 						},

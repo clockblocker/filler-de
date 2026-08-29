@@ -1,10 +1,10 @@
 import type {
+	SplitPathToMdFile,
 	VaultAction,
-	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import type { ResultAsync } from "neverthrow";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import { Effect, Option, Result } from "effect";
 import {
 	splitPathsEqual,
 	stringifySplitPath,
@@ -24,21 +24,25 @@ import type {
 	PendingGenerate,
 	TextfresserState,
 } from "../../state/textfresser-state";
+import {
+	describeVamFailure,
+	vamDispatchFailureToCommandError,
+} from "../shared/vam-failure";
 
 type GenerateCommandFn = (
 	input: CommandInput,
-) => ResultAsync<VaultAction[], CommandError>;
+) => Effect.Effect<VaultAction[], CommandError>;
 
 export type BackgroundGenerateCoordinator = {
 	requestBackgroundGenerate: (notify: (message: string) => void) => void;
-	awaitGenerateAndScroll: (inFlight: InFlightGenerate) => Promise<void>;
+	awaitGenerateAndScroll: (inFlight: InFlightGenerate) => Effect.Effect<void>;
 };
 
 export function createBackgroundGenerateCoordinator(params: {
 	state: TextfresserState;
 	vam: VaultActionManager;
 	runGenerateCommand: GenerateCommandFn;
-	scrollToTargetBlock: () => void;
+	scrollToTargetBlock: () => Effect.Effect<void>;
 }): BackgroundGenerateCoordinator {
 	const { runGenerateCommand, scrollToTargetBlock, state, vam } = params;
 
@@ -78,12 +82,14 @@ export function createBackgroundGenerateCoordinator(params: {
 
 	function launchBackgroundGenerate(request: PendingGenerate): void {
 		incrementPending();
-		const promise = runBackgroundGenerate(
-			request.targetPath,
-			request.lemma,
-			request.lemmaResult,
-			request.targetOwnedByInvocation,
-			request.notify,
+		const promise = Effect.runPromise(
+			runBackgroundGenerate(
+				request.targetPath,
+				request.lemma,
+				request.lemmaResult,
+				request.targetOwnedByInvocation,
+				request.notify,
+			),
 		)
 			.catch((error) => {
 				const reason = getErrorMessage(error);
@@ -112,50 +118,70 @@ export function createBackgroundGenerateCoordinator(params: {
 		};
 	}
 
-	async function runBackgroundGenerate(
+	const runBackgroundGenerate = Effect.fn(
+		"Textfresser.runBackgroundGenerate",
+	)(function* (
 		targetPath: SplitPathToMdFile,
 		lemma: string,
 		lemmaResult: LemmaResult,
 		targetOwnedByInvocation: boolean,
 		notify: (message: string) => void,
-	): Promise<void> {
-		const targetExistedBefore = vam.exists(targetPath);
+	): Effect.fn.Return<void, Error> {
+		const targetExistedBefore = yield* vam
+			.exists(targetPath)
+			.pipe(
+				Effect.mapError(
+					(error) => new Error(describeVamFailure(error)),
+				),
+			);
 
-		async function readTargetContent() {
+		function readTargetContent() {
 			// Single retry layer lives in VaultReader/TFileHelper.
 			return vam.readContent(targetPath);
 		}
 
-		async function cleanupIfEmpty(): Promise<string> {
+		const cleanupIfEmpty = Effect.fn(
+			"Textfresser.cleanupEmptyBackgroundTarget",
+		)(function* (): Effect.fn.Return<string> {
 			const shouldCleanup =
 				targetOwnedByInvocation || !targetExistedBefore;
 			if (!shouldCleanup) return "skipped";
 
-			const currentContent = await readTargetContent();
-			if (currentContent.isErr()) return "gone";
+			const currentContent = yield* readTargetContent().pipe(
+				Effect.option,
+			);
+			if (Option.isNone(currentContent)) return "gone";
 			if (currentContent.value.trim().length > 0) return "has-content";
 
-			const rollbackResult = await vam.dispatch([
+			const rollbackActions: VaultAction[] = [
 				{
 					kind: VaultActionKind.TrashMdFile,
 					payload: { splitPath: targetPath },
 				},
-			]);
-			if (rollbackResult.isErr()) {
-				const rollbackReason = rollbackResult.error
-					.map((e) => e.error)
-					.join(", ");
+			];
+			const rollbackResult = yield* vam
+				.dispatch(rollbackActions)
+				.pipe(Effect.result);
+			if (Result.isFailure(rollbackResult)) {
+				const rollbackError = vamDispatchFailureToCommandError(
+					rollbackResult.failure,
+					rollbackActions,
+				);
 				logger.warn(
 					"[Textfresser.backgroundGenerate] Failed to rollback empty generated note",
-					{ error: rollbackResult.error, targetPath },
+					{ error: rollbackResult.failure, targetPath },
 				);
+				const rollbackReason =
+					"reason" in rollbackError
+						? rollbackError.reason
+						: `Command failed: ${rollbackError.kind}`;
 				return `failed (${rollbackReason})`;
 			}
 			return "deleted";
-		}
+		});
 
-		const contentResult = await readTargetContent();
-		const content = contentResult.isOk() ? contentResult.value : "";
+		const contentResult = yield* readTargetContent().pipe(Effect.option);
+		const content = Option.getOrElse(contentResult, () => "");
 
 		const stateSnapshot: TextfresserState = {
 			...state,
@@ -170,16 +196,20 @@ export function createBackgroundGenerateCoordinator(params: {
 			textfresserState: stateSnapshot,
 		};
 
-		const generateResult = await runGenerateCommand(input);
-		if (generateResult.isErr()) {
-			const cleanupSummary = await cleanupIfEmpty();
-			const error = generateResult.error;
+		const generateResult = yield* runGenerateCommand(input).pipe(
+			Effect.result,
+		);
+		if (Result.isFailure(generateResult)) {
+			const cleanupSummary = yield* cleanupIfEmpty();
+			const error = generateResult.failure;
 			const reason =
 				"reason" in error
 					? error.reason
 					: `Command failed: ${error.kind}`;
-			throw new Error(
-				`${reason} (cleanup=${cleanupSummary}, owned=${targetOwnedByInvocation}, existedBefore=${targetExistedBefore})`,
+			return yield* Effect.fail(
+				new Error(
+					`${reason} (cleanup=${cleanupSummary}, owned=${targetOwnedByInvocation}, existedBefore=${targetExistedBefore})`,
+				),
 			);
 		}
 
@@ -187,27 +217,42 @@ export function createBackgroundGenerateCoordinator(params: {
 			kind: VaultActionKind.UpsertMdFile,
 			payload: { splitPath: targetPath },
 		};
-		const allActions = [upsertAction, ...generateResult.value];
+		const allActions = [upsertAction, ...generateResult.success];
 
-		const dispatchResult = await vam.dispatch(allActions);
-		if (dispatchResult.isErr()) {
-			const cleanupSummary = await cleanupIfEmpty();
-			const reason = dispatchResult.error.map((e) => e.error).join(", ");
-			throw new Error(
-				`${reason} (cleanup=${cleanupSummary}, owned=${targetOwnedByInvocation}, existedBefore=${targetExistedBefore})`,
+		const dispatchResult = yield* vam
+			.dispatch(allActions)
+			.pipe(Effect.result);
+		if (Result.isFailure(dispatchResult)) {
+			const cleanupSummary = yield* cleanupIfEmpty();
+			const dispatchError = vamDispatchFailureToCommandError(
+				dispatchResult.failure,
+				allActions,
+			);
+			const dispatchReason =
+				"reason" in dispatchError
+					? dispatchError.reason
+					: `Command failed: ${dispatchError.kind}`;
+			return yield* Effect.fail(
+				new Error(
+					`${dispatchReason} (cleanup=${cleanupSummary}, owned=${targetOwnedByInvocation}, existedBefore=${targetExistedBefore})`,
+				),
 			);
 		}
 
-		const finalContentResult = await readTargetContent();
-		if (finalContentResult.isErr()) {
-			throw new Error(
-				"Background generate finished but target note could not be read",
-			);
-		}
-		if (finalContentResult.value.trim().length === 0) {
-			const cleanupSummary = await cleanupIfEmpty();
-			throw new Error(
-				`Background generate produced empty target note: ${stringifySplitPath(targetPath)} (cleanup=${cleanupSummary}, owned=${targetOwnedByInvocation}, existedBefore=${targetExistedBefore})`,
+		const finalContentResult = yield* readTargetContent().pipe(
+			Effect.mapError(
+				() =>
+					new Error(
+						"Background generate finished but target note could not be read",
+					),
+			),
+		);
+		if (finalContentResult.trim().length === 0) {
+			const cleanupSummary = yield* cleanupIfEmpty();
+			return yield* Effect.fail(
+				new Error(
+					`Background generate produced empty target note: ${stringifySplitPath(targetPath)} (cleanup=${cleanupSummary}, owned=${targetOwnedByInvocation}, existedBefore=${targetExistedBefore})`,
+				),
 			);
 		}
 
@@ -236,29 +281,30 @@ export function createBackgroundGenerateCoordinator(params: {
 		} else {
 			notify(`✓ Entry created for ${lemma}`);
 		}
-	}
+	});
 
-	async function awaitGenerateAndScroll(
-		inFlight: InFlightGenerate,
-	): Promise<void> {
-		try {
-			await inFlight.promise;
-		} catch {
-			return;
-		}
+	const awaitGenerateAndScroll = Effect.fn(
+		"Textfresser.awaitGenerateAndScroll",
+	)(function* (inFlight: InFlightGenerate) {
+		const completed = yield* Effect.promise(() => inFlight.promise).pipe(
+			Effect.as(true),
+			Effect.catch(() => Effect.succeed(false)),
+		);
+		if (!completed) return;
 
-		await sleep(300);
+		yield* Effect.promise(() => sleep(300));
 
-		const currentFile = vam.mdPwd();
+		const currentFile = yield* vam.mdPwd().pipe(Effect.option);
 		if (
-			!currentFile ||
-			!splitPathsEqual(currentFile, inFlight.targetPath)
+			Option.isNone(currentFile) ||
+			!currentFile.value ||
+			!splitPathsEqual(currentFile.value, inFlight.targetPath)
 		) {
 			return;
 		}
 
-		scrollToTargetBlock();
-	}
+		yield* scrollToTargetBlock();
+	});
 
 	return {
 		awaitGenerateAndScroll,

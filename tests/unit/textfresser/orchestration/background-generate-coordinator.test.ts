@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
 import type {
 	SplitPathToMdFile,
 } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
-import { errAsync, ok, okAsync, ResultAsync } from "neverthrow";
+import { Effect } from "effect";
 import {
 	createBackgroundGenerateCoordinator,
 } from "../../../../src/commanders/textfresser/orchestration/background/background-generate-coordinator";
@@ -59,13 +59,12 @@ describe("background generate coordinator", () => {
 	it("queues latest pending target while one generate is in flight", async () => {
 		const dispatches: Array<readonly unknown[]> = [];
 		const vam = {
-			dispatch: async (actions: readonly unknown[]) => {
+			dispatch: (actions: readonly unknown[]) => Effect.sync(() => {
 				dispatches.push(actions);
-				return ok(undefined);
-			},
-			exists: () => false,
-			mdPwd: () => null,
-			readContent: async () => ok("ready"),
+			}),
+			exists: () => Effect.succeed(false),
+			mdPwd: () => Effect.succeed(null),
+			readContent: () => Effect.succeed("ready"),
 		} as unknown as VaultActionManager;
 
 		const state = createInitialTextfresserState({
@@ -84,17 +83,15 @@ describe("background generate coordinator", () => {
 		let callCount = 0;
 		const coordinator = createBackgroundGenerateCoordinator({
 			runGenerateCommand: (input) =>
-				new ResultAsync(
-					(async () => {
+				Effect.promise(async () => {
 						launches.push(input.commandContext.activeFile.splitPath.basename);
 						if (callCount === 0) {
 							callCount += 1;
 							await firstDone;
 						}
-						return ok([]);
-					})(),
-				),
-			scrollToTargetBlock: () => {},
+						return [];
+					}),
+			scrollToTargetBlock: () => Effect.void,
 			state,
 			vam,
 		});
@@ -126,10 +123,10 @@ describe("background generate coordinator", () => {
 
 	it("uses snapshotted lemmaResult, not live state", async () => {
 		const vam = {
-			dispatch: async () => ok(undefined),
-			exists: () => false,
-			mdPwd: () => null,
-			readContent: async () => ok("ready"),
+			dispatch: () => Effect.void,
+			exists: () => Effect.succeed(false),
+			mdPwd: () => Effect.succeed(null),
+			readContent: () => Effect.succeed("ready"),
 		} as unknown as VaultActionManager;
 
 		const state = createInitialTextfresserState({
@@ -147,16 +144,14 @@ describe("background generate coordinator", () => {
 
 		const coordinator = createBackgroundGenerateCoordinator({
 			runGenerateCommand: (input) =>
-				new ResultAsync(
-					(async () => {
+				Effect.promise(async () => {
 						receivedLemmas.push(
 							input.textfresserState.latestLemmaResult?.lemma ?? "null",
 						);
 						await generateBlocked;
-						return ok([]);
-					})(),
-				),
-			scrollToTargetBlock: () => {},
+						return [];
+					}),
+			scrollToTargetBlock: () => Effect.void,
 			state,
 			vam,
 		});
@@ -183,13 +178,12 @@ describe("background generate coordinator", () => {
 		const dispatches: Array<readonly unknown[]> = [];
 		const notifications: string[] = [];
 		const vam = {
-			dispatch: async (actions: readonly unknown[]) => {
+			dispatch: (actions: readonly unknown[]) => Effect.sync(() => {
 				dispatches.push(actions);
-				return ok(undefined);
-			},
-			exists: () => false,
-			mdPwd: () => null,
-			readContent: async () => ok(""),
+			}),
+			exists: () => Effect.succeed(false),
+			mdPwd: () => Effect.succeed(null),
+			readContent: () => Effect.succeed(""),
 		} as unknown as VaultActionManager;
 
 		const state = createInitialTextfresserState({
@@ -200,8 +194,8 @@ describe("background generate coordinator", () => {
 		});
 
 		const coordinator = createBackgroundGenerateCoordinator({
-			runGenerateCommand: () => okAsync([]),
-			scrollToTargetBlock: () => {},
+			runGenerateCommand: () => Effect.succeed([]),
+			scrollToTargetBlock: () => Effect.void,
 			state,
 			vam,
 		});
@@ -235,13 +229,12 @@ describe("background generate coordinator", () => {
 	it("rolls back empty target owned by current invocation even when it existed before", async () => {
 		const dispatches: Array<readonly unknown[]> = [];
 		const vam = {
-			dispatch: async (actions: readonly unknown[]) => {
+			dispatch: (actions: readonly unknown[]) => Effect.sync(() => {
 				dispatches.push(actions);
-				return ok(undefined);
-			},
-			exists: () => true,
-			mdPwd: () => null,
-			readContent: async () => ok(""),
+			}),
+			exists: () => Effect.succeed(true),
+			mdPwd: () => Effect.succeed(null),
+			readContent: () => Effect.succeed(""),
 		} as unknown as VaultActionManager;
 
 		const state = createInitialTextfresserState({
@@ -252,8 +245,8 @@ describe("background generate coordinator", () => {
 		});
 
 		const coordinator = createBackgroundGenerateCoordinator({
-			runGenerateCommand: () => okAsync([]),
-			scrollToTargetBlock: () => {},
+			runGenerateCommand: () => Effect.succeed([]),
+			scrollToTargetBlock: () => Effect.void,
 			state,
 			vam,
 		});
@@ -281,13 +274,12 @@ describe("background generate coordinator", () => {
 		const dispatches: Array<readonly unknown[]> = [];
 		const notifications: string[] = [];
 		const vam = {
-			dispatch: async (actions: readonly unknown[]) => {
+			dispatch: (actions: readonly unknown[]) => Effect.sync(() => {
 				dispatches.push(actions);
-				return ok(undefined);
-			},
-			exists: () => false,
-			mdPwd: () => null,
-			readContent: async () => ok(""),
+			}),
+			exists: () => Effect.succeed(false),
+			mdPwd: () => Effect.succeed(null),
+			readContent: () => Effect.succeed(""),
 		} as unknown as VaultActionManager;
 
 		const state = createInitialTextfresserState({
@@ -299,8 +291,8 @@ describe("background generate coordinator", () => {
 
 		const coordinator = createBackgroundGenerateCoordinator({
 			runGenerateCommand: () =>
-				errAsync({ kind: "ApiError", reason: "phrasem not supported" }),
-			scrollToTargetBlock: () => {},
+				Effect.fail({ kind: "ApiError", reason: "phrasem not supported" }),
+			scrollToTargetBlock: () => Effect.void,
 			state,
 			vam,
 		});
@@ -339,13 +331,12 @@ describe("background generate coordinator", () => {
 		const dispatches: Array<readonly unknown[]> = [];
 		const notifications: string[] = [];
 		const vam = {
-			dispatch: async (actions: readonly unknown[]) => {
+			dispatch: (actions: readonly unknown[]) => Effect.sync(() => {
 				dispatches.push(actions);
-				return ok(undefined);
-			},
-			exists: () => true,
-			mdPwd: () => null,
-			readContent: async () => ok("# Existing entry content\nSome data"),
+			}),
+			exists: () => Effect.succeed(true),
+			mdPwd: () => Effect.succeed(null),
+			readContent: () => Effect.succeed("# Existing entry content\nSome data"),
 		} as unknown as VaultActionManager;
 
 		const state = createInitialTextfresserState({
@@ -357,8 +348,8 @@ describe("background generate coordinator", () => {
 
 		const coordinator = createBackgroundGenerateCoordinator({
 			runGenerateCommand: () =>
-				errAsync({ kind: "ApiError", reason: "transient failure" }),
-			scrollToTargetBlock: () => {},
+				Effect.fail({ kind: "ApiError", reason: "transient failure" }),
+			scrollToTargetBlock: () => Effect.void,
 			state,
 			vam,
 		});

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
+import { Effect, Result } from "effect";
 import type {
 	GenerateSectionsResult,
 	ParsedRelation,
@@ -63,14 +64,14 @@ function makeCtx(params?: {
 				surfaceKind: "Lemma",
 			},
 			lookupInLibrary: () => [],
-			vam: { findByBasename: () => [] },
+			vam: { findByBasename: () => Effect.succeed([]) },
 		} as unknown as TextfresserState,
 	} as unknown as GenerateSectionsResult;
 }
 
 describe("propagateGeneratedSections", () => {
 	it("runs core propagation and the source-note post-step together", async () => {
-		const result = propagateGeneratedSections(
+		const result = await Effect.runPromise(propagateGeneratedSections(
 			makeCtx({
 				morphemes: [
 					{
@@ -82,11 +83,11 @@ describe("propagateGeneratedSections", () => {
 				],
 				relations: [{ kind: "Synonym", words: ["Heim"] }],
 			}),
-		);
-		expect(result.isOk()).toBe(true);
-		if (result.isErr()) return;
+		).pipe(Effect.result));
+		expect(Result.isSuccess(result)).toBe(true);
+		if (Result.isFailure(result)) return;
 
-		const actions = result.value.actions;
+		const actions = result.success.actions;
 		const upsertCount = actions.filter(
 			(action) => action.kind === VaultActionKind.UpsertMdFile,
 		).length;
@@ -107,10 +108,12 @@ describe("propagateGeneratedSections", () => {
 		expect(transformed).toBe(sample);
 	});
 
-	it("is a no-op when neither propagation nor post-step conditions apply", () => {
-		const result = propagateGeneratedSections(makeCtx());
-		expect(result.isOk()).toBe(true);
-		if (result.isErr()) return;
-		expect(result.value.actions).toHaveLength(0);
+	it("is a no-op when neither propagation nor post-step conditions apply", async () => {
+		const result = await Effect.runPromise(
+			propagateGeneratedSections(makeCtx()).pipe(Effect.result),
+		);
+		expect(Result.isSuccess(result)).toBe(true);
+		if (Result.isFailure(result)) return;
+		expect(result.success.actions).toHaveLength(0);
 	});
 });
