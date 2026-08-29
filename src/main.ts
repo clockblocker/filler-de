@@ -3,21 +3,15 @@ import {
 	type ObsidianEventLayer,
 	type UserEventKind,
 } from "@textfresser/obsidian-event-layer";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
+	createVaultActionManager,
 	makeSplitPath,
-	VaultActionKind,
-} from "@textfresser/vault-action-manager";
-import {
-	createVaultActionManager as createEffectVaultActionManager,
-	type VaultActionManager as EffectVaultActionManager,
+	type SplitPathToMdFile,
 	type VamShutdownError,
-} from "@textfresser/vault-action-manager/facade";
+	VaultActionKind,
+	type VaultActionManager,
+} from "@textfresser/vault-action-manager";
 import { logError } from "@textfresser/vault-action-manager/issue-handlers";
-import {
-	adaptLegacyVaultActionManager,
-	type LegacyVaultActionManager,
-} from "@textfresser/vault-action-manager/legacy-neverthrow-facade";
 import { Effect, Exit } from "effect";
 import { Modal, Notice, Plugin, TFile } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
@@ -64,11 +58,8 @@ import { sleep } from "./utils/sleep";
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
-	/** Compatibility view retained only for the existing E2E testing hook. */
-	legacyVamForTesting: LegacyVaultActionManager;
-	/** Canonical Effect view consumed by application features. */
-	effectVam: EffectVaultActionManager;
-	vamTesting: EffectVaultActionManager["testing"];
+	effectVam: VaultActionManager;
+	vamTesting: VaultActionManager["testing"];
 	userEventInterceptor: ObsidianEventLayer;
 	overlayManager: OverlayManager | null = null;
 	delimiterChangeService: DelimiterChangeService | null = null;
@@ -95,7 +86,7 @@ export default class TextEaterPlugin extends Plugin {
 					while (!this.initialized) {
 						await sleep(100);
 					}
-					// Tests access the real manager through getVaultActionManagerTestingApi().
+					// Initialization itself exposes the service required by the test harness.
 				},
 				id: "textfresser-testing-expose-opened-service",
 				name: "Testing: expose opened file service",
@@ -169,11 +160,8 @@ export default class TextEaterPlugin extends Plugin {
 
 		this.apiService = new ApiService(this.settings);
 
-		const vaultActions = createEffectVaultActionManager(this.app);
+		const vaultActions = createVaultActionManager(this.app);
 		this.effectVam = vaultActions.manager;
-		this.legacyVamForTesting = adaptLegacyVaultActionManager(
-			this.effectVam,
-		);
 		this.vamTesting = vaultActions.testing;
 		this.disposeVam = vaultActions.dispose;
 
@@ -472,14 +460,6 @@ export default class TextEaterPlugin extends Plugin {
 			id: "split-to-pages",
 			name: "Split file into pages",
 		});
-	}
-
-	getVaultActionManagerTestingApi() {
-		return {
-			makeSplitPath,
-			manager: this.legacyVamForTesting,
-			testing: this.vamTesting,
-		};
 	}
 
 	getLibrarianTestingApi() {

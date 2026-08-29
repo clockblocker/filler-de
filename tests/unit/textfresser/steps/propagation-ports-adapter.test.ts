@@ -3,12 +3,10 @@ import {
 	SplitPathKind,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
-	VaultActionKind,
-} from "@textfresser/vault-action-manager";
-import {
 	VamVaultIoError,
+	VaultActionKind,
 	type VaultActionManager,
-} from "@textfresser/vault-action-manager/facade";
+} from "@textfresser/vault-action-manager";
 import { Effect, Result } from "effect";
 import {
 	createPropagationPortsAdapter,

@@ -1,11 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { access, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { basename, resolve } from "node:path";
+import { resolve } from "node:path";
 import type { ArtifactSources } from "./artifacts";
 import { deployPlugins } from "./artifacts";
 import { ObsidianCli } from "./cli";
 import { HarnessError } from "./errors";
+import {
+	type ManagedVaultRegistration,
+	registerManagedVault,
+} from "./managed-vault-registry";
 import { runProcess } from "./process";
 
 export interface HostDescription {
@@ -290,10 +294,10 @@ export async function prepareManagedHost(options: {
 	const vaultPath = resolve(tmpdir(), "textfresser-obsidian-e2e-managed-vault");
 	await rm(vaultPath, { force: true, recursive: true });
 	await mkdir(vaultPath, { recursive: true });
-	const vaultName = basename(vaultPath);
 	let ownedPids: readonly number[] = [];
 	let launched = false;
-	const cli = new ObsidianCli({ cliPath: options.cliPath, vaultName });
+	let registration: ManagedVaultRegistration | undefined;
+	let cli: ObsidianCli | undefined;
 	try {
 		await restoreVaultTemplate(vaultPath);
 		await deployPlugins({
@@ -306,10 +310,15 @@ export async function prepareManagedHost(options: {
 			`${JSON.stringify([options.sources.driverId, options.sources.textfresserId], null, 2)}\n`,
 			"utf8",
 		);
+		registration = await registerManagedVault({ vaultPath });
+		cli = new ObsidianCli({
+			cliPath: options.cliPath,
+			vaultName: registration.vaultId,
+		});
 
 		const opened = await runProcess(
 			"/usr/bin/open",
-			[`obsidian://open?path=${encodeURIComponent(vaultPath)}`],
+			[registration.launchUri],
 			{ timeoutMs: 10_000 },
 		);
 		if (opened.exitCode !== 0) {
@@ -333,19 +342,27 @@ export async function prepareManagedHost(options: {
 		await waitForVault(cli, vaultPath);
 	} catch (error) {
 		if (launched) await quitOwnedObsidian(ownedPids);
+		await registration?.unregister();
 		await rm(vaultPath, { force: true, recursive: true });
 		throw error;
+	}
+	if (!cli || !registration) {
+		throw new HarnessError(
+			"SESSION_INVALID",
+			"Managed Obsidian host did not finish initialization",
+		);
 	}
 
 	return {
 		async cleanup() {
 			await quitOwnedObsidian(ownedPids);
+			await registration.unregister();
 			if (process.env.OBSIDIAN_E2E_KEEP_VAULT !== "1") {
 				await rm(vaultPath, { force: true, recursive: true });
 			}
 		},
 		cli,
-		vaultName,
+		vaultName: registration.vaultId,
 		vaultPath,
 	};
 }

@@ -1,10 +1,9 @@
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
+	VaultActionManager,
 } from "@textfresser/vault-action-manager";
-import type { Result } from "neverthrow";
-import { ok } from "neverthrow";
+import { Effect } from "effect";
 import type { NodeName } from "../../../types/schemas/node-name";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";
@@ -119,30 +118,28 @@ export function resolveNextAvailableNameInSection(
  * @param vam - Manager to list files
  * @returns The coreName to use (may have incremented duplicate number)
  */
-export async function resolveUniqueDuplicateName(
+export const resolveUniqueDuplicateName = Effect.fn(
+	"resolveUniqueDuplicateName",
+)(function* (
 	targetCoreName: NodeName,
 	folderPath: SplitPathToFolder,
 	suffixParts: NodeName[],
 	extension: string,
 	suffixDelimiter: string,
 	vam: VaultActionManager,
-): Promise<Result<NodeName, string>> {
+) {
 	// Extract duplicate marker from target coreName
 	const { cleanName, number } = extractDuplicateMarker(targetCoreName);
 
 	// If no duplicate marker, just return as-is
 	if (number === null) {
-		return ok(targetCoreName);
+		return targetCoreName;
 	}
 
 	// List files in the folder
-	const filesResult = vam.list(folderPath);
-	if (filesResult.isErr()) {
-		// If we can't list, just use the target name
-		return ok(targetCoreName);
-	}
-
-	const existingFiles = filesResult.value;
+	const existingFiles = yield* vam
+		.list(folderPath)
+		.pipe(Effect.catch(() => Effect.succeed([])));
 
 	// Find existing duplicate numbers by matching basename pattern
 	const existingNumbers = new Set<number>();
@@ -178,8 +175,8 @@ export async function resolveUniqueDuplicateName(
 		nextNumber,
 	) as NodeName;
 
-	return ok(finalCoreName);
-}
+	return finalCoreName;
+});
 
 function escapeRegex(str: string): string {
 	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

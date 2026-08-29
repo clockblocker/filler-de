@@ -1,9 +1,8 @@
 import { describe, expect, it } from "bun:test";
 import { LexicalGenerationFailureKind } from "@textfresser/lexical-generation";
 import { UserEventKind } from "@textfresser/obsidian-event-layer";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import type { SplitPathToMdFile, VaultActionManager } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
 import { Effect, Result } from "effect";
 import { okAsync } from "neverthrow";
 import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";

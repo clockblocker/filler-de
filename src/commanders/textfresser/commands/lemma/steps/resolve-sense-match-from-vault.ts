@@ -2,8 +2,10 @@ import type {
 	ResolvedSelection,
 	SenseDisambiguator,
 } from "@textfresser/lexical-generation";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import type {
+	SplitPathToMdFile,
+	VaultActionManager,
+} from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import { logger } from "../../../../../utils/logger";
 import { getSpelledLemma } from "../../../domain/native-selection";

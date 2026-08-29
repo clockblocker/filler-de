@@ -19,12 +19,12 @@ import type {
 	SplitPathWithTRef,
 } from "../types/split-path";
 
-export type EffectSplitPathToMdFileWithReader = SplitPathToMdFile & {
+export type VaultReaderReadableMdPath = SplitPathToMdFile & {
 	read: () => ReturnType<MarkdownFileAccess["readContent"]>;
 };
 
-export type EffectSplitPathWithReader =
-	| EffectSplitPathToMdFileWithReader
+export type VaultReaderReadablePath =
+	| VaultReaderReadableMdPath
 	| SplitPathToFile;
 
 function readerFailure(
@@ -215,7 +215,7 @@ export class VaultReader {
 
 	listAllFilesWithMdReaders(folder: SplitPathToFolder) {
 		return Effect.gen({ self: this }, function* () {
-			const all: EffectSplitPathWithReader[] = [];
+			const all: VaultReaderReadablePath[] = [];
 			const stack: SplitPathToFolder[] = [folder];
 
 			while (stack.length > 0) {

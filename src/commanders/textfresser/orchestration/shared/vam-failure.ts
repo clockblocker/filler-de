@@ -2,7 +2,7 @@ import type { VaultAction } from "@textfresser/vault-action-manager";
 import {
 	VamDispatchError,
 	type VamEffectError,
-} from "@textfresser/vault-action-manager/facade";
+} from "@textfresser/vault-action-manager";
 import { getErrorMessage } from "../../../../utils/get-error-message";
 import type { CommandError } from "../../commands/types";
 import { CommandErrorKind } from "../../errors";

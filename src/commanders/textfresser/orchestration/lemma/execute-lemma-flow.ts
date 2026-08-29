@@ -1,4 +1,4 @@
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { Clock, Effect } from "effect";
 import type { CommandContext } from "../../../../managers/obsidian/command-executor";
 import { logger } from "../../../../utils/logger";

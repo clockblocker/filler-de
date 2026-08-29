@@ -1,14 +1,11 @@
 {
 	"dependencies": {
 		"effect": "4.0.0-rc.112",
-		"neverthrow": "^8.2.0",
 		"zod": "4.3.6"
 	},
 	"exports": {
 		".": "./src/index.ts",
-		"./facade": "./src/facade.ts",
-		"./issue-handlers": "./src/helpers/issue-handlers.ts",
-		"./legacy-neverthrow-facade": "./src/legacy-neverthrow-facade.ts"
+		"./issue-handlers": "./src/helpers/issue-handlers.ts"
 	},
 	"name": "@textfresser/vault-action-manager",
 	"peerDependencies": {

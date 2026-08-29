@@ -1,5 +1,7 @@
-import type { VaultAction } from "@textfresser/vault-action-manager";
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import type {
+	VaultAction,
+	VaultActionManager,
+} from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import type { CommandError } from "../../commands/types";
 import { vamDispatchFailureToCommandError } from "./vam-failure";

@@ -2,9 +2,9 @@ import type {
 	AnySplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
+	VamEffectError,
 	VaultAction,
 } from "@textfresser/vault-action-manager";
-import type { VamEffectError } from "@textfresser/vault-action-manager/facade";
 import type { Effect } from "effect";
 
 export type ReadManyMdFilesOutcome =

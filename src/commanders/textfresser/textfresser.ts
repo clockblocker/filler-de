@@ -7,7 +7,7 @@ import type {
 	UserEventHandler,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { Effect, Option } from "effect";
 import type { CommandContext } from "../../managers/obsidian/command-executor";
 import type { ApiService } from "../../stateless-helpers/api-service";

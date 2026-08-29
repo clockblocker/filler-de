@@ -11,9 +11,11 @@ import {
 	TreeNodeStatus,
 	tryCanonicalizeSplitPathToDestination,
 } from "@textfresser/library-core";
-import type { MD } from "@textfresser/vault-action-manager";
+import type {
+	MD,
+	VaultActionManagerReadablePath,
+} from "@textfresser/vault-action-manager";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
-import type { VaultActionManagerReadablePath } from "@textfresser/vault-action-manager/facade";
 import { Effect, Option } from "effect";
 import { z } from "zod";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";

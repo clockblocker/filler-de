@@ -33,17 +33,15 @@ import type { PayloadFor } from "@textfresser/obsidian-event-layer";
 import type {
 	BulkVaultEvent,
 	VaultAction,
+	VaultActionManager,
+	VaultActionManagerReadableMdPath,
+	VaultActionManagerSubscription,
 } from "@textfresser/vault-action-manager";
 import {
 	MD,
 	SplitPathKind,
 	type SplitPathToMdFile,
 } from "@textfresser/vault-action-manager";
-import type {
-	VaultActionManager,
-	VaultActionManagerReadableMdPath,
-	VaultActionManagerSubscription,
-} from "@textfresser/vault-action-manager/facade";
 import { Effect, Result } from "effect";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {

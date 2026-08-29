@@ -3,7 +3,7 @@
  */
 
 import { makeCodecRulesFromSettings } from "@textfresser/library-core";
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { Effect, Exit } from "effect";
 import type { App, Menu, Plugin } from "obsidian";
 import { z } from "zod";

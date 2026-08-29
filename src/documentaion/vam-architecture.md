@@ -26,9 +26,8 @@ VaultActionManager is a **dependency-aware file system coordination boundary** o
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────┐
-│  Public Facades                                                           │
-│    facade.ts → composable Effect operations                              │
-│    legacy-neverthrow-facade.ts → Promise / neverthrow compatibility      │
+│  Public API                                                               │
+│    package root → composable Effect operations                           │
 │    dispatch() · subscribeToBulk() · reads · selection · navigation       │
 ├───────────────────────────────────────────────────────────────────────────┤
 │  One VAM ManagedRuntime + VamLive layer                                   │
@@ -63,7 +62,7 @@ VaultActionManager is a **dependency-aware file system coordination boundary** o
 
 ### 2.1 Runtime and ports
 
-Either public factory creates exactly one `ManagedRuntime`. Its `VamLive` layer
+The public factory creates exactly one `ManagedRuntime`. Its `VamLive` layer
 supplies two deliberately small Obsidian ports:
 
 - `VaultIo` owns vault, file-manager, and metadata-cache calls.
@@ -71,36 +70,26 @@ supplies two deliberately small Obsidian ports:
 
 The same layer installs a VAM logger backed by the repository logging sink and
 owns runtime lifecycle finalizers. Internal Effect modules return programs;
-they do not create runtimes or call `Effect.runPromise`. `facade.ts` supplies
+they do not create runtimes or call `Effect.runPromise`. The facade supplies
 the memoized runtime context to each operation and returns an environment-free
 Effect, so consumers can compose VAM programs before choosing where to run
-them. `legacy-neverthrow-facade.ts` is the only Promise/Neverthrow execution
-boundary. The synchronous Obsidian event callback bridge runs a captured
-runtime context because callbacks must return immediately.
+them. The synchronous Obsidian event callback bridge runs a captured runtime
+context because callbacks must return immediately.
 
-### 2.2 Public facade migration
+### 2.2 Public API
 
-The package exposes two explicit subpaths with the same primary symbol names:
+The package root is the single supported VAM interface:
 
 ```typescript
-// Existing contract
 import {
   createVaultActionManager,
   type VaultActionManager,
-} from "@textfresser/vault-action-manager/legacy-neverthrow-facade"
-
-// Effect contract
-import {
-  createVaultActionManager,
-  type VaultActionManager,
-} from "@textfresser/vault-action-manager/facade"
+} from "@textfresser/vault-action-manager"
 ```
 
-The package root remains mapped to the legacy symbols during the migration
-window. It also exports `createEffectVaultActionManager` and
-`EffectVaultActionManager` as discoverable aliases. New code should use the
-`/facade` subpath. A consumer migrates on its own schedule by changing the
-import and replacing Promise/Neverthrow handling with Effect composition.
+Every manager operation returns an environment-free `Effect`. The former
+Promise/Neverthrow facade and the transitional `/facade` subpath were removed
+after all application consumers migrated to this root API.
 
 ### 2.3 Error boundary
 
@@ -109,8 +98,8 @@ Setup, vault I/O, planning, dispatch, subscription, and shutdown failures are
 where relevant, `path` or `action`. The canonical facade preserves these values
 in the Effect error channel. Its returned Effects require no external VAM
 environment because the facade supplies its memoized live context. The legacy
-facade maps the same failures back to the existing Promise and `neverthrow`
-contracts.
+facade no longer exists, so failures are never flattened into strings or
+sentinel values at the VAM boundary.
 
 ### 2.4 Shutdown order
 
@@ -118,8 +107,7 @@ Disposal is idempotent. It closes public subscriptions, closes the observation
 scope and listeners, shuts down dispatch, and finally disposes the managed
 runtime. The active Dispatch Batch is allowed to finish; every queued caller is
 completed with a typed shutdown failure. Submitting work after disposal also
-returns a typed shutdown failure from `facade.ts` and the legacy mapped error
-from `legacy-neverthrow-facade.ts`.
+returns a typed shutdown failure.
 
 ---
 
@@ -250,7 +238,7 @@ DispatchBatchCoordinator
     ├─ 5. selfEventTracker.register()    [mark paths before execution]
     └─ 6. sequential execution           [Executor → Obsidian API]
          ↓
-    caller-owned DispatchResult (ok | err with DispatchError[])
+    caller-owned Effect<void, typed failure>
 ```
 
 ### 6.1 Dispatch Batch Coordination
@@ -258,14 +246,10 @@ DispatchBatchCoordinator
 **Source**: `impl/actions-processing/dispatch-batch.ts`
 
 `DispatchBatchCoordinator` is the deep module for outbound Vault Actions. The
-two facades present the same native program at different migration stages:
+public manager exposes its native program directly:
 
 ```typescript
-// facade.ts
 dispatch(actions: readonly VaultAction[]): Effect<void, VamRuntimeFailure<DispatchEffectFailure>>
-
-// legacy-neverthrow-facade.ts
-dispatch(actions: readonly VaultAction[]): Promise<DispatchResult>
 ```
 
 Planning helpers and the executor are internal seams. Callers do not coordinate queue state, requirement expansion, collapse, dependency ordering, Self Event registration, or partial-failure accounting.
@@ -275,7 +259,7 @@ Planning helpers and the executor are internal seams. Callers do not coordinate 
 - **Effect-owned coordination**: each submission is a `Queue` message carrying a caller-owned `Deferred`; one scoped worker is the only consumer.
 - **Caller-owned results**: an error is returned to the caller whose submitted batch produced it. A later failure cannot turn an earlier result into an error, and queued callers never receive unconditional success.
 - **Serial execution**: submitted batches drain FIFO to avoid interleaving Vault mutations.
-- **Overflow accounting**: every dropped submitted batch receives its own `DispatchError`; no waiter is left unresolved.
+- **Overflow accounting**: every dropped submitted batch receives its own typed `VamDispatchError`; no waiter is left unresolved.
 - **Observable idleness**: an Effect-native idle `Deferred` resolves only after the queue and active worker are empty; the testing adapter observes it without exposing queue state publicly.
 - **Tracing**: planning and each action execution have named Effect spans with action kind/path attributes.
 
@@ -420,7 +404,10 @@ For each action in sorted order, calls the appropriate Obsidian API:
 
 **Active file routing**: For `UpsertMdFile` and `ProcessMdFile`, executor asks `MarkdownFileAccess` to perform the operation. `MarkdownFileAccess` chooses the active-editor or background-vault adapter and owns selection preservation around renames.
 
-**Error handling**: Errors are **accumulated**, not thrown. The submitted batch returns `err(DispatchError[])` if any action fails, but all planned actions in that batch are attempted. Planning exceptions are also converted into an attributed `DispatchError`, so caller promises never hang.
+**Error handling**: Action failures are **accumulated** in a readonly array of
+typed `VamDispatchError` values, but all planned actions in that batch are
+attempted. Planning exceptions fail the Effect with an attributed
+`VamPlanningError`, so caller fibers never hang.
 
 ---
 
@@ -751,14 +738,12 @@ Trash actions are terminal. If a path is being trashed, no other action for that
 
 The executor and reader do not independently choose between editor and Vault operations. `MarkdownFileAccess` owns that policy and its two adapters, preventing route drift and keeping editor state, inline-title selection, and navigation knowledge behind one internal interface.
 
-### One Runtime, Two Migration Edges
+### One Runtime, One Public Edge
 
 VAM implementation modules expose Effect programs and rely on the shared live
-ports. `facade.ts` provides that runtime context and exposes the native Effect
-contract. `legacy-neverthrow-facade.ts` delegates to the Effect facade and maps
-only at its outer edge. `neverthrow` remains only in that compatibility module
-and structural legacy types. Both facades therefore share one implementation,
-one queue, one observation graph, and one lifecycle.
+ports. The public facade provides that runtime context and exposes the native
+Effect contract from the package root. There is one implementation, one queue,
+one observation graph, and one lifecycle.
 
 ---
 
@@ -767,9 +752,8 @@ one queue, one observation graph, and one lifecycle.
 | File | Purpose |
 |------|---------|
 | **Entry Points** | |
-| `index.ts` | Common exports, backward-compatible root, and named Effect aliases |
-| `facade.ts` | Canonical Effect-returning facade over one production manager graph |
-| `legacy-neverthrow-facade.ts` | Promise/Neverthrow adapter delegating to `facade.ts` |
+| `index.ts` | Public domain exports and the canonical Effect facade |
+| `facade.ts` | Effect-returning manager implementation over one production graph |
 | `testing-adapter.ts` | Running-Obsidian readiness over the real graph |
 | **Effect Runtime** | |
 | `effect/errors.ts` | Tagged setup, I/O, planning, dispatch, subscription, and shutdown errors |
@@ -854,7 +838,7 @@ The historical `bulk-event-emmiter/` directory name remains around the accumulat
 The overflow path now:
 1. Logs a warning with submitted-batch and action counts.
 2. Drops all batches beyond the configured drain-cycle limit.
-3. Resolves every dropped submission with its own `err(DispatchError[])`.
+3. Fails every dropped submission with its own typed `VamDispatchError`.
 4. Leaves no shared drain waiter that can report unconditional success.
 
 The `maxBatches` limit (default 10) is configurable via `DispatchBatchOptions` for testing.

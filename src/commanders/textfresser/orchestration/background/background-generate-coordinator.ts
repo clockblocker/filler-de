@@ -1,9 +1,9 @@
 import type {
 	SplitPathToMdFile,
 	VaultAction,
+	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
 import { Effect, Option, Result } from "effect";
 import {
 	splitPathsEqual,

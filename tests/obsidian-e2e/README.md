@@ -37,8 +37,11 @@ bun run test:obsidian-e2e:managed
 
 Managed mode requires macOS and refuses to run while any Obsidian process is
 already open. It creates a temporary vault, installs both plugins before app
-startup, owns the resulting process, and removes the vault afterward. Set
-`OBSIDIAN_E2E_KEEP_VAULT=1` to retain a failed vault, or
+startup, temporarily registers that folder with Obsidian, opens it by vault ID,
+owns the resulting process, and removes both the registration and vault
+afterward. This is necessary because an `obsidian://open?path=...` URI can find
+content only inside an already registered vault; it cannot register a new
+folder. Set `OBSIDIAN_E2E_KEEP_VAULT=1` to retain a failed vault, or
 `OBSIDIAN_E2E_VAULT_TEMPLATE=/absolute/path` to start from a template.
 
 Run the driver and transport tests without opening Obsidian:

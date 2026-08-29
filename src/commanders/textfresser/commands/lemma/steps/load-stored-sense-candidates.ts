@@ -1,6 +1,8 @@
 import type { LexicalMeta } from "@textfresser/lexical-generation";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import type {
+	SplitPathToMdFile,
+	VaultActionManager,
+} from "@textfresser/vault-action-manager";
 import { Effect, Option } from "effect";
 import { logger } from "../../../../../utils/logger";
 import { dictEntryIdHelper } from "../../../domain/dict-entry-id";

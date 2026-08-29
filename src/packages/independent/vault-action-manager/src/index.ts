@@ -1,3 +1,19 @@
+export {
+	createVaultActionManager,
+	type EffectBulkVaultEventHandler,
+	VamDispatchError,
+	type VamEffectError,
+	VamPlanningError,
+	VamSetupError,
+	VamShutdownError,
+	VamSubscriptionError,
+	VamVaultIoError,
+	type VaultActionManager,
+	type VaultActionManagerFactoryResult,
+	type VaultActionManagerReadableMdPath,
+	type VaultActionManagerReadablePath,
+	type VaultActionManagerSubscription,
+} from "./facade";
 export type { SelectionInfo } from "./file-services/active-view/selection-service";
 export * from "./helpers/pathfinder";
 export {
@@ -6,12 +22,6 @@ export {
 } from "./impl/common/split-path-and-system-path";
 export type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 export type { PossibleRootVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
-export {
-	createVaultActionManager,
-	type VaultActionManager,
-	type VaultActionManagerFactoryResult,
-} from "./legacy-neverthrow-facade";
-export type { DispatchError, DispatchResult } from "./types/dispatch";
 export * from "./types/literals";
 export {
 	classifyReadContentError,

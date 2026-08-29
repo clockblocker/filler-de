@@ -6,6 +6,10 @@ import {
 	type SectionNodeSegmentId,
 } from "@textfresser/library-core";
 import { UserEventKind } from "@textfresser/obsidian-event-layer";
+import type {
+	VaultActionManager,
+	VaultActionManagerReadablePath,
+} from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToFile,
@@ -13,10 +17,6 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import type {
-	VaultActionManager,
-	VaultActionManagerReadablePath,
-} from "@textfresser/vault-action-manager/facade";
 import { Effect } from "effect";
 import { Librarian } from "../../../src/commanders/librarian/librarian";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";

@@ -1,7 +1,9 @@
 import type { ResolvedSelection } from "@textfresser/lexical-generation";
-import type { VaultAction } from "@textfresser/vault-action-manager";
+import type {
+	VaultAction,
+	VaultActionManager,
+} from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
 import { Effect, Option, Result } from "effect";
 import { splitPathsEqual } from "../../../../stateless-helpers/split-path-comparison";
 import { logger } from "../../../../utils/logger";

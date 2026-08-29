@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { Cause, Effect, Exit, Layer, Option, Tracer } from "effect";
-import { err, ok, type Result } from "neverthrow";
 import {
 	VamDispatchError,
 	VamPlanningError,
@@ -15,7 +14,6 @@ import {
 } from "../../src/impl/actions-processing/dispatch-batch";
 import type { Executor } from "../../src/impl/actions-processing/executor";
 import type { SelfEventTracker } from "../../src/impl/event-processing/self-event-tracker";
-import type { DispatchError, DispatchResult } from "../../src/types/dispatch";
 import { MD } from "../../src/types/literals";
 import type {
 	SplitPathToFolder,
@@ -63,23 +61,24 @@ const emptyVamLayer = Layer.empty as unknown as Layer.Layer<
 >;
 
 function makeCoordinator(
-	execute: (action: VaultAction) => Promise<Result<unknown, string>>,
+	execute: (
+		action: VaultAction,
+	) => Promise<unknown> | Effect.Effect<unknown, unknown>,
 	options?: DispatchBatchOptions,
 	register: (actions: readonly VaultAction[]) => void = () => {},
 	runtime: VamRuntime = createVamRuntime(emptyVamLayer),
 ) {
 	const executor = {
 		execute: (action: VaultAction) =>
-			Effect.tryPromise({
-				catch: (cause) => cause,
-				try: () => execute(action),
-			}).pipe(
-				Effect.flatMap((result) =>
-					result.isErr()
-						? Effect.fail(result.error)
-						: Effect.succeed(result.value),
-				),
-			),
+			Effect.suspend(() => {
+				const result = execute(action);
+				return Effect.isEffect(result)
+					? result
+					: Effect.tryPromise({
+							catch: (cause) => cause,
+							try: () => result,
+						});
+			}),
 	} as unknown as Executor;
 	const selfEvents = {
 		registerEffect: (actions: readonly VaultAction[]) =>
@@ -114,87 +113,25 @@ function firstFailure(exit: Exit.Exit<unknown, unknown>): unknown {
 	return Option.getOrUndefined(Cause.findErrorOption(exit.cause));
 }
 
-function unwrapTaggedCause(cause: unknown): unknown {
-	let current = cause;
-	while (
-		current instanceof Error &&
-		current.message.length === 0 &&
-		"cause" in current &&
-		current.cause !== current
-	) {
-		current = current.cause;
-	}
-	return current;
-}
-
-function exceptionMessage(cause: unknown): string {
-	return `EXCEPTION: ${cause instanceof Error ? cause.message : String(cause)}`;
-}
-
-function compatibilityError(
-	failure: VamDispatchError,
-	fallback: VaultAction,
-): DispatchError {
-	const cause = unwrapTaggedCause(failure.cause);
-	return {
-		action: (failure.action as VaultAction | undefined) ?? fallback,
-		error:
-			failure.operation === "overflow"
-				? String(cause)
-				: cause instanceof Error
-					? exceptionMessage(cause)
-					: String(cause),
-	};
-}
-
-async function dispatchCompat(
+async function dispatch(
 	coordinator: DispatchBatchCoordinator,
 	actions: readonly VaultAction[],
-): Promise<DispatchResult> {
-	const exit = await runNative(
-		coordinator,
-		coordinator.dispatchEffect(actions),
-	);
-	if (Exit.isSuccess(exit)) return ok(undefined);
+): Promise<Exit.Exit<void, unknown>> {
+	return runNative(coordinator, coordinator.dispatchEffect(actions));
+}
 
-	const representative = actions[0] ?? ({} as VaultAction);
+function dispatchFailures(
+	exit: Exit.Exit<unknown, unknown>,
+): readonly VamDispatchError[] {
 	const failure = firstFailure(exit);
-	if (Array.isArray(failure)) {
-		return err(
-			failure.map((item) =>
-				item instanceof VamDispatchError
-					? compatibilityError(item, representative)
-					: { action: representative, error: exceptionMessage(item) },
-			),
-		);
+	expect(Array.isArray(failure)).toBe(true);
+	if (!Array.isArray(failure)) return [];
+	for (const item of failure) {
+		expect(item).toBeInstanceOf(VamDispatchError);
 	}
-	if (failure instanceof VamPlanningError) {
-		return err([
-			{
-				action:
-					(failure.action as VaultAction | undefined) ??
-					representative,
-				error: exceptionMessage(failure.cause),
-			},
-		]);
-	}
-	if (failure instanceof VamShutdownError) {
-		return err([
-			{
-				action: representative,
-				error: "Vault Action Manager has been disposed",
-			},
-		]);
-	}
-	if (failure instanceof VamDispatchError) {
-		return err([compatibilityError(failure, representative)]);
-	}
-	return err([
-		{
-			action: representative,
-			error: `EXCEPTION: ${Cause.pretty(exit.cause)}`,
-		},
-	]);
+	return failure.filter(
+		(item): item is VamDispatchError => item instanceof VamDispatchError,
+	);
 }
 
 async function whenIdle(coordinator: DispatchBatchCoordinator): Promise<void> {
@@ -220,13 +157,13 @@ describe("DispatchBatchCoordinator", () => {
 		const executed: VaultAction[] = [];
 		const coordinator = makeCoordinator(async (action) => {
 			executed.push(action);
-			return ok(undefined);
+			return;
 		});
 		const action = makeAction("note");
 
-		const result = await dispatchCompat(coordinator, [action]);
+		const result = await dispatch(coordinator, [action]);
 
-		expect(result.isOk()).toBe(true);
+		expect(Exit.isSuccess(result)).toBe(true);
 		expect(executed).toEqual([action]);
 	});
 
@@ -242,19 +179,19 @@ describe("DispatchBatchCoordinator", () => {
 				await releaseFirst.promise;
 			}
 			executed.push(`${basename}:end`);
-			return ok(undefined);
+			return;
 		});
 
-		const first = dispatchCompat(coordinator, [
+		const first = dispatch(coordinator, [
 			makeAction("first-a"),
 			makeAction("first-b"),
 		]);
 		await firstStarted.promise;
-		const second = dispatchCompat(coordinator, [
+		const second = dispatch(coordinator, [
 			makeAction("second-a"),
 			makeAction("second-b"),
 		]);
-		const third = dispatchCompat(coordinator, [makeAction("third")]);
+		const third = dispatch(coordinator, [makeAction("third")]);
 
 		expect(executed).toEqual(["first-a:start"]);
 		releaseFirst.resolve();
@@ -280,7 +217,7 @@ describe("DispatchBatchCoordinator", () => {
 		const coordinator = makeCoordinator(
 			async () => {
 				executeCount++;
-				return ok(undefined);
+				return;
 			},
 			undefined,
 			() => {
@@ -288,9 +225,9 @@ describe("DispatchBatchCoordinator", () => {
 			},
 		);
 
-		const result = await dispatchCompat(coordinator, []);
+		const result = await dispatch(coordinator, []);
 
-		expect(result.isOk()).toBe(true);
+		expect(Exit.isSuccess(result)).toBe(true);
 		expect(executeCount).toBe(0);
 		expect(registerCount).toBe(0);
 	});
@@ -309,16 +246,14 @@ describe("DispatchBatchCoordinator", () => {
 			if (actionBasename(action) === "first") {
 				markFirstStarted();
 				await firstGate;
-				return ok(undefined);
+				return;
 			}
-			return err("second batch failed");
+			throw new Error("second batch failed");
 		});
 
-		const firstResultPromise = dispatchCompat(coordinator, [
-			makeAction("first"),
-		]);
+		const firstResultPromise = dispatch(coordinator, [makeAction("first")]);
 		await firstStarted;
-		const secondResultPromise = dispatchCompat(coordinator, [
+		const secondResultPromise = dispatch(coordinator, [
 			makeAction("second"),
 		]);
 		releaseFirst();
@@ -328,31 +263,22 @@ describe("DispatchBatchCoordinator", () => {
 			secondResultPromise,
 		]);
 
-		expect(firstResult.isOk()).toBe(true);
-		expect(secondResult.isErr()).toBe(true);
-		if (secondResult.isErr()) {
-			expect(secondResult.error).toHaveLength(1);
-			expect(
-				actionBasename(
-					secondResult.error[0]?.action ?? makeAction("missing"),
-				),
-			).toBe("second");
-			expect(secondResult.error[0]?.error).toBe("second batch failed");
-		}
+		expect(Exit.isSuccess(firstResult)).toBe(true);
+		const [failure] = dispatchFailures(secondResult);
+		expect(actionBasename(failure?.action as VaultAction)).toBe("second");
+		expect(failure?.cause).toEqual(new Error("second batch failed"));
 	});
 
 	it("continues later submitted batches after an earlier failure", async () => {
-		const coordinator = makeCoordinator(async (action) =>
-			actionBasename(action) === "failed" ? err("failed") : ok(undefined),
-		);
+		const coordinator = makeCoordinator(async (action) => {
+			if (actionBasename(action) === "failed") throw new Error("failed");
+		});
 
-		const failed = dispatchCompat(coordinator, [makeAction("failed")]);
-		const succeeded = dispatchCompat(coordinator, [
-			makeAction("succeeded"),
-		]);
+		const failed = dispatch(coordinator, [makeAction("failed")]);
+		const succeeded = dispatch(coordinator, [makeAction("succeeded")]);
 
-		expect((await failed).isErr()).toBe(true);
-		expect((await succeeded).isOk()).toBe(true);
+		expect(Exit.isFailure(await failed)).toBe(true);
+		expect(Exit.isSuccess(await succeeded)).toBe(true);
 	});
 
 	it("accumulates action failures and continues later actions in the batch", async () => {
@@ -364,28 +290,26 @@ describe("DispatchBatchCoordinator", () => {
 			executed.push(action);
 			switch (actionBasename(action)) {
 				case "first-failure":
-					return err("first failed");
+					throw new Error("first failed");
 				case "second-defect":
 					throw new Error("second threw");
 				default:
-					return ok(undefined);
+					return;
 			}
 		});
 
-		const result = await dispatchCompat(coordinator, [
-			first,
-			second,
-			third,
-		]);
+		const result = await dispatch(coordinator, [first, second, third]);
 
 		expect(executed).toEqual([first, second, third]);
-		expect(result.isErr()).toBe(true);
-		if (result.isErr()) {
-			expect(result.error).toEqual([
-				{ action: first, error: "first failed" },
-				{ action: second, error: "EXCEPTION: second threw" },
-			]);
-		}
+		expect(
+			dispatchFailures(result).map((failure) => ({
+				action: failure.action,
+				cause: failure.cause,
+			})),
+		).toEqual([
+			{ action: first, cause: new Error("first failed") },
+			{ action: second, cause: new Error("second threw") },
+		]);
 	});
 
 	it("registers Self Events once in planned order immediately before execution", async () => {
@@ -403,7 +327,7 @@ describe("DispatchBatchCoordinator", () => {
 						? "execute:folder"
 						: "execute:file",
 				);
-				return ok(undefined);
+				return;
 			},
 			undefined,
 			(actions) => {
@@ -412,12 +336,9 @@ describe("DispatchBatchCoordinator", () => {
 			},
 		);
 
-		const result = await dispatchCompat(coordinator, [
-			fileAction,
-			folderAction,
-		]);
+		const result = await dispatch(coordinator, [fileAction, folderAction]);
 
-		expect(result.isOk()).toBe(true);
+		expect(Exit.isSuccess(result)).toBe(true);
 		expect(registrations).toEqual([[folderAction, fileAction]]);
 		expect(timeline).toEqual([
 			"register",
@@ -442,15 +363,15 @@ describe("DispatchBatchCoordinator", () => {
 		const runtime = createVamRuntime(tracerLayer);
 		const action = makeAction("traced");
 		const coordinator = makeCoordinator(
-			async () => ok(undefined),
+			async () => {},
 			undefined,
 			undefined,
 			runtime,
 		);
 
-		const result = await dispatchCompat(coordinator, [action]);
+		const result = await dispatch(coordinator, [action]);
 
-		expect(result.isOk()).toBe(true);
+		expect(Exit.isSuccess(result)).toBe(true);
 		const planningSpan = spans.find(
 			(span) => span.name === "vam.dispatch.plan",
 		);
@@ -477,14 +398,11 @@ describe("DispatchBatchCoordinator", () => {
 			throw new Error("boom");
 		});
 
-		const result = await dispatchCompat(coordinator, [action]);
+		const result = await dispatch(coordinator, [action]);
 
-		expect(result.isErr()).toBe(true);
-		if (result.isErr()) {
-			expect(result.error).toEqual([
-				{ action, error: "EXCEPTION: boom" },
-			]);
-		}
+		const [failure] = dispatchFailures(result);
+		expect(failure?.action).toBe(action);
+		expect(failure?.cause).toEqual(new Error("boom"));
 	});
 
 	it("retains the typed executor failure and action ownership at the Effect seam", async () => {
@@ -584,7 +502,7 @@ describe("DispatchBatchCoordinator", () => {
 		const coordinator = makeCoordinator(
 			async () => {
 				executeCount++;
-				return ok(undefined);
+				return;
 			},
 			undefined,
 			() => {
@@ -592,7 +510,7 @@ describe("DispatchBatchCoordinator", () => {
 			},
 		);
 
-		const result = await dispatchCompat(coordinator, [
+		const result = await dispatch(coordinator, [
 			action,
 			{
 				kind: VaultActionKind.ProcessMdFile,
@@ -605,11 +523,11 @@ describe("DispatchBatchCoordinator", () => {
 			},
 		]);
 
-		expect(result.isErr()).toBe(true);
-		if (result.isErr()) {
-			expect(result.error).toEqual([
-				{ action, error: "EXCEPTION: planning failed" },
-			]);
+		const failure = firstFailure(result);
+		expect(failure).toBeInstanceOf(VamPlanningError);
+		if (failure instanceof VamPlanningError) {
+			expect(failure.action).toBe(action);
+			expect(failure.cause).toEqual(new Error("planning failed"));
 		}
 		expect(executeCount).toBe(0);
 		expect(registerCount).toBe(0);
@@ -622,7 +540,7 @@ describe("DispatchBatchCoordinator", () => {
 		}
 		action.payload.content = "before";
 		const cause = new Error("typed planning failed");
-		const coordinator = makeCoordinator(async () => ok(undefined));
+		const coordinator = makeCoordinator(async () => {});
 
 		const exit = await runNative(
 			coordinator,
@@ -651,7 +569,7 @@ describe("DispatchBatchCoordinator", () => {
 	});
 
 	it("resolves whenIdle immediately when no batch is active or queued", async () => {
-		const coordinator = makeCoordinator(async () => ok(undefined));
+		const coordinator = makeCoordinator(async () => {});
 
 		await whenIdle(coordinator);
 
@@ -671,12 +589,12 @@ describe("DispatchBatchCoordinator", () => {
 				secondStarted.resolve();
 				await releaseSecond.promise;
 			}
-			return ok(undefined);
+			return;
 		});
 
-		const first = dispatchCompat(coordinator, [makeAction("first")]);
+		const first = dispatch(coordinator, [makeAction("first")]);
 		await firstStarted.promise;
-		const second = dispatchCompat(coordinator, [makeAction("second")]);
+		const second = dispatch(coordinator, [makeAction("second")]);
 		let idleResolved = false;
 		const idle = whenIdle(coordinator).then(() => {
 			idleResolved = true;
@@ -706,48 +624,40 @@ describe("DispatchBatchCoordinator", () => {
 					firstStarted.resolve();
 					await releaseFirst.promise;
 				}
-				return ok(undefined);
+				return;
 			},
 			{ maxBatches: 2 },
 		);
 
-		const first = dispatchCompat(coordinator, [makeAction("first")]);
+		const first = dispatch(coordinator, [makeAction("first")]);
 		await firstStarted.promise;
-		const second = dispatchCompat(coordinator, [makeAction("second")]);
+		const second = dispatch(coordinator, [makeAction("second")]);
 		const thirdA = makeAction("third-a");
 		const thirdB = makeAction("third-b");
 		const fourthAction = makeAction("fourth");
-		const third = dispatchCompat(coordinator, [thirdA, thirdB]);
-		const fourth = dispatchCompat(coordinator, [fourthAction]);
+		const third = dispatch(coordinator, [thirdA, thirdB]);
+		const fourth = dispatch(coordinator, [fourthAction]);
 		releaseFirst.resolve();
 
 		const [firstResult, secondResult, thirdResult, fourthResult] =
 			await Promise.all([first, second, third, fourth]);
 
-		expect(firstResult.isOk()).toBe(true);
-		expect(secondResult.isOk()).toBe(true);
-		expect(thirdResult.isErr()).toBe(true);
-		if (thirdResult.isErr()) {
-			expect(thirdResult.error).toEqual([
-				{
-					action: thirdA,
-					error: "Dispatch Batch overflow: batch limit 2 reached, 2 actions dropped",
-				},
-			]);
-		}
-		expect(fourthResult.isErr()).toBe(true);
-		if (fourthResult.isErr()) {
-			expect(fourthResult.error).toEqual([
-				{
-					action: fourthAction,
-					error: "Dispatch Batch overflow: batch limit 2 reached, 1 actions dropped",
-				},
-			]);
-		}
+		expect(Exit.isSuccess(firstResult)).toBe(true);
+		expect(Exit.isSuccess(secondResult)).toBe(true);
+		const [thirdFailure] = dispatchFailures(thirdResult);
+		expect(thirdFailure?.action).toBe(thirdA);
+		expect(thirdFailure?.cause).toBe(
+			"Dispatch Batch overflow: batch limit 2 reached, 2 actions dropped",
+		);
+		const [fourthFailure] = dispatchFailures(fourthResult);
+		expect(fourthFailure?.action).toBe(fourthAction);
+		expect(fourthFailure?.cause).toBe(
+			"Dispatch Batch overflow: batch limit 2 reached, 1 actions dropped",
+		);
 		expect(executed).toEqual(["first", "second"]);
 
-		const later = await dispatchCompat(coordinator, [makeAction("later")]);
-		expect(later.isOk()).toBe(true);
+		const later = await dispatch(coordinator, [makeAction("later")]);
+		expect(Exit.isSuccess(later)).toBe(true);
 		expect(executed).toEqual(["first", "second", "later"]);
 	});
 
@@ -764,7 +674,7 @@ describe("DispatchBatchCoordinator", () => {
 				activeStarted.resolve();
 				await releaseActive.promise;
 			}
-			return ok(undefined);
+			return;
 		});
 
 		const active = runNative(

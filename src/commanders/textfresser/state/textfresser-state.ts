@@ -7,8 +7,10 @@ import {
 	lexicalGenerationError,
 	type StructuredFetchFn,
 } from "@textfresser/lexical-generation";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import type {
+	SplitPathToMdFile,
+	VaultActionManager,
+} from "@textfresser/vault-action-manager";
 import type { ApiService } from "../../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../../types";
 import type { LemmaResult } from "../commands/lemma/types";

@@ -114,7 +114,6 @@
       "version": "0.0.0",
       "dependencies": {
         "effect": "4.0.0-rc.112",
-        "neverthrow": "^8.2.0",
         "zod": "4.3.6",
       },
       "peerDependencies": {

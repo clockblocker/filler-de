@@ -1,6 +1,8 @@
 import type {
 	SplitPathToMdFile,
+	VamEffectError,
 	VaultAction,
+	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import {
 	classifyReadContentError,
@@ -8,10 +10,6 @@ import {
 	ReadContentErrorKind,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import type {
-	VamEffectError,
-	VaultActionManager,
-} from "@textfresser/vault-action-manager/facade";
 import { Effect, Result } from "effect";
 import { getErrorMessage } from "../../../../../utils/get-error-message";
 import type { PathLookupFn } from "../../../common/target-path-resolver";

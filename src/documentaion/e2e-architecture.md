@@ -135,8 +135,10 @@ bun run test:obsidian-e2e:managed
 
 Managed mode is the reference CI topology. It refuses to run while Obsidian is
 already open, creates/restores the dedicated test vault before launch, installs
-both plugins before startup, owns the process it starts, and cleans the vault
-afterward. `OBSIDIAN_E2E_KEEP_VAULT=1` retains a failed vault;
+both plugins before startup, registers the disposable folder in Obsidian's vault
+map, opens it by vault ID, owns the process it starts, and removes the
+registration after Obsidian exits. It then cleans the vault afterward.
+`OBSIDIAN_E2E_KEEP_VAULT=1` retains a failed vault;
 `OBSIDIAN_E2E_VAULT_TEMPLATE=/absolute/path` supplies an immutable starting
 template.
 

@@ -1,8 +1,8 @@
-import type { VaultAction } from "@textfresser/vault-action-manager";
 import type {
 	VamDispatchError,
 	VamEffectError,
-} from "@textfresser/vault-action-manager/facade";
+	VaultAction,
+} from "@textfresser/vault-action-manager";
 import { getErrorMessage } from "../../../utils/get-error-message";
 import { type CommandError, CommandErrorKind } from "../errors";
 

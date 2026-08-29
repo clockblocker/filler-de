@@ -1,11 +1,11 @@
 import type { CodecRules, NodeName } from "@textfresser/library-core";
 import { serializeSeparatedSuffix } from "@textfresser/library-core";
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
 } from "@textfresser/vault-action-manager";
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
 import { Effect } from "effect";
 import { PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
 

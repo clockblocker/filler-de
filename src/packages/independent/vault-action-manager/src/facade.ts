@@ -30,10 +30,7 @@ import {
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { VaultObservation } from "./impl/event-processing/vault-observation";
-import {
-	type EffectSplitPathWithReader,
-	VaultReader,
-} from "./impl/vault-reader";
+import { VaultReader, type VaultReaderReadablePath } from "./impl/vault-reader";
 import { VaultActionManagerTestingAdapter } from "./testing-adapter";
 import type {
 	AnySplitPath,
@@ -298,7 +295,7 @@ export class VaultActionManager {
 	}
 
 	private provideReader(
-		path: EffectSplitPathWithReader,
+		path: VaultReaderReadablePath,
 	): VaultActionManagerReadablePath {
 		if (!("read" in path)) return path;
 		return {

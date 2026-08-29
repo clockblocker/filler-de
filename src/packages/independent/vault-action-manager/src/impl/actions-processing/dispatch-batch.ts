@@ -11,8 +11,6 @@ import type {
 	SplitPathToMdFile,
 } from "../../types/split-path";
 
-export type { DispatchError, DispatchResult } from "../../types/dispatch";
-
 import { type VaultAction, VaultActionKind } from "../../types/vault-action";
 import {
 	makeSplitPath,
@@ -66,7 +64,7 @@ export class DispatchBatchCoordinator {
 		);
 	}
 
-	/** Effect-native seam used by the compatibility facade. */
+	/** Effect-native dispatch seam used by the public facade. */
 	dispatchEffect(
 		actions: readonly VaultAction[],
 	): Effect.Effect<void, DispatchEffectFailure> {

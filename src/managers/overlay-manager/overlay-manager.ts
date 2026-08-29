@@ -15,7 +15,7 @@ import {
 	type PayloadFor,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { App, Plugin } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
 import type { CommandExecutor } from "../obsidian/command-executor";

@@ -1,5 +1,9 @@
 # VAM migration to Effect
 
+**Status**: Complete. The native Effect cutover promoted the Effect facade to
+the package root and removed the Promise/Neverthrow compatibility interface.
+The phased material below records the migration sequence.
+
 ## Goal
 
 Move the Vault Action Manager's I/O, failures, concurrency, timing, and
@@ -306,50 +310,31 @@ increase of 802,375 bytes (21.8%) from the 3,677,505-byte baseline.
   the official CLI, then passes the VAM/Librarian desktop scenarios without a
   manual copy or reload step.
 
-## Sealed Effect migration seam
+## Native Effect cutover
 
-The package root is the supported compatibility boundary during the migration.
-It keeps the current `VaultActionManager` and `createVaultActionManager`
-Promise/Neverthrow contract, together with the domain types and values used by
-callers. It does not export the Effect runtime, live layers, Obsidian ports, or
-Effect-specific manager aliases.
+The package root is now the only supported VAM interface. It exports
+`VaultActionManager` and `createVaultActionManager`; every operation returns an
+environment-free Effect and retains typed VAM failures in the error channel.
+The transitional `/facade` export, `legacy-neverthrow-facade.ts`, structural
+Neverthrow reader/result types, and VAM's `neverthrow` dependency are gone.
 
-The remaining subpaths have deliberately narrower roles:
-
-- `@textfresser/vault-action-manager/facade` is the unstable Effect migration
-  seam. Its operations return environment-free Effects and retain typed VAM
-  failures in the error channel. Existing migration callers remain
-  source-compatible, but new general consumers should use the package root
-  until the native Effect cutover.
-- `@textfresser/vault-action-manager/legacy-neverthrow-facade` preserves the
-  compatibility contract under an explicit subpath for staged migrations.
-
-Effect errors, Obsidian ports, runtime construction, and live layers remain
-internal package modules. The unstable `/facade` seam re-exports only the typed
-errors already required by its unchanged contract; it does not expose ports,
-runtime construction, or live layers. `VaultIo` and `ActiveEditorAccess` are
-the only `Context.Service` definitions because they are genuine production/test
-substitution seams around Obsidian. Helper classes remain ordinary objects.
+Effect errors are public because consumers need to handle them. Obsidian ports,
+runtime construction, live layers, and the testing adapter remain internal.
+`VaultIo` and `ActiveEditorAccess` remain the only `Context.Service`
+definitions because they are genuine production/test substitution seams.
+Helper classes remain ordinary objects.
 
 `createVaultActionManager()` constructs one `ManagedRuntime`. The returned
-manager owns its idempotent shutdown sequence; the factory's `dispose` handle
+manager owns its idempotent shutdown sequence; the factory's `dispose` Effect
 delegates to that same owner. Shutdown first closes subscriptions, observation,
 and dispatch coordination, then disposes the runtime exactly once.
 
-Keep the two facades only for the migration window. Delete
-`legacy-neverthrow-facade.ts`, structural Neverthrow reader/result types, and
-VAM's final `neverthrow` dependency once no consumer imports the compatibility
-contract. Promote the Effect facade only as part of the explicit native Effect
-cutover.
+## Consumer cutover
 
-## Library consumer cutover
-
-Library is the first feature boundary to consume the unstable Effect facade
-directly. `Librarian`, its commands, initial vault scan, page splitting,
-section healing, delimiter migration, and checkbox handling all compose
-environment-free Effects from
-`@textfresser/vault-action-manager/facade`. They do not adapt VAM operations
-back to Promises or `neverthrow`.
+`Librarian`, Textfresser orchestration, commands, initial vault scan, page
+splitting, section healing, delimiter migration, and checkbox handling all
+compose environment-free Effects from the package root. They do not adapt VAM
+operations back to Promises or `neverthrow`.
 
 Library-core remains synchronous TypeScript. Bulk interpretation, scoping,
 tree mutation planning, codex generation, validation, and action translation
@@ -365,6 +350,4 @@ calls no Effect runner, and defines no new `Context.Service`.
 
 The plugin remains the execution and lifecycle boundary. It runs Library
 programs for Obsidian callbacks and commands, closes the Librarian subscription
-before disposing VAM, and owns the single VAM disposal handle. The legacy
-facade remains available only at the explicit compatibility boundary; Library
-does not store or consume it.
+before disposing VAM, and owns the single VAM disposal handle.

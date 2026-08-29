@@ -1,12 +1,9 @@
 import { describe, expect, it } from "bun:test";
+import * as publicApi from "@textfresser/vault-action-manager";
 import {
 	createVaultActionManager,
 	VamShutdownError,
-} from "@textfresser/vault-action-manager/facade";
-import {
-	adaptLegacyVaultActionManager,
-	createVaultActionManager as createLegacyVaultActionManager,
-} from "@textfresser/vault-action-manager/legacy-neverthrow-facade";
+} from "@textfresser/vault-action-manager";
 import { Cause, Effect, Exit, Option } from "effect";
 import {
 	folderPath,
@@ -15,6 +12,22 @@ import {
 } from "./helpers/facade-harness";
 
 describe("VaultActionManager Effect facade", () => {
+	it("exposes the Effect facade and keeps runtime construction internal", () => {
+		expect(publicApi).toHaveProperty("createVaultActionManager");
+		expect(publicApi).toHaveProperty("VamVaultIoError");
+		expect(publicApi).not.toHaveProperty("VamRuntime");
+		expect(publicApi).not.toHaveProperty("createVamRuntime");
+		expect(publicApi).not.toHaveProperty("VaultIo");
+		expect(publicApi).not.toHaveProperty("ActiveEditorAccess");
+		expect(publicApi).not.toHaveProperty("makeVamLive");
+		expect(publicApi).not.toHaveProperty("adaptLegacyVaultActionManager");
+		expect(publicApi).not.toHaveProperty("createLegacyVaultActionManager");
+		expect(publicApi).not.toHaveProperty(
+			"VaultActionManagerTestingAdapter",
+		);
+		expect(publicApi).not.toHaveProperty("logError");
+	});
+
 	it("exposes composable Effects for the complete public workflow", async () => {
 		const harness = makeFacadeHarness();
 		const { dispose, manager } = createVaultActionManager(harness.app);
@@ -97,29 +110,5 @@ describe("VaultActionManager Effect facade", () => {
 			);
 			expect(failure).toBeInstanceOf(VamShutdownError);
 		}
-	});
-
-	it("keeps the legacy subpath source-compatible", async () => {
-		const harness = makeFacadeHarness();
-		const { dispose, manager } = createLegacyVaultActionManager(
-			harness.app,
-		);
-
-		const read = manager.readContent(mdPath);
-		expect(Effect.isEffect(read)).toBe(false);
-		expect((await read).isOk()).toBe(true);
-		await dispose();
-	});
-
-	it("adapts the canonical manager without owning a second runtime", async () => {
-		const harness = makeFacadeHarness();
-		const canonical = createVaultActionManager(harness.app);
-		const legacy = adaptLegacyVaultActionManager(canonical.manager);
-
-		expect((await legacy.readContent(mdPath)).isOk()).toBe(true);
-		await Effect.runPromise(canonical.dispose);
-
-		const readAfterCanonicalDisposal = await legacy.readContent(mdPath);
-		expect(readAfterCanonicalDisposal.isErr()).toBe(true);
 	});
 });

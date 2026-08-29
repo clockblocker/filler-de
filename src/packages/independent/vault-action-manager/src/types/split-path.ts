@@ -1,10 +1,8 @@
-import type { Result } from "neverthrow";
 import type { TFile, TFolder } from "obsidian";
 // NOTE: Must stay v4 — SplitPathSchema is consumed by z.codec() in
 // system-path-and-split-path-codec.ts which is a v4-only API.
 import { z } from "zod";
 import { FILE, FOLDER, MD_FILE, MdSchema } from "./literals";
-import type { ReadContentError } from "./read-content-error";
 
 /**
  * @example
@@ -68,16 +66,10 @@ export type SplitPathToAnyFile = SplitPathToFile | SplitPathToMdFile;
 
 export type SplitPathFromTo<T extends AnySplitPath> = { from: T; to: T };
 
-export type SplitPathToMdFileWithReader = SplitPathToMdFile & {
-	read: () => Promise<Result<string, ReadContentError>>;
-};
-
-export type SplitPathWithReader = SplitPathToMdFileWithReader | SplitPathToFile;
-
 /**
  * @internal
  * tRef types are internal to the manager - tRefs become stale and should not leave the manager.
- * Use SplitPathWithReader instead for external code.
+ * Use VaultActionManagerReadablePath from the package root for external code.
  * These are exported only for internal manager use (reader.ts, facade.ts).
  */
 export type SplitPathToFolderWithTRef = SplitPathToFolder & { tRef: TFolder };
@@ -86,7 +78,8 @@ export type SplitPathToMdFileWithTRef = SplitPathToMdFile & { tRef: TFile };
 
 /**
  * @internal
- * Internal type for manager use only. External code should use SplitPathWithReader.
+ * Internal type for manager use only. External code should use
+ * VaultActionManagerReadablePath from the package root.
  */
 export type SplitPathWithTRef =
 	| SplitPathToFolderWithTRef

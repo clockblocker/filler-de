@@ -7,8 +7,7 @@ import {
 	type SenseDisambiguator,
 	type SenseMatchResult,
 } from "@textfresser/lexical-generation";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import type { SplitPathToMdFile, VaultActionManager } from "@textfresser/vault-action-manager";
 import { Effect, Result as EffectResult } from "effect";
 import { err, type Result as NeverthrowResult, ok } from "neverthrow";
 import { resolveSenseMatchFromVault } from "../../../../src/commanders/textfresser/commands/lemma/steps/resolve-sense-match-from-vault";

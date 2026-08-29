@@ -13,11 +13,11 @@ import {
 	parseSeparatedSuffix,
 } from "@textfresser/library-core";
 import { goBackLinkHelper } from "@textfresser/note-addressing";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import type {
+	SplitPathToMdFile,
 	VamEffectError,
 	VaultActionManager,
-} from "@textfresser/vault-action-manager/facade";
+} from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import { Notice } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";

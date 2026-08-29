@@ -1,4 +1,4 @@
-import type { VaultActionManager } from "@textfresser/vault-action-manager/facade";
+import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import { Notice } from "obsidian";
 import type { LibrarianCommandKind } from "../../../commanders/librarian/commands/types";

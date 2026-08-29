@@ -10,11 +10,9 @@ import {
 import {
 	MD,
 	SplitPathKind,
-} from "@textfresser/vault-action-manager";
-import {
 	VamVaultIoError,
 	type VaultActionManagerReadableMdPath,
-} from "@textfresser/vault-action-manager/facade";
+} from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import { buildInitialCreateActions } from "../../../src/commanders/librarian/init/build-initial-actions";
 import { triggerSectionHealing } from "../../../src/commanders/librarian/runtime/section-healing";

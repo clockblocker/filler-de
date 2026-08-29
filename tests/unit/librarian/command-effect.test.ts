@@ -1,12 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import {
 	type SplitPathToMdFile,
-	VaultActionKind,
-} from "@textfresser/vault-action-manager";
-import {
 	VamPlanningError,
+	VaultActionKind,
 	type VaultActionManager,
-} from "@textfresser/vault-action-manager/facade";
+} from "@textfresser/vault-action-manager";
 import { Effect, Result } from "effect";
 import { goToNextPageCommand } from "../../../src/commanders/librarian/commands/navigate-pages";
 import { splitInBlocksCommand } from "../../../src/commanders/librarian/commands/split-in-blocks";
