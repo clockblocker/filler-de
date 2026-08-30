@@ -464,6 +464,10 @@ export default class TextEaterPlugin extends Plugin {
 
 	getLibrarianTestingApi() {
 		return {
+			getActiveSelection: () =>
+				Effect.runPromise(this.vam.getSelectionInfo()).then(
+					(selection) => selection?.text ?? null,
+				),
 			handleCodexCheckboxClick: (
 				payload: Parameters<Librarian["handleCodexCheckboxClick"]>[0],
 			) => {
@@ -473,6 +477,34 @@ export default class TextEaterPlugin extends Plugin {
 				);
 			},
 			librarian: this.librarian,
+			runPageNavigation: (direction: "next" | "prev") => {
+				const command =
+					direction === "next"
+						? CommandKind.GoToNextPage
+						: CommandKind.GoToPrevPage;
+				return this.commandExecutor?.(command) ?? Promise.resolve();
+			},
+			runSplitInBlocks: async () => {
+				if (!this.librarian) return;
+				const active = await Effect.runPromise(
+					this.vam.getActiveEditorContext(),
+				);
+				await Effect.runPromise(
+					this.librarian.executeCommand(
+						CommandKind.SplitInBlocks,
+						{
+							activeFile: active
+								? {
+										content: active.content,
+										splitPath: active.splitPath,
+									}
+								: null,
+							selection: active?.selection ?? null,
+						},
+						() => undefined,
+					),
+				);
+			},
 			splitPathCodec,
 		};
 	}

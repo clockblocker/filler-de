@@ -1,7 +1,7 @@
 "use strict";
 
 const { createHash, randomUUID } = require("node:crypto");
-const { apiVersion, Plugin, TFile, TFolder } = require("obsidian");
+const { apiVersion, MarkdownView, Plugin, TFile, TFolder } = require("obsidian");
 const {
 	PROTOCOL_VERSION,
 	ProtocolError,
@@ -313,6 +313,34 @@ async function ensureParentFolder(vault, filePath) {
 	await ensureFolder(vault, filePath.slice(0, slash));
 }
 
+async function openSourceEditor(app, file) {
+	const leaf = app.workspace.getLeaf(false);
+	await leaf.openFile(file);
+	app.workspace.setActiveLeaf(leaf, { focus: true });
+	const prior = leaf.getViewState();
+	await leaf.setViewState({
+		...prior,
+		active: true,
+		state: {
+			...prior.state,
+			file: file.path,
+			mode: "source",
+			source: false,
+		},
+		type: "markdown",
+	});
+	app.workspace.setActiveLeaf(leaf, { focus: true });
+	const view = app.workspace.getActiveViewOfType(MarkdownView);
+	if (view?.file !== file || view.getMode() !== "source") {
+		throw new DriverError(
+			"EditorUnavailable",
+			`source editor for '${file.path}' did not become active`,
+		);
+	}
+	view.editor.focus();
+	return view.editor;
+}
+
 function relativeTo(base, fullPath) {
 	if (fullPath === base) return "";
 	if (!fullPath.startsWith(`${base}/`)) {
@@ -418,7 +446,16 @@ class TextfresserE2EDriver extends Plugin {
 
 	statusValue() {
 		const lifecycle = this.observeTextfresser().status;
+		const scenario = this.activeScenario();
+		const activeFile = this.app.workspace.getActiveFile();
+		const activePath =
+			scenario &&
+			activeFile &&
+			activeFile.path.startsWith(`${scenario.libraryRoot}/`)
+				? relativeTo(scenario.libraryRoot, activeFile.path)
+				: null;
 		return {
+			activePath,
 			driver: {
 				configured: this.config !== null,
 				instanceId: this.driverInstanceId,
@@ -427,7 +464,7 @@ class TextfresserE2EDriver extends Plugin {
 				protocol: PROTOCOL_VERSION,
 				sessionId: this.config?.sessionId ?? null,
 			},
-			scenario: this.activeScenario(),
+			scenario,
 			textfresser: lifecycle,
 		};
 	}
@@ -950,7 +987,7 @@ class TextfresserE2EDriver extends Plugin {
 						`cannot split '${source.resolved}': markdown file not found`,
 					);
 				}
-				await this.app.workspace.getLeaf(false).openFile(file);
+				await openSourceEditor(this.app, file);
 				const commandId = `${TARGET_PLUGIN_ID}:split-to-pages`;
 				if (this.app.commands.executeCommandById(commandId) !== true) {
 					throw new DriverError(
@@ -960,10 +997,142 @@ class TextfresserE2EDriver extends Plugin {
 				}
 				break;
 			}
+			case "splitInBlocks": {
+				const file = this.app.vault.getAbstractFileByPath(source.resolved);
+				if (!file || !isFile(file) || file.extension?.toLowerCase() !== "md") {
+					throw new DriverError(
+						"FileNotFound",
+						`cannot split blocks in '${source.resolved}': markdown file not found`,
+					);
+				}
+				const selection = assertString(
+					operation.selection,
+					"params.operation.selection",
+				);
+				const editor = await openSourceEditor(this.app, file);
+				const content = editor.getValue();
+				const start = content.indexOf(selection);
+				if (start < 0 || content.indexOf(selection, start + 1) >= 0) {
+					throw new DriverError(
+						"SelectionUnavailable",
+						"splitInBlocks selection must occur exactly once in the active file",
+					);
+				}
+				editor.setSelection(
+					editor.offsetToPos(start),
+					editor.offsetToPos(start + selection.length),
+				);
+				if (editor.getSelection() !== selection) {
+					throw new DriverError(
+						"SelectionUnavailable",
+						"active editor did not retain the requested splitInBlocks selection",
+					);
+				}
+				const testingApi = before.plugin.getLibrarianTestingApi?.();
+				if (
+					typeof testingApi?.getActiveSelection !== "function" ||
+					typeof testingApi?.runSplitInBlocks !== "function"
+				) {
+					throw new DriverError(
+						"InteractionUnavailable",
+						"Textfresser split-in-blocks interaction is not available",
+					);
+				}
+				const activeSelection = await testingApi.getActiveSelection();
+				if (activeSelection !== selection) {
+					throw new DriverError(
+						"SelectionUnavailable",
+						"VAM did not observe the requested splitInBlocks selection",
+						{ activeSelection, editorSelection: editor.getSelection() },
+					);
+				}
+				let resolveModified;
+				const modified = new Promise((resolve) => {
+					resolveModified = resolve;
+				});
+				const modifyRef = this.app.vault.on("modify", (modifiedFile) => {
+					if (modifiedFile.path === file.path) resolveModified();
+				});
+				try {
+					await testingApi.runSplitInBlocks();
+					if (!editor.getValue().includes(`${selection} ^0`)) {
+						throw new DriverError(
+							"CommandDidNotMutateEditor",
+							"splitInBlocks completed without adding the first block marker",
+						);
+					}
+					await withTimeout(
+						modified,
+						5_000,
+						`persist editor mutation for '${file.path}'`,
+					);
+				} finally {
+					this.app.vault.offref(modifyRef);
+				}
+				break;
+			}
+			case "pageNavigation": {
+				const file = this.app.vault.getAbstractFileByPath(source.resolved);
+				if (!file || !isFile(file) || file.extension?.toLowerCase() !== "md") {
+					throw new DriverError(
+						"FileNotFound",
+						`cannot navigate from '${source.resolved}': markdown file not found`,
+					);
+				}
+				if (operation.direction !== "next" && operation.direction !== "prev") {
+					throw new DriverError(
+						"InvalidOperation",
+						"pageNavigation direction must be next or prev",
+					);
+				}
+				await openSourceEditor(this.app, file);
+				const testingApi = before.plugin.getLibrarianTestingApi?.();
+				if (typeof testingApi?.runPageNavigation !== "function") {
+					throw new DriverError(
+						"InteractionUnavailable",
+						"Textfresser page navigation is not available",
+					);
+				}
+				await testingApi.runPageNavigation(operation.direction);
+				break;
+			}
+			case "toggleCodexEntry": {
+				const file = this.app.vault.getAbstractFileByPath(source.resolved);
+				if (!file || !isFile(file) || file.extension?.toLowerCase() !== "md") {
+					throw new DriverError(
+						"FileNotFound",
+						`cannot toggle '${source.resolved}': Codex file not found`,
+					);
+				}
+				if (typeof operation.checked !== "boolean") {
+					throw new DriverError(
+						"InvalidOperation",
+						"toggleCodexEntry checked must be a boolean",
+					);
+				}
+				const lineContent = assertString(
+					operation.lineContent,
+					"params.operation.lineContent",
+				);
+				const testingApi = before.plugin.getLibrarianTestingApi?.();
+				if (typeof testingApi?.handleCodexCheckboxClick !== "function") {
+					throw new DriverError(
+						"InteractionUnavailable",
+						"Textfresser checkbox interaction is not available",
+					);
+				}
+				await testingApi.handleCodexCheckboxClick({
+					checked: operation.checked,
+					kind: "CheckboxClicked",
+					lineContent,
+					sourcePath: source.resolved,
+				});
+				break;
+			}
 			default:
 				throw new DriverError(
 					"InvalidOperation",
-					"params.operation.kind must be create, modify, rename, delete, or splitToPages",
+					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, pageNavigation, or toggleCodexEntry",
 				);
 		}
 

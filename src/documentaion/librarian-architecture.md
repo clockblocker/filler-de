@@ -75,7 +75,9 @@ The translation boundary must run before Healing. VAM remains unaware of Section
 
 Tree actions use node locators. A locator contains deterministic Segment IDs for the node and its ancestors. It does not depend on a live Obsidian object.
 
-`ObservedSplitPath` is optional evidence. A Create or Move action carries it only when Healing must compare the observed path with the canonical path.
+`ObservedSplitPath` is optional evidence. A Create, leaf Rename, or Move action
+carries it only when Healing must compare the observed post-operation path with
+the canonical path.
 
 ## Healing
 

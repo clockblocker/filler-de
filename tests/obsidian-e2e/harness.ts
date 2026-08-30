@@ -18,7 +18,23 @@ type ScenarioAction =
 	| { readonly content: string; readonly kind: "modifyFile"; readonly path: string }
 	| { readonly from: string; readonly kind: "renamePath"; readonly to: string }
 	| { readonly kind: "deletePath"; readonly path: string }
-	| { readonly kind: "runSplitToPages"; readonly path: string };
+	| { readonly kind: "runSplitToPages"; readonly path: string }
+	| {
+			readonly kind: "runSplitInBlocks";
+			readonly path: string;
+			readonly selection: string;
+	  }
+	| {
+			readonly direction: "next" | "prev";
+			readonly kind: "runPageNavigation";
+			readonly path: string;
+	  }
+	| {
+			readonly checked: boolean;
+			readonly kind: "toggleCodexEntry";
+			readonly lineContent: string;
+			readonly path: string;
+	  };
 
 interface ScenarioDefinition {
 	readonly fixture: readonly ScenarioFixture[];
@@ -27,6 +43,7 @@ interface ScenarioDefinition {
 }
 
 interface ScenarioStatus {
+	readonly activePath: string | null;
 	readonly generation: number;
 	readonly instanceId: string;
 	readonly root: string;
@@ -86,6 +103,7 @@ interface ActiveScenarioValue {
 }
 
 interface DriverStatusValue {
+	readonly activePath: string | null;
 	readonly scenario: ActiveScenarioValue | null;
 }
 
@@ -315,6 +333,25 @@ function encodeAction(action: ScenarioAction): Readonly<Record<string, unknown>>
 			return { kind: "delete", path: action.path };
 		case "runSplitToPages":
 			return { kind: "splitToPages", path: action.path };
+		case "runSplitInBlocks":
+			return {
+				kind: "splitInBlocks",
+				path: action.path,
+				selection: action.selection,
+			};
+		case "runPageNavigation":
+			return {
+				direction: action.direction,
+				kind: "pageNavigation",
+				path: action.path,
+			};
+		case "toggleCodexEntry":
+			return {
+				checked: action.checked,
+				kind: "toggleCodexEntry",
+				lineContent: action.lineContent,
+				path: action.path,
+			};
 	}
 }
 
@@ -437,6 +474,7 @@ export async function withObsidianScenario<T>(
 					definition.id,
 				);
 				return {
+					activePath: result.value.activePath,
 					generation: result.fence.generation,
 					instanceId: result.fence.instanceId,
 					root: scenario.libraryRoot,

@@ -14,6 +14,7 @@ import {
 	makeBulkInterpreter,
 	makeCodecRulesFromSettings,
 	makeCodecs,
+	makeLibraryScope,
 	type NodeName,
 	PREFIX_OF_CODEX,
 	parseCodexClickLineContent,
@@ -599,7 +600,15 @@ export class Librarian {
 	getPrevPage(currentFilePath: SplitPathToMdFile): SplitPathToMdFile | null {
 		const healer = this.getHealer();
 		if (!healer) return null;
-		return getPrevPageImpl(healer, this.codecs, currentFilePath);
+		const libraryScope = makeLibraryScope(this.codecs.rules);
+		const libraryPath = libraryScope.toLibraryPath(currentFilePath);
+		if (libraryPath.isErr()) return null;
+		const previous = getPrevPageImpl(
+			healer,
+			this.codecs,
+			libraryPath.value,
+		);
+		return previous ? libraryScope.toVaultPath(previous) : null;
 	}
 
 	/**
@@ -609,7 +618,11 @@ export class Librarian {
 	getNextPage(currentFilePath: SplitPathToMdFile): SplitPathToMdFile | null {
 		const healer = this.getHealer();
 		if (!healer) return null;
-		return getNextPageImpl(healer, this.codecs, currentFilePath);
+		const libraryScope = makeLibraryScope(this.codecs.rules);
+		const libraryPath = libraryScope.toLibraryPath(currentFilePath);
+		if (libraryPath.isErr()) return null;
+		const next = getNextPageImpl(healer, this.codecs, libraryPath.value);
+		return next ? libraryScope.toVaultPath(next) : null;
 	}
 
 	/**
@@ -617,10 +630,14 @@ export class Librarian {
 	 * Returns all possible commands for the file type; caller filters by selection state.
 	 */
 	listCommandsExecutableIn(splitPath: SplitPathToMdFile): CommandKind[] {
+		const libraryPath = makeLibraryScope(this.codecs.rules).toLibraryPath(
+			splitPath,
+		);
+		if (libraryPath.isErr()) return [];
 		return listCommandsExecutableInImpl(
 			this.codecs,
 			this.getHealer(),
-			splitPath,
+			libraryPath.value,
 		);
 	}
 

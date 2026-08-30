@@ -13,8 +13,7 @@ import { RenameIntent } from "./types";
  *     - no suffix → RENAME (folders don't have suffixe canonically)
  *     - has suffix → MOVE (folder should be moved based on suffix)
  *   - For FILES:
- *     - no suffix AND at root → RENAME
- *     - no suffix AND nested → MOVE to root (NameKing: empty suffix = root)
+ *     - no suffix → RENAME; the containing Section remains authoritative
  *     - suffix matches current path → RENAME (user just changed coreName)
  *     - suffix differs from current path → MOVE ("move-by-name")
  *
@@ -50,10 +49,9 @@ import { RenameIntent } from "./types";
  *
  * MOVE intent:
  *   Library/pie.md → Library/sweet-pie.md
- *   Library/A/B/Note-B-A.md → Library/A/B/Note.md (move to root)
  *
  *   Expected heals:
- *   - File moved based on suffix (or to root if no suffix)
+ *   - File moved based on suffix
  *
  * Note:
  * This function only infers **intent**.
@@ -92,12 +90,10 @@ export function inferRenameIntent(
 		to.pathParts,
 	);
 
-	// no suffix AND already at root → pure rename
-	// no suffix AND NOT at root → move to root (NameKing: empty suffix = root)
+	// An unsuffixed basename change is a Core Name rename. The observed folder
+	// remains authoritative and Healing restores its Library Suffix.
 	if (newSuffixParts.length === 0) {
-		return currentSuffixParts.length === 0
-			? RenameIntent.Rename
-			: RenameIntent.Move;
+		return RenameIntent.Rename;
 	}
 
 	// If suffix matches path, user just renamed the coreName — not a move

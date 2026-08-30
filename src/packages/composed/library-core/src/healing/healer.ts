@@ -357,8 +357,9 @@ export class Healer implements TreeReader {
 			);
 		}
 
-		// Leaf rename needs observed path - but rename action doesn't carry it
-		// The observed path IS the canonical path before rename (tree was in sync)
+		// Event-derived leaf renames carry the actual post-operation vault path.
+		// Internal semantic actions may omit it when the old canonical path is
+		// still the filesystem source.
 		const oldCanonicalResult = buildCanonicalLeafSplitPath(
 			targetLocator as ScrollNodeLocator | FileNodeLocator,
 			this.codecs,
@@ -370,6 +371,10 @@ export class Healer implements TreeReader {
 			);
 		}
 		const oldCanonical = oldCanonicalResult.value;
+		const observedSplitPath =
+			"observedSplitPath" in action && action.observedSplitPath
+				? action.observedSplitPath
+				: oldCanonical;
 		const newLocator = {
 			...targetLocator,
 			segmentId: newSegmentId,
@@ -377,12 +382,12 @@ export class Healer implements TreeReader {
 
 		// Narrow types based on locator kind
 		if (newLocator.targetKind === TreeNodeKind.Scroll) {
-			if (oldCanonical.kind === SplitPathKind.MdFile) {
-				return this.computeLeafHealing(newLocator, oldCanonical);
+			if (observedSplitPath.kind === SplitPathKind.MdFile) {
+				return this.computeLeafHealing(newLocator, observedSplitPath);
 			}
 		} else {
-			if (oldCanonical.kind === SplitPathKind.File) {
-				return this.computeLeafHealing(newLocator, oldCanonical);
+			if (observedSplitPath.kind === SplitPathKind.File) {
+				return this.computeLeafHealing(newLocator, observedSplitPath);
 			}
 		}
 		return [];

@@ -1,5 +1,6 @@
-import { logger } from "../../../../../../../internal/root/logger";
 import type { Codecs } from "../../../../../../../codecs";
+import { logger } from "../../../../../../../internal/root/logger";
+import { TreeNodeKind } from "../../../../../tree-node/types/atoms";
 import {
 	type MoveNodeAction,
 	type RenameNodeAction,
@@ -52,6 +53,9 @@ export function traslateRenameMaterializedEvent(
 		out.push({
 			actionType: TreeActionType.Rename,
 			newNodeName,
+			...(targetLocator.targetKind === TreeNodeKind.Section
+				? {}
+				: { observedSplitPath: ev.to }),
 			targetLocator,
 		} as RenameNodeAction);
 		return out;

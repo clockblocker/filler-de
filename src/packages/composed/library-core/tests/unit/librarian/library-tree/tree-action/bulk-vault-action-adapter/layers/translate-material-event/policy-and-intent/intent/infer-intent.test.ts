@@ -1,6 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
+import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	type CodecRules,
 	type Codecs,
@@ -127,6 +133,29 @@ describe("inferRenameIntent", () => {
 			);
 			expect(result).toBe(RenameIntent.Rename);
 		});
+
+		it("nested file keeps its containing Section", () => {
+			const result = inferRenameIntent(
+				{
+					from: {
+						basename: "Note-child-parent-Test",
+						extension: MD,
+						kind: SplitPathKind.MdFile,
+						pathParts: ["Library", "Test", "parent", "child"],
+					},
+					kind: MaterializedEventKind.Rename,
+					nodeKind: TreeNodeKind.Scroll,
+					to: {
+						basename: "NewNote",
+						extension: MD,
+						kind: SplitPathKind.MdFile,
+						pathParts: ["Library", "Test", "parent", "child"],
+					},
+				},
+				codecs,
+			);
+			expect(result).toBe(RenameIntent.Rename);
+		});
 	});
 
 	describe("basename changed, suffix differs from path => Move", () => {
@@ -200,4 +229,3 @@ describe("inferRenameIntent", () => {
 		});
 	});
 });
-

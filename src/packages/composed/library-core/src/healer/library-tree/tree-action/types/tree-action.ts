@@ -1,6 +1,5 @@
 import { CREATE, DELETE } from "@textfresser/vault-action-manager";
 import z from "zod";
-import type { Prettify } from "../../../../internal/root/type-helpers";
 import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
@@ -11,6 +10,7 @@ import type {
 	ScrollNodeLocator,
 	SectionNodeLocator,
 } from "../../../../codecs/locator/types";
+import type { Prettify } from "../../../../internal/root/type-helpers";
 import { CHANGE_STATUS, MOVE, RENAME } from "../../../../types/consts/literals";
 import type { NodeName } from "../../../../types/schemas/node-name";
 import type { TreeNodeStatus } from "../../tree-node/types/atoms";
@@ -67,7 +67,8 @@ export type DeleteNodeAction = Prettify<
  * Notes:
  * - This action represents a **pure rename** with no change in parent section.
  * - Guaranteed to be a valid NodeName → NodeName transformation.
- * - All breaking suffix-related issues are handled as MOVES or DELETES, not renames.
+ * - A leaf rename may carry its observed post-operation vault path when the
+ *   user supplied a non-canonical basename that Healing must correct.
  * - Any suffix or descendant updates required to maintain invariants
  *   are handled later during tree application / healing.
  * - If a rename implies a parent change, a `MoveNodeAction` is emitted instead.
@@ -178,6 +179,7 @@ type RenameFileNodeAction = {
 	actionType: typeof TreeActionType.Rename;
 	targetLocator: FileNodeLocator;
 	newNodeName: NodeName;
+	observedSplitPath?: SplitPathToFileInsideLibrary;
 };
 
 type RenameSectionNodeAction = {
@@ -190,6 +192,7 @@ type RenameScrollNodeAction = {
 	actionType: typeof TreeActionType.Rename;
 	targetLocator: ScrollNodeLocator;
 	newNodeName: NodeName;
+	observedSplitPath?: SplitPathToMdFileInsideLibrary;
 };
 
 // --- Move

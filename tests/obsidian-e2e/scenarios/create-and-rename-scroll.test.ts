@@ -19,7 +19,7 @@ describe("Obsidian E2E - create and rename a Scroll", () => {
 				await act({
 					from: "Recipe/Pie/Berry/MyNote-Berry-Pie-Recipe.md",
 					kind: "renamePath",
-					to: "Recipe/Pie/Berry/Renamed-Berry-Pie-Recipe.md",
+					to: "Recipe/Pie/Berry/Renamed.md",
 				});
 
 				const vault = await snapshot();

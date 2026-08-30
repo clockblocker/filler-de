@@ -9,6 +9,34 @@ file-manager callbacks, plugin lifecycle, or official CLI transport. Public
 in-process tests own deterministic Library and Textfresser composition. Live
 model quality is opt-in provider acceptance and never shares the desktop host.
 
+## Intended Librarian interaction matrix
+
+Every user-originated Tree Action has a desktop owner. `Create` is a leaf-only
+action: Sections enter the Tree when a nested Scroll or File is created.
+`ChangeStatus` applies only to Scrolls and Sections.
+
+| Interaction | Section | Scroll | File |
+| --- | --- | --- | --- |
+| Create | `create-more-files.test.ts` (implicit ancestor) | `basename-healing.test.ts`, `create-more-files.test.ts` | `create-more-files.test.ts` |
+| Delete | `delete-section.test.ts` | `delete-updates-codex.test.ts` | `delete-file.test.ts` |
+| Rename Core Name | `rename-section.test.ts` | `create-and-rename-scroll.test.ts` | `rename-file.test.ts` |
+| Move by path | `move-section-between-sections.test.ts` | `move-scroll-between-sections.test.ts` | `move-file-between-sections.test.ts` |
+| Move by name | `folder-rename-healing.test.ts` | `move-leaves-by-name.test.ts` | `move-leaves-by-name.test.ts` |
+| Change status | `change-status.test.ts` | `change-status.test.ts` | Not applicable |
+
+The Librarian's user commands also have desktop owners:
+
+| Command | Desktop owner |
+| --- | --- |
+| `SplitToPages` | `split-to-pages.test.ts` |
+| `SplitInBlocks` | `librarian-commands.test.ts` |
+| `GoToNextPage` | `librarian-commands.test.ts` |
+| `GoToPrevPage` | `librarian-commands.test.ts` |
+
+Startup lifecycle and its initial scan are covered by
+`startup-healing.test.ts`; `harness-lifecycle.test.ts` verifies that a returned
+mutation is already observable.
+
 ## Former Librarian chain
 
 | Former case | Current owner |
@@ -21,8 +49,8 @@ model quality is opt-in provider acceptance and never shares the desktop host.
 | `005-delete-folder` callback cascade | `delete-section.test.ts` |
 | `006-rename-corename` repeated Core Name changes | `core-name-renames.test.ts` plus `library-core/tests/integration/repeated-corename-rename.test.ts` |
 | `007-create-file-basename-healing` and backlink | `basename-healing.test.ts` |
-| `008-toggle-scroll-checkbox` | `tests/integration/librarian/codex-checkbox-public.test.ts` |
-| `009-toggle-section-checkbox` | `tests/integration/librarian/codex-checkbox-public.test.ts` |
+| `008-toggle-scroll-checkbox` | `change-status.test.ts` plus deterministic details in `tests/integration/librarian/codex-checkbox-public.test.ts` |
+| `009-toggle-section-checkbox` | `change-status.test.ts` plus deterministic details in `tests/integration/librarian/codex-checkbox-public.test.ts` |
 | `010-lemma-manne` source rewrite | `tests/unit/textfresser/steps/lemma-flow.test.ts` through public `Textfresser.executeCommand` |
 | `011-move-file-cli-codex` | `move-scroll-between-sections.test.ts` |
 | Scroll split command, file lifecycle, and Codex projection | `split-to-pages.test.ts` plus `tests/integration/librarian/split-to-pages-public.test.ts` for deterministic failure and queue semantics |
