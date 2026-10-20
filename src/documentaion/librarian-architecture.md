@@ -148,6 +148,12 @@ At startup, the Librarian:
 7. Dispatches one initial Healing, Codex, status, and full Scroll-backlink batch.
 
 The event subscription starts before the initial dispatch. VAM filters the resulting Self Events.
+Bulks that arrive while the initial batch runs are held and handled after it.
+They can hold events from before the scan, whose result the scan already
+holds. The Librarian replays them in order against the scanned file paths and
+drops creates of scanned paths and renames into a scanned path from an
+unscanned one, so it does not heal those files a second time. A file created
+during startup keeps all its events.
 
 Runtime Bulk observations, Codex clicks, and explicit command intentions enter
 the same serialized queue with different source discriminators. Full versus

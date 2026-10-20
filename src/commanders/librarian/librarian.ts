@@ -45,7 +45,7 @@ import type {
 	LibrarianCommandInput,
 	LibrarianCommandKind,
 } from "./commands/types";
-import { buildInitialCreateActions } from "./init";
+import { buildInitialCreateActions, dropScannedEvents } from "./init";
 import { listCommandsExecutableIn as listCommandsExecutableInImpl } from "./navigation/list-commands-executable";
 import {
 	getNextPage as getNextPageImpl,
@@ -348,7 +348,10 @@ export class Librarian {
 
 					const bufferedBulks = self.startupBulkBuffer;
 					self.startupBulkBuffer = null;
-					for (const bulk of bufferedBulks) {
+					for (const bulk of dropScannedEvents(
+						bufferedBulks,
+						scan.entries,
+					)) {
 						yield* self.handleBulkEvent(bulk);
 					}
 
