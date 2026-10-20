@@ -25,6 +25,11 @@ export type DispatchBatchOptions = {
 	 * submissions wait for space in submission order; none are dropped.
 	 */
 	readonly queueCapacity?: number;
+	/**
+	 * Test signal, called once per accepted submission after it is queued or
+	 * appended to the waiting list.
+	 */
+	readonly onSubmitted?: (placement: "queued" | "waiting") => void;
 };
 
 /**

@@ -453,11 +453,16 @@ export class TFileHelper {
 	 *
 	 * `Vault.process` callbacks must be synchronous. An asynchronous transform
 	 * is therefore started inside a first `process` call against the current
-	 * content, which is then aborted without writing. Once the transform
-	 * settles, a second `process` call writes its result only if the file still
-	 * holds the content the transform started from; otherwise it fails with a
-	 * typed `VamContentConflictError` and leaves the newer content in place.
-	 * The transform is never re-run, because it may not be idempotent.
+	 * content, which returns that content unchanged so nothing is written.
+	 * Once the transform settles, a second `process` call writes its result
+	 * only if the file still holds the content the transform started from;
+	 * otherwise it fails with a typed `VamContentConflictError` and leaves the
+	 * newer content in place. The transform is never re-run, because it may
+	 * not be idempotent.
+	 *
+	 * Every callback that must not write returns `current`: Obsidian skips the
+	 * write when the callback returns the content it was given. Only a
+	 * throwing transform aborts its `process` call with an error.
 	 */
 	private tryProcess(
 		file: TFile,
@@ -489,31 +494,25 @@ export class TFileHelper {
 					try {
 						result = transform(current);
 					} catch (cause) {
-						throw new AbortProcess("transform", cause);
+						throw new TransformThrew(cause);
 					}
-					if (typeof result !== "string") {
-						const after = Promise.resolve(result);
-						// Observed below; this only prevents an unhandled
-						// rejection while the aborted process call settles.
-						after.catch(() => {});
-						started.pending = { after, before: current };
-						throw new AbortProcess("async");
-					}
-					if (result === current) throw new AbortProcess("unchanged");
-					return result;
+					if (typeof result === "string") return result;
+					const after = Promise.resolve(result);
+					// Observed below; this only prevents an unhandled
+					// rejection while the first process call settles.
+					after.catch(() => {});
+					started.pending = { after, before: current };
+					return current;
 				}),
 			);
-			if (Result.isSuccess(first)) return file;
-
-			const aborted = abortReason(first.failure);
-			if (aborted?.reason === "unchanged") return file;
-			if (aborted?.reason === "transform") {
-				return yield* transformFailure(aborted.cause);
+			if (Result.isFailure(first)) {
+				const threw = first.failure.cause;
+				return yield* threw instanceof TransformThrew
+					? transformFailure(threw.cause)
+					: ioFailure("processFileContent", first.failure);
 			}
 			const pending = started.pending;
-			if (aborted?.reason !== "async" || !pending) {
-				return yield* ioFailure("processFileContent", first.failure);
-			}
+			if (!pending) return file;
 
 			const after = yield* Effect.tryPromise({
 				catch: transformFailure,
@@ -521,16 +520,19 @@ export class TFileHelper {
 			});
 			if (after === pending.before) return file;
 
-			const written = yield* Effect.result(
-				vault.process(file, (current) => {
-					if (current !== pending.before) {
-						throw new AbortProcess("conflict");
-					}
-					return after;
-				}),
-			);
-			if (Result.isSuccess(written)) return file;
-			if (abortReason(written.failure)?.reason === "conflict") {
+			const revalidated = { conflict: false };
+			yield* vault
+				.process(file, (current) => {
+					if (current === pending.before) return after;
+					revalidated.conflict = true;
+					return current;
+				})
+				.pipe(
+					Effect.mapError((error) =>
+						ioFailure("processFileContent.write", error),
+					),
+				);
+			if (revalidated.conflict) {
 				return yield* new VamContentConflictError({
 					cause: new Error(
 						`Content of ${path} changed while its transform was running; the transform result was not written`,
@@ -539,10 +541,7 @@ export class TFileHelper {
 					path,
 				});
 			}
-			return yield* ioFailure(
-				"processFileContent.write",
-				written.failure,
-			);
+			return file;
 		});
 	}
 }
@@ -552,14 +551,7 @@ type PendingTransform = {
 	readonly before: string;
 };
 
-/** Thrown from a `Vault.process` callback to abort it without writing. */
-class AbortProcess {
-	constructor(
-		readonly reason: "async" | "conflict" | "transform" | "unchanged",
-		readonly cause?: unknown,
-	) {}
-}
-
-function abortReason(error: VamVaultIoError): AbortProcess | null {
-	return error.cause instanceof AbortProcess ? error.cause : null;
+/** Thrown from a `Vault.process` callback when the transform itself throws. */
+class TransformThrew {
+	constructor(readonly cause: unknown) {}
 }

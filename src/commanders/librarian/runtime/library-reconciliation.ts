@@ -20,6 +20,7 @@ import {
 } from "@textfresser/library-core";
 import {
 	SplitPathKind,
+	VamDispatchStoppedError,
 	type VaultAction,
 	type VaultScanPath,
 } from "@textfresser/vault-action-manager";
@@ -58,6 +59,12 @@ export type ReconciliationRequest =
 export function classifyVamDispatchFailure(
 	failure: unknown,
 ): "FailedBeforeExecution" | "ExecutionUncertain" {
+	if (failure instanceof VamDispatchStoppedError) {
+		return failure.executed.length > 0 ||
+			failure.failure.operation === "executeAction"
+			? "ExecutionUncertain"
+			: "FailedBeforeExecution";
+	}
 	if (!Array.isArray(failure)) return "FailedBeforeExecution";
 	return failure.some(
 		(item) =>

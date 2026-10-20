@@ -182,10 +182,14 @@ function processVault(initial: string) {
 						operation: "process",
 						path: target.path,
 					}),
+				// Mirrors Obsidian's adapter: read, call `fn`, and write only
+				// when it returns something other than what was read.
 				try: () => {
 					processCalls++;
-					const next = fn(content);
-					if (next !== content) writes++;
+					const read = content;
+					const next = fn(read);
+					if (next === read) return read;
+					writes++;
 					content = next;
 					return next;
 				},

@@ -73,6 +73,11 @@ type DispatchBatchWorkerOptions = {
 	 * in submission order, until the worker frees a slot.
 	 */
 	readonly queueCapacity?: number;
+	/**
+	 * Test signal, called once per accepted submission after it is queued or
+	 * appended to the waiting list.
+	 */
+	readonly onSubmitted?: (placement: "queued" | "waiting") => void;
 };
 
 const DEFAULT_QUEUE_CAPACITY = 10;
@@ -120,6 +125,7 @@ const shutdownMessage: ShutdownMessage = { _tag: "Shutdown" };
  */
 export class DispatchBatchWorker {
 	private readonly idleSeed = Deferred.makeUnsafe<void>();
+	private readonly onSubmitted: DispatchBatchWorkerOptions["onSubmitted"];
 	private readonly queueCapacity: number;
 	private readonly queueReady =
 		Deferred.makeUnsafe<Queue.Queue<DispatchMessage>>();
@@ -188,10 +194,11 @@ export class DispatchBatchWorker {
 		private readonly selfEventTracker: SelfEventTracker,
 		options: DispatchBatchWorkerOptions = {},
 	) {
-		this.queueCapacity = Math.max(
-			1,
-			options.queueCapacity ?? DEFAULT_QUEUE_CAPACITY,
+		this.queueCapacity = Math.min(
+			MAX_PENDING_DISPATCH_BATCHES,
+			Math.max(1, options.queueCapacity ?? DEFAULT_QUEUE_CAPACITY),
 		);
+		this.onSubmitted = options.onSubmitted;
 		const scopedWorker = Effect.scoped(
 			Effect.forkScoped(this.worker(this)).pipe(
 				Effect.flatMap(Fiber.join),
@@ -231,9 +238,10 @@ export class DispatchBatchWorker {
 				stopOnFirstFailure: options.stopOnFirstFailure === true,
 			};
 
-			const queued = yield* SynchronizedRef.modifyEffect(
-				self.state,
-				(state) => {
+			// Submission is uninterruptible, so an interrupt can never land
+			// between joining the waiting list and installing the withdrawal.
+			return yield* Effect.uninterruptibleMask((restore) =>
+				SynchronizedRef.modifyEffect(self.state, (state) => {
 					if (state.lifecycle !== "running") {
 						return Effect.fail(
 							self.shutdownError("dispatch", representative),
@@ -241,13 +249,24 @@ export class DispatchBatchWorker {
 					}
 
 					return self.enqueueOrWait(queue, state, batch);
-				},
+				}).pipe(
+					Effect.tap((queued) =>
+						Effect.sync(() =>
+							self.onSubmitted?.(queued ? "queued" : "waiting"),
+						),
+					),
+					Effect.flatMap((queued) => {
+						const result = restore(Deferred.await(completion));
+						return queued
+							? result
+							: result.pipe(
+									Effect.onInterrupt(() =>
+										self.withdraw(batch),
+									),
+								);
+					}),
+				),
 			);
-
-			const result = Deferred.await(completion);
-			return yield* queued
-				? result
-				: result.pipe(Effect.onInterrupt(() => self.withdraw(batch)));
 		})(this);
 	}
 

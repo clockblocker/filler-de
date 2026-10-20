@@ -58,7 +58,8 @@ export class VaultIo extends Context.Service<
 		/**
 		 * Atomically reads, transforms, and saves a file through
 		 * `Vault.process`. `fn` runs synchronously against the current
-		 * content; throwing from it aborts without writing.
+		 * content. Returning that content unchanged writes nothing; throwing
+		 * from it aborts without writing.
 		 */
 		process(
 			file: TFile,
