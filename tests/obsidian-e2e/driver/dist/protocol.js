@@ -11,6 +11,7 @@ const REQUEST_METHODS = new Set([
 	"snapshot",
 	"modifications",
 	"diagnostics",
+	"dictionary",
 	"cleanupSession",
 ]);
 const MUTATING_METHODS = new Set([
@@ -340,6 +341,56 @@ function validateScriptedJevAnswers(value, label = "params.dumgen.jev") {
 	return answers;
 }
 
+/**
+ * A scenario's scripted Luna, by stage: rules whose `when` text must occur
+ * in the request's JSON input (any request without one) and the `output`
+ * Luna answers. The first matching rule wins; an unanswered request fails.
+ */
+function validateScriptedLunaAnswers(value, label = "params.dumgen.luna") {
+	if (value === undefined) return {};
+	const record = assertRecord(value, label);
+	const entries = Object.entries(record);
+	if (entries.length > 100) {
+		throw new ProtocolError(
+			"InvalidRequest",
+			`${label} must script at most 100 stages`,
+		);
+	}
+	const answers = {};
+	for (const [stage, rules] of entries) {
+		if (!/^[A-Za-z0-9._:-]{1,128}$/u.test(stage)) {
+			throw new ProtocolError(
+				"InvalidRequest",
+				`${label} stage '${stage}' must be a Luna stage name`,
+			);
+		}
+		if (!Array.isArray(rules) || rules.length > 200) {
+			throw new ProtocolError(
+				"InvalidRequest",
+				`${label}.${stage} must be an array of at most 200 rules`,
+			);
+		}
+		answers[stage] = rules.map((rule, index) => {
+			const checked = assertRecord(rule, `${label}.${stage}[${index}]`);
+			if (!("output" in checked)) {
+				throw new ProtocolError(
+					"InvalidRequest",
+					`${label}.${stage}[${index}] must have an output`,
+				);
+			}
+			return checked.when === undefined
+				? { output: checked.output }
+				: {
+						output: checked.output,
+						when: assertString(checked.when, `${label}.${stage}[${index}].when`, {
+							maxLength: 4_096,
+						}),
+					};
+		});
+	}
+	return answers;
+}
+
 function canonicalize(value) {
 	if (Array.isArray(value)) return value.map(canonicalize);
 	if (isRecord(value)) {
@@ -376,4 +427,5 @@ module.exports = {
 	validateScenarioId,
 	validateScope,
 	validateScriptedJevAnswers,
+	validateScriptedLunaAnswers,
 };

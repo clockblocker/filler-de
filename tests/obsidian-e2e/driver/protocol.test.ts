@@ -10,6 +10,7 @@ const {
 	validateDriverConfig,
 	validateRelativePath,
 	validateScriptedJevAnswers,
+	validateScriptedLunaAnswers,
 } = require("./dist/protocol.js") as typeof import("./dist/protocol.js");
 
 function encode(value: unknown): string {
@@ -184,6 +185,37 @@ describe("scripted jev answers", () => {
 			{ "../x": "a" },
 		]) {
 			expect(() => validateScriptedJevAnswers(bad)).toThrow(ProtocolError);
+		}
+	});
+});
+
+describe("scripted Luna answers", () => {
+	it("keeps each stage's rules with their outputs", () => {
+		expect(validateScriptedLunaAnswers(undefined)).toEqual({});
+		expect(
+			validateScriptedLunaAnswers({
+				canonical: [
+					{ output: { canonicalForm: "See" }, when: '"See"' },
+					{ output: { canonicalForm: "x" } },
+				],
+			}),
+		).toEqual({
+			canonical: [
+				{ output: { canonicalForm: "See" }, when: '"See"' },
+				{ output: { canonicalForm: "x" } },
+			],
+		});
+	});
+
+	it("rejects stages that are no names and rules without an output", () => {
+		for (const bad of [
+			[],
+			{ canonical: {} },
+			{ canonical: [{ when: "x" }] },
+			{ "../x": [{ output: 1 }] },
+			{ canonical: [{ output: 1, when: 3 }] },
+		]) {
+			expect(() => validateScriptedLunaAnswers(bad)).toThrow(ProtocolError);
 		}
 	});
 });

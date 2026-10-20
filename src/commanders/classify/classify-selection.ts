@@ -301,6 +301,7 @@ export const classifySelection = Effect.fn("classifySelection")(function* (
 	}
 
 	const plan: ClassifyPlan = {
+		content: input.content,
 		scrollPath: input.scrollPath,
 		sentences,
 		units: [...byRef.values()],

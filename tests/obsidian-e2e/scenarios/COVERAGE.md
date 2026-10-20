@@ -39,6 +39,15 @@ Segmentation Cache hit, and an edit invalidating only its own Sentence. Its
 dumgen answers from a scripted jev, so no provider is reached; the same
 story runs in process in `tests/unit/classify/classify-commander.test.ts`.
 
+Resolution (#64) is owned by `classify-resolution.test.ts`: a noun, a
+separable verb and a Locution each linked to its Reading block in the Lemma
+note at its identity path, and a re-encounter that appends an Attestation
+with no Knowledge call. Its scripted jev and Luna live in
+`classify-resolution-script.ts`, and
+`tests/integration/classify/classify-resolution.test.ts` runs the same story
+in process; the resolver's other cases are unit tests under
+`tests/unit/classify/resolution/`.
+
 Startup lifecycle and its initial scan are covered by
 `startup-healing.test.ts`; `harness-lifecycle.test.ts` verifies that a returned
 mutation is already observable. VAM's Markdown modify subscription, including

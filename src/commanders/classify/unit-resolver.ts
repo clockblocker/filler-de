@@ -1,8 +1,9 @@
 /**
  * Classify's second stage behind a port (#74): resolution takes the
  * `ClassifyPlan` segmentation built and resolves each `UnitRef` to its
- * Reading, then writes each occurrence's link. Resolving and writing
- * belong to #64; until then the stub resolves nothing and writes nothing.
+ * Reading, then writes each occurrence's link. `dumgenUnitResolver`
+ * (`resolution/`) is the plugin's; `pendingUnitResolver` resolves nothing
+ * and writes nothing.
  *
  * Keeping the hand-off a typed plan lets lazy click-time resolution become
  * one policy value later, rehydrating a `UnitRef` from the cache instead of
@@ -20,6 +21,8 @@ export type UnitResolution =
 			readonly lemmaPath: string;
 			/** The Reading's block ID in that note, without `^`. */
 			readonly readingBlockId: string;
+			/** How many of the unit's occurrences now link to the Reading. */
+			readonly linked: number;
 	  }
 	| {
 			readonly _tag: "Pending";
@@ -48,10 +51,9 @@ export class UnitResolver extends Context.Service<
 	}
 >()("textfresser/classify/UnitResolver") {}
 
-export const PENDING_RESOLUTION_REASON =
-	"Resolution through dumgen is not wired yet (#64)";
+export const PENDING_RESOLUTION_REASON = "Resolution is switched off";
 
-/** The stand-in until #64: every unit stays Pending, and nothing is written. */
+/** A resolver that leaves every unit Pending and writes nothing. */
 export const pendingUnitResolver: UnitResolver["Service"] = UnitResolver.of({
 	resolve: (plan) =>
 		Effect.succeed(

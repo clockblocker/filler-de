@@ -58,7 +58,7 @@ describe("ClassifyCommander", () => {
 		]);
 		expect(first?.resolutions).toEqual(["Pending"]);
 		expect(notices).toEqual([
-			"Classified 1 unit in 1 Sentence; 1 pending resolution",
+			"Classified 1 unit in 1 Sentence; 1 pending resolution (Resolution is switched off)",
 		]);
 
 		await run(STORY, "heute");

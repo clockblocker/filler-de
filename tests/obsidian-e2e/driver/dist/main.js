@@ -15,9 +15,12 @@ const {
 	validateScenarioId,
 	validateScope,
 	validateScriptedJevAnswers,
+	validateScriptedLunaAnswers,
 } = require("./protocol");
 
 const TARGET_PLUGIN_ID = "cbcr-text-eater-de";
+/** Where Textfresser keeps its Lemma notes, at the vault root (ADR 0013). */
+const DICTIONARY_ROOT = "Worter";
 const CLI_COMMAND = "textfresser-e2e";
 const CACHE_LIMIT = 256;
 const GLOBAL_STATE_KEY = Symbol.for("textfresser.e2e.driver.state.v1");
@@ -476,6 +479,7 @@ class TextfresserE2EDriver extends Plugin {
 			activeFile.path.startsWith(`${scenario.libraryRoot}/`)
 				? relativeTo(scenario.libraryRoot, activeFile.path)
 				: null;
+		const classifyApi = this.observeTextfresser().plugin?.getClassifyTestingApi?.();
 		return {
 			activePath,
 			classify: this.classifyHandoff(scenario),
@@ -487,6 +491,7 @@ class TextfresserE2EDriver extends Plugin {
 				protocol: PROTOCOL_VERSION,
 				sessionId: this.config?.sessionId ?? null,
 			},
+			dumgenRequests: classifyApi?.dumgenRequests?.() ?? null,
 			scenario,
 			textfresser: lifecycle,
 		};
@@ -616,6 +621,8 @@ class TextfresserE2EDriver extends Plugin {
 				return await this.modifications(request.params);
 			case "diagnostics":
 				return this.diagnostics();
+			case "dictionary":
+				return await this.dictionary();
 			case "cleanupSession":
 				return await this.cleanupSession(request);
 			default:
@@ -772,10 +779,16 @@ class TextfresserE2EDriver extends Plugin {
 		const settings = sanitizeSettings(request.params.settings);
 		// Desktop E2E never reaches a provider: every scenario's dumgen answers
 		// jev from its script, empty unless the scenario declares one.
-		const scriptedJev = validateScriptedJevAnswers(
+		const dumgenScript =
 			request.params.dumgen === undefined
-				? undefined
-				: assertRecord(request.params.dumgen, "params.dumgen").jev,
+				? {}
+				: assertRecord(request.params.dumgen, "params.dumgen");
+		const scriptedJev = validateScriptedJevAnswers(dumgenScript.jev);
+		const scriptedLuna = validateScriptedLunaAnswers(dumgenScript.luna);
+		const resetDictionary = assertBoolean(
+			request.params.resetDictionary,
+			"params.resetDictionary",
+			false,
 		);
 		if (typeof before.plugin.getClassifyTestingApi !== "function") {
 			throw new DriverError(
@@ -817,6 +830,17 @@ class TextfresserE2EDriver extends Plugin {
 		await this.settle({ timeoutMs: clampTimeout(request.params.timeoutMs, 30_000) });
 		const existingRoot = this.app.vault.getAbstractFileByPath(paths.scenarioRoot);
 		if (existingRoot) await this.app.vault.delete(existingRoot, true);
+		// The dictionary lives at the vault root, shared by every scenario: a
+		// scenario that asserts what Classify creates starts from none.
+		if (resetDictionary) {
+			const dictionary = this.app.vault.getAbstractFileByPath(DICTIONARY_ROOT);
+			if (dictionary) {
+				await this.app.vault.delete(dictionary, true);
+				await this.settle({
+					timeoutMs: clampTimeout(request.params.timeoutMs, 30_000),
+				});
+			}
+		}
 		await ensureFolder(this.app.vault, paths.libraryRoot);
 
 		const seen = new Set();
@@ -864,7 +888,12 @@ class TextfresserE2EDriver extends Plugin {
 			}
 		}
 
-		before.plugin.getClassifyTestingApi().useScriptedJev(scriptedJev);
+		const classifyApi = before.plugin.getClassifyTestingApi();
+		if (typeof classifyApi.useScriptedDumgen === "function") {
+			classifyApi.useScriptedDumgen({ jev: scriptedJev, luna: scriptedLuna });
+		} else {
+			classifyApi.useScriptedJev(scriptedJev);
+		}
 		await before.plugin.resetSettingsForTesting({
 			...settings,
 			libraryRoot: paths.libraryRoot,
@@ -1392,6 +1421,30 @@ class TextfresserE2EDriver extends Plugin {
 			root,
 			scenarioId: scenario.scenarioId,
 			scope,
+		};
+	}
+
+	/**
+	 * The dictionary's notes under the vault-root `Worter/` folder, by vault
+	 * path, read-only. Classify writes there, outside the scenario's library.
+	 */
+	async dictionary() {
+		this.requireActiveScenario();
+		await this.settle({ timeoutMs: 30_000 });
+		const markdown = {};
+		const root = this.app.vault.getAbstractFileByPath(DICTIONARY_ROOT);
+		const visit = async (folder) => {
+			for (const child of folder.children ?? []) {
+				if (isFolder(child)) await visit(child);
+				else if (isFile(child) && child.extension?.toLowerCase() === "md")
+					markdown[child.path] = await this.app.vault.read(child);
+			}
+		};
+		if (root && isFolder(root)) await visit(root);
+		return {
+			markdown: Object.fromEntries(
+				Object.entries(markdown).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+			),
 		};
 	}
 

@@ -51,7 +51,24 @@ interface ScenarioDefinition {
 	 */
 	readonly dumgen?: {
 		readonly jev: Readonly<Record<string, string | number>>;
+		/**
+		 * Luna's answers by stage (`canonical`, `emojiDescription`, …): the
+		 * first rule whose `when` text occurs in the request's JSON input, or
+		 * that has none, answers its `output`. An unanswered request fails,
+		 * so Luna stays unreachable unless scripted.
+		 */
+		readonly luna?: Readonly<
+			Record<
+				string,
+				readonly { readonly when?: string; readonly output: unknown }[]
+			>
+		>;
 	};
+	/**
+	 * Deletes the vault-root `Worter/` dictionary before the fixtures, so a
+	 * scenario that asserts what Classify creates starts from none.
+	 */
+	readonly resetDictionary?: boolean;
 	readonly fixture: readonly ScenarioFixture[];
 	readonly id: string;
 	/**
@@ -91,6 +108,15 @@ interface ScenarioClassifyHandoff {
 		}[];
 	}[];
 	readonly resolutions: readonly string[];
+	/** Per unit: the Reading block it links to, or why it stayed pending. */
+	readonly resolved?: readonly (
+		| {
+				readonly lemmaPath: string;
+				readonly readingBlockId: string;
+				readonly linked: number;
+		  }
+		| { readonly pending: string }
+	)[];
 	readonly stats: {
 		readonly cachedSentences: number;
 		readonly failedSentences: number;
@@ -100,10 +126,17 @@ interface ScenarioClassifyHandoff {
 	};
 }
 
+/** How many requests the scenario's scripted dumgen received, by stage. */
+interface ScenarioDumgenRequests {
+	readonly jev: Readonly<Record<string, number>>;
+	readonly luna: Readonly<Record<string, number>>;
+}
+
 interface ScenarioStatus {
 	readonly activePath: string | null;
 	/** Null until a Classify in this scenario succeeds. */
 	readonly classify: ScenarioClassifyHandoff | null;
+	readonly dumgenRequests: ScenarioDumgenRequests | null;
 	readonly generation: number;
 	readonly instanceId: string;
 	readonly root: string;
@@ -129,6 +162,10 @@ interface ScenarioActionReceipt {
 
 interface ObsidianScenario {
 	readonly act: (action: ScenarioAction) => Promise<void>;
+	/** The vault-root `Worter/` notes, by vault path, once settled. */
+	readonly dictionary: () => Promise<{
+		readonly markdown: Readonly<Record<string, string>>;
+	}>;
 	/** Settled modify observations; requires `observeModifications`. */
 	readonly modifications: () => Promise<readonly ScenarioModification[]>;
 	readonly snapshot: () => Promise<ScenarioSnapshot>;
@@ -167,6 +204,7 @@ interface ActiveScenarioValue {
 interface DriverStatusValue {
 	readonly activePath: string | null;
 	readonly classify?: ScenarioClassifyHandoff | null;
+	readonly dumgenRequests?: ScenarioDumgenRequests | null;
 	readonly scenario: ActiveScenarioValue | null;
 }
 
@@ -505,6 +543,7 @@ export async function withObsidianScenario<T>(
 				...(definition.observeModifications
 					? { observeModifications: definition.observeModifications }
 					: {}),
+				...(definition.resetDictionary ? { resetDictionary: true } : {}),
 				scenarioId: definition.id,
 				settings: definition.settings ?? {},
 			},
@@ -520,6 +559,12 @@ export async function withObsidianScenario<T>(
 					{ operation: encodeAction(action), settle: true },
 					fence,
 				);
+			},
+			async dictionary() {
+				const result = await client!.request<{
+					readonly markdown: Readonly<Record<string, string>>;
+				}>("dictionary", {}, fence);
+				return { markdown: result.value.markdown };
 			},
 			async modifications() {
 				const result = await client!.request<{
@@ -555,6 +600,7 @@ export async function withObsidianScenario<T>(
 				return {
 					activePath: result.value.activePath,
 					classify: result.value.classify ?? null,
+					dumgenRequests: result.value.dumgenRequests ?? null,
 					generation: result.fence.generation,
 					instanceId: result.fence.instanceId,
 					root: scenario.libraryRoot,

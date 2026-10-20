@@ -111,7 +111,19 @@ a few small entries per run, in the test vault's hidden
 `.textfresser/segmentation/` folder. `status().classify` returns what the
 last Classify handed to the resolver port: its `UnitRef`s with each unit's
 Family, Kind and occurrence texts, its Sentences and cache counts, with a
-Library-relative `scrollPath`; it is null until a Classify succeeds.
+Library-relative `scrollPath`, and under `resolved` the Reading block each
+unit now links to or why it stayed pending; it is null until a Classify
+succeeds.
+
+Resolution writes Lemma notes, and Luna writes their Canonical Forms and
+Knowledge, so a scenario that resolves also scripts Luna, by stage:
+`dumgen: { jev, luna: { <stage>: [{ when?: "<text in the request's JSON
+input>", output }] } }`; an unscripted Luna request fails like a provider.
+`status().dumgenRequests` counts the script's requests by stage, so a
+scenario can assert that no model was asked. The dictionary lives in the
+vault-root `Worter/` folder, shared by every scenario: `resetDictionary:
+true` deletes it before the fixtures, and `dictionary()` returns its notes
+by vault path.
 
 To observe VAM's Markdown modify subscription, declare
 `observeModifications: { path: "Worter" }` with a Library-relative folder.

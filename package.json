@@ -2,7 +2,9 @@
 	"author": "clockblocker",
 	"dependencies": {
 		"@codemirror/view": "latest",
+		"@textfresser/dictionary": "workspace:*",
 		"@textfresser/lemma-note-codec": "workspace:*",
+		"@textfresser/lemma-note-projections": "workspace:*",
 		"@textfresser/lexical-generation": "workspace:*",
 		"@textfresser/library-core": "workspace:*",
 		"@textfresser/linguistics": "workspace:*",

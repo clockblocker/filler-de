@@ -2,8 +2,8 @@
  * The Classify command over the active editor's selection: it reads the
  * Scroll and the selection's offsets, runs `classifySelection` with the
  * plugin's dumgen, Segmentation Cache and resolver port, and tells the
- * user what it found. It writes nothing to the Scroll; that is the
- * resolver's job (#64).
+ * user what it found. The resolver commits each unit's Reading and links
+ * its Segments (#64); this command writes nothing itself.
  */
 import type { Dumgen } from "dumgen";
 import { Cause, Effect, Layer } from "effect";
@@ -26,6 +26,11 @@ export type ClassifyCommanderDeps = {
 	readonly segmenterVersion: () => string;
 	readonly cache: SegmentationCache["Service"];
 	readonly resolver: UnitResolver["Service"];
+	/**
+	 * The provider keys Classify lacks, by provider name (`TypeSafe`,
+	 * `OpenAI`); Classify asks nothing without them.
+	 */
+	readonly missingProviderKeys?: () => readonly string[];
 };
 
 export type ClassifyContext = {
@@ -53,6 +58,15 @@ export type ClassifyHandoff = {
 		})[];
 	}[];
 	readonly resolutions: readonly string[];
+	/** Per unit, the Reading block it now links to, or why it is pending. */
+	readonly resolved: readonly (
+		| {
+				readonly lemmaPath: string;
+				readonly readingBlockId: string;
+				readonly linked: number;
+		  }
+		| { readonly pending: string }
+	)[];
 	readonly stats: ClassifyStats;
 };
 
@@ -62,6 +76,15 @@ function describeHandoff(
 ): ClassifyHandoff {
 	return {
 		resolutions: resolutions.map(({ _tag }) => _tag),
+		resolved: resolutions.map((resolution) =>
+			resolution._tag === "Resolved"
+				? {
+						lemmaPath: resolution.lemmaPath,
+						linked: resolution.linked,
+						readingBlockId: resolution.readingBlockId,
+					}
+				: { pending: resolution.reason },
+		),
 		scrollPath: plan.scrollPath,
 		sentences: [...plan.sentences].map(([sentenceKey, { segmented }]) => ({
 			sentenceKey,
@@ -84,16 +107,38 @@ function describeHandoff(
 function summary({ plan, resolutions, stats }: ClassifyOutcome): string {
 	const units = plan.units.length;
 	const sentences = plan.sentences.size;
-	const pending = resolutions.filter(({ _tag }) => _tag === "Pending").length;
+	const plural = (count: number, noun: string) =>
+		`${count} ${noun}${count === 1 ? "" : "s"}`;
+	const resolved = resolutions.filter(({ _tag }) => _tag === "Resolved");
+	const pending = resolutions.flatMap((resolution) =>
+		resolution._tag === "Pending" ? [resolution.reason] : [],
+	);
 	const parts = [
-		`Classified ${units} unit${units === 1 ? "" : "s"} in ${sentences} Sentence${sentences === 1 ? "" : "s"}`,
+		resolved.length > 0
+			? `Linked ${plural(resolved.length, "unit")} of ${units} in ${plural(sentences, "Sentence")}`
+			: `Classified ${plural(units, "unit")} in ${plural(sentences, "Sentence")}`,
 	];
 	if (stats.failedSentences > 0)
 		parts.push(
-			`${stats.failedSentences} Sentence${stats.failedSentences === 1 ? "" : "s"} could not be segmented; Classify again to retry`,
+			`${plural(stats.failedSentences, "Sentence")} could not be segmented; Classify again to retry`,
 		);
-	if (pending > 0) parts.push(`${pending} pending resolution`);
+	if (pending.length > 0)
+		parts.push(
+			`${pending.length} pending resolution (${[...new Set(pending)].slice(0, 3).join("; ")})`,
+		);
 	return parts.join("; ");
+}
+
+/** The notice for missing provider keys, or undefined when both are set. */
+export function missingKeysNotice(
+	missing: readonly string[],
+): string | undefined {
+	if (missing.length === 0) return undefined;
+	const names = missing.join(" and ");
+	const one = /^[AEIOU]/u.test(names)
+		? `an ${names} API key`
+		: `a ${names} API key`;
+	return `⚠ Classify needs ${missing.length === 1 ? one : `${names} API keys`}. Add ${missing.length === 1 ? "it" : "them"} in Textfresser's settings.`;
 }
 
 export class ClassifyCommander {
@@ -126,6 +171,14 @@ export class ClassifyCommander {
 				segmenterVersion: segmenterVersion(),
 			}),
 		);
+		const missing = missingKeysNotice(
+			this.deps.missingProviderKeys?.() ?? [],
+		);
+		if (missing)
+			return Effect.sync(() => {
+				this.latest = null;
+				notify(missing);
+			});
 		return Effect.sync(() => {
 			this.latest = null;
 		}).pipe(

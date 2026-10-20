@@ -53,7 +53,7 @@ describe("Obsidian E2E - Classify", () => {
 					segmentedSentences: 1,
 					touchedSentences: 1,
 				});
-				// Classify writes nothing until resolution lands (#64).
+				// Without a scripted Luna no unit resolves, so nothing is written.
 				expect((await snapshot()).markdown["Story.md"]).toBe(before);
 
 				// The same Sentence again comes from the Segmentation Cache.
