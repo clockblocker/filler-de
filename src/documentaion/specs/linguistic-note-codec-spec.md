@@ -312,7 +312,16 @@ Tests must cover:
 4. **`inflection`.** What the table projects from: owned Surfaces, `plural` and `conjugation_class`, a dumcorpus paradigm, or a plugin-owned generator kept beside dumdict state. If it stays generated, it becomes a plugin-owned Block rather than a projection. Depends on [#62](https://github.com/clockblocker/filler-de/issues/62).
 5. **Morphemes, features and tags.** Whether morpheme "used in" backlinks become a projection over `morphologicalTree`, whether any tag source beyond dumling identity and dumrel Knowledge survives, and whether `deviation` returns. dumgen does not produce these yet. Depends on [#62](https://github.com/clockblocker/filler-de/issues/62).
 
-Open implementation choices for [#55](https://github.com/clockblocker/filler-de/issues/55) are the marker syntax, the hash function and length, option names, and issue payload fields.
+## Implementation choices (#55)
+
+[#55](https://github.com/clockblocker/filler-de/issues/55) implements this spec as `@textfresser/lemma-note-codec` and settles its open choices:
+
+- **Markers.** Each part opens with `%%tf-part:lemma%%`, `%%tf-part:reading r-<hash>%%` or `%%tf-part:surface s-<hash>%%`. Each typed Block opens with `%%tf:<kind>%%`, or `%%tf:<kind> <json>%%` for a serialized Block, whose payload is canonical JSON on one line with `%` written as `\u0025`. Reading view hides every marker. A Block's visible rendering runs from its marker to the first blank line; anything after that blank line, up to the next marker, is freeform. Any other `%%tf…%%` line is an unknown Block, kept with its lines.
+- **Block IDs.** SHA-256 of the identity key, first 8 hex digits; colliding IDs inside one note grow by 4 digits until they differ. The part marker carries the ID, and the `header` and `surface` renderings repeat it as `^<id>` so Obsidian can link to it.
+- **API.** `parse(markdown, { language })` returns `{ document, data }`, where `data` is `{ ok: true, data, blockIds }` or `{ ok: false, issues, partial }`. `parseDocument`, `documentToData`, `serializeDocument` (byte-exact) and `blockIdsOf` are the layers beneath it. `serialize(document, data, { projections })` writes canonical order and keeps the document's freeform and unknown Blocks at the end of their part; those of a part the data dropped move to the Lemma part. Normalization is not implemented yet.
+- **Issues.** `MissingIdentity` is `MissingRequiredBlock` with `kind: "identity"`, which also covers a missing `reading` or `surface` Block. `DuplicatePart` and `MisplacedBlock` are added. Unknown Blocks are kept without an issue. `OrderingNormalized` and `BlockMerged` wait for normalization.
+- **Projections.** `header` has a default rendering. `tags` and `inflection` take caller hooks ([#75](https://github.com/clockblocker/filler-de/issues/75)), and `inverse_relation` takes the Reading's `projectSemanticRelations` edges ([#59](https://github.com/clockblocker/filler-de/issues/59)); a Block whose hook is absent is left out. Links default to path-qualified ones (open question 1).
+- **Paths.** The ADR-0013 path codec (`lemmaNotePath`, `shadowNotePath`, `parseNotePath`) lives in the same package as its own module. The note codec never reads a path.
 
 [dumling]: https://github.com/clockblocker/texteater/blob/main/battery/dumling/GLOSSARY.md
 [dumrel]: https://github.com/clockblocker/texteater/blob/main/battery/dumrel/GLOSSARY.md
