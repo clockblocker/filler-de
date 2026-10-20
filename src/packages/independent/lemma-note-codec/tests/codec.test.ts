@@ -89,6 +89,56 @@ describe("round trips for every German Family", () => {
 				expect(line.slice(2, -2)).not.toContain("%");
 		}
 	});
+
+	it("keeps links and embeds out of payloads, so each shows once", () => {
+		const markdown = serialize(undefined, nounData);
+		const payloadStrings = markdown
+			.split("\n")
+			.filter((line) => line.startsWith("%%tf"))
+			.flatMap((line) => line.match(/"(?:[^"\\]|\\.)*"/gu) ?? []);
+		expect(payloadStrings.length).toBeGreaterThan(0);
+		for (const token of payloadStrings) expect(token).not.toContain("[");
+		for (const embed of [
+			"![[Scroll#^3|^]]",
+			"![[Other Scroll#^7|^]]",
+			"![[Scroll#^12|^]]",
+		]) {
+			expect(markdown.split(embed)).toHaveLength(2);
+		}
+		expect(markdown).toContain(
+			' ["!\\u005b\\u005bScroll#^3|^]]","!\\u005b\\u005bOther Scroll#^7|^]]"]%%',
+		);
+		const [mother] = validData(markdown).readingEntries;
+		expect(mother?.attestations).toEqual([
+			"![[Scroll#^3|^]]",
+			"![[Other Scroll#^7|^]]",
+		]);
+
+		const notes = 'see [[Vater]], [a](b) and \\[[c]] in "[q]"';
+		const linked = serialize(undefined, {
+			...nounData,
+			pendingRelations: [],
+			readingEntries: nounData.readingEntries
+				.slice(0, 1)
+				.map((entry) => ({ ...entry, notes })),
+		});
+		expect(
+			linked.split("\n").find((line) => line.startsWith("%%tf:notes")),
+		).not.toContain("[");
+		expect(validData(linked).readingEntries[0]?.notes).toBe(notes);
+	});
+
+	it("still reads payloads written with links in them", () => {
+		const markdown = serialize(undefined, nounData);
+		const unescaped = markdown.replaceAll("\\u005b", "[");
+		expect(unescaped).not.toBe(markdown);
+		const parsed = parseDe(unescaped);
+		expect(parsed.data.ok && parsed.data.data).toEqual(
+			normalized(nounData),
+		);
+		if (!parsed.data.ok) return;
+		expect(serialize(parsed.document, parsed.data.data)).toBe(markdown);
+	});
 });
 
 describe("the document layer", () => {
