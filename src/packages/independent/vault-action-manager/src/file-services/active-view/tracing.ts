@@ -1,7 +1,7 @@
 import { Effect } from "effect";
-import type { VamFileAccessError } from "../../effect/errors";
+import type { VamFileWriteError } from "../../effect/errors";
 
-export function annotateFileAccessFailure(error: VamFileAccessError) {
+export function annotateFileAccessFailure(error: VamFileWriteError) {
 	const path = "path" in error ? error.path : undefined;
 	return Effect.annotateCurrentSpan({
 		"error.operation": error.operation,

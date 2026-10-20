@@ -55,6 +55,16 @@ export class VaultIo extends Context.Service<
 			file: TFile,
 			content: string,
 		): Effect.Effect<void, VamVaultIoError>;
+		/**
+		 * Atomically reads, transforms, and saves a file through
+		 * `Vault.process`. `fn` runs synchronously against the current
+		 * content. Returning that content unchanged writes nothing; throwing
+		 * from it aborts without writing.
+		 */
+		process(
+			file: TFile,
+			fn: (content: string) => string,
+		): Effect.Effect<string, VamVaultIoError>;
 		read(file: TFile): Effect.Effect<string, VamVaultIoError>;
 		rename(
 			file: TAbstractFile,

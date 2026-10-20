@@ -1,4 +1,5 @@
 import { Schema } from "effect";
+import type { VaultAction } from "../types/vault-action";
 
 export class VamSetupError extends Schema.TaggedError<VamSetupError>()(
 	"VamSetupError",
@@ -56,10 +57,26 @@ export class VamNoActiveEditorError extends Schema.TaggedError<VamNoActiveEditor
 	},
 ) {}
 
+/**
+ * A background Markdown transform lost a race: the file changed while an
+ * asynchronous transform was running, so its result was not written.
+ */
+export class VamContentConflictError extends Schema.TaggedError<VamContentConflictError>()(
+	"VamContentConflictError",
+	{
+		cause: Schema.Defect(),
+		operation: Schema.String,
+		path: Schema.String,
+	},
+) {}
+
 export type VamFileAccessError =
 	| VamActiveEditorError
 	| VamNoActiveEditorError
 	| VamVaultIoError;
+
+/** Failures of a Markdown write, which may also lose a content race. */
+export type VamFileWriteError = VamFileAccessError | VamContentConflictError;
 
 export class VamScanError extends Schema.TaggedError<VamScanError>()(
 	"VamScanError",
@@ -89,6 +106,41 @@ export class VamDispatchError extends Schema.TaggedError<VamDispatchError>()(
 	},
 ) {}
 
+const VaultActionListSchema = Schema.declare(
+	(input: unknown): input is readonly VaultAction[] => Array.isArray(input),
+);
+
+/**
+ * A batch dispatched with `stopOnFirstFailure` stopped at its first failed
+ * action. `executed` lists the planned actions that completed before it, and
+ * `skipped` the planned actions that were never attempted.
+ */
+export class VamDispatchStoppedError extends Schema.TaggedError<VamDispatchStoppedError>()(
+	"VamDispatchStoppedError",
+	{
+		action: Schema.optional(Schema.Unknown),
+		cause: Schema.Defect(),
+		executed: VaultActionListSchema,
+		failure: Schema.instanceOf(VamDispatchError),
+		operation: Schema.String,
+		skipped: VaultActionListSchema,
+	},
+) {}
+
+/**
+ * A submitted batch found the Dispatch Batch queue at its ceiling. VAM waits
+ * for queue space below the ceiling; reaching it signals a runaway producer.
+ */
+export class VamDispatchOverflowError extends Schema.TaggedError<VamDispatchOverflowError>()(
+	"VamDispatchOverflowError",
+	{
+		action: Schema.optional(Schema.Unknown),
+		cause: Schema.Defect(),
+		limit: Schema.Number,
+		operation: Schema.String,
+	},
+) {}
+
 export class VamSubscriptionError extends Schema.TaggedError<VamSubscriptionError>()(
 	"VamSubscriptionError",
 	{
@@ -111,7 +163,10 @@ export type VamEffectError =
 	| VamNoActiveEditorError
 	| VamScanError
 	| VamVaultIoError
+	| VamContentConflictError
 	| VamPlanningError
 	| VamDispatchError
+	| VamDispatchStoppedError
+	| VamDispatchOverflowError
 	| VamSubscriptionError
 	| VamShutdownError;

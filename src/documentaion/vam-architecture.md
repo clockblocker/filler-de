@@ -40,7 +40,7 @@ The API has four groups:
 
 | Group | Examples |
 | --- | --- |
-| Dispatch | `dispatch` |
+| Dispatch | `dispatch`, `dispatchStopOnFirstFailure` |
 | Observation | `startListening`, `subscribeToBulk` |
 | Vault reads | `readContent`, `exists`, `findByBasename`, `list`, `scan` |
 | Active editor | `mdPwd`, `getOpenedContent`, `getSelectionInfo`, `cd`, `scrollOpenedFileToLine` |
@@ -88,6 +88,15 @@ A `VaultAction` requests a vault change. Supported operations are:
 
 `ProcessMdFile` applies a transform to current content. VAM routes the operation to the active editor or the background vault adapter.
 
+In the background, a synchronous transform runs inside `Vault.process`, so the
+read, transform, and write are one atomic step. Collapsed transforms stay
+synchronous when every part is. An asynchronous transform starts against the
+content `Vault.process` reads; once it settles, a second `Vault.process` writes
+the result only if the file still holds that content. Otherwise the action
+fails with `VamContentConflictError` and the newer content stays in place. VAM
+never re-runs a transform. The active-editor route applies the same re-check
+and fails with an `IdentityMismatch` error.
+
 A `VaultEvent` is a typed create, rename, or delete observation from Obsidian. It is not a `VaultAction`.
 
 ## Dispatch pipeline
@@ -106,6 +115,16 @@ actions
 
 The coordinator processes submitted batches in first-in, first-out order. Batches do not interleave.
 
+The queue holds a bounded number of batches behind the active one. When it is
+full, later submissions wait for space in submission order; VAM never drops an
+accepted batch. A caller interrupted while its batch is still waiting
+withdraws that batch. Once queued, a batch runs.
+
+Waiting has a high ceiling, `MAX_PENDING_DISPATCH_BATCHES` (500 batches queued
+or waiting). A submission that finds the ceiling reached is not accepted and
+fails at once with `VamDispatchOverflowError`, so a runaway producer such as a
+healing loop surfaces instead of growing the queue without limit.
+
 Important rules:
 
 - Trash wins over other actions for the same path.
@@ -116,6 +135,12 @@ Important rules:
 - Each caller receives the result of its own batch.
 
 A Dispatch Batch is not atomic. VAM does not roll back actions that completed before a later failure. The failure reports the affected operation and retains the original cause.
+
+By default, `dispatch` attempts every planned action and reports all action
+failures together. `dispatchStopOnFirstFailure` stops at the first failed
+action and fails with `VamDispatchStoppedError`, which carries that failure,
+the planned actions already executed, and the planned actions skipped. Planned
+actions include prerequisites VAM added, such as parent folders.
 
 ## Observation pipeline
 
@@ -165,7 +190,7 @@ Shutdown is idempotent. It:
 1. Closes public subscriptions.
 2. Stops observation and listeners.
 3. Lets the active Dispatch Batch finish.
-4. Fails queued and new submissions with a typed shutdown error.
+4. Fails queued, waiting, and new submissions with a typed shutdown error.
 5. Disposes the managed runtime.
 
 Errors remain typed at the package boundary. They include the operation, cause, and path or action when applicable.

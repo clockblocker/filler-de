@@ -86,6 +86,17 @@ function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 							try: () => app.vault.modify(file, content),
 						}),
 					),
+					process: Effect.fn("VaultIo.process")((file, fn) =>
+						Effect.tryPromise({
+							catch: (cause) =>
+								new VamVaultIoError({
+									cause,
+									operation: "process",
+									path: file.path,
+								}),
+							try: () => app.vault.process(file, fn),
+						}),
+					),
 					read: Effect.fn("VaultIo.read")((file) =>
 						Effect.tryPromise({
 							catch: (cause) =>

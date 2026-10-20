@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it } from "bun:test";
-import { Cause, Effect, Exit, Layer, Option, Tracer } from "effect";
+import { Cause, Effect, Exit, Fiber, Layer, Option, Tracer } from "effect";
 import { type TAbstractFile, TFile, TFolder } from "obsidian";
+import { MAX_PENDING_DISPATCH_BATCHES } from "../../src/effect/dispatch-coordinator";
 import {
 	VamDispatchError,
+	VamDispatchOverflowError,
+	VamDispatchStoppedError,
 	VamPlanningError,
 	type VamSetupError,
 	VamShutdownError,
@@ -50,6 +53,36 @@ function deferred(): { promise: Promise<void>; resolve: () => void } {
 	return { promise, resolve };
 }
 
+/**
+ * Counts accepted submissions through the coordinator's test signal, so tests
+ * can wait until a number of batches are queued or waiting.
+ */
+function submissions() {
+	const counts = { queued: 0, waiting: 0 };
+	const listeners: (() => void)[] = [];
+	const onSubmitted = (placement: "queued" | "waiting") => {
+		counts[placement]++;
+		for (const listener of listeners.splice(0)) listener();
+	};
+	const until = (
+		predicate: (current: typeof counts) => boolean,
+	): Promise<void> =>
+		new Promise((resolve) => {
+			const check = () => {
+				if (predicate(counts)) resolve();
+				else listeners.push(check);
+			};
+			check();
+		});
+	return {
+		onSubmitted,
+		total: (count: number) =>
+			until((current) => current.queued + current.waiting >= count),
+		waiting: (count: number) =>
+			until((current) => current.waiting >= count),
+	};
+}
+
 function actionBasename(action: VaultAction): string {
 	if (action.kind !== VaultActionKind.UpsertMdFile) {
 		throw new Error(`Expected UpsertMdFile, received ${action.kind}`);
@@ -90,6 +123,7 @@ function makeVamLayer(
 		getAbstractFileByPath: lookup,
 		getMarkdownFiles: Effect.die("not used"),
 		modify: () => Effect.die("not used"),
+		process: () => Effect.die("not used"),
 		read: () => Effect.die("not used"),
 		rename: () => Effect.die("not used"),
 		resolveLinkpathDest: () => Effect.die("not used"),
@@ -760,7 +794,7 @@ describe("DispatchBatchCoordinator", () => {
 		expect(idleResolved).toBe(true);
 	});
 
-	it("preserves per-drain overflow and returns owned errors to every dropped caller", async () => {
+	it("applies back-pressure instead of dropping batches beyond queue capacity", async () => {
 		const firstStarted = deferred();
 		const releaseFirst = deferred();
 		const executed: string[] = [];
@@ -772,41 +806,350 @@ describe("DispatchBatchCoordinator", () => {
 					firstStarted.resolve();
 					await releaseFirst.promise;
 				}
-				return;
 			},
-			{ maxBatches: 2 },
+			{ queueCapacity: 2 },
 		);
 
 		const first = dispatch(coordinator, [makeAction("first")]);
 		await firstStarted.promise;
-		const second = dispatch(coordinator, [makeAction("second")]);
-		const thirdA = makeAction("third-a");
-		const thirdB = makeAction("third-b");
-		const fourthAction = makeAction("fourth");
-		const third = dispatch(coordinator, [thirdA, thirdB]);
-		const fourth = dispatch(coordinator, [fourthAction]);
+		const later = ["second", "third", "fourth", "fifth", "sixth"].map(
+			(basename) => dispatch(coordinator, [makeAction(basename)]),
+		);
 		releaseFirst.resolve();
 
-		const [firstResult, secondResult, thirdResult, fourthResult] =
-			await Promise.all([first, second, third, fourth]);
+		const results = await Promise.all([first, ...later]);
 
-		expect(Exit.isSuccess(firstResult)).toBe(true);
-		expect(Exit.isSuccess(secondResult)).toBe(true);
-		const [thirdFailure] = dispatchFailures(thirdResult);
-		expect(thirdFailure?.action).toBe(thirdA);
-		expect(thirdFailure?.cause).toBe(
-			"Dispatch Batch overflow: batch limit 2 reached, 2 actions dropped",
-		);
-		const [fourthFailure] = dispatchFailures(fourthResult);
-		expect(fourthFailure?.action).toBe(fourthAction);
-		expect(fourthFailure?.cause).toBe(
-			"Dispatch Batch overflow: batch limit 2 reached, 1 actions dropped",
-		);
-		expect(executed).toEqual(["first", "second"]);
+		expect(results.every((result) => Exit.isSuccess(result))).toBe(true);
+		expect(executed).toEqual([
+			"first",
+			"second",
+			"third",
+			"fourth",
+			"fifth",
+			"sixth",
+		]);
+	});
 
-		const later = await dispatch(coordinator, [makeAction("later")]);
-		expect(Exit.isSuccess(later)).toBe(true);
-		expect(executed).toEqual(["first", "second", "later"]);
+	it("drains more than the former per-cycle limit without dropping batches", async () => {
+		const firstStarted = deferred();
+		const releaseFirst = deferred();
+		const executed: string[] = [];
+		const coordinator = makeCoordinator(async (action) => {
+			const basename = actionBasename(action);
+			executed.push(basename);
+			if (basename === "batch-0") {
+				firstStarted.resolve();
+				await releaseFirst.promise;
+			}
+		});
+		const basenames = Array.from({ length: 25 }, (_, i) => `batch-${i}`);
+
+		const first = dispatch(coordinator, [makeAction("batch-0")]);
+		await firstStarted.promise;
+		const later = basenames
+			.slice(1)
+			.map((basename) => dispatch(coordinator, [makeAction(basename)]));
+		releaseFirst.resolve();
+		const results = await Promise.all([first, ...later]);
+
+		expect(results.every((result) => Exit.isSuccess(result))).toBe(true);
+		expect(executed).toEqual(basenames);
+	});
+
+	for (const [label, queueCapacity] of [
+		["the default capacity", undefined],
+		["a capacity above the ceiling", MAX_PENDING_DISPATCH_BATCHES * 2],
+	] as const) {
+		it(`waits up to the pending ceiling and fails loudly past it with ${label}`, async () => {
+			const firstStarted = deferred();
+			const releaseFirst = deferred();
+			const executed: string[] = [];
+			const signal = submissions();
+			const coordinator = makeCoordinator(
+				async (action) => {
+					const basename = actionBasename(action);
+					executed.push(basename);
+					if (basename === "active") {
+						firstStarted.resolve();
+						await releaseFirst.promise;
+					}
+				},
+				{ onSubmitted: signal.onSubmitted, queueCapacity },
+			);
+
+			const active = dispatch(coordinator, [makeAction("active")]);
+			await firstStarted.promise;
+			const pendingBasenames = Array.from(
+				{ length: MAX_PENDING_DISPATCH_BATCHES },
+				(_, i) => `pending-${i}`,
+			);
+			const pending = pendingBasenames.map((basename) =>
+				dispatch(coordinator, [makeAction(basename)]),
+			);
+			await signal.total(1 + MAX_PENDING_DISPATCH_BATCHES);
+
+			const overflowAction = makeAction("overflow");
+			const overflow = await dispatch(coordinator, [overflowAction]);
+			const stoppedOverflow = await runNative(
+				coordinator,
+				coordinator.dispatchEffect([makeAction("overflow-stop")], {
+					stopOnFirstFailure: true,
+				}),
+			);
+
+			const overflowFailure = firstFailure(overflow);
+			expect(overflowFailure).toBeInstanceOf(VamDispatchOverflowError);
+			if (overflowFailure instanceof VamDispatchOverflowError) {
+				expect(overflowFailure.action).toBe(overflowAction);
+				expect(overflowFailure.limit).toBe(
+					MAX_PENDING_DISPATCH_BATCHES,
+				);
+				expect(overflowFailure.operation).toBe("dispatch.overflow");
+			}
+			expect(firstFailure(stoppedOverflow)).toBeInstanceOf(
+				VamDispatchOverflowError,
+			);
+
+			releaseFirst.resolve();
+			const results = await Promise.all([active, ...pending]);
+
+			expect(results.every((result) => Exit.isSuccess(result))).toBe(
+				true,
+			);
+			expect(executed).toEqual(["active", ...pendingBasenames]);
+			expect(
+				Exit.isSuccess(
+					await dispatch(coordinator, [makeAction("after")]),
+				),
+			).toBe(true);
+		});
+	}
+
+	it("withdraws a batch whose caller is interrupted while it waits for queue space", async () => {
+		const firstStarted = deferred();
+		const releaseFirst = deferred();
+		const executed: string[] = [];
+		const signal = submissions();
+		const coordinator = makeCoordinator(
+			async (action) => {
+				const basename = actionBasename(action);
+				executed.push(basename);
+				if (basename === "first") {
+					firstStarted.resolve();
+					await releaseFirst.promise;
+				}
+			},
+			{ onSubmitted: signal.onSubmitted, queueCapacity: 1 },
+		);
+
+		const first = dispatch(coordinator, [makeAction("first")]);
+		await firstStarted.promise;
+		const queued = dispatch(coordinator, [makeAction("queued")]);
+		const interrupted = await runNative(
+			coordinator,
+			Effect.gen(function* () {
+				const fiber = yield* Effect.forkChild(
+					coordinator.dispatchEffect([makeAction("withdrawn")]),
+				);
+				yield* Effect.promise(() => signal.waiting(1));
+				return yield* Fiber.interrupt(fiber);
+			}),
+		);
+		const after = dispatch(coordinator, [makeAction("after")]);
+		releaseFirst.resolve();
+
+		const results = await Promise.all([first, queued, after]);
+
+		expect(Exit.isSuccess(interrupted)).toBe(true);
+		expect(results.every((result) => Exit.isSuccess(result))).toBe(true);
+		expect(executed).toEqual(["first", "queued", "after"]);
+	});
+
+	it("still runs a batch whose caller is interrupted after it left the waiting list", async () => {
+		const firstStarted = deferred();
+		const releaseFirst = deferred();
+		const blockerStarted = deferred();
+		const releaseBlocker = deferred();
+		const executed: string[] = [];
+		const signal = submissions();
+		const coordinator = makeCoordinator(
+			async (action) => {
+				const basename = actionBasename(action);
+				executed.push(basename);
+				if (basename === "first") {
+					firstStarted.resolve();
+					await releaseFirst.promise;
+				}
+				if (basename === "blocker") {
+					blockerStarted.resolve();
+					await releaseBlocker.promise;
+				}
+			},
+			{ onSubmitted: signal.onSubmitted, queueCapacity: 2 },
+		);
+
+		const first = dispatch(coordinator, [makeAction("first")]);
+		await firstStarted.promise;
+		const queued = dispatch(coordinator, [makeAction("queued")]);
+		const blocker = dispatch(coordinator, [makeAction("blocker")]);
+		const interrupted = await runNative(
+			coordinator,
+			Effect.gen(function* () {
+				const fiber = yield* Effect.forkChild(
+					coordinator.dispatchEffect([makeAction("admitted")]),
+				);
+				yield* Effect.promise(() => signal.waiting(1));
+				releaseFirst.resolve();
+				// The worker admits waiting batches after each completed
+				// batch, so once "blocker" runs, "admitted" left the waiting
+				// list for the queue slot that "queued" freed.
+				yield* Effect.promise(() => blockerStarted.promise);
+				return yield* Fiber.interrupt(fiber);
+			}),
+		);
+		releaseBlocker.resolve();
+
+		const results = await Promise.all([first, queued, blocker]);
+		await whenIdle(coordinator);
+
+		expect(Exit.isSuccess(interrupted)).toBe(true);
+		expect(results.every((result) => Exit.isSuccess(result))).toBe(true);
+		expect(executed).toEqual(["first", "queued", "blocker", "admitted"]);
+	});
+
+	it("fails batches waiting for queue space on shutdown", async () => {
+		const activeStarted = deferred();
+		const releaseActive = deferred();
+		const executed: string[] = [];
+		const signal = submissions();
+		const coordinator = makeCoordinator(
+			async (action) => {
+				const basename = actionBasename(action);
+				executed.push(basename);
+				if (basename === "active") {
+					activeStarted.resolve();
+					await releaseActive.promise;
+				}
+			},
+			{ onSubmitted: signal.onSubmitted, queueCapacity: 1 },
+		);
+
+		const active = dispatch(coordinator, [makeAction("active")]);
+		await activeStarted.promise;
+		const queued = dispatch(coordinator, [makeAction("queued")]);
+		const waitingAction = makeAction("waiting");
+		const waiting = dispatch(coordinator, [waitingAction]);
+		await signal.waiting(1);
+		const shutdownDone = shutdown(coordinator);
+		releaseActive.resolve();
+
+		const [activeExit, queuedExit, waitingExit] = await Promise.all([
+			active,
+			queued,
+			waiting,
+		]);
+		await shutdownDone;
+
+		expect(Exit.isSuccess(activeExit)).toBe(true);
+		expect(firstFailure(queuedExit)).toBeInstanceOf(VamShutdownError);
+		const waitingFailure = firstFailure(waitingExit);
+		expect(waitingFailure).toBeInstanceOf(VamShutdownError);
+		if (
+			waitingFailure instanceof VamShutdownError &&
+			waitingFailure.cause instanceof Error
+		) {
+			expect(waitingFailure.cause.cause).toBe(waitingAction);
+		}
+		expect(executed).toEqual(["active"]);
+	});
+
+	it("stops at the first failed action when the batch opts in, reporting executed and skipped actions", async () => {
+		const before = makeAction("before");
+		const failing = makeAction("failing");
+		const skippedA = makeAction("skipped-a");
+		const skippedB = makeAction("skipped-b");
+		const executed: VaultAction[] = [];
+		const cause = new Error("write failed");
+		const coordinator = makeCoordinator(async (action) => {
+			executed.push(action);
+			if (action === failing) throw cause;
+		});
+
+		const exit = await runNative(
+			coordinator,
+			coordinator.dispatchEffect([before, failing, skippedA, skippedB], {
+				stopOnFirstFailure: true,
+			}),
+		);
+
+		expect(executed).toEqual([before, failing]);
+		const failure = firstFailure(exit);
+		expect(failure).toBeInstanceOf(VamDispatchStoppedError);
+		if (failure instanceof VamDispatchStoppedError) {
+			expect(failure.executed).toEqual([before]);
+			expect(failure.skipped).toEqual([skippedA, skippedB]);
+			expect(failure.action).toBe(failing);
+			expect(failure.cause).toBe(cause);
+			expect(failure.failure).toBeInstanceOf(VamDispatchError);
+			expect(failure.failure.action).toBe(failing);
+			expect(failure.operation).toBe("dispatch.stopOnFirstFailure");
+		}
+	});
+
+	it("reports planned prerequisites among executed actions when stopping", async () => {
+		const runtime = createVamRuntime(
+			makeVamLayer((path) =>
+				Effect.succeed(path === "Library" ? null : makeFile(path)),
+			),
+		);
+		const failing = makeAction("failing");
+		const skipped = makeAction("skipped");
+		const coordinator = makeCoordinator(
+			async (action) => {
+				if (action === failing) throw new Error("failed");
+			},
+			undefined,
+			undefined,
+			runtime,
+		);
+
+		const exit = await runNative(
+			coordinator,
+			coordinator.dispatchEffect([failing, skipped], {
+				stopOnFirstFailure: true,
+			}),
+		);
+
+		const failure = firstFailure(exit);
+		expect(failure).toBeInstanceOf(VamDispatchStoppedError);
+		if (failure instanceof VamDispatchStoppedError) {
+			expect(failure.executed.map((action) => action.kind)).toEqual([
+				VaultActionKind.CreateFolder,
+			]);
+			expect(failure.skipped).toEqual([skipped]);
+		}
+	});
+
+	it("keeps attempting every action by default and leaves later batches unaffected by a stopped one", async () => {
+		const failing = makeAction("failing");
+		const later = makeAction("later");
+		const executed: VaultAction[] = [];
+		const coordinator = makeCoordinator(async (action) => {
+			executed.push(action);
+			if (action === failing) throw new Error("failed");
+		});
+
+		const stopped = await runNative(
+			coordinator,
+			coordinator.dispatchEffect([failing, later], {
+				stopOnFirstFailure: true,
+			}),
+		);
+		const defaulted = await dispatch(coordinator, [failing, later]);
+
+		expect(firstFailure(stopped)).toBeInstanceOf(VamDispatchStoppedError);
+		expect(dispatchFailures(defaulted)).toHaveLength(1);
+		expect(executed).toEqual([failing, failing, later]);
 	});
 
 	it("finishes the active batch, fails queued callers, and rejects later submissions on shutdown", async () => {
