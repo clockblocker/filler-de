@@ -306,6 +306,67 @@ describe("forms left out rather than guessed", () => {
 		expect(rows("studieren", weak)["Partizip II"]).toEqual(["studiert"]);
 	});
 
+	it("renders studieren with no ge- in any cell", () => {
+		const past =
+			"ich studierte, du studiertest, er studierte, wir studierten, ihr studiertet, sie studierten";
+		expect(rows("studieren", weak)).toEqual({
+			Imperativ: ["studier!, studiert!, studieren Sie!"],
+			"Konjunktiv II": [past],
+			"Partizip II": ["studiert"],
+			Präsens: [
+				"ich studiere, du studierst, er studiert, wir studieren, ihr studiert, sie studieren",
+			],
+			Präteritum: [past],
+		});
+	});
+
+	it("trompeten, whose first syllable is unstressed, gets no Partizip II", () => {
+		const past =
+			"ich trompetete, du trompetetest, er trompetete, wir trompeteten, ihr trompetetet, sie trompeteten";
+		expect(rows("trompeten", weak)).toEqual({
+			Imperativ: ["trompete!, trompetet!, trompeten Sie!"],
+			"Konjunktiv II": [past],
+			Präsens: [
+				"ich trompete, du trompetest, er trompetet, wir trompeten, ihr trompetet, sie trompeten",
+			],
+			Präteritum: [past],
+		});
+	});
+
+	it("any root longer than a syllable gets no Partizip II, its stress unknown", () => {
+		// posaunt, frohlockt, miaut, prophezeit, rumort: no ge-;
+		// gearbeitet, geantwortet: ge-. Only a dictionary tells them apart.
+		for (const infinitive of [
+			"posaunen",
+			"frohlocken",
+			"miauen",
+			"prophezeien",
+			"rumoren",
+			"palavern",
+			"arbeiten",
+			"antworten",
+		])
+			expect(rows(infinitive, weak)["Partizip II"]).toBeUndefined();
+		expect(
+			rows("bringen", {
+				conjugationClasses: ["Mixed"],
+				preterite: ["brachte"],
+			})["Partizip II"],
+		).toEqual(["gebracht"]);
+	});
+
+	it("a one-syllable root before -eln, -ern or -ig carries the stress", () => {
+		expect(rows("handeln", weak)["Partizip II"]).toEqual(["gehandelt"]);
+		expect(rows("ärgern", weak)["Partizip II"]).toEqual(["geärgert"]);
+		expect(rows("kündigen", weak)["Partizip II"]).toEqual(["gekündigt"]);
+	});
+
+	it("tells an -ern verb from an inseparable prefix", () => {
+		expect(rows("entern", weak)["Partizip II"]).toEqual(["geentert"]);
+		expect(rows("erinnern", weak)["Partizip II"]).toEqual(["erinnert"]);
+		expect(rows("verbessern", weak)["Partizip II"]).toEqual(["verbessert"]);
+	});
+
 	it("knien gets no table", () => {
 		expect(
 			conjugateGermanVerb({

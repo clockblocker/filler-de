@@ -6,7 +6,7 @@ import {
 	type GermanNounInput,
 	type NounCell,
 } from "../src";
-import { input, noun } from "./fixtures";
+import { input, noun, nounSurface } from "./fixtures";
 
 /**
  * The 5 Flexion tables of the dev vault's generated entries (#62), copied
@@ -174,7 +174,7 @@ describe("the 18 other vault nouns", () => {
 		});
 });
 
-describe("possible n-Deklination", () => {
+describe("n-Deklination the data cannot tell", () => {
 	for (const [lemma, plural] of [
 		["Mensch", "Menschen"],
 		["Kollege", "Kollegen"],
@@ -186,7 +186,7 @@ describe("possible n-Deklination", () => {
 				genders: ["Masc"],
 				plural: [plural],
 			});
-			expect(declension?.possibleNDeclension).toBe(true);
+			expect(declension?.nDeclensionUnknown).toBe(true);
 			expect(
 				declension?.cells
 					.filter((cell) => cell.number === "Sing")
@@ -197,18 +197,19 @@ describe("possible n-Deklination", () => {
 			).toHaveLength(4);
 		});
 
-	it("flags a masculine -e noun with no plural and declines Herz as weak", () => {
+	it("flags a masculine -e noun with no plural, and Herz whatever its plural", () => {
 		for (const [lemma, gender, plural] of [
 			["Glaube", "Masc", "NoPlural"],
 			["Wille", "Masc", "NoPlural"],
 			["Herz", "Neut", ["Herzen"]],
+			["Herz", "Neut", "NoPlural"],
 		] as const) {
 			const declension = declineGermanNoun({
 				canonicalForm: lemma,
 				genders: [gender],
 				plural,
 			});
-			expect(declension?.possibleNDeclension).toBe(true);
+			expect(declension?.nDeclensionUnknown).toBe(true);
 			expect(
 				declension?.cells
 					.filter((cell) => cell.number === "Sing")
@@ -217,14 +218,23 @@ describe("possible n-Deklination", () => {
 		}
 	});
 
-	it("flags Staat too, the known false positive", () => {
+	it("cannot tell Staat either, so renders no weak form for it", () => {
 		expect(
 			declineGermanNoun({
 				canonicalForm: "Staat",
 				genders: ["Masc"],
 				plural: ["Staaten"],
-			})?.possibleNDeclension,
+			})?.nDeclensionUnknown,
 		).toBe(true);
+		// Every cell shown is a form Staat has: no *den Staaten* singular.
+		expect(
+			deriveInflection(
+				input(noun("Staat", "Masc"), { plural: ["Staaten"] }),
+			),
+		).toBe(`N: der Staat, die Staaten
+A: die Staaten
+G: der Staaten
+D: den Staaten`);
 	});
 
 	it("renders the omission", () => {
@@ -236,6 +246,111 @@ describe("possible n-Deklination", () => {
 A: die Menschen
 G: der Menschen
 D: den Menschen`);
+	});
+
+	it("fills a cell an owned Surface attests, and only that cell", () => {
+		const staat = noun("Staat", "Masc");
+		expect(
+			deriveInflection(
+				input(staat, { plural: ["Staaten"] }, [
+					nounSurface(staat, "Staates", "Gen"),
+				]),
+			),
+		).toBe(`N: der Staat, die Staaten
+A: die Staaten
+G: des Staates, der Staaten
+D: den Staaten`);
+		const mensch = noun("Mensch", "Masc");
+		expect(
+			deriveInflection(
+				input(mensch, { plural: ["Menschen"] }, [
+					nounSurface(mensch, "Menschen", "Acc"),
+					nounSurface(mensch, "Menschen", "Dat"),
+					// A plural Surface and a variant spelling attest no singular cell.
+					nounSurface(mensch, "Menschen", "Gen", "Plur"),
+					nounSurface(mensch, "Mensche", "Dat", "Sing", "Variant"),
+				]),
+			),
+		).toBe(`N: der Mensch, die Menschen
+A: den Menschen, die Menschen
+G: der Menschen
+D: dem Menschen, den Menschen`);
+	});
+});
+
+describe("cells left out rather than guessed", () => {
+	const singular = (
+		lemma: string,
+		gender: Gender,
+		plural: GermanNounInput["plural"],
+	) =>
+		Object.fromEntries(
+			(
+				declineGermanNoun({
+					canonicalForm: lemma,
+					genders: [gender],
+					plural,
+				})?.cells ?? []
+			)
+				.filter((cell) => cell.number === "Sing")
+				.map((cell) => [cell.case, cell.form]),
+		);
+
+	it("doubles the s of -nis", () => {
+		expect(singular("Verständnis", "Neut", "NoPlural").Gen).toBe(
+			"Verständnisses",
+		);
+		expect(singular("Ergebnis", "Neut", ["Ergebnisse"]).Gen).toBe(
+			"Ergebnisses",
+		);
+	});
+
+	it("gives a final single s -es only where a plural shows it", () => {
+		for (const [lemma, gender, plural] of [
+			["Chaos", "Neut", "NoPlural"],
+			["Kosmos", "Masc", ["Kosmen"]],
+			["Atlas", "Masc", ["Atlanten"]],
+			["Tennis", "Neut", "NoPlural"],
+			["Applaus", "Masc", "NoPlural"],
+		] as const)
+			expect(singular(lemma, gender, plural)).toEqual({
+				Acc: lemma,
+				Dat: lemma,
+				Nom: lemma,
+			});
+		expect(singular("Atlas", "Masc", ["Atlanten", "Atlasse"]).Gen).toBe(
+			"Atlasses",
+		);
+		expect(singular("Gas", "Neut", ["Gase"]).Gen).toBe("Gases");
+	});
+
+	it("gives another sibilant -es only in a monosyllable or where a plural shows it", () => {
+		expect(singular("Business", "Neut", "NoPlural").Gen).toBeUndefined();
+		expect(singular("Jazz", "Masc", "NoPlural").Gen).toBeUndefined();
+		expect(singular("Kommerz", "Masc", "NoPlural").Gen).toBeUndefined();
+		expect(singular("Quiz", "Neut", ["Quiz"]).Gen).toBe("Quiz");
+		expect(singular("Stress", "Masc", "NoPlural").Gen).toBe("Stresses");
+		expect(singular("Prozess", "Masc", ["Prozesse"]).Gen).toBe("Prozesses");
+	});
+
+	it("gives a monosyllable with no plural no genitive", () => {
+		expect(singular("Rock", "Masc", "NoPlural").Gen).toBeUndefined();
+		expect(singular("Golf", "Neut", "NoPlural").Gen).toBeUndefined();
+		expect(singular("Rock", "Masc", ["Röcke"]).Gen).toBe("Rockes");
+	});
+
+	it("leaves out the genitive and dative of a neuter that may be an adjective", () => {
+		expect(
+			deriveInflection(
+				input(noun("Böse", "Neut"), { plural: "NoPlural" }),
+			),
+		).toBe("N: das Böse\nA: das Böse");
+		expect(singular("Auge", "Neut", ["Augen"])).toEqual({
+			Acc: "Auge",
+			Dat: "Auge",
+			Gen: "Auges",
+			Nom: "Auge",
+		});
 	});
 });
 

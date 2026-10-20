@@ -59,3 +59,31 @@ export function input(
 ): ProjectionInput {
 	return { entry: { knowledge }, lemma, ownedSurfaces };
 }
+
+/** An owned noun Surface in one case, as `ownedSurfaces` holds it. */
+export function nounSurface(
+	lemma: Dumling.Lemma<De, "Lexeme", "NOUN">,
+	form: string,
+	grammaticalCase: "Nom" | "Acc" | "Gen" | "Dat",
+	number: "Sing" | "Plur" = "Sing",
+	spelling: "Canonical" | "Variant" = "Canonical",
+): ProjectionInput["ownedSurfaces"][number] {
+	return {
+		surface: {
+			inflectionalFeatures: {
+				case: grammaticalCase,
+				gender: null,
+				number,
+			},
+			language: "de",
+			lemma,
+			normalizedSurface: form,
+			spelling:
+				spelling === "Canonical"
+					? { kind: "Canonical" }
+					: { kind: "Variant", variantTags: ["Historical"] },
+			surfaceFeatures: null,
+			unitKind: "Surface",
+		} as unknown as Dumling.Surface,
+	};
+}
