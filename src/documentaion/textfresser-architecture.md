@@ -19,17 +19,24 @@ Do not add features to the deprecated package unless the live application requir
 
 ## Domain model
 
+Terms follow dumling, dumrel and dumdict. See `CONTEXT.md` and the [adoption map](https://github.com/clockblocker/filler-de/issues/49).
+
 | Term | Meaning |
 | --- | --- |
-| Surface | Text that the user encounters. |
-| Selection | The linguistic classification of that Surface in context. |
-| Lemma | The canonical linguistic form. |
-| Attestation | The source context and source-note reference. |
-| Vocabulary note | One Markdown note for a visible Surface. |
-| Entry | One linguistic sense or grammatical role in a vocabulary note. |
-| Section | A managed part of an Entry, such as translation, relation, or inflection. |
+| Lemma | A grammatical entity: language, Family, Kind, Core Features and Canonical Form. It carries no sense. |
+| Reading | A Lemma plus one Emoji Description: one sense. |
+| Surface | A grammatical form that realizes exactly one Lemma. |
+| Attestation | A fleeting occurrence of a Surface in text. It has no durable identity. |
+| Attestation Ref | A durable embed of the source block where an Attestation occurred. |
+| Lemma note | The one Markdown note for one Lemma and all of its Readings and owned Surfaces. |
+| Reading Entry, Surface Entry | The dumdict records a Lemma note holds for one Reading or one Surface. |
+| Block | A typed part of a Lemma note, such as translation, relation, or inflection. |
 
-One note can contain multiple Entries. Do not use the note path as the identity of a sense.
+Selection is retired. "Section" means a Library Section only.
+
+One note holds one Lemma. Its path spells the Lemma's identity ([#52](https://github.com/clockblocker/filler-de/issues/52)), but the note's `identity` Block stays authoritative. Do not read identity from the path, and do not use the path as the identity of a Reading.
+
+Current code predates these terms. Its `LemmaResult` and "Lemma" include the sense emojis, so they are Readings. `EntrySection` and `DictSectionKind` are Blocks. Its notes are surface hosts that can hold several Lemmas. The cutover is tracked on the adoption map.
 
 ## Command flow
 
@@ -38,8 +45,8 @@ Textfresser has three commands:
 | Command | Result |
 | --- | --- |
 | `Lemma` | Resolve the selected Surface, insert a safe link, and start background generation. |
-| `Generate` | Create or update one Entry and propagate generated references. |
-| `TranslateSelection` | Translate selected text without creating a vocabulary Entry. |
+| `Generate` | Create or update one Reading Entry and propagate generated references. |
+| `TranslateSelection` | Translate selected text without creating a Reading Entry. |
 
 ### Lemma
 
@@ -49,7 +56,7 @@ Textfresser has three commands:
 selection
   -> resolve or create a safe working target
   -> insert a clickable link
-  -> resolve the linguistic Selection
+  -> resolve the Surface, Lemma, and Reading
   -> choose the final target by policy
   -> rewrite the source link
   -> rename, reuse, or remove the working target
@@ -69,8 +76,8 @@ The coordinator permits one active Generate operation and one latest pending req
 Generate:
 
 1. Reads the target note.
-2. Finds an existing matching Entry or allocates a new Entry.
-3. Produces the applicable sections.
+2. Finds an existing matching Reading Entry or allocates a new one.
+3. Produces the applicable Blocks.
 4. Propagates relations, morphology, morphemes, and inflections.
 5. Serializes the note.
 6. Dispatches all vault changes through VAM.
@@ -79,22 +86,22 @@ If generation fails, Textfresser can remove an empty target only when the invoca
 
 When the user opens the target during generation, the click handler waits for completion and then scrolls to the generated block.
 
-## Note and section ownership
+## Note and Block ownership
 
 Textfresser owns:
 
-- Entry identity and matching;
 - note parsing and serialization;
-- section selection and display order;
+- Block selection and display order;
 - German labels and formatting;
-- target paths, aliases, tags, and block IDs;
+- target paths, aliases, tags, and Block IDs;
+- plugin-owned Blocks: `closed_set_membership` and freeform content;
 - propagation and merge policy.
 
-The lexical-generation package owns model calls and generation DTOs. The linguistics package owns linguistic schemas and operations.
+dumling owns Lemma, Reading and Surface identity. dumdict owns the records, Reading matching, and change planning. dumrel owns Reading Knowledge and relation projections. Until the cutover, the lexical-generation package owns model calls and generation DTOs, and the linguistics package owns the legacy linguistic schemas.
 
-Headers and tags are projections. They must not become the canonical source for linguistic identity.
+Every Block serializes one dumdict or dumrel field, is a projection, or is plugin-owned. Headers, tags, inverse relations and the inflection table are projections. They must not become the canonical source for linguistic identity or data.
 
-The current note code has a legacy adapter and a newer document/data split under `core/notes/`. The proposed replacement contract is in `specs/linguistic-note-codec-spec.md`.
+The current note code has a legacy adapter and a newer document/data split under `core/notes/`. The replacement contract is in `specs/linguistic-note-codec-spec.md`.
 
 ## Target routing
 
@@ -103,13 +110,13 @@ Textfresser uses two storage families:
 | Family | Content |
 | --- | --- |
 | `Library` | Closed-set grammar and function-word leaves managed by the Librarian. |
-| `Worter` | Surface-host notes for open-set Entries and unconfirmed lookups. |
+| `Worter` | Surface-host notes for open-set Readings and unconfirmed lookups. |
 
 The accepted target policy is:
 
 - A user-authored `[[surface]]` link opens the `Worter` surface host.
-- A model-confirmed closed-set attestation can link to the exact `Library` leaf.
-- A `Worter` note can contain open-set Entries and closed-set membership Entries.
+- A model-confirmed closed-set Attestation can link to the exact `Library` leaf.
+- A `Worter` note can contain open-set Readings and `closed_set_membership` Blocks.
 - Normal Textfresser links render a basename. They do not store full vault paths.
 - Aliases and anchors must survive normalization.
 - Unknown slash-separated targets must remain unchanged.
@@ -118,18 +125,22 @@ The Librarian parses Library suffixes. Textfresser must not duplicate the separa
 
 Current gap: the wikilink-completion behavior still rewrites one unresolved Core Name to a unique Library leaf. It leaves multiple matches unchanged. This unique-match behavior does not conform to the surface-host policy and must be reconciled before the routing migration is complete.
 
+One note per Lemma replaces the surface host. Where a bare `[[surface]]` link and closed-class Lemmas land then is open in [#53](https://github.com/clockblocker/filler-de/issues/53), which may amend or supersede ADR-0008.
+
 ## Propagation
 
-Generated sections can create updates in other notes.
+Generated Blocks can create updates in other notes.
 
-| Source | Typical propagated result |
+Inverse relations must not be written. A Semantic Relation is a direct claim stored on its source Reading only; the target note shows its inverse as a projection, and a missing target stays a Pending Semantic Relation. The current code still writes inverse lines and stub notes, which [#59](https://github.com/clockblocker/filler-de/issues/59) removes.
+
+| Source | Current propagated result |
 | --- | --- |
-| Lexical relation | Inverse or matching relation on the target Entry |
+| Semantic Relation | Inverse or matching relation on the target note (legacy; to be removed) |
 | Morphology | Backlink or composition equation |
 | Morpheme | "used in" reference |
-| Inflection | Entry or reference for an inflected Surface |
+| Inflection | Note or reference for an inflected Surface |
 
-Propagation uses semantic intent keys and stable Entry IDs. It must deduplicate repeated intent.
+Propagation uses semantic intent keys and stable Block IDs. It must deduplicate repeated intent.
 
 Propagation produces Vault Actions. It does not write through Obsidian directly.
 
@@ -138,7 +149,7 @@ Propagation produces Vault Actions. It does not write through Obsidian directly.
 - `Textfresser` is the public commander and state owner.
 - `orchestration/` owns multi-step command coordination.
 - `commands/` owns command pipelines.
-- `core/` and `domain/` own note, Entry, wikilink, and propagation policy.
+- `core/` and `domain/` own note, Block, wikilink, and propagation policy.
 - `languages/de/` and `targets/de/` own German-specific policy and rendering.
 - VAM owns all vault and active-editor I/O.
 

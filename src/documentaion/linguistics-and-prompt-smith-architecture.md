@@ -7,13 +7,28 @@ Related decision:
 - [ADR-0006: Separate linguistic truth, lexical generation, and note policy](../../docs/adr/0006-separate-linguistic-truth-generation-and-note-policy.md)
 - [ADR-0010: Return field-level results from aggregate lexical generation](../../docs/adr/0010-return-field-level-results-from-aggregate-lexical-generation.md)
 
+## Terminology
+
+The packages below predate the batteries and will be deleted at the cutover ([#66](https://github.com/clockblocker/filler-de/issues/66)). New code uses dumling terms (see `CONTEXT.md`). The legacy names map to them as follows:
+
+| Legacy name | dumling term |
+| --- | --- |
+| `Lemma` with its sense emojis | Reading |
+| `Lemma` kind, POS, discriminator | Lemma: Family, Kind and Core Features |
+| `Selection` | Retired. An occurrence is an Attestation; its form is a Surface. |
+| Inherent features | Core Features, part of Lemma identity |
+| Attestation (source context and note reference) | Attestation Ref. A dumling Attestation is a fleeting occurrence. |
+| Entry section | Block |
+
+The type names in the tables below are the legacy packages' exported names. Keep them as they are until the packages are deleted.
+
 ## Package ownership
 
 | Package or layer | Owns | Must not own |
 | --- | --- | --- |
 | `@textfresser/linguistics` | Linguistic schemas, types, IDs, and language operations | Prompts, note paths, tags, or UI labels |
-| `@textfresser/lexical-generation-next` | Selection resolution, sense matching, prompt routing, and generation DTOs | Note layout, vault I/O, or Textfresser routing |
-| Textfresser | Notes, Entry IDs, target paths, labels, tags, and propagation | Private linguistic schemas or raw prompt dispatch |
+| `@textfresser/lexical-generation-next` | `Selection` resolution, sense matching, prompt routing, and generation DTOs | Note layout, vault I/O, or Textfresser routing |
+| Textfresser | Notes, Block IDs, target paths, labels, tags, and propagation | Private linguistic schemas or raw prompt dispatch |
 | Deprecated lexical generation | Current application runtime during cutover | New feature design |
 
 The boundary migration is incomplete. Some temporary application and `lexical-generation-next` types still import `src/deprecated-linguistic-enums.ts`. Remove these imports during the application cutover.
@@ -56,7 +71,7 @@ generateRelations
 
 `PromptKind`, prompt assets, and schemas are internal. Callers request a domain operation.
 
-Low-level generators accept a resolved Selection and an attestation. They do not resolve the same text again.
+Low-level generators accept a resolved `Selection` and its source context. They do not resolve the same text again.
 
 `generateLexicalInfo` runs applicable parts in parallel. Each field reports one status:
 
