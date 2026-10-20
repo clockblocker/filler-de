@@ -100,7 +100,7 @@ const DECORATION_PATTERNS: { marker: string; openPattern: RegExp }[] = [
 
 /**
  * Check if content contains sentence-ending punctuation that would cause
- * Intl.Segmenter to split it into multiple sentences.
+ * the sentence splitter to split it into multiple sentences.
  *
  * We look for sentence-ending punctuation followed by whitespace and more content,
  * which indicates multiple potential sentences.
@@ -111,7 +111,7 @@ function containsSentenceBoundary(content: string): boolean {
 	// Patterns that create sentence boundaries:
 	// 1. Single period (not part of ellipsis) followed by quotes, space, content
 	// 2. ! or ? followed by optional quotes, space, content
-	// 3. Ellipsis (... or …) followed by space and content (Intl.Segmenter splits here too)
+	// 3. Ellipsis (... or …) followed by space and content (the sentence splitter splits here too)
 	return (
 		/(?<![.])\.(?![.])["»"']*\s+\S/.test(content) || // single period
 		/[!?]["»"']*\s+\S/.test(content) || // ! or ?

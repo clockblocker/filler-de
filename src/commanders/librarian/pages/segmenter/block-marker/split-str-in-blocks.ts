@@ -43,6 +43,7 @@ import {
 } from "./types";
 
 export { formatBlocksWithMarkers } from "./block-formatting";
+
 // Re-export types that are part of public API
 
 /**
@@ -178,10 +179,7 @@ export function splitStrInBlocksWithIntermediate(
 	const filteredLines = scanLines(strippedText, fullConfig.languageConfig);
 
 	// Run pipeline stages 2-3 on stripped text
-	const sentenceTokens = segmentSentences(
-		strippedText,
-		fullConfig.languageConfig,
-	);
+	const sentenceTokens = segmentSentences(strippedText);
 	const annotated = annotateSentences(
 		sentenceTokens,
 		filteredLines,
@@ -265,4 +263,3 @@ export function splitStrInBlocksWithIntermediate(
 		markedText,
 	};
 }
-

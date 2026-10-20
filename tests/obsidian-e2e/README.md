@@ -95,10 +95,23 @@ Markdown contents are in `markdown`, and file kinds are `md` or `file`.
 
 Available actions are `createFile`, `createBinary`, `modifyFile`,
 `renamePath`, and `deletePath`. Narrow command actions cover
-`runSplitToPages`, `runSplitInBlocks`, and `runPageNavigation` with real active
-editor context. `toggleCodexEntry` drives the public checkbox interaction with
+`runSplitToPages`, `runSplitInBlocks`, `runClassify`, and `runPageNavigation`
+with real active editor context. `toggleCodexEntry` drives the public checkbox interaction with
 the Codex path, rendered line content, and pre-toggle checked state that
 Obsidian's event layer supplies.
+
+`runClassify` selects text that occurs once in a Scroll and runs the Classify
+command. Desktop E2E never reaches a provider: every scenario's dumgen answers
+jev from a script, which a scenario declares as `dumgen: { jev: { <question
+id>: "<Choice option>" | <Noul> } }`; unscripted questions get the scripted
+jev's defaults (`src/managers/dumgen/scripted-jev.ts`), German included.
+Each scenario's scripted segmentations are cached under their own segmenter
+version, so a scenario starts with a cold Segmentation Cache; they collect,
+a few small entries per run, in the test vault's hidden
+`.textfresser/segmentation/` folder. `status().classify` returns what the
+last Classify handed to the resolver port: its `UnitRef`s with each unit's
+Family, Kind and occurrence texts, its Sentences and cache counts, with a
+Library-relative `scrollPath`; it is null until a Classify succeeds.
 
 To observe VAM's Markdown modify subscription, declare
 `observeModifications: { path: "Worter" }` with a Library-relative folder.

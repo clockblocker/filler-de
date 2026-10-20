@@ -72,7 +72,7 @@ describe("splitStrInBlocks", () => {
 	});
 
 	test("intro with quote is one block (segmenter limitation)", () => {
-		// Note: Intl.Segmenter treats "intro: quote" as one sentence
+		// Note: dumgen's splitText treats "intro: quote" as one sentence
 		// So the block marker cannot split them without modifying sentence segmentation
 		const text = `Einem reichen Manne wurde seine Frau krank und er sprach: „Ich liebe dich." Sie lächelte.`;
 		const result = splitStrInBlocks(text);

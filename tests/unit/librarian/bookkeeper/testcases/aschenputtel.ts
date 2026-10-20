@@ -102,20 +102,16 @@ Die Frau hatte zwei Töchter mit ins Haus gebracht, die schön und weiß von Ang
 
 Da ging eine schlimme Zeit für das arme Stiefkind an. ^6
 
-"Soll die dumme Gans bei uns in der Stube sitzen!" ^7
+"Soll die dumme Gans bei uns in der Stube sitzen!" sprachen sie, "wer Brot essen will, muß verdienen: hinaus mit der Küchenmagd!" ^7
 
-sprachen sie, "wer Brot essen will, muß verdienen: hinaus mit der Küchenmagd!" ^8
+Sie nahmen ihm seine schönen Kleider weg, zogen ihm einen grauen, alten Kittel an und gaben ihm hölzerne Schuhe. ^8
 
-Sie nahmen ihm seine schönen Kleider weg, zogen ihm einen grauen, alten Kittel an und gaben ihm hölzerne Schuhe. ^9
+"Seht einmal die stolze Prinzessin, wie sie geputzt ist!" riefen sie, lachten und führten es in die Küche. ^9
 
-"Seht einmal die stolze Prinzessin, wie sie geputzt ist!" ^10
+Da mußte es von Morgen bis Abend schwere Arbeit tun, früh vor Tag aufstehen, Wasser tragen, Feuer anmachen, kochen und waschen. ^10
 
-riefen sie, lachten und führten es in die Küche. ^11
+Obendrein taten ihm die Schwestern alles ersinnliche Herzeleid an, verspotteten es und schütteten ihm die Erbsen und Linsen in die Asche, so daß es sitzen und sie wieder auslesen mußte. ^11
 
-Da mußte es von Morgen bis Abend schwere Arbeit tun, früh vor Tag aufstehen, Wasser tragen, Feuer anmachen, kochen und waschen. ^12
+Abends, wenn es sich müde gearbeitet hatte, kam es in kein Bett, sondern mußte sich neben den Herd in die Asche legen. ^12
 
-Obendrein taten ihm die Schwestern alles ersinnliche Herzeleid an, verspotteten es und schütteten ihm die Erbsen und Linsen in die Asche, so daß es sitzen und sie wieder auslesen mußte. ^13
-
-Abends, wenn es sich müde gearbeitet hatte, kam es in kein Bett, sondern mußte sich neben den Herd in die Asche legen. ^14
-
-Und weil es darum immer staubig und schmutzig aussah, nannten sie es Aschenputtel. ^15`;
+Und weil es darum immer staubig und schmutzig aussah, nannten sie es Aschenputtel. ^13`;

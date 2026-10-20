@@ -6,6 +6,7 @@
       "name": "cbcr-text-eater-de",
       "dependencies": {
         "@codemirror/view": "latest",
+        "@textfresser/lemma-note-codec": "workspace:*",
         "@textfresser/lexical-generation": "workspace:*",
         "@textfresser/library-core": "workspace:*",
         "@textfresser/linguistics": "workspace:*",

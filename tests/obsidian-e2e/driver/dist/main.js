@@ -14,6 +14,7 @@ const {
 	validateRelativePath,
 	validateScenarioId,
 	validateScope,
+	validateScriptedJevAnswers,
 } = require("./protocol");
 
 const TARGET_PLUGIN_ID = "cbcr-text-eater-de";
@@ -439,6 +440,27 @@ class TextfresserE2EDriver extends Plugin {
 		};
 	}
 
+	/**
+	 * What Textfresser's last Classify handed to its resolver port, with the
+	 * Scroll path relative to the scenario's library. Null before any
+	 * Classify, or for a Scroll outside the scenario.
+	 */
+	classifyHandoff(scenario) {
+		const plugin = this.observeTextfresser().plugin;
+		const handoff = plugin?.getClassifyTestingApi?.().latestHandoff() ?? null;
+		if (
+			!scenario ||
+			!handoff ||
+			!handoff.scrollPath.startsWith(`${scenario.libraryRoot}/`)
+		) {
+			return null;
+		}
+		return {
+			...handoff,
+			scrollPath: relativeTo(scenario.libraryRoot, handoff.scrollPath),
+		};
+	}
+
 	activeScenario() {
 		if (!this.config) return null;
 		return this.globalState.activeScenarios.get(this.config.sessionId) ?? null;
@@ -456,6 +478,7 @@ class TextfresserE2EDriver extends Plugin {
 				: null;
 		return {
 			activePath,
+			classify: this.classifyHandoff(scenario),
 			driver: {
 				configured: this.config !== null,
 				instanceId: this.driverInstanceId,
@@ -747,6 +770,19 @@ class TextfresserE2EDriver extends Plugin {
 		const scenarioId = validateScenarioId(request.params.scenarioId);
 		const paths = scenarioPaths(request.sessionId, scenarioId);
 		const settings = sanitizeSettings(request.params.settings);
+		// Desktop E2E never reaches a provider: every scenario's dumgen answers
+		// jev from its script, empty unless the scenario declares one.
+		const scriptedJev = validateScriptedJevAnswers(
+			request.params.dumgen === undefined
+				? undefined
+				: assertRecord(request.params.dumgen, "params.dumgen").jev,
+		);
+		if (typeof before.plugin.getClassifyTestingApi !== "function") {
+			throw new DriverError(
+				"TextfresserProbeMissing",
+				"Textfresser does not expose getClassifyTestingApi()",
+			);
+		}
 		const fixtures = request.params.fixtures ?? [];
 		if (!Array.isArray(fixtures) || fixtures.length > 2_000) {
 			throw new DriverError(
@@ -828,6 +864,7 @@ class TextfresserE2EDriver extends Plugin {
 			}
 		}
 
+		before.plugin.getClassifyTestingApi().useScriptedJev(scriptedJev);
 		await before.plugin.resetSettingsForTesting({
 			...settings,
 			libraryRoot: paths.libraryRoot,
@@ -1107,6 +1144,47 @@ class TextfresserE2EDriver extends Plugin {
 				}
 				break;
 			}
+			case "classify": {
+				const file = this.app.vault.getAbstractFileByPath(source.resolved);
+				if (!file || !isFile(file) || file.extension?.toLowerCase() !== "md") {
+					throw new DriverError(
+						"FileNotFound",
+						`cannot classify in '${source.resolved}': markdown file not found`,
+					);
+				}
+				const selection = assertString(
+					operation.selection,
+					"params.operation.selection",
+					{ maxLength: 4_096 },
+				);
+				const editor = await openSourceEditor(this.app, file);
+				const content = editor.getValue();
+				const start = content.indexOf(selection);
+				if (start < 0 || content.indexOf(selection, start + 1) >= 0) {
+					throw new DriverError(
+						"SelectionUnavailable",
+						"classify selection must occur exactly once in the active file",
+					);
+				}
+				editor.setSelection(
+					editor.offsetToPos(start),
+					editor.offsetToPos(start + selection.length),
+				);
+				if (editor.getSelection() !== selection) {
+					throw new DriverError(
+						"SelectionUnavailable",
+						"active editor did not retain the requested classify selection",
+					);
+				}
+				const commandId = `${TARGET_PLUGIN_ID}:classify-selection`;
+				if (this.app.commands.executeCommandById(commandId) !== true) {
+					throw new DriverError(
+						"CommandUnavailable",
+						`Textfresser command '${commandId}' was not available`,
+					);
+				}
+				break;
+			}
 			case "pageNavigation": {
 				const file = this.app.vault.getAbstractFileByPath(source.resolved);
 				if (!file || !isFile(file) || file.extension?.toLowerCase() !== "md") {
@@ -1168,7 +1246,7 @@ class TextfresserE2EDriver extends Plugin {
 			default:
 				throw new DriverError(
 					"InvalidOperation",
-					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, pageNavigation, or toggleCodexEntry",
+					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, classify, pageNavigation, or toggleCodexEntry",
 				);
 		}
 
@@ -1357,6 +1435,7 @@ class TextfresserE2EDriver extends Plugin {
 		const timeoutMs = clampTimeout(request.params.timeoutMs, 30_000);
 		await this.closeModifyObserver(this.config.sessionId);
 		await this.settle({ timeoutMs });
+		before.plugin.getClassifyTestingApi?.().useScriptedJev(null);
 
 		// Stop observing the session before deleting it. The stable driver-owned
 		// quarantine is outside E2E/, so cleanup cannot race Librarian healing or

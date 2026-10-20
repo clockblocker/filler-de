@@ -29,6 +29,8 @@ export type SourceActiveEditorSnapshot = ActiveEditorSnapshot & {
 	readonly primarySelection: EditorSelection | null;
 	readonly selection: string | null;
 	readonly selectionStartOffset: number | null;
+	/** Offset just past the primary selection's end; null without a selection. */
+	readonly selectionEndOffset: number | null;
 };
 
 export function activeEditorFailure(
@@ -132,6 +134,9 @@ export const requireSourceMode = Effect.fn(
 			const selectionStartOffset = selection
 				? snapshot.editor.posToOffset(snapshot.editor.getCursor("from"))
 				: null;
+			const selectionEndOffset = selection
+				? snapshot.editor.posToOffset(snapshot.editor.getCursor("to"))
+				: null;
 			return {
 				...snapshot,
 				content,
@@ -141,6 +146,7 @@ export const requireSourceMode = Effect.fn(
 				mode: "source" as const,
 				primarySelection,
 				selection,
+				selectionEndOffset,
 				selectionStartOffset,
 			} satisfies SourceActiveEditorSnapshot;
 		},

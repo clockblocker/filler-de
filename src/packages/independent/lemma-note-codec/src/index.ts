@@ -26,6 +26,7 @@ export {
 	parseDocument,
 	serializeDocument,
 } from "./document";
+export { sha256Hex } from "./hash";
 export type {
 	CodecIssue,
 	CodecIssueTag,

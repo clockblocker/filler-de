@@ -45,10 +45,16 @@ Supported methods are `status`, `ready`, `beginScenario`, `act`, `settle`,
 `snapshot`, `modifications`, `diagnostics`, and `cleanupSession`.
 `beginScenario` accepts `"observeModifications": { "path": "<folder>" }` to
 record Textfresser's VAM Markdown modify observations below that
-library-relative folder; `modifications` settles and returns them. `act` supports `create`,
-`modify`, `rename`, `delete`, and the narrow `splitToPages` Textfresser command;
-`create` also accepts
-`"entryType": "folder"`. File content uses UTF-8 by default or canonical
+library-relative folder; `modifications` settles and returns them. It also
+installs a scripted jev in Textfresser's dumgen for the whole scenario, from
+`"dumgen": { "jev": { "<question id>": "<Choice option>" | <Noul> } }` or
+empty, and `cleanupSession` removes it, so no scenario reaches a provider.
+`act` supports `create`, `modify`, `rename`, `delete`, and the narrow
+`splitToPages`, `splitInBlocks`, `classify`, `pageNavigation` and
+`toggleCodexEntry` Textfresser interactions; `create` also accepts
+`"entryType": "folder"`. `classify` selects its `selection`, which must occur
+exactly once in the file, and runs the Classify command; `status` then
+reports, under `classify`, what that Classify handed to the resolver port. File content uses UTF-8 by default or canonical
 padded base64 with `"encoding": "base64"`.
 
 Run the transport and confinement tests directly:

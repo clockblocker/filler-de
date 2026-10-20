@@ -1,7 +1,7 @@
 /**
  * Markdown Protector
  *
- * Protects markdown syntax that confuses Intl.Segmenter from being
+ * Protects markdown syntax that confuses the sentence splitter from being
  * incorrectly split on punctuation (`.`, `?`, `!`).
  *
  * Strategy: Replace "unsafe" content with placeholder tokens before

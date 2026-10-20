@@ -151,6 +151,7 @@ function makeHarness(input: {
 					surroundingRawBlock: "",
 					text: null,
 				},
+				selectionRange: null,
 				splitPath: input.sourcePath,
 			}),
 		getOpenedContent: () => Effect.succeed(input.content ?? LONG_CONTENT),

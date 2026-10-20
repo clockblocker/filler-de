@@ -2,8 +2,6 @@
  * Language-specific configuration for text segmentation.
  */
 export type LanguageConfig = {
-	/** Locale for Intl.Segmenter */
-	locale: string;
 	/** Quote mark definitions */
 	quotes: {
 		/** Characters that open quotes (increase depth) */
@@ -32,7 +30,6 @@ export type LanguageConfig = {
  * - U+0022 " (QUOTATION MARK) - ASCII neutral
  */
 const GERMAN_CONFIG: LanguageConfig = {
-	locale: "de",
 	poemIndicators: {
 		linePatterns: [/ {2}$/], // Markdown line break
 		maxLineLength: 60, // Lines under this might be verse

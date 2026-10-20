@@ -25,6 +25,12 @@ type ScenarioAction =
 			readonly selection: string;
 	  }
 	| {
+			readonly kind: "runClassify";
+			readonly path: string;
+			/** Text that occurs exactly once in the Scroll; it is selected before the command runs. */
+			readonly selection: string;
+	  }
+	| {
 			readonly direction: "next" | "prev";
 			readonly kind: "runPageNavigation";
 			readonly path: string;
@@ -37,6 +43,15 @@ type ScenarioAction =
 	  };
 
 interface ScenarioDefinition {
+	/**
+	 * dumgen never reaches a provider in desktop E2E: its jev answers every
+	 * question from this script, by question id. A string picks that Choice
+	 * option and a number is a Noul; anything unscripted gets the scripted
+	 * jev's defaults (`src/managers/dumgen/scripted-jev.ts`).
+	 */
+	readonly dumgen?: {
+		readonly jev: Readonly<Record<string, string | number>>;
+	};
 	readonly fixture: readonly ScenarioFixture[];
 	readonly id: string;
 	/**
@@ -54,8 +69,41 @@ interface ScenarioModification {
 	readonly size: number;
 }
 
+/** What the last Classify handed to its resolver port (#74's `UnitRef`s). */
+interface ScenarioClassifyHandoff {
+	/** Library-relative path of the classified Scroll. */
+	readonly scrollPath: string;
+	readonly sentences: readonly {
+		readonly sentenceKey: string;
+		readonly text: string;
+	}[];
+	readonly units: readonly {
+		readonly ref: {
+			readonly sentenceKey: string;
+			readonly segments: readonly number[];
+		};
+		readonly family: string;
+		readonly kind: string;
+		readonly occurrences: readonly {
+			readonly from: number;
+			readonly to: number;
+			readonly text: string;
+		}[];
+	}[];
+	readonly resolutions: readonly string[];
+	readonly stats: {
+		readonly cachedSentences: number;
+		readonly failedSentences: number;
+		readonly germanSentences: number;
+		readonly segmentedSentences: number;
+		readonly touchedSentences: number;
+	};
+}
+
 interface ScenarioStatus {
 	readonly activePath: string | null;
+	/** Null until a Classify in this scenario succeeds. */
+	readonly classify: ScenarioClassifyHandoff | null;
 	readonly generation: number;
 	readonly instanceId: string;
 	readonly root: string;
@@ -118,6 +166,7 @@ interface ActiveScenarioValue {
 
 interface DriverStatusValue {
 	readonly activePath: string | null;
+	readonly classify?: ScenarioClassifyHandoff | null;
 	readonly scenario: ActiveScenarioValue | null;
 }
 
@@ -353,6 +402,12 @@ function encodeAction(action: ScenarioAction): Readonly<Record<string, unknown>>
 				path: action.path,
 				selection: action.selection,
 			};
+		case "runClassify":
+			return {
+				kind: "classify",
+				path: action.path,
+				selection: action.selection,
+			};
 		case "runPageNavigation":
 			return {
 				direction: action.direction,
@@ -445,6 +500,7 @@ export async function withObsidianScenario<T>(
 		const begun = await client.request<unknown>(
 			"beginScenario",
 			{
+				...(definition.dumgen ? { dumgen: definition.dumgen } : {}),
 				fixtures: definition.fixture.map(encodeFixture),
 				...(definition.observeModifications
 					? { observeModifications: definition.observeModifications }
@@ -498,6 +554,7 @@ export async function withObsidianScenario<T>(
 				);
 				return {
 					activePath: result.value.activePath,
+					classify: result.value.classify ?? null,
 					generation: result.fence.generation,
 					instanceId: result.fence.instanceId,
 					root: scenario.libraryRoot,

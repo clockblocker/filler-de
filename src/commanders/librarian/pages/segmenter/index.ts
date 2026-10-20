@@ -56,7 +56,7 @@ import {
  *
  * Pipeline stages:
  * 1. Line Scanner: Scans lines and tracks quote state
- * 2. Sentence Segmenter: Splits into sentences using Intl.Segmenter
+ * 2. Sentence Segmenter: Splits into sentences with dumgen's splitText
  * 3. Context Annotator: Adds quote depth, region markers
  * 4. Region Grouper: Groups keep-together content (poems, quotes)
  * 5. Page Accumulator: Builds pages respecting size limits
@@ -236,7 +236,7 @@ function runPipeline(
 	const filteredLines = scanLines(strippedText, langConfig);
 
 	// Stage 2: Segment into tokens (sentences + paragraph breaks)
-	const rawTokens = segmentToTokens(strippedText, langConfig);
+	const rawTokens = segmentToTokens(strippedText);
 
 	// Stage 3: Annotate tokens with context
 	const annotatedTokens = annotateTokens(
@@ -311,7 +311,7 @@ function runPipelineSimple(
 	const { strippedText, spans: decorationSpans } = stripDecorations(safeText);
 
 	const lines = scanLines(strippedText, langConfig);
-	const rawTokens = segmentToTokens(strippedText, langConfig);
+	const rawTokens = segmentToTokens(strippedText);
 	const annotatedTokens = annotateTokens(rawTokens, lines, langConfig);
 
 	// Filter out HR placeholders from tokens, tracking them for later reinsertion

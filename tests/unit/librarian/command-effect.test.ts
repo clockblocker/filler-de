@@ -407,6 +407,7 @@ function makeActiveContext(content: string) {
 			surroundingRawBlock: content.split("\n")[0] ?? "",
 			text: null,
 		},
+		selectionRange: null,
 		splitPath: SOURCE_PATH,
 	};
 }
