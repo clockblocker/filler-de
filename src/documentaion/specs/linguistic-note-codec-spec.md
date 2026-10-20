@@ -169,9 +169,9 @@ The codec is pure, so the caller supplies every input a projection reads beyond 
 | --- | --- |
 | Note path | Not rendered by the codec. The store derives it from `identity` ([#52](https://github.com/clockblocker/filler-de/issues/52)) |
 | `header` | `identity`, `reading`, `transcription`, and the Block ID |
-| `tags` | `identity` and the Reading's Knowledge |
+| `tags` | `identity` and the Reading's Knowledge; derived by `@textfresser/lemma-note-projections` |
 | `inverse_relation` | `SemanticRelationProjection`s for this note's Readings, computed by the store with `projectSemanticRelations` over the relation edges that target this Lemma, with dictionary-wide `readingCounts` |
-| `inflection` | Open; see open question 4 |
+| `inflection` | `identity`, `plural`, `conjugation_class`, `preterite`, owned Surfaces and dumcorpus paradigms; derived by `@textfresser/lemma-note-projections` |
 | Wikilinks in any rendering | A caller-supplied link renderer for a Lemma or Reading target |
 
 Inverse relations are never written as data, in this note or any other. The `relation` Block holds only direct claims (synonym, nearSynonym, antonym, nearAntonym, hypernym, holonym, endonym), and dumrel's stored Knowledge has no field for an inverse such as hyponym or meronym ([ADR 0012]). Every relation stays inside its source's relation space ([ADR 0020]). When a commit adds or removes an edge, the store re-renders the `inverse_relation` Block of each affected target note ([#59](https://github.com/clockblocker/filler-de/issues/59)). Exonyms, Governors and participle users follow the same rule if rendered.
@@ -310,8 +310,8 @@ Tests must cover:
 1. **Wikilink form in renderings.** Whether `header`, `relation`, `pending_relation`, `inverse_relation` and `morphology` render path-qualified links or bare ones. Classify already writes path-qualified links to Reading blocks, and a hand-typed bare link may land on any Lemma or Shadow note with its spelling, which is accepted (ADR-0012). Depends on the path encoding in [#52](https://github.com/clockblocker/filler-de/issues/52). The codec takes a link renderer until then.
 2. **Path healing.** Who heals a note whose path disagrees with its `identity`, and how Syncretisms, long Sayings and Shadow notes are spelled. [#52](https://github.com/clockblocker/filler-de/issues/52), questions 4 to 6.
 3. **Closed-class Lemmas.** Resolved by ADR-0012: closed-class Lemma notes, generated Syncretisms included, live under `Worter/` and are created on first click; `closed_set_membership` is dropped.
-4. **`inflection`.** What the table projects from: owned Surfaces, `plural` and `conjugation_class`, a dumcorpus paradigm, or a plugin-owned generator kept beside dumdict state. If it stays generated, it becomes a plugin-owned Block rather than a projection. Depends on [#62](https://github.com/clockblocker/filler-de/issues/62).
-5. **Morphemes, features and tags.** Whether morpheme "used in" backlinks become a projection over `morphologicalTree`, whether any tag source beyond dumling identity and dumrel Knowledge survives, and whether `deviation` returns. dumgen does not produce these yet. Depends on [#62](https://github.com/clockblocker/filler-de/issues/62).
+4. ~~**`inflection`.**~~ Resolved by [#62](https://github.com/clockblocker/filler-de/issues/62) and built in [#75](https://github.com/clockblocker/filler-de/issues/75): a projection derived without a model; see Derived projections. What the table projects from: owned Surfaces, `plural` and `conjugation_class`, a dumcorpus paradigm, or a plugin-owned generator kept beside dumdict state. If it stays generated, it becomes a plugin-owned Block rather than a projection. Depends on [#62](https://github.com/clockblocker/filler-de/issues/62).
+5. **Morphemes, features and tags.** Tags are resolved by [#62](https://github.com/clockblocker/filler-de/issues/62) and built in [#75](https://github.com/clockblocker/filler-de/issues/75): they come from dumling identity and dumrel Knowledge only. Morphemes stay open. Whether morpheme "used in" backlinks become a projection over `morphologicalTree`, whether any tag source beyond dumling identity and dumrel Knowledge survives, and whether `deviation` returns. dumgen does not produce these yet. Depends on [#62](https://github.com/clockblocker/filler-de/issues/62).
 
 ## Implementation choices (#55)
 
@@ -325,6 +325,16 @@ Tests must cover:
 - **Rendering boundary.** A typed Block's rendering is exactly the sealed lines directly after its marker, and only when they still match the seal. Every other line up to the next marker becomes a freeform Block in place, byte for byte: a line typed directly under a rendering, with or without a blank line, and the whole rendering once a user edits it or types inside it. A Block without a seal, such as `identity`, has no rendering, so any line under it is freeform. `serialize` re-renders the Block and keeps the edited text as freeform, at the end of its part like all freeform, so the codec never drops user text and never reads an edit as data. An edited `header` or `surface` line keeps its `^<id>` as user text, so the ID appears twice until the user deletes the stale copy.
 - **Knowledge coverage.** Every `ReadingKnowledge` aspect has a Block; a new dumrel aspect fails to compile until it gets one, and `serialize` throws on an aspect it cannot place.
 - **Paths.** The ADR-0013 path codec (`lemmaNotePath`, `shadowNotePath`, `parseNotePath`) lives in the same package as its own module. The note codec never reads a path.
+
+## Derived projections (#75)
+
+[#75](https://github.com/clockblocker/filler-de/issues/75) fills the `inflection` and `tags` hooks from `@textfresser/lemma-note-projections`, an independent package over the batteries. Its `derivedProjections` plugs into `serialize`'s `projections` as is. It calls no model, and its cells are display-only, never Surfaces (batteries ADR 0019); forms come from stored data, never from pattern labels (ADR 0038).
+
+- **Nouns.** A case table from the Canonical Form, Core `gender`, `plural` and dumcorpus's definite article cells, by the rules measured in [#62](https://github.com/clockblocker/filler-de/issues/62). A masculine noun with an -(e)n plural may be weak, so its oblique singular cells are left out.
+- **Verbs.** A weak verb gets Präsens, Präteritum, Konjunktiv II, Partizip II and Imperativ, with its particle and reflexive in place. Any other verb gets the regular Präsens cells (ich, wir, ihr, sie), its Präteritum from `preterite`, and a Partizip II only from a stored `-te` form. The haben/sein auxiliary is never shown.
+- **Comparison.** A `comparable` ADJ or ADV gets Positiv, Komparativ and Superlativ: suppletive forms from dumcorpus, then a stored comparative Surface, then regular forms where no umlaut is in doubt.
+- **Closed classes.** A declining DET or PRON stem gets its case table from dumcorpus's realizations, and an AUX or closed VERB lists its forms.
+- **Tags.** The route, one nested tag per Core Feature value (`noun/masculine`, `verb/separable`, `verb/reflexive-acc`), and the inflection class Knowledge stores (`verb/weak`, `noun/plural-only`).
 
 [dumling]: https://github.com/clockblocker/texteater/blob/main/battery/dumling/GLOSSARY.md
 [dumrel]: https://github.com/clockblocker/texteater/blob/main/battery/dumrel/GLOSSARY.md

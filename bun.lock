@@ -21,6 +21,8 @@
       },
       "devDependencies": {
         "@biomejs/biome": "^2.2.6",
+        "@textfresser/lemma-note-codec": "workspace:*",
+        "@textfresser/lemma-note-projections": "workspace:*",
         "@textfresser/lexical-generation-next": "workspace:*",
         "@types/bun": "latest",
         "@types/node": "^18.19.130",
@@ -83,6 +85,10 @@
     },
     "src/packages/independent/lemma-note-codec": {
       "name": "@textfresser/lemma-note-codec",
+      "version": "0.0.0",
+    },
+    "src/packages/independent/lemma-note-projections": {
+      "name": "@textfresser/lemma-note-projections",
       "version": "0.0.0",
     },
     "src/packages/independent/linguistics": {
@@ -236,6 +242,8 @@
     "@textfresser/dictionary": ["@textfresser/dictionary@workspace:src/packages/composed/dictionary"],
 
     "@textfresser/lemma-note-codec": ["@textfresser/lemma-note-codec@workspace:src/packages/independent/lemma-note-codec"],
+
+    "@textfresser/lemma-note-projections": ["@textfresser/lemma-note-projections@workspace:src/packages/independent/lemma-note-projections"],
 
     "@textfresser/lexical-generation": ["@textfresser/lexical-generation@workspace:src/packages/independent/deprecated-lexical-generation"],
 
