@@ -15,14 +15,20 @@ export function stubRequestUrl(
 	answer: (request: RequestUrlParam) => StubAnswer,
 ) {
 	const requests: RequestUrlParam[] = [];
+	let sent: (request: RequestUrlParam) => void = () => {};
+	/** Settles once the first request is sent. */
+	const firstRequest = new Promise<RequestUrlParam>((resolve) => {
+		sent = resolve;
+	});
 	const requestUrl: RequestUrl = (request) => {
 		requests.push(request);
+		sent(request);
 		const reply = answer(request);
 		if (reply === "never") return new Promise(() => {});
 		if (reply instanceof Error) return Promise.reject(reply);
 		return Promise.resolve(reply);
 	};
-	return { requests, requestUrl };
+	return { firstRequest, requests, requestUrl };
 }
 
 export const parsedBody = (request: RequestUrlParam | undefined): unknown =>

@@ -41,15 +41,19 @@ export function createRequestUrlFetch(requestUrl: RequestUrl): DumgenFetch {
 		return new Promise((resolve, reject) => {
 			const onAbort = () => reject(abortReason(signal));
 			signal.addEventListener("abort", onAbort, { once: true });
-			Promise.resolve(
-				requestUrl({
-					body: init.body,
-					headers: { ...init.headers },
-					method: init.method,
-					throw: false,
-					url,
-				}),
-			)
+			// Called inside `then`, so a synchronous throw rejects too, and
+			// a signal aborted in the meantime sends nothing.
+			Promise.resolve()
+				.then(() => {
+					if (signal.aborted) throw abortReason(signal);
+					return requestUrl({
+						body: init.body,
+						headers: { ...init.headers },
+						method: init.method,
+						throw: false,
+						url,
+					});
+				})
 				.then(
 					(response) =>
 						resolve({

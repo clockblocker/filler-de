@@ -177,9 +177,9 @@ describe("OpenAI (Luna) over requestUrl", () => {
 	});
 
 	it("settles an interrupted call without waiting for requestUrl", async () => {
-		const { dumgen, requests } = dumgenOver(() => "never");
+		const { dumgen, firstRequest, requests } = dumgenOver(() => "never");
 		const fiber = Effect.runFork(translate(dumgen));
-		while (requests.length === 0) await Bun.sleep(1);
+		await firstRequest;
 		await Effect.runPromise(Fiber.interrupt(fiber));
 		expect(requests).toHaveLength(1);
 	});

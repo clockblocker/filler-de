@@ -61,13 +61,15 @@ describe("DumgenHost", () => {
 	});
 
 	it("aborts calls in flight on dispose and refuses use afterwards", async () => {
-		const { host, requests } = hostOver(() => "never");
+		const { firstRequest, host } = hostOver(() => "never");
 		const pending = Effect.runPromise(Effect.flip(translate(host)));
-		while (requests.length === 0) await Bun.sleep(1);
+		await firstRequest;
 		host.dispose();
 		const failure = await pending;
 		expect(failure).toBeInstanceOf(ProviderFailure);
-		expect(failure.message).toContain("The plugin unloaded");
+		expect(failure.message).toBe(
+			"OpenAI connection failed: Cancelled because the plugin unloaded",
+		);
 		expect(() => host.get()).toThrow("disposed");
 		host.dispose();
 	});

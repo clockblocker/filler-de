@@ -4,9 +4,12 @@
  * disposed on unload.
  *
  * `get()` returns the instance; its operations are Effects the caller runs.
- * Disposing aborts every call still in flight and makes `get()` throw. A
- * rebuilt instance gets a fresh request budget, and the old instance's
- * in-flight calls run on.
+ * Disposing aborts every call still in flight, the replaced instances'
+ * included, and makes `get()` throw. dumgen reports such a call as a
+ * `ProviderFailure` reading "… connection failed: Cancelled because the
+ * plugin unloaded", since it tells apart only its own aborts. A rebuilt
+ * instance gets a fresh request budget, and the old instance's in-flight
+ * calls run on.
  */
 import type { Dumgen } from "dumgen";
 import {
@@ -59,7 +62,7 @@ export class DumgenHost {
 	/** Aborts every call in flight; `get()` throws afterwards. Idempotent. */
 	dispose(): void {
 		this.current = undefined;
-		this.lifetime.abort(new Error("The plugin unloaded"));
+		this.lifetime.abort(new Error("Cancelled because the plugin unloaded"));
 	}
 
 	private readonly fetch: DumgenFetch = (url, init) =>

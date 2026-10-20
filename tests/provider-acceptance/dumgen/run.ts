@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createDumgen, type OperationTrace } from "dumgen";
 import * as Effect from "effect/Effect";
+import * as Result from "effect/Result";
 import {
 	createDumgenProviders,
 	createRequestUrlFetch,
@@ -64,7 +65,8 @@ export function parseCliOptions(args: readonly string[], env: Env): CliOptions {
 /**
  * The runtime's `fetch` standing in for Obsidian's `requestUrl`, so the
  * smoke sends through the plugin's own requestUrl port. Like `requestUrl`,
- * it takes no signal.
+ * it takes no signal: a request past its deadline fails the smoke at once,
+ * but keeps the process alive until the provider answers.
  */
 const fetchAsRequestUrl: RequestUrl = async (request) => {
 	const response = await fetch(request.url, {
@@ -87,7 +89,14 @@ async function main(): Promise<void> {
 		}),
 		onOperation: (trace) => traces.push(trace),
 	});
-	const checks = await Effect.runPromise(runDumgenSmoke(dumgen));
+	// A provider failure still writes the report, with the traces that explain it.
+	const outcome = await Effect.runPromise(
+		Effect.result(runDumgenSmoke(dumgen)),
+	);
+	const checks = Result.isSuccess(outcome) ? outcome.success : [];
+	const failure = Result.isFailure(outcome)
+		? { message: outcome.failure.message, tag: outcome.failure._tag }
+		: undefined;
 	const operations = traces.map((trace) => ({
 		calls: trace.calls.length,
 		durationMs: Math.round(trace.durationMs),
@@ -101,6 +110,7 @@ async function main(): Promise<void> {
 	}));
 	const report = {
 		checks,
+		...(failure ? { failure } : {}),
 		generatedAt: new Date().toISOString(),
 		operations,
 		schemaVersion: 1,
@@ -119,10 +129,11 @@ async function main(): Promise<void> {
 			`${operation.operation}: ${operation.calls} calls, ${operation.inputTokens}+${operation.outputTokens} tokens, ${operation.durationMs}ms`,
 		);
 	}
+	if (failure) console.log(`FAIL ${failure.tag}: ${failure.message}`);
 	const passed = checks.filter((check) => check.passed).length;
 	console.log(`dumgen acceptance: ${passed}/${checks.length} passed`);
 	console.log(`JSON report: ${jsonPath}`);
-	if (passed < checks.length) process.exitCode = 1;
+	if (failure || passed < checks.length) process.exitCode = 1;
 }
 
 if (import.meta.main) {
