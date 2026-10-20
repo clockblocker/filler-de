@@ -25,8 +25,13 @@ export type KnowledgeQueue = {
 	 * when none was running.
 	 */
 	readonly awaitNote: (lemmaPath: string) => Promise<string | undefined>;
-	/** Interrupts every run; answers how many there were. */
+	/**
+	 * Interrupts every run; answers how many there were. A run stops asking
+	 * dumgen at once; a publication it already started finishes first.
+	 */
 	readonly cancelAll: () => number;
+	/** Cancels every run and starts no new one: the plugin unloads. */
+	readonly close: () => void;
 	/** Resolves once no run is going. */
 	readonly whenIdle: () => Promise<void>;
 	readonly running: () => number;
@@ -85,6 +90,7 @@ export function createKnowledgeQueue(
 ): KnowledgeQueue {
 	const runs = new Map<string, Running>();
 	const saved: string[] = [];
+	let closed = false;
 	const notify = (message: string) => {
 		try {
 			options.notify(message);
@@ -98,7 +104,7 @@ export function createKnowledgeQueue(
 
 	const enqueue = (job: KnowledgeJob) => {
 		const key = readingIdentityKey(job.reading);
-		if (runs.has(key)) return;
+		if (closed || runs.has(key)) return;
 		options.onStart?.();
 		const fiber = Effect.runFork(Effect.suspend(() => options.run(job)));
 		const done = Effect.runPromise(Fiber.await(fiber))
@@ -120,6 +126,13 @@ export function createKnowledgeQueue(
 		runs.set(key, { done, fiber, job });
 	};
 
+	const cancelAll = () => {
+		const count = runs.size;
+		for (const { fiber } of runs.values())
+			Effect.runFork(Fiber.interrupt(fiber));
+		return count;
+	};
+
 	return {
 		awaitNote: async (lemmaPath) => {
 			const path = notePath(lemmaPath);
@@ -133,11 +146,10 @@ export function createKnowledgeQueue(
 				await Promise.all(pending.map(({ done }) => done));
 			}
 		},
-		cancelAll: () => {
-			const count = runs.size;
-			for (const { fiber } of runs.values())
-				Effect.runFork(Fiber.interrupt(fiber));
-			return count;
+		cancelAll,
+		close: () => {
+			closed = true;
+			cancelAll();
 		},
 		enqueue,
 		running: () => runs.size,

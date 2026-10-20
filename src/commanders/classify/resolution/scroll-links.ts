@@ -25,6 +25,8 @@ const DICTIONARY_PREFIX = "Worter/";
 const LIST_ITEM_OR_HEADING = /^\s*(?:[-*+]\s|\d+[.)]\s|#{1,6}\s|>)/u;
 const FENCE = /^\s*(?:```|~~~)/u;
 const TABLE_ROW = /^\s*\|/u;
+/** Bare URLs and inline HTML tags, which a link inside would break. */
+const INLINE_RAW = /\b[a-z][a-z0-9+.-]*:\/\/\S+|<[^>\n]+>/giu;
 
 function lineEndOf(content: string, from: number): number {
 	const end = content.indexOf("\n", from);
@@ -57,8 +59,18 @@ function structureAround(
 	const line = lineAt(content, start);
 	if (inFence(content, range.from)) return "inside a code block";
 	if (TABLE_ROW.test(line)) return "inside a table";
-	const ticks = (content.slice(start, range.from).match(/`/gu) ?? []).length;
-	if (ticks % 2 === 1) return "inside inline code";
+	const before = content.slice(start, range.from);
+	if ((before.match(/`/gu) ?? []).length % 2 === 1)
+		return "inside inline code";
+	if ((before.match(/\$/gu) ?? []).length % 2 === 1)
+		return "inside inline math";
+	if ((before.match(/%%/gu) ?? []).length % 2 === 1)
+		return "inside a comment";
+	for (const match of line.matchAll(INLINE_RAW)) {
+		const from = start + (match.index ?? 0);
+		if (from < range.to && from + match[0].length > range.from)
+			return "inside a URL or HTML";
+	}
 	return undefined;
 }
 
@@ -76,6 +88,12 @@ const breaksBlock = (line: string) =>
 	FENCE.test(line) ||
 	TABLE_ROW.test(line);
 
+/** A block ID at a line's end, after whitespace, as Obsidian reads one. */
+const BLOCK_ID = /(?:^|\s)\^([A-Za-z0-9-]+)\s*$/u;
+const blockIdOf = (line: string) => BLOCK_ID.exec(line)?.[1] ?? null;
+const HEADING = /^\s{0,3}#{1,6}\s/u;
+const QUOTE = /^\s*>\s?/u;
+
 /**
  * The block `offset` belongs to: from its line on to the paragraph's end,
  * the first line that carries a `^id`; a list item or heading starts a
@@ -84,14 +102,23 @@ const breaksBlock = (line: string) =>
  */
 function locateBlock(content: string, offset: number): SourceBlock {
 	const reason = structureAround(content, { from: offset, to: offset });
-	if (reason && reason !== "inside inline code")
+	if (reason && !reason.startsWith("inside inline"))
 		return { _tag: "Unaddressable", reason };
 	let start = lineStartOf(content, offset);
+	const opening = lineAt(content, start);
+	const quote = QUOTE.test(opening);
+	// A heading is a block of its own line; a quote runs on while its lines do.
+	const continues = (line: string) =>
+		HEADING.test(opening)
+			? false
+			: quote
+				? QUOTE.test(line) && line.replace(QUOTE, "").trim() !== ""
+				: !breaksBlock(line);
 	let lastEnd = lineEndOf(content, start);
 	for (let first = true; start <= content.length; first = false) {
 		const line = lineAt(content, start);
-		if (!first && breaksBlock(line)) break;
-		const id = blockIdHelper.extractFromLine(line);
+		if (!first && !continues(line)) break;
+		const id = blockIdOf(line);
 		if (id) return { _tag: "Identified", id };
 		lastEnd = start + line.length;
 		const end = lineEndOf(content, start);
@@ -177,7 +204,7 @@ export type MintedBlockIds = {
 	readonly content: string;
 	/** The ID each requested block carries now, by its snapshot `mintAt`. */
 	readonly ids: ReadonlyMap<number, string>;
-	/** The IDs this write appended, at their snapshot offsets, when it saw the snapshot. */
+	/** The IDs this write appended where a snapshot line ended, at those snapshot offsets. */
 	readonly appended: readonly {
 		readonly at: number;
 		readonly text: string;
@@ -199,15 +226,24 @@ export function mintBlockIds(input: {
 	const map = offsetMapper(snapshot, current);
 	let next = blockIdHelper.findHighestNumber(current) + 1;
 	const ids = new Map<number, string>();
-	const inserts = new Map<
-		number,
-		{ readonly id: string; readonly at: number }
-	>();
+	const inserts = new Map<number, { readonly id: string }>();
+	/** Where each mint's snapshot line end sits in the current content, if its line is intact. */
+	const appendedAt = new Map<number, number>();
 	for (const mintAt of new Set(input.mintAts)) {
 		const start = lineStartOf(snapshot, mintAt);
-		const moved = map.range({ from: start, to: start });
-		if (!moved) continue;
+		// The whole line, so the block is found by its text, never by an
+		// offset the user's typing now gives another line.
+		const moved = map.range({ from: start, to: mintAt });
+		if (
+			!moved ||
+			current.slice(moved.from, moved.to) !==
+				snapshot.slice(start, mintAt) ||
+			lineStartOf(current, moved.from) !== moved.from
+		)
+			continue;
 		const block = locateBlock(current, moved.from);
+		if (block._tag === "Unidentified" && block.mintAt === moved.to)
+			appendedAt.set(block.mintAt, mintAt);
 		if (block._tag === "Identified") {
 			ids.set(mintAt, block.id);
 			continue;
@@ -219,19 +255,18 @@ export function mintBlockIds(input: {
 			continue;
 		}
 		const id = String(next++);
-		inserts.set(block.mintAt, { at: mintAt, id });
+		inserts.set(block.mintAt, { id });
 		ids.set(mintAt, id);
 	}
 	let content = current;
 	for (const [at, { id }] of [...inserts].sort(([a], [b]) => b - a))
 		content = `${content.slice(0, at)} ^${id}${content.slice(at)}`;
-	const appended =
-		current === snapshot
-			? [...inserts.values()].map(({ at, id }) => ({
-					at,
-					text: ` ^${id}`,
-				}))
-			: [];
+	// An ID appended where the snapshot's line ended also goes into the
+	// snapshot, so links later diff only against the user's own edits.
+	const appended = [...inserts].flatMap(([currentAt, { id }]) => {
+		const at = appendedAt.get(currentAt);
+		return at === undefined ? [] : [{ at, text: ` ^${id}` }];
+	});
 	return { appended, content, ids };
 }
 

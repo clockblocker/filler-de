@@ -402,7 +402,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	override onunload() {
 		this.unloaded = true;
-		this.knowledgeQueue?.cancelAll();
+		this.knowledgeQueue?.close();
 		this.knowledgeQueue = null;
 		this.dumgen.dispose();
 		const dictionary = this.dictionary;

@@ -91,6 +91,56 @@ describe("mintBlockIds", () => {
 	});
 });
 
+describe("mintBlockIds after the user typed", () => {
+	it("finds a block by its line, never by an offset another paragraph now holds", () => {
+		for (const [snapshot, current] of [
+			["A.\n\nDer See ist tief.\n", "A.\n\nNeu hier.\n\nDer See ist tief.\n"],
+			["Der See ist tief.\n", "Der Hund.\n\nDer See ist tief.\n"],
+		] as const) {
+			const minted = mintBlockIds({
+				current,
+				mintAts: [snapshot.indexOf("tief.") + 5],
+				snapshot,
+			});
+			expect(minted.content).toBe(current.replace("tief.", "tief. ^0"));
+		}
+	});
+
+	it("keeps links mappable on lines that gained an ID", () => {
+		const snapshot = "Der Hund bellt.\n\nDie Katze schläft.\n\nDer See ist tief.\n";
+		const current = `Notiz.\n\n${snapshot}`;
+		const ends = [...snapshot.matchAll(/\.\n/gu)].map(({ index }) => index + 1);
+		const minted = mintBlockIds({ current, mintAts: ends, snapshot });
+		const moved = withAppended(snapshot, minted.appended);
+		const words = ["Hund", "Katze", "See"].map((word) => at(snapshot, word));
+		const linked = linkUnitsInScroll({
+			current: minted.content,
+			edits: words.map((occurrence) => ({
+				occurrences: [moved.move(occurrence)],
+				ref,
+				target,
+			})),
+			snapshot: moved.content,
+		});
+		expect(linked.linked).toEqual([1, 1, 1]);
+		expect(linked.content).toContain("tief. ^2\n");
+	});
+
+	it("puts a heading's ID on the heading and a quote's after its last line", () => {
+		const content = "# Der See\nEin Text.\n\n> [!note]\n> Der See ist tief.\n> zwei\n\nx 2^10\n";
+		const blocks = sourceBlocksOf(content, [
+			content.indexOf("See"),
+			content.indexOf("See ist"),
+			content.indexOf("x 2"),
+		]);
+		expect([...blocks.values()]).toEqual([
+			{ _tag: "Unidentified", mintAt: content.indexOf("\n") },
+			{ _tag: "Unidentified", mintAt: content.indexOf("zwei") + 4 },
+			{ _tag: "Unidentified", mintAt: content.indexOf("2^10") + 4 },
+		]);
+	});
+});
+
 describe("linkUnitsInScroll", () => {
 	it("re-points the plugin's own links and leaves the user's links and embeds alone", () => {
 		const content =
@@ -160,6 +210,14 @@ describe("linkUnitsInScroll", () => {
 			"inside a code block",
 			"its text cannot be a link's shown text",
 		]);
+		const url = "Siehe https://de.wikipedia.org/wiki/See hier.\n";
+		expect(
+			linkUnitsInScroll({
+				current: url,
+				edits: [{ occurrences: [at(url, "See")], ref, target }],
+				snapshot: url,
+			}).skipped.map(({ reason }) => reason),
+		).toEqual(["inside a URL or HTML"]);
 	});
 });
 
