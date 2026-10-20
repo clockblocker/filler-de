@@ -86,6 +86,8 @@ function germanTable(input: ProjectionInput): InflectionTable | undefined {
 			return conjugateGermanVerb({
 				canonicalForm: lemma.canonicalForm,
 				conjugationClasses: knowledge?.conjugationClass,
+				pastParticiple: knowledge?.pastParticiple,
+				presentSingular: knowledge?.presentSingular,
 				preterite: knowledge?.preterite,
 				reflexive:
 					core.lexicallyReflexive === "Acc" ||
@@ -96,6 +98,7 @@ function germanTable(input: ProjectionInput): InflectionTable | undefined {
 					typeof core.hasSepPrefix === "string"
 						? core.hasSepPrefix
 						: null,
+				subjunctivePast: knowledge?.subjunctivePast,
 			});
 		case "ADJ":
 		case "ADV":

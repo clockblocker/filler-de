@@ -339,6 +339,36 @@ describe("cells left out rather than guessed", () => {
 		expect(singular("Rock", "Masc", ["Röcke"]).Gen).toBe("Rockes");
 	});
 
+	it("gives Gen no genitive, never des Genes, unless the data shows it", () => {
+		const gen = noun("Gen", "Neut");
+		expect(deriveInflection(input(gen, { plural: ["Gene"] }))).toBe(
+			`N: das Gen, die Gene
+A: das Gen, die Gene
+G: der Gene
+D: dem Gen, den Genen`,
+		);
+		// An owned Surface attests the genitive.
+		expect(
+			deriveInflection(
+				input(gen, { plural: ["Gene"] }, [
+					nounSurface(gen, "Gens", "Gen"),
+				]),
+			)?.split("\n")[2],
+		).toBe("G: des Gens, der Gene");
+		// A stored S-plural shows the -s.
+		expect(singular("Ren", "Neut", ["Rene", "Rens"]).Gen).toBe("Rens");
+		for (const [lemma, gender, plural] of [
+			["Gel", "Neut", ["Gele"]],
+			["Pol", "Masc", ["Pole"]],
+			["Ton", "Masc", ["Töne"]],
+		] as const)
+			expect(singular(lemma, gender, plural).Gen).toBeUndefined();
+		// Other monosyllables keep their -es (#62).
+		expect(singular("Weg", "Masc", ["Wege"]).Gen).toBe("Weges");
+		expect(singular("Arm", "Masc", ["Arme"]).Gen).toBe("Armes");
+		expect(singular("Bein", "Neut", ["Beine"]).Gen).toBe("Beines");
+	});
+
 	it("leaves out the genitive and dative of a neuter that may be an adjective", () => {
 		expect(
 			deriveInflection(

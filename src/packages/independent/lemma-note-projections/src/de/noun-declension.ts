@@ -58,6 +58,16 @@ function withoutUmlauts(word: string): string {
 }
 
 /**
+ * Whether a monosyllable ends in one vowel letter and one l, m, n or r.
+ * Such a noun may be a loan that takes only `-s` (das Gen, des Gens; Gel,
+ * Mol, Pol, Ren) or not (der Ton, des Tones), and its `-e` plural (Gene,
+ * Töne) does not tell them apart.
+ */
+function mayTakeOnlyS(base: string): boolean {
+	return /^[^aeiouyäöü]*[aeiouyäöü][lmnr]$/u.test(base);
+}
+
+/**
  * The genitive singular of a masculine or neuter noun, by the rules
  * measured in #62: `-es` after s, ß, x, z and sch, `-s` with an S-plural,
  * `-es` for a monosyllable, `-s` otherwise. Undefined wherever the data
@@ -73,7 +83,12 @@ function withoutUmlauts(word: string): string {
  *   where a plural shows it, and keeps an unchanged plural's singular
  *   (Quiz). Business, Jazz and Kommerz get none;
  * - a monosyllable with no stored plural may be a loan that takes only `-s`
- *   (Rock, Golf, Smog), so it gets none.
+ *   (Rock, Golf, Smog), so it gets none, and so does one whose single vowel
+ *   letter precedes one l, m, n or r (Gen, Ton) whatever its plural, unless
+ *   a stored S-plural shows `-s` (Rens).
+ *
+ * An owned Surface that attests the genitive (`Gens`) wins over all of
+ * these and fills the cell they leave out.
  */
 function masculineOrNeuterGenitive(
 	singular: string,
@@ -103,7 +118,10 @@ function masculineOrNeuterGenitive(
 		return monosyllable || extended ? `${singular}es` : undefined;
 	}
 	if (folded.includes(`${stem}s`)) return `${singular}s`;
-	if (monosyllable) return plurals.length > 0 ? `${singular}es` : undefined;
+	if (monosyllable)
+		return plurals.length > 0 && !mayTakeOnlyS(base)
+			? `${singular}es`
+			: undefined;
 	return `${singular}s`;
 }
 

@@ -9,6 +9,15 @@ export type ProjectedKnowledge = {
 	readonly plural?: readonly string[] | "NoPlural" | "PluralOnly" | undefined;
 	readonly conjugationClass?: readonly Dumrel.ConjugationClass[] | undefined;
 	readonly preterite?: readonly string[] | undefined;
+	readonly presentSingular?:
+		| {
+				readonly first: readonly string[];
+				readonly second: readonly string[];
+				readonly third: readonly string[];
+		  }
+		| undefined;
+	readonly pastParticiple?: readonly string[] | undefined;
+	readonly subjunctivePast?: readonly string[] | undefined;
 };
 
 /**

@@ -19,6 +19,18 @@ export type GermanVerbInput = {
 	readonly conjugationClasses: readonly Dumrel.ConjugationClass[] | undefined;
 	/** dumrel `preterite`: stored third person singular Präteritum forms. */
 	readonly preterite: readonly string[] | undefined;
+	/** dumrel `presentSingular`: stored Präsens forms of each singular person. */
+	readonly presentSingular?:
+		| {
+				readonly first: readonly string[];
+				readonly second: readonly string[];
+				readonly third: readonly string[];
+		  }
+		| undefined;
+	/** dumrel `pastParticiple`: stored Partizip II forms, particle included. */
+	readonly pastParticiple?: readonly string[] | undefined;
+	/** dumrel `subjunctivePast`: stored third person singular Konjunktiv II forms. */
+	readonly subjunctivePast?: readonly string[] | undefined;
 };
 
 const PERSONS = ["ich", "du", "er", "wir", "ihr", "sie"] as const;
@@ -296,16 +308,50 @@ function finiteOf(form: string, particle: string | null): string | undefined {
 	return lower(split) === lower(particle) ? finite : undefined;
 }
 
+/** The finite words of stored forms, each once, without those {@link finiteOf} rejects. */
+function finiteForms(
+	forms: readonly string[] | undefined,
+	particle: string | null,
+): string[] {
+	return distinct(
+		(forms ?? [])
+			.map((form) => finiteOf(form, particle))
+			.filter((form) => form !== undefined),
+	);
+}
+
+/**
+ * Stored Partizip II forms that are one word and, for a separable verb,
+ * open with its particle (`abgefahren`); others are left out.
+ */
+function storedParticiples(
+	forms: readonly string[] | undefined,
+	particle: string | null,
+): string[] {
+	return distinct(
+		(forms ?? []).filter(
+			(form) =>
+				/^\S+$/u.test(form) &&
+				(particle === null ||
+					(lower(form).startsWith(lower(particle)) &&
+						form.length > particle.length)),
+		),
+	);
+}
+
 /**
  * A German verb's conjugation from its Canonical Form, Core and stored
- * Knowledge. A weak verb gets Präsens, Präteritum, Konjunktiv II
+ * Knowledge. Stored forms win over rules (ADR 0038): `presentSingular` gives
+ * the ich, du and er cells, `preterite` the Präteritum, `subjunctivePast`
+ * the Konjunktiv II and `pastParticiple` the Partizip II, for any class.
+ * Without them, a weak verb derives Präsens, Präteritum, Konjunktiv II
  * (= Präteritum), Partizip II and Imperativ, with the separable particle and
  * the reflexive in place. Any other verb, or one with no stored class, gets
  * the Präsens cells every non-closed verb forms regularly (ich, wir, ihr,
- * sie; wissen drops ich), the Präteritum from its stored `preterite`, and a
- * Partizip II only from a stored `-te` form (gebracht). The rest, the
- * haben/sein auxiliary, a participle whose `ge-` is in doubt and a stored
- * form whose particle is not the verb's are left out rather than guessed.
+ * sie; wissen drops ich) and a Partizip II only from a stored `-te` form
+ * (gebracht). The rest, the haben/sein auxiliary, a participle whose `ge-`
+ * is in doubt and a stored form whose particle is not the verb's are left
+ * out rather than guessed. A stored aspect is never filled in from rules.
  * Undefined when the Canonical Form is not one word once its particle and
  * `sich` are removed, or its stem is one no rule here spells (knien).
  */
@@ -326,44 +372,75 @@ export function conjugateGermanVerb(
 	const weak =
 		classes.length > 0 && classes.every((value) => value === "Weak");
 
-	// A stored form whose particle is not the verb's is left out.
-	const stored = input.preterite
-		?.map((form) => finiteOf(form, particle))
-		.filter((form) => form !== undefined);
-	const preterites = distinct(stored ?? (weak ? [weakPreterite(stem)] : []));
+	const preterites =
+		input.preterite === undefined
+			? weak
+				? [weakPreterite(stem)]
+				: []
+			: finiteForms(input.preterite, particle);
 
-	const present = presentForms(stem);
-	const presentPersons: readonly Person[] = weak
+	const derivedPresent = presentForms(stem);
+	const derivedPersons: readonly Person[] = weak
 		? PERSONS
 		: lower(infinitive) === "wissen"
 			? ["wir", "ihr", "sie"]
 			: ["ich", "wir", "ihr", "sie"];
-	const personRow = (
-		label: string,
-		forms: Record<Person, string>,
-		persons: readonly Person[] = PERSONS,
-	): TableRow => ({
-		cells: persons.map((person) => clause(person, forms[person], shape)),
-		label,
-	});
-	const ge = takesGe(stem);
+	const stored = input.presentSingular;
+	const storedPresent: Partial<Record<Person, readonly string[]>> =
+		stored === undefined
+			? {}
+			: {
+					du: finiteForms(stored.second, particle),
+					er: finiteForms(stored.third, particle),
+					ich: finiteForms(stored.first, particle),
+				};
+	const present: TableRow = {
+		cells: PERSONS.flatMap((person) =>
+			(
+				storedPresent[person] ??
+				(derivedPersons.includes(person)
+					? [derivedPresent[person]]
+					: [])
+			).map((finite) => clause(person, finite, shape)),
+		),
+		label: "Präsens",
+	};
+
+	const personRow = (label: string, finite: string): TableRow => {
+		const forms = pastForms(finite);
+		return {
+			cells: PERSONS.map((person) =>
+				clause(person, forms[person], shape),
+			),
+			label,
+		};
+	};
 	const dentalPreterites = preterites.filter((form) => form.endsWith("te"));
-	const participles =
-		ge === undefined || hasStrongParticiple(infinitive)
-			? []
-			: dentalPreterites.map(
-					(form) =>
-						`${particle ?? ""}${ge ? "ge" : ""}${form.slice(0, -1)}`,
+	// A Konjunktiv II form ends in -e, so it takes a -te Präteritum's person
+	// endings (führe, führest, führen).
+	const subjunctives =
+		input.subjunctivePast === undefined
+			? weak
+				? dentalPreterites
+				: []
+			: finiteForms(input.subjunctivePast, particle).filter((form) =>
+					form.endsWith("e"),
 				);
+	const ge = takesGe(stem);
+	const participles =
+		input.pastParticiple !== undefined
+			? storedParticiples(input.pastParticiple, particle)
+			: ge === undefined || hasStrongParticiple(infinitive)
+				? []
+				: dentalPreterites.map(
+						(form) =>
+							`${particle ?? ""}${ge ? "ge" : ""}${form.slice(0, -1)}`,
+					);
 
 	const rows: TableRow[] = [
-		personRow("Präsens", present, presentPersons),
-		...preterites.map((form) => personRow("Präteritum", pastForms(form))),
-		...(weak
-			? dentalPreterites.map((form) =>
-					personRow("Konjunktiv II", pastForms(form)),
-				)
-			: []),
+		present,
+		...preterites.map((form) => personRow("Präteritum", form)),
+		...subjunctives.map((form) => personRow("Konjunktiv II", form)),
 		{ cells: distinct(participles), label: "Partizip II" },
 		...(weak
 			? [{ cells: imperative(stem, shape), label: "Imperativ" }]
