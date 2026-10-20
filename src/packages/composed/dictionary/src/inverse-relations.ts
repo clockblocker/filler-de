@@ -1,11 +1,16 @@
-import type {
-	Projections,
-	SemanticRelationProjection,
+import {
+	type LemmaNoteDocument,
+	type Projections,
+	parseDocument,
+	type SemanticRelationProjection,
 } from "@textfresser/lemma-note-codec";
 import { canonicalJson } from "common-utils";
 import type { ReadingEntry } from "dumdict";
 import type * as Dumling from "dumling/types";
-import { projectSemanticRelations } from "dumrel";
+import {
+	type directSemanticRelationValues,
+	projectSemanticRelations,
+} from "dumrel";
 import { lemmaKeyOf, readingKeyOf } from "./keys";
 import type { NoteIndex, RelationEdge } from "./note-index";
 
@@ -15,8 +20,14 @@ export type InverseRelations = ReadonlyMap<
 	readonly SemanticRelationProjection[]
 >;
 
-/** The relation a direct claim's target holds back to its source (dumrel's algebra). */
-const INVERSE: Readonly<Record<string, string>> = {
+/**
+ * The relation a direct claim's target holds back to its source, as
+ * dumrel's projection algebra has it. Typed over dumrel's direct relations,
+ * so a new one fails to compile until it is given an inverse here.
+ */
+const INVERSE: Readonly<
+	Record<(typeof directSemanticRelationValues)[number], string>
+> = {
 	antonym: "antonym",
 	endonym: "exonym",
 	holonym: "meronym",
@@ -26,12 +37,15 @@ const INVERSE: Readonly<Record<string, string>> = {
 	synonym: "synonym",
 };
 
+const inverseOf = (relation: string): string | undefined =>
+	INVERSE[relation as keyof typeof INVERSE];
+
 type Inventory = ReadonlyMap<string, ReadingEntry<"de">>;
 
 /**
  * A Reading's direct claims cut down to targets inside the inventory, so
  * the projection depends on nothing but the inventory, and never fails on
- * an exact target it was not given.
+ * an exact target it was not given. A Reading keeps its target mode.
  */
 function claimsWithin(
 	entry: ReadingEntry<"de">,
@@ -53,12 +67,9 @@ function claimsWithin(
 		);
 		if (within.length > 0) kept[relation] = within;
 	}
-	if (Object.keys(kept).length === 0) return {};
-	return {
-		semanticRelations: byReading
-			? { ...kept, targetKind: "reading" }
-			: kept,
-	};
+	if (byReading)
+		return { semanticRelations: { ...kept, targetKind: "reading" } };
+	return Object.keys(kept).length === 0 ? {} : { semanticRelations: kept };
 }
 
 const reachesReading = (edge: RelationEdge, readingKey: string): boolean =>
@@ -66,29 +77,33 @@ const reachesReading = (edge: RelationEdge, readingKey: string): boolean =>
 	readingKeyOf(edge.target.reading) === readingKey;
 
 /**
- * Points a projected edge at the Reading whose claim it mirrors. dumrel
- * names a Lemma-mode inverse by its Lemma; the link should land on the
- * source Reading's Block (ADR 0012), so each Reading of that Lemma that
- * makes the mirrored claim stands in for it. An edge no claim explains
- * keeps its Lemma.
+ * The claims on this Reading an inferred edge mirrors, as edges to their
+ * source Readings. dumrel names a Lemma-mode inverse by its Lemma; the
+ * link should land on the source Reading's Block (ADR 0012), so each
+ * Reading of that Lemma that makes the mirrored claim stands in for it.
+ * An edge no claim on this note explains, such as a substitution through
+ * a synonym, is not an inverse and yields nothing.
  */
-function toSourceReadings(
+function mirroredClaims(
 	projection: SemanticRelationProjection,
 	readingKey: string,
 	edges: readonly RelationEdge[],
 ): SemanticRelationProjection[] {
 	const { target } = projection;
-	if (target.unitKind !== "Lemma") return [projection];
-	const targetKey = lemmaKeyOf(target as Dumling.Lemma<"de">);
+	const matches = (source: Dumling.Reading<"de">) =>
+		target.unitKind === "Lemma"
+			? lemmaKeyOf(source.lemma) ===
+				lemmaKeyOf(target as Dumling.Lemma<"de">)
+			: readingKeyOf(source) ===
+				readingKeyOf(target as Dumling.Reading<"de">);
 	const sources = new Map<string, Dumling.Reading<"de">>();
 	for (const edge of edges)
 		if (
-			lemmaKeyOf(edge.source.lemma) === targetKey &&
-			INVERSE[edge.relation] === projection.relation &&
-			reachesReading(edge, readingKey)
+			inverseOf(edge.relation) === projection.relation &&
+			reachesReading(edge, readingKey) &&
+			matches(edge.source)
 		)
 			sources.set(readingKeyOf(edge.source), edge.source);
-	if (sources.size === 0) return [projection];
 	return [...sources.values()].map((source) => ({
 		...projection,
 		target: source as SemanticRelationProjection["target"],
@@ -96,18 +111,20 @@ function toSourceReadings(
 }
 
 /**
- * The inverse and inferred Semantic Relations a Lemma note shows, computed
- * with dumrel's `projectSemanticRelations` over the claims that target it
- * (batteries ADR 0011, 0012). The inventory is the note's own Readings and
- * the source Readings of those claims, with dictionary-wide Reading
- * counts, so the result changes only when this note or a note with a
- * claim on it changes. Direct claims are left out: the `relation` Block
- * already shows them.
+ * The inverse Semantic Relations a Lemma note shows: for each claim
+ * another note's Reading makes on this Lemma or one of its Readings, the
+ * relation this Reading holds back, linked to the claiming Reading. dumrel's
+ * `projectSemanticRelations` decides which inverses hold (batteries ADR
+ * 0011, 0012): a Lemma target on a homonymous Lemma has none, and a direct
+ * claim of this note's own wins over an inferred one. The inventory is the
+ * note's own Readings and the claiming Readings, with dictionary-wide
+ * Reading counts, so the result changes only when this note or a note with
+ * a claim on it changes. Undefined when dumrel rejects the inventory.
  */
 export function inverseRelationsOf(
 	view: NoteIndex,
 	lemmaKey: string,
-): InverseRelations {
+): InverseRelations | undefined {
 	const data = view.lemmaData(lemmaKey);
 	const edges = view
 		.edgesTo(lemmaKey)
@@ -144,7 +161,7 @@ export function inverseRelationsOf(
 			}),
 		},
 	);
-	if (!projected.success) return new Map();
+	if (!projected.success) return undefined;
 
 	const own = new Set(
 		data.readingEntries.map(({ reading }) => readingKeyOf(reading)),
@@ -157,8 +174,12 @@ export function inverseRelationsOf(
 			projection.source as Dumling.Reading<"de">,
 		);
 		if (!own.has(readingKey)) continue;
-		for (const edge of toSourceReadings(projection, readingKey, edges)) {
-			const key = canonicalJson([readingKey, edge.relation, edge.target]);
+		for (const edge of mirroredClaims(projection, readingKey, edges)) {
+			const key = canonicalJson([
+				readingKey,
+				edge.relation,
+				readingKeyOf(edge.target as Dumling.Reading<"de">),
+			]);
 			if (seen.has(key)) continue;
 			seen.add(key);
 			byReading.set(readingKey, [
@@ -170,39 +191,61 @@ export function inverseRelationsOf(
 	return byReading;
 }
 
-/** Whether two notes' projected relations render the same Blocks. */
-export const sameInverseRelations = (
-	left: InverseRelations,
-	right: InverseRelations,
-): boolean => {
-	const sorted = (relations: InverseRelations) =>
-		[...relations].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-	return canonicalJson(sorted(left)) === canonicalJson(sorted(right));
-};
-
 /**
  * The inverse relations of every note, read against one index version and
- * computed at most once per Lemma.
+ * computed at most once per Lemma. `failed` collects the Lemmas dumrel
+ * rejected; their notes render no `inverse_relation` Block.
  */
 export function inverseRelationsReader(view: NoteIndex) {
-	const memo = new Map<string, InverseRelations>();
-	return (lemmaKey: string): InverseRelations => {
-		const cached = memo.get(lemmaKey);
-		if (cached) return cached;
+	const memo = new Map<string, InverseRelations | undefined>();
+	const failed = new Set<string>();
+	const read = (lemmaKey: string): InverseRelations | undefined => {
+		if (memo.has(lemmaKey)) return memo.get(lemmaKey);
 		const computed = inverseRelationsOf(view, lemmaKey);
+		if (computed === undefined) failed.add(lemmaKey);
 		memo.set(lemmaKey, computed);
 		return computed;
 	};
+	return { failed, read };
 }
 
-/** The codec's projections, with the `inverseRelations` hook read from `view`. */
+/** The codec's projections, with the `inverseRelations` hook read from `read`. */
 export function withInverseRelations(
 	projections: Omit<Projections<"de">, "inverseRelations"> | undefined,
-	read: (lemmaKey: string) => InverseRelations,
+	read: (lemmaKey: string) => InverseRelations | undefined,
 ): Projections<"de"> {
 	return {
 		...projections,
 		inverseRelations: ({ entry, lemma }) =>
-			read(lemmaKeyOf(lemma)).get(readingKeyOf(entry.reading)),
+			read(lemmaKeyOf(lemma))?.get(readingKeyOf(entry.reading)),
 	};
 }
+
+/** Each part's `inverse_relation` Blocks, as their raw lines. */
+function inverseBlocksOf(document: LemmaNoteDocument): string {
+	return canonicalJson(
+		document.parts.map((part) => [
+			part.blockId ?? "",
+			part.blocks
+				.filter(
+					(block) =>
+						block.type === "projection" &&
+						block.kind === "inverse_relation",
+				)
+				.map((block) => block.raw.trimEnd()),
+		]),
+	);
+}
+
+/**
+ * Whether a note's file shows other inverse relations than `rendered`, the
+ * content the store would write for it now. Only the `inverse_relation`
+ * Blocks are compared, so a note whose other Blocks or freeform text sit
+ * out of canonical order is not rewritten for that alone.
+ */
+export const showsOtherInverseRelations = (
+	current: string,
+	rendered: string,
+): boolean =>
+	inverseBlocksOf(parseDocument(current)) !==
+	inverseBlocksOf(parseDocument(rendered));

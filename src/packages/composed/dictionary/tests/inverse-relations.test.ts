@@ -10,6 +10,7 @@ import { type AddNewNoteRequest, createDumdictPlanner } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
 import { expectIndexMatchesFiles, run } from "./support/files";
 import {
+	contribute,
 	createLemma,
 	createPending,
 	createReading,
@@ -22,6 +23,8 @@ import {
 	readingOf,
 	schreiten,
 	schreitenReading,
+	springen,
+	springenReading,
 	synonym,
 } from "./support/fixtures";
 import { commit, openStore, seed } from "./support/store";
@@ -52,6 +55,30 @@ const dataOf = (content: string | undefined) => {
 	if (!data.ok) throw new Error("Expected a valid note");
 	return data.data;
 };
+
+const claim = (
+	reading: Dumling.Reading<"de">,
+	relation: "antonym" | "hypernym" | "synonym",
+	target: Dumling.Lemma<"de">,
+): PlannedChangeOp<"de"> => ({
+	ops: [
+		{
+			envelope: {
+				change: {
+					aspect: "semanticRelations",
+					kind: "Contribute",
+					relation,
+					value: [target],
+				},
+				reading,
+			},
+			kind: "applyKnowledgeChange",
+		},
+	],
+	preconditions: [],
+	reading,
+	type: "patchReading",
+});
 
 const retractSynonym = (
 	reading: Dumling.Reading<"de">,
@@ -160,13 +187,17 @@ describe("inverse relations are projected, never stored", () => {
 
 		await seed(store, [synonym(gehenReading, schreiten)]);
 
-		// One batch: A's own rewrite and B's re-render, both CAS transforms.
-		expect(vault.batches).toHaveLength(1);
-		const [batch = []] = vault.batches;
+		// A's own rewrite, then B's re-render once it landed, both CAS
+		// transforms.
+		expect(vault.batches.map(pathsOf)).toEqual([
+			[gehenPath],
+			[schreitenPath],
+		]);
 		expect(
-			batch.every(({ kind }) => kind === VaultActionKind.ProcessMdFile),
+			vault.batches
+				.flat()
+				.every(({ kind }) => kind === VaultActionKind.ProcessMdFile),
 		).toBe(true);
-		expect(pathsOf(batch).sort()).toEqual([gehenPath, schreitenPath]);
 
 		const after = vault.content(schreitenPath);
 		expect(after).not.toBe(before);
@@ -256,7 +287,7 @@ describe("inverse relations are projected, never stored", () => {
 		expect(inverseBlock(vault.content(laufenPath))).toBeUndefined();
 	});
 
-	test("a re-render whose note changed on disk refuses the commit and writes nothing", async () => {
+	test("a target whose file is ahead of the index is re-read and still re-rendered", async () => {
 		const { store, vault } = await openStore();
 		await seed(store, [
 			createLemma(schreiten),
@@ -266,18 +297,113 @@ describe("inverse relations are projected, never stored", () => {
 		]);
 		const edited = `${vault.content(schreitenPath)}\nTyped behind VAM's back.\n`;
 		vault.silentWrite(schreitenPath, edited);
-		const gehenBefore = vault.content(gehenPath);
 
 		expect(
 			await commit(store, [synonym(gehenReading, schreiten)]),
-		).toMatchObject({ code: "revisionConflict", status: "conflict" });
-		expect(vault.content(gehenPath)).toBe(gehenBefore);
-		expect(vault.content(schreitenPath)).toBe(edited);
-
-		await seed(store, [synonym(gehenReading, schreiten)]);
-		expect(vault.content(schreitenPath)).toContain(
-			"Typed behind VAM's back.",
+		).toMatchObject({ status: "committed" });
+		const after = vault.content(schreitenPath);
+		expect(after).toContain("Typed behind VAM's back.");
+		expect(withoutInverseBlock(after)).toBe(edited);
+		expect(inverseBlock(after)).toContain(
+			`synonym: ${linkTo(gehenReading)}`,
 		);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
+	test("a re-render that loses a race never fails the commit", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, [
+			createLemma(schreiten),
+			createReading(readingEntry(schreitenReading)),
+			createLemma(gehen),
+			createReading(readingEntry(gehenReading)),
+		]);
+		vault.failNextWrite((_, path) => path === schreitenPath, 2);
+
+		expect(
+			await commit(store, [synonym(gehenReading, schreiten)]),
+		).toMatchObject({ status: "committed" });
+		expect(
+			dataOf(vault.content(gehenPath)).readingEntries[0]?.knowledge,
+		).toEqual({ semanticRelations: { synonym: [schreiten] } });
+		expect(inverseBlock(vault.content(schreitenPath))).toBeUndefined();
+
+		// The next commit that reaches it repairs the stale projection.
+		await seed(store, [contribute(gehenReading, "sich fortbewegen")]);
+		expect(inverseBlock(vault.content(schreitenPath))).toContain(
+			`synonym: ${linkTo(gehenReading)}`,
+		);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
+	test("an asymmetric claim projects its inverse: hypernym shows as hyponym", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, [
+			createLemma(schreiten),
+			createReading(readingEntry(schreitenReading)),
+			createLemma(gehen),
+			createReading(readingEntry(gehenReading)),
+		]);
+		await seed(store, [claim(gehenReading, "hypernym", schreiten)]);
+		expect(inverseBlock(vault.content(schreitenPath))).toMatch(
+			/\*Projected\*: hyponym: \[\[Worter\/de\/Lexeme\/VERB\/gehen#\^r-/u,
+		);
+	});
+
+	test("each Reading of a source Lemma that makes the claim gets its own link", async () => {
+		const gehenOnFoot = readingOf(gehen, "🦵");
+		const { store, vault } = await openStore();
+		await seed(store, [
+			createLemma(schreiten),
+			createReading(readingEntry(schreitenReading)),
+			createLemma(gehen),
+			createReading(readingEntry(gehenReading)),
+			createReading(readingEntry(gehenOnFoot)),
+		]);
+		await seed(store, [
+			synonym(gehenReading, schreiten),
+			synonym(gehenOnFoot, schreiten),
+		]);
+		const block = inverseBlock(vault.content(schreitenPath)) ?? "";
+		expect(block).toContain(linkTo(gehenReading));
+		expect(block).toContain(linkTo(gehenOnFoot));
+	});
+
+	test("only inverses show: a substitution through a synonym does not", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, [
+			createLemma(schreiten),
+			createReading(readingEntry(schreitenReading)),
+			createLemma(springen),
+			createReading(readingEntry(springenReading)),
+			createLemma(gehen),
+			createReading(readingEntry(gehenReading)),
+		]);
+		await seed(store, [
+			synonym(gehenReading, schreiten),
+			claim(gehenReading, "antonym", springen),
+			claim(springenReading, "hypernym", schreiten),
+		]);
+		const block = inverseBlock(vault.content(schreitenPath)) ?? "";
+		expect(block).toContain(`synonym: ${linkTo(gehenReading)}`);
+		expect(block).toContain(`hyponym: ${linkTo(springenReading)}`);
+		expect(block).not.toContain("antonym");
+	});
+
+	test("deleting the source note by hand re-renders its targets", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, [
+			createLemma(schreiten),
+			createReading(readingEntry(schreitenReading)),
+			createLemma(gehen),
+			createReading(readingEntry(gehenReading)),
+		]);
+		const bare = vault.content(schreitenPath);
+		await seed(store, [synonym(gehenReading, schreiten)]);
 		expect(inverseBlock(vault.content(schreitenPath))).toBeDefined();
+
+		await vault.userDelete(gehenPath);
+		expect(vault.content(schreitenPath)).toBe(bare);
+		await expectIndexMatchesFiles(store, vault);
 	});
 });
