@@ -1,25 +1,30 @@
-// Points `.texteater` at the texteater checkout whose battery packages the
+// Points `.texteater` at the texteater clone whose battery packages the
 // plugin type-checks, tests and bundles from source. tsconfig.json `paths`
 // read the batteries through this link. Nothing is copied, and nothing is
 // written inside texteater. Runs as `postinstall`, or as
-// `bun run link:texteater` after moving the checkout.
+// `bun run link:texteater`.
 //
-// TEXTEATER_DIR sets the location. Without it, an existing link that still
-// holds the batteries is kept; otherwise the link targets the nearest
-// `texteater` or `textfresser-batteries` directory beside the plugin checkout
-// or beside one of its ancestors, such as the vault folder.
+// The link targets TEXTEATER_DIR when set, otherwise the dedicated clone at
+// ~/work/texteater-clones/plugin that `bun run batteries:sync` keeps at
+// texteater's origin/main. It never falls back to a texteater working
+// checkout, so the build does not depend on whatever that checkout holds.
 //
-// `--if-present` (used by postinstall) only warns when no checkout is found,
+// `--if-present` (used by postinstall) only warns when the clone is missing,
 // so `bun install` still works without texteater; typecheck, tests and any
 // build that imports a battery then fail on the missing modules.
+//
+// `--report` (run at build start) prints the texteater commit `.texteater`
+// points at, so a build log records which batteries it bundled.
 import {
 	existsSync,
 	lstatSync,
 	readFileSync,
 	readlinkSync,
+	realpathSync,
 	symlinkSync,
 	unlinkSync,
 } from "node:fs";
+import { homedir } from "node:os";
 import path from "node:path";
 
 export const BATTERY_PACKAGES = [
@@ -31,12 +36,21 @@ export const BATTERY_PACKAGES = [
 	"dumgen",
 ] as const;
 
-const CHECKOUT_NAMES = ["texteater", "textfresser-batteries"] as const;
-
 export const REPO_ROOT = path.resolve(import.meta.dir, "..");
 export const TEXTEATER_LINK = path.join(REPO_ROOT, ".texteater");
+const DEFAULT_TEXTEATER_DIR = path.join(
+	homedir(),
+	"work",
+	"texteater-clones",
+	"plugin",
+);
 
-function missingBatteries(checkout: string): string[] {
+export function texteaterDir(): string {
+	const fromEnv = process.env.TEXTEATER_DIR;
+	return fromEnv ? path.resolve(fromEnv) : DEFAULT_TEXTEATER_DIR;
+}
+
+export function missingBatteries(checkout: string): string[] {
 	return BATTERY_PACKAGES.filter((name) => {
 		const manifestPath = path.join(
 			checkout,
@@ -52,49 +66,21 @@ function missingBatteries(checkout: string): string[] {
 	});
 }
 
-function findSiblingCheckout(): string | undefined {
-	let dir = path.dirname(REPO_ROOT);
-	while (true) {
-		for (const name of CHECKOUT_NAMES) {
-			const candidate = path.join(dir, name);
-			if (missingBatteries(candidate).length === 0) return candidate;
-		}
-		const parent = path.dirname(dir);
-		if (parent === dir) return undefined;
-		dir = parent;
-	}
-}
-
-function currentLinkTarget(): string | undefined {
-	const existing = lstatSync(TEXTEATER_LINK, { throwIfNoEntry: false });
-	if (!existing?.isSymbolicLink()) return undefined;
-	const target = path.resolve(REPO_ROOT, readlinkSync(TEXTEATER_LINK));
-	return missingBatteries(target).length === 0 ? target : undefined;
-}
-
 function resolveCheckout(): string {
-	const fromEnv = process.env.TEXTEATER_DIR;
-	if (fromEnv) {
-		const checkout = path.resolve(fromEnv);
-		const missing = missingBatteries(checkout);
-		if (missing.length > 0) {
-			throw new Error(
-				`TEXTEATER_DIR=${fromEnv} has no battery/{${missing.join(",")}}/package.json.`,
-			);
-		}
-		return checkout;
-	}
-	const checkout = currentLinkTarget() ?? findSiblingCheckout();
-	if (!checkout) {
+	const checkout = texteaterDir();
+	const missing = missingBatteries(checkout);
+	if (missing.length === 0) return checkout;
+	if (process.env.TEXTEATER_DIR) {
 		throw new Error(
-			`No texteater checkout found. Clone clockblocker/texteater as "texteater" or "textfresser-batteries" next to this plugin or the vault that holds it, or set TEXTEATER_DIR.`,
+			`TEXTEATER_DIR=${process.env.TEXTEATER_DIR} has no battery/{${missing.join(",")}}/package.json.`,
 		);
 	}
-	return checkout;
+	throw new Error(
+		`No texteater clone at ${checkout}. Run \`bun run batteries:sync\` to clone it, or set TEXTEATER_DIR.`,
+	);
 }
 
-function linkTexteater(): void {
-	const checkout = resolveCheckout();
+export function linkTexteater(checkout = resolveCheckout()): void {
 	const existing = lstatSync(TEXTEATER_LINK, { throwIfNoEntry: false });
 	if (existing) {
 		if (!existing.isSymbolicLink()) {
@@ -112,9 +98,42 @@ function linkTexteater(): void {
 	console.log(`[link-texteater] linked .texteater -> ${checkout}`);
 }
 
+export function git(cwd: string, ...args: string[]): string {
+	const result = Bun.spawnSync(["git", ...args], {
+		cwd,
+		stderr: "pipe",
+		stdout: "pipe",
+	});
+	if (result.exitCode !== 0) {
+		throw new Error(
+			`git ${args.join(" ")} failed in ${cwd}: ${result.stderr.toString().trim()}`,
+		);
+	}
+	return result.stdout.toString().trimEnd();
+}
+
+export function describeCommit(checkout: string): string {
+	const commit = git(checkout, "log", "-1", "--format=%H %s");
+	const dirty = git(checkout, "status", "--porcelain") === "" ? "" : " (dirty)";
+	return `${commit}${dirty}`;
+}
+
+function reportTexteater(): void {
+	if (!existsSync(TEXTEATER_LINK)) {
+		throw new Error(
+			`${TEXTEATER_LINK} is missing or dangling. Run \`bun run batteries:sync\`, or set TEXTEATER_DIR and run \`bun run link:texteater\`.`,
+		);
+	}
+	const checkout = realpathSync(TEXTEATER_LINK);
+	console.log(
+		`[texteater] batteries from ${checkout} @ ${describeCommit(checkout)}`,
+	);
+}
+
 if (import.meta.main) {
 	try {
-		linkTexteater();
+		if (process.argv.includes("--report")) reportTexteater();
+		else linkTexteater();
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		if (process.argv.includes("--if-present")) {
