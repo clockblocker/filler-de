@@ -1,18 +1,19 @@
 {
-	"name": "@textfresser/library-core",
-	"private": true,
-	"version": "0.0.0",
-	"type": "module",
 	"dependencies": {
 		"@textfresser/note-addressing": "workspace:*",
 		"@textfresser/vault-action-manager": "workspace:*",
+		"effect": "4.0.0",
 		"neverthrow": "^8.2.0",
-		"zod": "4.3.6"
+		"zod": "4.4.3"
 	},
 	"exports": {
 		".": "./src/index.ts"
 	},
+	"name": "@textfresser/library-core",
+	"private": true,
 	"scripts": {
 		"build": "bun ../../../../scripts/build-workspace-package.ts"
-	}
+	},
+	"type": "module",
+	"version": "0.0.0"
 }

@@ -11,7 +11,7 @@
 		"neverthrow": "^8.2.0",
 		"openai": "latest",
 		"winston": "latest",
-		"zod": "4.3.6"
+		"zod": "4.4.3"
 	},
 	"description": "Go trough the german texts, building your own dictionary from your personal contexts",
 	"devDependencies": {
@@ -20,7 +20,7 @@
 		"@types/bun": "latest",
 		"@types/node": "^18.19.130",
 		"bun-types": "^1.3.4",
-		"effect": "4.0.0-rc.112",
+		"effect": "4.0.0",
 		"knip": "^6.33.0",
 		"obsidian": "^1.10.2",
 		"ts-plugin-sort-import-suggestions": "github:clockblocker/ts7-plugin-sort-import-suggestions",
