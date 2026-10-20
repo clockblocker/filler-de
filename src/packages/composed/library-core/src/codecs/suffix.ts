@@ -1,6 +1,4 @@
-export {
-	parseSeparatedSuffix,
-} from "./internal/suffix/parse";
+export { parseSeparatedSuffix } from "./internal/suffix/parse";
 export {
 	pathPartsToSuffixParts,
 	pathPartsWithRootToSuffixParts,

@@ -16,7 +16,6 @@ import type {
 	SectionNodeSegmentId,
 } from "../../../../src/codecs/segment-id/types/segment-id";
 import { NodeSegmentIdSeparator } from "../../../../src/codecs/segment-id/types/segment-id";
-import { Healer } from "../../../../src/healing";
 import { Tree } from "../../../../src/healer/library-tree/tree";
 import { makeNodeSegmentId } from "../../../../src/healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import {
@@ -27,6 +26,7 @@ import type {
 	LeafNode,
 	SectionNode,
 } from "../../../../src/healer/library-tree/tree-node/types/tree-node";
+import { Healer } from "../../../../src/healing";
 import type { NodeName } from "../../../../src/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";
 

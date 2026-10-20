@@ -1,10 +1,15 @@
-import type { Codecs } from "@textfresser/library-core";
-import type { SectionNodeSegmentId } from "@textfresser/library-core";
-import { isCodexSplitPath } from "@textfresser/library-core";
-import { sortTreeNodesForDisplay } from "@textfresser/library-core";
-import type { Healer } from "@textfresser/library-core";
-import type { ScrollNode, SectionNode } from "@textfresser/library-core";
-import { TreeNodeKind } from "@textfresser/library-core";
+import type {
+	Codecs,
+	Healer,
+	ScrollNode,
+	SectionNode,
+	SectionNodeSegmentId,
+} from "@textfresser/library-core";
+import {
+	isCodexSplitPath,
+	sortTreeNodesForDisplay,
+	TreeNodeKind,
+} from "@textfresser/library-core";
 import {
 	SplitPathKind,
 	type SplitPathToMdFile,

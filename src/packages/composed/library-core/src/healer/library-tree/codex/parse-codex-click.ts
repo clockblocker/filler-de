@@ -4,10 +4,10 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
-import { getParsedUserSettings } from "../../../internal/root/global-state";
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { NodeSegmentIdSeparator } from "../../../codecs/segment-id/types/segment-id";
+import { getParsedUserSettings } from "../../../internal/root/global-state";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import { PREFIX_OF_CODEX } from "./literals";
 

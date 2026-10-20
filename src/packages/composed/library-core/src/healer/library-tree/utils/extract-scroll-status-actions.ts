@@ -1,6 +1,6 @@
-import { logger } from "../../../internal/root/logger";
 import type { Codecs } from "../../../codecs";
 import type { ScrollNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
+import { logger } from "../../../internal/root/logger";
 import type { WriteScrollStatusAction } from "../codex/types/codex-action";
 import type { TreeAction } from "../tree-action/types/tree-action";
 import { TreeNodeKind } from "../tree-node/types/atoms";

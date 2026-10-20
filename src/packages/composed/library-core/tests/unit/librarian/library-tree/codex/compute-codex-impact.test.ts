@@ -1,13 +1,22 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
-import type { FileNodeSegmentId, ScrollNodeSegmentId, SectionNodeSegmentId } from "../../../../../src/codecs/segment-id/types/segment-id";
 import {
-	type CodexImpact,
-	computeCodexImpact,
-} from "../../../../../src/healer/library-tree/codex/compute-codex-impact";
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
+import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
+import type {
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+} from "../../../../../src/codecs/segment-id/types/segment-id";
+import { computeCodexImpact } from "../../../../../src/healer/library-tree/codex/compute-codex-impact";
 import { TreeActionType } from "../../../../../src/healer/library-tree/tree-action/types/tree-action";
-import { TreeNodeKind, TreeNodeStatus } from "../../../../../src/healer/library-tree/tree-node/types/atoms";
+import {
+	TreeNodeKind,
+	TreeNodeStatus,
+} from "../../../../../src/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../../../src/types/schemas/node-name";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
@@ -29,9 +38,6 @@ const sec = (name: string): SectionNodeSegmentId =>
 const scroll = (name: string): ScrollNodeSegmentId =>
 	`${name}﹘Scroll﹘md` as ScrollNodeSegmentId;
 
-const file = (name: string): FileNodeSegmentId =>
-	`${name}﹘File﹘png` as FileNodeSegmentId;
-
 describe("computeCodexImpact", () => {
 	describe("Create leaf", () => {
 		it("impacts parent and ancestors", () => {
@@ -45,7 +51,11 @@ describe("computeCodexImpact", () => {
 				},
 				targetLocator: {
 					segmentId: scroll("Note"),
-					segmentIdChainToParent: [sec("Library"), sec("A"), sec("B")],
+					segmentIdChainToParent: [
+						sec("Library"),
+						sec("A"),
+						sec("B"),
+					],
 					targetKind: TreeNodeKind.Scroll,
 				},
 			};
@@ -53,8 +63,15 @@ describe("computeCodexImpact", () => {
 			const impact = computeCodexImpact(action);
 
 			// Parent B + ancestors A + Library
-			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("A"), sec("B")]);
-			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("A")]);
+			expect(impact.contentChanged).toContainEqual([
+				sec("Library"),
+				sec("A"),
+				sec("B"),
+			]);
+			expect(impact.contentChanged).toContainEqual([
+				sec("Library"),
+				sec("A"),
+			]);
 			expect(impact.contentChanged).toContainEqual([sec("Library")]);
 			expect(impact.renamed).toEqual([]);
 			expect(impact.deleted).toEqual([]);
@@ -96,7 +113,10 @@ describe("computeCodexImpact", () => {
 
 			const impact = computeCodexImpact(action);
 
-			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("A")]);
+			expect(impact.contentChanged).toContainEqual([
+				sec("Library"),
+				sec("A"),
+			]);
 			expect(impact.contentChanged).toContainEqual([sec("Library")]);
 			expect(impact.deleted).toEqual([]);
 		});
@@ -137,7 +157,10 @@ describe("computeCodexImpact", () => {
 			const impact = computeCodexImpact(action);
 
 			// Only parent A needs update (link text changes)
-			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("A")]);
+			expect(impact.contentChanged).toContainEqual([
+				sec("Library"),
+				sec("A"),
+			]);
 			// Ancestors don't need update for leaf rename
 			expect(impact.contentChanged.length).toBe(1);
 		});
@@ -165,7 +188,10 @@ describe("computeCodexImpact", () => {
 				oldChain: [sec("Library"), sec("OldName")],
 			});
 			// Renamed section's content also needs update (parent backlink changes)
-			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("NewName")]);
+			expect(impact.contentChanged).toContainEqual([
+				sec("Library"),
+				sec("NewName"),
+			]);
 		});
 	});
 
@@ -195,10 +221,16 @@ describe("computeCodexImpact", () => {
 			const impact = computeCodexImpact(action);
 
 			// Old parent A + Library
-			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("A")]);
+			expect(impact.contentChanged).toContainEqual([
+				sec("Library"),
+				sec("A"),
+			]);
 			expect(impact.contentChanged).toContainEqual([sec("Library")]);
 			// New parent B + Library (Library already included)
-			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("B")]);
+			expect(impact.contentChanged).toContainEqual([
+				sec("Library"),
+				sec("B"),
+			]);
 		});
 	});
 
@@ -227,9 +259,15 @@ describe("computeCodexImpact", () => {
 			const impact = computeCodexImpact(action);
 
 			// Old parent A + Library
-			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("A")]);
+			expect(impact.contentChanged).toContainEqual([
+				sec("Library"),
+				sec("A"),
+			]);
 			// New parent B + Library
-			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("B")]);
+			expect(impact.contentChanged).toContainEqual([
+				sec("Library"),
+				sec("B"),
+			]);
 			// Section moves (codex file moves)
 			// Move actions include observedPathParts for intermediate location
 			expect(impact.renamed).toContainEqual({
@@ -238,7 +276,11 @@ describe("computeCodexImpact", () => {
 				oldChain: [sec("Library"), sec("A"), sec("Child")],
 			});
 			// Moved section's content needs update (parent backlink changes)
-			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("B"), sec("Child")]);
+			expect(impact.contentChanged).toContainEqual([
+				sec("Library"),
+				sec("B"),
+				sec("Child"),
+			]);
 		});
 	});
 
@@ -257,7 +299,10 @@ describe("computeCodexImpact", () => {
 			const impact = computeCodexImpact(action);
 
 			// Parent A + Library (aggregated status may change)
-			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("A")]);
+			expect(impact.contentChanged).toContainEqual([
+				sec("Library"),
+				sec("A"),
+			]);
 			expect(impact.contentChanged).toContainEqual([sec("Library")]);
 		});
 	});
@@ -277,7 +322,10 @@ describe("computeCodexImpact", () => {
 			const impact = computeCodexImpact(action);
 
 			// Section A + Library
-			expect(impact.contentChanged).toContainEqual([sec("Library"), sec("A")]);
+			expect(impact.contentChanged).toContainEqual([
+				sec("Library"),
+				sec("A"),
+			]);
 			expect(impact.contentChanged).toContainEqual([sec("Library")]);
 			// Note: descendants are marked as needing update via descendantsChanged
 			expect(impact.descendantsChanged).toContainEqual({

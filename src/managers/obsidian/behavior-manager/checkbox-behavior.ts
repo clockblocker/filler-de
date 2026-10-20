@@ -3,12 +3,12 @@
  * Delegates to Librarian for all logic.
  */
 
-import type { Librarian } from "../../../commanders/librarian/librarian";
-import {
-	type PayloadFor,
-	type UserEventHandler,
+import type {
+	PayloadFor,
+	UserEventHandler,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
+import type { Librarian } from "../../../commanders/librarian/librarian";
 
 /**
  * Create a handler for frontmatter property checkbox clicks.

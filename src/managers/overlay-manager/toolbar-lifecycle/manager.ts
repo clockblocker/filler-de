@@ -39,8 +39,8 @@ export function updateToolbarVisibility(
 		// Skip codex files - no toolbars for them
 		if (file.basename.startsWith("__")) continue;
 
-		// Obsidian leaf.id is not in public API, accessing via any
-		const leafId = (leaf as any).id as string | undefined;
+		// Obsidian leaf.id is not in the public API
+		const leafId = (leaf as { id?: string }).id;
 		if (!leafId) continue;
 		activeLeafIds.add(leafId);
 

@@ -9,7 +9,6 @@ import {
 import { Effect } from "effect";
 import { PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
 
-
 /**
  * Builds page basename from page index and source file info.
  *
@@ -74,9 +73,6 @@ export function parsePageIndex(
 const PAGE_INDEX_IN_BASENAME_PATTERN = new RegExp(
 	`_${PAGE_PREFIX}_(\\d{${PAGE_INDEX_DIGITS}})`,
 );
-
-
-
 
 /**
  * Find adjacent pages using VaultActionManager.list()

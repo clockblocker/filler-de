@@ -1,11 +1,17 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
 import type {
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	makeRegularSplitPathInsideLibrary,
 	tryParseCanonicalSplitPathInsideLibrary,
@@ -38,8 +44,12 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("Library");
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"Library",
+				);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual([]);
 				expect(result.value.pathParts).toEqual([]);
 				expect(result.value.kind).toBe(SplitPathKind.Folder);
 			}
@@ -56,9 +66,17 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyFolder");
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
-				expect(result.value.pathParts).toEqual(["Library", "Section1", "Section2"]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"MyFolder",
+				);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual([]);
+				expect(result.value.pathParts).toEqual([
+					"Library",
+					"Section1",
+					"Section2",
+				]);
 				expect(result.value.kind).toBe(SplitPathKind.Folder);
 			}
 		});
@@ -113,8 +131,12 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk() && result.value.kind === SplitPathKind.File) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyFile");
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"MyFile",
+				);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual([]);
 				expect(result.value.pathParts).toEqual(["Library"]);
 				expect(result.value.kind).toBe(SplitPathKind.File);
 				expect(result.value.extension).toBe("txt");
@@ -133,9 +155,17 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyFile");
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["Section2", "Section1"]);
-				expect(result.value.pathParts).toEqual(["Library", "Section1", "Section2"]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"MyFile",
+				);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["Section2", "Section1"]);
+				expect(result.value.pathParts).toEqual([
+					"Library",
+					"Section1",
+					"Section2",
+				]);
 				expect(result.value.kind).toBe(SplitPathKind.File);
 			}
 		});
@@ -152,7 +182,9 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
-				expect(result.error).toContain("Basename does not match canonical format");
+				expect(result.error).toContain(
+					"Basename does not match canonical format",
+				);
 			}
 		});
 
@@ -209,8 +241,12 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk() && result.value.kind === SplitPathKind.MdFile) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyNote");
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual([]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"MyNote",
+				);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual([]);
 				expect(result.value.pathParts).toEqual(["Library"]);
 				expect(result.value.kind).toBe(SplitPathKind.MdFile);
 				expect(result.value.extension).toBe("md");
@@ -229,9 +265,17 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyNote");
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["Section2", "Section1"]);
-				expect(result.value.pathParts).toEqual(["Library", "Section1", "Section2"]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"MyNote",
+				);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["Section2", "Section1"]);
+				expect(result.value.pathParts).toEqual([
+					"Library",
+					"Section1",
+					"Section2",
+				]);
 				expect(result.value.kind).toBe(SplitPathKind.MdFile);
 			}
 		});
@@ -248,7 +292,9 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
-				expect(result.error).toContain("Basename does not match canonical format");
+				expect(result.error).toContain(
+					"Basename does not match canonical format",
+				);
 			}
 		});
 
@@ -275,9 +321,17 @@ describe("tryParseCanonicalSplitPath", () => {
 
 			expect(result.isOk()).toBe(true);
 			if (result.isOk()) {
-				expect(result.value.separatedSuffixedBasename.coreName).toBe("MyNote");
-				expect(result.value.separatedSuffixedBasename.suffixParts).toEqual(["Section2", "Section1"]);
-				expect(result.value.pathParts).toEqual(["Library", "Section1", "Section2"]);
+				expect(result.value.separatedSuffixedBasename.coreName).toBe(
+					"MyNote",
+				);
+				expect(
+					result.value.separatedSuffixedBasename.suffixParts,
+				).toEqual(["Section2", "Section1"]);
+				expect(result.value.pathParts).toEqual([
+					"Library",
+					"Section1",
+					"Section2",
+				]);
 			}
 		});
 	});
@@ -290,13 +344,15 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const canonical1Res = tryParseCanonicalSplitPathInsideLibrary(regular);
+			const canonical1Res =
+				tryParseCanonicalSplitPathInsideLibrary(regular);
 			expect(canonical1Res.isOk()).toBe(true);
 			if (!canonical1Res.isOk()) return;
 			const canonical1 = canonical1Res.value;
 
 			const regular2 = makeRegularSplitPathInsideLibrary(canonical1);
-			const canonical2Res = tryParseCanonicalSplitPathInsideLibrary(regular2);
+			const canonical2Res =
+				tryParseCanonicalSplitPathInsideLibrary(regular2);
 			expect(canonical2Res.isOk()).toBe(true);
 			if (!canonical2Res.isOk()) return;
 			const canonical2 = canonical2Res.value;
@@ -316,13 +372,15 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const canonical1Res = tryParseCanonicalSplitPathInsideLibrary(regular);
+			const canonical1Res =
+				tryParseCanonicalSplitPathInsideLibrary(regular);
 			expect(canonical1Res.isOk()).toBe(true);
 			if (!canonical1Res.isOk()) return;
 			const canonical1 = canonical1Res.value;
 
 			const regular2 = makeRegularSplitPathInsideLibrary(canonical1);
-			const canonical2Res = tryParseCanonicalSplitPathInsideLibrary(regular2);
+			const canonical2Res =
+				tryParseCanonicalSplitPathInsideLibrary(regular2);
 			expect(canonical2Res.isOk()).toBe(true);
 			if (!canonical2Res.isOk()) return;
 			const canonical2 = canonical2Res.value;
@@ -345,13 +403,15 @@ describe("tryParseCanonicalSplitPath", () => {
 				pathParts: ["Library", "Section1", "Section2"],
 			};
 
-			const canonical1Res = tryParseCanonicalSplitPathInsideLibrary(regular);
+			const canonical1Res =
+				tryParseCanonicalSplitPathInsideLibrary(regular);
 			expect(canonical1Res.isOk()).toBe(true);
 			if (!canonical1Res.isOk()) return;
 			const canonical1 = canonical1Res.value;
 
 			const regular2 = makeRegularSplitPathInsideLibrary(canonical1);
-			const canonical2Res = tryParseCanonicalSplitPathInsideLibrary(regular2);
+			const canonical2Res =
+				tryParseCanonicalSplitPathInsideLibrary(regular2);
 			expect(canonical2Res.isOk()).toBe(true);
 			if (!canonical2Res.isOk()) return;
 			const canonical2 = canonical2Res.value;

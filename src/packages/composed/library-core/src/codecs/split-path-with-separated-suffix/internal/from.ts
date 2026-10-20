@@ -48,9 +48,9 @@ export function fromSplitPathInsideLibraryWithSeparatedSuffix<
 	);
 
 	switch (sp.kind) {
-		case SplitPathKind.Folder:
-			{
-				const folderPath = sp as SplitPathInsideLibraryWithSeparatedSuffixOf<
+		case SplitPathKind.Folder: {
+			const folderPath =
+				sp as SplitPathInsideLibraryWithSeparatedSuffixOf<
 					typeof SplitPathKind.Folder
 				>;
 			return {
@@ -58,32 +58,30 @@ export function fromSplitPathInsideLibraryWithSeparatedSuffix<
 				kind: SplitPathKind.Folder,
 				pathParts: folderPath.pathParts,
 			} as SplitPathInsideLibraryOf<SK>;
-			}
-		case SplitPathKind.File:
-			{
-				const filePath =
-					sp as unknown as SplitPathInsideLibraryWithSeparatedSuffixOf<
-						typeof SplitPathKind.File
-					>;
+		}
+		case SplitPathKind.File: {
+			const filePath =
+				sp as unknown as SplitPathInsideLibraryWithSeparatedSuffixOf<
+					typeof SplitPathKind.File
+				>;
 			return {
 				basename,
 				extension: filePath.extension,
 				kind: SplitPathKind.File,
 				pathParts: filePath.pathParts,
 			} as SplitPathInsideLibraryOf<SK>;
-			}
-		case SplitPathKind.MdFile:
-			{
-				const mdPath =
-					sp as unknown as SplitPathInsideLibraryWithSeparatedSuffixOf<
-						typeof SplitPathKind.MdFile
-					>;
+		}
+		case SplitPathKind.MdFile: {
+			const mdPath =
+				sp as unknown as SplitPathInsideLibraryWithSeparatedSuffixOf<
+					typeof SplitPathKind.MdFile
+				>;
 			return {
 				basename,
 				extension: mdPath.extension,
 				kind: SplitPathKind.MdFile,
 				pathParts: mdPath.pathParts,
 			} as SplitPathInsideLibraryOf<SK>;
-			}
+		}
 	}
 }

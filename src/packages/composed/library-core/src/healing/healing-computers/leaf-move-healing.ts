@@ -1,3 +1,4 @@
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import type {
 	Codecs,
 	FileNodeLocator,
@@ -13,7 +14,6 @@ import {
 	type ScrollNode,
 	TreeNodeKind,
 } from "../../tree";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	computeLeafHealingForFile,
 	computeLeafHealingForScroll,

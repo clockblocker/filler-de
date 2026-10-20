@@ -9,11 +9,11 @@
  */
 
 import type { LeafMatch } from "@textfresser/library-core";
-import { nonEmptyArrayResult } from "../../../types/utils";
-import {
-	type UserEventHandler,
+import type {
+	UserEventHandler,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
+import { nonEmptyArrayResult } from "../../../types/utils";
 import { pickClosestLeaf } from "./pick-closest-leaf";
 
 type WikilinkCompletionLibrarianPort = {

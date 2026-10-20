@@ -3,11 +3,11 @@
  * Produces markdown content for a section's codex file.
  */
 
-import { getParsedUserSettings } from "../../../internal/root/global-state";
-import { LINE_BREAK, SPACE_F, TAB } from "../../../internal/root/ui";
 import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { sortTreeNodesForDisplay } from "../../../display-name-sort";
+import { getParsedUserSettings } from "../../../internal/root/global-state";
+import { LINE_BREAK, SPACE_F, TAB } from "../../../internal/root/ui";
 import { sectionChainToPathParts } from "../../../path-finder";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";

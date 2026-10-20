@@ -1,12 +1,12 @@
 {
-	"name": "@textfresser/note-addressing",
-	"private": true,
-	"version": "0.0.0",
-	"type": "module",
 	"exports": {
 		".": "./src/index.ts"
 	},
+	"name": "@textfresser/note-addressing",
+	"private": true,
 	"scripts": {
 		"build": "bun ../../../../scripts/build-workspace-package.ts"
-	}
+	},
+	"type": "module",
+	"version": "0.0.0"
 }

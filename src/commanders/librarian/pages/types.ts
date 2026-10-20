@@ -1,15 +1,9 @@
-import { z } from "zod";
-import type { NonEmptyArray } from "../../../types/helpers";
+import type { NodeName } from "@textfresser/library-core";
 import {
 	TreeNodeStatus,
 	type TreeNodeStatus as TreeNodeStatusType,
 } from "@textfresser/library-core";
-import type { NodeName } from "@textfresser/library-core";
-
-// ─── Zod Enums ───
-
-
-
+import type { NonEmptyArray } from "../../../types/helpers";
 
 // ─── Types ───
 
@@ -36,7 +30,6 @@ export const DEFAULT_SEGMENTATION_CONFIG: SegmentationConfig = {
 	preserveParagraphs: true,
 	targetPageSizeChars: 3000,
 };
-
 
 /**
  * A single page segment.

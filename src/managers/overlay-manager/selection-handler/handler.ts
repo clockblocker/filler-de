@@ -16,8 +16,8 @@ export function handleSelectionChanged(
 
 	// Get active leaf ID
 	const activeLeaf = app.workspace.activeLeaf;
-	// Obsidian leaf.id is not in public API, accessing via any
-	const activeLeafId = (activeLeaf as any)?.id as string | undefined;
+	// Obsidian leaf.id is not in the public API
+	const activeLeafId = (activeLeaf as { id?: string } | null)?.id;
 	const newActiveLeafId = activeLeafId ?? null;
 
 	// Update ALL bottom toolbars: show button only on active leaf if there's a selection

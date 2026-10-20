@@ -1,10 +1,10 @@
 import type { SplitPathKind } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
-import { getParsedUserSettings } from "../../../../../../../../internal/root/global-state";
 import type {
 	Codecs,
 	SplitPathInsideLibraryOf,
 } from "../../../../../../../../codecs";
+import { getParsedUserSettings } from "../../../../../../../../internal/root/global-state";
 import { canonizeSplitPathWithSeparatedSuffix } from "../../../../../utils/canonical-naming/canonicalization-policy";
 import type { TreeNodeLocatorForLibraryScopedSplitPath } from "../../../materialized-node-events/types";
 

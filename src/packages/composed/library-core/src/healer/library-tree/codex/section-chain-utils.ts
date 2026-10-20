@@ -2,8 +2,8 @@
  * Utilities for working with section chains in codex generation.
  */
 
-import { dedupeByKeyFirst as dedupeByKey } from "../../../internal/root/array-utils";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
+import { dedupeByKeyFirst as dedupeByKey } from "../../../internal/root/array-utils";
 
 export { dedupeByKey };
 

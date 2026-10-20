@@ -1,5 +1,4 @@
 export { Tree } from "../healer/library-tree/tree";
-export type { LeafMatch } from "../healer/library-tree/types/leaf-match";
 export type {
 	TreeFacade,
 	TreeReader,
@@ -17,3 +16,4 @@ export type {
 	SectionNode,
 	TreeNode,
 } from "../healer/library-tree/tree-node/types/tree-node";
+export type { LeafMatch } from "../healer/library-tree/types/leaf-match";

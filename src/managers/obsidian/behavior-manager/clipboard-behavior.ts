@@ -1,9 +1,9 @@
 import { goBackLinkHelper } from "@textfresser/note-addressing";
-import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
-import {
-	type UserEventHandler,
+import type {
+	UserEventHandler,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
+import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 
 /**
  * Create a handler that strips metadata from clipboard copy.

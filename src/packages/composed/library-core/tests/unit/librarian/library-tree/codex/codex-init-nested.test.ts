@@ -1,6 +1,12 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
+import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
@@ -9,7 +15,6 @@ import type {
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
 } from "../../../../../src/codecs/segment-id/types/segment-id";
-import { Healer } from "../../../../../src/healing";
 import { codexImpactToRecreations } from "../../../../../src/healer/library-tree/codex/codex-impact-to-actions";
 import { mergeCodexImpacts } from "../../../../../src/healer/library-tree/codex/merge-codex-impacts";
 import { Tree } from "../../../../../src/healer/library-tree/tree";
@@ -17,6 +22,7 @@ import {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "../../../../../src/healer/library-tree/tree-node/types/atoms";
+import { Healer } from "../../../../../src/healing";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
@@ -41,7 +47,9 @@ describe("Codex init for nested sections", () => {
 		const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 		const codecs = makeCodecs(rules);
 		const healer = new Healer(new Tree("Library", codecs), codecs);
-		const impacts: ReturnType<typeof healer.getHealingActionsFor>["codexImpact"][] = [];
+		const impacts: ReturnType<
+			typeof healer.getHealingActionsFor
+		>["codexImpact"][] = [];
 
 		// Create a file at Library/grandpa/father/kid/Diary.md
 		const createAction = {
@@ -70,13 +78,19 @@ describe("Codex init for nested sections", () => {
 
 		const mergedImpact = mergeCodexImpacts(impacts);
 
-		const codexActions = codexImpactToRecreations(mergedImpact, healer, codecs);
+		const codexActions = codexImpactToRecreations(
+			mergedImpact,
+			healer,
+			codecs,
+		);
 
 		// Should have codexes for: Library, grandpa, father, kid
 		// New API uses ProcessCodex instead of UpsertCodex
-		const createCodexPaths = codexActions
-			.filter((a) => a.kind === "ProcessCodex")
-			.map((a) => (a.payload as any).splitPath.pathParts.join("/"));
+		const createCodexPaths = codexActions.flatMap((a) =>
+			a.kind === "ProcessCodex"
+				? [a.payload.splitPath.pathParts.join("/")]
+				: [],
+		);
 
 		expect(createCodexPaths).toContain("Library");
 		expect(createCodexPaths).toContain("Library/grandpa");

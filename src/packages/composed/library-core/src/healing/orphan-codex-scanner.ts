@@ -12,11 +12,8 @@
 
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../codecs";
 import type { SectionNodeSegmentId } from "../codecs/segment-id";
+import { computeCodexSplitPath, isCodexSplitPath } from "../codex";
 import type { HealingAction } from "../healer/library-tree/types/healing-action";
-import {
-	computeCodexSplitPath,
-	isCodexSplitPath,
-} from "../codex";
 import type { TreeReader } from "../tree";
 import { TreeNodeKind } from "../tree";
 

@@ -3,11 +3,11 @@
  * Used by ProcessMdFile actions to update scroll backlinks.
  */
 
-import type { Transform } from "@textfresser/vault-action-manager";
 import { goBackLinkHelper } from "@textfresser/note-addressing";
-import { noteMetadataHelper } from "../../../../internal/root/note-metadata";
+import type { Transform } from "@textfresser/vault-action-manager";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
+import { noteMetadataHelper } from "../../../../internal/root/note-metadata";
 import { sectionChainToPathParts } from "../../../../path-finder";
 import { makeCodexBasename } from "../format-codex-line";
 

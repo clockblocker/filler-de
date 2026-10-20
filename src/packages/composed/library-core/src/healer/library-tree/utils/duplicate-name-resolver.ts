@@ -1,8 +1,3 @@
-import type {
-	AnySplitPath,
-	SplitPathToFolder,
-} from "@textfresser/vault-action-manager";
-import { Effect } from "effect";
 import type { NodeName } from "../../../types/schemas/node-name";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import type { SectionNode } from "../tree-node/types/tree-node";
@@ -104,6 +99,3 @@ export function resolveNextAvailableNameInSection(
 	while (existingNumbers.has(n)) n++;
 	return buildNameWithDuplicateMarker(baseName, n) as NodeName;
 }
-
-
-

@@ -12,8 +12,6 @@ import type { ProtectedContent } from "../stream/markdown-protector";
 import { findPrecedingHRs } from "./hr-insertion";
 import type { HRInfo } from "./types";
 
-
-
 /**
  * Reconstructs text from sentence groups with headings and HRs inserted.
  */

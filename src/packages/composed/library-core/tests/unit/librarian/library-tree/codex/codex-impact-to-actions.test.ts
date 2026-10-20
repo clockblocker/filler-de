@@ -1,12 +1,17 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
 import { MD } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
 } from "../../../../../src/codecs";
-import type {
-	SectionNodeSegmentId,
-} from "../../../../../src/codecs/segment-id/types/segment-id";
+import type { SectionNodeSegmentId } from "../../../../../src/codecs/segment-id/types/segment-id";
 import {
 	codexImpactToDeletions,
 	codexImpactToIncrementalRecreations,
@@ -74,7 +79,8 @@ function makeTreeAccessor(root: SectionNode): TreeReader {
 				const segId = chain[i];
 				if (!segId) return undefined;
 				const child = current.children[segId];
-				if (!child || child.kind !== TreeNodeKind.Section) return undefined;
+				if (!child || child.kind !== TreeNodeKind.Section)
+					return undefined;
 				current = child;
 			}
 			return current;
@@ -143,7 +149,9 @@ describe("codexImpactToDeletions", () => {
 				expect(deleteAction.payload.splitPath.pathParts.join("/")).toBe(
 					"Library/NewName",
 				);
-				expect(deleteAction.payload.splitPath.basename).toBe("__-OldName");
+				expect(deleteAction.payload.splitPath.basename).toBe(
+					"__-OldName",
+				);
 			}
 		});
 
@@ -175,7 +183,8 @@ describe("codexImpactToDeletions", () => {
 			const parentDelete = actions.find(
 				(a) =>
 					a.kind === "DeleteMdFile" &&
-					a.payload.splitPath.pathParts.join("/") === "Library/NewName" &&
+					a.payload.splitPath.pathParts.join("/") ===
+						"Library/NewName" &&
 					a.payload.splitPath.basename === "__-OldName",
 			);
 			expect(parentDelete).toBeDefined();
@@ -298,7 +307,10 @@ describe("codexImpactToIncrementalRecreations", () => {
 		const root = section("Library", {
 			"A﹘Section﹘": section("A", {
 				"B﹘Section﹘": section("B", {
-					"scroll1﹘Scroll﹘md": scroll("scroll1", TreeNodeStatus.Done),
+					"scroll1﹘Scroll﹘md": scroll(
+						"scroll1",
+						TreeNodeStatus.Done,
+					),
 				}),
 			}),
 		});
@@ -322,7 +334,11 @@ describe("codexImpactToIncrementalRecreations", () => {
 			renamed: [],
 		};
 
-		const actions = codexImpactToIncrementalRecreations(impact, tree, codecs);
+		const actions = codexImpactToIncrementalRecreations(
+			impact,
+			tree,
+			codecs,
+		);
 
 		// Should have ProcessCodex for B (the descendant section)
 		const bProcessCodex = actions.find(
@@ -377,7 +393,11 @@ describe("codexImpactToIncrementalRecreations", () => {
 			renamed: [],
 		};
 
-		const actions = codexImpactToIncrementalRecreations(impact, tree, codecs);
+		const actions = codexImpactToIncrementalRecreations(
+			impact,
+			tree,
+			codecs,
+		);
 
 		// Count ProcessCodex actions for B - should be exactly 1 (from impactedChains, not from descendantsChanged)
 		const bProcessActions = actions.filter(
@@ -417,7 +437,11 @@ describe("codexImpactToIncrementalRecreations", () => {
 			renamed: [],
 		};
 
-		const actions = codexImpactToIncrementalRecreations(impact, tree, codecs);
+		const actions = codexImpactToIncrementalRecreations(
+			impact,
+			tree,
+			codecs,
+		);
 
 		// B should be processed
 		const bProcessCodex = actions.find(

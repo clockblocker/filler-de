@@ -1,6 +1,5 @@
 import type { AnySplitPath } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
-import { getParsedUserSettings } from "../../../../../internal/root/global-state";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
 	AnySplitPathInsideLibrary,
@@ -12,6 +11,7 @@ import type {
 	SplitPathToMdFileInsideLibrary,
 } from "../../../../../codecs";
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../../../codecs";
+import { getParsedUserSettings } from "../../../../../internal/root/global-state";
 import { NodeNameSchema } from "../../../../../types/schemas/node-name";
 import { canonizeSplitPathWithSeparatedSuffix } from "./canonicalization-policy";
 

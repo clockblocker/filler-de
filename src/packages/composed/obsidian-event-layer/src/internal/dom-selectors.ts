@@ -86,8 +86,3 @@ export const DomSelectors = {
 	/** Obsidian workspace leaf container */
 	WORKSPACE_LEAF: ".workspace-leaf",
 } as const;
-
-/**
- * Type for DOM selector keys.
- */
-type DomSelectorKey = keyof typeof DomSelectors;

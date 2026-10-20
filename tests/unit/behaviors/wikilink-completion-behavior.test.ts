@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import { createWikilinkCompletionHandler } from "../../../src/managers/obsidian/behavior-manager/wikilink-complition-behavior";
 import {
 	type PayloadFor,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
+import { createWikilinkCompletionHandler } from "../../../src/managers/obsidian/behavior-manager/wikilink-complition-behavior";
 
 type WikilinkLibrarian = Parameters<typeof createWikilinkCompletionHandler>[0];
 
