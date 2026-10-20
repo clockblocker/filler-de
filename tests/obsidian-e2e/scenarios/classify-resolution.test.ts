@@ -24,6 +24,11 @@ describe("Obsidian E2E - Classify resolution", () => {
 				resetDictionary: true,
 			},
 			async ({ act, dictionary, snapshot, status }) => {
+				// Healing has given the Scroll its go-back link; Classify must
+				// leave everything but the classified Sentence as it found it.
+				const healed = (await snapshot()).markdown["Story.md"] ?? "";
+				expect(healed).toContain(STORY);
+
 				// A noun, a separable verb and a Locution in one selection.
 				await act({
 					kind: "runClassify",
@@ -55,7 +60,10 @@ describe("Obsidian E2E - Classify resolution", () => {
 
 				const story = (await snapshot()).markdown["Story.md"];
 				expect(story).toBe(
-					`${linkTo(hund.lemmaPath, hund.readingBlockId, "Der Hund")} ${linkTo(anfangen.lemmaPath, anfangen.readingBlockId, "fängt")} ${linkTo(heute.lemmaPath, heute.readingBlockId, "heute")} ${linkTo(aufJedenFall.lemmaPath, aufJedenFall.readingBlockId, "auf jeden Fall")} ${linkTo(anfangen.lemmaPath, anfangen.readingBlockId, "an")}. ^0\n\nDer Hund schläft. ^1\n`,
+					healed.replace(
+						STORY,
+						`${linkTo(hund.lemmaPath, hund.readingBlockId, "Der Hund")} ${linkTo(anfangen.lemmaPath, anfangen.readingBlockId, "fängt")} ${linkTo(heute.lemmaPath, heute.readingBlockId, "heute")} ${linkTo(aufJedenFall.lemmaPath, aufJedenFall.readingBlockId, "auf jeden Fall")} ${linkTo(anfangen.lemmaPath, anfangen.readingBlockId, "an")}. ^0\n\nDer Hund schläft. ^1\n`,
+					),
 				);
 
 				// Each Lemma note sits at its identity path and holds the

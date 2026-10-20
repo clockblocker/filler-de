@@ -896,6 +896,12 @@ class TextfresserE2EDriver extends Plugin {
 			}
 		}
 
+		// Let the fixtures' own create events settle while Textfresser still
+		// points elsewhere. Otherwise VAM can deliver them after the Library
+		// switch below, and the new Librarian heals Leaves its startup scan
+		// has already healed.
+		await this.settle({ timeoutMs: clampTimeout(request.params.timeoutMs, 30_000) });
+
 		const classifyApi = before.plugin.getClassifyTestingApi();
 		if (typeof classifyApi.useScriptedDumgen === "function") {
 			classifyApi.useScriptedDumgen({ jev: scriptedJev, luna: scriptedLuna });
