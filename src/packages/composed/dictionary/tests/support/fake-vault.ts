@@ -8,6 +8,7 @@ import {
 	splitPathCodec,
 	VamDispatchError,
 	VamDispatchStoppedError,
+	VamScanError,
 	VamVaultIoError,
 	type VaultAction,
 	VaultActionKind,
@@ -62,6 +63,8 @@ export class FakeVault implements DictionaryVault {
 	readonly files = new Map<string, StoredFile>();
 	readonly batches: VaultAction[][] = [];
 	readonly readCount = new Map<string, number>();
+	/** Paths whose reads fail although the file exists. */
+	readonly unreadable = new Set<string>();
 	private clock = 1;
 	private failWhen: ((action: VaultAction, path: string) => boolean) | null =
 		null;
@@ -119,7 +122,7 @@ export class FakeVault implements DictionaryVault {
 			const path = format(splitPath);
 			this.readCount.set(path, (this.readCount.get(path) ?? 0) + 1);
 			const file = this.files.get(path);
-			if (!file)
+			if (!file || this.unreadable.has(path))
 				return Effect.fail(
 					new VamVaultIoError({
 						cause: new Error("File not found"),
@@ -133,8 +136,25 @@ export class FakeVault implements DictionaryVault {
 			});
 		});
 
+	private scanFailures = 0;
+
+	/** Makes the next `count` scans fail, as an unreadable folder would. */
+	failNextScans(count = 1): void {
+		this.scanFailures = count;
+	}
+
 	scanWithStat: DictionaryVault["scanWithStat"] = (folder) =>
-		Effect.sync(() => {
+		Effect.suspend(() => {
+			if (this.scanFailures > 0) {
+				this.scanFailures -= 1;
+				return Effect.fail(
+					new VamScanError({
+						cause: new Error("Injected scan failure"),
+						operation: "scanRoot",
+						path: format(folder),
+					}),
+				);
+			}
 			const root = format(folder);
 			const entries: VaultScanPathWithStat[] = [];
 			for (const [path, file] of this.files) {
@@ -154,7 +174,7 @@ export class FakeVault implements DictionaryVault {
 					stat: { ctime: 0, mtime: file.mtime, size: file.size },
 				});
 			}
-			return {
+			return Effect.succeed({
 				counts: {
 					folderCount: 0,
 					markdownFileCount: entries.length,
@@ -163,7 +183,7 @@ export class FakeVault implements DictionaryVault {
 				diagnostics: [],
 				entries,
 				kind: "Complete",
-			} as const;
+			} as const);
 		});
 
 	dispatchStopOnFirstFailure: DictionaryVault["dispatchStopOnFirstFailure"] =
@@ -205,9 +225,19 @@ export class FakeVault implements DictionaryVault {
 				),
 			);
 
+	/** Runs one action as VAM and Obsidian would, collisions included. */
 	private async execute(action: VaultAction) {
 		switch (action.kind) {
+			case VaultActionKind.CreateFile: {
+				// Obsidian's vault.create refuses an existing file.
+				const path = format(action.payload.splitPath);
+				if (this.files.has(path))
+					throw new Error("File already exists.");
+				this.put(path, action.payload.content ?? "");
+				return;
+			}
 			case VaultActionKind.UpsertMdFile: {
+				// VAM overwrites an existing file's content.
 				const path = format(action.payload.splitPath);
 				const { content } = action.payload;
 				if (content === null || content === undefined) {
@@ -216,7 +246,9 @@ export class FakeVault implements DictionaryVault {
 				return;
 			}
 			case VaultActionKind.ProcessMdFile: {
+				// VAM first ensures the file exists, creating it empty.
 				const path = format(action.payload.splitPath);
+				if (!this.files.has(path)) this.put(path, "");
 				const file = this.files.get(path);
 				if (!file) throw new Error(`No file at ${path}`);
 				const { payload } = action;
@@ -231,8 +263,24 @@ export class FakeVault implements DictionaryVault {
 				const from = format(action.payload.from);
 				const to = format(action.payload.to);
 				const file = this.files.get(from);
-				if (!file) throw new Error(`No file at ${from}`);
-				if (this.files.has(to)) throw new Error(`${to} exists`);
+				const target = this.files.get(to);
+				if (!file) {
+					if (target) return; // VAM treats a done rename as done.
+					throw new Error(`Both ${from} and ${to} are missing`);
+				}
+				if (target) {
+					// VAM trashes a same-content source, else renames it aside.
+					if (target.content === file.content) {
+						this.files.delete(from);
+						return;
+					}
+					const base = to.slice(0, -".md".length);
+					let index = 1;
+					while (this.files.has(`${base} ${index}.md`)) index += 1;
+					this.files.delete(from);
+					this.files.set(`${base} ${index}.md`, file);
+					return;
+				}
 				this.files.delete(from);
 				this.files.set(to, file);
 				return;

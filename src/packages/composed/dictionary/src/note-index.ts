@@ -1,4 +1,4 @@
-import { lemmaNotePath, shadowNotePath } from "@textfresser/lemma-note-codec";
+import { lemmaNotePath } from "@textfresser/lemma-note-codec";
 import type {
 	PendingSemanticRelationRecord,
 	ReadingEntry,
@@ -13,7 +13,13 @@ import {
 	readingKeyOf,
 	shadowKeyOf,
 } from "./keys";
-import type { LemmaNoteEntry, NoteData, PathEntry } from "./note-entry";
+import {
+	type LemmaNoteEntry,
+	type NoteData,
+	type PathEntry,
+	pendingOfEntry,
+} from "./note-entry";
+import { shadowPathOfTarget } from "./shadow-note";
 
 /** One direct Semantic Relation claim, as its source Reading stores it. */
 export type RelationEdge = {
@@ -43,15 +49,19 @@ export function canonicalLemmaPath(
 }
 
 /** The path of the Shadow note a pending relation's target gets. */
-export function shadowPathOf(
+export const shadowPathOf = (
 	record: PendingSemanticRelationRecord<"de">,
-): string | undefined {
-	try {
-		return shadowNotePath(record.pending.target).path;
-	} catch {
-		return undefined;
-	}
-}
+): string | undefined => shadowPathOfTarget(record.pending.target);
+
+/** One file's claim on a Shadow note: the file's path and the relation's locator. */
+export const shadowRefOf = (
+	notePath: string,
+	record: PendingSemanticRelationRecord<"de">,
+): string => `${notePath}\u0000${locatorKeyOf(record.locator)}`;
+
+/** Plain code-unit order, so paths that differ only by case sort one way everywhere. */
+export const byCodeUnit = (left: string, right: string): number =>
+	left < right ? -1 : left > right ? 1 : 0;
 
 function addTo<K, V>(map: Map<K, Set<V>>, key: K, value: V) {
 	const set = map.get(key);
@@ -64,6 +74,10 @@ function removeFrom<K, V>(map: Map<K, Set<V>>, key: K, value: V) {
 	if (!set) return;
 	set.delete(value);
 	if (set.size === 0) map.delete(key);
+}
+
+function cloneSets<K, V>(map: Map<K, Set<V>>): Map<K, Set<V>> {
+	return new Map([...map].map(([key, set]) => [key, new Set(set)]));
 }
 
 /** Each relation a Reading Entry claims, with its target's Lemma key. */
@@ -108,32 +122,33 @@ export function relationEdgesOf(
 /**
  * The in-memory index over `Worter/`: every Markdown path's entry, and the
  * lookups dumdict's slices and dumgen read, derived from the Lemma notes
- * that hold each Lemma. When two notes hold one Lemma, the one at its
- * canonical path, else the first by path, holds it; the other is reported
- * as a duplicate and never written.
+ * that hold each Lemma. When two notes hold one Lemma, a note already at
+ * its own canonical path, else the first by path, holds it; the other is
+ * reported as a duplicate and never written.
  *
- * It is synchronous and mutable; the store changes it only under its
- * writer lock, so a read sees one consistent state.
+ * The store never changes a published index: it clones it, changes the
+ * clone under its writer lock, and swaps the clone in with the next
+ * revision, so every read sees one consistent version.
  */
 export class NoteIndex {
-	private readonly entries = new Map<string, PathEntry>();
+	private entries = new Map<string, PathEntry>();
 	/** Lemma key → the paths of every note that holds it. */
-	private readonly claims = new Map<string, Set<string>>();
+	private claims = new Map<string, Set<string>>();
 	/** Lemma key → the path of the note that holds it. */
-	private readonly holders = new Map<string, string>();
-	private readonly readings = new Map<
+	private holders = new Map<string, string>();
+	private readings = new Map<
 		string,
 		{ readonly lemmaKey: string; readonly entry: ReadingEntry<"de"> }
 	>();
-	private readonly surfaces = new Map<
+	private surfaces = new Map<
 		string,
 		{ readonly lemmaKey: string; readonly entry: SurfaceEntry<"de"> }
 	>();
 	/** Form key of a Canonical Form or Surface → Lemma keys. */
-	private readonly forms = new Map<string, Set<string>>();
+	private forms = new Map<string, Set<string>>();
 	/** Shadow key → keys of the Lemmas that Shadow names. */
-	private readonly lemmasByShadow = new Map<string, Set<string>>();
-	private readonly pending = new Map<
+	private lemmasByShadow = new Map<string, Set<string>>();
+	private pending = new Map<
 		string,
 		{
 			readonly lemmaKey: string;
@@ -141,31 +156,34 @@ export class NoteIndex {
 		}
 	>();
 	/** Shadow key → locator keys of the pending relations targeting it. */
-	private readonly pendingByShadow = new Map<string, Set<string>>();
-	/** Shadow note path → locator keys of the pending relations it stands for. */
-	private readonly pendingByShadowPath = new Map<string, Set<string>>();
+	private pendingByShadow = new Map<string, Set<string>>();
+	/**
+	 * Shadow note path → every file's claim on it, holders, duplicates and
+	 * quarantined notes alike, so no file's relation loses its Shadow.
+	 */
+	private shadowRefs = new Map<string, Set<string>>();
 	/** Target Lemma key → edge key → edge. */
-	private readonly edgesByTarget = new Map<
-		string,
-		Map<string, RelationEdge>
-	>();
+	private edgesByTarget = new Map<string, Map<string, RelationEdge>>();
 
-	get size(): number {
-		return this.entries.size;
-	}
-
-	clear(): void {
-		this.entries.clear();
-		this.claims.clear();
-		this.holders.clear();
-		this.readings.clear();
-		this.surfaces.clear();
-		this.forms.clear();
-		this.lemmasByShadow.clear();
-		this.pending.clear();
-		this.pendingByShadow.clear();
-		this.pendingByShadowPath.clear();
-		this.edgesByTarget.clear();
+	clone(): NoteIndex {
+		const next = new NoteIndex();
+		next.entries = new Map(this.entries);
+		next.claims = cloneSets(this.claims);
+		next.holders = new Map(this.holders);
+		next.readings = new Map(this.readings);
+		next.surfaces = new Map(this.surfaces);
+		next.forms = cloneSets(this.forms);
+		next.lemmasByShadow = cloneSets(this.lemmasByShadow);
+		next.pending = new Map(this.pending);
+		next.pendingByShadow = cloneSets(this.pendingByShadow);
+		next.shadowRefs = cloneSets(this.shadowRefs);
+		next.edgesByTarget = new Map(
+			[...this.edgesByTarget].map(([key, edges]) => [
+				key,
+				new Map(edges),
+			]),
+		);
+		return next;
 	}
 
 	entry(path: string): PathEntry | undefined {
@@ -194,11 +212,25 @@ export class NoteIndex {
 			if (held?.kind === "lemma") this.unindex(held);
 			this.holders.delete(key);
 		}
+		for (const record of pendingOfEntry(previous)) {
+			const shadowPath = shadowPathOf(record);
+			if (shadowPath !== undefined)
+				removeFrom(
+					this.shadowRefs,
+					shadowPath,
+					shadowRefOf(path, record),
+				);
+		}
 		if (previous?.kind === "lemma")
 			removeFrom(this.claims, previous.lemmaKey, path);
 		if (next === undefined) this.entries.delete(path);
 		else this.entries.set(path, next);
 		if (next?.kind === "lemma") addTo(this.claims, next.lemmaKey, path);
+		for (const record of pendingOfEntry(next)) {
+			const shadowPath = shadowPathOf(record);
+			if (shadowPath !== undefined)
+				addTo(this.shadowRefs, shadowPath, shadowRefOf(path, record));
+		}
 		for (const key of keys) {
 			const holder = this.pickHolder(key);
 			if (holder === undefined) continue;
@@ -208,14 +240,15 @@ export class NoteIndex {
 	}
 
 	private pickHolder(key: string): LemmaNoteEntry | undefined {
-		const paths = [...(this.claims.get(key) ?? [])].sort();
-		const notes = paths
+		const notes = [...(this.claims.get(key) ?? [])]
+			.sort(byCodeUnit)
 			.map((path) => this.entries.get(path))
 			.filter((entry) => entry?.kind === "lemma");
-		const first = notes[0];
-		if (first === undefined) return undefined;
-		const canonical = canonicalLemmaPath(first.data.lemmaRecord.lemma);
-		return notes.find((note) => note.path === canonical) ?? first;
+		const placed = notes.find(
+			(note) =>
+				note.path === canonicalLemmaPath(note.data.lemmaRecord.lemma),
+		);
+		return placed ?? notes[0];
 	}
 
 	private index(note: LemmaNoteEntry) {
@@ -244,12 +277,10 @@ export class NoteIndex {
 			const locatorKey = locatorKeyOf(record.locator);
 			this.pending.set(locatorKey, { lemmaKey, record });
 			addTo(this.pendingByShadow, pendingShadowKeyOf(record), locatorKey);
-			const shadowPath = shadowPathOf(record);
-			if (shadowPath !== undefined)
-				addTo(this.pendingByShadowPath, shadowPath, locatorKey);
 		}
 	}
 
+	/** Removes everything a holding note gave; a Lemma has one holder, so this is exact. */
 	private unindex(note: LemmaNoteEntry) {
 		const { data, lemmaKey } = note;
 		const lemma = data.lemmaRecord.lemma;
@@ -280,9 +311,6 @@ export class NoteIndex {
 				pendingShadowKeyOf(record),
 				locatorKey,
 			);
-			const shadowPath = shadowPathOf(record);
-			if (shadowPath !== undefined)
-				removeFrom(this.pendingByShadowPath, shadowPath, locatorKey);
 		}
 	}
 
@@ -296,6 +324,16 @@ export class NoteIndex {
 
 	lemmaData(lemmaKey: string): NoteData | undefined {
 		return this.lemmaNote(lemmaKey)?.data;
+	}
+
+	/** Every holding note, by path. */
+	lemmaNotes(): LemmaNoteEntry[] {
+		return [...this.holders.keys()]
+			.flatMap((key) => {
+				const note = this.lemmaNote(key);
+				return note ? [note] : [];
+			})
+			.sort((a, b) => byCodeUnit(a.path, b.path));
 	}
 
 	reading(readingKey: string): ReadingEntry<"de"> | undefined {
@@ -322,12 +360,12 @@ export class NoteIndex {
 
 	/** Keys of the Lemmas whose Canonical Form or owned Surface has this form key. */
 	lemmasWithForm(formKey: string): readonly string[] {
-		return [...(this.forms.get(formKey) ?? [])];
+		return [...(this.forms.get(formKey) ?? [])].sort(byCodeUnit);
 	}
 
-	/** Keys of the Lemmas a Shadow (language, Family, Kind, folded form) names. */
+	/** Keys of the Lemmas a Shadow (language, Family, Kind, folded form) names, sorted. */
 	lemmasNamedBy(shadowKey: string): readonly string[] {
-		return [...(this.lemmasByShadow.get(shadowKey) ?? [])];
+		return [...(this.lemmasByShadow.get(shadowKey) ?? [])].sort(byCodeUnit);
 	}
 
 	pendingRecord(
@@ -337,17 +375,17 @@ export class NoteIndex {
 	}
 
 	pendingTargeting(shadowKey: string): PendingSemanticRelationRecord<"de">[] {
-		return [...(this.pendingByShadow.get(shadowKey) ?? [])].flatMap(
-			(key) => {
+		return [...(this.pendingByShadow.get(shadowKey) ?? [])]
+			.sort(byCodeUnit)
+			.flatMap((key) => {
 				const record = this.pending.get(key)?.record;
 				return record ? [record] : [];
-			},
-		);
+			});
 	}
 
-	/** Locator keys of the pending relations a Shadow note path stands for. */
-	pendingAtShadowPath(path: string): ReadonlySet<string> {
-		return this.pendingByShadowPath.get(path) ?? new Set();
+	/** Every file's claim on a Shadow note path (see {@link shadowRefOf}). */
+	shadowClaims(path: string): ReadonlySet<string> {
+		return this.shadowRefs.get(path) ?? new Set();
 	}
 
 	/** Every stored relation whose target is this Lemma or one of its Readings. */
@@ -364,7 +402,7 @@ export class NoteIndex {
 			for (const path of paths)
 				if (path !== holder) result.push({ heldBy: holder, path });
 		}
-		return result.sort((a, b) => (a.path < b.path ? -1 : 1));
+		return result.sort((a, b) => byCodeUnit(a.path, b.path));
 	}
 
 	/** Holding notes whose path is not their Lemma's canonical path. */
@@ -377,7 +415,20 @@ export class NoteIndex {
 			if (canonical !== holder)
 				result.push({ from: holder, to: canonical });
 		}
-		return result.sort((a, b) => (a.from < b.from ? -1 : 1));
+		return result.sort((a, b) => byCodeUnit(a.from, b.from));
+	}
+
+	/** Shadow notes the store wrote that no file's relation needs any more. */
+	orphanShadows(): string[] {
+		return this.allEntries()
+			.filter(
+				(entry) =>
+					entry.kind === "shadow" &&
+					entry.owned &&
+					this.shadowClaims(entry.path).size === 0,
+			)
+			.map(({ path }) => path)
+			.sort(byCodeUnit);
 	}
 }
 

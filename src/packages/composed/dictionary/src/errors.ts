@@ -48,9 +48,11 @@ export class DictionaryRoundTripError extends Schema.TaggedError<DictionaryRound
 ) {}
 
 /**
- * A commit's Dispatch Batch stopped at a failed write. The writes before it
- * stayed in the vault, so the commit is partly applied; the store rebuilt
- * its index from the files (`rebuilt`), and its revision moved on.
+ * A commit's Dispatch Batch stopped at a failed write after at least one of
+ * its writes had landed. Those writes stayed in the vault, so the commit is
+ * partly applied; the store rebuilt its index from the files (`rebuilt`),
+ * and its revision moved on. A batch that stopped before any write landed
+ * is reported as a `revisionConflict` instead.
  */
 export class DictionaryWriteError extends Schema.TaggedError<DictionaryWriteError>()(
 	"DictionaryWriteError",
@@ -66,6 +68,7 @@ export class DictionaryWriteError extends Schema.TaggedError<DictionaryWriteErro
 ) {}
 
 export type DictionaryCommitError =
+	| DictionaryScanError
 	| DictionaryRequestError
 	| DictionaryPathOccupiedError
 	| DictionaryRoundTripError

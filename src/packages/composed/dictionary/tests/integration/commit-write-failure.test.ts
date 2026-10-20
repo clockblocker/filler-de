@@ -72,18 +72,24 @@ const synonymsOf = async (
 		?.semanticRelations;
 
 describe("a commit that touches several notes", () => {
-	test("writes every note and removes the resolved Shadow in one batch", async () => {
+	test("writes every note in one batch, then removes the resolved Shadow", async () => {
 		const { store, vault } = await pendingDictionary();
 		const plan = await planSchreiten(store);
 		expect(await run(store.commitChanges(plan))).toMatchObject({
 			status: "committed",
 		});
 
-		const batch = vault.batches.at(-1) ?? [];
-		expect(batch.map((action) => action.kind)).toEqual([
-			VaultActionKind.UpsertMdFile,
+		const kinds = (batch: readonly { kind: string }[] = []) =>
+			batch.map(({ kind }) => kind);
+		// The commit's batch creates schreiten, rewrites gehen and laufen, and
+		// checks that the Shadow still holds the store's own body.
+		expect(kinds(vault.batches.at(-2))).toEqual([
+			VaultActionKind.CreateFile,
 			VaultActionKind.ProcessMdFile,
 			VaultActionKind.ProcessMdFile,
+			VaultActionKind.ProcessMdFile,
+		]);
+		expect(kinds(vault.batches.at(-1))).toEqual([
 			VaultActionKind.TrashMdFile,
 		]);
 		expect(await synonymsOf(store, gehen)).toEqual({

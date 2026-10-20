@@ -40,8 +40,13 @@ import {
 	DictionaryScanError,
 	DictionaryWriteError,
 } from "./errors";
-import { formKeyOf, lemmaKeyOf, locatorKeyOf, readingKeyOf } from "./keys";
-import { type DictionaryNoteCache, fromCached, toCached } from "./note-cache";
+import { formKeyOf, lemmaKeyOf, readingKeyOf } from "./keys";
+import {
+	cacheHit,
+	type DictionaryNoteCache,
+	fromCached,
+	toCached,
+} from "./note-cache";
 import {
 	classifyNote,
 	type LemmaNoteEntry,
@@ -52,15 +57,19 @@ import {
 	unreadableEntry,
 } from "./note-entry";
 import {
+	byCodeUnit,
 	canonicalLemmaPath,
 	NoteIndex,
 	type ReadingLocation,
 	type RelationEdge,
 	shadowPathOf,
+	shadowRefOf,
 } from "./note-index";
+import { isStoreShadow, shadowBody } from "./shadow-note";
 import { loadCleanupRelationsContext, loadReadingEntryContext } from "./slices";
 import { type StagedNote, stageChanges } from "./stage-changes";
 import {
+	createOnlySplitPath,
 	type DictionaryVault,
 	folderSplitPath,
 	formatPath,
@@ -99,6 +108,11 @@ export type HealingBlocked = {
 export type DictionaryDiagnostics = {
 	readonly quarantined: readonly QuarantinedNote[];
 	readonly healingBlocked: readonly HealingBlocked[];
+	/**
+	 * Shadow notes no pending relation needs any more that hold content the
+	 * store did not write. The store leaves them to the user.
+	 */
+	readonly userShadows: readonly string[];
 	/** Folders or files the last full scan could not read. */
 	readonly scanIssues: readonly string[];
 };
@@ -115,9 +129,13 @@ export type DumdictVaultStoreOptions = {
 
 /**
  * dumdict's host over the vault: one note per Lemma under `Worter/`, at its
- * identity path (ADR 0013). Reads come from an in-memory index kept current
- * through VAM's events; commits are serialized, checked against a staged
- * fork of the index, and written as one stop-on-first-failure batch.
+ * identity path (ADR 0013). Reads come from an immutable version of an
+ * in-memory index kept current through VAM's events; commits are
+ * serialized, checked against a staged fork of the index, and written as
+ * one stop-on-first-failure batch. The store never overwrites or removes
+ * content it did not write: creates fail on an existing file, rewrites
+ * compare-and-swap on the content they read, and only the store's own
+ * Shadow bodies are ever trashed.
  */
 export type DumdictVaultStore = {
 	/** dumdict's Reading Entry slice for one planner request. */
@@ -133,8 +151,8 @@ export type DumdictVaultStore = {
 	/**
 	 * Applies a plan all-or-nothing against its base revision. A conflict
 	 * writes nothing. A failure before dispatch writes nothing; a
-	 * `DictionaryWriteError` means the batch stopped part-way and the index
-	 * was rebuilt from the files.
+	 * `DictionaryWriteError` means the batch stopped after some writes
+	 * landed, and the index was rebuilt from the files.
 	 */
 	readonly commitChanges: (
 		request: CommitChangesRequest<"de"> | DumdictPlan<"de">,
@@ -146,7 +164,7 @@ export type DumdictVaultStore = {
 	readonly lemmaCandidates: (
 		texts: readonly string[],
 	) => Effect.Effect<LemmaCandidate[]>;
-	/** A Lemma's note path and its Reading Entries, if it is stored. */
+	/** A Lemma's note path and records, if it is stored. */
 	readonly lemmaNote: (lemma: Dumling.Lemma<"de">) => Effect.Effect<
 		| {
 				readonly path: string;
@@ -155,6 +173,13 @@ export type DumdictVaultStore = {
 				readonly pendingRelations: readonly PendingSemanticRelationRecord<"de">[];
 		  }
 		| undefined
+	>;
+	/** Every stored Lemma and the path of the note that holds it, by path. */
+	readonly lemmaNotes: Effect.Effect<
+		readonly {
+			readonly path: string;
+			readonly lemma: Dumling.Lemma<"de">;
+		}[]
 	>;
 	/** Where a Reading lives: its note path and Block ID, for links. */
 	readonly readingLocation: (
@@ -170,11 +195,6 @@ export type DumdictVaultStore = {
 	readonly diagnostics: Effect.Effect<DictionaryDiagnostics>;
 	/** Stops observing the vault. */
 	readonly close: Effect.Effect<void>;
-};
-
-const SHADOW_BODY = (record: PendingSemanticRelationRecord<"de">): string => {
-	const { canonicalForm, family, kind } = record.pending.target;
-	return `${canonicalForm}\n\nA Shadow note: a Semantic Relation names this ${family} ${kind}, which has no Lemma note yet.\n`;
 };
 
 const message = (cause: unknown): string =>
@@ -201,6 +221,15 @@ function sameData(left: NoteData, right: NoteData): boolean {
 	return canonicalJson(lists(left)) === canonicalJson(lists(right));
 }
 
+/** A rewrite that lands only on the content it was planned from. */
+function compareAndSwap(path: string, expected: string, next: string) {
+	return (onDisk: string) => {
+		if (onDisk !== expected)
+			throw new Error(`${path} changed after the store read it`);
+		return next;
+	};
+}
+
 let sessionCounter = 0;
 
 /**
@@ -213,9 +242,10 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 ): Effect.fn.Return<DumdictVaultStore, DictionaryScanError> {
 	const { vault, cache, projections } = options;
 	const lock = yield* Semaphore.make(1);
-	const index = new NoteIndex();
 	sessionCounter += 1;
 	const session = `${Date.now().toString(36)}${sessionCounter.toString(36)}`;
+	/** The published index version; replaced, never changed, under the lock. */
+	let index = new NoteIndex();
 	let counter = 0;
 	let stale = false;
 	let healingBlocked: HealingBlocked[] = [];
@@ -223,32 +253,56 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	let lastDiagnostics = "";
 
 	const revision = (): StoreRevision => `vault:${session}:${counter}`;
-	const bump = () => {
+	/** Swaps in a new index version together with the next revision. */
+	const publish = (next: NoteIndex) => {
+		index = next;
 		counter += 1;
 	};
+	const markStale = Effect.sync(() => {
+		stale = true;
+	});
 
-	const diagnosticsNow = (): DictionaryDiagnostics => {
+	const diagnosticsOf = (view: NoteIndex): DictionaryDiagnostics => {
 		const quarantined: QuarantinedNote[] = [];
-		for (const entry of index.allEntries())
+		const userShadows: string[] = [];
+		for (const entry of view.allEntries()) {
 			if (entry.kind === "quarantined")
 				quarantined.push({ path: entry.path, reason: entry.reason });
-		for (const { path, heldBy } of index.duplicates())
+			if (
+				entry.kind === "shadow" &&
+				!entry.owned &&
+				view.shadowClaims(entry.path).size === 0
+			)
+				userShadows.push(entry.path);
+		}
+		for (const { path, heldBy } of view.duplicates())
 			quarantined.push({
 				path,
 				reason: { _tag: "DuplicateLemma", heldBy },
 			});
-		quarantined.sort((a, b) => (a.path < b.path ? -1 : 1));
-		return { healingBlocked, quarantined, scanIssues };
+		quarantined.sort((a, b) => byCodeUnit(a.path, b.path));
+		return {
+			healingBlocked,
+			quarantined,
+			scanIssues,
+			userShadows: userShadows.sort(byCodeUnit),
+		};
 	};
 
 	const report = Effect.sync(() => {
 		if (!options.onDiagnostics) return;
-		const diagnostics = diagnosticsNow();
+		const diagnostics = diagnosticsOf(index);
 		const fingerprint = JSON.stringify(diagnostics);
 		if (fingerprint === lastDiagnostics) return;
 		lastDiagnostics = fingerprint;
 		options.onDiagnostics(diagnostics);
 	});
+
+	/** VAM's stop-on-first-failure dispatch; an interrupt leaves the index stale. */
+	const dispatch = (actions: readonly VaultAction[]) =>
+		vault
+			.dispatchStopOnFirstFailure(actions)
+			.pipe(Effect.onInterrupt(() => markStale));
 
 	/** Reads one path into its entry; undefined when no file is there. */
 	const readEntry = Effect.fnUntraced(function* (path: string) {
@@ -271,29 +325,43 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		return entry;
 	});
 
+	/**
+	 * Re-reads paths from the files and publishes what changed as one new
+	 * index version. A path whose content hash matches what was indexed,
+	 * such as an echo of the store's own write, changes nothing.
+	 */
+	const reread = Effect.fnUntraced(function* (paths: Iterable<string>) {
+		const changes: { path: string; entry: PathEntry | undefined }[] = [];
+		for (const path of new Set(paths)) {
+			if (!inScope(path)) continue;
+			const entry = yield* readEntry(path);
+			if (!sameEntry(index.entry(path), entry))
+				changes.push({ entry, path });
+		}
+		if (changes.length === 0) return false;
+		const next = index.clone();
+		for (const { path, entry } of changes) next.set(path, entry);
+		publish(next);
+		return true;
+	});
+
+	const scanError = (what: string) => (cause: unknown) =>
+		new DictionaryScanError({
+			cause,
+			message: `Could not ${what} ${WORTER_SPLIT_PATH.basename}/: ${message(cause)}`,
+		});
+
 	/** Rebuilds the index from a full scan of `Worter/`. Holds no lock itself. */
 	const rebuild = Effect.fnUntraced(function* () {
-		const present = yield* vault.exists(WORTER_SPLIT_PATH).pipe(
-			Effect.mapError(
-				(cause) =>
-					new DictionaryScanError({
-						cause,
-						message: `Could not check for ${WORTER_SPLIT_PATH.basename}/: ${message(cause)}`,
-					}),
-			),
-		);
-		const entries: PathEntry[] = [];
+		const present = yield* vault
+			.exists(WORTER_SPLIT_PATH)
+			.pipe(Effect.mapError(scanError("check for")));
+		const next = new NoteIndex();
 		let issues: string[] = [];
 		if (present) {
-			const scan = yield* vault.scanWithStat(WORTER_SPLIT_PATH).pipe(
-				Effect.mapError(
-					(cause) =>
-						new DictionaryScanError({
-							cause,
-							message: `Could not scan ${WORTER_SPLIT_PATH.basename}/: ${message(cause)}`,
-						}),
-				),
-			);
+			const scan = yield* vault
+				.scanWithStat(WORTER_SPLIT_PATH)
+				.pipe(Effect.mapError(scanError("scan")));
 			issues = scan.diagnostics.map(
 				(diagnostic) =>
 					`${diagnostic.path}: ${message(diagnostic.cause)}`,
@@ -305,11 +373,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 						return Effect.succeed(undefined);
 					const path = formatPath(entry);
 					const cached = cache?.get(path);
-					if (
-						cached &&
-						cached.mtime === entry.stat.mtime &&
-						cached.size === entry.stat.size
-					)
+					if (cacheHit(cached, entry.stat))
 						return Effect.succeed(fromCached(path, cached));
 					return entry.read().pipe(
 						Effect.map((content) => {
@@ -327,13 +391,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				},
 				{ concurrency: 16 },
 			);
-			for (const note of notes) if (note) entries.push(note);
+			for (const note of notes) if (note) next.set(note.path, note);
 		}
-		index.clear();
-		for (const entry of entries) index.set(entry.path, entry);
 		scanIssues = issues;
 		stale = false;
-		bump();
+		publish(next);
 	});
 
 	/** Rebuilds after a write whose outcome is uncertain; never fails. */
@@ -344,7 +406,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				Effect.andThen(
 					Effect.sync(() => {
 						stale = true;
-						bump();
+						// Old plans must not commit against an index that may be wrong.
+						counter += 1;
 						return false;
 					}),
 				),
@@ -353,60 +416,162 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	);
 
 	/**
-	 * Moves Lemma notes whose path disagrees with their metadata to their
-	 * canonical path. A failed move rebuilds the index and is not retried
-	 * until the next change.
+	 * The store's own Shadow notes among `paths`, read now: only a file that
+	 * holds exactly the store's Shadow body may be trashed.
 	 */
-	const heal = Effect.fnUntraced(function* () {
+	const ownedShadowContents = Effect.fnUntraced(function* (
+		paths: readonly string[],
+	) {
+		const owned: { path: string; content: string }[] = [];
+		for (const path of paths) {
+			const read = yield* Effect.result(
+				vault.readContentWithStat(mdSplitPath(path)),
+			);
+			if (
+				read._tag === "Success" &&
+				isStoreShadow(path, read.success.content)
+			)
+				owned.push({ content: read.success.content, path });
+		}
+		return owned;
+	});
+
+	/** An identity rewrite that fails the batch if the Shadow's content changed. */
+	const verifyShadow = ({
+		path,
+		content,
+	}: {
+		path: string;
+		content: string;
+	}): VaultAction => ({
+		kind: VaultActionKind.ProcessMdFile,
+		payload: {
+			splitPath: mdSplitPath(path),
+			transform: compareAndSwap(path, content, content),
+		},
+	});
+
+	/**
+	 * Trashes Shadow notes already verified as the store's own. VAM lets a
+	 * trash win over any other action on its path, so the verification runs
+	 * in the batch before; the files are re-read afterwards either way.
+	 */
+	const trashVerified = Effect.fnUntraced(function* (
+		paths: readonly string[],
+	) {
+		if (paths.length === 0) return;
+		const outcome = yield* Effect.result(
+			dispatch(
+				paths.map(
+					(path): VaultAction => ({
+						kind: VaultActionKind.TrashMdFile,
+						payload: { splitPath: mdSplitPath(path) },
+					}),
+				),
+			),
+		);
+		if (outcome._tag === "Failure")
+			yield* Effect.logWarning(
+				"Dictionary could not remove Shadow notes",
+				outcome.failure,
+			);
+		yield* reread(paths);
+	});
+
+	/** Removes the store's own Shadow notes that no relation needs any more. */
+	const cleanOrphanShadows = Effect.fnUntraced(function* () {
+		const orphans = yield* ownedShadowContents(index.orphanShadows());
+		if (orphans.length === 0) return;
+		const verified = yield* Effect.result(
+			dispatch(orphans.map(verifyShadow)),
+		);
+		if (verified._tag === "Failure") {
+			yield* reread(orphans.map(({ path }) => path));
+			return;
+		}
+		yield* trashVerified(orphans.map(({ path }) => path));
+	});
+
+	/**
+	 * Moves Lemma notes whose path disagrees with their metadata to their
+	 * canonical path, unless a file is already there. The index learns the
+	 * outcome from the files, not from what the move was meant to do; a move
+	 * that fails or lands elsewhere rebuilds the index and heals once more.
+	 */
+	const heal = Effect.fnUntraced(function* (
+		retry = true,
+	): Effect.fn.Return<void> {
 		const blocked: HealingBlocked[] = [];
-		const moves: { from: string; to: string; entry: LemmaNoteEntry }[] = [];
+		const moves: { from: string; to: string; lemmaKey: string }[] = [];
 		for (const { from, to } of index.misplaced()) {
-			const entry = index.entry(from);
-			if (entry?.kind !== "lemma") continue;
-			if (to === undefined)
+			if (to === undefined) {
 				blocked.push({
 					canonicalPath: undefined,
 					message: "Its Lemma has no path the slot table can spell",
 					path: from,
 				});
-			else if (index.entry(to) !== undefined)
+				continue;
+			}
+			const occupied =
+				index.entry(to) !== undefined ||
+				(yield* vault
+					.exists(mdSplitPath(to))
+					.pipe(Effect.orElseSucceed(() => true)));
+			if (occupied)
 				blocked.push({
 					canonicalPath: to,
-					message: "Another note sits at its canonical path",
+					message:
+						"Another file sits at its canonical path; the two may be duplicates",
 					path: from,
 				});
-			else moves.push({ entry, from, to });
+			else {
+				const moving = index.entry(from);
+				if (moving?.kind === "lemma")
+					moves.push({ from, lemmaKey: moving.lemmaKey, to });
+			}
 		}
 		healingBlocked = blocked;
-		if (moves.length === 0) return;
-		const actions: VaultAction[] = moves.map(({ from, to }) => ({
-			kind: VaultActionKind.RenameMdFile,
-			payload: { from: mdSplitPath(from), to: mdSplitPath(to) },
-		}));
-		const outcome = yield* Effect.result(
-			vault.dispatchStopOnFirstFailure(actions),
-		);
-		if (outcome._tag === "Failure") {
-			yield* Effect.logWarning(
-				"Dictionary healing stopped; rebuilding the index",
-				outcome.failure,
+		if (moves.length > 0) {
+			const outcome = yield* Effect.result(
+				dispatch(
+					moves.map(
+						({ from, to }): VaultAction => ({
+							kind: VaultActionKind.RenameMdFile,
+							payload: {
+								from: mdSplitPath(from),
+								to: mdSplitPath(to),
+							},
+						}),
+					),
+				),
 			);
-			yield* recover;
-			return;
+			if (outcome._tag === "Failure") {
+				yield* Effect.logWarning(
+					"Dictionary healing stopped; rebuilding the index",
+					outcome.failure,
+				);
+				if ((yield* recover) && retry) return yield* heal(false);
+			} else {
+				for (const { from } of moves) cache?.delete(from);
+				yield* reread(moves.flatMap(({ from, to }) => [from, to]));
+				// A move that landed elsewhere, such as VAM renaming it aside
+				// on a collision, is found by reading everything again.
+				const landed = moves.every(({ lemmaKey, to }) => {
+					const entry = index.entry(to);
+					return (
+						entry?.kind === "lemma" && entry.lemmaKey === lemmaKey
+					);
+				});
+				if (!landed && (yield* recover) && retry)
+					return yield* heal(false);
+			}
 		}
-		for (const { entry, from, to } of moves) {
-			index.set(from, undefined);
-			index.set(to, { ...entry, path: to });
-			cache?.delete(from);
-		}
-		bump();
+		yield* cleanOrphanShadows();
 	});
 
 	/**
-	 * Re-reads paths after an event and reflects them in the index. Identity
-	 * comes from content, never event order; a path whose content hash
-	 * matches what was indexed, such as an echo of the store's own write, is
-	 * a no-op that leaves the revision alone.
+	 * Re-reads what an event touched. Identity comes from content, never
+	 * event order, so paths and folders are simply read again.
 	 */
 	const refresh = Effect.fnUntraced(function* (
 		paths: Iterable<string>,
@@ -421,37 +586,36 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			const splitPath = folderSplitPath(folder);
 			const present = yield* vault
 				.exists(splitPath)
-				.pipe(Effect.orElseSucceed(() => false));
+				.pipe(Effect.orElseSucceed(() => true));
 			if (!present) continue;
 			const scan = yield* Effect.result(vault.scanWithStat(splitPath));
 			if (scan._tag === "Failure") {
+				yield* Effect.logWarning(
+					"Dictionary could not scan a folder; the index is stale",
+					scan.failure,
+				);
 				stale = true;
 				continue;
 			}
 			for (const entry of scan.success.entries)
 				if (entry.kind === "MdFile") targets.add(formatPath(entry));
 		}
-		let changed = false;
-		for (const path of targets) {
-			const next = yield* readEntry(path);
-			if (sameEntry(index.entry(path), next)) continue;
-			index.set(path, next);
-			changed = true;
-		}
-		if (!changed) return false;
-		bump();
+		if (!(yield* reread(targets))) return false;
 		yield* heal();
 		return true;
 	});
 
+	/** Event work: serialized with commits; a failure leaves the index stale. */
 	const guarded = <E>(label: string, effect: Effect.Effect<unknown, E>) =>
 		lock
 			.withPermit(
 				Effect.gen(function* () {
-					if (stale) yield* recover;
+					if (stale && (yield* recover)) yield* heal();
 					yield* effect;
-					yield* report;
-				}),
+				}).pipe(
+					Effect.onError(() => markStale),
+					Effect.ensuring(report),
+				),
 			)
 			.pipe(
 				Effect.catchCause((cause) =>
@@ -488,28 +652,19 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					break;
 			}
 		}
-		const relevant =
-			paths.some(inScope) ||
-			folders.some(
-				(folder) =>
-					inScope(`${folder}/`) ||
-					isUnder(WORTER_SPLIT_PATH.basename, folder),
-			);
-		if (!relevant) return Effect.void;
-		// A folder above `Worter/` moved or vanished: re-read everything.
-		const whole = folders.some(
-			(folder) =>
-				!inScope(`${folder}/`) &&
-				isUnder(WORTER_SPLIT_PATH.basename, folder),
-		);
+		/** A folder that is `Worter/` or above it. */
+		const above = (folder: string) =>
+			isUnder(WORTER_SPLIT_PATH.basename, folder);
+		const inside = (folder: string) =>
+			inScope(`${folder}/`) && !above(folder);
+		const whole = folders.some(above);
+		if (!(whole || paths.some(inScope) || folders.some(inside)))
+			return Effect.void;
 		return guarded(
 			"event handling",
 			whole
 				? rebuild().pipe(Effect.andThen(heal()))
-				: refresh(
-						paths,
-						folders.filter((folder) => inScope(`${folder}/`)),
-					),
+				: refresh(paths, folders.filter(inside)),
 		);
 	};
 
@@ -523,26 +678,12 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			),
 		);
 
-	const bulkSubscription = yield* vault.subscribeToBulk(onBulk).pipe(
-		Effect.mapError(
-			(cause) =>
-				new DictionaryScanError({
-					cause,
-					message: `Could not observe the vault: ${message(cause)}`,
-				}),
-		),
-	);
+	const bulkSubscription = yield* vault
+		.subscribeToBulk(onBulk)
+		.pipe(Effect.mapError(scanError("observe")));
 	const modifySubscription = yield* vault
 		.subscribeToMdModifications(WORTER_SPLIT_PATH, onModify)
-		.pipe(
-			Effect.mapError(
-				(cause) =>
-					new DictionaryScanError({
-						cause,
-						message: `Could not observe note edits: ${message(cause)}`,
-					}),
-			),
-		);
+		.pipe(Effect.mapError(scanError("observe edits in")));
 	const close = Effect.all(
 		[bulkSubscription.close, modifySubscription.close].map((closing) =>
 			Effect.ignore(closing),
@@ -576,8 +717,9 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	};
 
 	/**
-	 * Serializes one staged note. Undefined means the index was stale for
-	 * this note: the caller refreshes and reports a revision conflict.
+	 * Serializes one staged note. `Stale` means the index was behind the
+	 * files for this note: the caller re-reads and reports a revision
+	 * conflict, so the caller re-plans over what is really there.
 	 */
 	const planNoteWrite = Effect.fnUntraced(function* (
 		note: StagedNote,
@@ -589,13 +731,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	> {
 		const lemma = note.data.lemmaRecord.lemma;
 		const data: NoteData = note.data;
-		const write = (
-			path: string,
-			current: string | undefined,
-		): Effect.Effect<
-			{ readonly content: string; readonly entry: LemmaNoteEntry },
-			DictionaryRoundTripError
-		> =>
+		const write = (path: string, current: string | undefined) =>
 			Effect.try({
 				catch: (cause) =>
 					new DictionaryRoundTripError({
@@ -641,16 +777,13 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				return { _tag: "Stale", path } as const;
 			const current = read.success.content;
 			const { content, entry } = yield* write(path, current);
-			// A compare-and-swap: the write lands only on the content just read.
-			const transform = (onDisk: string) => {
-				if (onDisk !== current)
-					throw new Error(`${path} changed after the commit read it`);
-				return content;
-			};
 			return {
 				action: {
 					kind: VaultActionKind.ProcessMdFile,
-					payload: { splitPath: mdSplitPath(path), transform },
+					payload: {
+						splitPath: mdSplitPath(path),
+						transform: compareAndSwap(path, current, content),
+					},
 				},
 				entry,
 				path,
@@ -676,85 +809,84 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		const { content, entry } = yield* write(path, undefined);
 		return {
 			action: {
-				kind: VaultActionKind.UpsertMdFile,
-				payload: { content, splitPath: mdSplitPath(path) },
+				kind: VaultActionKind.CreateFile,
+				payload: { content, splitPath: createOnlySplitPath(path) },
 			},
 			entry,
 			path,
 		};
 	});
 
-	/** Shadow notes to create and remove as pending relations come and go. */
-	const planShadows = (notes: readonly StagedNote[]) => {
-		const delta = new Map<
-			string,
-			{
-				added: Set<string>;
-				removed: Set<string>;
-				sample?: PendingSemanticRelationRecord<"de">;
+	/**
+	 * Shadow notes to create and to remove. Every file's pending relations
+	 * count, holders, duplicates and quarantined notes alike. A Shadow with a
+	 * relation and no file is (re)created; one whose last relation goes is a
+	 * candidate for removal, verified as the store's own at dispatch.
+	 */
+	const planShadows = (
+		notes: readonly StagedNote[],
+		writes: ReadonlyMap<string, string>,
+	) => {
+		const removed = new Map<string, Set<string>>();
+		const added = new Map<string, Set<string>>();
+		const samples = new Map<string, PendingSemanticRelationRecord<"de">>();
+		const note = (
+			map: Map<string, Set<string>>,
+			path: string,
+			ref: string,
+		) => map.set(path, (map.get(path) ?? new Set()).add(ref));
+		for (const staged of notes) {
+			const notePath = staged.basePath ?? writes.get(staged.lemmaKey);
+			if (notePath === undefined) continue;
+			if (staged.basePath !== undefined)
+				for (const record of staged.base?.pendingRelations ?? []) {
+					const path = shadowPathOf(record);
+					if (path)
+						note(
+							removed,
+							path,
+							shadowRefOf(staged.basePath, record),
+						);
+				}
+			for (const record of staged.data.pendingRelations) {
+				const path = shadowPathOf(record);
+				if (!path) continue;
+				note(added, path, shadowRefOf(notePath, record));
+				samples.set(path, record);
 			}
-		>();
-		const at = (path: string) => {
-			const found = delta.get(path) ?? {
-				added: new Set(),
-				removed: new Set(),
-			};
-			delta.set(path, found);
-			return found;
-		};
-		for (const note of notes) {
-			const before = new Map(
-				(note.base?.pendingRelations ?? []).map((record) => [
-					locatorKeyOf(record.locator),
-					record,
-				]),
-			);
-			const after = new Map(
-				note.data.pendingRelations.map((record) => [
-					locatorKeyOf(record.locator),
-					record,
-				]),
-			);
-			for (const [key, record] of before)
-				if (!after.has(key)) {
-					const path = shadowPathOf(record);
-					if (path) at(path).removed.add(key);
-				}
-			for (const [key, record] of after)
-				if (!before.has(key)) {
-					const path = shadowPathOf(record);
-					if (path) {
-						const found = at(path);
-						found.added.add(key);
-						found.sample = record;
-					}
-				}
 		}
 		const creates: { path: string; content: string }[] = [];
-		const trashes: string[] = [];
-		for (const [path, { added, removed, sample }] of delta) {
-			const before = index.pendingAtShadowPath(path);
+		const removals: string[] = [];
+		for (const path of new Set([...removed.keys(), ...added.keys()])) {
+			const before = index.shadowClaims(path);
 			const after = new Set(
-				[...before].filter((key) => !removed.has(key)),
+				[...before].filter((ref) => !removed.get(path)?.has(ref)),
 			);
-			for (const key of added) after.add(key);
+			for (const ref of added.get(path) ?? []) after.add(ref);
 			const occupant = index.entry(path);
-			if (before.size === 0 && after.size > 0 && sample && !occupant)
-				creates.push({ content: SHADOW_BODY(sample), path });
+			const sample = samples.get(path);
+			if (after.size > 0 && occupant === undefined && sample)
+				creates.push({
+					content: shadowBody(sample.pending.target),
+					path,
+				});
 			if (
 				before.size > 0 &&
 				after.size === 0 &&
 				occupant?.kind === "shadow"
 			)
-				trashes.push(path);
+				removals.push(path);
 		}
-		return { creates, trashes };
+		return { creates, removals };
 	};
 
 	const commitUnderLock = Effect.fnUntraced(function* (
 		request: CommitChangesRequest<"de"> | DumdictPlan<"de">,
 	): Effect.fn.Return<CommitChangesResult, DictionaryCommitError> {
-		if (stale) yield* recover;
+		if (stale) {
+			yield* rebuild();
+			yield* heal();
+		}
 		const parsed = parseAsCommitChangesRequest(request, "de");
 		if (parsed instanceof ParsingError)
 			return yield* new DictionaryRequestError({
@@ -781,82 +913,107 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			if ("_tag" in planned) stalePaths.push(planned.path);
 			else writes.push(planned);
 		}
+		const writePaths = new Map(
+			writes.map(({ entry, path }) => [entry.lemmaKey, path]),
+		);
+		const shadows = planShadows(staged.notes, writePaths);
+		for (const { path } of shadows.creates) {
+			const present = yield* vault
+				.exists(mdSplitPath(path))
+				.pipe(Effect.orElseSucceed(() => true));
+			if (present) stalePaths.push(path);
+		}
 		if (stalePaths.length > 0) {
-			yield* refresh(stalePaths);
+			// A refresh that finds nothing new still refuses: the plan read a
+			// state the files no longer hold.
+			if (!(yield* reread(stalePaths))) publish(index.clone());
 			return conflict("revisionConflict");
 		}
-		const shadows = planShadows(staged.notes);
+		const removals = yield* ownedShadowContents(shadows.removals);
+		const verifiedPaths = new Set(removals.map(({ path }) => path));
+
+		// Creates go first: one that finds a file stops the batch before any
+		// write lands, which is a plain revision conflict.
+		const isCreate = ({ action }: PlannedWrite) =>
+			action.kind === VaultActionKind.CreateFile;
 		const actions: VaultAction[] = [
-			...writes.map(({ action }) => action),
+			...writes.filter(isCreate).map(({ action }) => action),
 			...shadows.creates.map(
 				({ path, content }): VaultAction => ({
-					kind: VaultActionKind.UpsertMdFile,
-					payload: { content, splitPath: mdSplitPath(path) },
+					kind: VaultActionKind.CreateFile,
+					payload: { content, splitPath: createOnlySplitPath(path) },
 				}),
 			),
-			...shadows.trashes.map(
-				(path): VaultAction => ({
-					kind: VaultActionKind.TrashMdFile,
-					payload: { splitPath: mdSplitPath(path) },
-				}),
-			),
+			...writes
+				.filter((write) => !isCreate(write))
+				.map(({ action }) => action),
+			...removals.map(verifyShadow),
 		];
 
-		const outcome = yield* Effect.result(
-			vault.dispatchStopOnFirstFailure(actions),
-		);
+		const outcome = yield* Effect.result(dispatch(actions));
 		if (outcome._tag === "Failure") {
 			const failure = outcome.failure;
 			const stopped = failure instanceof VamDispatchStoppedError;
+			const executed = stopped ? failure.executed : [];
+			const landed = executed.some(
+				(action) =>
+					action.kind !== VaultActionKind.CreateFolder &&
+					!(
+						action.kind === VaultActionKind.ProcessMdFile &&
+						verifiedPaths.has(actionPath(action))
+					),
+			);
 			const rebuilt = yield* recover;
-			yield* report;
+			if (stopped && !landed) return conflict("revisionConflict");
 			return yield* new DictionaryWriteError({
 				cause: failure,
-				executed: stopped ? failure.executed.map(actionPath) : [],
+				executed: executed.map(actionPath),
 				message: `The commit's writes stopped: ${message(stopped ? failure.failure : failure)}. The index was ${rebuilt ? "rebuilt from the files" : "not rebuilt; the next operation retries"}.`,
 				rebuilt,
 				skipped: stopped ? failure.skipped.map(actionPath) : [],
 			});
 		}
 
+		const next = index.clone();
 		for (const { path, entry } of writes) {
-			index.set(path, entry);
+			next.set(path, entry);
 			cache?.delete(path);
 		}
 		for (const { path, content } of shadows.creates) {
-			index.set(path, {
+			next.set(path, {
 				hash: contentHash(content),
 				kind: "shadow",
+				owned: true,
 				path,
 			});
 			cache?.delete(path);
 		}
-		for (const path of shadows.trashes) {
-			index.set(path, undefined);
-			cache?.delete(path);
-		}
-		bump();
-		yield* report;
+		publish(next);
+		yield* trashVerified([...verifiedPaths]);
 		return { nextRevision: revision(), status: "committed" };
 	});
 
-	const read = <A>(f: () => A) => Effect.sync(f);
+	/** A read against one published index version. */
+	const read = <A>(f: (view: NoteIndex) => A) => Effect.sync(() => f(index));
 
 	return {
 		close,
-		commitChanges: (request) => lock.withPermit(commitUnderLock(request)),
-		diagnostics: read(diagnosticsNow),
+		commitChanges: (request) =>
+			lock.withPermit(
+				commitUnderLock(request).pipe(Effect.ensuring(report)),
+			),
+		diagnostics: read(diagnosticsOf),
 		lemmaCandidates: (texts) =>
-			read(() => {
+			read((view) => {
 				const found = new Map<
 					string,
 					{ lemma: Dumling.Lemma<"de">; foundUnder: string[] }
 				>();
 				for (const text of texts)
-					for (const key of index.lemmasWithForm(
+					for (const key of view.lemmasWithForm(
 						formKeyOf(text, "de"),
 					)) {
-						const lemma = index.lemmaData(key)?.lemmaRecord.lemma;
+						const lemma = view.lemmaData(key)?.lemmaRecord.lemma;
 						if (!lemma) continue;
 						const candidate = found.get(key) ?? {
 							foundUnder: [],
@@ -869,8 +1026,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				return [...found.values()];
 			}),
 		lemmaNote: (lemma) =>
-			read(() => {
-				const note = index.lemmaNote(lemmaKeyOf(lemma));
+			read((view) => {
+				const note = view.lemmaNote(lemmaKeyOf(lemma));
 				return note
 					? {
 							ownedSurfaces: note.data.ownedSurfaceEntries,
@@ -880,8 +1037,17 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 						}
 					: undefined;
 			}),
+		lemmaNotes: read((view) =>
+			view.lemmaNotes().map(({ data, path }) => ({
+				lemma: data.lemmaRecord.lemma,
+				path,
+			})),
+		),
 		loadCleanupRelationsContext: (request) =>
-			read(() => loadCleanupRelationsContext(index, revision(), request)),
+			Effect.sync(() => {
+				const view = index;
+				return loadCleanupRelationsContext(view, revision(), request);
+			}),
 		loadReadingEntryContext: (request) =>
 			Effect.try({
 				catch: (cause) =>
@@ -892,10 +1058,10 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				try: () => loadReadingEntryContext(index, revision(), request),
 			}),
 		readingLocation: (reading) =>
-			read(() => index.readingLocation(readingKeyOf(reading))),
+			read((view) => view.readingLocation(readingKeyOf(reading))),
 		relationEdgesTo: (lemma) =>
-			read(() => index.edgesTo(lemmaKeyOf(lemma))),
-		revision: read(revision),
-		surface: (surfaceId) => read(() => index.surface(surfaceId)),
+			read((view) => view.edgesTo(lemmaKeyOf(lemma))),
+		revision: Effect.sync(revision),
+		surface: (surfaceId) => read((view) => view.surface(surfaceId)),
 	};
 });

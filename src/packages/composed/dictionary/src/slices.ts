@@ -26,12 +26,20 @@ export type NeighbourhoodSeeds = {
 	readonly targetShadowKeys?: readonly string[];
 };
 
+/** tf-demo's bounds on one relation slice. */
+export const MAX_NEIGHBOURHOOD_LEMMAS = 100;
+export const MAX_NEIGHBOURHOOD_READINGS = 200;
+
 /**
  * The closed relation inventory one plan reads, not the whole dictionary
- * (tf-demo's `loadRelationNeighbourhood`): the seed Readings and Lemmas,
- * every Lemma a seed Shadow names, and each loaded Reading's Lemma and
- * direct targets, following Reading targets to their Readings. Every
- * Reading's owner and targets are in it, as dumdict's slice check needs.
+ * (tf-demo's `loadRelationNeighbourhood`). It is bounded at 100 Lemmas and
+ * 200 Readings and filled nearest first, in a fixed order: the source
+ * Lemmas, the source Readings with their Lemmas and direct Lemma targets,
+ * the target Lemmas, every Lemma a seed Shadow names, then breadth first
+ * the target Readings and the Readings that Reading targets reach. A
+ * Reading whose Lemmas no longer fit is left out, and so is one whose
+ * Reading targets were, so every Reading's owner and targets stay in the
+ * inventory, as dumdict's slice check needs.
  */
 export function relationNeighbourhood(
 	index: NoteIndex,
@@ -42,35 +50,59 @@ export function relationNeighbourhood(
 } {
 	const lemmas = new Map<string, LemmaRecord<"de">>();
 	const readings = new Map<string, ReadingEntry<"de">>();
+	const readingTargets = new Map<string, readonly string[]>();
 	const addLemma = (key: string) => {
-		if (lemmas.has(key)) return;
+		if (lemmas.has(key) || lemmas.size >= MAX_NEIGHBOURHOOD_LEMMAS) return;
 		const record = index.lemmaData(key)?.lemmaRecord;
 		if (record) lemmas.set(key, record);
 	};
+	/** Adds a Reading with its Lemmas if they fit; returns its Reading targets. */
+	const addReading = (key: string): readonly string[] => {
+		if (readings.has(key) || readings.size >= MAX_NEIGHBOURHOOD_READINGS)
+			return [];
+		const entry = index.reading(key);
+		if (!entry) return [];
+		const edges = relationEdgesOf(entry);
+		const needed = [
+			...new Set([
+				lemmaKeyOf(entry.reading.lemma),
+				...edges.flatMap(({ edge, targetLemmaKey }) =>
+					edge.target.kind === "lemma" ? [targetLemmaKey] : [],
+				),
+			]),
+		].filter(
+			(lemmaKey) => !lemmas.has(lemmaKey) && index.lemmaData(lemmaKey),
+		);
+		if (lemmas.size + needed.length > MAX_NEIGHBOURHOOD_LEMMAS) return [];
+		for (const lemmaKey of needed) addLemma(lemmaKey);
+		readings.set(key, entry);
+		const targets = edges.flatMap(({ edge }) =>
+			edge.target.kind === "reading"
+				? [readingKeyOf(edge.target.reading)]
+				: [],
+		);
+		readingTargets.set(key, targets);
+		return targets;
+	};
+
 	for (const key of seeds.sourceLemmaKeys ?? []) addLemma(key);
+	let frontier = (seeds.sourceReadingKeys ?? []).flatMap(addReading);
 	for (const key of seeds.targetLemmaKeys ?? []) addLemma(key);
 	for (const shadow of seeds.targetShadowKeys ?? [])
 		for (const key of index.lemmasNamedBy(shadow)) addLemma(key);
-
-	let frontier = [
-		...(seeds.sourceReadingKeys ?? []),
-		...(seeds.targetReadingKeys ?? []),
-	];
-	while (frontier.length > 0) {
-		const next: string[] = [];
-		for (const key of frontier) {
-			if (readings.has(key)) continue;
-			const entry = index.reading(key);
-			if (!entry) continue;
-			readings.set(key, entry);
-			addLemma(lemmaKeyOf(entry.reading.lemma));
-			for (const { edge, targetLemmaKey } of relationEdgesOf(entry)) {
-				if (edge.target.kind === "reading")
-					next.push(readingKeyOf(edge.target.reading));
-				else addLemma(targetLemmaKey);
+	frontier = [...(seeds.targetReadingKeys ?? []), ...frontier];
+	while (frontier.length > 0) frontier = frontier.flatMap(addReading);
+	// Drop Readings whose Reading targets did not fit, until none is left open.
+	for (let pruned = true; pruned; ) {
+		pruned = false;
+		for (const [key, targets] of readingTargets)
+			if (
+				readings.has(key) &&
+				targets.some((target) => !readings.has(target))
+			) {
+				readings.delete(key);
+				pruned = true;
 			}
-		}
-		frontier = next;
 	}
 	return {
 		relationLemmas: [...lemmas.values()],
