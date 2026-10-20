@@ -109,16 +109,23 @@ function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 							try: () => app.vault.read(file),
 						}),
 					),
-					rename: Effect.fn("VaultIo.rename")((file, toPath) =>
-						Effect.tryPromise({
-							catch: (cause) =>
-								new VamVaultIoError({
-									cause,
-									operation: "rename",
-									path: `${file.path} -> ${toPath}`,
-								}),
-							try: () => app.fileManager.renameFile(file, toPath),
-						}),
+					rename: Effect.fn("VaultIo.rename")(
+						(file, toPath, options) =>
+							Effect.tryPromise({
+								catch: (cause) =>
+									new VamVaultIoError({
+										cause,
+										operation: "rename",
+										path: `${file.path} -> ${toPath}`,
+									}),
+								try: () =>
+									options?.updateLinks === false
+										? app.vault.rename(file, toPath)
+										: app.fileManager.renameFile(
+												file,
+												toPath,
+											),
+							}),
 					),
 					resolveLinkpathDest: Effect.fn(
 						"VaultIo.resolveLinkpathDest",

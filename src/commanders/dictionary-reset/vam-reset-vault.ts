@@ -125,11 +125,20 @@ export function vamResetVault(vam: ResetVam): ResetVault {
 							message: `Cannot move ${from}/ to ${to}/`,
 						}),
 					);
+				// Without Obsidian's link updater: with "Automatically update
+				// internal links" on, it rewrites links inside the moved notes
+				// (`[[Fahren]]` to a `fahren.md` becomes `[[fahren]]`) and in notes
+				// elsewhere, so the backup would no longer hold the notes as
+				// Collect read them.
 				return vam
 					.dispatchStopOnFirstFailure([
 						{
 							kind: VaultActionKind.RenameFolder,
-							payload: { from: source, to: target },
+							payload: {
+								from: source,
+								to: target,
+								updateLinks: false,
+							},
 						},
 					])
 					.pipe(
