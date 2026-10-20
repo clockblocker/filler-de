@@ -5,8 +5,12 @@ import path from "node:path";
 import { parse as parseJsonc } from "jsonc-parser";
 import {
 	BATTERY_PACKAGES,
+	git,
 	REPO_ROOT,
+	readLock,
 	TEXTEATER_LINK,
+	texteaterOverride,
+	worktreeFor,
 } from "../../../scripts/link-texteater";
 import { batteryExports } from "./battery-probe";
 
@@ -47,6 +51,13 @@ const isMapped = (specifier: string) =>
 	);
 
 describe("battery packages linked from texteater", () => {
+	it("links the worktree at the SHA in batteries.lock", () => {
+		if (texteaterOverride() !== undefined) return;
+		const lock = readLock();
+		expect(texteater).toBe(realpathSync(worktreeFor(lock)));
+		expect(git(texteater, "rev-parse", "HEAD")).toBe(lock);
+	});
+
 	it("imports one export from each battery", () => {
 		expect(Object.keys(batteryExports).sort()).toEqual(
 			[...BATTERY_PACKAGES].sort(),
