@@ -1,100 +1,50 @@
-// `bun run batteries:sync`: brings the dedicated texteater clone the plugin
-// builds against to texteater's origin/main, then points `.texteater` at it.
+// `bun run batteries:sync [--bump]`: makes the texteater worktree for the
+// SHA in `batteries.lock`, points `.texteater` at it, and prints the pinned
+// commit.
 //
-// The clone lives at TEXTEATER_DIR, or at ~/work/texteater-clones/plugin by
-// default. It is ours, not a texteater working checkout: this script clones
-// it when missing, fast-forwards it otherwise, and runs `bun install` inside
-// it. It refuses to touch a clone with local changes, one on a branch other
-// than main, or one whose main has diverged from origin/main.
+// `--bump` first fetches the shared clone at ~/work/texteater-clones/plugin
+// and moves the lock to texteater's origin/main. Commit the changed
+// `batteries.lock`: other checkouts and worktrees pick it up when they check
+// out or rebase onto that commit and run `bun install`. A bump never changes
+// the batteries under another branch, because each SHA has its own
+// worktree at ~/work/texteater-clones/plugin@<sha>.
 //
-// The clone is shared by every checkout and worktree of the plugin, so a sync
-// moves the batteries under all of them.
-import { existsSync, mkdirSync, realpathSync } from "node:fs";
-import path from "node:path";
+// The script never touches the shared clone's own working tree, and never
+// writes into a TEXTEATER_DIR checkout: with TEXTEATER_DIR set, it links
+// that directory as is.
 import {
+	BRANCH,
 	describeCommit,
+	ensureSharedClone,
 	git,
 	linkTexteater,
-	missingBatteries,
-	texteaterDir,
+	readLock,
+	resolveCheckout,
+	run,
+	SHARED_CLONE,
+	writeLock,
 } from "./link-texteater";
 
-const TEXTEATER_REMOTE = "https://github.com/clockblocker/texteater.git";
-const BRANCH = "main";
-
-function run(cwd: string, command: string[]): void {
-	const result = Bun.spawnSync(command, {
-		cwd,
-		stderr: "inherit",
-		stdout: "inherit",
-	});
-	if (result.exitCode !== 0) {
-		throw new Error(`${command.join(" ")} failed in ${cwd}.`);
+function bumpLock(): void {
+	ensureSharedClone();
+	console.log(`[batteries:sync] fetching origin in ${SHARED_CLONE}`);
+	run(SHARED_CLONE, ["git", "fetch", "origin", BRANCH]);
+	const previous = readLock();
+	const next = git(SHARED_CLONE, "rev-parse", `origin/${BRANCH}^{commit}`);
+	if (next === previous) {
+		console.log(`[batteries:sync] batteries.lock is at origin/${BRANCH}`);
+		return;
 	}
-}
-
-function cloneTexteater(clone: string): void {
-	mkdirSync(path.dirname(clone), { recursive: true });
-	console.log(`[batteries:sync] cloning ${TEXTEATER_REMOTE} into ${clone}`);
-	run(path.dirname(clone), [
-		"git",
-		"clone",
-		"--branch",
-		BRANCH,
-		TEXTEATER_REMOTE,
-		clone,
-	]);
-}
-
-function fastForwardTexteater(clone: string): void {
-	if (git(clone, "rev-parse", "--show-toplevel") !== realpathSync(clone)) {
-		throw new Error(`${clone} is not the root of a git repository.`);
-	}
-	const changes = git(clone, "status", "--porcelain");
-	if (changes !== "") {
-		throw new Error(
-			`${clone} has local changes; refusing to sync:\n${changes}`,
-		);
-	}
-	const branch = git(clone, "branch", "--show-current");
-	if (branch !== BRANCH) {
-		throw new Error(
-			`${clone} is on "${branch || "a detached HEAD"}", not ${BRANCH}; refusing to sync.`,
-		);
-	}
-	console.log(`[batteries:sync] fetching origin in ${clone}`);
-	run(clone, ["git", "fetch", "origin", BRANCH]);
-	const ahead = git(clone, "rev-list", "--count", `origin/${BRANCH}..HEAD`);
-	if (ahead !== "0") {
-		throw new Error(
-			`${clone} ${BRANCH} has ${ahead} commit(s) not on origin/${BRANCH}; refusing to sync.`,
-		);
-	}
-	run(clone, ["git", "merge", "--ff-only", "--quiet", `origin/${BRANCH}`]);
-}
-
-function syncTexteater(): void {
-	const clone = texteaterDir();
-	if (existsSync(clone)) fastForwardTexteater(clone);
-	else cloneTexteater(clone);
-
-	const missing = missingBatteries(clone);
-	if (missing.length > 0) {
-		throw new Error(
-			`${clone} has no battery/{${missing.join(",")}}/package.json.`,
-		);
-	}
-
-	console.log(`[batteries:sync] bun install in ${clone}`);
-	run(clone, ["bun", "install", "--frozen-lockfile"]);
-
-	linkTexteater(clone);
-	console.log(`[batteries:sync] pinned texteater ${describeCommit(clone)}`);
+	writeLock(next);
+	console.log(`[batteries:sync] batteries.lock ${previous} -> ${next}`);
 }
 
 if (import.meta.main) {
 	try {
-		syncTexteater();
+		if (process.argv.includes("--bump")) bumpLock();
+		const checkout = resolveCheckout();
+		linkTexteater(checkout);
+		console.log(`[batteries:sync] pinned texteater ${describeCommit(checkout)}`);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
 		console.error(`[batteries:sync] ${message}`);

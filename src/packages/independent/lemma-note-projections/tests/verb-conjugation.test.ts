@@ -11,6 +11,7 @@ function rows(
 	options: Partial<Omit<GermanVerbInput, "canonicalForm">> = {},
 ): Record<string, string[]> {
 	const table = conjugateGermanVerb({
+		...options,
 		canonicalForm,
 		conjugationClasses: options.conjugationClasses,
 		preterite: options.preterite,
@@ -284,6 +285,237 @@ Präteritum: ich fuhr, du fuhrst, er fuhr, wir fuhren, ihr fuhrt, sie fuhren`);
 				preterite: ["backte"],
 			})["Partizip II"],
 		).toBeUndefined();
+	});
+});
+
+/**
+ * The principal parts texteater#1218 stores, as dumcorpus's gold records
+ * hold them (der Zug fährt gleich ab, der Elefant trompetete, der Kellner
+ * bringt eine Cola, von morgen an fahre ich mit dem Rad zur Arbeit).
+ */
+describe("verbs with stored principal parts (texteater#1218)", () => {
+	const fahren = {
+		conjugationClasses: ["Strong"],
+		pastParticiple: ["gefahren"],
+		presentSingular: {
+			first: ["fahre"],
+			second: ["fährst"],
+			third: ["fährt"],
+		},
+		preterite: ["fuhr"],
+		subjunctivePast: ["führe"],
+	} as const;
+
+	it("fahren gets every row but the Imperativ", () => {
+		expect(rows("fahren", fahren)).toEqual({
+			"Konjunktiv II": [
+				"ich führe, du führest, er führe, wir führen, ihr führet, sie führen",
+			],
+			"Partizip II": ["gefahren"],
+			Präsens: [
+				"ich fahre, du fährst, er fährt, wir fahren, ihr fahrt, sie fahren",
+			],
+			Präteritum: [
+				"ich fuhr, du fuhrst, er fuhr, wir fuhren, ihr fuhrt, sie fuhren",
+			],
+		});
+	});
+
+	it("renders fahren through the inflection hook", () => {
+		expect(
+			deriveInflection(
+				input(verb("fahren"), {
+					conjugationClass: ["Strong"],
+					pastParticiple: ["gefahren"],
+					presentSingular: {
+						first: ["fahre"],
+						second: ["fährst"],
+						third: ["fährt"],
+					},
+					preterite: ["fuhr"],
+					subjunctivePast: ["führe"],
+				}),
+			),
+		).toBe(`Präsens: ich fahre, du fährst, er fährt, wir fahren, ihr fahrt, sie fahren
+Präteritum: ich fuhr, du fuhrst, er fuhr, wir fuhren, ihr fuhrt, sie fuhren
+Konjunktiv II: ich führe, du führest, er führe, wir führen, ihr führet, sie führen
+Partizip II: gefahren`);
+	});
+
+	it("abfahren places its particle in the finite forms only", () => {
+		expect(
+			rows("abfahren", {
+				conjugationClasses: ["Strong"],
+				pastParticiple: ["abgefahren"],
+				presentSingular: {
+					first: ["fahre ab"],
+					second: ["fährst ab"],
+					third: ["fährt ab"],
+				},
+				preterite: ["fuhr ab"],
+				separablePrefix: "ab",
+				subjunctivePast: ["führe ab"],
+			}),
+		).toEqual({
+			"Konjunktiv II": [
+				"ich führe ab, du führest ab, er führe ab, wir führen ab, ihr führet ab, sie führen ab",
+			],
+			"Partizip II": ["abgefahren"],
+			Präsens: [
+				"ich fahre ab, du fährst ab, er fährt ab, wir fahren ab, ihr fahrt ab, sie fahren ab",
+			],
+			Präteritum: [
+				"ich fuhr ab, du fuhrst ab, er fuhr ab, wir fuhren ab, ihr fuhrt ab, sie fuhren ab",
+			],
+		});
+	});
+
+	it("bringen gets its umlauted Konjunktiv II from the stored form", () => {
+		expect(
+			rows("bringen", {
+				conjugationClasses: ["Mixed"],
+				pastParticiple: ["gebracht"],
+				presentSingular: {
+					first: ["bringe"],
+					second: ["bringst"],
+					third: ["bringt"],
+				},
+				preterite: ["brachte"],
+				subjunctivePast: ["brächte"],
+			}),
+		).toEqual({
+			"Konjunktiv II": [
+				"ich brächte, du brächtest, er brächte, wir brächten, ihr brächtet, sie brächten",
+			],
+			"Partizip II": ["gebracht"],
+			Präsens: [
+				"ich bringe, du bringst, er bringt, wir bringen, ihr bringt, sie bringen",
+			],
+			Präteritum: [
+				"ich brachte, du brachtest, er brachte, wir brachten, ihr brachtet, sie brachten",
+			],
+		});
+	});
+
+	it("trompeten gets the Partizip II no rule could give it", () => {
+		const past =
+			"ich trompetete, du trompetetest, er trompetete, wir trompeteten, ihr trompetetet, sie trompeteten";
+		expect(
+			rows("trompeten", {
+				conjugationClasses: ["Weak"],
+				pastParticiple: ["trompetet"],
+				presentSingular: {
+					first: ["trompete"],
+					second: ["trompetest"],
+					third: ["trompetet"],
+				},
+				preterite: ["trompetete"],
+				subjunctivePast: ["trompetete"],
+			}),
+		).toEqual({
+			Imperativ: ["trompete!, trompetet!, trompeten Sie!"],
+			"Konjunktiv II": [past],
+			"Partizip II": ["trompetet"],
+			Präsens: [
+				"ich trompete, du trompetest, er trompetet, wir trompeten, ihr trompetet, sie trompeten",
+			],
+			Präteritum: [past],
+		});
+		expect(
+			rows("trompeten", { ...weak, pastParticiple: ["trompetet"] })[
+				"Partizip II"
+			],
+		).toEqual(["trompetet"]);
+	});
+
+	it("each stored aspect fills only its own cells", () => {
+		expect(
+			rows("fahren", {
+				conjugationClasses: ["Strong"],
+				pastParticiple: ["gefahren"],
+			}),
+		).toEqual({
+			"Partizip II": ["gefahren"],
+			Präsens: ["ich fahre, wir fahren, ihr fahrt, sie fahren"],
+		});
+	});
+
+	it("stored forms win over a weak verb's rules", () => {
+		const table = rows("senden", {
+			conjugationClasses: ["Weak"],
+			pastParticiple: ["gesendet"],
+			subjunctivePast: ["sendete"],
+		});
+		expect(table["Partizip II"]).toEqual(["gesendet"]);
+		expect(table["Konjunktiv II"]).toEqual([
+			"ich sendete, du sendetest, er sendete, wir sendeten, ihr sendetet, sie sendeten",
+		]);
+	});
+
+	it("lists each stored alternative", () => {
+		expect(
+			rows("backen", {
+				conjugationClasses: ["Weak"],
+				pastParticiple: ["gebacken"],
+				presentSingular: {
+					first: ["backe"],
+					second: ["backst", "bäckst"],
+					third: ["backt", "bäckt"],
+				},
+				preterite: ["backte"],
+			}),
+		).toMatchObject({
+			"Partizip II": ["gebacken"],
+			Präsens: [
+				"ich backe, du backst, du bäckst, er backt, er bäckt, wir backen, ihr backt, sie backen",
+			],
+		});
+	});
+
+	it("leaves out a stored form that does not fit the verb, never a rule's guess", () => {
+		expect(
+			rows("abfahren", {
+				conjugationClasses: ["Strong"],
+				// No particle in the participle, the wrong one in a Präsens form.
+				pastParticiple: ["gefahren"],
+				presentSingular: {
+					first: ["fahre ab"],
+					second: ["fährst an"],
+					third: ["fährt ab"],
+				},
+				separablePrefix: "ab",
+				// A Konjunktiv II form ends in -e.
+				subjunctivePast: ["führ ab"],
+			}),
+		).toEqual({
+			Präsens: [
+				"ich fahre ab, er fährt ab, wir fahren ab, ihr fahrt ab, sie fahren ab",
+			],
+		});
+	});
+
+	it("places a reflexive in the stored finite forms", () => {
+		expect(
+			rows("sich erinnern", {
+				conjugationClasses: ["Weak"],
+				pastParticiple: ["erinnert"],
+				presentSingular: {
+					first: ["erinnere"],
+					second: ["erinnerst"],
+					third: ["erinnert"],
+				},
+				reflexive: "Acc",
+				subjunctivePast: ["erinnerte"],
+			}),
+		).toMatchObject({
+			"Konjunktiv II": [
+				"ich erinnerte mich, du erinnertest dich, er erinnerte sich, wir erinnerten uns, ihr erinnertet euch, sie erinnerten sich",
+			],
+			"Partizip II": ["erinnert"],
+			Präsens: [
+				"ich erinnere mich, du erinnerst dich, er erinnert sich, wir erinnern uns, ihr erinnert euch, sie erinnern sich",
+			],
+		});
 	});
 });
 

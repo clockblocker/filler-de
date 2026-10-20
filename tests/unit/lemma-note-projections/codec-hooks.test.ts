@@ -63,7 +63,45 @@ const aufpassen = noteData(
 	{ conjugationClass: ["Weak"], preterite: ["passte auf"] },
 );
 
+// The principal parts texteater#1218 stores (dumcorpus gold).
+const fahren = noteData(
+	{
+		canonicalForm: "fahren",
+		coreFeatures: { hasSepPrefix: null, lexicallyReflexive: null },
+		family: "Lexeme",
+		kind: "VERB",
+		language: "de",
+		unitKind: "Lemma",
+	},
+	"🚲",
+	{
+		conjugationClass: ["Strong"],
+		pastParticiple: ["gefahren"],
+		presentSingular: {
+			first: ["fahre"],
+			second: ["fährst"],
+			third: ["fährt"],
+		},
+		preterite: ["fuhr"],
+		subjunctivePast: ["führe"],
+	},
+);
+
 describe("the codec renders the derived projections", () => {
+	it("renders a strong verb's stored principal parts and its table", () => {
+		const markdown = serialize(undefined, fahren, { projections });
+		expect(markdown).toContain(
+			"*Present singular*: 1: fahre; 2: fährst; 3: fährt",
+		);
+		expect(markdown).toContain("*Past participle*: gefahren");
+		expect(markdown).toContain("*Subjunctive past*: führe");
+		expect(markdown).toContain(`*Inflection*
+Präsens: ich fahre, du fährst, er fährt, wir fahren, ihr fahrt, sie fahren
+Präteritum: ich fuhr, du fuhrst, er fuhr, wir fuhren, ihr fuhrt, sie fuhren
+Konjunktiv II: ich führe, du führest, er führe, wir führen, ihr führet, sie führen
+Partizip II: gefahren`);
+	});
+
 	it("renders a noun's Inflection and Tags Blocks", () => {
 		const markdown = serialize(undefined, tag, { projections });
 		expect(markdown).toContain(`*Inflection*
@@ -84,6 +122,7 @@ D: dem Tag, den Tagen`);
 	for (const [name, data] of [
 		["Tag", tag],
 		["aufpassen", aufpassen],
+		["fahren", fahren],
 	] as const)
 		it(`${name}: a round trip leaves the data unchanged`, () => {
 			const first = parse(serialize(undefined, data, { projections }), {
