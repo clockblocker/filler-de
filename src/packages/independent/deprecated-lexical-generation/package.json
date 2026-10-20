@@ -3,7 +3,7 @@
 	"dependencies": {
 		"@textfresser/linguistics": "workspace:*",
 		"neverthrow": "8.2.0",
-		"zod": "3.25.76"
+		"zod": "4.4.3"
 	},
 	"devDependencies": {
 		"@types/bun": "1.3.0",

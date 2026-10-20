@@ -1,7 +1,7 @@
 {
 	"dependencies": {
-		"effect": "4.0.0-rc.112",
-		"zod": "4.3.6"
+		"effect": "4.0.0",
+		"zod": "4.4.3"
 	},
 	"exports": {
 		".": "./src/index.ts",
