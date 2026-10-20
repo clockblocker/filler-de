@@ -9,6 +9,7 @@ Related decisions:
 
 - [ADR-0007: Separate note documents from semantic note data](../../../docs/adr/0007-separate-note-documents-from-semantic-note-data.md)
 - [ADR-0011: Use different compatibility policies for domain and infrastructure](../../../docs/adr/0011-use-different-compatibility-policies-for-domain-and-infrastructure.md)
+- [ADR-0012: Link classified Segments to Reading blocks and keep every Lemma in Worter](../../../docs/adr/0012-link-classified-segments-to-reading-blocks-and-keep-every-lemma-in-worter.md)
 - Batteries [ADR 0002] (Lemma and Reading identity), [ADR 0003] (Attestation supersedes Selection), [ADR 0011], [ADR 0012] and [ADR 0020] (direct Semantic Relations), [ADR 0031] (Emoji Description), [ADR 0038] (plural and conjugation class), [ADR 0044] and [ADR 0046] (pronoun cells and Syncretisms)
 
 ADR-0007 predates the batteries. Its "Lemma and Selection content" now means the dumdict records below.
@@ -32,7 +33,8 @@ It must not own:
 
 - vault I/O, lookup, revisions, or commits (the dictionary store, [#58](https://github.com/clockblocker/filler-de/issues/58));
 - note paths or the path encoding ([#52](https://github.com/clockblocker/filler-de/issues/52));
-- wikilink destination resolution ([#53](https://github.com/clockblocker/filler-de/issues/53));
+- wikilink destination resolution, and the links Classify writes from Segments to Reading blocks (ADR-0012);
+- Shadow notes, which hold no records (ADR-0012);
 - prompts or generation (dumgen);
 - linguistic or Knowledge schemas (dumling, dumrel).
 
@@ -77,7 +79,7 @@ type LemmaNoteData<L extends Language> = {
 };
 ```
 
-`LemmaNoteDocument` preserves part order, Block order, and the bytes of freeform and unknown Blocks. It also holds every plugin-owned value: Block IDs, `closed_set_membership`, and freeform content.
+`LemmaNoteDocument` preserves part order, Block order, and the bytes of freeform and unknown Blocks. It also holds every plugin-owned value: Block IDs and freeform content.
 
 `LemmaNoteData` holds dumdict records only. Each record must validate with dumdict's `parseAsLemmaRecord`, `parseAsReadingEntry`, `parseAsSurfaceEntry` or `parseAsPendingSemanticRelationRecord` for the codec's language. Reading Knowledge is validated through `parseAsReadingEntry`.
 
@@ -98,7 +100,6 @@ A serialized Block's payload is canonical JSON in a form Obsidian's reading view
 | Block | Kind | Maps to |
 | --- | --- | --- |
 | `identity` | Serialized | `LemmaRecord.lemma`: the whole dumling Lemma: language, Family, Kind, Core Features, Canonical Form, and, for a Syncretism, `syncretic` and `syncretized` |
-| `closed_set_membership` | Plugin-owned | Link from the Lemma note to a closed-set Library leaf |
 | `freeform` | Plugin-owned | Opaque user content, byte-preserved |
 
 ### Reading part
@@ -145,6 +146,7 @@ A serialized Block whose field is absent or empty is omitted. The codec adds no 
 - `root_meta`. Every root field now belongs to a dumdict record and a Block above.
 - `inherent_features`. Core Features are Lemma identity ([ADR 0002]) and live in `identity`.
 - The Selection identity fields. Selection is retired ([ADR 0003]). An Attestation has no durable identity, so no Block stores one; a durable source reference is an Attestation Ref in `attestation`.
+- `closed_set_membership`. Closed-class Lemmas have their own notes under `Worter/` and no Library leaf, so there is nothing to link to (ADR-0012).
 - `deviation`, `morphem` and the propagated `morphology` backlinks of the legacy notes. The Morpheme breakdown is now `morphology`. See open question 5 for the rest.
 
 ## Plugin-owned values
@@ -155,8 +157,6 @@ A serialized Block whose field is absent or empty is omitted. The codec adds no 
 - A collision inside one note lengthens both colliding IDs deterministically.
 - The codec returns the map from Block ID to `readingIdentityKey` or `SurfaceId` beside the document. The map is recomputed from data on every parse and is never stored.
 - An ID that does not match its part's identity is reported as `BlockIdMismatch`. Parse does not repair it.
-
-**`closed_set_membership`.** A link to the closed-set Library leaf that plugin ADR-0008 routes through a surface host. It survives only while that ADR does. See open question 3.
 
 **Freeform.** User content inside a part, or before the first part. The document layer keeps its bytes and position. It is never converted to `ReadingEntry.notes`, which dumdict validates and may rewrite.
 
@@ -175,7 +175,7 @@ The codec is pure, so the caller supplies every input a projection reads beyond 
 
 Inverse relations are never written as data, in this note or any other. The `relation` Block holds only direct claims (synonym, nearSynonym, antonym, nearAntonym, hypernym, holonym, endonym), and dumrel's stored Knowledge has no field for an inverse such as hyponym or meronym ([ADR 0012]). Every relation stays inside its source's relation space ([ADR 0020]). When a commit adds or removes an edge, the store re-renders the `inverse_relation` Block of each affected target note ([#59](https://github.com/clockblocker/filler-de/issues/59)). Exonyms, Governors and participle users follow the same rule if rendered.
 
-A pending relation targets a Unit Shadow, not a note, so its rendering is unlinked text.
+A pending relation targets a Unit Shadow. The Shadow has a note under `Worter/<lang>/Shadow/…` that holds no records, and the store removes it when the target Lemma is created (ADR-0012). How the rendering links to it follows open question 1.
 
 ## Invariants
 
@@ -306,9 +306,9 @@ Tests must cover:
 
 ## Open questions
 
-1. **Wikilink form in renderings.** Whether `header`, `relation`, `inverse_relation` and `morphology` render path-qualified links or bare ones, and what a bare `[[See]]` resolves to when several Lemma notes share a spelling. Depends on [#52](https://github.com/clockblocker/filler-de/issues/52) and [#53](https://github.com/clockblocker/filler-de/issues/53). The codec takes a link renderer until then.
-2. **Path healing.** Who heals a note whose path disagrees with its `identity`, and how Syncretisms and long Sayings are spelled. [#52](https://github.com/clockblocker/filler-de/issues/52), questions 4 to 6.
-3. **`closed_set_membership`.** Whether it survives, and whether closed-class Lemma notes, including generated Syncretisms, live under `Worter/` or in the Library. Depends on [#53](https://github.com/clockblocker/filler-de/issues/53) and the fate of plugin ADR-0008.
+1. **Wikilink form in renderings.** Whether `header`, `relation`, `pending_relation`, `inverse_relation` and `morphology` render path-qualified links or bare ones. Classify already writes path-qualified links to Reading blocks, and a hand-typed bare link may land on any Lemma or Shadow note with its spelling, which is accepted (ADR-0012). Depends on the path encoding in [#52](https://github.com/clockblocker/filler-de/issues/52). The codec takes a link renderer until then.
+2. **Path healing.** Who heals a note whose path disagrees with its `identity`, and how Syncretisms, long Sayings and Shadow notes are spelled. [#52](https://github.com/clockblocker/filler-de/issues/52), questions 4 to 6.
+3. **Closed-class Lemmas.** Resolved by ADR-0012: closed-class Lemma notes, generated Syncretisms included, live under `Worter/` and are created on first click; `closed_set_membership` is dropped.
 4. **`inflection`.** What the table projects from: owned Surfaces, `plural` and `conjugation_class`, a dumcorpus paradigm, or a plugin-owned generator kept beside dumdict state. If it stays generated, it becomes a plugin-owned Block rather than a projection. Depends on [#62](https://github.com/clockblocker/filler-de/issues/62).
 5. **Morphemes, features and tags.** Whether morpheme "used in" backlinks become a projection over `morphologicalTree`, whether any tag source beyond dumling identity and dumrel Knowledge survives, and whether `deviation` returns. dumgen does not produce these yet. Depends on [#62](https://github.com/clockblocker/filler-de/issues/62).
 

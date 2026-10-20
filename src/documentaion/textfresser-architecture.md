@@ -5,9 +5,10 @@ Textfresser turns a word or phrase from a source note into a linked vocabulary e
 Related decisions and proposals:
 
 - [ADR-0006: Separate linguistic truth, lexical generation, and note policy](../../docs/adr/0006-separate-linguistic-truth-generation-and-note-policy.md)
-- [ADR-0008: Route unconfirmed closed-set links through a surface host](../../docs/adr/0008-route-unconfirmed-closed-set-links-through-a-surface-host.md)
+- [ADR-0008: Route unconfirmed closed-set links through a surface host](../../docs/adr/0008-route-unconfirmed-closed-set-links-through-a-surface-host.md) (superseded by ADR-0012)
 - [ADR-0010: Return field-level results from aggregate lexical generation](../../docs/adr/0010-return-field-level-results-from-aggregate-lexical-generation.md)
 - [ADR-0011: Use different compatibility policies for domain and infrastructure](../../docs/adr/0011-use-different-compatibility-policies-for-domain-and-infrastructure.md)
+- [ADR-0012: Link classified Segments to Reading blocks and keep every Lemma in Worter](../../docs/adr/0012-link-classified-segments-to-reading-blocks-and-keep-every-lemma-in-worter.md)
 
 ## Current package state
 
@@ -94,7 +95,7 @@ Textfresser owns:
 - Block selection and display order;
 - German labels and formatting;
 - target paths, aliases, tags, and Block IDs;
-- plugin-owned Blocks: `closed_set_membership` and freeform content;
+- plugin-owned Blocks: freeform content;
 - propagation and merge policy.
 
 dumling owns Lemma, Reading and Surface identity. dumdict owns the records, Reading matching, and change planning. dumrel owns Reading Knowledge and relation projections. Until the cutover, the lexical-generation package owns model calls and generation DTOs, and the linguistics package owns the legacy linguistic schemas.
@@ -105,27 +106,27 @@ The current note code has a legacy adapter and a newer document/data split under
 
 ## Target routing
 
-Textfresser uses two storage families:
+Current code uses two storage families:
 
 | Family | Content |
 | --- | --- |
 | `Library` | Closed-set grammar and function-word leaves managed by the Librarian. |
 | `Worter` | Surface-host notes for open-set Readings and unconfirmed lookups. |
 
-The accepted target policy is:
+It follows the surface-host policy of ADR-0008, which ADR-0012 supersedes. The target policy is:
 
-- A user-authored `[[surface]]` link opens the `Worter` surface host.
-- A model-confirmed closed-set Attestation can link to the exact `Library` leaf.
-- A `Worter` note can contain open-set Readings and `closed_set_membership` Blocks.
-- Normal Textfresser links render a basename. They do not store full vault paths.
+- Every Lemma, closed-class ones included, has one note under `Worter/` whose path spells its identity. A closed-class Lemma's note is created on first click; none goes to a Library leaf.
+- A Shadow (a dumrel Unit Shadow) has a note under `Worter/<lang>/Shadow/`, removed when its Lemma is created.
+- Classify on a selection links each Segment to its unit's Reading with a path-qualified link to the Reading's block, written by the plugin.
+- A bare `[[surface]]` link typed by hand is a side case and may be ambiguous; Obsidian picks the nearest or shortest path. There are no Crossroad notes.
 - Aliases and anchors must survive normalization.
 - Unknown slash-separated targets must remain unchanged.
 
+The path encoding, Shadow paths included, is settled in [#52](https://github.com/clockblocker/filler-de/issues/52). Whether the codec's renderings write bare or path-qualified links is open in the codec spec.
+
 The Librarian parses Library suffixes. Textfresser must not duplicate the separator rules.
 
-Current gap: the wikilink-completion behavior still rewrites one unresolved Core Name to a unique Library leaf. It leaves multiple matches unchanged. This unique-match behavior does not conform to the surface-host policy and must be reconciled before the routing migration is complete.
-
-One note per Lemma replaces the surface host. Where a bare `[[surface]]` link and closed-class Lemmas land then is open in [#53](https://github.com/clockblocker/filler-de/issues/53), which may amend or supersede ADR-0008.
+Current gap: the wikilink-completion behavior still rewrites one unresolved Core Name to a unique Library leaf. It leaves multiple matches unchanged. Closed-class Library leaves and surface hosts go away at the cutover.
 
 ## Propagation
 

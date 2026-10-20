@@ -168,6 +168,14 @@ _Avoid_: Entry, for any of them alone
 The one Markdown note that holds a Lemma's Lemma Record and all of its Reading Entries, owned Surface Entries and Pending Semantic Relations. Its path spells the Lemma's identity, as a projection of the note's own identity Block.
 _Avoid_: Vocabulary note, surface host, Dict Note
 
+**Shadow Note**:
+The note of a dumrel Unit Shadow: a target with language, Family, Kind and Canonical Form but no Lemma yet, such as the target of a Pending Semantic Relation. It lives under `Worter/<lang>/Shadow/`, holds no records, and is removed when its Lemma is created.
+_Avoid_: Stub note, placeholder note
+
+**Crossroad** (deferred):
+A spelling projection that would list every Lemma, Surface and Shadow with one case-folded spelling. It holds no data, so it is not built for now and can be added later without migration.
+_Avoid_: Surface host, disambiguation note
+
 **Block**:
 A typed part of a Lemma Note. A Block serializes one dumdict or dumrel field, is a Projection Block, or is plugin-owned.
 _Avoid_: Section, Entry Section
