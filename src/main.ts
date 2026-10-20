@@ -30,6 +30,11 @@ import {
 	UnitResolverError,
 	vamScrollFiles,
 } from "./commanders/classify";
+import {
+	CANCEL_RESET_COMMAND_NAME,
+	DictionaryResetCommand,
+	RESET_COMMAND_NAME,
+} from "./commanders/dictionary-reset/reset-command";
 import { Librarian } from "./commanders/librarian/librarian";
 import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
 import {
@@ -96,6 +101,8 @@ export default class TextEaterPlugin extends Plugin {
 	classify: ClassifyCommander | null = null;
 	/** Classify's background Knowledge runs, one per Reading (#64). */
 	knowledgeQueue: KnowledgeQueue | null = null;
+	/** "Reset dictionary from old notes…" (#65). */
+	private dictionaryReset: DictionaryResetCommand | null = null;
 	/** The dictionary store over `Worter/`, built once VAM exists. */
 	private dictionary: Promise<DumdictVaultStore> | null = null;
 	private unloaded = false;
@@ -237,8 +244,21 @@ export default class TextEaterPlugin extends Plugin {
 				),
 		});
 		this.knowledgeQueue = knowledgeQueue;
+		const segmentationCache = filesSegmentationCache(
+			this.app.vault.adapter,
+		);
+		const segmenterVersion = () => {
+			const scripted = this.dumgen.scriptedJevTag();
+			return scripted
+				? `${DUMGEN_SEGMENTER_VERSION}+scripted-${scripted}`
+				: DUMGEN_SEGMENTER_VERSION;
+		};
 		this.classify = new ClassifyCommander({
-			cache: filesSegmentationCache(this.app.vault.adapter),
+			blockedBy: () =>
+				this.dictionaryReset?.isRunning()
+					? "A dictionary reset is running; Classify once it has ended."
+					: undefined,
+			cache: segmentationCache,
 			dumgen: () => this.dumgen.get(),
 			missingProviderKeys: () => this.dumgen.missingKeys(),
 			resolver: dumgenUnitResolver({
@@ -248,12 +268,17 @@ export default class TextEaterPlugin extends Plugin {
 				scroll: vamScrollFiles(this.vam),
 				store: dictionary,
 			}),
-			segmenterVersion: () => {
-				const scripted = this.dumgen.scriptedJevTag();
-				return scripted
-					? `${DUMGEN_SEGMENTER_VERSION}+scripted-${scripted}`
-					: DUMGEN_SEGMENTER_VERSION;
-			},
+			segmenterVersion,
+		});
+		this.dictionaryReset = new DictionaryResetCommand({
+			app: this.app,
+			cache: segmentationCache,
+			dumgen: () => this.dumgen.get(),
+			knowledge: knowledgeQueue,
+			missingProviderKeys: () => this.dumgen.missingKeys(),
+			segmenterVersion,
+			store: () => this.dictionaryStore(),
+			vam: this.vam,
 		});
 
 		// Unified user event interceptor (clicks, clipboard, select-all, wikilinks)
@@ -345,6 +370,8 @@ export default class TextEaterPlugin extends Plugin {
 
 	override onunload() {
 		this.unloaded = true;
+		this.dictionaryReset?.cancel();
+		this.dictionaryReset = null;
 		this.knowledgeQueue?.close();
 		this.knowledgeQueue = null;
 		this.dumgen.dispose();
@@ -503,6 +530,27 @@ export default class TextEaterPlugin extends Plugin {
 			},
 			id: "cancel-knowledge-generation",
 			name: "Cancel background Knowledge generation",
+		});
+
+		this.addCommand({
+			callback: () => {
+				if (this.dictionaryReset) this.dictionaryReset.open();
+				else new Notice("Textfresser is still loading");
+			},
+			id: "reset-dictionary-from-old-notes",
+			name: RESET_COMMAND_NAME,
+		});
+
+		this.addCommand({
+			callback: () => {
+				new Notice(
+					this.dictionaryReset?.cancel()
+						? "Cancelling the dictionary reset after its current step"
+						: "No dictionary reset is running",
+				);
+			},
+			id: "cancel-dictionary-reset",
+			name: CANCEL_RESET_COMMAND_NAME,
 		});
 
 		this.addCommand({
