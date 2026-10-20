@@ -86,8 +86,16 @@ export function projectScrollMarkdown(
 		for (let index = 0; index < piece.length; index++) {
 			const char = piece[index] ?? "";
 			const offset = from + at + index;
+			// A CRLF's `\r` is dropped, so the hard break lands before the `\n`.
+			if (char === "\r" && piece[index + 1] === "\n") continue;
 			const previous = text.at(-1);
-			if (char === "\n" && previous !== undefined && previous !== "\n") {
+			if (
+				char === "\n" &&
+				previous !== undefined &&
+				previous !== "\n" &&
+				!text.endsWith("\\") &&
+				!text.endsWith("  ")
+			) {
 				// Two trailing spaces make a hard break; they map to the line break.
 				text += "  ";
 				offsets.push(offset, offset);

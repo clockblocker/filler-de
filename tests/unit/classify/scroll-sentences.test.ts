@@ -20,6 +20,20 @@ describe("projectScrollMarkdown", () => {
 	});
 });
 
+describe("hard breaks", () => {
+	it("keep CRLF wraps and backslash breaks as dumgen reads them", () => {
+		const texts = (content: string) =>
+			scrollSentences(content).sentences.map(({ text }) => text);
+		expect(texts("Der Mann ging\r\nnach Hause.")).toEqual([
+			"Der Mann ging nach Hause.",
+		]);
+		expect(texts("Rosen sind rot\\\nVeilchen sind blau")).toEqual([
+			"Rosen sind rot",
+			"Veilchen sind blau",
+		]);
+	});
+});
+
 describe("Classify and the ^N block formatter", () => {
 	it("split verse, prose and footnotes into the same Sentences", () => {
 		const content = [
