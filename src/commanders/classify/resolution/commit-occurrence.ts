@@ -17,6 +17,7 @@ import { createDumdictPlanner, makeSurfaceId } from "dumdict/planning";
 import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
 import { Effect } from "effect";
+import { exclusive } from "./exclusive";
 import {
 	DictionaryCommitFailed,
 	type ResolutionStore,
@@ -39,7 +40,8 @@ export type OccurrenceCommit = {
 	/** For a New the judge decided: the stored Emoji Descriptions it saw. */
 	readonly seen?: readonly string[];
 	readonly surface: Dumling.Surface<"de">;
-	readonly attestationRef: string;
+	/** The occurrence's Attestation Ref; none when its block cannot carry an ID. */
+	readonly attestationRef?: string;
 };
 
 export type OccurrenceCommitted =
@@ -109,28 +111,29 @@ const planReuse = Effect.fnUntraced(function* (
 					message: outcome.message ?? outcome.code,
 				});
 	const attestations = context.existingReading?.attestations ?? [];
-	const attest: PlannedChangeOp<"de">[] = attestations.includes(
-		input.attestationRef,
-	)
-		? []
-		: [
-				{
-					ops: [
-						{ kind: "addAttestation", value: input.attestationRef },
-					],
-					preconditions: [
-						{ kind: "revisionMatches", revision: context.revision },
-						{ kind: "readingExists", reading: input.reading },
-						{
-							kind: "readingAttestationMissing",
-							reading: input.reading,
-							value: input.attestationRef,
-						},
-					],
-					reading: input.reading,
-					type: "patchReading",
-				},
-			];
+	const ref = input.attestationRef;
+	const attest: PlannedChangeOp<"de">[] =
+		ref === undefined || attestations.includes(ref)
+			? []
+			: [
+					{
+						ops: [{ kind: "addAttestation", value: ref }],
+						preconditions: [
+							{
+								kind: "revisionMatches",
+								revision: context.revision,
+							},
+							{ kind: "readingExists", reading: input.reading },
+							{
+								kind: "readingAttestationMissing",
+								reading: input.reading,
+								value: ref,
+							},
+						],
+						reading: input.reading,
+						type: "patchReading",
+					},
+				];
 	if (outcome.plan.changes.length === 0 && attest.length === 0)
 		return { _tag: "Unchanged" } satisfies Planned;
 	const plan: DumdictPlan<"de"> = {
@@ -149,7 +152,13 @@ const planNew = Effect.fnUntraced(function* (
 		undefined;
 	const request = {
 		draft: {
-			note: { ...emptyNote(), attestations: [input.attestationRef] },
+			note: {
+				...emptyNote(),
+				attestations:
+					input.attestationRef === undefined
+						? []
+						: [input.attestationRef],
+			},
 			ownedSurfaces: surfaceStored
 				? []
 				: [{ note: emptyNote(), surface: input.surface }],
@@ -200,9 +209,9 @@ const planOccurrence = Effect.fnUntraced(function* (
 	input: OccurrenceCommit,
 ): Effect.fn.Return<Planned, DictionaryCommitFailed> {
 	const stored = yield* store.readingLocation(input.reading);
-	if (stored || input.decision === "Reuse")
-		return yield* planReuse(store, input);
-	if (input.seen !== undefined) {
+	// A reused Reading deleted meanwhile is created again.
+	if (stored) return yield* planReuse(store, input);
+	if (input.decision === "New" && input.seen !== undefined) {
 		const { lemma } = input.reading;
 		const note = yield* store.lemmaNote(lemma);
 		const keyOf = (emojiDescription: string) =>
@@ -231,30 +240,37 @@ export const commitOccurrence = Effect.fnUntraced(function* (
 	input: OccurrenceCommit,
 ): Effect.fn.Return<OccurrenceCommitted, DictionaryCommitFailed> {
 	let last = "";
+	const serialized = exclusive(store);
 	for (let attempt = 0; attempt < MAX_COMMIT_ATTEMPTS; attempt++) {
-		const planned = yield* planOccurrence(store, input);
-		if (planned._tag === "Stale") return planned;
-		if (planned._tag === "Unchanged")
-			return { _tag: "Committed", created: false };
-		if (planned._tag === "Retry") {
-			last = planned.message;
-			continue;
-		}
-		const result = yield* store.commitChanges(planned.plan).pipe(
-			Effect.map((committed) => ({ committed }) as const),
-			Effect.catch((error) =>
-				isRetryable(error)
-					? Effect.succeed({ retry: error.message } as const)
-					: Effect.fail(failed(error.message)(error)),
-			),
+		const outcome = yield* serialized(
+			Effect.gen(function* () {
+				const planned = yield* planOccurrence(store, input);
+				if (planned._tag === "Stale") return planned;
+				if (planned._tag === "Unchanged")
+					return { _tag: "Committed", created: false } as const;
+				if (planned._tag === "Retry")
+					return { _tag: "Retry", message: planned.message } as const;
+				const result = yield* store.commitChanges(planned.plan).pipe(
+					Effect.catch((error) =>
+						isRetryable(error)
+							? Effect.succeed({
+									code: "revisionConflict" as const,
+									message: error.message,
+									status: "conflict" as const,
+								})
+							: Effect.fail(failed(error.message)(error)),
+					),
+				);
+				return result.status === "committed"
+					? ({ _tag: "Committed", created: planned.created } as const)
+					: ({
+							_tag: "Retry",
+							message: result.message ?? result.code,
+						} as const);
+			}),
 		);
-		if ("retry" in result) {
-			last = result.retry;
-			continue;
-		}
-		if (result.committed.status === "committed")
-			return { _tag: "Committed", created: planned.created };
-		last = result.committed.message ?? result.committed.code;
+		if (outcome._tag !== "Retry") return outcome;
+		last = outcome.message;
 	}
 	return yield* new DictionaryCommitFailed({
 		cause: last,

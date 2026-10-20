@@ -122,8 +122,10 @@ input>", output }] } }`; an unscripted Luna request fails like a provider.
 `status().dumgenRequests` counts the script's requests by stage, so a
 scenario can assert that no model was asked. The dictionary lives in the
 vault-root `Worter/` folder, shared by every scenario: `resetDictionary:
-true` deletes it before the fixtures, and `dictionary()` returns its notes
-by vault path.
+true` moves it to Obsidian's trash before the fixtures, and `dictionary()`
+returns its notes by vault path. The driver resets the dictionary only in a
+vault marked as E2E-only by an `.obsidian/textfresser-e2e-vault` file:
+managed mode writes it, and an attached test vault needs it added once.
 
 To observe VAM's Markdown modify subscription, declare
 `observeModifications: { path: "Worter" }` with a Library-relative folder.

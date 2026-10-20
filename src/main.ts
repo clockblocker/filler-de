@@ -104,6 +104,7 @@ export default class TextEaterPlugin extends Plugin {
 	knowledgeQueue: KnowledgeQueue | null = null;
 	/** The dictionary store over `Worter/`, built once VAM exists. */
 	private dictionary: Promise<DumdictVaultStore> | null = null;
+	private unloaded = false;
 	librarian: Librarian | null = null;
 	textfresser: Textfresser | null = null;
 
@@ -205,36 +206,14 @@ export default class TextEaterPlugin extends Plugin {
 		this.disposeVam = vaultActions.dispose;
 
 		this.rebuildTextfresser();
-		this.dictionary = Effect.runPromise(
-			makeDumdictVaultStore({
-				onDiagnostics: (diagnostics) => {
-					if (diagnostics.quarantined.length > 0)
-						logger.warn(
-							"[TextEaterPlugin] Dictionary notes the store cannot read:",
-							diagnostics.quarantined
-								.map(({ path }) => path)
-								.join(", "),
-						);
-				},
-				projections: derivedProjections,
-				vault: this.vam,
-			}),
-		);
-		this.dictionary.catch((error) => {
-			logger.error(
-				"[TextEaterPlugin] Failed to build the dictionary store:",
-				getErrorMessage(error),
-			);
-		});
+		void this.dictionaryStore().catch(() => undefined);
 		const dictionary = Effect.tryPromise({
 			catch: (cause) =>
 				new UnitResolverError({
 					cause,
 					message: `the dictionary could not be read: ${getErrorMessage(cause)}`,
 				}),
-			try: () =>
-				this.dictionary ??
-				Promise.reject(new Error("the plugin has unloaded")),
+			try: () => this.dictionaryStore(),
 		});
 		const dumgen = Effect.try({
 			catch: (cause) =>
@@ -422,6 +401,7 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	override onunload() {
+		this.unloaded = true;
 		this.knowledgeQueue?.cancelAll();
 		this.knowledgeQueue = null;
 		this.dumgen.dispose();
@@ -675,6 +655,40 @@ export default class TextEaterPlugin extends Plugin {
 			useScriptedJev: (answers: ScriptedJevAnswers | null) =>
 				this.dumgen.useScriptedJevForTesting(answers),
 		};
+	}
+
+	/**
+	 * The dictionary store, built on first use; a build that failed, such as
+	 * a scan of `Worter/` that could not finish, is tried again next time.
+	 */
+	private dictionaryStore(): Promise<DumdictVaultStore> {
+		if (this.unloaded)
+			return Promise.reject(new Error("the plugin has unloaded"));
+		if (this.dictionary) return this.dictionary;
+		const building = Effect.runPromise(
+			makeDumdictVaultStore({
+				onDiagnostics: (diagnostics) => {
+					if (diagnostics.quarantined.length > 0)
+						logger.warn(
+							"[TextEaterPlugin] Dictionary notes the store cannot read:",
+							diagnostics.quarantined
+								.map(({ path }) => path)
+								.join(", "),
+						);
+				},
+				projections: derivedProjections,
+				vault: this.vam,
+			}),
+		);
+		this.dictionary = building;
+		building.catch((error) => {
+			if (this.dictionary === building) this.dictionary = null;
+			logger.error(
+				"[TextEaterPlugin] Failed to build the dictionary store:",
+				getErrorMessage(error),
+			);
+		});
+		return building;
 	}
 
 	/** Classify's scroll to entry: a clicked Reading link waits for its Knowledge. */

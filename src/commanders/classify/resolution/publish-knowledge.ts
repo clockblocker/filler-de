@@ -16,6 +16,7 @@ import {
 import type * as Dumling from "dumling/types";
 import { Effect } from "effect";
 import { MAX_COMMIT_ATTEMPTS } from "./commit-occurrence";
+import { exclusive } from "./exclusive";
 import {
 	DictionaryCommitFailed,
 	type GermanKnowledgeChange,
@@ -36,7 +37,7 @@ export type KnowledgePublication = {
 
 type Attempt =
 	| { readonly _tag: "Committed" }
-	| { readonly _tag: "OverBudget" }
+	| { readonly _tag: "OverBudget"; readonly reason: string }
 	| { readonly _tag: "Retry"; readonly message: string };
 
 const isRelation = (change: GermanKnowledgeChange) =>
@@ -75,7 +76,8 @@ const attempt = Effect.fnUntraced(function* (
 		)
 		.pipe(Effect.result);
 	// A relation slice the store cannot hold in one read is over budget too.
-	if (context._tag === "Failure") return { _tag: "OverBudget" };
+	if (context._tag === "Failure")
+		return { _tag: "OverBudget", reason: context.failure.message };
 	if (context.success.intent !== "applyGeneratedKnowledge")
 		return yield* new DictionaryCommitFailed({
 			cause: context.success,
@@ -90,7 +92,10 @@ const attempt = Effect.fnUntraced(function* (
 			message: outcome.message ?? outcome.code,
 		});
 	if (outcome.plan.changes.length > MAX_PLANNED_CHANGES)
-		return { _tag: "OverBudget" };
+		return {
+			_tag: "OverBudget",
+			reason: `${outcome.plan.changes.length} planned changes`,
+		};
 	if (outcome.plan.changes.length === 0) return { _tag: "Committed" };
 	const result = yield* store.commitChanges(outcome.plan).pipe(
 		Effect.catch((error) =>
@@ -176,7 +181,7 @@ export const publishKnowledge = Effect.fnUntraced(function* (
 		return { dropped: 0 };
 	let last = "";
 	for (let tries = 0; tries < MAX_COMMIT_ATTEMPTS; tries++) {
-		const result = yield* attempt(store, publication);
+		const result = yield* exclusive(store)(attempt(store, publication));
 		if (result._tag === "Committed") return { dropped: 0 };
 		if (result._tag === "Retry") {
 			last = result.message;
@@ -193,7 +198,7 @@ export const publishKnowledge = Effect.fnUntraced(function* (
 		if (units.length === 0)
 			return yield* new DictionaryCommitFailed({
 				cause: publication,
-				message: "The generated Knowledge does not fit one commit",
+				message: `The generated Knowledge does not fit one commit: ${result.reason}`,
 			});
 		if (units.length === 1 && rest.changes.length === 0)
 			return { dropped: 1 };

@@ -8,8 +8,8 @@
  * heute (6) and the Locution auf jeden Fall (8, 10 and 12). jev answers by
  * question id, so the grammar answers serve every unit that asks them; Luna
  * writes each unit's Canonical Form, drafting its Emoji Description, and the
- * Knowledge base text. The structural aspects stay unscripted and fail as
- * values, which a later occurrence never asks again.
+ * Knowledge base text and the noun's plural. The other structural aspects
+ * stay unscripted and fail as values.
  */
 export const STORY =
 	"Der Hund fängt heute auf jeden Fall an. ^0\n\nDer Hund schläft. ^1\n";
@@ -38,6 +38,7 @@ export const CLASSIFY_RESOLUTION_DUMGEN = {
 		number: "Sing",
 		orthography: "None",
 		person: "3",
+		plurality: "HasPlural",
 		prefix: "p0",
 		r_1_2: "Lexeme/NOUN",
 		r_3_8: "Lexeme/VERB",
@@ -86,6 +87,7 @@ export const CLASSIFY_RESOLUTION_DUMGEN = {
 			},
 		],
 		definition: [{ output: "Eine Bedeutung im Satz." }],
+		plural: [{ output: ["Hunde"], when: '"lemma":"Hund"' }],
 		relationCandidates: [{ output: [] }],
 		transcription: [{ output: "ˈtɛst" }],
 		translations: [

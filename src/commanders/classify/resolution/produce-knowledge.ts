@@ -8,13 +8,15 @@
  * links, never on their path.
  */
 import { canonicalJson } from "common-utils";
+import { authoredReading, closedRoute } from "dumcorpus/inventories";
 import type { Dumgen } from "dumgen";
-import { readingIdentityKey } from "dumling";
+import { readingIdentityKey, routeOf } from "dumling";
 import { Effect } from "effect";
 import {
 	isEmptyRequest,
 	knowledgeRequestFor,
 	PUBLISH_GENERATED_RELATIONS,
+	structureMissing,
 	type TranslationLanguage,
 } from "./knowledge-request";
 import type {
@@ -62,19 +64,28 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 	const publishRelations =
 		deps.publishRelations ?? PUBLISH_GENERATED_RELATIONS;
 	const { reading } = job;
+	// A Closed Route's or an authored Reading's Knowledge is reviewed in
+	// dumcorpus, never generated: dumgen answers a Catalog Miss for it.
+	if (closedRoute(routeOf(reading.lemma)) || authoredReading(reading))
+		return { _tag: "Covered" };
 	const [location, note] = yield* Effect.all([
 		deps.store.readingLocation(reading),
 		deps.store.lemmaNote(reading.lemma),
 	]);
 	const key = readingIdentityKey(reading);
+	const knowledge = location?.entry.knowledge;
+	// An entry missing structure only its first occurrence asks for, as when
+	// that run was interrupted, is asked as if it were New.
+	const origin =
+		job.origin === "TopUp" && structureMissing(reading, knowledge)
+			? "New"
+			: job.origin;
 	const request = knowledgeRequestFor({
-		origin: job.origin,
+		origin,
 		publishRelations,
 		reading,
 		stored: {
-			...(location?.entry.knowledge
-				? { knowledge: location.entry.knowledge }
-				: {}),
+			...(knowledge ? { knowledge } : {}),
 			pendingRelationKinds: (note?.pendingRelations ?? []).flatMap(
 				(record) =>
 					readingIdentityKey(record.sourceReading) === key
@@ -115,7 +126,7 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 		attestation: job.attestation,
 		language: "de",
 		onContribution: publishBaseText,
-		origin: job.origin,
+		origin,
 		reading,
 		request,
 		sentence: job.sentence,
@@ -135,10 +146,10 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 		_tag: "Published",
 		changes: published.size + changes.length,
 		dropped: final.dropped,
-		failures: produced.failures.map(({ aspect, code, leaf }) => ({
-			aspect,
-			code,
-			...(leaf === undefined ? {} : { leaf }),
-		})),
+		failures: produced.failures.flatMap(({ aspect, code, leaf }) =>
+			code === "CatalogMiss"
+				? []
+				: [{ aspect, code, ...(leaf === undefined ? {} : { leaf }) }],
+		),
 	};
 });

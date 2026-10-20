@@ -37,12 +37,13 @@ import type { KnowledgeJob, ResolutionStore } from "./knowledge-types";
 import type { ScrollFiles } from "./scroll-files";
 import {
 	attestationRefOf,
-	type BlockIdMint,
 	type LinkedScroll,
 	linkUnitsInScroll,
-	type SourceBlock,
+	type MintedBlockIds,
+	mintBlockIds,
 	sourceBlocksOf,
 	type UnitLinkEdit,
+	withAppended,
 } from "./scroll-links";
 
 /** How often a unit judges its Reading again after its New was refused as stale. */
@@ -76,7 +77,6 @@ type ResolvedUnit = {
 	readonly created: boolean;
 	readonly lemmaPath: string;
 	readonly readingBlockId: string;
-	readonly block: SourceBlock;
 };
 
 type UnitOutcome =
@@ -136,7 +136,8 @@ export const resolveUnit = Effect.fnUntraced(function* (
 	store: ResolutionStore,
 	plan: ClassifyPlan,
 	planned: PlannedUnit,
-	block: SourceBlock,
+	/** The Segment's source block as an embed; none when the block cannot carry an ID. */
+	attestationRef: string | undefined,
 ): Effect.fn.Return<ResolvedUnit, UnitPending> {
 	const sentence = plan.sentences.get(planned.ref.sentenceKey);
 	if (!sentence)
@@ -169,7 +170,6 @@ export const resolveUnit = Effect.fnUntraced(function* (
 		return yield* new UnitPending({ reason: grammar.message });
 	const { attestation } = grammar;
 	const lemma = attestation.surface.lemma;
-	const attestationRef = attestationRefOf(plan.scrollPath, block.id);
 
 	const judge = (candidates: readonly string[], written?: string) =>
 		dumgen.resolve
@@ -227,7 +227,7 @@ export const resolveUnit = Effect.fnUntraced(function* (
 	let created = false;
 	for (let rejudged = 0; ; rejudged++) {
 		const committed = yield* commitOccurrence(store, {
-			attestationRef,
+			...(attestationRef === undefined ? {} : { attestationRef }),
 			decision: decided.decision,
 			reading: decided.reading,
 			surface: attestation.surface,
@@ -257,7 +257,6 @@ export const resolveUnit = Effect.fnUntraced(function* (
 		});
 	return {
 		attestation,
-		block,
 		created,
 		lemmaPath: location.path,
 		planned,
@@ -267,28 +266,22 @@ export const resolveUnit = Effect.fnUntraced(function* (
 	};
 });
 
-/** Runs `transform` over the Scroll until it lands or stops losing races. */
-const writeLinks = Effect.fnUntraced(function* (
-	scroll: ScrollFiles,
-	plan: ClassifyPlan,
-	edits: readonly UnitLinkEdit[],
-	mints: readonly BlockIdMint[],
-) {
-	let last: LinkedScroll | undefined;
+/**
+ * Runs a pure transform over the Scroll until it lands or stops losing
+ * races, and answers what its last run computed.
+ */
+const processScroll = Effect.fnUntraced(function* <
+	A extends { readonly content: string },
+>(scroll: ScrollFiles, scrollPath: string, transform: (current: string) => A) {
+	let last: A | undefined;
 	for (let attempt = 1; ; attempt++) {
 		const written = yield* scroll
-			.process(plan.scrollPath, (current) => {
-				last = linkUnitsInScroll({
-					current,
-					edits,
-					mints,
-					snapshot: plan.content,
-				});
+			.process(scrollPath, (current) => {
+				last = transform(current);
 				return last.content;
 			})
 			.pipe(Effect.result);
-		if (written._tag === "Success" && last) return Option.some(last);
-		if (written._tag === "Success") return Option.none();
+		if (written._tag === "Success") return Option.fromNullishOr(last);
 		if (!written.failure.conflict || attempt >= MAX_LINK_WRITES)
 			return yield* written.failure;
 	}
@@ -302,12 +295,61 @@ export function dumgenUnitResolver(
 			function* (plan) {
 				const dumgen = yield* deps.dumgen;
 				const store = yield* deps.store;
+				const firstOf = (planned: PlannedUnit) =>
+					planned.occurrences[0]?.from ?? 0;
 				const blocks = sourceBlocksOf(
 					plan.content,
-					plan.units.map(
-						({ occurrences }) => occurrences[0]?.from ?? 0,
-					),
+					plan.units.map(firstOf),
 				);
+				// Blocks get their IDs before anything commits, so every
+				// Attestation Ref names a block the Scroll holds.
+				const mintAts = plan.units.flatMap((planned) => {
+					const block = blocks.get(firstOf(planned));
+					return planned.unit.route !== "Unresolved" &&
+						block?._tag === "Unidentified"
+						? [block.mintAt]
+						: [];
+				});
+				const minted: MintedBlockIds = Option.getOrElse(
+					mintAts.length === 0
+						? Option.none<MintedBlockIds>()
+						: yield* processScroll(
+								deps.scroll,
+								plan.scrollPath,
+								(current) =>
+									mintBlockIds({
+										current,
+										mintAts,
+										snapshot: plan.content,
+									}),
+							).pipe(
+								Effect.catchTag("ScrollWriteFailed", (error) =>
+									Effect.sync(() => {
+										deps.notify?.(
+											`⚠ Could not add block IDs to ${plan.scrollPath}; their units are saved without an Attestation: ${error.message}`,
+										);
+										return Option.none<MintedBlockIds>();
+									}),
+								),
+							),
+					() => ({
+						appended: [],
+						content: plan.content,
+						ids: new Map(),
+					}),
+				);
+				const refOf = (planned: PlannedUnit) => {
+					const block = blocks.get(firstOf(planned));
+					const id =
+						block?._tag === "Identified"
+							? block.id
+							: block?._tag === "Unidentified"
+								? minted.ids.get(block.mintAt)
+								: undefined;
+					return id === undefined
+						? undefined
+						: attestationRefOf(plan.scrollPath, id);
+				};
 				const outcomes = yield* Effect.forEach(
 					plan.units,
 					(planned): Effect.Effect<UnitOutcome> =>
@@ -316,9 +358,7 @@ export function dumgenUnitResolver(
 							store,
 							plan,
 							planned,
-							blocks.get(planned.occurrences[0]?.from ?? 0) ?? {
-								id: "0",
-							},
+							refOf(planned),
 						).pipe(
 							Effect.map(
 								(unit) => ({ _tag: "Resolved", unit }) as const,
@@ -346,36 +386,28 @@ export function dumgenUnitResolver(
 				const resolved = outcomes.flatMap((outcome) =>
 					outcome._tag === "Resolved" ? [outcome.unit] : [],
 				);
+				// Links map from the snapshot as the mint write left it.
+				const snapshot = withAppended(plan.content, minted.appended);
 				const edits: UnitLinkEdit[] = resolved.map((unit) => ({
-					occurrences: unit.planned.occurrences,
+					occurrences: unit.planned.occurrences.map(snapshot.move),
 					ref: unit.planned.ref,
 					target: {
 						lemmaPath: unit.lemmaPath,
 						readingBlockId: unit.readingBlockId,
 					},
 				}));
-				const mints = [
-					...new Map(
-						resolved.flatMap(({ block }) =>
-							block.mintAt === undefined
-								? []
-								: [
-										[
-											block.mintAt,
-											{ at: block.mintAt, id: block.id },
-										] as const,
-									],
-						),
-					).values(),
-				];
 				const linked =
 					edits.length === 0
 						? Option.none<LinkedScroll>()
-						: yield* writeLinks(
+						: yield* processScroll(
 								deps.scroll,
-								plan,
-								edits,
-								mints,
+								plan.scrollPath,
+								(current) =>
+									linkUnitsInScroll({
+										current,
+										edits,
+										snapshot: snapshot.content,
+									}),
 							).pipe(
 								Effect.catchTag("ScrollWriteFailed", (error) =>
 									Effect.sync(() => {

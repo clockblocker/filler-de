@@ -229,7 +229,7 @@ export function stubDumgen(stubs: {
 	return { calls, dumgen };
 }
 
-/** The base-text Knowledge a stub produces for whatever its request asks. */
+/** The base text and always-stored structure a stub produces for whatever its request asks. */
 export const baseTextKnowledge: KnowledgeStub = (input) => {
 	const changes: Dumrel.KnowledgeChange<Dumling.Reading<"de">>[] = [];
 	const request = input.request;
@@ -247,6 +247,14 @@ export const baseTextKnowledge: KnowledgeStub = (input) => {
 			kind: "Contribute",
 			language: language as "en",
 			value: [`${input.reading.lemma.canonicalForm} (${language})`],
+		});
+	if (request.plural === null)
+		changes.push({ aspect: "plural", kind: "Contribute", value: ["Seen"] });
+	if (request.conjugationClass === null)
+		changes.push({
+			aspect: "conjugationClass",
+			kind: "Contribute",
+			value: ["Weak"],
 		});
 	return { changes };
 };

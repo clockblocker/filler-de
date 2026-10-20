@@ -8,6 +8,7 @@
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { splitPathCodec } from "@textfresser/vault-action-manager";
 import { Effect, Option } from "effect";
+import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import type { KnowledgeQueue } from "./knowledge-queue";
 
 /** `Worter/…/See#^r-1a2b|See` → its note path and block ID. */
@@ -42,7 +43,7 @@ export const scrollOpenedNoteToBlock = Effect.fnUntraced(function* (
 		return;
 	const line = active.value.content
 		.split("\n")
-		.findIndex((text) => text.includes(`^${blockId}`));
+		.findIndex((text) => blockIdHelper.extractFromLine(text) === blockId);
 	if (line < 0) return;
 	yield* vam.scrollOpenedFileToLine(line).pipe(Effect.ignore);
 });

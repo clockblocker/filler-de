@@ -21,6 +21,8 @@ const {
 const TARGET_PLUGIN_ID = "cbcr-text-eater-de";
 /** Where Textfresser keeps its Lemma notes, at the vault root (ADR 0013). */
 const DICTIONARY_ROOT = "Worter";
+/** The file, in the vault's config folder, that marks a vault as E2E-only. */
+const E2E_VAULT_MARKER = "textfresser-e2e-vault";
 const CLI_COMMAND = "textfresser-e2e";
 const CACHE_LIMIT = 256;
 const GLOBAL_STATE_KEY = Symbol.for("textfresser.e2e.driver.state.v1");
@@ -833,9 +835,16 @@ class TextfresserE2EDriver extends Plugin {
 		// The dictionary lives at the vault root, shared by every scenario: a
 		// scenario that asserts what Classify creates starts from none.
 		if (resetDictionary) {
+			const marker = `${this.app.vault.configDir}/${E2E_VAULT_MARKER}`;
+			if (!(await this.app.vault.adapter.exists(marker))) {
+				throw new DriverError(
+					"DictionaryResetRefused",
+					`resetDictionary needs a dedicated E2E vault: add '${marker}' to it first`,
+				);
+			}
 			const dictionary = this.app.vault.getAbstractFileByPath(DICTIONARY_ROOT);
 			if (dictionary) {
-				await this.app.vault.delete(dictionary, true);
+				await this.app.vault.trash(dictionary, false);
 				await this.settle({
 					timeoutMs: clampTimeout(request.params.timeoutMs, 30_000),
 				});
