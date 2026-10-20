@@ -82,7 +82,7 @@ export class VamScanError extends Schema.TaggedError<VamScanError>()(
 	"VamScanError",
 	{
 		cause: Schema.Defect(),
-		operation: Schema.Literals(["scanRoot", "scanFolder"]),
+		operation: Schema.Literals(["scanRoot", "scanFolder", "scanFile"]),
 		path: Schema.String,
 	},
 ) {}

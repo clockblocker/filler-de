@@ -1,4 +1,4 @@
-import { Effect, Result } from "effect";
+import { Effect, Exit, Result } from "effect";
 import { TFile } from "obsidian";
 import {
 	VamContentConflictError,
@@ -57,8 +57,16 @@ function isLookupMiss(error: VamVaultIoError): boolean {
 	return error.operation === "getFile";
 }
 
+/** Attributes VAM's own background writes as modify Self Events. */
+export type SelfModifyRecorder = {
+	readonly expectModifyEffect: (path: string) => Effect.Effect<void>;
+	readonly forgetModifyEffect: (path: string) => Effect.Effect<void>;
+};
+
 /** Effect-native helper for background file operations. */
 export class TFileHelper {
+	constructor(private readonly selfModifies?: SelfModifyRecorder) {}
+
 	getFile<SPF extends SplitPathToAnyFile>(splitPath: SPF) {
 		return Effect.gen(function* () {
 			const vault = yield* VaultIo;
@@ -407,24 +415,18 @@ export class TFileHelper {
 		splitPath: SplitPathToMdFile,
 	) {
 		const path = pathfinder.systemPathFromSplitPath(splitPath);
-		return Effect.gen(function* () {
+		return Effect.gen({ self: this }, function* () {
 			const vault = yield* VaultIo;
-			yield* vault
-				.modify(file, content)
-				.pipe(
-					Effect.mapError((error) =>
-						operationFailure(
-							"replaceFileContent",
-							path,
-							errorWriteFailed(
-								"file",
-								path,
-								originalMessage(error),
-							),
-							error,
-						),
+			yield* this.modifyAsSelf(file, vault.modify(file, content)).pipe(
+				Effect.mapError((error) =>
+					operationFailure(
+						"replaceFileContent",
+						path,
+						errorWriteFailed("file", path, originalMessage(error)),
+						error,
 					),
-				);
+				),
+			);
 			return file;
 		});
 	}
@@ -485,11 +487,11 @@ export class TFileHelper {
 				error,
 			);
 
-		return Effect.gen(function* () {
+		return Effect.gen({ self: this }, function* () {
 			const vault = yield* VaultIo;
 			const started: { pending?: PendingTransform } = {};
 			const first = yield* Effect.result(
-				vault.process(file, (current) => {
+				this.processAsSelf(vault, file, (current) => {
 					let result: string | Promise<string>;
 					try {
 						result = transform(current);
@@ -521,17 +523,15 @@ export class TFileHelper {
 			if (after === pending.before) return file;
 
 			const revalidated = { conflict: false };
-			yield* vault
-				.process(file, (current) => {
-					if (current === pending.before) return after;
-					revalidated.conflict = true;
-					return current;
-				})
-				.pipe(
-					Effect.mapError((error) =>
-						ioFailure("processFileContent.write", error),
-					),
-				);
+			yield* this.processAsSelf(vault, file, (current) => {
+				if (current === pending.before) return after;
+				revalidated.conflict = true;
+				return current;
+			}).pipe(
+				Effect.mapError((error) =>
+					ioFailure("processFileContent.write", error),
+				),
+			);
 			if (revalidated.conflict) {
 				return yield* new VamContentConflictError({
 					cause: new Error(
@@ -543,6 +543,64 @@ export class TFileHelper {
 			}
 			return file;
 		});
+	}
+
+	/**
+	 * Runs one `Vault.process` call and attributes its write, if any, as a
+	 * modify Self Event. The expectation is recorded synchronously inside the
+	 * callback, and only when the callback changes the content, because only
+	 * then does Obsidian write. A modify callback that arrives before the
+	 * callback runs, or during a call that writes nothing, is never hidden.
+	 * The expectation is withdrawn if the call fails after recording it.
+	 */
+	private processAsSelf(
+		vault: VaultIo["Service"],
+		file: TFile,
+		fn: (current: string) => string,
+	): Effect.Effect<void, VamVaultIoError> {
+		const recorder = this.selfModifies;
+		if (!recorder) return Effect.asVoid(vault.process(file, fn));
+		return Effect.gen(function* () {
+			const runSync = Effect.runSyncWith(yield* Effect.context<never>());
+			const outcome = { recorded: false };
+			yield* vault
+				.process(file, (current) => {
+					const next = fn(current);
+					if (next !== current) {
+						runSync(recorder.expectModifyEffect(file.path));
+						outcome.recorded = true;
+					}
+					return next;
+				})
+				.pipe(
+					Effect.onExit((exit) =>
+						Exit.isFailure(exit) && outcome.recorded
+							? recorder.forgetModifyEffect(file.path)
+							: Effect.void,
+					),
+				);
+		});
+	}
+
+	private modifyAsSelf<E>(
+		file: TFile,
+		write: Effect.Effect<void, E>,
+	): Effect.Effect<void, E> {
+		const recorder = this.selfModifies;
+		if (!recorder) return write;
+		return recorder
+			.expectModifyEffect(file.path)
+			.pipe(
+				Effect.andThen(
+					write.pipe(
+						Effect.onExit((exit) =>
+							Exit.isFailure(exit)
+								? recorder.forgetModifyEffect(file.path)
+								: Effect.void,
+						),
+					),
+				),
+			);
 	}
 }
 

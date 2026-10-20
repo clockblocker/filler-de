@@ -589,6 +589,8 @@ class TextfresserE2EDriver extends Plugin {
 				return await this.settle(request.params);
 			case "snapshot":
 				return await this.snapshot(request.params);
+			case "modifications":
+				return await this.modifications(request.params);
 			case "diagnostics":
 				return this.diagnostics();
 			case "cleanupSession":
@@ -753,6 +755,29 @@ class TextfresserE2EDriver extends Plugin {
 			);
 		}
 
+		const observeModifications =
+			request.params.observeModifications === undefined
+				? null
+				: resolveScopedPath(
+						paths,
+						assertRecord(
+							request.params.observeModifications,
+							"params.observeModifications",
+						).path,
+						"library",
+						"params.observeModifications.path",
+					);
+		if (
+			observeModifications &&
+			typeof before.plugin.observeMdModificationsForTesting !== "function"
+		) {
+			throw new DriverError(
+				"TextfresserProbeMissing",
+				"Textfresser does not expose observeMdModificationsForTesting()",
+			);
+		}
+		await this.closeModifyObserver(request.sessionId);
+
 		await this.settle({ timeoutMs: clampTimeout(request.params.timeoutMs, 30_000) });
 		const existingRoot = this.app.vault.getAbstractFileByPath(paths.scenarioRoot);
 		if (existingRoot) await this.app.vault.delete(existingRoot, true);
@@ -815,6 +840,17 @@ class TextfresserE2EDriver extends Plugin {
 				"Textfresser reloaded while beginning the scenario",
 				{ after: after.status, before: before.status },
 			);
+		}
+
+		// Observe only after fixtures and startup healing have settled, so the
+		// scenario sees the modifications its own actions cause.
+		if (observeModifications) {
+			this.modifyObservers().set(request.sessionId, {
+				observer: await before.plugin.observeMdModificationsForTesting(
+					observeModifications.resolved,
+				),
+				plugin: before.plugin,
+			});
 		}
 
 		const active = {
@@ -1161,6 +1197,52 @@ class TextfresserE2EDriver extends Plugin {
 		};
 	}
 
+	modifyObservers() {
+		if (!(this.globalState.modifyObservers instanceof Map)) {
+			this.globalState.modifyObservers = new Map();
+		}
+		return this.globalState.modifyObservers;
+	}
+
+	async closeModifyObserver(sessionId) {
+		const observers = this.modifyObservers();
+		const entry = observers.get(sessionId);
+		if (!entry) return;
+		observers.delete(sessionId);
+		try {
+			await entry.observer.close();
+		} catch (error) {
+			// A reloaded plugin already disposed the observer with its VAM
+			// runtime, so closing it again can fail; that leaves nothing open.
+			if (this.observeTextfresser().plugin === entry.plugin) throw error;
+		}
+	}
+
+	async modifications(params) {
+		const scenario = this.requireActiveScenario();
+		const entry = this.modifyObservers().get(this.config.sessionId);
+		if (!entry) {
+			throw new DriverError(
+				"ModificationsNotObserved",
+				"beginScenario must request observeModifications before modifications can be read",
+			);
+		}
+		await this.settle({ timeoutMs: clampTimeout(params.timeoutMs, 30_000) });
+		if (this.observeTextfresser().plugin !== entry.plugin) {
+			throw new DriverError(
+				"TextfresserReloadedDuringRequest",
+				"Textfresser reloaded after modifications began to be observed",
+			);
+		}
+		return {
+			modifications: entry.observer.read().map(({ mtime, path, size }) => ({
+				mtime,
+				path: relativeTo(scenario.libraryRoot, path),
+				size,
+			})),
+		};
+	}
+
 	async snapshot(params) {
 		const scenario = this.requireActiveScenario();
 		const scope = validateScope(params.scope, "params.scope");
@@ -1273,6 +1355,7 @@ class TextfresserE2EDriver extends Plugin {
 			this.observeTextfresser(),
 		);
 		const timeoutMs = clampTimeout(request.params.timeoutMs, 30_000);
+		await this.closeModifyObserver(this.config.sessionId);
 		await this.settle({ timeoutMs });
 
 		// Stop observing the session before deleting it. The stable driver-owned

@@ -35,16 +35,35 @@ export class MarkdownFileAccess {
 				return yield* self.activeEditor.getContent(active);
 			}
 
-			const immediate = yield* Effect.result(
-				self.backgroundVault.getFile(target),
-			);
-			const file = Result.isSuccess(immediate)
-				? immediate.success
-				: immediate.failure.operation === "getFile"
-					? yield* self.backgroundVault.getFileWithRetry(target)
-					: yield* immediate.failure;
+			const file = yield* self.backgroundFile(target);
 			const vault = yield* VaultIo;
 			return yield* vault.read(file);
+		}, Effect.tapError(annotateFileAccessFailure))();
+	}
+
+	/**
+	 * Reads content through the same route as `readContent`, with the file's
+	 * stat taken first. A concurrent write can make the content newer than the
+	 * stat, never older, so a `(path, mtime)` cache only rereads too often.
+	 * The active editor may hold unsaved content; its stat describes disk.
+	 */
+	readContentWithStat(target: SplitPathToMdFile) {
+		const path = pathfinder.systemPathFromSplitPath(target);
+		const self = this;
+		return Effect.fn("vam.markdown.readWithStat")(function* () {
+			yield* Effect.annotateCurrentSpan({ operation: "read", path });
+			const vault = yield* VaultIo;
+			const active = yield* self.activeEditor.observeTarget(target);
+			if (active) {
+				const stat = yield* vault.stat(active.file);
+				const content = yield* self.activeEditor.getContent(active);
+				return { content, stat };
+			}
+
+			const file = yield* self.backgroundFile(target);
+			const stat = yield* vault.stat(file);
+			const content = yield* vault.read(file);
+			return { content, stat };
 		}, Effect.tapError(annotateFileAccessFailure))();
 	}
 
@@ -156,6 +175,20 @@ export class MarkdownFileAccess {
 
 	scrollOpenedFileToLine(line: number) {
 		return this.activeEditor.scrollToLine(line);
+	}
+
+	private backgroundFile(target: SplitPathToMdFile) {
+		const self = this;
+		return Effect.gen(function* () {
+			const immediate = yield* Effect.result(
+				self.backgroundVault.getFile(target),
+			);
+			return Result.isSuccess(immediate)
+				? immediate.success
+				: immediate.failure.operation === "getFile"
+					? yield* self.backgroundVault.getFileWithRetry(target)
+					: yield* immediate.failure;
+		});
 	}
 }
 

@@ -1,6 +1,7 @@
 import { Effect, Layer } from "effect";
 import { type App, MarkdownView } from "obsidian";
 import { DomSelectors } from "../internal/dom-selectors";
+import { decodeFileStat } from "../types/file-stat";
 import {
 	VamActiveEditorError,
 	type VamActiveEditorFailureReason,
@@ -135,6 +136,18 @@ function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 									fromPath,
 								),
 						}),
+					),
+					stat: Effect.fn("VaultIo.stat")((file) =>
+						decodeFileStat(file.stat).pipe(
+							Effect.mapError(
+								(cause) =>
+									new VamVaultIoError({
+										cause,
+										operation: "stat",
+										path: file.path,
+									}),
+							),
+						),
 					),
 					trash: Effect.fn("VaultIo.trash")((file) =>
 						Effect.tryPromise({

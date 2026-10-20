@@ -122,6 +122,7 @@ function services(mode: "success" | "failure") {
 				read: () => Effect.die("not used"),
 				rename: () => Effect.die("not used"),
 				resolveLinkpathDest: () => Effect.die("not used"),
+				stat: () => Effect.die("not used"),
 				trash: () => Effect.die("not used"),
 			}),
 		),

@@ -2,8 +2,8 @@ import { Clock, Deferred, Effect, Option, Queue } from "effect";
 import type { VaultEvent } from "../../../..";
 import type { BulkWindow } from "../types/bulk/bulk-window";
 
-export type EventAccumulatorCommand =
-	| { readonly _tag: "Event"; readonly event: VaultEvent }
+export type EventAccumulatorCommand<Ev = VaultEvent> =
+	| { readonly _tag: "Event"; readonly event: Ev }
 	| { readonly _tag: "Flush"; readonly completed: Deferred.Deferred<void> }
 	| { readonly _tag: "Settled"; readonly completed: Deferred.Deferred<void> };
 
@@ -14,8 +14,8 @@ export type EventAccumulatorOptions = {
 	readonly maxWindowMs: number;
 };
 
-type EventWindow = {
-	readonly events: ReadonlyArray<VaultEvent>;
+type EventWindow<Ev> = {
+	readonly events: ReadonlyArray<Ev>;
 	readonly startedAt: number;
 };
 
@@ -25,14 +25,16 @@ type EventWindow = {
  * The worker is the only consumer of the intake queue, so event ordering and
  * window boundaries do not depend on callback or subscriber scheduling.
  */
-export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* (
-	intake: Queue.Dequeue<EventAccumulatorCommand>,
+export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* <
+	Ev,
+>(
+	intake: Queue.Dequeue<EventAccumulatorCommand<Ev>>,
 	options: EventAccumulatorOptions,
-	onFlush: (window: BulkWindow) => Effect.Effect<void>,
+	onFlush: (window: BulkWindow<Ev>) => Effect.Effect<void>,
 	onSettled: Effect.Effect<void>,
 ): Effect.fn.Return<never> {
 	const flushWindow = Effect.fn("runEventAccumulator.flushWindow")(function* (
-		window: EventWindow,
+		window: EventWindow<Ev>,
 	): Effect.fn.Return<void> {
 		const endedAt = yield* Clock.currentTimeMillis;
 		yield* onFlush({
@@ -44,7 +46,7 @@ export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* (
 	const completeCommand = Effect.fn("runEventAccumulator.completeCommand")(
 		function* (
 			command: Extract<
-				EventAccumulatorCommand,
+				EventAccumulatorCommand<Ev>,
 				{ readonly _tag: "Flush" | "Settled" }
 			>,
 		): Effect.fn.Return<void> {
@@ -54,7 +56,7 @@ export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* (
 	);
 
 	const collectWindow = Effect.fn("runEventAccumulator.collectWindow")(
-		function* (window: EventWindow): Effect.fn.Return<void> {
+		function* (window: EventWindow<Ev>): Effect.fn.Return<void> {
 			const now = yield* Clock.currentTimeMillis;
 			const remainingMaximum = Math.max(
 				0,

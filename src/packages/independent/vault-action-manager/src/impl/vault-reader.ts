@@ -1,4 +1,5 @@
 import { Clock, Effect, Result } from "effect";
+import { type TAbstractFile, TFile } from "obsidian";
 import { VamScanError, VamVaultIoError } from "../effect/errors";
 import type { VamLiveServices } from "../effect/ports";
 import { VaultIo } from "../effect/ports";
@@ -16,8 +17,14 @@ import type {
 import type {
 	VaultScanCounts,
 	VaultScanPath,
+	VaultScanPathWithStat,
 	VaultScanResult,
 } from "../vault-scan";
+
+type ListedChild = {
+	readonly file: TAbstractFile;
+	readonly splitPath: AnySplitPath;
+};
 
 type ProvideRead = <A, E>(
 	effect: Effect.Effect<A, E, VamLiveServices>,
@@ -51,6 +58,10 @@ export class VaultReader {
 		return this.markdownFiles.readContent(target);
 	}
 
+	readContentWithStat(target: SplitPathToMdFile) {
+		return this.markdownFiles.readContentWithStat(target);
+	}
+
 	exists(target: AnySplitPath) {
 		if (target.kind === "Folder") {
 			return Effect.result(this.tfolderHelper.getFolder(target)).pipe(
@@ -63,6 +74,14 @@ export class VaultReader {
 	}
 
 	list(folder: SplitPathToFolder) {
+		return this.listChildren(folder).pipe(
+			Effect.map((children) =>
+				children.map(({ splitPath }) => splitPath),
+			),
+		);
+	}
+
+	private listChildren(folder: SplitPathToFolder) {
 		const folderPath = pathfinder.systemPathFromSplitPath(folder);
 		return this.tfolderHelper.getFolder(folder).pipe(
 			Effect.mapError((error) =>
@@ -82,13 +101,13 @@ export class VaultReader {
 							getErrorMessage(cause),
 							cause,
 						),
-					try: () =>
-						tfolder.children.map(
-							(child) =>
-								pathfinder.splitPathFromAbstract(
-									child,
-								) as AnySplitPath,
-						),
+					try: (): ListedChild[] =>
+						tfolder.children.map((child) => ({
+							file: child,
+							splitPath: pathfinder.splitPathFromAbstract(
+								child,
+							) as AnySplitPath,
+						})),
 				}),
 			),
 		);
@@ -127,13 +146,44 @@ export class VaultReader {
 		});
 	}
 
-	readonly scan = Effect.fn("VaultReader.scan")(function* (
+	scan(folder: SplitPathToFolder) {
+		return this.traverse(folder, (entry) => Effect.succeed(entry));
+	}
+
+	/**
+	 * Scans like `scan` and adds each file's stat. A file whose stat cannot be
+	 * read is omitted and reported as a `scanFile` diagnostic.
+	 */
+	scanWithStat(folder: SplitPathToFolder) {
+		return this.traverse(folder, (entry, file) =>
+			Effect.gen(function* () {
+				if (!(file instanceof TFile)) {
+					return yield* readerFailure(
+						"stat",
+						pathfinder.systemPathFromSplitPath(entry),
+						"Listed file is not a TFile",
+					);
+				}
+				const vault = yield* VaultIo;
+				const stat = yield* vault.stat(file);
+				return { ...entry, stat } satisfies VaultScanPathWithStat;
+			}),
+		);
+	}
+
+	private readonly traverse = Effect.fn("VaultReader.scan")(function* <
+		Entry extends VaultScanPath,
+	>(
 		this: VaultReader,
 		folder: SplitPathToFolder,
+		toEntry: (
+			entry: VaultScanPath,
+			file: TAbstractFile,
+		) => Effect.Effect<Entry, VamVaultIoError, VamLiveServices>,
 	) {
 		const rootPath = pathfinder.systemPathFromSplitPath(folder);
 		const startedAt = yield* Clock.currentTimeMillis;
-		const entries: VaultScanPath[] = [];
+		const entries: Entry[] = [];
 		const diagnostics: VamScanError[] = [];
 		const mutableCounts = {
 			folderCount: 1,
@@ -142,22 +192,23 @@ export class VaultReader {
 		};
 
 		const traversal = Effect.gen({ self: this }, function* () {
-			const rootChildren = yield* this.list(folder).pipe(
+			const rootChildren = yield* this.listChildren(folder).pipe(
 				Effect.mapError((cause) => {
 					const failure = scanFailure("scanRoot", rootPath, cause);
 					diagnostics.push(failure);
 					return failure;
 				}),
 			);
-			const stack: AnySplitPath[] = sortPaths(rootChildren).reverse();
+			const stack = sortChildren(rootChildren).reverse();
 
 			while (stack.length > 0) {
-				const current = stack.pop();
-				if (!current) continue;
+				const child = stack.pop();
+				if (!child) continue;
+				const current = child.splitPath;
 				if (current.kind === "Folder") {
 					mutableCounts.folderCount += 1;
 					const childrenResult = yield* Effect.result(
-						this.list(current),
+						this.listChildren(current),
 					);
 					if (Result.isFailure(childrenResult)) {
 						diagnostics.push(
@@ -169,17 +220,37 @@ export class VaultReader {
 						);
 						continue;
 					}
-					stack.push(...sortPaths(childrenResult.success).reverse());
-				} else if (current.kind === "MdFile") {
+					stack.push(
+						...sortChildren(childrenResult.success).reverse(),
+					);
+					continue;
+				}
+
+				let entry: VaultScanPath;
+				if (current.kind === "MdFile") {
 					mutableCounts.markdownFileCount += 1;
-					entries.push({
+					entry = {
 						...current,
 						read: () => this.provideRead(this.readContent(current)),
-					});
+					};
 				} else {
 					mutableCounts.otherFileCount += 1;
-					entries.push(current);
+					entry = current;
 				}
+				const entryResult = yield* Effect.result(
+					toEntry(entry, child.file),
+				);
+				if (Result.isFailure(entryResult)) {
+					diagnostics.push(
+						scanFailure(
+							"scanFile",
+							pathfinder.systemPathFromSplitPath(current),
+							entryResult.failure,
+						),
+					);
+					continue;
+				}
+				entries.push(entryResult.success);
 			}
 
 			return scanResult(entries, diagnostics, mutableCounts);
@@ -205,10 +276,10 @@ export class VaultReader {
 	});
 }
 
-function sortPaths(paths: readonly AnySplitPath[]): AnySplitPath[] {
-	return [...paths].sort((left, right) => {
-		const leftPath = pathfinder.systemPathFromSplitPath(left);
-		const rightPath = pathfinder.systemPathFromSplitPath(right);
+function sortChildren(children: readonly ListedChild[]): ListedChild[] {
+	return [...children].sort((left, right) => {
+		const leftPath = pathfinder.systemPathFromSplitPath(left.splitPath);
+		const rightPath = pathfinder.systemPathFromSplitPath(right.splitPath);
 		return leftPath < rightPath ? -1 : leftPath > rightPath ? 1 : 0;
 	});
 }
@@ -221,11 +292,11 @@ function scanFailure(
 	return new VamScanError({ cause, operation, path });
 }
 
-function scanResult(
-	entries: readonly VaultScanPath[],
+function scanResult<Entry extends VaultScanPath>(
+	entries: readonly Entry[],
 	diagnostics: readonly VamScanError[],
 	counts: VaultScanCounts,
-): VaultScanResult {
+): VaultScanResult<Entry> {
 	const frozenCounts = Object.freeze({ ...counts });
 	const frozenEntries = Object.freeze([...entries]);
 	const [firstDiagnostic, ...rest] = diagnostics;

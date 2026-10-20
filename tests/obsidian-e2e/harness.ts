@@ -39,7 +39,19 @@ type ScenarioAction =
 interface ScenarioDefinition {
 	readonly fixture: readonly ScenarioFixture[];
 	readonly id: string;
+	/**
+	 * Records VAM's Markdown modify observations below this Library-relative
+	 * folder, starting after fixtures and startup healing settle.
+	 */
+	readonly observeModifications?: { readonly path: string };
 	readonly settings?: Readonly<Record<string, unknown>>;
+}
+
+interface ScenarioModification {
+	readonly mtime: number;
+	/** Library-relative path of the modified Markdown file. */
+	readonly path: string;
+	readonly size: number;
 }
 
 interface ScenarioStatus {
@@ -69,6 +81,8 @@ interface ScenarioActionReceipt {
 
 interface ObsidianScenario {
 	readonly act: (action: ScenarioAction) => Promise<void>;
+	/** Settled modify observations; requires `observeModifications`. */
+	readonly modifications: () => Promise<readonly ScenarioModification[]>;
 	readonly snapshot: () => Promise<ScenarioSnapshot>;
 	readonly status: () => Promise<ScenarioStatus>;
 }
@@ -432,6 +446,9 @@ export async function withObsidianScenario<T>(
 			"beginScenario",
 			{
 				fixtures: definition.fixture.map(encodeFixture),
+				...(definition.observeModifications
+					? { observeModifications: definition.observeModifications }
+					: {}),
 				scenarioId: definition.id,
 				settings: definition.settings ?? {},
 			},
@@ -447,6 +464,12 @@ export async function withObsidianScenario<T>(
 					{ operation: encodeAction(action), settle: true },
 					fence,
 				);
+			},
+			async modifications() {
+				const result = await client!.request<{
+					readonly modifications: readonly ScenarioModification[];
+				}>("modifications", {}, fence);
+				return result.value.modifications;
 			},
 			async snapshot() {
 				const result = await client!.request<DriverSnapshotValue>(

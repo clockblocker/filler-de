@@ -4,15 +4,18 @@ import {
 	Deferred,
 	Effect,
 	Exit,
+	Option,
 	PubSub,
 	Queue,
 	Ref,
 	Scope,
 	Semaphore,
 } from "effect";
-import type { App, EventRef, TAbstractFile } from "obsidian";
+import { type App, type EventRef, type TAbstractFile, TFile } from "obsidian";
 import { VamSubscriptionError } from "../../effect/errors";
+import { splitPathFromAbstractInternal } from "../../helpers/pathfinder/path-codecs/split-and-abstract/split-path-from-abstract";
 import { logger } from "../../internal/logger";
+import { decodeFileStatOption } from "../../types/file-stat";
 import { type VaultEvent, VaultEventKind } from "../../types/vault-event";
 import {
 	type EventAccumulatorCommand,
@@ -22,7 +25,13 @@ import {
 import { collapseVaultEvents } from "./bulk-event-emmiter/batteries/processing-chain/collapse";
 import { reduceRoots } from "./bulk-event-emmiter/batteries/processing-chain/reduce-roots";
 import type { BulkVaultEvent } from "./bulk-event-emmiter/types/bulk/bulk-vault-event";
+import type { BulkWindow } from "./bulk-event-emmiter/types/bulk/bulk-window";
 import { isDelete, isRename } from "./bulk-event-emmiter/types/bulk/helpers";
+import {
+	type BulkMdModifyEvent,
+	coalesceMdModifications,
+	type MdFileModification,
+} from "./md-modify-event";
 import type { SelfEventTracker } from "./self-event-tracker";
 import {
 	makeVaultEventForFileCreated,
@@ -30,40 +39,57 @@ import {
 	tryMakeVaultEventForFileRenamed,
 } from "./vault-events-for-events";
 
-type BulkVaultEventHandler = (event: BulkVaultEvent) => Promise<void>;
+type ObservationHandler<M> = (message: M) => Promise<void>;
 
 type SubscriberBarrier = {
 	readonly completed: Deferred.Deferred<void>;
 	readonly remaining: Ref.Ref<number>;
 };
 
-type PublishedMessage =
-	| { readonly _tag: "Bulk"; readonly bulk: BulkVaultEvent }
+type PublishedMessage<M> =
+	| { readonly _tag: "Bulk"; readonly bulk: M }
 	| { readonly _tag: "Barrier"; readonly barrier: SubscriberBarrier };
 
-type SubscriberState = {
-	readonly handler: BulkVaultEventHandler;
+type SubscriberState<M> = {
+	readonly handler: ObservationHandler<M>;
 	readonly id: number;
 	readonly pendingBarriers: Ref.Ref<ReadonlySet<SubscriberBarrier>>;
 	readonly scope: Scope.Closeable;
 };
 
-type ObservationSession = {
+type ObservationSession<Ev> = {
 	readonly closed: Deferred.Deferred<void>;
-	readonly intake: Queue.Queue<EventAccumulatorCommand>;
+	readonly intake: Queue.Queue<EventAccumulatorCommand<Ev>>;
 	readonly scope: Scope.Closeable;
 };
 
-type ObservationCore = {
+type ObservationCore<Ev, M> = {
 	readonly activeHandlerWork: Ref.Ref<number>;
 	readonly context: Context.Context<never>;
 	readonly listeningRequested: Ref.Ref<boolean>;
 	readonly nextSubscriberId: Ref.Ref<number>;
-	readonly pubsub: PubSub.PubSub<PublishedMessage>;
+	readonly pubsub: PubSub.PubSub<PublishedMessage<M>>;
+	/** Windows handed to subscribers so far; lets settling detect progress. */
+	readonly publishedWindows: Ref.Ref<number>;
 	readonly rootScope: Scope.Closeable;
-	readonly session: Ref.Ref<ObservationSession | null>;
+	readonly session: Ref.Ref<ObservationSession<Ev> | null>;
 	readonly sessionLock: Semaphore.Semaphore;
-	readonly subscribers: Ref.Ref<ReadonlyMap<number, SubscriberState>>;
+	readonly subscribers: Ref.Ref<ReadonlyMap<number, SubscriberState<M>>>;
+};
+
+/** Runs one Obsidian callback program synchronously in the VAM runtime. */
+type RunCallback = (program: Effect.Effect<void>) => void;
+
+/**
+ * One observation channel: which Obsidian callbacks enter its windows and how
+ * a closed window becomes the message its subscribers receive.
+ */
+type ObservationSource<Ev, M> = {
+	readonly listen: (
+		intake: Queue.Enqueue<EventAccumulatorCommand<Ev>>,
+		runCallback: RunCallback,
+	) => Effect.Effect<void, VamSubscriptionError, Scope.Scope>;
+	readonly publish: (window: BulkWindow<Ev>) => M;
 };
 
 type VaultObservationOptions = Partial<EventAccumulatorOptions>;
@@ -72,41 +98,47 @@ type VaultObservationSubscription = {
 	readonly close: Effect.Effect<void>;
 };
 
-const makeObservationCore = Effect.fn("makeObservationCore")(
-	function* (): Effect.fn.Return<ObservationCore> {
-		const context = yield* Effect.context<never>();
-		const rootScope = yield* Scope.make("sequential");
-		const pubsub = yield* PubSub.unbounded<PublishedMessage>();
-		yield* Scope.addFinalizer(rootScope, PubSub.shutdown(pubsub));
-		return {
-			activeHandlerWork: yield* Ref.make(0),
-			context,
-			listeningRequested: yield* Ref.make(false),
-			nextSubscriberId: yield* Ref.make(0),
-			pubsub,
-			rootScope,
-			session: yield* Ref.make<ObservationSession | null>(null),
-			sessionLock: yield* Semaphore.make(1),
-			subscribers: yield* Ref.make<ReadonlyMap<number, SubscriberState>>(
-				new Map(),
-			),
-		};
-	},
-);
+const makeObservationCore = Effect.fn("makeObservationCore")(function* <
+	Ev,
+	M,
+>(): Effect.fn.Return<ObservationCore<Ev, M>> {
+	const context = yield* Effect.context<never>();
+	const rootScope = yield* Scope.make("sequential");
+	const pubsub = yield* PubSub.unbounded<PublishedMessage<M>>();
+	yield* Scope.addFinalizer(rootScope, PubSub.shutdown(pubsub));
+	return {
+		activeHandlerWork: yield* Ref.make(0),
+		context,
+		listeningRequested: yield* Ref.make(false),
+		nextSubscriberId: yield* Ref.make(0),
+		publishedWindows: yield* Ref.make(0),
+		pubsub,
+		rootScope,
+		session: yield* Ref.make<ObservationSession<Ev> | null>(null),
+		sessionLock: yield* Semaphore.make(1),
+		subscribers: yield* Ref.make<ReadonlyMap<number, SubscriberState<M>>>(
+			new Map(),
+		),
+	};
+});
 
 /**
  * Effect-native Vault observation. Construct it inside the VAM runtime with
- * `makeEffect` so callbacks and scoped fibers capture that runtime's context.
+ * `makeEffect` or `makeMdModifyEffect` so callbacks and scoped fibers capture
+ * that runtime's context.
+ *
+ * Each instance is one independent channel with its own listeners, windows,
+ * and subscribers. The Markdown-modify channel therefore never changes the
+ * timing or content of Bulk Vault Events.
  */
-export class VaultObservation {
-	private readonly core: ObservationCore;
+export class VaultObservation<Ev = VaultEvent, M = BulkVaultEvent> {
+	private readonly core: ObservationCore<Ev, M>;
 	private readonly options: EventAccumulatorOptions;
 
 	private constructor(
-		private readonly app: App,
-		private readonly selfEvents: SelfEventTracker,
+		private readonly source: ObservationSource<Ev, M>,
 		options: VaultObservationOptions,
-		core: ObservationCore,
+		core: ObservationCore<Ev, M>,
 	) {
 		this.options = {
 			maxWindowMs: options.maxWindowMs ?? 2000,
@@ -115,19 +147,48 @@ export class VaultObservation {
 		this.core = core;
 	}
 
+	/** Create, rename, and delete callbacks published as Bulk Vault Events. */
 	static readonly makeEffect = Effect.fn("VaultObservation.makeEffect")(
 		function* (
 			app: App,
 			selfEvents: SelfEventTracker,
 			options: VaultObservationOptions = {},
 		): Effect.fn.Return<VaultObservation> {
-			const core = yield* makeObservationCore();
-			return new VaultObservation(app, selfEvents, options, core);
+			const core = yield* makeObservationCore<
+				VaultEvent,
+				BulkVaultEvent
+			>();
+			return new VaultObservation(
+				bulkVaultEventSource(app, selfEvents),
+				options,
+				core,
+			);
 		},
 	);
 
+	/** Markdown modify callbacks, coalesced per path within each window. */
+	static readonly makeMdModifyEffect = Effect.fn(
+		"VaultObservation.makeMdModifyEffect",
+	)(function* (
+		app: App,
+		selfEvents: SelfEventTracker,
+		options: VaultObservationOptions = {},
+	): Effect.fn.Return<
+		VaultObservation<MdFileModification, BulkMdModifyEvent>
+	> {
+		const core = yield* makeObservationCore<
+			MdFileModification,
+			BulkMdModifyEvent
+		>();
+		return new VaultObservation(
+			mdModifySource(app, selfEvents),
+			options,
+			core,
+		);
+	});
+
 	readonly startEffect = Effect.fn("VaultObservation.start")(function* (
-		this: VaultObservation,
+		this: VaultObservation<Ev, M>,
 	): Effect.fn.Return<void, VamSubscriptionError> {
 		yield* Ref.set(this.core.listeningRequested, true);
 		yield* this.ensureSessionEffect();
@@ -135,8 +196,8 @@ export class VaultObservation {
 
 	readonly subscribeEffect = Effect.fn("VaultObservation.subscribe")(
 		function* (
-			this: VaultObservation,
-			handler: BulkVaultEventHandler,
+			this: VaultObservation<Ev, M>,
+			handler: ObservationHandler<M>,
 		): Effect.fn.Return<
 			VaultObservationSubscription,
 			VamSubscriptionError
@@ -152,7 +213,7 @@ export class VaultObservation {
 				this.core.nextSubscriberId,
 				(value) => value + 1,
 			);
-			const state: SubscriberState = {
+			const state: SubscriberState<M> = {
 				handler,
 				id,
 				pendingBarriers,
@@ -189,7 +250,7 @@ export class VaultObservation {
 	);
 
 	readonly flushPendingEffect = Effect.fn("VaultObservation.flushPending")(
-		function* (this: VaultObservation): Effect.fn.Return<void> {
+		function* (this: VaultObservation<Ev, M>): Effect.fn.Return<void> {
 			const session = yield* Ref.get(this.core.session);
 			if (!session) return;
 
@@ -207,7 +268,7 @@ export class VaultObservation {
 	);
 
 	readonly whenIdleEffect = Effect.fn("VaultObservation.whenIdle")(function* (
-		this: VaultObservation,
+		this: VaultObservation<Ev, M>,
 	): Effect.fn.Return<void> {
 		const session = yield* Ref.get(this.core.session);
 		if (!session) return;
@@ -224,14 +285,21 @@ export class VaultObservation {
 		);
 	});
 
+	/** Number of windows published to subscribers since construction. */
+	readonly publishedWindowCountEffect = Effect.fn(
+		"VaultObservation.publishedWindowCount",
+	)(function* (this: VaultObservation<Ev, M>): Effect.fn.Return<number> {
+		return yield* Ref.get(this.core.publishedWindows);
+	});
+
 	readonly activeHandlerCountEffect = Effect.fn(
 		"VaultObservation.activeHandlerCount",
-	)(function* (this: VaultObservation): Effect.fn.Return<number> {
+	)(function* (this: VaultObservation<Ev, M>): Effect.fn.Return<number> {
 		return yield* Ref.get(this.core.activeHandlerWork);
 	});
 
 	readonly disposeEffect = Effect.fn("VaultObservation.dispose")(function* (
-		this: VaultObservation,
+		this: VaultObservation<Ev, M>,
 	): Effect.fn.Return<void> {
 		yield* Ref.set(this.core.subscribers, new Map());
 		yield* Ref.set(this.core.session, null);
@@ -241,12 +309,12 @@ export class VaultObservation {
 	private readonly ensureSessionEffect = Effect.fn(
 		"VaultObservation.ensureSession",
 	)(function* (
-		this: VaultObservation,
+		this: VaultObservation<Ev, M>,
 	): Effect.fn.Return<void, VamSubscriptionError> {
 		yield* this.core.sessionLock.withPermits(1)(
 			Effect.gen(
 				function* (
-					this: VaultObservation,
+					this: VaultObservation<Ev, M>,
 				): Effect.fn.Return<void, VamSubscriptionError> {
 					const requested = yield* Ref.get(
 						this.core.listeningRequested,
@@ -261,15 +329,17 @@ export class VaultObservation {
 					);
 					const makeSession = Effect.gen(
 						function* (
-							this: VaultObservation,
+							this: VaultObservation<Ev, M>,
 						): Effect.fn.Return<
-							ObservationSession,
+							ObservationSession<Ev>,
 							VamSubscriptionError,
 							Scope.Scope
 						> {
 							const closed = yield* Deferred.make<void>();
 							const intake =
-								yield* Queue.unbounded<EventAccumulatorCommand>();
+								yield* Queue.unbounded<
+									EventAccumulatorCommand<Ev>
+								>();
 							yield* Scope.addFinalizer(
 								scope,
 								Queue.shutdown(intake),
@@ -279,18 +349,8 @@ export class VaultObservation {
 								Deferred.succeed(closed, undefined),
 							);
 
-							yield* this.acquireListenerEffect(
-								"create",
-								(file) => this.onCreate(intake, file),
-							);
-							yield* this.acquireListenerEffect(
-								"rename",
-								(file, oldPath) =>
-									this.onRename(intake, file, oldPath),
-							);
-							yield* this.acquireListenerEffect(
-								"delete",
-								(file) => this.onDelete(intake, file),
+							yield* this.source.listen(intake, (program) =>
+								this.runCallback(program),
 							);
 
 							yield* runEventAccumulator(
@@ -316,94 +376,23 @@ export class VaultObservation {
 		);
 	});
 
-	private readonly acquireListenerEffect = Effect.fn(
-		"VaultObservation.acquireListener",
-	)(function* <K extends "create" | "delete" | "rename">(
-		this: VaultObservation,
-		kind: K,
-		callback: K extends "rename"
-			? (file: TAbstractFile, oldPath: string) => void
-			: (file: TAbstractFile) => void,
-	): Effect.fn.Return<EventRef, VamSubscriptionError, Scope.Scope> {
-		return yield* Effect.acquireRelease(
-			Effect.try({
-				catch: (cause) =>
-					new VamSubscriptionError({
-						cause,
-						operation: `listen for ${kind}`,
-					}),
-				try: () => {
-					if (kind === "rename") {
-						return this.app.vault.on(
-							"rename",
-							callback as (
-								file: TAbstractFile,
-								oldPath: string,
-							) => void,
-						);
-					}
-					if (kind === "create") {
-						return this.app.vault.on(
-							"create",
-							callback as (file: TAbstractFile) => void,
-						);
-					}
-					return this.app.vault.on(
-						"delete",
-						callback as (file: TAbstractFile) => void,
-					);
-				},
-			}),
-			(ref) =>
-				Effect.sync(() => this.app.vault.offref(ref)).pipe(
-					Effect.catchCause((cause) =>
-						Effect.logError(
-							`[VaultObservation] Failed to release ${kind} listener`,
-							Cause.squash(cause),
-						),
-					),
-				),
-		);
-	});
-
 	private readonly publishWindowEffect = Effect.fn(
 		"VaultObservation.publishWindow",
 	)(function* (
-		this: VaultObservation,
-		window: {
-			readonly allObsidianEvents: VaultEvent[];
-			readonly debug: {
-				readonly endedAt: number;
-				readonly startedAt: number;
-			};
-		},
+		this: VaultObservation<Ev, M>,
+		window: BulkWindow<Ev>,
 	): Effect.fn.Return<void> {
 		const subscribers = yield* Ref.get(this.core.subscribers);
 		if (subscribers.size === 0) return;
 
-		const events = collapseVaultEvents(window.allObsidianEvents);
-		const roots = reduceRoots(events);
-		const bulk: BulkVaultEvent = {
-			debug: {
-				collapsedCount: countEvents(events),
-				endedAt: window.debug.endedAt,
-				reduced: {
-					rootDeletes: roots.filter(isDelete).length,
-					rootRenames: roots.filter(isRename).length,
-				},
-				startedAt: window.debug.startedAt,
-				trueCount: countEvents(window.allObsidianEvents),
-			},
-			events,
-			roots,
-		};
-
+		const bulk = this.source.publish(window);
+		yield* Ref.update(this.core.publishedWindows, (count) => count + 1);
 		yield* PubSub.publish(this.core.pubsub, { _tag: "Bulk", bulk });
 	});
 
 	private readonly publishSubscriberBarrierEffect = Effect.fn(
 		"VaultObservation.publishSubscriberBarrier",
-	)(function* (this: VaultObservation): Effect.fn.Return<void> {
+	)(function* (this: VaultObservation<Ev, M>): Effect.fn.Return<void> {
 		const subscribers = yield* Ref.get(this.core.subscribers);
 		if (subscribers.size === 0) return;
 
@@ -434,9 +423,9 @@ export class VaultObservation {
 	private readonly subscriberLoopEffect = Effect.fn(
 		"VaultObservation.subscriberLoop",
 	)(function* (
-		this: VaultObservation,
-		state: SubscriberState,
-		subscription: PubSub.Subscription<PublishedMessage>,
+		this: VaultObservation<Ev, M>,
+		state: SubscriberState<M>,
+		subscription: PubSub.Subscription<PublishedMessage<M>>,
 	): Effect.fn.Return<never> {
 		while (true) {
 			const message = yield* PubSub.take(subscription);
@@ -470,7 +459,10 @@ export class VaultObservation {
 
 	private readonly closeSubscriptionEffect = Effect.fn(
 		"VaultObservation.closeSubscription",
-	)(function* (this: VaultObservation, id: number): Effect.fn.Return<void> {
+	)(function* (
+		this: VaultObservation<Ev, M>,
+		id: number,
+	): Effect.fn.Return<void> {
 		const removed = yield* Ref.modify(
 			this.core.subscribers,
 			(subscribers) => {
@@ -489,10 +481,12 @@ export class VaultObservation {
 
 	private readonly stopSessionEffect = Effect.fn(
 		"VaultObservation.stopSession",
-	)(function* (this: VaultObservation): Effect.fn.Return<void> {
+	)(function* (this: VaultObservation<Ev, M>): Effect.fn.Return<void> {
 		yield* this.core.sessionLock.withPermits(1)(
 			Effect.gen(
-				function* (this: VaultObservation): Effect.fn.Return<void> {
+				function* (
+					this: VaultObservation<Ev, M>,
+				): Effect.fn.Return<void> {
 					const subscribers = yield* Ref.get(this.core.subscribers);
 					if (subscribers.size > 0) return;
 
@@ -509,8 +503,8 @@ export class VaultObservation {
 	private readonly releasePendingBarriersEffect = Effect.fn(
 		"VaultObservation.releasePendingBarriers",
 	)(function* (
-		this: VaultObservation,
-		state: SubscriberState,
+		this: VaultObservation<Ev, M>,
+		state: SubscriberState<M>,
 	): Effect.fn.Return<void> {
 		const pending = yield* Ref.getAndSet(state.pendingBarriers, new Set());
 		for (const barrier of pending) {
@@ -521,8 +515,8 @@ export class VaultObservation {
 	private readonly releaseBarrierEffect = Effect.fn(
 		"VaultObservation.releaseBarrier",
 	)(function* (
-		this: VaultObservation,
-		state: SubscriberState,
+		this: VaultObservation<Ev, M>,
+		state: SubscriberState<M>,
 		barrier: SubscriberBarrier,
 	): Effect.fn.Return<void> {
 		const pending = yield* Ref.modify(state.pendingBarriers, (barriers) => {
@@ -544,67 +538,6 @@ export class VaultObservation {
 		if (completed) yield* Deferred.succeed(barrier.completed, undefined);
 	});
 
-	private onCreate(
-		intake: Queue.Enqueue<EventAccumulatorCommand>,
-		file: TAbstractFile,
-	): void {
-		this.runCallbackEffect(intake, file.path, () =>
-			makeVaultEventForFileCreated(file),
-		);
-	}
-
-	private onRename(
-		intake: Queue.Enqueue<EventAccumulatorCommand>,
-		file: TAbstractFile,
-		oldPath: string,
-	): void {
-		const program = Effect.gen(
-			function* (this: VaultObservation): Effect.fn.Return<void> {
-				const newPathIsSelf = yield* this.selfEvents.shouldIgnoreEffect(
-					file.path,
-				);
-				const oldPathIsSelf =
-					yield* this.selfEvents.shouldIgnoreEffect(oldPath);
-				if (newPathIsSelf && oldPathIsSelf) return;
-
-				const event = tryMakeVaultEventForFileRenamed(file, oldPath);
-				if (event.success) {
-					yield* Queue.offer(intake, {
-						_tag: "Event",
-						event: event.event,
-					});
-				}
-			}.bind(this),
-		);
-		this.runCallback(program);
-	}
-
-	private onDelete(
-		intake: Queue.Enqueue<EventAccumulatorCommand>,
-		file: TAbstractFile,
-	): void {
-		this.runCallbackEffect(intake, file.path, () =>
-			makeVaultEventForFileDeleted(file),
-		);
-	}
-
-	private runCallbackEffect(
-		intake: Queue.Enqueue<EventAccumulatorCommand>,
-		path: string,
-		makeEvent: () => VaultEvent,
-	): void {
-		const program = Effect.gen(
-			function* (this: VaultObservation): Effect.fn.Return<void> {
-				if (yield* this.selfEvents.shouldIgnoreEffect(path)) return;
-				yield* Queue.offer(intake, {
-					_tag: "Event",
-					event: makeEvent(),
-				});
-			}.bind(this),
-		);
-		this.runCallback(program);
-	}
-
 	private runCallback(program: Effect.Effect<void>): void {
 		const logged = program.pipe(
 			Effect.catchCause((cause) =>
@@ -622,6 +555,196 @@ export class VaultObservation {
 			);
 		}
 	}
+}
+
+type VaultListenerKind = "create" | "delete" | "modify" | "rename";
+
+const acquireVaultListener = Effect.fn("VaultObservation.acquireListener")(
+	function* <K extends VaultListenerKind>(
+		app: App,
+		kind: K,
+		callback: K extends "rename"
+			? (file: TAbstractFile, oldPath: string) => void
+			: (file: TAbstractFile) => void,
+	): Effect.fn.Return<EventRef, VamSubscriptionError, Scope.Scope> {
+		return yield* Effect.acquireRelease(
+			Effect.try({
+				catch: (cause) =>
+					new VamSubscriptionError({
+						cause,
+						operation: `listen for ${kind}`,
+					}),
+				try: () => {
+					if (kind === "rename") {
+						return app.vault.on(
+							"rename",
+							callback as (
+								file: TAbstractFile,
+								oldPath: string,
+							) => void,
+						);
+					}
+					if (kind === "create") {
+						return app.vault.on(
+							"create",
+							callback as (file: TAbstractFile) => void,
+						);
+					}
+					if (kind === "modify") {
+						return app.vault.on(
+							"modify",
+							callback as (file: TAbstractFile) => void,
+						);
+					}
+					return app.vault.on(
+						"delete",
+						callback as (file: TAbstractFile) => void,
+					);
+				},
+			}),
+			(ref) =>
+				Effect.sync(() => app.vault.offref(ref)).pipe(
+					Effect.catchCause((cause) =>
+						Effect.logError(
+							`[VaultObservation] Failed to release ${kind} listener`,
+							Cause.squash(cause),
+						),
+					),
+				),
+		);
+	},
+);
+
+function bulkVaultEventSource(
+	app: App,
+	selfEvents: SelfEventTracker,
+): ObservationSource<VaultEvent, BulkVaultEvent> {
+	return {
+		listen: Effect.fn("VaultObservation.listenForBulk")(function* (
+			intake: Queue.Enqueue<EventAccumulatorCommand>,
+			runCallback: RunCallback,
+		): Effect.fn.Return<void, VamSubscriptionError, Scope.Scope> {
+			const offerUnlessSelf = (
+				path: string,
+				makeEvent: () => VaultEvent,
+			) =>
+				runCallback(
+					Effect.gen(function* () {
+						if (yield* selfEvents.shouldIgnoreEffect(path)) return;
+						yield* Queue.offer(intake, {
+							_tag: "Event",
+							event: makeEvent(),
+						});
+					}),
+				);
+
+			yield* acquireVaultListener(app, "create", (file) =>
+				offerUnlessSelf(file.path, () =>
+					makeVaultEventForFileCreated(file),
+				),
+			);
+			yield* acquireVaultListener(app, "rename", (file, oldPath) =>
+				runCallback(
+					Effect.gen(function* () {
+						const newPathIsSelf =
+							yield* selfEvents.shouldIgnoreEffect(file.path);
+						const oldPathIsSelf =
+							yield* selfEvents.shouldIgnoreEffect(oldPath);
+						if (newPathIsSelf && oldPathIsSelf) return;
+
+						const event = tryMakeVaultEventForFileRenamed(
+							file,
+							oldPath,
+						);
+						if (event.success) {
+							yield* Queue.offer(intake, {
+								_tag: "Event",
+								event: event.event,
+							});
+						}
+					}),
+				),
+			);
+			yield* acquireVaultListener(app, "delete", (file) =>
+				offerUnlessSelf(file.path, () =>
+					makeVaultEventForFileDeleted(file),
+				),
+			);
+		}),
+		publish: (window) => {
+			const events = collapseVaultEvents(window.allObsidianEvents);
+			const roots = reduceRoots(events);
+			return {
+				debug: {
+					collapsedCount: countEvents(events),
+					endedAt: window.debug.endedAt,
+					reduced: {
+						rootDeletes: roots.filter(isDelete).length,
+						rootRenames: roots.filter(isRename).length,
+					},
+					startedAt: window.debug.startedAt,
+					trueCount: countEvents(window.allObsidianEvents),
+				},
+				events,
+				roots,
+			};
+		},
+	};
+}
+
+function mdModifySource(
+	app: App,
+	selfEvents: SelfEventTracker,
+): ObservationSource<MdFileModification, BulkMdModifyEvent> {
+	return {
+		listen: Effect.fn("VaultObservation.listenForMdModify")(function* (
+			intake: Queue.Enqueue<EventAccumulatorCommand<MdFileModification>>,
+			runCallback: RunCallback,
+		): Effect.fn.Return<void, VamSubscriptionError, Scope.Scope> {
+			// Expectations recorded while nobody listened may belong to
+			// callbacks that already fired. A spurious echo is harmless; a
+			// hidden hand edit is not.
+			yield* selfEvents.clearModifiesEffect();
+			yield* acquireVaultListener(app, "modify", (file) => {
+				if (!(file instanceof TFile) || file.extension !== "md") return;
+				// Obsidian mutates `file.stat` in place, so copy it now.
+				const stat = decodeFileStatOption(file.stat);
+				const splitPath = splitPathFromAbstractInternal(file);
+				runCallback(
+					Effect.gen(function* () {
+						if (
+							yield* selfEvents.shouldIgnoreModifyEffect(
+								file.path,
+							)
+						) {
+							return;
+						}
+						if (
+							Option.isNone(stat) ||
+							splitPath.kind !== "MdFile"
+						) {
+							return yield* Effect.logWarning(
+								"[VaultObservation] Skipped a modify callback without a Markdown file stat",
+								file.path,
+							);
+						}
+						yield* Queue.offer(intake, {
+							_tag: "Event",
+							event: { splitPath, stat: stat.value },
+						});
+					}),
+				);
+			});
+		}),
+		publish: (window) => ({
+			debug: {
+				endedAt: window.debug.endedAt,
+				startedAt: window.debug.startedAt,
+				trueCount: window.allObsidianEvents.length,
+			},
+			modifications: coalesceMdModifications(window.allObsidianEvents),
+		}),
+	};
 }
 
 function countEvents(events: readonly VaultEvent[]) {

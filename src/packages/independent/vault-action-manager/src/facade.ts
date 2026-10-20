@@ -9,7 +9,7 @@ import {
 	type VamSubscriptionError,
 	VamVaultIoError,
 } from "./effect/errors";
-import { VaultIo } from "./effect/ports";
+import { type VamLiveServices, VaultIo } from "./effect/ports";
 import {
 	createVamRuntime,
 	type VamRuntime,
@@ -32,21 +32,31 @@ import {
 } from "./impl/actions-processing/dispatch-batch";
 import { Executor } from "./impl/actions-processing/executor";
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
+import {
+	type BulkMdModifyEvent,
+	type MdFileModification,
+	scopeMdModifyEvent,
+} from "./impl/event-processing/md-modify-event";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { VaultObservation } from "./impl/event-processing/vault-observation";
 import { VaultReader } from "./impl/vault-reader";
 import { splitPathCodec } from "./split-path-codec";
 import { VaultActionManagerTestingAdapter } from "./testing-adapter";
+import type { VaultFileStat } from "./types/file-stat";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "./types/split-path";
 import type { VaultAction } from "./types/vault-action";
-import type { VaultScanResult } from "./vault-scan";
+import type { VaultScanPathWithStat, VaultScanResult } from "./vault-scan";
 
 export type BulkVaultEventHandler<E = never> = (
 	event: BulkVaultEvent,
+) => Effect.Effect<void, E>;
+
+export type MdModifyEventHandler<E = never> = (
+	event: BulkMdModifyEvent,
 ) => Effect.Effect<void, E>;
 
 export type VaultActionManagerSubscription = {
@@ -72,6 +82,10 @@ export class VaultActionManager {
 
 	private readonly dispatches: DispatchBatchCoordinator;
 	private readonly markdownFiles: MarkdownFileAccess;
+	private readonly mdModifyObservation: VaultObservation<
+		MdFileModification,
+		BulkMdModifyEvent
+	>;
 	private readonly observation: VaultObservation;
 	private readonly reader: VaultReader;
 	private readonly selfEvents: SelfEventTracker;
@@ -83,8 +97,12 @@ export class VaultActionManager {
 		app: App,
 		private readonly runtime: VamRuntime,
 	) {
+		this.selfEvents = successOrThrow(
+			this.runtime.runSyncExit(SelfEventTracker.makeEffect()),
+			"initialize Self Event tracking",
+		);
 		const activeEditor = new ActiveFileService();
-		const tfileHelper = new TFileHelper();
+		const tfileHelper = new TFileHelper(this.selfEvents);
 		const tfolderHelper = new TFolderHelper();
 
 		this.markdownFiles = new MarkdownFileAccess(activeEditor, tfileHelper);
@@ -94,15 +112,17 @@ export class VaultActionManager {
 			tfolderHelper,
 			(effect) => this.runtime.provide(effect),
 		);
-		this.selfEvents = successOrThrow(
-			this.runtime.runSyncExit(SelfEventTracker.makeEffect()),
-			"initialize Self Event tracking",
-		);
 		this.observation = successOrThrow(
 			this.runtime.runSyncExit(
 				VaultObservation.makeEffect(app, this.selfEvents),
 			),
 			"initialize Vault observation",
+		);
+		this.mdModifyObservation = successOrThrow(
+			this.runtime.runSyncExit(
+				VaultObservation.makeMdModifyEffect(app, this.selfEvents),
+			),
+			"initialize Markdown modify observation",
 		);
 
 		const executor = new Executor(
@@ -118,7 +138,7 @@ export class VaultActionManager {
 		this.testing = new VaultActionManagerTestingAdapter(
 			this.runtime,
 			this.dispatches,
-			this.observation,
+			[this.observation, this.mdModifyObservation],
 			this.selfEvents,
 		);
 	}
@@ -127,7 +147,11 @@ export class VaultActionManager {
 		void,
 		VamRuntimeFailure<VamSubscriptionError>
 	> {
-		return this.runtime.provide(this.observation.startEffect());
+		return this.runtime.provide(
+			this.observation
+				.startEffect()
+				.pipe(Effect.andThen(this.mdModifyObservation.startEffect())),
+		);
 	}
 
 	subscribeToBulk<E>(
@@ -136,28 +160,73 @@ export class VaultActionManager {
 		VaultActionManagerSubscription,
 		VamRuntimeFailure<VamSubscriptionError>
 	> {
-		const promiseHandler = (event: BulkVaultEvent): Promise<void> =>
-			this.runtime.runPromiseExit(handler(event)).then((exit) => {
+		return this.trackSubscription(
+			this.observation.subscribeEffect(this.promiseHandler(handler)),
+		);
+	}
+
+	/**
+	 * Observes content changes to Markdown files below `folder`, such as hand
+	 * edits, Obsidian Sync, and Obsidian's link rewriting after a rename.
+	 *
+	 * Callbacks are coalesced per path over a window with the same quiet and
+	 * maximum deadlines as Bulk Vault Events, and VAM's own background writes
+	 * are filtered as Self Events. The handler is not called for windows with
+	 * no change below `folder`. Observation starts with `startListening`, and
+	 * the Vault's root folder observes every Markdown file.
+	 */
+	subscribeToMdModifications<E>(
+		folder: SplitPathToFolder,
+		handler: MdModifyEventHandler<E>,
+	): Effect.Effect<
+		VaultActionManagerSubscription,
+		VamRuntimeFailure<VamSubscriptionError>
+	> {
+		const scopedHandler = this.promiseHandler(
+			(event: BulkMdModifyEvent): Effect.Effect<void, E> => {
+				const scoped = scopeMdModifyEvent(event, folder);
+				return scoped ? handler(scoped) : Effect.void;
+			},
+		);
+		return this.trackSubscription(
+			this.mdModifyObservation.subscribeEffect(scopedHandler),
+		);
+	}
+
+	private promiseHandler<M, E>(
+		handler: (message: M) => Effect.Effect<void, E>,
+	): (message: M) => Promise<void> {
+		return (message) =>
+			this.runtime.runPromiseExit(handler(message)).then((exit) => {
 				if (Exit.isFailure(exit)) throw Cause.squash(exit.cause);
 			});
+	}
 
-		return this.runtime
-			.provide(this.observation.subscribeEffect(promiseHandler))
-			.pipe(
-				Effect.map((subscription) => {
-					const rawClose = subscription.close;
-					this.subscriptionClosers.add(rawClose);
-					let active = true;
-					return {
-						close: Effect.suspend(() => {
-							if (!active) return Effect.void;
-							active = false;
-							this.subscriptionClosers.delete(rawClose);
-							return this.runtime.provide(rawClose);
-						}),
-					};
-				}),
-			);
+	private trackSubscription(
+		subscribe: Effect.Effect<
+			{ readonly close: Effect.Effect<void> },
+			VamSubscriptionError,
+			VamLiveServices
+		>,
+	): Effect.Effect<
+		VaultActionManagerSubscription,
+		VamRuntimeFailure<VamSubscriptionError>
+	> {
+		return this.runtime.provide(subscribe).pipe(
+			Effect.map((subscription) => {
+				const rawClose = subscription.close;
+				this.subscriptionClosers.add(rawClose);
+				let active = true;
+				return {
+					close: Effect.suspend(() => {
+						if (!active) return Effect.void;
+						active = false;
+						this.subscriptionClosers.delete(rawClose);
+						return this.runtime.provide(rawClose);
+					}),
+				};
+			}),
+		);
 	}
 
 	/**
@@ -192,6 +261,16 @@ export class VaultActionManager {
 		splitPath: SplitPathToMdFile,
 	): Effect.Effect<string, VamRuntimeFailure<VamFileAccessError>> {
 		return this.runtime.provide(this.reader.readContent(splitPath));
+	}
+
+	/** Reads like `readContent` and adds the file's stat, taken before the read. */
+	readContentWithStat(
+		splitPath: SplitPathToMdFile,
+	): Effect.Effect<
+		{ readonly content: string; readonly stat: VaultFileStat },
+		VamRuntimeFailure<VamFileAccessError>
+	> {
+		return this.runtime.provide(this.reader.readContentWithStat(splitPath));
 	}
 
 	exists(
@@ -253,6 +332,20 @@ export class VaultActionManager {
 		splitPath: SplitPathToFolder,
 	): Effect.Effect<VaultScanResult, VamRuntimeFailure<VamScanError>> {
 		return this.runtime.provide(this.reader.scan(splitPath));
+	}
+
+	/**
+	 * Scans like `scan` and adds each file's stat, so a startup index can key
+	 * cached entries by `(path, mtime)`. Files without a readable stat are
+	 * omitted and reported as `scanFile` diagnostics.
+	 */
+	scanWithStat(
+		splitPath: SplitPathToFolder,
+	): Effect.Effect<
+		VaultScanResult<VaultScanPathWithStat>,
+		VamRuntimeFailure<VamScanError>
+	> {
+		return this.runtime.provide(this.reader.scanWithStat(splitPath));
 	}
 
 	mdPwd(): Effect.Effect<
@@ -342,6 +435,7 @@ export class VaultActionManager {
 		this.subscriptionClosers.clear();
 		const cleanup = Effect.all(closes, { discard: true }).pipe(
 			Effect.andThen(this.observation.disposeEffect()),
+			Effect.andThen(this.mdModifyObservation.disposeEffect()),
 			Effect.andThen(this.dispatches.shutdownEffect()),
 			Effect.ignore,
 		);

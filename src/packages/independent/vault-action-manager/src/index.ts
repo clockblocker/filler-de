@@ -2,6 +2,7 @@ export {
 	type BulkVaultEventHandler,
 	createVaultActionManager,
 	type DispatchBatchEffectFailure,
+	type MdModifyEventHandler,
 	type StopOnFirstFailureDispatchFailure,
 	VamActiveEditorError,
 	type VamActiveEditorFailureReason,
@@ -28,7 +29,12 @@ export type { ActiveEditorContext } from "./file-services/active-view/active-fil
 export type { SelectionInfo } from "./file-services/active-view/selection-service";
 export type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 export type { PossibleRootVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
+export type {
+	BulkMdModifyEvent,
+	MdFileModification,
+} from "./impl/event-processing/md-modify-event";
 export { type SplitPathCodec, splitPathCodec } from "./split-path-codec";
+export type { VaultFileStat } from "./types/file-stat";
 export * from "./types/literals";
 export {
 	classifyReadContentError,
@@ -62,6 +68,7 @@ export { type VaultEvent, VaultEventKind } from "./types/vault-event";
 export type {
 	VaultScanCounts,
 	VaultScanPath,
+	VaultScanPathWithStat,
 	VaultScanReadableMdPath,
 	VaultScanResult,
 } from "./vault-scan";

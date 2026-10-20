@@ -9,6 +9,7 @@ const REQUEST_METHODS = new Set([
 	"act",
 	"settle",
 	"snapshot",
+	"modifications",
 	"diagnostics",
 	"cleanupSession",
 ]);

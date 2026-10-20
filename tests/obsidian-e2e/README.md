@@ -98,7 +98,13 @@ Available actions are `createFile`, `createBinary`, `modifyFile`,
 `runSplitToPages`, `runSplitInBlocks`, and `runPageNavigation` with real active
 editor context. `toggleCodexEntry` drives the public checkbox interaction with
 the Codex path, rendered line content, and pre-toggle checked state that
-Obsidian's event layer supplies. If a test needs raw `app`, `eval`, VAM,
+Obsidian's event layer supplies.
+
+To observe VAM's Markdown modify subscription, declare
+`observeModifications: { path: "Worter" }` with a Library-relative folder.
+The driver subscribes after fixtures and startup healing settle, and
+`modifications()` returns the settled observations as Library-relative paths
+with `mtime` and `size`. If a test needs raw `app`, `eval`, VAM,
 Librarian, timing controls, or network monkey-patches, it belongs at an
 in-process integration seam or in the explicit provider-acceptance suite—not
 in desktop E2E.
