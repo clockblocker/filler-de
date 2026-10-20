@@ -47,7 +47,7 @@ Textfresser has three commands:
 | --- | --- |
 | `Lemma` | Resolve the selected Surface, insert a safe link, and start background generation. |
 | `Generate` | Create or update one Reading Entry and propagate generated references. |
-| `TranslateSelection` | Translate selected text without creating a Reading Entry. |
+| `TranslateSelection` | Translate the selected German text, or the caret's block, into the known language through dumgen's `translate.sentence`, with the surrounding Sentences as context, and write it under the text. It creates no Reading Entry. |
 
 ### Lemma
 

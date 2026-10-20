@@ -8,6 +8,7 @@ import type {
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import type { Dumgen } from "dumgen";
 import { Effect, Option } from "effect";
 import type { CommandContext } from "../../managers/obsidian/command-executor";
 import type { ApiService } from "../../stateless-helpers/api-service";
@@ -62,9 +63,11 @@ export class Textfresser {
 		languages: LanguagesConfig,
 		apiService: ApiService,
 		lexicalGenerationSettings: LexicalGenerationSettings,
+		getDumgen: () => Dumgen,
 	) {
 		this.state = createInitialTextfresserState({
 			apiService,
+			getDumgen,
 			languages,
 			lexicalGenerationSettings,
 			vam,

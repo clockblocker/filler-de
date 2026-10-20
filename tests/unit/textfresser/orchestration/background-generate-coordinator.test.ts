@@ -14,6 +14,7 @@ import {
 } from "../../../../src/commanders/textfresser/state/textfresser-state";
 import type { ApiService } from "../../../../src/stateless-helpers/api-service";
 import { makeLexemeLemmaResult } from "../helpers/native-fixtures";
+import { noDumgen } from "../helpers/stub-dumgen";
 
 function buildTargetPath(basename: string): SplitPathToMdFile {
 	return {
@@ -69,6 +70,7 @@ describe("background generate coordinator", () => {
 
 		const state = createInitialTextfresserState({
 			apiService: {} as ApiService,
+			getDumgen: noDumgen,
 			languages: { known: "English", target: "German" },
 			lexicalGenerationSettings: { generateInflections: true },
 			vam,
@@ -131,6 +133,7 @@ describe("background generate coordinator", () => {
 
 		const state = createInitialTextfresserState({
 			apiService: {} as ApiService,
+			getDumgen: noDumgen,
 			languages: { known: "English", target: "German" },
 			lexicalGenerationSettings: { generateInflections: true },
 			vam,
@@ -188,6 +191,7 @@ describe("background generate coordinator", () => {
 
 		const state = createInitialTextfresserState({
 			apiService: {} as ApiService,
+			getDumgen: noDumgen,
 			languages: { known: "English", target: "German" },
 			lexicalGenerationSettings: { generateInflections: true },
 			vam,
@@ -239,6 +243,7 @@ describe("background generate coordinator", () => {
 
 		const state = createInitialTextfresserState({
 			apiService: {} as ApiService,
+			getDumgen: noDumgen,
 			languages: { known: "English", target: "German" },
 			lexicalGenerationSettings: { generateInflections: true },
 			vam,
@@ -284,6 +289,7 @@ describe("background generate coordinator", () => {
 
 		const state = createInitialTextfresserState({
 			apiService: {} as ApiService,
+			getDumgen: noDumgen,
 			languages: { known: "English", target: "German" },
 			lexicalGenerationSettings: { generateInflections: true },
 			vam,
@@ -341,6 +347,7 @@ describe("background generate coordinator", () => {
 
 		const state = createInitialTextfresserState({
 			apiService: {} as ApiService,
+			getDumgen: noDumgen,
 			languages: { known: "English", target: "German" },
 			lexicalGenerationSettings: { generateInflections: true },
 			vam,

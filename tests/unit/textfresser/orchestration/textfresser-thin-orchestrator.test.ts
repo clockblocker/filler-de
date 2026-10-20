@@ -4,11 +4,10 @@ import { UserEventKind } from "@textfresser/obsidian-event-layer";
 import type { SplitPathToMdFile, VaultActionManager } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { Effect, Result } from "effect";
-import { okAsync } from "neverthrow";
-import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/prompt-runner";
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
 import type { CommandContext } from "../../../../src/managers/obsidian/command-executor";
 import type { ApiService } from "../../../../src/stateless-helpers/api-service";
+import { stubDumgen } from "../helpers/stub-dumgen";
 
 const SOURCE_PATH: SplitPathToMdFile = {
 	basename: "Source",
@@ -17,7 +16,7 @@ const SOURCE_PATH: SplitPathToMdFile = {
 	pathParts: ["Books"],
 };
 
-function makeHarness() {
+function makeHarness(dumgen = stubDumgen(() => Effect.succeed("Good morning"))) {
 	const dispatches: Array<readonly unknown[]> = [];
 	const scrollCalls: number[] = [];
 	const vam = {
@@ -42,9 +41,10 @@ function makeHarness() {
 		{ known: "English", target: "German" },
 		{} as ApiService,
 		{ generateInflections: true },
+		() => dumgen.dumgen,
 	);
 
-	return { dispatches, scrollCalls, textfresser };
+	return { dispatches, dumgen, scrollCalls, textfresser };
 }
 
 function makeTranslateContext(): CommandContext {
@@ -74,10 +74,7 @@ function makeGenerateContext(): CommandContext {
 
 describe("Textfresser thin orchestrator", () => {
 	it("delegates TranslateSelection through action-command map and dispatches actions", async () => {
-		const { dispatches, textfresser } = makeHarness();
-		textfresser.getState().promptRunner = {
-			generate: () => okAsync("Good morning"),
-		} as unknown as PromptRunner;
+		const { dispatches, dumgen, textfresser } = makeHarness();
 
 		const result = await Effect.runPromise(textfresser.executeCommand(
 			"TranslateSelection",
@@ -89,6 +86,7 @@ describe("Textfresser thin orchestrator", () => {
 		expect(dispatches).toHaveLength(1);
 		const actions = dispatches[0] as Array<{ kind?: string }> | undefined;
 		expect(actions?.[0]?.kind).toBe(VaultActionKind.ProcessMdFile);
+		expect(dumgen.inputs).toHaveLength(1);
 	});
 
 	it("createHandler tracks attestation context from wikilink click payload", async () => {

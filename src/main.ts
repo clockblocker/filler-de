@@ -853,6 +853,7 @@ export default class TextEaterPlugin extends Plugin {
 			{
 				generateInflections: this.settings.generateInflections,
 			},
+			() => this.dumgen.get(),
 		);
 	}
 
