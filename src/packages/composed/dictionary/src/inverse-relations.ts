@@ -72,9 +72,18 @@ function claimsWithin(
 	return Object.keys(kept).length === 0 ? {} : { semanticRelations: kept };
 }
 
-const reachesReading = (edge: RelationEdge, readingKey: string): boolean =>
-	edge.target.kind === "lemma" ||
-	readingKeyOf(edge.target.reading) === readingKey;
+/**
+ * Whether a claim reaches this Reading: an exact claim on it, or a Lemma
+ * claim on a Lemma whose only Reading it is (ADR 0011).
+ */
+const reachesReading = (
+	edge: RelationEdge,
+	readingKey: string,
+	readingCount: number,
+): boolean =>
+	edge.target.kind === "lemma"
+		? readingCount === 1
+		: readingKeyOf(edge.target.reading) === readingKey;
 
 /**
  * The claims on this Reading an inferred edge mirrors, as edges to their
@@ -87,6 +96,7 @@ const reachesReading = (edge: RelationEdge, readingKey: string): boolean =>
 function mirroredClaims(
 	projection: SemanticRelationProjection,
 	readingKey: string,
+	readingCount: number,
 	edges: readonly RelationEdge[],
 ): SemanticRelationProjection[] {
 	const { target } = projection;
@@ -100,7 +110,7 @@ function mirroredClaims(
 	for (const edge of edges)
 		if (
 			inverseOf(edge.relation) === projection.relation &&
-			reachesReading(edge, readingKey) &&
+			reachesReading(edge, readingKey, readingCount) &&
 			matches(edge.source)
 		)
 			sources.set(readingKeyOf(edge.source), edge.source);
@@ -174,7 +184,12 @@ export function inverseRelationsOf(
 			projection.source as Dumling.Reading<"de">,
 		);
 		if (!own.has(readingKey)) continue;
-		for (const edge of mirroredClaims(projection, readingKey, edges)) {
+		for (const edge of mirroredClaims(
+			projection,
+			readingKey,
+			data.readingEntries.length,
+			edges,
+		)) {
 			const key = canonicalJson([
 				readingKey,
 				edge.relation,
@@ -221,20 +236,24 @@ export function withInverseRelations(
 	};
 }
 
-/** Each part's `inverse_relation` Blocks, as their raw lines. */
+/** Each part's `inverse_relation` Blocks, as their raw lines, by Block ID. */
 function inverseBlocksOf(document: LemmaNoteDocument): string {
-	return canonicalJson(
-		document.parts.map((part) => [
-			part.blockId ?? "",
-			part.blocks
+	// Parts compare by Block ID, so reordering them by hand is no change.
+	const byPart = new Map<string, string[]>();
+	for (const part of document.parts) {
+		const id = part.blockId ?? "";
+		byPart.set(id, [
+			...(byPart.get(id) ?? []),
+			...part.blocks
 				.filter(
 					(block) =>
 						block.type === "projection" &&
 						block.kind === "inverse_relation",
 				)
 				.map((block) => block.raw.trimEnd()),
-		]),
-	);
+		]);
+	}
+	return canonicalJson(Object.fromEntries(byPart));
 }
 
 /**

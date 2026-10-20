@@ -276,6 +276,13 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		index = next;
 		counter += 1;
 	};
+	/**
+	 * Swaps in an index version that differs only in rendered projections.
+	 * No record changed, so plans made at the current revision stay valid.
+	 */
+	const publishRendering = (next: NoteIndex) => {
+		index = next;
+	};
 	const markStale = Effect.sync(() => {
 		stale = true;
 	});
@@ -362,20 +369,49 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	 * index version. A path whose content hash matches what was indexed,
 	 * such as an echo of the store's own write, changes nothing.
 	 */
-	const reread = Effect.fnUntraced(function* (paths: Iterable<string>) {
-		const changes: { path: string; entry: PathEntry | undefined }[] = [];
+	const rereadChanges = Effect.fnUntraced(function* (
+		paths: Iterable<string>,
+	) {
+		const changes: {
+			path: string;
+			before: PathEntry | undefined;
+			entry: PathEntry | undefined;
+		}[] = [];
 		for (const path of new Set(paths)) {
 			if (!inScope(path)) continue;
 			const entry = yield* readEntry(path);
-			if (!sameEntry(index.entry(path), entry))
-				changes.push({ entry, path });
+			const before = index.entry(path);
+			if (!sameEntry(before, entry))
+				changes.push({ before, entry, path });
 		}
-		if (changes.length === 0) return false;
+		if (changes.length === 0) return changes;
 		const next = index.clone();
 		for (const { path, entry } of changes) next.set(path, entry);
 		publish(next);
-		return true;
+		return changes;
 	});
+	const reread = (paths: Iterable<string>) =>
+		rereadChanges(paths).pipe(Effect.map((changes) => changes.length > 0));
+
+	/**
+	 * The Lemmas whose inverse relations these file changes can move: every
+	 * Lemma a changed note claimed a relation on, before or after, other
+	 * than the changed notes' own, which are left to their editor.
+	 */
+	const claimsMovedBy = (
+		changes: readonly {
+			readonly before: PathEntry | undefined;
+			readonly entry: PathEntry | undefined;
+		}[],
+	): Set<string> => {
+		const notes = changes
+			.flatMap(({ before, entry }) => [before, entry])
+			.filter((entry) => entry?.kind === "lemma");
+		return claimedBy(
+			notes.map(({ data }) => data),
+			new Set(notes.map(({ lemmaKey }) => lemmaKey)),
+		);
+	};
 
 	const scanError = (what: string) => (cause: unknown) =>
 		new DictionaryScanError({
@@ -649,23 +685,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			for (const entry of scan.success.entries)
 				if (entry.kind === "MdFile") targets.add(formatPath(entry));
 		}
-		const before = index;
-		if (!(yield* reread(targets))) return false;
+		const changes = yield* rereadChanges(targets);
+		if (changes.length === 0) return false;
 		yield* heal();
-		// Claims changed by hand, deletion or Sync reach other notes too; the
-		// changed notes themselves are left to their editor.
-		const changed = [...targets].flatMap((path) => {
-			const entries = [before.entry(path), index.entry(path)];
-			return sameEntry(entries[0], entries[1])
-				? []
-				: entries.filter((entry) => entry?.kind === "lemma");
-		});
-		yield* rerenderInverse(
-			claimedBy(
-				changed.map(({ data }) => data),
-				new Set(changed.map(({ lemmaKey }) => lemmaKey)),
-			),
-		);
+		// Claims changed by hand, deletion or Sync reach other notes too.
+		yield* rerenderInverse(claimsMovedBy(changes));
 		return true;
 	});
 
@@ -955,22 +979,23 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	 * note is rewritten only when its file shows other inverse relations
 	 * than the index gives, as one compare-and-swap on the content the store
 	 * indexed, so user text is never overwritten. A note whose file is ahead
-	 * of the index, or whose write loses a race, is re-read and tried once
-	 * more. It never fails: a note it cannot re-render keeps its Block until
-	 * the next re-render.
+	 * of the index, or whose write loses a race, is re-read and tried again,
+	 * with the notes its changed claims reach, for at most three rounds.
+	 * Re-renders keep the revision. It never fails: a note it cannot
+	 * re-render keeps its Block until the next re-render.
 	 */
 	const rerenderInverse = Effect.fnUntraced(function* (
 		lemmaKeys: ReadonlySet<string>,
 	) {
 		let pending = [...lemmaKeys].sort(byCodeUnit);
-		for (let round = 0; round < 2 && pending.length > 0; round += 1) {
+		for (let round = 0; round < 3 && pending.length > 0; round += 1) {
 			const reader = inverseRelationsReader(index);
 			const noteProjections = withInverseRelations(
 				projections,
 				reader.read,
 			);
 			const writes: PlannedWrite[] = [];
-			const retry: string[] = [];
+			const retry = new Set<string>();
 			const stalePaths: string[] = [];
 			for (const lemmaKey of pending) {
 				const held = index.lemmaNote(lemmaKey);
@@ -1012,14 +1037,20 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				const write = planned.success;
 				if ("_tag" in write) {
 					stalePaths.push(write.path);
-					retry.push(lemmaKey);
+					retry.add(lemmaKey);
 				} else if (
 					write.current !== undefined &&
 					showsOtherInverseRelations(write.current, write.content)
 				)
 					writes.push(write);
 			}
-			if (stalePaths.length > 0) yield* reread(stalePaths);
+			// A file ahead of the index holds an edit no event has delivered
+			// yet; the notes its claims reach are re-rendered with it.
+			if (stalePaths.length > 0)
+				for (const key of claimsMovedBy(
+					yield* rereadChanges(stalePaths),
+				))
+					retry.add(key);
 			if (writes.length > 0) {
 				const outcome = yield* Effect.result(
 					dispatch(writes.map(({ action }) => action)),
@@ -1030,17 +1061,20 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 						next.set(path, entry);
 						cache?.delete(path);
 					}
-					publish(next);
+					publishRendering(next);
 				} else {
 					yield* Effect.logWarning(
 						"Dictionary inverse-relation re-renders stopped; re-reading the notes",
 						outcome.failure,
 					);
-					yield* reread(writes.map(({ path }) => path));
-					retry.push(...writes.map(({ entry }) => entry.lemmaKey));
+					const changes = yield* rereadChanges(
+						writes.map(({ path }) => path),
+					);
+					for (const key of claimsMovedBy(changes)) retry.add(key);
+					for (const { entry } of writes) retry.add(entry.lemmaKey);
 				}
 			}
-			pending = retry;
+			pending = [...retry].sort(byCodeUnit);
 		}
 	});
 
@@ -1122,7 +1156,9 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		if (stalePaths.length > 0) {
 			// A refresh that finds nothing new still refuses: the plan read a
 			// state the files no longer hold.
-			if (!(yield* reread(stalePaths))) publish(index.clone());
+			const changes = yield* rereadChanges(stalePaths);
+			if (changes.length === 0) publish(index.clone());
+			yield* rerenderInverse(claimsMovedBy(changes));
 			return conflict("revisionConflict");
 		}
 		const removals = yield* ownedShadowContents(shadows.removals);
@@ -1207,9 +1243,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		}
 		publish(next);
 		yield* trashVerified([...verifiedPaths]);
+		const committed = revision();
 		// The notes this commit's claims reach, before or after, show the
 		// committed claims. Their re-renders change no data, so they run
-		// after the commit landed and never fail it.
+		// after the commit landed, never fail it and keep its revision; an
+		// edit they find on disk moves the revision past it.
 		const written = new Set(staged.notes.map(({ lemmaKey }) => lemmaKey));
 		yield* rerenderInverse(
 			claimedBy(
@@ -1217,7 +1255,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				written,
 			),
 		);
-		return { nextRevision: revision(), status: "committed" };
+		return { nextRevision: committed, status: "committed" };
 	});
 
 	const bulkSubscription = yield* vault

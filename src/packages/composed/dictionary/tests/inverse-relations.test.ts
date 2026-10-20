@@ -3,6 +3,7 @@ import {
 	lemmaNotePath,
 	parse,
 	readingBlockId,
+	serialize,
 } from "@textfresser/lemma-note-codec";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type { PlannedChangeOp } from "dumdict";
@@ -33,6 +34,7 @@ const planner = createDumdictPlanner("de");
 const gehenPath = lemmaNotePath(gehen).path;
 const laufenPath = lemmaNotePath(laufen).path;
 const schreitenPath = lemmaNotePath(schreiten).path;
+const springenPath = lemmaNotePath(springen).path;
 const shadowPath = "Worter/de/Shadow/Lexeme/VERB/schreiten.md";
 
 const linkTo = (reading: Dumling.Reading<"de", "Lexeme", "VERB">) =>
@@ -318,7 +320,7 @@ describe("inverse relations are projected, never stored", () => {
 			createLemma(gehen),
 			createReading(readingEntry(gehenReading)),
 		]);
-		vault.failNextWrite((_, path) => path === schreitenPath, 2);
+		vault.failNextWrite((_, path) => path === schreitenPath, 3);
 
 		expect(
 			await commit(store, [synonym(gehenReading, schreiten)]),
@@ -404,6 +406,61 @@ describe("inverse relations are projected, never stored", () => {
 
 		await vault.userDelete(gehenPath);
 		expect(vault.content(schreitenPath)).toBe(bare);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
+	test("a commit returns its own revision, which re-renders do not move", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, [
+			createLemma(schreiten),
+			createReading(readingEntry(schreitenReading)),
+			createLemma(gehen),
+			createReading(readingEntry(gehenReading)),
+		]);
+		const result = await commit(store, [synonym(gehenReading, schreiten)]);
+		expect(inverseBlock(vault.content(schreitenPath))).toBeDefined();
+		expect(result).toEqual({
+			nextRevision: await run(store.revision),
+			status: "committed",
+		});
+	});
+
+	test("a hand edit a re-render finds on disk re-renders the notes it claims on", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, [
+			createLemma(schreiten),
+			createReading(readingEntry(schreitenReading)),
+			createLemma(springen),
+			createReading(readingEntry(springenReading)),
+			createLemma(gehen),
+			createReading(readingEntry(gehenReading)),
+			synonym(gehenReading, schreiten),
+		]);
+		const { data, document } = parse(vault.content(schreitenPath) ?? "", {
+			language: "de",
+		});
+		if (!data.ok) throw new Error("Expected a valid note");
+		vault.silentWrite(
+			schreitenPath,
+			serialize(document, {
+				...data.data,
+				readingEntries: data.data.readingEntries.map((entry) => ({
+					...entry,
+					knowledge: { semanticRelations: { antonym: [springen] } },
+				})),
+			}),
+		);
+
+		// gehen's claim reaches schreiten, whose file is ahead of the index.
+		const result = await commit(store, [contribute(gehenReading, "gehen")]);
+		expect(result.status).toBe("committed");
+		expect(inverseBlock(vault.content(springenPath))).toContain(
+			`antonym: ${linkTo(schreitenReading)}`,
+		);
+		// The edit the commit never planned against moves the revision past it.
+		expect(await run(store.revision)).not.toBe(
+			"nextRevision" in result ? result.nextRevision : undefined,
+		);
 		await expectIndexMatchesFiles(store, vault);
 	});
 });
