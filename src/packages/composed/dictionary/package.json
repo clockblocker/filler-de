@@ -1,4 +1,9 @@
 {
+	"dependencies": {
+		"@textfresser/lemma-note-codec": "workspace:*",
+		"@textfresser/vault-action-manager": "workspace:*",
+		"effect": "4.0.0"
+	},
 	"exports": {
 		".": "./src/index.ts"
 	},
