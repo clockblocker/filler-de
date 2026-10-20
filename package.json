@@ -18,6 +18,8 @@
 	"description": "Go trough the german texts, building your own dictionary from your personal contexts",
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.6",
+		"@textfresser/lemma-note-codec": "workspace:*",
+		"@textfresser/lemma-note-projections": "workspace:*",
 		"@textfresser/lexical-generation-next": "workspace:*",
 		"@types/bun": "latest",
 		"@types/node": "^18.19.130",
