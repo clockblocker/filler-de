@@ -29,6 +29,7 @@ import type { VaultAction } from "../types/vault-action";
 import { VaultActionKind } from "../types/vault-action";
 import {
 	VamDispatchError,
+	VamDispatchOverflowError,
 	VamDispatchStoppedError,
 	VamPlanningError,
 	VamShutdownError,
@@ -41,12 +42,14 @@ import type { VamRuntime } from "./runtime";
 export type DispatchEffectFailure =
 	| VamPlanningError
 	| VamShutdownError
+	| VamDispatchOverflowError
 	| readonly VamDispatchError[];
 
 /** Failure of a batch dispatched with `stopOnFirstFailure: true`. */
 export type StopOnFirstFailureDispatchFailure =
 	| VamPlanningError
 	| VamShutdownError
+	| VamDispatchOverflowError
 	| VamDispatchStoppedError;
 
 export type AnyDispatchEffectFailure =
@@ -73,6 +76,13 @@ type DispatchBatchWorkerOptions = {
 };
 
 const DEFAULT_QUEUE_CAPACITY = 10;
+
+/**
+ * Ceiling on batches pending behind the active one, queued or waiting for
+ * queue space. Below it, submissions wait; at it, they fail with
+ * `VamDispatchOverflowError` so a runaway producer surfaces.
+ */
+export const MAX_PENDING_DISPATCH_BATCHES = 500;
 
 type BatchMessage = {
 	readonly _tag: "Batch";
@@ -274,7 +284,8 @@ export class DispatchBatchWorker {
 
 	/**
 	 * Queues the batch when it can keep FIFO order and there is space;
-	 * otherwise appends it to the waiting list. Runs under the state lock.
+	 * otherwise appends it to the waiting list, unless the pending ceiling is
+	 * reached. Runs under the state lock.
 	 */
 	private enqueueOrWait(
 		queue: Queue.Queue<DispatchMessage>,
@@ -282,7 +293,7 @@ export class DispatchBatchWorker {
 		batch: BatchMessage,
 	): Effect.Effect<
 		readonly [queued: boolean, state: CoordinationState],
-		VamShutdownError
+		VamShutdownError | VamDispatchOverflowError
 	> {
 		const busy: CoordinationState = state.busy
 			? state
@@ -293,16 +304,27 @@ export class DispatchBatchWorker {
 					size,
 				): Effect.Effect<
 					readonly [boolean, CoordinationState],
-					VamShutdownError
-				> =>
-					state.waiting.length === 0 && size < this.queueCapacity
-						? this.offerBatch(queue, batch).pipe(
-								Effect.as([true, busy] as const),
-							)
-						: Effect.succeed([
-								false,
-								{ ...busy, waiting: [...state.waiting, batch] },
-							] as const),
+					VamShutdownError | VamDispatchOverflowError
+				> => {
+					if (
+						state.waiting.length === 0 &&
+						size < this.queueCapacity
+					) {
+						return this.offerBatch(queue, batch).pipe(
+							Effect.as([true, busy] as const),
+						);
+					}
+					if (
+						size + state.waiting.length >=
+						MAX_PENDING_DISPATCH_BATCHES
+					) {
+						return Effect.fail(this.overflowError(batch));
+					}
+					return Effect.succeed([
+						false,
+						{ ...busy, waiting: [...state.waiting, batch] },
+					] as const);
+				},
 			),
 		);
 	}
@@ -636,6 +658,17 @@ export class DispatchBatchWorker {
 				] as const),
 			),
 		);
+	}
+
+	private overflowError(batch: BatchMessage): VamDispatchOverflowError {
+		return new VamDispatchOverflowError({
+			action: batch.actions[0],
+			cause: new Error(
+				`Dispatch Batch queue reached its ceiling of ${MAX_PENDING_DISPATCH_BATCHES} pending batches; the batch was not submitted`,
+			),
+			limit: MAX_PENDING_DISPATCH_BATCHES,
+			operation: "dispatch.overflow",
+		});
 	}
 
 	private shutdownError(

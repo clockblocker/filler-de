@@ -127,6 +127,20 @@ export class VamDispatchStoppedError extends Schema.TaggedError<VamDispatchStopp
 	},
 ) {}
 
+/**
+ * A submitted batch found the Dispatch Batch queue at its ceiling. VAM waits
+ * for queue space below the ceiling; reaching it signals a runaway producer.
+ */
+export class VamDispatchOverflowError extends Schema.TaggedError<VamDispatchOverflowError>()(
+	"VamDispatchOverflowError",
+	{
+		action: Schema.optional(Schema.Unknown),
+		cause: Schema.Defect(),
+		limit: Schema.Number,
+		operation: Schema.String,
+	},
+) {}
+
 export class VamSubscriptionError extends Schema.TaggedError<VamSubscriptionError>()(
 	"VamSubscriptionError",
 	{
@@ -153,5 +167,6 @@ export type VamEffectError =
 	| VamPlanningError
 	| VamDispatchError
 	| VamDispatchStoppedError
+	| VamDispatchOverflowError
 	| VamSubscriptionError
 	| VamShutdownError;

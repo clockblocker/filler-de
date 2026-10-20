@@ -22,7 +22,8 @@ The Librarian reads vault state, subscribes to vault changes, and requests files
   failures are returned as typed `VamDispatchError` values after all planned
   actions have been attempted. A batch can opt into stopping at its first
   failure, which reports the executed and skipped actions. Submitted batches
-  wait for queue space rather than being dropped.
+  wait for queue space rather than being dropped, up to a high ceiling past
+  which a submission fails with a typed overflow error.
 - The Librarian's reconciliation boundary treats action failure as execution
   uncertain. It records a partial outcome and completes a VAM-backed Tree
   resynchronization before serialized work may continue. It never claims that

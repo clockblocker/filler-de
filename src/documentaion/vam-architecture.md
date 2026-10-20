@@ -116,9 +116,14 @@ actions
 The coordinator processes submitted batches in first-in, first-out order. Batches do not interleave.
 
 The queue holds a bounded number of batches behind the active one. When it is
-full, later submissions wait for space in submission order; VAM never drops a
-submitted batch. A caller interrupted while its batch is still waiting
+full, later submissions wait for space in submission order; VAM never drops an
+accepted batch. A caller interrupted while its batch is still waiting
 withdraws that batch. Once queued, a batch runs.
+
+Waiting has a high ceiling, `MAX_PENDING_DISPATCH_BATCHES` (500 batches queued
+or waiting). A submission that finds the ceiling reached is not accepted and
+fails at once with `VamDispatchOverflowError`, so a runaway producer such as a
+healing loop surfaces instead of growing the queue without limit.
 
 Important rules:
 

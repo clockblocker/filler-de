@@ -378,6 +378,7 @@ export {
 	VamActiveEditorFailureReasonSchema,
 	VamContentConflictError,
 	VamDispatchError,
+	VamDispatchOverflowError,
 	VamDispatchStoppedError,
 	type VamEffectError,
 	type VamFileAccessError,

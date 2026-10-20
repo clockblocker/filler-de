@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it } from "bun:test";
 import { Cause, Effect, Exit, Fiber, Layer, Option, Tracer } from "effect";
 import { type TAbstractFile, TFile, TFolder } from "obsidian";
+import { MAX_PENDING_DISPATCH_BATCHES } from "../../src/effect/dispatch-coordinator";
 import {
 	VamDispatchError,
+	VamDispatchOverflowError,
 	VamDispatchStoppedError,
 	VamPlanningError,
 	type VamSetupError,
@@ -822,6 +824,60 @@ describe("DispatchBatchCoordinator", () => {
 
 		expect(results.every((result) => Exit.isSuccess(result))).toBe(true);
 		expect(executed).toEqual(basenames);
+	});
+
+	it("waits up to the pending ceiling and fails loudly past it", async () => {
+		const firstStarted = deferred();
+		const releaseFirst = deferred();
+		const executed: string[] = [];
+		const coordinator = makeCoordinator(async (action) => {
+			const basename = actionBasename(action);
+			executed.push(basename);
+			if (basename === "active") {
+				firstStarted.resolve();
+				await releaseFirst.promise;
+			}
+		});
+
+		const active = dispatch(coordinator, [makeAction("active")]);
+		await firstStarted.promise;
+		const pendingBasenames = Array.from(
+			{ length: MAX_PENDING_DISPATCH_BATCHES },
+			(_, i) => `pending-${i}`,
+		);
+		const pending = pendingBasenames.map((basename) =>
+			dispatch(coordinator, [makeAction(basename)]),
+		);
+		await new Promise((resolve) => setTimeout(resolve, 10));
+
+		const overflowAction = makeAction("overflow");
+		const overflow = await dispatch(coordinator, [overflowAction]);
+		const stoppedOverflow = await runNative(
+			coordinator,
+			coordinator.dispatchEffect([makeAction("overflow-stop")], {
+				stopOnFirstFailure: true,
+			}),
+		);
+
+		const overflowFailure = firstFailure(overflow);
+		expect(overflowFailure).toBeInstanceOf(VamDispatchOverflowError);
+		if (overflowFailure instanceof VamDispatchOverflowError) {
+			expect(overflowFailure.action).toBe(overflowAction);
+			expect(overflowFailure.limit).toBe(MAX_PENDING_DISPATCH_BATCHES);
+			expect(overflowFailure.operation).toBe("dispatch.overflow");
+		}
+		expect(firstFailure(stoppedOverflow)).toBeInstanceOf(
+			VamDispatchOverflowError,
+		);
+
+		releaseFirst.resolve();
+		const results = await Promise.all([active, ...pending]);
+
+		expect(results.every((result) => Exit.isSuccess(result))).toBe(true);
+		expect(executed).toEqual(["active", ...pendingBasenames]);
+		expect(
+			Exit.isSuccess(await dispatch(coordinator, [makeAction("after")])),
+		).toBe(true);
 	});
 
 	it("withdraws a batch whose caller is interrupted while it waits for queue space", async () => {
