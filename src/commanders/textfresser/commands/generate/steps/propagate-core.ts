@@ -11,7 +11,6 @@ import type { GenerateSectionsResult } from "./generate-sections";
 import { propagateInflections } from "./propagate-inflections";
 import { propagateMorphemes } from "./propagate-morphemes";
 import { propagateMorphologyRelations } from "./propagate-morphology-relations";
-import { propagateRelations } from "./propagate-relations";
 
 type ProcessTransform = (content: string) => string | Promise<string>;
 
@@ -169,8 +168,9 @@ function collectScopedActions(
 		...ctx,
 		actions: [],
 	};
-	return propagateRelations(scopedCtx, vamLookup)
-		.andThen((next) => propagateMorphologyRelations(next, vamLookup))
+	// Semantic relations are never written into their targets: the
+	// dictionary store projects inverses into each target note (#59).
+	return propagateMorphologyRelations(scopedCtx, vamLookup)
 		.andThen((next) => propagateMorphemes(next, vamLookup))
 		.andThen((next) => propagateInflections(next, vamLookup))
 		.map((result) => result.actions);

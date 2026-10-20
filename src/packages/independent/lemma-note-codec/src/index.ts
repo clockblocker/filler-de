@@ -66,6 +66,7 @@ export {
 	type LinkRenderer,
 	type Projections,
 	type ReadingProjectionContext,
+	type SemanticRelationProjection,
 } from "./render";
 export {
 	LemmaNoteSerializeError,

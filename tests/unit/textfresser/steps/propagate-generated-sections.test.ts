@@ -88,10 +88,13 @@ describe("propagateGeneratedSections", () => {
 		if (Result.isFailure(result)) return;
 
 		const actions = result.success.actions;
-		const upsertCount = actions.filter(
-			(action) => action.kind === VaultActionKind.UpsertMdFile,
-		).length;
-		expect(upsertCount).toBeGreaterThan(0);
+		// A relation is never written into its target note (#59).
+		const relationTargetWrites = actions.filter(
+			(action) =>
+				"splitPath" in action.payload &&
+				action.payload.splitPath.basename === "Heim",
+		);
+		expect(relationTargetWrites).toEqual([]);
 
 		const sourceProcess = actions.find(
 			(action) =>

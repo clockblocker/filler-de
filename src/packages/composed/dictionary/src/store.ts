@@ -40,6 +40,12 @@ import {
 	DictionaryScanError,
 	DictionaryWriteError,
 } from "./errors";
+import {
+	type InverseRelations,
+	inverseRelationsReader,
+	sameInverseRelations,
+	withInverseRelations,
+} from "./inverse-relations";
 import { formKeyOf, lemmaKeyOf, readingKeyOf } from "./keys";
 import {
 	cacheHit,
@@ -50,6 +56,7 @@ import {
 import {
 	classifyNote,
 	type LemmaNoteEntry,
+	lemmaEntry,
 	type NoteData,
 	type PathEntry,
 	type QuarantineReason,
@@ -62,6 +69,7 @@ import {
 	NoteIndex,
 	type ReadingLocation,
 	type RelationEdge,
+	relationEdgesOf,
 	shadowPathOf,
 	shadowRefOf,
 } from "./note-index";
@@ -121,8 +129,12 @@ export type DumdictVaultStoreOptions = {
 	readonly vault: DictionaryVault;
 	/** A `(path, mtime)` cache that lets startup skip unchanged notes. */
 	readonly cache?: DictionaryNoteCache;
-	/** Projection Blocks the codec renders into every note the store writes. */
-	readonly projections?: Projections<"de">;
+	/**
+	 * Projection Blocks the codec renders into every note the store writes.
+	 * The store fills the `inverse_relation` Block itself, from the claims
+	 * that target each note (#59).
+	 */
+	readonly projections?: Omit<Projections<"de">, "inverseRelations">;
 	/** Called after the index is built or changes, with the current diagnostics. */
 	readonly onDiagnostics?: (diagnostics: DictionaryDiagnostics) => void;
 };
@@ -149,8 +161,11 @@ export type DumdictVaultStore = {
 		}[];
 	}) => Effect.Effect<CleanupRelationsSlice<"de">>;
 	/**
-	 * Applies a plan all-or-nothing against its base revision. A conflict
-	 * writes nothing. A failure before dispatch writes nothing; a
+	 * Applies a plan all-or-nothing against its base revision. Every note
+	 * it writes shows the inverse relations of the committed state, and the
+	 * same batch re-renders each other note whose inverse relations it
+	 * changed; no relation is ever written into a note but its source's.
+	 * A conflict writes nothing. A failure before dispatch writes nothing; a
 	 * `DictionaryWriteError` means the batch stopped after some writes
 	 * landed, and the index was rebuilt from the files.
 	 */
@@ -757,6 +772,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	 */
 	const planNoteWrite = Effect.fnUntraced(function* (
 		note: StagedNote,
+		noteProjections: Projections<"de">,
 	): Effect.fn.Return<
 		PlannedWrite | { readonly _tag: "Stale"; readonly path: string },
 		| DictionaryPathOccupiedError
@@ -780,7 +796,9 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 						current === undefined
 							? undefined
 							: parse(current, { language: "de" }).document;
-					const content = serialize(document, data, { projections });
+					const content = serialize(document, data, {
+						projections: noteProjections,
+					});
 					const entry = classifyNote(path, content);
 					if (
 						entry.kind !== "lemma" ||
@@ -916,6 +934,81 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		return { creates, removals };
 	};
 
+	/**
+	 * The index with a commit's staged notes in place, for rendering only:
+	 * it is never published, and a new note sits at its canonical path.
+	 */
+	const previewOf = (notes: readonly StagedNote[]): NoteIndex => {
+		const preview = index.clone();
+		for (const note of notes) {
+			const path =
+				note.basePath ??
+				canonicalLemmaPath(note.data.lemmaRecord.lemma);
+			if (path !== undefined)
+				preview.set(path, lemmaEntry(path, "", note.data));
+		}
+		return preview;
+	};
+
+	/**
+	 * Re-renders of the notes a commit does not write whose inverse
+	 * relations it changes. Only a note a written note claimed a relation
+	 * on, before or after, can change, so only those are compared. Each
+	 * rewrite is a compare-and-swap on the content the store indexed; a
+	 * note that cannot hold its rendering is left as it is.
+	 */
+	const planRerenders = Effect.fnUntraced(function* (
+		notes: readonly StagedNote[],
+		before: (lemmaKey: string) => InverseRelations,
+		after: (lemmaKey: string) => InverseRelations,
+		noteProjections: Projections<"de">,
+	) {
+		const written = new Set(notes.map(({ lemmaKey }) => lemmaKey));
+		const targets = new Set<string>();
+		for (const note of notes)
+			for (const entry of [
+				...(note.base?.readingEntries ?? []),
+				...note.data.readingEntries,
+			])
+				for (const { targetLemmaKey } of relationEdgesOf(entry))
+					if (!written.has(targetLemmaKey))
+						targets.add(targetLemmaKey);
+
+		const writes: PlannedWrite[] = [];
+		const stalePaths: string[] = [];
+		for (const lemmaKey of [...targets].sort(byCodeUnit)) {
+			const held = index.lemmaNote(lemmaKey);
+			if (!held) continue;
+			if (sameInverseRelations(before(lemmaKey), after(lemmaKey)))
+				continue;
+			const planned = yield* planNoteWrite(
+				{
+					base: held.data,
+					basePath: held.path,
+					data: {
+						lemmaRecord: held.data.lemmaRecord,
+						ownedSurfaceEntries: [...held.data.ownedSurfaceEntries],
+						pendingRelations: [...held.data.pendingRelations],
+						readingEntries: [...held.data.readingEntries],
+					},
+					lemmaKey,
+				},
+				noteProjections,
+			).pipe(
+				Effect.catchTag("DictionaryRoundTripError", (error) =>
+					Effect.logWarning(
+						"Dictionary could not re-render a note's inverse relations",
+						error,
+					).pipe(Effect.as(undefined)),
+				),
+			);
+			if (planned === undefined) continue;
+			if ("_tag" in planned) stalePaths.push(planned.path);
+			else if (planned.entry.hash !== held.hash) writes.push(planned);
+		}
+		return { stalePaths, writes };
+	});
+
 	const commitUnderLock = Effect.fnUntraced(function* (
 		request: CommitChangesRequest<"de"> | DumdictPlan<"de">,
 	): Effect.fn.Return<CommitChangesResult, DictionaryCommitError> {
@@ -942,10 +1035,17 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		if (staged.notes.length === 0)
 			return { nextRevision: revision(), status: "committed" };
 
+		// The index as it will read once the commit lands: every note is
+		// rendered with the inverse relations of that state.
+		const preview = previewOf(staged.notes);
+		const inverseBefore = inverseRelationsReader(index);
+		const inverseAfter = inverseRelationsReader(preview);
+		const noteProjections = withInverseRelations(projections, inverseAfter);
+
 		const writes: PlannedWrite[] = [];
 		const stalePaths: string[] = [];
 		for (const note of staged.notes) {
-			const planned = yield* planNoteWrite(note);
+			const planned = yield* planNoteWrite(note, noteProjections);
 			if ("_tag" in planned) stalePaths.push(planned.path);
 			else writes.push(planned);
 		}
@@ -953,6 +1053,14 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			writes.map(({ entry, path }) => [entry.lemmaKey, path]),
 		);
 		const shadows = planShadows(staged.notes, writePaths);
+		const rerenders = yield* planRerenders(
+			staged.notes,
+			inverseBefore,
+			inverseAfter,
+			noteProjections,
+		);
+		stalePaths.push(...rerenders.stalePaths);
+		writes.push(...rerenders.writes);
 		for (const { path } of shadows.creates) {
 			const present = yield* vault
 				.exists(mdSplitPath(path))
