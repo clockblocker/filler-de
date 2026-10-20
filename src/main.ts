@@ -15,6 +15,12 @@ import {
 import { logError } from "@textfresser/vault-action-manager/issue-handlers";
 import { Effect, Exit, Predicate } from "effect";
 import { Modal, Notice, Plugin, requestUrl, TFile } from "obsidian";
+import {
+	ClassifyCommander,
+	DUMGEN_SEGMENTER_VERSION,
+	filesSegmentationCache,
+	pendingUnitResolver,
+} from "./commanders/classify";
 import { Librarian } from "./commanders/librarian/librarian";
 import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
 import {
@@ -30,6 +36,7 @@ import {
 	updateParsedSettings,
 } from "./global-state/global-state";
 import { createRequestUrlFetch, DumgenHost } from "./managers/dumgen";
+import type { ScriptedJevAnswers } from "./managers/dumgen/scripted-jev";
 import {
 	createHandlers,
 	tagLineCopyEmbedBehavior,
@@ -80,6 +87,7 @@ export default class TextEaterPlugin extends Plugin {
 	delimiterChangeService: DelimiterChangeService | null = null;
 
 	// Commanders
+	classify: ClassifyCommander | null = null;
 	librarian: Librarian | null = null;
 	textfresser: Textfresser | null = null;
 
@@ -181,6 +189,17 @@ export default class TextEaterPlugin extends Plugin {
 		this.disposeVam = vaultActions.dispose;
 
 		this.rebuildTextfresser();
+		this.classify = new ClassifyCommander({
+			cache: filesSegmentationCache(this.app.vault.adapter),
+			dumgen: () => this.dumgen.get(),
+			resolver: pendingUnitResolver,
+			segmenterVersion: () => {
+				const scripted = this.dumgen.scriptedJevTag();
+				return scripted
+					? `${DUMGEN_SEGMENTER_VERSION}+scripted-${scripted}`
+					: DUMGEN_SEGMENTER_VERSION;
+			},
+		});
 
 		// Dict note cleanup on file open (reorder entries, normalize attestation spacing)
 		this.registerEvent(
@@ -290,10 +309,12 @@ export default class TextEaterPlugin extends Plugin {
 		this.commandExecutor = async (kind) => {
 			incrementPending();
 			try {
+				const classify = this.classify;
 				const librarian = this.librarian;
 				const textfresser = this.textfresser;
-				if (!librarian || !textfresser) return;
+				if (!classify || !librarian || !textfresser) return;
 				await createCommandExecutor({
+					classify,
 					librarian,
 					textfresser,
 					vam: this.vam,
@@ -457,6 +478,17 @@ export default class TextEaterPlugin extends Plugin {
 		this.addCommand({
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
+					void this.commandExecutor?.(CommandKind.Classify);
+				}
+				return true;
+			},
+			id: "classify-selection",
+			name: "Classify selection",
+		});
+
+		this.addCommand({
+			editorCheckCallback: (checking: boolean) => {
+				if (!checking) {
 					void this.commandExecutor?.(CommandKind.Generate);
 				}
 				return true;
@@ -521,6 +553,18 @@ export default class TextEaterPlugin extends Plugin {
 				);
 			},
 			splitPathCodec,
+		};
+	}
+
+	/**
+	 * E2E test hooks for Classify: what its last run handed to the resolver
+	 * port, and a scripted jev so a scenario never reaches a provider.
+	 */
+	getClassifyTestingApi() {
+		return {
+			latestHandoff: () => this.classify?.latestHandoff() ?? null,
+			useScriptedJev: (answers: ScriptedJevAnswers | null) =>
+				this.dumgen.useScriptedJevForTesting(answers),
 		};
 	}
 

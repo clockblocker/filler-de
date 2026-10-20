@@ -1,19 +1,15 @@
+import {
+	locateSentences,
+	splitPlainText,
+} from "../../../../../stateless-helpers/dumgen-sentences";
 import type { RawContentToken, SentenceToken } from "../../types";
-import type { LanguageConfig } from "../language-config";
+import { isCodeBlock, isHorizontalRule } from "../block-marker/text-patterns";
 
 /**
  * Sentence-ending punctuation pattern.
  * Matches period, exclamation, or question mark optionally followed by closing quotes.
  */
 const SENTENCE_ENDING = /[.!?]["»«"']?\s*$/;
-
-/**
- * Colon-as-sentence-end pattern.
- * Colon followed by whitespace and then quote/uppercase/dash indicates sentence break.
- * Captures the whitespace to preserve it in the replacement.
- */
-const COLON_SENTENCE_BREAK =
-	/(?<!\p{Nd}):(\s+)(?!\/\/)(?=(\p{Quotation_Mark}|[\p{Lu}\p{Lt}]|[\p{Dash_Punctuation}—–-]))/gu;
 
 /**
  * Checks if text ends with complete sentence punctuation.
@@ -23,97 +19,51 @@ function isCompleteSentence(text: string): boolean {
 }
 
 /**
- * Pre-processes text to add markers at colon sentence boundaries.
- * This helps Intl.Segmenter recognize German speech patterns like:
- * "Die Mutter sprach: „Geh nach Hause!""
- * Preserves original whitespace (including paragraph breaks) after the colon.
+ * A horizontal rule or a protected code block on a line of its own stays
+ * a "sentence" of its own, so the block formatter can set it apart without
+ * a marker. dumgen would join such a line with a hard-wrapped neighbour,
+ * so it gets a blank line on either side before splitting. Only whitespace
+ * is added, which locating the Sentences ignores.
  */
-function preprocessColons(text: string): string {
-	// Insert a zero-width space after colons that introduce speech
-	// Preserve the original whitespace by using captured group $1
-	return text.replace(COLON_SENTENCE_BREAK, ":\u200B$1");
+function isolateStandaloneLines(content: string): string {
+	return content
+		.split("\n")
+		.map((line) =>
+			isHorizontalRule(line) || isCodeBlock(line) ? `\n${line}\n` : line,
+		)
+		.join("\n");
 }
 
 /**
  * Stage 2: Sentence Segmenter
- * Uses Intl.Segmenter with colon preprocessing for German text.
+ * Splits with dumgen's `splitText`, the plugin's only sentence splitter
+ * (ADR 0014), so every `^N` block groups whole dumgen Sentences. Each
+ * token's text runs from its Sentence's first character to the next
+ * Sentence's, trailing whitespace included, so the tokens put together
+ * give the content back from the first Sentence on.
  */
-export function segmentSentences(
-	content: string,
-	config: LanguageConfig,
-): SentenceToken[] {
-	const segmenter = new Intl.Segmenter(config.locale, {
-		granularity: "sentence",
-	});
-
-	// Preprocess colons for better sentence detection
-	const preprocessed = preprocessColons(content);
-	const segments = [...segmenter.segment(preprocessed)];
-
-	// Count zero-width spaces inserted before each position to map back to original
-	const zwsPositions = findZwsPositions(preprocessed);
-
-	const sentences: SentenceToken[] = [];
-
-	for (const segment of segments) {
-		// Remove zero-width spaces that were added during preprocessing
-		const text = segment.segment.replace(/\u200B/g, "");
-
-		// Skip empty or whitespace-only segments
-		if (text.trim().length === 0) continue;
-
-		// Map preprocessed index back to original content index
-		const preprocessedIndex = segment.index;
-		const zwsCountBefore = countZwsBefore(zwsPositions, preprocessedIndex);
-		const originalIndex = preprocessedIndex - zwsCountBefore;
-
-		sentences.push({
+export function segmentSentences(content: string): SentenceToken[] {
+	const sentences = splitPlainText(isolateStandaloneLines(content)).flat();
+	const located = locateSentences(content, sentences);
+	return located.map(({ start }, index) => {
+		const end = located[index + 1]?.start ?? content.length;
+		const text = content.slice(start, end);
+		return {
 			charCount: text.length,
 			isComplete: isCompleteSentence(text),
-			sourceOffset: originalIndex,
+			sourceOffset: start,
 			text,
-		});
-	}
-
-	return sentences;
+		};
+	});
 }
-
-/**
- * Find all positions of zero-width spaces in the preprocessed string.
- */
-function findZwsPositions(preprocessed: string): number[] {
-	const positions: number[] = [];
-	for (let i = 0; i < preprocessed.length; i++) {
-		if (preprocessed[i] === "\u200B") {
-			positions.push(i);
-		}
-	}
-	return positions;
-}
-
-/**
- * Count how many zero-width spaces appear before the given position.
- */
-function countZwsBefore(positions: number[], index: number): number {
-	let count = 0;
-	for (const pos of positions) {
-		if (pos < index) count++;
-		else break;
-	}
-	return count;
-}
-
 
 /**
  * Segments text into content tokens, emitting explicit paragraph break markers.
  * Returns a mix of sentence tokens and paragraph break tokens.
  */
-export function segmentToTokens(
-	content: string,
-	config: LanguageConfig,
-): RawContentToken[] {
+export function segmentToTokens(content: string): RawContentToken[] {
 	const tokens: RawContentToken[] = [];
-	const sentences = segmentSentences(content, config);
+	const sentences = segmentSentences(content);
 
 	for (let i = 0; i < sentences.length; i++) {
 		const sentence = sentences[i];

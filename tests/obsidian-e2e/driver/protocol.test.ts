@@ -9,6 +9,7 @@ const {
 	scenarioPaths,
 	validateDriverConfig,
 	validateRelativePath,
+	validateScriptedJevAnswers,
 } = require("./dist/protocol.js") as typeof import("./dist/protocol.js");
 
 function encode(value: unknown): string {
@@ -155,5 +156,34 @@ describe("driver data.json", () => {
 		expect(() =>
 			validateDriverConfig({ protocol: 2, sessionId: "run-123" }),
 		).toThrow("protocol must be 1");
+	});
+});
+
+describe("scripted jev answers", () => {
+	it("expands Choice options and Nouls into dumgen Answers", () => {
+		expect(validateScriptedJevAnswers(undefined)).toEqual({});
+		expect(
+			validateScriptedJevAnswers({ f_1: 0.9, r_1: "Lexeme/PRON" }),
+		).toEqual({
+			f_1: { noul: 0.9, type: "noul" },
+			r_1: {
+				choice: "Lexeme/PRON",
+				confidence: 1,
+				probabilities: { "Lexeme/PRON": 1 },
+				type: "choice",
+			},
+		});
+	});
+
+	it("rejects anything but a record of option strings and Nouls", () => {
+		for (const bad of [
+			[],
+			"r_1",
+			{ r_1: 2 },
+			{ r_1: true },
+			{ "../x": "a" },
+		]) {
+			expect(() => validateScriptedJevAnswers(bad)).toThrow(ProtocolError);
+		}
 	});
 });

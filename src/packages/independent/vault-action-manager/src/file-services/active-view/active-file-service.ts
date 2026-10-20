@@ -25,6 +25,11 @@ export type ActiveEditorContext = {
 	readonly currentLine: string;
 	readonly cursor: EditorPosition;
 	readonly selection: SelectionInfo;
+	/** The primary selection's offsets in `content`; null without a selection. */
+	readonly selectionRange: {
+		readonly from: number;
+		readonly to: number;
+	} | null;
 	readonly splitPath: SplitPathToMdFile;
 };
 
@@ -81,6 +86,14 @@ export class ActiveFileService {
 						currentLine: snapshot.currentLine,
 						cursor: snapshot.cursor,
 						selection: this.selection.fromSnapshot(snapshot),
+						selectionRange:
+							snapshot.selectionStartOffset === null ||
+							snapshot.selectionEndOffset === null
+								? null
+								: {
+										from: snapshot.selectionStartOffset,
+										to: snapshot.selectionEndOffset,
+									},
 						splitPath: snapshot.splitPath,
 					}) satisfies ActiveEditorContext,
 			),

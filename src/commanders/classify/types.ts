@@ -1,0 +1,55 @@
+/**
+ * The stage boundary between Classify's two stages (#74): segmentation
+ * hands resolution a `ClassifyPlan` of `UnitRef`s. In piped mode the plan
+ * never touches disk; only the Segmented Sentences it points at are cached
+ * (ADR 0014).
+ */
+import type { ResolveGrammarInput, SegmentedSentence, Unit } from "dumgen";
+
+/**
+ * One dumgen unit of one Sentence: the Sentence's cache key (ADR 0014,
+ * `sentenceKey`) and the unit's Segment indices, ascending, discontinuous
+ * pieces included. Its Family and Kind are on the unit's `route`.
+ */
+export type UnitRef = {
+	readonly sentenceKey: string;
+	readonly segments: readonly number[];
+};
+
+/** A half-open range of editor offsets in the Scroll as Classify read it. */
+export type SourceRange = {
+	readonly from: number;
+	readonly to: number;
+};
+
+/** The Sentences around a Sentence, as dumgen's resolution reads them. */
+export type NeighbourSentences = ResolveGrammarInput["neighbours"];
+
+/** A segmented Sentence with what resolution reads alongside it. */
+export type PlannedSentence = {
+	readonly segmented: SegmentedSentence;
+	readonly neighbours: NeighbourSentences;
+};
+
+/**
+ * A unit the selection covers: its ref, dumgen's unit with its route, and
+ * where each of its pieces stands in the Scroll. A piece is a run of the
+ * unit's Segments with only whitespace between them, so `fängt … an` has
+ * two occurrences that link to the same Reading (batteries ADR 0035).
+ */
+export type PlannedUnit = {
+	readonly ref: UnitRef;
+	readonly unit: Unit;
+	readonly occurrences: readonly SourceRange[];
+};
+
+/**
+ * Everything resolution needs: per Sentence key, the `(SegmentedSentence,
+ * NeighbourSentences)` dumgen's `ResolveGrammarInput` and
+ * `ResolveReadingInput` take, and the units in reading order.
+ */
+export type ClassifyPlan = {
+	readonly scrollPath: string;
+	readonly sentences: ReadonlyMap<string, PlannedSentence>;
+	readonly units: readonly PlannedUnit[];
+};

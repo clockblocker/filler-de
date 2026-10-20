@@ -7,7 +7,6 @@
 
 import {
 	offsetMapperHelper,
-	type RemovedItem,
 	type ReplacedItem,
 } from "../../../../../stateless-helpers/offset-mapper";
 import { annotateSentences } from "../stream/context-annotator";
@@ -30,9 +29,9 @@ import {
 	mergeOrphanedMarkers,
 } from "./block-grouping";
 import {
-	type ExtractedHeading,
 	extractHeadings,
 	filterHeadingsFromText,
+	headingRemovals,
 } from "./heading-extraction";
 import type { CodeBlockInfo, HorizontalRuleInfo } from "./heading-insertion";
 import { isCodeBlock, isHorizontalRule } from "./text-patterns";
@@ -43,6 +42,7 @@ import {
 } from "./types";
 
 export { formatBlocksWithMarkers } from "./block-formatting";
+
 // Re-export types that are part of public API
 
 /**
@@ -66,16 +66,6 @@ type BlockSplitResultWithIntermediate = {
  */
 export function stripBlockMarkers(text: string): string {
 	return text.replace(/ \^\d+/g, "");
-}
-
-/**
- * Create offset map from headings for the offset mapper.
- */
-function headingsToRemovedItems(headings: ExtractedHeading[]): RemovedItem[] {
-	return headings.map((h) => ({
-		endOffset: h.endOffset,
-		startOffset: h.startOffset,
-	}));
 }
 
 /**
@@ -171,17 +161,14 @@ export function splitStrInBlocksWithIntermediate(
 
 	// Create offset mapping for later heading placement
 	const offsetMap = offsetMapperHelper.createRemovalMap(
-		headingsToRemovedItems(headings),
+		headingRemovals(healedText, headings),
 	);
 
 	// Scan the stripped text for proper line metadata
 	const filteredLines = scanLines(strippedText, fullConfig.languageConfig);
 
 	// Run pipeline stages 2-3 on stripped text
-	const sentenceTokens = segmentSentences(
-		strippedText,
-		fullConfig.languageConfig,
-	);
+	const sentenceTokens = segmentSentences(strippedText);
 	const annotated = annotateSentences(
 		sentenceTokens,
 		filteredLines,
@@ -265,4 +252,3 @@ export function splitStrInBlocksWithIntermediate(
 		markedText,
 	};
 }
-

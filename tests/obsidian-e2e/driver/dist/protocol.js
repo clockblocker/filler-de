@@ -298,6 +298,48 @@ function resolveScopedPath(paths, rawPath, rawScope, label = "path") {
 	return { relativePath, resolved, scope };
 }
 
+/**
+ * A scenario's scripted jev answers, by question id: a string picks that
+ * Choice option, a number from 0 to 1 is a Noul. Returns dumgen Answers.
+ */
+function validateScriptedJevAnswers(value, label = "params.dumgen.jev") {
+	if (value === undefined) return {};
+	const record = assertRecord(value, label);
+	const entries = Object.entries(record);
+	if (entries.length > 1_000) {
+		throw new ProtocolError(
+			"InvalidRequest",
+			`${label} must script at most 1000 answers`,
+		);
+	}
+	const answers = {};
+	for (const [id, answer] of entries) {
+		validateIdentifier(id, `${label} question id`);
+		if (typeof answer === "string") {
+			assertString(answer, `${label}.${id}`);
+			answers[id] = {
+				choice: answer,
+				confidence: 1,
+				probabilities: { [answer]: 1 },
+				type: "choice",
+			};
+		} else if (
+			typeof answer === "number" &&
+			Number.isFinite(answer) &&
+			answer >= 0 &&
+			answer <= 1
+		) {
+			answers[id] = { noul: answer, type: "noul" };
+		} else {
+			throw new ProtocolError(
+				"InvalidRequest",
+				`${label}.${id} must be a Choice option string or a Noul from 0 to 1`,
+			);
+		}
+	}
+	return answers;
+}
+
 function canonicalize(value) {
 	if (Array.isArray(value)) return value.map(canonicalize);
 	if (isRecord(value)) {
@@ -333,4 +375,5 @@ module.exports = {
 	validateRequest,
 	validateScenarioId,
 	validateScope,
+	validateScriptedJevAnswers,
 };

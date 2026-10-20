@@ -33,6 +33,12 @@ The Librarian's user commands also have desktop owners:
 | `GoToNextPage` | `librarian-commands.test.ts` |
 | `GoToPrevPage` | `librarian-commands.test.ts` |
 
+Classify on a selection (#63) is owned by `classify-selection.test.ts`: the
+`UnitRef`s handed to the resolver port, a discontinuous unit's pieces, the
+Segmentation Cache hit, and an edit invalidating only its own Sentence. Its
+dumgen answers from a scripted jev, so no provider is reached; the same
+story runs in process in `tests/unit/classify/classify-commander.test.ts`.
+
 Startup lifecycle and its initial scan are covered by
 `startup-healing.test.ts`; `harness-lifecycle.test.ts` verifies that a returned
 mutation is already observable. VAM's Markdown modify subscription, including

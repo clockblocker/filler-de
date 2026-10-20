@@ -114,6 +114,7 @@ describe("VaultActionManager Effect facade", () => {
 				surroundingRawBlock: "content",
 				text: "content",
 			},
+			selectionRange: { from: 0, to: 0 },
 			splitPath: mdPath,
 		});
 		expect(result.opened).toBe("content");

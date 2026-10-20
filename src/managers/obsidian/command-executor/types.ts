@@ -11,6 +11,7 @@ import { ALL_TEXTFRESSER_COMMAND_KINDS } from "../../../commanders/textfresser/c
 const COMMAND_KIND_STR = [
 	...ALL_TEXTFRESSER_COMMAND_KINDS,
 	...ALL_LIBRARIAN_COMMAND_KINDS,
+	"Classify",
 ] as const;
 
 const CommandKindSchema = z.enum(COMMAND_KIND_STR);

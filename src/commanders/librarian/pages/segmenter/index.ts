@@ -1,7 +1,6 @@
 import type { SeparatedSuffixedBasename } from "@textfresser/library-core";
 import {
 	offsetMapperHelper,
-	type RemovedItem,
 	type ReplacedItem,
 } from "../../../../stateless-helpers/offset-mapper";
 import type {
@@ -14,6 +13,7 @@ import { DEFAULT_SEGMENTATION_CONFIG } from "../types";
 import {
 	extractHeadings,
 	filterHeadingsFromText,
+	headingRemovals,
 } from "./block-marker/heading-extraction";
 import {
 	formatBlocksWithMarkers,
@@ -56,7 +56,7 @@ import {
  *
  * Pipeline stages:
  * 1. Line Scanner: Scans lines and tracks quote state
- * 2. Sentence Segmenter: Splits into sentences using Intl.Segmenter
+ * 2. Sentence Segmenter: Splits into sentences with dumgen's splitText
  * 3. Context Annotator: Adds quote depth, region markers
  * 4. Region Grouper: Groups keep-together content (poems, quotes)
  * 5. Page Accumulator: Builds pages respecting size limits
@@ -219,10 +219,7 @@ function runPipeline(
 
 	// Filter heading content before sentence segmentation
 	const filteredContent = filterHeadingsFromText(content, headings);
-	const removedItems: RemovedItem[] = headings.map((h) => ({
-		endOffset: h.endOffset,
-		startOffset: h.startOffset,
-	}));
+	const removedItems = headingRemovals(content, headings);
 	const offsetMap = offsetMapperHelper.createRemovalMap(removedItems);
 
 	// Protect markdown syntax (URLs, wikilinks, etc.) before segmentation
@@ -236,7 +233,7 @@ function runPipeline(
 	const filteredLines = scanLines(strippedText, langConfig);
 
 	// Stage 2: Segment into tokens (sentences + paragraph breaks)
-	const rawTokens = segmentToTokens(strippedText, langConfig);
+	const rawTokens = segmentToTokens(strippedText);
 
 	// Stage 3: Annotate tokens with context
 	const annotatedTokens = annotateTokens(
@@ -311,7 +308,7 @@ function runPipelineSimple(
 	const { strippedText, spans: decorationSpans } = stripDecorations(safeText);
 
 	const lines = scanLines(strippedText, langConfig);
-	const rawTokens = segmentToTokens(strippedText, langConfig);
+	const rawTokens = segmentToTokens(strippedText);
 	const annotatedTokens = annotateTokens(rawTokens, lines, langConfig);
 
 	// Filter out HR placeholders from tokens, tracking them for later reinsertion

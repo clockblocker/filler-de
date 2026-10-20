@@ -72,7 +72,7 @@ describe("splitStrInBlocks", () => {
 	});
 
 	test("intro with quote is one block (segmenter limitation)", () => {
-		// Note: Intl.Segmenter treats "intro: quote" as one sentence
+		// Note: dumgen's splitText treats "intro: quote" as one sentence
 		// So the block marker cannot split them without modifying sentence segmentation
 		const text = `Einem reichen Manne wurde seine Frau krank und er sprach: „Ich liebe dich." Sie lächelte.`;
 		const result = splitStrInBlocks(text);
@@ -145,6 +145,19 @@ Dritter Satz nach Absatz. Vierter Satz hier auch.`;
 
 		// Should have 4 newlines (3 blank lines) between paragraphs
 		expect(result.markedText).toContain("^1\n\n\n\n");
+	});
+
+	test("a heading without blank lines around it still ends the text before it", () => {
+		// dumgen joins a hard-wrapped line with the next, so the removed
+		// heading must leave a boundary behind.
+		const text =
+			"Dies ist eine lange Zeile ohne einen Punkt am Ende\n## Kapitel\nDer Mann ging heim. Er schlief.";
+
+		const result = splitStrInBlocks(text);
+
+		expect(result.markedText).toBe(
+			"Dies ist eine lange Zeile ohne einen Punkt am Ende ^0\n\n\n\n## Kapitel\nDer Mann ging heim. Er schlief. ^1",
+		);
 	});
 
 	test("headings without space after hashes are detected", () => {

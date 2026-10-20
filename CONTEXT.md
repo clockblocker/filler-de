@@ -188,5 +188,19 @@ _Avoid_: Generated section, cache
 The plugin-owned Obsidian block ID of a Reading or Surface in a Lemma Note: a short hash of its identity key.
 _Avoid_: Entry ID, sense ID
 
+## Classify
+
+**Classify**:
+The command that segments the Sentences a selection in a Scroll touches through dumgen and links each covered Segment to its unit's Reading. It pipes two stages: segmentation, then resolution.
+_Avoid_: Lemma command, click classification
+
+**Segmentation Cache**:
+The device-local store of Segmented Sentences in the hidden vault folder `.textfresser/segmentation/`, one immutable entry per Sentence key: a hash of the segmenter version, the language and the Sentence's Stitched Text. It holds no Scroll identity, so only an edit to the Sentence invalidates its entry.
+_Avoid_: Sidecar, segmentation index
+
+**Unit Ref**:
+The hand-off from segmentation to resolution: a Sentence key plus one dumgen unit's Segment indices, discontinuous pieces included. The unit's route gives its Family and Kind. It never touches disk in piped Classify.
+_Avoid_: Segment ID, provisional link
+
 **Selection** (retired):
 Use Attestation for an occurrence and Surface for a form.

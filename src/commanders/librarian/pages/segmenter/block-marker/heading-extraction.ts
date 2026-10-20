@@ -4,6 +4,7 @@
  * Extracts headings from scanned lines and filters them from text.
  */
 
+import type { RemovedItem } from "../../../../../stateless-helpers/offset-mapper";
 import type { ScannedLine } from "../../types";
 
 /**
@@ -49,8 +50,25 @@ export function extractHeadings(lines: ScannedLine[]): ExtractedHeading[] {
 }
 
 /**
- * Remove heading lines from text, replacing them with blank lines to preserve structure.
- * This ensures paragraph boundary detection still works correctly.
+ * What removing each heading takes out of `text`: its line, but not the
+ * line break that ends it. That break stays behind and, with the break
+ * before the heading, makes a blank line, so the sentence splitter never
+ * joins the text around a heading into one Sentence. Feed these to the
+ * offset mapper to map filtered offsets back to `text`.
+ */
+export function headingRemovals(
+	text: string,
+	headings: readonly ExtractedHeading[],
+): RemovedItem[] {
+	return headings.map(({ endOffset, startOffset }) => ({
+		endOffset: text[endOffset - 1] === "\n" ? endOffset - 1 : text.length,
+		startOffset,
+	}));
+}
+
+/**
+ * Remove heading lines from text, leaving each heading's line break, so a
+ * heading is always a paragraph boundary (see `headingRemovals`).
  */
 export function filterHeadingsFromText(
 	originalText: string,
@@ -60,15 +78,12 @@ export function filterHeadingsFromText(
 
 	let result = originalText;
 	// Process in reverse order to maintain offset validity
-	const sortedHeadings = [...headings].sort(
+	const removals = headingRemovals(originalText, headings).sort(
 		(a, b) => b.startOffset - a.startOffset,
 	);
 
-	for (const heading of sortedHeadings) {
-		// Replace heading with empty line (keep the newline)
-		const before = result.slice(0, heading.startOffset);
-		const after = result.slice(heading.endOffset);
-		result = before + after;
+	for (const { endOffset, startOffset } of removals) {
+		result = result.slice(0, startOffset) + result.slice(endOffset);
 	}
 
 	return result;

@@ -1,6 +1,10 @@
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import {
+	splitPathCodec,
+	type VaultActionManager,
+} from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import { Notice } from "obsidian";
+import type { ClassifyCommander } from "../../../commanders/classify";
 import type { LibrarianCommandKind } from "../../../commanders/librarian/commands/types";
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import type { Textfresser } from "../../../commanders/textfresser/textfresser";
@@ -11,6 +15,7 @@ import { CommandKind } from "./types";
  * Managers needed to build command executor.
  */
 type CommandExecutorManagers = {
+	classify: ClassifyCommander;
 	librarian: Librarian;
 	textfresser: Textfresser;
 	vam: VaultActionManager;
@@ -21,7 +26,7 @@ type CommandExecutorManagers = {
  * Returns a function that executes commands by kind.
  */
 export function createCommandExecutor(managers: CommandExecutorManagers) {
-	const { librarian, textfresser, vam } = managers;
+	const { classify, librarian, textfresser, vam } = managers;
 
 	const notify = (message: string) => {
 		new Notice(message);
@@ -71,6 +76,41 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 							textfresser.executeCommand(kind, context, notify),
 						),
 						Effect.ignore,
+					),
+				);
+				break;
+			}
+
+			case CommandKind.Classify: {
+				await Effect.runPromise(
+					vam.getActiveEditorContext().pipe(
+						Effect.flatMap((context) =>
+							context
+								? classify.execute(
+										{
+											content: context.content,
+											scrollPath: splitPathCodec.format(
+												context.splitPath,
+											),
+											selection: context.selectionRange,
+										},
+										notify,
+									)
+								: Effect.sync(() =>
+										notify(
+											"⚠ Open a Scroll to classify a selection",
+										),
+									),
+						),
+						Effect.catch((error) =>
+							Effect.sync(() => {
+								notify("⚠ Could not read the active editor");
+								logger.warn(
+									"[CommandExecutor] Classify could not read the editor:",
+									error,
+								);
+							}),
+						),
 					),
 				);
 				break;
