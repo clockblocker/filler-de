@@ -236,6 +236,19 @@ describe("Translate through dumgen", () => {
 		]);
 	});
 
+	it("shows a notice when dumgen dies on its input", async () => {
+		const stub = stubDumgen(() => Effect.die(new Error("bad input")));
+		const { dispatches, notices, translate } = harness(() => stub.dumgen);
+
+		const result = await translate(
+			contextFor({ startInBlock: null, text: null }),
+		);
+
+		expect(Result.isFailure(result)).toBe(true);
+		expect(dispatches).toHaveLength(0);
+		expect(notices).toEqual(["⚠ Translation failed: bad input"]);
+	});
+
 	it("refuses a text that is not German without asking dumgen", async () => {
 		const stub = stubDumgen(() => Effect.succeed("unused"));
 		const { dispatches, notices, translate } = harness(() => stub.dumgen, {
@@ -291,11 +304,75 @@ describe("neighbourSentences", () => {
 				block: "Eines Tages ging sie in den Wald. ^3",
 				content: NOTE,
 				selection,
-				selectionStartInBlock: 0,
+				// The selection starts on an earlier line than the caret's.
+				selectionStartInBlock: -14,
 			}),
 		).toEqual({
 			after: "ging sie in den Wald.",
 			before: "Die jüngste war die",
+		});
+	});
+
+	it("tells a repeated word apart by where the selection starts", () => {
+		const block = "Er kam. Er ging. ^1";
+		const content = `${block}\n\nDann schlief er. ^2\n`;
+		const around = (selectionStartInBlock: number) =>
+			neighbourSentences({
+				block,
+				content,
+				selection: "Er",
+				selectionStartInBlock,
+			});
+		expect(around(0)).toEqual({ after: "kam." });
+		expect(around(block.lastIndexOf("Er"))).toEqual({
+			after: "ging.",
+			before: "Er kam.",
+		});
+	});
+
+	it("leaves no half of a link or a bold run the selection starts in", () => {
+		const content =
+			"Er hatte drei [[Tochter|Töchter]]. ^1\n\nDie jüngste war die **schönste**. ^2\n";
+		expect(
+			neighbourSentences({
+				block: "Er hatte drei [[Tochter|Töchter]]. ^1",
+				content,
+				selection: "Töchter",
+				selectionStartInBlock: "Er hatte drei [[Tochter|".length,
+			}),
+		).toEqual({ after: "Die jüngste war die schönste.", before: "Er hatte drei" });
+		expect(
+			neighbourSentences({
+				block: "Die jüngste war die **schönste**. ^2",
+				content,
+				selection: "schönste",
+				selectionStartInBlock: "Die jüngste war die **".length,
+			}),
+		).toEqual({ before: "Die jüngste war die" });
+	});
+
+	it("skips the translations written under earlier blocks", () => {
+		const content = [
+			"Es war einmal ein König. ^1",
+			"",
+			"Once upon a time there was a king.",
+			"",
+			"Er hatte drei Töchter. ^2",
+			"",
+			"He had three daughters.",
+			"",
+			"Eines Tages ging sie in den Wald. ^3",
+		].join("\n");
+		expect(
+			neighbourSentences({
+				block: "Er hatte drei Töchter. ^2",
+				content,
+				selection: null,
+				selectionStartInBlock: null,
+			}),
+		).toEqual({
+			after: "Eines Tages ging sie in den Wald.",
+			before: "Es war einmal ein König.",
 		});
 	});
 

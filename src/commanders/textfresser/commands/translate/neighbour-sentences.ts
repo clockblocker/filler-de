@@ -10,6 +10,13 @@
  * rest of that Sentence as its neighbours, which settles what the
  * selection leaves open just as well.
  *
+ * Block IDs, links and inline markup are stripped line by line before the
+ * split, with the translated text standing in as one mark, so a selection
+ * inside a link or a bold run leaves no half of it behind. In a note whose
+ * blocks carry IDs, only the lines carrying one count, besides the
+ * translated text's own: the translations Translate wrote earlier sit on
+ * lines without one, and are no Sentences of the text.
+ *
  * The translated text is found through its block, which the note must hold
  * exactly once, or else through the selection itself, likewise once. When
  * neither is unique there are no neighbours, and Translate still runs.
@@ -40,14 +47,36 @@ export type NeighbourSentencesInput = {
 
 type Span = { readonly start: number; readonly end: number };
 
+/** Stands in for the translated text; a private-use character no note holds. */
+const MARK = "";
+
 export function neighbourSentences(
 	input: NeighbourSentencesInput,
 ): NeighbourSentences {
 	const { body } = noteMetadataHelper.decompose(input.content);
 	const span = locate(body, input);
-	if (!span) return {};
-	const before = sentencesOf(body.slice(0, span.start)).findLast(hasLetter);
-	const after = sentencesOf(body.slice(span.end)).find(hasLetter);
+	if (!span || body.includes(MARK)) return {};
+	const lines =
+		`${body.slice(0, span.start)}${MARK}${body.slice(span.end)}`.split(
+			"\n",
+		);
+	const onlyBlocks = lines.some(hasBlockId);
+	const plain = lines
+		.filter(
+			(line) =>
+				!onlyBlocks ||
+				line.trim() === "" ||
+				line.includes(MARK) ||
+				hasBlockId(line),
+		)
+		.map((line) =>
+			markdownHelper.stripAll(blockIdHelper.stripFromEnd(line)),
+		)
+		.join("\n");
+	const at = plain.indexOf(MARK);
+	if (at === -1) return {};
+	const before = sentencesOf(plain.slice(0, at)).findLast(hasLetter);
+	const after = sentencesOf(plain.slice(at + MARK.length)).find(hasLetter);
 	return {
 		...(before === undefined ? {} : { before }),
 		...(after === undefined ? {} : { after }),
@@ -66,6 +95,7 @@ function locate(
 	if (
 		blockStart !== undefined &&
 		selectionStartInBlock !== null &&
+		selectionStartInBlock >= 0 &&
 		block.startsWith(selection, selectionStartInBlock)
 	) {
 		const start = blockStart + selectionStartInBlock;
@@ -84,15 +114,11 @@ function onlyIndexOf(text: string, part: string): number | undefined {
 	return index !== -1 && index === text.lastIndexOf(part) ? index : undefined;
 }
 
-/** The text's Sentences, without block IDs, links or inline markup. */
+const hasBlockId = (line: string) =>
+	blockIdHelper.extractFromLine(line) !== null;
+
 function sentencesOf(text: string): readonly string[] {
-	const plain = text
-		.split("\n")
-		.map((line) =>
-			markdownHelper.stripAll(blockIdHelper.stripFromEnd(line)),
-		)
-		.join("\n");
-	return splitScroll(extractPastedText(plain)).paragraphs.flatMap(
+	return splitScroll(extractPastedText(text)).paragraphs.flatMap(
 		({ sentences }) => sentences,
 	);
 }
