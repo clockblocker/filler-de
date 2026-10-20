@@ -1,11 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { serialize } from "../src";
-import {
-	foreignData,
-	mutter,
-	nounData,
-	verbData,
-} from "./fixtures";
+import { foreignData, mutter, nounData, verbData } from "./fixtures";
 import { issueTags, parseDe } from "./helpers";
 
 const noun = serialize(undefined, nounData);
@@ -137,6 +132,21 @@ describe("hand-edited notes come back as typed issues", () => {
 				),
 			),
 		).toEqual(["InvalidBlockPayload"]);
+	});
+
+	it("a null payload, which parse never repairs", () => {
+		expect(
+			issueTags(
+				replaceLine(
+					noun,
+					"%%tf:attestation",
+					"%%tf:attestation null%%",
+				),
+			),
+		).toEqual(["InvalidRecord"]);
+		expect(
+			issueTags(replaceLine(noun, "%%tf:notes", "%%tf:notes null%%")),
+		).toEqual(["InvalidRecord"]);
 	});
 
 	it("a stored inverse relation", () => {

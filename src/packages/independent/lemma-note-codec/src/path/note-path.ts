@@ -60,19 +60,31 @@ function slotsOrThrow(family: string, kind: string): readonly Slot[] {
  * feature value the slot table does not know.
  */
 export function lemmaNotePath(lemma: PathLemma): NotePath {
-	const slots = slotsOrThrow(lemma.family, lemma.kind);
-	const core: Readonly<Record<string, unknown>> = lemma.coreFeatures;
-	const syncretic = new Set(lemma.syncretic ?? []);
-	const spelled = slots.map((slot) =>
-		syncretic.has(slot.feature)
-			? SYNCRETIC_SLOT
-			: encodeSlot(slot, core[slot.feature]),
+	const spelled = spellSlots(
+		slotsOrThrow(lemma.family, lemma.kind),
+		lemma.coreFeatures,
+		lemma.syncretic,
 	);
-	while (spelled.at(-1) === NULL_SLOT) spelled.pop();
 	return notePath(
 		[WORTER_FOLDER, lemma.language, lemma.family, lemma.kind, ...spelled],
 		canonicalFormBasename(lemma.canonicalForm),
 	);
+}
+
+/** A route's slot folders, with trailing null slots dropped. */
+function spellSlots(
+	slots: readonly Slot[],
+	core: Readonly<Record<string, unknown>>,
+	syncretic: readonly string[] = [],
+): string[] {
+	const open = new Set(syncretic);
+	const spelled = slots.map((slot) =>
+		open.has(slot.feature)
+			? SYNCRETIC_SLOT
+			: encodeSlot(slot, core[slot.feature]),
+	);
+	while (spelled.at(-1) === NULL_SLOT) spelled.pop();
+	return spelled;
 }
 
 /**
@@ -128,21 +140,17 @@ function encodeSlot(slot: Slot, value: unknown): string {
 	);
 }
 
-/** A text value that would read as `_` or `~` escapes that character. */
-const RESERVED_TEXT: Readonly<Record<string, string>> = {
-	[NULL_SLOT]: "%5F",
-	[SYNCRETIC_SLOT]: "%7E",
-};
+/** A text value of just `_` escapes it; `~` is always escaped. */
+const ESCAPED_NULL_SLOT = "%5F";
 
 function encodeText(value: string): string {
-	return RESERVED_TEXT[value] ?? encodeSegment(value);
+	return value === NULL_SLOT ? ESCAPED_NULL_SLOT : encodeSegment(value);
 }
 
 function decodeText(slot: string): string | undefined {
-	for (const [value, sequence] of Object.entries(RESERVED_TEXT)) {
-		if (slot === sequence) return value;
-	}
-	return decodeSegment(slot);
+	if (slot === ESCAPED_NULL_SLOT) return NULL_SLOT;
+	const value = decodeSegment(slot);
+	return value === "" ? undefined : value;
 }
 
 /** What a Lemma note's path spells: everything but a shortened form's tail. */
@@ -241,6 +249,8 @@ export function parseNotePath(path: string): NotePathParse {
 			return invalid(`Slot ${index + 1} cannot spell ${slot.feature}`);
 		coreFeatures[slot.feature] = value;
 	}
+	if (!sameSpelling(slots, coreFeatures, syncretic, spelled))
+		return invalid("Not the canonical spelling of its Core Features");
 	return {
 		ok: true,
 		value: {
@@ -257,6 +267,24 @@ export function parseNotePath(path: string): NotePathParse {
 	};
 }
 
+/** Whether the parsed features spell exactly the folders they came from. */
+function sameSpelling(
+	slots: readonly Slot[],
+	core: Readonly<Record<string, unknown>>,
+	syncretic: readonly string[],
+	spelled: readonly string[],
+): boolean {
+	try {
+		const canonical = spellSlots(slots, core, syncretic);
+		return (
+			canonical.length === spelled.length &&
+			canonical.every((text, index) => text === spelled[index])
+		);
+	} catch {
+		return false;
+	}
+}
+
 function decodeSlot(slot: Slot, text: string): unknown {
 	switch (slot.encoding) {
 		case "flag":
@@ -268,6 +296,12 @@ function decodeSlot(slot: Slot, text: string): unknown {
 		case "valueSet": {
 			const members = text.split(SET_SEPARATOR);
 			if (!members.every(isClosedValue)) return undefined;
+			// A value set is distinct and in catalog (code-point) order.
+			const ascending = members.every(
+				(member, index) =>
+					index === 0 || (members[index - 1] ?? "") < member,
+			);
+			if (!ascending) return undefined;
 			return members.length === 1 ? text : { mixed: members };
 		}
 	}

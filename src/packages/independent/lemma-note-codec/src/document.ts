@@ -66,7 +66,7 @@ export const EMPTY_DOCUMENT: LemmaNoteDocument = { parts: [], preamble: [] };
  *   open a part;
  * - `%%tf:<kind>%%` opens a projection Block and `%%tf:<kind> <json>%%` a
  *   serialized one, whose payload is one line of JSON with `%` written as
- *   `%`.
+ *   `\u0025`.
  *
  * A typed Block's visible rendering follows its marker up to the first blank
  * line. Lines after that blank line, up to the next marker, are freeform.

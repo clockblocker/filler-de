@@ -201,6 +201,7 @@ export const verbData: LemmaNoteData<De> = {
 						nodeKind: "structure",
 					},
 				},
+				preterite: ["stand auf"],
 				translations: { en: ["get up", "stand up"] },
 				valency: [
 					{

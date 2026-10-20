@@ -1,8 +1,10 @@
 import { sha256Hex } from "../hash";
 
 /**
- * The characters a basename percent-encodes (ADR 0013). `%` comes first, so
- * decoding is the exact inverse. Every other character is kept.
+ * The characters a path segment percent-encodes anywhere (ADR 0013), plus
+ * `~`, which marks a shortened basename and a Syncretism slot. `%` comes
+ * first, so decoding is the exact inverse. Every other character is kept,
+ * except those {@link mustEscape} adds by position.
  */
 const ENCODED = [
 	"%",
@@ -19,6 +21,7 @@ const ENCODED = [
 	"^",
 	"[",
 	"]",
+	"~",
 ] as const;
 
 const ENCODED_SET: ReadonlySet<string> = new Set(ENCODED);
@@ -33,38 +36,47 @@ function escapeOf(char: string): string {
 	return `%${char.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`;
 }
 
-/** Percent-encodes the ADR 0013 characters; one entry per output character. */
+/**
+ * Whether a character is escaped where it stands: a reserved character, a
+ * control character, a leading `.` (Obsidian hides dotfiles, and `.` or `..`
+ * would leave the folder), and leading or trailing whitespace, which file
+ * systems and sync services trim.
+ */
+function mustEscape(char: string, index: number, length: number): boolean {
+	if (ENCODED_SET.has(char)) return true;
+	const code = char.codePointAt(0) ?? 0;
+	if (code < 0x20 || code === 0x7f) return true;
+	if (index === 0 && char === ".") return true;
+	return (index === 0 || index === length - 1) && /\s/u.test(char);
+}
+
+/** Percent-encodes a segment; one entry per input character. */
 function encodedChars(text: string): string[] {
-	return Array.from(text, (char) =>
-		ENCODED_SET.has(char) ? escapeOf(char) : char,
+	const chars = Array.from(text);
+	return chars.map((char, index) =>
+		mustEscape(char, index, chars.length) &&
+		(char.codePointAt(0) ?? 0) < 0x100
+			? escapeOf(char)
+			: char,
 	);
 }
 
-/** Percent-encodes the ADR 0013 characters, with no length cap. */
+/** Percent-encodes a path segment, with no length cap. */
 export function encodeSegment(text: string): string {
 	return encodedChars(text).join("");
 }
 
 const ESCAPE_PATTERN = /%([0-9A-F]{2})/g;
-const DECODABLE: ReadonlySet<string> = new Set(
-	ENCODED.map((char) => escapeOf(char)),
-);
 
 /**
- * Decodes {@link encodeSegment}, or returns undefined when the text is not
- * an encoding it produces: a raw reserved character, or a `%` escape of a
- * character it does not encode.
+ * Decodes {@link encodeSegment}, or returns undefined for text it never
+ * produces, such as a raw reserved character or a needless escape.
  */
 export function decodeSegment(text: string): string | undefined {
-	const withoutEscapes = text.replace(ESCAPE_PATTERN, (sequence) =>
-		DECODABLE.has(sequence) ? "" : sequence,
-	);
-	for (const char of withoutEscapes) {
-		if (ENCODED_SET.has(char)) return undefined;
-	}
-	return text.replace(ESCAPE_PATTERN, (_sequence, hex: string) =>
+	const decoded = text.replace(ESCAPE_PATTERN, (_sequence, hex: string) =>
 		String.fromCharCode(Number.parseInt(hex, 16)),
 	);
+	return encodeSegment(decoded) === text ? decoded : undefined;
 }
 
 /**
@@ -110,21 +122,28 @@ const SHORTENED_PATTERN = /^(.+)~([0-9a-f]{8})$/u;
 /**
  * Reverses {@link canonicalFormBasename}. A shortened basename keeps only
  * the Canonical Form's prefix and hash; the note's `identity` Block holds the
- * full form. Returns undefined for text the encoder never produces.
+ * full form. `~` is always escaped inside a form, so a raw `~` can only be
+ * the shortening mark. Returns undefined for text the encoder never
+ * produces.
  */
 export function decodeBasename(basename: string): DecodedBasename | undefined {
 	const shortened = SHORTENED_PATTERN.exec(basename);
-	const prefix = shortened?.[1];
-	const hash = shortened?.[2];
-	if (
-		prefix !== undefined &&
-		hash !== undefined &&
-		codePoints(prefix) <= BASENAME_KEPT &&
-		codePoints(prefix) > BASENAME_KEPT - 3
-	) {
-		const canonicalFormPrefix = decodeSegment(prefix);
-		if (canonicalFormPrefix !== undefined)
-			return { canonicalFormPrefix, hash, truncated: true };
+	if (shortened !== null) {
+		const [, prefix = "", hash = ""] = shortened;
+		const length = codePoints(prefix);
+		// The cut backs off at most two characters to keep an escape whole.
+		if (length > BASENAME_KEPT || length <= BASENAME_KEPT - 3)
+			return undefined;
+		// The prefix was encoded as the start of a longer form, so a trailing
+		// space in it is not escaped; a sentinel restores that position.
+		const decoded = decodeSegment(`${prefix}x`);
+		return decoded === undefined
+			? undefined
+			: {
+					canonicalFormPrefix: decoded.slice(0, -1),
+					hash,
+					truncated: true,
+				};
 	}
 	const canonicalForm = decodeSegment(basename);
 	if (canonicalForm === undefined || canonicalForm.length === 0)

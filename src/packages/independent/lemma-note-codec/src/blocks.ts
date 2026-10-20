@@ -22,6 +22,7 @@ export const SERIALIZED_BLOCK_KINDS = [
 	"participle_source",
 	"plural",
 	"conjugation_class",
+	"preterite",
 	"locution_type",
 	"saying_type",
 	"formula_role",
@@ -60,6 +61,7 @@ export const CANONICAL_BLOCK_ORDER = {
 		"participle_source",
 		"plural",
 		"conjugation_class",
+		"preterite",
 		"locution_type",
 		"saying_type",
 		"formula_role",
@@ -79,6 +81,7 @@ export const KNOWLEDGE_BLOCKS = {
 	morphology: "morphologicalTree",
 	participle_source: "participleSource",
 	plural: "plural",
+	preterite: "preterite",
 	relation: "semanticRelations",
 	saying_type: "sayingType",
 	transcription: "transcription",
@@ -87,6 +90,15 @@ export const KNOWLEDGE_BLOCKS = {
 } as const satisfies Partial<
 	Record<SerializedBlockKind, keyof Dumrel.ReadingKnowledge>
 >;
+
+/** Fails to compile when dumrel adds a Knowledge aspect no Block holds. */
+type MissingAspects = Exclude<
+	keyof Dumrel.ReadingKnowledge,
+	(typeof KNOWLEDGE_BLOCKS)[keyof typeof KNOWLEDGE_BLOCKS]
+>;
+const everyAspectHasABlock: [MissingAspects] extends [never] ? true : never =
+	true;
+void everyAspectHasABlock;
 
 const SERIALIZED: ReadonlySet<string> = new Set(SERIALIZED_BLOCK_KINDS);
 const PROJECTION: ReadonlySet<string> = new Set(PROJECTION_BLOCK_KINDS);

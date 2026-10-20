@@ -17,21 +17,31 @@ type ZodLike = {
 };
 
 /** The slot encoding a Core Feature's dumling schema calls for (ADR 0013). */
+/** Closed values are written verbatim, so they must stay plain words. */
+const spellable = (options: readonly string[] | undefined) =>
+	(options ?? []).every((option) => /^[A-Za-z0-9]+$/u.test(option));
+
+/**
+ * The slot encoding a Core Feature's dumling schema calls for (ADR 0013), or
+ * "unsupported" when no encoding spells all of its values.
+ */
 function encodingOf(schema: ZodLike): SlotEncoding | "unsupported" {
 	const inner = schema.unwrap?.() ?? schema;
 	if (inner.def.type === "string") return "text";
 	if (inner.def.type === "enum") {
 		const options = inner.options ?? [];
+		if (!spellable(options)) return "unsupported";
 		return options.length === 1 && options[0] === "Yes" ? "flag" : "value";
 	}
 	if (inner.def.type === "union") {
-		const kinds = (inner.def.options ?? []).map(
-			(option) => option.def.type,
-		);
+		const variants = inner.def.options ?? [];
+		const kinds = variants.map((option) => option.def.type);
+		const values = variants.find((option) => option.def.type === "enum");
 		if (
 			kinds.length === 2 &&
-			kinds.includes("enum") &&
-			kinds.includes("object")
+			kinds.includes("object") &&
+			values !== undefined &&
+			spellable(values.options)
 		)
 			return "valueSet";
 	}

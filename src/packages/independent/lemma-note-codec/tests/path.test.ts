@@ -226,11 +226,48 @@ describe("basenames", () => {
 		const form = 'a%b*c"d\\e/f<g>h:i|j?k#l^m[n]o …ü~+_';
 		const basename = canonicalFormBasename(form);
 		expect(basename).toBe(
-			"a%25b%2Ac%22d%5Ce%2Ff%3Cg%3Eh%3Ai%7Cj%3Fk%23l%5Em%5Bn%5Do …ü~+_",
+			"a%25b%2Ac%22d%5Ce%2Ff%3Cg%3Eh%3Ai%7Cj%3Fk%23l%5Em%5Bn%5Do …ü%7E+_",
 		);
 		expect(decodeBasename(basename)).toEqual({
 			canonicalForm: form,
 			truncated: false,
+		});
+	});
+
+	it("escapes a leading dot and edge whitespace, so no name is hidden or trimmed", () => {
+		expect(canonicalFormBasename(".")).toBe("%2E");
+		expect(canonicalFormBasename("..")).toBe("%2E.");
+		expect(canonicalFormBasename(" a b ")).toBe("%20a b%20");
+		expect(canonicalFormBasename("a\tb")).toBe("a%09b");
+		for (const form of [".", "..", " a b ", "a\tb", "x~deadbeef"])
+			expect(decodeBasename(canonicalFormBasename(form))).toEqual({
+				canonicalForm: form,
+				truncated: false,
+			});
+		expect(decodeBasename("%2Ea")).toEqual({
+			canonicalForm: ".a",
+			truncated: false,
+		});
+		expect(decodeBasename("a%2E")).toBeUndefined();
+		expect(decodeBasename(".a")).toBeUndefined();
+		expect(decodeBasename("%41")).toBeUndefined();
+	});
+
+	it("never reads a full form as a shortened one", () => {
+		const form = `${"a".repeat(79)}~deadbeef`;
+		expect(decodeBasename(canonicalFormBasename(form))).toEqual({
+			canonicalForm: form,
+			truncated: false,
+		});
+	});
+
+	it("keeps a shortened prefix that ends in a space", () => {
+		const form = `${"b".repeat(79)} ${"c".repeat(30)}`;
+		const basename = canonicalFormBasename(form);
+		expect(decodeBasename(basename)).toEqual({
+			canonicalFormPrefix: `${"b".repeat(79)} `,
+			hash: sha256Hex(form).slice(0, 8),
+			truncated: true,
 		});
 	});
 
@@ -281,6 +318,11 @@ describe("parseNotePath rejects what lemmaNotePath never writes", () => {
 		"Worter/de/Lexeme/NOUN/Masc/a?b.md",
 		"Worter/de/Shadow/Lexeme/NOUN/extra/See.md",
 		"Worter/de/Lexeme.md",
+		"Worter/de/Lexeme/VERB//stehen.md",
+		"Worter/de/Lexeme/NOUN/Masc+Masc/Balg.md",
+		"Worter/de/Lexeme/NOUN/Neut+Masc/Balg.md",
+		"Worter/de/Lexeme/VERB/%C3%BCber/übersetzen.md",
+		"Worter/de/Lexeme/NOUN/Masc/a~b.md",
 	];
 	for (const path of invalid) {
 		it(path, () => {
@@ -301,6 +343,12 @@ describe("parseNotePath rejects what lemmaNotePath never writes", () => {
 		} as const;
 		const { path } = lemmaNotePath(odd);
 		expect(path).toBe("Worter/de/Foreign/Foreign/%5F/x.md");
+		expect(
+			lemmaNotePath({
+				...odd,
+				coreFeatures: { sourceLang: ".." },
+			}).path,
+		).toBe("Worter/de/Foreign/Foreign/%2E./x.md");
 		const parsed = parseNotePath(path);
 		expect(
 			parsed.ok &&

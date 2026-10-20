@@ -44,6 +44,7 @@ describe("round trips for every German Family", () => {
 		expect(aufstehen?.knowledge?.valency).toEqual(
 			source?.knowledge?.valency,
 		);
+		expect(aufstehen?.knowledge?.preterite).toEqual(["stand auf"]);
 		const [ihm] = validData(
 			serialize(undefined, syncretismData),
 		).readingEntries;
@@ -70,6 +71,17 @@ describe("round trips for every German Family", () => {
 		expect(mother?.notes).toBe(nounData.readingEntries[0]?.notes);
 		expect(mother?.knowledge?.definition).toBe(
 			"A female parent; 100% of the time %% loved.",
+		);
+		const percents = serialize(undefined, {
+			...nounData,
+			pendingRelations: [],
+			readingEntries: nounData.readingEntries
+				.slice(0, 1)
+				.map((entry) => ({ ...entry, notes: "50%%% off\r\rnext" })),
+		});
+		expect(percents).not.toMatch(/^(?!%%tf).*%%/mu);
+		expect(validData(percents).readingEntries[0]?.notes).toBe(
+			"50%%% off\r\rnext",
 		);
 		for (const line of markdown.split("\n")) {
 			if (line.startsWith("%%tf"))

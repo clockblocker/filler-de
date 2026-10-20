@@ -77,6 +77,7 @@ export const DEFAULT_LABELS: Readonly<Record<TypedBlockKind, string>> = {
 	participle_source: "From",
 	pending_relation: "Pending",
 	plural: "Plural",
+	preterite: "Preterite",
 	reading: "",
 	relation: "Relations",
 	saying_type: "Saying",
@@ -138,9 +139,9 @@ export const DEFAULT_LINKS: LinkRenderer = {
  */
 export function sanitizeRendering(text: string): string {
 	return text
-		.split(/\r?\n/u)
+		.split(/\r\n?|\n/u)
 		.filter((line) => line.trim().length > 0)
-		.map((line) => line.replaceAll("%%", "%​%"))
+		.map((line) => line.replace(/%(?=%)/gu, "%\u200B"))
 		.join("\n");
 }
 
@@ -221,6 +222,7 @@ export const RENDERERS: Partial<Record<TypedBlockKind, Renderer>> = {
 			.join("\n"),
 	plural: (value) =>
 		Array.isArray(value) ? value.map(text).join(", ") : text(value),
+	preterite: (value) => list(value).map(text).join(", "),
 	relation: (value, links) =>
 		Object.entries(value as Record<string, unknown>)
 			.filter(([relation]) => relation !== "targetKind")

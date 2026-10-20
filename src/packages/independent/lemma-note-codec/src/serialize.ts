@@ -41,7 +41,7 @@ export type SerializeOptions<L extends Dumling.Language> = {
 
 /**
  * A serialized payload: canonical JSON on one line, `%` written as
- * `%` so no payload can close its Obsidian comment.
+ * `\u0025` so no payload can close its Obsidian comment.
  */
 function encodePayload(value: unknown): string {
 	try {
@@ -207,6 +207,14 @@ export function serialize<L extends Dumling.Language>(
 					? entry.reading.emojiDescription
 					: undefined,
 		};
+		const aspects: readonly string[] = Object.values(KNOWLEDGE_BLOCKS);
+		const unplaced = Object.keys(knowledge).filter(
+			(aspect) => !aspects.includes(aspect),
+		);
+		if (unplaced.length > 0)
+			throw new LemmaNoteSerializeError(
+				`No Block holds the Knowledge aspect ${unplaced.join(", ")}`,
+			);
 		for (const [kind, aspect] of Object.entries(KNOWLEDGE_BLOCKS)) {
 			payloads[kind as SerializedBlockKind] = knowledge[aspect];
 		}

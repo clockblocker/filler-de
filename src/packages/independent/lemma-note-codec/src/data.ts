@@ -349,9 +349,9 @@ function readReadingEntry<L extends Dumling.Language>(
 		if (value !== undefined) knowledge[aspect] = value;
 	}
 	const entry = {
-		attestations: payloads.attestation ?? [],
-		attestedTranslations: payloads.attested_translation ?? [],
-		notes: payloads.notes ?? "",
+		attestations: orDefault(payloads, "attestation", []),
+		attestedTranslations: orDefault(payloads, "attested_translation", []),
+		notes: orDefault(payloads, "notes", ""),
 		reading: foreign
 			? { lemma, unitKind: "Reading" }
 			: {
@@ -426,13 +426,17 @@ function readSurfaceEntry<L extends Dumling.Language>(
 	const entry = validated("SurfaceEntry", at, report, () =>
 		parseAsSurfaceEntry(
 			{
-				attestations: payloads.attestation ?? [],
-				attestedTranslations: payloads.attested_translation ?? [],
+				attestations: orDefault(payloads, "attestation", []),
+				attestedTranslations: orDefault(
+					payloads,
+					"attested_translation",
+					[],
+				),
 				id: makeSurfaceId(
 					language,
 					payloads.surface as Dumling.Surface<L>,
 				),
-				notes: payloads.notes ?? "",
+				notes: orDefault(payloads, "notes", ""),
 				ownerLemma: lemma,
 				surface: payloads.surface,
 			},
@@ -450,4 +454,17 @@ function readSurfaceEntry<L extends Dumling.Language>(
 		return undefined;
 	}
 	return entry;
+}
+
+/**
+ * A Block's payload, or the value its absence stands for. A present payload,
+ * `null` included, is passed on as written, so dumdict rejects it rather
+ * than parse repairing it.
+ */
+function orDefault(
+	payloads: Payloads,
+	kind: SerializedBlockKind,
+	absent: unknown,
+): unknown {
+	return kind in payloads ? payloads[kind] : absent;
 }

@@ -121,6 +121,7 @@ A serialized Block's payload is canonical JSON in a form Obsidian's reading view
 | `participle_source` | Serialized | `ReadingEntry.knowledge.participleSource` |
 | `plural` | Serialized | `ReadingEntry.knowledge.plural` (forms, `NoPlural` or `PluralOnly`) |
 | `conjugation_class` | Serialized | `ReadingEntry.knowledge.conjugationClass` |
+| `preterite` | Serialized | `ReadingEntry.knowledge.preterite` |
 | `locution_type` | Serialized | `ReadingEntry.knowledge.locutionType` |
 | `saying_type` | Serialized | `ReadingEntry.knowledge.sayingType` |
 | `formula_role` | Serialized | `ReadingEntry.knowledge.formulaRole` |
@@ -321,6 +322,8 @@ Tests must cover:
 - **API.** `parse(markdown, { language })` returns `{ document, data }`, where `data` is `{ ok: true, data, blockIds }` or `{ ok: false, issues, partial }`. `parseDocument`, `documentToData`, `serializeDocument` (byte-exact) and `blockIdsOf` are the layers beneath it. `serialize(document, data, { projections })` writes canonical order and keeps the document's freeform and unknown Blocks at the end of their part; those of a part the data dropped move to the Lemma part. Normalization is not implemented yet.
 - **Issues.** `MissingIdentity` is `MissingRequiredBlock` with `kind: "identity"`, which also covers a missing `reading` or `surface` Block. `DuplicatePart` and `MisplacedBlock` are added. Unknown Blocks are kept without an issue. `OrderingNormalized` and `BlockMerged` wait for normalization.
 - **Projections.** `header` has a default rendering. `tags` and `inflection` take caller hooks ([#75](https://github.com/clockblocker/filler-de/issues/75)), and `inverse_relation` takes the Reading's `projectSemanticRelations` edges ([#59](https://github.com/clockblocker/filler-de/issues/59)); a Block whose hook is absent is left out. Links default to path-qualified ones (open question 1).
+- **Rendering edits.** A line typed directly under a Block's rendering, with no blank line between, belongs to that rendering and is dropped on the next write. Freeform needs a blank line before it.
+- **Knowledge coverage.** Every `ReadingKnowledge` aspect has a Block; a new dumrel aspect fails to compile until it gets one, and `serialize` throws on an aspect it cannot place.
 - **Paths.** The ADR-0013 path codec (`lemmaNotePath`, `shadowNotePath`, `parseNotePath`) lives in the same package as its own module. The note codec never reads a path.
 
 [dumling]: https://github.com/clockblocker/texteater/blob/main/battery/dumling/GLOSSARY.md
