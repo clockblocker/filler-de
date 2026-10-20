@@ -1,6 +1,10 @@
 {
 	"$schema": "https://unpkg.com/knip@5/schema.json",
-	"ignoreDependencies": ["@typesafe-ai/sdk", "emoji-regex"],
+	"ignoreDependencies": [
+		"@typesafe-ai/sdk",
+		"emoji-regex",
+		"ts-plugin-sort-import-suggestions"
+	],
 	"ignoreIssues": {
 		"tests/obsidian-e2e/driver/dist/**/*.js": ["files"]
 	},
