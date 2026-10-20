@@ -39,7 +39,9 @@ export const MAX_NEIGHBOURHOOD_READINGS = 200;
  * the target Readings and the Readings that Reading targets reach. A
  * Reading whose Lemmas no longer fit is left out, and so is one whose
  * Reading targets were, so every Reading's owner and targets stay in the
- * inventory, as dumdict's slice check needs.
+ * inventory, as dumdict's slice check needs. It throws when a record the
+ * plan names itself does not fit, as tf-demo does, rather than plan
+ * without it.
  */
 export function relationNeighbourhood(
 	index: NoteIndex,
@@ -104,6 +106,25 @@ export function relationNeighbourhood(
 				pruned = true;
 			}
 	}
+	// A plan must see every record it names; only what lies beyond may be cut.
+	const seedLemmas = [
+		...(seeds.sourceLemmaKeys ?? []),
+		...(seeds.targetLemmaKeys ?? []),
+		...(seeds.targetShadowKeys ?? []).flatMap((shadow) =>
+			index.lemmasNamedBy(shadow),
+		),
+	];
+	const seedReadings = [
+		...(seeds.sourceReadingKeys ?? []),
+		...(seeds.targetReadingKeys ?? []),
+	];
+	if (
+		seedLemmas.some((key) => index.lemmaData(key) && !lemmas.has(key)) ||
+		seedReadings.some((key) => index.reading(key) && !readings.has(key))
+	)
+		throw new Error(
+			`The plan's relation neighbourhood needs more than ${MAX_NEIGHBOURHOOD_LEMMAS} Lemmas or ${MAX_NEIGHBOURHOOD_READINGS} Readings.`,
+		);
 	return {
 		relationLemmas: [...lemmas.values()],
 		relationReadings: [...readings.values()],

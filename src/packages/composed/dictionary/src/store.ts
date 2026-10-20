@@ -251,6 +251,9 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	let healingBlocked: HealingBlocked[] = [];
 	let scanIssues: string[] = [];
 	let lastDiagnostics = "";
+	/** Heal moves that failed, by `moveKey`, with the note's hash then. */
+	const failedMoves = new Map<string, string>();
+	const moveKey = (from: string, to: string) => `${from}\u0000${to}`;
 
 	const revision = (): StoreRevision => `vault:${session}:${counter}`;
 	/** Swaps in a new index version together with the next revision. */
@@ -298,11 +301,25 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		options.onDiagnostics(diagnostics);
 	});
 
-	/** VAM's stop-on-first-failure dispatch; an interrupt leaves the index stale. */
+	/**
+	 * VAM's stop-on-first-failure dispatch. VAM finishes a batch it accepted,
+	 * so the store waits for it rather than release its lock mid-write; an
+	 * interrupt before that still leaves the index stale.
+	 */
 	const dispatch = (actions: readonly VaultAction[]) =>
-		vault
-			.dispatchStopOnFirstFailure(actions)
-			.pipe(Effect.onInterrupt(() => markStale));
+		Effect.uninterruptible(vault.dispatchStopOnFirstFailure(actions)).pipe(
+			Effect.onInterrupt(() => markStale),
+		);
+
+	/**
+	 * Whether the index has seen every file whole: no stale index, no scan
+	 * issue and no quarantined note, any of which could hide a pending
+	 * relation. Only then may the store remove a Shadow no relation claims.
+	 */
+	const complete = () =>
+		!stale &&
+		scanIssues.length === 0 &&
+		index.allEntries().every((entry) => entry.kind !== "quarantined");
 
 	/** Reads one path into its entry; undefined when no file is there. */
 	const readEntry = Effect.fnUntraced(function* (path: string) {
@@ -454,7 +471,9 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	/**
 	 * Trashes Shadow notes already verified as the store's own. VAM lets a
 	 * trash win over any other action on its path, so the verification runs
-	 * in the batch before; the files are re-read afterwards either way.
+	 * in the batch before; the files are re-read afterwards either way. VAM
+	 * has no conditional trash, so an edit landing between the two batches
+	 * is lost to Obsidian's trash, where it can still be restored.
 	 */
 	const trashVerified = Effect.fnUntraced(function* (
 		paths: readonly string[],
@@ -478,8 +497,13 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		yield* reread(paths);
 	});
 
-	/** Removes the store's own Shadow notes that no relation needs any more. */
+	/**
+	 * Removes the store's own Shadow notes that no relation needs any more.
+	 * It runs only after a full read of `Worter/` that saw every file whole,
+	 * so a note it could not read never loses its Shadow.
+	 */
 	const cleanOrphanShadows = Effect.fnUntraced(function* () {
+		if (!complete()) return;
 		const orphans = yield* ownedShadowContents(index.orphanShadows());
 		if (orphans.length === 0) return;
 		const verified = yield* Effect.result(
@@ -512,8 +536,19 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				});
 				continue;
 			}
+			const moving = index.entry(from);
+			if (moving?.kind !== "lemma") continue;
+			if (failedMoves.get(moveKey(from, to)) === moving.hash) {
+				blocked.push({
+					canonicalPath: to,
+					message:
+						"Moving it to its canonical path failed; the store tries again once the note changes",
+					path: from,
+				});
+				continue;
+			}
 			const occupied =
-				index.entry(to) !== undefined ||
+				index.sameFileAs(to).length > 0 ||
 				(yield* vault
 					.exists(mdSplitPath(to))
 					.pipe(Effect.orElseSucceed(() => true)));
@@ -524,50 +559,49 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 						"Another file sits at its canonical path; the two may be duplicates",
 					path: from,
 				});
-			else {
-				const moving = index.entry(from);
-				if (moving?.kind === "lemma")
-					moves.push({ from, lemmaKey: moving.lemmaKey, to });
-			}
+			else moves.push({ from, lemmaKey: moving.lemmaKey, to });
 		}
 		healingBlocked = blocked;
-		if (moves.length > 0) {
-			const outcome = yield* Effect.result(
-				dispatch(
-					moves.map(
-						({ from, to }): VaultAction => ({
-							kind: VaultActionKind.RenameMdFile,
-							payload: {
-								from: mdSplitPath(from),
-								to: mdSplitPath(to),
-							},
-						}),
-					),
+		if (moves.length === 0) return;
+		const outcome = yield* Effect.result(
+			dispatch(
+				moves.map(
+					({ from, to }): VaultAction => ({
+						kind: VaultActionKind.RenameMdFile,
+						payload: {
+							from: mdSplitPath(from),
+							to: mdSplitPath(to),
+						},
+					}),
 				),
+			),
+		);
+		if (outcome._tag === "Failure")
+			yield* Effect.logWarning(
+				"Dictionary healing stopped; rebuilding the index",
+				outcome.failure,
 			);
-			if (outcome._tag === "Failure") {
-				yield* Effect.logWarning(
-					"Dictionary healing stopped; rebuilding the index",
-					outcome.failure,
-				);
-				if ((yield* recover) && retry) return yield* heal(false);
-			} else {
-				for (const { from } of moves) cache?.delete(from);
-				yield* reread(moves.flatMap(({ from, to }) => [from, to]));
-				// A move that landed elsewhere, such as VAM renaming it aside
-				// on a collision, is found by reading everything again.
-				const landed = moves.every(({ lemmaKey, to }) => {
-					const entry = index.entry(to);
-					return (
-						entry?.kind === "lemma" && entry.lemmaKey === lemmaKey
-					);
-				});
-				if (!landed && (yield* recover) && retry)
-					return yield* heal(false);
-			}
+		for (const { from } of moves) cache?.delete(from);
+		yield* reread(moves.flatMap(({ from, to }) => [from, to]));
+		// A move that failed or landed elsewhere, such as VAM renaming it
+		// aside on a collision, is found by reading everything again; it is
+		// not tried again until its note changes.
+		const landed = ({ lemmaKey, to }: (typeof moves)[number]) => {
+			const entry = index.entry(to);
+			return entry?.kind === "lemma" && entry.lemmaKey === lemmaKey;
+		};
+		if (outcome._tag === "Success" && moves.every(landed)) return;
+		const rebuilt = yield* recover;
+		for (const move of moves) {
+			const left = index.entry(move.from);
+			if (!landed(move) && left?.kind === "lemma")
+				failedMoves.set(moveKey(move.from, move.to), left.hash);
 		}
-		yield* cleanOrphanShadows();
+		if (rebuilt && retry) return yield* heal(false);
 	});
+
+	/** After a full read of `Worter/`: heal, then remove orphan Shadows. */
+	const settle = heal().pipe(Effect.andThen(cleanOrphanShadows()));
 
 	/**
 	 * Re-reads what an event touched. Identity comes from content, never
@@ -610,7 +644,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		lock
 			.withPermit(
 				Effect.gen(function* () {
-					if (stale && (yield* recover)) yield* heal();
+					if (stale && (yield* recover)) yield* settle;
 					yield* effect;
 				}).pipe(
 					Effect.onError(() => markStale),
@@ -663,7 +697,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		return guarded(
 			"event handling",
 			whole
-				? rebuild().pipe(Effect.andThen(heal()))
+				? rebuild().pipe(Effect.andThen(settle))
 				: refresh(paths, folders.filter(inside)),
 		);
 	};
@@ -695,7 +729,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		.withPermit(
 			Effect.gen(function* () {
 				yield* rebuild();
-				yield* heal();
+				yield* settle;
 				yield* report;
 			}),
 		)
@@ -796,7 +830,10 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				cause: lemma,
 				message: "The Lemma has no note path the slot table can spell",
 			});
-		const occupant = index.entry(path);
+		// A case variant of the path is the same file on macOS and Windows.
+		const [occupiedAt] = index.sameFileAs(path);
+		const occupant =
+			occupiedAt === undefined ? undefined : index.entry(occupiedAt);
 		if (occupant !== undefined)
 			return yield* new DictionaryPathOccupiedError({
 				message: `${path} holds a ${occupant.kind === "lemma" ? "note of another Lemma" : `${occupant.kind} note`}; the store will not overwrite it`,
@@ -863,19 +900,18 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				[...before].filter((ref) => !removed.get(path)?.has(ref)),
 			);
 			for (const ref of added.get(path) ?? []) after.add(ref);
-			const occupant = index.entry(path);
+			// Claims and files are matched without case, as the file system does.
+			const occupants = index.sameFileAs(path);
 			const sample = samples.get(path);
-			if (after.size > 0 && occupant === undefined && sample)
+			if (after.size > 0 && occupants.length === 0 && sample)
 				creates.push({
 					content: shadowBody(sample.pending.target),
 					path,
 				});
-			if (
-				before.size > 0 &&
-				after.size === 0 &&
-				occupant?.kind === "shadow"
-			)
-				removals.push(path);
+			if (before.size > 0 && after.size === 0 && complete())
+				for (const occupant of occupants)
+					if (index.entry(occupant)?.kind === "shadow")
+						removals.push(occupant);
 		}
 		return { creates, removals };
 	};
@@ -885,7 +921,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	): Effect.fn.Return<CommitChangesResult, DictionaryCommitError> {
 		if (stale) {
 			yield* rebuild();
-			yield* heal();
+			yield* settle;
 		}
 		const parsed = parseAsCommitChangesRequest(request, "de");
 		if (parsed instanceof ParsingError)
@@ -932,11 +968,12 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		const removals = yield* ownedShadowContents(shadows.removals);
 		const verifiedPaths = new Set(removals.map(({ path }) => path));
 
-		// Creates go first: one that finds a file stops the batch before any
-		// write lands, which is a plain revision conflict.
+		// Creates run as their own first batch: VAM orders a batch by folder
+		// depth, so only then does a create that finds a file stop the commit
+		// before any rewrite lands.
 		const isCreate = ({ action }: PlannedWrite) =>
 			action.kind === VaultActionKind.CreateFile;
-		const actions: VaultAction[] = [
+		const creates: VaultAction[] = [
 			...writes.filter(isCreate).map(({ action }) => action),
 			...shadows.creates.map(
 				({ path, content }): VaultAction => ({
@@ -944,33 +981,53 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					payload: { content, splitPath: createOnlySplitPath(path) },
 				}),
 			),
+		];
+		const rewrites: VaultAction[] = [
 			...writes
 				.filter((write) => !isCreate(write))
 				.map(({ action }) => action),
 			...removals.map(verifyShadow),
 		];
+		const wrote = (action: VaultAction) =>
+			action.kind !== VaultActionKind.CreateFolder &&
+			!(
+				action.kind === VaultActionKind.ProcessMdFile &&
+				verifiedPaths.has(actionPath(action))
+			);
 
-		const outcome = yield* Effect.result(dispatch(actions));
-		if (outcome._tag === "Failure") {
+		const phases = [creates, rewrites];
+		const done: VaultAction[] = [];
+		for (const [phase, actions] of phases.entries()) {
+			if (actions.length === 0) continue;
+			const outcome = yield* Effect.result(dispatch(actions));
+			if (outcome._tag === "Success") {
+				done.push(...actions);
+				continue;
+			}
+			const landedBefore = done.some(wrote);
+			const later = phases.slice(phase + 1).flat();
 			const failure = outcome.failure;
 			const stopped = failure instanceof VamDispatchStoppedError;
 			const executed = stopped ? failure.executed : [];
-			const landed = executed.some(
-				(action) =>
-					action.kind !== VaultActionKind.CreateFolder &&
-					!(
-						action.kind === VaultActionKind.ProcessMdFile &&
-						verifiedPaths.has(actionPath(action))
-					),
-			);
+			// VAM fails planning and overflow before it runs any action.
+			const ranNothing =
+				!stopped &&
+				(failure._tag === "VamPlanningError" ||
+					failure._tag === "VamDispatchOverflowError");
+			const landed =
+				landedBefore ||
+				executed.some(wrote) ||
+				!(stopped || ranNothing);
 			const rebuilt = yield* recover;
-			if (stopped && !landed) return conflict("revisionConflict");
+			if (!landed) return conflict("revisionConflict");
 			return yield* new DictionaryWriteError({
 				cause: failure,
-				executed: executed.map(actionPath),
-				message: `The commit's writes stopped: ${message(stopped ? failure.failure : failure)}. The index was ${rebuilt ? "rebuilt from the files" : "not rebuilt; the next operation retries"}.`,
+				executed: [...done, ...executed].map(actionPath),
+				message: `The commit's writes stopped: ${message(stopped ? failure.failure.cause : failure)}. The index was ${rebuilt ? "rebuilt from the files" : "not rebuilt; the next operation retries"}.`,
 				rebuilt,
-				skipped: stopped ? failure.skipped.map(actionPath) : [],
+				skipped: [...(stopped ? failure.skipped : []), ...later].map(
+					actionPath,
+				),
 			});
 		}
 

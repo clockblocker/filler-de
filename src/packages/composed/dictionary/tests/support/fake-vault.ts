@@ -91,10 +91,17 @@ export class FakeVault implements DictionaryVault {
 			.sort();
 	}
 
-	/** Makes the first later write whose action matches fail, once. */
-	failNextWrite(when: (action: VaultAction, path: string) => boolean): void {
+	/** Makes later writes whose action matches fail, `times` times. */
+	failNextWrite(
+		when: (action: VaultAction, path: string) => boolean,
+		times = 1,
+	): void {
 		this.failWhen = when;
+		this.failTimes = times;
 	}
+
+	private failTimes = 0;
+	scanCount = 0;
 
 	private put(path: string, content: string) {
 		this.clock += 1;
@@ -145,6 +152,7 @@ export class FakeVault implements DictionaryVault {
 
 	scanWithStat: DictionaryVault["scanWithStat"] = (folder) =>
 		Effect.suspend(() => {
+			this.scanCount += 1;
 			if (this.scanFailures > 0) {
 				this.scanFailures -= 1;
 				return Effect.fail(
@@ -197,7 +205,10 @@ export class FakeVault implements DictionaryVault {
 					let failure: unknown = fail
 						? new Error(`Injected failure at ${path}`)
 						: null;
-					if (fail) this.failWhen = null;
+					if (fail) {
+						this.failTimes -= 1;
+						if (this.failTimes <= 0) this.failWhen = null;
+					}
 					if (!failure)
 						try {
 							await this.execute(action);
@@ -246,9 +257,8 @@ export class FakeVault implements DictionaryVault {
 				return;
 			}
 			case VaultActionKind.ProcessMdFile: {
-				// VAM first ensures the file exists, creating it empty.
+				// VAM processes only an existing file; it does not create one.
 				const path = format(action.payload.splitPath);
-				if (!this.files.has(path)) this.put(path, "");
 				const file = this.files.get(path);
 				if (!file) throw new Error(`No file at ${path}`);
 				const { payload } = action;

@@ -81,10 +81,12 @@ describe("a commit that touches several notes", () => {
 
 		const kinds = (batch: readonly { kind: string }[] = []) =>
 			batch.map(({ kind }) => kind);
-		// The commit's batch creates schreiten, rewrites gehen and laufen, and
-		// checks that the Shadow still holds the store's own body.
-		expect(kinds(vault.batches.at(-2))).toEqual([
+		// The commit creates schreiten, then rewrites gehen and laufen and
+		// checks that the Shadow still holds the store's own body, then trashes it.
+		expect(kinds(vault.batches.at(-3))).toEqual([
 			VaultActionKind.CreateFile,
+		]);
+		expect(kinds(vault.batches.at(-2))).toEqual([
 			VaultActionKind.ProcessMdFile,
 			VaultActionKind.ProcessMdFile,
 			VaultActionKind.ProcessMdFile,

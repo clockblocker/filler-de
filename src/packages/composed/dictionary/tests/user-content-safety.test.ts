@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { lemmaNotePath } from "@textfresser/lemma-note-codec";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type { PlannedChangeOp } from "dumdict";
-import { createMemoryNoteCache } from "../src";
+import { createMemoryNoteCache, DictionaryRequestError } from "../src";
 import { shadowBody } from "../src/shadow-note";
 import { FakeVault } from "./support/fake-vault";
 import { expectIndexMatchesFiles, run } from "./support/files";
@@ -198,6 +198,40 @@ describe("healing", () => {
 	});
 });
 
+test("a heal move that keeps failing is reported and not retried on every event", async () => {
+	const { store, vault } = await withPendingGehen();
+	vault.failNextWrite(
+		(action) => action.kind === VaultActionKind.RenameMdFile,
+		1000,
+	);
+	await vault.userRename(gehenPath, "Worter/de/moved.md");
+	expect((await run(store.diagnostics)).healingBlocked).toMatchObject([
+		{ canonicalPath: gehenPath, path: "Worter/de/moved.md" },
+	]);
+	const scans = vault.scanCount;
+	const revision = await run(store.revision);
+	await vault.userWrite(
+		lemmaNotePath(laufen).path,
+		`${vault.content(lemmaNotePath(laufen).path)}\nedited\n`,
+	);
+	expect(vault.scanCount).toBe(scans);
+	expect(await run(store.revision)).not.toBe(revision);
+	expect(vault.content("Worter/de/moved.md")).toBeDefined();
+});
+
+describe("an incomplete read removes no Shadow", () => {
+	test("a note that is half-typed or unreadable at startup keeps its Shadow", async () => {
+		for (const spoil of ["half", "unreadable"] as const) {
+			const { vault } = await withPendingGehen();
+			if (spoil === "half")
+				vault.silentWrite(gehenPath, "%%tf-part:lemma%%\n%%tf:iden");
+			else vault.unreadable.add(gehenPath);
+			await openStore(vault);
+			expect(vault.content(shadowPath)).toBe(storeShadow);
+		}
+	});
+});
+
 describe("failures leave the index honest", () => {
 	test("a scan that fails while handling an event makes the next commit rebuild first", async () => {
 		const { store, vault } = await withPendingGehen();
@@ -207,6 +241,8 @@ describe("failures leave the index honest", () => {
 			"Worter/de/Lexeme/VERB",
 			"Worter/de/Lexeme/Verben",
 		);
+		// The notes it could not see still hold the Shadow's relation.
+		expect(vault.content(shadowPath)).toBe(storeShadow);
 
 		expect(
 			await run(
@@ -246,7 +282,7 @@ describe("failures leave the index honest", () => {
 	});
 });
 
-test("the relation inventory is capped at 100 Lemmas, nearest first and deterministic", async () => {
+test("the relation inventory is capped at 100 Lemmas, nearest first, and refuses a plan that names more", async () => {
 	const { store } = await openStore();
 	const others = Array.from({ length: 150 }, (_, index) =>
 		verb(`verb${String(index).padStart(3, "0")}en`),
@@ -256,25 +292,27 @@ test("the relation inventory is capped at 100 Lemmas, nearest first and determin
 		createReading(readingEntry(gehenReading)),
 		...others.map(createLemma),
 	]);
-	const load = () =>
+	const load = (targets: typeof others) =>
 		run(
 			store.loadReadingEntryContext({
 				intent: "applyGeneratedKnowledge",
 				pendingRelations: [],
 				reading: gehenReading,
-				relationTargetLemmas: others,
+				relationTargetLemmas: targets,
 				relationTargetReadings: [],
 			}),
 		);
-	const context = await load();
+	const context = await load(others.slice(0, 99));
 	if (context.intent !== "applyGeneratedKnowledge") throw new Error();
-	expect(context.relationLemmas).toHaveLength(100);
-	expect(context.relationLemmas[0]?.lemma).toEqual(gehen);
-	expect(context.relationLemmas.slice(1).map(({ lemma }) => lemma)).toEqual(
-		others.slice(0, 99),
-	);
+	expect(context.relationLemmas.map(({ lemma }) => lemma)).toEqual([
+		gehen,
+		...others.slice(0, 99),
+	]);
 	expect(context.relationReadings.map(({ reading }) => reading)).toEqual([
 		gehenReading,
 	]);
-	expect(await load()).toEqual(context);
+	expect(await load(others.slice(0, 99))).toEqual(context);
+	expect(await load(others).catch((error: unknown) => error)).toBeInstanceOf(
+		DictionaryRequestError,
+	);
 });

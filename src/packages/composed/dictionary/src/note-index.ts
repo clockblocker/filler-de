@@ -60,6 +60,13 @@ export const shadowRefOf = (
 ): string => `${notePath}\u0000${locatorKeyOf(record.locator)}`;
 
 /** Plain code-unit order, so paths that differ only by case sort one way everywhere. */
+/**
+ * A path as a case-insensitive, normalizing file system compares it, so
+ * paths that differ only by letter case or Unicode form name one file.
+ */
+export const foldPath = (path: string): string =>
+	path.normalize("NFC").toLowerCase();
+
 export const byCodeUnit = (left: string, right: string): number =>
 	left < right ? -1 : left > right ? 1 : 0;
 
@@ -132,6 +139,8 @@ export function relationEdgesOf(
  */
 export class NoteIndex {
 	private entries = new Map<string, PathEntry>();
+	/** Case- and Unicode-folded path → the paths spelled that way. */
+	private folded = new Map<string, Set<string>>();
 	/** Lemma key → the paths of every note that holds it. */
 	private claims = new Map<string, Set<string>>();
 	/** Lemma key → the path of the note that holds it. */
@@ -168,6 +177,7 @@ export class NoteIndex {
 	clone(): NoteIndex {
 		const next = new NoteIndex();
 		next.entries = new Map(this.entries);
+		next.folded = cloneSets(this.folded);
 		next.claims = cloneSets(this.claims);
 		next.holders = new Map(this.holders);
 		next.readings = new Map(this.readings);
@@ -217,7 +227,7 @@ export class NoteIndex {
 			if (shadowPath !== undefined)
 				removeFrom(
 					this.shadowRefs,
-					shadowPath,
+					foldPath(shadowPath),
 					shadowRefOf(path, record),
 				);
 		}
@@ -225,11 +235,19 @@ export class NoteIndex {
 			removeFrom(this.claims, previous.lemmaKey, path);
 		if (next === undefined) this.entries.delete(path);
 		else this.entries.set(path, next);
+		if (previous === undefined && next !== undefined)
+			addTo(this.folded, foldPath(path), path);
+		if (previous !== undefined && next === undefined)
+			removeFrom(this.folded, foldPath(path), path);
 		if (next?.kind === "lemma") addTo(this.claims, next.lemmaKey, path);
 		for (const record of pendingOfEntry(next)) {
 			const shadowPath = shadowPathOf(record);
 			if (shadowPath !== undefined)
-				addTo(this.shadowRefs, shadowPath, shadowRefOf(path, record));
+				addTo(
+					this.shadowRefs,
+					foldPath(shadowPath),
+					shadowRefOf(path, record),
+				);
 		}
 		for (const key of keys) {
 			const holder = this.pickHolder(key);
@@ -385,7 +403,15 @@ export class NoteIndex {
 
 	/** Every file's claim on a Shadow note path (see {@link shadowRefOf}). */
 	shadowClaims(path: string): ReadonlySet<string> {
-		return this.shadowRefs.get(path) ?? new Set();
+		return this.shadowRefs.get(foldPath(path)) ?? new Set();
+	}
+
+	/**
+	 * Indexed paths that name the same file as `path` on a case-insensitive
+	 * file system, such as macOS's: `Bank.md` for `bank.md`.
+	 */
+	sameFileAs(path: string): readonly string[] {
+		return [...(this.folded.get(foldPath(path)) ?? [])];
 	}
 
 	/** Every stored relation whose target is this Lemma or one of its Readings. */
