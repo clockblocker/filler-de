@@ -197,6 +197,26 @@ describe("possible n-Deklination", () => {
 			).toHaveLength(4);
 		});
 
+	it("flags a masculine -e noun with no plural and declines Herz as weak", () => {
+		for (const [lemma, gender, plural] of [
+			["Glaube", "Masc", "NoPlural"],
+			["Wille", "Masc", "NoPlural"],
+			["Herz", "Neut", ["Herzen"]],
+		] as const) {
+			const declension = declineGermanNoun({
+				canonicalForm: lemma,
+				genders: [gender],
+				plural,
+			});
+			expect(declension?.possibleNDeclension).toBe(true);
+			expect(
+				declension?.cells
+					.filter((cell) => cell.number === "Sing")
+					.map((cell) => cell.case),
+			).toEqual(["Nom"]);
+		}
+	});
+
 	it("flags Staat too, the known false positive", () => {
 		expect(
 			declineGermanNoun({
@@ -275,6 +295,32 @@ describe("other plural shapes", () => {
 			)?.form;
 		expect(genitive("Bus", "Busse")).toBe("Busses");
 		expect(genitive("Rhythmus", "Rhythmen")).toBe("Rhythmus");
+	});
+
+	it("folds umlauts before comparing a plural with its singular", () => {
+		const genitive = (lemma: string, plural: string) =>
+			declineGermanNoun({
+				canonicalForm: lemma,
+				genders: ["Neut"],
+				plural: [plural],
+			})?.cells.find(
+				(cell) => cell.case === "Gen" && cell.number === "Sing",
+			)?.form;
+		expect(genitive("Haus", "Häuser")).toBe("Hauses");
+		expect(genitive("Krankenhaus", "Krankenhäuser")).toBe("Krankenhauses");
+	});
+
+	it("keeps a foreign -us with no plural or the same plural", () => {
+		const genitive = (lemma: string, plural: GermanNounInput["plural"]) =>
+			declineGermanNoun({
+				canonicalForm: lemma,
+				genders: ["Masc"],
+				plural,
+			})?.cells.find(
+				(cell) => cell.case === "Gen" && cell.number === "Sing",
+			)?.form;
+		expect(genitive("Tourismus", "NoPlural")).toBe("Tourismus");
+		expect(genitive("Status", ["Status"])).toBe("Status");
 	});
 
 	it("joins the articles of a mixed gender and drops cells its genders disagree on", () => {

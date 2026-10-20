@@ -4,9 +4,13 @@ import type * as Dumling from "dumling/types";
 import { compareGerman, deriveInflection, renderTable } from "../src";
 import { input, lexeme, verb } from "./fixtures";
 
-function compared(positive: string, storedComparatives: string[] = []) {
+function compared(
+	positive: string,
+	storedComparatives: string[] = [],
+	derive = true,
+) {
 	return renderTable(
-		compareGerman({ canonicalForm: positive, storedComparatives }),
+		compareGerman({ canonicalForm: positive, derive, storedComparatives }),
 	);
 }
 
@@ -23,6 +27,9 @@ describe("comparison", () => {
 		["interessant", "interessanter", "am interessantesten"],
 		["typisch", "typischer", "am typischsten"],
 		["spät", "später", "am spätesten"],
+		["begeistert", "begeisterter", "am begeistertsten"],
+		["gebildet", "gebildeter", "am gebildetsten"],
+		["interessiert", "interessierter", "am interessiertesten"],
 	] as const)
 		it(`derives ${positive}, ${comparative}, ${superlative}`, () => {
 			expect(compared(positive)).toBe(
@@ -37,11 +44,26 @@ describe("comparison", () => {
 		expect(compared("gern")).toBe(
 			"Positiv: gern\nKomparativ: lieber\nSuperlativ: am liebsten",
 		);
+		expect(compared("gerne", [], false)).toBe(
+			"Positiv: gerne\nKomparativ: lieber\nSuperlativ: am liebsten",
+		);
+	});
+
+	it("derives nothing regular for an ADV", () => {
+		expect(compared("sehr", [], false)).toBeUndefined();
+		expect(
+			deriveInflection(
+				input(lexeme("ADV", "lange", { comparable: "Yes" })),
+			),
+		).toBeUndefined();
 	});
 
 	it("leaves out a monosyllable that may umlaut, unless a Surface stores it", () => {
 		expect(compared("alt")).toBeUndefined();
 		expect(compared("klar")).toBeUndefined();
+		expect(compared("lange")).toBeUndefined();
+		expect(compared("nahe")).toBeUndefined();
+		expect(compared("gesund")).toBeUndefined();
 		expect(compared("alt", ["älter"])).toBe(
 			"Positiv: alt\nKomparativ: älter",
 		);
@@ -108,11 +130,24 @@ D: diesem (m), diesem (n), dieser (f), diesen (pl)`,
 		const sein = authoredLemma(
 			(lemma) => lemma.kind === "AUX" && lemma.canonicalForm === "sein",
 		);
-		expect(
-			deriveInflection(input(sein))?.startsWith(
-				"Formen: sein, bin, bist, ist",
-			),
-		).toBe(true);
+		const forms = deriveInflection(input(sein));
+		expect(forms?.startsWith("Formen: sein, bin, bist, ist")).toBe(true);
+		for (const form of ["hab", "hätt", "ward"])
+			expect(forms?.split(": ")[1]?.split(", ")).not.toContain(form);
+	});
+
+	it("drops a modal's pre-reform ß spellings", () => {
+		const forms = deriveInflection(input(verb("müssen")));
+		expect(forms).toContain("muss");
+		expect(forms).not.toContain("muß");
+	});
+
+	it("gives an AUX that shares several verbs' forms no table", () => {
+		const bekommen = authoredLemma(
+			(lemma) =>
+				lemma.kind === "AUX" && lemma.canonicalForm === "bekommen",
+		);
+		expect(deriveInflection(input(bekommen))).toBeUndefined();
 	});
 
 	it("gives a pillar cell no table", () => {

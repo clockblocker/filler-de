@@ -14,13 +14,66 @@ const COLUMNS = [
 	["Plur", "pl"],
 ] as const;
 
+type Realization = (typeof authoredRealizations)[number];
+
+/** A plain spelling: no Shorthand or Fused member, nothing archaic or historical. */
+function isStandard(realization: Realization): boolean {
+	const { spelling } = realization;
+	return (
+		realization.orthography === undefined &&
+		realization.historicalStatus === undefined &&
+		!(
+			spelling?.kind === "Variant" &&
+			(spelling.variantTags as readonly string[]).includes("Historical")
+		)
+	);
+}
+
+let nonStandardForms: ReadonlySet<string> | undefined;
+
+/** The auxiliaries' forms that are not plain spellings: hab, hätt, ward. */
+function nonStandardAuxiliaryForms(): ReadonlySet<string> {
+	nonStandardForms ??= new Set(
+		authoredRealizations
+			.filter(
+				(realization) =>
+					realization.member.lemma.kind === "AUX" &&
+					!isStandard(realization),
+			)
+			.map(({ spelled }) => spelled),
+	);
+	return nonStandardForms;
+}
+
+/**
+ * The forms of a VERB or AUX whose whole paradigm is closed (sein, haben,
+ * werden and the modals), without shorthands, archaic forms or the
+ * pre-reform ß spellings (muß beside muss).
+ */
+function closedVerbParadigm(
+	canonicalForm: string,
+): InflectionTable | undefined {
+	if (!Object.hasOwn(closedVerbForms, canonicalForm)) return undefined;
+	const forms = closedVerbForms[canonicalForm] ?? [];
+	const nonStandard = nonStandardAuxiliaryForms();
+	const cells = distinct(forms).filter(
+		(form) =>
+			!nonStandard.has(form) &&
+			!(form.includes("ß") && forms.includes(form.replace(/ß/gu, "ss"))),
+	);
+	return cells.length === 0
+		? undefined
+		: { rows: [{ cells, label: "Formen" }] };
+}
+
 /**
  * A closed-class Lemma's paradigm from dumcorpus's Authored Inventory:
  *
  * - a declining DET or PRON stem (dieser, welcher) gets a case table from
- *   the cells its spellings realize, `N: dieser (m), dieses/dies (n), …`;
- * - an AUX, or a VERB whose whole paradigm is closed (sein, haben, werden
- *   and the modals), lists its forms.
+ *   the cells its plain spellings realize, `N: dieser (m), dieses (n), …`;
+ * - a VERB or AUX whose whole paradigm is closed (sein, haben, werden and
+ *   the modals) lists its forms. The recipient-passive and causative AUX
+ *   Lemmas share forms of several verbs, so they get none.
  *
  * A pillar Lemma that is one Paradigm Cell (der, ich) has no table of its
  * own, so it gets none. Undefined when dumcorpus has no paradigm.
@@ -28,25 +81,17 @@ const COLUMNS = [
 export function closedParadigm(
 	lemma: Dumling.Lemma<"de">,
 ): InflectionTable | undefined {
-	if (lemma.family === "Lexeme" && lemma.kind === "VERB") {
-		const forms = closedVerbForms[lemma.canonicalForm];
-		return forms === undefined
-			? undefined
-			: { rows: [{ cells: distinct(forms), label: "Formen" }] };
-	}
+	if (lemma.kind === "VERB" || lemma.kind === "AUX")
+		return lemma.family === "Lexeme"
+			? closedVerbParadigm(lemma.canonicalForm)
+			: undefined;
 	const members = authoredFor(lemma);
 	if (members.length === 0) return undefined;
-	const realizations = authoredRealizations.filter((realization) =>
-		members.includes(realization.member),
-	);
-	if (lemma.kind === "AUX") {
-		const forms = distinct(realizations.map(({ spelled }) => spelled));
-		return forms.length === 0
-			? undefined
-			: { rows: [{ cells: forms, label: "Formen" }] };
-	}
-	const celled = realizations.filter(
-		(realization) => realization.inflection?.case !== undefined,
+	const celled = authoredRealizations.filter(
+		(realization) =>
+			members.includes(realization.member) &&
+			realization.inflection?.case !== undefined &&
+			isStandard(realization),
 	);
 	if (celled.length === 0) return undefined;
 	const rows = CASES.map((grammaticalCase) => ({

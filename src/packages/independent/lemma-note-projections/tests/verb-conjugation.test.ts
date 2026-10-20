@@ -254,14 +254,66 @@ Präteritum: ich fuhr, du fuhrst, er fuhr, wir fuhren, ihr fuhrt, sie fuhren`);
 		).toEqual(["abgeholt"]);
 	});
 
-	it("refuses a stored form whose particle is not the verb's", () => {
+	it("leaves out a stored form whose particle is not the verb's", () => {
 		expect(
-			conjugateGermanVerb({
-				canonicalForm: "aufstehen",
+			rows("aufstehen", {
+				conjugationClasses: ["Strong"],
+				preterite: ["stand", "stand auf"],
+				separablePrefix: "auf",
+			}).Präteritum,
+		).toEqual([
+			"ich stand auf, du standest auf, er stand auf, wir standen auf, ihr standet auf, sie standen auf",
+		]);
+		expect(
+			rows("aufstehen", {
 				conjugationClasses: ["Strong"],
 				preterite: ["stand"],
-				reflexive: null,
 				separablePrefix: "auf",
+			}),
+		).toEqual({
+			Präsens: [
+				"ich stehe auf, wir stehen auf, ihr steht auf, sie stehen auf",
+			],
+		});
+	});
+
+	it("leaves out the participle of a weak past with a strong participle", () => {
+		expect(
+			rows("backen", {
+				conjugationClasses: ["Weak"],
+				preterite: ["backte"],
+			})["Partizip II"],
+		).toBeUndefined();
+	});
+});
+
+describe("forms left out rather than guessed", () => {
+	it("a be- verb whose stem opens with i or u gets no participle", () => {
+		expect(rows("beurteilen", weak)["Partizip II"]).toBeUndefined();
+		expect(rows("beugen", weak)["Partizip II"]).toBeUndefined();
+		expect(rows("beurteilen", weak).Präteritum).toEqual([
+			"ich beurteilte, du beurteiltest, er beurteilte, wir beurteilten, ihr beurteiltet, sie beurteilten",
+		]);
+	});
+
+	it("-ieren takes no ge- only after a stem vowel", () => {
+		expect(rows("schmieren", weak)["Partizip II"]).toEqual(["geschmiert"]);
+		expect(
+			rows("abschmieren", { ...weak, separablePrefix: "ab" })[
+				"Partizip II"
+			],
+		).toEqual(["abgeschmiert"]);
+		expect(rows("studieren", weak)["Partizip II"]).toEqual(["studiert"]);
+	});
+
+	it("knien gets no table", () => {
+		expect(
+			conjugateGermanVerb({
+				canonicalForm: "knien",
+				conjugationClasses: ["Weak"],
+				preterite: undefined,
+				reflexive: null,
+				separablePrefix: null,
 			}),
 		).toBeUndefined();
 	});

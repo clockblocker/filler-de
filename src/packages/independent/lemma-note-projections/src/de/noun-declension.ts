@@ -35,40 +35,48 @@ export type NounDeclension = {
 	/** The cells in table order: by case, the singular before the plurals. */
 	readonly cells: readonly NounCell[];
 	/**
-	 * A masculine noun with an -(e)n plural may be weak (Mensch, des
-	 * Menschen), which the stored data cannot tell, so its oblique singular
-	 * cells are left out. `Staat` is a known false positive.
+	 * A masculine noun with an -(e)n plural or a final `-e` may be weak
+	 * (Mensch, des Menschen; Glaube, des Glaubens), and Herz declines like
+	 * one, which the stored data cannot tell, so their oblique singular cells
+	 * are left out. `Staat` and `Käse` are known false positives.
 	 */
 	readonly possibleNDeclension: boolean;
 };
+
+/** Umlauts folded, so a plural compares with its singular: `häuser` → `hauser`. */
+function withoutUmlauts(word: string): string {
+	return word.replace(/ä/gu, "a").replace(/ö/gu, "o").replace(/ü/gu, "u");
+}
 
 /**
  * The genitive singular of a masculine or neuter noun: `-es` after s, ß, x,
  * z and sch, `-s` with an S-plural, `-es` for a monosyllable, `-s`
  * otherwise (measured in #62). A final vowel takes `-s` (Knie, Schnee), a
  * doubled plural `s` doubles here too (Bus, Busse, des Busses), and a
- * foreign `-us` whose plural replaces it is unchanged (Rhythmus, Rhythmen).
+ * foreign `-us` is unchanged where its plural replaces it (Rhythmus,
+ * Rhythmen), repeats it (Status) or is missing (Tourismus).
  */
 function masculineOrNeuterGenitive(
 	singular: string,
 	plurals: readonly string[],
 ): string {
 	const base = lower(singular);
-	const folded = plurals.map(lower);
+	const folded = plurals.map((plural) => withoutUmlauts(lower(plural)));
+	const stem = withoutUmlauts(base);
 	if (endsWithVowel(base)) return `${singular}s`;
 	if (
 		base.endsWith("s") &&
-		folded.some((plural) => plural.startsWith(`${base}s`))
+		folded.some((plural) => plural.startsWith(`${stem}s`))
 	)
 		return `${singular}ses`;
 	if (
 		base.endsWith("us") &&
-		folded.length > 0 &&
-		!folded.some((plural) => plural.startsWith(base))
+		syllableCount(base) > 1 &&
+		!folded.some((plural) => plural.startsWith(stem) && plural !== stem)
 	)
 		return singular;
 	if (endsWithSibilant(base) || base.endsWith("sch")) return `${singular}es`;
-	if (folded.includes(`${base}s`)) return `${singular}s`;
+	if (folded.includes(`${stem}s`)) return `${singular}s`;
 	if (syllableCount(base) === 1) return `${singular}es`;
 	return `${singular}s`;
 }
@@ -97,13 +105,13 @@ function isPossibleNDeclension(
 	plurals: readonly string[],
 ): boolean {
 	const base = lower(singular);
-	return (
-		genders.includes("Masc") &&
-		plurals.some(
-			(plural) =>
-				lower(plural) === `${base}n` || lower(plural) === `${base}en`,
-		)
+	const enPlural = plurals.some(
+		(plural) =>
+			lower(plural) === `${base}n` || lower(plural) === `${base}en`,
 	);
+	if (genders.includes("Masc"))
+		return enPlural || (base.endsWith("e") && !base.endsWith("ee"));
+	return genders.includes("Neut") && base.endsWith("herz") && enPlural;
 }
 
 /**

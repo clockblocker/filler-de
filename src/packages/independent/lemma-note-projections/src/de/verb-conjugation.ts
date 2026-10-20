@@ -91,7 +91,10 @@ function analyze(infinitive: string): Stem | undefined {
 	} else if (word.endsWith("ern")) {
 		stem = infinitive.slice(0, -1);
 		kind = "er";
-	} else if (word.endsWith("en")) stem = infinitive.slice(0, -2);
+	} else if (/[^e]ien$/u.test(word))
+		// knien keeps its stem's e (ich knie), which no rule here spells.
+		return undefined;
+	else if (word.endsWith("en")) stem = infinitive.slice(0, -2);
 	else if (word.endsWith("n")) stem = infinitive.slice(0, -1);
 	else return undefined;
 	if (!hasVowel(stem)) return undefined;
@@ -106,24 +109,61 @@ function analyze(infinitive: string): Stem | undefined {
 /**
  * Whether the infinitive starts with an inseparable prefix from dumcorpus
  * (be-, ver-, …) or a dual one, before a stem that is a verb in its own
- * right: `vernachlässigen` and `besuchen` do, `beten`, `ernten`, `bellen`
- * and `beugen` do not.
+ * right: `vernachlässigen` and `besuchen` do, `beten`, `ernten` and `bellen`
+ * do not. After be- or ge-, an i or u may open the stem (beurteilen,
+ * beinhalten) or a diphthong of a plain verb (beugen, geigen), so the
+ * answer there is unknown.
  */
-function hasInseparablePrefix(infinitive: string): boolean {
+function prefixStatus(infinitive: string): "inseparable" | "none" | "unknown" {
 	const word = lower(infinitive);
-	return [...germanInseparablePrefixes, ...DUAL_PREFIXES].some((prefix) => {
-		if (!word.startsWith(prefix)) return false;
+	let status: "inseparable" | "none" | "unknown" = "none";
+	for (const prefix of [...germanInseparablePrefixes, ...DUAL_PREFIXES]) {
+		if (!word.startsWith(prefix)) continue;
 		const rest = word.slice(prefix.length);
-		if (/^(.)\1/u.test(rest)) return false;
-		if (prefix.endsWith("e") && /^[iu]/u.test(rest)) return false;
-		return analyze(rest) !== undefined;
-	});
+		if (/^(.)\1/u.test(rest) || analyze(rest) === undefined) continue;
+		if (prefix.endsWith("e") && /^[iu]/u.test(rest)) status = "unknown";
+		else return "inseparable";
+	}
+	return status;
 }
 
-function takesGe(infinitive: string): boolean {
-	return !(
-		lower(infinitive).endsWith("ieren") || hasInseparablePrefix(infinitive)
+/**
+ * Verbs whose Präteritum is weak but whose participle is strong
+ * (backte, gebacken), so no `-te` form gives it.
+ */
+const STRONG_PARTICIPLES: ReadonlySet<string> = new Set([
+	"backen",
+	"hauen",
+	"mahlen",
+	"melken",
+	"salzen",
+	"schinden",
+	"sieden",
+	"spalten",
+	"weben",
+]);
+
+function hasStrongParticiple(infinitive: string): boolean {
+	const word = lower(infinitive);
+	return (
+		STRONG_PARTICIPLES.has(word) ||
+		[...germanInseparablePrefixes].some(
+			(prefix) =>
+				word.startsWith(prefix) &&
+				STRONG_PARTICIPLES.has(word.slice(prefix.length)),
+		)
 	);
+}
+
+/**
+ * Whether the participle takes `ge-`: not after an inseparable prefix and
+ * not for a verb in stressed `-ieren` (ignoriert, but geschmiert). Undefined
+ * when that cannot be told.
+ */
+function takesGe(infinitive: string): boolean | undefined {
+	if (/[aeiouyäöü][^aeiouyäöü]*ieren$/u.test(lower(infinitive))) return false;
+	const status = prefixStatus(infinitive);
+	return status === "unknown" ? undefined : status === "none";
 }
 
 type Shape = {
@@ -238,10 +278,12 @@ function finiteOf(form: string, particle: string | null): string | undefined {
  * (= Präteritum), Partizip II and Imperativ, with the separable particle and
  * the reflexive in place. Any other verb, or one with no stored class, gets
  * the Präsens cells every non-closed verb forms regularly (ich, wir, ihr,
- * sie), the Präteritum from its stored `preterite`, and a Partizip II only
- * from a stored `-te` form (gebracht). The rest, and the haben/sein
- * auxiliary, are left out rather than guessed. Undefined when the Canonical
- * Form is not one word once its particle and `sich` are removed.
+ * sie; wissen drops ich), the Präteritum from its stored `preterite`, and a
+ * Partizip II only from a stored `-te` form (gebracht). The rest, the
+ * haben/sein auxiliary, a participle whose `ge-` is in doubt and a stored
+ * form whose particle is not the verb's are left out rather than guessed.
+ * Undefined when the Canonical Form is not one word once its particle and
+ * `sich` are removed, or its stem is one no rule here spells (knien).
  */
 export function conjugateGermanVerb(
 	input: GermanVerbInput,
@@ -260,11 +302,11 @@ export function conjugateGermanVerb(
 	const weak =
 		classes.length > 0 && classes.every((value) => value === "Weak");
 
-	const stored = input.preterite?.map((form) => finiteOf(form, particle));
-	if (stored?.some((form) => form === undefined)) return undefined;
-	const preterites = distinct(
-		(stored as string[] | undefined) ?? (weak ? [weakPreterite(stem)] : []),
-	);
+	// A stored form whose particle is not the verb's is left out.
+	const stored = input.preterite
+		?.map((form) => finiteOf(form, particle))
+		.filter((form) => form !== undefined);
+	const preterites = distinct(stored ?? (weak ? [weakPreterite(stem)] : []));
 
 	const present = presentForms(stem);
 	const presentPersons: readonly Person[] = weak
@@ -280,8 +322,15 @@ export function conjugateGermanVerb(
 		cells: persons.map((person) => clause(person, forms[person], shape)),
 		label,
 	});
-	const ge = takesGe(infinitive) ? "ge" : "";
+	const ge = takesGe(infinitive);
 	const dentalPreterites = preterites.filter((form) => form.endsWith("te"));
+	const participles =
+		ge === undefined || hasStrongParticiple(infinitive)
+			? []
+			: dentalPreterites.map(
+					(form) =>
+						`${particle ?? ""}${ge ? "ge" : ""}${form.slice(0, -1)}`,
+				);
 
 	const rows: TableRow[] = [
 		personRow("Präsens", present, presentPersons),
@@ -291,14 +340,7 @@ export function conjugateGermanVerb(
 					personRow("Konjunktiv II", pastForms(form)),
 				)
 			: []),
-		{
-			cells: distinct(
-				dentalPreterites.map(
-					(form) => `${particle ?? ""}${ge}${form.slice(0, -1)}`,
-				),
-			),
-			label: "Partizip II",
-		},
+		{ cells: distinct(participles), label: "Partizip II" },
 		...(weak
 			? [{ cells: imperative(stem, shape), label: "Imperativ" }]
 			: []),

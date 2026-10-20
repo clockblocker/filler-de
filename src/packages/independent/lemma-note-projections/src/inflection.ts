@@ -71,6 +71,7 @@ function germanTable(input: ProjectionInput): InflectionTable | undefined {
 			return core.comparable === "Yes"
 				? compareGerman({
 						canonicalForm: lemma.canonicalForm,
+						derive: lemma.kind === "ADJ",
 						storedComparatives: storedComparatives(input),
 					})
 				: undefined;
