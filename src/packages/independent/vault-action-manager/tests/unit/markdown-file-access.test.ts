@@ -74,8 +74,12 @@ function makeHarness(
 	let transactionCount = 0;
 	let scrollCount = 0;
 	const vaultContents = new Map<string, string>();
+	const ioOrder: string[] = [];
 	const vaultRead = mock((file: TFile) =>
-		Effect.succeed(vaultContents.get(file.path) ?? "vault content"),
+		Effect.sync(() => {
+			ioOrder.push("read");
+			return vaultContents.get(file.path) ?? "vault content";
+		}),
 	);
 
 	const editor = {
@@ -85,7 +89,10 @@ function makeHarness(
 		}),
 		getLine: (line: number) => content.split("\n")[line] ?? "",
 		getSelection: () => options.selection ?? "selected",
-		getValue: () => content,
+		getValue: () => {
+			ioOrder.push("editor");
+			return content;
+		},
 		listSelections: () => [
 			{
 				anchor: { ch: 1, line: 1 },
@@ -218,7 +225,10 @@ function makeHarness(
 			}),
 		resolveLinkpathDest: () => Effect.die("not used"),
 		stat: (file) =>
-			Effect.succeed({ ctime: 1, mtime: 2, size: file.path.length }),
+			Effect.sync(() => {
+				ioOrder.push("stat");
+				return { ctime: 1, mtime: 2, size: file.path.length };
+			}),
 		trash: (file) =>
 			Effect.sync(() => {
 				files.delete(file.path);
@@ -250,6 +260,7 @@ function makeHarness(
 		getRestoredInlineTitleSelection: () => restoredInlineTitleSelection,
 		getScrollCount: () => scrollCount,
 		getTransactionCount: () => transactionCount,
+		ioOrder,
 		otherFile,
 		run,
 		setActiveFile: (file: TFile | null) => {
@@ -353,6 +364,20 @@ describe("MarkdownFileAccess", () => {
 			stat: { ctime: 1, mtime: 2, size: "Library/note.md".length },
 		});
 		expect(active.vaultRead).not.toHaveBeenCalled();
+	});
+
+	it("takes the stat before the content on both routes", async () => {
+		const active = makeHarness();
+		const background = makeHarness({ activePath: "Library/other.md" });
+
+		await active.run(active.access.readContentWithStat(target));
+		await background.run(background.access.readContentWithStat(target));
+
+		expect(active.ioOrder.slice(active.ioOrder.indexOf("stat"))).toEqual([
+			"stat",
+			"editor",
+		]);
+		expect(background.ioOrder).toEqual(["stat", "read"]);
 	});
 
 	it("does not fall back to the vault for stale or adapter-failed observations", async () => {

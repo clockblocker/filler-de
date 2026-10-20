@@ -1209,7 +1209,13 @@ class TextfresserE2EDriver extends Plugin {
 		const entry = observers.get(sessionId);
 		if (!entry) return;
 		observers.delete(sessionId);
-		await entry.observer.close();
+		try {
+			await entry.observer.close();
+		} catch (error) {
+			// A reloaded plugin already disposed the observer with its VAM
+			// runtime, so closing it again can fail; that leaves nothing open.
+			if (this.observeTextfresser().plugin === entry.plugin) throw error;
+		}
 	}
 
 	async modifications(params) {

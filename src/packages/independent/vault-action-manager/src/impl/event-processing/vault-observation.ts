@@ -69,6 +69,8 @@ type ObservationCore<Ev, M> = {
 	readonly listeningRequested: Ref.Ref<boolean>;
 	readonly nextSubscriberId: Ref.Ref<number>;
 	readonly pubsub: PubSub.PubSub<PublishedMessage<M>>;
+	/** Windows handed to subscribers so far; lets settling detect progress. */
+	readonly publishedWindows: Ref.Ref<number>;
 	readonly rootScope: Scope.Closeable;
 	readonly session: Ref.Ref<ObservationSession<Ev> | null>;
 	readonly sessionLock: Semaphore.Semaphore;
@@ -109,6 +111,7 @@ const makeObservationCore = Effect.fn("makeObservationCore")(function* <
 		context,
 		listeningRequested: yield* Ref.make(false),
 		nextSubscriberId: yield* Ref.make(0),
+		publishedWindows: yield* Ref.make(0),
 		pubsub,
 		rootScope,
 		session: yield* Ref.make<ObservationSession<Ev> | null>(null),
@@ -282,6 +285,13 @@ export class VaultObservation<Ev = VaultEvent, M = BulkVaultEvent> {
 		);
 	});
 
+	/** Number of windows published to subscribers since construction. */
+	readonly publishedWindowCountEffect = Effect.fn(
+		"VaultObservation.publishedWindowCount",
+	)(function* (this: VaultObservation<Ev, M>): Effect.fn.Return<number> {
+		return yield* Ref.get(this.core.publishedWindows);
+	});
+
 	readonly activeHandlerCountEffect = Effect.fn(
 		"VaultObservation.activeHandlerCount",
 	)(function* (this: VaultObservation<Ev, M>): Effect.fn.Return<number> {
@@ -376,6 +386,7 @@ export class VaultObservation<Ev = VaultEvent, M = BulkVaultEvent> {
 		if (subscribers.size === 0) return;
 
 		const bulk = this.source.publish(window);
+		yield* Ref.update(this.core.publishedWindows, (count) => count + 1);
 		yield* PubSub.publish(this.core.pubsub, { _tag: "Bulk", bulk });
 	});
 

@@ -193,12 +193,27 @@ relative to each other; structural changes appear only in `subscribeToBulk`.
 
 Modify Self Events are recorded at write time, not at planning time, because
 only the background writer knows whether a write happens. `TFileHelper`
-records one expectation immediately before each `vault.modify` and withdraws it
-if the write fails. A `ProcessMdFile` whose transform returns unchanged content
-records nothing. Modify expectations are counted per path, expire with the
-tracker TTL, and never hold the settle barrier open. Acquiring the modify
-listener clears them, because writes made while nobody listened left
-expectations whose callbacks already fired.
+records one expectation immediately before each `vault.modify` and, for
+`vault.process`, synchronously inside the callback and only when the callback
+changes the content, since Obsidian writes nothing when the callback returns
+its input. A modify callback that lands before the callback runs, or during a
+`vault.process` call that writes nothing (an unchanged `ProcessMdFile`, the
+first call of an asynchronous transform, a revalidation that lost a content
+race), is therefore never hidden. An expectation is withdrawn when its write
+fails. Modify expectations are counted per path, expire with the tracker TTL,
+and never hold the settle barrier open. Acquiring the modify listener clears
+them, because writes made while nobody listened left expectations whose
+callbacks already fired.
+
+One leftover remains: if Obsidian does not report a VAM write at all, for
+example a rewrite with the same size within the same millisecond that its
+watcher does not see as a change, the expectation stays until the TTL and can
+hide one hand edit to that path made within it.
+
+`whenSettled` settles to a fixed point. Each round waits for dispatch to go
+idle, flushes both channels and waits for their subscribers, then waits for the
+Dispatch Batches those subscribers submitted. Rounds repeat until one publishes
+no window, so a modify window opened by the last dispatch is included.
 
 Writes routed to the active editor are not attributed. Obsidian persists them
 with a debounced editor save that can also carry the user's own typing, so

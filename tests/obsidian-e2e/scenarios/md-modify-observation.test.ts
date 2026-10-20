@@ -52,6 +52,26 @@ describe("Obsidian E2E - VAM Markdown modify observation", () => {
 				observeModifications: { path: "Worter" },
 			},
 			async ({ act, modifications, snapshot }) => {
+				const codexPathsOf = (files: readonly { path: string }[]) =>
+					files
+						.map(({ path }) => path)
+						.filter((path) => path.startsWith("Worter/__"));
+
+				// The Codex already exists and does not list Maus yet, so the
+				// Librarian's write below is a modification of an existing note.
+				const before = await snapshot();
+				const codexBefore = codexPathsOf(before.files);
+				expect(codexBefore).toHaveLength(1);
+				expect(before.markdown[codexBefore[0] ?? ""]).not.toContain(
+					"Maus",
+				);
+				const hund = findPath(
+					before.files
+						.filter(({ kind }) => kind === "md")
+						.map(({ path }) => path),
+					"Worter/Hund",
+				);
+
 				await act({
 					content: "# Maus",
 					kind: "createFile",
@@ -59,16 +79,19 @@ describe("Obsidian E2E - VAM Markdown modify observation", () => {
 				});
 
 				const vault = await snapshot();
-				const codexPaths = vault.files
-					.map(({ path }) => path)
-					.filter((path) => path.startsWith("Worter/__"));
-				expect(codexPaths).toHaveLength(1);
+				const codexPaths = codexPathsOf(vault.files);
+				expect(codexPaths).toEqual(codexBefore);
 				expect(vault.markdown[codexPaths[0] ?? ""]).toContain("Maus");
+
+				// Positive control: the observer is live, so a hand edit is seen.
+				const edited = "# Hund\n\nhand edit";
+				await act({ content: edited, kind: "modifyFile", path: hund });
 
 				const observed = await modifications();
 				expect(
 					observed.filter(({ path }) => codexPaths.includes(path)),
 				).toEqual([]);
+				expect(observed.map(({ path }) => path)).toContain(hund);
 			},
 		);
 	});

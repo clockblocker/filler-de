@@ -4,9 +4,13 @@ import type { VamRuntime } from "./effect/runtime";
 import type { DispatchBatchCoordinator } from "./impl/actions-processing/dispatch-batch";
 import type { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 
+/** Bounds settling when subscribers keep provoking each other's windows. */
+const MAX_SETTLE_ROUNDS = 100;
+
 /** The idle barrier of one VaultObservation channel. */
 type SettleableObservation = {
 	readonly flushPendingEffect: () => Effect.Effect<void>;
+	readonly publishedWindowCountEffect: () => Effect.Effect<number>;
 	readonly whenIdleEffect: () => Effect.Effect<void>;
 };
 
@@ -30,19 +34,44 @@ export class VaultActionManagerTestingAdapter {
 	private readonly awaitSettled = Effect.fn(
 		"VaultActionManagerTestingAdapter.awaitSettled",
 	)(function* (this: VaultActionManagerTestingAdapter) {
-		yield* this.dispatches.whenIdleEffect();
+		// Settle to a fixed point. Each round waits for dispatch to go idle,
+		// turns every channel's current window into subscriber work, and waits
+		// for the Dispatch Batches those subscribers submit. Their writes can
+		// open new windows on either channel, so rounds repeat until one
+		// publishes no window at all.
+		let published = yield* this.publishedWindowCount();
+		for (let round = 1; ; round++) {
+			yield* this.dispatches.whenIdleEffect();
+			for (const observation of this.observations) {
+				yield* observation.flushPendingEffect();
+				yield* observation.whenIdleEffect();
+			}
+			yield* this.dispatches.whenIdleEffect();
 
-		// Turn the current quiet window into subscriber work, then include any
-		// Dispatch Batches those subscribers submit.
-		for (const observation of this.observations) {
-			yield* observation.flushPendingEffect();
-			yield* observation.whenIdleEffect();
+			const next = yield* this.publishedWindowCount();
+			if (next === published) break;
+			published = next;
+			if (round >= MAX_SETTLE_ROUNDS) {
+				yield* Effect.logWarning(
+					`[VaultActionManagerTestingAdapter] Still publishing windows after ${MAX_SETTLE_ROUNDS} settle rounds`,
+				);
+				break;
+			}
 		}
-		yield* this.dispatches.whenIdleEffect();
 
 		const filePaths = yield* this.selfEvents.getRegisteredFilePathsEffect();
 		yield* this.selfEvents.waitForAllRegisteredEffect();
 		yield* this.verifyFilesQueryableEffect(filePaths);
+	});
+
+	private readonly publishedWindowCount = Effect.fn(
+		"VaultActionManagerTestingAdapter.publishedWindowCount",
+	)(function* (this: VaultActionManagerTestingAdapter) {
+		let total = 0;
+		for (const observation of this.observations) {
+			total += yield* observation.publishedWindowCountEffect();
+		}
+		return total;
 	});
 
 	private readonly verifyFilesQueryableEffect = Effect.fn(

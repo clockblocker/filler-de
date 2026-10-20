@@ -270,6 +270,44 @@ describe("Markdown modify observation", () => {
 			}).pipe(Effect.provide(TestClock.layer())),
 		);
 	});
+
+	it("flushes at the maximum window deadline while edits keep arriving", async () => {
+		const vault = makeVault();
+
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const harness = yield* makeObservation(vault.app, {
+					maxWindowMs: 200,
+					quietWindowMs: 100,
+				});
+				vault.modify(mdFile("Worter/Hund.md", 1));
+				yield* TestClock.adjust(90);
+				vault.modify(mdFile("Worter/Hund.md", 2));
+				yield* TestClock.adjust(90);
+				vault.modify(mdFile("Worter/Hund.md", 3));
+				yield* TestClock.adjust(19);
+				expect(harness.received).toEqual([]);
+
+				yield* TestClock.adjust(1);
+				yield* harness.observation.whenIdleEffect();
+				expect(harness.received).toHaveLength(1);
+				expect(harness.received[0]?.modifications[0]?.stat.mtime).toBe(
+					3,
+				);
+				expect(harness.received[0]?.debug).toEqual({
+					endedAt: 200,
+					startedAt: 0,
+					trueCount: 3,
+				});
+
+				vault.modify(mdFile("Worter/Hund.md", 4));
+				yield* harness.settle;
+				expect(harness.received).toHaveLength(2);
+				yield* harness.subscription.close;
+				yield* harness.observation.disposeEffect();
+			}).pipe(Effect.provide(TestClock.layer())),
+		);
+	});
 });
 
 describe("scopeMdModifyEvent", () => {

@@ -547,33 +547,39 @@ export class TFileHelper {
 
 	/**
 	 * Runs one `Vault.process` call and attributes its write, if any, as a
-	 * modify Self Event. The expectation is recorded before the call, since
-	 * Obsidian writes before `process` resolves, and withdrawn when the
-	 * callback returned its input unchanged (no write) or the call failed.
+	 * modify Self Event. The expectation is recorded synchronously inside the
+	 * callback, and only when the callback changes the content, because only
+	 * then does Obsidian write. A modify callback that arrives before the
+	 * callback runs, or during a call that writes nothing, is never hidden.
+	 * The expectation is withdrawn if the call fails after recording it.
 	 */
 	private processAsSelf(
 		vault: VaultIo["Service"],
 		file: TFile,
 		fn: (current: string) => string,
 	): Effect.Effect<void, VamVaultIoError> {
-		const outcome = { wrote: false };
-		const run = vault.process(file, (current) => {
-			const next = fn(current);
-			outcome.wrote = next !== current;
-			return next;
-		});
 		const recorder = this.selfModifies;
-		if (!recorder) return Effect.asVoid(run);
-		return recorder.expectModifyEffect(file.path).pipe(
-			Effect.andThen(Effect.exit(run)),
-			Effect.flatMap((exit) =>
-				Exit.isSuccess(exit) && outcome.wrote
-					? Effect.void
-					: recorder
-							.forgetModifyEffect(file.path)
-							.pipe(Effect.andThen(Effect.asVoid(exit))),
-			),
-		);
+		if (!recorder) return Effect.asVoid(vault.process(file, fn));
+		return Effect.gen(function* () {
+			const runSync = Effect.runSyncWith(yield* Effect.context<never>());
+			const outcome = { recorded: false };
+			yield* vault
+				.process(file, (current) => {
+					const next = fn(current);
+					if (next !== current) {
+						runSync(recorder.expectModifyEffect(file.path));
+						outcome.recorded = true;
+					}
+					return next;
+				})
+				.pipe(
+					Effect.onExit((exit) =>
+						Exit.isFailure(exit) && outcome.recorded
+							? recorder.forgetModifyEffect(file.path)
+							: Effect.void,
+					),
+				);
+		});
 	}
 
 	private modifyAsSelf<E>(
@@ -582,10 +588,19 @@ export class TFileHelper {
 	): Effect.Effect<void, E> {
 		const recorder = this.selfModifies;
 		if (!recorder) return write;
-		return recorder.expectModifyEffect(file.path).pipe(
-			Effect.andThen(write),
-			Effect.tapError(() => recorder.forgetModifyEffect(file.path)),
-		);
+		return recorder
+			.expectModifyEffect(file.path)
+			.pipe(
+				Effect.andThen(
+					write.pipe(
+						Effect.onExit((exit) =>
+							Exit.isFailure(exit)
+								? recorder.forgetModifyEffect(file.path)
+								: Effect.void,
+						),
+					),
+				),
+			);
 	}
 }
 

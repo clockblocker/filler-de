@@ -7,6 +7,7 @@ import {
 } from "../../src/effect/errors";
 import { VaultIo } from "../../src/effect/ports";
 import { TFileHelper } from "../../src/file-services/background/helpers/tfile-helper";
+import { SelfEventTracker } from "../../src/impl/event-processing/self-event-tracker";
 import type { SplitPathToMdFile } from "../../src/types/split-path";
 
 const target: SplitPathToMdFile = {
@@ -280,7 +281,7 @@ describe("TFileHelper modify Self Events", () => {
 		]);
 	});
 
-	it("withdraws the expectation when a transform leaves the content unchanged", async () => {
+	it("expects nothing when a transform leaves the content unchanged", async () => {
 		const { helper, layer, log } = recordingHelper("same");
 
 		await Effect.runPromise(
@@ -289,10 +290,7 @@ describe("TFileHelper modify Self Events", () => {
 				.pipe(Effect.provide(layer)),
 		);
 
-		expect(log).toEqual([
-			"expect Library/note.md",
-			"forget Library/note.md",
-		]);
+		expect(log).toEqual([]);
 	});
 
 	it("attributes only the revalidated write of an asynchronous transform", async () => {
@@ -309,13 +307,11 @@ describe("TFileHelper modify Self Events", () => {
 
 		expect(log).toEqual([
 			"expect Library/note.md",
-			"forget Library/note.md",
-			"expect Library/note.md",
 			"process-write Library/note.md",
 		]);
 	});
 
-	it("withdraws every expectation when an asynchronous transform loses a content race", async () => {
+	it("expects nothing when an asynchronous transform loses a content race", async () => {
 		const { edit, helper, layer, log } = recordingHelper();
 
 		const result = await Effect.runPromise(
@@ -332,12 +328,7 @@ describe("TFileHelper modify Self Events", () => {
 		);
 
 		expect(Result.isFailure(result)).toBe(true);
-		expect(log).toEqual([
-			"expect Library/note.md",
-			"forget Library/note.md",
-			"expect Library/note.md",
-			"forget Library/note.md",
-		]);
+		expect(log).toEqual([]);
 	});
 
 	it("withdraws the expectation when the write fails", async () => {
@@ -367,5 +358,97 @@ describe("TFileHelper modify Self Events", () => {
 			"expect Library/note.md",
 			"forget Library/note.md",
 		]);
+	});
+});
+
+describe("TFileHelper modify Self Events with a real tracker", () => {
+	function trackedVault(initial: string) {
+		const tracker = Effect.runSync(SelfEventTracker.makeEffect());
+		const helper = new TFileHelper(tracker);
+		const file = new TFile();
+		file.path = "Library/note.md";
+		let content = initial;
+		const foreignIgnored: boolean[] = [];
+		let failWrite = false;
+		const layer = service({
+			getAbstractFileByPath: () => Effect.succeed(file),
+			// A hand edit's modify callback lands after Obsidian read the
+			// file and before it calls `fn`.
+			process: (target, fn) =>
+				Effect.gen(function* () {
+					const read = content;
+					foreignIgnored.push(
+						yield* tracker.shouldIgnoreModifyEffect(target.path),
+					);
+					const next = fn(read);
+					if (next === read) return read;
+					if (failWrite) {
+						return yield* new VamVaultIoError({
+							cause: new Error("disk full"),
+							operation: "process",
+							path: target.path,
+						});
+					}
+					content = next;
+					return next;
+				}),
+		});
+		return {
+			failWrites: () => {
+				failWrite = true;
+			},
+			foreignIgnored,
+			helper,
+			layer,
+			selfIgnored: () =>
+				Effect.runSync(tracker.shouldIgnoreModifyEffect(file.path)),
+		};
+	}
+
+	it("never hides a foreign modify that fires during a no-op process", async () => {
+		const vault = trackedVault("same");
+
+		await Effect.runPromise(
+			vault.helper
+				.processContent({ splitPath: target, transform: (c) => c })
+				.pipe(Effect.provide(vault.layer)),
+		);
+
+		expect(vault.foreignIgnored).toEqual([false]);
+		expect(vault.selfIgnored()).toBe(false);
+	});
+
+	it("attributes exactly the write a process call makes", async () => {
+		const vault = trackedVault("before");
+
+		await Effect.runPromise(
+			vault.helper
+				.processContent({
+					splitPath: target,
+					transform: (c) => `${c}!`,
+				})
+				.pipe(Effect.provide(vault.layer)),
+		);
+
+		expect(vault.foreignIgnored).toEqual([false]);
+		expect(vault.selfIgnored()).toBe(true);
+		expect(vault.selfIgnored()).toBe(false);
+	});
+
+	it("withdraws the expectation when the process write fails", async () => {
+		const vault = trackedVault("before");
+		vault.failWrites();
+
+		const result = await Effect.runPromise(
+			Effect.result(
+				vault.helper.processContent({
+					splitPath: target,
+					transform: (c) => `${c}!`,
+				}),
+			).pipe(Effect.provide(vault.layer)),
+		);
+
+		expect(Result.isFailure(result)).toBe(true);
+		expect(vault.selfIgnored()).toBe(false);
 	});
 });

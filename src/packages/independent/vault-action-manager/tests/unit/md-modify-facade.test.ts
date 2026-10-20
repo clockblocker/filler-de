@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import {
 	type BulkMdModifyEvent,
+	type BulkVaultEvent,
 	createVaultActionManager,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
@@ -77,16 +78,16 @@ function makeVaultHarness() {
 			modify: async (file: TFile, content: string) =>
 				write(file, content),
 			offref: () => {},
+			on: (name: string, callback: (...args: never[]) => void) => {
+				callbacks.set(name, callback);
+				return { callback, name };
+			},
 			// Mirrors Obsidian: write, and fire modify, only on a change.
 			process: async (file: TFile, fn: (content: string) => string) => {
 				const read = contents.get(file.path) ?? "";
 				const next = fn(read);
 				if (next !== read) write(file, next);
 				return next;
-			},
-			on: (name: string, callback: (...args: never[]) => void) => {
-				callbacks.set(name, callback);
-				return { callback, name };
 			},
 			read: async (file: TFile) => contents.get(file.path) ?? "",
 		},
@@ -102,6 +103,9 @@ function makeVaultHarness() {
 	return {
 		addFile,
 		app,
+		/** A note Obsidian reports as created, which VAM did not create. */
+		createByHand: (path: string, content: string) =>
+			callbacks.get("create")?.(addFile(path, content) as never),
 		/** An edit Obsidian reports but VAM did not make. */
 		editByHand: (file: TFile, content: string) => write(file, content),
 	};
@@ -222,5 +226,58 @@ describe("VaultActionManager Markdown modifications", () => {
 		expect(scan.diagnostics[0]?.operation).toBe("scanFile");
 		expect(scan.diagnostics[0]?.path).toBe("Worter/Broken.md");
 		await Effect.runPromise(dispose);
+	});
+});
+
+describe("VaultActionManager Bulk Vault Events beside a modify subscriber", () => {
+	async function observeBulk(withModifySubscriber: boolean) {
+		const harness = makeVaultHarness();
+		const hund = harness.addFile("Worter/Hund.md", "# Hund");
+		const { dispose, manager, testing } = createVaultActionManager(
+			harness.app,
+		);
+		const bulk: BulkVaultEvent[] = [];
+		const modified: BulkMdModifyEvent[] = [];
+
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				yield* manager.startListening();
+				yield* manager.subscribeToBulk((event) =>
+					Effect.sync(() => {
+						bulk.push(event);
+					}),
+				);
+				if (withModifySubscriber) {
+					yield* manager.subscribeToMdModifications(worter, (event) =>
+						Effect.sync(() => {
+							modified.push(event);
+						}),
+					);
+				}
+
+				harness.createByHand("Worter/Maus.md", "# Maus");
+				harness.editByHand(hund, "# Hund\n\nhand edit");
+				yield* testing.whenSettled();
+			}),
+		);
+		await Effect.runPromise(dispose);
+		return {
+			bulk: bulk.map(({ events, roots }) => ({ events, roots })),
+			modified: modified.flatMap((event) =>
+				event.modifications.map(({ splitPath }) =>
+					splitPathCodec.format(splitPath),
+				),
+			),
+		};
+	}
+
+	it("publishes the same Bulk Vault Events with or without a modify subscriber", async () => {
+		const without = await observeBulk(false);
+		const withModify = await observeBulk(true);
+
+		expect(without.bulk).toHaveLength(1);
+		expect(without.bulk[0]?.events).toHaveLength(1);
+		expect(withModify.bulk).toEqual(without.bulk);
+		expect(withModify.modified).toEqual(["Worter/Hund.md"]);
 	});
 });
