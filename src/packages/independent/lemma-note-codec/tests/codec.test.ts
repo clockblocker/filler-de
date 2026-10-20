@@ -320,15 +320,103 @@ describe("user text around renderings", () => {
 		roundTrip(edited, ["*Translation*: en: mom"]);
 	});
 
-	it("keeps an edited header, Block ID and all, beside the re-rendered one", () => {
-		const edited = canonical.replace(
-			"👩 **die Mutter** /ˈmʊtɐ/ ^r-",
-			"👩 **die liebe Mutter** /ˈmʊtɐ/ ^r-",
+	/** How often `^<id>` occurs in `markdown`. */
+	const idCount = (markdown: string, id: string) =>
+		markdown.match(new RegExp(`\\^${id}(?![0-9a-f])`, "gu"))?.length ?? 0;
+
+	/** Every Block ID of the note occurs once, on its canonical Block. */
+	function expectUniqueIds(written: string) {
+		const ids = blockIdsOf(normalized(nounData));
+		const all = [...ids.readings.values(), ...ids.surfaces.values()];
+		expect(all.length).toBeGreaterThan(0);
+		const canonicalLines = canonical.split("\n");
+		const writtenLines = written.split("\n");
+		for (const id of all) {
+			expect(idCount(written, id)).toBe(1);
+			const line = canonicalLines.find((text) =>
+				text.endsWith(` ^${id}`),
+			);
+			expect(line).toBeDefined();
+			expect(writtenLines).toContain(line ?? "");
+		}
+	}
+
+	/**
+	 * Edits the first line starting with `prefix`; returns the note and the
+	 * edited line without its Block ID and the whitespace before it.
+	 */
+	function editLine(
+		markdown: string,
+		prefix: string,
+		edit: (line: string) => string,
+	) {
+		const lines = markdown.split("\n");
+		const at = lines.findIndex((line) => line.startsWith(prefix));
+		if (at < 0) throw new Error(`No line starts with ${prefix}`);
+		const line = edit(lines[at] ?? "");
+		lines[at] = line;
+		const userText = line.replace(/[ \t]+\^[rs]-[0-9a-f]+(?=[ \t]*$)/u, "");
+		expect(userText).not.toBe(line);
+		return { markdown: lines.join("\n"), userText };
+	}
+
+	const idLines = {
+		header: "👩 **die Mutter** /ˈmʊtɐ/ ^r-",
+		surface: "*Surface*: Mütter (Nom Plur) ^s-",
+	};
+	for (const [kind, prefix] of Object.entries(idLines)) {
+		it(`keeps an edited ${kind} without its Block ID beside the re-rendered one`, () => {
+			const { markdown, userText } = editLine(canonical, prefix, (line) =>
+				line
+					.replace("Mutter", "liebe Mutter")
+					.replace("Mütter", "Mütterlein"),
+			);
+			const written = roundTrip(markdown, [userText]);
+			expect(written.split("\n")).toContain(userText);
+			expectUniqueIds(written);
+		});
+	}
+
+	it("keeps every edited header and surface byte for byte but their Block IDs", () => {
+		let markdown = canonical;
+		const userTexts: string[] = [];
+		const lines = canonical
+			.split("\n")
+			.filter((line) => / \^[rs]-[0-9a-f]+$/u.test(line));
+		expect(lines.length).toBeGreaterThan(2);
+		for (const [index, line] of lines.entries()) {
+			const edited = editLine(
+				markdown,
+				line,
+				(text) => `>  ${text.replace(/ \^/u, ` edit ${index}\t ^`)}  `,
+			);
+			markdown = edited.markdown;
+			userTexts.push(edited.userText);
+		}
+		const written = roundTrip(
+			markdown,
+			userTexts.map((text) => text.trimEnd()),
 		);
-		const written = roundTrip(edited, [
-			"👩 **die liebe Mutter** /ˈmʊtɐ/ ^r-",
+		const writtenLines = written.split("\n");
+		for (const text of userTexts) {
+			expect(text).toEndWith("  ");
+			expect(writtenLines).toContain(text);
+		}
+		expectUniqueIds(written);
+	});
+
+	it("drops the Block ID of a header unsealed by a line typed above it", () => {
+		const typed = typeUnder(canonical, "%%tf:header@", "Before the header");
+		const written = roundTrip(typed, [
+			"Before the header\n👩 **die Mutter** /ˈmʊtɐ/",
 		]);
-		expect(written).toContain("👩 **die Mutter** /ˈmʊtɐ/ ^r-");
+		expectUniqueIds(written);
+	});
+
+	it("keeps a Block ID a user types under an intact rendering", () => {
+		const typed = typeUnder(canonical, idLines.header, "My line ^r-0000");
+		const written = roundTrip(typed, ["My line ^r-0000"]);
+		expectUniqueIds(written);
 	});
 
 	it("keeps text typed between a marker and its rendering", () => {
