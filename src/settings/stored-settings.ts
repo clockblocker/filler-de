@@ -11,10 +11,20 @@ const RETIRED_SETTING_KEYS = [
 	"googleApiKey",
 ] as const;
 
+/** Whether stored data still holds a retired key, and should be saved again. */
+export function holdsRetiredSettings(stored: unknown): boolean {
+	return (
+		typeof stored === "object" &&
+		stored !== null &&
+		RETIRED_SETTING_KEYS.some((key) => key in stored)
+	);
+}
+
 /**
  * The settings stored data loads as: the defaults, overlaid with what was
  * stored, without the retired keys. Data saved by an older version, with
- * its Gemini key, still loads, and the next save drops those keys.
+ * its Gemini key, still loads; `holdsRetiredSettings` tells the plugin to
+ * save it again without them.
  */
 export function settingsFromStoredData(stored: unknown): TextEaterSettings {
 	const loaded: Record<string, unknown> =

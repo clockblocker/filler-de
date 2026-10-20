@@ -1,5 +1,8 @@
 import { describe, expect, it } from "bun:test";
-import { settingsFromStoredData } from "../../../src/settings/stored-settings";
+import {
+	holdsRetiredSettings,
+	settingsFromStoredData,
+} from "../../../src/settings/stored-settings";
 import { DEFAULT_SETTINGS } from "../../../src/types";
 
 describe("settingsFromStoredData", () => {
@@ -22,6 +25,13 @@ describe("settingsFromStoredData", () => {
 		expect("googleApiKey" in settings).toBe(false);
 		expect("apiProvider" in settings).toBe(false);
 		expect("generateInflections" in settings).toBe(false);
+	});
+
+	it("tells data holding a retired key apart from current data", () => {
+		expect(holdsRetiredSettings({ googleApiKey: "" })).toBe(true);
+		expect(holdsRetiredSettings({ generateInflections: true })).toBe(true);
+		expect(holdsRetiredSettings(DEFAULT_SETTINGS)).toBe(false);
+		expect(holdsRetiredSettings(null)).toBe(false);
 	});
 
 	it("falls back to the defaults when nothing is stored", () => {

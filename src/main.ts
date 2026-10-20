@@ -56,7 +56,10 @@ import {
 } from "./managers/obsidian/command-executor";
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
-import { settingsFromStoredData } from "./settings/stored-settings";
+import {
+	holdsRetiredSettings,
+	settingsFromStoredData,
+} from "./settings/stored-settings";
 import type { SuffixDelimiterConfig, TextEaterSettings } from "./types";
 import { buildCanonicalDelimiter } from "./utils/delimiter";
 import { getErrorMessage } from "./utils/get-error-message";
@@ -393,7 +396,10 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	private async loadSettings() {
-		this.settings = settingsFromStoredData(await this.loadData());
+		const stored: unknown = await this.loadData();
+		this.settings = settingsFromStoredData(stored);
+		// Drop the retired keys, the Gemini key among them, from data.json now.
+		if (holdsRetiredSettings(stored)) await this.saveData(this.settings);
 
 		// Initialize global state with parsed settings
 		initializeState(this.settings);

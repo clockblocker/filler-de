@@ -83,10 +83,6 @@ desktop story.
 | A completed mutation is visible before the harness returns | `harness-lifecycle.test.ts` |
 | CLI stdout/error parsing | `tests/obsidian-e2e/infra/cli.test.ts` |
 
-Provider reports explicitly list the orchestration assertions they do not own.
-Those assertions stay deterministic rather than being recreated through live
-plugin monkey-patches.
-
 ## Former fast suite
 
 | Former fast case | Current owner |

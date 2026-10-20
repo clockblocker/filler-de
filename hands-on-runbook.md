@@ -183,9 +183,6 @@ $OBS vault=$VAULT eval code="app.vault.getAbstractFileByPath('path.md')?'yes':'n
 # Wait for plugin idle
 $OBS vault=$VAULT eval code="(async()=>{await app.plugins.plugins['$PLUGIN'].whenIdle();return 'idle'})()"
 
-# Read Lemma state
-$OBS vault=$VAULT eval code="(async()=>{const p=app.plugins.plugins['$PLUGIN'];const lr=p.textfresser.getState().latestLemmaResult;return JSON.stringify(lr)})()"
-
 # List loaded plugins
 $OBS vault=$VAULT eval code="Object.keys(app.plugins.plugins).join(', ')"
 ```
