@@ -15,6 +15,7 @@ import {
 	type LemmaNoteDocument,
 	type NoteBlock,
 	type NotePart,
+	renderingSeal,
 	trimmedRaw,
 } from "./document";
 import {
@@ -70,13 +71,27 @@ function labelled(
 		: `*${label}*: ${clean}`;
 }
 
+/**
+ * A typed Block: its marker, sealing the rendering it is followed by, so
+ * parse can tell that rendering from anything a user types around it.
+ */
+function typedBlock(
+	kind: TypedBlockKind,
+	payload: string | undefined,
+	rendering: string | undefined,
+): string {
+	const seal =
+		rendering === undefined ? "" : renderingSeal(rendering.split("\n"));
+	const marker = `%%tf:${kind}${seal}${payload === undefined ? "" : ` ${payload}`}%%`;
+	return rendering === undefined ? marker : `${marker}\n${rendering}`;
+}
+
 function serializedBlock(
 	kind: SerializedBlockKind,
 	value: unknown,
 	rendering: string | undefined,
 ): string {
-	const marker = `%%tf:${kind} ${encodePayload(value)}%%`;
-	return rendering === undefined ? marker : `${marker}\n${rendering}`;
+	return typedBlock(kind, encodePayload(value), rendering);
 }
 
 /** A serialized Block with its default, labelled rendering. */
@@ -96,7 +111,9 @@ function projectionBlock(
 	kind: ProjectionBlockKind,
 	rendering: string | undefined,
 ): string | undefined {
-	return rendering === undefined ? undefined : `%%tf:${kind}%%\n${rendering}`;
+	return rendering === undefined
+		? undefined
+		: typedBlock(kind, undefined, rendering);
 }
 
 const isEmpty = (value: unknown) =>

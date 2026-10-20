@@ -3,6 +3,7 @@ import { readingIdentityKey } from "dumling";
 import {
 	assignBlockIds,
 	blockIdsOf,
+	type Projections,
 	parseDocument,
 	readingBlockId,
 	serialize,
@@ -201,10 +202,13 @@ describe("the document layer", () => {
 	});
 
 	it("never reads projection Blocks: editing or deleting them changes no data", () => {
-		const canonical = serialize(undefined, nounData);
+		const canonical = serialize(undefined, nounData, {
+			projections: { tags: () => ["de/noun"] },
+		});
 		const edited = canonical
 			.replace("👩 **die Mutter** /ˈmʊtɐ/", "🦖 **der Vater**")
-			.replace("%%tf:tags%%\n*Tags*: #de/noun\n\n", "");
+			.replace(/%%tf:tags@[^\n]*\n\*Tags\*: #de\/noun\n\n/gu, "");
+		expect(edited).not.toContain("%%tf:tags");
 		expect(validData(edited)).toEqual(validData(canonical));
 	});
 
@@ -216,6 +220,128 @@ describe("the document layer", () => {
 		);
 		expect(edited).not.toBe(canonical);
 		expect(validData(edited)).toEqual(validData(canonical));
+	});
+});
+
+describe("user text around renderings", () => {
+	const projections: Projections<"de"> = {
+		inflection: ({ entry }) =>
+			`| Nom | ${entry.knowledge?.plural?.toString() ?? ""} |\n| Gen | x |`,
+		inverseRelations: ({ entry }) => [
+			{
+				provenance: "inferred",
+				relation: "hyponym",
+				source: entry.reading as never,
+				target: verbData.lemmaRecord.lemma as never,
+			},
+		],
+		tags: () => ["noun", "fem"],
+	};
+	const canonical = serialize(undefined, nounData, { projections });
+
+	/** Inserts `text` after the first line that starts with `prefix`. */
+	function typeUnder(markdown: string, prefix: string, text: string) {
+		const lines = markdown.split("\n");
+		const at = lines.findIndex((line) => line.startsWith(prefix));
+		if (at < 0) throw new Error(`No line starts with ${prefix}`);
+		lines.splice(at + 1, 0, text);
+		return lines.join("\n");
+	}
+
+	/** parse → serialize → parse, checking data and the user's text survive. */
+	function roundTrip(markdown: string, kept: readonly string[]) {
+		const parsed = parseDe(markdown);
+		if (!parsed.data.ok) throw new Error("invalid");
+		expect(parsed.data.data).toEqual(normalized(nounData));
+		expect(serializeDocument(parsed.document)).toBe(markdown);
+		const freeform = parsed.document.parts
+			.flatMap((part) => part.blocks)
+			.filter((block) => block.type === "freeform")
+			.map((block) => block.raw)
+			.join("");
+		for (const text of kept) expect(freeform).toContain(text);
+
+		const written = serialize(parsed.document, parsed.data.data, {
+			projections,
+		});
+		for (const text of kept) expect(written).toContain(text);
+		const again = parseDe(written);
+		expect(again.data.ok && again.data.data).toEqual(normalized(nounData));
+		expect(
+			serialize(again.document, normalized(nounData), { projections }),
+		).toBe(written);
+		return written;
+	}
+
+	const lastLines = {
+		header: "👩 **die Mutter** /ˈmʊtɐ/ ^r-",
+		inflection: "| Gen | x |",
+		inverse_relation: "*Projected*: hyponym:",
+		surface: "*Surface*: Mütter (Nom Plur) ^s-",
+		tags: "*Tags*: #noun #fem",
+		translation: "*Translation*: en: mother",
+	};
+	for (const [kind, last] of Object.entries(lastLines)) {
+		it(`keeps a line typed directly under ${kind}`, () => {
+			const typed = typeUnder(canonical, last, `My ${kind} note`);
+			const written = roundTrip(typed, [`My ${kind} note`]);
+			expect(written).toContain(last);
+		});
+	}
+
+	it("keeps a line typed directly under a Block with no rendering", () => {
+		const typed = typeUnder(canonical, "%%tf:identity", "About Mutter");
+		roundTrip(typed, ["About Mutter"]);
+	});
+
+	it("keeps an edit inside a rendering as freeform and re-renders the Block", () => {
+		const edited = canonical
+			.replace("*Tags*: #noun #fem", "*Tags*: #noun #fem #mine")
+			.replace("| Gen | x |", "| Gen | Mutter |");
+		const parsed = parseDe(edited);
+		const blocks = parsed.document.parts[1]?.blocks ?? [];
+		const tags = blocks.find(
+			(block) => block.type === "projection" && block.kind === "tags",
+		);
+		expect(tags?.raw).toMatch(/^%%tf:tags@1:[0-9a-f]{8}%%\n$/u);
+		const written = roundTrip(edited, [
+			"*Tags*: #noun #fem #mine",
+			"*Inflection*\n| Nom | Mütter |\n| Gen | Mutter |",
+		]);
+		expect(written).toContain("*Tags*: #noun #fem\n");
+		expect(written).toContain("| Gen | x |");
+	});
+
+	it("keeps an edited serialized rendering without reading it", () => {
+		const edited = canonical.replace(
+			"*Translation*: en: mother",
+			"*Translation*: en: mom",
+		);
+		roundTrip(edited, ["*Translation*: en: mom"]);
+	});
+
+	it("keeps an edited header, Block ID and all, beside the re-rendered one", () => {
+		const edited = canonical.replace(
+			"👩 **die Mutter** /ˈmʊtɐ/ ^r-",
+			"👩 **die liebe Mutter** /ˈmʊtɐ/ ^r-",
+		);
+		const written = roundTrip(edited, [
+			"👩 **die liebe Mutter** /ˈmʊtɐ/ ^r-",
+		]);
+		expect(written).toContain("👩 **die Mutter** /ˈmʊtɐ/ ^r-");
+	});
+
+	it("keeps text typed between a marker and its rendering", () => {
+		const typed = typeUnder(canonical, "%%tf:tags@", "Before the tags");
+		roundTrip(typed, ["Before the tags\n*Tags*: #noun #fem"]);
+	});
+
+	it("still recognises its renderings with CRLF line endings", () => {
+		const crlf = canonical.replaceAll("\n", "\r\n");
+		const parsed = parseDe(crlf);
+		expect(serializeDocument(parsed.document)).toBe(crlf);
+		const blocks = parsed.document.parts.flatMap((part) => part.blocks);
+		expect(blocks.filter((block) => block.type === "freeform")).toEqual([]);
 	});
 });
 
@@ -236,11 +362,13 @@ describe("projections", () => {
 				tags: () => ["noun", "fem"],
 			},
 		});
-		expect(markdown).toContain("%%tf:tags%%\n*Tags*: #noun #fem");
-		expect(markdown).toContain(
+		const unsealed = markdown.replace(/@[0-9]+:[0-9a-f]{8}/gu, "");
+		expect(markdown).toContain("%%tf:tags@1:");
+		expect(unsealed).toContain("%%tf:tags%%\n*Tags*: #noun #fem");
+		expect(unsealed).toContain(
 			"%%tf:inverse_relation%%\n*Projected*: hyponym: [[Worter/de/Lexeme/VERB/auf/aufstehen|aufstehen]]",
 		);
-		expect(markdown).toContain(
+		expect(unsealed).toContain(
 			"%%tf:inflection%%\n*Inflection*\n| Nom | Mütter |\n| Gen | x |",
 		);
 		expect(validData(markdown)).toEqual(normalized(nounData));
@@ -262,7 +390,7 @@ describe("projections", () => {
 		});
 		expect(markdown).toContain("synonym: [[Mama]]");
 		expect(markdown).toMatch(
-			/%%tf:header%%\nCustom header \^r-[0-9a-f]{8}\n/u,
+			/%%tf:header@1:[0-9a-f]{8}%%\nCustom header \^r-[0-9a-f]{8}\n/u,
 		);
 	});
 });

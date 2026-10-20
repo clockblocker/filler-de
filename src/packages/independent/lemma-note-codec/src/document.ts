@@ -5,6 +5,7 @@ import {
 	type ProjectionBlockKind,
 	type SerializedBlockKind,
 } from "./blocks";
+import { sha256Hex } from "./hash";
 
 /**
  * One Block of a Lemma note. `raw` holds the Block's exact bytes, from its
@@ -25,7 +26,10 @@ export type NoteBlock =
 			readonly raw: string;
 	  }
 	| {
-			/** User content: any lines after a blank line, up to the next marker. */
+			/**
+			 * User content: any lines up to the next marker that are not a
+			 * typed Block's exact sealed rendering.
+			 */
 			readonly type: "freeform";
 			readonly raw: string;
 	  }
@@ -67,12 +71,17 @@ export const EMPTY_DOCUMENT: LemmaNoteDocument = { parts: [], preamble: [] };
  * - `%%tf:<kind>%%` opens a projection Block and `%%tf:<kind> <json>%%` a
  *   serialized one, whose payload is one line of JSON with `%` written as
  *   `\u0025`.
+ * - a typed Block with a visible rendering seals it in its marker, as
+ *   `%%tf:<kind>@<lines>:<hash>%%` or `%%tf:<kind>@<lines>:<hash> <json>%%`:
+ *   the rendering's line count and the first 8 hex digits of the SHA-256 of
+ *   its lines joined by `\n`.
  *
- * A typed Block's visible rendering follows its marker up to the first blank
- * line. Lines after that blank line, up to the next marker, are freeform.
+ * A typed Block's rendering is exactly the sealed lines directly after its
+ * marker. Every other line up to the next marker is freeform: lines typed
+ * under the rendering, and the whole rendering once it is edited.
  */
 const MARKER_PATTERN =
-	/^%%tf(-part)?:([A-Za-z0-9_-]+)(?: ([^\r\n]*?))?%%[ \t]*\r?\n?$/u;
+	/^%%tf(-part)?:([A-Za-z0-9_-]+)(?:@([1-9][0-9]*):([0-9a-f]{8}))?(?: ([^\r\n]*?))?%%[ \t]*\r?\n?$/u;
 const BLOCK_ID_PATTERN = /^[rs]-[0-9a-f]+$/u;
 const BLANK_PATTERN = /^[ \t]*\r?\n?$/u;
 
@@ -85,18 +94,46 @@ type BlockHead = NoteBlock extends infer Block
 
 type Marker =
 	| { readonly type: "part"; readonly scope: PartScope; readonly id?: string }
-	| { readonly type: "block"; readonly block: BlockHead };
+	| {
+			readonly type: "block";
+			readonly block: BlockHead;
+			readonly seal?: string;
+	  };
+
+/** The seal a marker writes for a rendering's lines: `@<lines>:<hash>`. */
+export function renderingSeal(lines: readonly string[]): string {
+	return `@${lines.length}:${sha256Hex(lines.join("\n")).slice(0, 8)}`;
+}
+
+/**
+ * How many of a typed Block's lines are its sealed rendering: all the
+ * sealed lines when they match the seal exactly, otherwise none.
+ */
+function sealedLength(
+	lines: readonly string[],
+	seal: string | undefined,
+): number {
+	if (seal === undefined) return 0;
+	const count = Number(seal.slice(1, seal.indexOf(":")));
+	if (lines.length < count) return 0;
+	const rendering = lines
+		.slice(0, count)
+		.map((line) => line.replace(/\r?\n$/u, ""));
+	return renderingSeal(rendering) === seal ? count : 0;
+}
 
 function readMarker(line: string): Marker | undefined {
 	const match = MARKER_PATTERN.exec(line);
 	if (match === null) return undefined;
-	const [, partPrefix, name = "", argument] = match;
+	const [, partPrefix, name = "", count, hash, argument] = match;
+	const seal = hash === undefined ? undefined : `@${count}:${hash}`;
 	if (partPrefix !== undefined) {
-		if (name === "lemma" && argument === undefined)
+		if (name === "lemma" && argument === undefined && seal === undefined)
 			return { scope: "lemma", type: "part" };
 		if (
 			(name === "reading" || name === "surface") &&
-			(argument === undefined || BLOCK_ID_PATTERN.test(argument))
+			(argument === undefined || BLOCK_ID_PATTERN.test(argument)) &&
+			seal === undefined
 		)
 			return {
 				scope: name,
@@ -108,13 +145,19 @@ function readMarker(line: string): Marker | undefined {
 			type: "block",
 		};
 	}
+	const sealed = seal === undefined ? {} : { seal };
 	if (isSerializedBlockKind(name))
 		return {
 			block: { kind: name, payload: argument ?? "", type: "serialized" },
 			type: "block",
+			...sealed,
 		};
 	if (isProjectionBlockKind(name))
-		return { block: { kind: name, type: "projection" }, type: "block" };
+		return {
+			block: { kind: name, type: "projection" },
+			type: "block",
+			...sealed,
+		};
 	return { block: { marker: `tf:${name}`, type: "unknown" }, type: "block" };
 }
 
@@ -128,8 +171,8 @@ type Phase = "rendering" | "trailing" | "freeform";
 
 /**
  * Parses a Lemma note into its document layer. It never fails: lines that
- * are not markers are rendering or freeform, unknown markers become unknown
- * Blocks, and every byte lands in some Block's `raw`.
+ * are not markers are a sealed rendering or freeform, unknown markers become
+ * unknown Blocks, and every byte lands in some Block's `raw`.
  */
 export function parseDocument(markdown: string): LemmaNoteDocument {
 	const preamble: NoteBlock[] = [];
@@ -139,6 +182,8 @@ export function parseDocument(markdown: string): LemmaNoteDocument {
 		| { marker: Marker & { type: "part" }; lines: string[] }
 		| undefined;
 	let phase: Phase = "freeform";
+	/** A typed Block's lines up to the first blank line, before the seal check. */
+	let rendering: { lines: string[]; seal: string | undefined } | undefined;
 
 	const target = () => parts.at(-1)?.blocks ?? preamble;
 	const flush = () => {
@@ -162,9 +207,26 @@ export function parseDocument(markdown: string): LemmaNoteDocument {
 		}
 	};
 
+	/**
+	 * Ends a typed Block's rendering. Lines that are exactly its sealed
+	 * rendering stay in the Block; the rest open a freeform Block in place.
+	 */
+	const settle = () => {
+		if (rendering === undefined || open === undefined) return;
+		const { lines, seal } = rendering;
+		rendering = undefined;
+		const kept = sealedLength(lines, seal);
+		open.lines.push(...lines.slice(0, kept));
+		if (kept === lines.length) return;
+		flush();
+		open = { block: { type: "freeform" }, lines: lines.slice(kept) };
+		phase = "freeform";
+	};
+
 	for (const line of splitLines(markdown)) {
 		const marker = readMarker(line);
 		if (marker !== undefined) {
+			settle();
 			flush();
 			if (marker.type === "part") {
 				openPart = { lines: [line], marker };
@@ -172,8 +234,17 @@ export function parseDocument(markdown: string): LemmaNoteDocument {
 			} else {
 				open = { block: marker.block, lines: [line] };
 				phase = "rendering";
+				if (marker.block.type !== "unknown")
+					rendering = { lines: [], seal: marker.seal };
 			}
 			continue;
+		}
+		if (rendering !== undefined) {
+			if (!isBlank(line)) {
+				rendering.lines.push(line);
+				continue;
+			}
+			settle();
 		}
 		const current = openPart ?? open;
 		if (current === undefined) {
@@ -190,6 +261,7 @@ export function parseDocument(markdown: string): LemmaNoteDocument {
 		}
 		current.lines.push(line);
 	}
+	settle();
 	flush();
 	return { parts: parts.map(({ part }) => part), preamble };
 }
