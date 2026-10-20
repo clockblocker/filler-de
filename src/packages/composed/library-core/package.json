@@ -1,8 +1,4 @@
 {
-	"name": "@textfresser/library-core",
-	"private": true,
-	"version": "0.0.0",
-	"type": "module",
 	"dependencies": {
 		"@textfresser/note-addressing": "workspace:*",
 		"@textfresser/vault-action-manager": "workspace:*",
@@ -13,7 +9,11 @@
 	"exports": {
 		".": "./src/index.ts"
 	},
+	"name": "@textfresser/library-core",
+	"private": true,
 	"scripts": {
 		"build": "bun ../../../../scripts/build-workspace-package.ts"
-	}
+	},
+	"type": "module",
+	"version": "0.0.0"
 }
