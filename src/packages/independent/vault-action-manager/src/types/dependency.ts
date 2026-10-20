@@ -23,4 +23,3 @@ export type ActionDependency = {
  * - For other actions: "UpsertMdFile:path/to/file.md"
  */
 export type DependencyGraph = Map<string, ActionDependency>;
-

@@ -1,5 +1,8 @@
 import type { ParsedUserSettings } from "../internal/root/parsed-settings";
-import type { LanguagesConfig, SuffixDelimiterConfig } from "../internal/root/plugin-types";
+import type {
+	LanguagesConfig,
+	SuffixDelimiterConfig,
+} from "../internal/root/plugin-types";
 
 /**
  * Codec configuration rules.

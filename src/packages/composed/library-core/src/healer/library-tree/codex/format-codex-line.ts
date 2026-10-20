@@ -3,6 +3,7 @@
  * Pure functions that produce markdown strings for codex entries.
  */
 
+import { makeCodecRulesFromSettings, makeCodecs } from "../../../codecs";
 import { getParsedUserSettings } from "../../../internal/root/global-state";
 import {
 	DASH,
@@ -13,7 +14,6 @@ import {
 	PIPE,
 	SPACE_F,
 } from "../../../internal/root/ui";
-import { makeCodecRulesFromSettings, makeCodecs } from "../../../codecs";
 import { computeCodexSuffix } from "../../../path-finder";
 import type { TreeNodeStatus } from "../tree-node/types/atoms";
 import { TreeNodeStatus as Status } from "../tree-node/types/atoms";

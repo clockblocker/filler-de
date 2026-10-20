@@ -1,6 +1,5 @@
-import type { Codecs } from "@textfresser/library-core";
+import type { Codecs, Healer } from "@textfresser/library-core";
 import { isCodexSplitPath } from "@textfresser/library-core";
-import type { Healer } from "@textfresser/library-core";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import {
 	CommandKind,

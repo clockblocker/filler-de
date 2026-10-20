@@ -10,25 +10,20 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
-import { MD } from "@textfresser/vault-action-manager";
-import {
+import type { NodeName } from "@textfresser/library-core";
+import {buildObservedLeafSplitPath, 
 	makeCodecRulesFromSettings,
 	makeCodecs,
-} from "@textfresser/library-core";
-import {
 	pathPartsToSuffixParts,
 	pathPartsWithRootToSuffixParts,
+	type ScrollNode,
 	serializeSeparatedSuffix,
 	serializeSeparatedSuffixUnchecked,
 	suffixPartsToPathParts,
-} from "@textfresser/library-core";
-import {
-	type ScrollNode,
 	TreeNodeKind,
-	TreeNodeStatus,
+	TreeNodeStatus
 } from "@textfresser/library-core";
-import { buildObservedLeafSplitPath } from "@textfresser/library-core";
-import type { NodeName } from "@textfresser/library-core";
+import { MD } from "@textfresser/vault-action-manager";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 

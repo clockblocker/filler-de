@@ -47,7 +47,6 @@
       "dependencies": {
         "@textfresser/note-addressing": "workspace:*",
         "@textfresser/vault-action-manager": "workspace:*",
-        "effect": "4.0.0",
         "neverthrow": "^8.2.0",
         "zod": "4.4.3",
       },

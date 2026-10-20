@@ -80,6 +80,7 @@ function upsert({
 		.find((l) => l.length > 0);
 
 	if (firstNonEmptyLine && isMatch(firstNonEmptyLine)) {
+		// biome-ignore lint/suspicious/noConsole: independent packages cannot import the plugin logger; this diagnostic must stay visible.
 		console.warn(
 			"[goBackLinkHelper.upsert] strip left a go-back link; regex may not match on-disk format",
 			{ firstLine: firstNonEmptyLine.slice(0, 80) },

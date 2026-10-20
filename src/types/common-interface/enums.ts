@@ -16,4 +16,3 @@ export const MdFileSubTypeSchema = z.enum([
 
 export const FileType = MdFileSubTypeSchema.enum;
 export type FileType = z.infer<typeof MdFileSubTypeSchema>;
-

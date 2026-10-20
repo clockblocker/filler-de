@@ -1,8 +1,8 @@
 import type { MD } from "@textfresser/vault-action-manager";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
-import type { InvertRecord } from "../../internal/root/type-helpers";
 import type { FileExtension } from "../../healer/library-tree/tree-node/types/atoms";
 import { TreeNodeKind } from "../../healer/library-tree/tree-node/types/atoms";
+import type { InvertRecord } from "../../internal/root/type-helpers";
 import type { NodeName } from "../../types/schemas/node-name";
 
 const TreeNodeKindToSplitPathKind = {

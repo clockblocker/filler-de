@@ -95,8 +95,6 @@ function calculateGroupCharCount(
 	return sentences.reduce((sum, s) => sum + s.charCount, 0);
 }
 
-
-
 /**
  * Stage 4 (token-based): Region Grouper
  * Groups content tokens, with paragraph breaks forcing group boundaries.

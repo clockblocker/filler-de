@@ -28,8 +28,6 @@ export function isDelete(e: VaultEvent): e is TrashVaultEvent {
 	);
 }
 
-
-
 export type PossibleRootVaultEvent = RenameVaultEvent | TrashVaultEvent;
 
 export function isPossibleRoot(e: VaultEvent): e is PossibleRootVaultEvent {

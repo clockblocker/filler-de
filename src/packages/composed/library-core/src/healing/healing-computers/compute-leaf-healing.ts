@@ -1,3 +1,4 @@
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import type {
 	Codecs,
 	FileNodeLocator,
@@ -7,7 +8,6 @@ import type {
 } from "../../codecs";
 import type { HealingAction } from "../../healer/library-tree/types/healing-action";
 import { buildCanonicalLeafSplitPath } from "../../tree/utils";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
 import { splitPathsEqual } from "../split-path-equality";
 
 /**

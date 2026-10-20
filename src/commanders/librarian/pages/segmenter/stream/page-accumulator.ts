@@ -5,10 +5,6 @@ import type {
 	SentenceGroup,
 } from "../../types";
 
-
-
-
-
 /**
  * Splits a large group at sentence boundaries to fit target size.
  * Used when a single group exceeds the target.

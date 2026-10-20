@@ -1,14 +1,11 @@
 import z from "zod";
 import {
-	SMALL_EM_DASH,
-	SmallEmDashSchema,
-} from "../../../internal/root/ui";
-import {
 	FileExtensionSchema,
 	MdExtensionSchema,
 	SectionExtensionSchema,
 	TreeNodeKind,
 } from "../../../healer/library-tree/tree-node/types/atoms";
+import { SMALL_EM_DASH, SmallEmDashSchema } from "../../../internal/root/ui";
 import { NodeNameSchema } from "../../../types/schemas/node-name";
 
 export const NodeSegmentIdSeparatorSchema = z.templateLiteral([

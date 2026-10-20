@@ -1,4 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
 import { MD } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
@@ -359,7 +366,10 @@ describe("generateCodexContent", () => {
 			const librarySection = section("Library", {
 				"A﹘Section﹘": section("A", {
 					"Note1﹘Scroll﹘md": scroll("Note1", TreeNodeStatus.Done),
-					"Note2﹘Scroll﹘md": scroll("Note2", TreeNodeStatus.NotStarted),
+					"Note2﹘Scroll﹘md": scroll(
+						"Note2",
+						TreeNodeStatus.NotStarted,
+					),
 				}),
 			});
 			const chain = [sec("Library")];

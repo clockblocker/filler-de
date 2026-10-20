@@ -1,5 +1,5 @@
 import { err, ok, type Result } from "neverthrow";
-import type { Codecs, CodecError } from "../../codecs";
+import type { CodecError, Codecs } from "../../codecs";
 import type { SectionNodeSegmentId } from "../../codecs/segment-id";
 import { sectionChainToPathParts } from "../../tree/utils";
 

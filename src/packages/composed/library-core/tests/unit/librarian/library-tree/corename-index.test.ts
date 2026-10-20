@@ -1,11 +1,15 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
 import { TreeNodeStatus } from "../../../../src/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../../src/types/schemas/node-name";
 import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
-import {
-	makeScrollLocator,
-	makeTree,
-} from "./tree-test-helpers";
+import { makeScrollLocator, makeTree } from "./tree-test-helpers";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
@@ -47,8 +51,9 @@ describe("Tree corename index", () => {
 
 		const matches = healer.getLeavesByCoreName("pick");
 		expect(matches).toHaveLength(1);
-		expect(matches[0]!.basename).toBe("pick-german");
-		expect(matches[0]!.pathParts).toEqual(["Library", "german"]);
+		expect(matches).toMatchObject([
+			{ basename: "pick-german", pathParts: ["Library", "german"] },
+		]);
 	});
 
 	it("finds multiple leaves with same corename in different sections", () => {
@@ -93,8 +98,12 @@ describe("Tree corename index", () => {
 
 		const matches = healer.getLeavesByCoreName("laufen");
 		expect(matches).toHaveLength(1);
-		expect(matches[0]!.basename).toBe("laufen-word-german");
-		expect(matches[0]!.pathParts).toEqual(["Library", "german", "word"]);
+		expect(matches).toMatchObject([
+			{
+				basename: "laufen-word-german",
+				pathParts: ["Library", "german", "word"],
+			},
+		]);
 	});
 
 	it("skips codex nodes (__ prefix)", () => {
@@ -131,7 +140,7 @@ describe("Tree corename index", () => {
 
 		const matches = healer.getLeavesByCoreName("image");
 		expect(matches).toHaveLength(1);
-		expect(matches[0]!.basename).toBe("image-german");
+		expect(matches).toMatchObject([{ basename: "image-german" }]);
 	});
 
 	it("invalidates index after tree mutation", () => {
@@ -168,7 +177,7 @@ describe("Tree corename index", () => {
 		// After mutation, new leaf should be found
 		const runMatches = healer.getLeavesByCoreName("run");
 		expect(runMatches).toHaveLength(1);
-		expect(runMatches[0]!.basename).toBe("run-german");
+		expect(runMatches).toMatchObject([{ basename: "run-german" }]);
 	});
 
 	it("finds leaf at library root level", () => {
@@ -182,7 +191,8 @@ describe("Tree corename index", () => {
 		const matches = healer.getLeavesByCoreName("note");
 		expect(matches).toHaveLength(1);
 		// At root level, no suffix parts → basename is just the corename
-		expect(matches[0]!.basename).toBe("note");
-		expect(matches[0]!.pathParts).toEqual(["Library"]);
+		expect(matches).toMatchObject([
+			{ basename: "note", pathParts: ["Library"] },
+		]);
 	});
 });

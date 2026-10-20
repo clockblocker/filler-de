@@ -1,9 +1,9 @@
 import { err, ok, type Result } from "neverthrow";
-import { getParsedUserSettings } from "../../../../../../../../internal/root/global-state";
 import type {
 	AnySplitPathInsideLibrary,
 	Codecs,
 } from "../../../../../../../../codecs";
+import { getParsedUserSettings } from "../../../../../../../../internal/root/global-state";
 import { canonizeSplitPathWithSeparatedSuffix } from "../../../../../utils/canonical-naming/canonicalization-policy";
 import { tryCanonicalizeSplitPathToDestination } from "../../../../../utils/canonical-naming/canonicalize-to-destination";
 import {

@@ -6,18 +6,17 @@ import {
 	it,
 	spyOn,
 } from "bun:test";
-import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
+import type { NodeName } from "@textfresser/library-core";
 import {
 	makeCodecRulesFromSettings,
-	makeCodecs,
+	makeCodecs,makeCodexBasename 
 } from "@textfresser/library-core";
-import { makeCodexBasename } from "@textfresser/library-core";
+import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	getNextPage,
 	getPrevPage,
 } from "../../../src/commanders/librarian/navigation/page-navigation";
-import type { NodeName } from "@textfresser/library-core";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 import { makeTree } from "./library-tree/tree-test-helpers";

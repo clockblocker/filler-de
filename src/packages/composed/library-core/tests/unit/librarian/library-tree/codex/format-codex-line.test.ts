@@ -1,4 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	type spyOn,
+} from "bun:test";
 import {
 	formatChildSectionLine,
 	formatFileLine,

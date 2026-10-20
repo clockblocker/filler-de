@@ -1,5 +1,5 @@
-import type { Prettify } from "../../../../internal/root/type-helpers";
 import type { TreeNodeSegmentId } from "../../../../codecs/segment-id/types/segment-id";
+import type { Prettify } from "../../../../internal/root/type-helpers";
 import type { NodeName } from "../../../../types/schemas/node-name";
 import type {
 	FileExtension,

@@ -1,8 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import {
-	type ParsedWikilink,
-	wikilinkHelper,
-} from "../src/wikilink";
+import { wikilinkHelper } from "../src/wikilink";
 
 describe("wikilinkHelper.parse", () => {
 	it("parses simple wikilink", () => {
@@ -32,9 +29,10 @@ describe("wikilinkHelper.parse", () => {
 	it("parses multiple wikilinks", () => {
 		const result = wikilinkHelper.parse("[[foo]] and [[bar|baz]]");
 		expect(result).toHaveLength(2);
-		expect(result[0]!.target).toBe("foo");
-		expect(result[1]!.target).toBe("bar");
-		expect(result[1]!.alias).toBe("baz");
+		expect(result).toMatchObject([
+			{ target: "foo" },
+			{ alias: "baz", target: "bar" },
+		]);
 	});
 
 	it("returns empty array for text without wikilinks", () => {
@@ -44,7 +42,7 @@ describe("wikilinkHelper.parse", () => {
 
 	it("handles wikilinks with special characters", () => {
 		const result = wikilinkHelper.parse("[[über-weg]]");
-		expect(result[0]!.target).toBe("über-weg");
+		expect(result).toMatchObject([{ target: "über-weg" }]);
 	});
 
 	it("handles empty string", () => {
@@ -75,12 +73,18 @@ describe("wikilinkHelper.findByTarget", () => {
 	});
 
 	it("returns null when target not found", () => {
-		const result = wikilinkHelper.findByTarget("Text with [[foo]] here", "bar");
+		const result = wikilinkHelper.findByTarget(
+			"Text with [[foo]] here",
+			"bar",
+		);
 		expect(result).toBeNull();
 	});
 
 	it("finds correct wikilink among multiple", () => {
-		const result = wikilinkHelper.findByTarget("[[foo]] and [[bar]] and [[baz]]", "bar");
+		const result = wikilinkHelper.findByTarget(
+			"[[foo]] and [[bar]] and [[baz]]",
+			"bar",
+		);
 		expect(result).not.toBeNull();
 		expect(result?.target).toBe("bar");
 	});
@@ -108,7 +112,9 @@ describe("wikilinkHelper.matchesPattern", () => {
 
 describe("wikilinkHelper.createMatcher", () => {
 	it("iterates through wikilinks", () => {
-		const nextMatch = wikilinkHelper.createMatcher("[[foo]] and [[bar|baz]]");
+		const nextMatch = wikilinkHelper.createMatcher(
+			"[[foo]] and [[bar|baz]]",
+		);
 
 		const first = nextMatch();
 		expect(first).not.toBeNull();
@@ -160,9 +166,9 @@ describe("wikilinkHelper.normalizeLinkTarget", () => {
 	});
 
 	it("does not flatten generic slash-based targets", () => {
-		expect(
-			wikilinkHelper.normalizeLinkTarget("domain/schema/field"),
-		).toBe("domain/schema/field");
+		expect(wikilinkHelper.normalizeLinkTarget("domain/schema/field")).toBe(
+			"domain/schema/field",
+		);
 	});
 });
 

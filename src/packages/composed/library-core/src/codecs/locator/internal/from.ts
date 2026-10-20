@@ -1,5 +1,4 @@
-import { MD } from "@textfresser/vault-action-manager";
-import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
 import { makeNodeSegmentId } from "../../../healer/library-tree/tree-node/codecs/node-and-segment-id/make-node-segment-id";
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
@@ -95,10 +94,9 @@ export function canonicalSplitPathInsideLibraryToLocator<
 	);
 
 	switch (sp.kind) {
-		case SplitPathKind.File:
-			{
-				const filePath =
-					sp as unknown as CanonicalSplitPathToFileInsideLibrary;
+		case SplitPathKind.File: {
+			const filePath =
+				sp as unknown as CanonicalSplitPathToFileInsideLibrary;
 			return serializeAndBuildLocator(
 				segmentId,
 				{
@@ -108,13 +106,15 @@ export function canonicalSplitPathInsideLibraryToLocator<
 				},
 				segmentIdChainToParent,
 				{ extension: filePath.extension },
-			) as Result<NodeLocatorOf<CorrespondingTreeNodeKind<SK>>, CodecError>;
-			}
+			) as Result<
+				NodeLocatorOf<CorrespondingTreeNodeKind<SK>>,
+				CodecError
+			>;
+		}
 
-		case SplitPathKind.MdFile:
-			{
-				const mdPath =
-					sp as unknown as CanonicalSplitPathToMdFileInsideLibrary;
+		case SplitPathKind.MdFile: {
+			const mdPath =
+				sp as unknown as CanonicalSplitPathToMdFileInsideLibrary;
 			return serializeAndBuildLocator(
 				segmentId,
 				{
@@ -124,12 +124,14 @@ export function canonicalSplitPathInsideLibraryToLocator<
 				},
 				segmentIdChainToParent,
 				{},
-			) as Result<NodeLocatorOf<CorrespondingTreeNodeKind<SK>>, CodecError>;
-			}
+			) as Result<
+				NodeLocatorOf<CorrespondingTreeNodeKind<SK>>,
+				CodecError
+			>;
+		}
 
-		case SplitPathKind.Folder:
-			{
-				const folderPath = sp as CanonicalSplitPathToFolderInsideLibrary;
+		case SplitPathKind.Folder: {
+			const folderPath = sp as CanonicalSplitPathToFolderInsideLibrary;
 			return serializeAndBuildLocator(
 				segmentId,
 				{
@@ -138,7 +140,10 @@ export function canonicalSplitPathInsideLibraryToLocator<
 				},
 				segmentIdChainToParent,
 				{},
-			) as Result<NodeLocatorOf<CorrespondingTreeNodeKind<SK>>, CodecError>;
-			}
+			) as Result<
+				NodeLocatorOf<CorrespondingTreeNodeKind<SK>>,
+				CodecError
+			>;
+		}
 	}
 }
