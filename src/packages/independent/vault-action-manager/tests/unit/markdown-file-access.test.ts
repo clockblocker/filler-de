@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
 import { Effect, Fiber, Layer, Tracer } from "effect";
 import { TFile } from "obsidian";
-import { VamActiveEditorError } from "../../src/effect/errors";
+import { VamActiveEditorError, VamVaultIoError } from "../../src/effect/errors";
 import {
 	ActiveEditorAccess,
 	type ActiveEditorHandle,
@@ -186,6 +186,22 @@ function makeHarness(
 		modify: (_file, value) =>
 			Effect.sync(() => {
 				content = value;
+			}),
+		process: (file, fn) =>
+			Effect.try({
+				catch: (cause) =>
+					new VamVaultIoError({
+						cause,
+						operation: "process",
+						path: file.path,
+					}),
+				try: () => {
+					const next = fn(
+						vaultContents.get(file.path) ?? "vault content",
+					);
+					vaultContents.set(file.path, next);
+					return next;
+				},
 			}),
 		read: vaultRead,
 		rename: (file, toPath) =>

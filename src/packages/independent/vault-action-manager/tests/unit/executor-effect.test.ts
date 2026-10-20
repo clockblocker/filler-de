@@ -118,6 +118,7 @@ function services(mode: "success" | "failure") {
 				getAbstractFileByPath: () => Effect.die("not used"),
 				getMarkdownFiles: Effect.die("not used"),
 				modify: () => Effect.die("not used"),
+				process: () => Effect.die("not used"),
 				read: () => Effect.die("not used"),
 				rename: () => Effect.die("not used"),
 				resolveLinkpathDest: () => Effect.die("not used"),

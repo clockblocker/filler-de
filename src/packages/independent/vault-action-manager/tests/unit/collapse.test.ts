@@ -96,6 +96,60 @@ describe("collapseActions", () => {
 			expect(result).toBe("x123");
 		});
 
+		it("keeps composed synchronous transforms synchronous", async () => {
+			const process = (suffix: string) =>
+				({
+					kind: VaultActionKind.ProcessMdFile,
+					payload: {
+						splitPath: mdFile("a.md"),
+						transform: (c: string) => `${c}${suffix}`,
+					},
+				}) as const;
+
+			const collapsed = await collapseActions([
+				process("1"),
+				process("2"),
+				process("3"),
+			]);
+			const single = expectFirstCollapsedAction(collapsed);
+			if (
+				single.kind !== VaultActionKind.ProcessMdFile ||
+				!("transform" in single.payload)
+			) {
+				throw new Error("Expected collapsed action to keep transform");
+			}
+			expect(single.payload.transform("x")).toBe("x123");
+		});
+
+		it("composes a synchronous transform after an asynchronous one", async () => {
+			const p1 = {
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					splitPath: mdFile("a.md"),
+					transform: async (c: string) => `${c}A`,
+				},
+			} as const;
+			const p2 = {
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					splitPath: mdFile("a.md"),
+					transform: (c: string) => `${c}B`,
+				},
+			} as const;
+
+			const collapsed = await collapseActions([p1, p2]);
+			const single = expectFirstCollapsedAction(collapsed);
+			if (
+				single.kind !== VaultActionKind.ProcessMdFile ||
+				!("transform" in single.payload)
+			) {
+				throw new Error("Expected collapsed action to keep transform");
+			}
+			const result = single.payload.transform("x");
+			expect(result).toBeInstanceOf(Promise);
+			expect(await result).toBe("xAB");
+		});
+
 		it("handles async transforms", async () => {
 			const p1 = {
 				kind: VaultActionKind.ProcessMdFile,

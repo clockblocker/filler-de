@@ -22,6 +22,19 @@ function getTransform(
 	return (content: string) => content.replace(payload.before, payload.after);
 }
 
+/**
+ * Composes two transforms in order. The result stays synchronous when both
+ * parts are, so background execution can apply it atomically.
+ */
+function composeTransforms(first: Transform, second: Transform): Transform {
+	return (content) => {
+		const intermediate = first(content);
+		return typeof intermediate === "string"
+			? second(intermediate)
+			: intermediate.then(second);
+	};
+}
+
 export const collapseActions = Effect.fn("DispatchBatch.collapseActions")(
 	function* (actions: readonly VaultAction[]) {
 		const byPath = new Map<string, VaultAction>();
@@ -114,11 +127,10 @@ export const collapseActions = Effect.fn("DispatchBatch.collapseActions")(
 								const actionTransform = getTransform(
 									action.payload,
 								);
-								const combined = async (content: string) => {
-									const first =
-										await existingTransform(content);
-									return await actionTransform(first);
-								};
+								const combined = composeTransforms(
+									existingTransform,
+									actionTransform,
+								);
 								// Remove old, add composed
 								additionalActions.delete(existingAdditional);
 								additionalActions.add({
@@ -161,10 +173,10 @@ export const collapseActions = Effect.fn("DispatchBatch.collapseActions")(
 							existing.payload,
 						);
 						const actionTransform = getTransform(action.payload);
-						const combined = async (content: string) => {
-							const first = await existingTransform(content);
-							return await actionTransform(first);
-						};
+						const combined = composeTransforms(
+							existingTransform,
+							actionTransform,
+						);
 						byPath.set(key, {
 							...existing,
 							payload: {

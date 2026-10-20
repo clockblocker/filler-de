@@ -28,6 +28,7 @@ import { splitPathFromAbstractInternal } from "./helpers/pathfinder/path-codecs/
 import {
 	DispatchBatchCoordinator,
 	type DispatchBatchEffectFailure,
+	type StopOnFirstFailureDispatchFailure,
 } from "./impl/actions-processing/dispatch-batch";
 import { Executor } from "./impl/actions-processing/executor";
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
@@ -159,10 +160,32 @@ export class VaultActionManager {
 			);
 	}
 
+	/**
+	 * Dispatches one ordered, non-atomic batch. Every planned action is
+	 * attempted; failures are reported together after the batch.
+	 */
 	dispatch(
 		actions: readonly VaultAction[],
 	): Effect.Effect<void, VamRuntimeFailure<DispatchBatchEffectFailure>> {
 		return this.runtime.provide(this.dispatches.dispatchEffect(actions));
+	}
+
+	/**
+	 * Dispatches one ordered, non-atomic batch that stops at its first failed
+	 * action. The `VamDispatchStoppedError` reports the failure, the planned
+	 * actions already executed, and the ones skipped. Nothing is rolled back.
+	 */
+	dispatchStopOnFirstFailure(
+		actions: readonly VaultAction[],
+	): Effect.Effect<
+		void,
+		VamRuntimeFailure<StopOnFirstFailureDispatchFailure>
+	> {
+		return this.runtime.provide(
+			this.dispatches.dispatchEffect(actions, {
+				stopOnFirstFailure: true,
+			}),
+		);
 	}
 
 	readContent(
@@ -353,9 +376,12 @@ export {
 	VamActiveEditorError,
 	type VamActiveEditorFailureReason,
 	VamActiveEditorFailureReasonSchema,
+	VamContentConflictError,
 	VamDispatchError,
+	VamDispatchStoppedError,
 	type VamEffectError,
 	type VamFileAccessError,
+	type VamFileWriteError,
 	VamNoActiveEditorError,
 	VamPlanningError,
 	VamScanError,
@@ -364,3 +390,7 @@ export {
 	VamSubscriptionError,
 	VamVaultIoError,
 } from "./effect/errors";
+export type {
+	DispatchBatchEffectFailure,
+	StopOnFirstFailureDispatchFailure,
+} from "./impl/actions-processing/dispatch-batch";

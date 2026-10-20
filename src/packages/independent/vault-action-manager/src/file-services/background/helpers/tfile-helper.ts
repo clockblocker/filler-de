@@ -1,6 +1,9 @@
 import { Effect, Result } from "effect";
 import { TFile } from "obsidian";
-import { VamVaultIoError } from "../../../effect/errors";
+import {
+	VamContentConflictError,
+	VamVaultIoError,
+} from "../../../effect/errors";
 import { VaultIo } from "../../../effect/ports";
 import {
 	errorBothSourceAndTargetNotFound,
@@ -440,63 +443,123 @@ export class TFileHelper {
 				: isLookupMiss(immediate.failure)
 					? yield* this.getFileWithRetry(splitPath)
 					: yield* immediate.failure;
-			return yield* this.tryReadAndTransform(file, transform, splitPath);
+			return yield* this.tryProcess(file, transform, splitPath);
 		});
 	}
 
-	private tryReadAndTransform(
+	/**
+	 * Applies a transform through `Vault.process`, so a synchronous transform
+	 * reads, transforms, and writes the file as one atomic step.
+	 *
+	 * `Vault.process` callbacks must be synchronous. An asynchronous transform
+	 * is therefore started inside a first `process` call against the current
+	 * content, which is then aborted without writing. Once the transform
+	 * settles, a second `process` call writes its result only if the file still
+	 * holds the content the transform started from; otherwise it fails with a
+	 * typed `VamContentConflictError` and leaves the newer content in place.
+	 * The transform is never re-run, because it may not be idempotent.
+	 */
+	private tryProcess(
 		file: TFile,
 		transform: Transform,
 		splitPath: SplitPathToMdFile,
 	) {
 		const path = pathfinder.systemPathFromSplitPath(splitPath);
+		const transformFailure = (cause: unknown) =>
+			operationFailure(
+				"processFileContent.transform",
+				path,
+				errorWriteFailed("file", path, getErrorMessage(cause)),
+				cause,
+			);
+		const ioFailure = (operation: string, error: VamVaultIoError) =>
+			operationFailure(
+				operation,
+				path,
+				errorWriteFailed("file", path, originalMessage(error)),
+				error,
+			);
+
 		return Effect.gen(function* () {
 			const vault = yield* VaultIo;
-			const before = yield* vault
-				.read(file)
-				.pipe(
-					Effect.mapError((error) =>
-						operationFailure(
-							"processFileContent.read",
-							path,
-							errorWriteFailed(
-								"file",
-								path,
-								originalMessage(error),
-							),
-							error,
-						),
-					),
-				);
-			const after = yield* Effect.tryPromise({
-				catch: (cause) =>
-					operationFailure(
-						"processFileContent.transform",
-						path,
-						errorWriteFailed("file", path, getErrorMessage(cause)),
-						cause,
-					),
-				try: async () => transform(before),
-			});
-			if (after !== before) {
-				yield* vault
-					.modify(file, after)
-					.pipe(
-						Effect.mapError((error) =>
-							operationFailure(
-								"processFileContent.write",
-								path,
-								errorWriteFailed(
-									"file",
-									path,
-									originalMessage(error),
-								),
-								error,
-							),
-						),
-					);
+			const started: { pending?: PendingTransform } = {};
+			const first = yield* Effect.result(
+				vault.process(file, (current) => {
+					let result: string | Promise<string>;
+					try {
+						result = transform(current);
+					} catch (cause) {
+						throw new AbortProcess("transform", cause);
+					}
+					if (typeof result !== "string") {
+						const after = Promise.resolve(result);
+						// Observed below; this only prevents an unhandled
+						// rejection while the aborted process call settles.
+						after.catch(() => {});
+						started.pending = { after, before: current };
+						throw new AbortProcess("async");
+					}
+					if (result === current) throw new AbortProcess("unchanged");
+					return result;
+				}),
+			);
+			if (Result.isSuccess(first)) return file;
+
+			const aborted = abortReason(first.failure);
+			if (aborted?.reason === "unchanged") return file;
+			if (aborted?.reason === "transform") {
+				return yield* transformFailure(aborted.cause);
 			}
-			return file;
+			const pending = started.pending;
+			if (aborted?.reason !== "async" || !pending) {
+				return yield* ioFailure("processFileContent", first.failure);
+			}
+
+			const after = yield* Effect.tryPromise({
+				catch: transformFailure,
+				try: () => pending.after,
+			});
+			if (after === pending.before) return file;
+
+			const written = yield* Effect.result(
+				vault.process(file, (current) => {
+					if (current !== pending.before) {
+						throw new AbortProcess("conflict");
+					}
+					return after;
+				}),
+			);
+			if (Result.isSuccess(written)) return file;
+			if (abortReason(written.failure)?.reason === "conflict") {
+				return yield* new VamContentConflictError({
+					cause: new Error(
+						`Content of ${path} changed while its transform was running; the transform result was not written`,
+					),
+					operation: "processFileContent.revalidate",
+					path,
+				});
+			}
+			return yield* ioFailure(
+				"processFileContent.write",
+				written.failure,
+			);
 		});
 	}
+}
+
+type PendingTransform = {
+	readonly after: Promise<string>;
+	readonly before: string;
+};
+
+/** Thrown from a `Vault.process` callback to abort it without writing. */
+class AbortProcess {
+	constructor(
+		readonly reason: "async" | "conflict" | "transform" | "unchanged",
+		readonly cause?: unknown,
+	) {}
+}
+
+function abortReason(error: VamVaultIoError): AbortProcess | null {
+	return error.cause instanceof AbortProcess ? error.cause : null;
 }

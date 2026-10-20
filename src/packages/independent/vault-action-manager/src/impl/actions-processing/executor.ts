@@ -1,5 +1,5 @@
 import { Effect, Result } from "effect";
-import { VamDispatchError, type VamFileAccessError } from "../../effect/errors";
+import { VamDispatchError, type VamFileWriteError } from "../../effect/errors";
 import { type VamLiveServices, VaultIo } from "../../effect/ports";
 import type { TFileHelper } from "../../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../../file-services/background/helpers/tfolder-helper";
@@ -34,7 +34,7 @@ export class Executor {
 
 	private executeAction(
 		action: VaultAction,
-	): Effect.Effect<unknown, VamFileAccessError, VamLiveServices> {
+	): Effect.Effect<unknown, VamFileWriteError, VamLiveServices> {
 		switch (action.kind) {
 			case VaultActionKind.CreateFolder:
 				return this.tfolderHelper.createFolder(
