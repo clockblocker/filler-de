@@ -14,7 +14,7 @@ import {
 } from "@textfresser/vault-action-manager";
 import { logError } from "@textfresser/vault-action-manager/issue-handlers";
 import { Effect, Exit, Predicate } from "effect";
-import { Modal, Notice, Plugin, TFile } from "obsidian";
+import { Modal, Notice, Plugin, requestUrl, TFile } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
 import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
 import {
@@ -29,6 +29,7 @@ import {
 	initializeState,
 	updateParsedSettings,
 } from "./global-state/global-state";
+import { createRequestUrlFetch, DumgenHost } from "./managers/dumgen";
 import {
 	createHandlers,
 	tagLineCopyEmbedBehavior,
@@ -59,6 +60,19 @@ import { sleep } from "./utils/sleep";
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
 	apiService: ApiService;
+	/**
+	 * The plugin's one dumgen instance: `this.dumgen.get()`. It is built on
+	 * first use from the TypeSafe and OpenAI keys in the settings, rebuilt
+	 * when a key changes, and disposed on unload. Its calls go through
+	 * `requestUrl` (see `managers/dumgen/request-url-fetch.ts`).
+	 */
+	readonly dumgen = new DumgenHost({
+		fetch: createRequestUrlFetch(requestUrl),
+		keys: () => ({
+			openaiApiKey: this.settings?.openaiApiKey ?? "",
+			typesafeApiKey: this.settings?.typesafeApiKey ?? "",
+		}),
+	});
 	vam: VaultActionManager;
 	vamTesting: VaultActionManager["testing"];
 	userEventInterceptor: ObsidianEventLayer;
@@ -302,6 +316,7 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	override onunload() {
+		this.dumgen.dispose();
 		// Destroy overlay manager
 		if (this.overlayManager) {
 			this.overlayManager.destroy();

@@ -20,6 +20,7 @@ export const defaultSettingsForUnitTests: ParsedUserSettings = {
 	languages: { known: "English", target: "German" },
 	maxSectionDepth: 6,
 	navButtonsPosition: "left",
+	openaiApiKey: "",
 	showScrollBacklinks: true,
 	showScrollsInCodexesForDepth: 1,
 	splitInBlocksPlacement: "AboveSelection",
@@ -32,4 +33,5 @@ export const defaultSettingsForUnitTests: ParsedUserSettings = {
 	suffixDelimiterConfig: defaultDelimiterConfig,
 	suffixDelimiterPattern: buildFlexibleDelimiterPattern(defaultDelimiterConfig),
 	translatePlacement: "AboveSelection",
+	typesafeApiKey: "",
 };

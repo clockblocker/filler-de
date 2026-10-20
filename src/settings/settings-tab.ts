@@ -2,12 +2,10 @@ import { type App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type TextEaterPluginStripped from "../main-stripped";
 import { ACTION_DEFINITIONS } from "../managers/overlay-manager/action-definitions/definitions";
 import {
-	type KnownLanguage,
 	KnownLanguageSchema,
 	ReprForLanguage,
-	type SelectionActionPlacement as SelectionActionPlacementType,
 	SelectionActionPlacementSchema,
-	type TargetLanguage,
+	type SelectionActionPlacement as SelectionActionPlacementType,
 	TargetLanguageSchema,
 } from "../types";
 import { LOCALES, type SettingsLocale } from "./locales";
@@ -53,6 +51,32 @@ export class SettingsTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.googleApiKey)
 					.onChange(async (value) => {
 						this.plugin.settings.googleApiKey = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t.typesafeApiKey)
+			.setDesc(t.typesafeApiKeyDesc)
+			.addText((text) =>
+				text
+					.setPlaceholder(t.apiKeyPlaceholder)
+					.setValue(this.plugin.settings.typesafeApiKey)
+					.onChange(async (value) => {
+						this.plugin.settings.typesafeApiKey = value;
+						await this.plugin.saveSettings();
+					}),
+			);
+
+		new Setting(containerEl)
+			.setName(t.openaiApiKey)
+			.setDesc(t.openaiApiKeyDesc)
+			.addText((text) =>
+				text
+					.setPlaceholder(t.apiKeyPlaceholder)
+					.setValue(this.plugin.settings.openaiApiKey)
+					.onChange(async (value) => {
+						this.plugin.settings.openaiApiKey = value;
 						await this.plugin.saveSettings();
 					}),
 			);
@@ -160,23 +184,19 @@ export class SettingsTab extends PluginSettingTab {
 								def.settingKey as keyof typeof this.plugin.settings
 							] as string,
 						)
-						.onChange(
-							async (value) => {
-								const parsed =
-									SelectionActionPlacementSchema.safeParse(
-										value,
-									);
-								if (!parsed.success) {
-									return;
-								}
-								// Type assertion needed: settingKey is dynamic but we know it's a placement key
-								// biome-ignore lint/suspicious/noExplicitAny: Dynamic settings key access
-								(this.plugin.settings as any)[
-									def.settingKey as string
-								] = parsed.data;
-								await this.plugin.saveSettings();
-							},
-						);
+						.onChange(async (value) => {
+							const parsed =
+								SelectionActionPlacementSchema.safeParse(value);
+							if (!parsed.success) {
+								return;
+							}
+							// Type assertion needed: settingKey is dynamic but we know it's a placement key
+							// biome-ignore lint/suspicious/noExplicitAny: Dynamic settings key access
+							(this.plugin.settings as any)[
+								def.settingKey as string
+							] = parsed.data;
+							await this.plugin.saveSettings();
+						});
 				});
 		}
 

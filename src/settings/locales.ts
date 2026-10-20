@@ -9,6 +9,8 @@ export type SettingsLocale = {
 
 	// Setting names
 	geminiApiKey: string;
+	typesafeApiKey: string;
+	openaiApiKey: string;
 	apiProvider: string;
 	knownLanguage: string;
 	targetLanguage: string;
@@ -24,6 +26,8 @@ export type SettingsLocale = {
 
 	// Setting descriptions
 	geminiApiKeyDesc: string;
+	typesafeApiKeyDesc: string;
+	openaiApiKeyDesc: string;
 	apiProviderDesc: string;
 	knownLanguageDesc: string;
 	targetLanguageDesc: string;
@@ -108,6 +112,8 @@ const ENGLISH_LOCALE: SettingsLocale = {
 	navButtonsPositionDesc:
 		"Where to show navigation buttons (← →) in the bottom toolbar",
 	navButtonsRight: "Right",
+	openaiApiKey: "OpenAI API key",
+	openaiApiKeyDesc: "Used by dumgen to write entries and translate sentences",
 	placementText: {
 		AboveSelection: "Above selection",
 		Bottom: "In bottom toolbar",
@@ -124,6 +130,8 @@ const ENGLISH_LOCALE: SettingsLocale = {
 	suffixDelimiterPlaceholder: "-",
 	targetLanguage: "Language to learn",
 	targetLanguageDesc: "The language you are studying",
+	typesafeApiKey: "TypeSafe API key",
+	typesafeApiKeyDesc: "Used by dumgen to segment sentences and judge words",
 	wrapDelimiter: "Wrap delimiter in spaces",
 	wrapDelimiterDesc: "Use ' - ' instead of '-' as delimiter",
 };
@@ -179,6 +187,9 @@ const RUSSIAN_LOCALE: SettingsLocale = {
 	navButtonsPositionDesc:
 		"Где показывать кнопки навигации (← →) в нижней панели",
 	navButtonsRight: "Справа",
+	openaiApiKey: "Ключ OpenAI API",
+	openaiApiKeyDesc:
+		"Нужен dumgen, чтобы писать статьи и переводить предложения",
 	placementText: {
 		AboveSelection: "Над выделением",
 		Bottom: "В нижней панели",
@@ -195,6 +206,9 @@ const RUSSIAN_LOCALE: SettingsLocale = {
 	suffixDelimiterPlaceholder: "-",
 	targetLanguage: "Изучаемый язык",
 	targetLanguageDesc: "Язык, который вы изучаете",
+	typesafeApiKey: "Ключ TypeSafe API",
+	typesafeApiKeyDesc:
+		"Нужен dumgen, чтобы разбивать предложения и оценивать слова",
 	wrapDelimiter: "Обернуть разделитель пробелами",
 	wrapDelimiterDesc: "Использовать ' - ' вместо '-' как разделитель",
 };
