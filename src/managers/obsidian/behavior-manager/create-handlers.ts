@@ -4,7 +4,7 @@
  *
  * Architecture:
  * - Stateless handlers (clipboard, select-all) call services directly
- * - All other handlers delegate to Librarian or Textfresser methods
+ * - All other handlers delegate to Librarian methods
  */
 
 import {
@@ -13,7 +13,6 @@ import {
 	UserEventKind as UserEventKinds,
 } from "@textfresser/obsidian-event-layer";
 import type { Librarian } from "../../../commanders/librarian/librarian";
-import type { Textfresser } from "../../../commanders/textfresser/textfresser";
 import { createCheckboxFrontmatterHandler } from "./checkbox-behavior";
 import { createClipboardHandler } from "./clipboard-behavior";
 import { createCodexCheckboxHandler } from "./codex-checkbox-behavior";
@@ -35,13 +34,11 @@ type HandlerDef = {
  * All librarian-dependent handlers delegate to librarian methods.
  *
  * @param librarian - Librarian instance for tree operations
- * @param textfresser - Textfresser instance for wikilink click tracking
  * @param onWikilinkClicked - Told every clicked link's target, such as
  *   Classify waiting for a Reading's Knowledge to scroll to it
  */
 export function createHandlers(
 	librarian: Librarian,
-	textfresser?: Textfresser,
 	onWikilinkClicked?: (target: string) => void,
 ): HandlerDef[] {
 	const handlers: HandlerDef[] = [
@@ -70,17 +67,14 @@ export function createHandlers(
 		},
 	];
 
-	// Textfresser handler (wikilink click tracking), and Classify's scroll to entry
-	const tracking = textfresser?.createHandler();
-	if (tracking || onWikilinkClicked) {
+	// Classify's scroll to entry
+	if (onWikilinkClicked) {
 		handlers.push({
 			handler: {
-				doesApply: (payload) => tracking?.doesApply(payload) ?? true,
+				doesApply: () => true,
 				handle: (payload) => {
-					onWikilinkClicked?.(payload.target.basename);
-					return tracking
-						? tracking.handle(payload)
-						: ({ outcome: "passthrough" } as const);
+					onWikilinkClicked(payload.target.basename);
+					return { outcome: "passthrough" } as const;
 				},
 			},
 			kind: UserEventKinds.WikilinkClicked,

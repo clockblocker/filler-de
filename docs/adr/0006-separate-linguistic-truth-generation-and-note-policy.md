@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by the batteries adoption (#49); the packages it governs were deleted in #66
 ---
 
 # Separate linguistic truth, generation, and note policy

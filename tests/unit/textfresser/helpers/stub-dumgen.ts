@@ -1,10 +1,5 @@
 import type { Dumgen, TranslateSentenceInput } from "dumgen";
 
-/** For Textfresser state in tests that never reach dumgen. */
-export const noDumgen = (): never => {
-	throw new Error("dumgen is not used in this test");
-};
-
 /**
  * A dumgen whose `translate.sentence` answers with `translate`, recording
  * every input. Its other operations are not stubbed.

@@ -1,6 +1,6 @@
 # Command and behavior architecture
 
-This document describes the boundary between user input and the Librarian or Textfresser commanders.
+This document describes the boundary between user input and the Librarian, Classify, and Textfresser commanders.
 
 ## Entry paths
 
@@ -13,14 +13,14 @@ The two paths do not call each other.
 
 ## Commands
 
-`createCommandExecutor({ librarian, textfresser, vam })` returns `executeCommand(kind)`.
+`createCommandExecutor({ classify, librarian, textfresser, vam })` returns `executeCommand(kind)`.
 
 For each command, the executor:
 
 1. Reads the active Markdown path and content from VAM.
 2. Reads the current selection from VAM.
 3. Routes Librarian commands to `Librarian.executeCommand`.
-4. Routes vocabulary commands to `Textfresser.executeCommand`.
+4. Routes `Classify` to `ClassifyCommander.execute` and `TranslateSelection` to `Textfresser.executeCommand`.
 5. Runs the returned Effect at the Obsidian boundary.
 
 The context is a snapshot. A commander must not read the editor again to reconstruct the same input.
@@ -28,11 +28,12 @@ The context is a snapshot. A commander must not read the editor again to reconst
 | Owner | Commands |
 | --- | --- |
 | Librarian | `GoToPrevPage`, `GoToNextPage`, `SplitToPages`, `SplitInBlocks` |
-| Textfresser | `TranslateSelection`, `Generate`, `Lemma` |
+| Classify | `Classify` |
+| Textfresser | `TranslateSelection` |
 
 ## Behaviors
 
-`createHandlers(librarian, textfresser?)` creates the handlers that `main.ts` registers with `UserEventInterceptor`.
+`createHandlers(librarian, onWikilinkClicked?)` creates the handlers that `main.ts` registers with `UserEventInterceptor`.
 
 | Event | Handler behavior |
 | --- | --- |
@@ -41,7 +42,7 @@ The context is a snapshot. A commander must not read the editor again to reconst
 | `WikilinkCompleted` | Ask the Librarian to resolve a Library target. |
 | `CheckboxFrontmatterClicked` | Route the status change to the Librarian. |
 | `CheckboxClicked` | Route a Codex status change to the Librarian. |
-| `WikilinkClicked` | Let Textfresser track attestation and deferred navigation. |
+| `WikilinkClicked` | Tell Classify the clicked target, so a link to a Reading whose Knowledge is still generating scrolls to it once it lands. |
 
 A handler has two stages:
 

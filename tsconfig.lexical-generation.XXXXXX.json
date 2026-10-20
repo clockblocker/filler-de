@@ -1,7 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "include": [
-    "src/packages/composed/lexical-generation/src/**/*.ts",
-    "src/packages/composed/lexical-generation/tests/**/*.ts"
-  ]
-}

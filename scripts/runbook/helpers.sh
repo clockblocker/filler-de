@@ -3,7 +3,6 @@
 # Source this file:  source scripts/runbook/helpers.sh
 #
 # Provides: wait_idle, read_source, reset_source, list_entries, read_entry, nuke_entries
-# For lemma_fire see lemma-fire.ts (requires bun).
 
 # Resolve script directory (works in both bash and zsh)
 if [[ -n "${BASH_SOURCE[0]:-}" ]]; then

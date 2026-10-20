@@ -9,16 +9,13 @@
         "@textfresser/dictionary": "workspace:*",
         "@textfresser/lemma-note-codec": "workspace:*",
         "@textfresser/lemma-note-projections": "workspace:*",
-        "@textfresser/lexical-generation": "workspace:*",
         "@textfresser/library-core": "workspace:*",
-        "@textfresser/linguistics": "workspace:*",
         "@textfresser/note-addressing": "workspace:*",
         "@textfresser/obsidian-event-layer": "workspace:*",
         "@textfresser/vault-action-manager": "workspace:*",
         "emoji-regex": "^10.6.0",
         "jsonc-parser": "^3.3.1",
         "neverthrow": "^8.2.0",
-        "openai": "latest",
         "winston": "latest",
         "zod": "4.4.3",
       },
@@ -26,7 +23,6 @@
         "@biomejs/biome": "^2.2.6",
         "@textfresser/lemma-note-codec": "workspace:*",
         "@textfresser/lemma-note-projections": "workspace:*",
-        "@textfresser/lexical-generation-next": "workspace:*",
         "@types/bun": "latest",
         "@types/node": "^18.19.130",
         "@typesafe-ai/sdk": "^0.6.0",
@@ -45,15 +41,6 @@
         "@textfresser/lemma-note-codec": "workspace:*",
         "@textfresser/vault-action-manager": "workspace:*",
         "effect": "4.0.0",
-      },
-    },
-    "src/packages/composed/lexical-generation": {
-      "name": "@textfresser/lexical-generation-next",
-      "version": "0.0.0",
-      "dependencies": {
-        "@textfresser/linguistics": "workspace:*",
-        "neverthrow": "^8.2.0",
-        "zod": "4.4.3",
       },
     },
     "src/packages/composed/library-core": {
@@ -77,20 +64,6 @@
         "zod": "4.4.3",
       },
     },
-    "src/packages/independent/deprecated-lexical-generation": {
-      "name": "@textfresser/lexical-generation",
-      "version": "0.0.0",
-      "dependencies": {
-        "@textfresser/linguistics": "workspace:*",
-        "neverthrow": "8.2.0",
-        "zod": "4.4.3",
-      },
-      "devDependencies": {
-        "@types/bun": "1.3.0",
-        "openai": "6.6.0",
-        "winston": "3.19.0",
-      },
-    },
     "src/packages/independent/lemma-note-codec": {
       "name": "@textfresser/lemma-note-codec",
       "version": "0.0.0",
@@ -98,19 +71,6 @@
     "src/packages/independent/lemma-note-projections": {
       "name": "@textfresser/lemma-note-projections",
       "version": "0.0.0",
-    },
-    "src/packages/independent/linguistics": {
-      "name": "@textfresser/linguistics",
-      "version": "0.0.0",
-      "dependencies": {
-        "neverthrow": "^8.2.0",
-        "zod": "4.4.3",
-      },
-      "devDependencies": {
-        "@types/bun": "1.3.0",
-        "knip": "^6.33.0",
-        "typescript": "^7.0.2",
-      },
     },
     "src/packages/independent/note-addressing": {
       "name": "@textfresser/note-addressing",
@@ -253,13 +213,7 @@
 
     "@textfresser/lemma-note-projections": ["@textfresser/lemma-note-projections@workspace:src/packages/independent/lemma-note-projections"],
 
-    "@textfresser/lexical-generation": ["@textfresser/lexical-generation@workspace:src/packages/independent/deprecated-lexical-generation"],
-
-    "@textfresser/lexical-generation-next": ["@textfresser/lexical-generation-next@workspace:src/packages/composed/lexical-generation"],
-
     "@textfresser/library-core": ["@textfresser/library-core@workspace:src/packages/composed/library-core"],
-
-    "@textfresser/linguistics": ["@textfresser/linguistics@workspace:src/packages/independent/linguistics"],
 
     "@textfresser/note-addressing": ["@textfresser/note-addressing@workspace:src/packages/independent/note-addressing"],
 
@@ -382,8 +336,6 @@
     "obsidian": ["obsidian@1.10.3", "", { "dependencies": { "@types/codemirror": "5.60.8", "moment": "2.29.4" }, "peerDependencies": { "@codemirror/state": "6.5.0", "@codemirror/view": "6.38.6" } }, "sha512-VP+ZSxNMG7y6Z+sU9WqLvJAskCfkFrTz2kFHWmmzis+C+4+ELjk/sazwcTHrHXNZlgCeo8YOlM6SOrAFCynNew=="],
 
     "one-time": ["one-time@1.0.0", "", { "dependencies": { "fn.name": "1.x.x" } }, "sha512-5DXOiRKwuSEcQ/l0kGCF6Q3jcADFv5tSmRaJck/OqkVFcOzutB134KRSfF0xDrL39MNnqxbHBbUUcjZIhTgb2g=="],
-
-    "openai": ["openai@6.6.0", "", { "peerDependencies": { "ws": "^8.18.0", "zod": "^3.25 || ^4.0" }, "optionalPeers": ["ws", "zod"], "bin": { "openai": "bin/cli" } }, "sha512-1yWk4cBsHF5Bq9TreHYOHY7pbqdlT74COnm8vPx7WKn36StS+Hyk8DdAitnLaw67a5Cudkz5EmlFQjSrNnrA2w=="],
 
     "oxc-parser": ["oxc-parser@0.147.0", "", { "dependencies": { "@oxc-project/types": "^0.147.0" }, "optionalDependencies": { "@oxc-parser/binding-android-arm-eabi": "0.147.0", "@oxc-parser/binding-android-arm64": "0.147.0", "@oxc-parser/binding-darwin-arm64": "0.147.0", "@oxc-parser/binding-darwin-x64": "0.147.0", "@oxc-parser/binding-freebsd-x64": "0.147.0", "@oxc-parser/binding-linux-arm-gnueabihf": "0.147.0", "@oxc-parser/binding-linux-arm-musleabihf": "0.147.0", "@oxc-parser/binding-linux-arm64-gnu": "0.147.0", "@oxc-parser/binding-linux-arm64-musl": "0.147.0", "@oxc-parser/binding-linux-ppc64-gnu": "0.147.0", "@oxc-parser/binding-linux-riscv64-gnu": "0.147.0", "@oxc-parser/binding-linux-riscv64-musl": "0.147.0", "@oxc-parser/binding-linux-s390x-gnu": "0.147.0", "@oxc-parser/binding-linux-x64-gnu": "0.147.0", "@oxc-parser/binding-linux-x64-musl": "0.147.0", "@oxc-parser/binding-openharmony-arm64": "0.147.0", "@oxc-parser/binding-win32-arm64-msvc": "0.147.0", "@oxc-parser/binding-win32-ia32-msvc": "0.147.0", "@oxc-parser/binding-win32-x64-msvc": "0.147.0" } }, "sha512-5xaug6t7GfV3BO5Iv+xHW1rmQkDEQ3BEu3L8g3InsvWO5i8CYGc4tCZ2X985QcwWNycFJam+aOns6Nr2XAThTA=="],
 

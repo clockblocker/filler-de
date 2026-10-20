@@ -35,7 +35,6 @@ prompt.ts
 .env.obsidian-e2e
 
 /tests/prompt-test/logs
-/src/packages/independent/lexical-generation/tests/prompt-test/logs
 
 
 # Bun

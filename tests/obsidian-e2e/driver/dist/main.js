@@ -178,7 +178,6 @@ function sanitizeSettings(value) {
 	const booleanKeys = new Set([
 		"showScrollBacklinks",
 		"hideMetadata",
-		"generateInflections",
 	]);
 	const integerKeys = new Set([
 		"maxSectionDepth",

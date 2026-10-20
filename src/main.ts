@@ -11,15 +11,13 @@ import {
 import {
 	createVaultActionManager,
 	SplitPathKind,
-	type SplitPathToMdFile,
 	splitPathCodec,
 	type VamShutdownError,
-	VaultActionKind,
 	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { logError } from "@textfresser/vault-action-manager/issue-handlers";
 import { Effect, Exit, Predicate } from "effect";
-import { Modal, Notice, Plugin, requestUrl, TFile } from "obsidian";
+import { Modal, Notice, Plugin, requestUrl } from "obsidian";
 import {
 	ClassifyCommander,
 	createKnowledgeQueue,
@@ -38,8 +36,6 @@ import {
 	DelimiterMigrationCoordinator,
 	type DelimiterMigrationOutcome,
 } from "./commanders/librarian/runtime/delimiter-migration-coordinator";
-import { cleanupDictNote } from "./commanders/textfresser/common/cleanup/cleanup-dict-note";
-import { DICT_ENTRY_NOTE_KIND } from "./commanders/textfresser/common/metadata";
 import { Textfresser } from "./commanders/textfresser/textfresser";
 import {
 	clearState,
@@ -60,12 +56,11 @@ import {
 } from "./managers/obsidian/command-executor";
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
-import { ApiService } from "./stateless-helpers/api-service";
 import {
-	DEFAULT_SETTINGS,
-	type SuffixDelimiterConfig,
-	type TextEaterSettings,
-} from "./types";
+	holdsRetiredSettings,
+	settingsFromStoredData,
+} from "./settings/stored-settings";
+import type { SuffixDelimiterConfig, TextEaterSettings } from "./types";
 import { buildCanonicalDelimiter } from "./utils/delimiter";
 import { getErrorMessage } from "./utils/get-error-message";
 import {
@@ -78,7 +73,6 @@ import { sleep } from "./utils/sleep";
 
 export default class TextEaterPlugin extends Plugin {
 	settings: TextEaterSettings;
-	apiService: ApiService;
 	/**
 	 * The plugin's one dumgen instance: `this.dumgen.get()`. It is built on
 	 * first use from the TypeSafe and OpenAI keys in the settings, rebuilt
@@ -198,8 +192,6 @@ export default class TextEaterPlugin extends Plugin {
 		await this.loadSettings();
 		await this.addCommands();
 
-		this.apiService = new ApiService(this.settings);
-
 		const vaultActions = createVaultActionManager(this.app);
 		this.vam = vaultActions.manager;
 		this.vamTesting = vaultActions.testing;
@@ -264,50 +256,6 @@ export default class TextEaterPlugin extends Plugin {
 			},
 		});
 
-		// Dict note cleanup on file open (reorder entries, normalize attestation spacing)
-		this.registerEvent(
-			this.app.workspace.on("file-open", (file) => {
-				if (!(file instanceof TFile) || file.extension !== "md") return;
-				void this.app.vault.read(file).then((content) => {
-					if (
-						!content.includes(
-							`"noteKind":"${DICT_ENTRY_NOTE_KIND}"`,
-						)
-					) {
-						// Also check YAML frontmatter style
-						if (
-							!content.includes(
-								`noteKind: ${DICT_ENTRY_NOTE_KIND}`,
-							)
-						) {
-							return;
-						}
-					}
-					const cleaned = cleanupDictNote(content);
-					if (cleaned === null) return;
-					void Effect.runPromise(
-						this.vam.dispatch([
-							{
-								kind: VaultActionKind.ProcessMdFile,
-								payload: {
-									// Safe cast: file.extension === "md" verified above
-									splitPath: splitPathCodec.parse(
-										file.path,
-									) as SplitPathToMdFile,
-									transform: () => cleaned,
-								},
-							},
-						]),
-					).catch((error) => {
-						logger.error(
-							"[TextEaterPlugin] Failed to clean dictionary note:",
-							getErrorMessage(error),
-						);
-					});
-				});
-			}),
-		);
-
 		// Unified user event interceptor (clicks, clipboard, select-all, wikilinks)
 		this.userEventInterceptor = createObsidianEventLayer({
 			app: this.app,
@@ -341,13 +289,9 @@ export default class TextEaterPlugin extends Plugin {
 			try {
 				await Effect.runPromise(this.librarian.init());
 
-				// Wire librarian corename lookup into Textfresser for propagation path resolution
-				this.wireLibrarianLookup();
-
 				// Register user event handlers after librarian is initialized
 				const handlers = createHandlers(
 					this.librarian,
-					this.textfresser ?? undefined,
 					this.onWikilinkClicked,
 				);
 				for (const handlerDef of handlers) {
@@ -357,7 +301,6 @@ export default class TextEaterPlugin extends Plugin {
 					);
 				}
 			} catch (error) {
-				this.clearLibrarianLookup();
 				logger.error(
 					"[TextEaterPlugin] Failed to initialize librarian:",
 					getErrorMessage(error),
@@ -453,8 +396,10 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	private async loadSettings() {
-		const loadedData = await this.loadData();
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
+		const stored: unknown = await this.loadData();
+		this.settings = settingsFromStoredData(stored);
+		// Drop the retired keys, the Gemini key among them, from data.json now.
+		if (holdsRetiredSettings(stored)) await this.saveData(this.settings);
 
 		// Initialize global state with parsed settings
 		initializeState(this.settings);
@@ -539,17 +484,6 @@ export default class TextEaterPlugin extends Plugin {
 		this.addCommand({
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
-					void this.commandExecutor?.(CommandKind.Lemma);
-				}
-				return true;
-			},
-			id: "lemma",
-			name: "Legacy: Lemma for the selected word",
-		});
-
-		this.addCommand({
-			editorCheckCallback: (checking: boolean) => {
-				if (!checking) {
 					void this.commandExecutor?.(CommandKind.Classify);
 				}
 				return true;
@@ -569,17 +503,6 @@ export default class TextEaterPlugin extends Plugin {
 			},
 			id: "cancel-knowledge-generation",
 			name: "Cancel background Knowledge generation",
-		});
-
-		this.addCommand({
-			editorCheckCallback: (checking: boolean) => {
-				if (!checking) {
-					void this.commandExecutor?.(CommandKind.Generate);
-				}
-				return true;
-			},
-			id: "new-gen-command",
-			name: "Legacy: Generate dictionary entry",
 		});
 
 		this.addCommand({
@@ -793,8 +716,7 @@ export default class TextEaterPlugin extends Plugin {
 			const backlinksChanged =
 				prev.showScrollBacklinks !== curr.showScrollBacklinks;
 			const hideMetadataChanged = prev.hideMetadata !== curr.hideMetadata;
-			const lexicalGenerationChanged =
-				prev.generateInflections !== curr.generateInflections ||
+			const languagesChanged =
 				prev.languages.known !== curr.languages.known ||
 				prev.languages.target !== curr.languages.target;
 
@@ -813,7 +735,7 @@ export default class TextEaterPlugin extends Plugin {
 					return;
 				}
 				delimiterLifecycleReinitialized =
-					outcome.kind === "Completed" && !lexicalGenerationChanged;
+					outcome.kind === "Completed" && !languagesChanged;
 			}
 
 			if (
@@ -822,12 +744,12 @@ export default class TextEaterPlugin extends Plugin {
 					rootChanged ||
 					backlinksChanged ||
 					hideMetadataChanged ||
-					lexicalGenerationChanged) &&
+					languagesChanged) &&
 				!delimiterLifecycleReinitialized
 			) {
 				// Update global state BEFORE reinit so librarian uses new settings
 				updateParsedSettings(this.settings);
-				if (lexicalGenerationChanged) {
+				if (languagesChanged) {
 					this.rebuildTextfresser();
 				}
 				await this.reinitLibrarian();
@@ -993,7 +915,6 @@ export default class TextEaterPlugin extends Plugin {
 			teardown();
 		}
 		this.handlerTeardowns = [];
-		this.clearLibrarianLookup();
 
 		if (this.librarian && options.unsubscribeCurrent !== false) {
 			await Effect.runPromise(this.librarian.unsubscribe());
@@ -1001,12 +922,10 @@ export default class TextEaterPlugin extends Plugin {
 		this.librarian = new Librarian(this.vam);
 		try {
 			await Effect.runPromise(this.librarian.init());
-			this.wireLibrarianLookup();
 
 			// Register new handlers
 			const handlers = createHandlers(
 				this.librarian,
-				this.textfresser ?? undefined,
 				this.onWikilinkClicked,
 			);
 			for (const handlerDef of handlers) {
@@ -1016,7 +935,6 @@ export default class TextEaterPlugin extends Plugin {
 				);
 			}
 		} catch (error) {
-			this.clearLibrarianLookup();
 			logger.error(
 				"[TextEaterPlugin] Failed to reinitialize librarian:",
 				getErrorMessage(error),
@@ -1029,10 +947,6 @@ export default class TextEaterPlugin extends Plugin {
 		this.textfresser = new Textfresser(
 			this.vam,
 			this.settings.languages,
-			this.apiService,
-			{
-				generateInflections: this.settings.generateInflections,
-			},
 			() => this.dumgen.get(),
 		);
 	}
@@ -1047,30 +961,6 @@ export default class TextEaterPlugin extends Plugin {
 				handler as never,
 			),
 		);
-	}
-
-	private wireLibrarianLookup(): void {
-		if (!this.textfresser || !this.librarian) {
-			return;
-		}
-		const lib = this.librarian;
-		this.textfresser.setLibrarianResolvers({
-			lookupInLibraryByCoreName: (name) =>
-				lib.findMatchingLeavesByCoreName(name).map(
-					(m): SplitPathToMdFile => ({
-						basename: m.basename,
-						extension: "md",
-						kind: "MdFile",
-						pathParts: m.pathParts,
-					}),
-				),
-			parseLibraryBasename: (basename) =>
-				lib.parseLibraryBasename(basename),
-		});
-	}
-
-	private clearLibrarianLookup(): void {
-		this.textfresser?.clearLibrarianLookup();
 	}
 }
 

@@ -1,6 +1,6 @@
 # Textfresser Hands-On Runbook (Obsidian CLI)
 
-Manual sanity checks for how Lemma/Generate commands interact with vault state.
+Manual sanity checks for how the plugin's commands interact with vault state.
 Run against `cli-e2e-test-vault`.
 
 This is an exploratory human runbook, not an automated test harness. Automated
@@ -12,7 +12,7 @@ desktop coverage belongs in `tests/obsidian-e2e`.
 
 1. **Resettable runs** — recreate source notes before each scenario. No leftover state.
 2. **Single eval for selection commands** — open file + select text + fire command in one `eval` to avoid editor focus races.
-3. **Gate assertions with `whenIdle()`** — idle tracker covers healing cascades AND background Generate.
+3. **Gate assertions with `whenIdle()`** — idle tracker covers healing cascades AND background Knowledge generation.
 4. **Assert via vault files** — `read` + `files` + `search` are ground truth. Command return values are best-effort.
 5. **Composable one-liners over long scripts** — the CLI is early-access. Short commands are easier to debug.
 
@@ -106,152 +106,13 @@ check_entries() {
   $OBS vault=$VAULT files folder="Worter/de" ext=md
 }
 
-lemma_state() {
-  $OBS vault=$VAULT eval \
-    code="(async()=>{const p=app.plugins.plugins['$PLUGIN'];const lr=p.textfresser.getState().latestLemmaResult;return lr?JSON.stringify({lemma:lr.lemma,pos:lr.posLikeKind,unit:lr.linguisticUnit}):JSON.stringify(null)})()"
-}
-```
-
-### `lemma_fire` — The Recommended Way
-
-Use the Bun script to avoid shell escaping issues (especially for umlauts, `!`, `$`):
-
-```bash
-bun scripts/runbook/lemma-fire.ts Mann
-bun scripts/runbook/lemma-fire.ts Katze
-bun scripts/runbook/lemma-fire.ts klar
-```
-
-The script uses `Bun.spawn` (no shell) → no zsh mangling. It tries `textfresser.executeCommand()` first, falls back to `app.commands.executeCommandById()`, waits for idle, and polls for the wikilink.
-
-**Fallback** — inline eval for simple ASCII surfaces:
-
-```bash
-lemma_fire() {
-  local surface="$1"
-  $OBS vault=$VAULT eval code="(async()=>{
-    const file=app.vault.getAbstractFileByPath('$SRC');
-    if(!file) throw new Error('not found: $SRC');
-    const leaf=app.workspace.getMostRecentLeaf()??app.workspace.getLeaf(true);
-    await leaf.openFile(file,{active:true});
-    const view=leaf.view;
-    if(view?.getMode?.()!=='source') await view.setMode('source');
-    const editor=view?.editor??app.workspace.activeEditor?.editor;
-    if(!editor) throw new Error('no editor');
-    const content=editor.getValue();
-    const idx=content.indexOf('$surface');
-    if(idx===-1) throw new Error('surface not found: $surface');
-    const toPos=(o)=>{const ls=content.slice(0,o).split('\n');return{line:ls.length-1,ch:ls[ls.length-1].length}};
-    editor.setSelection(toPos(idx),toPos(idx+'$surface'.length));
-    editor.focus?.();
-    app.commands.executeCommandById('$PLUGIN:lemma');
-    return 'ok';
-  })()"
-}
 ```
 
 ---
 
 ## 3) Scenarios
 
-### A: Idempotence on Same Surface
-
-Two Lemma runs on the same token must not create `[[...[[...]]...]]`.
-
-```bash
-reset_source
-
-bun scripts/runbook/lemma-fire.ts Mann
-wait_idle
-bun scripts/runbook/lemma-fire.ts Mann
-wait_idle
-
-read_source
-check_nested
-lemma_state
-check_entries
-```
-
-**Expected**: `Mann` linked once (as `[[Mann]]` or `[[something|Mann]]`). No nested wikilinks. A dictionary entry may appear in `Worter/de/` if Gemini API key is configured.
-
-### B: Back-to-Back on Different Tokens
-
-Tests pending-generate queue behavior.
-
-```bash
-reset_source
-
-bun scripts/runbook/lemma-fire.ts klar
-bun scripts/runbook/lemma-fire.ts deutlich
-wait_idle
-
-read_source
-check_nested
-check_entries
-```
-
-**Expected**: both `klar` and `deutlich` are wikilinked. No nesting.
-
-### C: Burst on 4 Tokens
-
-```bash
-reset_source
-
-for w in Mann Katze klar deutlich; do
-  bun scripts/runbook/lemma-fire.ts "$w"
-done
-wait_idle
-
-read_source
-check_nested
-check_entries
-```
-
-**Expected**: all 4 linked. Background Generate runs for the last pending Lemma (earlier ones get superseded).
-
-### D: Re-Encounter (Existing Entry)
-
-Lemma on an already-known word should append an attestation, not re-create the entry.
-
-```bash
-# First, create an entry via scenario A
-reset_source
-bun scripts/runbook/lemma-fire.ts Mann
-wait_idle
-
-# Now fire on "Mann" in a different source
-SRC2="Outside/Textfresser-Re-Encounter.md"
-$OBS vault=$VAULT create path="$SRC2" content="Der alte Mann ging spazieren." silent
-
-SRC="$SRC2" bun scripts/runbook/lemma-fire.ts Mann
-wait_idle
-
-$OBS vault=$VAULT read path="$SRC2"
-# → "Mann" should link to the SAME entry (not a new one)
-
-# Clean up
-$OBS vault=$VAULT delete path="$SRC2"
-SRC="Outside/Textfresser-Lemma-Manual.md"  # restore
-```
-
-### E: Inspect Generated Entry
-
-After any scenario that creates dictionary entries:
-
-```bash
-check_entries
-
-# Read a specific entry (adjust path)
-$OBS vault=$VAULT read path="Worter/de/Mann.md"
-
-# Check frontmatter
-$OBS vault=$VAULT property:read name=noteKind path="Worter/de/Mann.md"
-# → DictEntry
-```
-
-**Expected**: entry has `noteKind: DictEntry`, contains sections (Header, Morphem, Inflection, Translation, Attestation).
-
-### F: Librarian Healing Sanity
+### A: Librarian Healing Sanity
 
 Not Textfresser-specific — validates the healing pipeline after vault mutations.
 
@@ -322,9 +183,6 @@ $OBS vault=$VAULT eval code="app.vault.getAbstractFileByPath('path.md')?'yes':'n
 # Wait for plugin idle
 $OBS vault=$VAULT eval code="(async()=>{await app.plugins.plugins['$PLUGIN'].whenIdle();return 'idle'})()"
 
-# Read Lemma state
-$OBS vault=$VAULT eval code="(async()=>{const p=app.plugins.plugins['$PLUGIN'];const lr=p.textfresser.getState().latestLemmaResult;return JSON.stringify(lr)})()"
-
 # List loaded plugins
 $OBS vault=$VAULT eval code="Object.keys(app.plugins.plugins).join(', ')"
 ```
@@ -340,7 +198,7 @@ Even on errors. Parse stdout for `Error:` prefix instead of checking `$?`.
 Use `path=` for files in subdirectories. `name=` only works for root-level files (no `/` allowed).
 
 ### Shell Escaping Eats Special Characters
-zsh mangles `!`, `$`, and unicode inside double quotes. For eval code with umlauts or special chars, use `Bun.spawn` array args (no shell) — that's what `lemma-fire.ts` and the automated tests do.
+zsh mangles `!`, `$`, and unicode inside double quotes. For eval code with umlauts or special chars, use `Bun.spawn` array args (no shell) — that's what the automated tests do.
 
 ### Folder Operations Need `eval`
 CLI `create`/`delete` only handle files. Folders require `app.vault.createFolder()` / `app.vault.trash()` via eval.
@@ -431,7 +289,6 @@ wait_idle
 
 ## Known Pain Points (2026-02-20)
 
-1. Zero-byte dictionary notes can be created and linked when background Generate fails silently.
-2. `whenIdle()` resolves when async work finishes, but doesn't guarantee the entry is non-empty.
-3. Shell eval with umlauts is fragile — always use `lemma-fire.ts` for non-ASCII surfaces.
-4. `command id=...` returning `Executed` is not proof of success — check vault state.
+1. `whenIdle()` resolves when async work finishes, but doesn't guarantee the entry is non-empty.
+2. Shell eval with umlauts is fragile — pass non-ASCII surfaces through `Bun.spawn` array args.
+3. `command id=...` returning `Executed` is not proof of success — check vault state.

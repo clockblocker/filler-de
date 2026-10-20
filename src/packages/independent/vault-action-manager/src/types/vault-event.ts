@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 import { CREATE, DELETE, FILE, FOLDER, RENAME } from "./literals";
 import type {
 	SplitPathToFile,

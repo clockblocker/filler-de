@@ -18,8 +18,7 @@ export type KnownLanguage = z.infer<typeof KnownLanguageSchema>;
 export const KnownLanguage = KnownLanguageSchema.enum;
 
 export const TargetLanguageSchema = z.enum(["English", "German"]);
-export type TargetLanguage = z.infer<typeof TargetLanguageSchema>;
-export const TargetLanguage = TargetLanguageSchema.enum;
+type TargetLanguage = z.infer<typeof TargetLanguageSchema>;
 
 export type LanguagesConfig = {
 	known: KnownLanguage;
@@ -57,12 +56,10 @@ export type SelectionActionPlacement = z.infer<
 export const SelectionActionPlacement = SelectionActionPlacementSchema.enum;
 
 export type TextEaterSettings = {
-	googleApiKey: string;
 	/** TypeSafe (jev), which dumgen segments and judges with. */
 	typesafeApiKey: string;
 	/** OpenAI (Luna), which dumgen writes and translates with. */
 	openaiApiKey: string;
-	apiProvider: "google";
 	libraryRoot: string;
 	suffixDelimiter: SuffixDelimiterConfig;
 	maxSectionDepth: number; // 0 = own children only, 1 = own children and their children, etc.
@@ -75,15 +72,11 @@ export type TextEaterSettings = {
 	generatePlacement: SelectionActionPlacement;
 	navButtonsPosition: "left" | "right";
 	languages: LanguagesConfig;
-	generateInflections: boolean;
 };
 
 export const DEFAULT_SETTINGS: TextEaterSettings = {
-	apiProvider: "google",
 	explainGrammarPlacement: "AboveSelection",
-	generateInflections: true,
 	generatePlacement: "Bottom",
-	googleApiKey: "",
 	hideMetadata: true,
 	languages: { known: "Russian", target: "German" },
 	libraryRoot: "Library",

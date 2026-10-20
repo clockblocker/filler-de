@@ -18,7 +18,6 @@ usage() {
 	echo "  doctor            Run deeper diagnostics and IPC smoke checks"
 	echo "  show-config       Print VAULT/PLUGIN_ID/SRC/OBSIDIAN_BIN"
 	echo "  wait-idle         Wait for Textfresser pending work to settle"
-	echo "  lemma <surface>   Fire Lemma for a surface in SRC"
 	echo "  read-source       Read SRC content"
 	echo "  links-source      List outgoing links from SRC"
 	echo "  list-entries      List Worter/de markdown entries"
@@ -43,7 +42,7 @@ help|-h|--help)
 preflight|doctor|show-config|wait-idle|read-source|links-source|list-entries|check-no-nested|scan-empty|reload-plugin|reset-source|reset)
 	exec "$_RUNBOOK_CLI_DIR/commands/$cmd.sh" "$@"
 	;;
-lemma|check-entry)
+check-entry)
 	exec "$_RUNBOOK_CLI_DIR/commands/$cmd.sh" "$@"
 	;;
 *)

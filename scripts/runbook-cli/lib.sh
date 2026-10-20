@@ -13,8 +13,6 @@ export SRC="${SRC:-textfresser/0_Synthetic_Test_To_Check_Morhp.md}"
 
 source "$_RUNBOOK_CLI_DIR/../runbook/helpers.sh"
 
-LEMMA_FIRE_SCRIPT="$_RUNBOOK_CLI_DIR/../runbook/lemma-fire.ts"
-
 print_section() {
 	printf "\n== %s ==\n" "$1"
 }
@@ -25,17 +23,6 @@ require_command() {
 		echo "Missing required command: $cmd"
 		return 1
 	fi
-}
-
-run_lemma() {
-	local surface="$1"
-	bun "$LEMMA_FIRE_SCRIPT" "$surface"
-}
-
-run_lemma_on_src() {
-	local src_path="$1"
-	local surface="$2"
-	SRC="$src_path" bun "$LEMMA_FIRE_SCRIPT" "$surface"
 }
 
 run_preflight_checks() {

@@ -7,7 +7,7 @@ import { getErrorMessage } from "../../../../utils/get-error-message";
 import type { CommandError } from "../../commands/types";
 import { CommandErrorKind } from "../../errors";
 
-export function describeVamFailure(error: VamEffectError): string {
+function describeVamFailure(error: VamEffectError): string {
 	return `${error.operation}: ${getErrorMessage(error.cause)}`;
 }
 
@@ -56,14 +56,5 @@ export function vamDispatchFailureToCommandError(
 	return {
 		kind: CommandErrorKind.DispatchFailed,
 		reason,
-	};
-}
-
-export function vamIoFailureToCommandError(
-	error: VamEffectError,
-): CommandError {
-	return {
-		kind: CommandErrorKind.ApiError,
-		reason: describeVamFailure(error),
 	};
 }

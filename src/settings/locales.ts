@@ -8,13 +8,10 @@ export type SettingsLocale = {
 	actionsHeading: string;
 
 	// Setting names
-	geminiApiKey: string;
 	typesafeApiKey: string;
 	openaiApiKey: string;
-	apiProvider: string;
 	knownLanguage: string;
 	targetLanguage: string;
-	generateInflections: string;
 	libraryRoot: string;
 	maxSectionDepth: string;
 	showScrollsDepth: string;
@@ -25,13 +22,10 @@ export type SettingsLocale = {
 	navButtonsPosition: string;
 
 	// Setting descriptions
-	geminiApiKeyDesc: string;
 	typesafeApiKeyDesc: string;
 	openaiApiKeyDesc: string;
-	apiProviderDesc: string;
 	knownLanguageDesc: string;
 	targetLanguageDesc: string;
-	generateInflectionsDesc: string;
 	libraryRootDesc: string;
 	maxSectionDepthDesc: string;
 	showScrollsDepthDesc: string;
@@ -75,8 +69,6 @@ const ENGLISH_LOCALE: SettingsLocale = {
 
 	// Placeholders
 	apiKeyPlaceholder: "Enter your API key",
-	apiProvider: "API provider",
-	apiProviderDesc: "Choose your API provider",
 	delimiterForbiddenCharError: (char: string) =>
 		`Cannot use "${char}" in delimiter (forbidden character)`,
 
@@ -85,13 +77,8 @@ const ENGLISH_LOCALE: SettingsLocale = {
 	delimiterSpacesError: "Suffix delimiter symbol cannot contain spaces",
 
 	// Setting names
-	geminiApiKey: "Gemini API key",
 
 	// Setting descriptions
-	geminiApiKeyDesc: "Enter your Gemini API key",
-	generateInflections: "Generate inflections",
-	generateInflectionsDesc:
-		"Include inflection tables and rows when generating lexical info.",
 	hideMetadata: "Hide metadata",
 	hideMetadataDesc:
 		"Store metadata invisibly at end of file. When off, uses YAML frontmatter.",
@@ -150,8 +137,6 @@ const RUSSIAN_LOCALE: SettingsLocale = {
 
 	// Placeholders
 	apiKeyPlaceholder: "Введите ваш API ключ",
-	apiProvider: "Провайдер API",
-	apiProviderDesc: "Выберите провайдера API",
 	delimiterForbiddenCharError: (char: string) =>
 		`Нельзя использовать "${char}" в разделителе (запрещённый символ)`,
 
@@ -160,13 +145,8 @@ const RUSSIAN_LOCALE: SettingsLocale = {
 	delimiterSpacesError: "Символ разделителя не может содержать пробелы",
 
 	// Setting names
-	geminiApiKey: "Ключ Gemini API",
 
 	// Setting descriptions
-	geminiApiKeyDesc: "Введите ваш ключ Gemini API",
-	generateInflections: "Генерировать флексии",
-	generateInflectionsDesc:
-		"Добавлять таблицы и строки флексий при генерации лексической информации.",
 	hideMetadata: "Скрыть метаданные",
 	hideMetadataDesc:
 		"Хранить метаданные невидимо в конце файла. Если выкл., использует YAML frontmatter.",
