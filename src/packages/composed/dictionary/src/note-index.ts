@@ -64,8 +64,7 @@ export const shadowRefOf = (
  * A path as a case-insensitive, normalizing file system compares it, so
  * paths that differ only by letter case or Unicode form name one file.
  */
-export const foldPath = (path: string): string =>
-	path.normalize("NFC").toLowerCase();
+const foldPath = (path: string): string => path.normalize("NFC").toLowerCase();
 
 export const byCodeUnit = (left: string, right: string): number =>
 	left < right ? -1 : left > right ? 1 : 0;

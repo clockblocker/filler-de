@@ -47,7 +47,7 @@ export function unit<U extends Dumling.Unit>(value: U): U {
 type Segment = SegmentedSentence["segments"][number];
 
 /** Segments of a Sentence: words are ResolvableText, single spaces Whitespace. */
-export function segmentsOf(text: string): Segment[] {
+function segmentsOf(text: string): Segment[] {
 	return (text.match(/\s+|[\p{L}\p{N}]+|[^\s\p{L}\p{N}]/gu) ?? []).map(
 		(piece) => ({
 			kind: /^\s+$/u.test(piece)
@@ -61,7 +61,7 @@ export function segmentsOf(text: string): Segment[] {
 }
 
 /** One planned unit: its Segments in the Sentence starting at `offset` in the Scroll. */
-export function plannedUnit(input: {
+function plannedUnit(input: {
 	readonly sentenceKey: string;
 	readonly sentence: SegmentedSentence;
 	readonly offset: number;

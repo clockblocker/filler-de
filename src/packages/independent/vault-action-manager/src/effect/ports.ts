@@ -3,7 +3,7 @@ import type { Editor, TAbstractFile, TFile, TFolder } from "obsidian";
 import type { VaultFileStat } from "../types/file-stat";
 import type { VamActiveEditorError, VamVaultIoError } from "./errors";
 
-export type ActiveEditor = Pick<
+type ActiveEditor = Pick<
 	Editor,
 	| "getCursor"
 	| "getLine"

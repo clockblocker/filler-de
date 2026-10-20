@@ -107,7 +107,7 @@ export type ExecuteResult = DryRunResult & {
 };
 
 /** Collect: every old note under `Worter/`, read. */
-export const collectWorter = Effect.fnUntraced(function* (vault: ResetVault) {
+const collectWorter = Effect.fnUntraced(function* (vault: ResetVault) {
 	const listed = yield* vault.listFolder(WORTER);
 	if (!listed)
 		return yield* new ResetFailed({

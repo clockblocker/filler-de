@@ -17,7 +17,7 @@ import { lemmaKeyOf, locatorKeyOf, readingKeyOf, shadowKeyOf } from "./keys";
 import { type NoteIndex, relationEdgesOf } from "./note-index";
 
 /** The Lemmas and Readings a relation plan starts from and reaches. */
-export type NeighbourhoodSeeds = {
+type NeighbourhoodSeeds = {
 	readonly sourceReadingKeys?: readonly string[];
 	readonly sourceLemmaKeys?: readonly string[];
 	readonly targetReadingKeys?: readonly string[];
@@ -27,8 +27,8 @@ export type NeighbourhoodSeeds = {
 };
 
 /** tf-demo's bounds on one relation slice. */
-export const MAX_NEIGHBOURHOOD_LEMMAS = 100;
-export const MAX_NEIGHBOURHOOD_READINGS = 200;
+const MAX_NEIGHBOURHOOD_LEMMAS = 100;
+const MAX_NEIGHBOURHOOD_READINGS = 200;
 
 /**
  * The closed relation inventory one plan reads, not the whole dictionary
@@ -43,7 +43,7 @@ export const MAX_NEIGHBOURHOOD_READINGS = 200;
  * plan names itself does not fit, as tf-demo does, rather than plan
  * without it.
  */
-export function relationNeighbourhood(
+function relationNeighbourhood(
 	index: NoteIndex,
 	seeds: NeighbourhoodSeeds,
 ): {

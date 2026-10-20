@@ -131,7 +131,7 @@ function mirroredClaims(
  * Reading counts, so the result changes only when this note or a note with
  * a claim on it changes. Undefined when dumrel rejects the inventory.
  */
-export function inverseRelationsOf(
+function inverseRelationsOf(
 	view: NoteIndex,
 	lemmaKey: string,
 ): InverseRelations | undefined {

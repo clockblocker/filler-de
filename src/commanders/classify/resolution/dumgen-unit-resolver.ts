@@ -47,7 +47,7 @@ import {
 } from "./scroll-links";
 
 /** How often a unit judges its Reading again after its New was refused as stale. */
-export const MAX_STALE_REJUDGES = 2;
+const MAX_STALE_REJUDGES = 2;
 
 /** How often the link write runs again after losing a race. */
 const MAX_LINK_WRITES = 3;
@@ -104,7 +104,7 @@ function readingOf(
 const emojiDescriptionOf = (reading: Dumling.Reading<"de">) =>
 	"emojiDescription" in reading ? reading.emojiDescription : undefined;
 
-export const labelOf = (reading: Dumling.Reading<"de">) =>
+const labelOf = (reading: Dumling.Reading<"de">) =>
 	[reading.lemma.canonicalForm, emojiDescriptionOf(reading)]
 		.filter(Boolean)
 		.join(" ");
@@ -131,7 +131,7 @@ const pendingOnFailure =
 		new UnitPending({ reason: `${what}: ${error.message}` });
 
 /** Resolves one unit to its committed Reading; never writes to the Scroll. */
-export const resolveUnit = Effect.fnUntraced(function* (
+const resolveUnit = Effect.fnUntraced(function* (
 	dumgen: Dumgen,
 	store: ResolutionStore,
 	plan: ClassifyPlan,

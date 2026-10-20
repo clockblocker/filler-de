@@ -20,7 +20,7 @@ const SIMPLE_SPLIT_ERROR_KINDS = [
 	"LibrarianUnavailable",
 ] as const;
 
-export class SplitToPagesInputError extends Schema.TaggedError<SplitToPagesInputError>()(
+class SplitToPagesInputError extends Schema.TaggedError<SplitToPagesInputError>()(
 	"SplitToPagesInputError",
 	{
 		kind: Schema.Literals(SIMPLE_SPLIT_ERROR_KINDS),
@@ -28,7 +28,7 @@ export class SplitToPagesInputError extends Schema.TaggedError<SplitToPagesInput
 	},
 ) {}
 
-export class SplitToPagesDispatchError extends Schema.TaggedError<SplitToPagesDispatchError>()(
+class SplitToPagesDispatchError extends Schema.TaggedError<SplitToPagesDispatchError>()(
 	"SplitToPagesDispatchError",
 	{
 		execution: Schema.Literals([
@@ -43,7 +43,7 @@ export class SplitToPagesDispatchError extends Schema.TaggedError<SplitToPagesDi
 	},
 ) {}
 
-export class SplitToPagesReconciliationError extends Schema.TaggedError<SplitToPagesReconciliationError>()(
+class SplitToPagesReconciliationError extends Schema.TaggedError<SplitToPagesReconciliationError>()(
 	"SplitToPagesReconciliationError",
 	{
 		kind: Schema.Literal("ReconciliationFailed"),
@@ -56,7 +56,7 @@ export class SplitToPagesReconciliationError extends Schema.TaggedError<SplitToP
 	},
 ) {}
 
-export class SplitToPagesNavigationError extends Schema.TaggedError<SplitToPagesNavigationError>()(
+class SplitToPagesNavigationError extends Schema.TaggedError<SplitToPagesNavigationError>()(
 	"SplitToPagesNavigationError",
 	{
 		kind: Schema.Literal("NavigationFailed"),

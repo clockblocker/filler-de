@@ -24,7 +24,7 @@ export type LemmaNoteEntry = {
 };
 
 /** A file at a Shadow note path that holds no Lemma note. */
-export type ShadowNoteEntry = {
+type ShadowNoteEntry = {
 	readonly kind: "shadow";
 	readonly path: string;
 	readonly hash: string;

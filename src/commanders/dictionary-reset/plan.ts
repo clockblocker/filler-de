@@ -74,7 +74,7 @@ export type PlannedAttestation = {
 		| { readonly _tag: "Unresolvable"; readonly reason: string };
 };
 
-export type PlannedFreeform = {
+type PlannedFreeform = {
 	readonly notePath: string;
 	readonly headword: string;
 	readonly block: OldFreeformBlock;
@@ -94,7 +94,7 @@ export const headwordKey = (headword: string): string =>
 	headword.trim().toLowerCase();
 
 /** Why a located attestation cannot run, in the report's words. */
-export function locateFailure(
+function locateFailure(
 	located: Exclude<LocatedAttestation, { _tag: "Located" }>,
 	attestation: OldAttestation,
 	forms: readonly string[],

@@ -16,7 +16,7 @@ export const SMOKE_OPERATIONS = [
 	"translate.sentence",
 ] as const;
 
-export type SmokeCheck = {
+type SmokeCheck = {
 	readonly name: string;
 	readonly passed: boolean;
 	readonly detail: string;

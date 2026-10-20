@@ -202,41 +202,8 @@ export function buildEnsureExistKeys(
 }
 
 /**
- * Check if an action already exists in the batch for a given key.
- * For folders, also checks if a RenameFolder action creates the folder at the destination.
- *
- * @deprecated Use `buildActionKeyIndex` for O(1) lookups instead of O(N) scans.
- */
-export function hasActionForKey(
-	actions: readonly VaultAction[],
-	key: string,
-	kind: "folder" | "file",
-): boolean {
-	if (kind === "folder") {
-		return actions.some(
-			(a) =>
-				// CreateFolder directly creates the folder
-				(a.kind === VaultActionKind.CreateFolder &&
-					splitPathCodec.format(a.payload.splitPath) === key) ||
-				// RenameFolder creates the folder at the destination
-				(a.kind === VaultActionKind.RenameFolder &&
-					splitPathCodec.format(a.payload.to) === key),
-		);
-	}
-
-	// For files, check UpsertMdFile and ProcessMdFile
-	return actions.some(
-		(a) =>
-			(a.kind === VaultActionKind.UpsertMdFile &&
-				splitPathCodec.format(a.payload.splitPath) === key) ||
-			(a.kind === VaultActionKind.ProcessMdFile &&
-				splitPathCodec.format(a.payload.splitPath) === key),
-	);
-}
-
-/**
  * Pre-compute an index of folder and file keys from actions.
- * Replaces O(N) `hasActionForKey` with O(1) Set lookups.
+ * Lets callers check for an action per key with O(1) Set lookups.
  */
 export function buildActionKeyIndex(actions: readonly VaultAction[]): {
 	folderKeys: Set<string>;

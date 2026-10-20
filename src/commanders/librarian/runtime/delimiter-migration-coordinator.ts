@@ -11,14 +11,14 @@ import type {
 	DelimiterRenameAction,
 } from "./delimiter-migration-plan";
 
-export type DelimiterMigrationStage =
+type DelimiterMigrationStage =
 	| "Confirmation"
 	| "Dispatch"
 	| "Pause"
 	| "Planning"
 	| "Restore";
 
-export type DelimiterMigrationProblem = {
+type DelimiterMigrationProblem = {
 	readonly cause: unknown;
 	readonly operation: string;
 	readonly stage: DelimiterMigrationStage;
