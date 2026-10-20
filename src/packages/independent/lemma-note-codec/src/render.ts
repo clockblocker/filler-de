@@ -75,12 +75,15 @@ export const DEFAULT_LABELS: Readonly<Record<TypedBlockKind, string>> = {
 	morphology: "Morphology",
 	notes: "Notes",
 	participle_source: "From",
+	past_participle: "Past participle",
 	pending_relation: "Pending",
 	plural: "Plural",
+	present_singular: "Present singular",
 	preterite: "Preterite",
 	reading: "",
 	relation: "Relations",
 	saying_type: "Saying",
+	subjunctive_past: "Subjunctive past",
 	surface: "Surface",
 	tags: "Tags",
 	transcription: "",
@@ -156,6 +159,13 @@ const field = (value: unknown, key: string): unknown =>
 const text = (value: unknown): string =>
 	typeof value === "string" ? value : JSON.stringify(value);
 
+/** The persons of a `presentSingular` payload, as the rendering labels them. */
+const PRESENT_PERSONS = [
+	["first", "1"],
+	["second", "2"],
+	["third", "3"],
+] as const;
+
 function renderTarget(target: unknown, links: LinkRenderer): string {
 	if (field(target, "unitKind") === "Reading")
 		return links.reading(target as Dumling.Reading);
@@ -213,6 +223,7 @@ export const RENDERERS: Partial<Record<TypedBlockKind, Renderer>> = {
 	notes: text,
 	participle_source: (value, links) =>
 		`${links.lemma(field(value, "verb") as Dumling.Lemma)} (${text(field(value, "meaning"))})`,
+	past_participle: (value) => list(value).map(text).join(", "),
 	pending_relation: (value, links) =>
 		list(value)
 			.map(
@@ -222,6 +233,11 @@ export const RENDERERS: Partial<Record<TypedBlockKind, Renderer>> = {
 			.join("\n"),
 	plural: (value) =>
 		Array.isArray(value) ? value.map(text).join(", ") : text(value),
+	present_singular: (value) =>
+		PRESENT_PERSONS.map(
+			([person, label]) =>
+				`${label}: ${list(field(value, person)).map(text).join(", ")}`,
+		).join("; "),
 	preterite: (value) => list(value).map(text).join(", "),
 	relation: (value, links) =>
 		Object.entries(value as Record<string, unknown>)
@@ -237,6 +253,7 @@ export const RENDERERS: Partial<Record<TypedBlockKind, Renderer>> = {
 		const attribution = field(value, "attribution");
 		return `${text(field(value, "type"))}${attribution === undefined ? "" : ` (${text(attribution)})`}`;
 	},
+	subjunctive_past: (value) => list(value).map(text).join(", "),
 	translation: (value) =>
 		Object.entries(value as Record<string, unknown>)
 			.map(

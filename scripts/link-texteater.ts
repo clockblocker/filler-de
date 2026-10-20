@@ -45,8 +45,8 @@ export const BATTERY_PACKAGES = [
 
 export const REPO_ROOT = path.resolve(import.meta.dir, "..");
 export const TEXTEATER_LINK = path.join(REPO_ROOT, ".texteater");
-export const LOCK_FILE = path.join(REPO_ROOT, "batteries.lock");
-export const TEXTEATER_REMOTE = "https://github.com/clockblocker/texteater.git";
+const LOCK_FILE = path.join(REPO_ROOT, "batteries.lock");
+const TEXTEATER_REMOTE = "https://github.com/clockblocker/texteater.git";
 export const BRANCH = "main";
 /** The shared clone every per-SHA worktree is added from. */
 export const SHARED_CLONE = path.join(
@@ -82,7 +82,7 @@ export function texteaterOverride(): string | undefined {
 	return fromEnv ? path.resolve(fromEnv) : undefined;
 }
 
-export function missingBatteries(checkout: string): string[] {
+function missingBatteries(checkout: string): string[] {
 	return BATTERY_PACKAGES.filter((name) => {
 		const manifestPath = path.join(
 			checkout,
@@ -158,7 +158,7 @@ function hasCommit(sha: string): boolean {
  * its final path. A worktree at the final path is therefore installed, and
  * two installs racing for one SHA keep the first and drop the second.
  */
-export function ensureWorktree(sha: string): string {
+function ensureWorktree(sha: string): string {
 	const worktree = worktreeFor(sha);
 	if (existsSync(worktree)) return worktree;
 	ensureSharedClone();
