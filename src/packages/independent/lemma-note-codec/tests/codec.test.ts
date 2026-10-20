@@ -277,6 +277,7 @@ describe("user text around renderings", () => {
 		header: "👩 **die Mutter** /ˈmʊtɐ/ ^r-",
 		inflection: "| Gen | x |",
 		inverse_relation: "*Projected*: hyponym:",
+		surface: "*Surface*: Mütter (Nom Plur) ^s-",
 		tags: "*Tags*: #noun #fem",
 		translation: "*Translation*: en: mother",
 	};
@@ -317,6 +318,22 @@ describe("user text around renderings", () => {
 			"*Translation*: en: mom",
 		);
 		roundTrip(edited, ["*Translation*: en: mom"]);
+	});
+
+	it("keeps an edited header, Block ID and all, beside the re-rendered one", () => {
+		const edited = canonical.replace(
+			"👩 **die Mutter** /ˈmʊtɐ/ ^r-",
+			"👩 **die liebe Mutter** /ˈmʊtɐ/ ^r-",
+		);
+		const written = roundTrip(edited, [
+			"👩 **die liebe Mutter** /ˈmʊtɐ/ ^r-",
+		]);
+		expect(written).toContain("👩 **die Mutter** /ˈmʊtɐ/ ^r-");
+	});
+
+	it("keeps text typed between a marker and its rendering", () => {
+		const typed = typeUnder(canonical, "%%tf:tags@", "Before the tags");
+		roundTrip(typed, ["Before the tags\n*Tags*: #noun #fem"]);
 	});
 
 	it("still recognises its renderings with CRLF line endings", () => {
