@@ -170,7 +170,7 @@ The codec is pure, so the caller supplies every input a projection reads beyond 
 | Note path | Not rendered by the codec. The store derives it from `identity` ([#52](https://github.com/clockblocker/filler-de/issues/52)) |
 | `header` | `identity`, `reading`, `transcription`, and the Block ID |
 | `tags` | `identity` and the Reading's Knowledge; derived by `@textfresser/lemma-note-projections` |
-| `inverse_relation` | `SemanticRelationProjection`s for this note's Readings, computed by the store with `projectSemanticRelations` over the relation edges that target this Lemma, with dictionary-wide `readingCounts` |
+| `inverse_relation` | `SemanticRelationProjection`s for this note's Readings, computed by the store with `projectSemanticRelations` over the relation edges that target this Lemma, with dictionary-wide `readingCounts`; see Projected inverse relations |
 | `inflection` | `identity`, `plural`, `conjugation_class`, `preterite`, owned Surfaces and dumcorpus paradigms; derived by `@textfresser/lemma-note-projections` |
 | Wikilinks in any rendering | A caller-supplied link renderer for a Lemma or Reading target |
 
@@ -325,6 +325,16 @@ Tests must cover:
 - **Rendering boundary.** A typed Block's rendering is exactly the sealed lines directly after its marker, and only when they still match the seal. Every other line up to the next marker becomes a freeform Block in place, byte for byte: a line typed directly under a rendering, with or without a blank line, and the whole rendering once a user edits it or types inside it. A Block without a seal, such as `identity`, has no rendering, so any line under it is freeform. `serialize` re-renders the Block and keeps the edited text as freeform, at the end of its part like all freeform, so the codec never drops user text and never reads an edit as data. An edited `header` or `surface` line keeps its `^<id>` as user text, so the ID appears twice until the user deletes the stale copy.
 - **Knowledge coverage.** Every `ReadingKnowledge` aspect has a Block; a new dumrel aspect fails to compile until it gets one, and `serialize` throws on an aspect it cannot place.
 - **Paths.** The ADR-0013 path codec (`lemmaNotePath`, `shadowNotePath`, `parseNotePath`) lives in the same package as its own module. The note codec never reads a path.
+
+## Projected inverse relations (#59)
+
+`@textfresser/dictionary` fills the `inverse_relation` hook itself; a caller's `projections` cannot supply it.
+
+- **Inventory.** A note's projection runs `projectSemanticRelations` over the note's own Readings and the source Readings of the claims that target its Lemma (`relationEdgesTo`), with each claim cut down to targets inside that inventory and dictionary-wide `readingCounts` for every Lemma in it. A note's projection therefore depends only on its own records and on the notes that claim a relation on it.
+- **What shows.** Only inverses: for each claim another note's Reading makes on this Lemma or one of its Readings, the relation this Reading holds back, when dumrel infers it. Closure follows ADR 0011, so a Lemma target on a homonymous Lemma projects nothing, and a direct claim of the note's own wins and stays in the `relation` Block. Other inferred edges, such as a substitution through a synonym, are left out.
+- **Links.** dumrel names a Lemma-mode inverse by its Lemma. The store links each source Reading that makes the mirrored claim instead, path-qualified to its Block (ADR 0012, 0013).
+- **Re-rendering.** A commit renders every note it writes against the post-commit index. Once its writes landed, the store takes every note a written note claimed a relation on, before or after the commit, and rewrites those whose file shows other `inverse_relation` Blocks than the index gives. The same runs after VAM reports a change to a note, for the notes its old and new claims reach, so a hand edit or deletion of a source is re-rendered too. The changed note itself is not re-rendered, even when the edit changes what its own Block should show, so the store never writes the note a user is editing. Each re-render is a compare-and-swap rewrite of the content the store indexed, under the writer lock. A note whose file is ahead of the index is re-read, and the notes its new and old claims reach join the re-render; a note whose write loses a race is re-read and tried again, for at most three rounds. A re-render that still fails is logged and never fails the commit; the next re-render that reaches the note repairs it. A full rebuild, such as startup, re-renders nothing.
+- **Revisions.** A re-render changes no record, so it does not move the revision: a commit returns the revision of its own writes, and plans made before a re-render stay valid. An edit a re-render finds on disk does move it, so a plan that never saw that edit conflicts.
 
 ## Derived projections (#75)
 
