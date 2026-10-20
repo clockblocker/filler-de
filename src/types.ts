@@ -56,9 +56,12 @@ export type SelectionActionPlacement = z.infer<
 >;
 export const SelectionActionPlacement = SelectionActionPlacementSchema.enum;
 
-
 export type TextEaterSettings = {
 	googleApiKey: string;
+	/** TypeSafe (jev), which dumgen segments and judges with. */
+	typesafeApiKey: string;
+	/** OpenAI (Luna), which dumgen writes and translates with. */
+	openaiApiKey: string;
 	apiProvider: "google";
 	libraryRoot: string;
 	suffixDelimiter: SuffixDelimiterConfig;
@@ -86,9 +89,11 @@ export const DEFAULT_SETTINGS: TextEaterSettings = {
 	libraryRoot: "Library",
 	maxSectionDepth: 6,
 	navButtonsPosition: "left",
+	openaiApiKey: "",
 	showScrollBacklinks: true,
 	showScrollsInCodexesForDepth: 1,
 	splitInBlocksPlacement: "AboveSelection",
 	suffixDelimiter: { padded: false, symbol: "-" },
 	translatePlacement: "AboveSelection",
+	typesafeApiKey: "",
 };

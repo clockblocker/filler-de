@@ -19,6 +19,7 @@ bun run test:obsidian-e2e:infra # driver/transport only; no Obsidian required
 # Provider acceptance (live Gemini is always explicit)
 bun run test:provider-acceptance:preflight
 TEXTFRESSER_PROVIDER_ACCEPTANCE=1 bun run test:provider-acceptance --suite=smoke
+TEXTFRESSER_PROVIDER_ACCEPTANCE=1 bun run test:provider-acceptance:dumgen --suite=smoke # TypeSafe + OpenAI
 
 # Code quality
 bun run lint

@@ -1,0 +1,66 @@
+/**
+ * dumgen's `Fetch` port over Obsidian's `requestUrl`, the transport both
+ * dumgen providers use in the plugin: TypeSafe (jev) and OpenAI (Luna).
+ *
+ * Why `requestUrl` and not `fetch`: `requestUrl` runs outside the renderer,
+ * so CORS never applies. OpenAI documents browser use (its SDK's
+ * `dangerouslyAllowBrowser`), but TypeSafe documents no CORS policy for
+ * `api.typesafe.ai`, so `fetch` from `app://obsidian.md` is not known to
+ * work for jev.
+ *
+ * What that costs: `requestUrl` takes no `AbortSignal` and has no timeout,
+ * so it cannot cancel a request. This port races the request against the
+ * signal dumgen passes, which already joins dumgen's deadline
+ * (`timeoutMs`) and the operation's interruption. When the signal aborts,
+ * the port rejects at once, so a deadline still fails the call and an
+ * interrupted operation still settles promptly, as dumgen's `JevAsk` and
+ * `LunaAsk` contracts require. The HTTP request itself keeps running until
+ * the provider answers; that answer is dropped, the provider still bills
+ * it, and dumgen's request budget has already released its permit.
+ *
+ * The port asks `requestUrl` not to throw on HTTP errors, so dumgen sees
+ * the status and body and reports them as a `ProviderFailure`. A network
+ * failure rejects, and dumgen reports that as a `ProviderFailure` too.
+ */
+import type { RequestUrlParam, RequestUrlResponse } from "obsidian";
+import type { DumgenFetch } from "./providers";
+
+/** The part of Obsidian's `requestUrl` the port uses. */
+export type RequestUrl = (
+	request: RequestUrlParam,
+) => PromiseLike<Pick<RequestUrlResponse, "status" | "text">>;
+
+function abortReason(signal: AbortSignal): unknown {
+	return signal.reason ?? new Error("The request was aborted");
+}
+
+export function createRequestUrlFetch(requestUrl: RequestUrl): DumgenFetch {
+	return (url, init) => {
+		const { signal } = init;
+		if (signal.aborted) return Promise.reject(abortReason(signal));
+		return new Promise((resolve, reject) => {
+			const onAbort = () => reject(abortReason(signal));
+			signal.addEventListener("abort", onAbort, { once: true });
+			Promise.resolve(
+				requestUrl({
+					body: init.body,
+					headers: { ...init.headers },
+					method: init.method,
+					throw: false,
+					url,
+				}),
+			)
+				.then(
+					(response) =>
+						resolve({
+							ok: response.status >= 200 && response.status < 300,
+							status: response.status,
+							// Obsidian decodes the body lazily, and may throw.
+							text: async () => response.text,
+						}),
+					reject,
+				)
+				.finally(() => signal.removeEventListener("abort", onAbort));
+		});
+	};
+}
