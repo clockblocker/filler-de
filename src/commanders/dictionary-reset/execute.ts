@@ -64,7 +64,10 @@ export type ResetVault = ResetSources & {
 		ResetFailed
 	>;
 	readonly exists: (path: string) => Effect.Effect<boolean>;
-	/** Moves a folder with everything in it; fails rather than merge. */
+	/**
+	 * Moves a folder with everything in it, rewriting no file's content, not
+	 * even links to the moved notes; fails rather than merge.
+	 */
 	readonly moveFolder: (
 		from: string,
 		to: string,
@@ -276,7 +279,7 @@ const regenerateOne = Effect.fnUntraced(function* (
 > {
 	const planned = plan.attestations[index];
 	if (!planned) return { _tag: "Unresolved", reason: "it is not planned" };
-	// The source is read again: the backup's move may have rewritten links.
+	// The source is read again, as it is now, not as the plan read it.
 	const target = yield* targetAttestation(
 		vault,
 		{ forms: planned.forms, path: planned.notePath },

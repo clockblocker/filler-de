@@ -45,7 +45,14 @@ type CreateFolderPayload = {
 	splitPath: SplitPathToFolder;
 	content?: string;
 };
-type RenameFolderPayload = SplitPathFromTo<SplitPathToFolder>;
+type RenameFolderPayload = SplitPathFromTo<SplitPathToFolder> & {
+	/**
+	 * Whether Obsidian rewrites links to the moved files, as its "Automatically
+	 * update internal links" setting asks. Defaults to true. False moves the
+	 * folder without touching any file's content, the moved notes included.
+	 */
+	updateLinks?: boolean;
+};
 type TrashFolderPayload = { splitPath: SplitPathToFolder };
 
 // File payloads

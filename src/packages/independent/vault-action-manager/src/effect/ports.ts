@@ -67,9 +67,15 @@ export class VaultIo extends Context.Service<
 			fn: (content: string) => string,
 		): Effect.Effect<string, VamVaultIoError>;
 		read(file: TFile): Effect.Effect<string, VamVaultIoError>;
+		/**
+		 * Renames through `FileManager.renameFile`, which rewrites links to the
+		 * file when the user's settings ask for it, or, with `updateLinks:
+		 * false`, through `Vault.rename`, which changes no file's content.
+		 */
 		rename(
 			file: TAbstractFile,
 			toPath: string,
+			options?: { readonly updateLinks?: boolean },
 		): Effect.Effect<void, VamVaultIoError>;
 		resolveLinkpathDest(
 			linkpath: string,

@@ -126,8 +126,10 @@ export class TFolderHelper {
 		from,
 		to,
 		collisionStrategy = "rename",
+		updateLinks = true,
 	}: SplitPathFromTo<SplitPathToFolder> & {
 		collisionStrategy?: CollisionStrategy;
+		updateLinks?: boolean;
 	}) {
 		return Effect.gen({ self: this }, function* () {
 			const fromResult = yield* Effect.result(this.getFolder(from));
@@ -171,9 +173,14 @@ export class TFolderHelper {
 					fromResult.success,
 					from,
 					to,
+					updateLinks,
 				);
 			}
-			return yield* this.performRename(fromResult.success, to);
+			return yield* this.performRename(
+				fromResult.success,
+				to,
+				updateLinks,
+			);
 		});
 	}
 
@@ -181,6 +188,7 @@ export class TFolderHelper {
 		fromFolder: TFolder,
 		from: SplitPathToFolder,
 		to: SplitPathToFolder,
+		updateLinks: boolean,
 	) {
 		return Effect.gen({ self: this }, function* () {
 			const existingBasenames = yield* getExistingBasenamesInFolder(to);
@@ -198,7 +206,12 @@ export class TFolderHelper {
 						existingBasenames,
 					),
 			});
-			yield* this.tryVaultRename(fromFolder, indexedPath, from);
+			yield* this.tryVaultRename(
+				fromFolder,
+				indexedPath,
+				from,
+				updateLinks,
+			);
 			return yield* this.getFolder(indexedPath).pipe(
 				Effect.mapError((error) =>
 					operationFailure(
@@ -216,9 +229,13 @@ export class TFolderHelper {
 		});
 	}
 
-	private performRename(fromFolder: TFolder, to: SplitPathToFolder) {
+	private performRename(
+		fromFolder: TFolder,
+		to: SplitPathToFolder,
+		updateLinks: boolean,
+	) {
 		return Effect.gen({ self: this }, function* () {
-			yield* this.tryVaultRename(fromFolder, to, to);
+			yield* this.tryVaultRename(fromFolder, to, to, updateLinks);
 			return yield* this.getFolder(to).pipe(
 				Effect.mapError((error) =>
 					operationFailure(
@@ -240,12 +257,13 @@ export class TFolderHelper {
 		folder: TFolder,
 		to: SplitPathToFolder,
 		from: SplitPathToFolder,
+		updateLinks: boolean,
 	) {
 		const toPath = pathfinder.systemPathFromSplitPath(to);
 		const fromPath = pathfinder.systemPathFromSplitPath(from);
 		return Effect.gen(function* () {
 			const vault = yield* VaultIo;
-			yield* vault.rename(folder, toPath).pipe(
+			yield* vault.rename(folder, toPath, { updateLinks }).pipe(
 				Effect.tapError((error) =>
 					Effect.logError(
 						"[TFolderHelper.renameFolder] vault.rename threw",
