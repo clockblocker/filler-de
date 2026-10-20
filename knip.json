@@ -51,6 +51,10 @@
 			"entry": ["tests/**/*.test.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
+		"src/packages/independent/lemma-note-codec": {
+			"entry": ["tests/**/*.test.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
+		},
 		"src/packages/independent/linguistics": {
 			"entry": ["tests/**/*.test.ts"],
 			"project": [

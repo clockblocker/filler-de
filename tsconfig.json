@@ -30,6 +30,9 @@
 			"@textfresser/dictionary": [
 				"./src/packages/composed/dictionary/src/index.ts"
 			],
+			"@textfresser/lemma-note-codec": [
+				"./src/packages/independent/lemma-note-codec/src/index.ts"
+			],
 			"@textfresser/lexical-generation": [
 				"./src/packages/independent/deprecated-lexical-generation/src/index.ts"
 			],

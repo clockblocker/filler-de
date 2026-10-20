@@ -81,6 +81,10 @@
         "winston": "3.19.0",
       },
     },
+    "src/packages/independent/lemma-note-codec": {
+      "name": "@textfresser/lemma-note-codec",
+      "version": "0.0.0",
+    },
     "src/packages/independent/linguistics": {
       "name": "@textfresser/linguistics",
       "version": "0.0.0",
@@ -230,6 +234,8 @@
     "@so-ric/colorspace": ["@so-ric/colorspace@1.1.6", "", { "dependencies": { "color": "^5.0.2", "text-hex": "1.0.x" } }, "sha512-/KiKkpHNOBgkFJwu9sh48LkHSMYGyuTcSFK/qMBdnOAlrRJzRSXAOFB5qwzaVQuDl8wAvHVMkaASQDReTahxuw=="],
 
     "@textfresser/dictionary": ["@textfresser/dictionary@workspace:src/packages/composed/dictionary"],
+
+    "@textfresser/lemma-note-codec": ["@textfresser/lemma-note-codec@workspace:src/packages/independent/lemma-note-codec"],
 
     "@textfresser/lexical-generation": ["@textfresser/lexical-generation@workspace:src/packages/independent/deprecated-lexical-generation"],
 
