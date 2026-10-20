@@ -70,30 +70,6 @@ export function errorWriteFailed(
 	return `Failed to write ${entityType}: ${path}: ${errorMessage}`;
 }
 
-export function errorNoActiveView(): string {
-	return "File not open or not active";
-}
-
-export function errorNoFileParent(): string {
-	return "Opened file does not have a parent";
-}
-
-export function errorGetEditor(errorMessage?: string): string {
-	return `Failed to get editor${errorMessage ? `: ${errorMessage}` : ""}`;
-}
-
-export function errorNotInSourceMode(): string {
-	return "View not in source mode";
-}
-
 export function errorNoTFileFound(path: string): string {
 	return `No TFile found for path: ${path}`;
-}
-
-export function errorOpenFileFailed(errorMessage: string): string {
-	return `Failed to open file: ${errorMessage}`;
-}
-
-export function errorFileStale(path: string): string {
-	return `File no longer exists in vault: ${path}`;
 }

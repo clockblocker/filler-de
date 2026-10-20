@@ -49,7 +49,7 @@ const breaksParagraph = (text: string) =>
  * The block a block ID names: the line that carries it and the lines of
  * its paragraph above, up to a blank line, heading or list item.
  */
-export function findBlock(
+function findBlock(
 	content: string,
 	blockId: string,
 ): { readonly range: SourceRange; readonly idLines: number } | undefined {

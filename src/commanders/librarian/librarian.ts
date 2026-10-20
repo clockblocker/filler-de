@@ -97,7 +97,7 @@ export type LibrarianVam = Pick<
 	| "subscribeToBulk"
 >;
 
-export class LibrarianUnexpectedDispatchError extends Schema.TaggedError<LibrarianUnexpectedDispatchError>()(
+class LibrarianUnexpectedDispatchError extends Schema.TaggedError<LibrarianUnexpectedDispatchError>()(
 	"LibrarianUnexpectedDispatchError",
 	{
 		cause: Schema.Defect(),
@@ -105,7 +105,7 @@ export class LibrarianUnexpectedDispatchError extends Schema.TaggedError<Librari
 	},
 ) {}
 
-export class LibrarianUnexpectedRecoveryError extends Schema.TaggedError<LibrarianUnexpectedRecoveryError>()(
+class LibrarianUnexpectedRecoveryError extends Schema.TaggedError<LibrarianUnexpectedRecoveryError>()(
 	"LibrarianUnexpectedRecoveryError",
 	{
 		cause: Schema.Defect(),

@@ -300,7 +300,7 @@ export function withAppended(
 }
 
 /** A Reading block a unit links to. */
-export type LinkTarget = {
+type LinkTarget = {
 	/** The Lemma note's vault path, `.md` included. */
 	readonly lemmaPath: string;
 	/** The Reading's block ID, without `^`. */
@@ -314,7 +314,7 @@ export type UnitLinkEdit = {
 	readonly occurrences: readonly SourceRange[];
 };
 
-export type SkippedLink = {
+type SkippedLink = {
 	readonly ref: UnitRef;
 	readonly text: string;
 	readonly reason: string;
@@ -328,7 +328,7 @@ export type LinkedScroll = {
 };
 
 /** `[[Worter/…/See#^r-…|See]]`: the path-qualified link to a Reading block. */
-export function readingLink(target: LinkTarget, shown: string): string {
+function readingLink(target: LinkTarget, shown: string): string {
 	const path = target.lemmaPath.endsWith(".md")
 		? target.lemmaPath.slice(0, -3)
 		: target.lemmaPath;

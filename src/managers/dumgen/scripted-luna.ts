@@ -10,7 +10,7 @@
  */
 import type { LunaAsk } from "dumgen";
 
-export type ScriptedLunaRule = {
+type ScriptedLunaRule = {
 	/** Text the request's JSON input must contain; any request without it. */
 	readonly when?: string;
 	readonly output: unknown;

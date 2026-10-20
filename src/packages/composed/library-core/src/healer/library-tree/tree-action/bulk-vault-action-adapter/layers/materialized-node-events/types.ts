@@ -1,7 +1,6 @@
-import { CREATE, DELETE, RENAME } from "@textfresser/vault-action-manager";
 import type { SplitPathKind } from "@textfresser/vault-action-manager";
+import { CREATE, DELETE, RENAME } from "@textfresser/vault-action-manager";
 import z from "zod";
-import type { Prettify } from "../../../../../../internal/root/type-helpers";
 import type {
 	SplitPathInsideLibraryOf,
 	SplitPathToFileInsideLibrary,
@@ -16,6 +15,7 @@ import type {
 	ScrollNodeLocator,
 	SectionNodeLocator,
 } from "../../../../../../codecs/locator/types";
+import type { Prettify } from "../../../../../../internal/root/type-helpers";
 import type { TreeNodeKind } from "../../../../tree-node/types/atoms";
 
 /**
@@ -111,7 +111,7 @@ type RenameSectionNodeMaterializedEvent = {
 
 // -- Gropped By Event Type
 
-export type CreateLeafNodeMaterializedEvent =
+type CreateLeafNodeMaterializedEvent =
 	| CreateFileNodeMaterializedEvent
 	| CreateScrollNodeMaterializedEvent;
 

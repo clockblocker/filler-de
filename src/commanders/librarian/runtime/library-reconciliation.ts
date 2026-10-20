@@ -26,7 +26,7 @@ import {
 } from "@textfresser/vault-action-manager";
 import { type Cause, Clock, Effect, Result } from "effect";
 
-export type ReconciliationSource =
+type ReconciliationSource =
 	| "Startup"
 	| "ObservedBulk"
 	| "CodexClick"
@@ -43,7 +43,7 @@ type RuntimeReconciliationRequest = {
 	readonly treeActions: readonly TreeAction[];
 };
 
-export type StartupReconciliationRequest = {
+type StartupReconciliationRequest = {
 	readonly observedVaultPaths: readonly VaultScanPath[];
 	readonly operationId?: string;
 	readonly source: "Startup";
@@ -94,14 +94,14 @@ export type ReconciliationDerivedCounts = {
 	readonly vault: number;
 };
 
-export type ReconciliationStageDurations = {
+type ReconciliationStageDurations = {
 	readonly applyMs: number;
 	readonly deriveMs: number;
 	readonly dispatchMs: number;
 	readonly recoveryMs: number;
 };
 
-export type ReconciliationDispatchRecord<E> =
+type ReconciliationDispatchRecord<E> =
 	| { readonly kind: "NotRequired" }
 	| { readonly kind: "Completed"; readonly submittedCount: number }
 	| {
@@ -110,13 +110,13 @@ export type ReconciliationDispatchRecord<E> =
 			readonly submittedCount: number;
 	  };
 
-export type ReconciliationRecoveryRecord<R> =
+type ReconciliationRecoveryRecord<R> =
 	| { readonly kind: "NotNeeded" }
 	| { readonly kind: "StagedStateDiscarded" }
 	| { readonly kind: "Resynchronized" }
 	| { readonly cause: R | unknown; readonly kind: "Failed" };
 
-export type ReconciliationFailure<E> =
+type ReconciliationFailure<E> =
 	| {
 			readonly action: TreeAction;
 			readonly actionIndex: number;
@@ -130,11 +130,7 @@ export type ReconciliationFailure<E> =
 	  }
 	| { readonly cause: unknown; readonly kind: "ReconciliationUnavailable" };
 
-export type ReconciliationStatus =
-	| "Success"
-	| "NoOp"
-	| "Failed"
-	| "PartialFailure";
+type ReconciliationStatus = "Success" | "NoOp" | "Failed" | "PartialFailure";
 
 export type ReconciliationOutcome<E, R = unknown> = {
 	readonly derived: ReconciliationDerivedCounts;

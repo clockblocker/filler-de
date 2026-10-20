@@ -11,7 +11,8 @@
 				"src/main.ts",
 				"scripts/**/*.ts",
 				"tests/**/*.test.ts",
-				"tests/**/*-runner.ts"
+				"tests/**/*-runner.ts",
+				"tests/unit/batteries/battery-probe.ts"
 			],
 			"project": [
 				"src/**/*.ts",
@@ -26,10 +27,7 @@
 			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
 		"src/packages/composed/library-core": {
-			"entry": [
-				"tests/**/*.test.ts",
-				"tests/unit/librarian/library-tree/pipeline/investigate-bulk-event.ts"
-			],
+			"entry": ["tests/**/*.test.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
 		"src/packages/composed/obsidian-event-layer": {

@@ -14,7 +14,7 @@ export type FreeformInsert =
 const MARKER_LIKE = /^%%tf(?:-part)?:/u;
 
 /** Text without CRs, blank edge lines and trailing whitespace. */
-export function normalizeFreeform(text: string): string {
+function normalizeFreeform(text: string): string {
 	return text
 		.replace(/\r\n?/gu, "\n")
 		.split("\n")

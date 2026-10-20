@@ -12,7 +12,7 @@ import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import type { KnowledgeQueue } from "./knowledge-queue";
 
 /** `Worter/…/See#^r-1a2b|See` → its note path and block ID. */
-export function parseReadingLinkTarget(target: string): {
+function parseReadingLinkTarget(target: string): {
 	readonly path: string;
 	readonly blockId?: string;
 } {
@@ -27,7 +27,7 @@ export function parseReadingLinkTarget(target: string): {
 
 const withMd = (path: string) => (path.endsWith(".md") ? path : `${path}.md`);
 
-export const scrollOpenedNoteToBlock = Effect.fnUntraced(function* (
+const scrollOpenedNoteToBlock = Effect.fnUntraced(function* (
 	vam: Pick<
 		VaultActionManager,
 		"getActiveEditorContext" | "scrollOpenedFileToLine"

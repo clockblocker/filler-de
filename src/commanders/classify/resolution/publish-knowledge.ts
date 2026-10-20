@@ -25,7 +25,7 @@ import {
 } from "./knowledge-types";
 
 /** The most changes one Knowledge commit plans, as tf-demo caps it. */
-export const MAX_PLANNED_CHANGES = 50;
+const MAX_PLANNED_CHANGES = 50;
 
 const planner = createDumdictPlanner("de");
 

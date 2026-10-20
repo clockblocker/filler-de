@@ -33,7 +33,7 @@ const BASE_TEXT_ASPECTS = new Set([
 	"translations",
 ]);
 
-export type KnowledgeFailureSummary = {
+type KnowledgeFailureSummary = {
 	readonly aspect: string;
 	readonly leaf?: string;
 	readonly code: string;

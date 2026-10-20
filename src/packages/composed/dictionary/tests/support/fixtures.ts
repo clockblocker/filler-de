@@ -39,7 +39,7 @@ export const laufenReading = readingOf(laufen, "🏃");
 export const springenReading = readingOf(springen, "🦘");
 export const schreitenReading = readingOf(schreiten, "🦶");
 
-export const gehtSurface: Dumling.Surface<"de", "Lexeme", "VERB"> = {
+const gehtSurface: Dumling.Surface<"de", "Lexeme", "VERB"> = {
 	inflectionalFeatures: null,
 	language: "de",
 	lemma: gehen,
