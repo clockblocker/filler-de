@@ -3,6 +3,7 @@
 bun run build        # production
 bun run dev          # watch mode
 bun run build:dev    # dev + typecheck
+bun run batteries:sync # clone or fast-forward the texteater clone, relink
 
 # Deterministic tests
 bun test             # Bun discovery; desktop/provider suites are excluded
@@ -41,19 +42,31 @@ guide does not cover, search through `node_modules/effect/src`.
 ## Battery packages from texteater
 
 `common-utils`, `dumling`, `dumrel`, `dumcorpus`, `dumdict` and `dumgen` come
-from a local checkout of [clockblocker/texteater](https://github.com/clockblocker/texteater).
-They are read from its `battery/*/src`, so the checkout needs no `bun install`
-and no `dist`. Nothing is copied, and nothing is written inside texteater.
+from a dedicated, clean clone of [clockblocker/texteater](https://github.com/clockblocker/texteater)
+kept at its `origin/main`. They are read from its `battery/*/src`, with no
+`dist`. Nothing is copied. The plugin never builds against a texteater
+working checkout, such as `~/work/textfresser-batteries`, because those hold
+local commits and lag origin.
 
-- **Where texteater goes.** Clone it as `texteater` or `textfresser-batteries`
-  next to this checkout, or next to any parent folder, such as the vault. To
-  use another location, set `TEXTEATER_DIR=/path/to/texteater` and run
-  `bun run link:texteater`.
+- **The clone.** `bun run batteries:sync` (`scripts/sync-texteater.ts`)
+  owns `~/work/texteater-clones/plugin`. It clones texteater there when
+  missing. Otherwise it fast-forwards to `origin/main`, and refuses when the
+  clone has local changes, is off `main`, or has commits not on origin. It
+  then runs `bun install` inside the clone, points `.texteater` at it, and
+  prints the pinned commit. Run it to pick up merged battery PRs. Every
+  checkout and worktree of the plugin shares this one clone, so a sync moves
+  the batteries under all of them.
 - **The link.** `bun install` runs `scripts/link-texteater.ts` as
-  `postinstall`. It points the gitignored `.texteater` symlink at the checkout,
-  keeps an existing link that still holds the batteries, and only warns when
-  no checkout is found. Re-run `bun run link:texteater` after moving the
-  checkout.
+  `postinstall`. It points the gitignored `.texteater` symlink at the clone,
+  or only warns when the clone is missing. `bun run link:texteater` does the
+  same and fails when the clone is missing. A fresh worktree therefore needs
+  only `bun install`. To build against another texteater, set
+  `TEXTEATER_DIR=/path/to/texteater` and run `bun run link:texteater`. With
+  `TEXTEATER_DIR` set, `batteries:sync` syncs that directory instead.
+- **The pinned commit.** `bun run build`, `build:full` and `dev` start with
+  `bun run batteries:report`, which prints the texteater path and commit
+  `.texteater` resolves to, and marks a dirty tree. The build log, including
+  the one from `test:obsidian-e2e`, records which batteries were bundled.
 - **Resolution.** `tsconfig.json` `paths` map each battery export to its
   `.texteater/battery/<pkg>/src` entry, and map `effect`, `zod`,
   `emoji-regex`, `jsonc-parser` and `@typesafe-ai/sdk` to this repo's
