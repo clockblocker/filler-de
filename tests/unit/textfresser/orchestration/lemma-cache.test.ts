@@ -11,6 +11,7 @@ import {
 } from "../../../../src/commanders/textfresser/orchestration/lemma/lemma-cache";
 import type { TextfresserState } from "../../../../src/commanders/textfresser/state/textfresser-state";
 import { makeLexemeLemmaResult } from "../helpers/native-fixtures";
+import { noDumgen } from "../helpers/stub-dumgen";
 
 const SOURCE_PATH: SplitPathToMdFile = {
 	basename: "Source",
@@ -63,6 +64,7 @@ function makeState(cacheAtMs: number): TextfresserState {
 
 	return {
 		attestationForLatestNavigated: null,
+		getDumgen: noDumgen,
 		inFlightGenerate: null,
 		isLibraryLookupAvailable: false,
 		languages: { known: "English", target: "German" },
@@ -96,6 +98,7 @@ function makeStateWithLemmaResult(
 
 	return {
 		attestationForLatestNavigated: null,
+		getDumgen: noDumgen,
 		inFlightGenerate: null,
 		isLibraryLookupAvailable: false,
 		languages: { known: "English", target: "German" },

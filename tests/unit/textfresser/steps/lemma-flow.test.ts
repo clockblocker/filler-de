@@ -12,6 +12,7 @@ import type { PromptRunner } from "../../../../src/commanders/textfresser/llm/pr
 import { Textfresser } from "../../../../src/commanders/textfresser/textfresser";
 import type { CommandContext } from "../../../../src/managers/obsidian/command-executor";
 import type { ApiService } from "../../../../src/stateless-helpers/api-service";
+import { noDumgen } from "../helpers/stub-dumgen";
 
 type HarnessOptions = {
 	lemma: string;
@@ -99,6 +100,7 @@ function makeHarness(options: HarnessOptions) {
 		{ known: "English", target: "German" },
 		apiService,
 		{ generateInflections: true },
+		noDumgen,
 	);
 	textfresser.setLibrarianResolvers({
 		lookupInLibraryByCoreName: options.lookupInLibrary ?? (() => []),

@@ -11,6 +11,7 @@ import type {
 	SplitPathToMdFile,
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
+import type { Dumgen } from "dumgen";
 import type { ApiService } from "../../../stateless-helpers/api-service";
 import type { LanguagesConfig } from "../../../types";
 import type { LemmaResult } from "../commands/lemma/types";
@@ -52,6 +53,11 @@ export type TextfresserState = {
 	latestFailedSections: string[];
 	lexicalGeneration?: LexicalGenerationModule | null;
 	lexicalGenerationInitError?: LexicalGenerationError;
+	/**
+	 * The plugin's one dumgen instance, read on each use so a key change
+	 * takes effect. It throws once the plugin has unloaded.
+	 */
+	getDumgen: () => Dumgen;
 	targetBlockId?: string;
 	inFlightGenerate: InFlightGenerate | null;
 	pendingGenerate: PendingGenerate | null;
@@ -65,11 +71,13 @@ export type TextfresserState = {
 
 export function createInitialTextfresserState(params: {
 	apiService: ApiService;
+	getDumgen: () => Dumgen;
 	languages: LanguagesConfig;
 	lexicalGenerationSettings: LexicalGenerationSettings;
 	vam: VaultActionManager;
 }): TextfresserState {
-	const { apiService, languages, lexicalGenerationSettings, vam } = params;
+	const { apiService, getDumgen, languages, lexicalGenerationSettings, vam } =
+		params;
 	const fetchStructured: StructuredFetchFn = async ({
 		requestLabel,
 		schema,
@@ -103,6 +111,7 @@ export function createInitialTextfresserState(params: {
 
 	return {
 		attestationForLatestNavigated: null,
+		getDumgen,
 		inFlightGenerate: null,
 		isLibraryLookupAvailable: false,
 		languages,
