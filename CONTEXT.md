@@ -1,6 +1,8 @@
 # Textfresser Library Management
 
-This context defines the language for the managed Library and its boundary with an Obsidian vault. It covers the Librarian, the Vault Action Manager, and the translation of observed vault changes into Library intentions.
+This context defines the language for the managed Library and its boundary with an Obsidian vault. It covers the Librarian, the Vault Action Manager, the translation of observed vault changes into Library intentions, and the dictionary of Lemma notes.
+
+Dictionary terms follow the batteries' [dumling](https://github.com/clockblocker/texteater/blob/main/battery/dumling/GLOSSARY.md), [dumrel](https://github.com/clockblocker/texteater/blob/main/battery/dumrel/GLOSSARY.md) and [dumdict](https://github.com/clockblocker/texteater/blob/main/battery/dumdict/GLOSSARY.md) glossaries. Where this glossary and theirs differ, theirs wins.
 
 ## Managed Library
 
@@ -9,8 +11,8 @@ The configured subtree of an Obsidian vault whose organization, names, indexes, 
 _Avoid_: Vault, repository, collection
 
 **Section**:
-A branch in the Library hierarchy, represented in the vault by a folder and in the Library Tree by a Section Node.
-_Avoid_: Category, directory node
+A branch in the Library hierarchy, represented in the vault by a folder and in the Library Tree by a Section Node. Say Library Section where a Block could be meant.
+_Avoid_: Category, directory node; Section, for a part of a Lemma note
 
 **Scroll**:
 A Markdown content item in the Library that can carry reading status.
@@ -115,3 +117,76 @@ _Avoid_: BAM, VAM, DataAdapter, bulk executor
 **Materialized Node Event**:
 A Library-scoped, single-node observation used between bulk-event normalization and Tree Action translation.
 _Avoid_: Tree Action, raw Vault Event
+
+## Dictionary
+
+**Lemma**:
+A grammatical entity identified by its language, Family, Kind, Core Features and Canonical Form. A Lemma carries no meaning; its Readings do. A Lemma together with its sense emojis is a Reading.
+_Avoid_: Dictionary entry, Lemma Form
+
+**Core Features**:
+The grammatical features that belong to a Lemma's identity, such as a noun's gender.
+_Avoid_: Inherent Features
+
+**Reading**:
+One Lemma together with one Emoji Description: a sense of the Lemma. A Foreign Lemma has exactly one Reading and no Emoji Description.
+_Avoid_: Sense, meaning, Entry
+
+**Emoji Description**:
+The emoji label that tells the Readings of one Lemma apart. It is an identity label, not a mnemonic.
+_Avoid_: Sense emojis, gloss
+
+**Surface**:
+A reusable grammatical form that realizes exactly one Lemma, such as an inflected form.
+_Avoid_: Selection, selected text
+
+**Attestation**:
+A fleeting occurrence of one Surface in a text. It has no durable identity and is never stored as one.
+_Avoid_: Selection, source reference, context
+
+**Attestation Ref**:
+A durable reference to the place in a Scroll where an Attestation occurred, stored as an embed in a Reading Entry's or Surface Entry's `attestations`.
+_Avoid_: Attestation, Kontext
+
+**Reading Knowledge**:
+Optional linguistic content owned by one Reading, such as translations, definition, Semantic Relations, morphological tree, valency, plural and conjugation class. A Lemma owns no Knowledge.
+_Avoid_: Lemma metadata, sections
+
+**Semantic Relation**:
+A direct claim from one Reading to a Lemma or Reading, stored only on its source. Inverse and inferred relations are projected when a note is read and are never written.
+_Avoid_: Lexical Relation, propagated relation
+
+**Pending Semantic Relation**:
+A Semantic Relation whose target does not exist yet, kept as a dumdict record until a matching Lemma is created.
+_Avoid_: Stub note, placeholder target
+
+**Lemma Record**, **Reading Entry**, **Surface Entry**:
+The dumdict records for a Lemma, for one of its Readings with its Knowledge and learner content, and for one Surface it owns. With Pending Semantic Relations, they are the dictionary's only data.
+_Avoid_: Entry, for any of them alone
+
+**Lemma Note**:
+The one Markdown note that holds a Lemma's Lemma Record and all of its Reading Entries, owned Surface Entries and Pending Semantic Relations. Its path spells the Lemma's identity, as a projection of the note's own identity Block.
+_Avoid_: Vocabulary note, surface host, Dict Note
+
+**Shadow Note**:
+The note of a dumrel Unit Shadow: a target with language, Family, Kind and Canonical Form but no Lemma yet, such as the target of a Pending Semantic Relation. It lives under `Worter/<lang>/Shadow/`, holds no records, and is removed when its Lemma is created.
+_Avoid_: Stub note, placeholder note
+
+**Crossroad** (deferred):
+A spelling projection that would list every Lemma, Surface and Shadow with one case-folded spelling. It holds no data, so it is not built for now and can be added later without migration.
+_Avoid_: Surface host, disambiguation note
+
+**Block**:
+A typed part of a Lemma Note. A Block serializes one dumdict or dumrel field, is a Projection Block, or is plugin-owned.
+_Avoid_: Section, Entry Section
+
+**Projection Block**:
+A Block rendered from dictionary data and never parsed back, such as the Header, Tags, inverse relations, or the inflection table. Editing it changes no data.
+_Avoid_: Generated section, cache
+
+**Block ID**:
+The plugin-owned Obsidian block ID of a Reading or Surface in a Lemma Note: a short hash of its identity key.
+_Avoid_: Entry ID, sense ID
+
+**Selection** (retired):
+Use Attestation for an occurrence and Surface for a form.
