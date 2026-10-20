@@ -41,16 +41,26 @@ export type SerializeOptions<L extends Dumling.Language> = {
 	readonly projections?: Projections<L>;
 };
 
+/** A JSON string token, escapes included. */
+const JSON_STRING_PATTERN = /"(?:[^"\\]|\\.)*"/gu;
+
 /**
- * A serialized payload: canonical JSON on one line, `%` written as
- * `\u0025` so no payload can close its Obsidian comment.
+ * A serialized payload: canonical JSON on one line. Inside its strings, `%`
+ * is written as `\u0025`, so no payload can close its Obsidian comment, and
+ * `[` as `\u005b`, so no payload holds a wikilink, an embed or a Markdown
+ * link: Obsidian renders and indexes those even inside a comment. Both are
+ * plain JSON escapes, so `JSON.parse` reads the payload back unchanged.
  */
 function encodePayload(value: unknown): string {
+	let json: string;
 	try {
-		return canonicalJson(value).replaceAll("%", "\\u0025");
+		json = canonicalJson(value);
 	} catch (error) {
 		throw new LemmaNoteSerializeError(String(error));
 	}
+	return json.replace(JSON_STRING_PATTERN, (token) =>
+		token.replaceAll("%", "\\u0025").replaceAll("[", "\\u005b"),
+	);
 }
 
 type Render = {

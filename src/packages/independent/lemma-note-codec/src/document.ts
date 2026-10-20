@@ -75,8 +75,9 @@ export const EMPTY_DOCUMENT: LemmaNoteDocument = { parts: [], preamble: [] };
  * - `%%tf-part:lemma%%`, `%%tf-part:reading r-…%%`, `%%tf-part:surface s-…%%`
  *   open a part;
  * - `%%tf:<kind>%%` opens a projection Block and `%%tf:<kind> <json>%%` a
- *   serialized one, whose payload is one line of JSON with `%` written as
- *   `\u0025`.
+ *   serialized one, whose payload is one line of JSON with `%` and `[`
+ *   inside its strings written as `\u0025` and `\u005b`, so it
+ *   neither closes its comment nor holds a link Obsidian would render.
  * - a typed Block with a visible rendering seals it in its marker, as
  *   `%%tf:<kind>@<lines>:<hash>%%` or `%%tf:<kind>@<lines>:<hash> <json>%%`:
  *   the rendering's line count and the first 8 hex digits of the SHA-256 of
