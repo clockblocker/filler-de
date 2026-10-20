@@ -11,6 +11,12 @@ type ExactEntry = {
 
 type SelfEventState = {
 	readonly changed: Deferred.Deferred<void>;
+	/**
+	 * Expected Obsidian modify callbacks, one expiration per VAM write. This
+	 * namespace is separate from create, rename, and delete attribution and
+	 * does not hold the settle barrier open.
+	 */
+	readonly modifies: ReadonlyMap<string, readonly number[]>;
 	readonly prefixes: ReadonlyMap<string, number>;
 	readonly tracked: ReadonlyMap<string, ExactEntry>;
 };
@@ -57,14 +63,28 @@ function pruneState(state: SelfEventState, now: number): PrunedState {
 }
 
 function nextState(
+	previous: SelfEventState,
 	tracked: ReadonlyMap<string, ExactEntry>,
 	prefixes: ReadonlyMap<string, number>,
 ): SelfEventState {
 	return {
 		changed: Deferred.makeUnsafe<void>(),
+		modifies: previous.modifies,
 		prefixes,
 		tracked,
 	};
+}
+
+function pruneModifies(
+	modifies: ReadonlyMap<string, readonly number[]>,
+	now: number,
+): Map<string, readonly number[]> {
+	const pruned = new Map<string, readonly number[]>();
+	for (const [path, expirations] of modifies) {
+		const live = expirations.filter((expiresAt) => expiresAt > now);
+		if (live.length > 0) pruned.set(path, live);
+	}
+	return pruned;
 }
 
 const makeSelfEventTrackerCore = Effect.fn("makeSelfEventTrackerCore")(
@@ -72,6 +92,7 @@ const makeSelfEventTrackerCore = Effect.fn("makeSelfEventTrackerCore")(
 		const changed = yield* Deferred.make<void>();
 		const state = yield* Ref.make<SelfEventState>({
 			changed,
+			modifies: new Map(),
 			prefixes: new Map(),
 			tracked: new Map(),
 		});
@@ -83,7 +104,9 @@ const makeSelfEventTrackerCore = Effect.fn("makeSelfEventTrackerCore")(
  * Tracks Self Events by normalized path with a Clock-driven expiration time.
  *
  * Exact entries pop on their first match. Folder prefixes remain available to
- * match every descendant event until their expiration timestamp.
+ * match every descendant event until their expiration timestamp. Modify
+ * expectations are counted per path and recorded at write time, because only
+ * the executor knows whether a write actually happens.
  */
 export class SelfEventTracker {
 	private readonly core: SelfEventTrackerCore;
@@ -139,7 +162,10 @@ export class SelfEventTracker {
 				}
 			}
 
-			return [state.changed, nextState(pruned.tracked, pruned.prefixes)];
+			return [
+				state.changed,
+				nextState(state, pruned.tracked, pruned.prefixes),
+			];
 		});
 		yield* Deferred.succeed(previousSignal, undefined);
 	});
@@ -180,7 +206,7 @@ export class SelfEventTracker {
 
 					return [
 						{ ignored, previousSignal: state.changed },
-						nextState(pruned.tracked, pruned.prefixes),
+						nextState(state, pruned.tracked, pruned.prefixes),
 					];
 				},
 			);
@@ -191,6 +217,83 @@ export class SelfEventTracker {
 			return update.ignored;
 		},
 	);
+
+	/**
+	 * Records that VAM is about to write `path` through the vault, so the
+	 * resulting modify callback is attributed as a Self Event. Call it only
+	 * immediately before a write that will happen.
+	 */
+	readonly expectModifyEffect = Effect.fn("SelfEventTracker.expectModify")(
+		function* (
+			this: SelfEventTracker,
+			path: string,
+		): Effect.fn.Return<void> {
+			const now = yield* Clock.currentTimeMillis;
+			const normalized = this.normalizePath(path);
+			yield* Ref.update(this.core.state, (state) => {
+				const modifies = pruneModifies(state.modifies, now);
+				modifies.set(normalized, [
+					...(modifies.get(normalized) ?? []),
+					now + this.ttlMs,
+				]);
+				return { ...state, modifies };
+			});
+		},
+	);
+
+	/** Withdraws the newest expectation for `path` after a failed write. */
+	readonly forgetModifyEffect = Effect.fn("SelfEventTracker.forgetModify")(
+		function* (
+			this: SelfEventTracker,
+			path: string,
+		): Effect.fn.Return<void> {
+			const now = yield* Clock.currentTimeMillis;
+			const normalized = this.normalizePath(path);
+			yield* Ref.update(this.core.state, (state) => {
+				const modifies = pruneModifies(state.modifies, now);
+				const remaining = (modifies.get(normalized) ?? []).slice(0, -1);
+				if (remaining.length > 0) modifies.set(normalized, remaining);
+				else modifies.delete(normalized);
+				return { ...state, modifies };
+			});
+		},
+	);
+
+	/**
+	 * Drops every modify expectation. Writes made while nobody listened for
+	 * modify callbacks leave expectations whose callbacks already fired; a
+	 * new listener must not let them hide the next real edit.
+	 */
+	readonly clearModifiesEffect = Effect.fn("SelfEventTracker.clearModifies")(
+		function* (this: SelfEventTracker): Effect.fn.Return<void> {
+			yield* Ref.update(this.core.state, (state) => ({
+				...state,
+				modifies: new Map(),
+			}));
+		},
+	);
+
+	/** Pops one live modify expectation for `path`, if VAM wrote it. */
+	readonly shouldIgnoreModifyEffect = Effect.fn(
+		"SelfEventTracker.shouldIgnoreModify",
+	)(function* (
+		this: SelfEventTracker,
+		path: string,
+	): Effect.fn.Return<boolean> {
+		const now = yield* Clock.currentTimeMillis;
+		const normalized = this.normalizePath(path);
+		return yield* Ref.modify(
+			this.core.state,
+			(state): readonly [boolean, SelfEventState] => {
+				const modifies = pruneModifies(state.modifies, now);
+				const [, ...remaining] = modifies.get(normalized) ?? [];
+				const ignored = modifies.has(normalized);
+				if (remaining.length > 0) modifies.set(normalized, remaining);
+				else modifies.delete(normalized);
+				return [ignored, { ...state, modifies }];
+			},
+		);
+	});
 
 	readonly getRegisteredFilePathsEffect = Effect.fn(
 		"SelfEventTracker.getRegisteredFilePaths",
@@ -238,7 +341,11 @@ export class SelfEventTracker {
 						];
 					}
 
-					const snapshot = nextState(pruned.tracked, pruned.prefixes);
+					const snapshot = nextState(
+						state,
+						pruned.tracked,
+						pruned.prefixes,
+					);
 					return [
 						{ previousSignal: state.changed, snapshot },
 						snapshot,

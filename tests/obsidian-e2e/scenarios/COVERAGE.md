@@ -35,7 +35,9 @@ The Librarian's user commands also have desktop owners:
 
 Startup lifecycle and its initial scan are covered by
 `startup-healing.test.ts`; `harness-lifecycle.test.ts` verifies that a returned
-mutation is already observable.
+mutation is already observable. VAM's Markdown modify subscription, including
+Self Event filtering of the Librarian's Codex writes, is covered by
+`md-modify-observation.test.ts`.
 
 ## Former Librarian chain
 

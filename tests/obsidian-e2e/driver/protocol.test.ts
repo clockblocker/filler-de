@@ -59,6 +59,13 @@ describe("driver protocol request parsing", () => {
 		).toBe(3);
 	});
 
+	it("accepts modifications as an unfenced read", () => {
+		expect(
+			parseEncodedRequest(encode(request({ method: "modifications" })))
+				.method,
+		).toBe("modifications");
+	});
+
 	it("rejects malformed transport and protocol versions", () => {
 		expect(() => parseEncodedRequest("not+base64")).toThrow(
 			"unpadded base64url JSON",

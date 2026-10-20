@@ -1,5 +1,6 @@
 import { Context, type Effect } from "effect";
 import type { Editor, TAbstractFile, TFile, TFolder } from "obsidian";
+import type { VaultFileStat } from "../types/file-stat";
 import type { VamActiveEditorError, VamVaultIoError } from "./errors";
 
 export type ActiveEditor = Pick<
@@ -74,6 +75,8 @@ export class VaultIo extends Context.Service<
 			linkpath: string,
 			fromPath: string,
 		): Effect.Effect<TFile | null, VamVaultIoError>;
+		/** Obsidian's cached stat for a file, as of its last vault change. */
+		stat(file: TFile): Effect.Effect<VaultFileStat, VamVaultIoError>;
 		trash(file: TAbstractFile): Effect.Effect<void, VamVaultIoError>;
 	}
 >()("@textfresser/vault-action-manager/VaultIo") {}

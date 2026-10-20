@@ -217,6 +217,8 @@ function makeHarness(
 				files.set(toPath, file);
 			}),
 		resolveLinkpathDest: () => Effect.die("not used"),
+		stat: (file) =>
+			Effect.succeed({ ctime: 1, mtime: 2, size: file.path.length }),
 		trash: (file) =>
 			Effect.sync(() => {
 				files.delete(file.path);
@@ -332,6 +334,25 @@ describe("MarkdownFileAccess", () => {
 		);
 		expect(different.getObservationCount()).toBe(1);
 		expect(absent.getObservationCount()).toBe(1);
+	});
+
+	it("reads content with its stat through the same active or background route", async () => {
+		const active = makeHarness();
+		const background = makeHarness({ activePath: "Library/other.md" });
+
+		expect(
+			await active.run(active.access.readContentWithStat(target)),
+		).toEqual({
+			content: "editor content",
+			stat: { ctime: 1, mtime: 2, size: "Library/note.md".length },
+		});
+		expect(
+			await background.run(background.access.readContentWithStat(target)),
+		).toEqual({
+			content: "vault content",
+			stat: { ctime: 1, mtime: 2, size: "Library/note.md".length },
+		});
+		expect(active.vaultRead).not.toHaveBeenCalled();
 	});
 
 	it("does not fall back to the vault for stale or adapter-failed observations", async () => {

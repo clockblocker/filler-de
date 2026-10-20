@@ -510,6 +510,42 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	/**
+	 * E2E test hook: records VAM's Markdown modify observations below one
+	 * vault folder until closed. Paths are vault-relative system paths.
+	 */
+	async observeMdModificationsForTesting(folderPath: string): Promise<{
+		readonly close: () => Promise<void>;
+		readonly read: () => readonly {
+			readonly mtime: number;
+			readonly path: string;
+			readonly size: number;
+		}[];
+	}> {
+		const folder = splitPathCodec.parse(folderPath);
+		if (folder.kind !== SplitPathKind.Folder) {
+			throw new Error(`Expected a folder path, got '${folderPath}'`);
+		}
+		const observed: { mtime: number; path: string; size: number }[] = [];
+		const subscription = await Effect.runPromise(
+			this.vam.subscribeToMdModifications(folder, (event) =>
+				Effect.sync(() => {
+					for (const { splitPath, stat } of event.modifications) {
+						observed.push({
+							mtime: stat.mtime,
+							path: splitPathCodec.format(splitPath),
+							size: stat.size,
+						});
+					}
+				}),
+			),
+		);
+		return {
+			close: () => Effect.runPromise(subscription.close),
+			read: () => [...observed],
+		};
+	}
+
+	/**
 	 * E2E test hook: wait until all plugin async work is complete.
 	 * Resolves when all queues are drained, pending tasks are done, and Obsidian has registered all actions.
 	 */

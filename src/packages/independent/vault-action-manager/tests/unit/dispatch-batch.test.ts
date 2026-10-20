@@ -127,6 +127,7 @@ function makeVamLayer(
 		read: () => Effect.die("not used"),
 		rename: () => Effect.die("not used"),
 		resolveLinkpathDest: () => Effect.die("not used"),
+		stat: () => Effect.die("not used"),
 		trash: () => Effect.die("not used"),
 	});
 	return Layer.succeed(VaultIo, vault) as unknown as Layer.Layer<

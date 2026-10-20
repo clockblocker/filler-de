@@ -31,6 +31,7 @@ function service(overrides: Partial<VaultIoImplementation> = {}) {
 			read: () => Effect.die("not used"),
 			rename: () => Effect.die("not used"),
 			resolveLinkpathDest: () => Effect.die("not used"),
+			stat: () => Effect.die("not used"),
 			trash: () => Effect.die("not used"),
 			...overrides,
 		}),
@@ -216,3 +217,155 @@ function runProcess(
 		).pipe(Effect.provide(vault.layer)),
 	);
 }
+
+describe("TFileHelper modify Self Events", () => {
+	function recordingHelper(initial = "before") {
+		const log: string[] = [];
+		const helper = new TFileHelper({
+			expectModifyEffect: (path) =>
+				Effect.sync(() => log.push(`expect ${path}`)),
+			forgetModifyEffect: (path) =>
+				Effect.sync(() => log.push(`forget ${path}`)),
+		});
+		const file = new TFile();
+		file.path = "Library/note.md";
+		let content = initial;
+		const layer = service({
+			getAbstractFileByPath: () => Effect.succeed(file),
+			modify: (target, next) =>
+				Effect.sync(() => {
+					content = next;
+					log.push(`modify ${target.path}`);
+				}),
+			// Mirrors Obsidian's adapter: write only when `fn` changes the
+			// content it was given.
+			process: (target, fn) =>
+				Effect.sync(() => {
+					const read = content;
+					const next = fn(read);
+					if (next === read) return read;
+					content = next;
+					log.push(`process-write ${target.path}`);
+					return next;
+				}),
+		});
+		return {
+			edit: (next: string) => {
+				content = next;
+			},
+			helper,
+			layer,
+			log,
+		};
+	}
+
+	it("expects a modify callback immediately before each background write", async () => {
+		const { helper, layer, log } = recordingHelper();
+
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				yield* helper.replaceAllContent(target, "replaced");
+				yield* helper.processContent({
+					splitPath: target,
+					transform: (content) => `${content}!`,
+				});
+			}).pipe(Effect.provide(layer)),
+		);
+
+		expect(log).toEqual([
+			"expect Library/note.md",
+			"modify Library/note.md",
+			"expect Library/note.md",
+			"process-write Library/note.md",
+		]);
+	});
+
+	it("withdraws the expectation when a transform leaves the content unchanged", async () => {
+		const { helper, layer, log } = recordingHelper("same");
+
+		await Effect.runPromise(
+			helper
+				.processContent({ splitPath: target, transform: (c) => c })
+				.pipe(Effect.provide(layer)),
+		);
+
+		expect(log).toEqual([
+			"expect Library/note.md",
+			"forget Library/note.md",
+		]);
+	});
+
+	it("attributes only the revalidated write of an asynchronous transform", async () => {
+		const { helper, layer, log } = recordingHelper();
+
+		await Effect.runPromise(
+			helper
+				.processContent({
+					splitPath: target,
+					transform: async (content) => `${content}!`,
+				})
+				.pipe(Effect.provide(layer)),
+		);
+
+		expect(log).toEqual([
+			"expect Library/note.md",
+			"forget Library/note.md",
+			"expect Library/note.md",
+			"process-write Library/note.md",
+		]);
+	});
+
+	it("withdraws every expectation when an asynchronous transform loses a content race", async () => {
+		const { edit, helper, layer, log } = recordingHelper();
+
+		const result = await Effect.runPromise(
+			Effect.result(
+				helper.processContent({
+					splitPath: target,
+					transform: async (content) => {
+						await Promise.resolve();
+						edit("user edit");
+						return `${content}!`;
+					},
+				}),
+			).pipe(Effect.provide(layer)),
+		);
+
+		expect(Result.isFailure(result)).toBe(true);
+		expect(log).toEqual([
+			"expect Library/note.md",
+			"forget Library/note.md",
+			"expect Library/note.md",
+			"forget Library/note.md",
+		]);
+	});
+
+	it("withdraws the expectation when the write fails", async () => {
+		const { helper, log } = recordingHelper();
+		const file = new TFile();
+		file.path = "Library/note.md";
+		const layer = service({
+			getAbstractFileByPath: () => Effect.succeed(file),
+			modify: () =>
+				Effect.fail(
+					new VamVaultIoError({
+						cause: new Error("disk full"),
+						operation: "modify",
+						path: file.path,
+					}),
+				),
+		});
+
+		const result = await Effect.runPromise(
+			Effect.result(helper.replaceAllContent(target, "x")).pipe(
+				Effect.provide(layer),
+			),
+		);
+
+		expect(Result.isFailure(result)).toBe(true);
+		expect(log).toEqual([
+			"expect Library/note.md",
+			"forget Library/note.md",
+		]);
+	});
+});

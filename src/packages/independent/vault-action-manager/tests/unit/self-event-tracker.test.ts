@@ -398,3 +398,94 @@ describe("SelfEventTracker", () => {
 		);
 	});
 });
+
+describe("SelfEventTracker modify expectations", () => {
+	it("pops one expectation per expected write", async () => {
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const tracker = yield* SelfEventTracker.makeEffect();
+				yield* tracker.expectModifyEffect("Worter/Hund.md");
+				yield* tracker.expectModifyEffect("/Worter/Hund.md");
+
+				expect(
+					yield* tracker.shouldIgnoreModifyEffect("Worter\\Hund.md"),
+				).toBe(true);
+				expect(
+					yield* tracker.shouldIgnoreModifyEffect("Worter/Hund.md"),
+				).toBe(true);
+				expect(
+					yield* tracker.shouldIgnoreModifyEffect("Worter/Hund.md"),
+				).toBe(false);
+				expect(
+					yield* tracker.shouldIgnoreModifyEffect("Worter/Katze.md"),
+				).toBe(false);
+			}),
+		);
+	});
+
+	it("withdraws an expectation after a failed write", async () => {
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const tracker = yield* SelfEventTracker.makeEffect();
+				yield* tracker.expectModifyEffect("Worter/Hund.md");
+				yield* tracker.forgetModifyEffect("Worter/Hund.md");
+
+				expect(
+					yield* tracker.shouldIgnoreModifyEffect("Worter/Hund.md"),
+				).toBe(false);
+			}),
+		);
+	});
+
+	it("expires modify expectations after the TTL", async () => {
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const tracker = yield* SelfEventTracker.makeEffect({
+					ttlMs: 5000,
+				});
+				yield* tracker.expectModifyEffect("Worter/Hund.md");
+				yield* tracker.expectModifyEffect("Worter/Katze.md");
+
+				yield* TestClock.adjust(4999);
+				expect(
+					yield* tracker.shouldIgnoreModifyEffect("Worter/Hund.md"),
+				).toBe(true);
+				yield* TestClock.adjust(1);
+				expect(
+					yield* tracker.shouldIgnoreModifyEffect("Worter/Katze.md"),
+				).toBe(false);
+			}).pipe(Effect.provide(TestClock.layer())),
+		);
+	});
+
+	it("keeps modify expectations separate from create, rename, and delete attribution", async () => {
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const tracker = yield* SelfEventTracker.makeEffect();
+				yield* tracker.expectModifyEffect("Library/note.md");
+
+				expect(
+					yield* tracker.shouldIgnoreEffect("Library/note.md"),
+				).toBe(false);
+				expect(yield* tracker.getRegisteredFilePathsEffect()).toEqual(
+					[],
+				);
+				// Modify expectations never hold the settle barrier open.
+				yield* tracker.waitForAllRegisteredEffect();
+
+				yield* tracker.registerEffect([
+					{
+						kind: VaultActionKind.UpsertMdFile,
+						payload: { splitPath: mdFile("note", ["Library"]) },
+					},
+				]);
+				expect(
+					yield* tracker.shouldIgnoreEffect("Library/note.md"),
+				).toBe(true);
+				expect(
+					yield* tracker.shouldIgnoreModifyEffect("Library/note.md"),
+				).toBe(true);
+			}),
+		);
+	});
+});

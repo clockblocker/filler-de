@@ -41,8 +41,8 @@ The API has four groups:
 | Group | Examples |
 | --- | --- |
 | Dispatch | `dispatch`, `dispatchStopOnFirstFailure` |
-| Observation | `startListening`, `subscribeToBulk` |
-| Vault reads | `readContent`, `exists`, `findByBasename`, `list`, `scan` |
+| Observation | `startListening`, `subscribeToBulk`, `subscribeToMdModifications` |
+| Vault reads | `readContent`, `readContentWithStat`, `exists`, `findByBasename`, `list`, `scan`, `scanWithStat` |
 | Active editor | `mdPwd`, `getOpenedContent`, `getSelectionInfo`, `cd`, `scrollOpenedFileToLine` |
 
 `scan` owns recursive traversal. A resolved root returns a `Complete` or
@@ -50,6 +50,14 @@ The API has four groups:
 diagnostics for failed nested folders. A root-resolution failure stays in the
 Effect error channel. Markdown entries expose lazy, environment-free read
 Effects and never expose live Obsidian file references.
+
+`scanWithStat` and `readContentWithStat` add Obsidian's cached
+`VaultFileStat` (`ctime`, `mtime`, `size`), so a startup index can key cached
+entries by `(path, mtime)`. `scan` entries stay unchanged because consumers
+spread them into Split Paths. A file whose stat cannot be read is omitted from
+`scanWithStat` with a `scanFile` diagnostic. `readContentWithStat` takes the
+stat before reading, so content is never older than its stat. For the active
+editor, the content may be unsaved while the stat describes the file on disk.
 
 Do not import internal ports, the runtime, or helper classes.
 
@@ -163,7 +171,42 @@ The Self Event tracker uses two match types:
 - Exact paths match one expected callback and then disappear.
 - Folder source prefixes match descendant callback cascades until they expire.
 
-`ProcessMdFile` is not tracked because VAM does not subscribe to Obsidian modify callbacks.
+### Markdown modifications
+
+```text
+Obsidian modify callbacks for Markdown files
+  -> remove modify Self Events
+  -> copy the file's stat
+  -> collect one bounded event window
+  -> keep one modification per path, with its latest stat
+  -> publish one BulkMdModifyEvent
+  -> scope it to each subscriber's folder
+```
+
+`subscribeToMdModifications(folder, handler)` reports content changes that VAM
+did not make: hand edits, Obsidian Sync, and Obsidian's link rewriting after
+`fileManager.renameFile`. It is a separate observation channel with its own
+listener, window, and subscribers, so it never changes the timing or content of
+Bulk Vault Events. The modify listener is acquired only while a modify
+subscriber exists and listening was started. The two channels are not ordered
+relative to each other; structural changes appear only in `subscribeToBulk`.
+
+Modify Self Events are recorded at write time, not at planning time, because
+only the background writer knows whether a write happens. `TFileHelper`
+records one expectation immediately before each `vault.modify` and withdraws it
+if the write fails. A `ProcessMdFile` whose transform returns unchanged content
+records nothing. Modify expectations are counted per path, expire with the
+tracker TTL, and never hold the settle barrier open. Acquiring the modify
+listener clears them, because writes made while nobody listened left
+expectations whose callbacks already fired.
+
+Writes routed to the active editor are not attributed. Obsidian persists them
+with a debounced editor save that can also carry the user's own typing, so
+suppressing that save could hide a hand edit. Subscribers can see such an echo
+and should treat modifications idempotently.
+
+Self Events are VAM-wide: a modification made through any VAM caller,
+including the Librarian, is filtered for every modify subscriber.
 
 ## Markdown access
 

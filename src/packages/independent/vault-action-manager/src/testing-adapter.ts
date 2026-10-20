@@ -3,7 +3,12 @@ import { VaultIo } from "./effect/ports";
 import type { VamRuntime } from "./effect/runtime";
 import type { DispatchBatchCoordinator } from "./impl/actions-processing/dispatch-batch";
 import type { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
-import type { VaultObservation } from "./impl/event-processing/vault-observation";
+
+/** The idle barrier of one VaultObservation channel. */
+type SettleableObservation = {
+	readonly flushPendingEffect: () => Effect.Effect<void>;
+	readonly whenIdleEffect: () => Effect.Effect<void>;
+};
 
 /**
  * Readiness adapter over the same runtime and object graph used in production.
@@ -12,7 +17,7 @@ export class VaultActionManagerTestingAdapter {
 	constructor(
 		private readonly runtime: VamRuntime,
 		private readonly dispatches: DispatchBatchCoordinator,
-		private readonly observation: VaultObservation,
+		private readonly observations: readonly SettleableObservation[],
 		private readonly selfEvents: SelfEventTracker,
 	) {}
 
@@ -29,8 +34,10 @@ export class VaultActionManagerTestingAdapter {
 
 		// Turn the current quiet window into subscriber work, then include any
 		// Dispatch Batches those subscribers submit.
-		yield* this.observation.flushPendingEffect();
-		yield* this.observation.whenIdleEffect();
+		for (const observation of this.observations) {
+			yield* observation.flushPendingEffect();
+			yield* observation.whenIdleEffect();
+		}
 		yield* this.dispatches.whenIdleEffect();
 
 		const filePaths = yield* this.selfEvents.getRegisteredFilePathsEffect();
