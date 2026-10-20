@@ -95,17 +95,18 @@ The plugin automatically maintains bidirectional links between related words, he
 
 This plugin utilizes network requests to communicate with the following remote services:
 
-- **Google Gemini API:** Used for translation, dictionary entry generation, and other language processing tasks.
+- **TypeSafe API:** Used to segment and classify text.
+- **OpenAI API:** Used to write dictionary entries and translations.
 
 These APIs require network access to function properly. The plugin sends text to these services for processing and receives the results back. Your API keys are stored securely within your Obsidian vault and are not shared with any third parties.
 
 ## API Keys
 
-This plugin requires you to provide your own API keys for the Google Gemini API. You can obtain these keys by creating accounts on the respective platforms.
+This plugin requires you to provide your own TypeSafe and OpenAI API keys. You can obtain these keys by creating accounts on the respective platforms.
 
 ## Disclaimer
 
-This plugin is not affiliated with or endorsed by Google. The use of the Google Gemini API is subject to their respective terms of service.
+This plugin is not affiliated with or endorsed by TypeSafe or OpenAI. The use of their APIs is subject to their respective terms of service.
 
 ## License
 

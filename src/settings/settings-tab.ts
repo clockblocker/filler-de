@@ -43,19 +43,6 @@ export class SettingsTab extends PluginSettingTab {
 		new Setting(containerEl).setName(t.apiKeyHeading).setHeading();
 
 		new Setting(containerEl)
-			.setName(t.geminiApiKey)
-			.setDesc(t.geminiApiKeyDesc)
-			.addText((text) =>
-				text
-					.setPlaceholder(t.apiKeyPlaceholder)
-					.setValue(this.plugin.settings.googleApiKey)
-					.onChange(async (value) => {
-						this.plugin.settings.googleApiKey = value;
-						await this.plugin.saveSettings();
-					}),
-			);
-
-		new Setting(containerEl)
 			.setName(t.typesafeApiKey)
 			.setDesc(t.typesafeApiKeyDesc)
 			.addText((text) =>
@@ -80,22 +67,6 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}),
 			);
-
-		new Setting(containerEl)
-			.setName(t.apiProvider)
-			.setDesc(t.apiProviderDesc)
-			.addDropdown((dropdown) => {
-				dropdown
-					.addOption("google", "Google")
-					.setValue(this.plugin.settings.apiProvider)
-					.onChange(async (value) => {
-						if (value !== "google") {
-							return;
-						}
-						this.plugin.settings.apiProvider = value;
-						await this.plugin.saveSettings();
-					});
-			});
 
 		// Languages settings
 		new Setting(containerEl).setName(t.languagesHeading).setHeading();
@@ -144,18 +115,6 @@ export class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
-
-		new Setting(containerEl)
-			.setName(t.generateInflections)
-			.setDesc(t.generateInflectionsDesc)
-			.addToggle((toggle) =>
-				toggle
-					.setValue(this.plugin.settings.generateInflections)
-					.onChange(async (value) => {
-						this.plugin.settings.generateInflections = value;
-						await this.plugin.saveSettings();
-					}),
-			);
 
 		// Actions settings (moved here, after Languages)
 		new Setting(containerEl).setName(t.actionsHeading).setHeading();

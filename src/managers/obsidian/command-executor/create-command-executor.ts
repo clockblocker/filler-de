@@ -67,9 +67,7 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 				break;
 			}
 
-			case CommandKind.TranslateSelection:
-			case CommandKind.Generate:
-			case CommandKind.Lemma: {
+			case CommandKind.TranslateSelection: {
 				await Effect.runPromise(
 					collectContext().pipe(
 						Effect.flatMap((context) =>

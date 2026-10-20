@@ -1,5 +1,4 @@
 import z from "zod";
-import type { LexicalGenerationError } from "@textfresser/lexical-generation";
 import {
 	BASE_COMMAND_ERROR_KIND_STR,
 	type BaseCommandError,
@@ -10,49 +9,16 @@ import {
 const COMMAND_ERROR_KIND_STR = [
 	...BASE_COMMAND_ERROR_KIND_STR,
 	"ApiError",
-	"UNUSED_STUB",
 ] as const;
 
 const CommandErrorKindSchema = z.enum(COMMAND_ERROR_KIND_STR);
 export type CommandErrorKind = z.infer<typeof CommandErrorKindSchema>;
 export const CommandErrorKind = CommandErrorKindSchema.enum;
 
-type TextfresserSpecificCommandError =
-	| {
-			kind: typeof CommandErrorKind.ApiError;
-			reason: string;
-			lexicalGenerationError?: LexicalGenerationError;
-	  }
-	| { kind: typeof CommandErrorKind.UNUSED_STUB };
-
-type TextfresserCommandError =
+export type CommandError =
 	| BaseCommandError
-	| TextfresserSpecificCommandError;
-export type CommandError = TextfresserCommandError;
+	| { kind: typeof CommandErrorKind.ApiError; reason: string };
 
-export function commandApiError(params: {
-	reason: string;
-	lexicalGenerationError?: LexicalGenerationError;
-}): CommandError {
-	return {
-		kind: CommandErrorKind.ApiError,
-		...(params.lexicalGenerationError
-			? { lexicalGenerationError: params.lexicalGenerationError }
-			: {}),
-		reason: params.reason,
-	};
+export function commandApiError(params: { reason: string }): CommandError {
+	return { kind: CommandErrorKind.ApiError, reason: params.reason };
 }
-
-// ─── Attestation Parsing Error ───
-
-const ATT_PARSING_ERROR_KIND_STR = [
-	"WikilinkNotFound",
-	"BlockIdNotFound",
-] as const;
-
-const AttestationParsingErrorKindSchema = z.enum(ATT_PARSING_ERROR_KIND_STR);
-const AttestationParsingErrorKind = AttestationParsingErrorKindSchema.enum;
-
-export type AttestationParsingError =
-	| { kind: typeof AttestationParsingErrorKind.WikilinkNotFound }
-	| { kind: typeof AttestationParsingErrorKind.BlockIdNotFound };

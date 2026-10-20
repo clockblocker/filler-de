@@ -8,7 +8,7 @@ Decision: [ADR-0009: Use the official Obsidian CLI for desktop E2E](../../docs/a
 | --- | --- | --- |
 | Deterministic | Library policy, Healing, Librarian composition, and Textfresser orchestration | `bun run test:unit`, `bun run test:integration` |
 | Obsidian desktop | Plugin lifecycle, Obsidian callbacks, event timing, and CLI transport | `bun run test:obsidian-e2e` |
-| Provider acceptance | Live Gemini output and schema quality | `bun run test:provider-acceptance --suite=<budget>` |
+| Provider acceptance | Live dumgen output through TypeSafe and OpenAI | `bun run test:provider-acceptance:dumgen --suite=<budget>` |
 
 ## Desktop invariants
 

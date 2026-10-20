@@ -1,9 +1,0 @@
-{
-	"$schema": "https://unpkg.com/knip@5/schema.json",
-	"ignore": ["**/*.d.ts"],
-	"ignoreIssues": {
-		"src/lu/test.ts": ["files"]
-	},
-	"entry": ["src/index.ts"],
-	"project": ["src/**/*.ts"]
-}

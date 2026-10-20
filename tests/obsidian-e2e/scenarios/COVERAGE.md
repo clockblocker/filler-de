@@ -68,7 +68,6 @@ Self Event filtering of the Librarian's Codex writes, is covered by
 | `007-create-file-basename-healing` and backlink | `basename-healing.test.ts` |
 | `008-toggle-scroll-checkbox` | `change-status.test.ts` plus deterministic details in `tests/integration/librarian/codex-checkbox-public.test.ts` |
 | `009-toggle-section-checkbox` | `change-status.test.ts` plus deterministic details in `tests/integration/librarian/codex-checkbox-public.test.ts` |
-| `010-lemma-manne` source rewrite | `tests/unit/textfresser/steps/lemma-flow.test.ts` through public `Textfresser.executeCommand` |
 | `011-move-file-cli-codex` | `move-scroll-between-sections.test.ts` |
 | Scroll split command, file lifecycle, and Codex projection | `split-to-pages.test.ts` plus `tests/integration/librarian/split-to-pages-public.test.ts` for deterministic failure and queue semantics |
 
@@ -81,12 +80,7 @@ desktop story.
 
 | Former behavior | Current owner |
 | --- | --- |
-| Repeated Lemma runs remain idempotent and never nest wikilinks | `tests/unit/textfresser/steps/lemma-source-rewrite.test.ts` and `lemma-cache.test.ts` |
 | A completed mutation is visible before the harness returns | `harness-lifecycle.test.ts` |
-| Latest pending background Generate wins | `tests/unit/textfresser/orchestration/background-generate-coordinator.test.ts` |
-| Non-empty generated entry and cleanup behavior | background-generate and Generate step tests |
-| Nine live Gemini smoke cases | `tests/provider-acceptance/textfresser` smoke corpus |
-| Twenty-five homonym, cross-POS, separable-verb, phraseme, and adjective cases | `tests/provider-acceptance/textfresser` edge corpus |
 | CLI stdout/error parsing | `tests/obsidian-e2e/infra/cli.test.ts` |
 
 Provider reports explicitly list the orchestration assertions they do not own.

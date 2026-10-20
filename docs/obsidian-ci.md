@@ -37,6 +37,6 @@ fixture, `act`, `snapshot`, and `status` operations.
 See `tests/obsidian-e2e/README.md` for setup, authoring examples, and
 diagnostics. `tests/obsidian-e2e/scenarios/COVERAGE.md` records the completed
 cutover. Live model-quality checks run separately through the opt-in
-`tests/provider-acceptance/textfresser` suite. The CLI behavior and architecture
+`tests/provider-acceptance/dumgen` suite. The CLI behavior and architecture
 decisions behind the harness are recorded in
 `docs/e2e-obsidian-cli-research.md`.
