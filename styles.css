@@ -187,6 +187,25 @@ a:visited {
     text-decoration-line: none !important;
 }
 
+/* ------ Live Preview: hide comment-only lines ------ */
+
+/*
+ * Lemma notes keep Block metadata in `%%tf…%%` comment lines. Reading view
+ * hides comments; this does the same in Live Preview for every line the
+ * cursor is not on. Source mode is untouched.
+ *
+ * Plain text in a CodeMirror line is a bare text node, so no selector can
+ * tell "only a comment" from "text plus an inline comment". Hiding the comment
+ * tokens instead leaves a comment-only line with nothing to render, so it
+ * collapses to zero height, while a line with real text keeps that text.
+ * Code-block, frontmatter and math tokens can carry .cm-comment too; skip them.
+ */
+.markdown-source-view.mod-cm6.is-live-preview
+	.cm-line:not(.cm-active):not(.HyperMD-codeblock)
+	.cm-comment:not(.cm-hmd-codeblock):not(.cm-hmd-frontmatter):not(.cm-math) {
+	display: none;
+}
+
 /* ------ Edge Navigation Buttons ------ */
 
 .edge-nav-btn {
