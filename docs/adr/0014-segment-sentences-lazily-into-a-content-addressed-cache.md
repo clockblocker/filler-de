@@ -6,7 +6,7 @@ status: accepted
 
 When Classify touches a Sentence, the plugin segments that Sentence through dumgen and caches the result under a hash of the segmenter version and the Sentence text. The cache holds no Scroll ID, path or position, so renames, Healing, moves, SplitToPages and edits to other Sentences leave it valid, and an edited Sentence misses because its hash changes. dumgen's `splitText` is the only sentence splitter, and the plugin's `^N` blocks group its Sentences. The plugin persists no Segment index, because it points at `^N` blocks, so a segmentation is derived data and losing it costs one re-segmentation.
 
-This ADR covers storage only. Whether Classify also resolves right away or defers resolution to the click is an open research ticket on the map.
+This ADR covers storage only. Whether Classify also resolves right away was settled in [Settle whether Classify only segments and a click resolves the Reading](https://github.com/clockblocker/filler-de/issues/74) (#74): Classify pipes segment then resolve, handing over a `UnitRef` (the Sentence's cache key plus the unit's Segment indices), and lazy click-time resolution is deferred.
 
 ## Considered Options
 
