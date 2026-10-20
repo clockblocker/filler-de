@@ -31,6 +31,11 @@ export type ClassifyCommanderDeps = {
 	 * `OpenAI`); Classify asks nothing without them.
 	 */
 	readonly missingProviderKeys?: () => readonly string[];
+	/**
+	 * Why Classify may not run now, such as a dictionary reset moving
+	 * `Worter/`; Classify then tells the user and writes nothing.
+	 */
+	readonly blockedBy?: () => string | undefined;
 };
 
 export type ClassifyContext = {
@@ -171,9 +176,11 @@ export class ClassifyCommander {
 				segmenterVersion: segmenterVersion(),
 			}),
 		);
-		const missing = missingKeysNotice(
-			this.deps.missingProviderKeys?.() ?? [],
-		);
+		const blocked = this.deps.blockedBy?.();
+		const missing =
+			blocked === undefined
+				? missingKeysNotice(this.deps.missingProviderKeys?.() ?? [])
+				: `⚠ ${blocked}`;
 		if (missing)
 			return Effect.sync(() => {
 				this.latest = null;

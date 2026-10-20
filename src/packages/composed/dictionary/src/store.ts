@@ -40,6 +40,7 @@ import {
 	DictionaryScanError,
 	DictionaryWriteError,
 } from "./errors";
+import { holdsFreeformBlock, insertFreeformBlock } from "./freeform";
 import {
 	inverseRelationsReader,
 	showsOtherInverseRelations,
@@ -208,6 +209,27 @@ export type DumdictVaultStore = {
 		lemma: Dumling.Lemma<"de">,
 	) => Effect.Effect<RelationEdge[]>;
 	readonly diagnostics: Effect.Effect<DictionaryDiagnostics>;
+	/**
+	 * Rebuilds the index from a full scan of `Worter/`. A caller that moved
+	 * or created files there through VAM runs it: VAM keeps its own writes
+	 * from the store as Self Events.
+	 */
+	readonly rescan: Effect.Effect<void, DictionaryScanError>;
+	/**
+	 * Places user text as a freeform Block at the end of one Reading's part
+	 * of a stored Lemma note, or of its Lemma part when `readingBlockId`
+	 * names no Reading there. It changes no record, writes only through a
+	 * compare-and-swap on the content it read, and answers `AlreadyThere`
+	 * when the note already holds the text as a freeform Block.
+	 */
+	readonly appendFreeform: (request: {
+		readonly path: string;
+		readonly readingBlockId?: string;
+		readonly text: string;
+	}) => Effect.Effect<
+		"Appended" | "AlreadyThere",
+		DictionaryRequestError | DictionaryScanError
+	>;
 	/** Stops observing the vault. */
 	readonly close: Effect.Effect<void>;
 };
@@ -1258,6 +1280,95 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		return { nextRevision: committed, status: "committed" };
 	});
 
+	/** How often a freeform placement reads the note again after it changed. */
+	const FREEFORM_ATTEMPTS = 3;
+
+	const appendFreeformUnderLock = Effect.fnUntraced(function* (request: {
+		readonly path: string;
+		readonly readingBlockId?: string;
+		readonly text: string;
+	}): Effect.fn.Return<
+		"Appended" | "AlreadyThere",
+		DictionaryRequestError | DictionaryScanError
+	> {
+		if (stale) {
+			yield* rebuild();
+			yield* settle;
+		}
+		const { path } = request;
+		const refuse = (reason: string, cause: unknown = path) =>
+			new DictionaryRequestError({
+				cause,
+				message: `Could not place freeform text in ${path}: ${reason}`,
+			});
+		for (let attempt = 1; ; attempt += 1) {
+			const indexed = index.entry(path);
+			if (indexed?.kind !== "lemma")
+				return yield* refuse("the store holds no Lemma note there");
+			const read = yield* Effect.result(
+				vault.readContentWithStat(mdSplitPath(path)),
+			);
+			if (read._tag === "Failure")
+				return yield* refuse(message(read.failure), read.failure);
+			const current = read.success.content;
+			if (contentHash(current) !== indexed.hash) {
+				// The file is ahead of the index: an edit no event has
+				// delivered yet. Read it and place the text into that.
+				yield* rereadChanges([path]);
+				if (attempt < FREEFORM_ATTEMPTS) continue;
+				return yield* refuse(
+					"the note kept changing while the store read it",
+				);
+			}
+			const placed = insertFreeformBlock(
+				current,
+				request.readingBlockId,
+				request.text,
+			);
+			if (placed._tag === "AlreadyThere") return "AlreadyThere";
+			if (placed._tag === "Refused") return yield* refuse(placed.reason);
+			const entry = classifyNote(path, placed.content);
+			if (
+				entry.kind !== "lemma" ||
+				entry.lemmaKey !== indexed.lemmaKey ||
+				!sameData(entry.data, indexed.data) ||
+				!holdsFreeformBlock(placed.content, request.text)
+			)
+				return yield* refuse(
+					"the note would not parse back to its records with the text in it",
+				);
+			const outcome = yield* Effect.result(
+				dispatch([
+					{
+						kind: VaultActionKind.ProcessMdFile,
+						payload: {
+							splitPath: mdSplitPath(path),
+							transform: compareAndSwap(
+								path,
+								current,
+								placed.content,
+							),
+						},
+					},
+				]),
+			);
+			if (outcome._tag === "Success") {
+				// No record changed, so plans made at this revision stay valid.
+				const next = index.clone();
+				next.set(path, entry);
+				cache?.delete(path);
+				publishRendering(next);
+				return "Appended";
+			}
+			const changes = yield* rereadChanges([path]);
+			if (changes.length > 0 && attempt < FREEFORM_ATTEMPTS) continue;
+			return yield* refuse(
+				`the write failed: ${message(outcome.failure)}`,
+				outcome.failure,
+			);
+		}
+	});
+
 	const bulkSubscription = yield* vault
 		.subscribeToBulk(onBulk)
 		.pipe(Effect.mapError(scanError("observe")));
@@ -1285,6 +1396,10 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	const read = <A>(f: (view: NoteIndex) => A) => Effect.sync(() => f(index));
 
 	return {
+		appendFreeform: (request) =>
+			lock.withPermit(
+				appendFreeformUnderLock(request).pipe(Effect.ensuring(report)),
+			),
 		close,
 		commitChanges: (request) =>
 			lock.withPermit(
@@ -1349,6 +1464,9 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			read((view) => view.readingLocation(readingKeyOf(reading))),
 		relationEdgesTo: (lemma) =>
 			read((view) => view.edgesTo(lemmaKeyOf(lemma))),
+		rescan: lock.withPermit(
+			rebuild().pipe(Effect.andThen(settle), Effect.ensuring(report)),
+		),
 		revision: Effect.sync(revision),
 		surface: (surfaceId) => read((view) => view.surface(surfaceId)),
 	};
