@@ -4,9 +4,14 @@
 // written inside texteater. Runs as `postinstall`, or as
 // `bun run link:texteater` after moving the checkout.
 //
-// TEXTEATER_DIR overrides the location. Otherwise the link targets the nearest
+// TEXTEATER_DIR sets the location. Without it, an existing link that still
+// holds the batteries is kept; otherwise the link targets the nearest
 // `texteater` or `textfresser-batteries` directory beside the plugin checkout
 // or beside one of its ancestors, such as the vault folder.
+//
+// `--if-present` (used by postinstall) only warns when no checkout is found,
+// so `bun install` still works without texteater; typecheck, tests and any
+// build that imports a battery then fail on the missing modules.
 import {
 	existsSync,
 	lstatSync,
@@ -60,6 +65,13 @@ function findSiblingCheckout(): string | undefined {
 	}
 }
 
+function currentLinkTarget(): string | undefined {
+	const existing = lstatSync(TEXTEATER_LINK, { throwIfNoEntry: false });
+	if (!existing?.isSymbolicLink()) return undefined;
+	const target = path.resolve(REPO_ROOT, readlinkSync(TEXTEATER_LINK));
+	return missingBatteries(target).length === 0 ? target : undefined;
+}
+
 function resolveCheckout(): string {
 	const fromEnv = process.env.TEXTEATER_DIR;
 	if (fromEnv) {
@@ -72,7 +84,7 @@ function resolveCheckout(): string {
 		}
 		return checkout;
 	}
-	const checkout = findSiblingCheckout();
+	const checkout = currentLinkTarget() ?? findSiblingCheckout();
 	if (!checkout) {
 		throw new Error(
 			`No texteater checkout found. Clone clockblocker/texteater as "texteater" or "textfresser-batteries" next to this plugin or the vault that holds it, or set TEXTEATER_DIR.`,
@@ -104,9 +116,12 @@ if (import.meta.main) {
 	try {
 		linkTexteater();
 	} catch (error) {
-		console.error(
-			`[link-texteater] ${error instanceof Error ? error.message : String(error)}`,
-		);
-		process.exit(1);
+		const message = error instanceof Error ? error.message : String(error);
+		if (process.argv.includes("--if-present")) {
+			console.warn(`[link-texteater] warning: ${message}`);
+		} else {
+			console.error(`[link-texteater] ${message}`);
+			process.exit(1);
+		}
 	}
 }

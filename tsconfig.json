@@ -85,6 +85,9 @@
 			],
 			"dumgen": ["./.texteater/battery/dumgen/src/index.ts"],
 			"dumling": ["./.texteater/battery/dumling/src/index.ts"],
+			"dumling/codegen": [
+				"./.texteater/battery/dumling/codegen/index.ts"
+			],
 			"dumling/compiled-validation": [
 				"./.texteater/battery/dumling/src/generated/linked-validation.ts"
 			],
@@ -112,7 +115,7 @@
 			"emoji-regex": ["./node_modules/emoji-regex/index"],
 			"jsonc-parser": ["./node_modules/jsonc-parser/lib/esm/main"],
 			"zod": ["./node_modules/zod/index"],
-			"zod/v4": ["./node_modules/zod/v4/index"]
+			"zod/*": ["./node_modules/zod/*/index"]
 		},
 		"skipLibCheck": true,
 		"strictNullChecks": true,

@@ -46,7 +46,7 @@
 		"knip": "knip",
 		"link:texteater": "bun scripts/link-texteater.ts",
 		"lint": "bun x biome check .",
-		"postinstall": "bun scripts/link-texteater.ts",
+		"postinstall": "bun scripts/link-texteater.ts --if-present",
 		"prompt:stability": "bun run --filter @textfresser/lexical-generation prompt:stability",
 		"prompt:test": "bun run --filter @textfresser/lexical-generation prompt:test",
 		"runbook": "bash scripts/runbook-cli/textfresser-runbook",

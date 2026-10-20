@@ -33,12 +33,18 @@ const tsconfigPaths = (
 	}
 ).compilerOptions.paths;
 
-// Export subpaths the plugin cannot use: build tooling and raw JSON schemas.
-const UNMAPPED_EXPORTS = new Set([
-	"./package.json",
-	"dumcorpus:./schema/*",
-	"dumling:./codegen",
-]);
+// Export subpaths that are not modules: manifests and raw JSON schemas.
+const UNMAPPED_EXPORTS = new Set(["./package.json", "dumcorpus:./schema/*"]);
+
+// Mapped to declarations only, so battery code may import types from it but
+// no values.
+const TYPE_ONLY_PACKAGES = new Set(["@typesafe-ai/sdk"]);
+
+const isMapped = (specifier: string) =>
+	specifier in tsconfigPaths ||
+	Object.keys(tsconfigPaths).some(
+		(key) => key.endsWith("/*") && specifier.startsWith(key.slice(0, -1)),
+	);
 
 describe("battery packages linked from texteater", () => {
 	it("imports one export from each battery", () => {
@@ -78,6 +84,28 @@ describe("battery packages linked from texteater", () => {
 				});
 			}
 		}
+	});
+
+	it("maps every bare import in battery source to this repo", () => {
+		const transpiler = new Bun.Transpiler({ loader: "ts" });
+		const unmapped = new Set<string>();
+		const typeOnlyValueImports = new Set<string>();
+		for (const name of BATTERY_PACKAGES) {
+			const src = path.join(batteryDir(name), "src");
+			for (const file of new Bun.Glob("**/*.ts").scanSync({ cwd: src })) {
+				if (file.endsWith(".test.ts")) continue;
+				const code = readFileSync(path.join(src, file), "utf8");
+				for (const { path: specifier } of transpiler.scanImports(code)) {
+					if (/^(\.|node:|bun:)/.test(specifier)) continue;
+					if (!isMapped(specifier)) unmapped.add(specifier);
+					if (TYPE_ONLY_PACKAGES.has(specifier)) {
+						typeOnlyValueImports.add(`${name}/src/${file}`);
+					}
+				}
+			}
+		}
+		expect([...unmapped]).toEqual([]);
+		expect([...typeOnlyValueImports]).toEqual([]);
 	});
 
 	it("declares every battery npm dependency with the battery's version", () => {
@@ -148,11 +176,7 @@ describe("battery packages linked from texteater", () => {
 						),
 				);
 			expect([...packageRoots("effect")]).toEqual([REPO_ROOT]);
-			// The battery runtime entries load no zod today; any that appears
-			// must still be the plugin's copy.
-			expect(
-				[...packageRoots("zod")].filter((root) => root !== REPO_ROOT),
-			).toEqual([]);
+			expect([...packageRoots("zod")]).toEqual([REPO_ROOT]);
 			expect(
 				inputs.filter((input) => input.includes("/dist/")),
 			).not.toContainEqual(expect.stringContaining("/battery/"));

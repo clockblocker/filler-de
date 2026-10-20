@@ -49,21 +49,27 @@ and no `dist`. Nothing is copied, and nothing is written inside texteater.
   use another location, set `TEXTEATER_DIR=/path/to/texteater` and run
   `bun run link:texteater`.
 - **The link.** `bun install` runs `scripts/link-texteater.ts` as
-  `postinstall`. It points the gitignored `.texteater` symlink at the checkout.
-  Re-run `bun run link:texteater` after moving the checkout.
+  `postinstall`. It points the gitignored `.texteater` symlink at the checkout,
+  keeps an existing link that still holds the batteries, and only warns when
+  no checkout is found. Re-run `bun run link:texteater` after moving the
+  checkout.
 - **Resolution.** `tsconfig.json` `paths` map each battery export to its
   `.texteater/battery/<pkg>/src` entry, and map `effect`, `zod`,
   `emoji-regex`, `jsonc-parser` and `@typesafe-ai/sdk` to this repo's
   `node_modules`. That gives the bundle one copy of effect and one of zod. Bun
   resolves imports from a symlink's real path and uses the nearest tsconfig,
-  so `build:root` and the test scripts pass `--tsconfig-override=tsconfig.json`
-  to apply the paths inside battery files too. Pass the same flag to an ad hoc
-  `bun test` that loads a battery. Bun then prints a harmless `Internal error:
-  directory mismatch` line.
-- **Adding a battery dependency.** If a battery gains an npm dependency, add it
-  here at the same version, and add a `paths` entry when battery code imports
-  it. If a battery gains an export, add its `paths` entry.
-  `tests/unit/batteries/battery-link.test.ts` fails until both are done. Import
+  so `build:root`, `test:unit`, `test:integration` and `coverage` pass
+  `--tsconfig-override=tsconfig.json` to apply the paths inside battery files
+  too. Bun then prints a harmless `Internal error: directory mismatch` line.
+  Pass the same flag to any other `bun test` or `bun build` that loads a
+  battery, including workspace-package scripts; without it, battery code
+  loads texteater's own effect.
+- **Type-only mapping.** `@typesafe-ai/sdk` maps to its declarations, so
+  battery code may import only types from it.
+- **When a battery changes.** If a battery gains an npm dependency, add it
+  here at the same version. If battery code gains a bare import or a battery
+  gains an export, add its `paths` entry.
+  `tests/unit/batteries/battery-link.test.ts` fails until you do. Import
   `dumcorpus/inventories`, not the `dumcorpus` root, which reads files through
   `node:fs`.
 
