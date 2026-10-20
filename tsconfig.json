@@ -3,6 +3,11 @@
 		"allowImportingTsExtensions": true,
 		"allowJs": true,
 
+		// Battery packages resolve to texteater source: `paths` below point at
+		// `.texteater` (see AGENTS.md), and `bun build` / `bun test` pass this
+		// file as --tsconfig-override so the paths also apply inside batteries.
+		"customConditions": ["convex"],
+
 		// Override Bun's default settings that might affect discriminated unions
 		"isolatedModules": false,
 		// Environment setup & latest features
@@ -51,7 +56,66 @@
 			],
 			"@textfresser/vault-action-manager/issue-handlers": [
 				"./src/packages/independent/vault-action-manager/src/helpers/issue-handlers.ts"
-			]
+			],
+			"@typesafe-ai/sdk": [
+				"./node_modules/@typesafe-ai/sdk/dist/index.d.mts"
+			],
+			"common-utils": ["./.texteater/battery/common-utils/src/index.ts"],
+			"common-utils/validation": [
+				"./.texteater/battery/common-utils/src/validation.ts"
+			],
+			"common-utils/validation-compiler": [
+				"./.texteater/battery/common-utils/src/validation-compiler.ts"
+			],
+			"dumcorpus": ["./.texteater/battery/dumcorpus/src/index.ts"],
+			"dumcorpus/inventories": [
+				"./.texteater/battery/dumcorpus/src/inventories.ts"
+			],
+			"dumcorpus/types": ["./.texteater/battery/dumcorpus/src/types.ts"],
+			"dumdict": ["./.texteater/battery/dumdict/src/index.ts"],
+			"dumdict/pending": ["./.texteater/battery/dumdict/src/pending.ts"],
+			"dumdict/planning": [
+				"./.texteater/battery/dumdict/src/planning.ts"
+			],
+			"dumdict/schema": [
+				"./.texteater/battery/dumdict/src/public-schema.ts"
+			],
+			"dumdict/testing": [
+				"./.texteater/battery/dumdict/src/testing/index.ts"
+			],
+			"dumgen": ["./.texteater/battery/dumgen/src/index.ts"],
+			"dumling": ["./.texteater/battery/dumling/src/index.ts"],
+			"dumling/codegen": [
+				"./.texteater/battery/dumling/codegen/index.ts"
+			],
+			"dumling/compiled-validation": [
+				"./.texteater/battery/dumling/src/generated/linked-validation.ts"
+			],
+			"dumling/schema/*": [
+				"./.texteater/battery/dumling/src/generated/schemas/*.ts"
+			],
+			"dumling/types": ["./.texteater/battery/dumling/src/types.ts"],
+			"dumling/validation": [
+				"./.texteater/battery/dumling/src/validation/operations.ts"
+			],
+			"dumling/validation-artifact": [
+				"./.texteater/battery/dumling/src/generated/validation.ts"
+			],
+			"dumrel": ["./.texteater/battery/dumrel/src/index.ts"],
+			"dumrel/compiled-validation": [
+				"./.texteater/battery/dumrel/src/generated/linked-validation.ts"
+			],
+			"dumrel/schema": ["./.texteater/battery/dumrel/src/schemas.ts"],
+			"dumrel/types": ["./.texteater/battery/dumrel/src/types.ts"],
+			"dumrel/validation-artifact": [
+				"./.texteater/battery/dumrel/src/generated/validation.ts"
+			],
+			"effect": ["./node_modules/effect/dist/index"],
+			"effect/*": ["./node_modules/effect/dist/*"],
+			"emoji-regex": ["./node_modules/emoji-regex/index"],
+			"jsonc-parser": ["./node_modules/jsonc-parser/lib/esm/main"],
+			"zod": ["./node_modules/zod/index"],
+			"zod/*": ["./node_modules/zod/*/index"]
 		},
 		"skipLibCheck": true,
 		"strictNullChecks": true,
@@ -62,5 +126,5 @@
 		"types": ["obsidian", "bun-types"],
 		"verbatimModuleSyntax": true
 	},
-	"exclude": ["repos-for-reference"]
+	"exclude": [".texteater", "repos-for-reference"]
 }

@@ -43,3 +43,6 @@ bun.lockb
 
 # Local reference repositories
 /repos-for-reference/
+
+# Symlink to the texteater checkout (scripts/link-texteater.ts)
+/.texteater
