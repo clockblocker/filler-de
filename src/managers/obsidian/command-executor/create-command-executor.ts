@@ -102,7 +102,15 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 										),
 									),
 						),
-						Effect.ignore,
+						Effect.catch((error) =>
+							Effect.sync(() => {
+								notify("⚠ Could not read the active editor");
+								logger.warn(
+									"[CommandExecutor] Classify could not read the editor:",
+									error,
+								);
+							}),
+						),
 					),
 				);
 				break;

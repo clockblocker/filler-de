@@ -89,10 +89,12 @@ describe("ClassifyCommander", () => {
 		).toBe(true);
 	});
 
-	it("tells the user why nothing was classified, and keeps the last hand-off", async () => {
+	it("tells the user why nothing was classified, and forgets the earlier hand-off", async () => {
 		const { classify, notices, run } = commander(scripted);
+		await run(STORY, "heute");
+		expect(classify.latestHandoff()).not.toBeNull();
 		await run(STORY, null);
-		expect(notices).toEqual(["⚠ Select the text to classify."]);
+		expect(notices.at(-1)).toBe("⚠ Select the text to classify.");
 		expect(classify.latestHandoff()).toBeNull();
 	});
 

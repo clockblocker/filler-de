@@ -1,7 +1,6 @@
 import type { SeparatedSuffixedBasename } from "@textfresser/library-core";
 import {
 	offsetMapperHelper,
-	type RemovedItem,
 	type ReplacedItem,
 } from "../../../../stateless-helpers/offset-mapper";
 import type {
@@ -14,6 +13,7 @@ import { DEFAULT_SEGMENTATION_CONFIG } from "../types";
 import {
 	extractHeadings,
 	filterHeadingsFromText,
+	headingRemovals,
 } from "./block-marker/heading-extraction";
 import {
 	formatBlocksWithMarkers,
@@ -219,10 +219,7 @@ function runPipeline(
 
 	// Filter heading content before sentence segmentation
 	const filteredContent = filterHeadingsFromText(content, headings);
-	const removedItems: RemovedItem[] = headings.map((h) => ({
-		endOffset: h.endOffset,
-		startOffset: h.startOffset,
-	}));
+	const removedItems = headingRemovals(content, headings);
 	const offsetMap = offsetMapperHelper.createRemovalMap(removedItems);
 
 	// Protect markdown syntax (URLs, wikilinks, etc.) before segmentation

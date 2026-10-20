@@ -53,7 +53,8 @@ function clusterEnd(text: string, index: number): number {
 }
 
 function clusterText(text: string, start: number, end: number): string {
-	return end - start === 1
+	// NFC changes even a lone character, such as Ω (U+2126) into Ω (U+03A9).
+	return end - start === 1 && text.charCodeAt(start) < 0x80
 		? (text[start] ?? "")
 		: text.slice(start, end).normalize("NFC");
 }

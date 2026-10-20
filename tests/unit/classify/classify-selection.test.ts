@@ -99,6 +99,31 @@ describe("classifySelection", () => {
 		});
 	});
 
+	it("gives a repeated Sentence's unit one UnitRef with every occurrence", async () => {
+		const harness = classifyHarness();
+		const content = "Er fängt heute an. Er fängt heute an.";
+		const outcome = await harness.classify({
+			content,
+			scrollPath: "Story.md",
+			selection: { from: 0, to: content.length },
+		});
+		expect(outcome.plan.sentences.size).toBe(1);
+		expect(
+			outcome.plan.units.map(({ ref, occurrences }) => ({
+				segments: ref.segments,
+				texts: textsOf(content, occurrences),
+			})),
+		).toEqual([
+			{ segments: [0], texts: ["Er", "Er"] },
+			{ segments: [2, 6], texts: ["fängt", "an", "fängt", "an"] },
+			{ segments: [4], texts: ["heute", "heute"] },
+		]);
+		expect(outcome.stats).toMatchObject({
+			segmentedSentences: 1,
+			touchedSentences: 2,
+		});
+	});
+
 	it("maps a link's shown text back to the Scroll", async () => {
 		const harness = classifyHarness();
 		const outcome = await harness.classify({

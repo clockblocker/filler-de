@@ -147,6 +147,19 @@ Dritter Satz nach Absatz. Vierter Satz hier auch.`;
 		expect(result.markedText).toContain("^1\n\n\n\n");
 	});
 
+	test("a heading without blank lines around it still ends the text before it", () => {
+		// dumgen joins a hard-wrapped line with the next, so the removed
+		// heading must leave a boundary behind.
+		const text =
+			"Dies ist eine lange Zeile ohne einen Punkt am Ende\n## Kapitel\nDer Mann ging heim. Er schlief.";
+
+		const result = splitStrInBlocks(text);
+
+		expect(result.markedText).toBe(
+			"Dies ist eine lange Zeile ohne einen Punkt am Ende ^0\n\n\n\n## Kapitel\nDer Mann ging heim. Er schlief. ^1",
+		);
+	});
+
 	test("headings without space after hashes are detected", () => {
 		const text = `###### **ANNA:**
 Groß, schlank .. ein cooler Amerikaner.`;

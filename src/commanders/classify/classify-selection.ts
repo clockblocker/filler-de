@@ -260,7 +260,9 @@ export const classifySelection = Effect.fn("classifySelection")(function* (
 	);
 
 	const sentences = new Map<string, PlannedSentence>();
-	const units: PlannedUnit[] = [];
+	// One entry per UnitRef: a Sentence repeated in the selection, such as a
+	// refrain, adds its occurrences to the same unit.
+	const byRef = new Map<string, PlannedUnit>();
 	let failed = 0;
 	for (const { cached, index, key } of keyed) {
 		const sentence = scroll.sentences[index];
@@ -274,15 +276,34 @@ export const classifySelection = Effect.fn("classifySelection")(function* (
 				neighbours: neighboursOf(scroll.sentences, index),
 				segmented,
 			});
-		units.push(
-			...coveredUnits(scroll, sentence, segmented, key, selection),
-		);
+		for (const unit of coveredUnits(
+			scroll,
+			sentence,
+			segmented,
+			key,
+			selection,
+		)) {
+			const id = `${key}:${unit.ref.segments.join(",")}`;
+			const known = byRef.get(id);
+			byRef.set(
+				id,
+				known
+					? {
+							...known,
+							occurrences: [
+								...known.occurrences,
+								...unit.occurrences,
+							],
+						}
+					: unit,
+			);
+		}
 	}
 
 	const plan: ClassifyPlan = {
 		scrollPath: input.scrollPath,
 		sentences,
-		units,
+		units: [...byRef.values()],
 	};
 	const resolver = yield* UnitResolver;
 	const resolutions = yield* resolver.resolve(plan).pipe(

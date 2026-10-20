@@ -3,12 +3,15 @@
  * offsets.
  *
  * The Scroll's body (no frontmatter, go-back link or metadata section) is
- * first projected: block markers, comments, embeds, images and footnote
- * references are dropped, links keep only their shown text, and `==`/`~~`
- * markers go. Each kept character remembers its source offset. dumgen's
- * Markdown reader turns the projection into Extracted Text, `splitScroll`
- * splits each of its Scrolls into Sentences, and every Sentence is aligned
- * back to the projection, skipping the markup the reader dropped.
+ * first projected: block markers, comments, embeds and images are dropped,
+ * links keep only their shown text, and `==`/`~~` markers go. Each kept
+ * character remembers its source offset. Every line break inside a
+ * paragraph becomes a Markdown hard break, as Obsidian renders it, so
+ * dumgen's `splitText` tells verse from a hard wrap exactly as it does for
+ * the `^N` block formatter. dumgen's Markdown reader turns the projection
+ * into Extracted Text, `splitScroll` splits each of its Scrolls into
+ * Sentences, and every Sentence is aligned back to the projection, skipping
+ * the markup the reader dropped, footnote references included.
  */
 import { extractedTextFromMarkdown, type Scroll, splitScroll } from "dumgen";
 import {
@@ -49,7 +52,6 @@ const MARKUP = new RegExp(
 		String.raw`!\[[^\]\n]*\]\([^)\n]*\)`,
 		String.raw`\[\[([^\]|\n]*)(?:\|([^\]\n]*))?\]\]`,
 		String.raw`\[([^\]\n]*)\]\([^)\n]*\)`,
-		String.raw`\[\^[^\]\n]+\]`,
 		String.raw`[ \t]+\^[A-Za-z0-9-]+(?=[ \t]*(?:\r?\n|$))`,
 		"==|~~",
 	].join("|"),
@@ -81,9 +83,18 @@ export function projectScrollMarkdown(
 	let text = "";
 	const offsets: number[] = [];
 	const keep = (piece: string, at: number) => {
-		text += piece;
-		for (let index = 0; index < piece.length; index++)
-			offsets.push(from + at + index);
+		for (let index = 0; index < piece.length; index++) {
+			const char = piece[index] ?? "";
+			const offset = from + at + index;
+			const previous = text.at(-1);
+			if (char === "\n" && previous !== undefined && previous !== "\n") {
+				// Two trailing spaces make a hard break; they map to the line break.
+				text += "  ";
+				offsets.push(offset, offset);
+			}
+			text += char;
+			offsets.push(offset);
+		}
 	};
 	let copied = 0;
 	MARKUP.lastIndex = 0;

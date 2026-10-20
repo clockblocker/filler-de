@@ -38,6 +38,14 @@ describe("locateSentences", () => {
 			located.map(({ start, end }) => source.slice(start, end)),
 		).toEqual(["Müde.", "Grün."]);
 	});
+
+	it("matches a lone character that NFC replaces", () => {
+		const source = "Das Ω ist gut.";
+		const [sentence] = splitPlainText(source).flat();
+		expect(sentence).toBe("Das Ω ist gut.");
+		const [located] = locateSentences(source, [sentence ?? ""]);
+		expect(located && source.slice(located.start, located.end)).toBe(source);
+	});
 });
 
 describe("alignText", () => {

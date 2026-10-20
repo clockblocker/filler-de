@@ -11,6 +11,7 @@ import {
 	filesSegmentationCache,
 	SEGMENTATION_CACHE_FOLDER,
 } from "../../../src/commanders/classify/segmentation-cache";
+import { segmenterSourceHash } from "../../../src/commanders/classify/segmenter-source-hash";
 import {
 	DUMGEN_SEGMENTER_VERSION,
 	sentenceKey,
@@ -153,7 +154,8 @@ describe("sentenceKey", () => {
 			),
 		) as { version: string };
 		expect(DUMGEN_SEGMENTER_VERSION).toBe(
-			`dumgen@${manifest.version}+${pinnedJevModel}`,
+			`dumgen@${manifest.version}+${pinnedJevModel}+src-${segmenterSourceHash()}`,
 		);
+		expect(segmenterSourceHash()).toMatch(/^[0-9a-f]{12}$/);
 	});
 });

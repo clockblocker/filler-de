@@ -126,11 +126,16 @@ export class ClassifyCommander {
 				segmenterVersion: segmenterVersion(),
 			}),
 		);
-		return classifySelection({
-			content: context.content,
-			scrollPath: context.scrollPath,
-			selection: context.selection ?? { from: 0, to: 0 },
+		return Effect.sync(() => {
+			this.latest = null;
 		}).pipe(
+			Effect.andThen(
+				classifySelection({
+					content: context.content,
+					scrollPath: context.scrollPath,
+					selection: context.selection ?? { from: 0, to: 0 },
+				}),
+			),
 			Effect.provide(layer),
 			Effect.tap((outcome) =>
 				Effect.sync(() => {
@@ -145,10 +150,15 @@ export class ClassifyCommander {
 				}),
 			),
 			Effect.catchCause((cause) =>
-				Effect.sync(() => {
-					notify("⚠ Classify failed unexpectedly");
-					logger.error("[Classify] Failed:", Cause.pretty(cause));
-				}),
+				Cause.hasInterruptsOnly(cause)
+					? Effect.failCause(cause)
+					: Effect.sync(() => {
+							notify("⚠ Classify failed unexpectedly");
+							logger.error(
+								"[Classify] Failed:",
+								Cause.pretty(cause),
+							);
+						}),
 			),
 			Effect.asVoid,
 		);
