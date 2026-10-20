@@ -17,6 +17,7 @@ import {
 	type NotePart,
 	renderingSeal,
 	trimmedRaw,
+	withoutBlockIds,
 } from "./document";
 import {
 	DEFAULT_LABELS,
@@ -121,13 +122,23 @@ const isEmpty = (value: unknown) =>
 	value === "" ||
 	(Array.isArray(value) && value.length === 0);
 
-/** Freeform and unknown Blocks, which serialization keeps as they are. */
+/**
+ * Freeform and unknown Blocks, which serialization keeps as they are. An
+ * edited rendering loses only its Block IDs, which the re-rendered Block
+ * carries, so each ID occurs once in the note.
+ */
 function keptBlocks(blocks: readonly NoteBlock[]): string[] {
 	return blocks
 		.filter(
 			(block) => block.type === "freeform" || block.type === "unknown",
 		)
-		.map(trimmedRaw)
+		.map((block) =>
+			trimmedRaw(
+				block.type === "freeform" && block.demoted === true
+					? { ...block, raw: withoutBlockIds(block.raw) }
+					: block,
+			),
+		)
 		.filter((text) => text.length > 0);
 }
 
@@ -137,7 +148,8 @@ function keptBlocks(blocks: readonly NoteBlock[]): string[] {
  * per owned Surface Entry, in data order. Typed Blocks come from `data`;
  * projection Blocks from `options.projections`; the document only
  * contributes its freeform and unknown Blocks, kept byte for byte at the end
- * of the part they were in. Blocks of a part the data no longer has move to
+ * of the part they were in, except that an edited rendering loses its Block
+ * IDs. Blocks of a part the data no longer has move to
  * the end of the Lemma part, so no user content is lost.
  *
  * It throws {@link LemmaNoteSerializeError} for data no valid note holds;

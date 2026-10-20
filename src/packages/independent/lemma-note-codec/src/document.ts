@@ -32,6 +32,12 @@ export type NoteBlock =
 			 */
 			readonly type: "freeform";
 			readonly raw: string;
+			/**
+			 * Set when these lines were a typed Block's sealed rendering
+			 * until an edit broke the seal. `serialize` re-renders that
+			 * Block, so it drops the Block IDs these lines still end with.
+			 */
+			readonly demoted?: true;
 	  }
 	| {
 			/** A marker this codec does not know, kept with its lines. */
@@ -219,7 +225,13 @@ export function parseDocument(markdown: string): LemmaNoteDocument {
 		open.lines.push(...lines.slice(0, kept));
 		if (kept === lines.length) return;
 		flush();
-		open = { block: { type: "freeform" }, lines: lines.slice(kept) };
+		const demoted = seal !== undefined && kept === 0;
+		open = {
+			block: demoted
+				? { demoted, type: "freeform" }
+				: { type: "freeform" },
+			lines: lines.slice(kept),
+		};
 		phase = "freeform";
 	};
 
@@ -275,6 +287,23 @@ export function serializeDocument(document: LemmaNoteDocument): string {
 			...part.blocks.map((block) => block.raw),
 		]),
 	].join("");
+}
+
+/**
+ * A codec-owned Block ID token, `^r-…` or `^s-…`, at the end of a line,
+ * with the whitespace that separates it from the text before it.
+ */
+const TRAILING_BLOCK_ID_PATTERN =
+	/(?:^|[ \t]+)\^[rs]-[0-9a-f]+(?=[ \t]*\r?\n?$)/u;
+
+/**
+ * A Block's bytes without the codec-owned Block ID that ends any of its
+ * lines. Every other byte, line endings included, stays as it is.
+ */
+export function withoutBlockIds(raw: string): string {
+	return splitLines(raw)
+		.map((line) => line.replace(TRAILING_BLOCK_ID_PATTERN, ""))
+		.join("");
 }
 
 /** A Block's lines without the blank lines that separate it from the next. */
