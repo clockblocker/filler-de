@@ -272,6 +272,13 @@ async function restoreVaultTemplate(vaultPath: string): Promise<void> {
 		await cp(template, vaultPath, { recursive: true });
 	}
 	await mkdir(resolve(vaultPath, ".obsidian"), { recursive: true });
+	// Marks the disposable vault as E2E-only, so the driver may reset its
+	// dictionary (`resetDictionary`).
+	await writeFile(
+		resolve(vaultPath, ".obsidian/textfresser-e2e-vault"),
+		"This vault is disposable: Textfresser's E2E driver may reset Worter/.\n",
+		"utf8",
+	);
 	try {
 		await readFile(resolve(vaultPath, ".obsidian/app.json"));
 	} catch {

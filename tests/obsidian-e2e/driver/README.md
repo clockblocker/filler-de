@@ -42,13 +42,19 @@ beside the library. Traversal and absolute paths are rejected before any Vault
 API is called.
 
 Supported methods are `status`, `ready`, `beginScenario`, `act`, `settle`,
-`snapshot`, `modifications`, `diagnostics`, and `cleanupSession`.
+`snapshot`, `modifications`, `diagnostics`, `dictionary`, and
+`cleanupSession`. `dictionary` returns the vault-root `Worter/` notes by
+vault path, read-only.
 `beginScenario` accepts `"observeModifications": { "path": "<folder>" }` to
 record Textfresser's VAM Markdown modify observations below that
 library-relative folder; `modifications` settles and returns them. It also
 installs a scripted jev in Textfresser's dumgen for the whole scenario, from
 `"dumgen": { "jev": { "<question id>": "<Choice option>" | <Noul> } }` or
-empty, and `cleanupSession` removes it, so no scenario reaches a provider.
+empty, with Luna's answers by stage under `"luna": { "<stage>": [{ "when"?:
+"<input text>", "output": … }] }`, and `cleanupSession` removes it, so no
+scenario reaches a provider; `status` counts its requests under
+`dumgenRequests`. `"resetDictionary": true` moves `Worter/` to Obsidian's trash first, and
+only in a vault whose config folder holds a `textfresser-e2e-vault` marker.
 `act` supports `create`, `modify`, `rename`, `delete`, and the narrow
 `splitToPages`, `splitInBlocks`, `classify`, `pageNavigation` and
 `toggleCodexEntry` Textfresser interactions; `create` also accepts

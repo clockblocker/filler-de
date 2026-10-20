@@ -50,6 +50,12 @@ export type PlannedUnit = {
  */
 export type ClassifyPlan = {
 	readonly scrollPath: string;
+	/**
+	 * The Scroll's content as Classify read it: the occurrences' offsets
+	 * index it, and resolution maps them onto the Scroll as it is when it
+	 * writes.
+	 */
+	readonly content: string;
 	readonly sentences: ReadonlyMap<string, PlannedSentence>;
 	readonly units: readonly PlannedUnit[];
 };

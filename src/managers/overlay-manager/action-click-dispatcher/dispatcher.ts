@@ -33,8 +33,8 @@ export async function dispatchActionClick(
 			await commandExecutor(CommandKind.SplitInBlocks);
 			break;
 
-		case CommandKind.Generate:
-			await commandExecutor(CommandKind.Generate);
+		case CommandKind.Classify:
+			await commandExecutor(CommandKind.Classify);
 			break;
 
 		case CommandKind.GoToPrevPage:

@@ -32,11 +32,14 @@ export const ACTION_DEFINITIONS: Record<OverlayActionKind, ActionDefinition> = {
 		],
 		settingKey: "splitInBlocksPlacement",
 	},
-	[CommandKind.Generate]: {
-		id: CommandKind.Generate,
-		label: "Generate",
-		requiresSelection: false,
+	// Classify replaced the legacy Generate action (#64); it keeps its
+	// placement setting.
+	[CommandKind.Classify]: {
+		id: CommandKind.Classify,
+		label: "Classify",
+		requiresSelection: true,
 		selectablePlacements: [
+			OverlayPlacement.AboveSelection,
 			OverlayPlacement.Bottom,
 			OverlayPlacement.ShortcutOnly,
 		],

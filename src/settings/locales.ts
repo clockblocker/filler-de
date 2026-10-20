@@ -64,7 +64,7 @@ export type SettingsLocale = {
 const ENGLISH_LOCALE: SettingsLocale = {
 	// Action labels
 	actionLabels: {
-		Generate: "Generate",
+		Classify: "Classify",
 		SplitInBlocks: "Split in Blocks",
 		TranslateSelection: "Translate",
 	},
@@ -139,7 +139,7 @@ const ENGLISH_LOCALE: SettingsLocale = {
 const RUSSIAN_LOCALE: SettingsLocale = {
 	// Action labels
 	actionLabels: {
-		Generate: "Сгенерировать",
+		Classify: "Классифицировать",
 		SplitInBlocks: "Разбить на блоки",
 		TranslateSelection: "Перевести",
 	},

@@ -11,7 +11,7 @@ import type { CommandKind } from "../../obsidian/command-executor";
 const OVERLAY_ACTION_KINDS = [
 	"TranslateSelection",
 	"SplitInBlocks",
-	"Generate",
+	"Classify",
 	"GoToPrevPage",
 	"GoToNextPage",
 ] as const satisfies readonly (keyof typeof CommandKind)[];

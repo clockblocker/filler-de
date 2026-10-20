@@ -1,4 +1,9 @@
 import {
+	type DumdictVaultStore,
+	makeDumdictVaultStore,
+} from "@textfresser/dictionary";
+import { derivedProjections } from "@textfresser/lemma-note-projections";
+import {
 	createObsidianEventLayer,
 	type ObsidianEventLayer,
 	type UserEventKind,
@@ -17,9 +22,15 @@ import { Effect, Exit, Predicate } from "effect";
 import { Modal, Notice, Plugin, requestUrl, TFile } from "obsidian";
 import {
 	ClassifyCommander,
+	createKnowledgeQueue,
 	DUMGEN_SEGMENTER_VERSION,
+	dumgenUnitResolver,
 	filesSegmentationCache,
-	pendingUnitResolver,
+	type KnowledgeQueue,
+	produceKnowledge,
+	scrollAfterKnowledge,
+	UnitResolverError,
+	vamScrollFiles,
 } from "./commanders/classify";
 import { Librarian } from "./commanders/librarian/librarian";
 import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
@@ -36,6 +47,7 @@ import {
 	updateParsedSettings,
 } from "./global-state/global-state";
 import { createRequestUrlFetch, DumgenHost } from "./managers/dumgen";
+import type { ScriptedDumgen } from "./managers/dumgen/dumgen-host";
 import type { ScriptedJevAnswers } from "./managers/dumgen/scripted-jev";
 import {
 	createHandlers,
@@ -88,6 +100,11 @@ export default class TextEaterPlugin extends Plugin {
 
 	// Commanders
 	classify: ClassifyCommander | null = null;
+	/** Classify's background Knowledge runs, one per Reading (#64). */
+	knowledgeQueue: KnowledgeQueue | null = null;
+	/** The dictionary store over `Worter/`, built once VAM exists. */
+	private dictionary: Promise<DumdictVaultStore> | null = null;
+	private unloaded = false;
 	librarian: Librarian | null = null;
 	textfresser: Textfresser | null = null;
 
@@ -189,10 +206,56 @@ export default class TextEaterPlugin extends Plugin {
 		this.disposeVam = vaultActions.dispose;
 
 		this.rebuildTextfresser();
+		void this.dictionaryStore().catch(() => undefined);
+		const dictionary = Effect.tryPromise({
+			catch: (cause) =>
+				new UnitResolverError({
+					cause,
+					message: `the dictionary could not be read: ${getErrorMessage(cause)}`,
+				}),
+			try: () => this.dictionaryStore(),
+		});
+		const dumgen = Effect.try({
+			catch: (cause) =>
+				new UnitResolverError({
+					cause,
+					message: `dumgen is unavailable: ${getErrorMessage(cause)}`,
+				}),
+			try: () => this.dumgen.get(),
+		});
+		const knowledgeQueue = createKnowledgeQueue({
+			notify: (message) => new Notice(message),
+			onEnd: decrementPending,
+			onStart: incrementPending,
+			run: (job) =>
+				Effect.all([dumgen, dictionary]).pipe(
+					Effect.flatMap(([instance, store]) =>
+						produceKnowledge(
+							{
+								dumgen: instance,
+								store,
+								translationLanguages:
+									this.settings.languages.known === "Russian"
+										? ["en", "ru"]
+										: ["en"],
+							},
+							job,
+						),
+					),
+				),
+		});
+		this.knowledgeQueue = knowledgeQueue;
 		this.classify = new ClassifyCommander({
 			cache: filesSegmentationCache(this.app.vault.adapter),
 			dumgen: () => this.dumgen.get(),
-			resolver: pendingUnitResolver,
+			missingProviderKeys: () => this.dumgen.missingKeys(),
+			resolver: dumgenUnitResolver({
+				dumgen,
+				knowledge: knowledgeQueue,
+				notify: (message) => new Notice(message),
+				scroll: vamScrollFiles(this.vam),
+				store: dictionary,
+			}),
 			segmenterVersion: () => {
 				const scripted = this.dumgen.scriptedJevTag();
 				return scripted
@@ -285,6 +348,7 @@ export default class TextEaterPlugin extends Plugin {
 				const handlers = createHandlers(
 					this.librarian,
 					this.textfresser ?? undefined,
+					this.onWikilinkClicked,
 				);
 				for (const handlerDef of handlers) {
 					this.registerUserEventHandler(
@@ -337,7 +401,15 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	override onunload() {
+		this.unloaded = true;
+		this.knowledgeQueue?.close();
+		this.knowledgeQueue = null;
 		this.dumgen.dispose();
+		const dictionary = this.dictionary;
+		this.dictionary = null;
+		void dictionary
+			?.then((store) => Effect.runPromise(store.close))
+			.catch(() => undefined);
 		// Destroy overlay manager
 		if (this.overlayManager) {
 			this.overlayManager.destroy();
@@ -472,7 +544,7 @@ export default class TextEaterPlugin extends Plugin {
 				return true;
 			},
 			id: "lemma",
-			name: "Classify word (Lemma)",
+			name: "Legacy: Lemma for the selected word",
 		});
 
 		this.addCommand({
@@ -487,6 +559,19 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		this.addCommand({
+			callback: () => {
+				const cancelled = this.knowledgeQueue?.cancelAll() ?? 0;
+				new Notice(
+					cancelled > 0
+						? `Cancelled Knowledge generation for ${cancelled} Reading${cancelled === 1 ? "" : "s"}`
+						: "No Knowledge generation is running",
+				);
+			},
+			id: "cancel-knowledge-generation",
+			name: "Cancel background Knowledge generation",
+		});
+
+		this.addCommand({
 			editorCheckCallback: (checking: boolean) => {
 				if (!checking) {
 					void this.commandExecutor?.(CommandKind.Generate);
@@ -494,7 +579,7 @@ export default class TextEaterPlugin extends Plugin {
 				return true;
 			},
 			id: "new-gen-command",
-			name: "Generate dictionary entry",
+			name: "Legacy: Generate dictionary entry",
 		});
 
 		this.addCommand({
@@ -558,15 +643,65 @@ export default class TextEaterPlugin extends Plugin {
 
 	/**
 	 * E2E test hooks for Classify: what its last run handed to the resolver
-	 * port, and a scripted jev so a scenario never reaches a provider.
+	 * port and resolved, a scripted dumgen so a scenario never reaches a
+	 * provider, and how many requests that script answered.
 	 */
 	getClassifyTestingApi() {
 		return {
+			dumgenRequests: () => this.dumgen.scriptedRequests() ?? null,
 			latestHandoff: () => this.classify?.latestHandoff() ?? null,
+			useScriptedDumgen: (script: ScriptedDumgen | null) =>
+				this.dumgen.useScriptedDumgenForTesting(script),
 			useScriptedJev: (answers: ScriptedJevAnswers | null) =>
 				this.dumgen.useScriptedJevForTesting(answers),
 		};
 	}
+
+	/**
+	 * The dictionary store, built on first use; a build that failed, such as
+	 * a scan of `Worter/` that could not finish, is tried again next time.
+	 */
+	private dictionaryStore(): Promise<DumdictVaultStore> {
+		if (this.unloaded)
+			return Promise.reject(new Error("the plugin has unloaded"));
+		if (this.dictionary) return this.dictionary;
+		const building = Effect.runPromise(
+			makeDumdictVaultStore({
+				onDiagnostics: (diagnostics) => {
+					if (diagnostics.quarantined.length > 0)
+						logger.warn(
+							"[TextEaterPlugin] Dictionary notes the store cannot read:",
+							diagnostics.quarantined
+								.map(({ path }) => path)
+								.join(", "),
+						);
+				},
+				projections: derivedProjections,
+				vault: this.vam,
+			}),
+		);
+		this.dictionary = building;
+		building.catch((error) => {
+			if (this.dictionary === building) this.dictionary = null;
+			logger.error(
+				"[TextEaterPlugin] Failed to build the dictionary store:",
+				getErrorMessage(error),
+			);
+		});
+		return building;
+	}
+
+	/** Classify's scroll to entry: a clicked Reading link waits for its Knowledge. */
+	private readonly onWikilinkClicked = (target: string): void => {
+		const queue = this.knowledgeQueue;
+		if (!queue || !this.vam) return;
+		void scrollAfterKnowledge(queue, this.vam, target).catch((error) => {
+			logger.warn(
+				"[TextEaterPlugin] Could not scroll to the Reading:",
+				getErrorMessage(error),
+			);
+		});
+	};
 
 	/**
 	 * E2E test hook: records VAM's Markdown modify observations below one
@@ -872,6 +1007,7 @@ export default class TextEaterPlugin extends Plugin {
 			const handlers = createHandlers(
 				this.librarian,
 				this.textfresser ?? undefined,
+				this.onWikilinkClicked,
 			);
 			for (const handlerDef of handlers) {
 				this.registerUserEventHandler(

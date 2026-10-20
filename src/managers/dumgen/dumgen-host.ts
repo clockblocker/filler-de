@@ -19,6 +19,19 @@ import {
 	type DumgenProviderKeys,
 } from "./providers";
 import { createScriptedJev, type ScriptedJevAnswers } from "./scripted-jev";
+import { createScriptedLuna, type ScriptedLunaAnswers } from "./scripted-luna";
+
+/** A provider-free dumgen's script: jev's answers and, optionally, Luna's. */
+export type ScriptedDumgen = {
+	readonly jev: ScriptedJevAnswers;
+	readonly luna?: ScriptedLunaAnswers;
+};
+
+/** How many requests a scripted dumgen's providers received, by stage. */
+export type ScriptedDumgenRequests = {
+	readonly jev: Readonly<Record<string, number>>;
+	readonly luna: Readonly<Record<string, number>>;
+};
 
 export type DumgenHostOptions = {
 	/** Read on every `get()`, so a key change takes effect on the next call. */
@@ -33,7 +46,11 @@ export class DumgenHost {
 		| { readonly keys: DumgenProviderKeys; readonly dumgen: Dumgen }
 		| undefined;
 	private scripted:
-		| { readonly dumgen: Dumgen; readonly tag: string }
+		| {
+				readonly dumgen: Dumgen;
+				readonly tag: string;
+				readonly requests: () => ScriptedDumgenRequests;
+		  }
 		| undefined;
 
 	constructor(private readonly options: DumgenHostOptions) {}
@@ -71,23 +88,49 @@ export class DumgenHost {
 	 * Luna refuses every call, so no provider is ever reached.
 	 */
 	useScriptedJevForTesting(answers: ScriptedJevAnswers | null): void {
-		this.scripted =
-			answers === null
-				? undefined
-				: {
-						dumgen: createDumgen({
-							jev: createScriptedJev(answers).ask,
-							luna: () =>
-								Promise.reject(
-									new Error(
-										"The scripted dumgen has no Luna",
-									),
-								),
-						}),
-						tag: sha256Hex(
-							JSON.stringify([answers, crypto.randomUUID()]),
-						).slice(0, 12),
-					};
+		this.useScriptedDumgenForTesting(
+			answers === null ? null : { jev: answers },
+		);
+	}
+
+	/**
+	 * Desktop E2E and in-process tests: until cleared with `null`, `get()`
+	 * returns a dumgen whose jev and Luna answer from `script` (see
+	 * `createScriptedJev` and `createScriptedLuna`); Luna refuses every
+	 * request its script does not answer.
+	 */
+	useScriptedDumgenForTesting(script: ScriptedDumgen | null): void {
+		if (script === null) {
+			this.scripted = undefined;
+			return;
+		}
+		const jev = createScriptedJev(script.jev);
+		const luna = createScriptedLuna(script.luna ?? {});
+		this.scripted = {
+			dumgen: createDumgen({ jev: jev.ask, luna: luna.ask }),
+			requests: () => ({ jev: jev.requests(), luna: luna.requests() }),
+			tag: sha256Hex(
+				JSON.stringify([script.jev, crypto.randomUUID()]),
+			).slice(0, 12),
+		};
+	}
+
+	/** The scripted dumgen's requests so far; undefined with the real providers. */
+	scriptedRequests(): ScriptedDumgenRequests | undefined {
+		return this.scripted?.requests();
+	}
+
+	/**
+	 * The providers whose key the settings lack, by name; none while a
+	 * scripted dumgen stands in for them.
+	 */
+	missingKeys(): readonly string[] {
+		if (this.scripted) return [];
+		const keys = this.options.keys();
+		return [
+			...(keys.typesafeApiKey.trim() ? [] : ["TypeSafe"]),
+			...(keys.openaiApiKey.trim() ? [] : ["OpenAI"]),
+		];
 	}
 
 	/**
