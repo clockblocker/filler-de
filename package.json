@@ -58,7 +58,7 @@
 		"semantic-diff": "bun scripts/semantic-diff.ts",
 		"splitter:run": "bun tests/splitter-runner.ts",
 		"test": "bun run test:unit",
-		"test:integration": "bun test --tsconfig-override=tsconfig.json --preload ./tests/unit/setup.ts src/packages/composed/library-core/tests/integration/ tests/integration/",
+		"test:integration": "bun test --tsconfig-override=tsconfig.json --preload ./tests/unit/setup.ts src/packages/composed/library-core/tests/integration/ src/packages/composed/dictionary/tests/integration/ tests/integration/",
 		"test:lexical-generation": "bun run clearTestLogs && bun run --filter @textfresser/lexical-generation test",
 		"test:obsidian-e2e": "bun run build && bun --env-file=.env.obsidian-e2e --env-file=.env.cli-e2e tests/obsidian-e2e/runner.ts --mode=attached",
 		"test:obsidian-e2e:infra": "bun test tests/obsidian-e2e/infra tests/obsidian-e2e/driver --timeout 10000",

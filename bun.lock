@@ -39,6 +39,11 @@
     "src/packages/composed/dictionary": {
       "name": "@textfresser/dictionary",
       "version": "0.0.0",
+      "dependencies": {
+        "@textfresser/lemma-note-codec": "workspace:*",
+        "@textfresser/vault-action-manager": "workspace:*",
+        "effect": "4.0.0",
+      },
     },
     "src/packages/composed/lexical-generation": {
       "name": "@textfresser/lexical-generation-next",

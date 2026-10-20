@@ -31,7 +31,8 @@
 			]
 		},
 		"src/packages/composed/dictionary": {
-			"project": ["src/**/*.ts"]
+			"entry": ["tests/**/*.test.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
 		"src/packages/composed/lexical-generation": {
 			"entry": ["tests/**/*.test.ts"],
