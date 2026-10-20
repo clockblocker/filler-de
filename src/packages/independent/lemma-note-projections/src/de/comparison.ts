@@ -22,8 +22,55 @@ export type GermanComparisonInput = {
 	readonly derive: boolean;
 };
 
-/** Polysyllables that umlaut anyway: gesund, gesünder. */
-const UMLAUTING_POLYSYLLABLES: ReadonlySet<string> = new Set(["gesund"]);
+/**
+ * The adjectives that umlaut in comparison (alt, älter; gesund, gesünder).
+ * A compound ending in one may too (altklug, altklüger; lebensnah,
+ * lebensnäher).
+ */
+const UMLAUTING_HEADS: readonly string[] = [
+	"alt",
+	"arg",
+	"arm",
+	"bang",
+	"blass",
+	"dumm",
+	"fromm",
+	"gesund",
+	"glatt",
+	"grob",
+	"groß",
+	"hart",
+	"hoch",
+	"jung",
+	"kalt",
+	"karg",
+	"klug",
+	"krank",
+	"krumm",
+	"kurz",
+	"lang",
+	"nah",
+	"nass",
+	"rot",
+	"scharf",
+	"schmal",
+	"schwach",
+	"schwarz",
+	"stark",
+	"warm",
+];
+
+/**
+ * Latin adjectives in `-er` that drop its `e` before the comparative ending
+ * (integer, integrer), which no rule here tells from those that keep it
+ * (sauber, sauberer).
+ */
+const E_DROPPING: ReadonlySet<string> = new Set([
+	"illuster",
+	"integer",
+	"makaber",
+	"sinister",
+]);
 
 /** The stem the comparison endings attach to: `dunkel` → `dunkl`, `leise` → `leis`. */
 function comparativeStem(positive: string): string {
@@ -37,15 +84,14 @@ function comparativeStem(positive: string): string {
 /**
  * A monosyllabic stem whose vowel is a, o, u or au may umlaut (alt, älter;
  * lange, länger; hoch, höher) or not (klar, klarer), which the stored data
- * cannot tell. Polysyllables rarely do.
+ * cannot tell. A polysyllable does only when it ends in an umlauting
+ * adjective (kerngesund, altklug).
  */
 function mayUmlaut(positive: string): boolean {
 	const word = lower(positive);
 	const stem = word.endsWith("e") ? word.slice(0, -1) : word;
-	return (
-		UMLAUTING_POLYSYLLABLES.has(word) ||
-		(syllableCount(stem) === 1 && /(^|[^eä])[aou]/u.test(stem))
-	);
+	if (syllableCount(stem) === 1) return /(^|[^eä])[aou]/u.test(stem);
+	return UMLAUTING_HEADS.some((head) => stem.endsWith(head));
 }
 
 /**
@@ -53,12 +99,16 @@ function mayUmlaut(positive: string): boolean {
  * (am kältesten, am heißesten, am freiesten), except after the
  * participial `-end`, `-elt`, unstressed `-ert` and `-et` and after
  * `-isch` (am bedeutendsten, am begeistertsten, am gebildetsten, am
- * typischsten; but am interessiertesten).
+ * typischsten; but am interessiertesten). Undefined after the unstressed
+ * `-igt` and `-icht` (berechtigt, töricht), where no rule here is sure of
+ * the `e`.
  */
-function superlative(positive: string): string {
+function superlative(positive: string): string | undefined {
 	const word = lower(positive);
 	const base = word.endsWith("e") ? positive.slice(0, -1) : positive;
 	const folded = lower(base);
+	if (syllableCount(folded) > 1 && /i(g|ch)t$/u.test(folded))
+		return undefined;
 	const participial =
 		syllableCount(folded) > 1 &&
 		/(end|elt|[^i]ert|[dtnm]et)$/u.test(folded);
@@ -97,14 +147,17 @@ export function compareGerman(
 		? [suppletive.comparative]
 		: input.storedComparatives.length > 0
 			? distinct(input.storedComparatives)
-			: derivable
+			: derivable && !E_DROPPING.has(lower(canonicalForm))
 				? [`${comparativeStem(canonicalForm)}er`]
 				: [];
+	const derivedSuperlative = derivable
+		? superlative(canonicalForm)
+		: undefined;
 	const superlatives = suppletive
 		? [suppletive.superlative]
-		: derivable
-			? [superlative(canonicalForm)]
-			: [];
+		: derivedSuperlative === undefined
+			? []
+			: [derivedSuperlative];
 	if (comparatives.length === 0 && superlatives.length === 0)
 		return undefined;
 	return {

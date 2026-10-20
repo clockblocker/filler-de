@@ -69,6 +69,31 @@ describe("comparison", () => {
 		);
 	});
 
+	it("leaves out a compound whose last part may umlaut", () => {
+		expect(compared("altklug")).toBeUndefined();
+		expect(compared("kerngesund")).toBeUndefined();
+		expect(compared("lebensnah")).toBeUndefined();
+		expect(compared("leistungsstark")).toBeUndefined();
+	});
+
+	it("leaves out the comparative of a Latin -er that drops its e", () => {
+		expect(compared("integer")).toBe(
+			"Positiv: integer\nSuperlativ: am integersten",
+		);
+		expect(compared("sauber")).toBe(
+			"Positiv: sauber\nKomparativ: sauberer\nSuperlativ: am saubersten",
+		);
+	});
+
+	it("leaves out the superlative after an unstressed -igt or -icht", () => {
+		expect(compared("berechtigt")).toBe(
+			"Positiv: berechtigt\nKomparativ: berechtigter",
+		);
+		expect(compared("töricht")).toBe(
+			"Positiv: töricht\nKomparativ: törichter",
+		);
+	});
+
 	it("renders only where Core marks the Lemma comparable", () => {
 		expect(
 			deriveInflection(

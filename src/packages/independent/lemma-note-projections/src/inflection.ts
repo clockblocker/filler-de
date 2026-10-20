@@ -1,6 +1,6 @@
 import type * as Dumling from "dumling/types";
 import { coreOf, type ProjectionInput } from "./context";
-import type { Gender } from "./de/articles";
+import { CASES, type Case, type Gender } from "./de/articles";
 import { closedParadigm } from "./de/closed-paradigms";
 import { compareGerman } from "./de/comparison";
 import { declineGermanNoun, nounTable } from "./de/noun-declension";
@@ -18,20 +18,50 @@ function gendersOf(value: unknown): Gender[] {
 		: [];
 }
 
+function featuresOf(
+	surface: Dumling.Surface,
+): Readonly<Record<string, unknown>> | null | undefined {
+	return (surface as { inflectionalFeatures?: unknown })
+		.inflectionalFeatures as Readonly<Record<string, unknown>> | null;
+}
+
 function storedComparatives(input: ProjectionInput): string[] {
 	return input.ownedSurfaces
 		.map(({ surface }) => surface)
 		.filter((surface) => {
-			const features = (surface as { inflectionalFeatures?: unknown })
-				.inflectionalFeatures as Readonly<
-				Record<string, unknown>
-			> | null;
+			const features = featuresOf(surface);
 			return (
 				features?.degree === "Cmp" &&
 				(features.case === undefined || features.case === null)
 			);
 		})
 		.map((surface) => surface.normalizedSurface);
+}
+
+/**
+ * The singular forms a noun's owned Surfaces attest in their canonical
+ * spelling, by case: the data that establishes a cell derivation leaves in
+ * doubt, such as a weak noun's `Menschen`.
+ */
+function attestedSingular(
+	input: ProjectionInput,
+): Partial<Record<Case, string[]>> {
+	const byCase: Partial<Record<Case, string[]>> = {};
+	for (const { surface } of input.ownedSurfaces) {
+		const features = featuresOf(surface);
+		const grammaticalCase = features?.case;
+		if (
+			surface.spelling.kind !== "Canonical" ||
+			features?.number !== "Sing" ||
+			typeof grammaticalCase !== "string" ||
+			!(CASES as readonly string[]).includes(grammaticalCase)
+		)
+			continue;
+		const forms = byCase[grammaticalCase as Case] ?? [];
+		forms.push(surface.normalizedSurface);
+		byCase[grammaticalCase as Case] = forms;
+	}
+	return byCase;
 }
 
 function germanTable(input: ProjectionInput): InflectionTable | undefined {
@@ -45,6 +75,7 @@ function germanTable(input: ProjectionInput): InflectionTable | undefined {
 		case "NOUN": {
 			if (knowledge?.plural === undefined) return undefined;
 			const declension = declineGermanNoun({
+				attestedSingular: attestedSingular(input),
 				canonicalForm: lemma.canonicalForm,
 				genders: gendersOf(core.gender),
 				plural: knowledge.plural,

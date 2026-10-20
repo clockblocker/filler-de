@@ -1,7 +1,12 @@
 import { germanInseparablePrefixes } from "dumcorpus/inventories";
 import type * as Dumrel from "dumrel/types";
 import { distinct, type InflectionTable, type TableRow } from "../table";
-import { endsWithSibilant, hasVowel, lower } from "./orthography";
+import {
+	endsWithSibilant,
+	hasVowel,
+	lower,
+	syllableCount,
+} from "./orthography";
 
 export type GermanVerbInput = {
 	/** The infinitive as dumling cites it: `aufpassen`, `sich hüten`. */
@@ -97,7 +102,9 @@ function analyze(infinitive: string): Stem | undefined {
 	else if (word.endsWith("en")) stem = infinitive.slice(0, -2);
 	else if (word.endsWith("n")) stem = infinitive.slice(0, -1);
 	else return undefined;
-	if (!hasVowel(stem)) return undefined;
+	// The `e` of -eln and -ern is no stem vowel: entern is no ent- verb.
+	if (!hasVowel(kind === "regular" ? stem : stem.slice(0, -2)))
+		return undefined;
 	return {
 		infinitive,
 		kind,
@@ -156,14 +163,31 @@ function hasStrongParticiple(infinitive: string): boolean {
 }
 
 /**
- * Whether the participle takes `ge-`: not after an inseparable prefix and
- * not for a verb in stressed `-ieren` (ignoriert, but geschmiert). Undefined
- * when that cannot be told.
+ * The syllables of a stem before its unstressed endings: the `e` of -eln
+ * and -ern and a final `-ig` (`sammel` → `samm`, `kündig` → `künd`).
  */
-function takesGe(infinitive: string): boolean | undefined {
+function rootSyllables(stem: Stem): number {
+	const root = stem.kind === "regular" ? stem.stem : stem.stem.slice(0, -2);
+	const unsuffixed = root.replace(/ig$/iu, "");
+	return syllableCount(hasVowel(unsuffixed) ? unsuffixed : root);
+}
+
+/**
+ * Whether the participle takes `ge-`, which only a stressed first syllable
+ * takes. It does not after an inseparable prefix or for a verb in stressed
+ * `-ieren` (ignoriert, but geschmiert), and does for a verb with no prefix
+ * whose root is one syllable, which carries the stress (gepasst,
+ * gehandelt, gekündigt). Undefined when that cannot be told: a longer
+ * root may stress its first syllable (gearbeitet) or not (trompetet,
+ * posaunt, prophezeit), and only a dictionary knows which.
+ */
+function takesGe(stem: Stem): boolean | undefined {
+	const { infinitive } = stem;
 	if (/[aeiouyäöü][^aeiouyäöü]*ieren$/u.test(lower(infinitive))) return false;
 	const status = prefixStatus(infinitive);
-	return status === "unknown" ? undefined : status === "none";
+	if (status === "unknown") return undefined;
+	if (status === "inseparable") return false;
+	return rootSyllables(stem) === 1 ? true : undefined;
 }
 
 type Shape = {
@@ -322,7 +346,7 @@ export function conjugateGermanVerb(
 		cells: persons.map((person) => clause(person, forms[person], shape)),
 		label,
 	});
-	const ge = takesGe(infinitive);
+	const ge = takesGe(stem);
 	const dentalPreterites = preterites.filter((form) => form.endsWith("te"));
 	const participles =
 		ge === undefined || hasStrongParticiple(infinitive)
