@@ -65,6 +65,17 @@ type ScenarioAction =
 			 * tells what it showed.
 			 */
 			readonly kind: "openDictionaryReset";
+	  }
+	| {
+			/**
+			 * Runs "Reset dictionary from old notes…", clicks Dry run with the
+			 * suggested source and waits for its report; with `execute`, then
+			 * clicks Execute… on the report and Execute in the confirmation,
+			 * and waits for the run to end. Every modal is closed afterwards;
+			 * `status().dictionaryResetRun` tells what was shown and done.
+			 */
+			readonly kind: "dryRunDictionaryReset";
+			readonly execute?: boolean;
 	  };
 
 interface ScenarioDefinition {
@@ -88,12 +99,31 @@ interface ScenarioDefinition {
 				readonly { readonly when?: string; readonly output: unknown }[]
 			>
 		>;
+		/**
+		 * How each provider answers Textfresser's key check (`GET
+		 * /v1/models`): an HTTP status and body; 200 when unscripted.
+		 */
+		readonly keyCheck?: Partial<
+			Record<
+				"OpenAI" | "TypeSafe",
+				{ readonly status: number; readonly body?: string }
+			>
+		>;
 	};
 	/**
 	 * Deletes the vault-root `Worter/` dictionary before the fixtures, so a
 	 * scenario that asserts what Classify creates starts from none.
 	 */
 	readonly resetDictionary?: boolean;
+	/**
+	 * Notes the fresh `Worter/` starts with, by path below it, written after
+	 * `resetDictionary` (which it needs) and before the fixtures: old notes
+	 * for the dictionary reset to read, say.
+	 */
+	readonly dictionaryFixture?: readonly {
+		readonly path: string;
+		readonly content: string;
+	}[];
 	/**
 	 * Makes Obsidian create new notes in the vault-root `Worter/` folder for
 	 * this scenario, as the user's vault does (`newFileLocation: folder`,
@@ -178,6 +208,31 @@ type ScenarioDictionaryReset =
 	  }
 	| { readonly kind: "Failed"; readonly notice: string };
 
+/**
+ * What the scenario's `dryRunDictionaryReset` showed and did: the dry run's
+ * report modal, with its buttons and key warning, and, with `execute`, how
+ * the Execute ended.
+ */
+interface ScenarioDictionaryResetRun {
+	readonly dryRun:
+		| {
+				readonly kind: "Report";
+				readonly source: string;
+				readonly actions: readonly string[];
+				readonly keyWarning: string | null;
+		  }
+		| { readonly kind: "Failed"; readonly notice: string };
+	readonly execute:
+		| { readonly kind: "Refused"; readonly notice: string }
+		| {
+				readonly kind: "Done";
+				readonly reportPath: string;
+				readonly cancelled: boolean;
+		  }
+		| { readonly kind: "Stopped"; readonly notice: string }
+		| null;
+}
+
 /** How many requests the scenario's scripted dumgen received, by stage. */
 interface ScenarioDumgenRequests {
 	readonly jev: Readonly<Record<string, number>>;
@@ -190,6 +245,8 @@ interface ScenarioStatus {
 	readonly classify: ScenarioClassifyHandoff | null;
 	/** Null until `openDictionaryReset` runs in this scenario. */
 	readonly dictionaryReset: ScenarioDictionaryReset | null;
+	/** Null until `dryRunDictionaryReset` runs in this scenario. */
+	readonly dictionaryResetRun: ScenarioDictionaryResetRun | null;
 	readonly dumgenRequests: ScenarioDumgenRequests | null;
 	readonly generation: number;
 	readonly instanceId: string;
@@ -259,6 +316,7 @@ interface DriverStatusValue {
 	readonly activePath: string | null;
 	readonly classify?: ScenarioClassifyHandoff | null;
 	readonly dictionaryReset?: ScenarioDictionaryReset | null;
+	readonly dictionaryResetRun?: ScenarioDictionaryResetRun | null;
 	readonly dumgenRequests?: ScenarioDumgenRequests | null;
 	readonly scenario: ActiveScenarioValue | null;
 }
@@ -541,6 +599,11 @@ function encodeAction(action: ScenarioAction): Readonly<Record<string, unknown>>
 			};
 		case "openDictionaryReset":
 			return { kind: "openDictionaryReset" };
+		case "dryRunDictionaryReset":
+			return {
+				execute: action.execute ?? false,
+				kind: "dryRunDictionaryReset",
+			};
 	}
 }
 
@@ -626,6 +689,9 @@ export async function withObsidianScenario<T>(
 					? { observeModifications: definition.observeModifications }
 					: {}),
 				...(definition.resetDictionary ? { resetDictionary: true } : {}),
+				...(definition.dictionaryFixture
+					? { dictionaryFixture: definition.dictionaryFixture }
+					: {}),
 				...(definition.newNotesInDictionary
 					? { newNotesInDictionary: true }
 					: {}),
@@ -686,6 +752,7 @@ export async function withObsidianScenario<T>(
 					activePath: result.value.activePath,
 					classify: result.value.classify ?? null,
 					dictionaryReset: result.value.dictionaryReset ?? null,
+					dictionaryResetRun: result.value.dictionaryResetRun ?? null,
 					dumgenRequests: result.value.dumgenRequests ?? null,
 					generation: result.fence.generation,
 					instanceId: result.fence.instanceId,

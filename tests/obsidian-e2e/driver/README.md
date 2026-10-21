@@ -60,7 +60,7 @@ that folder, for the scenario. `cleanupSession` restores that vault config and
 every setting `beginScenario`'s `settings` replaced.
 `act` supports `create`, `modify`, `rename`, `delete`, and the narrow
 `splitToPages`, `splitInBlocks`, `classify`, `wrapLink`, `followLink`,
-`pageNavigation`, `toggleCodexEntry` and `openDictionaryReset` Textfresser interactions; `create` also accepts
+`pageNavigation`, `toggleCodexEntry`, `openDictionaryReset` and `dryRunDictionaryReset` Textfresser interactions; `create` also accepts
 `"entryType": "folder"`. `classify` selects its `selection`, which must occur
 exactly once in the file, and runs the Classify command; `status` then
 reports, under `classify`, what that Classify handed to the resolver port.
@@ -75,7 +75,16 @@ Textfresser writes into an open note through its editor, and settles once
 more. `openDictionaryReset` takes no path: it runs the "Reset dictionary from old
 notes…" command, waits for its modal (or its failure notice), and closes the
 modal again, clicking nothing in it; `status` then reports what it showed
-under `dictionaryReset`. File content uses UTF-8 by default or canonical
+under `dictionaryReset`. `dryRunDictionaryReset` runs the command, clicks
+Dry run and waits for the report, and with `"execute": true` clicks Execute…
+on the report and Execute in the confirmation and waits for the run to end;
+it closes every reset modal afterwards, and `status` reports the report's
+buttons, key warning and Execute outcome under `dictionaryResetRun`.
+`beginScenario` also takes `"dictionaryFixture": [{ "path", "content" }]`,
+notes written below the fresh `Worter/` (it needs `"resetDictionary":
+true`), and `"dumgen": { "keyCheck": { "OpenAI"?: { "status", "body"? },
+"TypeSafe"?: … } }`, how each scripted provider answers Textfresser's key
+check (200 when absent). File content uses UTF-8 by default or canonical
 padded base64 with `"encoding": "base64"`.
 
 Run the transport and confinement tests directly:

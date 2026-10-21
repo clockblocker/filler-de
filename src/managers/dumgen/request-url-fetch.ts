@@ -23,6 +23,7 @@
  * failure rejects, and dumgen reports that as a `ProviderFailure` too.
  */
 import type { RequestUrlParam, RequestUrlResponse } from "obsidian";
+import type { KeyCheckGet } from "./key-check";
 import type { DumgenFetch } from "./providers";
 
 /** The part of Obsidian's `requestUrl` the port uses. */
@@ -34,37 +35,62 @@ function abortReason(signal: AbortSignal): unknown {
 	return signal.reason ?? new Error("The request was aborted");
 }
 
+/**
+ * One request through `requestUrl`, settled early when `signal` aborts;
+ * HTTP errors resolve with their status.
+ */
+function sendThrough(
+	requestUrl: RequestUrl,
+	url: string,
+	init: {
+		readonly method: "GET" | "POST";
+		readonly headers: Readonly<Record<string, string>>;
+		readonly body?: string;
+		readonly signal: AbortSignal;
+	},
+): Promise<{
+	readonly ok: boolean;
+	readonly status: number;
+	text(): Promise<string>;
+}> {
+	const { signal } = init;
+	if (signal.aborted) return Promise.reject(abortReason(signal));
+	return new Promise((resolve, reject) => {
+		const onAbort = () => reject(abortReason(signal));
+		signal.addEventListener("abort", onAbort, { once: true });
+		// Called inside `then`, so a synchronous throw rejects too, and
+		// a signal aborted in the meantime sends nothing.
+		Promise.resolve()
+			.then(() => {
+				if (signal.aborted) throw abortReason(signal);
+				return requestUrl({
+					...(init.body === undefined ? {} : { body: init.body }),
+					headers: { ...init.headers },
+					method: init.method,
+					throw: false,
+					url,
+				});
+			})
+			.then(
+				(response) =>
+					resolve({
+						ok: response.status >= 200 && response.status < 300,
+						status: response.status,
+						// Obsidian decodes the body lazily, and may throw.
+						text: async () => response.text,
+					}),
+				reject,
+			)
+			.finally(() => signal.removeEventListener("abort", onAbort));
+	});
+}
+
 export function createRequestUrlFetch(requestUrl: RequestUrl): DumgenFetch {
-	return (url, init) => {
-		const { signal } = init;
-		if (signal.aborted) return Promise.reject(abortReason(signal));
-		return new Promise((resolve, reject) => {
-			const onAbort = () => reject(abortReason(signal));
-			signal.addEventListener("abort", onAbort, { once: true });
-			// Called inside `then`, so a synchronous throw rejects too, and
-			// a signal aborted in the meantime sends nothing.
-			Promise.resolve()
-				.then(() => {
-					if (signal.aborted) throw abortReason(signal);
-					return requestUrl({
-						body: init.body,
-						headers: { ...init.headers },
-						method: init.method,
-						throw: false,
-						url,
-					});
-				})
-				.then(
-					(response) =>
-						resolve({
-							ok: response.status >= 200 && response.status < 300,
-							status: response.status,
-							// Obsidian decodes the body lazily, and may throw.
-							text: async () => response.text,
-						}),
-					reject,
-				)
-				.finally(() => signal.removeEventListener("abort", onAbort));
-		});
-	};
+	return (url, init) => sendThrough(requestUrl, url, init);
+}
+
+/** The provider key check's GET (`key-check.ts`) over the same transport. */
+export function createRequestUrlGet(requestUrl: RequestUrl): KeyCheckGet {
+	return (url, init) =>
+		sendThrough(requestUrl, url, { ...init, method: "GET" });
 }

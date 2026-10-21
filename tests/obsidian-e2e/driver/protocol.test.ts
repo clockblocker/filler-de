@@ -10,6 +10,7 @@ const {
 	validateDriverConfig,
 	validateRelativePath,
 	validateScriptedJevAnswers,
+	validateScriptedKeyCheck,
 	validateScriptedLunaAnswers,
 } = require("./dist/protocol.js") as typeof import("./dist/protocol.js");
 
@@ -216,6 +217,33 @@ describe("scripted Luna answers", () => {
 			{ canonical: [{ output: 1, when: 3 }] },
 		]) {
 			expect(() => validateScriptedLunaAnswers(bad)).toThrow(ProtocolError);
+		}
+	});
+});
+
+describe("scripted key check", () => {
+	it("keeps each provider's status and body", () => {
+		expect(validateScriptedKeyCheck(undefined)).toEqual({});
+		expect(
+			validateScriptedKeyCheck({
+				OpenAI: { body: '{"error":{}}', status: 401 },
+				TypeSafe: { status: 200 },
+			}),
+		).toEqual({
+			OpenAI: { body: '{"error":{}}', status: 401 },
+			TypeSafe: { status: 200 },
+		});
+	});
+
+	it("rejects other providers and answers that are no HTTP status", () => {
+		for (const bad of [
+			[],
+			{ Gemini: { status: 401 } },
+			{ OpenAI: { status: "401" } },
+			{ OpenAI: { status: 42 } },
+			{ OpenAI: { body: 1, status: 401 } },
+		]) {
+			expect(() => validateScriptedKeyCheck(bad)).toThrow(ProtocolError);
 		}
 	});
 });

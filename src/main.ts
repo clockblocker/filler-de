@@ -58,7 +58,11 @@ import {
 	initializeState,
 	updateParsedSettings,
 } from "./global-state/global-state";
-import { createRequestUrlFetch, DumgenHost } from "./managers/dumgen";
+import {
+	createRequestUrlFetch,
+	createRequestUrlGet,
+	DumgenHost,
+} from "./managers/dumgen";
 import type { ScriptedDumgen } from "./managers/dumgen/dumgen-host";
 import type { ScriptedJevAnswers } from "./managers/dumgen/scripted-jev";
 import {
@@ -104,6 +108,7 @@ export default class TextEaterPlugin extends Plugin {
 	 */
 	readonly dumgen = new DumgenHost({
 		fetch: createRequestUrlFetch(requestUrl),
+		get: createRequestUrlGet(requestUrl),
 		keys: () => ({
 			openaiApiKey: this.settings?.openaiApiKey ?? "",
 			typesafeApiKey: this.settings?.typesafeApiKey ?? "",
@@ -325,6 +330,7 @@ export default class TextEaterPlugin extends Plugin {
 			activity: scrollActivity,
 			app: this.app,
 			cache: segmentationCache,
+			checkProviderKeys: () => this.dumgen.checkKeys(),
 			dumgen: () => this.dumgen.get(),
 			knowledge: knowledgeQueue,
 			missingProviderKeys: () => this.dumgen.missingKeys(),
@@ -692,11 +698,17 @@ export default class TextEaterPlugin extends Plugin {
 
 	/**
 	 * E2E test hooks for the "Reset dictionary from old notes…" command: what
-	 * its last opening showed, and closing its modal without clicking in it.
+	 * its last opening and dry run showed and how its last Execute ended,
+	 * clicking a button of its newest open modal, and closing its modals
+	 * without clicking in them.
 	 */
 	getDictionaryResetTestingApi() {
 		return {
+			clickButton: (label: string) =>
+				this.dictionaryReset?.clickButton(label) ?? false,
 			closeModal: () => this.dictionaryReset?.closeModal(),
+			lastDryRun: () => this.dictionaryReset?.lastDryRun() ?? null,
+			lastExecute: () => this.dictionaryReset?.lastExecute() ?? null,
 			lastOpening: () => this.dictionaryReset?.lastOpening() ?? null,
 		};
 	}
