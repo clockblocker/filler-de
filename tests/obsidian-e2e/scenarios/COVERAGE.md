@@ -146,3 +146,12 @@ desktop story.
 - Every mutation is fenced to one Textfresser instance and generation.
 - Failures preserve structured driver state, Obsidian errors/console, and a
   screenshot; successful runs remove temporary artifacts.
+
+Opening the dictionary reset (#65, #117) is owned by
+`dictionary-reset-modal.test.ts`: the "Reset dictionary from old notes…"
+command lists the vault's root folders and opens its modal, offering the
+vault-root `Worter/` as a source; the driver closes the modal again,
+clicking nothing in it. The reset's plan, dry run and Execute are unit tests
+under `tests/unit/dictionary-reset/`, and
+`tests/unit/dictionary-reset/vam-reset-vault.test.ts` lists the root
+through a real VAM over an app that finds it, as Obsidian does, only as "/".

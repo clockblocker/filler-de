@@ -66,26 +66,46 @@ const STAGE_LABEL: Record<ResetProgress["stage"], string> = {
 	Report: "Writing the report",
 };
 
+/**
+ * What the command's last opening showed: its modal, with the sources it
+ * offered, or the notice it failed with.
+ */
+export type ResetOpening =
+	| ({ readonly kind: "Opened" } & SourceChoice)
+	| { readonly kind: "Failed"; readonly notice: string };
+
 export class DictionaryResetCommand {
 	private running: Deferred.Deferred<void> | null = null;
+	private opening: Promise<ResetOpening> | null = null;
+	private modal: ResetModal | null = null;
 
 	constructor(private readonly deps: DictionaryResetDeps) {}
 
 	open(): void {
-		void this.openModal();
+		this.opening = this.openModal();
 	}
 
-	private async openModal(): Promise<void> {
+	/** E2E: what the last `open()` showed, once shown; null before any. */
+	lastOpening(): Promise<ResetOpening> | null {
+		return this.opening;
+	}
+
+	/** E2E: closes the modal the last `open()` showed, clicking nothing. */
+	closeModal(): void {
+		this.modal?.close();
+	}
+
+	private async openModal(): Promise<ResetOpening> {
 		const found = await Effect.runPromiseExit(
 			findSources(vamResetVault(this.deps.vam)),
 		);
 		if (Exit.isFailure(found)) {
-			new Notice(
-				`⚠ Dictionary reset: could not look for old notes: ${getErrorMessage(Cause.squash(found.cause))}`,
-			);
-			return;
+			const notice = `⚠ Dictionary reset: could not look for old notes: ${getErrorMessage(Cause.squash(found.cause))}`;
+			new Notice(notice);
+			return { kind: "Failed", notice };
 		}
-		new ResetModal(this.deps.app, found.value, {
+		let opened = false;
+		const modal = new ResetModal(this.deps.app, found.value, {
 			dryRun: (source) => void this.dryRun(source),
 			execute: (source) =>
 				new ConfirmExecuteModal(
@@ -94,7 +114,15 @@ export class DictionaryResetCommand {
 					found.value,
 					() => void this.execute(source),
 				).open(),
-		}).open();
+			opened: () => {
+				opened = true;
+			},
+		});
+		this.modal = modal;
+		modal.open();
+		return opened
+			? { kind: "Opened", ...found.value }
+			: { kind: "Failed", notice: "The reset modal did not open" };
 	}
 
 	/** Whether an Execute is running; Classify waits for it to end. */
@@ -295,6 +323,7 @@ class ResetModal extends Modal {
 		private readonly actions: {
 			readonly dryRun: (source: string) => void;
 			readonly execute: (source: string) => void;
+			readonly opened: () => void;
 		},
 	) {
 		super(app);
@@ -303,6 +332,7 @@ class ResetModal extends Modal {
 
 	override onOpen() {
 		const { contentEl } = this;
+		this.actions.opened();
 		contentEl.createEl("h2", { text: "Reset dictionary from old notes" });
 		contentEl.createEl("p", {
 			text: "Collects every attestation embed and freeform text from the old notes in the source folder, regenerates each attested Lemma through Classify into Lemma, Reading and Crossroad notes in a fresh Worter/, re-attaches the freeform text to the Reading note of its sense, and writes a report note. Nothing is deleted.",

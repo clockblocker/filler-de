@@ -691,6 +691,17 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	/**
+	 * E2E test hooks for the "Reset dictionary from old notes…" command: what
+	 * its last opening showed, and closing its modal without clicking in it.
+	 */
+	getDictionaryResetTestingApi() {
+		return {
+			closeModal: () => this.dictionaryReset?.closeModal(),
+			lastOpening: () => this.dictionaryReset?.lastOpening() ?? null,
+		};
+	}
+
+	/**
 	 * The dictionary store, built on first use; a build that failed, such as
 	 * a scan of `Worter/` that could not finish, is tried again next time.
 	 */

@@ -123,8 +123,9 @@ function makeVault() {
 			createFolder: async () => {
 				throw new Error("not used");
 			},
+			// As in Obsidian: the root is found as "/" (or `getRoot()`), not "".
 			getAbstractFileByPath: (path: string) =>
-				path === "" || path === "/" ? root : (byPath.get(path) ?? null),
+				path === "/" ? root : (byPath.get(path) ?? null),
 			getMarkdownFiles: files,
 			getRoot: () => root,
 			modify: async () => {
@@ -183,6 +184,33 @@ describe("the reset's backup move", () => {
 		expect(calls).toEqual(["vault.rename"]);
 		expect([...contents.keys()].some((path) => path.startsWith("Worter/"))).toBe(
 			false,
+		);
+	});
+});
+
+describe("the reset's root listing", () => {
+	it("lists the vault's top-level folders, the root found only as \"/\"", async () => {
+		const { app } = makeVault();
+		const { dispose, manager } = createVaultActionManager(app);
+		const roots = await Effect.runPromise(
+			vamResetVault(manager).listRootFolders,
+		);
+		await Effect.runPromise(dispose);
+		expect([...roots].sort()).toEqual(["Worter", "Wortlisten"]);
+	});
+
+	it("says why it could not list the root", async () => {
+		const { app } = makeVault();
+		app.vault.getRoot = () => {
+			throw new Error("vault not loaded");
+		};
+		const { dispose, manager } = createVaultActionManager(app);
+		const failure = await Effect.runPromise(
+			Effect.flip(vamResetVault(manager).listRootFolders),
+		);
+		await Effect.runPromise(dispose);
+		expect(failure.message).toBe(
+			"Could not list the vault's folders: listFolder (vault root): Folder not found: vault not loaded",
 		);
 	});
 });

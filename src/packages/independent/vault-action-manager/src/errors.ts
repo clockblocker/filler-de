@@ -1,9 +1,15 @@
 // Error message builders
+
+/** A system path for a message: the vault root's `""` reads "(vault root)". */
+export function displayPath(path: string): string {
+	return path === "" ? "(vault root)" : path;
+}
+
 export function errorGetByPath(
 	entityType: "file" | "folder",
 	path: string,
 ): string {
-	return `Failed to get ${entityType} by path: ${path}`;
+	return `Failed to get ${entityType} by path: ${displayPath(path)}`;
 }
 
 export function errorTypeMismatch(

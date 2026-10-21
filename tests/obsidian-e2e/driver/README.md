@@ -60,7 +60,7 @@ that folder, for the scenario. `cleanupSession` restores that vault config and
 every setting `beginScenario`'s `settings` replaced.
 `act` supports `create`, `modify`, `rename`, `delete`, and the narrow
 `splitToPages`, `splitInBlocks`, `classify`, `wrapLink`, `followLink`,
-`pageNavigation` and `toggleCodexEntry` Textfresser interactions; `create` also accepts
+`pageNavigation`, `toggleCodexEntry` and `openDictionaryReset` Textfresser interactions; `create` also accepts
 `"entryType": "folder"`. `classify` selects its `selection`, which must occur
 exactly once in the file, and runs the Classify command; `status` then
 reports, under `classify`, what that Classify handed to the resolver port.
@@ -72,7 +72,10 @@ and saves the note. `followLink` calls `Workspace.openLinkText` with its
 `[[<linkpath>|…]]`. After `classify` and `followLink` settle, the
 driver saves the active editor if it differs from the note on disk, since
 Textfresser writes into an open note through its editor, and settles once
-more. File content uses UTF-8 by default or canonical
+more. `openDictionaryReset` takes no path: it runs the "Reset dictionary from old
+notes…" command, waits for its modal (or its failure notice), and closes the
+modal again, clicking nothing in it; `status` then reports what it showed
+under `dictionaryReset`. File content uses UTF-8 by default or canonical
 padded base64 with `"encoding": "base64"`.
 
 Run the transport and confinement tests directly:
