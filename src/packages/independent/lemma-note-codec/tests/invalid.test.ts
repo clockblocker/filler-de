@@ -25,7 +25,7 @@ describe("hand-edited notes come back as typed issues", () => {
 	});
 
 	it("a note without a Lemma part", () => {
-		expect(issueTags(noun.replace("%%tf-part:lemma%%\n\n", ""))).toContain(
+		expect(issueTags(noun.replace("%%tf-part:lemma%%\n", ""))).toContain(
 			"MissingRequiredBlock",
 		);
 		expect(issueTags("")).toEqual(["MissingRequiredBlock"]);
@@ -34,7 +34,7 @@ describe("hand-edited notes come back as typed issues", () => {
 
 	it("never takes the Lemma from the path, header, tags or Block IDs", () => {
 		const withoutIdentity = noun.replace(`${identityLine}\n\n`, "");
-		expect(withoutIdentity).toContain("**die Mutter**");
+		expect(withoutIdentity).toContain("👩 die [[");
 		const { data } = parseDe(withoutIdentity);
 		expect(data.ok).toBe(false);
 		if (!data.ok) {
@@ -145,7 +145,7 @@ describe("hand-edited notes come back as typed issues", () => {
 			),
 		).toEqual(["InvalidRecord"]);
 		expect(
-			issueTags(replaceLine(noun, "%%tf:notes", "%%tf:notes null%%")),
+			issueTags(replaceLine(noun, "%%tf:notes@", "%%tf:notes null%%")),
 		).toEqual(["InvalidRecord"]);
 	});
 

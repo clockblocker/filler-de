@@ -9,7 +9,8 @@ import { lemmaNotePath, shadowNotePath } from "./path/note-path";
 /**
  * Renders a wikilink to a Lemma, Reading or Shadow note. The default links
  * German targets by path, to the Reading's Block (ADR 0012, 0013), and
- * other languages by bare Canonical Form.
+ * other languages by bare Canonical Form. It shows the Canonical Form alone,
+ * as the legacy notes did, so a link reads `Kohle`, never its path.
  */
 export type LinkRenderer = {
 	readonly lemma: (lemma: Dumling.Lemma) => string;
@@ -57,39 +58,102 @@ export type Projections<L extends Dumling.Language> = {
 		context: ReadingProjectionContext<L>,
 	) => readonly string[] | undefined;
 	readonly links?: Partial<LinkRenderer>;
-	/** Visible Block titles. They are cosmetic and never parsed. */
-	readonly labels?: Partial<Record<TypedBlockKind, string>>;
+	/** Visible section titles. They are cosmetic and never parsed. */
+	readonly titles?: Partial<Record<SectionKind, string>>;
 };
 
-export const DEFAULT_LABELS: Readonly<Record<TypedBlockKind, string>> = {
-	attestation: "Attestations",
-	attested_translation: "Attested",
-	conjugation_class: "Conjugation",
+/**
+ * A visible section of a part. Each is a title line, as the legacy
+ * dictionary notes wrote it, over the renderings of its Blocks. The name is
+ * the title's CSS suffix (`entry_section_title_<name>`, styles.css).
+ */
+export type SectionKind =
+	| "kontexte"
+	| "synonyme"
+	| "translations"
+	| "definition"
+	| "morpheme"
+	| "valenz"
+	| "partizip"
+	| "art"
+	| "tags"
+	| "flexion"
+	| "notizen";
+
+/** The legacy notes' German section titles, and titles for the new ones. */
+export const DEFAULT_TITLES: Readonly<Record<SectionKind, string>> = {
+	art: "Art",
 	definition: "Definition",
-	formula_role: "Formula",
-	header: "",
-	identity: "",
-	inflection: "Inflection",
-	inverse_relation: "Projected",
-	locution_type: "Locution",
-	morphology: "Morphology",
-	notes: "Notes",
-	participle_source: "From",
-	past_participle: "Past participle",
-	pending_relation: "Pending",
-	plural: "Plural",
-	present_singular: "Present singular",
-	preterite: "Preterite",
-	reading: "",
-	relation: "Relations",
-	saying_type: "Saying",
-	subjunctive_past: "Subjunctive past",
-	surface: "Surface",
+	flexion: "Flexion",
+	kontexte: "Kontexte",
+	morpheme: "Morpheme",
+	notizen: "Notizen",
+	partizip: "Partizip von",
+	synonyme: "Semantische Beziehungen",
 	tags: "Tags",
-	transcription: "",
-	translation: "Translation",
-	valency: "Valency",
+	translations: "Übersetzung",
+	valenz: "Valenz",
 };
+
+/**
+ * Where each typed Block shows. `head` Blocks stand with the part's marker
+ * and its header or surface line; those other than `header` and `surface`
+ * hold data only and render nothing, as the legacy notes showed it: the
+ * transcription in the header, the inflection classes and principal parts
+ * in the Flexion table. Blocks of one section stand together in canonical
+ * order, and the first one with a rendering carries the section's title.
+ */
+export const BLOCK_SECTIONS: Readonly<
+	Record<TypedBlockKind, SectionKind | "head">
+> = {
+	attestation: "kontexte",
+	attested_translation: "translations",
+	conjugation_class: "head",
+	definition: "definition",
+	formula_role: "art",
+	header: "head",
+	identity: "head",
+	inflection: "flexion",
+	inverse_relation: "synonyme",
+	locution_type: "art",
+	morphology: "morpheme",
+	notes: "notizen",
+	notes_title: "notizen",
+	participle_source: "partizip",
+	past_participle: "head",
+	pending_relation: "synonyme",
+	plural: "head",
+	present_singular: "head",
+	preterite: "head",
+	reading: "head",
+	relation: "synonyme",
+	saying_type: "art",
+	subjunctive_past: "head",
+	surface: "head",
+	tags: "tags",
+	transcription: "head",
+	translation: "translations",
+	valency: "valenz",
+};
+
+const HTML_ESCAPES: Readonly<Record<string, string>> = {
+	"&": "&amp;",
+	"<": "&lt;",
+	">": "&gt;",
+};
+
+/** A section's title line: `<span class="entry_section_title …">…</span>`. */
+export function sectionTitle(kind: SectionKind, title: string): string {
+	const text = title.replace(/[&<>]/gu, (char) => HTML_ESCAPES[char] ?? char);
+	return `<span class="entry_section_title entry_section_title_${kind}">${text}</span>`;
+}
+
+/**
+ * The lines that open every part after the first, as the legacy notes
+ * separated their entries. `***`, unlike `---`, never turns the line above
+ * it into a heading.
+ */
+export const PART_SEPARATOR = "***\n***";
 
 function bare(canonicalForm: string): string {
 	return `[[${canonicalForm}]]`;
@@ -111,14 +175,12 @@ export const DEFAULT_LINKS: LinkRenderer = {
 	},
 	reading(reading) {
 		const { lemma } = reading;
-		const emoji =
-			"emojiDescription" in reading ? ` ${reading.emojiDescription}` : "";
 		if (lemma.language !== "de") return bare(lemma.canonicalForm);
 		try {
 			const path = withoutExtension(
 				lemmaNotePath(lemma as Dumling.Lemma<"de">).path,
 			);
-			return `[[${path}#^${readingBlockId(reading)}|${lemma.canonicalForm}${emoji}]]`;
+			return `[[${path}#^${readingBlockId(reading)}|${lemma.canonicalForm}]]`;
 		} catch {
 			return bare(lemma.canonicalForm);
 		}
@@ -159,12 +221,69 @@ const field = (value: unknown, key: string): unknown =>
 const text = (value: unknown): string =>
 	typeof value === "string" ? value : JSON.stringify(value);
 
-/** The persons of a `presentSingular` payload, as the rendering labels them. */
-const PRESENT_PERSONS = [
-	["first", "1"],
-	["second", "2"],
-	["third", "3"],
-] as const;
+/** Each value once, in first-seen order. */
+const distinct = (values: readonly string[]): string[] => [...new Set(values)];
+
+/**
+ * The legacy notes' relation symbols: `⊃ [[Zeitraum]]` reads "Zeitraum is
+ * a hypernym". dumrel's Near Antonym, Endonym and Exonym had none in the
+ * legacy notes.
+ */
+export const RELATION_SYMBOLS: Readonly<Record<string, string>> = {
+	antonym: "≠",
+	endonym: "⇒",
+	exonym: "⇐",
+	holonym: "∋",
+	hypernym: "⊃",
+	hyponym: "⊂",
+	meronym: "∈",
+	nearAntonym: "≉",
+	nearSynonym: "≈",
+	synonym: "=",
+};
+
+/** The order relation lines show in, as the legacy notes wrote them. */
+const RELATION_ORDER: readonly string[] = [
+	"synonym",
+	"nearSynonym",
+	"antonym",
+	"nearAntonym",
+	"hypernym",
+	"hyponym",
+	"holonym",
+	"meronym",
+	"endonym",
+	"exonym",
+];
+
+/** A relation's place among the lines; unknown relations come last. */
+const relationRank = (relation: string) => {
+	const rank = RELATION_ORDER.indexOf(relation);
+	return rank === -1 ? RELATION_ORDER.length : rank;
+};
+
+/**
+ * One line per relation, `= [[a]], [[b]]`, in the symbols' order, each
+ * link once and in first-seen order.
+ */
+function relationLines(
+	entries: readonly (readonly [string, readonly string[]])[],
+): string {
+	const byRelation = new Map<string, string[]>();
+	for (const [relation, targets] of entries)
+		byRelation.set(relation, [
+			...(byRelation.get(relation) ?? []),
+			...targets,
+		]);
+	return [...byRelation]
+		.filter(([, targets]) => targets.length > 0)
+		.sort(([a], [b]) => relationRank(a) - relationRank(b))
+		.map(
+			([relation, targets]) =>
+				`${RELATION_SYMBOLS[relation] ?? `${relation}:`} ${distinct(targets).join(", ")}`,
+		)
+		.join("\n");
+}
 
 function renderTarget(target: unknown, links: LinkRenderer): string {
 	if (field(target, "unitKind") === "Reading")
@@ -174,22 +293,19 @@ function renderTarget(target: unknown, links: LinkRenderer): string {
 	return links.shadow(target as Dumrel.UnitShadow);
 }
 
-function renderMorphNode(
-	node: unknown,
-	links: LinkRenderer,
-	depth: number,
-): string {
+/** A morphological tree's leaves, in order, as the legacy notes listed them. */
+function morphLeaves(node: unknown, links: LinkRenderer): string[] {
 	switch (field(node, "nodeKind")) {
 		case "morphemeReading":
-			return links.reading(field(node, "reading") as Dumling.Reading);
+			return [links.reading(field(node, "reading") as Dumling.Reading)];
 		case "unitShadow":
-			return links.shadow(field(node, "unitShadow") as Dumrel.UnitShadow);
-		default: {
-			const inner = list(field(node, "children"))
-				.map((child) => renderMorphNode(child, links, depth + 1))
-				.join(" + ");
-			return depth === 0 ? inner : `(${inner})`;
-		}
+			return [
+				links.shadow(field(node, "unitShadow") as Dumrel.UnitShadow),
+			];
+		default:
+			return list(field(node, "children")).flatMap((child) =>
+				morphLeaves(child, links),
+			);
 	}
 }
 
@@ -210,57 +326,55 @@ function renderComplement(complement: unknown, links: LinkRenderer): string {
 	}
 }
 
-/** Visible renderings of serialized Blocks, derived from their payloads. */
+/**
+ * Visible renderings of serialized Blocks, derived from their payloads. A
+ * kind with none, such as `plural`, keeps its payload out of sight.
+ */
 export const RENDERERS: Partial<Record<TypedBlockKind, Renderer>> = {
 	attestation: (value) => list(value).map(text).join("\n"),
-	attested_translation: (value) => list(value).map(text).join(", "),
-	conjugation_class: (value) => list(value).map(text).join(", "),
+	attested_translation: (value) => {
+		const words = list(value).map(text);
+		return words.length === 0 ? undefined : `*${words.join(", ")}*`;
+	},
 	definition: text,
 	formula_role: text,
 	locution_type: text,
 	morphology: (value, links) =>
-		renderMorphNode(field(value, "root"), links, 0),
+		morphLeaves(field(value, "root"), links).join("|"),
 	notes: text,
 	participle_source: (value, links) =>
 		`${links.lemma(field(value, "verb") as Dumling.Lemma)} (${text(field(value, "meaning"))})`,
-	past_participle: (value) => list(value).map(text).join(", "),
 	pending_relation: (value, links) =>
-		list(value)
-			.map(
-				(pending) =>
-					`${text(field(pending, "relation"))}: ${links.shadow(field(pending, "target") as Dumrel.UnitShadow)}`,
-			)
-			.join("\n"),
-	plural: (value) =>
-		Array.isArray(value) ? value.map(text).join(", ") : text(value),
-	present_singular: (value) =>
-		PRESENT_PERSONS.map(
-			([person, label]) =>
-				`${label}: ${list(field(value, person)).map(text).join(", ")}`,
-		).join("; "),
-	preterite: (value) => list(value).map(text).join(", "),
+		relationLines(
+			list(value).map((pending) => [
+				text(field(pending, "relation")),
+				[links.shadow(field(pending, "target") as Dumrel.UnitShadow)],
+			]),
+		),
 	relation: (value, links) =>
-		Object.entries(value as Record<string, unknown>)
-			.filter(([relation]) => relation !== "targetKind")
-			.map(
-				([relation, targets]) =>
-					`${relation}: ${list(targets)
-						.map((target) => renderTarget(target, links))
-						.join(", ")}`,
-			)
-			.join("\n"),
+		relationLines(
+			Object.entries(value as Record<string, unknown>)
+				.filter(([relation]) => relation !== "targetKind")
+				.map(([relation, targets]) => [
+					relation,
+					list(targets).map((target) => renderTarget(target, links)),
+				]),
+		),
 	saying_type: (value) => {
 		const attribution = field(value, "attribution");
 		return `${text(field(value, "type"))}${attribution === undefined ? "" : ` (${text(attribution)})`}`;
 	},
-	subjunctive_past: (value) => list(value).map(text).join(", "),
-	translation: (value) =>
-		Object.entries(value as Record<string, unknown>)
-			.map(
-				([language, words]) =>
-					`${language}: ${list(words).map(text).join(", ")}`,
-			)
-			.join("; "),
+	translation: (value) => {
+		const languages = Object.entries(value as Record<string, unknown>);
+		return languages
+			.map(([language, words]) => {
+				const joined = list(words).map(text).join(", ");
+				return languages.length === 1
+					? joined
+					: `${language}: ${joined}`;
+			})
+			.join("\n");
+	},
 	valency: (value, links) =>
 		list(value)
 			.map(
@@ -293,37 +407,56 @@ function articleOf(lemma: Dumling.Lemma): string | undefined {
 	return mixed.length > 0 ? mixed.join("/") : undefined;
 }
 
+/** YouGlish's name for each dumling language. */
+const YOUGLISH_LANGUAGES: Readonly<Record<string, string>> = {
+	de: "german",
+	en: "english",
+	he: "hebrew",
+};
+
+/**
+ * A transcription as the legacy header showed it: `[taːk](youglish)`, a
+ * link to hear the word spoken, or `/taːk/` for a language YouGlish lacks.
+ */
+function pronunciation(lemma: Dumling.Lemma, transcription: string): string {
+	const language = YOUGLISH_LANGUAGES[lemma.language];
+	if (language === undefined) return `/${transcription}/`;
+	const label = transcription.replace(/[[\]\\]/gu, "\\$&");
+	return `[${label}](https://youglish.com/pronounce/${encodeURIComponent(lemma.canonicalForm)}/${language})`;
+}
+
+/**
+ * The legacy header: `🏭 das [[Kohlekraftwerk]], [ˈkoːlə…](youglish)`, the
+ * Emoji Description, a noun's article, a link to the note itself and the
+ * transcription.
+ */
 export function defaultHeader<L extends Dumling.Language>({
 	entry,
 	lemma,
+	links,
 }: ReadingProjectionContext<L>): string {
 	const article = articleOf(lemma);
-	const name = `**${article === undefined ? "" : `${article} `}${lemma.canonicalForm}**`;
+	const name = `${article === undefined ? "" : `${article} `}${links.lemma(lemma)}`;
 	const { reading } = entry;
 	const emoji =
 		"emojiDescription" in reading ? reading.emojiDescription : undefined;
 	const transcription = entry.knowledge?.transcription;
-	return [
-		emoji,
-		name,
-		transcription === undefined ? undefined : `/${transcription}/`,
-	]
-		.filter((part) => part !== undefined)
-		.join(" ");
+	const headword =
+		transcription === undefined
+			? name
+			: `${name}, ${pronunciation(lemma, transcription)}`;
+	return emoji === undefined ? headword : `${emoji} ${headword}`;
 }
 
+/** Inverse relation edges as symbol lines, grouped by relation. */
 export function renderInverseRelations(
 	projections: readonly SemanticRelationProjection[],
 	links: LinkRenderer,
 ): string {
-	const byRelation = new Map<string, string[]>();
-	for (const { relation, target } of projections) {
-		byRelation.set(relation, [
-			...(byRelation.get(relation) ?? []),
-			renderTarget(target, links),
-		]);
-	}
-	return [...byRelation]
-		.map(([relation, targets]) => `${relation}: ${targets.join(", ")}`)
-		.join("\n");
+	return relationLines(
+		projections.map(({ relation, target }) => [
+			relation,
+			[renderTarget(target, links)],
+		]),
+	);
 }
