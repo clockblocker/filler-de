@@ -5,11 +5,19 @@ import {
 	parseAsReadingEntry,
 	parseAsSurfaceEntry,
 } from "dumdict";
+import { readingIdentityKey } from "dumling";
+import type * as Dumling from "dumling/types";
 import {
+	type BodySegment,
 	type CodecIssue,
+	type DataResult,
+	freeformOf,
 	type LemmaNoteData,
-	type LemmaNoteParse,
-	parse,
+	type LemmaRecords,
+	parseLemmaNote,
+	parseReadingNote,
+	type ReadingNoteData,
+	type SerializedNote,
 } from "../src";
 
 function unwrap<T>(parsed: T | ParsingError): T {
@@ -18,38 +26,70 @@ function unwrap<T>(parsed: T | ParsingError): T {
 }
 
 /** A fixture as dumdict's parsers normalize it, which is what parse returns. */
-export function normalized(data: LemmaNoteData<"de">): LemmaNoteData<"de"> {
+function normalized(records: LemmaRecords<"de">): LemmaRecords<"de"> {
 	return {
-		lemmaRecord: unwrap(parseAsLemmaRecord(data.lemmaRecord, "de")),
-		ownedSurfaceEntries: data.ownedSurfaceEntries.map((entry) =>
+		lemmaRecord: unwrap(parseAsLemmaRecord(records.lemmaRecord, "de")),
+		ownedSurfaceEntries: records.ownedSurfaceEntries.map((entry) =>
 			unwrap(parseAsSurfaceEntry(entry, "de")),
 		),
-		pendingRelations: data.pendingRelations.map((record) =>
+		pendingRelations: records.pendingRelations.map((record) =>
 			unwrap(parseAsPendingSemanticRelationRecord(record, "de")),
 		),
-		readingEntries: data.readingEntries.map((entry) =>
+		readingEntries: records.readingEntries.map((entry) =>
 			unwrap(parseAsReadingEntry(entry, "de")),
 		),
 	};
 }
 
-export function parseDe(markdown: string): LemmaNoteParse<"de"> {
-	return parse(markdown, { language: "de" });
+/** What a Lemma note of `records` holds. */
+export function lemmaNoteDataOf(
+	records: LemmaRecords<"de">,
+): LemmaNoteData<"de"> {
+	const { lemmaRecord, ownedSurfaceEntries } = normalized(records);
+	return { lemmaRecord, ownedSurfaceEntries };
 }
 
-/** The data of a note that must parse. */
-export function validData(markdown: string): LemmaNoteData<"de"> {
-	const { data } = parseDe(markdown);
-	if (!data.ok)
+/** What the Reading note of `reading` holds. */
+export function readingNoteDataOf(
+	records: LemmaRecords<"de">,
+	reading: Dumling.Reading<"de">,
+): ReadingNoteData<"de"> {
+	const { pendingRelations, readingEntries } = normalized(records);
+	const key = readingIdentityKey(reading);
+	const readingEntry = readingEntries.find(
+		(entry) => readingIdentityKey(entry.reading) === key,
+	);
+	if (readingEntry === undefined) throw new Error("No such Reading");
+	return {
+		pendingRelations: pendingRelations.filter(
+			(record) => readingIdentityKey(record.sourceReading) === key,
+		),
+		readingEntry,
+	};
+}
+
+/** The data of a result that must be valid. */
+export function valid<T>(result: DataResult<T>): T {
+	if (!result.ok)
 		throw new Error(
-			`Expected a valid note: ${data.issues.map((issue) => issue.message).join("; ")}`,
+			`Expected valid data: ${result.issues.map((issue) => issue.message).join("; ")}`,
 		);
-	return data.data;
+	return result.data;
 }
 
-/** The issue tags of a note that must not parse. */
-export function issueTags(markdown: string): CodecIssue["_tag"][] {
-	const { data } = parseDe(markdown);
-	if (data.ok) throw new Error("Expected an invalid note");
-	return data.issues.map((issue) => issue._tag);
+export const parseLemma = (note: SerializedNote<unknown>) =>
+	parseLemmaNote(note as never, { language: "de" });
+
+export const parseReading = (note: SerializedNote<unknown>) =>
+	parseReadingNote(note as never, { language: "de" });
+
+/** The issue tags of a result that must be invalid. */
+export function issueTags<T>(result: DataResult<T>): CodecIssue["_tag"][] {
+	if (result.ok) throw new Error("Expected invalid data");
+	return result.issues.map((issue) => issue._tag);
 }
+
+/** A note's user text, as its parse reads it. */
+export const freeformTexts = (parsed: {
+	readonly document: { readonly segments: readonly BodySegment[] };
+}) => freeformOf(parsed.document.segments);

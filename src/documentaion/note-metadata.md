@@ -1,10 +1,11 @@
 # Note-metadata facility
 
 `src/stateless-helpers/note-metadata/` stores typed, versioned metadata per
-note. The Library keeps Reading Status and note kinds there. The dictionary
-will keep Lemma and Reading data there too (#112, #113), replacing inline
+note. The Library keeps Reading Status and note kinds there, and the
+dictionary keeps Lemma and Reading note data there (#112), with no inline
 markers. Library code reaches it through `library-core`'s
-`internal/root/note-metadata.ts` re-export.
+`internal/root/note-metadata.ts` re-export, and the dictionary store through
+its own `internal/note-metadata.ts`.
 
 ## Formats
 
@@ -52,7 +53,7 @@ objects and arrays survive.
   string and key it keeps in frontmatter, and reads them back unescaped, so
   no link inside its data reaches Obsidian's index. Moving data between the
   formats escapes or unescapes it as the target needs. The dictionary's
-  namespaces set it (#112).
+  namespaces (`lemmaNote`, `readingNote`) set it.
 
 Unit tests mock `parseYaml` and `stringifyYaml` with the `yaml` package,
 called with the options Obsidian 1.14.4 uses (`tests/unit/setup.ts`).
@@ -165,8 +166,20 @@ reports the counts, and the console lists every skipped or failed note.
 - A note whose frontmatter can't be parsed is left as it is and reported as
   skipped.
 
-When the dictionary moves onto the facility, #112/#113 add a scope for
-`Worter/` with its namespaces.
+A second scope covers `Worter/` with the dictionary's namespaces:
+`LemmaNoteMetadata` (`lemmaNote`), `ReadingNoteMetadata` (`readingNote`), and,
+until #113, the store's interim `LemmaBundleMetadata` (`lemmaBundle`).
+
+## Dictionary notes
+
+`dictionary-metadata.ts` defines the dictionary's namespaces from the Lemma
+note codec's specs (`LEMMA_NOTE_METADATA`, `READING_NOTE_METADATA`), which own
+their schemas and versions. `src/stateless-helpers/dictionary-notes.ts`
+composes the codec and the facility: `readLemmaNote` / `readReadingNote` read
+a file's records and freeform, and `writeLemmaNote` / `writeReadingNote` are
+pure transforms that rewrite a file as its note, keeping the user's freeform
+and frontmatter properties, and throw `NoteMetadataError` rather than
+overwrite metadata they cannot read.
 
 ## Blank-line growth (#107)
 

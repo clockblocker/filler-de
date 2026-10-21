@@ -22,17 +22,15 @@ export type PrincipalParts = {
 };
 
 /**
- * What a projection reads of one Reading part. It is the structural subset
- * of the Lemma note codec's `ReadingProjectionContext`, so the functions
- * here plug into its `inflection` and `tags` hooks without this package
- * depending on the codec.
+ * What a German projection reads of one Lemma: the Lemma, the principal
+ * parts its Paradigm gives, and its owned Surfaces.
  */
 export type ProjectionInput = {
 	readonly lemma: Dumling.Lemma;
 	/**
-	 * TODO(#120): the codec passes none, since the Reading Knowledge no
-	 * longer holds them, so a noun or verb gets no table and no inflection
-	 * class tag until the batteries' Inflection Pack projects its tables.
+	 * What the Lemma Paradigm's variants give one Licence Group or Reading
+	 * (`interim.ts`). TODO(#120): the German Inflection Pack derives tables
+	 * from the Paradigm itself.
 	 */
 	readonly principalParts?: PrincipalParts | undefined;
 	readonly ownedSurfaces: readonly { readonly surface: Dumling.Surface }[];

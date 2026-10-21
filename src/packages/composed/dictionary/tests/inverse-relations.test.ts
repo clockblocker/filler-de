@@ -1,14 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import {
+	crossroadNotePath,
 	legacyLemmaNotePath,
-	parse,
-	readingBlockId,
-	serialize,
 } from "@textfresser/lemma-note-codec";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type { PlannedChangeOp } from "dumdict";
 import { type AddNewNoteRequest, createDumdictPlanner } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
+import { readBundle, serializeBundle } from "../src/bundle";
+import { noteMetadataHelper } from "../src/internal/note-metadata";
 import { expectIndexMatchesFiles, run } from "./support/files";
 import {
 	contribute,
@@ -36,30 +36,57 @@ const laufenPath = legacyLemmaNotePath(laufen).path;
 const schreitenPath = legacyLemmaNotePath(schreiten).path;
 const springenPath = legacyLemmaNotePath(springen).path;
 
-const linkTo = (reading: Dumling.Reading<"de", "Lexeme", "VERB">) =>
-	`[[${legacyLemmaNotePath(reading.lemma).path.replace(/\.md$/u, "")}#^${readingBlockId(reading)}|${reading.lemma.canonicalForm}]]`;
-
-/** The note's `inverse_relation` Block, marker and rendering, if it has one. */
-const inverseBlock = (content: string | undefined) =>
-	content?.match(
-		/%%tf:inverse_relation@[^%]*%%\n[^\n]*(?:\n[^\n%][^\n]*)*/u,
-	)?.[0];
-
 /**
- * The content with its `inverse_relation` Block cut out, with the line
- * breaks that separated it from the line above.
+ * An inverse links its source's Lemma by its Unit Shadow: the Crossroad
+ * note of its spelling (ADR-0015), as the store holds no resolution for it.
  */
-const withoutInverseBlock = (content: string | undefined) => {
-	const block = inverseBlock(content);
-	return block === undefined
-		? content
-		: content
-				?.replace(/\n+(?=%%tf:inverse_relation@)/u, "")
-				.replace(block, "");
+const linkTo = (reading: Dumling.Reading<"de", "Lexeme", "VERB">) =>
+	`[[${crossroadNotePath(reading.lemma.canonicalForm, "de").path.replace(/\.md$/u, "")}|${reading.lemma.canonicalForm}]]`;
+
+/** The visible body, without the trailing blank lines the metadata pads it with. */
+const visible = (content: string | undefined) =>
+	noteMetadataHelper.body(content ?? "").trimEnd();
+
+/** The lines of the note's `inverse_relation` renderings, if it has any. */
+const inverseBlock = (content: string | undefined) => {
+	if (content === undefined) return undefined;
+	const lines = readBundle(content).segments.flatMap((segment) =>
+		segment.type === "rendering" && segment.block === "inverse_relation"
+			? segment.lines
+			: [],
+	);
+	return lines.length === 0 ? undefined : lines.join("\n");
 };
 
+/** The visible body with its `inverse_relation` renderings cut out. */
+const withoutInverseBlock = (content: string | undefined) => {
+	if (content === undefined) return undefined;
+	const read = readBundle(content);
+	const cut = new Set(
+		read.segments.flatMap((segment) =>
+			segment.type === "rendering" && segment.block === "inverse_relation"
+				? Array.from(
+						{ length: segment.end - segment.start },
+						(_, at) => segment.start + at,
+					)
+				: [],
+		),
+	);
+	return read.lines
+		.filter((_, at) => !cut.has(at))
+		.join("\n")
+		.replace(/\n{3,}/gu, "\n\n\n")
+		.trimEnd();
+};
+
+/** Types `text` at the end of the visible body, as a user would. */
+const typeAtEnd = (content: string | undefined, text: string) =>
+	noteMetadataHelper.mapBody((body) => `${body.trimEnd()}\n\n${text}\n`)(
+		content ?? "",
+	);
+
 const dataOf = (content: string | undefined) => {
-	const { data } = parse(content ?? "", { language: "de" });
+	const { data } = readBundle(content ?? "");
 	if (!data.ok) throw new Error("Expected a valid note");
 	return data.data;
 };
@@ -169,8 +196,8 @@ describe("inverse relations are projected, never stored", () => {
 			{ ...pendingFrom(gehenReading), resolvedLemma: schreiten },
 		]);
 
-		// B renders A as a projection, linked to A's Reading block, and
-		// stores no relation of its own.
+		// B renders A as a projection, linked to A's Crossroad, and stores
+		// no relation of its own.
 		const schreitenContent = vault.content(schreitenPath);
 		expect(inverseBlock(schreitenContent)).toMatch(
 			new RegExp(
@@ -195,7 +222,7 @@ describe("inverse relations are projected, never stored", () => {
 			createReading(readingEntry(gehenReading)),
 		]);
 		const words = "My own words about schreiten.";
-		const typed = `${vault.content(schreitenPath)}\n${words}\n`;
+		const typed = typeAtEnd(vault.content(schreitenPath), words);
 		await vault.userWrite(schreitenPath, typed);
 		const before = vault.content(schreitenPath);
 		vault.batches.length = 0;
@@ -221,9 +248,9 @@ describe("inverse relations are projected, never stored", () => {
 		// typed text moves under the Note title, where freeform stands.
 		expect(dataOf(after)).toEqual(dataOf(before));
 		expect(withoutInverseBlock(after)).toBe(
-			before
-				?.replace(`\n${words}\n`, "")
-				.replace("\nmine\n", `\nmine\n${words}\n`),
+			visible(before)
+				.replace(`\n\n${words}`, "")
+				.replace("\nmine", `\nmine\n${words}`),
 		);
 		expect(after?.split(words)).toHaveLength(2);
 		await expectIndexMatchesFiles(store, vault);
@@ -306,7 +333,8 @@ describe("inverse relations are projected, never stored", () => {
 			createLemma(gehen),
 			createReading(readingEntry(gehenReading)),
 		]);
-		const edited = `${vault.content(schreitenPath)}\nTyped behind VAM's back.\n`;
+		const typedText = "Typed behind VAM's back.";
+		const edited = typeAtEnd(vault.content(schreitenPath), typedText);
 		vault.silentWrite(schreitenPath, edited);
 
 		expect(
@@ -316,10 +344,9 @@ describe("inverse relations are projected, never stored", () => {
 		expect(after).toContain("Typed behind VAM's back.");
 		// The typed text takes the Note placeholder's place.
 		expect(withoutInverseBlock(after)).toBe(
-			edited.replace(
-				/%%tf:notes_placeholder@[^\n]*\n\*You can write here\*\n\n/u,
-				"",
-			),
+			visible(edited)
+				.replace(`\n\n${typedText}`, "")
+				.replace("*You can write here*", typedText),
 		);
 		expect(inverseBlock(after)).toContain(`= ${linkTo(gehenReading)}`);
 		await expectIndexMatchesFiles(store, vault);
@@ -360,12 +387,12 @@ describe("inverse relations are projected, never stored", () => {
 			createReading(readingEntry(gehenReading)),
 		]);
 		await seed(store, [claim(gehenReading, "hypernym", schreiten)]);
-		expect(inverseBlock(vault.content(schreitenPath))).toMatch(
-			/⊂ \[\[Worter\/de\/Lexeme\/VERB\/gehen#\^r-/u,
+		expect(inverseBlock(vault.content(schreitenPath))).toContain(
+			`⊂ ${linkTo(gehenReading)}`,
 		);
 	});
 
-	test("each Reading of a source Lemma that makes the claim gets its own link", async () => {
+	test("a source Lemma whose Readings both make the claim shows once", async () => {
 		const gehenOnFoot = readingOf(gehen, "🦵");
 		const { store, vault } = await openStore();
 		await seed(store, [
@@ -380,8 +407,8 @@ describe("inverse relations are projected, never stored", () => {
 			synonym(gehenOnFoot, schreiten),
 		]);
 		const block = inverseBlock(vault.content(schreitenPath)) ?? "";
-		expect(block).toContain(linkTo(gehenReading));
-		expect(block).toContain(linkTo(gehenOnFoot));
+		expect(block).toContain(`= ${linkTo(gehenReading)}`);
+		expect(block.split(linkTo(gehenOnFoot))).toHaveLength(2);
 	});
 
 	test("only inverses show: a substitution through a synonym does not", async () => {
@@ -449,19 +476,24 @@ describe("inverse relations are projected, never stored", () => {
 			createReading(readingEntry(gehenReading)),
 			synonym(gehenReading, schreiten),
 		]);
-		const { data, document } = parse(vault.content(schreitenPath) ?? "", {
-			language: "de",
-		});
-		if (!data.ok) throw new Error("Expected a valid note");
+		const current = vault.content(schreitenPath) ?? "";
+		const data = dataOf(current);
 		vault.silentWrite(
 			schreitenPath,
-			serialize(document, {
-				...data.data,
-				readingEntries: data.data.readingEntries.map((entry) => ({
-					...entry,
-					knowledge: { semanticRelations: { antonym: [springen] } },
-				})),
-			}),
+			serializeBundle(
+				current,
+				{
+					...data,
+					readingEntries: data.readingEntries.map((entry) => ({
+						...entry,
+						knowledge: {
+							semanticRelations: { antonym: [springen] },
+						},
+					})),
+				},
+				{},
+				"Hidden",
+			),
 		);
 
 		// gehen's claim reaches schreiten, whose file is ahead of the index.

@@ -145,7 +145,7 @@ A fleeting occurrence of one Surface in a text. It has no durable identity and i
 _Avoid_: Selection, source reference, context
 
 **Attestation Ref**:
-A durable reference to the place in a Scroll where an Attestation occurred, stored as an embed in a Reading Entry's or Surface Entry's `attestations`.
+A durable reference to the place in a Scroll where an Attestation occurred, stored as an embed: the `ref` of an Attestation Link `{ ref, surfaceId, reading }` in a Reading Entry's `attestationLinks`, or in a Surface Entry's `attestations`. A Reading Note shows each one under Deine Kontexte.
 _Avoid_: Attestation, Kontext
 
 **Reading Knowledge**:
@@ -165,11 +165,11 @@ The dumdict records for a Lemma, for one of its Readings with its Knowledge and 
 _Avoid_: Entry, for any of them alone
 
 **Lemma Note**:
-The Markdown note of one Lemma, which is also the note of its base-form Surface. Its metadata holds the Lemma Record and every owned Surface Entry. It lists every Surface met so far, each with an anchor, and shows one inflection table per Licence Group. No inflected Surface gets a note of its own. It lives at `Worter/<lang>/<Family>/<Kind>/<core slots…>/<l1>/<l3>/<l5>/<spelling>.md` (ADR-0015).
+The Markdown note of one Lemma, which is also the note of its base-form Surface. Its metadata (`lemmaNote`) holds the Lemma Record, with its Lemma Paradigm, and every owned Surface Entry. It links its Reading Notes, shows one inflection table per Licence Group, and lists every Surface met so far, each with its Surface Axes and an anchor. No inflected Surface gets a note of its own. It lives at `Worter/<lang>/<Family>/<Kind>/<core slots…>/<l1>/<l3>/<l5>/<spelling>.md` (ADR-0015).
 _Avoid_: Vocabulary note, surface host, Dict Note
 
 **Reading Note**:
-The Markdown note of one Reading, named `<emoji> <spelling>.md` in its Lemma Note's folder, such as `🚗 Fahrer.md`; a Foreign Reading takes `∅` for the emoji. Its metadata holds the Reading Entry and the Pending Semantic Relations whose source it is. It embeds its Licence Group's inflection table from the Lemma Note.
+The Markdown note of one Reading, named `<emoji> <spelling>.md` in its Lemma Note's folder, such as `🚗 Fahrer.md`; a Foreign Reading takes `∅` for the emoji. Its metadata (`readingNote`) holds the Reading Entry, its Reading's Lemma included, with its Attestation Links, and the Pending Semantic Relations whose source it is. It shows the user's dictionary layout and embeds its Licence Group's inflection table from the Lemma Note.
 _Avoid_: Sense note, Reading block
 
 **Crossroad Note**:
@@ -189,15 +189,23 @@ Two identities, or two spellings of one folder, whose paths have equal collision
 _Avoid_: Duplicate note
 
 **Block**:
-A typed part of a Lemma Note or Reading Note, whose data lives in the note's metadata. A Block serializes one dumdict or dumrel field, is a Projection Block, or is plugin-owned.
+A typed part of a Lemma Note's or Reading Note's visible body, such as the Header, a section's rendering, an inflection table or a Surface line. Every Block is a rendering: of data, which lives only in the note's metadata, or a Projection. Visible text is never read as data.
 _Avoid_: Section, Entry Section
 
 **Projection Block**:
-A Block rendered from dictionary data and never parsed back, such as the Header, Tags, inverse relations, or an inflection table. Editing it changes no data.
+A Block rendered from dictionary data or caller-supplied inputs and never parsed back, such as the Header, Tags, inverse relations, or an inflection table. Editing it changes no data.
 _Avoid_: Generated section, cache
 
+**Rendering Seal**:
+What a dictionary note's metadata keeps of one Block's rendering: its kind, its line count and a hash of its lines. On parse, body lines that match a seal are that rendering again; every other line is Freeform. A rendering the user edits no longer matches, so its lines become Freeform and the next write renders the Block afresh beside them.
+_Avoid_: Marker, inline seal
+
+**Freeform**:
+User text in a dictionary note: every body line no Rendering Seal matches. It is kept byte for byte and never read as data. It stands under a Reading Note's Note title, and last in a Lemma Note.
+_Avoid_: Notes (that is `ReadingEntry.notes`), comment
+
 **Block ID**:
-The plugin-owned Obsidian block ID of an inflection table or a met Surface in a Lemma Note, which Reading Notes embed and other notes link: `^t` or a short hash of its Licence Group for a table (#112), and `^s-<hash>` for a Surface.
+The plugin-owned Obsidian block ID of an inflection table or a met Surface in a Lemma Note, which Reading Notes embed and other notes link: `^t` for the table of a Lemma with one Licence Group, `^t-<hash>` of its `selectionKey` for each of several, and `^s-<hash>` for a Surface's line.
 _Avoid_: Entry ID, sense ID
 
 ## Classify

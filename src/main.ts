@@ -1,6 +1,8 @@
 import {
 	type DumdictVaultStore,
+	LemmaBundleMetadata,
 	makeDumdictVaultStore,
+	WORTER_SPLIT_PATH,
 } from "@textfresser/dictionary";
 import { derivedProjections } from "@textfresser/lemma-note-projections";
 import {
@@ -71,8 +73,10 @@ import {
 	settingsFromStoredData,
 } from "./settings/stored-settings";
 import {
+	LemmaNoteMetadata,
 	LibraryMetadata,
 	type MetadataFormat,
+	ReadingNoteMetadata,
 } from "./stateless-helpers/note-metadata";
 import type { SuffixDelimiterConfig, TextEaterSettings } from "./types";
 import { buildCanonicalDelimiter } from "./utils/delimiter";
@@ -647,6 +651,10 @@ export default class TextEaterPlugin extends Plugin {
 		if (this.dictionary) return this.dictionary;
 		const building = Effect.runPromise(
 			makeDumdictVaultStore({
+				metadataFormat: () =>
+					getParsedUserSettings().hideMetadata
+						? "Hidden"
+						: "Frontmatter",
 				onDiagnostics: (diagnostics) => {
 					if (diagnostics.quarantined.length > 0)
 						logger.warn(
@@ -966,8 +974,9 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	/**
-	 * Moves the Library's note metadata into `target`, the format "Hide
-	 * metadata" now selects, and reports the outcome in a Notice.
+	 * Moves the note metadata of the Library and of the dictionary under
+	 * `Worter/` into `target`, the format "Hide metadata" now selects, and
+	 * reports the outcome in a Notice.
 	 */
 	private async migrateNoteMetadata(target: MetadataFormat): Promise<void> {
 		const exit = await Effect.runPromiseExit(
@@ -975,6 +984,16 @@ export default class TextEaterPlugin extends Plugin {
 				{
 					folder: getParsedUserSettings().splitPathToLibraryRoot,
 					namespaces: [LibraryMetadata],
+				},
+				{
+					folder: WORTER_SPLIT_PATH,
+					// TODO(#113): drop LemmaBundleMetadata once the store writes
+					// Lemma and Reading notes.
+					namespaces: [
+						LemmaBundleMetadata,
+						LemmaNoteMetadata,
+						ReadingNoteMetadata,
+					],
 				},
 			]),
 		);

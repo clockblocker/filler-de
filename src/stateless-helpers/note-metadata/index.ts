@@ -23,11 +23,17 @@ import {
 	otherFormat,
 } from "./namespace";
 
+export {
+	LemmaNoteMetadata,
+	ReadingNoteMetadata,
+} from "./dictionary-metadata";
 export { LibraryMetadata } from "./library-metadata";
 export {
 	type AnyMetadataNamespace,
 	defineNestedNamespace,
 	type MetadataFormat,
+	type MetadataIssue,
+	type MetadataNamespace,
 	NoteMetadataError,
 } from "./namespace";
 

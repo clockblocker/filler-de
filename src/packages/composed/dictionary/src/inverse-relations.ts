@@ -1,9 +1,4 @@
-import {
-	type LemmaNoteDocument,
-	type Projections,
-	parseDocument,
-	type SemanticRelationProjection,
-} from "@textfresser/lemma-note-codec";
+import type { SemanticRelationProjection } from "@textfresser/lemma-note-codec";
 import { canonicalJson } from "common-utils";
 import type { ReadingEntry } from "dumdict";
 import type * as Dumling from "dumling/types";
@@ -11,6 +6,7 @@ import {
 	type directSemanticRelationValues,
 	projectSemanticRelations,
 } from "dumrel";
+import { type BundleRender, inverseRelationsShown } from "./bundle";
 import { lemmaKeyOf, readingKeyOf } from "./keys";
 import type { NoteIndex, RelationEdge } from "./note-index";
 
@@ -226,9 +222,9 @@ export function inverseRelationsReader(view: NoteIndex) {
 
 /** The codec's projections, with the `inverseRelations` hook read from `read`. */
 export function withInverseRelations(
-	projections: Omit<Projections<"de">, "inverseRelations"> | undefined,
+	projections: Omit<BundleRender, "inverseRelations"> | undefined,
 	read: (lemmaKey: string) => InverseRelations | undefined,
-): Projections<"de"> {
+): BundleRender {
 	return {
 		...projections,
 		inverseRelations: ({ entry, lemma }) =>
@@ -236,35 +232,14 @@ export function withInverseRelations(
 	};
 }
 
-/** Each part's `inverse_relation` Blocks, as their raw lines, by Block ID. */
-function inverseBlocksOf(document: LemmaNoteDocument): string {
-	// Parts compare by Block ID, so reordering them by hand is no change.
-	const byPart = new Map<string, string[]>();
-	for (const part of document.parts) {
-		const id = part.blockId ?? "";
-		byPart.set(id, [
-			...(byPart.get(id) ?? []),
-			...part.blocks
-				.filter(
-					(block) =>
-						block.type === "projection" &&
-						block.kind === "inverse_relation",
-				)
-				.map((block) => block.raw.trimEnd()),
-		]);
-	}
-	return canonicalJson(Object.fromEntries(byPart));
-}
-
 /**
  * Whether a note's file shows other inverse relations than `rendered`, the
  * content the store would write for it now. Only the `inverse_relation`
- * Blocks are compared, so a note whose other Blocks or freeform text sit
- * out of canonical order is not rewritten for that alone.
+ * renderings are compared, so a note whose other Blocks or freeform text
+ * sit out of canonical order is not rewritten for that alone.
  */
 export const showsOtherInverseRelations = (
 	current: string,
 	rendered: string,
 ): boolean =>
-	inverseBlocksOf(parseDocument(current)) !==
-	inverseBlocksOf(parseDocument(rendered));
+	inverseRelationsShown(current) !== inverseRelationsShown(rendered);

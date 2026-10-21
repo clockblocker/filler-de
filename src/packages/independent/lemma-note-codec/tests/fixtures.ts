@@ -7,7 +7,9 @@ import {
 import { createPendingSemanticRelationRecord } from "dumdict/pending";
 import { syncretize } from "dumling";
 import type * as Dumling from "dumling/types";
-import type { LemmaNoteData } from "../src";
+import { applyParadigmChanges, paradigmChangesFor } from "dumrel";
+import type * as Dumrel from "dumrel/types";
+import type { LemmaRecords } from "../src";
 
 type De = "de";
 type Lemma<
@@ -39,6 +41,27 @@ function link(
 		ref,
 		surfaceId: surface === undefined ? null : makeSurfaceId("de", surface),
 	};
+}
+
+/** A Lemma Paradigm from the forms each Reading licenses per dimension. */
+function paradigmOf(
+	lemma: Dumling.Lemma<De>,
+	licences: readonly {
+		readonly reading: Dumling.Reading<De>;
+		readonly dimension: Dumrel.DimensionId;
+		readonly values: readonly string[];
+	}[],
+): Dumrel.LemmaParadigm {
+	const result = applyParadigmChanges({
+		changes: licences.flatMap((licence) =>
+			paradigmChangesFor({ ...licence, provenance: "Produced" }),
+		),
+		lemma,
+		paradigm: { dimensions: {} },
+		readings: [...new Set(licences.map(({ reading }) => reading))],
+	});
+	if (!result.success) throw result.error;
+	return result.value;
 }
 
 function reading<L extends Dumling.Lemma<De>>(
@@ -73,8 +96,8 @@ const mama: Lemma<"Lexeme", "NOUN"> = {
 	unitKind: "Lemma",
 };
 
-const mutterParent = reading(mutter, "👩");
-const mutterNut = reading(mutter, "🔩");
+export const mutterParent = reading(mutter, "👩");
+export const mutterNut = reading(mutter, "🔩");
 
 const muetterSurface: Dumling.Surface<De, "Lexeme", "NOUN"> = {
 	inflectionalFeatures: { case: "Nom", gender: null, number: "Plur" },
@@ -101,8 +124,15 @@ function ownedSurface(
 	};
 }
 
-export const nounData: LemmaNoteData<De> = {
-	lemmaRecord: { lemma: mutter },
+export const nounData: LemmaRecords<De> = {
+	lemmaRecord: {
+		lemma: mutter,
+		// Two Licence Groups: 👩 Mütter, 🔩 Muttern (ADR 0038).
+		paradigm: paradigmOf(mutter, [
+			{ dimension: "plural", reading: mutterParent, values: ["Mütter"] },
+			{ dimension: "plural", reading: mutterNut, values: ["Muttern"] },
+		]),
+	},
 	ownedSurfaceEntries: [
 		ownedSurface(muetterSurface, {
 			attestations: ["![[Scroll#^12|^]]"],
@@ -182,7 +212,7 @@ const fuer: Lemma<"Lexeme", "ADP"> = {
 	unitKind: "Lemma",
 };
 
-export const verbData: LemmaNoteData<De> = {
+export const verbData: LemmaRecords<De> = {
 	lemmaRecord: { lemma: aufstehen },
 	ownedSurfaceEntries: [],
 	pendingRelations: [],
@@ -251,7 +281,7 @@ const insGrasBeissen: Lemma<"Locution", "VERB"> = {
 	unitKind: "Lemma",
 };
 
-const locutionData: LemmaNoteData<De> = {
+const locutionData: LemmaRecords<De> = {
 	lemmaRecord: { lemma: insGrasBeissen },
 	ownedSurfaceEntries: [],
 	pendingRelations: [],
@@ -276,7 +306,7 @@ const morgenstund: Lemma<"Saying", "Saying"> = {
 	unitKind: "Lemma",
 };
 
-const sayingData: LemmaNoteData<De> = {
+const sayingData: LemmaRecords<De> = {
 	lemmaRecord: { lemma: morgenstund },
 	ownedSurfaceEntries: [],
 	pendingRelations: [],
@@ -292,7 +322,7 @@ const sayingData: LemmaNoteData<De> = {
 
 // Morpheme.
 
-const morphemeData: LemmaNoteData<De> = {
+const morphemeData: LemmaRecords<De> = {
 	lemmaRecord: { lemma: aufPrefix },
 	ownedSurfaceEntries: [],
 	pendingRelations: [],
@@ -314,7 +344,7 @@ const foreignLemma: Lemma<"Foreign", "Foreign"> = {
 	unitKind: "Lemma",
 };
 
-export const foreignData: LemmaNoteData<De> = {
+const foreignData: LemmaRecords<De> = {
 	lemmaRecord: { lemma: foreignLemma },
 	ownedSurfaceEntries: [],
 	pendingRelations: [],
@@ -350,7 +380,7 @@ function ihmOf(gender: "Masc" | "Neut"): Lemma<"Lexeme", "PRON"> {
 const ihmMasc = ihmOf("Masc");
 const ihmSyncretism = syncretize([ihmOf("Masc"), ihmOf("Neut")]);
 
-export const syncretismData: LemmaNoteData<De> = {
+const syncretismData: LemmaRecords<De> = {
 	lemmaRecord: { lemma: ihmSyncretism },
 	ownedSurfaceEntries: [],
 	pendingRelations: [],
@@ -368,6 +398,88 @@ export const syncretismData: LemmaNoteData<De> = {
 	],
 };
 
+// VERB with a Free dimension: melken takes molk and melkte in every sense.
+
+const melken: Lemma<"Lexeme", "VERB"> = {
+	canonicalForm: "melken",
+	coreFeatures: { hasSepPrefix: null, lexicallyReflexive: null },
+	family: "Lexeme",
+	kind: "VERB",
+	language: "de",
+	unitKind: "Lemma",
+};
+const melkenCow = reading(melken, "🐄");
+const melkenProfit = reading(melken, "💰");
+
+const melkenData: LemmaRecords<De> = {
+	lemmaRecord: {
+		lemma: melken,
+		paradigm: paradigmOf(melken, [
+			{
+				dimension: "preterite",
+				reading: melkenCow,
+				values: ["molk", "melkte"],
+			},
+			{
+				dimension: "preterite",
+				reading: melkenProfit,
+				values: ["molk", "melkte"],
+			},
+		]),
+	},
+	ownedSurfaceEntries: [],
+	pendingRelations: [],
+	readingEntries: [
+		readingEntry(melkenCow, {
+			knowledge: { translations: { en: ["milk"] } },
+		}),
+		readingEntry(melkenProfit, {
+			knowledge: { translations: { en: ["fleece"] } },
+		}),
+	],
+};
+
+// VERB with partial overlap: 📨 senden takes sandte and sendete, 📺 only sendete.
+
+const senden: Lemma<"Lexeme", "VERB"> = {
+	canonicalForm: "senden",
+	coreFeatures: { hasSepPrefix: null, lexicallyReflexive: null },
+	family: "Lexeme",
+	kind: "VERB",
+	language: "de",
+	unitKind: "Lemma",
+};
+export const sendenMail = reading(senden, "📨");
+export const sendenBroadcast = reading(senden, "📺");
+
+const sendenData: LemmaRecords<De> = {
+	lemmaRecord: {
+		lemma: senden,
+		paradigm: paradigmOf(senden, [
+			{
+				dimension: "preterite",
+				reading: sendenMail,
+				values: ["sandte", "sendete"],
+			},
+			{
+				dimension: "preterite",
+				reading: sendenBroadcast,
+				values: ["sendete"],
+			},
+		]),
+	},
+	ownedSurfaceEntries: [],
+	pendingRelations: [],
+	readingEntries: [
+		readingEntry(sendenMail, {
+			knowledge: { translations: { en: ["send"] } },
+		}),
+		readingEntry(sendenBroadcast, {
+			knowledge: { translations: { en: ["broadcast"] } },
+		}),
+	],
+};
+
 export const familyFixtures = {
 	foreign: foreignData,
 	locution: locutionData,
@@ -376,4 +488,11 @@ export const familyFixtures = {
 	saying: sayingData,
 	syncretism: syncretismData,
 	verb: verbData,
+} as const;
+
+/** Lemmas whose Readings form one, two or overlapping Licence Groups. */
+export const licenceFixtures = {
+	melken: melkenData,
+	mutter: nounData,
+	senden: sendenData,
 } as const;

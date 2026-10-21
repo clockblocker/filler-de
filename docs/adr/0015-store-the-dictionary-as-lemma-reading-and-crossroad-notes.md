@@ -65,6 +65,14 @@ One pure, host-owned function spells every shard folder, every file name and eve
 - **Crossroad note.** It is plugin-owned and holds no records; a metadata entry only marks it as the store's. It lists every Lemma, with its Reading notes, and every met Surface with its spelling, and is regenerated from the store's index. Variant spellings (Kuss and Kuß) get separate Crossroads. An empty file Obsidian creates when the user clicks an uncreated Crossroad link is filled as "not classified yet", and the plugin generates no Knowledge for it. A Crossroad note is never removed, because other notes may still link to it.
 - **Inflection tables** come from the batteries, independent of language, Family and Kind: `dumdict/inflection` projects them, and `dumcorpus/inflection`'s language packs label them. The plugin only renders them.
 
+### Refinements from the note codec (#112)
+
+- **Metadata namespaces.** A Lemma note keeps its data under `lemmaNote` and a Reading note under `readingNote`, each a versioned namespace of the note-metadata facility. A Reading note's metadata holds its whole Reading, its Lemma included, so the note names its identity alone and the store can find one outside its Lemma's folder.
+- **The rendering boundary.** With no inline markers, a note tells its renderings from user text by Rendering Seals in its metadata: each Block's rendering is sealed as its line count and a hash of its lines. Lines that match a seal are the rendering; every other line is freeform, kept byte for byte and never read as data, so an edited rendering becomes freeform and survives beside the fresh one.
+- **Frontmatter.** While "Hide metadata" is off, the dictionary namespaces write `[` as `\[` (and `\` as `\\`) in every string and key of their frontmatter, so Obsidian indexes no link inside the data in either format, and the toggle works for `Worter/` as for the Library.
+- **Headers.** A Lemma note's header links its spelling's Crossroad note; a Reading note's header links its own Lemma note.
+- **Tables and Surfaces.** A table is `^t` when its Lemma has one Licence Group, otherwise `^t-<hash>` of its group's `selectionKey`, and is one Obsidian block, captioned with its group's emojis. The "Surfaces encountered so far" list holds every owned Surface, in-core forms too, since only a list item, never a table cell, can carry a Surface's `^s-<hash>`.
+
 ## Considered Options
 
 - **One note per Lemma with every Reading as a block** (ADR-0012). Rejected: a Reading's Knowledge, attestations and notes outgrow a shared note, and a link to a sense needs a block ID instead of a note.

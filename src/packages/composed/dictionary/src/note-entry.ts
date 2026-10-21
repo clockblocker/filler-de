@@ -1,14 +1,15 @@
-import {
-	blockIdsOf,
-	type CodecIssue,
-	type LemmaNoteData,
-	type NoteBlockIds,
-	parse,
-} from "@textfresser/lemma-note-codec";
+import type { CodecIssue, LemmaRecords } from "@textfresser/lemma-note-codec";
+import { readBundle, readingBlockIds } from "./bundle";
 import { contentHash } from "./content-hash";
 import { lemmaKeyOf } from "./keys";
 
-export type NoteData = LemmaNoteData<"de">;
+/** Every record of one Lemma. TODO(#113): split across its Lemma and Reading notes. */
+export type NoteData = LemmaRecords<"de">;
+
+/** Each Reading's header Block ID in its Lemma's bundle, by Reading key. */
+type NoteBlockIds = {
+	readonly readings: ReadonlyMap<string, string>;
+};
 
 /** A Lemma note whose records the codec accepted. */
 export type LemmaNoteEntry = {
@@ -49,7 +50,7 @@ export type PathEntry = LemmaNoteEntry | QuarantinedEntry;
  */
 export function classifyNote(path: string, content: string): PathEntry {
 	const hash = contentHash(content);
-	const { data } = parse(content, { language: "de" });
+	const { data } = readBundle(content);
 	if (data.ok) return lemmaEntry(path, hash, data.data);
 	return {
 		hash,
@@ -65,7 +66,11 @@ export function lemmaEntry(
 	data: NoteData,
 ): LemmaNoteEntry {
 	return {
-		blockIds: blockIdsOf(data),
+		blockIds: {
+			readings: readingBlockIds(
+				data.readingEntries.map(({ reading }) => reading),
+			),
+		},
 		data,
 		hash,
 		kind: "lemma",
