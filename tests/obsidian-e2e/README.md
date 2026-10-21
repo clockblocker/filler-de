@@ -142,7 +142,8 @@ keyCheck: { OpenAI?: { status, body? }, TypeSafe?: … } }`.
 `status().dumgenRequests` counts the script's requests by stage, so a
 scenario can assert that no model was asked. The dictionary lives in the
 vault-root `Worter/` folder, shared by every scenario: `resetDictionary:
-true` moves it to Obsidian's trash before the fixtures, and `dictionary()`
+true` moves it, with the backup folders and report notes a dictionary reset
+left beside it, to Obsidian's trash before the fixtures, and `dictionary()`
 returns its notes by vault path. The driver resets the dictionary only in a
 vault marked as E2E-only by an `.obsidian/textfresser-e2e-vault` file:
 managed mode writes it, and an attached test vault needs it added once.

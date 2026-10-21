@@ -462,6 +462,9 @@ export function dumgenUnitResolver(
 										current,
 										edits,
 										snapshot: snapshot.content,
+										...(plan.userLinks === undefined
+											? {}
+											: { userLinks: plan.userLinks }),
 									}),
 							).pipe(
 								Effect.catchTag("ScrollWriteFailed", (error) =>

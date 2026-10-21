@@ -342,7 +342,7 @@ export function renderReport(
 		)
 			lines.push(
 				"",
-				"Classify leaves links it did not write alone, such as an old `[[Fahrer]]`, so an attestation with 0 linked keeps its old link in its Scroll. That link may now resolve to the backup: point it at the new note, or unlink the word and Classify it again.",
+				"The reset replaces an old link at a regenerated occurrence, such as the `[[Fahrer]]` of `Der [[Fahrer]]`, with the link to its Reading. An attestation with 0 linked kept its text as it was, for the reason its notice below gives, such as code around it or an old link that shows more than the occurrence. Such an old link may now resolve to the backup: point it at the new note, or unlink the words and Classify them again.",
 			);
 		lines.push("");
 		if (execution.layout) lines.push(...layoutLines(execution.layout));

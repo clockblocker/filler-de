@@ -17,6 +17,7 @@
  */
 import type { Dumgen, SegmentedSentence, Unit } from "dumgen";
 import { Context, Effect, Option, Schema } from "effect";
+import type { UserLinks } from "./resolution/scroll-links";
 import {
 	type ScrollSentence,
 	type ScrollSentences,
@@ -70,6 +71,8 @@ export type ClassifyInput = {
 	/** The Scroll's content as the editor holds it. */
 	readonly content: string;
 	readonly selection: SourceRange;
+	/** What happens to the user's links at the covered occurrences; `Keep` when absent. */
+	readonly userLinks?: UserLinks;
 };
 
 export type ClassifyStats = {
@@ -304,6 +307,9 @@ export const classifySelection = Effect.fn("classifySelection")(function* (
 		scrollPath: input.scrollPath,
 		sentences,
 		units,
+		...(input.userLinks === undefined
+			? {}
+			: { userLinks: input.userLinks }),
 	};
 	const resolver = yield* UnitResolver;
 	const resolutions = yield* resolver.resolve(plan).pipe(

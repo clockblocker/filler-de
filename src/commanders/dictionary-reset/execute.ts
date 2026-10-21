@@ -287,10 +287,14 @@ const regenerateOne = Effect.fnUntraced(function* (
 	);
 	if (target._tag === "Unresolvable")
 		return { _tag: "Unresolved", reason: target.reason };
+	// The old notes' links at the occurrence, such as `Der [[Fahrer]]`,
+	// predate the dictionary's layout, so the link to the Reading replaces
+	// them (#148).
 	const outcome = yield* classifySelection({
 		content: target.content,
 		scrollPath: target.scrollPath,
 		selection: target.selection,
+		userLinks: "Replace",
 	}).pipe(
 		Effect.map(
 			(classified) => ({ _tag: "Classified", classified }) as const,

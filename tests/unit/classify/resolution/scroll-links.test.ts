@@ -220,6 +220,103 @@ describe("linkUnitsInScroll", () => {
 	});
 });
 
+describe("linkUnitsInScroll over the user's links", () => {
+	const reading = "Worter/de/Lexeme/NOUN/Masc/f/fah/fahre/🚗 Fahrer";
+	const fahrer = { readingPath: `${reading}.md` };
+	/** The source range from the start of `first` to the end of `last`. */
+	const span = (content: string, first: string, last: string) => {
+		const from = content.indexOf(first);
+		const end = content.indexOf(last, from) + last.length;
+		return { from, to: end };
+	};
+	const link = (
+		content: string,
+		occurrences: { from: number; to: number }[],
+		userLinks?: "Keep" | "Replace",
+		readingPath = fahrer.readingPath,
+	) =>
+		linkUnitsInScroll({
+			current: content,
+			edits: [{ occurrences, ref, target: { readingPath } }],
+			snapshot: content,
+			...(userLinks === undefined ? {} : { userLinks }),
+		});
+
+	it("keeps them by default, quoting the occurrence as a reader sees it", () => {
+		const content = "Der [[Fahrer]] fährt. ^0\n";
+		const linked = link(content, [span(content, "Der", "Fahrer")]);
+		expect(linked.content).toBe(content);
+		expect(linked.skipped).toEqual([
+			{ reason: "inside the user's link", ref, text: "Der Fahrer" },
+		]);
+	});
+
+	it("re-points a link of the plugin's that the occurrence takes in", () => {
+		const content =
+			"Der [[Worter/de/Lexeme/NOUN/Masc/f/fah/fahre/🚗 Fahrer|Fahrer]] fährt. ^0\n";
+		expect(link(content, [span(content, "Der", "Fahrer|Fahrer")]).content).toBe(
+			`[[${reading}|Der Fahrer]] fährt. ^0\n`,
+		);
+	});
+
+	it("replaces each link whose shown text lies in the occurrence when told to", () => {
+		const content = "Der [[Fahrer]] fährt mit [[Fahrkarte|der Karte]]. ^0\n";
+		const linked = link(
+			content,
+			[span(content, "Der", "Fahrer"), at(content, "der Karte")],
+			"Replace",
+		);
+		expect(linked.content).toBe(
+			`[[${reading}|Der Fahrer]] fährt mit [[${reading}|der Karte]]. ^0\n`,
+		);
+		expect(linked.linked).toEqual([2]);
+		expect(linked.skipped).toEqual([]);
+	});
+
+	it("replaces the old links of a discontinuous unit's pieces, and splits a contraction as Classify does", () => {
+		const verb = "Worter/de/Lexeme/VERB/auf/a/auf/aufpa/⚠ aufpassen";
+		const content =
+			"Mark, [[aufpassen|Pass]] auf dich [[aufpassen|auf]]! ^19\n\nWir arbeiten im [[Team]]. ^4\n";
+		const lastAuf = content.indexOf("auf]]!");
+		const pieces = [
+			span(content, "Pass", "] auf"),
+			{ from: lastAuf, to: lastAuf + 3 },
+		];
+		expect(link(content, pieces, "Replace", `${verb}.md`).content).toBe(
+			`Mark, [[${verb}|Pass auf]] dich [[${verb}|auf]]! ^19\n\nWir arbeiten im [[Team]]. ^4\n`,
+		);
+		const team = "Worter/de/Lexeme/NOUN/Neut/t/tea/team/👥 Team";
+		const contracted = span(content, "m [[Team", "Team");
+		expect(
+			link(content, [contracted], "Replace", `${team}.md`).content,
+		).toContain(`Wir arbeiten i[[${team}|m Team]]. ^4`);
+	});
+
+	it("still leaves embeds, Markdown links and links that show more than the occurrence", () => {
+		const content =
+			"[[Pass auf dich auf]] und ![[Fahrer]] und [Fahrer](https://x.de/a). ^0\n";
+		const word = (text: string, from: number) => ({
+			from,
+			to: from + text.length,
+		});
+		const linked = link(
+			content,
+			[
+				word("Pass", content.indexOf("Pass")),
+				word("Fahrer", content.indexOf("Fahrer]]")),
+				word("Fahrer", content.indexOf("Fahrer](")),
+			],
+			"Replace",
+		);
+		expect(linked.content).toBe(content);
+		expect(linked.skipped.map(({ reason, text }) => `${text}: ${reason}`)).toEqual([
+			"Pass: the user's link shows more than it",
+			"Fahrer: inside an embed or a Markdown link",
+			"Fahrer: inside an embed or a Markdown link",
+		]);
+	});
+});
+
 describe("knowledgeRequestFor", () => {
 	const reading = {
 		emojiDescription: "🌊",

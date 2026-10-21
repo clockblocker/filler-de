@@ -112,7 +112,9 @@ interface ScenarioDefinition {
 	};
 	/**
 	 * Deletes the vault-root `Worter/` dictionary before the fixtures, so a
-	 * scenario that asserts what Classify creates starts from none.
+	 * scenario that asserts what Classify creates starts from none, with
+	 * the `Worter backup …/` folders and `Dictionary reset ….md` reports a
+	 * dictionary reset left beside it.
 	 */
 	readonly resetDictionary?: boolean;
 	/**
