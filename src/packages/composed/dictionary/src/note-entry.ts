@@ -4,7 +4,7 @@ import {
 	type LemmaNoteData,
 	type NoteBlockIds,
 	parse,
-	parseNotePath,
+	parseLegacyNotePath,
 } from "@textfresser/lemma-note-codec";
 import type { PendingSemanticRelationRecord } from "dumdict";
 import { contentHash } from "./content-hash";
@@ -71,7 +71,7 @@ export function classifyNote(path: string, content: string): PathEntry {
 	const hash = contentHash(content);
 	const { data } = parse(content, { language: "de" });
 	if (data.ok) return lemmaEntry(path, hash, data.data);
-	const parsedPath = parseNotePath(path);
+	const parsedPath = parseLegacyNotePath(path);
 	if (parsedPath.ok && parsedPath.value.type === "shadow")
 		return {
 			hash,

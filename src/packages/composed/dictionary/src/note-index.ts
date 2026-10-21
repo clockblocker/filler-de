@@ -1,4 +1,4 @@
-import { lemmaNotePath } from "@textfresser/lemma-note-codec";
+import { legacyLemmaNotePath } from "@textfresser/lemma-note-codec";
 import type {
 	PendingSemanticRelationRecord,
 	ReadingEntry,
@@ -42,7 +42,7 @@ export function canonicalLemmaPath(
 	lemma: Dumling.Lemma<"de">,
 ): string | undefined {
 	try {
-		return lemmaNotePath(lemma).path;
+		return legacyLemmaNotePath(lemma).path;
 	} catch {
 		return undefined;
 	}

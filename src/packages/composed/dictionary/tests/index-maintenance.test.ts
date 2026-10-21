@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { lemmaNotePath, parse, serialize } from "@textfresser/lemma-note-codec";
+import {
+	legacyLemmaNotePath,
+	parse,
+	serialize,
+} from "@textfresser/lemma-note-codec";
 import { createMemoryNoteCache, DictionaryPathOccupiedError } from "../src";
 import { expectIndexMatchesFiles, run } from "./support/files";
 import {
@@ -20,8 +24,8 @@ import {
 } from "./support/fixtures";
 import { commit, openStore, seed } from "./support/store";
 
-const gehenPath = lemmaNotePath(gehen).path;
-const laufenPath = lemmaNotePath(laufen).path;
+const gehenPath = legacyLemmaNotePath(gehen).path;
+const laufenPath = legacyLemmaNotePath(laufen).path;
 const shadowPath = "Worter/de/Shadow/Lexeme/VERB/schreiten.md";
 
 async function seededStore() {
@@ -179,9 +183,9 @@ describe("keeping the index current", () => {
 			pendingRelations: [],
 			readingEntries: [],
 		});
-		await vault.userWrite(lemmaNotePath(springen).path, springenNote);
+		await vault.userWrite(legacyLemmaNotePath(springen).path, springenNote);
 		expect((await run(store.lemmaNote(springen)))?.path).toBe(
-			lemmaNotePath(springen).path,
+			legacyLemmaNotePath(springen).path,
 		);
 	});
 });

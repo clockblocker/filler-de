@@ -5,7 +5,8 @@
  * - `flag`: a feature whose only value is `Yes`, written as its name
  *   (`comparable`).
  * - `text`: an open string, such as `hasSepPrefix`, written as its value
- *   (`über`) and percent-encoded like a basename.
+ *   (`über`) through `toNameSegment` (ADR-0015), or percent-encoded in the
+ *   legacy ADR-0013 layout.
  * - `valueSet`: one closed value, or a noun's `{ mixed: [...] }` value set
  *   written with `+` (`Masc+Neut`).
  */

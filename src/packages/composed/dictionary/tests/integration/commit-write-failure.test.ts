@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { lemmaNotePath } from "@textfresser/lemma-note-codec";
+import { legacyLemmaNotePath } from "@textfresser/lemma-note-codec";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { type AddNewNoteRequest, createDumdictPlanner } from "dumdict/planning";
 import { DictionaryWriteError } from "../../src";
@@ -21,9 +21,9 @@ import { openStore, seed } from "../support/store";
 
 const planner = createDumdictPlanner("de");
 const shadowPath = "Worter/de/Shadow/Lexeme/VERB/schreiten.md";
-const gehenPath = lemmaNotePath(gehen).path;
-const laufenPath = lemmaNotePath(laufen).path;
-const schreitenPath = lemmaNotePath(schreiten).path;
+const gehenPath = legacyLemmaNotePath(gehen).path;
+const laufenPath = legacyLemmaNotePath(laufen).path;
+const schreitenPath = legacyLemmaNotePath(schreiten).path;
 
 const schreitenNote: AddNewNoteRequest<"de"> = {
 	draft: {
