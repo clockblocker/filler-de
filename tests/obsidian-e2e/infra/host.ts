@@ -234,8 +234,10 @@ export async function prepareAttachedHost(options: {
 	// new manifests discoverable and guarantees that callbacks orphaned by a
 	// prior fire-and-forget plugin unload cannot survive into this run.
 	await reloadAttachedVault(cli, absoluteVaultPath, pluginIds);
-	await cli.call(["plugin:enable", `id=${options.sources.driverId}`]);
-	await cli.call(["plugin:enable", `id=${options.sources.textfresserId}`]);
+	for (const id of [options.sources.driverId, options.sources.textfresserId])
+		await cli.call(["plugin:enable", `id=${id}`], {
+			completeWhen: (stdout) => stdout.split("\n").includes(`Enabled: ${id}`),
+		});
 
 	return {
 		cleanup: async () => undefined,

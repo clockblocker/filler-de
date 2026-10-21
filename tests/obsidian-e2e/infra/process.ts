@@ -12,6 +12,12 @@ interface RunProcessOptions {
 	readonly env?: NodeJS.ProcessEnv;
 	readonly inherit?: boolean;
 	readonly timeoutMs?: number;
+	/**
+	 * Says the output so far is the whole answer. The process is then
+	 * stopped and its run counts as a success: `obsidian-cli` has been seen
+	 * to print its full answer and not exit until its timeout.
+	 */
+	readonly completeWhen?: (stdout: string) => boolean;
 }
 
 export async function runProcess(
@@ -41,6 +47,12 @@ export async function runProcess(
 			child.stderr?.setEncoding("utf8");
 			child.stdout?.on("data", (chunk: string) => {
 				stdout += chunk;
+				if (settled || !options.completeWhen?.(stdout)) return;
+				settled = true;
+				clearTimeout(timer);
+				child.kill("SIGTERM");
+				setTimeout(() => child.kill("SIGKILL"), 1_000).unref();
+				resolve({ exitCode: 0, stderr: stderr.trim(), stdout: stdout.trim() });
 			});
 			child.stderr?.on("data", (chunk: string) => {
 				stderr += chunk;

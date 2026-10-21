@@ -166,10 +166,14 @@ successful runs remove their temporary artifact directory.
 A CLI timeout names the driver request that got no answer. Each wait in
 the driver gives up within 30 seconds and answers an error, and in a timed
 full run (#118) the slowest request took 8.5 seconds and `beginScenario`
-about 3, so a 45-second CLI timeout points at an answer lost between
-Obsidian and `obsidian-cli`, not at a slow Textfresser. `create-more-files` has hit it now and then in attached
-mode, where the test window shares one Obsidian process with the user's own
-vault, and passed when run again; it has not been reproduced in isolation.
+about 3, so a 45-second CLI timeout points at the transport, not at a slow
+Textfresser. `obsidian-cli` has been seen to print its whole answer and then
+not exit (`plugin:enable` printed `Enabled: …` and hung for 30 seconds), so a
+call ends as soon as its output is complete: a whole JSON value for driver
+requests, the `Enabled:` line for `plugin:enable`. `create-more-files` hit a
+45-second timeout now and then in attached mode, where the test window shares
+one Obsidian process with the user's own vault; it passed when run again and
+has not been reproduced since.
 
 The runner never retries a mutation. Every mutation carries a request ID plus
 the expected Textfresser instance and generation; a reload or ambiguous
