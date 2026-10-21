@@ -2585,7 +2585,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		),
 	);
 
-	/** Starts a table re-render in the background, unless one runs. */
+	/** Starts a table re-render in the background, unless one is in flight. */
 	function startTables(): Effect.Effect<void> {
 		return Effect.suspend(() => {
 			if (tablesRunning || closed) return Effect.void;
@@ -2600,12 +2600,19 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			);
 		});
 	}
-	const refreshTables = Effect.suspend(() =>
-		tablesRunning && tablesRun !== undefined
-			? Fiber.join(tablesRun)
-			: Effect.sync(() => {
-					tablesRunning = true;
-				}).pipe(Effect.andThen(tablesLoop)),
+	/** Starts a run unless one is in flight, and waits for it. */
+	const refreshTables = startTables().pipe(
+		Effect.andThen(
+			Effect.suspend(() =>
+				closed || tablesRun === undefined
+					? Effect.succeed<TablesRerendered>({
+							lemmas: 0,
+							notes: 0,
+							remaining: 0,
+						})
+					: Fiber.join(tablesRun),
+			),
+		),
 	);
 
 	const bulkSubscription = yield* vault
