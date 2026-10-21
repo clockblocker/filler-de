@@ -27,7 +27,13 @@ import {
 import type {
 	CleanupRelationsSlice,
 	LoadReadingEntryContextRequest,
+	OccurrenceSlice,
+	OccurrenceSliceRequest,
 	ReadingEntryContext,
+	ReevaluateShadowsRequest,
+	ReevaluateShadowsSlice,
+	RekeySurfacesSlice,
+	RekeySurfacesSliceRequest,
 } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
 import { Effect, Semaphore } from "effect";
@@ -71,7 +77,11 @@ import {
 	type RelationEdge,
 	relationEdgesOf,
 } from "./note-index";
-import { loadCleanupRelationsContext, loadReadingEntryContext } from "./slices";
+import {
+	loadCleanupRelationsContext,
+	loadReadingEntryContext,
+	loadReevaluateShadowsContext,
+} from "./slices";
 import { type StagedNote, stageChanges } from "./stage-changes";
 import {
 	createOnlySplitPath,
@@ -154,6 +164,27 @@ export type DumdictVaultStore = {
 			readonly locator: PendingSemanticRelationRecord<"de">["locator"];
 		}[];
 	}) => Effect.Effect<CleanupRelationsSlice<"de">>;
+	/**
+	 * dumdict's `reevaluateShadows` slice. A host plans it after a Lemma
+	 * note is removed, with the removed Lemma (#113).
+	 */
+	readonly loadReevaluateShadowsContext: (
+		request: Omit<ReevaluateShadowsRequest<"de">, "baseRevision">,
+	) => Effect.Effect<ReevaluateShadowsSlice<"de">, DictionaryRequestError>;
+	/**
+	 * dumdict's `removeOccurrence` slice. The store keeps no Attestation
+	 * Links yet, so it holds no Lemma for any ref.
+	 */
+	readonly loadOccurrenceSlice: (
+		request: OccurrenceSliceRequest,
+	) => Effect.Effect<OccurrenceSlice<"de">>;
+	/**
+	 * dumdict's `rekeySurfaces` slice: the stored Surface Entries with the
+	 * requested ids. No Reading holds a link to name them yet.
+	 */
+	readonly loadRekeySurfacesSlice: (
+		request: RekeySurfacesSliceRequest<"de">,
+	) => Effect.Effect<RekeySurfacesSlice<"de">>;
 	/**
 	 * Applies a plan all-or-nothing against its base revision. Every note
 	 * it writes shows the inverse relations of the committed state. Once the
@@ -1239,6 +1270,15 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				const view = index;
 				return loadCleanupRelationsContext(view, revision(), request);
 			}),
+		// TODO(#113): answer the Lemmas whose Readings hold the refs, once the
+		// store keeps Attestation Links.
+		loadOccurrenceSlice: () =>
+			Effect.sync(() => ({
+				claimingReadings: [],
+				lemmas: [],
+				pendingRelationsMatchingLemmas: [],
+				revision: revision(),
+			})),
 		loadReadingEntryContext: (request) =>
 			Effect.try({
 				catch: (cause) =>
@@ -1248,6 +1288,37 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					}),
 				try: () => loadReadingEntryContext(index, revision(), request),
 			}),
+		loadReevaluateShadowsContext: (request) =>
+			Effect.try({
+				catch: (cause) =>
+					new DictionaryRequestError({
+						cause,
+						message: message(cause),
+					}),
+				try: () =>
+					loadReevaluateShadowsContext(index, revision(), request),
+			}),
+		// TODO(#113): add the Readings whose Attestation Links name the ids.
+		loadRekeySurfacesSlice: ({ surfaceIds }) =>
+			read((view) => ({
+				readings: [],
+				revision: revision(),
+				surfaces: [...new Set(surfaceIds)].flatMap((id) => {
+					const entry = view.surface(id);
+					return entry
+						? [
+								{
+									attestations: entry.attestations,
+									attestedTranslations:
+										entry.attestedTranslations,
+									id: entry.id,
+									notes: entry.notes,
+									ownerLemma: entry.ownerLemma,
+								},
+							]
+						: [];
+				}),
+			})),
 		readingLocation: (reading) =>
 			read((view) => view.readingLocation(readingKeyOf(reading))),
 		relationEdgesTo: (lemma) =>

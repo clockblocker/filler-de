@@ -196,6 +196,7 @@ export function stubDumgen(stubs: {
 	const unused = () => Effect.die(new Error("not stubbed"));
 	const dumgen: Dumgen = {
 		knowledge: {
+			accumulateTranslations: unused,
 			produce: (input) =>
 				Effect.gen(function* () {
 					calls.knowledge.push(input);
@@ -206,6 +207,7 @@ export function stubDumgen(stubs: {
 					return {
 						changes: produced.changes,
 						failures: [],
+						paradigmChanges: [],
 						pendingRelations: produced.pendingRelations ?? [],
 					};
 				}),
@@ -229,7 +231,7 @@ export function stubDumgen(stubs: {
 	return { calls, dumgen };
 }
 
-/** The base text and always-stored structure a stub produces for whatever its request asks. */
+/** The base text a stub produces for whatever its request asks. */
 export const baseTextKnowledge: KnowledgeStub = (input) => {
 	const changes: Dumrel.KnowledgeChange<Dumling.Reading<"de">>[] = [];
 	const request = input.request;
@@ -247,14 +249,6 @@ export const baseTextKnowledge: KnowledgeStub = (input) => {
 			kind: "Contribute",
 			language: language as "en",
 			value: [`${input.reading.lemma.canonicalForm} (${language})`],
-		});
-	if (request.plural === null)
-		changes.push({ aspect: "plural", kind: "Contribute", value: ["Seen"] });
-	if (request.conjugationClass === null)
-		changes.push({
-			aspect: "conjugationClass",
-			kind: "Contribute",
-			value: ["Weak"],
 		});
 	return { changes };
 };

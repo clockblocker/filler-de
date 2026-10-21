@@ -145,9 +145,13 @@ describe("strong verbs without a stored Präteritum", () => {
 	});
 
 	it("a verb with no stored class gets the same reduced table", () => {
-		expect(deriveInflection(input(verb("passen")))).toBe(
+		expect(deriveInflection(input(verb("passen"), {}))).toBe(
 			"Präsens: ich passe, wir passen, ihr passt, sie passen",
 		);
+	});
+
+	it("a verb with no principal parts at all gets no table (#120)", () => {
+		expect(deriveInflection(input(verb("passen")))).toBeUndefined();
 	});
 });
 

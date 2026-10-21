@@ -126,16 +126,15 @@ export const NOTE_PLACEHOLDER = "*You can write here*";
  * Where each typed Block shows. `head` Blocks stand with the part's marker
  * and its header or surface line; those other than `header` and `surface`
  * hold data only and render nothing, as the dictionary notes showed it: the
- * transcription in the header, the inflection classes and principal parts
- * in the Flexion table. Blocks of one section stand together in canonical
- * order, and the first one with a rendering carries the section's title.
+ * transcription in the header. Blocks of one section stand together in
+ * canonical order, and the first one with a rendering carries the section's
+ * title.
  */
 export const BLOCK_SECTIONS: Readonly<
 	Record<TypedBlockKind, SectionKind | "head">
 > = {
 	attestation: "kontexte",
 	attested_translation: "translations",
-	conjugation_class: "head",
 	definition: "definition",
 	formula_role: "art",
 	header: "head",
@@ -148,15 +147,10 @@ export const BLOCK_SECTIONS: Readonly<
 	notes_placeholder: "note",
 	notes_title: "note",
 	participle_source: "partizip",
-	past_participle: "head",
 	pending_relation: "synonyme",
-	plural: "head",
-	present_singular: "head",
-	preterite: "head",
 	reading: "head",
 	relation: "synonyme",
 	saying_type: "art",
-	subjunctive_past: "head",
 	surface: "head",
 	tags: "tags",
 	transcription: "head",
@@ -373,11 +367,22 @@ function renderComplement(complement: unknown, links: LinkRenderer): string {
 
 /**
  * Visible renderings of serialized Blocks, derived from their payloads. A
- * kind with none, such as `plural`, keeps its payload out of sight.
+ * kind with none, such as `reading`, keeps its payload out of sight.
  */
 export const RENDERERS: Partial<Record<TypedBlockKind, Renderer>> = {
-	// A blank line between embeds, as the dictionary notes spaced them.
-	attestation: (value) => list(value).map(text).join("\n\n"),
+	// A blank line between embeds, as the dictionary notes spaced them. A
+	// Reading's payload is its Attestation Links, shown by their refs; a
+	// Surface's is its refs.
+	attestation: (value) =>
+		list(value)
+			.map((attestation) =>
+				text(
+					typeof attestation === "string"
+						? attestation
+						: field(attestation, "ref"),
+				),
+			)
+			.join("\n\n"),
 	attested_translation: (value) => {
 		const words = list(value).map(text);
 		return words.length === 0 ? undefined : `*${words.join(", ")}*`;
@@ -390,13 +395,24 @@ export const RENDERERS: Partial<Record<TypedBlockKind, Renderer>> = {
 	notes: text,
 	participle_source: (value, links) =>
 		`${links.lemma(field(value, "verb") as Dumling.Lemma)} (${text(field(value, "meaning"))})`,
-	pending_relation: (value, links) =>
-		relationLines(
-			list(value).map((pending) => [
-				text(field(pending, "relation")),
-				[links.shadow(field(pending, "target") as Dumrel.UnitShadow)],
-			]),
-		),
+	// A resolved Shadow relation shows through the `relation` Block's claim.
+	pending_relation: (value, links) => {
+		const unresolved = list(value).filter(
+			(pending) => field(pending, "resolvedLemma") === undefined,
+		);
+		return unresolved.length === 0
+			? undefined
+			: relationLines(
+					unresolved.map((pending) => [
+						text(field(pending, "relation")),
+						[
+							links.shadow(
+								field(pending, "target") as Dumrel.UnitShadow,
+							),
+						],
+					]),
+				);
+	},
 	relation: (value, links) =>
 		relationLines(
 			Object.entries(value as Record<string, unknown>)

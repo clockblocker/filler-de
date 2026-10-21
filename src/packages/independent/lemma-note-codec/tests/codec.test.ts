@@ -20,6 +20,14 @@ const title = (kind: string, text: string) =>
 const MUTTER_HEADER =
 	"👩 die [[Worter/de/Lexeme/NOUN/Fem/Mutter|Mutter]], [ˈmʊtɐ ♫](https://youglish.com/pronounce/Mutter/german)";
 
+/** A stand-in table cell per Mutter Reading, for the projection hooks. */
+const pluralOf = (reading: object) =>
+	"emojiDescription" in reading && reading.emojiDescription === "👩"
+		? "Mütter"
+		: "emojiDescription" in reading && reading.emojiDescription === "🔩"
+			? "Muttern"
+			: "";
+
 describe("round trips for every German Family", () => {
 	for (const [family, fixture] of Object.entries(familyFixtures)) {
 		it(`${family}: parse → serialize → parse keeps the records`, () => {
@@ -52,7 +60,6 @@ describe("round trips for every German Family", () => {
 		expect(aufstehen?.knowledge?.valency).toEqual(
 			source?.knowledge?.valency,
 		);
-		expect(aufstehen?.knowledge?.preterite).toEqual(["stand auf"]);
 		const [ihm] = validData(
 			serialize(undefined, syncretismData),
 		).readingEntries;
@@ -65,12 +72,38 @@ describe("round trips for every German Family", () => {
 	it("keeps both Readings, owned Surfaces and pending relations of Mutter", () => {
 		const data = validData(serialize(undefined, nounData));
 		expect(
-			data.readingEntries.map((entry) => entry.knowledge?.plural),
-		).toEqual([["Mütter"], ["Muttern"]]);
+			data.readingEntries.map((entry) => entry.knowledge?.translations),
+		).toEqual([{ en: ["mother"], ru: ["мать", "мама"] }, { en: ["nut"] }]);
 		expect(data.ownedSurfaceEntries).toHaveLength(1);
 		expect(
 			data.pendingRelations.map((record) => record.pending.relation),
 		).toEqual(["hypernym", "antonym"]);
+	});
+
+	it("keeps a resolved Shadow relation's Lemma and shows it through the claim alone", () => {
+		const [hypernym, antonym] = nounData.pendingRelations;
+		if (!(hypernym && antonym)) throw new Error("Expected two records");
+		const vater = {
+			canonicalForm: "Vater",
+			coreFeatures: { gender: "Masc" },
+			family: "Lexeme",
+			kind: "NOUN",
+			language: "de",
+			unitKind: "Lemma",
+		} as const;
+		const resolved = { ...antonym, resolvedLemma: vater };
+		const markdown = serialize(undefined, {
+			...nounData,
+			pendingRelations: [hypernym, resolved],
+		});
+		expect(validData(markdown).pendingRelations).toEqual([
+			hypernym,
+			resolved,
+		]);
+		expect(markdown).toContain(
+			"⊃ [[Worter/e/elt/elter/elternteil|Elternteil]]",
+		);
+		expect(markdown).not.toContain("≠ [[Worter/v/vat/vater/vater|Vater]]");
 	});
 
 	it("keeps notes, % and marker-like text inside payloads", () => {
@@ -112,11 +145,12 @@ describe("round trips for every German Family", () => {
 		]) {
 			expect(markdown.split(embed)).toHaveLength(2);
 		}
+		expect(markdown).toContain('"ref":"!\\u005b\\u005bScroll#^3|^]]"');
 		expect(markdown).toContain(
-			' ["!\\u005b\\u005bScroll#^3|^]]","!\\u005b\\u005bOther Scroll#^7|^]]"]%%',
+			'"ref":"!\\u005b\\u005bOther Scroll#^7|^]]"',
 		);
 		const [mother] = validData(markdown).readingEntries;
-		expect(mother?.attestations).toEqual([
+		expect(mother?.attestationLinks.map(({ ref }) => ref)).toEqual([
 			"![[Scroll#^3|^]]",
 			"![[Other Scroll#^7|^]]",
 		]);
@@ -297,7 +331,7 @@ describe("the document layer", () => {
 describe("user text around renderings", () => {
 	const projections: Projections<"de"> = {
 		inflection: ({ entry }) =>
-			`| Nom | ${entry.knowledge?.plural?.toString() ?? ""} |\n| Gen | x |`,
+			`| Nom | ${pluralOf(entry.reading)} |\n| Gen | x |`,
 		inverseRelations: ({ entry }) => [
 			{
 				provenance: "inferred",
@@ -511,7 +545,7 @@ describe("projections", () => {
 		const markdown = serialize(undefined, nounData, {
 			projections: {
 				inflection: ({ entry }) =>
-					`| Nom | ${entry.knowledge?.plural?.toString() ?? ""} |\n\n| Gen | x |`,
+					`| Nom | ${pluralOf(entry.reading)} |\n\n| Gen | x |`,
 				inverseRelations: ({ entry }) => [
 					{
 						provenance: "inferred",

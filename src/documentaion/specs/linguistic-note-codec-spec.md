@@ -126,11 +126,10 @@ Rows are in canonical order (see Layout).
 | `valency` | Serialized | `ReadingEntry.knowledge.valency` |
 | `participle_source` | Serialized | `ReadingEntry.knowledge.participleSource` |
 | `locution_type`, `saying_type`, `formula_role` | Serialized | the matching `ReadingEntry.knowledge` fields |
-| `conjugation_class` | Serialized | `ReadingEntry.knowledge.conjugationClass`; shown in `tags` |
 | `inflection_embed` | Projection | `![[<lemma note>#^<block id>\|…]]`: the Lemma note's table of this Reading's Licence Group |
 | `tags` | Projection | Tags derived from the Lemma's route and Core Features and the Reading's Knowledge |
 
-Principal parts (`plural`, `preterite`, `presentSingular`, `pastParticiple`, `subjunctivePast`) leave Reading Knowledge for the Lemma Paradigm (texteater#1226). A serialized Block whose field is absent or empty is omitted. The codec adds no Block for a Knowledge aspect the route's Knowledge Policy does not apply, and a new dumrel aspect fails to compile until it gets a Block.
+Principal parts (`plural`, `conjugationClass`, `preterite`, `presentSingular`, `pastParticiple`, `subjunctivePast`) leave Reading Knowledge for the Lemma Paradigm (texteater#1226). A serialized Block whose field is absent or empty is omitted. The codec adds no Block for a Knowledge aspect the route's Knowledge Policy does not apply, and a new dumrel aspect fails to compile until it gets a Block.
 
 ### Dropped
 

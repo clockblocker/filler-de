@@ -63,7 +63,7 @@ export function readingEntry(
 	content: Partial<Omit<ReadingEntry<"de">, "reading">> = {},
 ): ReadingEntry<"de"> {
 	return {
-		attestations: [],
+		attestationLinks: [],
 		attestedTranslations: [],
 		notes: "",
 		reading,
@@ -116,16 +116,6 @@ export const createPending = (
 	preconditions: [],
 	record,
 	type: "createPendingSemanticRelation",
-});
-
-export const addAttestation = (
-	reading: Dumling.Reading<"de">,
-	value: string,
-): PlannedChangeOp<"de"> => ({
-	ops: [{ kind: "addAttestation", value }],
-	preconditions: [],
-	reading,
-	type: "patchReading",
 });
 
 export const contribute = (

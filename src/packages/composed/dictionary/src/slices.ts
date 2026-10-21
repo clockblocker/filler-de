@@ -5,11 +5,17 @@ import {
 	type ReadingEntry,
 	type StoreRevision,
 } from "dumdict";
-import { derivePendingSemanticRelationLocator } from "dumdict/pending";
+import {
+	derivePendingSemanticRelationLocator,
+	reevaluatedPendingEntryIds,
+	unitShadowOf,
+} from "dumdict/pending";
 import type {
 	CleanupRelationsSlice,
 	LoadReadingEntryContextRequest,
 	ReadingEntryContext,
+	ReevaluateShadowsRequest,
+	ReevaluateShadowsSlice,
 } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
@@ -100,7 +106,11 @@ function relationNeighbourhood(
 		for (const [key, targets] of readingTargets)
 			if (
 				readings.has(key) &&
-				targets.some((target) => !readings.has(target))
+				// A claim on a Reading no note holds, such as one a removed
+				// Lemma had, stays: re-evaluation is what moves it.
+				targets.some(
+					(target) => !readings.has(target) && index.reading(target),
+				)
 			) {
 				readings.delete(key);
 				pruned = true;
@@ -163,9 +173,18 @@ export function loadReadingEntryContext(
 	const lemmaKey = lemmaKeyOf(reading.lemma);
 	const existingReading = index.reading(readingKey);
 	const reads = existingReading ? { existingReading } : {};
+	const existingLemma = index.lemmaData(lemmaKey)?.lemmaRecord;
+	const lemmaRead = existingLemma ? { existingLemma } : {};
+	const lemmaReadings = (index.lemmaData(lemmaKey)?.readingEntries ?? []).map(
+		(entry) => entry.reading,
+	);
+	/** The stored Shadow relations creating the Reading's Lemma re-evaluates. */
+	const matching = index.pendingTargeting(shadowKeyOf(reading.lemma));
 
 	if (request.intent === "applyGeneratedKnowledge") {
 		return {
+			lemmaReadings,
+			...lemmaRead,
 			exactPendingRelations: exactPending(
 				index,
 				reading,
@@ -184,15 +203,42 @@ export function loadReadingEntryContext(
 		};
 	}
 
-	const existingLemma = index.lemmaData(lemmaKey)?.lemmaRecord;
-	const lemmaRead = existingLemma ? { existingLemma } : {};
 	if (request.intent === "ensureReadingEntry")
-		return { intent: request.intent, revision, ...lemmaRead, ...reads };
-
-	if (request.intent === "ensureOwnedSurface") {
-		const surface = index.surface(makeSurfaceId("de", request.surface));
 		return {
-			existingOwnedSurfaces: surface ? [surface] : [],
+			intent: request.intent,
+			pendingRelationsMatchingProposedLemma: matching,
+			revision,
+			...lemmaRead,
+			...reads,
+			...relationNeighbourhood(index, {
+				sourceLemmaKeys: [lemmaKey],
+				sourceReadingKeys: matching.map(({ sourceReading }) =>
+					readingKeyOf(sourceReading),
+				),
+				targetShadowKeys: matching.map(({ pending }) =>
+					shadowOf(pending),
+				),
+			}),
+		};
+
+	if (
+		request.intent === "ensureOwnedSurface" ||
+		request.intent === "recordOccurrence"
+	) {
+		const surface = index.surface(makeSurfaceId("de", request.surface));
+		const existingOwnedSurfaces = surface ? [surface] : [];
+		if (request.intent === "ensureOwnedSurface")
+			return {
+				existingOwnedSurfaces,
+				intent: request.intent,
+				revision,
+				...lemmaRead,
+				...reads,
+			};
+		// TODO(#113): the store keeps no Attestation Links yet, so none holds the ref.
+		return {
+			attestationLinksWithRefs: [],
+			existingOwnedSurfaces,
 			intent: request.intent,
 			revision,
 			...lemmaRead,
@@ -217,8 +263,9 @@ export function loadReadingEntryContext(
 	const proposedPending = request.relations.flatMap(({ target }) =>
 		target.kind === "pending" ? [target.pending] : [],
 	);
-	const matching = index.pendingTargeting(shadowKeyOf(reading.lemma));
 	return {
+		// TODO(#113): the store keeps no Attestation Links yet, so none holds the draft's refs.
+		attestationLinksWithRefs: [],
 		exactPendingRelations: exactPending(index, reading, proposedPending),
 		existingOwnedSurfaces: surfaceIds.flatMap((id) => {
 			const entry = index.surface(id);
@@ -229,6 +276,7 @@ export function loadReadingEntryContext(
 			return record ? [record] : [];
 		}),
 		intent: request.intent,
+		lemmaReadings,
 		pendingRelationsMatchingProposedLemma: matching,
 		revision,
 		...lemmaRead,
@@ -274,6 +322,51 @@ export function loadCleanupRelationsContext(
 			targetShadowKeys: pendingRelations.map(({ pending }) =>
 				shadowOf(pending),
 			),
+		}),
+	};
+}
+
+/**
+ * The slice `reevaluateShadows` plans from: every stored Shadow relation
+ * whose Pending Entry ID the request names, every stored Reading that claims
+ * a removed Lemma or one of its Readings, and their neighbourhood, which
+ * holds the Lemmas the requested and the removed Lemmas' Shadows name.
+ */
+export function loadReevaluateShadowsContext(
+	index: NoteIndex,
+	revision: StoreRevision,
+	request: Omit<ReevaluateShadowsRequest<"de">, "baseRevision">,
+): ReevaluateShadowsSlice<"de"> {
+	const ids = new Set<string>(reevaluatedPendingEntryIds(request));
+	const removed = request.removedLemmas ?? [];
+	const shadowKeys = [
+		...new Set(
+			[...(request.shadows ?? []), ...removed.map(unitShadowOf)].map(
+				shadowKeyOf,
+			),
+		),
+	];
+	const pendingRelations = shadowKeys
+		.flatMap((key) => index.pendingTargeting(key))
+		.filter(({ locator }) => ids.has(locator.targetPendingId));
+	const claimants = removed.flatMap((lemma) =>
+		index
+			.edgesTo(lemmaKeyOf(lemma))
+			.map(({ source }) => readingKeyOf(source)),
+	);
+	return {
+		pendingRelations,
+		revision,
+		...relationNeighbourhood(index, {
+			sourceReadingKeys: [
+				...new Set([
+					...pendingRelations.map(({ sourceReading }) =>
+						readingKeyOf(sourceReading),
+					),
+					...claimants,
+				]),
+			],
+			targetShadowKeys: shadowKeys,
 		}),
 	};
 }

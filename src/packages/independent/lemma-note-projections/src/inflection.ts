@@ -70,7 +70,7 @@ function germanTable(input: ProjectionInput): InflectionTable | undefined {
 	if (closed !== undefined) return closed;
 	if (lemma.family !== "Lexeme") return undefined;
 	const core = coreOf(lemma);
-	const knowledge = input.entry.knowledge;
+	const knowledge = input.principalParts;
 	switch (lemma.kind) {
 		case "NOUN": {
 			if (knowledge?.plural === undefined) return undefined;
@@ -83,12 +83,13 @@ function germanTable(input: ProjectionInput): InflectionTable | undefined {
 			return declension === undefined ? undefined : nounTable(declension);
 		}
 		case "VERB":
+			if (knowledge === undefined) return undefined;
 			return conjugateGermanVerb({
 				canonicalForm: lemma.canonicalForm,
-				conjugationClasses: knowledge?.conjugationClass,
-				pastParticiple: knowledge?.pastParticiple,
-				presentSingular: knowledge?.presentSingular,
-				preterite: knowledge?.preterite,
+				conjugationClasses: knowledge.conjugationClass,
+				pastParticiple: knowledge.pastParticiple,
+				presentSingular: knowledge.presentSingular,
+				preterite: knowledge.preterite,
 				reflexive:
 					core.lexicallyReflexive === "Acc" ||
 					core.lexicallyReflexive === "Dat"
@@ -98,7 +99,7 @@ function germanTable(input: ProjectionInput): InflectionTable | undefined {
 					typeof core.hasSepPrefix === "string"
 						? core.hasSepPrefix
 						: null,
-				subjunctivePast: knowledge?.subjunctivePast,
+				subjunctivePast: knowledge.subjunctivePast,
 			});
 		case "ADJ":
 		case "ADV":
@@ -116,7 +117,7 @@ function germanTable(input: ProjectionInput): InflectionTable | undefined {
 
 /**
  * A Reading's inflection table as Markdown, derived without a model from
- * its Lemma, its stored Knowledge and dumcorpus. Undefined, so the codec
+ * its Lemma, its principal parts and dumcorpus. Undefined, so the codec
  * leaves the Block out, for a language other than German or a Reading the
  * data cannot fill a table for. Its forms are plain text, since no note
  * holds an inflected form, except that a form spelled as the Lemma links

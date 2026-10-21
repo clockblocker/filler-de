@@ -318,13 +318,18 @@ export function serialize<L extends Dumling.Language>(
 			entry.knowledge ?? {};
 		const pending = pendingByReading.get(key) ?? [];
 		const payloads: Partial<Record<SerializedBlockKind, unknown>> = {
-			attestation: entry.attestations,
+			attestation: entry.attestationLinks,
 			attested_translation: entry.attestedTranslations,
 			notes: entry.notes,
 			pending_relation:
 				pending.length === 0
 					? undefined
-					: pending.map(({ pending: relation }) => relation),
+					: pending.map(({ pending: relation, resolvedLemma }) =>
+							// A resolved Shadow relation keeps the Lemma it resolved to.
+							resolvedLemma === undefined
+								? relation
+								: { ...relation, resolvedLemma },
+						),
 			reading:
 				"emojiDescription" in entry.reading
 					? entry.reading.emojiDescription

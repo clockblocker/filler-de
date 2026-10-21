@@ -136,12 +136,10 @@ class StagedView {
 				return !this.hasPending(precondition.record);
 			case "pendingRelationMissing":
 				return this.hasPending(precondition.record);
-			case "readingAttestationMissing":
-				return (
-					this.readingEntry(
-						precondition.reading,
-					)?.attestations.includes(precondition.value) ?? false
-				);
+			case "attestationMissing":
+			case "attestationLinkExists":
+				// `refuseUnsupported` throws for these before any is checked.
+				throw unsupported(`the ${precondition.kind} precondition`);
 		}
 	}
 
@@ -176,8 +174,58 @@ function readingIndex(
 	);
 }
 
+const unsupported = (what: string) =>
+	// TODO(#113): store Attestation Links, Lemma Paradigms and deletions.
+	new Error(
+		`The dictionary store does not take ${what} yet: it keeps no Attestation Links or Lemma Paradigms and deletes no record (#113).`,
+	);
+
+/**
+ * Throws for a change the store cannot hold yet, before any precondition is
+ * checked: it runs dumdict's storage contract with `attestationLinks` and
+ * `paradigms` off, so it refuses every change that carries or checks an
+ * Attestation Link, every deletion and every Lemma Paradigm.
+ */
+function refuseUnsupported(change: PlannedChangeOp<"de">): void {
+	for (const precondition of change.preconditions)
+		if (
+			precondition.kind === "attestationMissing" ||
+			precondition.kind === "attestationLinkExists"
+		)
+			throw unsupported(`the ${precondition.kind} precondition`);
+	switch (change.type) {
+		case "createLemma":
+			if (change.record.paradigm !== undefined)
+				throw unsupported("a Lemma Paradigm");
+			return;
+		case "createReading":
+			if (change.entry.attestationLinks.length > 0)
+				throw unsupported("an Attestation Link");
+			return;
+		case "patchReading":
+			for (const op of change.ops)
+				if (op.kind !== "applyKnowledgeChange")
+					throw unsupported(`an ${op.kind} op`);
+			return;
+		case "deleteReading":
+		case "deleteOwnedSurface":
+		case "deleteLemma":
+		case "setLemmaParadigm":
+			throw unsupported(`a ${change.type} change`);
+		case "createOwnedSurface":
+		case "createPendingSemanticRelation":
+		case "deletePendingSemanticRelation":
+			return;
+	}
+}
+
 function apply(view: StagedView, change: PlannedChangeOp<"de">): boolean {
 	switch (change.type) {
+		case "deleteReading":
+		case "deleteOwnedSurface":
+		case "deleteLemma":
+		case "setLemmaParadigm":
+			throw unsupported(`a ${change.type} change`);
 		case "createLemma":
 			view.create(change.record);
 			return true;
@@ -226,13 +274,8 @@ function apply(view: StagedView, change: PlannedChangeOp<"de">): boolean {
 			let entry = note.data.readingEntries[at];
 			if (!entry) return false;
 			for (const op of change.ops) {
-				if (op.kind === "addAttestation") {
-					entry = {
-						...entry,
-						attestations: [...entry.attestations, op.value],
-					};
-					continue;
-				}
+				if (op.kind !== "applyKnowledgeChange")
+					throw unsupported(`an ${op.kind} op`);
 				const knowledgeChange = op.envelope.change;
 				if (
 					knowledgeChange.aspect === "semanticRelations" &&
@@ -262,6 +305,7 @@ export function stageChanges(
 	changes: readonly PlannedChangeOp<"de">[],
 ): StagedChanges {
 	const view = new StagedView(index, revision);
+	for (const change of changes) refuseUnsupported(change);
 	for (const [changeIndex, change] of changes.entries()) {
 		const preconditions = [
 			...change.preconditions,

@@ -1,4 +1,9 @@
-import { makeSurfaceId, type ReadingEntry, type SurfaceEntry } from "dumdict";
+import {
+	type AttestationLink,
+	makeSurfaceId,
+	type ReadingEntry,
+	type SurfaceEntry,
+} from "dumdict";
 import { createPendingSemanticRelationRecord } from "dumdict/pending";
 import { syncretize } from "dumling";
 import type * as Dumling from "dumling/types";
@@ -15,11 +20,24 @@ function readingEntry(
 	content: Partial<Omit<ReadingEntry<De>, "reading">> = {},
 ): ReadingEntry<De> {
 	return {
-		attestations: [],
+		attestationLinks: [],
 		attestedTranslations: [],
 		notes: "",
 		reading,
 		...content,
+	};
+}
+
+/** An Attestation Link of `ref` to `reading`, with the Surface it realized. */
+function link(
+	ref: string,
+	reading: Dumling.Reading<De>,
+	surface?: Dumling.Surface<De>,
+): AttestationLink<De> {
+	return {
+		reading,
+		ref,
+		surfaceId: surface === undefined ? null : makeSurfaceId("de", surface),
 	};
 }
 
@@ -114,11 +132,13 @@ export const nounData: LemmaNoteData<De> = {
 	],
 	readingEntries: [
 		readingEntry(mutterParent, {
-			attestations: ["![[Scroll#^3|^]]", "![[Other Scroll#^7|^]]"],
+			attestationLinks: [
+				link("![[Scroll#^3|^]]", mutterParent, muetterSurface),
+				link("![[Other Scroll#^7|^]]", mutterParent),
+			],
 			attestedTranslations: ["mother"],
 			knowledge: {
 				definition: "A female parent; 100% of the time %% loved.",
-				plural: ["Mütter"],
 				semanticRelations: { synonym: [mama], targetKind: "lemma" },
 				transcription: "ˈmʊtɐ",
 				translations: { en: ["mother"], ru: ["мать", "мама"] },
@@ -127,7 +147,6 @@ export const nounData: LemmaNoteData<De> = {
 		}),
 		readingEntry(mutterNut, {
 			knowledge: {
-				plural: ["Muttern"],
 				translations: { en: ["nut"] },
 			},
 		}),
@@ -169,9 +188,10 @@ export const verbData: LemmaNoteData<De> = {
 	pendingRelations: [],
 	readingEntries: [
 		readingEntry(reading(aufstehen, "🛏️"), {
-			attestations: ["![[Morgen#^2|^]]"],
+			attestationLinks: [
+				link("![[Morgen#^2|^]]", reading(aufstehen, "🛏️")),
+			],
 			knowledge: {
-				conjugationClass: ["Strong"],
 				morphologicalTree: {
 					root: {
 						children: [
@@ -201,7 +221,6 @@ export const verbData: LemmaNoteData<De> = {
 						nodeKind: "structure",
 					},
 				},
-				preterite: ["stand auf"],
 				translations: { en: ["get up", "stand up"] },
 				valency: [
 					{
