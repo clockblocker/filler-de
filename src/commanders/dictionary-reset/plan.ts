@@ -1,8 +1,10 @@
 /**
- * The reset's Collect and plan stages (#65), shared by Dry run and
- * Execute. Collect reads every old note under `Worter/`; the plan finds
- * each attestation's source block and Segment, and decides which freeform
- * Blocks have a regenerated Lemma to go to. Both only read.
+ * The reset's Collect and plan stages (#65, #117), shared by Dry run and
+ * Execute. Collect reads every old note in the source folder, `Worter/` or
+ * a `Worter backup …` folder, and, when the source is a backup, what
+ * `Worter/` holds now; the plan finds each attestation's source block and
+ * Segment, and decides which freeform Blocks have a regenerated Lemma to go
+ * to. Both only read.
  */
 import { Effect } from "effect";
 import type { SourceRange } from "../classify/types";
@@ -17,14 +19,14 @@ import {
 	readOldNote,
 } from "./old-notes";
 
-/** The folder the reset reads and backs up. */
+/** The dictionary's folder, which the reset backs up and regenerates into. */
 export const WORTER = "Worter";
 
 export type OldFile = { readonly path: string; readonly content: string };
 
 export type Collected = {
 	readonly notes: readonly OldNote[];
-	/** Files under `Worter/` that are not Markdown; the backup keeps them too. */
+	/** Files in the folder that are not Markdown; a backup keeps them too. */
 	readonly otherFiles: readonly string[];
 };
 
@@ -84,7 +86,15 @@ type PlannedFreeform = {
 };
 
 export type ResetPlan = {
+	/** The folder the old notes are read from: `Worter` or a backup folder. */
+	readonly source: string;
+	/** The source's notes. */
 	readonly collected: Collected;
+	/**
+	 * `Worter/` as it is now, when the source is a backup folder and `Worter/`
+	 * is there: Execute backs it up first and reads nothing from it.
+	 */
+	readonly current?: Collected;
 	readonly attestations: readonly PlannedAttestation[];
 	readonly freeform: readonly PlannedFreeform[];
 };
@@ -110,10 +120,11 @@ export const targetAttestation = Effect.fnUntraced(function* (
 	note: Pick<OldNote, "path" | "forms">,
 	attestation: OldAttestation,
 	/**
-	 * Folders a source may not lie in: `Worter/` and, once it exists, the
-	 * backup. Classify writes into its source, and these stay untouched.
+	 * Folders a source may not lie in: `Worter/`, the folder the old notes
+	 * come from and, once it exists, the new backup. Classify writes into
+	 * its source, and these stay untouched.
 	 */
-	protectedFolders: readonly string[] = [WORTER],
+	protectedFolders: readonly string[],
 ): Effect.fn.Return<
 	| ({
 			readonly _tag: "Ready";
@@ -167,13 +178,23 @@ export const targetAttestation = Effect.fnUntraced(function* (
  */
 export const planReset = Effect.fnUntraced(function* (
 	sources: ResetSources,
-	collected: Collected,
+	collect: {
+		readonly source: string;
+		readonly collected: Collected;
+		readonly current?: Collected;
+	},
 ): Effect.fn.Return<ResetPlan> {
+	const { collected, source } = collect;
 	const attestations: PlannedAttestation[] = [];
 	const seen = new Map<string, number>();
 	for (const note of collected.notes)
 		for (const attestation of note.attestations) {
-			const target = yield* targetAttestation(sources, note, attestation);
+			const target = yield* targetAttestation(
+				sources,
+				note,
+				attestation,
+				[...new Set([WORTER, source])],
+			);
 			const base = {
 				attestation,
 				forms: note.forms,
@@ -220,5 +241,11 @@ export const planReset = Effect.fnUntraced(function* (
 					} as const),
 		})),
 	);
-	return { attestations, collected, freeform };
+	return {
+		attestations,
+		collected,
+		...(collect.current === undefined ? {} : { current: collect.current }),
+		freeform,
+		source,
+	};
 });

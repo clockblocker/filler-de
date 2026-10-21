@@ -1,13 +1,16 @@
 /**
- * "Reset dictionary from old notes…" (#65): one pipeline in two modes.
+ * "Reset dictionary from old notes…" (#65, #117): one pipeline in two modes,
+ * over one source folder of old notes, `Worter/` or a `Worter backup …`
+ * folder (`source.ts`).
  *
  * - **Dry run**: Collect and plan, then the report. It reads only: no
  *   backup, no write, no provider call.
- * - **Execute**: Collect and plan; move `Worter/` to a dated backup folder
- *   and check every old file arrived there; regenerate each attestation by
- *   running Classify over its Segment, through the same `UnitResolver` and
- *   dictionary store as the command; re-attach each freeform Block to the
- *   Lemma regenerated for its note's headword; write the report note.
+ * - **Execute**: Collect and plan; move `Worter/`, whatever it holds, to a
+ *   new dated backup folder and check every file arrived there; regenerate
+ *   each attestation by running Classify over its Segment, through the same
+ *   `UnitResolver` and dictionary store as the command, into Lemma, Reading
+ *   and Crossroad notes; re-attach each freeform Block to the Reading note
+ *   of its sense (`freeform-target.ts`); write the report note.
  *
  * Nothing here deletes: the vault port has no delete, the backup is a
  * move, and every write either creates a new file or goes through the
@@ -18,7 +21,7 @@
  * more; the freeform text of what was regenerated is still re-attached,
  * and the report still written.
  */
-import { Cause, Deferred, Effect, Option, Schema } from "effect";
+import { Cause, Deferred, Effect, Option } from "effect";
 import { getErrorMessage } from "../../utils/get-error-message";
 import {
 	type ClassifyError,
@@ -27,69 +30,25 @@ import {
 } from "../classify/classify-selection";
 import type { SegmentationCache } from "../classify/segmentation-cache";
 import type { UnitResolver } from "../classify/unit-resolver";
+import { freeformTarget } from "./freeform-target";
+import { layoutOf, type ResetLayout } from "./layout";
 import {
+	type Collected,
 	collectOldNotes,
 	headwordKey,
-	type OldFile,
 	planReset,
 	type ResetPlan,
-	type ResetSources,
 	targetAttestation,
 	WORTER,
 } from "./plan";
+import { type ResetDictionary, ResetFailed, type ResetVault } from "./ports";
 import {
 	type FreeformResult,
 	type RegenerationResult,
 	type ResetExecution,
 	renderReport,
 } from "./report";
-
-export class ResetFailed extends Schema.TaggedError<ResetFailed>()(
-	"ResetFailed",
-	{
-		cause: Schema.Defect(),
-		message: Schema.String,
-	},
-) {}
-
-/** The reads and the few writes the reset makes, without any delete. */
-export type ResetVault = ResetSources & {
-	/** Every file below `folder`; undefined when there is no such folder. */
-	readonly listFolder: (folder: string) => Effect.Effect<
-		| {
-				readonly markdown: readonly OldFile[];
-				readonly other: readonly string[];
-		  }
-		| undefined,
-		ResetFailed
-	>;
-	readonly exists: (path: string) => Effect.Effect<boolean>;
-	/**
-	 * Moves a folder with everything in it, rewriting no file's content, not
-	 * even links to the moved notes; fails rather than merge.
-	 */
-	readonly moveFolder: (
-		from: string,
-		to: string,
-	) => Effect.Effect<void, ResetFailed>;
-	/** Creates a Markdown note; fails rather than overwrite one. */
-	readonly createNote: (
-		path: string,
-		content: string,
-	) => Effect.Effect<void, ResetFailed>;
-};
-
-/** The dictionary store and the Knowledge queue, as the reset uses them. */
-export type ResetDictionary = {
-	/** Reads `Worter/` again after the backup moved it through VAM. */
-	readonly rescan: Effect.Effect<void, ResetFailed>;
-	readonly appendFreeform: (request: {
-		readonly path: string;
-		readonly text: string;
-	}) => Effect.Effect<"Appended" | "AlreadyThere", ResetFailed>;
-	/** Waits until no background Knowledge run is going. */
-	readonly settleKnowledge: Effect.Effect<void>;
-};
+import { chooseSource, isOldNote } from "./source";
 
 export type ResetProgress = {
 	readonly stage: "Collect" | "Backup" | "Regenerate" | "Reattach" | "Report";
@@ -108,34 +67,75 @@ export type ExecuteResult = DryRunResult & {
 	readonly reportPath: string;
 };
 
-/** Collect: every old note under `Worter/`, read. */
-const collectWorter = Effect.fnUntraced(function* (vault: ResetVault) {
-	const listed = yield* vault.listFolder(WORTER);
-	if (!listed)
-		return yield* new ResetFailed({
-			cause: WORTER,
-			message: `There is no ${WORTER}/ folder to reset`,
-		});
-	if (listed.markdown.length === 0 && listed.other.length === 0)
-		return yield* new ResetFailed({
-			cause: WORTER,
-			message: `${WORTER}/ is empty; there is nothing to reset`,
-		});
+/** A folder as Collect read it. */
+type ReadFolder = {
+	readonly folder: string;
+	readonly collected: Collected;
+	/** Each note's content as Collect read it, by path. */
+	readonly contents: ReadonlyMap<string, string>;
+};
+
+const readFolder = Effect.fnUntraced(function* (
+	vault: ResetVault,
+	folder: string,
+): Effect.fn.Return<ReadFolder | undefined, ResetFailed> {
+	const listed = yield* vault.listFolder(folder);
+	if (!listed) return undefined;
 	return {
 		collected: collectOldNotes(listed.markdown, listed.other),
-		/** Each note's content as Collect read it, by path. */
 		contents: new Map(
 			listed.markdown.map(({ content, path }) => [path, content]),
-		) as ReadonlyMap<string, string>,
+		),
+		folder,
 	};
 });
+
+const isEmpty = ({ collected }: ReadFolder) =>
+	collected.notes.length === 0 && collected.otherFiles.length === 0;
+
+/**
+ * Collect: every note in the source folder, read, and `Worter/` as it is
+ * now, which is the source itself when the source is `Worter/`.
+ */
+const collect = Effect.fnUntraced(function* (
+	vault: ResetVault,
+	requested: string | undefined,
+) {
+	const folder = yield* chooseSource(vault, requested);
+	const source = yield* readFolder(vault, folder);
+	if (!source)
+		return yield* new ResetFailed({
+			cause: folder,
+			message: `There is no ${folder}/ folder to reset from`,
+		});
+	if (!source.collected.notes.some(isOldNote))
+		return yield* new ResetFailed({
+			cause: folder,
+			message: `${folder}/ holds no old notes, so there is nothing to regenerate from it${folder === WORTER ? `; choose a "${WORTER} backup <date time>" folder that holds them as the source` : ""}`,
+		});
+	const worter =
+		folder === WORTER ? source : yield* readFolder(vault, WORTER);
+	const plan = yield* planReset(vault, {
+		collected: source.collected,
+		source: folder,
+		...(folder !== WORTER && worter !== undefined
+			? { current: worter.collected }
+			: {}),
+	});
+	return { plan, source, worter };
+});
+
+export type ResetOptions = {
+	/** The folder of old notes, as `findSources` lists it; the suggestion when absent. */
+	readonly source?: string;
+};
 
 /** Dry run: Collect, plan and report, reading only. */
 export const dryRunReset = Effect.fn("dryRunReset")(function* (
 	vault: ResetVault,
+	options: ResetOptions = {},
 ): Effect.fn.Return<DryRunResult, ResetFailed> {
-	const { collected } = yield* collectWorter(vault);
-	const plan = yield* planReset(vault, collected);
+	const { plan } = yield* collect(vault, options.source);
 	return { plan, report: renderReport(plan) };
 });
 
@@ -170,41 +170,41 @@ const freePath = Effect.fnUntraced(function* (
 });
 
 /**
- * Reads `Worter/` again right before the move, so an edit since Collect
+ * Reads a folder again right before the move, so an edit since Collect
  * stops the reset while nothing has moved yet.
  */
 const checkUnchanged = Effect.fnUntraced(function* (
 	vault: ResetVault,
-	plan: ResetPlan,
-	contents: ReadonlyMap<string, string>,
+	read: ReadFolder,
 ): Effect.fn.Return<void, ResetFailed> {
-	const now = yield* vault.listFolder(WORTER);
+	const now = yield* vault.listFolder(read.folder);
 	const unchanged =
 		now !== undefined &&
-		now.markdown.length === contents.size &&
+		now.markdown.length === read.contents.size &&
 		now.markdown.every(
-			({ content, path }) => contents.get(path) === content,
+			({ content, path }) => read.contents.get(path) === content,
 		) &&
-		now.other.length === plan.collected.otherFiles.length;
+		now.other.length === read.collected.otherFiles.length;
 	if (!unchanged)
 		return yield* new ResetFailed({
-			cause: WORTER,
-			message: `${WORTER}/ changed while the reset read it. Nothing was moved; run the reset again`,
+			cause: read.folder,
+			message: `${read.folder}/ changed while the reset read it. Nothing was moved; run the reset again`,
 		});
 });
 
 /**
- * Moves `Worter/` to the backup folder, then checks the move: `Worter/` is
- * gone and every file Collect read sits in the backup with the content it
- * read. Anything else stops the reset before it writes anything more. It
- * answers the backup's files that Collect never read.
+ * Moves `Worter/`, old or obsolete notes alike, to the backup folder, then
+ * checks the move: `Worter/` is gone and every file Collect read sits in
+ * the backup with the content it read. Anything else stops the reset
+ * before it writes anything more. It answers the backup's files that
+ * Collect never read.
  */
 const backUp = Effect.fnUntraced(function* (
 	vault: ResetVault,
-	plan: ResetPlan,
-	contents: ReadonlyMap<string, string>,
+	worter: ReadFolder,
 	backupFolder: string,
 ): Effect.fn.Return<readonly string[], ResetFailed> {
+	const { collected, contents } = worter;
 	yield* vault.moveFolder(WORTER, backupFolder);
 	const moved = yield* vault.listFolder(backupFolder);
 	const stop = (message: string) =>
@@ -222,21 +222,21 @@ const backUp = Effect.fnUntraced(function* (
 	const otherFiles = new Set(moved.other);
 	const relocate = (path: string) =>
 		`${backupFolder}${path.slice(WORTER.length)}`;
-	for (const note of plan.collected.notes) {
+	for (const note of collected.notes) {
 		const content = backedUp.get(relocate(note.path));
 		if (content === undefined || content !== contents.get(note.path))
 			return yield* stop(
 				`${relocate(note.path)} is not in the backup as it was read`,
 			);
 	}
-	for (const path of plan.collected.otherFiles)
+	for (const path of collected.otherFiles)
 		if (!otherFiles.has(relocate(path)))
 			return yield* stop(`${relocate(path)} is not in the backup`);
 	// Files that arrived between the last read and the move: kept in the
 	// backup, never read, and named in the report.
 	const planned = new Set([
-		...plan.collected.notes.map(({ path }) => relocate(path)),
-		...plan.collected.otherFiles.map(relocate),
+		...collected.notes.map(({ path }) => relocate(path)),
+		...collected.otherFiles.map(relocate),
 	]);
 	return [...backedUp.keys(), ...otherFiles].filter(
 		(path) => !planned.has(path),
@@ -270,7 +270,7 @@ const regenerateOne = Effect.fnUntraced(function* (
 	vault: ResetVault,
 	plan: ResetPlan,
 	index: number,
-	backupFolder: string,
+	protectedFolders: readonly string[],
 ): Effect.fn.Return<
 	RegenerationResult,
 	never,
@@ -283,7 +283,7 @@ const regenerateOne = Effect.fnUntraced(function* (
 		vault,
 		{ forms: planned.forms, path: planned.notePath },
 		planned.attestation,
-		[WORTER, backupFolder],
+		protectedFolders,
 	);
 	if (target._tag === "Unresolvable")
 		return { _tag: "Unresolved", reason: target.reason };
@@ -316,6 +316,7 @@ const regenerateOne = Effect.fnUntraced(function* (
 	if (resolved?._tag === "Resolved")
 		return {
 			_tag: "Regenerated",
+			lemmaPath: resolved.lemmaPath,
 			linked: resolved.linked,
 			readingPath: resolved.readingPath,
 			scrollPath: target.scrollPath,
@@ -332,6 +333,8 @@ const regenerateOne = Effect.fnUntraced(function* (
 
 export type ExecuteOptions = {
 	readonly vault: ResetVault;
+	/** The folder of old notes the user chose: `Worter` or a backup folder. */
+	readonly source: string;
 	readonly dictionary: ResetDictionary;
 	/** Names the backup folder and the report: `resetStamp(...)`. */
 	readonly stamp: string;
@@ -355,15 +358,14 @@ export const executeReset = Effect.fn("executeReset")(function* (
 		Effect.sync(() => options.onProgress?.(update));
 
 	yield* progress({ done: 0, stage: "Collect", total: 1 });
-	const { collected, contents } = yield* collectWorter(vault);
-	const plan = yield* planReset(vault, collected);
-	const newFormat = collected.notes.filter(
+	const { plan, source, worter } = yield* collect(vault, options.source);
+	const newFormat = (worter?.collected.notes ?? []).filter(
 		({ kind }) => kind === "NewFormat",
 	);
 	if (newFormat.length > 0)
 		return yield* new ResetFailed({
 			cause: newFormat.map(({ path }) => path),
-			message: `${WORTER}/ already holds ${newFormat.length} note${newFormat.length === 1 ? "" : "s"} in the new format, such as ${newFormat[0]?.path}. The reset is for old notes only; nothing changed`,
+			message: `${WORTER}/ already holds ${newFormat.length} note${newFormat.length === 1 ? "" : "s"} of the current layout, such as ${newFormat[0]?.path}. The reset regenerates into a fresh ${WORTER}/ only; nothing changed`,
 		});
 
 	if (yield* Deferred.isDone(cancel))
@@ -373,22 +375,37 @@ export const executeReset = Effect.fn("executeReset")(function* (
 				"The reset was cancelled before the backup; nothing changed",
 		});
 	yield* progress({ done: 0, stage: "Backup", total: 1 });
-	const backupFolder = yield* freePath(
-		vault,
-		`${WORTER} backup ${options.stamp}`,
-	);
-	yield* checkUnchanged(vault, plan, contents);
+	const toMove =
+		worter !== undefined && !isEmpty(worter) ? worter : undefined;
+	const backupFolder =
+		toMove === undefined
+			? undefined
+			: yield* freePath(vault, `${WORTER} backup ${options.stamp}`);
+	yield* checkUnchanged(vault, source);
+	if (toMove !== undefined && toMove !== source)
+		yield* checkUnchanged(vault, toMove);
 	// VAM hides its own move from the store, so the store reads Worter/
 	// again whatever the backup came to.
-	const unplanned = yield* backUp(vault, plan, contents, backupFolder).pipe(
-		Effect.tapError(() => Effect.ignore(dictionary.rescan)),
-	);
+	const unplanned =
+		toMove === undefined || backupFolder === undefined
+			? []
+			: yield* backUp(vault, toMove, backupFolder).pipe(
+					Effect.tapError(() => Effect.ignore(dictionary.rescan)),
+				);
 	const rescanned = yield* Effect.result(dictionary.rescan);
 	const notices: string[] = [];
 	if (unplanned.length > 0)
 		notices.push(
 			`Files that reached ${WORTER}/ after the reset read it are kept in the backup, unread: ${unplanned.join(", ")}`,
 		);
+	// Classify writes into the Scroll it classifies, and none of these may be one.
+	const protectedFolders = [
+		...new Set([
+			WORTER,
+			plan.source,
+			...(backupFolder === undefined ? [] : [backupFolder]),
+		]),
+	];
 
 	const regenerations: (RegenerationResult | undefined)[] =
 		plan.attestations.map(() => undefined);
@@ -424,7 +441,7 @@ export const executeReset = Effect.fn("executeReset")(function* (
 			vault,
 			plan,
 			index,
-			backupFolder,
+			protectedFolders,
 		);
 		const settled = yield* unlessCancelled(
 			cancel,
@@ -452,39 +469,38 @@ export const executeReset = Effect.fn("executeReset")(function* (
 			continue;
 		}
 		const key = headwordKey(planned.headword);
-		const target =
-			regenerated.find(
-				({ planned: from }) => from.notePath === planned.notePath,
-			) ??
-			regenerated.find(
-				({ planned: from }) => headwordKey(from.headword) === key,
-			);
-		if (!target) {
+		const candidates = regenerated.flatMap(({ planned: from, result }) =>
+			from.notePath === planned.notePath ||
+			headwordKey(from.headword) === key
+				? [result]
+				: [],
+		);
+		const target = freeformTarget(planned.block.emojis, candidates);
+		if (target._tag === "None") {
 			freeform.push({
 				_tag: "Unplaced",
-				reason: cancelled
-					? `the reset was cancelled before "${planned.headword}" was regenerated`
-					: `no Lemma was regenerated for "${planned.headword}"`,
+				reason:
+					candidates.length > 0
+						? `${target.reason}, so neither its Reading nor its Lemma is known`
+						: cancelled
+							? `the reset was cancelled before "${planned.headword}" was regenerated`
+							: `no Lemma was regenerated for "${planned.headword}"`,
 			});
 			continue;
 		}
+		const to = target._tag;
 		const appended = yield* dictionary
-			.appendFreeform({
-				path: target.result.readingPath,
-				text: planned.block.text,
-			})
+			.appendFreeform({ path: target.path, text: planned.block.text })
 			.pipe(
 				Effect.map(
-					(outcome): FreeformResult =>
-						outcome === "Appended"
-							? {
-									_tag: "Attached",
-									readingPath: target.result.readingPath,
-								}
-							: {
-									_tag: "AlreadyThere",
-									readingPath: target.result.readingPath,
-								},
+					(outcome): FreeformResult => ({
+						_tag:
+							outcome === "Appended"
+								? "Attached"
+								: "AlreadyThere",
+						path: target.path,
+						to,
+					}),
 				),
 				Effect.catchTag("ResetFailed", (error) =>
 					Effect.succeed<FreeformResult>({
@@ -496,11 +512,24 @@ export const executeReset = Effect.fn("executeReset")(function* (
 		freeform.push(appended);
 	}
 
+	// What Worter/ holds now, read from the files: the report's layout.
+	const layout = yield* vault.listFolder(WORTER).pipe(
+		Effect.map((listed): ResetLayout | undefined =>
+			layoutOf(listed?.markdown ?? []),
+		),
+		Effect.orElseSucceed(() => undefined),
+	);
+	if (layout && layout.shadowNotes.length > 0)
+		notices.push(
+			`⚠ ${WORTER}/ holds ${layout.shadowNotes.length} Shadow note${layout.shadowNotes.length === 1 ? "" : "s"}, which the dictionary should never write`,
+		);
+
 	yield* progress({ done: 0, stage: "Report", total: 1 });
 	const execution: ResetExecution = {
 		backupFolder,
 		cancelled,
 		freeform,
+		layout,
 		notices: [...notices, ...(options.notices?.() ?? [])],
 		regenerations,
 	};

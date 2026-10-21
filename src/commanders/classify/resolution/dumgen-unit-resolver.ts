@@ -83,6 +83,7 @@ type ResolvedUnit = {
 	readonly sentence: PlannedSentence;
 	readonly created: boolean;
 	readonly readingPath: string;
+	readonly lemmaPath: string;
 };
 
 type UnitOutcome =
@@ -294,6 +295,7 @@ const commitUnit = Effect.fnUntraced(function* (
 	return {
 		attestation,
 		created,
+		lemmaPath: location.lemmaPath,
 		planned,
 		reading: decided.reading,
 		readingPath: location.path,
@@ -510,6 +512,7 @@ export function dumgenUnitResolver(
 					index++;
 					return {
 						_tag: "Resolved",
+						lemmaPath: outcome.unit.lemmaPath,
 						linked: linkedCount,
 						readingPath: outcome.unit.readingPath,
 						ref,

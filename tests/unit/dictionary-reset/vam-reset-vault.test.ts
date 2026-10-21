@@ -161,13 +161,18 @@ describe("the reset's backup move", () => {
 		const vault = vamResetVault(manager);
 		const backup = "Worter backup 2026-10-20 20-44-26";
 
-		const listed = await Effect.runPromise(
+		const { listed, roots } = await Effect.runPromise(
 			Effect.gen(function* () {
 				yield* vault.moveFolder("Worter", backup);
-				return yield* vault.listFolder(backup);
+				return {
+					listed: yield* vault.listFolder(backup),
+					// What finds a backup folder as the next reset's source (#117).
+					roots: yield* vault.listRootFolders,
+				};
 			}),
 		);
 		await Effect.runPromise(dispose);
+		expect([...roots].sort()).toEqual([backup, "Wortlisten"]);
 
 		expect(
 			listed?.markdown.find(

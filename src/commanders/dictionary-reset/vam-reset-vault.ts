@@ -12,12 +12,13 @@ import {
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import { getErrorMessage } from "../../utils/get-error-message";
-import { ResetFailed, type ResetVault } from "./execute";
+import { ResetFailed, type ResetVault } from "./ports";
 
 type ResetVam = Pick<
 	VaultActionManager,
 	| "dispatchStopOnFirstFailure"
 	| "exists"
+	| "list"
 	| "readContent"
 	| "resolveLinkpathDest"
 	| "scan"
@@ -114,6 +115,16 @@ export function vamResetVault(vam: ResetVam): ResetVault {
 				}
 				return { markdown, other };
 			}),
+		listRootFolders: Effect.suspend(() =>
+			vam.list(splitPathCodec.root).pipe(
+				Effect.map((children) =>
+					children.flatMap((child) =>
+						child.kind === "Folder" ? [child.basename] : [],
+					),
+				),
+				Effect.mapError(failed("Could not list the vault's folders")),
+			),
+		),
 		moveFolder: (from, to) =>
 			Effect.suspend(() => {
 				const source = folderPath(from);

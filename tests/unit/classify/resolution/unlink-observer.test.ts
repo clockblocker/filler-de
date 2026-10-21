@@ -86,11 +86,13 @@ function observerOver(options: {
 	readonly scroll: () => string;
 	readonly activity?: ScrollActivity;
 	readonly cache?: SegmentationCache["Service"];
+	readonly blockedBy?: () => string | undefined;
 }) {
 	const notices: string[] = [];
 	const store: UnlinkStore = options.store;
 	const observer = createUnlinkObserver({
 		activity: options.activity ?? createScrollActivity(),
+		...(options.blockedBy === undefined ? {} : { blockedBy: options.blockedBy }),
 		cache: options.cache ?? memorySegmentationCache(),
 		notify: (message) => notices.push(message),
 		quietMs: 0,
@@ -188,6 +190,51 @@ describe("unlink observer", () => {
 		expect(await run(harness.store.lemmaNote(see))).toBeUndefined();
 		expect(harness.vault.content(notePath(lake))).toBeUndefined();
 		expect(harness.vault.content(lemmaNotePath(see).path)).toBeUndefined();
+	});
+
+	it("stays off while a dictionary reset runs, and checks once it has ended", async () => {
+		const content = "Der See ist tief. ^0\n\nDer See ist kalt. ^1\n";
+		const { dumgen } = stubDumgen({
+			grammar: () => ({
+				_tag: "Resolved",
+				attestation: attestationOf(see, "See", ["See"], NOUN_EVIDENCE),
+			}),
+			reading: (input) =>
+				input.candidates.includes("🌊")
+					? { _tag: "Reuse", emojiDescription: "🌊" }
+					: { _tag: "New", emojiDescription: "🌊" },
+		});
+		const harness = await resolutionHarness({ content, dumgen, scrollPath: SCROLL });
+		for (const sentenceText of ["Der See ist tief.", "Der See ist kalt."])
+			await harness.resolve(
+				planFor({
+					content: harness.scroll.content,
+					scrollPath: SCROLL,
+					sentenceText,
+					units: seeUnits,
+				}),
+			);
+		let resetRunning = true;
+		const { observer } = observerOver({
+			blockedBy: () => (resetRunning ? "A dictionary reset is running" : undefined),
+			scroll: () => harness.scroll.content,
+			store: harness.store,
+			vault: harness.vault,
+		});
+		const link = linkTo(notePath(lake), "See");
+		harness.scroll.content = harness.scroll.content.replace(
+			`Der ${link} ist kalt.`,
+			"Der See ist kalt.",
+		);
+		observer.modified([SCROLL]);
+		const idle = observer.whenIdle();
+		await new Promise((resolve) => setTimeout(resolve, 30));
+		expect(await refsOf(harness.store, see)).toHaveLength(2);
+		resetRunning = false;
+		await idle;
+		expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 13))).toEqual([
+			"![[Story#^0|^",
+		]);
 	});
 
 	it("leaves moved text, a lost block ID and another Scroll's refs alone", async () => {

@@ -322,6 +322,7 @@ export default class TextEaterPlugin extends Plugin {
 			store: dictionary,
 		});
 		this.dictionaryReset = new DictionaryResetCommand({
+			activity: scrollActivity,
 			app: this.app,
 			cache: segmentationCache,
 			dumgen: () => this.dumgen.get(),

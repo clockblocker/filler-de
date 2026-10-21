@@ -1,8 +1,10 @@
 /**
- * The "Reset dictionary from old notes…" command (#65): a modal offers Dry
- * run and Execute, Execute asks once more, and the run reports progress in
- * a notice until it opens its report note. "Cancel dictionary reset" stops
- * a run between or inside attestations.
+ * The "Reset dictionary from old notes…" command (#65, #117): a modal shows
+ * the source folder of old notes, `Worter/` or a `Worter backup …` folder,
+ * and what `Worter/` holds now, and offers Dry run and Execute; Execute asks
+ * once more, naming both, and the run reports progress in a notice until it
+ * opens its report note. "Cancel dictionary reset" stops a run between or
+ * inside attestations.
  */
 import type { DumdictVaultStore } from "@textfresser/dictionary";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
@@ -16,7 +18,7 @@ import {
 	Layer,
 	Predicate,
 } from "effect";
-import { type App, Modal, Notice } from "obsidian";
+import { type App, Modal, Notice, Setting } from "obsidian";
 import { getErrorMessage } from "../../utils/get-error-message";
 import { logger } from "../../utils/logger";
 import {
@@ -25,17 +27,19 @@ import {
 } from "../classify/classify-selection";
 import { dumgenUnitResolver } from "../classify/resolution/dumgen-unit-resolver";
 import type { KnowledgeQueue } from "../classify/resolution/knowledge-queue";
+import type { ScrollActivity } from "../classify/resolution/scroll-activity";
 import { vamScrollFiles } from "../classify/resolution/scroll-files";
 import { SegmentationCache } from "../classify/segmentation-cache";
 import { UnitResolver, UnitResolverError } from "../classify/unit-resolver";
 import {
 	dryRunReset,
 	executeReset,
-	type ResetDictionary,
-	ResetFailed,
 	type ResetProgress,
 	resetStamp,
 } from "./execute";
+import { WORTER } from "./plan";
+import { type ResetDictionary, ResetFailed } from "./ports";
+import { findSources, type SourceChoice } from "./source";
 import { vamResetVault } from "./vam-reset-vault";
 
 export const RESET_COMMAND_NAME = "Reset dictionary from old notes…";
@@ -49,6 +53,8 @@ export type DictionaryResetDeps = {
 	readonly cache: SegmentationCache["Service"];
 	readonly store: () => Promise<DumdictVaultStore>;
 	readonly knowledge: KnowledgeQueue;
+	/** Classify's runs per Scroll, which the unlink observer waits out. */
+	readonly activity?: ScrollActivity;
 	readonly missingProviderKeys: () => readonly string[];
 };
 
@@ -66,12 +72,27 @@ export class DictionaryResetCommand {
 	constructor(private readonly deps: DictionaryResetDeps) {}
 
 	open(): void {
-		new ResetModal(this.deps.app, {
-			dryRun: () => void this.dryRun(),
-			execute: () =>
+		void this.openModal();
+	}
+
+	private async openModal(): Promise<void> {
+		const found = await Effect.runPromiseExit(
+			findSources(vamResetVault(this.deps.vam)),
+		);
+		if (Exit.isFailure(found)) {
+			new Notice(
+				`⚠ Dictionary reset: could not look for old notes: ${getErrorMessage(Cause.squash(found.cause))}`,
+			);
+			return;
+		}
+		new ResetModal(this.deps.app, found.value, {
+			dryRun: (source) => void this.dryRun(source),
+			execute: (source) =>
 				new ConfirmExecuteModal(
 					this.deps.app,
-					() => void this.execute(),
+					source,
+					found.value,
+					() => void this.execute(source),
 				).open(),
 		}).open();
 	}
@@ -90,14 +111,14 @@ export class DictionaryResetCommand {
 		return true;
 	}
 
-	private async dryRun(): Promise<void> {
+	private async dryRun(source: string): Promise<void> {
 		const notice = new Notice(
-			"Dictionary reset dry run: reading the old notes…",
+			`Dictionary reset dry run: reading the old notes in ${source}/…`,
 			0,
 		);
 		try {
 			const result = await Effect.runPromise(
-				dryRunReset(vamResetVault(this.deps.vam)),
+				dryRunReset(vamResetVault(this.deps.vam), { source }),
 			);
 			notice.hide();
 			new ReportModal(this.deps.app, result.report).open();
@@ -119,7 +140,7 @@ export class DictionaryResetCommand {
 		return undefined;
 	}
 
-	private async execute(): Promise<void> {
+	private async execute(source: string): Promise<void> {
 		const refusal = this.refusal();
 		if (refusal) {
 			new Notice(`⚠ ${refusal}`);
@@ -165,6 +186,7 @@ export class DictionaryResetCommand {
 			settleKnowledge: Effect.promise(() => deps.knowledge.whenIdle()),
 		};
 		const resolver = dumgenUnitResolver({
+			...(deps.activity === undefined ? {} : { activity: deps.activity }),
 			dumgen: Effect.try({
 				catch: (cause) =>
 					new UnitResolverError({
@@ -214,6 +236,7 @@ export class DictionaryResetCommand {
 						notice.setMessage(
 							`Dictionary reset: ${STAGE_LABEL[progress.stage]}${progress.stage === "Regenerate" ? ` ${progress.done + 1}/${progress.total}${progress.label ? ` (${progress.label})` : ""}` : "…"}\nRun "${CANCEL_RESET_COMMAND_NAME}" to stop.`,
 						),
+					source,
 					stamp: resetStamp(local),
 					vault: vamResetVault(deps.vam),
 				}).pipe(Effect.provide(layer)),
@@ -246,23 +269,73 @@ export class DictionaryResetCommand {
 	}
 }
 
+/** `Worter backup 2026-10-21 05-43-21/ (79 old notes)` */
+const sourceLabel = ({
+	folder,
+	oldNotes,
+}: SourceChoice["candidates"][number]) =>
+	`${folder}/ (${oldNotes} old note${oldNotes === 1 ? "" : "s"})`;
+
+/** What `Worter/` holds that is not the source, and that Execute backs up first. */
+function worterNote(choice: SourceChoice, source: string): string {
+	const worter = choice.candidates.find(({ folder }) => folder === WORTER);
+	if (source === WORTER)
+		return `Execute moves ${WORTER}/ to a new "${WORTER} backup <date time>" folder, checks every file arrived unchanged, and regenerates from the old notes there.`;
+	if (worter === undefined || worter.notes === 0)
+		return `There is no ${WORTER}/ to back up; Execute regenerates into a new one.`;
+	return `${WORTER}/ now holds ${worter.notes} note${worter.notes === 1 ? "" : "s"}${worter.oldNotes > 0 ? `, ${worter.oldNotes} of them old notes that this source does not regenerate` : ", none of them old notes"}. Execute first moves ${WORTER}/ to a new "${WORTER} backup <date time>" folder and checks every file arrived unchanged; it reads none of them.`;
+}
+
 class ResetModal extends Modal {
+	private source: string | undefined;
+
 	constructor(
 		app: App,
+		private readonly choice: SourceChoice,
 		private readonly actions: {
-			readonly dryRun: () => void;
-			readonly execute: () => void;
+			readonly dryRun: (source: string) => void;
+			readonly execute: (source: string) => void;
 		},
 	) {
 		super(app);
+		this.source = choice.suggested;
 	}
 
 	override onOpen() {
 		const { contentEl } = this;
 		contentEl.createEl("h2", { text: "Reset dictionary from old notes" });
 		contentEl.createEl("p", {
-			text: "Collects every attestation embed and freeform text from the old notes in Worter/, moves Worter/ to a dated backup folder, regenerates each attested Lemma through Classify, re-attaches the freeform text, and writes a report note. Nothing is deleted.",
+			text: "Collects every attestation embed and freeform text from the old notes in the source folder, regenerates each attested Lemma through Classify into Lemma, Reading and Crossroad notes in a fresh Worter/, re-attaches the freeform text to the Reading note of its sense, and writes a report note. Nothing is deleted.",
 		});
+		const usable = this.choice.candidates.filter(
+			({ oldNotes }) => oldNotes > 0,
+		);
+		const note = contentEl.createEl("p");
+		const render = () => {
+			note.setText(
+				this.source === undefined
+					? `No folder holds old notes: neither ${WORTER}/ nor any "${WORTER} backup <date time>" folder.`
+					: worterNote(this.choice, this.source),
+			);
+		};
+		new Setting(contentEl)
+			.setName("Source of the old notes")
+			.setDesc(
+				`${WORTER}/, or a "${WORTER} backup <date time>" folder an earlier reset moved them to.`,
+			)
+			.addDropdown((dropdown) => {
+				for (const candidate of usable)
+					dropdown.addOption(
+						candidate.folder,
+						sourceLabel(candidate),
+					);
+				if (this.source !== undefined) dropdown.setValue(this.source);
+				dropdown.onChange((value) => {
+					this.source = value;
+					render();
+				});
+			});
+		render();
 		contentEl.createEl("p", {
 			text: "Dry run only reads, and shows what Execute would do. Execute asks dumgen's providers and writes to the vault.",
 		});
@@ -270,18 +343,20 @@ class ResetModal extends Modal {
 		buttons
 			.createEl("button", { text: "Cancel" })
 			.addEventListener("click", () => this.close());
-		buttons
-			.createEl("button", { text: "Dry run" })
-			.addEventListener("click", () => {
-				this.close();
-				this.actions.dryRun();
-			});
-		buttons
-			.createEl("button", { cls: "mod-warning", text: "Execute…" })
-			.addEventListener("click", () => {
-				this.close();
-				this.actions.execute();
-			});
+		const run = (action: (source: string) => void) => () => {
+			const { source } = this;
+			if (source === undefined) return;
+			this.close();
+			action(source);
+		};
+		const dryRun = buttons.createEl("button", { text: "Dry run" });
+		dryRun.addEventListener("click", run(this.actions.dryRun));
+		const execute = buttons.createEl("button", {
+			cls: "mod-warning",
+			text: "Execute…",
+		});
+		execute.addEventListener("click", run(this.actions.execute));
+		dryRun.disabled = execute.disabled = this.source === undefined;
 	}
 
 	override onClose() {
@@ -292,6 +367,8 @@ class ResetModal extends Modal {
 class ConfirmExecuteModal extends Modal {
 	constructor(
 		app: App,
+		private readonly source: string,
+		private readonly choice: SourceChoice,
 		private readonly onConfirm: () => void,
 	) {
 		super(app);
@@ -301,7 +378,10 @@ class ConfirmExecuteModal extends Modal {
 		const { contentEl } = this;
 		contentEl.createEl("h2", { text: "Execute the dictionary reset?" });
 		contentEl.createEl("p", {
-			text: "Worter/ moves to a backup folder, and every attestation is classified again through dumgen, writing new Lemma notes and links into the attested Scrolls. Run a dry run first.",
+			text: `Source of the old notes: ${this.source}/. ${worterNote(this.choice, this.source)}`,
+		});
+		contentEl.createEl("p", {
+			text: "Every attestation is then classified again through dumgen, writing Lemma, Reading and Crossroad notes and links into the attested Scrolls. Run a dry run first.",
 		});
 		const buttons = contentEl.createDiv({ cls: "modal-button-container" });
 		buttons
