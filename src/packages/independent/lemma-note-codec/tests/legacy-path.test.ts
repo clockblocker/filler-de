@@ -7,7 +7,6 @@ import {
 	decodeBasename,
 	legacyLemmaNotePath,
 	parseLegacyNotePath,
-	shadowNotePath,
 } from "../src";
 import { sha256Hex } from "../src/hash";
 
@@ -200,28 +199,6 @@ describe("legacyLemmaNotePath (ADR-0013)", () => {
 	});
 });
 
-describe("shadowNotePath", () => {
-	it("puts a Shadow under Worter/<lang>/Shadow/<Family>/<Kind>/", () => {
-		const path = shadowNotePath({
-			canonicalForm: "Elternteil",
-			family: "Lexeme",
-			kind: "NOUN",
-			language: "de",
-		});
-		expect(path.path).toBe("Worter/de/Shadow/Lexeme/NOUN/Elternteil.md");
-		expect(parseLegacyNotePath(path.path)).toEqual({
-			ok: true,
-			value: {
-				basename: { canonicalForm: "Elternteil", truncated: false },
-				family: "Lexeme",
-				kind: "NOUN",
-				language: "de",
-				type: "shadow",
-			},
-		});
-	});
-});
-
 describe("basenames", () => {
 	it("percent-encodes exactly the reserved characters, % first", () => {
 		const form = 'a%b*c"d\\e/f<g>h:i|j?k#l^m[n]o …ü~+_';
@@ -317,7 +294,7 @@ describe("parseLegacyNotePath rejects what legacyLemmaNotePath never writes", ()
 		"Worter/de/Lexeme/ADJ/gradable/schön.md",
 		"Worter/de/Lexeme/NOUN/Ma-sc/See.md",
 		"Worter/de/Lexeme/NOUN/Masc/a?b.md",
-		"Worter/de/Shadow/Lexeme/NOUN/extra/See.md",
+		"Worter/de/Shadow/Lexeme/NOUN/See.md",
 		"Worter/de/Lexeme.md",
 		"Worter/de/Lexeme/VERB//stehen.md",
 		"Worter/de/Lexeme/NOUN/Masc+Masc/Balg.md",

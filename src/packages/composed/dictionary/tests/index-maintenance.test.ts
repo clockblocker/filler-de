@@ -26,7 +26,7 @@ import { commit, openStore, seed } from "./support/store";
 
 const gehenPath = legacyLemmaNotePath(gehen).path;
 const laufenPath = legacyLemmaNotePath(laufen).path;
-const shadowPath = "Worter/de/Shadow/Lexeme/VERB/schreiten.md";
+const schreitenCrossroad = "[[Worter/s/sch/schre/schreiten|schreiten]]";
 
 async function seededStore() {
 	const opened = await openStore();
@@ -59,6 +59,7 @@ const notesOf = async (store: Awaited<ReturnType<typeof openStore>>["store"]) =>
 describe("building the index", () => {
 	test("reads every note at startup and serves the same reads as the store that wrote them", async () => {
 		const { store, vault } = await seededStore();
+		await run(store.close);
 		const reopened = await openStore(vault);
 		expect(await run(reopened.store.lemmaNote(gehen))).toEqual(
 			await run(store.lemmaNote(gehen)),
@@ -259,28 +260,32 @@ describe("lookups", () => {
 		]);
 	});
 
-	test("a pending relation gets a Shadow note, removed with the last relation", async () => {
+	test("a pending relation lives only in its source note and round-trips through it", async () => {
 		const { store, vault } = await seededStore();
 		await seed(store, [createPending(pendingFrom(gehenReading))]);
-		expect(vault.content(shadowPath)).toContain("schreiten");
-		await seed(store, [createPending(pendingFrom(laufenReading))]);
-		await seed(store, [
+		// No other note holds it, or a placeholder for its target.
+		expect(vault.markdownPaths().sort()).toEqual([gehenPath, laufenPath]);
+		expect(vault.content(gehenPath)).toContain(schreitenCrossroad);
+		expect(vault.content(laufenPath)).not.toContain("schreiten");
+
+		const reopened = await openStore(vault);
+		expect(
+			(await run(reopened.store.lemmaNote(gehen)))?.pendingRelations,
+		).toEqual([pendingFrom(gehenReading)]);
+
+		await seed(reopened.store, [
 			{
 				preconditions: [],
 				record: pendingFrom(gehenReading),
 				type: "deletePendingSemanticRelation",
 			},
 		]);
-		expect(vault.content(shadowPath)).toBeDefined();
-		await seed(store, [
-			{
-				preconditions: [],
-				record: pendingFrom(laufenReading),
-				type: "deletePendingSemanticRelation",
-			},
-		]);
-		expect(vault.content(shadowPath)).toBeUndefined();
-		await expectIndexMatchesFiles(store, vault);
+		expect(vault.markdownPaths().sort()).toEqual([gehenPath, laufenPath]);
+		expect(vault.content(gehenPath)).not.toContain("schreiten");
+		expect(
+			(await run(reopened.store.lemmaNote(gehen)))?.pendingRelations,
+		).toEqual([]);
+		await expectIndexMatchesFiles(reopened.store, vault);
 	});
 
 	test("a relation slice holds the neighbourhood, not the whole dictionary", async () => {

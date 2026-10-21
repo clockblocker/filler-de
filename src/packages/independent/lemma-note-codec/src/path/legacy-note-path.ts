@@ -1,4 +1,3 @@
-import type * as Dumrel from "dumrel/types";
 import {
 	canonicalFormBasename,
 	type DecodedBasename,
@@ -25,14 +24,11 @@ import {
 
 /**
  * The superseded ADR-0013 layout: one note per Lemma at its identity
- * folders with no shard folders, percent-encoded basenames, and Shadow notes
- * under `Worter/<lang>/Shadow/`. The dictionary store and the note codec
- * still write it until the Lemma, Reading and Crossroad layout (ADR-0015,
- * `note-path.ts`) replaces it (#109, #112, #113).
+ * folders with no shard folders and percent-encoded basenames. The
+ * dictionary store and the note codec still write it until the Lemma,
+ * Reading and Crossroad layout (ADR-0015, `note-path.ts`) replaces it
+ * (#112, #113).
  */
-
-/** The folder under `Worter/<language>/` that holds Shadow notes. */
-export const SHADOW_FOLDER = "Shadow";
 
 /** A text value of just `_` escapes it; `~` is always escaped. */
 const ESCAPED_NULL_SLOT = "%5F";
@@ -68,27 +64,6 @@ export function legacyLemmaNotePath(lemma: PathLemma): NotePath {
 	);
 }
 
-/**
- * The path of a Shadow's note (ADR 0012, 0013):
- * `Worter/<language>/Shadow/<Family>/<Kind>/<basename>.md`. A Shadow has no
- * Core Features, so it has no slots. #109 removes Shadow notes.
- */
-export function shadowNotePath(
-	shadow: Extract<Dumrel.UnitShadow, { language: "de" }>,
-): NotePath {
-	slotsOrThrow(shadow.family, shadow.kind);
-	return notePath(
-		[
-			WORTER_FOLDER,
-			shadow.language,
-			SHADOW_FOLDER,
-			shadow.family,
-			shadow.kind,
-		],
-		canonicalFormBasename(shadow.canonicalForm),
-	);
-}
-
 /** What an ADR-0013 Lemma note's path spells: all but a shortened form's tail. */
 export type ParsedLegacyLemmaNotePath = {
 	readonly type: "lemma";
@@ -102,28 +77,16 @@ export type ParsedLegacyLemmaNotePath = {
 	readonly basename: DecodedBasename;
 };
 
-export type ParsedShadowNotePath = {
-	readonly type: "shadow";
-	readonly language: "de";
-	readonly family: string;
-	readonly kind: string;
-	readonly basename: DecodedBasename;
-};
-
-export type ParsedLegacyNotePath =
-	| ParsedLegacyLemmaNotePath
-	| ParsedShadowNotePath;
-
 export type LegacyNotePathParse =
-	| { readonly ok: true; readonly value: ParsedLegacyNotePath }
+	| { readonly ok: true; readonly value: ParsedLegacyLemmaNotePath }
 	| { readonly ok: false; readonly error: InvalidNotePath };
 
 /**
- * Reverses {@link legacyLemmaNotePath} and {@link shadowNotePath}. Only the
- * canonical spelling parses: a trailing `_`, an unknown route, or a slot
- * value its feature never takes is an `InvalidNotePath`. Feature values are
- * read as spelled; validating them as a Lemma is the caller's step, since
- * a shortened basename does not hold the whole Canonical Form.
+ * Reverses {@link legacyLemmaNotePath}. Only the canonical spelling parses:
+ * a trailing `_`, an unknown route, or a slot value its feature never takes
+ * is an `InvalidNotePath`. Feature values are read as spelled; validating
+ * them as a Lemma is the caller's step, since a shortened basename does not
+ * hold the whole Canonical Form.
  */
 export function parseLegacyNotePath(path: string): LegacyNotePathParse {
 	const invalid = (reason: string): LegacyNotePathParse => ({
@@ -140,18 +103,6 @@ export function parseLegacyNotePath(path: string): LegacyNotePathParse {
 	const basename =
 		basenameText === undefined ? undefined : decodeBasename(basenameText);
 	if (basename === undefined) return invalid("Invalid basename");
-
-	if (rest[0] === SHADOW_FOLDER) {
-		const [, family, kind, ...extra] = rest;
-		if (family === undefined || kind === undefined || extra.length > 0)
-			return invalid("A Shadow note sits at Shadow/<Family>/<Kind>/");
-		if (germanSlotsOf(family, kind) === undefined)
-			return invalid(`Unknown route ${family}/${kind}`);
-		return {
-			ok: true,
-			value: { basename, family, kind, language, type: "shadow" },
-		};
-	}
 
 	const [family, kind, ...spelled] = rest;
 	if (family === undefined || kind === undefined)

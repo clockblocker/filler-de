@@ -21,7 +21,8 @@ import type { KnowledgeOrigin } from "./knowledge-types";
  * Whether the plugin publishes the Semantic Relations dumgen generates.
  * tf-demo drops them all until a reviewed verdict qualifies a relation
  * kind; the plugin has always written relations, so it keeps publishing
- * them, and a Pending target becomes a Shadow note through the store.
+ * them. A Pending one is stored in its source note only, and its link
+ * points at the target's Crossroad path.
  * Flip this to stop asking for and publishing generated relations.
  */
 export const PUBLISH_GENERATED_RELATIONS = true;

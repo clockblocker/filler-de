@@ -20,7 +20,7 @@ import {
 import { openStore, seed } from "../support/store";
 
 const planner = createDumdictPlanner("de");
-const shadowPath = "Worter/de/Shadow/Lexeme/VERB/schreiten.md";
+const schreitenCrossroad = "[[Worter/s/sch/schre/schreiten|schreiten]]";
 const gehenPath = legacyLemmaNotePath(gehen).path;
 const laufenPath = legacyLemmaNotePath(laufen).path;
 const schreitenPath = legacyLemmaNotePath(schreiten).path;
@@ -43,7 +43,12 @@ async function pendingDictionary() {
 		createReading(readingEntry(laufenReading)),
 		createPending(pendingFrom(laufenReading)),
 	]);
-	expect(opened.vault.content(shadowPath)).toBeDefined();
+	// Only the two source notes exist; each links schreiten's Crossroad path.
+	expect(opened.vault.markdownPaths().sort()).toEqual([
+		gehenPath,
+		laufenPath,
+	]);
+	expect(opened.vault.content(gehenPath)).toContain(schreitenCrossroad);
 	return opened;
 }
 
@@ -72,7 +77,7 @@ const synonymsOf = async (
 		?.semanticRelations;
 
 describe("a commit that touches several notes", () => {
-	test("writes every note in one batch, then removes the resolved Shadow", async () => {
+	test("creates the new note, then rewrites every resolved source in one batch", async () => {
 		const { store, vault } = await pendingDictionary();
 		const plan = await planSchreiten(store);
 		expect(await run(store.commitChanges(plan))).toMatchObject({
@@ -81,18 +86,13 @@ describe("a commit that touches several notes", () => {
 
 		const kinds = (batch: readonly { kind: string }[] = []) =>
 			batch.map(({ kind }) => kind);
-		// The commit creates schreiten, then rewrites gehen and laufen and
-		// checks that the Shadow still holds the store's own body, then trashes it.
-		expect(kinds(vault.batches.at(-3))).toEqual([
+		// The commit creates schreiten, then rewrites gehen and laufen.
+		expect(kinds(vault.batches.at(-2))).toEqual([
 			VaultActionKind.CreateFile,
 		]);
-		expect(kinds(vault.batches.at(-2))).toEqual([
-			VaultActionKind.ProcessMdFile,
-			VaultActionKind.ProcessMdFile,
-			VaultActionKind.ProcessMdFile,
-		]);
 		expect(kinds(vault.batches.at(-1))).toEqual([
-			VaultActionKind.TrashMdFile,
+			VaultActionKind.ProcessMdFile,
+			VaultActionKind.ProcessMdFile,
 		]);
 		expect(await synonymsOf(store, gehen)).toEqual({
 			synonym: [schreiten],
@@ -100,7 +100,13 @@ describe("a commit that touches several notes", () => {
 		expect(await synonymsOf(store, laufen)).toEqual({
 			synonym: [schreiten],
 		});
-		expect(vault.content(shadowPath)).toBeUndefined();
+		// The resolved claims link schreiten's Lemma note now.
+		const schreitenLink = `[[${schreitenPath.slice(0, -3)}|schreiten]]`;
+		expect(vault.content(gehenPath)).toContain(schreitenLink);
+		expect(vault.content(gehenPath)).not.toContain(schreitenCrossroad);
+		expect(vault.markdownPaths().sort()).toEqual(
+			[gehenPath, laufenPath, schreitenPath].sort(),
+		);
 		await expectIndexMatchesFiles(store, vault);
 	});
 
@@ -117,7 +123,7 @@ describe("a commit that touches several notes", () => {
 		expect(failure).toMatchObject({
 			executed: [schreitenPath, gehenPath],
 			rebuilt: true,
-			skipped: [shadowPath],
+			skipped: [],
 		});
 
 		// The writes before the failure stayed; the index says so.
@@ -131,7 +137,7 @@ describe("a commit that touches several notes", () => {
 		expect((await run(store.lemmaNote(laufen)))?.pendingRelations).toEqual([
 			pendingFrom(laufenReading),
 		]);
-		expect(vault.content(shadowPath)).toBeDefined();
+		expect(vault.content(laufenPath)).toContain(schreitenCrossroad);
 		await expectIndexMatchesFiles(store, vault);
 
 		// A store built from the same files reads the same dictionary.
@@ -163,7 +169,7 @@ describe("a commit that touches several notes", () => {
 		expect(await synonymsOf(store, laufen)).toEqual({
 			synonym: [schreiten],
 		});
-		expect(vault.content(shadowPath)).toBeUndefined();
+		expect(vault.content(laufenPath)).not.toContain(schreitenCrossroad);
 		await expectIndexMatchesFiles(store, vault);
 	});
 

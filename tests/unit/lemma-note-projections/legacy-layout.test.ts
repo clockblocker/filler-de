@@ -189,7 +189,7 @@ ${title("synonyme", "Semantische Beziehungen")}
 ≠ [[Worter/de/Lexeme/NOUN/Neut/Windrad|Windrad]]
 ⊂ [[Worter/de/Lexeme/NOUN/Neut/Braunkohlekraftwerk|Braunkohlekraftwerk]]
 ${title("morpheme", "Morpheme")}
-[[Worter/de/Shadow/Lexeme/NOUN/Kohle|Kohle]]|[[Worter/de/Shadow/Lexeme/NOUN/Kraft|Kraft]]|[[Worter/de/Shadow/Lexeme/NOUN/Werk|Werk]]
+[[Worter/k/koh/kohle/kohle|Kohle]]|[[Worter/k/kra/kraft/kraft|Kraft]]|[[Worter/w/wer/werk/werk|Werk]]
 ${title("translations", "Übersetzung")}
 coal-fired power plant
 ${title("flexion", "Flexion")}

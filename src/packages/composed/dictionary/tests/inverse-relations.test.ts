@@ -35,7 +35,6 @@ const gehenPath = legacyLemmaNotePath(gehen).path;
 const laufenPath = legacyLemmaNotePath(laufen).path;
 const schreitenPath = legacyLemmaNotePath(schreiten).path;
 const springenPath = legacyLemmaNotePath(springen).path;
-const shadowPath = "Worter/de/Shadow/Lexeme/VERB/schreiten.md";
 
 const linkTo = (reading: Dumling.Reading<"de", "Lexeme", "VERB">) =>
 	`[[${legacyLemmaNotePath(reading.lemma).path.replace(/\.md$/u, "")}#^${readingBlockId(reading)}|${reading.lemma.canonicalForm}]]`;
@@ -151,18 +150,17 @@ describe("inverse relations are projected, never stored", () => {
 			createReading(readingEntry(gehenReading)),
 			createPending(pendingFrom(gehenReading)),
 		]);
-		expect(vault.content(shadowPath)).toBeDefined();
-		expect(vault.content(schreitenPath)).toBeUndefined();
+		expect(vault.markdownPaths()).toEqual([gehenPath]);
 
 		expect(await addSchreiten(store)).toMatchObject({
 			status: "committed",
 		});
 
-		// A holds the direct claim; the Shadow it pended on is gone.
+		// A holds the direct claim in place of its pending relation.
 		expect(
 			dataOf(vault.content(gehenPath)).readingEntries[0]?.knowledge,
 		).toEqual({ semanticRelations: { synonym: [schreiten] } });
-		expect(vault.content(shadowPath)).toBeUndefined();
+		expect(dataOf(vault.content(gehenPath)).pendingRelations).toEqual([]);
 
 		// B renders A as a projection, linked to A's Reading block, and
 		// stores no relation of its own.
