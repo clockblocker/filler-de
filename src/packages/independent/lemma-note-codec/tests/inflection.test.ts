@@ -12,9 +12,11 @@ import {
 	linkRenderer,
 	renderLemmaNote,
 	renderReadingNote,
+	sameTableVersions,
 	serializeLemmaNote,
 	sha256Hex,
 	surfaceBlockIds,
+	tableVersionsOf,
 } from "../src";
 import {
 	licenceFixtures,
@@ -307,5 +309,52 @@ describe("a Lemma without tables", () => {
 				},
 			),
 		).not.toContain("Flexion");
+	});
+});
+
+describe("table versions (#121)", () => {
+	it("a Lemma note records the pack's version and its Table Schema's id and version", () => {
+		const { metadata } = serializeLemmaNote(nounData, { inflection });
+		expect(metadata.tables).toEqual({
+			pack: "toy-1",
+			schema: { id: "toy/NOUN", version: 1 },
+		});
+		expect(tableVersionsOf(inflection, nounData.lemmaRecord.lemma)).toEqual(
+			metadata.tables,
+		);
+		expect(
+			parseLemma({ body: "", metadata }).document.metadata?.tables,
+		).toEqual(metadata.tables);
+	});
+
+	it("a Lemma without a schema records the pack's version alone", () => {
+		const lemma = { ...nounData.lemmaRecord.lemma, kind: "PROPN" };
+		expect(
+			tableVersionsOf(inflection, lemma as Dumling.Lemma<"de">),
+		).toEqual({ pack: "toy-1" });
+	});
+
+	it("a hook that names no versions records none", () => {
+		const bare: InflectionHook<"de"> = (input) => inflection(input);
+		expect(
+			serializeLemmaNote(nounData, { inflection: bare }).metadata.tables,
+		).toBeUndefined();
+		expect(serializeLemmaNote(nounData).metadata.tables).toBeUndefined();
+	});
+
+	it("a version bump changes the recorded versions, never a table's Block ID", () => {
+		const bumped = inflectionFromPack({ ...toyPack, version: "toy-2" });
+		const before = tablesOf(nounData).map(({ blockId }) => blockId);
+		expect(
+			tablesOf(nounData, bumped).map(({ blockId }) => blockId),
+		).toEqual(before);
+		const was = serializeLemmaNote(nounData, { inflection }).metadata
+			.tables;
+		const is = serializeLemmaNote(nounData, { inflection: bumped }).metadata
+			.tables;
+		expect(sameTableVersions(was, is)).toBe(false);
+		expect(sameTableVersions(is, { ...is, pack: "toy-2" })).toBe(true);
+		expect(sameTableVersions(undefined, undefined)).toBe(true);
+		expect(sameTableVersions(was, undefined)).toBe(false);
 	});
 });

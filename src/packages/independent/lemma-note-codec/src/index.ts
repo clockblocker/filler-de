@@ -44,7 +44,10 @@ export {
 	type RenderedInflection,
 	type RenderedSurfaceAxes,
 	type RenderedTable,
+	sameTableVersions,
+	type TableVersions,
 	tableOfReading,
+	tableVersionsOf,
 } from "./inflection";
 export type {
 	CodecIssue,

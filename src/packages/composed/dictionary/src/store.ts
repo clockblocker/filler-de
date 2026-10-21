@@ -41,7 +41,7 @@ import {
 } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
-import { Data, Effect, Semaphore } from "effect";
+import { Cause, Data, Effect, Fiber, Semaphore } from "effect";
 import { contentHash } from "./content-hash";
 import {
 	CrossroadNoteMetadata,
@@ -109,6 +109,7 @@ import {
 	type NoteProjections,
 	renderOptionsFor,
 	staleCrossroads,
+	staleTables,
 } from "./render";
 import {
 	loadCleanupRelationsContext,
@@ -199,6 +200,20 @@ export type DumdictVaultStoreOptions = {
 	readonly metadataFormat?: () => MetadataFormat;
 	/** Called after the index is built or changes, with the current diagnostics. */
 	readonly onDiagnostics?: (diagnostics: DictionaryDiagnostics) => void;
+	/** Called after a run re-rendered the tables of notes rendered at other versions (#121). */
+	readonly onTablesRerendered?: (report: TablesRerendered) => void;
+};
+
+/**
+ * What one run of the table re-render did (#121): the Lemmas whose notes
+ * now record the current pack and Table Schema versions, the notes it
+ * wrote for them (their Lemma notes, and the Reading notes whose embed
+ * moved), and the Lemmas still stale, which the next full read tries again.
+ */
+export type TablesRerendered = {
+	readonly lemmas: number;
+	readonly notes: number;
+	readonly remaining: number;
 };
 
 /**
@@ -309,6 +324,14 @@ export type DumdictVaultStore = {
 	 * from the store as Self Events.
 	 */
 	readonly rescan: Effect.Effect<void, DictionaryScanError>;
+	/**
+	 * Re-renders the notes of every Lemma whose Lemma note records other
+	 * table versions than the projections render now (#121). Every full
+	 * read of `Worter/` (startup, a rescan, a rebuild) starts it in the
+	 * background, in chunks that each hold the writer lock briefly; this
+	 * waits for the run in flight, or runs one, and answers what it did.
+	 */
+	readonly refreshTables: Effect.Effect<TablesRerendered>;
 	/**
 	 * Places user text as freeform in a stored Lemma or Reading note: under
 	 * a Reading note's Note title, in place of its placeholder, or last in a
@@ -490,6 +513,9 @@ const REEVALUATION_CHUNK = 8;
 
 /** Follow-up re-evaluations a commit may start, nested. */
 const MAX_FOLLOW_UP_DEPTH = 2;
+
+/** Lemmas whose tables one hold of the writer lock re-renders. */
+const TABLES_CHUNK = 32;
 
 let sessionCounter = 0;
 
@@ -699,6 +725,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		scanIssues = issues;
 		stale = false;
 		publish(next);
+		yield* startTables();
 	});
 
 	/** Rebuilds after a write whose outcome is uncertain; never fails. */
@@ -1678,7 +1705,14 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		lemmaKeys: ReadonlySet<string>,
 		formKeys: ReadonlySet<string>,
 		skip: ReadonlySet<string> = new Set(),
+		/**
+		 * Writes each round's Lemma notes only once its other writes landed,
+		 * so a Lemma note that records the current table versions never
+		 * stands beside a Reading note whose embed is still stale.
+		 */
+		lemmaNotesLast = false,
 	) {
+		const landed = new Set<string>();
 		let pendingLemmas = [...lemmaKeys].sort(byCodeUnit);
 		let pendingForms = [...formKeys].sort(byCodeUnit);
 		for (
@@ -1735,25 +1769,41 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					[...failed],
 				);
 			if (stalePaths.length > 0) yield* rereadChanges(stalePaths);
-			if (writes.length > 0) {
+			const isLemmaNote = ({ lemmaKey, path }: PlannedWrite) =>
+				lemmaKey !== undefined &&
+				view.lemmaNote(lemmaKey)?.path === path;
+			const batches = lemmaNotesLast
+				? [
+						writes.filter((write) => !isLemmaNote(write)),
+						writes.filter(isLemmaNote),
+					]
+				: [writes];
+			for (const batch of batches) {
+				if (batch.length === 0) continue;
 				const outcome = yield* Effect.result(
-					dispatch(writes.map(({ action }) => action)),
+					dispatch(batch.map(({ action }) => action)),
 				);
-				if (outcome._tag === "Success")
-					applied(writes, publishRendering);
-				else {
-					yield* Effect.logWarning(
-						"Dictionary re-renders stopped; re-reading the notes",
-						outcome.failure,
-					);
-					yield* rereadChanges(writes.map(({ path }) => path));
-					for (const key of pendingLemmas) retryLemmas.add(key);
-					for (const key of pendingForms) retryForms.add(key);
+				if (outcome._tag === "Success") {
+					applied(batch, publishRendering);
+					for (const { path } of batch) landed.add(path);
+					continue;
 				}
+				if (outcome.failure instanceof VamDispatchStoppedError)
+					for (const action of outcome.failure.executed)
+						landed.add(actionPath(action));
+				yield* Effect.logWarning(
+					"Dictionary re-renders stopped; re-reading the notes",
+					outcome.failure,
+				);
+				yield* rereadChanges(batch.map(({ path }) => path));
+				for (const key of pendingLemmas) retryLemmas.add(key);
+				for (const key of pendingForms) retryForms.add(key);
+				break;
 			}
 			pendingLemmas = [...retryLemmas].sort(byCodeUnit);
 			pendingForms = [...retryForms].sort(byCodeUnit);
 		}
+		return landed;
 	});
 
 	/**
@@ -2432,6 +2482,139 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		}
 	});
 
+	/**
+	 * The table re-render (#121). Tables are projections (system ADR 0049),
+	 * so a pack or Table Schema change needs no data migration, but notes
+	 * rendered before it show stale tables. A Lemma note records the
+	 * versions it was rendered at; the index tells the stale ones from
+	 * their metadata alone (`staleTables`), and each is re-rendered from
+	 * its records like any other re-render: compare-and-swaps on the
+	 * content read, freeform and edited renderings kept, writing only the
+	 * notes whose metadata changes. Its Reading notes go first and its Lemma
+	 * note last, so a note that records the current versions never stands
+	 * beside an embed still stale. Table Block IDs hash Licence Groups'
+	 * selection keys, never versions, so the embeds stay where they were.
+	 *
+	 * A run takes chunks of {@link TABLES_CHUNK} Lemmas, each under the
+	 * writer lock, so commits and events go between them and startup never
+	 * waits for it. It ends when a fresh look finds no stale Lemma but those
+	 * it gave up on, whose notes it could not write; the next full read
+	 * tries them again. Re-rendering is idempotent: a second run writes
+	 * nothing.
+	 */
+	let tablesRun: Fiber.Fiber<TablesRerendered> | undefined;
+	let tablesRunning = false;
+	let closed = false;
+
+	const tablesChunk = Effect.fnUntraced(function* (
+		keys: readonly string[],
+		gaveUp: Set<string>,
+	) {
+		if (stale && (yield* recover)) yield* settle;
+		const chunk = staleTables(index, projections?.inflection, keys);
+		if (chunk.length === 0) return { lemmas: 0, notes: 0 };
+		const landed = yield* rerender(
+			new Set(chunk),
+			new Set(),
+			new Set(),
+			true,
+		);
+		const left = new Set(
+			staleTables(index, projections?.inflection, chunk),
+		);
+		for (const key of left) gaveUp.add(key);
+		return { lemmas: chunk.length - left.size, notes: landed.size };
+	});
+
+	const tablesLoop = Effect.gen(function* () {
+		const gaveUp = new Set<string>();
+		let lemmas = 0;
+		let notes = 0;
+		for (;;) {
+			const pending = staleTables(index, projections?.inflection).filter(
+				(key) => !gaveUp.has(key),
+			);
+			if (pending.length === 0) break;
+			for (let at = 0; at < pending.length; at += TABLES_CHUNK) {
+				const keys = pending.slice(at, at + TABLES_CHUNK);
+				const done = yield* lock.withPermit(
+					tablesChunk(keys, gaveUp).pipe(
+						Effect.onError(() => markStale),
+						Effect.ensuring(report),
+					),
+				);
+				lemmas += done.lemmas;
+				notes += done.notes;
+				yield* Effect.yieldNow;
+			}
+		}
+		// No yield since the last look: a full read from now on starts a run.
+		tablesRunning = false;
+		const result: TablesRerendered = {
+			lemmas,
+			notes,
+			remaining: gaveUp.size,
+		};
+		if (lemmas > 0 || gaveUp.size > 0) options.onTablesRerendered?.(result);
+		if (gaveUp.size > 0)
+			yield* Effect.logWarning(
+				"Dictionary could not re-render the tables of some notes; the next full read tries again",
+				[...gaveUp],
+			);
+		return result;
+	}).pipe(
+		Effect.catchCause((cause) =>
+			Cause.hasInterruptsOnly(cause)
+				? Effect.failCause(cause)
+				: Effect.logError(
+						"Dictionary table re-render failed",
+						cause,
+					).pipe(
+						Effect.andThen(
+							Effect.sync((): TablesRerendered => {
+								tablesRunning = false;
+								return { lemmas: 0, notes: 0, remaining: 0 };
+							}),
+						),
+					),
+		),
+		Effect.onInterrupt(() =>
+			Effect.sync(() => {
+				tablesRunning = false;
+			}),
+		),
+	);
+
+	/** Starts a table re-render in the background, unless one is in flight. */
+	function startTables(): Effect.Effect<void> {
+		return Effect.suspend(() => {
+			if (tablesRunning || closed) return Effect.void;
+			tablesRunning = true;
+			return Effect.forkDetach(tablesLoop).pipe(
+				Effect.tap((fiber) =>
+					Effect.sync(() => {
+						tablesRun = fiber;
+					}),
+				),
+				Effect.asVoid,
+			);
+		});
+	}
+	/** Starts a run unless one is in flight, and waits for it. */
+	const refreshTables = startTables().pipe(
+		Effect.andThen(
+			Effect.suspend(() =>
+				closed || tablesRun === undefined
+					? Effect.succeed<TablesRerendered>({
+							lemmas: 0,
+							notes: 0,
+							remaining: 0,
+						})
+					: Fiber.join(tablesRun),
+			),
+		),
+	);
+
 	const bulkSubscription = yield* vault
 		.subscribeToBulk(onBulk)
 		.pipe(Effect.mapError(scanError("observe")));
@@ -2443,6 +2626,15 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			Effect.ignore(closing),
 		),
 		{ discard: true },
+	).pipe(
+		Effect.andThen(
+			Effect.suspend(() => {
+				closed = true;
+				return tablesRun === undefined
+					? Effect.void
+					: Fiber.interrupt(tablesRun);
+			}),
+		),
 	);
 
 	yield* lock
@@ -2537,6 +2729,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			read((view) => loadRekeySurfacesSlice(view, revision(), request)),
 		readingLocation: (reading) =>
 			read((view) => view.readingLocation(readingKeyOf(reading))),
+		refreshTables,
 		relationEdgesTo: (lemma) =>
 			read((view) => view.edgesTo(lemmaKeyOf(lemma))),
 		rescan: lock.withPermit(

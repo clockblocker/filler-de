@@ -5,9 +5,12 @@
 
 import {
 	crossroadNotePath,
+	type InflectionHook,
 	type LinkResolver,
 	type RenderOptions,
+	sameTableVersions,
 	shadowOf,
+	tableVersionsOf,
 	WORTER_FOLDER,
 } from "@textfresser/lemma-note-codec";
 import { resolveShadow, spellingTarget } from "dumdict";
@@ -279,6 +282,32 @@ export function staleCrossroads(
 	return [...keys]
 		.filter((key) => crossroadStale(view, key))
 		.sort(byCodeUnit);
+}
+
+/**
+ * The Lemmas whose Lemma note recorded other table versions than `hook`
+ * renders now (#121), sorted: a pack or Table Schema change, or a note
+ * written before versions were recorded. It reads no file: the index holds
+ * what each note's metadata records. A hook that names no versions makes
+ * none stale. Re-rendering them records the current versions, so a second
+ * run finds none.
+ */
+export function staleTables(
+	view: NoteIndex,
+	hook: InflectionHook<"de"> | undefined,
+	keys: Iterable<string> = view.lemmaKeys(),
+): string[] {
+	if (hook?.versions === undefined) return [];
+	const stale: string[] = [];
+	for (const key of new Set(keys)) {
+		const note = view.lemmaNote(key);
+		if (note === undefined) continue;
+		const entry = view.entry(note.path);
+		if (entry?.kind !== "lemma") continue;
+		const current = tableVersionsOf(hook, note.data.lemmaRecord.lemma);
+		if (!sameTableVersions(entry.tables, current)) stale.push(key);
+	}
+	return stale.sort(byCodeUnit);
 }
 
 /** Obsidian's names for a new note, such as `Untitled 2`: no spelling. */

@@ -124,6 +124,7 @@ Metadata, `lemmaNote`:
 | `paradigm` | `LemmaRecord.paradigm`: Paradigm Variants per Variation Dimension and each Reading's Licences (texteater#1226); absent when the Lemma has none |
 | `surfaces` | One entry per owned `SurfaceEntry`: its `surface`, and its `attestations`, `attestedTranslations` and `notes` when not empty. Its id and owner are rebuilt from the Surface and the note's Lemma |
 | `rendering` | The seals of the body's renderings (Rendering boundary) |
+| `tables` | The versions its tables were rendered at (#121): `pack`, the Inflection Pack's `version`, and `schema`, the Table Schema's `id` and `version` when the Lemma has one. It is no record; it is absent when the inflection hook names no versions, or in a note written before they were recorded |
 
 Visible Blocks, in order:
 
@@ -468,6 +469,14 @@ That is `Worter/s/suc/sucht/sucht.md`. der See and die See share `Worter/s/see/s
 ## Derived projections
 
 Inflection tables come from the batteries ([#120](https://github.com/clockblocker/filler-de/issues/120)): `dumdict/inflection`'s `projectLemmaTables` projects them from the Lemma Paradigm and the German Inflection Pack of `dumcorpus/inflection`, which owns every German rule and label, and the codec only draws them (Layout). The plugin composes its projections in `src/stateless-helpers/dictionary-projections.ts`.
+
+**Table versions** (#121). Tables are projections, never stored (system ADR 0049), so a pack or Table Schema change needs no data migration; only the notes that draw the old tables are stale. `inflectionFromPack`'s hook names, through its `versions`, the pack's `version` and the `schemaFor` schema's id and version, which are the ones the view carries, and a Lemma note records them as `tables`. After every full read of `Worter/` (startup, a rescan, a rebuild) the store finds, from the index alone, the Lemma notes whose recorded versions differ from the current ones, and re-renders those Lemmas' notes in the background (`refreshTables`):
+
+- **Bounded.** Chunks of 32 Lemmas, each under the writer lock, so commits and events go between them and the store opens without waiting. Over 2,000 Lemma notes, 4,000 Reading notes and 2,000 Crossroad notes, in an in-memory vault, a store opened after a pack bump is ready in about 280 ms, as without the bump. The background re-render then takes about 2.9 s, and a second open finds nothing stale and writes nothing.
+- **Through the normal re-render.** It writes compare-and-swaps on the content the store read, and retries a note whose file changed meanwhile from its new content. Freeform and edited renderings stay, as on every write, and only the notes whose metadata changes are written. That means each Lemma note, and a Reading note only when its embed moves.
+- **Order.** A Lemma's Reading notes are written before its Lemma note, so a Lemma note that records the current versions never stands beside a stale embed. A note whose writes keep failing stays stale, is reported, and is tried again at the next full read.
+- **Block IDs.** Table Block IDs hash the Licence Groups' `selectionKey`s, never versions, so a version-only re-render keeps every `^t…` and every Reading note's embed.
+- **Reported.** The plugin logs how many Lemmas' notes each run re-rendered.
 
 `@textfresser/lemma-note-projections` keeps only the Reading's Tags, which are Obsidian's: the route, one nested tag per Core Feature value (`noun/masculine`, `verb/separable`, `verb/reflexive-acc`), and the inflection class the Reading's own Licences give in the Lemma Paradigm: each licensed Präteritum variant's conjugation class (`verb/strong` for `fuhr`, both classes for melken's `molk / melkte`) and a licensed plural marker (`noun/singular-only`, `noun/plural-only`).
 

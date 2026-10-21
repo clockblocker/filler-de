@@ -13,6 +13,7 @@ import {
 	parseReadingNote,
 	type ReadingNoteData,
 	type RenderingSeal,
+	type TableVersions,
 } from "@textfresser/lemma-note-codec";
 import { contentHash } from "./content-hash";
 import { CrossroadNoteMetadata } from "./crossroad";
@@ -33,6 +34,8 @@ export type LemmaNoteEntry = {
 	readonly hash: string;
 	readonly lemmaKey: string;
 	readonly data: LemmaNoteData<"de">;
+	/** The versions its tables were rendered at, as its metadata records them (#121). */
+	readonly tables?: TableVersions;
 };
 
 /** A Reading note whose metadata the codec accepted. */
@@ -178,12 +181,14 @@ export function classifyFile(path: string, content: string): PathEntry {
 			{ language: "de" },
 		);
 		if (!data.ok) return invalid(path, hash, data.issues);
+		const { tables } = lemma.value;
 		return {
 			data: data.data,
 			hash,
 			kind: "lemma",
 			lemmaKey: lemmaKeyOf(data.data.lemmaRecord.lemma),
 			path,
+			...(tables === undefined ? {} : { tables }),
 		};
 	}
 	if (reading.kind === "Valid") {
