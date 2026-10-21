@@ -11,7 +11,9 @@
  *    and `segment.inUnits` only the misses, storing every success.
  * 4. A unit is covered when the selection overlaps any of its Segments. It
  *    then joins the plan with all of its pieces, so each piece of a
- *    discontinuous unit links to the same Reading.
+ *    discontinuous unit links to the same Reading. A Sentence repeated in
+ *    the Scroll shares its segmentation, but each instance gives units of
+ *    its own, so each stays its own occurrence.
  */
 import type { Dumgen, SegmentedSentence, Unit } from "dumgen";
 import { Context, Effect, Option, Schema } from "effect";
@@ -22,7 +24,11 @@ import {
 	segmentSourceRanges,
 } from "./scroll-sentences";
 import { SegmentationCache } from "./segmentation-cache";
-import { sentenceKey, sentenceStitchedText } from "./sentence-key";
+import {
+	sentenceInstances,
+	sentenceKey,
+	sentenceStitchedText,
+} from "./sentence-key";
 import type {
 	ClassifyPlan,
 	NeighbourSentences,
@@ -126,12 +132,13 @@ function neighboursOf(
 	};
 }
 
-/** The covered units of one segmented Sentence, in reading order. */
+/** The covered units of one instance of a segmented Sentence, in reading order. */
 function coveredUnits(
 	scroll: ScrollSentences,
 	sentence: ScrollSentence,
 	segmented: SegmentedSentence,
 	key: string,
+	instance: number,
 	selection: SourceRange,
 ): PlannedUnit[] {
 	const ranges = segmentSourceRanges(scroll, sentence, segmented.segments);
@@ -144,6 +151,7 @@ function coveredUnits(
 			}),
 		)
 		.map((unit) => ({
+			instance,
 			occurrences: occurrencesOf(unit, segmented, ranges),
 			ref: { segments: [...unit.segments], sentenceKey: key },
 			unit,
@@ -260,9 +268,12 @@ export const classifySelection = Effect.fn("classifySelection")(function* (
 	);
 
 	const sentences = new Map<string, PlannedSentence>();
-	// One entry per UnitRef: a Sentence repeated in the selection, such as a
-	// refrain, adds its occurrences to the same unit.
-	const byRef = new Map<string, PlannedUnit>();
+	// A Sentence repeated in the Scroll, such as a refrain, is segmented
+	// once, and each of its instances gives units of its own (#116).
+	const instances = sentenceInstances(
+		scroll.sentences.map(({ text }) => text),
+	);
+	const units: PlannedUnit[] = [];
 	let failed = 0;
 	for (const { cached, index, key } of keyed) {
 		const sentence = scroll.sentences[index];
@@ -276,35 +287,23 @@ export const classifySelection = Effect.fn("classifySelection")(function* (
 				neighbours: neighboursOf(scroll.sentences, index),
 				segmented,
 			});
-		for (const unit of coveredUnits(
-			scroll,
-			sentence,
-			segmented,
-			key,
-			selection,
-		)) {
-			const id = `${key}:${unit.ref.segments.join(",")}`;
-			const known = byRef.get(id);
-			byRef.set(
-				id,
-				known
-					? {
-							...known,
-							occurrences: [
-								...known.occurrences,
-								...unit.occurrences,
-							],
-						}
-					: unit,
-			);
-		}
+		units.push(
+			...coveredUnits(
+				scroll,
+				sentence,
+				segmented,
+				key,
+				instances[index] ?? 0,
+				selection,
+			),
+		);
 	}
 
 	const plan: ClassifyPlan = {
 		content: input.content,
 		scrollPath: input.scrollPath,
 		sentences,
-		units: [...byRef.values()],
+		units,
 	};
 	const resolver = yield* UnitResolver;
 	const resolutions = yield* resolver.resolve(plan).pipe(

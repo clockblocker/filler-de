@@ -39,6 +39,13 @@ export type PlannedSentence = {
  */
 export type PlannedUnit = {
 	readonly ref: UnitRef;
+	/**
+	 * Which instance of its Sentence's text in the Scroll the unit stands
+	 * in, counted from 0 in reading order (`sentenceInstances`). A Sentence
+	 * repeated in one Scroll, such as a refrain, has one `UnitRef` but a
+	 * separate unit per instance, each its own occurrence.
+	 */
+	readonly instance: number;
 	readonly unit: Unit;
 	readonly occurrences: readonly SourceRange[];
 };
@@ -57,5 +64,6 @@ export type ClassifyPlan = {
 	 */
 	readonly content: string;
 	readonly sentences: ReadonlyMap<string, PlannedSentence>;
+	/** The covered units, one per instance of a repeated Sentence, in reading order. */
 	readonly units: readonly PlannedUnit[];
 };

@@ -4,9 +4,9 @@
  * Reading's Knowledge runs on here, and the user hears how it ended. An
  * occurrence of a Reading whose run is still going joins that run instead
  * of starting another, a click on a link to a note whose Knowledge is
- * still running waits for it and then scrolls to the Reading
- * (`awaitNote`), and `cancelAll` or unloading the plugin interrupts every
- * run, which keeps whatever it already published.
+ * still running waits for it and then opens the Reading note again
+ * (`awaitNote`, `createReadingReopener`), and `cancelAll` or unloading the
+ * plugin interrupts every run, which keeps whatever it already published.
  */
 import { readingIdentityKey } from "dumling";
 import { Cause, Effect, Exit, Fiber } from "effect";

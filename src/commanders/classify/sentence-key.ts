@@ -37,3 +37,19 @@ export function sentenceKey(
 		]),
 	);
 }
+
+/**
+ * Per Sentence, how many earlier Sentences of the Scroll have its Stitched
+ * Text: 0 for the first instance of a text, 1 for its first repeat, and so
+ * on. It tells the instances of a repeated Sentence apart, so each keeps its
+ * own occurrences.
+ */
+export function sentenceInstances(texts: readonly string[]): number[] {
+	const seen = new Map<string, number>();
+	return texts.map((text) => {
+		const stitched = sentenceStitchedText(text);
+		const instance = seen.get(stitched) ?? 0;
+		seen.set(stitched, instance + 1);
+		return instance;
+	});
+}

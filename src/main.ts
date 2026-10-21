@@ -20,16 +20,21 @@ import { logError } from "@textfresser/vault-action-manager/issue-handlers";
 import { Cause, Effect, Exit, Predicate } from "effect";
 import { Modal, Notice, Plugin, requestUrl } from "obsidian";
 import {
-	awaitReadingKnowledge,
 	ClassifyCommander,
 	createKnowledgeQueue,
+	createReadingReopener,
+	createScrollActivity,
+	createUnlinkObserver,
 	DUMGEN_SEGMENTER_VERSION,
 	dumgenUnitResolver,
 	filesSegmentationCache,
 	type KnowledgeQueue,
+	observeScrollModifications,
 	produceKnowledge,
 	UnitResolverError,
+	type UnlinkObserver,
 	vamScrollFiles,
+	vamUnlinkScrolls,
 } from "./commanders/classify";
 import {
 	CANCEL_RESET_COMMAND_NAME,
@@ -114,6 +119,11 @@ export default class TextEaterPlugin extends Plugin {
 	classify: ClassifyCommander | null = null;
 	/** Classify's background Knowledge runs, one per Reading (#64). */
 	knowledgeQueue: KnowledgeQueue | null = null;
+	/** Removes the occurrences whose links the user deletes from a Scroll (#116). */
+	private unlinkObserver: UnlinkObserver | null = null;
+	private stopObservingScrolls: Effect.Effect<void> | null = null;
+	/** Reopens a clicked Reading note once its Knowledge lands (#116). */
+	private reopenReading: ((target: string) => Promise<boolean>) | null = null;
 	/** "Reset dictionary from old notes…" (#65). */
 	private dictionaryReset: DictionaryResetCommand | null = null;
 	/** The dictionary store over `Worter/`, built once VAM exists. */
@@ -257,6 +267,20 @@ export default class TextEaterPlugin extends Plugin {
 				),
 		});
 		this.knowledgeQueue = knowledgeQueue;
+		this.reopenReading = createReadingReopener({
+			activePath: async () => {
+				const exit = await Effect.runPromiseExit(this.vam.mdPwd());
+				return Exit.isSuccess(exit) && exit.value
+					? splitPathCodec.format(exit.value)
+					: null;
+			},
+			open: async (path) => {
+				const splitPath = splitPathCodec.parse(path);
+				if (splitPath.kind !== SplitPathKind.MdFile) return;
+				await Effect.runPromise(this.vam.cd(splitPath));
+			},
+			queue: knowledgeQueue,
+		});
 		const segmentationCache = filesSegmentationCache(
 			this.app.vault.adapter,
 		);
@@ -266,15 +290,18 @@ export default class TextEaterPlugin extends Plugin {
 				? `${DUMGEN_SEGMENTER_VERSION}+scripted-${scripted}`
 				: DUMGEN_SEGMENTER_VERSION;
 		};
+		const scrollActivity = createScrollActivity();
+		const resetRunning = () =>
+			this.dictionaryReset?.isRunning()
+				? "A dictionary reset is running; Classify once it has ended."
+				: undefined;
 		this.classify = new ClassifyCommander({
-			blockedBy: () =>
-				this.dictionaryReset?.isRunning()
-					? "A dictionary reset is running; Classify once it has ended."
-					: undefined,
+			blockedBy: resetRunning,
 			cache: segmentationCache,
 			dumgen: () => this.dumgen.get(),
 			missingProviderKeys: () => this.dumgen.missingKeys(),
 			resolver: dumgenUnitResolver({
+				activity: scrollActivity,
 				dumgen,
 				knowledge: knowledgeQueue,
 				notify: (message) => new Notice(message),
@@ -282,6 +309,17 @@ export default class TextEaterPlugin extends Plugin {
 				store: dictionary,
 			}),
 			segmenterVersion,
+		});
+		this.unlinkObserver = createUnlinkObserver({
+			activity: scrollActivity,
+			blockedBy: resetRunning,
+			cache: segmentationCache,
+			notify: (message) => new Notice(message),
+			onEnd: decrementPending,
+			onStart: incrementPending,
+			scrolls: vamUnlinkScrolls(this.vam),
+			segmenterVersion,
+			store: dictionary,
 		});
 		this.dictionaryReset = new DictionaryResetCommand({
 			app: this.app,
@@ -315,6 +353,9 @@ export default class TextEaterPlugin extends Plugin {
 		// VaultActionManager will convert events to VaultEvent, filter self-events,
 		// and notify subscribers (e.g., Librarian)
 		await Effect.runPromise(this.vam.startListening());
+		this.stopObservingScrolls = await Effect.runPromise(
+			observeScrollModifications(this.vam, this.unlinkObserver),
+		);
 
 		// Start listening to user events (clicks, clipboard, select-all, wikilinks)
 		this.userEventInterceptor.start();
@@ -387,6 +428,13 @@ export default class TextEaterPlugin extends Plugin {
 		this.dictionaryReset = null;
 		this.knowledgeQueue?.close();
 		this.knowledgeQueue = null;
+		this.reopenReading = null;
+		this.unlinkObserver?.close();
+		this.unlinkObserver = null;
+		const stopObservingScrolls = this.stopObservingScrolls;
+		this.stopObservingScrolls = null;
+		if (stopObservingScrolls)
+			void Effect.runPromise(stopObservingScrolls).catch(() => undefined);
 		this.dumgen.dispose();
 		const dictionary = this.dictionary;
 		this.dictionary = null;
@@ -679,13 +727,13 @@ export default class TextEaterPlugin extends Plugin {
 		return building;
 	}
 
-	/** A clicked Reading link waits for its Knowledge (TODO(#116): reopen it then). */
+	/** A clicked Reading link reopens its note once its Knowledge lands. */
 	private readonly onWikilinkClicked = (target: string): void => {
-		const queue = this.knowledgeQueue;
-		if (!queue) return;
-		void awaitReadingKnowledge(queue, target).catch((error) => {
+		const reopen = this.reopenReading;
+		if (!reopen) return;
+		void reopen(target).catch((error) => {
 			logger.warn(
-				"[TextEaterPlugin] Could not wait for the Reading's Knowledge:",
+				"[TextEaterPlugin] Could not reopen the Reading note:",
 				getErrorMessage(error),
 			);
 		});

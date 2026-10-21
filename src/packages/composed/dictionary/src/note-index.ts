@@ -676,6 +676,14 @@ export class NoteIndex {
 		return [...(this.refs.get(ref)?.values() ?? [])];
 	}
 
+	/** Every stored Attestation Link whose ref starts with `prefix`. */
+	linksWithRefPrefix(prefix: string): AttestationLink<"de">[] {
+		const links: AttestationLink<"de">[] = [];
+		for (const [ref, byReading] of this.refs)
+			if (ref.startsWith(prefix)) links.push(...byReading.values());
+		return links;
+	}
+
 	/** Every stored Reading whose links name this Surface. */
 	readingsLinking(surfaceId: string): ReadingEntry<"de">[] {
 		return [...(this.surfaceLinks.get(surfaceId) ?? [])]

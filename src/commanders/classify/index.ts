@@ -10,8 +10,17 @@ export {
 	type KnowledgeQueue,
 } from "./resolution/knowledge-queue";
 export { produceKnowledge } from "./resolution/produce-knowledge";
-export { vamScrollFiles } from "./resolution/scroll-files";
-export { awaitReadingKnowledge } from "./resolution/scroll-to-reading";
+export { createScrollActivity } from "./resolution/scroll-activity";
+export {
+	observeScrollModifications,
+	vamScrollFiles,
+	vamUnlinkScrolls,
+} from "./resolution/scroll-files";
+export { createReadingReopener } from "./resolution/scroll-to-reading";
+export {
+	createUnlinkObserver,
+	type UnlinkObserver,
+} from "./resolution/unlink-observer";
 export {
 	filesSegmentationCache,
 	memorySegmentationCache,

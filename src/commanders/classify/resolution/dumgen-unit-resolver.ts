@@ -7,20 +7,22 @@
  * 1. `resolve.grammar` names the unit's Attestation, with the stored
  *    Lemmas found under the Sentence's words as candidates.
  * 2. `resolve.reading` reuses one of the Lemma's stored Emoji Descriptions
- *    or writes a New one; a Foreign Lemma has its one Reading.
- * 3. The occurrence commits through the dictionary store: Reuse as
- *    `ensureOwnedSurface`, New as `addNewNote`, each with the Attestation
- *    Ref of the Segment's source block. A New the store refuses as stale is
- *    judged again, at most `MAX_STALE_REJUDGES` times.
+ *    or writes a New one; a Foreign Lemma has its one Reading. The
+ *    instances of a repeated Sentence share one judgement.
+ * 3. Each occurrence commits through the dictionary store
+ *    (`commitOccurrence`) with the Attestation Ref of its source block. A
+ *    New the store refuses as stale is judged again, at most
+ *    `MAX_STALE_REJUDGES` times.
  * 4. One compare-and-swap write links every piece of every resolved unit
  *    to its Reading note and adds the block IDs the refs name.
  * 5. Each resolved Reading's Knowledge runs in the background.
  *
- * `resolveUnit` is idempotent per `UnitRef`: a second run over the same
+ * Resolution is idempotent per occurrence: a second run over the same
  * occurrence reuses the Reading and adds nothing, so lazy click resolution
- * can later call it for one ref.
+ * can later call it for one ref. While it runs, the Scroll is marked busy
+ * (`ScrollActivity`), so its occurrences are not judged unlinked before its
+ * links are written.
  */
-import { sha256Hex } from "@textfresser/lemma-note-codec";
 import type { Dumgen } from "dumgen";
 import { parseUnit } from "dumling";
 import type * as Dumling from "dumling/types";
@@ -35,6 +37,7 @@ import {
 import { commitOccurrence } from "./commit-occurrence";
 import type { KnowledgeQueue } from "./knowledge-queue";
 import type { KnowledgeJob, ResolutionStore } from "./knowledge-types";
+import type { ScrollActivity } from "./scroll-activity";
 import type { ScrollFiles } from "./scroll-files";
 import {
 	attestationRefOf,
@@ -42,20 +45,11 @@ import {
 	linkUnitsInScroll,
 	type MintedBlockIds,
 	mintBlockIds,
+	occurrenceKeyOf,
 	sourceBlocksOf,
 	type UnitLinkEdit,
 	withAppended,
 } from "./scroll-links";
-
-/**
- * The key of one occurrence in its block: its Sentence and its Segments,
- * as the unit's ref names them, so running Classify over the same
- * occurrence again names the same ref.
- */
-const occurrenceKeyOf = (planned: PlannedUnit): string =>
-	sha256Hex(
-		JSON.stringify([planned.ref.sentenceKey, planned.ref.segments]),
-	).slice(0, 8);
 
 /** How often a unit judges its Reading again after its New was refused as stale. */
 const MAX_STALE_REJUDGES = 2;
@@ -73,6 +67,8 @@ export type DumgenUnitResolverDeps = {
 	readonly knowledge: Pick<KnowledgeQueue, "enqueue">;
 	/** Told what the run could not do: links it skipped, a failed write. */
 	readonly notify?: (message: string) => void;
+	/** Marks each Scroll busy while a run resolves and links in it. */
+	readonly activity?: ScrollActivity;
 };
 
 /** A unit resolution left unresolved, with the reason the user hears. */
@@ -140,15 +136,37 @@ const pendingOnFailure =
 	(error: { readonly message: string }): UnitPending =>
 		new UnitPending({ reason: `${what}: ${error.message}` });
 
-/** Resolves one unit to its committed Reading; never writes to the Scroll. */
-const resolveUnit = Effect.fnUntraced(function* (
+/** The Reading a unit commits under, and how it was decided. */
+type Decided = {
+	readonly decision: "New" | "Reuse";
+	readonly reading: Dumling.Reading<"de">;
+	/** For a judged Reading: the stored Emoji Descriptions the judge saw. */
+	readonly seen?: readonly string[];
+};
+
+/** What dumgen judged a unit: its Attestation and the Reading to commit it under. */
+type JudgedUnit = {
+	readonly attestation: Dumling.Attestation<"de">;
+	readonly sentence: PlannedSentence;
+	readonly decided: Decided;
+	/** Judges the Reading again over `candidates`, keeping a description already `written`. */
+	readonly judge: (
+		candidates: readonly string[],
+		written?: string,
+	) => Effect.Effect<Decided, UnitPending>;
+};
+
+/** One judgement per `UnitRef`: the instances of a repeated Sentence share it. */
+const judgementKeyOf = ({ ref }: PlannedUnit) =>
+	JSON.stringify([ref.sentenceKey, ref.segments]);
+
+/** Asks dumgen for a unit's grammar and Reading; writes nothing. */
+const judgeUnit = Effect.fnUntraced(function* (
 	dumgen: Dumgen,
 	store: ResolutionStore,
 	plan: ClassifyPlan,
 	planned: PlannedUnit,
-	/** The Segment's source block as an embed; none when the block cannot carry an ID. */
-	attestationRef: string | undefined,
-): Effect.fn.Return<ResolvedUnit, UnitPending> {
+): Effect.fn.Return<JudgedUnit, UnitPending> {
 	const sentence = plan.sentences.get(planned.ref.sentenceKey);
 	if (!sentence)
 		return yield* new UnitPending({
@@ -214,11 +232,7 @@ const resolveUnit = Effect.fnUntraced(function* (
 			);
 
 	const stored = yield* store.lemmaNote(lemma);
-	let decided: {
-		readonly decision: "New" | "Reuse";
-		readonly reading: Dumling.Reading<"de">;
-		readonly seen?: readonly string[];
-	};
+	let decided: Decided;
 	if (lemma.family === "Foreign") {
 		// A Foreign Lemma has exactly one Reading, without an Emoji Description.
 		decided = {
@@ -233,7 +247,19 @@ const resolveUnit = Effect.fnUntraced(function* (
 			}),
 		);
 	}
+	return { attestation, decided, judge, sentence };
+});
 
+/** Commits one occurrence of a judged unit; never writes to the Scroll. */
+const commitUnit = Effect.fnUntraced(function* (
+	store: ResolutionStore,
+	judged: JudgedUnit,
+	planned: PlannedUnit,
+	/** The Segment's source block as an embed; none when the block cannot carry an ID. */
+	attestationRef: string | undefined,
+): Effect.fn.Return<ResolvedUnit, UnitPending> {
+	const { attestation, judge, sentence } = judged;
+	let decided = judged.decided;
 	let created = false;
 	for (let rejudged = 0; ; rejudged++) {
 		const committed = yield* commitOccurrence(store, {
@@ -360,19 +386,36 @@ export function dumgenUnitResolver(
 						: attestationRefOf(
 								plan.scrollPath,
 								id,
-								occurrenceKeyOf(planned),
+								occurrenceKeyOf(planned.ref, planned.instance),
 							);
 				};
+				const judgements = new Map<
+					string,
+					Effect.Effect<JudgedUnit, UnitPending>
+				>();
+				for (const planned of plan.units)
+					if (!judgements.has(judgementKeyOf(planned)))
+						judgements.set(
+							judgementKeyOf(planned),
+							yield* Effect.cached(
+								judgeUnit(dumgen, store, plan, planned),
+							),
+						);
 				const outcomes = yield* Effect.forEach(
 					plan.units,
 					(planned): Effect.Effect<UnitOutcome> =>
-						resolveUnit(
-							dumgen,
-							store,
-							plan,
-							planned,
-							refOf(planned),
+						(
+							judgements.get(judgementKeyOf(planned)) ??
+							judgeUnit(dumgen, store, plan, planned)
 						).pipe(
+							Effect.flatMap((judged) =>
+								commitUnit(
+									store,
+									judged,
+									planned,
+									refOf(planned),
+								),
+							),
 							Effect.map(
 								(unit) => ({ _tag: "Resolved", unit }) as const,
 							),
@@ -481,6 +524,16 @@ export function dumgenUnitResolver(
 							message: getErrorMessage(cause),
 						}),
 			),
+			(effect, plan) => {
+				const { activity } = deps;
+				return activity === undefined
+					? effect
+					: Effect.acquireUseRelease(
+							Effect.sync(() => activity.begin(plan.scrollPath)),
+							() => effect,
+							(end) => Effect.sync(end),
+						);
+			},
 		),
 	});
 }

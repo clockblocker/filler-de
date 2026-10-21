@@ -4,7 +4,8 @@
  * dictionary store over a fake vault and the Scroll in memory. It proves
  * the scripted dumgen resolves the noun, the separable verb and the
  * Locution through the real dumgen, so the desktop scenario tests the
- * Obsidian side only.
+ * Obsidian side only. Its last step is the `classify-unlink` scenario's:
+ * the user unlinks two occurrences and the unlink observer removes them.
  */
 import { describe, expect, it } from "bun:test";
 import { makeDumdictVaultStore } from "@textfresser/dictionary";
@@ -14,6 +15,8 @@ import { ClassifyCommander } from "../../../src/commanders/classify/classify-com
 import { dumgenUnitResolver } from "../../../src/commanders/classify/resolution/dumgen-unit-resolver";
 import { createKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
 import { produceKnowledge } from "../../../src/commanders/classify/resolution/produce-knowledge";
+import { createScrollActivity } from "../../../src/commanders/classify/resolution/scroll-activity";
+import { createUnlinkObserver } from "../../../src/commanders/classify/resolution/unlink-observer";
 import { memorySegmentationCache } from "../../../src/commanders/classify/segmentation-cache";
 import { DumgenHost } from "../../../src/managers/dumgen";
 import { FakeVault } from "../../../src/packages/composed/dictionary/tests/support/fake-vault";
@@ -71,11 +74,14 @@ describe("Classify resolves a selection end to end", () => {
 					job,
 				),
 		});
+		const cache = memorySegmentationCache();
+		const activity = createScrollActivity();
 		const commander = new ClassifyCommander({
-			cache: memorySegmentationCache(),
+			cache,
 			dumgen: () => host.get(),
 			missingProviderKeys: () => host.missingKeys(),
 			resolver: dumgenUnitResolver({
+				activity,
 				dumgen: Effect.sync(() => host.get()),
 				knowledge: queue,
 				notify: (message) => notices.push(message),
@@ -146,5 +152,33 @@ describe("Classify resolves a selection end to end", () => {
 			/!\[\[Story#\^1\|\^[0-9a-f]{8}\]\]/u,
 		);
 		expect(knowledgeCalls()).toEqual(before);
+
+		// The user unlinks the second "Der Hund" and "heute" (#116).
+		const hundNote = await readingNoteOf(LEMMA_PATHS.hund);
+		const heuteNote = await readingNoteOf(LEMMA_PATHS.heute);
+		const observer = createUnlinkObserver({
+			activity,
+			cache,
+			quietMs: 0,
+			scrolls: {
+				exists: (path) => Effect.sync(() => vault.content(path) !== undefined),
+				read: (path) =>
+					Effect.sync(() => (path === SCROLL ? scroll.content : undefined)),
+				resolve: (linkpath) =>
+					Effect.succeed(linkpath === "Story" ? SCROLL : undefined),
+			},
+			segmenterVersion: () => "test-segmenter",
+			store: Effect.succeed(store),
+		});
+		scroll.content = scroll.content
+			.replace(`${await link(LEMMA_PATHS.hund, "Der Hund")} schläft.`, "Der Hund schläft.")
+			.replace(await link(LEMMA_PATHS.heute, "heute"), "heute");
+		observer.modified([SCROLL]);
+		await observer.whenIdle();
+		expect(vault.content(hundNote)).toMatch(/!\[\[Story#\^0\|\^[0-9a-f]{8}\]\]/u);
+		expect(vault.content(hundNote)).not.toMatch(/Story#\^1/u);
+		expect(vault.content(heuteNote)).toBeUndefined();
+		expect(vault.content(LEMMA_PATHS.heute)).toBeUndefined();
+		expect(vault.content(LEMMA_PATHS.anfangen)).toBeDefined();
 	});
 });
