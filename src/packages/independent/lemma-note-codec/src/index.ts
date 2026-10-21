@@ -58,11 +58,7 @@ export {
 	type LegacyNotePathParse,
 	legacyLemmaNotePath,
 	type ParsedLegacyLemmaNotePath,
-	type ParsedLegacyNotePath,
-	type ParsedShadowNotePath,
 	parseLegacyNotePath,
-	SHADOW_FOLDER,
-	shadowNotePath,
 } from "./path/legacy-note-path";
 export {
 	FILE_NAME_MAX_BYTES,

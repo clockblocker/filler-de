@@ -70,10 +70,7 @@ import {
 	type ReadingLocation,
 	type RelationEdge,
 	relationEdgesOf,
-	shadowPathOf,
-	shadowRefOf,
 } from "./note-index";
-import { isStoreShadow, shadowBody } from "./shadow-note";
 import { loadCleanupRelationsContext, loadReadingEntryContext } from "./slices";
 import { type StagedNote, stageChanges } from "./stage-changes";
 import {
@@ -116,11 +113,6 @@ export type HealingBlocked = {
 export type DictionaryDiagnostics = {
 	readonly quarantined: readonly QuarantinedNote[];
 	readonly healingBlocked: readonly HealingBlocked[];
-	/**
-	 * Shadow notes no pending relation needs any more that hold content the
-	 * store did not write. The store leaves them to the user.
-	 */
-	readonly userShadows: readonly string[];
 	/** Folders or files the last full scan could not read. */
 	readonly scanIssues: readonly string[];
 };
@@ -146,8 +138,10 @@ export type DumdictVaultStoreOptions = {
  * serialized, checked against a staged fork of the index, and written as
  * one stop-on-first-failure batch. The store never overwrites or removes
  * content it did not write: creates fail on an existing file, rewrites
- * compare-and-swap on the content they read, and only the store's own
- * Shadow bodies are ever trashed.
+ * compare-and-swap on the content they read, and it trashes no file. A
+ * pending relation lives only in its source note; a link to its target
+ * points at the target's Crossroad path, which Obsidian shows as an
+ * uncreated link until a note is there (ADR-0015).
  */
 export type DumdictVaultStore = {
 	/** dumdict's Reading Entry slice for one planner request. */
@@ -312,29 +306,16 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 
 	const diagnosticsOf = (view: NoteIndex): DictionaryDiagnostics => {
 		const quarantined: QuarantinedNote[] = [];
-		const userShadows: string[] = [];
-		for (const entry of view.allEntries()) {
+		for (const entry of view.allEntries())
 			if (entry.kind === "quarantined")
 				quarantined.push({ path: entry.path, reason: entry.reason });
-			if (
-				entry.kind === "shadow" &&
-				!entry.owned &&
-				view.shadowClaims(entry.path).size === 0
-			)
-				userShadows.push(entry.path);
-		}
 		for (const { path, heldBy } of view.duplicates())
 			quarantined.push({
 				path,
 				reason: { _tag: "DuplicateLemma", heldBy },
 			});
 		quarantined.sort((a, b) => byCodeUnit(a.path, b.path));
-		return {
-			healingBlocked,
-			quarantined,
-			scanIssues,
-			userShadows: userShadows.sort(byCodeUnit),
-		};
+		return { healingBlocked, quarantined, scanIssues };
 	};
 
 	const report = Effect.sync(() => {
@@ -355,16 +336,6 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		Effect.uninterruptible(vault.dispatchStopOnFirstFailure(actions)).pipe(
 			Effect.onInterrupt(() => markStale),
 		);
-
-	/**
-	 * Whether the index has seen every file whole: no stale index, no scan
-	 * issue and no quarantined note, any of which could hide a pending
-	 * relation. Only then may the store remove a Shadow no relation claims.
-	 */
-	const complete = () =>
-		!stale &&
-		scanIssues.length === 0 &&
-		index.allEntries().every((entry) => entry.kind !== "quarantined");
 
 	/** Reads one path into its entry; undefined when no file is there. */
 	const readEntry = Effect.fnUntraced(function* (path: string) {
@@ -507,90 +478,6 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	);
 
 	/**
-	 * The store's own Shadow notes among `paths`, read now: only a file that
-	 * holds exactly the store's Shadow body may be trashed.
-	 */
-	const ownedShadowContents = Effect.fnUntraced(function* (
-		paths: readonly string[],
-	) {
-		const owned: { path: string; content: string }[] = [];
-		for (const path of paths) {
-			const read = yield* Effect.result(
-				vault.readContentWithStat(mdSplitPath(path)),
-			);
-			if (
-				read._tag === "Success" &&
-				isStoreShadow(path, read.success.content)
-			)
-				owned.push({ content: read.success.content, path });
-		}
-		return owned;
-	});
-
-	/** An identity rewrite that fails the batch if the Shadow's content changed. */
-	const verifyShadow = ({
-		path,
-		content,
-	}: {
-		path: string;
-		content: string;
-	}): VaultAction => ({
-		kind: VaultActionKind.ProcessMdFile,
-		payload: {
-			splitPath: mdSplitPath(path),
-			transform: compareAndSwap(path, content, content),
-		},
-	});
-
-	/**
-	 * Trashes Shadow notes already verified as the store's own. VAM lets a
-	 * trash win over any other action on its path, so the verification runs
-	 * in the batch before; the files are re-read afterwards either way. VAM
-	 * has no conditional trash, so an edit landing between the two batches
-	 * is lost to Obsidian's trash, where it can still be restored.
-	 */
-	const trashVerified = Effect.fnUntraced(function* (
-		paths: readonly string[],
-	) {
-		if (paths.length === 0) return;
-		const outcome = yield* Effect.result(
-			dispatch(
-				paths.map(
-					(path): VaultAction => ({
-						kind: VaultActionKind.TrashMdFile,
-						payload: { splitPath: mdSplitPath(path) },
-					}),
-				),
-			),
-		);
-		if (outcome._tag === "Failure")
-			yield* Effect.logWarning(
-				"Dictionary could not remove Shadow notes",
-				outcome.failure,
-			);
-		yield* reread(paths);
-	});
-
-	/**
-	 * Removes the store's own Shadow notes that no relation needs any more.
-	 * It runs only after a full read of `Worter/` that saw every file whole,
-	 * so a note it could not read never loses its Shadow.
-	 */
-	const cleanOrphanShadows = Effect.fnUntraced(function* () {
-		if (!complete()) return;
-		const orphans = yield* ownedShadowContents(index.orphanShadows());
-		if (orphans.length === 0) return;
-		const verified = yield* Effect.result(
-			dispatch(orphans.map(verifyShadow)),
-		);
-		if (verified._tag === "Failure") {
-			yield* reread(orphans.map(({ path }) => path));
-			return;
-		}
-		yield* trashVerified(orphans.map(({ path }) => path));
-	});
-
-	/**
 	 * Moves Lemma notes whose path disagrees with their metadata to their
 	 * canonical path, unless a file is already there. The index learns the
 	 * outcome from the files, not from what the move was meant to do; a move
@@ -674,8 +561,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		if (rebuilt && retry) return yield* heal(false);
 	});
 
-	/** After a full read of `Worter/`: heal, then remove orphan Shadows. */
-	const settle = heal().pipe(Effect.andThen(cleanOrphanShadows()));
+	/** After a full read of `Worter/`: heal. */
+	const settle = heal();
 
 	/**
 	 * Re-reads what an event touched. Identity comes from content, never
@@ -919,68 +806,6 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	});
 
 	/**
-	 * Shadow notes to create and to remove. Every file's pending relations
-	 * count, holders, duplicates and quarantined notes alike. A Shadow with a
-	 * relation and no file is (re)created; one whose last relation goes is a
-	 * candidate for removal, verified as the store's own at dispatch.
-	 */
-	const planShadows = (
-		notes: readonly StagedNote[],
-		writes: ReadonlyMap<string, string>,
-	) => {
-		const removed = new Map<string, Set<string>>();
-		const added = new Map<string, Set<string>>();
-		const samples = new Map<string, PendingSemanticRelationRecord<"de">>();
-		const note = (
-			map: Map<string, Set<string>>,
-			path: string,
-			ref: string,
-		) => map.set(path, (map.get(path) ?? new Set()).add(ref));
-		for (const staged of notes) {
-			const notePath = staged.basePath ?? writes.get(staged.lemmaKey);
-			if (notePath === undefined) continue;
-			if (staged.basePath !== undefined)
-				for (const record of staged.base?.pendingRelations ?? []) {
-					const path = shadowPathOf(record);
-					if (path)
-						note(
-							removed,
-							path,
-							shadowRefOf(staged.basePath, record),
-						);
-				}
-			for (const record of staged.data.pendingRelations) {
-				const path = shadowPathOf(record);
-				if (!path) continue;
-				note(added, path, shadowRefOf(notePath, record));
-				samples.set(path, record);
-			}
-		}
-		const creates: { path: string; content: string }[] = [];
-		const removals: string[] = [];
-		for (const path of new Set([...removed.keys(), ...added.keys()])) {
-			const before = index.shadowClaims(path);
-			const after = new Set(
-				[...before].filter((ref) => !removed.get(path)?.has(ref)),
-			);
-			for (const ref of added.get(path) ?? []) after.add(ref);
-			// Claims and files are matched without case, as the file system does.
-			const occupants = index.sameFileAs(path);
-			const sample = samples.get(path);
-			if (after.size > 0 && occupants.length === 0 && sample)
-				creates.push({
-					content: shadowBody(sample.pending.target),
-					path,
-				});
-			if (before.size > 0 && after.size === 0 && complete())
-				for (const occupant of occupants)
-					if (index.entry(occupant)?.kind === "shadow")
-						removals.push(occupant);
-		}
-		return { creates, removals };
-	};
-
-	/**
 	 * The index with a commit's staged notes in place, for rendering only:
 	 * it is never published, and a new note sits at its canonical path.
 	 */
@@ -1161,21 +986,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			if ("_tag" in planned) stalePaths.push(planned.path);
 			else writes.push(planned);
 		}
-		const writePaths = new Map(
-			writes.map(({ entry, path }) => [entry.lemmaKey, path]),
-		);
-		const shadows = planShadows(staged.notes, writePaths);
 		if (inverseAfter.failed.size > 0)
 			yield* Effect.logWarning(
 				"Dictionary could not project inverse relations for some notes it writes",
 				[...inverseAfter.failed],
 			);
-		for (const { path } of shadows.creates) {
-			const present = yield* vault
-				.exists(mdSplitPath(path))
-				.pipe(Effect.orElseSucceed(() => true));
-			if (present) stalePaths.push(path);
-		}
 		if (stalePaths.length > 0) {
 			// A refresh that finds nothing new still refuses: the plan read a
 			// state the files no longer hold.
@@ -1184,35 +999,17 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			yield* rerenderInverse(claimsMovedBy(changes));
 			return conflict("revisionConflict");
 		}
-		const removals = yield* ownedShadowContents(shadows.removals);
-		const verifiedPaths = new Set(removals.map(({ path }) => path));
-
 		// Creates run as their own first batch: VAM orders a batch by folder
 		// depth, so only then does a create that finds a file stop the commit
 		// before any rewrite lands.
 		const isCreate = ({ action }: PlannedWrite) =>
 			action.kind === VaultActionKind.CreateFile;
-		const creates: VaultAction[] = [
-			...writes.filter(isCreate).map(({ action }) => action),
-			...shadows.creates.map(
-				({ path, content }): VaultAction => ({
-					kind: VaultActionKind.CreateFile,
-					payload: { content, splitPath: createOnlySplitPath(path) },
-				}),
-			),
-		];
-		const rewrites: VaultAction[] = [
-			...writes
-				.filter((write) => !isCreate(write))
-				.map(({ action }) => action),
-			...removals.map(verifyShadow),
-		];
+		const creates = writes.filter(isCreate).map(({ action }) => action);
+		const rewrites = writes
+			.filter((write) => !isCreate(write))
+			.map(({ action }) => action);
 		const wrote = (action: VaultAction) =>
-			action.kind !== VaultActionKind.CreateFolder &&
-			!(
-				action.kind === VaultActionKind.ProcessMdFile &&
-				verifiedPaths.has(actionPath(action))
-			);
+			action.kind !== VaultActionKind.CreateFolder;
 
 		const phases = [creates, rewrites];
 		const done: VaultAction[] = [];
@@ -1255,17 +1052,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			next.set(path, entry);
 			cache?.delete(path);
 		}
-		for (const { path, content } of shadows.creates) {
-			next.set(path, {
-				hash: contentHash(content),
-				kind: "shadow",
-				owned: true,
-				path,
-			});
-			cache?.delete(path);
-		}
 		publish(next);
-		yield* trashVerified([...verifiedPaths]);
 		const committed = revision();
 		// The notes this commit's claims reach, before or after, show the
 		// committed claims. Their re-renders change no data, so they run

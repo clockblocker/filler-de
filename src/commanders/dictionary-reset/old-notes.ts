@@ -38,9 +38,10 @@ export type OldNoteKind =
 	/** Nothing but whitespace. */
 	| "Empty"
 	/**
-	 * A Lemma or Shadow note the new store wrote (`%%tf-part:` markers), not
-	 * an old note. The reset reads nothing from it, and Execute refuses to
-	 * run while `Worter/` holds one.
+	 * A note a newer build wrote (`%%tf-part:` or `%%tf:` markers), such as a
+	 * Lemma note or a Shadow note from before #109, not an old note. The
+	 * reset reads nothing from it, and Execute refuses to run while `Worter/`
+	 * holds one.
 	 */
 	| "NewFormat";
 

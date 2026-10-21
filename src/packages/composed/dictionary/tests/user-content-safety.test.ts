@@ -2,8 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { legacyLemmaNotePath } from "@textfresser/lemma-note-codec";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type { PlannedChangeOp } from "dumdict";
-import { createMemoryNoteCache, DictionaryRequestError } from "../src";
-import { shadowBody } from "../src/shadow-note";
+import {
+	createMemoryNoteCache,
+	DictionaryPathOccupiedError,
+	DictionaryRequestError,
+} from "../src";
 import { FakeVault } from "./support/fake-vault";
 import { expectIndexMatchesFiles, run } from "./support/files";
 import {
@@ -16,15 +19,16 @@ import {
 	laufenReading,
 	pendingFrom,
 	readingEntry,
-	schreitenShadow,
 	synonym,
 	verb,
 } from "./support/fixtures";
 import { commit, openStore, seed } from "./support/store";
 
 const gehenPath = legacyLemmaNotePath(gehen).path;
-const shadowPath = "Worter/de/Shadow/Lexeme/VERB/schreiten.md";
-const storeShadow = shadowBody(schreitenShadow.target);
+const laufenPath = legacyLemmaNotePath(laufen).path;
+/** Where schreiten's Crossroad note goes, and the link a pending relation writes to it. */
+const schreitenCrossroadPath = "Worter/s/sch/schre/schreiten.md";
+const schreitenCrossroad = "[[Worter/s/sch/schre/schreiten|schreiten]]";
 const deletePending = (
 	reading: typeof gehenReading,
 ): PlannedChangeOp<"de"> => ({
@@ -42,77 +46,60 @@ async function withPendingGehen() {
 		createReading(readingEntry(laufenReading)),
 		createPending(pendingFrom(gehenReading)),
 	]);
-	expect(opened.vault.content(shadowPath)).toBe(storeShadow);
+	expect(opened.vault.markdownPaths().sort()).toEqual([
+		gehenPath,
+		laufenPath,
+	]);
 	return opened;
 }
 
-describe("Shadow notes", () => {
-	test("user content in a Shadow survives the deletion of its last relation", async () => {
+describe("a pending relation's target", () => {
+	test("its link points at the Crossroad path and stays put once a note is created there", async () => {
 		const { store, vault } = await withPendingGehen();
-		const written = `${storeShadow}\nMy own note about schreiten.\n`;
-		await vault.userWrite(shadowPath, written);
-
-		await seed(store, [deletePending(gehenReading)]);
-		expect(vault.content(shadowPath)).toBe(written);
-		expect((await run(store.diagnostics)).userShadows).toEqual([
-			shadowPath,
-		]);
-		await expectIndexMatchesFiles(store, vault);
-	});
-
-	test("a Shadow edited between the commit's check and its dispatch is kept", async () => {
-		const { store, vault } = await withPendingGehen();
-		const edited = `${storeShadow}typed just now\n`;
-		vault.failNextWrite((action, path) => {
-			if (
-				action.kind === VaultActionKind.ProcessMdFile &&
-				path === shadowPath
-			)
-				vault.silentWrite(shadowPath, edited);
-			return false;
-		});
-		await commit(store, [deletePending(gehenReading)]).catch(
-			() => undefined,
-		);
-		expect(vault.content(shadowPath)).toBe(edited);
-	});
-
-	test("an orphan Shadow the store wrote is cleaned up; one the user changed stays", async () => {
-		const userOrphan = "Worter/de/Shadow/Lexeme/VERB/springen.md";
-		const vault = new FakeVault({
-			[shadowPath]: storeShadow,
-			[userOrphan]: "springen, my notes",
-		});
-		const { store } = await openStore(vault);
-		expect(vault.content(shadowPath)).toBeUndefined();
-		expect(vault.content(userOrphan)).toBe("springen, my notes");
-		expect((await run(store.diagnostics)).userShadows).toEqual([
-			userOrphan,
-		]);
-	});
-
-	test("a Shadow the user deleted comes back with the next commit touching its relations, not on the event", async () => {
-		const { store, vault } = await withPendingGehen();
-		await vault.userDelete(shadowPath);
-		expect(vault.content(shadowPath)).toBeUndefined();
-
+		const before = vault.content(gehenPath) ?? "";
+		expect(before).toContain(schreitenCrossroad);
+		// Clicking the uncreated link makes Obsidian create an empty note there.
+		await vault.userWrite(schreitenCrossroadPath, "");
+		expect(vault.content(gehenPath)).toBe(before);
+		expect(
+			`${schreitenCrossroad.slice(2, -"|schreiten]]".length)}.md`,
+		).toBe(schreitenCrossroadPath);
+		// The store leaves the new note alone; #114 fills it as a Crossroad.
+		expect(vault.content(schreitenCrossroadPath)).toBe("");
 		await seed(store, [createPending(pendingFrom(laufenReading))]);
-		expect(vault.content(shadowPath)).toBe(storeShadow);
+		expect(vault.content(laufenPath)).toContain(schreitenCrossroad);
+		expect(vault.content(schreitenCrossroadPath)).toBe("");
 		await expectIndexMatchesFiles(store, vault);
 	});
 
-	test("a quarantined note's pending relations keep their Shadow", async () => {
-		const { store, vault } = await withPendingGehen();
-		// A wrong Block ID quarantines the note but leaves its records readable.
-		const broken = (vault.content(gehenPath) ?? "").replace(
-			/%%tf-part:reading r-[0-9a-f]+%%/,
-			"%%tf-part:reading r-00000000%%",
-		);
-		await vault.userWrite(gehenPath, broken);
-		expect((await run(store.diagnostics)).quarantined).toMatchObject([
-			{ path: gehenPath },
+	test("a note at an old Shadow path is never read, written or removed", async () => {
+		const oldShadow = "Worter/de/Shadow/Lexeme/VERB/schreiten.md";
+		const vault = new FakeVault({ [oldShadow]: "schreiten, my notes" });
+		const { store } = await openStore(vault);
+		await seed(store, [
+			createLemma(gehen),
+			createReading(readingEntry(gehenReading)),
+			createPending(pendingFrom(gehenReading)),
 		]);
-		expect(vault.content(shadowPath)).toBe(storeShadow);
+		await seed(store, [deletePending(gehenReading)]);
+		expect(vault.content(oldShadow)).toBe("schreiten, my notes");
+		expect(vault.markdownPaths().sort()).toEqual([gehenPath, oldShadow]);
+		expect((await run(store.diagnostics)).quarantined).toMatchObject([
+			{ path: oldShadow, reason: { _tag: "InvalidNote" } },
+		]);
+	});
+
+	test("an empty file at a Lemma's exact path is reported and left alone", async () => {
+		const vault = new FakeVault({ [gehenPath]: "" });
+		const { store } = await openStore(vault);
+		expect((await run(store.diagnostics)).quarantined).toMatchObject([
+			{ path: gehenPath, reason: { _tag: "InvalidNote" } },
+		]);
+		const refused = await commit(store, [createLemma(gehen)]).catch(
+			(error: unknown) => error,
+		);
+		expect(refused).toBeInstanceOf(DictionaryPathOccupiedError);
+		expect(vault.content(gehenPath)).toBe("");
 	});
 });
 
@@ -147,21 +134,16 @@ describe("creates never overwrite", () => {
 		expect(vault.content(gehenPath)).toBe("raced in");
 	});
 
-	test("a Shadow path holding an unseen file sends the commit back to re-plan", async () => {
+	test("a file at a pending target's Crossroad path does not hold up the commit", async () => {
 		const opened = await openStore();
 		await seed(opened.store, [
 			createLemma(gehen),
 			createReading(readingEntry(gehenReading)),
 		]);
-		opened.vault.silentWrite(shadowPath, "mine");
-		expect(
-			await commit(opened.store, [
-				createPending(pendingFrom(gehenReading)),
-			]),
-		).toMatchObject({ code: "revisionConflict" });
-		expect(opened.vault.content(shadowPath)).toBe("mine");
+		opened.vault.silentWrite(schreitenCrossroadPath, "mine");
 		await seed(opened.store, [createPending(pendingFrom(gehenReading))]);
-		expect(opened.vault.content(shadowPath)).toBe("mine");
+		expect(opened.vault.content(schreitenCrossroadPath)).toBe("mine");
+		expect(opened.vault.content(gehenPath)).toContain(schreitenCrossroad);
 	});
 });
 
@@ -219,19 +201,6 @@ test("a heal move that keeps failing is reported and not retried on every event"
 	expect(vault.content("Worter/de/moved.md")).toBeDefined();
 });
 
-describe("an incomplete read removes no Shadow", () => {
-	test("a note that is half-typed or unreadable at startup keeps its Shadow", async () => {
-		for (const spoil of ["half", "unreadable"] as const) {
-			const { vault } = await withPendingGehen();
-			if (spoil === "half")
-				vault.silentWrite(gehenPath, "%%tf-part:lemma%%\n%%tf:iden");
-			else vault.unreadable.add(gehenPath);
-			await openStore(vault);
-			expect(vault.content(shadowPath)).toBe(storeShadow);
-		}
-	});
-});
-
 describe("failures leave the index honest", () => {
 	test("a scan that fails while handling an event makes the next commit rebuild first", async () => {
 		const { store, vault } = await withPendingGehen();
@@ -241,9 +210,6 @@ describe("failures leave the index honest", () => {
 			"Worter/de/Lexeme/VERB",
 			"Worter/de/Lexeme/Verben",
 		);
-		// The notes it could not see still hold the Shadow's relation.
-		expect(vault.content(shadowPath)).toBe(storeShadow);
-
 		expect(
 			await run(
 				store.commitChanges({

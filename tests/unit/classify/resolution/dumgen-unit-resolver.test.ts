@@ -222,14 +222,14 @@ describe("dumgenUnitResolver", () => {
 		expect(note?.readings[0]?.attestations).toEqual(["![[Story#^0|^]]"]);
 	});
 
-	it("publishes generated relations, Pending targets as Shadows, in commits of capped size", async () => {
+	it("publishes generated relations, Pending ones in their source note only, in commits of capped size", async () => {
 		const content = "Der See ist tief. ^0\n";
-		const shadows = Array.from({ length: 60 }, (_, index) => `Teich${index}`);
+		const targets = Array.from({ length: 60 }, (_, index) => `Teich${index}`);
 		const { dumgen } = stubDumgen({
 			grammar: seeGrammar,
 			knowledge: (input) => ({
 				...baseTextKnowledge(input),
-				pendingRelations: shadows.map((canonicalForm) => ({
+				pendingRelations: targets.map((canonicalForm) => ({
 					relation: "synonym" as const,
 					target: {
 						canonicalForm,
@@ -260,7 +260,9 @@ describe("dumgenUnitResolver", () => {
 		const note = await run(harness.store.lemmaNote(see));
 		expect(note?.pendingRelations).toHaveLength(60);
 		expect(Math.max(...planned)).toBeLessThanOrEqual(50);
-		expect(harness.vault.content("Worter/de/Shadow/Lexeme/NOUN/Teich7.md")).toBeDefined();
+		const notePath = note?.path ?? "";
+		expect(harness.vault.markdownPaths().filter((path) => path.startsWith("Worter/"))).toEqual([notePath]);
+		expect(harness.vault.content(notePath)).toContain("[[Worter/t/tei/teich/teich7|Teich7]]");
 		expect(harness.notices).toEqual(["✓ Knowledge for See 🌊 saved"]);
 	});
 

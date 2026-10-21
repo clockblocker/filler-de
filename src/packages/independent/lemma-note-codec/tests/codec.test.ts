@@ -545,6 +545,20 @@ describe("projections", () => {
 		expect(markdown).not.toContain("%%tf:tags");
 	});
 
+	it("links a pending relation's target and a morpheme Shadow at their Crossroad paths", () => {
+		const pending = serialize(undefined, nounData).replace(
+			/@[0-9]+:[0-9a-f]{8}/gu,
+			"",
+		);
+		expect(pending).toContain(
+			"[[Worter/e/elt/elter/elternteil|Elternteil]]",
+		);
+		expect(pending).toContain("≠ [[Worter/v/vat/vater/vater|Vater]]");
+		expect(pending).not.toContain("Shadow/");
+		const morphemes = serialize(undefined, verbData);
+		expect(morphemes).toContain("[[Worter/s/ste/stehe/stehen|stehen]]");
+	});
+
 	it("takes a custom link renderer and header", () => {
 		const markdown = serialize(undefined, nounData, {
 			projections: {

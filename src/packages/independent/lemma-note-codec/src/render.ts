@@ -4,13 +4,16 @@ import type { projectSemanticRelations } from "dumrel";
 import type * as Dumrel from "dumrel/types";
 import { readingBlockId } from "./block-ids";
 import type { TypedBlockKind } from "./blocks";
-import { legacyLemmaNotePath, shadowNotePath } from "./path/legacy-note-path";
+import { legacyLemmaNotePath } from "./path/legacy-note-path";
+import { crossroadNotePath } from "./path/note-path";
 
 /**
- * Renders a wikilink to a Lemma, Reading or Shadow note. The default links
- * German targets by path, to the Reading's Block (ADR 0012, 0013), and
- * other languages by bare Canonical Form. It shows the Canonical Form alone,
- * as the legacy notes did, so a link reads `Kohle`, never its path.
+ * Renders a wikilink to a Lemma, a Reading, or a target known only by its
+ * Unit Shadow. The default links German Lemmas and Readings by path, to the
+ * Reading's Block (ADR 0012, 0013), and a Unit Shadow, whose sense is
+ * unknown, to its spelling's Crossroad note path (ADR-0015), whether or not
+ * that note exists yet. It shows the Canonical Form alone, as the legacy
+ * notes did, so a link reads `Kohle`, never its path.
  */
 export type LinkRenderer = {
 	readonly lemma: (lemma: Dumling.Lemma) => string;
@@ -188,7 +191,10 @@ function withoutExtension(path: string): string {
 	return path.replace(/\.md$/u, "");
 }
 
-/** Path-qualified links for German, bare ones where no path exists. */
+/**
+ * Path-qualified links: Lemmas and Readings for German, Unit Shadows at
+ * their Crossroad path; bare ones where no path exists.
+ */
 export const DEFAULT_LINKS: LinkRenderer = {
 	lemma(lemma) {
 		if (lemma.language !== "de") return bare(lemma.canonicalForm);
@@ -211,11 +217,11 @@ export const DEFAULT_LINKS: LinkRenderer = {
 		}
 	},
 	shadow(shadow) {
-		if (shadow.language !== "de") return bare(shadow.canonicalForm);
 		try {
-			const path = shadowNotePath(
-				shadow as Extract<Dumrel.UnitShadow, { language: "de" }>,
-			).path;
+			const { path } = crossroadNotePath(
+				shadow.canonicalForm,
+				shadow.language,
+			);
 			return `[[${withoutExtension(path)}|${shadow.canonicalForm}]]`;
 		} catch {
 			return bare(shadow.canonicalForm);

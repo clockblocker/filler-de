@@ -71,7 +71,7 @@ export function readingEntry(
 	};
 }
 
-export const schreitenShadow = {
+const schreitenSynonym = {
 	relation: "synonym",
 	target: {
 		canonicalForm: "schreiten",
@@ -84,7 +84,7 @@ export const schreitenShadow = {
 export const pendingFrom = (
 	reading: Dumling.Reading<"de">,
 ): PendingSemanticRelationRecord<"de"> =>
-	createPendingSemanticRelationRecord(reading, schreitenShadow);
+	createPendingSemanticRelationRecord(reading, schreitenSynonym);
 
 export const createLemma = (
 	lemma: Dumling.Lemma<"de">,

@@ -1,5 +1,4 @@
 import type { CodecIssue } from "@textfresser/lemma-note-codec";
-import type { PendingSemanticRelationRecord } from "dumdict";
 import { lemmaEntry, type NoteData, type PathEntry } from "./note-entry";
 
 /**
@@ -7,7 +6,7 @@ import { lemmaEntry, type NoteData, type PathEntry } from "./note-entry";
  * dumdict record schemas or the store's reading of a note change, so a
  * persisted cache from an older build misses instead of serving stale data.
  */
-const NOTE_CACHE_VERSION = "dictionary-note-cache/1";
+const NOTE_CACHE_VERSION = "dictionary-note-cache/2";
 
 /**
  * A cached read of one note, valid while the file's `mtime` and `size` are
@@ -25,15 +24,9 @@ export type CachedNote = {
 				readonly data: NoteData;
 		  }
 		| {
-				readonly kind: "shadow";
-				readonly hash: string;
-				readonly owned: boolean;
-		  }
-		| {
 				readonly kind: "quarantined";
 				readonly hash: string;
 				readonly issues: readonly CodecIssue[];
-				readonly pendingRelations: readonly PendingSemanticRelationRecord<"de">[];
 		  };
 };
 
@@ -90,11 +83,6 @@ export function toCached(
 				...base,
 				entry: { data: entry.data, hash: entry.hash, kind: "lemma" },
 			};
-		case "shadow":
-			return {
-				...base,
-				entry: { hash: entry.hash, kind: "shadow", owned: entry.owned },
-			};
 		case "quarantined":
 			return entry.reason._tag === "InvalidNote"
 				? {
@@ -103,7 +91,6 @@ export function toCached(
 							hash: entry.hash,
 							issues: entry.reason.issues,
 							kind: "quarantined",
-							pendingRelations: entry.pendingRelations,
 						},
 					}
 				: undefined;
@@ -115,19 +102,11 @@ export function fromCached(path: string, cached: CachedNote): PathEntry {
 	switch (entry.kind) {
 		case "lemma":
 			return lemmaEntry(path, entry.hash, entry.data);
-		case "shadow":
-			return {
-				hash: entry.hash,
-				kind: "shadow",
-				owned: entry.owned,
-				path,
-			};
 		case "quarantined":
 			return {
 				hash: entry.hash,
 				kind: "quarantined",
 				path,
-				pendingRelations: entry.pendingRelations,
 				reason: { _tag: "InvalidNote", issues: entry.issues },
 			};
 	}

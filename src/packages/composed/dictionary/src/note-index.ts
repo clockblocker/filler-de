@@ -13,13 +13,7 @@ import {
 	readingKeyOf,
 	shadowKeyOf,
 } from "./keys";
-import {
-	type LemmaNoteEntry,
-	type NoteData,
-	type PathEntry,
-	pendingOfEntry,
-} from "./note-entry";
-import { shadowPathOfTarget } from "./shadow-note";
+import type { LemmaNoteEntry, NoteData, PathEntry } from "./note-entry";
 
 /** One direct Semantic Relation claim, as its source Reading stores it. */
 export type RelationEdge = {
@@ -48,24 +42,13 @@ export function canonicalLemmaPath(
 	}
 }
 
-/** The path of the Shadow note a pending relation's target gets. */
-export const shadowPathOf = (
-	record: PendingSemanticRelationRecord<"de">,
-): string | undefined => shadowPathOfTarget(record.pending.target);
-
-/** One file's claim on a Shadow note: the file's path and the relation's locator. */
-export const shadowRefOf = (
-	notePath: string,
-	record: PendingSemanticRelationRecord<"de">,
-): string => `${notePath}\u0000${locatorKeyOf(record.locator)}`;
-
-/** Plain code-unit order, so paths that differ only by case sort one way everywhere. */
 /**
  * A path as a case-insensitive, normalizing file system compares it, so
  * paths that differ only by letter case or Unicode form name one file.
  */
 const foldPath = (path: string): string => path.normalize("NFC").toLowerCase();
 
+/** Plain code-unit order, so paths that differ only by case sort one way everywhere. */
 export const byCodeUnit = (left: string, right: string): number =>
 	left < right ? -1 : left > right ? 1 : 0;
 
@@ -165,11 +148,6 @@ export class NoteIndex {
 	>();
 	/** Shadow key → locator keys of the pending relations targeting it. */
 	private pendingByShadow = new Map<string, Set<string>>();
-	/**
-	 * Shadow note path → every file's claim on it, holders, duplicates and
-	 * quarantined notes alike, so no file's relation loses its Shadow.
-	 */
-	private shadowRefs = new Map<string, Set<string>>();
 	/** Target Lemma key → edge key → edge. */
 	private edgesByTarget = new Map<string, Map<string, RelationEdge>>();
 
@@ -185,7 +163,6 @@ export class NoteIndex {
 		next.lemmasByShadow = cloneSets(this.lemmasByShadow);
 		next.pending = new Map(this.pending);
 		next.pendingByShadow = cloneSets(this.pendingByShadow);
-		next.shadowRefs = cloneSets(this.shadowRefs);
 		next.edgesByTarget = new Map(
 			[...this.edgesByTarget].map(([key, edges]) => [
 				key,
@@ -221,15 +198,6 @@ export class NoteIndex {
 			if (held?.kind === "lemma") this.unindex(held);
 			this.holders.delete(key);
 		}
-		for (const record of pendingOfEntry(previous)) {
-			const shadowPath = shadowPathOf(record);
-			if (shadowPath !== undefined)
-				removeFrom(
-					this.shadowRefs,
-					foldPath(shadowPath),
-					shadowRefOf(path, record),
-				);
-		}
 		if (previous?.kind === "lemma")
 			removeFrom(this.claims, previous.lemmaKey, path);
 		if (next === undefined) this.entries.delete(path);
@@ -239,15 +207,6 @@ export class NoteIndex {
 		if (previous !== undefined && next === undefined)
 			removeFrom(this.folded, foldPath(path), path);
 		if (next?.kind === "lemma") addTo(this.claims, next.lemmaKey, path);
-		for (const record of pendingOfEntry(next)) {
-			const shadowPath = shadowPathOf(record);
-			if (shadowPath !== undefined)
-				addTo(
-					this.shadowRefs,
-					foldPath(shadowPath),
-					shadowRefOf(path, record),
-				);
-		}
 		for (const key of keys) {
 			const holder = this.pickHolder(key);
 			if (holder === undefined) continue;
@@ -400,11 +359,6 @@ export class NoteIndex {
 			});
 	}
 
-	/** Every file's claim on a Shadow note path (see {@link shadowRefOf}). */
-	shadowClaims(path: string): ReadonlySet<string> {
-		return this.shadowRefs.get(foldPath(path)) ?? new Set();
-	}
-
 	/**
 	 * Indexed paths that name the same file as `path` on a case-insensitive
 	 * file system, such as macOS's: `Bank.md` for `bank.md`.
@@ -441,19 +395,6 @@ export class NoteIndex {
 				result.push({ from: holder, to: canonical });
 		}
 		return result.sort((a, b) => byCodeUnit(a.from, b.from));
-	}
-
-	/** Shadow notes the store wrote that no file's relation needs any more. */
-	orphanShadows(): string[] {
-		return this.allEntries()
-			.filter(
-				(entry) =>
-					entry.kind === "shadow" &&
-					entry.owned &&
-					this.shadowClaims(entry.path).size === 0,
-			)
-			.map(({ path }) => path)
-			.sort(byCodeUnit);
 	}
 }
 
