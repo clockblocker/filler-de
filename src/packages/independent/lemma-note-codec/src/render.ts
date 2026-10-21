@@ -229,7 +229,7 @@ const distinct = (values: readonly string[]): string[] => [...new Set(values)];
  * a hypernym". dumrel's Near Antonym, Endonym and Exonym had none in the
  * legacy notes.
  */
-export const RELATION_SYMBOLS: Readonly<Record<string, string>> = {
+const RELATION_SYMBOLS: Readonly<Record<string, string>> = {
 	antonym: "≠",
 	endonym: "⇒",
 	exonym: "⇐",
