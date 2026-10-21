@@ -107,17 +107,20 @@ describe("Classify resolves a selection end to end", () => {
 			"Resolved",
 			"Resolved",
 		]);
-		const blockOf = async (path: string) => {
+		/** The Reading note of the one Reading of the Lemma note at `path`. */
+		const readingNoteOf = async (path: string) => {
 			const note = await Effect.runPromise(store.lemmaNotes);
 			const lemma = note.find((entry) => entry.path === path)?.lemma;
 			if (!lemma) throw new Error(`No Lemma note at ${path}`);
 			const stored = await Effect.runPromise(store.lemmaNote(lemma));
 			const reading = stored?.readings[0]?.reading;
 			if (!reading) throw new Error(`No Reading at ${path}`);
-			return (await Effect.runPromise(store.readingLocation(reading)))?.blockId;
+			const location = await Effect.runPromise(store.readingLocation(reading));
+			if (!location) throw new Error(`No Reading note for ${path}`);
+			return location.path;
 		};
 		const link = async (path: string, shown: string) =>
-			`[[${path.slice(0, -3)}#^${await blockOf(path)}|${shown}]]`;
+			`[[${(await readingNoteOf(path)).slice(0, -3)}|${shown}]]`;
 		expect(scroll.content).toBe(
 			`${await link(LEMMA_PATHS.hund, "Der Hund")} ${await link(LEMMA_PATHS.anfangen, "fängt")} ${await link(LEMMA_PATHS.heute, "heute")} ${await link(LEMMA_PATHS.aufJedenFall, "auf jeden Fall")} ${await link(LEMMA_PATHS.anfangen, "an")}. ^0\n\nDer Hund schläft. ^1\n`,
 		);
@@ -134,7 +137,10 @@ describe("Classify resolves a selection end to end", () => {
 
 		await classify(SECOND_SELECTION);
 		const hund = commander.latestHandoff()?.resolved[0];
-		expect(hund).toMatchObject({ lemmaPath: LEMMA_PATHS.hund, linked: 1 });
+		expect(hund).toMatchObject({
+			linked: 1,
+			readingPath: await readingNoteOf(LEMMA_PATHS.hund),
+		});
 		expect(vault.content(LEMMA_PATHS.hund)).not.toContain("![[Story#^1|^]]");
 		expect(knowledgeCalls()).toEqual(before);
 	});

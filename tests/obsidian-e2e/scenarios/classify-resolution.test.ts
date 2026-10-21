@@ -11,11 +11,14 @@ import {
 /** Luna stages a Reading's base-text Knowledge goes through. */
 const KNOWLEDGE_STAGES = ["transcription", "definition", "translations"];
 
-const linkTo = (path: string, blockId: string, shown: string) =>
-	`[[${path.slice(0, -3)}#^${blockId}|${shown}]]`;
+const linkTo = (path: string, shown: string) =>
+	`[[${path.slice(0, -3)}|${shown}]]`;
+
+/** The folder a note sits in. */
+const folderOf = (path: string) => path.slice(0, path.lastIndexOf("/"));
 
 describe("Obsidian E2E - Classify resolution", () => {
-	it("links each Segment to its Reading block at the Lemma's identity path, and re-encounters a sense without Knowledge calls", async () => {
+	it("links each Segment to its Reading note beside its Lemma note, and re-encounters a sense without Knowledge calls", async () => {
 		await withObsidianScenario(
 			{
 				dumgen: CLASSIFY_RESOLUTION_DUMGEN,
@@ -43,16 +46,20 @@ describe("Obsidian E2E - Classify resolution", () => {
 					"Resolved",
 				]);
 				const targets = (first?.resolved ?? []).map((resolved) => {
-					if (!("lemmaPath" in resolved))
+					if (!("readingPath" in resolved))
 						throw new Error(`A unit stayed pending: ${resolved.pending}`);
 					return resolved;
 				});
-				expect(targets.map(({ lemmaPath }) => lemmaPath)).toEqual([
+				// Each Reading note sits in its Lemma note's folder.
+				const lemmaPaths = [
 					LEMMA_PATHS.hund,
 					LEMMA_PATHS.anfangen,
 					LEMMA_PATHS.heute,
 					LEMMA_PATHS.aufJedenFall,
-				]);
+				];
+				expect(targets.map(({ readingPath }) => folderOf(readingPath))).toEqual(
+					lemmaPaths.map(folderOf),
+				);
 				const [hund, anfangen, heute, aufJedenFall] = targets;
 				if (!hund || !anfangen || !heute || !aufJedenFall)
 					throw new Error("Classify resolved fewer units than it reported");
@@ -62,17 +69,17 @@ describe("Obsidian E2E - Classify resolution", () => {
 				expect(story).toBe(
 					healed.replace(
 						STORY,
-						`${linkTo(hund.lemmaPath, hund.readingBlockId, "Der Hund")} ${linkTo(anfangen.lemmaPath, anfangen.readingBlockId, "fängt")} ${linkTo(heute.lemmaPath, heute.readingBlockId, "heute")} ${linkTo(aufJedenFall.lemmaPath, aufJedenFall.readingBlockId, "auf jeden Fall")} ${linkTo(anfangen.lemmaPath, anfangen.readingBlockId, "an")}. ^0\n\nDer Hund schläft. ^1\n`,
+						`${linkTo(hund.readingPath, "Der Hund")} ${linkTo(anfangen.readingPath, "fängt")} ${linkTo(heute.readingPath, "heute")} ${linkTo(aufJedenFall.readingPath, "auf jeden Fall")} ${linkTo(anfangen.readingPath, "an")}. ^0\n\nDer Hund schläft. ^1\n`,
 					),
 				);
 
-				// Each Lemma note sits at its identity path and holds the
-				// Reading block the links point at. TODO(#113): and the
-				// occurrence's Attestation Link, once the store keeps them.
+				// Each Lemma note sits at its identity path and links the
+				// Reading note the Scroll links.
 				let notes = (await dictionary()).markdown;
-				for (const { lemmaPath, readingBlockId } of targets) {
-					expect(notes[lemmaPath]).toContain(`^${readingBlockId}`);
-					expect(notes[lemmaPath]).not.toContain("![[Story#^0|^]]");
+				for (const [index, { readingPath }] of targets.entries()) {
+					const lemmaPath = lemmaPaths[index] ?? "";
+					expect(notes[readingPath]).toBeDefined();
+					expect(notes[lemmaPath]).toContain(readingPath.slice(0, -3));
 				}
 				const knowledgeCalls = async () => {
 					const requests = (await status()).dumgenRequests;
@@ -89,15 +96,14 @@ describe("Obsidian E2E - Classify resolution", () => {
 				});
 				const again = (await status()).classify?.resolved?.[0];
 				expect(again).toMatchObject({
-					lemmaPath: LEMMA_PATHS.hund,
 					linked: 1,
-					readingBlockId: hund.readingBlockId,
+					readingPath: hund.readingPath,
 				});
 				notes = (await dictionary()).markdown;
-				expect(notes[LEMMA_PATHS.hund]).not.toContain("![[Story#^1|^]]");
+				expect(notes[hund.readingPath]).toBeDefined();
 				expect(await knowledgeCalls()).toEqual(before);
 				expect((await snapshot()).markdown["Story.md"]).toContain(
-					`${linkTo(hund.lemmaPath, hund.readingBlockId, "Der Hund")} schläft. ^1`,
+					`${linkTo(hund.readingPath, "Der Hund")} schläft. ^1`,
 				);
 			},
 		);

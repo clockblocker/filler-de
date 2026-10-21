@@ -10,11 +10,10 @@ import {
 } from "../../../../src/commanders/classify/resolution/scroll-links";
 
 const target = {
-	lemmaPath: "Worter/de/Lexeme/NOUN/Masc/See.md",
-	readingBlockId: "r-1a2b3c4d",
+	readingPath: "Worter/de/Lexeme/NOUN/Masc/s/see/see/🌊 See.md",
 };
 const ref = { segments: [2], sentenceKey: "k" };
-const LINK = "[[Worter/de/Lexeme/NOUN/Masc/See#^r-1a2b3c4d|See]]";
+const LINK = "[[Worter/de/Lexeme/NOUN/Masc/s/see/see/🌊 See|See]]";
 
 function at(content: string, text: string) {
 	const from = content.indexOf(text);

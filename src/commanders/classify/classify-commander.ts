@@ -66,8 +66,7 @@ export type ClassifyHandoff = {
 	/** Per unit, the Reading block it now links to, or why it is pending. */
 	readonly resolved: readonly (
 		| {
-				readonly lemmaPath: string;
-				readonly readingBlockId: string;
+				readonly readingPath: string;
 				readonly linked: number;
 		  }
 		| { readonly pending: string }
@@ -84,9 +83,8 @@ function describeHandoff(
 		resolved: resolutions.map((resolution) =>
 			resolution._tag === "Resolved"
 				? {
-						lemmaPath: resolution.lemmaPath,
 						linked: resolution.linked,
-						readingBlockId: resolution.readingBlockId,
+						readingPath: resolution.readingPath,
 					}
 				: { pending: resolution.reason },
 		),

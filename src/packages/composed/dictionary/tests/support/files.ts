@@ -1,18 +1,31 @@
 import { expect } from "bun:test";
-import { legacyLemmaNotePath } from "@textfresser/lemma-note-codec";
 import { Effect } from "effect";
 import type { DumdictVaultStore } from "../../src";
-import { readBundle } from "../../src/bundle";
+import {
+	canonicalLemmaPath,
+	canonicalReadingPath,
+	NoteIndex,
+} from "../../src/note-index";
+import { classifyFile } from "../../src/notes";
 import type { FakeVault } from "./fake-vault";
 
 export const run = <A, E>(effect: Effect.Effect<A, E>): Promise<A> =>
 	Effect.runPromise(effect);
 
+/** An index built from the vault's files alone, as a fresh startup builds it. */
+function indexOfFiles(vault: FakeVault): NoteIndex {
+	const index = new NoteIndex();
+	for (const path of vault.markdownPaths())
+		if (path.startsWith("Worter/"))
+			index.set(path, classifyFile(path, vault.content(path) ?? ""));
+	return index;
+}
+
 /**
- * Checks the store's reads against the files alone, both ways: every Lemma
- * bundle that reads is read back from its path with the same records
- * or reported as a duplicate, and every note the store lists is such a
- * file. A pending relation is read from its source note alone.
+ * Checks the store's reads against the files alone: every Lemma a fresh
+ * index reads from the files is the store's, with the same records, at the
+ * same Lemma and Reading note paths, each its own path unless healing is
+ * blocked, and the store lists no other.
  */
 export async function expectIndexMatchesFiles(
 	store: DumdictVaultStore,
@@ -20,27 +33,29 @@ export async function expectIndexMatchesFiles(
 ): Promise<void> {
 	const diagnostics = await run(store.diagnostics);
 	const blocked = new Set(diagnostics.healingBlocked.map(({ path }) => path));
-	const noteFiles: string[] = [];
-	for (const path of vault.markdownPaths()) {
-		const { data } = readBundle(vault.content(path) ?? "");
-		if (!data.ok) continue;
-		noteFiles.push(path);
-		const note = await run(store.lemmaNote(data.data.lemmaRecord.lemma));
-		if (note?.path !== path) continue;
-		if (!blocked.has(path))
-			expect(path).toBe(
-				legacyLemmaNotePath(data.data.lemmaRecord.lemma).path,
-			);
-		expect(note).toEqual({
-			ownedSurfaces: data.data.ownedSurfaceEntries,
+	const files = indexOfFiles(vault);
+	const listed = await run(store.lemmaNotes);
+	expect(listed).toEqual(
+		files.lemmaNotes().map(({ data, path }) => ({
+			lemma: data.lemmaRecord.lemma,
 			path,
-			pendingRelations: data.data.pendingRelations,
-			readings: data.data.readingEntries,
+		})),
+	);
+	for (const { data, path } of files.lemmaNotes()) {
+		const { lemma } = data.lemmaRecord;
+		if (!blocked.has(path))
+			expect(path).toBe(canonicalLemmaPath(lemma) ?? "");
+		expect(await run(store.lemmaNote(lemma))).toEqual({
+			ownedSurfaces: data.ownedSurfaceEntries,
+			path,
+			pendingRelations: data.pendingRelations,
+			readings: data.readingEntries,
 		});
+		for (const { reading } of data.readingEntries) {
+			const location = await run(store.readingLocation(reading));
+			expect(location?.lemmaPath).toBe(path);
+			if (location && !blocked.has(location.path))
+				expect(location.path).toBe(canonicalReadingPath(reading) ?? "");
+		}
 	}
-	const listed = (await run(store.lemmaNotes)).map(({ path }) => path);
-	const duplicates = diagnostics.quarantined
-		.filter(({ reason }) => reason._tag === "DuplicateLemma")
-		.map(({ path }) => path);
-	expect([...listed, ...duplicates].sort()).toEqual(noteFiles.sort());
 }

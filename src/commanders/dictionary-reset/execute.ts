@@ -85,7 +85,6 @@ export type ResetDictionary = {
 	readonly rescan: Effect.Effect<void, ResetFailed>;
 	readonly appendFreeform: (request: {
 		readonly path: string;
-		readonly readingBlockId: string;
 		readonly text: string;
 	}) => Effect.Effect<"Appended" | "AlreadyThere", ResetFailed>;
 	/** Waits until no background Knowledge run is going. */
@@ -317,9 +316,8 @@ const regenerateOne = Effect.fnUntraced(function* (
 	if (resolved?._tag === "Resolved")
 		return {
 			_tag: "Regenerated",
-			lemmaPath: resolved.lemmaPath,
 			linked: resolved.linked,
-			readingBlockId: resolved.readingBlockId,
+			readingPath: resolved.readingPath,
 			scrollPath: target.scrollPath,
 		};
 	const reasons = pendingReasons(resolutions);
@@ -472,8 +470,7 @@ export const executeReset = Effect.fn("executeReset")(function* (
 		}
 		const appended = yield* dictionary
 			.appendFreeform({
-				path: target.result.lemmaPath,
-				readingBlockId: target.result.readingBlockId,
+				path: target.result.readingPath,
 				text: planned.block.text,
 			})
 			.pipe(
@@ -482,11 +479,11 @@ export const executeReset = Effect.fn("executeReset")(function* (
 						outcome === "Appended"
 							? {
 									_tag: "Attached",
-									lemmaPath: target.result.lemmaPath,
+									readingPath: target.result.readingPath,
 								}
 							: {
 									_tag: "AlreadyThere",
-									lemmaPath: target.result.lemmaPath,
+									readingPath: target.result.readingPath,
 								},
 				),
 				Effect.catchTag("ResetFailed", (error) =>

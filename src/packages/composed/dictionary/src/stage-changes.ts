@@ -1,4 +1,5 @@
 import type {
+	AttestationLink,
 	ChangePrecondition,
 	PendingSemanticRelationRecord,
 	PlannedChangeOp,
@@ -10,32 +11,50 @@ import {
 	applyDumdictKnowledgeChanges,
 	impliedChangePreconditions,
 } from "dumdict/planning";
+import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
 import { lemmaKeyOf, locatorKeyOf, readingKeyOf } from "./keys";
-import type { NoteData } from "./note-entry";
 import type { NoteIndex } from "./note-index";
+import type { NoteData } from "./notes";
 
-/** One note's records as a commit stages them. */
-export type StagedNote = {
+type MutableData = {
+	lemmaRecord: NoteData["lemmaRecord"];
+	readingEntries: ReadingEntry<"de">[];
+	ownedSurfaceEntries: SurfaceEntry<"de">[];
+	pendingRelations: PendingSemanticRelationRecord<"de">[];
+};
+
+/** One Lemma's records as a commit stages them. */
+type StagedNote = {
 	readonly lemmaKey: string;
-	/** The path of the note the index holds it in; absent for a new Lemma. */
-	readonly basePath: string | undefined;
+	/** The records the index holds; absent for a new Lemma. */
 	readonly base: NoteData | undefined;
-	data: {
-		lemmaRecord: NoteData["lemmaRecord"];
-		readingEntries: ReadingEntry<"de">[];
-		ownedSurfaceEntries: SurfaceEntry<"de">[];
-		pendingRelations: PendingSemanticRelationRecord<"de">[];
-	};
+	/** The records once the commit lands; absent for a deleted Lemma. */
+	data: MutableData | undefined;
 };
 
 export type StagedChanges =
 	| { readonly _tag: "Staged"; readonly notes: readonly StagedNote[] }
 	| { readonly _tag: "PreconditionFailed"; readonly changeIndex: number };
 
+const sameLink = (
+	left: AttestationLink<"de">,
+	right: AttestationLink<"de">,
+): boolean =>
+	left.ref === right.ref &&
+	left.surfaceId === right.surfaceId &&
+	readingIdentityKey(left.reading) === readingIdentityKey(right.reading);
+
+const copyOf = (data: NoteData): MutableData => ({
+	lemmaRecord: data.lemmaRecord,
+	ownedSurfaceEntries: [...data.ownedSurfaceEntries],
+	pendingRelations: [...data.pendingRelations],
+	readingEntries: [...data.readingEntries],
+});
+
 /**
- * A copy-on-write fork of the index: the notes a commit touched, staged
- * over the index it read. Reads see staged notes first, so each change's
+ * A copy-on-write fork of the index: the Lemmas a commit touched, staged
+ * over the index it read. Reads see staged Lemmas first, so each change's
  * preconditions are checked against the changes before it.
  */
 class StagedView {
@@ -46,44 +65,45 @@ class StagedView {
 		private readonly revision: StoreRevision,
 	) {}
 
-	data(lemmaKey: string): StagedNote["data"] | NoteData | undefined {
-		return this.notes.get(lemmaKey)?.data ?? this.index.lemmaData(lemmaKey);
+	data(lemmaKey: string): MutableData | NoteData | undefined {
+		const staged = this.notes.get(lemmaKey);
+		return staged ? staged.data : this.index.lemmaData(lemmaKey);
 	}
 
-	/** The staged note of a stored Lemma, copied from the index on first touch. */
-	stage(lemmaKey: string): StagedNote | undefined {
+	/** The staged records of a stored Lemma, copied from the index on first touch. */
+	stage(lemmaKey: string): MutableData | undefined {
 		const staged = this.notes.get(lemmaKey);
-		if (staged) return staged;
-		const note = this.index.lemmaNote(lemmaKey);
-		if (!note) return undefined;
-		const next: StagedNote = {
-			base: note.data,
-			basePath: note.path,
-			data: {
-				lemmaRecord: note.data.lemmaRecord,
-				ownedSurfaceEntries: [...note.data.ownedSurfaceEntries],
-				pendingRelations: [...note.data.pendingRelations],
-				readingEntries: [...note.data.readingEntries],
-			},
-			lemmaKey,
-		};
-		this.notes.set(lemmaKey, next);
-		return next;
+		if (staged) return staged.data;
+		const base = this.index.lemmaData(lemmaKey);
+		if (!base) return undefined;
+		const data = copyOf(base);
+		this.notes.set(lemmaKey, { base, data, lemmaKey });
+		return data;
 	}
 
 	create(record: NoteData["lemmaRecord"]): void {
 		const lemmaKey = lemmaKeyOf(record.lemma);
-		this.notes.set(lemmaKey, {
-			base: undefined,
-			basePath: undefined,
-			data: {
-				lemmaRecord: record,
-				ownedSurfaceEntries: [],
-				pendingRelations: [],
-				readingEntries: [],
-			},
-			lemmaKey,
-		});
+		const data: MutableData = {
+			lemmaRecord: record,
+			ownedSurfaceEntries: [],
+			pendingRelations: [],
+			readingEntries: [],
+		};
+		const staged = this.notes.get(lemmaKey);
+		if (staged) staged.data = data;
+		else
+			this.notes.set(lemmaKey, {
+				base: this.index.lemmaData(lemmaKey),
+				data,
+				lemmaKey,
+			});
+	}
+
+	delete(lemmaKey: string): boolean {
+		if (!this.stage(lemmaKey)) return false;
+		const staged = this.notes.get(lemmaKey);
+		if (staged) staged.data = undefined;
+		return true;
 	}
 
 	readingEntry(
@@ -98,7 +118,9 @@ class StagedView {
 	hasSurface(surfaceId: string): boolean {
 		for (const note of this.notes.values())
 			if (
-				note.data.ownedSurfaceEntries.some(({ id }) => id === surfaceId)
+				note.data?.ownedSurfaceEntries.some(
+					({ id }) => id === surfaceId,
+				)
 			)
 				return true;
 		const owner = this.index.surfaceOwner(surfaceId);
@@ -114,6 +136,19 @@ class StagedView {
 				(stored) => locatorKeyOf(stored.locator) === key,
 			) ?? false
 		);
+	}
+
+	/** Every link with this ref in the whole dictionary as staged. */
+	linksWithRef(ref: string): AttestationLink<"de">[] {
+		const links: AttestationLink<"de">[] = [];
+		for (const note of this.notes.values())
+			for (const entry of note.data?.readingEntries ?? [])
+				for (const link of entry.attestationLinks)
+					if (link.ref === ref) links.push(link);
+		for (const link of this.index.linksWithRef(ref))
+			if (!this.notes.has(lemmaKeyOf(link.reading.lemma)))
+				links.push(link);
+		return links;
 	}
 
 	fails(precondition: ChangePrecondition<"de">): boolean {
@@ -137,9 +172,11 @@ class StagedView {
 			case "pendingRelationMissing":
 				return this.hasPending(precondition.record);
 			case "attestationMissing":
+				return this.linksWithRef(precondition.ref).length > 0;
 			case "attestationLinkExists":
-				// `refuseUnsupported` throws for these before any is checked.
-				throw unsupported(`the ${precondition.kind} precondition`);
+				return !this.linksWithRef(precondition.link.ref).some((link) =>
+					sameLink(link, precondition.link),
+				);
 		}
 	}
 
@@ -164,74 +201,34 @@ class StagedView {
 	}
 }
 
-function readingIndex(
-	note: StagedNote,
-	reading: Dumling.Reading<"de">,
-): number {
+function readingAt(data: MutableData, reading: Dumling.Reading<"de">): number {
 	const key = readingKeyOf(reading);
-	return note.data.readingEntries.findIndex(
+	return data.readingEntries.findIndex(
 		(entry) => readingKeyOf(entry.reading) === key,
 	);
 }
 
-const unsupported = (what: string) =>
-	// TODO(#113): store Attestation Links, Lemma Paradigms and deletions.
-	new Error(
-		`The dictionary store does not take ${what} yet: it keeps no Attestation Links or Lemma Paradigms and deletes no record (#113).`,
-	);
-
-/**
- * Throws for a change the store cannot hold yet, before any precondition is
- * checked: it runs dumdict's storage contract with `attestationLinks` and
- * `paradigms` off, so it refuses every change that carries or checks an
- * Attestation Link, every deletion and every Lemma Paradigm.
- */
-function refuseUnsupported(change: PlannedChangeOp<"de">): void {
-	for (const precondition of change.preconditions)
-		if (
-			precondition.kind === "attestationMissing" ||
-			precondition.kind === "attestationLinkExists"
-		)
-			throw unsupported(`the ${precondition.kind} precondition`);
-	switch (change.type) {
-		case "createLemma":
-			if (change.record.paradigm !== undefined)
-				throw unsupported("a Lemma Paradigm");
-			return;
-		case "createReading":
-			if (change.entry.attestationLinks.length > 0)
-				throw unsupported("an Attestation Link");
-			return;
-		case "patchReading":
-			for (const op of change.ops)
-				if (op.kind !== "applyKnowledgeChange")
-					throw unsupported(`an ${op.kind} op`);
-			return;
-		case "deleteReading":
-		case "deleteOwnedSurface":
-		case "deleteLemma":
-		case "setLemmaParadigm":
-			throw unsupported(`a ${change.type} change`);
-		case "createOwnedSurface":
-		case "createPendingSemanticRelation":
-		case "deletePendingSemanticRelation":
-			return;
-	}
-}
-
 function apply(view: StagedView, change: PlannedChangeOp<"de">): boolean {
 	switch (change.type) {
-		case "deleteReading":
-		case "deleteOwnedSurface":
-		case "deleteLemma":
-		case "setLemmaParadigm":
-			throw unsupported(`a ${change.type} change`);
 		case "createLemma":
 			view.create(change.record);
 			return true;
+		case "deleteLemma":
+			return view.delete(lemmaKeyOf(change.lemma));
+		case "setLemmaParadigm": {
+			const data = view.stage(lemmaKeyOf(change.lemma));
+			if (!data) return false;
+			data.lemmaRecord = {
+				lemma: data.lemmaRecord.lemma,
+				...(change.paradigm === undefined
+					? {}
+					: { paradigm: change.paradigm }),
+			};
+			return true;
+		}
 		case "createReading": {
-			const note = view.stage(lemmaKeyOf(change.entry.reading.lemma));
-			if (!note) return false;
+			const data = view.stage(lemmaKeyOf(change.entry.reading.lemma));
+			if (!data) return false;
 			const relations = change.entry.knowledge?.semanticRelations as
 				| Readonly<Record<string, unknown>>
 				| undefined;
@@ -239,43 +236,80 @@ function apply(view: StagedView, change: PlannedChangeOp<"de">): boolean {
 				for (const [relation, targets] of Object.entries(relations))
 					if (relation !== "targetKind" && Array.isArray(targets))
 						view.assertTargetsStored(relations.targetKind, targets);
-			note.data.readingEntries.push(change.entry);
+			data.readingEntries.push(change.entry);
+			return true;
+		}
+		case "deleteReading": {
+			const data = view.stage(lemmaKeyOf(change.reading.lemma));
+			if (!data) return false;
+			const at = readingAt(data, change.reading);
+			if (at < 0) return false;
+			const key = readingKeyOf(change.reading);
+			data.readingEntries.splice(at, 1);
+			// A pending relation lives in its source's note, so it goes with it.
+			data.pendingRelations = data.pendingRelations.filter(
+				({ sourceReading }) => readingKeyOf(sourceReading) !== key,
+			);
 			return true;
 		}
 		case "createOwnedSurface": {
-			const note = view.stage(lemmaKeyOf(change.entry.ownerLemma));
-			if (!note) return false;
-			note.data.ownedSurfaceEntries.push(change.entry);
+			const data = view.stage(lemmaKeyOf(change.entry.ownerLemma));
+			if (!data) return false;
+			data.ownedSurfaceEntries.push(change.entry);
 			return true;
 		}
+		case "deleteOwnedSurface": {
+			const data = view.stage(lemmaKeyOf(change.ownerLemma));
+			if (!data) return false;
+			const before = data.ownedSurfaceEntries.length;
+			data.ownedSurfaceEntries = data.ownedSurfaceEntries.filter(
+				({ id }) => id !== change.surfaceId,
+			);
+			return data.ownedSurfaceEntries.length < before;
+		}
 		case "createPendingSemanticRelation": {
-			const note = view.stage(
+			const data = view.stage(
 				lemmaKeyOf(change.record.sourceReading.lemma),
 			);
-			if (!note) return false;
-			note.data.pendingRelations.push(change.record);
+			if (!data) return false;
+			data.pendingRelations.push(change.record);
 			return true;
 		}
 		case "deletePendingSemanticRelation": {
-			const note = view.stage(
+			const data = view.stage(
 				lemmaKeyOf(change.record.sourceReading.lemma),
 			);
-			if (!note) return false;
+			if (!data) return false;
 			const key = locatorKeyOf(change.record.locator);
-			note.data.pendingRelations = note.data.pendingRelations.filter(
+			data.pendingRelations = data.pendingRelations.filter(
 				(record) => locatorKeyOf(record.locator) !== key,
 			);
 			return true;
 		}
 		case "patchReading": {
-			const note = view.stage(lemmaKeyOf(change.reading.lemma));
-			if (!note) return false;
-			const at = readingIndex(note, change.reading);
-			let entry = note.data.readingEntries[at];
+			const data = view.stage(lemmaKeyOf(change.reading.lemma));
+			if (!data) return false;
+			const at = readingAt(data, change.reading);
+			let entry = data.readingEntries[at];
 			if (!entry) return false;
 			for (const op of change.ops) {
-				if (op.kind !== "applyKnowledgeChange")
-					throw unsupported(`an ${op.kind} op`);
+				if (op.kind === "addAttestationLink") {
+					entry = {
+						...entry,
+						attestationLinks: [...entry.attestationLinks, op.link],
+					};
+					continue;
+				}
+				if (op.kind === "removeAttestationLink") {
+					const { link } = op;
+					entry = {
+						...entry,
+						attestationLinks: entry.attestationLinks.filter(
+							(stored) => !sameLink(stored, link),
+						),
+					};
+					continue;
+				}
 				const knowledgeChange = op.envelope.change;
 				if (
 					knowledgeChange.aspect === "semanticRelations" &&
@@ -287,7 +321,7 @@ function apply(view: StagedView, change: PlannedChangeOp<"de">): boolean {
 					);
 				entry = applyDumdictKnowledgeChanges(entry, [op.envelope]);
 			}
-			note.data.readingEntries[at] = entry;
+			data.readingEntries[at] = entry;
 			return true;
 		}
 	}
@@ -305,7 +339,6 @@ export function stageChanges(
 	changes: readonly PlannedChangeOp<"de">[],
 ): StagedChanges {
 	const view = new StagedView(index, revision);
-	for (const change of changes) refuseUnsupported(change);
 	for (const [changeIndex, change] of changes.entries()) {
 		const preconditions = [
 			...change.preconditions,

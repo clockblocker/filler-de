@@ -167,8 +167,10 @@ reports the counts, and the console lists every skipped or failed note.
   skipped.
 
 A second scope covers `Worter/` with the dictionary's namespaces:
-`LemmaNoteMetadata` (`lemmaNote`), `ReadingNoteMetadata` (`readingNote`), and,
-until #113, the store's interim `LemmaBundleMetadata` (`lemmaBundle`).
+`LemmaNoteMetadata` (`lemmaNote`), `ReadingNoteMetadata` (`readingNote`) and
+the store's `CrossroadNoteMetadata` (`crossroadNote`). VAM keeps its own
+writes from the dictionary store, so the store reads `Worter/` again after
+the migration.
 
 ## Dictionary notes
 

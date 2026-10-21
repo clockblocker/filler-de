@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { legacyLemmaNotePath } from "@textfresser/lemma-note-codec";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
 import { type AddNewNoteRequest, createDumdictPlanner } from "dumdict/planning";
 import { DictionaryWriteError } from "../../src";
+import { noteMetadataHelper } from "../../src/internal/note-metadata";
 import { expectIndexMatchesFiles, run } from "../support/files";
 import {
 	createLemma,
@@ -17,15 +17,18 @@ import {
 	schreiten,
 	schreitenReading,
 } from "../support/fixtures";
+import { crossroadPath, lemmaPath, readingPath } from "../support/paths";
 import { openStore, seed } from "../support/store";
 
 const planner = createDumdictPlanner("de");
 const schreitenCrossroad = "[[Worter/s/sch/schre/schreiten|schreiten]]";
-const gehenPath = legacyLemmaNotePath(gehen).path;
-const laufenPath = legacyLemmaNotePath(laufen).path;
-const schreitenPath = legacyLemmaNotePath(schreiten).path;
+const schreitenLink = `[[${lemmaPath(schreiten).slice(0, -3)}|schreiten]]`;
+const gehenNote = readingPath(gehenReading);
+const laufenNote = readingPath(laufenReading);
+const schreitenPath = lemmaPath(schreiten);
+const schreitenNote = readingPath(schreitenReading);
 
-const schreitenNote: AddNewNoteRequest<"de"> = {
+const schreitenDraft: AddNewNoteRequest<"de"> = {
 	draft: {
 		note: {
 			attestationLinks: [],
@@ -47,12 +50,9 @@ async function pendingDictionary() {
 		createReading(readingEntry(laufenReading)),
 		createPending(pendingFrom(laufenReading)),
 	]);
-	// Only the two source notes exist; each links schreiten's Crossroad path.
-	expect(opened.vault.markdownPaths().sort()).toEqual([
-		gehenPath,
-		laufenPath,
-	]);
-	expect(opened.vault.content(gehenPath)).toContain(schreitenCrossroad);
+	// Each source's Reading note links schreiten's Crossroad path.
+	expect(opened.vault.content(gehenNote)).toContain(schreitenCrossroad);
+	expect(opened.vault.content(crossroadPath("schreiten"))).toBeUndefined();
 	return opened;
 }
 
@@ -63,12 +63,12 @@ async function planSchreiten(
 		store.loadReadingEntryContext(
 			planner.contextRequest({
 				intent: "addNewNote",
-				request: schreitenNote,
+				request: schreitenDraft,
 			}),
 		),
 	);
 	if (context.intent !== "addNewNote") throw new Error("Expected addNewNote");
-	const outcome = planner.addNewNote(context, schreitenNote);
+	const outcome = planner.addNewNote(context, schreitenDraft);
 	if (outcome.status !== "planned") throw new Error(JSON.stringify(outcome));
 	return outcome.plan;
 }
@@ -80,23 +80,38 @@ const synonymsOf = async (
 	(await run(store.lemmaNote(lemma)))?.readings[0]?.knowledge
 		?.semanticRelations;
 
+/** The paths of one batch, sorted. */
+const pathsOf = (batch: readonly { payload: unknown }[] = []) =>
+	batch
+		.map(({ payload }) => {
+			const { splitPath } = payload as {
+				splitPath: { pathParts: string[]; basename: string };
+			};
+			return `${[...splitPath.pathParts, splitPath.basename].join("/")}.md`;
+		})
+		.sort();
+
 describe("a commit that touches several notes", () => {
-	test("creates the new note, then rewrites every resolved source in one batch", async () => {
+	test("writes a Lemma note, Reading notes, a Crossroad note and the inverse-relation target, in order", async () => {
 		const { store, vault } = await pendingDictionary();
 		const plan = await planSchreiten(store);
+		const start = vault.batches.length;
 		expect(await run(store.commitChanges(plan))).toMatchObject({
 			status: "committed",
 		});
 
-		const kinds = (batch: readonly { kind: string }[] = []) =>
-			batch.map(({ kind }) => kind);
-		// The commit creates schreiten, then rewrites gehen and laufen.
-		expect(kinds(vault.batches.at(-2))).toEqual([
-			VaultActionKind.CreateFile,
+		const batches = vault.batches.slice(start);
+		// Creates first, then the sources whose records change, then the
+		// notes that only show the change.
+		expect(batches.map((batch) => batch.map(({ kind }) => kind))).toEqual([
+			[VaultActionKind.CreateFile, VaultActionKind.CreateFile],
+			[VaultActionKind.ProcessMdFile, VaultActionKind.ProcessMdFile],
+			[VaultActionKind.CreateFile],
 		]);
-		expect(kinds(vault.batches.at(-1))).toEqual([
-			VaultActionKind.ProcessMdFile,
-			VaultActionKind.ProcessMdFile,
+		expect(batches.map(pathsOf)).toEqual([
+			[schreitenPath, schreitenNote].sort(),
+			[gehenNote, laufenNote].sort(),
+			[crossroadPath("schreiten")],
 		]);
 		expect(await synonymsOf(store, gehen)).toEqual({
 			synonym: [schreiten],
@@ -104,30 +119,50 @@ describe("a commit that touches several notes", () => {
 		expect(await synonymsOf(store, laufen)).toEqual({
 			synonym: [schreiten],
 		});
-		// The resolved claims link schreiten's Lemma note now.
-		const schreitenLink = `[[${schreitenPath.slice(0, -3)}|schreiten]]`;
-		expect(vault.content(gehenPath)).toContain(schreitenLink);
-		expect(vault.content(gehenPath)).not.toContain(schreitenCrossroad);
-		expect(vault.markdownPaths().sort()).toEqual(
-			[gehenPath, laufenPath, schreitenPath].sort(),
+		// The resolved claims link schreiten's Lemma note now, and schreiten's
+		// Reading note shows both as inverse relations.
+		expect(vault.content(gehenNote)).toContain(schreitenLink);
+		expect(vault.content(gehenNote)).not.toContain(schreitenCrossroad);
+		expect(vault.content(schreitenNote)).toContain(
+			`= [[${lemmaPath(gehen).slice(0, -3)}|gehen]], [[${lemmaPath(laufen).slice(0, -3)}|laufen]]`,
+		);
+		expect(vault.content(crossroadPath("schreiten"))).toContain(
+			`${schreitenLink} (VERB)`,
 		);
 		await expectIndexMatchesFiles(store, vault);
 	});
 
-	test("a write that fails part-way leaves the index rebuilt to match the files", async () => {
+	test("a write that fails once part-way is finished from the files", async () => {
+		const { store, vault } = await pendingDictionary();
+		const plan = await planSchreiten(store);
+		vault.failNextWrite((_action, path) => path === laufenNote);
+
+		expect(await run(store.commitChanges(plan))).toMatchObject({
+			status: "committed",
+		});
+		expect(await synonymsOf(store, gehen)).toEqual({
+			synonym: [schreiten],
+		});
+		expect(await synonymsOf(store, laufen)).toEqual({
+			synonym: [schreiten],
+		});
+		expect(vault.content(laufenNote)).toContain(schreitenLink);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
+	test("a write that keeps failing leaves the index rebuilt to match the files, and links converge after", async () => {
 		const { store, vault } = await pendingDictionary();
 		const plan = await planSchreiten(store);
 		const before = await run(store.revision);
-		vault.failNextWrite((_action, path) => path === laufenPath);
+		vault.failNextWrite((_action, path) => path === laufenNote, 1000);
 
 		const failure = await run(store.commitChanges(plan)).catch(
 			(error: unknown) => error,
 		);
 		expect(failure).toBeInstanceOf(DictionaryWriteError);
 		expect(failure).toMatchObject({
-			executed: [schreitenPath, gehenPath],
+			executed: [schreitenPath, schreitenNote, gehenNote],
 			rebuilt: true,
-			skipped: [],
 		});
 
 		// The writes before the failure stayed; the index says so.
@@ -141,57 +176,81 @@ describe("a commit that touches several notes", () => {
 		expect((await run(store.lemmaNote(laufen)))?.pendingRelations).toEqual([
 			pendingFrom(laufenReading),
 		]);
-		expect(vault.content(laufenPath)).toContain(schreitenCrossroad);
+		expect(vault.content(laufenNote)).toContain(schreitenCrossroad);
 		await expectIndexMatchesFiles(store, vault);
-
-		// A store built from the same files reads the same dictionary.
-		const fresh = await openStore(vault);
-		for (const lemma of [gehen, laufen, schreiten])
-			expect(await run(fresh.store.lemmaNote(lemma))).toEqual(
-				await run(store.lemmaNote(lemma)),
-			);
-
-		// The old plan is stale, and re-planning finishes the job.
 		expect(await run(store.revision)).not.toBe(before);
-		expect(await run(store.commitChanges(plan))).toMatchObject({
-			code: "revisionConflict",
-			status: "conflict",
-		});
-		const resolutions = [{ locator: pendingFrom(laufenReading).locator }];
-		const slice = await run(
-			store.loadCleanupRelationsContext({ resolutions }),
-		);
-		const cleanup = planner.cleanupRelations(slice, {
-			baseRevision: slice.revision,
-			resolutions,
-		});
-		if (cleanup.status !== "planned")
-			throw new Error(JSON.stringify(cleanup));
-		expect(await run(store.commitChanges(cleanup.plan))).toMatchObject({
-			status: "committed",
-		});
-		expect(await synonymsOf(store, laufen)).toEqual({
+
+		// Once writes work again, a store built from the same files
+		// re-evaluates laufen's Shadow, which now names schreiten alone.
+		vault.failNextWrite(() => false);
+		const fresh = await openStore(vault);
+		expect(await synonymsOf(fresh.store, laufen)).toEqual({
 			synonym: [schreiten],
 		});
-		expect(vault.content(laufenPath)).not.toContain(schreitenCrossroad);
-		await expectIndexMatchesFiles(store, vault);
+		expect(vault.content(laufenNote)).toContain(schreitenLink);
+		expect(vault.content(schreitenNote)).toContain(
+			`[[${lemmaPath(laufen).slice(0, -3)}|laufen]]`,
+		);
+		await expectIndexMatchesFiles(fresh.store, vault);
 	});
 
-	test("a note edited between the commit's read and its write is left alone", async () => {
+	test("a failure twice in a row ends in a rebuild whose re-evaluation lets links converge", async () => {
 		const { store, vault } = await pendingDictionary();
 		const plan = await planSchreiten(store);
-		const edited = `${vault.content(laufenPath)}\nA line typed while the commit ran.\n`;
-		// The edit lands just before laufen's write runs; its compare-and-swap refuses.
-		vault.failNextWrite((_action, path) => {
-			if (path === laufenPath) vault.silentWrite(laufenPath, edited);
-			return false;
-		});
+		vault.failNextWrite((_action, path) => path === laufenNote, 2);
 
 		const failure = await run(store.commitChanges(plan)).catch(
 			(error: unknown) => error,
 		);
 		expect(failure).toBeInstanceOf(DictionaryWriteError);
-		expect(vault.content(laufenPath)).toBe(edited);
+		// The rebuild's re-evaluation resolved laufen's Shadow after all.
+		expect(await synonymsOf(store, laufen)).toEqual({
+			synonym: [schreiten],
+		});
+		expect(
+			(await run(store.lemmaNote(laufen)))?.pendingRelations,
+		).toMatchObject([{ resolvedLemma: schreiten }]);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
+	test("a create that fails takes the notes it created back, writing nothing", async () => {
+		const { store, vault } = await pendingDictionary();
+		const plan = await planSchreiten(store);
+		const files = vault.markdownPaths();
+		vault.failNextWrite((_action, path) => path === schreitenNote);
+
+		expect(await run(store.commitChanges(plan))).toMatchObject({
+			code: "revisionConflict",
+			status: "conflict",
+		});
+		expect(vault.markdownPaths()).toEqual(files);
+		expect(await run(store.lemmaNote(schreiten))).toBeUndefined();
+		await expectIndexMatchesFiles(store, vault);
+	});
+
+	test("a note edited between the commit's read and its write keeps the edit", async () => {
+		const { store, vault } = await pendingDictionary();
+		const plan = await planSchreiten(store);
+		const typed = "A line typed while the commit ran.";
+		const edited = noteMetadataHelper.mapBody(
+			(body) => `${body.trimEnd()}\n\n${typed}\n`,
+		)(vault.content(laufenNote) ?? "");
+		// The edit lands just before laufen's write runs; its compare-and-swap
+		// refuses, and the commit is finished over the edited file.
+		let typing = true;
+		vault.failNextWrite((_action, path) => {
+			if (typing && path === laufenNote) {
+				vault.silentWrite(laufenNote, edited);
+				typing = false;
+			}
+			return false;
+		});
+
+		expect(await run(store.commitChanges(plan))).toMatchObject({
+			status: "committed",
+		});
+		expect(vault.content(laufenNote)).toContain(typed);
+		expect(vault.content(laufenNote)).toContain(schreitenLink);
 		await expectIndexMatchesFiles(store, vault);
 	});
 });

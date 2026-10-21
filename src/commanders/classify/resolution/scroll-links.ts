@@ -299,12 +299,10 @@ export function withAppended(
 	};
 }
 
-/** A Reading block a unit links to. */
+/** The Reading note a unit links to. */
 type LinkTarget = {
-	/** The Lemma note's vault path, `.md` included. */
-	readonly lemmaPath: string;
-	/** The Reading's block ID, without `^`. */
-	readonly readingBlockId: string;
+	/** The Reading note's vault path, `.md` included. */
+	readonly readingPath: string;
 };
 
 /** One unit's links: every piece of it, located in the snapshot. */
@@ -327,12 +325,15 @@ export type LinkedScroll = {
 	readonly skipped: readonly SkippedLink[];
 };
 
-/** `[[Worter/…/See#^r-…|See]]`: the path-qualified link to a Reading block. */
+/**
+ * `[[Worter/…/🌊 See|See]]`: the path-qualified link to a Reading note
+ * (ADR-0015). TODO(#116): rewrite the `#^r-…` links an older build wrote.
+ */
 function readingLink(target: LinkTarget, shown: string): string {
-	const path = target.lemmaPath.endsWith(".md")
-		? target.lemmaPath.slice(0, -3)
-		: target.lemmaPath;
-	return `[[${path}#^${target.readingBlockId}|${shown}]]`;
+	const path = target.readingPath.endsWith(".md")
+		? target.readingPath.slice(0, -3)
+		: target.readingPath;
+	return `[[${path}|${shown}]]`;
 }
 
 const LINKISH =

@@ -60,7 +60,7 @@ One pure, host-owned function spells every shard folder, every file name and eve
 
 ## Notes
 
-- **Lemma note.** Its metadata holds the `LemmaRecord`, with its Lemma Paradigm, and every owned `SurfaceEntry`. It shows a header, links to its Reading notes, one inflection table per Licence Group (the Readings whose licences agree share one table, captioned with their emojis), and the list of Surfaces encountered so far, each with its Surface Axes and a `^s-<hash>` anchor. No inflected Surface gets a note of its own.
+- **Lemma note.** Its metadata holds the `LemmaRecord`, with its Lemma Paradigm, and every owned `SurfaceEntry`. It shows a header, links to its Reading notes, one inflection table per Licence Group (the Readings whose licences agree share one table, captioned with their emojis), and the list of Surfaces met so far ("Begegnete Formen"), each with its Surface Axes and a `^s-<hash>` anchor. No inflected Surface gets a note of its own.
 - **Reading note.** Its metadata holds the `ReadingEntry`, with its Attestation Links, and the `PendingSemanticRelationRecord`s whose source it is. It shows the Reading's layout (#103, #104), and its Flexion section embeds its Licence Group's table from the Lemma note: `![[<lemma path>#^<block id>|…]]`.
 - **Crossroad note.** It is plugin-owned and holds no records; a metadata entry only marks it as the store's. It lists every Lemma, with its Reading notes, and every met Surface with its spelling, and is regenerated from the store's index. Variant spellings (Kuss and Kuß) get separate Crossroads. An empty file Obsidian creates when the user clicks an uncreated Crossroad link is filled as "not classified yet", and the plugin generates no Knowledge for it. A Crossroad note is never removed, because other notes may still link to it.
 - **Inflection tables** come from the batteries, independent of language, Family and Kind: `dumdict/inflection` projects them, and `dumcorpus/inflection`'s language packs label them. The plugin only renders them.
@@ -71,7 +71,15 @@ One pure, host-owned function spells every shard folder, every file name and eve
 - **The rendering boundary.** With no inline markers, a note tells its renderings from user text by Rendering Seals in its metadata: each Block's rendering is sealed as its line count and a hash of its lines. Lines that match a seal are the rendering; every other line is freeform, kept byte for byte and never read as data, so an edited rendering becomes freeform and survives beside the fresh one.
 - **Frontmatter.** While "Hide metadata" is off, the dictionary namespaces write `[` as `\[` (and `\` as `\\`) in every string and key of their frontmatter, so Obsidian indexes no link inside the data in either format, and the toggle works for `Worter/` as for the Library.
 - **Headers.** A Lemma note's header links its spelling's Crossroad note; a Reading note's header links its own Lemma note.
-- **Tables and Surfaces.** A table is `^t` when its Lemma has one Licence Group, otherwise `^t-<hash>` of its group's `selectionKey`, and is one Obsidian block, captioned with its group's emojis. The "Surfaces encountered so far" list holds every owned Surface, in-core forms too, since only a list item, never a table cell, can carry a Surface's `^s-<hash>`.
+- **Tables and Surfaces.** A table is `^t` when its Lemma has one Licence Group, otherwise `^t-<hash>` of its group's `selectionKey`, and is one Obsidian block, captioned with its group's emojis. The "Begegnete Formen" list holds every owned Surface, in-core forms too, since only a list item, never a table cell, can carry a Surface's `^s-<hash>`.
+
+### Refinements from the store (#113)
+
+- **Write order.** A commit writes in stop-on-first-failure batches: creates of new Lemma and Reading notes, then the notes whose records change, then the re-renders of other notes its change moves links or inverse relations in and the Crossroad notes of the spellings it touches, then removed Reading notes and removed Lemma notes to the trash.
+- **Recovery.** A failed create trashes what the commit created and asks the caller to plan again. A later failure rebuilds the index from the files and writes what is missing once more. Every rebuild re-evaluates the stored Shadows the files' Lemmas no longer fit, so links converge however a commit stopped, and a removal is followed by that re-evaluation as a commit of its own.
+- **Removed notes keep their text.** A removed Reading note's freeform moves to its Lemma note, and a removed Lemma's to its spelling's Crossroad note.
+- **Links by uniqueness.** Morphemes, inverse relations, prepositions and source verbs link the Lemma note while their Unit Shadow names exactly one Lemma, like resolved relations, and the store re-renders them in the commit that changes that.
+- **Recognition.** Without dictionary metadata, a file at a Crossroad path is a Crossroad note, one directly in `Worter/` a stray, and an empty one at a note path is reported and never written over. A Reading note without its Lemma note is quarantined until the Lemma comes back.
 
 ## Considered Options
 

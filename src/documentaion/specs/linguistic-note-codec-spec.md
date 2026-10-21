@@ -1,6 +1,6 @@
 # Lemma and Reading note codec specification
 
-- Status: Implemented by [#112](https://github.com/clockblocker/filler-de/issues/112) in `@textfresser/lemma-note-codec`. The dictionary store still writes one file per Lemma until [#113](https://github.com/clockblocker/filler-de/issues/113): see Interim store layout.
+- Status: Implemented by [#112](https://github.com/clockblocker/filler-de/issues/112) in `@textfresser/lemma-note-codec`. The dictionary store writes Lemma, Reading and Crossroad notes since [#113](https://github.com/clockblocker/filler-de/issues/113): see The dictionary store.
 - Owner: Textfresser
 - Compatibility: Clean break from the one-note-per-Lemma format. The Dictionary reset ([#65](https://github.com/clockblocker/filler-de/issues/65), [#117](https://github.com/clockblocker/filler-de/issues/117)) regenerates old notes into this layout.
 - Tracking: the [layout map](https://github.com/clockblocker/filler-de/issues/105), implemented by [#111](https://github.com/clockblocker/filler-de/issues/111) (paths) and [#112](https://github.com/clockblocker/filler-de/issues/112) (notes)
@@ -212,7 +212,7 @@ Without `resolve`, the codec renders what a note knows without a lookup (`defaul
 - **Exact Lemma.** A direct claim's Lemma goes to its Lemma note, since dumdict holds a direct claim only on a stored Lemma, and so does a Reading note's header, which names its own Lemma.
 - **Sense unknown.** Everything else goes to the Crossroad note of its spelling, with the spelling as alias, such as `[[Worter/k/kra/kraft/kraftwerk|Kraftwerk]]`: pending relations, morpheme Shadows, inverse relations (by their source's Lemma's Unit Shadow), a Valency Frame's preposition and a participle's source verb, which may be stored nowhere, and a Lemma note's header.
 
-The store re-evaluates resolutions in bulk when Lemmas are added or removed and re-renders the affected notes (#113). A resolved Pending Semantic Relation is not rendered: its direct claim shows it. The codec makes no lookup, and rendering twice against the same inputs gives identical bytes.
+The store re-evaluates resolutions in bulk when Lemmas are added or removed and re-renders the affected notes (The dictionary store). A resolved Pending Semantic Relation is not rendered: its direct claim shows it. The codec makes no lookup, and rendering twice against the same inputs gives identical bytes.
 
 ## Invariants
 
@@ -392,9 +392,41 @@ D: diesem (m), diesem (n), [[dieser]] (f), diesen (Pl)
 - **Note.** A Reading note always has the Note title, so a user knows where to write. While the note has neither `notes` nor freeform, `notes_placeholder` shows `*You can write here*`.
 - **Not rendered.** The example's Verweise section and its compound-parts line have no data, nor do the old "Morphologische Relationen" (Verwendet in) backlinks and "Abweichungen" (open question 2).
 
-## Interim store layout (until #113)
+## The dictionary store (#113)
 
-The dictionary store still keeps one file per Lemma at its ADR-0013 path (`legacyLemmaNotePath`), and Classify still links `[[<lemma path>#^r-<hash>|…]]` (#116). Until #113 commits Lemma, Reading and Crossroad notes together, the store writes a **Lemma bundle** (`dictionary/src/bundle.ts`): the Lemma note's body, then each Reading note's body after `***`/`***`, its header ending in `^r-<hash>`, with every note's codec metadata under one `lemmaBundle` namespace. It has no inline markers: every rendering's seal, the separators' included, lives in the metadata, and freeform belongs to the note it follows. Links inside a bundle point at bundle paths.
+`@textfresser/dictionary` keeps the notes the codec reads and writes. Each Markdown file under `Worter/` is, by its metadata:
+
+- a **Lemma note** (`lemmaNote`) or a **Reading note** (`readingNote`), read as data when the codec accepts it and quarantined otherwise;
+- a **Crossroad note** (`crossroadNote`), or, without metadata, a file at a Crossroad path, such as the empty note a click on an uncreated Crossroad link leaves;
+- without metadata, a **stray** directly in `Worter/` (#115 heals it), an **empty file** at an exact Lemma or Reading path, or a quarantined file, such as a note in the retired marker format.
+
+Strays, empty files and Crossroad notes are never quarantined. Empty files at note paths and strays are reported and left alone, and no note is ever written over them.
+
+**Records.** A Lemma's records are its Lemma note's and those of every Reading note whose metadata names its Lemma, wherever it sits. A Reading note whose Lemma no readable Lemma note holds is an orphan; a Lemma whose Paradigm licenses a Reading no note holds, or a Foreign Lemma with two Reading notes, is inconsistent. Both are quarantined and reported; a Lemma created again takes its orphaned Reading notes back. A second note of one Lemma or Reading is a duplicate; the one at its own path holds it.
+
+**Index.** Besides the records, the index keeps a Lemma's notes' paths, Lemma keys by form key (the Crossroad index) and by Unit Shadow, pending relations by Shadow, the claims on each Lemma and its Readings, Attestation Links by ref, the Readings whose links name each Surface, and the Lemmas whose Knowledge names each Shadow outside its claims (a morpheme, a preposition, a source verb).
+
+**Links.** The store's `resolve` answers:
+
+- an exact Reading: its Reading note;
+- a direct claim's Lemma, a Reading note's own Lemma and a table's form spelled as its Lemma: the Lemma note;
+- an unresolved pending relation and a Lemma note's own spelling: the Crossroad note;
+- every other sense-unknown link, a morpheme's Shadow, an inverse relation's source, a preposition or a source verb not stored as named: the Lemma note while its Unit Shadow names exactly one stored Lemma (`resolveShadow`), the Crossroad note otherwise.
+
+**Commits.** A commit stages its changes over the index, renders every note it touches against the index as it will read once the commit lands, and writes them as stop-on-first-failure batches in this order:
+
+1. creates of new Lemma and Reading notes;
+2. rewrites of the notes whose records change;
+3. re-renders of the other notes whose links or inverse relations the change moves, and of the Crossroad notes of every spelling it touches;
+4. removed Reading notes, then removed Lemma notes, to the trash.
+
+Every rewrite is a compare-and-swap with the facility's transforms inside it. A note whose records stay is rewritten only when its metadata, which holds its renderings' seals, changes, so a note the user rearranged is not rewritten for that alone. A Reading note's embed names its Licence Group's table, so a Paradigm Change that splits or merges groups rewrites the Lemma note's tables and its Reading notes' embeds in one commit.
+
+**User text in removed notes.** A removed Reading note's freeform moves to its Lemma note; a removed Lemma's notes' freeform moves to its spelling's Crossroad note, which is never removed and says "not classified yet" once its spelling has nothing left.
+
+**Collisions.** Every created path is checked against every indexed path and folder by the collision key, and against the commit's other creates. A collision refuses the commit, which writes nothing.
+
+**Recovery.** A failure among the creates trashes the notes it created and answers a revision conflict. A failure among the rewrites or trashes rebuilds the index from the files and writes what is still missing once more, from the files as they are; only if that fails too is the commit a `DictionaryWriteError`, with the index rebuilt. A re-render of another note that fails, or whose file is ahead of the index, never fails the commit: it is read again and re-rendered after it. Every rebuild, at startup too, plans `reevaluateShadows` for each stored Shadow relation whose resolution the stored Lemmas no longer fit and for every claim on a Lemma the files no longer hold, so links converge however a commit stopped. A commit that removes Lemmas, and a Lemma note the user deletes, is followed by that re-evaluation, as its own commit from a fresh slice (texteater#1257).
 
 ## Projected inverse relations (#59)
 
@@ -403,8 +435,7 @@ The dictionary store still keeps one file per Lemma at its ADR-0013 path (`legac
 - **Inventory.** A Reading note's projection runs `projectSemanticRelations` over its Lemma's Readings and the source Readings of the claims that target its Lemma (`relationEdgesTo`), with each claim cut down to targets inside that inventory and dictionary-wide `readingCounts` for every Lemma in it.
 - **What shows.** Only inverses: for each claim another Reading makes on this Lemma or Reading, the relation this Reading holds back, when dumrel infers it. Closure follows ADR 0011, so a Lemma target on a homonymous Lemma projects nothing, and a direct claim of the note's own wins and stays in the `relation` Block.
 - **Links.** An inverse links its source Reading's Lemma, by the same rules as every other sense-unknown link: the subject is the Lemma's Unit Shadow, so the Crossroad path, or the Lemma note when the store resolves the Shadow to exactly one Lemma.
-- **Re-rendering.** A commit renders every note it writes against the post-commit index. Once its writes landed, the store rewrites the notes whose `inverse_relation` Blocks the index changed, as a compare-and-swap under the writer lock, retried for at most three rounds. A re-render that still fails is logged and never fails the commit. A full rebuild, such as startup, re-renders nothing.
-- **Revisions.** A re-render changes no record, so it does not move the revision.
+- **Re-rendering.** A commit renders every note it writes against the post-commit index, and re-renders the notes of the Lemmas whose inverse relations it moves in its third batch. A change the store observes, such as a deleted note, re-renders them after it. A re-render changes no record.
 
 ## Derived projections
 

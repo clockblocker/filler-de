@@ -14,26 +14,28 @@ async function makeStorage() {
 
 /**
  * Removes a Lemma as the user does outside dumdict's plans: by deleting its
- * note, which the store observes as a vault event.
+ * Lemma note and its Reading notes, which the store observes as vault
+ * events.
  */
 const removeLemmaNote =
 	(store: DumdictVaultStore, vault: FakeVault) =>
 	(lemma: Dumling.Lemma<"de">) =>
 		Effect.gen(function* () {
 			const note = yield* store.lemmaNote(lemma);
-			if (note) yield* Effect.promise(() => vault.userDelete(note.path));
+			if (!note) return;
+			const readings = yield* Effect.forEach(
+				note.readings,
+				({ reading }) => store.readingLocation(reading),
+			);
+			yield* Effect.promise(() =>
+				vault.userDeleteAll([
+					note.path,
+					...readings.flatMap((location) =>
+						location ? [location.path] : [],
+					),
+				]),
+			);
 		});
-
-/**
- * TODO(#113): run with dumdict's defaults, once the store keeps Attestation
- * Links and Lemma Paradigms and applies deletions. Until then it refuses
- * every change that carries them, as the suite checks.
- */
-const options = {
-	attestationLinks: false,
-	paradigms: false,
-	revisions: true,
-} as const;
 
 describeStorageConformance(
 	"DumdictVaultStore over a fake VAM",
@@ -41,7 +43,7 @@ describeStorageConformance(
 		const { store, vault } = await makeStorage();
 		return { ...store, removeLemma: removeLemmaNote(store, vault) };
 	},
-	options,
+	{},
 );
 
 /**
@@ -68,5 +70,5 @@ describeStorageConformance(
 			removeLemma: removeLemmaNote(store, vault),
 		};
 	},
-	options,
+	{},
 );

@@ -20,7 +20,7 @@
  * before the first entry, lines after a section once two or more blank
  * lines have ended it, and non-embed lines in a Kontexte section.
  */
-import { LemmaBundleMetadata } from "@textfresser/dictionary";
+import { CrossroadNoteMetadata } from "@textfresser/dictionary";
 import { Option, Schema } from "effect";
 import {
 	type AnyMetadataNamespace,
@@ -256,9 +256,9 @@ type State =
 /** Whether a note's metadata, in either format, holds dictionary data. */
 function holdsDictionaryData(content: string): boolean {
 	const namespaces: readonly AnyMetadataNamespace[] = [
-		LemmaBundleMetadata,
 		LemmaNoteMetadata,
 		ReadingNoteMetadata,
+		CrossroadNoteMetadata,
 	];
 	return namespaces.some(
 		(namespace) =>

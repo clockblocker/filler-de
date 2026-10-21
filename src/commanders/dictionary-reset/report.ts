@@ -10,8 +10,7 @@ export type RegenerationResult =
 	| {
 			readonly _tag: "Regenerated";
 			readonly scrollPath: string;
-			readonly lemmaPath: string;
-			readonly readingBlockId: string;
+			readonly readingPath: string;
 			/** How many occurrences Classify linked to the Reading. */
 			readonly linked: number;
 	  }
@@ -19,8 +18,8 @@ export type RegenerationResult =
 	| { readonly _tag: "Cancelled" };
 
 export type FreeformResult =
-	| { readonly _tag: "Attached"; readonly lemmaPath: string }
-	| { readonly _tag: "AlreadyThere"; readonly lemmaPath: string }
+	| { readonly _tag: "Attached"; readonly readingPath: string }
+	| { readonly _tag: "AlreadyThere"; readonly readingPath: string }
 	| { readonly _tag: "Unplaced"; readonly reason: string };
 
 export type ResetExecution = {
@@ -183,14 +182,14 @@ export function renderReport(
 		const regenerated = new Map<string, string[]>();
 		for (const { planned, result } of regenerations)
 			if (result?._tag === "Regenerated")
-				regenerated.set(result.lemmaPath, [
-					...(regenerated.get(result.lemmaPath) ?? []),
+				regenerated.set(result.readingPath, [
+					...(regenerated.get(result.readingPath) ?? []),
 					`${noteLink(result.scrollPath)} ^${planned.attestation.blockId} (${result.linked} linked)`,
 				]);
 		lines.push(`## Regenerated Lemmas (${regenerated.size})`, "");
 		if (regenerated.size === 0) lines.push("None.");
-		for (const [lemmaPath, from] of regenerated)
-			lines.push(`- ${noteLink(lemmaPath)}, from ${from.join(", ")}`);
+		for (const [readingPath, from] of regenerated)
+			lines.push(`- ${noteLink(readingPath)}, from ${from.join(", ")}`);
 		if (
 			regenerations.some(
 				({ result }) =>
@@ -257,7 +256,7 @@ export function renderReport(
 	for (const { planned, result } of placed)
 		lines.push(
 			result && result._tag !== "Unplaced"
-				? `- From ${oldNote(planned.notePath)}, line ${planned.block.line}, to ${noteLink(result.lemmaPath)}${result._tag === "AlreadyThere" ? " (it was already there)" : ""}`
+				? `- From ${oldNote(planned.notePath)}, line ${planned.block.line}, to ${noteLink(result.readingPath)}${result._tag === "AlreadyThere" ? " (it was already there)" : ""}`
 				: `- From ${oldNote(planned.notePath)}, line ${planned.block.line}, to the Lemma regenerated for "${planned.headword}"`,
 		);
 	lines.push("");
