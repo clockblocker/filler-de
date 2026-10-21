@@ -118,33 +118,43 @@ function normalizeFreeform(text: string): string {
 		.replace(/^\n+|\n+$/gu, "");
 }
 
+/** Text's paragraphs: its lines between runs of blank lines. */
+const paragraphsOf = (text: string): string[] =>
+	normalizeFreeform(text)
+		.split(/\n{2,}/u)
+		.filter((paragraph) => paragraph !== "");
+
 /**
  * Whether `text` already stands, as whole paragraphs, in one of these
  * freeform runs: all of a run, or a run of it between blank lines. Text
  * placed next to other freeform parses back as one run, so a placement is
  * found again this way, while a short text inside a longer paragraph is not
- * mistaken for it.
+ * mistaken for it. Paragraphs match however many blank lines part them.
  */
 export function holdsFreeformText(
 	freeform: readonly string[],
 	text: string,
 ): boolean {
-	const body = normalizeFreeform(text);
+	const wanted = paragraphsOf(text);
+	if (wanted.length === 0) return false;
 	return freeform.some((run) => {
-		const held = normalizeFreeform(run);
-		return (
-			held === body ||
-			held.startsWith(`${body}\n\n`) ||
-			held.endsWith(`\n\n${body}`) ||
-			held.includes(`\n\n${body}\n\n`)
-		);
+		const held = paragraphsOf(run);
+		for (let at = 0; at + wanted.length <= held.length; at++)
+			if (
+				wanted.every(
+					(paragraph, index) => held[at + index] === paragraph,
+				)
+			)
+				return true;
+		return false;
 	});
 }
 
 /**
  * The parts of `extra` a note's freeform does not hold yet, paragraph by
  * paragraph, so text moved again after a partial move, such as a retried
- * write, lands once.
+ * write, lands once. Text none of whose paragraphs is there yet lands as
+ * it is, blank lines and all.
  */
 export function freeformToAdd(
 	held: readonly string[],
@@ -153,11 +163,15 @@ export function freeformToAdd(
 	const kept = [...held];
 	const added: string[] = [];
 	for (const text of extra) {
-		const paragraphs = normalizeFreeform(text)
-			.split(/\n{2,}/u)
-			.filter((paragraph) => !holdsFreeformText(kept, paragraph));
-		if (paragraphs.length === 0) continue;
-		const joined = paragraphs.join("\n\n");
+		const paragraphs = paragraphsOf(text);
+		const missing = paragraphs.filter(
+			(paragraph) => !holdsFreeformText(kept, paragraph),
+		);
+		if (missing.length === 0) continue;
+		const joined =
+			missing.length === paragraphs.length
+				? normalizeFreeform(text)
+				: missing.join("\n\n");
 		added.push(joined);
 		kept.push(joined);
 	}

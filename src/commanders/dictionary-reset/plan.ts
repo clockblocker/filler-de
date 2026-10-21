@@ -6,6 +6,7 @@
  * Segment, and decides which freeform Blocks have a regenerated Lemma to go
  * to. Both only read.
  */
+import { freeformPlacementProblem } from "@textfresser/dictionary";
 import { Effect } from "effect";
 import type { SourceRange } from "../classify/types";
 import {
@@ -171,10 +172,35 @@ export const targetAttestation = Effect.fnUntraced(function* (
 });
 
 /**
+ * Whether a freeform Block would attach: some attestation of its headword
+ * can be regenerated, and its text passes the round-trip check the store
+ * runs when Execute places it, on a probe note.
+ */
+function freeformOutcome(
+	text: string,
+	regenerable: boolean,
+	headword: string,
+): PlannedFreeform["outcome"] {
+	if (!regenerable)
+		return {
+			_tag: "Unplaceable",
+			reason: `no attestation of "${headword}" can be regenerated`,
+		};
+	const problem = freeformPlacementProblem(text);
+	return problem === undefined
+		? { _tag: "WouldAttach" }
+		: {
+				_tag: "Unplaceable",
+				reason: `its text cannot be placed in a note: ${problem}`,
+			};
+}
+
+/**
  * Plans the reset from what Collect read. An attestation is Ready when its
  * source block and Segment are found, a Duplicate when an earlier one
  * names the same Segment. A freeform Block would attach when some Ready
- * attestation has its note's headword.
+ * attestation has its note's headword and its text round-trips through a
+ * note, as Execute checks it.
  */
 export const planReset = Effect.fnUntraced(function* (
 	sources: ResetSources,
@@ -233,12 +259,11 @@ export const planReset = Effect.fnUntraced(function* (
 			block,
 			headword: note.headword,
 			notePath: note.path,
-			outcome: ready.has(headwordKey(note.headword))
-				? ({ _tag: "WouldAttach" } as const)
-				: ({
-						_tag: "Unplaceable",
-						reason: `no attestation of "${note.headword}" can be regenerated`,
-					} as const),
+			outcome: freeformOutcome(
+				block.text,
+				ready.has(headwordKey(note.headword)),
+				note.headword,
+			),
 		})),
 	);
 	return {

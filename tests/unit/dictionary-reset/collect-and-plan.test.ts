@@ -346,6 +346,40 @@ describe("plan", () => {
 		]);
 	});
 
+	it("runs Execute's round-trip check on each freeform Block it would attach", async () => {
+		const source = "Der [[Fahrer]] fährt. ^0\n";
+		const sources: ResetSources = {
+			read: (path) => Effect.succeed(path === "Story.md" ? source : undefined),
+			resolveLink: (linkpath) =>
+				Effect.succeed(linkpath === "Story" ? "Story.md" : undefined),
+		};
+		const entry = `der [[Fahrer]] ^LX-LM-NOUN-1\n\n<span class="entry_section_title entry_section_title_kontexte">Kontexte</span>\n![[Story#^0|^]]\n\n\n`;
+		const plan = await run(
+			planReset(sources, {
+				collected: collectOldNotes([
+					{
+						content: `${entry}first memo\n\n\n\nsecond [[See]] [walk] ✋ 👀\n`,
+						path: "Worter/a/Fahrer.md",
+					},
+					{
+						// The Note placeholder, which a note never reads as text.
+						content: `${entry}*You can write here*\n`,
+						path: "Worter/b/Fahrer.md",
+					},
+				]),
+				source: "Worter",
+			}),
+		);
+		expect(plan.freeform.map(({ outcome }) => outcome)).toEqual([
+			{ _tag: "WouldAttach" },
+			{
+				_tag: "Unplaceable",
+				reason:
+					"its text cannot be placed in a note: the text would not read back whole from the note",
+			},
+		]);
+	});
+
 	it("never plans to classify inside a dictionary note", async () => {
 		const sources: ResetSources = {
 			read: () => Effect.succeed("Das Atom. ^13\n"),
