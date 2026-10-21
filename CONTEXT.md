@@ -1,6 +1,6 @@
 # Textfresser Library Management
 
-This context defines the language for the managed Library and its boundary with an Obsidian vault. It covers the Librarian, the Vault Action Manager, the translation of observed vault changes into Library intentions, and the dictionary of Lemma notes.
+This context defines the language for the managed Library and its boundary with an Obsidian vault. It covers the Librarian, the Vault Action Manager, the translation of observed vault changes into Library intentions, and the dictionary of Lemma, Reading and Crossroad notes.
 
 Dictionary terms follow the batteries' [dumling](https://github.com/clockblocker/texteater/blob/main/battery/dumling/GLOSSARY.md), [dumrel](https://github.com/clockblocker/texteater/blob/main/battery/dumrel/GLOSSARY.md) and [dumdict](https://github.com/clockblocker/texteater/blob/main/battery/dumdict/GLOSSARY.md) glossaries. Where this glossary and theirs differ, theirs wins.
 
@@ -157,41 +157,53 @@ A direct claim from one Reading to a Lemma or Reading, stored only on its source
 _Avoid_: Lexical Relation, propagated relation
 
 **Pending Semantic Relation**:
-A Semantic Relation whose target does not exist yet, kept as a dumdict record until a matching Lemma is created.
-_Avoid_: Stub note, placeholder target
+A Semantic Relation whose target does not exist yet, kept as a dumdict record until a matching Lemma is created. It is stored only in its source Reading Note's metadata, and its link points at the target's Crossroad Note path.
+_Avoid_: Stub note, placeholder target, Shadow note
 
 **Lemma Record**, **Reading Entry**, **Surface Entry**:
 The dumdict records for a Lemma, for one of its Readings with its Knowledge and learner content, and for one Surface it owns. With Pending Semantic Relations, they are the dictionary's only data.
 _Avoid_: Entry, for any of them alone
 
 **Lemma Note**:
-The one Markdown note that holds a Lemma's Lemma Record and all of its Reading Entries, owned Surface Entries and Pending Semantic Relations. Its path spells the Lemma's identity, as a projection of the note's own identity Block.
+The Markdown note of one Lemma, which is also the note of its base-form Surface. Its metadata holds the Lemma Record and every owned Surface Entry. It lists every Surface met so far, each with an anchor, and shows one inflection table per Licence Group. No inflected Surface gets a note of its own. It lives at `Worter/<lang>/<Family>/<Kind>/<core slots…>/<l1>/<l3>/<l5>/<spelling>.md` (ADR-0015).
 _Avoid_: Vocabulary note, surface host, Dict Note
 
-**Shadow Note**:
-The note of a dumrel Unit Shadow: a target with language, Family, Kind and Canonical Form but no Lemma yet, such as the target of a Pending Semantic Relation. It lives under `Worter/<lang>/Shadow/`, holds no records, and is removed when its Lemma is created.
-_Avoid_: Stub note, placeholder note
+**Reading Note**:
+The Markdown note of one Reading, named `<emoji> <spelling>.md` in its Lemma Note's folder, such as `🚗 Fahrer.md`; a Foreign Reading takes `∅` for the emoji. Its metadata holds the Reading Entry and the Pending Semantic Relations whose source it is. It embeds its Licence Group's inflection table from the Lemma Note.
+_Avoid_: Sense note, Reading block
 
-**Crossroad** (deferred):
-A spelling projection that would list every Lemma, Surface and Shadow with one case-folded spelling. It holds no data, so it is not built for now and can be added later without migration.
-_Avoid_: Surface host, disambiguation note
+**Crossroad Note**:
+The plugin-owned note of one folded spelling (dumling's `canonicalFormKey`), at `Worter/<l1>/<l3>/<l5>/<key>.md`. It lists every Lemma and every met Surface with that spelling and holds no records. Every link the plugin writes without knowing the exact sense points at it, unless its Unit Shadow matches exactly one Lemma, and a word the user wraps in `[[ ]]` lands on it. A Crossroad Note whose spelling has no Lemma yet says "not classified yet".
+_Avoid_: Surface host, disambiguation note, Shadow note
+
+**Shard Folders**:
+The three folders `<l1>/<l3>/<l5>` above a Lemma, Reading or Crossroad Note: the first one, three and five graphemes of the spelling's `canonicalFormKey`, with whitespace dropped. A shorter spelling repeats in full (`t/tag/tag/`).
+_Avoid_: Prefix folders, buckets
+
+**Name Segment**:
+A folder or file name the plugin writes, spelled by `toNameSegment`, which drops the characters Obsidian forbids. Names are lossy; the real spelling lives in metadata.
+_Avoid_: Encoded basename
+
+**Path Collision**:
+Two identities, or two spellings of one folder, whose paths have equal collision keys: the full Unicode case fold of the NFC path, so `Maße.md` and `MASSE.md` are one file. It is reported and never overwritten.
+_Avoid_: Duplicate note
 
 **Block**:
-A typed part of a Lemma Note. A Block serializes one dumdict or dumrel field, is a Projection Block, or is plugin-owned.
+A typed part of a Lemma Note or Reading Note, whose data lives in the note's metadata. A Block serializes one dumdict or dumrel field, is a Projection Block, or is plugin-owned.
 _Avoid_: Section, Entry Section
 
 **Projection Block**:
-A Block rendered from dictionary data and never parsed back, such as the Header, Tags, inverse relations, or the inflection table. Editing it changes no data.
+A Block rendered from dictionary data and never parsed back, such as the Header, Tags, inverse relations, or an inflection table. Editing it changes no data.
 _Avoid_: Generated section, cache
 
 **Block ID**:
-The plugin-owned Obsidian block ID of a Reading or Surface in a Lemma Note: a short hash of its identity key.
+The plugin-owned Obsidian block ID of an inflection table or a met Surface in a Lemma Note, which Reading Notes embed and other notes link: `^t` or a short hash of its Licence Group for a table (#112), and `^s-<hash>` for a Surface.
 _Avoid_: Entry ID, sense ID
 
 ## Classify
 
 **Classify**:
-The command that segments the Sentences a selection in a Scroll touches through dumgen and links each covered Segment to its unit's Reading. It pipes two stages: segmentation, then resolution.
+The command that segments the Sentences a selection in a Scroll touches through dumgen and links each covered Segment to its unit's Reading Note. It pipes two stages: segmentation, then resolution.
 _Avoid_: Lemma command, click classification
 
 **Segmentation Cache**:

@@ -1,16 +1,16 @@
-# Lemma note codec specification
+# Lemma and Reading note codec specification
 
-- Status: Draft
+- Status: Draft. This is the target of [#112](https://github.com/clockblocker/filler-de/issues/112). The code still writes the one-note-per-Lemma marker format of [#55](https://github.com/clockblocker/filler-de/issues/55) until #112 lands.
 - Owner: Textfresser
-- Compatibility: Clean break from the legacy Dict Note codec and the earlier typed-block draft
-- Tracking: [#54](https://github.com/clockblocker/filler-de/issues/54), implemented by [#55](https://github.com/clockblocker/filler-de/issues/55), part of [#49](https://github.com/clockblocker/filler-de/issues/49)
+- Compatibility: Clean break from the one-note-per-Lemma format. The Dictionary reset ([#65](https://github.com/clockblocker/filler-de/issues/65), [#117](https://github.com/clockblocker/filler-de/issues/117)) regenerates old notes into this layout.
+- Tracking: the [layout map](https://github.com/clockblocker/filler-de/issues/105), implemented by [#111](https://github.com/clockblocker/filler-de/issues/111) (paths) and [#112](https://github.com/clockblocker/filler-de/issues/112) (notes)
 
 Related decisions:
 
 - [ADR-0007: Separate note documents from semantic note data](../../../docs/adr/0007-separate-note-documents-from-semantic-note-data.md)
 - [ADR-0011: Use different compatibility policies for domain and infrastructure](../../../docs/adr/0011-use-different-compatibility-policies-for-domain-and-infrastructure.md)
-- [ADR-0012: Link classified Segments to Reading blocks and keep every Lemma in Worter](../../../docs/adr/0012-link-classified-segments-to-reading-blocks-and-keep-every-lemma-in-worter.md)
-- Batteries [ADR 0002] (Lemma and Reading identity), [ADR 0003] (Attestation supersedes Selection), [ADR 0011], [ADR 0012] and [ADR 0020] (direct Semantic Relations), [ADR 0031] (Emoji Description), [ADR 0038] (plural and conjugation class), [ADR 0044] and [ADR 0046] (pronoun cells and Syncretisms)
+- [ADR-0015: Store the dictionary as Lemma, Reading and Crossroad notes](../../../docs/adr/0015-store-the-dictionary-as-lemma-reading-and-crossroad-notes.md)
+- Batteries [ADR 0002] (Lemma and Reading identity), [ADR 0003] (Attestation supersedes Selection), [ADR 0011], [ADR 0012] and [ADR 0020] (direct Semantic Relations), [ADR 0031] (Emoji Description), [ADR 0038] (plural and conjugation class), [ADR 0044] and [ADR 0046] (pronoun cells and Syncretisms), and the Lemma Paradigm and inflection-table design ([texteater#1220](https://github.com/clockblocker/texteater/issues/1220))
 
 ADR-0007 predates the batteries. Its "Lemma and Selection content" now means the dumdict records below.
 
@@ -18,155 +18,137 @@ Terms follow the [dumling], [dumrel] and [dumdict] glossaries and `CONTEXT.md`.
 
 ## Purpose
 
-The proposed `@textfresser/lemma-note-codec` package converts between one Markdown **Lemma note** and dumdict records.
+`@textfresser/lemma-note-codec` converts between dumdict records and two kinds of Markdown note: the **Lemma note** of one Lemma and the **Reading note** of one of its Readings.
 
 It owns:
 
-- Block parsing and the typed note document;
-- conversion between Blocks and dumdict records;
+- the typed note documents and their conversion to dumdict records;
+- the metadata payloads it hands the note-metadata facility;
 - rendering of projection Blocks from data the caller supplies;
 - Block IDs;
 - deterministic serialization;
-- structured codec issues.
+- structured codec issues;
+- dictionary note paths, as its own module (ADR-0015, #111).
 
 It must not own:
 
-- vault I/O, lookup, revisions, or commits (the dictionary store, [#58](https://github.com/clockblocker/filler-de/issues/58));
-- note paths or the path encoding ([#52](https://github.com/clockblocker/filler-de/issues/52));
-- wikilink destination resolution, and the links Classify writes from Segments to Reading blocks (ADR-0012);
-- Shadow notes, which hold no records (ADR-0012);
+- vault I/O, lookup, revisions, commits, or cross-note invariants (the dictionary store, #113);
+- the metadata facility's storage format (`src/stateless-helpers/note-metadata/`, [#107](https://github.com/clockblocker/filler-de/issues/107));
+- link resolution: it renders the `LinkTarget` the store holds and decides nothing;
+- Crossroad notes, which hold no records (#114);
+- inflection rules or labels (`dumdict/inflection`, `dumcorpus/inflection`);
 - prompts or generation (dumgen);
 - linguistic or Knowledge schemas (dumling, dumrel).
 
-It depends only on the batteries: `dumling`, `dumrel` and `dumdict`. It must not import VAM types such as `SplitPath`, or any other `@textfresser/*` package.
+It depends only on the batteries. It must not import VAM types such as `SplitPath`, or any other `@textfresser/*` package.
 
-dumdict's own serialized note (`battery/dumdict/src/dto/serialized-note.ts`, `schemaVersion: 1`) is its reference store's internal shape. The codec must not depend on it.
+dumdict's own serialized note (`battery/dumdict/src/dto/serialized-note.ts`) is its reference store's internal shape. The codec must not depend on it.
 
-## One note, one Lemma
+## Two note kinds
 
-A Lemma note holds exactly one dumling Lemma and everything dumdict keys to it:
-
-| Record | Count | Scope in the note |
+| Record | Count | Note |
 | --- | --- | --- |
-| `LemmaRecord` | exactly 1 | Lemma part |
-| `ReadingEntry` | 1 or more | one Reading part each |
-| `SurfaceEntry` (owned) | 0 or more | one Surface part each |
-| `PendingSemanticRelationRecord` | 0 or more | the Reading part of its source Reading |
+| `LemmaRecord`, with its Lemma Paradigm | exactly 1 | the Lemma note |
+| `SurfaceEntry` (owned) | 0 or more | the Lemma note |
+| `ReadingEntry`, with its Attestation Links | exactly 1 per note | its Reading note |
+| `PendingSemanticRelationRecord` | 0 or more | the Reading note of its source Reading |
 
-The note's path spells the Lemma's identity. The path is a projection of the `identity` Block, which stays authoritative. The codec never reads the path. The encoding is settled in [#52](https://github.com/clockblocker/filler-de/issues/52).
+Every Reading of a Lemma has its own Reading note in the Lemma note's folder. The Lemma note is also the note of the Lemma's base-form Surface, and no inflected Surface gets a note of its own.
 
-A Foreign Lemma has exactly one Reading, with no Emoji Description ([ADR 0045]). A Lemma Syncretism is a Lemma like any other: its `syncretic` list is part of its identity, and its `syncretized` units are content of the `identity` Block ([ADR 0046]).
+Paths spell identity (ADR-0015), but metadata stays authoritative. The note codec never reads a path.
+
+A Foreign Lemma has exactly one Reading, with no Emoji Description ([ADR 0045]); its Reading note is `∅ <name>.md`. A Lemma Syncretism is a Lemma like any other: its `syncretic` list is part of its identity, and its `syncretized` units are content of its `LemmaRecord` ([ADR 0046]).
 
 ## Required model
 
-The codec exposes two layers, as ADR-0007 requires.
+The codec exposes two layers per note kind, as ADR-0007 requires.
 
 ```ts
-type LemmaNoteDocument = {
-	parts: NotePart[];
-};
-
-type NotePart =
-	| { scope: "lemma"; blocks: Block[] }
-	| { scope: "reading"; blockId: string; blocks: Block[] }
-	| { scope: "surface"; blockId: string; blocks: Block[] };
+type LemmaNoteDocument = { metadata: LemmaNoteMetadata; blocks: Block[] };
+type ReadingNoteDocument = { metadata: ReadingNoteMetadata; blocks: Block[] };
 
 type LemmaNoteData<L extends Language> = {
 	lemmaRecord: LemmaRecord<L>;
-	readingEntries: ReadingEntry<L>[];
 	ownedSurfaceEntries: SurfaceEntry<L>[];
+};
+
+type ReadingNoteData<L extends Language> = {
+	readingEntry: ReadingEntry<L>;
 	pendingRelations: PendingSemanticRelationRecord<L>[];
 };
 ```
 
-`LemmaNoteDocument` preserves part order, Block order, and the bytes of freeform and unknown Blocks. It also holds every plugin-owned value: Block IDs and freeform content.
-
-`LemmaNoteData` holds dumdict records only. Each record must validate with dumdict's `parseAsLemmaRecord`, `parseAsReadingEntry`, `parseAsSurfaceEntry` or `parseAsPendingSemanticRelationRecord` for the codec's language. Reading Knowledge is validated through `parseAsReadingEntry`.
-
-Loose data conversion must return a partial-invalid part when reconstruction fails. It must not return invalid content as a record.
+A document preserves Block order and the bytes of freeform text, and holds every plugin-owned value: Block IDs and freeform content. Data holds dumdict records only. Each record must validate with dumdict's `parseAs*` parser for the codec's language. Loose data conversion returns a partial-invalid result when reconstruction fails; it must not return invalid content as a record.
 
 ## Block kinds
 
 Every Block is one of three kinds:
 
-- **Serialized**: its payload is one dumdict or dumrel field. Parse reads the payload into data. Its visible rendering, if any, is derived from the payload and is never parsed.
+- **Serialized**: one dumdict or dumrel field. Its data lives in the note's metadata, never in the visible text. Its visible rendering, if any, is derived from the data and is never parsed.
 - **Projection**: rendered from data and never parsed back. Deleting or editing one changes no data.
-- **Plugin-owned**: Textfresser state that dumdict does not model. It lives only in the document layer.
+- **Plugin-owned**: Textfresser state that dumdict does not model, such as freeform text. It lives only in the document layer.
 
-A serialized Block's payload is canonical JSON in a form Obsidian's reading view hides. It holds no wikilink, embed or Markdown link syntax: Obsidian renders those in Live Preview and indexes them as links even inside a comment, so the Block's rendering is the only place a link to its target lives. The payload must round-trip nested dumling and dumrel values, such as morphological trees and Valency Frames, without loss.
+The metadata payload must round-trip nested dumling and dumrel values, such as morphological trees and Valency Frames, without loss. The facility escapes it so that no link, embed or comment syntax inside it reaches Obsidian's index (#107).
 
-### Lemma part
+### Lemma note
 
 | Block | Kind | Maps to |
 | --- | --- | --- |
-| `identity` | Serialized | `LemmaRecord.lemma`: the whole dumling Lemma: language, Family, Kind, Core Features, Canonical Form, and, for a Syncretism, `syncretic` and `syncretized` |
+| `identity` | Serialized | `LemmaRecord.lemma`: language, Family, Kind, Core Features, Canonical Form and, for a Syncretism, `syncretic` and `syncretized` |
+| `paradigm` | Serialized | the Lemma Paradigm: Paradigm Variants per Variation Dimension, and each Reading's licences (texteater#1226) |
+| `header` | Projection | Canonical Form, article, transcription |
+| `readings` | Projection | One link per Reading note, with its emoji |
+| `inflection` | Projection | One table per Licence Group, from `projectLemmaTables` (texteater#1228), each with its Block ID and its group's emojis as caption |
+| `surface` | Serialized | One owned `SurfaceEntry`; rendered as one line in the "Surfaces encountered so far" list with its Surface Axes and its `^s-<hash>` Block ID |
 | `freeform` | Plugin-owned | Opaque user content, byte-preserved |
 
-### Reading part
+### Reading note
 
 Rows are in canonical order (see Layout).
 
 | Block | Kind | Maps to |
 | --- | --- | --- |
-| `reading` | Serialized | `ReadingEntry.reading.emojiDescription`; absent for a Foreign Reading. The Lemma comes from `identity`; shown in `header`, no rendering of its own |
-| `transcription` | Serialized | `ReadingEntry.knowledge.transcription`; shown in `header`, no rendering of its own |
-| `plural` | Serialized | `ReadingEntry.knowledge.plural` (forms, `NoPlural` or `PluralOnly`); shown in `inflection`, no rendering of its own |
-| `conjugation_class` | Serialized | `ReadingEntry.knowledge.conjugationClass`; shown in `tags`, no rendering of its own |
-| `preterite` | Serialized | `ReadingEntry.knowledge.preterite`; shown in `inflection`, no rendering of its own |
-| `present_singular` | Serialized | `ReadingEntry.knowledge.presentSingular` (texteater#1218); shown in `inflection`, no rendering of its own |
-| `past_participle` | Serialized | `ReadingEntry.knowledge.pastParticiple`; shown in `inflection`, no rendering of its own |
-| `subjunctive_past` | Serialized | `ReadingEntry.knowledge.subjunctivePast`; shown in `inflection`, no rendering of its own |
-| `header` | Projection | Canonical Form, Emoji Description, article, transcription; carries the Reading's Block ID |
-| `attestation` | Serialized | `ReadingEntry.attestations`: Attestation Refs, stored as embeds (`![[Scroll#^id\|^]]`) |
-| `notes_title` | Projection | The Note title, always present, over `notes` and the part's freeform |
+| `reading` | Serialized | `ReadingEntry.reading.emojiDescription`; absent for a Foreign Reading. The Lemma comes from the Lemma note, by the store |
+| `transcription` | Serialized | `ReadingEntry.knowledge.transcription`; shown in `header` |
+| `header` | Projection | Canonical Form, Emoji Description, article, transcription |
+| `attestation` | Serialized | `ReadingEntry`'s Attestation Links (`{ ref, surfaceId, reading }`, texteater#1227), each rendered as the Scroll embed and the Surface's `^s-<hash>` |
+| `notes_title` | Projection | The Note title, always present |
 | `notes` | Serialized | `ReadingEntry.notes`; omitted when empty |
-| `notes_placeholder` | Projection | `*You can write here*`, while the part has no `notes` and no freeform |
+| `notes_placeholder` | Projection | `*You can write here*`, while the note has no `notes` and no freeform |
 | `freeform` | Plugin-owned | Opaque user content, byte-preserved |
-| `relation` | Serialized | `ReadingEntry.knowledge.semanticRelations`: direct claims only, in one target mode |
+| `relation` | Serialized | `ReadingEntry.knowledge.semanticRelations`: direct claims only, with each target's resolution |
 | `pending_relation` | Serialized | `PendingSemanticRelationRecord`s whose `sourceReading` is this Reading |
-| `inverse_relation` | Projection | Inverse and inferred edges from dumrel's `projectSemanticRelations` |
+| `inverse_relation` | Projection | Inverse edges from dumrel's `projectSemanticRelations` |
 | `morphology` | Serialized | `ReadingEntry.knowledge.morphologicalTree` |
-| `translation` | Serialized | `ReadingEntry.knowledge.translations` (`en`, `ru`) |
+| `translation` | Serialized | `ReadingEntry.knowledge.translations` |
 | `attested_translation` | Serialized | `ReadingEntry.attestedTranslations`; renders those `translation` does not already list |
 | `definition` | Serialized | `ReadingEntry.knowledge.definition` |
 | `valency` | Serialized | `ReadingEntry.knowledge.valency` |
 | `participle_source` | Serialized | `ReadingEntry.knowledge.participleSource` |
-| `locution_type` | Serialized | `ReadingEntry.knowledge.locutionType` |
-| `saying_type` | Serialized | `ReadingEntry.knowledge.sayingType` |
-| `formula_role` | Serialized | `ReadingEntry.knowledge.formulaRole` |
-| `inflection` | Projection | Inflection table |
+| `locution_type`, `saying_type`, `formula_role` | Serialized | the matching `ReadingEntry.knowledge` fields |
+| `conjugation_class` | Serialized | `ReadingEntry.knowledge.conjugationClass`; shown in `tags` |
+| `inflection_embed` | Projection | `![[<lemma note>#^<block id>\|…]]`: the Lemma note's table of this Reading's Licence Group |
 | `tags` | Projection | Tags derived from the Lemma's route and Core Features and the Reading's Knowledge |
 
-### Surface part
-
-| Block | Kind | Maps to |
-| --- | --- | --- |
-| `surface` | Serialized | `SurfaceEntry.surface`; carries the Surface's Block ID. `id` is recomputed with `makeSurfaceId`, and `ownerLemma` comes from `identity` |
-| `attestation` | Serialized | `SurfaceEntry.attestations` |
-| `attested_translation` | Serialized | `SurfaceEntry.attestedTranslations` |
-| `notes` | Serialized | `SurfaceEntry.notes`; omitted when empty |
-| `freeform` | Plugin-owned | Opaque user content, byte-preserved |
-
-A serialized Block whose field is absent or empty is omitted. The codec adds no Block for a Knowledge aspect the route's Knowledge Policy does not apply.
+Principal parts (`plural`, `preterite`, `presentSingular`, `pastParticiple`, `subjunctivePast`) leave Reading Knowledge for the Lemma Paradigm (texteater#1226). A serialized Block whose field is absent or empty is omitted. The codec adds no Block for a Knowledge aspect the route's Knowledge Policy does not apply, and a new dumrel aspect fails to compile until it gets a Block.
 
 ### Dropped
 
-- `root_meta`. Every root field now belongs to a dumdict record and a Block above.
-- `inherent_features`. Core Features are Lemma identity ([ADR 0002]) and live in `identity`.
-- The Selection identity fields. Selection is retired ([ADR 0003]). An Attestation has no durable identity, so no Block stores one; a durable source reference is an Attestation Ref in `attestation`.
-- `closed_set_membership`. Closed-class Lemmas have their own notes under `Worter/` and no Library leaf, so there is nothing to link to (ADR-0012).
-- `deviation`, `morphem` and the propagated `morphology` backlinks of the legacy notes. The Morpheme breakdown is now `morphology`. See open question 5 for the rest.
+- The part and Block markers (`%%tf-part…%%`, `%%tf:<kind>…%%`) and their seals. Data lives in metadata.
+- Reading parts and their `^r-<hash>` Block IDs. A Reading is a note.
+- `root_meta`, `inherent_features`, the Selection identity fields and `closed_set_membership`, as before: Core Features are Lemma identity ([ADR 0002]), Selection is retired ([ADR 0003]), and closed-class Lemmas have their own notes under `Worter/`.
+- `deviation`, `morphem` and the propagated `morphology` backlinks of the legacy notes (open question 3).
 
 ## Plugin-owned values
 
-**Block IDs.** Each Reading part and Surface part carries one Obsidian block ID. A Reading's ID is a short hash of its `readingIdentityKey`; a Surface's is a short hash of its `SurfaceId`. Both keys are JSON and are not valid block IDs. The prefix tells the scopes apart: `^r-<hash>` and `^s-<hash>`.
+**Block IDs.**
 
-- The hash function and length are fixed by the codec and must not change between versions, since links and scroll targets use the IDs.
-- A collision inside one note lengthens both colliding IDs deterministically.
-- The codec returns the map from Block ID to `readingIdentityKey` or `SurfaceId` beside the document. The map is recomputed from data on every parse and is never stored.
-- An ID that does not match its part's identity is reported as `BlockIdMismatch`. Parse does not repair it.
+- A met Surface's line carries `^s-<hash>`, a short hash of its `SurfaceId`. Table cells and other notes link a Surface as `<lemma note>#^s-<hash>`.
+- A table's ID is `^t` when the Lemma has a single Licence Group, otherwise a short hash of the group's `selectionKey`.
+- The hash function and length are fixed by the codec and must not change between versions, since links and embeds use the IDs. A collision inside one note lengthens both colliding IDs deterministically.
+- The codec returns the map from Block ID to `SurfaceId` or Licence Group beside the document. It is recomputed from data on every parse and is never stored.
 
-**Freeform.** User content inside a part, or before the first part. The document layer keeps its bytes and position. It is never converted to `ReadingEntry.notes`, which dumdict validates and may rewrite.
+**Freeform.** User content anywhere in either note. The document layer keeps its bytes. It is never converted to `ReadingEntry.notes`, which dumdict validates and may rewrite.
 
 ## Projections
 
@@ -174,177 +156,94 @@ The codec is pure, so the caller supplies every input a projection reads beyond 
 
 | Projection | Input |
 | --- | --- |
-| Note path | Not rendered by the codec. The store derives it from `identity` ([#52](https://github.com/clockblocker/filler-de/issues/52)) |
-| `header` | `identity`, `reading`, `transcription`, and the Block ID |
-| `tags` | `identity` and the Reading's Knowledge; derived by `@textfresser/lemma-note-projections` |
-| `inverse_relation` | `SemanticRelationProjection`s for this note's Readings, computed by the store with `projectSemanticRelations` over the relation edges that target this Lemma, with dictionary-wide `readingCounts`; see Projected inverse relations |
-| `inflection` | `identity`, `plural`, `conjugation_class`, `preterite`, `present_singular`, `past_participle`, `subjunctive_past`, owned Surfaces and dumcorpus paradigms; derived by `@textfresser/lemma-note-projections` |
-| Wikilinks in any rendering | A caller-supplied link renderer for a Lemma or Reading target |
+| Note paths | Not rendered by the note codec. The store derives them with the path module (ADR-0015) |
+| `header` | `identity`, `reading`, `transcription` |
+| `readings` | The Lemma's Reading notes, from the store |
+| `inflection`, `inflection_embed` | `projectLemmaTables`' `LemmaTablesView` and the language pack's labels and display. Until #120 lands, the hook can wrap `@textfresser/lemma-note-projections` |
+| `tags` | `identity` and the Reading's Knowledge |
+| `inverse_relation` | `SemanticRelationProjection`s for this Reading, computed by the store; see Projected inverse relations |
+| Links in any rendering | The `LinkTarget` the store holds for each link: `Spelling`, `Lemma` or `Reading` (texteater#1221) |
 
-Inverse relations are never written as data, in this note or any other. The `relation` Block holds only direct claims (synonym, nearSynonym, antonym, nearAntonym, hypernym, holonym, endonym), and dumrel's stored Knowledge has no field for an inverse such as hyponym or meronym ([ADR 0012]). Every relation stays inside its source's relation space ([ADR 0020]). When a commit adds or removes an edge, the store re-renders the `inverse_relation` Block of each affected target note ([#59](https://github.com/clockblocker/filler-de/issues/59)). Exonyms, Governors and participle users follow the same rule if rendered.
+Inverse relations are never written as data, in this note or any other. The `relation` Block holds only direct claims (synonym, nearSynonym, antonym, nearAntonym, hypernym, holonym, endonym), and dumrel's stored Knowledge has no field for an inverse such as hyponym or meronym ([ADR 0012]). Every relation stays inside its source's relation space ([ADR 0020]).
 
-A pending relation targets a Unit Shadow. The Shadow has a note under `Worter/<lang>/Shadow/…` that holds no records, and the store removes it when the target Lemma is created (ADR-0012). How the rendering links to it follows open question 1.
+### Links
+
+- **Sense unknown.** Every link the codec renders without knowing the exact sense points at the Crossroad note path with an alias, such as `[[Worter/k/kra/kraft/kraftwerk|Kraftwerk]]`: relations, inverse relations, pending relations, morphemes, and the header's self-link when it has no sense. The path comes from `crossroadNotePath` and needs only the spelling.
+- **Lemma upgrade.** A relation, morpheme or pending-relation link whose resolution the store holds as `Lemma` renders a link to that Lemma note. The store re-evaluates resolutions in bulk when Lemmas are added or removed and re-renders the affected notes (#113).
+- **Sense known.** Only a link whose exact sense is known renders a Reading note: a Lemma note's links to its own Reading notes, and a morphological leaf that is an exact `morphemeReading`.
+- The codec makes no lookup, and rendering twice against the same data gives identical bytes.
 
 ## Invariants
 
-1. A note must have exactly one `identity` Block, in its Lemma part.
+The codec checks these for one note:
+
+1. A Lemma note has exactly one `identity` and one `paradigm`. A Reading note has exactly one Reading Entry.
 2. `identity` is the only source for the Lemma. Paths, headers, tags and Block IDs never define it.
-3. Every Reading part must have exactly one `reading` Block, except a Foreign Reading, which has none. The Reading is `{ lemma, emojiDescription }`, with the Lemma from `identity`.
-4. A Foreign Lemma's note must have exactly one Reading part.
-5. Readings must be distinct by `readingIdentityKey`. Owned Surfaces must be distinct by `SurfaceId`.
-6. Every owned Surface's Lemma must equal the note's Lemma by `lemmaIdentityKey`.
-7. Every pending relation's `sourceReading` must be its part's Reading, and `locator.sourceReadingKey` must be that Reading's `readingIdentityKey`.
-8. Every reconstructed record must validate with its `parseAs*` parser.
-9. Projection Blocks must not be parsed into data.
-10. Parse must not repair content. Normalization must be an explicit operation.
-11. Block order within a part must not change parse meaning.
-12. Default serialization must use canonical order.
-13. The document layer must preserve freeform and unknown Blocks byte for byte.
+3. A Reading note has a `reading` Block, except a Foreign Reading, which has none.
+4. Owned Surfaces are distinct by `SurfaceId`, and each one's Lemma equals the note's Lemma by `lemmaIdentityKey`.
+5. Every pending relation's `sourceReading` is the note's Reading, and `locator.sourceReadingKey` is that Reading's `readingIdentityKey`.
+6. Every reconstructed record validates with its `parseAs*` parser.
+7. Projection Blocks are never parsed into data, and visible content is never read as data.
+8. Parse does not repair content. Normalization is an explicit operation.
+9. Default serialization uses canonical order.
+10. The document layer preserves freeform text byte for byte.
 
-## Repeated Blocks
+The store checks the cross-note ones:
 
-`freeform` and unknown Blocks can repeat. Every other Block occurs at most once per part. If one repeats:
-
-- strict conversion must fail;
-- loose conversion must report `DuplicateBlock`;
-- normalization may merge list payloads (`attestation`, `attested_translation`, `pending_relation`) only through an explicit policy.
+- Every Reading note has a Lemma note in its folder, and its Reading's Lemma is that note's Lemma.
+- Every Reading in a Lemma note's Paradigm has a Reading note, and a Foreign Lemma has exactly one.
+- Readings are distinct by `readingIdentityKey` across a Lemma's Reading notes.
+- No two identities share a path's collision key (ADR-0015).
 
 ## Parse and normalize
 
-Parsing has two steps:
+Parsing has two steps per note kind: Markdown and metadata to a document, then a document to validated data. Strict conversion fails on a missing identity, a duplicate Block, an inconsistent record, an invalid payload, or a record its `parseAs*` parser rejects. Loose conversion returns structured issues and partial-invalid data, and the store quarantines a note with any data issue and never throws.
 
-1. `parseDocument*` converts Markdown to `LemmaNoteDocument`.
-2. `documentToData*` reconstructs and validates `LemmaNoteData`.
+A note in the old marker format parses to a typed issue, never a throw, so the Dictionary reset can find it.
 
-`parseData*` is a convenience composition.
-
-Strict document parsing must fail on invalid part or Block structure. Strict data conversion must fail on a missing identity, a duplicate Block, an inconsistent record (invariants 3 to 7), an invalid payload, or a record its `parseAs*` parser rejects.
-
-Loose document parsing must preserve valid Blocks, freeform Blocks, unknown Blocks, and known Blocks with an unparseable payload.
-
-Loose data conversion must return structured issues and partial-invalid parts. The store quarantines a note with any data issue and never throws ([#58](https://github.com/clockblocker/filler-de/issues/58)).
-
-Normalization may:
-
-- deduplicate list payloads;
-- merge duplicate Blocks when policy allows;
-- canonicalize part and Block order;
-- regenerate projection Blocks and Block IDs;
-- normalize payload formatting.
-
-Normalization must not rewrite freeform content.
+Normalization may deduplicate list payloads, canonicalize Block order, regenerate projection Blocks and Block IDs, and normalize payload formatting. It must not rewrite freeform content.
 
 ## Serialization
 
-Default part order is the Lemma part, then Reading parts in `readingEntries` order, then Surface parts in `ownedSurfaceEntries` order.
+Default Block order follows the tables above. Freeform stands in the Reading note's Note section, and last in a Lemma note. Serializing data always renders projection Blocks from its inputs, since a note is regenerated as a whole.
 
-Default Block order within a Reading part follows the table above, from `reading` to `tags`; freeform stands in the Note section. A Surface part follows its table. Absent Blocks are skipped. See Layout for how the Blocks stand on the page.
+The rendering boundary must:
 
-`serializeDocument` may preserve encountered order. `serializeData` uses canonical order and places freeform content in its part's Note section, or last in a part without one, unless the caller supplies a layout policy.
-
-`document -> data -> document` can lose freeform placement. A caller that needs exact placement must stay on the document layer.
-
-`serializeData` always renders projection Blocks from its inputs, since a Lemma note is regenerated as a whole. `serializeDocument` regenerates them only on request.
-
-The final marker syntax is not fixed. It must:
-
-- identify part and Block boundaries without prose heuristics;
-- use stable Block kind names, independent of visible titles;
+- tell the codec's renderings from user text without inline seals, for example by keeping each rendering's line span and hash in the metadata;
+- treat any line that doesn't match a rendering as freeform, kept byte for byte and never read as data, so a hand-edited rendering becomes freeform;
 - keep visible titles cosmetic and localized;
-- hide serialized payloads in Obsidian's reading view;
-- permit byte-preserving storage of unknown Blocks and freeform content.
-
-## Public API
-
-```ts
-parseDocumentStrict(markdown, options?): LemmaNoteDocument
-parseDocumentLoose(markdown, options?): { document: LemmaNoteDocument; issues: CodecIssue[] }
-
-documentToDataStrict(document, options): LemmaNoteData
-documentToDataLoose(document, options): { data: PartialLemmaNoteData; issues: CodecIssue[] }
-
-parseDataStrict(markdown, options): LemmaNoteData
-parseDataLoose(markdown, options): { data: PartialLemmaNoteData; issues: CodecIssue[] }
-
-blockIdsOf(data): Map<string, ReadingIdentityKey | SurfaceId>
-
-normalizeDocument(document, options?)
-normalizeData(data, options?)
-
-serializeDocument(document, options?): string
-serializeData(data, projections, options?): string
-dataToDocument(data, projections, options?): LemmaNoteDocument
-```
-
-`options` binds the dumling language. `projections` carries the inputs listed under Projections. Strict functions return typed failures rather than throwing.
-
-`normalizeData` accepts valid `LemmaNoteData`. It must not accept partial-invalid loose output.
+- keep every table a single Obsidian block, so an embed shows all of it.
 
 ## Issue families
 
-The codec must use structured issues. Minimum families are:
-
-- `MissingIdentity`
-- `DuplicateBlock`
-- `InvalidBlockPayload`
-- `InvalidRecord` (a `parseAs*` rejection)
-- `InconsistentRecord` (invariants 3 to 7)
-- `BlockIdMismatch`
-- `UnknownTypedBlock`
-- `UnsupportedTopLevelContent`
-- `OrderingNormalized`
-- `BlockMerged`
+The codec uses structured issues. Minimum families are `MissingIdentity`, `DuplicateBlock`, `InvalidBlockPayload`, `InvalidRecord` (a `parseAs*` rejection), `InconsistentRecord` (invariants 3 to 5), `BlockIdMismatch`, `LegacyMarkerFormat`, `OrderingNormalized` and `BlockMerged`.
 
 ## Acceptance
 
 Tests must cover:
 
-- round trips (`parse -> serialize -> parse`) for each German Family, including a Locution, a Saying, a Morpheme, a Foreign Lemma and a Syncretism;
+- round trips of both note kinds for each German Family, including a Locution, a Saying, a Morpheme, a Foreign Lemma and a Syncretism;
 - nested payloads: a morphological tree, a Valency Frame, both relation target modes, and pending relations;
-- several Readings of one Lemma (`Mutter` 👩 with `Mütter` and 🔩 with `Muttern`, [ADR 0038]);
-- owned Surfaces;
-- missing and duplicate identity Blocks;
-- rejection of identity derived from the path, header, tags or Block IDs;
-- `parseAs*` rejections and inconsistent records as typed issues, never throws;
-- a stored inverse relation rejected;
-- Block ID derivation, collisions and mismatches;
-- freeform and unknown-Block round trips;
-- order-independent parsing and canonical serialization order;
-- explicit duplicate normalization.
+- Licence Groups: Mutter 👩 / 🔩 with two tables, melken with one, and senden with partial overlap;
+- stable table Block IDs, Reading-note embeds that target their group's table, and Surface lines that keep their `^s-<hash>`;
+- links rendered from each `LinkTarget`;
+- freeform round trips byte for byte in both notes, and a hand-edited rendering read as freeform, never as data;
+- no `%%tf` in any output, and a marker-format note parsed as a typed issue.
 
 ## Open questions
 
-1. **Wikilink form in renderings.** Whether `header`, `relation`, `pending_relation`, `inverse_relation` and `morphology` render path-qualified links or bare ones. Classify already writes path-qualified links to Reading blocks, and a hand-typed bare link may land on any Lemma or Shadow note with its spelling, which is accepted (ADR-0012). Depends on the path encoding in [#52](https://github.com/clockblocker/filler-de/issues/52). The codec takes a link renderer until then.
-2. **Path healing.** Who heals a note whose path disagrees with its `identity`, and how Syncretisms, long Sayings and Shadow notes are spelled. [#52](https://github.com/clockblocker/filler-de/issues/52), questions 4 to 6.
-3. **Closed-class Lemmas.** Resolved by ADR-0012: closed-class Lemma notes, generated Syncretisms included, live under `Worter/` and are created on first click; `closed_set_membership` is dropped.
-4. ~~**`inflection`.**~~ Resolved by [#62](https://github.com/clockblocker/filler-de/issues/62) and built in [#75](https://github.com/clockblocker/filler-de/issues/75): a projection derived without a model from `identity`, Reading Knowledge, owned Surfaces and dumcorpus; see Derived projections.
-5. **Morphemes.** Whether morpheme "used in" backlinks become a projection over `morphologicalTree`, and whether `deviation` returns. dumgen does not produce morphemes yet ([#62](https://github.com/clockblocker/filler-de/issues/62) drops them until it does). Features and tags are resolved by #62 and built in [#75](https://github.com/clockblocker/filler-de/issues/75): they come from dumling identity and dumrel Knowledge only.
-
-## Implementation choices (#55)
-
-[#55](https://github.com/clockblocker/filler-de/issues/55) implements this spec as `@textfresser/lemma-note-codec` and settles its open choices:
-
-- **Markers.** Each part opens with `%%tf-part:lemma%%`, `%%tf-part:reading r-<hash>%%` or `%%tf-part:surface s-<hash>%%`. Each typed Block opens with `%%tf:<kind>%%`, or `%%tf:<kind> <json>%%` for a serialized Block, whose payload is canonical JSON on one line with `%` and `[` written as `\u0025` and `\u005b` inside its strings. The first keeps a payload from closing its comment. The second keeps wikilinks, embeds and Markdown links out of it, so an Attestation Ref's embed shows once, in the rendering, and the comment adds no link to Obsidian's index. Both are plain JSON escapes, so a payload written before the `[` rule still parses. Reading view hides every marker. A typed Block with a visible rendering seals it in its marker: `%%tf:<kind>@<lines>:<hash>%%` or `%%tf:<kind>@<lines>:<hash> <json>%%`, where `<lines>` is the rendering's line count and `<hash>` the first 8 hex digits of the SHA-256 of those lines joined by `\n`, line endings excluded. Any other `%%tf…%%` line is an unknown Block, kept with its lines.
-- **Block IDs.** SHA-256 of the identity key, first 8 hex digits; colliding IDs inside one note grow by 4 digits until they differ. The part marker carries the ID, and the `header` and `surface` renderings repeat it as `^<id>` so Obsidian can link to it.
-- **API.** `parse(markdown, { language })` returns `{ document, data }`, where `data` is `{ ok: true, data, blockIds }` or `{ ok: false, issues, partial }`. `parseDocument`, `documentToData`, `serializeDocument` (byte-exact) and `blockIdsOf` are the layers beneath it. `serialize(document, data, { projections })` writes canonical order and keeps the document's freeform and unknown Blocks in their part, under a Reading part's Note title and at the end of any other part; those of a part the data dropped move to the Lemma part. Normalization is not implemented yet.
-- **Issues.** `MissingIdentity` is `MissingRequiredBlock` with `kind: "identity"`, which also covers a missing `reading` or `surface` Block. `DuplicatePart` and `MisplacedBlock` are added. Unknown Blocks are kept without an issue. `OrderingNormalized` and `BlockMerged` wait for normalization.
-- **Projections.** `header` has a default rendering (see Layout). `tags` and `inflection` take caller hooks ([#75](https://github.com/clockblocker/filler-de/issues/75)), and `inverse_relation` takes the Reading's `projectSemanticRelations` edges ([#59](https://github.com/clockblocker/filler-de/issues/59)); a Block whose hook is absent is left out. Links default to path-qualified ones (open question 1).
-- **Rendering boundary.** A typed Block's rendering is exactly the sealed lines directly after its marker, and only when they still match the seal. The sealed lines may hold blank lines, as Deine Kontexte does between its embeds, but never open with one; a blank line ends a rendering only once the seal covers no more lines. Every other line up to the next marker becomes a freeform Block in place, byte for byte: a line typed directly under a rendering, with or without a blank line, and the whole rendering once a user edits it or types inside it. A Block without a seal, such as `identity`, has no rendering, so any line under it is freeform. `serialize` re-renders the Block and keeps the edited text as freeform, in the Note section like all freeform, so the codec never drops user text and never reads an edit as data. Block IDs are plugin-owned, so when a rendering becomes freeform, `serialize` removes the codec-owned `^r-…` or `^s-…` token that ends any of its lines, with the whitespace before it, and keeps every other byte. An edited `header` or `surface` line therefore loses its `^<id>`, and each ID appears once in the note, on its canonical Block (#82). Freeform lines typed under an intact rendering are not touched.
-- **Knowledge coverage.** Every `ReadingKnowledge` aspect has a Block; a new dumrel aspect fails to compile until it gets one, and `serialize` throws on an aspect it cannot place.
-- **Paths.** The ADR-0013 path codec (`lemmaNotePath`, `shadowNotePath`, `parseNotePath`) lives in the same package as its own module. The note codec never reads a path.
+1. **Rendering boundary.** How a note tells its own renderings from user text once the seals are gone (#112).
+2. **Whole-path length.** Windows' 260-character limit without long-path support is not checked; only each segment is capped (ADR-0015).
+3. **Morphemes.** Whether morpheme "used in" backlinks become a projection over `morphologicalTree`, and whether `deviation` returns.
 
 ## Layout
 
-The codec lays every note out as the user's dictionary example
-([#49](https://github.com/clockblocker/filler-de/issues/49)) shows a note,
-so the notes the Dictionary reset
-([#65](https://github.com/clockblocker/filler-de/issues/65)) regenerates
-look as the user's dictionary did. Only the visible lines follow the
-example; every marker and payload stays as above. Visible text is never
-parsed.
+The codec lays the notes out as the user's dictionary example ([#49](https://github.com/clockblocker/filler-de/issues/49)) shows an entry ([#103](https://github.com/clockblocker/filler-de/issues/103), [#104](https://github.com/clockblocker/filler-de/issues/104)), split across the two notes. Only the visible lines follow the example. Visible text is never parsed.
+
+A Reading note, `🏭 Kohlekraftwerk.md`:
 
 ```
-🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german) ^r-…
+🏭 das [[Worter/k/koh/kohle/kohlekraftwerk|Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)
 
 <span class="note_block_title note_block_title_kontexte">Deine Kontexte</span>
 ![[Atom#^13|^]]
@@ -355,54 +254,63 @@ parsed.
 
 
 <span class="note_block_title note_block_title_synonyme">Semantische Beziehungen</span>
-= [[Kraftwerk]]
-≈ [[Industrieanlage]], [[Fabrik]]
-≠ [[Windrad]]
+= [[Worter/k/kra/kraft/kraftwerk|Kraftwerk]]
+≈ [[Worter/i/ind/indus/industrieanlage|Industrieanlage]], [[Worter/f/fab/fabri/fabrik|Fabrik]]
+≠ [[Worter/w/win/windr/windrad|Windrad]]
 <span class="note_block_title note_block_title_morpheme">Morpheme</span>
-[[Kohle]]|[[Kraft]]|[[Werk]]
+[[Worter/k/koh/kohle/kohle|Kohle]]|[[Worter/k/kra/kraft/kraft|Kraft]]|[[Worter/w/wer/werk/werk|Werk]]
 <span class="note_block_title note_block_title_translations">Übersetzung</span>
 coal-fired power plant
 <span class="note_block_title note_block_title_flexion">Flexion</span>
-N: das [[Kohlekraftwerk]], die Kohlekraftwerke
-A: das [[Kohlekraftwerk]], die Kohlekraftwerke
-G: des Kohlekraftwerks, der Kohlekraftwerke
-D: dem [[Kohlekraftwerk]], den Kohlekraftwerken
+![[Worter/de/Lexeme/NOUN/Neut/k/koh/kohle/Kohlekraftwerk#^t|Flexion]]
 <span class="note_block_title note_block_title_tags">Tags</span>
 #noun/neuter
 ```
 
-This is what reading view and Live Preview show, with the comment-only marker lines hidden (`styles.css`) and path-qualified links shown by their alias.
+A Lemma note, `Kohlekraftwerk.md`, in the same folder. Its layout is a sketch; #112 settles it:
 
-- **Head.** A part's marker and its data-only Blocks (`identity`; in a Reading part `reading`, `transcription` and the inflection Knowledge) stand on consecutive lines, followed directly by the `header` or `surface` Block. They render nothing, so the header is the part's first visible line, and its Block ID ends its paragraph.
-- **Header.** The Emoji Description, a German noun's article, a link to the note itself, and the transcription as a YouGlish link with `♫` in its text (`/…/` for a language YouGlish lacks).
-- **Sections.** Every other Block belongs to a section (`BLOCK_SECTIONS` in `render.ts`), in this order: Deine Kontexte (`attestation`), Note (`notes_title`, `notes`, `notes_placeholder`), Semantische Beziehungen (`relation`, `pending_relation`, `inverse_relation`), Morpheme (`morphology`), Übersetzung (`translation`, `attested_translation`), Definition, Valenz, Partizip von, Art (`locution_type`, `saying_type`, `formula_role`), Flexion (`inflection`) and Tags. Definition, Valenz, Partizip von and Art are sections the example lacks. The first rendering of a section opens with its title, `<span class="note_block_title note_block_title_<class>">Title</span>`, inside the sealed rendering. The class is the example's: `kontexte` (the Note title's too), `synonyme`, `morpheme`, `translations`, `flexion`, `tags`, and the section's own name for the new ones. Titles are cosmetic: `projections.titles` replaces them, and an empty title leaves the line out.
+```
+das [[Worter/k/koh/kohle/kohlekraftwerk|Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)
+
+[[Worter/de/Lexeme/NOUN/Neut/k/koh/kohle/🏭 Kohlekraftwerk|🏭]]
+
+<span class="note_block_title note_block_title_flexion">Flexion</span>
+N: das Kohlekraftwerk, die Kohlekraftwerke
+A: das Kohlekraftwerk, die Kohlekraftwerke
+G: des Kohlekraftwerks, der Kohlekraftwerke
+D: dem Kohlekraftwerk, den Kohlekraftwerken
+^t
+
+<span class="note_block_title note_block_title_surfaces">Surfaces encountered so far</span>
+Kohlekraftwerken: Dat.Pl ^s-…
+```
+
+- **Header.** The Emoji Description (in a Reading note), a German noun's article, a link to the spelling, and the transcription as a YouGlish link with `♫` in its text (`/…/` for a language YouGlish lacks).
+- **Sections.** In a Reading note, every Block but the header belongs to a section, in this order: Deine Kontexte (`attestation`), Note (`notes_title`, `notes`, `notes_placeholder`), Semantische Beziehungen (`relation`, `pending_relation`, `inverse_relation`), Morpheme (`morphology`), Übersetzung (`translation`, `attested_translation`), Definition, Valenz, Partizip von, Art (`locution_type`, `saying_type`, `formula_role`), Flexion (`inflection_embed`) and Tags. A section opens with its title, `<span class="note_block_title note_block_title_<class>">Title</span>`. The class is the example's: `kontexte` (the Note title's too), `synonyme`, `morpheme`, `translations`, `flexion`, `tags`, and the section's own name for the new ones. Titles are cosmetic: `projections.titles` replaces them, and an empty title leaves the line out.
 - **Spacing.** A blank line follows the header, two follow the Note section, and sections otherwise stand on consecutive lines, as in the example.
-- **Renderings.** Attestation embeds are separated by a blank line, which their seal covers. Relations are one line per relation with the dictionary's symbols, `=` synonym, `≈` near synonym, `≠` antonym, `≉` near antonym, `⊃` hypernym, `⊂` hyponym, `∋` holonym, `∈` meronym, `⇒` endonym, `⇐` exonym, each target once, so direct, pending and projected relations read as one list. A morphological tree lists its leaves, `[[Kohle]]|[[Kraft]]|[[Werk]]`. Translations show their words, prefixed by the language only when there are several; attested translations show in italics. Default links alias the Canonical Form alone. Inflection cells stay plain text: they are display-only (batteries ADR 0019), and no note holds an inflected form, so a link to one would not resolve. A cell's word spelled as the Lemma links to the Lemma's own note.
-- **Note.** A Reading part always has the Note title, so a user knows where to write. Freeform text stands directly under it, after `notes`, and text typed anywhere else in the part moves there when the note is written again. While the part has neither `notes` nor freeform, `notes_placeholder` shows `*You can write here*` under the title. It is a sealed projection, so parse never reads it as user text. Text typed in its place or under it is freeform, and the next serialize drops the placeholder; a freeform Block holding only the placeholder's words is dropped too, so the placeholder is never stored or written twice. A Surface part titles its `notes` the same way when it has any, with no placeholder, and keeps its freeform last.
-- **Separators.** Every part after the first opens its header or surface rendering with `***` twice, as the old notes separated entries. `***` cannot turn the line above it into a heading, as `---` would.
-- **Not rendered.** The example's Verweise section and its `[[Kohle]] + [[Kraftwerk]]` compound-parts line have no data: dumrel holds no related-or-references Knowledge, and a morphological tree names only its leaves, never an inner node such as `Kraftwerk`. Neither do the old "Morphologische Relationen" (Verwendet in) backlinks and "Abweichungen" (open question 5). The example's repeated links, trailing spaces, stray `|` line and leading spaces are not reproduced.
+- **Renderings.** Attestation embeds are separated by a blank line. Relations are one line per relation with the dictionary's symbols, `=` synonym, `≈` near synonym, `≠` antonym, `≉` near antonym, `⊃` hypernym, `⊂` hyponym, `∋` holonym, `∈` meronym, `⇒` endonym, `⇐` exonym, each target once, so direct, pending and projected relations read as one list. A morphological tree lists its leaves. Translations show their words, prefixed by the language only when there are several; attested translations show in italics. Links alias the spelling alone. Inflection cells are display-only (batteries ADR 0019).
+- **Note.** A Reading note always has the Note title, so a user knows where to write. Freeform text stands directly under it, after `notes`, and text typed anywhere else moves there when the note is written again. While the note has neither `notes` nor freeform, `notes_placeholder` shows `*You can write here*`. Text typed in its place is freeform, and the next serialize drops the placeholder; a freeform Block holding only the placeholder's words is dropped too.
+- **Not rendered.** The example's Verweise section and its compound-parts line have no data, nor do the old "Morphologische Relationen" (Verwendet in) backlinks and "Abweichungen" (open question 3).
 
 ## Projected inverse relations (#59)
 
 `@textfresser/dictionary` fills the `inverse_relation` hook itself; a caller's `projections` cannot supply it.
 
-- **Inventory.** A note's projection runs `projectSemanticRelations` over the note's own Readings and the source Readings of the claims that target its Lemma (`relationEdgesTo`), with each claim cut down to targets inside that inventory and dictionary-wide `readingCounts` for every Lemma in it. A note's projection therefore depends only on its own records and on the notes that claim a relation on it.
-- **What shows.** Only inverses: for each claim another note's Reading makes on this Lemma or one of its Readings, the relation this Reading holds back, when dumrel infers it. Closure follows ADR 0011, so a Lemma target on a homonymous Lemma projects nothing, and a direct claim of the note's own wins and stays in the `relation` Block. Other inferred edges, such as a substitution through a synonym, are left out.
-- **Links.** dumrel names a Lemma-mode inverse by its Lemma. The store links each source Reading that makes the mirrored claim instead, path-qualified to its Block (ADR 0012, 0013).
-- **Re-rendering.** A commit renders every note it writes against the post-commit index. Once its writes landed, the store takes every note a written note claimed a relation on, before or after the commit, and rewrites those whose file shows other `inverse_relation` Blocks than the index gives. The same runs after VAM reports a change to a note, for the notes its old and new claims reach, so a hand edit or deletion of a source is re-rendered too. The changed note itself is not re-rendered, even when the edit changes what its own Block should show, so the store never writes the note a user is editing. Each re-render is a compare-and-swap rewrite of the content the store indexed, under the writer lock. A note whose file is ahead of the index is re-read, and the notes its new and old claims reach join the re-render; a note whose write loses a race is re-read and tried again, for at most three rounds. A re-render that still fails is logged and never fails the commit; the next re-render that reaches the note repairs it. A full rebuild, such as startup, re-renders nothing.
-- **Revisions.** A re-render changes no record, so it does not move the revision: a commit returns the revision of its own writes, and plans made before a re-render stay valid. An edit a re-render finds on disk does move it, so a plan that never saw that edit conflicts.
+- **Inventory.** A Reading note's projection runs `projectSemanticRelations` over its Lemma's Readings and the source Readings of the claims that target its Lemma (`relationEdgesTo`), with each claim cut down to targets inside that inventory and dictionary-wide `readingCounts` for every Lemma in it.
+- **What shows.** Only inverses: for each claim another Reading makes on this Lemma or Reading, the relation this Reading holds back, when dumrel infers it. Closure follows ADR 0011, so a Lemma target on a homonymous Lemma projects nothing, and a direct claim of the note's own wins and stays in the `relation` Block.
+- **Links.** An inverse links its source Reading's Lemma, by the same rules as every other sense-unknown link: the Crossroad path, or the Lemma note while the claim's Unit Shadow matches exactly one Lemma.
+- **Re-rendering.** A commit renders every note it writes against the post-commit index. Once its writes landed, the store rewrites the notes whose `inverse_relation` Blocks the index changed, as a compare-and-swap under the writer lock, retried for at most three rounds. A re-render that still fails is logged and never fails the commit. A full rebuild, such as startup, re-renders nothing.
+- **Revisions.** A re-render changes no record, so it does not move the revision.
 
-## Derived projections (#75)
+## Derived projections (#75, until #120)
 
-[#75](https://github.com/clockblocker/filler-de/issues/75) fills the `inflection` and `tags` hooks from `@textfresser/lemma-note-projections`, an independent package over the batteries. Its `derivedProjections` plugs into `serialize`'s `projections` as is. It calls no model, and its cells are display-only, never Surfaces (batteries ADR 0019); forms come from stored data, never from pattern labels (ADR 0038).
+Until [#120](https://github.com/clockblocker/filler-de/issues/120) moves them to the dumcorpus German pack, `@textfresser/lemma-note-projections` derives the German inflection tables and tags without a model. Its cells are display-only, never Surfaces (batteries ADR 0019); forms come from stored data, never from pattern labels (ADR 0038), and a cell whose form the data leaves in doubt is left out, not guessed.
 
-A derived projection never shows a wrong form: a cell whose form the data leaves in doubt is left out, not guessed.
-
-- **Nouns.** A case table from the Canonical Form, Core `gender`, `plural` and dumcorpus's definite article cells, by the rules measured in [#62](https://github.com/clockblocker/filler-de/issues/62). A singular form an owned Surface attests wins. No weak (n-Deklination) form is derived: a masculine noun with an -(e)n plural or a final `-e` may be weak (Mensch) or not (Staat), and Herz declines like a weak noun, so their oblique singular cells come only from attested Surfaces. A genitive whose ending is in doubt is left out (Chaos, Atlas, Business, a monosyllable with no plural such as Rock, and one whose single vowel letter precedes one l, m, n or r, which may take only `-s`: Gen, des Gens, but Ton, des Tones), unless an owned Surface attests it or a stored S-plural shows `-s`. So are the genitive and dative of a neuter in `-e` with no plural, which may be an adjective used as a noun (das Böse).
-- **Verbs.** Stored forms win over rules, for any class: `presentSingular` gives the ich, du and er cells, `preterite` the Präteritum, `subjunctivePast` the Konjunktiv II and `pastParticiple` the Partizip II (texteater#1218), so a strong verb such as fahren gets every row but the Imperativ. A stored form that does not fit the verb (the wrong particle, a Konjunktiv II not in `-e`) is left out, and a stored aspect is never filled in from rules. Without them, a weak verb gets Präsens, Präteritum, Konjunktiv II, Partizip II and Imperativ, with its particle and reflexive in place. Any other verb gets the regular Präsens cells (ich, wir, ihr, sie; wissen drops ich) and a Partizip II only from a stored `-te` form. A Partizip II takes `ge-` only when its root is one syllable with no prefix (gepasst, gehandelt), and none after an inseparable prefix or in stressed `-ieren` (studiert). A longer root may stress its first syllable (gearbeitet) or not (trompetet), so without a stored `pastParticiple` its participle is left out, as are one whose `ge-` is otherwise in doubt (beurteilen) and one that is strong after a weak past (backen). The haben/sein auxiliary is never shown.
-- **Comparison.** A `comparable` ADJ or ADV gets Positiv, Komparativ and Superlativ: suppletive forms from dumcorpus, then a stored comparative Surface, then, for an ADJ only, regular forms unless the stem may umlaut (a monosyllable with a, o or u, or a compound ending in an umlauting adjective, such as altklug). A Latin `-er` that drops its `e` (integer) gets no derived comparative, and an unstressed `-igt` or `-icht` (berechtigt) no derived superlative.
-- **Closed classes.** A declining DET or PRON stem gets its case table from dumcorpus's plain-spelled realizations, and a closed VERB or AUX (sein, haben, werden, the modals) lists its forms.
-- **Tags.** The route, one nested tag per Core Feature value (`noun/masculine`, `verb/separable`, `verb/reflexive-acc`), and the inflection class Knowledge stores (`verb/weak`, `noun/plural-only`).
+- **Nouns.** A case table from the Canonical Form, Core `gender`, the plural and dumcorpus's definite article cells. A singular form an owned Surface attests wins. No weak (n-Deklination) form is derived, and a genitive whose ending is in doubt is left out unless a Surface attests it.
+- **Verbs.** Stored principal parts win over rules, for any class. Without them, a weak verb gets Präsens, Präteritum, Konjunktiv II, Partizip II and Imperativ, with its particle and reflexive in place; any other verb gets only what its stored forms and the regular Präsens cells allow. The haben/sein auxiliary is never shown.
+- **Comparison.** A `comparable` ADJ or ADV gets Positiv, Komparativ and Superlativ: suppletive forms from dumcorpus, then a stored comparative Surface, then regular forms for an ADJ whose stem cannot umlaut.
+- **Closed classes.** A declining DET or PRON stem gets its case table from dumcorpus's realizations, and a closed VERB or AUX lists its forms.
+- **Tags.** The route, one nested tag per Core Feature value (`noun/masculine`, `verb/separable`, `verb/reflexive-acc`), and the inflection class Knowledge stores (`verb/weak`, `noun/plural-only`). Tags stay in the plugin after #120.
 
 [dumling]: https://github.com/clockblocker/texteater/blob/main/battery/dumling/GLOSSARY.md
 [dumrel]: https://github.com/clockblocker/texteater/blob/main/battery/dumrel/GLOSSARY.md

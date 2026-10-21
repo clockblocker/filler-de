@@ -1,12 +1,13 @@
 # Textfresser wikilink resolution specification
 
-- Status: Superseded by ADR-0012. Describes the legacy surface-host routing until the one-note-per-Lemma cutover.
+- Status: Superseded by ADR-0012, itself superseded by ADR-0015. Describes the legacy surface-host routing only.
 - Owner: Textfresser
 
 Related decision:
 
 - [ADR-0008: Route unconfirmed closed-set links through a surface host](../../../docs/adr/0008-route-unconfirmed-closed-set-links-through-a-surface-host.md) (superseded)
-- [ADR-0012: Link classified Segments to Reading blocks and keep every Lemma in Worter](../../../docs/adr/0012-link-classified-segments-to-reading-blocks-and-keep-every-lemma-in-worter.md)
+- [ADR-0012: Link classified Segments to Reading blocks and keep every Lemma in Worter](../../../docs/adr/0012-link-classified-segments-to-reading-blocks-and-keep-every-lemma-in-worter.md) (superseded)
+- [ADR-0015: Store the dictionary as Lemma, Reading and Crossroad notes](../../../docs/adr/0015-store-the-dictionary-as-lemma-reading-and-crossroad-notes.md)
 
 ## Purpose
 
