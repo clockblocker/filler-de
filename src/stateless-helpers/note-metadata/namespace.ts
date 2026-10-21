@@ -143,7 +143,41 @@ export type NestedNamespaceSpec<T extends Record<string, unknown>> = {
 	 * Reading data of an older version runs them in order before the schema.
 	 */
 	readonly migrations?: Readonly<Record<number, (data: unknown) => unknown>>;
+	/**
+	 * Escape `[` in every string and key while the data sits in frontmatter.
+	 * Obsidian indexes a `[[…]]` in a property value as a link, so without
+	 * it a link inside the data, such as an Attestation's embed, would show
+	 * in the graph and in backlinks. The hidden section escapes `[` anyway.
+	 */
+	readonly escapeLinksInFrontmatter?: boolean;
 };
+
+/**
+ * The frontmatter escape: `\` is written `\\` and `[` is written `\[`, in
+ * every string and every key, so no value holds `[[` or a Markdown link.
+ * It is reversible for any text, and the hidden section never applies it.
+ */
+function mapStrings(value: unknown, change: (text: string) => string): unknown {
+	if (Predicate.isString(value)) return change(value);
+	if (Array.isArray(value))
+		return value.map((item) => mapStrings(item, change));
+	if (Predicate.isObject(value))
+		return Object.fromEntries(
+			Object.entries(value).map(([key, item]) => [
+				change(key),
+				mapStrings(item, change),
+			]),
+		);
+	return value;
+}
+
+const escapeLinks = (value: unknown) =>
+	mapStrings(value, (text) =>
+		text.replaceAll("\\", "\\\\").replaceAll("[", "\\["),
+	);
+
+const unescapeLinks = (value: unknown) =>
+	mapStrings(value, (text) => text.replace(/\\([\\[])/gu, "$1"));
 
 /**
  * A namespace stored as one object under `key`, the same in both formats:
@@ -160,9 +194,18 @@ export function defineNestedNamespace<T extends Record<string, unknown>>(
 ): MetadataNamespace<T> {
 	const { key, name, schema, version } = spec;
 	const migrations = spec.migrations ?? {};
+	const escaping = spec.escapeLinksInFrontmatter === true;
+	/** The stored object as the current format holds it, and back. */
+	const toStored = (data: unknown, format: MetadataFormat) =>
+		escaping && format === "Frontmatter" ? escapeLinks(data) : data;
+	const fromStored = (data: unknown, format: MetadataFormat) =>
+		escaping && format === "Frontmatter" ? unescapeLinks(data) : data;
 
-	const decode = (document: MetadataDocument): MetadataDecoding<T> => {
-		const stored = document[key];
+	const decode = (
+		document: MetadataDocument,
+		format: MetadataFormat,
+	): MetadataDecoding<T> => {
+		const stored = fromStored(document[key], format);
 		if (stored === undefined) return { kind: "Absent" };
 		if (!Predicate.isObject(stored)) {
 			return invalid({
@@ -207,7 +250,11 @@ export function defineNestedNamespace<T extends Record<string, unknown>>(
 				});
 	};
 
-	const encode = (document: MetadataDocument, value: T): MetadataDocument => {
+	const encode = (
+		document: MetadataDocument,
+		value: T,
+		format: MetadataFormat,
+	): MetadataDocument => {
 		const parsed = schema.safeParse(value);
 		if (!parsed.success) {
 			throw new NoteMetadataError(name, {
@@ -217,7 +264,7 @@ export function defineNestedNamespace<T extends Record<string, unknown>>(
 		}
 		const { [SCHEMA_VERSION_KEY]: _ignored, ...data } = parsed.data;
 		return editDocument(document, {
-			[key]: { [SCHEMA_VERSION_KEY]: version, ...data },
+			[key]: toStored({ [SCHEMA_VERSION_KEY]: version, ...data }, format),
 		});
 	};
 
@@ -229,14 +276,19 @@ export function defineNestedNamespace<T extends Record<string, unknown>>(
 		encode,
 		name,
 		remove,
-		// Stored the same way in both formats: move it as is, whatever its
-		// version, so nothing is lost.
-		transfer: (from, _fromFormat, to) =>
+		// Stored the same way in both formats but for the frontmatter escape:
+		// move it whatever its version, so nothing is lost.
+		transfer: (from, fromFormat, to) =>
 			from[key] === undefined
 				? null
 				: {
 						from: remove(from),
-						to: editDocument(to, { [key]: from[key] }),
+						to: editDocument(to, {
+							[key]: toStored(
+								fromStored(from[key], fromFormat),
+								otherFormat(fromFormat),
+							),
+						}),
 					},
 	};
 }
