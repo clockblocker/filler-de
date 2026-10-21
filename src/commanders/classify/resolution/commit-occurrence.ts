@@ -2,11 +2,16 @@
  * Commits one resolved occurrence to the dictionary (#64), as tf-demo's
  * `planAndCommitDictionary` does inside its transaction: a New Reading
  * becomes a new Reading Entry owning the attested Surface, and a reused
- * Reading gains the Surface if its Lemma does not own it yet. Either way
- * the Reading would record the occurrence's Attestation Ref. TODO(#113):
- * dumdict v2 records it as an Attestation Link, which the store does not
- * keep yet, so no occurrence is recorded until it does; `attestationRef`
- * is carried through for then.
+ * Reading records the occurrence (`recordOccurrence`), which ensures its
+ * Lemma owns the Surface. Either way the Reading holds the occurrence's
+ * Attestation Link `{ ref, surfaceId, reading }` (texteater#1227), and its
+ * Reading note shows the ref under Deine Kontexte.
+ *
+ * A ref names one occurrence, once in the dictionary. An occurrence judged
+ * a different Reading than it was recorded under moves: it is removed
+ * (`removeOccurrence`, with its cascade, which the store follows with the
+ * Shadow re-evaluation a removal asks for) and recorded again. One judged
+ * the same Reading under another Surface keeps its link.
  *
  * The store commits all-or-nothing against the revision a plan was built
  * from, so a plan is rebuilt from fresh slices whenever another write wins
@@ -15,8 +20,13 @@
  * written, and its caller judges again (ADR 0031).
  */
 import type { DictionaryCommitError } from "@textfresser/dictionary";
-import type { DumdictPlan } from "dumdict";
-import { createDumdictPlanner, makeSurfaceId } from "dumdict/planning";
+import type { AttestationLink, DumdictPlan } from "dumdict";
+import {
+	createDumdictPlanner,
+	type DumdictPlanOutcome,
+	makeSurfaceId,
+	type ReadingEntryContext,
+} from "dumdict/planning";
 import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
 import { Effect } from "effect";
@@ -49,10 +59,7 @@ export type OccurrenceCommit = {
 	/** For a New the judge decided: the stored Emoji Descriptions it saw. */
 	readonly seen?: readonly string[];
 	readonly surface: Dumling.Surface<"de">;
-	/**
-	 * The occurrence's Attestation Ref; none when its block cannot carry an
-	 * ID. Not recorded until the store keeps Attestation Links (#113).
-	 */
+	/** The occurrence's Attestation Ref; none when its block cannot carry an ID. */
 	readonly attestationRef?: string;
 };
 
@@ -71,6 +78,8 @@ export type OccurrenceCommitted =
 type Planned =
 	| { readonly _tag: "Stale"; readonly candidates: readonly string[] }
 	| { readonly _tag: "Unchanged" }
+	/** The ref is recorded under another Reading: remove it there first. */
+	| { readonly _tag: "Move"; readonly ref: string }
 	| { readonly _tag: "Retry"; readonly message: string }
 	| {
 			readonly _tag: "Plan";
@@ -88,25 +97,91 @@ const emojiDescriptionsOf = (
 		"emojiDescription" in reading ? [reading.emojiDescription] : [],
 	);
 
+/** The occurrence's Attestation Link, when its block can carry an ID. */
+function linkOf(input: OccurrenceCommit): AttestationLink<"de"> | undefined {
+	return input.attestationRef === undefined
+		? undefined
+		: {
+				reading: input.reading,
+				ref: input.attestationRef,
+				surfaceId: makeSurfaceId("de", input.surface),
+			};
+}
+
+/**
+ * What a ref recorded elsewhere asks: a move when another Reading holds it,
+ * nothing when this Reading does under another Surface.
+ */
+const elsewhere = (
+	input: OccurrenceCommit,
+	ref: string,
+	stored: readonly AttestationLink<"de">[],
+): Planned =>
+	stored.length > 0 &&
+	stored.every(
+		(link) =>
+			readingIdentityKey(link.reading) ===
+			readingIdentityKey(input.reading),
+	)
+		? { _tag: "Unchanged" }
+		: { _tag: "Move", ref };
+
+const loadContext = <I extends ReadingEntryContext<"de">["intent"]>(
+	store: ResolutionStore,
+	load: Parameters<typeof planner.contextRequest>[0],
+	intent: I,
+) =>
+	store.loadReadingEntryContext(planner.contextRequest(load)).pipe(
+		Effect.mapError(failed("Could not read the dictionary")),
+		Effect.flatMap((context) =>
+			context.intent === intent
+				? Effect.succeed(
+						context as Extract<
+							ReadingEntryContext<"de">,
+							{ intent: I }
+						>,
+					)
+				: Effect.fail(
+						new DictionaryCommitFailed({
+							cause: context,
+							message: "The dictionary answered another slice",
+						}),
+					),
+		),
+	);
+
+/** Plans a reused Reading's occurrence: its link and Surface, or the Surface alone. */
 const planReuse = Effect.fnUntraced(function* (
 	store: ResolutionStore,
 	input: OccurrenceCommit,
 ) {
-	const request = {
-		ownedSurface: { note: emptySurfaceNote(), surface: input.surface },
-		reading: input.reading,
-	};
-	const context = yield* store
-		.loadReadingEntryContext(
-			planner.contextRequest({ intent: "ensureOwnedSurface", request }),
+	const link = linkOf(input);
+	let outcome: DumdictPlanOutcome<"de">;
+	if (link === undefined) {
+		const request = {
+			ownedSurface: { note: emptySurfaceNote(), surface: input.surface },
+			reading: input.reading,
+		};
+		const context = yield* loadContext(
+			store,
+			{ intent: "ensureOwnedSurface", request },
+			"ensureOwnedSurface",
+		);
+		outcome = planner.ensureOwnedSurface(context, request);
+	} else {
+		const request = { link, surface: input.surface };
+		const context = yield* loadContext(
+			store,
+			{ intent: "recordOccurrence", request },
+			"recordOccurrence",
+		);
+		outcome = planner.recordOccurrence(context, request);
+		if (
+			outcome.status === "rejected" &&
+			outcome.code === "occurrenceAttestedElsewhere"
 		)
-		.pipe(Effect.mapError(failed("Could not read the dictionary")));
-	if (context.intent !== "ensureOwnedSurface")
-		return yield* new DictionaryCommitFailed({
-			cause: context,
-			message: "The dictionary answered another slice",
-		});
-	const outcome = planner.ensureOwnedSurface(context, request);
+			return elsewhere(input, link.ref, context.attestationLinksWithRefs);
+	}
 	if (outcome.status === "conflict")
 		return {
 			_tag: "Retry",
@@ -138,32 +213,33 @@ const planNew = Effect.fnUntraced(function* (
 	const surfaceStored =
 		(yield* store.surface(makeSurfaceId("de", input.surface))) !==
 		undefined;
+	const link = linkOf(input);
 	const request = {
 		draft: {
-			note: emptyReadingNote(),
+			note: {
+				...emptyReadingNote(),
+				attestationLinks: link === undefined ? [] : [link],
+			},
 			ownedSurfaces: surfaceStored
 				? []
 				: [{ note: emptySurfaceNote(), surface: input.surface }],
 			reading: input.reading,
 		},
 	};
-	const context = yield* store
-		.loadReadingEntryContext(
-			planner.contextRequest({ intent: "addNewNote", request }),
-		)
-		.pipe(Effect.mapError(failed("Could not read the dictionary")));
-	if (context.intent !== "addNewNote")
-		return yield* new DictionaryCommitFailed({
-			cause: context,
-			message: "The dictionary answered another slice",
-		});
+	const context = yield* loadContext(
+		store,
+		{ intent: "addNewNote", request },
+		"addNewNote",
+	);
 	const outcome = planner.addNewNote(context, request);
 	if (outcome.status === "conflict")
 		return {
 			_tag: "Retry",
 			message: outcome.message ?? outcome.code,
 		} satisfies Planned;
-	if (outcome.status === "rejected")
+	if (outcome.status === "rejected") {
+		if (outcome.code === "occurrenceAttestedElsewhere" && link)
+			return elsewhere(input, link.ref, context.attestationLinksWithRefs);
 		return outcome.code === "readingAlreadyExists" ||
 			outcome.code === "ownedSurfaceAlreadyExists"
 			? ({
@@ -174,11 +250,51 @@ const planNew = Effect.fnUntraced(function* (
 					cause: outcome,
 					message: outcome.message ?? outcome.code,
 				});
+	}
 	return {
 		_tag: "Plan",
 		created: true,
 		plan: outcome.plan,
 	} satisfies Planned;
+});
+
+/**
+ * Removes an occurrence (`removeOccurrence`) and what it leaves behind: a
+ * Reading with no link, a Surface no link names, a Lemma with no Reading,
+ * with the claims on them. The store follows a removed Lemma with the
+ * Shadow re-evaluation it asks for. A plan worked around a stored claim
+ * whose target is gone (`danglingRelationClaim`) is logged.
+ */
+const removeOccurrence = Effect.fnUntraced(function* (
+	store: ResolutionStore,
+	ref: string,
+): Effect.fn.Return<"Removed" | "Retry", DictionaryCommitFailed> {
+	const slice = yield* store.loadOccurrenceSlice(
+		planner.occurrenceSliceRequest({ ref }),
+	);
+	const outcome = planner.removeOccurrence(slice, { ref });
+	if (outcome.status === "conflict") return "Retry";
+	if (outcome.status === "rejected")
+		return yield* new DictionaryCommitFailed({
+			cause: outcome,
+			message: outcome.message ?? outcome.code,
+		});
+	if ((outcome.issues?.length ?? 0) > 0)
+		yield* Effect.logWarning(
+			"Removing an occurrence worked around stored claims",
+			outcome.issues,
+		);
+	if (outcome.plan.changes.length === 0) return "Removed";
+	const result = yield* store
+		.commitChanges(outcome.plan)
+		.pipe(
+			Effect.catch((error) =>
+				isRetryable(error)
+					? Effect.succeed({ status: "conflict" as const })
+					: Effect.fail(failed(error.message)(error)),
+			),
+		);
+	return result.status === "committed" ? "Removed" : "Retry";
 });
 
 /**
@@ -230,6 +346,13 @@ export const commitOccurrence = Effect.fnUntraced(function* (
 				if (planned._tag === "Stale") return planned;
 				if (planned._tag === "Unchanged")
 					return { _tag: "Committed", created: false } as const;
+				if (planned._tag === "Move") {
+					yield* removeOccurrence(store, planned.ref);
+					return {
+						_tag: "Retry",
+						message: "The occurrence moved from another Reading",
+					} as const;
+				}
 				if (planned._tag === "Retry")
 					return { _tag: "Retry", message: planned.message } as const;
 				const result = yield* store.commitChanges(planned.plan).pipe(

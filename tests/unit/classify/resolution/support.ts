@@ -177,6 +177,7 @@ type KnowledgeStub = (
 	readonly pendingRelations?: readonly (Dumrel.PendingSemanticRelation & {
 		readonly target: { readonly language: "de" };
 	})[];
+	readonly paradigmChanges?: readonly Dumrel.ParadigmChange[];
 };
 
 /**
@@ -207,7 +208,7 @@ export function stubDumgen(stubs: {
 					return {
 						changes: produced.changes,
 						failures: [],
-						paradigmChanges: [],
+						paradigmChanges: produced.paradigmChanges ?? [],
 						pendingRelations: produced.pendingRelations ?? [],
 					};
 				}),

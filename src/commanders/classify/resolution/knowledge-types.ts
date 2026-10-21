@@ -25,6 +25,7 @@ export type ResolutionStore = Pick<
 	| "commitChanges"
 	| "lemmaCandidates"
 	| "lemmaNote"
+	| "loadOccurrenceSlice"
 	| "loadReadingEntryContext"
 	| "readingLocation"
 	| "surface"

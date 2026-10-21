@@ -20,6 +20,7 @@
  * occurrence reuses the Reading and adds nothing, so lazy click resolution
  * can later call it for one ref.
  */
+import { sha256Hex } from "@textfresser/lemma-note-codec";
 import type { Dumgen } from "dumgen";
 import { parseUnit } from "dumling";
 import type * as Dumling from "dumling/types";
@@ -45,6 +46,16 @@ import {
 	type UnitLinkEdit,
 	withAppended,
 } from "./scroll-links";
+
+/**
+ * The key of one occurrence in its block: its Sentence and its Segments,
+ * as the unit's ref names them, so running Classify over the same
+ * occurrence again names the same ref.
+ */
+const occurrenceKeyOf = (planned: PlannedUnit): string =>
+	sha256Hex(
+		JSON.stringify([planned.ref.sentenceKey, planned.ref.segments]),
+	).slice(0, 8);
 
 /** How often a unit judges its Reading again after its New was refused as stale. */
 const MAX_STALE_REJUDGES = 2;
@@ -346,7 +357,11 @@ export function dumgenUnitResolver(
 								: undefined;
 					return id === undefined
 						? undefined
-						: attestationRefOf(plan.scrollPath, id);
+						: attestationRefOf(
+								plan.scrollPath,
+								id,
+								occurrenceKeyOf(planned),
+							);
 				};
 				const outcomes = yield* Effect.forEach(
 					plan.units,

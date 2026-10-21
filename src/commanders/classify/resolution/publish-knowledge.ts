@@ -14,6 +14,7 @@ import {
 	createDumdictPlanner,
 } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
+import type * as Dumrel from "dumrel/types";
 import { Effect } from "effect";
 import { MAX_COMMIT_ATTEMPTS } from "./commit-occurrence";
 import { exclusive } from "./exclusive";
@@ -33,6 +34,8 @@ export type KnowledgePublication = {
 	readonly reading: Dumling.Reading<"de">;
 	readonly changes: readonly GermanKnowledgeChange[];
 	readonly pendingRelations: readonly GermanPendingRelation[];
+	/** The Lemma Paradigm's changes (texteater#1230), applied with the Knowledge. */
+	readonly paradigmChanges?: readonly Dumrel.ParadigmChange[];
 };
 
 type Attempt =
@@ -59,6 +62,10 @@ const attempt = Effect.fnUntraced(function* (
 				changes: publication.changes,
 				pendingRelations: publication.pendingRelations,
 				reading: publication.reading,
+				...(publication.paradigmChanges === undefined ||
+				publication.paradigmChanges.length === 0
+					? {}
+					: { paradigmChanges: publication.paradigmChanges }),
 			}),
 	});
 	if (checked.status !== "ok")
@@ -118,8 +125,14 @@ const attempt = Effect.fnUntraced(function* (
 		: { _tag: "Retry", message: result.message ?? result.code };
 });
 
-/** The smallest relation parts a publication splits into: one target or one pending relation each. */
-function relationUnits(publication: KnowledgePublication) {
+/**
+ * The smallest relation parts a publication splits into: one target or one
+ * pending relation each. Paradigm Changes stay with the rest.
+ */
+function relationUnits({
+	paradigmChanges: _paradigm,
+	...publication
+}: KnowledgePublication) {
 	const units: KnowledgePublication[] = [];
 	for (const change of publication.changes.filter(isRelation)) {
 		const targets =
@@ -155,11 +168,19 @@ function relationUnits(publication: KnowledgePublication) {
 const merge = (
 	reading: Dumling.Reading<"de">,
 	parts: readonly KnowledgePublication[],
-): KnowledgePublication => ({
-	changes: parts.flatMap(({ changes }) => changes),
-	pendingRelations: parts.flatMap(({ pendingRelations }) => pendingRelations),
-	reading,
-});
+): KnowledgePublication => {
+	const paradigmChanges = parts.flatMap(
+		({ paradigmChanges: changes }) => changes ?? [],
+	);
+	return {
+		changes: parts.flatMap(({ changes }) => changes),
+		pendingRelations: parts.flatMap(
+			({ pendingRelations }) => pendingRelations,
+		),
+		reading,
+		...(paradigmChanges.length === 0 ? {} : { paradigmChanges }),
+	};
+};
 
 export type PublishOutcome = {
 	/** Relation parts dropped because even alone they did not fit one commit. */
@@ -176,7 +197,8 @@ export const publishKnowledge = Effect.fnUntraced(function* (
 ): Effect.fn.Return<PublishOutcome, DictionaryCommitFailed> {
 	if (
 		publication.changes.length === 0 &&
-		publication.pendingRelations.length === 0
+		publication.pendingRelations.length === 0 &&
+		(publication.paradigmChanges?.length ?? 0) === 0
 	)
 		return { dropped: 0 };
 	let last = "";
@@ -194,13 +216,20 @@ export const publishKnowledge = Effect.fnUntraced(function* (
 			),
 			pendingRelations: [],
 			reading: publication.reading,
+			...(publication.paradigmChanges === undefined
+				? {}
+				: { paradigmChanges: publication.paradigmChanges }),
 		};
 		if (units.length === 0)
 			return yield* new DictionaryCommitFailed({
 				cause: publication,
 				message: `The generated Knowledge does not fit one commit: ${result.reason}`,
 			});
-		if (units.length === 1 && rest.changes.length === 0)
+		if (
+			units.length === 1 &&
+			rest.changes.length === 0 &&
+			(rest.paradigmChanges?.length ?? 0) === 0
+		)
 			return { dropped: 1 };
 		if (units.length === 1) {
 			// Nothing left to split: drop the relation part, keep the rest.
