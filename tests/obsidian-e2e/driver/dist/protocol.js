@@ -391,6 +391,43 @@ function validateScriptedLunaAnswers(value, label = "params.dumgen.luna") {
 	return answers;
 }
 
+/**
+ * How a scenario's scripted providers answer Textfresser's key check, by
+ * provider (`OpenAI`, `TypeSafe`): an HTTP status and, optionally, a body.
+ * An unscripted provider answers 200.
+ */
+function validateScriptedKeyCheck(value, label = "params.dumgen.keyCheck") {
+	if (value === undefined) return {};
+	const record = assertRecord(value, label);
+	const answers = {};
+	for (const [provider, answer] of Object.entries(record)) {
+		if (provider !== "OpenAI" && provider !== "TypeSafe") {
+			throw new ProtocolError(
+				"InvalidRequest",
+				`${label} provider '${provider}' must be OpenAI or TypeSafe`,
+			);
+		}
+		const checked = assertRecord(answer, `${label}.${provider}`);
+		const { status } = checked;
+		if (!Number.isInteger(status) || status < 100 || status > 599) {
+			throw new ProtocolError(
+				"InvalidRequest",
+				`${label}.${provider}.status must be an HTTP status`,
+			);
+		}
+		answers[provider] =
+			checked.body === undefined
+				? { status }
+				: {
+						body: assertString(checked.body, `${label}.${provider}.body`, {
+							maxLength: 4_096,
+						}),
+						status,
+					};
+	}
+	return answers;
+}
+
 function canonicalize(value) {
 	if (Array.isArray(value)) return value.map(canonicalize);
 	if (isRecord(value)) {
@@ -427,5 +464,6 @@ module.exports = {
 	validateScenarioId,
 	validateScope,
 	validateScriptedJevAnswers,
+	validateScriptedKeyCheck,
 	validateScriptedLunaAnswers,
 };

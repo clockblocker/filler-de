@@ -13,6 +13,14 @@
  */
 import { sha256Hex } from "@textfresser/lemma-note-codec";
 import { createDumgen, type Dumgen } from "dumgen";
+import { Effect } from "effect";
+import {
+	checkProviderKeys,
+	KEY_CHECK_URLS,
+	type KeyCheckFailure,
+	type KeyCheckGet,
+} from "./key-check";
+import type { ProviderName } from "./provider-failure";
 import {
 	buildDumgen,
 	type DumgenFetch,
@@ -21,10 +29,19 @@ import {
 import { createScriptedJev, type ScriptedJevAnswers } from "./scripted-jev";
 import { createScriptedLuna, type ScriptedLunaAnswers } from "./scripted-luna";
 
-/** A provider-free dumgen's script: jev's answers and, optionally, Luna's. */
+/** How a scripted provider answers the key check: 200 with no body unless given. */
+export type ScriptedKeyCheck = Partial<
+	Record<ProviderName, { readonly status: number; readonly body?: string }>
+>;
+
+/**
+ * A provider-free dumgen's script: jev's answers and, optionally, Luna's,
+ * and how each provider answers the key check.
+ */
 export type ScriptedDumgen = {
 	readonly jev: ScriptedJevAnswers;
 	readonly luna?: ScriptedLunaAnswers;
+	readonly keyCheck?: ScriptedKeyCheck;
 };
 
 /** How many requests a scripted dumgen's providers received, by stage. */
@@ -37,6 +54,8 @@ export type DumgenHostOptions = {
 	/** Read on every `get()`, so a key change takes effect on the next call. */
 	readonly keys: () => DumgenProviderKeys;
 	readonly fetch: DumgenFetch;
+	/** The key check's GET; without one, `checkKeys()` checks nothing. */
+	readonly get?: KeyCheckGet;
 	readonly timeoutMs?: number;
 };
 
@@ -50,6 +69,7 @@ export class DumgenHost {
 				readonly dumgen: Dumgen;
 				readonly tag: string;
 				readonly requests: () => ScriptedDumgenRequests;
+				readonly keyCheck: ScriptedKeyCheck;
 		  }
 		| undefined;
 
@@ -108,6 +128,7 @@ export class DumgenHost {
 		const luna = createScriptedLuna(script.luna ?? {});
 		this.scripted = {
 			dumgen: createDumgen({ jev: jev.ask, luna: luna.ask }),
+			keyCheck: script.keyCheck ?? {},
 			requests: () => ({ jev: jev.requests(), luna: luna.requests() }),
 			tag: sha256Hex(
 				JSON.stringify([script.jev, crypto.randomUUID()]),
@@ -141,6 +162,41 @@ export class DumgenHost {
 	 */
 	scriptedJevTag(): string | undefined {
 		return this.scripted?.tag;
+	}
+
+	/**
+	 * Checks the keys in the settings with each provider (`key-check.ts`),
+	 * answering what failed; a scripted dumgen answers from its script's
+	 * `keyCheck`, so no provider is reached.
+	 */
+	checkKeys(): Effect.Effect<readonly KeyCheckFailure[]> {
+		const { scripted } = this;
+		if (scripted) {
+			const answer: KeyCheckGet = async (url) => {
+				const provider =
+					url === KEY_CHECK_URLS.OpenAI ? "OpenAI" : "TypeSafe";
+				const scriptedAnswer = scripted.keyCheck[provider];
+				return {
+					status: scriptedAnswer?.status ?? 200,
+					text: async () => scriptedAnswer?.body ?? "",
+				};
+			};
+			return checkProviderKeys({
+				get: answer,
+				keys: { openaiApiKey: "scripted", typesafeApiKey: "scripted" },
+			});
+		}
+		const { get } = this.options;
+		if (get === undefined) return Effect.succeed([]);
+		const { signal } = this.lifetime;
+		return checkProviderKeys({
+			get: (url, init) =>
+				get(url, {
+					...init,
+					signal: AbortSignal.any([init.signal, signal]),
+				}),
+			keys: this.options.keys(),
+		});
 	}
 
 	/** Aborts every call in flight; `get()` throws afterwards. Idempotent. */

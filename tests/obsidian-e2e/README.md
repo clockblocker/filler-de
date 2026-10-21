@@ -109,7 +109,14 @@ completed link. `clickLink` follows a link the note holds through
 its note where Obsidian puts it. `openDictionaryReset` runs "Reset dictionary
 from old notes…" and closes its modal again, clicking nothing in it;
 `status().dictionaryReset` then holds what it showed: the source folders it
-offered and the one it pre-selected, or the notice it failed with.
+offered and the one it pre-selected, or the notice it failed with. `dryRunDictionaryReset` runs it too, clicks Dry
+run with the suggested source and waits for the report; with `execute:
+true` it then clicks Execute… on the report and Execute in the
+confirmation, and waits for the run to end. Every modal is closed
+afterwards, and `status().dictionaryResetRun` holds the report's buttons and
+key-check warning and how Execute ended. `dictionaryFixture: [{ path,
+content }]`, which needs `resetDictionary: true`, writes notes below the
+fresh `Worter/`, such as old notes for the reset to read.
 
 `runClassify` selects text that occurs once in a Scroll and runs the Classify
 command. Desktop E2E never reaches a provider: every scenario's dumgen answers
@@ -129,7 +136,9 @@ succeeds.
 Resolution writes Lemma notes, and Luna writes their Canonical Forms and
 Knowledge, so a scenario that resolves also scripts Luna, by stage:
 `dumgen: { jev, luna: { <stage>: [{ when?: "<text in the request's JSON
-input>", output }] } }`; an unscripted Luna request fails like a provider.
+input>", output }] } }`; an unscripted Luna request fails like a provider. Textfresser's provider key check (`GET
+/v1/models`) answers 200 unless the script says otherwise under `dumgen: {
+keyCheck: { OpenAI?: { status, body? }, TypeSafe?: … } }`.
 `status().dumgenRequests` counts the script's requests by stage, so a
 scenario can assert that no model was asked. The dictionary lives in the
 vault-root `Worter/` folder, shared by every scenario: `resetDictionary:

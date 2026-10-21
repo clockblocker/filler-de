@@ -15,12 +15,15 @@ const {
 	validateScenarioId,
 	validateScope,
 	validateScriptedJevAnswers,
+	validateScriptedKeyCheck,
 	validateScriptedLunaAnswers,
 } = require("./protocol");
 
 const TARGET_PLUGIN_ID = "cbcr-text-eater-de";
 /** By active scenario: what its `openDictionaryReset` showed. */
 const dictionaryResetOpenings = new WeakMap();
+/** By active scenario: what its `dryRunDictionaryReset` showed and did. */
+const dictionaryResetRuns = new WeakMap();
 /** Where Textfresser keeps its Lemma notes, at the vault root (ADR 0013). */
 const DICTIONARY_ROOT = "Worter";
 /** The file, in the vault's config folder, that marks a vault as E2E-only. */
@@ -502,6 +505,8 @@ class TextfresserE2EDriver extends Plugin {
 			classify: this.classifyHandoff(scenario),
 			dictionaryReset:
 				(scenario && dictionaryResetOpenings.get(scenario)) ?? null,
+			dictionaryResetRun:
+				(scenario && dictionaryResetRuns.get(scenario)) ?? null,
 			driver: {
 				configured: this.config !== null,
 				instanceId: this.driverInstanceId,
@@ -804,6 +809,7 @@ class TextfresserE2EDriver extends Plugin {
 				: assertRecord(request.params.dumgen, "params.dumgen");
 		const scriptedJev = validateScriptedJevAnswers(dumgenScript.jev);
 		const scriptedLuna = validateScriptedLunaAnswers(dumgenScript.luna);
+		const scriptedKeyCheck = validateScriptedKeyCheck(dumgenScript.keyCheck);
 		const resetDictionary = assertBoolean(
 			request.params.resetDictionary,
 			"params.resetDictionary",
@@ -818,6 +824,19 @@ class TextfresserE2EDriver extends Plugin {
 			throw new DriverError(
 				"TextfresserProbeMissing",
 				"Textfresser does not expose getClassifyTestingApi()",
+			);
+		}
+		const dictionaryFixture = request.params.dictionaryFixture ?? [];
+		if (!Array.isArray(dictionaryFixture) || dictionaryFixture.length > 200) {
+			throw new DriverError(
+				"InvalidFixture",
+				"params.dictionaryFixture must be an array containing at most 200 notes",
+			);
+		}
+		if (dictionaryFixture.length > 0 && !resetDictionary) {
+			throw new DriverError(
+				"InvalidFixture",
+				"params.dictionaryFixture needs resetDictionary: true",
 			);
 		}
 		const fixtures = request.params.fixtures ?? [];
@@ -875,6 +894,34 @@ class TextfresserE2EDriver extends Plugin {
 		// The user's vault always holds the dictionary folder, and Obsidian
 		// creates a new note in the vault root when its folder is missing.
 		if (newNotesInDictionary) await ensureFolder(this.app.vault, DICTIONARY_ROOT);
+		// Notes the fresh dictionary starts with, such as old notes for the
+		// dictionary reset to read.
+		for (let index = 0; index < dictionaryFixture.length; index += 1) {
+			const note = assertRecord(
+				dictionaryFixture[index],
+				`params.dictionaryFixture[${index}]`,
+			);
+			const relativePath = validateRelativePath(
+				note.path,
+				`params.dictionaryFixture[${index}].path`,
+			);
+			const path = `${DICTIONARY_ROOT}/${relativePath}`;
+			if (this.app.vault.getAbstractFileByPath(path)) {
+				throw new DriverError(
+					"DuplicateFixture",
+					`dictionary fixture path '${relativePath}' is declared more than once`,
+				);
+			}
+			await ensureParentFolder(this.app.vault, path);
+			await this.app.vault.create(
+				path,
+				assertString(
+					note.content ?? "",
+					`params.dictionaryFixture[${index}].content`,
+					{ allowEmpty: true },
+				),
+			);
+		}
 		await ensureFolder(this.app.vault, paths.libraryRoot);
 
 		const seen = new Set();
@@ -955,7 +1002,11 @@ class TextfresserE2EDriver extends Plugin {
 
 		const classifyApi = before.plugin.getClassifyTestingApi();
 		if (typeof classifyApi.useScriptedDumgen === "function") {
-			classifyApi.useScriptedDumgen({ jev: scriptedJev, luna: scriptedLuna });
+			classifyApi.useScriptedDumgen({
+				jev: scriptedJev,
+				keyCheck: scriptedKeyCheck,
+				luna: scriptedLuna,
+			});
 		} else {
 			classifyApi.useScriptedJev(scriptedJev);
 		}
@@ -1028,7 +1079,8 @@ class TextfresserE2EDriver extends Plugin {
 		};
 		// Opening the dictionary reset touches no path of the scenario's.
 		const source =
-			operation.kind === "openDictionaryReset"
+			operation.kind === "openDictionaryReset" ||
+			operation.kind === "dryRunDictionaryReset"
 				? null
 				: resolveScopedPath(
 						paths,
@@ -1467,10 +1519,92 @@ class TextfresserE2EDriver extends Plugin {
 				testingApi.closeModal();
 				break;
 			}
+			case "dryRunDictionaryReset": {
+				const execute = assertBoolean(
+					operation.execute,
+					"params.operation.execute",
+					false,
+				);
+				const testingApi = before.plugin.getDictionaryResetTestingApi?.();
+				if (
+					typeof testingApi?.clickButton !== "function" ||
+					typeof testingApi?.lastDryRun !== "function"
+				) {
+					throw new DriverError(
+						"InteractionUnavailable",
+						"Textfresser dictionary reset is not available",
+					);
+				}
+				const commandId = `${TARGET_PLUGIN_ID}:reset-dictionary-from-old-notes`;
+				if (this.app.commands.executeCommandById(commandId) !== true) {
+					throw new DriverError(
+						"CommandUnavailable",
+						`Textfresser command '${commandId}' was not available`,
+					);
+				}
+				const click = (label) => {
+					if (!testingApi.clickButton(label)) {
+						testingApi.closeModal();
+						throw new DriverError(
+							"InteractionUnavailable",
+							`the dictionary reset showed no enabled '${label}' button`,
+						);
+					}
+				};
+				try {
+					const opening = await testingApi.lastOpening();
+					if (opening?.kind !== "Opened") {
+						throw new DriverError(
+							"InteractionUnavailable",
+							`the dictionary reset modal did not open: ${opening?.notice ?? "no opening"}`,
+						);
+					}
+					dictionaryResetOpenings.set(scenario, opening);
+					const dryRunBefore = testingApi.lastDryRun();
+					click("Dry run");
+					const shown = testingApi.lastDryRun();
+					if (!shown || shown === dryRunBefore) {
+						throw new DriverError(
+							"InteractionUnavailable",
+							"the dictionary reset's Dry run did not start",
+						);
+					}
+					const dryRun = await shown;
+					const run = { dryRun, execute: null };
+					dictionaryResetRuns.set(scenario, run);
+					if (execute) {
+						if (dryRun.kind !== "Report") {
+							throw new DriverError(
+								"InteractionUnavailable",
+								`the dictionary reset's dry run failed: ${dryRun.notice}`,
+							);
+						}
+						// Execute… on the report, then Execute in the confirmation.
+						const executeBefore = testingApi.lastExecute();
+						click("Execute…");
+						click("Execute");
+						const executed = testingApi.lastExecute();
+						if (!executed || executed === executeBefore) {
+							throw new DriverError(
+								"InteractionUnavailable",
+								"the dictionary reset's Execute did not start",
+							);
+						}
+						dictionaryResetRuns.set(scenario, {
+							...run,
+							execute: await executed,
+						});
+					}
+				} finally {
+					// No modal stays to cover the test window.
+					testingApi.closeModal();
+				}
+				break;
+			}
 			default:
 				throw new DriverError(
 					"InvalidOperation",
-					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, classify, wrapLink, followLink, pageNavigation, toggleCodexEntry, or openDictionaryReset",
+					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, classify, wrapLink, followLink, pageNavigation, toggleCodexEntry, openDictionaryReset, or dryRunDictionaryReset",
 				);
 		}
 

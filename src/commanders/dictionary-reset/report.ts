@@ -3,8 +3,10 @@
  * found, then either what Execute would do (Dry run) or what it did, down
  * to the Lemma, Reading and Crossroad notes `Worter/` holds afterwards.
  * Freeform text is quoted in fences, so the report renders none of its
- * links, embeds or block IDs.
+ * links, embeds or block IDs. A provider's failure shows as one line, not
+ * its JSON body (#147).
  */
+import { conciseFailure } from "../../managers/dumgen/provider-failure";
 import type { ResetLayout } from "./layout";
 import type { OldMetaShape, OldNoteKind } from "./old-notes";
 import {
@@ -388,7 +390,7 @@ export function renderReport(
 	if (unresolved.length === 0) lines.push("None.");
 	for (const { planned, reason } of unresolved)
 		lines.push(
-			`- \`${planned.attestation.embed}\` in ${oldNote(planned.notePath)} (${cell(planned.headword)}): ${reason}`,
+			`- \`${planned.attestation.embed}\` in ${oldNote(planned.notePath)} (${cell(planned.headword)}): ${conciseFailure(reason)}`,
 		);
 	lines.push("");
 
@@ -437,7 +439,8 @@ export function renderReport(
 	}
 	if (execution && execution.notices.length > 0) {
 		lines.push("## Notices", "");
-		for (const notice of execution.notices) lines.push(`- ${notice}`);
+		for (const notice of execution.notices)
+			lines.push(`- ${conciseFailure(notice)}`);
 		lines.push("");
 	}
 	return `${lines.join("\n").replace(/\n+$/u, "")}\n`;
