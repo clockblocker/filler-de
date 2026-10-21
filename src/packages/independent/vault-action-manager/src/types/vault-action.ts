@@ -72,7 +72,15 @@ type UpsertMdFilePayload = {
 	 */
 	content?: string | null;
 };
-type RenameMdFilePayload = SplitPathFromTo<SplitPathToMdFile>;
+type RenameMdFilePayload = SplitPathFromTo<SplitPathToMdFile> & {
+	/**
+	 * Whether Obsidian rewrites links to the moved note, as its "Automatically
+	 * update internal links" setting asks. Defaults to true. False moves the
+	 * note without touching any file's content: links keep their text and
+	 * resolve wherever Obsidian then resolves them.
+	 */
+	updateLinks?: boolean;
+};
 type TrashMdFilePayload = { splitPath: SplitPathToMdFile };
 type ProcessMdFilePayload =
 	| { splitPath: SplitPathToMdFile; transform: Transform }

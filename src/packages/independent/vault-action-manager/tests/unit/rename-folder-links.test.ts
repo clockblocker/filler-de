@@ -1,8 +1,11 @@
 import { describe, expect, it } from "bun:test";
 import { Effect } from "effect";
-import { type App, type TAbstractFile, TFolder } from "obsidian";
+import { type App, type TAbstractFile, TFile, TFolder } from "obsidian";
 import { createVaultActionManager } from "../../src";
-import type { SplitPathToFolder } from "../../src/types/split-path";
+import type {
+	SplitPathToFolder,
+	SplitPathToMdFile,
+} from "../../src/types/split-path";
 import { VaultActionKind } from "../../src/types/vault-action";
 
 const folder = (basename: string): SplitPathToFolder => ({
@@ -20,6 +23,14 @@ function makeApp() {
 	worter.name = "Worter";
 	worter.children = [];
 	byPath.set("Worter", worter);
+	const stray = new TFile();
+	stray.path = "Worter/Fahrer.md";
+	stray.name = "Fahrer.md";
+	stray.basename = "Fahrer";
+	stray.extension = "md";
+	stray.parent = worter;
+	worter.children.push(stray);
+	byPath.set(stray.path, stray);
 	const move = (entry: TAbstractFile, toPath: string) => {
 		byPath.delete(entry.path);
 		entry.path = toPath;
@@ -81,5 +92,41 @@ describe("RenameFolder and Obsidian's link updates", () => {
 
 	it("renames through Vault with updateLinks false, so no content changes", async () => {
 		expect(await renameWorter(false)).toEqual(["vault.rename"]);
+	});
+});
+
+const note = (pathParts: string[], basename: string): SplitPathToMdFile => ({
+	basename,
+	extension: "md",
+	kind: "MdFile",
+	pathParts,
+});
+
+async function moveStray(updateLinks?: boolean) {
+	const { app, calls } = makeApp();
+	const { dispose, manager } = createVaultActionManager(app);
+	await Effect.runPromise(
+		manager.dispatchStopOnFirstFailure([
+			{
+				kind: VaultActionKind.RenameMdFile,
+				payload: {
+					from: note(["Worter"], "Fahrer"),
+					to: note(["Worter"], "fahrer"),
+					...(updateLinks === undefined ? {} : { updateLinks }),
+				},
+			},
+		]),
+	);
+	await Effect.runPromise(dispose);
+	return calls;
+}
+
+describe("RenameMdFile and Obsidian's link updates", () => {
+	it("renames through FileManager by default, so links follow the move", async () => {
+		expect(await moveStray()).toEqual(["fileManager.renameFile"]);
+	});
+
+	it("renames through Vault with updateLinks false, so no content changes", async () => {
+		expect(await moveStray(false)).toEqual(["vault.rename"]);
 	});
 });

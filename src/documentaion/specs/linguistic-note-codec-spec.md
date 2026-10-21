@@ -398,9 +398,9 @@ D: diesem (m), diesem (n), [[dieser]] (f), diesen (Pl)
 
 - a **Lemma note** (`lemmaNote`) or a **Reading note** (`readingNote`), read as data when the codec accepts it and quarantined otherwise;
 - a **Crossroad note** (`crossroadNote`), or, without metadata, a file at a Crossroad path, such as the empty note a click on an uncreated Crossroad link leaves;
-- without metadata, a **stray** directly in `Worter/` (#115 heals it), an **empty file** at an exact Lemma or Reading path, or a quarantined file, such as a note in the retired marker format.
+- without metadata, a **stray** directly in `Worter/` (healed, see Strays and moved Crossroad notes), an **empty file** at an exact Lemma or Reading path, or a quarantined file, such as a note in the retired marker format.
 
-Strays, empty files and Crossroad notes are never quarantined. Empty files at note paths and strays are reported and left alone, and no note is ever written over them.
+Strays, empty files and Crossroad notes are never quarantined. Empty files at note paths are reported and left alone, and no note is ever written over them.
 
 **Records.** A Lemma's records are its Lemma note's and those of every Reading note whose metadata names its Lemma, wherever it sits. A Reading note whose Lemma no readable Lemma note holds is an orphan; a Lemma whose Paradigm licenses a Reading no note holds, or a Foreign Lemma with two Reading notes, is inconsistent. Both are quarantined and reported; a Lemma created again takes its orphaned Reading notes back. A second note of one Lemma or Reading is a duplicate; the one at its own path holds it.
 
@@ -442,6 +442,15 @@ That is `Worter/s/suc/sucht/sucht.md`. der See and die See share `Worter/s/see/s
 - **Metadata** (`crossroadNote`) holds the key, the language and the renderings' seals, so a Crossroad note is stale exactly when its seals or key differ from what the index renders, and the store tells that without reading the file.
 - **When the store writes one:** in every commit that changes its spelling's Lemmas or Surfaces; when a file appears or changes at a Crossroad path without being current, such as a click's empty note or one without metadata; and after every full read of `Worter/`, at startup, after a rescan and after a rebuild, for every spelling missing its note or holding a stale one. A missing note is created only while its spelling has something to list, so a spelling whose note was never created gets none. A hand edit of a current note is left alone, a note the user deletes stays deleted until the next full read, and a second regeneration writes nothing.
 - **Collisions.** A Crossroad note is never created over a file or folder the vault spells another way, nor beside another created Crossroad note it collides with. Names are lossy (`C#` and `C` are both `c.md`), so the first spelling's note keeps its path and the other is reported.
+
+**Strays and moved Crossroad notes (#115).** Clicking an unresolved bare link such as `[[Fahrer]]` makes Obsidian create `Worter/Fahrer.md` (`newFileLocation: folder`, `newFileFolderPath: Worter`). Healing, after every full read and every observed change, treats such a stray, and a Crossroad note moved away from its own path, as its spelling's Crossroad note: the stray's name is its spelling, the moved note's metadata names its key.
+
+- **Move.** While the Crossroad path is free, the note moves there and is filled as a Crossroad note right after. Its text stays, as freeform below the rendering, and so do its properties.
+- **Links.** A moved Crossroad note moves through Obsidian's link-preserving rename: its links are path-qualified and aliased, so they follow it back unchanged. A stray moves without it (`RenameMdFile` with `updateLinks: false`): links to a stray are bare, and the updater would rewrite `[[Fahrer]]` as `[[fahrer]]` in the user's texts, as it did in #102. Left as they are, they resolve to the Crossroad note by name, case-insensitively, wherever Obsidian's resolution order lets it win.
+- **Merge.** When its spelling's Crossroad note is already there, the note's user text joins that note's freeform, then the note goes to the trash, only while it still holds what was read. Text the Crossroad note already holds is not added again. A note whose frontmatter holds properties is not merged, since a Crossroad note cannot take them: it stays and is reported.
+- **Two notes of one spelling** in one pass: the first moves, and the other merges into it.
+- **Blocked.** A file or a folder the vault spells another way on the path blocks a move (the collision rules), and the note stays and is reported in `healingBlocked`. A move that fails is not tried again until the note changes.
+- **Not healed.** A stray named as Obsidian names a new note, `Untitled` or `Untitled 3`, is no spelling: it stays and is reported.
 
 **Collisions.** Every created path is checked against every indexed path and folder by the collision key, and against the commit's other creates. A collision refuses the commit, which writes nothing.
 

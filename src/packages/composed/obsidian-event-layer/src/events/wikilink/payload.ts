@@ -5,17 +5,20 @@
 import type { EditorView } from "@codemirror/view";
 import { z } from "zod";
 import { PayloadKind } from "../../types/payload-base";
-import { toSourcePath } from "../source-path";
+import type { CompletedLink } from "./link-at";
 
 /**
  * Note: EditorView cannot be validated by Zod, so we use a partial schema
  * and add the view at runtime.
  */
 const WikilinkPayloadSchemaPartial = z.object({
-	canResolveNatively: z.boolean(),
+	/** Whether the link is an embed, `![[…]]` */
+	embed: z.boolean(),
 	kind: z.literal(PayloadKind.WikilinkCompleted),
-	/** Raw content between [[ and ]] */
+	/** Content between [[ and ]], trimmed */
 	linkContent: z.string(),
+	/** The path Obsidian resolves the link to from its source note, if any */
+	resolvedPath: z.string().optional(),
 	sourcePath: z.string().optional(),
 });
 
@@ -24,6 +27,8 @@ type WikilinkPayload = z.infer<typeof WikilinkPayloadSchemaPartial>;
 export type InternalWikilinkPayload = WikilinkPayload & {
 	/** Position before ]] */
 	closePos: number;
+	/** Position after [[, where the content starts, padding included */
+	contentFrom: number;
 	/** EditorView for inserting alias */
 	view: EditorView;
 };
@@ -32,25 +37,15 @@ export type InternalWikilinkPayload = WikilinkPayload & {
  * Create a wikilink payload.
  */
 export function createWikilinkPayload(
-	linkContent: string,
-	closePos: number,
+	link: CompletedLink,
 	view: EditorView,
-	params?: {
-		canResolveNatively: boolean;
-		sourcePath?: {
-			basename: string;
-			extension: "md";
-			kind: "MdFile";
-			pathParts: string[];
-		};
-	},
 ): InternalWikilinkPayload {
 	return {
-		canResolveNatively: params?.canResolveNatively ?? false,
-		closePos,
+		closePos: link.closePos,
+		contentFrom: link.contentFrom,
+		embed: link.embed,
 		kind: PayloadKind.WikilinkCompleted,
-		linkContent,
-		sourcePath: toSourcePath(params?.sourcePath),
+		linkContent: link.linkContent,
 		view,
 	};
 }

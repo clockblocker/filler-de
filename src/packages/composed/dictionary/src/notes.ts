@@ -63,7 +63,8 @@ type CrossroadEntry = {
 
 /**
  * A note directly in `Worter/` without dictionary metadata, as Obsidian
- * creates one for an unresolved bare link. Reported; #115 heals it.
+ * creates one for an unresolved bare link. Healing moves it to its
+ * spelling's Crossroad path, or merges it into the Crossroad note there.
  */
 type StrayEntry = {
 	readonly kind: "stray";

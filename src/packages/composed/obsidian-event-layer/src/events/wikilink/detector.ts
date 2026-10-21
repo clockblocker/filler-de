@@ -8,10 +8,18 @@
  *
  * Uses registerEditorExtension which persists until plugin unload.
  *
- * Skips:
+ * Ignores undo and redo, so a rewrite stays undoable.
+ *
+ * Skips (`completedLinkAt`):
  * - Links that already have an alias (contain |)
  * - Nested wikilinks
+ * - Links spanning lines
  * - Empty link content
+ *
+ * The payload carries where Obsidian resolves the link from its source note
+ * (`getFirstLinkpathDest`) and whether it is an embed, so the handler can
+ * tell a link to a Library or other note from a word to land on its
+ * Crossroad note.
  */
 
 import { EditorView, type ViewUpdate } from "@codemirror/view";
@@ -20,6 +28,7 @@ import { PayloadKind } from "../../types/payload-base";
 import type { HandlerInvoker } from "../../user-event-interceptor";
 import { getCurrentFilePath } from "../get-current-file-path";
 import { WikilinkCodec } from "./codec";
+import { type CompletedLink, completedLinkAt } from "./link-at";
 import type { InternalWikilinkPayload } from "./payload";
 
 export class WikilinkDetector {
@@ -60,25 +69,27 @@ export class WikilinkDetector {
 	private handleUpdate(vu: ViewUpdate): void {
 		if (!this.listening) return;
 		if (!vu.docChanged) return;
+		// Undoing a rewrite brings the completed link back; answering it again
+		// would make the rewrite impossible to undo.
+		if (
+			vu.transactions.some(
+				(tr) => tr.isUserEvent("undo") || tr.isUserEvent("redo"),
+			)
+		)
+			return;
 
-		const detected =
+		const link =
 			this.detectCursorAfterClose(vu) ?? this.detectWrappedSelection(vu);
 
-		if (!detected) return;
+		if (!link) return;
 
-		const { closePos, linkContent } = detected;
-
-		const payload = WikilinkCodec.encode({
-			closePos,
-			linkContent,
-			view: vu.view,
-		});
+		const payload = WikilinkCodec.encode({ link, view: vu.view });
 		const currentFile = getCurrentFilePath(this.plugin.app);
 		payload.sourcePath = currentFile
 			? [...currentFile.pathParts, `${currentFile.basename}.md`].join("/")
 			: undefined;
-		payload.canResolveNatively = this.canResolveNatively(
-			linkContent,
+		payload.resolvedPath = this.resolve(
+			link.linkContent,
 			payload.sourcePath,
 		);
 
@@ -96,36 +107,30 @@ export class WikilinkDetector {
 		});
 	}
 
-	private canResolveNatively(
+	/** Where Obsidian resolves the link from its source note, if anywhere. */
+	private resolve(
 		linkContent: string,
 		sourcePath?: string,
-	): boolean {
-		if (!sourcePath) return false;
-		return (
-			this.plugin.app.metadataCache.getFirstLinkpathDest(
-				linkContent,
-				sourcePath,
-			) !== null
-		);
+	): string | undefined {
+		if (!sourcePath) return undefined;
+		return this.plugin.app.metadataCache.getFirstLinkpathDest(
+			linkContent,
+			sourcePath,
+		)?.path;
 	}
 
 	/** Case 1: cursor positioned right after ]] (manual typing) */
-	private detectCursorAfterClose(
-		vu: ViewUpdate,
-	): { closePos: number; linkContent: string } | null {
+	private detectCursorAfterClose(vu: ViewUpdate): CompletedLink | null {
 		const cursor = vu.state.selection.main.head;
 		const text = vu.state.doc.toString();
 
 		if (text.slice(cursor - 2, cursor) !== "]]") return null;
 
-		const closePos = cursor - 2;
-		return this.extractLinkContent(text, closePos);
+		return completedLinkAt(text, cursor - 2);
 	}
 
 	/** Case 2: selection wrapped in [[...]] (Obsidian bracket-wraps selected text) */
-	private detectWrappedSelection(
-		vu: ViewUpdate,
-	): { closePos: number; linkContent: string } | null {
+	private detectWrappedSelection(vu: ViewUpdate): CompletedLink | null {
 		const sel = vu.state.selection.main;
 		if (sel.from === sel.to) return null; // no selection
 
@@ -134,26 +139,6 @@ export class WikilinkDetector {
 		if (text.slice(sel.from - 2, sel.from) !== "[[") return null;
 		if (text.slice(sel.to, sel.to + 2) !== "]]") return null;
 
-		const closePos = sel.to;
-		return this.extractLinkContent(text, closePos);
-	}
-
-	/** Validate and extract link content from text ending at closePos */
-	private extractLinkContent(
-		text: string,
-		closePos: number,
-	): { closePos: number; linkContent: string } | null {
-		const openPos = text.lastIndexOf("[[", closePos);
-		if (openPos === -1) return null;
-
-		const between = text.slice(openPos + 2, closePos);
-
-		if (between.includes("[[")) return null;
-		if (between.includes("|")) return null;
-
-		const linkContent = between.trim();
-		if (!linkContent) return null;
-
-		return { closePos, linkContent };
+		return completedLinkAt(text, sel.to);
 	}
 }

@@ -98,7 +98,12 @@ Available actions are `createFile`, `createBinary`, `modifyFile`,
 `runSplitToPages`, `runSplitInBlocks`, `runClassify`, and `runPageNavigation`
 with real active editor context. `toggleCodexEntry` drives the public checkbox interaction with
 the Codex path, rendered line content, and pre-toggle checked state that
-Obsidian's event layer supplies.
+Obsidian's event layer supplies. `wrapInLink` selects text that occurs once in
+a note and wraps it in `[[ ]]` through the editor, as typing `[` twice over a
+selection does, then saves the note once Textfresser has answered the
+completed link. `clickLink` follows a link the note holds through
+`Workspace.openLinkText`, as a click on it does, so an uncreated link creates
+its note where Obsidian puts it.
 
 `runClassify` selects text that occurs once in a Scroll and runs the Classify
 command. Desktop E2E never reaches a provider: every scenario's dumgen answers

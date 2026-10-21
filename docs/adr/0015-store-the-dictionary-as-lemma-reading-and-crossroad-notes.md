@@ -88,6 +88,16 @@ One pure, host-owned function spells every shard folder, every file name and eve
 - **Clicked notes.** An empty file at a Crossroad path is filled as "not classified yet" as soon as the store sees it, with no Knowledge generated.
 - **Never created for nothing.** A Crossroad note is created only while its spelling has something to list; once created, it is never removed.
 
+### Refinements from link landing (#115)
+
+- **The rewrite.** In a note outside `Worter/`, a bare link the user wraps in `[[ ]]` or closes with `]]` becomes `[[Worter/<l1>/<l3>/<l5>/<key>|<word>]]`, keeping the user's spelling as its alias, whether or not the Crossroad note exists yet. The wikilink detector of the event layer finds the link and where Obsidian resolves it (`getFirstLinkpathDest`); the completion handler decides.
+- **Left alone.** A link with a path, a heading or block, an extension or an alias; an embed; a link with no letter or digit; and every link typed in a note under `Worter/`.
+- **Another note's link.** A bare link names a note that is not the dictionary's, and keeps the Library's rules, when Obsidian resolves it outside `Worter/`, or, resolving nowhere, when the Library tree holds leaves of that core name. A link Obsidian resolves into `Worter/` (a Crossroad, a Lemma note or a stray) is the dictionary's and is rewritten. The Librarian's suffix alias applies only to such Library links, so `[[E-Mail]]` lands on its Crossroad instead of becoming `[[E-Mail|E]]`.
+- **Strays.** The store moves a stray to its spelling's Crossroad path and fills it, keeping its text below the rendering; it merges one whose Crossroad note is already there into that note and trashes it. A stray whose properties a merge would lose stays, reported, as does one named `Untitled`. A stray moves without Obsidian's link updater: links to it are bare, the updater would rewrite `[[Fahrer]]` as `[[fahrer]]` in the user's texts (#102), and left alone they resolve to the Crossroad note by name.
+- **Moved Crossroad notes** move back to their own path through the link-preserving rename, since their links are path-qualified and aliased, or merge into the Crossroad note that took it.
+- **Undo.** The detector ignores undo and redo, so undoing a rewrite leaves the bare link the user wrapped.
+- **Placement is not pinned.** No test checks Obsidian's undocumented resolution order; the rewrite makes it matter only for links the plugin did not see typed, such as those the Dictionary reset left and the bare links to a healed stray.
+
 ## Considered Options
 
 - **One note per Lemma with every Reading as a block** (ADR-0012). Rejected: a Reading's Knowledge, attestations and notes outgrow a shared note, and a link to a sense needs a block ID instead of a note.

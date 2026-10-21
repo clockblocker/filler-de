@@ -56,6 +56,16 @@ repeated Sentence's instances, the Shadow re-evaluation after a removal) are
 unit tests in `tests/unit/classify/resolution/unlink-observer.test.ts` and
 `scroll-unlinks.test.ts`.
 
+Landing hand-wrapped links on Crossroad notes (#115) is owned by
+`crossroad-link-landing.test.ts`: a word wrapped in `[[ ]]` in a Scroll is
+rewritten to its Crossroad path, a word naming a Library note keeps the
+Library's link, and a click on the uncreated Crossroad link creates the note
+at that exact path, its folders included, filled as "not classified yet".
+The rewrite rules are unit tests in
+`tests/unit/behaviors/wikilink-completion-behavior.test.ts`, and stray
+healing is `dictionary/tests/stray-healing.test.ts`: the E2E vault does not
+create new notes in `Worter/`, so no desktop click makes a stray.
+
 Startup lifecycle and its initial scan are covered by
 `startup-healing.test.ts`; `harness-lifecycle.test.ts` verifies that a returned
 mutation is already observable. VAM's Markdown modify subscription, including
