@@ -53,8 +53,13 @@ describe("Obsidian E2E - Classify", () => {
 					segmentedSentences: 1,
 					touchedSentences: 1,
 				});
-				// Without a scripted Luna no unit resolves, so nothing is written.
-				expect((await snapshot()).markdown["Story.md"]).toBe(before);
+				// Classify gives the unit's block an ID before it resolves
+				// anything, so every Attestation Ref names a block the Scroll
+				// holds. Without a scripted Luna no unit resolves, so that ID
+				// is all it writes.
+				expect((await snapshot()).markdown["Story.md"]).toBe(
+					before?.replace("Er fängt heute an.\n", "Er fängt heute an. ^0\n"),
+				);
 
 				// The same Sentence again comes from the Segmentation Cache.
 				await act({ kind: "runClassify", path: "Story.md", selection: "heute" });

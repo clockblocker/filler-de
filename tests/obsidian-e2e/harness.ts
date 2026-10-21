@@ -86,6 +86,13 @@ interface ScenarioDefinition {
 	 * scenario that asserts what Classify creates starts from none.
 	 */
 	readonly resetDictionary?: boolean;
+	/**
+	 * Makes Obsidian create new notes in the vault-root `Worter/` folder for
+	 * this scenario, as the user's vault does (`newFileLocation: folder`,
+	 * `newFileFolderPath: Worter`), so a click on an unresolved bare link
+	 * makes a stray there.
+	 */
+	readonly newNotesInDictionary?: boolean;
 	readonly fixture: readonly ScenarioFixture[];
 	readonly id: string;
 	/**
@@ -93,6 +100,10 @@ interface ScenarioDefinition {
 	 * folder, starting after fixtures and startup healing settle.
 	 */
 	readonly observeModifications?: { readonly path: string };
+	/**
+	 * Textfresser settings for this scenario only, such as `hideMetadata`;
+	 * the driver restores what they replaced when the scenario ends.
+	 */
 	readonly settings?: Readonly<Record<string, unknown>>;
 }
 
@@ -572,6 +583,9 @@ export async function withObsidianScenario<T>(
 					? { observeModifications: definition.observeModifications }
 					: {}),
 				...(definition.resetDictionary ? { resetDictionary: true } : {}),
+				...(definition.newNotesInDictionary
+					? { newNotesInDictionary: true }
+					: {}),
 				scenarioId: definition.id,
 				settings: definition.settings ?? {},
 			},

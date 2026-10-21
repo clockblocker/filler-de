@@ -90,7 +90,10 @@ test("a new scroll is healed", async () => {
 
 Fixture and action paths are relative to that scenario's logical `Library`.
 `act()` returns only after Textfresser and its Obsidian/VAM event pipeline have
-settled. `snapshot()` returns one sorted, normalized view of the Library:
+settled. Textfresser writes into an open note through its editor, which
+Obsidian saves about two seconds later, so after `runClassify` and
+`clickLink` the driver also saves the active editor when it differs from
+disk, and settles again. `snapshot()` returns one sorted, normalized view of the Library:
 Markdown contents are in `markdown`, and file kinds are `md` or `file`.
 
 Available actions are `createFile`, `createBinary`, `modifyFile`,
@@ -131,6 +134,17 @@ true` moves it to Obsidian's trash before the fixtures, and `dictionary()`
 returns its notes by vault path. The driver resets the dictionary only in a
 vault marked as E2E-only by an `.obsidian/textfresser-e2e-vault` file:
 managed mode writes it, and an attached test vault needs it added once.
+`newNotesInDictionary: true` makes Obsidian create new notes in `Worter/`
+for the scenario, as the user's vault does, so a click on an unresolved bare
+link makes a stray there. `settings` (such as `hideMetadata: false`) and
+that vault config last only for their scenario: the driver restores what
+they replaced when the scenario ends.
+
+Dictionary notes follow ADR-0015: a Lemma note, a Reading note per sense
+and a Crossroad note per spelling, with their data in the note-metadata
+facility, never in inline `%%tf…%%` markers. `scenarios/dictionary-layout.ts`
+holds the assertions the classifying scenarios share: the section titles,
+the hidden metadata section or frontmatter, and a Lemma note's tables.
 
 To observe VAM's Markdown modify subscription, declare
 `observeModifications: { path: "Worter" }` with a Library-relative folder.

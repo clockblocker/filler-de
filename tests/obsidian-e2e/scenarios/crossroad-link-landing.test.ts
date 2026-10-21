@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { withObsidianScenario } from "../harness";
+import { expectHiddenMetadata, TITLES, visible } from "./dictionary-layout";
 
 const CROSSROAD = "Worter/z/zau/zaube/zauberwürfel";
 
@@ -46,7 +47,47 @@ describe("Obsidian E2E - landing hand-wrapped links on Crossroad notes (#115)", 
 				await act({ kind: "clickLink", linkpath: CROSSROAD, path: scroll });
 				const { markdown } = await dictionary();
 				expect(Object.keys(markdown)).toEqual([`${CROSSROAD}.md`]);
-				expect(markdown[`${CROSSROAD}.md`]).toContain("*Not classified yet*");
+				expectHiddenMetadata(markdown[`${CROSSROAD}.md`], "crossroadNote");
+				expect(visible(markdown[`${CROSSROAD}.md`])).toBe(
+					`${TITLES.eintraege}\n*Not classified yet*`,
+				);
+			},
+		);
+	});
+
+	it("heals the stray a click on an unresolved bare link makes in Worter/ onto its Crossroad path", async () => {
+		await withObsidianScenario(
+			{
+				// A fixture is written straight to disk, so its bare link was
+				// never rewritten, as in a note from before #115.
+				fixture: [
+					{ content: "Die [[Kaffeekanne]] ist leer.\n", path: "Texte/Kanne.md" },
+				],
+				id: "crossroad-stray-healing",
+				newNotesInDictionary: true,
+				resetDictionary: true,
+			},
+			async ({ act, dictionary, snapshot }) => {
+				const scroll = findPath(
+					(await snapshot()).files.map(({ path }) => path),
+					"Texte/Kanne",
+				);
+				const before = (await snapshot()).markdown[scroll];
+
+				// Obsidian creates `Worter/Kaffeekanne.md`, where the user's
+				// vault puts new notes; the store moves it to its spelling's
+				// Crossroad path and fills it as "not classified yet".
+				await act({ kind: "clickLink", linkpath: "Kaffeekanne", path: scroll });
+				const { markdown } = await dictionary();
+				const crossroad = "Worter/k/kaf/kaffe/kaffeekanne.md";
+				expect(Object.keys(markdown)).toEqual([crossroad]);
+				expectHiddenMetadata(markdown[crossroad], "crossroadNote");
+				expect(visible(markdown[crossroad])).toBe(
+					`${TITLES.eintraege}\n*Not classified yet*`,
+				);
+				// The bare link is left as the user wrote it: Obsidian resolves
+				// it to the Crossroad note by name.
+				expect((await snapshot()).markdown[scroll]).toBe(before);
 			},
 		);
 	});

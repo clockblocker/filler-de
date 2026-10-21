@@ -35,18 +35,35 @@ The Librarian's user commands also have desktop owners:
 
 Classify on a selection (#63) is owned by `classify-selection.test.ts`: the
 `UnitRef`s handed to the resolver port, a discontinuous unit's pieces, the
-Segmentation Cache hit, and an edit invalidating only its own Sentence. Its
+Segmentation Cache hit, an edit invalidating only its own Sentence, and the
+block ID Classify gives the unit's block before it resolves anything. Its
 dumgen answers from a scripted jev, so no provider is reached; the same
 story runs in process in `tests/unit/classify/classify-commander.test.ts`.
 
 Resolution (#64) is owned by `classify-resolution.test.ts`: a noun, a
 separable verb and a Locution each linked to its Reading note beside its
 Lemma note, and a re-encounter that appends an Attestation
-with no Knowledge call. Its scripted jev and Luna live in
-`classify-resolution-script.ts`, and
+with no Knowledge call. It also pins the ADR-0015 layout (#118): the
+dictionary holds exactly the Lemma, Reading and Crossroad notes, a met
+Surface's Crossroad included, each with its data in the hidden metadata
+section and no `%%tf` marker; the Lemma note shows its Crossroad, its
+Readings, its inflection table and "Begegnete Formen"; the Reading note
+shows its sections, its "Deine Kontexte" embeds with their `|^<key>`
+aliases and an embed of its table. Its scripted jev and Luna, and those
+layout assertions, live in `classify-resolution-script.ts`, and
 `tests/integration/classify/classify-resolution.test.ts` runs the same story
 in process; the resolver's other cases are unit tests under
-`tests/unit/classify/resolution/`.
+`tests/unit/classify/resolution/`. `dictionary-layout.ts` holds the layout
+helpers every classifying scenario shares.
+
+Licence Groups (#118) are owned by `classify-licence-groups.test.ts`: two
+senses of Mutter whose plurals differ give the Lemma note two tables,
+captioned 👩 and 🔩, and each Reading note embeds its own. Its script lives
+in `classify-licence-groups-script.ts`, and
+`tests/integration/classify/classify-licence-groups.test.ts` runs it in
+process. `dictionary-metadata-modes.test.ts` classifies the same word with
+"Hide metadata" off, so every note keeps its data in the frontmatter, and
+then with the default again, so a scenario's settings end with it.
 
 Removing a link from a Scroll (#116) is owned by `classify-unlink.test.ts`:
 the occurrence of a deleted link goes, a Reading that still has a linked
@@ -54,23 +71,29 @@ occurrence stays, and one that lost its last goes with its Lemma note. The
 unlink observer's guards (moved text, a lost block ID, a running Classify, a
 repeated Sentence's instances, the Shadow re-evaluation after a removal) are
 unit tests in `tests/unit/classify/resolution/unlink-observer.test.ts` and
-`scroll-unlinks.test.ts`.
+`scroll-unlinks.test.ts`. The scenario also shows the commit regenerating
+the Crossroads it touches: heute's goes back to "not classified yet".
 
 Landing hand-wrapped links on Crossroad notes (#115) is owned by
 `crossroad-link-landing.test.ts`: a word wrapped in `[[ ]]` in a Scroll is
 rewritten to its Crossroad path, a word naming a Library note keeps the
 Library's link, and a click on the uncreated Crossroad link creates the note
 at that exact path, its folders included, filled as "not classified yet".
-The rewrite rules are unit tests in
-`tests/unit/behaviors/wikilink-completion-behavior.test.ts`, and stray
-healing is `dictionary/tests/stray-healing.test.ts`: the E2E vault does not
-create new notes in `Worter/`, so no desktop click makes a stray.
+Its second story sets `newNotesInDictionary`, so Obsidian creates new notes
+in `Worter/` as the user's vault does: a click on a bare `[[Kaffeekanne]]`
+makes the stray `Worter/Kaffeekanne.md`, and the store heals it onto
+`Worter/k/kaf/kaffe/kaffeekanne.md`, leaving the link as written. The
+rewrite rules are unit tests in
+`tests/unit/behaviors/wikilink-completion-behavior.test.ts`, and the other
+stray-healing cases (merges, properties, `Untitled`) are
+`dictionary/tests/stray-healing.test.ts`.
 
 Startup lifecycle and its initial scan are covered by
 `startup-healing.test.ts`; `harness-lifecycle.test.ts` verifies that a returned
 mutation is already observable. VAM's Markdown modify subscription, including
 Self Event filtering of the Librarian's Codex writes, is covered by
-`md-modify-observation.test.ts`.
+`md-modify-observation.test.ts`, over a Library Section rather than the
+dictionary.
 
 ## Former Librarian chain
 
