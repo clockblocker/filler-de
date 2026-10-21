@@ -40,6 +40,7 @@ export const PROJECTION_BLOCK_KINDS = [
 	"inflection",
 	"tags",
 	"notes_title",
+	"notes_placeholder",
 ] as const;
 
 export type SerializedBlockKind = (typeof SERIALIZED_BLOCK_KINDS)[number];
@@ -47,11 +48,12 @@ export type ProjectionBlockKind = (typeof PROJECTION_BLOCK_KINDS)[number];
 export type TypedBlockKind = SerializedBlockKind | ProjectionBlockKind;
 
 /**
- * Each scope's typed Blocks in canonical order; freeform comes last. The
- * order is the legacy notes' layout (render.ts `BLOCK_SECTIONS`): data-only
- * Blocks before the header, then Kontexte, Semantische Beziehungen,
- * Übersetzung, Morpheme, Tags, Flexion and Notizen, with the Blocks the
- * legacy notes had no section for in between.
+ * Each scope's typed Blocks in canonical order. The order is the dictionary
+ * notes' layout (spec: Layout; render.ts `BLOCK_SECTIONS`): data-only Blocks
+ * before the header, then Deine Kontexte, Note, Semantische Beziehungen,
+ * Morpheme, Übersetzung, Flexion and Tags, with the Blocks the old notes had
+ * no section for in between. A Reading part's freeform stands in its Note
+ * section, after `notes_placeholder`; a Surface part's comes last.
  */
 export const CANONICAL_BLOCK_ORDER = {
 	lemma: ["identity"],
@@ -66,22 +68,23 @@ export const CANONICAL_BLOCK_ORDER = {
 		"subjunctive_past",
 		"header",
 		"attestation",
+		"notes_title",
+		"notes",
+		"notes_placeholder",
 		"relation",
 		"pending_relation",
 		"inverse_relation",
+		"morphology",
 		"translation",
 		"attested_translation",
 		"definition",
-		"morphology",
 		"valency",
 		"participle_source",
 		"locution_type",
 		"saying_type",
 		"formula_role",
-		"tags",
 		"inflection",
-		"notes_title",
-		"notes",
+		"tags",
 	],
 	surface: ["surface", "attestation", "attested_translation", "notes"],
 } as const satisfies Record<PartScope, readonly TypedBlockKind[]>;

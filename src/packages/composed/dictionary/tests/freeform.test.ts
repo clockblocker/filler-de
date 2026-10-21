@@ -1,5 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { lemmaNotePath, parse } from "@textfresser/lemma-note-codec";
+import {
+	blockIdsOf,
+	lemmaNotePath,
+	parse,
+	serialize,
+} from "@textfresser/lemma-note-codec";
+import { readingIdentityKey } from "dumling";
 import { Effect } from "effect";
 import { insertFreeformBlock } from "../src/freeform";
 import { expectIndexMatchesFiles, run } from "./support/files";
@@ -14,6 +20,9 @@ import {
 import { openStore, seed } from "./support/store";
 
 const gehenPath = lemmaNotePath(gehen).path;
+const PLACEHOLDER = "*You can write here*";
+const NOTE_TITLE =
+	'<span class="note_block_title note_block_title_kontexte">Note</span>';
 const MEMO =
 	"My own memo about gehen.\n\nIt has [[links]] and ![[Scroll#^3|^]].";
 
@@ -41,8 +50,14 @@ describe("appendFreeform", () => {
 		);
 		expect(outcome).toBe("Appended");
 		const after = vault.content(gehenPath) ?? "";
-		// The Reading's part ends the note, so the text follows it after a blank line.
-		expect(after).toBe(`${before}\n${MEMO}\n`);
+		// The text takes the Note placeholder's place, under the Note title.
+		expect(before).toContain(PLACEHOLDER);
+		expect(after).toBe(
+			before.replace(
+				/%%tf:notes_placeholder@[^\n]*\n\*You can write here\*\n/u,
+				`${MEMO}\n`,
+			),
+		);
 		const parsed = parse(after, { language: "de" });
 		expect(parsed.data.ok).toBe(true);
 		const readingPart = parsed.document.parts.find(
@@ -133,6 +148,45 @@ describe("insertFreeformBlock", () => {
 			_tag: "Inserted",
 			content:
 				"%%tf-part:lemma%%\n\nmemo\n\n%%tf-part:reading r-1%%\n\n%%tf-part:reading r-2%%\n",
+		});
+	});
+
+	test("places text under the Note title, before the sections below it", () => {
+		const data = {
+			lemmaRecord: { lemma: gehen },
+			ownedSurfaceEntries: [],
+			pendingRelations: [],
+			readingEntries: [
+				readingEntry(gehenReading, {
+					knowledge: { translations: { en: ["go"] } },
+				}),
+			],
+		};
+		const note = serialize(undefined, data);
+		const blockId =
+			blockIdsOf(data).readings.get(readingIdentityKey(gehenReading)) ??
+			"";
+		const placed = insertFreeformBlock(note, blockId, "memo");
+		if (placed._tag !== "Inserted") throw new Error(placed._tag);
+		expect(placed.content).toContain(
+			`${NOTE_TITLE}\nmemo\n\n\n%%tf:translation`,
+		);
+		expect(placed.content).not.toContain(PLACEHOLDER);
+		// It is what serialize writes for that freeform.
+		const parsed = parse(placed.content, { language: "de" });
+		if (!parsed.data.ok) throw new Error("invalid");
+		expect(serialize(parsed.document, parsed.data.data)).toBe(
+			placed.content,
+		);
+
+		// Further text goes under it, a paragraph of its own.
+		const more = insertFreeformBlock(placed.content, blockId, "more");
+		if (more._tag !== "Inserted") throw new Error(more._tag);
+		expect(more.content).toContain(
+			`${NOTE_TITLE}\nmemo\n\nmore\n\n\n%%tf:translation`,
+		);
+		expect(insertFreeformBlock(more.content, blockId, "memo")).toEqual({
+			_tag: "AlreadyThere",
 		});
 	});
 

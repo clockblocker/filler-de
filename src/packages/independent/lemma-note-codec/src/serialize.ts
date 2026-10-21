@@ -25,6 +25,8 @@ import {
 	DEFAULT_TITLES,
 	defaultHeader,
 	type LinkRenderer,
+	NOTE_PLACEHOLDER,
+	PARAGRAPH_KINDS,
 	PART_SEPARATOR,
 	type Projections,
 	RENDERERS,
@@ -99,18 +101,30 @@ type BlockItem = {
 };
 
 /**
- * Lays a part out as the legacy notes did (spec: Layout): the part marker
- * and its `head` Blocks on consecutive lines, then one section per run of
- * Blocks that share one, its title on the first rendering. Blocks of one
- * section stand on consecutive lines too, so with comment lines hidden a
- * section reads as one; a blank line separates sections. Returns the
- * part's segments, which the note joins with blank lines.
+ * The lines between a section and the next (spec: Layout): a blank line
+ * after the header, two after the Note section and its freeform, and none
+ * between other sections, as the dictionary notes stood.
+ */
+function gapAfter(section: SectionKind | "head"): string {
+	if (section === "head") return "\n\n";
+	if (section === "note") return "\n\n\n";
+	return "\n";
+}
+
+/**
+ * Lays a part out as the dictionary notes did (spec: Layout): the part
+ * marker and its `head` Blocks on consecutive lines, then one section per
+ * run of Blocks that share one, its title on the first rendering. With
+ * comment lines hidden, a section reads as its title over its lines. The
+ * part's freeform and unknown Blocks, `kept`, stand directly under its Note
+ * section, or after a blank line at its end when it has none.
  */
 function layoutPart(
 	marker: string,
 	items: readonly BlockItem[],
 	{ titles }: Render,
-): string[] {
+	kept: readonly string[] = [],
+): string {
 	const groups: { section: SectionKind | "head"; blocks: string[] }[] = [
 		{ blocks: [marker], section: "head" },
 	];
@@ -126,7 +140,10 @@ function layoutPart(
 			groups.push(group);
 			titled = false;
 		}
-		const clean = content === undefined ? "" : sanitizeRendering(content);
+		const clean =
+			content === undefined
+				? ""
+				: sanitizeRendering(content, PARAGRAPH_KINDS.has(kind));
 		let rendering =
 			clean.length > 0 ||
 			(kind === "notes_title" && content !== undefined)
@@ -146,9 +163,27 @@ function layoutPart(
 		if (rendering === undefined && payload === undefined) continue;
 		group.blocks.push(typedBlock(kind, payload, rendering));
 	}
-	return groups
+	const sections = groups
 		.filter((group) => group.blocks.length > 0)
-		.map((group) => group.blocks.join("\n"));
+		.map((group) => ({
+			section: group.section,
+			text: group.blocks.join("\n"),
+		}));
+	const freeform = kept.join("\n\n");
+	const note = sections.find((section) => section.section === "note");
+	if (note !== undefined && freeform.length > 0)
+		note.text = `${note.text}\n${freeform}`;
+	let text = "";
+	sections.forEach((section, index) => {
+		const previous = sections[index - 1];
+		text +=
+			previous === undefined
+				? section.text
+				: `${gapAfter(previous.section)}${section.text}`;
+	});
+	return note === undefined && freeform.length > 0
+		? `${text}\n\n${freeform}`
+		: text;
 }
 
 /**
@@ -177,21 +212,23 @@ const isEmpty = (value: unknown) =>
 /**
  * Freeform and unknown Blocks, which serialization keeps as they are. An
  * edited rendering loses only its Block IDs, which the re-rendered Block
- * carries, so each ID occurs once in the note.
+ * carries, so each ID occurs once in the note. A freeform Block holding
+ * only the Note placeholder is no user text, so it goes, and the placeholder
+ * is rendered again where nothing else is written.
  */
 function keptBlocks(blocks: readonly NoteBlock[]): string[] {
-	return blocks
-		.filter(
-			(block) => block.type === "freeform" || block.type === "unknown",
-		)
-		.map((block) =>
-			trimmedRaw(
-				block.type === "freeform" && block.demoted === true
-					? { ...block, raw: withoutBlockIds(block.raw) }
-					: block,
-			),
-		)
-		.filter((text) => text.length > 0);
+	return blocks.flatMap((block) => {
+		if (block.type !== "freeform" && block.type !== "unknown") return [];
+		const text = trimmedRaw(
+			block.type === "freeform" && block.demoted === true
+				? { ...block, raw: withoutBlockIds(block.raw) }
+				: block,
+		);
+		if (text.length === 0) return [];
+		if (block.type === "freeform" && text.trim() === NOTE_PLACEHOLDER)
+			return [];
+		return [text];
+	});
 }
 
 /**
@@ -199,10 +236,11 @@ function keptBlocks(blocks: readonly NoteBlock[]): string[] {
  * document's preamble, the Lemma part, then a part per Reading Entry and
  * per owned Surface Entry, in data order. Typed Blocks come from `data`;
  * projection Blocks from `options.projections`; the document only
- * contributes its freeform and unknown Blocks, kept byte for byte at the end
- * of the part they were in, except that an edited rendering loses its Block
- * IDs. Blocks of a part the data no longer has move to
- * the end of the Lemma part, so no user content is lost.
+ * contributes its freeform and unknown Blocks, kept byte for byte in the
+ * part they were in: under a Reading part's Note title, at the end of any
+ * other part. An edited rendering loses its Block IDs, and a Block holding
+ * only the Note placeholder goes. Blocks of a part the data no longer has
+ * move to the end of the Lemma part, so no user content is lost.
  *
  * It throws {@link LemmaNoteSerializeError} for data no valid note holds;
  * records that dumdict validated never do.
@@ -303,6 +341,7 @@ export function serialize<L extends Dumling.Language>(
 		for (const [kind, aspect] of Object.entries(KNOWLEDGE_BLOCKS)) {
 			payloads[kind as SerializedBlockKind] = knowledge[aspect];
 		}
+		const kept = take("reading", blockId);
 		const projected: Record<ProjectionBlockKind, string | undefined> = {
 			header: separated(
 				`${sanitizeRendering((projections.header ?? defaultHeader)(context))} ^${blockId}`,
@@ -314,8 +353,13 @@ export function serialize<L extends Dumling.Language>(
 					? undefined
 					: renderInverseRelations(edges, render.links);
 			})(),
-			// The Notizen title always stands last, over the notes and the
-			// freeform text kept below it, so a user knows where to write.
+			// The Note title always stands under Deine Kontexte, over the
+			// notes and the freeform text kept below it, so a user knows
+			// where to write; the placeholder says so until they do.
+			notes_placeholder:
+				kept.length === 0 && isEmpty(entry.notes)
+					? NOTE_PLACEHOLDER
+					: undefined,
 			notes_title: "",
 			tags: projections
 				.tags?.(context)
@@ -349,11 +393,12 @@ export function serialize<L extends Dumling.Language>(
 				];
 			},
 		);
-		return [
-			...layoutPart(`%%tf-part:reading ${blockId}%%`, items, render),
-			// Freeform and unknown Blocks stay last, under the Notizen title.
-			...take("reading", blockId),
-		];
+		return layoutPart(
+			`%%tf-part:reading ${blockId}%%`,
+			items,
+			render,
+			kept,
+		);
 	});
 
 	const surfaceParts = data.ownedSurfaceEntries.map((entry) => {
@@ -388,11 +433,12 @@ export function serialize<L extends Dumling.Language>(
 					: [serializedItem(kind, value, render)];
 			},
 		);
-		return [
-			...layoutPart(`%%tf-part:surface ${blockId}%%`, items, render),
-			// Freeform and unknown Blocks stay last in the part.
-			...take("surface", blockId),
-		];
+		return layoutPart(
+			`%%tf-part:surface ${blockId}%%`,
+			items,
+			render,
+			take("surface", blockId),
+		);
 	});
 
 	const orphans = source.parts
@@ -401,15 +447,15 @@ export function serialize<L extends Dumling.Language>(
 
 	const segments = [
 		...keptBlocks(source.preamble),
-		...layoutPart(
+		layoutPart(
 			"%%tf-part:lemma%%",
 			[{ kind: "identity", payload: encodePayload(lemma) }],
 			render,
 		),
 		...lemmaKept,
 		...orphans,
-		...readingParts.flat(),
-		...surfaceParts.flat(),
+		...readingParts,
+		...surfaceParts,
 	];
 	return `${segments.join("\n\n")}\n`;
 }

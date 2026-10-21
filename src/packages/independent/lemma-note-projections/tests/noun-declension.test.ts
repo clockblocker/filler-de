@@ -117,6 +117,21 @@ describe("the dev vault's Flexion tables", () => {
 				),
 			).toBe(flexion.replace(/\[\[|\]\]/gu, ""));
 		});
+
+		it(`links only the forms of ${lemma} spelled as the Lemma`, () => {
+			const link = `[[${lemma}]]`;
+			const table = deriveInflection({
+				...input(noun(lemma, gender), { plural: [plural] }),
+				links: { lemma: () => link },
+			});
+			// The vault's table, its links to other forms unlinked.
+			expect(table).toBe(
+				flexion.replace(/\[\[([^\]]+)\]\]/gu, (whole, form) =>
+					form === lemma ? whole : form,
+				),
+			);
+			expect(table).toContain(link);
+		});
 	}
 });
 

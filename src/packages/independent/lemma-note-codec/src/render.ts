@@ -63,31 +63,30 @@ export type Projections<L extends Dumling.Language> = {
 };
 
 /**
- * A visible section of a part. Each is a title line, as the legacy
- * dictionary notes wrote it, over the renderings of its Blocks. The name is
- * the title's CSS suffix (`entry_section_title_<name>`, styles.css).
+ * A visible section of a part: a title line, as the dictionary notes wrote
+ * it, over the renderings of its Blocks.
  */
 export type SectionKind =
 	| "kontexte"
+	| "note"
 	| "synonyme"
+	| "morpheme"
 	| "translations"
 	| "definition"
-	| "morpheme"
 	| "valenz"
 	| "partizip"
 	| "art"
-	| "tags"
 	| "flexion"
-	| "notizen";
+	| "tags";
 
-/** The legacy notes' German section titles, and titles for the new ones. */
+/** The dictionary notes' German section titles, and titles for the new ones. */
 export const DEFAULT_TITLES: Readonly<Record<SectionKind, string>> = {
 	art: "Art",
 	definition: "Definition",
 	flexion: "Flexion",
-	kontexte: "Kontexte",
+	kontexte: "Deine Kontexte",
 	morpheme: "Morpheme",
-	notizen: "Notizen",
+	note: "Note",
 	partizip: "Partizip von",
 	synonyme: "Semantische Beziehungen",
 	tags: "Tags",
@@ -96,9 +95,34 @@ export const DEFAULT_TITLES: Readonly<Record<SectionKind, string>> = {
 };
 
 /**
+ * Each section's title class suffix (`note_block_title_<suffix>`,
+ * styles.css). The dictionary notes styled the Note title as Kontexte.
+ */
+const SECTION_CLASSES: Readonly<Record<SectionKind, string>> = {
+	art: "art",
+	definition: "definition",
+	flexion: "flexion",
+	kontexte: "kontexte",
+	morpheme: "morpheme",
+	note: "kontexte",
+	partizip: "partizip",
+	synonyme: "synonyme",
+	tags: "tags",
+	translations: "translations",
+	valenz: "valenz",
+};
+
+/**
+ * What a Reading part's Note section shows while the user has written
+ * nothing there. It is a projection, never freeform, and serialize drops a
+ * freeform Block that holds nothing else.
+ */
+export const NOTE_PLACEHOLDER = "*You can write here*";
+
+/**
  * Where each typed Block shows. `head` Blocks stand with the part's marker
  * and its header or surface line; those other than `header` and `surface`
- * hold data only and render nothing, as the legacy notes showed it: the
+ * hold data only and render nothing, as the dictionary notes showed it: the
  * transcription in the header, the inflection classes and principal parts
  * in the Flexion table. Blocks of one section stand together in canonical
  * order, and the first one with a rendering carries the section's title.
@@ -117,8 +141,9 @@ export const BLOCK_SECTIONS: Readonly<
 	inverse_relation: "synonyme",
 	locution_type: "art",
 	morphology: "morpheme",
-	notes: "notizen",
-	notes_title: "notizen",
+	notes: "note",
+	notes_placeholder: "note",
+	notes_title: "note",
 	participle_source: "partizip",
 	past_participle: "head",
 	pending_relation: "synonyme",
@@ -142,14 +167,14 @@ const HTML_ESCAPES: Readonly<Record<string, string>> = {
 	">": "&gt;",
 };
 
-/** A section's title line: `<span class="entry_section_title …">…</span>`. */
+/** A section's title line: `<span class="note_block_title …">…</span>`. */
 export function sectionTitle(kind: SectionKind, title: string): string {
 	const text = title.replace(/[&<>]/gu, (char) => HTML_ESCAPES[char] ?? char);
-	return `<span class="entry_section_title entry_section_title_${kind}">${text}</span>`;
+	return `<span class="note_block_title note_block_title_${SECTION_CLASSES[kind]}">${text}</span>`;
 }
 
 /**
- * The lines that open every part after the first, as the legacy notes
+ * The lines that open every part after the first, as the dictionary notes
  * separated their entries. `***`, unlike `---`, never turns the line above
  * it into a heading.
  */
@@ -199,16 +224,30 @@ export const DEFAULT_LINKS: LinkRenderer = {
 };
 
 /**
- * Keeps a rendering inside its Block: blank lines would end the Block, and
- * `%%` would open an Obsidian comment, or a marker, in visible text.
+ * Keeps a rendering inside its Block: `%%` would open an Obsidian comment,
+ * or a marker, in visible text. Blank lines go, unless `paragraphs` keeps
+ * one between two lines that had any; the seal holds a rendering's blank
+ * lines, but a blank line before its first line would end it there.
  */
-export function sanitizeRendering(text: string): string {
-	return text
-		.split(/\r\n?|\n/u)
-		.filter((line) => line.trim().length > 0)
-		.map((line) => line.replace(/%(?=%)/gu, "%\u200B"))
-		.join("\n");
+export function sanitizeRendering(text: string, paragraphs = false): string {
+	const lines: string[] = [];
+	let gap = false;
+	for (const line of text.split(/\r\n?|\n/u)) {
+		if (line.trim().length === 0) {
+			gap = paragraphs && lines.length > 0;
+			continue;
+		}
+		if (gap) lines.push("");
+		gap = false;
+		lines.push(line.replace(/%(?=%)/gu, "%\u200B"));
+	}
+	return lines.join("\n");
 }
+
+/** Blocks whose renderings keep a blank line between paragraphs. */
+export const PARAGRAPH_KINDS: ReadonlySet<TypedBlockKind> = new Set([
+	"attestation",
+]);
 
 type Renderer = (value: unknown, links: LinkRenderer) => string | undefined;
 
@@ -331,7 +370,8 @@ function renderComplement(complement: unknown, links: LinkRenderer): string {
  * kind with none, such as `plural`, keeps its payload out of sight.
  */
 export const RENDERERS: Partial<Record<TypedBlockKind, Renderer>> = {
-	attestation: (value) => list(value).map(text).join("\n"),
+	// A blank line between embeds, as the dictionary notes spaced them.
+	attestation: (value) => list(value).map(text).join("\n\n"),
 	attested_translation: (value) => {
 		const words = list(value).map(text);
 		return words.length === 0 ? undefined : `*${words.join(", ")}*`;
@@ -415,18 +455,18 @@ const YOUGLISH_LANGUAGES: Readonly<Record<string, string>> = {
 };
 
 /**
- * A transcription as the legacy header showed it: `[taːk](youglish)`, a
- * link to hear the word spoken, or `/taːk/` for a language YouGlish lacks.
+ * A transcription as the dictionary header showed it: `[taːk ♫](youglish)`,
+ * a link to hear the word spoken, or `/taːk/` for a language YouGlish lacks.
  */
 function pronunciation(lemma: Dumling.Lemma, transcription: string): string {
 	const language = YOUGLISH_LANGUAGES[lemma.language];
 	if (language === undefined) return `/${transcription}/`;
 	const label = transcription.replace(/[[\]\\]/gu, "\\$&");
-	return `[${label}](https://youglish.com/pronounce/${encodeURIComponent(lemma.canonicalForm)}/${language})`;
+	return `[${label} ♫](https://youglish.com/pronounce/${encodeURIComponent(lemma.canonicalForm)}/${language})`;
 }
 
 /**
- * The legacy header: `🏭 das [[Kohlekraftwerk]], [ˈkoːlə…](youglish)`, the
+ * The dictionary header: `🏭 das [[Kohlekraftwerk]], [ˈkoːlə… ♫](youglish)`, the
  * Emoji Description, a noun's article, a link to the note itself and the
  * transcription.
  */

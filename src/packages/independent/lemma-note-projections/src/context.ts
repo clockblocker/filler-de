@@ -30,6 +30,10 @@ export type ProjectionInput = {
 	readonly lemma: Dumling.Lemma;
 	readonly entry: { readonly knowledge?: ProjectedKnowledge | undefined };
 	readonly ownedSurfaces: readonly { readonly surface: Dumling.Surface }[];
+	/** How the note links a Lemma; without it, a table links nothing. */
+	readonly links?: {
+		readonly lemma: (lemma: Dumling.Lemma) => string;
+	};
 };
 
 /** A Lemma's Core Features as a plain record. */

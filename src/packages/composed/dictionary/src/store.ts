@@ -216,9 +216,10 @@ export type DumdictVaultStore = {
 	 */
 	readonly rescan: Effect.Effect<void, DictionaryScanError>;
 	/**
-	 * Places user text as a freeform Block at the end of one Reading's part
-	 * of a stored Lemma note, or of its Lemma part when `readingBlockId`
-	 * names no Reading there. It changes no record, writes only through a
+	 * Places user text as a freeform Block in one Reading's part of a
+	 * stored Lemma note, under its Note title in place of the placeholder,
+	 * or at the end of its Lemma part when `readingBlockId` names no
+	 * Reading there. It changes no record, writes only through a
 	 * compare-and-swap on the content it read, and answers `AlreadyThere`
 	 * when the note already holds the text as a freeform Block.
 	 */
