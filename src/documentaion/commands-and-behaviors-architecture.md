@@ -39,7 +39,7 @@ The context is a snapshot. A commander must not read the editor again to reconst
 | --- | --- |
 | `ClipboardCopy` | Remove Librarian metadata from copied text. |
 | `SelectAll` | Exclude frontmatter, go-back links, and metadata. |
-| `WikilinkCompleted` | Ask the Librarian to resolve a Library target. |
+| `WikilinkCompleted` | Land a bare word typed outside `Worter/` on its Crossroad note's path (ADR-0015); otherwise ask the Librarian to resolve a Library target. |
 | `CheckboxFrontmatterClicked` | Route the status change to the Librarian. |
 | `CheckboxClicked` | Route a Codex status change to the Librarian. |
 | `WikilinkClicked` | Tell Classify the clicked target, so a link to a Reading whose Knowledge is still generating scrolls to it once it lands. |

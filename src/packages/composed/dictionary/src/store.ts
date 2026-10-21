@@ -46,6 +46,7 @@ import { contentHash } from "./content-hash";
 import {
 	CrossroadNoteMetadata,
 	crossroadMetadataOf,
+	crossroadUserText,
 	writeCrossroadNote,
 } from "./crossroad";
 import {
@@ -102,6 +103,8 @@ import {
 import {
 	crossroadContentOf,
 	crossroadPathOf,
+	type DisplacedCrossroad,
+	displacedCrossroads,
 	fanOutOf,
 	type NoteProjections,
 	renderOptionsFor,
@@ -168,7 +171,11 @@ export type HealingBlocked = {
 export type DictionaryDiagnostics = {
 	readonly quarantined: readonly QuarantinedNote[];
 	readonly healingBlocked: readonly HealingBlocked[];
-	/** Notes directly in `Worter/` without dictionary metadata (#115 heals them). */
+	/**
+	 * Notes directly in `Worter/` without dictionary metadata that are still
+	 * there: named as Obsidian names a new note (`Untitled`), or kept by
+	 * healing, which says why in `healingBlocked`.
+	 */
 	readonly strays: readonly string[];
 	/** Empty files at exact Lemma or Reading note paths, left alone. */
 	readonly emptyNotes: readonly string[];
@@ -712,17 +719,58 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	);
 
 	/**
-	 * Moves Lemma and Reading notes whose path disagrees with their
-	 * metadata to their own path, unless a file is already there. The index
-	 * learns the outcome from the files, not from what the move was meant to
-	 * do; a move that fails or lands elsewhere rebuilds the index and heals
-	 * once more.
+	 * Where a displaced note may go: undefined when its path is free, else
+	 * why it stays. A file there, or a folder of it the vault spells another
+	 * way, blocks a move (ADR-0015's collision rules).
+	 */
+	const blockedAt = Effect.fnUntraced(function* (to: string) {
+		const collision = index.folderCollision(to);
+		if (collision !== undefined)
+			return `Its folder ${collision.folder} collides with ${collision.existing}`;
+		const occupied =
+			index.sameFileAs(to).length > 0 ||
+			(yield* vault
+				.exists(mdSplitPath(to))
+				.pipe(Effect.orElseSucceed(() => true)));
+		return occupied
+			? "Another file sits at its own path; the two may be duplicates"
+			: undefined;
+	});
+
+	/**
+	 * Moves notes whose path disagrees with what they are to their own path,
+	 * unless a file is already there: Lemma and Reading notes by their
+	 * metadata, and displaced Crossroad notes, strays included, to their
+	 * spelling's Crossroad path (`displacedCrossroads`). Lemma, Reading and
+	 * moved Crossroad notes move through Obsidian's link-preserving rename,
+	 * strays without it, so their links keep their text. A displaced note whose spelling's Crossroad note is already there is
+	 * merged into it instead (`mergeDisplaced`). The index learns the outcome
+	 * from the files, not from what the move was meant to do; a move that
+	 * fails or lands elsewhere rebuilds the index and heals once more.
+	 * Answers the Crossroad paths it moved or merged notes to, which the
+	 * caller fills.
 	 */
 	const heal = Effect.fnUntraced(function* (
 		retry = true,
-	): Effect.fn.Return<void> {
+	): Effect.fn.Return<ReadonlySet<string>> {
 		const blocked: HealingBlocked[] = [];
-		const moves: { from: string; to: string; hash: string }[] = [];
+		const moves: {
+			from: string;
+			to: string;
+			hash: string;
+			/** Whether links to it follow it: not for a stray, see below. */
+			updateLinks: boolean;
+		}[] = [];
+		const tried = (from: string, to: string, hash: string) => {
+			if (failedMoves.get(moveKey(from, to)) !== hash) return false;
+			blocked.push({
+				canonicalPath: to,
+				message:
+					"Moving it to its own path failed; the store tries again once the note changes",
+				path: from,
+			});
+			return true;
+		};
 		for (const { from, to } of index.misplaced()) {
 			if (to === undefined) {
 				blocked.push({
@@ -734,69 +782,118 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				continue;
 			}
 			const moving = index.entry(from);
-			if (moving === undefined) continue;
-			if (failedMoves.get(moveKey(from, to)) === moving.hash) {
+			if (moving === undefined || tried(from, to, moving.hash)) continue;
+			const reason = yield* blockedAt(to);
+			if (reason === undefined)
+				moves.push({ from, hash: moving.hash, to, updateLinks: true });
+			else
 				blocked.push({
 					canonicalPath: to,
-					message:
-						"Moving it to its own path failed; the store tries again once the note changes",
+					message: reason,
 					path: from,
 				});
+		}
+		const merges: DisplacedCrossroad[] = [];
+		const crossroadMoves: PathClaim[] = [];
+		for (const displaced of displacedCrossroads(index)) {
+			const { from, to } = displaced;
+			const moving = index.entry(from);
+			if (moving === undefined || tried(from, to, moving.hash)) continue;
+			const [occupiedAt] = index.sameFileAs(to);
+			const occupant =
+				occupiedAt === to ? index.entry(occupiedAt) : undefined;
+			if (
+				occupant?.kind === "crossroad" &&
+				(occupant.key === undefined || occupant.key === displaced.key)
+			) {
+				merges.push(displaced);
 				continue;
 			}
-			const collision = index.folderCollision(to);
-			const occupied =
-				index.sameFileAs(to).length > 0 ||
-				collision !== undefined ||
-				(yield* vault
-					.exists(mdSplitPath(to))
-					.pipe(Effect.orElseSucceed(() => true)));
-			if (occupied)
+			const reason = yield* blockedAt(to);
+			if (reason === undefined) {
+				// Links to a stray are bare, `[[Fahrer]]`, and Obsidian's link
+				// updater would rewrite them to the new name, `[[fahrer]]`, in
+				// the user's texts (#102). Left as they are, they resolve to the
+				// Crossroad note by name. A moved Crossroad note's links are
+				// path-qualified and aliased, so they follow it back.
+				moves.push({
+					from,
+					hash: moving.hash,
+					to,
+					updateLinks: displaced.kind === "crossroad",
+				});
+				crossroadMoves.push({ owner: from, path: to });
+			} else
 				blocked.push({
 					canonicalPath: to,
-					message:
-						collision === undefined
-							? "Another file sits at its own path; the two may be duplicates"
-							: `Its folder ${collision.folder} collides with ${collision.existing}`,
+					message: reason,
 					path: from,
 				});
-			else moves.push({ from, hash: moving.hash, to });
 		}
-		healingBlocked = blocked;
-		if (moves.length === 0) return;
-		const outcome = yield* Effect.result(
-			dispatch(
-				moves.map(
-					({ from, to }): VaultAction => ({
-						kind: VaultActionKind.RenameMdFile,
-						payload: {
-							from: mdSplitPath(from),
-							to: mdSplitPath(to),
-						},
-					}),
-				),
+		// Two notes of one spelling: the first moves, the second merges after.
+		const later = new Set(
+			findPathCollisions(crossroadMoves).map(
+				({ second }) => second.owner,
 			),
 		);
-		if (outcome._tag === "Failure")
-			yield* Effect.logWarning(
-				"Dictionary healing stopped; rebuilding the index",
-				outcome.failure,
-			);
-		for (const { from } of moves) cache?.delete(from);
-		yield* rereadChanges(moves.flatMap(({ from, to }) => [from, to]));
-		// A move that failed or landed elsewhere, such as VAM renaming it
-		// aside on a collision, is found by reading everything again; it is
-		// not tried again until its note changes.
-		const landed = ({ hash, to }: (typeof moves)[number]) =>
-			index.entry(to)?.hash === hash;
-		if (outcome._tag === "Success" && moves.every(landed)) return;
-		const rebuilt = yield* recover;
-		for (const move of moves) {
-			const left = index.entry(move.from);
-			if (!landed(move) && left !== undefined)
-				failedMoves.set(moveKey(move.from, move.to), left.hash);
+		for (const from of later) {
+			const at = moves.findIndex((move) => move.from === from);
+			const [move] = moves.splice(at, 1);
+			if (move)
+				blocked.push({
+					canonicalPath: move.to,
+					message:
+						"Another note of its spelling moves there first; it is merged into that one",
+					path: from,
+				});
 		}
-		if (rebuilt && retry) return yield* heal(false);
+		const healed = new Set<string>();
+		for (const displaced of merges)
+			if (yield* mergeDisplaced(displaced, blocked))
+				healed.add(displaced.to);
+		healingBlocked = blocked;
+		if (moves.length > 0) {
+			const outcome = yield* Effect.result(
+				dispatch(
+					moves.map(
+						({ from, to, updateLinks }): VaultAction => ({
+							kind: VaultActionKind.RenameMdFile,
+							payload: {
+								from: mdSplitPath(from),
+								to: mdSplitPath(to),
+								...(updateLinks ? {} : { updateLinks }),
+							},
+						}),
+					),
+				),
+			);
+			if (outcome._tag === "Failure")
+				yield* Effect.logWarning(
+					"Dictionary healing stopped; rebuilding the index",
+					outcome.failure,
+				);
+			for (const { from } of moves) cache?.delete(from);
+			yield* rereadChanges(moves.flatMap(({ from, to }) => [from, to]));
+			// A move that failed or landed elsewhere, such as VAM renaming it
+			// aside on a collision, is found by reading everything again; it is
+			// not tried again until its note changes.
+			const landed = ({ hash, to }: (typeof moves)[number]) =>
+				index.entry(to)?.hash === hash;
+			for (const move of moves) if (landed(move)) healed.add(move.to);
+			if (outcome._tag === "Failure" || !moves.every(landed)) {
+				const rebuilt = yield* recover;
+				for (const move of moves) {
+					const left = index.entry(move.from);
+					if (!landed(move) && left !== undefined)
+						failedMoves.set(moveKey(move.from, move.to), left.hash);
+				}
+				if (!(rebuilt && retry)) return healed;
+				return new Set([...healed, ...(yield* heal(false))]);
+			}
+		}
+		if (later.size > 0 && retry)
+			return new Set([...healed, ...(yield* heal(false))]);
+		return healed;
 	});
 
 	/** A conflict that reports the revision the caller should re-plan at. */
@@ -1219,6 +1316,85 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				phase: extra.length > 0 ? Phase.Own : Phase.FanOut,
 			},
 		];
+	});
+
+	/**
+	 * Merges a displaced note into its spelling's Crossroad note, which is
+	 * already there: its user text goes below the Crossroad's rendering,
+	 * then the note goes to the trash, only while it still holds what was
+	 * read, so text typed into it meanwhile waits for the next merge. A note
+	 * whose frontmatter holds properties stays, since the Crossroad note
+	 * cannot take them. Answers whether it merged; a note that stays is
+	 * added to `blocked`.
+	 */
+	const mergeDisplaced = Effect.fnUntraced(function* (
+		displaced: DisplacedCrossroad,
+		blocked: HealingBlocked[],
+	): Effect.fn.Return<boolean> {
+		const { from, to, key } = displaced;
+		const block = (message: string) => {
+			blocked.push({ canonicalPath: to, message, path: from });
+			return false;
+		};
+		const view = index;
+		const read = yield* Effect.result(readCurrent(view, from));
+		// A file ahead of the index: its event comes, and heals it then.
+		if (read._tag === "Failure") return false;
+		const current = read.success;
+		const { properties, texts } = crossroadUserText(current);
+		if (properties)
+			return block(
+				"Its Crossroad note is already there, and it holds properties a Crossroad note cannot take; move them by hand",
+			);
+		const planned = yield* Effect.result(
+			planCrossroad({
+				after: view,
+				extra: texts,
+				key,
+				skip: new Set(),
+				view,
+			}),
+		);
+		if (planned._tag === "Failure")
+			return planned.failure._tag === "StaleRead"
+				? false
+				: block(planned.failure.message);
+		const writes = planned.success;
+		if (writes.length > 0) {
+			const wrote = yield* Effect.result(
+				dispatch(writes.map(({ action }) => action)),
+			);
+			if (wrote._tag === "Failure") {
+				yield* Effect.logWarning(
+					`Dictionary could not merge ${from} into ${to}`,
+					wrote.failure,
+				);
+				yield* rereadChanges([to]);
+				return false;
+			}
+		}
+		const again = yield* Effect.result(
+			vault.readContentWithStat(mdSplitPath(from)),
+		);
+		if (again._tag === "Success" && again.success.content === current) {
+			const trashed = yield* Effect.result(
+				dispatch([
+					{
+						kind: VaultActionKind.TrashMdFile,
+						payload: { splitPath: mdSplitPath(from) },
+					},
+				]),
+			);
+			if (trashed._tag === "Failure")
+				yield* Effect.logWarning(
+					`Dictionary merged ${from} into ${to} but could not trash it`,
+					trashed.failure,
+				);
+		}
+		cache?.delete(from);
+		cache?.delete(to);
+		yield* rereadChanges([from, to]);
+		return index.entry(from) === undefined;
 	});
 
 	/**
@@ -1831,7 +2007,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		const before = index;
 		const changes = yield* rereadChanges(targets);
 		if (changes.length === 0) return false;
-		yield* heal();
+		const healed = yield* heal();
 		// Only Lemmas whose records changed move links in other notes; text
 		// typed into a note changes none.
 		const touched = new Set<string>();
@@ -1848,9 +2024,9 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		const changedPaths = new Set(changes.map(({ path }) => path));
 		yield* followUp(before, touched, changedPaths);
 		// A Crossroad note that appeared or changed without being current,
-		// such as the empty note a click leaves, is filled even though it
-		// was the file that changed.
-		yield* regenerateCrossroads(changedPaths);
+		// such as the empty note a click leaves or a stray healing moved, is
+		// filled even though it was the file that changed.
+		yield* regenerateCrossroads([...changedPaths, ...healed]);
 		return true;
 	});
 

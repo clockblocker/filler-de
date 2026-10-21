@@ -1228,6 +1228,104 @@ class TextfresserE2EDriver extends Plugin {
 				}
 				break;
 			}
+			case "wrapLink": {
+				const file = this.app.vault.getAbstractFileByPath(source.resolved);
+				if (!file || !isFile(file) || file.extension?.toLowerCase() !== "md") {
+					throw new DriverError(
+						"FileNotFound",
+						`cannot wrap a link in '${source.resolved}': markdown file not found`,
+					);
+				}
+				const selection = assertString(
+					operation.selection,
+					"params.operation.selection",
+					{ maxLength: 256 },
+				);
+				const editor = await openSourceEditor(this.app, file);
+				const content = editor.getValue();
+				const start = content.indexOf(selection);
+				if (
+					start < 0 ||
+					content.indexOf(selection, start + 1) >= 0 ||
+					selection.includes("\n")
+				) {
+					throw new DriverError(
+						"SelectionUnavailable",
+						"wrapLink selection must occur exactly once in the active file, on one line",
+					);
+				}
+				const end = start + selection.length;
+				editor.setSelection(editor.offsetToPos(start), editor.offsetToPos(end));
+				// Typing `[` over a selection wraps it in `[` and `]` and keeps it
+				// selected, as Obsidian's bracket auto-pair does; twice makes a link.
+				for (let depth = 0; depth < 2; depth += 1) {
+					const from = editor.offsetToPos(start + depth);
+					const to = editor.offsetToPos(end + depth);
+					editor.transaction({
+						changes: [
+							{ from, text: "[" },
+							{ from: to, text: "]" },
+						],
+						selection: {
+							from: { ch: from.ch + 1, line: from.line },
+							to: { ch: to.ch + 1, line: to.line },
+						},
+					});
+				}
+				const wrapped = editor.getValue();
+				if (
+					editor.getSelection() !== selection ||
+					wrapped.slice(start, end + 4) !== `[[${selection}]]`
+				) {
+					throw new DriverError(
+						"SelectionUnavailable",
+						"active editor did not wrap the requested selection in [[ ]]",
+						{ editorSelection: editor.getSelection() },
+					);
+				}
+				// Textfresser answers the completed link asynchronously; a link it
+				// leaves alone keeps the wrapped text.
+				const deadline = Date.now() + 2_000;
+				while (editor.getValue() === wrapped && Date.now() < deadline)
+					await sleep(20);
+				const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (view?.file !== file) {
+					throw new DriverError(
+						"EditorUnavailable",
+						`source editor for '${file.path}' is no longer active`,
+					);
+				}
+				await view.save();
+				break;
+			}
+			case "followLink": {
+				const file = this.app.vault.getAbstractFileByPath(source.resolved);
+				if (!file || !isFile(file) || file.extension?.toLowerCase() !== "md") {
+					throw new DriverError(
+						"FileNotFound",
+						`cannot follow a link in '${source.resolved}': markdown file not found`,
+					);
+				}
+				const linkpath = assertString(
+					operation.linkpath,
+					"params.operation.linkpath",
+					{ maxLength: 1_024 },
+				);
+				const editor = await openSourceEditor(this.app, file);
+				// Only a link the note holds is followed, as a click on it is.
+				const content = editor.getValue();
+				if (
+					!content.includes(`[[${linkpath}]]`) &&
+					!content.includes(`[[${linkpath}|`)
+				) {
+					throw new DriverError(
+						"LinkUnavailable",
+						`'${source.resolved}' holds no link to '${linkpath}'`,
+					);
+				}
+				await this.app.workspace.openLinkText(linkpath, file.path, false);
+				break;
+			}
 			case "pageNavigation": {
 				const file = this.app.vault.getAbstractFileByPath(source.resolved);
 				if (!file || !isFile(file) || file.extension?.toLowerCase() !== "md") {
@@ -1289,7 +1387,7 @@ class TextfresserE2EDriver extends Plugin {
 			default:
 				throw new DriverError(
 					"InvalidOperation",
-					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, classify, pageNavigation, or toggleCodexEntry",
+					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, classify, wrapLink, followLink, pageNavigation, or toggleCodexEntry",
 				);
 		}
 

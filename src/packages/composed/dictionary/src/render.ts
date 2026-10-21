@@ -8,6 +8,7 @@ import {
 	type LinkResolver,
 	type RenderOptions,
 	shadowOf,
+	WORTER_FOLDER,
 } from "@textfresser/lemma-note-codec";
 import { resolveShadow, spellingTarget } from "dumdict";
 import type * as Dumling from "dumling/types";
@@ -198,13 +199,20 @@ export function crossroadContentOf(
 	return { key, lemmas, surfaces };
 }
 
+/** Crossroad paths by form key; spelling one is pure, and healing asks for every note's on each change. */
+const crossroadPaths = new Map<string, string | undefined>();
+
 /** The path of a form key's Crossroad note, or undefined if none can be spelled. */
 export function crossroadPathOf(key: string): string | undefined {
+	if (crossroadPaths.has(key)) return crossroadPaths.get(key);
+	let path: string | undefined;
 	try {
-		return crossroadNotePath(key, "de").path;
+		path = crossroadNotePath(key, "de").path;
 	} catch {
-		return undefined;
+		path = undefined;
 	}
+	crossroadPaths.set(key, path);
+	return path;
 }
 
 /**
@@ -271,4 +279,54 @@ export function staleCrossroads(
 	return [...keys]
 		.filter((key) => crossroadStale(view, key))
 		.sort(byCodeUnit);
+}
+
+/** Obsidian's names for a new note, such as `Untitled 2`: no spelling. */
+const UNTITLED = /^Untitled(?: \d+)?$/u;
+
+/**
+ * A note that belongs at a Crossroad path but sits elsewhere: a stray, as
+ * Obsidian creates one directly in `Worter/` for a click on an unresolved
+ * bare link (`newFileFolderPath: Worter`), whose name is its spelling, or a
+ * Crossroad note moved away from its own path.
+ */
+export type DisplacedCrossroad = {
+	readonly from: string;
+	/** Its spelling's Crossroad path. */
+	readonly to: string;
+	/** The spelling's form key. */
+	readonly key: string;
+	readonly kind: "stray" | "crossroad";
+};
+
+/**
+ * Every displaced Crossroad note, by path. A stray named as Obsidian names
+ * a new note (`Untitled`, `Untitled 2`) is no word, and stays a stray.
+ */
+export function displacedCrossroads(view: NoteIndex): DisplacedCrossroad[] {
+	const displaced: DisplacedCrossroad[] = [];
+	for (const entry of view.allEntries()) {
+		if (entry.kind === "stray") {
+			const name = entry.path.slice(
+				`${WORTER_FOLDER}/`.length,
+				-".md".length,
+			);
+			if (UNTITLED.test(name)) continue;
+			const key = formKeyOf(name, "de");
+			const to = crossroadPathOf(key);
+			if (to !== undefined)
+				displaced.push({ from: entry.path, key, kind: "stray", to });
+			continue;
+		}
+		if (entry.kind !== "crossroad" || entry.key === undefined) continue;
+		const to = crossroadPathOf(entry.key);
+		if (to !== undefined && to !== entry.path)
+			displaced.push({
+				from: entry.path,
+				key: entry.key,
+				kind: "crossroad",
+				to,
+			});
+	}
+	return displaced.sort((a, b) => byCodeUnit(a.from, b.from));
 }

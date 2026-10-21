@@ -58,9 +58,12 @@ type UserPayloadByKey = {
 		};
 	};
 	WikilinkCompleted: {
-		canResolveNatively: boolean;
+		/** Whether the link is an embed, `![[…]]`. */
+		embed: boolean;
 		kind: typeof UserEventKind.WikilinkCompleted;
 		linkContent: string;
+		/** Where Obsidian resolves the link from its source note; absent when it resolves nowhere. */
+		resolvedPath?: string;
 		sourcePath?: string;
 	};
 };

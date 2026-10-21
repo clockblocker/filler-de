@@ -39,7 +39,7 @@ DOM Event → Detector → Codec.encode() → Payload → Handler.doesApply()?
 | CheckboxClicked | task checkbox | Update codex completion status |
 | CheckboxInFrontmatterClicked | property checkbox | Toggle node completion |
 | SelectAll | Cmd+A | Exclude frontmatter/go-back/meta from selection; only intercepted when note has exclusions, else native runs |
-| WikilinkCompleted | `]]` typed | Auto-insert display alias |
+| WikilinkCompleted | `]]` typed, or a selection wrapped in `[[ ]]` | Land a word on its Crossroad note, or auto-insert a Library alias |
 | SelectionChanged | mouse/keyboard | Toolbar visibility |
 | ActionElementClicked | [data-action] | Button handlers |
 

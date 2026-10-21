@@ -5,21 +5,36 @@
 import type { EditorView } from "@codemirror/view";
 import type { UserEffectFor } from "../../contracts";
 import { createEventCodec } from "../codec-factory";
+import type { CompletedLink } from "./link-at";
 import type { InternalWikilinkPayload } from "./payload";
 import { createWikilinkPayload } from "./payload";
 
 type WikilinkData = {
-	linkContent: string;
-	closePos: number;
+	link: CompletedLink;
 	view: EditorView;
 };
+
+/**
+ * Whether the editor still holds the link the payload was made from: an
+ * edit made before the handler answered moves or changes it, and then the
+ * effect is dropped rather than written over other text.
+ */
+function stillThere(payload: InternalWikilinkPayload): boolean {
+	const { state } = payload.view;
+	return (
+		state.sliceDoc(payload.contentFrom - 2, payload.contentFrom) === "[[" &&
+		state.sliceDoc(payload.closePos, payload.closePos + 2) === "]]" &&
+		state.sliceDoc(payload.contentFrom, payload.closePos).trim() ===
+			payload.linkContent
+	);
+}
 
 export const WikilinkCodec = createEventCodec(
 	/**
 	 * Encode wikilink data into a payload.
 	 */
 	(data: WikilinkData): InternalWikilinkPayload =>
-		createWikilinkPayload(data.linkContent, data.closePos, data.view),
+		createWikilinkPayload(data.link, data.view),
 	{
 		/**
 		 * Insert alias at closePos.
@@ -31,6 +46,7 @@ export const WikilinkCodec = createEventCodec(
 				{ aliasToInsert: string; resolvedTarget?: never }
 			>,
 		): void {
+			if (!stillThere(payload)) return;
 			payload.view.dispatch({
 				changes: {
 					from: payload.closePos,
@@ -50,15 +66,18 @@ export const WikilinkCodec = createEventCodec(
 				{ resolvedTarget: string }
 			>,
 		): void {
-			const from = payload.closePos - payload.linkContent.length;
-			const to = payload.closePos;
+			if (!stillThere(payload)) return;
 			const alias = effect.aliasToInsert;
 			const insert = alias
 				? `${effect.resolvedTarget}|${alias}`
 				: effect.resolvedTarget;
 
 			payload.view.dispatch({
-				changes: { from, insert, to },
+				changes: {
+					from: payload.contentFrom,
+					insert,
+					to: payload.closePos,
+				},
 			});
 		},
 	},

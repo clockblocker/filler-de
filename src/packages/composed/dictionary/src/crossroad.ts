@@ -206,6 +206,29 @@ export function crossroadMetadataOf(
 }
 
 /**
+ * The user's text in a note that is to be merged into a Crossroad note:
+ * every body line no seal of its Crossroad metadata claims, so all of a
+ * stray's body, as paragraphs. `properties` tells frontmatter beyond the
+ * Crossroad metadata, which a merge would lose.
+ */
+export function crossroadUserText(content: string): {
+	readonly texts: readonly string[];
+	readonly properties: boolean;
+} {
+	const seals = crossroadMetadataOf(content)?.rendering ?? [];
+	const texts = readBody(noteMetadataHelper.body(content), seals).flatMap(
+		(segment) =>
+			segment.type === "freeform" && segment.text.trim() !== ""
+				? [segment.text]
+				: [],
+	);
+	const own = noteMetadataHelper.remove(CrossroadNoteMetadata)(content);
+	const properties =
+		noteMetadataHelper.stripOnlyFrontmatter(own) !== own.trimStart();
+	return { properties, texts };
+}
+
+/**
  * Rewrites a file as the Crossroad note of `content`, keeping every line
  * of the user's text and adding `extra` after it, such as the text of a
  * removed Lemma's notes. An empty file, or one with text but no Crossroad

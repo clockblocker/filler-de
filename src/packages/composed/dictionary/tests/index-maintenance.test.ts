@@ -295,14 +295,14 @@ describe("recognition", () => {
 		expect(vault.content(gehenPath)).not.toBe(copy);
 	});
 
-	test("a stray in Worter/ is reported and left alone, never quarantined", async () => {
+	test("a new note Obsidian named in Worter/ is reported and left alone, never quarantined", async () => {
 		const { store, vault } = await seededStore();
-		await vault.userWrite("Worter/Fahrer.md", "my own words");
+		await vault.userWrite("Worter/Untitled 2.md", "my own words");
 		const diagnostics = await run(store.diagnostics);
-		expect(diagnostics.strays).toEqual(["Worter/Fahrer.md"]);
+		expect(diagnostics.strays).toEqual(["Worter/Untitled 2.md"]);
 		expect(diagnostics.quarantined).toEqual([]);
 		await seed(store, [contribute(gehenReading, "x")]);
-		expect(vault.content("Worter/Fahrer.md")).toBe("my own words");
+		expect(vault.content("Worter/Untitled 2.md")).toBe("my own words");
 	});
 
 	test("an empty Crossroad note a click left is a Crossroad note, filled as not classified yet", async () => {

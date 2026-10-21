@@ -102,7 +102,9 @@ export class MarkdownFileAccess {
 		}, Effect.tapError(annotateFileAccessFailure))();
 	}
 
-	renameFile<SPF extends SplitPathToAnyFile>(paths: SplitPathFromTo<SPF>) {
+	renameFile<SPF extends SplitPathToAnyFile>(
+		paths: SplitPathFromTo<SPF> & { readonly updateLinks?: boolean },
+	) {
 		const fromPath = pathfinder.systemPathFromSplitPath(paths.from);
 		const toPath = pathfinder.systemPathFromSplitPath(paths.to);
 		const self = this;

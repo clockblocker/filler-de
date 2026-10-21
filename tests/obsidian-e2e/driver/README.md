@@ -56,11 +56,17 @@ scenario reaches a provider; `status` counts its requests under
 `dumgenRequests`. `"resetDictionary": true` moves `Worter/` to Obsidian's trash first, and
 only in a vault whose config folder holds a `textfresser-e2e-vault` marker.
 `act` supports `create`, `modify`, `rename`, `delete`, and the narrow
-`splitToPages`, `splitInBlocks`, `classify`, `pageNavigation` and
-`toggleCodexEntry` Textfresser interactions; `create` also accepts
+`splitToPages`, `splitInBlocks`, `classify`, `wrapLink`, `followLink`,
+`pageNavigation` and `toggleCodexEntry` Textfresser interactions; `create` also accepts
 `"entryType": "folder"`. `classify` selects its `selection`, which must occur
 exactly once in the file, and runs the Classify command; `status` then
-reports, under `classify`, what that Classify handed to the resolver port. File content uses UTF-8 by default or canonical
+reports, under `classify`, what that Classify handed to the resolver port.
+`wrapLink` wraps its `selection`, which must occur exactly once on one line,
+in `[[ ]]` with two editor transactions, as Obsidian's bracket auto-pair
+does, waits up to two seconds for Textfresser to answer the completed link,
+and saves the note. `followLink` calls `Workspace.openLinkText` with its
+`linkpath`, which the note must hold as `[[<linkpath>]]` or
+`[[<linkpath>|…]]`. File content uses UTF-8 by default or canonical
 padded base64 with `"encoding": "base64"`.
 
 Run the transport and confinement tests directly:

@@ -31,6 +31,23 @@ type ScenarioAction =
 			readonly selection: string;
 	  }
 	| {
+			readonly kind: "wrapInLink";
+			readonly path: string;
+			/**
+			 * Text on one line that occurs exactly once in the note: it is
+			 * selected and wrapped in `[[ ]]` as typing `[` twice over a
+			 * selection does.
+			 */
+			readonly selection: string;
+	  }
+	| {
+			readonly kind: "clickLink";
+			/** A Library-relative note holding a `[[<linkpath>]]` or `[[<linkpath>|…]]` link. */
+			readonly path: string;
+			/** The link's target, as written, followed as a click on it is. */
+			readonly linkpath: string;
+	  }
+	| {
 			readonly direction: "next" | "prev";
 			readonly kind: "runPageNavigation";
 			readonly path: string;
@@ -444,6 +461,18 @@ function encodeAction(action: ScenarioAction): Readonly<Record<string, unknown>>
 				kind: "classify",
 				path: action.path,
 				selection: action.selection,
+			};
+		case "wrapInLink":
+			return {
+				kind: "wrapLink",
+				path: action.path,
+				selection: action.selection,
+			};
+		case "clickLink":
+			return {
+				kind: "followLink",
+				linkpath: action.linkpath,
+				path: action.path,
 			};
 		case "runPageNavigation":
 			return {

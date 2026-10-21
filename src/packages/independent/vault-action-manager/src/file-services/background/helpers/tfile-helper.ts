@@ -169,7 +169,11 @@ export class TFileHelper {
 		from,
 		to,
 		collisionStrategy = "rename",
-	}: SplitPathFromTo<SPF> & { collisionStrategy?: CollisionStrategy }) {
+		updateLinks = true,
+	}: SplitPathFromTo<SPF> & {
+		collisionStrategy?: CollisionStrategy;
+		updateLinks?: boolean;
+	}) {
 		return Effect.gen({ self: this }, function* () {
 			const { fromFile, toFile } = yield* this.resolveRenamePaths(
 				from,
@@ -182,8 +186,9 @@ export class TFileHelper {
 						from,
 						to,
 						collisionStrategy,
+						updateLinks,
 					)
-				: yield* this.performRename(fromFile, to);
+				: yield* this.performRename(fromFile, to, updateLinks);
 		});
 	}
 
@@ -255,6 +260,7 @@ export class TFileHelper {
 		from: SPF,
 		to: SPF,
 		collisionStrategy: CollisionStrategy,
+		updateLinks: boolean,
 	) {
 		return Effect.gen({ self: this }, function* () {
 			if (fromFile === toFile) return fromFile;
@@ -270,7 +276,12 @@ export class TFileHelper {
 				}
 			}
 			if (collisionStrategy === "skip") return toFile;
-			return yield* this.renameToIndexedPath(fromFile, from, to);
+			return yield* this.renameToIndexedPath(
+				fromFile,
+				from,
+				to,
+				updateLinks,
+			);
 		});
 	}
 
@@ -303,6 +314,7 @@ export class TFileHelper {
 		fromFile: TFile,
 		from: SPF,
 		to: SPF,
+		updateLinks: boolean,
 	) {
 		return Effect.gen({ self: this }, function* () {
 			const existingBasenames = yield* getExistingBasenamesInFolder(to);
@@ -320,7 +332,12 @@ export class TFileHelper {
 						existingBasenames,
 					),
 			});
-			yield* this.tryVaultRename(fromFile, indexedPath, from);
+			yield* this.tryVaultRename(
+				fromFile,
+				indexedPath,
+				from,
+				updateLinks,
+			);
 			return yield* this.getFile(indexedPath).pipe(
 				Effect.mapError((error) =>
 					operationFailure(
@@ -341,9 +358,10 @@ export class TFileHelper {
 	private performRename<SPF extends SplitPathToAnyFile>(
 		fromFile: TFile,
 		to: SPF,
+		updateLinks: boolean,
 	) {
 		return Effect.gen({ self: this }, function* () {
-			yield* this.tryVaultRename(fromFile, to, to);
+			yield* this.tryVaultRename(fromFile, to, to, updateLinks);
 			return yield* this.getFile(to).pipe(
 				Effect.mapError((error) =>
 					operationFailure(
@@ -365,12 +383,13 @@ export class TFileHelper {
 		file: TFile,
 		to: SPF,
 		from: SPF,
+		updateLinks: boolean,
 	) {
 		const toPath = pathfinder.systemPathFromSplitPath(to);
 		const fromPath = pathfinder.systemPathFromSplitPath(from);
 		return Effect.gen(function* () {
 			const vault = yield* VaultIo;
-			yield* vault.rename(file, toPath).pipe(
+			yield* vault.rename(file, toPath, { updateLinks }).pipe(
 				Effect.tapError((error) =>
 					Effect.logError(
 						"[TFileHelper.renameFile] vault.rename threw",
