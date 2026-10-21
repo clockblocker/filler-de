@@ -15,7 +15,9 @@ import { Effect } from "effect";
 import {
 	isEmptyRequest,
 	knowledgeRequestFor,
+	PRODUCE_LEMMA_PARADIGM,
 	PUBLISH_GENERATED_RELATIONS,
+	paradigmRequestFor,
 	type TranslationLanguage,
 } from "./knowledge-request";
 import type {
@@ -54,6 +56,8 @@ export type ProduceKnowledgeDeps = {
 	readonly store: ResolutionStore;
 	readonly translationLanguages: readonly TranslationLanguage[];
 	readonly publishRelations?: boolean;
+	/** Whether to ask for the Lemma Paradigm; {@link PRODUCE_LEMMA_PARADIGM} by default. */
+	readonly produceParadigm?: boolean;
 };
 
 export const produceKnowledge = Effect.fnUntraced(function* (
@@ -115,11 +119,24 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 			);
 		});
 
+	// TODO(#113): pass the stored Paradigm once the store's `lemmaNote`
+	// returns it, and publish `produced.paradigmChanges`.
+	const paradigm =
+		(deps.produceParadigm ?? PRODUCE_LEMMA_PARADIGM)
+			? paradigmRequestFor({
+					origin: job.origin,
+					reading,
+					readings: (note?.readings ?? []).map(
+						(entry) => entry.reading,
+					),
+				})
+			: undefined;
 	const produced = yield* deps.dumgen.knowledge.produce({
 		attestation: job.attestation,
 		language: "de",
 		onContribution: publishBaseText,
 		origin: job.origin,
+		...(paradigm === undefined ? {} : { paradigm }),
 		reading,
 		request,
 		sentence: job.sentence,

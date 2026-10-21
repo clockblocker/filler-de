@@ -101,7 +101,7 @@ lemmaNoteDataOf(metadata, { language }) / readingNoteDataOf(metadata, { language
 // Rendering boundary, tables, paths
 readBody(body, seals): BodySegment[]; sealOf(rendering): RenderingSeal
 BodyWriter; renderingLines(text)   // for other notes with user text, such as Crossroads (#114)
-inflectionFromPack(pack, draw?): InflectionHook<L>; lemmaTables(hook, input); tableOfReading(tables, reading)
+inflectionFromPack(pack, draw = drawTable): InflectionHook<L>; lemmaTables(hook, input); tableOfReading(tables, reading)
 surfaceBlockIds(surfaces); tableBlockIds(selectionKeys)
 notePathsOf(records): { lemma; readings; claims; collisions }
 ```
@@ -132,7 +132,7 @@ Visible Blocks, in order:
 | `header` | A German noun's article and a link to the Lemma's spelling |
 | `readings` | One link per Reading note, its alias the Emoji Description (the Canonical Form for a Foreign Reading) |
 | `flexion_title`, `inflection` | One table per Licence Group, from the inflection hook, each captioned with its group's emojis and ending in its Block ID |
-| `surface` | One list item per owned Surface: its form, its Surface Axes and its `^s-<hash>` Block ID, under "Surfaces encountered so far" |
+| `surface` | One list item per owned Surface: its form, its Surface Axes, any Licence Conflict mark and its `^s-<hash>` Block ID, under "Begegnete Formen" |
 
 Freeform stands last.
 
@@ -191,7 +191,7 @@ The codec is pure, so the caller supplies every input a projection reads beyond 
 | --- | --- |
 | Note paths | `paths`; by default the path module (ADR-0015). `notePathsOf` gives a Lemma's notes' paths and the collisions among them |
 | `readings` | The Lemma's Reading Entries, in the records |
-| `inflection`, `inflection_embed`, Surface Axes | The `inflection` hook. `inflectionFromPack(pack)` builds one from `projectLemmaTables`' `LemmaTablesView` (texteater#1228) and the pack's `labels` and `display`. Until #120 lands, the plugin's hook wraps `@textfresser/lemma-note-projections` (Derived projections) |
+| `inflection`, `inflection_embed`, Surface Axes, Licence Conflicts | The `inflection` hook. `inflectionFromPack(pack)` builds one from `projectLemmaTables`' `LemmaTablesView` (texteater#1228), drawing each group with `drawTable` and the pack's `labels` and `display`, its Surface Axes from `surfaceAxes` through `labels.bundle`. The plugin's hook is `inflectionFromPack(inflectionPacks.de)`, the German Inflection Pack of `dumcorpus/inflection` (texteater#1229) |
 | `tags` | The `tags` hook |
 | `inverse_relation` | The `inverseRelations` hook: `SemanticRelationProjection`s for this Reading, computed by the store; see Projected inverse relations |
 | Links in any rendering | `resolve`: the `LinkTarget` the store holds for each link (texteater#1221) |
@@ -325,29 +325,70 @@ die [[Worter/m/mut/mutte/mutter|Mutter]]
 <span class="note_block_title note_block_title_flexion">Flexion</span>
 
 👩
-N: die Mutter, die Mütter
-A: die Mutter, die Mütter
-G: der Mutter, der Mütter
-D: der Mutter, den Müttern
+N: die [[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter|Mutter]], die Mütter
+A: die [[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter|Mutter]], die Mütter
+G: der [[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter|Mutter]], der Mütter
+D: der [[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter|Mutter]], den Müttern
 ^t-8ed83aad
 
 🔩
-N: die Mutter, die Muttern
-A: die Mutter, die Muttern
-G: der Mutter, der Muttern
-D: der Mutter, den Muttern
+N: die [[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter|Mutter]], die Muttern
+A: die [[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter|Mutter]], die Muttern
+G: der [[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter|Mutter]], der Muttern
+D: der [[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter|Mutter]], den Muttern
 ^t-eb48dc8c
 
-<span class="note_block_title note_block_title_surfaces">Surfaces encountered so far</span>
+<span class="note_block_title note_block_title_surfaces">Begegnete Formen</span>
 - Mütter: Nom.Pl ^s-95e50a29
-- Muttern: Acc.Pl ^s-b41162c0
+- Muttern: Akk.Pl ⚠ 👩 → 🔩 ^s-b41162c0
+```
+
+Here Muttern was also met in a text judged 👩, whose Licence takes only Mütter: a Licence Conflict, marked on its line and never written into 👩's table.
+
+Tables of other routes, shown with bare links (`paths.lemma` undefined); the Lemma note links them at its path:
+
+```
+🚉
+Präsens: ich fahre … ab, du fährst … ab, er fährt … ab, wir fahren … ab, ihr fahrt … ab, sie fahren … ab
+Präteritum: ich fuhr … ab, du fuhrst … ab, er fuhr … ab, wir fuhren … ab, ihr fuhrt … ab, sie fuhren … ab
+Konjunktiv II: ich führe … ab, du führest … ab, er führe … ab, wir führen … ab, ihr führet … ab, sie führen … ab
+Partizip II: abgefahren
+^t
+
+🐄 💰
+Präsens: ich melke, du melkst / milkst, er melkt / milkt, wir [[melken]], ihr melkt, sie [[melken]]
+Präteritum: ich melkte / molk, du melktest / molkst, er melkte / molk, wir melkten / molken, ihr melktet / molkt, sie melkten / molken
+Konjunktiv II: ich melkte / mölke, du melktest / mölkest, er melkte / mölke, wir melkten / mölken, ihr melktet / mölket, sie melkten / mölken
+Partizip II: gemelkt / gemolken
+^t
+
+⚡
+Positiv: [[schnell]]
+Komparativ: schneller
+Superlativ: am schnellsten
+^t
+
+👉
+N: [[dieser]] (m), dieses (n), diese (f), diese (Pl)
+A: diesen (m), dieses (n), diese (f), diese (Pl)
+G: dieses (m), dieses (n), [[dieser]] (f), [[dieser]] (Pl)
+D: diesem (m), diesem (n), [[dieser]] (f), diesen (Pl)
+^t
 ```
 
 - **Header.** In a Reading note: the Emoji Description, a German noun's article, a link to its Lemma note, and the transcription as a YouGlish link with `♫` in its text (`/…/` for a language YouGlish lacks). In a Lemma note: the article and a link to its spelling's Crossroad note. The transcription is Reading Knowledge, so only Reading notes show it.
 - **Sections.** In a Reading note, every Block but the header belongs to a section, in this order: Deine Kontexte (`attestation`), Note (`notes_title`, `notes`, `notes_placeholder`), Semantische Beziehungen (`relation`, `pending_relation`, `inverse_relation`), Morpheme (`morphology`), Übersetzung (`translation`, `attested_translation`), Definition, Valenz, Partizip von, Art (`locution_type`, `saying_type`, `formula_role`), Flexion (`inflection_embed`) and Tags. A section opens with its title, `<span class="note_block_title note_block_title_<class>">Title</span>`. The class is the example's: `kontexte` (the Note title's too), `synonyme`, `morpheme`, `translations`, `flexion`, `tags`, and the section's own name for the new ones (`surfaces` in a Lemma note). Titles are cosmetic: `titles` replaces them, and an empty title leaves the line out.
 - **Spacing.** A blank line follows the header, two follow the Note section, and sections otherwise stand on consecutive lines, as in the example. In a Lemma note, a blank line separates the header, the Reading links, the Flexion title, each table and the Surface list.
 - **Renderings.** Attestation embeds are separated by a blank line. Relations are one line per relation with the dictionary's symbols, `=` synonym, `≈` near synonym, `≠` antonym, `≉` near antonym, `⊃` hypernym, `⊂` hyponym, `∋` holonym, `∈` meronym, `⇒` endonym, `⇐` exonym, each target once, so direct, pending and projected relations read as one list. A morphological tree lists its leaves. Translations show their words, prefixed by the language only when there are several; attested translations show in italics. Links alias the spelling alone. Inflection cells are display-only (batteries ADR 0019).
-- **The Surface list** lists every owned Surface, in-core forms included: an Obsidian Block ID cannot sit in a table cell, so the list is where every Surface's `^s-<hash>` anchor lives. Each line is a list item, so each is its own block.
+- **Tables** (`drawTable`) are drawn in the dictionary's line style, never as Markdown grids, from the shape of the pack's view alone; the drawer names no case, tense or person.
+  - **One panel** (a noun's declension, a comparison, a stem's declension): one line per row, `<row label>: <cells>`, with no panel caption.
+  - **Several panels** (a verb's Präsens, Präteritum, Konjunktiv II and Partizip II): a single-column panel is one line, `<panel label>: <its rows' cells>`, the display's Context telling the rows apart; any other panel is its label on a line of its own, then its rows.
+  - **Cells** stand in column order with `, ` between them. In a panel of more than two columns, each cell is followed by its column label (`dieser (m)`), since order alone no longer tells them apart.
+  - **Forms** show the pack's display runs: Context as plain text (`die`, `er`), a Gap as ` … ` (`er fährt … ab`), and ` / ` between a cell's forms (`er melkte / molk`), a leading Context they all share shown once. A form that is one Form run spelled as the Lemma's Canonical Form links the Lemma note (link role `inflection`); every other form is plain text, as the dictionary notes wrote them.
+  - **Holes.** An Unknown cell, which neither derivation nor a met form fills, shows `?`. An Absent cell, which the language or the group's licensed selection gives no form (a `NoPlural` noun's plural), shows `—`. A met form only one of whose candidate cells this is (a Surface Syncretism placed OneOf) gets ` (?)`. A row with no form, a column Absent in every row, and a panel with neither are left out; a group with no line gets no table. A met form that no stored variant derives in the cell it Covers (`undescribed`) is never written there; it shows only in the Surface list.
+- **The Surface list**, "Begegnete Formen", lists every owned Surface, in-core forms included: an Obsidian Block ID cannot sit in a table cell, so the list is where every Surface's `^s-<hash>` anchor lives. Each line is a list item, so each is its own block: `- <form>: <Surface Axes> <marks> ^s-<hash>`.
+  - **Surface Axes** come from `surfaceAxes` through the pack's `labels.bundle` (`Dat.Pl`, `Präs.3.Sg`): the bundles of the cells the Surface Covers, `, ` between them, or of the cells it may be OneOf, ` / ` between them, then its bundles that fit no cell.
+  - **Licence Conflicts.** A Surface met under a Reading whose Licence doesn't take its form gets `⚠ <that Reading> → <the groups it fits>`, by emoji (`⚠ 👩 → 🔩`), one per Reading. A conflict is never written into a table.
 - **Note.** A Reading note always has the Note title, so a user knows where to write. While the note has neither `notes` nor freeform, `notes_placeholder` shows `*You can write here*`.
 - **Not rendered.** The example's Verweise section and its compound-parts line have no data, nor do the old "Morphologische Relationen" (Verwendet in) backlinks and "Abweichungen" (open question 2).
 
@@ -365,15 +406,11 @@ The dictionary store still keeps one file per Lemma at its ADR-0013 path (`legac
 - **Re-rendering.** A commit renders every note it writes against the post-commit index. Once its writes landed, the store rewrites the notes whose `inverse_relation` Blocks the index changed, as a compare-and-swap under the writer lock, retried for at most three rounds. A re-render that still fails is logged and never fails the commit. A full rebuild, such as startup, re-renders nothing.
 - **Revisions.** A re-render changes no record, so it does not move the revision.
 
-## Derived projections (#75, until #120)
+## Derived projections
 
-Until [#120](https://github.com/clockblocker/filler-de/issues/120) moves them to the dumcorpus German pack, `@textfresser/lemma-note-projections` derives the German inflection tables and tags without a model. Its interim hooks (`interim.ts`) give each Licence Group of `dumrel`'s `licenceGroups` its table, from the principal parts its licensed Paradigm Variants hold, and each Reading its tags, from its own Licences. Its cells are display-only, never Surfaces (batteries ADR 0019); forms come from stored data, never from pattern labels (ADR 0038), and a cell whose form the data leaves in doubt is left out, not guessed.
+Inflection tables come from the batteries ([#120](https://github.com/clockblocker/filler-de/issues/120)): `dumdict/inflection`'s `projectLemmaTables` projects them from the Lemma Paradigm and the German Inflection Pack of `dumcorpus/inflection`, which owns every German rule and label, and the codec only draws them (Layout). The plugin composes its projections in `src/stateless-helpers/dictionary-projections.ts`.
 
-- **Nouns.** A case table from the Canonical Form, Core `gender`, the plural and dumcorpus's definite article cells. A singular form an owned Surface attests wins. No weak (n-Deklination) form is derived, and a genitive whose ending is in doubt is left out unless a Surface attests it.
-- **Verbs.** Stored principal parts win over rules, for any class. Without them, a weak verb gets Präsens, Präteritum, Konjunktiv II, Partizip II and Imperativ, with its particle and reflexive in place; any other verb gets only what its stored forms and the regular Präsens cells allow. The haben/sein auxiliary is never shown.
-- **Comparison.** A `comparable` ADJ or ADV gets Positiv, Komparativ and Superlativ: suppletive forms from dumcorpus, then a stored comparative Surface, then regular forms for an ADJ whose stem cannot umlaut.
-- **Closed classes.** A declining DET or PRON stem gets its case table from dumcorpus's realizations, and a closed VERB or AUX lists its forms.
-- **Tags.** The route, one nested tag per Core Feature value (`noun/masculine`, `verb/separable`, `verb/reflexive-acc`), and the inflection class the Reading's own Licences give (`verb/weak` from a preterite in -te, `noun/plural-only`). Tags stay in the plugin after #120.
+`@textfresser/lemma-note-projections` keeps only the Reading's Tags, which are Obsidian's: the route, one nested tag per Core Feature value (`noun/masculine`, `verb/separable`, `verb/reflexive-acc`), and the inflection class the Reading's own Licences give in the Lemma Paradigm: each licensed Präteritum variant's conjugation class (`verb/strong` for `fuhr`, both classes for melken's `molk / melkte`) and a licensed plural marker (`noun/singular-only`, `noun/plural-only`).
 
 [dumling]: https://github.com/clockblocker/texteater/blob/main/battery/dumling/GLOSSARY.md
 [dumrel]: https://github.com/clockblocker/texteater/blob/main/battery/dumrel/GLOSSARY.md

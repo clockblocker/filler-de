@@ -113,6 +113,27 @@ describe("dumgenUnitResolver", () => {
 		expect(harness.notices).toEqual(["✓ Knowledge for See 🌊 saved"]);
 	});
 
+	it("asks for the Lemma Paradigm, with the Lemma's Readings, only when enabled (TODO(#113))", async () => {
+		const content = "Der See ist tief. ^0\n";
+		const plan = planFor({ content, scrollPath: SCROLL, sentenceText: "Der See ist tief.", units: seeUnits });
+		const stub = () =>
+			stubDumgen({
+				grammar: seeGrammar,
+				knowledge: baseTextKnowledge,
+				reading: () => ({ _tag: "New", emojiDescription: "🌊" }),
+			});
+		const off = stub();
+		await (await resolutionHarness({ content, dumgen: off.dumgen, scrollPath: SCROLL })).resolve(plan);
+		expect(off.calls.knowledge[0]?.paradigm).toBeUndefined();
+
+		const on = stub();
+		await (
+			await resolutionHarness({ content, dumgen: on.dumgen, produceParadigm: true, scrollPath: SCROLL })
+		).resolve(plan);
+		const reading = { emojiDescription: "🌊", lemma: see, unitKind: "Reading" } as Dumling.Reading<"de">;
+		expect(on.calls.knowledge[0]?.paradigm).toEqual({ dimensions: ["plural"], readings: [reading] });
+	});
+
 	it("re-encounters the same sense: appends its Attestation and asks no Knowledge", async () => {
 		const content = "Der See ist tief. ^0\n\nDer See ist kalt. ^1\n";
 		const stub = stubDumgen({

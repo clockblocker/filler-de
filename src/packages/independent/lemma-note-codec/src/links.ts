@@ -32,7 +32,9 @@ export type LinkRole =
 	/** A Valency Frame's preposition. */
 	| "valency"
 	/** A participle's source verb. */
-	| "participleSource";
+	| "participleSource"
+	/** An inflection table's form spelled as its own Lemma: `N: die [[Mutter]], die Mütter`. */
+	| "inflection";
 
 /** What the note's data names. */
 export type LinkNamed<L extends Dumling.Language = Dumling.Language> =
@@ -70,8 +72,9 @@ export function shadowOf<L extends Dumling.Language>(
  *
  * - an exact Reading, which only an exact claim or a `morphemeReading` names,
  *   goes to its Reading note;
- * - a Lemma a direct claim names, and a Reading note's own Lemma, go to the
- *   Lemma note: dumdict holds a direct claim only on a stored Lemma;
+ * - a Lemma a direct claim names, a Reading note's own Lemma, and a table's
+ *   form spelled as its Lemma, go to the Lemma note: dumdict holds a direct
+ *   claim only on a stored Lemma, and a table is its own Lemma's;
  * - everything else goes to its spelling's Crossroad note: Unit Shadows,
  *   inverse sources, a preposition or a source verb that may be stored
  *   nowhere, and a Lemma note's own spelling.
@@ -82,7 +85,10 @@ export function defaultResolve<L extends Dumling.Language>({
 }: LinkSubject<L>): LinkTarget<L> {
 	if (names.kind === "Reading")
 		return { kind: "Reading", reading: names.reading };
-	if (names.kind === "Lemma" && (role === "relation" || role === "header"))
+	if (
+		names.kind === "Lemma" &&
+		(role === "relation" || role === "header" || role === "inflection")
+	)
 		return { kind: "Lemma", lemma: names.lemma };
 	const { canonicalForm, language } =
 		names.kind === "Shadow" ? names.shadow : names.lemma;

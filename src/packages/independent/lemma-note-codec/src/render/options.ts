@@ -35,7 +35,7 @@ export type RenderOptions<L extends Dumling.Language> = {
 	readonly resolve?: LinkResolver<L>;
 	/** Where targets live; the path module (ADR-0015) by default. */
 	readonly paths?: Partial<NotePaths<L>>;
-	/** The Lemma's inflection tables (#120 swaps in the German pack). */
+	/** The Lemma's inflection tables, normally `inflectionFromPack` of a language's Inflection Pack. */
 	readonly inflection?: InflectionHook<L>;
 	/** A Reading note's tags, without `#`. */
 	readonly tags?: (

@@ -4,7 +4,6 @@ import {
 	makeDumdictVaultStore,
 	WORTER_SPLIT_PATH,
 } from "@textfresser/dictionary";
-import { derivedProjections } from "@textfresser/lemma-note-projections";
 import {
 	createObsidianEventLayer,
 	type ObsidianEventLayer,
@@ -72,6 +71,7 @@ import {
 	holdsRetiredSettings,
 	settingsFromStoredData,
 } from "./settings/stored-settings";
+import { dictionaryProjections } from "./stateless-helpers/dictionary-projections";
 import {
 	LemmaNoteMetadata,
 	LibraryMetadata,
@@ -664,7 +664,7 @@ export default class TextEaterPlugin extends Plugin {
 								.join(", "),
 						);
 				},
-				projections: derivedProjections,
+				projections: dictionaryProjections,
 				vault: this.vam,
 			}),
 		);

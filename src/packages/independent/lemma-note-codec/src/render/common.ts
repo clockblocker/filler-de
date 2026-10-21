@@ -36,7 +36,7 @@ export const DEFAULT_TITLES: Readonly<Record<SectionKind, string>> = {
 	morpheme: "Morpheme",
 	note: "Note",
 	partizip: "Partizip von",
-	surfaces: "Surfaces encountered so far",
+	surfaces: "Begegnete Formen",
 	synonyme: "Semantische Beziehungen",
 	tags: "Tags",
 	translations: "Übersetzung",

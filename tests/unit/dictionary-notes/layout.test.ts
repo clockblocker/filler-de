@@ -8,24 +8,36 @@ import {
 	serializeLemmaNote,
 	serializeReadingNote,
 } from "@textfresser/lemma-note-codec";
-import { derivedProjections } from "@textfresser/lemma-note-projections";
+import { dictionaryProjections } from "../../../src/stateless-helpers/dictionary-projections";
 import {
+	abfahren,
+	abfahrenReading,
+	dieser,
+	dieserReading,
 	fahren,
 	fahrenReading,
 	kohlekraftwerk,
 	kohlekraftwerkReading,
+	melken,
+	melkenCow,
+	melkenFleece,
 	mutter,
+	mutterConflict,
 	mutterNut,
 	mutterParent,
+	nounRecords,
+	schnell,
+	schnellReading,
 } from "./layout-fixtures";
 
 /**
  * Golden notes in the user's dictionary layout (#103, #104), split across
- * a Lemma note and its Reading notes (#112), with the plugin's interim
- * German tables and tags (TODO(#120): the German Inflection Pack).
+ * a Lemma note and its Reading notes (#112), with the German Inflection
+ * Pack's tables drawn in the dictionary's line style, and the plugin's
+ * tags (#120).
  */
 
-const options = derivedProjections;
+const options = dictionaryProjections;
 const title = (kind: string, text: string) =>
 	`<span class="note_block_title note_block_title_${kind}">${text}</span>`;
 const KONTEXTE = title("kontexte", "Deine Kontexte");
@@ -33,6 +45,18 @@ const NOTE = title("kontexte", "Note");
 const FLEXION = title("flexion", "Flexion");
 const TAGS = title("tags", "Tags");
 const TRANSLATIONS = title("translations", "Übersetzung");
+const SURFACES = title("surfaces", "Begegnete Formen");
+const MUTTER = "[[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter|Mutter]]";
+
+/** The Lemma note's lines from `^id`'s table up to its Block ID. */
+function tableBlock(body: string, blockId: string): string {
+	const lines = body.split("\n");
+	const end = lines.indexOf(`^${blockId}`);
+	if (end < 0) throw new Error(`No table ^${blockId}`);
+	let start = end;
+	while (start > 0 && (lines[start - 1] ?? "") !== "") start--;
+	return lines.slice(start, end + 1).join("\n");
+}
 
 describe("a Reading note reads as the user's dictionary example", () => {
 	it("lays out a noun with relations, morphemes and two Attestations", () => {
@@ -115,23 +139,36 @@ describe("a Lemma note shows its Readings, tables and met Surfaces", () => {
 ${FLEXION}
 
 👩
-N: die Mutter, die Mütter
-A: die Mutter, die Mütter
-G: der Mutter, der Mütter
-D: der Mutter, den Müttern
+N: die ${MUTTER}, die Mütter
+A: die ${MUTTER}, die Mütter
+G: der ${MUTTER}, der Mütter
+D: der ${MUTTER}, den Müttern
 ^t-8ed83aad
 
 🔩
-N: die Mutter, die Muttern
-A: die Mutter, die Muttern
-G: der Mutter, der Muttern
-D: der Mutter, den Muttern
+N: die ${MUTTER}, die Muttern
+A: die ${MUTTER}, die Muttern
+G: der ${MUTTER}, der Muttern
+D: der ${MUTTER}, den Muttern
 ^t-eb48dc8c
 
-${title("surfaces", "Surfaces encountered so far")}
+${SURFACES}
 - Mütter: Nom.Pl ^s-95e50a29
-- Muttern: Acc.Pl ^s-b41162c0
+- Muttern: Akk.Pl ^s-b41162c0
 `);
+	});
+
+	it("marks a Licence Conflict on its Surface's line, never in a table", () => {
+		const body = renderLemmaNote(mutterConflict, options);
+		// Muttern met under 👩, whose Licence takes only Mütter: it fits 🔩.
+		expect(body).toContain(`${SURFACES}
+- Mütter: Nom.Pl ^s-95e50a29
+- Muttern: Akk.Pl ⚠ 👩 → 🔩 ^s-b41162c0
+`);
+		expect(tableBlock(body, "t-8ed83aad")).not.toContain("Muttern");
+		expect(tableBlock(body, "t-8ed83aad")).toBe(
+			tableBlock(renderLemmaNote(mutter, options), "t-8ed83aad"),
+		);
 	});
 
 	it("a single Licence Group's table is ^t", () => {
@@ -142,25 +179,164 @@ ${title("surfaces", "Surfaces encountered so far")}
 ${FLEXION}
 
 🏭
-N: das Kohlekraftwerk, die Kohlekraftwerke
-A: das Kohlekraftwerk, die Kohlekraftwerke
+N: das [[Worter/de/Lexeme/NOUN/Neut/k/koh/kohle/Kohlekraftwerk|Kohlekraftwerk]], die Kohlekraftwerke
+A: das [[Worter/de/Lexeme/NOUN/Neut/k/koh/kohle/Kohlekraftwerk|Kohlekraftwerk]], die Kohlekraftwerke
 G: des Kohlekraftwerks, der Kohlekraftwerke
-D: dem Kohlekraftwerk, den Kohlekraftwerken
+D: dem [[Worter/de/Lexeme/NOUN/Neut/k/koh/kohle/Kohlekraftwerk|Kohlekraftwerk]], den Kohlekraftwerken
 ^t
 
-${title("surfaces", "Surfaces encountered so far")}
+${SURFACES}
 - Kohlekraftwerken: Dat.Pl ^s-8baa5baa
 `);
-		expect(renderLemmaNote(fahren, options)).toContain(`${FLEXION}
+	});
+});
 
-🚗
-Präsens: ich fahre, du fährst, er fährt, wir fahren, ihr fahrt, sie fahren
+/** Tables with each form spelled as the Lemma linked bare, as the vault's notes link it. */
+const bare = { ...options, paths: { lemma: () => undefined } };
+
+describe("the German Inflection Pack's tables in the dictionary's line style", () => {
+	it("fahren: one line per tense, the Lemma's own form linked", () => {
+		expect(tableBlock(renderLemmaNote(fahren, bare), "t")).toBe(`🚗
+Präsens: ich fahre, du fährst, er fährt, wir [[fahren]], ihr fahrt, sie [[fahren]]
 Präteritum: ich fuhr, du fuhrst, er fuhr, wir fuhren, ihr fuhrt, sie fuhren
 Konjunktiv II: ich führe, du führest, er führe, wir führen, ihr führet, sie führen
 Partizip II: gefahren
-^t
+^t`);
+	});
+
+	it("abfahren: a separable verb's finite forms split off their particle after a Gap", () => {
+		const body = renderLemmaNote(abfahren, bare);
+		expect(tableBlock(body, "t")).toBe(`🚉
+Präsens: ich fahre … ab, du fährst … ab, er fährt … ab, wir fahren … ab, ihr fahrt … ab, sie fahren … ab
+Präteritum: ich fuhr … ab, du fuhrst … ab, er fuhr … ab, wir fuhren … ab, ihr fuhrt … ab, sie fuhren … ab
+Konjunktiv II: ich führe … ab, du führest … ab, er führe … ab, wir führen … ab, ihr führet … ab, sie führen … ab
+Partizip II: abgefahren
+^t`);
+		expect(body).toContain(`${SURFACES}\n- fährt ab: Präs.3.Sg ^s-`);
+		expect(
+			renderReadingNote(abfahren, abfahrenReading, options),
+		).toContain(
+			`${FLEXION}\n![[Worter/de/Lexeme/VERB/ab/a/abf/abfah/abfahren#^t|abfahren]]\n`,
+		);
+	});
+
+	it("melken: a Free Lemma has one table, its cells holding every licensed form", () => {
+		const body = renderLemmaNote(melken, bare);
+		expect(tableBlock(body, "t")).toBe(`🐄 💰
+Präsens: ich melke, du melkst / milkst, er melkt / milkt, wir [[melken]], ihr melkt, sie [[melken]]
+Präteritum: ich melkte / molk, du melktest / molkst, er melkte / molk, wir melkten / molken, ihr melktet / molkt, sie melkten / molken
+Konjunktiv II: ich melkte / mölke, du melktest / mölkest, er melkte / mölke, wir melkten / mölken, ihr melktet / mölket, sie melkten / mölken
+Partizip II: gemelkt / gemolken
+^t`);
+		expect(body).toContain(`${SURFACES}\n- molk: Prät.3.Sg ^s-`);
+		for (const reading of [melkenCow, melkenFleece])
+			expect(renderReadingNote(melken, reading, options)).toContain(
+				"/melken#^t|melken]]",
+			);
+	});
+
+	it("schnell: a comparable adjective's comparison, and a declined form in the list", () => {
+		const body = renderLemmaNote(schnell, bare);
+		expect(tableBlock(body, "t")).toBe(`⚡
+Positiv: [[schnell]]
+Komparativ: schneller
+Superlativ: am schnellsten
+^t`);
+		expect(body).toContain(`${SURFACES}
+- schneller: Komp ^s-52b1489f
+- schnellen: Dat.Sg.m.Pos ^s-cbe769c5
 `);
 	});
+
+	it("dieser: a determiner stem's columns carry their labels", () => {
+		expect(tableBlock(renderLemmaNote(dieser, bare), "t")).toBe(`👉
+N: [[dieser]] (m), dieses (n), diese (f), diese (Pl)
+A: diesen (m), dieses (n), diese (f), diese (Pl)
+G: dieses (m), dieses (n), [[dieser]] (f), [[dieser]] (Pl)
+D: diesem (m), diesem (n), [[dieser]] (f), diesen (Pl)
+^t`);
+	});
+});
+
+/**
+ * The 5 Flexion tables of the dev vault's generated entries (#62, #75),
+ * copied from `Worter/` with their wikilinks: 40 cells.
+ */
+const VAULT_TABLES: readonly {
+	readonly lemma: string;
+	readonly gender: "Fem" | "Masc" | "Neut";
+	readonly plural: string;
+	readonly flexion: string;
+}[] = [
+	{
+		flexion: `N: der [[Tag]], die [[Tage]]
+A: den [[Tag]], die [[Tage]]
+G: des [[Tages]], der [[Tage]]
+D: dem [[Tag]], den [[Tagen]]`,
+		gender: "Masc",
+		lemma: "Tag",
+		plural: "Tage",
+	},
+	{
+		flexion: `N: das [[Team]], die [[Teams]]
+A: das [[Team]], die [[Teams]]
+G: des [[Teams]], der [[Teams]]
+D: dem [[Team]], den [[Teams]]`,
+		gender: "Neut",
+		lemma: "Team",
+		plural: "Teams",
+	},
+	{
+		flexion: `N: das [[Formular]], die [[Formulare]]
+A: das [[Formular]], die [[Formulare]]
+G: des [[Formulars]], der [[Formulare]]
+D: dem [[Formular]], den [[Formularen]]`,
+		gender: "Neut",
+		lemma: "Formular",
+		plural: "Formulare",
+	},
+	{
+		flexion: `N: der [[Fahrer]], die [[Fahrer]]
+A: den [[Fahrer]], die [[Fahrer]]
+G: des [[Fahrers]], der [[Fahrer]]
+D: dem [[Fahrer]], den [[Fahrern]]`,
+		gender: "Masc",
+		lemma: "Fahrer",
+		plural: "Fahrer",
+	},
+	{
+		flexion: `N: die [[Fahrkarte]], die [[Fahrkarten]]
+A: die [[Fahrkarte]], die [[Fahrkarten]]
+G: der [[Fahrkarte]], der [[Fahrkarten]]
+D: der [[Fahrkarte]], den [[Fahrkarten]]`,
+		gender: "Fem",
+		lemma: "Fahrkarte",
+		plural: "Fahrkarten",
+	},
+];
+
+describe("the dev vault's Flexion tables, through the German Inflection Pack", () => {
+	it("hold 40 cells", () => {
+		expect(
+			VAULT_TABLES.flatMap(({ flexion }) =>
+				flexion.split("\n").flatMap((row) => row.split(": ")[1]?.split(", ")),
+			),
+		).toHaveLength(40);
+	});
+
+	for (const { flexion, gender, lemma, plural } of VAULT_TABLES)
+		it(`${lemma}: every cell as the vault shows it, only the forms spelled as the Lemma linked`, () => {
+			const records = nounRecords(lemma, gender, plural);
+			expect(tableBlock(renderLemmaNote(records, bare), "t")).toBe(
+				[
+					"📘",
+					flexion.replace(/\[\[([^\]]+)\]\]/gu, (whole, form) =>
+						form === lemma ? whole : form,
+					),
+					"^t",
+				].join("\n"),
+			);
+		});
 });
 
 describe("the golden notes round-trip", () => {
@@ -168,6 +344,11 @@ describe("the golden notes round-trip", () => {
 		["Kohlekraftwerk", kohlekraftwerk, [kohlekraftwerkReading]],
 		["fahren", fahren, [fahrenReading]],
 		["Mutter", mutter, [mutterParent, mutterNut]],
+		["Mutter with a Licence Conflict", mutterConflict, [mutterParent, mutterNut]],
+		["abfahren", abfahren, [abfahrenReading]],
+		["melken", melken, [melkenCow, melkenFleece]],
+		["schnell", schnell, [schnellReading]],
+		["dieser", dieser, [dieserReading]],
 	] as const)
 		it(`${name}: parse → serialize gives the same notes`, () => {
 			const lemma = serializeLemmaNote(records, options);
