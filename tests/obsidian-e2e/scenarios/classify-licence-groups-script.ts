@@ -39,6 +39,7 @@ export const LICENCE_GROUPS_DUMGEN = {
 		nounKind: "Ordinary",
 		number: "Sing",
 		orthography: "None",
+		plural: "s1",
 		plurality: "HasPlural",
 		r_1_2: "Lexeme/NOUN",
 		r_3: "Lexeme/VERB",
