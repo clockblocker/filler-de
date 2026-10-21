@@ -883,13 +883,22 @@ class TextfresserE2EDriver extends Plugin {
 					`resetDictionary needs a dedicated E2E vault: add '${marker}' to it first`,
 				);
 			}
-			const dictionary = this.app.vault.getAbstractFileByPath(DICTIONARY_ROOT);
-			if (dictionary) {
-				await this.app.vault.trash(dictionary, false);
+			// What a dictionary reset left beside it goes too: its backup
+			// folders and its report notes.
+			const leftovers = this.app.vault
+				.getRoot()
+				.children.filter(
+					(child) =>
+						child.path === DICTIONARY_ROOT ||
+						child.path.startsWith(`${DICTIONARY_ROOT} backup `) ||
+						/^Dictionary reset .*\.md$/u.test(child.path),
+				);
+			for (const leftover of leftovers)
+				await this.app.vault.trash(leftover, false);
+			if (leftovers.length > 0)
 				await this.settle({
 					timeoutMs: clampTimeout(request.params.timeoutMs, 30_000),
 				});
-			}
 		}
 		// The user's vault always holds the dictionary folder, and Obsidian
 		// creates a new note in the vault root when its folder is missing.

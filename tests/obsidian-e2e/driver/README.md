@@ -53,7 +53,7 @@ installs a scripted jev in Textfresser's dumgen for the whole scenario, from
 empty, with Luna's answers by stage under `"luna": { "<stage>": [{ "when"?:
 "<input text>", "output": … }] }`, and `cleanupSession` removes it, so no
 scenario reaches a provider; `status` counts its requests under
-`dumgenRequests`. `"resetDictionary": true` moves `Worter/` to Obsidian's trash first, and
+`dumgenRequests`. `"resetDictionary": true` moves `Worter/`, and the `Worter backup …/` folders and `Dictionary reset ….md` reports a dictionary reset leaves at the vault root, to Obsidian's trash first, and
 only in a vault whose config folder holds a `textfresser-e2e-vault` marker. `"newNotesInDictionary": true` sets the vault's
 `newFileLocation` to `folder` and `newFileFolderPath` to `Worter`, creating
 that folder, for the scenario. `cleanupSession` restores that vault config and
