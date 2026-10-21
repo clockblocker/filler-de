@@ -99,7 +99,7 @@ describe("classifySelection", () => {
 		});
 	});
 
-	it("gives a repeated Sentence's unit one UnitRef with every occurrence", async () => {
+	it("segments a repeated Sentence once and keeps each instance's units separate", async () => {
 		const harness = classifyHarness();
 		const content = "Er fängt heute an. Er fängt heute an.";
 		const outcome = await harness.classify({
@@ -108,16 +108,24 @@ describe("classifySelection", () => {
 			selection: { from: 0, to: content.length },
 		});
 		expect(outcome.plan.sentences.size).toBe(1);
+		const second = content.lastIndexOf("Er");
 		expect(
-			outcome.plan.units.map(({ ref, occurrences }) => ({
+			outcome.plan.units.map(({ instance, ref, occurrences }) => ({
+				from: occurrences[0]?.from,
+				instance,
 				segments: ref.segments,
 				texts: textsOf(content, occurrences),
 			})),
 		).toEqual([
-			{ segments: [0], texts: ["Er", "Er"] },
-			{ segments: [2, 6], texts: ["fängt", "an", "fängt", "an"] },
-			{ segments: [4], texts: ["heute", "heute"] },
+			{ from: 0, instance: 0, segments: [0], texts: ["Er"] },
+			{ from: 3, instance: 0, segments: [2, 6], texts: ["fängt", "an"] },
+			{ from: 9, instance: 0, segments: [4], texts: ["heute"] },
+			{ from: second, instance: 1, segments: [0], texts: ["Er"] },
+			{ from: second + 3, instance: 1, segments: [2, 6], texts: ["fängt", "an"] },
+			{ from: second + 9, instance: 1, segments: [4], texts: ["heute"] },
 		]);
+		// Both instances share one UnitRef per unit.
+		expect(outcome.plan.units[0]?.ref).toEqual(outcome.plan.units[3]?.ref);
 		expect(outcome.stats).toMatchObject({
 			segmentedSentences: 1,
 			touchedSentences: 2,

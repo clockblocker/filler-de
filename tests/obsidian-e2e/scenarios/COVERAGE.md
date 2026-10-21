@@ -40,13 +40,21 @@ dumgen answers from a scripted jev, so no provider is reached; the same
 story runs in process in `tests/unit/classify/classify-commander.test.ts`.
 
 Resolution (#64) is owned by `classify-resolution.test.ts`: a noun, a
-separable verb and a Locution each linked to its Reading block in the Lemma
-note at its identity path, and a re-encounter that appends an Attestation
+separable verb and a Locution each linked to its Reading note beside its
+Lemma note, and a re-encounter that appends an Attestation
 with no Knowledge call. Its scripted jev and Luna live in
 `classify-resolution-script.ts`, and
 `tests/integration/classify/classify-resolution.test.ts` runs the same story
 in process; the resolver's other cases are unit tests under
 `tests/unit/classify/resolution/`.
+
+Removing a link from a Scroll (#116) is owned by `classify-unlink.test.ts`:
+the occurrence of a deleted link goes, a Reading that still has a linked
+occurrence stays, and one that lost its last goes with its Lemma note. The
+unlink observer's guards (moved text, a lost block ID, a running Classify, a
+repeated Sentence's instances, the Shadow re-evaluation after a removal) are
+unit tests in `tests/unit/classify/resolution/unlink-observer.test.ts` and
+`scroll-unlinks.test.ts`.
 
 Startup lifecycle and its initial scan are covered by
 `startup-healing.test.ts`; `harness-lifecycle.test.ts` verifies that a returned

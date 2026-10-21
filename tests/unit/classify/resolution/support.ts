@@ -90,6 +90,7 @@ function plannedUnit(input: {
 		previous = index;
 	}
 	return {
+		instance: 0,
 		occurrences,
 		ref: { segments: [...input.unit.segments], sentenceKey: input.sentenceKey },
 		unit: input.unit,

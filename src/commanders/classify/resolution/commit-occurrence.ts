@@ -261,12 +261,15 @@ const planNew = Effect.fnUntraced(function* (
 /**
  * Removes an occurrence (`removeOccurrence`) and what it leaves behind: a
  * Reading with no link, a Surface no link names, a Lemma with no Reading,
- * with the claims on them. The store follows a removed Lemma with the
- * Shadow re-evaluation it asks for. A plan worked around a stored claim
- * whose target is gone (`danglingRelationClaim`) is logged.
+ * with the claims on them. Once the plan has landed, the store re-evaluates
+ * the Shadows of the Lemmas it removed, as a commit of its own from a slice
+ * loaded then (texteater#1257). A plan worked around a stored claim whose
+ * target is gone (`danglingRelationClaim`) is logged.
+ *
+ * It takes no lock: callers run it inside `exclusive(store)`.
  */
-const removeOccurrence = Effect.fnUntraced(function* (
-	store: ResolutionStore,
+export const removeOccurrence = Effect.fnUntraced(function* (
+	store: Pick<ResolutionStore, "commitChanges" | "loadOccurrenceSlice">,
 	ref: string,
 ): Effect.fn.Return<"Removed" | "Retry", DictionaryCommitFailed> {
 	const slice = yield* store.loadOccurrenceSlice(

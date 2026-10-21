@@ -38,7 +38,9 @@ A note's path spells its identity with identity folders and shard folders (ADR-0
 | `Classify` | `ClassifyCommander` | Segment the selected Sentences through dumgen, resolve each Segment's Reading, commit the occurrence to the dictionary store, link the Segment to the Reading's note, and queue background Knowledge for the Reading. |
 | `TranslateSelection` | `Textfresser` | Translate the selected German text, or the caret's block, into the known language through dumgen's `translate.sentence`, with the surrounding Sentences as context, and write it under the text. It creates no Reading Entry. |
 
-Classify hands a `ClassifyPlan` of `UnitRef`s to the `UnitResolver` port. `dumgenUnitResolver` implements it: it resolves through dumgen, commits through the dumdict vault store (`@textfresser/dictionary`), and rewrites the Scroll's links. Knowledge runs after the commit and the links, one run per Reading, and a click on a Reading link whose Knowledge is still running scrolls to it once it lands.
+Classify hands a `ClassifyPlan` of `UnitRef`s to the `UnitResolver` port. `dumgenUnitResolver` implements it: it resolves through dumgen, commits through the dumdict vault store (`@textfresser/dictionary`), and rewrites the Scroll's links. Each instance of a Sentence repeated in a Scroll is an occurrence of its own, with its own Attestation Ref. Knowledge runs after the commit and the links, one run per Reading, and a click on a Reading link whose Knowledge is still running opens the Reading note again once it lands.
+
+Deleting a Classify link from a Scroll removes its occurrence (`createUnlinkObserver`). VAM's Markdown modify observation reports the edit; once the Scroll has been quiet for five seconds and no Classify run is resolving in it, the observer reads it and removes each recorded occurrence whose block no longer links its Reading, through dumdict's `removeOccurrence` and its cascade. Moved text, a lost block ID, a link to a note that is not there, and a file holding none of the refs' blocks remove nothing.
 
 ## Note and Block ownership
 

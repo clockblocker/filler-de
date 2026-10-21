@@ -35,7 +35,7 @@ type HandlerDef = {
  *
  * @param librarian - Librarian instance for tree operations
  * @param onWikilinkClicked - Told every clicked link's target, such as
- *   Classify waiting for a Reading's Knowledge to scroll to it
+ *   Classify waiting for a Reading's Knowledge to open its note again
  */
 export function createHandlers(
 	librarian: Librarian,
@@ -67,7 +67,7 @@ export function createHandlers(
 		},
 	];
 
-	// Classify's scroll to entry
+	// Classify reopens a Reading note once its Knowledge lands
 	if (onWikilinkClicked) {
 		handlers.push({
 			handler: {

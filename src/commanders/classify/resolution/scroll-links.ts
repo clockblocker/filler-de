@@ -16,6 +16,7 @@
  * links, and wikilinks the user wrote. Only the plugin's own links to
  * `Worter/` are re-pointed.
  */
+import { sha256Hex } from "@textfresser/lemma-note-codec";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import type { SourceRange, UnitRef } from "../types";
 
@@ -51,7 +52,7 @@ function inFence(content: string, offset: number): boolean {
 }
 
 /** Why Markdown structure forbids touching `range`, if it does. */
-function structureAround(
+export function structureAround(
 	content: string,
 	range: SourceRange,
 ): string | undefined {
@@ -138,21 +139,76 @@ export function sourceBlocksOf(
 	);
 }
 
+/** The block IDs that end the lines of `content`. */
+export function blockIdsOf(content: string): ReadonlySet<string> {
+	const ids = new Set<string>();
+	for (const line of content.split("\n")) {
+		const id = blockIdOf(line.replace(/\r$/u, ""));
+		if (id) ids.add(id);
+	}
+	return ids;
+}
+
+/** A Scroll's name as its embeds spell it: its basename. */
+export function scrollBasenameOf(scrollPath: string): string {
+	const file = scrollPath.split("/").at(-1) ?? scrollPath;
+	return file.endsWith(".md") ? file.slice(0, -3) : file;
+}
+
+/**
+ * The key of one occurrence in its Scroll: its Sentence, its Segments and
+ * which instance of the Sentence's text it stands in, so running Classify
+ * over the same occurrence again names the same ref, while the instances
+ * of a repeated Sentence never share one. The first instance's key leaves
+ * the instance out.
+ */
+export function occurrenceKeyOf(ref: UnitRef, instance: number): string {
+	return sha256Hex(
+		JSON.stringify(
+			instance === 0
+				? [ref.sentenceKey, ref.segments]
+				: [ref.sentenceKey, ref.segments, instance],
+		),
+	).slice(0, 8);
+}
+
 /**
  * The Attestation Ref a Reading note stores for one occurrence: an embed of
  * the Scroll's block, `![[Story#^0|^1a2b3c4d]]`. A ref names one occurrence
  * and is unique in the dictionary (texteater#1227), while one block holds
- * many, so the alias, which Obsidian does not show for an embed, carries
- * the occurrence's key.
+ * many, so the alias carries the occurrence's key. Obsidian never shows an
+ * embed's alias: Reading view replaces the embed's text with the embedded
+ * block, and Live Preview keeps the alias only as the embed's `alt`
+ * attribute (Obsidian 1.14.4's `app.js`), so it shows only in source.
  */
 export function attestationRefOf(
 	scrollPath: string,
 	blockId: string,
 	occurrence: string,
 ): string {
-	const file = scrollPath.split("/").at(-1) ?? scrollPath;
-	const basename = file.endsWith(".md") ? file.slice(0, -3) : file;
-	return `![[${basename}#^${blockId}|^${occurrence}]]`;
+	return `${attestationRefPrefixOf(scrollPath)}${blockId}|^${occurrence}]]`;
+}
+
+/** What every Attestation Ref into one Scroll starts with: `![[Story#^`. */
+export function attestationRefPrefixOf(scrollPath: string): string {
+	return `![[${scrollBasenameOf(scrollPath)}#^`;
+}
+
+const ATTESTATION_REF =
+	/^!\[\[([^\]#|\n]+)#\^([A-Za-z0-9-]+)\|\^([0-9a-f]{8})\]\]$/u;
+
+/** The parts of an Attestation Ref `attestationRefOf` wrote, if it is one. */
+export function parseAttestationRef(ref: string):
+	| {
+			readonly scrollBasename: string;
+			readonly blockId: string;
+			readonly occurrence: string;
+	  }
+	| undefined {
+	const match = ATTESTATION_REF.exec(ref);
+	if (!match) return undefined;
+	const [, scrollBasename = "", blockId = "", occurrence = ""] = match;
+	return { blockId, occurrence, scrollBasename };
 }
 
 /**
@@ -337,7 +393,8 @@ export type LinkedScroll = {
 
 /**
  * `[[Worter/…/🌊 See|See]]`: the path-qualified link to a Reading note
- * (ADR-0015). TODO(#116): rewrite the `#^r-…` links an older build wrote.
+ * (ADR-0015). An earlier link of Classify's at the occurrence, such as a
+ * pre-ADR-0015 `[[…/See#^r-…|See]]`, is replaced whole (`replaceableSpan`).
  */
 function readingLink(target: LinkTarget, shown: string): string {
 	const path = target.readingPath.endsWith(".md")

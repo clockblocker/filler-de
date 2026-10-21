@@ -15,6 +15,7 @@ import {
 } from "@textfresser/vault-action-manager";
 import { canonicalJson } from "common-utils";
 import {
+	type AttestationLink,
 	type CommitChangesRequest,
 	type CommitChangesResult,
 	type DumdictPlan,
@@ -276,6 +277,13 @@ export type DumdictVaultStore = {
 			readonly lemma: Dumling.Lemma<"de">;
 		}[]
 	>;
+	/**
+	 * Every stored Attestation Link whose ref starts with `prefix`, such as
+	 * the refs into one Scroll.
+	 */
+	readonly attestationLinksWithRefPrefix: (
+		prefix: string,
+	) => Effect.Effect<readonly AttestationLink<"de">[]>;
 	/** Where a Reading lives: its Reading note and its Lemma note. */
 	readonly readingLocation: (
 		reading: Dumling.Reading<"de">,
@@ -2282,6 +2290,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			lock.withPermit(
 				appendFreeformUnderLock(request).pipe(Effect.ensuring(report)),
 			),
+		attestationLinksWithRefPrefix: (prefix) =>
+			read((view) => view.linksWithRefPrefix(prefix)),
 		close,
 		commitChanges: (request) =>
 			lock.withPermit(
