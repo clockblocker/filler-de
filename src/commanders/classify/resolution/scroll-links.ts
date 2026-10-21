@@ -138,11 +138,21 @@ export function sourceBlocksOf(
 	);
 }
 
-/** The Attestation Ref Lemma notes store: an embed of the Scroll's block. */
-export function attestationRefOf(scrollPath: string, blockId: string): string {
+/**
+ * The Attestation Ref a Reading note stores for one occurrence: an embed of
+ * the Scroll's block, `![[Story#^0|^1a2b3c4d]]`. A ref names one occurrence
+ * and is unique in the dictionary (texteater#1227), while one block holds
+ * many, so the alias, which Obsidian does not show for an embed, carries
+ * the occurrence's key.
+ */
+export function attestationRefOf(
+	scrollPath: string,
+	blockId: string,
+	occurrence: string,
+): string {
 	const file = scrollPath.split("/").at(-1) ?? scrollPath;
 	const basename = file.endsWith(".md") ? file.slice(0, -3) : file;
-	return blockIdHelper.formatEmbed(basename, blockId);
+	return `![[${basename}#^${blockId}|^${occurrence}]]`;
 }
 
 /**

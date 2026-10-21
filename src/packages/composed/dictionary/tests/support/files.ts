@@ -45,8 +45,10 @@ export async function expectIndexMatchesFiles(
 		const { lemma } = data.lemmaRecord;
 		if (!blocked.has(path))
 			expect(path).toBe(canonicalLemmaPath(lemma) ?? "");
+		const { paradigm } = data.lemmaRecord;
 		expect(await run(store.lemmaNote(lemma))).toEqual({
 			ownedSurfaces: data.ownedSurfaceEntries,
+			...(paradigm === undefined ? {} : { paradigm }),
 			path,
 			pendingRelations: data.pendingRelations,
 			readings: data.readingEntries,

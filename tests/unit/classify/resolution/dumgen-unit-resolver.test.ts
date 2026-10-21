@@ -4,6 +4,7 @@ import { lemmaNotePath, readingNotePath } from "@textfresser/lemma-note-codec";
 import type { Unit } from "dumgen";
 import { createDumgen } from "dumgen";
 import type * as Dumling from "dumling/types";
+import { variantIdOf } from "dumrel";
 import { Effect, Layer } from "effect";
 import {
 	ClassifyCommander,
@@ -103,8 +104,14 @@ describe("dumgenUnitResolver", () => {
 		const note = await run(harness.store.lemmaNote(see));
 		expect(note?.path).toBe(SEE_PATH);
 		const entry = note?.readings[0];
-		// TODO(#113): the occurrences' Attestation Links, once the store keeps them.
-		expect(entry?.attestationLinks).toEqual([]);
+		// The occurrence's Attestation Link: one ref per occurrence, an embed
+		// of its block whose alias keys the occurrence.
+		expect(entry?.attestationLinks).toHaveLength(1);
+		const [link] = entry?.attestationLinks ?? [];
+		expect(link?.ref).toMatch(/^!\[\[Story#\^0\|\^[0-9a-f]{8}\]\]$/u);
+		expect(link?.surfaceId).toBe(note?.ownedSurfaces[0]?.id);
+		// The Reading note shows it under Deine Kontexte.
+		expect(harness.vault.content(SEE_READING_PATH)).toContain(link?.ref ?? "?");
 		expect(entry?.knowledge?.definition).toBe("See, defined");
 		expect(note?.ownedSurfaces.map(({ surface }) => surface.normalizedSurface)).toEqual(["See"]);
 
@@ -121,25 +128,54 @@ describe("dumgenUnitResolver", () => {
 		expect(harness.notices).toEqual(["✓ Knowledge for See 🌊 saved"]);
 	});
 
-	it("asks for the Lemma Paradigm, with the Lemma's Readings, only when enabled (TODO(#113))", async () => {
-		const content = "Der See ist tief. ^0\n";
+	it("asks for the Lemma Paradigm unless disabled, and stores the Paradigm Changes it gets", async () => {
+		const content = "Der See ist tief. ^0\n\nDer See ist blau. ^1\n";
+		const lake = { emojiDescription: "🌊", lemma: see, unitKind: "Reading" } as Dumling.Reading<"de">;
 		const plan = planFor({ content, scrollPath: SCROLL, sentenceText: "Der See ist tief.", units: seeUnits });
-		const stub = () =>
-			stubDumgen({
-				grammar: seeGrammar,
-				knowledge: baseTextKnowledge,
-				reading: () => ({ _tag: "New", emojiDescription: "🌊" }),
-			});
-		const off = stub();
-		await (await resolutionHarness({ content, dumgen: off.dumgen, scrollPath: SCROLL })).resolve(plan);
+		const off = stubDumgen({
+			grammar: seeGrammar,
+			knowledge: baseTextKnowledge,
+			reading: () => ({ _tag: "New", emojiDescription: "🌊" }),
+		});
+		await (await resolutionHarness({ content, dumgen: off.dumgen, produceParadigm: false, scrollPath: SCROLL })).resolve(plan);
 		expect(off.calls.knowledge[0]?.paradigm).toBeUndefined();
 
-		const on = stub();
-		await (
-			await resolutionHarness({ content, dumgen: on.dumgen, produceParadigm: true, scrollPath: SCROLL })
-		).resolve(plan);
-		const reading = { emojiDescription: "🌊", lemma: see, unitKind: "Reading" } as Dumling.Reading<"de">;
-		expect(on.calls.knowledge[0]?.paradigm).toEqual({ dimensions: ["plural"], readings: [reading] });
+		const seen = variantIdOf(see, "plural", "Seen");
+		const on = stubDumgen({
+			grammar: seeGrammar,
+			knowledge: (input) => ({
+				...baseTextKnowledge(input),
+				paradigmChanges:
+					input.paradigm?.stored === undefined
+						? [
+								{ dimension: "plural", kind: "Contribute", provenance: "Produced", value: "Seen" },
+								{ dimension: "plural", kind: "License", reading: input.reading, variants: [seen] },
+							]
+						: [{ dimension: "plural", kind: "License", reading: input.reading, variants: [seen] }],
+			}),
+			reading: (input) =>
+				input.candidates.length === 0
+					? { _tag: "New", emojiDescription: "🌊" }
+					: { _tag: "New", emojiDescription: "🏞" },
+		});
+		const harness = await resolutionHarness({ content, dumgen: on.dumgen, scrollPath: SCROLL });
+		await harness.resolve(plan);
+		expect(on.calls.knowledge[0]?.paradigm).toEqual({ dimensions: ["plural"], readings: [lake] });
+		const stored = (await run(harness.store.lemmaNote(see)))?.paradigm;
+		expect(stored?.dimensions.plural?.variants.map(({ value }) => value)).toEqual(["Seen"]);
+
+		// A later Reading of the Lemma is judged against the stored Paradigm.
+		await harness.resolve(
+			planFor({
+				content: harness.scroll.content,
+				scrollPath: SCROLL,
+				sentenceText: "Der See ist blau.",
+				units: seeUnits,
+			}),
+		);
+		expect(on.calls.knowledge[1]?.paradigm).toMatchObject({ dimensions: ["plural"], stored });
+		const both = (await run(harness.store.lemmaNote(see)))?.paradigm;
+		expect(Object.keys(both?.dimensions.plural?.licences ?? {})).toHaveLength(2);
 	});
 
 	it("re-encounters the same sense: appends its Attestation and asks no Knowledge", async () => {
@@ -170,8 +206,11 @@ describe("dumgenUnitResolver", () => {
 		expect(stub.calls.reading[1]?.candidates).toEqual(["🌊"]);
 		const note = await run(harness.store.lemmaNote(see));
 		expect(note?.readings).toHaveLength(1);
-		// TODO(#113): the occurrences' Attestation Links, once the store keeps them.
-		expect(note?.readings[0]?.attestationLinks).toEqual([]);
+		// Each occurrence holds its own link, from its own block.
+		expect(note?.readings[0]?.attestationLinks.map(({ ref }) => ref.slice(0, 13))).toEqual([
+			"![[Story#^0|^",
+			"![[Story#^1|^",
+		]);
 		// The stored entry covers what a later occurrence may ask: no model call.
 		expect(stub.calls.knowledge).toHaveLength(1);
 		expect(harness.scroll.content.split(readingLink(SEE_READING_PATH, "See"))).toHaveLength(3);
@@ -187,6 +226,31 @@ describe("dumgenUnitResolver", () => {
 			}),
 		);
 		expect(harness.vault.batches.length).toBe(before);
+	});
+
+	it("moves an occurrence judged another Reading: the old one goes with its last link", async () => {
+		const content = "Der See ist tief. ^0\n";
+		const plan = planFor({ content, scrollPath: SCROLL, sentenceText: "Der See ist tief.", units: seeUnits });
+		let emoji = "🌊";
+		const stub = stubDumgen({
+			grammar: seeGrammar,
+			knowledge: baseTextKnowledge,
+			reading: () => ({ _tag: "New", emojiDescription: emoji }),
+		});
+		const harness = await resolutionHarness({ content, dumgen: stub.dumgen, scrollPath: SCROLL });
+		await harness.resolve(plan);
+		const [first] = (await run(harness.store.lemmaNote(see)))?.readings ?? [];
+		const ref = first?.attestationLinks[0]?.ref;
+		expect(ref).toBeDefined();
+
+		emoji = "🏞";
+		const [moved] = await harness.resolve({ ...plan, content: harness.scroll.content });
+		expect(moved?._tag).toBe("Resolved");
+		const note = await run(harness.store.lemmaNote(see));
+		expect(note?.readings.map(({ reading }) => ("emojiDescription" in reading ? reading.emojiDescription : ""))).toEqual(["🏞"]);
+		expect(note?.readings[0]?.attestationLinks.map((link) => link.ref)).toEqual([ref ?? ""]);
+		// 🌊 lost its last occurrence, so its Reading note went with it.
+		expect(harness.vault.content(SEE_READING_PATH)).toBeUndefined();
 	});
 
 	it("links every piece of a separable verb to one Reading, segmented through Classify", async () => {
@@ -248,8 +312,8 @@ describe("dumgenUnitResolver", () => {
 		// The block had no ID: the Attestation Ref minted one.
 		expect(harness.scroll.content).toBe(`Er ${link("fängt")} heute ${link("an")}. ^0\n`);
 		const note = await run(harness.store.lemmaNote(anfangen));
-		// TODO(#113): the occurrences' Attestation Links, once the store keeps them.
-		expect(note?.readings[0]?.attestationLinks).toEqual([]);
+		// One occurrence of two pieces: one Attestation Link.
+		expect(note?.readings[0]?.attestationLinks).toHaveLength(1);
 	});
 
 	it("publishes generated relations, Pending ones in their source note only, in commits of capped size", async () => {

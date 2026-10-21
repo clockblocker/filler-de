@@ -136,12 +136,10 @@ export const RETRIED_ASPECTS: ReadonlySet<string> = BASE_TEXT_ASPECTS;
 
 /**
  * Whether Classify asks `knowledge.produce` for the Lemma Paradigm
- * (texteater#1230). TODO(#113): turn it on once the store keeps Lemma
- * Paradigms, and publish `paradigmChanges` with the rest: until then the
- * store refuses every Paradigm Change, so the forms would be paid for and
- * dropped.
+ * (texteater#1230) and publishes its `paradigmChanges` with the rest of
+ * the Knowledge.
  */
-export const PRODUCE_LEMMA_PARADIGM = false;
+export const PRODUCE_LEMMA_PARADIGM = true;
 
 /** `knowledge.produce`'s `paradigm` input (texteater#1230). */
 export type ParadigmRequest = {

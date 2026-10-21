@@ -40,6 +40,7 @@ import {
 	type RekeySurfacesSliceRequest,
 } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
+import type * as Dumrel from "dumrel/types";
 import { Data, Effect, Semaphore } from "effect";
 import { contentHash } from "./content-hash";
 import {
@@ -256,10 +257,11 @@ export type DumdictVaultStore = {
 	readonly lemmaCandidates: (
 		texts: readonly string[],
 	) => Effect.Effect<LemmaCandidate[]>;
-	/** A Lemma's note paths and records, if it is stored. */
+	/** A Lemma's note path and records, with its Paradigm, if it is stored. */
 	readonly lemmaNote: (lemma: Dumling.Lemma<"de">) => Effect.Effect<
 		| {
 				readonly path: string;
+				readonly paradigm?: Dumrel.LemmaParadigm;
 				readonly readings: readonly ReadingEntry<"de">[];
 				readonly ownedSurfaces: readonly SurfaceEntry<"de">[];
 				readonly pendingRelations: readonly PendingSemanticRelationRecord<"de">[];
@@ -2265,9 +2267,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		lemmaNote: (lemma) =>
 			read((view) => {
 				const note = view.lemmaNote(lemmaKeyOf(lemma));
+				const paradigm = note?.data.lemmaRecord.paradigm;
 				return note
 					? {
 							ownedSurfaces: note.data.ownedSurfaceEntries,
+							...(paradigm === undefined ? {} : { paradigm }),
 							path: note.path,
 							pendingRelations: note.data.pendingRelations,
 							readings: note.data.readingEntries,

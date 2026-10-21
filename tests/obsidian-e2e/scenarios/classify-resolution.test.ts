@@ -14,6 +14,10 @@ const KNOWLEDGE_STAGES = ["transcription", "definition", "translations"];
 const linkTo = (path: string, shown: string) =>
 	`[[${path.slice(0, -3)}|${shown}]]`;
 
+/** An occurrence's Attestation Ref in block `^0` or `^1` of the Story. */
+const KONTEXT_0 = /!\[\[Story#\^0\|\^[0-9a-f]{8}\]\]/u;
+const KONTEXT_1 = /!\[\[Story#\^1\|\^[0-9a-f]{8}\]\]/u;
+
 /** The folder a note sits in. */
 const folderOf = (path: string) => path.slice(0, path.lastIndexOf("/"));
 
@@ -74,11 +78,12 @@ describe("Obsidian E2E - Classify resolution", () => {
 				);
 
 				// Each Lemma note sits at its identity path and links the
-				// Reading note the Scroll links.
+				// Reading note the Scroll links, which shows the occurrence
+				// under Deine Kontexte.
 				let notes = (await dictionary()).markdown;
 				for (const [index, { readingPath }] of targets.entries()) {
 					const lemmaPath = lemmaPaths[index] ?? "";
-					expect(notes[readingPath]).toBeDefined();
+					expect(notes[readingPath]).toMatch(KONTEXT_0);
 					expect(notes[lemmaPath]).toContain(readingPath.slice(0, -3));
 				}
 				const knowledgeCalls = async () => {
@@ -100,7 +105,8 @@ describe("Obsidian E2E - Classify resolution", () => {
 					readingPath: hund.readingPath,
 				});
 				notes = (await dictionary()).markdown;
-				expect(notes[hund.readingPath]).toBeDefined();
+				expect(notes[hund.readingPath]).toMatch(KONTEXT_0);
+				expect(notes[hund.readingPath]).toMatch(KONTEXT_1);
 				expect(await knowledgeCalls()).toEqual(before);
 				expect((await snapshot()).markdown["Story.md"]).toContain(
 					`${linkTo(hund.readingPath, "Der Hund")} schläft. ^1`,

@@ -42,8 +42,8 @@ describe("sourceBlocksOf", () => {
 			{ _tag: "Unaddressable", reason: "inside a table" },
 			{ _tag: "Unaddressable", reason: "inside a code block" },
 		]);
-		expect(attestationRefOf("Library/Story-Library.md", "4")).toBe(
-			"![[Story-Library#^4|^]]",
+		expect(attestationRefOf("Library/Story-Library.md", "4", "1a2b3c4d")).toBe(
+			"![[Story-Library#^4|^1a2b3c4d]]",
 		);
 	});
 });

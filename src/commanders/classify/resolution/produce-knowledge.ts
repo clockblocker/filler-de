@@ -119,8 +119,8 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 			);
 		});
 
-	// TODO(#113): pass the stored Paradigm once the store's `lemmaNote`
-	// returns it, and publish `produced.paradigmChanges`.
+	// The Lemma's stored Paradigm and its other Readings, so dumgen writes
+	// a first Reading's forms and judges a later Reading's licences.
 	const paradigm =
 		(deps.produceParadigm ?? PRODUCE_LEMMA_PARADIGM)
 			? paradigmRequestFor({
@@ -129,6 +129,9 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 					readings: (note?.readings ?? []).map(
 						(entry) => entry.reading,
 					),
+					...(note?.paradigm === undefined
+						? {}
+						: { stored: note.paradigm }),
 				})
 			: undefined;
 	const produced = yield* deps.dumgen.knowledge.produce({
@@ -149,6 +152,7 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 	const pendingRelations = publishRelations ? produced.pendingRelations : [];
 	const final = yield* publishKnowledge(deps.store, {
 		changes,
+		paradigmChanges: produced.paradigmChanges,
 		pendingRelations,
 		reading,
 	}).pipe(Effect.uninterruptible);
