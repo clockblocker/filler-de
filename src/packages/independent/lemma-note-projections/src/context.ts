@@ -2,10 +2,11 @@ import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
 
 /**
- * The Reading Knowledge aspects a projection reads. dumrel's
- * `ReadingKnowledge` holds them in these shapes.
+ * The principal parts a projection reads, in the shapes dumrel's Reading
+ * Knowledge held them before they moved into the Lemma Paradigm
+ * (texteater#1226).
  */
-export type ProjectedKnowledge = {
+export type PrincipalParts = {
 	readonly plural?: readonly string[] | "NoPlural" | "PluralOnly" | undefined;
 	readonly conjugationClass?: readonly Dumrel.ConjugationClass[] | undefined;
 	readonly preterite?: readonly string[] | undefined;
@@ -28,7 +29,12 @@ export type ProjectedKnowledge = {
  */
 export type ProjectionInput = {
 	readonly lemma: Dumling.Lemma;
-	readonly entry: { readonly knowledge?: ProjectedKnowledge | undefined };
+	/**
+	 * TODO(#120): the codec passes none, since the Reading Knowledge no
+	 * longer holds them, so a noun or verb gets no table and no inflection
+	 * class tag until the batteries' Inflection Pack projects its tables.
+	 */
+	readonly principalParts?: PrincipalParts | undefined;
 	readonly ownedSurfaces: readonly { readonly surface: Dumling.Surface }[];
 	/** How the note links a Lemma; without it, a table links nothing. */
 	readonly links?: {

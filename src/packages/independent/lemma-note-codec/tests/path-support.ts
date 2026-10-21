@@ -51,7 +51,7 @@ export function acceptsEmojiDescription(
 ): boolean {
 	const parsed = parseAsReadingEntry(
 		{
-			attestations: [],
+			attestationLinks: [],
 			attestedTranslations: [],
 			notes: "",
 			reading: { emojiDescription, lemma: of, unitKind: "Reading" },

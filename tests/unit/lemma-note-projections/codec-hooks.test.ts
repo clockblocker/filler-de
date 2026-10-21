@@ -5,7 +5,10 @@ import {
 	parse,
 	serialize,
 } from "@textfresser/lemma-note-codec";
-import { derivedProjections } from "@textfresser/lemma-note-projections";
+import {
+	derivedProjections,
+	type PrincipalParts,
+} from "@textfresser/lemma-note-projections";
 import type { ReadingEntry } from "dumdict";
 import type * as Dumling from "dumling/types";
 
@@ -14,12 +17,47 @@ const title = (kind: string, text: string) =>
 	`<span class="note_block_title note_block_title_${kind}">${text}</span>`;
 
 // The derived hooks fit the codec's projection hooks with no adapter.
-const projections = derivedProjections satisfies Projections<"de">;
+const derived = derivedProjections satisfies Projections<"de">;
+
+/**
+ * The principal parts each Lemma's table is derived from. Reading Knowledge
+ * no longer holds them (texteater#1226) and the codec passes none, so these
+ * hooks hand them in until #120 renders the batteries' tables.
+ */
+const PRINCIPAL_PARTS: Readonly<Record<string, PrincipalParts>> = {
+	aufpassen: { conjugationClass: ["Weak"], preterite: ["passte auf"] },
+	// The principal parts texteater#1218 stored (dumcorpus gold).
+	fahren: {
+		conjugationClass: ["Strong"],
+		pastParticiple: ["gefahren"],
+		presentSingular: {
+			first: ["fahre"],
+			second: ["fährst"],
+			third: ["fährt"],
+		},
+		preterite: ["fuhr"],
+		subjunctivePast: ["führe"],
+	},
+	Tag: { plural: ["Tage"] },
+};
+
+const projections: Projections<"de"> = {
+	inflection: (context) =>
+		derived.inflection({
+			...context,
+			principalParts: PRINCIPAL_PARTS[context.lemma.canonicalForm],
+		}),
+	tags: (context) =>
+		derived.tags({
+			...context,
+			principalParts: PRINCIPAL_PARTS[context.lemma.canonicalForm],
+		}),
+};
 
 function noteData(
 	lemma: Dumling.Lemma<"de">,
 	emojiDescription: string,
-	knowledge: ReadingEntry<"de">["knowledge"],
+	knowledge?: ReadingEntry<"de">["knowledge"],
 ): LemmaNoteData<"de"> {
 	return {
 		lemmaRecord: { lemma },
@@ -27,9 +65,9 @@ function noteData(
 		pendingRelations: [],
 		readingEntries: [
 			{
-				attestations: [],
+				attestationLinks: [],
 				attestedTranslations: [],
-				knowledge,
+				...(knowledge === undefined ? {} : { knowledge }),
 				notes: "",
 				reading: {
 					emojiDescription,
@@ -51,7 +89,6 @@ const tag = noteData(
 		unitKind: "Lemma",
 	},
 	"🌞",
-	{ plural: ["Tage"] },
 );
 
 const aufpassen = noteData(
@@ -64,10 +101,8 @@ const aufpassen = noteData(
 		unitKind: "Lemma",
 	},
 	"👀",
-	{ conjugationClass: ["Weak"], preterite: ["passte auf"] },
 );
 
-// The principal parts texteater#1218 stores (dumcorpus gold).
 const fahren = noteData(
 	{
 		canonicalForm: "fahren",
@@ -78,29 +113,23 @@ const fahren = noteData(
 		unitKind: "Lemma",
 	},
 	"🚲",
-	{
-		conjugationClass: ["Strong"],
-		pastParticiple: ["gefahren"],
-		presentSingular: {
-			first: ["fahre"],
-			second: ["fährst"],
-			third: ["fährt"],
-		},
-		preterite: ["fuhr"],
-		subjunctivePast: ["führe"],
-	},
 );
 
 describe("the codec renders the derived projections", () => {
-	it("renders a strong verb's stored principal parts in its table", () => {
-		const markdown = serialize(undefined, fahren, { projections });
-		// The principal parts are data the Flexion table shows, as the
-		// dictionary notes did; their own Blocks render nothing. A form
-		// spelled as the Lemma links to its note.
-		expect(markdown).toContain(
-			'%%tf:present_singular {"first":["fahre"],"second":["fährst"],"third":["fährt"]}%%\n',
+	it("renders no Flexion for a noun or verb without its principal parts (#120)", () => {
+		for (const data of [tag, aufpassen, fahren]) {
+			const markdown = serialize(undefined, data, { projections: derived });
+			expect(markdown).not.toContain(title("flexion", "Flexion"));
+			expect(markdown).not.toContain("%%tf:inflection");
+		}
+		expect(serialize(undefined, aufpassen, { projections: derived })).toContain(
+			`${title("tags", "Tags")}\n#verb/separable\n`,
 		);
-		expect(markdown).toContain('%%tf:past_participle ["gefahren"]%%\n');
+	});
+
+	it("renders a strong verb's principal parts in its table", () => {
+		const markdown = serialize(undefined, fahren, { projections });
+		// A form spelled as the Lemma links to its note.
 		expect(markdown).toContain(`${title("flexion", "Flexion")}
 Präsens: ich fahre, du fährst, er fährt, wir [[Worter/de/Lexeme/VERB/fahren|fahren]], ihr fahrt, sie [[Worter/de/Lexeme/VERB/fahren|fahren]]
 Präteritum: ich fuhr, du fuhrst, er fuhr, wir fuhren, ihr fuhrt, sie fuhren

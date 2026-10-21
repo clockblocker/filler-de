@@ -1,6 +1,8 @@
+import type { ConformanceStorage } from "dumdict/testing";
 import { describeStorageConformance } from "dumdict/testing";
+import type * as Dumling from "dumling/types";
 import { Effect } from "effect";
-import { makeDumdictVaultStore } from "../src";
+import { type DumdictVaultStore, makeDumdictVaultStore } from "../src";
 import { FakeVault } from "./support/fake-vault";
 import { expectIndexMatchesFiles, run } from "./support/files";
 
@@ -10,13 +12,36 @@ async function makeStorage() {
 	return { store, vault };
 }
 
+/**
+ * Removes a Lemma as the user does outside dumdict's plans: by deleting its
+ * note, which the store observes as a vault event.
+ */
+const removeLemmaNote =
+	(store: DumdictVaultStore, vault: FakeVault) =>
+	(lemma: Dumling.Lemma<"de">) =>
+		Effect.gen(function* () {
+			const note = yield* store.lemmaNote(lemma);
+			if (note) yield* Effect.promise(() => vault.userDelete(note.path));
+		});
+
+/**
+ * TODO(#113): run with dumdict's defaults, once the store keeps Attestation
+ * Links and Lemma Paradigms and applies deletions. Until then it refuses
+ * every change that carries them, as the suite checks.
+ */
+const options = {
+	attestationLinks: false,
+	paradigms: false,
+	revisions: true,
+} as const;
+
 describeStorageConformance(
 	"DumdictVaultStore over a fake VAM",
-	async () => {
-		const { store } = await makeStorage();
-		return store;
+	async (): Promise<ConformanceStorage> => {
+		const { store, vault } = await makeStorage();
+		return { ...store, removeLemma: removeLemmaNote(store, vault) };
 	},
-	{ readingAttestations: true, revisions: true },
+	options,
 );
 
 /**
@@ -26,7 +51,7 @@ describeStorageConformance(
  */
 describeStorageConformance(
 	"DumdictVaultStore read back from its notes",
-	async () => {
+	async (): Promise<ConformanceStorage> => {
 		const { store, vault } = await makeStorage();
 		return {
 			...store,
@@ -40,7 +65,8 @@ describeStorageConformance(
 							),
 						),
 					),
+			removeLemma: removeLemmaNote(store, vault),
 		};
 	},
-	{ readingAttestations: true, revisions: true },
+	options,
 );

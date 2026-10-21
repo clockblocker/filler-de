@@ -16,7 +16,6 @@ import {
 	isEmptyRequest,
 	knowledgeRequestFor,
 	PUBLISH_GENERATED_RELATIONS,
-	structureMissing,
 	type TranslationLanguage,
 } from "./knowledge-request";
 import type {
@@ -74,14 +73,8 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 	]);
 	const key = readingIdentityKey(reading);
 	const knowledge = location?.entry.knowledge;
-	// An entry missing structure only its first occurrence asks for, as when
-	// that run was interrupted, is asked as if it were New.
-	const origin =
-		job.origin === "TopUp" && structureMissing(reading, knowledge)
-			? "New"
-			: job.origin;
 	const request = knowledgeRequestFor({
-		origin,
+		origin: job.origin,
 		publishRelations,
 		reading,
 		stored: {
@@ -126,7 +119,7 @@ export const produceKnowledge = Effect.fnUntraced(function* (
 		attestation: job.attestation,
 		language: "de",
 		onContribution: publishBaseText,
-		origin,
+		origin: job.origin,
 		reading,
 		request,
 		sentence: job.sentence,

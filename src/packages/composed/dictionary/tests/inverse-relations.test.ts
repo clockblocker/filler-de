@@ -111,7 +111,11 @@ const retractSynonym = (
 
 const schreitenNote: AddNewNoteRequest<"de"> = {
 	draft: {
-		note: { attestations: [], attestedTranslations: ["stride"], notes: "" },
+		note: {
+			attestationLinks: [],
+			attestedTranslations: ["stride"],
+			notes: "",
+		},
 		reading: schreitenReading,
 	},
 };
@@ -156,11 +160,14 @@ describe("inverse relations are projected, never stored", () => {
 			status: "committed",
 		});
 
-		// A holds the direct claim in place of its pending relation.
+		// A holds the direct claim, and keeps its Shadow relation resolved
+		// to B (texteater#1221).
 		expect(
 			dataOf(vault.content(gehenPath)).readingEntries[0]?.knowledge,
 		).toEqual({ semanticRelations: { synonym: [schreiten] } });
-		expect(dataOf(vault.content(gehenPath)).pendingRelations).toEqual([]);
+		expect(dataOf(vault.content(gehenPath)).pendingRelations).toEqual([
+			{ ...pendingFrom(gehenReading), resolvedLemma: schreiten },
+		]);
 
 		// B renders A as a projection, linked to A's Reading block, and
 		// stores no relation of its own.
@@ -251,14 +258,7 @@ describe("inverse relations are projected, never stored", () => {
 		]);
 		vault.batches.length = 0;
 
-		await seed(store, [
-			{
-				ops: [{ kind: "addAttestation", value: "![[Text#^1|^]]" }],
-				preconditions: [],
-				reading: gehenReading,
-				type: "patchReading",
-			},
-		]);
+		await seed(store, [contribute(gehenReading, "to go on foot")]);
 		expect(vault.batches.flatMap(pathsOf)).toEqual([gehenPath]);
 	});
 

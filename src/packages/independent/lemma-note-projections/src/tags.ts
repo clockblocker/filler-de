@@ -88,7 +88,7 @@ function featureParts(feature: string, value: unknown): string[] {
 /**
  * A Reading's Tags, without `#`: its route, one nested tag per Core Feature
  * value (`noun/masculine`, `verb/separable`, `verb/reflexive-acc`), and
- * the inflection class its Knowledge stores (`verb/weak`,
+ * the inflection class its principal parts give (`verb/weak`,
  * `noun/plural-only`). The old `common` and `compound` tags have no dumling
  * feature and are gone. A Reading with nothing to add gets its route alone.
  */
@@ -98,7 +98,7 @@ export function deriveTags(input: ProjectionInput): readonly string[] {
 	const parts = Object.keys(core)
 		.sort()
 		.flatMap((feature) => featureParts(feature, core[feature]));
-	const knowledge = input.entry.knowledge;
+	const knowledge = input.principalParts;
 	for (const value of knowledge?.conjugationClass ?? [])
 		parts.push(CLASS_SLUGS[value] ?? slug(value));
 	if (knowledge?.plural === "NoPlural") parts.push("singular-only");

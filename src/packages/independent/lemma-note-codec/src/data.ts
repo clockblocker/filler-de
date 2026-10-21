@@ -349,7 +349,7 @@ function readReadingEntry<L extends Dumling.Language>(
 		if (value !== undefined) knowledge[aspect] = value;
 	}
 	const entry = {
-		attestations: orDefault(payloads, "attestation", []),
+		attestationLinks: orDefault(payloads, "attestation", []),
 		attestedTranslations: orDefault(payloads, "attested_translation", []),
 		notes: orDefault(payloads, "notes", ""),
 		reading: foreign
@@ -385,20 +385,28 @@ function readPendingRelations<L extends Dumling.Language>(
 		return [];
 	}
 	const records: PendingSemanticRelationRecord<L>[] = [];
-	for (const pending of payload) {
+	for (const item of payload) {
+		const { resolvedLemma, ...pending } = (
+			typeof item === "object" && item !== null ? item : {}
+		) as Record<string, unknown>;
 		const record = validated(
 			"PendingSemanticRelationRecord",
 			at,
 			report,
 			() =>
 				parseAsPendingSemanticRelationRecord(
-					createPendingSemanticRelationRecord(
-						entry.reading,
-						// dumdict validates the reconstructed record below.
-						pending as Parameters<
-							typeof createPendingSemanticRelationRecord<L>
-						>[1],
-					),
+					{
+						...createPendingSemanticRelationRecord(
+							entry.reading,
+							// dumdict validates the reconstructed record below.
+							pending as Parameters<
+								typeof createPendingSemanticRelationRecord<L>
+							>[1],
+						),
+						...(resolvedLemma === undefined
+							? {}
+							: { resolvedLemma }),
+					},
 					language,
 				),
 		);

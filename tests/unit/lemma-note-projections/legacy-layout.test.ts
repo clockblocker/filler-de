@@ -5,7 +5,10 @@ import {
 	parse,
 	serialize,
 } from "@textfresser/lemma-note-codec";
-import { derivedProjections } from "@textfresser/lemma-note-projections";
+import {
+	derivedProjections,
+	type PrincipalParts,
+} from "@textfresser/lemma-note-projections";
 import type { ReadingEntry } from "dumdict";
 import type * as Dumling from "dumling/types";
 
@@ -33,31 +36,41 @@ const noun = (
 
 function noteData(
 	lemma: Dumling.Lemma<"de">,
-	entries: readonly (Partial<ReadingEntry<"de">> & {
+	entries: readonly (Partial<
+		Omit<ReadingEntry<"de">, "attestationLinks" | "reading">
+	> & {
 		readonly emojiDescription: string;
+		/** The refs of the Reading's Attestation Links. */
+		readonly refs?: readonly string[];
 	})[],
 ): LemmaNoteData<"de"> {
 	return {
 		lemmaRecord: { lemma },
 		ownedSurfaceEntries: [],
 		pendingRelations: [],
-		readingEntries: entries.map(({ emojiDescription, ...entry }) => ({
-			attestations: [],
-			attestedTranslations: [],
-			notes: "",
-			...entry,
-			reading: {
+		readingEntries: entries.map(({ emojiDescription, refs, ...entry }) => {
+			const reading = {
 				emojiDescription,
 				lemma,
 				unitKind: "Reading",
-			} as Dumling.Reading<"de">,
-		})),
+			} as Dumling.Reading<"de">;
+			return {
+				attestationLinks: (refs ?? []).map((ref) => ({
+					reading,
+					ref,
+					surfaceId: null,
+				})),
+				attestedTranslations: [],
+				notes: "",
+				...entry,
+				reading,
+			};
+		}),
 	};
 }
 
 const kohlekraftwerk = noteData(noun("Kohlekraftwerk", "Neut"), [
 	{
-		attestations: ["![[Atom#^13|^]]", "![[Atom#^14|^]]"],
 		emojiDescription: "🏭",
 		knowledge: {
 			morphologicalTree: {
@@ -72,7 +85,6 @@ const kohlekraftwerk = noteData(noun("Kohlekraftwerk", "Neut"), [
 					nodeKind: "structure",
 				},
 			},
-			plural: ["Kohlekraftwerke"],
 			semanticRelations: {
 				antonym: [noun("Windrad", "Neut")],
 				nearSynonym: [noun("Industrieanlage", "Fem"), noun("Fabrik", "Fem")],
@@ -82,6 +94,7 @@ const kohlekraftwerk = noteData(noun("Kohlekraftwerk", "Neut"), [
 			transcription: "ˈkoːləˌkraftvɛɐ̯k",
 			translations: { en: ["coal-fired power plant"] },
 		},
+		refs: ["![[Atom#^13|^]]", "![[Atom#^14|^]]"],
 	},
 ]);
 
@@ -94,33 +107,49 @@ const fahrenLemma: Dumling.Lemma<"de", "Lexeme", "VERB"> = {
 	unitKind: "Lemma",
 };
 
-// The principal parts texteater#1218 stores (dumcorpus gold).
 const fahren = noteData(fahrenLemma, [
 	{
-		attestations: ["![[Ankunft#^3|^]]"],
 		attestedTranslations: ["drive", "drove"],
 		emojiDescription: "🚗",
 		knowledge: {
-			conjugationClass: ["Strong"],
-			pastParticiple: ["gefahren"],
-			presentSingular: {
-				first: ["fahre"],
-				second: ["fährst"],
-				third: ["fährt"],
-			},
-			preterite: ["fuhr"],
-			subjunctivePast: ["führe"],
 			transcription: "ˈfaːʁən",
 			translations: { en: ["drive", "ride", "go"] },
 		},
+		refs: ["![[Ankunft#^3|^]]"],
 	},
 ]);
 
 const braunkohlekraftwerk = noun("Braunkohlekraftwerk", "Neut");
 
+/**
+ * The principal parts each Lemma's table is derived from. Reading Knowledge
+ * no longer holds them (texteater#1226) and the codec passes none, so the
+ * hooks below hand them in until #120 renders the batteries' tables.
+ */
+const PRINCIPAL_PARTS: Readonly<Record<string, PrincipalParts>> = {
+	// The principal parts texteater#1218 stored (dumcorpus gold).
+	fahren: {
+		conjugationClass: ["Strong"],
+		pastParticiple: ["gefahren"],
+		presentSingular: {
+			first: ["fahre"],
+			second: ["fährst"],
+			third: ["fährt"],
+		},
+		preterite: ["fuhr"],
+		subjunctivePast: ["führe"],
+	},
+	Kohlekraftwerk: { plural: ["Kohlekraftwerke"] },
+	Mutter: { plural: ["Mütter"] },
+};
+
 /** The derived hooks, and the inverse relation the store would project. */
 const projections: Projections<"de"> = {
-	...derivedProjections,
+	inflection: (context) =>
+		derivedProjections.inflection({
+			...context,
+			principalParts: PRINCIPAL_PARTS[context.lemma.canonicalForm],
+		}),
 	inverseRelations: ({ entry, lemma }) =>
 		lemma.canonicalForm === "Kohlekraftwerk"
 			? [
@@ -132,6 +161,11 @@ const projections: Projections<"de"> = {
 					},
 				]
 			: [],
+	tags: (context) =>
+		derivedProjections.tags({
+			...context,
+			principalParts: PRINCIPAL_PARTS[context.lemma.canonicalForm],
+		}),
 };
 
 const render = (data: LemmaNoteData<"de">) =>
@@ -264,11 +298,11 @@ ${title("tags", "Tags")}
 			noteData(mutter, [
 				{
 					emojiDescription: "👩",
-					knowledge: { plural: ["Mütter"], translations: { en: ["mother"] } },
+					knowledge: { translations: { en: ["mother"] } },
 				},
 				{
 					emojiDescription: "🔩",
-					knowledge: { plural: ["Muttern"], translations: { en: ["nut"] } },
+					knowledge: { translations: { en: ["nut"] } },
 				},
 			]),
 		);

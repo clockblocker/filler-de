@@ -3,7 +3,10 @@
  * `planAndCommitDictionary` does inside its transaction: a New Reading
  * becomes a new Reading Entry owning the attested Surface, and a reused
  * Reading gains the Surface if its Lemma does not own it yet. Either way
- * the Reading records the occurrence's Attestation Ref.
+ * the Reading would record the occurrence's Attestation Ref. TODO(#113):
+ * dumdict v2 records it as an Attestation Link, which the store does not
+ * keep yet, so no occurrence is recorded until it does; `attestationRef`
+ * is carried through for then.
  *
  * The store commits all-or-nothing against the revision a plan was built
  * from, so a plan is rebuilt from fresh slices whenever another write wins
@@ -12,7 +15,7 @@
  * written, and its caller judges again (ADR 0031).
  */
 import type { DictionaryCommitError } from "@textfresser/dictionary";
-import type { DumdictPlan, PlannedChangeOp } from "dumdict";
+import type { DumdictPlan } from "dumdict";
 import { createDumdictPlanner, makeSurfaceId } from "dumdict/planning";
 import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
@@ -28,8 +31,14 @@ export const MAX_COMMIT_ATTEMPTS = 4;
 
 const planner = createDumdictPlanner("de");
 
-const emptyNote = () => ({
+const emptySurfaceNote = () => ({
 	attestations: [] as string[],
+	attestedTranslations: [] as string[],
+	notes: "",
+});
+
+const emptyReadingNote = () => ({
+	attestationLinks: [],
 	attestedTranslations: [] as string[],
 	notes: "",
 });
@@ -40,7 +49,10 @@ export type OccurrenceCommit = {
 	/** For a New the judge decided: the stored Emoji Descriptions it saw. */
 	readonly seen?: readonly string[];
 	readonly surface: Dumling.Surface<"de">;
-	/** The occurrence's Attestation Ref; none when its block cannot carry an ID. */
+	/**
+	 * The occurrence's Attestation Ref; none when its block cannot carry an
+	 * ID. Not recorded until the store keeps Attestation Links (#113).
+	 */
 	readonly attestationRef?: string;
 };
 
@@ -81,7 +93,7 @@ const planReuse = Effect.fnUntraced(function* (
 	input: OccurrenceCommit,
 ) {
 	const request = {
-		ownedSurface: { note: emptyNote(), surface: input.surface },
+		ownedSurface: { note: emptySurfaceNote(), surface: input.surface },
 		reading: input.reading,
 	};
 	const context = yield* store
@@ -110,37 +122,13 @@ const planReuse = Effect.fnUntraced(function* (
 					cause: outcome,
 					message: outcome.message ?? outcome.code,
 				});
-	const attestations = context.existingReading?.attestations ?? [];
-	const ref = input.attestationRef;
-	const attest: PlannedChangeOp<"de">[] =
-		ref === undefined || attestations.includes(ref)
-			? []
-			: [
-					{
-						ops: [{ kind: "addAttestation", value: ref }],
-						preconditions: [
-							{
-								kind: "revisionMatches",
-								revision: context.revision,
-							},
-							{ kind: "readingExists", reading: input.reading },
-							{
-								kind: "readingAttestationMissing",
-								reading: input.reading,
-								value: ref,
-							},
-						],
-						reading: input.reading,
-						type: "patchReading",
-					},
-				];
-	if (outcome.plan.changes.length === 0 && attest.length === 0)
+	if (outcome.plan.changes.length === 0)
 		return { _tag: "Unchanged" } satisfies Planned;
-	const plan: DumdictPlan<"de"> = {
-		baseRevision: outcome.plan.baseRevision,
-		changes: [...outcome.plan.changes, ...attest],
-	};
-	return { _tag: "Plan", created: false, plan } satisfies Planned;
+	return {
+		_tag: "Plan",
+		created: false,
+		plan: outcome.plan,
+	} satisfies Planned;
 });
 
 const planNew = Effect.fnUntraced(function* (
@@ -152,16 +140,10 @@ const planNew = Effect.fnUntraced(function* (
 		undefined;
 	const request = {
 		draft: {
-			note: {
-				...emptyNote(),
-				attestations:
-					input.attestationRef === undefined
-						? []
-						: [input.attestationRef],
-			},
+			note: emptyReadingNote(),
 			ownedSurfaces: surfaceStored
 				? []
-				: [{ note: emptyNote(), surface: input.surface }],
+				: [{ note: emptySurfaceNote(), surface: input.surface }],
 			reading: input.reading,
 		},
 	};

@@ -94,7 +94,8 @@ describe("dumgenUnitResolver", () => {
 		const note = await run(harness.store.lemmaNote(see));
 		expect(note?.path).toBe(SEE_PATH);
 		const entry = note?.readings[0];
-		expect(entry?.attestations).toEqual(["![[Story#^0|^]]"]);
+		// TODO(#113): the occurrences' Attestation Links, once the store keeps them.
+		expect(entry?.attestationLinks).toEqual([]);
 		expect(entry?.knowledge?.definition).toBe("See, defined");
 		expect(note?.ownedSurfaces.map(({ surface }) => surface.normalizedSurface)).toEqual(["See"]);
 
@@ -140,10 +141,8 @@ describe("dumgenUnitResolver", () => {
 		expect(stub.calls.reading[1]?.candidates).toEqual(["🌊"]);
 		const note = await run(harness.store.lemmaNote(see));
 		expect(note?.readings).toHaveLength(1);
-		expect(note?.readings[0]?.attestations).toEqual([
-			"![[Story#^0|^]]",
-			"![[Story#^1|^]]",
-		]);
+		// TODO(#113): the occurrences' Attestation Links, once the store keeps them.
+		expect(note?.readings[0]?.attestationLinks).toEqual([]);
 		// The stored entry covers what a later occurrence may ask: no model call.
 		expect(stub.calls.knowledge).toHaveLength(1);
 		expect(harness.scroll.content.match(/\[\[Worter\/de\/Lexeme\/NOUN\/Masc\/See#\^r-/gu)).toHaveLength(2);
@@ -219,7 +218,8 @@ describe("dumgenUnitResolver", () => {
 		// The block had no ID: the Attestation Ref minted one.
 		expect(harness.scroll.content).toBe(`Er ${link("fängt")} heute ${link("an")}. ^0\n`);
 		const note = await run(harness.store.lemmaNote(anfangen));
-		expect(note?.readings[0]?.attestations).toEqual(["![[Story#^0|^]]"]);
+		// TODO(#113): the occurrences' Attestation Links, once the store keeps them.
+		expect(note?.readings[0]?.attestationLinks).toEqual([]);
 	});
 
 	it("publishes generated relations, Pending ones in their source note only, in commits of capped size", async () => {
@@ -498,7 +498,7 @@ async function seedReading(store: DumdictVaultStore, emojiDescription: string) {
 							},
 						]),
 				{
-					entry: { attestations: [], attestedTranslations: [], notes: "", reading },
+					entry: { attestationLinks: [], attestedTranslations: [], notes: "", reading },
 					preconditions: [],
 					type: "createReading",
 				},

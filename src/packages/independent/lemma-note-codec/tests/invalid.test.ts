@@ -83,7 +83,9 @@ describe("hand-edited notes come back as typed issues", () => {
 			),
 		).toEqual(["InvalidBlockPayload"]);
 		expect(
-			issueTags(replaceLine(noun, "%%tf:plural", "%%tf:plural%%")),
+			issueTags(
+				replaceLine(noun, "%%tf:translation", "%%tf:translation%%"),
+			),
 		).toEqual(["InvalidBlockPayload"]);
 	});
 

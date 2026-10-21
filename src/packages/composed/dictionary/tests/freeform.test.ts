@@ -10,7 +10,7 @@ import { Effect } from "effect";
 import { insertFreeformBlock } from "../src/freeform";
 import { expectIndexMatchesFiles, run } from "./support/files";
 import {
-	addAttestation,
+	contribute,
 	createLemma,
 	createReading,
 	gehen,
@@ -91,9 +91,9 @@ describe("appendFreeform", () => {
 				}),
 			),
 		).toBe("AlreadyThere");
-		await seed(store, [addAttestation(gehenReading, "![[Scroll#^9|^]]")]);
+		await seed(store, [contribute(gehenReading, "to go on foot")]);
 		const after = vault.content(gehenPath) ?? "";
-		expect(after).toContain("Scroll#^9");
+		expect(after).toContain("to go on foot");
 		expect(after).toContain(MEMO);
 		await expectIndexMatchesFiles(store, vault);
 	});

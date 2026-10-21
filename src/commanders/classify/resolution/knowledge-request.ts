@@ -123,33 +123,12 @@ export function knowledgeRequestFor(input: {
 }
 
 /**
- * Aspects that always store a value once answered, and that only an
- * occurrence counted as New asks for.
+ * Aspects a later occurrence asks again when they failed or never came.
+ * The principal parts that a New occurrence alone asked moved from Reading
+ * Knowledge into the Lemma Paradigm (texteater#1226). TODO(#113): request
+ * its Paradigm Changes once the store keeps Lemma Paradigms.
  */
-const ALWAYS_STORED_STRUCTURE = ["plural", "conjugationClass"] as const;
-
-/** Aspects a later occurrence asks again when they failed or never came. */
-export const RETRIED_ASPECTS: ReadonlySet<string> = new Set([
-	...BASE_TEXT_ASPECTS,
-	...ALWAYS_STORED_STRUCTURE,
-]);
-
-/**
- * Whether the stored Knowledge lacks structure the Reading's route always
- * stores once asked, as after an interrupted or failed first run.
- */
-export function structureMissing(
-	reading: Dumling.Reading<"de">,
-	knowledge: StoredKnowledge["knowledge"],
-): boolean {
-	const selected = selectKnowledge({ route: routeOf(reading.lemma) });
-	if (!selected.success) return false;
-	const stored: Readonly<Record<string, unknown>> = knowledge ?? {};
-	const applicable: Readonly<Record<string, unknown>> = selected.value;
-	return ALWAYS_STORED_STRUCTURE.some(
-		(aspect) => aspect in applicable && stored[aspect] === undefined,
-	);
-}
+export const RETRIED_ASPECTS: ReadonlySet<string> = BASE_TEXT_ASPECTS;
 
 /** Whether a request asks for nothing, so no model call is needed. */
 export const isEmptyRequest = (request: Dumrel.KnowledgeRequestMask) =>

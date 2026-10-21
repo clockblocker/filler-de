@@ -2,7 +2,7 @@ import type { ProjectionInput } from "./context";
 import { deriveInflection } from "./inflection";
 import { deriveTags } from "./tags";
 
-export type { ProjectedKnowledge, ProjectionInput } from "./context";
+export type { PrincipalParts, ProjectionInput } from "./context";
 export type { Case, Gender, GrammaticalNumber } from "./de/articles";
 export { closedParadigm } from "./de/closed-paradigms";
 export { compareGerman, type GermanComparisonInput } from "./de/comparison";

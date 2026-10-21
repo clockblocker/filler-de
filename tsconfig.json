@@ -70,6 +70,9 @@
 			],
 			"dumcorpus/types": ["./.texteater/battery/dumcorpus/src/types.ts"],
 			"dumdict": ["./.texteater/battery/dumdict/src/index.ts"],
+			"dumdict/inflection": [
+				"./.texteater/battery/dumdict/src/inflection.ts"
+			],
 			"dumdict/pending": ["./.texteater/battery/dumdict/src/pending.ts"],
 			"dumdict/planning": [
 				"./.texteater/battery/dumdict/src/planning.ts"

@@ -1,5 +1,5 @@
 import type * as Dumling from "dumling/types";
-import type { ProjectedKnowledge, ProjectionInput } from "../src";
+import type { PrincipalParts, ProjectionInput } from "../src";
 
 type De = "de";
 
@@ -54,10 +54,10 @@ export function lexeme<K extends "ADJ" | "ADV" | "PROPN">(
 
 export function input(
 	lemma: Dumling.Lemma,
-	knowledge?: ProjectedKnowledge,
+	principalParts?: PrincipalParts,
 	ownedSurfaces: ProjectionInput["ownedSurfaces"] = [],
 ): ProjectionInput {
-	return { entry: { knowledge }, lemma, ownedSurfaces };
+	return { lemma, ownedSurfaces, principalParts };
 }
 
 /** An owned noun Surface in one case, as `ownedSurfaces` holds it. */

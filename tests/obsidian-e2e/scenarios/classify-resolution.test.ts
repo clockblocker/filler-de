@@ -67,11 +67,12 @@ describe("Obsidian E2E - Classify resolution", () => {
 				);
 
 				// Each Lemma note sits at its identity path and holds the
-				// Reading block the links point at, with the Attestation Ref.
+				// Reading block the links point at. TODO(#113): and the
+				// occurrence's Attestation Link, once the store keeps them.
 				let notes = (await dictionary()).markdown;
 				for (const { lemmaPath, readingBlockId } of targets) {
 					expect(notes[lemmaPath]).toContain(`^${readingBlockId}`);
-					expect(notes[lemmaPath]).toContain("![[Story#^0|^]]");
+					expect(notes[lemmaPath]).not.toContain("![[Story#^0|^]]");
 				}
 				const knowledgeCalls = async () => {
 					const requests = (await status()).dumgenRequests;
@@ -93,7 +94,7 @@ describe("Obsidian E2E - Classify resolution", () => {
 					readingBlockId: hund.readingBlockId,
 				});
 				notes = (await dictionary()).markdown;
-				expect(notes[LEMMA_PATHS.hund]).toContain("![[Story#^1|^]]");
+				expect(notes[LEMMA_PATHS.hund]).not.toContain("![[Story#^1|^]]");
 				expect(await knowledgeCalls()).toEqual(before);
 				expect((await snapshot()).markdown["Story.md"]).toContain(
 					`${linkTo(hund.lemmaPath, hund.readingBlockId, "Der Hund")} schläft. ^1`,

@@ -27,7 +27,11 @@ const schreitenPath = legacyLemmaNotePath(schreiten).path;
 
 const schreitenNote: AddNewNoteRequest<"de"> = {
 	draft: {
-		note: { attestations: [], attestedTranslations: ["stride"], notes: "" },
+		note: {
+			attestationLinks: [],
+			attestedTranslations: ["stride"],
+			notes: "",
+		},
 		reading: schreitenReading,
 	},
 };
