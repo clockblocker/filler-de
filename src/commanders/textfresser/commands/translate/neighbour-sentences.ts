@@ -53,7 +53,7 @@ const MARK = "";
 export function neighbourSentences(
 	input: NeighbourSentencesInput,
 ): NeighbourSentences {
-	const { body } = noteMetadataHelper.decompose(input.content);
+	const body = noteMetadataHelper.body(input.content);
 	const span = locate(body, input);
 	if (!span || body.includes(MARK)) return {};
 	const lines =

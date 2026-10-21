@@ -6,23 +6,17 @@ import { makeCodecRulesFromSettings } from "@textfresser/library-core";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { Effect, Exit } from "effect";
 import type { App, Menu, Plugin } from "obsidian";
-import { z } from "zod";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/pages/split-to-pages-action";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 import {
-	FileType,
-	MdFileSubTypeSchema,
-} from "../../../types/common-interface/enums";
+	LibraryMetadata,
+	noteMetadataHelper,
+} from "../../../stateless-helpers/note-metadata";
+import { FileType } from "../../../types/common-interface/enums";
 import {
 	type CommandExecutor,
 	CommandKind,
 } from "../../obsidian/command-executor";
-
-/** Schema for reading noteKind from file metadata. */
-const FileTypeMetadataSchema = z.object({
-	noteKind: MdFileSubTypeSchema.optional(),
-});
 
 type ContextMenuDeps = {
 	app: App;
@@ -92,10 +86,7 @@ function handleEditorMenu(
 	let wouldSplitToMultiplePages = false;
 
 	try {
-		const metaInfo = noteMetadataHelper.read(
-			content,
-			FileTypeMetadataSchema,
-		);
+		const metaInfo = noteMetadataHelper.read(content, LibraryMetadata);
 		fileType = metaInfo?.noteKind ?? null;
 
 		// Check if scroll would split to multiple pages

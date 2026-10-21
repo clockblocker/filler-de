@@ -6,7 +6,10 @@
 import type { Transform } from "@textfresser/vault-action-manager";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
-import { noteMetadataHelper } from "../../../../internal/root/note-metadata";
+import {
+	LibraryMetadata,
+	noteMetadataHelper,
+} from "../../../../internal/root/note-metadata";
 import type { SectionNode } from "../../tree-node/types/tree-node";
 import { generateChildrenList } from "../generate-codex-content";
 import { makeBacklinkTransform } from "./scroll-transforms";
@@ -25,7 +28,9 @@ export function makeCodexTransform(
 	sectionChain: SectionNodeSegmentId[],
 	codecs: Codecs,
 ): Transform {
-	const metaTransform = noteMetadataHelper.upsert({ fileType: "Codex" });
+	const metaTransform = noteMetadataHelper.write(LibraryMetadata, {
+		fileType: "Codex",
+	});
 
 	return async (_content: string) => {
 		const childrenContent = generateChildrenList(

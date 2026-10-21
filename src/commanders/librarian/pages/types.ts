@@ -1,8 +1,5 @@
 import type { NodeName } from "@textfresser/library-core";
-import {
-	TreeNodeStatus,
-	type TreeNodeStatus as TreeNodeStatusType,
-} from "@textfresser/library-core";
+import { TreeNodeStatus } from "@textfresser/library-core";
 import type { NonEmptyArray } from "../../../types/helpers";
 
 // ─── Types ───
@@ -58,7 +55,7 @@ export type SegmentationResult = {
  */
 type PageFrontmatter = {
 	noteKind: "Page";
-	status: TreeNodeStatusType;
+	status: typeof TreeNodeStatus.NotStarted;
 };
 
 export const PAGE_FRONTMATTER: PageFrontmatter = {

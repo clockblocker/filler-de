@@ -81,7 +81,7 @@ const ENGLISH_LOCALE: SettingsLocale = {
 	// Setting descriptions
 	hideMetadata: "Hide metadata",
 	hideMetadataDesc:
-		"Store metadata invisibly at end of file. When off, uses YAML frontmatter.",
+		"Store metadata invisibly at the end of each note. When off, uses YAML frontmatter. Switching moves existing Library metadata into the selected format.",
 	knownLanguage: "Language you know",
 	knownLanguageDesc: "Your native or known language for translations",
 	languagesHeading: "Languages",
@@ -149,7 +149,7 @@ const RUSSIAN_LOCALE: SettingsLocale = {
 	// Setting descriptions
 	hideMetadata: "Скрыть метаданные",
 	hideMetadataDesc:
-		"Хранить метаданные невидимо в конце файла. Если выкл., использует YAML frontmatter.",
+		"Хранить метаданные невидимо в конце файла. Если выкл., использует YAML frontmatter. При переключении метаданные библиотеки переносятся в выбранный формат.",
 	knownLanguage: "Язык, который вы знаете",
 	knownLanguageDesc: "Ваш родной язык для переводов",
 	languagesHeading: "Языки",

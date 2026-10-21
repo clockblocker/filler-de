@@ -41,8 +41,7 @@ function translateCodexAction(
 			// For frontmatter, "Unknown" status is treated as "NotStarted"
 			const normalizedStatus =
 				status === "Unknown" ? ("NotStarted" as const) : status;
-			// Use toggleStatus which properly merges with existing frontmatter
-			// (internally calls upsertFrontmatterStatus which reads existing metadata first)
+			// toggleStatus keeps the note's other Library metadata.
 			const checked = normalizedStatus === "Done";
 			return {
 				kind: VaultActionKind.ProcessMdFile,

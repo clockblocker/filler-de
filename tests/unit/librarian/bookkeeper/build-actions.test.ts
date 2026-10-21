@@ -2,25 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 } from "@textfresser/library-core";
-import { z } from "zod";
 import {
 	buildPageSplitActions,
 } from "../../../../src/commanders/librarian/pages/build-actions";
 import type { SegmentationResult } from "../../../../src/commanders/librarian/pages/types";
-import { noteMetadataHelper } from "../../../../src/stateless-helpers/note-metadata";
+import {
+	LibraryMetadata,
+	noteMetadataHelper,
+} from "../../../../src/stateless-helpers/note-metadata";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
 
 let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
-const PageMetadataSchema = z
-	.object({
-		nextPageIdx: z.number().optional(),
-		noteKind: z.string().optional(),
-		prevPageIdx: z.number().optional(),
-		status: z.enum(["Done", "NotStarted"]).optional(),
-	})
-	.passthrough();
 
 beforeEach(() => {
 	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
@@ -67,12 +61,10 @@ describe("buildPageSplitActions", () => {
 
 		const metadata = noteMetadataHelper.read(
 			firstAction.payload.content,
-			PageMetadataSchema,
+			LibraryMetadata,
 		);
-		expect(metadata?.noteKind).toBe("Page");
-		expect(metadata?.status).toBe("NotStarted");
-		expect(metadata?.prevPageIdx).toBeUndefined();
-		expect(metadata?.nextPageIdx).toBeUndefined();
+		expect(metadata).toEqual({ noteKind: "Page", status: "NotStarted" });
+		expect(firstAction.payload.content).not.toContain("PageIdx");
 		expect(split.treeActions.map((action) => action.actionType)).toEqual([
 			"Delete",
 			"Create",

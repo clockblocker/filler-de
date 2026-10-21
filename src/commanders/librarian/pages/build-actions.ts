@@ -21,7 +21,10 @@ import {
 } from "@textfresser/vault-action-manager";
 import { Schema } from "effect";
 import { err, ok, type Result } from "neverthrow";
-import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
+import {
+	LibraryMetadata,
+	noteMetadataHelper,
+} from "../../../stateless-helpers/note-metadata";
 import { buildPageBasename, buildPageFolderBasename } from "./page-codec";
 import type { SegmentationResult } from "./types";
 import { PAGE_FRONTMATTER, PAGE_INDEX_DIGITS, PAGE_PREFIX } from "./types";
@@ -203,12 +206,10 @@ function buildPageSplitPath(
  * Uses upsertMetadata to respect hideMetadata setting.
  */
 function formatPageContent(content: string): string {
-	// Transform is synchronous here, cast is safe
-	const metadata: Record<string, unknown> = {
+	return noteMetadataHelper.write(LibraryMetadata, {
 		noteKind: PAGE_FRONTMATTER.noteKind,
 		status: PAGE_FRONTMATTER.status,
-	};
-	return noteMetadataHelper.upsert(metadata)(content) as string;
+	})(content);
 }
 
 /**

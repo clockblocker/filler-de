@@ -190,7 +190,7 @@ Navigation uses Library Tree order. It does not depend on stored next-page or pr
   serialization, command parsing, split operation IDs, and navigation.
 - The reconciliation runtime owns staged Tree application, all projection
   derivation, VAM dispatch, truthful recovery, and the audit outcome.
-- Note metadata and go-back links are projections of Library state.
+- Note metadata and go-back links are projections of Library state. The [note-metadata facility](note-metadata.md) stores the metadata.
 
 ## Source map
 
