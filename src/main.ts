@@ -713,6 +713,11 @@ export default class TextEaterPlugin extends Plugin {
 								.join(", "),
 						);
 				},
+				onTablesRerendered: ({ lemmas, notes, remaining }) => {
+					logger.info(
+						`[TextEaterPlugin] Re-rendered the inflection tables of ${lemmas} Lemma notes for the current language pack (${notes} notes written${remaining > 0 ? `, ${remaining} left for the next scan` : ""})`,
+					);
+				},
 				projections: dictionaryProjections,
 				vault: this.vam,
 			}),

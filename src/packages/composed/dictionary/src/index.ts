@@ -28,5 +28,6 @@ export {
 	type LemmaCandidate,
 	makeDumdictVaultStore,
 	type QuarantinedNote,
+	type TablesRerendered,
 } from "./store";
 export { type DictionaryVault, WORTER_SPLIT_PATH } from "./vault";

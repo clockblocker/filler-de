@@ -88,6 +88,11 @@ One pure, host-owned function spells every shard folder, every file name and eve
 - **Clicked notes.** An empty file at a Crossroad path is filled as "not classified yet" as soon as the store sees it, with no Knowledge generated.
 - **Never created for nothing.** A Crossroad note is created only while its spelling has something to list; once created, it is never removed.
 
+### Refinements from table versions (#121)
+
+- **Recorded versions.** A Lemma note's metadata records the pack and Table Schema versions its tables were rendered at. A Reading note records none: its embed names a Block ID that hashes its Licence Group's selection, never a version.
+- **Re-rendered after every full read.** The store finds the Lemma notes recorded at other versions from the index alone, and re-renders those Lemmas' notes in the background, in chunks under the writer lock. It writes each Lemma's Reading notes before its Lemma note, through the usual compare-and-swap re-render. A second run writes nothing.
+
 ### Refinements from link landing (#115)
 
 - **The rewrite.** In a note outside `Worter/`, a bare link the user wraps in `[[ ]]` or closes with `]]` becomes `[[Worter/<l1>/<l3>/<l5>/<key>|<word>]]`, keeping the user's spelling as its alias, whether or not the Crossroad note exists yet. The wikilink detector of the event layer finds the link and where Obsidian resolves it (`getFirstLinkpathDest`); the completion handler decides.

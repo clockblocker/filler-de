@@ -15,6 +15,7 @@ import { lemmaIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
 import { z } from "zod";
 import type { RenderingSeal } from "./boundary";
+import type { TableVersions } from "./inflection";
 import type { CodecIssue, IssueLocation, RecordName } from "./issues";
 import type {
 	CodecOptions,
@@ -58,16 +59,28 @@ const PendingMetadataSchema = z.strictObject({
 	target: z.unknown(),
 });
 
+/** The pack and Table Schema versions a Lemma note's tables were rendered at. */
+const TableVersionsSchema = z.strictObject({
+	pack: z.string(),
+	schema: z
+		.strictObject({ id: z.string(), version: z.number().int() })
+		.optional(),
+});
+
 /**
  * A Lemma note's metadata: the Lemma, its Lemma Paradigm and its owned
  * Surfaces. A Surface Entry keeps only its Surface and its user content;
- * its id and owner come from the Surface and the note's Lemma.
+ * its id and owner come from the Surface and the note's Lemma. `tables`
+ * names the versions its tables were rendered at (#121), and is no record:
+ * a note without it was rendered before versions were recorded, or by a
+ * hook that names none.
  */
 export const LemmaNoteMetadataSchema = z.strictObject({
 	lemma: z.unknown(),
 	paradigm: z.unknown().optional(),
 	rendering: z.array(SealSchema),
 	surfaces: z.array(SurfaceMetadataSchema),
+	tables: TableVersionsSchema.optional(),
 });
 
 /**
@@ -134,6 +147,7 @@ function defined<T extends Record<string, unknown>>(value: T): T {
 export function lemmaNoteMetadataOf<L extends Dumling.Language>(
 	data: LemmaNoteData<L>,
 	rendering: readonly RenderingSeal[],
+	tables?: TableVersions,
 ): LemmaNoteMetadata {
 	const { lemma, paradigm } = data.lemmaRecord;
 	return json(
@@ -149,6 +163,7 @@ export function lemmaNoteMetadataOf<L extends Dumling.Language>(
 					surface: entry.surface,
 				}),
 			),
+			tables,
 		}),
 	);
 }

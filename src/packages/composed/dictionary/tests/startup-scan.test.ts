@@ -5,15 +5,24 @@
  *     DICTIONARY_SCAN_BENCH=2000 bun test --preload ./tests/unit/setup.ts \
  *       src/packages/composed/dictionary/tests/startup-scan.test.ts
  *
- * and prints the time a cold scan and a cached scan take.
+ * and prints the time a cold scan and a cached scan take. A second bench
+ * renders the same vault's tables at one pack version, opens it at the
+ * next (#121), and prints how long the store takes to open, how long the
+ * background re-render takes, and how long a second open takes, which
+ * writes nothing.
  */
 import { expect, test } from "bun:test";
+import {
+	type InflectionHook,
+	inflectionFromPack,
+} from "@textfresser/lemma-note-codec";
+import { inflectionPacks } from "dumcorpus/inflection";
 import type * as Dumling from "dumling/types";
 import {
 	writeLemmaNote,
 	writeReadingNote,
 } from "../../../../stateless-helpers/dictionary-notes";
-import { createMemoryNoteCache } from "../src";
+import { createMemoryNoteCache, makeDumdictVaultStore } from "../src";
 import { writeCrossroadNote } from "../src/crossroad";
 import { readingKeyOf } from "../src/keys";
 import { byCodeUnit } from "../src/note-index";
@@ -36,9 +45,16 @@ function word(index: number): string {
 	return `${name}eln`;
 }
 
-function generatedVault(count: number): FakeVault {
+function generatedVault(
+	count: number,
+	inflection?: InflectionHook<"de">,
+): FakeVault {
 	const files: Record<string, string> = {};
-	const options = { format: "Hidden", language: "de" } as const;
+	const options = {
+		format: "Hidden",
+		language: "de",
+		...(inflection ? { inflection } : {}),
+	} as const;
 	for (let index = 0; index < count; index++) {
 		const lemma = verb(word(index));
 		const readings = EMOJIS.map((emoji) =>
@@ -102,6 +118,71 @@ test.skipIf(lemmaCount === 0)(
 
 		process.stdout.write(
 			`[startup scan] ${notes} notes (${lemmaCount} Lemma notes, ${lemmaCount * EMOJIS.length} Reading notes, ${lemmaCount} Crossroad notes): cold ${coldMs.toFixed(0)} ms, cached ${warmMs.toFixed(0)} ms\n`,
+		);
+	},
+	600_000,
+);
+
+test.skipIf(lemmaCount === 0)(
+	"the table re-render after a pack bump over a generated vault",
+	async () => {
+		const v1 = inflectionPacks.de;
+		const v2 = {
+			...v1,
+			labels: {
+				...v1.labels,
+				panel: (id: string) => `${v1.labels.panel(id)}°`,
+			},
+			version: "2",
+		};
+		const vault = generatedVault(lemmaCount, inflectionFromPack(v1));
+		const notes = vault.markdownPaths().length;
+		const cache = createMemoryNoteCache();
+		const openAt = (pack: typeof v1) =>
+			run(
+				makeDumdictVaultStore({
+					cache,
+					projections: { inflection: inflectionFromPack(pack) },
+					vault,
+				}),
+			);
+
+		const current = await openAt(v1);
+		expect(await run(current.refreshTables)).toEqual({
+			lemmas: 0,
+			notes: 0,
+			remaining: 0,
+		});
+		expect(vault.batches).toHaveLength(0);
+		await run(current.close);
+
+		const openStart = performance.now();
+		const bumped = await openAt(v2);
+		const openMs = performance.now() - openStart;
+		const refreshStart = performance.now();
+		const refreshed = await run(bumped.refreshTables);
+		const refreshMs = performance.now() - refreshStart;
+		expect(refreshed).toEqual({
+			lemmas: lemmaCount,
+			notes: lemmaCount,
+			remaining: 0,
+		});
+		await run(bumped.close);
+
+		const writes = vault.batches.length;
+		const againStart = performance.now();
+		const again = await openAt(v2);
+		expect(await run(again.refreshTables)).toEqual({
+			lemmas: 0,
+			notes: 0,
+			remaining: 0,
+		});
+		const againMs = performance.now() - againStart;
+		expect(vault.batches).toHaveLength(writes);
+		await run(again.close);
+
+		process.stdout.write(
+			`[table re-render] ${notes} notes (${lemmaCount} Lemma notes): open after a pack bump ${openMs.toFixed(0)} ms, background re-render ${refreshMs.toFixed(0)} ms in ${writes} batches, second open and check ${againMs.toFixed(0)} ms with no writes\n`,
 		);
 	},
 	600_000,

@@ -9,7 +9,7 @@ import {
 	renderingLines,
 	trimBlankLines,
 } from "./boundary";
-import { lemmaTables } from "./inflection";
+import { lemmaTables, tableVersionsOf } from "./inflection";
 import { missingMetadata } from "./issues";
 import { shadowOf } from "./links";
 import {
@@ -124,8 +124,9 @@ export function parseLemmaNote<L extends Dumling.Language>(
  * Writes a Lemma note from its Lemma's records: the header, the links to
  * its Reading notes, its tables and its Surface lines, then the freeform of
  * `options.previous`, kept byte for byte but for the codec-owned Block IDs
- * an edited rendering still carries. It throws `NoteSerializeError` for
- * records no valid note holds.
+ * an edited rendering still carries. Its metadata records the versions
+ * `options.inflection` renders the tables at. It throws
+ * `NoteSerializeError` for records no valid note holds.
  */
 export function serializeLemmaNote<L extends Dumling.Language>(
 	records: LemmaRecords<L>,
@@ -213,6 +214,7 @@ export function serializeLemmaNote<L extends Dumling.Language>(
 				ownedSurfaceEntries: records.ownedSurfaceEntries,
 			},
 			rendering,
+			tableVersionsOf(options.inflection, lemma),
 		),
 	};
 }

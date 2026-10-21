@@ -55,10 +55,50 @@ export type InflectionInput<L extends Dumling.Language> = {
 	readonly link: LinkRenderer<L>;
 };
 
+/**
+ * The versions a Lemma's tables are rendered at (system ADR 0049): its
+ * Inflection Pack's, and its Table Schema's id and version when it has one.
+ * Tables are projections, so a note rendered at other versions shows stale
+ * tables; a Lemma note records these, and the store re-renders a note that
+ * recorded others (#121).
+ */
+export type TableVersions = {
+	readonly pack: string;
+	readonly schema?: { readonly id: string; readonly version: number };
+};
+
 /** Renders a Lemma's tables, or undefined when it has none. Pure. */
-export type InflectionHook<L extends Dumling.Language> = (
+export type InflectionHook<L extends Dumling.Language> = ((
 	input: InflectionInput<L>,
-) => RenderedInflection<L> | undefined;
+) => RenderedInflection<L> | undefined) & {
+	/**
+	 * The versions the hook renders a Lemma's tables at. Pure and cheap: the
+	 * store asks it for every Lemma at each full read, without rendering.
+	 * A hook without it records none, and its notes are never re-rendered
+	 * for a version change.
+	 */
+	readonly versions?: (lemma: Dumling.Lemma<L>) => TableVersions | undefined;
+};
+
+/** The versions `hook` renders `lemma`'s tables at, if it names any. */
+export function tableVersionsOf<L extends Dumling.Language>(
+	hook: InflectionHook<L> | undefined,
+	lemma: Dumling.Lemma<L>,
+): TableVersions | undefined {
+	return hook?.versions?.(lemma);
+}
+
+/** Whether two notes' recorded table versions are the same. */
+export function sameTableVersions(
+	left: TableVersions | undefined,
+	right: TableVersions | undefined,
+): boolean {
+	return (
+		left?.pack === right?.pack &&
+		left?.schema?.id === right?.schema?.id &&
+		left?.schema?.version === right?.schema?.version
+	);
+}
 
 /** One Licence Group's table in a note, with its Block ID. */
 export type LemmaTable<L extends Dumling.Language> = RenderedTable<L> & {
@@ -177,13 +217,24 @@ function axesOf<L extends Dumling.Language, F>(
  * view from `projectLemmaTables`, one table per Licence Group drawn by
  * `draw` ({@link drawTable}, the dictionary's line style, by default),
  * each met Surface's Surface Axes through the pack's `labels.bundle`, and
- * a mark on each Surface met as a Licence Conflict.
+ * a mark on each Surface met as a Licence Conflict. Its `versions` are the
+ * ones the view carries: the pack's `version` and the `schemaFor` schema's
+ * id and version.
  */
 export function inflectionFromPack<L extends Dumling.Language, F>(
 	pack: InflectionPack<L, F, string>,
 	draw: TableDrawer<L, F> = drawTable,
 ): InflectionHook<L> {
-	return ({ link, records }) => {
+	const versions = (lemma: Dumling.Lemma<L>): TableVersions => {
+		const schema = pack.schemaFor(lemma);
+		return {
+			pack: pack.version,
+			...(schema === undefined
+				? {}
+				: { schema: { id: schema.id, version: schema.version } }),
+		};
+	};
+	const render: InflectionHook<L> = ({ link, records }) => {
 		const view = projectLemmaTables(pack, {
 			lemmaRecord: records.lemmaRecord,
 			ownedSurfaceEntries: records.ownedSurfaceEntries,
@@ -204,4 +255,5 @@ export function inflectionFromPack<L extends Dumling.Language, F>(
 			})),
 		};
 	};
+	return Object.assign(render, { versions });
 }
