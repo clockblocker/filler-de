@@ -1,6 +1,6 @@
 import {
+	CrossroadNoteMetadata,
 	type DumdictVaultStore,
-	LemmaBundleMetadata,
 	makeDumdictVaultStore,
 	WORTER_SPLIT_PATH,
 } from "@textfresser/dictionary";
@@ -20,6 +20,7 @@ import { logError } from "@textfresser/vault-action-manager/issue-handlers";
 import { Cause, Effect, Exit, Predicate } from "effect";
 import { Modal, Notice, Plugin, requestUrl } from "obsidian";
 import {
+	awaitReadingKnowledge,
 	ClassifyCommander,
 	createKnowledgeQueue,
 	DUMGEN_SEGMENTER_VERSION,
@@ -27,7 +28,6 @@ import {
 	filesSegmentationCache,
 	type KnowledgeQueue,
 	produceKnowledge,
-	scrollAfterKnowledge,
 	UnitResolverError,
 	vamScrollFiles,
 } from "./commanders/classify";
@@ -679,13 +679,13 @@ export default class TextEaterPlugin extends Plugin {
 		return building;
 	}
 
-	/** Classify's scroll to entry: a clicked Reading link waits for its Knowledge. */
+	/** A clicked Reading link waits for its Knowledge (TODO(#116): reopen it then). */
 	private readonly onWikilinkClicked = (target: string): void => {
 		const queue = this.knowledgeQueue;
-		if (!queue || !this.vam) return;
-		void scrollAfterKnowledge(queue, this.vam, target).catch((error) => {
+		if (!queue) return;
+		void awaitReadingKnowledge(queue, target).catch((error) => {
 			logger.warn(
-				"[TextEaterPlugin] Could not scroll to the Reading:",
+				"[TextEaterPlugin] Could not wait for the Reading's Knowledge:",
 				getErrorMessage(error),
 			);
 		});
@@ -987,12 +987,10 @@ export default class TextEaterPlugin extends Plugin {
 				},
 				{
 					folder: WORTER_SPLIT_PATH,
-					// TODO(#113): drop LemmaBundleMetadata once the store writes
-					// Lemma and Reading notes.
 					namespaces: [
-						LemmaBundleMetadata,
 						LemmaNoteMetadata,
 						ReadingNoteMetadata,
+						CrossroadNoteMetadata,
 					],
 				},
 			]),
@@ -1006,6 +1004,16 @@ export default class TextEaterPlugin extends Plugin {
 			return;
 		}
 		const report = exit.value;
+		// VAM's own writes reach the dictionary store as Self Events only, so
+		// it reads the notes the migration moved under `Worter/` again.
+		await this.dictionary
+			?.then((store) => Effect.runPromise(store.rescan))
+			.catch((error: unknown) =>
+				logger.warn(
+					"[TextEaterPlugin] The dictionary could not read Worter/ again after the metadata migration:",
+					getErrorMessage(error),
+				),
+			);
 		if (report.skipped.length > 0 || report.failed.length > 0) {
 			logger.warn("[TextEaterPlugin] Metadata migration incomplete:", {
 				failed: report.failed,

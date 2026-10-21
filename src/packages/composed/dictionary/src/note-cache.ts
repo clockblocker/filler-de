@@ -1,12 +1,18 @@
-import type { CodecIssue } from "@textfresser/lemma-note-codec";
-import { lemmaEntry, type NoteData, type PathEntry } from "./note-entry";
+import type { PathEntry } from "./notes";
 
 /**
  * The version of what a cached entry holds. Bump it whenever the codec, the
  * dumdict record schemas or the store's reading of a note change, so a
  * persisted cache from an older build misses instead of serving stale data.
  */
-const NOTE_CACHE_VERSION = "dictionary-note-cache/3";
+const NOTE_CACHE_VERSION = "dictionary-note-cache/4";
+
+/** A path's entry without its path, as plain JSON. */
+type CachedEntry = PathEntry extends infer E
+	? E extends PathEntry
+		? Omit<E, "path">
+		: never
+	: never;
 
 /**
  * A cached read of one note, valid while the file's `mtime` and `size` are
@@ -17,17 +23,7 @@ export type CachedNote = {
 	readonly version: string;
 	readonly mtime: number;
 	readonly size: number;
-	readonly entry:
-		| {
-				readonly kind: "lemma";
-				readonly hash: string;
-				readonly data: NoteData;
-		  }
-		| {
-				readonly kind: "quarantined";
-				readonly hash: string;
-				readonly issues: readonly CodecIssue[];
-		  };
+	readonly entry: CachedEntry;
 };
 
 /**
@@ -72,42 +68,16 @@ export function toCached(
 	entry: PathEntry,
 	stat: { readonly mtime: number; readonly size: number },
 ): CachedNote | undefined {
-	const base = {
+	if (entry.kind === "quarantined" && entry.reason._tag === "Unreadable")
+		return undefined;
+	const { path: _path, ...rest } = entry;
+	return {
+		entry: rest as CachedEntry,
 		mtime: stat.mtime,
 		size: stat.size,
 		version: NOTE_CACHE_VERSION,
 	};
-	switch (entry.kind) {
-		case "lemma":
-			return {
-				...base,
-				entry: { data: entry.data, hash: entry.hash, kind: "lemma" },
-			};
-		case "quarantined":
-			return entry.reason._tag === "InvalidNote"
-				? {
-						...base,
-						entry: {
-							hash: entry.hash,
-							issues: entry.reason.issues,
-							kind: "quarantined",
-						},
-					}
-				: undefined;
-	}
 }
 
-export function fromCached(path: string, cached: CachedNote): PathEntry {
-	const { entry } = cached;
-	switch (entry.kind) {
-		case "lemma":
-			return lemmaEntry(path, entry.hash, entry.data);
-		case "quarantined":
-			return {
-				hash: entry.hash,
-				kind: "quarantined",
-				path,
-				reason: { _tag: "InvalidNote", issues: entry.issues },
-			};
-	}
-}
+export const fromCached = (path: string, cached: CachedNote): PathEntry =>
+	({ ...cached.entry, path }) as PathEntry;

@@ -11,7 +11,7 @@ export {
 } from "./resolution/knowledge-queue";
 export { produceKnowledge } from "./resolution/produce-knowledge";
 export { vamScrollFiles } from "./resolution/scroll-files";
-export { scrollAfterKnowledge } from "./resolution/scroll-to-reading";
+export { awaitReadingKnowledge } from "./resolution/scroll-to-reading";
 export {
 	filesSegmentationCache,
 	memorySegmentationCache,

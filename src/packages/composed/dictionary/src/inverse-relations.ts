@@ -1,4 +1,7 @@
-import type { SemanticRelationProjection } from "@textfresser/lemma-note-codec";
+import type {
+	RenderOptions,
+	SemanticRelationProjection,
+} from "@textfresser/lemma-note-codec";
 import { canonicalJson } from "common-utils";
 import type { ReadingEntry } from "dumdict";
 import type * as Dumling from "dumling/types";
@@ -6,7 +9,6 @@ import {
 	type directSemanticRelationValues,
 	projectSemanticRelations,
 } from "dumrel";
-import { type BundleRender, inverseRelationsShown } from "./bundle";
 import { lemmaKeyOf, readingKeyOf } from "./keys";
 import type { NoteIndex, RelationEdge } from "./note-index";
 
@@ -220,26 +222,10 @@ export function inverseRelationsReader(view: NoteIndex) {
 	return { failed, read };
 }
 
-/** The codec's projections, with the `inverseRelations` hook read from `read`. */
-export function withInverseRelations(
-	projections: Omit<BundleRender, "inverseRelations"> | undefined,
-	read: (lemmaKey: string) => InverseRelations | undefined,
-): BundleRender {
-	return {
-		...projections,
-		inverseRelations: ({ entry, lemma }) =>
-			read(lemmaKeyOf(lemma))?.get(readingKeyOf(entry.reading)),
-	};
-}
-
-/**
- * Whether a note's file shows other inverse relations than `rendered`, the
- * content the store would write for it now. Only the `inverse_relation`
- * renderings are compared, so a note whose other Blocks or freeform text
- * sit out of canonical order is not rewritten for that alone.
- */
-export const showsOtherInverseRelations = (
-	current: string,
-	rendered: string,
-): boolean =>
-	inverseRelationsShown(current) !== inverseRelationsShown(rendered);
+/** The `inverseRelations` hook of the codec, read from `read`. */
+export const inverseRelationsHook =
+	(
+		read: (lemmaKey: string) => InverseRelations | undefined,
+	): NonNullable<RenderOptions<"de">["inverseRelations"]> =>
+	({ entry, lemma }) =>
+		read(lemmaKeyOf(lemma))?.get(readingKeyOf(entry.reading));

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { DumdictVaultStore } from "@textfresser/dictionary";
+import { lemmaNotePath, readingNotePath } from "@textfresser/lemma-note-codec";
 import type { Unit } from "dumgen";
 import { createDumgen } from "dumgen";
 import type * as Dumling from "dumling/types";
@@ -65,7 +66,15 @@ const route = (family: string, kind: string) =>
 
 const NOUN_EVIDENCE = { articleEvidence: null, valencyEvidence: [] };
 
-const SEE_PATH = "Worter/de/Lexeme/NOUN/Masc/See.md";
+const SEE_PATH = lemmaNotePath(see).path;
+const SEE_READING_PATH = readingNotePath({
+	emojiDescription: "🌊",
+	lemma: see,
+	unitKind: "Reading",
+} as Dumling.Reading<"de">).path;
+/** A Reading note's link, as Classify writes it: path-qualified, no Block. */
+const readingLink = (path: string, shown: string) =>
+	`[[${path.replace(/\.md$/u, "")}|${shown}]]`;
 
 /** A grammar stub that resolves `See` and leaves every other unit unresolved. */
 const seeGrammar = (input: { readonly unit: Unit }) =>
@@ -101,11 +110,10 @@ describe("dumgenUnitResolver", () => {
 
 		const [resolution] = resolutions;
 		if (resolution?._tag !== "Resolved") throw new Error("See did not resolve");
-		expect(resolution.lemmaPath).toBe(SEE_PATH);
-		expect(resolution.readingBlockId).toMatch(/^r-[0-9a-f]{8}$/);
+		expect(resolution.readingPath).toBe(SEE_READING_PATH);
 		expect(resolution.linked).toBe(1);
 		expect(harness.scroll.content).toBe(
-			`Der [[Worter/de/Lexeme/NOUN/Masc/See#^${resolution.readingBlockId}|See]] ist tief. ^0\n`,
+			`Der ${readingLink(SEE_READING_PATH, "See")} ist tief. ^0\n`,
 		);
 		expect(calls.reading[0]?.candidates).toEqual([]);
 		expect(calls.knowledge).toHaveLength(1);
@@ -166,7 +174,7 @@ describe("dumgenUnitResolver", () => {
 		expect(note?.readings[0]?.attestationLinks).toEqual([]);
 		// The stored entry covers what a later occurrence may ask: no model call.
 		expect(stub.calls.knowledge).toHaveLength(1);
-		expect(harness.scroll.content.match(/\[\[Worter\/de\/Lexeme\/NOUN\/Masc\/See#\^r-/gu)).toHaveLength(2);
+		expect(harness.scroll.content.split(readingLink(SEE_READING_PATH, "See"))).toHaveLength(3);
 
 		// The very same occurrence again changes nothing.
 		const before = harness.vault.batches.length;
@@ -232,10 +240,11 @@ describe("dumgenUnitResolver", () => {
 		await harness.queue.whenIdle();
 		const [resolution] = outcome.resolutions;
 		if (resolution?._tag !== "Resolved") throw new Error("anfangen did not resolve");
-		expect(resolution.lemmaPath).toBe("Worter/de/Lexeme/VERB/an/anfangen.md");
+		expect(resolution.readingPath).toMatch(
+			/^Worter\/de\/Lexeme\/VERB\/an\/a\/anf\/anfan\/\S+ anfangen\.md$/u,
+		);
 		expect(resolution.linked).toBe(2);
-		const link = (shown: string) =>
-			`[[Worter/de/Lexeme/VERB/an/anfangen#^${resolution.readingBlockId}|${shown}]]`;
+		const link = (shown: string) => readingLink(resolution.readingPath, shown);
 		// The block had no ID: the Attestation Ref minted one.
 		expect(harness.scroll.content).toBe(`Er ${link("fängt")} heute ${link("an")}. ^0\n`);
 		const note = await run(harness.store.lemmaNote(anfangen));
@@ -281,9 +290,13 @@ describe("dumgenUnitResolver", () => {
 		const note = await run(harness.store.lemmaNote(see));
 		expect(note?.pendingRelations).toHaveLength(60);
 		expect(Math.max(...planned)).toBeLessThanOrEqual(50);
-		const notePath = note?.path ?? "";
-		expect(harness.vault.markdownPaths().filter((path) => path.startsWith("Worter/"))).toEqual([notePath]);
-		expect(harness.vault.content(notePath)).toContain("[[Worter/t/tei/teich/teich7|Teich7]]");
+		// The pending relations live in the source's Reading note alone.
+		expect(
+			harness.vault
+				.markdownPaths()
+				.filter((path) => path.startsWith("Worter/") && path.includes("teich")),
+		).toEqual([]);
+		expect(harness.vault.content(SEE_READING_PATH)).toContain("[[Worter/t/tei/teich/teich7|Teich7]]");
 		expect(harness.notices).toEqual(["✓ Knowledge for See 🌊 saved"]);
 	});
 
@@ -306,9 +319,9 @@ describe("dumgenUnitResolver", () => {
 			}),
 		);
 		if (resolution?._tag !== "Resolved") throw new Error("the Locution did not resolve");
-		expect(resolution.lemmaPath).toBe("Worter/de/Locution/ADV/auf jeden Fall.md");
+		expect(resolution.readingPath.startsWith("Worter/de/Locution/ADV/a/auf/aufje/")).toBe(true);
 		expect(harness.scroll.content).toBe(
-			`Er kommt [[Worter/de/Locution/ADV/auf jeden Fall#^${resolution.readingBlockId}|auf jeden Fall]]. ^3\n`,
+			`Er kommt ${readingLink(resolution.readingPath, "auf jeden Fall")}. ^3\n`,
 		);
 	});
 
@@ -404,7 +417,7 @@ describe("dumgenUnitResolver", () => {
 		);
 		if (resolution?._tag !== "Resolved") throw new Error("See did not resolve");
 		expect(harness.scroll.content).toBe(
-			`Titel\n\nDer [[Worter/de/Lexeme/NOUN/Masc/See#^${resolution.readingBlockId}|See]] ist tief. ^0\nNeu getippt.\n`,
+			`Titel\n\nDer ${readingLink(SEE_READING_PATH, "See")} ist tief. ^0\nNeu getippt.\n`,
 		);
 
 		harness.scroll.content = "Der Seehund ist tief. ^0\n";
@@ -482,10 +495,9 @@ describe("createKnowledgeQueue", () => {
 		const job = {
 			attestation: attestationOf(see, "See", ["See"], NOUN_EVIDENCE),
 			label: "See 🌊",
-			lemmaPath: SEE_PATH,
 			origin: "New" as const,
 			reading,
-			readingBlockId: "r-1",
+			readingPath: SEE_READING_PATH,
 			sentence: { segments: [{ text: "See" }], target: [0] },
 		};
 		queue.enqueue(job);
@@ -493,9 +505,9 @@ describe("createKnowledgeQueue", () => {
 		await new Promise((resolve) => setTimeout(resolve, 0));
 		expect(started).toBe(1);
 		expect(queue.running()).toBe(1);
-		const waiting = queue.awaitNote("Worter/de/Lexeme/NOUN/Masc/See");
+		const waiting = queue.awaitNote(SEE_READING_PATH.slice(0, -3));
 		expect(queue.cancelAll()).toBe(1);
-		expect(await waiting).toBe("r-1");
+		expect(await waiting).toBe(true);
 		expect(queue.running()).toBe(0);
 		expect(notices).toEqual([]);
 	});

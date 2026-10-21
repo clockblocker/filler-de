@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { legacyLemmaNotePath } from "@textfresser/lemma-note-codec";
+import { writeLemmaNote } from "../../../../stateless-helpers/dictionary-notes";
 import { createMemoryNoteCache, DictionaryPathOccupiedError } from "../src";
-import { readBundle, serializeBundle } from "../src/bundle";
 import { expectIndexMatchesFiles, run } from "./support/files";
 import {
 	contribute,
@@ -16,13 +15,22 @@ import {
 	laufenReading,
 	pendingFrom,
 	readingEntry,
+	readingOf,
 	springen,
 	synonym,
 } from "./support/fixtures";
+import {
+	crossroadPath,
+	lemmaPath,
+	readingPath,
+	withReadingNotes,
+} from "./support/paths";
 import { commit, openStore, seed } from "./support/store";
 
-const gehenPath = legacyLemmaNotePath(gehen).path;
-const laufenPath = legacyLemmaNotePath(laufen).path;
+const gehenPath = lemmaPath(gehen);
+const gehenReadingPath = readingPath(gehenReading);
+const laufenPath = lemmaPath(laufen);
+const laufenReadingPath = readingPath(laufenReading);
 const schreitenCrossroad = "[[Worter/s/sch/schre/schreiten|schreiten]]";
 
 async function seededStore() {
@@ -37,43 +45,51 @@ async function seededStore() {
 	return opened;
 }
 
-/** The note at `path` with its gehen Reading's notes replaced, as a hand edit would leave it. */
-function editedNotes(content: string, notes: string): string {
-	const { data } = readBundle(content);
-	if (!data.ok) throw new Error("Expected a valid note");
-	return serializeBundle(
-		content,
-		{
-			...data.data,
-			readingEntries: data.data.readingEntries.map((entry) => ({
-				...entry,
-				notes,
-			})),
-		},
-		{},
-		"Hidden",
-	);
-}
-
 const notesOf = async (store: Awaited<ReturnType<typeof openStore>>["store"]) =>
 	(await run(store.lemmaNote(gehen)))?.readings.map((entry) => entry.notes);
+
+describe("the notes of a Lemma", () => {
+	test("a Lemma note, a Reading note per Reading and a Crossroad note per spelling", async () => {
+		const { vault } = await seededStore();
+		expect(vault.markdownPaths()).toEqual(
+			[
+				gehenPath,
+				gehenReadingPath,
+				laufenPath,
+				laufenReadingPath,
+				crossroadPath("gehen"),
+				crossroadPath("geht"),
+				crossroadPath("laufen"),
+			].sort(),
+		);
+		expect(gehenReadingPath).toBe(
+			"Worter/de/Lexeme/VERB/g/geh/gehen/🚶 gehen.md",
+		);
+		expect(vault.content(crossroadPath("geht"))).toContain(
+			"[[Worter/de/Lexeme/VERB/g/geh/gehen/gehen|gehen]]",
+		);
+	});
+});
 
 describe("building the index", () => {
 	test("reads every note at startup and serves the same reads as the store that wrote them", async () => {
 		const { store, vault } = await seededStore();
 		await run(store.close);
+		const batches = vault.batches.length;
 		const reopened = await openStore(vault);
 		expect(await run(reopened.store.lemmaNote(gehen))).toEqual(
 			await run(store.lemmaNote(gehen)),
 		);
 		await expectIndexMatchesFiles(reopened.store, vault);
+		// Opening writes nothing.
+		expect(vault.batches).toHaveLength(batches);
 	});
 
 	test("a (path, mtime) cache skips reading unchanged notes", async () => {
 		const { vault } = await seededStore();
 		const cache = createMemoryNoteCache();
 		await openStore(vault, cache);
-		expect(cache.entries().size).toBe(2);
+		expect(cache.entries().size).toBe(7);
 		vault.readCount.clear();
 
 		const cached = await openStore(vault, cache);
@@ -81,11 +97,11 @@ describe("building the index", () => {
 		await expectIndexMatchesFiles(cached.store, vault);
 
 		vault.silentWrite(
-			gehenPath,
-			editedNotes(vault.content(gehenPath) ?? "", "changed"),
+			gehenReadingPath,
+			withReadingNotes(vault.content(gehenReadingPath) ?? "", "changed"),
 		);
 		const refreshed = await openStore(vault, cache);
-		expect([...vault.readCount.keys()]).toEqual([gehenPath]);
+		expect([...vault.readCount.keys()]).toEqual([gehenReadingPath]);
 		expect(await notesOf(refreshed.store)).toEqual(["changed"]);
 	});
 });
@@ -95,8 +111,8 @@ describe("keeping the index current", () => {
 		const { store, vault } = await seededStore();
 		const before = await run(store.revision);
 		await vault.userWrite(
-			gehenPath,
-			editedNotes(vault.content(gehenPath) ?? "", "by hand"),
+			gehenReadingPath,
+			withReadingNotes(vault.content(gehenReadingPath) ?? "", "by hand"),
 		);
 		expect(await notesOf(store)).toEqual(["by hand"]);
 		expect(await run(store.revision)).not.toBe(before);
@@ -109,9 +125,9 @@ describe("keeping the index current", () => {
 		const revision = await run(store.revision);
 		vault.readCount.clear();
 
-		await vault.echo(gehenPath);
+		await vault.echo(gehenReadingPath);
 		expect(await run(store.revision)).toBe(revision);
-		expect(vault.readCount.get(gehenPath)).toBe(1);
+		expect(vault.readCount.get(gehenReadingPath)).toBe(1);
 		expect(
 			await commit(store, [contribute(laufenReading, "rennen")]),
 		).toMatchObject({ status: "committed" });
@@ -121,8 +137,8 @@ describe("keeping the index current", () => {
 		const { store, vault } = await seededStore();
 		const revision = await run(store.revision);
 		await vault.userWrite(
-			gehenPath,
-			editedNotes(vault.content(gehenPath) ?? "", "by hand"),
+			gehenReadingPath,
+			withReadingNotes(vault.content(gehenReadingPath) ?? "", "by hand"),
 		);
 		expect(
 			await run(
@@ -138,8 +154,8 @@ describe("keeping the index current", () => {
 	test("an edit no event reported is caught at commit and refused", async () => {
 		const { store, vault } = await seededStore();
 		vault.silentWrite(
-			gehenPath,
-			editedNotes(vault.content(gehenPath) ?? "", "unseen"),
+			gehenReadingPath,
+			withReadingNotes(vault.content(gehenReadingPath) ?? "", "unseen"),
 		);
 		expect(
 			await commit(store, [contribute(gehenReading, "x")]),
@@ -151,7 +167,7 @@ describe("keeping the index current", () => {
 		await expectIndexMatchesFiles(store, vault);
 	});
 
-	test("a note renamed by hand is healed back to its identity path", async () => {
+	test("a Lemma note renamed by hand is healed back to its identity path", async () => {
 		const { store, vault } = await seededStore();
 		await vault.userRename(gehenPath, "Worter/de/gehen.md");
 		expect(vault.content("Worter/de/gehen.md")).toBeUndefined();
@@ -159,46 +175,83 @@ describe("keeping the index current", () => {
 		await expectIndexMatchesFiles(store, vault);
 	});
 
+	test("a Reading note renamed by hand is healed back to its identity path", async () => {
+		const { store, vault } = await seededStore();
+		const renamed = "Worter/de/Lexeme/VERB/g/geh/gehen/walking.md";
+		await vault.userRename(gehenReadingPath, renamed);
+		expect(vault.content(renamed)).toBeUndefined();
+		expect((await run(store.readingLocation(gehenReading)))?.path).toBe(
+			gehenReadingPath,
+		);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
+	test("a Reading note outside its Lemma's folder is moved back into it", async () => {
+		const { store, vault } = await seededStore();
+		const away = "Worter/de/Lexeme/VERB/l/lau/laufe/🚶 gehen.md";
+		await vault.userRename(gehenReadingPath, away);
+		expect(vault.content(away)).toBeUndefined();
+		expect(vault.content(gehenReadingPath)).toContain("gehen");
+		expect(await notesOf(store)).toEqual(["first"]);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
 	test("a renamed folder is re-read and its notes healed", async () => {
 		const { store, vault } = await seededStore();
+		const before = vault.markdownPaths();
 		await vault.userRenameFolder(
 			"Worter/de/Lexeme/VERB",
 			"Worter/de/Lexeme/Verben",
 		);
-		expect(vault.markdownPaths()).toEqual([laufenPath, gehenPath].sort());
+		expect(vault.markdownPaths()).toEqual(before);
 		await expectIndexMatchesFiles(store, vault);
 	});
 
-	test("a deleted note leaves the dictionary", async () => {
+	test("a deleted Lemma note leaves its Lemma out, and its Reading notes orphaned", async () => {
 		const { store, vault } = await seededStore();
 		await vault.userDelete(gehenPath);
 		expect(await run(store.lemmaNote(gehen))).toBeUndefined();
-		expect(await commit(store, [createLemma(gehen)])).toMatchObject({
-			status: "committed",
-		});
+		expect(await run(store.readingLocation(gehenReading))).toBeUndefined();
+		expect((await run(store.diagnostics)).quarantined).toEqual([
+			{ path: gehenReadingPath, reason: { _tag: "OrphanReading" } },
+		]);
+		// The orphan keeps its text and is never removed.
+		expect(vault.content(gehenReadingPath)).toContain("first");
+		// A Lemma created again takes its orphaned Reading note back.
+		await seed(store, [createLemma(gehen)]);
+		expect(await notesOf(store)).toEqual(["first"]);
+		expect((await run(store.diagnostics)).quarantined).toEqual([]);
+	});
+
+	test("a deleted Reading note leaves its Reading out and its Lemma note re-rendered", async () => {
+		const { store, vault } = await seededStore();
+		expect(vault.content(gehenPath)).toContain("🚶 gehen|🚶");
+		await vault.userDelete(gehenReadingPath);
+		expect(await run(store.readingLocation(gehenReading))).toBeUndefined();
+		expect((await run(store.lemmaNote(gehen)))?.readings).toEqual([]);
+		expect(vault.content(gehenPath)).not.toContain("🚶 gehen|🚶");
+		await expectIndexMatchesFiles(store, vault);
 	});
 
 	test("a hand-made note at an identity path joins the dictionary", async () => {
 		const { store, vault } = await seededStore();
-		const springenNote = serializeBundle(
-			undefined,
+		const springenNote = writeLemmaNote(
 			{
 				lemmaRecord: { lemma: springen },
 				ownedSurfaceEntries: [],
 				pendingRelations: [],
 				readingEntries: [],
 			},
-			{},
-			"Hidden",
-		);
-		await vault.userWrite(legacyLemmaNotePath(springen).path, springenNote);
+			{ format: "Hidden", language: "de" },
+		)("");
+		await vault.userWrite(lemmaPath(springen), springenNote);
 		expect((await run(store.lemmaNote(springen)))?.path).toBe(
-			legacyLemmaNotePath(springen).path,
+			lemmaPath(springen),
 		);
 	});
 });
 
-describe("quarantine", () => {
+describe("recognition", () => {
 	test("a note the codec rejects is reported, unread and never overwritten", async () => {
 		const { store, vault, reports } = await seededStore();
 		await vault.userWrite(
@@ -208,6 +261,7 @@ describe("quarantine", () => {
 		const diagnostics = await run(store.diagnostics);
 		expect(diagnostics.quarantined).toMatchObject([
 			{ path: gehenPath, reason: { _tag: "InvalidNote" } },
+			{ path: gehenReadingPath, reason: { _tag: "OrphanReading" } },
 		]);
 		expect(reports.at(-1)).toEqual(diagnostics);
 		expect(await run(store.lemmaNote(gehen))).toBeUndefined();
@@ -233,9 +287,48 @@ describe("quarantine", () => {
 			},
 		]);
 		expect((await run(store.lemmaNote(gehen)))?.path).toBe(gehenPath);
-		await seed(store, [contribute(gehenReading, "x")]);
+		// A new Reading changes the Lemma note's Reading links.
+		await seed(store, [
+			createReading(readingEntry(readingOf(gehen, "🚗"))),
+		]);
 		expect(vault.content("Worter/de/copy.md")).toBe(copy);
 		expect(vault.content(gehenPath)).not.toBe(copy);
+	});
+
+	test("a stray in Worter/ is reported and left alone, never quarantined", async () => {
+		const { store, vault } = await seededStore();
+		await vault.userWrite("Worter/Fahrer.md", "my own words");
+		const diagnostics = await run(store.diagnostics);
+		expect(diagnostics.strays).toEqual(["Worter/Fahrer.md"]);
+		expect(diagnostics.quarantined).toEqual([]);
+		await seed(store, [contribute(gehenReading, "x")]);
+		expect(vault.content("Worter/Fahrer.md")).toBe("my own words");
+	});
+
+	test("an empty Crossroad note a click left is a Crossroad note, left for #114", async () => {
+		const { store, vault } = await seededStore();
+		const path = crossroadPath("fahrer");
+		await vault.userWrite(path, "");
+		const diagnostics = await run(store.diagnostics);
+		expect(diagnostics.quarantined).toEqual([]);
+		expect(diagnostics.strays).toEqual([]);
+		expect(vault.content(path)).toBe("");
+	});
+
+	test("an empty file at an exact Reading path is reported and left alone", async () => {
+		const { store, vault } = await seededStore();
+		const driving = readingOf(gehen, "🚗");
+		const path = readingPath(driving);
+		await vault.userWrite(path, "");
+		expect((await run(store.diagnostics)).emptyNotes).toEqual([path]);
+		const refused = await run(
+			store.commitChanges({
+				baseRevision: await run(store.revision),
+				changes: [createReading(readingEntry(driving))],
+			}),
+		).catch((error: unknown) => error);
+		expect(refused).toBeInstanceOf(DictionaryPathOccupiedError);
+		expect(vault.content(path)).toBe("");
 	});
 });
 
@@ -252,12 +345,12 @@ describe("lookups", () => {
 		]);
 	});
 
-	test("locates a Reading's Block and indexes relation edges by target", async () => {
+	test("locates a Reading's note and indexes relation edges by target", async () => {
 		const { store } = await seededStore();
 		await seed(store, [synonym(gehenReading, laufen)]);
 		const location = await run(store.readingLocation(gehenReading));
-		expect(location?.path).toBe(gehenPath);
-		expect(location?.blockId).toMatch(/^r-[0-9a-f]{8}$/);
+		expect(location?.path).toBe(gehenReadingPath);
+		expect(location?.lemmaPath).toBe(gehenPath);
 		expect(await run(store.relationEdgesTo(laufen))).toEqual([
 			{
 				relation: "synonym",
@@ -267,13 +360,14 @@ describe("lookups", () => {
 		]);
 	});
 
-	test("a pending relation lives only in its source note and round-trips through it", async () => {
+	test("a pending relation lives only in its source's Reading note and round-trips through it", async () => {
 		const { store, vault } = await seededStore();
+		const before = vault.markdownPaths();
 		await seed(store, [createPending(pendingFrom(gehenReading))]);
 		// No other note holds it, or a placeholder for its target.
-		expect(vault.markdownPaths().sort()).toEqual([gehenPath, laufenPath]);
-		expect(vault.content(gehenPath)).toContain(schreitenCrossroad);
-		expect(vault.content(laufenPath)).not.toContain("schreiten");
+		expect(vault.markdownPaths()).toEqual(before);
+		expect(vault.content(gehenReadingPath)).toContain(schreitenCrossroad);
+		expect(vault.content(gehenPath)).not.toContain("schreiten");
 
 		const reopened = await openStore(vault);
 		expect(
@@ -287,8 +381,8 @@ describe("lookups", () => {
 				type: "deletePendingSemanticRelation",
 			},
 		]);
-		expect(vault.markdownPaths().sort()).toEqual([gehenPath, laufenPath]);
-		expect(vault.content(gehenPath)).not.toContain("schreiten");
+		expect(vault.markdownPaths()).toEqual(before);
+		expect(vault.content(gehenReadingPath)).not.toContain("schreiten");
 		expect(
 			(await run(reopened.store.lemmaNote(gehen)))?.pendingRelations,
 		).toEqual([]);

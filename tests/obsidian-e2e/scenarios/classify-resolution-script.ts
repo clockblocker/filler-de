@@ -97,10 +97,10 @@ export const CLASSIFY_RESOLUTION_DUMGEN = {
 	},
 } as const;
 
-/** Where each unit's Lemma note lives (ADR 0013). */
+/** Where each unit's Lemma note lives (ADR-0015). */
 export const LEMMA_PATHS = {
-	anfangen: "Worter/de/Lexeme/VERB/an/anfangen.md",
-	aufJedenFall: "Worter/de/Locution/ADV/auf jeden Fall.md",
-	heute: "Worter/de/Lexeme/ADV/heute.md",
-	hund: "Worter/de/Lexeme/NOUN/Masc/Hund.md",
+	anfangen: "Worter/de/Lexeme/VERB/an/a/anf/anfan/anfangen.md",
+	aufJedenFall: "Worter/de/Locution/ADV/a/auf/aufje/auf jeden Fall.md",
+	heute: "Worter/de/Lexeme/ADV/h/heu/heute/heute.md",
+	hund: "Worter/de/Lexeme/NOUN/Masc/h/hun/hund/Hund.md",
 } as const;

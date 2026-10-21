@@ -17,10 +17,8 @@ export type UnitResolution =
 	| {
 			readonly _tag: "Resolved";
 			readonly ref: UnitRef;
-			/** The Lemma note's vault path. */
-			readonly lemmaPath: string;
-			/** The Reading's block ID in that note, without `^`. */
-			readonly readingBlockId: string;
+			/** The Reading note's vault path, which the unit's links now name. */
+			readonly readingPath: string;
 			/** How many of the unit's occurrences now link to the Reading. */
 			readonly linked: number;
 	  }

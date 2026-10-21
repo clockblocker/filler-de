@@ -6,16 +6,22 @@ import {
 	type StoreRevision,
 } from "dumdict";
 import {
+	derivePendingEntryId,
 	derivePendingSemanticRelationLocator,
 	reevaluatedPendingEntryIds,
 	unitShadowOf,
 } from "dumdict/pending";
 import type {
 	CleanupRelationsSlice,
+	LemmaSlice,
 	LoadReadingEntryContextRequest,
+	OccurrenceSlice,
+	OccurrenceSliceRequest,
 	ReadingEntryContext,
 	ReevaluateShadowsRequest,
 	ReevaluateShadowsSlice,
+	RekeySurfacesSlice,
+	RekeySurfacesSliceRequest,
 } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
@@ -235,9 +241,8 @@ export function loadReadingEntryContext(
 				...lemmaRead,
 				...reads,
 			};
-		// TODO(#113): the store keeps no Attestation Links yet, so none holds the ref.
 		return {
-			attestationLinksWithRefs: [],
+			attestationLinksWithRefs: index.linksWithRef(request.ref),
 			existingOwnedSurfaces,
 			intent: request.intent,
 			revision,
@@ -264,8 +269,9 @@ export function loadReadingEntryContext(
 		target.kind === "pending" ? [target.pending] : [],
 	);
 	return {
-		// TODO(#113): the store keeps no Attestation Links yet, so none holds the draft's refs.
-		attestationLinksWithRefs: [],
+		attestationLinksWithRefs: [...new Set(request.attestationRefs)].flatMap(
+			(ref) => index.linksWithRef(ref),
+		),
 		exactPendingRelations: exactPending(index, reading, proposedPending),
 		existingOwnedSurfaces: surfaceIds.flatMap((id) => {
 			const entry = index.surface(id);
@@ -367,6 +373,100 @@ export function loadReevaluateShadowsContext(
 				]),
 			],
 			targetShadowKeys: shadowKeys,
+		}),
+	};
+}
+
+/**
+ * The slice `removeOccurrence` and `reconcileAttestationLinks` plan from:
+ * each stored Lemma one of whose Readings holds a link with a requested
+ * ref, whole, every other Reading that claims one of them or one of their
+ * Readings, and every stored Shadow relation whose Pending Entry ID is one
+ * of theirs.
+ */
+export function loadOccurrenceSlice(
+	index: NoteIndex,
+	revision: StoreRevision,
+	request: OccurrenceSliceRequest,
+): OccurrenceSlice<"de"> {
+	const lemmaKeys = new Set<string>();
+	for (const ref of new Set(request.refs))
+		for (const link of index.linksWithRef(ref)) {
+			const owner = index.readingOwner(readingKeyOf(link.reading));
+			if (owner !== undefined) lemmaKeys.add(owner);
+		}
+	const lemmas: LemmaSlice<"de">[] = [...lemmaKeys].sort().flatMap((key) => {
+		const data = index.lemmaData(key);
+		return data
+			? [
+					{
+						lemmaRecord: data.lemmaRecord,
+						ownedSurfaceEntries: [...data.ownedSurfaceEntries],
+						pendingRelations: [...data.pendingRelations],
+						readingEntries: [...data.readingEntries],
+					},
+				]
+			: [];
+	});
+	const claimingReadings = new Map<string, ReadingEntry<"de">>();
+	for (const key of lemmaKeys)
+		for (const { source } of index.edgesTo(key)) {
+			const sourceKey = readingKeyOf(source);
+			if (lemmaKeys.has(lemmaKeyOf(source.lemma))) continue;
+			const entry = index.reading(sourceKey);
+			if (entry) claimingReadings.set(sourceKey, entry);
+		}
+	const pendingRelationsMatchingLemmas = lemmas.flatMap(({ lemmaRecord }) => {
+		const id = derivePendingEntryId(unitShadowOf(lemmaRecord.lemma));
+		return index
+			.pendingTargeting(shadowKeyOf(lemmaRecord.lemma))
+			.filter(({ locator }) => locator.targetPendingId === id);
+	});
+	return {
+		claimingReadings: [...claimingReadings.values()],
+		lemmas,
+		pendingRelationsMatchingLemmas: [
+			...new Map(
+				pendingRelationsMatchingLemmas.map((record) => [
+					locatorKeyOf(record.locator),
+					record,
+				]),
+			).values(),
+		],
+		revision,
+	};
+}
+
+/**
+ * The slice `rekeySurfaces` plans from: each stored Surface Entry with a
+ * requested id, without its Surface, and every Reading whose links name one.
+ */
+export function loadRekeySurfacesSlice(
+	index: NoteIndex,
+	revision: StoreRevision,
+	request: RekeySurfacesSliceRequest<"de">,
+): RekeySurfacesSlice<"de"> {
+	const ids = [...new Set<string>(request.surfaceIds)];
+	const readings = new Map<string, ReadingEntry<"de">>();
+	for (const id of ids)
+		for (const entry of index.readingsLinking(id))
+			readings.set(readingKeyOf(entry.reading), entry);
+	return {
+		readings: [...readings.values()],
+		revision,
+		surfaces: ids.flatMap((id) => {
+			const entry = index.surface(id);
+			return entry
+				? [
+						{
+							attestations: entry.attestations,
+							attestedTranslations: entry.attestedTranslations,
+							id: entry.id,
+							notes: entry.notes,
+							ownerLemma: entry.ownerLemma,
+						},
+					]
+				: [];
 		}),
 	};
 }

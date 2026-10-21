@@ -410,6 +410,17 @@ export class FakeVault implements DictionaryVault {
 		]);
 	}
 
+	/** Deletes several files at once, as one bulk event. */
+	async userDeleteAll(paths: readonly string[]): Promise<void> {
+		for (const path of paths) this.files.delete(path);
+		await this.emitBulk(
+			paths.map((path) => ({
+				kind: VaultEventKind.FileDeleted,
+				splitPath: mdPath(path),
+			})),
+		);
+	}
+
 	async userDelete(path: string): Promise<void> {
 		this.files.delete(path);
 		await this.emitBulk([

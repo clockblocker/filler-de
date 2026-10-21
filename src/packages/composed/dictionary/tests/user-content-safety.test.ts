@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { legacyLemmaNotePath } from "@textfresser/lemma-note-codec";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type { PlannedChangeOp } from "dumdict";
 import {
@@ -22,10 +21,13 @@ import {
 	synonym,
 	verb,
 } from "./support/fixtures";
+import { crossroadPath, lemmaPath, readingPath } from "./support/paths";
 import { commit, openStore, seed } from "./support/store";
 
-const gehenPath = legacyLemmaNotePath(gehen).path;
-const laufenPath = legacyLemmaNotePath(laufen).path;
+const gehenPath = lemmaPath(gehen);
+const gehenReadingPath = readingPath(gehenReading);
+const laufenPath = lemmaPath(laufen);
+const laufenReadingPath = readingPath(laufenReading);
 /** Where schreiten's Crossroad note goes, and the link a pending relation writes to it. */
 const schreitenCrossroadPath = "Worter/s/sch/schre/schreiten.md";
 const schreitenCrossroad = "[[Worter/s/sch/schre/schreiten|schreiten]]";
@@ -46,28 +48,34 @@ async function withPendingGehen() {
 		createReading(readingEntry(laufenReading)),
 		createPending(pendingFrom(gehenReading)),
 	]);
-	expect(opened.vault.markdownPaths().sort()).toEqual([
-		gehenPath,
-		laufenPath,
-	]);
+	expect(opened.vault.markdownPaths()).toEqual(
+		[
+			gehenPath,
+			gehenReadingPath,
+			laufenPath,
+			laufenReadingPath,
+			crossroadPath("gehen"),
+			crossroadPath("laufen"),
+		].sort(),
+	);
 	return opened;
 }
 
 describe("a pending relation's target", () => {
 	test("its link points at the Crossroad path and stays put once a note is created there", async () => {
 		const { store, vault } = await withPendingGehen();
-		const before = vault.content(gehenPath) ?? "";
+		const before = vault.content(gehenReadingPath) ?? "";
 		expect(before).toContain(schreitenCrossroad);
 		// Clicking the uncreated link makes Obsidian create an empty note there.
 		await vault.userWrite(schreitenCrossroadPath, "");
-		expect(vault.content(gehenPath)).toBe(before);
+		expect(vault.content(gehenReadingPath)).toBe(before);
 		expect(
 			`${schreitenCrossroad.slice(2, -"|schreiten]]".length)}.md`,
 		).toBe(schreitenCrossroadPath);
 		// The store leaves the new note alone; #114 fills it as a Crossroad.
 		expect(vault.content(schreitenCrossroadPath)).toBe("");
 		await seed(store, [createPending(pendingFrom(laufenReading))]);
-		expect(vault.content(laufenPath)).toContain(schreitenCrossroad);
+		expect(vault.content(laufenReadingPath)).toContain(schreitenCrossroad);
 		expect(vault.content(schreitenCrossroadPath)).toBe("");
 		await expectIndexMatchesFiles(store, vault);
 	});
@@ -83,7 +91,14 @@ describe("a pending relation's target", () => {
 		]);
 		await seed(store, [deletePending(gehenReading)]);
 		expect(vault.content(oldShadow)).toBe("schreiten, my notes");
-		expect(vault.markdownPaths().sort()).toEqual([gehenPath, oldShadow]);
+		expect(vault.markdownPaths()).toEqual(
+			[
+				gehenPath,
+				gehenReadingPath,
+				crossroadPath("gehen"),
+				oldShadow,
+			].sort(),
+		);
 		expect((await run(store.diagnostics)).quarantined).toMatchObject([
 			{ path: oldShadow, reason: { _tag: "InvalidNote" } },
 		]);
@@ -92,9 +107,9 @@ describe("a pending relation's target", () => {
 	test("an empty file at a Lemma's exact path is reported and left alone", async () => {
 		const vault = new FakeVault({ [gehenPath]: "" });
 		const { store } = await openStore(vault);
-		expect((await run(store.diagnostics)).quarantined).toMatchObject([
-			{ path: gehenPath, reason: { _tag: "InvalidNote" } },
-		]);
+		const diagnostics = await run(store.diagnostics);
+		expect(diagnostics.emptyNotes).toEqual([gehenPath]);
+		expect(diagnostics.quarantined).toEqual([]);
 		const refused = await commit(store, [createLemma(gehen)]).catch(
 			(error: unknown) => error,
 		);
@@ -143,7 +158,9 @@ describe("creates never overwrite", () => {
 		opened.vault.silentWrite(schreitenCrossroadPath, "mine");
 		await seed(opened.store, [createPending(pendingFrom(gehenReading))]);
 		expect(opened.vault.content(schreitenCrossroadPath)).toBe("mine");
-		expect(opened.vault.content(gehenPath)).toContain(schreitenCrossroad);
+		expect(opened.vault.content(gehenReadingPath)).toContain(
+			schreitenCrossroad,
+		);
 	});
 });
 
@@ -192,10 +209,7 @@ test("a heal move that keeps failing is reported and not retried on every event"
 	]);
 	const scans = vault.scanCount;
 	const revision = await run(store.revision);
-	await vault.userWrite(
-		legacyLemmaNotePath(laufen).path,
-		`${vault.content(legacyLemmaNotePath(laufen).path)}\nedited\n`,
-	);
+	await vault.userWrite(laufenPath, `${vault.content(laufenPath)}\nedited\n`);
 	expect(vault.scanCount).toBe(scans);
 	expect(await run(store.revision)).not.toBe(revision);
 	expect(vault.content("Worter/de/moved.md")).toBeDefined();
@@ -219,7 +233,7 @@ describe("failures leave the index honest", () => {
 			),
 		).toMatchObject({ code: "revisionConflict" });
 		await seed(store, [synonym(gehenReading, laufen)]);
-		expect(vault.content(gehenPath)).toContain("laufen");
+		expect(vault.content(gehenReadingPath)).toContain("laufen");
 		await expectIndexMatchesFiles(store, vault);
 	});
 
@@ -233,6 +247,7 @@ describe("failures leave the index honest", () => {
 		expect(await run(store.revision)).toBe(once);
 		expect((await run(store.diagnostics)).quarantined).toMatchObject([
 			{ path: gehenPath, reason: { _tag: "Unreadable" } },
+			{ path: gehenReadingPath, reason: { _tag: "OrphanReading" } },
 		]);
 	});
 

@@ -1,4 +1,4 @@
-export { LemmaBundleMetadata } from "./bundle";
+export { CrossroadNoteMetadata } from "./crossroad";
 export {
 	type DictionaryCommitError,
 	DictionaryPathOccupiedError,
@@ -8,12 +8,18 @@ export {
 	DictionaryWriteError,
 } from "./errors";
 export {
+	defineNestedNamespace,
+	type MetadataFormat,
+	noteMetadataHelper,
+} from "./internal/note-metadata";
+export {
 	type CachedNote,
 	createMemoryNoteCache,
 	type DictionaryNoteCache,
 } from "./note-cache";
-export type { QuarantineReason } from "./note-entry";
 export type { ReadingLocation, RelationEdge } from "./note-index";
+export type { QuarantineReason } from "./notes";
+export type { NoteProjections } from "./render";
 export {
 	type DictionaryDiagnostics,
 	type DumdictVaultStore,

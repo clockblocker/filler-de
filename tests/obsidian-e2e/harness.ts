@@ -108,11 +108,10 @@ interface ScenarioClassifyHandoff {
 		}[];
 	}[];
 	readonly resolutions: readonly string[];
-	/** Per unit: the Reading block it links to, or why it stayed pending. */
+	/** Per unit: the Reading note it links to, or why it stayed pending. */
 	readonly resolved?: readonly (
 		| {
-				readonly lemmaPath: string;
-				readonly readingBlockId: string;
+				readonly readingPath: string;
 				readonly linked: number;
 		  }
 		| { readonly pending: string }

@@ -96,13 +96,6 @@ export {
 	readingNoteOwner,
 } from "./note-paths";
 export {
-	BASENAME_KEPT,
-	BASENAME_LIMIT,
-	canonicalFormBasename,
-	type DecodedBasename,
-	decodeBasename,
-} from "./path/basename";
-export {
 	caseFold,
 	findPathCollisions,
 	type PathClaim,
@@ -115,12 +108,6 @@ export {
 	type PathLemma,
 	WORTER_FOLDER,
 } from "./path/common";
-export {
-	type LegacyNotePathParse,
-	legacyLemmaNotePath,
-	type ParsedLegacyLemmaNotePath,
-	parseLegacyNotePath,
-} from "./path/legacy-note-path";
 export {
 	FILE_NAME_MAX_BYTES,
 	NAME_SEGMENT_FALLBACK,

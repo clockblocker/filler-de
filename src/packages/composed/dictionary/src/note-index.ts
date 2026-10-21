@@ -1,10 +1,17 @@
-import { legacyLemmaNotePath } from "@textfresser/lemma-note-codec";
+import {
+	lemmaNotePath,
+	pathCollisionKey,
+	readingNotePath,
+} from "@textfresser/lemma-note-codec";
 import type {
+	AttestationLink,
 	PendingSemanticRelationRecord,
 	ReadingEntry,
 	SurfaceEntry,
 } from "dumdict";
 import type * as Dumling from "dumling/types";
+import { parseLemmaParadigm } from "dumrel";
+import { Predicate } from "effect";
 import {
 	formKeyOf,
 	lemmaKeyOf,
@@ -13,7 +20,12 @@ import {
 	readingKeyOf,
 	shadowKeyOf,
 } from "./keys";
-import type { LemmaNoteEntry, NoteData, PathEntry } from "./note-entry";
+import type {
+	LemmaNoteEntry,
+	NoteData,
+	PathEntry,
+	ReadingNoteEntry,
+} from "./notes";
 
 /** One direct Semantic Relation claim, as its source Reading stores it. */
 export type RelationEdge = {
@@ -24,33 +36,54 @@ export type RelationEdge = {
 		| { readonly kind: "reading"; readonly reading: Dumling.Reading<"de"> };
 };
 
-/** Where a Reading lives: its note and the Block ID of its part. */
+/** Where a Reading lives: its Reading note, beside its Lemma note. */
 export type ReadingLocation = {
 	readonly path: string;
-	readonly blockId: string;
+	readonly lemmaPath: string;
 	readonly entry: ReadingEntry<"de">;
 };
 
-/** The canonical path of a Lemma's note, or undefined if none can be spelled. */
-export function canonicalLemmaPath(
-	lemma: Dumling.Lemma<"de">,
-): string | undefined {
+function attempt(path: () => string): string | undefined {
 	try {
-		return legacyLemmaNotePath(lemma).path;
+		return path();
 	} catch {
 		return undefined;
 	}
 }
 
-/**
- * A path as a case-insensitive, normalizing file system compares it, so
- * paths that differ only by letter case or Unicode form name one file.
- */
-const foldPath = (path: string): string => path.normalize("NFC").toLowerCase();
+/** A Lemma note's path (ADR-0015), or undefined if none can be spelled. */
+export const canonicalLemmaPath = (
+	lemma: Dumling.Lemma<"de">,
+): string | undefined => attempt(() => lemmaNotePath(lemma).path);
+
+/** A Reading note's path (ADR-0015), or undefined if none can be spelled. */
+export const canonicalReadingPath = (
+	reading: Dumling.Reading<"de">,
+): string | undefined => attempt(() => readingNotePath(reading).path);
 
 /** Plain code-unit order, so paths that differ only by case sort one way everywhere. */
 export const byCodeUnit = (left: string, right: string): number =>
 	left < right ? -1 : left > right ? 1 : 0;
+
+/** A Lemma's records in the order every note renders them: Readings by key. */
+export function canonicalData(data: NoteData): NoteData {
+	const readingEntries = [...data.readingEntries].sort((a, b) =>
+		byCodeUnit(readingKeyOf(a.reading), readingKeyOf(b.reading)),
+	);
+	const order = new Map(
+		readingEntries.map(({ reading }, index) => [
+			readingKeyOf(reading),
+			index,
+		]),
+	);
+	const pendingRelations = [...data.pendingRelations].sort(
+		(a, b) =>
+			(order.get(readingKeyOf(a.sourceReading)) ?? 0) -
+				(order.get(readingKeyOf(b.sourceReading)) ?? 0) ||
+			byCodeUnit(locatorKeyOf(a.locator), locatorKeyOf(b.locator)),
+	);
+	return { ...data, pendingRelations, readingEntries };
+}
 
 function addTo<K, V>(map: Map<K, Set<V>>, key: K, value: V) {
 	const set = map.get(key);
@@ -67,6 +100,10 @@ function removeFrom<K, V>(map: Map<K, Set<V>>, key: K, value: V) {
 
 function cloneSets<K, V>(map: Map<K, Set<V>>): Map<K, Set<V>> {
 	return new Map([...map].map(([key, set]) => [key, new Set(set)]));
+}
+
+function cloneMaps<K, J, V>(map: Map<K, Map<J, V>>): Map<K, Map<J, V>> {
+	return new Map([...map].map(([key, inner]) => [key, new Map(inner)]));
 }
 
 /** Each relation a Reading Entry claims, with its target's Lemma key. */
@@ -108,12 +145,96 @@ export function relationEdgesOf(
 	return edges;
 }
 
+const isShadowLike = (
+	value: Record<string, unknown>,
+): value is {
+	language: Dumling.Language;
+	family: string;
+	kind: string;
+	canonicalForm: string;
+} =>
+	Predicate.isString(value.language) &&
+	Predicate.isString(value.family) &&
+	Predicate.isString(value.kind) &&
+	Predicate.isString(value.canonicalForm);
+
 /**
- * The in-memory index over `Worter/`: every Markdown path's entry, and the
- * lookups dumdict's slices and dumgen read, derived from the Lemma notes
- * that hold each Lemma. When two notes hold one Lemma, a note already at
- * its own canonical path, else the first by path, holds it; the other is
- * reported as a duplicate and never written.
+ * The Shadow keys a Reading's Knowledge names outside its direct claims: a
+ * morpheme's Unit Shadow, a Valency Frame's preposition, a participle's
+ * source verb. Its note links each by uniqueness of its Shadow among the
+ * stored Lemmas, so it must be rendered again when that set changes. It
+ * may name more than the note links; a re-render that changes nothing
+ * writes nothing.
+ */
+function knowledgeShadowKeys(entry: ReadingEntry<"de">): Set<string> {
+	const keys = new Set<string>();
+	const walk = (value: unknown) => {
+		if (Array.isArray(value)) {
+			for (const item of value) walk(item);
+			return;
+		}
+		if (!Predicate.isObject(value)) return;
+		const record = value as Record<string, unknown>;
+		const { unitKind } = record;
+		if (unitKind === "Reading") return;
+		if (
+			(unitKind === "Lemma" || unitKind === undefined) &&
+			isShadowLike(record)
+		)
+			keys.add(shadowKeyOf(record));
+		if (unitKind === "Lemma") return;
+		for (const [key, field] of Object.entries(record))
+			if (key !== "semanticRelations") walk(field);
+	};
+	walk(entry.knowledge);
+	return keys;
+}
+
+/** A Lemma's notes as the index holds them. */
+type Aggregate = {
+	readonly lemmaKey: string;
+	readonly lemmaPath: string;
+	/** Each Reading's note, by Reading key. */
+	readonly readingPaths: ReadonlyMap<string, string>;
+	readonly data: NoteData;
+	/** Why the Lemma is not read as data, when it is not. */
+	readonly problem?: string;
+};
+
+/** A path whose file sits elsewhere than its metadata says. */
+export type Misplaced = {
+	readonly from: string;
+	readonly to: string | undefined;
+	/** The Lemma or Reading key the note holds. */
+	readonly key: string;
+};
+
+/** A note the index does not read as data, beyond what its file says. */
+export type IndexProblem =
+	| {
+			readonly path: string;
+			readonly _tag: "DuplicateLemma" | "DuplicateReading";
+			readonly heldBy: string;
+	  }
+	| {
+			/** A Reading note whose Lemma no readable Lemma note holds. */
+			readonly path: string;
+			readonly _tag: "OrphanReading";
+	  }
+	| {
+			/** A Lemma whose notes disagree, such as a Paradigm licensing a Reading without a note. */
+			readonly path: string;
+			readonly _tag: "InconsistentLemma";
+			readonly message: string;
+	  };
+
+/**
+ * The in-memory index over `Worter/`: every Markdown path's entry, each
+ * Lemma's records gathered from its Lemma note and its Reading notes, and
+ * the lookups dumdict's slices and dumgen read. A Reading note belongs to
+ * the Lemma its metadata names, wherever it sits. When two notes hold one
+ * Lemma or one Reading, the one at its own path, else the first by path,
+ * holds it; the other is a duplicate and never written.
  *
  * The store never changes a published index: it clones it, changes the
  * clone under its writer lock, and swaps the clone in with the next
@@ -121,21 +242,30 @@ export function relationEdgesOf(
  */
 export class NoteIndex {
 	private entries = new Map<string, PathEntry>();
-	/** Case- and Unicode-folded path → the paths spelled that way. */
+	/** Collision key of a path → the paths spelled that way. */
 	private folded = new Map<string, Set<string>>();
-	/** Lemma key → the paths of every note that holds it. */
-	private claims = new Map<string, Set<string>>();
-	/** Lemma key → the path of the note that holds it. */
-	private holders = new Map<string, string>();
+	/** Collision key of a folder → each spelling of it, with its file count. */
+	private folders = new Map<string, Map<string, number>>();
+	private lemmaClaims = new Map<string, Set<string>>();
+	private readingClaims = new Map<string, Set<string>>();
+	/** Lemma key → keys of the Readings some note claims for it. */
+	private readingsOfLemma = new Map<string, Set<string>>();
+	private aggregates = new Map<string, Aggregate>();
+
+	// Lookups over the Lemmas read as data.
 	private readings = new Map<
 		string,
-		{ readonly lemmaKey: string; readonly entry: ReadingEntry<"de"> }
+		{
+			readonly lemmaKey: string;
+			readonly entry: ReadingEntry<"de">;
+			readonly path: string;
+		}
 	>();
 	private surfaces = new Map<
 		string,
 		{ readonly lemmaKey: string; readonly entry: SurfaceEntry<"de"> }
 	>();
-	/** Form key of a Canonical Form or Surface → Lemma keys. */
+	/** Form key of a Canonical Form or Surface → Lemma keys: the Crossroad index. */
 	private forms = new Map<string, Set<string>>();
 	/** Shadow key → keys of the Lemmas that Shadow names. */
 	private lemmasByShadow = new Map<string, Set<string>>();
@@ -148,27 +278,34 @@ export class NoteIndex {
 	>();
 	/** Shadow key → locator keys of the pending relations targeting it. */
 	private pendingByShadow = new Map<string, Set<string>>();
-	/** Target Lemma key → edge key → edge. */
+	/** Target Lemma key → edge key → edge: the claims on a Lemma and its Readings. */
 	private edgesByTarget = new Map<string, Map<string, RelationEdge>>();
+	/** Attestation ref → Reading key → link. A ref is unique; more than one is a fault. */
+	private refs = new Map<string, Map<string, AttestationLink<"de">>>();
+	/** Surface ID → keys of the Readings whose links name it. */
+	private surfaceLinks = new Map<string, Set<string>>();
+	/** Shadow key → keys of the Lemmas whose notes link by it (morphemes, prepositions). */
+	private dependents = new Map<string, Set<string>>();
 
 	clone(): NoteIndex {
 		const next = new NoteIndex();
 		next.entries = new Map(this.entries);
 		next.folded = cloneSets(this.folded);
-		next.claims = cloneSets(this.claims);
-		next.holders = new Map(this.holders);
+		next.folders = cloneMaps(this.folders);
+		next.lemmaClaims = cloneSets(this.lemmaClaims);
+		next.readingClaims = cloneSets(this.readingClaims);
+		next.readingsOfLemma = cloneSets(this.readingsOfLemma);
+		next.aggregates = new Map(this.aggregates);
 		next.readings = new Map(this.readings);
 		next.surfaces = new Map(this.surfaces);
 		next.forms = cloneSets(this.forms);
 		next.lemmasByShadow = cloneSets(this.lemmasByShadow);
 		next.pending = new Map(this.pending);
 		next.pendingByShadow = cloneSets(this.pendingByShadow);
-		next.edgesByTarget = new Map(
-			[...this.edgesByTarget].map(([key, edges]) => [
-				key,
-				new Map(edges),
-			]),
-		);
+		next.edgesByTarget = cloneMaps(this.edgesByTarget);
+		next.refs = cloneMaps(this.refs);
+		next.surfaceLinks = cloneSets(this.surfaceLinks);
+		next.dependents = cloneSets(this.dependents);
 		return next;
 	}
 
@@ -184,62 +321,155 @@ export class NoteIndex {
 		return [...this.entries.values()];
 	}
 
-	/** Sets or removes one path's entry and re-derives the lookups it feeds. */
+	/** Sets or removes one path's entry and re-derives the Lemmas it feeds. */
 	set(path: string, next: PathEntry | undefined): void {
 		const previous = this.entries.get(path);
-		const keys = new Set<string>();
-		if (previous?.kind === "lemma") keys.add(previous.lemmaKey);
-		if (next?.kind === "lemma") keys.add(next.lemmaKey);
+		const affected = new Set<string>();
+		for (const entry of [previous, next])
+			if (entry?.kind === "lemma" || entry?.kind === "reading")
+				affected.add(entry.lemmaKey);
+		for (const key of affected) this.dropAggregate(key);
 
-		for (const key of keys) {
-			const holder = this.holders.get(key);
-			const held =
-				holder === undefined ? undefined : this.entries.get(holder);
-			if (held?.kind === "lemma") this.unindex(held);
-			this.holders.delete(key);
-		}
 		if (previous?.kind === "lemma")
-			removeFrom(this.claims, previous.lemmaKey, path);
+			removeFrom(this.lemmaClaims, previous.lemmaKey, path);
+		if (previous?.kind === "reading") {
+			removeFrom(this.readingClaims, previous.readingKey, path);
+			if (!this.readingClaims.has(previous.readingKey))
+				removeFrom(
+					this.readingsOfLemma,
+					previous.lemmaKey,
+					previous.readingKey,
+				);
+		}
 		if (next === undefined) this.entries.delete(path);
 		else this.entries.set(path, next);
-		if (previous === undefined && next !== undefined)
-			addTo(this.folded, foldPath(path), path);
-		if (previous !== undefined && next === undefined)
-			removeFrom(this.folded, foldPath(path), path);
-		if (next?.kind === "lemma") addTo(this.claims, next.lemmaKey, path);
-		for (const key of keys) {
-			const holder = this.pickHolder(key);
-			if (holder === undefined) continue;
-			this.holders.set(key, holder.path);
-			this.index(holder);
+		if (previous === undefined && next !== undefined) this.addPath(path);
+		if (previous !== undefined && next === undefined) this.removePath(path);
+		if (next?.kind === "lemma")
+			addTo(this.lemmaClaims, next.lemmaKey, path);
+		if (next?.kind === "reading") {
+			addTo(this.readingClaims, next.readingKey, path);
+			addTo(this.readingsOfLemma, next.lemmaKey, next.readingKey);
+		}
+		for (const key of affected) this.buildAggregate(key);
+	}
+
+	private addPath(path: string) {
+		addTo(this.folded, pathCollisionKey(path), path);
+		for (const folder of foldersOf(path)) {
+			const key = pathCollisionKey(folder);
+			const spellings =
+				this.folders.get(key) ?? new Map<string, number>();
+			spellings.set(folder, (spellings.get(folder) ?? 0) + 1);
+			this.folders.set(key, spellings);
 		}
 	}
 
-	private pickHolder(key: string): LemmaNoteEntry | undefined {
-		const notes = [...(this.claims.get(key) ?? [])]
-			.sort(byCodeUnit)
-			.map((path) => this.entries.get(path))
-			.filter((entry) => entry?.kind === "lemma");
-		const placed = notes.find(
-			(note) =>
-				note.path === canonicalLemmaPath(note.data.lemmaRecord.lemma),
-		);
-		return placed ?? notes[0];
+	private removePath(path: string) {
+		removeFrom(this.folded, pathCollisionKey(path), path);
+		for (const folder of foldersOf(path)) {
+			const key = pathCollisionKey(folder);
+			const spellings = this.folders.get(key);
+			if (!spellings) continue;
+			const count = (spellings.get(folder) ?? 0) - 1;
+			if (count > 0) spellings.set(folder, count);
+			else spellings.delete(folder);
+			if (spellings.size === 0) this.folders.delete(key);
+		}
 	}
 
-	private index(note: LemmaNoteEntry) {
-		const { data, lemmaKey } = note;
+	/** The note among `paths` that holds an identity: the one at `canonical`, else the first. */
+	private holderOf(
+		paths: ReadonlySet<string> | undefined,
+		canonical: string | undefined,
+	): string | undefined {
+		const sorted = [...(paths ?? [])].sort(byCodeUnit);
+		return sorted.find((path) => path === canonical) ?? sorted[0];
+	}
+
+	private buildAggregate(lemmaKey: string) {
+		const lemmaPath = this.holderOf(
+			this.lemmaClaims.get(lemmaKey),
+			undefined,
+		);
+		if (lemmaPath === undefined) return;
+		const claims = this.lemmaClaims.get(lemmaKey);
+		const first = this.entries.get(lemmaPath) as LemmaNoteEntry;
+		const canonical = canonicalLemmaPath(first.data.lemmaRecord.lemma);
+		const holder = this.holderOf(claims, canonical) ?? lemmaPath;
+		const lemmaNote = this.entries.get(holder) as LemmaNoteEntry;
+		const readingPaths = new Map<string, string>();
+		const readingEntries: ReadingEntry<"de">[] = [];
+		const pendingRelations: PendingSemanticRelationRecord<"de">[] = [];
+		for (const readingKey of [
+			...(this.readingsOfLemma.get(lemmaKey) ?? []),
+		].sort(byCodeUnit)) {
+			const paths = this.readingClaims.get(readingKey);
+			const any = this.holderOf(paths, undefined);
+			if (any === undefined) continue;
+			const sample = this.entries.get(any) as ReadingNoteEntry;
+			const path =
+				this.holderOf(
+					paths,
+					canonicalReadingPath(sample.data.readingEntry.reading),
+				) ?? any;
+			const note = this.entries.get(path) as ReadingNoteEntry;
+			readingPaths.set(readingKey, path);
+			readingEntries.push(note.data.readingEntry);
+			pendingRelations.push(...note.data.pendingRelations);
+		}
+		const data = canonicalData({
+			lemmaRecord: lemmaNote.data.lemmaRecord,
+			ownedSurfaceEntries: lemmaNote.data.ownedSurfaceEntries,
+			pendingRelations,
+			readingEntries,
+		});
+		const problem = problemOf(data);
+		const aggregate: Aggregate = {
+			data,
+			lemmaKey,
+			lemmaPath: holder,
+			readingPaths,
+			...(problem === undefined ? {} : { problem }),
+		};
+		this.aggregates.set(lemmaKey, aggregate);
+		if (problem === undefined) this.index(aggregate);
+	}
+
+	private dropAggregate(lemmaKey: string) {
+		const aggregate = this.aggregates.get(lemmaKey);
+		if (!aggregate) return;
+		if (aggregate.problem === undefined) this.unindex(aggregate);
+		this.aggregates.delete(lemmaKey);
+	}
+
+	private index(aggregate: Aggregate) {
+		const { data, lemmaKey } = aggregate;
 		const lemma = data.lemmaRecord.lemma;
 		addTo(this.forms, formKeyOf(lemma.canonicalForm, "de"), lemmaKey);
 		addTo(this.lemmasByShadow, shadowKeyOf(lemma), lemmaKey);
 		for (const entry of data.readingEntries) {
-			this.readings.set(readingKeyOf(entry.reading), { entry, lemmaKey });
+			const readingKey = readingKeyOf(entry.reading);
+			this.readings.set(readingKey, {
+				entry,
+				lemmaKey,
+				path: aggregate.readingPaths.get(readingKey) ?? "",
+			});
 			for (const { edge, targetLemmaKey } of relationEdgesOf(entry)) {
 				const edges =
 					this.edgesByTarget.get(targetLemmaKey) ?? new Map();
 				edges.set(edgeKeyOf(edge), edge);
 				this.edgesByTarget.set(targetLemmaKey, edges);
 			}
+			for (const link of entry.attestationLinks) {
+				const links = this.refs.get(link.ref) ?? new Map();
+				links.set(readingKey, link);
+				this.refs.set(link.ref, links);
+				if (link.surfaceId !== null)
+					addTo(this.surfaceLinks, link.surfaceId, readingKey);
+			}
+			for (const key of knowledgeShadowKeys(entry))
+				addTo(this.dependents, key, lemmaKey);
 		}
 		for (const entry of data.ownedSurfaceEntries) {
 			this.surfaces.set(entry.id, { entry, lemmaKey });
@@ -256,20 +486,30 @@ export class NoteIndex {
 		}
 	}
 
-	/** Removes everything a holding note gave; a Lemma has one holder, so this is exact. */
-	private unindex(note: LemmaNoteEntry) {
-		const { data, lemmaKey } = note;
+	/** Removes everything an aggregate gave; a Lemma has one aggregate, so this is exact. */
+	private unindex(aggregate: Aggregate) {
+		const { data, lemmaKey } = aggregate;
 		const lemma = data.lemmaRecord.lemma;
 		removeFrom(this.forms, formKeyOf(lemma.canonicalForm, "de"), lemmaKey);
 		removeFrom(this.lemmasByShadow, shadowKeyOf(lemma), lemmaKey);
 		for (const entry of data.readingEntries) {
-			this.readings.delete(readingKeyOf(entry.reading));
+			const readingKey = readingKeyOf(entry.reading);
+			this.readings.delete(readingKey);
 			for (const { edge, targetLemmaKey } of relationEdgesOf(entry)) {
 				const edges = this.edgesByTarget.get(targetLemmaKey);
 				edges?.delete(edgeKeyOf(edge));
 				if (edges?.size === 0)
 					this.edgesByTarget.delete(targetLemmaKey);
 			}
+			for (const link of entry.attestationLinks) {
+				const links = this.refs.get(link.ref);
+				links?.delete(readingKey);
+				if (links?.size === 0) this.refs.delete(link.ref);
+				if (link.surfaceId !== null)
+					removeFrom(this.surfaceLinks, link.surfaceId, readingKey);
+			}
+			for (const key of knowledgeShadowKeys(entry))
+				removeFrom(this.dependents, key, lemmaKey);
 		}
 		for (const entry of data.ownedSurfaceEntries) {
 			this.surfaces.delete(entry.id);
@@ -290,25 +530,40 @@ export class NoteIndex {
 		}
 	}
 
-	/** The note that holds a Lemma, if any. */
-	lemmaNote(lemmaKey: string): LemmaNoteEntry | undefined {
-		const holder = this.holders.get(lemmaKey);
-		const entry =
-			holder === undefined ? undefined : this.entries.get(holder);
-		return entry?.kind === "lemma" ? entry : undefined;
+	/** A Lemma read as data: its notes' paths and its records. */
+	lemmaNote(lemmaKey: string):
+		| {
+				readonly path: string;
+				readonly readingPaths: ReadonlyMap<string, string>;
+				readonly data: NoteData;
+		  }
+		| undefined {
+		const aggregate = this.aggregates.get(lemmaKey);
+		return aggregate && aggregate.problem === undefined
+			? {
+					data: aggregate.data,
+					path: aggregate.lemmaPath,
+					readingPaths: aggregate.readingPaths,
+				}
+			: undefined;
 	}
 
 	lemmaData(lemmaKey: string): NoteData | undefined {
 		return this.lemmaNote(lemmaKey)?.data;
 	}
 
-	/** Every holding note, by path. */
-	lemmaNotes(): LemmaNoteEntry[] {
-		return [...this.holders.keys()]
-			.flatMap((key) => {
-				const note = this.lemmaNote(key);
-				return note ? [note] : [];
-			})
+	/** The keys of every Lemma read as data. */
+	lemmaKeys(): string[] {
+		return [...this.aggregates.values()]
+			.filter(({ problem }) => problem === undefined)
+			.map(({ lemmaKey }) => lemmaKey);
+	}
+
+	/** Every Lemma read as data, with its Lemma note's path, by path. */
+	lemmaNotes(): { readonly path: string; readonly data: NoteData }[] {
+		return [...this.aggregates.values()]
+			.filter(({ problem }) => problem === undefined)
+			.map(({ data, lemmaPath }) => ({ data, path: lemmaPath }))
 			.sort((a, b) => byCodeUnit(a.path, b.path));
 	}
 
@@ -316,14 +571,17 @@ export class NoteIndex {
 		return this.readings.get(readingKey)?.entry;
 	}
 
+	readingOwner(readingKey: string): string | undefined {
+		return this.readings.get(readingKey)?.lemmaKey;
+	}
+
 	readingLocation(readingKey: string): ReadingLocation | undefined {
 		const found = this.readings.get(readingKey);
 		if (!found) return undefined;
-		const note = this.lemmaNote(found.lemmaKey);
-		const blockId = note?.blockIds.readings.get(readingKey);
-		return note && blockId
-			? { blockId, entry: found.entry, path: note.path }
-			: undefined;
+		const lemmaPath = this.aggregates.get(found.lemmaKey)?.lemmaPath;
+		return lemmaPath === undefined
+			? undefined
+			: { entry: found.entry, lemmaPath, path: found.path };
 	}
 
 	surface(surfaceId: string): SurfaceEntry<"de"> | undefined {
@@ -344,6 +602,11 @@ export class NoteIndex {
 		return [...(this.lemmasByShadow.get(shadowKey) ?? [])].sort(byCodeUnit);
 	}
 
+	/** Keys of the Lemmas whose notes link something by this Shadow key. */
+	dependentsOf(shadowKey: string): readonly string[] {
+		return [...(this.dependents.get(shadowKey) ?? [])].sort(byCodeUnit);
+	}
+
 	pendingRecord(
 		locatorKey: string,
 	): PendingSemanticRelationRecord<"de"> | undefined {
@@ -359,12 +622,12 @@ export class NoteIndex {
 			});
 	}
 
-	/**
-	 * Indexed paths that name the same file as `path` on a case-insensitive
-	 * file system, such as macOS's: `Bank.md` for `bank.md`.
-	 */
-	sameFileAs(path: string): readonly string[] {
-		return [...(this.folded.get(foldPath(path)) ?? [])];
+	/** Every stored pending relation, by locator. */
+	allPending(): PendingSemanticRelationRecord<"de">[] {
+		return [...this.pending.keys()].sort(byCodeUnit).flatMap((key) => {
+			const record = this.pending.get(key)?.record;
+			return record ? [record] : [];
+		});
 	}
 
 	/** Every stored relation whose target is this Lemma or one of its Readings. */
@@ -372,30 +635,167 @@ export class NoteIndex {
 		return [...(this.edgesByTarget.get(lemmaKey)?.values() ?? [])];
 	}
 
-	/** Paths of notes that hold a Lemma another note already holds. */
-	duplicates(): { readonly path: string; readonly heldBy: string }[] {
-		const result: { path: string; heldBy: string }[] = [];
-		for (const [key, paths] of this.claims) {
-			const holder = this.holders.get(key);
-			if (holder === undefined) continue;
+	/**
+	 * Every note that holds a Lemma or one of its Readings, duplicates
+	 * included: what removing the Lemma removes.
+	 */
+	notesOf(lemmaKey: string): {
+		readonly lemma: readonly string[];
+		readonly readings: ReadonlyMap<string, readonly string[]>;
+	} {
+		return {
+			lemma: [...(this.lemmaClaims.get(lemmaKey) ?? [])].sort(byCodeUnit),
+			readings: new Map(
+				[...(this.readingsOfLemma.get(lemmaKey) ?? [])].map((key) => [
+					key,
+					[...(this.readingClaims.get(key) ?? [])].sort(byCodeUnit),
+				]),
+			),
+		};
+	}
+
+	/** Whether some file holds this Lemma, read as data or not. */
+	holdsAnyNoteOf(lemma: Dumling.Lemma<"de">): boolean {
+		if (this.lemmaClaims.has(lemmaKeyOf(lemma))) return true;
+		const path = canonicalLemmaPath(lemma);
+		return path !== undefined && this.sameFileAs(path).length > 0;
+	}
+
+	/** The keys of every Lemma some stored claim targets, stored or not. */
+	claimedLemmaKeys(): string[] {
+		return [...this.edgesByTarget.keys()];
+	}
+
+	/** Every stored Attestation Link with this ref. */
+	linksWithRef(ref: string): AttestationLink<"de">[] {
+		return [...(this.refs.get(ref)?.values() ?? [])];
+	}
+
+	/** Every stored Reading whose links name this Surface. */
+	readingsLinking(surfaceId: string): ReadingEntry<"de">[] {
+		return [...(this.surfaceLinks.get(surfaceId) ?? [])]
+			.sort(byCodeUnit)
+			.flatMap((key) => {
+				const entry = this.reading(key);
+				return entry ? [entry] : [];
+			});
+	}
+
+	/**
+	 * Indexed paths that name the same file as `path` on a case-insensitive,
+	 * normalizing file system: `Bank.md` for `bank.md`, `MASSE.md` for
+	 * `Maße.md` (ADR-0015's collision key).
+	 */
+	sameFileAs(path: string): readonly string[] {
+		return [...(this.folded.get(pathCollisionKey(path)) ?? [])];
+	}
+
+	/**
+	 * A folder of `path` that the vault already spells another way, which a
+	 * case-insensitive file system holds as one folder.
+	 */
+	folderCollision(
+		path: string,
+	): { readonly folder: string; readonly existing: string } | undefined {
+		for (const folder of foldersOf(path)) {
+			const spellings = this.folders.get(pathCollisionKey(folder));
+			if (spellings === undefined || spellings.has(folder)) continue;
+			const [existing] = [...spellings.keys()].sort(byCodeUnit);
+			if (existing !== undefined) return { existing, folder };
+		}
+		return undefined;
+	}
+
+	/** Notes the index does not read as data, beyond their own file. */
+	problems(): IndexProblem[] {
+		const result: IndexProblem[] = [];
+		for (const [key, paths] of this.lemmaClaims) {
+			const aggregate = this.aggregates.get(key);
+			if (aggregate === undefined) continue;
 			for (const path of paths)
-				if (path !== holder) result.push({ heldBy: holder, path });
+				if (path !== aggregate.lemmaPath)
+					result.push({
+						_tag: "DuplicateLemma",
+						heldBy: aggregate.lemmaPath,
+						path,
+					});
+			if (aggregate.problem !== undefined)
+				result.push({
+					_tag: "InconsistentLemma",
+					message: aggregate.problem,
+					path: aggregate.lemmaPath,
+				});
+		}
+		for (const [readingKey, paths] of this.readingClaims) {
+			const sample = this.entries.get([...paths][0] ?? "");
+			if (sample?.kind !== "reading") continue;
+			const aggregate = this.aggregates.get(sample.lemmaKey);
+			const holder = aggregate?.readingPaths.get(readingKey);
+			for (const path of paths)
+				if (aggregate === undefined || aggregate.problem !== undefined)
+					result.push({ _tag: "OrphanReading", path });
+				else if (holder !== undefined && path !== holder)
+					result.push({
+						_tag: "DuplicateReading",
+						heldBy: holder,
+						path,
+					});
 		}
 		return result.sort((a, b) => byCodeUnit(a.path, b.path));
 	}
 
-	/** Holding notes whose path is not their Lemma's canonical path. */
-	misplaced(): { readonly from: string; readonly to: string | undefined }[] {
-		const result: { from: string; to: string | undefined }[] = [];
-		for (const holder of this.holders.values()) {
-			const entry = this.entries.get(holder);
-			if (entry?.kind !== "lemma") continue;
-			const canonical = canonicalLemmaPath(entry.data.lemmaRecord.lemma);
-			if (canonical !== holder)
-				result.push({ from: holder, to: canonical });
+	/** Holding notes whose path is not their identity's path. */
+	misplaced(): Misplaced[] {
+		const result: Misplaced[] = [];
+		for (const aggregate of this.aggregates.values()) {
+			if (aggregate.problem !== undefined) continue;
+			const canonical = canonicalLemmaPath(
+				aggregate.data.lemmaRecord.lemma,
+			);
+			if (canonical !== aggregate.lemmaPath)
+				result.push({
+					from: aggregate.lemmaPath,
+					key: aggregate.lemmaKey,
+					to: canonical,
+				});
+			for (const { reading } of aggregate.data.readingEntries) {
+				const key = readingKeyOf(reading);
+				const path = aggregate.readingPaths.get(key);
+				const target = canonicalReadingPath(reading);
+				if (path !== undefined && path !== target)
+					result.push({ from: path, key, to: target });
+			}
 		}
 		return result.sort((a, b) => byCodeUnit(a.from, b.from));
 	}
+}
+
+/** Each folder of a path, shallowest first, without `Worter` itself. */
+function foldersOf(path: string): string[] {
+	const parts = path.normalize("NFC").split("/");
+	const folders: string[] = [];
+	for (let end = 2; end < parts.length; end++)
+		folders.push(parts.slice(0, end).join("/"));
+	return folders;
+}
+
+/**
+ * Why a Lemma's notes are not one valid Lemma: a Foreign Lemma with more
+ * than one Reading, or a Paradigm that licenses a Reading no note holds.
+ */
+function problemOf(data: NoteData): string | undefined {
+	const { lemma, paradigm } = data.lemmaRecord;
+	if (lemma.family === "Foreign" && data.readingEntries.length > 1)
+		return "A Foreign Lemma has exactly one Reading";
+	if (paradigm === undefined) return undefined;
+	const parsed = parseLemmaParadigm({
+		lemma,
+		paradigm,
+		readings: data.readingEntries.map(({ reading }) => reading),
+	});
+	return parsed.success
+		? undefined
+		: `Its Paradigm does not fit its Reading notes: ${parsed.error.message}`;
 }
 
 const edgeKeyOf = (edge: RelationEdge): string =>

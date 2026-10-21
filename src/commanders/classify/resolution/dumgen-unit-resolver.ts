@@ -13,7 +13,7 @@
  *    Ref of the Segment's source block. A New the store refuses as stale is
  *    judged again, at most `MAX_STALE_REJUDGES` times.
  * 4. One compare-and-swap write links every piece of every resolved unit
- *    to its Reading block and adds the block IDs the refs name.
+ *    to its Reading note and adds the block IDs the refs name.
  * 5. Each resolved Reading's Knowledge runs in the background.
  *
  * `resolveUnit` is idempotent per `UnitRef`: a second run over the same
@@ -75,8 +75,7 @@ type ResolvedUnit = {
 	readonly attestation: Dumling.Attestation<"de">;
 	readonly sentence: PlannedSentence;
 	readonly created: boolean;
-	readonly lemmaPath: string;
-	readonly readingBlockId: string;
+	readonly readingPath: string;
 };
 
 type UnitOutcome =
@@ -258,10 +257,9 @@ const resolveUnit = Effect.fnUntraced(function* (
 	return {
 		attestation,
 		created,
-		lemmaPath: location.path,
 		planned,
 		reading: decided.reading,
-		readingBlockId: location.blockId,
+		readingPath: location.path,
 		sentence,
 	};
 });
@@ -391,10 +389,7 @@ export function dumgenUnitResolver(
 				const edits: UnitLinkEdit[] = resolved.map((unit) => ({
 					occurrences: unit.planned.occurrences.map(snapshot.move),
 					ref: unit.planned.ref,
-					target: {
-						lemmaPath: unit.lemmaPath,
-						readingBlockId: unit.readingBlockId,
-					},
+					target: { readingPath: unit.readingPath },
 				}));
 				const linked =
 					edits.length === 0
@@ -428,10 +423,9 @@ export function dumgenUnitResolver(
 					.map((unit) => ({
 						attestation: unit.attestation,
 						label: labelOf(unit.reading),
-						lemmaPath: unit.lemmaPath,
 						origin: unit.created ? "New" : "TopUp",
 						reading: unit.reading,
-						readingBlockId: unit.readingBlockId,
+						readingPath: unit.readingPath,
 						sentence: {
 							segments: unit.sentence.segmented.segments.map(
 								({ text }) => ({
@@ -458,9 +452,8 @@ export function dumgenUnitResolver(
 					index++;
 					return {
 						_tag: "Resolved",
-						lemmaPath: outcome.unit.lemmaPath,
 						linked: linkedCount,
-						readingBlockId: outcome.unit.readingBlockId,
+						readingPath: outcome.unit.readingPath,
 						ref,
 					};
 				});

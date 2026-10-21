@@ -39,9 +39,8 @@ export type KnowledgeJob = {
 		readonly target: readonly number[];
 	};
 	readonly origin: KnowledgeOrigin;
-	/** Where the Reading lives, for scrolling to it once its Knowledge lands. */
-	readonly lemmaPath: string;
-	readonly readingBlockId: string;
+	/** The Reading note's vault path, whose clicks wait for the Knowledge. */
+	readonly readingPath: string;
 	/** How the user knows the Reading: `See 🌊`. */
 	readonly label: string;
 };

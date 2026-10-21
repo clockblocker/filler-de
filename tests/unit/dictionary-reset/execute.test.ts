@@ -108,15 +108,14 @@ function stubResolver(vault: FakeResetVault, onResolve?: () => void) {
 				return plan.units.map((planned): UnitResolution => {
 					const first = planned.occurrences[0];
 					const text = first ? plan.content.slice(first.from, first.to) : "";
-					const lemmaPath = `Worter/de/Lexeme/NOUN/${text}.md`;
+					const readingPath = `Worter/de/Lexeme/NOUN/${text}.md`;
 					vault.ops.push(`resolve ${text}`);
-					if (!vault.files.has(lemmaPath))
-						vault.files.set(lemmaPath, `%%tf-part:lemma%%\n${text}\n`);
+					if (!vault.files.has(readingPath))
+						vault.files.set(readingPath, `%%tf-part:lemma%%\n${text}\n`);
 					return {
 						_tag: "Resolved",
-						lemmaPath,
 						linked: 0,
-						readingBlockId: "r-0001",
+						readingPath,
 						ref: planned.ref,
 					};
 				});
@@ -203,14 +202,14 @@ describe("executeReset", () => {
 			else expect(vault.files.get(path)).toBe(content);
 
 		const regenerated = result.execution.regenerations.flatMap((entry) =>
-			entry?._tag === "Regenerated" ? [entry.lemmaPath] : [],
+			entry?._tag === "Regenerated" ? [entry.readingPath] : [],
 		);
 		expect(regenerated).toHaveLength(3);
 		const aufpassen = result.execution.freeform.find(
 			(entry) => entry._tag === "Attached",
 		);
 		expect(aufpassen).toMatchObject({ _tag: "Attached" });
-		const attachedTo = aufpassen?._tag === "Attached" ? aufpassen.lemmaPath : "";
+		const attachedTo = aufpassen?._tag === "Attached" ? aufpassen.readingPath : "";
 		expect(vault.files.get(attachedTo)).toContain("I [walked] in the park");
 		expect(
 			result.execution.freeform.filter((entry) => entry._tag === "Unplaced"),

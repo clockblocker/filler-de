@@ -20,11 +20,10 @@ export type KnowledgeQueue = {
 	/** Starts the Reading's run unless one is already going. */
 	readonly enqueue: (job: KnowledgeJob) => void;
 	/**
-	 * Waits for the runs on the note at `lemmaPath` (`.md` optional) and
-	 * answers the Reading block of the last one that finished, or undefined
-	 * when none was running.
+	 * Waits for the runs on the Reading note at `path` (`.md` optional) and
+	 * answers whether any was running.
 	 */
-	readonly awaitNote: (lemmaPath: string) => Promise<string | undefined>;
+	readonly awaitNote: (path: string) => Promise<boolean>;
 	/**
 	 * Interrupts every run; answers how many there were. A run stops asking
 	 * dumgen at once; a publication it already started finishes first.
@@ -134,15 +133,15 @@ export function createKnowledgeQueue(
 	};
 
 	return {
-		awaitNote: async (lemmaPath) => {
-			const path = notePath(lemmaPath);
-			let blockId: string | undefined;
+		awaitNote: async (readingPath) => {
+			const path = notePath(readingPath);
+			let waited = false;
 			for (;;) {
 				const pending = [...runs.values()].filter(
-					({ job }) => notePath(job.lemmaPath) === path,
+					({ job }) => notePath(job.readingPath) === path,
 				);
-				if (pending.length === 0) return blockId;
-				blockId = pending.at(-1)?.job.readingBlockId;
+				if (pending.length === 0) return waited;
+				waited = true;
 				await Promise.all(pending.map(({ done }) => done));
 			}
 		},
