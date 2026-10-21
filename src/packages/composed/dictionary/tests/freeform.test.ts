@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	blockIdsOf,
-	lemmaNotePath,
+	legacyLemmaNotePath,
 	parse,
 	serialize,
 } from "@textfresser/lemma-note-codec";
@@ -19,7 +19,7 @@ import {
 } from "./support/fixtures";
 import { openStore, seed } from "./support/store";
 
-const gehenPath = lemmaNotePath(gehen).path;
+const gehenPath = legacyLemmaNotePath(gehen).path;
 const PLACEHOLDER = "*You can write here*";
 const NOTE_TITLE =
 	'<span class="note_block_title note_block_title_kontexte">Note</span>';

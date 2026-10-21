@@ -5,8 +5,8 @@ import type * as Dumling from "dumling/types";
 import {
 	canonicalFormBasename,
 	decodeBasename,
-	lemmaNotePath,
-	parseNotePath,
+	legacyLemmaNotePath,
+	parseLegacyNotePath,
 	shadowNotePath,
 } from "../src";
 import { sha256Hex } from "../src/hash";
@@ -134,14 +134,14 @@ const setFeatures = (core: Readonly<Record<string, unknown>>) =>
 		),
 	);
 
-describe("lemmaNotePath", () => {
+describe("legacyLemmaNotePath (ADR-0013)", () => {
 	for (const [expected, source] of ADR_EXAMPLES) {
 		it(`spells ${expected}`, () => {
-			expect(lemmaNotePath(source).path).toBe(expected);
+			expect(legacyLemmaNotePath(source).path).toBe(expected);
 		});
 
 		it(`parses ${expected} back to the Lemma's identity`, () => {
-			const parsed = parseNotePath(expected);
+			const parsed = parseLegacyNotePath(expected);
 			if (!parsed.ok) throw new Error(parsed.error.reason);
 			const { value } = parsed;
 			if (value.type !== "lemma")
@@ -169,30 +169,31 @@ describe("lemmaNotePath", () => {
 			hasSepPrefix: null,
 			lexicallyReflexive: "Acc",
 		});
-		expect(lemmaNotePath(schaemen).path).toBe(
+		expect(legacyLemmaNotePath(schaemen).path).toBe(
 			"Worter/de/Lexeme/VERB/_/Acc/schämen.md",
 		);
 	});
 
 	it("spells Foreign, Morpheme, Locution and Saying routes", () => {
 		expect(
-			lemmaNotePath(
+			legacyLemmaNotePath(
 				lemma("Foreign", "Foreign", "c'est la vie", {
 					sourceLang: "fr",
 				}),
 			).path,
 		).toBe("Worter/de/Foreign/Foreign/fr/c'est la vie.md");
 		expect(
-			lemmaNotePath(
+			legacyLemmaNotePath(
 				lemma("Morpheme", "Prefix", "auf", { hasSepPrefix: "auf" }),
 			).path,
 		).toBe("Worter/de/Morpheme/Prefix/auf/auf.md");
 		expect(
-			lemmaNotePath(lemma("Locution", "VERB", "ins Gras beißen", {}))
-				.path,
+			legacyLemmaNotePath(
+				lemma("Locution", "VERB", "ins Gras beißen", {}),
+			).path,
 		).toBe("Worter/de/Locution/VERB/ins Gras beißen.md");
 		expect(
-			lemmaNotePath(
+			legacyLemmaNotePath(
 				lemma("Saying", "Saying", "Wer rastet, der rostet", {}),
 			).path,
 		).toBe("Worter/de/Saying/Saying/Wer rastet, der rostet.md");
@@ -208,7 +209,7 @@ describe("shadowNotePath", () => {
 			language: "de",
 		});
 		expect(path.path).toBe("Worter/de/Shadow/Lexeme/NOUN/Elternteil.md");
-		expect(parseNotePath(path.path)).toEqual({
+		expect(parseLegacyNotePath(path.path)).toEqual({
 			ok: true,
 			value: {
 				basename: { canonicalForm: "Elternteil", truncated: false },
@@ -305,7 +306,7 @@ describe("basenames", () => {
 	});
 });
 
-describe("parseNotePath rejects what lemmaNotePath never writes", () => {
+describe("parseLegacyNotePath rejects what legacyLemmaNotePath never writes", () => {
 	const invalid = [
 		"Worter/de/Lexeme/NOUN/Masc/See.txt",
 		"Other/de/Lexeme/NOUN/Masc/See.md",
@@ -326,7 +327,7 @@ describe("parseNotePath rejects what lemmaNotePath never writes", () => {
 	];
 	for (const path of invalid) {
 		it(path, () => {
-			const parsed = parseNotePath(path);
+			const parsed = parseLegacyNotePath(path);
 			expect(parsed.ok).toBe(false);
 			if (!parsed.ok) expect(parsed.error._tag).toBe("InvalidNotePath");
 		});
@@ -341,15 +342,15 @@ describe("parseNotePath rejects what lemmaNotePath never writes", () => {
 			kind: "Foreign",
 			language: "de",
 		} as const;
-		const { path } = lemmaNotePath(odd);
+		const { path } = legacyLemmaNotePath(odd);
 		expect(path).toBe("Worter/de/Foreign/Foreign/%5F/x.md");
 		expect(
-			lemmaNotePath({
+			legacyLemmaNotePath({
 				...odd,
 				coreFeatures: { sourceLang: ".." },
 			}).path,
 		).toBe("Worter/de/Foreign/Foreign/%2E./x.md");
-		const parsed = parseNotePath(path);
+		const parsed = parseLegacyNotePath(path);
 		expect(
 			parsed.ok &&
 				parsed.value.type === "lemma" &&

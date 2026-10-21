@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { lemmaNotePath } from "@textfresser/lemma-note-codec";
+import { legacyLemmaNotePath } from "@textfresser/lemma-note-codec";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
 import type { PlannedChangeOp } from "dumdict";
 import { createMemoryNoteCache, DictionaryRequestError } from "../src";
@@ -22,7 +22,7 @@ import {
 } from "./support/fixtures";
 import { commit, openStore, seed } from "./support/store";
 
-const gehenPath = lemmaNotePath(gehen).path;
+const gehenPath = legacyLemmaNotePath(gehen).path;
 const shadowPath = "Worter/de/Shadow/Lexeme/VERB/schreiten.md";
 const storeShadow = shadowBody(schreitenShadow.target);
 const deletePending = (
@@ -211,8 +211,8 @@ test("a heal move that keeps failing is reported and not retried on every event"
 	const scans = vault.scanCount;
 	const revision = await run(store.revision);
 	await vault.userWrite(
-		lemmaNotePath(laufen).path,
-		`${vault.content(lemmaNotePath(laufen).path)}\nedited\n`,
+		legacyLemmaNotePath(laufen).path,
+		`${vault.content(legacyLemmaNotePath(laufen).path)}\nedited\n`,
 	);
 	expect(vault.scanCount).toBe(scans);
 	expect(await run(store.revision)).not.toBe(revision);

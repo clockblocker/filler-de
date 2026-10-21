@@ -1,8 +1,8 @@
 import { expect } from "bun:test";
 import {
-	lemmaNotePath,
+	legacyLemmaNotePath,
 	parse,
-	parseNotePath,
+	parseLegacyNotePath,
 	shadowNotePath,
 } from "@textfresser/lemma-note-codec";
 import { Effect } from "effect";
@@ -35,7 +35,7 @@ export async function expectIndexMatchesFiles(
 			: data.partial.pendingRelations)
 			neededShadows.add(shadowNotePath(record.pending.target).path);
 		if (!data.ok) {
-			const parsedPath = parseNotePath(path);
+			const parsedPath = parseLegacyNotePath(path);
 			if (parsedPath.ok && parsedPath.value.type === "shadow")
 				shadowFiles.add(path);
 			continue;
@@ -44,7 +44,9 @@ export async function expectIndexMatchesFiles(
 		const note = await run(store.lemmaNote(data.data.lemmaRecord.lemma));
 		if (note?.path !== path) continue;
 		if (!blocked.has(path))
-			expect(path).toBe(lemmaNotePath(data.data.lemmaRecord.lemma).path);
+			expect(path).toBe(
+				legacyLemmaNotePath(data.data.lemmaRecord.lemma).path,
+			);
 		expect(note).toEqual({
 			ownedSurfaces: data.data.ownedSurfaceEntries,
 			path,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
-	lemmaNotePath,
+	legacyLemmaNotePath,
 	parse,
 	readingBlockId,
 	serialize,
@@ -31,14 +31,14 @@ import {
 import { commit, openStore, seed } from "./support/store";
 
 const planner = createDumdictPlanner("de");
-const gehenPath = lemmaNotePath(gehen).path;
-const laufenPath = lemmaNotePath(laufen).path;
-const schreitenPath = lemmaNotePath(schreiten).path;
-const springenPath = lemmaNotePath(springen).path;
+const gehenPath = legacyLemmaNotePath(gehen).path;
+const laufenPath = legacyLemmaNotePath(laufen).path;
+const schreitenPath = legacyLemmaNotePath(schreiten).path;
+const springenPath = legacyLemmaNotePath(springen).path;
 const shadowPath = "Worter/de/Shadow/Lexeme/VERB/schreiten.md";
 
 const linkTo = (reading: Dumling.Reading<"de", "Lexeme", "VERB">) =>
-	`[[${lemmaNotePath(reading.lemma).path.replace(/\.md$/u, "")}#^${readingBlockId(reading)}|${reading.lemma.canonicalForm}]]`;
+	`[[${legacyLemmaNotePath(reading.lemma).path.replace(/\.md$/u, "")}#^${readingBlockId(reading)}|${reading.lemma.canonicalForm}]]`;
 
 /** The note's `inverse_relation` Block, marker and rendering, if it has one. */
 const inverseBlock = (content: string | undefined) =>

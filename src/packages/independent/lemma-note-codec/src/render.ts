@@ -4,7 +4,7 @@ import type { projectSemanticRelations } from "dumrel";
 import type * as Dumrel from "dumrel/types";
 import { readingBlockId } from "./block-ids";
 import type { TypedBlockKind } from "./blocks";
-import { lemmaNotePath, shadowNotePath } from "./path/note-path";
+import { legacyLemmaNotePath, shadowNotePath } from "./path/legacy-note-path";
 
 /**
  * Renders a wikilink to a Lemma, Reading or Shadow note. The default links
@@ -193,7 +193,7 @@ export const DEFAULT_LINKS: LinkRenderer = {
 	lemma(lemma) {
 		if (lemma.language !== "de") return bare(lemma.canonicalForm);
 		try {
-			return `[[${withoutExtension(lemmaNotePath(lemma as Dumling.Lemma<"de">).path)}|${lemma.canonicalForm}]]`;
+			return `[[${withoutExtension(legacyLemmaNotePath(lemma as Dumling.Lemma<"de">).path)}|${lemma.canonicalForm}]]`;
 		} catch {
 			return bare(lemma.canonicalForm);
 		}
@@ -203,7 +203,7 @@ export const DEFAULT_LINKS: LinkRenderer = {
 		if (lemma.language !== "de") return bare(lemma.canonicalForm);
 		try {
 			const path = withoutExtension(
-				lemmaNotePath(lemma as Dumling.Lemma<"de">).path,
+				legacyLemmaNotePath(lemma as Dumling.Lemma<"de">).path,
 			);
 			return `[[${path}#^${readingBlockId(reading)}|${lemma.canonicalForm}]]`;
 		} catch {

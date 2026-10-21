@@ -42,19 +42,49 @@ export {
 	decodeBasename,
 } from "./path/basename";
 export {
+	caseFold,
+	findPathCollisions,
+	type PathClaim,
+	type PathCollision,
+	pathCollisionKey,
+} from "./path/collision";
+export {
 	type InvalidNotePath,
-	lemmaNotePath,
 	type NotePath,
-	type NotePathParse,
-	type ParsedLemmaNotePath,
-	type ParsedNotePath,
-	type ParsedShadowNotePath,
 	type PathLemma,
-	parseNotePath,
+	WORTER_FOLDER,
+} from "./path/common";
+export {
+	type LegacyNotePathParse,
+	legacyLemmaNotePath,
+	type ParsedLegacyLemmaNotePath,
+	type ParsedLegacyNotePath,
+	type ParsedShadowNotePath,
+	parseLegacyNotePath,
 	SHADOW_FOLDER,
 	shadowNotePath,
-	WORTER_FOLDER,
+} from "./path/legacy-note-path";
+export {
+	FILE_NAME_MAX_BYTES,
+	NAME_SEGMENT_FALLBACK,
+	NAME_SEGMENT_MAX_BYTES,
+	RESERVED_NAME_PREFIX,
+	toNameSegment,
+} from "./path/name-segment";
+export {
+	crossroadNotePath,
+	FOREIGN_READING_MARKER,
+	lemmaNotePath,
+	type NotePathParse,
+	type ParsedCrossroadNotePath,
+	type ParsedLemmaNotePath,
+	type ParsedNotePath,
+	type ParsedReadingNotePath,
+	type ParsedStrayNotePath,
+	parseNotePath,
+	readingNotePath,
 } from "./path/note-path";
+export { type ShardFolders, shardFolders } from "./path/shards";
 export {
 	GERMAN_SLOT_TABLE,
 	germanSlotsOf,
