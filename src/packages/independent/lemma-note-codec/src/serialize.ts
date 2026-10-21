@@ -20,15 +20,19 @@ import {
 	withoutBlockIds,
 } from "./document";
 import {
-	DEFAULT_LABELS,
+	BLOCK_SECTIONS,
 	DEFAULT_LINKS,
+	DEFAULT_TITLES,
 	defaultHeader,
 	type LinkRenderer,
+	PART_SEPARATOR,
 	type Projections,
 	RENDERERS,
 	type ReadingProjectionContext,
 	renderInverseRelations,
+	type SectionKind,
 	sanitizeRendering,
+	sectionTitle,
 } from "./render";
 import type { LemmaNoteData } from "./types";
 
@@ -65,22 +69,8 @@ function encodePayload(value: unknown): string {
 
 type Render = {
 	readonly links: LinkRenderer;
-	readonly labels: Readonly<Record<TypedBlockKind, string>>;
+	readonly titles: Readonly<Record<SectionKind, string>>;
 };
-
-function labelled(
-	kind: TypedBlockKind,
-	content: string | undefined,
-	{ labels }: Render,
-): string | undefined {
-	const clean = content === undefined ? "" : sanitizeRendering(content);
-	if (clean.length === 0) return undefined;
-	const label = sanitizeRendering(labels[kind]);
-	if (label.length === 0) return clean;
-	return clean.includes("\n")
-		? `*${label}*\n${clean}`
-		: `*${label}*: ${clean}`;
-}
 
 /**
  * A typed Block: its marker, sealing the rendering it is followed by, so
@@ -97,34 +87,86 @@ function typedBlock(
 	return rendering === undefined ? marker : `${marker}\n${rendering}`;
 }
 
-function serializedBlock(
-	kind: SerializedBlockKind,
-	value: unknown,
-	rendering: string | undefined,
-): string {
-	return typedBlock(kind, encodePayload(value), rendering);
+/**
+ * One typed Block before layout: its encoded payload, for a serialized
+ * Block, and its visible content, before its section's title. A projection
+ * Block without content is left out.
+ */
+type BlockItem = {
+	readonly kind: TypedBlockKind;
+	readonly payload?: string;
+	readonly content?: string;
+};
+
+/**
+ * Lays a part out as the legacy notes did (spec: Layout): the part marker
+ * and its `head` Blocks on consecutive lines, then one section per run of
+ * Blocks that share one, its title on the first rendering. Blocks of one
+ * section stand on consecutive lines too, so with comment lines hidden a
+ * section reads as one; a blank line separates sections. Returns the
+ * part's segments, which the note joins with blank lines.
+ */
+function layoutPart(
+	marker: string,
+	items: readonly BlockItem[],
+	{ titles }: Render,
+): string[] {
+	const groups: { section: SectionKind | "head"; blocks: string[] }[] = [
+		{ blocks: [marker], section: "head" },
+	];
+	let titled = false;
+	for (const { content, kind, payload } of items) {
+		const section = BLOCK_SECTIONS[kind];
+		const last = groups.at(-1);
+		const group =
+			last !== undefined && last.section === section
+				? last
+				: { blocks: [], section };
+		if (group !== last) {
+			groups.push(group);
+			titled = false;
+		}
+		const clean = content === undefined ? "" : sanitizeRendering(content);
+		let rendering =
+			clean.length > 0 ||
+			(kind === "notes_title" && content !== undefined)
+				? clean
+				: undefined;
+		if (rendering !== undefined && section !== "head" && !titled) {
+			const title = sanitizeRendering(titles[section]);
+			if (title.length > 0) {
+				const line = sectionTitle(section, title);
+				rendering =
+					rendering.length > 0 ? `${line}\n${rendering}` : line;
+			}
+			titled = true;
+		}
+		if (rendering !== undefined && rendering.length === 0)
+			rendering = undefined;
+		if (rendering === undefined && payload === undefined) continue;
+		group.blocks.push(typedBlock(kind, payload, rendering));
+	}
+	return groups
+		.filter((group) => group.blocks.length > 0)
+		.map((group) => group.blocks.join("\n"));
 }
 
-/** A serialized Block with its default, labelled rendering. */
-function renderedBlock(
+/**
+ * A serialized Block with its payload and its default rendering, of `shown`
+ * when it shows less than the payload holds.
+ */
+function serializedItem(
 	kind: SerializedBlockKind,
-	value: unknown,
-	render: Render,
-): string {
-	return serializedBlock(
+	shown: unknown,
+	{ links }: Render,
+	value: unknown = shown,
+): BlockItem {
+	const content = RENDERERS[kind]?.(shown, links);
+	return {
 		kind,
-		value,
-		labelled(kind, RENDERERS[kind]?.(value, render.links), render),
-	);
-}
-
-function projectionBlock(
-	kind: ProjectionBlockKind,
-	rendering: string | undefined,
-): string | undefined {
-	return rendering === undefined
-		? undefined
-		: typedBlock(kind, undefined, rendering);
+		payload: encodePayload(value),
+		...(content === undefined ? {} : { content }),
+	};
 }
 
 const isEmpty = (value: unknown) =>
@@ -172,8 +214,8 @@ export function serialize<L extends Dumling.Language>(
 ): string {
 	const { projections = {} } = options;
 	const render: Render = {
-		labels: { ...DEFAULT_LABELS, ...projections.labels },
 		links: { ...DEFAULT_LINKS, ...projections.links },
+		titles: { ...DEFAULT_TITLES, ...projections.titles },
 	};
 	const source = document ?? EMPTY_DOCUMENT;
 	const ids = blockIdsOf(data);
@@ -220,6 +262,10 @@ export function serialize<L extends Dumling.Language>(
 	};
 
 	const lemmaKept = take("lemma");
+	/** The separator lines every part after the first opens with. */
+	let visibleParts = 0;
+	const separated = (line: string) =>
+		visibleParts++ === 0 ? line : `${PART_SEPARATOR}\n${line}`;
 	const readingParts = data.readingEntries.map((entry, index) => {
 		const key = readingKeys[index] ?? "";
 		const blockId = ids.readings.get(key) ?? "";
@@ -258,45 +304,54 @@ export function serialize<L extends Dumling.Language>(
 			payloads[kind as SerializedBlockKind] = knowledge[aspect];
 		}
 		const projected: Record<ProjectionBlockKind, string | undefined> = {
-			header: `${sanitizeRendering((projections.header ?? defaultHeader)(context))} ^${blockId}`,
-			inflection: labelled(
-				"inflection",
-				projections.inflection?.(context),
-				render,
+			header: separated(
+				`${sanitizeRendering((projections.header ?? defaultHeader)(context))} ^${blockId}`,
 			),
-			inverse_relation: labelled(
-				"inverse_relation",
-				(() => {
-					const edges = projections.inverseRelations?.(context);
-					return edges === undefined || edges.length === 0
-						? undefined
-						: renderInverseRelations(edges, render.links);
-				})(),
-				render,
-			),
-			tags: labelled(
-				"tags",
-				projections
-					.tags?.(context)
-					?.map((tag) => `#${tag}`)
-					.join(" "),
-				render,
-			),
+			inflection: projections.inflection?.(context),
+			inverse_relation: (() => {
+				const edges = projections.inverseRelations?.(context);
+				return edges === undefined || edges.length === 0
+					? undefined
+					: renderInverseRelations(edges, render.links);
+			})(),
+			// The Notizen title always stands last, over the notes and the
+			// freeform text kept below it, so a user knows where to write.
+			notes_title: "",
+			tags: projections
+				.tags?.(context)
+				?.map((tag) => `#${tag}`)
+				.join(" "),
 		};
-		const blocks = CANONICAL_BLOCK_ORDER.reading.map((kind) => {
-			if (kind in projected)
-				return projectionBlock(
-					kind as ProjectionBlockKind,
-					projected[kind as ProjectionBlockKind],
-				);
-			const value = payloads[kind as SerializedBlockKind];
-			return isEmpty(value)
-				? undefined
-				: renderedBlock(kind as SerializedBlockKind, value, render);
-		});
+		const translated = new Set<string>(
+			Object.values(entry.knowledge?.translations ?? {}).flat(),
+		);
+		const items = CANONICAL_BLOCK_ORDER.reading.flatMap(
+			(kind): BlockItem[] => {
+				if (kind in projected) {
+					const content = projected[kind as ProjectionBlockKind];
+					return content === undefined ? [] : [{ content, kind }];
+				}
+				const value = payloads[kind as SerializedBlockKind];
+				if (isEmpty(value)) return [];
+				// Übersetzung shows an attested translation once, so one the
+				// Reading's translations already list shows only there.
+				return [
+					serializedItem(
+						kind as SerializedBlockKind,
+						kind === "attested_translation"
+							? entry.attestedTranslations.filter(
+									(word) => !translated.has(word),
+								)
+							: value,
+						render,
+						value,
+					),
+				];
+			},
+		);
 		return [
-			`%%tf-part:reading ${blockId}%%`,
-			...blocks,
+			...layoutPart(`%%tf-part:reading ${blockId}%%`, items, render),
+			// Freeform and unknown Blocks stay last, under the Notizen title.
 			...take("reading", blockId),
 		];
 	});
@@ -315,21 +370,27 @@ export function serialize<L extends Dumling.Language>(
 			attested_translation: entry.attestedTranslations,
 			notes: entry.notes,
 		};
-		const blocks = CANONICAL_BLOCK_ORDER.surface.map((kind) => {
-			if (kind === "surface")
-				return serializedBlock(
-					"surface",
-					surface,
-					`${labelled("surface", shown, render) ?? ""} ^${blockId}`,
-				);
-			const value = payloads[kind];
-			return isEmpty(value)
-				? undefined
-				: renderedBlock(kind, value, render);
-		});
+		const items = CANONICAL_BLOCK_ORDER.surface.flatMap(
+			(kind): BlockItem[] => {
+				if (kind === "surface")
+					return [
+						{
+							content: separated(
+								`${sanitizeRendering(shown)} ^${blockId}`,
+							),
+							kind,
+							payload: encodePayload(surface),
+						},
+					];
+				const value = payloads[kind];
+				return isEmpty(value)
+					? []
+					: [serializedItem(kind, value, render)];
+			},
+		);
 		return [
-			`%%tf-part:surface ${blockId}%%`,
-			...blocks,
+			...layoutPart(`%%tf-part:surface ${blockId}%%`, items, render),
+			// Freeform and unknown Blocks stay last in the part.
 			...take("surface", blockId),
 		];
 	});
@@ -340,12 +401,15 @@ export function serialize<L extends Dumling.Language>(
 
 	const segments = [
 		...keptBlocks(source.preamble),
-		"%%tf-part:lemma%%",
-		serializedBlock("identity", lemma, undefined),
+		...layoutPart(
+			"%%tf-part:lemma%%",
+			[{ kind: "identity", payload: encodePayload(lemma) }],
+			render,
+		),
 		...lemmaKept,
 		...orphans,
 		...readingParts.flat(),
 		...surfaceParts.flat(),
-	].filter((segment): segment is string => segment !== undefined);
+	];
 	return `${segments.join("\n\n")}\n`;
 }

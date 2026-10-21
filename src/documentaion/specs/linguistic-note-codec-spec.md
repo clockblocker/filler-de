@@ -104,32 +104,35 @@ A serialized Block's payload is canonical JSON in a form Obsidian's reading view
 
 ### Reading part
 
+Rows are in canonical order (see Layout).
+
 | Block | Kind | Maps to |
 | --- | --- | --- |
-| `header` | Projection | Canonical Form, Emoji Description, article, transcription; carries the Reading's Block ID |
-| `reading` | Serialized | `ReadingEntry.reading.emojiDescription`; absent for a Foreign Reading. The Lemma comes from `identity` |
-| `attestation` | Serialized | `ReadingEntry.attestations`: Attestation Refs, stored as embeds (`![[Scroll#^id\|^]]`) |
-| `translation` | Serialized | `ReadingEntry.knowledge.translations` (`en`, `ru`) |
-| `attested_translation` | Serialized | `ReadingEntry.attestedTranslations` |
-| `definition` | Serialized | `ReadingEntry.knowledge.definition` |
+| `reading` | Serialized | `ReadingEntry.reading.emojiDescription`; absent for a Foreign Reading. The Lemma comes from `identity`; shown in `header`, no rendering of its own |
 | `transcription` | Serialized | `ReadingEntry.knowledge.transcription`; shown in `header`, no rendering of its own |
+| `plural` | Serialized | `ReadingEntry.knowledge.plural` (forms, `NoPlural` or `PluralOnly`); shown in `inflection`, no rendering of its own |
+| `conjugation_class` | Serialized | `ReadingEntry.knowledge.conjugationClass`; shown in `tags`, no rendering of its own |
+| `preterite` | Serialized | `ReadingEntry.knowledge.preterite`; shown in `inflection`, no rendering of its own |
+| `present_singular` | Serialized | `ReadingEntry.knowledge.presentSingular` (texteater#1218); shown in `inflection`, no rendering of its own |
+| `past_participle` | Serialized | `ReadingEntry.knowledge.pastParticiple`; shown in `inflection`, no rendering of its own |
+| `subjunctive_past` | Serialized | `ReadingEntry.knowledge.subjunctivePast`; shown in `inflection`, no rendering of its own |
+| `header` | Projection | Canonical Form, Emoji Description, article, transcription; carries the Reading's Block ID |
+| `attestation` | Serialized | `ReadingEntry.attestations`: Attestation Refs, stored as embeds (`![[Scroll#^id\|^]]`) |
 | `relation` | Serialized | `ReadingEntry.knowledge.semanticRelations`: direct claims only, in one target mode |
 | `pending_relation` | Serialized | `PendingSemanticRelationRecord`s whose `sourceReading` is this Reading |
 | `inverse_relation` | Projection | Inverse and inferred edges from dumrel's `projectSemanticRelations` |
+| `translation` | Serialized | `ReadingEntry.knowledge.translations` (`en`, `ru`) |
+| `attested_translation` | Serialized | `ReadingEntry.attestedTranslations`; renders those `translation` does not already list |
+| `definition` | Serialized | `ReadingEntry.knowledge.definition` |
 | `morphology` | Serialized | `ReadingEntry.knowledge.morphologicalTree` |
 | `valency` | Serialized | `ReadingEntry.knowledge.valency` |
 | `participle_source` | Serialized | `ReadingEntry.knowledge.participleSource` |
-| `plural` | Serialized | `ReadingEntry.knowledge.plural` (forms, `NoPlural` or `PluralOnly`) |
-| `conjugation_class` | Serialized | `ReadingEntry.knowledge.conjugationClass` |
-| `preterite` | Serialized | `ReadingEntry.knowledge.preterite` |
-| `present_singular` | Serialized | `ReadingEntry.knowledge.presentSingular` (texteater#1218) |
-| `past_participle` | Serialized | `ReadingEntry.knowledge.pastParticiple` |
-| `subjunctive_past` | Serialized | `ReadingEntry.knowledge.subjunctivePast` |
 | `locution_type` | Serialized | `ReadingEntry.knowledge.locutionType` |
 | `saying_type` | Serialized | `ReadingEntry.knowledge.sayingType` |
 | `formula_role` | Serialized | `ReadingEntry.knowledge.formulaRole` |
-| `inflection` | Projection | Inflection table |
 | `tags` | Projection | Tags derived from the Lemma's route and Core Features and the Reading's Knowledge |
+| `inflection` | Projection | Inflection table |
+| `notes_title` | Projection | The Notizen title, always present, over `notes` and the part's freeform |
 | `notes` | Serialized | `ReadingEntry.notes`; omitted when empty |
 | `freeform` | Plugin-owned | Opaque user content, byte-preserved |
 
@@ -234,7 +237,7 @@ Normalization must not rewrite freeform content.
 
 Default part order is the Lemma part, then Reading parts in `readingEntries` order, then Surface parts in `ownedSurfaceEntries` order.
 
-Default Block order within a Reading part follows the table above, from `header` to `freeform`. A Surface part follows its table. Absent Blocks are skipped.
+Default Block order within a Reading part follows the table above, from `reading` to `freeform`. A Surface part follows its table. Absent Blocks are skipped. See Layout for how the Blocks stand on the page.
 
 `serializeDocument` may preserve encountered order. `serializeData` uses canonical order and places freeform content last in its part, unless the caller supplies a layout policy.
 
@@ -324,10 +327,55 @@ Tests must cover:
 - **Block IDs.** SHA-256 of the identity key, first 8 hex digits; colliding IDs inside one note grow by 4 digits until they differ. The part marker carries the ID, and the `header` and `surface` renderings repeat it as `^<id>` so Obsidian can link to it.
 - **API.** `parse(markdown, { language })` returns `{ document, data }`, where `data` is `{ ok: true, data, blockIds }` or `{ ok: false, issues, partial }`. `parseDocument`, `documentToData`, `serializeDocument` (byte-exact) and `blockIdsOf` are the layers beneath it. `serialize(document, data, { projections })` writes canonical order and keeps the document's freeform and unknown Blocks at the end of their part; those of a part the data dropped move to the Lemma part. Normalization is not implemented yet.
 - **Issues.** `MissingIdentity` is `MissingRequiredBlock` with `kind: "identity"`, which also covers a missing `reading` or `surface` Block. `DuplicatePart` and `MisplacedBlock` are added. Unknown Blocks are kept without an issue. `OrderingNormalized` and `BlockMerged` wait for normalization.
-- **Projections.** `header` has a default rendering. `tags` and `inflection` take caller hooks ([#75](https://github.com/clockblocker/filler-de/issues/75)), and `inverse_relation` takes the Reading's `projectSemanticRelations` edges ([#59](https://github.com/clockblocker/filler-de/issues/59)); a Block whose hook is absent is left out. Links default to path-qualified ones (open question 1).
+- **Projections.** `header` has a default rendering (see Layout). `tags` and `inflection` take caller hooks ([#75](https://github.com/clockblocker/filler-de/issues/75)), and `inverse_relation` takes the Reading's `projectSemanticRelations` edges ([#59](https://github.com/clockblocker/filler-de/issues/59)); a Block whose hook is absent is left out. Links default to path-qualified ones (open question 1).
 - **Rendering boundary.** A typed Block's rendering is exactly the sealed lines directly after its marker, and only when they still match the seal. Every other line up to the next marker becomes a freeform Block in place, byte for byte: a line typed directly under a rendering, with or without a blank line, and the whole rendering once a user edits it or types inside it. A Block without a seal, such as `identity`, has no rendering, so any line under it is freeform. `serialize` re-renders the Block and keeps the edited text as freeform, at the end of its part like all freeform, so the codec never drops user text and never reads an edit as data. Block IDs are plugin-owned, so when a rendering becomes freeform, `serialize` removes the codec-owned `^r-…` or `^s-…` token that ends any of its lines, with the whitespace before it, and keeps every other byte. An edited `header` or `surface` line therefore loses its `^<id>`, and each ID appears once in the note, on its canonical Block (#82). Freeform lines typed under an intact rendering are not touched.
 - **Knowledge coverage.** Every `ReadingKnowledge` aspect has a Block; a new dumrel aspect fails to compile until it gets one, and `serialize` throws on an aspect it cannot place.
 - **Paths.** The ADR-0013 path codec (`lemmaNotePath`, `shadowNotePath`, `parseNotePath`) lives in the same package as its own module. The note codec never reads a path.
+
+## Layout
+
+The codec lays every note out as the legacy Dict Notes looked, so a note
+reads the same after the Dictionary reset ([#65](https://github.com/clockblocker/filler-de/issues/65)) regenerated it. Only the visible lines follow the legacy notes; every marker and payload stays as above, so parse and round trips do not change. Visible text is never parsed.
+
+```
+🏭 das [[Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k](https://youglish.com/pronounce/Kohlekraftwerk/german) ^r-…
+
+<span class="entry_section_title entry_section_title_kontexte">Kontexte</span>
+![[Atom#^13|^]]
+![[Atom#^14|^]]
+
+<span class="entry_section_title entry_section_title_synonyme">Semantische Beziehungen</span>
+= [[Kraftwerk]]
+≈ [[Industrieanlage]], [[Fabrik]]
+≠ [[Windrad]]
+
+<span class="entry_section_title entry_section_title_translations">Übersetzung</span>
+coal-fired power plant
+
+<span class="entry_section_title entry_section_title_morpheme">Morpheme</span>
+[[Kohle]]|[[Kraft]]|[[Werk]]
+
+<span class="entry_section_title entry_section_title_tags">Tags</span>
+#noun/neuter
+
+<span class="entry_section_title entry_section_title_flexion">Flexion</span>
+N: das Kohlekraftwerk, die Kohlekraftwerke
+A: das Kohlekraftwerk, die Kohlekraftwerke
+G: des Kohlekraftwerks, der Kohlekraftwerke
+D: dem Kohlekraftwerk, den Kohlekraftwerken
+
+<span class="entry_section_title entry_section_title_notizen">Notizen</span>
+```
+
+This is what reading view and Live Preview show, with the comment-only marker lines hidden (`styles.css`) and path-qualified links shown by their alias.
+
+- **Head.** A part's marker and its data-only Blocks (`identity`; in a Reading part `reading`, `transcription` and the inflection Knowledge) stand on consecutive lines, followed directly by the `header` or `surface` Block. They render nothing, so the header is the part's first visible line, and its Block ID ends its paragraph.
+- **Header.** The Emoji Description, a German noun's article, a link to the note itself, and the transcription as a YouGlish link (`/…/` for a language YouGlish lacks).
+- **Sections.** Every other Block belongs to a section (`BLOCK_SECTIONS` in `render.ts`): Kontexte (`attestation`), Semantische Beziehungen (`relation`, `pending_relation`, `inverse_relation`), Übersetzung (`translation`, `attested_translation`), Definition, Morpheme (`morphology`), Valenz, Partizip von, Art (`locution_type`, `saying_type`, `formula_role`), Tags, Flexion (`inflection`) and Notizen (`notes_title`, `notes`). A section's Blocks stand on consecutive lines and the first rendering opens with the section's title, `<span class="entry_section_title entry_section_title_<section>">Title</span>`, inside the sealed rendering. A blank line separates sections. Titles are cosmetic: `projections.titles` replaces them, and an empty title leaves the line out.
+- **Renderings.** Relations are one line per relation with the legacy symbols, `=` synonym, `≈` near synonym, `≠` antonym, `≉` near antonym, `⊃` hypernym, `⊂` hyponym, `∋` holonym, `∈` meronym, `⇒` endonym, `⇐` exonym, each target once, so direct, pending and projected relations read as one list. A morphological tree lists its leaves, `[[Kohle]]|[[Kraft]]|[[Werk]]`. Translations show their words, prefixed by the language only when there are several; attested translations show in italics. Default links alias the Canonical Form alone. Inflection cells stay plain text: they are display-only (batteries ADR 0019), and the legacy notes' inflected-form notes no longer exist.
+- **Separators.** Every part after the first opens its header or surface rendering with `***` twice, as the legacy notes separated entries. `***` cannot turn the line above it into a heading, as `---` would.
+- **Notizen.** A Reading part always ends with the Notizen title, so a user knows where to write; freeform text stays last in its part, under it, and `notes` renders there too. A Surface part titles its `notes` the same way when it has any.
+- **Not rendered.** The legacy "Morphologische Relationen" (Verwendet in) backlinks and "Abweichungen" have no data in the batteries (open question 5).
 
 ## Projected inverse relations (#59)
 

@@ -13,6 +13,13 @@ import { sha256Hex } from "../src/hash";
 import { familyFixtures, nounData, syncretismData, verbData } from "./fixtures";
 import { normalized, parseDe, validData } from "./helpers";
 
+/** A section's title line, as the codec renders it. */
+const title = (kind: string, text: string) =>
+	`<span class="entry_section_title entry_section_title_${kind}">${text}</span>`;
+
+const MUTTER_HEADER =
+	"👩 die [[Worter/de/Lexeme/NOUN/Fem/Mutter|Mutter]], [ˈmʊtɐ](https://youglish.com/pronounce/Mutter/german)";
+
 describe("round trips for every German Family", () => {
 	for (const [family, fixture] of Object.entries(familyFixtures)) {
 		it(`${family}: parse → serialize → parse keeps the records`, () => {
@@ -150,7 +157,9 @@ describe("the document layer", () => {
 		"",
 		"%%tf-part:lemma%%",
 		"",
-		serialize(undefined, nounData).split("\n")[2] ?? "",
+		serialize(undefined, nounData)
+			.split("\n")
+			.find((line) => line.startsWith("%%tf:identity")) ?? "",
 		"",
 		"My own paragraph",
 		"",
@@ -172,7 +181,9 @@ describe("the document layer", () => {
 
 	it("keeps freeform and unknown Blocks byte for byte through serialize", () => {
 		const parsed = parseDe(
-			`${note}${serialize(undefined, nounData).split("\n").slice(4).join("\n")}`,
+			`${note}${serialize(undefined, nounData).slice(
+				serialize(undefined, nounData).indexOf("%%tf-part:reading"),
+			)}`,
 		);
 		if (!parsed.data.ok)
 			throw new Error(
@@ -203,8 +214,8 @@ describe("the document layer", () => {
 			readingIdentityKey(nut.reading),
 		);
 		const edited = canonical.replace(
-			`%%tf-part:reading ${nutId}%%\n\n`,
-			`%%tf-part:reading ${nutId}%%\n\nA note about nuts\n\n`,
+			`%%tf-part:reading ${nutId}%%\n`,
+			`%%tf-part:reading ${nutId}%%\nA note about nuts\n\n`,
 		);
 		const parsed = parseDe(edited);
 		if (!parsed.data.ok) throw new Error("invalid");
@@ -242,8 +253,11 @@ describe("the document layer", () => {
 	it("parses Blocks in any order and serializes them canonically", () => {
 		const canonical = serialize(undefined, normalized(verbData));
 		const [head, part] = canonical.split("%%tf-part:reading");
-		const [marker, ...blocks] = (part ?? "").split("\n\n");
-		const shuffled = `${head}%%tf-part:reading${[marker, ...blocks.filter(Boolean).reverse()].join("\n\n")}\n`;
+		// Each Block, from its marker to the next, with its blank lines cut.
+		const [marker, ...blocks] = (part ?? "")
+			.split(/^(?=%%tf:)/mu)
+			.map((block) => block.trimEnd());
+		const shuffled = `${head}%%tf-part:reading${[marker, ...blocks.reverse()].join("\n\n")}\n`;
 		expect(shuffled).not.toBe(canonical);
 		const parsed = parseDe(shuffled);
 		if (!parsed.data.ok) throw new Error("invalid");
@@ -256,8 +270,8 @@ describe("the document layer", () => {
 			projections: { tags: () => ["de/noun"] },
 		});
 		const edited = canonical
-			.replace("👩 **die Mutter** /ˈmʊtɐ/", "🦖 **der Vater**")
-			.replace(/%%tf:tags@[^\n]*\n\*Tags\*: #de\/noun\n\n/gu, "");
+			.replace(MUTTER_HEADER, "🦖 der [[Vater]]")
+			.replace(/%%tf:tags@[^\n]*\n<span[^\n]*\n#de\/noun\n\n/gu, "");
 		expect(edited).not.toContain("%%tf:tags");
 		expect(validData(edited)).toEqual(validData(canonical));
 	});
@@ -265,8 +279,8 @@ describe("the document layer", () => {
 	it("ignores edits to a serialized Block's visible rendering", () => {
 		const canonical = serialize(undefined, nounData);
 		const edited = canonical.replace(
-			"*Translation*: en: nut",
-			"*Translation*: en: bolt",
+			`${title("translations", "Übersetzung")}\nnut`,
+			`${title("translations", "Übersetzung")}\nbolt`,
 		);
 		expect(edited).not.toBe(canonical);
 		expect(validData(edited)).toEqual(validData(canonical));
@@ -324,12 +338,13 @@ describe("user text around renderings", () => {
 	}
 
 	const lastLines = {
-		header: "👩 **die Mutter** /ˈmʊtɐ/ ^r-",
+		header: `${MUTTER_HEADER} ^r-`,
 		inflection: "| Gen | x |",
-		inverse_relation: "*Projected*: hyponym:",
-		surface: "*Surface*: Mütter (Nom Plur) ^s-",
-		tags: "*Tags*: #noun #fem",
-		translation: "*Translation*: en: mother",
+		inverse_relation: "⊂ [[",
+		notes_title: title("notizen", "Notizen"),
+		surface: "Mütter (Nom Plur) ^s-",
+		tags: "#noun #fem",
+		translation: "ru: мать, мама",
 	};
 	for (const [kind, last] of Object.entries(lastLines)) {
 		it(`keeps a line typed directly under ${kind}`, () => {
@@ -346,28 +361,25 @@ describe("user text around renderings", () => {
 
 	it("keeps an edit inside a rendering as freeform and re-renders the Block", () => {
 		const edited = canonical
-			.replace("*Tags*: #noun #fem", "*Tags*: #noun #fem #mine")
+			.replace("#noun #fem", "#noun #fem #mine")
 			.replace("| Gen | x |", "| Gen | Mutter |");
 		const parsed = parseDe(edited);
 		const blocks = parsed.document.parts[1]?.blocks ?? [];
 		const tags = blocks.find(
 			(block) => block.type === "projection" && block.kind === "tags",
 		);
-		expect(tags?.raw).toMatch(/^%%tf:tags@1:[0-9a-f]{8}%%\n$/u);
+		expect(tags?.raw).toMatch(/^%%tf:tags@2:[0-9a-f]{8}%%\n$/u);
 		const written = roundTrip(edited, [
-			"*Tags*: #noun #fem #mine",
-			"*Inflection*\n| Nom | Mütter |\n| Gen | Mutter |",
+			`${title("tags", "Tags")}\n#noun #fem #mine`,
+			`${title("flexion", "Flexion")}\n| Nom | Mütter |\n| Gen | Mutter |`,
 		]);
-		expect(written).toContain("*Tags*: #noun #fem\n");
+		expect(written).toContain(`${title("tags", "Tags")}\n#noun #fem\n`);
 		expect(written).toContain("| Gen | x |");
 	});
 
 	it("keeps an edited serialized rendering without reading it", () => {
-		const edited = canonical.replace(
-			"*Translation*: en: mother",
-			"*Translation*: en: mom",
-		);
-		roundTrip(edited, ["*Translation*: en: mom"]);
+		const edited = canonical.replace("en: mother", "en: mom");
+		roundTrip(edited, ["en: mom"]);
 	});
 
 	/** How often `^<id>` occurs in `markdown`. */
@@ -411,8 +423,8 @@ describe("user text around renderings", () => {
 	}
 
 	const idLines = {
-		header: "👩 **die Mutter** /ˈmʊtɐ/ ^r-",
-		surface: "*Surface*: Mütter (Nom Plur) ^s-",
+		header: `${MUTTER_HEADER} ^r-`,
+		surface: "Mütter (Nom Plur) ^s-",
 	};
 	for (const [kind, prefix] of Object.entries(idLines)) {
 		it(`keeps an edited ${kind} without its Block ID beside the re-rendered one`, () => {
@@ -458,7 +470,7 @@ describe("user text around renderings", () => {
 	it("drops the Block ID of a header unsealed by a line typed above it", () => {
 		const typed = typeUnder(canonical, "%%tf:header@", "Before the header");
 		const written = roundTrip(typed, [
-			"Before the header\n👩 **die Mutter** /ˈmʊtɐ/",
+			`Before the header\n${MUTTER_HEADER}`,
 		]);
 		expectUniqueIds(written);
 	});
@@ -471,7 +483,9 @@ describe("user text around renderings", () => {
 
 	it("keeps text typed between a marker and its rendering", () => {
 		const typed = typeUnder(canonical, "%%tf:tags@", "Before the tags");
-		roundTrip(typed, ["Before the tags\n*Tags*: #noun #fem"]);
+		roundTrip(typed, [
+			`Before the tags\n${title("tags", "Tags")}\n#noun #fem`,
+		]);
 	});
 
 	it("still recognises its renderings with CRLF line endings", () => {
@@ -501,13 +515,16 @@ describe("projections", () => {
 			},
 		});
 		const unsealed = markdown.replace(/@[0-9]+:[0-9a-f]{8}/gu, "");
-		expect(markdown).toContain("%%tf:tags@1:");
-		expect(unsealed).toContain("%%tf:tags%%\n*Tags*: #noun #fem");
+		expect(markdown).toContain("%%tf:tags@2:");
 		expect(unsealed).toContain(
-			"%%tf:inverse_relation%%\n*Projected*: hyponym: [[Worter/de/Lexeme/VERB/auf/aufstehen|aufstehen]]",
+			`%%tf:tags%%\n${title("tags", "Tags")}\n#noun #fem`,
+		);
+		// The inverse relation joins the direct ones under one title.
+		expect(unsealed).toContain(
+			"%%tf:inverse_relation%%\n⊂ [[Worter/de/Lexeme/VERB/auf/aufstehen|aufstehen]]",
 		);
 		expect(unsealed).toContain(
-			"%%tf:inflection%%\n*Inflection*\n| Nom | Mütter |\n| Gen | x |",
+			`%%tf:inflection%%\n${title("flexion", "Flexion")}\n| Nom | Mütter |\n| Gen | x |`,
 		);
 		expect(validData(markdown)).toEqual(normalized(nounData));
 	});
@@ -526,7 +543,7 @@ describe("projections", () => {
 				links: { lemma: (lemma) => `[[${lemma.canonicalForm}]]` },
 			},
 		});
-		expect(markdown).toContain("synonym: [[Mama]]");
+		expect(markdown).toContain("= [[Mama]]");
 		expect(markdown).toMatch(
 			/%%tf:header@1:[0-9a-f]{8}%%\nCustom header \^r-[0-9a-f]{8}\n/u,
 		);

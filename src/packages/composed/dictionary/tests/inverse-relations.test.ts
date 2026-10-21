@@ -38,7 +38,7 @@ const springenPath = lemmaNotePath(springen).path;
 const shadowPath = "Worter/de/Shadow/Lexeme/VERB/schreiten.md";
 
 const linkTo = (reading: Dumling.Reading<"de", "Lexeme", "VERB">) =>
-	`[[${lemmaNotePath(reading.lemma).path.replace(/\.md$/u, "")}#^${readingBlockId(reading)}|${reading.lemma.canonicalForm} ${reading.emojiDescription}]]`;
+	`[[${lemmaNotePath(reading.lemma).path.replace(/\.md$/u, "")}#^${readingBlockId(reading)}|${reading.lemma.canonicalForm}]]`;
 
 /** The note's `inverse_relation` Block, marker and rendering, if it has one. */
 const inverseBlock = (content: string | undefined) =>
@@ -162,7 +162,7 @@ describe("inverse relations are projected, never stored", () => {
 		const schreitenContent = vault.content(schreitenPath);
 		expect(inverseBlock(schreitenContent)).toMatch(
 			new RegExp(
-				`\\n\\*Projected\\*: synonym: ${linkTo(gehenReading).replace(/[[\]^|.]/gu, "\\$&")}$`,
+				`\\n= ${linkTo(gehenReading).replace(/[[\]^|.]/gu, "\\$&")}$`,
 				"u",
 			),
 		);
@@ -203,9 +203,7 @@ describe("inverse relations are projected, never stored", () => {
 
 		const after = vault.content(schreitenPath);
 		expect(after).not.toBe(before);
-		expect(inverseBlock(after)).toContain(
-			`synonym: ${linkTo(gehenReading)}`,
-		);
+		expect(inverseBlock(after)).toContain(`= ${linkTo(gehenReading)}`);
 		// Only the projection changed: the data and every other byte stay.
 		expect(dataOf(after)).toEqual(dataOf(before));
 		expect(withoutInverseBlock(after)).toBe(before);
@@ -284,7 +282,7 @@ describe("inverse relations are projected, never stored", () => {
 			synonym(laufenReading, schreiten),
 		]);
 		expect(inverseBlock(vault.content(schreitenPath))).toContain(
-			`synonym: ${[gehenReading, laufenReading].map(linkTo).join(", ")}`,
+			`= ${[gehenReading, laufenReading].map(linkTo).join(", ")}`,
 		);
 		expect(inverseBlock(vault.content(laufenPath))).toBeUndefined();
 	});
@@ -306,9 +304,7 @@ describe("inverse relations are projected, never stored", () => {
 		const after = vault.content(schreitenPath);
 		expect(after).toContain("Typed behind VAM's back.");
 		expect(withoutInverseBlock(after)).toBe(edited);
-		expect(inverseBlock(after)).toContain(
-			`synonym: ${linkTo(gehenReading)}`,
-		);
+		expect(inverseBlock(after)).toContain(`= ${linkTo(gehenReading)}`);
 		await expectIndexMatchesFiles(store, vault);
 	});
 
@@ -333,7 +329,7 @@ describe("inverse relations are projected, never stored", () => {
 		// The next commit that reaches it repairs the stale projection.
 		await seed(store, [contribute(gehenReading, "sich fortbewegen")]);
 		expect(inverseBlock(vault.content(schreitenPath))).toContain(
-			`synonym: ${linkTo(gehenReading)}`,
+			`= ${linkTo(gehenReading)}`,
 		);
 		await expectIndexMatchesFiles(store, vault);
 	});
@@ -348,7 +344,7 @@ describe("inverse relations are projected, never stored", () => {
 		]);
 		await seed(store, [claim(gehenReading, "hypernym", schreiten)]);
 		expect(inverseBlock(vault.content(schreitenPath))).toMatch(
-			/\*Projected\*: hyponym: \[\[Worter\/de\/Lexeme\/VERB\/gehen#\^r-/u,
+			/⊂ \[\[Worter\/de\/Lexeme\/VERB\/gehen#\^r-/u,
 		);
 	});
 
@@ -387,8 +383,8 @@ describe("inverse relations are projected, never stored", () => {
 			claim(springenReading, "hypernym", schreiten),
 		]);
 		const block = inverseBlock(vault.content(schreitenPath)) ?? "";
-		expect(block).toContain(`synonym: ${linkTo(gehenReading)}`);
-		expect(block).toContain(`hyponym: ${linkTo(springenReading)}`);
+		expect(block).toContain(`= ${linkTo(gehenReading)}`);
+		expect(block).toContain(`⊂ ${linkTo(springenReading)}`);
 		expect(block).not.toContain("antonym");
 	});
 
@@ -455,7 +451,7 @@ describe("inverse relations are projected, never stored", () => {
 		const result = await commit(store, [contribute(gehenReading, "gehen")]);
 		expect(result.status).toBe("committed");
 		expect(inverseBlock(vault.content(springenPath))).toContain(
-			`antonym: ${linkTo(schreitenReading)}`,
+			`≠ ${linkTo(schreitenReading)}`,
 		);
 		// The edit the commit never planned against moves the revision past it.
 		expect(await run(store.revision)).not.toBe(
