@@ -305,14 +305,15 @@ describe("recognition", () => {
 		expect(vault.content("Worter/Fahrer.md")).toBe("my own words");
 	});
 
-	test("an empty Crossroad note a click left is a Crossroad note, left for #114", async () => {
+	test("an empty Crossroad note a click left is a Crossroad note, filled as not classified yet", async () => {
 		const { store, vault } = await seededStore();
 		const path = crossroadPath("fahrer");
 		await vault.userWrite(path, "");
 		const diagnostics = await run(store.diagnostics);
 		expect(diagnostics.quarantined).toEqual([]);
 		expect(diagnostics.strays).toEqual([]);
-		expect(vault.content(path)).toBe("");
+		expect(vault.content(path)).toContain("*Not classified yet*");
+		await expectIndexMatchesFiles(store, vault);
 	});
 
 	test("an empty file at an exact Reading path is reported and left alone", async () => {

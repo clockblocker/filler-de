@@ -81,6 +81,13 @@ One pure, host-owned function spells every shard folder, every file name and eve
 - **Links by uniqueness.** Morphemes, inverse relations, prepositions and source verbs link the Lemma note while their Unit Shadow names exactly one Lemma, like resolved relations, and the store re-renders them in the commit that changes that.
 - **Recognition.** Without dictionary metadata, a file at a Crossroad path is a Crossroad note, one directly in `Worter/` a stray, and an empty one at a note path is reported and never written over. A Reading note without its Lemma note is quarantined until the Lemma comes back.
 
+### Refinements from the Crossroad notes (#114)
+
+- **Layout.** A Crossroad note is a compact router page under the dictionary's section titles: "Einträge" lists each Lemma with its article (or its Kind) and its Reading notes by emoji, and "Begegnete Formen" lists each met Surface of another Lemma as `Tage → der Tag`. A spelling with neither says "not classified yet".
+- **Staleness from seals.** Its metadata seals what it shows, so the store finds missing and stale Crossroad notes from the index alone and regenerates them after every full read of `Worter/`. A second run writes nothing.
+- **Clicked notes.** An empty file at a Crossroad path is filled as "not classified yet" as soon as the store sees it, with no Knowledge generated.
+- **Never created for nothing.** A Crossroad note is created only while its spelling has something to list; once created, it is never removed.
+
 ## Considered Options
 
 - **One note per Lemma with every Reading as a block** (ADR-0012). Rejected: a Reading's Knowledge, attestations and notes outgrow a shared note, and a link to a sense needs a block ID instead of a note.

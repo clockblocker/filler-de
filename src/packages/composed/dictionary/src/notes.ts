@@ -12,6 +12,7 @@ import {
 	parseNotePath,
 	parseReadingNote,
 	type ReadingNoteData,
+	type RenderingSeal,
 } from "@textfresser/lemma-note-codec";
 import { contentHash } from "./content-hash";
 import { CrossroadNoteMetadata } from "./crossroad";
@@ -54,6 +55,8 @@ type CrossroadEntry = {
 	readonly path: string;
 	readonly hash: string;
 	readonly key: string | undefined;
+	/** Its renderings' seals, as its metadata holds them; none without metadata. */
+	readonly rendering: readonly RenderingSeal[] | undefined;
 	/** Whether the file holds nothing but whitespace. */
 	readonly empty: boolean;
 };
@@ -212,13 +215,21 @@ export function classifyFile(path: string, content: string): PathEntry {
 			key: crossroad.value.key,
 			kind: "crossroad",
 			path,
+			rendering: crossroad.value.rendering,
 		};
 
 	const parsed = parseNotePath(path);
 	if (parsed.ok)
 		switch (parsed.value.type) {
 			case "crossroad":
-				return { empty, hash, key: undefined, kind: "crossroad", path };
+				return {
+					empty,
+					hash,
+					key: undefined,
+					kind: "crossroad",
+					path,
+					rendering: undefined,
+				};
 			case "stray":
 				return { hash, kind: "stray", path };
 			case "lemma":

@@ -597,6 +597,11 @@ export class NoteIndex {
 		return [...(this.forms.get(formKey) ?? [])].sort(byCodeUnit);
 	}
 
+	/** Every form key some stored Lemma or owned Surface has: every spelling with a Crossroad. */
+	formKeys(): string[] {
+		return [...this.forms.keys()].sort(byCodeUnit);
+	}
+
 	/** Keys of the Lemmas a Shadow (language, Family, Kind, folded form) names, sorted. */
 	lemmasNamedBy(shadowKey: string): readonly string[] {
 		return [...(this.lemmasByShadow.get(shadowKey) ?? [])].sort(byCodeUnit);

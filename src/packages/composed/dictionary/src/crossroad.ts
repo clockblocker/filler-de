@@ -6,20 +6,33 @@
  * marks them as the store's and seals the renderings, so the user's text
  * in them is kept byte for byte.
  *
- * The store writes a Crossroad note in every commit that changes its
- * spelling's Lemmas or Surfaces, and never removes one: a spelling left
- * with nothing says "not classified yet". TODO(#114): the visible layout,
- * filling the empty file a click on an uncreated Crossroad link leaves, and
- * regenerating missing or stale Crossroads at startup.
+ * The layout is a compact router page under the dictionary's section
+ * titles:
+ *
+ * ```
+ * <span class="note_block_title note_block_title_eintraege">Einträge</span>
+ * - der [[…/Fahrer|Fahrer]]: [[…/🚗 Fahrer|🚗]]
+ * <span class="note_block_title note_block_title_surfaces">Begegnete Formen</span>
+ * - Fahrern → der [[…/Fahrer|Fahrer]]
+ * ```
+ *
+ * A spelling with nothing to list says `*Not classified yet*` under the
+ * Einträge title. The store writes a Crossroad note in every commit that
+ * changes its spelling's Lemmas or Surfaces, fills the empty file a click
+ * on an uncreated Crossroad link leaves, regenerates missing or stale ones
+ * after every full read of `Worter/`, and never removes one.
  */
 
 import {
+	articleOf,
 	type BodySegment,
 	BodyWriter,
 	DEFAULT_PATHS,
 	type RenderedBlock,
+	type RenderingSeal,
 	readBody,
 	renderingLines,
+	sealOf,
 	wikilink,
 } from "@textfresser/lemma-note-codec";
 import type * as Dumling from "dumling/types";
@@ -71,8 +84,22 @@ export type CrossroadContent = {
 
 const NOT_CLASSIFIED_YET = "*Not classified yet*";
 
-function lemmaLink(lemma: Dumling.Lemma<"de">): string {
-	return wikilink(DEFAULT_PATHS.lemma(lemma), lemma.canonicalForm);
+/** The section titles, in the dictionary's style (styles.css, #103, #104). */
+const TITLES = {
+	lemmas: { className: "eintraege", text: "Einträge" },
+	surfaces: { className: "surfaces", text: "Begegnete Formen" },
+} as const;
+
+const titleLine = ({ className, text }: (typeof TITLES)[keyof typeof TITLES]) =>
+	`<span class="note_block_title note_block_title_${className}">${text}</span>`;
+
+/** A Lemma as a Crossroad names it: `der [[…|See]]`, or `[[…|gehen]] (VERB)`. */
+function lemmaLabel(lemma: Dumling.Lemma<"de">): string {
+	const link = wikilink(DEFAULT_PATHS.lemma(lemma), lemma.canonicalForm);
+	const article = articleOf(lemma);
+	return article === undefined
+		? `${link} (${lemma.kind})`
+		: `${article} ${link}`;
 }
 
 function readingLink(reading: Dumling.Reading<"de">): string {
@@ -84,25 +111,68 @@ function readingLink(reading: Dumling.Reading<"de">): string {
 	);
 }
 
+/** One line per Lemma and per met Surface, each its own Block, titled per section. */
 function blocksOf(content: CrossroadContent): RenderedBlock[] {
+	const titled = (
+		title: (typeof TITLES)[keyof typeof TITLES],
+		index: number,
+		line: string,
+	) => [...(index === 0 ? [titleLine(title)] : []), ...renderingLines(line)];
 	const blocks: RenderedBlock[] = content.lemmas.map(
-		({ lemma, readings }) => ({
+		({ lemma, readings }, index) => ({
 			block: "crossroad_lemma",
-			lines: renderingLines(
-				`- ${lemmaLink(lemma)} (${lemma.kind})${readings.length > 0 ? `: ${readings.map(readingLink).join(" ")}` : ""}`,
+			lines: titled(
+				TITLES.lemmas,
+				index,
+				`- ${lemmaLabel(lemma)}${readings.length > 0 ? `: ${readings.map(readingLink).join(" ")}` : ""}`,
 			),
 		}),
 	);
-	for (const { form, lemma } of content.surfaces)
+	content.surfaces.forEach(({ form, lemma }, index) => {
 		blocks.push({
 			block: "crossroad_surface",
-			lines: renderingLines(
-				`- ${form} → ${lemmaLink(lemma)} (${lemma.kind})`,
+			lines: titled(
+				TITLES.surfaces,
+				index,
+				`- ${form} → ${lemmaLabel(lemma)}`,
 			),
 		});
+	});
 	if (blocks.length === 0)
-		blocks.push({ block: "crossroad_empty", lines: [NOT_CLASSIFIED_YET] });
+		blocks.push({
+			block: "crossroad_empty",
+			lines: [titleLine(TITLES.lemmas), NOT_CLASSIFIED_YET],
+		});
 	return blocks;
+}
+
+/** Whether a Crossroad lists nothing, so it says "not classified yet". */
+export const listsNothing = (content: CrossroadContent): boolean =>
+	content.lemmas.length === 0 && content.surfaces.length === 0;
+
+/**
+ * Whether a Crossroad note's metadata already holds what `content` renders:
+ * its key and its renderings' seals. It is what tells a stale Crossroad
+ * note without reading its file.
+ */
+export function rendersAs(
+	metadata: {
+		readonly key: string;
+		readonly rendering: readonly RenderingSeal[];
+	},
+	content: CrossroadContent,
+): boolean {
+	if (metadata.key !== content.key) return false;
+	const wanted = blocksOf(content).map(sealOf);
+	return (
+		wanted.length === metadata.rendering.length &&
+		wanted.every(
+			(seal, index) =>
+				seal.block === metadata.rendering[index]?.block &&
+				seal.hash === metadata.rendering[index]?.hash &&
+				seal.lines === metadata.rendering[index]?.lines,
+		)
+	);
 }
 
 /** A Crossroad note's body and metadata, keeping the user text of `previous`. */

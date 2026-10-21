@@ -144,6 +144,7 @@ export {
 	serializeReadingNote,
 } from "./reading-note";
 export {
+	articleOf,
 	DEFAULT_TITLES,
 	type SectionKind,
 	type SemanticRelationProjection,

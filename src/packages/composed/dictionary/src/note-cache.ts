@@ -5,7 +5,7 @@ import type { PathEntry } from "./notes";
  * dumdict record schemas or the store's reading of a note change, so a
  * persisted cache from an older build misses instead of serving stale data.
  */
-const NOTE_CACHE_VERSION = "dictionary-note-cache/4";
+const NOTE_CACHE_VERSION = "dictionary-note-cache/5";
 
 /** A path's entry without its path, as plain JSON. */
 type CachedEntry = PathEntry extends infer E

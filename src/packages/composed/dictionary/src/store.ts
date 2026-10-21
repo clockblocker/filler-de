@@ -1,5 +1,4 @@
 import {
-	crossroadNotePath,
 	findPathCollisions,
 	lemmaNoteOwner,
 	NoteSerializeError,
@@ -101,9 +100,11 @@ import {
 } from "./notes";
 import {
 	crossroadContentOf,
+	crossroadPathOf,
 	fanOutOf,
 	type NoteProjections,
 	renderOptionsFor,
+	staleCrossroads,
 } from "./render";
 import {
 	loadCleanupRelationsContext,
@@ -1132,13 +1133,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		StaleRead | DictionaryPathOccupiedError
 	> {
 		const { view, after, key, extra, skip } = input;
-		let path: string;
-		try {
-			path = crossroadNotePath(key, "de").path;
-		} catch {
-			return [];
-		}
-		if (skip.has(path)) return [];
+		const path = crossroadPathOf(key);
+		if (path === undefined || skip.has(path)) return [];
 		const content = crossroadContentOf(after, key);
 		const write = writeCrossroadNote(content, metadataFormat(), extra);
 		const refuse = (reason: string) =>
@@ -1187,6 +1183,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		const occupant = view.entry(occupiedAt);
 		if (occupant?.kind !== "crossroad" || occupiedAt !== path)
 			return yield* refuse(`holds a ${occupant?.kind ?? "file"} note`);
+		// Names are lossy: another spelling's Crossroad note keeps its path.
+		if (occupant.key !== undefined && occupant.key !== key)
+			return yield* refuse(
+				`holds the Crossroad note of another spelling, ${JSON.stringify(occupant.key)}`,
+			);
 		const current = yield* readCurrent(view, path);
 		const next = write(current);
 		const changed =
@@ -1572,6 +1573,44 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	});
 
 	/**
+	 * Writes the Crossroad notes that are missing or stale against the
+	 * published index (`staleCrossroads`): of every spelling, or only of
+	 * the Crossroad notes among `paths`, such as the empty note a click on
+	 * an uncreated Crossroad link leaves, filled as "not classified yet".
+	 * A missing note is created only when its spelling has something to
+	 * list, and never over a file that sits on its path or its folders,
+	 * nor beside another created note it collides with. It writes nothing
+	 * when every Crossroad note is current, and never fails.
+	 */
+	const regenerateCrossroads = Effect.fnUntraced(function* (
+		paths?: Iterable<string>,
+	) {
+		const view = index;
+		const stale = staleCrossroads(view, paths);
+		if (stale.length === 0) return;
+		const creates: PathClaim[] = stale.flatMap((key) => {
+			const path = crossroadPathOf(key);
+			return path === undefined || view.sameFileAs(path).length > 0
+				? []
+				: [{ owner: key, path }];
+		});
+		const collisions = findPathCollisions(creates);
+		if (collisions.length > 0)
+			yield* Effect.logWarning(
+				"Dictionary left out Crossroad notes whose paths collide with each other",
+				collisions.map(
+					({ first, second }) =>
+						`${second.path} (${second.owner}) and ${first.path} (${first.owner})`,
+				),
+			);
+		const dropped = new Set(collisions.map(({ second }) => second.owner));
+		yield* rerender(
+			new Set(),
+			new Set(stale.filter((key) => !dropped.has(key))),
+		);
+	});
+
+	/**
 	 * The Lemmas stored claims name but the index does not read as data;
 	 * `converge` keeps only those no file holds, so a note that is there but
 	 * unreadable, such as one being edited by hand, keeps its claims.
@@ -1711,9 +1750,13 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			),
 		);
 
-	/** After a full read of `Worter/`: heal, then let links converge. */
+	/**
+	 * After a full read of `Worter/`: heal, let links converge, then
+	 * regenerate the Crossroad notes that are missing or stale.
+	 */
 	const settle = heal().pipe(
 		Effect.andThen(Effect.suspend(() => converge())),
+		Effect.andThen(regenerateCrossroads()),
 	);
 
 	/**
@@ -1794,11 +1837,12 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					)
 				)
 					touched.add(note.lemmaKey);
-		yield* followUp(
-			before,
-			touched,
-			new Set(changes.map(({ path }) => path)),
-		);
+		const changedPaths = new Set(changes.map(({ path }) => path));
+		yield* followUp(before, touched, changedPaths);
+		// A Crossroad note that appeared or changed without being current,
+		// such as the empty note a click leaves, is filled even though it
+		// was the file that changed.
+		yield* regenerateCrossroads(changedPaths);
 		return true;
 	});
 
@@ -1984,6 +2028,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			if (rollback._tag === "Success" && !first.uncertain)
 				return conflict("revisionConflict");
 			yield* converge({}, depth + 1);
+			if (rebuilt) yield* regenerateCrossroads();
 			return yield* new DictionaryWriteError({
 				cause: first.cause,
 				executed: first.landed.map(({ path }) => path),
@@ -2030,6 +2075,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			}
 		}
 		yield* converge({}, depth + 1);
+		if (rebuilt) yield* regenerateCrossroads();
 		return yield* new DictionaryWriteError({
 			cause: first.cause,
 			executed: first.landed.map(({ path }) => path),
