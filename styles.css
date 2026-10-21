@@ -1,4 +1,7 @@
-/* Keep note_block_title for dictionary notes created before the class rename. */
+/*
+ * Section titles. Lemma notes write note_block_title, as the dictionary notes
+ * first did; entry_section_title styles the notes written under that name.
+ */
 .note_block_title,
 .entry_section_title {
 	float: right;

@@ -15,10 +15,10 @@ import { normalized, parseDe, validData } from "./helpers";
 
 /** A section's title line, as the codec renders it. */
 const title = (kind: string, text: string) =>
-	`<span class="entry_section_title entry_section_title_${kind}">${text}</span>`;
+	`<span class="note_block_title note_block_title_${kind}">${text}</span>`;
 
 const MUTTER_HEADER =
-	"👩 die [[Worter/de/Lexeme/NOUN/Fem/Mutter|Mutter]], [ˈmʊtɐ](https://youglish.com/pronounce/Mutter/german)";
+	"👩 die [[Worter/de/Lexeme/NOUN/Fem/Mutter|Mutter]], [ˈmʊtɐ ♫](https://youglish.com/pronounce/Mutter/german)";
 
 describe("round trips for every German Family", () => {
 	for (const [family, fixture] of Object.entries(familyFixtures)) {
@@ -206,7 +206,7 @@ describe("the document layer", () => {
 		expect(serialize(again.document, parsed.data.data)).toBe(written);
 	});
 
-	it("keeps a Reading part's freeform with its Reading, last in the part", () => {
+	it("keeps a Reading part's freeform with its Reading, under its Note title", () => {
 		const canonical = serialize(undefined, nounData);
 		const nut = nounData.readingEntries[1];
 		if (nut === undefined) throw new Error("fixture");
@@ -224,7 +224,14 @@ describe("the document layer", () => {
 			written
 				.split(`%%tf-part:reading ${nutId}%%`)[1]
 				?.split("%%tf-part:")[0] ?? "";
-		expect(nutPart.trimEnd().endsWith("A note about nuts")).toBe(true);
+		expect(nutPart).toContain(
+			`${title("kontexte", "Note")}\nA note about nuts\n\n\n%%tf:translation`,
+		);
+		// Written text replaces the Note placeholder.
+		expect(nutPart).not.toContain("*You can write here*");
+		expect(serialize(parseDe(written).document, parsed.data.data)).toBe(
+			written,
+		);
 	});
 
 	it("moves freeform of a part the data dropped to the Lemma part", () => {
@@ -338,10 +345,12 @@ describe("user text around renderings", () => {
 	}
 
 	const lastLines = {
+		// The last of two embeds a blank line separates in one rendering.
+		attestation: "![[Other Scroll#^7|^]]",
 		header: `${MUTTER_HEADER} ^r-`,
 		inflection: "| Gen | x |",
 		inverse_relation: "⊂ [[",
-		notes_title: title("notizen", "Notizen"),
+		notes_title: title("kontexte", "Note"),
 		surface: "Mütter (Nom Plur) ^s-",
 		tags: "#noun #fem",
 		translation: "ru: мать, мама",

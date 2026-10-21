@@ -84,8 +84,9 @@ export const EMPTY_DOCUMENT: LemmaNoteDocument = { parts: [], preamble: [] };
  *   its lines joined by `\n`.
  *
  * A typed Block's rendering is exactly the sealed lines directly after its
- * marker. Every other line up to the next marker is freeform: lines typed
- * under the rendering, and the whole rendering once it is edited.
+ * marker. They may hold blank lines, but not open with one. Every other line
+ * up to the next marker is freeform: lines typed under the rendering, and
+ * the whole rendering once it is edited.
  */
 const MARKER_PATTERN =
 	/^%%tf(-part)?:([A-Za-z0-9_-]+)(?:@([1-9][0-9]*):([0-9a-f]{8}))?(?: ([^\r\n]*?))?%%[ \t]*\r?\n?$/u;
@@ -112,6 +113,11 @@ export function renderingSeal(lines: readonly string[]): string {
 	return `@${lines.length}:${sha256Hex(lines.join("\n")).slice(0, 8)}`;
 }
 
+/** How many lines a seal covers. */
+function sealCount(seal: string): number {
+	return Number(seal.slice(1, seal.indexOf(":")));
+}
+
 /**
  * How many of a typed Block's lines are its sealed rendering: all the
  * sealed lines when they match the seal exactly, otherwise none.
@@ -121,7 +127,7 @@ function sealedLength(
 	seal: string | undefined,
 ): number {
 	if (seal === undefined) return 0;
-	const count = Number(seal.slice(1, seal.indexOf(":")));
+	const count = sealCount(seal);
 	if (lines.length < count) return 0;
 	const rendering = lines
 		.slice(0, count)
@@ -189,7 +195,10 @@ export function parseDocument(markdown: string): LemmaNoteDocument {
 		| { marker: Marker & { type: "part" }; lines: string[] }
 		| undefined;
 	let phase: Phase = "freeform";
-	/** A typed Block's lines up to the first blank line, before the seal check. */
+	/**
+	 * A typed Block's candidate rendering, before the seal check: its lines
+	 * up to the first blank line after as many lines as the seal covers.
+	 */
 	let rendering: { lines: string[]; seal: string | undefined } | undefined;
 
 	const target = () => parts.at(-1)?.blocks ?? preamble;
@@ -253,8 +262,19 @@ export function parseDocument(markdown: string): LemmaNoteDocument {
 			continue;
 		}
 		if (rendering !== undefined) {
-			if (!isBlank(line)) {
-				rendering.lines.push(line);
+			const { lines, seal } = rendering;
+			// A blank line ends the rendering unless the seal still covers
+			// more lines: a rendering such as Deine Kontexte separates its
+			// lines by blank ones. One that fails its seal becomes freeform
+			// with every line after it up to the next marker, as it would
+			// have from its first blank line on.
+			if (
+				!isBlank(line) ||
+				(seal !== undefined &&
+					lines.length > 0 &&
+					lines.length < sealCount(seal))
+			) {
+				lines.push(line);
 				continue;
 			}
 			settle();

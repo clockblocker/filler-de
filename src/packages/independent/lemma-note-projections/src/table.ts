@@ -12,14 +12,19 @@ export type InflectionTable = {
 	readonly rows: readonly TableRow[];
 };
 
-/** The table as Markdown lines, one row per line; undefined when empty. */
+/**
+ * The table as Markdown lines, one row per line; undefined when empty.
+ * `word` rewrites each space-separated word of a cell, to link one.
+ */
 export function renderTable(
 	table: InflectionTable | undefined,
+	word: (word: string) => string = (same) => same,
 ): string | undefined {
 	const rows = table?.rows.filter((row) => row.cells.length > 0) ?? [];
 	if (rows.length === 0) return undefined;
+	const cell = (text: string) => text.split(" ").map(word).join(" ");
 	return rows
-		.map((row) => `${row.label}: ${row.cells.join(", ")}`)
+		.map((row) => `${row.label}: ${row.cells.map(cell).join(", ")}`)
 		.join("\n");
 }
 

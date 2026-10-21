@@ -11,7 +11,7 @@ import type * as Dumling from "dumling/types";
 
 /** A section's title line, as the codec renders it. */
 const title = (kind: string, text: string) =>
-	`<span class="entry_section_title entry_section_title_${kind}">${text}</span>`;
+	`<span class="note_block_title note_block_title_${kind}">${text}</span>`;
 
 // The derived hooks fit the codec's projection hooks with no adapter.
 const projections = derivedProjections satisfies Projections<"de">;
@@ -95,13 +95,14 @@ describe("the codec renders the derived projections", () => {
 	it("renders a strong verb's stored principal parts in its table", () => {
 		const markdown = serialize(undefined, fahren, { projections });
 		// The principal parts are data the Flexion table shows, as the
-		// legacy notes did; their own Blocks render nothing.
+		// dictionary notes did; their own Blocks render nothing. A form
+		// spelled as the Lemma links to its note.
 		expect(markdown).toContain(
 			'%%tf:present_singular {"first":["fahre"],"second":["fährst"],"third":["fährt"]}%%\n',
 		);
 		expect(markdown).toContain('%%tf:past_participle ["gefahren"]%%\n');
 		expect(markdown).toContain(`${title("flexion", "Flexion")}
-Präsens: ich fahre, du fährst, er fährt, wir fahren, ihr fahrt, sie fahren
+Präsens: ich fahre, du fährst, er fährt, wir [[Worter/de/Lexeme/VERB/fahren|fahren]], ihr fahrt, sie [[Worter/de/Lexeme/VERB/fahren|fahren]]
 Präteritum: ich fuhr, du fuhrst, er fuhr, wir fuhren, ihr fuhrt, sie fuhren
 Konjunktiv II: ich führe, du führest, er führe, wir führen, ihr führet, sie führen
 Partizip II: gefahren`);
@@ -110,10 +111,10 @@ Partizip II: gefahren`);
 	it("renders a noun's Flexion and Tags sections", () => {
 		const markdown = serialize(undefined, tag, { projections });
 		expect(markdown).toContain(`${title("flexion", "Flexion")}
-N: der Tag, die Tage
-A: den Tag, die Tage
+N: der [[Worter/de/Lexeme/NOUN/Masc/Tag|Tag]], die Tage
+A: den [[Worter/de/Lexeme/NOUN/Masc/Tag|Tag]], die Tage
 G: des Tages, der Tage
-D: dem Tag, den Tagen`);
+D: dem [[Worter/de/Lexeme/NOUN/Masc/Tag|Tag]], den Tagen`);
 		expect(markdown).toContain(`${title("tags", "Tags")}\n#noun/masculine`);
 	});
 

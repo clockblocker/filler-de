@@ -46,10 +46,17 @@ const inverseBlock = (content: string | undefined) =>
 		/%%tf:inverse_relation@[^%]*%%\n[^\n]*(?:\n[^\n%][^\n]*)*/u,
 	)?.[0];
 
-/** The content with its `inverse_relation` Block cut out. */
+/**
+ * The content with its `inverse_relation` Block cut out, with the line
+ * breaks that separated it from the line above.
+ */
 const withoutInverseBlock = (content: string | undefined) => {
 	const block = inverseBlock(content);
-	return block === undefined ? content : content?.replace(`${block}\n\n`, "");
+	return block === undefined
+		? content
+		: content
+				?.replace(/\n+(?=%%tf:inverse_relation@)/u, "")
+				.replace(block, "");
 };
 
 const dataOf = (content: string | undefined) => {
@@ -182,7 +189,8 @@ describe("inverse relations are projected, never stored", () => {
 			createLemma(gehen),
 			createReading(readingEntry(gehenReading)),
 		]);
-		const typed = `${vault.content(schreitenPath)}\nMy own words about schreiten.\n`;
+		const words = "My own words about schreiten.";
+		const typed = `${vault.content(schreitenPath)}\n${words}\n`;
 		await vault.userWrite(schreitenPath, typed);
 		const before = vault.content(schreitenPath);
 		vault.batches.length = 0;
@@ -204,10 +212,15 @@ describe("inverse relations are projected, never stored", () => {
 		const after = vault.content(schreitenPath);
 		expect(after).not.toBe(before);
 		expect(inverseBlock(after)).toContain(`= ${linkTo(gehenReading)}`);
-		// Only the projection changed: the data and every other byte stay.
+		// The data stays, and so does every other byte, except that the
+		// typed text moves under the Note title, where freeform stands.
 		expect(dataOf(after)).toEqual(dataOf(before));
-		expect(withoutInverseBlock(after)).toBe(before);
-		expect(after).toContain("My own words about schreiten.");
+		expect(withoutInverseBlock(after)).toBe(
+			before
+				?.replace(`\n${words}\n`, "")
+				.replace("\nmine\n", `\nmine\n${words}\n`),
+		);
+		expect(after?.split(words)).toHaveLength(2);
 		await expectIndexMatchesFiles(store, vault);
 	});
 
@@ -303,7 +316,13 @@ describe("inverse relations are projected, never stored", () => {
 		).toMatchObject({ status: "committed" });
 		const after = vault.content(schreitenPath);
 		expect(after).toContain("Typed behind VAM's back.");
-		expect(withoutInverseBlock(after)).toBe(edited);
+		// The typed text takes the Note placeholder's place.
+		expect(withoutInverseBlock(after)).toBe(
+			edited.replace(
+				/%%tf:notes_placeholder@[^\n]*\n\*You can write here\*\n\n/u,
+				"",
+			),
+		);
 		expect(inverseBlock(after)).toContain(`= ${linkTo(gehenReading)}`);
 		await expectIndexMatchesFiles(store, vault);
 	});

@@ -1,5 +1,6 @@
 import {
 	type NoteBlock,
+	type NotePart,
 	parseDocument,
 	serializeDocument,
 } from "@textfresser/lemma-note-codec";
@@ -43,10 +44,72 @@ const freeformTexts = (blocks: readonly NoteBlock[]) =>
 		block.type === "freeform" ? [normalizeFreeform(block.raw)] : [],
 	);
 
+/** The Blocks of a Reading part's Note section (codec spec: Layout). */
+const NOTE_KINDS: ReadonlySet<string> = new Set([
+	"notes_title",
+	"notes",
+	"notes_placeholder",
+]);
+
+const isNoteBlock = (block: NoteBlock) =>
+	(block.type === "projection" || block.type === "serialized") &&
+	NOTE_KINDS.has(block.kind);
+
+const isKeptBlock = (block: NoteBlock) =>
+	block.type === "freeform" || block.type === "unknown";
+
+const isPlaceholder = (block: NoteBlock) =>
+	block.type === "projection" && block.kind === "notes_placeholder";
+
+/** Bytes without the blank lines that end them, their last line ended. */
+const withoutTrailingBlankLines = (text: string) =>
+	text.replace(/\n(?:[ \t]*\r?\n)*$/u, "\n");
+
 /**
- * Places `text` as one freeform Block at the end of the part of the Reading
- * whose Block ID is `readingBlockId`, or of the Lemma part when there is no
- * such Reading. Every other byte of the note stays as it was. Text that is
+ * Places `body` in a Reading part's Note section, under its title, notes
+ * and freeform, as `serialize` lays freeform out, and drops the Note
+ * placeholder. Undefined for a part without a Note section.
+ */
+function placeInNote(
+	parts: readonly NotePart[],
+	at: number,
+	preamble: readonly NoteBlock[],
+	body: string,
+): string | undefined {
+	const part = parts[at];
+	if (part === undefined) return undefined;
+	const { blocks } = part;
+	const last = blocks.findLastIndex(isNoteBlock);
+	if (last < 0) return undefined;
+	let end = last + 1;
+	while (end < blocks.length && isKeptBlock(blocks[end] as NoteBlock)) end++;
+	const above = blocks.slice(0, end).filter((block) => !isPlaceholder(block));
+	const below = blocks.slice(end);
+	const later = parts.slice(at + 1);
+
+	let before = withoutTrailingBlankLines(
+		serializeDocument({
+			parts: [...parts.slice(0, at), { ...part, blocks: above }],
+			preamble,
+		}),
+	);
+	if (!before.endsWith("\n")) before += "\n";
+	// Directly under a rendering, its seal ends it; text next to freeform
+	// needs a blank line to stay a paragraph of its own.
+	const lastAbove = above.at(-1);
+	const joiner =
+		lastAbove !== undefined && isKeptBlock(lastAbove) ? "\n" : "";
+	const after = `${below.map((block) => block.raw).join("")}${serializeDocument({ parts: later, preamble: [] })}`;
+	const gap = below.length > 0 ? "\n\n" : later.length > 0 ? "\n" : "";
+	return `${before}${joiner}${body}\n${gap}${after}`;
+}
+
+/**
+ * Places `text` as one freeform Block in the part of the Reading whose
+ * Block ID is `readingBlockId`: in its Note section, where `serialize` keeps
+ * freeform, in place of the Note placeholder; at the end of a part without
+ * one. With no such Reading it ends the Lemma part. Every other byte of the
+ * note stays as it was, except blank lines around the text. Text that is
  * already a freeform Block of the note is not added twice, and text with a
  * line the codec would read as a marker is refused.
  */
@@ -83,6 +146,8 @@ export function insertFreeformBlock(
 	if (at < 0) at = parts.findIndex((part) => part.scope === "lemma");
 	if (at < 0)
 		return { _tag: "Refused", reason: "the note has no Lemma part" };
+	const placed = placeInNote(parts, at, document.preamble, body);
+	if (placed !== undefined) return { _tag: "Inserted", content: placed };
 
 	const before = serializeDocument({
 		parts: parts.slice(0, at + 1),

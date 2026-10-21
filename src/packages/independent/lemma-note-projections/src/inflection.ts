@@ -118,9 +118,15 @@ function germanTable(input: ProjectionInput): InflectionTable | undefined {
  * A Reading's inflection table as Markdown, derived without a model from
  * its Lemma, its stored Knowledge and dumcorpus. Undefined, so the codec
  * leaves the Block out, for a language other than German or a Reading the
- * data cannot fill a table for.
+ * data cannot fill a table for. Its forms are plain text, since no note
+ * holds an inflected form, except that a form spelled as the Lemma links
+ * to the Lemma's note through `input.links`.
  */
 export function deriveInflection(input: ProjectionInput): string | undefined {
 	if (input.lemma.language !== "de") return undefined;
-	return renderTable(germanTable(input));
+	const { canonicalForm } = input.lemma;
+	const link = input.links?.lemma(input.lemma);
+	return renderTable(germanTable(input), (word) =>
+		link !== undefined && word === canonicalForm ? link : word,
+	);
 }
