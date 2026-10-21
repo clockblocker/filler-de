@@ -20,13 +20,17 @@ import { createUnlinkObserver } from "../../../src/commanders/classify/resolutio
 import { memorySegmentationCache } from "../../../src/commanders/classify/segmentation-cache";
 import { DumgenHost } from "../../../src/managers/dumgen";
 import { FakeVault } from "../../../src/packages/composed/dictionary/tests/support/fake-vault";
+import { dictionaryProjections } from "../../../src/stateless-helpers/dictionary-projections";
 import {
 	CLASSIFY_RESOLUTION_DUMGEN,
+	CROSSROAD_PATHS,
+	expectFirstClassifyNotes,
 	FIRST_SELECTION,
 	LEMMA_PATHS,
 	SECOND_SELECTION,
 	STORY,
 } from "../../obsidian-e2e/scenarios/classify-resolution-script";
+import { TITLES, visible } from "../../obsidian-e2e/scenarios/dictionary-layout";
 import { MemoryScroll } from "../../unit/classify/resolution/support";
 
 const SCROLL = "Library/Story.md";
@@ -52,6 +56,12 @@ function answersOf(
 
 const KNOWLEDGE_STAGES = ["transcription", "definition", "translations"];
 
+/** The dictionary's notes by vault path, as the driver's `dictionary` reads them. */
+const notesOf = (vault: FakeVault) =>
+	Object.fromEntries(
+		vault.markdownPaths().map((path) => [path, vault.content(path)]),
+	);
+
 describe("Classify resolves a selection end to end", () => {
 	it("links the noun, the separable verb and the Locution, then re-encounters the noun without Knowledge calls", async () => {
 		const host = new DumgenHost({
@@ -63,7 +73,9 @@ describe("Classify resolves a selection end to end", () => {
 			luna: CLASSIFY_RESOLUTION_DUMGEN.luna,
 		});
 		const vault = new FakeVault();
-		const store = await Effect.runPromise(makeDumdictVaultStore({ vault }));
+		const store = await Effect.runPromise(
+			makeDumdictVaultStore({ projections: dictionaryProjections, vault }),
+		);
 		const scroll = new MemoryScroll(SCROLL, STORY);
 		const notices: string[] = [];
 		const queue = createKnowledgeQueue({
@@ -130,11 +142,16 @@ describe("Classify resolves a selection end to end", () => {
 		expect(scroll.content).toBe(
 			`${await link(LEMMA_PATHS.hund, "Der Hund")} ${await link(LEMMA_PATHS.anfangen, "fängt")} ${await link(LEMMA_PATHS.heute, "heute")} ${await link(LEMMA_PATHS.aufJedenFall, "auf jeden Fall")} ${await link(LEMMA_PATHS.anfangen, "an")}. ^0\n\nDer Hund schläft. ^1\n`,
 		);
-		// Each Reading note shows its occurrence under Deine Kontexte.
-		for (const path of Object.values(LEMMA_PATHS))
-			expect(vault.content(await readingNoteOf(path))).toMatch(
-				/!\[\[Story#\^0\|\^[0-9a-f]{8}\]\]/u,
-			);
+		const readingPaths = [];
+		for (const path of [
+			LEMMA_PATHS.hund,
+			LEMMA_PATHS.anfangen,
+			LEMMA_PATHS.heute,
+			LEMMA_PATHS.aufJedenFall,
+		])
+			readingPaths.push(await readingNoteOf(path));
+		expectFirstClassifyNotes(notesOf(vault), readingPaths);
+		const afterFirst = notesOf(vault);
 		const knowledgeCalls = () =>
 			KNOWLEDGE_STAGES.map(
 				(stage) => host.scriptedRequests()?.luna[stage] ?? 0,
@@ -152,6 +169,11 @@ describe("Classify resolves a selection end to end", () => {
 			/!\[\[Story#\^1\|\^[0-9a-f]{8}\]\]/u,
 		);
 		expect(knowledgeCalls()).toEqual(before);
+		// The same Surface again: the Lemma note and the Crossroad stay.
+		expect(vault.content(LEMMA_PATHS.hund)).toBe(afterFirst[LEMMA_PATHS.hund]);
+		expect(vault.content(CROSSROAD_PATHS.hund)).toBe(
+			afterFirst[CROSSROAD_PATHS.hund],
+		);
 
 		// The user unlinks the second "Der Hund" and "heute" (#116).
 		const hundNote = await readingNoteOf(LEMMA_PATHS.hund);
@@ -180,5 +202,9 @@ describe("Classify resolves a selection end to end", () => {
 		expect(vault.content(heuteNote)).toBeUndefined();
 		expect(vault.content(LEMMA_PATHS.heute)).toBeUndefined();
 		expect(vault.content(LEMMA_PATHS.anfangen)).toBeDefined();
+		// heute's Crossroad stays, saying it is not classified yet.
+		expect(visible(vault.content(CROSSROAD_PATHS.heute))).toBe(
+			`${TITLES.eintraege}\n*Not classified yet*`,
+		);
 	});
 });

@@ -40,6 +40,18 @@ export function parseCliJson<T>(output: string, command: string): T {
 	}
 }
 
+/** Whether CLI output is a whole JSON value, so the answer is complete. */
+export function isCompleteJson(output: string): boolean {
+	const clean = output.replace(/^=>\s*/u, "").trim();
+	if (!/^[[{]/u.test(clean)) return false;
+	try {
+		JSON.parse(clean);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 export function isOfficialCliTarget(path: string): boolean {
 	return basename(path).toLowerCase() === "obsidian-cli";
 }
@@ -103,11 +115,20 @@ export class ObsidianCli {
 
 	async call(
 		args: readonly string[],
-		options: { readonly allowErrorText?: boolean; readonly timeoutMs?: number } = {},
+		options: {
+			readonly allowErrorText?: boolean;
+			readonly timeoutMs?: number;
+			/** Says the noise-free output so far is the whole answer (`runProcess`). */
+			readonly completeWhen?: (stdout: string) => boolean;
+		} = {},
 	): Promise<ProcessResult> {
 		const operation = this.#tail.then(async () => {
 			const fullArgs = [`vault=${this.#vaultName}`, ...args];
+			const { completeWhen } = options;
 			const result = await runProcess(this.#cliPath, fullArgs, {
+				...(completeWhen
+					? { completeWhen: (stdout: string) => completeWhen(stripCliNoise(stdout)) }
+					: {}),
 				timeoutMs: options.timeoutMs,
 			});
 			const normalized = {
@@ -148,7 +169,10 @@ export class ObsidianCli {
 		args: readonly string[],
 		options: { readonly timeoutMs?: number } = {},
 	): Promise<T> {
-		const result = await this.call(args, options);
+		const result = await this.call(args, {
+			...options,
+			completeWhen: isCompleteJson,
+		});
 		return parseCliJson<T>(result.stdout, args.join(" "));
 	}
 }

@@ -54,7 +54,10 @@ empty, with Luna's answers by stage under `"luna": { "<stage>": [{ "when"?:
 "<input text>", "output": … }] }`, and `cleanupSession` removes it, so no
 scenario reaches a provider; `status` counts its requests under
 `dumgenRequests`. `"resetDictionary": true` moves `Worter/` to Obsidian's trash first, and
-only in a vault whose config folder holds a `textfresser-e2e-vault` marker.
+only in a vault whose config folder holds a `textfresser-e2e-vault` marker. `"newNotesInDictionary": true` sets the vault's
+`newFileLocation` to `folder` and `newFileFolderPath` to `Worter`, creating
+that folder, for the scenario. `cleanupSession` restores that vault config and
+every setting `beginScenario`'s `settings` replaced.
 `act` supports `create`, `modify`, `rename`, `delete`, and the narrow
 `splitToPages`, `splitInBlocks`, `classify`, `wrapLink`, `followLink`,
 `pageNavigation` and `toggleCodexEntry` Textfresser interactions; `create` also accepts
@@ -66,7 +69,10 @@ in `[[ ]]` with two editor transactions, as Obsidian's bracket auto-pair
 does, waits up to two seconds for Textfresser to answer the completed link,
 and saves the note. `followLink` calls `Workspace.openLinkText` with its
 `linkpath`, which the note must hold as `[[<linkpath>]]` or
-`[[<linkpath>|…]]`. File content uses UTF-8 by default or canonical
+`[[<linkpath>|…]]`. After `classify` and `followLink` settle, the
+driver saves the active editor if it differs from the note on disk, since
+Textfresser writes into an open note through its editor, and settles once
+more. File content uses UTF-8 by default or canonical
 padded base64 with `"encoding": "base64"`.
 
 Run the transport and confinement tests directly:

@@ -346,6 +346,20 @@ async function openSourceEditor(app, file) {
 	return view.editor;
 }
 
+/**
+ * Saves the active editor when its content differs from its note on disk.
+ * Textfresser writes into an open note through its editor, and Obsidian
+ * saves an editor about two seconds after its last change, so without this
+ * a disk read after the plugin settles races that save.
+ */
+async function persistActiveEditor(app) {
+	const view = app.workspace.getActiveViewOfType(MarkdownView);
+	const file = view?.file;
+	if (!file || !isFile(file)) return;
+	if (view.editor.getValue() === (await app.vault.read(file))) return;
+	await view.save();
+}
+
 function relativeTo(base, fullPath) {
 	if (fullPath === base) return "";
 	if (!fullPath.startsWith(`${base}/`)) {
@@ -791,6 +805,11 @@ class TextfresserE2EDriver extends Plugin {
 			"params.resetDictionary",
 			false,
 		);
+		const newNotesInDictionary = assertBoolean(
+			request.params.newNotesInDictionary,
+			"params.newNotesInDictionary",
+			false,
+		);
 		if (typeof before.plugin.getClassifyTestingApi !== "function") {
 			throw new DriverError(
 				"TextfresserProbeMissing",
@@ -849,6 +868,9 @@ class TextfresserE2EDriver extends Plugin {
 				});
 			}
 		}
+		// The user's vault always holds the dictionary folder, and Obsidian
+		// creates a new note in the vault root when its folder is missing.
+		if (newNotesInDictionary) await ensureFolder(this.app.vault, DICTIONARY_ROOT);
 		await ensureFolder(this.app.vault, paths.libraryRoot);
 
 		const seen = new Set();
@@ -901,6 +923,31 @@ class TextfresserE2EDriver extends Plugin {
 		// switch below, and the new Librarian heals Leaves its startup scan
 		// has already healed.
 		await this.settle({ timeoutMs: clampTimeout(request.params.timeoutMs, 30_000) });
+
+		// A scenario's settings and vault config last only for the scenario:
+		// cleanupSession restores what they replaced.
+		const restore = {
+			settings: Object.fromEntries(
+				Object.keys(settings).map((key) => [
+					key,
+					structuredClone(before.plugin.settings?.[key]),
+				]),
+			),
+			vaultConfig: {},
+		};
+		this.restoreAfterScenario().set(request.sessionId, restore);
+		if (newNotesInDictionary) {
+			// The user's vault creates new notes in the dictionary
+			// (`newFileLocation: folder`, `newFileFolderPath: Worter`), so a
+			// click on an unresolved bare link makes a stray there.
+			for (const [key, value] of [
+				["newFileLocation", "folder"],
+				["newFileFolderPath", DICTIONARY_ROOT],
+			]) {
+				restore.vaultConfig[key] = this.app.vault.getConfig(key);
+				this.app.vault.setConfig(key, value);
+			}
+		}
 
 		const classifyApi = before.plugin.getClassifyTestingApi();
 		if (typeof classifyApi.useScriptedDumgen === "function") {
@@ -1393,6 +1440,17 @@ class TextfresserE2EDriver extends Plugin {
 
 		let settled = null;
 		if (settleAfter) settled = await this.settle({ timeoutMs });
+		// Classify writes its block IDs and links into the Scroll's open
+		// editor, and the store fills a clicked note while it is open; the
+		// act returns once that is on disk too, and once Textfresser has
+		// answered the save.
+		if (
+			settleAfter &&
+			(operation.kind === "classify" || operation.kind === "followLink")
+		) {
+			await persistActiveEditor(this.app);
+			settled = await this.settle({ timeoutMs });
+		}
 		const after = this.observeTextfresser();
 		if (after.plugin !== before.plugin) {
 			throw new DriverError(
@@ -1414,6 +1472,13 @@ class TextfresserE2EDriver extends Plugin {
 			startedAt,
 			startSequence,
 		};
+	}
+
+	restoreAfterScenario() {
+		if (!(this.globalState.restoreAfterScenario instanceof Map)) {
+			this.globalState.restoreAfterScenario = new Map();
+		}
+		return this.globalState.restoreAfterScenario;
 	}
 
 	modifyObservers() {
@@ -1607,7 +1672,12 @@ class TextfresserE2EDriver extends Plugin {
 		// leave one quarantine subtree behind for every run.
 		const quarantineRoot = "_TextfresserE2EQuarantine/Library";
 		await ensureFolder(this.app.vault, quarantineRoot);
+		const restore = this.restoreAfterScenario().get(this.config.sessionId);
+		this.restoreAfterScenario().delete(this.config.sessionId);
+		for (const [key, value] of Object.entries(restore?.vaultConfig ?? {}))
+			this.app.vault.setConfig(key, value);
 		await before.plugin.resetSettingsForTesting({
+			...(restore?.settings ?? {}),
 			libraryRoot: quarantineRoot,
 		});
 		await this.settle({ timeoutMs });

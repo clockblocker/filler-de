@@ -2,14 +2,18 @@ import { describe, expect, it } from "bun:test";
 import { withObsidianScenario } from "../harness";
 import {
 	CLASSIFY_RESOLUTION_DUMGEN,
+	CROSSROAD_PATHS,
 	FIRST_SELECTION,
 	LEMMA_PATHS,
 	SECOND_SELECTION,
 	STORY,
 } from "./classify-resolution-script";
-
-const linkTo = (path: string, shown: string) =>
-	`[[${path.slice(0, -3)}|${shown}]]`;
+import {
+	expectHiddenMetadata,
+	linkTo,
+	TITLES,
+	visible,
+} from "./dictionary-layout";
 
 const KONTEXT_0 = /!\[\[Story#\^0\|\^[0-9a-f]{8}\]\]/u;
 const KONTEXT_1 = /!\[\[Story#\^1\|\^[0-9a-f]{8}\]\]/u;
@@ -54,6 +58,15 @@ describe("Obsidian E2E - Classify unlink", () => {
 				expect(notes[heute]).toBeUndefined();
 				expect(notes[LEMMA_PATHS.heute]).toBeUndefined();
 				expect(notes[LEMMA_PATHS.hund]).toBeDefined();
+				// The commit regenerates the Crossroads it touches: heute's says
+				// it is not classified yet, and Hund's still lists der Hund.
+				expectHiddenMetadata(notes[CROSSROAD_PATHS.heute], "crossroadNote");
+				expect(visible(notes[CROSSROAD_PATHS.heute])).toBe(
+					`${TITLES.eintraege}\n*Not classified yet*`,
+				);
+				expect(visible(notes[CROSSROAD_PATHS.hund])).toBe(
+					`${TITLES.eintraege}\n- der ${linkTo(LEMMA_PATHS.hund, "Hund")}: ${linkTo(hund, "🐕")}`,
+				);
 				// The Scroll is left as the user wrote it.
 				expect((await snapshot()).markdown["Story.md"]).toBe(unlinked);
 			},

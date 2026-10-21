@@ -2,19 +2,19 @@ import { describe, expect, it } from "bun:test";
 import { withObsidianScenario } from "../harness";
 import {
 	CLASSIFY_RESOLUTION_DUMGEN,
+	CROSSROAD_PATHS,
+	expectFirstClassifyNotes,
 	FIRST_SELECTION,
 	LEMMA_PATHS,
 	SECOND_SELECTION,
 	STORY,
 } from "./classify-resolution-script";
+import { expectInOrder, linkTo, TITLES, visible } from "./dictionary-layout";
 
 /** Luna stages a Reading's base-text Knowledge goes through. */
 const KNOWLEDGE_STAGES = ["transcription", "definition", "translations"];
 
-const linkTo = (path: string, shown: string) =>
-	`[[${path.slice(0, -3)}|${shown}]]`;
-
-/** An occurrence's Attestation Ref in block `^0` or `^1` of the Story. */
+/** An occurrence's Attestation Ref in block `^0` or `^1` of the Story: the block, with the occurrence's key as its alias. */
 const KONTEXT_0 = /!\[\[Story#\^0\|\^[0-9a-f]{8}\]\]/u;
 const KONTEXT_1 = /!\[\[Story#\^1\|\^[0-9a-f]{8}\]\]/u;
 
@@ -68,6 +68,10 @@ describe("Obsidian E2E - Classify resolution", () => {
 				if (!hund || !anfangen || !heute || !aufJedenFall)
 					throw new Error("Classify resolved fewer units than it reported");
 				expect(anfangen.linked).toBe(2);
+				// A Reading note is named `<emoji> <Lemma spelling>.md`.
+				expect(hund.readingPath).toBe(
+					`${folderOf(LEMMA_PATHS.hund)}/🐕 Hund.md`,
+				);
 
 				const story = (await snapshot()).markdown["Story.md"];
 				expect(story).toBe(
@@ -77,15 +81,15 @@ describe("Obsidian E2E - Classify resolution", () => {
 					),
 				);
 
-				// Each Lemma note sits at its identity path and links the
-				// Reading note the Scroll links, which shows the occurrence
-				// under Deine Kontexte.
 				let notes = (await dictionary()).markdown;
-				for (const [index, { readingPath }] of targets.entries()) {
-					const lemmaPath = lemmaPaths[index] ?? "";
-					expect(notes[readingPath]).toMatch(KONTEXT_0);
-					expect(notes[lemmaPath]).toContain(readingPath.slice(0, -3));
-				}
+				expectFirstClassifyNotes(
+					notes,
+					targets.map(({ readingPath }) => readingPath),
+				);
+				expect(`${story}\n${Object.values(notes).join("\n")}`).not.toContain(
+					"%%tf",
+				);
+
 				const knowledgeCalls = async () => {
 					const requests = (await status()).dumgenRequests;
 					return KNOWLEDGE_STAGES.map((stage) => requests?.luna[stage] ?? 0);
@@ -104,9 +108,19 @@ describe("Obsidian E2E - Classify resolution", () => {
 					linked: 1,
 					readingPath: hund.readingPath,
 				});
+				const previous = notes;
 				notes = (await dictionary()).markdown;
+				expectInOrder(visible(notes[hund.readingPath]), [
+					TITLES.deineKontexte,
+					"\n![[Story#^0|^",
+					"\n![[Story#^1|^",
+					TITLES.note,
+				]);
 				expect(notes[hund.readingPath]).toMatch(KONTEXT_0);
 				expect(notes[hund.readingPath]).toMatch(KONTEXT_1);
+				// The same Surface again: the Lemma note and the Crossroad stay.
+				expect(notes[LEMMA_PATHS.hund]).toBe(previous[LEMMA_PATHS.hund]);
+				expect(notes[CROSSROAD_PATHS.hund]).toBe(previous[CROSSROAD_PATHS.hund]);
 				expect(await knowledgeCalls()).toEqual(before);
 				expect((await snapshot()).markdown["Story.md"]).toContain(
 					`${linkTo(hund.readingPath, "Der Hund")} schläft. ^1`,
