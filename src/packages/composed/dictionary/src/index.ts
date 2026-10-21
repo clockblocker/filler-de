@@ -7,6 +7,7 @@ export {
 	DictionaryScanError,
 	DictionaryWriteError,
 } from "./errors";
+export { freeformPlacementProblem } from "./freeform";
 export {
 	defineNestedNamespace,
 	type MetadataFormat,

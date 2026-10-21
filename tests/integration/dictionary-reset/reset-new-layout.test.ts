@@ -56,6 +56,10 @@ const OLD_HUND = [
 	"",
 	"Mein Hund heißt Bello.",
 	"",
+	"",
+	"",
+	"Er bellt [laut] ✋ 👀, wie [[See]].",
+	"",
 ].join("\n");
 
 /** What the first reset left: the old notes in its backup, obsolete notes in Worter/. */
@@ -253,7 +257,10 @@ describe("the Dictionary reset regenerates into the Lemma, Reading and Crossroad
 		);
 		const reading = vault.content(readingPath) ?? "";
 		expect(reading).toMatch(/!\[\[Story#\^1\|\^[0-9a-f]{8}\]\]/u);
-		expect(reading).toContain("Mein Hund heißt Bello.");
+		// Paragraphs blank lines apart land as they were (#149).
+		expect(reading).toContain(
+			"Mein Hund heißt Bello.\n\n\n\nEr bellt [laut] ✋ 👀, wie [[See]].",
+		);
 		// Notes are read in path order: `Untitled.md` before `de/…`.
 		expect(execution.freeform).toEqual([
 			{

@@ -57,7 +57,12 @@ import {
 	DictionaryScanError,
 	DictionaryWriteError,
 } from "./errors";
-import { freeformOfNote, holdsFreeform, placedFreeform } from "./freeform";
+import {
+	freeformOfNote,
+	holdsFreeform,
+	placedFreeform,
+	placedNoteProblem,
+} from "./freeform";
 import {
 	type WriteOptions,
 	writeLemmaNote,
@@ -2438,18 +2443,18 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 								write,
 							)(current.success),
 			});
+			const problem = placedNoteProblem({
+				content: next,
+				data:
+					indexed?.kind === "lemma" || indexed?.kind === "reading"
+						? indexed.data
+						: undefined,
+				kind,
+				path,
+				text,
+			});
+			if (problem !== undefined) return yield* refuse(problem);
 			const entry = classifyFile(path, next);
-			const sameRecords =
-				(entry.kind === "lemma" || entry.kind === "reading") &&
-				entry.kind === indexed?.kind &&
-				sameJson(entry.data, indexed.data);
-			if (
-				!sameRecords ||
-				!holdsFreeform(freeformOfNote(next, kind), text)
-			)
-				return yield* refuse(
-					"the note would not parse back to its records with the text in it",
-				);
 			const outcome = yield* Effect.result(
 				dispatch([
 					{

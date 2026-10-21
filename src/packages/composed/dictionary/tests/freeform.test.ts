@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Effect } from "effect";
-import { freeformOfNote } from "../src/freeform";
+import { freeformOfNote, freeformPlacementProblem } from "../src/freeform";
 import { noteMetadataHelper } from "../src/internal/note-metadata";
 import { expectIndexMatchesFiles, run } from "./support/files";
 import {
@@ -21,6 +21,26 @@ const NOTE_TITLE =
 	'<span class="note_block_title note_block_title_kontexte">Note</span>';
 const MEMO =
 	"My own memo about gehen.\n\nIt has [[links]] and ![[Scroll#^3|^]].";
+/** The dev vault's old aufpassen memo (#149): paragraphs two and three blank lines apart. */
+const SPACED_MEMO = [
+	"I [walked] in the park",
+	"",
+	"walked - v, dashjfa,",
+	"",
+	"",
+	"This task was a [walk in the park]",
+	"",
+	"",
+	"Руслан, [дорброе утро]",
+	"",
+	"✋ 👀 schloss",
+	"schloss (2)",
+	"",
+	"",
+	"",
+	"der [[See]]",
+	"die [[See]]",
+].join("\n");
 
 async function withGehen() {
 	const opened = await openStore();
@@ -93,6 +113,30 @@ describe("appendFreeform", () => {
 		expect(after).toContain(MEMO);
 	});
 
+	test("places text whose paragraphs stand several blank lines apart as it is, and finds it again", async () => {
+		const { store, vault } = await withGehen();
+		expect(
+			await run(
+				store.appendFreeform({
+					path: gehenReadingPath,
+					text: SPACED_MEMO,
+				}),
+			),
+		).toBe("Appended");
+		const after = vault.content(gehenReadingPath) ?? "";
+		expect(freeformOfNote(after, "reading")).toEqual([SPACED_MEMO]);
+		expect(
+			await run(
+				store.appendFreeform({
+					path: gehenReadingPath,
+					text: SPACED_MEMO.replace(/\n{3,}/gu, "\n\n"),
+				}),
+			),
+		).toBe("AlreadyThere");
+		expect(vault.content(gehenReadingPath)).toBe(after);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
 	test("refuses a path the store holds no note at, and writes nothing", async () => {
 		const { store, vault } = await withGehen();
 		const batches = vault.batches.length;
@@ -115,5 +159,24 @@ describe("rescan", () => {
 		vault.silentWrite(gehenPath, content);
 		await run(store.rescan);
 		expect((await run(store.lemmaNote(gehen)))?.path).toBe(gehenPath);
+	});
+});
+
+describe("freeformPlacementProblem", () => {
+	test("passes text that round-trips through a note, blank lines, links and brackets included", () => {
+		expect(freeformPlacementProblem(SPACED_MEMO)).toBeUndefined();
+		expect(freeformPlacementProblem(MEMO)).toBeUndefined();
+	});
+
+	test("names what keeps a text from round-tripping", () => {
+		expect(freeformPlacementProblem(" \n\n")).toBe("the text is empty");
+		expect(freeformPlacementProblem(PLACEHOLDER)).toBe(
+			"the text would not read back whole from the note",
+		);
+		expect(
+			freeformPlacementProblem(
+				'<section id="textfresser_meta_keep_me_invisible">\n{}\n</section>',
+			),
+		).toBe("the text would not read back whole from the note");
 	});
 });
