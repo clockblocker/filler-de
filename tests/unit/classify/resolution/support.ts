@@ -260,6 +260,8 @@ export async function resolutionHarness(options: {
 	readonly vault?: FakeVault;
 	/** Wraps the store the resolver commits through, to inject races. */
 	readonly wrapStore?: (store: DumdictVaultStore) => ResolutionStore;
+	/** Whether Knowledge production asks for the Lemma Paradigm. */
+	readonly produceParadigm?: boolean;
 }) {
 	const vault = options.vault ?? new FakeVault();
 	const store = await run(makeDumdictVaultStore({ vault }));
@@ -274,6 +276,9 @@ export async function resolutionHarness(options: {
 					dumgen: options.dumgen,
 					store: resolverStore,
 					translationLanguages: ["en"],
+					...(options.produceParadigm === undefined
+						? {}
+						: { produceParadigm: options.produceParadigm }),
 				},
 				job,
 			),

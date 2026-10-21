@@ -113,6 +113,8 @@ const toyPack: InflectionPack<"de", string, string> = {
 };
 
 const inflection = inflectionFromPack(toyPack);
+/** A table form spelled as its Lemma links the Lemma note. */
+const MUTTER = "[[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter|Mutter]]";
 const link = linkRenderer(defaultResolve, DEFAULT_PATHS);
 const tablesOf = (
 	records: LemmaRecords<"de">,
@@ -141,18 +143,18 @@ describe("one table per Licence Group", () => {
 		if (!mother || !nut) throw new Error("two tables");
 		expect(tableBlock(body, mother.blockId)).toEqual([
 			"👩",
-			"Nom: Mutter, Mütter",
-			"Acc: Mutter, Mütter",
-			"Dat: Mutter, Müttern",
-			"Gen: Mutter, Mütter",
+			`Nom: ${MUTTER}, Mütter`,
+			`Acc: ${MUTTER}, Mütter`,
+			`Dat: ${MUTTER}, Müttern`,
+			`Gen: ${MUTTER}, Mütter`,
 			`^${mother.blockId}`,
 		]);
 		expect(tableBlock(body, nut.blockId)).toEqual([
 			"🔩",
-			"Nom: Mutter, Muttern",
-			"Acc: Mutter, Muttern",
-			"Dat: Mutter, Muttern",
-			"Gen: Mutter, Muttern",
+			`Nom: ${MUTTER}, Muttern`,
+			`Acc: ${MUTTER}, Muttern`,
+			`Dat: ${MUTTER}, Muttern`,
+			`Gen: ${MUTTER}, Muttern`,
 			`^${nut.blockId}`,
 		]);
 	});
@@ -174,9 +176,9 @@ describe("one table per Licence Group", () => {
 		const { melken } = licenceFixtures;
 		expect(tablesOf(melken).map(({ blockId }) => blockId)).toEqual(["t"]);
 		const body = renderLemmaNote(melken, { inflection });
+		// One panel: its rows, without a caption.
 		expect(tableBlock(body, "t")).toEqual([
 			"🐄 💰",
-			"Präteritum",
 			"3: melkte / molk",
 			"^t",
 		]);
@@ -204,7 +206,7 @@ describe("one table per Licence Group", () => {
 				(r) => readingIdentityKey(r) === readingIdentityKey(sendenMail),
 			),
 		);
-		expect(mail?.lines).toEqual(["Präteritum", "3: sandte / sendete"]);
+		expect(mail?.lines).toEqual(["3: sandte / sendete"]);
 	});
 
 	it("keeps each table's Block ID whatever order the records list things in", () => {
@@ -260,14 +262,14 @@ describe("one table per Licence Group", () => {
 	});
 });
 
-describe("the Surfaces encountered so far", () => {
+describe("the Surfaces met so far", () => {
 	it("lists every owned Surface with its Surface Axes and its ^s- anchor", () => {
 		const body = renderLemmaNote(nounData, { inflection });
 		const ids = surfaceBlockIds(nounData.ownedSurfaceEntries);
 		const [surface] = nounData.ownedSurfaceEntries;
 		if (!surface) throw new Error("fixture");
 		expect(body).toContain(
-			`<span class="note_block_title note_block_title_surfaces">Surfaces encountered so far</span>\n- Mütter: Nom.Plur ^${ids.get(surface.id)}`,
+			`<span class="note_block_title note_block_title_surfaces">Begegnete Formen</span>\n- Mütter: Nom.Plur ^${ids.get(surface.id)}`,
 		);
 		expect(ids.get(surface.id)).toBe(
 			`s-${sha256Hex(surface.id).slice(0, 8)}`,

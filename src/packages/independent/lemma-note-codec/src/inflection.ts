@@ -2,12 +2,14 @@ import {
 	type InflectionPack,
 	type LemmaTablesView,
 	projectLemmaTables,
-	type TableGroupView,
+	type SurfaceAxes,
 } from "dumdict/inflection";
 import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
 import { tableBlockIds } from "./block-ids";
 import type { LinkRenderer } from "./links";
+import { emojiOf } from "./render/common";
+import { drawTable, type TableDrawer } from "./render/table";
 import type { LemmaRecords, SurfaceId } from "./types";
 
 /**
@@ -15,8 +17,7 @@ import type { LemmaRecords, SurfaceId } from "./types";
  * Licence Group, and each Reading note embeds its group's. The codec only
  * lays tables out: an {@link InflectionHook} renders them, normally from
  * `dumdict/inflection`'s `projectLemmaTables` and a language's Inflection
- * Pack ({@link inflectionFromPack}). Until the German pack lands (#120),
- * the plugin's hook wraps its own German projections.
+ * Pack ({@link inflectionFromPack}).
  */
 
 /** One Licence Group's table, as a hook renders it. */
@@ -37,6 +38,8 @@ export type RenderedTable<L extends Dumling.Language> = {
 export type RenderedSurfaceAxes<L extends Dumling.Language> = {
 	readonly surfaceId: SurfaceId<L>;
 	readonly axes: string;
+	/** Marks after the axes, such as a Licence Conflict's `⚠ 🪑 → 🏦`. */
+	readonly marks?: readonly string[];
 };
 
 export type RenderedInflection<L extends Dumling.Language> = {
@@ -64,6 +67,7 @@ export type LemmaTable<L extends Dumling.Language> = RenderedTable<L> & {
 
 export type LemmaTables<L extends Dumling.Language> = {
 	readonly tables: readonly LemmaTable<L>[];
+	/** Each met Surface's line after its form, by Surface id: its axes, then its marks. */
 	readonly surfaceAxes: ReadonlyMap<string, string>;
 };
 
@@ -83,9 +87,12 @@ export function lemmaTables<L extends Dumling.Language>(
 	);
 	return {
 		surfaceAxes: new Map(
-			(rendered.surfaces ?? []).map(({ axes, surfaceId }) => [
+			(rendered.surfaces ?? []).map(({ axes, marks = [], surfaceId }) => [
 				surfaceId as string,
-				axes,
+				[axes, ...marks]
+					.map((part) => part.trim())
+					.filter((part) => part.length > 0)
+					.join(" "),
 			]),
 		),
 		tables: rendered.tables
@@ -108,66 +115,90 @@ export function tableOfReading<L extends Dumling.Language>(
 	);
 }
 
-/** How {@link inflectionFromPack} draws one group's core panels. */
-export type TableDrawer<L extends Dumling.Language, F> = (
-	group: TableGroupView<L, F>,
-	pack: InflectionPack<L, F, string>,
+/**
+ * Marks for the Surfaces whose occurrences are Licence Conflicts: a form
+ * met under a Reading whose Licence doesn't take it (`Banken` under 🪑).
+ * Each gets one `⚠ <Reading> → <groups it fits>` per Reading, by emoji. A
+ * conflict is never written into a table; this is where it shows.
+ */
+function conflictMarks<L extends Dumling.Language, F>(
 	view: LemmaTablesView<L, F>,
-) => readonly string[];
+	records: LemmaRecords<L>,
+): ReadonlyMap<string, readonly string[]> {
+	const readings = new Map(
+		records.readingEntries.map(({ reading }) => [
+			readingIdentityKey(reading) as string,
+			reading,
+		]),
+	);
+	const shown = (reading: Dumling.Reading<L> | undefined) =>
+		reading === undefined
+			? "?"
+			: (emojiOf(reading) ?? reading.lemma.canonicalForm);
+	const groups = new Map(
+		view.groups.map((group) => [
+			group.selectionKey,
+			group.readings.map(shown).join(" "),
+		]),
+	);
+	const marks = new Map<string, string[]>();
+	const seen = new Set<string>();
+	for (const conflict of view.conflicts) {
+		const key = JSON.stringify([conflict.surfaceId, conflict.reading]);
+		if (seen.has(key)) continue;
+		seen.add(key);
+		const fits = conflict.fitsGroups
+			.map((selectionKey) => groups.get(selectionKey) ?? "?")
+			.join(", ");
+		const list = marks.get(conflict.surfaceId) ?? [];
+		list.push(`⚠ ${shown(readings.get(conflict.reading))} → ${fits}`);
+		marks.set(conflict.surfaceId, list);
+	}
+	return marks;
+}
 
 /**
- * A plain, language-blind drawing of a group's core panels: per panel its
- * label, then one line per row, `<row label>: <cells>`, the cells' forms
- * through the pack's `display` with ` / ` between a cell's forms and `—`
- * for a cell without one. #120 replaces it with the dictionary's tables.
+ * A met Surface's axes through the pack's `labels.bundle`: the bundles of
+ * the cells it Covers, `, ` between them, or of the cells it may be OneOf,
+ * ` / ` between them, then its bundles that fit no cell.
  */
-export function drawPanels<L extends Dumling.Language, F>(
-	group: TableGroupView<L, F>,
+function axesOf<L extends Dumling.Language, F>(
+	axes: SurfaceAxes,
 	pack: InflectionPack<L, F, string>,
-): readonly string[] {
-	const shown = (form: F) =>
-		pack
-			.display(form)
-			.map((run) => run.text)
-			.join("");
-	return group.panels.flatMap((panel) => {
-		const rows = panel.rows.map((row, index) => {
-			const cells = (panel.cells[index] ?? []).map((cell) =>
-				cell.forms.length === 0
-					? "—"
-					: cell.forms.map(({ form }) => shown(form)).join(" / "),
-			);
-			return `${pack.labels.axis(row)}: ${cells.join(", ")}`;
-		});
-		const label = pack.labels.panel(panel.id).trim();
-		return label.length === 0 ? rows : [label, ...rows];
-	});
+): string {
+	const labels = axes.bundles
+		.map((bundle) => pack.labels.bundle(bundle).trim())
+		.filter((label) => label.length > 0);
+	return labels.join(axes.placement.kind === "OneOf" ? " / " : ", ");
 }
 
 /**
  * An {@link InflectionHook} from a language's Inflection Pack: the Lemma's
  * view from `projectLemmaTables`, one table per Licence Group drawn by
- * `draw`, and each met Surface's axes through the pack's `labels.bundle`.
+ * `draw` ({@link drawTable}, the dictionary's line style, by default),
+ * each met Surface's Surface Axes through the pack's `labels.bundle`, and
+ * a mark on each Surface met as a Licence Conflict.
  */
 export function inflectionFromPack<L extends Dumling.Language, F>(
 	pack: InflectionPack<L, F, string>,
-	draw: TableDrawer<L, F> = drawPanels,
+	draw: TableDrawer<L, F> = drawTable,
 ): InflectionHook<L> {
-	return ({ records }) => {
+	return ({ link, records }) => {
 		const view = projectLemmaTables(pack, {
 			lemmaRecord: records.lemmaRecord,
 			ownedSurfaceEntries: records.ownedSurfaceEntries,
 			readingEntries: records.readingEntries,
 		});
+		const marks = conflictMarks(view, records);
+		const { lemma } = records.lemmaRecord;
 		return {
 			surfaces: view.surfaces.map((line) => ({
-				axes: line.axes.bundles
-					.map((bundle) => pack.labels.bundle(bundle))
-					.join(", "),
+				axes: axesOf(line.axes, pack),
+				marks: marks.get(line.surfaceId) ?? [],
 				surfaceId: line.surfaceId,
 			})),
 			tables: view.groups.map((group) => ({
-				lines: draw(group, pack, view),
+				lines: draw({ group, lemma, link, pack, view }),
 				readings: group.readings,
 				selectionKey: group.selectionKey,
 			})),

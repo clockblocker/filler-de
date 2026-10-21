@@ -1,4 +1,22 @@
-import { coreOf, type ProjectionInput } from "./context";
+import { readingIdentityKey } from "dumling";
+import type * as Dumling from "dumling/types";
+import { germanConjugationClass, licensed } from "dumrel";
+import type * as Dumrel from "dumrel/types";
+
+/**
+ * A Reading's Tags (spec: Tags), the one projection the plugin derives
+ * itself: Tags are Obsidian's, not the batteries'. Inflection tables come
+ * from the batteries' Inflection Packs (#120).
+ */
+
+/** What a Reading's Tags read: its Lemma and what its own Licences give it. */
+export type TagInput = {
+	readonly lemma: Dumling.Lemma;
+	/** The conjugation class of each Präteritum variant the Reading licenses. */
+	readonly conjugationClasses?: readonly Dumrel.ConjugationClass[];
+	/** The plural marker the Reading licenses instead of a plural form. */
+	readonly pluralMarker?: "NoPlural" | "PluralOnly";
+};
 
 const KIND_SLUGS: Readonly<Record<string, string>> = {
 	ADJ: "adjective",
@@ -65,7 +83,7 @@ function slug(text: string): string {
 }
 
 /** `noun`, or `locution/noun` for a Family other than Lexeme. */
-function routeTag(input: ProjectionInput): string {
+function routeTag(input: TagInput): string {
 	const { family, kind } = input.lemma;
 	const kindSlug = KIND_SLUGS[kind] ?? slug(kind);
 	return family === "Lexeme" ? kindSlug : `${slug(family)}/${kindSlug}`;
@@ -88,21 +106,68 @@ function featureParts(feature: string, value: unknown): string[] {
 /**
  * A Reading's Tags, without `#`: its route, one nested tag per Core Feature
  * value (`noun/masculine`, `verb/separable`, `verb/reflexive-acc`), and
- * the inflection class its principal parts give (`verb/weak`,
- * `noun/plural-only`). The old `common` and `compound` tags have no dumling
- * feature and are gone. A Reading with nothing to add gets its route alone.
+ * the inflection class its Licences give (`verb/weak`, `noun/plural-only`).
+ * The old `common` and `compound` tags have no dumling feature and are
+ * gone. A Reading with nothing to add gets its route alone.
  */
-export function deriveTags(input: ProjectionInput): readonly string[] {
+export function deriveTags(input: TagInput): readonly string[] {
 	const route = routeTag(input);
-	const core = coreOf(input.lemma);
+	const core: Readonly<Record<string, unknown>> = input.lemma.coreFeatures;
 	const parts = Object.keys(core)
 		.sort()
 		.flatMap((feature) => featureParts(feature, core[feature]));
-	const knowledge = input.principalParts;
-	for (const value of knowledge?.conjugationClass ?? [])
+	for (const value of input.conjugationClasses ?? [])
 		parts.push(CLASS_SLUGS[value] ?? slug(value));
-	if (knowledge?.plural === "NoPlural") parts.push("singular-only");
-	if (knowledge?.plural === "PluralOnly") parts.push("plural-only");
+	if (input.pluralMarker === "NoPlural") parts.push("singular-only");
+	if (input.pluralMarker === "PluralOnly") parts.push("plural-only");
 	const tags = [...new Set(parts)].map((part) => `${route}/${part}`);
 	return tags.length === 0 ? [route] : tags;
+}
+
+/** The values of the variants a Reading licenses in one dimension, in variant order. */
+function licensedValues(
+	paradigm: Dumrel.LemmaParadigm | undefined,
+	dimension: Dumrel.DimensionId,
+	reading: Dumling.Reading,
+): string[] {
+	if (paradigm === undefined) return [];
+	const taken = new Set(
+		licensed(paradigm, dimension, readingIdentityKey(reading)),
+	);
+	return (paradigm.dimensions[dimension]?.variants ?? [])
+		.filter(({ id }) => taken.has(id))
+		.map(({ value }) => value);
+}
+
+/**
+ * The Lemma note codec's `tags` hook: one Reading's Tags, from its Lemma
+ * and the Paradigm Variants its own Licences take. Each Präteritum variant
+ * gives its conjugation class (`fuhr`: Strong), and a licensed `NoPlural`
+ * or `PluralOnly` its plural class.
+ */
+export function readingTags(context: {
+	readonly records: {
+		readonly lemmaRecord: {
+			readonly lemma: Dumling.Lemma;
+			readonly paradigm?: Dumrel.LemmaParadigm;
+		};
+	};
+	readonly entry: { readonly reading: Dumling.Reading };
+}): readonly string[] {
+	const { lemma, paradigm } = context.records.lemmaRecord;
+	const { reading } = context.entry;
+	const marker = licensedValues(paradigm, "plural", reading).find(
+		(value) => value === "NoPlural" || value === "PluralOnly",
+	);
+	return deriveTags({
+		conjugationClasses: [
+			...new Set(
+				licensedValues(paradigm, "preterite", reading).map((form) =>
+					germanConjugationClass(lemma.canonicalForm, form),
+				),
+			),
+		],
+		lemma,
+		...(marker === undefined ? {} : { pluralMarker: marker }),
+	});
 }

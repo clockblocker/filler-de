@@ -12,7 +12,11 @@
  */
 import { routeOf } from "dumling";
 import type * as Dumling from "dumling/types";
-import { directSemanticRelationValues, selectKnowledge } from "dumrel";
+import {
+	directSemanticRelationValues,
+	paradigmDimensions,
+	selectKnowledge,
+} from "dumrel";
 import type * as Dumrel from "dumrel/types";
 import { Predicate } from "effect";
 import type { KnowledgeOrigin } from "./knowledge-types";
@@ -125,10 +129,52 @@ export function knowledgeRequestFor(input: {
 /**
  * Aspects a later occurrence asks again when they failed or never came.
  * The principal parts that a New occurrence alone asked moved from Reading
- * Knowledge into the Lemma Paradigm (texteater#1226). TODO(#113): request
- * its Paradigm Changes once the store keeps Lemma Paradigms.
+ * Knowledge into the Lemma Paradigm (texteater#1226); see
+ * {@link paradigmRequestFor}.
  */
 export const RETRIED_ASPECTS: ReadonlySet<string> = BASE_TEXT_ASPECTS;
+
+/**
+ * Whether Classify asks `knowledge.produce` for the Lemma Paradigm
+ * (texteater#1230). TODO(#113): turn it on once the store keeps Lemma
+ * Paradigms, and publish `paradigmChanges` with the rest: until then the
+ * store refuses every Paradigm Change, so the forms would be paid for and
+ * dropped.
+ */
+export const PRODUCE_LEMMA_PARADIGM = false;
+
+/** `knowledge.produce`'s `paradigm` input (texteater#1230). */
+export type ParadigmRequest = {
+	readonly dimensions: readonly Dumrel.DimensionId[];
+	readonly stored?: Dumrel.LemmaParadigm;
+	readonly readings?: readonly Dumling.Reading<"de">[];
+};
+
+/**
+ * The Lemma Paradigm one occurrence asks for: every Variation Dimension the
+ * route's Paradigm Policy names, with the Lemma's stored Paradigm and its
+ * other Readings, so dumgen writes a first Reading's forms and has a later
+ * Reading's licences judged against the stored variants. As with the
+ * structural aspects, only the occurrence that created the Reading (`New`)
+ * asks; a route with no dimensions asks nothing.
+ */
+export function paradigmRequestFor(input: {
+	readonly reading: Dumling.Reading<"de">;
+	readonly origin: KnowledgeOrigin;
+	/** The Lemma's stored Paradigm, if it has one. */
+	readonly stored?: Dumrel.LemmaParadigm;
+	/** The Lemma's stored Readings; this one may be among them. */
+	readonly readings: readonly Dumling.Reading<"de">[];
+}): ParadigmRequest | undefined {
+	if (input.origin !== "New") return undefined;
+	const dimensions = paradigmDimensions(input.reading.lemma);
+	if (dimensions.length === 0) return undefined;
+	return {
+		dimensions,
+		readings: input.readings,
+		...(input.stored === undefined ? {} : { stored: input.stored }),
+	};
+}
 
 /** Whether a request asks for nothing, so no model call is needed. */
 export const isEmptyRequest = (request: Dumrel.KnowledgeRequestMask) =>

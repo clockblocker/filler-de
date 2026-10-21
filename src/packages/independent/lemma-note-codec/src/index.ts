@@ -35,7 +35,6 @@ export {
 } from "./boundary";
 export { sha256Hex } from "./hash";
 export {
-	drawPanels,
 	type InflectionHook,
 	type InflectionInput,
 	inflectionFromPack,
@@ -45,7 +44,6 @@ export {
 	type RenderedInflection,
 	type RenderedSurfaceAxes,
 	type RenderedTable,
-	type TableDrawer,
 	tableOfReading,
 } from "./inflection";
 export type {
@@ -171,6 +169,11 @@ export {
 	type SerializedNote,
 	type SerializeOptions,
 } from "./render/options";
+export {
+	drawTable,
+	type TableDrawContext,
+	type TableDrawer,
+} from "./render/table";
 export type {
 	CodecOptions,
 	LemmaNoteData,

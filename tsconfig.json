@@ -65,6 +65,9 @@
 				"./.texteater/battery/common-utils/src/validation-compiler.ts"
 			],
 			"dumcorpus": ["./.texteater/battery/dumcorpus/src/index.ts"],
+			"dumcorpus/inflection": [
+				"./.texteater/battery/dumcorpus/src/inflection.ts"
+			],
 			"dumcorpus/inventories": [
 				"./.texteater/battery/dumcorpus/src/inventories.ts"
 			],

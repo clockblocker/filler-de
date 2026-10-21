@@ -1,9 +1,66 @@
 import { describe, expect, it } from "bun:test";
 import type * as Dumling from "dumling/types";
-import { deriveTags } from "../src";
-import { input, lexeme, noun, verb } from "./fixtures";
+import { applyParadigmChanges, paradigmChangesFor } from "dumrel";
+import type * as Dumrel from "dumrel/types";
+import { deriveTags, readingTags, type TagInput } from "../src";
 
-describe("Tags from Core and Knowledge", () => {
+type De = "de";
+
+function noun(
+	canonicalForm: string,
+	gender: Dumling.Lemma<De, "Lexeme", "NOUN">["coreFeatures"]["gender"],
+): Dumling.Lemma<De, "Lexeme", "NOUN"> {
+	return {
+		canonicalForm,
+		coreFeatures: { gender },
+		family: "Lexeme",
+		kind: "NOUN",
+		language: "de",
+		unitKind: "Lemma",
+	};
+}
+
+function verb(
+	canonicalForm: string,
+	core: {
+		readonly hasSepPrefix?: string;
+		readonly lexicallyReflexive?: "Acc" | "Dat";
+	} = {},
+): Dumling.Lemma<De, "Lexeme", "VERB"> {
+	return {
+		canonicalForm,
+		coreFeatures: {
+			hasSepPrefix: core.hasSepPrefix ?? null,
+			lexicallyReflexive: core.lexicallyReflexive ?? null,
+		},
+		family: "Lexeme",
+		kind: "VERB",
+		language: "de",
+		unitKind: "Lemma",
+	};
+}
+
+function lexeme<K extends "ADJ" | "ADV" | "PROPN">(
+	kind: K,
+	canonicalForm: string,
+	coreFeatures: Dumling.Lemma<De, "Lexeme", K>["coreFeatures"],
+): Dumling.Lemma<De, "Lexeme", K> {
+	return {
+		canonicalForm,
+		coreFeatures,
+		family: "Lexeme",
+		kind,
+		language: "de",
+		unitKind: "Lemma",
+	} as Dumling.Lemma<De, "Lexeme", K>;
+}
+
+const input = (
+	lemma: Dumling.Lemma,
+	rest: Omit<TagInput, "lemma"> = {},
+): TagInput => ({ lemma, ...rest });
+
+describe("Tags from Core and Licences", () => {
 	it("a noun's gender", () => {
 		expect(deriveTags(input(noun("Tag", "Masc")))).toEqual([
 			"noun/masculine",
@@ -21,10 +78,14 @@ describe("Tags from Core and Knowledge", () => {
 
 	it("a noun's stored plural class", () => {
 		expect(
-			deriveTags(input(noun("Leute", null), { plural: "PluralOnly" })),
+			deriveTags(
+				input(noun("Leute", null), { pluralMarker: "PluralOnly" }),
+			),
 		).toEqual(["noun/plural-only"]);
 		expect(
-			deriveTags(input(noun("Schnee", "Masc"), { plural: "NoPlural" })),
+			deriveTags(
+				input(noun("Schnee", "Masc"), { pluralMarker: "NoPlural" }),
+			),
 		).toEqual(["noun/masculine", "noun/singular-only"]);
 	});
 
@@ -52,7 +113,7 @@ describe("Tags from Core and Knowledge", () => {
 		expect(
 			deriveTags(
 				input(verb("aufpassen", { hasSepPrefix: "auf" }), {
-					conjugationClass: ["Weak"],
+					conjugationClasses: ["Weak"],
 				}),
 			),
 		).toEqual(["verb/separable", "verb/weak"]);
@@ -86,5 +147,103 @@ describe("Tags from Core and Knowledge", () => {
 			unitKind: "Lemma",
 		} as unknown as Dumling.Lemma;
 		expect(deriveTags(input(locution))).toEqual(["locution/verb"]);
+	});
+});
+
+const readingOf = (lemma: Dumling.Lemma<De>, emojiDescription: string) =>
+	({ emojiDescription, lemma, unitKind: "Reading" }) as Dumling.Reading<De>;
+
+function paradigmOf(
+	lemma: Dumling.Lemma<De>,
+	licences: readonly [Dumling.Reading<De>, Dumrel.DimensionId, string[]][],
+): Dumrel.LemmaParadigm {
+	const result = applyParadigmChanges({
+		changes: licences.flatMap(([reading, dimension, values]) =>
+			paradigmChangesFor({
+				dimension,
+				provenance: "Produced",
+				reading,
+				values,
+			}),
+		),
+		lemma,
+		paradigm: { dimensions: {} },
+		readings: [...new Set(licences.map(([reading]) => reading))],
+	});
+	if (!result.success) throw result.error;
+	return result.value;
+}
+
+const tagsOf = (
+	lemma: Dumling.Lemma<De>,
+	reading: Dumling.Reading<De>,
+	paradigm?: Dumrel.LemmaParadigm,
+) =>
+	readingTags({
+		entry: { reading },
+		records: { lemmaRecord: { lemma, ...(paradigm ? { paradigm } : {}) } },
+	});
+
+describe("the tags hook reads a Reading's own Licences in the Lemma Paradigm", () => {
+	it("tags the conjugation class each licensed Präteritum gives", () => {
+		const fahren = verb("fahren");
+		const car = readingOf(fahren, "🚗");
+		expect(
+			tagsOf(
+				fahren,
+				car,
+				paradigmOf(fahren, [[car, "preterite", ["fuhr"]]]),
+			),
+		).toEqual(["verb/strong"]);
+		const kaufen = verb("kaufen");
+		const buy = readingOf(kaufen, "🛒");
+		expect(
+			tagsOf(
+				kaufen,
+				buy,
+				paradigmOf(kaufen, [[buy, "preterite", ["kaufte"]]]),
+			),
+		).toEqual(["verb/weak"]);
+	});
+
+	it("tags both classes of a Free dimension, melken's molk / melkte", () => {
+		const melken = verb("melken");
+		const cow = readingOf(melken, "🐄");
+		expect(
+			tagsOf(
+				melken,
+				cow,
+				paradigmOf(melken, [[cow, "preterite", ["molk", "melkte"]]]),
+			),
+		).toEqual(["verb/weak", "verb/strong"]);
+	});
+
+	it("tags only what the Reading's own Licence takes", () => {
+		const senden = verb("senden");
+		const mail = readingOf(senden, "📨");
+		const broadcast = readingOf(senden, "📡");
+		const paradigm = paradigmOf(senden, [
+			[mail, "preterite", ["sandte"]],
+			[broadcast, "preterite", ["sendete"]],
+		]);
+		expect(tagsOf(senden, mail, paradigm)).toEqual(["verb/mixed"]);
+		expect(tagsOf(senden, broadcast, paradigm)).toEqual(["verb/weak"]);
+	});
+
+	it("tags a licensed plural marker", () => {
+		const geld = noun("Geld", "Neut");
+		const money = readingOf(geld, "💶");
+		expect(
+			tagsOf(
+				geld,
+				money,
+				paradigmOf(geld, [[money, "plural", ["NoPlural"]]]),
+			),
+		).toEqual(["noun/neuter", "noun/singular-only"]);
+	});
+
+	it("tags Core alone without a Paradigm", () => {
+		const tag = noun("Tag", "Masc");
+		expect(tagsOf(tag, readingOf(tag, "📅"))).toEqual(["noun/masculine"]);
 	});
 });

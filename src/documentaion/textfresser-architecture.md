@@ -45,7 +45,7 @@ Classify hands a `ClassifyPlan` of `UnitRef`s to the `UnitResolver` port. `dumge
 - dumling owns Lemma, Reading and Surface identity, and the `canonicalFormKey` that folds a spelling.
 - dumdict owns the records, Reading matching, change planning, and the projection of inflection tables (`dumdict/inflection`). The plugin's dumdict host is `@textfresser/dictionary`, over VAM.
 - dumrel owns Reading Knowledge and relation projections.
-- dumcorpus's language packs (`dumcorpus/inflection`) label inflection tables. The plugin only renders the tables; it holds no inflection rules of its own once #120 lands.
+- dumcorpus's language packs (`dumcorpus/inflection`) derive and label inflection tables. The plugin only draws the tables (the Lemma note codec's `drawTable`); it holds no inflection rules of its own.
 - `@textfresser/lemma-note-codec` reads and writes Lemma and Reading notes and spells every dictionary path, through `toNameSegment`. Dictionary data lives in the note-metadata facility, never in inline markers, and visible content is never parsed as data.
 - The plugin owns Crossroad notes, freeform text, and Block IDs.
 
@@ -72,4 +72,4 @@ The Librarian parses Library suffixes. Textfresser must not duplicate the separa
 | dumgen host and transports | `src/managers/dumgen/` |
 | Dictionary store | `src/packages/composed/dictionary/` |
 | Lemma note codec | `src/packages/independent/lemma-note-codec/` |
-| Projections (German inflection rules until #120, then tags only) | `src/packages/independent/lemma-note-projections/` |
+| Projections (tags only; tables come from `dumcorpus/inflection`) | `src/packages/independent/lemma-note-projections/` |

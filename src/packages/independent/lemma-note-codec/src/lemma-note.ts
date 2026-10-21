@@ -51,7 +51,7 @@ import type {
  * N: die Mutter, die Mütter                                   captioned with its emojis,
  * ^t-1a2b3c4d                                                 each one Obsidian block
  *
- * <span …surfaces>Surfaces encountered so far</span>
+ * <span …surfaces>Begegnete Formen</span>
  * - Mütter: Nom.Pl ^s-5e6f7a8b                                one list item per met Surface
  *
  * <freeform>
