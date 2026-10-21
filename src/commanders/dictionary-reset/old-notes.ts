@@ -20,14 +20,8 @@
  * before the first entry, lines after a section once two or more blank
  * lines have ended it, and non-embed lines in a Kontexte section.
  */
-import { CrossroadNoteMetadata } from "@textfresser/dictionary";
 import { Option, Schema } from "effect";
-import {
-	type AnyMetadataNamespace,
-	LemmaNoteMetadata,
-	noteMetadataHelper,
-	ReadingNoteMetadata,
-} from "../../stateless-helpers/note-metadata";
+import { dictionaryNoteKind } from "./layout";
 
 /** The metadata shape of one old entry. */
 export type OldMetaShape = "LexicalMeta" | "Entity" | "Unrecognized";
@@ -45,10 +39,16 @@ export type OldNoteKind =
 	/** Nothing but whitespace. */
 	| "Empty"
 	/**
-	 * A note a newer build wrote, not an old note: one in the marker format
-	 * (`%%tf-part:` or `%%tf:`), such as a Shadow note from before #109, or
-	 * one whose metadata holds dictionary data (#112). The reset reads
-	 * nothing from it, and Execute refuses to run while `Worter/` holds one.
+	 * A note in the obsolete marker format (`%%tf-part:` or `%%tf:`, ADR-0013),
+	 * such as the Lemma and Shadow notes the first reset wrote on 2026-10-21.
+	 * There is no compatibility with that data (#117): the reset reads
+	 * nothing from it, backs it up with the rest of `Worter/`, and runs.
+	 */
+	| "Obsolete"
+	/**
+	 * A note whose metadata holds dictionary data: a Lemma, Reading or
+	 * Crossroad note of the current layout (#112). The reset reads nothing
+	 * from it, and Execute refuses to run while `Worter/` holds one.
 	 */
 	| "NewFormat";
 
@@ -68,6 +68,12 @@ export type OldFreeformBlock = {
 	readonly text: string;
 	/** Its first line in the note, 1-based. */
 	readonly line: number;
+	/**
+	 * The sense emojis of the entry the text sits under, from its header and
+	 * its metadata (`🚗 🧑‍✈️ der [[Fahrer]]`): what finds the Reading the
+	 * text belongs to. Empty when the text belongs to no one entry.
+	 */
+	readonly emojis: readonly string[];
 };
 
 export type OldNote = {
@@ -107,6 +113,9 @@ const isBlank = (line: string) => line.trim() === "";
 
 const EmojiDescription = Schema.optionalKey(Schema.Array(Schema.String));
 
+/** Whether a token holds an emoji: a pictograph or a flag's letter. */
+const EMOJI = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u;
+
 const LexicalMetaEntry = Schema.Struct({
 	lexicalMeta: Schema.Struct({
 		emojiDescription: EmojiDescription,
@@ -134,28 +143,45 @@ const decodeEntity = Schema.decodeUnknownOption(EntityEntry);
 type MetaRead = {
 	readonly shapes: OldMetaShape[];
 	readonly lemmas: string[];
+	/** Each entry's `emojiDescription`, by entry ID. */
+	readonly emojis: ReadonlyMap<string, readonly string[]>;
 	readonly readable: boolean;
 };
 
 function readMeta(json: string): MetaRead {
 	const meta = decodeMeta(json);
-	if (Option.isNone(meta)) return { lemmas: [], readable: false, shapes: [] };
+	if (Option.isNone(meta))
+		return { emojis: new Map(), lemmas: [], readable: false, shapes: [] };
 	const shapes: OldMetaShape[] = [];
 	const lemmas: string[] = [];
-	for (const entry of Object.values(meta.value.entries)) {
+	const emojis = new Map<string, readonly string[]>();
+	for (const [id, entry] of Object.entries(meta.value.entries)) {
 		const entity = decodeEntity(entry);
 		if (Option.isSome(entity)) {
 			shapes.push("Entity");
 			lemmas.push(entity.value.entity.lemma);
+			emojis.set(id, entity.value.entity.emojiDescription ?? []);
 			continue;
 		}
-		shapes.push(
-			Option.isSome(decodeLexicalMeta(entry))
-				? "LexicalMeta"
-				: "Unrecognized",
-		);
+		const lexical = decodeLexicalMeta(entry);
+		shapes.push(Option.isSome(lexical) ? "LexicalMeta" : "Unrecognized");
+		if (Option.isSome(lexical))
+			emojis.set(id, lexical.value.lexicalMeta.emojiDescription ?? []);
 	}
-	return { lemmas, readable: true, shapes };
+	return { emojis, lemmas, readable: true, shapes };
+}
+
+/**
+ * The emojis a header line opens with, before its first word or link:
+ * `🚗 🧑‍✈️ der [[Fahrer]], … ^LX-LM-NOUN-1` has `🚗` and `🧑‍✈️`.
+ */
+function headerEmojis(line: string): string[] {
+	const emojis: string[] = [];
+	for (const token of line.replace(ENTRY_HEADER, "").trim().split(/\s+/u)) {
+		if (!EMOJI.test(token) || /[\p{L}\p{N}[]/u.test(token)) break;
+		emojis.push(token);
+	}
+	return emojis;
 }
 
 function basenameOf(path: string): string {
@@ -253,28 +279,17 @@ type State =
 	| "after"
 	| "meta";
 
-/** Whether a note's metadata, in either format, holds dictionary data. */
-function holdsDictionaryData(content: string): boolean {
-	const namespaces: readonly AnyMetadataNamespace[] = [
-		LemmaNoteMetadata,
-		ReadingNoteMetadata,
-		CrossroadNoteMetadata,
-	];
-	return namespaces.some(
-		(namespace) =>
-			noteMetadataHelper.inspect(content, namespace, "Hidden").kind !==
-			"Absent",
-	);
-}
-
 /** Reads one old note. It never fails; what it cannot place is freeform. */
 export function readOldNote(path: string, content: string): OldNote {
 	const lines = content.replace(/\r\n?/gu, "\n").split("\n");
 	const basename = basenameOf(path);
-	if (
-		lines.some((line) => /^%%tf(?:-part)?:/u.test(line)) ||
-		holdsDictionaryData(content)
-	)
+	const unread: OldNoteKind | undefined =
+		dictionaryNoteKind(content) !== undefined
+			? "NewFormat"
+			: lines.some((line) => /^%%tf(?:-part)?:/u.test(line))
+				? "Obsolete"
+				: undefined;
+	if (unread !== undefined)
 		return {
 			attestations: [],
 			basename,
@@ -283,18 +298,22 @@ export function readOldNote(path: string, content: string): OldNote {
 			freeform: [],
 			frontmatter: false,
 			headword: basename,
-			kind: "NewFormat",
+			kind: unread,
 			metaShapes: [],
 			path,
 			unreadableMeta: false,
 		};
 	const attestations: OldAttestation[] = [];
-	const freeform: OldFreeformBlock[] = [];
+	/** Each block with the index of the entry header it sits under, if any. */
+	const freeform: (Omit<OldFreeformBlock, "emojis"> & {
+		readonly entry: number | undefined;
+	})[] = [];
 	const entryIds: string[] = [];
 	const headers: {
 		readonly headword?: string;
 		readonly host: boolean;
 		readonly linked: boolean;
+		readonly emojis: readonly string[];
 	}[] = [];
 	const inflectedForms: string[] = [];
 	let sections = 0;
@@ -317,7 +336,11 @@ export function readOldNote(path: string, content: string): OldNote {
 		}
 		while (kept.length > 0 && isBlank(kept.at(-1) ?? "")) kept.pop();
 		if (kept.length > 0)
-			freeform.push({ line: start, text: kept.join("\n") });
+			freeform.push({
+				entry: headers.length > 0 ? headers.length - 1 : undefined,
+				line: start,
+				text: kept.join("\n"),
+			});
 		open = undefined;
 	};
 	const addFreeform = (line: string, number: number) => {
@@ -368,7 +391,12 @@ export function readOldNote(path: string, content: string): OldNote {
 			entryIds.push(header[1]);
 			const host = INFLECTION_HOST.test(line);
 			const { headword, linked } = headerHeadword(line);
-			headers.push({ host, linked, ...(headword ? { headword } : {}) });
+			headers.push({
+				emojis: headerEmojis(line),
+				host,
+				linked,
+				...(headword ? { headword } : {}),
+			});
 			state = "section";
 			sectionKind = HEADER;
 			sectionLines = 0;
@@ -449,6 +477,21 @@ export function readOldNote(path: string, content: string): OldNote {
 				: freeform.length > 0 || attestations.length > 0
 					? "FreeformOnly"
 					: "Empty";
+	// Text before the first entry belongs to the note's one entry, if it
+	// has only one; otherwise to no entry.
+	const entryOf = (index: number | undefined) =>
+		index ?? (headers.length === 1 ? 0 : undefined);
+	const emojisOf = (index: number | undefined): readonly string[] => {
+		if (index === undefined) return [];
+		const id = entryIds[index];
+		return [
+			...new Set([
+				...(headers[index]?.emojis ?? []),
+				...((id === undefined ? undefined : meta?.emojis.get(id)) ??
+					[]),
+			]),
+		];
+	};
 	return {
 		attestations,
 		basename,
@@ -460,7 +503,11 @@ export function readOldNote(path: string, content: string): OldNote {
 					.filter(Boolean),
 			),
 		],
-		freeform,
+		freeform: freeform.map(({ entry, line, text }) => ({
+			emojis: emojisOf(entryOf(entry)),
+			line,
+			text,
+		})),
 		frontmatter: skipped > 0,
 		headword,
 		kind,

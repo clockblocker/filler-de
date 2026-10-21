@@ -19,6 +19,8 @@ export type UnitResolution =
 			readonly ref: UnitRef;
 			/** The Reading note's vault path, which the unit's links now name. */
 			readonly readingPath: string;
+			/** The vault path of the Reading's Lemma note. */
+			readonly lemmaPath: string;
 			/** How many of the unit's occurrences now link to the Reading. */
 			readonly linked: number;
 	  }

@@ -134,6 +134,11 @@ describe("Collect", () => {
 		]);
 		const [trailing] = freeform["aufpassen.md"] ?? [];
 		expect(trailing?.line).toBe(34);
+		// The sense emojis of the entry the text sits under, from its header
+		// and its metadata: what finds its Reading note (#117).
+		expect(
+			noteAt(plan, "aufpassen.md").freeform.map(({ emojis }) => emojis),
+		).toEqual([["✋", "👀"]]);
 		expect(trailing?.text.startsWith("I [walked] in the park")).toBe(true);
 		expect(trailing?.text.trimEnd().endsWith("aufpassen")).toBe(true);
 		expect(trailing?.text).not.toContain("Flexion");
@@ -207,14 +212,66 @@ describe("readOldNote keeps what the old generator did not write", () => {
 		expect(note.headword).toBe("Gespenst");
 	});
 
-	it("reads nothing from a note in the new format", () => {
+	it("reads nothing from a note in the obsolete marker format", () => {
 		const note = readOldNote(
 			"Worter/de/Lexeme/NOUN/See.md",
 			"%%tf-part:lemma%%\n\nmy notes\n![[Scroll#^1|^]]\n",
 		);
-		expect(note.kind).toBe("NewFormat");
+		expect(note.kind).toBe("Obsolete");
 		expect(note.freeform).toEqual([]);
 		expect(note.attestations).toEqual([]);
+		expect(readOldNote("Worter/de/Shadow/Lexeme/NOUN/See.md", "%%tf:shadow%%\n").kind).toBe(
+			"Obsolete",
+		);
+	});
+
+	it("tells a note of the current layout by its dictionary metadata", () => {
+		const note = readOldNote(
+			"Worter/s/see/see/see.md",
+			[
+				"*Not classified yet*",
+				"",
+				'<section id="textfresser_meta_keep_me_invisible">',
+				'{"crossroadNote":{"schemaVersion":1,"key":"see","language":"de","rendering":[]}}',
+				"</section>",
+				"",
+			].join("\n"),
+		);
+		expect(note.kind).toBe("NewFormat");
+		expect(note.freeform).toEqual([]);
+	});
+
+	it("takes each entry's sense emojis for the text under it", () => {
+		const note = readOldNote(
+			"Worter/de/Bank.md",
+			[
+				"text before any entry",
+				"🪑 die [[Bank]] ^LX-LM-NOUN-1",
+				"",
+				'<span class="entry_section_title entry_section_title_translations">Übersetzung</span>',
+				"bench",
+				"",
+				"",
+				"I sat on it",
+				"---",
+				"🏦 die [[Bank]] ^LX-LM-NOUN-2",
+				"",
+				'<span class="entry_section_title entry_section_title_translations">Übersetzung</span>',
+				"bank",
+				"",
+				"",
+				"I keep money there",
+				"",
+				'<section id="textfresser_meta_keep_me_invisible">',
+				'{"entries":{"LX-LM-NOUN-2":{"lexicalMeta":{"emojiDescription":["🏦","💶"],"metaTag":"x"}}}}',
+				"</section>",
+			].join("\n"),
+		);
+		expect(note.freeform.map(({ emojis, text }) => [text, emojis])).toEqual([
+			["text before any entry", []],
+			["I sat on it", ["🪑"]],
+			["I keep money there", ["🏦", "💶"]],
+		]);
 	});
 });
 
@@ -271,10 +328,13 @@ describe("plan", () => {
 			path,
 		});
 		const plan = await run(
-			planReset(
-				sources,
-				collectOldNotes([note("Worter/a/Fahrer.md"), note("Worter/b/Fahrer.md")]),
-			),
+			planReset(sources, {
+				collected: collectOldNotes([
+					note("Worter/a/Fahrer.md"),
+					note("Worter/b/Fahrer.md"),
+				]),
+				source: "Worter",
+			}),
 		);
 		expect(plan.attestations.map(({ outcome }) => outcome._tag)).toEqual([
 			"Ready",
@@ -292,17 +352,40 @@ describe("plan", () => {
 			resolveLink: () => Effect.succeed("Worter/Atom.md"),
 		};
 		const plan = await run(
-			planReset(
-				sources,
-				collectOldNotes([
+			planReset(sources, {
+				collected: collectOldNotes([
 					{
 						content: "[[Atom]] ^LX-LM-NOUN-1\n\n![[Atom#^13|^]]\n",
 						path: "Worter/de/Atom.md",
 					},
 				]),
-			),
+				source: "Worter",
+			}),
 		);
 		expect(plan.attestations[0]?.outcome).toMatchObject({
+			_tag: "Unresolvable",
+			reason: expect.stringContaining("dictionary note"),
+		});
+		// Nor inside the backup folder the old notes come from.
+		const backup = "Worter backup 2026-10-21 05-43-21";
+		const fromBackup = await run(
+			planReset(
+				{
+					read: () => Effect.succeed("Das Atom. ^13\n"),
+					resolveLink: () => Effect.succeed(`${backup}/Atom.md`),
+				},
+				{
+					collected: collectOldNotes([
+						{
+							content: "[[Atom]] ^LX-LM-NOUN-1\n\n![[Atom#^13|^]]\n",
+							path: `${backup}/de/Atom.md`,
+						},
+					]),
+					source: backup,
+				},
+			),
+		);
+		expect(fromBackup.attestations[0]?.outcome).toMatchObject({
 			_tag: "Unresolvable",
 			reason: expect.stringContaining("dictionary note"),
 		});

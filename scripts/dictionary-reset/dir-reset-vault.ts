@@ -11,7 +11,7 @@ import { Effect } from "effect";
 import {
 	ResetFailed,
 	type ResetVault,
-} from "../../src/commanders/dictionary-reset/execute";
+} from "../../src/commanders/dictionary-reset/ports";
 
 function walk(root: string, folder: string): string[] {
 	return readdirSync(join(root, folder), { withFileTypes: true }).flatMap(
@@ -66,6 +66,11 @@ export function dirResetVault(root: string): ResetVault {
 					other: inside.filter((path) => !path.endsWith(".md")),
 				};
 			}),
+		listRootFolders: Effect.sync(() =>
+			readdirSync(root, { withFileTypes: true })
+				.filter((entry) => entry.isDirectory() && !entry.name.startsWith("."))
+				.map((entry) => entry.name),
+		),
 		moveFolder: (from, to) => refused(`move ${from} to ${to}`),
 		read: (path) =>
 			Effect.sync(() =>
