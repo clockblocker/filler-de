@@ -1,18 +1,11 @@
-import {
-	type NoteBlock,
-	type NotePart,
-	parseDocument,
-	serializeDocument,
-} from "@textfresser/lemma-note-codec";
+import { LemmaBundleMetadata, readBundle } from "./bundle";
+import { noteMetadataHelper } from "./internal/note-metadata";
 
-/** What placing freeform text into a Lemma note came to. */
+/** What placing freeform text into a Lemma bundle came to. */
 export type FreeformInsert =
 	| { readonly _tag: "Inserted"; readonly content: string }
 	| { readonly _tag: "AlreadyThere" }
 	| { readonly _tag: "Refused"; readonly reason: string };
-
-/** A line the codec would read as a Block or part marker. */
-const MARKER_LIKE = /^%%tf(?:-part)?:/u;
 
 /** Text without CRs, blank edge lines and trailing whitespace. */
 function normalizeFreeform(text: string): string {
@@ -27,7 +20,7 @@ function normalizeFreeform(text: string): string {
 /**
  * Whether `body` is whole paragraphs of `held`: all of it, or a run of it
  * between blank lines. Freeform text placed next to other freeform text
- * parses back as one Block, so a placement is found again this way, while a
+ * parses back as one run, so a placement is found again this way, while a
  * short text inside a longer paragraph is not mistaken for it.
  */
 function holdsParagraphs(held: string, body: string): boolean {
@@ -39,79 +32,15 @@ function holdsParagraphs(held: string, body: string): boolean {
 	);
 }
 
-const freeformTexts = (blocks: readonly NoteBlock[]) =>
-	blocks.flatMap((block) =>
-		block.type === "freeform" ? [normalizeFreeform(block.raw)] : [],
-	);
-
-/** The Blocks of a Reading part's Note section (codec spec: Layout). */
-const NOTE_KINDS: ReadonlySet<string> = new Set([
-	"notes_title",
-	"notes",
-	"notes_placeholder",
-]);
-
-const isNoteBlock = (block: NoteBlock) =>
-	(block.type === "projection" || block.type === "serialized") &&
-	NOTE_KINDS.has(block.kind);
-
-const isKeptBlock = (block: NoteBlock) =>
-	block.type === "freeform" || block.type === "unknown";
-
-const isPlaceholder = (block: NoteBlock) =>
-	block.type === "projection" && block.kind === "notes_placeholder";
-
-/** Bytes without the blank lines that end them, their last line ended. */
-const withoutTrailingBlankLines = (text: string) =>
-	text.replace(/\n(?:[ \t]*\r?\n)*$/u, "\n");
+const NOTE_BLOCKS: ReadonlySet<string> = new Set(["notes_title", "notes"]);
 
 /**
- * Places `body` in a Reading part's Note section, under its title, notes
- * and freeform, as `serialize` lays freeform out, and drops the Note
- * placeholder. Undefined for a part without a Note section.
- */
-function placeInNote(
-	parts: readonly NotePart[],
-	at: number,
-	preamble: readonly NoteBlock[],
-	body: string,
-): string | undefined {
-	const part = parts[at];
-	if (part === undefined) return undefined;
-	const { blocks } = part;
-	const last = blocks.findLastIndex(isNoteBlock);
-	if (last < 0) return undefined;
-	let end = last + 1;
-	while (end < blocks.length && isKeptBlock(blocks[end] as NoteBlock)) end++;
-	const above = blocks.slice(0, end).filter((block) => !isPlaceholder(block));
-	const below = blocks.slice(end);
-	const later = parts.slice(at + 1);
-
-	let before = withoutTrailingBlankLines(
-		serializeDocument({
-			parts: [...parts.slice(0, at), { ...part, blocks: above }],
-			preamble,
-		}),
-	);
-	if (!before.endsWith("\n")) before += "\n";
-	// Directly under a rendering, its seal ends it; text next to freeform
-	// needs a blank line to stay a paragraph of its own.
-	const lastAbove = above.at(-1);
-	const joiner =
-		lastAbove !== undefined && isKeptBlock(lastAbove) ? "\n" : "";
-	const after = `${below.map((block) => block.raw).join("")}${serializeDocument({ parts: later, preamble: [] })}`;
-	const gap = below.length > 0 ? "\n\n" : later.length > 0 ? "\n" : "";
-	return `${before}${joiner}${body}\n${gap}${after}`;
-}
-
-/**
- * Places `text` as one freeform Block in the part of the Reading whose
- * Block ID is `readingBlockId`: in its Note section, where `serialize` keeps
- * freeform, in place of the Note placeholder; at the end of a part without
- * one. With no such Reading it ends the Lemma part. Every other byte of the
- * note stays as it was, except blank lines around the text. Text that is
- * already a freeform Block of the note is not added twice, and text with a
- * line the codec would read as a marker is refused.
+ * TODO(#113): places `text` as freeform in the Reading part whose header
+ * carries `readingBlockId`: in place of its Note placeholder, or under its
+ * Note title, notes and freeform, where the codec keeps freeform. With no
+ * such Reading it ends the Lemma part. Only body lines change: the records
+ * and seals stay, so the bundle parses back to the same data. Text that is
+ * already freeform of the bundle is not added twice.
  */
 export function insertFreeformBlock(
 	content: string,
@@ -121,61 +50,99 @@ export function insertFreeformBlock(
 	const body = normalizeFreeform(text);
 	if (body.trim() === "")
 		return { _tag: "Refused", reason: "the text is empty" };
-	if (body.split("\n").some((line) => MARKER_LIKE.test(line.trimStart())))
-		return {
-			_tag: "Refused",
-			reason: "a line of it reads as a Lemma note Block marker",
-		};
-	const document = parseDocument(content);
-	const existing = [
-		...freeformTexts(document.preamble),
-		...document.parts.flatMap((part) => freeformTexts(part.blocks)),
-	];
-	if (existing.some((held) => holdsParagraphs(held, body)))
+	const read = readBundle(content);
+	if (!read.data.ok)
+		return { _tag: "Refused", reason: "the note holds no Lemma bundle" };
+	const held = read.segments.flatMap((segment) =>
+		segment.type === "freeform" ? [normalizeFreeform(segment.text)] : [],
+	);
+	if (held.some((paragraphs) => holdsParagraphs(paragraphs, body)))
 		return { _tag: "AlreadyThere" };
 
-	const { parts } = document;
-	let at =
-		readingBlockId === undefined
-			? -1
-			: parts.findIndex(
-					(part) =>
-						part.scope === "reading" &&
-						part.blockId === readingBlockId,
-				);
-	if (at < 0) at = parts.findIndex((part) => part.scope === "lemma");
-	if (at < 0)
-		return { _tag: "Refused", reason: "the note has no Lemma part" };
-	const placed = placeInNote(parts, at, document.preamble, body);
-	if (placed !== undefined) return { _tag: "Inserted", content: placed };
-
-	const before = serializeDocument({
-		parts: parts.slice(0, at + 1),
-		preamble: document.preamble,
-	});
-	const after = serializeDocument({
-		parts: parts.slice(at + 1),
-		preamble: [],
-	});
-	// A blank line before the text ends the Block above; one after it
-	// separates it from the next part's marker.
-	const separated = before.endsWith("\n\n")
-		? before
-		: before.endsWith("\n")
-			? `${before}\n`
-			: `${before}\n\n`;
+	const key = [...read.data.readingBlockIds].find(
+		([, id]) => id === readingBlockId,
+	)?.[0];
+	const owner = key === undefined ? 0 : read.readingKeys.indexOf(key) + 1;
+	const segments = read.segments.filter((segment) => segment.owner === owner);
+	const placeholder = segments.find(
+		(segment) =>
+			segment.type === "rendering" &&
+			segment.block === "notes_placeholder",
+	);
+	const lines = [...read.lines];
+	const added = body.split("\n");
+	let metadata = read.stored;
+	if (owner > 0 && placeholder?.type === "rendering" && metadata) {
+		lines.splice(
+			placeholder.start,
+			placeholder.end - placeholder.start,
+			...added,
+		);
+		// The placeholder is gone, so its seal goes too, as serialize writes it.
+		const { lemma, readings } = metadata.value;
+		let offset = lemma.rendering.length;
+		for (const part of readings.slice(0, owner - 1))
+			offset += part.rendering.length;
+		const local = placeholder.seal - offset;
+		metadata = {
+			...metadata,
+			value: {
+				lemma,
+				readings: readings.map((part, at) =>
+					at === owner - 1
+						? {
+								...part,
+								rendering: part.rendering.filter(
+									(_, position) => position !== local,
+								),
+							}
+						: part,
+				),
+			},
+		};
+	} else {
+		const anchor =
+			owner > 0
+				? segments.findLastIndex(
+						(segment) =>
+							segment.type === "rendering" &&
+							NOTE_BLOCKS.has(segment.block),
+					)
+				: segments.length - 1;
+		let last = segments[anchor];
+		for (let at = anchor + 1; owner > 0 && at < segments.length; at++) {
+			const next = segments[at];
+			if (next?.type !== "freeform") break;
+			last = next;
+		}
+		if (last === undefined)
+			return { _tag: "Refused", reason: "the part has no Note section" };
+		// Next to freeform, a blank line keeps the text a paragraph of its own;
+		// after the Lemma part's last line, blank lines set it apart.
+		const separated = last.type === "freeform" || owner === 0;
+		lines.splice(last.end, 0, ...(separated ? ["", ...added] : added));
+	}
+	const placed = `${lines.join("\n")}\n`;
+	const withBody = noteMetadataHelper.mapBody(() => placed)(content);
 	return {
 		_tag: "Inserted",
-		content: `${separated}${body}\n${after.length > 0 ? `\n${after}` : ""}`,
+		content:
+			metadata === undefined || metadata === read.stored
+				? withBody
+				: noteMetadataHelper.write(
+						LemmaBundleMetadata,
+						metadata.value,
+						metadata.format,
+					)(withBody),
 	};
 }
 
-/** Whether `text` stands in one of the note's freeform Blocks, as parsed back. */
+/** Whether `text` stands in one of the bundle's freeform runs, as parsed back. */
 export function holdsFreeformBlock(content: string, text: string): boolean {
 	const body = normalizeFreeform(text);
-	const document = parseDocument(content);
-	return [
-		...freeformTexts(document.preamble),
-		...document.parts.flatMap((part) => freeformTexts(part.blocks)),
-	].some((held) => holdsParagraphs(held, body));
+	return readBundle(content).segments.some(
+		(segment) =>
+			segment.type === "freeform" &&
+			holdsParagraphs(normalizeFreeform(segment.text), body),
+	);
 }

@@ -6,7 +6,7 @@ import { lemmaEntry, type NoteData, type PathEntry } from "./note-entry";
  * dumdict record schemas or the store's reading of a note change, so a
  * persisted cache from an older build misses instead of serving stale data.
  */
-const NOTE_CACHE_VERSION = "dictionary-note-cache/2";
+const NOTE_CACHE_VERSION = "dictionary-note-cache/3";
 
 /**
  * A cached read of one note, valid while the file's `mtime` and `size` are

@@ -1,10 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import {
-	legacyLemmaNotePath,
-	parse,
-	serialize,
-} from "@textfresser/lemma-note-codec";
+import { legacyLemmaNotePath } from "@textfresser/lemma-note-codec";
 import { createMemoryNoteCache, DictionaryPathOccupiedError } from "../src";
+import { readBundle, serializeBundle } from "../src/bundle";
 import { expectIndexMatchesFiles, run } from "./support/files";
 import {
 	contribute,
@@ -42,15 +39,20 @@ async function seededStore() {
 
 /** The note at `path` with its gehen Reading's notes replaced, as a hand edit would leave it. */
 function editedNotes(content: string, notes: string): string {
-	const { data, document } = parse(content, { language: "de" });
+	const { data } = readBundle(content);
 	if (!data.ok) throw new Error("Expected a valid note");
-	return serialize(document, {
-		...data.data,
-		readingEntries: data.data.readingEntries.map((entry) => ({
-			...entry,
-			notes,
-		})),
-	});
+	return serializeBundle(
+		content,
+		{
+			...data.data,
+			readingEntries: data.data.readingEntries.map((entry) => ({
+				...entry,
+				notes,
+			})),
+		},
+		{},
+		"Hidden",
+	);
 }
 
 const notesOf = async (store: Awaited<ReturnType<typeof openStore>>["store"]) =>
@@ -178,12 +180,17 @@ describe("keeping the index current", () => {
 
 	test("a hand-made note at an identity path joins the dictionary", async () => {
 		const { store, vault } = await seededStore();
-		const springenNote = serialize(undefined, {
-			lemmaRecord: { lemma: springen },
-			ownedSurfaceEntries: [],
-			pendingRelations: [],
-			readingEntries: [],
-		});
+		const springenNote = serializeBundle(
+			undefined,
+			{
+				lemmaRecord: { lemma: springen },
+				ownedSurfaceEntries: [],
+				pendingRelations: [],
+				readingEntries: [],
+			},
+			{},
+			"Hidden",
+		);
 		await vault.userWrite(legacyLemmaNotePath(springen).path, springenNote);
 		expect((await run(store.lemmaNote(springen)))?.path).toBe(
 			legacyLemmaNotePath(springen).path,

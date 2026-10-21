@@ -1,39 +1,102 @@
+/**
+ * `@textfresser/lemma-note-codec`: dictionary notes as Markdown (spec:
+ * `src/documentaion/specs/linguistic-note-codec-spec.md`).
+ *
+ * - **Lemma notes** and **Reading notes**: `parse*Note` reads a note's
+ *   records from its metadata and splits its body at the rendering
+ *   boundary; `serialize*Note` writes its body and the metadata to store;
+ *   `render*Note` writes the body alone.
+ * - **Metadata**: the namespace specs the plugin defines its note-metadata
+ *   namespaces from, and their schemas.
+ * - **Paths**: where each note lives (ADR-0015).
+ *
+ * It depends only on the batteries: no vault I/O, no lookup, no facility.
+ */
 export {
 	assignBlockIds,
 	BLOCK_ID_HASH_LENGTH,
-	type BlockIdTarget,
-	blockIdsOf,
-	type NoteBlockIds,
-	READING_BLOCK_ID_PREFIX,
-	readingBlockId,
+	SINGLE_TABLE_BLOCK_ID,
 	SURFACE_BLOCK_ID_PREFIX,
+	surfaceBlockIds,
+	TABLE_BLOCK_ID_PREFIX,
+	tableBlockIds,
 } from "./block-ids";
 export {
-	CANONICAL_BLOCK_ORDER,
-	type PartScope,
-	PROJECTION_BLOCK_KINDS,
-	type ProjectionBlockKind,
-	SERIALIZED_BLOCK_KINDS,
-	type SerializedBlockKind,
-	type TypedBlockKind,
-} from "./blocks";
-export { documentToData, type LemmaNoteDataResult } from "./data";
-export {
-	EMPTY_DOCUMENT,
-	type LemmaNoteDocument,
-	type NoteBlock,
-	type NotePart,
-	parseDocument,
-	serializeDocument,
-} from "./document";
+	type BodySegment,
+	BodyWriter,
+	freeformOf,
+	linesOf,
+	type RenderedBlock,
+	type RenderingSeal,
+	readBody,
+	renderingLines,
+	SEAL_HASH_LENGTH,
+	sealOf,
+} from "./boundary";
 export { sha256Hex } from "./hash";
+export {
+	drawPanels,
+	type InflectionHook,
+	type InflectionInput,
+	inflectionFromPack,
+	type LemmaTable,
+	type LemmaTables,
+	lemmaTables,
+	type RenderedInflection,
+	type RenderedSurfaceAxes,
+	type RenderedTable,
+	type TableDrawer,
+	tableOfReading,
+} from "./inflection";
 export type {
 	CodecIssue,
 	CodecIssueTag,
 	IssueLocation,
 	RecordName,
 } from "./issues";
-export { type LemmaNoteParse, parse } from "./parse";
+export {
+	type LemmaNoteBlockIds,
+	type LemmaNoteDataResult,
+	type LemmaNoteDocument,
+	type LemmaNoteParse,
+	type NoteSource,
+	parseLemmaNote,
+	renderLemmaNote,
+	serializeLemmaNote,
+} from "./lemma-note";
+export {
+	DEFAULT_PATHS,
+	defaultResolve,
+	type LinkNamed,
+	type LinkRenderer,
+	type LinkResolver,
+	type LinkRole,
+	type LinkSubject,
+	linkRenderer,
+	type NotePaths,
+	shadowOf,
+	wikilink,
+} from "./links";
+export {
+	type DataResult,
+	LEMMA_NOTE_METADATA,
+	type LemmaNoteMetadata,
+	LemmaNoteMetadataSchema,
+	lemmaNoteDataOf,
+	lemmaNoteMetadataOf,
+	type NoteMetadataSpec,
+	READING_NOTE_METADATA,
+	type ReadingNoteMetadata,
+	ReadingNoteMetadataSchema,
+	readingNoteDataOf,
+	readingNoteMetadataOf,
+} from "./metadata";
+export {
+	type LemmaNotePaths,
+	lemmaNoteOwner,
+	notePathsOf,
+	readingNoteOwner,
+} from "./note-paths";
 export {
 	BASENAME_KEPT,
 	BASENAME_LIMIT,
@@ -88,20 +151,30 @@ export {
 	type SlotEncoding,
 } from "./path/slot-table-de";
 export {
-	DEFAULT_LINKS,
-	type LinkRenderer,
-	type Projections,
-	type ReadingProjectionContext,
-	type SemanticRelationProjection,
-} from "./render";
+	NOTE_PLACEHOLDER,
+	parseReadingNote,
+	type ReadingNoteDocument,
+	type ReadingNoteParse,
+	renderReadingNote,
+	serializeReadingNote,
+} from "./reading-note";
 export {
-	LemmaNoteSerializeError,
+	DEFAULT_TITLES,
+	type SectionKind,
+	type SemanticRelationProjection,
+} from "./render/common";
+export {
+	NoteSerializeError,
+	type PreviousDocument,
+	type ReadingNoteContext,
+	type RenderOptions,
+	type SerializedNote,
 	type SerializeOptions,
-	serialize,
-} from "./serialize";
+} from "./render/options";
 export type {
 	CodecOptions,
 	LemmaNoteData,
-	PartialLemmaNoteData,
+	LemmaRecords,
+	ReadingNoteData,
 	SurfaceId,
 } from "./types";

@@ -1,19 +1,23 @@
-import { readingIdentityKey } from "dumling";
-import type * as Dumling from "dumling/types";
 import { sha256Hex } from "./hash";
-import type { LemmaNoteData, SurfaceId } from "./types";
+import type { SurfaceId } from "./types";
+
+/**
+ * Block IDs of a Lemma note (spec: Plugin-owned values). Links and embeds
+ * name them, so the hash and its length are part of the note format and
+ * must never change.
+ */
 
 /** Hex digits a Block ID starts with, and how many a collision adds. */
 export const BLOCK_ID_HASH_LENGTH = 8;
 const COLLISION_STEP = 4;
 const MAX_HASH_LENGTH = 64;
 
-export const READING_BLOCK_ID_PREFIX = "r-";
+/** A met Surface's line: `^s-<hash of its SurfaceId>`. */
 export const SURFACE_BLOCK_ID_PREFIX = "s-";
-
-export type BlockIdTarget =
-	| { readonly scope: "reading"; readonly key: string }
-	| { readonly scope: "surface"; readonly key: SurfaceId };
+/** The table of a Lemma with a single Licence Group. */
+export const SINGLE_TABLE_BLOCK_ID = "t";
+/** A table of a Lemma with several Licence Groups: `^t-<hash of its selectionKey>`. */
+export const TABLE_BLOCK_ID_PREFIX = "t-";
 
 /**
  * Assigns each distinct key `prefix` plus a prefix of its digest. IDs start
@@ -37,14 +41,12 @@ export function assignBlockIds(
 			const id = hash.slice(0, lengths.get(key));
 			byId.set(id, [...(byId.get(id) ?? []), key]);
 		}
-		const colliding = [...byId.values()].filter(
-			(group) => group.length > 1,
-		);
-		const growable = colliding
+		const growable = [...byId.values()]
+			.filter((group) => group.length > 1)
 			.flat()
 			.filter((key) => (lengths.get(key) ?? 0) < MAX_HASH_LENGTH);
 		if (growable.length === 0) break;
-		for (const key of growable) {
+		for (const key of growable)
 			lengths.set(
 				key,
 				Math.min(
@@ -52,7 +54,6 @@ export function assignBlockIds(
 					MAX_HASH_LENGTH,
 				),
 			);
-		}
 	}
 	return new Map(
 		[...digests].map(([key, hash]) => [
@@ -62,41 +63,50 @@ export function assignBlockIds(
 	);
 }
 
-/**
- * A Reading's Block ID as a link from another note writes it: the short
- * hash, without the lengthening a collision inside its own note would add.
- */
-export function readingBlockId(reading: Dumling.Reading): string {
-	return `${READING_BLOCK_ID_PREFIX}${sha256Hex(readingIdentityKey(reading)).slice(0, BLOCK_ID_HASH_LENGTH)}`;
+/** The Block ID of each owned Surface's line, by SurfaceId. */
+export function surfaceBlockIds(
+	surfaces: readonly { readonly id: SurfaceId }[],
+): Map<SurfaceId, string> {
+	return assignBlockIds(
+		SURFACE_BLOCK_ID_PREFIX,
+		surfaces.map(({ id }) => id),
+	) as Map<SurfaceId, string>;
 }
 
-/** Every Block ID of a note's data, with the reverse map. Never stored. */
-export type NoteBlockIds = {
-	readonly readings: ReadonlyMap<string, string>;
-	readonly surfaces: ReadonlyMap<SurfaceId, string>;
-	/** Block ID to the `readingIdentityKey` or `SurfaceId` it hashes. */
-	readonly targets: ReadonlyMap<string, BlockIdTarget>;
-};
+/**
+ * The Block ID of each Licence Group's table, by the group's `selectionKey`:
+ * `t` when the Lemma has a single group, otherwise `t-` and a hash of the
+ * key, stable while the group's Licences are. A licence change that splits
+ * or merges groups changes the IDs, and the store rewrites the embeds.
+ */
+export function tableBlockIds(
+	selectionKeys: readonly string[],
+): Map<string, string> {
+	const keys = [...new Set(selectionKeys)];
+	if (keys.length === 1)
+		return new Map([[keys[0] as string, SINGLE_TABLE_BLOCK_ID]]);
+	return assignBlockIds(TABLE_BLOCK_ID_PREFIX, keys);
+}
 
-/** Derives a note's Block IDs from its records (spec: Plugin-owned values). */
-export function blockIdsOf<L extends Dumling.Language>(
-	data: Pick<LemmaNoteData<L>, "readingEntries" | "ownedSurfaceEntries">,
-): NoteBlockIds {
-	const readings = assignBlockIds(
-		READING_BLOCK_ID_PREFIX,
-		data.readingEntries.map((entry) => readingIdentityKey(entry.reading)),
-	);
-	const surfaces = assignBlockIds(
-		SURFACE_BLOCK_ID_PREFIX,
-		data.ownedSurfaceEntries.map((entry) => entry.id),
-	) as Map<SurfaceId, string>;
-	const targets = new Map<string, BlockIdTarget>([
-		...[...readings].map(
-			([key, id]) => [id, { key, scope: "reading" }] as const,
-		),
-		...[...surfaces].map(
-			([key, id]) => [id, { key, scope: "surface" }] as const,
-		),
-	]);
-	return { readings, surfaces, targets };
+/** A codec-owned Block ID ending a line, with the whitespace before it. */
+const TRAILING_BLOCK_ID =
+	/(?:^|[ \t]+)\^(?:s-[0-9a-f]+|t(?:-[0-9a-f]+)?)[ \t]*$/u;
+
+/**
+ * Text without the codec-owned Block IDs that end any of its lines: an
+ * edited rendering that became freeform keeps every byte but those, so
+ * each ID stays once in the note, on the fresh rendering. A line that held
+ * only an ID goes.
+ */
+export function withoutBlockIds(text: string): string {
+	return text
+		.split("\n")
+		.flatMap((line) => {
+			const cr = line.endsWith("\r") ? "\r" : "";
+			const bare = cr ? line.slice(0, -1) : line;
+			if (!TRAILING_BLOCK_ID.test(bare)) return [line];
+			const kept = bare.replace(TRAILING_BLOCK_ID, "");
+			return kept.length === 0 ? [] : [`${kept}${cr}`];
+		})
+		.join("\n");
 }

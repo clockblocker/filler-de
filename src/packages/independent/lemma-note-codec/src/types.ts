@@ -11,21 +11,26 @@ export type SurfaceId<L extends Dumling.Language = Dumling.Language> =
 	SurfaceEntry<L>["id"];
 
 /**
- * A Lemma note's data layer: dumdict records only, each validated by its
- * `parseAs*` parser. Plugin-owned values live in the document layer.
+ * Every record of one Lemma: what its Lemma note and its Reading notes hold
+ * between them. Rendering either kind of note reads it, since a Lemma note
+ * links its Readings and a Reading note embeds its Licence Group's table.
  */
-export type LemmaNoteData<L extends Dumling.Language> = {
+export type LemmaRecords<L extends Dumling.Language> = {
 	readonly lemmaRecord: LemmaRecord<L>;
 	readonly readingEntries: readonly ReadingEntry<L>[];
 	readonly ownedSurfaceEntries: readonly SurfaceEntry<L>[];
 	readonly pendingRelations: readonly PendingSemanticRelationRecord<L>[];
 };
 
-/** The records of an invalid note that did validate. Never commit it. */
-export type PartialLemmaNoteData<L extends Dumling.Language> = {
-	readonly lemmaRecord: LemmaRecord<L> | undefined;
-	readonly readingEntries: readonly ReadingEntry<L>[];
+/** A Lemma note's data: its Lemma Record, with its Paradigm, and its owned Surfaces. */
+export type LemmaNoteData<L extends Dumling.Language> = {
+	readonly lemmaRecord: LemmaRecord<L>;
 	readonly ownedSurfaceEntries: readonly SurfaceEntry<L>[];
+};
+
+/** A Reading note's data: its Reading Entry and the pending relations it is the source of. */
+export type ReadingNoteData<L extends Dumling.Language> = {
+	readonly readingEntry: ReadingEntry<L>;
 	readonly pendingRelations: readonly PendingSemanticRelationRecord<L>[];
 };
 

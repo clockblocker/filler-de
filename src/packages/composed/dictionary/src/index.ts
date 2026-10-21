@@ -1,3 +1,4 @@
+export { LemmaBundleMetadata } from "./bundle";
 export {
 	type DictionaryCommitError,
 	DictionaryPathOccupiedError,

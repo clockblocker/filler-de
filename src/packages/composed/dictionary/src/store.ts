@@ -1,9 +1,4 @@
-import {
-	LemmaNoteSerializeError,
-	type Projections,
-	parse,
-	serialize,
-} from "@textfresser/lemma-note-codec";
+import { NoteSerializeError } from "@textfresser/lemma-note-codec";
 import {
 	type BulkMdModifyEvent,
 	type BulkVaultEvent,
@@ -37,6 +32,7 @@ import type {
 } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
 import { Effect, Semaphore } from "effect";
+import { type BundleRender, serializeBundle } from "./bundle";
 import { contentHash } from "./content-hash";
 import {
 	type DictionaryCommitError,
@@ -47,6 +43,7 @@ import {
 	DictionaryWriteError,
 } from "./errors";
 import { holdsFreeformBlock, insertFreeformBlock } from "./freeform";
+import type { MetadataFormat } from "./internal/note-metadata";
 import {
 	inverseRelationsReader,
 	showsOtherInverseRelations,
@@ -132,11 +129,16 @@ export type DumdictVaultStoreOptions = {
 	/** A `(path, mtime)` cache that lets startup skip unchanged notes. */
 	readonly cache?: DictionaryNoteCache;
 	/**
-	 * Projection Blocks the codec renders into every note the store writes.
-	 * The store fills the `inverse_relation` Block itself, from the claims
-	 * that target each note (#59).
+	 * Projections the codec renders into every note the store writes. The
+	 * store fills the `inverse_relation` Block itself, from the claims that
+	 * target each note (#59).
 	 */
-	readonly projections?: Omit<Projections<"de">, "inverseRelations">;
+	readonly projections?: Omit<BundleRender, "inverseRelations">;
+	/**
+	 * Where notes keep their metadata: the format "Hide metadata" selects.
+	 * Hidden when absent.
+	 */
+	readonly metadataFormat?: () => MetadataFormat;
 	/** Called after the index is built or changes, with the current diagnostics. */
 	readonly onDiagnostics?: (diagnostics: DictionaryDiagnostics) => void;
 };
@@ -304,6 +306,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	options: DumdictVaultStoreOptions,
 ): Effect.fn.Return<DumdictVaultStore, DictionaryScanError> {
 	const { vault, cache, projections } = options;
+	const metadataFormat = options.metadataFormat ?? (() => "Hidden" as const);
 	const lock = yield* Semaphore.make(1);
 	sessionCounter += 1;
 	const session = `${Date.now().toString(36)}${sessionCounter.toString(36)}`;
@@ -732,7 +735,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	 */
 	const planNoteWrite = Effect.fnUntraced(function* (
 		note: StagedNote,
-		noteProjections: Projections<"de">,
+		noteProjections: BundleRender,
 	): Effect.fn.Return<
 		PlannedWrite | { readonly _tag: "Stale"; readonly path: string },
 		| DictionaryPathOccupiedError
@@ -746,19 +749,18 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				catch: (cause) =>
 					new DictionaryRoundTripError({
 						message:
-							cause instanceof LemmaNoteSerializeError
+							cause instanceof NoteSerializeError
 								? `The note cannot hold these records: ${cause.message}`
 								: message(cause),
 						path,
 					}),
 				try: () => {
-					const document =
-						current === undefined
-							? undefined
-							: parse(current, { language: "de" }).document;
-					const content = serialize(document, data, {
-						projections: noteProjections,
-					});
+					const content = serializeBundle(
+						current,
+						data,
+						noteProjections,
+						metadataFormat(),
+					);
 					const entry = classifyNote(path, content);
 					if (
 						entry.kind !== "lemma" ||

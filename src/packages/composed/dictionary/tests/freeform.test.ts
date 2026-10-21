@@ -1,13 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import {
-	blockIdsOf,
-	legacyLemmaNotePath,
-	parse,
-	serialize,
-} from "@textfresser/lemma-note-codec";
+import { legacyLemmaNotePath } from "@textfresser/lemma-note-codec";
 import { readingIdentityKey } from "dumling";
 import { Effect } from "effect";
+import { readBundle, readingBlockIds, serializeBundle } from "../src/bundle";
 import { insertFreeformBlock } from "../src/freeform";
+import { noteMetadataHelper } from "../src/internal/note-metadata";
 import { expectIndexMatchesFiles, run } from "./support/files";
 import {
 	contribute,
@@ -50,24 +47,27 @@ describe("appendFreeform", () => {
 		);
 		expect(outcome).toBe("Appended");
 		const after = vault.content(gehenPath) ?? "";
-		// The text takes the Note placeholder's place, under the Note title.
+		// The text takes the Note placeholder's place, under the Note title;
+		// no other body line changes.
 		expect(before).toContain(PLACEHOLDER);
-		expect(after).toBe(
-			before.replace(
-				/%%tf:notes_placeholder@[^\n]*\n\*You can write here\*\n/u,
-				`${MEMO}\n`,
-			),
+		expect(noteMetadataHelper.body(after)).toBe(
+			noteMetadataHelper
+				.body(before)
+				.replace(
+					`${NOTE_TITLE}\n${PLACEHOLDER}\n`,
+					`${NOTE_TITLE}\n${MEMO}\n`,
+				),
 		);
-		const parsed = parse(after, { language: "de" });
+		const parsed = readBundle(after);
 		expect(parsed.data.ok).toBe(true);
-		const readingPart = parsed.document.parts.find(
-			(part) => part.blockId === blockId,
-		);
+		const owner =
+			parsed.readingKeys.indexOf(readingIdentityKey(gehenReading)) + 1;
 		expect(
-			readingPart?.blocks.some(
-				(block) =>
-					block.type === "freeform" &&
-					block.raw.includes("My own memo"),
+			parsed.segments.some(
+				(segment) =>
+					segment.owner === owner &&
+					segment.type === "freeform" &&
+					segment.text.includes("My own memo"),
 			),
 		).toBe(true);
 		await expectIndexMatchesFiles(store, vault);
@@ -100,7 +100,9 @@ describe("appendFreeform", () => {
 
 	test("reads an edit no event delivered before placing the text", async () => {
 		const { blockId, store, vault } = await withGehen();
-		const edited = `${vault.content(gehenPath)}\nTyped by hand.\n`;
+		const edited = noteMetadataHelper.mapBody(
+			(body) => `${body}\nTyped by hand.\n`,
+		)(vault.content(gehenPath) ?? "");
 		vault.silentWrite(gehenPath, edited);
 		await run(
 			store.appendFreeform({
@@ -126,78 +128,66 @@ describe("appendFreeform", () => {
 });
 
 describe("insertFreeformBlock", () => {
-	test("finds placed text again only as whole paragraphs", () => {
-		const note = "%%tf-part:lemma%%\n\nsay TODO here\n\nmemo\n";
-		expect(insertFreeformBlock(note, undefined, "memo")).toEqual({
-			_tag: "AlreadyThere",
-		});
-		expect(insertFreeformBlock(note, undefined, "TODO")._tag).toBe(
-			"Inserted",
-		);
-	});
-
-	test("ends the named Reading's part, before the next part's marker", () => {
-		const note =
-			"%%tf-part:lemma%%\n\n%%tf-part:reading r-1%%\n\n%%tf-part:reading r-2%%\n";
-		expect(insertFreeformBlock(note, "r-1", "memo")).toEqual({
-			_tag: "Inserted",
-			content:
-				"%%tf-part:lemma%%\n\n%%tf-part:reading r-1%%\n\nmemo\n\n%%tf-part:reading r-2%%\n",
-		});
-		expect(insertFreeformBlock(note, "r-9", "memo")).toEqual({
-			_tag: "Inserted",
-			content:
-				"%%tf-part:lemma%%\n\nmemo\n\n%%tf-part:reading r-1%%\n\n%%tf-part:reading r-2%%\n",
-		});
-	});
+	const data = {
+		lemmaRecord: { lemma: gehen },
+		ownedSurfaceEntries: [],
+		pendingRelations: [],
+		readingEntries: [
+			readingEntry(gehenReading, {
+				knowledge: { translations: { en: ["go"] } },
+			}),
+		],
+	};
+	const note = serializeBundle(undefined, data, {}, "Hidden");
+	const blockId =
+		readingBlockIds([gehenReading]).get(readingIdentityKey(gehenReading)) ??
+		"";
+	const TRANSLATION_TITLE =
+		'<span class="note_block_title note_block_title_translations">Übersetzung</span>';
 
 	test("places text under the Note title, before the sections below it", () => {
-		const data = {
-			lemmaRecord: { lemma: gehen },
-			ownedSurfaceEntries: [],
-			pendingRelations: [],
-			readingEntries: [
-				readingEntry(gehenReading, {
-					knowledge: { translations: { en: ["go"] } },
-				}),
-			],
-		};
-		const note = serialize(undefined, data);
-		const blockId =
-			blockIdsOf(data).readings.get(readingIdentityKey(gehenReading)) ??
-			"";
 		const placed = insertFreeformBlock(note, blockId, "memo");
 		if (placed._tag !== "Inserted") throw new Error(placed._tag);
-		expect(placed.content).toContain(
-			`${NOTE_TITLE}\nmemo\n\n\n%%tf:translation`,
-		);
-		expect(placed.content).not.toContain(PLACEHOLDER);
+		const body = noteMetadataHelper.body(placed.content);
+		expect(body).toContain(`${NOTE_TITLE}\nmemo\n\n\n${TRANSLATION_TITLE}`);
+		expect(body).not.toContain(PLACEHOLDER);
 		// It is what serialize writes for that freeform.
-		const parsed = parse(placed.content, { language: "de" });
-		if (!parsed.data.ok) throw new Error("invalid");
-		expect(serialize(parsed.document, parsed.data.data)).toBe(
+		expect(serializeBundle(placed.content, data, {}, "Hidden")).toBe(
 			placed.content,
 		);
 
 		// Further text goes under it, a paragraph of its own.
 		const more = insertFreeformBlock(placed.content, blockId, "more");
 		if (more._tag !== "Inserted") throw new Error(more._tag);
-		expect(more.content).toContain(
-			`${NOTE_TITLE}\nmemo\n\nmore\n\n\n%%tf:translation`,
+		expect(noteMetadataHelper.body(more.content)).toContain(
+			`${NOTE_TITLE}\nmemo\n\nmore\n\n\n${TRANSLATION_TITLE}`,
 		);
 		expect(insertFreeformBlock(more.content, blockId, "memo")).toEqual({
 			_tag: "AlreadyThere",
 		});
+		expect(insertFreeformBlock(more.content, blockId, "mem")._tag).toBe(
+			"Inserted",
+		);
 	});
 
-	test("refuses text with a line that reads as a Block marker", () => {
+	test("ends the Lemma part when no Reading has the Block ID", () => {
+		const placed = insertFreeformBlock(note, "r-00000000", "memo");
+		if (placed._tag !== "Inserted") throw new Error(placed._tag);
+		const parsed = readBundle(placed.content);
 		expect(
-			insertFreeformBlock(
-				"%%tf-part:lemma%%\n",
-				undefined,
-				"%%tf:notes%%\nsneaky",
-			),
-		).toMatchObject({ _tag: "Refused" });
+			parsed.segments.filter((segment) => segment.type === "freeform"),
+		).toMatchObject([{ owner: 0, text: "memo" }]);
+		expect(serializeBundle(placed.content, data, {}, "Hidden")).toBe(
+			placed.content,
+		);
+	});
+
+	test("refuses a note without a Lemma bundle", () => {
+		expect(
+			insertFreeformBlock("%%tf-part:lemma%%\n", undefined, "memo"),
+		).toMatchObject({
+			_tag: "Refused",
+		});
 	});
 });
 

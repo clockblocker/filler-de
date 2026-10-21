@@ -20,7 +20,14 @@
  * before the first entry, lines after a section once two or more blank
  * lines have ended it, and non-embed lines in a Kontexte section.
  */
+import { LemmaBundleMetadata } from "@textfresser/dictionary";
 import { Option, Schema } from "effect";
+import {
+	type AnyMetadataNamespace,
+	LemmaNoteMetadata,
+	noteMetadataHelper,
+	ReadingNoteMetadata,
+} from "../../stateless-helpers/note-metadata";
 
 /** The metadata shape of one old entry. */
 export type OldMetaShape = "LexicalMeta" | "Entity" | "Unrecognized";
@@ -38,10 +45,10 @@ export type OldNoteKind =
 	/** Nothing but whitespace. */
 	| "Empty"
 	/**
-	 * A note a newer build wrote (`%%tf-part:` or `%%tf:` markers), such as a
-	 * Lemma note or a Shadow note from before #109, not an old note. The
-	 * reset reads nothing from it, and Execute refuses to run while `Worter/`
-	 * holds one.
+	 * A note a newer build wrote, not an old note: one in the marker format
+	 * (`%%tf-part:` or `%%tf:`), such as a Shadow note from before #109, or
+	 * one whose metadata holds dictionary data (#112). The reset reads
+	 * nothing from it, and Execute refuses to run while `Worter/` holds one.
 	 */
 	| "NewFormat";
 
@@ -246,11 +253,28 @@ type State =
 	| "after"
 	| "meta";
 
+/** Whether a note's metadata, in either format, holds dictionary data. */
+function holdsDictionaryData(content: string): boolean {
+	const namespaces: readonly AnyMetadataNamespace[] = [
+		LemmaBundleMetadata,
+		LemmaNoteMetadata,
+		ReadingNoteMetadata,
+	];
+	return namespaces.some(
+		(namespace) =>
+			noteMetadataHelper.inspect(content, namespace, "Hidden").kind !==
+			"Absent",
+	);
+}
+
 /** Reads one old note. It never fails; what it cannot place is freeform. */
 export function readOldNote(path: string, content: string): OldNote {
 	const lines = content.replace(/\r\n?/gu, "\n").split("\n");
 	const basename = basenameOf(path);
-	if (lines.some((line) => /^%%tf(?:-part)?:/u.test(line)))
+	if (
+		lines.some((line) => /^%%tf(?:-part)?:/u.test(line)) ||
+		holdsDictionaryData(content)
+	)
 		return {
 			attestations: [],
 			basename,
