@@ -72,11 +72,13 @@ describe("a pending relation's target", () => {
 		expect(
 			`${schreitenCrossroad.slice(2, -"|schreiten]]".length)}.md`,
 		).toBe(schreitenCrossroadPath);
-		// The store leaves the new note alone; #114 fills it as a Crossroad.
-		expect(vault.content(schreitenCrossroadPath)).toBe("");
+		// The store fills the new note as a Crossroad that is not classified
+		// yet, and generates nothing else for it.
+		const filled = vault.content(schreitenCrossroadPath);
+		expect(filled).toContain("*Not classified yet*");
 		await seed(store, [createPending(pendingFrom(laufenReading))]);
 		expect(vault.content(laufenReadingPath)).toContain(schreitenCrossroad);
-		expect(vault.content(schreitenCrossroadPath)).toBe("");
+		expect(vault.content(schreitenCrossroadPath)).toBe(filled);
 		await expectIndexMatchesFiles(store, vault);
 	});
 

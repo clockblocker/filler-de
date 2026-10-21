@@ -4,6 +4,7 @@
  */
 
 import {
+	crossroadNotePath,
 	type LinkResolver,
 	type RenderOptions,
 	shadowOf,
@@ -11,7 +12,7 @@ import {
 import { resolveShadow, spellingTarget } from "dumdict";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
-import type { CrossroadContent } from "./crossroad";
+import { type CrossroadContent, listsNothing, rendersAs } from "./crossroad";
 import type { WriteOptions } from "./internal/dictionary-notes";
 import type { MetadataFormat } from "./internal/note-metadata";
 import {
@@ -20,7 +21,7 @@ import {
 } from "./inverse-relations";
 import { formKeyOf, lemmaKeyOf, shadowKeyOf } from "./keys";
 import { byCodeUnit, type NoteIndex, relationEdgesOf } from "./note-index";
-import type { NoteData } from "./notes";
+import type { NoteData, PathEntry } from "./notes";
 
 /** What a host renders into every note beyond the store's own projections. */
 export type NoteProjections = Omit<
@@ -195,4 +196,79 @@ export function crossroadContentOf(
 			surfaces.push({ form, lemma });
 	}
 	return { key, lemmas, surfaces };
+}
+
+/** The path of a form key's Crossroad note, or undefined if none can be spelled. */
+export function crossroadPathOf(key: string): string | undefined {
+	try {
+		return crossroadNotePath(key, "de").path;
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * The form key a Crossroad note is for: the one its metadata names, else
+ * the stored spelling whose Crossroad sits at its path, else its name, as
+ * for the empty note a click on an uncreated link leaves. Names are lossy,
+ * so a name is taken only when it spells that very path back.
+ */
+function crossroadKeyOf(
+	entry: Extract<PathEntry, { kind: "crossroad" }>,
+	storedAt: ReadonlyMap<string, string>,
+): string | undefined {
+	if (entry.key !== undefined) return entry.key;
+	const stored = storedAt.get(entry.path);
+	if (stored !== undefined) return stored;
+	const name = entry.path.split("/").at(-1)?.slice(0, -".md".length);
+	return name !== undefined && crossroadPathOf(name) === entry.path
+		? name
+		: undefined;
+}
+
+/**
+ * Whether the Crossroad note of a form key is missing or stale: missing
+ * while its spelling has something to list, or a file there without
+ * Crossroad metadata (a click's empty note, or text written by hand), or
+ * metadata whose key or seals differ from what the index renders. It reads
+ * no file: a note's seals say what it shows.
+ */
+function crossroadStale(view: NoteIndex, key: string): boolean {
+	const path = crossroadPathOf(key);
+	if (path === undefined) return false;
+	const entry = view.entry(path);
+	const content = crossroadContentOf(view, key);
+	if (entry?.kind !== "crossroad") return !listsNothing(content);
+	if (entry.key === undefined || entry.rendering === undefined) return true;
+	return !rendersAs({ key: entry.key, rendering: entry.rendering }, content);
+}
+
+/**
+ * The form keys whose Crossroad note is missing or stale, sorted: of every
+ * spelling the index holds and of every Crossroad note there is, or only
+ * of the Crossroad notes among `paths`. Regenerating them all writes what
+ * the index renders, so a second run finds none.
+ */
+export function staleCrossroads(
+	view: NoteIndex,
+	paths?: Iterable<string>,
+): string[] {
+	const storedAt = new Map<string, string>();
+	for (const key of view.formKeys()) {
+		const path = crossroadPathOf(key);
+		if (path !== undefined && !storedAt.has(path)) storedAt.set(path, key);
+	}
+	const keys = new Set<string>(paths === undefined ? view.formKeys() : []);
+	const entries =
+		paths === undefined
+			? view.allEntries()
+			: [...paths].flatMap((path) => view.entry(path) ?? []);
+	for (const entry of entries) {
+		if (entry.kind !== "crossroad") continue;
+		const key = crossroadKeyOf(entry, storedAt);
+		if (key !== undefined) keys.add(key);
+	}
+	return [...keys]
+		.filter((key) => crossroadStale(view, key))
+		.sort(byCodeUnit);
 }

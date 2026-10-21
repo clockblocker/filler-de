@@ -36,7 +36,7 @@ It must not own:
 - vault I/O, lookup, revisions, commits, or cross-note invariants (the dictionary store, #113);
 - the metadata facility's storage format (`src/stateless-helpers/note-metadata/`, [#107](https://github.com/clockblocker/filler-de/issues/107));
 - link resolution: it renders the `LinkTarget` the store holds and decides nothing;
-- Crossroad notes, which hold no records (#114);
+- Crossroad notes, which hold no records (#114; see The dictionary store);
 - inflection rules or labels (`dumdict/inflection`, `dumcorpus/inflection`);
 - prompts or generation (dumgen);
 - linguistic or Knowledge schemas (dumling, dumrel).
@@ -423,6 +423,25 @@ Strays, empty files and Crossroad notes are never quarantined. Empty files at no
 Every rewrite is a compare-and-swap with the facility's transforms inside it. A note whose records stay is rewritten only when its metadata, which holds its renderings' seals, changes, so a note the user rearranged is not rewritten for that alone. A Reading note's embed names its Licence Group's table, so a Paradigm Change that splits or merges groups rewrites the Lemma note's tables and its Reading notes' embeds in one commit.
 
 **User text in removed notes.** A removed Reading note's freeform moves to its Lemma note; a removed Lemma's notes' freeform moves to its spelling's Crossroad note, which is never removed and says "not classified yet" once its spelling has nothing left.
+
+**Crossroad notes (#114).** The store renders them itself (`dictionary/src/crossroad.ts`); the codec only lends `BodyWriter`, `readBody` and `articleOf`. A Crossroad is a router page under the dictionary's section titles, one line per Lemma and per met Surface, each its own sealed Block:
+
+```
+<span class="note_block_title note_block_title_eintraege">Einträge</span>
+- die [[Worter/de/Lexeme/NOUN/Fem/s/suc/sucht/Sucht|Sucht]]: [[Worter/de/Lexeme/NOUN/Fem/s/suc/sucht/💉 Sucht|💉]]
+<span class="note_block_title note_block_title_surfaces">Begegnete Formen</span>
+- sucht → [[Worter/de/Lexeme/VERB/s/suc/suche/suchen|suchen]] (VERB)
+```
+
+That is `Worter/s/suc/sucht/sucht.md`. der See and die See share `Worter/s/see/see/see.md`, one line each.
+
+- **Einträge** lists every Lemma whose Canonical Form has the note's key, by Lemma key: a noun's article, or the Kind in parentheses for any other Lemma (`[[…/gehen|gehen]] (VERB)`), and its Reading notes by emoji.
+- **Begegnete Formen** lists every met Surface of another Lemma with that key, as `<form> → <its Lemma>`, so `Tage` lands on `Tag`.
+- **Not classified yet.** A spelling with neither shows the Einträge title over `*Not classified yet*`. That is what a Crossroad note goes back to when its spelling loses its last Lemma and Surface, and what the empty note a click on an uncreated Crossroad link leaves is filled with. The store generates no Knowledge for it.
+- **Freeform** follows the renderings after a blank line and is kept byte for byte; an old layout's sealed renderings are replaced, not kept.
+- **Metadata** (`crossroadNote`) holds the key, the language and the renderings' seals, so a Crossroad note is stale exactly when its seals or key differ from what the index renders, and the store tells that without reading the file.
+- **When the store writes one:** in every commit that changes its spelling's Lemmas or Surfaces; when a file appears or changes at a Crossroad path without being current, such as a click's empty note or one without metadata; and after every full read of `Worter/`, at startup, after a rescan and after a rebuild, for every spelling missing its note or holding a stale one. A missing note is created only while its spelling has something to list, so a spelling whose note was never created gets none. A hand edit of a current note is left alone, a note the user deletes stays deleted until the next full read, and a second regeneration writes nothing.
+- **Collisions.** A Crossroad note is never created over a file or folder the vault spells another way, nor beside another created Crossroad note it collides with. Names are lossy (`C#` and `C` are both `c.md`), so the first spelling's note keeps its path and the other is reported.
 
 **Collisions.** Every created path is checked against every indexed path and folder by the collision key, and against the commit's other creates. A collision refuses the commit, which writes nothing.
 

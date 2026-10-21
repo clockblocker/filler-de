@@ -14,6 +14,9 @@ import {
 	writeReadingNote,
 } from "../../../../stateless-helpers/dictionary-notes";
 import { createMemoryNoteCache } from "../src";
+import { writeCrossroadNote } from "../src/crossroad";
+import { readingKeyOf } from "../src/keys";
+import { byCodeUnit } from "../src/note-index";
 import { FakeVault } from "./support/fake-vault";
 import { run } from "./support/files";
 import { readingEntry, readingOf, verb } from "./support/fixtures";
@@ -56,7 +59,23 @@ function generatedVault(count: number): FakeVault {
 				entry.reading,
 				options,
 			)("");
-		files[crossroadPath(lemma.canonicalForm)] = "";
+		files[crossroadPath(lemma.canonicalForm)] = writeCrossroadNote(
+			{
+				key: lemma.canonicalForm,
+				lemmas: [
+					{
+						lemma,
+						readings: readings
+							.map(({ reading }) => reading)
+							.sort((a, b) =>
+								byCodeUnit(readingKeyOf(a), readingKeyOf(b)),
+							),
+					},
+				],
+				surfaces: [],
+			},
+			"Hidden",
+		)("");
 	}
 	return new FakeVault(files);
 }
@@ -72,6 +91,8 @@ test.skipIf(lemmaCount === 0)(
 		const cold = await openStore(vault, cache);
 		const coldMs = performance.now() - coldStart;
 		expect((await run(cold.store.lemmaNotes)).length).toBe(lemmaCount);
+		// Every Crossroad note is current, so opening writes nothing.
+		expect(vault.batches).toHaveLength(0);
 		await run(cold.store.close);
 
 		const warmStart = performance.now();
