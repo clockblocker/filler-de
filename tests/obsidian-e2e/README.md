@@ -163,6 +163,14 @@ also captures Obsidian errors, warning/error console output, and a screenshot.
 The temporary artifact path is printed on failure and contains `session.json`;
 successful runs remove their temporary artifact directory.
 
+A CLI timeout names the driver request that got no answer. Each wait in
+the driver gives up within 30 seconds and answers an error, and in a timed
+full run (#118) the slowest request took 8.5 seconds and `beginScenario`
+about 3, so a 45-second CLI timeout points at an answer lost between
+Obsidian and `obsidian-cli`, not at a slow Textfresser. `create-more-files` has hit it now and then in attached
+mode, where the test window shares one Obsidian process with the user's own
+vault, and passed when run again; it has not been reproduced in isolation.
+
 The runner never retries a mutation. Every mutation carries a request ID plus
 the expected Textfresser instance and generation; a reload or ambiguous
 lifecycle transition fails the story instead of replaying it.

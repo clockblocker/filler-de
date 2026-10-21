@@ -357,10 +357,23 @@ class DriverClient {
 		const encoded = Buffer.from(JSON.stringify(request), "utf8").toString(
 			"base64url",
 		);
-		const response = await this.#cli.json<DriverEnvelope>(
-			[this.#manifest.driverCommand, `request=${encoded}`],
-			{ timeoutMs: REQUEST_TIMEOUT_MS },
-		);
+		const response = await this.#cli
+			.json<DriverEnvelope>(
+				[this.#manifest.driverCommand, `request=${encoded}`],
+				{ timeoutMs: REQUEST_TIMEOUT_MS },
+			)
+			.catch((error: unknown) => {
+				// Every driver wait gives up within 30 s and answers an error,
+				// so a CLI timeout means the answer never came back. Name the
+				// request: a mutation may have run, and is never retried.
+				if (error instanceof HarnessError && error.code === "CLI_TIMEOUT")
+					throw new HarnessError(
+						"CLI_TIMEOUT",
+						`Driver ${method}${isRecord(params.operation) ? ` ${String(params.operation.kind)}` : ""} got no answer through obsidian-cli within ${REQUEST_TIMEOUT_MS} ms`,
+						error.details,
+					);
+				throw error;
+			});
 
 		if (
 			response.protocol !== PROTOCOL_VERSION ||
