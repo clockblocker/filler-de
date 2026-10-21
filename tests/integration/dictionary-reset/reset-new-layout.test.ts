@@ -151,7 +151,11 @@ async function setUp() {
 	});
 	const vault = new FakeVault(VAULT);
 	const store = await Effect.runPromise(makeDumdictVaultStore({ vault }));
-	const scroll = new MemoryScroll(SCROLL, STORY);
+	// The old Hund note's attestation, with the link the user wrote then (#148).
+	const scroll = new MemoryScroll(
+		SCROLL,
+		STORY.replace("Der Hund schläft.", "Der [[Hund]] schläft."),
+	);
 	const queue = createKnowledgeQueue({
 		notify: () => undefined,
 		run: (job) =>
@@ -246,11 +250,15 @@ describe("the Dictionary reset regenerates into the Lemma, Reading and Crossroad
 			"Worter/h/hun/hund/hund.md",
 		);
 
-		// The occurrence is linked to the Reading note and recorded with a
-		// per-occurrence ref; the freeform text sits in the Reading note.
+		// The occurrence is linked to the Reading note, its old link
+		// replaced, and recorded with a per-occurrence ref; the freeform text
+		// sits in the Reading note.
 		expect(scroll.content).toContain(
-			`[[${readingPath.slice(0, -3)}|Der Hund]] schläft. ^1`,
+			`\n\n[[${readingPath.slice(0, -3)}|Der Hund]] schläft. ^1`,
 		);
+		expect(execution.regenerations).toMatchObject([
+			{ _tag: "Regenerated", linked: 1 },
+		]);
 		const reading = vault.content(readingPath) ?? "";
 		expect(reading).toMatch(/!\[\[Story#\^1\|\^[0-9a-f]{8}\]\]/u);
 		expect(reading).toContain("Mein Hund heißt Bello.");

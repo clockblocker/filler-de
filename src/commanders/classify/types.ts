@@ -5,6 +5,7 @@
  * (ADR 0014).
  */
 import type { ResolveGrammarInput, SegmentedSentence, Unit } from "dumgen";
+import type { UserLinks } from "./resolution/scroll-links";
 
 /**
  * One dumgen unit of one Sentence: the Sentence's cache key (ADR 0014,
@@ -66,4 +67,10 @@ export type ClassifyPlan = {
 	readonly sentences: ReadonlyMap<string, PlannedSentence>;
 	/** The covered units, one per instance of a repeated Sentence, in reading order. */
 	readonly units: readonly PlannedUnit[];
+	/**
+	 * Whether links the user wrote at an occurrence are kept or replaced by
+	 * the link to its Reading. The command keeps them; the Dictionary reset
+	 * replaces the old notes' links (#148). `Keep` when absent.
+	 */
+	readonly userLinks?: UserLinks;
 };

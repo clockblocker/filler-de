@@ -14,7 +14,8 @@
  * Markdown that a link or a block ID would break is left alone: code spans
  * and fences, table rows, emphasis inside an occurrence, embeds, Markdown
  * links, and wikilinks the user wrote. Only the plugin's own links to
- * `Worter/` are re-pointed.
+ * `Worter/` are re-pointed, unless the run replaces the user's links too,
+ * as the Dictionary reset does with links written before the redesign.
  */
 import { sha256Hex } from "@textfresser/lemma-note-codec";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
@@ -380,6 +381,7 @@ export type UnitLinkEdit = {
 
 type SkippedLink = {
 	readonly ref: UnitRef;
+	/** The occurrence's text as a reader sees it. */
 	readonly text: string;
 	readonly reason: string;
 };
@@ -393,8 +395,8 @@ export type LinkedScroll = {
 
 /**
  * `[[Worter/…/🌊 See|See]]`: the path-qualified link to a Reading note
- * (ADR-0015). An earlier link of Classify's at the occurrence, such as a
- * pre-ADR-0015 `[[…/See#^r-…|See]]`, is replaced whole (`replaceableSpan`).
+ * (ADR-0015). The links it replaces at the occurrence go whole
+ * (`replaceableSpan`).
  */
 function readingLink(target: LinkTarget, shown: string): string {
 	const path = target.readingPath.endsWith(".md")
@@ -403,43 +405,119 @@ function readingLink(target: LinkTarget, shown: string): string {
 	return `[[${path}|${shown}]]`;
 }
 
+/** A wikilink, embed or Markdown link on a line, with the part a reader sees. */
+type LinkSpan = SourceRange & {
+	readonly kind: "Wikilink" | "Embed" | "Markdown";
+	/** A wikilink's target, `#` part included. */
+	readonly target: string;
+	/** What Obsidian shows of it; none for an embed. */
+	readonly shown: SourceRange | undefined;
+};
+
 const LINKISH =
-	/!?\[\[([^\]|\n]*)(?:\|([^\]\n]*))?\]\]|!?\[[^\]\n]*\]\([^)\n]*\)/gu;
+	/(!?)\[\[([^\]|\n]*)(?:\|([^\]\n]*))?\]\]|(!?)\[([^\]\n]*)\]\([^)\n]*\)/gu;
+
+/** The links on the lines `range` touches. */
+function linksAround(content: string, range: SourceRange): LinkSpan[] {
+	const start = lineStartOf(content, range.from);
+	const text = content.slice(start, lineEndOf(content, range.to));
+	return [...text.matchAll(LINKISH)].map((match): LinkSpan => {
+		const [whole, wikiBang, target, alias, markdownBang, label] = match;
+		const from = start + (match.index ?? 0);
+		const to = from + whole.length;
+		if (target === undefined)
+			return {
+				from,
+				kind: "Markdown",
+				shown: markdownBang
+					? undefined
+					: { from: from + 1, to: from + 1 + (label ?? "").length },
+				target: "",
+				to,
+			};
+		if (wikiBang)
+			return { from, kind: "Embed", shown: undefined, target, to };
+		if (alias !== undefined)
+			return {
+				from,
+				kind: "Wikilink",
+				shown: { from: from + whole.indexOf("|") + 1, to: to - 2 },
+				target,
+				to,
+			};
+		const hash = target.indexOf("#");
+		return {
+			from,
+			kind: "Wikilink",
+			shown: {
+				from: from + 2,
+				to: from + 2 + (hash < 0 ? target.length : hash),
+			},
+			target,
+			to,
+		};
+	});
+}
 
 /**
- * What to replace for an occurrence at `range`: the range itself, or a
- * whole earlier Classify link whose shown text it is exactly, so links
- * never nest. An occurrence inside an embed, a Markdown link, a link the
- * user wrote or only part of a link's shown text is left alone.
+ * The text a reader sees of `range`: the shown text of each link in it,
+ * without the link's markup. An occurrence of several Segments with a link
+ * between them, `Der [[Fahrer]]`, reads `Der Fahrer`.
+ */
+function visibleText(content: string, range: SourceRange): string {
+	const links = linksAround(content, range);
+	let text = "";
+	for (let at = range.from; at < range.to; at++) {
+		const link = links.find(({ from, to }) => from <= at && at < to);
+		if (
+			link &&
+			!(link.shown && link.shown.from <= at && at < link.shown.to)
+		)
+			continue;
+		text += content[at] ?? "";
+	}
+	return text;
+}
+
+/**
+ * What the links Classify finds at an occurrence are to it: links the user
+ * wrote are kept, or replaced, as the Dictionary reset replaces the old
+ * notes' links (#148).
+ */
+export type UserLinks = "Keep" | "Replace";
+
+/**
+ * What to replace for an occurrence at `range`: the range itself, or the
+ * range with the links whose shown text lies in it, so links never nest.
+ * An earlier Classify link, such as a pre-ADR-0015 `[[…/See#^r-…|See]]`,
+ * is always replaced whole; under `Replace`, so is a link the user wrote,
+ * such as the old `[[Fahrer]]` of `Der [[Fahrer]]`. An occurrence inside
+ * an embed, a Markdown link, a link the user wrote that is kept, or a link
+ * that shows more than it is left alone.
  */
 function replaceableSpan(
 	content: string,
 	range: SourceRange,
+	userLinks: UserLinks,
 ): SourceRange | string {
-	const lineStart = lineStartOf(content, range.from);
-	const line = content.slice(lineStart, lineEndOf(content, range.from));
-	LINKISH.lastIndex = 0;
-	for (let match = LINKISH.exec(line); match; match = LINKISH.exec(line)) {
-		const from = lineStart + match.index;
-		const to = from + match[0].length;
-		if (to <= range.from || from >= range.to) continue;
-		const [whole, target, alias] = match;
-		if (whole.startsWith("!") || target === undefined)
+	let span = range;
+	for (const link of linksAround(content, range)) {
+		if (link.to <= range.from || link.from >= range.to) continue;
+		const { shown } = link;
+		if (link.kind !== "Wikilink" || shown === undefined)
 			return "inside an embed or a Markdown link";
-		if (!target.startsWith(DICTIONARY_PREFIX))
-			return "inside the user's link";
-		const shownFrom =
-			alias === undefined ? from + 2 : from + whole.indexOf("|") + 1;
-		const hash = target.indexOf("#");
-		const shownTo =
-			alias === undefined
-				? from + 2 + (hash < 0 ? target.length : hash)
-				: to - 2;
-		if (shownFrom === range.from && shownTo === range.to)
-			return { from, to };
-		return "inside another link";
+		const own = link.target.startsWith(DICTIONARY_PREFIX);
+		if (!own && userLinks === "Keep") return "inside the user's link";
+		if (shown.from < range.from || shown.to > range.to)
+			return own
+				? "inside another link"
+				: "the user's link shows more than it";
+		span = {
+			from: Math.min(span.from, link.from),
+			to: Math.max(span.to, link.to),
+		};
 	}
-	return range;
+	return span;
 }
 
 /** Characters a link's shown text cannot hold, or that mark up the text around it. */
@@ -453,8 +531,11 @@ export function linkUnitsInScroll(input: {
 	readonly snapshot: string;
 	readonly current: string;
 	readonly edits: readonly UnitLinkEdit[];
+	/** Whether the user's links at an occurrence are kept; `Keep` when absent. */
+	readonly userLinks?: UserLinks;
 }): LinkedScroll {
 	const { current, snapshot } = input;
+	const userLinks = input.userLinks ?? "Keep";
 	const map = offsetMapper(snapshot, current);
 	type Replacement = SourceRange & {
 		readonly text: string;
@@ -466,9 +547,16 @@ export function linkUnitsInScroll(input: {
 	for (const [index, edit] of input.edits.entries()) {
 		for (const occurrence of edit.occurrences) {
 			const text = snapshot.slice(occurrence.from, occurrence.to);
+			// What the reader sees of it: what notices quote and the link
+			// shows. An embed shows none of it, and says why below.
+			const shown = visibleText(snapshot, occurrence);
 			const skip = (reason: string) =>
-				skipped.push({ reason, ref: edit.ref, text });
-			if (!text.trim() || UNLINKABLE.test(text)) {
+				skipped.push({
+					reason,
+					ref: edit.ref,
+					text: shown.trim() ? shown : text,
+				});
+			if (!text.trim() || UNLINKABLE.test(shown)) {
 				skip("its text cannot be a link's shown text");
 				continue;
 			}
@@ -489,9 +577,13 @@ export function linkUnitsInScroll(input: {
 				skip(structure);
 				continue;
 			}
-			const span = replaceableSpan(current, moved);
+			const span = replaceableSpan(current, moved, userLinks);
 			if (typeof span === "string") {
 				skip(span);
+				continue;
+			}
+			if (!shown.trim()) {
+				skip("its text cannot be a link's shown text");
 				continue;
 			}
 			if (
@@ -505,7 +597,7 @@ export function linkUnitsInScroll(input: {
 			replacements.push({
 				...span,
 				edit: index,
-				text: readingLink(edit.target, text),
+				text: readingLink(edit.target, shown),
 			});
 		}
 	}
