@@ -1,4 +1,17 @@
 import { mock } from "bun:test";
+import { parse, stringify } from "yaml";
+
+/**
+ * Obsidian's `parseYaml` and `stringifyYaml` are the `yaml` package's
+ * `parse` and `stringify`, called with these options (Obsidian 1.14.4).
+ */
+const parseYaml = (text: string): unknown => parse(text, {});
+const stringifyYaml = (value: unknown): string =>
+	stringify(value, null, {
+		aliasDuplicateObjects: false,
+		lineWidth: 0,
+		nullStr: "",
+	});
 
 // ESM-friendly mock for "obsidian" so imports resolve in tests
 mock.module("obsidian", () => ({
@@ -9,6 +22,8 @@ mock.module("obsidian", () => ({
 	Notice: class Notice {
 		constructor(_message: string) {}
 	},
+	parseYaml,
+	stringifyYaml,
 	TFile: class TFile {
 		path = "";
 		basename = "";
@@ -33,6 +48,8 @@ if (typeof require !== "undefined") {
 			Notice: class Notice {
 				constructor(_message: string) {}
 			},
+			parseYaml,
+			stringifyYaml,
 			TFile: class TFile {
 				path = "";
 				basename = "";

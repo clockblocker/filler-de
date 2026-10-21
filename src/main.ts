@@ -16,7 +16,7 @@ import {
 	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { logError } from "@textfresser/vault-action-manager/issue-handlers";
-import { Effect, Exit, Predicate } from "effect";
+import { Cause, Effect, Exit, Predicate } from "effect";
 import { Modal, Notice, Plugin, requestUrl } from "obsidian";
 import {
 	ClassifyCommander,
@@ -41,9 +41,14 @@ import {
 	DelimiterMigrationCoordinator,
 	type DelimiterMigrationOutcome,
 } from "./commanders/librarian/runtime/delimiter-migration-coordinator";
+import {
+	describeMetadataMigration,
+	migrateMetadataFormat,
+} from "./commanders/note-metadata-migration/migrate-metadata-format";
 import { Textfresser } from "./commanders/textfresser/textfresser";
 import {
 	clearState,
+	getParsedUserSettings,
 	initializeState,
 	updateParsedSettings,
 } from "./global-state/global-state";
@@ -65,6 +70,10 @@ import {
 	holdsRetiredSettings,
 	settingsFromStoredData,
 } from "./settings/stored-settings";
+import {
+	LibraryMetadata,
+	type MetadataFormat,
+} from "./stateless-helpers/note-metadata";
 import type { SuffixDelimiterConfig, TextEaterSettings } from "./types";
 import { buildCanonicalDelimiter } from "./utils/delimiter";
 import { getErrorMessage } from "./utils/get-error-message";
@@ -786,6 +795,13 @@ export default class TextEaterPlugin extends Plugin {
 					outcome.kind === "Completed" && !languagesChanged;
 			}
 
+			if (hideMetadataChanged) {
+				updateParsedSettings(this.settings);
+				await this.migrateNoteMetadata(
+					curr.hideMetadata ? "Hidden" : "Frontmatter",
+				);
+			}
+
 			if (
 				(delimiterChanged ||
 					depthChanged ||
@@ -947,6 +963,37 @@ export default class TextEaterPlugin extends Plugin {
 			const modal = new ConfirmModal(this.app, title, message, resolve);
 			modal.open();
 		});
+	}
+
+	/**
+	 * Moves the Library's note metadata into `target`, the format "Hide
+	 * metadata" now selects, and reports the outcome in a Notice.
+	 */
+	private async migrateNoteMetadata(target: MetadataFormat): Promise<void> {
+		const exit = await Effect.runPromiseExit(
+			migrateMetadataFormat(this.vam, target, [
+				{
+					folder: getParsedUserSettings().splitPathToLibraryRoot,
+					namespaces: [LibraryMetadata],
+				},
+			]),
+		);
+		if (Exit.isFailure(exit)) {
+			logger.error(
+				"[TextEaterPlugin] Metadata migration failed:",
+				getErrorMessage(Cause.squash(exit.cause)),
+			);
+			new Notice("Moving note metadata failed; see the console.");
+			return;
+		}
+		const report = exit.value;
+		if (report.skipped.length > 0 || report.failed.length > 0) {
+			logger.warn("[TextEaterPlugin] Metadata migration incomplete:", {
+				failed: report.failed,
+				skipped: report.skipped,
+			});
+		}
+		new Notice(describeMetadataMigration(report));
 	}
 
 	/**

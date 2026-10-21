@@ -18,18 +18,15 @@ import { makeCodexBasename } from "../format-codex-line";
  * @returns Transform function
  */
 export function makeStripScrollBacklinkTransform(): Transform {
-	return (content: string): string => {
-		const { frontmatter, body, jsonSection } =
-			noteMetadataHelper.decompose(content);
-		const stripped = goBackLinkHelper.strip(body);
-		return `${frontmatter}${stripped}${jsonSection}`;
-	};
+	return noteMetadataHelper.mapBody((body) => goBackLinkHelper.strip(body));
 }
 
 /**
  * Create transform that updates backlink on a codex or scroll.
  * Both file types link back to their parent section's codex.
- * Format: [frontmatter]\n[[backlink]]  \n\n<content>\n[json-meta]
+ * Format: [frontmatter]\n[[backlink]]  \n\n<content>[hidden metadata section]
+ * The facility writes the hidden section canonically, so running this any
+ * number of times gives the bytes of one run.
  *
  * Works correctly for:
  * - Codexes: have `fileType: Codex` frontmatter, no JSON meta (harmless empty match)
@@ -64,15 +61,13 @@ export function makeBacklinkTransform(
 			return content;
 		}
 
-		const { frontmatter, body, jsonSection } =
-			noteMetadataHelper.decompose(content);
-
-		const contentWithGoBack = goBackLinkHelper.upsert({
-			content: body.trimStart(),
-			displayName: parentName,
-			targetBasename: makeCodexBasename(parentPathParts),
-		});
-
-		return `${frontmatter}${contentWithGoBack}${jsonSection}`;
+		const targetBasename = makeCodexBasename(parentPathParts);
+		return noteMetadataHelper.mapBody((body) =>
+			goBackLinkHelper.upsert({
+				content: body.trimStart(),
+				displayName: parentName,
+				targetBasename,
+			}),
+		)(content);
 	};
 }

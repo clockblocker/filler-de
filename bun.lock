@@ -30,6 +30,7 @@
         "obsidian": "^1.10.2",
         "ts-plugin-sort-import-suggestions": "github:clockblocker/ts7-plugin-sort-import-suggestions",
         "typescript": "^7.0.2",
+        "yaml": "2.9.0",
       },
     },
     "src/packages/composed/dictionary": {

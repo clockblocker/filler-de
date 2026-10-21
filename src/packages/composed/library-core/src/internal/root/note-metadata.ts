@@ -1,1 +1,4 @@
-export { noteMetadataHelper } from "../../../../../../stateless-helpers/note-metadata";
+export {
+	LibraryMetadata,
+	noteMetadataHelper,
+} from "../../../../../../stateless-helpers/note-metadata";

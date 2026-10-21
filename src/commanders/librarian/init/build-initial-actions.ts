@@ -14,17 +14,13 @@ import {
 	splitPathCodec,
 } from "@textfresser/vault-action-manager";
 import { Effect, Result } from "effect";
-import { z } from "zod";
-import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
+import {
+	LibraryMetadata,
+	noteMetadataHelper,
+} from "../../../stateless-helpers/note-metadata";
 import { logger } from "../../../utils/logger";
 
 // ─── Scroll Metadata Schema ───
-
-const ScrollMetadataSchema = z
-	.object({
-		status: z.enum(["Done", "NotStarted"]),
-	})
-	.passthrough();
 
 type BuildInitialActionsResult = {
 	createActions: CreateTreeLeafAction[];
@@ -79,10 +75,9 @@ export const buildInitialCreateActions = Effect.fn("buildInitialCreateActions")(
 			if (file.kind === SplitPathKind.MdFile) {
 				const content = yield* Effect.result(file.read());
 				if (Result.isSuccess(content)) {
-					// Read metadata using unified API (tries JSON first, then YAML)
 					const meta = noteMetadataHelper.read(
 						content.success,
-						ScrollMetadataSchema,
+						LibraryMetadata,
 					);
 					if (meta?.status === "Done") {
 						status = TreeNodeStatus.Done;
