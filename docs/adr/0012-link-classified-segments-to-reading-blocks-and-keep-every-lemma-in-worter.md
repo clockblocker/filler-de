@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded by ADR-0015
 ---
 
 # Link classified Segments to Reading blocks and keep every Lemma in Worter
@@ -9,5 +9,5 @@ Each dumling Lemma has one note whose path spells its identity, so der See and d
 ## Consequences
 
 - There are no Crossroad notes for now. A Crossroad would hold no data, so it can be added later as a pure projection with no migration.
-- A Shadow, a dumrel Unit Shadow with language, Family, Kind and Canonical Form but no Lemma yet, gets a note under `Worter/<lang>/Shadow/…`. It holds no records. When the Lemma is created, dumdict resolves the Pending Semantic Relation and the store removes the Shadow note.
+- A Shadow, a dumrel Unit Shadow with language, Family, Kind and Canonical Form but no Lemma yet, gets a note under `Worter/<lang>/Shadow/…`. It holds no records. When the Lemma is created, dumdict resolves the Pending Semantic Relation and the store removes the Shadow note. Superseded by ADR-0015: Shadow notes are dropped, and a Pending Semantic Relation lives only in its source Reading note's metadata.
 - Closed-class Lemmas (dumcorpus Authored Inventories) live under `Worter/` like other Lemmas, each created on first click. They no longer go to Library leaves, and no surface host or membership Entry exists.
