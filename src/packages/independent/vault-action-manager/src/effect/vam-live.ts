@@ -1,5 +1,6 @@
 import { Effect, Layer } from "effect";
 import { type App, MarkdownView } from "obsidian";
+import { getAbstractFileByPath } from "../internal/abstract-file-by-path";
 import { DomSelectors } from "../internal/dom-selectors";
 import { decodeFileStat } from "../types/file-stat";
 import {
@@ -65,7 +66,7 @@ function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 									operation: "getAbstractFileByPath",
 									path,
 								}),
-							try: () => app.vault.getAbstractFileByPath(path),
+							try: () => getAbstractFileByPath(app.vault, path),
 						}),
 					),
 					getMarkdownFiles: Effect.try({

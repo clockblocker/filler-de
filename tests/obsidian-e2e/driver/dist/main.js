@@ -19,6 +19,8 @@ const {
 } = require("./protocol");
 
 const TARGET_PLUGIN_ID = "cbcr-text-eater-de";
+/** By active scenario: what its `openDictionaryReset` showed. */
+const dictionaryResetOpenings = new WeakMap();
 /** Where Textfresser keeps its Lemma notes, at the vault root (ADR 0013). */
 const DICTIONARY_ROOT = "Worter";
 /** The file, in the vault's config folder, that marks a vault as E2E-only. */
@@ -498,6 +500,8 @@ class TextfresserE2EDriver extends Plugin {
 		return {
 			activePath,
 			classify: this.classifyHandoff(scenario),
+			dictionaryReset:
+				(scenario && dictionaryResetOpenings.get(scenario)) ?? null,
 			driver: {
 				configured: this.config !== null,
 				instanceId: this.driverInstanceId,
@@ -1022,15 +1026,19 @@ class TextfresserE2EDriver extends Plugin {
 			libraryRoot: scenario.libraryRoot,
 			scenarioRoot: scenario.scenarioRoot,
 		};
-		const source = resolveScopedPath(
-			paths,
-			operation.path,
-			operation.scope,
-			"params.operation.path",
-		);
+		// Opening the dictionary reset touches no path of the scenario's.
+		const source =
+			operation.kind === "openDictionaryReset"
+				? null
+				: resolveScopedPath(
+						paths,
+						operation.path,
+						operation.scope,
+						"params.operation.path",
+					);
 		const startSequence = ++this.globalState.operationSequence;
 		const startedAt = new Date().toISOString();
-		const affectedPaths = [source.resolved];
+		const affectedPaths = source ? [source.resolved] : [];
 
 		switch (operation.kind) {
 			case "create": {
@@ -1431,10 +1439,38 @@ class TextfresserE2EDriver extends Plugin {
 				});
 				break;
 			}
+			case "openDictionaryReset": {
+				const testingApi = before.plugin.getDictionaryResetTestingApi?.();
+				if (typeof testingApi?.lastOpening !== "function") {
+					throw new DriverError(
+						"InteractionUnavailable",
+						"Textfresser dictionary reset is not available",
+					);
+				}
+				const commandId = `${TARGET_PLUGIN_ID}:reset-dictionary-from-old-notes`;
+				if (this.app.commands.executeCommandById(commandId) !== true) {
+					throw new DriverError(
+						"CommandUnavailable",
+						`Textfresser command '${commandId}' was not available`,
+					);
+				}
+				const opening = testingApi.lastOpening();
+				if (!opening) {
+					throw new DriverError(
+						"InteractionUnavailable",
+						"the dictionary reset command did not start opening its modal",
+					);
+				}
+				dictionaryResetOpenings.set(scenario, await opening);
+				// The modal is closed again, clicking nothing in it, so it does
+				// not cover the test window.
+				testingApi.closeModal();
+				break;
+			}
 			default:
 				throw new DriverError(
 					"InvalidOperation",
-					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, classify, wrapLink, followLink, pageNavigation, or toggleCodexEntry",
+					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, classify, wrapLink, followLink, pageNavigation, toggleCodexEntry, or openDictionaryReset",
 				);
 		}
 

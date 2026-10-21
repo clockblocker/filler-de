@@ -106,7 +106,10 @@ a note and wraps it in `[[ ]]` through the editor, as typing `[` twice over a
 selection does, then saves the note once Textfresser has answered the
 completed link. `clickLink` follows a link the note holds through
 `Workspace.openLinkText`, as a click on it does, so an uncreated link creates
-its note where Obsidian puts it.
+its note where Obsidian puts it. `openDictionaryReset` runs "Reset dictionary
+from old notes…" and closes its modal again, clicking nothing in it;
+`status().dictionaryReset` then holds what it showed: the source folders it
+offered and the one it pre-selected, or the notice it failed with.
 
 `runClassify` selects text that occurs once in a Scroll and runs the Classify
 command. Desktop E2E never reaches a provider: every scenario's dumgen answers

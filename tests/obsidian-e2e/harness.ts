@@ -57,6 +57,14 @@ type ScenarioAction =
 			readonly kind: "toggleCodexEntry";
 			readonly lineContent: string;
 			readonly path: string;
+	  }
+	| {
+			/**
+			 * Runs "Reset dictionary from old notes…" and closes its modal
+			 * again, clicking nothing in it; `status().dictionaryReset` then
+			 * tells what it showed.
+			 */
+			readonly kind: "openDictionaryReset";
 	  };
 
 interface ScenarioDefinition {
@@ -153,6 +161,23 @@ interface ScenarioClassifyHandoff {
 	};
 }
 
+/**
+ * What the scenario's `openDictionaryReset` showed: the reset modal, with the
+ * source folders it offered and the one it pre-selected, or the notice it
+ * failed with.
+ */
+type ScenarioDictionaryReset =
+	| {
+			readonly kind: "Opened";
+			readonly candidates: readonly {
+				readonly folder: string;
+				readonly notes: number;
+				readonly oldNotes: number;
+			}[];
+			readonly suggested?: string;
+	  }
+	| { readonly kind: "Failed"; readonly notice: string };
+
 /** How many requests the scenario's scripted dumgen received, by stage. */
 interface ScenarioDumgenRequests {
 	readonly jev: Readonly<Record<string, number>>;
@@ -163,6 +188,8 @@ interface ScenarioStatus {
 	readonly activePath: string | null;
 	/** Null until a Classify in this scenario succeeds. */
 	readonly classify: ScenarioClassifyHandoff | null;
+	/** Null until `openDictionaryReset` runs in this scenario. */
+	readonly dictionaryReset: ScenarioDictionaryReset | null;
 	readonly dumgenRequests: ScenarioDumgenRequests | null;
 	readonly generation: number;
 	readonly instanceId: string;
@@ -231,6 +258,7 @@ interface ActiveScenarioValue {
 interface DriverStatusValue {
 	readonly activePath: string | null;
 	readonly classify?: ScenarioClassifyHandoff | null;
+	readonly dictionaryReset?: ScenarioDictionaryReset | null;
 	readonly dumgenRequests?: ScenarioDumgenRequests | null;
 	readonly scenario: ActiveScenarioValue | null;
 }
@@ -511,6 +539,8 @@ function encodeAction(action: ScenarioAction): Readonly<Record<string, unknown>>
 				lineContent: action.lineContent,
 				path: action.path,
 			};
+		case "openDictionaryReset":
+			return { kind: "openDictionaryReset" };
 	}
 }
 
@@ -655,6 +685,7 @@ export async function withObsidianScenario<T>(
 				return {
 					activePath: result.value.activePath,
 					classify: result.value.classify ?? null,
+					dictionaryReset: result.value.dictionaryReset ?? null,
 					dumgenRequests: result.value.dumgenRequests ?? null,
 					generation: result.fence.generation,
 					instanceId: result.fence.instanceId,

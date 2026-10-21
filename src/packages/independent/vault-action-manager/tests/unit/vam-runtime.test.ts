@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { Cause, Effect, Exit, Option } from "effect";
-import { type App, TFile } from "obsidian";
+import { type App, TFile, TFolder } from "obsidian";
 import {
 	VamActiveEditorError,
 	VamShutdownError,
@@ -10,7 +10,12 @@ import { ActiveEditorAccess, VaultIo } from "../../src/effect/ports";
 import { createVamRuntime } from "../../src/effect/runtime";
 import { makeVamLive } from "../../src/effect/vam-live";
 
-function makeApp(overrides: { getAbstractFileByPath?: () => never } = {}) {
+function makeApp(
+	overrides: {
+		getAbstractFileByPath?: (path: string) => unknown;
+		getRoot?: () => unknown;
+	} = {},
+) {
 	return {
 		fileManager: {
 			renameFile: async () => {},
@@ -29,6 +34,7 @@ function makeApp(overrides: { getAbstractFileByPath?: () => never } = {}) {
 			getAbstractFileByPath:
 				overrides.getAbstractFileByPath ?? (() => null),
 			getMarkdownFiles: () => [],
+			getRoot: overrides.getRoot ?? (() => null),
 			modify: async () => {},
 			read: async () => "",
 		},
@@ -282,5 +288,49 @@ describe("VamRuntime", () => {
 		);
 		expect((failure as VamVaultIoError).path).toBe("Library/note.md");
 		expect((failure as VamVaultIoError).cause).toBe(original);
+	});
+
+	it('finds the vault root, which Obsidian keys as "/", for the root path ""', async () => {
+		const root = new TFolder();
+		root.path = "/";
+		const runtime = createVamRuntime(
+			makeVamLive(
+				makeApp({
+					getAbstractFileByPath: (path) =>
+						path === "/" ? root : null,
+					getRoot: () => root,
+				}),
+			),
+		);
+
+		const exit = await runtime.runPromiseExit(
+			VaultIo.use((vault) => vault.getAbstractFileByPath("")),
+		);
+		await runtime.dispose();
+
+		expect(exit).toEqual(Exit.succeed(root));
+	});
+
+	it("gives VaultIo failures a message naming the operation, path and cause", async () => {
+		const runtime = createVamRuntime(
+			makeVamLive(
+				makeApp({
+					getAbstractFileByPath: () => {
+						throw new Error("lookup failed");
+					},
+				}),
+			),
+		);
+
+		const exit = await runtime.runPromiseExit(
+			VaultIo.use((vault) =>
+				vault.getAbstractFileByPath("Library/note.md"),
+			),
+		);
+		await runtime.dispose();
+
+		expect(typedFailure(exit)?.message).toBe(
+			"getAbstractFileByPath Library/note.md: lookup failed",
+		);
 	});
 });
