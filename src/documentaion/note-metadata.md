@@ -47,9 +47,12 @@ objects and arrays survive.
   one is re-serialized, as `processFrontMatter` does.
 - Frontmatter that isn't a readable YAML mapping is never overwritten. A
   write in this format throws `NoteMetadataError` instead.
-- Obsidian indexes `[[…]]` inside property values. In this format, links in
-  dictionary data become real links. The hidden format is the one to use for
-  dictionary data.
+- Obsidian indexes `[[…]]` inside property values. A nested namespace with
+  `escapeLinksInFrontmatter` writes `[` as `\[` and `\` as `\\` in every
+  string and key it keeps in frontmatter, and reads them back unescaped, so
+  no link inside its data reaches Obsidian's index. Moving data between the
+  formats escapes or unescapes it as the target needs. The dictionary's
+  namespaces set it (#112).
 
 Unit tests mock `parseYaml` and `stringifyYaml` with the `yaml` package,
 called with the options Obsidian 1.14.4 uses (`tests/unit/setup.ts`).
@@ -70,7 +73,8 @@ namespace's keys.
 
   A spec gives `name`, `key`, the current `version`, the current version's
   zod `schema` (without `schemaVersion`), and `migrations`, where
-  `migrations[n]` turns version `n` data into version `n + 1`. Reading
+  `migrations[n]` turns version `n` data into version `n + 1`, and may set
+  `escapeLinksInFrontmatter`. Reading
   checks the version, runs the migrations, then validates with the schema:
   - missing `schemaVersion`: `MissingVersion`;
   - a version above `version`: `NewerVersion`;
