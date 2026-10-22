@@ -442,6 +442,43 @@ describe("DispatchBatchCoordinator", () => {
 		]);
 	});
 
+	it("closes the window of an action interrupted while it runs", async () => {
+		const hanging = makeAction("hanging");
+		const runtime = createVamRuntime(makeVamLayer());
+		const timeline: string[] = [];
+		let started!: () => void;
+		const running = new Promise<void>((resolve) => {
+			started = resolve;
+		});
+		const coordinator = makeCoordinator(
+			(action) =>
+				Effect.sync(() => {
+					timeline.push(`execute:${actionBasename(action)}`);
+					started();
+				}).pipe(Effect.andThen(Effect.never)),
+			undefined,
+			(action) => {
+				timeline.push(`begin:${actionBasename(action)}`);
+			},
+			runtime,
+			(action) => {
+				timeline.push(`finish:${actionBasename(action)}`);
+			},
+		);
+
+		void runtime.runPromiseExit(coordinator.dispatchEffect([hanging]));
+		await running;
+		// Disposal interrupts the worker mid-action; nothing is left to shut down.
+		coordinators.splice(coordinators.indexOf(coordinator), 1);
+		await runtime.dispose();
+
+		expect(timeline).toEqual([
+			"begin:hanging",
+			"execute:hanging",
+			"finish:hanging",
+		]);
+	});
+
 	it("closes a failed action's window and opens none for actions a stopped batch skips", async () => {
 		const failing = makeAction("failing");
 		const skipped = makeAction("skipped");

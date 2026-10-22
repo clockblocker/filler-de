@@ -5,7 +5,6 @@ import {
 	Fiber,
 	Option,
 	Queue,
-	Result,
 	SynchronizedRef,
 	type Tracer,
 } from "effect";
@@ -573,27 +572,22 @@ export class DispatchBatchWorker {
 	 * Opens the action's Self Event window immediately before executing it and
 	 * starts its TTL when the action ends, however it ends. Each action's
 	 * window is thereby measured from its own execution, not from the start of
-	 * the batch. An action whose window cannot be opened is not executed.
+	 * the batch. Opening is uninterruptible and closing always runs, so an
+	 * interrupted action cannot leave entries that never expire.
+	 *
+	 * Opening the window cannot fail. Callers read a `registerSelfEvents`
+	 * failure as "nothing in the batch ran", which a per-action failure in the
+	 * middle of a batch would no longer guarantee.
 	 */
-	private readonly runAction = Effect.fnUntraced(function* (
-		this: DispatchBatchWorker,
+	private runAction(
 		action: VaultAction,
-	): Effect.fn.Return<VamDispatchError | undefined, never, VamLiveServices> {
-		const registration = yield* Effect.result(
+	): Effect.Effect<VamDispatchError | undefined, never, VamLiveServices> {
+		return Effect.acquireUseRelease(
 			this.selfEventTracker.beginEffect(action),
+			() => this.executeAction(action),
+			() => this.selfEventTracker.finishEffect(action),
 		);
-		if (Result.isFailure(registration)) {
-			return new VamDispatchError({
-				action,
-				cause: registration.failure,
-				operation: "registerSelfEvents",
-			});
-		}
-
-		return yield* this.executeAction(action).pipe(
-			Effect.ensuring(this.selfEventTracker.finishEffect(action)),
-		);
-	});
+	}
 
 	private executeAction(
 		action: VaultAction,
