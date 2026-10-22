@@ -366,6 +366,19 @@ describe("MarkdownFileAccess", () => {
 		expect(active.vaultRead).not.toHaveBeenCalled();
 	});
 
+	it("reads the stat alone, without the content, on both routes", async () => {
+		const active = makeHarness();
+		const background = makeHarness({ activePath: "Library/other.md" });
+
+		const stat = { ctime: 1, mtime: 2, size: "Library/note.md".length };
+		expect(await active.run(active.access.readStat(target))).toEqual(stat);
+		expect(
+			await background.run(background.access.readStat(target)),
+		).toEqual(stat);
+		expect(active.ioOrder).not.toContain("editor");
+		expect(background.ioOrder).toEqual(["stat"]);
+	});
+
 	it("takes the stat before the content on both routes", async () => {
 		const active = makeHarness();
 		const background = makeHarness({ activePath: "Library/other.md" });

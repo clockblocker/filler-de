@@ -29,6 +29,31 @@
  *   modified file.
  * - **Ambiguity.** `unlinkedOccurrences` leaves alone whatever moved text,
  *   a lost block ID or a link in flux could explain.
+ *
+ * Links removed while the plugin was not running, such as in another
+ * editor or on another device, reach no modification. `sweep` catches up
+ * on them once at startup (#161): it finds every Scroll the dictionary
+ * holds refs into and checks each as if it had just been modified, through
+ * the same quiet period, lock and removals. Nothing told it the Scroll was
+ * edited, so a check the sweep asked for judges less:
+ *
+ * - **Settled refs only.** Only the occurrences recorded when the sweep
+ *   began, whose Reading note was then no newer than the Scroll: the
+ *   dictionary may have synced a ref ahead of the Scroll that links it, and
+ *   Classify always writes a Scroll's links after the refs.
+ * - **The same Scroll.** Only a Scroll that still links one of its recorded
+ *   occurrences, so another file that took its name, or an old version that
+ *   replaced it, removes nothing.
+ * - **Blocks it still holds.** A block that is gone, split into a page or
+ *   lost its ID removes nothing; a link removed from a block still there
+ *   does.
+ * - **A quiet vault.** Its checks wait until no Markdown file has been
+ *   modified from outside for `sweepQuietMs`, so Sync catching up at
+ *   startup lands first.
+ *
+ * A Scroll modified while its check is pending is judged in full, as any
+ * edit is. What the sweep removed is told in one notice once its last
+ * check is done.
  */
 import type { DumdictVaultStore } from "@textfresser/dictionary";
 import { parseNotePath } from "@textfresser/lemma-note-codec";
@@ -47,6 +72,7 @@ import { exclusive } from "./exclusive";
 import type { ScrollActivity } from "./scroll-activity";
 import {
 	attestationRefPrefixOf,
+	blockIdsOf,
 	occurrenceKeyOf,
 	parseAttestationRef,
 	scrollBasenameOf,
@@ -61,6 +87,12 @@ import {
 
 /** How long a Scroll stays unmodified before its links are checked. */
 const UNLINK_QUIET_MS = 5_000;
+
+/** How many quiet periods the vault stays unmodified before the sweep's checks run. */
+const SWEEP_QUIET_PERIODS = 3;
+
+/** What every Attestation Ref starts with, whichever Scroll it names. */
+const ATTESTATION_REF_START = "![[";
 
 /** The part of the dictionary store the observer reads and removes through. */
 export type UnlinkStore = Pick<
@@ -81,6 +113,8 @@ export type UnlinkScrolls = {
 		linkpath: string,
 		sourcePath: string,
 	) => Effect.Effect<string | undefined>;
+	/** When the file at `path` was last modified, by `Date.now()`; none when it is gone. */
+	readonly modifiedAt: (path: string) => Effect.Effect<number | undefined>;
 };
 
 export type UnlinkObserverDeps = {
@@ -93,6 +127,8 @@ export type UnlinkObserverDeps = {
 	readonly blockedBy?: () => string | undefined;
 	readonly notify?: (message: string) => void;
 	readonly quietMs?: number;
+	/** How long no Markdown file may be modified before the sweep's checks run. */
+	readonly sweepQuietMs?: number;
 	/** Called as a check is pending and once it is done, for the plugin's idle tracker. */
 	readonly onStart?: () => void;
 	readonly onEnd?: () => void;
@@ -101,6 +137,12 @@ export type UnlinkObserverDeps = {
 export type UnlinkObserver = {
 	/** Tells the observer these Markdown files changed. */
 	readonly modified: (paths: readonly string[]) => void;
+	/**
+	 * Checks every Scroll the dictionary holds refs into, for links removed
+	 * while the plugin was not running. Run once the dictionary and the
+	 * Librarian are ready; it does not wait for the checks.
+	 */
+	readonly sweep: () => void;
 	/** Resolves once no check is pending. */
 	readonly whenIdle: () => Promise<void>;
 	/** Drops every pending check and takes no new one: the plugin unloads. */
@@ -180,11 +222,98 @@ type Checked =
 	| { readonly _tag: "Busy" }
 	| { readonly _tag: "Done"; readonly removed: number };
 
-/** Checks one Scroll and removes the occurrences it no longer links. */
+/** An occurrence as the sweep settles it: its Reading note and its ref. */
+const settledKeyOf = (readingPath: string, ref: string) =>
+	`${readingPath}\u0000${ref}`;
+
+/**
+ * The Scrolls the sweep checks, as Obsidian resolves each ref's Scroll from
+ * its Reading note, and the occurrences it may judge in them, by
+ * `settledKeyOf`: those whose Reading note was no newer than their Scroll
+ * as it began. The others' refs may have arrived ahead of the Scroll that
+ * links them.
+ */
+const scrollsWithRefs = Effect.fnUntraced(function* (
+	deps: UnlinkObserverDeps,
+	store: UnlinkStore,
+) {
+	const found: { scrollPath: string; readingPath: string; ref: string }[] =
+		[];
+	const resolved = new Map<string, string | undefined>();
+	for (const { reading, ref } of yield* store.attestationLinksWithRefPrefix(
+		ATTESTATION_REF_START,
+	)) {
+		const parsed = parseAttestationRef(ref);
+		const location = yield* store.readingLocation(reading);
+		if (!parsed || !location) continue;
+		const key = `${parsed.scrollBasename}\u0000${location.path}`;
+		if (!resolved.has(key))
+			resolved.set(
+				key,
+				yield* deps.scrolls.resolve(
+					parsed.scrollBasename,
+					location.path,
+				),
+			);
+		const scrollPath = resolved.get(key);
+		if (scrollPath !== undefined)
+			found.push({ readingPath: location.path, ref, scrollPath });
+	}
+	const modifiedAt = new Map<string, number | undefined>();
+	for (const { readingPath, scrollPath } of found)
+		for (const path of [scrollPath, readingPath])
+			if (!modifiedAt.has(path))
+				modifiedAt.set(path, yield* deps.scrolls.modifiedAt(path));
+	const scrolls = new Set<string>();
+	const settled = new Set<string>();
+	for (const { readingPath, ref, scrollPath } of found) {
+		const scrollAt = modifiedAt.get(scrollPath);
+		const noteAt = modifiedAt.get(readingPath);
+		if (scrollAt === undefined || noteAt === undefined || noteAt > scrollAt)
+			continue;
+		scrolls.add(scrollPath);
+		settled.add(settledKeyOf(readingPath, ref));
+	}
+	return { scrolls: [...scrolls].sort(), settled };
+});
+
+/**
+ * What the sweep may judge of a Scroll's recorded occurrences: none unless
+ * the Scroll still links one of them in its block, else the settled ones
+ * whose block it still holds.
+ */
+const sweptInScroll = (
+	settled: ReadonlySet<string>,
+	content: string,
+	links: readonly ScrollLink[],
+	recorded: readonly RecordedOccurrence[],
+) => {
+	const same = links.some(
+		(link) =>
+			link.block !== undefined &&
+			recorded.some(
+				({ blockId, readingPath }) =>
+					readingPath === link.notePath && blockId === link.block,
+			),
+	);
+	if (!same) return [];
+	const blocks = blockIdsOf(content);
+	return recorded.filter(
+		({ blockId, readingPath, ref }) =>
+			blocks.has(blockId) && settled.has(settledKeyOf(readingPath, ref)),
+	);
+};
+
+/**
+ * Checks one Scroll and removes the occurrences it no longer links. A
+ * check the sweep asked for, given the occurrences it settled, judges only
+ * those `sweptInScroll` keeps.
+ */
 const checkScroll = Effect.fnUntraced(function* (
 	deps: UnlinkObserverDeps,
 	store: UnlinkStore,
 	scrollPath: string,
+	swept: ReadonlySet<string> | undefined,
 ): Effect.fn.Return<Checked, unknown> {
 	if (deps.activity.busy(scrollPath)) return { _tag: "Busy" };
 	const stored = yield* store.attestationLinksWithRefPrefix(
@@ -195,7 +324,7 @@ const checkScroll = Effect.fnUntraced(function* (
 	if (content === undefined) return { _tag: "Done", removed: 0 };
 	const basename = scrollBasenameOf(scrollPath);
 
-	const recorded: RecordedOccurrence[] = [];
+	let recorded: RecordedOccurrence[] = [];
 	const resolvesHere = new Map<string, boolean>();
 	for (const { reading, ref } of stored) {
 		const parsed = parseAttestationRef(ref);
@@ -217,9 +346,10 @@ const checkScroll = Effect.fnUntraced(function* (
 				ref,
 			});
 	}
+	const links = dictionaryLinksOf(content);
+	if (swept) recorded = sweptInScroll(swept, content, links, recorded);
 	if (recorded.length === 0) return { _tag: "Done", removed: 0 };
 
-	const links = dictionaryLinksOf(content);
 	const missing = new Set<string>();
 	for (const notePath of new Set(links.map((link) => link.notePath))) {
 		const parsed = parseNotePath(notePath);
@@ -267,19 +397,66 @@ type Watched = {
 	timer: ReturnType<typeof setTimeout> | undefined;
 	/** Modified again while its check ran: check once more. */
 	again: boolean;
+	/** Asked for by the startup sweep and not modified since. */
+	sweep: SweepRun | undefined;
 };
+
+/** One startup sweep: what its checks may judge, and what they removed. */
+type SweepRun = {
+	/** The occurrences its checks may judge, by `settledKeyOf`. */
+	readonly settled: ReadonlySet<string>;
+	/** Its checks not done yet. */
+	left: number;
+	removed: number;
+	/** The Scrolls its checks removed occurrences from. */
+	readonly scrolls: string[];
+};
+
+const removedNotice = (removed: number, where: string) =>
+	`✓ Removed ${removed} occurrence${removed === 1 ? "" : "s"} you unlinked in ${where}`;
 
 export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 	const quietMs = deps.quietMs ?? UNLINK_QUIET_MS;
+	const sweepQuietMs = deps.sweepQuietMs ?? SWEEP_QUIET_PERIODS * quietMs;
 	const watched = new Map<string, Watched>();
 	const idleWaiters: (() => void)[] = [];
+	let sweeping = 0;
 	let closed = false;
+	/** When a Markdown file was last modified from outside, as VAM reported it. */
+	let vaultModifiedAt = Number.NEGATIVE_INFINITY;
+
+	const wakeIdle = () => {
+		if (watched.size === 0 && sweeping === 0)
+			for (const resolve of idleWaiters.splice(0)) resolve();
+	};
+
+	/** The check no longer counts toward its sweep; the sweep's last tells what it removed. */
+	const leaveSweep = (entry: Watched) => {
+		const sweep = entry.sweep;
+		if (!sweep) return;
+		entry.sweep = undefined;
+		sweep.left--;
+		if (sweep.left > 0 || closed || sweep.removed === 0) return;
+		logger.info(
+			`[Classify] The startup sweep removed ${sweep.removed} unlinked occurrences from: ${sweep.scrolls.join(", ")}`,
+		);
+		const [only] = sweep.scrolls;
+		deps.notify?.(
+			removedNotice(
+				sweep.removed,
+				sweep.scrolls.length === 1 && only !== undefined
+					? scrollBasenameOf(only)
+					: `${sweep.scrolls.length} Scrolls`,
+			),
+		);
+	};
 
 	const settle = (path: string) => {
+		const entry = watched.get(path);
+		if (entry) leaveSweep(entry);
 		watched.delete(path);
 		deps.onEnd?.();
-		if (watched.size === 0)
-			for (const resolve of idleWaiters.splice(0)) resolve();
+		wakeIdle();
 	};
 
 	const run = <A>(effect: Effect.Effect<A, unknown>) =>
@@ -312,11 +489,17 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 		const sinceRun = Date.now() - (deps.activity.endedAt(path) ?? 0);
 		if (sinceRun < quietMs)
 			return schedule(path, entry, quietMs - sinceRun);
+		// Sync may still be bringing the Scroll or its refs up to date.
+		const sinceVault = Date.now() - vaultModifiedAt;
+		if (entry.sweep && sinceVault < sweepQuietMs)
+			return schedule(path, entry, sweepQuietMs - sinceVault);
 		entry.again = false;
 		const checked = await run(
 			deps.store.pipe(
 				Effect.flatMap((store) =>
-					exclusive(store)(checkScroll(deps, store, path)),
+					exclusive(store)(
+						checkScroll(deps, store, path, entry.sweep?.settled),
+					),
 				),
 			),
 		);
@@ -325,19 +508,29 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 			await deps.activity.idle(path);
 			return schedule(path, entry);
 		}
-		if (checked?._tag === "Done" && checked.removed > 0)
-			deps.notify?.(
-				`✓ Removed ${checked.removed} occurrence${checked.removed === 1 ? "" : "s"} you unlinked in ${scrollBasenameOf(path)}`,
-			);
+		if (checked?._tag === "Done" && checked.removed > 0) {
+			if (entry.sweep) {
+				entry.sweep.removed += checked.removed;
+				entry.sweep.scrolls.push(path);
+			} else
+				deps.notify?.(
+					removedNotice(checked.removed, scrollBasenameOf(path)),
+				);
+		}
 		if (entry.again) return schedule(path, entry);
 		settle(path);
 	};
 
-	/** Watches a Scroll only while the dictionary holds refs into it. */
-	const start = async (path: string) => {
-		const entry: Watched = { again: false, timer: undefined };
+	const watch = (path: string, sweep: SweepRun | undefined) => {
+		const entry: Watched = { again: false, sweep, timer: undefined };
 		watched.set(path, entry);
 		deps.onStart?.();
+		return entry;
+	};
+
+	/** Watches a Scroll only while the dictionary holds refs into it. */
+	const start = async (path: string) => {
+		const entry = watch(path, undefined);
 		const holdsRefs = await run(
 			deps.store.pipe(
 				Effect.flatMap((store) =>
@@ -352,6 +545,9 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 		schedule(path, entry);
 	};
 
+	const isScrollPath = (path: string) =>
+		path.endsWith(".md") && !path.startsWith("Worter/");
+
 	return {
 		close: () => {
 			closed = true;
@@ -363,17 +559,50 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 		},
 		modified: (paths) => {
 			if (closed) return;
+			if (paths.length > 0) vaultModifiedAt = Date.now();
 			for (const path of paths) {
-				if (!path.endsWith(".md") || path.startsWith("Worter/"))
-					continue;
+				if (!isScrollPath(path)) continue;
 				const entry = watched.get(path);
-				if (!entry) void start(path);
-				else if (entry.timer !== undefined) schedule(path, entry);
+				if (!entry) {
+					void start(path);
+					continue;
+				}
+				leaveSweep(entry);
+				if (entry.timer !== undefined) schedule(path, entry);
 				else entry.again = true;
 			}
 		},
+		sweep: () => {
+			if (closed) return;
+			sweeping++;
+			deps.onStart?.();
+			void run(
+				deps.store.pipe(
+					Effect.flatMap((store) => scrollsWithRefs(deps, store)),
+				),
+			).then((found) => {
+				sweeping--;
+				deps.onEnd?.();
+				if (!closed && found) {
+					const sweep: SweepRun = {
+						left: 0,
+						removed: 0,
+						scrolls: [],
+						settled: found.settled,
+					};
+					// A Scroll already watched is checked in full anyway.
+					const paths = found.scrolls.filter(
+						(path) => isScrollPath(path) && !watched.has(path),
+					);
+					sweep.left = paths.length;
+					for (const path of paths)
+						schedule(path, watch(path, sweep));
+				}
+				wakeIdle();
+			});
+		},
 		whenIdle: () =>
-			watched.size === 0
+			watched.size === 0 && sweeping === 0
 				? Promise.resolve()
 				: new Promise<void>((resolve) => {
 						idleWaiters.push(resolve);

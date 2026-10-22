@@ -62,6 +62,10 @@ export class VaultReader {
 		return this.markdownFiles.readContentWithStat(target);
 	}
 
+	readStat(target: SplitPathToMdFile) {
+		return this.markdownFiles.readStat(target);
+	}
+
 	exists(target: AnySplitPath) {
 		if (target.kind === "Folder") {
 			return Effect.result(this.tfolderHelper.getFolder(target)).pipe(
