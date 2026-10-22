@@ -428,29 +428,14 @@ export class DispatchBatchWorker {
 	): Effect.Effect<void, AnyDispatchEffectFailure, VamLiveServices> {
 		if (actions.length === 0) return Effect.void;
 
-		const representative = actions[0];
-
 		return Effect.fn("DispatchBatch.executeBatch")(function* (
 			self: DispatchBatchWorker,
 		) {
 			const planned = yield* self.plan(actions);
-			const registration = yield* Effect.result(
-				self.selfEventTracker.registerEffect(planned),
-			);
-			if (Result.isFailure(registration)) {
-				const failure = new VamDispatchError({
-					action: planned[0] ?? representative,
-					cause: registration.failure,
-					operation: "registerSelfEvents",
-				});
-				return yield* stopOnFirstFailure
-					? Effect.fail(self.stopped(failure, [], planned))
-					: Effect.fail([failure] as const);
-			}
 
 			const errors: VamDispatchError[] = [];
 			for (const [index, action] of planned.entries()) {
-				const failure = yield* self.executeAction(action);
+				const failure = yield* self.runAction(action);
 				if (!failure) continue;
 				if (stopOnFirstFailure) {
 					return yield* Effect.fail(
@@ -582,6 +567,32 @@ export class DispatchBatchWorker {
 		return splitPath.kind === "Folder"
 			? entry instanceof TFolder
 			: entry instanceof TFile;
+	});
+
+	/**
+	 * Opens the action's Self Event window immediately before executing it and
+	 * starts its TTL when the action ends, however it ends. Each action's
+	 * window is thereby measured from its own execution, not from the start of
+	 * the batch. An action whose window cannot be opened is not executed.
+	 */
+	private readonly runAction = Effect.fnUntraced(function* (
+		this: DispatchBatchWorker,
+		action: VaultAction,
+	): Effect.fn.Return<VamDispatchError | undefined, never, VamLiveServices> {
+		const registration = yield* Effect.result(
+			this.selfEventTracker.beginEffect(action),
+		);
+		if (Result.isFailure(registration)) {
+			return new VamDispatchError({
+				action,
+				cause: registration.failure,
+				operation: "registerSelfEvents",
+			});
+		}
+
+		return yield* this.executeAction(action).pipe(
+			Effect.ensuring(this.selfEventTracker.finishEffect(action)),
+		);
 	});
 
 	private executeAction(
