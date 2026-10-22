@@ -55,6 +55,10 @@ const actions: readonly VaultAction[] = [
 	},
 	{ kind: VaultActionKind.TrashFile, payload: { splitPath: file } },
 	{
+		kind: VaultActionKind.CreateMdFile,
+		payload: { content: "note", splitPath: markdown },
+	},
+	{
 		kind: VaultActionKind.UpsertMdFile,
 		payload: { content: "note", splitPath: markdown },
 	},
@@ -63,6 +67,10 @@ const actions: readonly VaultAction[] = [
 		payload: { from: markdown, to: nextMarkdown },
 	},
 	{ kind: VaultActionKind.TrashMdFile, payload: { splitPath: markdown } },
+	{
+		kind: VaultActionKind.TrashMdFile,
+		payload: { ifContent: "note", splitPath: markdown },
+	},
 	{
 		kind: VaultActionKind.ProcessMdFile,
 		payload: { after: "after", before: "before", splitPath: markdown },
@@ -84,6 +92,7 @@ function dependencies(mode: "success" | "failure") {
 			? Effect.succeed(value)
 			: Effect.fail(failure(operation));
 	const tfileHelper = {
+		createFile: () => effect({ _tag: "Created" }, "createFile"),
 		getFile: () => effect(tfile, "getFile"),
 		processContent: () => effect(tfile, "processContent"),
 		renameFile: () => effect(tfile, "renameFile"),
@@ -99,6 +108,7 @@ function dependencies(mode: "success" | "failure") {
 		processContent: () => effect(tfile, "processMarkdown"),
 		renameFile: () => effect(tfile, "renameMarkdown"),
 		replaceContent: () => effect(tfile, "replaceMarkdown"),
+		trashFile: () => effect(undefined, "trashMarkdown"),
 	} as unknown as MarkdownFileAccess;
 	return { markdownFiles, tfileHelper, tfolderHelper };
 }

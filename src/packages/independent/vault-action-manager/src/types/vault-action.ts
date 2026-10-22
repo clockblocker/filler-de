@@ -24,7 +24,7 @@ import type {
 // Operations allowed per target
 const FolderOps = z.enum([CREATE, RENAME, TRASH] as const);
 const FileOps = z.enum([CREATE, RENAME, TRASH] as const);
-const MdFileOps = z.enum([UPSERT, PROCESS, RENAME, TRASH] as const);
+const MdFileOps = z.enum([CREATE, UPSERT, PROCESS, RENAME, TRASH] as const);
 
 const TargetSchema = z.enum([FOLDER, FILE, MD_FILE] as const);
 const Target = TargetSchema.enum;
@@ -40,12 +40,36 @@ export type VaultActionKind = z.infer<typeof VaultActionKindSchema>;
 
 export type Transform = (content: string) => string | Promise<string>;
 
+/**
+ * What a file must hold for a guarded action to run: its whole content, or
+ * the `vaultContentHash` of it, such as a dispatch report's `afterHash`.
+ */
+export type ExpectedContent = string | { readonly hash: string };
+
+/**
+ * What a rename does when its target is taken, by the exact path or by a
+ * name the vault's file system holds to be the same:
+ *
+ * - `fail`: fails with `VamTargetExistsError` (kind `exists`) and moves
+ *   nothing. A missing source fails too (kind `missing`).
+ * - `index`: moves the source to the first free `1_<name>`, `2_<name>`, …
+ *   (`RenamedToIndexed`).
+ * - `dedupe`: like `index`, except that a Markdown source whose content the
+ *   target already holds goes to the trash (`TrashedDuplicate`).
+ *
+ * With `index` and `dedupe`, a rename whose source is gone and whose target
+ * is there counts as done (`NoOp`).
+ */
+export type RenameCollision = "fail" | "index" | "dedupe";
+
 // Folder payloads
 type CreateFolderPayload = {
 	splitPath: SplitPathToFolder;
 	content?: string;
 };
 type RenameFolderPayload = SplitPathFromTo<SplitPathToFolder> & {
+	/** What happens when the target is taken. Defaults to `index`. */
+	onCollision?: Exclude<RenameCollision, "dedupe">;
 	/**
 	 * Whether Obsidian rewrites links to the moved files, as its "Automatically
 	 * update internal links" setting asks. Defaults to true. False moves the
@@ -60,10 +84,18 @@ type CreateFilePayload = {
 	splitPath: SplitPathToFile;
 	content?: string;
 };
-type RenameFilePayload = SplitPathFromTo<SplitPathToFile>;
+type RenameFilePayload = SplitPathFromTo<SplitPathToFile> & {
+	/** What happens when the target is taken. Defaults to `index`. */
+	onCollision?: Exclude<RenameCollision, "dedupe">;
+};
 type TrashFilePayload = { splitPath: SplitPathToFile };
 
 // MdFile payloads
+type CreateMdFilePayload = {
+	splitPath: SplitPathToMdFile;
+	/** Content to create the file with; empty when omitted. */
+	content?: string;
+};
 type UpsertMdFilePayload = {
 	splitPath: SplitPathToMdFile;
 	/**
@@ -73,6 +105,8 @@ type UpsertMdFilePayload = {
 	content?: string | null;
 };
 type RenameMdFilePayload = SplitPathFromTo<SplitPathToMdFile> & {
+	/** What happens when the target is taken. Defaults to `dedupe`. */
+	onCollision?: RenameCollision;
 	/**
 	 * Whether Obsidian rewrites links to the moved note, as its "Automatically
 	 * update internal links" setting asks. Defaults to true. False moves the
@@ -81,10 +115,30 @@ type RenameMdFilePayload = SplitPathFromTo<SplitPathToMdFile> & {
 	 */
 	updateLinks?: boolean;
 };
-type TrashMdFilePayload = { splitPath: SplitPathToMdFile };
-type ProcessMdFilePayload =
-	| { splitPath: SplitPathToMdFile; transform: Transform }
-	| { splitPath: SplitPathToMdFile; before: string; after: string };
+type TrashMdFilePayload = {
+	splitPath: SplitPathToMdFile;
+	/**
+	 * Trash the file only while it holds this content, as the active editor
+	 * shows it when the file is open. Otherwise the action fails with
+	 * `VamContentConflictError` (kind `conflict`) and trashes nothing. A
+	 * file already gone is a `NoOp`.
+	 */
+	ifContent?: ExpectedContent;
+};
+type ProcessMdFileGuard = {
+	/**
+	 * The content the transform must receive. Otherwise the action fails with
+	 * `VamContentConflictError` (kind `conflict`) before anything is written;
+	 * in the background the check runs inside the same `Vault.process` call
+	 * as the write.
+	 */
+	expected?: ExpectedContent;
+};
+type ProcessMdFilePayload = ProcessMdFileGuard &
+	(
+		| { splitPath: SplitPathToMdFile; transform: Transform }
+		| { splitPath: SplitPathToMdFile; before: string; after: string }
+	);
 
 export type VaultAction =
 	| {
@@ -99,6 +153,10 @@ export type VaultAction =
 	| { kind: typeof VaultActionKind.CreateFile; payload: CreateFilePayload }
 	| { kind: typeof VaultActionKind.RenameFile; payload: RenameFilePayload }
 	| { kind: typeof VaultActionKind.TrashFile; payload: TrashFilePayload }
+	| {
+			kind: typeof VaultActionKind.CreateMdFile;
+			payload: CreateMdFilePayload;
+	  }
 	| {
 			kind: typeof VaultActionKind.UpsertMdFile;
 			payload: UpsertMdFilePayload;

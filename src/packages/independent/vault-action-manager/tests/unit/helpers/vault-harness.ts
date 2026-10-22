@@ -32,6 +32,11 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 		created.name = path.split("/").at(-1) ?? path;
 		created.children = [];
 		byPath.set(path, created);
+		if (path !== "") {
+			const parent = ensureFolder(path.split("/").slice(0, -1).join("/"));
+			created.parent = parent;
+			parent.children.push(created);
+		}
 		return created;
 	};
 
@@ -60,8 +65,22 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 		callbacks.get("modify")?.(file as never);
 	};
 
+	const detach = (entry: TAbstractFile) => {
+		if (entry.parent)
+			entry.parent.children = entry.parent.children.filter(
+				(child) => child !== entry,
+			);
+	};
+
 	const move = (file: TAbstractFile, toPath: string) => {
 		writes.push(`${file.path} -> ${toPath}`);
+		detach(file);
+		const parent = ensureFolder(toPath.split("/").slice(0, -1).join("/"));
+		file.parent = parent;
+		parent.children.push(file);
+		file.name = toPath.split("/").at(-1) ?? toPath;
+		if (file instanceof TFile)
+			file.basename = file.name.slice(0, -(file.extension.length + 1));
 		byPath.delete(file.path);
 		const content = contents.get(file.path);
 		contents.delete(file.path);
@@ -92,7 +111,9 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 			},
 			trashFile: async (file: TAbstractFile) => {
 				writes.push(`trash ${file.path}`);
+				detach(file);
 				byPath.delete(file.path);
+				contents.delete(file.path);
 			},
 		},
 		metadataCache: { getFirstLinkpathDest: () => null },

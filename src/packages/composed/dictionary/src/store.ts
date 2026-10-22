@@ -8,6 +8,7 @@ import {
 import {
 	type BulkMdModifyEvent,
 	type BulkVaultEvent,
+	isContentConflict,
 	type VaultAction,
 	VaultActionKind,
 	VaultEventKind,
@@ -125,7 +126,6 @@ import {
 } from "./slices";
 import { stageChanges } from "./stage-changes";
 import {
-	createOnlySplitPath,
 	type DictionaryVault,
 	folderSplitPath,
 	formatPath,
@@ -358,12 +358,31 @@ export type DumdictVaultStore = {
 const message = (cause: unknown): string =>
 	cause instanceof Error ? cause.message : String(cause);
 
-/** A rewrite that lands only on the content it was planned from. */
-function compareAndSwap(path: string, expected: string, next: string) {
-	return (onDisk: string) => {
-		if (onDisk !== expected)
-			throw new Error(`${path} changed after the store read it`);
-		return next;
+/**
+ * A rewrite that lands only on the content it was planned from: VAM checks
+ * `expected` inside the `Vault.process` call that writes, and reports a
+ * `conflict` without writing when the file holds anything else.
+ */
+function compareAndSwap(
+	path: string,
+	expected: string,
+	next: string,
+): VaultAction {
+	return {
+		kind: VaultActionKind.ProcessMdFile,
+		payload: {
+			expected,
+			splitPath: mdSplitPath(path),
+			transform: () => next,
+		},
+	};
+}
+
+/** A note created only where no file is; VAM fails it with `exists` otherwise. */
+function createNote(path: string, content: string): VaultAction {
+	return {
+		kind: VaultActionKind.CreateMdFile,
+		payload: { content, splitPath: mdSplitPath(path) },
 	};
 }
 
@@ -391,8 +410,6 @@ type PlannedWrite = {
 	readonly content: string | undefined;
 	/** The identity a created note claims its path for. */
 	readonly owner?: string;
-	/** What a note sent to the trash must still hold when it goes. */
-	readonly expected?: string;
 	/** The Lemma whose note it is, or the form key of the Crossroad note it is. */
 	readonly lemmaKey?: string;
 	readonly formKey?: string;
@@ -1020,13 +1037,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			if (!write) return [];
 			return [
 				{
-					action: {
-						kind: VaultActionKind.ProcessMdFile,
-						payload: {
-							splitPath: mdSplitPath(path),
-							transform: compareAndSwap(path, current, next),
-						},
-					},
+					action: compareAndSwap(path, current, next),
 					content: next,
 					path,
 					phase: note.changed ? Phase.Own : Phase.FanOut,
@@ -1066,13 +1077,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		const content = yield* produce(note.path, "");
 		return [
 			{
-				action: {
-					kind: VaultActionKind.CreateFile,
-					payload: {
-						content,
-						splitPath: createOnlySplitPath(note.path),
-					},
-				},
+				action: createNote(note.path, content),
 				content,
 				owner: note.owner,
 				path: note.path,
@@ -1106,7 +1111,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		const { view, lemmaKey, intended, render, mode, skip } = input;
 		const held = view.lemmaNote(lemmaKey);
 		const writes: PlannedWrite[] = [];
-		/** Sends a note to the trash, once its file still holds what was read. */
+		/**
+		 * Sends a note to the trash only while it holds what was read: VAM
+		 * checks it next to the trash, so text typed into it meanwhile is
+		 * moved, not lost.
+		 */
 		const trash = (
 			path: string,
 			phase: Phase,
@@ -1114,10 +1123,9 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		): PlannedWrite => ({
 			action: {
 				kind: VaultActionKind.TrashMdFile,
-				payload: { splitPath: mdSplitPath(path) },
+				payload: { ifContent: expected, splitPath: mdSplitPath(path) },
 			},
 			content: undefined,
-			expected,
 			path,
 			phase,
 		});
@@ -1293,13 +1301,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			const created = write("");
 			return [
 				{
-					action: {
-						kind: VaultActionKind.CreateFile,
-						payload: {
-							content: created,
-							splitPath: createOnlySplitPath(path),
-						},
-					},
+					action: createNote(path, created),
 					content: created,
 					formKey: key,
 					path,
@@ -1325,13 +1327,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		if (!changed) return [];
 		return [
 			{
-				action: {
-					kind: VaultActionKind.ProcessMdFile,
-					payload: {
-						splitPath: mdSplitPath(path),
-						transform: compareAndSwap(path, current, next),
-					},
-				},
+				action: compareAndSwap(path, current, next),
 				content: next,
 				formKey: key,
 				path,
@@ -1396,24 +1392,23 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				return false;
 			}
 		}
-		const again = yield* Effect.result(
-			vault.readContentWithStat(mdSplitPath(from)),
-		);
-		if (again._tag === "Success" && again.success.content === current) {
-			const trashed = yield* Effect.result(
-				dispatch([
-					{
-						kind: VaultActionKind.TrashMdFile,
-						payload: { splitPath: mdSplitPath(from) },
+		const trashed = yield* Effect.result(
+			dispatch([
+				{
+					kind: VaultActionKind.TrashMdFile,
+					payload: {
+						ifContent: current,
+						splitPath: mdSplitPath(from),
 					},
-				]),
+				},
+			]),
+		);
+		// A note that changed meanwhile stays, for the next merge to take.
+		if (trashed._tag === "Failure" && !isContentConflict(trashed.failure))
+			yield* Effect.logWarning(
+				`Dictionary merged ${from} into ${to} but could not trash it`,
+				trashed.failure,
 			);
-			if (trashed._tag === "Failure")
-				yield* Effect.logWarning(
-					`Dictionary merged ${from} into ${to} but could not trash it`,
-					trashed.failure,
-				);
-		}
 		cache?.delete(from);
 		cache?.delete(to);
 		yield* rereadChanges([from, to]);
@@ -1595,28 +1590,6 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		for (const phase of PHASES) {
 			const batch = writes.filter((write) => write.phase === phase);
 			if (batch.length === 0) continue;
-			// A note goes to the trash only while it holds what the commit
-			// read, so text typed into it meanwhile is moved, not lost.
-			for (const write of batch) {
-				if (write.expected === undefined) continue;
-				const read = yield* Effect.result(
-					vault.readContentWithStat(mdSplitPath(write.path)),
-				);
-				if (
-					read._tag === "Success" &&
-					read.success.content === write.expected
-				)
-					continue;
-				return {
-					_tag: "Failed",
-					cause: new Error(
-						`${write.path} changed after the store read it`,
-					),
-					landed,
-					phase,
-					skipped: writes.filter((later) => later.phase >= phase),
-				} as const;
-			}
 			const outcome = yield* Effect.result(
 				dispatch(batch.map(({ action }) => action)),
 			);
@@ -2231,9 +2204,14 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					: yield* Effect.result(
 							dispatch(
 								first.landed.map(
-									({ path }): VaultAction => ({
+									({ content, path }): VaultAction => ({
 										kind: VaultActionKind.TrashMdFile,
+										// A note typed into since it was
+										// created is not the commit's to undo.
 										payload: {
+											...(content === undefined
+												? {}
+												: { ifContent: content }),
 											splitPath: mdSplitPath(path),
 										},
 									}),
@@ -2433,19 +2411,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			if (problem !== undefined) return yield* refuse(problem);
 			const entry = classifyFile(path, next);
 			const outcome = yield* Effect.result(
-				dispatch([
-					{
-						kind: VaultActionKind.ProcessMdFile,
-						payload: {
-							splitPath: mdSplitPath(path),
-							transform: compareAndSwap(
-								path,
-								current.success,
-								next,
-							),
-						},
-					},
-				]),
+				dispatch([compareAndSwap(path, current.success, next)]),
 			);
 			if (outcome._tag === "Success") {
 				// No record changed, so plans made at this revision stay valid.

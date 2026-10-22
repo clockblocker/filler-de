@@ -122,6 +122,36 @@ describe("a stray Obsidian created for an unresolved bare link", () => {
 		expect(vault.content(path)).toBe(merged);
 	});
 
+	test("a stray typed into just as its merge trashes it stays, for the next merge", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, lemmaWith(fahrer, "🚗"));
+		const path = crossroadPath("Fahrer");
+		const stray = "Worter/fahrer.md";
+		let typed = false;
+		vault.failNextWrite((action, target) => {
+			if (!typed && action.kind === "TrashMdFile" && target === stray) {
+				typed = true;
+				vault.silentWrite(stray, "Mine.\n\nTyped at the trash.");
+			}
+			return false;
+		});
+		await vault.userWrite(stray, "Mine.");
+		expect(typed).toBe(true);
+		// The trash saw other text than the merge read, so it kept the note.
+		expect(vault.content(stray)).toBe("Mine.\n\nTyped at the trash.");
+		expect(visible(vault.content(path))).toContain("Mine.");
+		expect(visible(vault.content(path))).not.toContain(
+			"Typed at the trash.",
+		);
+
+		// The next edit's event merges the rest.
+		await vault.userWrite(stray, "Mine.\n\nTyped at the trash.\n\nMore.");
+		expect(vault.content(stray)).toBeUndefined();
+		expect(visible(vault.content(path))).toContain("Typed at the trash.");
+		expect(visible(vault.content(path))).toContain("More.");
+		await expectIndexMatchesFiles(store, vault);
+	});
+
 	test("an empty stray whose Crossroad note is there is trashed, leaving the note alone", async () => {
 		const { store, vault } = await openStore();
 		await seed(store, lemmaWith(fahrer, "🚗"));

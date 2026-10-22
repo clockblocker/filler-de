@@ -4,7 +4,10 @@ import { type App, type TAbstractFile, TFile, TFolder } from "obsidian";
 import { createVaultActionManager, splitPathCodec } from "../../src";
 import type { BulkVaultEvent } from "../../src/impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import type { SplitPathToFolder } from "../../src/types/split-path";
-import { VaultActionKind } from "../../src/types/vault-action";
+import {
+	type VaultAction,
+	VaultActionKind,
+} from "../../src/types/vault-action";
 import type { VaultEvent } from "../../src/types/vault-event";
 
 type Callback = (...args: never[]) => void;
@@ -134,10 +137,36 @@ async function renameOldToNew(
 	vault: ReturnType<typeof makeVault>,
 	duringWindow: () => Promise<void> = async () => {},
 ): Promise<string[]> {
+	const { events } = await dispatchObserved(
+		vault,
+		[
+			{
+				kind: VaultActionKind.RenameFolder,
+				payload: {
+					from: folder(["Library"], "Old"),
+					to: folder(["Library"], "New"),
+				},
+			},
+		],
+		duringWindow,
+	);
+	return events;
+}
+
+/**
+ * Starts VAM over `vault`, dispatches `actions`, runs `duringWindow` while
+ * their Self Event windows are open, settles, and returns the outcomes and
+ * every event subscribers received.
+ */
+async function dispatchObserved(
+	vault: ReturnType<typeof makeVault>,
+	actions: readonly VaultAction[],
+	duringWindow: () => Promise<void> = async () => {},
+) {
 	const { dispose, manager, testing } = createVaultActionManager(vault.app);
 	const bulks: BulkVaultEvent[] = [];
 	try {
-		await Effect.runPromise(
+		const report = await Effect.runPromise(
 			Effect.gen(function* () {
 				yield* manager.startListening();
 				yield* manager.subscribeToBulk((bulk) =>
@@ -145,23 +174,21 @@ async function renameOldToNew(
 						bulks.push(bulk);
 					}),
 				);
-				yield* manager.dispatch([
-					{
-						kind: VaultActionKind.RenameFolder,
-						payload: {
-							from: folder(["Library"], "Old"),
-							to: folder(["Library"], "New"),
-						},
-					},
-				]);
+				const report = yield* manager.dispatchWithReport(actions);
 				yield* Effect.promise(duringWindow);
 				yield* testing.whenSettled();
+				return report;
 			}),
 		);
+		return {
+			events: bulks.flatMap((bulk) => bulk.events.map(describeEvent)),
+			outcomes: report.entries.map((entry) =>
+				entry.status === "Done" ? entry.outcome : entry.status,
+			),
+		};
 	} finally {
 		await Effect.runPromise(dispose);
 	}
-	return bulks.flatMap((bulk) => bulk.events.map(describeEvent));
 }
 
 const nestedLibrary = [
@@ -214,5 +241,95 @@ describe("RenameFolder Self Events", () => {
 		expect(events).toEqual([
 			"FileRenamed Library/Old/late.md -> Library/New/Sub/late.md",
 		]);
+	});
+});
+
+describe("Renames that land on an indexed destination (#175)", () => {
+	const takenLibrary = [...nestedLibrary, "Library/New/kept.md"];
+	const renameFolderToTaken: VaultAction = {
+		kind: VaultActionKind.RenameFolder,
+		payload: {
+			from: folder(["Library"], "Old"),
+			to: folder(["Library"], "New"),
+		},
+	};
+
+	it("publishes none of the renames Obsidian reports for a folder moved to its indexed name", async () => {
+		const vault = makeVault(takenLibrary);
+
+		const { events, outcomes } = await dispatchObserved(vault, [
+			renameFolderToTaken,
+		]);
+
+		expect(outcomes).toEqual([
+			{ _tag: "RenamedToIndexed", to: folder(["Library"], "1_New") },
+		]);
+		expect(events).toEqual([]);
+	});
+
+	it("still publishes a file the user creates in the indexed destination while the window is open", async () => {
+		const vault = makeVault(takenLibrary);
+
+		const { events } = await dispatchObserved(
+			vault,
+			[renameFolderToTaken],
+			async () => {
+				vault.createByHand("Library/1_New/Sub/user.md");
+			},
+		);
+
+		expect(events).toEqual(["FileCreated Library/1_New/Sub/user.md"]);
+	});
+
+	it("still publishes a user rename into the planned destination, where nothing of VAM's lands", async () => {
+		const vault = makeVault([...takenLibrary, "Inbox/note.md"]);
+
+		const { events } = await dispatchObserved(
+			vault,
+			[renameFolderToTaken],
+			() => vault.renameByHand("Inbox/note.md", "Library/New/note.md"),
+		);
+
+		expect(events).toEqual([
+			"FileRenamed Inbox/note.md -> Library/New/note.md",
+		]);
+	});
+
+	it("publishes no event for a note moved to its indexed name", async () => {
+		const vault = makeVault(["Library/a.md", "Library/b.md"]);
+
+		const { events, outcomes } = await dispatchObserved(vault, [
+			{
+				kind: VaultActionKind.RenameMdFile,
+				payload: {
+					from: {
+						basename: "a",
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Library"],
+					},
+					onCollision: "index",
+					to: {
+						basename: "b",
+						extension: "md",
+						kind: "MdFile",
+						pathParts: ["Library"],
+					},
+				},
+			},
+		]);
+
+		expect(outcomes).toEqual([
+			{
+				_tag: "RenamedToIndexed",
+				to: {
+					basename: "1_b",
+					extension: "md",
+					kind: "MdFile",
+					pathParts: ["Library"],
+				},
+			},
+		]);
+		expect(events).toEqual([]);
 	});
 });

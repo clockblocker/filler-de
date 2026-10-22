@@ -117,8 +117,10 @@ function makeVault() {
 		metadataCache: { getFirstLinkpathDest: () => null },
 		vault: {
 			cachedRead: async (file: TFile) => contents.get(file.path) ?? "",
-			create: async () => {
-				throw new Error("not used");
+			create: async (path: string, content: string) => {
+				calls.push(`vault.create ${path}`);
+				addFile(path, content);
+				return byPath.get(path);
 			},
 			createFolder: async () => {
 				throw new Error("not used");
@@ -152,7 +154,7 @@ function makeVault() {
 	addFile("Worter/de/lexem/lemma/f/fah/fahre/fahren.md", "# fahren\n");
 	addFile("Worter/de/lexem/lemma/k/kar/karte/Karte.md", "# Karte\n");
 	addFile(OUTSIDE, OUTSIDE_CONTENT);
-	return { app, calls, contents };
+	return { addFile, app, calls, contents };
 }
 
 describe("the reset's backup move", () => {
@@ -212,5 +214,59 @@ describe("the reset's root listing", () => {
 		expect(failure.message).toBe(
 			"Could not list the vault's folders: listFolder (vault root): Folder not found: vault not loaded",
 		);
+	});
+});
+
+describe("the reset's create-only writes and fail-on-collision move", () => {
+	it("refuses to move Worter/ onto a backup folder that is already there, moving nothing", async () => {
+		const { addFile, app, calls, contents } = makeVault();
+		const backup = "Worter backup 2026-10-20 20-44-26";
+		addFile(`${backup}/kept.md`, "already here");
+		const { dispose, manager } = createVaultActionManager(app);
+		const failure = await Effect.runPromise(
+			Effect.flip(vamResetVault(manager).moveFolder("Worter", backup)),
+		);
+		await Effect.runPromise(dispose);
+		expect(failure.message).toContain(`Could not move Worter/ to ${backup}/`);
+		expect(failure.message).toContain("already exists");
+		expect(calls).toEqual([]);
+		expect(contents.get(FAHRKARTE)).toBe(FAHRKARTE_CONTENT);
+		expect(contents.get(`${backup}/kept.md`)).toBe("already here");
+		expect([...contents.keys()].some((path) => path.startsWith("1_"))).toBe(
+			false,
+		);
+	});
+
+	it("creates a note where none is", async () => {
+		const { app, calls, contents } = makeVault();
+		const { dispose, manager } = createVaultActionManager(app);
+		await Effect.runPromise(
+			vamResetVault(manager).createNote("Wortlisten/Reset.md", "report"),
+		);
+		await Effect.runPromise(dispose);
+		expect(calls).toEqual(["vault.create Wortlisten/Reset.md"]);
+		expect(contents.get("Wortlisten/Reset.md")).toBe("report");
+	});
+
+	it("refuses to create a note over one that is there, or over its case variant on macOS", async () => {
+		const { app, calls, contents } = makeVault();
+		const { dispose, manager } = createVaultActionManager(app, {
+			fileSystem: { caseInsensitive: true },
+		});
+		const vault = vamResetVault(manager);
+		const exact = await Effect.runPromise(
+			Effect.flip(vault.createNote(OUTSIDE, "report")),
+		);
+		const variant = await Effect.runPromise(
+			Effect.flip(vault.createNote("Wortlisten/zeit.md", "report")),
+		);
+		await Effect.runPromise(dispose);
+		expect(exact.message).toContain(`Could not write ${OUTSIDE}`);
+		expect(exact.message).toContain("already exists");
+		expect(variant.message).toContain(
+			`${OUTSIDE} already exists, which is Wortlisten/zeit.md`,
+		);
+		expect(calls).toEqual([]);
+		expect(contents.get(OUTSIDE)).toBe(OUTSIDE_CONTENT);
 	});
 });

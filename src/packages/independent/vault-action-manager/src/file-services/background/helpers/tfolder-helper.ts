@@ -1,7 +1,10 @@
 import { Effect, Result } from "effect";
 import { TFolder } from "obsidian";
 import type { VamActionOutcome } from "../../../effect/dispatch-report";
-import { VamVaultIoError } from "../../../effect/errors";
+import {
+	type VamTargetExistsError,
+	VamVaultIoError,
+} from "../../../effect/errors";
 import { VaultIo } from "../../../effect/ports";
 import {
 	errorBothSourceAndTargetNotFound,
@@ -18,7 +21,14 @@ import type {
 	SplitPathFromTo,
 	SplitPathToFolder,
 } from "../../../types/split-path";
-import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
+import type { RenameCollision } from "../../../types/vault-action";
+import { VaultPath, type VaultPathIdentity } from "../../../vault-path";
+import {
+	firstFreeIndexedPath,
+	occupantOf,
+	type SelfRenameRecorder,
+	targetExists,
+} from "./common";
 
 function operationFailure(
 	operation: string,
@@ -48,6 +58,11 @@ const NO_OP: VamActionOutcome = { _tag: "NoOp" };
 
 /** Effect-native helper for low-level folder operations. */
 export class TFolderHelper {
+	constructor(
+		private readonly selfEvents?: SelfRenameRecorder,
+		private readonly paths: VaultPathIdentity = VaultPath.caseSensitive,
+	) {}
+
 	getFolder(splitPath: SplitPathToFolder) {
 		return Effect.gen(function* () {
 			const vault = yield* VaultIo;
@@ -132,15 +147,23 @@ export class TFolderHelper {
 		});
 	}
 
+	/**
+	 * Renames the folder. A taken target is handled as `onCollision` asks
+	 * (`fail` or `index`, the default); see `RenameCollision`.
+	 */
 	renameFolder({
 		from,
 		to,
-		collisionStrategy = "rename",
+		onCollision = "index",
 		updateLinks = true,
 	}: SplitPathFromTo<SplitPathToFolder> & {
-		collisionStrategy?: CollisionStrategy;
+		onCollision?: Exclude<RenameCollision, "dedupe">;
 		updateLinks?: boolean;
-	}): Effect.Effect<VamActionOutcome, VamVaultIoError, VaultIo> {
+	}): Effect.Effect<
+		VamActionOutcome,
+		VamVaultIoError | VamTargetExistsError,
+		VaultIo
+	> {
 		return Effect.gen({ self: this }, function* () {
 			const fromResult = yield* Effect.result(this.getFolder(from));
 			const toResult = yield* Effect.result(this.getFolder(to));
@@ -155,40 +178,46 @@ export class TFolderHelper {
 			}
 
 			if (Result.isFailure(fromResult)) {
-				// Moved already: the source is gone and the target there.
-				if (Result.isSuccess(toResult)) return NO_OP;
 				const fromPath = pathfinder.systemPathFromSplitPath(from);
 				const toPath = pathfinder.systemPathFromSplitPath(to);
+				// Moved already: the source is gone and the target there,
+				// unless the rename must not guess.
+				if (Result.isSuccess(toResult) && onCollision !== "fail")
+					return NO_OP;
 				return yield* operationFailure(
 					"renameFolder.resolve",
 					`${fromPath} -> ${toPath}`,
-					errorBothSourceAndTargetNotFound(
-						"folder",
-						fromPath,
-						toPath,
-						getErrorMessage(toResult.failure.cause),
-					),
+					Result.isSuccess(toResult)
+						? `Cannot rename ${fromPath}: it is not there, and ${toPath} is`
+						: errorBothSourceAndTargetNotFound(
+								"folder",
+								fromPath,
+								toPath,
+								getErrorMessage(toResult.failure.cause),
+							),
 					fromResult.failure,
 				);
 			}
 
-			if (
-				Result.isSuccess(toResult) &&
-				fromResult.success === toResult.success
-			) {
+			const fromFolder = fromResult.success;
+			if (Result.isSuccess(toResult) && fromFolder === toResult.success) {
 				return NO_OP;
 			}
-			if (Result.isSuccess(toResult)) {
-				if (collisionStrategy === "skip") return NO_OP;
-				return yield* this.renameToIndexedPath(
-					fromResult.success,
-					from,
+			const occupant = Result.isSuccess(toResult)
+				? toResult.success
+				: yield* occupantOf(to, this.paths, fromFolder);
+			if (!occupant)
+				return yield* this.performRename(fromFolder, to, updateLinks);
+			if (onCollision === "fail")
+				return yield* targetExists(
+					"renameFolder.collision",
 					to,
-					updateLinks,
+					occupant,
+					`Cannot rename ${fromFolder.path}`,
 				);
-			}
-			return yield* this.performRename(
-				fromResult.success,
+			return yield* this.renameToIndexedPath(
+				fromFolder,
+				from,
 				to,
 				updateLinks,
 			);
@@ -202,21 +231,14 @@ export class TFolderHelper {
 		updateLinks: boolean,
 	) {
 		return Effect.gen({ self: this }, function* () {
-			const existingBasenames = yield* getExistingBasenamesInFolder(to);
-			const indexedPath = yield* Effect.tryPromise({
-				catch: (cause) =>
-					operationFailure(
-						"findIndexedFolderPath",
-						pathfinder.systemPathFromSplitPath(to),
-						getErrorMessage(cause),
-						cause,
-					),
-				try: () =>
-					pathfinder.findFirstAvailableIndexedPath(
-						to,
-						existingBasenames,
-					),
-			});
+			const indexedPath = yield* firstFreeIndexedPath(to, this.paths);
+			// Before the move: Obsidian reports its renames during it (#175).
+			yield* this.selfEvents?.expectRenameDestinationEffect({
+				actual: pathfinder.systemPathFromSplitPath(indexedPath),
+				from: pathfinder.systemPathFromSplitPath(from),
+				isFolder: true,
+				planned: pathfinder.systemPathFromSplitPath(to),
+			}) ?? Effect.void;
 			yield* this.tryVaultRename(
 				fromFolder,
 				indexedPath,

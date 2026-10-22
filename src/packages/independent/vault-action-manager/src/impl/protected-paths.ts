@@ -117,6 +117,7 @@ function touchedPaths(action: VaultAction): readonly AnySplitPath[] {
 		case VaultActionKind.TrashFolder:
 		case VaultActionKind.CreateFile:
 		case VaultActionKind.TrashFile:
+		case VaultActionKind.CreateMdFile:
 		case VaultActionKind.UpsertMdFile:
 		case VaultActionKind.ProcessMdFile:
 		case VaultActionKind.TrashMdFile:

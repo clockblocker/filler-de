@@ -138,7 +138,7 @@ describe("creates never overwrite", () => {
 		const { store, vault } = await openStore();
 		vault.failNextWrite((action, path) => {
 			if (
-				action.kind === VaultActionKind.CreateFile &&
+				action.kind === VaultActionKind.CreateMdFile &&
 				path === gehenPath
 			)
 				vault.silentWrite(gehenPath, "raced in");

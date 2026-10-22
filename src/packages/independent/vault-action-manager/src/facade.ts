@@ -208,8 +208,8 @@ export class VaultActionManager {
 			"initialize Self Event tracking",
 		);
 		const activeEditor = new ActiveFileService();
-		const tfileHelper = new TFileHelper(this.selfEvents);
-		const tfolderHelper = new TFolderHelper();
+		const tfileHelper = new TFileHelper(this.selfEvents, this.paths);
+		const tfolderHelper = new TFolderHelper(this.selfEvents, this.paths);
 
 		this.markdownFiles = new MarkdownFileAccess(activeEditor, tfileHelper);
 		this.reader = new VaultReader(
@@ -816,5 +816,6 @@ export {
 	VamSetupError,
 	VamShutdownError,
 	VamSubscriptionError,
+	VamTargetExistsError,
 	VamVaultIoError,
 } from "./effect/errors";

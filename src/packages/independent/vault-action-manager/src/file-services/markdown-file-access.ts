@@ -1,19 +1,28 @@
 import { Effect, Result } from "effect";
 import {
 	VamActiveEditorError,
+	VamContentConflictError,
 	type VamFileAccessError,
 	VamNoActiveEditorError,
 	VamVaultIoError,
 } from "../effect/errors";
 import { VaultIo } from "../effect/ports";
 import { pathfinder } from "../helpers/pathfinder";
+import {
+	ContentPreconditionFailed,
+	contentMatches,
+} from "../internal/content-precondition";
 import type {
 	AnySplitPath,
 	SplitPathFromTo,
 	SplitPathToAnyFile,
 	SplitPathToMdFile,
 } from "../types/split-path";
-import type { Transform } from "../types/vault-action";
+import type {
+	ExpectedContent,
+	RenameCollision,
+	Transform,
+} from "../types/vault-action";
 import type { ActiveFileService } from "./active-view/active-file-service";
 import { annotateFileAccessFailure } from "./active-view/tracing";
 import type { TFileHelper } from "./background/helpers/tfile-helper";
@@ -114,8 +123,46 @@ export class MarkdownFileAccess {
 		}, Effect.tapError(annotateFileAccessFailure))();
 	}
 
+	/**
+	 * Trashes the file; `NoOp` when it is gone. With `ifContent`, only while
+	 * it holds that content, as the route reads it: the active editor's
+	 * buffer, unsaved typing included, or the file on disk. The check runs
+	 * immediately before the trash; otherwise it fails with
+	 * `VamContentConflictError` and trashes nothing.
+	 */
+	trashFile(target: SplitPathToMdFile, ifContent?: ExpectedContent) {
+		const path = pathfinder.systemPathFromSplitPath(target);
+		const self = this;
+		return Effect.fn("vam.markdown.trash")(function* () {
+			yield* Effect.annotateCurrentSpan({ operation: "trash", path });
+			if (ifContent !== undefined) {
+				const present = yield* Effect.result(
+					self.backgroundVault.getFile(target),
+				);
+				if (Result.isFailure(present)) {
+					if (present.failure.operation !== "getFile")
+						return yield* present.failure;
+					return { _tag: "NoOp" } as const;
+				}
+				const current = yield* self.readContent(target);
+				if (!contentMatches(current, ifContent))
+					return yield* new VamContentConflictError({
+						cause: new ContentPreconditionFailed({
+							expected: ifContent,
+						}),
+						operation: "trashFile.ifContent",
+						path,
+					});
+			}
+			return yield* self.backgroundVault.trashFile(target);
+		}, Effect.tapError(annotateFileAccessFailure))();
+	}
+
 	renameFile<SPF extends SplitPathToAnyFile>(
-		paths: SplitPathFromTo<SPF> & { readonly updateLinks?: boolean },
+		paths: SplitPathFromTo<SPF> & {
+			readonly onCollision?: RenameCollision;
+			readonly updateLinks?: boolean;
+		},
 	) {
 		const fromPath = pathfinder.systemPathFromSplitPath(paths.from);
 		const toPath = pathfinder.systemPathFromSplitPath(paths.to);

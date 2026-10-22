@@ -114,6 +114,7 @@ function getPathDepth(action: VaultAction): number {
 			return action.payload.to.pathParts.length;
 		case VaultActionKind.CreateFile:
 		case VaultActionKind.TrashFile:
+		case VaultActionKind.CreateMdFile:
 		case VaultActionKind.UpsertMdFile:
 		case VaultActionKind.TrashMdFile:
 		case VaultActionKind.ProcessMdFile:

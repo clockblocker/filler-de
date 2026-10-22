@@ -4,23 +4,43 @@ import {
 	isRenameAction,
 	isTrashAction,
 	isUpsertMdFileAction,
+	processTransformOf,
 } from "../../helpers/action-helpers";
-import type { Transform, VaultAction } from "../../types/vault-action";
+import {
+	type Transform,
+	type VaultAction,
+	VaultActionKind,
+} from "../../types/vault-action";
 import { sameRename } from "../common/collapse-helpers";
 import { makeKeyForAction } from "./helpers/make-key-for-action";
 
-/**
- * Extract transform function from ProcessMdFile payload.
- * Normalizes before/after variant to transform function.
- */
-function getTransform(
-	payload: { transform: Transform } | { before: string; after: string },
-): Transform {
-	if ("transform" in payload) {
-		return payload.transform;
-	}
-	return (content: string) => content.replace(payload.before, payload.after);
+/** Whether a trash runs only while its file holds some content. */
+function isGuardedTrash(action: VaultAction): boolean {
+	return (
+		action.kind === VaultActionKind.TrashMdFile &&
+		action.payload.ifContent !== undefined
+	);
 }
+
+/** The collision policy a rename runs with, its default spelled out. */
+function collisionOf(action: VaultAction): string | undefined {
+	switch (action.kind) {
+		case VaultActionKind.RenameMdFile:
+			return action.payload.onCollision ?? "dedupe";
+		case VaultActionKind.RenameFile:
+		case VaultActionKind.RenameFolder:
+			return action.payload.onCollision ?? "index";
+		default:
+			return undefined;
+	}
+}
+
+/** A transform applied to known content, as collapse folds it into a create. */
+const transformContent = (transform: Transform, content: string) =>
+	Effect.tryPromise({
+		catch: (cause) => cause,
+		try: () => Promise.resolve(transform(content)),
+	});
 
 /**
  * Composes two transforms in order. The result stays synchronous when both
@@ -72,8 +92,16 @@ export const collapseActions = Effect.fn("DispatchBatch.collapseActions")(
 			const key = makeKeyForAction(action);
 			const existing = byPath.get(key);
 
-			// Trash wins - terminal operation
+			// Trash wins - terminal operation. An unconditional trash already
+			// there stays: it trashes in every case a guarded one would.
 			if (isTrashAction(action)) {
+				if (
+					existing &&
+					isTrashAction(existing) &&
+					!isGuardedTrash(existing) &&
+					isGuardedTrash(action)
+				)
+					continue;
 				byPath.set(key, action);
 				// If we trash the target, any additional Process for the same key is meaningless.
 				removeAdditionalProcessByKey(key);
@@ -90,7 +118,8 @@ export const collapseActions = Effect.fn("DispatchBatch.collapseActions")(
 				if (
 					existing &&
 					isRenameAction(existing) &&
-					sameRename(existing.payload, action.payload)
+					sameRename(existing.payload, action.payload) &&
+					collisionOf(existing) === collisionOf(action)
 				) {
 					continue;
 				}
@@ -101,6 +130,22 @@ export const collapseActions = Effect.fn("DispatchBatch.collapseActions")(
 			// ProcessMdFile rules
 			if (isProcessAction(action)) {
 				if (existing) {
+					if (existing.kind === VaultActionKind.CreateMdFile) {
+						// CreateMdFile + ProcessMdFile: create the transformed content
+						const transformed = yield* transformContent(
+							processTransformOf(action.payload),
+							existing.payload.content ?? "",
+						);
+						byPath.set(key, {
+							...existing,
+							payload: {
+								...existing.payload,
+								content: transformed,
+							},
+						});
+						continue;
+					}
+
 					if (isUpsertMdFileAction(existing)) {
 						// UpsertMdFile + ProcessMdFile
 						const upsertContent = existing.payload.content;
@@ -121,10 +166,10 @@ export const collapseActions = Effect.fn("DispatchBatch.collapseActions")(
 								isProcessAction(existingAdditional)
 							) {
 								// Compose: existing additional then new action
-								const existingTransform = getTransform(
+								const existingTransform = processTransformOf(
 									existingAdditional.payload,
 								);
-								const actionTransform = getTransform(
+								const actionTransform = processTransformOf(
 									action.payload,
 								);
 								const combined = composeTransforms(
@@ -149,12 +194,10 @@ export const collapseActions = Effect.fn("DispatchBatch.collapseActions")(
 						}
 
 						// UpsertMdFile(content) + ProcessMdFile: apply transform to content, keep as Upsert
-						const transform = getTransform(action.payload);
-						const transformed = yield* Effect.tryPromise({
-							catch: (cause) => cause,
-							try: () =>
-								Promise.resolve(transform(upsertContent)),
-						});
+						const transformed = yield* transformContent(
+							processTransformOf(action.payload),
+							upsertContent,
+						);
 						byPath.set(key, {
 							...existing,
 							payload: {
@@ -169,10 +212,12 @@ export const collapseActions = Effect.fn("DispatchBatch.collapseActions")(
 
 					if (isProcessAction(existing)) {
 						// Compose transforms: existing then action
-						const existingTransform = getTransform(
+						const existingTransform = processTransformOf(
 							existing.payload,
 						);
-						const actionTransform = getTransform(action.payload);
+						const actionTransform = processTransformOf(
+							action.payload,
+						);
 						const combined = composeTransforms(
 							existingTransform,
 							actionTransform,
@@ -195,6 +240,15 @@ export const collapseActions = Effect.fn("DispatchBatch.collapseActions")(
 			// UpsertMdFile rules
 			if (isUpsertMdFileAction(action)) {
 				if (existing) {
+					// CreateMdFile + EnsureExist: the create makes it exist
+					if (
+						existing.kind === VaultActionKind.CreateMdFile &&
+						(action.payload.content === null ||
+							action.payload.content === undefined)
+					) {
+						continue;
+					}
+
 					if (isUpsertMdFileAction(existing)) {
 						// Both UpsertMdFile - collapse based on content semantics
 						const aContent = action.payload.content;

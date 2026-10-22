@@ -48,6 +48,7 @@ function makeApp() {
 		vault: {
 			getAbstractFileByPath: (path: string) => byPath.get(path) ?? null,
 			getMarkdownFiles: () => [],
+			getRoot: () => byPath.get("") ?? null,
 			offref: () => {},
 			on: (name: string, callback: unknown) => ({ callback, name }),
 			rename: async (entry: TAbstractFile, toPath: string) => {

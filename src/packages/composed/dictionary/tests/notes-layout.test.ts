@@ -497,6 +497,36 @@ describe("a stopped commit never loses or doubles the user's text", () => {
 		await expectIndexMatchesFiles(store, vault);
 	});
 
+	test("text typed into a removed note just as its trash runs is moved, not lost", async () => {
+		const { store, vault } = await bankWithMemos();
+		let typed = false;
+		vault.failNextWrite((action, path) => {
+			// The commit read the note and planned its trash; the user types
+			// into it between that check and the trash itself.
+			if (
+				!typed &&
+				action.kind === "TrashMdFile" &&
+				path === readingPath(moneyBank)
+			) {
+				typed = true;
+				vault.silentWrite(
+					readingPath(moneyBank),
+					noteMetadataHelper.mapBody(
+						(body) => `${body.trimEnd()}\n\nTyped at the trash.\n`,
+					)(vault.content(readingPath(moneyBank)) ?? ""),
+				);
+			}
+			return false;
+		});
+		await remove(store, "![[Geld#^2|^]]");
+		expect(typed).toBe(true);
+		expect(vault.content(readingPath(moneyBank))).toBeUndefined();
+		const lemmaNote = vault.content(lemmaPath(bank));
+		expect(lemmaNote).toContain("Typed at the trash.");
+		expect(countOf(lemmaNote, "Money memo.")).toBe(1);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
 	test("a removed Lemma's duplicate note goes with it, its text kept", async () => {
 		const { store, vault } = await bankWithMemos();
 		const copy = "Worter/de/Lexeme/NOUN/Fem/copy.md";

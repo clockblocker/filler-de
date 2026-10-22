@@ -1,8 +1,10 @@
 import { Effect } from "effect";
 import type { EditorPosition } from "obsidian";
+import { VamContentConflictError } from "../../../effect/errors";
 import type { SavedInlineTitleSelection } from "../../../effect/ports";
 import { pathfinder } from "../../../helpers/pathfinder";
 import { vaultContentHash } from "../../../internal/content-hash";
+import { ContentPreconditionFailed } from "../../../internal/content-precondition";
 import { getErrorMessage } from "../../../internal/get-error-message";
 import type { SplitPathToMdFile } from "../../../types/split-path";
 import type { Transform } from "../../../types/vault-action";
@@ -402,13 +404,19 @@ export class ActiveFileWriter {
 		const before = snapshot.content;
 		const after = yield* Effect.tryPromise({
 			catch: (cause) =>
-				activeEditorFailure(
-					"ReadFailure",
-					"processActiveContent.transform",
-					getErrorMessage(cause),
-					snapshot.path,
-					cause,
-				),
+				cause instanceof ContentPreconditionFailed
+					? new VamContentConflictError({
+							cause,
+							operation: "processActiveContent.expected",
+							path: snapshot.path,
+						})
+					: activeEditorFailure(
+							"ReadFailure",
+							"processActiveContent.transform",
+							getErrorMessage(cause),
+							snapshot.path,
+							cause,
+						),
 			try: async () => transform(before),
 		});
 		if (after === before) return { _tag: "NoOp" } as const;
