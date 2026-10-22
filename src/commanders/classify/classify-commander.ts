@@ -32,10 +32,11 @@ export type ClassifyCommanderDeps = {
 	 */
 	readonly missingProviderKeys?: () => readonly string[];
 	/**
-	 * Why Classify may not run now, such as a dictionary reset moving
-	 * `Worter/`; Classify then tells the user and writes nothing.
+	 * Why Classify may not run now on the Scroll at `scrollPath`, such as a
+	 * dictionary reset moving `Worter/` or a protected Scroll; Classify then
+	 * tells the user and writes nothing.
 	 */
-	readonly blockedBy?: () => string | undefined;
+	readonly blockedBy?: (scrollPath: string) => string | undefined;
 };
 
 export type ClassifyContext = {
@@ -174,7 +175,7 @@ export class ClassifyCommander {
 				segmenterVersion: segmenterVersion(),
 			}),
 		);
-		const blocked = this.deps.blockedBy?.();
+		const blocked = this.deps.blockedBy?.(context.scrollPath);
 		const missing =
 			blocked === undefined
 				? missingKeysNotice(this.deps.missingProviderKeys?.() ?? [])

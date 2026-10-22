@@ -9,7 +9,9 @@ import {
 import type { VamShutdownError } from "../../effect/errors";
 import type { VamRuntime } from "../../effect/runtime";
 import type { VaultAction } from "../../types/vault-action";
+import type { LinkRewriteWindows } from "../event-processing/link-rewrite-windows";
 import type { SelfEventTracker } from "../event-processing/self-event-tracker";
+import type { ProtectedPaths } from "../protected-paths";
 import type { Executor } from "./executor";
 
 export type DispatchBatchEffectFailure = DispatchEffectFailure;
@@ -30,6 +32,13 @@ export type DispatchBatchOptions = {
 	 * appended to the waiting list.
 	 */
 	readonly onSubmitted?: (placement: "queued" | "waiting") => void;
+	/**
+	 * Paths no batch may change. A submission naming one fails with
+	 * `VamProtectedPathError` before anything in it runs.
+	 */
+	readonly protectedPaths?: ProtectedPaths;
+	/** Records when link-updating renames run. */
+	readonly linkRewrites?: LinkRewriteWindows;
 };
 
 /**

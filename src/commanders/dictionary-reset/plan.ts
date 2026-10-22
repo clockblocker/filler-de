@@ -51,6 +51,8 @@ export type ResetSources = {
 		fromPath: string,
 	) => Effect.Effect<string | undefined>;
 	readonly read: (path: string) => Effect.Effect<string | undefined>;
+	/** Whether VAM refuses to write `path`, such as a note under `Exemplar/`. */
+	readonly isProtected?: (path: string) => boolean;
 };
 
 export type AttestationTarget = {
@@ -147,6 +149,11 @@ export const targetAttestation = Effect.fnUntraced(function* (
 		return {
 			_tag: "Unresolvable",
 			reason: `its source ${scrollPath} is a dictionary note, which the reset backs up and never writes to`,
+		} as const;
+	if (sources.isProtected?.(scrollPath))
+		return {
+			_tag: "Unresolvable",
+			reason: `its source ${scrollPath} lies in a protected folder, which Textfresser never writes to`,
 		} as const;
 	const content = yield* sources.read(scrollPath);
 	if (content === undefined)

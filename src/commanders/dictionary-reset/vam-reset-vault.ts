@@ -19,6 +19,7 @@ type ResetVam = Pick<
 	| "dispatchStopOnFirstFailure"
 	| "exists"
 	| "list"
+	| "protectedPrefixOf"
 	| "readContent"
 	| "resolveLinkpathDest"
 	| "scan"
@@ -79,6 +80,7 @@ export function vamResetVault(vam: ResetVam): ResetVault {
 					.pipe(Effect.mapError(failed(`Could not write ${path}`)));
 			}),
 		exists,
+		isProtected: (path) => vam.protectedPrefixOf(path) !== undefined,
 		listFolder: (path) =>
 			Effect.gen(function* () {
 				const folder = folderPath(path);

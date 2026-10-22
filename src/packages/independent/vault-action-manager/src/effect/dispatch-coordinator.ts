@@ -17,7 +17,12 @@ import {
 } from "../impl/actions-processing/ensure-requirements-helpers";
 import type { Executor } from "../impl/actions-processing/executor";
 import { topologicalSort } from "../impl/actions-processing/topological-sort";
+import {
+	type LinkRewriteWindows,
+	rewritesLinks,
+} from "../impl/event-processing/link-rewrite-windows";
 import type { SelfEventTracker } from "../impl/event-processing/self-event-tracker";
+import type { ProtectedPaths } from "../impl/protected-paths";
 import { splitPathCodec } from "../split-path-codec";
 import type {
 	AnySplitPath,
@@ -31,6 +36,7 @@ import {
 	VamDispatchOverflowError,
 	VamDispatchStoppedError,
 	VamPlanningError,
+	VamProtectedPathError,
 	VamShutdownError,
 	VamVaultIoError,
 } from "./errors";
@@ -40,6 +46,7 @@ import type { VamRuntime } from "./runtime";
 /** Failure of a default batch, which attempts every planned action. */
 export type DispatchEffectFailure =
 	| VamPlanningError
+	| VamProtectedPathError
 	| VamShutdownError
 	| VamDispatchOverflowError
 	| readonly VamDispatchError[];
@@ -47,6 +54,7 @@ export type DispatchEffectFailure =
 /** Failure of a batch dispatched with `stopOnFirstFailure: true`. */
 export type StopOnFirstFailureDispatchFailure =
 	| VamPlanningError
+	| VamProtectedPathError
 	| VamShutdownError
 	| VamDispatchOverflowError
 	| VamDispatchStoppedError;
@@ -77,6 +85,13 @@ type DispatchBatchWorkerOptions = {
 	 * appended to the waiting list.
 	 */
 	readonly onSubmitted?: (placement: "queued" | "waiting") => void;
+	/**
+	 * Paths no batch may change. A submission naming one fails with
+	 * `VamProtectedPathError` before anything in it runs.
+	 */
+	readonly protectedPaths?: ProtectedPaths;
+	/** Records when link-updating renames run. */
+	readonly linkRewrites?: LinkRewriteWindows;
 };
 
 const DEFAULT_QUEUE_CAPACITY = 10;
@@ -124,6 +139,8 @@ const shutdownMessage: ShutdownMessage = { _tag: "Shutdown" };
  */
 export class DispatchBatchWorker {
 	private readonly idleSeed = Deferred.makeUnsafe<void>();
+	private readonly linkRewrites: DispatchBatchWorkerOptions["linkRewrites"];
+	private readonly protectedPaths: DispatchBatchWorkerOptions["protectedPaths"];
 	private readonly onSubmitted: DispatchBatchWorkerOptions["onSubmitted"];
 	private readonly queueCapacity: number;
 	private readonly queueReady =
@@ -198,6 +215,8 @@ export class DispatchBatchWorker {
 			Math.max(1, options.queueCapacity ?? DEFAULT_QUEUE_CAPACITY),
 		);
 		this.onSubmitted = options.onSubmitted;
+		this.protectedPaths = options.protectedPaths;
+		this.linkRewrites = options.linkRewrites;
 		const scopedWorker = Effect.scoped(
 			Effect.forkScoped(this.worker(this)).pipe(
 				Effect.flatMap(Fiber.join),
@@ -223,6 +242,7 @@ export class DispatchBatchWorker {
 		return Effect.fn("DispatchBatch.dispatch")(function* (
 			self: DispatchBatchWorker,
 		) {
+			yield* self.refuseProtected(submitted);
 			const queue = yield* Deferred.await(self.queueReady);
 			const parentSpan = yield* Effect.option(Effect.currentSpan);
 			const completion = yield* Deferred.make<
@@ -267,6 +287,28 @@ export class DispatchBatchWorker {
 				),
 			);
 		})(this);
+	}
+
+	/**
+	 * Fails with `VamProtectedPathError` when any submitted action names a
+	 * protected path. Prerequisites added in planning only create parent
+	 * folders of submitted targets, so checking the submission suffices.
+	 */
+	private refuseProtected(
+		actions: readonly VaultAction[],
+	): Effect.Effect<void, VamProtectedPathError> {
+		const violation = this.protectedPaths?.findViolation(actions);
+		if (!violation) return Effect.void;
+		const error = new VamProtectedPathError({
+			action: violation.action,
+			operation: violation.action.kind,
+			path: violation.path,
+			prefix: violation.prefix,
+			relation: violation.relation,
+		});
+		return Effect.logError("[DispatchBatch] Refused a protected path", {
+			error: error.message,
+		}).pipe(Effect.andThen(Effect.fail(error)));
 	}
 
 	whenIdleEffect(): Effect.Effect<void> {
@@ -592,7 +634,12 @@ export class DispatchBatchWorker {
 	private executeAction(
 		action: VaultAction,
 	): Effect.Effect<VamDispatchError | undefined, never, VamLiveServices> {
-		const execute = this.executor.execute(action).pipe(
+		const run = this.executor.execute(action);
+		const tracked =
+			this.linkRewrites && rewritesLinks(action)
+				? this.linkRewrites.track(run)
+				: run;
+		const execute = tracked.pipe(
 			Effect.matchCause({
 				onFailure: (cause) =>
 					new VamDispatchError({

@@ -424,6 +424,31 @@ describe("plan", () => {
 			reason: expect.stringContaining("dictionary note"),
 		});
 	});
+	it("never plans to classify inside a protected source", async () => {
+		const scroll = "Exemplar/Kohlekraftwerk/Sources/Atom.md";
+		const plan = await run(
+			planReset(
+				{
+					isProtected: (path) => path.startsWith("Exemplar/"),
+					read: () => Effect.succeed("Das Atom. ^13\n"),
+					resolveLink: () => Effect.succeed(scroll),
+				},
+				{
+					collected: collectOldNotes([
+						{
+							content: "[[Atom]] ^LX-LM-NOUN-1\n\n![[Atom#^13|^]]\n",
+							path: "Worter/de/Atom.md",
+						},
+					]),
+					source: "Worter",
+				},
+			),
+		);
+		expect(plan.attestations[0]?.outcome).toEqual({
+			_tag: "Unresolvable",
+			reason: `its source ${scroll} lies in a protected folder, which Textfresser never writes to`,
+		});
+	});
 });
 
 describe("locateAttestation", () => {

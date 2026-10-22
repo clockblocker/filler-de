@@ -200,6 +200,30 @@ export class VamDispatchOverflowError extends Schema.TaggedError<VamDispatchOver
 	}
 }
 
+/**
+ * A Dispatch Batch named a protected path, so VAM refused the whole batch
+ * before running any of it. `relation` tells whether the path lies inside a
+ * protected prefix or is a folder containing one.
+ */
+export class VamProtectedPathError extends Schema.TaggedError<VamProtectedPathError>()(
+	"VamProtectedPathError",
+	{
+		action: Schema.optional(Schema.Unknown),
+		operation: Schema.String,
+		path: Schema.String,
+		prefix: Schema.String,
+		relation: Schema.Literals(["inside", "contains"]),
+	},
+) {
+	override get message(): string {
+		const where =
+			this.relation === "inside"
+				? `is protected (under "${this.prefix}")`
+				: `contains the protected path "${this.prefix}"`;
+		return `${this.operation} ${displayPath(this.path)}: refused, the path ${where}; no action in the batch ran`;
+	}
+}
+
 export class VamSubscriptionError extends Schema.TaggedError<VamSubscriptionError>()(
 	"VamSubscriptionError",
 	{
@@ -235,5 +259,6 @@ export type VamEffectError =
 	| VamDispatchError
 	| VamDispatchStoppedError
 	| VamDispatchOverflowError
+	| VamProtectedPathError
 	| VamSubscriptionError
 	| VamShutdownError;

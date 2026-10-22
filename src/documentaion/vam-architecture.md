@@ -41,7 +41,7 @@ The API has four groups:
 | Group | Examples |
 | --- | --- |
 | Dispatch | `dispatch`, `dispatchStopOnFirstFailure` |
-| Observation | `startListening`, `subscribeToBulk`, `subscribeToMdModifications` |
+| Observation | `startListening`, `subscribeToBulk`, `subscribeToMdModifications`, `subscribeToProtectedPathModifications` |
 | Vault reads | `readContent`, `readContentWithStat`, `exists`, `findByBasename`, `list`, `scan`, `scanWithStat` |
 | Active editor | `mdPwd`, `getOpenedContent`, `getSelectionInfo`, `cd`, `scrollOpenedFileToLine` |
 
@@ -152,6 +152,51 @@ failures together. `dispatchStopOnFirstFailure` stops at the first failed
 action and fails with `VamDispatchStoppedError`, which carries that failure,
 the planned actions already executed, and the planned actions skipped. Planned
 actions include prerequisites VAM added, such as parent folders.
+
+## Protected paths
+
+`createVaultActionManager(app, { protectedPaths })` takes vault path prefixes
+that no Dispatch Batch may change. The plugin protects `Exemplar`, which holds
+the design-reference notes such as `Exemplar/Kohlekraftwerk/`. The list is a
+constant in `src/managers/obsidian/protected-paths/`, not a setting.
+
+A prefix protects its own path and everything below it. Matching uses whole
+segments, so `Exemplar` covers `Exemplar/Note.md` but not
+`Exemplars/Note.md`. It ignores case, because the file systems of macOS and
+Windows put `exemplar/x.md` in `Exemplar/`. It also ignores stray slashes and
+backslashes. The vault root (`""`) cannot be a prefix.
+
+Dispatch checks each submitted batch before it queues it. If any action names
+a protected path, the whole batch fails with `VamProtectedPathError` and none
+of it runs. A protected path here is a target, or either end of a rename. A
+rename or trash of a folder that contains a prefix is refused too, and so is
+the vault root, which contains every prefix. Creating such a folder is
+allowed. Planning only adds parent folders of submitted targets, so checking
+the submission is enough. `replaceActiveLine` is not a dispatch and is not
+checked: it edits the open note at the user's command.
+`protectedPrefixOf(path)` answers the same match up front. Classify and the
+dictionary reset ask it before they write `Worter/` for a Scroll, because a
+refused Scroll write afterwards would leave the dictionary half-written.
+
+VAM cannot stop Obsidian from writing these files. The link updater rewrites
+links in any file after `fileManager.renameFile`, and Sync or other plugins
+may write them too. `subscribeToProtectedPathModifications` reports these
+writes. It runs over the Markdown modification channel below and labels each
+change with an `origin`:
+
+- `VamRenameLinkUpdate`: the file's mtime falls within a rename that VAM ran
+  with link updating, plus a 5 s grace.
+- `OpenInEditor`: otherwise, if a Markdown view shows the file. This is most
+  likely the user's own typing.
+- `Unattributed`: anything else.
+
+The plugin shows a Notice for every origin except `OpenInEditor`. The Notice
+stays until dismissed and names each file. Hand edits to an open exemplar
+therefore raise no alarm. A rewrite after a VAM rename still raises one while
+the note is open. One case is missed: Obsidian's link updater rewrites an
+open exemplar after a rename the user made. If the editor lookup fails, the
+change counts as `Unattributed`, so a failure can add a warning but never
+hide one.
 
 ## Observation pipeline
 

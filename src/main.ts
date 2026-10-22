@@ -75,6 +75,11 @@ import {
 	CommandKind,
 	createCommandExecutor,
 } from "./managers/obsidian/command-executor";
+import {
+	PROTECTED_PATH_PREFIXES,
+	protectedPathRefusal,
+	watchProtectedPaths,
+} from "./managers/obsidian/protected-paths/protected-paths-guard";
 import { OverlayManager } from "./managers/overlay-manager";
 import { SettingsTab } from "./settings";
 import {
@@ -236,7 +241,9 @@ export default class TextEaterPlugin extends Plugin {
 		await this.loadSettings();
 		await this.addCommands();
 
-		const vaultActions = createVaultActionManager(this.app);
+		const vaultActions = createVaultActionManager(this.app, {
+			protectedPaths: PROTECTED_PATH_PREFIXES,
+		});
 		this.vam = vaultActions.manager;
 		this.vamTesting = vaultActions.testing;
 		this.disposeVam = vaultActions.dispose;
@@ -310,7 +317,8 @@ export default class TextEaterPlugin extends Plugin {
 				? "A dictionary reset is running; Classify once it has ended."
 				: undefined;
 		this.classify = new ClassifyCommander({
-			blockedBy: resetRunning,
+			blockedBy: (scrollPath) =>
+				resetRunning() ?? protectedPathRefusal(this.vam, scrollPath),
 			cache: segmentationCache,
 			dumgen: () => this.dumgen.get(),
 			missingProviderKeys: () => this.dumgen.missingKeys(),
@@ -371,6 +379,20 @@ export default class TextEaterPlugin extends Plugin {
 		// VaultActionManager will convert events to VaultEvent, filter self-events,
 		// and notify subscribers (e.g., Librarian)
 		await Effect.runPromise(this.vam.startListening());
+		// VAM closes this subscription when it is disposed.
+		await Effect.runPromise(
+			watchProtectedPaths(this.vam, (message) => {
+				logger.warn(`[TextEaterPlugin] ${message}`);
+				const notice = new Notice(message, 0);
+				return {
+					showing: () => notice.noticeEl.isConnected,
+					update: (next) => {
+						logger.warn(`[TextEaterPlugin] ${next}`);
+						notice.setMessage(next);
+					},
+				};
+			}),
+		);
 		this.stopObservingScrolls = await Effect.runPromise(
 			observeScrollModifications(this.vam, this.unlinkObserver),
 		);

@@ -154,6 +154,10 @@ function makeHarness(
 			Effect.sync(() => {
 				activeFile = file;
 			}),
+		openMarkdownPaths: Effect.sync(
+			(): ReadonlySet<string> =>
+				new Set(activeFile ? [activeFile.path] : []),
+		),
 		waitForActiveEditor: ({ expectedInlineTitleText, path }) => {
 			const attempt = Effect.suspend(() => {
 				readinessCount++;
