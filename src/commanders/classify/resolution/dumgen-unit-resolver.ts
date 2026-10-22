@@ -275,7 +275,11 @@ const commitUnit = Effect.fnUntraced(function* (
 		const names =
 			refOf === undefined
 				? undefined
-				: yield* store.scrollRefNames(scrollPath, decided.reading);
+				: yield* store.scrollRefNames(
+						scrollPath,
+						decided.reading,
+						attestation.surface,
+					);
 		const committed = yield* commitOccurrence(store, {
 			...(refOf === undefined || names === undefined
 				? {}

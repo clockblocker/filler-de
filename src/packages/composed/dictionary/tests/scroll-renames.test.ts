@@ -28,6 +28,7 @@ import {
 	readingEntry,
 	readingOf,
 	springen,
+	verb,
 } from "./support/fixtures";
 import { crossroadPath, lemmaPath, readingPath } from "./support/paths";
 import { openStore, seed } from "./support/store";
@@ -689,6 +690,117 @@ describe("refs named from the Reading note that holds them (#210)", () => {
 		]);
 		expect(storedRefs(vault.content(RUN))).toEqual([
 			ref("gehen", 5, "55555555"),
+		]);
+	});
+
+	test("name a Scroll by its path when the commit creates the Crossroad note of the occurrence's spelling", async () => {
+		const { store } = await twoFolders(
+			{ run: [], walk: [] },
+			{ "Library/ging.md": "ging" },
+		);
+		const ging: Dumling.Surface<"de"> = {
+			...gehtSurfaceEntry.surface,
+			normalizedSurface: "ging",
+		};
+		expect(
+			await run(
+				store.scrollRefNames("Library/ging.md", gehenReading, ging),
+			),
+		).toEqual({ aliases: [], linkpath: "Library/ging" });
+		expect(
+			await run(store.scrollRefNames("Library/ging.md", gehenReading)),
+		).toEqual({ aliases: [], linkpath: "ging" });
+	});
+});
+
+/** A Scroll block that links, as Classify links an occurrence, the Reading note at `reading`. */
+const linkedBlock = (block: number, reading: string, shown = "geht") =>
+	`Er [[${reading.replace(/\.md$/u, "")}|${shown}]] heim. ^${block}`;
+const gehenlassen = verb("gehenlassen");
+
+describe("refs a dictionary note took their Scroll's name from (#210)", () => {
+	test("take the Scroll's path at the next start, once the Scroll's block links their Reading note", async () => {
+		const { store, vault } = await twoFolders(
+			{ run: [], walk: [ref("gehen", 0, "00000000")] },
+			{ "Library/gehen.md": "Er geht heim. ^0\n" },
+		);
+		// Without a link to 🚶's note, nothing shows the block is its.
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("gehen", 0, "00000000"),
+		]);
+		await run(store.close);
+		vault.silentWrite("Library/gehen.md", `${linkedBlock(0, WALK)}\n`);
+		const reopened = await openStore(vault);
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("Library/gehen", 0, "00000000"),
+		]);
+		await run(reopened.store.close);
+		const before = vault.batches.length;
+		await openStore(vault);
+		expect(vault.batches.length).toBe(before);
+	});
+
+	test("stay while another note outside the dictionary has the name, or the block is not there", async () => {
+		const { store, vault } = await twoFolders(
+			{
+				run: [],
+				walk: [
+					ref("gehen", 0, "00000000"),
+					ref("Other", 7, "77777777"),
+				],
+			},
+			{
+				"Archive/gehen.md": `${linkedBlock(0, WALK)}\n`,
+				"Library/gehen.md": `${linkedBlock(0, WALK)}\n`,
+				"Library/Other.md": `${linkedBlock(1, WALK)}\n`,
+				[`${WALK.split("/").slice(0, -1).join("/")}/Other.md`]: "x",
+			},
+		);
+		await run(store.close);
+		await openStore(vault);
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("gehen", 0, "00000000"),
+			ref("Other", 7, "77777777"),
+		]);
+	});
+
+	test("take the Scroll's path when a Lemma note created beside their Reading note takes its basename", async () => {
+		const { store, vault } = await twoFolders(
+			{
+				run: [ref("gehenlassen", 5, "55555555")],
+				walk: [ref("gehenlassen", 0, "00000000")],
+			},
+			{
+				"Library/gehenlassen.md": `${linkedBlock(0, WALK)}\n\n${linkedBlock(5, RUN, "läuft")}\n`,
+			},
+		);
+		expect(lemmaPath(gehenlassen).split("/").slice(0, -1)).toEqual(
+			WALK.split("/").slice(0, -1),
+		);
+		await seed(store, [
+			createLemma(gehenlassen),
+			createReading(readingEntry(readingOf(gehenlassen, "🙋"))),
+		]);
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("Library/gehenlassen", 0, "00000000"),
+		]);
+		// From 🏃's note, in another folder, the basename still opens the Scroll.
+		expect(storedRefs(vault.content(RUN))).toEqual([
+			ref("gehenlassen", 5, "55555555"),
+		]);
+	});
+
+	test("take the Scroll's path when the user creates a note of its name beside their Reading note", async () => {
+		const { vault } = await twoFolders(
+			{ run: [], walk: [ref("Story", 0, "00000000")] },
+			{ "Library/Story.md": `${linkedBlock(0, WALK)}\n` },
+		);
+		await vault.userWrite(
+			`${WALK.split("/").slice(0, -1).join("/")}/Story.md`,
+			"a note of mine",
+		);
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("Library/Story", 0, "00000000"),
 		]);
 	});
 });

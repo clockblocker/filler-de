@@ -51,6 +51,11 @@
  * store adopts the new name for each such ref whose old name opens no note
  * and whose new one opens a note outside `Worter/` (`retargetForRepairs`),
  * each resolved from its own Reading note.
+ *
+ * A dictionary note that takes a Scroll's basename from refs beside it,
+ * such as a Lemma note created in their Reading note's folder, breaks
+ * them. The store moves each such ref to its Scroll's path when nothing
+ * else could be its Scroll (`retargetForShadows`).
  */
 import {
 	ATTESTATION_REF_START,
@@ -647,6 +652,100 @@ export const retargetForRepairs = Effect.fnUntraced(function* <E>(
 		const now = yield* lookup.resolve(linkpath, from);
 		if (now === undefined || !outsideDictionary(now)) continue;
 		byRef.set(ref, yield* nameOf(now, from, lookup));
+	}
+	if (byRef.size === 0) return undefined;
+	return (_parts, ref) => byRef.get(ref);
+});
+
+/** The form a note's basename is matched by in a link, ignoring case. */
+export const basenameKeyOf = (path: string): string =>
+	nameKey(basenameOf(path));
+
+/** A block ID at a line's end, after whitespace, as Obsidian reads one. */
+const BLOCK_ID = /(?:^|\s)\^([A-Za-z0-9-]+)\s*$/u;
+/** A line that starts a block of its own: a list item, a heading or a quote. */
+const OPENS_BLOCK = /^\s*(?:[-*+]\s|\d+[.)]\s|#{1,6}\s|>)/u;
+/** A line no block runs across. */
+const BREAKS_BLOCK = /^\s*(?:$|```|~~~|\|)/u;
+const WIKILINK = /\[\[([^\]|#\n]+)(?:#[^\]|\n]*)?(?:\|[^\]\n]*)?\]\]/gu;
+
+/**
+ * Whether `content` holds the block `^blockId` exactly once, and that
+ * block links the note at `linked`: the link Classify writes at an
+ * occurrence goes to its Reading note (#64).
+ */
+function blockLinks(content: string, blockId: string, linked: string): boolean {
+	const lines = content.split("\n").map((line) => line.replace(/\r$/u, ""));
+	const ends = lines.flatMap((line, at) =>
+		BLOCK_ID.exec(line)?.[1] === blockId ? [at] : [],
+	);
+	const [end] = ends;
+	if (ends.length !== 1 || end === undefined) return false;
+	let start = end;
+	while (start > 0 && !OPENS_BLOCK.test(lines[start] ?? "")) {
+		const previous = lines[start - 1] ?? "";
+		if (BREAKS_BLOCK.test(previous) || BLOCK_ID.test(previous)) break;
+		start -= 1;
+	}
+	const target = nameKey(linkpathOf(linked));
+	return lines
+		.slice(start, end + 1)
+		.some((line) =>
+			[...line.matchAll(WIKILINK)].some(
+				([, linkpath]) => nameKey(linkpath ?? "") === target,
+			),
+		);
+}
+
+/**
+ * Where refs go whose basename a dictionary note took from their Scroll
+ * (#210): a Lemma note created beside their Reading note, a Crossroad note
+ * whose path is shorter than the Scroll's, or a ref written that way
+ * before refs were named from their own Reading note. Refs never point
+ * into `Worter/`, so such a ref is broken, and it moves to the Scroll's
+ * path only when nothing else could be its Scroll:
+ *
+ * - its link path is a basename, and from its Reading note Obsidian opens
+ *   a note under `Worter/` for it;
+ * - exactly one note outside `Worter/` has that basename;
+ * - that note holds the ref's block once, and the block links the ref's
+ *   Reading note, as Classify linked the occurrence;
+ * - no other Reading note holds the same ref.
+ *
+ * The occurrence key is a hash of the segmenter's Sentence and Segments,
+ * which the store cannot recompute; `planRefRewrite` still refuses a move
+ * onto a ref the dictionary holds. Every other ref stays as it is. `names`
+ * limits it to refs naming those basenames, by `basenameKeyOf`.
+ */
+export const retargetForShadows = Effect.fnUntraced(function* <E>(
+	held: readonly HeldRef[],
+	asked: ScrollLookup<E>,
+	read: (path: string) => Effect.Effect<string | undefined, E>,
+	names?: ReadonlySet<string>,
+): Effect.fn.Return<Retarget | undefined, E> {
+	const lookup = remembering(asked);
+	const holders = new Map<string, number>();
+	for (const { ref } of held) holders.set(ref, (holders.get(ref) ?? 0) + 1);
+	const contents = new Map<string, string | undefined>();
+	const byRef = new Map<string, string>();
+	for (const { from, ref } of held) {
+		const parts = parseAttestationRef(ref);
+		if (parts === undefined || parts.linkpath.includes("/")) continue;
+		if (names !== undefined && !names.has(nameKey(parts.linkpath)))
+			continue;
+		if (holders.get(ref) !== 1) continue;
+		const opened = yield* lookup.resolve(parts.linkpath, from);
+		if (opened === undefined || outsideDictionary(opened)) continue;
+		const outside = (yield* lookup.named(parts.linkpath)).filter(
+			outsideDictionary,
+		);
+		const [scroll] = outside;
+		if (outside.length !== 1 || scroll === undefined) continue;
+		if (!contents.has(scroll)) contents.set(scroll, yield* read(scroll));
+		const content = contents.get(scroll);
+		if (content === undefined || !blockLinks(content, parts.blockId, from))
+			continue;
+		byRef.set(ref, yield* nameOf(scroll, from, lookup));
 	}
 	if (byRef.size === 0) return undefined;
 	return (_parts, ref) => byRef.get(ref);
