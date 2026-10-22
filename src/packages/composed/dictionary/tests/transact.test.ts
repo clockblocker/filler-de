@@ -136,28 +136,47 @@ describe("transact", () => {
 		expect(await emojisOf(store)).toEqual(["🚶"]);
 	});
 
-	test("a write that fails for another reason fails the transaction at once", async () => {
+	/** A plan that adds Knowledge to gehen's Reading note, counting its plans. */
+	const defineGehen =
+		(counter: { plans: number }) => (view: DictionaryView) => {
+			counter.plans++;
+			return Result.succeed(
+				Transaction.commit(
+					{
+						baseRevision: view.revision,
+						changes: [contribute(gehenReading, "to walk")],
+					},
+					"Defined",
+				),
+			);
+		};
+
+	test("a write that keeps failing as I/O plans once more, then fails", async () => {
 		const { store, vault } = await gehenDictionary();
-		let plans = 0;
+		const counter = { plans: 0 };
 		const gehenNote = readingPath(gehenReading);
 		vault.failNextWrite((_action, path) => path === gehenNote, 1000);
-		const failure = await run(
-			store.transact((view) => {
-				plans++;
-				return Result.succeed(
-					Transaction.commit(
-						{
-							baseRevision: view.revision,
-							changes: [contribute(gehenReading, "to walk")],
-						},
-						"Defined",
-					),
-				);
-			}),
-		).catch((error: unknown) => error);
+		const failure = await run(store.transact(defineGehen(counter))).catch(
+			(error: unknown) => error,
+		);
 		expect(failure).toBeInstanceOf(DictionaryWriteError);
-		expect(failure).toMatchObject({ externalChange: false });
-		expect(plans).toBe(1);
+		expect(failure).toMatchObject({
+			externalChange: false,
+			transient: true,
+		});
+		expect(counter.plans).toBe(2);
+	});
+
+	test("an I/O failure that clears lands on the next plan", async () => {
+		const { store, vault } = await gehenDictionary();
+		const counter = { plans: 0 };
+		const gehenNote = readingPath(gehenReading);
+		// The commit's own second write fails too; the transaction's next plan lands.
+		vault.failNextWrite((_action, path) => path === gehenNote, 2);
+		const done = await run(store.transact(defineGehen(counter)));
+		expect(done).toBe("Defined");
+		expect(counter.plans).toBe(2);
+		expect(vault.content(gehenNote)).toContain("to walk");
 	});
 
 	test("a stop commits nothing, and a plan's failure is the transaction's", async () => {

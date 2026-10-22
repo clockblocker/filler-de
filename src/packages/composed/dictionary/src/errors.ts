@@ -70,6 +70,12 @@ export class DictionaryWriteError extends Schema.TaggedError<DictionaryWriteErro
 		rebuilt: Schema.Boolean,
 		/** Vault paths of the writes never attempted. */
 		skipped: Schema.Array(Schema.String),
+		/**
+		 * VAM failed the write that stopped as `io`, such as a file another
+		 * process held (`EBUSY`), which may not recur. `transact` plans once
+		 * more after a pause.
+		 */
+		transient: Schema.Boolean,
 	},
 ) {}
 

@@ -291,8 +291,10 @@ export type DumdictVaultStore = {
 	 * a create whose path was taken) plans again from the files as they are
 	 * now, after releasing the lock so pending events land. So does a plan
 	 * that answers `Replan`. After `maxAttempts` plans the transaction
-	 * fails with `DictionaryTransactionConflict`; any other commit failure
-	 * fails it at once. Never call the store's locked operations
+	 * fails with `DictionaryTransactionConflict`. A write VAM failed as
+	 * `io` (`DictionaryWriteError.transient`) plans again once, after a
+	 * pause, within the attempts; any other commit failure fails it at
+	 * once. Never call the store's locked operations
 	 * (`commitChanges`, `transact`, `rescan`, `appendFreeform`,
 	 * `refreshTables`) from inside `plan`: the lock is not reentrant.
 	 */
@@ -556,6 +558,9 @@ const MAX_FOLLOW_UP_DEPTH = 2;
 
 /** Plans one `transact` tries before it gives up, unless told otherwise. */
 const DEFAULT_TRANSACT_ATTEMPTS = 4;
+
+/** How long `transact` waits, outside the lock, before it plans again after an `io` failure. */
+const TRANSIENT_RETRY_DELAY = "100 millis";
 
 /** Lemmas whose tables one hold of the writer lock re-renders. */
 const TABLES_CHUNK = 32;
@@ -1607,6 +1612,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				readonly cause: unknown;
 				/** The write that stopped found its file changed by someone else. */
 				readonly externalChange: boolean;
+				/** VAM failed the write that stopped as `io`. */
+				readonly transient: boolean;
 		  };
 
 	/**
@@ -1661,6 +1668,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					...batch.filter(({ path }) => !executed.has(path)),
 					...later,
 				],
+				transient:
+					reason._tag === "VamDispatchError" && reason.kind === "io",
 			};
 		}
 		return { _tag: "Done", landed, missed };
@@ -2264,6 +2273,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				message: `The commit's creates stopped and could not be undone: ${message(first.cause)}. The index was ${rebuilt ? "rebuilt from the files" : "not rebuilt; the next operation retries"}.`,
 				rebuilt,
 				skipped: first.skipped.map(({ path }) => path),
+				transient: first.transient,
 			});
 		}
 
@@ -2312,6 +2322,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			message: `The commit's writes stopped: ${message(first.cause)}. The index was ${rebuilt ? "rebuilt from the files" : "not rebuilt; the next operation retries"}.`,
 			rebuilt,
 			skipped: first.skipped.map(({ path }) => path),
+			transient: first.transient,
 		});
 	});
 
@@ -2641,6 +2652,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				readonly _tag: "Conflict";
 				readonly reason: string;
 				readonly cause: unknown;
+				/** A write failed as `io`: pause before planning again. */
+				readonly transient?: true;
 		  };
 
 	/**
@@ -2651,7 +2664,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	 */
 	const attemptUnderLock = <A, E>(
 		plan: (view: DictionaryView) => Result.Result<Transaction<A>, E>,
-		attempts: { used: number; readonly max: number },
+		attempts: { used: number; readonly max: number; transient: boolean },
 	): Effect.Effect<Attempted<A>, E | DictionaryCommitError> =>
 		Effect.gen(function* () {
 			for (;;) {
@@ -2691,6 +2704,22 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 							cause: error,
 							reason: error.message,
 						} as const;
+					// An I/O failure, such as a file another process held,
+					// may not recur: plan once more, after a pause.
+					if (
+						error._tag === "DictionaryWriteError" &&
+						error.transient &&
+						!attempts.transient &&
+						attempts.used < attempts.max
+					) {
+						attempts.transient = true;
+						return {
+							_tag: "Conflict",
+							cause: error,
+							reason: error.message,
+							transient: true,
+						} as const;
+					}
 					return yield* Effect.fail(error);
 				}
 				const result = committed.success;
@@ -2722,7 +2751,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			1,
 			options?.maxAttempts ?? DEFAULT_TRANSACT_ATTEMPTS,
 		);
-		const attempts = { max, used: 0 };
+		const attempts = { max, transient: false, used: 0 };
 		for (;;) {
 			const attempted = yield* lock.withPermit(
 				attemptUnderLock(plan, attempts).pipe(Effect.ensuring(report)),
@@ -2736,7 +2765,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					reason: attempted.reason,
 				});
 			// Released: let the events behind the change land before planning again.
-			yield* Effect.yieldNow;
+			if (attempted.transient) yield* Effect.sleep(TRANSIENT_RETRY_DELAY);
+			else yield* Effect.yieldNow;
 		}
 	});
 
