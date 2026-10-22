@@ -1,4 +1,12 @@
-import { Cause, Exit, Logger, Option, References, Tracer } from "effect";
+import {
+	Cause,
+	Exit,
+	Logger,
+	Option,
+	Predicate,
+	References,
+	Tracer,
+} from "effect";
 import { formatCause, formatValue } from "./format-cause";
 
 export type TraceStatus = "ok" | "failed" | "interrupted" | "running";
@@ -12,8 +20,10 @@ export type RecordedSpan = {
 	readonly start: number;
 	readonly end: number | undefined;
 	readonly status: TraceStatus;
+	/** Numbers and booleans as they are; anything else as bounded text. */
 	readonly attributes: ReadonlyMap<string, unknown> | undefined;
-	readonly cause: Cause.Cause<unknown> | undefined;
+	/** The failure, formatted when the span ended. */
+	readonly cause: string | undefined;
 };
 
 export type RecordedLog = {
@@ -23,7 +33,8 @@ export type RecordedLog = {
 	/** Rendered when logged, so it shows the values as they were then. */
 	readonly text: string;
 	readonly spanId: string | undefined;
-	readonly cause: Cause.Cause<unknown> | undefined;
+	/** The cause, formatted when logged. */
+	readonly cause: string | undefined;
 };
 
 /**
@@ -78,14 +89,58 @@ class RingSpan extends Tracer.NativeSpan {
 
 const toMillis = (nanos: bigint): number => Number(nanos / 1000n) / 1000;
 
+/** The longest string a span attribute or a log entry's part keeps. */
+const MAX_TEXT_LENGTH = 1000;
+
+const capped = (text: string): string =>
+	text.length > MAX_TEXT_LENGTH ? `${text.slice(0, MAX_TEXT_LENGTH)}…` : text;
+
+/**
+ * Copies a span's attributes as small values, so the ring holds no
+ * reference to whatever a span was annotated with.
+ */
+function attributesOf(
+	span: RingSpan,
+): ReadonlyMap<string, unknown> | undefined {
+	const attributes = span._attributes;
+	if (!attributes || attributes.size === 0) return undefined;
+	const copy = new Map<string, unknown>();
+	for (const [key, value] of attributes)
+		copy.set(
+			key,
+			Predicate.isNumber(value) || Predicate.isBoolean(value)
+				? value
+				: Predicate.isString(value)
+					? capped(value)
+					: formatValue(value),
+		);
+	return copy;
+}
+
+/**
+ * A failure is formatted once, when recorded, so the ring holds text rather
+ * than the errors and whatever they reference. A failure ends every span it
+ * passes through, so the text is cached by cause.
+ */
+const causeTexts = new WeakMap<Cause.Cause<unknown>, string>();
+
+function causeText(cause: Cause.Cause<unknown>): string | undefined {
+	if (cause.reasons.length === 0 || Cause.hasInterruptsOnly(cause))
+		return undefined;
+	let text = causeTexts.get(cause);
+	if (text === undefined) {
+		text = formatCause(cause);
+		causeTexts.set(cause, text);
+	}
+	return text;
+}
+
 function record(span: RingSpan): RecordedSpan {
 	const { status } = span;
 	const exit = status._tag === "Ended" ? status.exit : undefined;
-	const failure = exit && Exit.isFailure(exit) ? exit.cause : undefined;
 	return {
-		attributes: span._attributes,
-		cause:
-			failure && !Cause.hasInterruptsOnly(failure) ? failure : undefined,
+		attributes: attributesOf(span),
+		cause: exit && Exit.isFailure(exit) ? causeText(exit.cause) : undefined,
 		end:
 			status._tag === "Ended"
 				? span.startedAt + toMillis(status.endTime - status.startTime)
@@ -107,7 +162,9 @@ function record(span: RingSpan): RecordedSpan {
 
 const messageText = (message: readonly unknown[]): string =>
 	message
-		.map((part) => (typeof part === "string" ? part : formatValue(part)))
+		.map((part) =>
+			typeof part === "string" ? capped(part) : formatValue(part),
+		)
 		.join(" ");
 
 export function makeRecentTrace(
@@ -153,7 +210,7 @@ export function makeRecentTrace(
 				text += ` ${label}=${date.getTime() - start}ms`;
 			logs.push({
 				at: date.getTime(),
-				cause: cause.reasons.length > 0 ? cause : undefined,
+				cause: causeText(cause),
 				level: logLevel.toUpperCase(),
 				spanId: fiber.cache.span?.spanId,
 				text,
@@ -235,9 +292,8 @@ function renderNode(
 	shownCauses: Set<string>,
 	lines: string[],
 ): void {
-	const causeLines = (cause: Cause.Cause<unknown> | undefined): string => {
-		if (!cause) return "";
-		const text = formatCause(cause);
+	const causeLines = (text: string | undefined): string => {
+		if (!text) return "";
 		if (shownCauses.has(text)) return " (cause shown above)";
 		shownCauses.add(text);
 		return `\n${text.replace(/^/gm, `${indent}    `)}`;
@@ -256,7 +312,10 @@ function renderNode(
 			: milliseconds(span.end - span.start);
 	const attributes = span.attributes
 		? [...span.attributes]
-				.map(([key, value]) => ` ${key}=${formatValue(value)}`)
+				.map(
+					([key, value]) =>
+						` ${key}=${Predicate.isString(value) ? JSON.stringify(value) : String(value)}`,
+				)
 				.join("")
 		: "";
 	const links =

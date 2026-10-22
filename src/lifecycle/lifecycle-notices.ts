@@ -16,7 +16,7 @@ import { recentTrace } from "../utils/recent-trace";
 const STOP_TRACE_ENTRIES = 300;
 
 /** Not `logger`: the trace it writes would record itself. */
-const sink = globalThis.console;
+const writeToConsole = (_text: string) => {};
 
 /** Shows `message`; a sticky one stays until the user dismisses it. */
 export type ShowNotice = (
@@ -34,11 +34,18 @@ export type LibrarianStartReason =
 export type LifecycleNotices = ReturnType<typeof createLifecycleNotices>;
 
 /**
- * `trace` is what a Librarian stop writes to the console, with its message.
+ * A Librarian stop hands its message and the recent `trace` to `writeStop`,
+ * the console unless a test silences it.
  */
 export function createLifecycleNotices(
 	show: ShowNotice,
-	trace: Pick<RecentTrace, "render"> = recentTrace,
+	{
+		trace = recentTrace,
+		writeStop = writeToConsole,
+	}: {
+		readonly trace?: Pick<RecentTrace, "render">;
+		readonly writeStop?: (text: string) => void;
+	} = {},
 ) {
 	let closed = false;
 	const notify = (message: string, sticky = false) => {
@@ -105,7 +112,7 @@ export function createLifecycleNotices(
 			starting: LibrarianStartReason | null,
 		) => {
 			if (stop.kind === "Stopped")
-				sink.error(
+				writeStop(
 					`[TextEaterPlugin] The Librarian stopped: ${stop.message}\n${trace.render({ last: STOP_TRACE_ENTRIES })}`,
 				);
 			if (starting === "DelimiterMigration") return;

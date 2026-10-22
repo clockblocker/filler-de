@@ -58,9 +58,12 @@ function makeHarness() {
 	let failStarts = 0;
 	let holdNextStart: Deferred.Deferred<void> | null = null;
 
-	const notices = createLifecycleNotices((message, { sticky }) => {
-		shown.push({ message, sticky });
-	});
+	const notices = createLifecycleNotices(
+		(message, { sticky }) => {
+			shown.push({ message, sticky });
+		},
+		{ writeStop: () => {} },
+	);
 	const supervisor = createLifecycleSupervisor<Fake>({ notices });
 	const service = {
 		execute: () =>

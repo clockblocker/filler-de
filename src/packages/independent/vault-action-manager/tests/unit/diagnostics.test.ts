@@ -112,6 +112,78 @@ describe("describeError and formatValue", () => {
 		);
 		expect(formatValue(cyclic)).toBe('{"n":"1n","self":"[Circular]"}');
 		expect(formatValue("x".repeat(2000)).length).toBeLessThan(600);
+		expect(formatValue("x".repeat(2000))).toStartWith('"xxx');
+	});
+
+	it("leave note content out, as its length", () => {
+		const action = {
+			kind: "UpsertMdFile",
+			payload: {
+				content: "Der Hund bellt.",
+				splitPath: { basename: "Hund" },
+			},
+		};
+		expect(formatValue({ action })).toBe(
+			'{"action":{"kind":"UpsertMdFile","payload":{"content":"<15 chars>","splitPath":{"basename":"Hund"}}}}',
+		);
+		const error = Object.assign(new Error("refused"), {
+			content: "Der Hund bellt.",
+		});
+		expect(describeError(error, { stack: false })).toBe(
+			"Error: refused (content=<15 chars>)",
+		);
+	});
+
+	it("never throw, on cycles, throwing getters or odd values", () => {
+		const a = new Error("a") as Error & { peer?: unknown };
+		const b = new Error("b") as Error & { peer?: unknown };
+		a.peer = b;
+		b.peer = a;
+		const looped = new Error("looped");
+		looped.cause = looped;
+		const getter = new Error("getter");
+		Object.defineProperty(getter, "boom", {
+			enumerable: true,
+			get() {
+				throw new Error("no");
+			},
+		});
+		const message = new Error("message");
+		Object.defineProperty(message, "message", {
+			get() {
+				throw new Error("no");
+			},
+		});
+		const keys = new Proxy(
+			{},
+			{
+				ownKeys() {
+					throw new Error("no");
+				},
+			},
+		);
+		const huge = new Error("huge") as Error & Record<string, unknown>;
+		for (let i = 0; i < 100; i++) huge[`f${i}`] = "x".repeat(10_000);
+
+		const values = [a, looped, getter, message, keys, huge];
+		for (const value of values) {
+			expect(() => formatCause(Cause.fail(value))).not.toThrow();
+			expect(() =>
+				formatCause(Cause.die(value), { stack: false }),
+			).not.toThrow();
+			expect(() => describeError(value)).not.toThrow();
+			expect(() => formatValue({ value })).not.toThrow();
+		}
+		expect(formatCause(Cause.fail(a), { stack: false })).toStartWith(
+			"Error: a (peer=Error: b (peer=",
+		);
+		expect(formatCause(Cause.fail(a), { stack: false })).toContain("[…]");
+		expect(formatCause(Cause.fail(getter), { stack: false })).toBe(
+			"Error: getter (boom=undefined)",
+		);
+		expect(
+			formatCause(Cause.fail(huge), { stack: false }).length,
+		).toBeLessThan(12_000);
 	});
 });
 
@@ -167,9 +239,7 @@ describe("makeRecentTrace", () => {
 		expect((outer?.end ?? 0) - (outer?.start ?? 0)).toBeGreaterThanOrEqual(
 			0,
 		);
-		expect(second?.cause && formatCause(second.cause)).toStartWith(
-			'ReadFailed (path="b.md")',
-		);
+		expect(second?.cause).toStartWith('ReadFailed (path="b.md")');
 		expect(logs.map(({ spanId }) => spanId)).toEqual([
 			first?.spanId,
 			second?.spanId,
@@ -184,6 +254,29 @@ describe("makeRecentTrace", () => {
 		expect(rendered).toContain("inner");
 		expect(rendered).toContain("(cause shown above)");
 		expect(rendered.match(/ReadFailed/g)).toHaveLength(1);
+	});
+
+	it("keeps bounded copies of attributes and log text, not the values", async () => {
+		const trace = makeRecentTrace();
+		const action = { content: "Der Hund bellt.", path: "a.md" };
+		await Effect.runPromise(
+			Effect.void.pipe(
+				Effect.withSpan("annotated", {
+					attributes: { action, long: "x".repeat(5000), n: 1 },
+				}),
+				Effect.withTracer(trace.tracer),
+			),
+		);
+		trace.recordLog("info", ["y".repeat(5000)]);
+
+		const [span] = trace.snapshot().spans;
+		expect(span?.attributes?.get("n")).toBe(1);
+		expect(span?.attributes?.get("action")).toBe(
+			'{"content":"<15 chars>","path":"a.md"}',
+		);
+		expect(String(span?.attributes?.get("long")).length).toBeLessThan(1100);
+		expect(trace.snapshot().logs[0]?.text.length).toBeLessThan(1100);
+		expect(trace.render()).not.toContain("Hund");
 	});
 
 	it("shows spans still running, and logs made outside Effect", async () => {

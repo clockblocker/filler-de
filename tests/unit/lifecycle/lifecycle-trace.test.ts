@@ -1,4 +1,4 @@
-import { describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { makeRecentTrace } from "@textfresser/vault-action-manager/diagnostics";
 import { Effect } from "effect";
 import { createLifecycleNotices } from "../../../src/lifecycle/lifecycle-notices";
@@ -10,7 +10,10 @@ import {
 describe("lifecycle trace", () => {
 	it("records the spans of the lifecycle's commands", async () => {
 		const trace = makeRecentTrace();
-		const notices = createLifecycleNotices(() => {}, trace);
+		const notices = createLifecycleNotices(() => {}, {
+			trace,
+			writeStop: () => {},
+		});
 		const supervisor = createLifecycleSupervisor<SupervisedLibrarian>({
 			notices,
 			tracer: trace.tracer,
@@ -38,28 +41,25 @@ describe("lifecycle trace", () => {
 		await Effect.runPromise(supervisor.stop);
 	});
 
-	it("writes the recent trace to the console with a Librarian stop", () => {
-		const error = spyOn(console, "error").mockImplementation(() => {});
+	it("writes the recent trace out with a Librarian stop", () => {
+		const written: string[] = [];
 		const shown: string[] = [];
 		const notices = createLifecycleNotices((message) => shown.push(message), {
-			render: () => "TRACE",
+			trace: { render: () => "TRACE" },
+			writeStop: (text) => written.push(text),
 		});
-		try {
-			notices.librarianStopped(
-				{ kind: "Stopped", message: "Healing failed" },
-				null,
-			);
-			notices.librarianStopped(
-				{ kind: "LibraryRootMissing", message: "No Library folder" },
-				"Settings",
-			);
+		notices.librarianStopped(
+			{ kind: "Stopped", message: "Healing failed" },
+			null,
+		);
+		notices.librarianStopped(
+			{ kind: "LibraryRootMissing", message: "No Library folder" },
+			"Settings",
+		);
 
-			expect(error.mock.calls).toEqual([
-				["[TextEaterPlugin] The Librarian stopped: Healing failed\nTRACE"],
-			]);
-			expect(shown).toEqual(["Healing failed", "No Library folder"]);
-		} finally {
-			error.mockRestore();
-		}
+		expect(written).toEqual([
+			"[TextEaterPlugin] The Librarian stopped: Healing failed\nTRACE",
+		]);
+		expect(shown).toEqual(["Healing failed", "No Library folder"]);
 	});
 });
