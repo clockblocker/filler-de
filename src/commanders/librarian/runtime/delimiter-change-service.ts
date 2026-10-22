@@ -37,6 +37,8 @@ export type DelimiterMigrationVam = {
 	readonly scan: (
 		root: SplitPathToFolder,
 	) => ReturnType<VaultActionManager["scan"]>;
+	/** Path identity on the vault's file system, for name collisions. */
+	readonly paths: VaultActionManager["paths"];
 };
 
 export type DelimiterActionFailure = {
@@ -153,6 +155,7 @@ export class DelimiterChangeService {
 		const conflicts = findDelimiterRenameConflicts(
 			plan.actions,
 			candidates,
+			this.vam.paths,
 		);
 		if (conflicts.length > 0) {
 			return yield* conflictError(conflicts);

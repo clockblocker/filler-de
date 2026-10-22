@@ -1,19 +1,20 @@
-import type { AnySplitPath } from "@textfresser/vault-action-manager";
+import {
+	type AnySplitPath,
+	splitPathCodec,
+	VaultPath,
+} from "@textfresser/vault-action-manager";
 
+/**
+ * Whether an observed and a canonical path are one path of one kind.
+ * Case-sensitive, so Healing still renames a leaf whose name differs from
+ * its canonical name only in case.
+ */
 export function splitPathsEqual(a: AnySplitPath, b: AnySplitPath): boolean {
-	if (a.kind !== b.kind) return false;
-	if (a.basename !== b.basename) return false;
-	if (a.pathParts.length !== b.pathParts.length) return false;
-
-	for (let i = 0; i < a.pathParts.length; i++) {
-		if (a.pathParts[i] !== b.pathParts[i]) {
-			return false;
-		}
-	}
-
-	if ("extension" in a && "extension" in b && a.extension !== b.extension) {
-		return false;
-	}
-
-	return true;
+	return (
+		a.kind === b.kind &&
+		VaultPath.caseSensitive.same(
+			splitPathCodec.format(a),
+			splitPathCodec.format(b),
+		)
+	);
 }

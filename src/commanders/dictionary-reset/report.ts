@@ -6,6 +6,7 @@
  * links, embeds or block IDs. A provider's failure shows as one line, not
  * its JSON body (#147).
  */
+import { VaultPath } from "@textfresser/vault-action-manager";
 import { conciseFailure } from "../../managers/dumgen/provider-failure";
 import type { ResetLayout } from "./layout";
 import type { OldMetaShape, OldNoteKind } from "./old-notes";
@@ -143,9 +144,10 @@ function fenced(text: string): string {
 
 /** Where a note of `Worter/` sits once it is backed up. */
 const movedPath = (path: string, backupFolder: string | undefined) =>
-	backupFolder === undefined || !path.startsWith(`${WORTER}/`)
+	backupFolder === undefined ||
+	!VaultPath.caseSensitive.isUnder(path, WORTER, { inclusive: false })
 		? path
-		: `${backupFolder}${path.slice(WORTER.length)}`;
+		: `${backupFolder}${VaultPath.normalize(path).slice(WORTER.length)}`;
 
 const plural = (count: number, word: string) =>
 	`${count} ${word}${count === 1 ? "" : "s"}`;

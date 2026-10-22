@@ -14,6 +14,7 @@ import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../types/split-path";
+import { VaultPath } from "../vault-path";
 import type {
 	VaultScanCounts,
 	VaultScanPath,
@@ -120,7 +121,7 @@ export class VaultReader {
 	findByBasename(basename: string, opts?: { folder?: SplitPathToFolder }) {
 		return Effect.gen(function* () {
 			const folderPrefix = opts?.folder
-				? `${pathfinder.systemPathFromSplitPath(opts.folder)}/`
+				? pathfinder.systemPathFromSplitPath(opts.folder)
 				: undefined;
 			const vault = yield* VaultIo;
 			const files = yield* vault.getMarkdownFiles;
@@ -137,8 +138,12 @@ export class VaultReader {
 						.filter(
 							(file) =>
 								file.basename === basename &&
-								(!folderPrefix ||
-									file.path.startsWith(folderPrefix)),
+								(folderPrefix === undefined ||
+									VaultPath.caseSensitive.isUnder(
+										file.path,
+										folderPrefix,
+										{ inclusive: false },
+									)),
 						)
 						.map(
 							(file) =>

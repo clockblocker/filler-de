@@ -86,6 +86,10 @@ _Avoid_: BAM, Librarian, Obsidian DataAdapter
 A typed, vault-scoped identity for a folder, Markdown file, or other file, separated into path parts, basename, kind, and—when applicable—extension.
 _Avoid_: String path, system path, node locator
 
+**Vault Path**:
+A vault item's path as one `/`-separated string relative to the vault root, which is `""`. Two Vault Paths are compared only through VAM's `VaultPath` module, under a named case policy: case-sensitive as Obsidian's lookup is, or as the vault's file system compares names.
+_Avoid_: System path (Obsidian's own key, with the root as `"/"`), raw string comparison
+
 **Vault Action**:
 A typed request for VAM to create, update, rename, process, or trash a vault item.
 _Avoid_: Tree Action, Healing Action, Obsidian event

@@ -5,6 +5,7 @@ import { pathfinder } from "../../../helpers/pathfinder";
 import { getErrorMessage } from "../../../internal/get-error-message";
 import type { SplitPathToMdFile } from "../../../types/split-path";
 import type { Transform } from "../../../types/vault-action";
+import { VaultPath } from "../../../vault-path";
 import {
 	type ActiveEditorSnapshot,
 	activeEditorFailure,
@@ -269,7 +270,12 @@ export class ActiveFileWriter {
 					const expectedPath = pathfinder.systemPathFromSplitPath(
 						args.splitPath,
 					);
-					if (current.path !== expectedPath) {
+					if (
+						!VaultPath.caseSensitive.same(
+							current.path,
+							expectedPath,
+						)
+					) {
 						return yield* activeEditorFailure(
 							"IdentityMismatch",
 							"replaceLine.revalidate",
@@ -335,7 +341,7 @@ export class ActiveFileWriter {
 			Effect.flatMap((current) => {
 				const expectedPath =
 					pathfinder.systemPathFromSplitPath(splitPath);
-				if (current.path !== expectedPath) {
+				if (!VaultPath.caseSensitive.same(current.path, expectedPath)) {
 					return Effect.fail(
 						activeEditorFailure(
 							"IdentityMismatch",

@@ -1,4 +1,4 @@
-import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { SplitPathKind, VaultPath } from "@textfresser/vault-action-manager";
 import type { Codecs, SplitPathToFolderInsideLibrary } from "../../codecs";
 import type { SectionNodeSegmentId } from "../../codecs/segment-id";
 import type { HealingAction } from "../../healer/library-tree/types/healing-action";
@@ -70,7 +70,9 @@ export function computeSectionMoveHealing(
 	// 1) Heal the folder itself if observed != canonical
 	const observedFolderPath = currentSectionPath.join("/");
 	const canonicalFolderPath = canonicalSectionPath.join("/");
-	if (observedFolderPath !== canonicalFolderPath) {
+	if (
+		!VaultPath.caseSensitive.same(observedFolderPath, canonicalFolderPath)
+	) {
 		const renameFolderAction: HealingAction = {
 			kind: "RenameFolder",
 			payload: {

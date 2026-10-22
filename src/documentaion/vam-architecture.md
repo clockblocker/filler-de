@@ -82,6 +82,47 @@ const systemPath = splitPathCodec.format(splitPath);
 const vaultRoot = splitPathCodec.root;
 ```
 
+### Vault Path identity
+
+`VaultPath` decides when two path strings are one path and when one lies
+under another. Do not compare paths with `===`, `startsWith`, or
+`toLowerCase`.
+
+```ts
+import { VaultPath } from "@textfresser/vault-action-manager";
+
+VaultPath.caseSensitive.isUnder("Worter/de/a.md", "Worter", { inclusive: false }); // true
+VaultPath.caseSensitive.isUnder("Worterbuch/a.md", "Worter", { inclusive: true }); // false
+vam.paths.same("Exemplar/a.md", "exemplar/A.md"); // true on macOS and Windows
+```
+
+Every comparison first normalizes both paths as Obsidian's `normalizePath`
+does: `/` and `\` runs become one `/`, edge slashes go, non-breaking spaces
+become spaces, and the result is NFC. The root stays `""`. Containment goes by
+whole segments, and the root lies above every other path.
+
+Case is the caller's choice of identity:
+
+| Identity | Case | Use it for |
+| --- | --- | --- |
+| `VaultPath.caseSensitive` | matters | Anything that feeds Obsidian's exact lookup, a path-keyed map, or a rename that may change only case: Library scope, the dictionary's scope, Self Events, Markdown modification scopes, active-editor routing. |
+| `vam.paths` | as the vault's file system | Whether two paths land on one file: protected paths, delimiter rename collisions. |
+
+`vam.paths` reads Obsidian's undocumented `adapter.insensitive` flag. The
+desktop adapter sets it by probing the vault folder (it writes `.OBSIDIANTEST`
+and checks for `.obsidiantest`), so a case-sensitive APFS volume is detected.
+Without the flag, the platform decides: macOS and Windows ignore case. Off
+desktop, VAM assumes case is ignored: the mobile adapter sets the flag to
+`false` without probing, and Android's shared storage ignores case, so
+protected paths and the collision check refuse more rather than less.
+`createVaultActionManager(app, { fileSystem })` overrides it for tests.
+`VaultPath.caseInsensitive` and `VaultPath.forFileSystem` exist for callers
+and tests that need a fixed policy.
+
+The only path Obsidian receives for a lookup is a branded `SystemPath`, made by
+`toSystemPath` inside VAM's lookup adapter: the normalized path, with the root
+as `"/"`, which `getRoot()` answers.
+
 The codec accepts domain values only. Conversion to or from Obsidian `TFile`, `TFolder`, `TAbstractFile`, and `Vault` objects is an internal adapter concern and is not exported from the package root.
 
 A `VaultAction` requests a vault change. Supported operations are:
@@ -164,9 +205,12 @@ constant in `src/managers/obsidian/protected-paths/`, not a setting.
 
 A prefix protects its own path and everything below it. Matching uses whole
 segments, so `Exemplar` covers `Exemplar/Note.md` but not
-`Exemplars/Note.md`. It ignores case, because the file systems of macOS and
-Windows put `exemplar/x.md` in `Exemplar/`. It also ignores stray slashes and
-backslashes. The vault root (`""`) cannot be a prefix.
+`Exemplars/Note.md`. It compares case as the vault's file system does
+(`vam.paths`), because the file systems of macOS and Windows put
+`exemplar/x.md` in `Exemplar/`; on a case-sensitive file system that is
+another folder and is not protected. It also ignores stray slashes,
+backslashes, and Unicode composition. The vault root (`""`) cannot be a
+prefix.
 
 Dispatch checks each submitted batch before it queues it. If any action names
 a protected path, the whole batch fails with `VamProtectedPathError` and none

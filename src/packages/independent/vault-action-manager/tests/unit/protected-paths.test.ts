@@ -10,13 +10,18 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "../../src/types/vault-action";
+import { VaultPath } from "../../src/vault-path";
 
 const md = (path: string) => splitPathCodec.parse(path) as SplitPathToMdFile;
 const folder = (path: string) =>
 	splitPathCodec.parse(path) as SplitPathToFolder;
 const file = (path: string) => splitPathCodec.parse(path) as SplitPathToFile;
 
-const exemplar = new ProtectedPaths(["Exemplar"]);
+/** Protected paths on a case-insensitive file system, as on macOS. */
+const protect = (prefixes: readonly string[] = []) =>
+	new ProtectedPaths(prefixes, VaultPath.caseInsensitive);
+
+const exemplar = protect(["Exemplar"]);
 
 describe("ProtectedPaths prefix matching", () => {
 	it("covers the prefix itself and everything below it", () => {
@@ -54,12 +59,24 @@ describe("ProtectedPaths prefix matching", () => {
 		expect(exemplar.prefixCovering("Exemplar//Note.md")).toBe("Exemplar");
 		expect(exemplar.prefixCovering("Exemplar\\Note.md")).toBe("Exemplar");
 
-		const composed = new ProtectedPaths(["Bücher"]);
+		const composed = protect(["Bücher"]);
 		expect(composed.prefixCovering("Bücher/Note.md")).toBe("Bücher");
 	});
 
+	it("respects case on a case-sensitive file system, where exemplar/ is another folder", () => {
+		const sensitive = new ProtectedPaths(
+			["Exemplar"],
+			VaultPath.caseSensitive,
+		);
+		expect(sensitive.prefixCovering("Exemplar/note.md")).toBe("Exemplar");
+		expect(sensitive.prefixCovering("exemplar/note.md")).toBeUndefined();
+		expect(sensitive.prefixCovering("EXEMPLAR")).toBeUndefined();
+		expect(sensitive.prefixInside("exemplar")).toBeUndefined();
+		expect(sensitive.prefixCovering("/Exemplar\\Note.md")).toBe("Exemplar");
+	});
+
 	it("normalizes configured prefixes and drops duplicates", () => {
-		const paths = new ProtectedPaths([
+		const paths = protect([
 			"/Exemplar/Kohlekraftwerk/",
 			"Exemplar\\Kohlekraftwerk",
 			"Other",
@@ -72,12 +89,12 @@ describe("ProtectedPaths prefix matching", () => {
 	});
 
 	it("refuses to protect the vault root", () => {
-		expect(() => new ProtectedPaths([""])).toThrow(/vault root/);
-		expect(() => new ProtectedPaths(["/"])).toThrow(/vault root/);
+		expect(() => protect([""])).toThrow(/vault root/);
+		expect(() => protect(["/"])).toThrow(/vault root/);
 	});
 
 	it("finds a prefix strictly inside a folder", () => {
-		const nested = new ProtectedPaths(["Exemplar/Kohlekraftwerk"]);
+		const nested = protect(["Exemplar/Kohlekraftwerk"]);
 		expect(nested.prefixInside("Exemplar")).toBe("Exemplar/Kohlekraftwerk");
 		expect(nested.prefixInside("")).toBe("Exemplar/Kohlekraftwerk");
 		expect(nested.prefixInside("Exemplars")).toBeUndefined();
@@ -86,7 +103,7 @@ describe("ProtectedPaths prefix matching", () => {
 });
 
 describe("ProtectedPaths.findViolation", () => {
-	const nested = new ProtectedPaths(["Exemplar/Kohlekraftwerk"]);
+	const nested = protect(["Exemplar/Kohlekraftwerk"]);
 	const inside = "Exemplar/Kohlekraftwerk/Kohlekraftwerk.md";
 
 	const insideActions: readonly VaultAction[] = [
@@ -214,7 +231,7 @@ describe("ProtectedPaths.findViolation", () => {
 
 	it("reports nothing when no prefix is configured", () => {
 		expect(
-			new ProtectedPaths().findViolation([
+			protect().findViolation([
 				{
 					kind: VaultActionKind.TrashFolder,
 					payload: { splitPath: splitPathCodec.root },

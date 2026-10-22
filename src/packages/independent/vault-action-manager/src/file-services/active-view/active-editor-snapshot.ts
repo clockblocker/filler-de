@@ -12,6 +12,7 @@ import {
 } from "../../effect/ports";
 import { pathfinder } from "../../helpers/pathfinder";
 import type { AnySplitPath, SplitPathToMdFile } from "../../types/split-path";
+import { VaultPath } from "../../vault-path";
 import { annotateFileAccessFailure } from "./tracing";
 
 export type ActiveEditorSnapshot = ActiveEditorHandle & {
@@ -90,7 +91,7 @@ export const waitForActiveEditorSnapshot = Effect.fn(
 		readiness,
 	});
 	const snapshot = yield* validateActiveEditorHandle(handle);
-	if (snapshot.path !== path) {
+	if (!VaultPath.caseSensitive.same(snapshot.path, path)) {
 		return yield* activeEditorFailure(
 			"IdentityMismatch",
 			"waitForActiveEditorSnapshot",
@@ -159,7 +160,10 @@ export function snapshotMatches(
 	snapshot: ActiveEditorSnapshot,
 	target: AnySplitPath,
 ): boolean {
-	return snapshot.path === pathfinder.systemPathFromSplitPath(target);
+	return VaultPath.caseSensitive.same(
+		snapshot.path,
+		pathfinder.systemPathFromSplitPath(target),
+	);
 }
 
 export function assertSnapshotCurrent(

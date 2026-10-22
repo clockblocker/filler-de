@@ -11,6 +11,7 @@ import {
 	VamScanError,
 	type VaultAction,
 	VaultActionKind,
+	VaultPath,
 	type VaultScanPath,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
@@ -550,6 +551,21 @@ describe("delimiter migration lifecycle", () => {
 		expect(harness.dispatchCalls).toBe(0);
 	});
 
+	test("on a case-sensitive file system, a target differing only in case is free", async () => {
+		const harness = makeHarness(
+			[readableMdPath("Alpha-Beta"), readableMdPath("alpha ~ beta")],
+			{ caseInsensitive: false },
+		);
+
+		const plan = await Effect.runPromise(
+			harness.service.plan(oldConfig, newConfig, root),
+		);
+
+		expect(
+			plan.actions.map(({ payload }) => splitPathCodec.format(payload.to)),
+		).toContain("Library/Alpha ~ Beta.md");
+	});
+
 	test("a rename that changes only its own note's case is not a conflict", async () => {
 		const harness = makeHarness([readableMdPath("alphaxbeta")]);
 
@@ -869,7 +885,11 @@ function readableMdPath(
 
 type Rename = Extract<VaultAction, { kind: "RenameMdFile" }>;
 
-function makeHarness(paths: readonly VaultScanPath[]) {
+/** A vault on a case-insensitive file system, as on macOS, by default. */
+function makeHarness(
+	paths: readonly VaultScanPath[],
+	{ caseInsensitive = true } = {},
+) {
 	const files = new Set(paths.map((path) => splitPathCodec.format(path)));
 	let failForward: (action: Rename) => Error | undefined = () => undefined;
 	let failRollback: (action: Rename) => Error | undefined = () => undefined;
@@ -977,6 +997,7 @@ function makeHarness(paths: readonly VaultScanPath[]) {
 			return dispatchImpl(actions);
 		},
 		exists: (path) => existsImpl(path),
+		paths: VaultPath.forFileSystem({ caseInsensitive }),
 		scan: (libraryRoot) => {
 			scanCalls += 1;
 			return scanImpl(libraryRoot);

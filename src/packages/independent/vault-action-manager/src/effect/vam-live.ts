@@ -1,8 +1,12 @@
 import { Effect, Layer } from "effect";
 import { type App, MarkdownView } from "obsidian";
-import { getAbstractFileByPath } from "../internal/abstract-file-by-path";
+import {
+	getAbstractFileByPath,
+	toSystemPath,
+} from "../internal/abstract-file-by-path";
 import { DomSelectors } from "../internal/dom-selectors";
 import { decodeFileStat } from "../types/file-stat";
+import { VaultPath } from "../vault-path";
 import {
 	VamActiveEditorError,
 	type VamActiveEditorFailureReason,
@@ -66,7 +70,11 @@ function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 									operation: "getAbstractFileByPath",
 									path,
 								}),
-							try: () => getAbstractFileByPath(app.vault, path),
+							try: () =>
+								getAbstractFileByPath(
+									app.vault,
+									toSystemPath(path),
+								),
 						}),
 					),
 					getMarkdownFiles: Effect.try({
@@ -376,7 +384,8 @@ function waitForViewReady(
 		});
 	const checkView = (): ActiveEditorHandle | null => {
 		const view = app.workspace.getActiveViewOfType(MarkdownView);
-		if (view?.file?.path !== path) return null;
+		if (!view?.file || !VaultPath.caseSensitive.same(view.file.path, path))
+			return null;
 		if (readiness === "inline-title") {
 			const title = view.contentEl.querySelector(
 				DomSelectors.INLINE_TITLE,

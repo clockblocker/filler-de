@@ -14,10 +14,15 @@ import type {
 } from "@textfresser/vault-action-manager";
 import {
 	type SplitPathKind,
+	splitPathCodec,
 	VaultEventKind,
 } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
-import type { CodecRules } from "../codecs/rules";
+import {
+	type CodecRules,
+	isUnderLibraryRoot,
+	libraryRootPath,
+} from "../codecs/rules";
 import type {
 	AnySplitPathInsideLibrary,
 	SplitPathInsideLibraryOf,
@@ -184,26 +189,23 @@ export type LibraryScope = {
 /**
  * Owns the Vault <-> Library path policy for all in-process Library planning.
  * The configured root is captured once so callers cannot accidentally mix rules.
+ *
+ * Membership is case-sensitive: the Library Tree names nodes as Obsidian
+ * spells them, so `library/A.md` is outside a Library rooted at `Library`
+ * even where the file system puts it in the same folder.
  */
 export function makeLibraryScope(rules: CodecRules): LibraryScope {
-	const libraryPrefix = [
-		...rules.libraryRootPathParts,
-		rules.libraryRootName,
-	];
+	const libraryRoot = libraryRootPath(rules);
 
 	const toLibraryPath: LibraryScope["toLibraryPath"] = (splitPath) => {
-		const full = splitPath.pathParts;
-		if (full.length < libraryPrefix.length) return err("OutsideLibrary");
-
-		for (let index = 0; index < libraryPrefix.length; index++) {
-			if (full[index] !== libraryPrefix[index]) {
-				return err("OutsideLibrary");
-			}
-		}
+		if (!isUnderLibraryRoot(splitPathCodec.format(splitPath), libraryRoot))
+			return err("OutsideLibrary");
 
 		return ok({
 			...splitPath,
-			pathParts: full.slice(rules.libraryRootPathParts.length),
+			pathParts: splitPath.pathParts.slice(
+				rules.libraryRootPathParts.length,
+			),
 		} as SplitPathInsideLibraryOf<SplitPathKindOf<typeof splitPath>>);
 	};
 

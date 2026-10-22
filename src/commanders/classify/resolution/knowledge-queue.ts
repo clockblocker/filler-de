@@ -8,6 +8,7 @@
  * (`awaitNote`, `createReadingReopener`), and `cancelAll` or unloading the
  * plugin interrupts every run, which keeps whatever it already published.
  */
+import { VaultPath } from "@textfresser/vault-action-manager";
 import { readingIdentityKey } from "dumling";
 import { Cause, Effect, Exit, Fiber } from "effect";
 import { getErrorMessage } from "../../../utils/get-error-message";
@@ -137,8 +138,11 @@ export function createKnowledgeQueue(
 			const path = notePath(readingPath);
 			let waited = false;
 			for (;;) {
-				const pending = [...runs.values()].filter(
-					({ job }) => notePath(job.readingPath) === path,
+				const pending = [...runs.values()].filter(({ job }) =>
+					VaultPath.caseSensitive.same(
+						notePath(job.readingPath),
+						path,
+					),
 				);
 				if (pending.length === 0) return waited;
 				waited = true;

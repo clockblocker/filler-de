@@ -73,6 +73,11 @@ export * from "./types/vault-action";
 export { type VaultAction, VaultActionKind } from "./types/vault-action";
 export * from "./types/vault-event";
 export { type VaultEvent, VaultEventKind } from "./types/vault-event";
+export {
+	type VaultFileSystem,
+	VaultPath,
+	type VaultPathIdentity,
+} from "./vault-path";
 export type {
 	VaultScanCounts,
 	VaultScanPath,
