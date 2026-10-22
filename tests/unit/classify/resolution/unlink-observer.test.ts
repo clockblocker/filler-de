@@ -274,6 +274,18 @@ describe("unlink observer", () => {
 			]);
 		});
 
+		it("judges only the occurrence whose Sentence another file at the Scroll's path happens to hold", async () => {
+			const { edit, harness } = await linked();
+			// Another file took the Scroll's name. Its first block holds the
+			// same Sentence, unlinked; its second does not.
+			await edit(() => {
+				harness.scroll.content = "Der See ist tief. ^0\n\nEin ganz anderer Text. ^1\n";
+			});
+			expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 13))).toEqual([
+				"![[Story#^1|^",
+			]);
+		});
+
 		it("removes the Scroll's last link only while it holds the Sentence that link was recorded in", async () => {
 			const { edit, harness } = await linked();
 			await edit(() => {
@@ -358,6 +370,35 @@ describe("unlink observer", () => {
 			expect(await refsOf(harness.store, see)).toHaveLength(2);
 			expect(notices).toEqual([]);
 		});
+	});
+
+	it("waits for Sync to stop bringing dictionary notes before it judges, so the Scroll catches up first", async () => {
+		const content = "Der See ist tief. ^0\n\nDer See ist kalt. ^1\n";
+		const { cache, harness } = await classifiedSee(content, [
+			"Der See ist tief.",
+			"Der See ist kalt.",
+		]);
+		const linkedScroll = harness.scroll.content;
+		const link = linkTo(notePath(lake), "See");
+		const { observer } = observerOver({
+			cache,
+			scroll: () => harness.scroll.content,
+			store: harness.store,
+			sweepQuietMs: 150,
+			vault: harness.vault,
+		});
+		// Sync brought the lake's note with a ref another device recorded, and
+		// the user edits the Scroll before its links arrive.
+		observer.modified([notePath(lake)]);
+		harness.scroll.content = linkedScroll.replace(`Der ${link} ist kalt.`, "Der See ist kalt.");
+		observer.modified([SCROLL]);
+		await Bun.sleep(50);
+		expect(await refsOf(harness.store, see)).toHaveLength(2);
+		// The Scroll lands.
+		harness.scroll.content = linkedScroll;
+		observer.modified([SCROLL]);
+		await observer.whenIdle();
+		expect(await refsOf(harness.store, see)).toHaveLength(2);
 	});
 
 	it("stays off while a dictionary reset runs, and checks once it has ended", async () => {

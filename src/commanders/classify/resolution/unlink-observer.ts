@@ -29,17 +29,27 @@
  *   modified file.
  * - **The same Scroll.** Block IDs run `^0`, `^1`… in every classified
  *   file, so another file that took the Scroll's name, or one that replaced
- *   it, would hold the refs' blocks too. A check judges only a file that
- *   still links one of its recorded occurrences in that occurrence's block,
- *   or, once its last link is gone, still holds in that block the Sentence
- *   an occurrence was recorded in: one of its cached units gives back the
- *   occurrence's key. Anything else removes nothing.
+ *   it, would hold the refs' blocks too. A check judges a file in full only
+ *   when it still links one of its recorded occurrences in that
+ *   occurrence's block. Once its last link is gone, it judges only the
+ *   occurrences whose own Sentence the file still holds in their block: one
+ *   of the Sentence's cached units gives back the occurrence's key. The key
+ *   hashes the Sentence's text, not the Scroll, so another file holding the
+ *   same Sentence in a block of the same ID passes for that occurrence
+ *   alone, never for the rest. Anything else removes nothing.
  * - **Links as Obsidian resolves them.** Every wikilink and embed in the
  *   Scroll is resolved from the Scroll, as Obsidian opens it, so a link the
  *   link updater rewrote to the shortest path still links its Reading. A
  *   link that resolves to no note leaves its block alone.
  * - **Ambiguity.** `unlinkedOccurrences` leaves alone whatever a gone
  *   block, moved text, a lost block ID or a link in flux could explain.
+ * - **Dictionary Sync.** Sync can bring refs into Reading notes ahead of
+ *   the Scroll that links them, and an edit to the stale Scroll would read
+ *   as their removal. VAM reports every dictionary note modified from
+ *   outside, as its own writes are filtered, so a check waits until no
+ *   dictionary note has been modified from outside for `sweepQuietMs`,
+ *   and the Scroll catching up lands first. A Scroll that lands later than
+ *   that is still judged as it is.
  *
  * Links removed while the plugin was not running, such as in another
  * editor or on another device, reach no modification. `sweep` catches up
@@ -66,7 +76,7 @@
  * check is done.
  */
 import type { DumdictVaultStore } from "@textfresser/dictionary";
-import { parseNotePath } from "@textfresser/lemma-note-codec";
+import { parseNotePath, pathCollisionKey } from "@textfresser/lemma-note-codec";
 import { Effect, Option } from "effect";
 import { getErrorMessage } from "../../../utils/get-error-message";
 import { logger } from "../../../utils/logger";
@@ -137,7 +147,10 @@ export type UnlinkObserverDeps = {
 	readonly blockedBy?: () => string | undefined;
 	readonly notify?: (message: string) => void;
 	readonly quietMs?: number;
-	/** How long no Markdown file may be modified before the sweep's checks run. */
+	/**
+	 * How long no Markdown file may be modified before the sweep's checks
+	 * run, and no dictionary note before any check runs.
+	 */
 	readonly sweepQuietMs?: number;
 	/** Called as a check is pending and once it is done, for the plugin's idle tracker. */
 	readonly onStart?: () => void;
@@ -229,23 +242,25 @@ const occurrenceKeysOf = Effect.fnUntraced(function* (
 });
 
 /**
- * Whether one of `recorded` stands in its block of the Scroll as it was
- * recorded: a Sentence of that block, its segmentation cached, has a unit
- * whose occurrence key is the recorded one. The key hashes the Sentence's
- * text, so no other file and no edited Sentence gives it back.
+ * The refs of `recorded` whose occurrence stands in its block of the Scroll
+ * as it was recorded: a Sentence of that block, its segmentation cached,
+ * has a unit whose occurrence key is the recorded one. The key hashes the
+ * Sentence's text, so an edited Sentence gives it back for none, and a
+ * cache miss counts as not held.
  */
-const holdsARecordedSentence = Effect.fnUntraced(function* (
+const recordedSentencesHeld = Effect.fnUntraced(function* (
 	content: string,
 	recorded: readonly RecordedOccurrence[],
 	cache: SegmentationCache["Service"],
 	segmenterVersion: string,
 ) {
-	const wanted = new Set(
-		recorded.map(
-			({ blockId, occurrence }) => `${blockId}\u0000${occurrence}`,
-		),
-	);
+	const wanted = new Map<string, string[]>();
+	for (const { blockId, occurrence, ref } of recorded) {
+		const key = `${blockId}\u0000${occurrence}`;
+		wanted.set(key, [...(wanted.get(key) ?? []), ref]);
+	}
 	const recordedBlocks = new Set(recorded.map(({ blockId }) => blockId));
+	const held = new Set<string>();
 	const scroll = scrollSentences(content);
 	const instances = sentenceInstances(
 		scroll.sentences.map(({ text }) => text),
@@ -269,18 +284,17 @@ const holdsARecordedSentence = Effect.fnUntraced(function* (
 				{ segments: [...unit.segments], sentenceKey: key },
 				instances[index] ?? 0,
 			);
-			if (wanted.has(`${block.id}\u0000${occurrence}`)) return true;
+			for (const ref of wanted.get(`${block.id}\u0000${occurrence}`) ??
+				[])
+				held.add(ref);
 		}
 	}
-	return false;
+	return held;
 });
 
 /** The extensions of the files besides notes that Obsidian links and embeds. */
 const ATTACHMENT =
 	/\.(?:3gp|avif|base|bmp|canvas|flac|gif|jpe?g|m4a|mkv|mov|mp3|mp4|ogg|ogv|pdf|png|svg|wav|webm|webp)$/iu;
-
-/** A path as Obsidian matches it: ignoring case and Unicode normalization. */
-const pathKeyOf = (path: string) => path.normalize("NFC").toLowerCase();
 
 /**
  * The Scroll's wikilinks and embeds, each resolved from the Scroll as
@@ -295,9 +309,10 @@ const resolvedLinksOf = Effect.fnUntraced(function* (
 	content: string,
 	recorded: readonly RecordedOccurrence[],
 ) {
+	// The store keeps no two dictionary notes at one collision key.
 	const readingPaths = new Map(
 		recorded.map(({ readingPath }) => [
-			pathKeyOf(readingPath),
+			pathCollisionKey(readingPath),
 			readingPath,
 		]),
 	);
@@ -311,7 +326,7 @@ const resolvedLinksOf = Effect.fnUntraced(function* (
 				linkpath,
 				found === undefined
 					? undefined
-					: (readingPaths.get(pathKeyOf(found)) ?? found),
+					: (readingPaths.get(pathCollisionKey(found)) ?? found),
 			);
 		}
 		const notePath = resolved.get(linkpath);
@@ -450,16 +465,15 @@ const checkScroll = Effect.fnUntraced(function* (
 		recorded,
 	);
 	if (swept) recorded = sweptInScroll(swept, links, recorded);
-	else if (
-		!linksOneOf(links, recorded) &&
-		!(yield* holdsARecordedSentence(
+	else if (!linksOneOf(links, recorded)) {
+		const held = yield* recordedSentencesHeld(
 			content,
 			recorded,
 			deps.cache,
 			deps.segmenterVersion(),
-		))
-	)
-		recorded = [];
+		);
+		recorded = recorded.filter(({ ref }) => held.has(ref));
+	}
 	if (recorded.length === 0) return { _tag: "Done", removed: 0 };
 
 	const judge = (keys?: ReadonlyMap<number, string | undefined>) =>
@@ -529,6 +543,8 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 	let closed = false;
 	/** When a Markdown file was last modified from outside, as VAM reported it. */
 	let vaultModifiedAt = Number.NEGATIVE_INFINITY;
+	/** When a dictionary note was last modified from outside, as VAM reported it. */
+	let dictionaryModifiedAt = Number.NEGATIVE_INFINITY;
 
 	const wakeIdle = () => {
 		if (watched.size === 0 && sweeping === 0)
@@ -598,6 +614,10 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 		const sinceVault = Date.now() - vaultModifiedAt;
 		if (entry.sweep && sinceVault < sweepQuietMs)
 			return schedule(path, entry, sweepQuietMs - sinceVault);
+		// Sync may have brought refs ahead of the Scroll that links them.
+		const sinceDictionary = Date.now() - dictionaryModifiedAt;
+		if (sinceDictionary < sweepQuietMs)
+			return schedule(path, entry, sweepQuietMs - sinceDictionary);
 		entry.again = false;
 		const checked = await run(
 			deps.store.pipe(
@@ -650,6 +670,8 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 		schedule(path, entry);
 	};
 
+	const isDictionaryPath = (path: string) =>
+		path.endsWith(".md") && path.startsWith("Worter/");
 	const isScrollPath = (path: string) =>
 		path.endsWith(".md") && !path.startsWith("Worter/");
 
@@ -666,6 +688,7 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 			if (closed) return;
 			if (paths.length > 0) vaultModifiedAt = Date.now();
 			for (const path of paths) {
+				if (isDictionaryPath(path)) dictionaryModifiedAt = Date.now();
 				if (!isScrollPath(path)) continue;
 				const entry = watched.get(path);
 				if (!entry) {
