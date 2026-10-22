@@ -3,15 +3,20 @@ import {
 	SplitPathKind,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
+	splitPathCodec,
 	VamDispatchError,
+	VamDispatchStoppedError,
+	VamPlanningError,
 	VamScanError,
 	type VaultAction,
+	VaultActionKind,
 	type VaultScanPath,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import {
 	DelimiterChangeService,
 	type DelimiterMigrationVam,
+	DelimiterRenameConflictError,
 } from "../../../src/commanders/librarian/runtime/delimiter-change-service";
 import {
 	DelimiterMigrationCoordinator,
@@ -21,10 +26,12 @@ import {
 	type DelimiterMigrationPlan,
 	planDelimiterMigration,
 } from "../../../src/commanders/librarian/runtime/delimiter-migration-plan";
+import { reportDelimiterMigration } from "../../../src/commanders/librarian/runtime/delimiter-migration-report";
 import type { SuffixDelimiterConfig } from "../../../src/types";
 
 const oldConfig = { padded: false, symbol: "-" } satisfies SuffixDelimiterConfig;
 const newConfig = { padded: true, symbol: "~" } satisfies SuffixDelimiterConfig;
+const delimiters = { newDelimiter: " ~ ", oldDelimiter: "-" } as const;
 const root: SplitPathToFolder = {
 	basename: "Library",
 	kind: SplitPathKind.Folder,
@@ -161,19 +168,13 @@ describe("delimiter migration lifecycle", () => {
 		expect(harness.restoredConfigs).toEqual([{ padded: true, symbol: "-" }]);
 	});
 
-	test("partial dispatch failure retains successes and restores old config", async () => {
+	test("a failure partway renames the moved files back and keeps the old config", async () => {
 		const harness = makeHarness([
 			readableMdPath("alpha-beta"),
 			readableMdPath("gamma-delta"),
+			readableMdPath("kappa-lambda"),
 		]);
-		harness.dispatch = (actions) =>
-			Effect.fail([
-				new VamDispatchError({
-					action: actions[1],
-					cause: new Error("rename rejected"),
-					operation: "executeAction",
-				}),
-			]);
+		harness.failForward = failOn("gamma-delta");
 		const coordinator = new DelimiterMigrationCoordinator(
 			harness.service,
 			harness.lifecycle(),
@@ -183,13 +184,310 @@ describe("delimiter migration lifecycle", () => {
 			coordinator.migrate(oldConfig, newConfig, root),
 		);
 
-		expect(outcome.kind).toBe("PartiallyFailed");
-		if (outcome.kind !== "PartiallyFailed") return;
-		expect(outcome.renamedCount).toBe(1);
-		expect(outcome.failures).toHaveLength(1);
-		expect(outcome.failures[0]?.operation).toBe("executeAction");
-		expect(outcome.failures[0]?.path).toContain("gamma-delta.md");
+		expect(outcome.kind).toBe("Failed");
+		if (outcome.kind !== "Failed") return;
+		expect(outcome.problem.stage).toBe("Dispatch");
+		expect(outcome.problem.operation).toBe("executeAction");
+		expect(outcome.execution?.kind).toBe("RolledBack");
+		if (outcome.execution?.kind !== "RolledBack") return;
+		expect(outcome.execution.failure.path).toBe(
+			"Library/gamma-delta.md → Library/gamma ~ delta.md",
+		);
+		expect(
+			outcome.execution.rolledBack.map(
+				(action) => action.payload.from.basename,
+			),
+		).toEqual(["alpha-beta"]);
+		expect(harness.rollbackBatches).toHaveLength(1);
+		expect(harness.rollbackBatches[0]).toEqual([
+			{
+				kind: VaultActionKind.RenameMdFile,
+				payload: {
+					from: mdPath("alpha ~ beta"),
+					to: mdPath("alpha-beta"),
+				},
+			},
+		]);
+		expect(vaultFiles(harness)).toEqual([
+			"Library/alpha-beta.md",
+			"Library/gamma-delta.md",
+			"Library/kappa-lambda.md",
+		]);
 		expect(harness.restoredConfigs).toEqual([oldConfig]);
+	});
+
+	test("a failure on the first rename needs no rollback", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+		]);
+		harness.failForward = failOn("alpha-beta");
+		const coordinator = new DelimiterMigrationCoordinator(
+			harness.service,
+			harness.lifecycle(),
+		);
+
+		const outcome = await Effect.runPromise(
+			coordinator.migrate(oldConfig, newConfig, root),
+		);
+
+		expect(outcome.kind).toBe("Failed");
+		if (outcome.kind !== "Failed") return;
+		expect(outcome.execution?.kind).toBe("RolledBack");
+		if (outcome.execution?.kind !== "RolledBack") return;
+		expect(outcome.execution.rolledBack).toEqual([]);
+		expect(harness.rollbackBatches).toEqual([]);
+		expect(vaultFiles(harness)).toEqual([
+			"Library/alpha-beta.md",
+			"Library/gamma-delta.md",
+		]);
+		expect(harness.restoredConfigs).toEqual([oldConfig]);
+	});
+
+	test("matches executed actions by path, not identity", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+		]);
+		harness.dispatch = (actions) => {
+			const [first, second] = actions;
+			if (first?.kind !== VaultActionKind.RenameMdFile || !second) {
+				return Effect.die(new Error("unexpected plan"));
+			}
+			harness.files.delete("Library/alpha-beta.md");
+			harness.files.add("Library/alpha ~ beta.md");
+			const cause = new Error("rename rejected");
+			return Effect.fail(
+				new VamDispatchStoppedError({
+					action: { ...second },
+					cause,
+					executed: [structuredClone(first)],
+					failure: new VamDispatchError({
+						action: { ...second },
+						cause,
+						operation: "executeAction",
+					}),
+					operation: "dispatch.stopOnFirstFailure",
+					skipped: [],
+				}),
+			);
+		};
+		const execution = await Effect.runPromise(
+			harness.service.execute(await plannedFor(harness)),
+		);
+
+		expect(execution.kind).toBe("RolledBack");
+		if (execution.kind !== "RolledBack") return;
+		expect(execution.rolledBack).toHaveLength(1);
+		expect(execution.failure.path).toContain("gamma-delta.md");
+		expect(vaultFiles(harness)).toEqual([
+			"Library/alpha-beta.md",
+			"Library/gamma-delta.md",
+		]);
+	});
+
+	test("a rename that fails after moving the file is rolled back too", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+		]);
+		harness.failForward = failOn("gamma-delta", "selection restore failed");
+		harness.renameBeforeFailing = true;
+
+		const execution = await Effect.runPromise(
+			harness.service.execute(await plannedFor(harness)),
+		);
+
+		expect(execution.kind).toBe("RolledBack");
+		if (execution.kind !== "RolledBack") return;
+		expect(
+			execution.rolledBack.map((action) => action.payload.from.basename),
+		).toEqual(["alpha-beta", "gamma-delta"]);
+		expect(vaultFiles(harness)).toEqual([
+			"Library/alpha-beta.md",
+			"Library/gamma-delta.md",
+		]);
+	});
+
+	test("an unrecognised dispatch defect checks every planned file", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+		]);
+		harness.dispatch = () =>
+			Effect.suspend(() => {
+				harness.files.delete("Library/alpha-beta.md");
+				harness.files.add("Library/alpha ~ beta.md");
+				return Effect.die(new Error("dispatch exploded"));
+			});
+
+		const execution = await Effect.runPromise(
+			harness.service.execute(await plannedFor(harness)),
+		);
+
+		expect(execution.kind).toBe("RolledBack");
+		if (execution.kind !== "RolledBack") return;
+		expect(execution.failure.path).toBeUndefined();
+		expect(execution.rolledBack).toHaveLength(1);
+		expect(vaultFiles(harness)).toEqual([
+			"Library/alpha-beta.md",
+			"Library/gamma-delta.md",
+		]);
+	});
+
+	test("a planning failure touched nothing and is not observed", async () => {
+		const harness = makeHarness([readableMdPath("alpha-beta")]);
+		let existsCalls = 0;
+		harness.exists = () => {
+			existsCalls += 1;
+			return Effect.succeed(true);
+		};
+		harness.dispatch = (actions) =>
+			Effect.fail(
+				new VamPlanningError({
+					action: actions[0],
+					cause: new Error("folder lookup failed"),
+					operation: "planDispatchBatch",
+				}),
+			);
+
+		const execution = await Effect.runPromise(
+			harness.service.execute(await plannedFor(harness)),
+		);
+
+		expect(execution.kind).toBe("RolledBack");
+		if (execution.kind !== "RolledBack") return;
+		expect(execution.failure.operation).toBe("planDispatchBatch");
+		expect(execution.rolledBack).toEqual([]);
+		expect(existsCalls).toBe(0);
+		expect(harness.rollbackBatches).toEqual([]);
+	});
+
+	test("a partly failed rollback names the files left on the new delimiter", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+			readableMdPath("kappa-lambda"),
+			readableMdPath("omega-psi"),
+		]);
+		harness.failForward = failOn("kappa-lambda");
+		harness.failRollback = failOn("alpha ~ beta", "file is locked");
+		const coordinator = new DelimiterMigrationCoordinator(
+			harness.service,
+			harness.lifecycle(),
+		);
+
+		const outcome = await Effect.runPromise(
+			coordinator.migrate(oldConfig, newConfig, root),
+		);
+
+		expect(outcome.kind).toBe("RollbackIncomplete");
+		if (outcome.kind !== "RollbackIncomplete") return;
+		const { execution } = outcome;
+		expect(
+			execution.leftRenamed.map((action) => action.payload.to.basename),
+		).toEqual(["alpha ~ beta"]);
+		expect(
+			execution.rolledBack.map((action) => action.payload.from.basename),
+		).toEqual(["gamma-delta"]);
+		expect(execution.unresolved).toEqual([]);
+		expect(execution.rollbackFailures).toHaveLength(1);
+		expect(execution.rollbackFailures[0]?.action?.payload.from.basename).toBe(
+			"alpha-beta",
+		);
+		expect(outcome.failures).toHaveLength(2);
+		expect(vaultFiles(harness)).toEqual([
+			"Library/alpha ~ beta.md",
+			"Library/gamma-delta.md",
+			"Library/kappa-lambda.md",
+			"Library/omega-psi.md",
+		]);
+		expect(harness.restoredConfigs).toEqual([oldConfig]);
+
+		const report = reportDelimiterMigration(outcome, delimiters);
+		expect(report.keepsNewDelimiter).toBe(false);
+		expect(report.persistent).toBe(true);
+		expect(report.notice).toBe(
+			'Delimiter change failed: could not rename Library/kappa-lambda.md → Library/kappa ~ lambda.md (rename rejected). Renamed 1 file(s) back to "-". Could not rename these back, so they still use " ~ ": Library/alpha ~ beta.md. Kept the delimiter "-"; rename the files listed by hand.',
+		);
+		expect(report.log).toContain("file is locked");
+	});
+
+	test("a file whose state cannot be read is reported as unresolved", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+		]);
+		harness.failForward = failOn("gamma-delta");
+		const exists = (path: SplitPathToMdFile) =>
+			path.basename.startsWith("alpha")
+				? Effect.die(new Error("stat failed"))
+				: Effect.succeed(
+						harness.files.has(splitPathCodec.format(path)),
+					);
+		harness.exists = exists;
+
+		const execution = await Effect.runPromise(
+			harness.service.execute(await plannedFor(harness)),
+		);
+
+		expect(execution.kind).toBe("RollbackIncomplete");
+		if (execution.kind !== "RollbackIncomplete") return;
+		expect(
+			execution.unresolved.map((action) => action.payload.from.basename),
+		).toEqual(["alpha-beta"]);
+		expect(harness.rollbackBatches).toEqual([]);
+	});
+
+	test("renames onto a taken name are refused before anything is touched", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("alpha - beta"),
+			readableMdPath("gamma-delta"),
+			readableMdPath("gamma ~ delta"),
+		]);
+		const coordinator = new DelimiterMigrationCoordinator(
+			harness.service,
+			harness.lifecycle(),
+		);
+
+		const outcome = await Effect.runPromise(
+			coordinator.migrate(oldConfig, newConfig, root),
+		);
+
+		expect(outcome.kind).toBe("Failed");
+		if (outcome.kind !== "Failed") return;
+		expect(outcome.problem.stage).toBe("Planning");
+		expect(outcome.problem.cause).toBeInstanceOf(
+			DelimiterRenameConflictError,
+		);
+		expect(outcome.problem.operation).toBe(
+			"planDelimiterMigration.conflicts",
+		);
+		if (!(outcome.problem.cause instanceof DelimiterRenameConflictError))
+			return;
+		expect(outcome.problem.cause.conflicts).toEqual([
+			{
+				from: "Library/alpha-beta.md",
+				occupiedBy: "Library/alpha - beta.md",
+				to: "Library/alpha ~ beta.md",
+			},
+			{
+				from: "Library/gamma-delta.md",
+				occupiedBy: "Library/gamma ~ delta.md",
+				to: "Library/gamma ~ delta.md",
+			},
+		]);
+		expect(outcome.problem.cause.message).toBe(
+			"2 rename(s) would land on a name already in use: Library/alpha-beta.md → Library/alpha ~ beta.md (also the new name of Library/alpha - beta.md); Library/gamma-delta.md → Library/gamma ~ delta.md (already exists)",
+		);
+		expect(reportDelimiterMigration(outcome, delimiters).notice).toBe(
+			`Delimiter change failed before any file was renamed: ${outcome.problem.cause.message}. Kept the delimiter "-".`,
+		);
+		expect(harness.confirmCalls).toBe(0);
+		expect(harness.pauseCalls).toBe(0);
+		expect(harness.dispatchCalls).toBe(0);
+		expect(harness.restoreCalls).toBe(0);
 	});
 
 	test("a scan defect leaves the active lifecycle untouched", async () => {
@@ -331,6 +629,120 @@ describe("delimiter migration lifecycle", () => {
 	});
 });
 
+describe("delimiter migration report", () => {
+	test("a rolled back failure says what failed and that nothing kept the new delimiter", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+		]);
+		harness.failForward = failOn("gamma-delta");
+		const outcome = await Effect.runPromise(
+			new DelimiterMigrationCoordinator(
+				harness.service,
+				harness.lifecycle(),
+			).migrate(oldConfig, newConfig, root),
+		);
+
+		const report = reportDelimiterMigration(outcome, delimiters);
+
+		expect(report).toEqual({
+			keepsNewDelimiter: false,
+			librarianRestarted: false,
+			log: expect.stringContaining("renamed back: Library/alpha-beta.md"),
+			notice: 'Delimiter change failed: could not rename Library/gamma-delta.md → Library/gamma ~ delta.md (rename rejected). Renamed the 1 file(s) already changed back to "-". Kept the delimiter "-".',
+			persistent: false,
+		});
+	});
+
+	test("a completed migration keeps the new delimiter", async () => {
+		const harness = makeHarness([readableMdPath("alpha-beta")]);
+		const outcome = await Effect.runPromise(
+			new DelimiterMigrationCoordinator(
+				harness.service,
+				harness.lifecycle(),
+			).migrate(oldConfig, newConfig, root),
+		);
+
+		expect(reportDelimiterMigration(outcome, delimiters)).toEqual({
+			keepsNewDelimiter: true,
+			librarianRestarted: true,
+			log: null,
+			notice: 'Renamed 1 file(s) to use " ~ ".',
+			persistent: false,
+		});
+	});
+
+	test("a restart failure after every rename keeps the new delimiter", async () => {
+		const harness = makeHarness([readableMdPath("alpha-beta")]);
+		const outcome = await Effect.runPromise(
+			new DelimiterMigrationCoordinator(
+				harness.service,
+				harness.lifecycle({
+					restore: () => Effect.fail(new Error("reinit failed")),
+				}),
+			).migrate(oldConfig, newConfig, root),
+		);
+
+		const report = reportDelimiterMigration(outcome, delimiters);
+
+		expect(report.keepsNewDelimiter).toBe(true);
+		expect(report.librarianRestarted).toBe(false);
+		expect(report.persistent).toBe(true);
+		expect(report.notice).toBe(
+			'Renamed 1 file(s) to use " ~ " and kept that delimiter, but the Librarian failed to restart: reinit failed.',
+		);
+	});
+
+	test("a restart failure after a rollback keeps the old delimiter", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+		]);
+		harness.failForward = failOn("gamma-delta");
+		const outcome = await Effect.runPromise(
+			new DelimiterMigrationCoordinator(
+				harness.service,
+				harness.lifecycle({
+					restore: () => Effect.fail(new Error("reinit failed")),
+				}),
+			).migrate(oldConfig, newConfig, root),
+		);
+
+		const report = reportDelimiterMigration(outcome, delimiters);
+
+		expect(outcome.kind).toBe("Failed");
+		expect(report.keepsNewDelimiter).toBe(false);
+		expect(report.notice).toEndWith(
+			'Kept the delimiter "-", but the Librarian failed to restart: reinit failed.',
+		);
+	});
+
+	test("lists at most five files and points to the console for the rest", async () => {
+		const names = ["a", "b", "c", "d", "e", "f", "g"].map(
+			(letter) => `${letter}-x`,
+		);
+		const harness = makeHarness([
+			...names.map(readableMdPath),
+			readableMdPath("z-x"),
+		]);
+		harness.failForward = failOn("z-x");
+		harness.failRollback = () => new Error("vault is read-only");
+		const outcome = await Effect.runPromise(
+			new DelimiterMigrationCoordinator(
+				harness.service,
+				harness.lifecycle(),
+			).migrate(oldConfig, newConfig, root),
+		);
+
+		const notice = reportDelimiterMigration(outcome, delimiters).notice;
+
+		expect(notice).toContain(
+			"Library/a ~ x.md, Library/b ~ x.md, Library/c ~ x.md, Library/d ~ x.md, Library/e ~ x.md, and 2 more (see the console)",
+		);
+		expect(notice).not.toContain("Renamed 0");
+	});
+});
+
 function mdPath(
 	basename: string,
 	pathParts: string[] = ["Library"],
@@ -343,16 +755,89 @@ function mdPath(
 	};
 }
 
+async function plannedFor(
+	harness: ReturnType<typeof makeHarness>,
+): Promise<DelimiterMigrationPlan> {
+	return Effect.runPromise(harness.service.plan(oldConfig, newConfig, root));
+}
+
 function readableMdPath(
 	basename: string,
 ): Extract<VaultScanPath, { kind: "MdFile" }> {
 	return { ...mdPath(basename), read: () => Effect.succeed("") };
 }
 
+type Rename = Extract<VaultAction, { kind: "RenameMdFile" }>;
+
 function makeHarness(paths: readonly VaultScanPath[]) {
-	let dispatchImpl: DelimiterMigrationVam["dispatch"] = (
-		_actions: readonly VaultAction[],
-	) => Effect.void;
+	const files = new Set(paths.map((path) => splitPathCodec.format(path)));
+	let failForward: (action: Rename) => Error | undefined = () => undefined;
+	let failRollback: (action: Rename) => Error | undefined = () => undefined;
+	let renameBeforeFailing = false;
+	const rename = (action: VaultAction) => {
+		if (action.kind !== VaultActionKind.RenameMdFile) return;
+		const from = splitPathCodec.format(action.payload.from);
+		const to = splitPathCodec.format(action.payload.to);
+		if (!files.has(from) || files.has(to)) {
+			throw new Error(`cannot rename ${from} to ${to}`);
+		}
+		files.delete(from);
+		files.add(to);
+	};
+	const fakeStopOnFirstFailure: DelimiterMigrationVam["dispatchStopOnFirstFailure"] =
+		(actions) =>
+			Effect.suspend(() => {
+				for (const [index, action] of actions.entries()) {
+					const injected =
+						action.kind === VaultActionKind.RenameMdFile
+							? failForward(action)
+							: undefined;
+					if (injected && renameBeforeFailing) rename(action);
+					const cause = injected ?? attempt(() => rename(action));
+					if (!cause) continue;
+					const failure = new VamDispatchError({
+						action,
+						cause,
+						operation: "executeAction",
+					});
+					return Effect.fail(
+						new VamDispatchStoppedError({
+							action,
+							cause,
+							executed: actions.slice(0, index),
+							failure,
+							operation: "dispatch.stopOnFirstFailure",
+							skipped: actions.slice(index + 1),
+						}),
+					);
+				}
+				return Effect.void;
+			});
+	const fakeDispatch: DelimiterMigrationVam["dispatch"] = (actions) =>
+		Effect.suspend(() => {
+			const errors: VamDispatchError[] = [];
+			for (const action of actions) {
+				const injected =
+					action.kind === VaultActionKind.RenameMdFile
+						? failRollback(action)
+						: undefined;
+				const cause = injected ?? attempt(() => rename(action));
+				if (cause) {
+					errors.push(
+						new VamDispatchError({
+							action,
+							cause,
+							operation: "executeAction",
+						}),
+					);
+				}
+			}
+			return errors.length > 0 ? Effect.fail(errors) : Effect.void;
+		});
+	let dispatchImpl = fakeStopOnFirstFailure;
+	let rollbackImpl = fakeDispatch;
+	let existsImpl: DelimiterMigrationVam["exists"] = (path) =>
+		Effect.succeed(files.has(splitPathCodec.format(path)));
 	let scanImpl: DelimiterMigrationVam["scan"] = (
 		_root: SplitPathToFolder,
 	) =>
@@ -376,16 +861,22 @@ function makeHarness(paths: readonly VaultScanPath[]) {
 	let restoreCalls = 0;
 	let confirmCalls = 0;
 	let dispatchedActions: readonly VaultAction[] | undefined;
+	const rollbackBatches: (readonly VaultAction[])[] = [];
 	const restoredConfigs: Readonly<SuffixDelimiterConfig>[] = [];
 	const restoreContexts: {
 		readonly currentAlreadyPaused: boolean;
 	}[] = [];
 	const vam: DelimiterMigrationVam = {
 		dispatch: (actions) => {
+			rollbackBatches.push(actions);
+			return rollbackImpl(actions);
+		},
+		dispatchStopOnFirstFailure: (actions) => {
 			dispatchCalls += 1;
 			dispatchedActions = actions;
 			return dispatchImpl(actions);
 		},
+		exists: (path) => existsImpl(path),
 		scan: (libraryRoot) => {
 			scanCalls += 1;
 			return scanImpl(libraryRoot);
@@ -406,6 +897,16 @@ function makeHarness(paths: readonly VaultScanPath[]) {
 		get dispatchedActions() {
 			return dispatchedActions;
 		},
+		set exists(implementation: typeof existsImpl) {
+			existsImpl = implementation;
+		},
+		set failForward(predicate: (action: Rename) => Error | undefined) {
+			failForward = predicate;
+		},
+		set failRollback(predicate: (action: Rename) => Error | undefined) {
+			failRollback = predicate;
+		},
+		files,
 		lifecycle(
 			overrides: Partial<DelimiterMigrationLifecycle> = {},
 		): DelimiterMigrationLifecycle {
@@ -429,11 +930,18 @@ function makeHarness(paths: readonly VaultScanPath[]) {
 		get pauseCalls() {
 			return pauseCalls;
 		},
+		set renameBeforeFailing(value: boolean) {
+			renameBeforeFailing = value;
+		},
 		get restoreCalls() {
 			return restoreCalls;
 		},
 		restoreContexts,
 		restoredConfigs,
+		set rollback(implementation: typeof rollbackImpl) {
+			rollbackImpl = implementation;
+		},
+		rollbackBatches,
 		set scan(implementation: typeof scanImpl) {
 			scanImpl = implementation;
 		},
@@ -442,4 +950,24 @@ function makeHarness(paths: readonly VaultScanPath[]) {
 		},
 		service,
 	};
+}
+
+function attempt(run: () => void): Error | undefined {
+	try {
+		run();
+		return undefined;
+	} catch (error) {
+		return error instanceof Error ? error : new Error(String(error));
+	}
+}
+
+function failOn(basename: string, message = "rename rejected") {
+	return (action: Rename) =>
+		action.payload.from.basename === basename
+			? new Error(message)
+			: undefined;
+}
+
+function vaultFiles(harness: ReturnType<typeof makeHarness>): string[] {
+	return [...harness.files].sort();
 }

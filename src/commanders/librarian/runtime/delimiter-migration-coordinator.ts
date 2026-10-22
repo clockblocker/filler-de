@@ -36,6 +36,11 @@ export type DelimiterMigrationOutcome =
 			readonly succeeded: readonly DelimiterRenameAction[];
 	  })
 	| {
+			/**
+			 * What the renames did before the failure, when they ran. Absent
+			 * or `RolledBack`: every note keeps its old name. `Completed`:
+			 * every note carries the new delimiter.
+			 */
 			readonly execution?: DelimiterMigrationExecution;
 			readonly failures: readonly DelimiterActionFailure[];
 			readonly kind: "Failed";
@@ -44,10 +49,13 @@ export type DelimiterMigrationOutcome =
 	  }
 	| (PlannedOutcome & { readonly kind: "NoOp" })
 	| (PlannedOutcome & {
+			readonly execution: Extract<
+				DelimiterMigrationExecution,
+				{ kind: "RollbackIncomplete" }
+			>;
 			readonly failures: readonly DelimiterActionFailure[];
-			readonly kind: "PartiallyFailed";
-			readonly renamedCount: number;
-			readonly succeeded: readonly DelimiterRenameAction[];
+			/** The old delimiter is kept, but some notes still carry the new one. */
+			readonly kind: "RollbackIncomplete";
 	  });
 
 export type DelimiterMigrationLifecycle = {
@@ -61,7 +69,11 @@ export type DelimiterMigrationLifecycle = {
 	) => Effect.Effect<void, unknown>;
 };
 
-/** Owns the one-way migration lifecycle around the pure plan and VAM executor. */
+/**
+ * Owns the migration lifecycle around the pure plan and VAM executor. The
+ * stored delimiter becomes the new one only when every rename succeeded;
+ * otherwise the renames are undone and the old delimiter is restored.
+ */
 export class DelimiterMigrationCoordinator {
 	constructor(
 		private readonly service: DelimiterChangeService,
@@ -162,10 +174,7 @@ export class DelimiterMigrationCoordinator {
 					problem("Restore", failureFromCause(restoreExit.cause)),
 					{
 						execution,
-						failures:
-							execution.kind === "Completed"
-								? []
-								: execution.failures,
+						failures: executionFailures(execution),
 						plan,
 					},
 				);
@@ -203,20 +212,40 @@ function outcomeFromExecution(
 	if (execution.kind === "Completed") {
 		return completed(plan, execution.succeeded);
 	}
-	if (execution.kind === "PartiallyFailed") {
+	if (execution.kind === "RollbackIncomplete") {
 		return Object.freeze({
-			failures: execution.failures,
-			kind: "PartiallyFailed" as const,
+			execution,
+			failures: executionFailures(execution),
+			kind: "RollbackIncomplete" as const,
 			plan,
-			renamedCount: execution.renamedCount,
-			succeeded: execution.succeeded,
 		});
 	}
-	return failed(problem("Dispatch", execution.failures), {
-		execution,
-		failures: execution.failures,
-		plan,
-	});
+	return failed(
+		problem(
+			"Dispatch",
+			execution.failure.cause,
+			execution.failure.operation,
+		),
+		{
+			execution,
+			failures: executionFailures(execution),
+			plan,
+		},
+	);
+}
+
+/** The forward failure first, then any failed attempt to rename back. */
+function executionFailures(
+	execution: DelimiterMigrationExecution,
+): readonly DelimiterActionFailure[] {
+	switch (execution.kind) {
+		case "Completed":
+			return [];
+		case "RolledBack":
+			return [execution.failure];
+		case "RollbackIncomplete":
+			return [execution.failure, ...execution.rollbackFailures];
+	}
 }
 
 function completed(
@@ -250,12 +279,14 @@ function failed(
 function problem(
 	stage: DelimiterMigrationStage,
 	cause: unknown,
+	knownOperation?: string,
 ): DelimiterMigrationProblem {
 	const operation =
-		Predicate.hasProperty(cause, "operation") &&
+		knownOperation ??
+		(Predicate.hasProperty(cause, "operation") &&
 		Predicate.isString(cause.operation)
 			? cause.operation
-			: stage.toLowerCase();
+			: stage.toLowerCase());
 	return Object.freeze({ cause, operation, stage });
 }
 

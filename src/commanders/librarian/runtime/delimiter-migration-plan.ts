@@ -103,6 +103,52 @@ export function planDelimiterMigration(
 	});
 }
 
+/** A planned rename whose target name another note already holds or also targets. */
+export type DelimiterRenameConflict = {
+	readonly action: DelimiterRenameAction;
+	/** The note at the target now, or the other note the plan renames there. */
+	readonly occupiedBy: string;
+	readonly reason: "SharedTarget" | "TargetTaken";
+};
+
+/**
+ * Finds renames that would land on a name already in use. VAM resolves such a
+ * collision by renaming to an indexed name, or by trashing an identical
+ * source, so the plan could neither keep its names nor be undone safely.
+ * `existing` holds every note the plan was built from.
+ */
+export function findDelimiterRenameConflicts(
+	actions: readonly DelimiterRenameAction[],
+	existing: readonly SplitPathToMdFile[],
+): readonly DelimiterRenameConflict[] {
+	const taken = new Set(existing.map((path) => splitPathCodec.format(path)));
+	const firstClaim = new Map<string, DelimiterRenameAction>();
+	const conflicts: DelimiterRenameConflict[] = [];
+	for (const action of actions) {
+		const target = splitPathCodec.format(action.payload.to);
+		const claimant = firstClaim.get(target);
+		if (taken.has(target)) {
+			conflicts.push(
+				Object.freeze({
+					action,
+					occupiedBy: target,
+					reason: "TargetTaken" as const,
+				}),
+			);
+		} else if (claimant) {
+			conflicts.push(
+				Object.freeze({
+					action,
+					occupiedBy: splitPathCodec.format(claimant.payload.from),
+					reason: "SharedTarget" as const,
+				}),
+			);
+		}
+		if (!claimant) firstClaim.set(target, action);
+	}
+	return Object.freeze(conflicts);
+}
+
 function isInsideRoot(
 	path: SplitPathToMdFile,
 	root: SplitPathToFolder,

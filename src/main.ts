@@ -17,7 +17,7 @@ import {
 	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { logError } from "@textfresser/vault-action-manager/issue-handlers";
-import { Cause, Effect, Exit, Predicate } from "effect";
+import { Cause, Effect, Exit } from "effect";
 import { Modal, Notice, Plugin, requestUrl } from "obsidian";
 import {
 	ClassifyCommander,
@@ -47,6 +47,10 @@ import {
 	DelimiterMigrationCoordinator,
 	type DelimiterMigrationOutcome,
 } from "./commanders/librarian/runtime/delimiter-migration-coordinator";
+import {
+	type DelimiterMigrationReport,
+	reportDelimiterMigration,
+} from "./commanders/librarian/runtime/delimiter-migration-report";
 import { RESTART_LIBRARIAN_COMMAND_NAME } from "./commanders/librarian/runtime/describe-librarian-stop";
 import {
 	describeMetadataMigration,
@@ -911,21 +915,19 @@ export default class TextEaterPlugin extends Plugin {
 				prev.languages.target !== curr.languages.target;
 
 			if (delimiterChanged) {
-				const outcome = await this.handleDelimiterChange(
+				const report = await this.handleDelimiterChange(
 					prev.suffixDelimiter,
 					curr.suffixDelimiter,
 				);
-				if (
-					outcome.kind === "Cancelled" ||
-					outcome.kind === "Failed" ||
-					outcome.kind === "PartiallyFailed"
-				) {
+				// The setting follows the files: it keeps the new delimiter
+				// only when every file carries it.
+				if (!report.keepsNewDelimiter) {
 					this.settings.suffixDelimiter = { ...prev.suffixDelimiter };
 					updateParsedSettings(this.settings);
 					return;
 				}
 				delimiterLifecycleReinitialized =
-					outcome.kind === "Completed" && !languagesChanged;
+					report.librarianRestarted && !languagesChanged;
 			}
 
 			if (hideMetadataChanged) {
@@ -975,10 +977,41 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	/**
-	 * Handle delimiter change by renaming files with suffixes.
-	 * The coordinator owns planning, confirmation, dispatch, and restoration.
+	 * Handle delimiter change by renaming files with suffixes, and tell the
+	 * user what happened to the files and to the setting.
 	 */
 	private async handleDelimiterChange(
+		oldConfig: SuffixDelimiterConfig,
+		newConfig: SuffixDelimiterConfig,
+	): Promise<DelimiterMigrationReport> {
+		this.delimiterMigrating = true;
+		const outcome = await this.migrateDelimiter(
+			oldConfig,
+			newConfig,
+		).finally(() => {
+			this.delimiterMigrating = false;
+		});
+		const report = reportDelimiterMigration(outcome, {
+			newDelimiter: buildCanonicalDelimiter(newConfig),
+			oldDelimiter: buildCanonicalDelimiter(oldConfig),
+		});
+		if (report.notice) {
+			new Notice(report.notice, report.persistent ? 0 : undefined);
+		}
+		if (report.log) {
+			logger.error(
+				"[TextEaterPlugin] Delimiter migration did not complete:",
+				report.log,
+			);
+		}
+		return report;
+	}
+
+	/**
+	 * Renames files with suffixes for a new delimiter. The coordinator owns
+	 * planning, confirmation, dispatch, rollback, and restoration.
+	 */
+	private async migrateDelimiter(
 		oldConfig: SuffixDelimiterConfig,
 		newConfig: SuffixDelimiterConfig,
 	): Promise<DelimiterMigrationOutcome> {
@@ -1046,49 +1079,9 @@ export default class TextEaterPlugin extends Plugin {
 					}),
 			},
 		);
-		this.delimiterMigrating = true;
-		const outcome = await Effect.runPromise(
+		return Effect.runPromise(
 			coordinator.migrate(oldConfig, newConfig, libraryRoot),
-		).finally(() => {
-			this.delimiterMigrating = false;
-		});
-
-		switch (outcome.kind) {
-			case "Completed":
-				new Notice(`Renamed ${outcome.renamedCount} file(s)`);
-				break;
-			case "PartiallyFailed":
-				new Notice(
-					`Renamed ${outcome.renamedCount} file(s); ${outcome.failures.length} failed. Previous delimiter retained.`,
-				);
-				break;
-			case "Failed":
-				new Notice(
-					"Delimiter change failed. Previous delimiter retained.",
-				);
-				break;
-			case "Cancelled":
-			case "NoOp":
-				break;
-		}
-
-		if (outcome.kind === "PartiallyFailed" || outcome.kind === "Failed") {
-			const actionFailures = outcome.failures
-				.slice(0, 10)
-				.map(
-					(failure) =>
-						`${failure.operation} ${failure.path}: ${getErrorMessage(failure.cause)}`,
-				)
-				.join(", ");
-			logger.error(
-				"[TextEaterPlugin] Delimiter migration did not complete:",
-				outcome.kind === "Failed"
-					? `${outcome.problem.stage}/${outcome.problem.operation}: ${describeDelimiterMigrationCause(outcome.problem.cause)}${actionFailures ? `; ${actionFailures}` : ""}`
-					: actionFailures,
-			);
-		}
-
-		return outcome;
+		);
 	}
 
 	/**
@@ -1282,28 +1275,6 @@ export default class TextEaterPlugin extends Plugin {
 			),
 		);
 	}
-}
-
-function describeDelimiterMigrationCause(cause: unknown): string {
-	if (!Array.isArray(cause)) return getErrorMessage(cause);
-	return cause
-		.map((item) => {
-			const operation =
-				Predicate.hasProperty(item, "operation") &&
-				Predicate.isString(item.operation)
-					? item.operation
-					: "scan";
-			const path =
-				Predicate.hasProperty(item, "path") &&
-				Predicate.isString(item.path)
-					? ` ${item.path}`
-					: "";
-			const itemCause = Predicate.hasProperty(item, "cause")
-				? item.cause
-				: item;
-			return `${operation}${path}: ${getErrorMessage(itemCause)}`;
-		})
-		.join(", ");
 }
 
 /**
