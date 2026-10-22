@@ -111,4 +111,28 @@ describe("a Reading note whose Kontexte Obsidian retargeted", () => {
 		expect(parsed.document.retargeted).toBeUndefined();
 		expect(freeformTexts(parsed).join("\n")).toContain(TALE_1);
 	});
+
+	it("reads a Kontexte block the user deleted an embed from as freeform", () => {
+		const deleted = edit(retargeted, (body) =>
+			body.replace(`${TALE_0}\n`, ""),
+		);
+		const parsed = parseReading(deleted);
+		expect(parsed.document.retargeted).toBeUndefined();
+		expect(freeformTexts(parsed).join("\n")).toContain(TALE_1);
+		const again = serializeReadingNote(records, mutterParent, {
+			previous: parsed.document,
+		});
+		expect(again.body).toContain(TALE_1);
+	});
+
+	it("reads a Kontexte block the user added a line to as freeform", () => {
+		const commented = edit(retargeted, (body) =>
+			body.replace(TALE_0, `${TALE_0}\nmein Kommentar`),
+		);
+		const parsed = parseReading(commented);
+		expect(parsed.document.retargeted).toBeUndefined();
+		const freeform = freeformTexts(parsed).join("\n");
+		expect(freeform).toContain("mein Kommentar");
+		expect(freeform).toContain(TALE_0);
+	});
 });
