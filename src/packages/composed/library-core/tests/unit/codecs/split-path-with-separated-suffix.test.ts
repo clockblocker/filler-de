@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { makeSuffixCodecs } from "../../../../src/commanders/librarian/codecs/internal/suffix";
-import type { SuffixCodecs } from "../../../../src/commanders/librarian/codecs/internal/suffix";
-import { makeSplitPathWithSeparatedSuffixCodecs } from "../../../../src/commanders/librarian/codecs/split-path-with-separated-suffix/make";
-import type { SplitPathWithSeparatedSuffixCodecs } from "../../../../src/commanders/librarian/codecs/split-path-with-separated-suffix/make";
-import { SplitPathKind } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
+import type { SuffixCodecs } from "../../../src/codecs/internal/suffix";
+import { makeSuffixCodecs } from "../../../src/codecs/internal/suffix";
+import type { CodecRules } from "../../../src/codecs/rules";
 import type {
-	SplitPathToMdFileInsideLibrary,
-	SplitPathToFolderInsideLibrary,
 	SplitPathToFileInsideLibrary,
-} from "../../../../src/commanders/librarian/codecs/split-path-inside-library";
-import type { NodeName } from "../../../../src/commanders/librarian/types/schemas/node-name";
-import type { CodecRules } from "../../../../src/commanders/librarian/codecs/rules";
-import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
-import { defaultSettingsForUnitTests } from "../../common-utils/consts";
+	SplitPathToFolderInsideLibrary,
+	SplitPathToMdFileInsideLibrary,
+} from "../../../src/codecs/split-path-inside-library";
+import type { SplitPathWithSeparatedSuffixCodecs } from "../../../src/codecs/split-path-with-separated-suffix/make";
+import { makeSplitPathWithSeparatedSuffixCodecs } from "../../../src/codecs/split-path-with-separated-suffix/make";
+import type { NodeName } from "../../../src/types/schemas/node-name";
+import { defaultSettingsForUnitTests } from "../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
 function makeDefaultRules(): CodecRules {
 	return {
@@ -22,7 +22,8 @@ function makeDefaultRules(): CodecRules {
 		libraryRootPathParts: [],
 		showScrollBacklinks: defaultSettingsForUnitTests.showScrollBacklinks,
 		suffixDelimiter: defaultSettingsForUnitTests.suffixDelimiter,
-		suffixDelimiterConfig: defaultSettingsForUnitTests.suffixDelimiterConfig,
+		suffixDelimiterConfig:
+			defaultSettingsForUnitTests.suffixDelimiterConfig,
 		suffixDelimiterPattern:
 			defaultSettingsForUnitTests.suffixDelimiterPattern,
 	};
@@ -127,11 +128,7 @@ describe("split-path-with-separated-suffix codecs", () => {
 				codecs.fromSplitPathInsideLibraryWithSeparatedSuffix(sp);
 			expect(result.basename).toBe("NoteName-child-parent");
 			expect(result.kind).toBe(SplitPathKind.MdFile);
-			expect(result.pathParts).toEqual([
-				"Library",
-				"parent",
-				"child",
-			]);
+			expect(result.pathParts).toEqual(["Library", "parent", "child"]);
 		});
 
 		it("converts Folder separated suffix form back to split path", () => {
@@ -177,10 +174,9 @@ describe("split-path-with-separated-suffix codecs", () => {
 			const withSuffix =
 				codecs.splitPathInsideLibraryToWithSeparatedSuffix(original);
 			expect(withSuffix.isOk()).toBe(true);
-			const back =
-				codecs.fromSplitPathInsideLibraryWithSeparatedSuffix(
-					withSuffix._unsafeUnwrap(),
-				);
+			const back = codecs.fromSplitPathInsideLibraryWithSeparatedSuffix(
+				withSuffix._unsafeUnwrap(),
+			);
 			expect(back.basename).toBe(original.basename);
 			expect(back.pathParts).toEqual(original.pathParts);
 			expect(back.kind).toBe(original.kind);
@@ -195,10 +191,9 @@ describe("split-path-with-separated-suffix codecs", () => {
 			const withSuffix =
 				codecs.splitPathInsideLibraryToWithSeparatedSuffix(original);
 			expect(withSuffix.isOk()).toBe(true);
-			const back =
-				codecs.fromSplitPathInsideLibraryWithSeparatedSuffix(
-					withSuffix._unsafeUnwrap(),
-				);
+			const back = codecs.fromSplitPathInsideLibraryWithSeparatedSuffix(
+				withSuffix._unsafeUnwrap(),
+			);
 			expect(back.basename).toBe(original.basename);
 			expect(back.pathParts).toEqual(original.pathParts);
 		});

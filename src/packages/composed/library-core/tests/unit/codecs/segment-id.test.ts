@@ -1,16 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { makeSegmentIdCodecs } from "../../../../src/commanders/librarian/codecs/segment-id/make";
-import type { SegmentIdCodecs } from "../../../../src/commanders/librarian/codecs/segment-id/make";
-import { TreeNodeKind } from "../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
-import type { TreeNodeSegmentId } from "../../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
+import type { CodecRules } from "../../../src/codecs/rules";
+import type { SegmentIdCodecs } from "../../../src/codecs/segment-id/make";
+import { makeSegmentIdCodecs } from "../../../src/codecs/segment-id/make";
 import type {
+	FileNodeSegmentId,
 	ScrollNodeSegmentId,
 	SectionNodeSegmentId,
-	FileNodeSegmentId,
-} from "../../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
-import type { CodecRules } from "../../../../src/commanders/librarian/codecs/rules";
-import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
-import { defaultSettingsForUnitTests } from "../../common-utils/consts";
+	TreeNodeSegmentId,
+} from "../../../src/codecs/segment-id/types/segment-id";
+import { TreeNodeKind } from "../../../src/healer/library-tree/tree-node/types/atoms";
+import type { NodeName } from "../../../src/types/schemas/node-name";
+import { defaultSettingsForUnitTests } from "../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
 // ﹘ = SMALL_EM_DASH (U+FE58) - the NodeSegmentIdSeparator
 const SEP = "﹘";
@@ -23,7 +24,8 @@ function makeDefaultRules(): CodecRules {
 		libraryRootPathParts: [],
 		showScrollBacklinks: defaultSettingsForUnitTests.showScrollBacklinks,
 		suffixDelimiter: defaultSettingsForUnitTests.suffixDelimiter,
-		suffixDelimiterConfig: defaultSettingsForUnitTests.suffixDelimiterConfig,
+		suffixDelimiterConfig:
+			defaultSettingsForUnitTests.suffixDelimiterConfig,
 		suffixDelimiterPattern:
 			defaultSettingsForUnitTests.suffixDelimiterPattern,
 	};
@@ -88,8 +90,7 @@ describe("segment-id codecs", () => {
 		});
 
 		it("returns error for unknown TreeNodeKind", () => {
-			const id =
-				`MyNode${SEP}UnknownKind${SEP}md` as TreeNodeSegmentId;
+			const id = `MyNode${SEP}UnknownKind${SEP}md` as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
@@ -100,8 +101,7 @@ describe("segment-id codecs", () => {
 		});
 
 		it("returns error for Section with non-empty extension", () => {
-			const id =
-				`MySection${SEP}Section${SEP}md` as TreeNodeSegmentId;
+			const id = `MySection${SEP}Section${SEP}md` as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
@@ -119,8 +119,7 @@ describe("segment-id codecs", () => {
 		});
 
 		it("returns error for Scroll with non-md extension", () => {
-			const id =
-				`MyScroll${SEP}Scroll${SEP}txt` as TreeNodeSegmentId;
+			const id = `MyScroll${SEP}Scroll${SEP}txt` as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
 			expect(result.isErr()).toBe(true);
 			if (result.isErr()) {
@@ -162,9 +161,7 @@ describe("segment-id codecs", () => {
 			const id = `MyNote${SEP}Scroll${SEP}md` as ScrollNodeSegmentId;
 			const result = codecs.parseScrollSegmentId(id);
 			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap().targetKind).toBe(
-				TreeNodeKind.Scroll,
-			);
+			expect(result._unsafeUnwrap().targetKind).toBe(TreeNodeKind.Scroll);
 			expect(result._unsafeUnwrap().extension).toBe("md");
 		});
 
@@ -180,7 +177,7 @@ describe("segment-id codecs", () => {
 	describe("serializeSegmentId", () => {
 		it("serializes Section segment ID", () => {
 			const result = codecs.serializeSegmentId({
-				coreName: "MySection" as any,
+				coreName: "MySection" as NodeName,
 				targetKind: TreeNodeKind.Section,
 			});
 			expect(result).toBe(`MySection${SEP}Section${SEP}`);
@@ -188,8 +185,8 @@ describe("segment-id codecs", () => {
 
 		it("serializes Scroll segment ID", () => {
 			const result = codecs.serializeSegmentId({
-				coreName: "MyScroll" as any,
-				extension: "md" as any,
+				coreName: "MyScroll" as NodeName,
+				extension: "md",
 				targetKind: TreeNodeKind.Scroll,
 			});
 			expect(result).toBe(`MyScroll${SEP}Scroll${SEP}md`);
@@ -197,8 +194,8 @@ describe("segment-id codecs", () => {
 
 		it("serializes File segment ID", () => {
 			const result = codecs.serializeSegmentId({
-				coreName: "MyFile" as any,
-				extension: "png" as any,
+				coreName: "MyFile" as NodeName,
+				extension: "png",
 				targetKind: TreeNodeKind.File,
 			});
 			expect(result).toBe(`MyFile${SEP}File${SEP}png`);
@@ -212,9 +209,7 @@ describe("segment-id codecs", () => {
 				targetKind: TreeNodeKind.Section,
 			});
 			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toBe(
-				`MySection${SEP}Section${SEP}`,
-			);
+			expect(result._unsafeUnwrap()).toBe(`MySection${SEP}Section${SEP}`);
 		});
 
 		it("validates and serializes Scroll", () => {
@@ -224,9 +219,7 @@ describe("segment-id codecs", () => {
 				targetKind: TreeNodeKind.Scroll,
 			});
 			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toBe(
-				`MyScroll${SEP}Scroll${SEP}md`,
-			);
+			expect(result._unsafeUnwrap()).toBe(`MyScroll${SEP}Scroll${SEP}md`);
 		});
 
 		it("returns error for Section with extension", () => {
@@ -257,7 +250,8 @@ describe("segment-id codecs", () => {
 
 	describe("parse/serialize roundtrip", () => {
 		it("roundtrips Section segment ID", () => {
-			const original = `MySection${SEP}Section${SEP}` as TreeNodeSegmentId;
+			const original =
+				`MySection${SEP}Section${SEP}` as TreeNodeSegmentId;
 			const parsed = codecs.parseSegmentId(original);
 			expect(parsed.isOk()).toBe(true);
 			const serialized = codecs.serializeSegmentId(
@@ -267,7 +261,8 @@ describe("segment-id codecs", () => {
 		});
 
 		it("roundtrips Scroll segment ID", () => {
-			const original = `MyScroll${SEP}Scroll${SEP}md` as TreeNodeSegmentId;
+			const original =
+				`MyScroll${SEP}Scroll${SEP}md` as TreeNodeSegmentId;
 			const parsed = codecs.parseSegmentId(original);
 			expect(parsed.isOk()).toBe(true);
 			const serialized = codecs.serializeSegmentId(

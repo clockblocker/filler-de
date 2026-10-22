@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import type { NodeName } from "../../../../src/commanders/librarian/types/schemas/node-name";
-import { makeSuffixCodecs } from "../../../../src/commanders/librarian/codecs/internal/suffix";
-import type { SuffixCodecs } from "../../../../src/commanders/librarian/codecs/internal/suffix";
-import type { CodecRules } from "../../../../src/commanders/librarian/codecs/rules";
-import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
-import { defaultSettingsForUnitTests } from "../../common-utils/consts";
+import type { SuffixCodecs } from "../../../src/codecs/internal/suffix";
+import { makeSuffixCodecs } from "../../../src/codecs/internal/suffix";
+import type { CodecRules } from "../../../src/codecs/rules";
+import type { NodeName } from "../../../src/types/schemas/node-name";
+import { defaultSettingsForUnitTests } from "../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
 // Default rules with "-" delimiter, no padding
 function makeDefaultRules(): CodecRules {
@@ -15,7 +15,8 @@ function makeDefaultRules(): CodecRules {
 		libraryRootPathParts: [],
 		showScrollBacklinks: defaultSettingsForUnitTests.showScrollBacklinks,
 		suffixDelimiter: defaultSettingsForUnitTests.suffixDelimiter,
-		suffixDelimiterConfig: defaultSettingsForUnitTests.suffixDelimiterConfig,
+		suffixDelimiterConfig:
+			defaultSettingsForUnitTests.suffixDelimiterConfig,
 		suffixDelimiterPattern:
 			defaultSettingsForUnitTests.suffixDelimiterPattern,
 	};
@@ -56,8 +57,7 @@ describe("suffix codecs", () => {
 		});
 
 		it("parses basename with multiple suffix parts", () => {
-			const result =
-				codecs.parseSeparatedSuffix("NoteName-child-parent");
+			const result = codecs.parseSeparatedSuffix("NoteName-child-parent");
 			expect(result.isOk()).toBe(true);
 			expect(result._unsafeUnwrap()).toEqual({
 				coreName: "NoteName",
@@ -66,8 +66,9 @@ describe("suffix codecs", () => {
 		});
 
 		it("handles flexible spacing around delimiter", () => {
-			const result =
-				codecs.parseSeparatedSuffix("NoteName - child - parent");
+			const result = codecs.parseSeparatedSuffix(
+				"NoteName - child - parent",
+			);
 			expect(result.isOk()).toBe(true);
 			expect(result._unsafeUnwrap()).toEqual({
 				coreName: "NoteName",
@@ -145,8 +146,9 @@ describe("suffix codecs", () => {
 		});
 
 		it("splits multiple parts", () => {
-			const result =
-				codecs.splitBySuffixDelimiter("NoteName-child-parent");
+			const result = codecs.splitBySuffixDelimiter(
+				"NoteName-child-parent",
+			);
 			expect(result.isOk()).toBe(true);
 			expect(result._unsafeUnwrap()).toEqual([
 				"NoteName",
@@ -163,10 +165,7 @@ describe("suffix codecs", () => {
 
 	describe("pathPartsToSuffixParts / suffixPartsToPathParts", () => {
 		it("reverses path parts to suffix parts", () => {
-			const result = codecs.pathPartsToSuffixParts([
-				"grandpa",
-				"father",
-			]);
+			const result = codecs.pathPartsToSuffixParts(["grandpa", "father"]);
 			expect(result).toEqual(["father", "grandpa"]);
 		});
 
@@ -207,8 +206,7 @@ describe("suffix codecs", () => {
 		});
 
 		it("returns empty for Library root only", () => {
-			const result =
-				codecs.pathPartsWithRootToSuffixParts(["Library"]);
+			const result = codecs.pathPartsWithRootToSuffixParts(["Library"]);
 			expect(result).toEqual([]);
 		});
 	});
@@ -258,8 +256,9 @@ describe("suffix codecs", () => {
 		});
 
 		it("parses with padded delimiter", () => {
-			const result =
-				paddedCodecs.parseSeparatedSuffix("NoteName - child - parent");
+			const result = paddedCodecs.parseSeparatedSuffix(
+				"NoteName - child - parent",
+			);
 			expect(result.isOk()).toBe(true);
 			expect(result._unsafeUnwrap()).toEqual({
 				coreName: "NoteName",

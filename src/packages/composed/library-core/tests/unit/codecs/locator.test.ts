@@ -1,26 +1,26 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { makeSuffixCodecs } from "../../../../src/commanders/librarian/codecs/internal/suffix";
-import type { SuffixCodecs } from "../../../../src/commanders/librarian/codecs/internal/suffix";
-import { makeSegmentIdCodecs } from "../../../../src/commanders/librarian/codecs/segment-id/make";
-import type { SegmentIdCodecs } from "../../../../src/commanders/librarian/codecs/segment-id/make";
-import { makeLocatorCodecs } from "../../../../src/commanders/librarian/codecs/locator/make";
-import type { LocatorCodecs } from "../../../../src/commanders/librarian/codecs/locator/make";
-import { TreeNodeKind } from "../../../../src/commanders/librarian/healer/library-tree/tree-node/types/atoms";
-import { SplitPathKind } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
+import type { SuffixCodecs } from "../../../src/codecs/internal/suffix";
+import { makeSuffixCodecs } from "../../../src/codecs/internal/suffix";
+import type { LocatorCodecs } from "../../../src/codecs/locator/make";
+import { makeLocatorCodecs } from "../../../src/codecs/locator/make";
+import type { CodecRules } from "../../../src/codecs/rules";
+import type { SegmentIdCodecs } from "../../../src/codecs/segment-id/make";
+import { makeSegmentIdCodecs } from "../../../src/codecs/segment-id/make";
 import type {
-	SectionNodeSegmentId,
-	ScrollNodeSegmentId,
 	FileNodeSegmentId,
-} from "../../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
+	ScrollNodeSegmentId,
+	SectionNodeSegmentId,
+} from "../../../src/codecs/segment-id/types/segment-id";
 import type {
+	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
-	CanonicalSplitPathToFileInsideLibrary,
-} from "../../../../src/commanders/librarian/codecs/split-path-with-separated-suffix";
-import type { NodeName } from "../../../../src/commanders/librarian/types/schemas/node-name";
-import type { CodecRules } from "../../../../src/commanders/librarian/codecs/rules";
-import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
-import { defaultSettingsForUnitTests } from "../../common-utils/consts";
+} from "../../../src/codecs/split-path-with-separated-suffix";
+import { TreeNodeKind } from "../../../src/healer/library-tree/tree-node/types/atoms";
+import type { NodeName } from "../../../src/types/schemas/node-name";
+import { defaultSettingsForUnitTests } from "../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
 // ﹘ = SMALL_EM_DASH (U+FE58)
 const SEP = "﹘";
@@ -35,7 +35,8 @@ function makeDefaultRules(): CodecRules {
 		libraryRootPathParts: [],
 		showScrollBacklinks: defaultSettingsForUnitTests.showScrollBacklinks,
 		suffixDelimiter: defaultSettingsForUnitTests.suffixDelimiter,
-		suffixDelimiterConfig: defaultSettingsForUnitTests.suffixDelimiterConfig,
+		suffixDelimiterConfig:
+			defaultSettingsForUnitTests.suffixDelimiterConfig,
 		suffixDelimiterPattern:
 			defaultSettingsForUnitTests.suffixDelimiterPattern,
 	};
@@ -69,8 +70,7 @@ describe("locator codecs", () => {
 					suffixParts: [] as NodeName[],
 				},
 			};
-			const result =
-				codecs.canonicalSplitPathInsideLibraryToLocator(sp);
+			const result = codecs.canonicalSplitPathInsideLibraryToLocator(sp);
 			expect(result.isOk()).toBe(true);
 			const loc = result._unsafeUnwrap();
 			expect(loc.targetKind).toBe(TreeNodeKind.Section);
@@ -91,8 +91,7 @@ describe("locator codecs", () => {
 					suffixParts: ["parent" as NodeName],
 				},
 			};
-			const result =
-				codecs.canonicalSplitPathInsideLibraryToLocator(sp);
+			const result = codecs.canonicalSplitPathInsideLibraryToLocator(sp);
 			expect(result.isOk()).toBe(true);
 			const loc = result._unsafeUnwrap();
 			expect(loc.targetKind).toBe(TreeNodeKind.Scroll);
@@ -113,8 +112,7 @@ describe("locator codecs", () => {
 					suffixParts: ["parent" as NodeName],
 				},
 			};
-			const result =
-				codecs.canonicalSplitPathInsideLibraryToLocator(sp);
+			const result = codecs.canonicalSplitPathInsideLibraryToLocator(sp);
 			expect(result.isOk()).toBe(true);
 			const loc = result._unsafeUnwrap();
 			expect(loc.targetKind).toBe(TreeNodeKind.File);
@@ -135,8 +133,7 @@ describe("locator codecs", () => {
 					],
 				},
 			};
-			const result =
-				codecs.canonicalSplitPathInsideLibraryToLocator(sp);
+			const result = codecs.canonicalSplitPathInsideLibraryToLocator(sp);
 			expect(result.isOk()).toBe(true);
 			const loc = result._unsafeUnwrap();
 			expect(loc.segmentIdChainToParent).toEqual([
@@ -152,11 +149,13 @@ describe("locator codecs", () => {
 		it("converts Section locator to Folder canonical split path", () => {
 			const loc = {
 				segmentId: `child${SEP}Section${SEP}` as SectionNodeSegmentId,
-				segmentIdChainToParent: [sec("Library"), sec("parent")] as SectionNodeSegmentId[],
+				segmentIdChainToParent: [
+					sec("Library"),
+					sec("parent"),
+				] as SectionNodeSegmentId[],
 				targetKind: TreeNodeKind.Section as typeof TreeNodeKind.Section,
 			};
-			const result =
-				codecs.locatorToCanonicalSplitPathInsideLibrary(loc);
+			const result = codecs.locatorToCanonicalSplitPathInsideLibrary(loc);
 			expect(result.isOk()).toBe(true);
 			const sp = result._unsafeUnwrap();
 			expect(sp.kind).toBe(SplitPathKind.Folder);
@@ -167,13 +166,14 @@ describe("locator codecs", () => {
 
 		it("converts Scroll locator to MdFile canonical split path", () => {
 			const loc = {
-				segmentId:
-					`MyNote${SEP}Scroll${SEP}md` as ScrollNodeSegmentId,
-				segmentIdChainToParent: [sec("Library"), sec("parent")] as SectionNodeSegmentId[],
+				segmentId: `MyNote${SEP}Scroll${SEP}md` as ScrollNodeSegmentId,
+				segmentIdChainToParent: [
+					sec("Library"),
+					sec("parent"),
+				] as SectionNodeSegmentId[],
 				targetKind: TreeNodeKind.Scroll as typeof TreeNodeKind.Scroll,
 			};
-			const result =
-				codecs.locatorToCanonicalSplitPathInsideLibrary(loc);
+			const result = codecs.locatorToCanonicalSplitPathInsideLibrary(loc);
 			expect(result.isOk()).toBe(true);
 			const sp = result._unsafeUnwrap();
 			expect(sp.kind).toBe(SplitPathKind.MdFile);
@@ -186,13 +186,14 @@ describe("locator codecs", () => {
 
 		it("converts File locator to File canonical split path", () => {
 			const loc = {
-				segmentId:
-					`Image${SEP}File${SEP}png` as FileNodeSegmentId,
-				segmentIdChainToParent: [sec("Library"), sec("parent")] as SectionNodeSegmentId[],
+				segmentId: `Image${SEP}File${SEP}png` as FileNodeSegmentId,
+				segmentIdChainToParent: [
+					sec("Library"),
+					sec("parent"),
+				] as SectionNodeSegmentId[],
 				targetKind: TreeNodeKind.File as typeof TreeNodeKind.File,
 			};
-			const result =
-				codecs.locatorToCanonicalSplitPathInsideLibrary(loc);
+			const result = codecs.locatorToCanonicalSplitPathInsideLibrary(loc);
 			expect(result.isOk()).toBe(true);
 			const sp = result._unsafeUnwrap();
 			expect(sp.kind).toBe(SplitPathKind.File);

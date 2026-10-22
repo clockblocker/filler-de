@@ -1,27 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { SplitPathKind } from "@textfresser/vault-action-manager";
 import {
-	fromSplitPath,
-	toSplitPath,
-	getSuffixParts,
-	getBasename,
-	getParentPathParts,
-	makeLeafPath,
-	makeSectionPath,
-	fromSectionChain,
-	makeLibraryPathCodecs,
 	type LibraryPath,
-} from "../../../../src/commanders/librarian/codecs/library-path";
-import { makeSegmentIdCodecs } from "../../../../src/commanders/librarian/codecs/segment-id/make";
-import { SplitPathKind } from "../../../../src/managers/obsidian/vault-action-manager/types/split-path";
+	makeLibraryPathCodecs,
+} from "../../../src/codecs/library-path";
+import type { CodecRules } from "../../../src/codecs/rules";
+import { makeSegmentIdCodecs } from "../../../src/codecs/segment-id/make";
+import type { SectionNodeSegmentId } from "../../../src/codecs/segment-id/types/segment-id";
 import type {
+	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
-	SplitPathToFileInsideLibrary,
-} from "../../../../src/commanders/librarian/codecs/split-path-inside-library";
-import type { SectionNodeSegmentId } from "../../../../src/commanders/librarian/codecs/segment-id/types/segment-id";
-import type { CodecRules } from "../../../../src/commanders/librarian/codecs/rules";
-import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
-import { defaultSettingsForUnitTests } from "../../common-utils/consts";
+} from "../../../src/codecs/split-path-inside-library";
+import { defaultSettingsForUnitTests } from "../common-utils/consts";
+import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
 // ﹘ = SMALL_EM_DASH (U+FE58)
 const SEP = "﹘";
@@ -36,11 +28,23 @@ function makeDefaultRules(): CodecRules {
 		libraryRootPathParts: [],
 		showScrollBacklinks: defaultSettingsForUnitTests.showScrollBacklinks,
 		suffixDelimiter: defaultSettingsForUnitTests.suffixDelimiter,
-		suffixDelimiterConfig: defaultSettingsForUnitTests.suffixDelimiterConfig,
+		suffixDelimiterConfig:
+			defaultSettingsForUnitTests.suffixDelimiterConfig,
 		suffixDelimiterPattern:
 			defaultSettingsForUnitTests.suffixDelimiterPattern,
 	};
 }
+
+// The path helpers are reachable only through the codec factory.
+const {
+	fromSplitPath,
+	getBasename,
+	getParentPathParts,
+	getSuffixParts,
+	makeLeafPath,
+	makeSectionPath,
+	toSplitPath,
+} = makeLibraryPathCodecs(makeSegmentIdCodecs(makeDefaultRules()));
 
 describe("library-path codecs", () => {
 	let spy: ReturnType<typeof setupGetParsedUserSettingsSpy>;
@@ -221,7 +225,9 @@ describe("library-path codecs", () => {
 			const rules = makeDefaultRules();
 			const segmentIdCodecs = makeSegmentIdCodecs(rules);
 			const chain = [sec("Library"), sec("parent"), sec("child")];
-			const result = fromSectionChain(chain, segmentIdCodecs);
+			const result = makeLibraryPathCodecs(
+				segmentIdCodecs,
+			).fromSectionChain(chain, segmentIdCodecs);
 			expect(result.isOk()).toBe(true);
 			const lp = result._unsafeUnwrap();
 			expect(lp.segments).toEqual(["Library", "parent", "child"]);
@@ -231,7 +237,9 @@ describe("library-path codecs", () => {
 		it("returns empty segments for empty chain", () => {
 			const rules = makeDefaultRules();
 			const segmentIdCodecs = makeSegmentIdCodecs(rules);
-			const result = fromSectionChain([], segmentIdCodecs);
+			const result = makeLibraryPathCodecs(
+				segmentIdCodecs,
+			).fromSectionChain([], segmentIdCodecs);
 			expect(result.isOk()).toBe(true);
 			expect(result._unsafeUnwrap().segments).toEqual([]);
 		});
@@ -240,7 +248,9 @@ describe("library-path codecs", () => {
 			const rules = makeDefaultRules();
 			const segmentIdCodecs = makeSegmentIdCodecs(rules);
 			const chain = ["invalid" as SectionNodeSegmentId];
-			const result = fromSectionChain(chain, segmentIdCodecs);
+			const result = makeLibraryPathCodecs(
+				segmentIdCodecs,
+			).fromSectionChain(chain, segmentIdCodecs);
 			expect(result.isErr()).toBe(true);
 		});
 	});
