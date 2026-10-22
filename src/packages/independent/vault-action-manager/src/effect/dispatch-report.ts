@@ -1,7 +1,7 @@
 import { Predicate, Schema } from "effect";
 import type { VamOperation } from "../types/event-origin";
 import type { AnySplitPath } from "../types/split-path";
-import type { VaultAction } from "../types/vault-action";
+import { type VaultAction, VaultActionKind } from "../types/vault-action";
 import {
 	type VamActionFailureKind,
 	VamActiveEditorError,
@@ -72,6 +72,10 @@ export type VamActionOutcome = typeof VamActionOutcomeSchema.Type;
  *   `missing`).
  * - `Uncertain`: it failed and may have changed the vault, such as a rename
  *   that moved the file and then could not restore the editor selection.
+ *   For a create or a rename, `targetTaken` says whether something held
+ *   its target (a rename's `to`), as the vault's file system compares
+ *   names, by the collision check the action made immediately before it
+ *   wrote or moved; it is absent when the action failed before that check.
  * - `Skipped`: it never ran.
  */
 export const VamDispatchEntrySchema = Schema.Union([
@@ -89,6 +93,7 @@ export const VamDispatchEntrySchema = Schema.Union([
 		action: VaultActionSchema,
 		error: Schema.instanceOf(VamDispatchError),
 		status: Schema.Literal("Uncertain"),
+		targetTaken: Schema.optional(Schema.Boolean),
 	}),
 	Schema.Struct({
 		action: VaultActionSchema,
@@ -143,6 +148,19 @@ export class VamDispatchReport extends Schema.Class<VamDispatchReport>(
 			error,
 			status: wroteNothing(error.kind) ? "Failed" : "Uncertain",
 		};
+	}
+
+	/**
+	 * `entry` with whether its action's target was taken when its collision
+	 * check ran, kept only on an `Uncertain` entry, where a probe needs it.
+	 */
+	static withTargetTaken(
+		entry: VamDispatchEntry,
+		targetTaken: boolean | undefined,
+	): VamDispatchEntry {
+		return entry.status === "Uncertain" && targetTaken !== undefined
+			? { ...entry, targetTaken }
+			: entry;
 	}
 
 	/** Actions that completed, in run order. */
@@ -244,6 +262,22 @@ export function isContentConflict(failure: VamDispatchFailure): boolean {
 	return (
 		failed.length > 0 && failed.every((error) => error.kind === "conflict")
 	);
+}
+
+/** The path a create or a rename puts something at. */
+export function actionTarget(action: VaultAction): AnySplitPath | undefined {
+	switch (action.kind) {
+		case VaultActionKind.CreateFolder:
+		case VaultActionKind.CreateFile:
+		case VaultActionKind.CreateMdFile:
+			return action.payload.splitPath;
+		case VaultActionKind.RenameFolder:
+		case VaultActionKind.RenameFile:
+		case VaultActionKind.RenameMdFile:
+			return action.payload.to;
+		default:
+			return undefined;
+	}
 }
 
 function wroteNothing(kind: VamActionFailureKind): boolean {

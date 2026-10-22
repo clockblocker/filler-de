@@ -330,7 +330,12 @@ The report has one entry per planned action, in the order VAM ran them. Its
 - `Failed`, with its `VamDispatchError`: it failed and changed nothing.
 - `Uncertain`, with its `VamDispatchError`: it failed and may have changed
   the vault, such as a rename that moved the file and then could not restore
-  the editor selection.
+  the editor selection. A create's or rename's entry also has `targetTaken`:
+  whether something held its target (a rename's `to`), as the vault's file
+  system compares names, by the collision check the action made immediately
+  before it wrote or moved. It is absent when the action failed before that
+  check, and so moved nothing. The check is the one the action makes anyway,
+  so recording it costs no lookup.
 - `Skipped`: it never ran.
 
 A `VamDispatchError` names its typed `action` and a `kind`: `conflict` (the
@@ -389,14 +394,20 @@ restored to stale content.
 An `Uncertain` entry is never inverted blindly. VAM probes the vault and
 records the finding in `probed`: `Landed` (a rename's file is at `to` and
 not at `from`; a create's file holds the content it was created with),
-`NotLanded`, or `Unknown`. Before the batch runs, VAM also looks up the
-target of every create and rename, so a file that was there already is
-never taken for the batch's: a create whose path was taken did not land,
-and a rename whose target was taken, which may have gone to an indexed
-name or trashed a duplicate, is `Unknown`, unless it changes only its own
-name's case. Only a landed action is inverted, under the same
-guard; an `Unknown` one is `couldNotUndo` with block `Unknown`. A
-`dispatchWithReport` that dies counts every action as `Uncertain`.
+`NotLanded`, or `Unknown`. A file that was at a create's or rename's
+target when the action ran is never taken for the batch's: a create whose
+path was taken did not land, and a rename whose target was taken, which
+may have gone to an indexed name or trashed a duplicate, is `Unknown`,
+unless it changes only its own name's case. The entry's `targetTaken`
+says whether it was taken, so a file that reaches the target, or leaves
+it, while the batch waits in the queue, or while a rename reads link
+sources and protected files ahead of its move, counts as it stood when
+the action moved (#202). An entry without one falls back to a lookup
+`dispatchOrUndo` makes before it submits the batch: a bare
+`VamUndoPort`'s entries, an action that failed before its check, and a
+`dispatchWithReport` that dies, which counts every action as
+`Uncertain`. Only a landed action is inverted, under the same
+guard; an `Unknown` one is `couldNotUndo` with block `Unknown`.
 
 Each inverse runs as its own one-action batch, in reverse run order, so
 VAM's planner cannot reorder them by path depth. Every inverse is attempted

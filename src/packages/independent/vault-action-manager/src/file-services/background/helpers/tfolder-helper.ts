@@ -1,5 +1,6 @@
 import { Effect, Result } from "effect";
 import { TFolder } from "obsidian";
+import { recordTargetTaken } from "../../../effect/current-operation";
 import type { VamActionOutcome } from "../../../effect/dispatch-report";
 import {
 	type VamTargetExistsError,
@@ -90,6 +91,12 @@ export class TFolderHelper {
 			const existing = yield* Effect.result(this.getFolder(splitPath));
 			if (Result.isSuccess(existing)) return NO_OP;
 			if (!isLookupMiss(existing.failure)) return yield* existing.failure;
+			// For the dispatch report only; a failed lookup records nothing.
+			const occupant = yield* Effect.result(
+				occupantOf(splitPath, this.paths),
+			);
+			if (Result.isSuccess(occupant))
+				yield* recordTargetTaken(occupant.success !== undefined);
 			return yield* this.tryVaultCreateFolder(splitPath);
 		});
 	}
@@ -206,6 +213,7 @@ export class TFolderHelper {
 			const occupant = Result.isSuccess(toResult)
 				? toResult.success
 				: yield* occupantOf(to, this.paths, fromFolder);
+			yield* recordTargetTaken(occupant !== undefined);
 			if (!occupant)
 				return yield* this.performRename(fromFolder, to, updateLinks);
 			if (onCollision === "fail")

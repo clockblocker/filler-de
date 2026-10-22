@@ -16,6 +16,7 @@ import { type VaultAction, VaultActionKind } from "../types/vault-action";
 import { VaultPath } from "../vault-path";
 import type { DispatchCaller, DispatchOptions } from "./dispatch-coordinator";
 import {
+	actionTarget,
 	type VamActionOutcome,
 	type VamDispatchEntry,
 	VamDispatchFailure,
@@ -77,10 +78,17 @@ const ABSENT: PreImage = { _tag: "Absent" };
 type PreImages = ReadonlyMap<string, PreImage>;
 
 /**
- * What the vault held before the batch ran: the pre-images of the files it
- * writes, and, for each path a create or a rename targets, whether
- * something was there (`undefined` when the lookup failed). A probe never
- * takes a file that was there before for one the batch put there.
+ * What the vault held before the batch was submitted: the pre-images of
+ * the files it writes, and, for each path a create or a rename targets,
+ * whether something was there (`undefined` when the lookup failed). A probe
+ * never takes a file that was there before for one the batch put there.
+ * An `Uncertain` entry's own `targetTaken`, from its action's collision
+ * check immediately before it wrote or moved, replaces the target's record
+ * here: a file can arrive at the target, or leave it, while the batch waits
+ * in the queue or the rename reads ahead of its move. The record here
+ * serves a port whose entries do not say, actions a dying dispatch never
+ * reported, and actions that failed before their check, which moved
+ * nothing.
  */
 type BeforeBatch = {
 	readonly images: PreImages;
@@ -125,8 +133,8 @@ const UNDONE: InverseResult = { _tag: "Undone" };
  *   where it went and its old path is free (`onCollision: "fail"`).
  * - `Trashed`, `TrashedDuplicate` → not undoable.
  * - `Uncertain` → probed; only one that landed is undone, guarded as above.
- *   A create or rename whose target was taken before the batch is never
- *   found to have landed there.
+ *   A create or rename whose target was taken when it ran is never found
+ *   to have landed there.
  *
  * Each inverse runs as its own batch, after the ones before it, so none is
  * reordered among the others; every one is attempted.
@@ -224,7 +232,7 @@ const captureBefore = Effect.fnUntraced(function* (
 	const targets = new Map<string, boolean | undefined>();
 	let left = budget;
 	for (const action of actions) {
-		const target = targetOf(action);
+		const target = actionTarget(action);
 		if (target) {
 			const key = keyOf(target);
 			if (!targets.has(key))
@@ -256,22 +264,6 @@ const captureBefore = Effect.fnUntraced(function* (
 	}
 	return { images, targets };
 });
-
-/** The path a create or a rename puts something at. */
-function targetOf(action: VaultAction): AnySplitPath | undefined {
-	switch (action.kind) {
-		case VaultActionKind.CreateFolder:
-		case VaultActionKind.CreateFile:
-		case VaultActionKind.CreateMdFile:
-			return action.payload.splitPath;
-		case VaultActionKind.RenameFolder:
-		case VaultActionKind.RenameFile:
-		case VaultActionKind.RenameMdFile:
-			return action.payload.to;
-		default:
-			return undefined;
-	}
-}
 
 const undoStopped = Effect.fn("vam.undo")(function* (
 	port: VamUndoPort,
@@ -348,7 +340,12 @@ const planUndo = Effect.fnUntraced(function* (
 				preImages,
 			);
 		case "Uncertain": {
-			const found = yield* probeForward(port, entry.action, before);
+			const found = yield* probeForward(
+				port,
+				entry.action,
+				before,
+				entry.targetTaken,
+			);
 			onProbed(found);
 			switch (found) {
 				case "Landed":
@@ -568,19 +565,23 @@ function renameFrom(
  * Whether an `Uncertain` action landed, from the vault as it is now. Only
  * evidence counts: a rename landed when its file is at `to` and not at
  * `from`, a create when its file holds what it was created with, and
- * neither when something was at its target before the batch ran, since
- * that may be what is there now (a rename that went to an indexed name or
- * trashed a duplicate, a create VAM refused).
+ * neither when something was at its target when it ran, since that may be
+ * what is there now (a rename that went to an indexed name or trashed a
+ * duplicate, a create VAM refused). `targetTaken` is the entry's record of
+ * that; without one, the record from before the batch stands in.
  */
 const probeForward = Effect.fn("vam.undo.probe")(function* (
 	port: VamUndoPort,
 	action: VaultAction,
 	batch: BeforeBatch,
+	targetTaken: boolean | undefined,
 ): Effect.fn.Return<VamUndoProbe> {
 	yield* Effect.annotateCurrentSpan({ "action.kind": action.kind });
 	const preImages = batch.images;
-	const target = targetOf(action);
-	const held = target ? batch.targets.get(keyOf(target)) : false;
+	const target = actionTarget(action);
+	const held = target
+		? (targetTaken ?? batch.targets.get(keyOf(target)))
+		: false;
 	switch (action.kind) {
 		case VaultActionKind.RenameMdFile:
 		case VaultActionKind.RenameFile:

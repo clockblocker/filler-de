@@ -36,7 +36,11 @@ import type {
 } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionKind } from "../types/vault-action";
-import { CurrentVamOperation } from "./current-operation";
+import {
+	CurrentTargetCheck,
+	CurrentVamOperation,
+	type TargetCheck,
+} from "./current-operation";
 import {
 	type VamDispatchEntry,
 	VamDispatchFailure,
@@ -645,6 +649,11 @@ export class DispatchBatchWorker {
 	 *
 	 * Opening the window cannot fail, so every planned action that runs gets
 	 * exactly one report entry, from its own execution.
+	 *
+	 * A create or a rename records what its own collision check found at
+	 * its target, immediately before it wrote or moved, so an `Uncertain`
+	 * entry says whether the target was taken as the action ran, not when
+	 * the batch was submitted (#202).
 	 */
 	private runAction(
 		action: VaultAction,
@@ -652,7 +661,15 @@ export class DispatchBatchWorker {
 	): Effect.Effect<VamDispatchEntry, never, VamLiveServices> {
 		return Effect.acquireUseRelease(
 			this.selfEventTracker.beginEffect(action, operation),
-			() => this.executeAction(action, operation),
+			() => {
+				const check: TargetCheck = { taken: undefined };
+				return this.executeAction(action, operation).pipe(
+					Effect.provideService(CurrentTargetCheck, check),
+					Effect.map((entry) =>
+						VamDispatchReport.withTargetTaken(entry, check.taken),
+					),
+				);
+			},
 			() => this.selfEventTracker.finishEffect(action),
 		);
 	}
