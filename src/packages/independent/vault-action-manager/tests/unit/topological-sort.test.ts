@@ -211,6 +211,45 @@ describe("topologicalSort", () => {
 		}).toThrow("Cycle detected");
 	});
 
+	it("runs trashes under a renamed folder before the rename, however deep", () => {
+		const rename: VaultAction = {
+			kind: VaultActionKind.RenameFolder,
+			payload: {
+				from: folder("Old", ["Library"]),
+				to: folder("New", ["Library"]),
+			},
+		};
+		const deep: VaultAction = {
+			kind: VaultActionKind.TrashMdFile,
+			payload: {
+				splitPath: mdFile("__-Inner", [
+					"Library",
+					"Old",
+					"Sub",
+					"Inner",
+				]),
+			},
+		};
+		const nested: VaultAction = {
+			kind: VaultActionKind.TrashMdFile,
+			payload: { splitPath: mdFile("__-Sub", ["Library", "Old", "Sub"]) },
+		};
+		const shallow: VaultAction = {
+			kind: VaultActionKind.UpsertMdFile,
+			payload: {
+				content: "",
+				splitPath: mdFile("__-Library", ["Library"]),
+			},
+		};
+		const actions = [rename, deep, nested, shallow];
+
+		// The rename becomes ready only after deeper actions ran, and is
+		// shallower than them; it must still run.
+		const sorted = topologicalSort(actions, buildDependencyGraph(actions));
+
+		expect(sorted).toEqual([shallow, nested, deep, rename]);
+	});
+
 	it("should handle RenameMdFile dependency on destination folder", () => {
 		const destFolder: VaultAction = {
 			kind: VaultActionKind.CreateFolder,

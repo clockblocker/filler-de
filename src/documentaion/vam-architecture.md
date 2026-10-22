@@ -139,6 +139,8 @@ Important rules:
 - Multiple Markdown transforms compose in submission order.
 - A content write wins over an earlier transform for the same file.
 - Parent folders are created before their children.
+- Trashes below a renamed folder's source run before that rename, so they
+  still find their targets.
 - Each action's Self Event paths are registered immediately before it runs.
   They stay expected while it runs and for one TTL (5 s) after it ends, so
   the window does not depend on how long the batch is. Actions a stopped
@@ -214,10 +216,17 @@ Obsidian callbacks do not wait for subscribers. Each subscriber gets its own han
 
 The accumulator has a quiet deadline and an absolute maximum deadline. Continuous callbacks cannot keep a window open without limit.
 
-The Self Event tracker uses two match types:
+The Self Event tracker uses three match types:
 
 - Exact paths match one expected callback and then disappear.
 - Folder source prefixes match descendant callback cascades until they expire.
+- Folder rename pairs match, until they expire, each descendant rename
+  Obsidian reports for a folder VAM renamed: the old path lies under the
+  source, and the new path is the same remainder under the destination.
+
+A rename callback is Self when both of its paths match, or when it is such a
+descendant pair. The destination is not a prefix, so a user's create or
+rename into it stays observable during the window.
 
 ### Markdown modifications
 

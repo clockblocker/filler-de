@@ -9,8 +9,20 @@ type ExactEntry = {
 	readonly isFilePath: boolean;
 };
 
+/**
+ * A folder rename VAM is running or ran. Obsidian reports a rename for each
+ * descendant of the moved folder, and each such pair is Self.
+ */
+type FolderRenameEntry = {
+	readonly expiresAt: number;
+	readonly from: string;
+	readonly to: string;
+};
+
 type SelfEventState = {
 	readonly changed: Deferred.Deferred<void>;
+	/** Keyed by `folderRenameKey(from, to)`. */
+	readonly folderRenames: ReadonlyMap<string, FolderRenameEntry>;
 	/**
 	 * Expected Obsidian modify callbacks, one expiration per VAM write. This
 	 * namespace is separate from create, rename, and delete attribution and
@@ -31,13 +43,14 @@ type SelfEventTrackerOptions = {
 
 type PrunedState = {
 	readonly changed: boolean;
+	readonly folderRenames: Map<string, FolderRenameEntry>;
 	readonly prefixes: Map<string, number>;
 	readonly tracked: Map<string, ExactEntry>;
 };
 
-type IgnoreUpdate = {
-	readonly ignored: boolean;
+type ModifyUpdate<A> = {
 	readonly previousSignal: Deferred.Deferred<void> | undefined;
+	readonly result: A;
 };
 
 type SnapshotUpdate = {
@@ -59,20 +72,71 @@ function pruneState(state: SelfEventState, now: number): PrunedState {
 		else prefixes.set(prefix, expiresAt);
 	}
 
-	return { changed, prefixes, tracked };
+	const folderRenames = new Map<string, FolderRenameEntry>();
+	for (const [key, entry] of state.folderRenames) {
+		if (entry.expiresAt <= now) changed = true;
+		else folderRenames.set(key, entry);
+	}
+
+	return { changed, folderRenames, prefixes, tracked };
 }
 
 function nextState(
 	previous: SelfEventState,
-	tracked: ReadonlyMap<string, ExactEntry>,
-	prefixes: ReadonlyMap<string, number>,
+	pruned: PrunedState,
 ): SelfEventState {
 	return {
 		changed: Deferred.makeUnsafe<void>(),
+		folderRenames: pruned.folderRenames,
 		modifies: previous.modifies,
-		prefixes,
-		tracked,
+		prefixes: pruned.prefixes,
+		tracked: pruned.tracked,
 	};
+}
+
+function folderRenameKey(from: string, to: string): string {
+	return JSON.stringify([from, to]);
+}
+
+/**
+ * Pops `normalized` if it is an exact entry, else matches it against the
+ * folder prefixes. The vault root (`""`) as a prefix matches only itself.
+ */
+function matchPath(
+	pruned: PrunedState,
+	normalized: string,
+): { readonly ignored: boolean; readonly popped: boolean } {
+	if (pruned.tracked.delete(normalized)) {
+		return { ignored: true, popped: true };
+	}
+	for (const prefix of pruned.prefixes.keys()) {
+		if (normalized === prefix || normalized.startsWith(`${prefix}/`)) {
+			return { ignored: true, popped: false };
+		}
+	}
+	return { ignored: false, popped: false };
+}
+
+/**
+ * True when `oldPath -> newPath` is the rename Obsidian reports for a
+ * descendant of a folder VAM renamed: `oldPath` lies strictly under the
+ * source and `newPath` is the same remainder under the destination. The
+ * folder's own rename is left to its exact entries. Nothing lies under the
+ * vault root (`""`), matching how folder prefixes treat it.
+ */
+function isFolderRenameDescendant(
+	folderRenames: ReadonlyMap<string, FolderRenameEntry>,
+	oldPath: string,
+	newPath: string,
+): boolean {
+	for (const { from, to } of folderRenames.values()) {
+		if (from === "" || !oldPath.startsWith(`${from}/`)) continue;
+		const remainder = oldPath.slice(from.length + 1);
+		if (newPath === (to === "" ? remainder : `${to}/${remainder}`)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 function pruneModifies(
@@ -92,6 +156,7 @@ const makeSelfEventTrackerCore = Effect.fn("makeSelfEventTrackerCore")(
 		const changed = yield* Deferred.make<void>();
 		const state = yield* Ref.make<SelfEventState>({
 			changed,
+			folderRenames: new Map(),
 			modifies: new Map(),
 			prefixes: new Map(),
 			tracked: new Map(),
@@ -108,7 +173,10 @@ const makeSelfEventTrackerCore = Effect.fn("makeSelfEventTrackerCore")(
  * while the action runs plus one TTL, however long the batch is.
  *
  * Exact entries pop on their first match. Folder prefixes remain available to
- * match every descendant event until their expiration timestamp. Modify
+ * match every descendant event until their expiration timestamp. A folder
+ * rename also matches, until it expires, each descendant rename that moves a
+ * path from under its source to the same place under its destination; other
+ * events in the destination stay observable. Modify
  * expectations are counted per path and recorded at write time, because only
  * the executor knows whether a write actually happens.
  */
@@ -173,12 +241,17 @@ export class SelfEventTracker {
 				for (const prefix of this.extractFolderPrefixes(action)) {
 					pruned.prefixes.set(this.normalizePath(prefix), expiration);
 				}
+
+				const folderRename = this.extractFolderRename(action);
+				if (folderRename !== undefined) {
+					pruned.folderRenames.set(
+						folderRenameKey(folderRename.from, folderRename.to),
+						{ ...folderRename, expiresAt: expiration },
+					);
+				}
 			}
 
-			return [
-				state.changed,
-				nextState(state, pruned.tracked, pruned.prefixes),
-			];
+			return [state.changed, nextState(state, pruned)];
 		});
 		yield* Deferred.succeed(previousSignal, undefined);
 	});
@@ -227,10 +300,22 @@ export class SelfEventTracker {
 					}
 				}
 
-				return [
-					state.changed,
-					nextState(state, pruned.tracked, pruned.prefixes),
-				];
+				const folderRename = this.extractFolderRename(action);
+				if (folderRename !== undefined) {
+					const key = folderRenameKey(
+						folderRename.from,
+						folderRename.to,
+					);
+					const entry = pruned.folderRenames.get(key);
+					if (entry !== undefined) {
+						pruned.folderRenames.set(key, {
+							...entry,
+							expiresAt: expiration,
+						});
+					}
+				}
+
+				return [state.changed, nextState(state, pruned)];
 			},
 		);
 		yield* Deferred.succeed(previousSignal, undefined);
@@ -241,48 +326,76 @@ export class SelfEventTracker {
 			this: SelfEventTracker,
 			path: string,
 		): Effect.fn.Return<boolean> {
-			const now = yield* Clock.currentTimeMillis;
 			const normalized = this.normalizePath(path);
-			const update = yield* Ref.modify(
-				this.core.state,
-				(state): readonly [IgnoreUpdate, SelfEventState] => {
-					const pruned = pruneState(state, now);
-					let ignored = false;
-					let stateChanged = pruned.changed;
-
-					if (pruned.tracked.has(normalized)) {
-						pruned.tracked.delete(normalized);
-						ignored = true;
-						stateChanged = true;
-					} else {
-						for (const prefix of pruned.prefixes.keys()) {
-							if (
-								normalized === prefix ||
-								normalized.startsWith(`${prefix}/`)
-							) {
-								ignored = true;
-								break;
-							}
-						}
-					}
-
-					if (!stateChanged) {
-						return [{ ignored, previousSignal: undefined }, state];
-					}
-
-					return [
-						{ ignored, previousSignal: state.changed },
-						nextState(state, pruned.tracked, pruned.prefixes),
-					];
-				},
-			);
-
-			if (update.previousSignal) {
-				yield* Deferred.succeed(update.previousSignal, undefined);
-			}
-			return update.ignored;
+			return yield* this.modifyPrunedEffect((pruned) => {
+				const match = matchPath(pruned, normalized);
+				return [match.ignored, match.popped];
+			});
 		},
 	);
+
+	/**
+	 * Attributes one Obsidian rename callback. It is Self when both paths
+	 * are expected, or when it is a descendant rename of a folder VAM
+	 * renamed.
+	 */
+	readonly shouldIgnoreRenameEffect = Effect.fn(
+		"SelfEventTracker.shouldIgnoreRename",
+	)(function* (
+		this: SelfEventTracker,
+		oldPath: string,
+		newPath: string,
+	): Effect.fn.Return<boolean> {
+		const normalizedOld = this.normalizePath(oldPath);
+		const normalizedNew = this.normalizePath(newPath);
+		return yield* this.modifyPrunedEffect((pruned) => {
+			if (
+				isFolderRenameDescendant(
+					pruned.folderRenames,
+					normalizedOld,
+					normalizedNew,
+				)
+			) {
+				return [true, false];
+			}
+			const newMatch = matchPath(pruned, normalizedNew);
+			const oldMatch = matchPath(pruned, normalizedOld);
+			return [
+				newMatch.ignored && oldMatch.ignored,
+				newMatch.popped || oldMatch.popped,
+			];
+		});
+	});
+
+	/**
+	 * Runs `f` on the pruned state. `f` returns its result and whether it
+	 * changed the state; any change, pruning included, signals waiters.
+	 */
+	private readonly modifyPrunedEffect = Effect.fnUntraced(function* <A>(
+		this: SelfEventTracker,
+		f: (pruned: PrunedState) => readonly [A, boolean],
+	): Effect.fn.Return<A> {
+		const now = yield* Clock.currentTimeMillis;
+		const update = yield* Ref.modify(
+			this.core.state,
+			(state): readonly [ModifyUpdate<A>, SelfEventState] => {
+				const pruned = pruneState(state, now);
+				const [result, changed] = f(pruned);
+				if (!pruned.changed && !changed) {
+					return [{ previousSignal: undefined, result }, state];
+				}
+				return [
+					{ previousSignal: state.changed, result },
+					nextState(state, pruned),
+				];
+			},
+		);
+
+		if (update.previousSignal) {
+			yield* Deferred.succeed(update.previousSignal, undefined);
+		}
+		return update.result;
+	});
 
 	/**
 	 * Records that VAM is about to write `path` through the vault, so the
@@ -407,11 +520,7 @@ export class SelfEventTracker {
 						];
 					}
 
-					const snapshot = nextState(
-						state,
-						pruned.tracked,
-						pruned.prefixes,
-					);
+					const snapshot = nextState(state, pruned);
 					return [
 						{ previousSignal: state.changed, snapshot },
 						snapshot,
@@ -441,6 +550,20 @@ export class SelfEventTracker {
 			default:
 				return [];
 		}
+	}
+
+	private extractFolderRename(
+		action: VaultAction,
+	): { readonly from: string; readonly to: string } | undefined {
+		if (action.kind !== VaultActionKind.RenameFolder) return undefined;
+		return {
+			from: this.normalizePath(
+				pathfinder.systemPathFromSplitPath(action.payload.from),
+			),
+			to: this.normalizePath(
+				pathfinder.systemPathFromSplitPath(action.payload.to),
+			),
+		};
 	}
 
 	private extractPaths(action: VaultAction): string[] {

@@ -646,11 +646,14 @@ function bulkVaultEventSource(
 			yield* acquireVaultListener(app, "rename", (file, oldPath) =>
 				runCallback(
 					Effect.gen(function* () {
-						const newPathIsSelf =
-							yield* selfEvents.shouldIgnoreEffect(file.path);
-						const oldPathIsSelf =
-							yield* selfEvents.shouldIgnoreEffect(oldPath);
-						if (newPathIsSelf && oldPathIsSelf) return;
+						if (
+							yield* selfEvents.shouldIgnoreRenameEffect(
+								oldPath,
+								file.path,
+							)
+						) {
+							return;
+						}
 
 						const event = tryMakeVaultEventForFileRenamed(
 							file,
