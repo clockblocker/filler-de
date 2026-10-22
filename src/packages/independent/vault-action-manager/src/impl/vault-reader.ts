@@ -1,5 +1,5 @@
-import { Clock, Effect, Result } from "effect";
-import { type TAbstractFile, TFile } from "obsidian";
+import { Clock, Effect, Option, Result } from "effect";
+import { type TAbstractFile, TFile, TFolder, type Vault } from "obsidian";
 import { VamScanError, VamVaultIoError } from "../effect/errors";
 import type { VamLiveServices } from "../effect/ports";
 import { VaultIo } from "../effect/ports";
@@ -8,7 +8,12 @@ import type { TFileHelper } from "../file-services/background/helpers/tfile-help
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
 import type { MarkdownFileAccess } from "../file-services/markdown-file-access";
 import { pathfinder } from "../helpers/pathfinder";
+import {
+	getAbstractFileByPath,
+	toSystemPath,
+} from "../internal/abstract-file-by-path";
 import { getErrorMessage } from "../internal/get-error-message";
+import { decodeFileStatOption } from "../types/file-stat";
 import type {
 	AnySplitPath,
 	SplitPathToFolder,
@@ -26,6 +31,9 @@ type ListedChild = {
 	readonly file: TAbstractFile;
 	readonly splitPath: AnySplitPath;
 };
+
+/** Obsidian's in-memory file tree, which a snapshot reads synchronously. */
+export type VaultTree = Pick<Vault, "getAbstractFileByPath" | "getRoot">;
 
 type ProvideRead = <A, E>(
 	effect: Effect.Effect<A, E, VamLiveServices>,
@@ -53,6 +61,7 @@ export class VaultReader {
 		private readonly tfileHelper: TFileHelper,
 		private readonly tfolderHelper: TFolderHelper,
 		private readonly provideRead: ProvideRead,
+		private readonly tree: VaultTree,
 	) {}
 
 	readContent(target: SplitPathToMdFile) {
@@ -180,6 +189,89 @@ export class VaultReader {
 		);
 	}
 
+	/**
+	 * What `scanWithStat` answers, read from Obsidian's in-memory tree in
+	 * one synchronous pass, so no vault callback can land inside it and a
+	 * cursor read on the same tick describes it exactly. Markdown entries
+	 * read their content when asked, as `scan`'s do.
+	 */
+	snapshot(
+		folder: SplitPathToFolder,
+	): Result.Result<VaultScanResult<VaultScanPathWithStat>, VamScanError> {
+		const rootPath = pathfinder.systemPathFromSplitPath(folder);
+		const root = getAbstractFileByPath(this.tree, toSystemPath(rootPath));
+		if (!(root instanceof TFolder)) {
+			return Result.fail(
+				scanFailure(
+					"scanRoot",
+					rootPath,
+					readerFailure(
+						"listFolder",
+						rootPath,
+						`Folder not found: ${rootPath}`,
+					),
+				),
+			);
+		}
+		const entries: VaultScanPathWithStat[] = [];
+		const diagnostics: VamScanError[] = [];
+		const counts = {
+			folderCount: 1,
+			markdownFileCount: 0,
+			otherFileCount: 0,
+		};
+		const stack = sortTreeChildren(root).reverse();
+		while (stack.length > 0) {
+			const child = stack.pop();
+			if (!child) continue;
+			if (child instanceof TFolder) {
+				counts.folderCount += 1;
+				stack.push(...sortTreeChildren(child).reverse());
+				continue;
+			}
+			let splitPath: AnySplitPath;
+			try {
+				splitPath = pathfinder.splitPathFromAbstract(child);
+			} catch (cause) {
+				diagnostics.push(scanFailure("scanFile", child.path, cause));
+				continue;
+			}
+			if (splitPath.kind === "Folder") continue;
+			if (splitPath.kind === "MdFile") counts.markdownFileCount += 1;
+			else counts.otherFileCount += 1;
+			// Obsidian mutates `file.stat` in place, so copy it now.
+			const stat =
+				child instanceof TFile
+					? decodeFileStatOption(child.stat)
+					: Option.none();
+			if (Option.isNone(stat)) {
+				diagnostics.push(
+					scanFailure(
+						"scanFile",
+						child.path,
+						readerFailure(
+							"stat",
+							child.path,
+							"Listed file has no stat",
+						),
+					),
+				);
+				continue;
+			}
+			if (splitPath.kind === "MdFile") {
+				const mdPath = splitPath;
+				entries.push({
+					...mdPath,
+					read: () => this.provideRead(this.readContent(mdPath)),
+					stat: stat.value,
+				});
+			} else {
+				entries.push({ ...splitPath, stat: stat.value });
+			}
+		}
+		return Result.succeed(scanResult(entries, diagnostics, counts));
+	}
+
 	private readonly traverse = Effect.fn("VaultReader.scan")(function* <
 		Entry extends VaultScanPath,
 	>(
@@ -291,6 +383,12 @@ function sortChildren(children: readonly ListedChild[]): ListedChild[] {
 		const rightPath = pathfinder.systemPathFromSplitPath(right.splitPath);
 		return leftPath < rightPath ? -1 : leftPath > rightPath ? 1 : 0;
 	});
+}
+
+function sortTreeChildren(folder: TFolder): TAbstractFile[] {
+	return [...folder.children].sort((left, right) =>
+		left.path < right.path ? -1 : left.path > right.path ? 1 : 0,
+	);
 }
 
 function scanFailure(

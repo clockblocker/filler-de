@@ -15,6 +15,7 @@ import {
 	VaultEventKind,
 	type VaultScanPath,
 	type VaultScanReadableMdPath,
+	type VaultScanResult,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import { err } from "neverthrow";
@@ -23,6 +24,7 @@ import {
 	Librarian,
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
+import { withScanAndSubscribe } from "../../support/librarian-vam";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 
 mock.module("../../../src/global-state/global-state", () => ({
@@ -353,10 +355,10 @@ describe("Librarian Effect helpers", () => {
 });
 
 function makeLibrarianVam(
-	scan: ReturnType<LibrarianVam["scan"]>,
+	scan: Effect.Effect<VaultScanResult, VamScanError>,
 	onSubscribe: () => void,
 ): LibrarianVam {
-	return {
+	return withScanAndSubscribe({
 		cd: () => Effect.void,
 		dispatch: () => Effect.void,
 		getActiveEditorContext: () => Effect.succeed(null),
@@ -368,5 +370,5 @@ function makeLibrarianVam(
 				onSubscribe();
 				return { close: Effect.void };
 			}),
-	};
+	});
 }

@@ -12,6 +12,12 @@ import { VaultObservation } from "../../src/impl/event-processing/vault-observat
 import { splitPathCodec } from "../../src/split-path-codec";
 import type { SplitPathToFolder } from "../../src/types/split-path";
 
+/** A Promise handler as the Effect handler observation runs. */
+const viaPromise =
+	<M>(handler: (message: M) => Promise<void>) =>
+	(message: M) =>
+		Effect.promise(() => handler(message));
+
 type VaultCallback = (...args: never[]) => void;
 
 function makeVault() {
@@ -80,9 +86,9 @@ function makeObservation(
 		const received: BulkMdModifyEvent[] = [];
 		yield* observation.startEffect();
 		const subscription = yield* observation.subscribeEffect(
-			async (event) => {
+			viaPromise(async (event) => {
 				received.push(event);
-			},
+			}),
 		);
 		const settle = observation
 			.flushPendingEffect()
@@ -103,13 +109,13 @@ describe("Markdown modify observation", () => {
 					selfEvents,
 				);
 				const first = yield* observation.subscribeEffect(
-					async () => {},
+					viaPromise(async () => {}),
 				);
 				expect(vault.registrations).toEqual([]);
 
 				yield* observation.startEffect();
 				const second = yield* observation.subscribeEffect(
-					async () => {},
+					viaPromise(async () => {}),
 				);
 				expect(vault.registrations).toEqual(["modify"]);
 
@@ -227,9 +233,11 @@ describe("Markdown modify observation", () => {
 				);
 				const events: BulkMdModifyEvent[] = [];
 				yield* observation.startEffect();
-				yield* observation.subscribeEffect(async (event) => {
-					events.push(event);
-				});
+				yield* observation.subscribeEffect(
+					viaPromise(async (event) => {
+						events.push(event);
+					}),
+				);
 				vault.modify(mdFile("Worter/Hund.md"));
 				yield* observation.flushPendingEffect();
 				yield* observation.whenIdleEffect();

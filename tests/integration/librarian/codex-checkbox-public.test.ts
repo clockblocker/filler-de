@@ -22,6 +22,7 @@ import {
 	Librarian,
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
+import { withScanAndSubscribe } from "../../support/librarian-vam";
 import { actionError, failedActions } from "../../support/vam-dispatch";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
@@ -98,7 +99,7 @@ function makeHarness(
 	) => Effect.Effect<void, VamDispatchFailure> = () => Effect.void;
 	let emitBulk: (bulk: BulkVaultEvent) => Effect.Effect<void, unknown> = () =>
 		Effect.void;
-	const vam: LibrarianVam = {
+	const vam = withScanAndSubscribe({
 		cd: () => Effect.void,
 		dispatch: (actions: readonly VaultAction[]) =>
 			Effect.sync(() => dispatches.push([...actions])).pipe(
@@ -130,7 +131,7 @@ function makeHarness(
 				}
 				return { close: Effect.void };
 			}),
-	};
+	});
 
 	return {
 		dispatches,

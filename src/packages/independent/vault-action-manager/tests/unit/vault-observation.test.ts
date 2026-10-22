@@ -10,6 +10,12 @@ import { VaultObservation } from "../../src/impl/event-processing/vault-observat
 import type { VaultEvent } from "../../src/types/vault-event";
 import { VaultEventKind } from "../../src/types/vault-event";
 
+/** A Promise handler as the Effect handler observation runs. */
+const viaPromise =
+	<M>(handler: (message: M) => Promise<void>) =>
+	(message: M) =>
+		Effect.promise(() => handler(message));
+
 type VaultCallback = (...args: never[]) => void;
 
 function makeHarness(shouldIgnore: (path: string) => boolean) {
@@ -53,7 +59,7 @@ function makeHarness(shouldIgnore: (path: string) => boolean) {
 		start: () => Effect.runSync(native.startEffect()),
 		subscribe: (handler: (bulk: BulkVaultEvent) => Promise<void>) => {
 			const subscription = Effect.runSync(
-				native.subscribeEffect(handler),
+				native.subscribeEffect(viaPromise(handler)),
 			);
 			let active = true;
 			return () => {
@@ -71,6 +77,7 @@ function makeHarness(shouldIgnore: (path: string) => boolean) {
 		app,
 		callbacks,
 		listenerRegistrations,
+		native,
 		observation,
 		removed,
 		selfEvents,
@@ -141,8 +148,8 @@ describe("VaultObservation", () => {
 				yield* observation.startEffect();
 				const subscriptions = yield* Effect.all(
 					[
-						observation.subscribeEffect(async () => {}),
-						observation.subscribeEffect(async () => {}),
+						observation.subscribeEffect(viaPromise(async () => {})),
+						observation.subscribeEffect(viaPromise(async () => {})),
 					],
 					{ concurrency: "unbounded" },
 				);
@@ -449,6 +456,45 @@ describe("VaultObservation", () => {
 		}
 	});
 
+	it("keeps delivering to a subscriber whose handler throws instead of failing", async () => {
+		const logged: unknown[] = [];
+		const errorLog = spyOn(console, "error").mockImplementation((...args) =>
+			logged.push(...args),
+		);
+		const plainLog = spyOn(console, "log").mockImplementation((...args) =>
+			logged.push(...args),
+		);
+		const { callbacks, native, observation } = makeHarness(() => false);
+		const received: BulkVaultEvent[] = [];
+		let calls = 0;
+
+		try {
+			observation.start();
+			Effect.runSync(
+				native.subscribeEffect((bulk) => {
+					calls += 1;
+					if (calls === 1) throw new Error("handler threw");
+					return Effect.sync(() => {
+						received.push(bulk);
+					});
+				}),
+			);
+			callbacks.get("create")?.(mdFile("Library/first.md") as never);
+			observation.flushPending();
+			await observation.whenIdle();
+			callbacks.get("create")?.(mdFile("Library/second.md") as never);
+			observation.flushPending();
+			await observation.whenIdle();
+
+			expect(calls).toBe(2);
+			expect(received).toHaveLength(1);
+			expect(Bun.inspect(logged)).toContain("handler threw");
+		} finally {
+			errorLog.mockRestore();
+			plainLog.mockRestore();
+		}
+	});
+
 	it("flushes after the quiet window using TestClock", async () => {
 		const { app, callbacks, selfEvents } = makeHarness(() => false);
 		const bulks: BulkVaultEvent[] = [];
@@ -465,9 +511,9 @@ describe("VaultObservation", () => {
 				);
 				yield* observation.startEffect();
 				const subscription = yield* observation.subscribeEffect(
-					async (bulk) => {
+					viaPromise(async (bulk) => {
 						bulks.push(bulk);
-					},
+					}),
 				);
 
 				callbacks.get("create")?.(mdFile("Library/quiet.md") as never);
@@ -502,9 +548,9 @@ describe("VaultObservation", () => {
 				);
 				yield* observation.startEffect();
 				const subscription = yield* observation.subscribeEffect(
-					async (bulk) => {
+					viaPromise(async (bulk) => {
 						bulks.push(bulk);
-					},
+					}),
 				);
 
 				callbacks.get("create")?.(mdFile("Library/one.md") as never);
@@ -544,12 +590,12 @@ describe("VaultObservation", () => {
 				yield* observation.startEffect();
 				let handled = 0;
 				const subscription = yield* observation.subscribeEffect(
-					async () => {
+					viaPromise(async () => {
 						handled++;
 						order.push(`start-${handled}`);
 						if (handled === 1) await firstCanFinish;
 						order.push(`end-${handled}`);
-					},
+					}),
 				);
 
 				callbacks.get("create")?.(mdFile("Library/one.md") as never);
@@ -584,10 +630,10 @@ describe("VaultObservation", () => {
 				);
 				yield* observation.startEffect();
 				const subscription = yield* observation.subscribeEffect(
-					async () => {
+					viaPromise(async () => {
 						markStarted();
 						await new Promise<void>(() => {});
-					},
+					}),
 				);
 
 				callbacks.get("create")?.(
@@ -618,10 +664,12 @@ describe("VaultObservation", () => {
 					selfEvents,
 				);
 				yield* observation.startEffect();
-				yield* observation.subscribeEffect(async () => {
-					markStarted();
-					await new Promise<void>(() => {});
-				});
+				yield* observation.subscribeEffect(
+					viaPromise(async () => {
+						markStarted();
+						await new Promise<void>(() => {});
+					}),
+				);
 
 				callbacks.get("create")?.(
 					mdFile("Library/in-flight.md") as never,

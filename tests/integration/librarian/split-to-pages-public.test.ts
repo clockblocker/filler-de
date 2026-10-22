@@ -6,6 +6,7 @@ import {
 	SplitPathKind,
 	type SplitPathToMdFile,
 	VamPlanningError,
+	type VamScanError,
 	VamVaultIoError,
 	type VaultAction,
 	VaultActionKind,
@@ -23,6 +24,7 @@ import {
 	splitToPagesAction,
 } from "../../../src/commanders/librarian/pages/split-to-pages-action";
 import type { SegmentationConfig } from "../../../src/commanders/librarian/pages/types";
+import { withScanAndSubscribe } from "../../support/librarian-vam";
 import {
 	actionError,
 	failedActions,
@@ -33,7 +35,7 @@ import { toShape } from "../../unit/librarian/library-tree/tree-test-helpers";
 
 type DispatchFailure = Effect.Error<ReturnType<LibrarianVam["dispatch"]>>;
 type NavigationFailure = Effect.Error<ReturnType<LibrarianVam["cd"]>>;
-type ScanFailure = Effect.Error<ReturnType<LibrarianVam["scan"]>>;
+type ScanFailure = VamScanError;
 
 const SPLIT_CONFIG: SegmentationConfig = {
 	maxPageSizeChars: 80,
@@ -133,7 +135,7 @@ function makeHarness(input: {
 	let emitBulk: (bulk: BulkVaultEvent) => Effect.Effect<void, unknown> = () =>
 		Effect.void;
 
-	const vam: LibrarianVam = {
+	const vam = withScanAndSubscribe({
 		cd: (path) =>
 			Effect.sync(() => {
 				order.push("cd");
@@ -166,7 +168,7 @@ function makeHarness(input: {
 				emitBulk = handler;
 				return { close: Effect.void };
 			}),
-	};
+	});
 	const librarian = new Librarian(vam);
 
 	return {

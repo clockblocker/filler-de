@@ -1,4 +1,4 @@
-import { Cause, Effect, Exit } from "effect";
+import { Cause, Effect, Exit, Result } from "effect";
 import type { App } from "obsidian";
 import type { DispatchOptions } from "./effect/dispatch-coordinator";
 import {
@@ -11,7 +11,7 @@ import {
 	type VamNoActiveEditorError,
 	type VamScanError,
 	VamShutdownError,
-	type VamSubscriptionError,
+	VamSubscriptionError,
 	VamVaultIoError,
 } from "./effect/errors";
 import { type VamLiveServices, VaultIo } from "./effect/ports";
@@ -33,6 +33,7 @@ import { splitPathFromAbstractInternal } from "./helpers/pathfinder/path-codecs/
 import { DispatchBatchCoordinator } from "./impl/actions-processing/dispatch-batch";
 import { Executor } from "./impl/actions-processing/executor";
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
+import { VaultCallbackSequence } from "./impl/event-processing/callback-sequence";
 import { LinkRewriteWindows } from "./impl/event-processing/link-rewrite-windows";
 import {
 	type BulkMdModifyEvent,
@@ -44,7 +45,10 @@ import {
 	type ProtectedPathModificationsEvent,
 } from "./impl/event-processing/protected-modifications";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
-import { VaultObservation } from "./impl/event-processing/vault-observation";
+import {
+	VaultObservation,
+	type VaultObservationSubscription,
+} from "./impl/event-processing/vault-observation";
 import { ProtectedPaths } from "./impl/protected-paths";
 import { VaultReader } from "./impl/vault-reader";
 import { detectVaultFileSystem } from "./internal/file-system-case";
@@ -62,7 +66,12 @@ import {
 	VaultPath,
 	type VaultPathIdentity,
 } from "./vault-path";
-import type { VaultScanPathWithStat, VaultScanResult } from "./vault-scan";
+import type {
+	VaultCursor,
+	VaultScanPathWithStat,
+	VaultScanResult,
+	VaultSnapshot,
+} from "./vault-scan";
 
 export type BulkVaultEventHandler<E = never> = (
 	event: BulkVaultEvent,
@@ -99,6 +108,49 @@ export type VaultActionManagerSubscription = {
 	readonly close: Effect.Effect<void, VamRuntimeFailure<never>>;
 };
 
+/** What `scanAndSubscribe` delivers after its snapshot. */
+export type VaultSnapshotHandlers<E = never> = {
+	/** Bulk Vault Events anywhere in the vault, as `subscribeToBulk` delivers them. */
+	readonly onBulk?: BulkVaultEventHandler<E>;
+	/**
+	 * Markdown modifications below the snapshot's folder, as
+	 * `subscribeToMdModifications` delivers them.
+	 */
+	readonly onModifications?: MdModifyEventHandler<E>;
+};
+
+/**
+ * A snapshot of one folder and a subscription to every change after it.
+ * Nothing the snapshot holds is delivered, and nothing after it is lost.
+ */
+export type VaultSnapshotSubscription = VaultActionManagerSubscription & {
+	/**
+	 * The part of a delivered bulk event after the latest snapshot; `null`
+	 * when that snapshot holds all of it. Delivery already drops what a
+	 * snapshot holds; this is for an event a handler took before a
+	 * `rescan` and works on after it.
+	 */
+	readonly afterSnapshot: (event: BulkVaultEvent) => BulkVaultEvent | null;
+	/**
+	 * Takes a fresh snapshot of the folder and moves the cursor to it, so
+	 * changes it holds that are not yet delivered never are. A failure
+	 * leaves the cursor where it was. Works after `close`, as a plain
+	 * snapshot.
+	 */
+	readonly rescan: Effect.Effect<
+		VaultSnapshot,
+		VamRuntimeFailure<VamScanError>
+	>;
+	/** What the folder held when the subscription began. */
+	readonly snapshot: VaultSnapshot;
+	/**
+	 * Starts delivering the changes after the latest snapshot. Until then
+	 * they wait in VAM, so a consumer can build its state from the snapshot
+	 * first. Idempotent.
+	 */
+	readonly start: Effect.Effect<void, VamRuntimeFailure<never>>;
+};
+
 function successOrThrow<A>(exit: Exit.Exit<A, unknown>, operation: string): A {
 	if (Exit.isSuccess(exit)) return exit.value;
 	throw new Error(`Vault Action Manager ${operation} failed`, {
@@ -133,6 +185,8 @@ export class VaultActionManager {
 	private readonly observation: VaultObservation;
 	private readonly reader: VaultReader;
 	private readonly selfEvents: SelfEventTracker;
+	/** Numbers every vault callback either observation channel hears. */
+	private readonly sequence = new VaultCallbackSequence();
 	private readonly subscriptionClosers = new Set<Effect.Effect<void>>();
 	private disposalPromise: Promise<void> | null = null;
 
@@ -163,16 +217,21 @@ export class VaultActionManager {
 			tfileHelper,
 			tfolderHelper,
 			(effect) => this.runtime.provide(effect),
+			app.vault,
 		);
 		this.observation = successOrThrow(
 			this.runtime.runSyncExit(
-				VaultObservation.makeEffect(app, this.selfEvents),
+				VaultObservation.makeEffect(app, this.selfEvents, {
+					sequence: this.sequence,
+				}),
 			),
 			"initialize Vault observation",
 		);
 		this.mdModifyObservation = successOrThrow(
 			this.runtime.runSyncExit(
-				VaultObservation.makeMdModifyEffect(app, this.selfEvents),
+				VaultObservation.makeMdModifyEffect(app, this.selfEvents, {
+					sequence: this.sequence,
+				}),
 			),
 			"initialize Markdown modify observation",
 		);
@@ -217,7 +276,7 @@ export class VaultActionManager {
 		VamRuntimeFailure<VamSubscriptionError>
 	> {
 		return this.trackSubscription(
-			this.observation.subscribeEffect(this.promiseHandler(handler)),
+			this.observation.subscribeEffect(this.effectHandler(handler)),
 		);
 	}
 
@@ -238,7 +297,7 @@ export class VaultActionManager {
 		VaultActionManagerSubscription,
 		VamRuntimeFailure<VamSubscriptionError>
 	> {
-		const scopedHandler = this.promiseHandler(
+		const scopedHandler = this.effectHandler(
 			(event: BulkMdModifyEvent): Effect.Effect<void, E> => {
 				const scoped = scopeMdModifyEvent(event, folder);
 				return scoped ? handler(scoped) : Effect.void;
@@ -278,7 +337,7 @@ export class VaultActionManager {
 		VaultActionManagerSubscription,
 		VamRuntimeFailure<VamSubscriptionError>
 	> {
-		const protectedHandler = this.promiseHandler(
+		const protectedHandler = this.effectHandler(
 			(event: BulkMdModifyEvent) =>
 				classifyProtectedModifications(
 					event,
@@ -295,13 +354,143 @@ export class VaultActionManager {
 		);
 	}
 
-	private promiseHandler<M, E>(
+	/**
+	 * Snapshots `folder` and subscribes to every change after the snapshot.
+	 *
+	 * The snapshot lists the folder's files with their stats from
+	 * Obsidian's in-memory tree, in one synchronous pass on the tick VAM
+	 * reads the cursor: the number of the latest vault callback. Handlers
+	 * then receive only callbacks numbered after it, filtered and batched
+	 * as `subscribeToBulk` and `subscribeToMdModifications` do. A rename
+	 * chain that straddles the cursor arrives as its part after it.
+	 *
+	 * Delivery waits for `start`, so the consumer can build its state from
+	 * the snapshot first; `rescan` takes a fresh one. Needs
+	 * `startListening`, and fails with a `VamSubscriptionError` before it,
+	 * since changes VAM does not hear would be lost. A folder that is not
+	 * there fails with a `scanRoot` `VamScanError`.
+	 */
+	scanAndSubscribe<E>(
+		folder: SplitPathToFolder,
+		handlers: VaultSnapshotHandlers<E>,
+	): Effect.Effect<
+		VaultSnapshotSubscription,
+		VamRuntimeFailure<VamScanError | VamSubscriptionError>
+	> {
+		return this.runtime.provide(
+			this.openSnapshotSubscription(folder, handlers),
+		);
+	}
+
+	private readonly openSnapshotSubscription = Effect.fn(
+		"vam.scanAndSubscribe",
+	)(function* <E>(
+		this: VaultActionManager,
+		folder: SplitPathToFolder,
+		{ onBulk, onModifications }: VaultSnapshotHandlers<E>,
+	): Effect.fn.Return<
+		VaultSnapshotSubscription,
+		VamScanError | VamSubscriptionError,
+		VamLiveServices
+	> {
+		const bulk = onBulk
+			? yield* this.subscribeGated(
+					this.observation,
+					this.effectHandler(onBulk),
+				)
+			: undefined;
+		const closeBulk = bulk?.close ?? Effect.void;
+		const modify = onModifications
+			? yield* this.subscribeGated(
+					this.mdModifyObservation,
+					this.effectHandler(
+						(event: BulkMdModifyEvent): Effect.Effect<void, E> => {
+							const scoped = scopeMdModifyEvent(event, folder);
+							return scoped
+								? onModifications(scoped)
+								: Effect.void;
+						},
+					),
+				).pipe(Effect.onError(() => closeBulk))
+			: undefined;
+		const parts = [bulk, modify].filter((part) => part !== undefined);
+		const close = Effect.all(
+			parts.map((part) => part.close),
+			{ discard: true },
+		);
+		const take = Effect.sync(() => {
+			// One synchronous step: no vault callback can land between
+			// reading the cursor and reading the tree.
+			const cursor = this.sequence.current as VaultCursor;
+			const result = this.reader.snapshot(folder);
+			if (Result.isSuccess(result)) {
+				for (const part of parts) part.moveCursor(cursor);
+			}
+			return Result.map(
+				result,
+				(scan): VaultSnapshot => ({ ...scan, cursor }),
+			);
+		}).pipe(
+			Effect.flatMap(Effect.fromResult),
+			Effect.tap((snapshot) =>
+				Effect.annotateCurrentSpan({
+					"snapshot.cursor": snapshot.cursor,
+					"snapshot.root": splitPathCodec.format(folder),
+				}),
+			),
+		);
+		const snapshot = yield* take.pipe(Effect.onError(() => close));
+		return {
+			afterSnapshot: (event: BulkVaultEvent) =>
+				bulk ? bulk.afterCursor(event) : event,
+			close: this.trackClose(close),
+			rescan: this.runtime.provide(
+				take.pipe(Effect.withSpan("vam.scanAndSubscribe.rescan")),
+			),
+			snapshot,
+			start: this.runtime.provide(
+				Effect.all(
+					parts.map((part) => part.start),
+					{ discard: true },
+				),
+			),
+		};
+	});
+
+	/** A subscription that delivers nothing until started, on a channel that is listening. */
+	private subscribeGated<Ev, M extends object>(
+		observation: VaultObservation<Ev, M>,
+		handler: (message: M) => Effect.Effect<void, unknown>,
+	): Effect.Effect<VaultObservationSubscription<M>, VamSubscriptionError> {
+		return observation.subscribeEffect(handler, { gated: true }).pipe(
+			Effect.flatMap((subscription) =>
+				observation.isListeningEffect().pipe(
+					Effect.flatMap((listening) =>
+						listening
+							? Effect.succeed(subscription)
+							: subscription.close.pipe(
+									Effect.andThen(
+										Effect.fail(
+											new VamSubscriptionError({
+												cause: new Error(
+													"VAM is not listening yet; call startListening first",
+												),
+												operation: "scanAndSubscribe",
+											}),
+										),
+									),
+								),
+					),
+				),
+			),
+		);
+	}
+
+	/** A consumer's handler, supplied with VAM's services, keeping its cause. */
+	private effectHandler<M, E>(
 		handler: (message: M) => Effect.Effect<void, E, VamLiveServices>,
-	): (message: M) => Promise<void> {
-		return (message) =>
-			this.runtime.runPromiseExit(handler(message)).then((exit) => {
-				if (Exit.isFailure(exit)) throw Cause.squash(exit.cause);
-			});
+	): (message: M) => Effect.Effect<void, VamRuntimeFailure<E>> {
+		return (message) => this.runtime.provide(handler(message));
 	}
 
 	private trackSubscription(
@@ -315,20 +504,24 @@ export class VaultActionManager {
 		VamRuntimeFailure<VamSubscriptionError>
 	> {
 		return this.runtime.provide(subscribe).pipe(
-			Effect.map((subscription) => {
-				const rawClose = subscription.close;
-				this.subscriptionClosers.add(rawClose);
-				let active = true;
-				return {
-					close: Effect.suspend(() => {
-						if (!active) return Effect.void;
-						active = false;
-						this.subscriptionClosers.delete(rawClose);
-						return this.runtime.provide(rawClose);
-					}),
-				};
-			}),
+			Effect.map((subscription) => ({
+				close: this.trackClose(subscription.close),
+			})),
 		);
+	}
+
+	/** Closes `rawClose` at most once, and on disposal if nobody did. */
+	private trackClose(
+		rawClose: Effect.Effect<void>,
+	): Effect.Effect<void, VamRuntimeFailure<never>> {
+		this.subscriptionClosers.add(rawClose);
+		let active = true;
+		return Effect.suspend(() => {
+			if (!active) return Effect.void;
+			active = false;
+			this.subscriptionClosers.delete(rawClose);
+			return this.runtime.provide(rawClose);
+		});
 	}
 
 	/**

@@ -41,7 +41,7 @@ The API has four groups:
 | Group | Examples |
 | --- | --- |
 | Dispatch | `dispatchWithReport`, `dispatch`, `dispatchStopOnFirstFailure` |
-| Observation | `startListening`, `subscribeToBulk`, `subscribeToMdModifications`, `subscribeToProtectedPathModifications` |
+| Observation | `startListening`, `scanAndSubscribe`, `subscribeToBulk`, `subscribeToMdModifications`, `subscribeToProtectedPathModifications` |
 | Vault reads | `readContent`, `readContentWithStat`, `exists`, `findByBasename`, `list`, `scan`, `scanWithStat` |
 | Active editor | `mdPwd`, `getOpenedContent`, `getSelectionInfo`, `cd`, `scrollOpenedFileToLine` |
 
@@ -297,6 +297,7 @@ hide one.
 
 ```text
 Obsidian create, rename, and delete callbacks
+  -> number each callback
   -> attribute and remove Self Events
   -> encode Vault Events
   -> collect one bounded event window
@@ -306,6 +307,70 @@ Obsidian create, rename, and delete callbacks
 ```
 
 Obsidian callbacks do not wait for subscribers. Each subscriber gets its own handler fiber. One subscriber failure must not stop observation or another subscriber.
+
+Handlers are Effects, run in VAM's runtime: each in a fiber of its own,
+scoped to the channel, so a handler's span and its failure's full cause stay
+attached, and a handler that closes its own subscription is not interrupted.
+VAM logs a failed handler's cause and goes on.
+
+### Callback sequence and cursors
+
+Every raw vault callback VAM listens to (create, rename, delete, modify)
+gets the next number of one sequence shared by both channels, on entry and
+before Self Event attribution. The event carries it through the window as
+an `ObservedCallback { seq, event }`. Later per-callback labels, an `origin`
+and the `operationId` of the dispatch behind it, belong on that record;
+cursor filtering reads only `seq`.
+
+Each subscriber has a cursor: the latest callback it must not receive. A
+window is filtered by cursor before it is collapsed and its roots reduced,
+so a subscriber whose cursor falls inside a window gets that window's part
+after the cursor, collapsed among itself: a rename chain `a -> b` before the
+cursor and `b -> c` after it arrives as `b -> c`, never as `a -> c`. A
+window wholly after the cursor reaches every subscriber as one shared
+message. A plain subscription's cursor is the latest callback when it
+subscribed, so a subscriber never receives what Obsidian fired before it
+subscribed, though such callbacks may share its first window.
+
+### Snapshot and subscribe
+
+`scanAndSubscribe(folder, { onBulk, onModifications })` answers what the
+folder holds and every change after it:
+
+1. It subscribes `onBulk` to Bulk Vault Events (unscoped, as
+   `subscribeToBulk`) and `onModifications` to Markdown modifications below
+   `folder` (as `subscribeToMdModifications`). Both are gated: they deliver
+   nothing until `start`.
+2. It fails with `VamSubscriptionError` unless the channels are listening
+   (`startListening`): changes VAM does not hear would be lost.
+3. In one synchronous step it reads the sequence's latest number `N`, lists
+   the folder from Obsidian's in-memory tree, and moves both cursors to
+   `N`. No callback can land inside that step. Obsidian updates its tree
+   before it fires a callback, so the snapshot holds every callback up to
+   `N` and none after.
+
+The snapshot (`VaultSnapshot`) is `scanWithStat`'s result plus `cursor`:
+files with their stats, folders counted, a missing root as a `scanRoot`
+`VamScanError`. Content is not part of it. A Markdown entry's `read` reads
+the file when called, so it is at least as new as the snapshot and may
+already show a change after `N`; that change is delivered too, so a consumer
+that tracks content applies it idempotently, by reading again. A file moved
+after `N` fails to read, and the rename after `N` says where it went.
+
+The subscription answers:
+
+| Member | Does |
+| --- | --- |
+| `snapshot` | The folder at `N`. |
+| `start` | Starts delivery. Changes after the latest snapshot waited in VAM until now, so the consumer can build its state first. Settling waits for a subscriber that has not started. |
+| `rescan` | A fresh snapshot, moving the cursors to its `N'`. Windows not yet delivered lose what it holds. A failed rescan leaves the cursors. |
+| `afterSnapshot(bulk)` | A delivered bulk's part after the latest snapshot, or `null`; for work queued before a `rescan` and run after it. |
+| `close` | Ends both subscriptions. `rescan` still answers a snapshot. |
+
+Re-subscribing gets a fresh snapshot and cursor. The Librarian takes its
+startup snapshot this way, starts delivery once startup reconciliation
+ends, rescans on recovery, and trims each queued bulk with
+`afterSnapshot` in its turn.
 
 The accumulator has a quiet deadline and an absolute maximum deadline. Continuous callbacks cannot keep a window open without limit.
 
@@ -421,6 +486,8 @@ Desktop scenarios use this idle barrier. They must not inspect VAM internals or 
 | Dispatch | `src/packages/independent/vault-action-manager/src/impl/actions-processing/` |
 | Dispatch reports | `src/packages/independent/vault-action-manager/src/effect/dispatch-report.ts` |
 | Observation | `src/packages/independent/vault-action-manager/src/impl/event-processing/` |
+| Callback sequence | `src/packages/independent/vault-action-manager/src/impl/event-processing/callback-sequence.ts` |
+| Snapshot traversal | `VaultReader.snapshot` in `src/packages/independent/vault-action-manager/src/impl/vault-reader.ts` |
 | Markdown routing | `src/packages/independent/vault-action-manager/src/file-services/markdown-file-access.ts` |
 | Testing adapter | `src/packages/independent/vault-action-manager/src/testing-adapter.ts` |
 | Public types | `src/packages/independent/vault-action-manager/src/types/` |

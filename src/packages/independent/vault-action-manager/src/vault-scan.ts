@@ -42,3 +42,22 @@ export type VaultScanResult<Entry extends VaultScanPath = VaultScanPath> =
 			readonly diagnostics: readonly [VamScanError, ...VamScanError[]];
 			readonly kind: "Partial";
 	  });
+
+declare const VaultCursorBrand: unique symbol;
+
+/**
+ * A place in the order of the vault callbacks Obsidian fired: everything up
+ * to it, and nothing after. Cursors of one VAM compare as numbers.
+ */
+export type VaultCursor = number & { readonly [VaultCursorBrand]: true };
+
+/**
+ * What the vault held below a folder at `cursor`, as `scanWithStat` lists
+ * it: files with their stats, folders counted. It comes from Obsidian's
+ * in-memory tree, read on the tick the cursor was. Content is not part of
+ * it: a Markdown entry's `read` reads the file when called, so it is at
+ * least as new as the snapshot and may already show a change after it.
+ */
+export type VaultSnapshot = VaultScanResult<VaultScanPathWithStat> & {
+	readonly cursor: VaultCursor;
+};

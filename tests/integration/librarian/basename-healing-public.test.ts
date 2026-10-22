@@ -16,6 +16,7 @@ import {
 	Librarian,
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
+import { withScanAndSubscribe } from "../../support/librarian-vam";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 
 let settingsSpy: ReturnType<typeof spyOn>;
@@ -71,7 +72,7 @@ function makeHarness() {
 	const dispatches: VaultAction[][] = [];
 	let emitBulk: (bulk: BulkVaultEvent) => Effect.Effect<void, unknown> = () =>
 		Effect.void;
-	const vam: LibrarianVam = {
+	const vam = withScanAndSubscribe({
 		cd: () => Effect.void,
 		dispatch: (actions) =>
 			Effect.sync(() => {
@@ -96,7 +97,7 @@ function makeHarness() {
 				emitBulk = handler;
 				return { close: Effect.void };
 			}),
-	};
+	});
 
 	return {
 		dispatches,
@@ -139,24 +140,6 @@ describe("Librarian basename healing through its public event seam", () => {
 		});
 
 		await Effect.runPromise(librarian.unsubscribe());
-	});
-
-	it("does not heal again a create that startup reconciliation already healed", async () => {
-		// The file was created just before the scan, so its create event
-		// reaches the Librarian only while startup reconciliation runs.
-		const anchor = mdFile("Anchor");
-		const { dispatches, files } = await initWithBulksDuringStartup(
-			["Anchor"],
-			[bulkOf({ kind: VaultEventKind.FileCreated, splitPath: anchor })],
-		);
-
-		expect(renamesFrom(dispatches, "Anchor")).toEqual([
-			{
-				kind: VaultActionKind.RenameMdFile,
-				payload: { from: anchor, to: mdFile("Anchor-Ramen-Soup") },
-			},
-		]);
-		expect([...files]).toEqual(["Library/Soup/Ramen/Anchor-Ramen-Soup"]);
 	});
 
 	it("heals a file created and then renamed while startup reconciliation runs", async () => {
@@ -224,8 +207,9 @@ function renamesFrom(dispatches: VaultAction[][], basename: string) {
 }
 
 /**
- * Starts a Librarian over a Library holding `scanned` and delivers `bulks`
- * during the first startup dispatch, as debounced Bulks would arrive.
+ * Starts a Librarian over a Library holding `scanned` and emits `bulks`
+ * during the first startup dispatch, as debounced Bulks would arrive; the
+ * subscription holds them until startup reconciliation ends.
  */
 async function initWithBulksDuringStartup(
 	scanned: readonly string[],
@@ -238,7 +222,7 @@ async function initWithBulksDuringStartup(
 	let emitBulk: (bulk: BulkVaultEvent) => Effect.Effect<void, unknown> = () =>
 		Effect.void;
 	let delivered = false;
-	const vam: LibrarianVam = {
+	const vam = withScanAndSubscribe({
 		cd: () => Effect.void,
 		dispatch: (actions) =>
 			Effect.gen(function* () {
@@ -274,7 +258,7 @@ async function initWithBulksDuringStartup(
 				emitBulk = handler;
 				return { close: Effect.void };
 			}),
-	};
+	});
 	const librarian = new Librarian(vam);
 
 	await Effect.runPromise(librarian.init());
