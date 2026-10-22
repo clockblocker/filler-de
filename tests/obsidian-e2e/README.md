@@ -117,6 +117,8 @@ afterwards, and `status().dictionaryResetRun` holds the report's buttons and
 key-check warning and how Execute ended. `dictionaryFixture: [{ path,
 content }]`, which needs `resetDictionary: true`, writes notes below the
 fresh `Worter/`, such as old notes for the reset to read.
+`restartLibrarian` runs "Restart Librarian", which rescans the Library and
+heals it again as on load, and settles once the restart is done.
 
 `runClassify` selects text that occurs once in a Scroll and runs the Classify
 command. Desktop E2E never reaches a provider: every scenario's dumgen answers

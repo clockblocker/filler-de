@@ -58,6 +58,10 @@ import {
 import { resolveAliasFromSuffix } from "./navigation/wikilink-alias";
 import type { PageSplitPlan } from "./pages/build-actions";
 import {
+	describeLibrarianStop,
+	type LibrarianStopPhase,
+} from "./runtime/describe-librarian-stop";
+import {
 	classifyVamDispatchFailure,
 	LibraryReconciler,
 	ReconciliationAuditLog,
@@ -173,6 +177,14 @@ export class LibraryCommandIntentionError extends Schema.TaggedError<LibraryComm
 	{ kind: Schema.Literal("LibrarianUnavailable") },
 ) {}
 
+export type LibrarianOptions = {
+	/**
+	 * Told, with a message for the user, when the Librarian stops: its
+	 * startup failed, or a later reconciliation failed past recovery.
+	 */
+	readonly onStopped?: (message: string) => void;
+};
+
 // ─── Librarian ───
 
 export class Librarian {
@@ -188,6 +200,8 @@ export class Librarian {
 	private actionQueue: VaultActionQueue<LibrarianQueueItem, never> | null =
 		null;
 	private startupBulkBuffer: BulkVaultEvent[] | null = null;
+	/** What startup last scanned: its first scan, or a recovery's rescan. */
+	private startupScanEntries: VaultScanResult["entries"] = [];
 	private nextCommandOperationId = 0;
 	private codecs!: Codecs;
 	private interpretBulk!: BulkInterpreter;
@@ -200,7 +214,16 @@ export class Librarian {
 		return this.reconciliationAudit.getRecent(1)[0] ?? null;
 	}
 
-	constructor(private readonly vam: LibrarianVam) {}
+	constructor(
+		private readonly vam: LibrarianVam,
+		private readonly options: LibrarianOptions = {},
+	) {}
+
+	private reportStopped(phase: LibrarianStopPhase, failure: unknown): void {
+		const message = describeLibrarianStop(phase, failure);
+		logger.error(`[Librarian] Stopped. ${message}`, failure);
+		this.options.onStopped?.(message);
+	}
 
 	private prepareStartupReconciliation(
 		scan: VaultScanResult,
@@ -245,10 +268,13 @@ export class Librarian {
 			const rootSplitPath =
 				getParsedUserSettings().splitPathToLibraryRoot;
 			const scan = yield* this.vam.scan(rootSplitPath);
+			// Startup accepted a partial scan, so its recovery does too.
+			const duringStartup = this.startupBulkBuffer !== null;
+			if (duringStartup) this.startupScanEntries = scan.entries;
 			return yield* this.prepareStartupReconciliation(
 				scan,
 				rootSplitPath.basename,
-				false,
+				duringStartup,
 			);
 		},
 	);
@@ -287,6 +313,7 @@ export class Librarian {
 					self.reconciler = null;
 					self.actionQueue = null;
 					self.startupBulkBuffer = [];
+					self.startupScanEntries = [];
 					self.reconciliationAudit = new ReconciliationAuditLog();
 					self._debugLastScanDiagnostics = [];
 					self.codecs = makeCodecs(
@@ -309,6 +336,7 @@ export class Librarian {
 							),
 						);
 					self._debugLastScanDiagnostics = scan.diagnostics;
+					self.startupScanEntries = scan.entries;
 					if (scan.kind === "Partial") {
 						for (const diagnostic of scan.diagnostics) {
 							logger.warn(
@@ -343,18 +371,27 @@ export class Librarian {
 						},
 						request: startup.request,
 					});
+					const startupOutcome = startupResult.outcome;
 					if (
-						startupResult.outcome?.status === "Failed" ||
-						startupResult.outcome?.status === "PartialFailure"
+						startupOutcome?.status === "Failed" ||
+						startupOutcome?.status === "PartialFailure"
 					) {
-						return yield* Effect.fail(startupResult.outcome);
+						if (startupOutcome.recovery.kind !== "Resynchronized") {
+							return yield* Effect.fail(startupOutcome);
+						}
+						logger.warn(
+							"[Librarian] Startup healing partly failed; a rescan of the library recovered it:",
+							startupOutcome,
+						);
 					}
 
 					const bufferedBulks = self.startupBulkBuffer;
 					self.startupBulkBuffer = null;
+					// After a recovery the rescan, not the first scan, holds
+					// what the buffered events did before it.
 					for (const bulk of dropScannedEvents(
 						bufferedBulks,
-						scan.entries,
+						self.startupScanEntries,
 					)) {
 						yield* self.handleBulkEvent(bulk);
 					}
@@ -364,7 +401,16 @@ export class Librarian {
 					yield* self.actionQueue.waitForDrain();
 				}),
 			() => Effect.sync(decrementPending),
-		).pipe(Effect.onError(() => self.unsubscribe().pipe(Effect.ignore)));
+		).pipe(
+			Effect.tapCause((cause) =>
+				Cause.hasInterruptsOnly(cause)
+					? Effect.void
+					: Effect.sync(() =>
+							self.reportStopped("Startup", Cause.squash(cause)),
+						),
+			),
+			Effect.onError(() => self.unsubscribe().pipe(Effect.ignore)),
+		);
 	});
 
 	/**
@@ -435,6 +481,7 @@ export class Librarian {
 				return;
 			}
 
+			const wasUnavailable = this.reconciler.isUnavailable();
 			const outcome = yield* this.reconciler.reconcile(item.request);
 			item.observe?.(outcome);
 			if (
@@ -443,14 +490,28 @@ export class Librarian {
 			) {
 				logger.error("[Librarian] Reconciliation failed:", outcome);
 			}
+			// A failed startup is reported once, by init.
+			if (item.request.source !== "Startup") {
+				this.reportIfNewlyStopped(wasUnavailable, outcome);
+			}
 		},
 	);
+
+	private reportIfNewlyStopped(
+		wasUnavailable: boolean,
+		outcome: LibrarianReconciliationOutcome,
+	): void {
+		if (!wasUnavailable && this.reconciler?.isUnavailable()) {
+			this.reportStopped("Runtime", outcome);
+		}
+	}
 
 	private readonly processCommandIntention = Effect.fn(
 		"Librarian.processCommandIntention",
 	)(function* (this: Librarian, item: CommandIntentionQueueItem) {
 		if (!this.reconciler) return;
 		const { intention } = item;
+		const wasUnavailable = this.reconciler.isUnavailable();
 		const dispatchResult = yield* this.vam
 			.dispatch(intention.vaultActions)
 			.pipe(
@@ -487,6 +548,7 @@ export class Librarian {
 				"[Librarian] Command intention vault dispatch failed:",
 				outcome,
 			);
+			this.reportIfNewlyStopped(wasUnavailable, outcome);
 			return;
 		}
 
@@ -513,6 +575,7 @@ export class Librarian {
 				"[Librarian] Command intention reconciliation failed:",
 				outcome,
 			);
+			this.reportIfNewlyStopped(wasUnavailable, outcome);
 			return;
 		}
 		item.observe({

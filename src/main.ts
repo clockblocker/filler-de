@@ -47,6 +47,7 @@ import {
 	DelimiterMigrationCoordinator,
 	type DelimiterMigrationOutcome,
 } from "./commanders/librarian/runtime/delimiter-migration-coordinator";
+import { RESTART_LIBRARIAN_COMMAND_NAME } from "./commanders/librarian/runtime/describe-librarian-stop";
 import {
 	describeMetadataMigration,
 	migrateMetadataFormat,
@@ -354,7 +355,7 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		// New Librarian (healing modes)
-		this.librarian = new Librarian(this.vam);
+		this.librarian = this.makeLibrarian();
 
 		// Start listening to file system events
 		// VaultActionManager will convert events to VaultEvent, filter self-events,
@@ -630,6 +631,14 @@ export default class TextEaterPlugin extends Plugin {
 			},
 			id: "split-to-pages",
 			name: "Split file into pages",
+		});
+
+		this.addCommand({
+			callback: () => {
+				void this.restartLibrarian();
+			},
+			id: "restart-librarian",
+			name: RESTART_LIBRARIAN_COMMAND_NAME,
 		});
 	}
 
@@ -1108,7 +1117,7 @@ export default class TextEaterPlugin extends Plugin {
 			readonly propagateFailure?: boolean;
 			readonly unsubscribeCurrent?: boolean;
 		} = {},
-	): Promise<void> {
+	): Promise<boolean> {
 		// Unregister old handlers
 		for (const teardown of this.handlerTeardowns) {
 			teardown();
@@ -1118,7 +1127,7 @@ export default class TextEaterPlugin extends Plugin {
 		if (this.librarian && options.unsubscribeCurrent !== false) {
 			await Effect.runPromise(this.librarian.unsubscribe());
 		}
-		this.librarian = new Librarian(this.vam);
+		this.librarian = this.makeLibrarian();
 		try {
 			await Effect.runPromise(this.librarian.init());
 
@@ -1133,12 +1142,41 @@ export default class TextEaterPlugin extends Plugin {
 					handlerDef.handler,
 				);
 			}
+			return true;
 		} catch (error) {
 			logger.error(
 				"[TextEaterPlugin] Failed to reinitialize librarian:",
 				getErrorMessage(error),
 			);
 			if (options.propagateFailure) throw error;
+			return false;
+		}
+	}
+
+	/** A Librarian that tells the user, in a notice that stays, when it stops. */
+	private makeLibrarian(): Librarian {
+		return new Librarian(this.vam, {
+			onStopped: (message) => new Notice(message, 0),
+		});
+	}
+
+	/**
+	 * Rescans the library and heals it again, as on load: the way back for
+	 * a Librarian that stopped. A failed restart is reported by the
+	 * Librarian's own notice.
+	 */
+	private async restartLibrarian(): Promise<void> {
+		if (!this.librarian) {
+			new Notice("Textfresser is still loading");
+			return;
+		}
+		incrementPending();
+		try {
+			if (await this.reinitLibrarian()) {
+				new Notice("Librarian restarted");
+			}
+		} finally {
+			decrementPending();
 		}
 	}
 

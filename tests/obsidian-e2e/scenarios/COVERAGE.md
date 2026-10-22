@@ -32,6 +32,7 @@ The Librarian's user commands also have desktop owners:
 | `SplitInBlocks` | `librarian-commands.test.ts` |
 | `GoToNextPage` | `librarian-commands.test.ts` |
 | `GoToPrevPage` | `librarian-commands.test.ts` |
+| Restart Librarian | `librarian-commands.test.ts` |
 
 Classify on a selection (#63) is owned by `classify-selection.test.ts`: the
 `UnitRef`s handed to the resolver port, a discontinuous unit's pieces, the

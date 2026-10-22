@@ -60,7 +60,7 @@ that folder, for the scenario. `cleanupSession` restores that vault config and
 every setting `beginScenario`'s `settings` replaced.
 `act` supports `create`, `modify`, `rename`, `delete`, and the narrow
 `splitToPages`, `splitInBlocks`, `classify`, `wrapLink`, `followLink`,
-`pageNavigation`, `toggleCodexEntry`, `openDictionaryReset` and `dryRunDictionaryReset` Textfresser interactions; `create` also accepts
+`pageNavigation`, `toggleCodexEntry`, `openDictionaryReset`, `dryRunDictionaryReset` and `restartLibrarian` Textfresser interactions; `create` also accepts
 `"entryType": "folder"`. `classify` selects its `selection`, which must occur
 exactly once in the file, and runs the Classify command; `status` then
 reports, under `classify`, what that Classify handed to the resolver port.
@@ -80,6 +80,8 @@ Dry run and waits for the report, and with `"execute": true` clicks Execute…
 on the report and Execute in the confirmation and waits for the run to end;
 it closes every reset modal afterwards, and `status` reports the report's
 buttons, key warning and Execute outcome under `dictionaryResetRun`.
+`restartLibrarian` takes no path: it runs the "Restart Librarian" command and
+settles once the Librarian has rescanned and healed the library again.
 `beginScenario` also takes `"dictionaryFixture": [{ "path", "content" }]`,
 notes written below the fresh `Worter/` (it needs `"resetDictionary":
 true`), and `"dumgen": { "keyCheck": { "OpenAI"?: { "status", "body"? },
