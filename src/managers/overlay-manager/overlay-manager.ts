@@ -45,7 +45,11 @@ import { updateToolbarVisibility } from "./toolbar-lifecycle/manager";
  */
 type OverlayManagerDeps = {
 	app: App;
-	librarian: Librarian;
+	/**
+	 * The current Librarian. A getter, because the plugin replaces the
+	 * Librarian when settings such as the Library root change.
+	 */
+	getLibrarian: () => Librarian | null;
 	plugin?: Plugin;
 	userEventInterceptor?: ObsidianEventLayer;
 	commandExecutor?: CommandExecutor;
@@ -57,7 +61,7 @@ type OverlayManagerDeps = {
  */
 export class OverlayManager {
 	private readonly app: App;
-	private readonly librarian: Librarian;
+	private readonly getLibrarian: () => Librarian | null;
 	private readonly plugin: Plugin | null;
 	private readonly workspaceInterceptor: WorkspaceEventInterceptor;
 	private readonly userEventInterceptor: ObsidianEventLayer | null;
@@ -74,7 +78,7 @@ export class OverlayManager {
 
 	constructor(deps: OverlayManagerDeps) {
 		this.app = deps.app;
-		this.librarian = deps.librarian;
+		this.getLibrarian = deps.getLibrarian;
 		this.plugin = deps.plugin ?? null;
 		this.workspaceInterceptor = new WorkspaceEventInterceptor(this.app);
 		this.userEventInterceptor = deps.userEventInterceptor ?? null;
@@ -133,7 +137,11 @@ export class OverlayManager {
 			this.contextMenuTeardown = setupContextMenu({
 				app: this.app,
 				commandExecutor: this.commandExecutor,
-				librarian: this.librarian,
+				librarian: {
+					isInsideLibrary: (splitPath) =>
+						this.getLibrarian()?.isInsideLibrary(splitPath) ??
+						false,
+				},
 				plugin: this.plugin,
 				vam: this.vam,
 			});
@@ -183,6 +191,8 @@ export class OverlayManager {
 	}
 
 	refreshToolbars(): void {
+		const librarian = this.getLibrarian();
+		if (!librarian) return;
 		const actions = computeAllowedActions();
 		updateToolbarVisibility(
 			{
@@ -194,7 +204,7 @@ export class OverlayManager {
 				createSelectionToolbar: (container) =>
 					createSelectionToolbar({ container }),
 				edgeZones: this.edgeZones,
-				librarian: this.librarian,
+				librarian,
 				selectionToolbars: this.selectionToolbars,
 			},
 			actions,
