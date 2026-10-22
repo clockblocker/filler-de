@@ -32,13 +32,19 @@ import {
 } from "./impl/actions-processing/dispatch-batch";
 import { Executor } from "./impl/actions-processing/executor";
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
+import { LinkRewriteWindows } from "./impl/event-processing/link-rewrite-windows";
 import {
 	type BulkMdModifyEvent,
 	type MdFileModification,
 	scopeMdModifyEvent,
 } from "./impl/event-processing/md-modify-event";
+import {
+	classifyProtectedModifications,
+	type ProtectedPathModificationsEvent,
+} from "./impl/event-processing/protected-modifications";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { VaultObservation } from "./impl/event-processing/vault-observation";
+import { ProtectedPaths } from "./impl/protected-paths";
 import { VaultReader } from "./impl/vault-reader";
 import { splitPathCodec } from "./split-path-codec";
 import { VaultActionManagerTestingAdapter } from "./testing-adapter";
@@ -58,6 +64,21 @@ export type BulkVaultEventHandler<E = never> = (
 export type MdModifyEventHandler<E = never> = (
 	event: BulkMdModifyEvent,
 ) => Effect.Effect<void, E>;
+
+export type ProtectedPathModificationHandler<E = never> = (
+	event: ProtectedPathModificationsEvent,
+) => Effect.Effect<void, E>;
+
+export type VaultActionManagerOptions = {
+	/**
+	 * Vault path prefixes no Dispatch Batch may change, such as
+	 * `"Exemplar"`. A prefix protects the path itself and everything below
+	 * it, by whole segments and case-insensitively. Dispatch refuses a batch
+	 * naming a protected path, or renaming or trashing a folder that contains
+	 * one, with `VamProtectedPathError`. The vault root cannot be protected.
+	 */
+	readonly protectedPaths?: readonly string[];
+};
 
 export type VaultActionManagerSubscription = {
 	readonly close: Effect.Effect<void, VamRuntimeFailure<never>>;
@@ -81,6 +102,8 @@ export class VaultActionManager {
 	readonly testing: VaultActionManagerTestingAdapter;
 
 	private readonly dispatches: DispatchBatchCoordinator;
+	private readonly linkRewrites = new LinkRewriteWindows();
+	private readonly protectedPaths: ProtectedPaths;
 	private readonly markdownFiles: MarkdownFileAccess;
 	private readonly mdModifyObservation: VaultObservation<
 		MdFileModification,
@@ -96,7 +119,9 @@ export class VaultActionManager {
 	constructor(
 		app: App,
 		private readonly runtime: VamRuntime,
+		options: VaultActionManagerOptions = {},
 	) {
+		this.protectedPaths = new ProtectedPaths(options.protectedPaths);
 		this.selfEvents = successOrThrow(
 			this.runtime.runSyncExit(SelfEventTracker.makeEffect()),
 			"initialize Self Event tracking",
@@ -134,6 +159,10 @@ export class VaultActionManager {
 			executor,
 			this.selfEvents,
 			this.runtime,
+			{
+				linkRewrites: this.linkRewrites,
+				protectedPaths: this.protectedPaths,
+			},
 		);
 		this.testing = new VaultActionManagerTestingAdapter(
 			this.runtime,
@@ -193,8 +222,45 @@ export class VaultActionManager {
 		);
 	}
 
+	/** The configured protected prefixes, normalized. */
+	get protectedPathPrefixes(): readonly string[] {
+		return this.protectedPaths.prefixes;
+	}
+
+	/**
+	 * Observes content changes to files under a protected prefix that VAM did
+	 * not make. VAM refuses to change those paths itself, but cannot stop
+	 * Obsidian's link updater, Sync, other plugins, or the user from writing
+	 * them. Each modification carries its most likely `origin`; callers
+	 * typically warn about every origin except `OpenInEditor`, the user's own
+	 * editing. Delivered over `subscribeToMdModifications`, so it needs
+	 * `startListening` and shares its coalescing window.
+	 */
+	subscribeToProtectedPathModifications<E>(
+		handler: ProtectedPathModificationHandler<E>,
+	): Effect.Effect<
+		VaultActionManagerSubscription,
+		VamRuntimeFailure<VamSubscriptionError>
+	> {
+		const protectedHandler = this.promiseHandler(
+			(event: BulkMdModifyEvent) =>
+				classifyProtectedModifications(
+					event,
+					this.protectedPaths,
+					this.linkRewrites,
+				).pipe(
+					Effect.flatMap((scoped) =>
+						scoped ? handler(scoped) : Effect.void,
+					),
+				),
+		);
+		return this.trackSubscription(
+			this.mdModifyObservation.subscribeEffect(protectedHandler),
+		);
+	}
+
 	private promiseHandler<M, E>(
-		handler: (message: M) => Effect.Effect<void, E>,
+		handler: (message: M) => Effect.Effect<void, E, VamLiveServices>,
 	): (message: M) => Promise<void> {
 		return (message) =>
 			this.runtime.runPromiseExit(handler(message)).then((exit) => {
@@ -456,9 +522,10 @@ export type VaultActionManagerFactoryResult = {
 /** Builds the canonical Effect facade over one ManagedRuntime. */
 export function createVaultActionManager(
 	app: App,
+	options: VaultActionManagerOptions = {},
 ): VaultActionManagerFactoryResult {
 	const runtime = createVamRuntime(makeVamLive(app));
-	const manager = new VaultActionManager(app, runtime);
+	const manager = new VaultActionManager(app, runtime, options);
 	return {
 		dispose: manager.disposeEffect(),
 		manager,
@@ -479,6 +546,7 @@ export {
 	type VamFileWriteError,
 	VamNoActiveEditorError,
 	VamPlanningError,
+	VamProtectedPathError,
 	VamScanError,
 	VamSetupError,
 	VamShutdownError,

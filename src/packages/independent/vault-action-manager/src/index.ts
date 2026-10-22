@@ -3,6 +3,7 @@ export {
 	createVaultActionManager,
 	type DispatchBatchEffectFailure,
 	type MdModifyEventHandler,
+	type ProtectedPathModificationHandler,
 	type StopOnFirstFailureDispatchFailure,
 	VamActiveEditorError,
 	type VamActiveEditorFailureReason,
@@ -16,6 +17,7 @@ export {
 	type VamFileWriteError,
 	VamNoActiveEditorError,
 	VamPlanningError,
+	VamProtectedPathError,
 	VamScanError,
 	VamSetupError,
 	VamShutdownError,
@@ -23,6 +25,7 @@ export {
 	VamVaultIoError,
 	type VaultActionManager,
 	type VaultActionManagerFactoryResult,
+	type VaultActionManagerOptions,
 	type VaultActionManagerSubscription,
 } from "./facade";
 export type { ActiveEditorContext } from "./file-services/active-view/active-file-service";
@@ -33,6 +36,11 @@ export type {
 	BulkMdModifyEvent,
 	MdFileModification,
 } from "./impl/event-processing/md-modify-event";
+export type {
+	ProtectedModificationOrigin,
+	ProtectedPathModification,
+	ProtectedPathModificationsEvent,
+} from "./impl/event-processing/protected-modifications";
 export { type SplitPathCodec, splitPathCodec } from "./split-path-codec";
 export type { VaultFileStat } from "./types/file-stat";
 export * from "./types/literals";

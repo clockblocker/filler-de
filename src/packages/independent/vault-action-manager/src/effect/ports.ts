@@ -95,6 +95,11 @@ export class ActiveEditorAccess extends Context.Service<
 			VamActiveEditorError
 		>;
 		openFile(file: TFile): Effect.Effect<void, VamActiveEditorError>;
+		/** Paths of the files shown in any Markdown view, active or not. */
+		readonly openMarkdownPaths: Effect.Effect<
+			ReadonlySet<string>,
+			VamActiveEditorError
+		>;
 		waitForActiveEditor(args: {
 			readonly expectedInlineTitleText?: string;
 			readonly path: string;

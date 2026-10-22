@@ -257,6 +257,15 @@ function makeActiveEditorAccessLive(
 							yield* waitForViewReady(app, file.path);
 						},
 					),
+					openMarkdownPaths: Effect.try({
+						catch: (cause) =>
+							new VamActiveEditorError({
+								cause,
+								operation: "openMarkdownPaths",
+								reason: "AdapterFailure",
+							}),
+						try: () => readOpenMarkdownPaths(app),
+					}),
 					waitForActiveEditor: ({
 						expectedInlineTitleText,
 						path,
@@ -271,6 +280,16 @@ function makeActiveEditorAccessLive(
 				}),
 		}),
 	);
+}
+
+function readOpenMarkdownPaths(app: App): ReadonlySet<string> {
+	const paths = new Set<string>();
+	for (const leaf of app.workspace.getLeavesOfType("markdown")) {
+		const view = leaf.view;
+		if (view instanceof MarkdownView && view.file)
+			paths.add(view.file.path);
+	}
+	return paths;
 }
 
 function readActiveEditor(app: App): ActiveEditorHandle | null {
