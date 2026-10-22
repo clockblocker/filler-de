@@ -75,6 +75,63 @@ function setup() {
 	};
 }
 
+/**
+ * A VAM whose worker is held by another batch's rename, so that a batch
+ * `dispatchOrUndo` submits waits in the queue. `undoing` runs `meanwhile`
+ * once the batch is submitted, after `dispatchOrUndo` looked the vault up,
+ * then lets the queue run.
+ */
+function queuedBehindAnotherBatch() {
+	const context = setup();
+	const { fileManager, harness, manager } = context;
+	harness.addFile("Library/held.md", "held");
+	const undoing = async (
+		actions: readonly VaultAction[],
+		meanwhile: () => unknown,
+	) => {
+		const held = Promise.withResolvers<void>();
+		const release = Promise.withResolvers<void>();
+		const rename = fileManager.renameFile;
+		fileManager.renameFile = async (file, toPath) => {
+			if (file.path !== "Library/held.md") return rename(file, toPath);
+			held.resolve();
+			await release.promise;
+			return rename(file, toPath);
+		};
+		const earlier = Effect.runPromise(
+			manager.dispatch(
+				[renameMd("Library/held.md", "Library/released.md")],
+				{ caller: "other" },
+			),
+		);
+		await held.promise;
+		const submitted = Promise.withResolvers<void>();
+		const port: VamUndoPort = {
+			dispatchWithReport: (batch, options) => {
+				if (options.stopOnFirstFailure) submitted.resolve();
+				return manager.dispatchWithReport(batch, options);
+			},
+			exists: (path) => manager.exists(path),
+			readContent: (path) => manager.readContent(path),
+		};
+		const failing = Effect.runPromise(
+			dispatchOrUndoVia(port, actions, { caller: "test" }).pipe(
+				Effect.flip,
+			),
+		);
+		await submitted.promise;
+		meanwhile();
+		release.resolve();
+		await earlier;
+		const failure = await failing;
+		await Effect.runPromise(context.dispose);
+		const { undo } = failure.report;
+		if (!undo) throw new Error("dispatchOrUndo answered no undo report");
+		return { failure, undo };
+	};
+	return { ...context, undoing };
+}
+
 const createMd = (path: string, content: string): VaultAction => ({
 	kind: VaultActionKind.CreateMdFile,
 	payload: { content, splitPath: md(path) },
@@ -548,6 +605,66 @@ describe("what was there before the batch", () => {
 		expect(harness.contents.get("Library/b.md")).toBe("theirs");
 		expect(harness.contents.get("Library/1_b.md")).toBe("A");
 		expect(harness.exists("Library/a.md")).toBe(false);
+	});
+
+	it.each(["index", "dedupe"] as const)(
+		"never moves back a note that reached the target of an onCollision %s rename while the batch was queued",
+		async (onCollision) => {
+			const queue = queuedBehindAnotherBatch();
+			const { fileManager, harness } = queue;
+			harness.addFile("Library/a.md", "A");
+			const rename = fileManager.renameFile;
+			fileManager.renameFile = async (file, toPath) => {
+				await rename(file, toPath);
+				if (toPath === "Library/1_b.md")
+					throw new Error("selection restore failed");
+			};
+			const { failure, undo } = await queue.undoing(
+				[renameMd("Library/a.md", "Library/b.md", onCollision)],
+				// Arrives after the batch was submitted, before it runs.
+				() => harness.addFile("Library/b.md", "theirs"),
+			);
+			expect(failure.report.entries).toMatchObject([
+				{ status: "Uncertain", targetTaken: true },
+			]);
+			expect(undo.probed).toMatchObject([{ found: "Unknown" }]);
+			expect(undo.undone).toEqual([]);
+			expect(blocks(undo)).toEqual([
+				[VaultActionKind.RenameMdFile, "Unknown"],
+			]);
+			expect(harness.contents.get("Library/b.md")).toBe("theirs");
+			expect(harness.contents.get("Library/1_b.md")).toBe("A");
+			expect(harness.exists("Library/a.md")).toBe(false);
+		},
+	);
+
+	it("renames back a note whose target was freed while the batch was queued", async () => {
+		const queue = queuedBehindAnotherBatch();
+		const { fileAt, fileManager, harness } = queue;
+		harness.addFile("Library/a.md", "A");
+		harness.addFile("Library/b.md", "theirs");
+		const rename = fileManager.renameFile;
+		fileManager.renameFile = async (file, toPath) => {
+			await rename(file, toPath);
+			if (toPath === "Library/b.md")
+				throw new Error("selection restore failed");
+		};
+		const { failure, undo } = await queue.undoing(
+			[renameMd("Library/a.md", "Library/b.md")],
+			() =>
+				harness.app.vault.rename(
+					fileAt("Library/b.md"),
+					"Library/moved.md",
+				),
+		);
+		expect(failure.report.entries).toMatchObject([
+			{ status: "Uncertain", targetTaken: false },
+		]);
+		expect(undo.probed).toMatchObject([{ found: "Landed" }]);
+		expect(kinds(undo.undone)).toEqual([VaultActionKind.RenameMdFile]);
+		expect(harness.contents.get("Library/a.md")).toBe("A");
+		expect(harness.contents.get("Library/moved.md")).toBe("theirs");
+		expect(harness.exists("Library/b.md")).toBe(false);
 	});
 
 	it("never trashes a note that was there before, when the dispatch dies", async () => {
