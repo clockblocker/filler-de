@@ -26,6 +26,7 @@ export const DICTIONARY_EVENTS: VamSubscribeOptions = {
 /** The part of VAM the store uses. */
 export type DictionaryVault = Pick<
 	VaultActionManager,
+	| "dispatchOrUndo"
 	| "dispatchStopOnFirstFailure"
 	| "exists"
 	| "readContentWithStat"

@@ -7,15 +7,18 @@ import {
 	VamActiveEditorError,
 	VamContentConflictError,
 	VamDispatchError,
-	VamDispatchOverflowError,
+	type VamDispatchFailureReason,
+	VamDispatchFailureReasonSchema,
 	VamNoActiveEditorError,
-	VamPlanningError,
-	VamProtectedPathError,
-	VamSetupError,
-	VamShutdownError,
 	VamTargetExistsError,
 	VamVaultIoError,
 	VaultActionSchema,
+} from "./errors";
+import { VamUndoReport } from "./undo-report";
+
+export {
+	type VamDispatchFailureReason,
+	VamDispatchFailureReasonSchema,
 } from "./errors";
 
 const SplitPathSchema = Schema.declare(
@@ -108,7 +111,8 @@ export type VamTouchedVault = "no" | "yes" | "unknown";
  * as parent folders. A batch that failed before planning, because it was
  * refused, overflowed, or met a shut-down VAM, lists each submitted action
  * as `Skipped`. `caller` and `operationId` name the batch, as its spans and
- * the origins of its events do.
+ * the origins of its events do. `undo` says what `dispatchOrUndo` took
+ * back after a failure; other dispatches never set it.
  */
 export class VamDispatchReport extends Schema.Class<VamDispatchReport>(
 	"VamDispatchReport",
@@ -116,6 +120,7 @@ export class VamDispatchReport extends Schema.Class<VamDispatchReport>(
 	caller: Schema.String,
 	entries: Schema.Array(VamDispatchEntrySchema),
 	operationId: Schema.String,
+	undo: Schema.optional(VamUndoReport),
 }) {
 	/** A report for a batch of `operation` none of which ran. */
 	static notRun(
@@ -185,19 +190,6 @@ export class VamDispatchReport extends Schema.Class<VamDispatchReport>(
 		);
 	}
 }
-
-/** Why a Dispatch Batch failed. */
-export const VamDispatchFailureReasonSchema = Schema.Union([
-	VamPlanningError,
-	VamProtectedPathError,
-	VamDispatchOverflowError,
-	VamShutdownError,
-	VamSetupError,
-	VamDispatchError,
-]);
-
-export type VamDispatchFailureReason =
-	typeof VamDispatchFailureReasonSchema.Type;
 
 /**
  * The one failure of `dispatch`, `dispatchStopOnFirstFailure` and

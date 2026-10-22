@@ -40,7 +40,7 @@ The API has four groups:
 
 | Group | Examples |
 | --- | --- |
-| Dispatch | `dispatchWithReport`, `dispatch`, `dispatchStopOnFirstFailure` |
+| Dispatch | `dispatchWithReport`, `dispatch`, `dispatchStopOnFirstFailure`, `dispatchOrUndo` |
 | Observation | `startListening`, `scanAndSubscribe`, `subscribeToBulk`, `subscribeToMdModifications`, `subscribeToProtectedPathModifications` |
 | Vault reads | `readContent`, `readContentWithStat`, `exists`, `findByBasename`, `list`, `scan`, `scanWithStat` |
 | Active editor | `mdPwd`, `getOpenedContent`, `getSelectionInfo`, `cd`, `scrollOpenedFileToLine` |
@@ -295,8 +295,9 @@ Important rules:
   batch skips register nothing.
 - Each caller receives the result of its own batch.
 
-A Dispatch Batch is not atomic. VAM does not roll back actions that completed
-before a later failure; the report below says what each one did.
+A Dispatch Batch is not atomic. A dispatch does not roll back actions that
+completed before a later failure; the report below says what each one did.
+`dispatchOrUndo` (below) undoes what it safely can.
 
 By default, a batch attempts every planned action. With
 `stopOnFirstFailure`, it stops at the first failed action and reports the rest
@@ -353,7 +354,60 @@ inverses from them:
 Hashes are `vaultContentHash`es of the whole file. The report also answers
 `executed`, `failed`, `uncertain` and `skipped`, and `touchedVault`: `yes`
 when an action changed something, `unknown` when none did but an `Uncertain`
-one may have, `no` otherwise. VAM itself never undoes anything.
+one may have, `no` otherwise. Only `dispatchOrUndo` undoes anything.
+
+## Guarded undo on failure
+
+`dispatchOrUndo(actions, { caller })` dispatches one batch that stops at its
+first failure. On success it answers the report. On failure it builds
+inverses from the receipts above, newest first, and fails with the batch's
+own `VamDispatchFailure`, whose `report.undo` (`VamUndoReport`) lists what
+was `undone`, what it `couldNotUndo` and why, what is `notUndoable`, and
+what it `probed`. It is best effort, never a transaction: trashes are not
+restorable, Obsidian's link updater rewrites links back only as far as it
+rewrote them, and Sync or the user may write between the batch and its
+undo. Every inverse is therefore guarded by a precondition:
+
+| Receipt | Inverse | Guard; `couldNotUndo` when it fails |
+| --- | --- | --- |
+| `Created` (a Markdown file) | `TrashMdFile` | `ifContent: { hash: contentHash }`: `Changed` once someone typed into it. |
+| `Created` (a folder, another file) | none | `notUndoable`: no guard keeps a trash from taking what was put there since. |
+| `Wrote` | `ProcessMdFile` writing the pre-image | `expected: { hash: afterHash }`: `Changed`. `NoPreImage` when the pre-image was not captured. |
+| `Renamed`, `RenamedToIndexed` | the rename from `to` back, same link policy | `onCollision: "fail"`: `Taken` when the old path is occupied, `Missing` when the file left `to`. |
+| `Trashed`, `TrashedDuplicate` | none | `notUndoable`. |
+| `NoOp` | none | |
+
+Receipts carry hashes only, so the pre-image of every file a
+`ProcessMdFile` or contentful `UpsertMdFile` names is read before the batch
+runs, within `maxPreImageChars` (4 Mi code units by default), and held only
+for the call. A pre-image is used only if its hash is the receipt's
+`beforeHash`, so a file changed between the read and the write is not
+restored to stale content.
+
+An `Uncertain` entry is never inverted blindly. VAM probes the vault and
+records the finding in `probed`: `Landed` (a rename's file is at `to` and
+not at `from`; a create's file holds the content it was created with),
+`NotLanded`, or `Unknown`. Before the batch runs, VAM also looks up the
+target of every create and rename, so a file that was there already is
+never taken for the batch's: a create whose path was taken did not land,
+and a rename whose target was taken, which may have gone to an indexed
+name or trashed a duplicate, is `Unknown`, unless it changes only its own
+name's case. Only a landed action is inverted, under the same
+guard; an `Unknown` one is `couldNotUndo` with block `Unknown`. A
+`dispatchWithReport` that dies counts every action as `Uncertain`.
+
+Each inverse runs as its own one-action batch, in reverse run order, so
+VAM's planner cannot reorder them by path depth. Every inverse is attempted
+even after another failed: each is guarded on its own. An inverse that ends
+`Uncertain` is probed in turn. The inverse batches run under the forward
+batch's `caller` and `operationId`, so traces and event origins show the
+undo as part of the same operation. A bare implementation of the
+`VamUndoPort` (`dispatchWithReport`, `exists`, `readContent`) can run the
+same layer through `dispatchOrUndoVia`, as test fakes do.
+
+Callers: the delimiter migration renames back every note it moved; the
+dictionary store undoes its create phase, and rolls forward from the files
+for its later phases.
 
 ## Protected paths
 
@@ -628,6 +682,7 @@ Desktop scenarios use this idle barrier. They must not inspect VAM internals or 
 | Effect runtime and ports | `src/packages/independent/vault-action-manager/src/effect/` |
 | Dispatch | `src/packages/independent/vault-action-manager/src/impl/actions-processing/` |
 | Dispatch reports | `src/packages/independent/vault-action-manager/src/effect/dispatch-report.ts` |
+| Guarded undo | `src/packages/independent/vault-action-manager/src/effect/undo-on-failure.ts`, `undo-report.ts` |
 | Observation | `src/packages/independent/vault-action-manager/src/impl/event-processing/` |
 | Callback sequence | `src/packages/independent/vault-action-manager/src/impl/event-processing/callback-sequence.ts` |
 | Snapshot traversal | `VaultReader.snapshot` in `src/packages/independent/vault-action-manager/src/impl/vault-reader.ts` |

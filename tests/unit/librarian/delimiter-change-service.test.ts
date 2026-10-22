@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	dispatchOrUndoVia,
 	SplitPathKind,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
@@ -10,6 +11,7 @@ import {
 	VamPlanningError,
 	VamProtectedPathError,
 	VamScanError,
+	type VamUndoPort,
 	type VaultAction,
 	VaultActionKind,
 	VaultPath,
@@ -342,7 +344,10 @@ describe("delimiter migration lifecycle", () => {
 
 		expect(execution.kind).toBe("RolledBack");
 		if (execution.kind !== "RolledBack") return;
-		expect(execution.failure.path).toBeUndefined();
+		// A defect names no failed action: VAM's undo treats every rename as
+		// uncertain, probes each, and renames back the one that moved.
+		expect(execution.failure.operation).toBe("dispatch");
+		expect(String(execution.failure.cause)).toContain("dispatch exploded");
 		expect(execution.rolledBack).toHaveLength(1);
 		expect(vaultFiles(harness)).toEqual([
 			"Library/alpha-beta.md",
@@ -352,9 +357,11 @@ describe("delimiter migration lifecycle", () => {
 
 	test("a planning failure touched nothing and is not observed", async () => {
 		const harness = makeHarness([readableMdPath("alpha-beta")]);
+		// VAM looks up each rename's target before the batch; only probes
+		// after it would observe the vault.
 		let existsCalls = 0;
 		harness.exists = () => {
-			existsCalls += 1;
+			if (harness.dispatchCalls > 0) existsCalls += 1;
 			return Effect.succeed(true);
 		};
 		harness.dispatch = (actions) =>
@@ -383,9 +390,11 @@ describe("delimiter migration lifecycle", () => {
 
 	test("a protected-path refusal touched nothing and is not observed", async () => {
 		const harness = makeHarness([readableMdPath("alpha-beta")]);
+		// VAM looks up each rename's target before the batch; only probes
+		// after it would observe the vault.
 		let existsCalls = 0;
 		harness.exists = () => {
-			existsCalls += 1;
+			if (harness.dispatchCalls > 0) existsCalls += 1;
 			return Effect.succeed(true);
 		};
 		harness.dispatch = (actions) => {
@@ -475,7 +484,8 @@ describe("delimiter migration lifecycle", () => {
 		harness.renameBeforeFailing = true;
 		const probed: string[] = [];
 		harness.exists = (path) => {
-			probed.push(path.basename);
+			// Lookups before the batch, of each rename's target, are no probes.
+			if (harness.dispatchCalls > 0) probed.push(path.basename);
 			return path.basename.startsWith("gamma")
 				? Effect.die(new Error("stat failed"))
 				: Effect.succeed(harness.files.has(splitPathCodec.format(path)));
@@ -507,7 +517,8 @@ describe("delimiter migration lifecycle", () => {
 		harness.failForward = failOn("gamma-delta");
 		let existsCalls = 0;
 		harness.exists = (path) => {
-			existsCalls += 1;
+			// Lookups before the batch, of each rename's target, are no probes.
+			if (harness.dispatchCalls > 0) existsCalls += 1;
 			return Effect.succeed(harness.files.has(splitPathCodec.format(path)));
 		};
 
@@ -1041,7 +1052,7 @@ function makeHarness(
 	};
 	type Dispatch = (
 		actions: readonly VaultAction[],
-	) => ReturnType<DelimiterMigrationVam["dispatchWithReport"]>;
+	) => ReturnType<VamUndoPort["dispatchWithReport"]>;
 	/** Runs one rename as VAM would, and reports its entry. */
 	const run = (
 		action: VaultAction,
@@ -1117,9 +1128,10 @@ function makeHarness(
 	const restoreContexts: {
 		readonly currentAlreadyPaused: boolean;
 	}[] = [];
-	const vam: DelimiterMigrationVam = {
+	/** VAM's own undo layer, over this fake's dispatch and probes. */
+	const port: VamUndoPort = {
 		dispatchWithReport: (actions, options) => {
-			if (!options?.stopOnFirstFailure) {
+			if (!options.stopOnFirstFailure) {
 				rollbackBatches.push(actions);
 				return rollbackImpl(actions);
 			}
@@ -1127,6 +1139,15 @@ function makeHarness(
 			dispatchedActions = actions;
 			return dispatchImpl(actions);
 		},
+		exists: (path) =>
+			path.kind === SplitPathKind.MdFile
+				? existsImpl(path)
+				: Effect.succeed(false),
+		readContent: () => Effect.die(new Error("renames read no content")),
+	};
+	const vam: DelimiterMigrationVam = {
+		dispatchOrUndo: (actions, options) =>
+			dispatchOrUndoVia(port, actions, options),
 		exists: (path) => existsImpl(path),
 		paths: VaultPath.forFileSystem({ caseInsensitive }),
 		scan: (libraryRoot) => {
