@@ -1,11 +1,12 @@
 import { describe, expect, it } from "bun:test";
 import type { DumdictVaultStore } from "@textfresser/dictionary";
+import { Transaction } from "@textfresser/dictionary";
 import { lemmaNotePath, readingNotePath } from "@textfresser/lemma-note-codec";
 import type { Unit } from "dumgen";
 import { createDumgen } from "dumgen";
 import type * as Dumling from "dumling/types";
 import { variantIdOf } from "dumrel";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Result } from "effect";
 import {
 	ClassifyCommander,
 	missingKeysNotice,
@@ -22,6 +23,7 @@ import {
 } from "../../../../src/commanders/classify/segmentation-cache";
 import { UnitResolver } from "../../../../src/commanders/classify/unit-resolver";
 import { createScriptedJev } from "../../../../src/managers/dumgen/scripted-jev";
+import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
 import { FAENGT_AN_ANSWERS, selectionOf } from "../support";
 import {
 	attestationOf,
@@ -342,10 +344,16 @@ describe("dumgenUnitResolver", () => {
 			scrollPath: SCROLL,
 			wrapStore: (store) => ({
 				...store,
-				commitChanges: (request) => {
-					planned.push(request.changes.length);
-					return store.commitChanges(request);
-				},
+				transact: (plan, options) =>
+					store.transact(
+						(view) =>
+							Result.map(plan(view), (step) => {
+								if (step._tag === "Commit" || step._tag === "CommitAndReplan")
+									planned.push(step.plan.changes.length);
+								return step;
+							}),
+						options,
+					),
 			}),
 		});
 		await harness.resolve(
@@ -425,9 +433,15 @@ describe("dumgenUnitResolver", () => {
 		).toEqual(["🌊", "⛵"].sort());
 	});
 
-	it("re-plans and retries a commit that lost a revision race", async () => {
+	/**
+	 * A store whose first transaction's plans each meet a hand edit of
+	 * See's Lemma note that no event has delivered yet, `edits` times.
+	 */
+	async function editedDuringPlans(edits: number) {
 		const content = "Der See ist tief. ^0\n";
-		let commits = 0;
+		const vault = new FakeVault();
+		let plans = 0;
+		let wrapped = false;
 		const { dumgen } = stubDumgen({
 			grammar: seeGrammar,
 			reading: () => ({ _tag: "New", emojiDescription: "🌊" }),
@@ -436,35 +450,86 @@ describe("dumgenUnitResolver", () => {
 			content,
 			dumgen,
 			scrollPath: SCROLL,
+			vault,
 			wrapStore: (store) => ({
 				...store,
-				commitChanges: (request) =>
-					Effect.gen(function* () {
-						commits++;
-						if (commits === 1) {
-							// Another writer commits first, so this plan's revision is stale.
-							const revision = yield* store.revision;
-							yield* store.commitChanges({
-								baseRevision: revision,
-								changes: [
-									{
-										preconditions: [{ kind: "lemmaMissing", lemma: anfangen }],
-										record: { lemma: anfangen },
-										type: "createLemma",
-									},
-								],
-							});
+				transact: (plan, options) => {
+					if (wrapped) return store.transact(plan, options);
+					wrapped = true;
+					return store.transact((view) => {
+						plans++;
+						if (plans <= edits) {
+							// Typed under the header, above the note's metadata.
+							const [header, ...rest] = (vault.content(SEE_PATH) ?? "").split("\n");
+							vault.silentWrite(SEE_PATH, [header, `Notiz ${plans}`, ...rest].join("\n"));
 						}
-						return yield* store.commitChanges(request);
-					}),
+						return plan(view);
+					}, options);
+				},
 			}),
 		});
+		await seedReading(harness.store, "⛵");
 		const [resolution] = await harness.resolve(
 			planFor({ content, scrollPath: SCROLL, sentenceText: "Der See ist tief.", units: seeUnits }),
 		);
-		expect(commits).toBe(2);
+		return { harness, plans: () => plans, resolution, vault };
+	}
+
+	it("plans again when the commit meets an edit made outside the store", async () => {
+		const { harness, plans, resolution, vault } = await editedDuringPlans(1);
+		expect(plans()).toBe(2);
 		expect(resolution?._tag).toBe("Resolved");
+		expect((await run(harness.store.lemmaNote(see)))?.readings).toHaveLength(2);
+		// The edit the first plan missed is kept, not written over.
+		expect(vault.content(SEE_PATH)).toContain("Notiz 1");
+	});
+
+	it("gives up after its attempts when every commit meets an outside edit", async () => {
+		const { harness, plans, resolution, vault } = await editedDuringPlans(Number.POSITIVE_INFINITY);
+		expect(plans()).toBe(4);
+		expect(resolution).toMatchObject({ _tag: "Pending" });
+		expect(resolution?._tag === "Pending" ? resolution.reason : "").toContain(
+			"The dictionary kept changing while this occurrence committed",
+		);
 		expect((await run(harness.store.lemmaNote(see)))?.readings).toHaveLength(1);
+		expect(vault.content(SEE_PATH)).toContain("Notiz 4");
+	});
+
+	it("judges a stale New again outside the store's lock", async () => {
+		const content = "Der See ist tief. ^0\n";
+		let store: DumdictVaultStore | undefined;
+		const lockFree: boolean[] = [];
+		const stub = stubDumgen({
+			grammar: seeGrammar,
+			reading: async (input) => {
+				if (store) {
+					// A judge running under the lock would wait here for ever.
+					const probe = store.transact(() => Result.succeed(Transaction.stop(true)));
+					lockFree.push(
+						await run(
+							probe.pipe(
+								Effect.timeoutOrElse({
+									duration: "1 second",
+									orElse: () => Effect.succeed(false),
+								}),
+							),
+						),
+					);
+				}
+				if (input.written !== undefined)
+					return { _tag: "New", emojiDescription: input.written };
+				if (store) await seedReading(store, "⛵");
+				return { _tag: "New", emojiDescription: "🌊" };
+			},
+		});
+		const harness = await resolutionHarness({ content, dumgen: stub.dumgen, scrollPath: SCROLL });
+		store = harness.store;
+		const [resolution] = await harness.resolve(
+			planFor({ content, scrollPath: SCROLL, sentenceText: "Der See ist tief.", units: seeUnits }),
+		);
+		expect(resolution?._tag).toBe("Resolved");
+		expect(stub.calls.reading).toHaveLength(2);
+		expect(lockFree).toEqual([true, true]);
 	});
 
 	it("keeps the user's typing and skips an occurrence they changed", async () => {

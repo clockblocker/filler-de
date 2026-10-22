@@ -19,16 +19,13 @@ export type GermanPendingRelation = Dumrel.PendingSemanticRelation & {
 	readonly target: { readonly language: "de" };
 };
 
-/** The part of the dictionary store resolution reads and commits through. */
+/**
+ * The part of the dictionary store resolution reads and commits through.
+ * Every commit goes through `transact`, which plans from its own view.
+ */
 export type ResolutionStore = Pick<
 	DumdictVaultStore,
-	| "commitChanges"
-	| "lemmaCandidates"
-	| "lemmaNote"
-	| "loadOccurrenceSlice"
-	| "loadReadingEntryContext"
-	| "readingLocation"
-	| "surface"
+	"lemmaCandidates" | "lemmaNote" | "readingLocation" | "transact"
 >;
 
 /** One Reading whose Knowledge an occurrence asks dumgen for, after its commit. */

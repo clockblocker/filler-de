@@ -13,14 +13,21 @@
  * Shadow re-evaluation a removal asks for) and recorded again. One judged
  * the same Reading under another Surface keeps its link.
  *
- * The store commits all-or-nothing against the revision a plan was built
- * from, so a plan is rebuilt from fresh slices whenever another write wins
- * the race, a bounded number of times. A New whose judge never saw a
- * Reading the Lemma has gained since is refused before anything is
- * written, and its caller judges again (ADR 0031).
+ * Each occurrence is one store transaction (`transact`): it plans from the
+ * store's view and commits under the store's lock, so no other commit
+ * lands in between, and plans again, a bounded number of times, only when
+ * the commit meets a change made outside the store. A New whose judge
+ * never saw a Reading the Lemma has gained since stops the transaction
+ * before anything is written, and its caller judges again (ADR 0031),
+ * outside the lock.
  */
-import type { DictionaryCommitError } from "@textfresser/dictionary";
-import type { AttestationLink, DumdictPlan } from "dumdict";
+import {
+	type DictionaryCommitError,
+	type DictionaryTransactionConflict,
+	type DictionaryView,
+	Transaction,
+} from "@textfresser/dictionary";
+import type { AttestationLink } from "dumdict";
 import {
 	createDumdictPlanner,
 	type DumdictPlanOutcome,
@@ -29,14 +36,13 @@ import {
 } from "dumdict/planning";
 import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
-import { Effect } from "effect";
-import { exclusive } from "./exclusive";
+import { Effect, Result } from "effect";
 import {
 	DictionaryCommitFailed,
 	type ResolutionStore,
 } from "./knowledge-types";
 
-/** Plans rebuilt after a lost race before the occurrence gives up. */
+/** Plans a transaction tries before the occurrence gives up. */
 export const MAX_COMMIT_ATTEMPTS = 4;
 
 const planner = createDumdictPlanner("de");
@@ -75,20 +81,38 @@ export type OccurrenceCommitted =
 			readonly candidates: readonly string[];
 	  };
 
-type Planned =
-	| { readonly _tag: "Stale"; readonly candidates: readonly string[] }
-	| { readonly _tag: "Unchanged" }
-	/** The ref is recorded under another Reading: remove it there first. */
-	| { readonly _tag: "Move"; readonly ref: string }
-	| { readonly _tag: "Retry"; readonly message: string }
-	| {
-			readonly _tag: "Plan";
-			readonly created: boolean;
-			readonly plan: DumdictPlan<"de">;
-	  };
+type Planned = Result.Result<
+	Transaction<OccurrenceCommitted>,
+	DictionaryCommitFailed
+>;
+
+const MOVED = "The occurrence moved from another Reading";
+
+const unchanged: OccurrenceCommitted = { _tag: "Committed", created: false };
 
 const failed = (message: string) => (cause: unknown) =>
 	new DictionaryCommitFailed({ cause, message });
+
+/**
+ * A transaction's failure as resolution reports it: a conflict that
+ * outlasted its attempts says what kept changing while `what`.
+ */
+export const commitFailure =
+	(what: string) =>
+	(
+		error:
+			| DictionaryCommitFailed
+			| DictionaryCommitError
+			| DictionaryTransactionConflict,
+	): DictionaryCommitFailed => {
+		if (error._tag === "DictionaryCommitFailed") return error;
+		if (error._tag === "DictionaryTransactionConflict")
+			return new DictionaryCommitFailed({
+				cause: error,
+				message: `The dictionary kept changing while ${what} (${error.reason})`,
+			});
+		return failed(error.message)(error);
+	};
 
 const emojiDescriptionsOf = (
 	readings: readonly { reading: Dumling.Reading<"de"> }[],
@@ -109,212 +133,226 @@ function linkOf(input: OccurrenceCommit): AttestationLink<"de"> | undefined {
 }
 
 /**
- * What a ref recorded elsewhere asks: a move when another Reading holds it,
- * nothing when this Reading does under another Surface.
+ * Plans removing an occurrence (`removeOccurrence`) and what it leaves
+ * behind: a Reading with no link, a Surface no link names, a Lemma with no
+ * Reading, with the claims on them. Once the plan has landed, the store
+ * re-evaluates the Shadows of the Lemmas it removed, as a commit of its own
+ * from a slice loaded then (texteater#1257). A plan worked around a stored
+ * claim whose target is gone (`danglingRelationClaim`) is logged with its
+ * commit.
  */
-const elsewhere = (
+export function planRemoval(
+	view: DictionaryView,
+	ref: string,
+): Result.Result<Transaction<"Removed">, DictionaryCommitFailed> {
+	const slice = view.loadOccurrenceSlice(
+		planner.occurrenceSliceRequest({ ref }),
+	);
+	const outcome = planner.removeOccurrence(slice, { ref });
+	if (outcome.status === "conflict")
+		return Result.succeed(
+			Transaction.replan(outcome.message ?? outcome.code),
+		);
+	if (outcome.status === "rejected")
+		return Result.fail(
+			new DictionaryCommitFailed({
+				cause: outcome,
+				message: outcome.message ?? outcome.code,
+			}),
+		);
+	if (outcome.plan.changes.length === 0)
+		return Result.succeed(Transaction.stop("Removed"));
+	return Result.succeed(
+		Transaction.commit(outcome.plan, "Removed", {
+			...(outcome.issues === undefined ? {} : { issues: outcome.issues }),
+		}),
+	);
+}
+
+/**
+ * What a ref recorded elsewhere asks: nothing when this Reading holds it
+ * under another Surface; when another Reading does, removing it there
+ * first, then recording it here from the view that leaves.
+ */
+function elsewhere(
+	view: DictionaryView,
 	input: OccurrenceCommit,
 	ref: string,
 	stored: readonly AttestationLink<"de">[],
-): Planned =>
-	stored.length > 0 &&
-	stored.every(
-		(link) =>
-			readingIdentityKey(link.reading) ===
-			readingIdentityKey(input.reading),
+): Planned {
+	if (
+		stored.length > 0 &&
+		stored.every(
+			(link) =>
+				readingIdentityKey(link.reading) ===
+				readingIdentityKey(input.reading),
+		)
 	)
-		? { _tag: "Unchanged" }
-		: { _tag: "Move", ref };
+		return Result.succeed(Transaction.stop(unchanged));
+	return Result.map(planRemoval(view, ref), (removal) =>
+		removal._tag === "Commit"
+			? Transaction.commitAndReplan(removal.plan, MOVED, {
+					...(removal.issues === undefined
+						? {}
+						: { issues: removal.issues }),
+				})
+			: Transaction.replan(
+					removal._tag === "Replan" ? removal.reason : MOVED,
+				),
+	);
+}
 
 const loadContext = <I extends ReadingEntryContext<"de">["intent"]>(
-	store: ResolutionStore,
+	view: DictionaryView,
 	load: Parameters<typeof planner.contextRequest>[0],
 	intent: I,
-) =>
-	store.loadReadingEntryContext(planner.contextRequest(load)).pipe(
-		Effect.mapError(failed("Could not read the dictionary")),
-		Effect.flatMap((context) =>
+): Result.Result<
+	Extract<ReadingEntryContext<"de">, { intent: I }>,
+	DictionaryCommitFailed
+> =>
+	Result.flatMap(
+		Result.mapError(
+			view.loadReadingEntryContext(planner.contextRequest(load)),
+			failed("Could not read the dictionary"),
+		),
+		(context) =>
 			context.intent === intent
-				? Effect.succeed(
+				? Result.succeed(
 						context as Extract<
 							ReadingEntryContext<"de">,
 							{ intent: I }
 						>,
 					)
-				: Effect.fail(
+				: Result.fail(
 						new DictionaryCommitFailed({
 							cause: context,
 							message: "The dictionary answered another slice",
 						}),
 					),
-		),
 	);
 
 /** Plans a reused Reading's occurrence: its link and Surface, or the Surface alone. */
-const planReuse = Effect.fnUntraced(function* (
-	store: ResolutionStore,
-	input: OccurrenceCommit,
-) {
-	const link = linkOf(input);
-	let outcome: DumdictPlanOutcome<"de">;
-	if (link === undefined) {
+const planReuse = (view: DictionaryView, input: OccurrenceCommit): Planned =>
+	Result.gen(function* () {
+		const link = linkOf(input);
+		let outcome: DumdictPlanOutcome<"de">;
+		if (link === undefined) {
+			const request = {
+				ownedSurface: {
+					note: emptySurfaceNote(),
+					surface: input.surface,
+				},
+				reading: input.reading,
+			};
+			const context = yield* loadContext(
+				view,
+				{ intent: "ensureOwnedSurface", request },
+				"ensureOwnedSurface",
+			);
+			outcome = planner.ensureOwnedSurface(context, request);
+		} else {
+			const request = { link, surface: input.surface };
+			const context = yield* loadContext(
+				view,
+				{ intent: "recordOccurrence", request },
+				"recordOccurrence",
+			);
+			outcome = planner.recordOccurrence(context, request);
+			if (
+				outcome.status === "rejected" &&
+				outcome.code === "occurrenceAttestedElsewhere"
+			)
+				return yield* elsewhere(
+					view,
+					input,
+					link.ref,
+					context.attestationLinksWithRefs,
+				);
+		}
+		if (outcome.status === "conflict")
+			return Transaction.replan(outcome.message ?? outcome.code);
+		if (outcome.status === "rejected") {
+			if (outcome.code === "readingMissing")
+				return Transaction.replan("The Reading vanished");
+			return yield* Result.fail(
+				new DictionaryCommitFailed({
+					cause: outcome,
+					message: outcome.message ?? outcome.code,
+				}),
+			);
+		}
+		if (outcome.plan.changes.length === 0)
+			return Transaction.stop(unchanged);
+		return Transaction.commit<OccurrenceCommitted>(outcome.plan, {
+			_tag: "Committed",
+			created: false,
+		});
+	});
+
+const planNew = (view: DictionaryView, input: OccurrenceCommit): Planned =>
+	Result.gen(function* () {
+		const surfaceStored =
+			view.surface(makeSurfaceId("de", input.surface)) !== undefined;
+		const link = linkOf(input);
 		const request = {
-			ownedSurface: { note: emptySurfaceNote(), surface: input.surface },
-			reading: input.reading,
+			draft: {
+				note: {
+					...emptyReadingNote(),
+					attestationLinks: link === undefined ? [] : [link],
+				},
+				ownedSurfaces: surfaceStored
+					? []
+					: [{ note: emptySurfaceNote(), surface: input.surface }],
+				reading: input.reading,
+			},
 		};
 		const context = yield* loadContext(
-			store,
-			{ intent: "ensureOwnedSurface", request },
-			"ensureOwnedSurface",
+			view,
+			{ intent: "addNewNote", request },
+			"addNewNote",
 		);
-		outcome = planner.ensureOwnedSurface(context, request);
-	} else {
-		const request = { link, surface: input.surface };
-		const context = yield* loadContext(
-			store,
-			{ intent: "recordOccurrence", request },
-			"recordOccurrence",
-		);
-		outcome = planner.recordOccurrence(context, request);
-		if (
-			outcome.status === "rejected" &&
-			outcome.code === "occurrenceAttestedElsewhere"
-		)
-			return elsewhere(input, link.ref, context.attestationLinksWithRefs);
-	}
-	if (outcome.status === "conflict")
-		return {
-			_tag: "Retry",
-			message: outcome.message ?? outcome.code,
-		} satisfies Planned;
-	if (outcome.status === "rejected")
-		return outcome.code === "readingMissing"
-			? ({
-					_tag: "Retry",
-					message: "The Reading vanished",
-				} satisfies Planned)
-			: yield* new DictionaryCommitFailed({
+		const outcome = planner.addNewNote(context, request);
+		if (outcome.status === "conflict")
+			return Transaction.replan(outcome.message ?? outcome.code);
+		if (outcome.status === "rejected") {
+			if (outcome.code === "occurrenceAttestedElsewhere" && link)
+				return yield* elsewhere(
+					view,
+					input,
+					link.ref,
+					context.attestationLinksWithRefs,
+				);
+			if (
+				outcome.code === "readingAlreadyExists" ||
+				outcome.code === "ownedSurfaceAlreadyExists"
+			)
+				return Transaction.replan(outcome.message ?? outcome.code);
+			return yield* Result.fail(
+				new DictionaryCommitFailed({
 					cause: outcome,
 					message: outcome.message ?? outcome.code,
-				});
-	if (outcome.plan.changes.length === 0)
-		return { _tag: "Unchanged" } satisfies Planned;
-	return {
-		_tag: "Plan",
-		created: false,
-		plan: outcome.plan,
-	} satisfies Planned;
-});
-
-const planNew = Effect.fnUntraced(function* (
-	store: ResolutionStore,
-	input: OccurrenceCommit,
-) {
-	const surfaceStored =
-		(yield* store.surface(makeSurfaceId("de", input.surface))) !==
-		undefined;
-	const link = linkOf(input);
-	const request = {
-		draft: {
-			note: {
-				...emptyReadingNote(),
-				attestationLinks: link === undefined ? [] : [link],
-			},
-			ownedSurfaces: surfaceStored
-				? []
-				: [{ note: emptySurfaceNote(), surface: input.surface }],
-			reading: input.reading,
-		},
-	};
-	const context = yield* loadContext(
-		store,
-		{ intent: "addNewNote", request },
-		"addNewNote",
-	);
-	const outcome = planner.addNewNote(context, request);
-	if (outcome.status === "conflict")
-		return {
-			_tag: "Retry",
-			message: outcome.message ?? outcome.code,
-		} satisfies Planned;
-	if (outcome.status === "rejected") {
-		if (outcome.code === "occurrenceAttestedElsewhere" && link)
-			return elsewhere(input, link.ref, context.attestationLinksWithRefs);
-		return outcome.code === "readingAlreadyExists" ||
-			outcome.code === "ownedSurfaceAlreadyExists"
-			? ({
-					_tag: "Retry",
-					message: outcome.message ?? outcome.code,
-				} satisfies Planned)
-			: yield* new DictionaryCommitFailed({
-					cause: outcome,
-					message: outcome.message ?? outcome.code,
-				});
-	}
-	return {
-		_tag: "Plan",
-		created: true,
-		plan: outcome.plan,
-	} satisfies Planned;
-});
-
-/**
- * Removes an occurrence (`removeOccurrence`) and what it leaves behind: a
- * Reading with no link, a Surface no link names, a Lemma with no Reading,
- * with the claims on them. Once the plan has landed, the store re-evaluates
- * the Shadows of the Lemmas it removed, as a commit of its own from a slice
- * loaded then (texteater#1257). A plan worked around a stored claim whose
- * target is gone (`danglingRelationClaim`) is logged.
- *
- * It takes no lock: callers run it inside `exclusive(store)`.
- */
-export const removeOccurrence = Effect.fnUntraced(function* (
-	store: Pick<ResolutionStore, "commitChanges" | "loadOccurrenceSlice">,
-	ref: string,
-): Effect.fn.Return<"Removed" | "Retry", DictionaryCommitFailed> {
-	const slice = yield* store.loadOccurrenceSlice(
-		planner.occurrenceSliceRequest({ ref }),
-	);
-	const outcome = planner.removeOccurrence(slice, { ref });
-	if (outcome.status === "conflict") return "Retry";
-	if (outcome.status === "rejected")
-		return yield* new DictionaryCommitFailed({
-			cause: outcome,
-			message: outcome.message ?? outcome.code,
+				}),
+			);
+		}
+		return Transaction.commit<OccurrenceCommitted>(outcome.plan, {
+			_tag: "Committed",
+			created: true,
 		});
-	if ((outcome.issues?.length ?? 0) > 0)
-		yield* Effect.logWarning(
-			"Removing an occurrence worked around stored claims",
-			outcome.issues,
-		);
-	if (outcome.plan.changes.length === 0) return "Removed";
-	const result = yield* store
-		.commitChanges(outcome.plan)
-		.pipe(
-			Effect.catch((error) =>
-				isRetryable(error)
-					? Effect.succeed({ status: "conflict" as const })
-					: Effect.fail(failed(error.message)(error)),
-			),
-		);
-	return result.status === "committed" ? "Removed" : "Retry";
-});
+	});
 
 /**
- * Plans against the store as it is now. A Reading stored by now is reused
+ * Plans against the store's view. A Reading stored by now is reused
  * whatever the judge decided; a New the judge decided without seeing every
- * stored Reading of its Lemma is stale.
+ * stored Reading of its Lemma is stale, and stops the transaction.
  */
-const planOccurrence = Effect.fnUntraced(function* (
-	store: ResolutionStore,
+function planOccurrence(
+	view: DictionaryView,
 	input: OccurrenceCommit,
-): Effect.fn.Return<Planned, DictionaryCommitFailed> {
-	const stored = yield* store.readingLocation(input.reading);
+): Planned {
 	// A reused Reading deleted meanwhile is created again.
-	if (stored) return yield* planReuse(store, input);
+	if (view.readingLocation(input.reading)) return planReuse(view, input);
 	if (input.decision === "New" && input.seen !== undefined) {
 		const { lemma } = input.reading;
-		const note = yield* store.lemmaNote(lemma);
 		const keyOf = (emojiDescription: string) =>
 			readingIdentityKey({
 				emojiDescription,
@@ -322,66 +360,35 @@ const planOccurrence = Effect.fnUntraced(function* (
 				unitKind: "Reading",
 			} as Dumling.Reading<"de">);
 		const judged = new Set(input.seen.map(keyOf));
-		const readings = note?.readings ?? [];
+		const readings = view.lemmaNote(lemma)?.readings ?? [];
 		if (
 			readings.some(
 				({ reading }) => !judged.has(readingIdentityKey(reading)),
 			)
 		)
-			return { _tag: "Stale", candidates: emojiDescriptionsOf(readings) };
+			return Result.succeed(
+				Transaction.stop<OccurrenceCommitted>({
+					_tag: "Stale",
+					candidates: emojiDescriptionsOf(readings),
+				}),
+			);
 	}
-	return yield* planNew(store, input);
-});
+	return planNew(view, input);
+}
 
-const isRetryable = (error: DictionaryCommitError) =>
-	error._tag === "DictionaryWriteError";
-
-export const commitOccurrence = Effect.fnUntraced(function* (
-	store: ResolutionStore,
-	input: OccurrenceCommit,
-): Effect.fn.Return<OccurrenceCommitted, DictionaryCommitFailed> {
-	let last = "";
-	const serialized = exclusive(store);
-	for (let attempt = 0; attempt < MAX_COMMIT_ATTEMPTS; attempt++) {
-		const outcome = yield* serialized(
-			Effect.gen(function* () {
-				const planned = yield* planOccurrence(store, input);
-				if (planned._tag === "Stale") return planned;
-				if (planned._tag === "Unchanged")
-					return { _tag: "Committed", created: false } as const;
-				if (planned._tag === "Move") {
-					yield* removeOccurrence(store, planned.ref);
-					return {
-						_tag: "Retry",
-						message: "The occurrence moved from another Reading",
-					} as const;
-				}
-				if (planned._tag === "Retry")
-					return { _tag: "Retry", message: planned.message } as const;
-				const result = yield* store.commitChanges(planned.plan).pipe(
-					Effect.catch((error) =>
-						isRetryable(error)
-							? Effect.succeed({
-									code: "revisionConflict" as const,
-									message: error.message,
-									status: "conflict" as const,
-								})
-							: Effect.fail(failed(error.message)(error)),
-					),
-				);
-				return result.status === "committed"
-					? ({ _tag: "Committed", created: planned.created } as const)
-					: ({
-							_tag: "Retry",
-							message: result.message ?? result.code,
-						} as const);
-			}),
-		);
-		if (outcome._tag !== "Retry") return outcome;
-		last = outcome.message;
-	}
-	return yield* new DictionaryCommitFailed({
-		cause: last,
-		message: `The dictionary kept changing while this occurrence committed (${last})`,
-	});
-});
+/**
+ * Commits one occurrence as one transaction. A `Stale` answer wrote
+ * nothing; its caller judges again, outside the store's lock.
+ */
+export const commitOccurrence = Effect.fn("classify.commitOccurrence")(
+	function* (
+		store: Pick<ResolutionStore, "transact">,
+		input: OccurrenceCommit,
+	): Effect.fn.Return<OccurrenceCommitted, DictionaryCommitFailed> {
+		return yield* store
+			.transact((view) => planOccurrence(view, input), {
+				maxAttempts: MAX_COMMIT_ATTEMPTS,
+			})
+			.pipe(Effect.mapError(commitFailure("this occurrence committed")));
+	},
+);

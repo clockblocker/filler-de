@@ -21,9 +21,13 @@
  *   is read again then.
  * - **Classify runs.** A run commits occurrences before it writes their
  *   links. A Scroll a run is resolving in is left alone until a quiet
- *   period after it ended, and the whole check and its removals hold the
- *   same lock as Classify's commits (`exclusive`), so no run commits in
- *   between.
+ *   period after it ended. The check reads and judges outside the store's
+ *   lock; each removal is a store transaction (`transact`) whose plan,
+ *   under the lock Classify's commits take, removes nothing when a run is
+ *   going on the Scroll or one ended since the check began, a dictionary
+ *   reset holds Classify, or the ref's recorded Readings changed since the
+ *   check read them. The check then runs again, so no run commits between
+ *   the judgement and its removals.
  * - **The ref's Scroll.** Refs name a Scroll by basename; they count only
  *   when Obsidian resolves that basename, from their Reading note, to the
  *   modified file.
@@ -75,14 +79,20 @@
  * edit is. What the sweep removed is told in one notice once its last
  * check is done.
  */
-import type { DumdictVaultStore } from "@textfresser/dictionary";
+import type {
+	DictionaryView,
+	DumdictVaultStore,
+	Transaction,
+} from "@textfresser/dictionary";
 import {
 	parseNotePath,
 	pathCollisionKey,
 	WORTER_FOLDER,
 } from "@textfresser/lemma-note-codec";
 import { VaultPath } from "@textfresser/vault-action-manager";
-import { Effect, Option } from "effect";
+import type { AttestationLink } from "dumdict";
+import { readingIdentityKey } from "dumling";
+import { Effect, Option, Result } from "effect";
 import { getErrorMessage } from "../../../utils/get-error-message";
 import { logger } from "../../../utils/logger";
 import { scrollSentences, segmentSourceRanges } from "../scroll-sentences";
@@ -92,8 +102,8 @@ import {
 	sentenceKey,
 	sentenceStitchedText,
 } from "../sentence-key";
-import { MAX_COMMIT_ATTEMPTS, removeOccurrence } from "./commit-occurrence";
-import { exclusive } from "./exclusive";
+import { MAX_COMMIT_ATTEMPTS, planRemoval } from "./commit-occurrence";
+import type { DictionaryCommitFailed } from "./knowledge-types";
 import type { ScrollActivity } from "./scroll-activity";
 import {
 	attestationRefPrefixOf,
@@ -123,10 +133,7 @@ const ATTESTATION_REF_START = "![[";
 /** The part of the dictionary store the observer reads and removes through. */
 export type UnlinkStore = Pick<
 	DumdictVaultStore,
-	| "attestationLinksWithRefPrefix"
-	| "commitChanges"
-	| "loadOccurrenceSlice"
-	| "readingLocation"
+	"attestationLinksWithRefPrefix" | "readingLocation" | "transact"
 >;
 
 /** The Scrolls the observer reads, and how Obsidian resolves a ref's Scroll. */
@@ -348,7 +355,63 @@ const resolvedLinksOf = Effect.fnUntraced(function* (
 
 type Checked =
 	| { readonly _tag: "Busy" }
-	| { readonly _tag: "Done"; readonly removed: number };
+	| {
+			readonly _tag: "Done";
+			readonly removed: number;
+			/** A removal found the Scroll or its refs moved on since the check read them. */
+			readonly again: boolean;
+	  };
+
+/** Why a removal's plan removed nothing and the Scroll is checked again. */
+type Withheld = "Busy" | "Blocked" | "Changed";
+
+/** The Readings a ref is recorded under, as one comparable key. */
+const recordedUnder = (links: readonly AttestationLink<"de">[], ref: string) =>
+	links
+		.filter((link) => link.ref === ref)
+		.map(({ reading }) => readingIdentityKey(reading))
+		.sort()
+		.join("\u0000");
+
+/**
+ * Plans removing one unlinked ref, under the store's lock, only while what
+ * the check judged still holds: no run on the Scroll and none ended since
+ * the check began, no reset holding Classify, and the ref recorded under
+ * the Readings the check read.
+ */
+const planUnlinkedRemoval =
+	(
+		deps: UnlinkObserverDeps,
+		scrollPath: string,
+		endedAt: number | undefined,
+		ref: string,
+		readings: string,
+	) =>
+	(
+		view: DictionaryView,
+	): Result.Result<
+		Transaction<"Removed" | Withheld>,
+		DictionaryCommitFailed
+	> => {
+		if (deps.blockedBy?.() !== undefined)
+			return Result.succeed(stopWith("Blocked"));
+		if (
+			deps.activity.busy(scrollPath) ||
+			deps.activity.endedAt(scrollPath) !== endedAt
+		)
+			return Result.succeed(stopWith("Busy"));
+		if (
+			recordedUnder(view.attestationLinksWithRefPrefix(ref), ref) !==
+			readings
+		)
+			return Result.succeed(stopWith("Changed"));
+		return planRemoval(view, ref);
+	};
+
+const stopWith = (withheld: Withheld): Transaction<Withheld> => ({
+	_tag: "Stop",
+	value: withheld,
+});
 
 /** An occurrence as the sweep settles it: its Reading note and its ref. */
 const settledKeyOf = (readingPath: string, ref: string) =>
@@ -432,12 +495,14 @@ const checkScroll = Effect.fnUntraced(function* (
 	swept: ReadonlySet<string> | undefined,
 ): Effect.fn.Return<Checked, unknown> {
 	if (deps.activity.busy(scrollPath)) return { _tag: "Busy" };
+	const endedAt = deps.activity.endedAt(scrollPath);
+	const nothing: Checked = { _tag: "Done", again: false, removed: 0 };
 	const stored = yield* store.attestationLinksWithRefPrefix(
 		attestationRefPrefixOf(scrollPath),
 	);
-	if (stored.length === 0) return { _tag: "Done", removed: 0 };
+	if (stored.length === 0) return nothing;
 	const content = yield* deps.scrolls.read(scrollPath);
-	if (content === undefined) return { _tag: "Done", removed: 0 };
+	if (content === undefined) return nothing;
 	const basename = scrollBasenameOf(scrollPath);
 
 	let recorded: RecordedOccurrence[] = [];
@@ -462,7 +527,7 @@ const checkScroll = Effect.fnUntraced(function* (
 				ref,
 			});
 	}
-	if (recorded.length === 0) return { _tag: "Done", removed: 0 };
+	if (recorded.length === 0) return nothing;
 	const links = yield* resolvedLinksOf(
 		deps.scrolls,
 		scrollPath,
@@ -479,7 +544,7 @@ const checkScroll = Effect.fnUntraced(function* (
 		);
 		recorded = recorded.filter(({ ref }) => held.has(ref));
 	}
-	if (recorded.length === 0) return { _tag: "Done", removed: 0 };
+	if (recorded.length === 0) return nothing;
 
 	const judge = (keys?: ReadonlyMap<number, string | undefined>) =>
 		unlinkedOccurrences({
@@ -500,21 +565,33 @@ const checkScroll = Effect.fnUntraced(function* (
 		);
 
 	let removed = 0;
-	for (const ref of judged.unlinked)
-		for (let attempt = 1; ; attempt++) {
-			const outcome = yield* removeOccurrence(store, ref);
-			if (outcome === "Removed") {
-				removed++;
-				break;
-			}
-			if (attempt >= MAX_COMMIT_ATTEMPTS) {
-				logger.warn(
-					`[Classify] Could not remove the unlinked occurrence ${ref}: the dictionary kept changing`,
-				);
-				break;
-			}
-		}
-	return { _tag: "Done", removed };
+	for (const ref of judged.unlinked) {
+		const outcome = yield* store
+			.transact(
+				planUnlinkedRemoval(
+					deps,
+					scrollPath,
+					endedAt,
+					ref,
+					recordedUnder(stored, ref),
+				),
+				{ maxAttempts: MAX_COMMIT_ATTEMPTS },
+			)
+			.pipe(
+				Effect.catchTag("DictionaryTransactionConflict", () =>
+					Effect.sync(() => {
+						logger.warn(
+							`[Classify] Could not remove the unlinked occurrence ${ref}: the dictionary kept changing`,
+						);
+						return "Skipped" as const;
+					}),
+				),
+			);
+		if (outcome === "Removed") removed++;
+		else if (outcome !== "Skipped")
+			return { _tag: "Done", again: true, removed };
+	}
+	return { _tag: "Done", again: false, removed };
 });
 
 type Watched = {
@@ -627,9 +704,7 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 		const checked = await run(
 			deps.store.pipe(
 				Effect.flatMap((store) =>
-					exclusive(store)(
-						checkScroll(deps, store, path, entry.sweep?.settled),
-					),
+					checkScroll(deps, store, path, entry.sweep?.settled),
 				),
 			),
 		);
@@ -647,7 +722,8 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 					removedNotice(checked.removed, scrollBasenameOf(path)),
 				);
 		}
-		if (entry.again) return schedule(path, entry);
+		if (entry.again || (checked?._tag === "Done" && checked.again))
+			return schedule(path, entry);
 		settle(path);
 	};
 
