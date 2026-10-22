@@ -149,9 +149,10 @@ describe("battery packages linked from texteater", () => {
 
 	it("bundles the batteries from source with the plugin's effect and zod", async () => {
 		// `build:root` runs the live-build guard first; take the bundle step.
-		const buildRoot =
-			(pluginManifest.scripts?.["build:root"] ?? "").split(" && ").at(-1) ??
-			"";
+		const buildRoot = (pluginManifest.scripts?.["build:root"] ?? "")
+			.split(" && ")
+			.find((step) => step.startsWith("bun build "));
+		if (!buildRoot) throw new Error("build:root has no `bun build` step");
 		const outdir = mkdtempSync(path.join(tmpdir(), "battery-bundle-"));
 		try {
 			const metafile = path.join(outdir, "meta.json");
