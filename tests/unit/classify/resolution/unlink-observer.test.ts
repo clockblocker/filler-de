@@ -89,6 +89,7 @@ function observerOver(options: {
 	readonly blockedBy?: () => string | undefined;
 	/** When the Scroll was last written; after every note unless given. */
 	readonly scrollModifiedAt?: () => number;
+	readonly sweepQuietMs?: number;
 }) {
 	const notices: string[] = [];
 	const reads: string[] = [];
@@ -99,6 +100,7 @@ function observerOver(options: {
 		cache: options.cache ?? memorySegmentationCache(),
 		notify: (message) => notices.push(message),
 		quietMs: 0,
+		...(options.sweepQuietMs === undefined ? {} : { sweepQuietMs: options.sweepQuietMs }),
 		scrolls: {
 			exists: (path) =>
 				Effect.sync(() => options.vault.content(path) !== undefined),
@@ -580,11 +582,65 @@ describe("unlink observer", () => {
 			expect(await refsOf(harness.store, see)).toHaveLength(1);
 			expect(notices).toEqual(["✓ Removed 1 occurrence you unlinked in Story"]);
 		});
-			it("judges every Scroll by the notes as they were before the sweep wrote", async () => {
+		it("leaves a Scroll that links none of its occurrences alone, as another file of its name", async () => {
+			const harness = await classified();
+			harness.scroll.content = content;
+			const { edit, notices, sweep } = observerOver({
+				scroll: () => harness.scroll.content,
+				store: harness.store,
+				vault: harness.vault,
+			});
+			await sweep();
+			expect(await refsOf(harness.store, see)).toHaveLength(2);
+			expect(notices).toEqual([]);
+			// An edit the plugin saw is judged in full.
+			await edit(() => undefined);
+			expect(await refsOf(harness.store, see)).toHaveLength(0);
+		});
+
+		it("leaves an occurrence whose block is gone alone", async () => {
+			const harness = await classified();
+			harness.scroll.content = `Der ${link} ist tief. ^0\n`;
+			const { edit, notices, sweep } = observerOver({
+				scroll: () => harness.scroll.content,
+				store: harness.store,
+				vault: harness.vault,
+			});
+			await sweep();
+			expect(await refsOf(harness.store, see)).toHaveLength(2);
+			expect(notices).toEqual([]);
+			await edit(() => undefined);
+			expect(await refsOf(harness.store, see)).toHaveLength(1);
+		});
+
+		it("waits for the vault to be quiet before its checks", async () => {
+			const harness = await classified();
+			unlinkOffline(harness);
+			const { observer } = observerOver({
+				scroll: () => harness.scroll.content,
+				store: harness.store,
+				sweepQuietMs: 150,
+				vault: harness.vault,
+			});
+			observer.sweep();
+			// Sync writes a note elsewhere.
+			observer.modified(["Worter/elsewhere.md"]);
+			await Bun.sleep(50);
+			expect(await refsOf(harness.store, see)).toHaveLength(2);
+			await observer.whenIdle();
+			expect(await refsOf(harness.store, see)).toHaveLength(1);
+		});
+
+		it("judges every Scroll by the notes as they were before the sweep wrote, and tells it in one notice", async () => {
 			const { store, vault } = await openStore();
 			await seed(store, [createLemma(see), createReading(readingEntry(lake))]);
 			const surface = attestationOf(see, "See", ["See"], NOUN_EVIDENCE).surface;
-			for (const ref of ["![[Story#^0|^00000000]]", "![[Tale#^0|^11111111]]"]) {
+			for (const ref of [
+				"![[Story#^0|^00000000]]",
+				"![[Story#^1|^22222222]]",
+				"![[Tale#^0|^11111111]]",
+				"![[Tale#^1|^33333333]]",
+			]) {
 				const request = { link: { reading: lake, ref, surfaceId: makeSurfaceId("de", surface) }, surface };
 				const context = await run(
 					store.loadReadingEntryContext(planner.contextRequest({ intent: "recordOccurrence", request })),
@@ -594,10 +650,10 @@ describe("unlink observer", () => {
 				if (outcome.status !== "planned") throw new Error(JSON.stringify(outcome));
 				await run(store.commitChanges(outcome.plan));
 			}
-			// Both Scrolls lost their link to the lake while the plugin was off.
+			// Both Scrolls lost one link to the lake while the plugin was off.
 			const scrolls: Record<string, string> = {
-				"Library/Story.md": "Der See ist tief. ^0\n",
-				"Library/Tale.md": "Der See ist kalt. ^0\n",
+				"Library/Story.md": `Der See ist tief. ^0\n\nDer ${link} ist klar. ^1\n`,
+				"Library/Tale.md": `Der See ist kalt. ^0\n\nDer ${link} ist still. ^1\n`,
 			};
 			// After every note was written, and before the sweep's writes.
 			const editedAt = Math.max(...[...vault.files.values()].map(({ mtime }) => mtime)) + 0.5;
@@ -622,11 +678,11 @@ describe("unlink observer", () => {
 			observer.sweep();
 			await observer.whenIdle();
 			// Story's removal rewrote the lake's note; Tale's ref went too.
-			expect(await run(store.lemmaNote(see))).toBeUndefined();
-			expect(notices).toEqual([
-				"✓ Removed 1 occurrence you unlinked in Story",
-				"✓ Removed 1 occurrence you unlinked in Tale",
+			expect(await refsOf(store, see)).toEqual([
+				"![[Story#^1|^22222222]]",
+				"![[Tale#^1|^33333333]]",
 			]);
+			expect(notices).toEqual(["✓ Removed 2 occurrences you unlinked in 2 Scrolls"]);
 		});
 	});
 });
