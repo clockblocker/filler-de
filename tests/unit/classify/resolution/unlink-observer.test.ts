@@ -124,6 +124,8 @@ function observerOver(options: {
 	/** When the Scroll was last written; after every note unless given. */
 	readonly scrollModifiedAt?: () => number;
 	readonly sweepQuietMs?: number;
+	/** Reads Scrolls from the vault instead of `scroll`, as after a rename. */
+	readonly readFromVault?: boolean;
 }) {
 	const notices: string[] = [];
 	const reads: string[] = [];
@@ -145,6 +147,7 @@ function observerOver(options: {
 			read: (path) =>
 				Effect.sync(() => {
 					reads.push(path);
+					if (options.readFromVault) return options.vault.content(path);
 					return path === SCROLL ? options.scroll() : undefined;
 				}),
 			resolve: resolveAmong(() => [...options.vault.markdownPaths(), SCROLL]),
@@ -370,6 +373,89 @@ describe("unlink observer", () => {
 			expect(await refsOf(harness.store, see)).toHaveLength(2);
 			expect(notices).toEqual([]);
 		});
+	});
+
+	it("stays quiet while its Scroll is renamed, and judges it under its new name once the refs follow (#99)", async () => {
+		const content = "Der See ist tief. ^0\n\nDer See ist kalt. ^1\n";
+		const { cache, harness } = await classifiedSee(content, [
+			"Der See ist tief.",
+			"Der See ist kalt.",
+		]);
+		const TALE = "Library/Tale.md";
+		const { vault } = harness;
+		vault.silentWrite(SCROLL, harness.scroll.content);
+		const { notices, observer } = observerOver({
+			cache,
+			readFromVault: true,
+			scroll: () => vault.content(SCROLL) ?? "",
+			store: harness.store,
+			vault,
+		});
+		const link = linkTo(notePath(lake), "See");
+
+		// Obsidian moved the Scroll; the store has not heard yet, and the
+		// user already edited it under its new name.
+		vault.silentRename(SCROLL, TALE);
+		vault.silentWrite(
+			TALE,
+			(vault.content(TALE) ?? "").replace(`Der ${link} ist kalt.`, "Der See ist kalt."),
+		);
+		observer.modified([SCROLL, TALE, notePath(lake)]);
+		await observer.whenIdle();
+		expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 13))).toEqual([
+			"![[Story#^0|^",
+			"![[Story#^1|^",
+		]);
+		expect(notices).toEqual([]);
+
+		// The store hears the rename: the refs follow the Scroll, and the
+		// next check judges it by them.
+		await vault.announceRenames([[SCROLL, TALE]]);
+		expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 12))).toEqual([
+			"![[Tale#^0|^",
+			"![[Tale#^1|^",
+		]);
+		observer.modified([TALE]);
+		await observer.whenIdle();
+		expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 12))).toEqual([
+			"![[Tale#^0|^",
+		]);
+		expect(notices).toEqual(["✓ Removed 1 occurrence you unlinked in Tale"]);
+	});
+
+	it("judges a Scroll its refs name by path, as the store names a renamed one whose basename another note took", async () => {
+		const content = "Der See ist tief. ^0\n\nDer See ist kalt. ^1\n";
+		const { cache, harness } = await classifiedSee(content, [
+			"Der See ist tief.",
+			"Der See ist kalt.",
+		]);
+		const TALE = "Library/Tale.md";
+		const { vault } = harness;
+		vault.silentWrite(SCROLL, harness.scroll.content);
+		vault.silentWrite("Archive/Tale.md", "Another Tale");
+		const { notices, observer } = observerOver({
+			cache,
+			readFromVault: true,
+			scroll: () => vault.content(SCROLL) ?? "",
+			store: harness.store,
+			vault,
+		});
+		await vault.userRename(SCROLL, TALE);
+		expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 20))).toEqual([
+			"![[Library/Tale#^0|^",
+			"![[Library/Tale#^1|^",
+		]);
+		const link = linkTo(notePath(lake), "See");
+		vault.silentWrite(
+			TALE,
+			(vault.content(TALE) ?? "").replace(`Der ${link} ist kalt.`, "Der See ist kalt."),
+		);
+		observer.modified([TALE]);
+		await observer.whenIdle();
+		expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 20))).toEqual([
+			"![[Library/Tale#^0|^",
+		]);
+		expect(notices).toEqual(["✓ Removed 1 occurrence you unlinked in Tale"]);
 	});
 
 	it("waits for Sync to stop bringing dictionary notes before it judges, so the Scroll catches up first", async () => {

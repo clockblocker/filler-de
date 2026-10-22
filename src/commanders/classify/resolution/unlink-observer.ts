@@ -28,9 +28,10 @@
  *   reset holds Classify, or the ref's recorded Readings changed since the
  *   check read them. The check then runs again, so no run commits between
  *   the judgement and its removals.
- * - **The ref's Scroll.** Refs name a Scroll by basename; they count only
- *   when Obsidian resolves that basename, from their Reading note, to the
- *   modified file.
+ * - **The ref's Scroll.** Refs name a Scroll by its basename, or by its
+ *   path where a rename left the basename to another note (#99); they
+ *   count only when Obsidian resolves that name, from their Reading note,
+ *   to the modified file.
  * - **The same Scroll.** Block IDs run `^0`, `^1`… in every classified
  *   file, so another file that took the Scroll's name, or one that replaced
  *   it, would hold the refs' blocks too. A check judges a file in full only
@@ -85,6 +86,8 @@ import type {
 	Transaction,
 } from "@textfresser/dictionary";
 import {
+	ATTESTATION_REF_START,
+	attestationRefPrefix,
 	parseNotePath,
 	pathCollisionKey,
 	WORTER_FOLDER,
@@ -110,6 +113,7 @@ import {
 	occurrenceKeyOf,
 	parseAttestationRef,
 	scrollBasenameOf,
+	scrollLinkpathOf,
 	sourceBlocksOf,
 } from "./scroll-links";
 import {
@@ -126,9 +130,6 @@ const UNLINK_QUIET_MS = 5_000;
 
 /** How many quiet periods the vault stays unmodified before the sweep's checks run. */
 const SWEEP_QUIET_PERIODS = 3;
-
-/** What every Attestation Ref starts with, whichever Scroll it names. */
-const ATTESTATION_REF_START = "![[";
 
 /** The part of the dictionary store the observer reads and removes through. */
 export type UnlinkStore = Pick<
@@ -437,14 +438,11 @@ const scrollsWithRefs = Effect.fnUntraced(function* (
 		const parsed = parseAttestationRef(ref);
 		const location = yield* store.readingLocation(reading);
 		if (!parsed || !location) continue;
-		const key = `${parsed.scrollBasename}\u0000${location.path}`;
+		const key = `${parsed.linkpath}\u0000${location.path}`;
 		if (!resolved.has(key))
 			resolved.set(
 				key,
-				yield* deps.scrolls.resolve(
-					parsed.scrollBasename,
-					location.path,
-				),
+				yield* deps.scrolls.resolve(parsed.linkpath, location.path),
 			);
 		const scrollPath = resolved.get(key);
 		if (scrollPath !== undefined)
@@ -484,6 +482,23 @@ const sweptInScroll = (
 		: [];
 
 /**
+ * The stored links whose refs name the Scroll at `scrollPath`, by its
+ * basename or by its path.
+ */
+const refsInto = Effect.fnUntraced(function* (
+	store: UnlinkStore,
+	scrollPath: string,
+) {
+	const byName = attestationRefPrefixOf(scrollPath);
+	const byPath = attestationRefPrefix(scrollLinkpathOf(scrollPath));
+	const links = [...(yield* store.attestationLinksWithRefPrefix(byName))];
+	// A Scroll at the vault root has one name for both.
+	if (byPath !== byName)
+		links.push(...(yield* store.attestationLinksWithRefPrefix(byPath)));
+	return links;
+});
+
+/**
  * Checks one Scroll and removes the occurrences it no longer links, once
  * the file proves to be their Scroll. A check the sweep asked for, given
  * the occurrences it settled, judges only those `sweptInScroll` keeps.
@@ -497,27 +512,30 @@ const checkScroll = Effect.fnUntraced(function* (
 	if (deps.activity.busy(scrollPath)) return { _tag: "Busy" };
 	const endedAt = deps.activity.endedAt(scrollPath);
 	const nothing: Checked = { _tag: "Done", again: false, removed: 0 };
-	const stored = yield* store.attestationLinksWithRefPrefix(
-		attestationRefPrefixOf(scrollPath),
-	);
+	const stored = yield* refsInto(store, scrollPath);
 	if (stored.length === 0) return nothing;
 	const content = yield* deps.scrolls.read(scrollPath);
 	if (content === undefined) return nothing;
-	const basename = scrollBasenameOf(scrollPath);
+	const names = new Set([
+		scrollBasenameOf(scrollPath),
+		scrollLinkpathOf(scrollPath),
+	]);
 
 	let recorded: RecordedOccurrence[] = [];
 	const resolvesHere = new Map<string, boolean>();
 	for (const { reading, ref } of stored) {
 		const parsed = parseAttestationRef(ref);
 		const location = yield* store.readingLocation(reading);
-		if (!parsed || parsed.scrollBasename !== basename || !location)
-			continue;
-		let here = resolvesHere.get(location.path);
+		if (!parsed || !names.has(parsed.linkpath) || !location) continue;
+		const key = `${parsed.linkpath}\u0000${location.path}`;
+		let here = resolvesHere.get(key);
 		if (here === undefined) {
 			here =
-				(yield* deps.scrolls.resolve(basename, location.path)) ===
-				scrollPath;
-			resolvesHere.set(location.path, here);
+				(yield* deps.scrolls.resolve(
+					parsed.linkpath,
+					location.path,
+				)) === scrollPath;
+			resolvesHere.set(key, here);
 		}
 		if (here)
 			recorded.push({
@@ -739,11 +757,7 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 		const entry = watch(path, undefined);
 		const holdsRefs = await run(
 			deps.store.pipe(
-				Effect.flatMap((store) =>
-					store.attestationLinksWithRefPrefix(
-						attestationRefPrefixOf(path),
-					),
-				),
+				Effect.flatMap((store) => refsInto(store, path)),
 				Effect.map((links) => links.length > 0),
 			),
 		);

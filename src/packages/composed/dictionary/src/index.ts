@@ -2,6 +2,7 @@ export { CrossroadNoteMetadata } from "./crossroad";
 export {
 	type DictionaryCommitError,
 	DictionaryPathOccupiedError,
+	DictionaryRefRewriteError,
 	DictionaryRequestError,
 	DictionaryRoundTripError,
 	DictionaryScanError,

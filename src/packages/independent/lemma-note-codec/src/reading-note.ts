@@ -1,10 +1,12 @@
 import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
+import { type RetargetedRefLine, retargetedRefLines } from "./attestation-ref";
 import {
 	type BodySegment,
 	BodyWriter,
 	freeformOf,
+	type RenderingSeal,
 	readBody,
 	renderingLines,
 	trimBlankLines,
@@ -63,6 +65,15 @@ export const NOTE_PLACEHOLDER = "*You can write here*";
 export type ReadingNoteDocument = {
 	readonly metadata: ReadingNoteMetadata | undefined;
 	readonly segments: readonly BodySegment[];
+	/**
+	 * The refs Deine Kontexte shows by another link path, as Obsidian's link
+	 * updater rewrote them when their Scroll moved; absent when it shows
+	 * every ref as stored. Their lines still count as the rendering.
+	 */
+	readonly retargeted?: readonly {
+		readonly ref: string;
+		readonly linkpath: string;
+	}[];
 };
 
 export type ReadingNoteParse<L extends Dumling.Language> = {
@@ -84,12 +95,72 @@ export function parseReadingNote<L extends Dumling.Language>(
 			data: { issues: missingMetadata(body, "Reading"), ok: false },
 			document: { metadata, segments: readBody(body, []) },
 		};
-	const seals = ReadingNoteMetadataSchema.safeParse(metadata).success
-		? metadata.rendering
-		: [];
+	const valid = ReadingNoteMetadataSchema.safeParse(metadata).success;
+	const seals = valid ? metadata.rendering : [];
+	const segments = readBody(body, seals);
+	const retargeted = valid
+		? withRetargetedRefs(
+				body,
+				seals,
+				segments,
+				(metadata.attestationLinks ?? []).map(({ ref }) => ref),
+			)
+		: undefined;
 	return {
 		data: readingNoteDataOf(metadata, options),
-		document: { metadata, segments: readBody(body, seals) },
+		document: {
+			metadata,
+			...(retargeted ?? { segments }),
+		},
+	};
+}
+
+/** The body's lines with these retargeted lines put back to their stored refs. */
+function restored(
+	lines: readonly string[],
+	retargeted: readonly RetargetedRefLine[],
+): string {
+	const restoredLines = [...lines];
+	for (const { line, ref } of retargeted)
+		restoredLines[line] = lines[line]?.endsWith("\r") ? `${ref}\r` : ref;
+	return restoredLines.join("\n");
+}
+
+/**
+ * Deine Kontexte as Obsidian's link updater leaves it after a Scroll
+ * moved: each embed of a moved Scroll names it by its new link path, so
+ * the rendering no longer matches its seal and would read as freeform.
+ * When putting those lines back to the stored refs makes the rendering
+ * match, it is the rendering again, and only its own lines count as
+ * retargeted; a ref the user copied into their text stays theirs.
+ */
+function withRetargetedRefs(
+	body: string,
+	seals: readonly RenderingSeal[],
+	segments: readonly BodySegment[],
+	refs: readonly string[],
+): Pick<Required<ReadingNoteDocument>, "segments" | "retargeted"> | undefined {
+	const seal = seals.findIndex(({ block }) => block === "attestation");
+	if (
+		seal < 0 ||
+		segments.some(
+			(segment) => segment.type === "rendering" && segment.seal === seal,
+		)
+	)
+		return undefined;
+	const lines = body.split("\n");
+	const candidates = retargetedRefLines(lines, refs);
+	if (candidates.length === 0) return undefined;
+	const rendering = readBody(restored(lines, candidates), seals).find(
+		(segment) => segment.type === "rendering" && segment.seal === seal,
+	);
+	if (rendering === undefined) return undefined;
+	const inside = candidates.filter(
+		({ line }) => rendering.start <= line && line < rendering.end,
+	);
+	return {
+		retargeted: inside.map(({ linkpath, ref }) => ({ linkpath, ref })),
+		segments: readBody(restored(lines, inside), seals),
 	};
 }
 

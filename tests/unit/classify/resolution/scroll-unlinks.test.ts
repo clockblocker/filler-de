@@ -164,8 +164,8 @@ describe("parseAttestationRef", () => {
 	it("reads back what attestationRefOf writes, and nothing else", () => {
 		expect(parseAttestationRef(attestationRefOf("Library/Story-Library.md", "4", "1a2b3c4d"))).toEqual({
 			blockId: "4",
+			linkpath: "Story-Library",
 			occurrence: "1a2b3c4d",
-			scrollBasename: "Story-Library",
 		});
 		expect(parseAttestationRef("![[Story#^4|^]]")).toBeUndefined();
 	});

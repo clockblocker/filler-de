@@ -1,8 +1,10 @@
 import {
+	ATTESTATION_REF_START,
 	findPathCollisions,
 	lemmaNoteOwner,
 	NoteSerializeError,
 	type PathClaim,
+	parseAttestationRef,
 	readingNoteOwner,
 } from "@textfresser/lemma-note-codec";
 import {
@@ -53,6 +55,7 @@ import {
 import {
 	type DictionaryCommitError,
 	DictionaryPathOccupiedError,
+	DictionaryRefRewriteError,
 	DictionaryRequestError,
 	DictionaryRoundTripError,
 	DictionaryScanError,
@@ -118,6 +121,15 @@ import {
 	staleCrossroads,
 	staleTables,
 } from "./render";
+import {
+	planRefRewrite,
+	type RefRewrite,
+	retargetForRenames,
+	retargetForRepairs,
+	type ScrollLookup,
+	type ScrollRename,
+	scrollRenamesOf,
+} from "./scroll-refs";
 import { loadReevaluateShadowsContext } from "./slices";
 import { stageChanges } from "./stage-changes";
 import type { Transaction, TransactOptions } from "./transaction";
@@ -584,6 +596,9 @@ const DEFAULT_TRANSACT_ATTEMPTS = 4;
 
 /** How long `transact` waits, outside the lock, before it plans again after an `io` failure. */
 const TRANSIENT_RETRY_DELAY = "100 millis";
+
+/** Plans a ref rewrite tries: each may meet a Reading note Obsidian's link updater rewrote. */
+const REF_REWRITE_ATTEMPTS = 8;
 
 /** Lemmas whose tables one hold of the writer lock re-renders. */
 const TABLES_CHUNK = 32;
@@ -2024,12 +2039,53 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		);
 
 	/**
-	 * After a full read of `Worter/`: heal, let links converge, then
-	 * regenerate the Crossroad notes that are missing or stale.
+	 * Adopts the names Obsidian's link updater gave refs in Deine Kontexte
+	 * while the store was not listening (#99), as one commit under the lock
+	 * its caller holds: each ref whose stored name opens no note now and
+	 * whose shown name opens a Scroll. It never fails.
+	 */
+	const repairRetargetedRefs = Effect.gen(function* () {
+		const retargeted = index.allEntries().flatMap((entry) =>
+			entry.kind === "reading"
+				? (entry.retargeted ?? []).map((shown) => ({
+						...shown,
+						from: entry.path,
+					}))
+				: [],
+		);
+		if (retargeted.length === 0) return;
+		const retarget = yield* retargetForRepairs(retargeted, lookup);
+		if (retarget === undefined) return;
+		const step = planRefRewrite(viewOf(index, revision()), retarget);
+		if (step._tag !== "Commit") return;
+		const result = yield* Effect.result(commitUnderLock(step.plan));
+		if (result._tag === "Failure" || result.success.status !== "committed")
+			yield* Effect.logWarning(
+				"Dictionary could not adopt the names Obsidian gave refs into moved Scrolls",
+				result._tag === "Failure" ? result.failure : result.success,
+			);
+		else
+			yield* Effect.logInfo(
+				`Dictionary renamed ${step.value.rewritten} refs into Scrolls moved while it was not running`,
+			);
+	}).pipe(
+		Effect.catchCause((cause) =>
+			Effect.logError(
+				"Dictionary could not repair refs into moved Scrolls",
+				cause,
+			),
+		),
+	);
+
+	/**
+	 * After a full read of `Worter/`: heal, let links converge, regenerate
+	 * the Crossroad notes that are missing or stale, then adopt the names
+	 * Obsidian gave refs into Scrolls that moved meanwhile.
 	 */
 	const settle = heal().pipe(
 		Effect.andThen(Effect.suspend(() => converge())),
 		Effect.andThen(regenerateCrossroads()),
+		Effect.andThen(repairRetargetedRefs),
 	);
 
 	/**
@@ -2137,6 +2193,213 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				),
 			);
 
+	/** What one hold of the lock in `transact` ended with. */
+	type Attempted<A> =
+		| { readonly _tag: "Done"; readonly value: A }
+		| {
+				readonly _tag: "Conflict";
+				readonly reason: string;
+				readonly cause: unknown;
+				/** A write failed as `io`: pause before planning again. */
+				readonly transient?: true;
+		  };
+
+	/**
+	 * Plans and commits until a plan stops or commits, a commit meets a
+	 * change made outside the store, or the attempts run out, under one
+	 * hold of the lock its caller takes. Nothing else moves the revision
+	 * while the lock is held, so only an external change re-plans.
+	 */
+	const attemptUnderLock = <A, E>(
+		plan: (view: DictionaryView) => Result.Result<Transaction<A>, E>,
+		attempts: { used: number; readonly max: number; transient: boolean },
+	): Effect.Effect<Attempted<A>, E | DictionaryCommitError> =>
+		Effect.gen(function* () {
+			for (;;) {
+				attempts.used += 1;
+				if (stale) {
+					yield* rebuild();
+					yield* settle;
+				}
+				const planned = plan(viewOf(index, revision()));
+				if (Result.isFailure(planned))
+					return yield* Effect.fail(planned.failure);
+				const step = planned.success;
+				if (step._tag === "Stop")
+					return { _tag: "Done", value: step.value } as const;
+				if (step._tag === "Replan")
+					return {
+						_tag: "Conflict",
+						cause: step.reason,
+						reason: step.reason,
+					} as const;
+				if (step.issues !== undefined)
+					yield* Effect.logWarning(
+						"Dictionary plan worked around stored claims",
+						step.issues,
+					);
+				const committed = yield* Effect.result(
+					commitUnderLock(step.plan),
+				);
+				if (committed._tag === "Failure") {
+					const error = committed.failure;
+					if (
+						error._tag === "DictionaryWriteError" &&
+						error.externalChange
+					)
+						return {
+							_tag: "Conflict",
+							cause: error,
+							reason: error.message,
+						} as const;
+					// An I/O failure, such as a file another process held,
+					// may not recur: plan once more, after a pause.
+					if (
+						error._tag === "DictionaryWriteError" &&
+						error.transient &&
+						!attempts.transient &&
+						attempts.used < attempts.max
+					) {
+						attempts.transient = true;
+						return {
+							_tag: "Conflict",
+							cause: error,
+							reason: error.message,
+							transient: true,
+						} as const;
+					}
+					return yield* Effect.fail(error);
+				}
+				const result = committed.success;
+				if (result.status === "conflict")
+					return {
+						_tag: "Conflict",
+						cause: result,
+						reason: result.message ?? result.code,
+					} as const;
+				if (step._tag === "Commit")
+					return { _tag: "Done", value: step.value } as const;
+				if (attempts.used >= attempts.max)
+					return {
+						_tag: "Conflict",
+						cause: step.reason,
+						reason: step.reason,
+					} as const;
+			}
+		});
+
+	const transact = Effect.fn("dictionary.transact")(function* <A, E>(
+		plan: (view: DictionaryView) => Result.Result<Transaction<A>, E>,
+		options?: TransactOptions,
+	): Effect.fn.Return<
+		A,
+		E | DictionaryCommitError | DictionaryTransactionConflict
+	> {
+		const max = Math.max(
+			1,
+			options?.maxAttempts ?? DEFAULT_TRANSACT_ATTEMPTS,
+		);
+		const attempts = { max, transient: false, used: 0 };
+		for (;;) {
+			const attempted = yield* lock.withPermit(
+				attemptUnderLock(plan, attempts).pipe(Effect.ensuring(report)),
+			);
+			if (attempted._tag === "Done") return attempted.value;
+			if (attempts.used >= max)
+				return yield* new DictionaryTransactionConflict({
+					attempts: attempts.used,
+					cause: attempted.cause,
+					message: `The dictionary kept changing outside the store over ${attempts.used} plans: ${attempted.reason}`,
+					reason: attempted.reason,
+				});
+			// Released: let the events behind the change land before planning again.
+			if (attempted.transient) yield* Effect.sleep(TRANSIENT_RETRY_DELAY);
+			else yield* Effect.yieldNow;
+		}
+	});
+
+	/** How Obsidian resolves names, through VAM, from a dictionary note. */
+	const lookup: ScrollLookup<unknown> = {
+		named: (basename) =>
+			vault
+				.findByBasename(basename)
+				.pipe(Effect.map((paths) => paths.map(formatPath))),
+		resolve: (linkpath, from) =>
+			vault
+				.resolveLinkpathDest(linkpath, mdSplitPath(from))
+				.pipe(
+					Effect.map((found) =>
+						found === null ? undefined : formatPath(found),
+					),
+				),
+	};
+
+	/** The link paths stored refs name their Scrolls by, and a Reading note to resolve them from. */
+	const heldLinkpaths = () => {
+		const links = index.linksWithRefPrefix(ATTESTATION_REF_START);
+		const held = new Set<string>();
+		for (const { ref } of links) {
+			const parts = parseAttestationRef(ref);
+			if (parts) held.add(parts.linkpath);
+		}
+		let from: string | undefined;
+		for (const { reading } of links) {
+			from = index.readingLocation(readingKeyOf(reading))?.path;
+			if (from !== undefined) break;
+		}
+		return { from, held };
+	};
+
+	/** Waits for the Markdown modifications VAM heard so far; set once the store subscribed. */
+	let modificationsCaughtUp: Effect.Effect<void> = Effect.void;
+
+	/**
+	 * Rewrites the refs into renamed Scrolls (#99) in one transaction: from
+	 * any origin but the store's own, as VAM delivers them. Where each ref
+	 * goes is decided first, asking Obsidian how it resolves names
+	 * (`retargetForRenames`); the plan, under the lock, moves the refs the
+	 * index holds then. A rename heard twice moves nothing the second time.
+	 */
+	const rewriteScrollRefs = Effect.fn("dictionary.rewriteScrollRefs")(
+		function* (
+			renames: readonly ScrollRename[],
+		): Effect.fn.Return<RefRewrite, DictionaryRefRewriteError> {
+			const nothing: RefRewrite = { kept: [], rewritten: 0 };
+			const { from, held } = heldLinkpaths();
+			if (from === undefined) return nothing;
+			const failed = (what: string) => (cause: unknown) =>
+				new DictionaryRefRewriteError({
+					cause,
+					message: `Could not ${what} the refs into ${renames.map(({ from: path, to }) => `${path} → ${to}`).join(", ")}: ${message(cause)}`,
+				});
+			const { notes, retarget } = yield* retargetForRenames(
+				renames,
+				held,
+				from,
+				lookup,
+			).pipe(Effect.mapError(failed("place")));
+			if (notes.length > 0)
+				yield* Effect.logWarning(
+					"Dictionary left refs into a renamed Scroll as they were",
+					notes,
+				);
+			if (retarget === undefined) return nothing;
+			// Obsidian's link updater may have rewritten the Reading notes'
+			// Kontexte: their edits land first, so the plan meets no stale file.
+			yield* modificationsCaughtUp;
+			const outcome = yield* transact(
+				(view) => Result.succeed(planRefRewrite(view, retarget)),
+				{ maxAttempts: REF_REWRITE_ATTEMPTS },
+			).pipe(Effect.mapError(failed("rewrite")));
+			if (outcome.kept.length > 0)
+				yield* Effect.logWarning(
+					"Dictionary left refs into a renamed Scroll that would collide with others",
+					outcome.kept,
+				);
+			return outcome;
+		},
+	);
+
 	const onBulk = (event: BulkVaultEvent) => {
 		const paths: string[] = [];
 		const folders: string[] = [];
@@ -2172,14 +2435,27 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		const inside = (folder: string) =>
 			isUnder(folder, WORTER_SPLIT_PATH.basename) && !above(folder);
 		const whole = folders.some(above);
+		const renames = scrollRenamesOf(event);
+		const rewrite =
+			renames.length === 0
+				? Effect.void
+				: rewriteScrollRefs(renames).pipe(
+						Effect.catch((error) =>
+							Effect.logWarning(
+								"Dictionary could not rewrite the refs into a renamed Scroll",
+								error,
+							),
+						),
+						Effect.asVoid,
+					);
 		if (!(whole || paths.some(inScope) || folders.some(inside)))
-			return Effect.void;
+			return rewrite;
 		return guarded(
 			"event handling",
 			whole
 				? rebuild().pipe(Effect.andThen(settle))
 				: refresh(paths, folders.filter(inside)),
-		);
+		).pipe(Effect.andThen(rewrite));
 	};
 
 	const onModify = (event: BulkMdModifyEvent) =>
@@ -2642,6 +2918,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			DICTIONARY_EVENTS,
 		)
 		.pipe(Effect.mapError(scanError("observe edits in")));
+	modificationsCaughtUp = Effect.ignore(modifySubscription.caughtUp);
 	const close = Effect.all(
 		[bulkSubscription.close, modifySubscription.close].map((closing) =>
 			Effect.ignore(closing),
@@ -2670,131 +2947,6 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 
 	/** Reads against the index version published when they run. */
 	const live = () => viewOf(index, revision());
-
-	/** What one hold of the lock in `transact` ended with. */
-	type Attempted<A> =
-		| { readonly _tag: "Done"; readonly value: A }
-		| {
-				readonly _tag: "Conflict";
-				readonly reason: string;
-				readonly cause: unknown;
-				/** A write failed as `io`: pause before planning again. */
-				readonly transient?: true;
-		  };
-
-	/**
-	 * Plans and commits until a plan stops or commits, a commit meets a
-	 * change made outside the store, or the attempts run out, under one
-	 * hold of the lock its caller takes. Nothing else moves the revision
-	 * while the lock is held, so only an external change re-plans.
-	 */
-	const attemptUnderLock = <A, E>(
-		plan: (view: DictionaryView) => Result.Result<Transaction<A>, E>,
-		attempts: { used: number; readonly max: number; transient: boolean },
-	): Effect.Effect<Attempted<A>, E | DictionaryCommitError> =>
-		Effect.gen(function* () {
-			for (;;) {
-				attempts.used += 1;
-				if (stale) {
-					yield* rebuild();
-					yield* settle;
-				}
-				const planned = plan(viewOf(index, revision()));
-				if (Result.isFailure(planned))
-					return yield* Effect.fail(planned.failure);
-				const step = planned.success;
-				if (step._tag === "Stop")
-					return { _tag: "Done", value: step.value } as const;
-				if (step._tag === "Replan")
-					return {
-						_tag: "Conflict",
-						cause: step.reason,
-						reason: step.reason,
-					} as const;
-				if (step.issues !== undefined)
-					yield* Effect.logWarning(
-						"Dictionary plan worked around stored claims",
-						step.issues,
-					);
-				const committed = yield* Effect.result(
-					commitUnderLock(step.plan),
-				);
-				if (committed._tag === "Failure") {
-					const error = committed.failure;
-					if (
-						error._tag === "DictionaryWriteError" &&
-						error.externalChange
-					)
-						return {
-							_tag: "Conflict",
-							cause: error,
-							reason: error.message,
-						} as const;
-					// An I/O failure, such as a file another process held,
-					// may not recur: plan once more, after a pause.
-					if (
-						error._tag === "DictionaryWriteError" &&
-						error.transient &&
-						!attempts.transient &&
-						attempts.used < attempts.max
-					) {
-						attempts.transient = true;
-						return {
-							_tag: "Conflict",
-							cause: error,
-							reason: error.message,
-							transient: true,
-						} as const;
-					}
-					return yield* Effect.fail(error);
-				}
-				const result = committed.success;
-				if (result.status === "conflict")
-					return {
-						_tag: "Conflict",
-						cause: result,
-						reason: result.message ?? result.code,
-					} as const;
-				if (step._tag === "Commit")
-					return { _tag: "Done", value: step.value } as const;
-				if (attempts.used >= attempts.max)
-					return {
-						_tag: "Conflict",
-						cause: step.reason,
-						reason: step.reason,
-					} as const;
-			}
-		});
-
-	const transact = Effect.fn("dictionary.transact")(function* <A, E>(
-		plan: (view: DictionaryView) => Result.Result<Transaction<A>, E>,
-		options?: TransactOptions,
-	): Effect.fn.Return<
-		A,
-		E | DictionaryCommitError | DictionaryTransactionConflict
-	> {
-		const max = Math.max(
-			1,
-			options?.maxAttempts ?? DEFAULT_TRANSACT_ATTEMPTS,
-		);
-		const attempts = { max, transient: false, used: 0 };
-		for (;;) {
-			const attempted = yield* lock.withPermit(
-				attemptUnderLock(plan, attempts).pipe(Effect.ensuring(report)),
-			);
-			if (attempted._tag === "Done") return attempted.value;
-			if (attempts.used >= max)
-				return yield* new DictionaryTransactionConflict({
-					attempts: attempts.used,
-					cause: attempted.cause,
-					message: `The dictionary kept changing outside the store over ${attempts.used} plans: ${attempted.reason}`,
-					reason: attempted.reason,
-				});
-			// Released: let the events behind the change land before planning again.
-			if (attempted.transient) yield* Effect.sleep(TRANSIENT_RETRY_DELAY);
-			else yield* Effect.yieldNow;
-		}
-	});
 
 	return {
 		appendFreeform: (request) =>
