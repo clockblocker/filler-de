@@ -70,3 +70,5 @@ handle(payload, context): HandleResult
 | Behavior routing | `src/managers/obsidian/behavior-manager/` |
 | Event detection | `src/packages/composed/obsidian-event-layer/` |
 | Plugin wiring | `src/main.ts` |
+| Plugin lifecycle (launch, Librarian restarts, unload) | `src/lifecycle/` |
+| Palette commands, settings reactions | `src/plugin/` |
