@@ -7,6 +7,7 @@
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	type BulkVaultEvent,
+	EXTERNAL_ORIGIN,
 	SplitPathKind,
 	type SplitPathToMdFile,
 	type VaultAction,
@@ -117,6 +118,7 @@ function makeVault(initial: Record<string, string>) {
 					events: [
 						{
 							kind: VaultEventKind.FileCreated,
+							origin: EXTERNAL_ORIGIN,
 							splitPath: {
 								...scrollPath("New-C1-P2"),
 							},

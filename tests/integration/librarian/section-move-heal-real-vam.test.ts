@@ -8,8 +8,10 @@ import { afterEach, beforeEach, describe, expect, it, type spyOn } from "bun:tes
 import {
 	type BulkVaultEvent,
 	createVaultActionManager,
+	type SplitPathToFolder,
 	splitPathCodec,
 	type VaultAction,
+	VaultActionKind,
 	type VaultEvent,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
@@ -31,6 +33,12 @@ afterEach(() => {
 	settingsSpy.mockRestore();
 });
 
+function folderAt(path: string): SplitPathToFolder {
+	const splitPath = splitPathCodec.parse(path);
+	if (splitPath.kind !== "Folder") throw new Error(`Not a folder: ${path}`);
+	return splitPath;
+}
+
 function describeRoot(event: VaultEvent): string {
 	return "from" in event
 		? `${event.kind} ${splitPathCodec.format(event.from)} -> ${splitPathCodec.format(event.to)}`
@@ -45,21 +53,25 @@ async function startLibrarian(vault: ReturnType<typeof makeObsidianVault>) {
 	const stops: LibrarianStop[] = [];
 	const vam: LibrarianVam = {
 		cd: (...args) => manager.cd(...args),
-		dispatch: (actions) => {
+		dispatch: (actions, caller) => {
 			batches.push([...actions]);
-			return manager.dispatch(actions);
+			return manager.dispatch(actions, caller);
 		},
 		getActiveEditorContext: (...args) =>
 			manager.getActiveEditorContext(...args),
 		getOpenedContent: (...args) => manager.getOpenedContent(...args),
 		mdPwd: (...args) => manager.mdPwd(...args),
-		scanAndSubscribe: (folder, { onBulk }) =>
-			manager.scanAndSubscribe(folder, {
-				onBulk: (bulk) => {
-					bulks.push(bulk);
-					return onBulk ? onBulk(bulk) : Effect.void;
+		scanAndSubscribe: (folder, { onBulk }, options) =>
+			manager.scanAndSubscribe(
+				folder,
+				{
+					onBulk: (bulk) => {
+						bulks.push(bulk);
+						return onBulk ? onBulk(bulk) : Effect.void;
+					},
 				},
-			}),
+				options,
+			),
 	};
 	const librarian = new Librarian(vam, {
 		onStopped: (stop) => void stops.push(stop),
@@ -71,6 +83,7 @@ async function startLibrarian(vault: ReturnType<typeof makeObsidianVault>) {
 	return {
 		batches,
 		bulks,
+		manager,
 		/** Forgets what startup sent and received. */
 		reset: () => {
 			bulks.length = 0;
@@ -147,6 +160,51 @@ describe("Librarian section-move heal over real VAM", () => {
 			}
 		},
 		// Settling waits out the Self Event TTL of paths Obsidian never reports.
+		30_000,
+	);
+
+	it(
+		"never hears, so never heals, a rename another VAM caller makes",
+		async () => {
+			const vault = makeObsidianVault({
+				"Library/Recipe/Pie/Ingredients.md": "# Ingredients",
+				"Library/Recipe/Pie/Steps.md": "# Steps",
+			});
+			const librarian = await startLibrarian(vault);
+			try {
+				librarian.reset();
+				const before = vault.files();
+
+				// The same rename as a user's section move, but dispatched:
+				// the Librarian subscribes to external events only.
+				await Effect.runPromise(
+					librarian.manager.dispatch(
+						[
+							{
+								kind: VaultActionKind.RenameFolder,
+								payload: {
+									from: folderAt("Library/Recipe/Pie"),
+									to: folderAt("Library/Recipe/Fish-Pie"),
+									updateLinks: false,
+								},
+							},
+						],
+						{ caller: "reset" },
+					),
+				);
+				await librarian.settle();
+
+				expect(librarian.bulks).toEqual([]);
+				expect(librarian.batches).toEqual([]);
+				expect(vault.files()).toEqual(
+					before.map((path) =>
+						path.replace("Library/Recipe/Pie/", "Library/Recipe/Fish-Pie/"),
+					),
+				);
+			} finally {
+				await librarian.stop();
+			}
+		},
 		30_000,
 	);
 });

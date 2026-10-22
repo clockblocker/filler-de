@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	type BulkVaultEvent,
+	EXTERNAL_ORIGIN,
 	MD,
 	SplitPathKind,
 	type SplitPathToMdFile,
@@ -139,6 +140,7 @@ function makeHarness(
 function createdBulk(basename: string): BulkVaultEvent {
 	const created = {
 		kind: VaultEventKind.FileCreated,
+		origin: EXTERNAL_ORIGIN,
 		splitPath: mdFile(basename),
 	} as const;
 	return {

@@ -10,7 +10,7 @@ export function dispatchActions(
 	vam: VaultActionManager,
 	actions: readonly VaultAction[],
 ): Effect.Effect<void, CommandError> {
-	return vam.dispatch(actions).pipe(
+	return vam.dispatch(actions, { caller: "textfresser" }).pipe(
 		Effect.mapError(
 			(error): CommandError => ({
 				kind: CommandErrorKind.DispatchFailed,

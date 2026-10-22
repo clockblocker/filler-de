@@ -4,15 +4,26 @@ import {
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
 	splitPathCodec,
+	type VamSubscribeOptions,
 	type VaultActionManager,
 	VaultPath,
 } from "@textfresser/vault-action-manager";
 
+/** The store's name in VAM, for its dispatches and its subscriptions. */
+export const DICTIONARY_CALLER = "dictionary";
+
 /**
- * The part of VAM the store uses. The store is the only writer under
- * `Worter/`: VAM suppresses its own writes as Self Events, so a write that
- * bypassed the store would be invisible to the index.
+ * What the store hears: every change under `Worter/` but its own writes,
+ * so other callers (the reset, the metadata migration, Textfresser's
+ * commands) may write there and the index follows. Handling is
+ * idempotent: an event names paths, and the store reads them again.
  */
+export const DICTIONARY_EVENTS: VamSubscribeOptions = {
+	caller: DICTIONARY_CALLER,
+	from: "allButMine",
+};
+
+/** The part of VAM the store uses. */
 export type DictionaryVault = Pick<
 	VaultActionManager,
 	| "dispatchStopOnFirstFailure"

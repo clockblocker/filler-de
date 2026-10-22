@@ -17,8 +17,18 @@ import { formatCause } from "../../diagnostics/format-cause";
 import { VamSubscriptionError } from "../../effect/errors";
 import { splitPathFromAbstractInternal } from "../../helpers/pathfinder/path-codecs/split-and-abstract/split-path-from-abstract";
 import { logger } from "../../internal/logger";
+import {
+	EXTERNAL_ORIGIN,
+	type OriginFilter,
+	originFilter,
+	type VaultEventOrigin,
+} from "../../types/event-origin";
 import { decodeFileStatOption } from "../../types/file-stat";
-import { type VaultEvent, VaultEventKind } from "../../types/vault-event";
+import {
+	type ObservedVaultEvent,
+	type VaultEvent,
+	VaultEventKind,
+} from "../../types/vault-event";
 import {
 	type EventAccumulatorCommand,
 	type EventAccumulatorOptions,
@@ -33,10 +43,11 @@ import {
 	type ObservedCallback,
 	VaultCallbackSequence,
 } from "./callback-sequence";
+import type { LinkRewriteWindows } from "./link-rewrite-windows";
 import {
 	type BulkMdModifyEvent,
 	coalesceMdModifications,
-	type MdFileModification,
+	type MdFileChange,
 } from "./md-modify-event";
 import type { SelfEventTracker } from "./self-event-tracker";
 import {
@@ -56,8 +67,14 @@ type SubscriberBarrier = {
 	readonly remaining: Ref.Ref<number>;
 };
 
-/** A closed window, with the callbacks it holds and its message for every subscriber whose cursor precedes them all. */
+/**
+ * A closed window, with the callbacks it holds and its message for every
+ * subscriber whose cursor precedes them all and who takes every origin in
+ * it. `byFilter` holds the message for each other origin filter, built
+ * once by its first subscriber.
+ */
 type PublishedWindow<Ev, M> = {
+	readonly byFilter: Map<string, M>;
 	readonly shared: M;
 	readonly window: BulkWindow<ObservedCallback<Ev>>;
 };
@@ -74,6 +91,8 @@ type SubscriberState<M> = {
 	readonly cursor: { value: number };
 	/** Completes when delivery may begin; complete from the start unless gated. */
 	readonly delivering: Deferred.Deferred<void>;
+	/** The origins this subscriber receives. */
+	readonly filter: OriginFilter;
 	readonly handler: ObservationHandler<M>;
 	readonly id: number;
 	readonly pendingBarriers: Ref.Ref<ReadonlySet<SubscriberBarrier>>;
@@ -117,7 +136,8 @@ type ObservationSource<Ev, M> = {
 		runCallback: RunCallback,
 		sequence: VaultCallbackSequence,
 	) => Effect.Effect<void, VamSubscriptionError, Scope.Scope>;
-	readonly publish: (window: BulkWindow<Ev>) => M;
+	/** Builds the message of the window's callbacks, each with its origin. */
+	readonly publish: (window: BulkWindow<ObservedCallback<Ev>>) => M;
 };
 
 type VaultObservationOptions = Partial<EventAccumulatorOptions> & {
@@ -125,9 +145,16 @@ type VaultObservationOptions = Partial<EventAccumulatorOptions> & {
 	readonly sequence?: VaultCallbackSequence;
 };
 
+type MdModifyObservationOptions = VaultObservationOptions & {
+	/** Labels modifications inside a VAM rename's window `LinkUpdate`. */
+	readonly linkRewrites?: LinkRewriteWindows;
+};
+
 type SubscribeOptions = {
 	/** Deliver nothing until `start`; messages wait in the subscription meanwhile. */
 	readonly gated?: boolean;
+	/** The origins to deliver; VAM's own writes are left out by default. */
+	readonly filter?: OriginFilter;
 };
 
 export type VaultObservationSubscription<M> = {
@@ -137,6 +164,14 @@ export type VaultObservationSubscription<M> = {
 	 * it is. A message the channel did not build is answered unchanged.
 	 */
 	readonly afterCursor: (message: M) => M | null;
+	/**
+	 * Completes once the handler has run for every callback the channel
+	 * heard before the call, or skipped it as before its cursor or of an
+	 * origin it does not take. It waits for the open window's own
+	 * deadlines, never closes it early, and waits for a gated subscription
+	 * to start.
+	 */
+	readonly caughtUp: Effect.Effect<void>;
 	readonly close: Effect.Effect<void>;
 	/** Delivers from now on only callbacks numbered after `cursor`. */
 	readonly moveCursor: (cursor: number) => void;
@@ -228,16 +263,14 @@ export class VaultObservation<
 	)(function* (
 		app: App,
 		selfEvents: SelfEventTracker,
-		options: VaultObservationOptions = {},
-	): Effect.fn.Return<
-		VaultObservation<MdFileModification, BulkMdModifyEvent>
-	> {
+		options: MdModifyObservationOptions = {},
+	): Effect.fn.Return<VaultObservation<MdFileChange, BulkMdModifyEvent>> {
 		const core = yield* makeObservationCore<
-			MdFileModification,
+			MdFileChange,
 			BulkMdModifyEvent
 		>();
 		return new VaultObservation(
-			mdModifySource(app, selfEvents),
+			mdModifySource(app, selfEvents, options.linkRewrites),
 			options,
 			core,
 		);
@@ -253,7 +286,8 @@ export class VaultObservation<
 	/**
 	 * Subscribes `handler` to the windows published from now on. It receives
 	 * only callbacks numbered after its cursor, which starts at the latest
-	 * callback, so nothing Obsidian fired before the subscription reaches it.
+	 * callback, so nothing Obsidian fired before the subscription reaches it,
+	 * and only those of origins its filter takes.
 	 */
 	readonly subscribeEffect = Effect.fn("VaultObservation.subscribe")(
 		function* (
@@ -280,6 +314,7 @@ export class VaultObservation<
 			const state: SubscriberState<M> = {
 				cursor: { value: this.sequence.current },
 				delivering,
+				filter: options.filter ?? originFilter(),
 				handler,
 				id,
 				pendingBarriers,
@@ -311,6 +346,7 @@ export class VaultObservation<
 
 			return {
 				afterCursor: (message) => this.afterCursor(state, message),
+				caughtUp: this.caughtUpEffect(state),
 				close: this.closeSubscriptionEffect(id),
 				moveCursor: (cursor) => {
 					state.cursor.value = cursor;
@@ -473,45 +509,110 @@ export class VaultObservation<
 		yield* Ref.update(this.core.publishedWindows, (count) => count + 1);
 		yield* PubSub.publish(this.core.pubsub, {
 			_tag: "Bulk",
-			published: { shared, window },
+			published: { byFilter: new Map(), shared, window },
 		});
 	});
 
 	private buildMessage(window: BulkWindow<ObservedCallback<Ev>>): M {
-		const message = this.source.publish({
-			allObsidianEvents: window.allObsidianEvents.map(
-				({ event }) => event,
-			),
-			debug: window.debug,
-		});
+		const message = this.source.publish(window);
 		this.windowsByMessage.set(message, window);
 		return message;
 	}
 
 	/**
 	 * The window's message as one subscriber may receive it: only the
-	 * callbacks after its cursor, collapsed among themselves; `null` when
-	 * none is. Filtering precedes collapsing, so a rename chain that
-	 * straddles the cursor yields only its part after it.
+	 * callbacks after its cursor and of origins it takes, collapsed among
+	 * themselves; `null` when none is. Filtering precedes collapsing, so a
+	 * rename chain that straddles the cursor yields only its part after it,
+	 * and a chain of one caller's and another's renames only its part from
+	 * the origins taken.
 	 */
 	private messageAfter(
 		cursor: number,
+		filter: OriginFilter,
 		window: BulkWindow<ObservedCallback<Ev>>,
 		whole: M,
+		byFilter?: Map<string, M>,
 	): M | null {
 		const callbacks = window.allObsidianEvents;
+		const kept = callbacks.filter(
+			({ origin, seq }) => seq > cursor && filter.accepts(origin),
+		);
+		if (kept.length === callbacks.length) return whole;
+		if (kept.length === 0) return null;
+		const build = () =>
+			this.buildMessage({ ...window, allObsidianEvents: kept });
+		// Subscribers whose cursor precedes the window differ only by
+		// filter, so those with one filter share one message.
 		const first = callbacks[0];
-		if (first === undefined || first.seq > cursor) return whole;
-		const after = callbacks.filter(({ seq }) => seq > cursor);
-		if (after.length === 0) return null;
-		return this.buildMessage({ ...window, allObsidianEvents: after });
+		if (
+			byFilter === undefined ||
+			first === undefined ||
+			first.seq <= cursor
+		)
+			return build();
+		const cached = byFilter.get(filter.key);
+		if (cached !== undefined) return cached;
+		const message = build();
+		byFilter.set(filter.key, message);
+		return message;
 	}
 
 	private afterCursor(state: SubscriberState<M>, message: M): M | null {
 		const window = this.windowsByMessage.get(message);
 		if (!window) return message;
-		return this.messageAfter(state.cursor.value, window, message);
+		return this.messageAfter(
+			state.cursor.value,
+			state.filter,
+			window,
+			message,
+		);
 	}
+
+	/**
+	 * Waits until `state`'s handler is done with every callback queued
+	 * before the call: a barrier for it alone, published after the window
+	 * those callbacks close in.
+	 */
+	private readonly caughtUpEffect = Effect.fn("vam.observation.caughtUp")(
+		function* (
+			this: VaultObservation<Ev, M>,
+			state: SubscriberState<M>,
+		): Effect.fn.Return<void> {
+			const session = yield* Ref.get(this.core.session);
+			if (!session) return;
+			const barrier: SubscriberBarrier = {
+				completed: yield* Deferred.make<void>(),
+				remaining: yield* Ref.make(1),
+			};
+			yield* Ref.update(state.pendingBarriers, (barriers) =>
+				new Set(barriers).add(barrier),
+			);
+			// Added before this check, the barrier is released by closing;
+			// after it, here.
+			const subscribed = (yield* Ref.get(this.core.subscribers)).has(
+				state.id,
+			);
+			const release = this.releaseBarrierEffect(state, barrier);
+			if (!subscribed) return yield* release;
+			const offered = yield* Queue.offer(session.intake, {
+				_tag: "AfterWindow",
+				run: PubSub.publish(this.core.pubsub, {
+					_tag: "Barrier",
+					barrier,
+				}).pipe(
+					Effect.flatMap((published) =>
+						published ? Effect.void : release,
+					),
+				),
+			});
+			if (!offered) return yield* release;
+			yield* Effect.raceFirst(
+				Deferred.await(barrier.completed),
+				Deferred.await(session.closed),
+			);
+		},
+	);
 
 	private readonly publishSubscriberBarrierEffect = Effect.fn(
 		"VaultObservation.publishSubscriberBarrier",
@@ -563,8 +664,10 @@ export class VaultObservation<
 			// taken while it waited drops what that snapshot holds.
 			const bulk = this.messageAfter(
 				state.cursor.value,
+				state.filter,
 				message.published.window,
 				message.published.shared,
+				message.published.byFilter,
 			);
 			if (bulk === null) continue;
 
@@ -770,23 +873,32 @@ function bulkVaultEventSource(
 			runCallback: RunCallback,
 			sequence: VaultCallbackSequence,
 		): Effect.fn.Return<void, VamSubscriptionError, Scope.Scope> {
-			const offer = (seq: number, event: VaultEvent) =>
-				Queue.offer(intake, { _tag: "Event", event: { event, seq } });
-			const offerUnlessSelf = (
+			const offer = (
+				seq: number,
+				event: VaultEvent,
+				origin: VaultEventOrigin,
+			) =>
+				Queue.offer(intake, {
+					_tag: "Event",
+					event: { event, origin, seq },
+				});
+			// Every callback is offered with its origin; each subscription
+			// leaves out the origins it does not take.
+			const offerAttributed = (
 				path: string,
 				makeEvent: () => VaultEvent,
 			) => {
 				const seq = sequence.next();
 				runCallback(
 					Effect.gen(function* () {
-						if (yield* selfEvents.shouldIgnoreEffect(path)) return;
-						yield* offer(seq, makeEvent());
+						const origin = yield* selfEvents.attributeEffect(path);
+						yield* offer(seq, makeEvent(), origin);
 					}),
 				);
 			};
 
 			yield* acquireVaultListener(app, "create", (file) =>
-				offerUnlessSelf(file.path, () =>
+				offerAttributed(file.path, () =>
 					makeVaultEventForFileCreated(file),
 				),
 			);
@@ -794,31 +906,34 @@ function bulkVaultEventSource(
 				const seq = sequence.next();
 				runCallback(
 					Effect.gen(function* () {
-						if (
-							yield* selfEvents.shouldIgnoreRenameEffect(
-								oldPath,
-								file.path,
-							)
-						) {
-							return;
-						}
-
+						const origin = yield* selfEvents.attributeRenameEffect(
+							oldPath,
+							file.path,
+						);
 						const event = tryMakeVaultEventForFileRenamed(
 							file,
 							oldPath,
 						);
-						if (event.success) yield* offer(seq, event.event);
+						if (event.success)
+							yield* offer(seq, event.event, origin);
 					}),
 				);
 			});
 			yield* acquireVaultListener(app, "delete", (file) =>
-				offerUnlessSelf(file.path, () =>
+				offerAttributed(file.path, () =>
 					makeVaultEventForFileDeleted(file),
 				),
 			);
 		}),
 		publish: (window) => {
-			const events = collapseVaultEvents(window.allObsidianEvents);
+			const events = collapseVaultEvents(
+				window.allObsidianEvents.map(
+					({ event, origin }): ObservedVaultEvent => ({
+						...event,
+						origin,
+					}),
+				),
+			);
 			const roots = reduceRoots(events);
 			return {
 				debug: {
@@ -829,7 +944,9 @@ function bulkVaultEventSource(
 						rootRenames: roots.filter(isRename).length,
 					},
 					startedAt: window.debug.startedAt,
-					trueCount: countEvents(window.allObsidianEvents),
+					trueCount: countEvents(
+						window.allObsidianEvents.map(({ event }) => event),
+					),
 				},
 				events,
 				roots,
@@ -841,11 +958,27 @@ function bulkVaultEventSource(
 function mdModifySource(
 	app: App,
 	selfEvents: SelfEventTracker,
-): ObservationSource<MdFileModification, BulkMdModifyEvent> {
+	linkRewrites: LinkRewriteWindows | undefined,
+): ObservationSource<MdFileChange, BulkMdModifyEvent> {
+	/**
+	 * VAM's own write, else Obsidian's link updater within a VAM rename's
+	 * window, else external.
+	 */
+	const attribute = Effect.fnUntraced(function* (
+		path: string,
+		mtime: number,
+	): Effect.fn.Return<VaultEventOrigin> {
+		const origin = yield* selfEvents.attributeModifyEffect(path);
+		if (origin.kind !== "External" || !linkRewrites) return origin;
+		const operationId = yield* linkRewrites.covering(mtime);
+		return operationId === undefined
+			? EXTERNAL_ORIGIN
+			: { kind: "LinkUpdate", operationId };
+	});
 	return {
 		listen: Effect.fn("VaultObservation.listenForMdModify")(function* (
 			intake: Queue.Enqueue<
-				EventAccumulatorCommand<ObservedCallback<MdFileModification>>
+				EventAccumulatorCommand<ObservedCallback<MdFileChange>>
 			>,
 			runCallback: RunCallback,
 			sequence: VaultCallbackSequence,
@@ -863,25 +996,29 @@ function mdModifySource(
 				runCallback(
 					Effect.gen(function* () {
 						if (
-							yield* selfEvents.shouldIgnoreModifyEffect(
-								file.path,
-							)
-						) {
-							return;
-						}
-						if (
 							Option.isNone(stat) ||
 							splitPath.kind !== "MdFile"
 						) {
+							// Still pops VAM's expectation for its own write.
+							const origin =
+								yield* selfEvents.attributeModifyEffect(
+									file.path,
+								);
+							if (origin.kind === "Vam") return;
 							return yield* Effect.logWarning(
 								"[VaultObservation] Skipped a modify callback without a Markdown file stat",
 								file.path,
 							);
 						}
+						const origin = yield* attribute(
+							file.path,
+							stat.value.mtime,
+						);
 						yield* Queue.offer(intake, {
 							_tag: "Event",
 							event: {
 								event: { splitPath, stat: stat.value },
+								origin,
 								seq,
 							},
 						});
@@ -895,7 +1032,12 @@ function mdModifySource(
 				startedAt: window.debug.startedAt,
 				trueCount: window.allObsidianEvents.length,
 			},
-			modifications: coalesceMdModifications(window.allObsidianEvents),
+			modifications: coalesceMdModifications(
+				window.allObsidianEvents.map(({ event, origin }) => ({
+					...event,
+					origin,
+				})),
+			),
 		}),
 	};
 }

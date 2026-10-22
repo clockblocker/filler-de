@@ -27,7 +27,7 @@ import {
 export type DelimiterMigrationVam = {
 	readonly dispatchWithReport: (
 		actions: readonly VaultAction[],
-		options?: DispatchOptions,
+		options: DispatchOptions,
 	) => ReturnType<VaultActionManager["dispatchWithReport"]>;
 	readonly exists: (
 		path: SplitPathToMdFile,
@@ -183,6 +183,7 @@ export class DelimiterChangeService {
 
 		const exit = yield* Effect.exit(
 			this.vam.dispatchWithReport(plan.actions, {
+				caller: "librarian",
 				stopOnFirstFailure: true,
 			}),
 		);
@@ -293,7 +294,9 @@ export class DelimiterChangeService {
 		readonly placements: ReadonlyMap<DelimiterRenameAction, Placement>;
 	}> {
 		const inverses = moved.map(invert);
-		const exit = yield* Effect.exit(this.vam.dispatchWithReport(inverses));
+		const exit = yield* Effect.exit(
+			this.vam.dispatchWithReport(inverses, { caller: "librarian" }),
+		);
 		const failure = Exit.isSuccess(exit)
 			? undefined
 			: failureFromCause(exit.cause);

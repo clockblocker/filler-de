@@ -328,7 +328,11 @@ describe("scopeMdModifyEvent", () => {
 		].map((path) => {
 			const splitPath = splitPathCodec.parse(path);
 			if (splitPath.kind !== "MdFile") throw new Error(path);
-			return { splitPath, stat: { ctime: 0, mtime: 1, size: 1 } };
+			return {
+				origin: { kind: "External" } as const,
+				splitPath,
+				stat: { ctime: 0, mtime: 1, size: 1 },
+			};
 		}),
 	};
 	const worter: SplitPathToFolder = {

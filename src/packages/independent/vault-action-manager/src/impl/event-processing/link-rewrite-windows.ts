@@ -1,4 +1,5 @@
 import { Clock, Effect, Ref } from "effect";
+import type { VamOperationId } from "../../types/event-origin";
 import { type VaultAction, VaultActionKind } from "../../types/vault-action";
 
 /**
@@ -25,6 +26,8 @@ type Window = {
 	readonly start: number;
 	/** `undefined` while the rename is still running. */
 	readonly end: number | undefined;
+	/** The Dispatch Batch the rename ran in. */
+	readonly operationId: VamOperationId;
 };
 
 /** Whether executing `action` lets Obsidian rewrite links in other files. */
@@ -42,20 +45,31 @@ export function rewritesLinks(action: VaultAction): boolean {
 
 /**
  * Remembers when VAM ran renames that let Obsidian rewrite links, so a
- * modification observed afterwards can be attributed to that rewriting by
- * its file's mtime.
+ * modification observed afterwards can be labelled `LinkUpdate`, with the
+ * rename's operation, by its file's mtime. The heuristic is timing only: a
+ * hand edit inside a window is labelled too.
  */
 export class LinkRewriteWindows {
 	private readonly windows = Ref.makeUnsafe<readonly Window[]>([]);
 
 	constructor(private readonly graceMs: number = LINK_REWRITE_GRACE_MS) {}
 
-	/** Runs `effect`, a link-updating rename, inside a recorded window. */
-	track<A, E, R>(effect: Effect.Effect<A, E, R>): Effect.Effect<A, E, R> {
+	/**
+	 * Runs `effect`, a link-updating rename of `operationId`, inside a
+	 * recorded window.
+	 */
+	track<A, E, R>(
+		effect: Effect.Effect<A, E, R>,
+		operationId: VamOperationId,
+	): Effect.Effect<A, E, R> {
 		return Effect.acquireUseRelease(
 			Clock.currentTimeMillis.pipe(
 				Effect.flatMap((start) => {
-					const window: Window = { end: undefined, start };
+					const window: Window = {
+						end: undefined,
+						operationId,
+						start,
+					};
 					return Ref.update(this.windows, (windows) => [
 						...this.prune(windows, start),
 						window,
@@ -76,18 +90,21 @@ export class LinkRewriteWindows {
 		);
 	}
 
-	/** Whether a write at `mtime` falls within a recorded window. */
-	covers(mtime: number): Effect.Effect<boolean> {
+	/**
+	 * The operation of the latest recorded window a write at `mtime` falls
+	 * within; `undefined` when none.
+	 */
+	covering(mtime: number): Effect.Effect<VamOperationId | undefined> {
 		return Clock.currentTimeMillis.pipe(
 			Effect.flatMap((now) =>
 				Ref.modify(this.windows, (windows) => {
 					const live = this.prune(windows, now);
-					const covered = live.some(
+					const covered = live.findLast(
 						({ end, start }) =>
 							mtime >= start - MTIME_SLACK_MS &&
 							mtime <= (end ?? now) + this.graceMs,
 					);
-					return [covered, live];
+					return [covered?.operationId, live];
 				}),
 			),
 		);

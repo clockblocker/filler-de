@@ -32,20 +32,20 @@ const NAMED_PATHS = 10;
 
 /**
  * The warning for protected files changed by something other than the
- * user's own editing; `null` when every modification is `OpenInEditor`.
+ * user's own editing; `null` when every modification's writer is `OpenInEditor`.
  */
 export function describeProtectedModifications(
 	modifications: readonly ProtectedPathModification[],
 ): string | null {
 	const suspicious = modifications.filter(
-		({ origin }) => origin !== "OpenInEditor",
+		({ writer }) => writer !== "OpenInEditor",
 	);
 	if (suspicious.length === 0) return null;
 	const paths = suspicious.map(({ splitPath }) =>
 		splitPathCodec.format(splitPath),
 	);
 	const byVamRename = suspicious.every(
-		({ origin }) => origin === "VamRenameLinkUpdate",
+		({ writer }) => writer === "VamRenameLinkUpdate",
 	);
 	const who = byVamRename
 		? "Obsidian's link updating, after a Textfresser rename"
@@ -82,7 +82,7 @@ export function watchProtectedPaths(
 	return vam.subscribeToProtectedPathModifications((event) =>
 		Effect.sync(() => {
 			const suspicious = event.modifications.filter(
-				({ origin }) => origin !== "OpenInEditor",
+				({ writer }) => writer !== "OpenInEditor",
 			);
 			if (suspicious.length === 0) return;
 			const showing = current?.showing() === true;

@@ -324,7 +324,8 @@ export class Librarian {
 		return new LibraryReconciler(healer, this.codecs, {
 			audit: this.reconciliationAudit,
 			classifyDispatchFailure: classifyLibrarianDispatchFailure,
-			dispatch: (actions) => this.vam.dispatch(actions),
+			dispatch: (actions) =>
+				this.vam.dispatch(actions, { caller: "librarian" }),
 			recover: () => this.prepareRecovery(),
 			unexpectedDispatchFailure: (cause) =>
 				new LibrarianUnexpectedDispatchError({
@@ -366,10 +367,14 @@ export class Librarian {
 					// vault change after the snapshot reaches handleBulkEvent
 					// once, and none it holds does. VAM holds them until
 					// `start`, below.
+					// External events only: the Librarian's own renames, and
+					// every other caller's, are never healed again.
 					const subscription = yield* self.vam
-						.scanAndSubscribe(rootSplitPath, {
-							onBulk: (bulk) => self.handleBulkEvent(bulk),
-						})
+						.scanAndSubscribe(
+							rootSplitPath,
+							{ onBulk: (bulk) => self.handleBulkEvent(bulk) },
+							{ from: "external" },
+						)
 						.pipe(
 							Effect.tapError((failure) =>
 								Effect.sync(() =>
@@ -543,7 +548,12 @@ export class Librarian {
 		const { intention } = item;
 		const wasUnavailable = this.reconciler.isUnavailable();
 		const dispatchResult = yield* this.vam
-			.dispatch(intention.vaultActions)
+			// The command's operation id names its batch too, so the split's
+			// record, its VAM report and its spans share one id.
+			.dispatch(intention.vaultActions, {
+				caller: "librarian",
+				operationId: intention.operationId,
+			})
 			.pipe(
 				Effect.mapError((failure): LibrarianDispatchFailure => failure),
 				Effect.result,

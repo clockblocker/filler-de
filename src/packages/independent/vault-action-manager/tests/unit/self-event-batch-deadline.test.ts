@@ -11,6 +11,7 @@ import { MD } from "../../src/types/literals";
 import type { SplitPathToMdFile } from "../../src/types/split-path";
 import type { VaultAction } from "../../src/types/vault-action";
 import { VaultActionKind } from "../../src/types/vault-action";
+import { selfOf, TEST_OPERATION } from "./helpers/self-events";
 
 const TTL_MS = 5000;
 
@@ -128,7 +129,7 @@ function setup(
 				if (probe !== undefined) {
 					probed.push({
 						path: probe,
-						self: yield* tracker.shouldIgnoreEffect(probe),
+						self: yield* selfOf(tracker.attributeEffect(probe)),
 					});
 				}
 				time.advance(actionMs);
@@ -136,9 +137,9 @@ function setup(
 				const to = pathOf(action.payload.to.basename);
 				const from = pathOf(action.payload.from.basename);
 				attributed.push({
-					from: yield* tracker.shouldIgnoreEffect(from),
+					from: yield* selfOf(tracker.attributeEffect(from)),
 					path: to,
-					to: yield* tracker.shouldIgnoreEffect(to),
+					to: yield* selfOf(tracker.attributeEffect(to)),
 				});
 			}).pipe(Effect.as({ _tag: "NoOp" } as const)),
 	} as unknown as Executor;
@@ -154,11 +155,15 @@ function setup(
 		advance: time.advance,
 		attributed,
 		dispatch: (actions: readonly VaultAction[]) =>
-			runtime.runPromiseExit(coordinator.dispatchEffect(actions)),
+			runtime.runPromiseExit(
+				coordinator.dispatchEffect(actions, {
+					operation: TEST_OPERATION,
+				}),
+			),
 		probed,
 		shouldIgnore: async (path: string) => {
 			const exit = await runtime.runPromiseExit(
-				tracker.shouldIgnoreEffect(path),
+				selfOf(tracker.attributeEffect(path)),
 			);
 			if (Exit.isFailure(exit)) throw new Error("shouldIgnore failed");
 			return exit.value;

@@ -11,6 +11,7 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "../../src/types/vault-action";
+import { selfOf, TEST_OPERATION } from "./helpers/self-events";
 
 const NFC = "Mütter";
 const NFD = "Mütter";
@@ -32,8 +33,9 @@ const mdFile = (basename: string, pathParts: string[] = []) =>
 
 function makeTracker(actions: readonly VaultAction[]) {
 	const tracker = Effect.runSync(SelfEventTracker.makeEffect());
-	Effect.runSync(tracker.registerEffect(actions));
-	return (path: string) => Effect.runSync(tracker.shouldIgnoreEffect(path));
+	Effect.runSync(tracker.registerEffect(actions, TEST_OPERATION));
+	return (path: string) =>
+		Effect.runSync(selfOf(tracker.attributeEffect(path)));
 }
 
 describe("SelfEventTracker path identity", () => {

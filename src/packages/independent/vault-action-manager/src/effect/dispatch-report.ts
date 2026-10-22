@@ -1,4 +1,5 @@
 import { Predicate, Schema } from "effect";
+import type { VamOperation } from "../types/event-origin";
 import type { AnySplitPath } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import {
@@ -106,16 +107,23 @@ export type VamTouchedVault = "no" | "yes" | "unknown";
  * order VAM ran them. Planned actions include prerequisites VAM added, such
  * as parent folders. A batch that failed before planning, because it was
  * refused, overflowed, or met a shut-down VAM, lists each submitted action
- * as `Skipped`.
+ * as `Skipped`. `caller` and `operationId` name the batch, as its spans and
+ * the origins of its events do.
  */
 export class VamDispatchReport extends Schema.Class<VamDispatchReport>(
 	"VamDispatchReport",
 )({
+	caller: Schema.String,
 	entries: Schema.Array(VamDispatchEntrySchema),
+	operationId: Schema.String,
 }) {
-	/** A report for a batch none of which ran. */
-	static notRun(actions: readonly VaultAction[]): VamDispatchReport {
+	/** A report for a batch of `operation` none of which ran. */
+	static notRun(
+		actions: readonly VaultAction[],
+		operation: VamOperation,
+	): VamDispatchReport {
 		return new VamDispatchReport({
+			...operation,
 			entries: actions.map((action) => ({
 				action,
 				status: "Skipped" as const,
@@ -204,14 +212,15 @@ export class VamDispatchFailure extends Schema.TaggedError<VamDispatchFailure>()
 		report: VamDispatchReport,
 	},
 ) {
-	/** A batch that failed before any of it ran. */
+	/** A batch of `operation` that failed before any of it ran. */
 	static notRun(
 		reason: Exclude<VamDispatchFailureReason, VamDispatchError>,
 		actions: readonly VaultAction[],
+		operation: VamOperation,
 	): VamDispatchFailure {
 		return new VamDispatchFailure({
 			reason,
-			report: VamDispatchReport.notRun(actions),
+			report: VamDispatchReport.notRun(actions, operation),
 		});
 	}
 

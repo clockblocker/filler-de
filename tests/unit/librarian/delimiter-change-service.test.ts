@@ -34,7 +34,7 @@ import {
 	reportDelimiterMigration,
 } from "../../../src/commanders/librarian/runtime/delimiter-migration-report";
 import type { SuffixDelimiterConfig } from "../../../src/types";
-import { actionError, notRun } from "../../support/vam-dispatch";
+import { actionError, FAKE_OPERATION, notRun } from "../../support/vam-dispatch";
 
 const oldConfig = { padded: false, symbol: "-" } satisfies SuffixDelimiterConfig;
 const newConfig = { padded: true, symbol: "~" } satisfies SuffixDelimiterConfig;
@@ -274,6 +274,7 @@ describe("delimiter migration lifecycle", () => {
 				new VamDispatchFailure({
 					reason: error,
 					report: new VamDispatchReport({
+						...FAKE_OPERATION,
 						entries: [
 							{
 								action: executed,
@@ -531,6 +532,7 @@ describe("delimiter migration lifecycle", () => {
 			// end, so the rename back fails having changed nothing.
 			harness.files.delete("Library/alpha ~ beta.md");
 			const report = new VamDispatchReport({
+				...FAKE_OPERATION,
 				entries: actions.map((action) =>
 					VamDispatchReport.entryFor(
 						actionError(action, new Error("not found"), "missing"),
@@ -1062,7 +1064,7 @@ function makeHarness(
 			: { action, outcome: { _tag: "NoOp" }, status: "Done" };
 	};
 	const settle = (entries: readonly VamDispatchEntry[]) => {
-		const report = new VamDispatchReport({ entries });
+		const report = new VamDispatchReport({ ...FAKE_OPERATION, entries });
 		const failure = VamDispatchFailure.ofReport(report);
 		return failure ? Effect.fail(failure) : Effect.succeed(report);
 	};

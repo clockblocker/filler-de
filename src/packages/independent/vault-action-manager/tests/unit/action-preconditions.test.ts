@@ -29,7 +29,7 @@ function setup({ insensitive = true } = {}) {
 	/** The batch's report entries, whether it failed or not. */
 	const entries = (actions: readonly VaultAction[]) =>
 		Effect.runPromise(
-			manager.dispatchWithReport(actions).pipe(
+			manager.dispatchWithReport(actions, { caller: "test" }).pipe(
 				Effect.map((report) => report.entries),
 				Effect.catchTag("VamDispatchFailure", (failure) =>
 					Effect.succeed(failure.report.entries),
@@ -199,7 +199,9 @@ describe("ProcessMdFile expected", () => {
 		harness.addFile("Library/a.md", "edited by hand");
 		const failed = await Effect.runPromise(
 			manager
-				.dispatchWithReport([swap("Library/a.md", "before", "after")])
+				.dispatchWithReport([swap("Library/a.md", "before", "after")], {
+					caller: "test",
+				})
 				.pipe(Effect.flip),
 		);
 		await Effect.runPromise(dispose);

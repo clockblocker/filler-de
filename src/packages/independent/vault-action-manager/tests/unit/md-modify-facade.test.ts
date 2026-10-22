@@ -131,16 +131,19 @@ describe("VaultActionManager Markdown modifications", () => {
 				);
 
 				const append = (suffix: string) =>
-					manager.dispatch([
-						{
-							kind: VaultActionKind.ProcessMdFile,
-							payload: {
-								splitPath: hundPath,
-								transform: (content) =>
-									`${content}\n\n${suffix}`,
+					manager.dispatch(
+						[
+							{
+								kind: VaultActionKind.ProcessMdFile,
+								payload: {
+									splitPath: hundPath,
+									transform: (content) =>
+										`${content}\n\n${suffix}`,
+								},
 							},
-						},
-					]);
+						],
+						{ caller: "test" },
+					);
 				yield* append("first VAM write");
 				yield* append("second VAM write");
 				yield* testing.whenSettled();
@@ -156,6 +159,7 @@ describe("VaultActionManager Markdown modifications", () => {
 		expect(received).toHaveLength(1);
 		expect(received[0]?.modifications).toEqual([
 			{
+				origin: { kind: "External" },
 				splitPath: hundPath,
 				stat: {
 					ctime: 1,

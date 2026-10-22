@@ -5,7 +5,13 @@ import type { BulkWindow } from "../types/bulk/bulk-window";
 export type EventAccumulatorCommand<Ev = VaultEvent> =
 	| { readonly _tag: "Event"; readonly event: Ev }
 	| { readonly _tag: "Flush"; readonly completed: Deferred.Deferred<void> }
-	| { readonly _tag: "Settled"; readonly completed: Deferred.Deferred<void> };
+	| { readonly _tag: "Settled"; readonly completed: Deferred.Deferred<void> }
+	/**
+	 * Runs `run` once every event queued before it is published: after the
+	 * open window closes, on its own deadlines, or at once when none is
+	 * open. It neither opens nor extends a window.
+	 */
+	| { readonly _tag: "AfterWindow"; readonly run: Effect.Effect<void> };
 
 export type EventAccumulatorOptions = {
 	/** Flush when no new Vault Event arrives for this long. */
@@ -15,7 +21,11 @@ export type EventAccumulatorOptions = {
 };
 
 type EventWindow<Ev> = {
+	/** What runs once the window is published. */
+	readonly after: ReadonlyArray<Effect.Effect<void>>;
 	readonly events: ReadonlyArray<Ev>;
+	/** When the latest event arrived; the quiet deadline counts from it. */
+	readonly lastEventAt: number;
 	readonly startedAt: number;
 };
 
@@ -41,15 +51,17 @@ export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* <
 			allObsidianEvents: [...window.events],
 			debug: { endedAt, startedAt: window.startedAt },
 		});
+		for (const run of window.after) yield* run;
 	});
 
 	const completeCommand = Effect.fn("runEventAccumulator.completeCommand")(
 		function* (
 			command: Extract<
 				EventAccumulatorCommand<Ev>,
-				{ readonly _tag: "Flush" | "Settled" }
+				{ readonly _tag: "Flush" | "Settled" | "AfterWindow" }
 			>,
 		): Effect.fn.Return<void> {
+			if (command._tag === "AfterWindow") return yield* command.run;
 			if (command._tag === "Settled") yield* onSettled;
 			yield* Deferred.succeed(command.completed, undefined);
 		},
@@ -58,11 +70,11 @@ export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* <
 	const collectWindow = Effect.fn("runEventAccumulator.collectWindow")(
 		function* (window: EventWindow<Ev>): Effect.fn.Return<void> {
 			const now = yield* Clock.currentTimeMillis;
-			const remainingMaximum = Math.max(
-				0,
-				options.maxWindowMs - (now - window.startedAt),
+			const deadline = Math.min(
+				window.lastEventAt + options.quietWindowMs,
+				window.startedAt + options.maxWindowMs,
 			);
-			const waitFor = Math.min(options.quietWindowMs, remainingMaximum);
+			const waitFor = Math.max(0, deadline - now);
 
 			const next = yield* Queue.take(intake).pipe(
 				Effect.timeoutOption(waitFor),
@@ -73,6 +85,13 @@ export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* <
 			}
 
 			const command = next.value;
+			if (command._tag === "AfterWindow") {
+				yield* collectWindow({
+					...window,
+					after: [...window.after, command.run],
+				});
+				return;
+			}
 			if (command._tag !== "Event") {
 				yield* flushWindow(window);
 				yield* completeCommand(command);
@@ -81,8 +100,9 @@ export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* <
 
 			const receivedAt = yield* Clock.currentTimeMillis;
 			const nextWindow = {
+				...window,
 				events: [...window.events, command.event],
-				startedAt: window.startedAt,
+				lastEventAt: receivedAt,
 			};
 			if (receivedAt - window.startedAt >= options.maxWindowMs) {
 				yield* flushWindow(nextWindow);
@@ -101,6 +121,11 @@ export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* <
 		}
 
 		const startedAt = yield* Clock.currentTimeMillis;
-		yield* collectWindow({ events: [command.event], startedAt });
+		yield* collectWindow({
+			after: [],
+			events: [command.event],
+			lastEventAt: startedAt,
+			startedAt,
+		});
 	}
 });

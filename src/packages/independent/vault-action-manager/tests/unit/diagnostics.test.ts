@@ -362,17 +362,20 @@ describe("VAM's loggers", () => {
 		);
 		try {
 			await Effect.runPromiseExit(
-				manager.dispatch([
-					{
-						kind: VaultActionKind.UpsertMdFile,
-						payload: {
-							content: "changed",
-							splitPath: splitPathCodec.parse(
-								"Exemplar/Note.md",
-							) as SplitPathToMdFile,
+				manager.dispatch(
+					[
+						{
+							kind: VaultActionKind.UpsertMdFile,
+							payload: {
+								content: "changed",
+								splitPath: splitPathCodec.parse(
+									"Exemplar/Note.md",
+								) as SplitPathToMdFile,
+							},
 						},
-					},
-				]),
+					],
+					{ caller: "test" },
+				),
 			);
 			await Effect.runPromise(testing.whenSettled());
 

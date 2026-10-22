@@ -359,17 +359,7 @@ export class DictionaryResetCommand {
 								}),
 					),
 				),
-			rescan: store.pipe(
-				Effect.flatMap((opened) => opened.rescan),
-				Effect.mapError((error) =>
-					error instanceof ResetFailed
-						? error
-						: new ResetFailed({
-								cause: error,
-								message: error.message,
-							}),
-				),
-			),
+			caughtUp: store.pipe(Effect.flatMap((opened) => opened.caughtUp)),
 			settleKnowledge: Effect.promise(() => deps.knowledge.whenIdle()),
 		};
 		const resolver = dumgenUnitResolver({

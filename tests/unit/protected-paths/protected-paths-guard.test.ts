@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import {
-	type ProtectedModificationOrigin,
+	type ProtectedModificationWriter,
 	type ProtectedPathModification,
 	type SplitPathToMdFile,
 	splitPathCodec,
@@ -15,12 +15,16 @@ import {
 
 const modification = (
 	path: string,
-	origin: ProtectedModificationOrigin,
+	writer: ProtectedModificationWriter,
 ): ProtectedPathModification => ({
-	origin,
+	origin:
+		writer === "VamRenameLinkUpdate"
+			? { kind: "LinkUpdate", operationId: "librarian#1" }
+			: { kind: "External" },
 	prefix: "Exemplar",
 	splitPath: splitPathCodec.parse(path) as SplitPathToMdFile,
 	stat: { ctime: 1, mtime: 2, size: 3 },
+	writer,
 });
 
 const NOTE = "Exemplar/Kohlekraftwerk/Kohlekraftwerk.md";
@@ -86,7 +90,7 @@ describe("watchProtectedPaths", () => {
 				}) => Effect.Effect<void>,
 			) => {
 				deliver = (modifications) => Effect.runSync(handler({ modifications }));
-				return Effect.succeed({ close: Effect.void });
+				return Effect.succeed({ caughtUp: Effect.void, close: Effect.void });
 			},
 		};
 		await Effect.runPromise(

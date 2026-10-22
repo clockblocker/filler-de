@@ -32,7 +32,11 @@ export {
 	type TablesRerendered,
 } from "./store";
 export { Transaction, type TransactOptions } from "./transaction";
-export { type DictionaryVault, WORTER_SPLIT_PATH } from "./vault";
+export {
+	DICTIONARY_CALLER,
+	type DictionaryVault,
+	WORTER_SPLIT_PATH,
+} from "./vault";
 export type {
 	DictionaryView,
 	LemmaCandidate,

@@ -46,8 +46,11 @@ export type ResetVault = ResetSources & {
 
 /** The dictionary store and the Knowledge queue, as the reset uses them. */
 export type ResetDictionary = {
-	/** Reads `Worter/` again after the backup moved it through VAM. */
-	readonly rescan: Effect.Effect<void, ResetFailed>;
+	/**
+	 * Waits until the store has followed the vault changes made so far, such
+	 * as the backup's move of `Worter/`, which reaches it as an event.
+	 */
+	readonly caughtUp: Effect.Effect<void, ResetFailed>;
 	/**
 	 * Places text as freeform: under a Reading note's Note title, or last in
 	 * a Lemma note.

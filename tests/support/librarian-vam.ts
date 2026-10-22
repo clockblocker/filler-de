@@ -62,6 +62,7 @@ export function withScanAndSubscribe(
 				});
 				return {
 					afterSnapshot: (bulk) => bulk,
+					caughtUp: Effect.void,
 					close: subscription.close,
 					rescan: Effect.suspend(scan).pipe(Effect.map(snapshotOf)),
 					snapshot,

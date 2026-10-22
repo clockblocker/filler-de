@@ -14,6 +14,9 @@ import { Effect } from "effect";
 import { getErrorMessage } from "../../utils/get-error-message";
 import { ResetFailed, type ResetVault } from "./ports";
 
+/** The reset's name in VAM: the dictionary store hears its writes. */
+const RESET_CALLER = { caller: "reset" } as const;
+
 type ResetVam = Pick<
 	VaultActionManager,
 	| "dispatchStopOnFirstFailure"
@@ -62,12 +65,15 @@ export function vamResetVault(vam: ResetVam): ResetVault {
 					);
 				// `CreateMdFile` fails, writing nothing, when a file is there.
 				return vam
-					.dispatchStopOnFirstFailure([
-						{
-							kind: VaultActionKind.CreateMdFile,
-							payload: { content, splitPath },
-						},
-					])
+					.dispatchStopOnFirstFailure(
+						[
+							{
+								kind: VaultActionKind.CreateMdFile,
+								payload: { content, splitPath },
+							},
+						],
+						RESET_CALLER,
+					)
 					.pipe(Effect.mapError(failed(`Could not write ${path}`)));
 			}),
 		exists,
@@ -136,17 +142,20 @@ export function vamResetVault(vam: ResetVam): ResetVault {
 				// Collect read them. A target that is taken fails the move
 				// rather than send it to an indexed name beside the target.
 				return vam
-					.dispatchStopOnFirstFailure([
-						{
-							kind: VaultActionKind.RenameFolder,
-							payload: {
-								from: source,
-								onCollision: "fail",
-								to: target,
-								updateLinks: false,
+					.dispatchStopOnFirstFailure(
+						[
+							{
+								kind: VaultActionKind.RenameFolder,
+								payload: {
+									from: source,
+									onCollision: "fail",
+									to: target,
+									updateLinks: false,
+								},
 							},
-						},
-					])
+						],
+						RESET_CALLER,
+					)
 					.pipe(
 						Effect.mapError(
 							failed(`Could not move ${from}/ to ${to}/`),

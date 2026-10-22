@@ -149,7 +149,7 @@ describe("appendFreeform", () => {
 });
 
 describe("rescan", () => {
-	test("finds notes written past the store, as VAM's own moves are", async () => {
+	test("finds notes written past VAM, which reported nothing", async () => {
 		const { store, vault } = await withGehen();
 		const content = vault.content(gehenPath) ?? "";
 		vault.files.delete(gehenPath);

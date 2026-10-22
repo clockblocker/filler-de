@@ -111,8 +111,12 @@ A Vault Event that represents an independent user operation after descendant eff
 _Avoid_: First event, root folder, raw event
 
 **Self Event**:
-An Obsidian Vault Event expected as a consequence of a Vault Action dispatched by VAM, rather than a new user intention.
+An Obsidian Vault Event expected as a consequence of a Vault Action dispatched by VAM, rather than a new user intention. VAM labels it with the `Vam` Event Origin of its Dispatch Batch.
 _Avoid_: Duplicate event, recursive action
+
+**Event Origin**:
+Who caused a delivered Vault Event or Markdown modification: a VAM caller's Dispatch Batch (`Vam`, with caller and operation id), Obsidian's link updater during a VAM rename (`LinkUpdate`), or anything else (`External`). Each subscription chooses the origins it hears.
+_Avoid_: Source, author
 
 **Bulk Vault Action Adapter**:
 The Library boundary that translates a Bulk Vault Event into Tree Actions by applying Library scope, materializing single-node observations, and inferring Library intent. Despite its source name, it neither executes Vault Actions nor implements an Obsidian adapter.

@@ -121,6 +121,8 @@ import { loadReevaluateShadowsContext } from "./slices";
 import { stageChanges } from "./stage-changes";
 import type { Transaction, TransactOptions } from "./transaction";
 import {
+	DICTIONARY_CALLER,
+	DICTIONARY_EVENTS,
 	type DictionaryVault,
 	folderSplitPath,
 	formatPath,
@@ -342,12 +344,15 @@ export type DumdictVaultStore = {
 		lemma: Dumling.Lemma<"de">,
 	) => Effect.Effect<RelationEdge[]>;
 	readonly diagnostics: Effect.Effect<DictionaryDiagnostics>;
-	/**
-	 * Rebuilds the index from a full scan of `Worter/`. A caller that moved
-	 * or created files there through VAM runs it: VAM keeps its own writes
-	 * from the store as Self Events.
-	 */
+	/** Rebuilds the index from a full scan of `Worter/`. */
 	readonly rescan: Effect.Effect<void, DictionaryScanError>;
+	/**
+	 * Waits until the store has handled every vault change VAM heard before
+	 * the call, such as another caller's dispatch that just finished, so a
+	 * commit after it plans against them. It never fails: a change the store
+	 * could not apply leaves the index stale, and the next commit rebuilds.
+	 */
+	readonly caughtUp: Effect.Effect<void>;
 	/**
 	 * Re-renders the notes of every Lemma whose Lemma note records other
 	 * table versions than the projections render now (#121). Every full
@@ -668,9 +673,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	 * interrupt before that still leaves the index stale.
 	 */
 	const dispatch = (actions: readonly VaultAction[]) =>
-		Effect.uninterruptible(vault.dispatchStopOnFirstFailure(actions)).pipe(
-			Effect.onInterrupt(() => markStale),
-		);
+		Effect.uninterruptible(
+			vault.dispatchStopOnFirstFailure(actions, {
+				caller: DICTIONARY_CALLER,
+			}),
+		).pipe(Effect.onInterrupt(() => markStale));
 
 	/** Reads one path into its entry; undefined when no file is there. */
 	const readEntry = Effect.fnUntraced(function* (path: string) {
@@ -2611,10 +2618,14 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	);
 
 	const bulkSubscription = yield* vault
-		.subscribeToBulk(onBulk)
+		.subscribeToBulk(onBulk, DICTIONARY_EVENTS)
 		.pipe(Effect.mapError(scanError("observe")));
 	const modifySubscription = yield* vault
-		.subscribeToMdModifications(WORTER_SPLIT_PATH, onModify)
+		.subscribeToMdModifications(
+			WORTER_SPLIT_PATH,
+			onModify,
+			DICTIONARY_EVENTS,
+		)
 		.pipe(Effect.mapError(scanError("observe edits in")));
 	const close = Effect.all(
 		[bulkSubscription.close, modifySubscription.close].map((closing) =>
@@ -2777,6 +2788,12 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			),
 		attestationLinksWithRefPrefix: (prefix) =>
 			Effect.sync(() => live().attestationLinksWithRefPrefix(prefix)),
+		caughtUp: Effect.all(
+			[bulkSubscription.caughtUp, modifySubscription.caughtUp].map(
+				(caughtUp) => Effect.ignore(caughtUp),
+			),
+			{ concurrency: "unbounded", discard: true },
+		),
 		close,
 		commitChanges: (request) =>
 			lock.withPermit(

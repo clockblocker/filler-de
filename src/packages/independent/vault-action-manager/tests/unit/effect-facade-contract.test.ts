@@ -35,7 +35,9 @@ describe("VaultActionManager Effect facade", () => {
 		const harness = makeFacadeHarness();
 		const { dispose, manager } = createVaultActionManager(harness.app);
 
-		expect(Effect.isEffect(manager.dispatch([]))).toBe(true);
+		expect(Effect.isEffect(manager.dispatch([], { caller: "test" }))).toBe(
+			true,
+		);
 		expect(Effect.isEffect(manager.readContent(mdPath))).toBe(true);
 
 		const result = await Effect.runPromise(
@@ -44,7 +46,7 @@ describe("VaultActionManager Effect facade", () => {
 				const subscription = yield* manager.subscribeToBulk(
 					() => Effect.void,
 				);
-				yield* manager.dispatch([]);
+				yield* manager.dispatch([], { caller: "test" });
 				const content = yield* manager.readContent(mdPath);
 				const exists = yield* manager.exists(mdPath);
 				const matches = yield* manager.findByBasename("note");

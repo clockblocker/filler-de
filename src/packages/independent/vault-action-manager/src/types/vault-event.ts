@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { VaultEventOrigin } from "./event-origin";
 import { CREATE, DELETE, FILE, FOLDER, RENAME } from "./literals";
 import type {
 	SplitPathToFile,
@@ -25,6 +26,11 @@ export type VaultEvent =
 	| FolderCreatedVaultEvent
 	| FolderRenamedVaultEvent
 	| FolderDeletedVaultEvent;
+
+/** A Vault Event as a subscription delivers it: with who caused it. */
+export type ObservedVaultEvent = VaultEvent & {
+	readonly origin: VaultEventOrigin;
+};
 
 export type FileCreatedVaultEvent = {
 	kind: typeof VaultEventKind.FileCreated;

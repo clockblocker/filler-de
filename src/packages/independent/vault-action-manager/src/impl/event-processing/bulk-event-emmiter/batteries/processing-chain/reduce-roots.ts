@@ -16,9 +16,17 @@ import {
 } from "../../types/bulk/helpers";
 import { makeKeyForEvent } from "./helpers/make-key-for-event";
 
-export function reduceRoots(events: VaultEvent[]): PossibleRootVaultEvent[] {
+/**
+ * The Semantic Roots of `events`. Roots are members of `events`, so any
+ * label an event carries, such as its origin, stays on its root.
+ */
+export function reduceRoots<E extends VaultEvent>(
+	events: E[],
+): (E & PossibleRootVaultEvent)[] {
 	const possibleRoots = dedupeByKey(
-		events.filter(isPossibleRoot),
+		events.filter((e): e is E & PossibleRootVaultEvent =>
+			isPossibleRoot(e),
+		),
 		makeKeyForEvent,
 	);
 
@@ -32,7 +40,7 @@ export function reduceRoots(events: VaultEvent[]): PossibleRootVaultEvent[] {
 		(e) => e.kind === VaultEventKind.FolderDeleted,
 	);
 
-	const roots: PossibleRootVaultEvent[] = [];
+	const roots: (E & PossibleRootVaultEvent)[] = [];
 
 	for (const e of possibleRoots) {
 		if (isRename(e)) {

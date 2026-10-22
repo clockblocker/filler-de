@@ -25,12 +25,18 @@ import type { SelfEventTracker } from "../impl/event-processing/self-event-track
 import type { ProtectedPaths } from "../impl/protected-paths";
 import { splitPathCodec } from "../split-path-codec";
 import type {
+	VamCaller,
+	VamOperation,
+	VamOperationId,
+} from "../types/event-origin";
+import type {
 	AnySplitPath,
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionKind } from "../types/vault-action";
+import { CurrentVamOperation } from "./current-operation";
 import {
 	type VamDispatchEntry,
 	VamDispatchFailure,
@@ -47,13 +53,33 @@ import {
 import { type VamLiveServices, VaultIo } from "./ports";
 import type { VamRuntime } from "./runtime";
 
+/** Who dispatches a batch, and under which operation id. */
+export type DispatchCaller = {
+	/**
+	 * The caller's name, such as `"librarian"`. The batch's events carry it
+	 * in their `Vam` origin, so a subscription can leave out its own.
+	 */
+	readonly caller: VamCaller;
+	/**
+	 * Names the batch in its report, its spans and its events' origins.
+	 * VAM makes one when it is not given.
+	 */
+	readonly operationId?: VamOperationId;
+};
+
 /** Per-batch dispatch options. */
-export type DispatchOptions = {
+export type DispatchOptions = DispatchCaller & {
 	/**
 	 * Stop at the first failed action instead of attempting the rest of the
 	 * batch. The report then lists the remaining planned actions as
 	 * `Skipped`. Defaults to `false`.
 	 */
+	readonly stopOnFirstFailure?: boolean;
+};
+
+/** One submission as the worker takes it: its operation already named. */
+export type DispatchRequest = {
+	readonly operation: VamOperation;
 	readonly stopOnFirstFailure?: boolean;
 };
 
@@ -93,6 +119,7 @@ type BatchMessage = {
 		VamDispatchReport,
 		VamDispatchFailure
 	>;
+	readonly operation: VamOperation;
 	readonly parentSpan: Option.Option<Tracer.Span>;
 	readonly stopOnFirstFailure: boolean;
 };
@@ -172,7 +199,11 @@ export class DispatchBatchWorker {
 				if (message._tag !== "Batch") continue;
 				yield* Deferred.fail(
 					message.completion,
-					self.shutdownError("dispatch.queued", message.actions),
+					self.shutdownError(
+						"dispatch.queued",
+						message.actions,
+						message.operation,
+					),
 				);
 			}
 
@@ -220,14 +251,14 @@ export class DispatchBatchWorker {
 	 */
 	dispatchEffect(
 		actions: readonly VaultAction[],
-		options: DispatchOptions = {},
+		request: DispatchRequest,
 	): Effect.Effect<VamDispatchReport, VamDispatchFailure> {
 		const submitted = [...actions];
+		const { operation } = request;
 
-		return Effect.fn("DispatchBatch.dispatch")(function* (
-			self: DispatchBatchWorker,
-		) {
-			yield* self.refuseProtected(submitted);
+		return Effect.fn("vam.dispatch")(function* (self: DispatchBatchWorker) {
+			yield* Effect.annotateCurrentSpan(operationAttributes(operation));
+			yield* self.refuseProtected(submitted, operation);
 			const queue = yield* Deferred.await(self.queueReady);
 			const parentSpan = yield* Effect.option(Effect.currentSpan);
 			const completion = yield* Deferred.make<
@@ -238,8 +269,9 @@ export class DispatchBatchWorker {
 				_tag: "Batch",
 				actions: submitted,
 				completion,
+				operation,
 				parentSpan,
-				stopOnFirstFailure: options.stopOnFirstFailure === true,
+				stopOnFirstFailure: request.stopOnFirstFailure === true,
 			};
 
 			// Submission is uninterruptible, so an interrupt can never land
@@ -248,7 +280,11 @@ export class DispatchBatchWorker {
 				SynchronizedRef.modifyEffect(self.state, (state) => {
 					if (state.lifecycle !== "running") {
 						return Effect.fail(
-							self.shutdownError("dispatch", submitted),
+							self.shutdownError(
+								"dispatch",
+								submitted,
+								operation,
+							),
 						);
 					}
 
@@ -282,6 +318,7 @@ export class DispatchBatchWorker {
 	 */
 	private refuseProtected(
 		actions: readonly VaultAction[],
+		operation: VamOperation,
 	): Effect.Effect<void, VamDispatchFailure> {
 		const violation = this.protectedPaths?.findViolation(actions);
 		if (!violation) return Effect.void;
@@ -296,7 +333,9 @@ export class DispatchBatchWorker {
 			error: error.message,
 		}).pipe(
 			Effect.andThen(
-				Effect.fail(VamDispatchFailure.notRun(error, actions)),
+				Effect.fail(
+					VamDispatchFailure.notRun(error, actions, operation),
+				),
 			),
 		);
 	}
@@ -388,7 +427,11 @@ export class DispatchBatchWorker {
 				offered
 					? Effect.void
 					: Effect.fail(
-							this.shutdownError("dispatch.offer", batch.actions),
+							this.shutdownError(
+								"dispatch.offer",
+								batch.actions,
+								batch.operation,
+							),
 						),
 			),
 		);
@@ -438,8 +481,11 @@ export class DispatchBatchWorker {
 	private completeBatch(
 		batch: BatchMessage,
 	): Effect.Effect<void, never, VamLiveServices> {
+		// Writes deep in the file helpers record their Self Events under it.
 		const run = () =>
-			this.executeBatch(batch.actions, batch.stopOnFirstFailure);
+			this.executeBatch(batch).pipe(
+				Effect.provideService(CurrentVamOperation, batch.operation),
+			);
 		const execution = Option.match(batch.parentSpan, {
 			onNone: run,
 			onSome: (span) => Effect.withParentSpan(run(), span),
@@ -451,26 +497,29 @@ export class DispatchBatchWorker {
 	}
 
 	private executeBatch(
-		actions: readonly VaultAction[],
-		stopOnFirstFailure: boolean,
+		batch: BatchMessage,
 	): Effect.Effect<VamDispatchReport, VamDispatchFailure, VamLiveServices> {
+		const { actions, operation, stopOnFirstFailure } = batch;
 		if (actions.length === 0)
-			return Effect.succeed(new VamDispatchReport({ entries: [] }));
+			return Effect.succeed(
+				new VamDispatchReport({ ...operation, entries: [] }),
+			);
 
 		return Effect.fn("DispatchBatch.executeBatch")(function* (
 			self: DispatchBatchWorker,
 		) {
+			yield* Effect.annotateCurrentSpan(operationAttributes(operation));
 			const planned = yield* self
 				.plan(actions)
 				.pipe(
 					Effect.mapError((error) =>
-						VamDispatchFailure.notRun(error, actions),
+						VamDispatchFailure.notRun(error, actions, operation),
 					),
 				);
 
 			const entries: VamDispatchEntry[] = [];
 			for (const [index, action] of planned.entries()) {
-				const entry = yield* self.runAction(action);
+				const entry = yield* self.runAction(action, operation);
 				entries.push(entry);
 				if (stopOnFirstFailure && entry.status !== "Done") {
 					for (const skipped of planned.slice(index + 1))
@@ -479,7 +528,7 @@ export class DispatchBatchWorker {
 				}
 			}
 
-			const report = new VamDispatchReport({ entries });
+			const report = new VamDispatchReport({ ...operation, entries });
 			const failure = VamDispatchFailure.ofReport(report);
 			if (failure) return yield* Effect.fail(failure);
 			return report;
@@ -599,21 +648,23 @@ export class DispatchBatchWorker {
 	 */
 	private runAction(
 		action: VaultAction,
+		operation: VamOperation,
 	): Effect.Effect<VamDispatchEntry, never, VamLiveServices> {
 		return Effect.acquireUseRelease(
-			this.selfEventTracker.beginEffect(action),
-			() => this.executeAction(action),
+			this.selfEventTracker.beginEffect(action, operation),
+			() => this.executeAction(action, operation),
 			() => this.selfEventTracker.finishEffect(action),
 		);
 	}
 
 	private executeAction(
 		action: VaultAction,
+		operation: VamOperation,
 	): Effect.Effect<VamDispatchEntry, never, VamLiveServices> {
 		const run = this.executor.execute(action);
 		const tracked =
 			this.linkRewrites && rewritesLinks(action)
-				? this.linkRewrites.track(run)
+				? this.linkRewrites.track(run, operation.operationId)
 				: run;
 		const execute = tracked.pipe(
 			Effect.matchCause({
@@ -729,12 +780,14 @@ export class DispatchBatchWorker {
 				operation: "dispatch.overflow",
 			}),
 			batch.actions,
+			batch.operation,
 		);
 	}
 
 	private shutdownError(
 		operation: string,
 		actions: readonly VaultAction[],
+		batch: VamOperation,
 	): VamDispatchFailure {
 		return VamDispatchFailure.notRun(
 			new VamShutdownError({
@@ -744,6 +797,7 @@ export class DispatchBatchWorker {
 				operation,
 			}),
 			actions,
+			batch,
 		);
 	}
 
@@ -794,4 +848,12 @@ export class DispatchBatchWorker {
 		}
 		return current;
 	}
+}
+
+/** The span attributes that line a batch's spans up with its events. */
+function operationAttributes(operation: VamOperation): Record<string, string> {
+	return {
+		"vam.caller": operation.caller,
+		"vam.operationId": operation.operationId,
+	};
 }

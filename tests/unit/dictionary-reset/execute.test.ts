@@ -182,8 +182,8 @@ function stubDictionary(vault: FakeResetVault): ResetDictionary {
 				vault.files.set(path, `${vault.files.get(path) ?? ""}\n${text}\n`);
 				return "Appended" as const;
 			}),
-		rescan: Effect.sync(() => {
-			vault.ops.push("rescan");
+		caughtUp: Effect.sync(() => {
+			vault.ops.push("caught up");
 		}),
 		settleKnowledge: Effect.sync(() => {
 			vault.ops.push("settle");
@@ -240,7 +240,8 @@ describe("executeReset", () => {
 		const move = vault.ops.indexOf(`move Worter -> ${BACKUP}`);
 		const firstResolve = vault.ops.findIndex((op) => op.startsWith("resolve"));
 		expect(move).toBe(0);
-		expect(vault.ops[1]).toBe("rescan");
+		// Regeneration waits until the store has followed the move.
+		expect(vault.ops[1]).toBe("caught up");
 		expect(firstResolve).toBeGreaterThan(move);
 		expect(plans.map(({ scrollPath }) => scrollPath)).toEqual([
 			"Library/Textfresser/test/Morphologie ;; test ;; Textfresser.md",
@@ -355,7 +356,7 @@ describe("executeReset from an earlier reset's backup folder", () => {
 
 		expect(vault.ops.slice(0, 2)).toEqual([
 			`move Worter -> ${BACKUP}`,
-			"rescan",
+			"caught up",
 		]);
 		expect(execution.backupFolder).toBe(BACKUP);
 		// Every file is where it was, or, if it was in Worter/, in the new
