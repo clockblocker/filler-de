@@ -75,6 +75,7 @@ const SEE_READING_PATH = readingNotePath({
 	lemma: see,
 	unitKind: "Reading",
 } as Dumling.Reading<"de">).path;
+const LAKE = { emojiDescription: "🌊", lemma: see, unitKind: "Reading" } as Dumling.Reading<"de">;
 /** A Reading note's link, as Classify writes it: path-qualified, no Block. */
 const readingLink = (path: string, shown: string) =>
 	`[[${path.replace(/\.md$/u, "")}|${shown}]]`;
@@ -230,6 +231,97 @@ describe("dumgenUnitResolver", () => {
 		expect(harness.vault.batches.length).toBe(before);
 	});
 
+	describe("in a Scroll named as its Lemma (#210)", () => {
+		// The Mutter case: the Lemma note See.md sits beside the Reading note
+		// 🌊 See.md, so from there "See" opens the Lemma note, not the Scroll.
+		const SEE_SCROLL = "Library/See.md";
+		const reuse = () =>
+			stubDumgen({
+				grammar: seeGrammar,
+				knowledge: baseTextKnowledge,
+				reading: (input) =>
+					input.candidates.includes("🌊")
+						? { _tag: "Reuse", emojiDescription: "🌊" }
+						: { _tag: "New", emojiDescription: "🌊" },
+			});
+		const refsOf = async (store: DumdictVaultStore) =>
+			((await run(store.lemmaNote(see)))?.readings[0]?.attestationLinks ?? []).map(({ ref }) => ref);
+
+		it("names the Scroll by its path in the Reading note beside the Lemma note, from the first ref on", async () => {
+			const content = "Der See ist tief. ^0\n\nDer See ist kalt. ^1\n";
+			const harness = await resolutionHarness({ content, dumgen: reuse().dumgen, scrollPath: SEE_SCROLL });
+			// The Lemma is new: its notes come with the first ref.
+			await harness.resolve(
+				planFor({ content, scrollPath: SEE_SCROLL, sentenceText: "Der See ist tief.", units: seeUnits }),
+			);
+			const [first = ""] = await refsOf(harness.store);
+			expect(first).toMatch(/^!\[\[Library\/See#\^0\|\^[0-9a-f]{8}\]\]$/u);
+			expect(harness.vault.content(SEE_READING_PATH)).toContain(first);
+			expect(await run(harness.store.scrollRefNames(SEE_SCROLL, LAKE))).toEqual({
+				aliases: [{ from: SEE_READING_PATH, linkpath: "Library/See" }],
+				linkpath: "Library/See",
+			});
+
+			// A later occurrence, the Reading and its Lemma stored, names it alike.
+			await harness.resolve(
+				planFor({
+					content: harness.scroll.content,
+					scrollPath: SEE_SCROLL,
+					sentenceText: "Der See ist kalt.",
+					units: seeUnits,
+				}),
+			);
+			const refs = await refsOf(harness.store);
+			expect(refs).toHaveLength(2);
+			expect(refs[1]).toMatch(/^!\[\[Library\/See#\^1\|\^[0-9a-f]{8}\]\]$/u);
+
+			// The same occurrence again keeps its one ref.
+			const before = harness.vault.batches.length;
+			await harness.resolve(
+				planFor({ content, scrollPath: SEE_SCROLL, sentenceText: "Der See ist tief.", units: seeUnits }),
+			);
+			expect(await refsOf(harness.store)).toEqual(refs);
+			expect(harness.vault.batches.length).toBe(before);
+		});
+
+		it("adds the ref by its path beside a stored basename ref that opens the Lemma note, and keeps that one", async () => {
+			const content = "Der See ist tief. ^0\n";
+			const harness = await resolutionHarness({ content, dumgen: reuse().dumgen, scrollPath: SEE_SCROLL });
+			await harness.resolve(
+				planFor({ content, scrollPath: SEE_SCROLL, sentenceText: "Der See ist tief.", units: seeUnits }),
+			);
+			const [byPath = ""] = await refsOf(harness.store);
+			// A ref as Classify wrote it before #210, by the basename: from its
+			// note it opens the Lemma note, so it is no alias of the Scroll.
+			const byName = byPath.replace("![[Library/See#", "![[See#");
+			const [link] = (await run(harness.store.lemmaNote(see)))?.readings[0]?.attestationLinks ?? [];
+			if (link === undefined) throw new Error("See's occurrence was not stored");
+			await run(
+				harness.store.commitChanges({
+					baseRevision: await run(harness.store.revision),
+					changes: [
+						{
+							ops: [
+								{ kind: "removeAttestationLink", link },
+								{ kind: "addAttestationLink", link: { ...link, ref: byName } },
+							],
+							preconditions: [],
+							reading: LAKE,
+							type: "patchReading",
+						},
+					],
+				}),
+			);
+			expect(await refsOf(harness.store)).toEqual([byName]);
+			expect((await run(harness.store.scrollRefNames(SEE_SCROLL, LAKE))).aliases).toEqual([]);
+			await harness.resolve(
+				planFor({ content, scrollPath: SEE_SCROLL, sentenceText: "Der See ist tief.", units: seeUnits }),
+			);
+			// The stored ref stays as it was; the occurrence gains the one that opens the Scroll.
+			expect(await refsOf(harness.store)).toEqual([byName, byPath]);
+		});
+	});
+
 	describe("after its Scroll moved onto a name another note has (#198)", () => {
 		const TALE = "Library/Tale.md";
 		const reuse = () =>
@@ -264,8 +356,8 @@ describe("dumgenUnitResolver", () => {
 		it("writes a new ref by the Scroll's path, so the occurrence keeps one ref", async () => {
 			const { content, vault } = await classifiedThenMoved();
 			const again = await resolutionHarness({ content, dumgen: reuse().dumgen, scrollPath: TALE, vault });
-			expect(await run(again.store.scrollRefNames(TALE))).toEqual({
-				aliases: ["Library/Tale"],
+			expect(await run(again.store.scrollRefNames(TALE, LAKE))).toEqual({
+				aliases: [{ from: SEE_READING_PATH, linkpath: "Library/Tale" }],
 				linkpath: "Library/Tale",
 			});
 			const before = vault.batches.length;
@@ -284,8 +376,8 @@ describe("dumgenUnitResolver", () => {
 			await vault.userDelete("Archive/Tale.md");
 			const again = await resolutionHarness({ content, dumgen: reuse().dumgen, scrollPath: TALE, vault });
 			// New refs name the Scroll by its basename again; the stored one by its path still opens it.
-			expect(await run(again.store.scrollRefNames(TALE))).toEqual({
-				aliases: ["Tale", "Library/Tale"],
+			expect(await run(again.store.scrollRefNames(TALE, LAKE))).toEqual({
+				aliases: [{ from: SEE_READING_PATH, linkpath: "Library/Tale" }],
 				linkpath: "Tale",
 			});
 			const [stored = ""] = await refsOf(again.store);

@@ -4,7 +4,6 @@ import {
 	lemmaNoteOwner,
 	NoteSerializeError,
 	type PathClaim,
-	parseAttestationRef,
 	readingNoteOwner,
 } from "@textfresser/lemma-note-codec";
 import {
@@ -124,6 +123,7 @@ import {
 import {
 	basenameRefNames,
 	type DeferredRefs,
+	type HeldRef,
 	planRefRewrite,
 	type RefRewrite,
 	retargetForRenames,
@@ -356,15 +356,18 @@ export type DumdictVaultStore = {
 		reading: Dumling.Reading<"de">,
 	) => Effect.Effect<ReadingLocation | undefined>;
 	/**
-	 * How Attestation Refs name the Scroll at `scrollPath` (#198): the link
-	 * path a new ref takes, by the rule the store's rename rewrite follows
-	 * (its basename when Obsidian opens the Scroll for it, its path
-	 * otherwise), and every spelling stored refs name it by. It never
-	 * fails: when Obsidian cannot be asked, it answers the basename alone
-	 * and logs a warning.
+	 * How Attestation Refs name the Scroll at `scrollPath` for a new ref of
+	 * `reading` (#198, #210): the link path the ref takes, by the rule the
+	 * store's rename rewrite follows, resolved from the Reading's note, the
+	 * one it has or the one its commit creates (its basename when Obsidian
+	 * opens the Scroll for it from there, its path otherwise), and every
+	 * spelling stored refs name it by from the notes holding them. It never
+	 * fails: when Obsidian cannot be asked, it answers the basename, unless
+	 * a note the Reading's commit creates has it, and logs a warning.
 	 */
 	readonly scrollRefNames: (
 		scrollPath: string,
+		reading: Dumling.Reading<"de">,
 	) => Effect.Effect<ScrollRefNames>;
 	readonly surface: (
 		surfaceId: SurfaceEntry<"de">["id"],
@@ -2457,45 +2460,50 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				),
 	};
 
-	/**
-	 * The stored refs, the link paths they name their Scrolls by, and a
-	 * Reading note to resolve them from.
-	 */
-	const heldLinkpaths = () => {
-		const links = index.linksWithRefPrefix(ATTESTATION_REF_START);
-		const held = new Set<string>();
-		for (const { ref } of links) {
-			const parts = parseAttestationRef(ref);
-			if (parts) held.add(parts.linkpath);
-		}
-		let from: string | undefined;
-		for (const { reading } of links) {
-			from = index.readingLocation(readingKeyOf(reading))?.path;
-			if (from !== undefined) break;
-		}
-		return { from, held, refs: links.map(({ ref }) => ref) };
-	};
+	/** Every stored ref with the Reading note holding it, which its name resolves from. */
+	const heldRefs = (): HeldRef[] =>
+		index
+			.linksWithRefPrefix(ATTESTATION_REF_START)
+			.flatMap(({ reading, ref }) => {
+				const from = index.readingLocation(readingKeyOf(reading))?.path;
+				return from === undefined ? [] : [{ from, ref }];
+			});
 
 	/**
-	 * How refs name one Scroll, resolved from a Reading note, as the
-	 * rename rewrite resolves; from a note under `Worter/` while there is
-	 * none. A Scroll is never under `Worter/`, so its names resolve alike
-	 * from any note there.
+	 * How refs of one Reading name one Scroll, resolved from the Reading's
+	 * note, as the rename rewrite resolves each ref (#210). A Reading not
+	 * stored yet gets its note, and its Lemma's when that is new too, from
+	 * its commit: Obsidian cannot see them yet, so a note among them with
+	 * the Scroll's basename takes the name from it.
 	 */
 	const scrollRefNames = Effect.fn("dictionary.scrollRefNames")(function* (
 		scrollPath: string,
+		reading: Dumling.Reading<"de">,
 	): Effect.fn.Return<ScrollRefNames> {
-		const { from, held } = heldLinkpaths();
-		const source =
-			from ??
-			index.paths()[0] ??
+		const stored = index.readingLocation(readingKeyOf(reading))?.path;
+		const lemmaHeld = index.lemmaNote(lemmaKeyOf(reading.lemma))?.path;
+		const unseen = [
+			...(stored === undefined ? [canonicalReadingPath(reading)] : []),
+			...(lemmaHeld === undefined
+				? [canonicalLemmaPath(reading.lemma)]
+				: []),
+		].filter((path) => path !== undefined);
+		const from =
+			stored ??
+			canonicalReadingPath(reading) ??
 			`${WORTER_SPLIT_PATH.basename}/${WORTER_SPLIT_PATH.basename}.md`;
-		return yield* scrollRefNamesOf(scrollPath, held, source, lookup).pipe(
+		return yield* scrollRefNamesOf(
+			scrollPath,
+			from,
+			heldRefs(),
+			lookup,
+			unseen,
+		).pipe(
 			Effect.catch((cause) =>
 				Effect.logWarning(
-					`Dictionary could not ask Obsidian how refs name ${scrollPath}; new refs name it by its basename`,
+					`Dictionary could not ask Obsidian how refs name ${scrollPath}; new refs name it by its basename where no new note takes it`,
 					cause,
-				).pipe(Effect.as(basenameRefNames(scrollPath))),
+				).pipe(Effect.as(basenameRefNames(scrollPath, unseen))),
 			),
 		);
 	});
@@ -2518,8 +2526,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			renames: readonly ScrollRename[],
 		): Effect.fn.Return<RefRewrite, DictionaryRefRewriteError> {
 			const nothing: RefRewrite = { kept: [], rewritten: 0 };
-			const { from, refs } = heldLinkpaths();
-			if (from === undefined) return nothing;
+			const held = heldRefs();
+			if (held.length === 0) return nothing;
 			const failed = (what: string) => (cause: unknown) =>
 				new DictionaryRefRewriteError({
 					cause,
@@ -2528,8 +2536,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			const now = yield* Clock.currentTimeMillis;
 			const { deferred, notes, retarget } = yield* retargetForRenames(
 				renames,
-				refs,
-				from,
+				held,
 				lookup,
 				deferredRefs.filter(
 					({ at }) => now - at < DEFERRED_REFS_TTL_MS,

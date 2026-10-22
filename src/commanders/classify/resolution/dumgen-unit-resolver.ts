@@ -252,25 +252,39 @@ const judgeUnit = Effect.fnUntraced(function* (
 	return { attestation, decided, judge, sentence };
 });
 
+/**
+ * The Segment's source block as an embed, given the link path that names
+ * the Scroll; none when the block cannot carry an ID.
+ */
+type RefOf = ((linkpath: string) => string) | undefined;
+
 /** Commits one occurrence of a judged unit; never writes to the Scroll. */
 const commitUnit = Effect.fnUntraced(function* (
 	store: ResolutionStore,
 	judged: JudgedUnit,
 	planned: PlannedUnit,
-	/** The Segment's source block as an embed; none when the block cannot carry an ID. */
-	attestationRef: string | undefined,
-	/** The link paths stored refs may name the Scroll by. */
-	scrollAliases: readonly string[],
+	scrollPath: string,
+	refOf: RefOf,
 ): Effect.fn.Return<ResolvedUnit, UnitPending> {
 	const { attestation, judge, sentence } = judged;
 	let decided = judged.decided;
 	let created = false;
 	for (let rejudged = 0; ; rejudged++) {
+		// The ref names the Scroll as Obsidian opens it from the note it
+		// goes in, its Reading's, as the store's rename rewrite does (#210).
+		const names =
+			refOf === undefined
+				? undefined
+				: yield* store.scrollRefNames(scrollPath, decided.reading);
 		const committed = yield* commitOccurrence(store, {
-			...(attestationRef === undefined ? {} : { attestationRef }),
+			...(refOf === undefined || names === undefined
+				? {}
+				: {
+						attestationRef: refOf(names.linkpath),
+						scrollAliases: names.aliases,
+					}),
 			decision: decided.decision,
 			reading: decided.reading,
-			scrollAliases,
 			surface: attestation.surface,
 			...(decided.seen === undefined ? {} : { seen: decided.seen }),
 		}).pipe(Effect.mapError(pendingOnFailure("the dictionary refused it")));
@@ -336,8 +350,6 @@ export function dumgenUnitResolver(
 			function* (plan) {
 				const dumgen = yield* deps.dumgen;
 				const store = yield* deps.store;
-				// Refs name the Scroll as the store's rename rewrite does.
-				const names = yield* store.scrollRefNames(plan.scrollPath);
 				const firstOf = (planned: PlannedUnit) =>
 					planned.occurrences[0]?.from ?? 0;
 				const blocks = sourceBlocksOf(
@@ -381,7 +393,7 @@ export function dumgenUnitResolver(
 						ids: new Map(),
 					}),
 				);
-				const refOf = (planned: PlannedUnit) => {
+				const refOf = (planned: PlannedUnit): RefOf => {
 					const block = blocks.get(firstOf(planned));
 					const id =
 						block?._tag === "Identified"
@@ -391,12 +403,16 @@ export function dumgenUnitResolver(
 								: undefined;
 					return id === undefined
 						? undefined
-						: attestationRefOf(
-								plan.scrollPath,
-								id,
-								occurrenceKeyOf(planned.ref, planned.instance),
-								names.linkpath,
-							);
+						: (linkpath) =>
+								attestationRefOf(
+									plan.scrollPath,
+									id,
+									occurrenceKeyOf(
+										planned.ref,
+										planned.instance,
+									),
+									linkpath,
+								);
 				};
 				const judgements = new Map<
 					string,
@@ -422,8 +438,8 @@ export function dumgenUnitResolver(
 									store,
 									judged,
 									planned,
+									plan.scrollPath,
 									refOf(planned),
-									names.aliases,
 								),
 							),
 							Effect.map(
