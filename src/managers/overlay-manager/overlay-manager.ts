@@ -133,6 +133,7 @@ export class OverlayManager {
 			this.contextMenuTeardown = setupContextMenu({
 				app: this.app,
 				commandExecutor: this.commandExecutor,
+				librarian: this.librarian,
 				plugin: this.plugin,
 				vam: this.vam,
 			});

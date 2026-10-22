@@ -6,6 +6,7 @@ import { makeCodecRulesFromSettings } from "@textfresser/library-core";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { Effect, Exit } from "effect";
 import type { App, Menu, Plugin } from "obsidian";
+import type { Librarian } from "../../../commanders/librarian/librarian";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/pages/split-to-pages-action";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import {
@@ -22,29 +23,22 @@ type ContextMenuDeps = {
 	app: App;
 	plugin: Plugin;
 	commandExecutor: CommandExecutor | null;
+	librarian: Pick<Librarian, "isInsideLibrary">;
 	vam: VaultActionManager;
 };
 
-const getContextMenuFile = Effect.fn("getContextMenuFile")(function* (
-	vam: VaultActionManager,
+/**
+ * Active editor file for the context menu, or null when it is outside the
+ * Library. Library membership is the Librarian's call.
+ */
+export const getContextMenuFile = Effect.fn("getContextMenuFile")(function* (
+	vam: Pick<VaultActionManager, "getActiveEditorContext">,
+	librarian: Pick<Librarian, "isInsideLibrary">,
 ) {
 	const context = yield* vam.getActiveEditorContext();
 	if (!context) return null;
 	const { content, splitPath } = context;
-
-	let isInLibrary = false;
-	try {
-		const { splitPathToLibraryRoot } = getParsedUserSettings();
-		const libraryPathParts = splitPathToLibraryRoot.pathParts;
-		isInLibrary =
-			splitPath.pathParts.length >= libraryPathParts.length &&
-			libraryPathParts.every(
-				(part, i) => splitPath.pathParts[i] === part,
-			);
-	} catch {
-		isInLibrary = false;
-	}
-	if (!isInLibrary) return null;
+	if (!librarian.isInsideLibrary(splitPath)) return null;
 
 	return { content, splitPath };
 });
@@ -54,10 +48,10 @@ const getContextMenuFile = Effect.fn("getContextMenuFile")(function* (
  * Returns teardown function for cleanup.
  */
 export function setupContextMenu(deps: ContextMenuDeps): () => void {
-	const { app, commandExecutor, plugin, vam } = deps;
+	const { app, commandExecutor, librarian, plugin, vam } = deps;
 
 	const editorMenuRef = app.workspace.on("editor-menu", (menu: Menu) => {
-		handleEditorMenu(menu, vam, commandExecutor);
+		handleEditorMenu(menu, vam, librarian, commandExecutor);
 	});
 
 	plugin.registerEvent(editorMenuRef);
@@ -75,9 +69,12 @@ export function setupContextMenu(deps: ContextMenuDeps): () => void {
 function handleEditorMenu(
 	menu: Menu,
 	vam: VaultActionManager,
+	librarian: Pick<Librarian, "isInsideLibrary">,
 	commandExecutor: CommandExecutor | null,
 ): void {
-	const activeFileExit = Effect.runSyncExit(getContextMenuFile(vam));
+	const activeFileExit = Effect.runSyncExit(
+		getContextMenuFile(vam, librarian),
+	);
 	if (Exit.isFailure(activeFileExit) || !activeFileExit.value) return;
 	const { content, splitPath } = activeFileExit.value;
 
