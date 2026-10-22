@@ -170,6 +170,50 @@ describe("VaultActionManager scanAndSubscribe", () => {
 		expect(paths(subscription)).toEqual(["Library/a.md"]);
 	}, 10_000);
 
+	it("keeps the other subscribers' events moving while settling waits for start", async () => {
+		const harness = await makeHarness(
+			{ "Library/a.md": "" },
+			{ otherSubscriber: false },
+		);
+		const other: string[] = [];
+		const otherSubscription = await run(
+			harness.manager.subscribeToBulk((bulk) =>
+				Effect.sync(() => {
+					for (const event of bulk.events) {
+						other.push(describeEvent(event));
+					}
+				}),
+			),
+		);
+		const subscription = await harness.subscribe();
+
+		await harness.vault.createByHand("Library/before.md");
+		let settled = false;
+		const settling = harness.settle().then(() => {
+			settled = true;
+		});
+		// The settle closes the open window and publishes its barrier.
+		await run(otherSubscription.caughtUp);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+		// While it waits for the gated subscriber, a later change still
+		// reaches the started one.
+		await harness.vault.createByHand("Library/during.md");
+		await run(otherSubscription.caughtUp);
+		expect(other).toEqual([
+			"FileCreated Library/before.md",
+			"FileCreated Library/during.md",
+		]);
+		expect(harness.bulks).toEqual([]);
+		expect(settled).toBe(false);
+
+		await run(subscription.start);
+		await settling;
+		expect(harness.delivered()).toEqual([
+			"FileCreated Library/before.md",
+			"FileCreated Library/during.md",
+		]);
+	}, 10_000);
+
 	it("never delivers a change from before the snapshot, though it shares the open window", async () => {
 		const harness = await makeHarness({ "Library/a.md": "" });
 		await harness.vault.createByHand("Library/before.md");
