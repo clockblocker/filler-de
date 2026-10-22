@@ -174,7 +174,9 @@ async function dispatchObserved(
 						bulks.push(bulk);
 					}),
 				);
-				const report = yield* manager.dispatchWithReport(actions);
+				const report = yield* manager.dispatchWithReport(actions, {
+					caller: "test",
+				});
 				yield* Effect.promise(duringWindow);
 				yield* testing.whenSettled();
 				return report;

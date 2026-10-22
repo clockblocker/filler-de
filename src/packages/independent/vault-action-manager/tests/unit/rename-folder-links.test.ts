@@ -71,16 +71,19 @@ async function renameWorter(updateLinks?: boolean) {
 	const { app, calls } = makeApp();
 	const { dispose, manager } = createVaultActionManager(app);
 	await Effect.runPromise(
-		manager.dispatchStopOnFirstFailure([
-			{
-				kind: VaultActionKind.RenameFolder,
-				payload: {
-					from: folder("Worter"),
-					to: folder("Backup"),
-					...(updateLinks === undefined ? {} : { updateLinks }),
+		manager.dispatchStopOnFirstFailure(
+			[
+				{
+					kind: VaultActionKind.RenameFolder,
+					payload: {
+						from: folder("Worter"),
+						to: folder("Backup"),
+						...(updateLinks === undefined ? {} : { updateLinks }),
+					},
 				},
-			},
-		]),
+			],
+			{ caller: "test" },
+		),
 	);
 	await Effect.runPromise(dispose);
 	return calls;
@@ -107,16 +110,19 @@ async function moveStray(updateLinks?: boolean) {
 	const { app, calls } = makeApp();
 	const { dispose, manager } = createVaultActionManager(app);
 	await Effect.runPromise(
-		manager.dispatchStopOnFirstFailure([
-			{
-				kind: VaultActionKind.RenameMdFile,
-				payload: {
-					from: note(["Worter"], "Fahrer"),
-					to: note(["Worter"], "fahrer"),
-					...(updateLinks === undefined ? {} : { updateLinks }),
+		manager.dispatchStopOnFirstFailure(
+			[
+				{
+					kind: VaultActionKind.RenameMdFile,
+					payload: {
+						from: note(["Worter"], "Fahrer"),
+						to: note(["Worter"], "fahrer"),
+						...(updateLinks === undefined ? {} : { updateLinks }),
+					},
 				},
-			},
-		]),
+			],
+			{ caller: "test" },
+		),
 	);
 	await Effect.runPromise(dispose);
 	return calls;

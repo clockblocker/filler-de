@@ -10,6 +10,7 @@ import type {
 import { SplitPathKind } from "../../src/types/split-path";
 import type { VaultAction } from "../../src/types/vault-action";
 import { VaultActionKind } from "../../src/types/vault-action";
+import { selfOf, TEST_OPERATION } from "./helpers/self-events";
 
 const folder = (
 	basename: string,
@@ -36,11 +37,13 @@ function makeTracker() {
 		getRegisteredFilePaths: () =>
 			Effect.runSync(tracker.getRegisteredFilePathsEffect()),
 		register: (actions: readonly VaultAction[]) =>
-			Effect.runSync(tracker.registerEffect(actions)),
+			Effect.runSync(tracker.registerEffect(actions, TEST_OPERATION)),
 		shouldIgnore: (path: string) =>
-			Effect.runSync(tracker.shouldIgnoreEffect(path)),
+			Effect.runSync(selfOf(tracker.attributeEffect(path))),
 		shouldIgnoreRename: (oldPath: string, newPath: string) =>
-			Effect.runSync(tracker.shouldIgnoreRenameEffect(oldPath, newPath)),
+			Effect.runSync(
+				selfOf(tracker.attributeRenameEffect(oldPath, newPath)),
+			),
 		waitForAllRegistered: () =>
 			Effect.runPromise(tracker.waitForAllRegisteredEffect()),
 	};
@@ -448,14 +451,17 @@ describe("SelfEventTracker", () => {
 				const tracker = yield* SelfEventTracker.makeEffect({
 					ttlMs: 5000,
 				});
-				yield* tracker.registerEffect([
-					{
-						kind: VaultActionKind.UpsertMdFile,
-						payload: {
-							splitPath: mdFile("note", ["Library"]),
+				yield* tracker.registerEffect(
+					[
+						{
+							kind: VaultActionKind.UpsertMdFile,
+							payload: {
+								splitPath: mdFile("note", ["Library"]),
+							},
 						},
-					},
-				]);
+					],
+					TEST_OPERATION,
+				);
 				const waiter = yield* tracker
 					.waitForAllRegisteredEffect()
 					.pipe(Effect.forkChild);
@@ -480,31 +486,34 @@ describe("SelfEventTracker", () => {
 				const tracker = yield* SelfEventTracker.makeEffect({
 					ttlMs: 5000,
 				});
-				yield* tracker.registerEffect([
-					{
-						kind: VaultActionKind.TrashFolder,
-						payload: {
-							splitPath: folder("target", ["Library"]),
+				yield* tracker.registerEffect(
+					[
+						{
+							kind: VaultActionKind.TrashFolder,
+							payload: {
+								splitPath: folder("target", ["Library"]),
+							},
 						},
-					},
-				]);
+					],
+					TEST_OPERATION,
+				);
 
 				yield* TestClock.adjust(4999);
 				expect(
-					yield* tracker.shouldIgnoreEffect(
-						"Library/target/first.md",
+					yield* selfOf(
+						tracker.attributeEffect("Library/target/first.md"),
 					),
 				).toBe(true);
 				expect(
-					yield* tracker.shouldIgnoreEffect(
-						"Library/target/second.md",
+					yield* selfOf(
+						tracker.attributeEffect("Library/target/second.md"),
 					),
 				).toBe(true);
 
 				yield* TestClock.adjust(1);
 				expect(
-					yield* tracker.shouldIgnoreEffect(
-						"Library/target/expired.md",
+					yield* selfOf(
+						tracker.attributeEffect("Library/target/expired.md"),
 					),
 				).toBe(false);
 			}).pipe(Effect.provide(TestClock.layer())),
@@ -524,7 +533,7 @@ describe("SelfEventTracker", () => {
 						to: folder("new", ["Library"]),
 					},
 				};
-				yield* tracker.beginEffect(action);
+				yield* tracker.beginEffect(action, TEST_OPERATION);
 				yield* tracker.expectRenameDestinationEffect({
 					actual: "Library/1_new",
 					from: "Library/old",
@@ -536,40 +545,50 @@ describe("SelfEventTracker", () => {
 				// The folder's own rename and a descendant's, at the actual
 				// destination; nothing at the planned one any more.
 				expect(
-					yield* tracker.shouldIgnoreRenameEffect(
-						"Library/old",
-						"Library/1_new",
+					yield* selfOf(
+						tracker.attributeRenameEffect(
+							"Library/old",
+							"Library/1_new",
+						),
 					),
 				).toBe(true);
 				expect(
-					yield* tracker.shouldIgnoreRenameEffect(
-						"Library/old/a.md",
-						"Library/1_new/a.md",
+					yield* selfOf(
+						tracker.attributeRenameEffect(
+							"Library/old/a.md",
+							"Library/1_new/a.md",
+						),
 					),
 				).toBe(true);
 				expect(
-					yield* tracker.shouldIgnoreRenameEffect(
-						"Library/old/b.md",
-						"Library/new/b.md",
+					yield* selfOf(
+						tracker.attributeRenameEffect(
+							"Library/old/b.md",
+							"Library/new/b.md",
+						),
 					),
 				).toBe(false);
-				expect(yield* tracker.shouldIgnoreEffect("Library/new")).toBe(
-					false,
-				);
+				expect(
+					yield* selfOf(tracker.attributeEffect("Library/new")),
+				).toBe(false);
 
 				yield* tracker.finishEffect(action);
 				yield* TestClock.adjust(4999);
 				expect(
-					yield* tracker.shouldIgnoreRenameEffect(
-						"Library/old/c.md",
-						"Library/1_new/c.md",
+					yield* selfOf(
+						tracker.attributeRenameEffect(
+							"Library/old/c.md",
+							"Library/1_new/c.md",
+						),
 					),
 				).toBe(true);
 				yield* TestClock.adjust(1);
 				expect(
-					yield* tracker.shouldIgnoreRenameEffect(
-						"Library/old/d.md",
-						"Library/1_new/d.md",
+					yield* selfOf(
+						tracker.attributeRenameEffect(
+							"Library/old/d.md",
+							"Library/1_new/d.md",
+						),
 					),
 				).toBe(false);
 				// Nothing is left to hold the settle barrier.
@@ -591,30 +610,36 @@ describe("SelfEventTracker", () => {
 						to: folder("new", ["Library"]),
 					},
 				};
-				yield* tracker.beginEffect(action);
+				yield* tracker.beginEffect(action, TEST_OPERATION);
 
 				yield* TestClock.adjust(60_000);
 				expect(
-					yield* tracker.shouldIgnoreRenameEffect(
-						"Library/old/a.md",
-						"Library/new/a.md",
+					yield* selfOf(
+						tracker.attributeRenameEffect(
+							"Library/old/a.md",
+							"Library/new/a.md",
+						),
 					),
 				).toBe(true);
 
 				yield* tracker.finishEffect(action);
 				yield* TestClock.adjust(4999);
 				expect(
-					yield* tracker.shouldIgnoreRenameEffect(
-						"Library/old/b.md",
-						"Library/new/b.md",
+					yield* selfOf(
+						tracker.attributeRenameEffect(
+							"Library/old/b.md",
+							"Library/new/b.md",
+						),
 					),
 				).toBe(true);
 
 				yield* TestClock.adjust(1);
 				expect(
-					yield* tracker.shouldIgnoreRenameEffect(
-						"Library/old/c.md",
-						"Library/new/c.md",
+					yield* selfOf(
+						tracker.attributeRenameEffect(
+							"Library/old/c.md",
+							"Library/new/c.md",
+						),
 					),
 				).toBe(false);
 			}).pipe(Effect.provide(TestClock.layer())),
@@ -627,21 +652,24 @@ describe("SelfEventTracker", () => {
 				const tracker = yield* SelfEventTracker.makeEffect({
 					ttlMs: 5000,
 				});
-				yield* tracker.registerEffect([
-					{
-						kind: VaultActionKind.UpsertMdFile,
-						payload: {
-							splitPath: mdFile("note", ["Library"]),
+				yield* tracker.registerEffect(
+					[
+						{
+							kind: VaultActionKind.UpsertMdFile,
+							payload: {
+								splitPath: mdFile("note", ["Library"]),
+							},
 						},
-					},
-				]);
+					],
+					TEST_OPERATION,
+				);
 				const waiter = yield* tracker
 					.waitForAllRegisteredEffect()
 					.pipe(Effect.forkChild);
 				yield* Effect.yieldNow;
 
 				expect(
-					yield* tracker.shouldIgnoreEffect("Library/note.md"),
+					yield* selfOf(tracker.attributeEffect("Library/note.md")),
 				).toBe(true);
 				yield* Fiber.join(waiter);
 			}),
@@ -658,16 +686,24 @@ describe("SelfEventTracker modify expectations", () => {
 				yield* tracker.expectModifyEffect("/Worter/Hund.md");
 
 				expect(
-					yield* tracker.shouldIgnoreModifyEffect("Worter\\Hund.md"),
+					yield* selfOf(
+						tracker.attributeModifyEffect("Worter\\Hund.md"),
+					),
 				).toBe(true);
 				expect(
-					yield* tracker.shouldIgnoreModifyEffect("Worter/Hund.md"),
+					yield* selfOf(
+						tracker.attributeModifyEffect("Worter/Hund.md"),
+					),
 				).toBe(true);
 				expect(
-					yield* tracker.shouldIgnoreModifyEffect("Worter/Hund.md"),
+					yield* selfOf(
+						tracker.attributeModifyEffect("Worter/Hund.md"),
+					),
 				).toBe(false);
 				expect(
-					yield* tracker.shouldIgnoreModifyEffect("Worter/Katze.md"),
+					yield* selfOf(
+						tracker.attributeModifyEffect("Worter/Katze.md"),
+					),
 				).toBe(false);
 			}),
 		);
@@ -681,7 +717,9 @@ describe("SelfEventTracker modify expectations", () => {
 				yield* tracker.forgetModifyEffect("Worter/Hund.md");
 
 				expect(
-					yield* tracker.shouldIgnoreModifyEffect("Worter/Hund.md"),
+					yield* selfOf(
+						tracker.attributeModifyEffect("Worter/Hund.md"),
+					),
 				).toBe(false);
 			}),
 		);
@@ -698,11 +736,15 @@ describe("SelfEventTracker modify expectations", () => {
 
 				yield* TestClock.adjust(4999);
 				expect(
-					yield* tracker.shouldIgnoreModifyEffect("Worter/Hund.md"),
+					yield* selfOf(
+						tracker.attributeModifyEffect("Worter/Hund.md"),
+					),
 				).toBe(true);
 				yield* TestClock.adjust(1);
 				expect(
-					yield* tracker.shouldIgnoreModifyEffect("Worter/Katze.md"),
+					yield* selfOf(
+						tracker.attributeModifyEffect("Worter/Katze.md"),
+					),
 				).toBe(false);
 			}).pipe(Effect.provide(TestClock.layer())),
 		);
@@ -715,7 +757,7 @@ describe("SelfEventTracker modify expectations", () => {
 				yield* tracker.expectModifyEffect("Library/note.md");
 
 				expect(
-					yield* tracker.shouldIgnoreEffect("Library/note.md"),
+					yield* selfOf(tracker.attributeEffect("Library/note.md")),
 				).toBe(false);
 				expect(yield* tracker.getRegisteredFilePathsEffect()).toEqual(
 					[],
@@ -723,17 +765,22 @@ describe("SelfEventTracker modify expectations", () => {
 				// Modify expectations never hold the settle barrier open.
 				yield* tracker.waitForAllRegisteredEffect();
 
-				yield* tracker.registerEffect([
-					{
-						kind: VaultActionKind.UpsertMdFile,
-						payload: { splitPath: mdFile("note", ["Library"]) },
-					},
-				]);
+				yield* tracker.registerEffect(
+					[
+						{
+							kind: VaultActionKind.UpsertMdFile,
+							payload: { splitPath: mdFile("note", ["Library"]) },
+						},
+					],
+					TEST_OPERATION,
+				);
 				expect(
-					yield* tracker.shouldIgnoreEffect("Library/note.md"),
+					yield* selfOf(tracker.attributeEffect("Library/note.md")),
 				).toBe(true);
 				expect(
-					yield* tracker.shouldIgnoreModifyEffect("Library/note.md"),
+					yield* selfOf(
+						tracker.attributeModifyEffect("Library/note.md"),
+					),
 				).toBe(true);
 			}),
 		);
@@ -752,24 +799,24 @@ describe("SelfEventTracker modify expectations", () => {
 						to: mdFile("new", ["Library"]),
 					},
 				};
-				yield* tracker.beginEffect(action);
+				yield* tracker.beginEffect(action, TEST_OPERATION);
 
 				yield* TestClock.adjust(60_000);
 				expect(
-					yield* tracker.shouldIgnoreEffect("Library/new.md"),
+					yield* selfOf(tracker.attributeEffect("Library/new.md")),
 				).toBe(true);
 
 				yield* tracker.finishEffect(action);
 				// The matched entry stays matched.
 				expect(
-					yield* tracker.shouldIgnoreEffect("Library/new.md"),
+					yield* selfOf(tracker.attributeEffect("Library/new.md")),
 				).toBe(false);
 				yield* TestClock.adjust(4999);
 				expect(yield* tracker.getRegisteredFilePathsEffect()).toEqual(
 					[],
 				);
 				expect(
-					yield* tracker.shouldIgnoreEffect("Library/old.md"),
+					yield* selfOf(tracker.attributeEffect("Library/old.md")),
 				).toBe(true);
 			}).pipe(Effect.provide(TestClock.layer())),
 		);
@@ -785,31 +832,35 @@ describe("SelfEventTracker modify expectations", () => {
 					kind: VaultActionKind.TrashFolder,
 					payload: { splitPath: folder("target", ["Library"]) },
 				};
-				yield* tracker.beginEffect(action);
+				yield* tracker.beginEffect(action, TEST_OPERATION);
 				const waiter = yield* tracker
 					.waitForAllRegisteredEffect()
 					.pipe(Effect.forkChild);
 
 				yield* TestClock.adjust(60_000);
 				expect(
-					yield* tracker.shouldIgnoreEffect(
-						"Library/target/child.md",
+					yield* selfOf(
+						tracker.attributeEffect("Library/target/child.md"),
 					),
 				).toBe(true);
 
 				yield* tracker.finishEffect(action);
 				yield* TestClock.adjust(4999);
 				expect(
-					yield* tracker.shouldIgnoreEffect("Library/target/late.md"),
+					yield* selfOf(
+						tracker.attributeEffect("Library/target/late.md"),
+					),
 				).toBe(true);
 
 				yield* TestClock.adjust(1);
 				yield* Fiber.join(waiter);
 				expect(
-					yield* tracker.shouldIgnoreEffect("Library/target/user.md"),
+					yield* selfOf(
+						tracker.attributeEffect("Library/target/user.md"),
+					),
 				).toBe(false);
 				expect(
-					yield* tracker.shouldIgnoreEffect("Library/target"),
+					yield* selfOf(tracker.attributeEffect("Library/target")),
 				).toBe(false);
 			}).pipe(Effect.provide(TestClock.layer())),
 		);

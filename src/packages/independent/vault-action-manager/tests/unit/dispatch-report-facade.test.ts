@@ -51,7 +51,10 @@ function setup() {
 	) =>
 		Effect.runPromise(
 			manager
-				.dispatchWithReport(actions, { stopOnFirstFailure })
+				.dispatchWithReport(actions, {
+					caller: "test",
+					stopOnFirstFailure,
+				})
 				.pipe(Effect.flip),
 		);
 	return { dispose, fail, harness, manager };
@@ -70,19 +73,22 @@ describe("VaultActionManager dispatch reports", () => {
 		harness.addFile("Library/Old.md", "old");
 
 		const report = await Effect.runPromise(
-			manager.dispatchWithReport([
-				upsert("Library/New.md", "fresh"),
-				upsert("Library/Kept.md", null),
-				upsert("Library/Edited.md", "after"),
-				process("Library/Kept.md", (content) => content),
-				rename("Library/Moved.md", "Library/Elsewhere.md"),
-				rename("Library/Bumped.md", "Library/Taken.md"),
-				rename("Library/Copy.md", "Library/Original.md"),
-				{
-					kind: VaultActionKind.TrashMdFile,
-					payload: { splitPath: md("Library/Old.md") },
-				},
-			]),
+			manager.dispatchWithReport(
+				[
+					upsert("Library/New.md", "fresh"),
+					upsert("Library/Kept.md", null),
+					upsert("Library/Edited.md", "after"),
+					process("Library/Kept.md", (content) => content),
+					rename("Library/Moved.md", "Library/Elsewhere.md"),
+					rename("Library/Bumped.md", "Library/Taken.md"),
+					rename("Library/Copy.md", "Library/Original.md"),
+					{
+						kind: VaultActionKind.TrashMdFile,
+						payload: { splitPath: md("Library/Old.md") },
+					},
+				],
+				{ caller: "test" },
+			),
 		);
 
 		const outcomes = new Map(
@@ -128,10 +134,13 @@ describe("VaultActionManager dispatch reports", () => {
 		harness.addFile("Library/Kept.md", "kept");
 
 		const report = await Effect.runPromise(
-			manager.dispatchWithReport([
-				upsert("Library/Kept.md", null),
-				process("Library/Kept.md", (content) => content),
-			]),
+			manager.dispatchWithReport(
+				[
+					upsert("Library/Kept.md", null),
+					process("Library/Kept.md", (content) => content),
+				],
+				{ caller: "test" },
+			),
 		);
 
 		expect(
@@ -292,14 +301,19 @@ describe("VaultActionManager dispatch reports", () => {
 		harness.failingWrites.add("Library/Locked.md");
 
 		const done = await Effect.runPromise(
-			manager.dispatch([upsert("Library/Fine.md", "fine")]),
+			manager.dispatch([upsert("Library/Fine.md", "fine")], {
+				caller: "test",
+			}),
 		);
 		const failure = await Effect.runPromise(
 			manager
-				.dispatchStopOnFirstFailure([
-					upsert("Library/Locked.md", "changed"),
-					upsert("Library/Later.md", "later"),
-				])
+				.dispatchStopOnFirstFailure(
+					[
+						upsert("Library/Locked.md", "changed"),
+						upsert("Library/Later.md", "later"),
+					],
+					{ caller: "test" },
+				)
 				.pipe(Effect.flip),
 		);
 

@@ -325,7 +325,7 @@ describe("user text and concurrent writers", () => {
 		const path = lemmaPath(bank);
 		const dispatch = vault.dispatchStopOnFirstFailure;
 		let raced = false;
-		vault.dispatchStopOnFirstFailure = (actions) => {
+		vault.dispatchStopOnFirstFailure = (actions, caller) => {
 			if (!raced && writtenIn(actions).includes(path)) {
 				raced = true;
 				const content = vault.content(path) ?? "";
@@ -335,7 +335,7 @@ describe("user text and concurrent writers", () => {
 					`${content.slice(0, at).trimEnd()}\n\nTyped meanwhile.\n\n${content.slice(at)}`,
 				);
 			}
-			return dispatch(actions);
+			return dispatch(actions, caller);
 		};
 
 		const { refreshed, store } = await openSettled(vault, v2);

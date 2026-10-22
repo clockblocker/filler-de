@@ -1,4 +1,5 @@
 import { splitPathCodec } from "../../split-path-codec";
+import type { VaultEventOrigin } from "../../types/event-origin";
 import type { VaultFileStat } from "../../types/file-stat";
 import type {
 	SplitPathToFolder,
@@ -6,11 +7,16 @@ import type {
 } from "../../types/split-path";
 import { VaultPath } from "../../vault-path";
 
-/** One Markdown file whose content changed outside VAM. */
-export type MdFileModification = {
+/** One Markdown file whose content changed, as Obsidian reported it. */
+export type MdFileChange = {
 	readonly splitPath: SplitPathToMdFile;
 	/** The file's stat when Obsidian reported the change. */
 	readonly stat: VaultFileStat;
+};
+
+/** One Markdown file whose content changed, and who changed it last. */
+export type MdFileModification = MdFileChange & {
+	readonly origin: VaultEventOrigin;
 };
 
 /**
@@ -21,7 +27,10 @@ export type MdFileModification = {
  * subscriptions are not ordered relative to each other.
  */
 export type BulkMdModifyEvent = {
-	/** One entry per modified file, in first-observed order, with its latest stat. */
+	/**
+	 * One entry per modified file, in first-observed order, with its latest
+	 * stat and the origin of its latest change the subscription receives.
+	 */
 	readonly modifications: readonly MdFileModification[];
 	readonly debug: {
 		/** Timestamp (ms since epoch) of the window's first accepted callback. */

@@ -10,6 +10,9 @@ import {
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
 
+/** The batch a fake dispatch reports, when a test does not care which. */
+export const FAKE_OPERATION = { caller: "test", operationId: "test#1" } as const;
+
 /** Stands in for the failed action when a test does not care which it is. */
 const SOME_ACTION: VaultAction = {
 	kind: VaultActionKind.UpsertMdFile,
@@ -43,7 +46,7 @@ export function notRun(
 	reason: Parameters<typeof VamDispatchFailure.notRun>[0],
 	actions: readonly VaultAction[] = [],
 ): VamDispatchFailure {
-	return VamDispatchFailure.notRun(reason, actions);
+	return VamDispatchFailure.notRun(reason, actions, FAKE_OPERATION);
 }
 
 /**
@@ -58,6 +61,7 @@ export function failedActions(
 	} = {},
 ): VamDispatchFailure {
 	const report = new VamDispatchReport({
+		...FAKE_OPERATION,
 		entries: [
 			...(options.executed ?? []).map((action) => ({
 				action,

@@ -38,16 +38,19 @@ describe("VaultActionManager protected paths: dispatch", () => {
 		const { dispose, manager, testing } = makeManager(harness);
 
 		const exit = await Effect.runPromiseExit(
-			manager.dispatch([
-				upsert("Worter/Katze.md"),
-				{
-					kind: VaultActionKind.ProcessMdFile,
-					payload: {
-						splitPath: md(EXEMPLAR_NOTE),
-						transform: () => "damaged",
+			manager.dispatch(
+				[
+					upsert("Worter/Katze.md"),
+					{
+						kind: VaultActionKind.ProcessMdFile,
+						payload: {
+							splitPath: md(EXEMPLAR_NOTE),
+							transform: () => "damaged",
+						},
 					},
-				},
-			]),
+				],
+				{ caller: "test" },
+			),
 		);
 		await Effect.runPromise(testing.whenSettled());
 
@@ -85,15 +88,18 @@ describe("VaultActionManager protected paths: dispatch", () => {
 
 		const failure = await Effect.runPromise(
 			manager
-				.dispatchStopOnFirstFailure([
-					{
-						kind: VaultActionKind.RenameFolder,
-						payload: {
-							from: folder("Exemplar"),
-							to: folder("Archive"),
+				.dispatchStopOnFirstFailure(
+					[
+						{
+							kind: VaultActionKind.RenameFolder,
+							payload: {
+								from: folder("Exemplar"),
+								to: folder("Archive"),
+							},
 						},
-					},
-				])
+					],
+					{ caller: "test" },
+				)
 				.pipe(Effect.flip),
 		);
 
@@ -109,12 +115,15 @@ describe("VaultActionManager protected paths: dispatch", () => {
 
 		const failure = await Effect.runPromise(
 			manager
-				.dispatch([
-					{
-						kind: VaultActionKind.TrashFolder,
-						payload: { splitPath: splitPathCodec.root },
-					},
-				])
+				.dispatch(
+					[
+						{
+							kind: VaultActionKind.TrashFolder,
+							payload: { splitPath: splitPathCodec.root },
+						},
+					],
+					{ caller: "test" },
+				)
 				.pipe(Effect.flip),
 		);
 
@@ -130,10 +139,10 @@ describe("VaultActionManager protected paths: dispatch", () => {
 		const { dispose, manager } = makeManager(harness);
 
 		await Effect.runPromise(
-			manager.dispatch([
-				upsert("Exemplars/Note.md"),
-				upsert("Worter/Hund.md"),
-			]),
+			manager.dispatch(
+				[upsert("Exemplars/Note.md"), upsert("Worter/Hund.md")],
+				{ caller: "test" },
+			),
 		);
 
 		expect(harness.writes).toEqual([
@@ -209,12 +218,13 @@ describe("VaultActionManager protected paths: modifications", () => {
 		return received;
 	}
 
-	const origins = (events: readonly ProtectedPathModificationsEvent[]) =>
+	const writers = (events: readonly ProtectedPathModificationsEvent[]) =>
 		events.flatMap(({ modifications }) =>
-			modifications.map(({ origin, prefix, splitPath }) => ({
+			modifications.map(({ origin, prefix, splitPath, writer }) => ({
 				origin,
 				path: splitPathCodec.format(splitPath),
 				prefix,
+				writer,
 			})),
 		);
 
@@ -230,8 +240,13 @@ describe("VaultActionManager protected paths: modifications", () => {
 			}),
 		);
 
-		expect(origins(received)).toEqual([
-			{ origin: "Unattributed", path: EXEMPLAR_NOTE, prefix: "Exemplar" },
+		expect(writers(received)).toEqual([
+			{
+				origin: { kind: "External" },
+				path: EXEMPLAR_NOTE,
+				prefix: "Exemplar",
+				writer: "Unattributed",
+			},
 		]);
 	});
 
@@ -246,12 +261,17 @@ describe("VaultActionManager protected paths: modifications", () => {
 			),
 		);
 
-		expect(origins(received)).toEqual([
-			{ origin: "OpenInEditor", path: EXEMPLAR_NOTE, prefix: "Exemplar" },
+		expect(writers(received)).toEqual([
+			{
+				origin: { kind: "External" },
+				path: EXEMPLAR_NOTE,
+				prefix: "Exemplar",
+				writer: "OpenInEditor",
+			},
 		]);
 	});
 
-	it("attributes link rewriting after a VAM rename, even of an open file", async () => {
+	it("labels link rewriting after a VAM rename LinkUpdate, with the rename's operation, even of an open file", async () => {
 		const harness = makeVaultHarness();
 		harness.addFile("Worter/Hund.md", "# Hund");
 		const note = harness.addFile(EXEMPLAR_NOTE, "[[Hund]]");
@@ -259,22 +279,26 @@ describe("VaultActionManager protected paths: modifications", () => {
 		harness.open(EXEMPLAR_NOTE);
 
 		const received = await observe(harness, (manager) =>
-			manager.dispatch([
-				{
-					kind: VaultActionKind.RenameMdFile,
-					payload: {
-						from: md("Worter/Hund.md"),
-						to: md("Worter/Hunde.md"),
+			manager.dispatch(
+				[
+					{
+						kind: VaultActionKind.RenameMdFile,
+						payload: {
+							from: md("Worter/Hund.md"),
+							to: md("Worter/Hunde.md"),
+						},
 					},
-				},
-			]),
+				],
+				{ caller: "test", operationId: "rename-hund" },
+			),
 		);
 
-		expect(origins(received)).toEqual([
+		expect(writers(received)).toEqual([
 			{
-				origin: "VamRenameLinkUpdate",
+				origin: { kind: "LinkUpdate", operationId: "rename-hund" },
 				path: EXEMPLAR_NOTE,
 				prefix: "Exemplar",
+				writer: "VamRenameLinkUpdate",
 			},
 		]);
 	});

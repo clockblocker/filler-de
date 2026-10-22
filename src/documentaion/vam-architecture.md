@@ -18,7 +18,7 @@ VAM owns:
 - active-editor access;
 - dependency-ordered action dispatch;
 - Obsidian callback normalization;
-- Self Event filtering;
+- Self Event attribution: labelling each event with its origin;
 - subscription and runtime lifecycle.
 
 VAM does not own Library names, Codexes, linguistic notes, or command policy.
@@ -200,6 +200,61 @@ dictionary reset's backup move use `fail`.
 
 A `VaultEvent` is a typed create, rename, or delete observation from Obsidian. It is not a `VaultAction`.
 
+### Callers, operations and origins
+
+Every dispatch names its caller, and every delivered event names its
+origin:
+
+```ts
+vam.dispatch(actions, { caller: "reset" });
+vam.dispatchWithReport(actions, { caller: "librarian", operationId, stopOnFirstFailure });
+
+type VaultEventOrigin =
+	| { kind: "Vam"; caller: string; operationId: string }
+	| { kind: "LinkUpdate"; operationId: string }
+	| { kind: "External" };
+```
+
+The caller is a plain name (`librarian`, `dictionary`, `classify`, `reset`,
+`migration`, `textfresser`); VAM gives it no meaning beyond telling callers
+apart. The `operationId` names one Dispatch Batch. A caller may pass one, for
+example to line several of its batches up; otherwise VAM makes
+`<caller>#<n>`, fresh on each run of the Effect. It appears in the batch's
+report, as the `vam.caller` and `vam.operationId` attributes of its
+`vam.dispatch` and `DispatchBatch.executeBatch` spans, and in the origin of
+every event the batch causes.
+
+- `Vam`: the Self Event windows below attributed the callback to a batch.
+- `LinkUpdate`: a Markdown modification inside the window of a rename VAM ran
+  with link updating, so most likely Obsidian's link updater rewriting a
+  link; it carries the rename's `operationId`. The window is the timing
+  heuristic of `LinkRewriteWindows` (the rename's run plus a 5 s grace, by
+  the file's mtime), so a hand edit inside it is labelled too.
+- `External`: anything else: the user, Sync, another plugin, or a VAM write
+  routed to the open editor (see below).
+
+Each subscription (`subscribeToBulk`, `subscribeToMdModifications`,
+`scanAndSubscribe`) takes `{ from }`:
+
+| `from` | Delivers |
+| --- | --- |
+| `external` (default) | Everything but `Vam`. `LinkUpdate` arrives, as before origins existed. |
+| `allButMine` (with `caller`) | Everything but `Vam` events of `caller`. |
+| `all` | Everything. |
+
+The Librarian subscribes with `external`, so it never heals its own renames
+or another caller's. The dictionary store subscribes with `allButMine` as
+`dictionary`, so the reset's and the metadata migration's writes under
+`Worter/` reach it; it handles every event by reading the named paths again,
+so an event it hears twice changes nothing. The protected-path watcher takes
+`all`. Classify's unlink observer and the other subscribers keep the default.
+
+Attribution is the same per-action windows as before, with the folder-rename
+remainder rule and the indexed destinations of a redirected rename: they
+now decide a label instead of whether anyone hears the event. A
+misattribution mislabels one event for the subscribers that filter on its
+origin, instead of hiding it from every subscriber.
+
 ## Dispatch pipeline
 
 Each `dispatch(actions)` call is one Dispatch Batch.
@@ -250,9 +305,10 @@ folders.
 
 ## Dispatch reports
 
-`dispatchWithReport(actions, { stopOnFirstFailure })` answers a
-`VamDispatchReport`, the batch's receipt. `dispatch` and
-`dispatchStopOnFirstFailure` run the same batch for callers that need only
+`dispatchWithReport(actions, { caller, operationId, stopOnFirstFailure })`
+answers a `VamDispatchReport`, the batch's receipt, with its `caller` and
+`operationId`. `dispatch` and `dispatchStopOnFirstFailure` take
+`{ caller, operationId }` and run the same batch for callers that need only
 success, and answer `void`. All three fail with one error,
 `VamDispatchFailure`, which carries the same report and a `reason`:
 
@@ -330,16 +386,16 @@ refused Scroll write afterwards would leave the dictionary half-written.
 VAM cannot stop Obsidian from writing these files. The link updater rewrites
 links in any file after `fileManager.renameFile`, and Sync or other plugins
 may write them too. `subscribeToProtectedPathModifications` reports these
-writes. It runs over the Markdown modification channel below and labels each
-change with an `origin`:
+writes. It runs over the Markdown modification channel below with every
+origin, and gives each change a `writer` from its origin:
 
-- `VamRenameLinkUpdate`: the file's mtime falls within a rename that VAM ran
-  with link updating, plus a 5 s grace.
-- `OpenInEditor`: otherwise, if a Markdown view shows the file. This is most
-  likely the user's own typing.
-- `Unattributed`: anything else.
+- `VamRenameLinkUpdate`: its origin is `LinkUpdate`.
+- `OpenInEditor`: otherwise, if its origin is `External` and a Markdown view
+  shows the file. This is most likely the user's own typing.
+- `Unattributed`: anything else. VAM never writes a protected path, so a
+  change labelled `Vam` is a misattribution and counts here.
 
-The plugin shows a Notice for every origin except `OpenInEditor`. The Notice
+The plugin shows a Notice for every writer except `OpenInEditor`. The Notice
 stays until dismissed and names each file. Hand edits to an open exemplar
 therefore raise no alarm. A rewrite after a VAM rename still raises one while
 the note is open. One case is missed: Obsidian's link updater rewrites an
@@ -352,9 +408,10 @@ hide one.
 ```text
 Obsidian create, rename, and delete callbacks
   -> number each callback
-  -> attribute and remove Self Events
+  -> attribute it: label its origin
   -> encode Vault Events
   -> collect one bounded event window
+  -> per subscriber: keep the callbacks after its cursor, of origins it takes
   -> collapse duplicates and rename chains
   -> identify Semantic Roots
   -> publish one BulkVaultEvent
@@ -372,17 +429,19 @@ VAM logs a failed handler's cause and goes on.
 Every raw vault callback VAM listens to (create, rename, delete, modify)
 gets the next number of one sequence shared by both channels, on entry and
 before Self Event attribution. The event carries it through the window as
-an `ObservedCallback { seq, event }`. Later per-callback labels, an `origin`
-and the `operationId` of the dispatch behind it, belong on that record;
-cursor filtering reads only `seq`.
+an `ObservedCallback { seq, event, origin }`. Cursor filtering reads `seq`;
+origin filtering reads `origin`.
 
-Each subscriber has a cursor: the latest callback it must not receive. A
-window is filtered by cursor before it is collapsed and its roots reduced,
-so a subscriber whose cursor falls inside a window gets that window's part
-after the cursor, collapsed among itself: a rename chain `a -> b` before the
-cursor and `b -> c` after it arrives as `b -> c`, never as `a -> c`. A
-window wholly after the cursor reaches every subscriber as one shared
-message. A plain subscription's cursor is the latest callback when it
+Each subscriber has a cursor: the latest callback it must not receive,
+and an origin filter. A window is filtered by both before it is collapsed
+and its roots reduced, so a subscriber whose cursor falls inside a window
+gets that window's part after the cursor, collapsed among itself: a rename
+chain `a -> b` before the cursor and `b -> c` after it arrives as `b -> c`,
+never as `a -> c`. A chain of a user's rename `a -> b` and VAM's `b -> c`
+reaches an `external` subscriber as `a -> b` and an `all` subscriber as
+`a -> c`. A collapsed event carries its last hop's origin. A window wholly
+after the cursor and of origins the subscriber takes reaches it as one
+shared message; subscribers with one filter share the message of the rest. A plain subscription's cursor is the latest callback when it
 subscribed, so a subscriber never receives what Obsidian fired before it
 subscribed, though such callbacks may share its first window.
 
@@ -419,6 +478,7 @@ The subscription answers:
 | `start` | Starts delivery. Changes after the latest snapshot waited in VAM until now, so the consumer can build its state first. Settling waits for a subscriber that has not started. |
 | `rescan` | A fresh snapshot, moving the cursors to its `N'`. Windows not yet delivered lose what it holds. A failed rescan leaves the cursors. |
 | `afterSnapshot(bulk)` | A delivered bulk's part after the latest snapshot, or `null`; for work queued before a `rescan` and run after it. |
+| `caughtUp` | As for any subscription, below. |
 | `close` | Ends both subscriptions. `rescan` still answers a snapshot. |
 
 Re-subscribing gets a fresh snapshot and cursor. The Librarian takes its
@@ -428,7 +488,21 @@ ends, rescans on recovery, and trims each queued bulk with
 
 The accumulator has a quiet deadline and an absolute maximum deadline. Continuous callbacks cannot keep a window open without limit.
 
-The Self Event tracker uses three match types:
+### Catching up
+
+Every subscription answers `caughtUp`: it completes once the handler has
+run for every callback VAM heard before the call, or skipped it as before
+its cursor or of an origin it leaves out. It is a barrier for that
+subscriber alone, queued behind those callbacks and published after the
+window they close in. It never closes a window early, so it waits at most
+`maxWindowMs` (2 s) plus the handler work ahead of it; a gated subscription
+waits until it starts. A handler must not await its own subscription's
+`caughtUp`. The dictionary reset awaits the store's after its backup move,
+so no regeneration commits against the notes it moved away.
+
+The Self Event tracker attributes a callback to the batch whose entry it
+matches; each entry records its batch's operation. It uses three match
+types:
 
 - Exact paths match one expected callback and then disappear.
 - Folder source prefixes match descendant callback cascades until they expire.
@@ -436,8 +510,9 @@ The Self Event tracker uses three match types:
   Obsidian reports for a folder VAM renamed: the old path lies under the
   source, and the new path is the same remainder under the destination.
 
-A rename callback is Self when both of its paths match, or when it is such a
-descendant pair. The destination is not a prefix, so a user's create or
+A rename callback is Self when both of its paths match, under the batch of
+the new path's entry, or when it is such a descendant pair, under the
+folder rename's batch. The destination is not a prefix, so a user's create or
 rename into it stays observable during the window.
 
 A rename that lands elsewhere than its action's `to`, at a free indexed name,
@@ -451,7 +526,7 @@ finishes. The planned destination's entries go, since nothing lands there.
 
 ```text
 Obsidian modify callbacks for Markdown files
-  -> remove modify Self Events
+  -> attribute it: Vam (a modify Self Event), else LinkUpdate, else External
   -> copy the file's stat
   -> collect one bounded event window
   -> keep one modification per path, with its latest stat
@@ -459,16 +534,19 @@ Obsidian modify callbacks for Markdown files
   -> scope it to each subscriber's folder
 ```
 
-`subscribeToMdModifications(folder, handler)` reports content changes that VAM
-did not make: hand edits, Obsidian Sync, and Obsidian's link rewriting after
-`fileManager.renameFile`. It is a separate observation channel with its own
+`subscribeToMdModifications(folder, handler, { from })` reports content
+changes, each with its origin: hand edits, Obsidian Sync, Obsidian's link
+rewriting after `fileManager.renameFile` (`LinkUpdate`), and, for a
+subscription that takes them, VAM's own writes. It is a separate observation channel with its own
 listener, window, and subscribers, so it never changes the timing or content of
 Bulk Vault Events. The modify listener is acquired only while a modify
 subscriber exists and listening was started. The two channels are not ordered
 relative to each other; structural changes appear only in `subscribeToBulk`.
 
 Modify Self Events are recorded at write time, not at planning time, because
-only the background writer knows whether a write happens. `TFileHelper`
+only the background writer knows whether a write happens. The writer runs
+inside its batch, which provides `CurrentVamOperation`, so the expectation
+records the batch's operation. `TFileHelper`
 writes over an existing Markdown file only through `vault.process`, for
 `UpsertMdFile` as for `ProcessMdFile`, and records one expectation
 synchronously inside the callback and only when the callback changes the
@@ -490,15 +568,19 @@ hide one hand edit to that path made within it.
 `whenSettled` settles to a fixed point. Each round waits for dispatch to go
 idle, flushes both channels and waits for their subscribers, then waits for the
 Dispatch Batches those subscribers submitted. Rounds repeat until one publishes
-no window, so a modify window opened by the last dispatch is included.
+no window, so a modify window opened by the last dispatch is included. VAM's
+own writes enter windows too, so a round can publish a window no subscriber
+takes; the round after it publishes none.
 
-Writes routed to the active editor are not attributed. Obsidian persists them
+Writes routed to the active editor are not attributed: their modifications
+are `External`. Obsidian persists them
 with a debounced editor save that can also carry the user's own typing, so
 suppressing that save could hide a hand edit. Subscribers can see such an echo
 and should treat modifications idempotently.
 
-Self Events are VAM-wide: a modification made through any VAM caller,
-including the Librarian, is filtered for every modify subscriber.
+Origins are VAM-wide: a modification made through any VAM caller is
+labelled with that caller, and each modify subscriber's `from` decides
+whether it hears it.
 
 ## Markdown access
 
@@ -552,3 +634,5 @@ Desktop scenarios use this idle barrier. They must not inspect VAM internals or 
 | Markdown routing | `src/packages/independent/vault-action-manager/src/file-services/markdown-file-access.ts` |
 | Testing adapter | `src/packages/independent/vault-action-manager/src/testing-adapter.ts` |
 | Public types | `src/packages/independent/vault-action-manager/src/types/` |
+| Callers, operations, origins | `src/packages/independent/vault-action-manager/src/types/event-origin.ts` |
+| Link-update windows | `src/packages/independent/vault-action-manager/src/impl/event-processing/link-rewrite-windows.ts` |

@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { writeLemmaNote } from "../../../../stateless-helpers/dictionary-notes";
-import { createMemoryNoteCache, DictionaryPathOccupiedError } from "../src";
+import {
+	createMemoryNoteCache,
+	DICTIONARY_CALLER,
+	DictionaryPathOccupiedError,
+} from "../src";
+import { vamWrite } from "./support/fake-vault";
 import { expectIndexMatchesFiles, run } from "./support/files";
 import {
 	contribute,
@@ -418,5 +423,50 @@ describe("lookups", () => {
 		expect(vault.subscriberCount).toBe(2);
 		await run(store.close);
 		expect(vault.subscriberCount).toBe(0);
+	});
+});
+
+describe("writes of other VAM callers", () => {
+	test("the metadata migration's write reaches the store, as a hand edit does", async () => {
+		const { store, vault } = await seededStore();
+		await vault.userWrite(
+			gehenReadingPath,
+			withReadingNotes(vault.content(gehenReadingPath) ?? "", "migrated"),
+			vamWrite("migration"),
+		);
+		expect(await notesOf(store)).toEqual(["migrated"]);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
+	test("the reset's backup move and the notes it writes again reach the store, with no rescan", async () => {
+		const { store, vault } = await seededStore();
+		const lemma = vault.content(gehenPath) ?? "";
+		const reading = vault.content(gehenReadingPath) ?? "";
+		await vault.userRenameFolder(
+			"Worter",
+			"Worter backup",
+			vamWrite("reset"),
+		);
+		expect(await run(store.lemmaNotes)).toEqual([]);
+
+		await vault.userWrite(gehenPath, lemma, vamWrite("reset"));
+		await vault.userWrite(gehenReadingPath, reading, vamWrite("reset"));
+		// Handled idempotently: the same write heard twice changes nothing.
+		await vault.userWrite(gehenReadingPath, reading, vamWrite("reset"));
+		expect((await run(store.lemmaNote(gehen)))?.path).toBe(gehenPath);
+		expect(await notesOf(store)).toEqual(["first"]);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
+	test("the store's own writes are not delivered back to it", async () => {
+		const { store, vault } = await seededStore();
+		vault.readCount.clear();
+		await vault.userWrite(
+			gehenReadingPath,
+			withReadingNotes(vault.content(gehenReadingPath) ?? "", "own"),
+			vamWrite(DICTIONARY_CALLER),
+		);
+		expect(vault.readCount.size).toBe(0);
+		expect(await notesOf(store)).toEqual(["first"]);
 	});
 });

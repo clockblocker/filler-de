@@ -11,8 +11,6 @@ export type DictionaryStoreService<Store> = {
 	readonly state: () => ServiceState;
 	/** The store, built on first use. Rejects once the plugin unloaded. */
 	readonly get: () => Promise<Store>;
-	/** The store when it is built or building; null before the first use. */
-	readonly ifStarted: () => Promise<Store> | null;
 	/**
 	 * Closes the store. A build still under way is closed once it ends,
 	 * without waiting for it, as before VAM is disposed it would fail anyway.
@@ -54,7 +52,6 @@ export function createDictionaryStoreService<Store>(deps: {
 
 	return {
 		get,
-		ifStarted: () => building,
 		state: () => state,
 		stop: Effect.suspend(() => {
 			const last = building;

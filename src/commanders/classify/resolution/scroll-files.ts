@@ -47,12 +47,15 @@ export function vamScrollFiles(
 						}),
 					);
 				return vam
-					.dispatchStopOnFirstFailure([
-						{
-							kind: VaultActionKind.ProcessMdFile,
-							payload: { splitPath, transform },
-						},
-					])
+					.dispatchStopOnFirstFailure(
+						[
+							{
+								kind: VaultActionKind.ProcessMdFile,
+								payload: { splitPath, transform },
+							},
+						],
+						{ caller: "classify" },
+					)
 					.pipe(
 						Effect.mapError(
 							(error) =>

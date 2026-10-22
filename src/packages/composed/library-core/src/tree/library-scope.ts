@@ -1,12 +1,12 @@
 import type {
 	AnySplitPath,
-	BulkVaultEvent,
 	FileCreatedVaultEvent,
 	FileDeletedVaultEvent,
 	FileRenamedVaultEvent,
 	FolderCreatedVaultEvent,
 	FolderDeletedVaultEvent,
 	FolderRenamedVaultEvent,
+	PossibleRootVaultEvent,
 	SplitPathToFile,
 	SplitPathToFolder,
 	SplitPathToMdFile,
@@ -31,8 +31,15 @@ import type {
 	SplitPathToMdFileInsideLibrary,
 } from "../codecs/split-path-inside-library";
 
-/** The semantic input consumed by Library. Observation diagnostics stay in VAM. */
-export type LibraryBulk = Pick<BulkVaultEvent, "events" | "roots">;
+/**
+ * The semantic input consumed by Library: a `BulkVaultEvent`'s events and
+ * roots. Observation diagnostics and origins stay in VAM; the Librarian
+ * subscribes to external events only.
+ */
+export type LibraryBulk = {
+	readonly events: readonly VaultEvent[];
+	readonly roots: readonly PossibleRootVaultEvent[];
+};
 
 export const Scope = {
 	Inside: "Inside",

@@ -4,7 +4,7 @@ status: accepted
 
 # Coalesce Obsidian callbacks into Bulk Vault Events
 
-VAM groups related Obsidian create, rename, and delete callbacks into a `BulkVaultEvent` before notifying the Librarian. It filters expected Self Events, collapses duplicate events and rename chains, and identifies Semantic Roots so a folder operation is interpreted as one user intention rather than a cascade of independent descendant changes.
+VAM groups related Obsidian create, rename, and delete callbacks into a `BulkVaultEvent` before notifying the Librarian. It labels each event with its Event Origin and delivers the Librarian external events only, so expected Self Events never reach it; it collapses duplicate events and rename chains, and identifies Semantic Roots so a folder operation is interpreted as one user intention rather than a cascade of independent descendant changes.
 
 ## Considered Options
 

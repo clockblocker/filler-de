@@ -9,6 +9,7 @@ import { UserEventKind } from "@textfresser/obsidian-event-layer";
 import type { VaultScanPath } from "@textfresser/vault-action-manager";
 import {
 	type BulkVaultEvent,
+	EXTERNAL_ORIGIN,
 	SplitPathKind,
 	type SplitPathToFile,
 	type SplitPathToMdFile,
@@ -76,6 +77,7 @@ function createdScrollBulk(name: string): BulkVaultEvent {
 		events: [
 			{
 				kind: VaultEventKind.FileCreated,
+				origin: EXTERNAL_ORIGIN,
 				splitPath: {
 					basename: name,
 					extension: "md",
@@ -192,6 +194,7 @@ describe("Librarian checkbox-click public seam", () => {
 			events: [
 				{
 					kind: VaultEventKind.FileCreated,
+					origin: EXTERNAL_ORIGIN,
 					splitPath: {
 						basename: "DuringStartup",
 						extension: "md",
@@ -233,6 +236,7 @@ describe("Librarian checkbox-click public seam", () => {
 				events: [
 					{
 						kind: VaultEventKind.FileCreated,
+						origin: EXTERNAL_ORIGIN,
 						splitPath: {
 							basename: "Observed",
 							extension: "md",

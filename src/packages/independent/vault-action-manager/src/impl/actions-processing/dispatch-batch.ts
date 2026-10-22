@@ -2,6 +2,7 @@ import type { Effect } from "effect";
 import {
 	DispatchBatchWorker,
 	type DispatchOptions,
+	type DispatchRequest,
 } from "../../effect/dispatch-coordinator";
 import type {
 	VamDispatchFailure,
@@ -15,7 +16,7 @@ import type { SelfEventTracker } from "../event-processing/self-event-tracker";
 import type { ProtectedPaths } from "../protected-paths";
 import type { Executor } from "./executor";
 
-export type { DispatchOptions };
+export type { DispatchOptions, DispatchRequest };
 
 export type DispatchBatchOptions = {
 	/**
@@ -60,9 +61,9 @@ export class DispatchBatchCoordinator {
 	/** Effect-native dispatch seam used by the public facade. */
 	dispatchEffect(
 		actions: readonly VaultAction[],
-		options?: DispatchOptions,
+		request: DispatchRequest,
 	): Effect.Effect<VamDispatchReport, VamDispatchFailure> {
-		return this.worker.dispatchEffect(actions, options);
+		return this.worker.dispatchEffect(actions, request);
 	}
 
 	/** Effect-native idleness observation used by the testing adapter. */

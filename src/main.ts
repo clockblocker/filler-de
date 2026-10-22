@@ -560,7 +560,6 @@ export default class TextEaterPlugin extends Plugin {
 				updateParsedSettings(this.settings);
 				await migrateNoteMetadata(
 					services.vam,
-					services.store.ifStarted(),
 					curr.hideMetadata ? "Hidden" : "Frontmatter",
 				);
 			}

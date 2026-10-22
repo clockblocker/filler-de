@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import {
 	type BulkVaultEvent,
+	EXTERNAL_ORIGIN,
 	type FileRenamedVaultEvent,
 	MD,
 	SplitPathKind,
@@ -9,6 +10,7 @@ import {
 	VaultActionKind,
 	type VaultEvent,
 	VaultEventKind,
+	type VaultEventOrigin,
 	type VaultScanPath,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
@@ -46,9 +48,10 @@ function nestedScrollRenamedWithoutItsSuffix(): BulkVaultEvent {
 		kind: SplitPathKind.MdFile,
 		pathParts: ["Library", "Soup", "Ramen"],
 	};
-	const renamed: FileRenamedVaultEvent = {
+	const renamed: FileRenamedVaultEvent & { origin: VaultEventOrigin } = {
 		from,
 		kind: VaultEventKind.FileRenamed,
+		origin: EXTERNAL_ORIGIN,
 		to: {
 			...from,
 			basename: "NewScroll",
@@ -176,7 +179,9 @@ function mdFile(basename: string): SplitPathToMdFile {
 	};
 }
 
-function bulkOf(event: VaultEvent): BulkVaultEvent {
+/** One external event as VAM delivers it. */
+function bulkOf(vaultEvent: VaultEvent): BulkVaultEvent {
+	const event = { ...vaultEvent, origin: EXTERNAL_ORIGIN };
 	const isRename = event.kind === VaultEventKind.FileRenamed;
 	const count = {
 		creates: event.kind === VaultEventKind.FileCreated ? 1 : 0,
@@ -192,7 +197,7 @@ function bulkOf(event: VaultEvent): BulkVaultEvent {
 			trueCount: count,
 		},
 		events: [event],
-		roots: isRename ? [event] : [],
+		roots: event.kind === VaultEventKind.FileRenamed ? [event] : [],
 	};
 }
 

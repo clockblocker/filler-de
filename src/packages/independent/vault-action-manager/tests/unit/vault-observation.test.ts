@@ -7,8 +7,14 @@ import { makeKeyForEvent } from "../../src/impl/event-processing/bulk-event-emmi
 import type { BulkVaultEvent } from "../../src/impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import type { SelfEventTracker } from "../../src/impl/event-processing/self-event-tracker";
 import { VaultObservation } from "../../src/impl/event-processing/vault-observation";
+import {
+	EXTERNAL_ORIGIN,
+	type VaultEventOrigin,
+	vamOrigin,
+} from "../../src/types/event-origin";
 import type { VaultEvent } from "../../src/types/vault-event";
 import { VaultEventKind } from "../../src/types/vault-event";
+import { TEST_OPERATION } from "./helpers/self-events";
 
 /** A Promise handler as the Effect handler observation runs. */
 const viaPromise =
@@ -31,16 +37,18 @@ function makeHarness(shouldIgnore: (path: string) => boolean) {
 		},
 	};
 	const app = { vault } as unknown as App;
+	const originOf = (self: boolean): VaultEventOrigin =>
+		self ? vamOrigin(TEST_OPERATION) : EXTERNAL_ORIGIN;
 	const selfEvents = {
-		shouldIgnoreEffect: (path: string) =>
-			Effect.sync(() => shouldIgnore(path)),
+		attributeEffect: (path: string) =>
+			Effect.sync(() => originOf(shouldIgnore(path))),
 		// Like the tracker for renames outside a VAM folder rename: Self only
 		// when both paths are, asking about each once, new path first.
-		shouldIgnoreRenameEffect: (oldPath: string, newPath: string) =>
+		attributeRenameEffect: (oldPath: string, newPath: string) =>
 			Effect.sync(() => {
 				const newPathIsSelf = shouldIgnore(newPath);
 				const oldPathIsSelf = shouldIgnore(oldPath);
-				return newPathIsSelf && oldPathIsSelf;
+				return originOf(newPathIsSelf && oldPathIsSelf);
 			}),
 	} as unknown as SelfEventTracker;
 	const native = Effect.runSync(

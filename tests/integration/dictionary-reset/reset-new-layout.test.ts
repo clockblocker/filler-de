@@ -31,7 +31,10 @@ import {
 	type ResetVault,
 } from "../../../src/commanders/dictionary-reset/ports";
 import { DumgenHost } from "../../../src/managers/dumgen";
-import { FakeVault } from "../../../src/packages/composed/dictionary/tests/support/fake-vault";
+import {
+	FakeVault,
+	vamWrite,
+} from "../../../src/packages/composed/dictionary/tests/support/fake-vault";
 import {
 	CLASSIFY_RESOLUTION_DUMGEN,
 	LEMMA_PATHS,
@@ -89,7 +92,11 @@ function answersOf(
 	);
 }
 
-/** The reset's vault port over the store's fake vault, with the Scroll in memory. */
+/**
+ * The reset's vault port over the store's fake vault, with the Scroll in
+ * memory. Its writes reach the store as another VAM caller's would, with no
+ * rescan.
+ */
 function resetVault(vault: FakeVault, scroll: MemoryScroll): ResetVault {
 	const paths = () => [...vault.files.keys(), scroll.path];
 	const under = (folder: string) =>
@@ -99,8 +106,9 @@ function resetVault(vault: FakeVault, scroll: MemoryScroll): ResetVault {
 			Effect.suspend(() => {
 				if (vault.files.has(path))
 					return Effect.fail(new ResetFailed({ cause: path, message: "exists" }));
-				vault.files.set(path, { content, mtime: 1, size: content.length });
-				return Effect.void;
+				return Effect.promise(() =>
+					vault.userWrite(path, content, vamWrite("reset")),
+				);
 			}),
 		exists: (path) =>
 			Effect.sync(() => paths().includes(path) || under(path).length > 0),
@@ -127,14 +135,9 @@ function resetVault(vault: FakeVault, scroll: MemoryScroll): ResetVault {
 		]),
 		// As VAM's link-preserving rename: no event reaches the store.
 		moveFolder: (from, to) =>
-			Effect.sync(() => {
-				for (const path of under(from)) {
-					const file = vault.files.get(path);
-					if (!file) continue;
-					vault.files.delete(path);
-					vault.files.set(`${to}${path.slice(from.length)}`, file);
-				}
-			}),
+			Effect.promise(() =>
+				vault.userRenameFolder(from, to, vamWrite("reset")),
+			),
 		read: (path) =>
 			Effect.sync(() =>
 				path === scroll.path ? scroll.content : vault.content(path),
@@ -175,11 +178,7 @@ async function setUp() {
 					(error) => new ResetFailed({ cause: error, message: error.message }),
 				),
 			),
-		rescan: store.rescan.pipe(
-			Effect.mapError(
-				(error) => new ResetFailed({ cause: error, message: error.message }),
-			),
-		),
+		caughtUp: store.caughtUp,
 		settleKnowledge: Effect.promise(() => queue.whenIdle()),
 	};
 	const layer = Layer.mergeAll(

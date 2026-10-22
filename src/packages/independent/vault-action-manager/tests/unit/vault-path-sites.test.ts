@@ -21,6 +21,7 @@ describe("scopeMdModifyEvent path identity", () => {
 	const event: BulkMdModifyEvent = {
 		debug: { endedAt: 2, startedAt: 1, trueCount: 2 },
 		modifications: [`${NFC}/Hund.md`, "worter/Katze.md"].map((path) => ({
+			origin: { kind: "External" } as const,
 			splitPath: md(path),
 			stat: { ctime: 0, mtime: 1, size: 1 },
 		})),

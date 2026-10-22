@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 import { TreeNodeStatus } from "@textfresser/library-core";
 import {
 	type BulkVaultEvent,
+	EXTERNAL_ORIGIN,
 	MD,
 	SplitPathKind,
 	type SplitPathToMdFile,
@@ -89,6 +90,7 @@ function createdScrollBulk(
 		events: [
 			{
 				kind: VaultEventKind.FileCreated,
+				origin: EXTERNAL_ORIGIN,
 				splitPath: {
 					basename,
 					extension: MD,

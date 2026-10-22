@@ -147,7 +147,9 @@ At startup, the Librarian:
 6. Starts the Bulk Vault Event subscription.
 7. Dispatches one initial Healing, Codex, status, and full Scroll-backlink batch.
 
-The event subscription starts before the initial dispatch. VAM filters the resulting Self Events.
+The event subscription starts before the initial dispatch. It takes external
+events only (`from: "external"`), so the resulting Self Events, and any other
+VAM caller's, never reach the Librarian.
 Bulks that arrive while the initial batch runs are held and handled after it.
 They can hold events from before the scan, whose result the scan already
 holds. The Librarian replays them in order against the scanned file paths and
@@ -164,7 +166,7 @@ Scroll splitting submits one branded split plan. The queue holds one permit
 while VAM writes the page files and trashes the source, then reconciles the
 ordered semantic actions: delete the original Scroll followed by one Create per
 page. The first Create materializes the destination Section through normal Tree
-semantics. Self Events from the file batch remain filtered, because the command
+semantics. Self Events from the file batch never reach the Librarian, because the command
 supplies the semantic intent explicitly. Planning failures stop before Tree
 application; execution-uncertain failures rescan and resynchronize before the
 permit is released. Navigation and the success Notice happen only after both

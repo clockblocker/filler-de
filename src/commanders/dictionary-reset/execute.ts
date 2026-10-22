@@ -388,15 +388,18 @@ export const executeReset = Effect.fn("executeReset")(function* (
 	yield* checkUnchanged(vault, source);
 	if (toMove !== undefined && toMove !== source)
 		yield* checkUnchanged(vault, toMove);
-	// VAM hides its own move from the store, so the store reads Worter/
-	// again whatever the backup came to.
 	const unplanned =
 		toMove === undefined || backupFolder === undefined
 			? []
 			: yield* backUp(vault, toMove, backupFolder).pipe(
-					Effect.tapError(() => Effect.ignore(dictionary.rescan)),
+					// A backup that stopped part way may still have moved
+					// notes: the store has followed them before the reset
+					// reports the failure.
+					Effect.tapError(() => Effect.ignore(dictionary.caughtUp)),
 				);
-	const rescanned = yield* Effect.result(dictionary.rescan);
+	// The store hears the backup's move as an event; regeneration waits
+	// until it has followed it, so no commit plans against the old notes.
+	const caughtUp = yield* Effect.result(dictionary.caughtUp);
 	const notices: string[] = [];
 	if (unplanned.length > 0)
 		notices.push(
@@ -420,11 +423,11 @@ export const executeReset = Effect.fn("executeReset")(function* (
 	for (const [position, index] of ready.entries()) {
 		const planned = plan.attestations[index];
 		if (!planned) continue;
-		if (rescanned._tag === "Failure") {
-			// A store that could not read Worter/ again must not commit.
+		if (caughtUp._tag === "Failure") {
+			// A store that could not be opened must not commit.
 			regenerations[index] = {
 				_tag: "Unresolved",
-				reason: `the dictionary could not read ${WORTER}/ after the backup: ${rescanned.failure.message}`,
+				reason: `the dictionary could not follow the backup of ${WORTER}/: ${caughtUp.failure.message}`,
 			};
 			continue;
 		}

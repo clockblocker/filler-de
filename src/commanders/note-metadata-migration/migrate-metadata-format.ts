@@ -112,20 +112,23 @@ export const migrateMetadataFormat = Effect.fn("migrateMetadataFormat")(
 				if (conversion.content === content.success) continue;
 
 				const written = yield* Effect.exit(
-					vam.dispatch([
-						{
-							kind: VaultActionKind.ProcessMdFile,
-							payload: {
-								splitPath: splitPath as SplitPathToMdFile,
-								// Runs again on the content Vault.process
-								// reads, so a concurrent edit is kept.
-								transform: noteMetadataHelper.convertFormat(
-									target,
-									namespaces,
-								),
+					vam.dispatch(
+						[
+							{
+								kind: VaultActionKind.ProcessMdFile,
+								payload: {
+									splitPath: splitPath as SplitPathToMdFile,
+									// Runs again on the content Vault.process
+									// reads, so a concurrent edit is kept.
+									transform: noteMetadataHelper.convertFormat(
+										target,
+										namespaces,
+									),
+								},
 							},
-						},
-					]),
+						],
+						{ caller: "migration" },
+					),
 				);
 				if (Exit.isSuccess(written)) converted.push(path);
 				else

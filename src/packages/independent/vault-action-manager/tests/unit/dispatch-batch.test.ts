@@ -26,6 +26,7 @@ import type {
 } from "../../src/types/split-path";
 import type { VaultAction } from "../../src/types/vault-action";
 import { VaultActionKind } from "../../src/types/vault-action";
+import { TEST_OPERATION } from "./helpers/self-events";
 
 const mdFile = (basename: string): SplitPathToMdFile => ({
 	basename,
@@ -219,7 +220,10 @@ async function dispatch(
 	coordinator: DispatchBatchCoordinator,
 	actions: readonly VaultAction[],
 ): Promise<Exit.Exit<unknown, unknown>> {
-	return runNative(coordinator, coordinator.dispatchEffect(actions));
+	return runNative(
+		coordinator,
+		coordinator.dispatchEffect(actions, { operation: TEST_OPERATION }),
+	);
 }
 
 function dispatchFailures(
@@ -467,7 +471,11 @@ describe("DispatchBatchCoordinator", () => {
 			},
 		);
 
-		void runtime.runPromiseExit(coordinator.dispatchEffect([hanging]));
+		void runtime.runPromiseExit(
+			coordinator.dispatchEffect([hanging], {
+				operation: TEST_OPERATION,
+			}),
+		);
 		await running;
 		// Disposal interrupts the worker mid-action; nothing is left to shut down.
 		coordinators.splice(coordinators.indexOf(coordinator), 1);
@@ -502,6 +510,7 @@ describe("DispatchBatchCoordinator", () => {
 		const result = await runNative(
 			coordinator,
 			coordinator.dispatchEffect([failing, skipped], {
+				operation: TEST_OPERATION,
 				stopOnFirstFailure: true,
 			}),
 		);
@@ -514,7 +523,7 @@ describe("DispatchBatchCoordinator", () => {
 		]);
 	});
 
-	it("emits planning and action spans with action kind and path attributes", async () => {
+	it("emits planning and action spans with action kind and path attributes, and the operation on the batch's spans", async () => {
 		const spans: Tracer.NativeSpan[] = [];
 		const tracer = Tracer.make({
 			span: (options) => {
@@ -542,8 +551,9 @@ describe("DispatchBatchCoordinator", () => {
 		const planningSpan = spans.find(
 			(span) => span.name === "vam.dispatch.plan",
 		);
-		const dispatchSpan = spans.find(
-			(span) => span.name === "DispatchBatch.dispatch",
+		const dispatchSpan = spans.find((span) => span.name === "vam.dispatch");
+		const batchSpan = spans.find(
+			(span) => span.name === "DispatchBatch.executeBatch",
 		);
 		const actionSpan = spans.find(
 			(span) => span.name === "vam.dispatch.action",
@@ -564,6 +574,15 @@ describe("DispatchBatchCoordinator", () => {
 			"Library/traced.md",
 		);
 		expect(existenceSpan?.attributes.get("path")).toBe("Library");
+		// The batch's operation lines its spans up with its events.
+		for (const span of [dispatchSpan, batchSpan]) {
+			expect(span?.attributes.get("vam.caller")).toBe(
+				TEST_OPERATION.caller,
+			);
+			expect(span?.attributes.get("vam.operationId")).toBe(
+				TEST_OPERATION.operationId,
+			);
+		}
 		if (!dispatchSpan || !planningSpan || !actionSpan || !existenceSpan) {
 			throw new Error(
 				"Expected dispatch, planning, action, and existence spans",
@@ -655,7 +674,7 @@ describe("DispatchBatchCoordinator", () => {
 
 		const exit = await runNative(
 			coordinator,
-			coordinator.dispatchEffect([action]),
+			coordinator.dispatchEffect([action], { operation: TEST_OPERATION }),
 		);
 
 		expect(Exit.isFailure(exit)).toBe(true);
@@ -693,7 +712,9 @@ describe("DispatchBatchCoordinator", () => {
 
 		const exit = await runNative(
 			coordinator,
-			coordinator.dispatchEffect([defectAction, laterAction]),
+			coordinator.dispatchEffect([defectAction, laterAction], {
+				operation: TEST_OPERATION,
+			}),
 		);
 
 		expect(executed).toEqual([defectAction, laterAction]);
@@ -760,18 +781,21 @@ describe("DispatchBatchCoordinator", () => {
 
 		const exit = await runNative(
 			coordinator,
-			coordinator.dispatchEffect([
-				action,
-				{
-					kind: VaultActionKind.ProcessMdFile,
-					payload: {
-						splitPath: mdFile("typed-planning"),
-						transform: () => {
-							throw cause;
+			coordinator.dispatchEffect(
+				[
+					action,
+					{
+						kind: VaultActionKind.ProcessMdFile,
+						payload: {
+							splitPath: mdFile("typed-planning"),
+							transform: () => {
+								throw cause;
+							},
 						},
 					},
-				},
-			]),
+				],
+				{ operation: TEST_OPERATION },
+			),
 		);
 
 		expect(Exit.isFailure(exit)).toBe(true);
@@ -961,6 +985,7 @@ describe("DispatchBatchCoordinator", () => {
 			const stoppedOverflow = await runNative(
 				coordinator,
 				coordinator.dispatchEffect([makeAction("overflow-stop")], {
+					operation: TEST_OPERATION,
 					stopOnFirstFailure: true,
 				}),
 			);
@@ -1021,7 +1046,9 @@ describe("DispatchBatchCoordinator", () => {
 			coordinator,
 			Effect.gen(function* () {
 				const fiber = yield* Effect.forkChild(
-					coordinator.dispatchEffect([makeAction("withdrawn")]),
+					coordinator.dispatchEffect([makeAction("withdrawn")], {
+						operation: TEST_OPERATION,
+					}),
 				);
 				yield* Effect.promise(() => signal.waiting(1));
 				return yield* Fiber.interrupt(fiber);
@@ -1068,7 +1095,9 @@ describe("DispatchBatchCoordinator", () => {
 			coordinator,
 			Effect.gen(function* () {
 				const fiber = yield* Effect.forkChild(
-					coordinator.dispatchEffect([makeAction("admitted")]),
+					coordinator.dispatchEffect([makeAction("admitted")], {
+						operation: TEST_OPERATION,
+					}),
 				);
 				yield* Effect.promise(() => signal.waiting(1));
 				releaseFirst.resolve();
@@ -1147,6 +1176,7 @@ describe("DispatchBatchCoordinator", () => {
 		const exit = await runNative(
 			coordinator,
 			coordinator.dispatchEffect([before, failing, skippedA, skippedB], {
+				operation: TEST_OPERATION,
 				stopOnFirstFailure: true,
 			}),
 		);
@@ -1191,6 +1221,7 @@ describe("DispatchBatchCoordinator", () => {
 		const exit = await runNative(
 			coordinator,
 			coordinator.dispatchEffect([failing, skipped], {
+				operation: TEST_OPERATION,
 				stopOnFirstFailure: true,
 			}),
 		);
@@ -1214,6 +1245,7 @@ describe("DispatchBatchCoordinator", () => {
 		const stopped = await runNative(
 			coordinator,
 			coordinator.dispatchEffect([failing, later], {
+				operation: TEST_OPERATION,
 				stopOnFirstFailure: true,
 			}),
 		);
@@ -1243,16 +1275,22 @@ describe("DispatchBatchCoordinator", () => {
 
 		const active = runNative(
 			coordinator,
-			coordinator.dispatchEffect([activeAction]),
+			coordinator.dispatchEffect([activeAction], {
+				operation: TEST_OPERATION,
+			}),
 		);
 		await activeStarted.promise;
 		const queued = runNative(
 			coordinator,
-			coordinator.dispatchEffect([queuedAction]),
+			coordinator.dispatchEffect([queuedAction], {
+				operation: TEST_OPERATION,
+			}),
 		);
 		const anotherQueued = runNative(
 			coordinator,
-			coordinator.dispatchEffect([anotherQueuedAction]),
+			coordinator.dispatchEffect([anotherQueuedAction], {
+				operation: TEST_OPERATION,
+			}),
 		);
 		const shutdown = runNative(coordinator, coordinator.shutdownEffect());
 
@@ -1279,7 +1317,9 @@ describe("DispatchBatchCoordinator", () => {
 
 		const postShutdown = await runNative(
 			coordinator,
-			coordinator.dispatchEffect([makeAction("post-shutdown")]),
+			coordinator.dispatchEffect([makeAction("post-shutdown")], {
+				operation: TEST_OPERATION,
+			}),
 		);
 		expect(firstFailure(postShutdown)).toBeInstanceOf(VamShutdownError);
 	});

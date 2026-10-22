@@ -1,3 +1,5 @@
+import type { VaultEventOrigin } from "../../types/event-origin";
+
 /**
  * Numbers every raw Obsidian vault callback VAM listens to (create, rename,
  * delete, modify) in the order Obsidian fired them. One sequence spans both
@@ -23,12 +25,12 @@ export class VaultCallbackSequence {
 }
 
 /**
- * One raw callback as observation carries it: its place in the sequence and
- * the event it became. Per-callback labels belong here beside `seq`: a
- * later `origin`, and the `operationId` of the dispatch that caused it,
- * which become span attributes. Cursor filtering reads only `seq`.
+ * One raw callback as observation carries it: its place in the sequence,
+ * the event it became, and who caused it. Cursor filtering reads `seq`;
+ * each subscription's origin filter reads `origin`.
  */
 export type ObservedCallback<Ev> = {
 	readonly event: Ev;
+	readonly origin: VaultEventOrigin;
 	readonly seq: number;
 };

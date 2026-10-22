@@ -1,11 +1,17 @@
-import type { VaultEvent } from "../../../../..";
+import type { ObservedVaultEvent } from "../../../../../types/vault-event";
 import type { PossibleRootVaultEvent } from "./helpers";
+
+/** A Semantic Root as a subscription delivers it: with who caused it. */
+export type ObservedRootVaultEvent = ObservedVaultEvent &
+	PossibleRootVaultEvent;
 
 export type BulkVaultEvent = {
 	/**
-	 * Minimally collapsed vault events that were triggered by the user during this bulk operation.
+	 * Minimally collapsed vault events of this window that the subscription
+	 * receives, each with its `origin`. A collapsed rename chain carries
+	 * the origin of its last hop.
 	 */
-	events: VaultEvent[];
+	events: ObservedVaultEvent[];
 
 	/**
 	 * Minimal set of "root" vault events that semantically imply the rest
@@ -79,7 +85,7 @@ export type BulkVaultEvent = {
 	 * Downstream consumers should base their logic on `roots`,
 	 * not on the full `events` list.
 	 */
-	roots: Array<PossibleRootVaultEvent>;
+	roots: Array<ObservedRootVaultEvent>;
 
 	/**
 	 * Diagnostic metadata describing how raw vault events were normalized

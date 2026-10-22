@@ -1,7 +1,10 @@
 import { Cause, Effect, Exit, Result } from "effect";
 import type { App } from "obsidian";
 import type { RecentTrace } from "./diagnostics/recent-trace";
-import type { DispatchOptions } from "./effect/dispatch-coordinator";
+import type {
+	DispatchCaller,
+	DispatchOptions,
+} from "./effect/dispatch-coordinator";
 import {
 	VamDispatchFailure,
 	type VamDispatchReport,
@@ -38,7 +41,7 @@ import { VaultCallbackSequence } from "./impl/event-processing/callback-sequence
 import { LinkRewriteWindows } from "./impl/event-processing/link-rewrite-windows";
 import {
 	type BulkMdModifyEvent,
-	type MdFileModification,
+	type MdFileChange,
 	scopeMdModifyEvent,
 } from "./impl/event-processing/md-modify-event";
 import {
@@ -55,6 +58,12 @@ import { VaultReader } from "./impl/vault-reader";
 import { detectVaultFileSystem } from "./internal/file-system-case";
 import { splitPathCodec } from "./split-path-codec";
 import { VaultActionManagerTestingAdapter } from "./testing-adapter";
+import {
+	type OriginFilter,
+	originFilter,
+	type VamOperation,
+	type VamSubscribeOptions,
+} from "./types/event-origin";
 import type { VaultFileStat } from "./types/file-stat";
 import type {
 	AnySplitPath,
@@ -111,6 +120,15 @@ export type VaultActionManagerOptions = {
 };
 
 export type VaultActionManagerSubscription = {
+	/**
+	 * Completes once the handler has run for every vault callback VAM heard
+	 * before the call, or skipped it (before the cursor, or of an origin the
+	 * subscription leaves out). It waits for the open window's own deadlines
+	 * (at most `maxWindowMs`, 2 s) and does not close it early. A gated
+	 * subscription waits until it starts. Never await it inside the same
+	 * subscription's handler: the handler would wait for itself.
+	 */
+	readonly caughtUp: Effect.Effect<void, VamRuntimeFailure<never>>;
 	readonly close: Effect.Effect<void, VamRuntimeFailure<never>>;
 };
 
@@ -185,9 +203,11 @@ export class VaultActionManager {
 	private readonly protectedPaths: ProtectedPaths;
 	private readonly markdownFiles: MarkdownFileAccess;
 	private readonly mdModifyObservation: VaultObservation<
-		MdFileModification,
+		MdFileChange,
 		BulkMdModifyEvent
 	>;
+	/** Numbers the batches dispatched without an operation id. */
+	private operationCount = 0;
 	private readonly observation: VaultObservation;
 	private readonly reader: VaultReader;
 	private readonly selfEvents: SelfEventTracker;
@@ -236,6 +256,7 @@ export class VaultActionManager {
 		this.mdModifyObservation = successOrThrow(
 			this.runtime.runSyncExit(
 				VaultObservation.makeMdModifyEffect(app, this.selfEvents, {
+					linkRewrites: this.linkRewrites,
 					sequence: this.sequence,
 				}),
 			),
@@ -275,14 +296,23 @@ export class VaultActionManager {
 		);
 	}
 
+	/**
+	 * Delivers Bulk Vault Events anywhere in the vault, each event with its
+	 * `origin`. `from` picks the origins: VAM's own writes are left out by
+	 * default (`external`); `allButMine` leaves out only `caller`'s; `all`
+	 * keeps every one.
+	 */
 	subscribeToBulk<E>(
 		handler: BulkVaultEventHandler<E>,
+		options: VamSubscribeOptions = {},
 	): Effect.Effect<
 		VaultActionManagerSubscription,
 		VamRuntimeFailure<VamSubscriptionError>
 	> {
 		return this.trackSubscription(
-			this.observation.subscribeEffect(this.effectHandler(handler)),
+			this.observation.subscribeEffect(this.effectHandler(handler), {
+				filter: originFilter(options),
+			}),
 		);
 	}
 
@@ -291,14 +321,18 @@ export class VaultActionManager {
 	 * edits, Obsidian Sync, and Obsidian's link rewriting after a rename.
 	 *
 	 * Callbacks are coalesced per path over a window with the same quiet and
-	 * maximum deadlines as Bulk Vault Events, and VAM's own background writes
-	 * are filtered as Self Events. The handler is not called for windows with
-	 * no change below `folder`. Observation starts with `startListening`, and
-	 * the Vault's root folder observes every Markdown file.
+	 * maximum deadlines as Bulk Vault Events. Each modification carries its
+	 * `origin`, and `from` picks the origins as for `subscribeToBulk`: by
+	 * default VAM's own background writes are left out, while Obsidian's
+	 * link rewriting after a VAM rename arrives as `LinkUpdate`. The handler
+	 * is not called for windows with no change below `folder`. Observation
+	 * starts with `startListening`, and the Vault's root folder observes
+	 * every Markdown file.
 	 */
 	subscribeToMdModifications<E>(
 		folder: SplitPathToFolder,
 		handler: MdModifyEventHandler<E>,
+		options: VamSubscribeOptions = {},
 	): Effect.Effect<
 		VaultActionManagerSubscription,
 		VamRuntimeFailure<VamSubscriptionError>
@@ -310,7 +344,9 @@ export class VaultActionManager {
 			},
 		);
 		return this.trackSubscription(
-			this.mdModifyObservation.subscribeEffect(scopedHandler),
+			this.mdModifyObservation.subscribeEffect(scopedHandler, {
+				filter: originFilter(options),
+			}),
 		);
 	}
 
@@ -332,9 +368,10 @@ export class VaultActionManager {
 	 * Observes content changes to files under a protected prefix that VAM did
 	 * not make. VAM refuses to change those paths itself, but cannot stop
 	 * Obsidian's link updater, Sync, other plugins, or the user from writing
-	 * them. Each modification carries its most likely `origin`; callers
-	 * typically warn about every origin except `OpenInEditor`, the user's own
-	 * editing. Delivered over `subscribeToMdModifications`, so it needs
+	 * them. Each modification carries its most likely `writer`, from its
+	 * origin and the open editors; callers typically warn about every
+	 * writer except `OpenInEditor`, the user's own editing. Delivered over
+	 * `subscribeToMdModifications` with every origin, so it needs
 	 * `startListening` and shares its coalescing window.
 	 */
 	subscribeToProtectedPathModifications<E>(
@@ -345,18 +382,18 @@ export class VaultActionManager {
 	> {
 		const protectedHandler = this.effectHandler(
 			(event: BulkMdModifyEvent) =>
-				classifyProtectedModifications(
-					event,
-					this.protectedPaths,
-					this.linkRewrites,
-				).pipe(
+				classifyProtectedModifications(event, this.protectedPaths).pipe(
 					Effect.flatMap((scoped) =>
 						scoped ? handler(scoped) : Effect.void,
 					),
 				),
 		);
+		// Every origin: VAM never writes a protected path, so one labelled
+		// VAM's is a misattribution, and must not hide a change.
 		return this.trackSubscription(
-			this.mdModifyObservation.subscribeEffect(protectedHandler),
+			this.mdModifyObservation.subscribeEffect(protectedHandler, {
+				filter: originFilter({ from: "all" }),
+			}),
 		);
 	}
 
@@ -371,7 +408,8 @@ export class VaultActionManager {
 	 * chain that straddles the cursor arrives as its part after it.
 	 *
 	 * Delivery waits for `start`, so the consumer can build its state from
-	 * the snapshot first; `rescan` takes a fresh one. Needs
+	 * the snapshot first; `rescan` takes a fresh one. `options.from` picks
+	 * the origins both handlers receive, as for `subscribeToBulk`. Needs
 	 * `startListening`, and fails with a `VamSubscriptionError` before it,
 	 * since changes VAM does not hear would be lost. A folder that is not
 	 * there fails with a `scanRoot` `VamScanError`.
@@ -379,12 +417,13 @@ export class VaultActionManager {
 	scanAndSubscribe<E>(
 		folder: SplitPathToFolder,
 		handlers: VaultSnapshotHandlers<E>,
+		options: VamSubscribeOptions = {},
 	): Effect.Effect<
 		VaultSnapshotSubscription,
 		VamRuntimeFailure<VamScanError | VamSubscriptionError>
 	> {
 		return this.runtime.provide(
-			this.openSnapshotSubscription(folder, handlers),
+			this.openSnapshotSubscription(folder, handlers, options),
 		);
 	}
 
@@ -394,15 +433,18 @@ export class VaultActionManager {
 		this: VaultActionManager,
 		folder: SplitPathToFolder,
 		{ onBulk, onModifications }: VaultSnapshotHandlers<E>,
+		options: VamSubscribeOptions,
 	): Effect.fn.Return<
 		VaultSnapshotSubscription,
 		VamScanError | VamSubscriptionError,
 		VamLiveServices
 	> {
+		const filter = originFilter(options);
 		const bulk = onBulk
 			? yield* this.subscribeGated(
 					this.observation,
 					this.effectHandler(onBulk),
+					filter,
 				)
 			: undefined;
 		const closeBulk = bulk?.close ?? Effect.void;
@@ -417,6 +459,7 @@ export class VaultActionManager {
 								: Effect.void;
 						},
 					),
+					filter,
 				).pipe(Effect.onError(() => closeBulk))
 			: undefined;
 		const parts = [bulk, modify].filter((part) => part !== undefined);
@@ -449,6 +492,12 @@ export class VaultActionManager {
 		return {
 			afterSnapshot: (event: BulkVaultEvent) =>
 				bulk ? bulk.afterCursor(event) : event,
+			caughtUp: this.runtime.provide(
+				Effect.all(
+					parts.map((part) => part.caughtUp),
+					{ concurrency: "unbounded", discard: true },
+				),
+			),
 			close: this.trackClose(close),
 			rescan: this.runtime.provide(
 				take.pipe(Effect.withSpan("vam.scanAndSubscribe.rescan")),
@@ -467,29 +516,33 @@ export class VaultActionManager {
 	private subscribeGated<Ev, M extends object>(
 		observation: VaultObservation<Ev, M>,
 		handler: (message: M) => Effect.Effect<void, unknown>,
+		filter: OriginFilter,
 	): Effect.Effect<VaultObservationSubscription<M>, VamSubscriptionError> {
-		return observation.subscribeEffect(handler, { gated: true }).pipe(
-			Effect.flatMap((subscription) =>
-				observation.isListeningEffect().pipe(
-					Effect.flatMap((listening) =>
-						listening
-							? Effect.succeed(subscription)
-							: subscription.close.pipe(
-									Effect.andThen(
-										Effect.fail(
-											new VamSubscriptionError({
-												cause: new Error(
-													"VAM is not listening yet; call startListening first",
-												),
-												operation: "scanAndSubscribe",
-											}),
+		return observation
+			.subscribeEffect(handler, { filter, gated: true })
+			.pipe(
+				Effect.flatMap((subscription) =>
+					observation.isListeningEffect().pipe(
+						Effect.flatMap((listening) =>
+							listening
+								? Effect.succeed(subscription)
+								: subscription.close.pipe(
+										Effect.andThen(
+											Effect.fail(
+												new VamSubscriptionError({
+													cause: new Error(
+														"VAM is not listening yet; call startListening first",
+													),
+													operation:
+														"scanAndSubscribe",
+												}),
+											),
 										),
 									),
-								),
+						),
 					),
 				),
-			),
-		);
+			);
 	}
 
 	/** A consumer's handler, supplied with VAM's services, keeping its cause. */
@@ -501,7 +554,10 @@ export class VaultActionManager {
 
 	private trackSubscription(
 		subscribe: Effect.Effect<
-			{ readonly close: Effect.Effect<void> },
+			{
+				readonly caughtUp: Effect.Effect<void>;
+				readonly close: Effect.Effect<void>;
+			},
 			VamSubscriptionError,
 			VamLiveServices
 		>,
@@ -511,6 +567,7 @@ export class VaultActionManager {
 	> {
 		return this.runtime.provide(subscribe).pipe(
 			Effect.map((subscription) => ({
+				caughtUp: this.runtime.provide(subscription.caughtUp),
 				close: this.trackClose(subscription.close),
 			})),
 		);
@@ -531,26 +588,52 @@ export class VaultActionManager {
 	}
 
 	/**
-	 * Dispatches one ordered, non-atomic batch and answers its report: one
-	 * entry per planned action, with what it did. Every planned action is
-	 * attempted unless `stopOnFirstFailure` is set, in which case the
-	 * actions after the first failure are `Skipped`. On failure the
-	 * `VamDispatchFailure` carries the same report. Nothing is rolled back.
+	 * Dispatches one ordered, non-atomic batch for `options.caller` and
+	 * answers its report: one entry per planned action, with what it did.
+	 * Every planned action is attempted unless `stopOnFirstFailure` is set,
+	 * in which case the actions after the first failure are `Skipped`. On
+	 * failure the `VamDispatchFailure` carries the same report. Nothing is
+	 * rolled back.
+	 *
+	 * The batch's `operationId`, given or made here, names it in the report,
+	 * on its `vam.dispatch` span, and in the `Vam` origin of the events it
+	 * causes. Each run of the Effect is one batch, so a retried Effect
+	 * without an `operationId` gets a fresh one.
 	 */
 	dispatchWithReport(
 		actions: readonly VaultAction[],
-		options: DispatchOptions = {},
+		options: DispatchOptions,
 	): Effect.Effect<VamDispatchReport, VamDispatchFailure> {
-		return this.runtime
-			.provide(this.dispatches.dispatchEffect(actions, options))
-			.pipe(
-				Effect.catchTags({
-					VamSetupError: (error) =>
-						Effect.fail(VamDispatchFailure.notRun(error, actions)),
-					VamShutdownError: (error) =>
-						Effect.fail(VamDispatchFailure.notRun(error, actions)),
-				}),
-			);
+		return Effect.suspend(() => {
+			const operation = this.operationFor(options);
+			return this.runtime
+				.provide(
+					this.dispatches.dispatchEffect(actions, {
+						operation,
+						stopOnFirstFailure: options.stopOnFirstFailure,
+					}),
+				)
+				.pipe(
+					Effect.catchTags({
+						VamSetupError: (error) =>
+							Effect.fail(
+								VamDispatchFailure.notRun(
+									error,
+									actions,
+									operation,
+								),
+							),
+						VamShutdownError: (error) =>
+							Effect.fail(
+								VamDispatchFailure.notRun(
+									error,
+									actions,
+									operation,
+								),
+							),
+					}),
+				);
+		});
 	}
 
 	/**
@@ -559,8 +642,9 @@ export class VaultActionManager {
 	 */
 	dispatch(
 		actions: readonly VaultAction[],
+		caller: DispatchCaller,
 	): Effect.Effect<void, VamDispatchFailure> {
-		return Effect.asVoid(this.dispatchWithReport(actions));
+		return Effect.asVoid(this.dispatchWithReport(actions, caller));
 	}
 
 	/**
@@ -569,10 +653,24 @@ export class VaultActionManager {
 	 */
 	dispatchStopOnFirstFailure(
 		actions: readonly VaultAction[],
+		caller: DispatchCaller,
 	): Effect.Effect<void, VamDispatchFailure> {
 		return Effect.asVoid(
-			this.dispatchWithReport(actions, { stopOnFirstFailure: true }),
+			this.dispatchWithReport(actions, {
+				...caller,
+				stopOnFirstFailure: true,
+			}),
 		);
+	}
+
+	/** The batch's operation: its given id, or the caller's next one. */
+	private operationFor({
+		caller,
+		operationId,
+	}: DispatchCaller): VamOperation {
+		if (operationId !== undefined) return { caller, operationId };
+		this.operationCount += 1;
+		return { caller, operationId: `${caller}#${this.operationCount}` };
 	}
 
 	readContent(
@@ -794,7 +892,10 @@ export function createVaultActionManager(
 	};
 }
 
-export type { DispatchOptions } from "./effect/dispatch-coordinator";
+export type {
+	DispatchCaller,
+	DispatchOptions,
+} from "./effect/dispatch-coordinator";
 export {
 	isContentConflict,
 	type VamActionOutcome,

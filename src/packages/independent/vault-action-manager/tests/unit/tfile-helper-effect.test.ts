@@ -9,6 +9,7 @@ import { VaultIo } from "../../src/effect/ports";
 import { TFileHelper } from "../../src/file-services/background/helpers/tfile-helper";
 import { SelfEventTracker } from "../../src/impl/event-processing/self-event-tracker";
 import type { SplitPathToMdFile } from "../../src/types/split-path";
+import { selfOf } from "./helpers/self-events";
 
 const target: SplitPathToMdFile = {
 	basename: "note",
@@ -395,7 +396,9 @@ describe("TFileHelper modify Self Events with a real tracker", () => {
 				Effect.gen(function* () {
 					const read = content;
 					foreignIgnored.push(
-						yield* tracker.shouldIgnoreModifyEffect(target.path),
+						yield* selfOf(
+							tracker.attributeModifyEffect(target.path),
+						),
 					);
 					const next = fn(read);
 					if (next === read) return read;
@@ -418,7 +421,9 @@ describe("TFileHelper modify Self Events with a real tracker", () => {
 			helper,
 			layer,
 			selfIgnored: () =>
-				Effect.runSync(tracker.shouldIgnoreModifyEffect(file.path)),
+				Effect.runSync(
+					selfOf(tracker.attributeModifyEffect(file.path)),
+				),
 		};
 	}
 

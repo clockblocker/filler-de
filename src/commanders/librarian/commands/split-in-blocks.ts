@@ -43,7 +43,7 @@ export const splitInBlocksCommand: LibrarianCommandFn = Effect.fn(
 			splitPath: selection.splitPathToFileWithSelection,
 		},
 	};
-	yield* vam.dispatch([action]).pipe(
+	yield* vam.dispatch([action], { caller: "librarian" }).pipe(
 		Effect.mapError((error) => ({
 			kind: CommandErrorKind.DispatchFailed,
 			reason: error.message,

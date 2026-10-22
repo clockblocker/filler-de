@@ -51,7 +51,7 @@ function makeHarness(
 	const stops: LibrarianStop[] = [];
 	const vam: LibrarianVam = {
 		cd: (...args) => manager.cd(...args),
-		dispatch: (actions) =>
+		dispatch: (actions, caller) =>
 			Effect.promise(() => beforeDispatch(actions, batches.length + 1)).pipe(
 				Effect.flatMap((verdict) => {
 					batches.push([...actions]);
@@ -62,20 +62,24 @@ function makeHarness(
 									actionError(first, new Error("destination is locked")),
 								]),
 							)
-						: manager.dispatch(actions);
+						: manager.dispatch(actions, caller);
 				}),
 			),
 		getActiveEditorContext: (...args) =>
 			manager.getActiveEditorContext(...args),
 		getOpenedContent: (...args) => manager.getOpenedContent(...args),
 		mdPwd: (...args) => manager.mdPwd(...args),
-		scanAndSubscribe: (folder, { onBulk }) =>
-			manager.scanAndSubscribe(folder, {
-				onBulk: (bulk) => {
-					bulks.push(bulk);
-					return onBulk ? onBulk(bulk) : Effect.void;
+		scanAndSubscribe: (folder, { onBulk }, options) =>
+			manager.scanAndSubscribe(
+				folder,
+				{
+					onBulk: (bulk) => {
+						bulks.push(bulk);
+						return onBulk ? onBulk(bulk) : Effect.void;
+					},
 				},
-			}),
+				options,
+			),
 	};
 	const librarian = new Librarian(vam, {
 		onStopped: (stop) => void stops.push(stop),

@@ -1,5 +1,12 @@
 import { Clock, Deferred, Effect, Ref } from "effect";
+import { CurrentVamOperation } from "../../effect/current-operation";
 import { pathfinder } from "../../helpers/pathfinder";
+import {
+	EXTERNAL_ORIGIN,
+	type VamOperation,
+	type VaultEventOrigin,
+	vamOrigin,
+} from "../../types/event-origin";
 import type { AnySplitPath } from "../../types/split-path";
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionKind } from "../../types/vault-action";
@@ -8,6 +15,19 @@ import { VaultPath } from "../../vault-path";
 type ExactEntry = {
 	readonly expiresAt: number;
 	readonly isFilePath: boolean;
+	/** The Dispatch Batch whose action expects the path. */
+	readonly operation: VamOperation;
+};
+
+type PrefixEntry = {
+	readonly expiresAt: number;
+	readonly operation: VamOperation;
+};
+
+/** One expected modify callback of a VAM write. */
+type ModifyEntry = {
+	readonly expiresAt: number;
+	readonly operation: VamOperation;
 };
 
 /**
@@ -17,6 +37,7 @@ type ExactEntry = {
 type FolderRenameEntry = {
 	readonly expiresAt: number;
 	readonly from: string;
+	readonly operation: VamOperation;
 	readonly to: string;
 };
 
@@ -29,8 +50,8 @@ type SelfEventState = {
 	 * namespace is separate from create, rename, and delete attribution and
 	 * does not hold the settle barrier open.
 	 */
-	readonly modifies: ReadonlyMap<string, readonly number[]>;
-	readonly prefixes: ReadonlyMap<string, number>;
+	readonly modifies: ReadonlyMap<string, readonly ModifyEntry[]>;
+	readonly prefixes: ReadonlyMap<string, PrefixEntry>;
 	/**
 	 * Renames that landed elsewhere than planned, keyed by
 	 * `folderRenameKey(from, plannedTo)`: the path VAM actually moved the
@@ -61,7 +82,7 @@ type SelfEventTrackerOptions = {
 type PrunedState = {
 	readonly changed: boolean;
 	readonly folderRenames: Map<string, FolderRenameEntry>;
-	readonly prefixes: Map<string, number>;
+	readonly prefixes: Map<string, PrefixEntry>;
 	readonly tracked: Map<string, ExactEntry>;
 };
 
@@ -83,10 +104,10 @@ function pruneState(state: SelfEventState, now: number): PrunedState {
 		else tracked.set(path, entry);
 	}
 
-	const prefixes = new Map<string, number>();
-	for (const [prefix, expiresAt] of state.prefixes) {
-		if (expiresAt <= now) changed = true;
-		else prefixes.set(prefix, expiresAt);
+	const prefixes = new Map<string, PrefixEntry>();
+	for (const [prefix, entry] of state.prefixes) {
+		if (entry.expiresAt <= now) changed = true;
+		else prefixes.set(prefix, entry);
 	}
 
 	const folderRenames = new Map<string, FolderRenameEntry>();
@@ -118,21 +139,27 @@ function folderRenameKey(from: string, to: string): string {
 
 /**
  * Pops `normalized` if it is an exact entry, else matches it against the
- * folder prefixes. The vault root (`""`) as a prefix matches only itself.
+ * folder prefixes, and answers the batch that expected it. The vault root
+ * (`""`) as a prefix matches only itself.
  */
 function matchPath(
 	pruned: PrunedState,
 	normalized: string,
-): { readonly ignored: boolean; readonly popped: boolean } {
-	if (pruned.tracked.delete(normalized)) {
-		return { ignored: true, popped: true };
+): {
+	readonly operation: VamOperation | undefined;
+	readonly popped: boolean;
+} {
+	const exact = pruned.tracked.get(normalized);
+	if (exact !== undefined) {
+		pruned.tracked.delete(normalized);
+		return { operation: exact.operation, popped: true };
 	}
-	for (const prefix of pruned.prefixes.keys()) {
+	for (const [prefix, entry] of pruned.prefixes) {
 		if (coveredByPrefix(normalized, prefix)) {
-			return { ignored: true, popped: false };
+			return { operation: entry.operation, popped: false };
 		}
 	}
-	return { ignored: false, popped: false };
+	return { operation: undefined, popped: false };
 }
 
 /**
@@ -146,18 +173,18 @@ function coveredByPrefix(path: string, prefix: string): boolean {
 }
 
 /**
- * True when `oldPath -> newPath` is the rename Obsidian reports for a
- * descendant of a folder VAM renamed: `oldPath` lies strictly under the
- * source and `newPath` is the same remainder under the destination. The
- * folder's own rename is left to its exact entries. Nothing lies under the
- * vault root (`""`), matching how folder prefixes treat it.
+ * The batch of the folder rename whose descendant `oldPath -> newPath` is:
+ * `oldPath` lies strictly under its source and `newPath` is the same
+ * remainder under its destination. The folder's own rename is left to its
+ * exact entries. Nothing lies under the vault root (`""`), matching how
+ * folder prefixes treat it.
  */
-function isFolderRenameDescendant(
+function folderRenameDescendantOf(
 	folderRenames: ReadonlyMap<string, FolderRenameEntry>,
 	oldPath: string,
 	newPath: string,
-): boolean {
-	for (const { from, to } of folderRenames.values()) {
+): VamOperation | undefined {
+	for (const { from, operation, to } of folderRenames.values()) {
 		if (
 			from === VaultPath.root ||
 			!VaultPath.caseSensitive.isUnder(oldPath, from, {
@@ -169,19 +196,23 @@ function isFolderRenameDescendant(
 		if (
 			VaultPath.caseSensitive.same(newPath, VaultPath.join(to, remainder))
 		) {
-			return true;
+			return operation;
 		}
 	}
-	return false;
+	return undefined;
+}
+
+function originOf(operation: VamOperation | undefined): VaultEventOrigin {
+	return operation === undefined ? EXTERNAL_ORIGIN : vamOrigin(operation);
 }
 
 function pruneModifies(
-	modifies: ReadonlyMap<string, readonly number[]>,
+	modifies: ReadonlyMap<string, readonly ModifyEntry[]>,
 	now: number,
-): Map<string, readonly number[]> {
-	const pruned = new Map<string, readonly number[]>();
-	for (const [path, expirations] of modifies) {
-		const live = expirations.filter((expiresAt) => expiresAt > now);
+): Map<string, readonly ModifyEntry[]> {
+	const pruned = new Map<string, readonly ModifyEntry[]>();
+	for (const [path, entries] of modifies) {
+		const live = entries.filter(({ expiresAt }) => expiresAt > now);
 		if (live.length > 0) pruned.set(path, live);
 	}
 	return pruned;
@@ -203,7 +234,8 @@ const makeSelfEventTrackerCore = Effect.fn("makeSelfEventTrackerCore")(
 );
 
 /**
- * Tracks Self Events by normalized path with a Clock-driven expiration time.
+ * Tracks Self Events by normalized path with a Clock-driven expiration time,
+ * and attributes each vault callback to the Dispatch Batch that expected it.
  *
  * The Dispatch Batch worker begins each action's window immediately before
  * the action runs and finishes it when the action ends, so the window lasts
@@ -238,19 +270,21 @@ export class SelfEventTracker {
 		},
 	);
 
-	/** Registers `actions` with a window of one TTL from now. */
+	/** Registers `actions` of `operation` with a window of one TTL from now. */
 	readonly registerEffect = Effect.fn("SelfEventTracker.register")(function* (
 		this: SelfEventTracker,
 		actions: readonly VaultAction[],
+		operation: VamOperation,
 	): Effect.fn.Return<void> {
 		const now = yield* Clock.currentTimeMillis;
-		yield* this.registerUntil(actions, now + this.ttlMs);
+		yield* this.registerUntil(actions, now + this.ttlMs, operation);
 	});
 
 	private readonly registerUntil = Effect.fnUntraced(function* (
 		this: SelfEventTracker,
 		actions: readonly VaultAction[],
 		expiration: number,
+		operation: VamOperation,
 	): Effect.fn.Return<void> {
 		const now = yield* Clock.currentTimeMillis;
 		const previousSignal = yield* Ref.modify(this.core.state, (state) => {
@@ -272,18 +306,22 @@ export class SelfEventTracker {
 					pruned.tracked.set(normalized, {
 						expiresAt: expiration,
 						isFilePath: normalized === normalizedFilePath,
+						operation,
 					});
 				}
 
 				for (const prefix of this.extractFolderPrefixes(action)) {
-					pruned.prefixes.set(this.normalizePath(prefix), expiration);
+					pruned.prefixes.set(this.normalizePath(prefix), {
+						expiresAt: expiration,
+						operation,
+					});
 				}
 
 				const folderRename = this.extractFolderRename(action);
 				if (folderRename !== undefined) {
 					pruned.folderRenames.set(
 						folderRenameKey(folderRename.from, folderRename.to),
-						{ ...folderRename, expiresAt: expiration },
+						{ ...folderRename, expiresAt: expiration, operation },
 					);
 				}
 			}
@@ -294,14 +332,20 @@ export class SelfEventTracker {
 	});
 
 	/**
-	 * Opens the Self Event window of an action that is about to run. Its
-	 * entries do not expire while it runs; `finishEffect` starts their TTL.
+	 * Opens the Self Event window of an action of `operation` that is about
+	 * to run. Its entries do not expire while it runs; `finishEffect` starts
+	 * their TTL.
 	 */
 	readonly beginEffect = Effect.fn("SelfEventTracker.begin")(function* (
 		this: SelfEventTracker,
 		action: VaultAction,
+		operation: VamOperation,
 	): Effect.fn.Return<void> {
-		yield* this.registerUntil([action], Number.POSITIVE_INFINITY);
+		yield* this.registerUntil(
+			[action],
+			Number.POSITIVE_INFINITY,
+			operation,
+		);
 	});
 
 	/**
@@ -332,8 +376,12 @@ export class SelfEventTracker {
 
 				for (const prefix of this.extractFolderPrefixes(action)) {
 					const normalized = this.normalizePath(prefix);
-					if (pruned.prefixes.has(normalized)) {
-						pruned.prefixes.set(normalized, expiration);
+					const entry = pruned.prefixes.get(normalized);
+					if (entry !== undefined) {
+						pruned.prefixes.set(normalized, {
+							...entry,
+							expiresAt: expiration,
+						});
 					}
 				}
 
@@ -399,6 +447,7 @@ export class SelfEventTracker {
 		redirect: RenameRedirect,
 	): Effect.fn.Return<void> {
 		const now = yield* Clock.currentTimeMillis;
+		const current = yield* CurrentVamOperation;
 		const from = this.normalizePath(redirect.from);
 		const planned = this.normalizePath(redirect.planned);
 		const actual = this.normalizePath(redirect.actual);
@@ -407,11 +456,11 @@ export class SelfEventTracker {
 			this.core.state,
 			(state): readonly [Deferred.Deferred<void>, SelfEventState] => {
 				const pruned = pruneState(state, now);
-				const window =
-					(redirect.isFolder
-						? pruned.folderRenames.get(plannedKey)?.expiresAt
-						: pruned.tracked.get(planned)?.expiresAt) ??
-					now + this.ttlMs;
+				const plannedEntry = redirect.isFolder
+					? pruned.folderRenames.get(plannedKey)
+					: pruned.tracked.get(planned);
+				const window = plannedEntry?.expiresAt ?? now + this.ttlMs;
+				const operation = plannedEntry?.operation ?? current;
 				// Nothing lands at the planned destination now: its entries
 				// would only hide a user's event there, and hold the settle
 				// barrier until they expire.
@@ -420,11 +469,13 @@ export class SelfEventTracker {
 				pruned.tracked.set(actual, {
 					expiresAt: window,
 					isFilePath: !redirect.isFolder,
+					operation,
 				});
 				if (redirect.isFolder)
 					pruned.folderRenames.set(folderRenameKey(from, actual), {
 						expiresAt: window,
 						from,
+						operation,
 						to: actual,
 					});
 				const redirects = new Map(state.redirects);
@@ -438,47 +489,54 @@ export class SelfEventTracker {
 		yield* Deferred.succeed(previousSignal, undefined);
 	});
 
-	readonly shouldIgnoreEffect = Effect.fn("SelfEventTracker.shouldIgnore")(
+	/**
+	 * Attributes one Obsidian create or delete callback: `Vam`, with the
+	 * batch that expected the path, or `External`.
+	 */
+	readonly attributeEffect = Effect.fn("SelfEventTracker.attribute")(
 		function* (
 			this: SelfEventTracker,
 			path: string,
-		): Effect.fn.Return<boolean> {
+		): Effect.fn.Return<VaultEventOrigin> {
 			const normalized = this.normalizePath(path);
 			return yield* this.modifyPrunedEffect((pruned) => {
 				const match = matchPath(pruned, normalized);
-				return [match.ignored, match.popped];
+				return [originOf(match.operation), match.popped];
 			});
 		},
 	);
 
 	/**
-	 * Attributes one Obsidian rename callback. It is Self when both paths
-	 * are expected, or when it is a descendant rename of a folder VAM
-	 * renamed.
+	 * Attributes one Obsidian rename callback. It is VAM's when both paths
+	 * are expected, under the batch that expected the new one, or when it
+	 * is a descendant rename of a folder VAM renamed.
 	 */
-	readonly shouldIgnoreRenameEffect = Effect.fn(
-		"SelfEventTracker.shouldIgnoreRename",
+	readonly attributeRenameEffect = Effect.fn(
+		"SelfEventTracker.attributeRename",
 	)(function* (
 		this: SelfEventTracker,
 		oldPath: string,
 		newPath: string,
-	): Effect.fn.Return<boolean> {
+	): Effect.fn.Return<VaultEventOrigin> {
 		const normalizedOld = this.normalizePath(oldPath);
 		const normalizedNew = this.normalizePath(newPath);
 		return yield* this.modifyPrunedEffect((pruned) => {
-			if (
-				isFolderRenameDescendant(
-					pruned.folderRenames,
-					normalizedOld,
-					normalizedNew,
-				)
-			) {
-				return [true, false];
+			const descendantOf = folderRenameDescendantOf(
+				pruned.folderRenames,
+				normalizedOld,
+				normalizedNew,
+			);
+			if (descendantOf !== undefined) {
+				return [vamOrigin(descendantOf), false];
 			}
 			const newMatch = matchPath(pruned, normalizedNew);
 			const oldMatch = matchPath(pruned, normalizedOld);
 			return [
-				newMatch.ignored && oldMatch.ignored,
+				originOf(
+					oldMatch.operation === undefined
+						? undefined
+						: newMatch.operation,
+				),
 				newMatch.popped || oldMatch.popped,
 			];
 		});
@@ -516,8 +574,9 @@ export class SelfEventTracker {
 
 	/**
 	 * Records that VAM is about to write `path` through the vault, so the
-	 * resulting modify callback is attributed as a Self Event. Call it only
-	 * immediately before a write that will happen.
+	 * resulting modify callback is attributed as a Self Event of the
+	 * current Dispatch Batch. Call it only immediately before a write that
+	 * will happen.
 	 */
 	readonly expectModifyEffect = Effect.fn("SelfEventTracker.expectModify")(
 		function* (
@@ -525,12 +584,13 @@ export class SelfEventTracker {
 			path: string,
 		): Effect.fn.Return<void> {
 			const now = yield* Clock.currentTimeMillis;
+			const operation = yield* CurrentVamOperation;
 			const normalized = this.normalizePath(path);
 			yield* Ref.update(this.core.state, (state) => {
 				const modifies = pruneModifies(state.modifies, now);
 				modifies.set(normalized, [
 					...(modifies.get(normalized) ?? []),
-					now + this.ttlMs,
+					{ expiresAt: now + this.ttlMs, operation },
 				]);
 				return { ...state, modifies };
 			});
@@ -569,24 +629,26 @@ export class SelfEventTracker {
 		},
 	);
 
-	/** Pops one live modify expectation for `path`, if VAM wrote it. */
-	readonly shouldIgnoreModifyEffect = Effect.fn(
-		"SelfEventTracker.shouldIgnoreModify",
+	/**
+	 * Attributes one modify callback: pops the oldest live expectation for
+	 * `path` and answers its batch, or `External` when VAM did not write it.
+	 */
+	readonly attributeModifyEffect = Effect.fn(
+		"SelfEventTracker.attributeModify",
 	)(function* (
 		this: SelfEventTracker,
 		path: string,
-	): Effect.fn.Return<boolean> {
+	): Effect.fn.Return<VaultEventOrigin> {
 		const now = yield* Clock.currentTimeMillis;
 		const normalized = this.normalizePath(path);
 		return yield* Ref.modify(
 			this.core.state,
-			(state): readonly [boolean, SelfEventState] => {
+			(state): readonly [VaultEventOrigin, SelfEventState] => {
 				const modifies = pruneModifies(state.modifies, now);
-				const [, ...remaining] = modifies.get(normalized) ?? [];
-				const ignored = modifies.has(normalized);
+				const [first, ...remaining] = modifies.get(normalized) ?? [];
 				if (remaining.length > 0) modifies.set(normalized, remaining);
 				else modifies.delete(normalized);
-				return [ignored, { ...state, modifies }];
+				return [originOf(first?.operation), { ...state, modifies }];
 			},
 		);
 	});

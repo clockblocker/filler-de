@@ -10,7 +10,12 @@ import type {
 } from "../../types/bulk/helpers";
 import { makeKeyForEvent } from "./helpers/make-key-for-event";
 
-export function collapseVaultEvents(events: VaultEvent[]): VaultEvent[] {
+/**
+ * Dedupes `events` and collapses rename chains. A collapsed rename is its
+ * chain's last hop with the first hop's `from`, so labels such as the
+ * origin come from the last hop.
+ */
+export function collapseVaultEvents<E extends VaultEvent>(events: E[]): E[] {
 	// 1) Exact dedupe (keep last)
 	const deduped = dedupeByKey(events, makeKeyForEvent);
 
@@ -26,17 +31,21 @@ export function collapseVaultEvents(events: VaultEvent[]): VaultEvent[] {
  *
  * Does NOT do root reduction (folder cover). That’s a later stage.
  */
-function collapseRenameChains(events: VaultEvent[]): {
-	collapsedRenames: RenameVaultEvent[];
-	rest: VaultEvent[];
+function collapseRenameChains<E extends VaultEvent>(
+	events: E[],
+): {
+	collapsedRenames: E[];
+	rest: E[];
 } {
-	const fileRenames: FileRenamedVaultEvent[] = [];
-	const folderRenames: FolderRenamedVaultEvent[] = [];
-	const rest: VaultEvent[] = [];
+	const fileRenames: (E & FileRenamedVaultEvent)[] = [];
+	const folderRenames: (E & FolderRenamedVaultEvent)[] = [];
+	const rest: E[] = [];
 
 	for (const e of events) {
-		if (e.kind === VaultEventKind.FileRenamed) fileRenames.push(e);
-		else if (e.kind === VaultEventKind.FolderRenamed) folderRenames.push(e);
+		if (e.kind === VaultEventKind.FileRenamed)
+			fileRenames.push(e as E & FileRenamedVaultEvent);
+		else if (e.kind === VaultEventKind.FolderRenamed)
+			folderRenames.push(e as E & FolderRenamedVaultEvent);
 		else rest.push(e);
 	}
 
@@ -52,31 +61,26 @@ function collapseRenameChains(events: VaultEvent[]): {
 function collapseRenameList<T extends RenameVaultEvent>(renames: T[]): T[] {
 	if (renames.length === 0) return [];
 
-	const type = renames[0]?.kind;
-
-	// forward map: fromKey -> to (keep last)
-	const forward = new Map<string, T["to"]>();
-	// representative "from" SplitPath for each fromKey (keep last)
-	const fromByKey = new Map<string, T["from"]>();
+	// forward map: fromKey -> the rename from it (keep last)
+	const forward = new Map<string, T>();
 	// all toKeys (to detect chain roots)
 	const toKeys = new Set<string>();
 
 	for (const r of renames) {
-		const fk = makeKeyFor(r.from);
-		forward.set(fk, r.to);
-		fromByKey.set(fk, r.from);
+		forward.set(makeKeyFor(r.from), r);
 		toKeys.add(makeKeyFor(r.to));
 	}
 
-	const resolveFinalTo = (fromKey: string): T["to"] | null => {
+	/** The chain's last hop from `fromKey`. */
+	const resolveFinalHop = (fromKey: string): T | null => {
 		const seen = new Set<string>();
 		let cur = fromKey;
 
 		while (true) {
-			const next = forward.get(cur);
-			if (!next) return null;
+			const hop = forward.get(cur);
+			if (!hop) return null;
 
-			const nextKey = makeKeyFor(next);
+			const nextKey = makeKeyFor(hop.to);
 
 			// cycle guard: stop collapsing for this chain
 			if (seen.has(cur) || seen.has(nextKey)) {
@@ -85,7 +89,7 @@ function collapseRenameList<T extends RenameVaultEvent>(renames: T[]): T[] {
 			seen.add(cur);
 
 			// reached final hop
-			if (!forward.has(nextKey)) return next;
+			if (!forward.has(nextKey)) return hop;
 
 			cur = nextKey;
 		}
@@ -95,19 +99,16 @@ function collapseRenameList<T extends RenameVaultEvent>(renames: T[]): T[] {
 	// root fromKey = appears as a fromKey, but NOT as any toKey.
 	const out: T[] = [];
 
-	for (const fromKey of forward.keys()) {
+	for (const [fromKey, first] of forward) {
 		if (toKeys.has(fromKey)) continue; // not a chain root
 
-		const from = fromByKey.get(fromKey);
-		if (!from) continue;
-
-		const toFinal = resolveFinalTo(fromKey);
-		if (!toFinal) continue;
+		const last = resolveFinalHop(fromKey);
+		if (!last) continue;
 
 		// Drop no-op renames A→A
-		if (makeKeyFor(from) === makeKeyFor(toFinal)) continue;
+		if (makeKeyFor(first.from) === makeKeyFor(last.to)) continue;
 
-		out.push({ from, kind: type, to: toFinal } as T);
+		out.push({ ...last, from: first.from });
 	}
 
 	return out;

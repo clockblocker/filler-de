@@ -31,7 +31,6 @@ describe("dictionary store service", () => {
 	it("builds once, on first use", async () => {
 		const h = makeHarness();
 		expect(h.service.state().kind).toBe("Idle");
-		expect(h.service.ifStarted()).toBeNull();
 
 		const [first, second] = await Promise.all([
 			h.service.get(),

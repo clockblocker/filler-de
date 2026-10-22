@@ -2,6 +2,7 @@ import {
 	type BulkMdModifyEvent,
 	type BulkVaultEvent,
 	type BulkVaultEventHandler,
+	EXTERNAL_ORIGIN,
 	type ExpectedContent,
 	type MdModifyEventHandler,
 	type SplitPathToFolder,
@@ -12,12 +13,14 @@ import {
 	VamDispatchFailure,
 	VamDispatchReport,
 	VamScanError,
+	type VamSubscribeOptions,
 	VamTargetExistsError,
 	VamVaultIoError,
 	type VaultAction,
 	VaultActionKind,
 	type VaultEvent,
 	VaultEventKind,
+	type VaultEventOrigin,
 	type VaultScanPathWithStat,
 	vaultContentHash,
 } from "@textfresser/vault-action-manager";
@@ -56,7 +59,7 @@ const conflict = (operation: string, path: string) =>
 const under = (path: string, folder: string) =>
 	folder === "" || path.startsWith(`${folder}/`);
 
-function bulk(events: VaultEvent[]): BulkVaultEvent {
+function bulk(events: VaultEvent[], origin: VaultEventOrigin): BulkVaultEvent {
 	const zero = { creates: 0, deletes: 0, renames: 0 };
 	return {
 		debug: {
@@ -66,16 +69,35 @@ function bulk(events: VaultEvent[]): BulkVaultEvent {
 			startedAt: 0,
 			trueCount: zero,
 		},
-		events,
+		events: events.map((event) => ({ ...event, origin })),
 		roots: [],
 	};
 }
 
+/** Whether a subscription with `options` receives an event of `origin`, as VAM decides. */
+function accepts(
+	options: VamSubscribeOptions,
+	origin: VaultEventOrigin,
+): boolean {
+	if (origin.kind !== "Vam") return true;
+	if (options.from === "all") return true;
+	return options.from === "allButMine" && origin.caller !== options.caller;
+}
+
+/** A write another VAM caller made, such as the reset's or the migration's. */
+export const vamWrite = (caller: string): VaultEventOrigin => ({
+	caller,
+	kind: "Vam",
+	operationId: `${caller}#1`,
+});
+
 /**
  * An in-memory vault behind the store's VAM port. Store writes go through
- * `dispatchStopOnFirstFailure` and, like VAM's Self Events, fire no events;
- * the `user*` methods change files as a user or Sync would and deliver the
- * events VAM would, awaiting the store's handlers.
+ * `dispatchStopOnFirstFailure` and fire no events: the store subscribes to
+ * every origin but its own, as VAM delivers them. The `user*` methods change
+ * files as a user or Sync would, or, given an `origin`, as another VAM
+ * caller would, and deliver the events VAM would to the subscriptions that
+ * take that origin, awaiting the store's handlers.
  */
 export class FakeVault implements DictionaryVault {
 	readonly files = new Map<string, StoredFile>();
@@ -86,12 +108,14 @@ export class FakeVault implements DictionaryVault {
 	private clock = 1;
 	private failWhen: ((action: VaultAction, path: string) => boolean) | null =
 		null;
-	private readonly bulkHandlers = new Set<
-		(event: BulkVaultEvent) => Effect.Effect<void, unknown>
-	>();
+	private readonly bulkHandlers = new Set<{
+		handler: (event: BulkVaultEvent) => Effect.Effect<void, unknown>;
+		options: VamSubscribeOptions;
+	}>();
 	private readonly modifyHandlers = new Set<{
 		folder: string;
 		handler: (event: BulkMdModifyEvent) => Effect.Effect<void, unknown>;
+		options: VamSubscribeOptions;
 	}>();
 
 	constructor(initial: Record<string, string> = {}) {
@@ -213,7 +237,7 @@ export class FakeVault implements DictionaryVault {
 		});
 
 	dispatchStopOnFirstFailure: DictionaryVault["dispatchStopOnFirstFailure"] =
-		(actions) =>
+		(actions, { caller, operationId = `${caller}#1` }) =>
 			Effect.promise(async () => {
 				this.batches.push([...actions]);
 				const executed: VaultAction[] = [];
@@ -248,6 +272,7 @@ export class FakeVault implements DictionaryVault {
 						return new VamDispatchFailure({
 							reason: error,
 							report: new VamDispatchReport({
+								caller,
 								entries: [
 									...executed.map((done) => ({
 										action: done,
@@ -262,6 +287,7 @@ export class FakeVault implements DictionaryVault {
 											status: "Skipped" as const,
 										})),
 								],
+								operationId,
 							}),
 						});
 					}
@@ -365,22 +391,35 @@ export class FakeVault implements DictionaryVault {
 
 	subscribeToBulk: DictionaryVault["subscribeToBulk"] = <E>(
 		handler: BulkVaultEventHandler<E>,
+		options: VamSubscribeOptions = {},
 	) =>
 		Effect.sync(() => {
-			this.bulkHandlers.add(handler);
+			const subscription = { handler, options };
+			this.bulkHandlers.add(subscription);
 			return {
+				// Events are delivered and awaited as they happen.
+				caughtUp: Effect.void,
 				close: Effect.sync(() => {
-					this.bulkHandlers.delete(handler);
+					this.bulkHandlers.delete(subscription);
 				}),
 			};
 		});
 
 	subscribeToMdModifications: DictionaryVault["subscribeToMdModifications"] =
-		<E>(folder: SplitPathToFolder, handler: MdModifyEventHandler<E>) =>
+		<E>(
+			folder: SplitPathToFolder,
+			handler: MdModifyEventHandler<E>,
+			options: VamSubscribeOptions = {},
+		) =>
 			Effect.sync(() => {
-				const subscription = { folder: format(folder), handler };
+				const subscription = {
+					folder: format(folder),
+					handler,
+					options,
+				};
 				this.modifyHandlers.add(subscription);
 				return {
+					caughtUp: Effect.void,
 					close: Effect.sync(() => {
 						this.modifyHandlers.delete(subscription);
 					}),
@@ -391,18 +430,27 @@ export class FakeVault implements DictionaryVault {
 		return this.bulkHandlers.size + this.modifyHandlers.size;
 	}
 
-	private async emitBulk(events: VaultEvent[]) {
-		for (const handler of this.bulkHandlers)
-			await Effect.runPromise(handler(bulk(events)));
+	private async emitBulk(
+		events: VaultEvent[],
+		origin: VaultEventOrigin = EXTERNAL_ORIGIN,
+	) {
+		for (const { handler, options } of this.bulkHandlers)
+			if (accepts(options, origin))
+				await Effect.runPromise(handler(bulk(events, origin)));
 	}
 
-	private async emitModify(paths: string[]) {
-		for (const { folder, handler } of this.modifyHandlers) {
+	private async emitModify(
+		paths: string[],
+		origin: VaultEventOrigin = EXTERNAL_ORIGIN,
+	) {
+		for (const { folder, handler, options } of this.modifyHandlers) {
+			if (!accepts(options, origin)) continue;
 			const modifications = paths
 				.filter((path) => under(path, folder))
 				.map((path) => {
 					const file = this.files.get(path);
 					return {
+						origin,
 						splitPath: mdPath(path),
 						stat: {
 							ctime: 0,
@@ -426,14 +474,19 @@ export class FakeVault implements DictionaryVault {
 	}
 
 	/** A hand edit or Sync write; VAM reports it on the modify channel. */
-	async userWrite(path: string, content: string): Promise<void> {
+	async userWrite(
+		path: string,
+		content: string,
+		origin: VaultEventOrigin = EXTERNAL_ORIGIN,
+	): Promise<void> {
 		const created = !this.files.has(path);
 		this.put(path, content);
 		if (created)
-			await this.emitBulk([
-				{ kind: VaultEventKind.FileCreated, splitPath: mdPath(path) },
-			]);
-		else await this.emitModify([path]);
+			await this.emitBulk(
+				[{ kind: VaultEventKind.FileCreated, splitPath: mdPath(path) }],
+				origin,
+			);
+		else await this.emitModify([path], origin);
 	}
 
 	/** A modify callback for content that did not change, such as an editor save echo. */
@@ -455,19 +508,26 @@ export class FakeVault implements DictionaryVault {
 		]);
 	}
 
-	async userRenameFolder(from: string, to: string): Promise<void> {
+	async userRenameFolder(
+		from: string,
+		to: string,
+		origin: VaultEventOrigin = EXTERNAL_ORIGIN,
+	): Promise<void> {
 		for (const [path, file] of [...this.files])
 			if (under(path, from)) {
 				this.files.delete(path);
 				this.files.set(`${to}${path.slice(from.length)}`, file);
 			}
-		await this.emitBulk([
-			{
-				from: folderPath(from),
-				kind: VaultEventKind.FolderRenamed,
-				to: folderPath(to),
-			},
-		]);
+		await this.emitBulk(
+			[
+				{
+					from: folderPath(from),
+					kind: VaultEventKind.FolderRenamed,
+					to: folderPath(to),
+				},
+			],
+			origin,
+		);
 	}
 
 	/** Deletes several files at once, as one bulk event. */
