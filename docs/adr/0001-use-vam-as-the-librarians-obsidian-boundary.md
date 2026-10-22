@@ -18,13 +18,14 @@ The Librarian reads vault state, subscribes to vault changes, and requests files
 - System paths cross the package seam through the single public `splitPathCodec`. Conversions involving live Obsidian file and folder references remain inside VAM's implementation.
 - Obsidian-specific coordination is centralized while VAM remains unaware of Sections, Scrolls, Codexes, and Healing.
 - A VAM Dispatch Batch is ordered and executed sequentially, not committed
-  atomically. Planning failures happen before execution; by default, action
-  failures are returned as typed `VamDispatchError` values after all planned
-  actions have been attempted. A batch can opt into stopping at its first
-  failure, which reports the executed and skipped actions. Submitted batches
+  atomically. Planning failures happen before execution; by default, all
+  planned actions are attempted, and a failed batch fails with one
+  `VamDispatchFailure` whose report says what each planned action did. A
+  batch can opt into stopping at its first failure, which reports the rest as
+  skipped. Submitted batches
   wait for queue space rather than being dropped, up to a high ceiling past
   which a submission fails with a typed overflow error.
-- The Librarian's reconciliation boundary treats action failure as execution
-  uncertain. It records a partial outcome and completes a VAM-backed Tree
+- The Librarian's reconciliation boundary treats a failure whose report may
+  have touched the vault as execution uncertain. It records a partial outcome and completes a VAM-backed Tree
   resynchronization before serialized work may continue. It never claims that
   VAM or Tree work was rolled back when it was not.

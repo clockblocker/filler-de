@@ -1,8 +1,9 @@
 import {
 	type AnySplitPath,
+	describeVaultActionPath,
 	splitPathCodec,
 	VamDispatchError,
-	VamDispatchStoppedError,
+	VamDispatchFailure,
 	VamScanError,
 	VamVaultIoError,
 } from "@textfresser/vault-action-manager";
@@ -132,13 +133,16 @@ function collectFailedItems(failure: unknown): FailedItem[] {
 				: failure.failure,
 		);
 	}
-	if (failure instanceof VamDispatchStoppedError) {
-		return collectFailedItems(failure.failure);
+	if (failure instanceof VamDispatchFailure) {
+		const { failed } = failure.report;
+		return failed.length > 0
+			? failed.flatMap(collectFailedItems)
+			: collectFailedItems(failure.reason);
 	}
 	if (failure instanceof VamDispatchError) {
 		return [
 			{
-				path: actionPath(failure.action),
+				path: describeVaultActionPath(failure.action),
 				reason: getErrorMessage(failure.cause),
 			},
 		];

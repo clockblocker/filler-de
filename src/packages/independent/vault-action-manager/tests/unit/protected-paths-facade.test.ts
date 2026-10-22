@@ -5,160 +5,19 @@ import {
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
 	splitPathCodec,
-	VamDispatchStoppedError,
+	VamDispatchFailure,
 	VamProtectedPathError,
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
 import { Effect, Exit } from "effect";
-import {
-	type App,
-	MarkdownView,
-	type TAbstractFile,
-	TFile,
-	TFolder,
-} from "obsidian";
+import { makeVaultHarness } from "./helpers/vault-harness";
 
 const md = (path: string) => splitPathCodec.parse(path) as SplitPathToMdFile;
 const folder = (path: string) =>
 	splitPathCodec.parse(path) as SplitPathToFolder;
 
 const EXEMPLAR_NOTE = "Exemplar/Kohlekraftwerk/Kohlekraftwerk.md";
-
-/**
- * A vault whose writes fire Obsidian's modify callback, and whose
- * `FileManager.renameFile` rewrites the files listed in `linkingFiles`, as
- * Obsidian's link updater does. Its adapter reports a case-insensitive file
- * system, as Obsidian's does on macOS, unless `insensitive` is false.
- */
-function makeVaultHarness({ insensitive = true } = {}) {
-	const callbacks = new Map<string, (...args: never[]) => void>();
-	const contents = new Map<string, string>();
-	const byPath = new Map<string, TAbstractFile>();
-	const writes: string[] = [];
-	const openPaths = new Set<string>();
-	const linkingFiles: TFile[] = [];
-
-	const ensureFolder = (path: string): TFolder => {
-		const existing = byPath.get(path);
-		if (existing instanceof TFolder) return existing;
-		const created = new TFolder();
-		created.path = path;
-		created.name = path.split("/").at(-1) ?? path;
-		created.children = [];
-		byPath.set(path, created);
-		return created;
-	};
-
-	const addFile = (path: string, content: string) => {
-		const file = new TFile();
-		file.path = path;
-		const name = path.split("/").at(-1) ?? path;
-		file.extension = name.split(".").at(-1) ?? "";
-		file.basename = name.slice(0, -(file.extension.length + 1));
-		file.name = name;
-		const parent = ensureFolder(path.split("/").slice(0, -1).join("/"));
-		file.parent = parent;
-		parent.children.push(file);
-		file.stat = { ctime: 1, mtime: Date.now(), size: content.length };
-		byPath.set(path, file);
-		contents.set(path, content);
-		return file;
-	};
-
-	const write = (file: TFile, content: string) => {
-		writes.push(file.path);
-		contents.set(file.path, content);
-		file.stat = { ...file.stat, mtime: Date.now(), size: content.length };
-		callbacks.get("modify")?.(file as never);
-	};
-
-	const move = (file: TAbstractFile, toPath: string) => {
-		writes.push(`${file.path} -> ${toPath}`);
-		byPath.delete(file.path);
-		const content = contents.get(file.path);
-		contents.delete(file.path);
-		const oldPath = file.path;
-		file.path = toPath;
-		byPath.set(toPath, file);
-		if (content !== undefined) contents.set(toPath, content);
-		callbacks.get("rename")?.(file as never, oldPath as never);
-	};
-
-	const leaves = () =>
-		[...openPaths].map((path) => {
-			const view = new MarkdownView({} as never);
-			view.file = byPath.get(path) as TFile;
-			return { view };
-		});
-
-	const app = {
-		fileManager: {
-			renameFile: async (file: TAbstractFile, toPath: string) => {
-				move(file, toPath);
-				for (const linking of linkingFiles) {
-					write(
-						linking,
-						`${contents.get(linking.path)} [[${toPath}]]`,
-					);
-				}
-			},
-			trashFile: async (file: TAbstractFile) => {
-				writes.push(`trash ${file.path}`);
-				byPath.delete(file.path);
-			},
-		},
-		metadataCache: { getFirstLinkpathDest: () => null },
-		vault: {
-			adapter: { insensitive },
-			create: async (path: string, content: string) => {
-				writes.push(`create ${path}`);
-				return addFile(path, content);
-			},
-			createFolder: async (path: string) => ensureFolder(path),
-			getAbstractFileByPath: (path: string) => byPath.get(path) ?? null,
-			getMarkdownFiles: () =>
-				[...byPath.values()].filter(
-					(file): file is TFile => file instanceof TFile,
-				),
-			getRoot: () => ensureFolder(""),
-			modify: async (file: TFile, content: string) =>
-				write(file, content),
-			offref: () => {},
-			on: (name: string, callback: (...args: never[]) => void) => {
-				callbacks.set(name, callback);
-				return { callback, name };
-			},
-			process: async (file: TFile, fn: (content: string) => string) => {
-				const read = contents.get(file.path) ?? "";
-				const next = fn(read);
-				if (next !== read) write(file, next);
-				return next;
-			},
-			read: async (file: TFile) => contents.get(file.path) ?? "",
-			rename: async (file: TAbstractFile, toPath: string) =>
-				move(file, toPath),
-		},
-		workspace: {
-			getActiveViewOfType: () => null,
-			getLeaf: () => ({ openFile: async () => {} }),
-			getLeavesOfType: (type: string) =>
-				type === "markdown" ? leaves() : [],
-			leftSplit: null,
-			setActiveLeaf: () => {},
-		},
-	} as unknown as App;
-
-	return {
-		addFile,
-		app,
-		/** An edit Obsidian reports but VAM did not make. */
-		editByHand: (file: TFile, content: string) => write(file, content),
-		linkingFiles,
-		open: (path: string) => openPaths.add(path),
-		writes,
-	};
-}
 
 function makeManager(harness: ReturnType<typeof makeVaultHarness>) {
 	return createVaultActionManager(harness.app, {
@@ -193,14 +52,21 @@ describe("VaultActionManager protected paths: dispatch", () => {
 		await Effect.runPromise(testing.whenSettled());
 
 		expect(Exit.isFailure(exit)).toBe(true);
-		const error = Exit.isFailure(exit)
+		const failure = Exit.isFailure(exit)
 			? exit.cause.reasons
 					.map((reason) =>
 						reason._tag === "Fail" ? reason.error : undefined,
 					)
-					.find((value) => value instanceof VamProtectedPathError)
+					.find((value) => value instanceof VamDispatchFailure)
 			: undefined;
+		const error =
+			failure?.reason instanceof VamProtectedPathError
+				? failure.reason
+				: undefined;
 		expect(error).toBeInstanceOf(VamProtectedPathError);
+		expect(failure?.report.touchedVault).toBe("no");
+		expect(failure?.report.skipped).toHaveLength(2);
+		expect(failure?.message).toBe(error?.message);
 		expect(error?.path).toBe(EXEMPLAR_NOTE);
 		expect(error?.prefix).toBe("Exemplar");
 		expect(error?.relation).toBe("inside");
@@ -231,8 +97,8 @@ describe("VaultActionManager protected paths: dispatch", () => {
 				.pipe(Effect.flip),
 		);
 
-		expect(failure).toBeInstanceOf(VamProtectedPathError);
-		expect(failure).not.toBeInstanceOf(VamDispatchStoppedError);
+		expect(failure.reason).toBeInstanceOf(VamProtectedPathError);
+		expect(failure.report.executed).toEqual([]);
 		expect(harness.writes).toEqual([]);
 		await Effect.runPromise(dispose);
 	});
@@ -252,8 +118,8 @@ describe("VaultActionManager protected paths: dispatch", () => {
 				.pipe(Effect.flip),
 		);
 
-		expect(failure).toBeInstanceOf(VamProtectedPathError);
-		expect((failure as VamProtectedPathError).message).toBe(
+		expect(failure.reason).toBeInstanceOf(VamProtectedPathError);
+		expect(failure.message).toBe(
 			'TrashFolder (vault root): refused, the path contains the protected path "Exemplar"; no action in the batch ran',
 		);
 		await Effect.runPromise(dispose);

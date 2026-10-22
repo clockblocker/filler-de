@@ -32,9 +32,13 @@ import type {
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionKind } from "../types/vault-action";
 import {
+	type VamDispatchEntry,
+	VamDispatchFailure,
+	VamDispatchReport,
+} from "./dispatch-report";
+import {
 	VamDispatchError,
 	VamDispatchOverflowError,
-	VamDispatchStoppedError,
 	VamPlanningError,
 	VamProtectedPathError,
 	VamShutdownError,
@@ -43,33 +47,12 @@ import {
 import { type VamLiveServices, VaultIo } from "./ports";
 import type { VamRuntime } from "./runtime";
 
-/** Failure of a default batch, which attempts every planned action. */
-export type DispatchEffectFailure =
-	| VamPlanningError
-	| VamProtectedPathError
-	| VamShutdownError
-	| VamDispatchOverflowError
-	| readonly VamDispatchError[];
-
-/** Failure of a batch dispatched with `stopOnFirstFailure: true`. */
-export type StopOnFirstFailureDispatchFailure =
-	| VamPlanningError
-	| VamProtectedPathError
-	| VamShutdownError
-	| VamDispatchOverflowError
-	| VamDispatchStoppedError;
-
-export type AnyDispatchEffectFailure =
-	| DispatchEffectFailure
-	| StopOnFirstFailureDispatchFailure;
-
 /** Per-batch dispatch options. */
 export type DispatchOptions = {
 	/**
 	 * Stop at the first failed action instead of attempting the rest of the
-	 * batch. The batch then fails with a `VamDispatchStoppedError` listing the
-	 * planned actions already executed and the ones skipped. Defaults to
-	 * `false`.
+	 * batch. The report then lists the remaining planned actions as
+	 * `Skipped`. Defaults to `false`.
 	 */
 	readonly stopOnFirstFailure?: boolean;
 };
@@ -106,7 +89,10 @@ export const MAX_PENDING_DISPATCH_BATCHES = 500;
 type BatchMessage = {
 	readonly _tag: "Batch";
 	readonly actions: readonly VaultAction[];
-	readonly completion: Deferred.Deferred<void, AnyDispatchEffectFailure>;
+	readonly completion: Deferred.Deferred<
+		VamDispatchReport,
+		VamDispatchFailure
+	>;
 	readonly parentSpan: Option.Option<Tracer.Span>;
 	readonly stopOnFirstFailure: boolean;
 };
@@ -186,7 +172,7 @@ export class DispatchBatchWorker {
 				if (message._tag !== "Batch") continue;
 				yield* Deferred.fail(
 					message.completion,
-					self.shutdownError("dispatch.queued", message.actions[0]),
+					self.shutdownError("dispatch.queued", message.actions),
 				);
 			}
 
@@ -226,7 +212,7 @@ export class DispatchBatchWorker {
 	}
 
 	/**
-	 * Submits one Dispatch Batch and waits for its result.
+	 * Submits one Dispatch Batch and waits for its report.
 	 *
 	 * When the queue is full, the batch waits for space behind earlier waiting
 	 * batches instead of being dropped. Interrupting a caller whose batch is
@@ -235,9 +221,8 @@ export class DispatchBatchWorker {
 	dispatchEffect(
 		actions: readonly VaultAction[],
 		options: DispatchOptions = {},
-	): Effect.Effect<void, AnyDispatchEffectFailure> {
+	): Effect.Effect<VamDispatchReport, VamDispatchFailure> {
 		const submitted = [...actions];
-		const representative = submitted[0];
 
 		return Effect.fn("DispatchBatch.dispatch")(function* (
 			self: DispatchBatchWorker,
@@ -246,8 +231,8 @@ export class DispatchBatchWorker {
 			const queue = yield* Deferred.await(self.queueReady);
 			const parentSpan = yield* Effect.option(Effect.currentSpan);
 			const completion = yield* Deferred.make<
-				void,
-				AnyDispatchEffectFailure
+				VamDispatchReport,
+				VamDispatchFailure
 			>();
 			const batch: BatchMessage = {
 				_tag: "Batch",
@@ -263,7 +248,7 @@ export class DispatchBatchWorker {
 				SynchronizedRef.modifyEffect(self.state, (state) => {
 					if (state.lifecycle !== "running") {
 						return Effect.fail(
-							self.shutdownError("dispatch", representative),
+							self.shutdownError("dispatch", submitted),
 						);
 					}
 
@@ -290,13 +275,14 @@ export class DispatchBatchWorker {
 	}
 
 	/**
-	 * Fails with `VamProtectedPathError` when any submitted action names a
-	 * protected path. Prerequisites added in planning only create parent
-	 * folders of submitted targets, so checking the submission suffices.
+	 * Refuses the batch, for a `VamProtectedPathError`, when any submitted
+	 * action names a protected path. Prerequisites added in planning only
+	 * create parent folders of submitted targets, so checking the submission
+	 * suffices.
 	 */
 	private refuseProtected(
 		actions: readonly VaultAction[],
-	): Effect.Effect<void, VamProtectedPathError> {
+	): Effect.Effect<void, VamDispatchFailure> {
 		const violation = this.protectedPaths?.findViolation(actions);
 		if (!violation) return Effect.void;
 		const error = new VamProtectedPathError({
@@ -308,7 +294,11 @@ export class DispatchBatchWorker {
 		});
 		return Effect.logError("[DispatchBatch] Refused a protected path", {
 			error: error.message,
-		}).pipe(Effect.andThen(Effect.fail(error)));
+		}).pipe(
+			Effect.andThen(
+				Effect.fail(VamDispatchFailure.notRun(error, actions)),
+			),
+		);
 	}
 
 	whenIdleEffect(): Effect.Effect<void> {
@@ -353,7 +343,7 @@ export class DispatchBatchWorker {
 		batch: BatchMessage,
 	): Effect.Effect<
 		readonly [queued: boolean, state: CoordinationState],
-		VamShutdownError | VamDispatchOverflowError
+		VamDispatchFailure
 	> {
 		const busy: CoordinationState = state.busy
 			? state
@@ -364,7 +354,7 @@ export class DispatchBatchWorker {
 					size,
 				): Effect.Effect<
 					readonly [boolean, CoordinationState],
-					VamShutdownError | VamDispatchOverflowError
+					VamDispatchFailure
 				> => {
 					if (
 						state.waiting.length === 0 &&
@@ -392,16 +382,13 @@ export class DispatchBatchWorker {
 	private offerBatch(
 		queue: Queue.Queue<DispatchMessage>,
 		batch: BatchMessage,
-	): Effect.Effect<void, VamShutdownError> {
+	): Effect.Effect<void, VamDispatchFailure> {
 		return Queue.offer(queue, batch).pipe(
 			Effect.flatMap((offered) =>
 				offered
 					? Effect.void
 					: Effect.fail(
-							this.shutdownError(
-								"dispatch.offer",
-								batch.actions[0],
-							),
+							this.shutdownError("dispatch.offer", batch.actions),
 						),
 			),
 		);
@@ -466,47 +453,37 @@ export class DispatchBatchWorker {
 	private executeBatch(
 		actions: readonly VaultAction[],
 		stopOnFirstFailure: boolean,
-	): Effect.Effect<void, AnyDispatchEffectFailure, VamLiveServices> {
-		if (actions.length === 0) return Effect.void;
+	): Effect.Effect<VamDispatchReport, VamDispatchFailure, VamLiveServices> {
+		if (actions.length === 0)
+			return Effect.succeed(new VamDispatchReport({ entries: [] }));
 
 		return Effect.fn("DispatchBatch.executeBatch")(function* (
 			self: DispatchBatchWorker,
 		) {
-			const planned = yield* self.plan(actions);
+			const planned = yield* self
+				.plan(actions)
+				.pipe(
+					Effect.mapError((error) =>
+						VamDispatchFailure.notRun(error, actions),
+					),
+				);
 
-			const errors: VamDispatchError[] = [];
+			const entries: VamDispatchEntry[] = [];
 			for (const [index, action] of planned.entries()) {
-				const failure = yield* self.runAction(action);
-				if (!failure) continue;
-				if (stopOnFirstFailure) {
-					return yield* Effect.fail(
-						self.stopped(
-							failure,
-							planned.slice(0, index),
-							planned.slice(index + 1),
-						),
-					);
+				const entry = yield* self.runAction(action);
+				entries.push(entry);
+				if (stopOnFirstFailure && entry.status !== "Done") {
+					for (const skipped of planned.slice(index + 1))
+						entries.push({ action: skipped, status: "Skipped" });
+					break;
 				}
-				errors.push(failure);
 			}
 
-			if (errors.length > 0) return yield* Effect.fail(errors);
+			const report = new VamDispatchReport({ entries });
+			const failure = VamDispatchFailure.ofReport(report);
+			if (failure) return yield* Effect.fail(failure);
+			return report;
 		})(this);
-	}
-
-	private stopped(
-		failure: VamDispatchError,
-		executed: readonly VaultAction[],
-		skipped: readonly VaultAction[],
-	): VamDispatchStoppedError {
-		return new VamDispatchStoppedError({
-			action: failure.action,
-			cause: failure.cause,
-			executed,
-			failure,
-			operation: "dispatch.stopOnFirstFailure",
-			skipped,
-		});
 	}
 
 	private readonly plan = Effect.fn("DispatchBatch.plan")(function* (
@@ -617,13 +594,12 @@ export class DispatchBatchWorker {
 	 * the batch. Opening is uninterruptible and closing always runs, so an
 	 * interrupted action cannot leave entries that never expire.
 	 *
-	 * Opening the window cannot fail. Callers read a `registerSelfEvents`
-	 * failure as "nothing in the batch ran", which a per-action failure in the
-	 * middle of a batch would no longer guarantee.
+	 * Opening the window cannot fail, so every planned action that runs gets
+	 * exactly one report entry, from its own execution.
 	 */
 	private runAction(
 		action: VaultAction,
-	): Effect.Effect<VamDispatchError | undefined, never, VamLiveServices> {
+	): Effect.Effect<VamDispatchEntry, never, VamLiveServices> {
 		return Effect.acquireUseRelease(
 			this.selfEventTracker.beginEffect(action),
 			() => this.executeAction(action),
@@ -633,7 +609,7 @@ export class DispatchBatchWorker {
 
 	private executeAction(
 		action: VaultAction,
-	): Effect.Effect<VamDispatchError | undefined, never, VamLiveServices> {
+	): Effect.Effect<VamDispatchEntry, never, VamLiveServices> {
 		const run = this.executor.execute(action);
 		const tracked =
 			this.linkRewrites && rewritesLinks(action)
@@ -641,30 +617,41 @@ export class DispatchBatchWorker {
 				: run;
 		const execute = tracked.pipe(
 			Effect.matchCause({
-				onFailure: (cause) =>
-					new VamDispatchError({
-						action,
-						cause: Cause.squash(cause),
-						operation: "executeAction",
-					}),
-				onSuccess: () => undefined,
+				onFailure: (cause): VamDispatchEntry => {
+					const squashed = Cause.squash(cause);
+					return VamDispatchReport.entryFor(
+						squashed instanceof VamDispatchError
+							? squashed
+							: new VamDispatchError({
+									action,
+									cause: squashed,
+									kind: "defect",
+									operation: "executeAction",
+								}),
+					);
+				},
+				onSuccess: (outcome): VamDispatchEntry => ({
+					action,
+					outcome,
+					status: "Done",
+				}),
 			}),
-			Effect.tap((failure) =>
-				failure
-					? Effect.logError(
-							failure.cause instanceof Error &&
-								!(failure.cause instanceof VamDispatchError)
+			Effect.tap((entry) =>
+				entry.status === "Done" || entry.status === "Skipped"
+					? Effect.void
+					: Effect.logError(
+							entry.error.kind === "defect"
 								? "[DispatchBatch] Action threw exception"
 								: "[DispatchBatch] Action failed",
 							{
 								error: this.causeMessage(
-									this.unwrapTaggedCause(failure.cause),
+									this.unwrapTaggedCause(entry.error.cause),
 								),
 								kind: action.kind,
 								path: this.describePath(action),
+								status: entry.status,
 							},
-						)
-					: Effect.void,
+						),
 			),
 			Effect.withSpan("vam.dispatch.action", {
 				attributes: this.spanAttributes(action),
@@ -731,28 +718,33 @@ export class DispatchBatchWorker {
 		);
 	}
 
-	private overflowError(batch: BatchMessage): VamDispatchOverflowError {
-		return new VamDispatchOverflowError({
-			action: batch.actions[0],
-			cause: new Error(
-				`Dispatch Batch queue reached its ceiling of ${MAX_PENDING_DISPATCH_BATCHES} pending batches; the batch was not submitted`,
-			),
-			limit: MAX_PENDING_DISPATCH_BATCHES,
-			operation: "dispatch.overflow",
-		});
+	private overflowError(batch: BatchMessage): VamDispatchFailure {
+		return VamDispatchFailure.notRun(
+			new VamDispatchOverflowError({
+				action: batch.actions[0],
+				cause: new Error(
+					`Dispatch Batch queue reached its ceiling of ${MAX_PENDING_DISPATCH_BATCHES} pending batches; the batch was not submitted`,
+				),
+				limit: MAX_PENDING_DISPATCH_BATCHES,
+				operation: "dispatch.overflow",
+			}),
+			batch.actions,
+		);
 	}
 
 	private shutdownError(
 		operation: string,
-		action?: VaultAction,
-	): VamShutdownError {
-		return new VamShutdownError({
-			cause: new Error(
-				"Vault Action Manager dispatch has been shut down",
-				{ cause: action },
-			),
-			operation,
-		});
+		actions: readonly VaultAction[],
+	): VamDispatchFailure {
+		return VamDispatchFailure.notRun(
+			new VamShutdownError({
+				cause: new Error(
+					"Vault Action Manager dispatch has been shut down",
+				),
+				operation,
+			}),
+			actions,
+		);
 	}
 
 	private toFolder(path: string): SplitPathToFolder | null {

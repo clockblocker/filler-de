@@ -7,7 +7,8 @@ import {
 	type SplitPathToMdFile,
 	splitPathCodec,
 	VamDispatchError,
-	VamDispatchStoppedError,
+	VamDispatchFailure,
+	VamDispatchReport,
 	VamScanError,
 	VamVaultIoError,
 	type VaultAction,
@@ -215,18 +216,33 @@ export class FakeVault implements DictionaryVault {
 						} catch (cause) {
 							failure = cause;
 						}
-					if (failure)
-						return new VamDispatchStoppedError({
+					if (failure) {
+						const error = new VamDispatchError({
+							action,
 							cause: failure,
-							executed,
-							failure: new VamDispatchError({
-								action,
-								cause: failure,
-								operation: "execute",
-							}),
-							operation: "dispatch",
-							skipped: actions.slice(index + 1),
+							kind: "io",
+							operation: "execute",
 						});
+						return new VamDispatchFailure({
+							reason: error,
+							report: new VamDispatchReport({
+								entries: [
+									...executed.map((done) => ({
+										action: done,
+										outcome: { _tag: "Created" } as const,
+										status: "Done" as const,
+									})),
+									VamDispatchReport.entryFor(error),
+									...actions
+										.slice(index + 1)
+										.map((skipped) => ({
+											action: skipped,
+											status: "Skipped" as const,
+										})),
+								],
+							}),
+						});
+					}
 					executed.push(action);
 				}
 				return null;

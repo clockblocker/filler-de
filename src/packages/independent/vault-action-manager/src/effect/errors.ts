@@ -1,7 +1,31 @@
-import { Schema } from "effect";
+import { Predicate, Schema } from "effect";
 import { displayPath } from "../errors";
 import { getErrorMessage } from "../internal/get-error-message";
+import { splitPathCodec } from "../split-path-codec";
 import type { VaultAction } from "../types/vault-action";
+import type { VamDispatchFailure } from "./dispatch-report";
+
+/** A `VaultAction` field. Actions carry functions, so they are declared, not encoded. */
+export const VaultActionSchema = Schema.declare(
+	(input: unknown): input is VaultAction =>
+		Predicate.hasProperty(input, "kind") &&
+		Predicate.isString(input.kind) &&
+		Predicate.hasProperty(input, "payload"),
+);
+
+/**
+ * The path an action names, as messages show it: `from → to` for a rename.
+ */
+export function describeVaultActionPath(action: VaultAction): string {
+	switch (action.kind) {
+		case "RenameFolder":
+		case "RenameFile":
+		case "RenameMdFile":
+			return `${displayPath(splitPathCodec.format(action.payload.from))} → ${displayPath(splitPathCodec.format(action.payload.to))}`;
+		default:
+			return displayPath(splitPathCodec.format(action.payload.splitPath));
+	}
+}
 
 /**
  * The message of a VAM error: its operation, the path it touched, and its
@@ -133,7 +157,7 @@ export class VamScanError extends Schema.TaggedError<VamScanError>()(
 export class VamPlanningError extends Schema.TaggedError<VamPlanningError>()(
 	"VamPlanningError",
 	{
-		action: Schema.optional(Schema.Unknown),
+		action: Schema.optional(VaultActionSchema),
 		cause: Schema.Defect(),
 		operation: Schema.String,
 		path: Schema.optional(Schema.String),
@@ -144,41 +168,38 @@ export class VamPlanningError extends Schema.TaggedError<VamPlanningError>()(
 	}
 }
 
+/**
+ * How one action of a Dispatch Batch failed:
+ *
+ * - `conflict`: its target changed under it, a background content race or
+ *   an active editor that moved on. The action wrote nothing.
+ * - `missing`: its file or folder was not there. The action wrote nothing.
+ * - `io`: vault or editor I/O failed. The action may have changed the vault.
+ * - `defect`: it threw unexpectedly. It may have changed the vault.
+ */
+export const VamActionFailureKindSchema = Schema.Literals([
+	"conflict",
+	"missing",
+	"io",
+	"defect",
+]);
+
+export type VamActionFailureKind = typeof VamActionFailureKindSchema.Type;
+
+/** One failed action of a Dispatch Batch, with the error that failed it. */
 export class VamDispatchError extends Schema.TaggedError<VamDispatchError>()(
 	"VamDispatchError",
 	{
-		action: Schema.optional(Schema.Unknown),
+		action: VaultActionSchema,
 		cause: Schema.Defect(),
+		kind: VamActionFailureKindSchema,
 		operation: Schema.String,
 	},
 ) {
 	override get message(): string {
-		return describeFailure(this.operation, undefined, this.cause);
-	}
-}
-
-const VaultActionListSchema = Schema.declare(
-	(input: unknown): input is readonly VaultAction[] => Array.isArray(input),
-);
-
-/**
- * A batch dispatched with `stopOnFirstFailure` stopped at its first failed
- * action. `executed` lists the planned actions that completed before it, and
- * `skipped` the planned actions that were never attempted.
- */
-export class VamDispatchStoppedError extends Schema.TaggedError<VamDispatchStoppedError>()(
-	"VamDispatchStoppedError",
-	{
-		action: Schema.optional(Schema.Unknown),
-		cause: Schema.Defect(),
-		executed: VaultActionListSchema,
-		failure: Schema.instanceOf(VamDispatchError),
-		operation: Schema.String,
-		skipped: VaultActionListSchema,
-	},
-) {
-	override get message(): string {
-		return describeFailure(this.operation, undefined, this.cause);
+		const because = getErrorMessage(this.cause);
+		const what = `${this.action.kind} ${describeVaultActionPath(this.action)}`;
+		return because ? `${what}: ${because}` : what;
 	}
 }
 
@@ -189,7 +210,7 @@ export class VamDispatchStoppedError extends Schema.TaggedError<VamDispatchStopp
 export class VamDispatchOverflowError extends Schema.TaggedError<VamDispatchOverflowError>()(
 	"VamDispatchOverflowError",
 	{
-		action: Schema.optional(Schema.Unknown),
+		action: Schema.optional(VaultActionSchema),
 		cause: Schema.Defect(),
 		limit: Schema.Number,
 		operation: Schema.String,
@@ -208,7 +229,7 @@ export class VamDispatchOverflowError extends Schema.TaggedError<VamDispatchOver
 export class VamProtectedPathError extends Schema.TaggedError<VamProtectedPathError>()(
 	"VamProtectedPathError",
 	{
-		action: Schema.optional(Schema.Unknown),
+		action: VaultActionSchema,
 		operation: Schema.String,
 		path: Schema.String,
 		prefix: Schema.String,
@@ -257,7 +278,7 @@ export type VamEffectError =
 	| VamContentConflictError
 	| VamPlanningError
 	| VamDispatchError
-	| VamDispatchStoppedError
+	| VamDispatchFailure
 	| VamDispatchOverflowError
 	| VamProtectedPathError
 	| VamSubscriptionError

@@ -4,8 +4,9 @@ import {
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
 	splitPathCodec,
-	VamDispatchError,
-	VamDispatchStoppedError,
+	type VamDispatchEntry,
+	VamDispatchFailure,
+	VamDispatchReport,
 	VamPlanningError,
 	VamProtectedPathError,
 	VamScanError,
@@ -33,6 +34,7 @@ import {
 	reportDelimiterMigration,
 } from "../../../src/commanders/librarian/runtime/delimiter-migration-report";
 import type { SuffixDelimiterConfig } from "../../../src/types";
+import { actionError, notRun } from "../../support/vam-dispatch";
 
 const oldConfig = { padded: false, symbol: "-" } satisfies SuffixDelimiterConfig;
 const newConfig = { padded: true, symbol: "~" } satisfies SuffixDelimiterConfig;
@@ -261,19 +263,25 @@ describe("delimiter migration lifecycle", () => {
 			}
 			harness.files.delete("Library/alpha-beta.md");
 			harness.files.add("Library/alpha ~ beta.md");
-			const cause = new Error("rename rejected");
+			// VAM reports its planned copies of the submitted actions.
+			const executed = structuredClone(first);
+			const error = actionError(
+				{ ...second },
+				new Error("rename rejected"),
+			);
 			return Effect.fail(
-				new VamDispatchStoppedError({
-					action: { ...second },
-					cause,
-					executed: [structuredClone(first)],
-					failure: new VamDispatchError({
-						action: { ...second },
-						cause,
-						operation: "executeAction",
+				new VamDispatchFailure({
+					reason: error,
+					report: new VamDispatchReport({
+						entries: [
+							{
+								action: executed,
+								outcome: { _tag: "Renamed", to: executed.payload.to },
+								status: "Done",
+							},
+							VamDispatchReport.entryFor(error),
+						],
 					}),
-					operation: "dispatch.stopOnFirstFailure",
-					skipped: [],
 				}),
 			);
 		};
@@ -349,11 +357,14 @@ describe("delimiter migration lifecycle", () => {
 		};
 		harness.dispatch = (actions) =>
 			Effect.fail(
-				new VamPlanningError({
-					action: actions[0],
-					cause: new Error("folder lookup failed"),
-					operation: "planDispatchBatch",
-				}),
+				notRun(
+					new VamPlanningError({
+						action: actions[0],
+						cause: new Error("folder lookup failed"),
+						operation: "planDispatchBatch",
+					}),
+					actions,
+				),
 			);
 
 		const execution = await Effect.runPromise(
@@ -375,16 +386,22 @@ describe("delimiter migration lifecycle", () => {
 			existsCalls += 1;
 			return Effect.succeed(true);
 		};
-		harness.dispatch = (actions) =>
-			Effect.fail(
-				new VamProtectedPathError({
-					action: actions[0],
-					operation: "dispatch.protectedPath",
-					path: "Library/alpha-beta.md",
-					prefix: "Library",
-					relation: "inside",
-				}),
+		harness.dispatch = (actions) => {
+			const [action] = actions;
+			if (!action) return Effect.die(new Error("unexpected plan"));
+			return Effect.fail(
+				notRun(
+					new VamProtectedPathError({
+						action,
+						operation: "dispatch.protectedPath",
+						path: "Library/alpha-beta.md",
+						prefix: "Library",
+						relation: "inside",
+					}),
+					actions,
+				),
 			);
+		};
 
 		const execution = await Effect.runPromise(
 			harness.service.execute(await plannedFor(harness)),
@@ -447,19 +464,20 @@ describe("delimiter migration lifecycle", () => {
 		expect(report.log).toContain("file is locked");
 	});
 
-	test("a file whose state cannot be read is reported as unresolved", async () => {
+	test("an uncertain rename whose file cannot be read is reported as unresolved", async () => {
 		const harness = makeHarness([
 			readableMdPath("alpha-beta"),
 			readableMdPath("gamma-delta"),
 		]);
-		harness.failForward = failOn("gamma-delta");
-		const exists = (path: SplitPathToMdFile) =>
-			path.basename.startsWith("alpha")
+		harness.failForward = failOn("gamma-delta", "selection restore failed");
+		harness.renameBeforeFailing = true;
+		const probed: string[] = [];
+		harness.exists = (path) => {
+			probed.push(path.basename);
+			return path.basename.startsWith("gamma")
 				? Effect.die(new Error("stat failed"))
-				: Effect.succeed(
-						harness.files.has(splitPathCodec.format(path)),
-					);
-		harness.exists = exists;
+				: Effect.succeed(harness.files.has(splitPathCodec.format(path)));
+		};
 
 		const execution = await Effect.runPromise(
 			harness.service.execute(await plannedFor(harness)),
@@ -469,8 +487,84 @@ describe("delimiter migration lifecycle", () => {
 		if (execution.kind !== "RollbackIncomplete") return;
 		expect(
 			execution.unresolved.map((action) => action.payload.from.basename),
+		).toEqual(["gamma-delta"]);
+		// The report says where alpha went; only the uncertain gamma is probed.
+		expect(
+			execution.rolledBack.map((action) => action.payload.from.basename),
 		).toEqual(["alpha-beta"]);
-		expect(harness.rollbackBatches).toEqual([]);
+		expect(probed.every((basename) => basename.startsWith("gamma"))).toBe(
+			true,
+		);
+	});
+
+	test("trusts the report over the vault for renames it reports", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+		]);
+		harness.failForward = failOn("gamma-delta");
+		let existsCalls = 0;
+		harness.exists = (path) => {
+			existsCalls += 1;
+			return Effect.succeed(harness.files.has(splitPathCodec.format(path)));
+		};
+
+		const execution = await Effect.runPromise(
+			harness.service.execute(await plannedFor(harness)),
+		);
+
+		expect(execution.kind).toBe("RolledBack");
+		// Only gamma's injected failure is uncertain; alpha's forward and
+		// backward renames are both reported as done.
+		expect(existsCalls).toBe(2);
+	});
+
+	test("a rename VAM moved to an indexed name is renamed back from there", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+		]);
+		const indexed = mdPath("1_alpha ~ beta");
+		harness.dispatch = (actions) => {
+			const [first, second] = actions;
+			if (first?.kind !== VaultActionKind.RenameMdFile || !second) {
+				return Effect.die(new Error("unexpected plan"));
+			}
+			harness.files.delete("Library/alpha-beta.md");
+			harness.files.add("Library/1_alpha ~ beta.md");
+			const error = actionError(second, new Error("rename rejected"), "missing");
+			return Effect.fail(
+				new VamDispatchFailure({
+					reason: error,
+					report: new VamDispatchReport({
+						entries: [
+							{
+								action: first,
+								outcome: { _tag: "RenamedToIndexed", to: indexed },
+								status: "Done",
+							},
+							VamDispatchReport.entryFor(error),
+						],
+					}),
+				}),
+			);
+		};
+
+		const execution = await Effect.runPromise(
+			harness.service.execute(await plannedFor(harness)),
+		);
+
+		expect(execution.kind).toBe("RolledBack");
+		expect(harness.rollbackBatches[0]).toEqual([
+			{
+				kind: VaultActionKind.RenameMdFile,
+				payload: { from: indexed, to: mdPath("alpha-beta") },
+			},
+		]);
+		expect(vaultFiles(harness)).toEqual([
+			"Library/alpha-beta.md",
+			"Library/gamma-delta.md",
+		]);
 	});
 
 	test("renames onto a taken name are refused before anything is touched", async () => {
@@ -904,56 +998,52 @@ function makeHarness(
 		files.delete(from);
 		files.add(to);
 	};
-	const fakeStopOnFirstFailure: DelimiterMigrationVam["dispatchStopOnFirstFailure"] =
-		(actions) =>
-			Effect.suspend(() => {
-				for (const [index, action] of actions.entries()) {
-					const injected =
-						action.kind === VaultActionKind.RenameMdFile
-							? failForward(action)
-							: undefined;
-					if (injected && renameBeforeFailing) rename(action);
-					const cause = injected ?? attempt(() => rename(action));
-					if (!cause) continue;
-					const failure = new VamDispatchError({
-						action,
-						cause,
-						operation: "executeAction",
-					});
-					return Effect.fail(
-						new VamDispatchStoppedError({
-							action,
-							cause,
-							executed: actions.slice(0, index),
-							failure,
-							operation: "dispatch.stopOnFirstFailure",
-							skipped: actions.slice(index + 1),
-						}),
-					);
+	type Dispatch = (
+		actions: readonly VaultAction[],
+	) => ReturnType<DelimiterMigrationVam["dispatchWithReport"]>;
+	/** Runs one rename as VAM would, and reports its entry. */
+	const run = (
+		action: VaultAction,
+		inject: (action: Rename) => Error | undefined,
+		moveBeforeFailing = false,
+	): VamDispatchEntry => {
+		const injected =
+			action.kind === VaultActionKind.RenameMdFile
+				? inject(action)
+				: undefined;
+		if (injected && moveBeforeFailing) rename(action);
+		const cause = injected ?? attempt(() => rename(action));
+		if (cause) return VamDispatchReport.entryFor(actionError(action, cause));
+		return action.kind === VaultActionKind.RenameMdFile
+			? {
+					action,
+					outcome: { _tag: "Renamed", to: action.payload.to },
+					status: "Done",
 				}
-				return Effect.void;
-			});
-	const fakeDispatch: DelimiterMigrationVam["dispatch"] = (actions) =>
+			: { action, outcome: { _tag: "NoOp" }, status: "Done" };
+	};
+	const settle = (entries: readonly VamDispatchEntry[]) => {
+		const report = new VamDispatchReport({ entries });
+		const failure = VamDispatchFailure.ofReport(report);
+		return failure ? Effect.fail(failure) : Effect.succeed(report);
+	};
+	const fakeStopOnFirstFailure: Dispatch = (actions) =>
 		Effect.suspend(() => {
-			const errors: VamDispatchError[] = [];
-			for (const action of actions) {
-				const injected =
-					action.kind === VaultActionKind.RenameMdFile
-						? failRollback(action)
-						: undefined;
-				const cause = injected ?? attempt(() => rename(action));
-				if (cause) {
-					errors.push(
-						new VamDispatchError({
-							action,
-							cause,
-							operation: "executeAction",
-						}),
-					);
-				}
+			const entries: VamDispatchEntry[] = [];
+			for (const [index, action] of actions.entries()) {
+				const entry = run(action, failForward, renameBeforeFailing);
+				entries.push(entry);
+				if (entry.status === "Done") continue;
+				for (const skipped of actions.slice(index + 1))
+					entries.push({ action: skipped, status: "Skipped" });
+				break;
 			}
-			return errors.length > 0 ? Effect.fail(errors) : Effect.void;
+			return settle(entries);
 		});
+	const fakeDispatch: Dispatch = (actions) =>
+		Effect.suspend(() =>
+			settle(actions.map((action) => run(action, failRollback))),
+		);
 	let dispatchImpl = fakeStopOnFirstFailure;
 	let rollbackImpl = fakeDispatch;
 	let existsImpl: DelimiterMigrationVam["exists"] = (path) =>
@@ -987,11 +1077,11 @@ function makeHarness(
 		readonly currentAlreadyPaused: boolean;
 	}[] = [];
 	const vam: DelimiterMigrationVam = {
-		dispatch: (actions) => {
-			rollbackBatches.push(actions);
-			return rollbackImpl(actions);
-		},
-		dispatchStopOnFirstFailure: (actions) => {
+		dispatchWithReport: (actions, options) => {
+			if (!options?.stopOnFirstFailure) {
+				rollbackBatches.push(actions);
+				return rollbackImpl(actions);
+			}
 			dispatchCalls += 1;
 			dispatchedActions = actions;
 			return dispatchImpl(actions);

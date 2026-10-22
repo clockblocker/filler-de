@@ -10,7 +10,7 @@ import {
 import {
 	MD,
 	SplitPathKind,
-	VamDispatchError,
+	VamDispatchFailure,
 	VamPlanningError,
 	type VaultAction,
 	VaultActionKind,
@@ -24,6 +24,11 @@ import {
 	type ReconciliationRecoveryInput,
 	type ReconciliationRequest,
 } from "../../../src/commanders/librarian/runtime/library-reconciliation";
+import {
+	actionError,
+	failedActions,
+	notRun,
+} from "../../support/vam-dispatch";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import {
@@ -34,8 +39,7 @@ import {
 } from "../../unit/librarian/library-tree/tree-test-helpers";
 
 type DispatchFailure =
-	| VamPlanningError
-	| readonly VamDispatchError[]
+	| VamDispatchFailure
 	| { readonly cause: unknown; readonly kind: "UnexpectedDispatchFailure" };
 type RecoveryFailure =
 	| { readonly kind: "RecoveryFailed" }
@@ -128,10 +132,9 @@ function makeHarness(options?: {
 		{
 			audit,
 			classifyDispatchFailure: (failure) =>
-				"kind" in failure &&
-				failure.kind === "UnexpectedDispatchFailure"
-					? "ExecutionUncertain"
-					: classifyVamDispatchFailure(failure),
+				failure instanceof VamDispatchFailure
+					? classifyVamDispatchFailure(failure)
+					: "ExecutionUncertain",
 			dispatch: (actions) =>
 				dispatch(actions).pipe(
 					Effect.tap(() =>
@@ -429,11 +432,12 @@ describe("Library reconciliation interface", () => {
 	});
 
 	it("records typed planning failure and leaves committed state reusable", async () => {
-		const planningFailure = new VamPlanningError({
-			action: undefined,
-			cause: new Error("cannot plan"),
-			operation: "planDispatchBatch",
-		});
+		const planningFailure = notRun(
+			new VamPlanningError({
+				cause: new Error("cannot plan"),
+				operation: "planDispatchBatch",
+			}),
+		);
 		let fail = true;
 		const { reconciler } = makeHarness({
 			dispatch: () =>
@@ -459,16 +463,12 @@ describe("Library reconciliation interface", () => {
 		expect(retried.status).toBe("Success");
 	});
 
-	it("records self-event registration failure before action execution", async () => {
-		const registrationFailure = [
-			new VamDispatchError({
-				action: undefined,
-				cause: new Error("registration failed"),
-				operation: "registerSelfEvents",
-			}),
-		] as const;
+	it("records a batch whose failed action wrote nothing as failed before execution", async () => {
+		const conflict = failedActions([
+			actionError(undefined, new Error("lost a race"), "conflict"),
+		]);
 		const { reconciler } = makeHarness({
-			dispatch: () => Effect.fail(registrationFailure),
+			dispatch: () => Effect.fail(conflict),
 		});
 
 		const outcome = await Effect.runPromise(
@@ -485,18 +485,15 @@ describe("Library reconciliation interface", () => {
 
 	it("audits preceding split planning and registration failures without recovery", async () => {
 		const failures: DispatchFailure[] = [
-			new VamPlanningError({
-				action: undefined,
-				cause: new Error("planning failed"),
-				operation: "planDispatchBatch",
-			}),
-			[
-				new VamDispatchError({
-					action: undefined,
-					cause: new Error("registration failed"),
-					operation: "registerSelfEvents",
+			notRun(
+				new VamPlanningError({
+					cause: new Error("planning failed"),
+					operation: "planDispatchBatch",
 				}),
-			],
+			),
+			failedActions([
+				actionError(undefined, new Error("lost a race"), "conflict"),
+			]),
 		];
 
 		for (const [index, failure] of failures.entries()) {
@@ -527,13 +524,9 @@ describe("Library reconciliation interface", () => {
 	});
 
 	it("resynchronizes an uncertain split file batch before accepting later work", async () => {
-		const partialFailures = [
-			new VamDispatchError({
-				action: undefined,
-				cause: new Error("page write failed"),
-				operation: "executeAction",
-			}),
-		] as const;
+		const partialFailures = failedActions([
+			actionError(undefined, new Error("page write failed")),
+		]);
 		const recoveryPaths = [
 			scanScroll(["Library"], "Existing"),
 			scanScroll(["Library"], "New"),
@@ -567,13 +560,9 @@ describe("Library reconciliation interface", () => {
 	});
 
 	it("latches unavailable when uncertain split-batch recovery also fails", async () => {
-		const partialFailures = [
-			new VamDispatchError({
-				action: undefined,
-				cause: new Error("execution remained uncertain"),
-				operation: "executeAction",
-			}),
-		] as const;
+		const partialFailures = failedActions([
+			actionError(undefined, new Error("execution remained uncertain")),
+		]);
 		let recoveryDispatches = 0;
 		const recoveryPaths = [
 			scanScroll(["Library"], "Existing"),
@@ -610,13 +599,9 @@ describe("Library reconciliation interface", () => {
 	});
 
 	it("records partial execution and resynchronizes before later work", async () => {
-		const partialFailures = [
-			new VamDispatchError({
-				action: undefined,
-				cause: new Error("write failed"),
-				operation: "executeAction",
-			}),
-		] as const;
+		const partialFailures = failedActions([
+			actionError(undefined, new Error("write failed")),
+		]);
 		let dispatchCount = 0;
 		const recoveryPaths = [
 			scanScroll(["Library"], "Existing"),
@@ -673,13 +658,9 @@ describe("Library reconciliation interface", () => {
 	});
 
 	it("latches unavailable after unrecovered partial execution", async () => {
-		const partialFailures = [
-			new VamDispatchError({
-				action: undefined,
-				cause: new Error("partial"),
-				operation: "executeAction",
-			}),
-		] as const;
+		const partialFailures = failedActions([
+			actionError(undefined, new Error("partial")),
+		]);
 		let dispatches = 0;
 		const { reconciler } = makeHarness({
 			dispatch: () => {
@@ -706,13 +687,9 @@ describe("Library reconciliation interface", () => {
 	});
 
 	it("resynchronizes a startup batch that partly ran instead of latching unavailable", async () => {
-		const partialFailures = [
-			new VamDispatchError({
-				action: undefined,
-				cause: new Error("rename failed"),
-				operation: "executeAction",
-			}),
-		] as const;
+		const partialFailures = failedActions([
+			actionError(undefined, new Error("rename failed")),
+		]);
 		let dispatchCount = 0;
 		let recoveries = 0;
 		const paths = [
@@ -754,13 +731,9 @@ describe("Library reconciliation interface", () => {
 	});
 
 	it("rescans a persistent startup partial failure once, then latches unavailable", async () => {
-		const partialFailures = [
-			new VamDispatchError({
-				action: undefined,
-				cause: new Error("rename keeps failing"),
-				operation: "executeAction",
-			}),
-		] as const;
+		const partialFailures = failedActions([
+			actionError(undefined, new Error("rename keeps failing")),
+		]);
 		let dispatchCount = 0;
 		let recoveries = 0;
 		const paths = [
@@ -803,10 +776,12 @@ describe("Library reconciliation interface", () => {
 		const { reconciler } = makeHarness({
 			dispatch: () =>
 				Effect.fail(
-					new VamPlanningError({
-						cause: new Error("bad plan"),
-						operation: "plan",
-					}),
+					notRun(
+						new VamPlanningError({
+							cause: new Error("bad plan"),
+							operation: "plan",
+						}),
+					),
 				),
 			recover: () =>
 				Effect.sync(() => {

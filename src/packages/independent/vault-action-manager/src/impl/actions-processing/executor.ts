@@ -1,4 +1,8 @@
 import { Effect, Result } from "effect";
+import {
+	classifyActionFailure,
+	type VamActionOutcome,
+} from "../../effect/dispatch-report";
 import { VamDispatchError, type VamFileWriteError } from "../../effect/errors";
 import { type VamLiveServices, VaultIo } from "../../effect/ports";
 import type { TFileHelper } from "../../file-services/background/helpers/tfile-helper";
@@ -8,10 +12,15 @@ import {
 	type MdFileWithContentDto,
 	pathfinder,
 } from "../../helpers/pathfinder";
+import { vaultContentHash } from "../../internal/content-hash";
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionKind } from "../../types/vault-action";
 
-/** Executes one native action program; compatibility mapping belongs in the facade. */
+/**
+ * Executes one action and answers what it did to the vault. A failure is a
+ * `VamDispatchError` whose `kind` tells whether the action may have changed
+ * the vault.
+ */
 export class Executor {
 	constructor(
 		private readonly tfileHelper: TFileHelper,
@@ -19,13 +28,16 @@ export class Executor {
 		private readonly markdownFiles: MarkdownFileAccess,
 	) {}
 
-	execute(action: VaultAction) {
+	execute(
+		action: VaultAction,
+	): Effect.Effect<VamActionOutcome, VamDispatchError, VamLiveServices> {
 		return this.executeAction(action).pipe(
 			Effect.mapError(
 				(cause) =>
 					new VamDispatchError({
 						action,
 						cause,
+						kind: classifyActionFailure(cause),
 						operation: `execute.${action.kind}`,
 					}),
 			),
@@ -34,7 +46,7 @@ export class Executor {
 
 	private executeAction(
 		action: VaultAction,
-	): Effect.Effect<unknown, VamFileWriteError, VamLiveServices> {
+	): Effect.Effect<VamActionOutcome, VamFileWriteError, VamLiveServices> {
 		switch (action.kind) {
 			case VaultActionKind.CreateFolder:
 				return this.tfolderHelper.createFolder(
@@ -47,12 +59,17 @@ export class Executor {
 			case VaultActionKind.CreateFile:
 				return Effect.gen(function* () {
 					const vault = yield* VaultIo;
-					return yield* vault.create(
+					const content = action.payload.content ?? "";
+					yield* vault.create(
 						pathfinder.systemPathFromSplitPath(
 							action.payload.splitPath,
 						),
-						action.payload.content ?? "",
+						content,
 					);
+					return {
+						_tag: "Created",
+						contentHash: vaultContentHash(content),
+					} as const;
 				});
 			case VaultActionKind.UpsertMdFile:
 				return Effect.gen({ self: this }, function* () {
@@ -62,7 +79,7 @@ export class Executor {
 					);
 					if (Result.isSuccess(existing)) {
 						return content === null || content === undefined
-							? existing.success
+							? ({ _tag: "NoOp" } as const)
 							: yield* this.markdownFiles.replaceContent(
 									splitPath,
 									content,

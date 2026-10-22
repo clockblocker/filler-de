@@ -130,7 +130,8 @@ export class MarkdownFileAccess {
 			const savedSelection = active
 				? yield* self.activeEditor.saveInlineTitleSelection(active)
 				: null;
-			const renamed = yield* self.backgroundVault.renameFile(paths);
+			const { file: renamed, outcome } =
+				yield* self.backgroundVault.renameFile(paths);
 			yield* Effect.annotateCurrentSpan({ path: renamed.path });
 			if (savedSelection && active && renamed === active.file) {
 				yield* self.activeEditor
@@ -144,7 +145,7 @@ export class MarkdownFileAccess {
 						Effect.uninterruptible,
 					);
 			}
-			return renamed;
+			return outcome;
 		}, Effect.tapError(annotateFileAccessFailure))();
 	}
 

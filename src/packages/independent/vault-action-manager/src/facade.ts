@@ -1,5 +1,10 @@
 import { Cause, Effect, Exit } from "effect";
 import type { App } from "obsidian";
+import type { DispatchOptions } from "./effect/dispatch-coordinator";
+import {
+	VamDispatchFailure,
+	type VamDispatchReport,
+} from "./effect/dispatch-report";
 import {
 	type VamActiveEditorError,
 	type VamFileAccessError,
@@ -25,11 +30,7 @@ import { TFileHelper } from "./file-services/background/helpers/tfile-helper";
 import { TFolderHelper } from "./file-services/background/helpers/tfolder-helper";
 import { MarkdownFileAccess } from "./file-services/markdown-file-access";
 import { splitPathFromAbstractInternal } from "./helpers/pathfinder/path-codecs/split-and-abstract/split-path-from-abstract";
-import {
-	DispatchBatchCoordinator,
-	type DispatchBatchEffectFailure,
-	type StopOnFirstFailureDispatchFailure,
-} from "./impl/actions-processing/dispatch-batch";
+import { DispatchBatchCoordinator } from "./impl/actions-processing/dispatch-batch";
 import { Executor } from "./impl/actions-processing/executor";
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import { LinkRewriteWindows } from "./impl/event-processing/link-rewrite-windows";
@@ -331,30 +332,47 @@ export class VaultActionManager {
 	}
 
 	/**
-	 * Dispatches one ordered, non-atomic batch. Every planned action is
-	 * attempted; failures are reported together after the batch.
+	 * Dispatches one ordered, non-atomic batch and answers its report: one
+	 * entry per planned action, with what it did. Every planned action is
+	 * attempted unless `stopOnFirstFailure` is set, in which case the
+	 * actions after the first failure are `Skipped`. On failure the
+	 * `VamDispatchFailure` carries the same report. Nothing is rolled back.
 	 */
-	dispatch(
+	dispatchWithReport(
 		actions: readonly VaultAction[],
-	): Effect.Effect<void, VamRuntimeFailure<DispatchBatchEffectFailure>> {
-		return this.runtime.provide(this.dispatches.dispatchEffect(actions));
+		options: DispatchOptions = {},
+	): Effect.Effect<VamDispatchReport, VamDispatchFailure> {
+		return this.runtime
+			.provide(this.dispatches.dispatchEffect(actions, options))
+			.pipe(
+				Effect.catchTags({
+					VamSetupError: (error) =>
+						Effect.fail(VamDispatchFailure.notRun(error, actions)),
+					VamShutdownError: (error) =>
+						Effect.fail(VamDispatchFailure.notRun(error, actions)),
+				}),
+			);
 	}
 
 	/**
-	 * Dispatches one ordered, non-atomic batch that stops at its first failed
-	 * action. The `VamDispatchStoppedError` reports the failure, the planned
-	 * actions already executed, and the ones skipped. Nothing is rolled back.
+	 * `dispatchWithReport` for callers that need only success: every planned
+	 * action is attempted, and a failure carries the report.
+	 */
+	dispatch(
+		actions: readonly VaultAction[],
+	): Effect.Effect<void, VamDispatchFailure> {
+		return Effect.asVoid(this.dispatchWithReport(actions));
+	}
+
+	/**
+	 * `dispatchWithReport` with `stopOnFirstFailure`, for callers that need
+	 * only success. The failure's report lists the actions skipped.
 	 */
 	dispatchStopOnFirstFailure(
 		actions: readonly VaultAction[],
-	): Effect.Effect<
-		void,
-		VamRuntimeFailure<StopOnFirstFailureDispatchFailure>
-	> {
-		return this.runtime.provide(
-			this.dispatches.dispatchEffect(actions, {
-				stopOnFirstFailure: true,
-			}),
+	): Effect.Effect<void, VamDispatchFailure> {
+		return Effect.asVoid(
+			this.dispatchWithReport(actions, { stopOnFirstFailure: true }),
 		);
 	}
 
@@ -575,14 +593,26 @@ export function createVaultActionManager(
 	};
 }
 
+export type { DispatchOptions } from "./effect/dispatch-coordinator";
 export {
+	isContentConflict,
+	type VamActionOutcome,
+	type VamDispatchEntry,
+	VamDispatchFailure,
+	type VamDispatchFailureReason,
+	VamDispatchReport,
+	type VamTouchedVault,
+} from "./effect/dispatch-report";
+export {
+	describeVaultActionPath,
+	type VamActionFailureKind,
+	VamActionFailureKindSchema,
 	VamActiveEditorError,
 	type VamActiveEditorFailureReason,
 	VamActiveEditorFailureReasonSchema,
 	VamContentConflictError,
 	VamDispatchError,
 	VamDispatchOverflowError,
-	VamDispatchStoppedError,
 	type VamEffectError,
 	type VamFileAccessError,
 	type VamFileWriteError,
@@ -595,7 +625,3 @@ export {
 	VamSubscriptionError,
 	VamVaultIoError,
 } from "./effect/errors";
-export type {
-	DispatchBatchEffectFailure,
-	StopOnFirstFailureDispatchFailure,
-} from "./impl/actions-processing/dispatch-batch";

@@ -7,7 +7,6 @@ import {
 	SplitPathKind,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
-	VamDispatchError,
 	type VaultAction,
 	VaultActionKind,
 	type VaultScanPath,
@@ -23,6 +22,7 @@ import {
 	LibraryMetadata,
 	noteMetadataHelper as meta,
 } from "../../../src/stateless-helpers/note-metadata";
+import { actionError, failedActions } from "../../support/vam-dispatch";
 import { setupGetParsedUserSettingsSpyWithHooks } from "../common-utils/setup-spy";
 
 setupGetParsedUserSettingsSpyWithHooks({ hideMetadata: true });
@@ -145,12 +145,14 @@ describe("migrateMetadataFormat", () => {
 							const { splitPath, transform } = action.payload;
 							const name = splitPath.basename;
 							if (failing.includes(name)) {
-								return yield* Effect.fail([
-									new VamDispatchError({
-										cause: new Error(`cannot write ${name}`),
-										operation: "executeAction",
-									}),
-								]);
+								return yield* Effect.fail(
+									failedActions([
+										actionError(
+											action,
+											new Error(`cannot write ${name}`),
+										),
+									]),
+								);
 							}
 							const next = yield* Effect.promise(async () =>
 								transform(contents.get(name) ?? ""),

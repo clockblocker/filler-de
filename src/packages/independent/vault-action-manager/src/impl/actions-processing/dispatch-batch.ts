@@ -1,11 +1,12 @@
 import type { Effect } from "effect";
 import {
-	type AnyDispatchEffectFailure,
 	DispatchBatchWorker,
-	type DispatchEffectFailure,
 	type DispatchOptions,
-	type StopOnFirstFailureDispatchFailure,
 } from "../../effect/dispatch-coordinator";
+import type {
+	VamDispatchFailure,
+	VamDispatchReport,
+} from "../../effect/dispatch-report";
 import type { VamShutdownError } from "../../effect/errors";
 import type { VamRuntime } from "../../effect/runtime";
 import type { VaultAction } from "../../types/vault-action";
@@ -14,12 +15,7 @@ import type { SelfEventTracker } from "../event-processing/self-event-tracker";
 import type { ProtectedPaths } from "../protected-paths";
 import type { Executor } from "./executor";
 
-export type DispatchBatchEffectFailure = DispatchEffectFailure;
-export type {
-	AnyDispatchEffectFailure,
-	DispatchOptions,
-	StopOnFirstFailureDispatchFailure,
-};
+export type { DispatchOptions };
 
 export type DispatchBatchOptions = {
 	/**
@@ -64,19 +60,8 @@ export class DispatchBatchCoordinator {
 	/** Effect-native dispatch seam used by the public facade. */
 	dispatchEffect(
 		actions: readonly VaultAction[],
-	): Effect.Effect<void, DispatchEffectFailure>;
-	dispatchEffect(
-		actions: readonly VaultAction[],
-		options: DispatchOptions & { readonly stopOnFirstFailure: true },
-	): Effect.Effect<void, StopOnFirstFailureDispatchFailure>;
-	dispatchEffect(
-		actions: readonly VaultAction[],
 		options?: DispatchOptions,
-	): Effect.Effect<void, AnyDispatchEffectFailure>;
-	dispatchEffect(
-		actions: readonly VaultAction[],
-		options?: DispatchOptions,
-	): Effect.Effect<void, AnyDispatchEffectFailure> {
+	): Effect.Effect<VamDispatchReport, VamDispatchFailure> {
 		return this.worker.dispatchEffect(actions, options);
 	}
 

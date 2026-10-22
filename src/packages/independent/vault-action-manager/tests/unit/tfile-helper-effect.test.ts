@@ -249,6 +249,7 @@ describe("TFileHelper modify Self Events", () => {
 					log.push(`process-write ${target.path}`);
 					return next;
 				}),
+			read: () => Effect.sync(() => content),
 		});
 		return {
 			edit: (next: string) => {
@@ -345,6 +346,7 @@ describe("TFileHelper modify Self Events", () => {
 						path: file.path,
 					}),
 				),
+			read: () => Effect.succeed("before"),
 		});
 
 		const result = await Effect.runPromise(

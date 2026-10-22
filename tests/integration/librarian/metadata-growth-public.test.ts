@@ -9,7 +9,6 @@ import {
 	type BulkVaultEvent,
 	SplitPathKind,
 	type SplitPathToMdFile,
-	VamDispatchError,
 	type VaultAction,
 	VaultActionKind,
 	VaultEventKind,
@@ -20,6 +19,7 @@ import {
 	Librarian,
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
+import { actionError, failedActions } from "../../support/vam-dispatch";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 
 const OPEN = '<section id="textfresser_meta_keep_me_invisible">';
@@ -63,15 +63,12 @@ function makeVault(initial: Record<string, string>) {
 	const vam: LibrarianVam = {
 		cd: () => Effect.void,
 		dispatch: (actions) => {
-			if (failNextRuntimeDispatch) {
+			const [first] = actions;
+			if (failNextRuntimeDispatch && first) {
 				failNextRuntimeDispatch = false;
-				return Effect.fail([
-					new VamDispatchError({
-						action: actions[0],
-						cause: new Error("injected"),
-						operation: "executeAction",
-					}),
-				]);
+				return Effect.fail(
+					failedActions([actionError(first, new Error("injected"))]),
+				);
 			}
 			return Effect.promise(async () => {
 				for (const action of actions) await apply(action);

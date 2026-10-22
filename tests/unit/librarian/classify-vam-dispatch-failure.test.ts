@@ -1,56 +1,46 @@
 import { describe, expect, it } from "bun:test";
 import {
-	VamDispatchError,
 	VamDispatchOverflowError,
-	VamDispatchStoppedError,
 	type VaultAction,
+	VaultActionKind,
 } from "@textfresser/vault-action-manager";
 import { classifyVamDispatchFailure } from "../../../src/commanders/librarian/runtime/library-reconciliation";
+import { actionError, failedActions, notRun } from "../../support/vam-dispatch";
 
-const action = { kind: "CreateFolder" } as unknown as VaultAction;
-
-function stopped(
-	operation: string,
-	executed: readonly VaultAction[],
-): VamDispatchStoppedError {
-	const failure = new VamDispatchError({ action, cause: "failed", operation });
-	return new VamDispatchStoppedError({
-		action,
-		cause: "failed",
-		executed,
-		failure,
-		operation: "dispatch.stopOnFirstFailure",
-		skipped: [action],
-	});
-}
+const action: VaultAction = {
+	kind: VaultActionKind.CreateFolder,
+	payload: {
+		splitPath: { basename: "Section", kind: "Folder", pathParts: ["Library"] },
+	},
+};
 
 describe("classifyVamDispatchFailure", () => {
-	it("treats a stopped batch that already executed actions as uncertain", () => {
-		expect(classifyVamDispatchFailure(stopped("plan", [action]))).toBe(
-			"ExecutionUncertain",
-		);
-	});
-
-	it("treats a stopped batch whose first action failed during execution as uncertain", () => {
-		expect(classifyVamDispatchFailure(stopped("executeAction", []))).toBe(
-			"ExecutionUncertain",
-		);
-	});
-
-	it("treats a stopped batch that failed before executing anything as not executed", () => {
+	it("treats a failed action that may have written as uncertain", () => {
 		expect(
-			classifyVamDispatchFailure(stopped("registerSelfEvents", [])),
+			classifyVamDispatchFailure(
+				failedActions([actionError(action, "failed", "io")], {
+					skipped: [action],
+				}),
+			),
+		).toBe("ExecutionUncertain");
+	});
+
+	it("treats a batch whose only failure wrote nothing as not executed", () => {
+		expect(
+			classifyVamDispatchFailure(
+				failedActions([actionError(action, "lost a race", "conflict")]),
+			),
 		).toBe("FailedBeforeExecution");
 	});
 
-	it("treats an overflowed submission as not executed", () => {
+	it("treats a batch that refused before running as not executed", () => {
 		const overflow = new VamDispatchOverflowError({
 			action,
 			cause: "full",
 			limit: 500,
 			operation: "dispatch.overflow",
 		});
-		expect(classifyVamDispatchFailure(overflow)).toBe(
+		expect(classifyVamDispatchFailure(notRun(overflow, [action]))).toBe(
 			"FailedBeforeExecution",
 		);
 	});

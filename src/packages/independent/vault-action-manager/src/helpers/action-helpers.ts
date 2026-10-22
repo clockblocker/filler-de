@@ -4,6 +4,7 @@
 
 import type { AnySplitPath } from "../types/split-path";
 import { type VaultAction, VaultActionKind } from "../types/vault-action";
+import { systemPathFromSplitPathInternal } from "./pathfinder/path-codecs/system-and-any-split/system-path-and-split-path-codec";
 
 // ─── Action Type Aliases for Type Predicates ───
 
@@ -93,4 +94,14 @@ export function getActionSplitPath(action: VaultAction): AnySplitPath {
 		case VaultActionKind.RenameFile:
 			return action.payload.from;
 	}
+}
+
+/**
+ * The system path an action leaves its result at: a rename's `to`, the
+ * target of any other action.
+ */
+export function vaultActionTargetPath(action: VaultAction): string {
+	return systemPathFromSplitPathInternal(
+		isRenameAction(action) ? action.payload.to : action.payload.splitPath,
+	);
 }

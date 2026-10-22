@@ -7,7 +7,6 @@ import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import { type CommandError, CommandErrorKind } from "../errors";
 import { splitStrInBlocks } from "../pages/segmenter/block-marker/split-str-in-blocks";
 import type { LibrarianCommandFn } from "./types";
-import { vamFailureToCommandError } from "./vam-failure";
 
 /**
  * Splits selected text into blocks with Obsidian block markers (^N).
@@ -44,10 +43,11 @@ export const splitInBlocksCommand: LibrarianCommandFn = Effect.fn(
 			splitPath: selection.splitPathToFileWithSelection,
 		},
 	};
-	const actions = [action];
-
-	yield* vam.dispatch(actions).pipe(
-		Effect.mapError((error) => vamFailureToCommandError(error, actions)),
+	yield* vam.dispatch([action]).pipe(
+		Effect.mapError((error) => ({
+			kind: CommandErrorKind.DispatchFailed,
+			reason: error.message,
+		})),
 		Effect.tapError((error) =>
 			Effect.sync(() => notify(`Error: ${error.reason}`)),
 		),

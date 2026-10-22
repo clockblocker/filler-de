@@ -5,7 +5,6 @@ import {
 	MD,
 	SplitPathKind,
 	type SplitPathToMdFile,
-	VamDispatchError,
 	VamPlanningError,
 	VamVaultIoError,
 	type VaultAction,
@@ -24,6 +23,11 @@ import {
 	splitToPagesAction,
 } from "../../../src/commanders/librarian/pages/split-to-pages-action";
 import type { SegmentationConfig } from "../../../src/commanders/librarian/pages/types";
+import {
+	actionError,
+	failedActions,
+	notRun,
+} from "../../support/vam-dispatch";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import { toShape } from "../../unit/librarian/library-tree/tree-test-helpers";
 
@@ -440,10 +444,12 @@ describe("public Scroll split reconciliation", () => {
 		harness.order.length = 0;
 		harness.setDispatch(() =>
 			Effect.fail(
-				new VamPlanningError({
-					cause: new Error("cannot plan split"),
-					operation: "planDispatchBatch",
-				}),
+				notRun(
+					new VamPlanningError({
+						cause: new Error("cannot plan split"),
+						operation: "planDispatchBatch",
+					}),
+				),
 			),
 		);
 
@@ -493,13 +499,9 @@ describe("public Scroll split reconciliation", () => {
 		await Effect.runPromise(harness.librarian.init());
 		harness.dispatches.length = 0;
 		harness.order.length = 0;
-		const partialFailures = [
-			new VamDispatchError({
-				action: undefined,
-				cause: new Error("some page writes failed"),
-				operation: "executeAction",
-			}),
-		] as const;
+		const partialFailures = failedActions([
+			actionError(undefined, new Error("some page writes failed")),
+		]);
 		let releaseDispatch: () => void = () => undefined;
 		const gate = new Promise<void>((resolve) => {
 			releaseDispatch = resolve;
@@ -778,13 +780,12 @@ describe("public Scroll split reconciliation", () => {
 		});
 		await Effect.runPromise(harness.librarian.init());
 		harness.dispatches.length = 0;
-		const partialFailures = [
-			new VamDispatchError({
-				action: undefined,
-				cause: new Error("initial execution remained uncertain"),
-				operation: "executeAction",
-			}),
-		] as const;
+		const partialFailures = failedActions([
+			actionError(
+				undefined,
+				new Error("initial execution remained uncertain"),
+			),
+		]);
 		harness.setDispatch(() => Effect.fail(partialFailures));
 		harness.setScan(() =>
 			Effect.die(new Error("unexpected recovery scan defect")),
@@ -857,10 +858,12 @@ describe("public Scroll split reconciliation", () => {
 			}
 			if (dispatchIndex === 2) {
 				return Effect.fail(
-					new VamPlanningError({
-						cause: new Error("derived actions cannot be planned"),
-						operation: "planDispatchBatch",
-					}),
+					notRun(
+						new VamPlanningError({
+							cause: new Error("derived actions cannot be planned"),
+							operation: "planDispatchBatch",
+						}),
+					),
 				);
 			}
 			return Effect.void;

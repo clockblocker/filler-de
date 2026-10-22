@@ -41,6 +41,7 @@ import type {
 	CommandContext,
 	CommandKind,
 } from "../../managers/obsidian/command-executor";
+import { getErrorMessage } from "../../utils/get-error-message";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { logger } from "../../utils/logger";
 import { commandFnForCommandKind } from "./commands";
@@ -113,7 +114,11 @@ class LibrarianUnexpectedDispatchError extends Schema.TaggedError<LibrarianUnexp
 		cause: Schema.Defect(),
 		operation: Schema.Literal("dispatch"),
 	},
-) {}
+) {
+	override get message(): string {
+		return `${this.operation}: ${getErrorMessage(this.cause)}`;
+	}
+}
 
 class LibrarianUnexpectedRecoveryError extends Schema.TaggedError<LibrarianUnexpectedRecoveryError>()(
 	"LibrarianUnexpectedRecoveryError",

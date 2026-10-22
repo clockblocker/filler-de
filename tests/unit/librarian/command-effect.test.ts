@@ -17,6 +17,7 @@ import type {
 import type { PageSplitPlan } from "../../../src/commanders/librarian/pages/build-actions";
 import { getAdjacentPageInfo } from "../../../src/commanders/librarian/pages/page-codec";
 import { splitToPagesAction } from "../../../src/commanders/librarian/pages/split-to-pages-action";
+import { notRun } from "../../support/vam-dispatch";
 import { setupGetParsedUserSettingsSpyWithHooks } from "../common-utils/setup-spy";
 
 const SOURCE_PATH: SplitPathToMdFile = {
@@ -123,10 +124,12 @@ describe("Librarian Effect commands", () => {
 			vam: {
 				dispatch: () =>
 					Effect.fail(
-						new VamPlanningError({
-							cause: new Error("planning failed"),
-							operation: "planDispatchBatch",
-						}),
+						notRun(
+							new VamPlanningError({
+								cause: new Error("planning failed"),
+								operation: "planDispatchBatch",
+							}),
+						),
 					),
 			},
 		});
@@ -147,10 +150,12 @@ describe("Librarian Effect commands", () => {
 
 	it("preserves split operation and recovery details at the command boundary", async () => {
 		const opened: SplitPathToMdFile[] = [];
-		const failure = new VamPlanningError({
-			cause: new Error("split planning failed"),
-			operation: "planDispatchBatch",
-		});
+		const failure = notRun(
+			new VamPlanningError({
+				cause: new Error("split planning failed"),
+				operation: "planDispatchBatch",
+			}),
+		);
 		const dispatch = {
 			failure,
 			kind: "FailedBeforeExecution" as const,
@@ -221,10 +226,12 @@ describe("Librarian Effect commands", () => {
 	});
 
 	it("preserves reconciliation identity and status at the command boundary", async () => {
-		const failure = new VamPlanningError({
-			cause: new Error("derived planning failed"),
-			operation: "planDispatchBatch",
-		});
+		const failure = notRun(
+			new VamPlanningError({
+				cause: new Error("derived planning failed"),
+				operation: "planDispatchBatch",
+			}),
+		);
 		const dispatch = {
 			failure,
 			kind: "FailedBeforeExecution" as const,

@@ -26,6 +26,7 @@ function trash(basename: string): VamDispatchError {
 			},
 		},
 		cause: new Error("locked"),
+		kind: "io",
 		operation: "executeAction",
 	});
 }
