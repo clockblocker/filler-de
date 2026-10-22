@@ -414,11 +414,13 @@ describe("a file open in a background pane", () => {
 		expect(harness.writes).toEqual([]);
 	});
 
-	it("two panes that disagree: reads, writes and trashes fail with conflict and change nothing", async () => {
+	it("two panes with different unsaved typing: reads, writes and trashes fail with conflict and change nothing", async () => {
 		const { dispose, harness, manager, run } = setup();
 		harness.addFile("Library/a.md", "saved");
 		const first = harness.open("Library/a.md", { buffer: "typed here" });
-		const second = harness.open("Library/a.md");
+		const second = harness.open("Library/a.md", {
+			buffer: "typed there",
+		});
 		const readFailure = await Effect.runPromise(
 			manager.readContent(md("Library/a.md")).pipe(Effect.flip),
 		);
@@ -440,7 +442,63 @@ describe("a file open in a background pane", () => {
 		expect(harness.contents.get("Library/a.md")).toBe("saved");
 		expect(harness.writes).toEqual([]);
 		expect(harness.shown(first)).toBe("typed here");
-		expect(harness.shown(second)).toBe("saved");
+		expect(harness.shown(second)).toBe("typed there");
+	});
+
+	it("a typed pane beside a clean one: the typing is the content", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		const typed = harness.open("Library/a.md", { buffer: "typed here" });
+		const clean = harness.open("Library/a.md");
+		const read = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")),
+		);
+		const stale = await run(trashIf("Library/a.md", "saved"));
+		const written = await run(
+			swap("Library/a.md", "typed here", "typed here!"),
+		);
+		await Effect.runPromise(dispose);
+		expect(read).toBe("typed here");
+		expect(failure(stale).kind).toBe("conflict");
+		expect(written.status).toBe("Done");
+		expect(harness.shown(typed)).toBe("typed here!");
+		expect(harness.shown(clean)).toBe("typed here!");
+		expect(harness.writes).toEqual([]);
+	});
+
+	it("a clean pane not yet reloaded after a disk write is not taken for typing", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "new");
+		// Obsidian reloads a clean view after a write with an async read;
+		// until then it holds what it last loaded.
+		harness.open("Library/a.md", { buffer: "old", clean: true });
+		const read = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")),
+		);
+		const written = await run(swap("Library/a.md", "new", "newer"));
+		await Effect.runPromise(dispose);
+		expect(read).toBe("new");
+		expect(written).toMatchObject({
+			outcome: { _tag: "Wrote" },
+			status: "Done",
+		});
+		expect(harness.contents.get("Library/a.md")).toBe("newer");
+	});
+
+	it("a pane in reading mode is judged by what it shows, not by its lagging editor", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		harness.open("Library/a.md", { editor: "older", mode: "preview" });
+		const read = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")),
+		);
+		const trashed = await run(trashIf("Library/a.md", "saved"));
+		await Effect.runPromise(dispose);
+		expect(read).toBe("saved");
+		expect(trashed).toMatchObject({
+			outcome: { _tag: "Trashed" },
+			status: "Done",
+		});
 	});
 });
 

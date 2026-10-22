@@ -691,34 +691,51 @@ describe("MarkdownFileAccess", () => {
 		expect(clean.vaultRead).toHaveBeenCalledTimes(1);
 	});
 
-	it("keeps the active route when a background pane agrees, and refuses when it does not", async () => {
-		const agreeing = makeHarness();
-		agreeing.addBackgroundView(agreeing.targetFile, "editor content");
-		const disagreeing = makeHarness();
-		disagreeing.addBackgroundView(disagreeing.targetFile, "other typing");
+	it("keeps the active route whatever a background pane of the file holds", async () => {
+		// Typing goes into the active view; Obsidian copies it into the
+		// file's other views a few milliseconds later, so they only lag it.
+		const harness = makeHarness();
+		harness.addBackgroundView(harness.targetFile, "lagging copy");
 
-		expect(await agreeing.run(agreeing.access.readContent(target))).toBe(
+		expect(await harness.run(harness.access.readContent(target))).toBe(
 			"editor content",
 		);
-		const failure = await disagreeing.run(
-			Effect.flip(disagreeing.access.readContent(target)),
+		const outcome = await harness.run(
+			harness.access.processContent({
+				splitPath: target,
+				transform: (value) => `${value}!`,
+			}),
 		);
-		const process = await disagreeing.run(
+
+		expect(harness.vaultRead).not.toHaveBeenCalled();
+		expect(outcome).toMatchObject({ _tag: "Wrote" });
+		expect(harness.getTransactionCount()).toBe(1);
+	});
+
+	it("refuses background panes with different unsaved typing", async () => {
+		const harness = makeHarness({ activePath: null });
+		harness.addVaultFile(harness.targetFile, "saved");
+		harness.addBackgroundView(harness.targetFile, "typed here");
+		harness.addBackgroundView(harness.targetFile, "typed there");
+
+		const failure = await harness.run(
+			Effect.flip(harness.access.readContent(target)),
+		);
+		const process = await harness.run(
 			Effect.flip(
-				disagreeing.access.processContent({
+				harness.access.processContent({
 					splitPath: target,
 					transform: (value) => `${value}!`,
 				}),
 			),
 		);
 
-		expect(agreeing.vaultRead).not.toHaveBeenCalled();
 		expect(failure).toBeInstanceOf(VamContentConflictError);
 		expect((failure as VamContentConflictError).cause).toBeInstanceOf(
 			OpenViewsDisagree,
 		);
 		expect(process).toBeInstanceOf(VamContentConflictError);
-		expect(disagreeing.getTransactionCount()).toBe(0);
+		expect(harness.getTransactionCount()).toBe(0);
 	});
 
 	it("takes the stat before a background pane's buffer", async () => {

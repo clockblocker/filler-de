@@ -172,8 +172,9 @@ over or trashed. `ExpectedContent` is the whole content, or
 
 Both checks see every open Markdown view of the file, not only the
 active one: a note typed into in a split or another tab, and not saved
-yet, is checked against that typing, and open views that disagree fail
-the action with a conflict (see [Markdown access](#markdown-access)).
+yet, is checked against that typing, and background views holding
+different unsaved typing fail the action with a conflict (see
+[Markdown access](#markdown-access)).
 
 The process check is atomic: nothing can land between the check and the
 write. The trash check is one read away from the trash, the closest Obsidian
@@ -758,23 +759,42 @@ whether it hears it.
   reads a file, plans, and writes with `expected` set to what it read is
   therefore checked against the content it read.
 
-The route looks at every loaded Markdown view showing the file
-(`ActiveEditorAccess.markdownViewsOf`, all windows; a deferred tab holds no
-buffer and is not listed):
+When the active view shows the file, it is the route, as it always was:
+typing goes into the active view, and Obsidian copies it into the file's
+other views (its `quick-preview`, debounced 10 ms), so they can only lag
+it. Otherwise the route looks at every loaded Markdown view showing the
+file (`ActiveEditorAccess.markdownViewsOf`, all windows; a deferred tab, or
+a view that has not loaded its content yet, holds no buffer and is
+skipped):
 
-| Views of the file | Route |
+| Background views of the file | Route |
 | --- | --- |
 | None | The disk. |
-| The active view only | The active editor, as always. |
-| The active view and others, all holding the active buffer | The active editor. |
-| Background views only, all holding what the disk holds | The disk. Obsidian reloads clean views; nothing is merged. |
-| Background views only, all holding the same unsaved buffer | That buffer: reads return it, and a write goes through the first such view's editor. |
-| Views holding different content | None: `VamContentConflictError`, kind `conflict`, with cause `OpenViewsDisagree`. Nothing is read or written. |
+| None holds unsaved typing | The disk. Obsidian reloads clean views; nothing is merged. |
+| Some hold unsaved typing, all the same | That buffer: reads return it, and a write goes through such a view's editor, one in source mode if there is one. |
+| They hold different unsaved typing | None: `VamContentConflictError`, kind `conflict`, with cause `OpenViewsDisagree`. Nothing is read or written. |
 
-A view's buffer is `editor.getValue()`. VAM cannot see Obsidian's dirty
-flag, so a buffer that differs from the disk counts as unsaved typing. A
-background view in reading mode whose buffer differs fails the write as
-the active editor does in reading mode (`WrongMode`).
+A view's buffer is what it shows, `getViewData()`: in reading mode
+Obsidian updates only the rendered mode, so the view's `editor` can lag.
+A view holds unsaved typing when its buffer differs both from what it
+last loaded or saved and from the disk. The first comparison reads
+Obsidian's internal `TextFileView.lastSavedData` (and `saving`, since a
+view mid-save is not yet on disk). It matters right after a disk write:
+Obsidian reloads each clean view of the file with an asynchronous read,
+and until then the view holds the old content, which the disk alone would
+take for typing. Without these internals, every view is compared with
+the disk. A view of the file that is clean is ignored even when it holds
+something else, since it holds nothing that is not on disk. Different
+unsaved typing in two background views needs a keystroke the file's other
+views have not caught up with, so it lasts milliseconds; the action fails
+rather than guess, as on any other content conflict. A background view in reading mode with unsaved typing
+answers reads; a write through it fails as the active editor does in
+reading mode (`WrongMode`).
+
+Listing the views walks the workspace's leaves once per read of a file
+the active view does not show, untraced. A workspace holds tens of leaves,
+so a startup read of every file costs that many steps per file beside its
+disk read.
 
 ### Writes to a file open in a background pane
 
@@ -802,8 +822,9 @@ Flushing the panes first (`view.save()`) was rejected too: a read would
 then write the user's half-typed note to disk on VAM's schedule, and two
 panes that disagree would leave whichever saved last.
 
-A clean background pane is written through the disk, which keeps the
-atomic `Vault.process` check. An unconditional `TrashMdFile` reads no
+A clean background pane, even one not yet reloaded after a disk write,
+is written through the disk, which keeps the atomic `Vault.process`
+check. An unconditional `TrashMdFile` reads no
 content and consults no view: it trashes the note, unsaved typing and all,
 as asked.
 

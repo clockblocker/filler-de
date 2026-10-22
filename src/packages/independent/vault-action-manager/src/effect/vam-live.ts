@@ -1,4 +1,4 @@
-import { Effect, Layer, Tracer } from "effect";
+import { Effect, Layer, Predicate, Tracer } from "effect";
 import { type App, MarkdownView, type TAbstractFile, TFolder } from "obsidian";
 import type { RecentTrace } from "../diagnostics/recent-trace";
 import {
@@ -268,9 +268,9 @@ function makeActiveEditorAccessLive(
 							}),
 						try: () => readActiveEditor(app),
 					}),
-					markdownViewsOf: Effect.fn(
-						"ActiveEditorAccess.markdownViewsOf",
-					)((path) =>
+					// Untraced: every content read of a file the active
+					// view does not show asks it.
+					markdownViewsOf: (path) =>
 						Effect.try({
 							catch: (cause) =>
 								new VamActiveEditorError({
@@ -281,7 +281,6 @@ function makeActiveEditorAccessLive(
 								}),
 							try: () => readMarkdownViewsOf(app, path),
 						}),
-					),
 					openFile: Effect.fn("ActiveEditorAccess.openFile")(
 						function* (file) {
 							const leaf = yield* Effect.try({
@@ -421,10 +420,29 @@ function readActiveEditorFromView(view: MarkdownView): ActiveEditorHandle {
 			view.file?.path === path &&
 			view.getMode() === mode,
 		mode,
+		persisted: () => readPersisted(view),
 		readInlineTitleSelection: () => readInlineTitleSelection(view),
 		restoreInlineTitleSelection: (saved) =>
 			restoreInlineTitleSelection(view, saved),
+		viewData: () => view.getViewData(),
 	};
+}
+
+/**
+ * `TextFileView.lastSavedData` and `saving`, Obsidian internals: what the
+ * view last loaded from or saved to disk (`null` before it loads), and
+ * whether a save is writing. `undefined` when they are not there.
+ */
+function readPersisted(
+	view: MarkdownView,
+): { readonly data: string | null; readonly saving: boolean } | undefined {
+	const internals = view as unknown as {
+		readonly lastSavedData?: unknown;
+		readonly saving?: unknown;
+	};
+	const data = internals.lastSavedData;
+	if (!(data === null || Predicate.isString(data))) return undefined;
+	return { data, saving: internals.saving === true };
 }
 
 function readInlineTitleSelection(

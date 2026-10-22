@@ -9,12 +9,18 @@ import { rewriteWikilinks } from "./link-rewrite";
 
 /**
  * One Markdown view in the harness's workspace, never the active one. Its
- * `buffer` is the editor's unsaved content; `null` means it shows what the
- * disk holds. A write through its editor reaches every view of its file,
- * as Obsidian keeps the views of one file in step.
+ * `buffer` is its content; `null` means it shows what the disk holds.
+ * `lastSaved` is what it last loaded or saved (Obsidian's
+ * `lastSavedData`): a buffer other than that is unsaved typing, one equal
+ * to it is a clean view Obsidian has not reloaded yet. `editor`, when set,
+ * is what its source editor holds while reading mode shows `buffer`. A
+ * write through its editor reaches every view of its file, as Obsidian
+ * keeps the views of one file in step.
  */
 export type HarnessPane = {
 	buffer: string | null;
+	editor: string | null;
+	lastSaved: string | null;
 	mode: "preview" | "source";
 	readonly path: string;
 };
@@ -112,13 +118,16 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 		getCursor: () => ({ ch: 0, line: 0 }),
 		getLine: (line: number) => shown(pane).split("\n")[line] ?? "",
 		getSelection: () => "",
-		getValue: () => shown(pane),
+		getValue: () => pane.editor ?? shown(pane),
 		listSelections: () => [],
 		posToOffset: () => 0,
 		transaction: ({ changes }: { changes: readonly LineChange[] }) => {
 			const next = applyLineChanges(shown(pane), changes);
 			for (const each of panes)
-				if (each.path === pane.path) each.buffer = next;
+				if (each.path === pane.path) {
+					each.buffer = next;
+					each.editor = null;
+				}
 		},
 	});
 	const views = new Map<HarnessPane, MarkdownView>();
@@ -130,6 +139,16 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 			contentEl: { querySelector: () => null },
 			editor: editorOf(pane),
 			getMode: () => pane.mode,
+			getViewData: () => shown(pane),
+		});
+		Object.defineProperties(view, {
+			lastSavedData: {
+				get: () =>
+					pane.buffer === null
+						? (contents.get(pane.path) ?? "")
+						: pane.lastSaved,
+			},
+			saving: { value: false },
 		});
 		views.set(pane, view);
 		return view;
@@ -216,17 +235,26 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 		linkingFiles,
 		/**
 		 * Opens `path` in another background pane, showing the disk content
-		 * or, with `buffer`, unsaved typing.
+		 * or, with `buffer`, unsaved typing. With `clean`, the buffer is
+		 * what the pane last loaded, not yet reloaded after a disk write.
+		 * With `editor`, its source editor lags `buffer`, as in reading mode.
 		 */
 		open: (
 			path: string,
 			options: {
 				buffer?: string;
+				clean?: boolean;
+				editor?: string;
 				mode?: HarnessPane["mode"];
 			} = {},
 		): HarnessPane => {
+			const buffer = options.buffer ?? null;
 			const pane: HarnessPane = {
-				buffer: options.buffer ?? null,
+				buffer,
+				editor: options.editor ?? null,
+				lastSaved: options.clean
+					? buffer
+					: (contents.get(path) ?? null),
 				mode: options.mode ?? "source",
 				path,
 			};

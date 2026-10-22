@@ -43,8 +43,8 @@ export class MarkdownFileAccess {
 	/**
 	 * The file's content as VAM routes it (`resolveContentRoute`): the
 	 * active editor's buffer, a background view's unsaved buffer, or the
-	 * file on disk. Open views that disagree fail it with
-	 * `VamContentConflictError`.
+	 * file on disk. Background views with different unsaved typing fail it
+	 * with `VamContentConflictError`.
 	 */
 	readContent(target: SplitPathToMdFile) {
 		const path = pathfinder.systemPathFromSplitPath(target);
@@ -52,10 +52,10 @@ export class MarkdownFileAccess {
 		return Effect.fn("vam.markdown.read")(function* () {
 			yield* Effect.annotateCurrentSpan({ operation: "read", path });
 			const route = yield* self.route(target);
-			if (route._tag === "Editor") {
-				return yield* self.activeEditor.getContent(route.snapshot);
-			}
-			return route.content ?? (yield* self.diskContent(target));
+			if (route.content !== null) return route.content;
+			return route._tag === "Editor"
+				? yield* self.activeEditor.getContent(route.snapshot)
+				: yield* self.diskContent(target);
 		}, Effect.tapError(annotateFileAccessFailure))();
 	}
 
@@ -78,10 +78,11 @@ export class MarkdownFileAccess {
 				target,
 				Effect.suspend(() => vault.read(file)),
 			);
+			if (route.content !== null) return { content: route.content, stat };
 			const content =
 				route._tag === "Editor"
 					? yield* self.activeEditor.getContent(route.snapshot)
-					: (route.content ?? (yield* vault.read(file)));
+					: yield* vault.read(file);
 			return { content, stat };
 		}, Effect.tapError(annotateFileAccessFailure))();
 	}
@@ -135,8 +136,9 @@ export class MarkdownFileAccess {
 	 * Trashes the file; `NoOp` when it is gone. With `ifContent`, only while
 	 * it holds that content, as `readContent` routes it: an open view's
 	 * buffer, unsaved typing included, or the file on disk. The check runs
-	 * immediately before the trash; otherwise, or when the open views
-	 * disagree, it fails with `VamContentConflictError` and trashes nothing.
+	 * immediately before the trash; otherwise, or when background views
+	 * hold different unsaved typing, it fails with `VamContentConflictError`
+	 * and trashes nothing.
 	 */
 	trashFile(target: SplitPathToMdFile, ifContent?: ExpectedContent) {
 		const path = pathfinder.systemPathFromSplitPath(target);

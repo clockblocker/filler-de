@@ -35,6 +35,22 @@ export type ActiveEditorHandle = {
 	readonly file: TFile | null;
 	readonly mode: string;
 	isCurrent(): boolean;
+	/**
+	 * The view's content in its current mode (`getViewData`). In reading
+	 * mode Obsidian updates only the rendered mode, so `editor` can lag it.
+	 * Absent: read `editor`.
+	 */
+	readonly viewData?: () => string;
+	/**
+	 * What the view last loaded from or saved to disk, from Obsidian's
+	 * internal `TextFileView.lastSavedData` and `saving`: `data` is `null`
+	 * while the view holds no content yet. A view whose content is `data`,
+	 * not mid-save, holds no unsaved typing. `undefined` when Obsidian does
+	 * not say.
+	 */
+	readonly persisted?: () =>
+		| { readonly data: string | null; readonly saving: boolean }
+		| undefined;
 	readInlineTitleSelection(): SavedInlineTitleSelection | null;
 	restoreInlineTitleSelection(saved: SavedInlineTitleSelection): void;
 };
