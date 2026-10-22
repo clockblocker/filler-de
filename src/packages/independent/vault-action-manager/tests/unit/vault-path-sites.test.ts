@@ -95,4 +95,16 @@ describe("findByBasename folder scope", () => {
 		expect(inSibling).toEqual([]);
 		await Effect.runPromise(dispose);
 	});
+
+	it("matches names that differ only in case when asked to, as links do", async () => {
+		const harness = makeFacadeHarness();
+		const { dispose, manager } = createVaultActionManager(harness.app);
+		const exact = await Effect.runPromise(manager.findByBasename("NOTE"));
+		const folded = await Effect.runPromise(
+			manager.findByBasename("NOTE", { ignoreCase: true }),
+		);
+		expect(exact).toEqual([]);
+		expect(folded.map(splitPathCodec.format)).toEqual(["Library/note.md"]);
+		await Effect.runPromise(dispose);
+	});
 });

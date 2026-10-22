@@ -92,6 +92,10 @@ export type DictionaryView = {
 	readonly attestationLinksWithRefPrefix: (
 		prefix: string,
 	) => readonly AttestationLink<"de">[];
+	/** Every stored Attestation Link with exactly this ref. */
+	readonly attestationLinksWithRef: (
+		ref: string,
+	) => readonly AttestationLink<"de">[];
 	/** Where a Reading lives: its Reading note and its Lemma note. */
 	readonly readingLocation: (
 		reading: Dumling.Reading<"de">,
@@ -123,6 +127,7 @@ export function viewOf(
 	revision: StoreRevision,
 ): DictionaryView {
 	return {
+		attestationLinksWithRef: (ref) => index.linksWithRef(ref),
 		attestationLinksWithRefPrefix: (prefix) =>
 			index.linksWithRefPrefix(prefix),
 		lemmaCandidates: (texts) => {

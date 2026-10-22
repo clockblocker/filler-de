@@ -57,9 +57,13 @@ function answersOf(
 const KNOWLEDGE_STAGES = ["transcription", "definition", "translations"];
 
 /** The dictionary's notes by vault path, as the driver's `dictionary` reads them. */
+/** The dictionary's notes, by path. */
 const notesOf = (vault: FakeVault) =>
 	Object.fromEntries(
-		vault.markdownPaths().map((path) => [path, vault.content(path)]),
+		vault
+			.markdownPaths()
+			.filter((path) => path.startsWith("Worter/"))
+			.map((path) => [path, vault.content(path)]),
 	);
 
 describe("Classify resolves a selection end to end", () => {
@@ -72,7 +76,8 @@ describe("Classify resolves a selection end to end", () => {
 			jev: answersOf(CLASSIFY_RESOLUTION_DUMGEN.jev),
 			luna: CLASSIFY_RESOLUTION_DUMGEN.luna,
 		});
-		const vault = new FakeVault();
+		// Obsidian knows the Scroll, so refs name it by its basename.
+		const vault = new FakeVault({ [SCROLL]: STORY });
 		const store = await Effect.runPromise(
 			makeDumdictVaultStore({ projections: dictionaryProjections, vault }),
 		);

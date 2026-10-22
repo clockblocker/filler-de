@@ -266,6 +266,9 @@ export async function resolutionHarness(options: {
 	readonly produceParadigm?: boolean;
 }) {
 	const vault = options.vault ?? new FakeVault();
+	// Obsidian knows the Scroll, so refs name it as the store resolves it.
+	if (vault.content(options.scrollPath) === undefined)
+		vault.silentWrite(options.scrollPath, options.content);
 	const store = await run(makeDumdictVaultStore({ vault }));
 	const resolverStore = options.wrapStore?.(store) ?? store;
 	const scroll = new MemoryScroll(options.scrollPath, options.content);

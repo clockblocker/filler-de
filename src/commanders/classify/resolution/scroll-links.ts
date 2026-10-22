@@ -185,19 +185,18 @@ export function occurrenceKeyOf(ref: UnitRef, instance: number): string {
  * embed's alias: Reading view replaces the embed's text with the embedded
  * block, and Live Preview keeps the alias only as the embed's `alt`
  * attribute (Obsidian 1.14.4's `app.js`), so it shows only in source.
- * Classify names the Scroll by its basename; the dictionary store names it
- * by its path once a rename leaves the basename to another note (#99).
+ * `linkpath` names the Scroll: Classify asks the dictionary store for it
+ * (`scrollRefNames`), which answers the basename when Obsidian opens the
+ * Scroll for it and the path otherwise, as its rename rewrite names it
+ * (#99, #198). Without one, the ref names the Scroll by its basename.
  */
 export function attestationRefOf(
 	scrollPath: string,
 	blockId: string,
 	occurrence: string,
+	linkpath: string = scrollBasenameOf(scrollPath),
 ): string {
-	return attestationRef({
-		blockId,
-		linkpath: scrollBasenameOf(scrollPath),
-		occurrence,
-	});
+	return attestationRef({ blockId, linkpath, occurrence });
 }
 
 /** What every Attestation Ref into one Scroll by its basename starts with: `![[Story#^`. */

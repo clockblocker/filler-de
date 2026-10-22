@@ -25,7 +25,11 @@ export type GermanPendingRelation = Dumrel.PendingSemanticRelation & {
  */
 export type ResolutionStore = Pick<
 	DumdictVaultStore,
-	"lemmaCandidates" | "lemmaNote" | "readingLocation" | "transact"
+	| "lemmaCandidates"
+	| "lemmaNote"
+	| "readingLocation"
+	| "scrollRefNames"
+	| "transact"
 >;
 
 /** One Reading whose Knowledge an occurrence asks dumgen for, after its commit. */

@@ -44,7 +44,7 @@ import {
 	type RekeySurfacesSliceRequest,
 } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
-import { Cause, Data, Effect, Fiber, Result, Semaphore } from "effect";
+import { Cause, Clock, Data, Effect, Fiber, Result, Semaphore } from "effect";
 import { contentHash } from "./content-hash";
 import {
 	CrossroadNoteMetadata,
@@ -122,12 +122,16 @@ import {
 	staleTables,
 } from "./render";
 import {
+	basenameRefNames,
+	type DeferredRefs,
 	planRefRewrite,
 	type RefRewrite,
 	retargetForRenames,
 	retargetForRepairs,
 	type ScrollLookup,
+	type ScrollRefNames,
 	type ScrollRename,
+	scrollRefNamesOf,
 	scrollRenamesOf,
 } from "./scroll-refs";
 import { loadReevaluateShadowsContext } from "./slices";
@@ -351,6 +355,17 @@ export type DumdictVaultStore = {
 	readonly readingLocation: (
 		reading: Dumling.Reading<"de">,
 	) => Effect.Effect<ReadingLocation | undefined>;
+	/**
+	 * How Attestation Refs name the Scroll at `scrollPath` (#198): the link
+	 * path a new ref takes, by the rule the store's rename rewrite follows
+	 * (its basename when Obsidian opens the Scroll for it, its path
+	 * otherwise), and every spelling stored refs name it by. It never
+	 * fails: when Obsidian cannot be asked, it answers the basename alone
+	 * and logs a warning.
+	 */
+	readonly scrollRefNames: (
+		scrollPath: string,
+	) => Effect.Effect<ScrollRefNames>;
 	readonly surface: (
 		surfaceId: SurfaceEntry<"de">["id"],
 	) => Effect.Effect<SurfaceEntry<"de"> | undefined>;
@@ -605,6 +620,9 @@ const REF_REWRITE_ATTEMPTS = 8;
  * refused, as text typed into it meanwhile refuses it.
  */
 const MERGE_ATTEMPTS = 3;
+
+/** How long refs a rename left to their old name's owner wait for that owner's own rename (#199). */
+const DEFERRED_REFS_TTL_MS = 60_000;
 
 /** Lemmas whose tables one hold of the writer lock re-renders. */
 const TABLES_CHUNK = 32;
@@ -2427,7 +2445,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	const lookup: ScrollLookup<unknown> = {
 		named: (basename) =>
 			vault
-				.findByBasename(basename)
+				.findByBasename(basename, { ignoreCase: true })
 				.pipe(Effect.map((paths) => paths.map(formatPath))),
 		resolve: (linkpath, from) =>
 			vault
@@ -2439,7 +2457,10 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				),
 	};
 
-	/** The link paths stored refs name their Scrolls by, and a Reading note to resolve them from. */
+	/**
+	 * The stored refs, the link paths they name their Scrolls by, and a
+	 * Reading note to resolve them from.
+	 */
 	const heldLinkpaths = () => {
 		const links = index.linksWithRefPrefix(ATTESTATION_REF_START);
 		const held = new Set<string>();
@@ -2452,8 +2473,35 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			from = index.readingLocation(readingKeyOf(reading))?.path;
 			if (from !== undefined) break;
 		}
-		return { from, held };
+		return { from, held, refs: links.map(({ ref }) => ref) };
 	};
+
+	/**
+	 * How refs name one Scroll, resolved from a Reading note, as the
+	 * rename rewrite resolves; from a note under `Worter/` while there is
+	 * none. A Scroll is never under `Worter/`, so its names resolve alike
+	 * from any note there.
+	 */
+	const scrollRefNames = Effect.fn("dictionary.scrollRefNames")(function* (
+		scrollPath: string,
+	): Effect.fn.Return<ScrollRefNames> {
+		const { from, held } = heldLinkpaths();
+		const source =
+			from ??
+			index.paths()[0] ??
+			`${WORTER_SPLIT_PATH.basename}/${WORTER_SPLIT_PATH.basename}.md`;
+		return yield* scrollRefNamesOf(scrollPath, held, source, lookup).pipe(
+			Effect.catch((cause) =>
+				Effect.logWarning(
+					`Dictionary could not ask Obsidian how refs name ${scrollPath}; new refs name it by its basename`,
+					cause,
+				).pipe(Effect.as(basenameRefNames(scrollPath))),
+			),
+		);
+	});
+
+	/** Refs a rename left to their old name's owner, until its own rename settles them (#199). */
+	let deferredRefs: readonly DeferredRefs[] = [];
 
 	/** Waits for the Markdown modifications VAM heard so far; set once the store subscribed. */
 	let modificationsCaughtUp: Effect.Effect<void> = Effect.void;
@@ -2470,19 +2518,25 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			renames: readonly ScrollRename[],
 		): Effect.fn.Return<RefRewrite, DictionaryRefRewriteError> {
 			const nothing: RefRewrite = { kept: [], rewritten: 0 };
-			const { from, held } = heldLinkpaths();
+			const { from, refs } = heldLinkpaths();
 			if (from === undefined) return nothing;
 			const failed = (what: string) => (cause: unknown) =>
 				new DictionaryRefRewriteError({
 					cause,
 					message: `Could not ${what} the refs into ${renames.map(({ from: path, to }) => `${path} → ${to}`).join(", ")}: ${message(cause)}`,
 				});
-			const { notes, retarget } = yield* retargetForRenames(
+			const now = yield* Clock.currentTimeMillis;
+			const { deferred, notes, retarget } = yield* retargetForRenames(
 				renames,
-				held,
+				refs,
 				from,
 				lookup,
+				deferredRefs.filter(
+					({ at }) => now - at < DEFERRED_REFS_TTL_MS,
+				),
+				now,
 			).pipe(Effect.mapError(failed("place")));
+			deferredRefs = deferred;
 			if (notes.length > 0)
 				yield* Effect.logWarning(
 					"Dictionary left refs into a renamed Scroll as they were",
@@ -3099,6 +3153,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			rebuild().pipe(Effect.andThen(settle), Effect.ensuring(report)),
 		),
 		revision: Effect.sync(revision),
+		scrollRefNames,
 		surface: (surfaceId) => Effect.sync(() => live().surface(surfaceId)),
 		transact,
 	};

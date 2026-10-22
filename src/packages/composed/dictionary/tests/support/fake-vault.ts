@@ -182,10 +182,15 @@ export class FakeVault implements DictionaryVault {
 		});
 
 	/** Every Markdown note with this basename, as VAM finds them. */
-	findByBasename: DictionaryVault["findByBasename"] = (basename) =>
+	findByBasename: DictionaryVault["findByBasename"] = (basename, options) =>
 		Effect.sync(() =>
 			this.markdownPaths()
-				.filter((path) => basenameOf(path) === basename)
+				.filter((path) =>
+					options?.ignoreCase
+						? basenameOf(path).toLowerCase() ===
+							basename.toLowerCase()
+						: basenameOf(path) === basename,
+				)
 				.map(mdPath),
 		);
 

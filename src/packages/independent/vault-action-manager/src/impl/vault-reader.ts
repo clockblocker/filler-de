@@ -127,7 +127,15 @@ export class VaultReader {
 		);
 	}
 
-	findByBasename(basename: string, opts?: { folder?: SplitPathToFolder }) {
+	/**
+	 * Every Markdown file with this basename, below `folder` if given. With
+	 * `ignoreCase`, names that differ only in case match too, as Obsidian
+	 * matches link names on every file system.
+	 */
+	findByBasename(
+		basename: string,
+		opts?: { folder?: SplitPathToFolder; ignoreCase?: boolean },
+	) {
 		return Effect.gen(function* () {
 			const folderPrefix = opts?.folder
 				? pathfinder.systemPathFromSplitPath(opts.folder)
@@ -146,7 +154,12 @@ export class VaultReader {
 					files
 						.filter(
 							(file) =>
-								file.basename === basename &&
+								(opts?.ignoreCase
+									? VaultPath.caseInsensitive.same(
+											file.basename,
+											basename,
+										)
+									: file.basename === basename) &&
 								(folderPrefix === undefined ||
 									VaultPath.caseSensitive.isUnder(
 										file.path,

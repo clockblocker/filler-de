@@ -230,6 +230,71 @@ describe("dumgenUnitResolver", () => {
 		expect(harness.vault.batches.length).toBe(before);
 	});
 
+	describe("after its Scroll moved onto a name another note has (#198)", () => {
+		const TALE = "Library/Tale.md";
+		const reuse = () =>
+			stubDumgen({
+				grammar: seeGrammar,
+				knowledge: baseTextKnowledge,
+				reading: (input) =>
+					input.candidates.includes("🌊")
+						? { _tag: "Reuse", emojiDescription: "🌊" }
+						: { _tag: "New", emojiDescription: "🌊" },
+			});
+		const refsOf = async (store: DumdictVaultStore) =>
+			((await run(store.lemmaNote(see)))?.readings[0]?.attestationLinks ?? []).map(({ ref }) => ref);
+
+		/** Classifies "Der See ist tief." in Story, then renames Story to Tale beside Archive/Tale.md. */
+		async function classifiedThenMoved() {
+			const content = "Der See ist tief. ^0\n";
+			const vault = new FakeVault({ "Archive/Tale.md": "another Tale" });
+			const first = await resolutionHarness({ content, dumgen: reuse().dumgen, scrollPath: SCROLL, vault });
+			await first.resolve(planFor({ content, scrollPath: SCROLL, sentenceText: "Der See ist tief.", units: seeUnits }));
+			const [written = ""] = await refsOf(first.store);
+			expect(written).toMatch(/^!\[\[Story#\^0\|\^[0-9a-f]{8}\]\]$/u);
+			vault.silentWrite(SCROLL, first.scroll.content);
+			await vault.userRename(SCROLL, TALE);
+			// The store named the moved Scroll by its path: Obsidian opens Archive/Tale.md for "Tale".
+			expect(await refsOf(first.store)).toEqual([written.replace("![[Story#", "![[Library/Tale#")]);
+			await run(first.store.close);
+			// The same occurrence, Classified again in the moved Scroll.
+			return { content, vault };
+		}
+
+		it("writes a new ref by the Scroll's path, so the occurrence keeps one ref", async () => {
+			const { content, vault } = await classifiedThenMoved();
+			const again = await resolutionHarness({ content, dumgen: reuse().dumgen, scrollPath: TALE, vault });
+			expect(await run(again.store.scrollRefNames(TALE))).toEqual({
+				aliases: ["Library/Tale"],
+				linkpath: "Library/Tale",
+			});
+			const before = vault.batches.length;
+			const resolved = await again.resolve(
+				planFor({ content, scrollPath: TALE, sentenceText: "Der See ist tief.", units: seeUnits }),
+			);
+			expect(resolved[0]?._tag).toBe("Resolved");
+			const refs = await refsOf(again.store);
+			expect(refs).toHaveLength(1);
+			expect(refs[0]).toMatch(/^!\[\[Library\/Tale#\^0\|\^[0-9a-f]{8}\]\]$/u);
+			expect(vault.batches.length).toBe(before);
+		});
+
+		it("matches the stored ref by path once the basename is the Scroll's again", async () => {
+			const { content, vault } = await classifiedThenMoved();
+			await vault.userDelete("Archive/Tale.md");
+			const again = await resolutionHarness({ content, dumgen: reuse().dumgen, scrollPath: TALE, vault });
+			// New refs name the Scroll by its basename again; the stored one by its path still opens it.
+			expect(await run(again.store.scrollRefNames(TALE))).toEqual({
+				aliases: ["Tale", "Library/Tale"],
+				linkpath: "Tale",
+			});
+			const [stored = ""] = await refsOf(again.store);
+			expect(stored).toMatch(/^!\[\[Library\/Tale#\^0\|/u);
+			await again.resolve(planFor({ content, scrollPath: TALE, sentenceText: "Der See ist tief.", units: seeUnits }));
+			expect(await refsOf(again.store)).toEqual([stored]);
+		});
+	});
+
 	it("moves an occurrence judged another Reading: the old one goes with its last link", async () => {
 		const content = "Der See ist tief. ^0\n";
 		const plan = planFor({ content, scrollPath: SCROLL, sentenceText: "Der See ist tief.", units: seeUnits });
