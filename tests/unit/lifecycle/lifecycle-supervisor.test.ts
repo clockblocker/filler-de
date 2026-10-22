@@ -576,3 +576,57 @@ describe("lifecycle supervisor: unload", () => {
 		expect(released).toEqual(["first"]);
 	});
 });
+
+describe("lifecycle supervisor: thrown errors", () => {
+	/** `h.plugin`, but the first Librarian's `init` or `unsubscribe` throws. */
+	const throwingFirst = (
+		h: ReturnType<typeof makeHarness>,
+		method: "init" | "unsubscribe",
+	): LaunchedPlugin<FakeLibrarian> => ({
+		...h.plugin,
+		makeLibrarian: (onStopped) => {
+			const librarian = h.plugin.makeLibrarian(onStopped);
+			if (librarian.id !== 0) return librarian;
+			return Object.assign(librarian, {
+				[method]: () => Effect.die(new Error("boom")),
+			});
+		},
+	});
+
+	it("takes a Librarian start that throws for a failed start: the launch goes on, and so do later commands", async () => {
+		const h = makeHarness({ autoStart: true });
+		await h.launch(Effect.succeed(throwingFirst(h, "init")));
+
+		expect(h.supervisor.librarianState().kind).toBe("Failed");
+		expect(h.supervisor.state().kind).toBe("Running");
+		expect(h.events).toContain("launched");
+		expect(await Effect.runPromise(h.supervisor.reconfigure)).toBe(true);
+		expect(h.supervisor.librarianState().kind).toBe("Running");
+	});
+
+	it("logs a launch that throws, and answers the commands after it", async () => {
+		const h = makeHarness({ autoStart: true });
+		await h.launch(Effect.die(new Error("boom")));
+
+		expect(h.supervisor.state().kind).toBe("Failed");
+		expect(await Effect.runPromise(h.supervisor.reconfigure)).toBe(false);
+	});
+
+	it("still disposes the vault when the Librarian's stop throws", async () => {
+		const h = makeHarness({ autoStart: true });
+		let disposed = false;
+		await h.launch(
+			Effect.sync(() => {
+				h.supervisor.ownLast(
+					"dispose the vault",
+					Effect.sync(() => {
+						disposed = true;
+					}),
+				);
+				return throwingFirst(h, "unsubscribe");
+			}),
+		);
+		await Effect.runPromise(h.supervisor.stop);
+		expect(disposed).toBe(true);
+	});
+});

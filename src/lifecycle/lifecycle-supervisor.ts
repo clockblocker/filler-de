@@ -235,6 +235,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 		detach();
 		if (!current || librarianState.kind === "Paused") return Effect.void;
 		return current.librarian.unsubscribe().pipe(
+			Effect.catchDefect(Effect.fail),
 			Effect.tapError((cause) =>
 				Effect.sync(() => {
 					librarianState = ServiceState.failed(cause);
@@ -285,6 +286,9 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 						sweepOnce(plugin);
 					}),
 				),
+				// A start that throws failed like one that fails: the
+				// command reports it, and the launch goes on.
+				Effect.catchDefect(Effect.fail),
 				Effect.tapError((cause) =>
 					Effect.sync(() => {
 						if (current === started)
@@ -297,7 +301,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 					}),
 				),
 			);
-		});
+		}).pipe(Effect.catchDefect(Effect.fail));
 
 	const restartLibrarian = (reason: LibrarianStartReason) =>
 		Effect.suspend(() => {
@@ -394,6 +398,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 					plugin.onLaunched();
 					pluginState = ServiceState.running;
 				}).pipe(
+					Effect.catchDefect(Effect.fail),
 					Effect.catch((error) =>
 						Effect.sync(() => {
 							pluginState = ServiceState.failed(error);
@@ -498,12 +503,15 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 				const last = current;
 				current = null;
 				if (last) {
+					// Even a stop that throws leaves the vault to dispose.
 					yield* last.librarian
 						.unsubscribe()
 						.pipe(
-							Effect.catch((error) =>
+							Effect.catchCause((cause) =>
 								Effect.sync(() =>
-									notices.librarianStopFailed(error),
+									notices.librarianStopFailed(
+										Cause.squash(cause),
+									),
 								),
 							),
 						);
