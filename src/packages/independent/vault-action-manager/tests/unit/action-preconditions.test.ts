@@ -502,6 +502,178 @@ describe("a file open in a background pane", () => {
 	});
 });
 
+describe("the active pane in reading mode", () => {
+	const trashes = (writes: readonly string[]) =>
+		writes.filter((write) => write.startsWith("trash"));
+
+	it("reads the note, and a guarded write and trash go through the disk", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		harness.addFile("Library/b.md", "saved");
+		// Reading mode updates only what it renders; the editor lags.
+		const pane = harness.open("Library/a.md", {
+			active: true,
+			editor: "older",
+			mode: "preview",
+		});
+		const read = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")),
+		);
+		const withStat = await Effect.runPromise(
+			manager.readContentWithStat(md("Library/a.md")),
+		);
+		const written = await run(swap("Library/a.md", read, "rewritten"));
+		await Effect.runPromise(dispose);
+		expect(read).toBe("saved");
+		expect(withStat.content).toBe("saved");
+		expect(written).toMatchObject({
+			outcome: {
+				_tag: "Wrote",
+				afterHash: vaultContentHash("rewritten"),
+				beforeHash: vaultContentHash("saved"),
+			},
+			status: "Done",
+		});
+		// Written to disk; Obsidian reloads the pane from it.
+		expect(harness.contents.get("Library/a.md")).toBe("rewritten");
+		expect(harness.writes).toEqual(["Library/a.md"]);
+		expect(harness.shown(pane)).toBe("rewritten");
+
+		const trash = setup();
+		trash.harness.addFile("Library/a.md", "saved");
+		trash.harness.open("Library/a.md", {
+			active: true,
+			editor: "older",
+			mode: "preview",
+		});
+		const trashed = await trash.run(trashIf("Library/a.md", "saved"));
+		await Effect.runPromise(trash.dispose);
+		expect(trashed).toMatchObject({
+			outcome: { _tag: "Trashed" },
+			status: "Done",
+		});
+		expect(trash.harness.exists("Library/a.md")).toBe(false);
+	});
+
+	it("a disk change the pane has not reloaded yet: the disk is the content", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "synced");
+		// Sync wrote the file; Obsidian reloads the clean pane with an
+		// async read, and until then it shows what it last loaded.
+		harness.open("Library/a.md", {
+			active: true,
+			buffer: "old",
+			clean: true,
+			editor: "older",
+			mode: "preview",
+		});
+		const read = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")),
+		);
+		const stale = await run(swap("Library/a.md", "old", "from old"));
+		const written = await run(swap("Library/a.md", "synced", "synced!"));
+		const trashed = await run(trashIf("Library/a.md", "synced!"));
+		await Effect.runPromise(dispose);
+		expect(read).toBe("synced");
+		expect(failure(stale).kind).toBe("conflict");
+		expect(written).toMatchObject({
+			outcome: { _tag: "Wrote" },
+			status: "Done",
+		});
+		expect(trashed).toMatchObject({
+			outcome: { _tag: "Trashed" },
+			status: "Done",
+		});
+		expect(harness.writes).toEqual(["Library/a.md", "trash Library/a.md"]);
+	});
+
+	it("content not saved yet: reads it, keeps it from a stale guard, and writes nothing through reading mode", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "- [ ] task");
+		// A checkbox ticked in reading view, its save still running.
+		const pane = harness.open("Library/a.md", {
+			active: true,
+			buffer: "- [x] task",
+			editor: "- [ ] task",
+			mode: "preview",
+		});
+		const read = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")),
+		);
+		const stale = await run(trashIf("Library/a.md", "- [ ] task"));
+		const written = await run(
+			swap("Library/a.md", "- [x] task", "- [x] task\nmore"),
+		);
+		await Effect.runPromise(dispose);
+		expect(read).toBe("- [x] task");
+		expect(failure(stale).kind).toBe("conflict");
+		const error = failure(written);
+		expect(error.kind).toBe("conflict");
+		expect(error.cause).toMatchObject({
+			_tag: "VamActiveEditorError",
+			reason: "WrongMode",
+		});
+		expect(error.message).toContain("reading view");
+		expect(harness.exists("Library/a.md")).toBe(true);
+		expect(trashes(harness.writes)).toEqual([]);
+		expect(harness.writes).toEqual([]);
+		expect(harness.shown(pane)).toBe("- [x] task");
+	});
+
+	it("typing in a background source pane: writes go through that pane's editor", async () => {
+		const { dispose, harness, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		// Obsidian copies the typing into the reading pane it shows.
+		const reading = harness.open("Library/a.md", {
+			active: true,
+			buffer: "saved\ntyped",
+			editor: "saved",
+			mode: "preview",
+		});
+		const source = harness.open("Library/a.md", {
+			buffer: "saved\ntyped",
+		});
+		const written = await run(
+			swap("Library/a.md", "saved\ntyped", "saved\ntyped\nmore"),
+		);
+		await Effect.runPromise(dispose);
+		expect(written.status).toBe("Done");
+		expect(harness.shown(source)).toBe("saved\ntyped\nmore");
+		expect(harness.shown(reading)).toBe("saved\ntyped\nmore");
+		expect(harness.writes).toEqual([]);
+	});
+});
+
+describe("the active pane in source mode", () => {
+	it("is the route, unsaved typing and all, as before", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		const pane = harness.open("Library/a.md", {
+			active: true,
+			buffer: "saved\ntyped",
+		});
+		const read = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")),
+		);
+		const stale = await run(trashIf("Library/a.md", "saved"));
+		const staleWrite = await run(swap("Library/a.md", "saved", "x"));
+		const written = await run(
+			swap("Library/a.md", read, "saved\ntyped\nmore"),
+		);
+		await Effect.runPromise(dispose);
+		expect(read).toBe("saved\ntyped");
+		expect(failure(stale).kind).toBe("conflict");
+		expect(failure(staleWrite).kind).toBe("conflict");
+		expect(written).toMatchObject({
+			outcome: { _tag: "Wrote" },
+			status: "Done",
+		});
+		expect(harness.shown(pane)).toBe("saved\ntyped\nmore");
+		expect(harness.contents.get("Library/a.md")).toBe("saved");
+		expect(harness.writes).toEqual([]);
+	});
+});
+
 describe("RenameMdFile onCollision", () => {
 	it("fail: refuses a taken target and moves nothing", async () => {
 		const { dispose, harness, run } = setup();

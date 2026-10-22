@@ -25,6 +25,8 @@ For each command, the executor:
 
 The context is a snapshot. A commander must not read the editor again to reconstruct the same input.
 
+Page navigation (`GoToPrevPage`, `GoToNextPage`) needs only the note, so its context comes from `mdPwd` and `readContent`, with no selection; it works in reading view, where the bottom toolbar's page buttons also show. The other commands read the editor's context, which reading view does not have: there the executor shows a Notice asking to switch to editing view.
+
 | Owner | Commands |
 | --- | --- |
 | Librarian | `GoToPrevPage`, `GoToNextPage`, `SplitToPages`, `SplitInBlocks` |

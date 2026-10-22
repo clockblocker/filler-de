@@ -42,9 +42,10 @@ export class MarkdownFileAccess {
 
 	/**
 	 * The file's content as VAM routes it (`resolveContentRoute`): the
-	 * active editor's buffer, a background view's unsaved buffer, or the
-	 * file on disk. Background views with different unsaved typing fail it
-	 * with `VamContentConflictError`.
+	 * active editor's buffer in source mode, another view's unsaved buffer
+	 * (an active view in reading mode counts as another), or the file on
+	 * disk. Views with different unsaved content fail it with
+	 * `VamContentConflictError`.
 	 */
 	readContent(target: SplitPathToMdFile) {
 		const path = pathfinder.systemPathFromSplitPath(target);

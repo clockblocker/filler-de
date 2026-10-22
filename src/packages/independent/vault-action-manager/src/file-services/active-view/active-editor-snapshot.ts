@@ -127,7 +127,9 @@ export const requireSourceMode = Effect.fn(
 		return yield* activeEditorFailure(
 			"WrongMode",
 			"requireSourceMode",
-			`Active editor is in ${snapshot.mode} mode`,
+			snapshot.mode === "preview"
+				? "the note is shown in reading view, which has no editor to select in or write through; switch it to editing view"
+				: `the note's view is in ${snapshot.mode} mode, not editing view`,
 			snapshot.path,
 		);
 	}

@@ -763,15 +763,18 @@ whether it hears it.
   reads a file, plans, and writes with `expected` set to what it read is
   therefore checked against the content it read.
 
-When the active view shows the file, it is the route, as it always was:
-typing goes into the active view, and Obsidian copies it into the file's
-other views (its `quick-preview`, debounced 10 ms), so they can only lag
-it. Otherwise the route looks at every loaded Markdown view showing the
-file (`ActiveEditorAccess.markdownViewsOf`, all windows; a deferred tab, or
-a view that has not loaded its content yet, holds no buffer and is
-skipped):
+When the active view shows the file in source mode (editing view, Live
+Preview included), it is the route, as it always was: typing goes into
+the active view, and Obsidian copies it into the file's other views (its
+`quick-preview`, debounced 10 ms), so they can only lag it. Otherwise the
+route looks at every loaded Markdown view showing the file
+(`ActiveEditorAccess.markdownViewsOf`, all windows; a deferred tab, or a
+view that has not loaded its content yet, holds no buffer and is
+skipped). An active view in reading mode is one of them: nothing can be
+typed into it, and its editor lags what it shows, so it is judged as a
+background view is.
 
-| Background views of the file | Route |
+| Other views of the file | Route |
 | --- | --- |
 | None | The disk. |
 | None holds unsaved typing | The disk. Obsidian reloads clean views; nothing is merged. |
@@ -791,9 +794,38 @@ the disk. A view of the file that is clean is ignored even when it holds
 something else, since it holds nothing that is not on disk. Different
 unsaved typing in two background views needs a keystroke the file's other
 views have not caught up with, so it lasts milliseconds; the action fails
-rather than guess, as on any other content conflict. A background view in reading mode with unsaved typing
-answers reads; a write through it fails as the active editor does in
-reading mode (`WrongMode`).
+rather than guess, as on any other content conflict.
+
+### A note shown in reading mode
+
+Reading mode keeps no content of its own for long. Switching a view to
+it saves first (`MarkdownView.setMode` awaits `save()` when it leaves
+source mode), and its own edits, a ticked checkbox or a property changed
+in reading view, save at once (`MarkdownPreviewView.edit`,
+`MarkdownView.saveFrontmatter`), not on the 2 s debounce typing waits
+for. A note the user is only viewing is therefore clean: reads take the
+disk, and writes and guarded trashes go through the disk too, with the
+atomic `Vault.process` check. Obsidian reloads the view from the disk
+(`TextFileView.onModify`), which re-renders it. Each of these is as in
+Obsidian 1.14.4.
+
+The view holds unsaved content only while such a save runs, or when a
+source view of the same file in another pane holds typing it copied in.
+Reads then return that content. A write goes through a source view of
+the file if there is one; otherwise it fails with `VamActiveEditorError`
+reason `WrongMode`, kind `conflict`, writing nothing, since the reading
+view has no editor that holds its content and the disk lacks it. A
+background view in reading mode is handled alike.
+
+The active-editor operations that need an editor keep failing with
+`WrongMode` in reading mode: `getActiveEditorContext`, `getOpenedContent`,
+`getSelectionInfo`, `getSelectionText` and `replaceActiveLine` read a
+cursor or selection, or edit a line, that reading mode does not have.
+Obsidian does not offer editor commands in reading mode (a command
+without `allowPreview` is unavailable there), so the plugin's commands
+reach them only from its own buttons. Page navigation needs only the
+note, so it reads it through `mdPwd` and `readContent`; the commands
+that need a selection tell the user to switch to editing view.
 
 Listing the views walks the workspace's leaves once per read of a file
 the active view does not show, untraced. A workspace holds tens of leaves,
