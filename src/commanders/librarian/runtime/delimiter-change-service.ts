@@ -14,6 +14,7 @@ import {
 	VamDispatchError,
 	VamDispatchFailure,
 	VaultActionKind,
+	VaultPath,
 } from "@textfresser/vault-action-manager";
 import { Cause, Effect, Exit, Predicate, Schema } from "effect";
 import type { SuffixDelimiterConfig } from "../../../types";
@@ -455,8 +456,12 @@ function entryFor(
 	return report.entries.find((entry) => sameRename(entry.action, action));
 }
 
+/** One path, as Obsidian's lookup tells: a case-only rename is a move. */
 function samePath(a: SplitPathToMdFile, b: SplitPathToMdFile): boolean {
-	return splitPathCodec.format(a) === splitPathCodec.format(b);
+	return VaultPath.caseSensitive.same(
+		splitPathCodec.format(a),
+		splitPathCodec.format(b),
+	);
 }
 
 function sameRename(
