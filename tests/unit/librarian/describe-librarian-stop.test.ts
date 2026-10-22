@@ -4,9 +4,13 @@ import {
 	SplitPathKind,
 	VamDispatchError,
 	VamScanError,
+	VamVaultIoError,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import { describeLibrarianStop } from "../../../src/commanders/librarian/runtime/describe-librarian-stop";
+import {
+	describeLibrarianStop,
+	isMissingLibraryRoot,
+} from "../../../src/commanders/librarian/runtime/describe-librarian-stop";
 
 function trash(basename: string): VamDispatchError {
 	return new VamDispatchError({
@@ -64,5 +68,30 @@ describe("describeLibrarianStop", () => {
 		expect(message).toContain(
 			'Run "Restart Librarian" from the command palette to try again.',
 		);
+	});
+
+	it("tells a missing Library folder from a root it could not read", () => {
+		const rootScan = (operation: string) =>
+			new VamScanError({
+				cause: new VamVaultIoError({
+					cause: new Error("x"),
+					operation,
+					path: "Library",
+				}),
+				operation: "scanRoot",
+				path: "Library",
+			});
+
+		expect(isMissingLibraryRoot(rootScan("listFolder"))).toBeTrue();
+		expect(isMissingLibraryRoot(rootScan("listFolder.decode"))).toBeFalse();
+		expect(
+			isMissingLibraryRoot(
+				new VamScanError({
+					cause: new Error("x"),
+					operation: "scanFolder",
+					path: "Library/Soup",
+				}),
+			),
+		).toBeFalse();
 	});
 });

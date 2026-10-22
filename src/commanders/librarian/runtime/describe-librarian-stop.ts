@@ -3,6 +3,8 @@ import {
 	splitPathCodec,
 	VamDispatchError,
 	VamDispatchStoppedError,
+	VamScanError,
+	VamVaultIoError,
 } from "@textfresser/vault-action-manager";
 import { Predicate } from "effect";
 import { getErrorMessage } from "../../../utils/get-error-message";
@@ -15,6 +17,28 @@ export type LibrarianStopPhase = "Startup" | "Runtime";
 type FailedItem = { readonly path: string | null; readonly reason: string };
 
 const MAX_LISTED_ITEMS = 3;
+
+/**
+ * Whether startup stopped only because the Library root folder is not
+ * there: the scan could not list the root. A vault without a Library is
+ * not a broken Librarian, so this is not worth a notice that stays.
+ */
+export function isMissingLibraryRoot(
+	failure: unknown,
+): failure is VamScanError {
+	return (
+		failure instanceof VamScanError &&
+		failure.operation === "scanRoot" &&
+		failure.cause instanceof VamVaultIoError &&
+		failure.cause.operation === "listFolder"
+	);
+}
+
+/** The notice for a Librarian whose Library root folder is not there. */
+export function describeMissingLibraryRoot(failure: VamScanError): string {
+	const where = failure.path ? ` at "${failure.path}"` : "";
+	return `The Librarian is off: there is no Library folder${where}. Create it, or choose another in settings, then run "${RESTART_LIBRARIAN_COMMAND_NAME}" from the command palette.`;
+}
 
 /**
  * The notice for a Librarian that stopped: that it stopped, why, with the

@@ -59,6 +59,8 @@ import { resolveAliasFromSuffix } from "./navigation/wikilink-alias";
 import type { PageSplitPlan } from "./pages/build-actions";
 import {
 	describeLibrarianStop,
+	describeMissingLibraryRoot,
+	isMissingLibraryRoot,
 	type LibrarianStopPhase,
 } from "./runtime/describe-librarian-stop";
 import {
@@ -177,12 +179,21 @@ export class LibraryCommandIntentionError extends Schema.TaggedError<LibraryComm
 	{ kind: Schema.Literal("LibrarianUnavailable") },
 ) {}
 
+/**
+ * Why the Librarian stopped, with a message for the user. `LibraryRootMissing`
+ * is a vault without its Library folder, not a failure to heal.
+ */
+export type LibrarianStop = {
+	readonly kind: "Stopped" | "LibraryRootMissing";
+	readonly message: string;
+};
+
 export type LibrarianOptions = {
 	/**
-	 * Told, with a message for the user, when the Librarian stops: its
-	 * startup failed, or a later reconciliation failed past recovery.
+	 * Told when the Librarian stops: its startup failed, or a later
+	 * reconciliation failed past recovery.
 	 */
-	readonly onStopped?: (message: string) => void;
+	readonly onStopped?: (stop: LibrarianStop) => void;
 };
 
 // ─── Librarian ───
@@ -220,9 +231,15 @@ export class Librarian {
 	) {}
 
 	private reportStopped(phase: LibrarianStopPhase, failure: unknown): void {
+		if (phase === "Startup" && isMissingLibraryRoot(failure)) {
+			const message = describeMissingLibraryRoot(failure);
+			logger.warn(`[Librarian] ${message}`, failure);
+			this.options.onStopped?.({ kind: "LibraryRootMissing", message });
+			return;
+		}
 		const message = describeLibrarianStop(phase, failure);
 		logger.error(`[Librarian] Stopped. ${message}`, failure);
-		this.options.onStopped?.(message);
+		this.options.onStopped?.({ kind: "Stopped", message });
 	}
 
 	private prepareStartupReconciliation(

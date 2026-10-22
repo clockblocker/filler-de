@@ -5,6 +5,8 @@ import {
 	SplitPathKind,
 	type SplitPathToMdFile,
 	VamDispatchError,
+	VamScanError,
+	VamVaultIoError,
 	type VaultAction,
 	VaultActionKind,
 	VaultEventKind,
@@ -13,6 +15,7 @@ import {
 import { Effect, Exit } from "effect";
 import {
 	Librarian,
+	type LibrarianStop,
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
@@ -55,9 +58,11 @@ function isRenameFrom(action: VaultAction, basename: string): boolean {
 function makeHarness(
 	fails: (dispatchNumber: number) => boolean,
 	failing = "Anchor",
+	{ rootMissing = false } = {},
 ) {
 	const files = ["Anchor"];
 	const dispatches: VaultAction[][] = [];
+	const stopped: LibrarianStop[] = [];
 	const stops: string[] = [];
 	let scans = 0;
 	let emitBulk: (bulk: BulkVaultEvent) => Effect.Effect<void, unknown> = () =>
@@ -83,9 +88,22 @@ function makeHarness(
 		getOpenedContent: () => Effect.succeed(""),
 		mdPwd: () => Effect.succeed(null),
 		scan: () =>
-			Effect.sync(() => {
+			Effect.suspend(() => {
 				scans += 1;
-				return {
+				if (rootMissing) {
+					return Effect.fail(
+						new VamScanError({
+							cause: new VamVaultIoError({
+								cause: new Error("Folder not found: Library"),
+								operation: "listFolder",
+								path: "Library",
+							}),
+							operation: "scanRoot",
+							path: "Library",
+						}),
+					);
+				}
+				return Effect.succeed({
 					counts: {
 						folderCount: 3,
 						markdownFileCount: files.length,
@@ -94,7 +112,7 @@ function makeHarness(
 					diagnostics: [],
 					entries: files.map(scanned),
 					kind: "Complete" as const,
-				};
+				});
 			}),
 		subscribeToBulk: (handler) =>
 			Effect.sync(() => {
@@ -108,9 +126,13 @@ function makeHarness(
 		emitBulk: (bulk: BulkVaultEvent) => emitBulk(bulk),
 		files,
 		librarian: new Librarian(vam, {
-			onStopped: (message) => stops.push(message),
+			onStopped: (stop) => {
+				stopped.push(stop);
+				if (stop.kind === "Stopped") stops.push(stop.message);
+			},
 		}),
 		scans: () => scans,
+		stopped,
 		stops,
 	};
 }
@@ -180,6 +202,23 @@ describe("Librarian startup healing that partly fails", () => {
 			"Library/Soup/Ramen/Anchor.md → Library/Soup/Ramen/Anchor-Ramen-Soup.md (destination is locked)",
 		);
 		expect(message).toContain('run "Restart Librarian"');
+	});
+
+	it("reports a missing Library folder as such, not as a failed heal", async () => {
+		const { dispatches, librarian, stopped } = makeHarness(() => false, "Anchor", {
+			rootMissing: true,
+		});
+
+		const exit = await Effect.runPromiseExit(librarian.init());
+
+		expect(Exit.isFailure(exit)).toBeTrue();
+		expect(dispatches).toHaveLength(0);
+		expect(stopped).toHaveLength(1);
+		expect(stopped[0]?.kind).toBe("LibraryRootMissing");
+		expect(stopped[0]?.message).toContain(
+			'there is no Library folder at "Library"',
+		);
+		expect(stopped[0]?.message).toContain('run "Restart Librarian"');
 	});
 
 	it("tells the user once when a later heal fails past its rescan", async () => {
