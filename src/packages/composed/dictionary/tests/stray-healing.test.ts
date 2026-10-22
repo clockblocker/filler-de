@@ -122,36 +122,6 @@ describe("a stray Obsidian created for an unresolved bare link", () => {
 		expect(vault.content(path)).toBe(merged);
 	});
 
-	test("a stray typed into just as its merge trashes it stays, for the next merge", async () => {
-		const { store, vault } = await openStore();
-		await seed(store, lemmaWith(fahrer, "🚗"));
-		const path = crossroadPath("Fahrer");
-		const stray = "Worter/fahrer.md";
-		let typed = false;
-		vault.failNextWrite((action, target) => {
-			if (!typed && action.kind === "TrashMdFile" && target === stray) {
-				typed = true;
-				vault.silentWrite(stray, "Mine.\n\nTyped at the trash.");
-			}
-			return false;
-		});
-		await vault.userWrite(stray, "Mine.");
-		expect(typed).toBe(true);
-		// The trash saw other text than the merge read, so it kept the note.
-		expect(vault.content(stray)).toBe("Mine.\n\nTyped at the trash.");
-		expect(visible(vault.content(path))).toContain("Mine.");
-		expect(visible(vault.content(path))).not.toContain(
-			"Typed at the trash.",
-		);
-
-		// The next edit's event merges the rest.
-		await vault.userWrite(stray, "Mine.\n\nTyped at the trash.\n\nMore.");
-		expect(vault.content(stray)).toBeUndefined();
-		expect(visible(vault.content(path))).toContain("Typed at the trash.");
-		expect(visible(vault.content(path))).toContain("More.");
-		await expectIndexMatchesFiles(store, vault);
-	});
-
 	test("an empty stray whose Crossroad note is there is trashed, leaving the note alone", async () => {
 		const { store, vault } = await openStore();
 		await seed(store, lemmaWith(fahrer, "🚗"));
@@ -248,6 +218,178 @@ describe("a stray Obsidian created for an unresolved bare link", () => {
 			`${NOT_CLASSIFIED}\nfirst\n\nsecond\n`,
 		);
 		expect(vault.markdownPaths()).toEqual([path]);
+	});
+});
+
+describe("a stray that changes while it is merged (#201)", () => {
+	const stray = "Worter/fahrer.md";
+	const path = crossroadPath("Fahrer");
+
+	/**
+	 * Runs `edit` just before each of the first `times` trashes of the
+	 * stray, as text typed into it then refuses the trash.
+	 */
+	const atTrash = (
+		vault: FakeVault,
+		edit: (index: number) => void,
+		times = 1,
+	) => {
+		let seen = 0;
+		vault.failNextWrite((action, target) => {
+			if (
+				seen < times &&
+				action.kind === "TrashMdFile" &&
+				target === stray
+			) {
+				edit(seen);
+				seen += 1;
+			}
+			return false;
+		});
+		return () => seen;
+	};
+
+	test("an edited paragraph replaces its copy, which the store wrote and no one changed", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, lemmaWith(fahrer, "🚗"));
+		const before = visible(vault.content(path)) ?? "";
+		const trashes = atTrash(vault, () =>
+			vault.silentWrite(stray, "Mine.\n\nFoo bar baz"),
+		);
+		await vault.userWrite(stray, "Mine.\n\nFoo bar");
+		expect(trashes()).toBe(1);
+		// Merged again at once, and trashed: the old copy is gone.
+		expect(vault.content(stray)).toBeUndefined();
+		expect(visible(vault.content(path))).toBe(
+			`${before}\nMine.\n\nFoo bar baz\n`,
+		);
+		expect((await run(store.diagnostics)).healingBlocked).toEqual([]);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
+	test("text added to it is merged once, with what it held", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, lemmaWith(fahrer, "🚗"));
+		const before = visible(vault.content(path)) ?? "";
+		atTrash(vault, () =>
+			vault.silentWrite(stray, "Mine.\n\nTyped at the trash."),
+		);
+		await vault.userWrite(stray, "Mine.");
+		expect(vault.content(stray)).toBeUndefined();
+		expect(visible(vault.content(path))).toBe(
+			`${before}\nMine.\n\nTyped at the trash.\n`,
+		);
+	});
+
+	test("text the Crossroad note held before the merge stays, however the stray changes", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, lemmaWith(fahrer, "🚗"));
+		await vault.userWrite(
+			path,
+			noteMetadataHelper.mapBody(
+				(body) => `${body.trimEnd()}\n\nFoo bar\n`,
+			)(vault.content(path) ?? ""),
+		);
+		const before = visible(vault.content(path)) ?? "";
+		atTrash(vault, () => vault.silentWrite(stray, "Foo bar baz"));
+		await vault.userWrite(stray, "Foo bar\n\nMine.");
+		expect(vault.content(stray)).toBeUndefined();
+		// Its own "Foo bar" was never the store's copy, so it stays.
+		expect(visible(vault.content(path))).toBe(`${before}\nFoo bar baz\n`);
+	});
+
+	test("a stray that keeps changing waits, whole, for the next merge", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, lemmaWith(fahrer, "🚗"));
+		const untouched = vault.content(path);
+		const trashes = atTrash(
+			vault,
+			(index) => vault.silentWrite(stray, `Foo bar ${index}`),
+			Number.POSITIVE_INFINITY,
+		);
+		await vault.userWrite(stray, "Foo bar");
+		expect(trashes()).toBe(3);
+		// Each copy was taken back: its text stands in the stray alone.
+		expect(vault.content(stray)).toBe("Foo bar 2");
+		expect(vault.content(path)).toBe(untouched);
+		expect((await run(store.diagnostics)).healingBlocked).toMatchObject([
+			{ canonicalPath: path, path: stray },
+		]);
+		await expectIndexMatchesFiles(store, vault);
+
+		vault.failNextWrite(() => false);
+		await vault.userWrite(stray, "Foo bar 3");
+		expect(vault.content(stray)).toBeUndefined();
+		expect(visible(vault.content(path))).toBe(
+			`${visible(untouched)}\nFoo bar 3\n`,
+		);
+		expect((await run(store.diagnostics)).healingBlocked).toEqual([]);
+	});
+
+	test("a copy the user edited in the Crossroad note too stays beside the stray's new text", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, lemmaWith(fahrer, "🚗"));
+		const before = visible(vault.content(path)) ?? "";
+		atTrash(vault, () => {
+			vault.silentWrite(stray, "Foo bar baz");
+			vault.silentWrite(
+				path,
+				(vault.content(path) ?? "").replace("Foo bar", "Foo bar qux"),
+			);
+		});
+		await vault.userWrite(stray, "Foo bar");
+		expect(vault.content(stray)).toBeUndefined();
+		// Neither edit is dropped.
+		expect(visible(vault.content(path))).toBe(
+			`${before}\nFoo bar qux\n\nFoo bar baz\n`,
+		);
+		await expectIndexMatchesFiles(store, vault);
+	});
+
+	test("a copy is not taken back from a Crossroad note the user edited meanwhile", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, lemmaWith(fahrer, "🚗"));
+		const before = visible(vault.content(path)) ?? "";
+		atTrash(
+			vault,
+			(index) => {
+				vault.silentWrite(stray, `Foo bar ${index}`);
+				if (index === 2)
+					vault.silentWrite(
+						path,
+						noteMetadataHelper.mapBody(
+							(body) => `${body.trimEnd()}\n\nTheirs.\n`,
+						)(vault.content(path) ?? ""),
+					);
+			},
+			3,
+		);
+		await vault.userWrite(stray, "Foo bar");
+		expect(vault.content(stray)).toBe("Foo bar 2");
+		expect(visible(vault.content(path))).toBe(
+			`${before}\nFoo bar 1\n\nTheirs.\n`,
+		);
+
+		// The next merge keeps every version.
+		await vault.userWrite(stray, "Foo bar 3");
+		expect(vault.content(stray)).toBeUndefined();
+		expect(visible(vault.content(path))).toBe(
+			`${before}\nFoo bar 1\n\nTheirs.\n\nFoo bar 3\n`,
+		);
+	});
+
+	test("a stray that takes properties meanwhile stays, and its copy is taken back", async () => {
+		const { store, vault } = await openStore();
+		await seed(store, lemmaWith(fahrer, "🚗"));
+		const untouched = vault.content(path);
+		const withProperties = "---\ntags: [beruf]\n---\nMine.\n";
+		atTrash(vault, () => vault.silentWrite(stray, withProperties));
+		await vault.userWrite(stray, "Mine.");
+		expect(vault.content(stray)).toBe(withProperties);
+		expect(vault.content(path)).toBe(untouched);
+		expect((await run(store.diagnostics)).healingBlocked).toMatchObject([
+			{ canonicalPath: path, path: stray },
+		]);
 	});
 });
 

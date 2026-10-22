@@ -600,6 +600,12 @@ const TRANSIENT_RETRY_DELAY = "100 millis";
 /** Plans a ref rewrite tries: each may meet a Reading note Obsidian's link updater rewrote. */
 const REF_REWRITE_ATTEMPTS = 8;
 
+/**
+ * Merges of one displaced Crossroad note tried in a row while its trash is
+ * refused, as text typed into it meanwhile refuses it.
+ */
+const MERGE_ATTEMPTS = 3;
+
 /** Lemmas whose tables one hold of the writer lock re-renders. */
 const TABLES_CHUNK = 32;
 
@@ -1426,10 +1432,17 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	 * Merges a displaced note into its spelling's Crossroad note, which is
 	 * already there: its user text goes below the Crossroad's rendering,
 	 * then the note goes to the trash, only while it still holds what was
-	 * read, so text typed into it meanwhile waits for the next merge. A note
-	 * whose frontmatter holds properties stays, since the Crossroad note
-	 * cannot take them. Answers whether it merged; a note that stays is
-	 * added to `blocked`.
+	 * read. A merge lands as a whole (#201): when the trash is refused, the
+	 * note changed after it was read, so its copy, while the Crossroad note
+	 * still holds it as the store wrote it, is replaced by the note's text
+	 * as it now reads, and the trash is tried again. After
+	 * `MERGE_ATTEMPTS` refusals the copy is taken back and the note waits
+	 * for the next merge, so an edited paragraph never stands in the
+	 * Crossroad note beside its earlier copy. A Crossroad note changed after
+	 * the store wrote the copy keeps it, and the note's text is added again
+	 * beside it: both versions stay. A note whose frontmatter holds
+	 * properties stays, since the Crossroad note cannot take them. Answers
+	 * whether it merged; a note that stays is added to `blocked`.
 	 */
 	const mergeDisplaced = Effect.fnUntraced(function* (
 		displaced: DisplacedCrossroad,
@@ -1440,64 +1453,156 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			blocked.push({ canonicalPath: to, message, path: from });
 			return false;
 		};
-		const view = index;
-		const read = yield* Effect.result(readCurrent(view, from));
-		// A file ahead of the index: its event comes, and heals it then.
-		if (read._tag === "Failure") return false;
-		const current = read.success;
-		const { properties, texts } = crossroadUserText(current);
-		if (properties)
-			return block(
-				"Its Crossroad note is already there, and it holds properties a Crossroad note cannot take; move them by hand",
+		const reread = Effect.suspend(() => {
+			cache?.delete(from);
+			cache?.delete(to);
+			return rereadChanges([from, to]);
+		});
+		/**
+		 * The Crossroad note before this merge's copy, and with it, while the
+		 * file is known to hold the copy as the store wrote it.
+		 */
+		let copy:
+			| { readonly before: string; readonly after: string }
+			| undefined;
+		/** Takes the copy back, unless the Crossroad note changed since. */
+		const takeBack = Effect.suspend(() => {
+			if (copy === undefined || copy.after === copy.before)
+				return Effect.void;
+			return Effect.result(
+				dispatch([compareAndSwap(to, copy.after, copy.before)]),
+			).pipe(
+				Effect.flatMap((undone) => {
+					if (undone._tag === "Success") return Effect.void;
+					const warning = `Dictionary could not take back what it copied from ${from} into ${to}; both keep the text`;
+					// A conflict is the user's edit of the Crossroad note.
+					return isContentConflict(undone.failure)
+						? Effect.logWarning(warning)
+						: Effect.logWarning(warning, undone.failure);
+				}),
 			);
-		const planned = yield* Effect.result(
-			planCrossroad({
-				after: view,
-				extra: texts,
-				key,
-				skip: new Set(),
-				view,
-			}),
-		);
-		if (planned._tag === "Failure")
-			return planned.failure._tag === "StaleRead"
-				? false
-				: block(planned.failure.message);
-		const writes = planned.success;
-		if (writes.length > 0) {
-			const wrote = yield* Effect.result(
-				dispatch(writes.map(({ action }) => action)),
-			);
-			if (wrote._tag === "Failure") {
-				yield* Effect.logWarning(
-					`Dictionary could not merge ${from} into ${to}`,
-					wrote.failure,
-				);
-				yield* rereadChanges([to]);
-				return false;
+		});
+		for (let attempt = 0; attempt < MERGE_ATTEMPTS; attempt++) {
+			if (attempt > 0) {
+				yield* reread;
+				// Gone meanwhile: what it held stays merged.
+				if (index.entry(from) === undefined) return true;
 			}
-		}
-		const trashed = yield* Effect.result(
-			dispatch([
-				{
-					kind: VaultActionKind.TrashMdFile,
-					payload: {
-						ifContent: current,
-						splitPath: mdSplitPath(from),
+			const view = index;
+			const read = yield* Effect.result(readCurrent(view, from));
+			// A file ahead of the index: its event comes, and heals it then.
+			if (read._tag === "Failure") {
+				if (copy === undefined) return false;
+				continue;
+			}
+			const current = read.success;
+			const { properties, texts } = crossroadUserText(current);
+			if (properties) {
+				yield* takeBack;
+				if (copy !== undefined) yield* reread;
+				return block(
+					"Its Crossroad note is already there, and it holds properties a Crossroad note cannot take; move them by hand",
+				);
+			}
+			if (copy !== undefined) {
+				// The copy as the note now reads, in place of the old one.
+				const next = writeCrossroadNote(
+					crossroadContentOf(view, key),
+					metadataFormat(),
+					texts,
+				)(copy.before);
+				const replaced =
+					next === copy.after
+						? undefined
+						: yield* Effect.result(
+								dispatch([
+									compareAndSwap(to, copy.after, next),
+								]),
+							);
+				if (replaced === undefined || replaced._tag === "Success")
+					copy = { after: next, before: copy.before };
+				else if (isContentConflict(replaced.failure)) {
+					// The user edited the Crossroad note since: the copy stays
+					// as they left it, and the note's text joins it again.
+					yield* Effect.logWarning(
+						`Dictionary keeps both versions of the text ${from} changed after it was copied into ${to}, which changed too`,
+					);
+					copy = undefined;
+					continue;
+				} else {
+					yield* Effect.logWarning(
+						`Dictionary could not merge ${from} into ${to}`,
+						replaced.failure,
+					);
+					yield* reread;
+					return false;
+				}
+			} else {
+				const before = yield* Effect.result(readCurrent(view, to));
+				if (before._tag === "Failure") return false;
+				const planned = yield* Effect.result(
+					planCrossroad({
+						after: view,
+						extra: texts,
+						key,
+						skip: new Set(),
+						view,
+					}),
+				);
+				if (planned._tag === "Failure")
+					return planned.failure._tag === "StaleRead"
+						? false
+						: block(planned.failure.message);
+				const writes = planned.success;
+				if (writes.length > 0) {
+					const wrote = yield* Effect.result(
+						dispatch(writes.map(({ action }) => action)),
+					);
+					if (wrote._tag === "Failure") {
+						yield* Effect.logWarning(
+							`Dictionary could not merge ${from} into ${to}`,
+							wrote.failure,
+						);
+						yield* rereadChanges([to]);
+						return false;
+					}
+				}
+				copy = {
+					after: writes.at(-1)?.content ?? before.success,
+					before: before.success,
+				};
+			}
+			const trashed = yield* Effect.result(
+				dispatch([
+					{
+						kind: VaultActionKind.TrashMdFile,
+						payload: {
+							ifContent: current,
+							splitPath: mdSplitPath(from),
+						},
 					},
-				},
-			]),
-		);
-		// A note that changed meanwhile stays, for the next merge to take.
-		if (trashed._tag === "Failure" && !isContentConflict(trashed.failure))
-			yield* Effect.logWarning(
-				`Dictionary merged ${from} into ${to} but could not trash it`,
-				trashed.failure,
+				]),
 			);
-		cache?.delete(from);
-		cache?.delete(to);
-		yield* rereadChanges([from, to]);
-		return index.entry(from) === undefined;
+			// Refused: the note changed after it was read. Merge it again.
+			if (
+				trashed._tag === "Failure" &&
+				isContentConflict(trashed.failure)
+			)
+				continue;
+			if (trashed._tag === "Failure")
+				yield* Effect.logWarning(
+					`Dictionary merged ${from} into ${to} but could not trash it`,
+					trashed.failure,
+				);
+			yield* reread;
+			return index.entry(from) === undefined;
+		}
+		// It kept changing: it waits, whole, for the next merge.
+		yield* takeBack;
+		yield* reread;
+		return block(
+			"It changed during each merge into its Crossroad note; it is merged once it stays unchanged",
+		);
 	});
 
 	/**
