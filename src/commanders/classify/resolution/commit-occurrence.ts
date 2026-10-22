@@ -25,6 +25,7 @@ import {
 	type DictionaryCommitError,
 	type DictionaryTransactionConflict,
 	type DictionaryView,
+	storedRefFor,
 	Transaction,
 } from "@textfresser/dictionary";
 import type { AttestationLink } from "dumdict";
@@ -67,6 +68,13 @@ export type OccurrenceCommit = {
 	readonly surface: Dumling.Surface<"de">;
 	/** The occurrence's Attestation Ref; none when its block cannot carry an ID. */
 	readonly attestationRef?: string;
+	/**
+	 * Every link path stored refs may name the occurrence's Scroll by
+	 * (`ScrollRefNames.aliases`). A stored ref of the same occurrence that
+	 * names the Scroll by one of them stands for `attestationRef`, so the
+	 * occurrence never gets a second ref (#198).
+	 */
+	readonly scrollAliases?: readonly string[];
 };
 
 export type OccurrenceCommitted =
@@ -121,13 +129,24 @@ const emojiDescriptionsOf = (
 		"emojiDescription" in reading ? [reading.emojiDescription] : [],
 	);
 
-/** The occurrence's Attestation Link, when its block can carry an ID. */
-function linkOf(input: OccurrenceCommit): AttestationLink<"de"> | undefined {
+/**
+ * The occurrence's Attestation Link, when its block can carry an ID: its
+ * ref as the dictionary already holds it, if it holds it naming the
+ * Scroll another way.
+ */
+function linkOf(
+	view: DictionaryView,
+	input: OccurrenceCommit,
+): AttestationLink<"de"> | undefined {
 	return input.attestationRef === undefined
 		? undefined
 		: {
 				reading: input.reading,
-				ref: input.attestationRef,
+				ref: storedRefFor(
+					view,
+					input.attestationRef,
+					input.scrollAliases ?? [],
+				),
 				surfaceId: makeSurfaceId("de", input.surface),
 			};
 }
@@ -234,7 +253,7 @@ const loadContext = <I extends ReadingEntryContext<"de">["intent"]>(
 /** Plans a reused Reading's occurrence: its link and Surface, or the Surface alone. */
 const planReuse = (view: DictionaryView, input: OccurrenceCommit): Planned =>
 	Result.gen(function* () {
-		const link = linkOf(input);
+		const link = linkOf(view, input);
 		let outcome: DumdictPlanOutcome<"de">;
 		if (link === undefined) {
 			const request = {
@@ -293,7 +312,7 @@ const planNew = (view: DictionaryView, input: OccurrenceCommit): Planned =>
 	Result.gen(function* () {
 		const surfaceStored =
 			view.surface(makeSurfaceId("de", input.surface)) !== undefined;
-		const link = linkOf(input);
+		const link = linkOf(view, input);
 		const request = {
 			draft: {
 				note: {

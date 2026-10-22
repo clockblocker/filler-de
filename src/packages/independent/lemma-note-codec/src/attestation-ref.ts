@@ -3,7 +3,8 @@
  * place in a Scroll where an occurrence stands. A ref is an embed of the
  * occurrence's block whose alias keys the occurrence,
  * `![[Story#^0|^1a2b3c4d]]`. Its link path is the Scroll's basename, or its
- * vault path without `.md` where another note shares the basename.
+ * vault path without `.md` where Obsidian opens another note for the
+ * basename; the dictionary store decides which (`scrollRefNames`).
  *
  * Obsidian's link updater cannot see a ref in a note's metadata, but it
  * sees, and rewrites, the embed the Reading note shows under Deine

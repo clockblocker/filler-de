@@ -23,7 +23,7 @@ import {
 	readingEntry,
 	readingOf,
 } from "./support/fixtures";
-import { readingPath } from "./support/paths";
+import { crossroadPath, readingPath } from "./support/paths";
 import { openStore, seed } from "./support/store";
 
 const slowReading = readingOf(gehen, "🐌");
@@ -305,6 +305,181 @@ describe("a renamed Scroll whose names other notes share", () => {
 		await vault.userRename("Library/Story.md", "Library/Tale.md");
 		expect(storedRefs(vault.content(WALK))).toEqual([STORY_0]);
 		expect(storedRefs(vault.content(SLOW))).toEqual([TALE_0]);
+	});
+});
+
+describe("a renamed Scroll's names, ignoring case and the dictionary (#199)", () => {
+	const TALE_4 = ref("Tale", 4, "44444444");
+
+	test("keeps the refs it shadows on a note whose name differs only in case", async () => {
+		const tale4 = ref("tale", 4, "44444444");
+		const { vault } = await dictionary(
+			{ slow: [tale4], walk: [STORY_0] },
+			{ "Zettel/tale.md": "tale" },
+		);
+		// Obsidian matches "tale" to the renamed Scroll now, as it does "Tale".
+		await vault.userRename("Library/Story.md", "Library/Tale.md");
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("Tale", 0, "00000000"),
+		]);
+		expect(storedRefs(vault.content(SLOW))).toEqual([
+			ref("Zettel/tale", 4, "44444444"),
+		]);
+	});
+
+	test("keeps the refs it shadows on the one other note outside the dictionary", async () => {
+		const { vault } = await dictionary(
+			{ slow: [TALE_4], walk: [STORY_0] },
+			{
+				"Worter/de/Lexeme/NOUN/Fem/t/tal/tale/Tale.md": "",
+				"Zettel/Tale.md": "Tale",
+			},
+		);
+		await vault.userRename("Library/Story.md", "Library/Tale.md");
+		expect(storedRefs(vault.content(SLOW))).toEqual([
+			ref("Zettel/Tale", 4, "44444444"),
+		]);
+	});
+
+	test("move when only a dictionary note has the old name", async () => {
+		// Obsidian opens the Crossroad note story.md for "Story" once the Scroll left it.
+		const { vault } = await dictionary(
+			{},
+			{ [crossroadPath("story")]: "" },
+		);
+		await vault.userRename("Library/Story.md", "Library/Tale.md");
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("Tale", 0, "00000000"),
+			OTHER_2,
+			ref("Tale", 3, "33333333"),
+		]);
+	});
+
+	test("stay when a dictionary note and another note outside it have the old name", async () => {
+		const { vault } = await dictionary(
+			{},
+			{
+				[crossroadPath("story")]: "",
+				"Zettel/Story.md": "another Story",
+			},
+		);
+		await vault.userRename("Library/Story.md", "Library/Tale.md");
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			STORY_0,
+			OTHER_2,
+			STORY_3,
+		]);
+	});
+});
+
+describe("two Scrolls that swap names across bulks (#199)", () => {
+	const swapped = {
+		slow: [ref("Other", 1, "11111111")],
+		walk: [
+			ref("Other", 0, "00000000"),
+			ref("Story", 2, "22222222"),
+			ref("Other", 3, "33333333"),
+		],
+	};
+	const expectSwapped = (vault: FakeVault) => {
+		expect(storedRefs(vault.content(WALK))).toEqual(swapped.walk);
+		expect(storedRefs(vault.content(SLOW))).toEqual(swapped.slow);
+	};
+	/** Story → Tmp, Other → Story, Tmp → Other, all landed before the store hears any. */
+	const swapSilently = (vault: FakeVault) => {
+		vault.silentRename("Library/Story.md", "Library/Tmp.md");
+		vault.silentRename("Library/Other.md", "Library/Story.md");
+		vault.silentRename("Library/Tmp.md", "Library/Other.md");
+	};
+
+	test("trade names when the first bulk holds only the first move", async () => {
+		const { vault } = await dictionary();
+		swapSilently(vault);
+		await vault.announceRenames([["Library/Story.md", "Library/Tmp.md"]]);
+		// Obsidian opens the other Scroll for "Story" by now: the refs wait.
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			STORY_0,
+			OTHER_2,
+			STORY_3,
+		]);
+		await vault.announceRenames([
+			["Library/Other.md", "Library/Story.md"],
+			["Library/Tmp.md", "Library/Other.md"],
+		]);
+		expectSwapped(vault);
+	});
+
+	test("trade names when the last move comes in a bulk of its own", async () => {
+		const { vault } = await dictionary();
+		swapSilently(vault);
+		await vault.announceRenames([
+			["Library/Story.md", "Library/Tmp.md"],
+			["Library/Other.md", "Library/Story.md"],
+		]);
+		await vault.announceRenames([["Library/Tmp.md", "Library/Other.md"]]);
+		expectSwapped(vault);
+	});
+
+	test("trade names when each move comes in a bulk of its own", async () => {
+		const { vault } = await dictionary();
+		// Other moves aside first, Story takes its name, Other takes Story's.
+		vault.silentRename("Library/Other.md", "Library/Tmp.md");
+		vault.silentRename("Library/Story.md", "Library/Other.md");
+		vault.silentRename("Library/Tmp.md", "Library/Story.md");
+		await vault.announceRenames([["Library/Other.md", "Library/Tmp.md"]]);
+		await vault.announceRenames([["Library/Story.md", "Library/Other.md"]]);
+		await vault.announceRenames([["Library/Tmp.md", "Library/Story.md"]]);
+		expectSwapped(vault);
+	});
+
+	test("leaves the refs when the note that has their name never took it in a rename", async () => {
+		const { vault } = await dictionary(
+			{},
+			{ "Archive/Story.md": "another Story" },
+		);
+		await vault.userRename("Library/Story.md", "Library/Tale.md");
+		// Archive/Story.md moves, keeping its name: it took no name.
+		await vault.userRename("Archive/Story.md", "Zettel/Story.md");
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			STORY_0,
+			OTHER_2,
+			STORY_3,
+		]);
+	});
+});
+
+describe("how refs name a Scroll (#198)", () => {
+	test("by its basename while Obsidian opens it for that name", async () => {
+		const { store } = await dictionary();
+		expect(await run(store.scrollRefNames("Library/Story.md"))).toEqual({
+			aliases: ["Story"],
+			linkpath: "Story",
+		});
+	});
+
+	test("by its path where another note wins its basename", async () => {
+		const { store } = await dictionary(
+			{},
+			{ "Archive/Story.md": "another" },
+		);
+		expect(await run(store.scrollRefNames("Library/Story.md"))).toEqual({
+			aliases: ["Library/Story"],
+			linkpath: "Library/Story",
+		});
+	});
+
+	test("with every stored spelling that opens it as an alias, and none that opens another note", async () => {
+		const { store } = await dictionary({
+			slow: [ref("story", 1, "11111111")],
+			walk: [
+				ref("Library/Story", 0, "00000000"),
+				ref("Archive/Story", 3, "33333333"),
+			],
+		});
+		expect(await run(store.scrollRefNames("Library/Story.md"))).toEqual({
+			aliases: ["Story", "Library/Story", "story"],
+			linkpath: "Story",
+		});
 	});
 });
 

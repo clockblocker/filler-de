@@ -45,6 +45,10 @@ The API has four groups:
 | Vault reads | `readContent`, `readContentWithStat`, `exists`, `findByBasename`, `list`, `scan`, `scanWithStat` |
 | Active editor | `mdPwd`, `getOpenedContent`, `getSelectionInfo`, `cd`, `scrollOpenedFileToLine` |
 
+`findByBasename(basename, { folder, ignoreCase })` lists the Markdown files
+with that basename. With `ignoreCase`, names that differ only in case match
+too, as Obsidian matches link names on every file system.
+
 `scan` owns recursive traversal. A resolved root returns a `Complete` or
 `Partial` result; partial results retain successful file paths and typed
 diagnostics for failed nested folders. A root-resolution failure stays in the

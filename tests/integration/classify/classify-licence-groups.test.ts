@@ -60,7 +60,8 @@ describe("Classify gives each Licence Group its own table", () => {
 			jev: answersOf(LICENCE_GROUPS_DUMGEN.jev),
 			luna: LICENCE_GROUPS_DUMGEN.luna,
 		});
-		const vault = new FakeVault();
+		// Obsidian knows the Scroll, so refs name it by its basename.
+		const vault = new FakeVault({ [SCROLL]: STORY });
 		const store = await Effect.runPromise(
 			makeDumdictVaultStore({ projections: dictionaryProjections, vault }),
 		);
@@ -114,7 +115,10 @@ describe("Classify gives each Licence Group its own table", () => {
 		);
 		expectLicenceGroupNotes(
 			Object.fromEntries(
-				vault.markdownPaths().map((path) => [path, vault.content(path)]),
+				vault
+					.markdownPaths()
+					.filter((path) => path.startsWith("Worter/"))
+					.map((path) => [path, vault.content(path)]),
 			),
 		);
 		// The licence judge was asked about the stored plural, once.

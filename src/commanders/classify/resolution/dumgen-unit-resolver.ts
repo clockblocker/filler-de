@@ -259,6 +259,8 @@ const commitUnit = Effect.fnUntraced(function* (
 	planned: PlannedUnit,
 	/** The Segment's source block as an embed; none when the block cannot carry an ID. */
 	attestationRef: string | undefined,
+	/** The link paths stored refs may name the Scroll by. */
+	scrollAliases: readonly string[],
 ): Effect.fn.Return<ResolvedUnit, UnitPending> {
 	const { attestation, judge, sentence } = judged;
 	let decided = judged.decided;
@@ -268,6 +270,7 @@ const commitUnit = Effect.fnUntraced(function* (
 			...(attestationRef === undefined ? {} : { attestationRef }),
 			decision: decided.decision,
 			reading: decided.reading,
+			scrollAliases,
 			surface: attestation.surface,
 			...(decided.seen === undefined ? {} : { seen: decided.seen }),
 		}).pipe(Effect.mapError(pendingOnFailure("the dictionary refused it")));
@@ -333,6 +336,8 @@ export function dumgenUnitResolver(
 			function* (plan) {
 				const dumgen = yield* deps.dumgen;
 				const store = yield* deps.store;
+				// Refs name the Scroll as the store's rename rewrite does.
+				const names = yield* store.scrollRefNames(plan.scrollPath);
 				const firstOf = (planned: PlannedUnit) =>
 					planned.occurrences[0]?.from ?? 0;
 				const blocks = sourceBlocksOf(
@@ -390,6 +395,7 @@ export function dumgenUnitResolver(
 								plan.scrollPath,
 								id,
 								occurrenceKeyOf(planned.ref, planned.instance),
+								names.linkpath,
 							);
 				};
 				const judgements = new Map<
@@ -417,6 +423,7 @@ export function dumgenUnitResolver(
 									judged,
 									planned,
 									refOf(planned),
+									names.aliases,
 								),
 							),
 							Effect.map(

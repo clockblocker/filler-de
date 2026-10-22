@@ -745,7 +745,7 @@ export class VaultActionManager {
 
 	findByBasename(
 		basename: string,
-		options?: { folder?: SplitPathToFolder },
+		options?: { folder?: SplitPathToFolder; ignoreCase?: boolean },
 	): Effect.Effect<SplitPathToMdFile[], VamRuntimeFailure<VamVaultIoError>> {
 		return this.runtime.provide(
 			this.reader.findByBasename(basename, options),

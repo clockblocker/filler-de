@@ -156,7 +156,8 @@ async function setUp() {
 		jev: answersOf(CLASSIFY_RESOLUTION_DUMGEN.jev),
 		luna: CLASSIFY_RESOLUTION_DUMGEN.luna,
 	});
-	const vault = new FakeVault(VAULT);
+	// Obsidian knows the Scroll, so refs name it by its basename.
+	const vault = new FakeVault({ ...VAULT, [SCROLL]: STORY });
 	const store = await Effect.runPromise(makeDumdictVaultStore({ vault }));
 	// The old Hund note's attestation, with the link the user wrote then (#148).
 	const scroll = new MemoryScroll(
