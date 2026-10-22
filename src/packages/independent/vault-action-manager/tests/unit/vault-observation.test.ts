@@ -77,6 +77,7 @@ function makeHarness(shouldIgnore: (path: string) => boolean) {
 		app,
 		callbacks,
 		listenerRegistrations,
+		native,
 		observation,
 		removed,
 		selfEvents,
@@ -452,6 +453,45 @@ describe("VaultObservation", () => {
 			expect(received[0]?.events[0]?.kind).toBe("FileCreated");
 		} finally {
 			errorLog.mockRestore();
+		}
+	});
+
+	it("keeps delivering to a subscriber whose handler throws instead of failing", async () => {
+		const logged: unknown[] = [];
+		const errorLog = spyOn(console, "error").mockImplementation((...args) =>
+			logged.push(...args),
+		);
+		const plainLog = spyOn(console, "log").mockImplementation((...args) =>
+			logged.push(...args),
+		);
+		const { callbacks, native, observation } = makeHarness(() => false);
+		const received: BulkVaultEvent[] = [];
+		let calls = 0;
+
+		try {
+			observation.start();
+			Effect.runSync(
+				native.subscribeEffect((bulk) => {
+					calls += 1;
+					if (calls === 1) throw new Error("handler threw");
+					return Effect.sync(() => {
+						received.push(bulk);
+					});
+				}),
+			);
+			callbacks.get("create")?.(mdFile("Library/first.md") as never);
+			observation.flushPending();
+			await observation.whenIdle();
+			callbacks.get("create")?.(mdFile("Library/second.md") as never);
+			observation.flushPending();
+			await observation.whenIdle();
+
+			expect(calls).toBe(2);
+			expect(received).toHaveLength(1);
+			expect(Bun.inspect(logged)).toContain("handler threw");
+		} finally {
+			errorLog.mockRestore();
+			plainLog.mockRestore();
 		}
 	});
 

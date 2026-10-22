@@ -573,12 +573,14 @@ export class VaultObservation<
 			);
 			// The handler runs in a fiber of its own, scoped to the channel,
 			// so closing the subscription from inside it cannot interrupt it.
-			const handling = yield* state
-				.handler(bulk)
-				.pipe(
-					Effect.withSpan("vam.observation.handle"),
-					Effect.forkIn(this.core.rootScope),
-				);
+			// Suspended, so a handler that throws instead of failing fails
+			// that fiber, not this loop.
+			const handling = yield* Effect.suspend(() =>
+				state.handler(bulk),
+			).pipe(
+				Effect.withSpan("vam.observation.handle"),
+				Effect.forkIn(this.core.rootScope),
+			);
 			yield* Fiber.await(handling).pipe(
 				Effect.flatMap((exit) =>
 					Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause)

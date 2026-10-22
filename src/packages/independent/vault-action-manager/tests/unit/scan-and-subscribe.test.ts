@@ -209,6 +209,21 @@ describe("VaultActionManager scanAndSubscribe", () => {
 		]);
 	});
 
+	it("delivers the delete of a file created before the cursor", async () => {
+		const harness = await makeHarness({ "Library/a.md": "" });
+		await harness.vault.createByHand("Library/held.md");
+
+		const subscription = await harness.subscribe();
+		await harness.vault.deleteByHand("Library/held.md");
+		await run(subscription.start);
+		await harness.settle();
+
+		expect(paths(subscription)).toContain("Library/held.md");
+		// The create before the cursor must not travel with its delete:
+		// the consumer would otherwise see held.md appear before it goes.
+		expect(harness.delivered()).toEqual(["FileDeleted Library/held.md"]);
+	});
+
 	it("keeps a folder rename on one side of the snapshot", async () => {
 		const harness = await makeHarness({
 			"Library/Early/one.md": "1",

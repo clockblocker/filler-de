@@ -195,6 +195,12 @@ export function makeObsidianVault(initial: Record<string, string>) {
 		/** A file the user creates in Obsidian. */
 		createByHand: (path: string, content = "") =>
 			app.vault.create(path, content),
+		/** A file or folder the user deletes in Obsidian. */
+		deleteByHand: (path: string) => {
+			const entry = byPath.get(path);
+			if (!entry) throw new Error(`missing ${path}`);
+			return app.fileManager.trashFile(entry);
+		},
 		/** An edit the user makes in Obsidian. */
 		editByHand: (path: string, content: string) => {
 			const entry = byPath.get(path);
