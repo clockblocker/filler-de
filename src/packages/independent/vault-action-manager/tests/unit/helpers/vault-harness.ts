@@ -5,6 +5,7 @@ import {
 	TFile,
 	TFolder,
 } from "obsidian";
+import { rewriteWikilinks } from "./link-rewrite";
 
 /**
  * A vault whose writes fire Obsidian's modify callback, and whose
@@ -103,12 +104,15 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 	const app = {
 		fileManager: {
 			renameFile: async (file: TAbstractFile, toPath: string) => {
+				const fromPath = file.path;
 				move(file, toPath);
 				for (const linking of linkingFiles) {
-					write(
-						linking,
-						`${contents.get(linking.path)} [[${toPath}]]`,
+					const content = contents.get(linking.path) ?? "";
+					const rewritten = rewriteWikilinks(
+						content,
+						new Map([[fromPath, toPath]]),
 					);
+					if (rewritten !== content) write(linking, rewritten);
 				}
 			},
 			trashFile: async (file: TAbstractFile) => {

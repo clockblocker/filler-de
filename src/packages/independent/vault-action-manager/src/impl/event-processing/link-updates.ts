@@ -150,9 +150,10 @@ type LinkUpdatesOptions = {
  * window is labelled `LinkUpdate` with basis `Timing`.
  *
  * A linking file under a protected prefix is read before the rename and
- * written back after it, behind a check that it still holds what Obsidian
- * wrote, so a hand edit in between is never overwritten. Its links to the
- * renamed entry keep their old text.
+ * written back after it, only if it differs from what was read in link
+ * text alone, and behind a check that it still holds what Obsidian wrote,
+ * so a hand edit in between is never overwritten. Its links to the renamed
+ * entry keep their old text.
  */
 export class LinkUpdates {
 	private readonly expected = Ref.makeUnsafe<
@@ -270,7 +271,8 @@ export class LinkUpdates {
 
 	/**
 	 * The restoration VAM made of the protected file at `path` after a rename
-	 * of `operationId`; `undefined` when it made none.
+	 * of `operationId`; `undefined` when it made none, or a later rename of
+	 * the operation rewrote the file and VAM did not put it back.
 	 */
 	readonly restorationOf = Effect.fnUntraced(function* (
 		this: LinkUpdates,
@@ -360,7 +362,8 @@ export class LinkUpdates {
 
 	/**
 	 * Puts the protected file back as `snapshot` held it, if the rename
-	 * changed it, and only while it holds what the rename left there.
+	 * changed it, the change was its links alone and no unpredicted write
+	 * was heard, and only while it holds what the rename left there.
 	 */
 	private readonly restore = Effect.fn("vam.linkUpdates.restoreProtected")(
 		function* (
@@ -376,10 +379,19 @@ export class LinkUpdates {
 				return [guards.get(key), next];
 			});
 			const rewritten = yield* readFile(snapshot.path);
-			if (rewritten === undefined) return;
+			if (rewritten === undefined) return yield* this.unrestored(key);
 			const rewrittenHash = vaultContentHash(rewritten);
 			if (rewrittenHash === snapshot.hash) return;
-			if (guard?.foreign !== false) {
+			// Two checks, since either alone can miss a foreign write: a
+			// callback can lag the write it reports (or go unheard while no
+			// modify subscriber listens), and a write that changes only links
+			// looks like the rewrite. Restore only if no unpredicted callback
+			// came and the file differs from its pre-image in link text alone.
+			if (
+				guard?.foreign !== false ||
+				!differsOnlyInLinks(snapshot.content, rewritten)
+			) {
+				yield* this.unrestored(key);
 				return yield* Effect.logWarning(
 					"[LinkUpdates] Left a protected file as it is: something other than Obsidian's link updater changed it during a rename",
 					{
@@ -389,7 +401,7 @@ export class LinkUpdates {
 				);
 			}
 			const splitPath = splitPathCodec.parse(snapshot.path);
-			if (splitPath.kind !== "MdFile") return;
+			if (splitPath.kind !== "MdFile") return yield* this.unrestored(key);
 			// The guarded inverse `dispatchOrUndo` builds for a write: the
 			// pre-image back, only while the file holds what the rename left.
 			// It runs in the rename's own action, so under its caller and
@@ -406,6 +418,7 @@ export class LinkUpdates {
 				}),
 			);
 			if (Result.isFailure(written)) {
+				yield* this.unrestored(key);
 				return yield* Effect.logError(
 					"[LinkUpdates] Could not put back a protected file Obsidian's link updater rewrote",
 					{
@@ -437,6 +450,19 @@ export class LinkUpdates {
 			);
 		},
 	);
+
+	/**
+	 * Forgets an earlier restoration of the file at `key`: a later rename of
+	 * the same operation rewrote it, and VAM did not put it back this time.
+	 */
+	private unrestored(key: string): Effect.Effect<void> {
+		return Ref.update(this.restorations, (restorations) => {
+			if (!restorations.has(key)) return restorations;
+			const next = new Map(restorations);
+			next.delete(key);
+			return next;
+		});
+	}
 
 	/** Expects each of `paths` once, until `rename` finishes. */
 	private readonly expect = Effect.fnUntraced(function* (
@@ -557,6 +583,37 @@ function movedPath(source: string, target: string, to: string): string {
 			),
 		);
 	return source;
+}
+
+/**
+ * The spans Obsidian's link updater rewrites: wikilinks and embeds (also in
+ * a property value), and Markdown links and images, with an optional title.
+ */
+const LINK =
+	/!?\[\[(?:(?!\]\])[^\n])*\]\]|!?\[[^\]\n]*\]\((?:<[^>\n]*>|[^)\s]*)(?:\s+"[^"\n]*")?\)/g;
+
+/** `content` without its links: the text around them, in order. */
+function textAroundLinks(content: string): string[] {
+	const texts: string[] = [];
+	let last = 0;
+	for (const link of content.matchAll(LINK)) {
+		texts.push(content.slice(last, link.index));
+		last = link.index + link[0].length;
+	}
+	texts.push(content.slice(last));
+	return texts;
+}
+
+/**
+ * Whether `after` holds `before` with only links replaced, one for one: what
+ * Obsidian's link updater does. Any other change, such as a hand edit or a
+ * Sync write landing inside the rename, makes it `false`. A link it does not
+ * parse counts as text, so the answer errs towards `false`.
+ */
+export function differsOnlyInLinks(before: string, after: string): boolean {
+	const was = textAroundLinks(before);
+	const is = textAroundLinks(after);
+	return was.length === is.length && was.every((text, i) => text === is[i]);
 }
 
 function isMarkdownPath(path: string): boolean {

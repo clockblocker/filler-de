@@ -18,6 +18,7 @@ import {
 	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
+import { differsOnlyInLinks } from "../../src/impl/event-processing/link-updates";
 import {
 	makeObsidianVault,
 	type ObsidianVaultLinkOptions,
@@ -130,7 +131,7 @@ describe("link updates after a VAM rename", () => {
 		);
 
 		expect(vault.content("Library/Story.md")).toBe(
-			`[[Kraftwerk]] [[${MOVED}]]`,
+			"[[Worter/k/Kraftwerk]]",
 		);
 		expect(observed.modified).toEqual([
 			"Library/Story.md (LinkUpdate Predicted heal-kraftwerk)",
@@ -206,7 +207,7 @@ describe("link updates after a VAM rename", () => {
 		expect(vault.files()).toContain(MOVED);
 		expect(vault.content(EXEMPLAR)).toBe(exemplar);
 		expect(vault.content("Library/Story.md")).toBe(
-			`[[Kraftwerk]] [[${MOVED}]]`,
+			"[[Worter/k/Kraftwerk]]",
 		);
 		expect(observed.protectedWriters).toEqual([
 			{
@@ -244,6 +245,111 @@ describe("link updates after a VAM rename", () => {
 		]);
 	});
 
+	it("never puts back a predicted protected file that Obsidian left alone but someone edited during the rename", async () => {
+		// The resolved links say the exemplar links to Kraftwerk, but no
+		// link the move changes; the one modify callback is the user's.
+		let vault: ReturnType<typeof makeObsidianVault> | undefined;
+		const result = await observe(
+			{ [EXEMPLAR]: "Strom aus Kohle.", [KRAFTWERK]: "# Kraftwerk" },
+			[[EXEMPLAR, KRAFTWERK]],
+			(manager) =>
+				manager.dispatch([renameMd(KRAFTWERK, MOVED)], {
+					caller: "dictionary",
+					operationId: "heal-kraftwerk",
+				}),
+			{
+				afterRewrite: () =>
+					vault?.editByHand(EXEMPLAR, "Strom aus Kohle, getippt."),
+				vault: (made) => {
+					vault = made;
+				},
+			},
+		);
+
+		expect(result.vault.content(EXEMPLAR)).toBe(
+			"Strom aus Kohle, getippt.",
+		);
+		expect(result.observed.protectedWriters).toEqual([
+			{ path: EXEMPLAR, writer: "VamRenameLinkUpdate" },
+		]);
+	});
+
+	it("never puts back a rewritten protected file that another writer changed before its callback arrived", async () => {
+		let vault: ReturnType<typeof makeObsidianVault> | undefined;
+		const result = await observe(
+			{ [EXEMPLAR]: "[[Kraftwerk]]", [KRAFTWERK]: "# Kraftwerk" },
+			[[EXEMPLAR, KRAFTWERK]],
+			(manager) =>
+				manager.dispatch([renameMd(KRAFTWERK, MOVED)], {
+					caller: "dictionary",
+					operationId: "heal-kraftwerk",
+				}),
+			{
+				afterRewrite: () =>
+					vault?.editUnheard(
+						EXEMPLAR,
+						`${vault.content(EXEMPLAR)} (synced)`,
+					),
+				vault: (made) => {
+					vault = made;
+				},
+			},
+		);
+
+		expect(result.vault.content(EXEMPLAR)).toBe(
+			"[[Worter/k/Kraftwerk]] (synced)",
+		);
+		expect(result.observed.protectedWriters).toEqual([
+			{ path: EXEMPLAR, writer: "VamRenameLinkUpdate" },
+		]);
+	});
+
+	it("reports a protected file as rewritten, not restored, when a later rename of the batch rewrote it and VAM left it", async () => {
+		const KOHLE = "Worter/Kohle.md";
+		let vault: ReturnType<typeof makeObsidianVault> | undefined;
+		let rewrites = 0;
+		const result = await observe(
+			{
+				[EXEMPLAR]: "[[Kraftwerk]] und [[Kohle]]",
+				[KOHLE]: "# Kohle",
+				[KRAFTWERK]: "# Kraftwerk",
+			},
+			[
+				[EXEMPLAR, KRAFTWERK],
+				[EXEMPLAR, KOHLE],
+			],
+			(manager) =>
+				manager.dispatch(
+					[
+						renameMd(KRAFTWERK, MOVED),
+						renameMd(KOHLE, "Worter/k/Kohle.md"),
+					],
+					{ caller: "dictionary", operationId: "heal-k" },
+				),
+			{
+				afterRewrite: () => {
+					rewrites += 1;
+					if (rewrites === 2)
+						vault?.editUnheard(
+							EXEMPLAR,
+							`${vault.content(EXEMPLAR)} (synced)`,
+						);
+				},
+				vault: (made) => {
+					vault = made;
+				},
+			},
+		);
+
+		expect(result.vault.content(EXEMPLAR)).toBe(
+			"[[Kraftwerk]] und [[Worter/k/Kohle]] (synced)",
+		);
+		expect(result.observed.protectedWriters.at(-1)).toEqual({
+			path: EXEMPLAR,
+			writer: "VamRenameLinkUpdate",
+		});
+	});
+
 	it("still reports a protected file Obsidian rewrote without a predicted link", async () => {
 		const { observed, vault } = await observe(
 			{ [EXEMPLAR]: "[[Kraftwerk]]", [KRAFTWERK]: "# Kraftwerk" },
@@ -256,7 +362,7 @@ describe("link updates after a VAM rename", () => {
 			{ unpredicted: [EXEMPLAR] },
 		);
 
-		expect(vault.content(EXEMPLAR)).toBe(`[[Kraftwerk]] [[${MOVED}]]`);
+		expect(vault.content(EXEMPLAR)).toBe("[[Worter/k/Kraftwerk]]");
 		expect(observed.protectedWriters).toEqual([
 			{ path: EXEMPLAR, writer: "Unattributed" },
 		]);
@@ -307,5 +413,23 @@ describe("link updates after a VAM rename", () => {
 				writer: "RestoredAfterLinkUpdate",
 			},
 		]);
+	});
+});
+
+describe("differsOnlyInLinks", () => {
+	it("accepts links rewritten in place, of every kind Obsidian rewrites", () => {
+		expect(
+			differsOnlyInLinks(
+				'---\nsiehe: "[[Kraftwerk]]"\n---\n![[Kohle]] und [K](Kraftwerk.md "t") und [[Kraftwerk|Kw]]',
+				'---\nsiehe: "[[Worter/k/Kraftwerk]]"\n---\n![[Worter/Kohle]] und [K](<Neu Ordner/Kraftwerk.md> "t") und [[Worter/k/Kraftwerk|Kw]]',
+			),
+		).toBe(true);
+	});
+
+	it("refuses any change outside a link, and a link added or removed", () => {
+		expect(differsOnlyInLinks("[[a]] b", "[[x]] c")).toBe(false);
+		expect(differsOnlyInLinks("[[a]] b", "[[a]] [[x]] b")).toBe(false);
+		expect(differsOnlyInLinks("[[a]] b", " b")).toBe(false);
+		expect(differsOnlyInLinks("[[a]]", "[[a]]\n")).toBe(false);
 	});
 });

@@ -77,8 +77,13 @@ export const classifyProtectedModifications = Effect.fnUntraced(function* (
 	const modifications: ProtectedPathModification[] = [];
 	for (const { modification, path, prefix } of candidates) {
 		const { origin } = modification;
+		// A restored file's window ends with VAM's own write, or with the
+		// predicted rewrite when that write fell in the next window. A timed
+		// `LinkUpdate` is a write VAM did not predict, so it is reported as
+		// a change even after a restoration of the same operation.
 		const restoration =
-			origin.kind === "LinkUpdate" || origin.kind === "Vam"
+			origin.kind === "Vam" ||
+			(origin.kind === "LinkUpdate" && origin.basis === "Predicted")
 				? yield* linkUpdates.restorationOf(path, origin.operationId)
 				: undefined;
 		if (restoration !== undefined) {

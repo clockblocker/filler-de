@@ -3,6 +3,7 @@
  * Manager over it.
  */
 import { type App, type TAbstractFile, TFile, TFolder } from "obsidian";
+import { rewriteWikilinks } from "./link-rewrite";
 
 type Callback = (...args: never[]) => void;
 
@@ -27,10 +28,11 @@ export type ObsidianVaultLinkOptions = {
  * Obsidian does.
  *
  * `linkTo` records a resolved link, as `MetadataCache.resolvedLinks` holds
- * it. `FileManager.renameFile` then rewrites each file linking to the moved
- * file, or to a file below the moved folder, by appending the new path, and
- * each file in `unpredicted` as well, as the link updater rewrites a link
- * the rename made ambiguous.
+ * it. `FileManager.renameFile` then rewrites, in place, the wikilinks to a
+ * moved file in each file linking to the moved file, or to a file below the
+ * moved folder, and in each file in `unpredicted` as well, as the link
+ * updater rewrites a link the rename made ambiguous. A file whose links name
+ * no moved file is not written.
  */
 export function makeObsidianVault(
 	initial: Record<string, string>,
@@ -153,11 +155,18 @@ export function makeObsidianVault(
 		const linking = Object.entries(resolvedLinks)
 			.filter(([, destinations]) => linksTo(destinations, fromPath))
 			.map(([source]) => source);
+		const movedFiles =
+			entry instanceof TFolder
+				? descendants(entry)
+						.filter((each) => each instanceof TFile)
+						.map((each) => each.path)
+				: [fromPath];
 		await rename(entry, toPath);
 		const moved = (path: string) =>
 			path === fromPath || path.startsWith(`${fromPath}/`)
 				? `${toPath}${path.slice(fromPath.length)}`
 				: path;
+		const moves = new Map(movedFiles.map((path) => [path, moved(path)]));
 		for (const destinations of Object.values(resolvedLinks))
 			for (const destination of Object.keys(destinations)) {
 				const now = moved(destination);
@@ -175,8 +184,10 @@ export function makeObsidianVault(
 			return;
 		for (const path of new Set([...linking.map(moved), ...unpredicted])) {
 			const file = byPath.get(path);
-			if (file instanceof TFile)
-				write(file, `${contents.get(path) ?? ""} [[${toPath}]]`);
+			if (!(file instanceof TFile)) continue;
+			const content = contents.get(path) ?? "";
+			const rewritten = rewriteWikilinks(content, moves);
+			if (rewritten !== content) write(file, rewritten);
 		}
 		links.afterRewrite?.();
 	};
@@ -274,6 +285,14 @@ export function makeObsidianVault(
 			const entry = byPath.get(path);
 			if (!(entry instanceof TFile)) throw new Error(`missing ${path}`);
 			write(entry, content);
+		},
+		/**
+		 * A write whose modify callback has not arrived yet, such as Sync's
+		 * before Obsidian's file watcher reports it.
+		 */
+		editUnheard: (path: string, content: string) => {
+			if (!contents.has(path)) throw new Error(`missing ${path}`);
+			contents.set(path, content);
 		},
 		files: () =>
 			[...byPath.values()]

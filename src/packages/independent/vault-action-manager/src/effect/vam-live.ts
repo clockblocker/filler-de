@@ -1,5 +1,5 @@
 import { Effect, Layer, Tracer } from "effect";
-import { type App, MarkdownView, TFolder } from "obsidian";
+import { type App, MarkdownView, type TAbstractFile, TFolder } from "obsidian";
 import type { RecentTrace } from "../diagnostics/recent-trace";
 import {
 	getAbstractFileByPath,
@@ -201,28 +201,41 @@ function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
  * Who links to the entry at `path`, from `MetadataCache.resolvedLinks`:
  * the links Obsidian's link updater considers, since it rewrites only
  * links that resolve. A folder's are those to any file below it.
+ *
+ * One pass over the resolved links, with a set lookup per link: a folder's
+ * files are collected once from Obsidian's tree, whose paths are the keys
+ * `resolvedLinks` uses, so no link is normalized or compared by prefix.
  */
 function readLinkSources(app: App, path: string): LinkSources {
 	const setting = readLinkUpdateSetting(app);
 	const entry = getAbstractFileByPath(app.vault, toSystemPath(path));
 	if (!entry) return { setting, sources: [], target: null };
-	const target = entry.path;
-	const pointsAtTarget =
+	const targets =
 		entry instanceof TFolder
-			? (destinations: Record<string, number>) =>
-					Object.keys(destinations).some((destination) =>
-						VaultPath.caseSensitive.isUnder(destination, target, {
-							inclusive: false,
-						}),
-					)
-			: (destinations: Record<string, number>) =>
-					Object.hasOwn(destinations, target);
+			? filesBelow(entry)
+			: new Set<string>([entry.path]);
 	const sources: string[] = [];
-	for (const [source, destinations] of Object.entries(
-		app.metadataCache.resolvedLinks,
-	))
-		if (pointsAtTarget(destinations)) sources.push(source);
-	return { setting, sources, target };
+	if (targets.size > 0)
+		for (const [source, destinations] of Object.entries(
+			app.metadataCache.resolvedLinks,
+		))
+			for (const destination in destinations)
+				if (targets.has(destination)) {
+					sources.push(source);
+					break;
+				}
+	return { setting, sources, target: entry.path };
+}
+
+/** The paths of every file below `folder`, as Obsidian keys them. */
+function filesBelow(folder: TFolder): Set<string> {
+	const files = new Set<string>();
+	const pending: TAbstractFile[] = [...folder.children];
+	for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
+		if (next instanceof TFolder) pending.push(...next.children);
+		else files.add(next.path);
+	}
+	return files;
 }
 
 /** `alwaysUpdateLinks`, which `Vault.getConfig` answers outside the typings. */

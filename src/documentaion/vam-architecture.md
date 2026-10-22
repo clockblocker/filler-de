@@ -498,15 +498,36 @@ of any other file inside the rename's window is labelled `LinkUpdate`,
 the moved file itself, and files the metadata cache had not indexed yet.
 A failed read predicts nothing, and the rename runs as before.
 
+The read is one pass over `resolvedLinks` with a set lookup per link; a
+folder's files are collected once from Obsidian's tree, so a folder rename
+costs the vault's link count plus the folder's file count.
+
 A linking Markdown file under a protected prefix is read before the
-rename. Once the rename ends, if it changed, and its only change was the
-predicted rewrite, VAM puts the pre-image back as `dispatchOrUndo` inverts
-a write: a `ProcessMdFile` transform guarded by `expected: { hash }` of what
+rename. Once the rename ends, if it changed, VAM puts the pre-image back
+only when its only change was the predicted rewrite, by two checks, since
+either alone can miss a foreign write: no modify callback of the file came
+but the one predicted, and the file differs from its pre-image only in
+links replaced one for one (wikilinks, embeds, Markdown links; the text
+around them identical). A callback can lag its write, such as Sync's, or
+go unheard while nothing listens, and a write that changes only a link
+looks like the rewrite. VAM then puts the pre-image back as
+`dispatchOrUndo` inverts a write: a `ProcessMdFile` transform guarded by `expected: { hash }` of what
 the rename left, run inside the rename's action, so it is a `Vam` write under
 the rename's caller and operationId. It is not dispatched: a new batch would
 queue behind the running one, and dispatch refuses protected paths. A file changed by anything else meanwhile, or by then, is
 left as it is, and the watcher reports the rewrite. The rename's report
 entry is its own; a failed restoration is logged.
+
+The restoration goes through `Vault.process`, as Obsidian's own rewrite
+does, also when the file is open: Obsidian reloads the open view from
+disk, merging unsaved typing in, as it did for the rewrite. The watcher
+names a file `RestoredAfterLinkUpdate` only for VAM's write or the
+predicted rewrite; a timed `LinkUpdate` after it, or a later rename of the
+same operation whose rewrite VAM left, is reported as a change.
+
+With the setting off, `renameFile` waits for the dialog, so the batch, and
+every batch queued behind it, waits for the user's answer, and the
+rename's expectations and timing window stay open until then.
 
 Three ways to keep the exemplar unrewritten were weighed:
 

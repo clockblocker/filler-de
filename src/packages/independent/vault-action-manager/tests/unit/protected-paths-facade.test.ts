@@ -307,9 +307,7 @@ describe("VaultActionManager protected paths: modifications", () => {
 				writer: "VamRenameLinkUpdate",
 			},
 		]);
-		expect(harness.contents.get(EXEMPLAR_NOTE)).toBe(
-			"[[Hund]] [[Worter/Hunde.md]]",
-		);
+		expect(harness.contents.get(EXEMPLAR_NOTE)).toBe("[[Worter/Hunde]]");
 	});
 
 	it("puts back an open protected file whose predicted link Obsidian rewrote, and reports it restored", async () => {
