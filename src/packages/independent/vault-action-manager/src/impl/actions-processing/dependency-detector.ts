@@ -1,4 +1,5 @@
 import type { ActionDependency, DependencyGraph } from "../../types/dependency";
+import type { AnySplitPath, SplitPathToFolder } from "../../types/split-path";
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionKind } from "../../types/vault-action";
 import { makeKeyFor } from "../common/collapse-helpers";
@@ -11,6 +12,8 @@ import { makeKeyFor } from "../common/collapse-helpers";
  * - Rename actions depend on folder-creating actions for destination parent folders
  * - Folder-creating actions: CreateFolder OR RenameFolder (destination creates folder)
  * - CreateFolder depends on parent folder-creating actions
+ * - RenameFolder depends on trash actions strictly under its source, which
+ *   name paths that exist only until the folder moves
  * - Trash actions have no dependencies
  */
 export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
@@ -21,6 +24,7 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 	// Tracks actions that CREATE a folder at a given path (CreateFolder or RenameFolder.to)
 	const folderCreatorByPathKey = new Map<string, VaultAction>();
 	const upsertByPathKey = new Map<string, VaultAction>();
+	const trashActions: TrashAction[] = [];
 
 	for (const a of actions) {
 		if (a.kind === VaultActionKind.CreateFolder) {
@@ -33,6 +37,7 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 		if (a.kind === VaultActionKind.UpsertMdFile) {
 			upsertByPathKey.set(makeKeyFor(a.payload.splitPath), a);
 		}
+		if (isTrashAction(a)) trashActions.push(a);
 	}
 
 	// Initialize graph entries for all actions
@@ -55,6 +60,7 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 			action,
 			folderCreatorByPathKey,
 			upsertByPathKey,
+			trashActions,
 		);
 
 		deps.dependsOn = dependencies;
@@ -77,6 +83,7 @@ function findDependenciesForAction(
 	action: VaultAction,
 	folderCreatorByPathKey: Map<string, VaultAction>,
 	upsertByPathKey: Map<string, VaultAction>,
+	trashActions: readonly TrashAction[],
 ): VaultAction[] {
 	const dependencies: VaultAction[] = [];
 
@@ -108,7 +115,22 @@ function findDependenciesForAction(
 			break;
 		}
 
-		case VaultActionKind.RenameFolder:
+		case VaultActionKind.RenameFolder: {
+			dependencies.push(
+				...findParentFolderDependencies(
+					action.payload.to,
+					folderCreatorByPathKey,
+				),
+				...trashActions.filter((trash) =>
+					isStrictlyUnder(
+						trash.payload.splitPath,
+						action.payload.from,
+					),
+				),
+			);
+			break;
+		}
+
 		case VaultActionKind.RenameFile:
 		case VaultActionKind.RenameMdFile: {
 			dependencies.push(
@@ -137,6 +159,39 @@ function findDependenciesForAction(
 	}
 
 	return dependencies;
+}
+
+type TrashAction = Extract<
+	VaultAction,
+	{
+		kind:
+			| typeof VaultActionKind.TrashFolder
+			| typeof VaultActionKind.TrashFile
+			| typeof VaultActionKind.TrashMdFile;
+	}
+>;
+
+function isTrashAction(action: VaultAction): action is TrashAction {
+	return (
+		action.kind === VaultActionKind.TrashFolder ||
+		action.kind === VaultActionKind.TrashFile ||
+		action.kind === VaultActionKind.TrashMdFile
+	);
+}
+
+/** True when `path` lies below `folder`, not at it. */
+function isStrictlyUnder(
+	path: AnySplitPath,
+	folder: SplitPathToFolder,
+): boolean {
+	const folderParts = [...folder.pathParts, folder.basename].filter(
+		(part) => part.length > 0,
+	);
+	if (folderParts.length === 0) return false;
+	return (
+		path.pathParts.length >= folderParts.length &&
+		folderParts.every((part, i) => path.pathParts[i] === part)
+	);
 }
 
 function findParentFolderDependencies(

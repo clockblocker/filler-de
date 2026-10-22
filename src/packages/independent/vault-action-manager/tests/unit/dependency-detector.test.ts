@@ -201,6 +201,54 @@ describe("buildDependencyGraph", () => {
 		expect(trashDeps?.requiredBy).toHaveLength(0);
 	});
 
+	it("RenameFolder depends on trashes strictly under its source", () => {
+		const rename: VaultAction = {
+			kind: VaultActionKind.RenameFolder,
+			payload: {
+				from: folder("Old", ["Library"]),
+				to: folder("New", ["Library"]),
+			},
+		};
+		const nestedFile: VaultAction = {
+			kind: VaultActionKind.TrashMdFile,
+			payload: { splitPath: mdFile("__-Sub", ["Library", "Old", "Sub"]) },
+		};
+		const nestedFolder: VaultAction = {
+			kind: VaultActionKind.TrashFolder,
+			payload: { splitPath: folder("Gone", ["Library", "Old"]) },
+		};
+		const source: VaultAction = {
+			kind: VaultActionKind.TrashFolder,
+			payload: { splitPath: folder("Old", ["Library"]) },
+		};
+		const sibling: VaultAction = {
+			kind: VaultActionKind.TrashMdFile,
+			payload: { splitPath: mdFile("note", ["Library", "Older"]) },
+		};
+		const destination: VaultAction = {
+			kind: VaultActionKind.TrashMdFile,
+			payload: { splitPath: mdFile("note", ["Library", "New"]) },
+		};
+
+		const graph = buildDependencyGraph([
+			rename,
+			nestedFile,
+			nestedFolder,
+			source,
+			sibling,
+			destination,
+		]);
+
+		expect(graph.get(makeGraphKey(rename))?.dependsOn).toEqual([
+			nestedFile,
+			nestedFolder,
+		]);
+		expect(graph.get(makeGraphKey(nestedFile))?.requiredBy).toEqual([
+			rename,
+		]);
+		expect(graph.get(makeGraphKey(nestedFile))?.dependsOn).toHaveLength(0);
+	});
+
 	it("should handle actions with no dependencies", () => {
 		const create: VaultAction = {
 			kind: VaultActionKind.CreateFolder,

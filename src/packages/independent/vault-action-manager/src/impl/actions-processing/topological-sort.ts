@@ -43,10 +43,10 @@ export function topologicalSort(
 	const sorted: VaultAction[] = [];
 	const processed = new Set<string>();
 
-	// Process level by level
-	let qi = 0;
-	while (qi < queue.length) {
-		const action = queue[qi++];
+	// The queue holds only actions not yet taken, so re-sorting it after an
+	// insertion cannot move a pending action behind the read position.
+	while (queue.length > 0) {
+		const action = queue.shift();
 		if (!action) continue;
 
 		const key = makeGraphKey(action);
