@@ -184,6 +184,7 @@ describe("Classify resolves a selection end to end", () => {
 			quietMs: 0,
 			scrolls: {
 				exists: (path) => Effect.sync(() => vault.content(path) !== undefined),
+				modifiedAt: () => Effect.succeed(undefined),
 				read: (path) =>
 					Effect.sync(() => (path === SCROLL ? scroll.content : undefined)),
 				resolve: (linkpath) =>

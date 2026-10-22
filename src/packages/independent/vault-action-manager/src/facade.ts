@@ -273,6 +273,13 @@ export class VaultActionManager {
 		return this.runtime.provide(this.reader.readContentWithStat(splitPath));
 	}
 
+	/** The file's stat on disk, without reading its content. */
+	readStat(
+		splitPath: SplitPathToMdFile,
+	): Effect.Effect<VaultFileStat, VamRuntimeFailure<VamFileAccessError>> {
+		return this.runtime.provide(this.reader.readStat(splitPath));
+	}
+
 	exists(
 		splitPath: AnySplitPath,
 	): Effect.Effect<boolean, VamRuntimeFailure<never>> {

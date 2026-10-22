@@ -399,6 +399,10 @@ export default class TextEaterPlugin extends Plugin {
 							handlerDef.handler,
 						);
 					}
+					// Links removed while the plugin was not running reach no
+					// modification event; with the Scrolls' names healed, catch
+					// up on them in the background.
+					this.unlinkObserver?.sweep();
 				} catch (error) {
 					logger.error(
 						"[TextEaterPlugin] Failed to initialize librarian:",

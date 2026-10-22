@@ -67,6 +67,18 @@ export class MarkdownFileAccess {
 		}, Effect.tapError(annotateFileAccessFailure))();
 	}
 
+	/** The file's stat on disk, as `readContentWithStat` takes it, without its content. */
+	readStat(target: SplitPathToMdFile) {
+		const path = pathfinder.systemPathFromSplitPath(target);
+		const self = this;
+		return Effect.fn("vam.markdown.stat")(function* () {
+			yield* Effect.annotateCurrentSpan({ operation: "stat", path });
+			const vault = yield* VaultIo;
+			const file = yield* self.backgroundFile(target);
+			return yield* vault.stat(file);
+		}, Effect.tapError(annotateFileAccessFailure))();
+	}
+
 	replaceContent(target: SplitPathToMdFile, content: string) {
 		const path = pathfinder.systemPathFromSplitPath(target);
 		const self = this;

@@ -93,7 +93,7 @@ function mdSplitPath(path: string) {
 export function vamUnlinkScrolls(
 	vam: Pick<
 		VaultActionManager,
-		"exists" | "readContent" | "resolveLinkpathDest"
+		"exists" | "readContent" | "readStat" | "resolveLinkpathDest"
 	>,
 ): UnlinkScrolls {
 	return {
@@ -102,6 +102,15 @@ export function vamUnlinkScrolls(
 			return splitPath === undefined
 				? Effect.succeed(false)
 				: vam.exists(splitPath).pipe(Effect.orElseSucceed(() => false));
+		},
+		modifiedAt: (path) => {
+			const splitPath = mdSplitPath(path);
+			return splitPath === undefined
+				? Effect.succeed(undefined)
+				: vam.readStat(splitPath).pipe(
+						Effect.map(({ mtime }) => mtime),
+						Effect.orElseSucceed(() => undefined),
+					);
 		},
 		read: (path) => {
 			const splitPath = mdSplitPath(path);
