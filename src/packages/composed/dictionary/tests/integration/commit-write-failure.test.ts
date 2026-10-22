@@ -104,9 +104,9 @@ describe("a commit that touches several notes", () => {
 		// Creates first, then the sources whose records change, then the
 		// notes that only show the change.
 		expect(batches.map((batch) => batch.map(({ kind }) => kind))).toEqual([
-			[VaultActionKind.CreateFile, VaultActionKind.CreateFile],
+			[VaultActionKind.CreateMdFile, VaultActionKind.CreateMdFile],
 			[VaultActionKind.ProcessMdFile, VaultActionKind.ProcessMdFile],
-			[VaultActionKind.CreateFile],
+			[VaultActionKind.CreateMdFile],
 		]);
 		expect(batches.map(pathsOf)).toEqual([
 			[schreitenPath, schreitenNote].sort(),

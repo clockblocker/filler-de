@@ -2,20 +2,24 @@ import {
 	type BulkMdModifyEvent,
 	type BulkVaultEvent,
 	type BulkVaultEventHandler,
+	type ExpectedContent,
 	type MdModifyEventHandler,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
 	splitPathCodec,
+	VamContentConflictError,
 	VamDispatchError,
 	VamDispatchFailure,
 	VamDispatchReport,
 	VamScanError,
+	VamTargetExistsError,
 	VamVaultIoError,
 	type VaultAction,
 	VaultActionKind,
 	type VaultEvent,
 	VaultEventKind,
 	type VaultScanPathWithStat,
+	vaultContentHash,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import type { DictionaryVault } from "../../src";
@@ -35,6 +39,19 @@ function folderPath(path: string): SplitPathToFolder {
 	if (splitPath.kind !== "Folder") throw new Error(`Not a folder: ${path}`);
 	return splitPath;
 }
+
+/** Whether `content` is what a guarded action expects, as VAM checks it. */
+const matches = (content: string, expected: ExpectedContent) =>
+	typeof expected === "string"
+		? content === expected
+		: vaultContentHash(content) === expected.hash;
+
+const conflict = (operation: string, path: string) =>
+	new VamContentConflictError({
+		cause: new Error(`${path} holds other content than expected`),
+		operation,
+		path,
+	});
 
 const under = (path: string, folder: string) =>
 	folder === "" || path.startsWith(`${folder}/`);
@@ -220,7 +237,12 @@ export class FakeVault implements DictionaryVault {
 						const error = new VamDispatchError({
 							action,
 							cause: failure,
-							kind: "io",
+							kind:
+								failure instanceof VamContentConflictError
+									? "conflict"
+									: failure instanceof VamTargetExistsError
+										? "exists"
+										: "io",
 							operation: "execute",
 						});
 						return new VamDispatchFailure({
@@ -255,11 +277,17 @@ export class FakeVault implements DictionaryVault {
 	/** Runs one action as VAM and Obsidian would, collisions included. */
 	private async execute(action: VaultAction) {
 		switch (action.kind) {
-			case VaultActionKind.CreateFile: {
-				// Obsidian's vault.create refuses an existing file.
+			case VaultActionKind.CreateFile:
+			case VaultActionKind.CreateMdFile: {
+				// VAM creates only where no file is.
 				const path = format(action.payload.splitPath);
 				if (this.files.has(path))
-					throw new Error("File already exists.");
+					throw new VamTargetExistsError({
+						cause: new Error("File already exists."),
+						occupiedBy: path,
+						operation: "createFile.exists",
+						path,
+					});
 				this.put(path, action.payload.content ?? "");
 				return;
 			}
@@ -278,6 +306,11 @@ export class FakeVault implements DictionaryVault {
 				const file = this.files.get(path);
 				if (!file) throw new Error(`No file at ${path}`);
 				const { payload } = action;
+				if (
+					payload.expected !== undefined &&
+					!matches(file.content, payload.expected)
+				)
+					throw conflict("processFileContent.expected", path);
 				const next =
 					"transform" in payload
 						? await payload.transform(file.content)
@@ -311,9 +344,20 @@ export class FakeVault implements DictionaryVault {
 				this.files.set(to, file);
 				return;
 			}
-			case VaultActionKind.TrashMdFile:
-				this.files.delete(format(action.payload.splitPath));
+			case VaultActionKind.TrashMdFile: {
+				// VAM trashes a guarded note only while it holds `ifContent`.
+				const path = format(action.payload.splitPath);
+				const { ifContent } = action.payload;
+				const file = this.files.get(path);
+				if (
+					file &&
+					ifContent !== undefined &&
+					!matches(file.content, ifContent)
+				)
+					throw conflict("trashFile.ifContent", path);
+				this.files.delete(path);
 				return;
+			}
 			default:
 				throw new Error(`The fake vault does not run ${action.kind}`);
 		}

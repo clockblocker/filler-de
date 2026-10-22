@@ -56,6 +56,7 @@ export function collectRequirements(actions: readonly VaultAction[]): {
 			// Actions with splitPath: extract parent folders
 			case VaultActionKind.CreateFolder:
 			case VaultActionKind.CreateFile:
+			case VaultActionKind.CreateMdFile:
 			case VaultActionKind.UpsertMdFile:
 			case VaultActionKind.ProcessMdFile: {
 				const { splitPath } = action.payload;
@@ -220,6 +221,7 @@ export function buildActionKeyIndex(actions: readonly VaultAction[]): {
 			case VaultActionKind.RenameFolder:
 				folderKeys.add(splitPathCodec.format(action.payload.to));
 				break;
+			case VaultActionKind.CreateMdFile:
 			case VaultActionKind.UpsertMdFile:
 			case VaultActionKind.ProcessMdFile:
 				fileKeys.add(splitPathCodec.format(action.payload.splitPath));

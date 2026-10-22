@@ -1,7 +1,6 @@
 import { WORTER_FOLDER } from "@textfresser/lemma-note-codec";
 import {
 	type AnySplitPath,
-	type SplitPathToFile,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
 	splitPathCodec,
@@ -39,15 +38,6 @@ export function mdSplitPath(path: string): SplitPathToMdFile {
 	if (splitPath.kind !== "MdFile")
 		throw new Error(`Not a Markdown path: ${path}`);
 	return splitPath;
-}
-
-/**
- * A Markdown path as a plain File, for `CreateFile`: Obsidian's
- * `vault.create` fails when the file exists, so a create never overwrites.
- */
-export function createOnlySplitPath(path: string): SplitPathToFile {
-	const { basename, pathParts } = mdSplitPath(path);
-	return { basename, extension: "md", kind: "File", pathParts };
 }
 
 export function folderSplitPath(path: string): SplitPathToFolder {

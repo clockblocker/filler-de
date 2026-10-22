@@ -4,6 +4,7 @@ import {
 	VamActiveEditorError,
 	VamContentConflictError,
 	VamNoActiveEditorError,
+	VamTargetExistsError,
 	VamVaultIoError,
 } from "../../src/effect/errors";
 
@@ -20,6 +21,19 @@ describe("classifyActionFailure", () => {
 				}),
 			),
 		).toBe("conflict");
+	});
+
+	it("reads a taken target as exists", () => {
+		expect(
+			classifyActionFailure(
+				new VamTargetExistsError({
+					cause,
+					occupiedBy: "Library/Note.md",
+					operation: "createFile.exists",
+					path: "Library/note.md",
+				}),
+			),
+		).toBe("exists");
 	});
 
 	it("reads an editor that moved on before the write as a conflict", () => {

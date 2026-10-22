@@ -1,8 +1,9 @@
 import { Effect, Exit, Result } from "effect";
-import { TFile } from "obsidian";
+import { type TAbstractFile, TFile } from "obsidian";
 import type { VamActionOutcome } from "../../../effect/dispatch-report";
 import {
 	VamContentConflictError,
+	VamTargetExistsError,
 	VamVaultIoError,
 } from "../../../effect/errors";
 import { VaultIo } from "../../../effect/ports";
@@ -22,6 +23,7 @@ import {
 	pathfinder,
 } from "../../../helpers/pathfinder";
 import { vaultContentHash } from "../../../internal/content-hash";
+import { ContentPreconditionFailed } from "../../../internal/content-precondition";
 import { getErrorMessage } from "../../../internal/get-error-message";
 import {
 	type SplitPathFromTo,
@@ -29,8 +31,14 @@ import {
 	type SplitPathToAnyFile,
 	type SplitPathToMdFile,
 } from "../../../types/split-path";
-import type { Transform } from "../../../types/vault-action";
-import { type CollisionStrategy, getExistingBasenamesInFolder } from "./common";
+import type { RenameCollision, Transform } from "../../../types/vault-action";
+import { VaultPath, type VaultPathIdentity } from "../../../vault-path";
+import {
+	firstFreeIndexedPath,
+	occupantOf,
+	type SelfRenameRecorder,
+	targetExists,
+} from "./common";
 
 const GET_FILE_RETRY_COUNT = 10;
 const GET_FILE_RETRY_DELAY_MS = 50;
@@ -85,7 +93,11 @@ export type SelfModifyRecorder = {
 
 /** Effect-native helper for background file operations. */
 export class TFileHelper {
-	constructor(private readonly selfModifies?: SelfModifyRecorder) {}
+	constructor(
+		private readonly selfEvents?: SelfModifyRecorder &
+			Partial<SelfRenameRecorder>,
+		private readonly paths: VaultPathIdentity = VaultPath.caseSensitive,
+	) {}
 
 	getFile<SPF extends SplitPathToAnyFile>(splitPath: SPF) {
 		return Effect.gen(function* () {
@@ -182,6 +194,61 @@ export class TFileHelper {
 		});
 	}
 
+	/**
+	 * Creates the file, never over another: a file or folder at its path, or
+	 * at a path the vault's file system holds to be the same, fails it with
+	 * `VamTargetExistsError` before anything is written. Obsidian's
+	 * `vault.create` refuses an existing file too, so a file created between
+	 * the check and the create fails it the same way.
+	 */
+	createFile(
+		splitPath: SplitPathToAnyFile,
+		content: string,
+	): Effect.Effect<
+		VamActionOutcome,
+		VamVaultIoError | VamTargetExistsError,
+		VaultIo
+	> {
+		const paths = this.paths;
+		return Effect.fn("vam.file.create")(function* () {
+			const vault = yield* VaultIo;
+			const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
+			yield* Effect.annotateCurrentSpan({ path: systemPath });
+			const occupant = yield* occupantOf(splitPath, paths);
+			if (occupant)
+				return yield* targetExists(
+					"createFile.exists",
+					splitPath,
+					occupant,
+					"Cannot create the file",
+				);
+			const created = yield* Effect.result(
+				vault.create(systemPath, content),
+			);
+			if (Result.isSuccess(created))
+				return {
+					_tag: "Created",
+					contentHash: vaultContentHash(content),
+				} as const;
+			const message = originalMessage(created.failure);
+			if (message.includes("already exists")) {
+				const raced = yield* occupantOf(splitPath, paths);
+				return yield* new VamTargetExistsError({
+					cause: created.failure,
+					occupiedBy: raced?.path ?? systemPath,
+					operation: "createFile.exists",
+					path: systemPath,
+				});
+			}
+			return yield* operationFailure(
+				"createFile",
+				systemPath,
+				errorCreateFailed("file", systemPath, message),
+				created.failure,
+			);
+		})();
+	}
+
 	/** Trashes the file; `NoOp` when it is gone. */
 	trashFile<SPF extends SplitPathToAnyFile>(splitPath: SPF) {
 		return Effect.gen({ self: this }, function* () {
@@ -197,27 +264,44 @@ export class TFileHelper {
 		});
 	}
 
+	/**
+	 * Renames the file. A taken target is handled as `onCollision` asks;
+	 * see `RenameCollision`. It defaults to `dedupe` for Markdown and
+	 * `index` for other files.
+	 */
 	renameFile<SPF extends SplitPathToAnyFile>({
 		from,
 		to,
-		collisionStrategy = "rename",
+		onCollision,
 		updateLinks = true,
 	}: SplitPathFromTo<SPF> & {
-		collisionStrategy?: CollisionStrategy;
+		onCollision?: RenameCollision;
 		updateLinks?: boolean;
-	}): Effect.Effect<RenameResult, VamVaultIoError, VaultIo> {
+	}): Effect.Effect<
+		RenameResult,
+		VamVaultIoError | VamTargetExistsError,
+		VaultIo
+	> {
+		const policy =
+			onCollision ??
+			(to.kind === SplitPathKind.MdFile ? "dedupe" : "index");
 		return Effect.gen({ self: this }, function* () {
 			const { fromFile, toFile } = yield* this.resolveRenamePaths(
 				from,
 				to,
+				policy,
 			);
-			return toFile
+			// The same file: the rename is done, or its source is gone.
+			if (fromFile === toFile) return { file: fromFile, outcome: NO_OP };
+			const occupant =
+				toFile ?? (yield* occupantOf(to, this.paths, fromFile));
+			return occupant
 				? yield* this.handleTargetCollision(
 						fromFile,
-						toFile,
+						occupant,
 						from,
 						to,
-						collisionStrategy,
+						policy,
 						updateLinks,
 					)
 				: yield* this.performRename(fromFile, to, updateLinks);
@@ -227,6 +311,7 @@ export class TFileHelper {
 	private resolveRenamePaths<SPF extends SplitPathToAnyFile>(
 		from: SPF,
 		to: SPF,
+		policy: RenameCollision,
 	) {
 		return Effect.gen({ self: this }, function* () {
 			let fromResult = yield* Effect.result(this.getFile(from));
@@ -246,14 +331,22 @@ export class TFileHelper {
 				);
 			}
 			if (Result.isFailure(fromResult)) {
-				if (Result.isSuccess(toResult)) {
-					return {
-						fromFile: toResult.success,
-						toFile: toResult.success,
-					};
-				}
 				const fromPath = pathfinder.systemPathFromSplitPath(from);
 				const toPath = pathfinder.systemPathFromSplitPath(to);
+				if (Result.isSuccess(toResult)) {
+					// Moved already, unless the rename must not guess.
+					if (policy !== "fail")
+						return {
+							fromFile: toResult.success,
+							toFile: toResult.success,
+						};
+					return yield* operationFailure(
+						"renameFile.resolve",
+						`${fromPath} -> ${toPath}`,
+						`Cannot rename ${fromPath}: it is not there, and ${toPath} is`,
+						fromResult.failure,
+					);
+				}
 				yield* Effect.logError(
 					"[TFileHelper.renameFile] Both from and to not found",
 					JSON.stringify({ from: fromPath, to: toPath }),
@@ -288,31 +381,42 @@ export class TFileHelper {
 
 	private handleTargetCollision<SPF extends SplitPathToAnyFile>(
 		fromFile: TFile,
-		toFile: TFile,
+		occupant: TAbstractFile,
 		from: SPF,
 		to: SPF,
-		collisionStrategy: CollisionStrategy,
+		policy: RenameCollision,
 		updateLinks: boolean,
-	): Effect.Effect<RenameResult, VamVaultIoError, VaultIo> {
+	): Effect.Effect<
+		RenameResult,
+		VamVaultIoError | VamTargetExistsError,
+		VaultIo
+	> {
 		return Effect.gen({ self: this }, function* () {
-			// The same file: the rename is done, or its source is gone.
-			if (fromFile === toFile) return { file: fromFile, outcome: NO_OP };
-			if (to.kind === SplitPathKind.MdFile) {
+			if (policy === "fail")
+				return yield* targetExists(
+					"renameFile.collision",
+					to,
+					occupant,
+					`Cannot rename ${fromFile.path}`,
+				);
+			if (
+				policy === "dedupe" &&
+				to.kind === SplitPathKind.MdFile &&
+				occupant instanceof TFile
+			) {
 				const vault = yield* VaultIo;
 				const [targetContent, sourceContent] = yield* Effect.all(
-					[vault.read(toFile), vault.read(fromFile)],
+					[vault.read(occupant), vault.read(fromFile)],
 					{ concurrency: "unbounded" },
 				);
 				if (targetContent === sourceContent) {
 					yield* this.trashDuplicate(fromFile, from);
 					return {
-						file: toFile,
+						file: occupant,
 						outcome: { _tag: "TrashedDuplicate" },
 					} as const;
 				}
 			}
-			if (collisionStrategy === "skip")
-				return { file: toFile, outcome: NO_OP };
 			return yield* this.renameToIndexedPath(
 				fromFile,
 				from,
@@ -354,21 +458,14 @@ export class TFileHelper {
 		updateLinks: boolean,
 	) {
 		return Effect.gen({ self: this }, function* () {
-			const existingBasenames = yield* getExistingBasenamesInFolder(to);
-			const indexedPath = yield* Effect.tryPromise({
-				catch: (cause) =>
-					operationFailure(
-						"findIndexedFilePath",
-						pathfinder.systemPathFromSplitPath(to),
-						getErrorMessage(cause),
-						cause,
-					),
-				try: () =>
-					pathfinder.findFirstAvailableIndexedPath(
-						to,
-						existingBasenames,
-					),
-			});
+			const indexedPath = yield* firstFreeIndexedPath(to, this.paths);
+			// Before the move: Obsidian reports its rename during it (#175).
+			yield* this.selfEvents?.expectRenameDestinationEffect?.({
+				actual: pathfinder.systemPathFromSplitPath(indexedPath),
+				from: pathfinder.systemPathFromSplitPath(from),
+				isFolder: false,
+				planned: pathfinder.systemPathFromSplitPath(to),
+			}) ?? Effect.void;
 			yield* this.tryVaultRename(
 				fromFile,
 				indexedPath,
@@ -551,13 +648,21 @@ export class TFileHelper {
 		VaultIo
 	> {
 		const path = pathfinder.systemPathFromSplitPath(splitPath);
-		const transformFailure = (cause: unknown) =>
-			operationFailure(
-				"processFileContent.transform",
-				path,
-				errorWriteFailed("file", path, getErrorMessage(cause)),
-				cause,
-			);
+		const transformFailure = (
+			cause: unknown,
+		): VamVaultIoError | VamContentConflictError =>
+			cause instanceof ContentPreconditionFailed
+				? new VamContentConflictError({
+						cause,
+						operation: "processFileContent.expected",
+						path,
+					})
+				: operationFailure(
+						"processFileContent.transform",
+						path,
+						errorWriteFailed("file", path, getErrorMessage(cause)),
+						cause,
+					);
 		const ioFailure = (operation: string, error: VamVaultIoError) =>
 			operationFailure(
 				operation,
@@ -641,7 +746,7 @@ export class TFileHelper {
 		file: TFile,
 		fn: (current: string) => string,
 	): Effect.Effect<void, VamVaultIoError> {
-		const recorder = this.selfModifies;
+		const recorder = this.selfEvents;
 		if (!recorder) return Effect.asVoid(vault.process(file, fn));
 		return Effect.gen(function* () {
 			const runSync = Effect.runSyncWith(yield* Effect.context<never>());

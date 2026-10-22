@@ -4,15 +4,12 @@ import {
 	type VamActionOutcome,
 } from "../../effect/dispatch-report";
 import { VamDispatchError, type VamFileWriteError } from "../../effect/errors";
-import { type VamLiveServices, VaultIo } from "../../effect/ports";
+import type { VamLiveServices } from "../../effect/ports";
 import type { TFileHelper } from "../../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../../file-services/background/helpers/tfolder-helper";
 import type { MarkdownFileAccess } from "../../file-services/markdown-file-access";
-import {
-	type MdFileWithContentDto,
-	pathfinder,
-} from "../../helpers/pathfinder";
-import { vaultContentHash } from "../../internal/content-hash";
+import { processTransformOf } from "../../helpers/action-helpers";
+import type { MdFileWithContentDto } from "../../helpers/pathfinder";
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionKind } from "../../types/vault-action";
 
@@ -57,20 +54,11 @@ export class Executor {
 			case VaultActionKind.TrashFolder:
 				return this.tfolderHelper.trashFolder(action.payload.splitPath);
 			case VaultActionKind.CreateFile:
-				return Effect.gen(function* () {
-					const vault = yield* VaultIo;
-					const content = action.payload.content ?? "";
-					yield* vault.create(
-						pathfinder.systemPathFromSplitPath(
-							action.payload.splitPath,
-						),
-						content,
-					);
-					return {
-						_tag: "Created",
-						contentHash: vaultContentHash(content),
-					} as const;
-				});
+			case VaultActionKind.CreateMdFile:
+				return this.tfileHelper.createFile(
+					action.payload.splitPath,
+					action.payload.content ?? "",
+				);
 			case VaultActionKind.UpsertMdFile:
 				return Effect.gen({ self: this }, function* () {
 					const { splitPath, content } = action.payload;
@@ -99,20 +87,17 @@ export class Executor {
 			case VaultActionKind.RenameMdFile:
 				return this.markdownFiles.renameFile(action.payload);
 			case VaultActionKind.TrashFile:
-			case VaultActionKind.TrashMdFile:
 				return this.tfileHelper.trashFile(action.payload.splitPath);
-			case VaultActionKind.ProcessMdFile: {
-				const payload = action.payload;
-				const transform =
-					"transform" in payload
-						? payload.transform
-						: (content: string) =>
-								content.replace(payload.before, payload.after);
+			case VaultActionKind.TrashMdFile:
+				return this.markdownFiles.trashFile(
+					action.payload.splitPath,
+					action.payload.ifContent,
+				);
+			case VaultActionKind.ProcessMdFile:
 				return this.markdownFiles.processContent({
-					splitPath: payload.splitPath,
-					transform,
+					splitPath: action.payload.splitPath,
+					transform: processTransformOf(action.payload),
 				});
-			}
 		}
 	}
 }

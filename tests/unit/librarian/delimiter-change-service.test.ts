@@ -211,6 +211,7 @@ describe("delimiter migration lifecycle", () => {
 				kind: VaultActionKind.RenameMdFile,
 				payload: {
 					from: mdPath("alpha ~ beta"),
+					onCollision: "fail",
 					to: mdPath("alpha-beta"),
 				},
 			},
@@ -552,49 +553,54 @@ describe("delimiter migration lifecycle", () => {
 		).toEqual(["alpha-beta"]);
 	});
 
-	test("a rename VAM moved to an indexed name is renamed back from there", async () => {
+	test("plans its renames, and their inverses, to fail on a taken name", async () => {
 		const harness = makeHarness([
 			readableMdPath("alpha-beta"),
 			readableMdPath("gamma-delta"),
 		]);
-		const indexed = mdPath("1_alpha ~ beta");
-		harness.dispatch = (actions) => {
-			const [first, second] = actions;
-			if (first?.kind !== VaultActionKind.RenameMdFile || !second) {
-				return Effect.die(new Error("unexpected plan"));
-			}
-			harness.files.delete("Library/alpha-beta.md");
-			harness.files.add("Library/1_alpha ~ beta.md");
-			const error = actionError(second, new Error("rename rejected"), "missing");
-			return Effect.fail(
-				new VamDispatchFailure({
-					reason: error,
-					report: new VamDispatchReport({
-						entries: [
-							{
-								action: first,
-								outcome: { _tag: "RenamedToIndexed", to: indexed },
-								status: "Done",
-							},
-							VamDispatchReport.entryFor(error),
-						],
-					}),
-				}),
-			);
+		const plan = await plannedFor(harness);
+		expect(plan.actions.map((action) => action.payload.onCollision)).toEqual([
+			"fail",
+			"fail",
+		]);
+	});
+
+	test("a note whose old name was taken meanwhile stays under its new one, and is reported", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+		]);
+		const plan = await plannedFor(harness);
+		harness.failForward = (action) => {
+			if (action.payload.from.basename !== "gamma-delta") return undefined;
+			// Another note takes alpha-beta's old name before the undo.
+			harness.files.add("Library/alpha-beta.md");
+			return new Error("rename rejected");
 		};
 
-		const execution = await Effect.runPromise(
-			harness.service.execute(await plannedFor(harness)),
-		);
+		const execution = await Effect.runPromise(harness.service.execute(plan));
 
-		expect(execution.kind).toBe("RolledBack");
+		expect(execution.kind).toBe("RollbackIncomplete");
+		if (execution.kind !== "RollbackIncomplete") return;
+		// Both names are taken now, so the migration cannot tell which note
+		// is its own and leaves both for the user.
+		expect(execution.leftRenamed).toEqual([]);
+		expect(
+			execution.unresolved.map((action) => action.payload.from.basename),
+		).toEqual(["alpha-beta"]);
 		expect(harness.rollbackBatches[0]).toEqual([
 			{
 				kind: VaultActionKind.RenameMdFile,
-				payload: { from: indexed, to: mdPath("alpha-beta") },
+				payload: {
+					from: mdPath("alpha ~ beta"),
+					onCollision: "fail",
+					to: mdPath("alpha-beta"),
+				},
 			},
 		]);
+		// The inverse moved nothing onto the other note, or beside it.
 		expect(vaultFiles(harness)).toEqual([
+			"Library/alpha ~ beta.md",
 			"Library/alpha-beta.md",
 			"Library/gamma-delta.md",
 		]);

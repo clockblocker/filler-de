@@ -131,9 +131,16 @@ A `VaultAction` requests a vault change. Supported operations are:
 | --- | --- |
 | Folder | Create, rename, trash |
 | File | Create, rename, trash |
-| Markdown file | Upsert, process, rename, trash |
+| Markdown file | Create, upsert, process, rename, trash |
 
 `UpsertMdFile` with `content: null` means "ensure that this file exists." It must not overwrite existing content.
+
+`CreateMdFile` (and `CreateFile`) create a file only where none is. A file
+or folder at the path, or at a path the vault's file system holds to be the
+same (`Foo.md` for `foo.md` on macOS), fails the action with
+`VamTargetExistsError`, kind `exists`, before anything is written. Obsidian's
+`vault.create` refuses an existing file as well, so a file that appears
+between that check and the create fails it the same way.
 
 `ProcessMdFile` applies a transform to current content. VAM routes the operation to the active editor or the background vault adapter.
 
@@ -146,6 +153,50 @@ fails with `VamContentConflictError` and the newer content stays in place. VAM
 never re-runs a transform. The active-editor route applies the same re-check
 and fails with an `IdentityMismatch` error. The dispatch report gives both the
 failure kind `conflict`; `isContentConflict(failure)` asks for it.
+
+### Preconditions
+
+A caller that planned a write from content it read can make the write
+conditional on that content, so a hand edit made in between is never written
+over or trashed. `ExpectedContent` is the whole content, or
+`{ hash }` with its `vaultContentHash`, such as a report's `afterHash`.
+
+| Action | Field | Checked | When it does not hold |
+| --- | --- | --- | --- |
+| `ProcessMdFile` | `expected` | Against the content the transform receives, inside the same `Vault.process` call that writes (in the editor, before the transform runs). | `VamContentConflictError`, kind `conflict`, `Failed`; nothing written. |
+| `TrashMdFile` | `ifContent` | Against the content read immediately before the trash: the open editor's buffer, unsaved typing included, or the file on disk. | `VamContentConflictError`, kind `conflict`, `Failed`; nothing trashed. A file already gone is a `NoOp`. |
+| `CreateMdFile`, `CreateFile` | (always) | That no file is at the path, as the file system compares names. | `VamTargetExistsError`, kind `exists`, `Failed`. |
+
+The process check is atomic: nothing can land between the check and the
+write. The trash check is one read away from the trash, the closest Obsidian
+allows, since `trashFile` takes no callback. VAM creates no missing file
+for a `ProcessMdFile`, so a file deleted meanwhile fails it as `missing`.
+
+Collapse keeps the checks. Transforms of one file compose in submission
+order, each behind its own check against the content it receives; the
+composed action carries no `expected` of its own. A transform folded into a
+`CreateMdFile` or a contentful `UpsertMdFile` runs, check included, on that
+content during planning. An unconditional trash beats a guarded one for the
+same file, and a trash still supersedes earlier transforms of its file.
+
+### Rename collisions
+
+`RenameMdFile`, `RenameFile` and `RenameFolder` take
+`onCollision: "fail" | "index" | "dedupe"` for a target that is taken, by
+its exact path or by a name the file system holds to be the same (a rename
+that changes only the case of its own source is free):
+
+| `onCollision` | Taken target | Source gone, target there |
+| --- | --- | --- |
+| `fail` | `VamTargetExistsError`, kind `exists`, `Failed`; nothing moves. | Kind `missing`, `Failed`. |
+| `index` | Moves to the first free `1_<name>`, `2_<name>`, … (`RenamedToIndexed`). | `NoOp`. |
+| `dedupe` (Markdown only) | Like `index`, except that a source whose content the target holds goes to the trash (`TrashedDuplicate`). | `NoOp`. |
+
+The defaults keep the Librarian's behaviour: `dedupe` for `RenameMdFile`,
+`index` for `RenameFile` and `RenameFolder`. A free indexed name is one no
+sibling, file or folder, holds as the file system compares names, so
+`1_Foo` and `1_foo` collide on macOS. The delimiter migration and the
+dictionary reset's backup move use `fail`.
 
 A `VaultEvent` is a typed create, rename, or delete observation from Obsidian. It is not a `VaultAction`.
 
@@ -224,8 +275,11 @@ The report has one entry per planned action, in the order VAM ran them. Its
 - `Skipped`: it never ran.
 
 A `VamDispatchError` names its typed `action` and a `kind`: `conflict` (the
-file or editor changed under it), `missing` (its file or folder was not
-there), `io` or `defect`. The first two are `Failed`, the others `Uncertain`.
+file or editor changed under it, or a precondition did not hold), `exists`
+(its target was taken), `missing` (its file or folder was not there), `io`
+or `defect`. The first three are `Failed`, the others `Uncertain`. Its
+`cause` is the typed error the action failed with, such as
+`VamContentConflictError` or `VamTargetExistsError`.
 
 Outcomes record what actually happened, so a caller can build guarded
 inverses from them:
@@ -385,6 +439,13 @@ The Self Event tracker uses three match types:
 A rename callback is Self when both of its paths match, or when it is such a
 descendant pair. The destination is not a prefix, so a user's create or
 rename into it stays observable during the window.
+
+A rename that lands elsewhere than its action's `to`, at a free indexed name,
+tells the tracker before it moves anything, because Obsidian reports the
+renames during the move (#175). The tracker then expects the actual
+destination instead: its exact path and, for a folder, the rename pair from
+the source to it, in the planned action's window, closing when that action
+finishes. The planned destination's entries go, since nothing lands there.
 
 ### Markdown modifications
 

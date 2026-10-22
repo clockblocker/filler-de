@@ -31,7 +31,23 @@ type SelfEventState = {
 	 */
 	readonly modifies: ReadonlyMap<string, readonly number[]>;
 	readonly prefixes: ReadonlyMap<string, number>;
+	/**
+	 * Renames that landed elsewhere than planned, keyed by
+	 * `folderRenameKey(from, plannedTo)`: the path VAM actually moved the
+	 * source to. Their window closes when the planned action finishes.
+	 */
+	readonly redirects: ReadonlyMap<string, string>;
 	readonly tracked: ReadonlyMap<string, ExactEntry>;
+};
+
+/** A rename VAM is about to run to another destination than its action names. */
+export type RenameRedirect = {
+	readonly from: string;
+	/** The action's `to`. */
+	readonly planned: string;
+	/** Where VAM moves the source instead, such as a free indexed name. */
+	readonly actual: string;
+	readonly isFolder: boolean;
 };
 
 type SelfEventTrackerCore = {
@@ -91,6 +107,7 @@ function nextState(
 		folderRenames: pruned.folderRenames,
 		modifies: previous.modifies,
 		prefixes: pruned.prefixes,
+		redirects: previous.redirects,
 		tracked: pruned.tracked,
 	};
 }
@@ -178,6 +195,7 @@ const makeSelfEventTrackerCore = Effect.fn("makeSelfEventTrackerCore")(
 			folderRenames: new Map(),
 			modifies: new Map(),
 			prefixes: new Map(),
+			redirects: new Map(),
 			tracked: new Map(),
 		});
 		return { state };
@@ -334,7 +352,87 @@ export class SelfEventTracker {
 					}
 				}
 
-				return [state.changed, nextState(state, pruned)];
+				// A rename that landed elsewhere closes its entries there too.
+				const rename = this.extractRename(action);
+				const redirectKey =
+					rename && folderRenameKey(rename.from, rename.to);
+				const actual = redirectKey && state.redirects.get(redirectKey);
+				if (!rename || !redirectKey || actual === undefined)
+					return [state.changed, nextState(state, pruned)];
+
+				const entry = pruned.tracked.get(actual);
+				if (entry !== undefined)
+					pruned.tracked.set(actual, {
+						...entry,
+						expiresAt: expiration,
+					});
+				const actualKey = folderRenameKey(rename.from, actual);
+				const redirected = pruned.folderRenames.get(actualKey);
+				if (redirected !== undefined)
+					pruned.folderRenames.set(actualKey, {
+						...redirected,
+						expiresAt: expiration,
+					});
+				const redirects = new Map(state.redirects);
+				redirects.delete(redirectKey);
+				return [
+					state.changed,
+					{ ...nextState(state, pruned), redirects },
+				];
+			},
+		);
+		yield* Deferred.succeed(previousSignal, undefined);
+	});
+
+	/**
+	 * Records, immediately before VAM moves a source elsewhere than its
+	 * action's `to`, where it moves it, so the callbacks Obsidian reports for
+	 * that move are Self (#175). A folder's descendant renames then match the
+	 * actual destination by the remainder rule. The entries share the
+	 * planned action's window and close when it finishes; the planned
+	 * destination's entries go, since nothing lands there.
+	 */
+	readonly expectRenameDestinationEffect = Effect.fn(
+		"vam.selfEvents.expectRenameDestination",
+	)(function* (
+		this: SelfEventTracker,
+		redirect: RenameRedirect,
+	): Effect.fn.Return<void> {
+		const now = yield* Clock.currentTimeMillis;
+		const from = this.normalizePath(redirect.from);
+		const planned = this.normalizePath(redirect.planned);
+		const actual = this.normalizePath(redirect.actual);
+		const plannedKey = folderRenameKey(from, planned);
+		const previousSignal = yield* Ref.modify(
+			this.core.state,
+			(state): readonly [Deferred.Deferred<void>, SelfEventState] => {
+				const pruned = pruneState(state, now);
+				const window =
+					(redirect.isFolder
+						? pruned.folderRenames.get(plannedKey)?.expiresAt
+						: pruned.tracked.get(planned)?.expiresAt) ??
+					now + this.ttlMs;
+				// Nothing lands at the planned destination now: its entries
+				// would only hide a user's event there, and hold the settle
+				// barrier until they expire.
+				pruned.tracked.delete(planned);
+				pruned.folderRenames.delete(plannedKey);
+				pruned.tracked.set(actual, {
+					expiresAt: window,
+					isFilePath: !redirect.isFolder,
+				});
+				if (redirect.isFolder)
+					pruned.folderRenames.set(folderRenameKey(from, actual), {
+						expiresAt: window,
+						from,
+						to: actual,
+					});
+				const redirects = new Map(state.redirects);
+				redirects.set(plannedKey, actual);
+				return [
+					state.changed,
+					{ ...nextState(state, pruned), redirects },
+				];
 			},
 		);
 		yield* Deferred.succeed(previousSignal, undefined);
@@ -585,12 +683,34 @@ export class SelfEventTracker {
 		};
 	}
 
+	/** A rename's normalized ends, of a file or a folder. */
+	private extractRename(
+		action: VaultAction,
+	): { readonly from: string; readonly to: string } | undefined {
+		switch (action.kind) {
+			case VaultActionKind.RenameFolder:
+			case VaultActionKind.RenameFile:
+			case VaultActionKind.RenameMdFile:
+				return {
+					from: this.normalizePath(
+						pathfinder.systemPathFromSplitPath(action.payload.from),
+					),
+					to: this.normalizePath(
+						pathfinder.systemPathFromSplitPath(action.payload.to),
+					),
+				};
+			default:
+				return undefined;
+		}
+	}
+
 	private extractPaths(action: VaultAction): string[] {
 		switch (action.kind) {
 			case VaultActionKind.CreateFolder:
 				return this.extractPathsWithParents(action.payload.splitPath);
 
 			case VaultActionKind.CreateFile:
+			case VaultActionKind.CreateMdFile:
 			case VaultActionKind.UpsertMdFile:
 				return [
 					pathfinder.systemPathFromSplitPath(
@@ -652,6 +772,7 @@ export class SelfEventTracker {
 	): string | undefined {
 		switch (action.kind) {
 			case VaultActionKind.CreateFile:
+			case VaultActionKind.CreateMdFile:
 			case VaultActionKind.UpsertMdFile:
 			case VaultActionKind.RenameFile:
 			case VaultActionKind.RenameMdFile:

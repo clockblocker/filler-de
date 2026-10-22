@@ -511,6 +511,73 @@ describe("SelfEventTracker", () => {
 		);
 	});
 
+	it("matches a redirected folder rename at its actual destination until one TTL after the action finishes (#175)", async () => {
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const tracker = yield* SelfEventTracker.makeEffect({
+					ttlMs: 5000,
+				});
+				const action: VaultAction = {
+					kind: VaultActionKind.RenameFolder,
+					payload: {
+						from: folder("old", ["Library"]),
+						to: folder("new", ["Library"]),
+					},
+				};
+				yield* tracker.beginEffect(action);
+				yield* tracker.expectRenameDestinationEffect({
+					actual: "Library/1_new",
+					from: "Library/old",
+					isFolder: true,
+					planned: "Library/new",
+				});
+
+				yield* TestClock.adjust(60_000);
+				// The folder's own rename and a descendant's, at the actual
+				// destination; nothing at the planned one any more.
+				expect(
+					yield* tracker.shouldIgnoreRenameEffect(
+						"Library/old",
+						"Library/1_new",
+					),
+				).toBe(true);
+				expect(
+					yield* tracker.shouldIgnoreRenameEffect(
+						"Library/old/a.md",
+						"Library/1_new/a.md",
+					),
+				).toBe(true);
+				expect(
+					yield* tracker.shouldIgnoreRenameEffect(
+						"Library/old/b.md",
+						"Library/new/b.md",
+					),
+				).toBe(false);
+				expect(yield* tracker.shouldIgnoreEffect("Library/new")).toBe(
+					false,
+				);
+
+				yield* tracker.finishEffect(action);
+				yield* TestClock.adjust(4999);
+				expect(
+					yield* tracker.shouldIgnoreRenameEffect(
+						"Library/old/c.md",
+						"Library/1_new/c.md",
+					),
+				).toBe(true);
+				yield* TestClock.adjust(1);
+				expect(
+					yield* tracker.shouldIgnoreRenameEffect(
+						"Library/old/d.md",
+						"Library/1_new/d.md",
+					),
+				).toBe(false);
+				// Nothing is left to hold the settle barrier.
+				yield* tracker.waitForAllRegisteredEffect();
+			}).pipe(Effect.provide(TestClock.layer())),
+		);
+	});
+
 	it("keeps folder rename pairs until one TTL after the action finishes", async () => {
 		await Effect.runPromise(
 			Effect.gen(function* () {

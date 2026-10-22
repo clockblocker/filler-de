@@ -12,6 +12,7 @@ import {
 	VamProtectedPathError,
 	VamSetupError,
 	VamShutdownError,
+	VamTargetExistsError,
 	VamVaultIoError,
 	VaultActionSchema,
 } from "./errors";
@@ -63,7 +64,8 @@ export type VamActionOutcome = typeof VamActionOutcomeSchema.Type;
  * One planned action of a Dispatch Batch and what became of it:
  *
  * - `Done`: it completed, with its `outcome`.
- * - `Failed`: it failed and changed nothing (`conflict` or `missing`).
+ * - `Failed`: it failed and changed nothing (`conflict`, `exists` or
+ *   `missing`).
  * - `Uncertain`: it failed and may have changed the vault, such as a rename
  *   that moved the file and then could not restore the editor selection.
  * - `Skipped`: it never ran.
@@ -244,7 +246,7 @@ export function isContentConflict(failure: VamDispatchFailure): boolean {
 }
 
 function wroteNothing(kind: VamActionFailureKind): boolean {
-	return kind === "conflict" || kind === "missing";
+	return kind === "conflict" || kind === "exists" || kind === "missing";
 }
 
 /** Lookups that fail before an action writes anything. */
@@ -258,6 +260,7 @@ const LOOKUP_OPERATIONS: ReadonlySet<string> = new Set([
 /** The kind of an action's failure, from the error its execution raised. */
 export function classifyActionFailure(cause: unknown): VamActionFailureKind {
 	if (cause instanceof VamContentConflictError) return "conflict";
+	if (cause instanceof VamTargetExistsError) return "exists";
 	if (cause instanceof VamActiveEditorError) {
 		return cause.stateChanged !== true &&
 			(cause.reason === "IdentityMismatch" ||

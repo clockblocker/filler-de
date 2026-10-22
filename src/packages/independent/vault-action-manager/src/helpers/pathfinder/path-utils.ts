@@ -16,26 +16,18 @@ export const SPLIT_PATH_TO_ROOT_FOLDER: SplitPathToFolder = Object.freeze({
 });
 
 /**
- * Finds the first available indexed filename in the target folder.
- * Pattern: `${index}_${basename}.md` (e.g., `1_file.md`, `2_file.md`)
+ * The first indexed variant of `target` that `isTaken` lets through:
+ * `1_<basename>`, then `2_<basename>`, ….
  */
-export async function findFirstAvailableIndexedPath<SP extends AnySplitPath>(
+export function findFirstAvailableIndexedPath<SP extends AnySplitPath>(
 	target: SP,
-	existingBasenames: Set<string>,
-): Promise<SP> {
-	let index = 1;
-	let indexedBasename: string;
-
-	while (true) {
-		indexedBasename = `${index}_${target.basename}`;
-		if (!existingBasenames.has(indexedBasename)) {
-			break;
-		}
-		index += 1;
+	isTaken: (candidate: SP) => boolean,
+): SP {
+	for (let index = 1; ; index += 1) {
+		const candidate = {
+			...target,
+			basename: `${index}_${target.basename}`,
+		};
+		if (!isTaken(candidate)) return candidate;
 	}
-
-	return {
-		...target,
-		basename: indexedBasename,
-	};
 }

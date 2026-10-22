@@ -29,6 +29,7 @@ export {
 	VamSetupError,
 	VamShutdownError,
 	VamSubscriptionError,
+	VamTargetExistsError,
 	type VamTouchedVault,
 	VamVaultIoError,
 	type VaultActionManager,

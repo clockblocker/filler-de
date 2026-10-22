@@ -665,4 +665,87 @@ describe("collapseActions", () => {
 			expect(bResult).toBe("xB");
 		});
 	});
+
+	describe("preconditions and collision policies", () => {
+		const trash = (ifContent?: string): VaultAction => ({
+			kind: VaultActionKind.TrashMdFile,
+			payload: {
+				splitPath: mdFile("a"),
+				...(ifContent === undefined ? {} : { ifContent }),
+			},
+		});
+
+		it("keeps an unconditional trash over a guarded one, in either order", async () => {
+			expect(await collapseActions([trash(), trash("read")])).toEqual([
+				trash(),
+			]);
+			expect(await collapseActions([trash("read"), trash()])).toEqual([
+				trash(),
+			]);
+		});
+
+		it("keeps renames with different collision policies apart, the latest winning", async () => {
+			const rename = (onCollision: "fail" | "dedupe"): VaultAction => ({
+				kind: VaultActionKind.RenameMdFile,
+				payload: { from: mdFile("a"), onCollision, to: mdFile("b") },
+			});
+			expect(
+				await collapseActions([rename("dedupe"), rename("fail")]),
+			).toEqual([rename("fail")]);
+		});
+
+		it("keeps a create over a later ensure-exists, and folds a transform into it", async () => {
+			const create: VaultAction = {
+				kind: VaultActionKind.CreateMdFile,
+				payload: { content: "x", splitPath: mdFile("a") },
+			};
+			const collapsed = await collapseActions([
+				create,
+				{
+					kind: VaultActionKind.UpsertMdFile,
+					payload: { content: null, splitPath: mdFile("a") },
+				},
+				{
+					kind: VaultActionKind.ProcessMdFile,
+					payload: {
+						expected: "x",
+						splitPath: mdFile("a"),
+						transform: (content) => `${content}y`,
+					},
+				},
+			]);
+			expect(collapsed).toEqual([
+				{
+					kind: VaultActionKind.CreateMdFile,
+					payload: { content: "xy", splitPath: mdFile("a") },
+				},
+			]);
+		});
+
+		it("composes guarded transforms into one that checks each against what it receives", async () => {
+			const swap = (expected: string, next: string): VaultAction => ({
+				kind: VaultActionKind.ProcessMdFile,
+				payload: {
+					expected,
+					splitPath: mdFile("a"),
+					transform: () => next,
+				},
+			});
+			const [composed] = await collapseActions([
+				swap("one", "two"),
+				swap("two", "three"),
+			]);
+			if (
+				composed?.kind !== VaultActionKind.ProcessMdFile ||
+				!("transform" in composed.payload)
+			)
+				throw new Error("Expected one composed transform");
+			const { expected, transform } = composed.payload;
+			expect(expected).toBeUndefined();
+			expect(transform("one")).toBe("three");
+			expect(() => transform("other")).toThrow(
+				"no longer holds the content",
+			);
+		});
+	});
 });

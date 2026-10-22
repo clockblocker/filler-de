@@ -8,7 +8,7 @@ import { makeKeyFor } from "../common/collapse-helpers";
  * Build dependency graph from actions.
  *
  * Rules:
- * - ProcessMdFile depends on UpsertMdFile for same file
+ * - ProcessMdFile depends on UpsertMdFile or CreateMdFile for same file
  * - Rename actions depend on folder-creating actions for destination parent folders
  * - Folder-creating actions: CreateFolder OR RenameFolder (destination creates folder)
  * - CreateFolder depends on parent folder-creating actions
@@ -34,7 +34,10 @@ export function buildDependencyGraph(actions: VaultAction[]): DependencyGraph {
 		if (a.kind === VaultActionKind.RenameFolder) {
 			folderCreatorByPathKey.set(makeKeyFor(a.payload.to), a);
 		}
-		if (a.kind === VaultActionKind.UpsertMdFile) {
+		if (
+			a.kind === VaultActionKind.UpsertMdFile ||
+			a.kind === VaultActionKind.CreateMdFile
+		) {
 			upsertByPathKey.set(makeKeyFor(a.payload.splitPath), a);
 		}
 		if (isTrashAction(a)) trashActions.push(a);
@@ -105,6 +108,7 @@ function findDependenciesForAction(
 		}
 
 		case VaultActionKind.UpsertMdFile:
+		case VaultActionKind.CreateMdFile:
 		case VaultActionKind.CreateFile: {
 			dependencies.push(
 				...findParentFolderDependencies(

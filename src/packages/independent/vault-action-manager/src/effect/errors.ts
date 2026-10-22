@@ -117,8 +117,10 @@ export class VamNoActiveEditorError extends Schema.TaggedError<VamNoActiveEditor
 }
 
 /**
- * A background Markdown transform lost a race: the file changed while an
- * asynchronous transform was running, so its result was not written.
+ * A Markdown write found other content than it may write over, and wrote
+ * nothing: an asynchronous transform lost a race with a newer edit, a
+ * `ProcessMdFile` did not receive its `expected` content, or a
+ * `TrashMdFile` found other content than its `ifContent`.
  */
 export class VamContentConflictError extends Schema.TaggedError<VamContentConflictError>()(
 	"VamContentConflictError",
@@ -133,13 +135,39 @@ export class VamContentConflictError extends Schema.TaggedError<VamContentConfli
 	}
 }
 
+/**
+ * An action's target was already taken, so it wrote nothing: a create found
+ * a file there, or a rename with `onCollision: "fail"` found its target
+ * occupied. `occupiedBy` is the path that holds it, which differs from
+ * `path` in case alone where the vault's file system ignores case.
+ */
+export class VamTargetExistsError extends Schema.TaggedError<VamTargetExistsError>()(
+	"VamTargetExistsError",
+	{
+		cause: Schema.Defect(),
+		occupiedBy: Schema.String,
+		operation: Schema.String,
+		path: Schema.String,
+	},
+) {
+	override get message(): string {
+		return describeFailure(this.operation, this.path, this.cause);
+	}
+}
+
 export type VamFileAccessError =
 	| VamActiveEditorError
 	| VamNoActiveEditorError
 	| VamVaultIoError;
 
-/** Failures of a Markdown write, which may also lose a content race. */
-export type VamFileWriteError = VamFileAccessError | VamContentConflictError;
+/**
+ * Failures of a write, which may also lose a content race or find its
+ * target taken.
+ */
+export type VamFileWriteError =
+	| VamFileAccessError
+	| VamContentConflictError
+	| VamTargetExistsError;
 
 export class VamScanError extends Schema.TaggedError<VamScanError>()(
 	"VamScanError",
@@ -171,14 +199,17 @@ export class VamPlanningError extends Schema.TaggedError<VamPlanningError>()(
 /**
  * How one action of a Dispatch Batch failed:
  *
- * - `conflict`: its target changed under it, a background content race or
- *   an active editor that moved on. The action wrote nothing.
+ * - `conflict`: its target changed under it, a background content race, a
+ *   content precondition that did not hold, or an active editor that moved
+ *   on. The action wrote nothing.
+ * - `exists`: its target was already taken. The action wrote nothing.
  * - `missing`: its file or folder was not there. The action wrote nothing.
  * - `io`: vault or editor I/O failed. The action may have changed the vault.
  * - `defect`: it threw unexpectedly. It may have changed the vault.
  */
 export const VamActionFailureKindSchema = Schema.Literals([
 	"conflict",
+	"exists",
 	"missing",
 	"io",
 	"defect",
@@ -276,6 +307,7 @@ export type VamEffectError =
 	| VamScanError
 	| VamVaultIoError
 	| VamContentConflictError
+	| VamTargetExistsError
 	| VamPlanningError
 	| VamDispatchError
 	| VamDispatchFailure

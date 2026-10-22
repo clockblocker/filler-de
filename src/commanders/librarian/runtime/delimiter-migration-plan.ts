@@ -85,7 +85,13 @@ export function planDelimiterMigration(
 			return [
 				Object.freeze({
 					kind: VaultActionKind.RenameMdFile,
-					payload: Object.freeze({ from, to }),
+					// A name taken after planning fails the rename instead of
+					// sending the note to an indexed name or the trash.
+					payload: Object.freeze({
+						from,
+						onCollision: "fail" as const,
+						to,
+					}),
 				}),
 			];
 		})
@@ -114,10 +120,10 @@ export type DelimiterRenameConflict = {
 };
 
 /**
- * Finds renames that would land on a name already in use. VAM resolves such a
- * collision by renaming to an indexed name, or by trashing an identical
- * source, so the plan could neither keep its names nor be undone safely.
- * `existing` holds every note the plan was built from.
+ * Finds renames that would land on a name already in use, so the plan is
+ * refused before anything moves. The renames run with `onCollision: "fail"`,
+ * so a name taken only after planning fails its rename instead, and the
+ * migration rolls back. `existing` holds every note the plan was built from.
  *
  * Names are compared as the vault's file system compares them (`paths`): on
  * a case-insensitive file system (macOS, Windows) `Foo.md` and `foo.md` are

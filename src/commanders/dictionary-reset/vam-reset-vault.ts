@@ -60,21 +60,12 @@ export function vamResetVault(vam: ResetVam): ResetVault {
 							message: `${path} is no Markdown path`,
 						}),
 					);
-				// `CreateFile` runs Obsidian's `vault.create`, which refuses
-				// an existing file.
+				// `CreateMdFile` fails, writing nothing, when a file is there.
 				return vam
 					.dispatchStopOnFirstFailure([
 						{
-							kind: VaultActionKind.CreateFile,
-							payload: {
-								content,
-								splitPath: {
-									basename: splitPath.basename,
-									extension: "md",
-									kind: "File",
-									pathParts: splitPath.pathParts,
-								},
-							},
+							kind: VaultActionKind.CreateMdFile,
+							payload: { content, splitPath },
 						},
 					])
 					.pipe(Effect.mapError(failed(`Could not write ${path}`)));
@@ -142,13 +133,15 @@ export function vamResetVault(vam: ResetVam): ResetVault {
 				// internal links" on, it rewrites links inside the moved notes
 				// (`[[Fahren]]` to a `fahren.md` becomes `[[fahren]]`) and in notes
 				// elsewhere, so the backup would no longer hold the notes as
-				// Collect read them.
+				// Collect read them. A target that is taken fails the move
+				// rather than send it to an indexed name beside the target.
 				return vam
 					.dispatchStopOnFirstFailure([
 						{
 							kind: VaultActionKind.RenameFolder,
 							payload: {
 								from: source,
+								onCollision: "fail",
 								to: target,
 								updateLinks: false,
 							},

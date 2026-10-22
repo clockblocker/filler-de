@@ -1,7 +1,11 @@
 import { describe, expect, it, mock } from "bun:test";
 import { Effect, Fiber, Layer, Tracer } from "effect";
 import { TFile } from "obsidian";
-import { VamActiveEditorError, VamVaultIoError } from "../../src/effect/errors";
+import {
+	VamActiveEditorError,
+	VamContentConflictError,
+	VamVaultIoError,
+} from "../../src/effect/errors";
 import {
 	ActiveEditorAccess,
 	type ActiveEditorHandle,
@@ -11,6 +15,9 @@ import {
 import { ActiveFileService } from "../../src/file-services/active-view/active-file-service";
 import { TFileHelper } from "../../src/file-services/background/helpers/tfile-helper";
 import { MarkdownFileAccess } from "../../src/file-services/markdown-file-access";
+import { processTransformOf } from "../../src/helpers/action-helpers";
+import { vaultContentHash } from "../../src/internal/content-hash";
+import { ContentPreconditionFailed } from "../../src/internal/content-precondition";
 import type { SplitPathToMdFile } from "../../src/types/split-path";
 
 const target: SplitPathToMdFile = {
@@ -579,6 +586,70 @@ describe("MarkdownFileAccess", () => {
 		expect(identity.getTransactionCount()).toBe(0);
 		expect(content.getTransactionCount()).toBe(0);
 		expect(mode.getTransactionCount()).toBe(0);
+	});
+
+	it("checks a process's expected content against the open editor's unsaved buffer", async () => {
+		const typed = makeHarness();
+		typed.setContent("planned\nunsaved typing");
+		typed.addVaultFile(typed.targetFile, "planned");
+		const held = makeHarness();
+		held.setContent("planned");
+		held.addVaultFile(held.targetFile, "other on disk");
+		const guarded = (expected: string) =>
+			processTransformOf({
+				expected,
+				splitPath: target,
+				transform: () => "rewritten",
+			});
+
+		const failure = await typed.run(
+			Effect.flip(
+				typed.access.processContent({
+					splitPath: target,
+					transform: guarded("planned"),
+				}),
+			),
+		);
+		const outcome = await held.run(
+			held.access.processContent({
+				splitPath: target,
+				transform: guarded("planned"),
+			}),
+		);
+
+		expect(failure).toBeInstanceOf(VamContentConflictError);
+		expect((failure as VamContentConflictError).cause).toBeInstanceOf(
+			ContentPreconditionFailed,
+		);
+		expect(typed.getTransactionCount()).toBe(0);
+		expect(outcome._tag).toBe("Wrote");
+		expect(held.getTransactionCount()).toBe(1);
+		expect(held.vaultRead).not.toHaveBeenCalled();
+	});
+
+	it("checks a trash's ifContent against the open editor's unsaved buffer", async () => {
+		const typed = makeHarness();
+		typed.setContent("planned\nunsaved typing");
+		typed.addVaultFile(typed.targetFile, "planned");
+		const held = makeHarness();
+		held.setContent("planned");
+		held.addVaultFile(held.targetFile, "planned");
+
+		const failure = await typed.run(
+			Effect.flip(typed.access.trashFile(target, "planned")),
+		);
+		const outcome = await held.run(
+			held.access.trashFile(target, {
+				hash: vaultContentHash("planned"),
+			}),
+		);
+
+		expect(failure).toBeInstanceOf(VamContentConflictError);
+		expect(await typed.run(typed.access.readContent(target))).toBe(
+			"planned\nunsaved typing",
+		);
+		expect(typed.vaultRead).not.toHaveBeenCalled();
+		expect(outcome).toEqual({ _tag: "Trashed" });
 	});
 
 	it("mutates an expected active line and rejects stale line content", async () => {
