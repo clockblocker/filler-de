@@ -334,3 +334,22 @@ export function attestationOf(
 		unitKind: "Attestation",
 	} as unknown as Dumling.Attestation<"de">);
 }
+
+/**
+ * How Obsidian resolves a link's path, ignoring case: the note at that path,
+ * with or without `.md`, else, for a bare name, the note of that name.
+ */
+export const resolveAmong =
+	(paths: () => readonly string[]) => (linkpath: string) =>
+		Effect.sync(() => {
+			const wanted = linkpath.toLowerCase();
+			const all = paths();
+			const exact = all.find(
+				(path) =>
+					path.toLowerCase() === wanted || path.toLowerCase() === `${wanted}.md`,
+			);
+			if (exact !== undefined || wanted.includes("/")) return exact;
+			return all.find(
+				(path) => path.toLowerCase().split("/").at(-1) === `${wanted}.md`,
+			);
+		});
