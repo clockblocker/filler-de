@@ -9,6 +9,7 @@ import {
 	VamDispatchOverflowError,
 	VamDispatchStoppedError,
 	VamPlanningError,
+	VamProtectedPathError,
 	VamSetupError,
 	VamShutdownError,
 	VaultActionKind,
@@ -326,6 +327,7 @@ function failureFromCause(cause: Cause.Cause<unknown>): unknown {
 function failedBeforeExecution(failure: unknown): boolean {
 	return (
 		failure instanceof VamPlanningError ||
+		failure instanceof VamProtectedPathError ||
 		failure instanceof VamDispatchOverflowError ||
 		failure instanceof VamShutdownError ||
 		failure instanceof VamSetupError

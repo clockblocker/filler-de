@@ -7,6 +7,7 @@ import {
 	VamDispatchError,
 	VamDispatchStoppedError,
 	VamPlanningError,
+	VamProtectedPathError,
 	VamScanError,
 	type VaultAction,
 	VaultActionKind,
@@ -361,6 +362,35 @@ describe("delimiter migration lifecycle", () => {
 		expect(execution.kind).toBe("RolledBack");
 		if (execution.kind !== "RolledBack") return;
 		expect(execution.failure.operation).toBe("planDispatchBatch");
+		expect(execution.rolledBack).toEqual([]);
+		expect(existsCalls).toBe(0);
+		expect(harness.rollbackBatches).toEqual([]);
+	});
+
+	test("a protected-path refusal touched nothing and is not observed", async () => {
+		const harness = makeHarness([readableMdPath("alpha-beta")]);
+		let existsCalls = 0;
+		harness.exists = () => {
+			existsCalls += 1;
+			return Effect.succeed(true);
+		};
+		harness.dispatch = (actions) =>
+			Effect.fail(
+				new VamProtectedPathError({
+					action: actions[0],
+					operation: "dispatch.protectedPath",
+					path: "Library/alpha-beta.md",
+					prefix: "Library",
+					relation: "inside",
+				}),
+			);
+
+		const execution = await Effect.runPromise(
+			harness.service.execute(await plannedFor(harness)),
+		);
+
+		expect(execution.kind).toBe("RolledBack");
+		if (execution.kind !== "RolledBack") return;
 		expect(execution.rolledBack).toEqual([]);
 		expect(existsCalls).toBe(0);
 		expect(harness.rollbackBatches).toEqual([]);
