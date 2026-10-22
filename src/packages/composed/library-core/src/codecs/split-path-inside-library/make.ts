@@ -1,14 +1,7 @@
 import type { AnySplitPath } from "@textfresser/vault-action-manager";
-import type { Result } from "neverthrow";
-import type { CodecError } from "../errors";
 import type { CodecRules } from "../rules";
-import type {
-	AnySplitPathInsideLibrary,
-	SplitPathInsideLibraryCandidate,
-} from ".";
-import { fromInsideLibrary } from "./internal/from";
+import type { SplitPathInsideLibraryCandidate } from ".";
 import { checkIfInsideLibrary } from "./internal/predicate";
-import { toInsideLibrary } from "./internal/to";
 
 export type SplitPathInsideLibraryCodecs = {
 	/** Quick predicate (for early returns) */
@@ -17,12 +10,6 @@ export type SplitPathInsideLibraryCodecs = {
 	isInsideLibrary: (
 		sp: AnySplitPath,
 	) => sp is SplitPathInsideLibraryCandidate;
-	/** Canonical API: returns proper CodecError with reason */
-	toInsideLibrary: (
-		sp: AnySplitPath,
-	) => Result<AnySplitPathInsideLibrary, CodecError>;
-	/** Adds LibraryRoot path parts back */
-	fromInsideLibrary: (sp: AnySplitPathInsideLibrary) => AnySplitPath;
 };
 
 export function makeSplitPathInsideLibraryCodecs(
@@ -30,10 +17,8 @@ export function makeSplitPathInsideLibraryCodecs(
 ): SplitPathInsideLibraryCodecs {
 	return {
 		checkIfInsideLibrary: (sp) => checkIfInsideLibrary(rules, sp),
-		fromInsideLibrary: (sp) => fromInsideLibrary(rules, sp),
 		isInsideLibrary: (sp): sp is SplitPathInsideLibraryCandidate => {
 			return checkIfInsideLibrary(rules, sp);
 		},
-		toInsideLibrary: (sp) => toInsideLibrary(rules, sp),
 	};
 }

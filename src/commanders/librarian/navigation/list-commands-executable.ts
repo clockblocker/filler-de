@@ -17,7 +17,8 @@ import {
  *
  * @param codecs - Codecs for parsing paths and suffixes
  * @param healer - Healer for tree-based edge detection (nullable during init)
- * @param splitPath - Path to the file
+ * @param splitPath - Library-scoped path to the file. The caller (Librarian)
+ *   has already checked that the vault path is inside the Library.
  * @returns Array of CommandKind that are applicable
  */
 export function listCommandsExecutableIn(
@@ -25,11 +26,6 @@ export function listCommandsExecutableIn(
 	healer: Healer | null,
 	splitPath: SplitPathToMdFile,
 ): CommandKindType[] {
-	// Check if inside library
-	if (!codecs.splitPathInsideLibrary.checkIfInsideLibrary(splitPath)) {
-		return [];
-	}
-
 	const commands: CommandKindType[] = [];
 
 	// Parse suffix to get coreName for page detection

@@ -36,8 +36,10 @@ export function updateToolbarVisibility(
 		const file = view.file;
 		if (!file || file.extension !== "md") continue;
 
+		const filePath = buildSplitPath(file.path);
+
 		// Skip codex files - no toolbars for them
-		if (file.basename.startsWith("__")) continue;
+		if (filePath && librarian.isCodex(filePath)) continue;
 
 		// Obsidian leaf.id is not in the public API
 		const leafId = (leaf as { id?: string }).id;
@@ -47,7 +49,6 @@ export function updateToolbarVisibility(
 		const container = view.containerEl?.querySelector(".view-content");
 		if (!container || !(container instanceof HTMLElement)) continue;
 
-		const filePath = buildSplitPath(file.path);
 		const navActions = filePath
 			? computeNavActions(librarian, filePath)
 			: [];

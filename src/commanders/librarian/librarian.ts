@@ -30,7 +30,11 @@ import type {
 	VaultActionManagerSubscription,
 	VaultScanResult,
 } from "@textfresser/vault-action-manager";
-import { MD, type SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import {
+	type AnySplitPath,
+	MD,
+	type SplitPathToMdFile,
+} from "@textfresser/vault-action-manager";
 import { Cause, Effect, Result, Schema } from "effect";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
@@ -681,6 +685,22 @@ export class Librarian {
 
 	isCodexInsideLibrary(splitPath: SplitPathToMdFile): boolean {
 		return isCodexInsideLibraryHelper(splitPath, this.codecs.rules);
+	}
+
+	/**
+	 * Whether a vault path is the Library root folder or lies under it.
+	 * False until init has read the configured root.
+	 */
+	isInsideLibrary(splitPath: AnySplitPath): boolean {
+		if (!this.codecs) return false;
+		return this.codecs.splitPathInsideLibrary.checkIfInsideLibrary(
+			splitPath,
+		);
+	}
+
+	/** Whether a path names a codex file (basename carries the codex prefix). */
+	isCodex(splitPath: AnySplitPath): boolean {
+		return isCodexSplitPath(splitPath);
 	}
 
 	resolveWikilinkAlias(linkContent: string): string | null {
