@@ -87,6 +87,7 @@ export class DelimiterRenameConflictError extends Schema.TaggedError<DelimiterRe
 			Schema.Struct({
 				from: Schema.String,
 				occupiedBy: Schema.String,
+				reason: Schema.Literals(["SharedTarget", "TargetTaken"]),
 				to: Schema.String,
 			}),
 		),
@@ -96,10 +97,12 @@ export class DelimiterRenameConflictError extends Schema.TaggedError<DelimiterRe
 	override get message(): string {
 		const listed = this.conflicts
 			.slice(0, 5)
-			.map(({ from, occupiedBy, to }) =>
-				occupiedBy === to
-					? `${from} → ${to} (already exists)`
-					: `${from} → ${to} (also the new name of ${occupiedBy})`,
+			.map(({ from, occupiedBy, reason, to }) =>
+				reason === "SharedTarget"
+					? `${from} → ${to} (also the new name of ${occupiedBy})`
+					: occupiedBy === to
+						? `${from} → ${to} (already exists)`
+						: `${from} → ${to} (${occupiedBy} already exists)`,
 			)
 			.join("; ");
 		const more =
@@ -291,9 +294,10 @@ function conflictError(
 	conflicts: readonly DelimiterRenameConflict[],
 ): DelimiterRenameConflictError {
 	return new DelimiterRenameConflictError({
-		conflicts: conflicts.map(({ action, occupiedBy }) => ({
+		conflicts: conflicts.map(({ action, occupiedBy, reason }) => ({
 			from: splitPathCodec.format(action.payload.from),
 			occupiedBy,
+			reason,
 			to: splitPathCodec.format(action.payload.to),
 		})),
 		operation: "planDelimiterMigration.conflicts",
@@ -303,7 +307,10 @@ function conflictError(
 function invert(action: DelimiterRenameAction): DelimiterRenameAction {
 	return Object.freeze({
 		kind: VaultActionKind.RenameMdFile,
+		// Same link policy as the forward rename, so the links it rewrote
+		// are rewritten back.
 		payload: Object.freeze({
+			...action.payload,
 			from: action.payload.to,
 			to: action.payload.from,
 		}),

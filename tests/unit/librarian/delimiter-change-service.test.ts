@@ -470,11 +470,13 @@ describe("delimiter migration lifecycle", () => {
 			{
 				from: "Library/alpha-beta.md",
 				occupiedBy: "Library/alpha - beta.md",
+				reason: "SharedTarget",
 				to: "Library/alpha ~ beta.md",
 			},
 			{
 				from: "Library/gamma-delta.md",
 				occupiedBy: "Library/gamma ~ delta.md",
+				reason: "TargetTaken",
 				to: "Library/gamma ~ delta.md",
 			},
 		]);
@@ -488,6 +490,47 @@ describe("delimiter migration lifecycle", () => {
 		expect(harness.pauseCalls).toBe(0);
 		expect(harness.dispatchCalls).toBe(0);
 		expect(harness.restoreCalls).toBe(0);
+	});
+
+	test("a target taken by a name differing only in case is refused", async () => {
+		const harness = makeHarness([
+			readableMdPath("Alpha-Beta"),
+			readableMdPath("alpha ~ beta"),
+		]);
+		const coordinator = new DelimiterMigrationCoordinator(
+			harness.service,
+			harness.lifecycle(),
+		);
+
+		const outcome = await Effect.runPromise(
+			coordinator.migrate(oldConfig, newConfig, root),
+		);
+
+		expect(outcome.kind).toBe("Failed");
+		if (outcome.kind !== "Failed") return;
+		if (!(outcome.problem.cause instanceof DelimiterRenameConflictError))
+			throw new Error("expected a rename conflict");
+		expect(outcome.problem.cause.message).toBe(
+			"1 rename(s) would land on a name already in use: Library/Alpha-Beta.md → Library/Alpha ~ Beta.md (Library/alpha ~ beta.md already exists)",
+		);
+		expect(harness.pauseCalls).toBe(0);
+		expect(harness.dispatchCalls).toBe(0);
+	});
+
+	test("a rename that changes only its own note's case is not a conflict", async () => {
+		const harness = makeHarness([readableMdPath("alphaxbeta")]);
+
+		const plan = await Effect.runPromise(
+			harness.service.plan(
+				{ padded: false, symbol: "x" },
+				{ padded: false, symbol: "X" },
+				root,
+			),
+		);
+
+		expect(plan.actions.map((action) => action.payload.to.basename)).toEqual(
+			["alphaXbeta"],
+		);
 	});
 
 	test("a scan defect leaves the active lifecycle untouched", async () => {
