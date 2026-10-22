@@ -353,10 +353,7 @@ function describeDispatchFailure(
 	actions: readonly DelimiterRenameAction[],
 	failure: unknown,
 ): DelimiterActionFailure {
-	if (
-		failure instanceof VamDispatchStoppedError &&
-		failure.failure.operation !== "registerSelfEvents"
-	) {
+	if (failure instanceof VamDispatchStoppedError) {
 		const action = actions.find((candidate) =>
 			sameRename(failure.failure.action, candidate),
 		);
@@ -395,7 +392,7 @@ function correlateFailures(
 	actions: readonly DelimiterRenameAction[],
 	failure: unknown,
 ): DelimiterActionFailure[] {
-	if (!Array.isArray(failure) || isBatchWideFailure(failure)) {
+	if (!Array.isArray(failure)) {
 		return actions.map((action) => describeFailure(action, failure));
 	}
 
@@ -407,14 +404,6 @@ function correlateFailures(
 	return correlated.length > 0
 		? correlated
 		: actions.map((action) => describeFailure(action, failure));
-}
-
-function isBatchWideFailure(failure: readonly unknown[]): boolean {
-	return failure.some(
-		(item) =>
-			Predicate.hasProperty(item, "operation") &&
-			item.operation === "registerSelfEvents",
-	);
 }
 
 function findFailedAction(
