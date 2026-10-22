@@ -5,9 +5,11 @@ import {
 } from "../../../../src/commanders/classify/resolution/scroll-links";
 import { createReadingReopener } from "../../../../src/commanders/classify/resolution/scroll-to-reading";
 import {
-	dictionaryLinksOf,
 	linkKeyOf,
+	linksOneOf,
 	type RecordedOccurrence,
+	type ScrollLink,
+	scrollLinksOf,
 	unlinkedOccurrences,
 } from "../../../../src/commanders/classify/resolution/scroll-unlinks";
 
@@ -25,6 +27,14 @@ const occurrence = (
 	ref: attestationRefOf("Library/Story.md", blockId, key),
 });
 
+/** The Scroll's links, resolved as their full path names a note unless it is `missing`. */
+const linksIn = (content: string, missing: readonly string[] = []): ScrollLink[] =>
+	scrollLinksOf(content).map(({ block, linkpath, shown }) => ({
+		block,
+		notePath: missing.includes(linkpath) ? undefined : `${linkpath}.md`,
+		shown,
+	}));
+
 const judge = (
 	content: string,
 	recorded: readonly RecordedOccurrence[],
@@ -35,19 +45,20 @@ const judge = (
 ) =>
 	unlinkedOccurrences({
 		content,
-		isMissingNote: (path) => (options.missing ?? []).includes(path),
-		links: dictionaryLinksOf(content),
+		links: linksIn(content, options.missing),
 		recorded,
 		...(options.keys ? { keys: options.keys } : {}),
 	});
 
-describe("dictionaryLinksOf", () => {
-	it("reads the links into Worter/ with their blocks, outside code and comments", () => {
+describe("scrollLinksOf", () => {
+	it("reads every wikilink and embed with its path and block, outside code and comments", () => {
 		const content = [
 			"---",
 			`a: "[[${SEE}|See]]"`,
 			"---",
 			`Der [[${SEE}|See]] und [[${TEICH}#^r-1|Teich]] und ![[${SEE}]] und [[Meer]]. ^0`,
+			"",
+			`| [[ 🌊 See \\|See]] | [[#Kopf]] |`,
 			"",
 			`\`[[${SEE}|See]]\` %%[[${SEE}]]%%`,
 			"",
@@ -58,32 +69,48 @@ describe("dictionaryLinksOf", () => {
 			"",
 		].join("\n");
 		expect(
-			dictionaryLinksOf(content).map(({ block, notePath, shown }) => ({
+			scrollLinksOf(content).map(({ block, linkpath, shown }) => ({
 				block,
-				notePath,
+				linkpath,
 				shown: content.slice(shown.from, shown.to),
 			})),
 		).toEqual([
-			{ block: "0", notePath: `${SEE}.md`, shown: "See" },
-			{ block: "0", notePath: `${TEICH}.md`, shown: "Teich" },
-			{ block: undefined, notePath: `${SEE}.md`, shown: SEE },
+			{ block: "0", linkpath: SEE, shown: "See" },
+			{ block: "0", linkpath: TEICH, shown: "Teich" },
+			{ block: "0", linkpath: SEE, shown: SEE },
+			{ block: "0", linkpath: "Meer", shown: "Meer" },
+			{ block: undefined, linkpath: "🌊 See", shown: "See" },
+			{ block: undefined, linkpath: "", shown: "#Kopf" },
+			{ block: undefined, linkpath: SEE, shown: SEE },
 		]);
+	});
+});
+
+describe("linksOneOf", () => {
+	it("tells whether the Scroll links a recorded occurrence in its block", () => {
+		const recorded = [occurrence("0", "aaaaaaaa")];
+		expect(linksOneOf(linksIn(`Der [[${SEE}|See]]. ^0\n`), recorded)).toBe(true);
+		// Its Reading in another block, another Reading in its block, or a
+		// link in flux prove nothing.
+		expect(linksOneOf(linksIn(`Neu. ^0\n\nDer [[${SEE}|See]]. ^1\n`), recorded)).toBe(false);
+		expect(linksOneOf(linksIn(`Der [[${TEICH}|Teich]]. ^0\n`), recorded)).toBe(false);
+		expect(linksOneOf(linksIn(`Der [[${SEE}|See]]. ^0\n`, [SEE]), recorded)).toBe(false);
 	});
 });
 
 describe("unlinkedOccurrences", () => {
 	const link = `[[${SEE}|See]]`;
 
-	it("unlinks what a block no longer links, also when the block is gone", () => {
-		const [kept, gone, deleted] = [
+	it("unlinks what a block no longer links, and nothing in a block that is gone", () => {
+		const [kept, gone, cut] = [
 			occurrence("0", "aaaaaaaa"),
 			occurrence("1", "bbbbbbbb"),
 			occurrence("2", "cccccccc"),
 		];
 		const content = `Der ${link} ist tief. ^0\n\nDer See ist kalt. ^1\n`;
-		expect(judge(content, [kept, gone, deleted])).toEqual({
+		expect(judge(content, [kept, gone, cut])).toEqual({
 			unkeyed: [],
-			unlinked: [gone.ref, deleted.ref],
+			unlinked: [gone.ref],
 		});
 	});
 
@@ -104,7 +131,7 @@ describe("unlinkedOccurrences", () => {
 		const content = `Der ${moved} ist tief. ^0\n`;
 		expect(
 			judge(content, [recorded], {
-				missing: [`${SEE.replace("/s/see/", "/x/see/")}.md`],
+				missing: [SEE.replace("/s/see/", "/x/see/")],
 			}).unlinked,
 		).toEqual([]);
 		expect(judge(content, [recorded]).unlinked).toEqual([recorded.ref]);

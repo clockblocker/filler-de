@@ -70,7 +70,9 @@ Removing a link from a Scroll (#116) is owned by `classify-unlink.test.ts`:
 the occurrence of a deleted link goes, a Reading that still has a linked
 occurrence stays, and one that lost its last goes with its Lemma note. The
 unlink observer's guards (moved text, a lost block ID, a running Classify, a
-repeated Sentence's instances, the Shadow re-evaluation after a removal) are
+repeated Sentence's instances, the Shadow re-evaluation after a removal,
+another file at the Scroll's path, a block that is gone, links resolved as
+Obsidian resolves them) are
 unit tests in `tests/unit/classify/resolution/unlink-observer.test.ts` and
 `scroll-unlinks.test.ts`. The scenario also shows the commit regenerating
 the Crossroads it touches: heute's goes back to "not classified yet".

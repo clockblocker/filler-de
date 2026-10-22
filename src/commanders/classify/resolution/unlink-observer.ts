@@ -27,8 +27,19 @@
  * - **The ref's Scroll.** Refs name a Scroll by basename; they count only
  *   when Obsidian resolves that basename, from their Reading note, to the
  *   modified file.
- * - **Ambiguity.** `unlinkedOccurrences` leaves alone whatever moved text,
- *   a lost block ID or a link in flux could explain.
+ * - **The same Scroll.** Block IDs run `^0`, `^1`… in every classified
+ *   file, so another file that took the Scroll's name, or one that replaced
+ *   it, would hold the refs' blocks too. A check judges only a file that
+ *   still links one of its recorded occurrences in that occurrence's block,
+ *   or, once its last link is gone, still holds in that block the Sentence
+ *   an occurrence was recorded in: one of its cached units gives back the
+ *   occurrence's key. Anything else removes nothing.
+ * - **Links as Obsidian resolves them.** Every wikilink and embed in the
+ *   Scroll is resolved from the Scroll, as Obsidian opens it, so a link the
+ *   link updater rewrote to the shortest path still links its Reading. A
+ *   link that resolves to no note leaves its block alone.
+ * - **Ambiguity.** `unlinkedOccurrences` leaves alone whatever a gone
+ *   block, moved text, a lost block ID or a link in flux could explain.
  *
  * Links removed while the plugin was not running, such as in another
  * editor or on another device, reach no modification. `sweep` catches up
@@ -41,12 +52,11 @@
  *   began, whose Reading note was then no newer than the Scroll: the
  *   dictionary may have synced a ref ahead of the Scroll that links it, and
  *   Classify always writes a Scroll's links after the refs.
- * - **The same Scroll.** Only a Scroll that still links one of its recorded
- *   occurrences, so another file that took its name, or an old version that
- *   replaced it, removes nothing.
- * - **Blocks it still holds.** A block that is gone, split into a page or
- *   lost its ID removes nothing; a link removed from a block still there
- *   does.
+ * - **The same Scroll, by its links alone.** Only a Scroll that still links
+ *   one of its recorded occurrences, so another file that took its name, or
+ *   an old version that replaced it, removes nothing. The Sentences it
+ *   holds do not count here: nothing tells the sweep the user removed the
+ *   last link, and an old version of the Scroll holds them too.
  * - **A quiet vault.** Its checks wait until no Markdown file has been
  *   modified from outside for `sweepQuietMs`, so Sync catching up at
  *   startup lands first.
@@ -72,16 +82,17 @@ import { exclusive } from "./exclusive";
 import type { ScrollActivity } from "./scroll-activity";
 import {
 	attestationRefPrefixOf,
-	blockIdsOf,
 	occurrenceKeyOf,
 	parseAttestationRef,
 	scrollBasenameOf,
+	sourceBlocksOf,
 } from "./scroll-links";
 import {
-	dictionaryLinksOf,
 	linkKeyOf,
+	linksOneOf,
 	type RecordedOccurrence,
 	type ScrollLink,
+	scrollLinksOf,
 	unlinkedOccurrences,
 } from "./scroll-unlinks";
 
@@ -107,8 +118,7 @@ export type UnlinkStore = Pick<
 export type UnlinkScrolls = {
 	/** The Scroll's content as the editor or the vault holds it; none when it is gone. */
 	readonly read: (path: string) => Effect.Effect<string | undefined>;
-	readonly exists: (path: string) => Effect.Effect<boolean>;
-	/** The file Obsidian opens for `linkpath` from `sourcePath`, if any. */
+	/** The Markdown note Obsidian opens for `linkpath` from `sourcePath`, if any. */
 	readonly resolve: (
 		linkpath: string,
 		sourcePath: string,
@@ -218,6 +228,104 @@ const occurrenceKeysOf = Effect.fnUntraced(function* (
 	return keys;
 });
 
+/**
+ * Whether one of `recorded` stands in its block of the Scroll as it was
+ * recorded: a Sentence of that block, its segmentation cached, has a unit
+ * whose occurrence key is the recorded one. The key hashes the Sentence's
+ * text, so no other file and no edited Sentence gives it back.
+ */
+const holdsARecordedSentence = Effect.fnUntraced(function* (
+	content: string,
+	recorded: readonly RecordedOccurrence[],
+	cache: SegmentationCache["Service"],
+	segmenterVersion: string,
+) {
+	const wanted = new Set(
+		recorded.map(
+			({ blockId, occurrence }) => `${blockId}\u0000${occurrence}`,
+		),
+	);
+	const recordedBlocks = new Set(recorded.map(({ blockId }) => blockId));
+	const scroll = scrollSentences(content);
+	const instances = sentenceInstances(
+		scroll.sentences.map(({ text }) => text),
+	);
+	const blocks = sourceBlocksOf(
+		content,
+		scroll.sentences.map(({ source }) => source.from),
+	);
+	for (const [index, sentence] of scroll.sentences.entries()) {
+		const block = blocks.get(sentence.source.from);
+		if (block?._tag !== "Identified" || !recordedBlocks.has(block.id))
+			continue;
+		const key = sentenceKey(segmenterVersion, "de", sentence.text);
+		const cached = Option.filter(
+			yield* cache.get(key),
+			(entry) => entry.text === sentenceStitchedText(sentence.text),
+		);
+		if (Option.isNone(cached)) continue;
+		for (const unit of cached.value.units) {
+			const occurrence = occurrenceKeyOf(
+				{ segments: [...unit.segments], sentenceKey: key },
+				instances[index] ?? 0,
+			);
+			if (wanted.has(`${block.id}\u0000${occurrence}`)) return true;
+		}
+	}
+	return false;
+});
+
+/** The extensions of the files besides notes that Obsidian links and embeds. */
+const ATTACHMENT =
+	/\.(?:3gp|avif|base|bmp|canvas|flac|gif|jpe?g|m4a|mkv|mov|mp3|mp4|ogg|ogv|pdf|png|svg|wav|webm|webp)$/iu;
+
+/** A path as Obsidian matches it: ignoring case and Unicode normalization. */
+const pathKeyOf = (path: string) => path.normalize("NFC").toLowerCase();
+
+/**
+ * The Scroll's wikilinks and embeds, each resolved from the Scroll as
+ * Obsidian opens it. A note that is one of `recorded`'s Reading notes is
+ * named as the dictionary names it. Links into the Scroll itself and to
+ * attachments are left out, and so are Crossroad links that resolve to no
+ * note, as a Crossroad is written only once it is needed.
+ */
+const resolvedLinksOf = Effect.fnUntraced(function* (
+	scrolls: UnlinkScrolls,
+	scrollPath: string,
+	content: string,
+	recorded: readonly RecordedOccurrence[],
+) {
+	const readingPaths = new Map(
+		recorded.map(({ readingPath }) => [
+			pathKeyOf(readingPath),
+			readingPath,
+		]),
+	);
+	const resolved = new Map<string, string | undefined>();
+	const links: ScrollLink[] = [];
+	for (const { block, linkpath, shown } of scrollLinksOf(content)) {
+		if (linkpath === "" || ATTACHMENT.test(linkpath)) continue;
+		if (!resolved.has(linkpath)) {
+			const found = yield* scrolls.resolve(linkpath, scrollPath);
+			resolved.set(
+				linkpath,
+				found === undefined
+					? undefined
+					: (readingPaths.get(pathKeyOf(found)) ?? found),
+			);
+		}
+		const notePath = resolved.get(linkpath);
+		if (notePath === undefined) {
+			const parsed = parseNotePath(
+				linkpath.endsWith(".md") ? linkpath : `${linkpath}.md`,
+			);
+			if (parsed.ok && parsed.value.type === "crossroad") continue;
+		}
+		links.push({ block, notePath, shown });
+	}
+	return links;
+});
+
 type Checked =
 	| { readonly _tag: "Busy" }
 	| { readonly _tag: "Done"; readonly removed: number };
@@ -279,35 +387,23 @@ const scrollsWithRefs = Effect.fnUntraced(function* (
 
 /**
  * What the sweep may judge of a Scroll's recorded occurrences: none unless
- * the Scroll still links one of them in its block, else the settled ones
- * whose block it still holds.
+ * the Scroll still links one of them in its block, else the settled ones.
  */
 const sweptInScroll = (
 	settled: ReadonlySet<string>,
-	content: string,
 	links: readonly ScrollLink[],
 	recorded: readonly RecordedOccurrence[],
-) => {
-	const same = links.some(
-		(link) =>
-			link.block !== undefined &&
-			recorded.some(
-				({ blockId, readingPath }) =>
-					readingPath === link.notePath && blockId === link.block,
-			),
-	);
-	if (!same) return [];
-	const blocks = blockIdsOf(content);
-	return recorded.filter(
-		({ blockId, readingPath, ref }) =>
-			blocks.has(blockId) && settled.has(settledKeyOf(readingPath, ref)),
-	);
-};
+) =>
+	linksOneOf(links, recorded)
+		? recorded.filter(({ readingPath, ref }) =>
+				settled.has(settledKeyOf(readingPath, ref)),
+			)
+		: [];
 
 /**
- * Checks one Scroll and removes the occurrences it no longer links. A
- * check the sweep asked for, given the occurrences it settled, judges only
- * those `sweptInScroll` keeps.
+ * Checks one Scroll and removes the occurrences it no longer links, once
+ * the file proves to be their Scroll. A check the sweep asked for, given
+ * the occurrences it settled, judges only those `sweptInScroll` keeps.
  */
 const checkScroll = Effect.fnUntraced(function* (
 	deps: UnlinkObserverDeps,
@@ -346,20 +442,29 @@ const checkScroll = Effect.fnUntraced(function* (
 				ref,
 			});
 	}
-	const links = dictionaryLinksOf(content);
-	if (swept) recorded = sweptInScroll(swept, content, links, recorded);
+	if (recorded.length === 0) return { _tag: "Done", removed: 0 };
+	const links = yield* resolvedLinksOf(
+		deps.scrolls,
+		scrollPath,
+		content,
+		recorded,
+	);
+	if (swept) recorded = sweptInScroll(swept, links, recorded);
+	else if (
+		!linksOneOf(links, recorded) &&
+		!(yield* holdsARecordedSentence(
+			content,
+			recorded,
+			deps.cache,
+			deps.segmenterVersion(),
+		))
+	)
+		recorded = [];
 	if (recorded.length === 0) return { _tag: "Done", removed: 0 };
 
-	const missing = new Set<string>();
-	for (const notePath of new Set(links.map((link) => link.notePath))) {
-		const parsed = parseNotePath(notePath);
-		if (parsed.ok && parsed.value.type === "crossroad") continue;
-		if (!(yield* deps.scrolls.exists(notePath))) missing.add(notePath);
-	}
 	const judge = (keys?: ReadonlyMap<number, string | undefined>) =>
 		unlinkedOccurrences({
 			content,
-			isMissingNote: (notePath) => missing.has(notePath),
 			links,
 			recorded,
 			...(keys === undefined ? {} : { keys }),

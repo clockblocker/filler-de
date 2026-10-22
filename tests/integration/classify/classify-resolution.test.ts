@@ -31,7 +31,7 @@ import {
 	STORY,
 } from "../../obsidian-e2e/scenarios/classify-resolution-script";
 import { TITLES, visible } from "../../obsidian-e2e/scenarios/dictionary-layout";
-import { MemoryScroll } from "../../unit/classify/resolution/support";
+import { MemoryScroll, resolveAmong } from "../../unit/classify/resolution/support";
 
 const SCROLL = "Library/Story.md";
 
@@ -183,12 +183,10 @@ describe("Classify resolves a selection end to end", () => {
 			cache,
 			quietMs: 0,
 			scrolls: {
-				exists: (path) => Effect.sync(() => vault.content(path) !== undefined),
 				modifiedAt: () => Effect.succeed(undefined),
 				read: (path) =>
 					Effect.sync(() => (path === SCROLL ? scroll.content : undefined)),
-				resolve: (linkpath) =>
-					Effect.succeed(linkpath === "Story" ? SCROLL : undefined),
+				resolve: resolveAmong(() => [...vault.markdownPaths(), SCROLL]),
 			},
 			segmenterVersion: () => "test-segmenter",
 			store: Effect.succeed(store),

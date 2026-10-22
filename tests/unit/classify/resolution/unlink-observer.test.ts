@@ -25,6 +25,7 @@ import {
 	memorySegmentationCache,
 	SegmentationCache,
 } from "../../../../src/commanders/classify/segmentation-cache";
+import { sentenceKey } from "../../../../src/commanders/classify/sentence-key";
 import { UnitResolver } from "../../../../src/commanders/classify/unit-resolver";
 import { createScriptedJev } from "../../../../src/managers/dumgen/scripted-jev";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
@@ -39,6 +40,7 @@ import {
 	attestationOf,
 	planFor,
 	resolutionHarness,
+	resolveAmong,
 	run,
 	stubDumgen,
 	unit,
@@ -78,6 +80,38 @@ const notePath = (reading: Dumling.Reading<"de">) =>
 	readingNotePath(reading).path;
 const linkTo = (path: string, shown: string) =>
 	`[[${path.replace(/\.md$/u, "")}|${shown}]]`;
+const SEGMENTER_VERSION = "test-segmenter";
+
+/** Classify linked See in each of `sentences`, caching their segmentation as it does. */
+async function classifiedSee(content: string, sentences: readonly string[]) {
+	const { dumgen } = stubDumgen({
+		grammar: () => ({
+			_tag: "Resolved",
+			attestation: attestationOf(see, "See", ["See"], NOUN_EVIDENCE),
+		}),
+		reading: (input) =>
+			input.candidates.includes("🌊")
+				? { _tag: "Reuse", emojiDescription: "🌊" }
+				: { _tag: "New", emojiDescription: "🌊" },
+	});
+	const harness = await resolutionHarness({ content, dumgen, scrollPath: SCROLL });
+	const cache = memorySegmentationCache();
+	for (const sentenceText of sentences) {
+		const key = sentenceKey(SEGMENTER_VERSION, "de", sentenceText);
+		const plan = planFor({
+			content: harness.scroll.content,
+			scrollPath: SCROLL,
+			sentenceKey: key,
+			sentenceText,
+			units: seeUnits,
+		});
+		const segmented = plan.sentences.get(key)?.segmented;
+		if (!segmented) throw new Error(`no plan for ${sentenceText}`);
+		await run(cache.put(key, segmented));
+		await harness.resolve(plan);
+	}
+	return { cache, harness };
+}
 
 /** An observer over an in-memory Scroll, checking at once instead of after a quiet period. */
 function observerOver(options: {
@@ -102,8 +136,6 @@ function observerOver(options: {
 		quietMs: 0,
 		...(options.sweepQuietMs === undefined ? {} : { sweepQuietMs: options.sweepQuietMs }),
 		scrolls: {
-			exists: (path) =>
-				Effect.sync(() => options.vault.content(path) !== undefined),
 			modifiedAt: (path) =>
 				Effect.sync(() =>
 					path === SCROLL
@@ -115,10 +147,9 @@ function observerOver(options: {
 					reads.push(path);
 					return path === SCROLL ? options.scroll() : undefined;
 				}),
-			resolve: (linkpath) =>
-				Effect.succeed(linkpath === "Story" ? SCROLL : undefined),
+			resolve: resolveAmong(() => [...options.vault.markdownPaths(), SCROLL]),
 		},
-		segmenterVersion: () => "test-segmenter",
+		segmenterVersion: () => SEGMENTER_VERSION,
 		store: Effect.succeed(store),
 	});
 	return {
@@ -148,30 +179,10 @@ const refsOf = async (store: DumdictVaultStore, lemma: Dumling.Lemma<"de">) =>
 describe("unlink observer", () => {
 	it("removes an occurrence whose link the user deleted, and the Reading with its last one", async () => {
 		const content = "Der See ist tief. ^0\n\nDer See ist kalt. ^1\n";
-		const stub = stubDumgen({
-			grammar: () => ({
-				_tag: "Resolved",
-				attestation: attestationOf(see, "See", ["See"], NOUN_EVIDENCE),
-			}),
-			reading: (input) =>
-				input.candidates.includes("🌊")
-					? { _tag: "Reuse", emojiDescription: "🌊" }
-					: { _tag: "New", emojiDescription: "🌊" },
-		});
-		const harness = await resolutionHarness({
-			content,
-			dumgen: stub.dumgen,
-			scrollPath: SCROLL,
-		});
-		for (const sentenceText of ["Der See ist tief.", "Der See ist kalt."])
-			await harness.resolve(
-				planFor({
-					content: harness.scroll.content,
-					scrollPath: SCROLL,
-					sentenceText,
-					units: seeUnits,
-				}),
-			);
+		const { cache, harness } = await classifiedSee(content, [
+			"Der See ist tief.",
+			"Der See ist kalt.",
+		]);
 		const link = linkTo(notePath(lake), "See");
 		expect(harness.scroll.content).toBe(
 			`Der ${link} ist tief. ^0\n\nDer ${link} ist kalt. ^1\n`,
@@ -181,6 +192,7 @@ describe("unlink observer", () => {
 			"![[Story#^1|^",
 		]);
 		const { edit, notices } = observerOver({
+			cache,
 			scroll: () => harness.scroll.content,
 			store: harness.store,
 			vault: harness.vault,
@@ -204,13 +216,148 @@ describe("unlink observer", () => {
 		expect(harness.vault.content(notePath(lake))).not.toContain("Story#^1");
 		expect(notices).toEqual(["✓ Removed 1 occurrence you unlinked in Story"]);
 
-		// The last link goes: the Reading, its Surface and its Lemma go with it.
+		// The last link goes: the Scroll still holds the Sentence it was
+		// recorded in, so the Reading, its Surface and its Lemma go with it.
 		await edit(() => {
 			harness.scroll.content = harness.scroll.content.replace(link, "See");
 		});
 		expect(await run(harness.store.lemmaNote(see))).toBeUndefined();
 		expect(harness.vault.content(notePath(lake))).toBeUndefined();
 		expect(harness.vault.content(lemmaNotePath(see).path)).toBeUndefined();
+	});
+
+	describe("the same Scroll", () => {
+		const content = "Der See ist tief. ^0\n\nDer See ist kalt. ^1\n";
+		const link = linkTo(notePath(lake), "See");
+		const linked = async () => {
+			const { cache, harness } = await classifiedSee(content, [
+				"Der See ist tief.",
+				"Der See ist kalt.",
+			]);
+			expect(harness.scroll.content).toBe(
+				`Der ${link} ist tief. ^0\n\nDer ${link} ist kalt. ^1\n`,
+			);
+			const observed = observerOver({
+				cache,
+				scroll: () => harness.scroll.content,
+				store: harness.store,
+				vault: harness.vault,
+			});
+			return { ...observed, harness };
+		};
+
+		it("leaves another file at the Scroll's path alone, though it numbers its blocks as the Scroll did", async () => {
+			const { edit, harness, notices } = await linked();
+			// The Scroll was renamed without its refs, and another classified
+			// file took its name: its blocks are ^0 and ^1 too.
+			await edit(() => {
+				harness.scroll.content = `Ein ganz anderer Text. ^0\n\nMit eigenen ${linkTo("Worter/de/x/Block", "Blöcken")}. ^1\n`;
+			});
+			expect(await refsOf(harness.store, see)).toHaveLength(2);
+			expect(notices).toEqual([]);
+		});
+
+		it("leaves an occurrence alone whose block was cut out of the Scroll", async () => {
+			const { edit, harness, notices } = await linked();
+			// The second paragraph was cut, as to paste it elsewhere.
+			await edit(() => {
+				harness.scroll.content = `Der ${link} ist tief. ^0\n`;
+			});
+			expect(await refsOf(harness.store, see)).toHaveLength(2);
+			expect(notices).toEqual([]);
+			// A link removed from a block the Scroll still holds goes.
+			await edit(() => {
+				harness.scroll.content = "Der See ist tief. ^0\n";
+			});
+			expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 13))).toEqual([
+				"![[Story#^1|^",
+			]);
+		});
+
+		it("removes the Scroll's last link only while it holds the Sentence that link was recorded in", async () => {
+			const { edit, harness } = await linked();
+			await edit(() => {
+				harness.scroll.content = harness.scroll.content.replace(
+					`Der ${link} ist kalt.`,
+					"Der See ist sehr kalt.",
+				);
+			});
+			// The last link goes with an edit to its Sentence: nothing tells
+			// this is still the Scroll, so it stays.
+			await edit(() => {
+				harness.scroll.content = "Der See ist sehr tief. ^0\n\nDer See ist sehr kalt. ^1\n";
+			});
+			expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 13))).toEqual([
+				"![[Story#^0|^",
+			]);
+		});
+	});
+
+	describe("links as Obsidian resolves them", () => {
+		const content = "Der See ist tief. ^0\n\nDer See ist kalt. ^1\n";
+		const path = notePath(lake).replace(/\.md$/u, "");
+		const name = path.split("/").at(-1) ?? path;
+		const linked = async () => {
+			const { cache, harness } = await classifiedSee(content, [
+				"Der See ist tief.",
+				"Der See ist kalt.",
+			]);
+			const observed = observerOver({
+				cache,
+				scroll: () => harness.scroll.content,
+				store: harness.store,
+				vault: harness.vault,
+			});
+			return { ...observed, harness };
+		};
+
+		it("counts a link Obsidian rewrote to the shortest path as still linking, until the user removes it", async () => {
+			const { edit, harness, notices } = await linked();
+			// Obsidian's link updater, set to the shortest path, rewrote both.
+			await edit(() => {
+				harness.scroll.content = `Der [[${name}|See]] ist tief. ^0\n\nDer [[${name}|See]] ist kalt. ^1\n`;
+			});
+			expect(await refsOf(harness.store, see)).toHaveLength(2);
+			expect(notices).toEqual([]);
+			await edit(() => {
+				harness.scroll.content = `Der [[${name}|See]] ist tief. ^0\n\nDer See ist kalt. ^1\n`;
+			});
+			expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 13))).toEqual([
+				"![[Story#^0|^",
+			]);
+			expect(notices).toEqual(["✓ Removed 1 occurrence you unlinked in Story"]);
+		});
+
+		it("counts another case, a heading, a block, `.md`, an escaped pipe and an embed as still linking", async () => {
+			const { edit, harness, notices } = await linked();
+			for (const written of [
+				`[[${path.toLowerCase()}|See]]`,
+				`[[${name.toUpperCase()}|See]]`,
+				`[[${path}#Kontexte|See]]`,
+				`[[${name}#^abc|See]]`,
+				`[[${path}.md|See]]`,
+				`[[${path}\\|See]]`,
+				`[[ ${path} |See]]`,
+				`![[${path}]]`,
+			]) {
+				await edit(() => {
+					harness.scroll.content = `Der ${linkTo(notePath(lake), "See")} ist tief. ^0\n\nDer ${written} ist kalt. ^1\n`;
+				});
+				expect(await refsOf(harness.store, see)).toHaveLength(2);
+			}
+			expect(notices).toEqual([]);
+		});
+
+		it("leaves a block alone whose link resolves to no note", async () => {
+			const { edit, harness, notices } = await linked();
+			// The Reading note was renamed, and Obsidian has not rewritten its
+			// shortest link yet.
+			await edit(() => {
+				harness.scroll.content = `Der ${linkTo(notePath(lake), "See")} ist tief. ^0\n\nDer [[${name} alt|See]] ist kalt. ^1\n`;
+			});
+			expect(await refsOf(harness.store, see)).toHaveLength(2);
+			expect(notices).toEqual([]);
+		});
 	});
 
 	it("stays off while a dictionary reset runs, and checks once it has ended", async () => {
@@ -297,20 +444,11 @@ describe("unlink observer", () => {
 
 	it("waits for a Classify run on the Scroll to end before it judges", async () => {
 		const content = "Der See ist tief. ^0\n";
-		const { dumgen } = stubDumgen({
-			grammar: () => ({
-				_tag: "Resolved",
-				attestation: attestationOf(see, "See", ["See"], NOUN_EVIDENCE),
-			}),
-			reading: () => ({ _tag: "New", emojiDescription: "🌊" }),
-		});
-		const harness = await resolutionHarness({ content, dumgen, scrollPath: SCROLL });
-		await harness.resolve(
-			planFor({ content, scrollPath: SCROLL, sentenceText: "Der See ist tief.", units: seeUnits }),
-		);
+		const { cache, harness } = await classifiedSee(content, ["Der See ist tief."]);
 		const activity = createScrollActivity();
 		const { observer } = observerOver({
 			activity,
+			cache,
 			scroll: () => harness.scroll.content,
 			store: harness.store,
 			vault: harness.vault,
@@ -593,9 +731,9 @@ describe("unlink observer", () => {
 			await sweep();
 			expect(await refsOf(harness.store, see)).toHaveLength(2);
 			expect(notices).toEqual([]);
-			// An edit the plugin saw is judged in full.
+			// An edit the plugin saw finds no more proof that this is the Scroll.
 			await edit(() => undefined);
-			expect(await refsOf(harness.store, see)).toHaveLength(0);
+			expect(await refsOf(harness.store, see)).toHaveLength(2);
 		});
 
 		it("leaves an occurrence whose block is gone alone", async () => {
@@ -609,8 +747,9 @@ describe("unlink observer", () => {
 			await sweep();
 			expect(await refsOf(harness.store, see)).toHaveLength(2);
 			expect(notices).toEqual([]);
+			// Nor does an edit the plugin saw.
 			await edit(() => undefined);
-			expect(await refsOf(harness.store, see)).toHaveLength(1);
+			expect(await refsOf(harness.store, see)).toHaveLength(2);
 		});
 
 		it("waits for the vault to be quiet before its checks", async () => {
@@ -664,13 +803,12 @@ describe("unlink observer", () => {
 				notify: (message) => notices.push(message),
 				quietMs: 0,
 				scrolls: {
-					exists: (path) => Effect.sync(() => vault.content(path) !== undefined),
 					modifiedAt: (path) =>
 						Effect.sync(() =>
 							path in scrolls ? editedAt : vault.files.get(path)?.mtime,
 						),
 					read: (path) => Effect.sync(() => scrolls[path]),
-					resolve: (linkpath) => Effect.succeed(`Library/${linkpath}.md`),
+					resolve: resolveAmong(() => [...vault.markdownPaths(), ...Object.keys(scrolls)]),
 				},
 				segmenterVersion: () => "test-segmenter",
 				store: Effect.succeed(store),
