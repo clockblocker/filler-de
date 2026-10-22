@@ -76,6 +76,17 @@ const ABSENT: PreImage = { _tag: "Absent" };
 
 type PreImages = ReadonlyMap<string, PreImage>;
 
+/**
+ * What the vault held before the batch ran: the pre-images of the files it
+ * writes, and, for each path a create or a rename targets, whether
+ * something was there (`undefined` when the lookup failed). A probe never
+ * takes a file that was there before for one the batch put there.
+ */
+type BeforeBatch = {
+	readonly images: PreImages;
+	readonly targets: ReadonlyMap<string, boolean | undefined>;
+};
+
 /** How one stopped batch's change is taken back, if at all. */
 type UndoPlan =
 	| { readonly _tag: "Nothing" }
@@ -114,6 +125,8 @@ const UNDONE: InverseResult = { _tag: "Undone" };
  *   where it went and its old path is free (`onCollision: "fail"`).
  * - `Trashed`, `TrashedDuplicate` → not undoable.
  * - `Uncertain` → probed; only one that landed is undone, guarded as above.
+ *   A create or rename whose target was taken before the batch is never
+ *   found to have landed there.
  *
  * Each inverse runs as its own batch, after the ones before it, so none is
  * reordered among the others; every one is attempted.
@@ -124,7 +137,7 @@ export const dispatchOrUndoVia = Effect.fn("vam.dispatchOrUndo")(function* (
 	options: DispatchOrUndoOptions,
 ): Effect.fn.Return<VamDispatchReport, VamDispatchFailure> {
 	const { maxPreImageChars = MAX_PRE_IMAGE_CHARS, ...caller } = options;
-	const preImages = yield* capturePreImages(port, actions, maxPreImageChars);
+	const before = yield* captureBefore(port, actions, maxPreImageChars);
 	const exit = yield* Effect.exit(
 		port.dispatchWithReport(actions, {
 			...caller,
@@ -137,7 +150,7 @@ export const dispatchOrUndoVia = Effect.fn("vam.dispatchOrUndo")(function* (
 	const undo = yield* undoStopped(
 		port,
 		stopped.report,
-		preImages,
+		before,
 		inverseOptions(stopped.report),
 	);
 	return yield* new VamDispatchFailure({
@@ -199,16 +212,25 @@ function stoppedBatch(
 /**
  * Reads what each file the batch may write holds now, within `budget`:
  * a `ProcessMdFile`'s file, or a contentful `UpsertMdFile`'s, and whether
- * an upsert's file is there at all.
+ * an upsert's file is there at all; and whether something is at each
+ * path a create or a rename targets.
  */
-const capturePreImages = Effect.fnUntraced(function* (
+const captureBefore = Effect.fnUntraced(function* (
 	port: VamUndoPort,
 	actions: readonly VaultAction[],
 	budget: number,
-) {
+): Effect.fn.Return<BeforeBatch> {
 	const images = new Map<string, PreImage>();
+	const targets = new Map<string, boolean | undefined>();
 	let left = budget;
 	for (const action of actions) {
+		const target = targetOf(action);
+		if (target) {
+			const key = keyOf(target);
+			if (!targets.has(key))
+				targets.set(key, yield* settle(port.exists(target)));
+			continue;
+		}
 		if (
 			action.kind !== VaultActionKind.ProcessMdFile &&
 			action.kind !== VaultActionKind.UpsertMdFile
@@ -232,13 +254,29 @@ const capturePreImages = Effect.fnUntraced(function* (
 		left -= content.length;
 		images.set(key, { _tag: "Content", content });
 	}
-	return images;
+	return { images, targets };
 });
+
+/** The path a create or a rename puts something at. */
+function targetOf(action: VaultAction): AnySplitPath | undefined {
+	switch (action.kind) {
+		case VaultActionKind.CreateFolder:
+		case VaultActionKind.CreateFile:
+		case VaultActionKind.CreateMdFile:
+			return action.payload.splitPath;
+		case VaultActionKind.RenameFolder:
+		case VaultActionKind.RenameFile:
+		case VaultActionKind.RenameMdFile:
+			return action.payload.to;
+		default:
+			return undefined;
+	}
+}
 
 const undoStopped = Effect.fn("vam.undo")(function* (
 	port: VamUndoPort,
 	report: VamDispatchReport,
-	preImages: PreImages,
+	before: BeforeBatch,
 	options: DispatchOptions,
 ) {
 	const couldNotUndo: VamUndoReport["couldNotUndo"][number][] = [];
@@ -247,7 +285,7 @@ const undoStopped = Effect.fn("vam.undo")(function* (
 	const undone: VamUndoReport["undone"][number][] = [];
 	for (const entry of [...report.entries].reverse()) {
 		const { action } = entry;
-		const plan = yield* planUndo(port, entry, preImages, (found) =>
+		const plan = yield* planUndo(port, entry, before, (found) =>
 			probed.push({ action, found }),
 		);
 		switch (plan._tag) {
@@ -294,9 +332,10 @@ const undoStopped = Effect.fn("vam.undo")(function* (
 const planUndo = Effect.fnUntraced(function* (
 	port: VamUndoPort,
 	entry: VamDispatchEntry,
-	preImages: PreImages,
+	before: BeforeBatch,
 	onProbed: (found: VamUndoProbe) => void,
 ): Effect.fn.Return<UndoPlan> {
+	const preImages = before.images;
 	switch (entry.status) {
 		case "Failed":
 		case "Skipped":
@@ -309,7 +348,7 @@ const planUndo = Effect.fnUntraced(function* (
 				preImages,
 			);
 		case "Uncertain": {
-			const found = yield* probeForward(port, entry.action, preImages);
+			const found = yield* probeForward(port, entry.action, before);
 			onProbed(found);
 			switch (found) {
 				case "Landed":
@@ -528,29 +567,40 @@ function renameFrom(
 /**
  * Whether an `Uncertain` action landed, from the vault as it is now. Only
  * evidence counts: a rename landed when its file is at `to` and not at
- * `from`, a create when its file holds what it was created with.
+ * `from`, a create when its file holds what it was created with, and
+ * neither when something was at its target before the batch ran, since
+ * that may be what is there now (a rename that went to an indexed name or
+ * trashed a duplicate, a create VAM refused).
  */
 const probeForward = Effect.fn("vam.undo.probe")(function* (
 	port: VamUndoPort,
 	action: VaultAction,
-	preImages: PreImages,
+	batch: BeforeBatch,
 ): Effect.fn.Return<VamUndoProbe> {
 	yield* Effect.annotateCurrentSpan({ "action.kind": action.kind });
+	const preImages = batch.images;
+	const target = targetOf(action);
+	const held = target ? batch.targets.get(keyOf(target)) : false;
 	switch (action.kind) {
 		case VaultActionKind.RenameMdFile:
 		case VaultActionKind.RenameFile:
-		case VaultActionKind.RenameFolder:
-			return yield* probeRename(
-				port,
-				action.payload.from,
-				action.payload.to,
+		case VaultActionKind.RenameFolder: {
+			const { from, to } = action.payload;
+			// A rename that changes only its own name's case finds itself.
+			const ownCase = VaultPath.caseInsensitive.same(
+				splitPathCodec.format(from),
+				splitPathCodec.format(to),
 			);
+			if (held !== false && !ownCase) return "Unknown";
+			return yield* probeRename(port, from, to);
+		}
 		case VaultActionKind.TrashMdFile:
 		case VaultActionKind.TrashFile:
 		case VaultActionKind.TrashFolder:
 			return yield* probeGone(port, action.payload.splitPath);
 		case VaultActionKind.CreateFolder:
 		case VaultActionKind.CreateFile: {
+			if (held !== false) return held ? "NotLanded" : "Unknown";
 			const present = yield* settle(
 				port.exists(action.payload.splitPath),
 			);
@@ -558,6 +608,10 @@ const probeForward = Effect.fn("vam.undo.probe")(function* (
 			return present ? "Landed" : "NotLanded";
 		}
 		case VaultActionKind.CreateMdFile:
+			// A create refuses a taken path, and a batch that trashes its
+			// path as well only trashes it, so a file there before is not
+			// the create's.
+			if (held !== false) return held ? "NotLanded" : "Unknown";
 			return yield* probeContent(
 				port,
 				action.payload.splitPath,

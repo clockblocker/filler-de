@@ -529,3 +529,48 @@ describe("Uncertain", () => {
 		expect(harness.contents.get("Library/a.md")).toBe("A");
 	});
 });
+
+describe("what was there before the batch", () => {
+	it("never moves back a note that held the target before an uncertain indexed rename", async () => {
+		const { fileManager, harness, undoing } = setup();
+		harness.addFile("Library/a.md", "A");
+		harness.addFile("Library/b.md", "theirs");
+		const rename = fileManager.renameFile;
+		fileManager.renameFile = async (file, toPath) => {
+			await rename(file, toPath);
+			throw new Error("selection restore failed");
+		};
+		const { undo } = await undoing([
+			renameMd("Library/a.md", "Library/b.md", "index"),
+		]);
+		expect(undo.probed).toMatchObject([{ found: "Unknown" }]);
+		expect(undo.undone).toEqual([]);
+		expect(harness.contents.get("Library/b.md")).toBe("theirs");
+		expect(harness.contents.get("Library/1_b.md")).toBe("A");
+		expect(harness.exists("Library/a.md")).toBe(false);
+	});
+
+	it("never trashes a note that was there before, when the dispatch dies", async () => {
+		const files = new Map([["Library/kept.md", "same"]]);
+		const inverses: VaultAction[] = [];
+		const port: VamUndoPort = {
+			dispatchWithReport: (actions, { stopOnFirstFailure }) => {
+				if (!stopOnFirstFailure) inverses.push(...actions);
+				return Effect.die(new Error("dispatch exploded"));
+			},
+			exists: (path) =>
+				Effect.succeed(files.has(splitPathCodec.format(path))),
+			readContent: (path) =>
+				Effect.succeed(files.get(splitPathCodec.format(path)) ?? ""),
+		};
+		const failure = await Effect.runPromise(
+			dispatchOrUndoVia(port, [createMd("Library/kept.md", "same")], {
+				caller: "test",
+			}).pipe(Effect.flip),
+		);
+		expect(failure.report.undo?.probed).toMatchObject([
+			{ found: "NotLanded" },
+		]);
+		expect(inverses).toEqual([]);
+	});
+});

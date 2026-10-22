@@ -387,7 +387,12 @@ restored to stale content.
 An `Uncertain` entry is never inverted blindly. VAM probes the vault and
 records the finding in `probed`: `Landed` (a rename's file is at `to` and
 not at `from`; a create's file holds the content it was created with),
-`NotLanded`, or `Unknown`. Only a landed action is inverted, under the same
+`NotLanded`, or `Unknown`. Before the batch runs, VAM also looks up the
+target of every create and rename, so a file that was there already is
+never taken for the batch's: a create whose path was taken did not land,
+and a rename whose target was taken, which may have gone to an indexed
+name or trashed a duplicate, is `Unknown`, unless it changes only its own
+name's case. Only a landed action is inverted, under the same
 guard; an `Unknown` one is `couldNotUndo` with block `Unknown`. A
 `dispatchWithReport` that dies counts every action as `Uncertain`.
 

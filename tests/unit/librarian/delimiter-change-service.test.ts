@@ -357,9 +357,11 @@ describe("delimiter migration lifecycle", () => {
 
 	test("a planning failure touched nothing and is not observed", async () => {
 		const harness = makeHarness([readableMdPath("alpha-beta")]);
+		// VAM looks up each rename's target before the batch; only probes
+		// after it would observe the vault.
 		let existsCalls = 0;
 		harness.exists = () => {
-			existsCalls += 1;
+			if (harness.dispatchCalls > 0) existsCalls += 1;
 			return Effect.succeed(true);
 		};
 		harness.dispatch = (actions) =>
@@ -388,9 +390,11 @@ describe("delimiter migration lifecycle", () => {
 
 	test("a protected-path refusal touched nothing and is not observed", async () => {
 		const harness = makeHarness([readableMdPath("alpha-beta")]);
+		// VAM looks up each rename's target before the batch; only probes
+		// after it would observe the vault.
 		let existsCalls = 0;
 		harness.exists = () => {
-			existsCalls += 1;
+			if (harness.dispatchCalls > 0) existsCalls += 1;
 			return Effect.succeed(true);
 		};
 		harness.dispatch = (actions) => {
@@ -480,7 +484,8 @@ describe("delimiter migration lifecycle", () => {
 		harness.renameBeforeFailing = true;
 		const probed: string[] = [];
 		harness.exists = (path) => {
-			probed.push(path.basename);
+			// Lookups before the batch, of each rename's target, are no probes.
+			if (harness.dispatchCalls > 0) probed.push(path.basename);
 			return path.basename.startsWith("gamma")
 				? Effect.die(new Error("stat failed"))
 				: Effect.succeed(harness.files.has(splitPathCodec.format(path)));
@@ -512,7 +517,8 @@ describe("delimiter migration lifecycle", () => {
 		harness.failForward = failOn("gamma-delta");
 		let existsCalls = 0;
 		harness.exists = (path) => {
-			existsCalls += 1;
+			// Lookups before the batch, of each rename's target, are no probes.
+			if (harness.dispatchCalls > 0) existsCalls += 1;
 			return Effect.succeed(harness.files.has(splitPathCodec.format(path)));
 		};
 
