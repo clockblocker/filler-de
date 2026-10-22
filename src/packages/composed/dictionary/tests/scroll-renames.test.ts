@@ -5,7 +5,11 @@
  */
 import { describe, expect, test } from "bun:test";
 import { freeformOf, parseReadingNote } from "@textfresser/lemma-note-codec";
-import type { AttestationLink } from "dumdict";
+import {
+	type AttestationLink,
+	makeSurfaceId,
+	type SurfaceEntry,
+} from "dumdict";
 import type * as Dumling from "dumling/types";
 import {
 	noteMetadataHelper,
@@ -20,10 +24,13 @@ import {
 	gehen,
 	gehenReading,
 	gehtSurfaceEntry,
+	laufen,
 	readingEntry,
 	readingOf,
+	springen,
+	verb,
 } from "./support/fixtures";
-import { crossroadPath, readingPath } from "./support/paths";
+import { crossroadPath, lemmaPath, readingPath } from "./support/paths";
 import { openStore, seed } from "./support/store";
 
 const slowReading = readingOf(gehen, "🐌");
@@ -467,8 +474,13 @@ describe("two Scrolls that swap names across bulks (#199)", () => {
 describe("how refs name a Scroll (#198)", () => {
 	test("by its basename while Obsidian opens it for that name", async () => {
 		const { store } = await dictionary();
-		expect(await run(store.scrollRefNames("Library/Story.md"))).toEqual({
-			aliases: ["Story"],
+		expect(
+			await run(store.scrollRefNames("Library/Story.md", gehenReading)),
+		).toEqual({
+			aliases: [
+				{ from: SLOW, linkpath: "Story" },
+				{ from: WALK, linkpath: "Story" },
+			],
 			linkpath: "Story",
 		});
 	});
@@ -478,10 +490,9 @@ describe("how refs name a Scroll (#198)", () => {
 			{},
 			{ "Archive/Story.md": "another" },
 		);
-		expect(await run(store.scrollRefNames("Library/Story.md"))).toEqual({
-			aliases: ["Library/Story"],
-			linkpath: "Library/Story",
-		});
+		expect(
+			await run(store.scrollRefNames("Library/Story.md", gehenReading)),
+		).toEqual({ aliases: [], linkpath: "Library/Story" });
 	});
 
 	test("with every stored spelling that opens it as an alias, and none that opens another note", async () => {
@@ -492,10 +503,305 @@ describe("how refs name a Scroll (#198)", () => {
 				ref("Archive/Story", 3, "33333333"),
 			],
 		});
-		expect(await run(store.scrollRefNames("Library/Story.md"))).toEqual({
-			aliases: ["Story", "Library/Story", "story"],
+		expect(
+			await run(store.scrollRefNames("Library/Story.md", gehenReading)),
+		).toEqual({
+			aliases: [
+				{ from: WALK, linkpath: "Library/Story" },
+				{ from: SLOW, linkpath: "story" },
+			],
 			linkpath: "Story",
 		});
+	});
+});
+
+const runReading = readingOf(laufen, "🏃");
+const RUN = readingPath(runReading);
+const laeuftSurface: Dumling.Surface<"de", "Lexeme", "VERB"> = {
+	inflectionalFeatures: null,
+	language: "de",
+	lemma: laufen,
+	normalizedSurface: "Läuft",
+	spelling: { kind: "Canonical" },
+	surfaceFeatures: null,
+	unitKind: "Surface",
+};
+const laeuftSurfaceEntry: SurfaceEntry<"de"> = {
+	attestations: [],
+	attestedTranslations: [],
+	id: makeSurfaceId("de", laeuftSurface),
+	notes: "",
+	ownerLemma: laufen,
+	surface: laeuftSurface,
+};
+
+/**
+ * gehen 🚶 and laufen 🏃, in two folders, with these refs, over a vault
+ * that holds Story and `extra`. gehen's Lemma note, `gehen.md`, sits
+ * beside 🚶's note, so from there Obsidian opens it for "gehen".
+ */
+async function twoFolders(
+	refs: { readonly walk: readonly string[]; readonly run: readonly string[] },
+	extra: Record<string, string> = {},
+) {
+	const vault = new FakeVault({ "Library/Story.md": "Story", ...extra });
+	const opened = await openStore(vault);
+	await seed(opened.store, [
+		createLemma(gehen),
+		createLemma(laufen),
+		createSurface(gehtSurfaceEntry),
+		createSurface(laeuftSurfaceEntry),
+		createReading(
+			readingEntry(gehenReading, {
+				attestationLinks: refs.walk.map((stored) =>
+					link(gehenReading, stored),
+				),
+			}),
+		),
+		createReading(
+			readingEntry(runReading, {
+				attestationLinks: refs.run.map((stored) => ({
+					reading: runReading,
+					ref: stored,
+					surfaceId: laeuftSurfaceEntry.id,
+				})),
+			}),
+		),
+	]);
+	return opened;
+}
+
+describe("refs named from the Reading note that holds them (#210)", () => {
+	test("name a Scroll by its path in a Reading note beside a Lemma note of its name, by its basename elsewhere", async () => {
+		const { store } = await twoFolders(
+			{ run: [], walk: [] },
+			{ "Library/gehen.md": "gehen" },
+		);
+		expect(lemmaPath(gehen).split("/").slice(0, -1)).toEqual(
+			WALK.split("/").slice(0, -1),
+		);
+		// The Mutter case: from 🚶's note, "gehen" opens the Lemma note.
+		expect(
+			await run(store.scrollRefNames("Library/gehen.md", gehenReading)),
+		).toEqual({ aliases: [], linkpath: "Library/gehen" });
+		// From 🏃's note, in another folder, it opens the Scroll.
+		expect(
+			await run(store.scrollRefNames("Library/gehen.md", runReading)),
+		).toEqual({ aliases: [], linkpath: "gehen" });
+	});
+
+	test("name a Scroll by its path when the commit creates a note of its name, which Obsidian cannot see yet", async () => {
+		const vault = new FakeVault({
+			"Library/Story.md": "Story",
+			"Library/springen.md": "springen",
+		});
+		const { store } = await openStore(vault);
+		// springen is stored nowhere: its Lemma note springen.md comes with the ref.
+		expect(
+			await run(
+				store.scrollRefNames(
+					"Library/springen.md",
+					readingOf(springen, "🦘"),
+				),
+			),
+		).toEqual({ aliases: [], linkpath: "Library/springen" });
+		// A Scroll of another name keeps its basename.
+		expect(
+			await run(
+				store.scrollRefNames(
+					"Library/Story.md",
+					readingOf(springen, "🦘"),
+				),
+			),
+		).toEqual({ aliases: [], linkpath: "Story" });
+	});
+
+	test("take a stored spelling as an alias only from a note it opens the Scroll from", async () => {
+		const { store } = await twoFolders(
+			{
+				run: [ref("gehen", 5, "55555555")],
+				walk: [ref("gehen", 0, "00000000")],
+			},
+			{ "Library/gehen.md": "gehen" },
+		);
+		// 🚶's "gehen" opens the Lemma note beside it, never the Scroll.
+		expect(
+			await run(store.scrollRefNames("Library/gehen.md", gehenReading)),
+		).toEqual({
+			aliases: [{ from: RUN, linkpath: "gehen" }],
+			linkpath: "Library/gehen",
+		});
+	});
+
+	test("follow a rename each in the form its own Reading note needs", async () => {
+		const { vault } = await twoFolders({
+			run: [ref("Story", 5, "55555555")],
+			walk: [ref("Story", 0, "00000000")],
+		});
+		await vault.userRename("Library/Story.md", "Library/gehen.md");
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("Library/gehen", 0, "00000000"),
+		]);
+		expect(storedRefs(vault.content(RUN))).toEqual([
+			ref("gehen", 5, "55555555"),
+		]);
+		// Heard again, the rename writes nothing.
+		const before = vault.batches.length;
+		await vault.announceRenames([["Library/Story.md", "Library/gehen.md"]]);
+		expect(vault.batches.length).toBe(before);
+	});
+
+	test("follow a rename away from a Lemma note's name back to the basename", async () => {
+		const { vault } = await twoFolders(
+			{
+				run: [ref("gehen", 5, "55555555")],
+				walk: [ref("Library/gehen", 0, "00000000")],
+			},
+			{ "Library/gehen.md": "gehen" },
+		);
+		await vault.userRename("Library/gehen.md", "Library/Tale.md");
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("Tale", 0, "00000000"),
+		]);
+		expect(storedRefs(vault.content(RUN))).toEqual([
+			ref("Tale", 5, "55555555"),
+		]);
+	});
+
+	test("adopt the name Obsidian gave a ref while the plugin was off, as its own note needs it", async () => {
+		const { store, vault } = await twoFolders({
+			run: [ref("Story", 5, "55555555")],
+			walk: [ref("Story", 0, "00000000")],
+		});
+		await run(store.close);
+		vault.silentRename("Library/Story.md", "Library/gehen.md");
+		// Obsidian's updater names it from each note as that note needs it.
+		vault.silentWrite(
+			WALK,
+			retargetBody(vault.content(WALK), "Story", "Library/gehen"),
+		);
+		vault.silentWrite(
+			RUN,
+			retargetBody(vault.content(RUN), "Story", "gehen"),
+		);
+		await openStore(vault);
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("Library/gehen", 0, "00000000"),
+		]);
+		expect(storedRefs(vault.content(RUN))).toEqual([
+			ref("gehen", 5, "55555555"),
+		]);
+	});
+
+	test("name a Scroll by its path when the commit creates the Crossroad note of the occurrence's spelling", async () => {
+		const { store } = await twoFolders(
+			{ run: [], walk: [] },
+			{ "Library/ging.md": "ging" },
+		);
+		const ging: Dumling.Surface<"de"> = {
+			...gehtSurfaceEntry.surface,
+			normalizedSurface: "ging",
+		};
+		expect(
+			await run(
+				store.scrollRefNames("Library/ging.md", gehenReading, ging),
+			),
+		).toEqual({ aliases: [], linkpath: "Library/ging" });
+		expect(
+			await run(store.scrollRefNames("Library/ging.md", gehenReading)),
+		).toEqual({ aliases: [], linkpath: "ging" });
+	});
+});
+
+/** A Scroll block that links, as Classify links an occurrence, the Reading note at `reading`. */
+const linkedBlock = (block: number, reading: string, shown = "geht") =>
+	`Er [[${reading.replace(/\.md$/u, "")}|${shown}]] heim. ^${block}`;
+const gehenlassen = verb("gehenlassen");
+
+describe("refs a dictionary note took their Scroll's name from (#210)", () => {
+	test("take the Scroll's path at the next start, once the Scroll's block links their Reading note", async () => {
+		const { store, vault } = await twoFolders(
+			{ run: [], walk: [ref("gehen", 0, "00000000")] },
+			{ "Library/gehen.md": "Er geht heim. ^0\n" },
+		);
+		// Without a link to 🚶's note, nothing shows the block is its.
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("gehen", 0, "00000000"),
+		]);
+		await run(store.close);
+		vault.silentWrite("Library/gehen.md", `${linkedBlock(0, WALK)}\n`);
+		const reopened = await openStore(vault);
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("Library/gehen", 0, "00000000"),
+		]);
+		await run(reopened.store.close);
+		const before = vault.batches.length;
+		await openStore(vault);
+		expect(vault.batches.length).toBe(before);
+	});
+
+	test("stay while another note outside the dictionary has the name, or the block is not there", async () => {
+		const { store, vault } = await twoFolders(
+			{
+				run: [],
+				walk: [
+					ref("gehen", 0, "00000000"),
+					ref("Other", 7, "77777777"),
+				],
+			},
+			{
+				"Archive/gehen.md": `${linkedBlock(0, WALK)}\n`,
+				"Library/gehen.md": `${linkedBlock(0, WALK)}\n`,
+				"Library/Other.md": `${linkedBlock(1, WALK)}\n`,
+				[`${WALK.split("/").slice(0, -1).join("/")}/Other.md`]: "x",
+			},
+		);
+		await run(store.close);
+		await openStore(vault);
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("gehen", 0, "00000000"),
+			ref("Other", 7, "77777777"),
+		]);
+	});
+
+	test("take the Scroll's path when a Lemma note created beside their Reading note takes its basename", async () => {
+		const { store, vault } = await twoFolders(
+			{
+				run: [ref("gehenlassen", 5, "55555555")],
+				walk: [ref("gehenlassen", 0, "00000000")],
+			},
+			{
+				"Library/gehenlassen.md": `${linkedBlock(0, WALK)}\n\n${linkedBlock(5, RUN, "läuft")}\n`,
+			},
+		);
+		expect(lemmaPath(gehenlassen).split("/").slice(0, -1)).toEqual(
+			WALK.split("/").slice(0, -1),
+		);
+		await seed(store, [
+			createLemma(gehenlassen),
+			createReading(readingEntry(readingOf(gehenlassen, "🙋"))),
+		]);
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("Library/gehenlassen", 0, "00000000"),
+		]);
+		// From 🏃's note, in another folder, the basename still opens the Scroll.
+		expect(storedRefs(vault.content(RUN))).toEqual([
+			ref("gehenlassen", 5, "55555555"),
+		]);
+	});
+
+	test("take the Scroll's path when the user creates a note of its name beside their Reading note", async () => {
+		const { vault } = await twoFolders(
+			{ run: [], walk: [ref("Story", 0, "00000000")] },
+			{ "Library/Story.md": `${linkedBlock(0, WALK)}\n` },
+		);
+		await vault.userWrite(
+			`${WALK.split("/").slice(0, -1).join("/")}/Story.md`,
+			"a note of mine",
+		);
+		expect(storedRefs(vault.content(WALK))).toEqual([
+			ref("Library/Story", 0, "00000000"),
+		]);
 	});
 });
 

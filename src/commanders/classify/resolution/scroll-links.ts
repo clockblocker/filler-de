@@ -187,8 +187,9 @@ export function occurrenceKeyOf(ref: UnitRef, instance: number): string {
  * attribute (Obsidian 1.14.4's `app.js`), so it shows only in source.
  * `linkpath` names the Scroll: Classify asks the dictionary store for it
  * (`scrollRefNames`), which answers the basename when Obsidian opens the
- * Scroll for it and the path otherwise, as its rename rewrite names it
- * (#99, #198). Without one, the ref names the Scroll by its basename.
+ * Scroll for it from the Reading note the ref goes in, and the path
+ * otherwise, as its rename rewrite names it (#99, #198, #210). Without
+ * one, the ref names the Scroll by its basename.
  */
 export function attestationRefOf(
 	scrollPath: string,

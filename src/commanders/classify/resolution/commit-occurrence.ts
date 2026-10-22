@@ -25,6 +25,7 @@ import {
 	type DictionaryCommitError,
 	type DictionaryTransactionConflict,
 	type DictionaryView,
+	type ScrollAlias,
 	storedRefFor,
 	Transaction,
 } from "@textfresser/dictionary";
@@ -69,12 +70,13 @@ export type OccurrenceCommit = {
 	/** The occurrence's Attestation Ref; none when its block cannot carry an ID. */
 	readonly attestationRef?: string;
 	/**
-	 * Every link path stored refs may name the occurrence's Scroll by
-	 * (`ScrollRefNames.aliases`). A stored ref of the same occurrence that
-	 * names the Scroll by one of them stands for `attestationRef`, so the
-	 * occurrence never gets a second ref (#198).
+	 * Every link path stored refs may name the occurrence's Scroll by, with
+	 * the Reading note it opens the Scroll from (`ScrollRefNames.aliases`).
+	 * A stored ref of the same occurrence that names the Scroll by one of
+	 * them, in that note, stands for `attestationRef`, so the occurrence
+	 * never gets a second ref (#198, #210).
 	 */
-	readonly scrollAliases?: readonly string[];
+	readonly scrollAliases?: readonly ScrollAlias[];
 };
 
 export type OccurrenceCommitted =

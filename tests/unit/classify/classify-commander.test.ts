@@ -6,6 +6,7 @@ import {
 	memorySegmentationCache,
 	pendingUnitResolver,
 } from "../../../src/commanders/classify";
+import { dictionaryNoteRefusal } from "../../../src/commanders/classify/classify-commander";
 import { createScriptedJev } from "../../../src/managers/dumgen/scripted-jev";
 import { FAENGT_AN_ANSWERS, selectionOf } from "./support";
 
@@ -70,6 +71,49 @@ describe("ClassifyCommander", () => {
 			"⚠ Textfresser does not write to Exemplar/Story.md",
 		]);
 		expect(classify.latestHandoff()).toBeNull();
+	});
+
+	it("refuses a note inside Worter/, before anything else, and says why (#210)", async () => {
+		const asked: string[] = [];
+		const notices: string[] = [];
+		const classify = new ClassifyCommander({
+			blockedBy: (scrollPath) => {
+				asked.push(scrollPath);
+				return undefined;
+			},
+			cache: memorySegmentationCache(),
+			dumgen: () => {
+				throw new Error("Classify in Worter/ must not reach dumgen");
+			},
+			resolver: pendingUnitResolver,
+			segmenterVersion: () => "test-segmenter",
+		});
+		for (const scrollPath of [
+			"Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/👩 Mutter.md",
+			"worter/m/mut/mutte/mutter.md",
+		])
+			await Effect.runPromise(
+				classify.execute(
+					{
+						content: STORY,
+						scrollPath,
+						selection: selectionOf(STORY, "an."),
+					},
+					(message) => notices.push(message),
+				),
+			);
+		expect(asked).toEqual([]);
+		expect(notices).toEqual([
+			"⚠ Classify does not run on dictionary notes: Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/👩 Mutter.md lies in Worter/. Classify a text outside it.",
+			"⚠ Classify does not run on dictionary notes: worter/m/mut/mutte/mutter.md lies in Worter/. Classify a text outside it.",
+		]);
+		expect(classify.latestHandoff()).toBeNull();
+	});
+
+	it("lets a note whose folder only starts like Worter be classified", () => {
+		expect(dictionaryNoteRefusal("Wortertexte/Story.md")).toBeUndefined();
+		expect(dictionaryNoteRefusal("Worter.md")).toBeUndefined();
+		expect(dictionaryNoteRefusal("Library/Worter/Story.md")).toBeUndefined();
 	});
 
 	// The desktop scenario `classify-selection` tells this story in Obsidian.

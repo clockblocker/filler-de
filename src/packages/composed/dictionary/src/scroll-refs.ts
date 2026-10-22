@@ -29,11 +29,17 @@
  *   keep their Scroll.
  * - **Names ignore case,** as Obsidian matches link names: `tale` and
  *   `Tale` are one name, wherever names are compared.
+ * - **From the note that holds it.** Obsidian resolves a link from the
+ *   note it sits in: a note under that note's folder wins a basename
+ *   before the shortest path does. So every name is resolved from the
+ *   Reading note holding the ref (#210): a Lemma note `Mutter.md` beside
+ *   `👩 Mutter.md` takes "Mutter" from it, wherever the Scroll is.
  *
- * Classify names a Scroll in a new ref by the same rule
- * (`scrollRefNamesOf`), and matches a stored ref that names the same
- * occurrence by another spelling of the Scroll (`storedRefFor`), so one
- * occurrence never has two refs (#198).
+ * Classify names a Scroll in a new ref by the same rule, from the Reading
+ * note the ref goes in (`scrollRefNamesOf`), and matches a stored ref
+ * that names the same occurrence by another spelling that opens the
+ * Scroll from the note holding it (`storedRefFor`), so one occurrence
+ * never has two refs (#198).
  * - **A ref already there.** A ref moves only where no ref stays, and no
  *   two refs move to one; the others stay, and the store logs them.
  * - **Idempotent.** A ref that already names the Scroll as it should stays,
@@ -43,7 +49,13 @@
  * have left Deine Kontexte showing a ref by its new name while the metadata
  * holds the old one (`ReadingNoteEntry.retargeted`). After a full read the
  * store adopts the new name for each such ref whose old name opens no note
- * and whose new one opens a note outside `Worter/` (`retargetForRepairs`).
+ * and whose new one opens a note outside `Worter/` (`retargetForRepairs`),
+ * each resolved from its own Reading note.
+ *
+ * A dictionary note that takes a Scroll's basename from refs beside it,
+ * such as a Lemma note created in their Reading note's folder, breaks
+ * them. The store moves each such ref to its Scroll's path when nothing
+ * else could be its Scroll (`retargetForShadows`).
  */
 import {
 	ATTESTATION_REF_START,
@@ -95,6 +107,9 @@ export type ScrollLookup<E> = {
 	/** Every Markdown note with this basename. */
 	readonly named: (basename: string) => Effect.Effect<readonly string[], E>;
 };
+
+/** A stored ref and the Reading note holding it, which its name resolves from. */
+export type HeldRef = { readonly ref: string; readonly from: string };
 
 /** Whether a path is neither `Worter/` nor below it. */
 const outsideDictionary = (path: string) => !isUnder(path, WORTER_FOLDER);
@@ -150,7 +165,49 @@ const nameKey = (name: string) => VaultPath.caseInsensitive.key(name);
 
 const samePath = VaultPath.caseSensitive.same;
 
-/** The link path a ref names the note at `path` by: its basename if that opens it, else its path. */
+/** The folder a note sits in: Obsidian resolves a link from a note by it alone. */
+const folderOf = (path: string) => path.split("/").slice(0, -1).join("/");
+
+/**
+ * `lookup`, asking Obsidian once per name and folder: within one decision
+ * the vault holds still, and every Reading note of a folder resolves a
+ * name alike.
+ */
+function remembering<E>(lookup: ScrollLookup<E>): ScrollLookup<E> {
+	const resolved = new Map<string, string | undefined>();
+	const named = new Map<string, readonly string[]>();
+	return {
+		named: (basename) => {
+			const known = named.get(basename);
+			return known === undefined
+				? lookup
+						.named(basename)
+						.pipe(
+							Effect.tap((paths) =>
+								Effect.sync(() => named.set(basename, paths)),
+							),
+						)
+				: Effect.succeed(known);
+		},
+		resolve: (linkpath, from) => {
+			const key = `${linkpath}\u0000${folderOf(from)}`;
+			return resolved.has(key)
+				? Effect.succeed(resolved.get(key))
+				: lookup
+						.resolve(linkpath, from)
+						.pipe(
+							Effect.tap((found) =>
+								Effect.sync(() => resolved.set(key, found)),
+							),
+						);
+		},
+	};
+}
+
+/**
+ * The link path a ref in the note at `from` names the note at `path` by:
+ * its basename if Obsidian opens it for that name from there, else its path.
+ */
 const nameOf = Effect.fnUntraced(function* <E>(
 	path: string,
 	from: string,
@@ -162,68 +219,118 @@ const nameOf = Effect.fnUntraced(function* <E>(
 		: linkpathOf(path);
 });
 
-/** How Attestation Refs name one Scroll (#198). */
-export type ScrollRefNames = {
-	/** The link path a new ref names the Scroll by, as the store's rename rewrite names it. */
+/** A spelling stored refs name a Scroll by, and the Reading note it opens the Scroll from. */
+export type ScrollAlias = {
 	readonly linkpath: string;
-	/**
-	 * Every link path a stored ref may name the Scroll by: `linkpath`, and
-	 * each other spelling of its basename or path that stored refs use and
-	 * Obsidian opens the Scroll for.
-	 */
-	readonly aliases: readonly string[];
+	/** The Reading note holding refs of that spelling. */
+	readonly from: string;
 };
 
-/** How refs name a Scroll when Obsidian cannot be asked: by its basename, as Classify did before #198. */
-export const basenameRefNames = (scrollPath: string): ScrollRefNames => {
-	const linkpath = basenameOf(scrollPath);
-	return { aliases: [linkpath], linkpath };
+/** How Attestation Refs name one Scroll, for a new ref in one Reading note (#198, #210). */
+export type ScrollRefNames = {
+	/**
+	 * The link path a new ref in that Reading note names the Scroll by, as
+	 * the store's rename rewrite names it there.
+	 */
+	readonly linkpath: string;
+	/**
+	 * Every spelling of the Scroll's basename or path that stored refs use,
+	 * with each Reading note holding them that Obsidian opens the Scroll
+	 * for that spelling from.
+	 */
+	readonly aliases: readonly ScrollAlias[];
 };
 
 /**
- * How refs name the Scroll at `scrollPath`, for refs whose link paths are
- * `held`, resolved from the dictionary note at `from`: its basename when
- * Obsidian opens it for that name, its path otherwise, the rule the
- * store's rename rewrite follows.
+ * Whether a note Obsidian does not know yet, such as a Lemma note the
+ * commit creates, has the Scroll's basename. Such a note, beside the
+ * Reading note, wins the name from it.
+ */
+const takenByUnseen = (scrollPath: string, unseen: readonly string[]) => {
+	const name = nameKey(basenameOf(scrollPath));
+	return unseen.some(
+		(path) =>
+			!samePath(path, scrollPath) && nameKey(basenameOf(path)) === name,
+	);
+};
+
+/**
+ * How refs name a Scroll when Obsidian cannot be asked: by its basename,
+ * as Classify did before #198, unless a note of `unseen` has it.
+ */
+export const basenameRefNames = (
+	scrollPath: string,
+	unseen: readonly string[] = [],
+): ScrollRefNames => ({
+	aliases: [],
+	linkpath: takenByUnseen(scrollPath, unseen)
+		? linkpathOf(scrollPath)
+		: basenameOf(scrollPath),
+});
+
+/**
+ * How refs name the Scroll at `scrollPath` for a new ref in the Reading
+ * note at `from`, given the `held` refs: its basename when Obsidian opens
+ * the Scroll for it from that note, its path otherwise, the rule the
+ * store's rename rewrite follows. `unseen` are notes the ref's commit may
+ * create that Obsidian cannot see yet, the Reading's own Lemma and Reading
+ * notes: one with the Scroll's basename takes the path form.
  */
 export const scrollRefNamesOf = Effect.fnUntraced(function* <E>(
 	scrollPath: string,
-	held: Iterable<string>,
 	from: string,
-	lookup: ScrollLookup<E>,
+	held: readonly HeldRef[],
+	asked: ScrollLookup<E>,
+	unseen: readonly string[] = [],
 ): Effect.fn.Return<ScrollRefNames, E> {
-	const linkpath = yield* nameOf(scrollPath, from, lookup);
-	const others = new Set<string>();
+	const lookup = remembering(asked);
+	const linkpath = takenByUnseen(scrollPath, unseen)
+		? linkpathOf(scrollPath)
+		: yield* nameOf(scrollPath, from, lookup);
 	const name = nameKey(basenameOf(scrollPath));
 	const path = nameKey(linkpathOf(scrollPath));
-	for (const stored of held) {
-		if (stored === linkpath || others.has(stored)) continue;
-		const key = nameKey(stored);
+	const aliases = new Map<string, ScrollAlias>();
+	for (const { from: holder, ref } of held) {
+		const parts = parseAttestationRef(ref);
+		if (parts === undefined) continue;
+		const key = nameKey(parts.linkpath);
 		if (key !== name && key !== path) continue;
-		if ((yield* lookup.resolve(stored, from)) === scrollPath)
-			others.add(stored);
+		const alias = `${parts.linkpath}\u0000${holder}`;
+		if (aliases.has(alias)) continue;
+		if ((yield* lookup.resolve(parts.linkpath, holder)) === scrollPath)
+			aliases.set(alias, { from: holder, linkpath: parts.linkpath });
 	}
-	return { aliases: [linkpath, ...[...others].sort()], linkpath };
+	return {
+		aliases: [...aliases]
+			.sort(([left], [right]) => (left < right ? -1 : 1))
+			.map(([, alias]) => alias),
+		linkpath,
+	};
 });
 
 /**
  * The stored ref of the occurrence `ref` names, when a stored ref names it
- * by one of the Scroll's `aliases`: the same block and occurrence key, the
- * Scroll spelled another way. `ref` itself when the dictionary holds it,
- * or holds no such ref. Matching refs this way keeps a second ref of one
- * occurrence from being added beside the first (#198).
+ * by one of the Scroll's `aliases` from the Reading note the alias holds:
+ * the same block and occurrence key, the Scroll spelled another way that
+ * opens it from the note the stored ref sits in. `ref` itself when the
+ * dictionary holds it, or holds no such ref. Matching refs this way keeps
+ * a second ref of one occurrence from being added beside the first (#198),
+ * and never takes a ref that opens another note for the occurrence's (#210).
  */
 export function storedRefFor(
-	view: Pick<DictionaryView, "attestationLinksWithRef">,
+	view: Pick<DictionaryView, "attestationLinksWithRef" | "readingLocation">,
 	ref: string,
-	aliases: readonly string[],
+	aliases: readonly ScrollAlias[],
 ): string {
 	const parts = parseAttestationRef(ref);
 	if (parts === undefined || view.attestationLinksWithRef(ref).length > 0)
 		return ref;
 	for (const alias of aliases) {
-		const stored = retargetedRef(parts, alias);
-		if (view.attestationLinksWithRef(stored).length > 0) return stored;
+		const stored = retargetedRef(parts, alias.linkpath);
+		const holders = view
+			.attestationLinksWithRef(stored)
+			.map(({ reading }) => view.readingLocation(reading)?.path);
+		if (holders.includes(alias.from)) return stored;
 	}
 	return ref;
 }
@@ -243,8 +350,10 @@ export type DeferredRefs = {
 	readonly name: string;
 	/** The renamed Scroll's path, as the last rename heard left it. */
 	readonly scroll: string;
-	/** The note Obsidian opened for `name` instead. */
+	/** The note Obsidian opened for `name` instead, from `from`. */
 	readonly owner: string;
+	/** The Reading note holding the refs, which their names resolve from. */
+	readonly from: string;
 	/** Set once the store heard the owner take its name, while the Scroll had moved on unheard. */
 	readonly ownerArrived?: true;
 	/** When the rename left them, in milliseconds. */
@@ -261,16 +370,16 @@ export type RenameRetarget = {
 };
 
 /**
- * Where the refs of these renames go, for the stored `refs`, resolved
- * from the dictionary note at `from`. `deferred` are refs earlier renames
- * left; a rename here that gives their owner its name settles them, as if
- * both renames had come in one bulk. `retarget` is undefined when no ref
- * moves; new deferrals are stamped `now`.
+ * Where the refs of these renames go, for the stored `refs` one Reading
+ * note holds, resolved from that note, `from`. `deferred` are refs earlier
+ * renames left in it; a rename here that gives their owner its name
+ * settles them, as if both renames had come in one bulk. `retarget` is
+ * undefined when no ref moves; new deferrals are stamped `now`.
  *
  * Names compare as Obsidian matches link names, ignoring case. Notes under
  * `Worter/` never count as a name's owner: refs never point into it.
  */
-export const retargetForRenames = Effect.fnUntraced(function* <E>(
+const retargetFromNote = Effect.fnUntraced(function* <E>(
 	renames: readonly ScrollRename[],
 	refs: readonly string[],
 	from: string,
@@ -413,6 +522,7 @@ export const retargetForRenames = Effect.fnUntraced(function* <E>(
 					);
 					fresh.push({
 						at: now,
+						from,
 						name: oldName,
 						owner,
 						refs: refsNamed.get(nameKey(oldName)) ?? [],
@@ -471,6 +581,55 @@ export const retargetForRenames = Effect.fnUntraced(function* <E>(
 });
 
 /**
+ * Where the refs of these renames go, for every stored ref with the
+ * Reading note holding it (#210): each note's refs are placed by
+ * `retargetFromNote`, resolved from that note, with the deferrals its refs
+ * left. A deferral whose note holds no ref any more is dropped, and its
+ * refs, if they moved elsewhere, stay.
+ */
+export const retargetForRenames = Effect.fnUntraced(function* <E>(
+	renames: readonly ScrollRename[],
+	held: readonly HeldRef[],
+	asked: ScrollLookup<E>,
+	deferred: readonly DeferredRefs[] = [],
+	now = 0,
+): Effect.fn.Return<RenameRetarget, E> {
+	const lookup = remembering(asked);
+	const byNote = new Map<string, string[]>();
+	for (const { from, ref } of held) {
+		const refs = byNote.get(from) ?? [];
+		refs.push(ref);
+		byNote.set(from, refs);
+	}
+	const notes = new Set<string>();
+	const waiting: DeferredRefs[] = [];
+	const byRef = new Map<string, Retarget>();
+	for (const [from, refs] of byNote) {
+		const placed = yield* retargetFromNote(
+			renames,
+			refs,
+			from,
+			lookup,
+			deferred.filter((earlier) => earlier.from === from),
+			now,
+		);
+		for (const note of placed.notes) notes.add(note);
+		waiting.push(...placed.deferred);
+		const { retarget } = placed;
+		if (retarget !== undefined)
+			for (const ref of refs) byRef.set(ref, retarget);
+	}
+	return {
+		deferred: waiting,
+		notes: [...notes],
+		retarget:
+			byRef.size === 0
+				? undefined
+				: (parts, ref) => byRef.get(ref)?.(parts, ref),
+	};
+});
+
+/**
  * Where the refs Obsidian retargeted while the plugin was off go: the
  * note their new link path opens, named as `nameOf` names it, for each
  * ref whose stored link path opens no note. Each comes with the Reading
@@ -493,6 +652,100 @@ export const retargetForRepairs = Effect.fnUntraced(function* <E>(
 		const now = yield* lookup.resolve(linkpath, from);
 		if (now === undefined || !outsideDictionary(now)) continue;
 		byRef.set(ref, yield* nameOf(now, from, lookup));
+	}
+	if (byRef.size === 0) return undefined;
+	return (_parts, ref) => byRef.get(ref);
+});
+
+/** The form a note's basename is matched by in a link, ignoring case. */
+export const basenameKeyOf = (path: string): string =>
+	nameKey(basenameOf(path));
+
+/** A block ID at a line's end, after whitespace, as Obsidian reads one. */
+const BLOCK_ID = /(?:^|\s)\^([A-Za-z0-9-]+)\s*$/u;
+/** A line that starts a block of its own: a list item, a heading or a quote. */
+const OPENS_BLOCK = /^\s*(?:[-*+]\s|\d+[.)]\s|#{1,6}\s|>)/u;
+/** A line no block runs across. */
+const BREAKS_BLOCK = /^\s*(?:$|```|~~~|\|)/u;
+const WIKILINK = /\[\[([^\]|#\n]+)(?:#[^\]|\n]*)?(?:\|[^\]\n]*)?\]\]/gu;
+
+/**
+ * Whether `content` holds the block `^blockId` exactly once, and that
+ * block links the note at `linked`: the link Classify writes at an
+ * occurrence goes to its Reading note (#64).
+ */
+function blockLinks(content: string, blockId: string, linked: string): boolean {
+	const lines = content.split("\n").map((line) => line.replace(/\r$/u, ""));
+	const ends = lines.flatMap((line, at) =>
+		BLOCK_ID.exec(line)?.[1] === blockId ? [at] : [],
+	);
+	const [end] = ends;
+	if (ends.length !== 1 || end === undefined) return false;
+	let start = end;
+	while (start > 0 && !OPENS_BLOCK.test(lines[start] ?? "")) {
+		const previous = lines[start - 1] ?? "";
+		if (BREAKS_BLOCK.test(previous) || BLOCK_ID.test(previous)) break;
+		start -= 1;
+	}
+	const target = nameKey(linkpathOf(linked));
+	return lines
+		.slice(start, end + 1)
+		.some((line) =>
+			[...line.matchAll(WIKILINK)].some(
+				([, linkpath]) => nameKey(linkpath ?? "") === target,
+			),
+		);
+}
+
+/**
+ * Where refs go whose basename a dictionary note took from their Scroll
+ * (#210): a Lemma note created beside their Reading note, a Crossroad note
+ * whose path is shorter than the Scroll's, or a ref written that way
+ * before refs were named from their own Reading note. Refs never point
+ * into `Worter/`, so such a ref is broken, and it moves to the Scroll's
+ * path only when nothing else could be its Scroll:
+ *
+ * - its link path is a basename, and from its Reading note Obsidian opens
+ *   a note under `Worter/` for it;
+ * - exactly one note outside `Worter/` has that basename;
+ * - that note holds the ref's block once, and the block links the ref's
+ *   Reading note, as Classify linked the occurrence;
+ * - no other Reading note holds the same ref.
+ *
+ * The occurrence key is a hash of the segmenter's Sentence and Segments,
+ * which the store cannot recompute; `planRefRewrite` still refuses a move
+ * onto a ref the dictionary holds. Every other ref stays as it is. `names`
+ * limits it to refs naming those basenames, by `basenameKeyOf`.
+ */
+export const retargetForShadows = Effect.fnUntraced(function* <E>(
+	held: readonly HeldRef[],
+	asked: ScrollLookup<E>,
+	read: (path: string) => Effect.Effect<string | undefined, E>,
+	names?: ReadonlySet<string>,
+): Effect.fn.Return<Retarget | undefined, E> {
+	const lookup = remembering(asked);
+	const holders = new Map<string, number>();
+	for (const { ref } of held) holders.set(ref, (holders.get(ref) ?? 0) + 1);
+	const contents = new Map<string, string | undefined>();
+	const byRef = new Map<string, string>();
+	for (const { from, ref } of held) {
+		const parts = parseAttestationRef(ref);
+		if (parts === undefined || parts.linkpath.includes("/")) continue;
+		if (names !== undefined && !names.has(nameKey(parts.linkpath)))
+			continue;
+		if (holders.get(ref) !== 1) continue;
+		const opened = yield* lookup.resolve(parts.linkpath, from);
+		if (opened === undefined || outsideDictionary(opened)) continue;
+		const outside = (yield* lookup.named(parts.linkpath)).filter(
+			outsideDictionary,
+		);
+		const [scroll] = outside;
+		if (outside.length !== 1 || scroll === undefined) continue;
+		if (!contents.has(scroll)) contents.set(scroll, yield* read(scroll));
+		const content = contents.get(scroll);
+		if (content === undefined || !blockLinks(content, parts.blockId, from))
+			continue;
+		byRef.set(ref, yield* nameOf(scroll, from, lookup));
 	}
 	if (byRef.size === 0) return undefined;
 	return (_parts, ref) => byRef.get(ref);

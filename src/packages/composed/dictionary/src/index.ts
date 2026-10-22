@@ -23,7 +23,11 @@ export {
 export type { ReadingLocation, RelationEdge } from "./note-index";
 export type { QuarantineReason } from "./notes";
 export type { NoteProjections } from "./render";
-export { type ScrollRefNames, storedRefFor } from "./scroll-refs";
+export {
+	type ScrollAlias,
+	type ScrollRefNames,
+	storedRefFor,
+} from "./scroll-refs";
 export {
 	type DictionaryDiagnostics,
 	type DumdictVaultStore,

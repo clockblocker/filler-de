@@ -4,7 +4,6 @@ import {
 	lemmaNoteOwner,
 	NoteSerializeError,
 	type PathClaim,
-	parseAttestationRef,
 	readingNoteOwner,
 } from "@textfresser/lemma-note-codec";
 import {
@@ -122,12 +121,15 @@ import {
 	staleTables,
 } from "./render";
 import {
+	basenameKeyOf,
 	basenameRefNames,
 	type DeferredRefs,
+	type HeldRef,
 	planRefRewrite,
 	type RefRewrite,
 	retargetForRenames,
 	retargetForRepairs,
+	retargetForShadows,
 	type ScrollLookup,
 	type ScrollRefNames,
 	type ScrollRename,
@@ -356,15 +358,22 @@ export type DumdictVaultStore = {
 		reading: Dumling.Reading<"de">,
 	) => Effect.Effect<ReadingLocation | undefined>;
 	/**
-	 * How Attestation Refs name the Scroll at `scrollPath` (#198): the link
-	 * path a new ref takes, by the rule the store's rename rewrite follows
-	 * (its basename when Obsidian opens the Scroll for it, its path
-	 * otherwise), and every spelling stored refs name it by. It never
-	 * fails: when Obsidian cannot be asked, it answers the basename alone
-	 * and logs a warning.
+	 * How Attestation Refs name the Scroll at `scrollPath` for a new ref of
+	 * `reading` (#198, #210): the link path the ref takes, by the rule the
+	 * store's rename rewrite follows, resolved from the Reading's note, the
+	 * one it has or the one its commit creates (its basename when Obsidian
+	 * opens the Scroll for it from there, its path otherwise), and every
+	 * spelling stored refs name it by from the notes holding them. It never
+	 * fails: when Obsidian cannot be asked, it answers the basename, unless
+	 * a note the Reading's commit creates has it, and logs a warning. The
+	 * notes the commit creates include the Crossroad notes of the Lemma's
+	 * and the Surface's spellings that are not there yet.
 	 */
 	readonly scrollRefNames: (
 		scrollPath: string,
+		reading: Dumling.Reading<"de">,
+		/** The occurrence's Surface, whose Crossroad note the commit may create. */
+		surface?: Dumling.Surface<"de">,
 	) => Effect.Effect<ScrollRefNames>;
 	readonly surface: (
 		surfaceId: SurfaceEntry<"de">["id"],
@@ -671,6 +680,12 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	const markStale = Effect.sync(() => {
 		stale = true;
 	});
+	/**
+	 * The basenames, by `basenameKeyOf`, of notes that appeared in the index
+	 * since refs were last checked against them: a new note may take a
+	 * Scroll's basename from refs beside it (#210, `repairShadowedRefs`).
+	 */
+	let appeared = new Set<string>();
 
 	const diagnosticsOf = (view: NoteIndex): DictionaryDiagnostics => {
 		const quarantined: QuarantinedNote[] = [];
@@ -791,7 +806,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		}
 		if (changes.length === 0) return changes;
 		const next = index.clone();
-		for (const { path, entry } of changes) next.set(path, entry);
+		for (const { before, path, entry } of changes) {
+			next.set(path, entry);
+			if (before === undefined && entry !== undefined)
+				appeared.add(basenameKeyOf(path));
+		}
 		publish(next);
 		return changes;
 	});
@@ -1861,6 +1880,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	) => {
 		const next = index.clone();
 		for (const { content, path } of writes) {
+			if (content !== undefined && index.entry(path) === undefined)
+				appeared.add(basenameKeyOf(path));
 			next.set(
 				path,
 				content === undefined ? undefined : classifyFile(path, content),
@@ -2201,14 +2222,66 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	);
 
 	/**
+	 * Moves the refs a dictionary note took their Scroll's basename from to
+	 * the Scroll's path (#210, `retargetForShadows`), as one commit under
+	 * the lock its caller holds: every ref after a full read, else the refs
+	 * naming a note that appeared since the last check. It never fails.
+	 */
+	const repairShadowedRefs = (whole: boolean, depth = 0) =>
+		Effect.gen(function* () {
+			const names = appeared;
+			appeared = new Set();
+			if (!whole && names.size === 0) return;
+			const held = heldRefs();
+			if (held.length === 0) return;
+			const retarget = yield* retargetForShadows(
+				held,
+				lookup,
+				(path) =>
+					vault.readContentWithStat(mdSplitPath(path)).pipe(
+						Effect.map(({ content }) => content),
+						Effect.orElseSucceed(() => undefined),
+					),
+				whole ? undefined : names,
+			);
+			if (retarget === undefined) return;
+			const step = planRefRewrite(viewOf(index, revision()), retarget);
+			if (step._tag !== "Commit") return;
+			const result = yield* Effect.result(
+				commitUnderLock(step.plan, depth + 1),
+			);
+			if (
+				result._tag === "Failure" ||
+				result.success.status !== "committed"
+			)
+				yield* Effect.logWarning(
+					"Dictionary could not name Scrolls by path in refs a dictionary note shadowed",
+					result._tag === "Failure" ? result.failure : result.success,
+				);
+			else
+				yield* Effect.logInfo(
+					`Dictionary named ${step.value.rewritten} Scrolls by path in refs a dictionary note shadowed`,
+				);
+		}).pipe(
+			Effect.catchCause((cause) =>
+				Effect.logError(
+					"Dictionary could not repair refs a dictionary note shadowed",
+					cause,
+				),
+			),
+		);
+
+	/**
 	 * After a full read of `Worter/`: heal, let links converge, regenerate
-	 * the Crossroad notes that are missing or stale, then adopt the names
-	 * Obsidian gave refs into Scrolls that moved meanwhile.
+	 * the Crossroad notes that are missing or stale, adopt the names
+	 * Obsidian gave refs into Scrolls that moved meanwhile, then name by
+	 * path the Scrolls of refs a dictionary note shadows.
 	 */
 	const settle = heal().pipe(
 		Effect.andThen(Effect.suspend(() => converge())),
 		Effect.andThen(regenerateCrossroads()),
 		Effect.andThen(repairRetargetedRefs),
+		Effect.andThen(Effect.suspend(() => repairShadowedRefs(true))),
 	);
 
 	/**
@@ -2305,6 +2378,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				Effect.gen(function* () {
 					if (stale && (yield* recover)) yield* settle;
 					yield* effect;
+					yield* repairShadowedRefs(false);
 				}).pipe(
 					Effect.onError(() => markStale),
 					Effect.ensuring(report),
@@ -2457,45 +2531,63 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				),
 	};
 
-	/**
-	 * The stored refs, the link paths they name their Scrolls by, and a
-	 * Reading note to resolve them from.
-	 */
-	const heldLinkpaths = () => {
-		const links = index.linksWithRefPrefix(ATTESTATION_REF_START);
-		const held = new Set<string>();
-		for (const { ref } of links) {
-			const parts = parseAttestationRef(ref);
-			if (parts) held.add(parts.linkpath);
-		}
-		let from: string | undefined;
-		for (const { reading } of links) {
-			from = index.readingLocation(readingKeyOf(reading))?.path;
-			if (from !== undefined) break;
-		}
-		return { from, held, refs: links.map(({ ref }) => ref) };
-	};
+	/** Every stored ref with the Reading note holding it, which its name resolves from. */
+	const heldRefs = (): HeldRef[] =>
+		index
+			.linksWithRefPrefix(ATTESTATION_REF_START)
+			.flatMap(({ reading, ref }) => {
+				const from = index.readingLocation(readingKeyOf(reading))?.path;
+				return from === undefined ? [] : [{ from, ref }];
+			});
 
 	/**
-	 * How refs name one Scroll, resolved from a Reading note, as the
-	 * rename rewrite resolves; from a note under `Worter/` while there is
-	 * none. A Scroll is never under `Worter/`, so its names resolve alike
-	 * from any note there.
+	 * How refs of one Reading name one Scroll, resolved from the Reading's
+	 * note, as the rename rewrite resolves each ref (#210). A Reading not
+	 * stored yet gets its note, and its Lemma's when that is new too, from
+	 * its commit: Obsidian cannot see them yet, so a note among them with
+	 * the Scroll's basename takes the name from it.
 	 */
 	const scrollRefNames = Effect.fn("dictionary.scrollRefNames")(function* (
 		scrollPath: string,
+		reading: Dumling.Reading<"de">,
+		surface?: Dumling.Surface<"de">,
 	): Effect.fn.Return<ScrollRefNames> {
-		const { from, held } = heldLinkpaths();
-		const source =
-			from ??
-			index.paths()[0] ??
+		const stored = index.readingLocation(readingKeyOf(reading))?.path;
+		const lemmaHeld = index.lemmaNote(lemmaKeyOf(reading.lemma))?.path;
+		// The Crossroad notes of the spellings the commit lists, when they are
+		// not there yet: one may win the Scroll's basename by a shorter path.
+		const crossroads = [
+			reading.lemma.canonicalForm,
+			...(surface === undefined ? [] : [surface.normalizedSurface]),
+		].flatMap((spelling) => {
+			const path = crossroadPathOf(formKeyOf(spelling, "de"));
+			return path === undefined || index.entry(path) !== undefined
+				? []
+				: [path];
+		});
+		const unseen = [
+			...(stored === undefined ? [canonicalReadingPath(reading)] : []),
+			...(lemmaHeld === undefined
+				? [canonicalLemmaPath(reading.lemma)]
+				: []),
+			...crossroads,
+		].filter((path) => path !== undefined);
+		const from =
+			stored ??
+			canonicalReadingPath(reading) ??
 			`${WORTER_SPLIT_PATH.basename}/${WORTER_SPLIT_PATH.basename}.md`;
-		return yield* scrollRefNamesOf(scrollPath, held, source, lookup).pipe(
+		return yield* scrollRefNamesOf(
+			scrollPath,
+			from,
+			heldRefs(),
+			lookup,
+			unseen,
+		).pipe(
 			Effect.catch((cause) =>
 				Effect.logWarning(
-					`Dictionary could not ask Obsidian how refs name ${scrollPath}; new refs name it by its basename`,
+					`Dictionary could not ask Obsidian how refs name ${scrollPath}; new refs name it by its basename where no new note takes it`,
 					cause,
-				).pipe(Effect.as(basenameRefNames(scrollPath))),
+				).pipe(Effect.as(basenameRefNames(scrollPath, unseen))),
 			),
 		);
 	});
@@ -2518,8 +2610,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			renames: readonly ScrollRename[],
 		): Effect.fn.Return<RefRewrite, DictionaryRefRewriteError> {
 			const nothing: RefRewrite = { kept: [], rewritten: 0 };
-			const { from, refs } = heldLinkpaths();
-			if (from === undefined) return nothing;
+			const held = heldRefs();
+			if (held.length === 0) return nothing;
 			const failed = (what: string) => (cause: unknown) =>
 				new DictionaryRefRewriteError({
 					cause,
@@ -2528,8 +2620,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			const now = yield* Clock.currentTimeMillis;
 			const { deferred, notes, retarget } = yield* retargetForRenames(
 				renames,
-				refs,
-				from,
+				held,
 				lookup,
 				deferredRefs.filter(
 					({ at }) => now - at < DEFERRED_REFS_TTL_MS,
@@ -2707,6 +2798,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 						},
 						depth,
 					);
+				yield* repairShadowedRefs(false, depth);
 				return committed;
 			});
 

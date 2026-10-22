@@ -5,6 +5,8 @@
  * user what it found. The resolver commits each unit's Reading and links
  * its Segments (#64); this command writes nothing itself.
  */
+import { WORTER_FOLDER } from "@textfresser/lemma-note-codec";
+import { VaultPath } from "@textfresser/vault-action-manager";
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import type { Dumgen } from "dumgen";
 import { Cause, Effect, Layer } from "effect";
@@ -146,6 +148,19 @@ export function missingKeysNotice(
 	return `⚠ Classify needs ${missing.length === 1 ? one : `${names} API keys`}. Add ${missing.length === 1 ? "it" : "them"} in Textfresser's settings.`;
 }
 
+/**
+ * Why Classify refuses a note inside `Worter/`: the dictionary's own notes
+ * are no Scrolls, and refs never point into `Worter/` (#210). Names match
+ * ignoring case, as a case-insensitive file system holds them.
+ */
+export function dictionaryNoteRefusal(scrollPath: string): string | undefined {
+	return VaultPath.caseInsensitive.isUnder(scrollPath, WORTER_FOLDER, {
+		inclusive: false,
+	})
+		? `Classify does not run on dictionary notes: ${scrollPath} lies in ${WORTER_FOLDER}/. Classify a text outside it.`
+		: undefined;
+}
+
 export class ClassifyCommander {
 	private latest: ClassifyHandoff | null = null;
 
@@ -176,7 +191,9 @@ export class ClassifyCommander {
 				segmenterVersion: segmenterVersion(),
 			}),
 		);
-		const blocked = this.deps.blockedBy?.(context.scrollPath);
+		const blocked =
+			dictionaryNoteRefusal(context.scrollPath) ??
+			this.deps.blockedBy?.(context.scrollPath);
 		const missing =
 			blocked === undefined
 				? missingKeysNotice(this.deps.missingProviderKeys?.() ?? [])
