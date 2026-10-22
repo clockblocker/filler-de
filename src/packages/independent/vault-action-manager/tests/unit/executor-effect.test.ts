@@ -127,6 +127,7 @@ function services(mode: "success" | "failure") {
 				createFolder: () => Effect.die("not used"),
 				getAbstractFileByPath: () => Effect.die("not used"),
 				getMarkdownFiles: Effect.die("not used"),
+				linkSources: () => Effect.die("not used"),
 				modify: () => Effect.die("not used"),
 				process: () => Effect.die("not used"),
 				read: () => Effect.die("not used"),

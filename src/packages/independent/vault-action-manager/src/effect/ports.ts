@@ -37,6 +37,27 @@ export type ActiveEditorHandle = {
 
 export type ActiveEditorReadiness = "editor" | "inline-title";
 
+/**
+ * Obsidian's "Automatically update internal links" setting
+ * (`alwaysUpdateLinks`). `FileManager.renameFile` honours it after the move:
+ * `always` rewrites the links at once; `ask` opens a dialog and rewrites
+ * them only if the user agrees, so the rename resolves once the user
+ * answers. Either way the links it may rewrite are the same.
+ */
+export type LinkUpdateSetting = "always" | "ask";
+
+/** The files Obsidian's link updater may rewrite when an entry is renamed. */
+export type LinkSources = {
+	/** The renamed entry's path as Obsidian keys it; `null` when nothing is there. */
+	readonly target: string | null;
+	/**
+	 * The files whose resolved links, as `MetadataCache.resolvedLinks` holds
+	 * them, point at the target file or, for a folder, at a file below it.
+	 */
+	readonly sources: readonly string[];
+	readonly setting: LinkUpdateSetting;
+};
+
 export class VaultIo extends Context.Service<
 	VaultIo,
 	{
@@ -66,6 +87,11 @@ export class VaultIo extends Context.Service<
 			file: TFile,
 			fn: (content: string) => string,
 		): Effect.Effect<string, VamVaultIoError>;
+		/**
+		 * What renaming the entry at `path` through `FileManager.renameFile`
+		 * may rewrite, read before the rename from Obsidian's resolved links.
+		 */
+		linkSources(path: string): Effect.Effect<LinkSources, VamVaultIoError>;
 		read(file: TFile): Effect.Effect<string, VamVaultIoError>;
 		/**
 		 * Renames through `FileManager.renameFile`, which rewrites links to the

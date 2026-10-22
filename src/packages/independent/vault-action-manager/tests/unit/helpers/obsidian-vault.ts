@@ -3,16 +3,43 @@
  * Manager over it.
  */
 import { type App, type TAbstractFile, TFile, TFolder } from "obsidian";
+import { rewriteWikilinks } from "./link-rewrite";
 
 type Callback = (...args: never[]) => void;
+
+/**
+ * How the vault's `FileManager.renameFile` imitates Obsidian's link updater:
+ *
+ * - `alwaysUpdateLinks`: the "Automatically update internal links" setting.
+ *   Off, the rename asks, and `answer` is the user's choice.
+ * - `afterRewrite`: runs after the updater rewrote its files, before
+ *   `renameFile` resolves.
+ */
+export type ObsidianVaultLinkOptions = {
+	alwaysUpdateLinks?: boolean;
+	answer?: "update" | "decline";
+	afterRewrite?: () => void;
+};
 
 /**
  * An in-memory Obsidian vault holding `initial` (path to content). Renaming a
  * folder reports a rename for the folder and then for every descendant, and
  * trashing a folder reports a delete for it and every descendant, as
  * Obsidian does.
+ *
+ * `linkTo` records a resolved link, as `MetadataCache.resolvedLinks` holds
+ * it. `FileManager.renameFile` then rewrites, in place, the wikilinks to a
+ * moved file in each file linking to the moved file, or to a file below the
+ * moved folder, and in each file in `unpredicted` as well, as the link
+ * updater rewrites a link the rename made ambiguous. A file whose links name
+ * no moved file is not written.
  */
-export function makeObsidianVault(initial: Record<string, string>) {
+export function makeObsidianVault(
+	initial: Record<string, string>,
+	links: ObsidianVaultLinkOptions = {},
+) {
+	const resolvedLinks: Record<string, Record<string, number>> = {};
+	const unpredicted = new Set<string>();
 	const callbacks = new Map<string, Callback[]>();
 	const byPath = new Map<string, TAbstractFile>();
 	const contents = new Map<string, string>();
@@ -118,9 +145,56 @@ export function makeObsidianVault(initial: Record<string, string>) {
 		fire("modify", file);
 	};
 
+	const linksTo = (destinations: Record<string, number>, target: string) =>
+		Object.keys(destinations).some(
+			(destination) =>
+				destination === target || destination.startsWith(`${target}/`),
+		);
+	const renameFile = async (entry: TAbstractFile, toPath: string) => {
+		const fromPath = entry.path;
+		const linking = Object.entries(resolvedLinks)
+			.filter(([, destinations]) => linksTo(destinations, fromPath))
+			.map(([source]) => source);
+		const movedFiles =
+			entry instanceof TFolder
+				? descendants(entry)
+						.filter((each) => each instanceof TFile)
+						.map((each) => each.path)
+				: [fromPath];
+		await rename(entry, toPath);
+		const moved = (path: string) =>
+			path === fromPath || path.startsWith(`${fromPath}/`)
+				? `${toPath}${path.slice(fromPath.length)}`
+				: path;
+		const moves = new Map(movedFiles.map((path) => [path, moved(path)]));
+		for (const destinations of Object.values(resolvedLinks))
+			for (const destination of Object.keys(destinations)) {
+				const now = moved(destination);
+				if (now === destination) continue;
+				destinations[now] = destinations[destination] ?? 1;
+				delete destinations[destination];
+			}
+		for (const source of Object.keys(resolvedLinks)) {
+			const now = moved(source);
+			if (now === source) continue;
+			resolvedLinks[now] = resolvedLinks[source] ?? {};
+			delete resolvedLinks[source];
+		}
+		if (links.alwaysUpdateLinks === false && links.answer !== "update")
+			return;
+		for (const path of new Set([...linking.map(moved), ...unpredicted])) {
+			const file = byPath.get(path);
+			if (!(file instanceof TFile)) continue;
+			const content = contents.get(path) ?? "";
+			const rewritten = rewriteWikilinks(content, moves);
+			if (rewritten !== content) write(file, rewritten);
+		}
+		links.afterRewrite?.();
+	};
+
 	const app = {
 		fileManager: {
-			renameFile: rename,
+			renameFile,
 			trashFile: async (entry: TAbstractFile) => {
 				trashed.push(entry.path);
 				const gone =
@@ -135,7 +209,7 @@ export function makeObsidianVault(initial: Record<string, string>) {
 				for (const g of gone) fire("delete", g);
 			},
 		},
-		metadataCache: { getFirstLinkpathDest: () => null },
+		metadataCache: { getFirstLinkpathDest: () => null, resolvedLinks },
 		vault: {
 			create: async (path: string, content: string) => {
 				if (byPath.has(path)) throw new Error(`exists ${path}`);
@@ -150,6 +224,10 @@ export function makeObsidianVault(initial: Record<string, string>) {
 				return folder;
 			},
 			getAbstractFileByPath: (path: string) => byPath.get(path) ?? null,
+			getConfig: (key: string) =>
+				key === "alwaysUpdateLinks"
+					? (links.alwaysUpdateLinks ?? true)
+					: undefined,
 			getMarkdownFiles: () =>
 				[...byPath.values()].filter(
 					(f): f is TFile =>
@@ -192,6 +270,7 @@ export function makeObsidianVault(initial: Record<string, string>) {
 
 	return {
 		app,
+		content: (path: string) => contents.get(path),
 		/** A file the user creates in Obsidian. */
 		createByHand: (path: string, content = "") =>
 			app.vault.create(path, content),
@@ -207,11 +286,23 @@ export function makeObsidianVault(initial: Record<string, string>) {
 			if (!(entry instanceof TFile)) throw new Error(`missing ${path}`);
 			write(entry, content);
 		},
+		/**
+		 * A write whose modify callback has not arrived yet, such as Sync's
+		 * before Obsidian's file watcher reports it.
+		 */
+		editUnheard: (path: string, content: string) => {
+			if (!contents.has(path)) throw new Error(`missing ${path}`);
+			contents.set(path, content);
+		},
 		files: () =>
 			[...byPath.values()]
 				.filter((e) => e instanceof TFile)
 				.map((e) => e.path)
 				.sort(),
+		/** A resolved link from `source` to `target`, as Obsidian indexes it. */
+		linkTo: (source: string, target: string) => {
+			resolvedLinks[source] = { ...resolvedLinks[source], [target]: 1 };
+		},
 		/** A rename the user makes in Obsidian. */
 		renameByHand: (from: string, to: string) => {
 			const entry = byPath.get(from);
@@ -219,5 +310,7 @@ export function makeObsidianVault(initial: Record<string, string>) {
 			return rename(entry, to);
 		},
 		trashed,
+		/** Files the next renames rewrite though nothing predicts them. */
+		unpredicted,
 	};
 }

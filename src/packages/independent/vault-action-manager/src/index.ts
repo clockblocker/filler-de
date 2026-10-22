@@ -72,6 +72,7 @@ export { vaultContentHash } from "./internal/content-hash";
 export { type SplitPathCodec, splitPathCodec } from "./split-path-codec";
 export {
 	EXTERNAL_ORIGIN,
+	type LinkUpdateBasis,
 	type VamCaller,
 	type VamOperation,
 	type VamOperationId,

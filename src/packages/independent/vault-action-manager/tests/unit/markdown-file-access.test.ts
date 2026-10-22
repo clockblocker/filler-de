@@ -201,6 +201,7 @@ function makeHarness(
 				return file;
 			}),
 		getMarkdownFiles: Effect.sync(() => [...files.values()]),
+		linkSources: () => Effect.die("not used"),
 		modify: (_file, value) =>
 			Effect.sync(() => {
 				content = value;

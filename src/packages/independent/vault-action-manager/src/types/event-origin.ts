@@ -18,13 +18,17 @@ export type VamOperation = {
  * Who caused a delivered vault event:
  *
  * - `Vam`: a Dispatch Batch, attributed by its Self Event windows.
- * - `LinkUpdate`: Obsidian's link updater, rewriting a file while or just
- *   after a VAM rename with link updating ran (Markdown modifications only).
+ * - `LinkUpdate`: Obsidian's link updater, rewriting a file after a VAM
+ *   rename with link updating (Markdown modifications only). Its `basis`
+ *   says how VAM knows: `Predicted`, a file VAM read as linking to the
+ *   renamed entry before the rename; `Timing`, any other file modified
+ *   while or just after the rename ran.
  * - `External`: anything else: the user, Sync, another plugin, or a VAM
  *   write routed to the open editor.
  *
- * Attribution goes by timing windows, so a label can be wrong; a wrong
- * label reaches the subscribers that filter on it, never the others.
+ * Attribution goes by expectations and timing windows, so a label can be
+ * wrong; a wrong label reaches the subscribers that filter on it, never the
+ * others.
  */
 export type VaultEventOrigin =
 	| {
@@ -32,8 +36,18 @@ export type VaultEventOrigin =
 			readonly caller: VamCaller;
 			readonly operationId: VamOperationId;
 	  }
-	| { readonly kind: "LinkUpdate"; readonly operationId: VamOperationId }
+	| {
+			readonly kind: "LinkUpdate";
+			readonly operationId: VamOperationId;
+			readonly basis: LinkUpdateBasis;
+	  }
 	| { readonly kind: "External" };
+
+/**
+ * How VAM attributed a `LinkUpdate`: by predicting the rewrite from the
+ * renamed entry's backlinks, or only by the time the file changed.
+ */
+export type LinkUpdateBasis = "Predicted" | "Timing";
 
 export const EXTERNAL_ORIGIN: VaultEventOrigin = { kind: "External" };
 

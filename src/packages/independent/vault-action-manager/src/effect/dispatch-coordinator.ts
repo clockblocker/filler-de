@@ -18,9 +18,9 @@ import {
 import type { Executor } from "../impl/actions-processing/executor";
 import { topologicalSort } from "../impl/actions-processing/topological-sort";
 import {
-	type LinkRewriteWindows,
-	rewritesLinks,
-} from "../impl/event-processing/link-rewrite-windows";
+	type LinkUpdates,
+	linkUpdatingRename,
+} from "../impl/event-processing/link-updates";
 import type { SelfEventTracker } from "../impl/event-processing/self-event-tracker";
 import type { ProtectedPaths } from "../impl/protected-paths";
 import { splitPathCodec } from "../split-path-codec";
@@ -99,8 +99,8 @@ type DispatchBatchWorkerOptions = {
 	 * `VamProtectedPathError` before anything in it runs.
 	 */
 	readonly protectedPaths?: ProtectedPaths;
-	/** Records when link-updating renames run. */
-	readonly linkRewrites?: LinkRewriteWindows;
+	/** Predicts and labels what link-updating renames make Obsidian rewrite. */
+	readonly linkUpdates?: LinkUpdates;
 };
 
 const DEFAULT_QUEUE_CAPACITY = 10;
@@ -152,7 +152,7 @@ const shutdownMessage: ShutdownMessage = { _tag: "Shutdown" };
  */
 export class DispatchBatchWorker {
 	private readonly idleSeed = Deferred.makeUnsafe<void>();
-	private readonly linkRewrites: DispatchBatchWorkerOptions["linkRewrites"];
+	private readonly linkUpdates: DispatchBatchWorkerOptions["linkUpdates"];
 	private readonly protectedPaths: DispatchBatchWorkerOptions["protectedPaths"];
 	private readonly onSubmitted: DispatchBatchWorkerOptions["onSubmitted"];
 	private readonly queueCapacity: number;
@@ -233,7 +233,7 @@ export class DispatchBatchWorker {
 		);
 		this.onSubmitted = options.onSubmitted;
 		this.protectedPaths = options.protectedPaths;
-		this.linkRewrites = options.linkRewrites;
+		this.linkUpdates = options.linkUpdates;
 		const scopedWorker = Effect.scoped(
 			Effect.forkScoped(this.worker(this)).pipe(
 				Effect.flatMap(Fiber.join),
@@ -662,10 +662,11 @@ export class DispatchBatchWorker {
 		operation: VamOperation,
 	): Effect.Effect<VamDispatchEntry, never, VamLiveServices> {
 		const run = this.executor.execute(action);
-		const tracked =
-			this.linkRewrites && rewritesLinks(action)
-				? this.linkRewrites.track(run, operation.operationId)
-				: run;
+		const { linkUpdates } = this;
+		const rename = linkUpdates && linkUpdatingRename(action);
+		const tracked = rename
+			? linkUpdates.aroundRename(rename, operation, run)
+			: run;
 		const execute = tracked.pipe(
 			Effect.matchCause({
 				onFailure: (cause): VamDispatchEntry => {

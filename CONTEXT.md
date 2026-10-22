@@ -115,7 +115,7 @@ An Obsidian Vault Event expected as a consequence of a Vault Action dispatched b
 _Avoid_: Duplicate event, recursive action
 
 **Event Origin**:
-Who caused a delivered Vault Event or Markdown modification: a VAM caller's Dispatch Batch (`Vam`, with caller and operation id), Obsidian's link updater during a VAM rename (`LinkUpdate`), or anything else (`External`). Each subscription chooses the origins it hears.
+Who caused a delivered Vault Event or Markdown modification: a VAM caller's Dispatch Batch (`Vam`, with caller and operation id), Obsidian's link updater after a VAM rename (`LinkUpdate`, `Predicted` from the renamed entry's backlinks or by `Timing`), or anything else (`External`). Each subscription chooses the origins it hears.
 _Avoid_: Source, author
 
 **Bulk Vault Action Adapter**:

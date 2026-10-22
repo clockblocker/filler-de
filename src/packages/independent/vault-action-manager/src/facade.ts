@@ -42,7 +42,7 @@ import { DispatchBatchCoordinator } from "./impl/actions-processing/dispatch-bat
 import { Executor } from "./impl/actions-processing/executor";
 import type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import { VaultCallbackSequence } from "./impl/event-processing/callback-sequence";
-import { LinkRewriteWindows } from "./impl/event-processing/link-rewrite-windows";
+import { LinkUpdates } from "./impl/event-processing/link-updates";
 import {
 	type BulkMdModifyEvent,
 	type MdFileChange,
@@ -203,7 +203,7 @@ export class VaultActionManager {
 	readonly paths: VaultPathIdentity;
 
 	private readonly dispatches: DispatchBatchCoordinator;
-	private readonly linkRewrites = new LinkRewriteWindows();
+	private readonly linkUpdates: LinkUpdates;
 	private readonly protectedPaths: ProtectedPaths;
 	private readonly markdownFiles: MarkdownFileAccess;
 	private readonly mdModifyObservation: VaultObservation<
@@ -240,6 +240,10 @@ export class VaultActionManager {
 		const activeEditor = new ActiveFileService();
 		const tfileHelper = new TFileHelper(this.selfEvents, this.paths);
 		const tfolderHelper = new TFolderHelper(this.selfEvents, this.paths);
+		this.linkUpdates = new LinkUpdates({
+			files: tfileHelper,
+			protectedPaths: this.protectedPaths,
+		});
 
 		this.markdownFiles = new MarkdownFileAccess(activeEditor, tfileHelper);
 		this.reader = new VaultReader(
@@ -260,7 +264,7 @@ export class VaultActionManager {
 		this.mdModifyObservation = successOrThrow(
 			this.runtime.runSyncExit(
 				VaultObservation.makeMdModifyEffect(app, this.selfEvents, {
-					linkRewrites: this.linkRewrites,
+					linkUpdates: this.linkUpdates,
 					sequence: this.sequence,
 				}),
 			),
@@ -277,7 +281,7 @@ export class VaultActionManager {
 			this.selfEvents,
 			this.runtime,
 			{
-				linkRewrites: this.linkRewrites,
+				linkUpdates: this.linkUpdates,
 				protectedPaths: this.protectedPaths,
 			},
 		);
@@ -369,12 +373,14 @@ export class VaultActionManager {
 	}
 
 	/**
-	 * Observes content changes to files under a protected prefix that VAM did
-	 * not make. VAM refuses to change those paths itself, but cannot stop
-	 * Obsidian's link updater, Sync, other plugins, or the user from writing
-	 * them. Each modification carries its most likely `writer`, from its
-	 * origin and the open editors; callers typically warn about every
-	 * writer except `OpenInEditor`, the user's own editing. Delivered over
+	 * Observes content changes to files under a protected prefix. VAM
+	 * refuses to change those paths itself, and puts back a protected file
+	 * Obsidian's link updater rewrites after a VAM rename that it predicted
+	 * (`RestoredAfterLinkUpdate`). It cannot stop Sync, other plugins, the
+	 * user, or an unpredicted rewrite. Each modification carries its most
+	 * likely `writer`, from its origin, VAM's restorations and the open
+	 * editors; callers typically warn about every writer except
+	 * `OpenInEditor`, the user's own editing. Delivered over
 	 * `subscribeToMdModifications` with every origin, so it needs
 	 * `startListening` and shares its coalescing window.
 	 */
@@ -386,14 +392,19 @@ export class VaultActionManager {
 	> {
 		const protectedHandler = this.effectHandler(
 			(event: BulkMdModifyEvent) =>
-				classifyProtectedModifications(event, this.protectedPaths).pipe(
+				classifyProtectedModifications(
+					event,
+					this.protectedPaths,
+					this.linkUpdates,
+				).pipe(
 					Effect.flatMap((scoped) =>
 						scoped ? handler(scoped) : Effect.void,
 					),
 				),
 		);
-		// Every origin: VAM never writes a protected path, so one labelled
-		// VAM's is a misattribution, and must not hide a change.
+		// Every origin: VAM writes a protected path only to put it back, so
+		// any other change labelled VAM's is a misattribution, and must not
+		// hide a change.
 		return this.trackSubscription(
 			this.mdModifyObservation.subscribeEffect(protectedHandler, {
 				filter: originFilter({ from: "all" }),

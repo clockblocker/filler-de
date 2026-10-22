@@ -23,6 +23,7 @@ function makeApp(
 		},
 		metadataCache: {
 			getFirstLinkpathDest: () => null,
+			resolvedLinks: {},
 		},
 		vault: {
 			create: async () => {

@@ -44,7 +44,7 @@ function makeApp() {
 			},
 			trashFile: async () => {},
 		},
-		metadataCache: { getFirstLinkpathDest: () => null },
+		metadataCache: { getFirstLinkpathDest: () => null, resolvedLinks: {} },
 		vault: {
 			getAbstractFileByPath: (path: string) => byPath.get(path) ?? null,
 			getMarkdownFiles: () => [],

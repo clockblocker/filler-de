@@ -64,7 +64,7 @@ function makeVaultHarness() {
 			renameFile: async () => {},
 			trashFile: async () => {},
 		},
-		metadataCache: { getFirstLinkpathDest: () => null },
+		metadataCache: { getFirstLinkpathDest: () => null, resolvedLinks: {} },
 		vault: {
 			create: async () => {
 				throw new Error("not used");

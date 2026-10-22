@@ -18,7 +18,6 @@ import { VamSubscriptionError } from "../../effect/errors";
 import { splitPathFromAbstractInternal } from "../../helpers/pathfinder/path-codecs/split-and-abstract/split-path-from-abstract";
 import { logger } from "../../internal/logger";
 import {
-	EXTERNAL_ORIGIN,
 	type OriginFilter,
 	originFilter,
 	type VaultEventOrigin,
@@ -43,7 +42,7 @@ import {
 	type ObservedCallback,
 	VaultCallbackSequence,
 } from "./callback-sequence";
-import type { LinkRewriteWindows } from "./link-rewrite-windows";
+import type { LinkUpdates } from "./link-updates";
 import {
 	type BulkMdModifyEvent,
 	coalesceMdModifications,
@@ -146,8 +145,8 @@ type VaultObservationOptions = Partial<EventAccumulatorOptions> & {
 };
 
 type MdModifyObservationOptions = VaultObservationOptions & {
-	/** Labels modifications inside a VAM rename's window `LinkUpdate`. */
-	readonly linkRewrites?: LinkRewriteWindows;
+	/** Labels Obsidian's link rewriting after a VAM rename `LinkUpdate`. */
+	readonly linkUpdates?: LinkUpdates;
 };
 
 type SubscribeOptions = {
@@ -270,7 +269,7 @@ export class VaultObservation<
 			BulkMdModifyEvent
 		>();
 		return new VaultObservation(
-			mdModifySource(app, selfEvents, options.linkRewrites),
+			mdModifySource(app, selfEvents, options.linkUpdates),
 			options,
 			core,
 		);
@@ -958,22 +957,19 @@ function bulkVaultEventSource(
 function mdModifySource(
 	app: App,
 	selfEvents: SelfEventTracker,
-	linkRewrites: LinkRewriteWindows | undefined,
+	linkUpdates: LinkUpdates | undefined,
 ): ObservationSource<MdFileChange, BulkMdModifyEvent> {
 	/**
-	 * VAM's own write, else Obsidian's link updater within a VAM rename's
-	 * window, else external.
+	 * VAM's own write, else Obsidian's link updater after a VAM rename,
+	 * predicted or within its window, else external.
 	 */
 	const attribute = Effect.fnUntraced(function* (
 		path: string,
 		mtime: number,
 	): Effect.fn.Return<VaultEventOrigin> {
 		const origin = yield* selfEvents.attributeModifyEffect(path);
-		if (origin.kind !== "External" || !linkRewrites) return origin;
-		const operationId = yield* linkRewrites.covering(mtime);
-		return operationId === undefined
-			? EXTERNAL_ORIGIN
-			: { kind: "LinkUpdate", operationId };
+		if (origin.kind !== "External" || !linkUpdates) return origin;
+		return yield* linkUpdates.attributeEffect(path, mtime);
 	});
 	return {
 		listen: Effect.fn("VaultObservation.listenForMdModify")(function* (

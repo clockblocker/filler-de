@@ -19,9 +19,18 @@ const modification = (
 ): ProtectedPathModification => ({
 	origin:
 		writer === "VamRenameLinkUpdate"
-			? { kind: "LinkUpdate", operationId: "librarian#1" }
-			: { kind: "External" },
+			? { basis: "Timing", kind: "LinkUpdate", operationId: "librarian#1" }
+			: writer === "RestoredAfterLinkUpdate"
+				? {
+						basis: "Predicted",
+						kind: "LinkUpdate",
+						operationId: "dictionary#1",
+					}
+				: { kind: "External" },
 	prefix: "Exemplar",
+	...(writer === "RestoredAfterLinkUpdate"
+		? { renamed: { from: "Worter/Kraftwerk.md", to: "Worter/k/Kraftwerk.md" } }
+		: {}),
 	splitPath: splitPathCodec.parse(path) as SplitPathToMdFile,
 	stat: { ctime: 1, mtime: 2, size: 3 },
 	writer,
@@ -44,6 +53,28 @@ describe("describeProtectedModifications", () => {
 			]),
 		).toBe(
 			`Textfresser: the protected file ${NOTE} was changed by Obsidian's link updating, after a Textfresser rename. Check it against the checksum.`,
+		);
+	});
+
+	it("names a file put back after Obsidian's link updating rewrote it, and the note it links to", () => {
+		expect(
+			describeProtectedModifications([
+				modification(NOTE, "RestoredAfterLinkUpdate"),
+			]),
+		).toBe(
+			`Textfresser: the protected file ${NOTE} links to Worter/Kraftwerk.md, which Textfresser moved to Worter/k/Kraftwerk.md. Obsidian's link updating rewrote that link; Textfresser put the file back as it was, so the link keeps its old text.`,
+		);
+	});
+
+	it("names restored files apart from changed ones", () => {
+		expect(
+			describeProtectedModifications([
+				modification(NOTE, "RestoredAfterLinkUpdate"),
+				modification(SOURCE, "RestoredAfterLinkUpdate"),
+				modification("Exemplar/Notes.md", "VamRenameLinkUpdate"),
+			]),
+		).toBe(
+			`Textfresser: the protected file Exemplar/Notes.md was changed by Obsidian's link updating, after a Textfresser rename. Check it against the checksum. Obsidian's link updating rewrote 2 protected files: ${NOTE}, ${SOURCE} after Textfresser moved notes they link to; Textfresser put them back as they were, so those links keep their old text.`,
 		);
 	});
 

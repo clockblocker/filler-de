@@ -194,7 +194,7 @@ function makeScanHarness(
 			renameFile: async () => {},
 			trashFile: async () => {},
 		},
-		metadataCache: { getFirstLinkpathDest: () => null },
+		metadataCache: { getFirstLinkpathDest: () => null, resolvedLinks: {} },
 		vault: {
 			create: async () => rootMd,
 			createFolder: async () => root,
