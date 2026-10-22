@@ -39,6 +39,8 @@ function makeTracker() {
 			Effect.runSync(tracker.registerEffect(actions)),
 		shouldIgnore: (path: string) =>
 			Effect.runSync(tracker.shouldIgnoreEffect(path)),
+		shouldIgnoreRename: (oldPath: string, newPath: string) =>
+			Effect.runSync(tracker.shouldIgnoreRenameEffect(oldPath, newPath)),
 		waitForAllRegistered: () =>
 			Effect.runPromise(tracker.waitForAllRegisteredEffect()),
 	};
@@ -217,6 +219,128 @@ describe("SelfEventTracker", () => {
 		expect(tracker.shouldIgnore("Library/new/user-created.md")).toBe(false);
 	});
 
+	it("RenameFolder makes each descendant rename to the same place under the destination Self", () => {
+		const tracker = makeTracker();
+		tracker.register([
+			{
+				kind: VaultActionKind.RenameFolder,
+				payload: {
+					from: folder("old", ["Library"]),
+					to: folder("new", ["Library"]),
+				},
+			},
+		]);
+
+		// Descendant pairs never pop, at any depth, and with stray separators.
+		expect(
+			tracker.shouldIgnoreRename("Library/old/a.md", "Library/new/a.md"),
+		).toBe(true);
+		expect(
+			tracker.shouldIgnoreRename("Library/old/a.md", "Library/new/a.md"),
+		).toBe(true);
+		expect(
+			tracker.shouldIgnoreRename(
+				"\\Library\\old\\Sub\\Inner\\b.md",
+				"/Library/new/Sub/Inner/b.md/",
+			),
+		).toBe(true);
+		expect(
+			tracker.shouldIgnoreRename("Library/old/Sub", "Library/new/Sub"),
+		).toBe(true);
+		// The folder itself pops its exact entries.
+		expect(tracker.shouldIgnoreRename("Library/old", "Library/new")).toBe(
+			true,
+		);
+		expect(tracker.shouldIgnoreRename("Library/old", "Library/new")).toBe(
+			false,
+		);
+	});
+
+	it("RenameFolder leaves other renames into or out of its folders observable", () => {
+		const tracker = makeTracker();
+		tracker.register([
+			{
+				kind: VaultActionKind.RenameFolder,
+				payload: {
+					from: folder("old", ["Library"]),
+					to: folder("new", ["Library"]),
+				},
+			},
+		]);
+
+		// A different remainder under the destination.
+		expect(
+			tracker.shouldIgnoreRename("Library/old/a.md", "Library/new/b.md"),
+		).toBe(false);
+		expect(
+			tracker.shouldIgnoreRename(
+				"Library/old/Sub/a.md",
+				"Library/new/a.md",
+			),
+		).toBe(false);
+		// From elsewhere into the destination.
+		expect(
+			tracker.shouldIgnoreRename("Inbox/a.md", "Library/new/a.md"),
+		).toBe(false);
+		// A sibling whose name only starts like the source.
+		expect(
+			tracker.shouldIgnoreRename(
+				"Library/older/a.md",
+				"Library/new/a.md",
+			),
+		).toBe(false);
+		// Paths compare exactly after separator cleanup, like every match.
+		expect(
+			tracker.shouldIgnoreRename("Library/Old/a.md", "Library/new/a.md"),
+		).toBe(false);
+		expect(
+			tracker.shouldIgnoreRename(
+				"Library/old/Cafe\u0301.md",
+				"Library/new/Caf\u00e9.md",
+			),
+		).toBe(false);
+	});
+
+	it("RenameFolder into the vault root maps descendants to root paths", () => {
+		const tracker = makeTracker();
+		tracker.register([
+			{
+				kind: VaultActionKind.RenameFolder,
+				payload: {
+					from: folder("old", ["Library"]),
+					to: folder(""),
+				},
+			},
+		]);
+
+		expect(tracker.shouldIgnoreRename("Library/old/a.md", "a.md")).toBe(
+			true,
+		);
+		expect(tracker.shouldIgnoreRename("Library/old/a.md", "/a.md")).toBe(
+			true,
+		);
+		expect(
+			tracker.shouldIgnoreRename("Library/old/a.md", "Library/a.md"),
+		).toBe(false);
+	});
+
+	it("RenameFolder from the vault root matches no descendant pair", () => {
+		const tracker = makeTracker();
+		tracker.register([
+			{
+				kind: VaultActionKind.RenameFolder,
+				payload: {
+					from: folder(""),
+					to: folder("new", ["Library"]),
+				},
+			},
+		]);
+
+		expect(tracker.shouldIgnoreRename("a.md", "Library/new/a.md")).toBe(
+			false,
+		);
+	});
+
 	it("TrashMdFile tracks one exact path and no descendants", () => {
 		const tracker = makeTracker();
 		const actions: VaultAction[] = [
@@ -365,6 +489,49 @@ describe("SelfEventTracker", () => {
 				expect(
 					yield* tracker.shouldIgnoreEffect(
 						"Library/target/expired.md",
+					),
+				).toBe(false);
+			}).pipe(Effect.provide(TestClock.layer())),
+		);
+	});
+
+	it("keeps folder rename pairs until one TTL after the action finishes", async () => {
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const tracker = yield* SelfEventTracker.makeEffect({
+					ttlMs: 5000,
+				});
+				const action: VaultAction = {
+					kind: VaultActionKind.RenameFolder,
+					payload: {
+						from: folder("old", ["Library"]),
+						to: folder("new", ["Library"]),
+					},
+				};
+				yield* tracker.beginEffect(action);
+
+				yield* TestClock.adjust(60_000);
+				expect(
+					yield* tracker.shouldIgnoreRenameEffect(
+						"Library/old/a.md",
+						"Library/new/a.md",
+					),
+				).toBe(true);
+
+				yield* tracker.finishEffect(action);
+				yield* TestClock.adjust(4999);
+				expect(
+					yield* tracker.shouldIgnoreRenameEffect(
+						"Library/old/b.md",
+						"Library/new/b.md",
+					),
+				).toBe(true);
+
+				yield* TestClock.adjust(1);
+				expect(
+					yield* tracker.shouldIgnoreRenameEffect(
+						"Library/old/c.md",
+						"Library/new/c.md",
 					),
 				).toBe(false);
 			}).pipe(Effect.provide(TestClock.layer())),

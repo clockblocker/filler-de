@@ -28,6 +28,14 @@ function makeHarness(shouldIgnore: (path: string) => boolean) {
 	const selfEvents = {
 		shouldIgnoreEffect: (path: string) =>
 			Effect.sync(() => shouldIgnore(path)),
+		// Like the tracker for renames outside a VAM folder rename: Self only
+		// when both paths are, asking about each once, new path first.
+		shouldIgnoreRenameEffect: (oldPath: string, newPath: string) =>
+			Effect.sync(() => {
+				const newPathIsSelf = shouldIgnore(newPath);
+				const oldPathIsSelf = shouldIgnore(oldPath);
+				return newPathIsSelf && oldPathIsSelf;
+			}),
 	} as unknown as SelfEventTracker;
 	const native = Effect.runSync(
 		VaultObservation.makeEffect(app, selfEvents, {
