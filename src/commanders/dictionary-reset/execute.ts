@@ -391,7 +391,12 @@ export const executeReset = Effect.fn("executeReset")(function* (
 	const unplanned =
 		toMove === undefined || backupFolder === undefined
 			? []
-			: yield* backUp(vault, toMove, backupFolder);
+			: yield* backUp(vault, toMove, backupFolder).pipe(
+					// A backup that stopped part way may still have moved
+					// notes: the store has followed them before the reset
+					// reports the failure.
+					Effect.tapError(() => Effect.ignore(dictionary.caughtUp)),
+				);
 	// The store hears the backup's move as an event; regeneration waits
 	// until it has followed it, so no commit plans against the old notes.
 	const caughtUp = yield* Effect.result(dictionary.caughtUp);

@@ -288,6 +288,8 @@ describe("executeReset", () => {
 			"is not in the backup",
 		);
 		expect(plans).toHaveLength(0);
+		// The store has followed whatever the stopped backup moved.
+		expect(vault.ops).toContain("caught up");
 		expect(vault.ops.some((op) => op.startsWith("create"))).toBe(false);
 		expect(vault.ops.some((op) => op.startsWith("append"))).toBe(false);
 	});
