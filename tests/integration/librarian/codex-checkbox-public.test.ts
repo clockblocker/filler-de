@@ -12,7 +12,7 @@ import {
 	SplitPathKind,
 	type SplitPathToFile,
 	type SplitPathToMdFile,
-	VamDispatchError,
+	type VamDispatchFailure,
 	type VaultAction,
 	VaultActionKind,
 	VaultEventKind,
@@ -22,6 +22,7 @@ import {
 	Librarian,
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
+import { actionError, failedActions } from "../../support/vam-dispatch";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 
@@ -94,7 +95,7 @@ function makeHarness(
 	let scannedFiles = initialFiles;
 	let dispatchImpl: (
 		actions: readonly VaultAction[],
-	) => Effect.Effect<void, readonly VamDispatchError[]> = () => Effect.void;
+	) => Effect.Effect<void, VamDispatchFailure> = () => Effect.void;
 	let emitBulk: (bulk: BulkVaultEvent) => Effect.Effect<void, unknown> = () =>
 		Effect.void;
 	const vam: LibrarianVam = {
@@ -138,7 +139,7 @@ function makeHarness(
 		setDispatch: (
 			implementation: (
 				actions: readonly VaultAction[],
-			) => Effect.Effect<void, readonly VamDispatchError[]>,
+			) => Effect.Effect<void, VamDispatchFailure>,
 		) => {
 			dispatchImpl = implementation;
 		},
@@ -262,13 +263,12 @@ describe("Librarian checkbox-click public seam", () => {
 		dispatches.length = 0;
 		setScanFiles([existing, first]);
 
-		const partialFailures = [
-			new VamDispatchError({
-				action: undefined,
-				cause: new Error("first dispatch was only partially applied"),
-				operation: "executeAction",
-			}),
-		] as const;
+		const partialFailures = failedActions([
+			actionError(
+				undefined,
+				new Error("first dispatch was only partially applied"),
+			),
+		]);
 		let releaseFirstDispatch: () => void = () => undefined;
 		const firstDispatchGate = new Promise<void>((resolve) => {
 			releaseFirstDispatch = resolve;

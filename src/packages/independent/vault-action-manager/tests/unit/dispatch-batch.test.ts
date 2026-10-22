@@ -2,10 +2,10 @@ import { afterEach, describe, expect, it } from "bun:test";
 import { Cause, Effect, Exit, Fiber, Layer, Option, Tracer } from "effect";
 import { type TAbstractFile, TFile, TFolder } from "obsidian";
 import { MAX_PENDING_DISPATCH_BATCHES } from "../../src/effect/dispatch-coordinator";
+import { VamDispatchFailure } from "../../src/effect/dispatch-report";
 import {
 	VamDispatchError,
 	VamDispatchOverflowError,
-	VamDispatchStoppedError,
 	VamPlanningError,
 	type VamSetupError,
 	VamShutdownError,
@@ -155,7 +155,7 @@ function makeCoordinator(
 							catch: (cause) => cause,
 							try: () => result,
 						});
-			}),
+			}).pipe(Effect.as({ _tag: "NoOp" } as const)),
 	} as unknown as Executor;
 	const selfEvents = {
 		beginEffect: (action: VaultAction) => Effect.sync(() => begin(action)),
@@ -185,9 +185,18 @@ function runNative<A, E>(
 	return runtime.runPromiseExit(effect);
 }
 
-function firstFailure(exit: Exit.Exit<unknown, unknown>): unknown {
+function dispatchFailure(
+	exit: Exit.Exit<unknown, unknown>,
+): VamDispatchFailure | undefined {
 	if (Exit.isSuccess(exit)) return undefined;
-	return Option.getOrUndefined(Cause.findErrorOption(exit.cause));
+	const failure = Option.getOrUndefined(Cause.findErrorOption(exit.cause));
+	expect(failure).toBeInstanceOf(VamDispatchFailure);
+	return failure instanceof VamDispatchFailure ? failure : undefined;
+}
+
+/** Why a batch failed: its `VamDispatchFailure`'s reason. */
+function firstFailure(exit: Exit.Exit<unknown, unknown>): unknown {
+	return dispatchFailure(exit)?.reason;
 }
 
 function isDescendantOf(
@@ -209,22 +218,14 @@ function isDescendantOf(
 async function dispatch(
 	coordinator: DispatchBatchCoordinator,
 	actions: readonly VaultAction[],
-): Promise<Exit.Exit<void, unknown>> {
+): Promise<Exit.Exit<unknown, unknown>> {
 	return runNative(coordinator, coordinator.dispatchEffect(actions));
 }
 
 function dispatchFailures(
 	exit: Exit.Exit<unknown, unknown>,
 ): readonly VamDispatchError[] {
-	const failure = firstFailure(exit);
-	expect(Array.isArray(failure)).toBe(true);
-	if (!Array.isArray(failure)) return [];
-	for (const item of failure) {
-		expect(item).toBeInstanceOf(VamDispatchError);
-	}
-	return failure.filter(
-		(item): item is VamDispatchError => item instanceof VamDispatchError,
-	);
+	return dispatchFailure(exit)?.report.failed ?? [];
 }
 
 async function whenIdle(coordinator: DispatchBatchCoordinator): Promise<void> {
@@ -635,6 +636,7 @@ describe("DispatchBatchCoordinator", () => {
 		const executorFailure = new VamDispatchError({
 			action,
 			cause,
+			kind: "io",
 			operation: "execute.UpsertMdFile",
 		});
 		const runtime = createVamRuntime(makeVamLayer());
@@ -657,19 +659,12 @@ describe("DispatchBatchCoordinator", () => {
 		);
 
 		expect(Exit.isFailure(exit)).toBe(true);
-		const failure = firstFailure(exit);
-		expect(Array.isArray(failure)).toBe(true);
-		if (Array.isArray(failure)) {
-			expect(failure).toHaveLength(1);
-			const dispatchFailure = failure[0];
-			expect(dispatchFailure).toBeInstanceOf(VamDispatchError);
-			if (dispatchFailure instanceof VamDispatchError) {
-				expect(dispatchFailure.action).toBe(action);
-				expect(dispatchFailure.cause).toBe(executorFailure);
-				expect(executorFailure.cause).toBe(cause);
-				expect(dispatchFailure.operation).toBe("executeAction");
-			}
-		}
+		// The executor's own error is reported, not wrapped again.
+		expect(dispatchFailures(exit)).toEqual([executorFailure]);
+		expect(firstFailure(exit)).toBe(executorFailure);
+		expect(dispatchFailure(exit)?.report.entries).toEqual([
+			{ action, error: executorFailure, status: "Uncertain" },
+		]);
 	});
 
 	it("turns an executor defect into an action-owned failure and continues", async () => {
@@ -684,7 +679,7 @@ describe("DispatchBatchCoordinator", () => {
 					executed.push(action);
 					return action === defectAction
 						? Effect.die(cause)
-						: Effect.succeed(undefined);
+						: Effect.succeed({ _tag: "NoOp" } as const);
 				},
 			} as unknown as Executor,
 			{
@@ -702,17 +697,12 @@ describe("DispatchBatchCoordinator", () => {
 		);
 
 		expect(executed).toEqual([defectAction, laterAction]);
-		const failure = firstFailure(exit);
-		expect(Array.isArray(failure)).toBe(true);
-		if (Array.isArray(failure)) {
-			expect(failure).toHaveLength(1);
-			const dispatchFailure = failure[0];
-			expect(dispatchFailure).toBeInstanceOf(VamDispatchError);
-			if (dispatchFailure instanceof VamDispatchError) {
-				expect(dispatchFailure.action).toBe(defectAction);
-				expect(dispatchFailure.cause).toBe(cause);
-			}
-		}
+		const failures = dispatchFailures(exit);
+		expect(failures).toHaveLength(1);
+		expect(failures[0]?.action).toBe(defectAction);
+		expect(failures[0]?.cause).toBe(cause);
+		expect(failures[0]?.kind).toBe("defect");
+		expect(dispatchFailure(exit)?.report.executed).toEqual([laterAction]);
 	});
 
 	it("owns planning failures by the first action without execution or Self Events", async () => {
@@ -984,6 +974,10 @@ describe("DispatchBatchCoordinator", () => {
 				);
 				expect(overflowFailure.operation).toBe("dispatch.overflow");
 			}
+			expect(dispatchFailure(overflow)?.report.skipped).toEqual([
+				overflowAction,
+			]);
+			expect(dispatchFailure(overflow)?.report.touchedVault).toBe("no");
 			expect(firstFailure(stoppedOverflow)).toBeInstanceOf(
 				VamDispatchOverflowError,
 			);
@@ -1130,14 +1124,11 @@ describe("DispatchBatchCoordinator", () => {
 
 		expect(Exit.isSuccess(activeExit)).toBe(true);
 		expect(firstFailure(queuedExit)).toBeInstanceOf(VamShutdownError);
-		const waitingFailure = firstFailure(waitingExit);
-		expect(waitingFailure).toBeInstanceOf(VamShutdownError);
-		if (
-			waitingFailure instanceof VamShutdownError &&
-			waitingFailure.cause instanceof Error
-		) {
-			expect(waitingFailure.cause.cause).toBe(waitingAction);
-		}
+		expect(firstFailure(waitingExit)).toBeInstanceOf(VamShutdownError);
+		expect(dispatchFailure(waitingExit)?.report.skipped).toEqual([
+			waitingAction,
+		]);
+		expect(dispatchFailure(waitingExit)?.report.touchedVault).toBe("no");
 		expect(executed).toEqual(["active"]);
 	});
 
@@ -1161,16 +1152,22 @@ describe("DispatchBatchCoordinator", () => {
 		);
 
 		expect(executed).toEqual([before, failing]);
-		const failure = firstFailure(exit);
-		expect(failure).toBeInstanceOf(VamDispatchStoppedError);
-		if (failure instanceof VamDispatchStoppedError) {
-			expect(failure.executed).toEqual([before]);
-			expect(failure.skipped).toEqual([skippedA, skippedB]);
-			expect(failure.action).toBe(failing);
-			expect(failure.cause).toBe(cause);
-			expect(failure.failure).toBeInstanceOf(VamDispatchError);
-			expect(failure.failure.action).toBe(failing);
-			expect(failure.operation).toBe("dispatch.stopOnFirstFailure");
+		const report = dispatchFailure(exit)?.report;
+		expect(report?.executed).toEqual([before]);
+		expect(report?.skipped).toEqual([skippedA, skippedB]);
+		expect(report?.uncertain).toEqual([failing]);
+		expect(report?.entries.map((entry) => entry.status)).toEqual([
+			"Done",
+			"Uncertain",
+			"Skipped",
+			"Skipped",
+		]);
+		const reason = firstFailure(exit);
+		expect(reason).toBeInstanceOf(VamDispatchError);
+		if (reason instanceof VamDispatchError) {
+			expect(reason.action).toBe(failing);
+			expect(reason.cause).toBe(cause);
+			expect(reason.kind).toBe("defect");
 		}
 	});
 
@@ -1198,14 +1195,11 @@ describe("DispatchBatchCoordinator", () => {
 			}),
 		);
 
-		const failure = firstFailure(exit);
-		expect(failure).toBeInstanceOf(VamDispatchStoppedError);
-		if (failure instanceof VamDispatchStoppedError) {
-			expect(failure.executed.map((action) => action.kind)).toEqual([
-				VaultActionKind.CreateFolder,
-			]);
-			expect(failure.skipped).toEqual([skipped]);
-		}
+		const report = dispatchFailure(exit)?.report;
+		expect(report?.executed.map((action) => action.kind)).toEqual([
+			VaultActionKind.CreateFolder,
+		]);
+		expect(report?.skipped).toEqual([skipped]);
 	});
 
 	it("keeps attempting every action by default and leaves later batches unaffected by a stopped one", async () => {
@@ -1225,8 +1219,9 @@ describe("DispatchBatchCoordinator", () => {
 		);
 		const defaulted = await dispatch(coordinator, [failing, later]);
 
-		expect(firstFailure(stopped)).toBeInstanceOf(VamDispatchStoppedError);
+		expect(dispatchFailure(stopped)?.report.skipped).toEqual([later]);
 		expect(dispatchFailures(defaulted)).toHaveLength(1);
+		expect(dispatchFailure(defaulted)?.report.skipped).toEqual([]);
 		expect(executed).toEqual([failing, failing, later]);
 	});
 
@@ -1272,14 +1267,10 @@ describe("DispatchBatchCoordinator", () => {
 		const [activeExit, queuedExit, anotherQueuedExit, shutdownExit] =
 			await Promise.all([active, queued, anotherQueued, shutdown]);
 		expect(Exit.isSuccess(activeExit)).toBe(true);
-		const queuedFailure = firstFailure(queuedExit);
-		expect(queuedFailure).toBeInstanceOf(VamShutdownError);
-		if (
-			queuedFailure instanceof VamShutdownError &&
-			queuedFailure.cause instanceof Error
-		) {
-			expect(queuedFailure.cause.cause).toBe(queuedAction);
-		}
+		expect(firstFailure(queuedExit)).toBeInstanceOf(VamShutdownError);
+		expect(dispatchFailure(queuedExit)?.report.skipped).toEqual([
+			queuedAction,
+		]);
 		expect(firstFailure(anotherQueuedExit)).toBeInstanceOf(
 			VamShutdownError,
 		);

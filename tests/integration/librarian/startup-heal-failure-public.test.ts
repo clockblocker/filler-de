@@ -4,7 +4,6 @@ import {
 	MD,
 	SplitPathKind,
 	type SplitPathToMdFile,
-	VamDispatchError,
 	VamScanError,
 	VamVaultIoError,
 	type VaultAction,
@@ -18,6 +17,7 @@ import {
 	type LibrarianStop,
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
+import { actionError, failedActions } from "../../support/vam-dispatch";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 
 let settingsSpy: ReturnType<typeof spyOn>;
@@ -76,13 +76,11 @@ function makeHarness(
 					isRenameFrom(action, failing),
 				);
 				if (!failed || !fails(dispatches.length)) return Effect.void;
-				return Effect.fail([
-					new VamDispatchError({
-						action: failed,
-						cause: new Error("destination is locked"),
-						operation: "executeAction",
-					}),
-				] as const);
+				return Effect.fail(
+					failedActions([
+						actionError(failed, new Error("destination is locked")),
+					]),
+				);
 			}),
 		getActiveEditorContext: () => Effect.succeed(null),
 		getOpenedContent: () => Effect.succeed(""),

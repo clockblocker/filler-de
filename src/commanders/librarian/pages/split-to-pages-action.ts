@@ -16,7 +16,6 @@ import type {
 import { Effect } from "effect";
 import { Notice } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
-import { describeLibrarianVamFailure } from "../commands/vam-failure";
 import type {
 	Librarian,
 	LibrarianReconciliationOutcome,
@@ -73,7 +72,7 @@ const gatherInput = Effect.fn("Librarian.splitToPages.gatherInput")(function* (
 		.getActiveEditorContext()
 		.pipe(
 			Effect.mapError((error) =>
-				makeSplitToPagesError.noPwd(describeLibrarianVamFailure(error)),
+				makeSplitToPagesError.noPwd(error.message),
 			),
 		);
 	if (!editorContext) {
@@ -151,10 +150,7 @@ const executeIntention = Effect.fn("Librarian.splitToPages.executeIntention")(
 			const dispatchKind = execution.outcome.dispatch.kind;
 			return yield* Effect.fail(
 				makeSplitToPagesError.dispatchFailed(
-					describeLibrarianVamFailure(
-						execution.failure,
-						plan.value.vaultActions,
-					),
+					execution.failure.message,
 					operationId,
 					dispatchKind === "ExecutionUncertain"
 						? "ExecutionUncertain"
@@ -214,7 +210,7 @@ export const splitToPagesAction = Effect.fn("Librarian.splitToPagesAction")(
 		yield* context.vam.cd(result.firstPagePath).pipe(
 			Effect.mapError((error) =>
 				makeSplitToPagesError.navigationFailed(
-					describeLibrarianVamFailure(error),
+					error.message,
 					operationId,
 				),
 			),

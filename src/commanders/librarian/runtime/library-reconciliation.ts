@@ -20,7 +20,7 @@ import {
 } from "@textfresser/library-core";
 import {
 	SplitPathKind,
-	VamDispatchStoppedError,
+	type VamDispatchFailure,
 	type VaultAction,
 	type VaultScanPath,
 } from "@textfresser/vault-action-manager";
@@ -55,26 +55,13 @@ export type ReconciliationRequest =
 	| RuntimeReconciliationRequest
 	| StartupReconciliationRequest;
 
-/** Classify the VAM boundary by whether action execution could have started. */
+/** Classify a VAM dispatch failure by whether it may have changed the vault. */
 export function classifyVamDispatchFailure(
-	failure: unknown,
+	failure: VamDispatchFailure,
 ): "FailedBeforeExecution" | "ExecutionUncertain" {
-	if (failure instanceof VamDispatchStoppedError) {
-		return failure.executed.length > 0 ||
-			failure.failure.operation === "executeAction"
-			? "ExecutionUncertain"
-			: "FailedBeforeExecution";
-	}
-	if (!Array.isArray(failure)) return "FailedBeforeExecution";
-	return failure.some(
-		(item) =>
-			typeof item === "object" &&
-			item !== null &&
-			"operation" in item &&
-			item.operation === "executeAction",
-	)
-		? "ExecutionUncertain"
-		: "FailedBeforeExecution";
+	return failure.report.touchedVault === "no"
+		? "FailedBeforeExecution"
+		: "ExecutionUncertain";
 }
 
 export type ReconciliationTreeActionCounts = {

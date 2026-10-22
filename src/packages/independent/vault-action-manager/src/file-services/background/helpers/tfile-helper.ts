@@ -1,5 +1,6 @@
 import { Effect, Exit, Result } from "effect";
 import { TFile } from "obsidian";
+import type { VamActionOutcome } from "../../../effect/dispatch-report";
 import {
 	VamContentConflictError,
 	VamVaultIoError,
@@ -20,6 +21,7 @@ import {
 	type MdFileWithContentDto,
 	pathfinder,
 } from "../../../helpers/pathfinder";
+import { vaultContentHash } from "../../../internal/content-hash";
 import { getErrorMessage } from "../../../internal/get-error-message";
 import {
 	type SplitPathFromTo,
@@ -56,6 +58,24 @@ function originalMessage(error: VamVaultIoError): string {
 function isLookupMiss(error: VamVaultIoError): boolean {
 	return error.operation === "getFile";
 }
+
+const NO_OP: VamActionOutcome = { _tag: "NoOp" };
+
+function wrote(before: string, after: string): VamActionOutcome {
+	return before === after
+		? NO_OP
+		: {
+				_tag: "Wrote",
+				afterHash: vaultContentHash(after),
+				beforeHash: vaultContentHash(before),
+			};
+}
+
+/** A renamed file and what the rename did. */
+export type RenameResult = {
+	readonly file: TFile;
+	readonly outcome: VamActionOutcome;
+};
 
 /** Attributes VAM's own background writes as modify Self Events. */
 export type SelfModifyRecorder = {
@@ -106,10 +126,11 @@ export class TFileHelper {
 		});
 	}
 
+	/** Creates the file unless it is there; `NoOp` when it is. */
 	upsertMdFile(file: MdFileWithContentDto) {
 		return Effect.gen({ self: this }, function* () {
 			const existing = yield* Effect.result(this.getFile(file.splitPath));
-			if (Result.isSuccess(existing)) return existing.success;
+			if (Result.isSuccess(existing)) return NO_OP;
 			if (!isLookupMiss(existing.failure)) return yield* existing.failure;
 			return yield* this.tryVaultCreate(
 				file.splitPath,
@@ -118,17 +139,26 @@ export class TFileHelper {
 		});
 	}
 
-	private tryVaultCreate(splitPath: SplitPathToMdFile, content: string) {
+	private tryVaultCreate(
+		splitPath: SplitPathToMdFile,
+		content: string,
+	): Effect.Effect<VamActionOutcome, VamVaultIoError, VaultIo> {
 		return Effect.gen({ self: this }, function* () {
 			const vault = yield* VaultIo;
 			const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
 			const created = yield* Effect.result(
 				vault.create(systemPath, content),
 			);
-			if (Result.isSuccess(created)) return created.success;
+			if (Result.isSuccess(created))
+				return {
+					_tag: "Created",
+					contentHash: vaultContentHash(content),
+				} as const;
 			const message = originalMessage(created.failure);
 			if (message.includes("already exists")) {
+				// Another writer created it first.
 				return yield* this.getFile(splitPath).pipe(
+					Effect.as(NO_OP),
 					Effect.mapError((error) =>
 						operationFailure(
 							"createFile.race",
@@ -152,16 +182,18 @@ export class TFileHelper {
 		});
 	}
 
+	/** Trashes the file; `NoOp` when it is gone. */
 	trashFile<SPF extends SplitPathToAnyFile>(splitPath: SPF) {
 		return Effect.gen({ self: this }, function* () {
 			const existing = yield* Effect.result(this.getFile(splitPath));
 			if (Result.isFailure(existing)) {
 				return isLookupMiss(existing.failure)
-					? undefined
+					? NO_OP
 					: yield* existing.failure;
 			}
 			const vault = yield* VaultIo;
 			yield* vault.trash(existing.success);
+			return { _tag: "Trashed" } as const satisfies VamActionOutcome;
 		});
 	}
 
@@ -173,7 +205,7 @@ export class TFileHelper {
 	}: SplitPathFromTo<SPF> & {
 		collisionStrategy?: CollisionStrategy;
 		updateLinks?: boolean;
-	}) {
+	}): Effect.Effect<RenameResult, VamVaultIoError, VaultIo> {
 		return Effect.gen({ self: this }, function* () {
 			const { fromFile, toFile } = yield* this.resolveRenamePaths(
 				from,
@@ -261,9 +293,10 @@ export class TFileHelper {
 		to: SPF,
 		collisionStrategy: CollisionStrategy,
 		updateLinks: boolean,
-	) {
+	): Effect.Effect<RenameResult, VamVaultIoError, VaultIo> {
 		return Effect.gen({ self: this }, function* () {
-			if (fromFile === toFile) return fromFile;
+			// The same file: the rename is done, or its source is gone.
+			if (fromFile === toFile) return { file: fromFile, outcome: NO_OP };
 			if (to.kind === SplitPathKind.MdFile) {
 				const vault = yield* VaultIo;
 				const [targetContent, sourceContent] = yield* Effect.all(
@@ -272,10 +305,14 @@ export class TFileHelper {
 				);
 				if (targetContent === sourceContent) {
 					yield* this.trashDuplicate(fromFile, from);
-					return toFile;
+					return {
+						file: toFile,
+						outcome: { _tag: "TrashedDuplicate" },
+					} as const;
 				}
 			}
-			if (collisionStrategy === "skip") return toFile;
+			if (collisionStrategy === "skip")
+				return { file: toFile, outcome: NO_OP };
 			return yield* this.renameToIndexedPath(
 				fromFile,
 				from,
@@ -339,6 +376,12 @@ export class TFileHelper {
 				updateLinks,
 			);
 			return yield* this.getFile(indexedPath).pipe(
+				Effect.map(
+					(file): RenameResult => ({
+						file,
+						outcome: { _tag: "RenamedToIndexed", to: indexedPath },
+					}),
+				),
 				Effect.mapError((error) =>
 					operationFailure(
 						"renameFile.retrieve",
@@ -363,6 +406,12 @@ export class TFileHelper {
 		return Effect.gen({ self: this }, function* () {
 			yield* this.tryVaultRename(fromFile, to, to, updateLinks);
 			return yield* this.getFile(to).pipe(
+				Effect.map(
+					(file): RenameResult => ({
+						file,
+						outcome: { _tag: "Renamed", to },
+					}),
+				),
 				Effect.mapError((error) =>
 					operationFailure(
 						"renameFile.retrieve",
@@ -436,7 +485,14 @@ export class TFileHelper {
 		const path = pathfinder.systemPathFromSplitPath(splitPath);
 		return Effect.gen({ self: this }, function* () {
 			const vault = yield* VaultIo;
-			yield* this.modifyAsSelf(file, vault.modify(file, content)).pipe(
+			// One `Vault.process` call reads the pre-image the report hashes
+			// and writes over it atomically, so the hash names exactly the
+			// content replaced; Obsidian skips the write when it is unchanged.
+			const replaced: { before?: string } = {};
+			yield* this.processAsSelf(vault, file, (current) => {
+				replaced.before = current;
+				return content;
+			}).pipe(
 				Effect.mapError((error) =>
 					operationFailure(
 						"replaceFileContent",
@@ -446,7 +502,7 @@ export class TFileHelper {
 					),
 				),
 			);
-			return file;
+			return wrote(replaced.before ?? "", content);
 		});
 	}
 
@@ -489,7 +545,11 @@ export class TFileHelper {
 		file: TFile,
 		transform: Transform,
 		splitPath: SplitPathToMdFile,
-	) {
+	): Effect.Effect<
+		VamActionOutcome,
+		VamVaultIoError | VamContentConflictError,
+		VaultIo
+	> {
 		const path = pathfinder.systemPathFromSplitPath(splitPath);
 		const transformFailure = (cause: unknown) =>
 			operationFailure(
@@ -509,6 +569,7 @@ export class TFileHelper {
 		return Effect.gen({ self: this }, function* () {
 			const vault = yield* VaultIo;
 			const started: { pending?: PendingTransform } = {};
+			const synchronous: { outcome?: VamActionOutcome } = {};
 			const first = yield* Effect.result(
 				this.processAsSelf(vault, file, (current) => {
 					let result: string | Promise<string>;
@@ -517,7 +578,10 @@ export class TFileHelper {
 					} catch (cause) {
 						throw new TransformThrew(cause);
 					}
-					if (typeof result === "string") return result;
+					if (typeof result === "string") {
+						synchronous.outcome = wrote(current, result);
+						return result;
+					}
 					const after = Promise.resolve(result);
 					// Observed below; this only prevents an unhandled
 					// rejection while the first process call settles.
@@ -533,13 +597,13 @@ export class TFileHelper {
 					: ioFailure("processFileContent", first.failure);
 			}
 			const pending = started.pending;
-			if (!pending) return file;
+			if (!pending) return synchronous.outcome ?? NO_OP;
 
 			const after = yield* Effect.tryPromise({
 				catch: transformFailure,
 				try: () => pending.after,
 			});
-			if (after === pending.before) return file;
+			if (after === pending.before) return NO_OP;
 
 			const revalidated = { conflict: false };
 			yield* this.processAsSelf(vault, file, (current) => {
@@ -560,7 +624,7 @@ export class TFileHelper {
 					path,
 				});
 			}
-			return file;
+			return wrote(pending.before, after);
 		});
 	}
 
@@ -599,27 +663,6 @@ export class TFileHelper {
 					),
 				);
 		});
-	}
-
-	private modifyAsSelf<E>(
-		file: TFile,
-		write: Effect.Effect<void, E>,
-	): Effect.Effect<void, E> {
-		const recorder = this.selfModifies;
-		if (!recorder) return write;
-		return recorder
-			.expectModifyEffect(file.path)
-			.pipe(
-				Effect.andThen(
-					write.pipe(
-						Effect.onExit((exit) =>
-							Exit.isFailure(exit)
-								? recorder.forgetModifyEffect(file.path)
-								: Effect.void,
-						),
-					),
-				),
-			);
 	}
 }
 

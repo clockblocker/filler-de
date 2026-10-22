@@ -637,7 +637,7 @@ describe("MarkdownFileAccess", () => {
 			harness.access.renameFile({ from: target, to: renamedTarget }),
 		);
 
-		expect(renamed.path).toBe("Library/renamed.md");
+		expect(renamed).toEqual({ _tag: "Renamed", to: renamedTarget });
 		expect(harness.getReadinessCount()).toBe(1);
 		expect(harness.getLastExpectedInlineTitleText()).toBe("renamed");
 		expect(harness.getRestoredInlineTitleSelection()).toEqual({
@@ -658,7 +658,10 @@ describe("MarkdownFileAccess", () => {
 			harness.access.renameFile({ from: target, to: renamedTarget }),
 		);
 
-		expect(renamed.path).toBe("Library/1_renamed.md");
+		expect(renamed).toEqual({
+			_tag: "RenamedToIndexed",
+			to: { ...renamedTarget, basename: "1_renamed" },
+		});
 		expect(harness.getLastExpectedInlineTitleText()).toBe("1_renamed");
 		expect(harness.getRestoredInlineTitleSelection()).toEqual({
 			end: 4,
@@ -675,8 +678,8 @@ describe("MarkdownFileAccess", () => {
 			harness.access.renameFile({ from: target, to: renamedTarget }),
 		);
 
-		expect(renamed.path).toBe("Library/renamed.md");
-		expect(renamed).not.toBe(harness.targetFile);
+		// Equal contents: the source went to the trash beside its copy.
+		expect(renamed).toEqual({ _tag: "TrashedDuplicate" });
 		expect(harness.getReadinessCount()).toBe(0);
 		expect(harness.getRestoredInlineTitleSelection()).toBeNull();
 	});

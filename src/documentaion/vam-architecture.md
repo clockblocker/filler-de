@@ -40,7 +40,7 @@ The API has four groups:
 
 | Group | Examples |
 | --- | --- |
-| Dispatch | `dispatch`, `dispatchStopOnFirstFailure` |
+| Dispatch | `dispatchWithReport`, `dispatch`, `dispatchStopOnFirstFailure` |
 | Observation | `startListening`, `subscribeToBulk`, `subscribeToMdModifications`, `subscribeToProtectedPathModifications` |
 | Vault reads | `readContent`, `readContentWithStat`, `exists`, `findByBasename`, `list`, `scan`, `scanWithStat` |
 | Active editor | `mdPwd`, `getOpenedContent`, `getSelectionInfo`, `cd`, `scrollOpenedFileToLine` |
@@ -144,7 +144,8 @@ content `Vault.process` reads; once it settles, a second `Vault.process` writes
 the result only if the file still holds that content. Otherwise the action
 fails with `VamContentConflictError` and the newer content stays in place. VAM
 never re-runs a transform. The active-editor route applies the same re-check
-and fails with an `IdentityMismatch` error.
+and fails with an `IdentityMismatch` error. The dispatch report gives both the
+failure kind `conflict`; `isContentConflict(failure)` asks for it.
 
 A `VaultEvent` is a typed create, rename, or delete observation from Obsidian. It is not a `VaultAction`.
 
@@ -171,8 +172,8 @@ withdraws that batch. Once queued, a batch runs.
 
 Waiting has a high ceiling, `MAX_PENDING_DISPATCH_BATCHES` (500 batches queued
 or waiting). A submission that finds the ceiling reached is not accepted and
-fails at once with `VamDispatchOverflowError`, so a runaway producer such as a
-healing loop surfaces instead of growing the queue without limit.
+fails at once, for a `VamDispatchOverflowError`, so a runaway producer such as
+a healing loop surfaces instead of growing the queue without limit.
 
 Important rules:
 
@@ -188,13 +189,61 @@ Important rules:
   batch skips register nothing.
 - Each caller receives the result of its own batch.
 
-A Dispatch Batch is not atomic. VAM does not roll back actions that completed before a later failure. The failure reports the affected operation and retains the original cause.
+A Dispatch Batch is not atomic. VAM does not roll back actions that completed
+before a later failure; the report below says what each one did.
 
-By default, `dispatch` attempts every planned action and reports all action
-failures together. `dispatchStopOnFirstFailure` stops at the first failed
-action and fails with `VamDispatchStoppedError`, which carries that failure,
-the planned actions already executed, and the planned actions skipped. Planned
-actions include prerequisites VAM added, such as parent folders.
+By default, a batch attempts every planned action. With
+`stopOnFirstFailure`, it stops at the first failed action and reports the rest
+as skipped. Planned actions include prerequisites VAM added, such as parent
+folders.
+
+## Dispatch reports
+
+`dispatchWithReport(actions, { stopOnFirstFailure })` answers a
+`VamDispatchReport`, the batch's receipt. `dispatch` and
+`dispatchStopOnFirstFailure` run the same batch for callers that need only
+success, and answer `void`. All three fail with one error,
+`VamDispatchFailure`, which carries the same report and a `reason`:
+
+| `reason` | When | Report |
+| --- | --- | --- |
+| `VamDispatchError` | An action failed; this is the first one. | Every planned action |
+| `VamPlanningError` | Planning failed. | Every submitted action `Skipped` |
+| `VamProtectedPathError` | The batch named a protected path. | Every submitted action `Skipped` |
+| `VamDispatchOverflowError` | The queue was at its ceiling. | Every submitted action `Skipped` |
+| `VamShutdownError`, `VamSetupError` | VAM was shut down, or could not start. | Every submitted action `Skipped` |
+
+The report has one entry per planned action, in the order VAM ran them. Its
+`status` is:
+
+- `Done`, with an `outcome`: what the action did.
+- `Failed`, with its `VamDispatchError`: it failed and changed nothing.
+- `Uncertain`, with its `VamDispatchError`: it failed and may have changed
+  the vault, such as a rename that moved the file and then could not restore
+  the editor selection.
+- `Skipped`: it never ran.
+
+A `VamDispatchError` names its typed `action` and a `kind`: `conflict` (the
+file or editor changed under it), `missing` (its file or folder was not
+there), `io` or `defect`. The first two are `Failed`, the others `Uncertain`.
+
+Outcomes record what actually happened, so a caller can build guarded
+inverses from them:
+
+| Outcome | Meaning | Inverse a caller could build |
+| --- | --- | --- |
+| `Created { contentHash? }` | Made the file or folder. | Trash it while it still has `contentHash`. |
+| `Wrote { beforeHash, afterHash }` | Changed an existing file. | Restore a captured pre-image whose hash is `beforeHash`, while the file still has `afterHash`. |
+| `Renamed { to }` | Moved the source to `to`. | Rename back while the file is at `to`. |
+| `RenamedToIndexed { to }` | The target was taken; moved to the free indexed path `to`. | Rename back from `to`. |
+| `TrashedDuplicate` | The target already held the source's content; the source went to the trash. | None needed for content; the target holds it. |
+| `Trashed` | Moved the target to the trash. | None in VAM. |
+| `NoOp` | Changed nothing. | None. |
+
+Hashes are `vaultContentHash`es of the whole file. The report also answers
+`executed`, `failed`, `uncertain` and `skipped`, and `touchedVault`: `yes`
+when an action changed something, `unknown` when none did but an `Uncertain`
+one may have, `no` otherwise. VAM itself never undoes anything.
 
 ## Protected paths
 
@@ -213,8 +262,8 @@ backslashes, and Unicode composition. The vault root (`""`) cannot be a
 prefix.
 
 Dispatch checks each submitted batch before it queues it. If any action names
-a protected path, the whole batch fails with `VamProtectedPathError` and none
-of it runs. A protected path here is a target, or either end of a rename. A
+a protected path, the whole batch fails, for a `VamProtectedPathError`, and
+none of it runs. A protected path here is a target, or either end of a rename. A
 rename or trash of a folder that contains a prefix is refused too, and so is
 the vault root, which contains every prefix. Creating such a folder is
 allowed. Planning only adds parent folders of submitted targets, so checking
@@ -294,13 +343,14 @@ relative to each other; structural changes appear only in `subscribeToBulk`.
 
 Modify Self Events are recorded at write time, not at planning time, because
 only the background writer knows whether a write happens. `TFileHelper`
-records one expectation immediately before each `vault.modify` and, for
-`vault.process`, synchronously inside the callback and only when the callback
-changes the content, since Obsidian writes nothing when the callback returns
-its input. A modify callback that lands before the callback runs, or during a
-`vault.process` call that writes nothing (an unchanged `ProcessMdFile`, the
-first call of an asynchronous transform, a revalidation that lost a content
-race), is therefore never hidden. An expectation is withdrawn when its write
+writes over an existing Markdown file only through `vault.process`, for
+`UpsertMdFile` as for `ProcessMdFile`, and records one expectation
+synchronously inside the callback and only when the callback changes the
+content, since Obsidian writes nothing when the callback returns its input. A modify callback that
+lands before the callback runs, or during a `vault.process` call that writes
+nothing (an unchanged `ProcessMdFile` or `UpsertMdFile`, the first call of an
+asynchronous transform, a revalidation that lost a content race), is
+therefore never hidden. An expectation is withdrawn when its write
 fails. Modify expectations are counted per path, expire with the tracker TTL,
 and never hold the settle barrier open. Acquiring the modify listener clears
 them, because writes made while nobody listened left expectations whose
@@ -349,10 +399,10 @@ Shutdown is idempotent. It:
 1. Closes public subscriptions.
 2. Stops observation and listeners.
 3. Lets the active Dispatch Batch finish.
-4. Fails queued, waiting, and new submissions with a typed shutdown error.
+4. Fails queued, waiting, and new submissions, for a `VamShutdownError`.
 5. Disposes the managed runtime.
 
-Errors remain typed at the package boundary. They include the operation, cause, and path or action when applicable.
+Errors remain typed at the package boundary. They include the operation, cause, and path or typed action when applicable, and a `message` built from them.
 
 ## Test boundary
 
@@ -369,6 +419,7 @@ Desktop scenarios use this idle barrier. They must not inspect VAM internals or 
 | Public facade | `src/packages/independent/vault-action-manager/src/facade.ts` |
 | Effect runtime and ports | `src/packages/independent/vault-action-manager/src/effect/` |
 | Dispatch | `src/packages/independent/vault-action-manager/src/impl/actions-processing/` |
+| Dispatch reports | `src/packages/independent/vault-action-manager/src/effect/dispatch-report.ts` |
 | Observation | `src/packages/independent/vault-action-manager/src/impl/event-processing/` |
 | Markdown routing | `src/packages/independent/vault-action-manager/src/file-services/markdown-file-access.ts` |
 | Testing adapter | `src/packages/independent/vault-action-manager/src/testing-adapter.ts` |

@@ -140,7 +140,7 @@ function setup(
 					path: to,
 					to: yield* tracker.shouldIgnoreEffect(to),
 				});
-			}),
+			}).pipe(Effect.as({ _tag: "NoOp" } as const)),
 	} as unknown as Executor;
 
 	const coordinator = new DispatchBatchCoordinator(

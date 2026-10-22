@@ -1,7 +1,6 @@
 import { Effect } from "effect";
-import type { CommandError } from "../errors";
+import { type CommandError, CommandErrorKind } from "../errors";
 import type { LibrarianCommandFn, LibrarianCommandInput } from "./types";
-import { vamFailureToCommandError } from "./vam-failure";
 
 type Direction = "prev" | "next";
 
@@ -20,9 +19,14 @@ function navigateToPage(
 				: librarian.getNextPage(activeFile.splitPath);
 		if (!targetPage) return;
 
-		yield* vam
-			.cd(targetPage)
-			.pipe(Effect.mapError((error) => vamFailureToCommandError(error)));
+		yield* vam.cd(targetPage).pipe(
+			Effect.mapError(
+				(error): CommandError => ({
+					kind: CommandErrorKind.DispatchFailed,
+					reason: error.message,
+				}),
+			),
+		);
 	})();
 }
 

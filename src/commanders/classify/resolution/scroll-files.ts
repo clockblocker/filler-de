@@ -5,12 +5,13 @@
  * content as it is at that moment, so the user's typing is never replaced.
  */
 import {
+	isContentConflict,
 	SplitPathKind,
 	splitPathCodec,
 	VaultActionKind,
 	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
-import { Effect, Predicate, Schema } from "effect";
+import { Effect, Schema } from "effect";
 import type { UnlinkObserver, UnlinkScrolls } from "./unlink-observer";
 
 export class ScrollWriteFailed extends Schema.TaggedError<ScrollWriteFailed>()(
@@ -29,23 +30,6 @@ export type ScrollFiles = {
 		transform: (current: string) => string,
 	) => Effect.Effect<void, ScrollWriteFailed>;
 };
-
-/** Whether a VAM failure says the file changed under the transform. */
-function lostRace(error: unknown): boolean {
-	const cause =
-		Predicate.hasProperty(error, "failure") &&
-		Predicate.hasProperty(error.failure, "cause")
-			? error.failure.cause
-			: error;
-	if (!Predicate.hasProperty(cause, "_tag")) return false;
-	return (
-		cause._tag === "VamContentConflictError" ||
-		(cause._tag === "VamActiveEditorError" &&
-			Predicate.hasProperty(cause, "reason") &&
-			(cause.reason === "IdentityMismatch" ||
-				cause.reason === "StaleFile"))
-	);
-}
 
 export function vamScrollFiles(
 	vam: Pick<VaultActionManager, "dispatchStopOnFirstFailure">,
@@ -74,7 +58,7 @@ export function vamScrollFiles(
 							(error) =>
 								new ScrollWriteFailed({
 									cause: error,
-									conflict: lostRace(error),
+									conflict: isContentConflict(error),
 									message: `Could not write the links into ${scrollPath}`,
 								}),
 						),

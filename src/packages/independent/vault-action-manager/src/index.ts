@@ -1,17 +1,24 @@
 export {
 	type BulkVaultEventHandler,
 	createVaultActionManager,
-	type DispatchBatchEffectFailure,
+	type DispatchOptions,
+	describeVaultActionPath,
+	isContentConflict,
 	type MdModifyEventHandler,
 	type ProtectedPathModificationHandler,
-	type StopOnFirstFailureDispatchFailure,
+	type VamActionFailureKind,
+	VamActionFailureKindSchema,
+	type VamActionOutcome,
 	VamActiveEditorError,
 	type VamActiveEditorFailureReason,
 	VamActiveEditorFailureReasonSchema,
 	VamContentConflictError,
+	type VamDispatchEntry,
 	VamDispatchError,
+	VamDispatchFailure,
+	type VamDispatchFailureReason,
 	VamDispatchOverflowError,
-	VamDispatchStoppedError,
+	VamDispatchReport,
 	type VamEffectError,
 	type VamFileAccessError,
 	type VamFileWriteError,
@@ -22,6 +29,7 @@ export {
 	VamSetupError,
 	VamShutdownError,
 	VamSubscriptionError,
+	type VamTouchedVault,
 	VamVaultIoError,
 	type VaultActionManager,
 	type VaultActionManagerFactoryResult,
@@ -30,6 +38,7 @@ export {
 } from "./facade";
 export type { ActiveEditorContext } from "./file-services/active-view/active-file-service";
 export type { SelectionInfo } from "./file-services/active-view/selection-service";
+export { vaultActionTargetPath } from "./helpers/action-helpers";
 export type { BulkVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 export type { PossibleRootVaultEvent } from "./impl/event-processing/bulk-event-emmiter/types/bulk/helpers";
 export type {
@@ -41,6 +50,7 @@ export type {
 	ProtectedPathModification,
 	ProtectedPathModificationsEvent,
 } from "./impl/event-processing/protected-modifications";
+export { vaultContentHash } from "./internal/content-hash";
 export { type SplitPathCodec, splitPathCodec } from "./split-path-codec";
 export type { VaultFileStat } from "./types/file-stat";
 export * from "./types/literals";

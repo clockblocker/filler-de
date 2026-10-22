@@ -8,10 +8,10 @@ import {
 import {
 	type BulkMdModifyEvent,
 	type BulkVaultEvent,
-	VamDispatchStoppedError,
 	type VaultAction,
 	VaultActionKind,
 	VaultEventKind,
+	vaultActionTargetPath,
 } from "@textfresser/vault-action-manager";
 import { canonicalJson } from "common-utils";
 import {
@@ -357,15 +357,6 @@ export type DumdictVaultStore = {
 
 const message = (cause: unknown): string =>
 	cause instanceof Error ? cause.message : String(cause);
-
-function actionPath(action: VaultAction): string {
-	const payload = action.payload as {
-		readonly splitPath?: Parameters<typeof formatPath>[0];
-		readonly to?: Parameters<typeof formatPath>[0];
-	};
-	const target = payload.to ?? payload.splitPath;
-	return target ? formatPath(target) : action.kind;
-}
 
 /** A rewrite that lands only on the content it was planned from. */
 function compareAndSwap(path: string, expected: string, next: string) {
@@ -1587,8 +1578,6 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				readonly phase: Phase;
 				/** Writes that landed, in this and earlier batches. */
 				readonly landed: readonly PlannedWrite[];
-				/** Whether the failed batch may have landed writes it did not report. */
-				readonly uncertain: boolean;
 				readonly skipped: readonly PlannedWrite[];
 				readonly cause: unknown;
 		  };
@@ -1626,7 +1615,6 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					landed,
 					phase,
 					skipped: writes.filter((later) => later.phase >= phase),
-					uncertain: false,
 				} as const;
 			}
 			const outcome = yield* Effect.result(
@@ -1637,25 +1625,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				continue;
 			}
 			const failure = outcome.failure;
-			const stopped = failure instanceof VamDispatchStoppedError;
 			const executed = new Set(
-				(stopped ? failure.executed : [])
-					.filter(
-						(action) =>
-							action.kind !== VaultActionKind.CreateFolder,
-					)
-					.map(actionPath),
+				failure.report.executed.map(vaultActionTargetPath),
 			);
-			// VAM fails planning, overflow and a protected path before it
-			// runs any action.
-			const ranNothing =
-				!stopped &&
-				(failure._tag === "VamPlanningError" ||
-					failure._tag === "VamDispatchOverflowError" ||
-					failure._tag === "VamProtectedPathError");
 			if (phase === Phase.FanOut) {
-				const ran = (write: PlannedWrite) =>
-					stopped && executed.has(write.path);
+				const ran = (write: PlannedWrite) => executed.has(write.path);
 				landed.push(...batch.filter(ran));
 				missed.push(...batch.filter((write) => !ran(write)));
 				yield* Effect.logWarning(
@@ -1667,7 +1641,10 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			const later = writes.filter((write) => write.phase > phase);
 			return {
 				_tag: "Failed",
-				cause: stopped ? failure.failure.cause : failure,
+				cause:
+					failure.reason._tag === "VamDispatchError"
+						? failure.reason.cause
+						: failure,
 				landed: [
 					...landed,
 					...batch.filter(({ path }) => executed.has(path)),
@@ -1677,7 +1654,6 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					...batch.filter(({ path }) => !executed.has(path)),
 					...later,
 				],
-				uncertain: !(stopped || ranNothing),
 			};
 		}
 		return { _tag: "Done", landed, missed };
@@ -1795,9 +1771,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					for (const { path } of batch) landed.add(path);
 					continue;
 				}
-				if (outcome.failure instanceof VamDispatchStoppedError)
-					for (const action of outcome.failure.executed)
-						landed.add(actionPath(action));
+				for (const action of outcome.failure.report.executed)
+					landed.add(vaultActionTargetPath(action));
 				yield* Effect.logWarning(
 					"Dictionary re-renders stopped; re-reading the notes",
 					outcome.failure,
@@ -2266,7 +2241,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 							),
 						);
 			const rebuilt = yield* recover;
-			if (rollback._tag === "Success" && !first.uncertain)
+			if (rollback._tag === "Success")
 				return conflict("revisionConflict");
 			yield* converge({}, depth + 1);
 			if (rebuilt) yield* regenerateCrossroads();

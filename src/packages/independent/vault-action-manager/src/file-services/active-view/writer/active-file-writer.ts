@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import type { EditorPosition } from "obsidian";
 import type { SavedInlineTitleSelection } from "../../../effect/ports";
 import { pathfinder } from "../../../helpers/pathfinder";
+import { vaultContentHash } from "../../../internal/content-hash";
 import { getErrorMessage } from "../../../internal/get-error-message";
 import type { SplitPathToMdFile } from "../../../types/split-path";
 import type { Transform } from "../../../types/vault-action";
@@ -410,7 +411,7 @@ export class ActiveFileWriter {
 				),
 			try: async () => transform(before),
 		});
-		if (after === before) return after;
+		if (after === before) return { _tag: "NoOp" } as const;
 		yield* assertSnapshotCurrent(snapshot, "processActiveContent.write");
 		const currentContent = yield* Effect.try({
 			catch: (cause) =>
@@ -445,7 +446,11 @@ export class ActiveFileWriter {
 				if (changes.length) snapshot.editor.transaction({ changes });
 			},
 		});
-		return after;
+		return {
+			_tag: "Wrote",
+			afterHash: vaultContentHash(after),
+			beforeHash: vaultContentHash(before),
+		} as const;
 	});
 }
 
