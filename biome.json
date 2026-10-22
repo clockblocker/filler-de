@@ -39,6 +39,14 @@
 			"style": {
 				"noInferrableTypes": "error",
 				"noParameterAssign": "error",
+				"noRestrictedImports": {
+					"level": "error",
+					"options": {
+						"paths": {
+							"zod/v3": "Import zod (v4). Mixing zod v3 and v4 schemas fails at runtime, e.g. in VAM's .extend() and z.codec()."
+						}
+					}
+				},
 				"noUnusedTemplateLiteral": "error",
 				"noUselessElse": "error",
 				"useAsConstAssertion": "error",

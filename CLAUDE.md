@@ -20,6 +20,10 @@ bun run typecheck
 bun run typecheck:changed
 ```
 
+`build:root` (so every build, `dev` and `test:obsidian-e2e*`) refuses to run in
+an installed plugin folder (`.obsidian/plugins/<name>`), where Hot Reload would
+load the bundle; build from a worktree, or set `TEXTFRESSER_ALLOW_LIVE_BUILD=1`.
+
 # Effect
 
 Before writing Effect code, read `node_modules/effect/AGENTS.md` completely and

@@ -39,7 +39,7 @@
 		"build": "bun run batteries:report && bun run build:root",
 		"build:dev": "bun x tsc --noEmit && bun run dev",
 		"build:full": "bun run build",
-		"build:root": "bun build ./src/main.ts --outfile=main.js --platform=node --format=cjs --conditions=convex --tsconfig-override=tsconfig.json --external obsidian --external electron --external @codemirror/*",
+		"build:root": "bun scripts/live-build-guard.ts && bun build ./src/main.ts --outfile=main.js --platform=node --format=cjs --conditions=convex --tsconfig-override=tsconfig.json --external obsidian --external electron --external @codemirror/*",
 		"clearTestLogs": "bun ./tests/tracing/scripts/clear-test-logs.ts",
 		"coverage": "bun run clearTestLogs && bun test --tsconfig-override=tsconfig.json --coverage --preload ./tests/unit/setup.ts",
 		"dev": "bun run batteries:report && bun run build:root --watch --sourcemap=inline",
