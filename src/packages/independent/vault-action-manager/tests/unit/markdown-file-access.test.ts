@@ -81,6 +81,8 @@ function makeHarness(
 	let lastExpectedInlineTitleText: string | undefined;
 	let transactionCount = 0;
 	let scrollCount = 0;
+	/** What the view shows and last saved; unset, only its editor tells. */
+	let viewState: { lastSaved: string; shown: string } | null = null;
 	const vaultContents = new Map<string, string>();
 	const ioOrder: string[] = [];
 	const vaultRead = mock((file: TFile) =>
@@ -137,6 +139,15 @@ function makeHarness(
 				file.path === capturedPath &&
 				mode === capturedMode,
 			mode: capturedMode,
+			...(viewState
+				? {
+						persisted: () =>
+							viewState
+								? { data: viewState.lastSaved, saving: false }
+								: undefined,
+						viewData: () => viewState?.shown ?? content,
+					}
+				: {}),
 			readInlineTitleSelection: () => inlineTitleSelection,
 			restoreInlineTitleSelection: (saved) => {
 				if (restoreFailure) throw restoreFailure;
@@ -333,6 +344,13 @@ function makeHarness(
 		setVaultIdentity: (path: string, file: TFile) => {
 			files.set(path, file);
 		},
+		/**
+		 * What the active view shows (`getViewData`) and last loaded or
+		 * saved, apart from its editor, as in reading mode.
+		 */
+		setViewState: (value: { lastSaved: string; shown: string }) => {
+			viewState = value;
+		},
 		targetFile,
 		vaultRead,
 	};
@@ -447,18 +465,66 @@ describe("MarkdownFileAccess", () => {
 		expect(adapter.vaultRead).not.toHaveBeenCalled();
 	});
 
-	it("reports preview mode before reading source-editor values", async () => {
+	it("reads a note shown in reading view by what it shows, never by its lagging editor", async () => {
 		const harness = makeHarness({ mode: "preview" });
+		harness.addVaultFile(harness.targetFile, "vault content");
+		harness.setContent("stale editor");
+		harness.setViewState({
+			lastSaved: "vault content",
+			shown: "vault content",
+		});
 
-		const failure = await harness.run(
-			Effect.flip(harness.access.readContent(target)),
+		expect(await harness.run(harness.access.readContent(target))).toBe(
+			"vault content",
 		);
-
-		expect(failure).toBeInstanceOf(VamActiveEditorError);
-		expect(asActiveError(failure).reason).toBe("WrongMode");
+		expect(
+			await harness.run(harness.access.readContentWithStat(target)),
+		).toMatchObject({ content: "vault content" });
+		expect(harness.ioOrder).not.toContain("editor");
 		expect(await harness.run(harness.access.activeMdPath())).toEqual(
 			target,
 		);
+	});
+
+	it("writes a clean note shown in reading view through the disk", async () => {
+		const harness = makeHarness({ mode: "preview" });
+		harness.addVaultFile(harness.targetFile, "vault content");
+		harness.setContent("stale editor");
+		harness.setViewState({
+			lastSaved: "vault content",
+			shown: "vault content",
+		});
+
+		const outcome = await harness.run(
+			harness.access.processContent({
+				splitPath: target,
+				transform: (value) => `${value}!`,
+			}),
+		);
+		const replaced = await harness.run(
+			harness.access.replaceContent(target, "replaced"),
+		);
+
+		expect(outcome).toMatchObject({ _tag: "Wrote" });
+		expect(replaced).toMatchObject({ _tag: "Wrote" });
+		expect(harness.getTransactionCount()).toBe(0);
+		expect(harness.getContent()).toBe("stale editor");
+	});
+
+	it("keeps editor-only reads failing in reading view, with a message saying so", async () => {
+		const harness = makeHarness({ mode: "preview" });
+
+		const opened = await harness.run(
+			Effect.flip(harness.access.openedContent()),
+		);
+		const context = await harness.run(
+			Effect.flip(harness.access.activeContext()),
+		);
+
+		for (const failure of [opened, context]) {
+			expect(asActiveError(failure).reason).toBe("WrongMode");
+			expect(asActiveError(failure).message).toContain("reading view");
+		}
 	});
 
 	it("suppresses only explicit absence in optional active-editor reads", async () => {
@@ -474,7 +540,11 @@ describe("MarkdownFileAccess", () => {
 	});
 
 	it("traces operation, path, and typed failure outcome", async () => {
-		const harness = makeHarness({ mode: "preview" });
+		const harness = makeHarness();
+		harness.setVaultIdentity(
+			"Library/note.md",
+			makeFile("Library/note.md"),
+		);
 		const spans: Tracer.NativeSpan[] = [];
 		const tracer = Tracer.make({
 			span: (options) => {
@@ -496,7 +566,7 @@ describe("MarkdownFileAccess", () => {
 		expect(span?.attributes.get("operation")).toBe("read");
 		expect(span?.attributes.get("path")).toBe("Library/note.md");
 		expect(span?.attributes.get("error.tag")).toBe("VamActiveEditorError");
-		expect(span?.attributes.get("error.reason")).toBe("WrongMode");
+		expect(span?.attributes.get("error.reason")).toBe("StaleFile");
 		expect(span?.attributes.get("error.path")).toBe("Library/note.md");
 	});
 

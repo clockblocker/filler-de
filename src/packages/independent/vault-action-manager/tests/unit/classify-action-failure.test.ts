@@ -50,6 +50,18 @@ describe("classifyActionFailure", () => {
 		}
 	});
 
+	it("reads a view in reading mode, which a write cannot go through yet, as a conflict", () => {
+		expect(
+			classifyActionFailure(
+				new VamActiveEditorError({
+					cause,
+					operation: "requireSourceMode",
+					reason: "WrongMode",
+				}),
+			),
+		).toBe("conflict");
+	});
+
 	it("reads a failure after the vault changed as I/O, whatever its reason", () => {
 		expect(
 			classifyActionFailure(

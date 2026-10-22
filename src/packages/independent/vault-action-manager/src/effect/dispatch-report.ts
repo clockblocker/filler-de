@@ -297,9 +297,13 @@ export function classifyActionFailure(cause: unknown): VamActionFailureKind {
 	if (cause instanceof VamContentConflictError) return "conflict";
 	if (cause instanceof VamTargetExistsError) return "exists";
 	if (cause instanceof VamActiveEditorError) {
+		// `WrongMode` is raised before the editor is touched: a view in
+		// reading mode holds content not yet saved, so a write cannot go
+		// through it now, and may once the save lands.
 		return cause.stateChanged !== true &&
 			(cause.reason === "IdentityMismatch" ||
-				cause.reason === "StaleFile")
+				cause.reason === "StaleFile" ||
+				cause.reason === "WrongMode")
 			? "conflict"
 			: "io";
 	}

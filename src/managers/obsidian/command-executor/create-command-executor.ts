@@ -1,5 +1,6 @@
 import {
 	splitPathCodec,
+	VamActiveEditorError,
 	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
@@ -9,7 +10,7 @@ import type { LibrarianCommandKind } from "../../../commanders/librarian/command
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import type { Textfresser } from "../../../commanders/textfresser/textfresser";
 import { logger } from "../../../utils/logger";
-import { CommandKind } from "./types";
+import { type CommandContext, CommandKind } from "./types";
 
 /**
  * Managers needed to build command executor.
@@ -50,19 +51,70 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 		},
 	);
 
+	/**
+	 * Context for page navigation, which needs only the note: read as VAM
+	 * routes it, so it works in reading view, which has no editor to read
+	 * a cursor or selection from.
+	 */
+	const collectNoteContext = Effect.fn(
+		"createCommandExecutor.collectNoteContext",
+	)(function* () {
+		const splitPath = yield* vam.mdPwd();
+		const context: CommandContext = splitPath
+			? {
+					activeFile: {
+						content: yield* vam.readContent(splitPath),
+						splitPath,
+					},
+					selection: null,
+				}
+			: { activeFile: null, selection: null };
+		return context;
+	});
+
+	/** Tells the user why a command could not read the active note. */
+	const reportUnreadEditor = (command: string) => (error: unknown) =>
+		Effect.sync(() => {
+			notify(
+				error instanceof VamActiveEditorError &&
+					error.reason === "WrongMode"
+					? `⚠ Switch the note to editing view to ${command}`
+					: "⚠ Could not read the active note",
+			);
+			logger.warn(
+				`[CommandExecutor] Could not read the active note to ${command}:`,
+				error,
+			);
+		});
+
 	return async function executeCommand(kind: CommandKind): Promise<void> {
 		switch (kind) {
 			case CommandKind.GoToPrevPage:
 			case CommandKind.GoToNextPage:
 			case CommandKind.SplitToPages:
 			case CommandKind.SplitInBlocks: {
-				const context = await Effect.runPromise(collectContext());
+				const navigates =
+					kind === CommandKind.GoToPrevPage ||
+					kind === CommandKind.GoToNextPage;
 				// Delegate to librarian - codex guard handled internally
 				const librarianKind = kind as LibrarianCommandKind;
 				await Effect.runPromise(
-					librarian
-						.executeCommand(librarianKind, context, notify)
-						.pipe(Effect.ignore),
+					(navigates ? collectNoteContext() : collectContext()).pipe(
+						Effect.flatMap((context) =>
+							librarian
+								.executeCommand(librarianKind, context, notify)
+								.pipe(Effect.ignore),
+						),
+						Effect.catch(
+							reportUnreadEditor(
+								navigates
+									? "turn the page"
+									: kind === CommandKind.SplitToPages
+										? "split it into pages"
+										: "split it in blocks",
+							),
+						),
+					),
 				);
 				break;
 			}
@@ -71,9 +123,13 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 				await Effect.runPromise(
 					collectContext().pipe(
 						Effect.flatMap((context) =>
-							textfresser.executeCommand(kind, context, notify),
+							textfresser
+								.executeCommand(kind, context, notify)
+								.pipe(Effect.ignore),
 						),
-						Effect.ignore,
+						Effect.catch(
+							reportUnreadEditor("translate a selection"),
+						),
 					),
 				);
 				break;
@@ -100,14 +156,8 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 										),
 									),
 						),
-						Effect.catch((error) =>
-							Effect.sync(() => {
-								notify("⚠ Could not read the active editor");
-								logger.warn(
-									"[CommandExecutor] Classify could not read the editor:",
-									error,
-								);
-							}),
+						Effect.catch(
+							reportUnreadEditor("classify a selection"),
 						),
 					),
 				);

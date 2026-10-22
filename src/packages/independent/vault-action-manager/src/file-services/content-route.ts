@@ -17,10 +17,10 @@ import type { ActiveFileService } from "./active-view/active-file-service";
  * Where a Markdown file's content is read and written:
  *
  * - `Editor`: through one view's editor, unsaved typing included. The
- *   active view when it shows the file, as before; otherwise a background
- *   view holding unsaved typing, whose buffer is `content`.
+ *   active view when it shows the file in source mode, as before;
+ *   otherwise a view holding unsaved content, whose buffer is `content`.
  * - `Disk`: through the vault. No view shows the file, or none holds
- *   unsaved typing. `content` is the disk content when the route read it
+ *   unsaved content. `content` is the disk content when the route read it
  *   to decide, so a read need not read it again.
  */
 export type ContentRoute =
@@ -60,14 +60,16 @@ type ViewState = {
 
 /**
  * Decides the content route of `target`. The active view, when it shows
- * the file, is the route, as it always was: typing goes into the active
- * view, and Obsidian copies it into the file's other views within a few
- * milliseconds, so they can only lag it. Otherwise every background view
- * of the file is consulted. A view that holds what it last loaded or saved
- * is clean even while it is older than the disk (Obsidian reloads it
- * after a write); any other view holds unsaved typing when its buffer
- * differs from the disk, which `readDisk` reads. Views with different
- * unsaved typing fail it with `VamContentConflictError`.
+ * the file in source mode, is the route, as it always was: typing goes
+ * into the active view, and Obsidian copies it into the file's other views
+ * within a few milliseconds, so they can only lag it. In reading mode
+ * nothing can be typed into the active view, and its editor lags what it
+ * shows, so it is consulted like every other view of the file. A view
+ * that holds what it last loaded or saved is clean even while it is older
+ * than the disk (Obsidian reloads it after a write); any other view holds
+ * unsaved content when its buffer differs from the disk, which `readDisk`
+ * reads. Views with different unsaved content fail it with
+ * `VamContentConflictError`.
  *
  * Untraced: every content read takes it; callers annotate their own span.
  */
@@ -77,8 +79,9 @@ export const resolveContentRoute = Effect.fnUntraced(function* (
 	readDisk: Effect.Effect<string, VamVaultIoError, VaultIo>,
 ) {
 	const active = yield* editors.observeTarget(target);
-	if (active) return editorRoute(active, null);
+	if (active?.mode === "source") return editorRoute(active, null);
 
+	// Every view of the file, the active one in reading mode included.
 	const views = yield* editors.observeViews(target);
 	if (views.length === 0) return diskRoute(null);
 	const states = yield* Effect.forEach(views, readView);
@@ -101,6 +104,8 @@ export const resolveContentRoute = Effect.fnUntraced(function* (
 			path: pathfinder.systemPathFromSplitPath(target),
 		});
 	// One write through one view: Obsidian keeps a file's views in step.
+	// Only a source-mode view can take it; through a reading-mode one it
+	// fails with `WrongMode`, writing nothing.
 	const writable =
 		unsaved.find((view) => view.snapshot.mode === "source") ?? first;
 	return editorRoute(writable.snapshot, first.buffer);

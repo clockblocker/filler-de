@@ -8,8 +8,8 @@ import {
 import { rewriteWikilinks } from "./link-rewrite";
 
 /**
- * One Markdown view in the harness's workspace, never the active one. Its
- * `buffer` is its content; `null` means it shows what the disk holds.
+ * One Markdown view in the harness's workspace, the active one when
+ * opened with `active`. Its `buffer` is its content; `null` means it shows what the disk holds.
  * `lastSaved` is what it last loaded or saved (Obsidian's
  * `lastSavedData`): a buffer other than that is unsaved typing, one equal
  * to it is a clean view Obsidian has not reloaded yet. `editor`, when set,
@@ -40,6 +40,7 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 	const byPath = new Map<string, TAbstractFile>();
 	const writes: string[] = [];
 	const panes: HarnessPane[] = [];
+	let activePane: HarnessPane | null = null;
 	const linkingFiles: TFile[] = [];
 	const resolvedLinks: Record<string, Record<string, number>> = {};
 	const failingWrites = new Set<string>();
@@ -153,12 +154,12 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 		views.set(pane, view);
 		return view;
 	};
-	const leaves = () =>
-		panes.map((pane) => {
-			const view = viewOf(pane);
-			view.file = byPath.get(pane.path) as TFile;
-			return { view };
-		});
+	const liveView = (pane: HarnessPane) => {
+		const view = viewOf(pane);
+		view.file = byPath.get(pane.path) as TFile;
+		return view;
+	};
+	const leaves = () => panes.map((pane) => ({ view: liveView(pane) }));
 
 	const app = {
 		fileManager: {
@@ -214,7 +215,8 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 				move(file, toPath),
 		},
 		workspace: {
-			getActiveViewOfType: () => null,
+			getActiveViewOfType: () =>
+				activePane ? liveView(activePane) : null,
 			getLeaf: () => ({ openFile: async () => {} }),
 			getLeavesOfType: (type: string) =>
 				type === "markdown" ? leaves() : [],
@@ -238,10 +240,12 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 		 * or, with `buffer`, unsaved typing. With `clean`, the buffer is
 		 * what the pane last loaded, not yet reloaded after a disk write.
 		 * With `editor`, its source editor lags `buffer`, as in reading mode.
+		 * With `active`, it is the workspace's active view.
 		 */
 		open: (
 			path: string,
 			options: {
+				active?: boolean;
 				buffer?: string;
 				clean?: boolean;
 				editor?: string;
@@ -259,6 +263,7 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 				path,
 			};
 			panes.push(pane);
+			if (options.active) activePane = pane;
 			return pane;
 		},
 		resolvedLinks,
