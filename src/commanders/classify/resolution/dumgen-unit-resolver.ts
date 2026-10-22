@@ -23,6 +23,7 @@
  * (`ScrollActivity`), so its occurrences are not judged unlinked before its
  * links are written.
  */
+import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import type { Dumgen } from "dumgen";
 import { parseUnit } from "dumling";
 import type * as Dumling from "dumling/types";
@@ -430,7 +431,7 @@ export function dumgenUnitResolver(
 												Cause.findErrorOption(cause),
 												{
 													onNone: () =>
-														`resolution failed unexpectedly: ${getErrorMessage(Cause.squash(cause))}`,
+														`resolution failed unexpectedly: ${formatCause(cause, { stack: false })}`,
 													onSome: (error) =>
 														error.reason,
 												},

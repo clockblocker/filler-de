@@ -1,61 +1,24 @@
-import winston from "winston";
+import { recentTrace } from "./recent-trace";
+
+type Level = "error" | "info" | "warn";
+
+const sink = globalThis.console;
 
 /**
- * Logger utility with winston + console transports.
- * Objects are auto-serialized via formatMessage — no manual stringify needed.
+ * Hands its arguments to `console` as they are, so devtools can inspect
+ * them and an `Error` keeps its message and stack, and records the entry in
+ * `recentTrace`.
  */
-
-const formatMessage = (message: string, ...args: unknown[]): string => {
-	if (args.length === 0) {
-		return message;
-	}
-
-	const stringifiedArgs = args.map((arg) => {
-		if (typeof arg === "object") {
-			try {
-				return JSON.stringify(arg, null, 2);
-			} catch {
-				return "[Object]";
-			}
-		}
-		if (arg === null || arg === undefined) {
-			return String(arg);
-		}
-		return String(arg);
-	});
-
-	return `${message} ${stringifiedArgs.join(" ")}`;
-};
-
-const winstonLogger = winston.createLogger({
-	format: winston.format.combine(
-		winston.format.errors({ stack: true }),
-		winston.format.printf(({ level, message, timestamp, stack }) => {
-			const ts = timestamp ?? new Date().toISOString();
-			return `[${ts}] ${level.toUpperCase()}: ${stack ?? message}`;
-		}),
-	),
-	level: "info",
-	transports: [
-		new winston.transports.Console({
-			format: winston.format.combine(
-				winston.format.colorize(),
-				winston.format.printf(({ level, message, stack }) => {
-					return `${level}: ${stack ?? message}`;
-				}),
-			),
-		}),
-	],
-});
+function write(level: Level, message: string, args: readonly unknown[]): void {
+	sink[level](message, ...args);
+	recentTrace.recordLog(level, [message, ...args]);
+}
 
 export const logger = {
-	error: (message: string, ...args: unknown[]): void => {
-		winstonLogger.error(formatMessage(message, ...args));
-	},
-	info: (message: string, ...args: unknown[]): void => {
-		winstonLogger.info(formatMessage(message, ...args));
-	},
-	warn: (message: string, ...args: unknown[]): void => {
-		winstonLogger.warn(formatMessage(message, ...args));
-	},
+	error: (message: string, ...args: unknown[]): void =>
+		write("error", message, args),
+	info: (message: string, ...args: unknown[]): void =>
+		write("info", message, args),
+	warn: (message: string, ...args: unknown[]): void =>
+		write("warn", message, args),
 };

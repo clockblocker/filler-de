@@ -51,6 +51,9 @@
 			"@textfresser/vault-action-manager": [
 				"./src/packages/independent/vault-action-manager/src/index.ts"
 			],
+			"@textfresser/vault-action-manager/diagnostics": [
+				"./src/packages/independent/vault-action-manager/src/diagnostics/index.ts"
+			],
 			"@textfresser/vault-action-manager/issue-handlers": [
 				"./src/packages/independent/vault-action-manager/src/helpers/issue-handlers.ts"
 			],

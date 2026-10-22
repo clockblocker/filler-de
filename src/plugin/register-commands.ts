@@ -10,6 +10,7 @@ import {
 import { RESTART_LIBRARIAN_COMMAND_NAME } from "../commanders/librarian/runtime/describe-librarian-stop";
 import { tagLineCopyEmbedBehavior } from "../managers/obsidian/behavior-manager";
 import { CommandKind } from "../managers/obsidian/command-executor";
+import { recentTrace } from "../utils/recent-trace";
 
 /** What the palette commands reach; null while the plugin still loads. */
 export type PluginCommandDeps = {
@@ -151,5 +152,16 @@ export function registerCommands(plugin: Plugin, deps: PluginCommandDeps) {
 		callback: deps.restartLibrarian,
 		id: "restart-librarian",
 		name: RESTART_LIBRARIAN_COMMAND_NAME,
+	});
+
+	plugin.addCommand({
+		callback: () => {
+			void navigator.clipboard.writeText(recentTrace.render()).then(
+				() => new Notice("Copied the recent trace"),
+				() => new Notice("⚠ Could not copy the recent trace"),
+			);
+		},
+		id: "copy-recent-trace",
+		name: "Copy recent trace",
 	});
 }

@@ -9,6 +9,7 @@
  * plugin interrupts every run, which keeps whatever it already published.
  */
 import { VaultPath } from "@textfresser/vault-action-manager";
+import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import { readingIdentityKey } from "dumling";
 import { Cause, Effect, Exit, Fiber } from "effect";
 import { getErrorMessage } from "../../../utils/get-error-message";
@@ -77,12 +78,11 @@ function describeOutcome(
 		return SAVED;
 	}
 	if (Cause.hasInterruptsOnly(exit.cause)) return undefined;
-	const error = Cause.squash(exit.cause);
 	logger.warn(
 		`[Classify] Knowledge for ${job.label} failed:`,
-		Cause.pretty(exit.cause),
+		formatCause(exit.cause),
 	);
-	return `⚠ Knowledge for ${job.label} failed: ${getErrorMessage(error)}`;
+	return `⚠ Knowledge for ${job.label} failed: ${formatCause(exit.cause, { stack: false })}`;
 }
 
 export function createKnowledgeQueue(

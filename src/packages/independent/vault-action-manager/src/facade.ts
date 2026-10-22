@@ -1,5 +1,6 @@
 import { Cause, Effect, Exit, Result } from "effect";
 import type { App } from "obsidian";
+import type { RecentTrace } from "./diagnostics/recent-trace";
 import type { DispatchOptions } from "./effect/dispatch-coordinator";
 import {
 	VamDispatchFailure,
@@ -102,6 +103,11 @@ export type VaultActionManagerOptions = {
 	 * that, as tests do.
 	 */
 	readonly fileSystem?: VaultFileSystem;
+	/**
+	 * Records VAM's spans and Effect log entries, for "Copy recent trace".
+	 * Without it VAM's spans are discarded.
+	 */
+	readonly recentTrace?: RecentTrace;
 };
 
 export type VaultActionManagerSubscription = {
@@ -777,7 +783,9 @@ export function createVaultActionManager(
 	app: App,
 	options: VaultActionManagerOptions = {},
 ): VaultActionManagerFactoryResult {
-	const runtime = createVamRuntime(makeVamLive(app));
+	const runtime = createVamRuntime(
+		makeVamLive(app, { recentTrace: options.recentTrace }),
+	);
 	const manager = new VaultActionManager(app, runtime, options);
 	return {
 		dispose: manager.disposeEffect(),

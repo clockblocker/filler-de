@@ -5,6 +5,7 @@
 	},
 	"exports": {
 		".": "./src/index.ts",
+		"./diagnostics": "./src/diagnostics/index.ts",
 		"./issue-handlers": "./src/helpers/issue-handlers.ts"
 	},
 	"name": "@textfresser/vault-action-manager",

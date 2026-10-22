@@ -12,7 +12,6 @@
 		"emoji-regex": "^10.6.0",
 		"jsonc-parser": "^3.3.1",
 		"neverthrow": "^8.2.0",
-		"winston": "latest",
 		"zod": "4.4.3"
 	},
 	"description": "Go trough the german texts, building your own dictionary from your personal contexts",

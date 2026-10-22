@@ -86,6 +86,7 @@ import {
 	whenIdle as whenIdleTracker,
 } from "./utils/idle-tracker";
 import { logger } from "./utils/logger";
+import { recentTrace } from "./utils/recent-trace";
 import { sleep } from "./utils/sleep";
 
 /** The services the launch builds, once it built them. */
@@ -126,6 +127,7 @@ export default class TextEaterPlugin extends Plugin {
 	});
 	private readonly lifecycle = createLifecycleSupervisor<Librarian>({
 		notices: this.notices,
+		tracer: recentTrace.tracer,
 	});
 	private services: PluginServices | null = null;
 	private overlayManager: OverlayManager | null = null;
@@ -195,6 +197,7 @@ export default class TextEaterPlugin extends Plugin {
 
 			const vaultActions = createVaultActionManager(plugin.app, {
 				protectedPaths: PROTECTED_PATH_PREFIXES,
+				recentTrace,
 			});
 			const vam = vaultActions.manager;
 			lifecycle.ownLast(

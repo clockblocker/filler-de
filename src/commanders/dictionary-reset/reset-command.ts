@@ -9,6 +9,10 @@
  */
 import type { DumdictVaultStore } from "@textfresser/dictionary";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import {
+	describeError,
+	formatCause,
+} from "@textfresser/vault-action-manager/diagnostics";
 import type { Dumgen } from "dumgen";
 import {
 	Cause,
@@ -189,7 +193,7 @@ export class DictionaryResetCommand {
 			findSources(vamResetVault(this.deps.vam)),
 		);
 		if (Exit.isFailure(found)) {
-			const notice = `⚠ Dictionary reset: could not look for old notes: ${getErrorMessage(Cause.squash(found.cause))}`;
+			const notice = `⚠ Dictionary reset: could not look for old notes: ${formatCause(found.cause, { stack: false })}`;
 			new Notice(notice);
 			return { kind: "Failed", notice };
 		}
@@ -457,7 +461,7 @@ export class DictionaryResetCommand {
 			};
 		} catch (error) {
 			notice.hide();
-			logger.error("[DictionaryReset] Failed:", getErrorMessage(error));
+			logger.error("[DictionaryReset] Failed:", describeError(error));
 			const message = `⚠ Dictionary reset stopped: ${conciseFailure(getErrorMessage(error))}`;
 			new Notice(message, 0);
 			return { kind: "Stopped", notice: message };

@@ -19,7 +19,7 @@
  * drops those waiting, releases every service the launch owned (newest
  * first), stops the Librarian, and then the vault itself.
  */
-import { Cause, Deferred, Effect, Exit, Fiber, Schema } from "effect";
+import { Deferred, Effect, Exit, Fiber, Schema, type Tracer } from "effect";
 import type { LibrarianStop } from "../commanders/librarian/librarian";
 import { decrementPending, incrementPending } from "../utils/idle-tracker";
 import type {
@@ -161,8 +161,10 @@ type LibrarianSlot<L> = {
 
 export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 	readonly notices: LifecycleNotices;
+	/** Records each command's spans, such as the Librarian's start. */
+	readonly tracer?: Tracer.Tracer;
 }): LifecycleSupervisor<L> {
-	const { notices } = deps;
+	const { notices, tracer } = deps;
 
 	let pluginState: ServiceState = ServiceState.idle;
 	let launched: LaunchedPlugin<L> | null = null;
@@ -186,7 +188,9 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 		if (!command) return;
 		const entry: InFlight = { command, fiber: null };
 		inFlight = entry;
-		const fiber = Effect.runFork(command.body);
+		const fiber = Effect.runFork(
+			tracer ? Effect.withTracer(command.body, tracer) : command.body,
+		);
 		entry.fiber = fiber;
 		fiber.addObserver((exit) => {
 			if (inFlight === entry) inFlight = null;
@@ -337,9 +341,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 			({ what, release: run }) =>
 				run.pipe(
 					Effect.catchCause((cause) =>
-						Effect.sync(() =>
-							notices.releaseFailed(what, Cause.squash(cause)),
-						),
+						Effect.sync(() => notices.releaseFailed(what, cause)),
 					),
 				),
 			{ discard: true },
@@ -509,9 +511,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 						.pipe(
 							Effect.catchCause((cause) =>
 								Effect.sync(() =>
-									notices.librarianStopFailed(
-										Cause.squash(cause),
-									),
+									notices.librarianStopFailed(cause),
 								),
 							),
 						);

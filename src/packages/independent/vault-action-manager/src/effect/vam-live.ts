@@ -1,5 +1,6 @@
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Tracer } from "effect";
 import { type App, MarkdownView } from "obsidian";
+import type { RecentTrace } from "../diagnostics/recent-trace";
 import {
 	getAbstractFileByPath,
 	toSystemPath,
@@ -13,7 +14,7 @@ import {
 	VamSetupError,
 	VamVaultIoError,
 } from "./errors";
-import { VamLoggerLive } from "./logger";
+import { makeVamLoggerLive } from "./logger";
 import {
 	ActiveEditorAccess,
 	type ActiveEditorHandle,
@@ -25,6 +26,8 @@ import {
 
 type VamLiveOptions = {
 	readonly onFinalize?: () => void;
+	/** Records VAM's spans and log entries, when the plugin keeps a trace. */
+	readonly recentTrace?: RecentTrace;
 };
 
 function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
@@ -474,10 +477,15 @@ export function makeVamLive(
 		),
 	);
 
+	const tracer = options.recentTrace
+		? Layer.succeed(Tracer.Tracer, options.recentTrace.tracer)
+		: Layer.empty;
+
 	return Layer.mergeAll(
 		makeVaultIoLive(app),
 		makeActiveEditorAccessLive(app),
-		VamLoggerLive,
+		makeVamLoggerLive(options.recentTrace),
+		tracer,
 		lifecycle,
 	);
 }

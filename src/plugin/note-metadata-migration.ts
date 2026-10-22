@@ -4,7 +4,8 @@ import {
 	WORTER_SPLIT_PATH,
 } from "@textfresser/dictionary";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { Cause, Effect, Exit } from "effect";
+import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
+import { Effect, Exit } from "effect";
 import { Notice } from "obsidian";
 import {
 	describeMetadataMigration,
@@ -50,7 +51,7 @@ export async function migrateNoteMetadata(
 	if (Exit.isFailure(exit)) {
 		logger.error(
 			"[TextEaterPlugin] Metadata migration failed:",
-			getErrorMessage(Cause.squash(exit.cause)),
+			formatCause(exit.cause),
 		);
 		new Notice("Moving note metadata failed; see the console.");
 		return;
