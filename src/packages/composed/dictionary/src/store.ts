@@ -1646,11 +1646,13 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					)
 					.map(actionPath),
 			);
-			// VAM fails planning and overflow before it runs any action.
+			// VAM fails planning, overflow and a protected path before it
+			// runs any action.
 			const ranNothing =
 				!stopped &&
 				(failure._tag === "VamPlanningError" ||
-					failure._tag === "VamDispatchOverflowError");
+					failure._tag === "VamDispatchOverflowError" ||
+					failure._tag === "VamProtectedPathError");
 			if (phase === Phase.FanOut) {
 				const ran = (write: PlannedWrite) =>
 					stopped && executed.has(write.path);

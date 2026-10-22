@@ -281,6 +281,10 @@ describe("VaultActionManager protected paths: dispatch", () => {
 			protectedPaths: ["/Exemplar/"],
 		});
 		expect(manager.protectedPathPrefixes).toEqual(["Exemplar"]);
+		expect(manager.protectedPrefixOf("exemplar/Kohlekraftwerk/A.md")).toBe(
+			"Exemplar",
+		);
+		expect(manager.protectedPrefixOf("Exemplars/A.md")).toBeUndefined();
 		expect(() =>
 			createVaultActionManager(harness.app, { protectedPaths: ["/"] }),
 		).toThrow(/vault root/);

@@ -228,6 +228,15 @@ export class VaultActionManager {
 	}
 
 	/**
+	 * The protected prefix `path` lies at or below, matched as dispatch
+	 * matches it; `undefined` when `path` is not protected. Callers check a
+	 * path up front so they write nothing elsewhere for it either.
+	 */
+	protectedPrefixOf(path: string): string | undefined {
+		return this.protectedPaths.prefixCovering(path);
+	}
+
+	/**
 	 * Observes content changes to files under a protected prefix that VAM did
 	 * not make. VAM refuses to change those paths itself, but cannot stop
 	 * Obsidian's link updater, Sync, other plugins, or the user from writing

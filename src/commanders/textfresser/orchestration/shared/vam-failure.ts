@@ -8,6 +8,8 @@ import type { CommandError } from "../../commands/types";
 import { CommandErrorKind } from "../../errors";
 
 function describeVamFailure(error: VamEffectError): string {
+	// A refused batch has no cause; its message names the path.
+	if (error._tag === "VamProtectedPathError") return error.message;
 	return `${error.operation}: ${getErrorMessage(error.cause)}`;
 }
 

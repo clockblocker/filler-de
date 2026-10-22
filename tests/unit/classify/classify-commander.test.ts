@@ -40,6 +40,38 @@ const scripted = () =>
 	});
 
 describe("ClassifyCommander", () => {
+	it("writes nothing to a Scroll it is blocked on, and says why", async () => {
+		const asked: string[] = [];
+		const notices: string[] = [];
+		const classify = new ClassifyCommander({
+			blockedBy: (scrollPath) => {
+				asked.push(scrollPath);
+				return `Textfresser does not write to ${scrollPath}`;
+			},
+			cache: memorySegmentationCache(),
+			dumgen: () => {
+				throw new Error("a blocked Classify must not reach dumgen");
+			},
+			resolver: pendingUnitResolver,
+			segmenterVersion: () => "test-segmenter",
+		});
+		await Effect.runPromise(
+			classify.execute(
+				{
+					content: STORY,
+					scrollPath: "Exemplar/Story.md",
+					selection: selectionOf(STORY, "an."),
+				},
+				(message) => notices.push(message),
+			),
+		);
+		expect(asked).toEqual(["Exemplar/Story.md"]);
+		expect(notices).toEqual([
+			"⚠ Textfresser does not write to Exemplar/Story.md",
+		]);
+		expect(classify.latestHandoff()).toBeNull();
+	});
+
 	// The desktop scenario `classify-selection` tells this story in Obsidian.
 	it("records each hand-off and reuses cached Sentences across runs", async () => {
 		const { classify, notices, run } = commander(scripted);

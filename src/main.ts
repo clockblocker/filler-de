@@ -77,6 +77,7 @@ import {
 } from "./managers/obsidian/command-executor";
 import {
 	PROTECTED_PATH_PREFIXES,
+	protectedPathRefusal,
 	watchProtectedPaths,
 } from "./managers/obsidian/protected-paths/protected-paths-guard";
 import { OverlayManager } from "./managers/overlay-manager";
@@ -316,7 +317,8 @@ export default class TextEaterPlugin extends Plugin {
 				? "A dictionary reset is running; Classify once it has ended."
 				: undefined;
 		this.classify = new ClassifyCommander({
-			blockedBy: resetRunning,
+			blockedBy: (scrollPath) =>
+				resetRunning() ?? protectedPathRefusal(this.vam, scrollPath),
 			cache: segmentationCache,
 			dumgen: () => this.dumgen.get(),
 			missingProviderKeys: () => this.dumgen.missingKeys(),
@@ -381,7 +383,14 @@ export default class TextEaterPlugin extends Plugin {
 		await Effect.runPromise(
 			watchProtectedPaths(this.vam, (message) => {
 				logger.warn(`[TextEaterPlugin] ${message}`);
-				new Notice(message, 0);
+				const notice = new Notice(message, 0);
+				return {
+					showing: () => notice.noticeEl.isConnected,
+					update: (next) => {
+						logger.warn(`[TextEaterPlugin] ${next}`);
+						notice.setMessage(next);
+					},
+				};
 			}),
 		);
 		this.stopObservingScrolls = await Effect.runPromise(

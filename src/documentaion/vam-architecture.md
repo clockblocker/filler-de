@@ -174,6 +174,9 @@ the vault root, which contains every prefix. Creating such a folder is
 allowed. Planning only adds parent folders of submitted targets, so checking
 the submission is enough. `replaceActiveLine` is not a dispatch and is not
 checked: it edits the open note at the user's command.
+`protectedPrefixOf(path)` answers the same match up front. Classify and the
+dictionary reset ask it before they write `Worter/` for a Scroll, because a
+refused Scroll write afterwards would leave the dictionary half-written.
 
 VAM cannot stop Obsidian from writing these files. The link updater rewrites
 links in any file after `fileManager.renameFile`, and Sync or other plugins
