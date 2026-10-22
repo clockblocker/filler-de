@@ -211,7 +211,7 @@ vam.dispatchWithReport(actions, { caller: "librarian", operationId, stopOnFirstF
 
 type VaultEventOrigin =
 	| { kind: "Vam"; caller: string; operationId: string }
-	| { kind: "LinkUpdate"; operationId: string }
+	| { kind: "LinkUpdate"; operationId: string; basis: "Predicted" | "Timing" }
 	| { kind: "External" };
 ```
 
@@ -225,11 +225,13 @@ report, as the `vam.caller` and `vam.operationId` attributes of its
 every event the batch causes.
 
 - `Vam`: the Self Event windows below attributed the callback to a batch.
-- `LinkUpdate`: a Markdown modification inside the window of a rename VAM ran
-  with link updating, so most likely Obsidian's link updater rewriting a
-  link; it carries the rename's `operationId`. The window is the timing
-  heuristic of `LinkRewriteWindows` (the rename's run plus a 5 s grace, by
-  the file's mtime), so a hand edit inside it is labelled too.
+- `LinkUpdate`: Obsidian's link updater rewriting a file after a rename VAM
+  ran with link updating; it carries the rename's `operationId`. `basis`
+  says how VAM knows (see [Link updates](#link-updates)): `Predicted`, a
+  file VAM read as linking to the renamed entry before the rename;
+  `Timing`, any other Markdown modification inside the rename's window (its
+  run plus a 5 s grace, by the file's mtime), so a hand edit inside it is
+  labelled too.
 - `External`: anything else: the user, Sync, another plugin, or a VAM write
   routed to the open editor (see below).
 
@@ -437,25 +439,82 @@ checked: it edits the open note at the user's command.
 dictionary reset ask it before they write `Worter/` for a Scroll, because a
 refused Scroll write afterwards would leave the dictionary half-written.
 
-VAM cannot stop Obsidian from writing these files. The link updater rewrites
-links in any file after `fileManager.renameFile`, and Sync or other plugins
-may write them too. `subscribeToProtectedPathModifications` reports these
-writes. It runs over the Markdown modification channel below with every
-origin, and gives each change a `writer` from its origin:
+Obsidian's link updater rewrites links in any file after
+`fileManager.renameFile`. After a VAM rename VAM puts back each protected
+file it predicted the rewrite of (see [Link updates](#link-updates)), so the
+exemplar keeps its bytes and its links to the moved note keep their old
+text. VAM cannot stop the other writers: an unpredicted rewrite, Sync, other
+plugins, or the link updater after the user's own rename.
+`subscribeToProtectedPathModifications` reports these writes. It runs over
+the Markdown modification channel below with every origin, and gives each
+change a `writer`:
 
-- `VamRenameLinkUpdate`: its origin is `LinkUpdate`.
+- `RestoredAfterLinkUpdate`: VAM put the file back after the rename whose
+  `LinkUpdate` or restoring write this is, and `renamed` names that
+  rename's ends.
+- `VamRenameLinkUpdate`: otherwise, if its origin is `LinkUpdate`: VAM did
+  not predict the rewrite, or the file changed again before VAM could put
+  it back.
 - `OpenInEditor`: otherwise, if its origin is `External` and a Markdown view
   shows the file. This is most likely the user's own typing.
-- `Unattributed`: anything else. VAM never writes a protected path, so a
-  change labelled `Vam` is a misattribution and counts here.
+- `Unattributed`: anything else. VAM writes a protected path only to put it
+  back, so any other change labelled `Vam` is a misattribution and counts
+  here.
 
 The plugin shows a Notice for every writer except `OpenInEditor`. The Notice
-stays until dismissed and names each file. Hand edits to an open exemplar
-therefore raise no alarm. A rewrite after a VAM rename still raises one while
-the note is open. One case is missed: Obsidian's link updater rewrites an
-open exemplar after a rename the user made. If the editor lookup fails, the
-change counts as `Unattributed`, so a failure can add a warning but never
-hide one.
+stays until dismissed and names each file; a restored file is named apart,
+with the note it links to and where that note moved. Hand edits to an open
+exemplar therefore raise no alarm. An unrestored rewrite after a VAM rename
+still raises one while the note is open. One case is missed: Obsidian's link
+updater rewrites an open exemplar after a rename the user made. If the
+editor lookup fails, the change counts as `Unattributed`, so a failure can
+add a warning but never hide one.
+
+## Link updates
+
+A rename with link updating (`RenameMdFile` and `RenameFolder` unless
+`updateLinks: false`, and every `RenameFile`) runs through
+`FileManager.renameFile`. In Obsidian 1.14.4 that method lists every link
+that resolves before the move, moves the entry, and rewrites each link whose
+resolution the move changed, one `Vault.process` per file, before it
+resolves. Unresolved links are never rewritten. When it rewrites follows the
+user's "Automatically update internal links" setting (`alwaysUpdateLinks`):
+on, at once; off, it opens a dialog after the move and rewrites only if the
+user agrees, and `renameFile` resolves once the user answers. VAM handles
+both alike, since the files that may be rewritten are the same.
+
+Before each such rename VAM asks its Obsidian boundary,
+`VaultIo.linkSources(from)`, who links to the renamed file or to any file
+below the renamed folder, from `MetadataCache.resolvedLinks`, and the
+setting, which the `vam.linkUpdates.rename` span records. Each linking file
+is expected once, at its path after the move (a file inside a moved folder
+is rewritten where it lands), from just before the rename until one grace
+(5 s) after it ends. Its modify callback is labelled `LinkUpdate`,
+`Predicted`. The prediction is a superset: a link the move does not change,
+such as `[[Kraftwerk]]` after a move that keeps the name unique, is
+expected and never rewritten, and its expectation expires. A modification
+of any other file inside the rename's window is labelled `LinkUpdate`,
+`Timing`: Obsidian also rewrites a link the move made ambiguous, links in
+the moved file itself, and files the metadata cache had not indexed yet.
+A failed read predicts nothing, and the rename runs as before.
+
+A linking Markdown file under a protected prefix is read before the
+rename. Once the rename ends, if it changed, and its only change was the
+predicted rewrite, VAM puts the pre-image back as `dispatchOrUndo` inverts
+a write: a `ProcessMdFile` transform guarded by `expected: { hash }` of what
+the rename left, run inside the rename's action, so it is a `Vam` write under
+the rename's caller and operationId. It is not dispatched: a new batch would
+queue behind the running one, and dispatch refuses protected paths. A file changed by anything else meanwhile, or by then, is
+left as it is, and the watcher reports the rewrite. The rename's report
+entry is its own; a failed restoration is logged.
+
+Three ways to keep the exemplar unrewritten were weighed:
+
+| Strategy | Why not, or why |
+| --- | --- |
+| Refuse the rename with `VamProtectedPathError` | The exemplar links to Lemmas (`[[Kraftwerk]]`, `[[Kohle]]`, ...). The dictionary store's healing moves misplaced Lemma notes with link updating, and the Librarian heals its tree the same way; a refusal would block those moves for every Lemma the exemplar names, and the store would retry it on every change of the note. |
+| Rename with `updateLinks: false`, and have VAM rewrite the other files' links | VAM would reimplement Obsidian's link updater, which the design study rejected. |
+| Rename with link updating, then put the protected file back | Chosen. Moves go on as planned. The exemplar keeps its bytes; a link to the moved note keeps its old text, which may no longer resolve. A stale link in a frozen reference note beats a rewritten one. |
 
 ## Observation pipeline
 
@@ -580,7 +639,8 @@ finishes. The planned destination's entries go, since nothing lands there.
 
 ```text
 Obsidian modify callbacks for Markdown files
-  -> attribute it: Vam (a modify Self Event), else LinkUpdate, else External
+  -> attribute it: Vam (a modify Self Event), else LinkUpdate (predicted,
+     else timed), else External
   -> copy the file's stat
   -> collect one bounded event window
   -> keep one modification per path, with its latest stat
@@ -690,4 +750,4 @@ Desktop scenarios use this idle barrier. They must not inspect VAM internals or 
 | Testing adapter | `src/packages/independent/vault-action-manager/src/testing-adapter.ts` |
 | Public types | `src/packages/independent/vault-action-manager/src/types/` |
 | Callers, operations, origins | `src/packages/independent/vault-action-manager/src/types/event-origin.ts` |
-| Link-update windows | `src/packages/independent/vault-action-manager/src/impl/event-processing/link-rewrite-windows.ts` |
+| Link updates: prediction, timing windows, protected restoration | `src/packages/independent/vault-action-manager/src/impl/event-processing/link-updates.ts` |

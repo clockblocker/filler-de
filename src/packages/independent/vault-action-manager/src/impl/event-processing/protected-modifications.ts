@@ -2,24 +2,31 @@ import { Effect } from "effect";
 import { ActiveEditorAccess } from "../../effect/ports";
 import { splitPathCodec } from "../../split-path-codec";
 import type { ProtectedPaths } from "../protected-paths";
+import type { LinkUpdates } from "./link-updates";
 import type { BulkMdModifyEvent, MdFileModification } from "./md-modify-event";
 
 /**
  * Who most likely changed a protected file:
  *
- * - `VamRenameLinkUpdate`: its origin is `LinkUpdate`, so Obsidian's link
- *   updater rewrote it on VAM's behalf.
+ * - `RestoredAfterLinkUpdate`: Obsidian's link updater rewrote it after a
+ *   VAM rename, VAM predicted that and put the file back as it was. Its
+ *   content is unchanged; its links to the renamed entry keep their old
+ *   text, which may no longer resolve.
+ * - `VamRenameLinkUpdate`: Obsidian's link updater rewrote it after a VAM
+ *   rename, and VAM did not put it back: the rewrite was not predicted, or
+ *   the file changed again before VAM could.
  * - `OpenInEditor`: the file is shown in a Markdown view, so this is most
  *   likely the user's own editing.
- * - `Unattributed`: neither, for example Obsidian's link updater after the
- *   user's own rename, Obsidian Sync, or another plugin.
+ * - `Unattributed`: none of these, for example Obsidian's link updater after
+ *   the user's own rename, Obsidian Sync, or another plugin.
  *
- * `VamRenameLinkUpdate` wins over `OpenInEditor`, so a rewrite of an open
- * protected file after a VAM rename is still reported as one. VAM never
- * writes a protected path, so a modification labelled VAM's own is a
- * misattribution and counts as `Unattributed`.
+ * The link-update writers win over `OpenInEditor`, so a rewrite of an open
+ * protected file after a VAM rename is still reported as one. VAM writes a
+ * protected path only to put it back, so any other modification labelled
+ * VAM's own is a misattribution and counts as `Unattributed`.
  */
 export type ProtectedModificationWriter =
+	| "RestoredAfterLinkUpdate"
 	| "VamRenameLinkUpdate"
 	| "OpenInEditor"
 	| "Unattributed";
@@ -29,6 +36,11 @@ export type ProtectedPathModification = MdFileModification & {
 	/** The protected prefix the file lies under. */
 	readonly prefix: string;
 	readonly writer: ProtectedModificationWriter;
+	/**
+	 * For `RestoredAfterLinkUpdate`, the rename whose links the file held:
+	 * the renamed entry's path before and after.
+	 */
+	readonly renamed?: { readonly from: string; readonly to: string };
 };
 
 /** The protected modifications of one Markdown modify window. */
@@ -44,16 +56,16 @@ export type ProtectedPathModificationsEvent = {
 export const classifyProtectedModifications = Effect.fnUntraced(function* (
 	event: BulkMdModifyEvent,
 	protectedPaths: ProtectedPaths,
+	linkUpdates: LinkUpdates,
 ): Effect.fn.Return<
 	ProtectedPathModificationsEvent | null,
 	never,
 	ActiveEditorAccess
 > {
 	const candidates = event.modifications.flatMap((modification) => {
-		const prefix = protectedPaths.prefixCovering(
-			splitPathCodec.format(modification.splitPath),
-		);
-		return prefix === undefined ? [] : [{ modification, prefix }];
+		const path = splitPathCodec.format(modification.splitPath);
+		const prefix = protectedPaths.prefixCovering(path);
+		return prefix === undefined ? [] : [{ modification, path, prefix }];
 	});
 	if (candidates.length === 0) return null;
 
@@ -62,20 +74,32 @@ export const classifyProtectedModifications = Effect.fnUntraced(function* (
 		Effect.orElseSucceed((): ReadonlySet<string> => new Set()),
 	);
 
-	const modifications = candidates.map(
-		({ modification, prefix }): ProtectedPathModification => ({
+	const modifications: ProtectedPathModification[] = [];
+	for (const { modification, path, prefix } of candidates) {
+		const { origin } = modification;
+		const restoration =
+			origin.kind === "LinkUpdate" || origin.kind === "Vam"
+				? yield* linkUpdates.restorationOf(path, origin.operationId)
+				: undefined;
+		if (restoration !== undefined) {
+			modifications.push({
+				...modification,
+				prefix,
+				renamed: { from: restoration.from, to: restoration.to },
+				writer: "RestoredAfterLinkUpdate",
+			});
+			continue;
+		}
+		modifications.push({
 			...modification,
 			prefix,
 			writer:
-				modification.origin.kind === "LinkUpdate"
+				origin.kind === "LinkUpdate"
 					? "VamRenameLinkUpdate"
-					: modification.origin.kind === "External" &&
-							openPaths.has(
-								splitPathCodec.format(modification.splitPath),
-							)
+					: origin.kind === "External" && openPaths.has(path)
 						? "OpenInEditor"
 						: "Unattributed",
-		}),
-	);
+		});
+	}
 	return { modifications };
 });

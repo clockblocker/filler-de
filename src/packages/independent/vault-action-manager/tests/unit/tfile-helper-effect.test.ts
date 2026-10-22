@@ -28,6 +28,7 @@ function service(overrides: Partial<VaultIoImplementation> = {}) {
 			createFolder: () => Effect.die("not used"),
 			getAbstractFileByPath: () => Effect.succeed(null),
 			getMarkdownFiles: Effect.succeed([]),
+			linkSources: () => Effect.die("not used"),
 			modify: () => Effect.die("not used"),
 			process: () => Effect.die("not used"),
 			read: () => Effect.die("not used"),

@@ -11,7 +11,7 @@ import type {
 import type { VamShutdownError } from "../../effect/errors";
 import type { VamRuntime } from "../../effect/runtime";
 import type { VaultAction } from "../../types/vault-action";
-import type { LinkRewriteWindows } from "../event-processing/link-rewrite-windows";
+import type { LinkUpdates } from "../event-processing/link-updates";
 import type { SelfEventTracker } from "../event-processing/self-event-tracker";
 import type { ProtectedPaths } from "../protected-paths";
 import type { Executor } from "./executor";
@@ -34,8 +34,8 @@ export type DispatchBatchOptions = {
 	 * `VamProtectedPathError` before anything in it runs.
 	 */
 	readonly protectedPaths?: ProtectedPaths;
-	/** Records when link-updating renames run. */
-	readonly linkRewrites?: LinkRewriteWindows;
+	/** Predicts and labels what link-updating renames make Obsidian rewrite. */
+	readonly linkUpdates?: LinkUpdates;
 };
 
 /**

@@ -97,6 +97,7 @@ function setup(
 		createFolder: () => Effect.die("not used"),
 		getAbstractFileByPath: (path) => Effect.succeed(makeEntry(path)),
 		getMarkdownFiles: Effect.die("not used"),
+		linkSources: () => Effect.die("not used"),
 		modify: () => Effect.die("not used"),
 		process: () => Effect.die("not used"),
 		read: () => Effect.die("not used"),

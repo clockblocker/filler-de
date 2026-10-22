@@ -123,6 +123,7 @@ function makeVamLayer(
 		createFolder: () => Effect.die("not used"),
 		getAbstractFileByPath: lookup,
 		getMarkdownFiles: Effect.die("not used"),
+		linkSources: () => Effect.die("not used"),
 		modify: () => Effect.die("not used"),
 		process: () => Effect.die("not used"),
 		read: () => Effect.die("not used"),

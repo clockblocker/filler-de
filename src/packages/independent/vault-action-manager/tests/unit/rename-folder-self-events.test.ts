@@ -88,7 +88,7 @@ function makeVault(initialFiles: readonly string[]) {
 
 	const app = {
 		fileManager: { renameFile: rename, trashFile: async () => {} },
-		metadataCache: { getFirstLinkpathDest: () => null },
+		metadataCache: { getFirstLinkpathDest: () => null, resolvedLinks: {} },
 		vault: {
 			getAbstractFileByPath: (path: string) => byPath.get(path) ?? null,
 			getMarkdownFiles: () => [],

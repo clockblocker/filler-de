@@ -1,5 +1,5 @@
 import { Effect, Layer, Tracer } from "effect";
-import { type App, MarkdownView } from "obsidian";
+import { type App, MarkdownView, TFolder } from "obsidian";
 import type { RecentTrace } from "../diagnostics/recent-trace";
 import {
 	getAbstractFileByPath,
@@ -19,6 +19,8 @@ import {
 	ActiveEditorAccess,
 	type ActiveEditorHandle,
 	type ActiveEditorReadiness,
+	type LinkSources,
+	type LinkUpdateSetting,
 	type SavedInlineTitleSelection,
 	type VamLiveServices,
 	VaultIo,
@@ -88,6 +90,17 @@ function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 							}),
 						try: () => app.vault.getMarkdownFiles(),
 					}),
+					linkSources: Effect.fn("VaultIo.linkSources")((path) =>
+						Effect.try({
+							catch: (cause) =>
+								new VamVaultIoError({
+									cause,
+									operation: "linkSources",
+									path,
+								}),
+							try: () => readLinkSources(app, path),
+						}),
+					),
 					modify: Effect.fn("VaultIo.modify")((file, content) =>
 						Effect.tryPromise({
 							catch: (cause) =>
@@ -182,6 +195,42 @@ function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 				}),
 		}),
 	);
+}
+
+/**
+ * Who links to the entry at `path`, from `MetadataCache.resolvedLinks`:
+ * the links Obsidian's link updater considers, since it rewrites only
+ * links that resolve. A folder's are those to any file below it.
+ */
+function readLinkSources(app: App, path: string): LinkSources {
+	const setting = readLinkUpdateSetting(app);
+	const entry = getAbstractFileByPath(app.vault, toSystemPath(path));
+	if (!entry) return { setting, sources: [], target: null };
+	const target = entry.path;
+	const pointsAtTarget =
+		entry instanceof TFolder
+			? (destinations: Record<string, number>) =>
+					Object.keys(destinations).some((destination) =>
+						VaultPath.caseSensitive.isUnder(destination, target, {
+							inclusive: false,
+						}),
+					)
+			: (destinations: Record<string, number>) =>
+					Object.hasOwn(destinations, target);
+	const sources: string[] = [];
+	for (const [source, destinations] of Object.entries(
+		app.metadataCache.resolvedLinks,
+	))
+		if (pointsAtTarget(destinations)) sources.push(source);
+	return { setting, sources, target };
+}
+
+/** `alwaysUpdateLinks`, which `Vault.getConfig` answers outside the typings. */
+function readLinkUpdateSetting(app: App): LinkUpdateSetting {
+	const vault = app.vault as unknown as {
+		getConfig?: (key: string) => unknown;
+	};
+	return vault.getConfig?.("alwaysUpdateLinks") === true ? "always" : "ask";
 }
 
 function makeActiveEditorAccessLive(

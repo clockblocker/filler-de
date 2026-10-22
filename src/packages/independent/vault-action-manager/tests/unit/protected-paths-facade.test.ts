@@ -271,34 +271,71 @@ describe("VaultActionManager protected paths: modifications", () => {
 		]);
 	});
 
-	it("labels link rewriting after a VAM rename LinkUpdate, with the rename's operation, even of an open file", async () => {
+	const renameHund = (manager: ReturnType<typeof makeManager>["manager"]) =>
+		manager.dispatch(
+			[
+				{
+					kind: VaultActionKind.RenameMdFile,
+					payload: {
+						from: md("Worter/Hund.md"),
+						to: md("Worter/Hunde.md"),
+					},
+				},
+			],
+			{ caller: "test", operationId: "rename-hund" },
+		);
+
+	it("reports an unpredicted rewrite after a VAM rename as VamRenameLinkUpdate, labelled by timing, even of an open file", async () => {
+		const harness = makeVaultHarness();
+		harness.addFile("Worter/Hund.md", "# Hund");
+		const note = harness.addFile(EXEMPLAR_NOTE, "[[Hund]]");
+		// Obsidian rewrites it, though its resolved links did not say so.
+		harness.linkingFiles.push(note);
+		harness.open(EXEMPLAR_NOTE);
+
+		const received = await observe(harness, renameHund);
+
+		expect(writers(received)).toEqual([
+			{
+				origin: {
+					basis: "Timing",
+					kind: "LinkUpdate",
+					operationId: "rename-hund",
+				},
+				path: EXEMPLAR_NOTE,
+				prefix: "Exemplar",
+				writer: "VamRenameLinkUpdate",
+			},
+		]);
+		expect(harness.contents.get(EXEMPLAR_NOTE)).toBe(
+			"[[Hund]] [[Worter/Hunde.md]]",
+		);
+	});
+
+	it("puts back an open protected file whose predicted link Obsidian rewrote, and reports it restored", async () => {
 		const harness = makeVaultHarness();
 		harness.addFile("Worter/Hund.md", "# Hund");
 		const note = harness.addFile(EXEMPLAR_NOTE, "[[Hund]]");
 		harness.linkingFiles.push(note);
+		harness.resolvedLinks[EXEMPLAR_NOTE] = { "Worter/Hund.md": 1 };
 		harness.open(EXEMPLAR_NOTE);
 
-		const received = await observe(harness, (manager) =>
-			manager.dispatch(
-				[
-					{
-						kind: VaultActionKind.RenameMdFile,
-						payload: {
-							from: md("Worter/Hund.md"),
-							to: md("Worter/Hunde.md"),
-						},
-					},
-				],
-				{ caller: "test", operationId: "rename-hund" },
-			),
-		);
+		const received = await observe(harness, renameHund);
 
-		expect(writers(received)).toEqual([
+		expect(harness.contents.get(EXEMPLAR_NOTE)).toBe("[[Hund]]");
+		expect(
+			received.flatMap(({ modifications }) =>
+				modifications.map(({ renamed, splitPath, writer }) => ({
+					path: splitPathCodec.format(splitPath),
+					renamed,
+					writer,
+				})),
+			),
+		).toEqual([
 			{
-				origin: { kind: "LinkUpdate", operationId: "rename-hund" },
 				path: EXEMPLAR_NOTE,
-				prefix: "Exemplar",
-				writer: "VamRenameLinkUpdate",
+				renamed: { from: "Worter/Hund.md", to: "Worter/Hunde.md" },
+				writer: "RestoredAfterLinkUpdate",
 			},
 		]);
 	});

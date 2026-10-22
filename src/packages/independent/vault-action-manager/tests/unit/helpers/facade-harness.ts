@@ -77,6 +77,7 @@ export function makeFacadeHarness() {
 		},
 		metadataCache: {
 			getFirstLinkpathDest: () => file,
+			resolvedLinks: {},
 		},
 		vault,
 		workspace: {

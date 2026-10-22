@@ -9,7 +9,8 @@ import {
 /**
  * A vault whose writes fire Obsidian's modify callback, and whose
  * `FileManager.renameFile` rewrites the files listed in `linkingFiles`, as
- * Obsidian's link updater does. Writes to a path in `failingWrites` throw,
+ * Obsidian's link updater does; `resolvedLinks` is what Obsidian's metadata
+ * cache says links where, which VAM reads to predict those rewrites. Writes to a path in `failingWrites` throw,
  * and `beforeProcess` runs before each `Vault.process` reads its file. Its
  * adapter reports a case-insensitive file system, as Obsidian's does on
  * macOS, unless `insensitive` is false.
@@ -21,6 +22,7 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 	const writes: string[] = [];
 	const openPaths = new Set<string>();
 	const linkingFiles: TFile[] = [];
+	const resolvedLinks: Record<string, Record<string, number>> = {};
 	const failingWrites = new Set<string>();
 	const hooks: { beforeProcess?: (file: TFile) => void } = {};
 
@@ -116,7 +118,7 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 				contents.delete(file.path);
 			},
 		},
-		metadataCache: { getFirstLinkpathDest: () => null },
+		metadataCache: { getFirstLinkpathDest: () => null, resolvedLinks },
 		vault: {
 			adapter: { insensitive },
 			create: async (path: string, content: string) => {
@@ -169,6 +171,7 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 		hooks,
 		linkingFiles,
 		open: (path: string) => openPaths.add(path),
+		resolvedLinks,
 		writes,
 	};
 }
