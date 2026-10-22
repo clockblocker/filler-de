@@ -117,8 +117,8 @@ actions
   -> collapse redundant actions
   -> build the dependency graph
   -> topologically sort
-  -> register expected Self Events
-  -> execute actions in sequence
+  -> for each action in sequence:
+       open its Self Event window, execute it, start the window's TTL
 ```
 
 The coordinator processes submitted batches in first-in, first-out order. Batches do not interleave.
@@ -139,7 +139,10 @@ Important rules:
 - Multiple Markdown transforms compose in submission order.
 - A content write wins over an earlier transform for the same file.
 - Parent folders are created before their children.
-- All Self Event paths are registered before execution starts.
+- Each action's Self Event paths are registered immediately before it runs.
+  They stay expected while it runs and for one TTL (5 s) after it ends, so
+  the window does not depend on how long the batch is. Actions a stopped
+  batch skips register nothing.
 - Each caller receives the result of its own batch.
 
 A Dispatch Batch is not atomic. VAM does not roll back actions that completed before a later failure. The failure reports the affected operation and retains the original cause.

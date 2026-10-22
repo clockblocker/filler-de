@@ -5,7 +5,6 @@ import {
 	Fiber,
 	Option,
 	Queue,
-	Result,
 	SynchronizedRef,
 	type Tracer,
 } from "effect";
@@ -428,29 +427,14 @@ export class DispatchBatchWorker {
 	): Effect.Effect<void, AnyDispatchEffectFailure, VamLiveServices> {
 		if (actions.length === 0) return Effect.void;
 
-		const representative = actions[0];
-
 		return Effect.fn("DispatchBatch.executeBatch")(function* (
 			self: DispatchBatchWorker,
 		) {
 			const planned = yield* self.plan(actions);
-			const registration = yield* Effect.result(
-				self.selfEventTracker.registerEffect(planned),
-			);
-			if (Result.isFailure(registration)) {
-				const failure = new VamDispatchError({
-					action: planned[0] ?? representative,
-					cause: registration.failure,
-					operation: "registerSelfEvents",
-				});
-				return yield* stopOnFirstFailure
-					? Effect.fail(self.stopped(failure, [], planned))
-					: Effect.fail([failure] as const);
-			}
 
 			const errors: VamDispatchError[] = [];
 			for (const [index, action] of planned.entries()) {
-				const failure = yield* self.executeAction(action);
+				const failure = yield* self.runAction(action);
 				if (!failure) continue;
 				if (stopOnFirstFailure) {
 					return yield* Effect.fail(
@@ -583,6 +567,27 @@ export class DispatchBatchWorker {
 			? entry instanceof TFolder
 			: entry instanceof TFile;
 	});
+
+	/**
+	 * Opens the action's Self Event window immediately before executing it and
+	 * starts its TTL when the action ends, however it ends. Each action's
+	 * window is thereby measured from its own execution, not from the start of
+	 * the batch. Opening is uninterruptible and closing always runs, so an
+	 * interrupted action cannot leave entries that never expire.
+	 *
+	 * Opening the window cannot fail. Callers read a `registerSelfEvents`
+	 * failure as "nothing in the batch ran", which a per-action failure in the
+	 * middle of a batch would no longer guarantee.
+	 */
+	private runAction(
+		action: VaultAction,
+	): Effect.Effect<VamDispatchError | undefined, never, VamLiveServices> {
+		return Effect.acquireUseRelease(
+			this.selfEventTracker.beginEffect(action),
+			() => this.executeAction(action),
+			() => this.selfEventTracker.finishEffect(action),
+		);
+	}
 
 	private executeAction(
 		action: VaultAction,

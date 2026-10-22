@@ -103,6 +103,10 @@ const makeSelfEventTrackerCore = Effect.fn("makeSelfEventTrackerCore")(
 /**
  * Tracks Self Events by normalized path with a Clock-driven expiration time.
  *
+ * The Dispatch Batch worker begins each action's window immediately before
+ * the action runs and finishes it when the action ends, so the window lasts
+ * while the action runs plus one TTL, however long the batch is.
+ *
  * Exact entries pop on their first match. Folder prefixes remain available to
  * match every descendant event until their expiration timestamp. Modify
  * expectations are counted per path and recorded at write time, because only
@@ -129,12 +133,21 @@ export class SelfEventTracker {
 		},
 	);
 
+	/** Registers `actions` with a window of one TTL from now. */
 	readonly registerEffect = Effect.fn("SelfEventTracker.register")(function* (
 		this: SelfEventTracker,
 		actions: readonly VaultAction[],
 	): Effect.fn.Return<void> {
 		const now = yield* Clock.currentTimeMillis;
-		const expiration = now + this.ttlMs;
+		yield* this.registerUntil(actions, now + this.ttlMs);
+	});
+
+	private readonly registerUntil = Effect.fnUntraced(function* (
+		this: SelfEventTracker,
+		actions: readonly VaultAction[],
+		expiration: number,
+	): Effect.fn.Return<void> {
+		const now = yield* Clock.currentTimeMillis;
 		const previousSignal = yield* Ref.modify(this.core.state, (state) => {
 			const pruned = pruneState(state, now);
 
@@ -167,6 +180,59 @@ export class SelfEventTracker {
 				nextState(state, pruned.tracked, pruned.prefixes),
 			];
 		});
+		yield* Deferred.succeed(previousSignal, undefined);
+	});
+
+	/**
+	 * Opens the Self Event window of an action that is about to run. Its
+	 * entries do not expire while it runs; `finishEffect` starts their TTL.
+	 */
+	readonly beginEffect = Effect.fn("SelfEventTracker.begin")(function* (
+		this: SelfEventTracker,
+		action: VaultAction,
+	): Effect.fn.Return<void> {
+		yield* this.registerUntil([action], Number.POSITIVE_INFINITY);
+	});
+
+	/**
+	 * Starts the TTL of a begun action's still-unmatched entries now, so an
+	 * event Obsidian reports during or shortly after a slow action is still
+	 * Self. Entries already matched stay matched.
+	 */
+	readonly finishEffect = Effect.fn("SelfEventTracker.finish")(function* (
+		this: SelfEventTracker,
+		action: VaultAction,
+	): Effect.fn.Return<void> {
+		const now = yield* Clock.currentTimeMillis;
+		const expiration = now + this.ttlMs;
+		const previousSignal = yield* Ref.modify(
+			this.core.state,
+			(state): readonly [Deferred.Deferred<void>, SelfEventState] => {
+				const pruned = pruneState(state, now);
+
+				for (const path of this.extractPaths(action)) {
+					const normalized = this.normalizePath(path);
+					const entry = pruned.tracked.get(normalized);
+					if (entry === undefined) continue;
+					pruned.tracked.set(normalized, {
+						...entry,
+						expiresAt: expiration,
+					});
+				}
+
+				for (const prefix of this.extractFolderPrefixes(action)) {
+					const normalized = this.normalizePath(prefix);
+					if (pruned.prefixes.has(normalized)) {
+						pruned.prefixes.set(normalized, expiration);
+					}
+				}
+
+				return [
+					state.changed,
+					nextState(state, pruned.tracked, pruned.prefixes),
+				];
+			},
+		);
 		yield* Deferred.succeed(previousSignal, undefined);
 	});
 

@@ -141,8 +141,9 @@ function makeCoordinator(
 		action: VaultAction,
 	) => Promise<unknown> | Effect.Effect<unknown, unknown>,
 	options?: DispatchBatchOptions,
-	register: (actions: readonly VaultAction[]) => void = () => {},
+	begin: (action: VaultAction) => void = () => {},
 	runtime: VamRuntime = createVamRuntime(makeVamLayer()),
+	finish: (action: VaultAction) => void = () => {},
 ) {
 	const executor = {
 		execute: (action: VaultAction) =>
@@ -157,8 +158,9 @@ function makeCoordinator(
 			}),
 	} as unknown as Executor;
 	const selfEvents = {
-		registerEffect: (actions: readonly VaultAction[]) =>
-			Effect.sync(() => register(actions)),
+		beginEffect: (action: VaultAction) => Effect.sync(() => begin(action)),
+		finishEffect: (action: VaultAction) =>
+			Effect.sync(() => finish(action)),
 	} as unknown as SelfEventTracker;
 	const coordinator = new DispatchBatchCoordinator(
 		executor,
@@ -403,38 +405,111 @@ describe("DispatchBatchCoordinator", () => {
 		]);
 	});
 
-	it("registers Self Events once in planned order immediately before execution", async () => {
+	it("opens each action's Self Event window immediately before it runs and closes it when it ends", async () => {
 		const fileAction = makeAction("planned");
 		const folderAction: VaultAction = {
 			kind: VaultActionKind.CreateFolder,
 			payload: { splitPath: folder("Library") },
 		};
+		const name = (action: VaultAction) =>
+			action.kind === VaultActionKind.CreateFolder ? "folder" : "file";
 		const timeline: string[] = [];
-		const registrations: Array<readonly VaultAction[]> = [];
 		const coordinator = makeCoordinator(
 			async (action) => {
-				timeline.push(
-					action.kind === VaultActionKind.CreateFolder
-						? "execute:folder"
-						: "execute:file",
-				);
+				timeline.push(`execute:${name(action)}`);
 				return;
 			},
 			undefined,
-			(actions) => {
-				registrations.push(actions);
-				timeline.push("register");
+			(action) => {
+				timeline.push(`begin:${name(action)}`);
+			},
+			undefined,
+			(action) => {
+				timeline.push(`finish:${name(action)}`);
 			},
 		);
 
 		const result = await dispatch(coordinator, [fileAction, folderAction]);
 
 		expect(Exit.isSuccess(result)).toBe(true);
-		expect(registrations).toEqual([[folderAction, fileAction]]);
 		expect(timeline).toEqual([
-			"register",
+			"begin:folder",
 			"execute:folder",
+			"finish:folder",
+			"begin:file",
 			"execute:file",
+			"finish:file",
+		]);
+	});
+
+	it("closes the window of an action interrupted while it runs", async () => {
+		const hanging = makeAction("hanging");
+		const runtime = createVamRuntime(makeVamLayer());
+		const timeline: string[] = [];
+		let started!: () => void;
+		const running = new Promise<void>((resolve) => {
+			started = resolve;
+		});
+		const coordinator = makeCoordinator(
+			(action) =>
+				Effect.sync(() => {
+					timeline.push(`execute:${actionBasename(action)}`);
+					started();
+				}).pipe(Effect.andThen(Effect.never)),
+			undefined,
+			(action) => {
+				timeline.push(`begin:${actionBasename(action)}`);
+			},
+			runtime,
+			(action) => {
+				timeline.push(`finish:${actionBasename(action)}`);
+			},
+		);
+
+		void runtime.runPromiseExit(coordinator.dispatchEffect([hanging]));
+		await running;
+		// Disposal interrupts the worker mid-action; nothing is left to shut down.
+		coordinators.splice(coordinators.indexOf(coordinator), 1);
+		await runtime.dispose();
+
+		expect(timeline).toEqual([
+			"begin:hanging",
+			"execute:hanging",
+			"finish:hanging",
+		]);
+	});
+
+	it("closes a failed action's window and opens none for actions a stopped batch skips", async () => {
+		const failing = makeAction("failing");
+		const skipped = makeAction("skipped");
+		const timeline: string[] = [];
+		const coordinator = makeCoordinator(
+			async (action) => {
+				timeline.push(`execute:${actionBasename(action)}`);
+				if (action === failing) throw new Error("failed");
+			},
+			undefined,
+			(action) => {
+				timeline.push(`begin:${actionBasename(action)}`);
+			},
+			undefined,
+			(action) => {
+				timeline.push(`finish:${actionBasename(action)}`);
+			},
+		);
+
+		const result = await runNative(
+			coordinator,
+			coordinator.dispatchEffect([failing, skipped], {
+				stopOnFirstFailure: true,
+			}),
+		);
+
+		expect(Exit.isFailure(result)).toBe(true);
+		expect(timeline).toEqual([
+			"begin:failing",
+			"execute:failing",
+			"finish:failing",
 		]);
 	});
 
@@ -568,7 +643,8 @@ describe("DispatchBatchCoordinator", () => {
 				execute: () => Effect.fail(executorFailure),
 			} as unknown as Executor,
 			{
-				registerEffect: () => Effect.void,
+				beginEffect: () => Effect.void,
+				finishEffect: () => Effect.void,
 			} as unknown as SelfEventTracker,
 			runtime,
 		);
@@ -612,7 +688,8 @@ describe("DispatchBatchCoordinator", () => {
 				},
 			} as unknown as Executor,
 			{
-				registerEffect: () => Effect.void,
+				beginEffect: () => Effect.void,
+				finishEffect: () => Effect.void,
 			} as unknown as SelfEventTracker,
 			runtime,
 		);

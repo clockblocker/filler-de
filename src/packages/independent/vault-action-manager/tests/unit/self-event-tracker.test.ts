@@ -488,4 +488,80 @@ describe("SelfEventTracker modify expectations", () => {
 			}),
 		);
 	});
+
+	it("keeps a begun action's entries open until it finishes, then for one TTL", async () => {
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const tracker = yield* SelfEventTracker.makeEffect({
+					ttlMs: 5000,
+				});
+				const action: VaultAction = {
+					kind: VaultActionKind.RenameMdFile,
+					payload: {
+						from: mdFile("old", ["Library"]),
+						to: mdFile("new", ["Library"]),
+					},
+				};
+				yield* tracker.beginEffect(action);
+
+				yield* TestClock.adjust(60_000);
+				expect(
+					yield* tracker.shouldIgnoreEffect("Library/new.md"),
+				).toBe(true);
+
+				yield* tracker.finishEffect(action);
+				// The matched entry stays matched.
+				expect(
+					yield* tracker.shouldIgnoreEffect("Library/new.md"),
+				).toBe(false);
+				yield* TestClock.adjust(4999);
+				expect(yield* tracker.getRegisteredFilePathsEffect()).toEqual(
+					[],
+				);
+				expect(
+					yield* tracker.shouldIgnoreEffect("Library/old.md"),
+				).toBe(true);
+			}).pipe(Effect.provide(TestClock.layer())),
+		);
+	});
+
+	it("expires a finished action's unmatched entries and prefixes one TTL after it finishes", async () => {
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const tracker = yield* SelfEventTracker.makeEffect({
+					ttlMs: 5000,
+				});
+				const action: VaultAction = {
+					kind: VaultActionKind.TrashFolder,
+					payload: { splitPath: folder("target", ["Library"]) },
+				};
+				yield* tracker.beginEffect(action);
+				const waiter = yield* tracker
+					.waitForAllRegisteredEffect()
+					.pipe(Effect.forkChild);
+
+				yield* TestClock.adjust(60_000);
+				expect(
+					yield* tracker.shouldIgnoreEffect(
+						"Library/target/child.md",
+					),
+				).toBe(true);
+
+				yield* tracker.finishEffect(action);
+				yield* TestClock.adjust(4999);
+				expect(
+					yield* tracker.shouldIgnoreEffect("Library/target/late.md"),
+				).toBe(true);
+
+				yield* TestClock.adjust(1);
+				yield* Fiber.join(waiter);
+				expect(
+					yield* tracker.shouldIgnoreEffect("Library/target/user.md"),
+				).toBe(false);
+				expect(
+					yield* tracker.shouldIgnoreEffect("Library/target"),
+				).toBe(false);
+			}).pipe(Effect.provide(TestClock.layer())),
+		);
+	});
 });
