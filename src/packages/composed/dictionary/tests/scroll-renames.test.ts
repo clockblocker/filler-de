@@ -446,6 +446,22 @@ describe("two Scrolls that swap names across bulks (#199)", () => {
 			STORY_3,
 		]);
 	});
+
+	test("leaves the refs when another note takes the name at the path the note that had it left", async () => {
+		const { vault } = await dictionary(
+			{},
+			{ "Archive/Story.md": "another Story", "Notes/Fable.md": "Fable" },
+		);
+		await vault.userRename("Library/Story.md", "Library/Tale.md");
+		// Archive/Story.md had the name all along; Fable lands on its old path.
+		await vault.userRename("Archive/Story.md", "Zettel/Story.md");
+		await vault.userRename("Notes/Fable.md", "Archive/Story.md");
+		expect(
+			storedRefs(vault.content(WALK)).filter((stored) =>
+				stored.startsWith("![[Tale"),
+			),
+		).toEqual([]);
+	});
 });
 
 describe("how refs name a Scroll (#198)", () => {

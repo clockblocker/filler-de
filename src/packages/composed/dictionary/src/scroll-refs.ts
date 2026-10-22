@@ -315,6 +315,23 @@ export const retargetForRenames = Effect.fnUntraced(function* <E>(
 	const waiting: DeferredRefs[] = [];
 	const settled: DeferredRefs[] = [];
 	for (const earlier of deferred) {
+		// A rename that moves the owner away, before any rename showed it
+		// taking the name, shows it had the name all along: the refs may
+		// be its, and stay for good. Without this, another note renamed
+		// onto the owner's old path would look like its arrival.
+		if (
+			earlier.ownerArrived !== true &&
+			renames.some((rename) =>
+				rename.kind === "File"
+					? samePath(rename.from, earlier.owner)
+					: isUnder(earlier.owner, rename.from),
+			)
+		) {
+			notes.push(
+				`Refs to ${earlier.name} stay: ${earlier.owner}, which Obsidian opened for that name, moved without taking it`,
+			);
+			continue;
+		}
 		const arrival = files.find(
 			(rename) => tookName(rename) && samePath(rename.to, earlier.owner),
 		);
