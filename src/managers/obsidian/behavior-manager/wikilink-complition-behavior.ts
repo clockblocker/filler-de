@@ -38,6 +38,7 @@ import type {
 	UserEventKind,
 	UserEventResult,
 } from "@textfresser/obsidian-event-layer";
+import { VaultPath } from "@textfresser/vault-action-manager";
 import { nonEmptyArrayResult } from "../../../types/utils";
 import { pickClosestLeaf } from "./pick-closest-leaf";
 
@@ -53,7 +54,7 @@ const PASSTHROUGH = { outcome: "passthrough" } as const;
 
 /** Whether a vault path is the dictionary's folder or below it. */
 const inWorter = (path: string): boolean =>
-	path === WORTER_FOLDER || path.startsWith(`${WORTER_FOLDER}/`);
+	VaultPath.caseSensitive.isUnder(path, WORTER_FOLDER, { inclusive: true });
 
 /**
  * A link naming only a note, by a word: no path, subpath or extension, and

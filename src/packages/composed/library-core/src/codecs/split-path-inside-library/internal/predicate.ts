@@ -1,8 +1,14 @@
 import {
 	type AnySplitPath,
 	SplitPathKind,
+	splitPathCodec,
+	VaultPath,
 } from "@textfresser/vault-action-manager";
-import type { CodecRules } from "../../rules";
+import {
+	type CodecRules,
+	isUnderLibraryRoot,
+	libraryRootPath,
+} from "../../rules";
 
 /**
  * Quick predicate to check if a vault-scoped split path is inside the library.
@@ -13,17 +19,12 @@ export function checkIfInsideLibrary(
 	rules: CodecRules,
 	sp: AnySplitPath,
 ): boolean {
-	const { pathParts } = sp;
-	const rootParentParts = rules.libraryRootPathParts;
-	const libraryPrefix = [...rootParentParts, rules.libraryRootName];
-
-	const isLibraryRootFolder =
+	const path = splitPathCodec.format(sp);
+	const root = libraryRootPath(rules);
+	if (
 		sp.kind === SplitPathKind.Folder &&
-		sp.basename === rules.libraryRootName &&
-		pathParts.length === rootParentParts.length &&
-		rootParentParts.every((part, index) => pathParts[index] === part);
-	if (isLibraryRootFolder) return true;
-
-	if (pathParts.length < libraryPrefix.length) return false;
-	return libraryPrefix.every((part, index) => pathParts[index] === part);
+		VaultPath.caseSensitive.same(path, root)
+	)
+		return true;
+	return isUnderLibraryRoot(path, root);
 }

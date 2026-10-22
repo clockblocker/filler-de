@@ -1,6 +1,9 @@
 import type { TAbstractFile, TFile, TFolder, Vault } from "obsidian";
 import { TFile as TFileClass, TFolder as TFolderClass } from "obsidian";
-import { getAbstractFileByPath } from "../../../../internal/abstract-file-by-path";
+import {
+	getAbstractFileByPath,
+	toSystemPath,
+} from "../../../../internal/abstract-file-by-path";
 import type {
 	AnySplitPath,
 	SplitPathToAnyFile,
@@ -35,7 +38,7 @@ export function abstractFromSplitPathInternal(
 	splitPath: AnySplitPath,
 ): TAbstractFile | null {
 	const systemPath = systemPathFromSplitPathInternal(splitPath);
-	const file = getAbstractFileByPath(vault, systemPath);
+	const file = getAbstractFileByPath(vault, toSystemPath(systemPath));
 
 	if (!file) return null;
 

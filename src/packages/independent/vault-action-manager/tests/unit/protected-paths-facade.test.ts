@@ -28,9 +28,10 @@ const EXEMPLAR_NOTE = "Exemplar/Kohlekraftwerk/Kohlekraftwerk.md";
 /**
  * A vault whose writes fire Obsidian's modify callback, and whose
  * `FileManager.renameFile` rewrites the files listed in `linkingFiles`, as
- * Obsidian's link updater does.
+ * Obsidian's link updater does. Its adapter reports a case-insensitive file
+ * system, as Obsidian's does on macOS, unless `insensitive` is false.
  */
-function makeVaultHarness() {
+function makeVaultHarness({ insensitive = true } = {}) {
 	const callbacks = new Map<string, (...args: never[]) => void>();
 	const contents = new Map<string, string>();
 	const byPath = new Map<string, TAbstractFile>();
@@ -109,6 +110,7 @@ function makeVaultHarness() {
 		},
 		metadataCache: { getFirstLinkpathDest: () => null },
 		vault: {
+			adapter: { insensitive },
 			create: async (path: string, content: string) => {
 				writes.push(`create ${path}`);
 				return addFile(path, content);
@@ -288,6 +290,28 @@ describe("VaultActionManager protected paths: dispatch", () => {
 		expect(() =>
 			createVaultActionManager(harness.app, { protectedPaths: ["/"] }),
 		).toThrow(/vault root/);
+	});
+
+	it("compares case as the adapter's file system does", () => {
+		const sensitive = createVaultActionManager(
+			makeVaultHarness({ insensitive: false }).app,
+			{ protectedPaths: ["Exemplar"] },
+		).manager;
+		expect(sensitive.paths.caseInsensitive).toBe(false);
+		expect(sensitive.protectedPrefixOf("Exemplar/A.md")).toBe("Exemplar");
+		expect(sensitive.protectedPrefixOf("exemplar/A.md")).toBeUndefined();
+
+		const insensitive = createVaultActionManager(makeVaultHarness().app, {
+			protectedPaths: ["Exemplar"],
+		}).manager;
+		expect(insensitive.paths.caseInsensitive).toBe(true);
+		expect(insensitive.protectedPrefixOf("exemplar/A.md")).toBe("Exemplar");
+
+		const overridden = createVaultActionManager(makeVaultHarness().app, {
+			fileSystem: { caseInsensitive: false },
+			protectedPaths: ["Exemplar"],
+		}).manager;
+		expect(overridden.protectedPrefixOf("exemplar/A.md")).toBeUndefined();
 	});
 });
 

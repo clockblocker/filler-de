@@ -1,6 +1,7 @@
 import { splitPathCodec } from "../split-path-codec";
 import type { AnySplitPath } from "../types/split-path";
 import { type VaultAction, VaultActionKind } from "../types/vault-action";
+import { VaultPath, type VaultPathIdentity } from "../vault-path";
 
 /**
  * How an action's path meets a protected prefix: it lies `inside` the
@@ -18,40 +19,29 @@ export type ProtectedPathViolation = {
 	readonly relation: ProtectedPathRelation;
 };
 
-/** Trims slashes, turns `\` into `/`, and composes Unicode (NFC). */
-function normalizePath(path: string): string {
-	return path
-		.normalize("NFC")
-		.replace(/\\/g, "/")
-		.replace(/\/{2,}/g, "/")
-		.replace(/^\/+|\/+$/g, "");
-}
-
-/**
- * Case-insensitive, so a buggy action that spells the folder differently is
- * still refused: on the case-insensitive file systems of macOS and Windows,
- * `exemplar/x.md` lands in `Exemplar/`.
- */
-function comparable(path: string): string {
-	return normalizePath(path).toLowerCase();
-}
-
 /**
  * The vault paths VAM refuses to change. A prefix protects the file or folder
  * at that path and everything below it, matched by whole path segments:
  * `Exemplar` protects `Exemplar` and `Exemplar/Note.md`, not
  * `Exemplars/Note.md`.
+ *
+ * Paths match as the vault's file system compares them, so a buggy action
+ * that spells the folder differently is still refused where it would land
+ * in the protected folder: on the case-insensitive file systems of macOS
+ * and Windows, `exemplar/x.md` lands in `Exemplar/`.
  */
 export class ProtectedPaths {
 	/** Normalized prefixes, as configured. */
 	readonly prefixes: readonly string[];
-	private readonly keys: readonly string[];
 
-	constructor(prefixes: readonly string[] = []) {
+	constructor(
+		prefixes: readonly string[],
+		private readonly paths: VaultPathIdentity,
+	) {
 		const normalized: string[] = [];
 		for (const raw of prefixes) {
-			const prefix = normalizePath(raw);
-			if (prefix === "") {
+			const prefix = VaultPath.normalize(raw);
+			if (prefix === VaultPath.root) {
 				throw new Error(
 					`A protected path prefix cannot be the vault root (got ${JSON.stringify(raw)}): it would protect every path`,
 				);
@@ -59,7 +49,6 @@ export class ProtectedPaths {
 			if (!normalized.includes(prefix)) normalized.push(prefix);
 		}
 		this.prefixes = normalized;
-		this.keys = normalized.map((prefix) => prefix.toLowerCase());
 	}
 
 	get isEmpty(): boolean {
@@ -68,11 +57,9 @@ export class ProtectedPaths {
 
 	/** The prefix protecting `path`, if `path` lies at or below one. */
 	prefixCovering(path: string): string | undefined {
-		const key = comparable(path);
-		const index = this.keys.findIndex(
-			(prefix) => key === prefix || key.startsWith(`${prefix}/`),
+		return this.prefixes.find((prefix) =>
+			this.paths.isUnder(path, prefix, { inclusive: true }),
 		);
-		return index === -1 ? undefined : this.prefixes[index];
 	}
 
 	/**
@@ -80,11 +67,9 @@ export class ProtectedPaths {
 	 * root `""` contains every prefix.
 	 */
 	prefixInside(path: string): string | undefined {
-		const key = comparable(path);
-		const index = this.keys.findIndex((prefix) =>
-			key === "" ? true : prefix.startsWith(`${key}/`),
+		return this.prefixes.find((prefix) =>
+			this.paths.isUnder(prefix, path, { inclusive: false }),
 		);
-		return index === -1 ? undefined : this.prefixes[index];
 	}
 
 	/** The first action in `actions` that would change a protected path. */

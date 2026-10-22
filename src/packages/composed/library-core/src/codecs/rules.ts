@@ -1,3 +1,4 @@
+import { VaultPath } from "@textfresser/vault-action-manager";
 import type { ParsedUserSettings } from "../internal/root/parsed-settings";
 import type {
 	LanguagesConfig,
@@ -44,4 +45,21 @@ export function makeCodecRulesFromSettings(
 		suffixDelimiterConfig: settings.suffixDelimiterConfig,
 		suffixDelimiterPattern: settings.suffixDelimiterPattern,
 	};
+}
+
+/** The vault path of the Library root folder, such as `Library`. */
+export function libraryRootPath(rules: CodecRules): string {
+	return VaultPath.join(...rules.libraryRootPathParts, rules.libraryRootName);
+}
+
+/**
+ * Whether `path` lies strictly below the Library root, case-sensitively:
+ * the Library Tree names nodes as Obsidian spells them. A Library rooted at
+ * the vault root holds nothing, so the Librarian never heals a whole vault.
+ */
+export function isUnderLibraryRoot(path: string, root: string): boolean {
+	return (
+		root !== VaultPath.root &&
+		VaultPath.caseSensitive.isUnder(path, root, { inclusive: false })
+	);
 }

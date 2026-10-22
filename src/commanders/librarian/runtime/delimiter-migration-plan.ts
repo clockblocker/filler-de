@@ -2,10 +2,12 @@ import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 	VaultAction,
+	VaultPathIdentity,
 } from "@textfresser/vault-action-manager";
 import {
 	splitPathCodec,
 	VaultActionKind,
+	VaultPath,
 } from "@textfresser/vault-action-manager";
 import type { SuffixDelimiterConfig } from "../../../types";
 import {
@@ -117,29 +119,33 @@ export type DelimiterRenameConflict = {
  * source, so the plan could neither keep its names nor be undone safely.
  * `existing` holds every note the plan was built from.
  *
- * Names are compared ignoring case: on a case-insensitive file system (macOS,
- * Windows) `Foo.md` and `foo.md` are one file. A rename that changes only the
- * case of its own note is not a conflict.
+ * Names are compared as the vault's file system compares them (`paths`): on
+ * a case-insensitive file system (macOS, Windows) `Foo.md` and `foo.md` are
+ * one file. A rename that changes only the case of its own note is not a
+ * conflict.
  */
 export function findDelimiterRenameConflicts(
 	actions: readonly DelimiterRenameAction[],
 	existing: readonly SplitPathToMdFile[],
+	paths: VaultPathIdentity,
 ): readonly DelimiterRenameConflict[] {
 	const taken = new Map<string, string[]>();
 	for (const path of existing) {
 		const formatted = splitPathCodec.format(path);
-		const key = foldCase(formatted);
+		const key = paths.key(formatted);
 		taken.set(key, [...(taken.get(key) ?? []), formatted]);
 	}
 	const firstClaim = new Map<string, DelimiterRenameAction>();
 	const conflicts: DelimiterRenameConflict[] = [];
 	for (const action of actions) {
 		const source = splitPathCodec.format(action.payload.from);
-		const target = foldCase(splitPathCodec.format(action.payload.to));
+		const target = paths.key(splitPathCodec.format(action.payload.to));
 		const claimant = firstClaim.get(target);
 		const occupant = taken
 			.get(target)
-			?.find((occupied) => occupied !== source);
+			?.find(
+				(occupied) => !VaultPath.caseSensitive.same(occupied, source),
+			);
 		if (occupant !== undefined) {
 			conflicts.push(
 				Object.freeze({
@@ -162,16 +168,16 @@ export function findDelimiterRenameConflicts(
 	return Object.freeze(conflicts);
 }
 
-function foldCase(path: string): string {
-	return path.toLowerCase();
-}
-
+/** Case-sensitive, as the Librarian scopes its Library. */
 function isInsideRoot(
 	path: SplitPathToMdFile,
 	root: SplitPathToFolder,
 ): boolean {
-	const rootParts = [...root.pathParts, root.basename].filter(Boolean);
-	return rootParts.every((part, index) => path.pathParts[index] === part);
+	return VaultPath.caseSensitive.isUnder(
+		splitPathCodec.format(path),
+		splitPathCodec.format(root),
+		{ inclusive: false },
+	);
 }
 
 function findEscapeCharacter(

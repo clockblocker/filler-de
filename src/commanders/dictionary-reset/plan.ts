@@ -7,6 +7,7 @@
  * to. Both only read.
  */
 import { freeformPlacementProblem } from "@textfresser/dictionary";
+import { VaultPath } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import type { SourceRange } from "../classify/types";
 import {
@@ -145,7 +146,13 @@ export const targetAttestation = Effect.fnUntraced(function* (
 			_tag: "Unresolvable",
 			reason: `no note "${attestation.linkpath}" exists`,
 		} as const;
-	if (protectedFolders.some((folder) => scrollPath.startsWith(`${folder}/`)))
+	if (
+		protectedFolders.some((folder) =>
+			VaultPath.caseSensitive.isUnder(scrollPath, folder, {
+				inclusive: false,
+			}),
+		)
+	)
 		return {
 			_tag: "Unresolvable",
 			reason: `its source ${scrollPath} is a dictionary note, which the reset backs up and never writes to`,

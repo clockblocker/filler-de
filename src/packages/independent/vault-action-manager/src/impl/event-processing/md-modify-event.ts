@@ -4,6 +4,7 @@ import type {
 	SplitPathToFolder,
 	SplitPathToMdFile,
 } from "../../types/split-path";
+import { VaultPath } from "../../vault-path";
 
 /** One Markdown file whose content changed outside VAM. */
 export type MdFileModification = {
@@ -42,16 +43,21 @@ export function coalesceMdModifications(
 	return [...byPath.values()];
 }
 
-/** Restricts a bulk event to files below `folder`; `null` when none remain. */
+/**
+ * Restricts a bulk event to files below `folder`; `null` when none remain.
+ * Case-sensitive, as Obsidian reports a path and as a subscriber keys it.
+ */
 export function scopeMdModifyEvent(
 	event: BulkMdModifyEvent,
 	folder: SplitPathToFolder,
 ): BulkMdModifyEvent | null {
-	const prefix = splitPathCodec.format(folder).replace(/^\/+|\/+$/g, "");
-	const modifications = event.modifications.filter(
-		({ splitPath }) =>
-			prefix === "" ||
-			splitPathCodec.format(splitPath).startsWith(`${prefix}/`),
+	const prefix = splitPathCodec.format(folder);
+	const modifications = event.modifications.filter(({ splitPath }) =>
+		VaultPath.caseSensitive.isUnder(
+			splitPathCodec.format(splitPath),
+			prefix,
+			{ inclusive: false },
+		),
 	);
 	if (modifications.length === 0) return null;
 	return { debug: event.debug, modifications };

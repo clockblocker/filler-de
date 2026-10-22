@@ -6,6 +6,8 @@
  * clicked link reopens its note, so a user who clicked on elsewhere is
  * pulled back to nothing older.
  */
+import { WORTER_FOLDER } from "@textfresser/lemma-note-codec";
+import { VaultPath } from "@textfresser/vault-action-manager";
 import type { KnowledgeQueue } from "./knowledge-queue";
 
 /** `Worter/…/🌊 See|See` or `Worter/…/See#^r-1a2b|See` → its note path. */
@@ -24,7 +26,12 @@ function awaitReadingKnowledge(
 	target: string,
 ): Promise<boolean> {
 	const path = linkTargetPath(target);
-	if (!path.startsWith("Worter/")) return Promise.resolve(false);
+	if (
+		!VaultPath.caseSensitive.isUnder(path, WORTER_FOLDER, {
+			inclusive: false,
+		})
+	)
+		return Promise.resolve(false);
 	return queue.awaitNote(path);
 }
 
@@ -49,7 +56,9 @@ export function createReadingReopener(
 		if (!(await awaitReadingKnowledge(deps.queue, target))) return false;
 		if (click !== latest) return false;
 		const path = notePathOf(linkTargetPath(target));
-		if ((await deps.activePath()) === path) return false;
+		const active = await deps.activePath();
+		if (active !== null && VaultPath.caseSensitive.same(active, path))
+			return false;
 		await deps.open(path);
 		return true;
 	};

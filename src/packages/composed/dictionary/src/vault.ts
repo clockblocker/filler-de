@@ -6,6 +6,7 @@ import {
 	type SplitPathToMdFile,
 	splitPathCodec,
 	type VaultActionManager,
+	VaultPath,
 } from "@textfresser/vault-action-manager";
 
 /**
@@ -28,8 +29,6 @@ export const WORTER_SPLIT_PATH: SplitPathToFolder = {
 	kind: "Folder",
 	pathParts: [],
 };
-
-const WORTER_PREFIX = `${WORTER_FOLDER}/`;
 
 /** A vault path as the index keys it: `Worter/…/name.md`. */
 export const formatPath = (splitPath: AnySplitPath): string =>
@@ -57,10 +56,13 @@ export function folderSplitPath(path: string): SplitPathToFolder {
 	return splitPath;
 }
 
-/** Whether a path lies below `Worter/`, the store's scope. */
+/**
+ * Whether a path lies below `Worter/`, the store's scope. Case-sensitive, as
+ * the index keys paths and as Obsidian's lookup finds them.
+ */
 export const inScope = (path: string): boolean =>
-	path.startsWith(WORTER_PREFIX);
+	VaultPath.caseSensitive.isUnder(path, WORTER_FOLDER, { inclusive: false });
 
-/** Whether a path is `folder` itself or below it. */
+/** Whether a path is `folder` itself or below it, case-sensitively. */
 export const isUnder = (path: string, folder: string): boolean =>
-	folder === "" || path === folder || path.startsWith(`${folder}/`);
+	VaultPath.caseSensitive.isUnder(path, folder, { inclusive: true });

@@ -289,16 +289,32 @@ describe("SelfEventTracker", () => {
 				"Library/new/a.md",
 			),
 		).toBe(false);
-		// Paths compare exactly after separator cleanup, like every match.
+		// Paths compare case-sensitively after VaultPath normalization, like
+		// every match.
 		expect(
 			tracker.shouldIgnoreRename("Library/Old/a.md", "Library/new/a.md"),
 		).toBe(false);
+	});
+
+	it("RenameFolder matches descendants whatever their Unicode composition", () => {
+		const tracker = makeTracker();
+		tracker.register([
+			{
+				kind: VaultActionKind.RenameFolder,
+				payload: {
+					from: folder("old", ["Library"]),
+					to: folder("new", ["Library"]),
+				},
+			},
+		]);
+
+		// Obsidian composes every path to NFC, so NFC and NFD spell one path.
 		expect(
 			tracker.shouldIgnoreRename(
 				"Library/old/Cafe\u0301.md",
 				"Library/new/Caf\u00e9.md",
 			),
-		).toBe(false);
+		).toBe(true);
 	});
 
 	it("RenameFolder into the vault root maps descendants to root paths", () => {

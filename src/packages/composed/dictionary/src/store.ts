@@ -2043,7 +2043,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		for (const folder of folders) {
 			for (const path of index.paths())
 				if (isUnder(path, folder)) targets.add(path);
-			if (!inScope(`${folder}/`)) continue;
+			if (!isUnder(folder, WORTER_SPLIT_PATH.basename)) continue;
 			const splitPath = folderSplitPath(folder);
 			const present = yield* vault
 				.exists(splitPath)
@@ -2138,7 +2138,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		const above = (folder: string) =>
 			isUnder(WORTER_SPLIT_PATH.basename, folder);
 		const inside = (folder: string) =>
-			inScope(`${folder}/`) && !above(folder);
+			isUnder(folder, WORTER_SPLIT_PATH.basename) && !above(folder);
 		const whole = folders.some(above);
 		if (!(whole || paths.some(inScope) || folders.some(inside)))
 			return Effect.void;

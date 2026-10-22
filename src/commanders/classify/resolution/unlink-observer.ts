@@ -76,7 +76,12 @@
  * check is done.
  */
 import type { DumdictVaultStore } from "@textfresser/dictionary";
-import { parseNotePath, pathCollisionKey } from "@textfresser/lemma-note-codec";
+import {
+	parseNotePath,
+	pathCollisionKey,
+	WORTER_FOLDER,
+} from "@textfresser/lemma-note-codec";
+import { VaultPath } from "@textfresser/vault-action-manager";
 import { Effect, Option } from "effect";
 import { getErrorMessage } from "../../../utils/get-error-message";
 import { logger } from "../../../utils/logger";
@@ -670,10 +675,14 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 		schedule(path, entry);
 	};
 
+	const inWorter = (path: string) =>
+		VaultPath.caseSensitive.isUnder(path, WORTER_FOLDER, {
+			inclusive: false,
+		});
 	const isDictionaryPath = (path: string) =>
-		path.endsWith(".md") && path.startsWith("Worter/");
+		path.endsWith(".md") && inWorter(path);
 	const isScrollPath = (path: string) =>
-		path.endsWith(".md") && !path.startsWith("Worter/");
+		path.endsWith(".md") && !inWorter(path);
 
 	return {
 		close: () => {

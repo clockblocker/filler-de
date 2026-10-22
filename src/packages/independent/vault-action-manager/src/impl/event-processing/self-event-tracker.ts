@@ -3,6 +3,7 @@ import { pathfinder } from "../../helpers/pathfinder";
 import type { AnySplitPath } from "../../types/split-path";
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionKind } from "../../types/vault-action";
+import { VaultPath } from "../../vault-path";
 
 type ExactEntry = {
 	readonly expiresAt: number;
@@ -110,11 +111,21 @@ function matchPath(
 		return { ignored: true, popped: true };
 	}
 	for (const prefix of pruned.prefixes.keys()) {
-		if (normalized === prefix || normalized.startsWith(`${prefix}/`)) {
+		if (coveredByPrefix(normalized, prefix)) {
 			return { ignored: true, popped: false };
 		}
 	}
 	return { ignored: false, popped: false };
+}
+
+/**
+ * Whether `path` is the folder `prefix` or lies below it. Nothing lies under
+ * the vault root (`""`) here: a root prefix covers only the root itself.
+ */
+function coveredByPrefix(path: string, prefix: string): boolean {
+	return prefix === VaultPath.root
+		? path === prefix
+		: VaultPath.caseSensitive.isUnder(path, prefix, { inclusive: true });
 }
 
 /**
@@ -130,9 +141,17 @@ function isFolderRenameDescendant(
 	newPath: string,
 ): boolean {
 	for (const { from, to } of folderRenames.values()) {
-		if (from === "" || !oldPath.startsWith(`${from}/`)) continue;
+		if (
+			from === VaultPath.root ||
+			!VaultPath.caseSensitive.isUnder(oldPath, from, {
+				inclusive: false,
+			})
+		)
+			continue;
 		const remainder = oldPath.slice(from.length + 1);
-		if (newPath === (to === "" ? remainder : `${to}/${remainder}`)) {
+		if (
+			VaultPath.caseSensitive.same(newPath, VaultPath.join(to, remainder))
+		) {
 			return true;
 		}
 	}
@@ -619,8 +638,12 @@ export class SelfEventTracker {
 		return paths;
 	}
 
+	/**
+	 * Case-sensitive, as Obsidian reports a path: a rename that changes only
+	 * case expects both of its ends.
+	 */
 	private normalizePath(path: string): string {
-		return path.replace(/^[\\/]+|[\\/]+$/g, "").replace(/\\/g, "/");
+		return VaultPath.caseSensitive.key(path);
 	}
 
 	private getFilePathToVerify(

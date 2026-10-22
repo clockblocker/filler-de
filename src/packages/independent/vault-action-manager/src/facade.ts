@@ -46,6 +46,7 @@ import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import { VaultObservation } from "./impl/event-processing/vault-observation";
 import { ProtectedPaths } from "./impl/protected-paths";
 import { VaultReader } from "./impl/vault-reader";
+import { detectVaultFileSystem } from "./internal/file-system-case";
 import { splitPathCodec } from "./split-path-codec";
 import { VaultActionManagerTestingAdapter } from "./testing-adapter";
 import type { VaultFileStat } from "./types/file-stat";
@@ -55,6 +56,11 @@ import type {
 	SplitPathToMdFile,
 } from "./types/split-path";
 import type { VaultAction } from "./types/vault-action";
+import {
+	type VaultFileSystem,
+	VaultPath,
+	type VaultPathIdentity,
+} from "./vault-path";
 import type { VaultScanPathWithStat, VaultScanResult } from "./vault-scan";
 
 export type BulkVaultEventHandler<E = never> = (
@@ -73,11 +79,19 @@ export type VaultActionManagerOptions = {
 	/**
 	 * Vault path prefixes no Dispatch Batch may change, such as
 	 * `"Exemplar"`. A prefix protects the path itself and everything below
-	 * it, by whole segments and case-insensitively. Dispatch refuses a batch
+	 * it, by whole segments, compared as the vault's file system compares
+	 * names (see `fileSystem`). Dispatch refuses a batch
 	 * naming a protected path, or renaming or trashing a folder that contains
 	 * one, with `VamProtectedPathError`. The vault root cannot be protected.
 	 */
 	readonly protectedPaths?: readonly string[];
+	/**
+	 * How the vault's file system compares names. VAM reads it from
+	 * Obsidian's adapter, which probes the vault folder, and falls back to
+	 * the platform: macOS and Windows ignore case. Pass it only to override
+	 * that, as tests do.
+	 */
+	readonly fileSystem?: VaultFileSystem;
 };
 
 export type VaultActionManagerSubscription = {
@@ -100,6 +114,12 @@ function successOrThrow<A>(exit: Exit.Exit<A, unknown>, operation: string): A {
  */
 export class VaultActionManager {
 	readonly testing: VaultActionManagerTestingAdapter;
+	/**
+	 * Path identity on this vault's file system: case-insensitive where the
+	 * file system ignores case. Use it to ask whether two paths would be one
+	 * file; use `VaultPath.caseSensitive` to match Obsidian's exact lookup.
+	 */
+	readonly paths: VaultPathIdentity;
 
 	private readonly dispatches: DispatchBatchCoordinator;
 	private readonly linkRewrites = new LinkRewriteWindows();
@@ -121,7 +141,13 @@ export class VaultActionManager {
 		private readonly runtime: VamRuntime,
 		options: VaultActionManagerOptions = {},
 	) {
-		this.protectedPaths = new ProtectedPaths(options.protectedPaths);
+		this.paths = VaultPath.forFileSystem(
+			options.fileSystem ?? detectVaultFileSystem(app),
+		);
+		this.protectedPaths = new ProtectedPaths(
+			options.protectedPaths ?? [],
+			this.paths,
+		);
 		this.selfEvents = successOrThrow(
 			this.runtime.runSyncExit(SelfEventTracker.makeEffect()),
 			"initialize Self Event tracking",
