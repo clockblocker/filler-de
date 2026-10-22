@@ -24,6 +24,10 @@ import {
 	type VamRuntime,
 	type VamRuntimeFailure,
 } from "./effect/runtime";
+import {
+	type DispatchOrUndoOptions,
+	dispatchOrUndoVia,
+} from "./effect/undo-on-failure";
 import { makeVamLive } from "./effect/vam-live";
 import {
 	type ActiveEditorContext,
@@ -593,7 +597,7 @@ export class VaultActionManager {
 	 * Every planned action is attempted unless `stopOnFirstFailure` is set,
 	 * in which case the actions after the first failure are `Skipped`. On
 	 * failure the `VamDispatchFailure` carries the same report. Nothing is
-	 * rolled back.
+	 * rolled back; `dispatchOrUndo` undoes what it can.
 	 *
 	 * The batch's `operationId`, given or made here, names it in the report,
 	 * on its `vam.dispatch` span, and in the `Vam` origin of the events it
@@ -659,6 +663,31 @@ export class VaultActionManager {
 			this.dispatchWithReport(actions, {
 				...caller,
 				stopOnFirstFailure: true,
+			}),
+		);
+	}
+
+	/**
+	 * Dispatches one batch that stops at its first failure and, on failure,
+	 * undoes what landed, guarded and newest first: a created note is
+	 * trashed only while it holds what it was created with, a write is
+	 * reverted only while the file holds what it wrote, and a rename moves
+	 * back only while the file is where it went and its old name is free.
+	 * Trashes are not undone, and `Uncertain` actions are probed, never
+	 * blindly inverted. The failure's `report.undo` says what was undone,
+	 * what could not be and why, and what is not undoable. Pre-images of
+	 * the files the batch writes are read before it runs. The inverse
+	 * batches run under the batch's own `caller` and `operationId`.
+	 */
+	dispatchOrUndo(
+		actions: readonly VaultAction[],
+		options: DispatchOrUndoOptions,
+	): Effect.Effect<VamDispatchReport, VamDispatchFailure> {
+		// One operation for the batch and its undo, named before either runs.
+		return Effect.suspend(() =>
+			dispatchOrUndoVia(this, actions, {
+				...options,
+				...this.operationFor(options),
 			}),
 		);
 	}
@@ -928,3 +957,18 @@ export {
 	VamTargetExistsError,
 	VamVaultIoError,
 } from "./effect/errors";
+export {
+	type DispatchOrUndoOptions,
+	dispatchOrUndoVia,
+	MAX_PRE_IMAGE_CHARS,
+	type VamUndoPort,
+} from "./effect/undo-on-failure";
+export {
+	type VamNotUndoable,
+	VamNotUndoableSchema,
+	type VamUndoBlock,
+	VamUndoBlockSchema,
+	type VamUndoProbe,
+	VamUndoProbeSchema,
+	VamUndoReport,
+} from "./effect/undo-report";

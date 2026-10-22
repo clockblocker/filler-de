@@ -228,6 +228,50 @@ describe("a commit that touches several notes", () => {
 		await expectIndexMatchesFiles(store, vault);
 	});
 
+	test("a create that fails after landing is probed and taken back too", async () => {
+		const { store, vault } = await pendingDictionary();
+		const plan = await planSchreiten(store);
+		const files = vault.markdownPaths();
+		vault.failNextWrite((_action, path) => path === schreitenNote, 1, {
+			landBeforeFailing: true,
+		});
+
+		expect(await run(store.commitChanges(plan))).toMatchObject({
+			code: "revisionConflict",
+			status: "conflict",
+		});
+		expect(vault.markdownPaths()).toEqual(files);
+		expect(await run(store.lemmaNote(schreiten))).toBeUndefined();
+		await expectIndexMatchesFiles(store, vault);
+	});
+
+	test("a created note typed into before the undo stays, and the commit fails", async () => {
+		const { store, vault } = await pendingDictionary();
+		const plan = await planSchreiten(store);
+		const created = [schreitenPath, schreitenNote];
+		let typedInto: string | undefined;
+		vault.failNextWrite((action, path) => {
+			if (action.kind !== VaultActionKind.CreateMdFile) return false;
+			const other = created.find(
+				(candidate) => candidate !== path && vault.content(candidate),
+			);
+			if (!created.includes(path) || !other) return false;
+			typedInto = other;
+			vault.silentWrite(other, `${vault.content(other)}\nTyped.\n`);
+			return true;
+		});
+
+		const failure = await run(store.commitChanges(plan)).catch(
+			(error: unknown) => error,
+		);
+		expect(failure).toBeInstanceOf(DictionaryWriteError);
+		if (!(failure instanceof DictionaryWriteError) || !typedInto) return;
+		expect(failure.executed).toEqual([typedInto]);
+		expect(failure.message).toContain("could not be undone");
+		expect(vault.content(typedInto)).toContain("Typed.");
+		await expectIndexMatchesFiles(store, vault);
+	});
+
 	test("a note edited between the commit's read and its write keeps the edit", async () => {
 		const { store, vault } = await pendingDictionary();
 		const plan = await planSchreiten(store);

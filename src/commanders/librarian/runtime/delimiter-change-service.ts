@@ -1,9 +1,8 @@
 import type {
-	DispatchOptions,
+	DispatchOrUndoOptions,
 	SplitPathToFolder,
 	SplitPathToMdFile,
-	VamDispatchEntry,
-	VamDispatchReport,
+	VamUndoReport,
 	VaultAction,
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
@@ -25,10 +24,10 @@ import {
 } from "./delimiter-migration-plan";
 
 export type DelimiterMigrationVam = {
-	readonly dispatchWithReport: (
+	readonly dispatchOrUndo: (
 		actions: readonly VaultAction[],
-		options: DispatchOptions,
-	) => ReturnType<VaultActionManager["dispatchWithReport"]>;
+		options: DispatchOrUndoOptions,
+	) => ReturnType<VaultActionManager["dispatchOrUndo"]>;
 	readonly exists: (
 		path: SplitPathToMdFile,
 	) => ReturnType<VaultActionManager["exists"]>;
@@ -115,11 +114,12 @@ export class DelimiterRenameConflictError extends Schema.TaggedError<DelimiterRe
 }
 
 /**
- * Where a planned note sits: under its old name, under its new one, or under
- * neither or both. Its renames, forward and back, fail rather than land on a
- * taken name, so a note is never anywhere else.
+ * Where a moved note ended up: back under its old name, still under its new
+ * one, or under neither or both. Its renames, forward and back, fail rather
+ * than land on a taken name, so a note is never anywhere else. A note not
+ * moved at all has no placement.
  */
-type Placement = "Old" | "Moved" | "Unresolved";
+type Placement = "Restored" | "Moved" | "Unresolved";
 
 /** Plans and executes delimiter renames exclusively through the public VAM. */
 export class DelimiterChangeService {
@@ -167,11 +167,12 @@ export class DelimiterChangeService {
 	});
 
 	/**
-	 * Renames the planned notes, stopping at the first failure. After a
-	 * failure, every note the migration moved is renamed back, so the vault
-	 * keeps the old delimiter throughout. VAM's dispatch reports say which
-	 * notes moved and which came back; the vault is probed only for renames
-	 * the reports leave uncertain.
+	 * Renames the planned notes through VAM's `dispatchOrUndo`: the batch
+	 * stops at the first failure, and VAM renames every note it moved back,
+	 * each only while it still sits under its new name and its old one is
+	 * free, so the vault keeps the old delimiter throughout. The undo report
+	 * says which notes came back; the vault is probed only for those it
+	 * could not bring back, to tell left renamed from unresolved.
 	 */
 	readonly execute = Effect.fn("DelimiterChangeService.execute")(function* (
 		this: DelimiterChangeService,
@@ -182,48 +183,28 @@ export class DelimiterChangeService {
 		}
 
 		const exit = yield* Effect.exit(
-			this.vam.dispatchWithReport(plan.actions, {
-				caller: "librarian",
-				stopOnFirstFailure: true,
-			}),
+			this.vam.dispatchOrUndo(plan.actions, { caller: "librarian" }),
 		);
 		if (Exit.isSuccess(exit)) return completed(plan.actions);
 
 		const dispatchFailure = failureFromCause(exit.cause);
 		const failure = describeDispatchFailure(plan.actions, dispatchFailure);
-		const before = yield* Effect.forEach(plan.actions, (action) =>
+		const undo =
 			dispatchFailure instanceof VamDispatchFailure
-				? this.placeAfterForward(action, dispatchFailure.report)
-				: this.probe(action),
-		);
-		const moved = plan.actions
-			.filter((_, index) => before[index] === "Moved")
-			.reverse();
-		if (moved.length === 0 && !before.includes("Unresolved")) {
-			return rolledBack(failure, []);
-		}
+				? dispatchFailure.report.undo
+				: undefined;
+		const settled = undo
+			? yield* this.placeAfterUndo(plan.actions, undo)
+			: yield* this.placeByProbing(plan.actions);
 
-		const rollback =
-			moved.length > 0
-				? yield* this.rollBack(moved)
-				: {
-						failures: [],
-						placements: new Map<DelimiterRenameAction, Placement>(),
-					};
-		const after = plan.actions.map(
-			(action, index) =>
-				rollback.placements.get(action) ??
-				before[index] ??
-				"Unresolved",
-		);
 		const restored = plan.actions.filter(
-			(action, index) => after[index] === "Old" && moved.includes(action),
+			(action) => settled.placements.get(action) === "Restored",
 		);
 		const leftRenamed = plan.actions.filter(
-			(_, index) => after[index] === "Moved",
+			(action) => settled.placements.get(action) === "Moved",
 		);
 		const unresolved = plan.actions.filter(
-			(_, index) => after[index] === "Unresolved",
+			(action) => settled.placements.get(action) === "Unresolved",
 		);
 		if (leftRenamed.length === 0 && unresolved.length === 0) {
 			return rolledBack(failure, restored);
@@ -234,7 +215,7 @@ export class DelimiterChangeService {
 			kind: "RollbackIncomplete" as const,
 			leftRenamed: Object.freeze(leftRenamed),
 			rollbackFailures: Object.freeze(
-				rollback.failures.filter(
+				settled.failures.filter(
 					({ action }) => action && !restored.includes(action),
 				),
 			),
@@ -244,101 +225,73 @@ export class DelimiterChangeService {
 	});
 
 	/**
-	 * Where a forward rename left its note, by the stopped batch's report. A
-	 * rename that fails on a taken name moves nothing, so `Done` is the only
-	 * report of a move, always to the planned name.
+	 * Where each note the batch moved ended up, by VAM's undo report: back
+	 * under its old name, or, for one VAM could not bring back, wherever the
+	 * vault says. A note VAM could not tell about (`Unknown`) stays
+	 * unresolved, and one whose rename back never ran stays moved.
 	 */
-	private placeAfterForward(
-		action: DelimiterRenameAction,
-		report: VamDispatchReport,
-	): Effect.Effect<Placement> {
-		const entry = entryFor(report, action);
-		if (!entry) return this.probe(action);
-		switch (entry.status) {
-			case "Done":
-				return Effect.succeed("Moved");
-			case "Uncertain":
-				return this.probe(action);
-			case "Failed":
-			case "Skipped":
-				return Effect.succeed("Old");
-		}
-	}
-
-	/** Where a note sits now, between its old and its new name; read from the vault. */
-	private probe(action: DelimiterRenameAction): Effect.Effect<Placement> {
-		return Effect.all([
-			this.vam.exists(action.payload.from),
-			this.vam.exists(action.payload.to),
-		]).pipe(
-			Effect.map(([atOld, atNew]): Placement => {
-				if (atOld && !atNew) return "Old";
-				if (atNew && !atOld) return "Moved";
-				return "Unresolved";
-			}),
-			Effect.catchCause(() => Effect.succeed("Unresolved" as const)),
-		);
-	}
-
-	/**
-	 * Renames each moved note back to its old name. Every inverse rename is
-	 * attempted, and fails rather than land on its old name if another note
-	 * took it meanwhile; the report says where each note ended up, and the
-	 * failures come back keyed by the original rename.
-	 */
-	private readonly rollBack = Effect.fnUntraced(function* (
+	private readonly placeAfterUndo = Effect.fnUntraced(function* (
 		this: DelimiterChangeService,
-		moved: readonly DelimiterRenameAction[],
-	): Effect.fn.Return<{
-		readonly failures: readonly DelimiterActionFailure[];
-		readonly placements: ReadonlyMap<DelimiterRenameAction, Placement>;
-	}> {
-		const inverses = moved.map(invert);
-		const exit = yield* Effect.exit(
-			this.vam.dispatchWithReport(inverses, { caller: "librarian" }),
-		);
-		const failure = Exit.isSuccess(exit)
-			? undefined
-			: failureFromCause(exit.cause);
-		const report = Exit.isSuccess(exit)
-			? exit.value
-			: failure instanceof VamDispatchFailure
-				? failure.report
-				: undefined;
-		const failures: DelimiterActionFailure[] = [];
+		actions: readonly DelimiterRenameAction[],
+		undo: VamUndoReport,
+	) {
 		const placements = new Map<DelimiterRenameAction, Placement>();
-		for (const [index, action] of moved.entries()) {
-			const inverse = inverses[index];
-			const entry =
-				report && inverse ? entryFor(report, inverse) : undefined;
-			if (entry?.status === "Done") {
-				placements.set(action, "Old");
-				continue;
-			}
-			if (entry?.status === "Failed" || entry?.status === "Uncertain") {
-				failures.push(describeFailure(action, entry.error));
-			} else if (failure !== undefined) {
-				failures.push(
-					describeFailure(
-						action,
-						failure instanceof VamDispatchFailure
-							? failure.reason
-							: failure,
-					),
-				);
-			}
-			// A skipped inverse left the note where it was. A failed one
-			// changed nothing, but may have failed because the note is not
-			// under its new name any more, so the vault says where it is.
+		const failures: DelimiterActionFailure[] = [];
+		for (const { action: undone } of undo.undone) {
+			const action = planned(actions, undone);
+			if (action) placements.set(action, "Restored");
+		}
+		for (const blocked of undo.couldNotUndo) {
+			const action = planned(actions, blocked.action);
+			if (!action) continue;
+			if (blocked.error)
+				failures.push(describeFailure(action, blocked.error));
+			const placement =
+				blocked.block === "Unknown"
+					? ("Unresolved" as const)
+					: blocked.block === "NotRun"
+						? ("Moved" as const)
+						: yield* this.probe(action);
 			placements.set(
 				action,
-				entry?.status === "Skipped"
-					? "Moved"
-					: yield* this.probe(action),
+				placement === "Old" ? "Restored" : placement,
 			);
 		}
 		return { failures, placements };
 	});
+
+	/**
+	 * Where every planned note sits, read from the vault, for a dispatch
+	 * that answered no undo report: nothing was renamed back.
+	 */
+	private readonly placeByProbing = Effect.fnUntraced(function* (
+		this: DelimiterChangeService,
+		actions: readonly DelimiterRenameAction[],
+	) {
+		const placements = new Map<DelimiterRenameAction, Placement>();
+		for (const action of actions) {
+			const placement = yield* this.probe(action);
+			if (placement !== "Old") placements.set(action, placement);
+		}
+		return { failures: [] as DelimiterActionFailure[], placements };
+	});
+
+	/** Where a note sits now, between its old and its new name; read from the vault. */
+	private probe(
+		action: DelimiterRenameAction,
+	): Effect.Effect<"Old" | "Moved" | "Unresolved"> {
+		return Effect.all([
+			this.vam.exists(action.payload.from),
+			this.vam.exists(action.payload.to),
+		]).pipe(
+			Effect.map(([atOld, atNew]) => {
+				if (atOld && !atNew) return "Old" as const;
+				if (atNew && !atOld) return "Moved" as const;
+				return "Unresolved" as const;
+			}),
+			Effect.catchCause(() => Effect.succeed("Unresolved" as const)),
+		);
+	}
 }
 
 function completed(
@@ -376,31 +329,17 @@ function conflictError(
 	});
 }
 
-/** The rename that moves a note from its new name back to its old one. */
-function invert(action: DelimiterRenameAction): DelimiterRenameAction {
-	return Object.freeze({
-		kind: VaultActionKind.RenameMdFile,
-		// Same link and collision policies as the forward rename, so the
-		// links it rewrote are rewritten back, and a taken old name fails.
-		payload: Object.freeze({
-			...action.payload,
-			from: action.payload.to,
-			to: action.payload.from,
-		}),
-	});
-}
-
 function failureFromCause(cause: Cause.Cause<unknown>): unknown {
 	const reason = cause.reasons.find(Cause.isFailReason);
 	return reason ? reason.error : Cause.squash(cause);
 }
 
-/** The report's entry for a rename, matched by path: VAM plans its own copies. */
-function entryFor(
-	report: VamDispatchReport,
-	action: DelimiterRenameAction,
-): VamDispatchEntry | undefined {
-	return report.entries.find((entry) => sameRename(entry.action, action));
+/** The planned rename a report names, matched by path: VAM plans its own copies. */
+function planned(
+	actions: readonly DelimiterRenameAction[],
+	reported: VaultAction,
+): DelimiterRenameAction | undefined {
+	return actions.find((action) => sameRename(reported, action));
 }
 
 /** One path, as Obsidian's lookup tells: a case-only rename is a move. */

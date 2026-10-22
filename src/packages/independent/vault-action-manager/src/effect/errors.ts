@@ -300,6 +300,19 @@ export class VamShutdownError extends Schema.TaggedError<VamShutdownError>()(
 	}
 }
 
+/** Why a Dispatch Batch failed: its first failed action, or what kept it from running. */
+export const VamDispatchFailureReasonSchema = Schema.Union([
+	VamPlanningError,
+	VamProtectedPathError,
+	VamDispatchOverflowError,
+	VamShutdownError,
+	VamSetupError,
+	VamDispatchError,
+]);
+
+export type VamDispatchFailureReason =
+	typeof VamDispatchFailureReasonSchema.Type;
+
 export type VamEffectError =
 	| VamSetupError
 	| VamActiveEditorError

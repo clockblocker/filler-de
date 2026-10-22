@@ -10,6 +10,7 @@ import {
 	type BulkVaultEvent,
 	isContentConflict,
 	type VamActionFailureKind,
+	type VamUndoReport,
 	type VaultAction,
 	VaultActionKind,
 	VaultEventKind,
@@ -267,8 +268,10 @@ export type DumdictVaultStore = {
 	 *    and of the Crossroad notes of every spelling the change touches;
 	 * 4. removed Reading notes, then removed Lemma notes, to the trash.
 	 *
-	 * A failure among the creates removes the notes it created and answers
-	 * a conflict, as if nothing was written. A later failure rebuilds the
+	 * A failure among the creates removes the notes it created, through
+	 * VAM's guarded `dispatchOrUndo`, and answers a conflict, as if nothing
+	 * was written; a note it could not remove, such as one typed into
+	 * meanwhile, makes it a `DictionaryWriteError`. A later failure rebuilds the
 	 * index from the files and writes what is still missing once more; only
 	 * if that fails too is a `DictionaryWriteError` returned, with the index
 	 * rebuilt. Every rebuild re-evaluates the stored Shadows the files'
@@ -424,6 +427,21 @@ const EXTERNAL_CHANGE_KINDS: ReadonlySet<VamActionFailureKind> = new Set([
 class StaleRead extends Data.TaggedError("StaleRead")<{
 	readonly path: string;
 }> {}
+
+/**
+ * The notes a stopped create phase leaves behind: those VAM's undo could
+ * not trash (one gone already is not left), Uncertain creates it found
+ * landed among them. Without an undo report, every create that landed.
+ */
+function createsLeft(
+	landed: readonly { readonly path: string }[],
+	undo: VamUndoReport | undefined,
+): string[] {
+	if (!undo) return landed.map(({ path }) => path);
+	return undo.couldNotUndo
+		.filter(({ block }) => block !== "Missing")
+		.map(({ action }) => vaultActionTargetPath(action));
+}
 
 /** The order a commit's writes land in; see `commitChanges`. */
 const Phase = {
@@ -677,6 +695,16 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			vault.dispatchStopOnFirstFailure(actions, {
 				caller: DICTIONARY_CALLER,
 			}),
+		).pipe(Effect.onInterrupt(() => markStale));
+
+	/**
+	 * The creates' dispatch: VAM's `dispatchOrUndo`, which on a failure
+	 * trashes each note the batch created while it holds what it was
+	 * created with, and probes an uncertain create rather than assume it.
+	 */
+	const dispatchOrUndo = (actions: readonly VaultAction[]) =>
+		Effect.uninterruptible(
+			vault.dispatchOrUndo(actions, { caller: DICTIONARY_CALLER }),
 		).pipe(Effect.onInterrupt(() => markStale));
 
 	/** Reads one path into its entry; undefined when no file is there. */
@@ -1621,6 +1649,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				readonly externalChange: boolean;
 				/** VAM failed the write that stopped as `io`. */
 				readonly transient: boolean;
+				/** What VAM took back of a stopped create phase. */
+				readonly undo?: VamUndoReport;
 		  };
 
 	/**
@@ -1636,8 +1666,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		for (const phase of PHASES) {
 			const batch = writes.filter((write) => write.phase === phase);
 			if (batch.length === 0) continue;
+			const actions = batch.map(({ action }) => action);
 			const outcome = yield* Effect.result(
-				dispatch(batch.map(({ action }) => action)),
+				phase === Phase.Create
+					? dispatchOrUndo(actions)
+					: dispatch(actions),
 			);
 			if (outcome._tag === "Success") {
 				landed.push(...batch);
@@ -1677,6 +1710,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				],
 				transient:
 					reason._tag === "VamDispatchError" && reason.kind === "io",
+				...(failure.report.undo ? { undo: failure.report.undo } : {}),
 			};
 		}
 		return { _tag: "Done", landed, missed };
@@ -2246,38 +2280,19 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			return { nextRevision: yield* done(first), status: "committed" };
 
 		if (first.phase === Phase.Create) {
-			// Only new files landed: send them back to the trash, as if the
-			// commit had never run, and let the caller plan again.
-			const rollback =
-				first.landed.length === 0
-					? ({ _tag: "Success" } as const)
-					: yield* Effect.result(
-							dispatch(
-								first.landed.map(
-									({ content, path }): VaultAction => ({
-										kind: VaultActionKind.TrashMdFile,
-										// A note typed into since it was
-										// created is not the commit's to undo.
-										payload: {
-											...(content === undefined
-												? {}
-												: { ifContent: content }),
-											splitPath: mdSplitPath(path),
-										},
-									}),
-								),
-							),
-						);
+			// Only new files landed, and VAM took back what it could: with
+			// all of them gone, the commit never ran, and the caller plans
+			// again.
+			const left = createsLeft(first.landed, first.undo);
 			const rebuilt = yield* recover;
-			if (rollback._tag === "Success")
-				return conflict("revisionConflict");
+			if (left.length === 0) return conflict("revisionConflict");
 			yield* converge({}, depth + 1);
 			if (rebuilt) yield* regenerateCrossroads();
 			return yield* new DictionaryWriteError({
 				cause: first.cause,
-				executed: first.landed.map(({ path }) => path),
+				executed: left,
 				externalChange: first.externalChange,
-				message: `The commit's creates stopped and could not be undone: ${message(first.cause)}. The index was ${rebuilt ? "rebuilt from the files" : "not rebuilt; the next operation retries"}.`,
+				message: `The commit's creates stopped and could not be undone (${left.join(", ")}): ${message(first.cause)}. The index was ${rebuilt ? "rebuilt from the files" : "not rebuilt; the next operation retries"}.`,
 				rebuilt,
 				skipped: first.skipped.map(({ path }) => path),
 				transient: first.transient,

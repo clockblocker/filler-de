@@ -2,13 +2,16 @@ import {
 	type BulkMdModifyEvent,
 	type BulkVaultEvent,
 	type BulkVaultEventHandler,
+	dispatchOrUndoVia,
 	EXTERNAL_ORIGIN,
 	type ExpectedContent,
 	type MdModifyEventHandler,
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
 	splitPathCodec,
+	type VamActionOutcome,
 	VamContentConflictError,
+	type VamDispatchEntry,
 	VamDispatchError,
 	VamDispatchFailure,
 	VamDispatchReport,
@@ -18,6 +21,7 @@ import {
 	VamVaultIoError,
 	type VaultAction,
 	VaultActionKind,
+	type VaultActionManager,
 	type VaultEvent,
 	VaultEventKind,
 	type VaultEventOrigin,
@@ -93,7 +97,7 @@ export const vamWrite = (caller: string): VaultEventOrigin => ({
 
 /**
  * An in-memory vault behind the store's VAM port. Store writes go through
- * `dispatchStopOnFirstFailure` and fire no events: the store subscribes to
+ * `dispatchStopOnFirstFailure` or `dispatchOrUndo` and fire no events: the store subscribes to
  * every origin but its own, as VAM delivers them. The `user*` methods change
  * files as a user or Sync would, or, given an `origin`, as another VAM
  * caller would, and deliver the events VAM would to the subscriptions that
@@ -133,14 +137,22 @@ export class FakeVault implements DictionaryVault {
 			.sort();
 	}
 
-	/** Makes later writes whose action matches fail, `times` times. */
+	/**
+	 * Makes later writes whose action matches fail, `times` times, as
+	 * `io`: VAM reports them `Uncertain`. With `landBeforeFailing`, each
+	 * lands first.
+	 */
 	failNextWrite(
 		when: (action: VaultAction, path: string) => boolean,
 		times = 1,
+		{ landBeforeFailing = false } = {},
 	): void {
 		this.failWhen = when;
 		this.failTimes = times;
+		this.landBeforeFailing = landBeforeFailing;
 	}
+
+	private landBeforeFailing = false;
 
 	private failTimes = 0;
 	scanCount = 0;
@@ -236,29 +248,39 @@ export class FakeVault implements DictionaryVault {
 			} as const);
 		});
 
-	dispatchStopOnFirstFailure: DictionaryVault["dispatchStopOnFirstFailure"] =
-		(actions, { caller, operationId = `${caller}#1` }) =>
-			Effect.promise(async () => {
-				this.batches.push([...actions]);
-				const executed: VaultAction[] = [];
-				for (const [index, action] of actions.entries()) {
-					const path = actionPath(action);
-					const fail = this.failWhen?.(action, path) ?? false;
-					let failure: unknown = fail
-						? new Error(`Injected failure at ${path}`)
-						: null;
-					if (fail) {
-						this.failTimes -= 1;
-						if (this.failTimes <= 0) this.failWhen = null;
+	/** Runs a batch as VAM would, with an accurate report. */
+	dispatchWithReport: VaultActionManager["dispatchWithReport"] = (
+		actions,
+		{ caller, operationId = `${caller}#1`, stopOnFirstFailure = false },
+	) =>
+		Effect.promise(async () => {
+			this.batches.push([...actions]);
+			const entries: VamDispatchEntry[] = [];
+			for (const [index, action] of actions.entries()) {
+				const path = actionPath(action);
+				const fail = this.failWhen?.(action, path) ?? false;
+				let failure: unknown = null;
+				let outcome: VamActionOutcome | undefined;
+				if (fail) {
+					this.failTimes -= 1;
+					if (this.failTimes <= 0) this.failWhen = null;
+					// An action that lands and then fails, as an editor
+					// selection restore after a rename may.
+					if (this.landBeforeFailing) await this.execute(action);
+					failure = new Error(`Injected failure at ${path}`);
+				} else
+					try {
+						outcome = await this.execute(action);
+					} catch (cause) {
+						failure = cause;
 					}
-					if (!failure)
-						try {
-							await this.execute(action);
-						} catch (cause) {
-							failure = cause;
-						}
-					if (failure) {
-						const error = new VamDispatchError({
+				if (outcome) {
+					entries.push({ action, outcome, status: "Done" });
+					continue;
+				}
+				entries.push(
+					VamDispatchReport.entryFor(
+						new VamDispatchError({
 							action,
 							cause: failure,
 							kind:
@@ -268,40 +290,46 @@ export class FakeVault implements DictionaryVault {
 										? "exists"
 										: "io",
 							operation: "execute",
-						});
-						return new VamDispatchFailure({
-							reason: error,
-							report: new VamDispatchReport({
-								caller,
-								entries: [
-									...executed.map((done) => ({
-										action: done,
-										outcome: { _tag: "Created" } as const,
-										status: "Done" as const,
-									})),
-									VamDispatchReport.entryFor(error),
-									...actions
-										.slice(index + 1)
-										.map((skipped) => ({
-											action: skipped,
-											status: "Skipped" as const,
-										})),
-								],
-								operationId,
-							}),
-						});
-					}
-					executed.push(action);
-				}
-				return null;
-			}).pipe(
-				Effect.flatMap((stopped) =>
-					stopped ? Effect.fail(stopped) : Effect.void,
-				),
+						}),
+					),
+				);
+				if (!stopOnFirstFailure) continue;
+				for (const skipped of actions.slice(index + 1))
+					entries.push({ action: skipped, status: "Skipped" });
+				break;
+			}
+			return new VamDispatchReport({ caller, entries, operationId });
+		}).pipe(
+			Effect.flatMap((report) => {
+				const failure = VamDispatchFailure.ofReport(report);
+				return failure ? Effect.fail(failure) : Effect.succeed(report);
+			}),
+		);
+
+	dispatchStopOnFirstFailure: DictionaryVault["dispatchStopOnFirstFailure"] =
+		(actions, caller) =>
+			Effect.asVoid(
+				this.dispatchWithReport(actions, {
+					...caller,
+					stopOnFirstFailure: true,
+				}),
 			);
 
+	/** VAM's own guarded undo, over this vault. */
+	dispatchOrUndo: DictionaryVault["dispatchOrUndo"] = (actions, options) =>
+		dispatchOrUndoVia(this, actions, options);
+
+	/** Reads without counting, as VAM's undo probes do. */
+	readContent = (splitPath: SplitPathToMdFile) =>
+		Effect.suspend(() => {
+			const file = this.files.get(format(splitPath));
+			return file
+				? Effect.succeed(file.content)
+				: Effect.fail(new Error(`No file at ${format(splitPath)}`));
+		});
+
 	/** Runs one action as VAM and Obsidian would, collisions included. */
-	private async execute(action: VaultAction) {
+	private async execute(action: VaultAction): Promise<VamActionOutcome> {
 		switch (action.kind) {
 			case VaultActionKind.CreateFile:
 			case VaultActionKind.CreateMdFile: {
@@ -314,17 +342,37 @@ export class FakeVault implements DictionaryVault {
 						operation: "createFile.exists",
 						path,
 					});
-				this.put(path, action.payload.content ?? "");
-				return;
+				const content = action.payload.content ?? "";
+				this.put(path, content);
+				return {
+					_tag: "Created",
+					contentHash: vaultContentHash(content),
+				};
 			}
 			case VaultActionKind.UpsertMdFile: {
 				// VAM overwrites an existing file's content.
 				const path = format(action.payload.splitPath);
 				const { content } = action.payload;
-				if (content === null || content === undefined) {
-					if (!this.files.has(path)) this.put(path, "");
-				} else this.put(path, content);
-				return;
+				const before = this.files.get(path)?.content;
+				if (before === undefined) {
+					this.put(path, content ?? "");
+					return {
+						_tag: "Created",
+						contentHash: vaultContentHash(content ?? ""),
+					};
+				}
+				if (
+					content === null ||
+					content === undefined ||
+					content === before
+				)
+					return { _tag: "NoOp" };
+				this.put(path, content);
+				return {
+					_tag: "Wrote",
+					afterHash: vaultContentHash(content),
+					beforeHash: vaultContentHash(before),
+				};
 			}
 			case VaultActionKind.ProcessMdFile: {
 				// VAM processes only an existing file; it does not create one.
@@ -341,8 +389,14 @@ export class FakeVault implements DictionaryVault {
 					"transform" in payload
 						? await payload.transform(file.content)
 						: file.content.replace(payload.before, payload.after);
-				if (next !== file.content) this.put(path, next);
-				return;
+				if (next === file.content) return { _tag: "NoOp" };
+				const before = file.content;
+				this.put(path, next);
+				return {
+					_tag: "Wrote",
+					afterHash: vaultContentHash(next),
+					beforeHash: vaultContentHash(before),
+				};
 			}
 			case VaultActionKind.RenameMdFile: {
 				const from = format(action.payload.from);
@@ -350,25 +404,28 @@ export class FakeVault implements DictionaryVault {
 				const file = this.files.get(from);
 				const target = this.files.get(to);
 				if (!file) {
-					if (target) return; // VAM treats a done rename as done.
+					if (target) return { _tag: "NoOp" }; // VAM treats a done rename as done.
 					throw new Error(`Both ${from} and ${to} are missing`);
 				}
 				if (target) {
 					// VAM trashes a same-content source, else renames it aside.
 					if (target.content === file.content) {
 						this.files.delete(from);
-						return;
+						return { _tag: "TrashedDuplicate" };
 					}
 					const base = to.slice(0, -".md".length);
 					let index = 1;
 					while (this.files.has(`${base} ${index}.md`)) index += 1;
 					this.files.delete(from);
 					this.files.set(`${base} ${index}.md`, file);
-					return;
+					return {
+						_tag: "RenamedToIndexed",
+						to: mdPath(`${base} ${index}.md`),
+					};
 				}
 				this.files.delete(from);
 				this.files.set(to, file);
-				return;
+				return { _tag: "Renamed", to: action.payload.to };
 			}
 			case VaultActionKind.TrashMdFile: {
 				// VAM trashes a guarded note only while it holds `ifContent`.
@@ -381,8 +438,9 @@ export class FakeVault implements DictionaryVault {
 					!matches(file.content, ifContent)
 				)
 					throw conflict("trashFile.ifContent", path);
+				if (!file) return { _tag: "NoOp" };
 				this.files.delete(path);
-				return;
+				return { _tag: "Trashed" };
 			}
 			default:
 				throw new Error(`The fake vault does not run ${action.kind}`);
