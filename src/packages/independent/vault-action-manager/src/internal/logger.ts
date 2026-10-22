@@ -1,49 +1,17 @@
-type LogMethod = "error" | "info" | "warn";
+const sink = globalThis.console;
 
-type LogSink = {
-	[Method in LogMethod]: (message: string) => void;
-};
-
-function formatMessage(message: string, args: readonly unknown[]): string {
-	if (args.length === 0) {
-		return message;
-	}
-
-	const rendered = args.map((arg) => {
-		if (typeof arg === "object") {
-			try {
-				return JSON.stringify(arg, null, 2);
-			} catch {
-				return "[Object]";
-			}
-		}
-		if (arg === null || arg === undefined) {
-			return String(arg);
-		}
-		return String(arg);
-	});
-
-	return `${message} ${rendered.join(" ")}`;
-}
-
-const sink: LogSink = globalThis.console;
-
-function write(
-	method: LogMethod,
-	message: string,
-	args: readonly unknown[],
-): void {
-	sink[method](formatMessage(message, args));
-}
-
+/**
+ * VAM's plain logger. It hands its arguments to `console` as they are, so
+ * devtools can inspect them and an `Error` keeps its message and stack.
+ */
 export const logger = {
 	error(message: string, ...args: unknown[]): void {
-		write("error", message, args);
+		sink.error(message, ...args);
 	},
 	info(message: string, ...args: unknown[]): void {
-		write("info", message, args);
+		sink.info(message, ...args);
 	},
 	warn(message: string, ...args: unknown[]): void {
-		write("warn", message, args);
+		sink.warn(message, ...args);
 	},
 };

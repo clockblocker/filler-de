@@ -21,8 +21,8 @@
  * more; the freeform text of what was regenerated is still re-attached,
  * and the report still written.
  */
+import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import { Cause, Deferred, Effect, Option } from "effect";
-import { getErrorMessage } from "../../utils/get-error-message";
 import {
 	type ClassifyError,
 	type ClassifySegmenter,
@@ -307,7 +307,7 @@ const regenerateOne = Effect.fnUntraced(function* (
 				? Effect.failCause(cause)
 				: Effect.succeed({
 						_tag: "Failed",
-						reason: `Classify failed unexpectedly: ${getErrorMessage(Cause.squash(cause))}`,
+						reason: `Classify failed unexpectedly: ${formatCause(cause, { stack: false })}`,
 					} as const),
 		),
 	);

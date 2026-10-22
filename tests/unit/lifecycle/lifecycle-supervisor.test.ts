@@ -42,9 +42,12 @@ function makeHarness(options: { readonly autoStart?: boolean } = {}) {
 	let storeLoaded: Deferred.Deferred<void, unknown> = Deferred.makeUnsafe();
 	Deferred.doneUnsafe(storeLoaded, Effect.void);
 
-	const notices = createLifecycleNotices((message, { sticky }) => {
-		shown.push({ message, sticky });
-	});
+	const notices = createLifecycleNotices(
+		(message, { sticky }) => {
+			shown.push({ message, sticky });
+		},
+		{ writeStop: () => {} },
+	);
 	const supervisor = createLifecycleSupervisor<FakeLibrarian>({ notices });
 
 	const makeLibrarian = (

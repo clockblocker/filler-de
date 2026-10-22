@@ -13,6 +13,7 @@ import {
 	Semaphore,
 } from "effect";
 import { type App, type EventRef, type TAbstractFile, TFile } from "obsidian";
+import { formatCause } from "../../diagnostics/format-cause";
 import { VamSubscriptionError } from "../../effect/errors";
 import { splitPathFromAbstractInternal } from "../../helpers/pathfinder/path-codecs/split-and-abstract/split-path-from-abstract";
 import { logger } from "../../internal/logger";
@@ -685,7 +686,7 @@ export class VaultObservation<
 			Effect.catchCause((cause) =>
 				Effect.logError(
 					"[VaultObservation] Vault callback failed",
-					Cause.squash(cause),
+					cause,
 				),
 			),
 		);
@@ -693,7 +694,7 @@ export class VaultObservation<
 		if (Exit.isFailure(exit)) {
 			logger.error(
 				"[VaultObservation] Vault callback logging failed",
-				Cause.squash(exit.cause),
+				formatCause(exit.cause),
 			);
 		}
 	}
@@ -749,7 +750,7 @@ const acquireVaultListener = Effect.fn("VaultObservation.acquireListener")(
 					Effect.catchCause((cause) =>
 						Effect.logError(
 							`[VaultObservation] Failed to release ${kind} listener`,
-							Cause.squash(cause),
+							cause,
 						),
 					),
 				),

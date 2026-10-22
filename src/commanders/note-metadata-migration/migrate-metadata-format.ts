@@ -14,7 +14,8 @@ import {
 	VaultActionKind,
 	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
-import { Cause, Effect, Exit, Result } from "effect";
+import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
+import { Effect, Exit, Result } from "effect";
 import {
 	type AnyMetadataNamespace,
 	type FormatConversion,
@@ -129,7 +130,7 @@ export const migrateMetadataFormat = Effect.fn("migrateMetadataFormat")(
 				if (Exit.isSuccess(written)) converted.push(path);
 				else
 					failed.push({
-						message: message(Cause.squash(written.cause)),
+						message: formatCause(written.cause, { stack: false }),
 						path,
 					});
 			}

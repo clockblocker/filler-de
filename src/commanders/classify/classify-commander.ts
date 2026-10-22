@@ -5,6 +5,7 @@
  * user what it found. The resolver commits each unit's Reading and links
  * its Segments (#64); this command writes nothing itself.
  */
+import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import type { Dumgen } from "dumgen";
 import { Cause, Effect, Layer } from "effect";
 import { getErrorMessage } from "../../utils/get-error-message";
@@ -215,7 +216,7 @@ export class ClassifyCommander {
 							notify("⚠ Classify failed unexpectedly");
 							logger.error(
 								"[Classify] Failed:",
-								Cause.pretty(cause),
+								formatCause(cause),
 							);
 						}),
 			),
