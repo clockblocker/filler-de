@@ -82,11 +82,13 @@ type PreImages = ReadonlyMap<string, PreImage>;
  * the files it writes, and, for each path a create or a rename targets,
  * whether something was there (`undefined` when the lookup failed). A probe
  * never takes a file that was there before for one the batch put there.
- * An `Uncertain` entry's own `targetTaken`, looked up as its action ran,
- * replaces the target's record here: a file can arrive at the target, or
- * leave it, while the batch waits in the queue. The record here serves a
- * port whose entries do not say, and actions a dying dispatch never
- * reported.
+ * An `Uncertain` entry's own `targetTaken`, from its action's collision
+ * check immediately before it wrote or moved, replaces the target's record
+ * here: a file can arrive at the target, or leave it, while the batch waits
+ * in the queue or the rename reads ahead of its move. The record here
+ * serves a port whose entries do not say, actions a dying dispatch never
+ * reported, and actions that failed before their check, which moved
+ * nothing.
  */
 type BeforeBatch = {
 	readonly images: PreImages;
@@ -563,7 +565,7 @@ function renameFrom(
  * Whether an `Uncertain` action landed, from the vault as it is now. Only
  * evidence counts: a rename landed when its file is at `to` and not at
  * `from`, a create when its file holds what it was created with, and
- * neither when something was at its target as it ran, since that may be
+ * neither when something was at its target when it ran, since that may be
  * what is there now (a rename that went to an indexed name or trashed a
  * duplicate, a create VAM refused). `targetTaken` is the entry's record of
  * that; without one, the record from before the batch stands in.

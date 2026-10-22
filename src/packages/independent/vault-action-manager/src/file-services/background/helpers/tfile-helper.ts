@@ -1,5 +1,6 @@
 import { Effect, Exit, Result } from "effect";
 import { type TAbstractFile, TFile } from "obsidian";
+import { recordTargetTaken } from "../../../effect/current-operation";
 import type { VamActionOutcome } from "../../../effect/dispatch-report";
 import {
 	VamContentConflictError,
@@ -215,6 +216,7 @@ export class TFileHelper {
 			const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
 			yield* Effect.annotateCurrentSpan({ path: systemPath });
 			const occupant = yield* occupantOf(splitPath, paths);
+			yield* recordTargetTaken(occupant !== undefined);
 			if (occupant)
 				return yield* targetExists(
 					"createFile.exists",
@@ -295,6 +297,7 @@ export class TFileHelper {
 			if (fromFile === toFile) return { file: fromFile, outcome: NO_OP };
 			const occupant =
 				toFile ?? (yield* occupantOf(to, this.paths, fromFile));
+			yield* recordTargetTaken(occupant !== undefined);
 			return occupant
 				? yield* this.handleTargetCollision(
 						fromFile,

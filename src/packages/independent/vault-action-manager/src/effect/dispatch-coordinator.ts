@@ -2,7 +2,6 @@ import {
 	Cause,
 	Deferred,
 	Effect,
-	Exit,
 	Fiber,
 	Option,
 	Queue,
@@ -37,9 +36,12 @@ import type {
 } from "../types/split-path";
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionKind } from "../types/vault-action";
-import { CurrentVamOperation } from "./current-operation";
 import {
-	actionTarget,
+	CurrentTargetCheck,
+	CurrentVamOperation,
+	type TargetCheck,
+} from "./current-operation";
+import {
 	type VamDispatchEntry,
 	VamDispatchFailure,
 	VamDispatchReport,
@@ -648,9 +650,10 @@ export class DispatchBatchWorker {
 	 * Opening the window cannot fail, so every planned action that runs gets
 	 * exactly one report entry, from its own execution.
 	 *
-	 * At the same moment it looks up the target of a create or a rename, so
-	 * an `Uncertain` entry says whether something was there when the action
-	 * ran, not when the batch was submitted (#202).
+	 * A create or a rename records what its own collision check found at
+	 * its target, immediately before it wrote or moved, so an `Uncertain`
+	 * entry says whether the target was taken as the action ran, not when
+	 * the batch was submitted (#202).
 	 */
 	private runAction(
 		action: VaultAction,
@@ -658,13 +661,15 @@ export class DispatchBatchWorker {
 	): Effect.Effect<VamDispatchEntry, never, VamLiveServices> {
 		return Effect.acquireUseRelease(
 			this.selfEventTracker.beginEffect(action, operation),
-			() =>
-				Effect.zipWith(
-					targetTaken(action),
-					this.executeAction(action, operation),
-					(taken, entry) =>
-						VamDispatchReport.withTargetTaken(entry, taken),
-				),
+			() => {
+				const check: TargetCheck = { taken: undefined };
+				return this.executeAction(action, operation).pipe(
+					Effect.provideService(CurrentTargetCheck, check),
+					Effect.map((entry) =>
+						VamDispatchReport.withTargetTaken(entry, check.taken),
+					),
+				);
+			},
 			() => this.selfEventTracker.finishEffect(action),
 		);
 	}
@@ -861,27 +866,6 @@ export class DispatchBatchWorker {
 		}
 		return current;
 	}
-}
-
-/**
- * Whether anything is at the path a create or a rename targets, as
- * Obsidian looks it up; `undefined` for other actions and when the lookup
- * fails.
- */
-function targetTaken(
-	action: VaultAction,
-): Effect.Effect<boolean | undefined, never, VamLiveServices> {
-	const target = actionTarget(action);
-	if (!target) return Effect.succeed(undefined);
-	return Effect.exit(
-		VaultIo.use((vault) =>
-			vault.getAbstractFileByPath(splitPathCodec.format(target)),
-		),
-	).pipe(
-		Effect.map((exit) =>
-			Exit.isSuccess(exit) ? exit.value !== null : undefined,
-		),
-	);
 }
 
 /** The span attributes that line a batch's spans up with its events. */

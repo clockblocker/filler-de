@@ -72,9 +72,10 @@ export type VamActionOutcome = typeof VamActionOutcomeSchema.Type;
  *   `missing`).
  * - `Uncertain`: it failed and may have changed the vault, such as a rename
  *   that moved the file and then could not restore the editor selection.
- *   For a create or a rename, `targetTaken` says whether something was at
- *   its target (a rename's `to`) immediately before it ran, as Obsidian
- *   looks the path up; it is absent when the lookup failed.
+ *   For a create or a rename, `targetTaken` says whether something held
+ *   its target (a rename's `to`), as the vault's file system compares
+ *   names, by the collision check the action made immediately before it
+ *   wrote or moved; it is absent when the action failed before that check.
  * - `Skipped`: it never ran.
  */
 export const VamDispatchEntrySchema = Schema.Union([
@@ -150,8 +151,8 @@ export class VamDispatchReport extends Schema.Class<VamDispatchReport>(
 	}
 
 	/**
-	 * `entry` with whether its action's target was taken just before it
-	 * ran, kept only on an `Uncertain` entry, where a probe needs it.
+	 * `entry` with whether its action's target was taken when its collision
+	 * check ran, kept only on an `Uncertain` entry, where a probe needs it.
 	 */
 	static withTargetTaken(
 		entry: VamDispatchEntry,

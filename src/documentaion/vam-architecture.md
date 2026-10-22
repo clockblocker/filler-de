@@ -331,9 +331,11 @@ The report has one entry per planned action, in the order VAM ran them. Its
 - `Uncertain`, with its `VamDispatchError`: it failed and may have changed
   the vault, such as a rename that moved the file and then could not restore
   the editor selection. A create's or rename's entry also has `targetTaken`:
-  whether something was at its target (a rename's `to`) immediately before
-  it ran, as Obsidian looks the path up, when its Self Event window opened.
-  It is absent when the lookup failed.
+  whether something held its target (a rename's `to`), as the vault's file
+  system compares names, by the collision check the action made immediately
+  before it wrote or moved. It is absent when the action failed before that
+  check, and so moved nothing. The check is the one the action makes anyway,
+  so recording it costs no lookup.
 - `Skipped`: it never ran.
 
 A `VamDispatchError` names its typed `action` and a `kind`: `conflict` (the
@@ -398,11 +400,13 @@ path was taken did not land, and a rename whose target was taken, which
 may have gone to an indexed name or trashed a duplicate, is `Unknown`,
 unless it changes only its own name's case. The entry's `targetTaken`
 says whether it was taken, so a file that reaches the target, or leaves
-it, while the batch waits in the queue counts as it stood when the action
-ran (#202). An entry without one falls back to a lookup `dispatchOrUndo`
-makes before it submits the batch: a bare `VamUndoPort`'s entries, a
-failed lookup, and a `dispatchWithReport` that dies, which counts every
-action as `Uncertain`. Only a landed action is inverted, under the same
+it, while the batch waits in the queue, or while a rename reads link
+sources and protected files ahead of its move, counts as it stood when
+the action moved (#202). An entry without one falls back to a lookup
+`dispatchOrUndo` makes before it submits the batch: a bare
+`VamUndoPort`'s entries, an action that failed before its check, and a
+`dispatchWithReport` that dies, which counts every action as
+`Uncertain`. Only a landed action is inverted, under the same
 guard; an `Unknown` one is `couldNotUndo` with block `Unknown`.
 
 Each inverse runs as its own one-action batch, in reverse run order, so

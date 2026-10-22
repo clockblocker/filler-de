@@ -667,6 +667,82 @@ describe("what was there before the batch", () => {
 		expect(harness.exists("Library/b.md")).toBe(false);
 	});
 
+	it("counts a target taken by another case of its name while the batch was queued", async () => {
+		const queue = queuedBehindAnotherBatch();
+		const { fileManager, harness } = queue;
+		harness.addFile("Library/a.md", "A");
+		const rename = fileManager.renameFile;
+		fileManager.renameFile = async (file, toPath) => {
+			await rename(file, toPath);
+			if (toPath === "Library/1_b.md")
+				throw new Error("selection restore failed");
+		};
+		const { failure, undo } = await queue.undoing(
+			[renameMd("Library/a.md", "Library/b.md", "index")],
+			() => harness.addFile("Library/B.md", "theirs"),
+		);
+		expect(failure.report.entries).toMatchObject([
+			{ status: "Uncertain", targetTaken: true },
+		]);
+		expect(undo.probed).toMatchObject([{ found: "Unknown" }]);
+		expect(undo.undone).toEqual([]);
+		expect(harness.contents.get("Library/B.md")).toBe("theirs");
+		expect(harness.contents.get("Library/1_b.md")).toBe("A");
+	});
+
+	it("never moves back a note that reached the target while the rename read a protected file ahead of its move", async () => {
+		const harness = makeVaultHarness();
+		const { dispose, manager } = createVaultActionManager(harness.app, {
+			fileSystem: { caseInsensitive: true },
+			protectedPaths: ["Exemplar"],
+		});
+		harness.addFile("Library/a.md", "A");
+		harness.addFile("Exemplar/x.md", "[[a]]");
+		harness.resolvedLinks["Exemplar/x.md"] = { "Library/a.md": 1 };
+		const vault = harness.app.vault as unknown as {
+			read: (file: TFile) => Promise<string>;
+		};
+		const read = vault.read;
+		vault.read = async (file) => {
+			// Arrives while VAM reads the exemplar's pre-image, after the
+			// batch began and before the move.
+			if (
+				file.path === "Exemplar/x.md" &&
+				!harness.exists("Library/b.md")
+			)
+				harness.addFile("Library/b.md", "theirs");
+			return read(file);
+		};
+		const fileManager = harness.app.fileManager as unknown as {
+			renameFile: (file: TAbstractFile, toPath: string) => Promise<void>;
+		};
+		const rename = fileManager.renameFile;
+		fileManager.renameFile = async (file, toPath) => {
+			await rename(file, toPath);
+			if (toPath === "Library/1_b.md")
+				throw new Error("selection restore failed");
+		};
+		const failure = await Effect.runPromise(
+			manager
+				.dispatchOrUndo(
+					[renameMd("Library/a.md", "Library/b.md", "index")],
+					{ caller: "test" },
+				)
+				.pipe(Effect.flip),
+		);
+		await Effect.runPromise(dispose);
+		expect(failure.report.entries).toMatchObject([
+			{ status: "Uncertain", targetTaken: true },
+		]);
+		expect(failure.report.undo?.probed).toMatchObject([
+			{ found: "Unknown" },
+		]);
+		expect(failure.report.undo?.undone).toEqual([]);
+		expect(harness.contents.get("Library/b.md")).toBe("theirs");
+		expect(harness.contents.get("Library/1_b.md")).toBe("A");
+		expect(harness.exists("Library/a.md")).toBe(false);
+	});
+
 	it("never trashes a note that was there before, when the dispatch dies", async () => {
 		const files = new Map([["Library/kept.md", "same"]]);
 		const inverses: VaultAction[] = [];
