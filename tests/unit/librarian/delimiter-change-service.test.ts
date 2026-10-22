@@ -26,7 +26,10 @@ import {
 	type DelimiterMigrationPlan,
 	planDelimiterMigration,
 } from "../../../src/commanders/librarian/runtime/delimiter-migration-plan";
-import { reportDelimiterMigration } from "../../../src/commanders/librarian/runtime/delimiter-migration-report";
+import {
+	needsLibrarianRestartRetry,
+	reportDelimiterMigration,
+} from "../../../src/commanders/librarian/runtime/delimiter-migration-report";
 import type { SuffixDelimiterConfig } from "../../../src/types";
 
 const oldConfig = { padded: false, symbol: "-" } satisfies SuffixDelimiterConfig;
@@ -690,7 +693,7 @@ describe("delimiter migration report", () => {
 
 		expect(report).toEqual({
 			keepsNewDelimiter: false,
-			librarianRestarted: false,
+			librarianReinitialized: false,
 			log: expect.stringContaining("renamed back: Library/alpha-beta.md"),
 			notice: 'Delimiter change failed: could not rename Library/gamma-delta.md → Library/gamma ~ delta.md (rename rejected). Renamed the 1 file(s) already changed back to "-". Kept the delimiter "-".',
 			persistent: false,
@@ -708,7 +711,7 @@ describe("delimiter migration report", () => {
 
 		expect(reportDelimiterMigration(outcome, delimiters)).toEqual({
 			keepsNewDelimiter: true,
-			librarianRestarted: true,
+			librarianReinitialized: true,
 			log: null,
 			notice: 'Renamed 1 file(s) to use " ~ ".',
 			persistent: false,
@@ -726,14 +729,36 @@ describe("delimiter migration report", () => {
 			).migrate(oldConfig, newConfig, root),
 		);
 
-		const report = reportDelimiterMigration(outcome, delimiters);
+		expect(needsLibrarianRestartRetry(outcome)).toBe(true);
+		const report = reportDelimiterMigration(outcome, delimiters, false);
 
 		expect(report.keepsNewDelimiter).toBe(true);
-		expect(report.librarianRestarted).toBe(false);
+		// The one retry failed: saving the settings must not try again.
+		expect(report.librarianReinitialized).toBe(true);
 		expect(report.persistent).toBe(true);
 		expect(report.notice).toBe(
-			'Renamed 1 file(s) to use " ~ " and kept that delimiter, but the Librarian failed to restart: reinit failed.',
+			'Renamed 1 file(s) to use " ~ " and kept that delimiter, but the Librarian did not restart. The Librarian stopped: it could not heal the library at startup. Reason: reinit failed. Run "Restart Librarian" from the command palette to try again. Details are in the developer console.',
 		);
+	});
+
+	test("a restart that succeeds on its retry reports a plain completion", async () => {
+		const harness = makeHarness([readableMdPath("alpha-beta")]);
+		const outcome = await Effect.runPromise(
+			new DelimiterMigrationCoordinator(
+				harness.service,
+				harness.lifecycle({
+					restore: () => Effect.fail(new Error("reinit failed")),
+				}),
+			).migrate(oldConfig, newConfig, root),
+		);
+
+		expect(reportDelimiterMigration(outcome, delimiters, true)).toEqual({
+			keepsNewDelimiter: true,
+			librarianReinitialized: true,
+			log: expect.stringContaining("reinit failed"),
+			notice: 'Renamed 1 file(s) to use " ~ ".',
+			persistent: false,
+		});
 	});
 
 	test("a restart failure after a rollback keeps the old delimiter", async () => {
@@ -754,9 +779,11 @@ describe("delimiter migration report", () => {
 		const report = reportDelimiterMigration(outcome, delimiters);
 
 		expect(outcome.kind).toBe("Failed");
+		expect(needsLibrarianRestartRetry(outcome)).toBe(false);
 		expect(report.keepsNewDelimiter).toBe(false);
+		expect(report.persistent).toBe(true);
 		expect(report.notice).toEndWith(
-			'Kept the delimiter "-", but the Librarian failed to restart: reinit failed.',
+			'Kept the delimiter "-". The Librarian did not restart. The Librarian stopped: it could not heal the library at startup. Reason: reinit failed. Run "Restart Librarian" from the command palette to try again. Details are in the developer console.',
 		);
 	});
 

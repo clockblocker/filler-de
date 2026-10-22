@@ -49,6 +49,7 @@ import {
 } from "./commanders/librarian/runtime/delimiter-migration-coordinator";
 import {
 	type DelimiterMigrationReport,
+	needsLibrarianRestartRetry,
 	reportDelimiterMigration,
 } from "./commanders/librarian/runtime/delimiter-migration-report";
 import { RESTART_LIBRARIAN_COMMAND_NAME } from "./commanders/librarian/runtime/describe-librarian-stop";
@@ -160,6 +161,8 @@ export default class TextEaterPlugin extends Plugin {
 	private librarianRestarting = false;
 	/** A delimiter migration pauses the Librarian and restores it itself. */
 	private delimiterMigrating = false;
+	/** A delimiter migration's re-init is under way; it reports a failure. */
+	private delimiterRestartReported = false;
 
 	override async onload() {
 		try {
@@ -927,7 +930,7 @@ export default class TextEaterPlugin extends Plugin {
 					return;
 				}
 				delimiterLifecycleReinitialized =
-					report.librarianRestarted && !languagesChanged;
+					report.librarianReinitialized && !languagesChanged;
 			}
 
 			if (hideMetadataChanged) {
@@ -985,16 +988,27 @@ export default class TextEaterPlugin extends Plugin {
 		newConfig: SuffixDelimiterConfig,
 	): Promise<DelimiterMigrationReport> {
 		this.delimiterMigrating = true;
-		const outcome = await this.migrateDelimiter(
-			oldConfig,
-			newConfig,
-		).finally(() => {
+		let outcome: DelimiterMigrationOutcome;
+		let librarianRestartRetried: boolean | undefined;
+		try {
+			outcome = await this.migrateDelimiter(oldConfig, newConfig);
+			// Every file carries the new delimiter, but the Librarian did not
+			// start under it: try once more.
+			if (needsLibrarianRestartRetry(outcome)) {
+				librarianRestartRetried =
+					await this.reinitLibrarianForDelimiterMigration({});
+			}
+		} finally {
 			this.delimiterMigrating = false;
-		});
-		const report = reportDelimiterMigration(outcome, {
-			newDelimiter: buildCanonicalDelimiter(newConfig),
-			oldDelimiter: buildCanonicalDelimiter(oldConfig),
-		});
+		}
+		const report = reportDelimiterMigration(
+			outcome,
+			{
+				newDelimiter: buildCanonicalDelimiter(newConfig),
+				oldDelimiter: buildCanonicalDelimiter(oldConfig),
+			},
+			librarianRestartRetried,
+		);
 		if (report.notice) {
 			new Notice(report.notice, report.persistent ? 0 : undefined);
 		}
@@ -1071,7 +1085,7 @@ export default class TextEaterPlugin extends Plugin {
 						try: async () => {
 							this.settings.suffixDelimiter = { ...config };
 							updateParsedSettings(this.settings);
-							await this.reinitLibrarian({
+							await this.reinitLibrarianForDelimiterMigration({
 								propagateFailure: true,
 								unsubscribeCurrent: !currentAlreadyPaused,
 							});
@@ -1147,6 +1161,22 @@ export default class TextEaterPlugin extends Plugin {
 		new Notice(describeMetadataMigration(report));
 	}
 
+	/**
+	 * Re-inits the Librarian for a delimiter migration, whose report tells
+	 * the user if it fails: the Librarian's own stop notice is held back.
+	 */
+	private async reinitLibrarianForDelimiterMigration(options: {
+		readonly propagateFailure?: boolean;
+		readonly unsubscribeCurrent?: boolean;
+	}): Promise<boolean> {
+		this.delimiterRestartReported = true;
+		try {
+			return await this.reinitLibrarian(options);
+		} finally {
+			this.delimiterRestartReported = false;
+		}
+	}
+
 	/** Runs `task` once every earlier Librarian init or re-init is done. */
 	private inLibrarianLifecycle<T>(task: () => Promise<T>): Promise<T> {
 		const run = this.librarianLifecycle.then(task);
@@ -1218,6 +1248,7 @@ export default class TextEaterPlugin extends Plugin {
 	}): Librarian {
 		return new Librarian(this.vam, {
 			onStopped: (stop) => {
+				if (this.delimiterRestartReported) return;
 				if (stop.kind === "Stopped") new Notice(stop.message, 0);
 				else if (options.announceMissingRoot) new Notice(stop.message);
 			},

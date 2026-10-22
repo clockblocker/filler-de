@@ -7,12 +7,21 @@ import type {
 } from "./delimiter-change-service";
 import type { DelimiterMigrationOutcome } from "./delimiter-migration-coordinator";
 import type { DelimiterRenameAction } from "./delimiter-migration-plan";
+import {
+	describeLibrarianStop,
+	describeMissingLibraryRoot,
+	isMissingLibraryRoot,
+} from "./describe-librarian-stop";
 
 export type DelimiterMigrationReport = {
 	/** Whether the setting must keep the new delimiter: every note carries it. */
 	readonly keepsNewDelimiter: boolean;
-	/** Whether the Librarian already restarted under the new delimiter. */
-	readonly librarianRestarted: boolean;
+	/**
+	 * Whether the migration already re-initialized the Librarian under the
+	 * delimiter the setting keeps, or tried its one retry, so saving the
+	 * settings must not re-initialize it again.
+	 */
+	readonly librarianReinitialized: boolean;
 	/** Full details for the console, when the migration did not complete. */
 	readonly log: string | null;
 	readonly notice: string | null;
@@ -23,9 +32,25 @@ export type DelimiterMigrationReport = {
 const LISTED_FILES = 5;
 
 /**
+ * Whether every note carries the new delimiter but the Librarian failed to
+ * restart under it, so the restart is worth one more try.
+ */
+export function needsLibrarianRestartRetry(
+	outcome: DelimiterMigrationOutcome,
+): boolean {
+	return (
+		outcome.kind === "Failed" &&
+		outcome.problem.stage === "Restore" &&
+		outcome.execution?.kind === "Completed"
+	);
+}
+
+/**
  * Tells the user what a delimiter migration did to the vault and which
  * delimiter the setting now holds. `oldDelimiter` and `newDelimiter` are the
  * canonical delimiters, as the confirmation showed them.
+ * `librarianRestartRetried` is whether the retry `needsLibrarianRestartRetry`
+ * asks for restarted the Librarian; absent when there was none.
  */
 export function reportDelimiterMigration(
 	outcome: DelimiterMigrationOutcome,
@@ -33,6 +58,7 @@ export function reportDelimiterMigration(
 		readonly newDelimiter: string;
 		readonly oldDelimiter: string;
 	},
+	librarianRestartRetried?: boolean,
 ): DelimiterMigrationReport {
 	const { newDelimiter, oldDelimiter } = delimiters;
 	switch (outcome.kind) {
@@ -47,7 +73,7 @@ export function reportDelimiterMigration(
 					null,
 					false,
 				),
-				librarianRestarted: true,
+				librarianReinitialized: true,
 			});
 		case "RollbackIncomplete":
 			return report(
@@ -57,7 +83,7 @@ export function reportDelimiterMigration(
 				true,
 			);
 		case "Failed":
-			return reportFailure(outcome, delimiters);
+			return reportFailure(outcome, delimiters, librarianRestartRetried);
 	}
 }
 
@@ -67,6 +93,7 @@ function reportFailure(
 		readonly newDelimiter: string;
 		readonly oldDelimiter: string;
 	},
+	librarianRestartRetried: boolean | undefined,
 ): DelimiterMigrationReport {
 	const { newDelimiter, oldDelimiter } = delimiters;
 	const { execution, problem } = outcome;
@@ -92,29 +119,48 @@ function reportFailure(
 		);
 	}
 
-	const restart = `the Librarian failed to restart: ${reason}`;
+	// The Librarian's own stop notice is held back during the migration;
+	// this notice tells the user why it stopped and how to restart it.
+	const stopped = describeRestartFailure(problem.cause);
 	if (!execution) {
 		return report(
 			false,
-			`No file was renamed, but ${restart}. Kept the delimiter "${oldDelimiter}".`,
+			`No file was renamed and the delimiter "${oldDelimiter}" is kept, but the Librarian did not restart. ${stopped}`,
 			log,
 			true,
 		);
 	}
 	if (execution.kind === "Completed") {
-		return report(
-			true,
-			`Renamed ${execution.renamedCount} file(s) to use "${newDelimiter}" and kept that delimiter, but ${restart}.`,
-			log,
-			true,
-		);
+		const renamed = `Renamed ${execution.renamedCount} file(s) to use "${newDelimiter}"`;
+		if (librarianRestartRetried === true) {
+			return Object.freeze({
+				...report(true, `${renamed}.`, log, false),
+				librarianReinitialized: true,
+			});
+		}
+		return Object.freeze({
+			...report(
+				true,
+				`${renamed} and kept that delimiter, but the Librarian did not restart. ${stopped}`,
+				log,
+				true,
+			),
+			librarianReinitialized: librarianRestartRetried === false,
+		});
 	}
 	return report(
 		false,
-		`${describeExecution(execution, delimiters)} Kept the delimiter "${oldDelimiter}", but ${restart}.${execution.kind === "RollbackIncomplete" ? " Rename the files listed by hand." : ""}`,
+		`${describeExecution(execution, delimiters)} Kept the delimiter "${oldDelimiter}"${execution.kind === "RollbackIncomplete" ? "; rename the files listed by hand" : ""}. The Librarian did not restart. ${stopped}`,
 		log,
 		true,
 	);
+}
+
+/** Why the Librarian did not restart, as its own stop notice would say. */
+function describeRestartFailure(cause: unknown): string {
+	return isMissingLibraryRoot(cause)
+		? describeMissingLibraryRoot(cause)
+		: describeLibrarianStop("Startup", cause);
 }
 
 /** One account of a failed execution: the failure, then the files' state. */
@@ -230,7 +276,7 @@ function report(
 ): DelimiterMigrationReport {
 	return Object.freeze({
 		keepsNewDelimiter,
-		librarianRestarted: false,
+		librarianReinitialized: false,
 		log,
 		notice,
 		persistent,
