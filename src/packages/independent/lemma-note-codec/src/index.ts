@@ -13,6 +13,16 @@
  * It depends only on the batteries: no vault I/O, no lookup, no facility.
  */
 export {
+	ATTESTATION_REF_START,
+	type AttestationRefParts,
+	attestationRef,
+	attestationRefPrefix,
+	parseAttestationRef,
+	type RetargetedRefLine,
+	retargetedRef,
+	retargetedRefLines,
+} from "./attestation-ref";
+export {
 	assignBlockIds,
 	BLOCK_ID_HASH_LENGTH,
 	SINGLE_TABLE_BLOCK_ID,

@@ -46,6 +46,14 @@ export type ReadingNoteEntry = {
 	readonly lemmaKey: string;
 	readonly readingKey: string;
 	readonly data: ReadingNoteData<"de">;
+	/**
+	 * Refs Deine Kontexte shows by another link path, as Obsidian's link
+	 * updater rewrote them when their Scroll moved (#99).
+	 */
+	readonly retargeted?: readonly {
+		readonly ref: string;
+		readonly linkpath: string;
+	}[];
 };
 
 /**
@@ -192,12 +200,13 @@ export function classifyFile(path: string, content: string): PathEntry {
 		};
 	}
 	if (reading.kind === "Valid") {
-		const { data } = parseReadingNote(
+		const { data, document } = parseReadingNote(
 			{ body: body(), metadata: reading.value },
 			{ language: "de" },
 		);
 		if (!data.ok) return invalid(path, hash, data.issues);
 		const entry = data.data.readingEntry;
+		const { retargeted } = document;
 		return {
 			data: data.data,
 			hash,
@@ -205,6 +214,7 @@ export function classifyFile(path: string, content: string): PathEntry {
 			lemmaKey: lemmaKeyOf(entry.reading.lemma),
 			path,
 			readingKey: readingKeyOf(entry.reading),
+			...(retargeted === undefined ? {} : { retargeted }),
 		};
 	}
 	if (crossroad.kind === "Invalid")

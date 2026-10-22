@@ -77,6 +77,17 @@ unit tests in `tests/unit/classify/resolution/unlink-observer.test.ts` and
 `scroll-unlinks.test.ts`. The scenario also shows the commit regenerating
 the Crossroads it touches: heute's goes back to "not classified yet".
 
+Rewriting a renamed Scroll's refs (#99) is owned by
+`scroll-rename-refs.test.ts`: a Scroll the user renames keeps its
+occurrences, each Deine Kontexte embed shows once by the new name with the
+hidden metadata agreeing, and an unlink in the renamed Scroll still removes
+its occurrence; a Scroll moved into a Section follows the Librarian's
+suffix rename. Folder renames, rename chains and swaps, Obsidian's own
+rewrite of the embeds, shared basenames, protected paths and a rename
+while the plugin was off are unit tests in
+`src/packages/composed/dictionary/tests/scroll-renames.test.ts`; the
+observer staying quiet during the rename is in `unlink-observer.test.ts`.
+
 Landing hand-wrapped links on Crossroad notes (#115) is owned by
 `crossroad-link-landing.test.ts`: a word wrapped in `[[ ]]` in a Scroll is
 rewritten to its Crossroad path, a word naming a Library note keeps the

@@ -95,6 +95,19 @@ export class DictionaryTransactionConflict extends Schema.TaggedError<Dictionary
 	},
 ) {}
 
+/**
+ * The refs into a renamed Scroll could not be rewritten (#99): looking up
+ * how Obsidian resolves the Scroll's names failed, or the transaction did.
+ * The refs still name the Scroll as before; `cause` says why.
+ */
+export class DictionaryRefRewriteError extends Schema.TaggedError<DictionaryRefRewriteError>()(
+	"DictionaryRefRewriteError",
+	{
+		cause: Schema.Defect(),
+		message: Schema.String,
+	},
+) {}
+
 export type DictionaryCommitError =
 	| DictionaryScanError
 	| DictionaryRequestError

@@ -60,6 +60,9 @@ const conflict = (operation: string, path: string) =>
 		path,
 	});
 
+const basenameOf = (path: string) =>
+	(path.split("/").at(-1) ?? path).replace(/\.md$/u, "");
+
 const under = (path: string, folder: string) =>
 	folder === "" || path.startsWith(`${folder}/`);
 
@@ -176,6 +179,43 @@ export class FakeVault implements DictionaryVault {
 			return splitPath.kind === "Folder"
 				? this.folderExists(path)
 				: this.files.has(path);
+		});
+
+	/** Every Markdown note with this basename, as VAM finds them. */
+	findByBasename: DictionaryVault["findByBasename"] = (basename) =>
+		Effect.sync(() =>
+			this.markdownPaths()
+				.filter((path) => basenameOf(path) === basename)
+				.map(mdPath),
+		);
+
+	/**
+	 * The note Obsidian opens for a link path from `from`: a path names its
+	 * note, ignoring case; a basename names a note of that name, one in the
+	 * linking note's folder first, else the first by path.
+	 */
+	resolveLinkpathDest: DictionaryVault["resolveLinkpathDest"] = (
+		linkpath,
+		from,
+	) =>
+		Effect.sync(() => {
+			const wanted = linkpath.toLowerCase().replace(/\.md$/u, "");
+			const paths = this.markdownPaths();
+			if (wanted.includes("/")) {
+				const found = paths.find(
+					(path) => path.toLowerCase() === `${wanted}.md`,
+				);
+				return found === undefined ? null : mdPath(found);
+			}
+			const named = paths.filter(
+				(path) => basenameOf(path).toLowerCase() === wanted,
+			);
+			const folder = format(from).split("/").slice(0, -1).join("/");
+			const found =
+				named.find(
+					(path) => path.split("/").slice(0, -1).join("/") === folder,
+				) ?? named[0];
+			return found === undefined ? null : mdPath(found);
 		});
 
 	readContentWithStat: DictionaryVault["readContentWithStat"] = (splitPath) =>
@@ -552,18 +592,44 @@ export class FakeVault implements DictionaryVault {
 		await this.emitModify([path]);
 	}
 
-	async userRename(from: string, to: string): Promise<void> {
+	async userRename(
+		from: string,
+		to: string,
+		origin: VaultEventOrigin = EXTERNAL_ORIGIN,
+	): Promise<void> {
+		await this.userRenameAll([[from, to]], origin);
+	}
+
+	/** Renames several notes at once, as one bulk event, such as a swap. */
+	async userRenameAll(
+		renames: readonly (readonly [string, string])[],
+		origin: VaultEventOrigin = EXTERNAL_ORIGIN,
+	): Promise<void> {
+		for (const [from, to] of renames) this.silentRename(from, to);
+		await this.announceRenames(renames, origin);
+	}
+
+	/** Moves a note without any event, as Obsidian does before VAM's window closes. */
+	silentRename(from: string, to: string): void {
 		const file = this.files.get(from);
 		if (!file) throw new Error(`No file at ${from}`);
 		this.files.delete(from);
 		this.files.set(to, file);
-		await this.emitBulk([
-			{
+	}
+
+	/** Delivers the bulk event of renames that already happened. */
+	async announceRenames(
+		renames: readonly (readonly [string, string])[],
+		origin: VaultEventOrigin = EXTERNAL_ORIGIN,
+	): Promise<void> {
+		await this.emitBulk(
+			renames.map(([from, to]) => ({
 				from: mdPath(from),
 				kind: VaultEventKind.FileRenamed,
 				to: mdPath(to),
-			},
-		]);
+			})),
+			origin,
+		);
 	}
 
 	async userRenameFolder(

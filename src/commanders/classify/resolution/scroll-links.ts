@@ -17,7 +17,11 @@
  * `Worter/` are re-pointed, unless the run replaces the user's links too,
  * as the Dictionary reset does with links written before the redesign.
  */
-import { sha256Hex } from "@textfresser/lemma-note-codec";
+import {
+	attestationRef,
+	attestationRefPrefix,
+	sha256Hex,
+} from "@textfresser/lemma-note-codec";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import type { SourceRange, UnitRef } from "../types";
 
@@ -181,36 +185,32 @@ export function occurrenceKeyOf(ref: UnitRef, instance: number): string {
  * embed's alias: Reading view replaces the embed's text with the embedded
  * block, and Live Preview keeps the alias only as the embed's `alt`
  * attribute (Obsidian 1.14.4's `app.js`), so it shows only in source.
+ * Classify names the Scroll by its basename; the dictionary store names it
+ * by its path once a rename leaves the basename to another note (#99).
  */
 export function attestationRefOf(
 	scrollPath: string,
 	blockId: string,
 	occurrence: string,
 ): string {
-	return `${attestationRefPrefixOf(scrollPath)}${blockId}|^${occurrence}]]`;
+	return attestationRef({
+		blockId,
+		linkpath: scrollBasenameOf(scrollPath),
+		occurrence,
+	});
 }
 
-/** What every Attestation Ref into one Scroll starts with: `![[Story#^`. */
+/** What every Attestation Ref into one Scroll by its basename starts with: `![[Story#^`. */
 export function attestationRefPrefixOf(scrollPath: string): string {
-	return `![[${scrollBasenameOf(scrollPath)}#^`;
+	return attestationRefPrefix(scrollBasenameOf(scrollPath));
 }
 
-const ATTESTATION_REF =
-	/^!\[\[([^\]#|\n]+)#\^([A-Za-z0-9-]+)\|\^([0-9a-f]{8})\]\]$/u;
-
-/** The parts of an Attestation Ref `attestationRefOf` wrote, if it is one. */
-export function parseAttestationRef(ref: string):
-	| {
-			readonly scrollBasename: string;
-			readonly blockId: string;
-			readonly occurrence: string;
-	  }
-	| undefined {
-	const match = ATTESTATION_REF.exec(ref);
-	if (!match) return undefined;
-	const [, scrollBasename = "", blockId = "", occurrence = ""] = match;
-	return { blockId, occurrence, scrollBasename };
+/** The Scroll's path as a ref names it where its basename is not its own: `Library/Story`. */
+export function scrollLinkpathOf(scrollPath: string): string {
+	return scrollPath.endsWith(".md") ? scrollPath.slice(0, -3) : scrollPath;
 }
+
+export { parseAttestationRef } from "@textfresser/lemma-note-codec";
 
 /**
  * How snapshot offsets map onto the current content. A range outside the
