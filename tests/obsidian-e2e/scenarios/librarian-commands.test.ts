@@ -27,6 +27,32 @@ describe("Obsidian E2E - Librarian commands", () => {
 		);
 	});
 
+	it("restarts the Librarian, which keeps healing afterwards", async () => {
+		await withObsidianScenario(
+			{
+				fixture: [{ content: "# Anchor", path: "Recipe/Pie/Anchor.md" }],
+				id: "restart-librarian",
+			},
+			async ({ act, snapshot }) => {
+				await act({ kind: "restartLibrarian" });
+				await act({
+					content: "# Fresh",
+					kind: "createFile",
+					path: "Recipe/Pie/Fresh.md",
+				});
+
+				const vault = await snapshot();
+				const paths = vault.files.map(({ path }) => path);
+				expect(paths).toContain("Recipe/Pie/Anchor-Pie-Recipe.md");
+				expect(paths).toContain("Recipe/Pie/Fresh-Pie-Recipe.md");
+				expect(paths).not.toContain("Recipe/Pie/Fresh.md");
+				expect(vault.markdown["Recipe/Pie/__-Pie-Recipe.md"]).toContain(
+					"[[Fresh-Pie-Recipe|Fresh]]",
+				);
+			},
+		);
+	});
+
 	it("navigates to the next and previous Scroll in display order", async () => {
 		await withObsidianScenario(
 			{

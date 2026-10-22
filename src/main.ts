@@ -47,6 +47,7 @@ import {
 	DelimiterMigrationCoordinator,
 	type DelimiterMigrationOutcome,
 } from "./commanders/librarian/runtime/delimiter-migration-coordinator";
+import { RESTART_LIBRARIAN_COMMAND_NAME } from "./commanders/librarian/runtime/describe-librarian-stop";
 import {
 	describeMetadataMigration,
 	migrateMetadataFormat,
@@ -142,6 +143,14 @@ export default class TextEaterPlugin extends Plugin {
 	private initialized = false;
 	private previousSettings: TextEaterSettings | null = null;
 	private handlerTeardowns: (() => void)[] = [];
+	/**
+	 * The Librarian's init and re-inits, one after another: two overlapping
+	 * re-inits would each subscribe a Librarian, and leave one healing.
+	 */
+	private librarianLifecycle: Promise<unknown> = Promise.resolve();
+	private librarianRestarting = false;
+	/** A delimiter migration pauses the Librarian and restores it itself. */
+	private delimiterMigrating = false;
 
 	override async onload() {
 		try {
@@ -354,7 +363,9 @@ export default class TextEaterPlugin extends Plugin {
 		});
 
 		// New Librarian (healing modes)
-		this.librarian = new Librarian(this.vam);
+		// A vault without a Library folder is told so only when the user
+		// re-inits, not at every launch.
+		this.librarian = this.makeLibrarian({ announceMissingRoot: false });
 
 		// Start listening to file system events
 		// VaultActionManager will convert events to VaultEvent, filter self-events,
@@ -371,27 +382,30 @@ export default class TextEaterPlugin extends Plugin {
 		this.delimiterChangeService = new DelimiterChangeService(this.vam);
 
 		// Initialize librarian: read tree, heal mismatches, regenerate codexes
-		if (this.librarian) {
-			try {
-				await Effect.runPromise(this.librarian.init());
+		const librarian = this.librarian;
+		if (librarian) {
+			await this.inLibrarianLifecycle(async () => {
+				try {
+					await Effect.runPromise(librarian.init());
 
-				// Register user event handlers after librarian is initialized
-				const handlers = createHandlers(
-					this.librarian,
-					this.onWikilinkClicked,
-				);
-				for (const handlerDef of handlers) {
-					this.registerUserEventHandler(
-						handlerDef.kind,
-						handlerDef.handler,
+					// Register user event handlers after librarian is initialized
+					const handlers = createHandlers(
+						librarian,
+						this.onWikilinkClicked,
+					);
+					for (const handlerDef of handlers) {
+						this.registerUserEventHandler(
+							handlerDef.kind,
+							handlerDef.handler,
+						);
+					}
+				} catch (error) {
+					logger.error(
+						"[TextEaterPlugin] Failed to initialize librarian:",
+						getErrorMessage(error),
 					);
 				}
-			} catch (error) {
-				logger.error(
-					"[TextEaterPlugin] Failed to initialize librarian:",
-					getErrorMessage(error),
-				);
-			}
+			});
 		}
 
 		if (!this.textfresser) {
@@ -630,6 +644,14 @@ export default class TextEaterPlugin extends Plugin {
 			},
 			id: "split-to-pages",
 			name: "Split file into pages",
+		});
+
+		this.addCommand({
+			callback: () => {
+				void this.restartLibrarian();
+			},
+			id: "restart-librarian",
+			name: RESTART_LIBRARIAN_COMMAND_NAME,
 		});
 	}
 
@@ -967,6 +989,9 @@ export default class TextEaterPlugin extends Plugin {
 
 		const oldDelimiter = buildCanonicalDelimiter(oldConfig);
 		const newDelimiter = buildCanonicalDelimiter(newConfig);
+		// Pause the Librarian a restart already under way leaves, not the
+		// one it is replacing.
+		await this.librarianLifecycle;
 		const librarianToPause = this.librarian;
 		const coordinator = new DelimiterMigrationCoordinator(
 			this.delimiterChangeService,
@@ -995,9 +1020,12 @@ export default class TextEaterPlugin extends Plugin {
 					}),
 			},
 		);
+		this.delimiterMigrating = true;
 		const outcome = await Effect.runPromise(
 			coordinator.migrate(oldConfig, newConfig, libraryRoot),
-		);
+		).finally(() => {
+			this.delimiterMigrating = false;
+		});
 
 		switch (outcome.kind) {
 			case "Completed":
@@ -1100,15 +1128,32 @@ export default class TextEaterPlugin extends Plugin {
 		new Notice(describeMetadataMigration(report));
 	}
 
+	/** Runs `task` once every earlier Librarian init or re-init is done. */
+	private inLibrarianLifecycle<T>(task: () => Promise<T>): Promise<T> {
+		const run = this.librarianLifecycle.then(task);
+		this.librarianLifecycle = run.catch(() => undefined);
+		return run;
+	}
+
 	/**
-	 * Reinitialize the librarian with current settings.
+	 * Reinitialize the librarian with current settings, after any init or
+	 * re-init already under way.
 	 */
-	private async reinitLibrarian(
+	private reinitLibrarian(
 		options: {
 			readonly propagateFailure?: boolean;
 			readonly unsubscribeCurrent?: boolean;
 		} = {},
-	): Promise<void> {
+	): Promise<boolean> {
+		return this.inLibrarianLifecycle(() =>
+			this.reinitLibrarianNow(options),
+		);
+	}
+
+	private async reinitLibrarianNow(options: {
+		readonly propagateFailure?: boolean;
+		readonly unsubscribeCurrent?: boolean;
+	}): Promise<boolean> {
 		// Unregister old handlers
 		for (const teardown of this.handlerTeardowns) {
 			teardown();
@@ -1118,7 +1163,7 @@ export default class TextEaterPlugin extends Plugin {
 		if (this.librarian && options.unsubscribeCurrent !== false) {
 			await Effect.runPromise(this.librarian.unsubscribe());
 		}
-		this.librarian = new Librarian(this.vam);
+		this.librarian = this.makeLibrarian({ announceMissingRoot: true });
 		try {
 			await Effect.runPromise(this.librarian.init());
 
@@ -1133,12 +1178,62 @@ export default class TextEaterPlugin extends Plugin {
 					handlerDef.handler,
 				);
 			}
+			return true;
 		} catch (error) {
 			logger.error(
 				"[TextEaterPlugin] Failed to reinitialize librarian:",
 				getErrorMessage(error),
 			);
 			if (options.propagateFailure) throw error;
+			return false;
+		}
+	}
+
+	/**
+	 * A Librarian that tells the user, in a notice that stays, when it
+	 * stops. A missing Library folder is not a failure: it gets a passing
+	 * notice, and only when `announceMissingRoot`.
+	 */
+	private makeLibrarian(options: {
+		readonly announceMissingRoot: boolean;
+	}): Librarian {
+		return new Librarian(this.vam, {
+			onStopped: (stop) => {
+				if (stop.kind === "Stopped") new Notice(stop.message, 0);
+				else if (options.announceMissingRoot) new Notice(stop.message);
+			},
+		});
+	}
+
+	/**
+	 * Rescans the library and heals it again, as on load: the way back for
+	 * a Librarian that stopped. A failed restart is reported by the
+	 * Librarian's own notice.
+	 */
+	private async restartLibrarian(): Promise<void> {
+		if (!this.librarian) {
+			new Notice("Textfresser is still loading");
+			return;
+		}
+		if (this.librarianRestarting) {
+			new Notice("The Librarian is already restarting");
+			return;
+		}
+		if (this.delimiterMigrating) {
+			new Notice(
+				"The suffix delimiter is still changing; the Librarian restarts once it is done",
+			);
+			return;
+		}
+		this.librarianRestarting = true;
+		incrementPending();
+		try {
+			if (await this.reinitLibrarian()) {
+				new Notice("Librarian restarted");
+			}
+		} finally {
+			this.librarianRestarting = false;
+			decrementPending();
 		}
 	}
 

@@ -1086,10 +1086,12 @@ class TextfresserE2EDriver extends Plugin {
 			libraryRoot: scenario.libraryRoot,
 			scenarioRoot: scenario.scenarioRoot,
 		};
-		// Opening the dictionary reset touches no path of the scenario's.
+		// Opening the dictionary reset and restarting the Librarian touch no
+		// path of the scenario's.
 		const source =
 			operation.kind === "openDictionaryReset" ||
-			operation.kind === "dryRunDictionaryReset"
+			operation.kind === "dryRunDictionaryReset" ||
+			operation.kind === "restartLibrarian"
 				? null
 				: resolveScopedPath(
 						paths,
@@ -1610,10 +1612,22 @@ class TextfresserE2EDriver extends Plugin {
 				}
 				break;
 			}
+			case "restartLibrarian": {
+				// The command counts its restart as pending work, so the
+				// settle below waits for it.
+				const commandId = `${TARGET_PLUGIN_ID}:restart-librarian`;
+				if (this.app.commands.executeCommandById(commandId) !== true) {
+					throw new DriverError(
+						"CommandUnavailable",
+						`Textfresser command '${commandId}' was not available`,
+					);
+				}
+				break;
+			}
 			default:
 				throw new DriverError(
 					"InvalidOperation",
-					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, classify, wrapLink, followLink, pageNavigation, toggleCodexEntry, openDictionaryReset, or dryRunDictionaryReset",
+					"params.operation.kind must be create, modify, rename, delete, splitToPages, splitInBlocks, classify, wrapLink, followLink, pageNavigation, toggleCodexEntry, openDictionaryReset, dryRunDictionaryReset, or restartLibrarian",
 				);
 		}
 

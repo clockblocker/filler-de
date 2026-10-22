@@ -76,6 +76,13 @@ type ScenarioAction =
 			 */
 			readonly kind: "dryRunDictionaryReset";
 			readonly execute?: boolean;
+	  }
+	| {
+			/**
+			 * Runs "Restart Librarian", which rescans the Library and heals it
+			 * again as on load, and settles once the restart is done.
+			 */
+			readonly kind: "restartLibrarian";
 	  };
 
 interface ScenarioDefinition {
@@ -606,6 +613,8 @@ function encodeAction(action: ScenarioAction): Readonly<Record<string, unknown>>
 				execute: action.execute ?? false,
 				kind: "dryRunDictionaryReset",
 			};
+		case "restartLibrarian":
+			return { kind: "restartLibrarian" };
 	}
 }
 

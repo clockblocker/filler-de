@@ -705,6 +705,126 @@ describe("Library reconciliation interface", () => {
 		expect(dispatches).toBe(1);
 	});
 
+	it("resynchronizes a startup batch that partly ran instead of latching unavailable", async () => {
+		const partialFailures = [
+			new VamDispatchError({
+				action: undefined,
+				cause: new Error("rename failed"),
+				operation: "executeAction",
+			}),
+		] as const;
+		let dispatchCount = 0;
+		let recoveries = 0;
+		const paths = [
+			scanScroll(["Library"], "Existing"),
+			scanScroll(["Library"], "New"),
+		];
+		const { reconciler } = makeHarness({
+			dispatch: () => {
+				dispatchCount += 1;
+				return dispatchCount === 1
+					? Effect.fail(partialFailures)
+					: Effect.void;
+			},
+			recover: () =>
+				Effect.sync(() => {
+					recoveries += 1;
+					return startupRecovery(paths);
+				}),
+		});
+
+		const startup = await Effect.runPromise(
+			reconciler.reconcile(startupRecovery(paths).request),
+		);
+
+		expect(startup.status).toBe("PartialFailure");
+		expect(startup.recovery.kind).toBe("Resynchronized");
+		expect(recoveries).toBe(1);
+		expect(reconciler.isUnavailable()).toBeFalse();
+		expect(
+			Object.keys(toShape(reconciler.getCommittedHealer()).children ?? {}),
+		).toEqual(["Existing", "New"]);
+
+		const later = await Effect.runPromise(
+			reconciler.reconcile(
+				runtimeRequest([createScroll(["Library"], "Later")]),
+			),
+		);
+		expect(later.status).toBe("Success");
+	});
+
+	it("rescans a persistent startup partial failure once, then latches unavailable", async () => {
+		const partialFailures = [
+			new VamDispatchError({
+				action: undefined,
+				cause: new Error("rename keeps failing"),
+				operation: "executeAction",
+			}),
+		] as const;
+		let dispatchCount = 0;
+		let recoveries = 0;
+		const paths = [
+			scanScroll(["Library"], "Existing"),
+			scanScroll(["Library"], "New"),
+		];
+		const { reconciler } = makeHarness({
+			dispatch: () => {
+				dispatchCount += 1;
+				return Effect.fail(partialFailures);
+			},
+			recover: () =>
+				Effect.sync(() => {
+					recoveries += 1;
+					return startupRecovery(paths);
+				}),
+		});
+
+		const startup = await Effect.runPromise(
+			reconciler.reconcile(startupRecovery(paths).request),
+		);
+		const blocked = await Effect.runPromise(
+			reconciler.reconcile(
+				runtimeRequest([createScroll(["Library"], "Later")]),
+			),
+		);
+
+		expect(startup.status).toBe("PartialFailure");
+		expect(startup.recovery.kind).toBe("Failed");
+		expect(recoveries).toBe(1);
+		expect(dispatchCount).toBe(2);
+		expect(reconciler.isUnavailable()).toBeTrue();
+		expect(blocked.failure?.kind).toBe("ReconciliationUnavailable");
+		expect(dispatchCount).toBe(2);
+	});
+
+	it("discards a startup batch that failed before running without a rescan", async () => {
+		let recoveries = 0;
+		const paths = [scanScroll(["Library"], "Existing")];
+		const { reconciler } = makeHarness({
+			dispatch: () =>
+				Effect.fail(
+					new VamPlanningError({
+						cause: new Error("bad plan"),
+						operation: "plan",
+					}),
+				),
+			recover: () =>
+				Effect.sync(() => {
+					recoveries += 1;
+					return startupRecovery(paths);
+				}),
+		});
+
+		const startup = await Effect.runPromise(
+			reconciler.reconcile(startupRecovery(paths).request),
+		);
+
+		expect(startup.status).toBe("Failed");
+		expect(startup.recovery.kind).toBe("StagedStateDiscarded");
+		expect(recoveries).toBe(0);
+		expect(reconciler.isUnavailable()).toBeFalse();
+	});
+
 	it("bounds a nested Section move and replaces moved Codex projections", async () => {
 		const { dispatches, reconciler } = makeHarness({
 			healer: makeTree({

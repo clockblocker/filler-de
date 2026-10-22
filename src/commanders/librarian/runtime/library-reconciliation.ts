@@ -230,8 +230,8 @@ export class ReconciliationAuditLog<E, R = unknown> {
  *
  * Each request is applied to a fork of the last acknowledged Tree. The fork is
  * published only after dispatch completes. Failures are total, audited
- * outcomes; execution-uncertain dispatch failures require a vault-backed
- * recovery before the reconciler accepts later work.
+ * outcomes; execution-uncertain dispatch failures, at startup too, require a
+ * vault-backed recovery before the reconciler accepts later work.
  */
 export class LibraryReconciler<E, R = unknown> {
 	private healer: Healer;
@@ -247,6 +247,11 @@ export class LibraryReconciler<E, R = unknown> {
 
 	getCommittedHealer(): Healer {
 		return this.healer;
+	}
+
+	/** Whether an unrecovered failure stops every later reconciliation. */
+	isUnavailable(): boolean {
+		return this.unavailableCause !== undefined;
 	}
 
 	getAuditLog(): ReconciliationAuditLog<E, R> {
@@ -305,7 +310,15 @@ export class LibraryReconciler<E, R = unknown> {
 			return outcome;
 		}
 
-		if (request.source !== "Startup" && this.options.recover) {
+		// A runtime failure, or a startup batch that partly ran, leaves the
+		// vault somewhere between the committed Tree and the staged one. A
+		// rescan rebuilds the Tree from the vault and heals what is left, once.
+		// Only when that also fails does the reconciler become unavailable.
+		if (
+			this.options.recover &&
+			(request.source !== "Startup" ||
+				outcome.dispatch.kind === "ExecutionUncertain")
+		) {
 			outcome = yield* this.resynchronize(outcome);
 		} else if (outcome.dispatch.kind === "ExecutionUncertain") {
 			this.unavailableCause = outcome.failure;
