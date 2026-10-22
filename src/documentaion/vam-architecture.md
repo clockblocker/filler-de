@@ -111,7 +111,10 @@ Case is the caller's choice of identity:
 `vam.paths` reads Obsidian's undocumented `adapter.insensitive` flag. The
 desktop adapter sets it by probing the vault folder (it writes `.OBSIDIANTEST`
 and checks for `.obsidiantest`), so a case-sensitive APFS volume is detected.
-Without the flag, the platform decides: macOS and Windows ignore case.
+Without the flag, the platform decides: macOS and Windows ignore case. Off
+desktop, VAM assumes case is ignored: the mobile adapter sets the flag to
+`false` without probing, and Android's shared storage ignores case, so
+protected paths and the collision check refuse more rather than less.
 `createVaultActionManager(app, { fileSystem })` overrides it for tests.
 `VaultPath.caseInsensitive` and `VaultPath.forFileSystem` exist for callers
 and tests that need a fixed policy.

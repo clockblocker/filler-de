@@ -63,14 +63,6 @@ function normalize(path: string): string {
 		.normalize("NFC");
 }
 
-/** The folder holding `path`; `undefined` for the root, which has none. */
-function parent(path: string): string | undefined {
-	const normalized = normalize(path);
-	if (normalized === ROOT) return undefined;
-	const slash = normalized.lastIndexOf("/");
-	return slash === -1 ? ROOT : normalized.slice(0, slash);
-}
-
 /** The path of `segments` joined below one another, normalized. */
 function join(...segments: readonly string[]): string {
 	return normalize(segments.join("/"));
@@ -107,7 +99,6 @@ export const VaultPath = Object.freeze({
 	join,
 	/** `path` in the form Obsidian keys it, with the root as `""`. */
 	normalize,
-	parent,
 	/** The vault root. */
 	root: ROOT,
 });

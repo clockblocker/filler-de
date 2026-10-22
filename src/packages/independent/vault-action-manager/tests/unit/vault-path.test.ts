@@ -26,15 +26,7 @@ describe("VaultPath.normalize", () => {
 	});
 });
 
-describe("VaultPath.parent and join", () => {
-	it("gives the folder holding a path, and none for the root", () => {
-		expect(VaultPath.parent("Worter/de/a.md")).toBe("Worter/de");
-		expect(VaultPath.parent("a.md")).toBe("");
-		expect(VaultPath.parent("/Worter/")).toBe("");
-		expect(VaultPath.parent("")).toBeUndefined();
-		expect(VaultPath.parent("/")).toBeUndefined();
-	});
-
+describe("VaultPath.join", () => {
 	it("joins segments below one another, skipping empty ones", () => {
 		expect(VaultPath.join("Worter", "de", "a.md")).toBe("Worter/de/a.md");
 		expect(VaultPath.join("", "Library")).toBe("Library");
@@ -138,6 +130,25 @@ describe("detectVaultFileSystem", () => {
 		expect(detectVaultFileSystem(appWith(undefined))).toEqual(
 			detectVaultFileSystem(appWith({ insensitive: "yes" })),
 		);
+	});
+
+	it("assumes case is ignored off desktop, where the flag is not probed", () => {
+		const original = Object.getOwnPropertyDescriptor(globalThis, "process");
+		Object.defineProperty(globalThis, "process", {
+			configurable: true,
+			value: undefined,
+		});
+		try {
+			expect(
+				detectVaultFileSystem(appWith({ insensitive: false })),
+			).toEqual({ caseInsensitive: true });
+			expect(detectVaultFileSystem(appWith(undefined))).toEqual({
+				caseInsensitive: true,
+			});
+		} finally {
+			if (original)
+				Object.defineProperty(globalThis, "process", original);
+		}
 	});
 });
 
