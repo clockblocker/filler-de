@@ -658,6 +658,60 @@ describe("VaultObservation", () => {
 		);
 	});
 
+	it("keeps delivering to started subscribers while whenIdle waits for a gated one", async () => {
+		const { app, callbacks, selfEvents } = makeHarness(() => false);
+		const started: string[][] = [];
+		const gated: string[][] = [];
+		const paths = (bulk: BulkVaultEvent) =>
+			bulk.events.map(makeKeyForEvent);
+
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const observation = yield* VaultObservation.makeEffect(
+					app,
+					selfEvents,
+				);
+				yield* observation.startEffect();
+				const startedSubscription = yield* observation.subscribeEffect(
+					(bulk) => Effect.sync(() => void started.push(paths(bulk))),
+				);
+				const gatedSubscription = yield* observation.subscribeEffect(
+					(bulk) => Effect.sync(() => void gated.push(paths(bulk))),
+					{ gated: true },
+				);
+
+				callbacks.get("create")?.(mdFile("Library/before.md") as never);
+				const idle = yield* observation
+					.whenIdleEffect()
+					.pipe(Effect.forkChild);
+				// Its window, and the settle barrier behind it, are out.
+				while ((yield* observation.publishedWindowCountEffect()) < 1) {
+					yield* Effect.yieldNow;
+				}
+
+				// The settle is pending on the gated subscriber, and the
+				// channel still windows and delivers a later callback.
+				callbacks.get("create")?.(mdFile("Library/during.md") as never);
+				yield* observation.flushPendingEffect();
+				yield* startedSubscription.caughtUp;
+				expect(started).toHaveLength(2);
+				expect(gated).toEqual([]);
+				expect(idle.pollUnsafe()).toBeUndefined();
+
+				yield* gatedSubscription.start;
+				yield* Fiber.join(idle);
+				expect(gated[0]).toEqual(started[0]);
+
+				yield* observation.whenIdleEffect();
+				expect(gated).toEqual(started);
+
+				yield* startedSubscription.close;
+				yield* gatedSubscription.close;
+				yield* observation.disposeEffect();
+			}),
+		);
+	});
+
 	it("dispose completes a pending whenIdle barrier", async () => {
 		const { app, callbacks, selfEvents } = makeHarness(() => false);
 		let markStarted = () => {};

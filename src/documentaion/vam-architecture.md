@@ -609,7 +609,7 @@ The subscription answers:
 | Member | Does |
 | --- | --- |
 | `snapshot` | The folder at `N`. |
-| `start` | Starts delivery. Changes after the latest snapshot waited in VAM until now, so the consumer can build its state first. Settling waits for a subscriber that has not started. |
+| `start` | Starts delivery. Changes after the latest snapshot waited in VAM until now, so the consumer can build its state first. Settling waits for a subscriber that has not started; the channel meanwhile keeps delivering to the others. |
 | `rescan` | A fresh snapshot, moving the cursors to its `N'`. Windows not yet delivered lose what it holds. A failed rescan leaves the cursors. |
 | `afterSnapshot(bulk)` | A delivered bulk's part after the latest snapshot, or `null`; for work queued before a `rescan` and run after it. |
 | `caughtUp` | As for any subscription, below. |
@@ -706,6 +706,15 @@ Dispatch Batches those subscribers submitted. Rounds repeat until one publishes
 no window, so a modify window opened by the last dispatch is included. VAM's
 own writes enter windows too, so a round can publish a window no subscriber
 takes; the round after it publishes none.
+
+Waiting for a channel's subscribers is a barrier the channel's worker
+publishes behind the window it closes; the caller, not the worker, waits for
+it. A gated subscriber takes the barrier only once it has started and
+handled what came before, so settling during the Librarian's startup waits
+for its `start`, while the channel goes on windowing and delivering to the
+subscribers that have started, and `caughtUp` and the window's queued work
+still complete. A window published meanwhile counts as progress, so the
+next round waits for it too.
 
 Writes routed to the active editor are not attributed: their modifications
 are `External`. Obsidian persists them

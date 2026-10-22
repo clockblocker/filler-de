@@ -5,7 +5,12 @@ import type { BulkWindow } from "../types/bulk/bulk-window";
 export type EventAccumulatorCommand<Ev = VaultEvent> =
 	| { readonly _tag: "Event"; readonly event: Ev }
 	| { readonly _tag: "Flush"; readonly completed: Deferred.Deferred<void> }
-	| { readonly _tag: "Settled"; readonly completed: Deferred.Deferred<void> }
+	/**
+	 * Closes the open window now, then runs `run`. The worker takes nothing
+	 * else until `run` ends, so `run` must not wait on subscribers: a
+	 * gated one takes nothing before it starts.
+	 */
+	| { readonly _tag: "Settled"; readonly run: Effect.Effect<void> }
 	/**
 	 * Runs `run` once every event queued before it is published: after the
 	 * open window closes, on its own deadlines, or at once when none is
@@ -41,7 +46,6 @@ export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* <
 	intake: Queue.Dequeue<EventAccumulatorCommand<Ev>>,
 	options: EventAccumulatorOptions,
 	onFlush: (window: BulkWindow<Ev>) => Effect.Effect<void>,
-	onSettled: Effect.Effect<void>,
 ): Effect.fn.Return<never> {
 	const flushWindow = Effect.fn("runEventAccumulator.flushWindow")(function* (
 		window: EventWindow<Ev>,
@@ -61,8 +65,7 @@ export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* <
 				{ readonly _tag: "Flush" | "Settled" | "AfterWindow" }
 			>,
 		): Effect.fn.Return<void> {
-			if (command._tag === "AfterWindow") return yield* command.run;
-			if (command._tag === "Settled") yield* onSettled;
+			if (command._tag !== "Flush") return yield* command.run;
 			yield* Deferred.succeed(command.completed, undefined);
 		},
 	);

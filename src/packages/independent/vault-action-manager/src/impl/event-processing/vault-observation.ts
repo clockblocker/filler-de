@@ -382,20 +382,38 @@ export class VaultObservation<
 		},
 	);
 
+	/**
+	 * Closes the open window, then waits until every subscriber has handled
+	 * it and everything before it; a gated subscriber, until it has started
+	 * and done so. The worker only publishes the barrier and the caller
+	 * waits for it, so the channel keeps windowing and delivering to the
+	 * other subscribers meanwhile.
+	 */
 	readonly whenIdleEffect = Effect.fn("VaultObservation.whenIdle")(function* (
 		this: VaultObservation<Ev, M>,
 	): Effect.fn.Return<void> {
 		const session = yield* Ref.get(this.core.session);
 		if (!session) return;
 
-		const completed = yield* Deferred.make<void>();
+		const published = yield* Deferred.make<SubscriberBarrier | null>();
 		const offered = yield* Queue.offer(session.intake, {
 			_tag: "Settled",
-			completed,
+			run: this.publishSubscriberBarrierEffect().pipe(
+				Effect.flatMap((barrier) =>
+					Deferred.succeed(published, barrier),
+				),
+				Effect.asVoid,
+			),
 		});
 		if (!offered) return;
 		yield* Effect.raceFirst(
-			Deferred.await(completed),
+			Deferred.await(published).pipe(
+				Effect.flatMap((barrier) =>
+					barrier === null
+						? Effect.void
+						: Deferred.await(barrier.completed),
+				),
+			),
 			Deferred.await(session.closed),
 		);
 	});
@@ -476,7 +494,6 @@ export class VaultObservation<
 								intake,
 								this.options,
 								(window) => this.publishWindowEffect(window),
-								this.publishSubscriberBarrierEffect(),
 							).pipe(Effect.forkIn(scope));
 
 							return { closed, intake, scope };
@@ -613,11 +630,18 @@ export class VaultObservation<
 		},
 	);
 
+	/**
+	 * Publishes a barrier every current subscriber releases once it has
+	 * handled what was published before it, and answers it without
+	 * waiting; `null` when there is no subscriber.
+	 */
 	private readonly publishSubscriberBarrierEffect = Effect.fn(
 		"VaultObservation.publishSubscriberBarrier",
-	)(function* (this: VaultObservation<Ev, M>): Effect.fn.Return<void> {
+	)(function* (
+		this: VaultObservation<Ev, M>,
+	): Effect.fn.Return<SubscriberBarrier | null> {
 		const subscribers = yield* Ref.get(this.core.subscribers);
-		if (subscribers.size === 0) return;
+		if (subscribers.size === 0) return null;
 
 		const barrier: SubscriberBarrier = {
 			completed: yield* Deferred.make<void>(),
@@ -640,7 +664,7 @@ export class VaultObservation<
 				yield* this.releaseBarrierEffect(subscriber, barrier);
 			}
 		}
-		yield* Deferred.await(barrier.completed);
+		return barrier;
 	});
 
 	private readonly subscriberLoopEffect = Effect.fn(
@@ -651,7 +675,8 @@ export class VaultObservation<
 		subscription: PubSub.Subscription<PublishedMessage<Ev, M>>,
 	): Effect.fn.Return<never> {
 		// A gated subscriber takes nothing, barriers included, until it
-		// starts: settling waits for the windows it has yet to handle.
+		// starts: settling waits, in its caller, for the windows it has yet
+		// to handle.
 		yield* Deferred.await(state.delivering);
 		while (true) {
 			const message = yield* PubSub.take(subscription);
