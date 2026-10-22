@@ -38,8 +38,9 @@ const SplitPathSchema = Schema.declare(
  *   the source went to the trash.
  * - `Trashed`: moved the target to the trash.
  * - `NoOp`: changed nothing: the folder or file was already there, the
- *   transform kept the content, the file to trash was gone, or a rename's
- *   source was gone and its target there.
+ *   transform kept the content, the upsert's content was already there, the
+ *   file to trash was gone, or a rename's source was gone and its target
+ *   there.
  */
 export const VamActionOutcomeSchema = Schema.Union([
 	Schema.TaggedStruct("Created", {

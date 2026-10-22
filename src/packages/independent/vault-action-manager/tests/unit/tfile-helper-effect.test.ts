@@ -276,10 +276,23 @@ describe("TFileHelper modify Self Events", () => {
 
 		expect(log).toEqual([
 			"expect Library/note.md",
-			"modify Library/note.md",
+			"process-write Library/note.md",
 			"expect Library/note.md",
 			"process-write Library/note.md",
 		]);
+	});
+
+	it("writes nothing and expects nothing when a replace keeps the content", async () => {
+		const { helper, layer, log } = recordingHelper("same");
+
+		const outcome = await Effect.runPromise(
+			helper
+				.replaceAllContent(target, "same")
+				.pipe(Effect.provide(layer)),
+		);
+
+		expect(outcome).toEqual({ _tag: "NoOp" });
+		expect(log).toEqual([]);
 	});
 
 	it("expects nothing when a transform leaves the content unchanged", async () => {
@@ -338,15 +351,17 @@ describe("TFileHelper modify Self Events", () => {
 		file.path = "Library/note.md";
 		const layer = service({
 			getAbstractFileByPath: () => Effect.succeed(file),
-			modify: () =>
-				Effect.fail(
-					new VamVaultIoError({
-						cause: new Error("disk full"),
-						operation: "modify",
-						path: file.path,
-					}),
-				),
-			read: () => Effect.succeed("before"),
+			process: (_target, fn) =>
+				Effect.suspend(() => {
+					fn("before");
+					return Effect.fail(
+						new VamVaultIoError({
+							cause: new Error("disk full"),
+							operation: "process",
+							path: file.path,
+						}),
+					);
+				}),
 		});
 
 		const result = await Effect.runPromise(

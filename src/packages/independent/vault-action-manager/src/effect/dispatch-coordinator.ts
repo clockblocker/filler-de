@@ -626,7 +626,7 @@ export class DispatchBatchWorker {
 									action,
 									cause: squashed,
 									kind: "defect",
-									operation: "executeAction",
+									operation: `execute.${action.kind}`,
 								}),
 					);
 				},

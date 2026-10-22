@@ -485,24 +485,14 @@ export class TFileHelper {
 		const path = pathfinder.systemPathFromSplitPath(splitPath);
 		return Effect.gen({ self: this }, function* () {
 			const vault = yield* VaultIo;
-			// The pre-image's hash, for the report.
-			const before = yield* vault
-				.read(file)
-				.pipe(
-					Effect.mapError((error) =>
-						operationFailure(
-							"replaceFileContent.read",
-							path,
-							errorWriteFailed(
-								"file",
-								path,
-								originalMessage(error),
-							),
-							error,
-						),
-					),
-				);
-			yield* this.modifyAsSelf(file, vault.modify(file, content)).pipe(
+			// One `Vault.process` call reads the pre-image the report hashes
+			// and writes over it atomically, so the hash names exactly the
+			// content replaced; Obsidian skips the write when it is unchanged.
+			const replaced: { before?: string } = {};
+			yield* this.processAsSelf(vault, file, (current) => {
+				replaced.before = current;
+				return content;
+			}).pipe(
 				Effect.mapError((error) =>
 					operationFailure(
 						"replaceFileContent",
@@ -512,11 +502,7 @@ export class TFileHelper {
 					),
 				),
 			);
-			return {
-				_tag: "Wrote",
-				afterHash: vaultContentHash(content),
-				beforeHash: vaultContentHash(before),
-			} as const satisfies VamActionOutcome;
+			return wrote(replaced.before ?? "", content);
 		});
 	}
 
@@ -677,27 +663,6 @@ export class TFileHelper {
 					),
 				);
 		});
-	}
-
-	private modifyAsSelf<E>(
-		file: TFile,
-		write: Effect.Effect<void, E>,
-	): Effect.Effect<void, E> {
-		const recorder = this.selfModifies;
-		if (!recorder) return write;
-		return recorder
-			.expectModifyEffect(file.path)
-			.pipe(
-				Effect.andThen(
-					write.pipe(
-						Effect.onExit((exit) =>
-							Exit.isFailure(exit)
-								? recorder.forgetModifyEffect(file.path)
-								: Effect.void,
-						),
-					),
-				),
-			);
 	}
 }
 

@@ -194,7 +194,7 @@ describe("delimiter migration lifecycle", () => {
 		expect(outcome.kind).toBe("Failed");
 		if (outcome.kind !== "Failed") return;
 		expect(outcome.problem.stage).toBe("Dispatch");
-		expect(outcome.problem.operation).toBe("executeAction");
+		expect(outcome.problem.operation).toBe("execute.RenameMdFile");
 		expect(outcome.execution?.kind).toBe("RolledBack");
 		if (outcome.execution?.kind !== "RolledBack") return;
 		expect(outcome.execution.failure.path).toBe(
@@ -517,6 +517,39 @@ describe("delimiter migration lifecycle", () => {
 		// Only gamma's injected failure is uncertain; alpha's forward and
 		// backward renames are both reported as done.
 		expect(existsCalls).toBe(2);
+	});
+
+	test("a rename back that finds its note gone reports it unresolved, not left renamed", async () => {
+		const harness = makeHarness([
+			readableMdPath("alpha-beta"),
+			readableMdPath("gamma-delta"),
+		]);
+		harness.failForward = failOn("gamma-delta");
+		harness.rollback = (actions) => {
+			// The note moved away after the forward rename: VAM finds neither
+			// end, so the rename back fails having changed nothing.
+			harness.files.delete("Library/alpha ~ beta.md");
+			const report = new VamDispatchReport({
+				entries: actions.map((action) =>
+					VamDispatchReport.entryFor(
+						actionError(action, new Error("not found"), "missing"),
+					),
+				),
+			});
+			const failure = VamDispatchFailure.ofReport(report);
+			return failure ? Effect.fail(failure) : Effect.succeed(report);
+		};
+
+		const execution = await Effect.runPromise(
+			harness.service.execute(await plannedFor(harness)),
+		);
+
+		expect(execution.kind).toBe("RollbackIncomplete");
+		if (execution.kind !== "RollbackIncomplete") return;
+		expect(execution.leftRenamed).toEqual([]);
+		expect(
+			execution.unresolved.map((action) => action.payload.from.basename),
+		).toEqual(["alpha-beta"]);
 	});
 
 	test("a rename VAM moved to an indexed name is renamed back from there", async () => {

@@ -29,11 +29,12 @@ export function actionError(
 	cause: unknown,
 	kind: VamActionFailureKind = "io",
 ): VamDispatchError {
+	const failed = action ?? SOME_ACTION;
 	return new VamDispatchError({
-		action: action ?? SOME_ACTION,
+		action: failed,
 		cause,
 		kind,
-		operation: "executeAction",
+		operation: `execute.${failed.kind}`,
 	});
 }
 

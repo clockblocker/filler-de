@@ -343,13 +343,14 @@ relative to each other; structural changes appear only in `subscribeToBulk`.
 
 Modify Self Events are recorded at write time, not at planning time, because
 only the background writer knows whether a write happens. `TFileHelper`
-records one expectation immediately before each `vault.modify` and, for
-`vault.process`, synchronously inside the callback and only when the callback
-changes the content, since Obsidian writes nothing when the callback returns
-its input. A modify callback that lands before the callback runs, or during a
-`vault.process` call that writes nothing (an unchanged `ProcessMdFile`, the
-first call of an asynchronous transform, a revalidation that lost a content
-race), is therefore never hidden. An expectation is withdrawn when its write
+writes over an existing Markdown file only through `vault.process`, for
+`UpsertMdFile` as for `ProcessMdFile`, and records one expectation
+synchronously inside the callback and only when the callback changes the
+content, since Obsidian writes nothing when the callback returns its input. A modify callback that
+lands before the callback runs, or during a `vault.process` call that writes
+nothing (an unchanged `ProcessMdFile` or `UpsertMdFile`, the first call of an
+asynchronous transform, a revalidation that lost a content race), is
+therefore never hidden. An expectation is withdrawn when its write
 fails. Modify expectations are counted per path, expire with the tracker TTL,
 and never hold the settle barrier open. Acquiring the modify listener clears
 them, because writes made while nobody listened left expectations whose

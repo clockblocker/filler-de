@@ -364,9 +364,12 @@ export class DelimiterChangeService {
 					),
 				);
 			}
+			// A skipped inverse left the note where it was. A failed one
+			// changed nothing, but may have failed because the note is not
+			// at `at` any more, so the vault says where it is.
 			placements.set(
 				action,
-				entry?.status === "Failed" || entry?.status === "Skipped"
+				entry?.status === "Skipped"
 					? { at, kind: "Moved" }
 					: yield* this.probe(action, at),
 			);
