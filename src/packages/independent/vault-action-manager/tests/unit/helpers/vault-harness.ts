@@ -8,6 +8,24 @@ import {
 import { rewriteWikilinks } from "./link-rewrite";
 
 /**
+ * One Markdown view in the harness's workspace, never the active one. Its
+ * `buffer` is its content; `null` means it shows what the disk holds.
+ * `lastSaved` is what it last loaded or saved (Obsidian's
+ * `lastSavedData`): a buffer other than that is unsaved typing, one equal
+ * to it is a clean view Obsidian has not reloaded yet. `editor`, when set,
+ * is what its source editor holds while reading mode shows `buffer`. A
+ * write through its editor reaches every view of its file, as Obsidian
+ * keeps the views of one file in step.
+ */
+export type HarnessPane = {
+	buffer: string | null;
+	editor: string | null;
+	lastSaved: string | null;
+	mode: "preview" | "source";
+	readonly path: string;
+};
+
+/**
  * A vault whose writes fire Obsidian's modify callback, and whose
  * `FileManager.renameFile` rewrites the files listed in `linkingFiles`, as
  * Obsidian's link updater does; `resolvedLinks` is what Obsidian's metadata
@@ -21,7 +39,7 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 	const contents = new Map<string, string>();
 	const byPath = new Map<string, TAbstractFile>();
 	const writes: string[] = [];
-	const openPaths = new Set<string>();
+	const panes: HarnessPane[] = [];
 	const linkingFiles: TFile[] = [];
 	const resolvedLinks: Record<string, Record<string, number>> = {};
 	const failingWrites = new Set<string>();
@@ -94,10 +112,51 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 		callbacks.get("rename")?.(file as never, oldPath as never);
 	};
 
+	const shown = (pane: HarnessPane) =>
+		pane.buffer ?? contents.get(pane.path) ?? "";
+	const editorOf = (pane: HarnessPane) => ({
+		getCursor: () => ({ ch: 0, line: 0 }),
+		getLine: (line: number) => shown(pane).split("\n")[line] ?? "",
+		getSelection: () => "",
+		getValue: () => pane.editor ?? shown(pane),
+		listSelections: () => [],
+		posToOffset: () => 0,
+		transaction: ({ changes }: { changes: readonly LineChange[] }) => {
+			const next = applyLineChanges(shown(pane), changes);
+			for (const each of panes)
+				if (each.path === pane.path) {
+					each.buffer = next;
+					each.editor = null;
+				}
+		},
+	});
+	const views = new Map<HarnessPane, MarkdownView>();
+	const viewOf = (pane: HarnessPane) => {
+		const known = views.get(pane);
+		if (known) return known;
+		const view = new MarkdownView({} as never);
+		Object.assign(view, {
+			contentEl: { querySelector: () => null },
+			editor: editorOf(pane),
+			getMode: () => pane.mode,
+			getViewData: () => shown(pane),
+		});
+		Object.defineProperties(view, {
+			lastSavedData: {
+				get: () =>
+					pane.buffer === null
+						? (contents.get(pane.path) ?? "")
+						: pane.lastSaved,
+			},
+			saving: { value: false },
+		});
+		views.set(pane, view);
+		return view;
+	};
 	const leaves = () =>
-		[...openPaths].map((path) => {
-			const view = new MarkdownView({} as never);
-			view.file = byPath.get(path) as TFile;
+		panes.map((pane) => {
+			const view = viewOf(pane);
+			view.file = byPath.get(pane.path) as TFile;
 			return { view };
 		});
 
@@ -174,8 +233,65 @@ export function makeVaultHarness({ insensitive = true } = {}) {
 		failingWrites,
 		hooks,
 		linkingFiles,
-		open: (path: string) => openPaths.add(path),
+		/**
+		 * Opens `path` in another background pane, showing the disk content
+		 * or, with `buffer`, unsaved typing. With `clean`, the buffer is
+		 * what the pane last loaded, not yet reloaded after a disk write.
+		 * With `editor`, its source editor lags `buffer`, as in reading mode.
+		 */
+		open: (
+			path: string,
+			options: {
+				buffer?: string;
+				clean?: boolean;
+				editor?: string;
+				mode?: HarnessPane["mode"];
+			} = {},
+		): HarnessPane => {
+			const buffer = options.buffer ?? null;
+			const pane: HarnessPane = {
+				buffer,
+				editor: options.editor ?? null,
+				lastSaved: options.clean
+					? buffer
+					: (contents.get(path) ?? null),
+				mode: options.mode ?? "source",
+				path,
+			};
+			panes.push(pane);
+			return pane;
+		},
 		resolvedLinks,
+		/** What `pane` shows: its unsaved buffer, or the disk content. */
+		shown,
 		writes,
 	};
+}
+
+type LineChange = {
+	readonly from: { readonly ch: number; readonly line: number };
+	readonly text: string;
+	readonly to?: { readonly ch: number; readonly line: number };
+};
+
+/** Applies `editor.transaction` changes, given in positions of `text`. */
+function applyLineChanges(text: string, changes: readonly LineChange[]) {
+	const lines = text.split("\n");
+	const offset = ({ ch, line }: { ch: number; line: number }) =>
+		lines.slice(0, line).reduce((sum, each) => sum + each.length + 1, 0) +
+		ch;
+	return [...changes]
+		.map((change) => ({
+			from: offset(change.from),
+			text: change.text,
+			to: offset(change.to ?? change.from),
+		}))
+		.sort((a, b) => b.from - a.from)
+		.reduce(
+			(current, change) =>
+				current.slice(0, change.from) +
+				change.text +
+				current.slice(change.to),
+			text,
+		);
 }

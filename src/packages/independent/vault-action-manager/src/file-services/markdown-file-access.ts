@@ -26,27 +26,36 @@ import type {
 import type { ActiveFileService } from "./active-view/active-file-service";
 import { annotateFileAccessFailure } from "./active-view/tracing";
 import type { TFileHelper } from "./background/helpers/tfile-helper";
+import { resolveContentRoute } from "./content-route";
 
-/** Owns the active-editor/background-vault routing policy for Markdown files. */
+/**
+ * Owns the routing policy for Markdown files between editors and the
+ * background vault. Content reads and writes share one route,
+ * `resolveContentRoute`, so a guarded write checks the content a read
+ * returned.
+ */
 export class MarkdownFileAccess {
 	constructor(
 		private readonly activeEditor: ActiveFileService,
 		private readonly backgroundVault: TFileHelper,
 	) {}
 
+	/**
+	 * The file's content as VAM routes it (`resolveContentRoute`): the
+	 * active editor's buffer, a background view's unsaved buffer, or the
+	 * file on disk. Background views with different unsaved typing fail it
+	 * with `VamContentConflictError`.
+	 */
 	readContent(target: SplitPathToMdFile) {
 		const path = pathfinder.systemPathFromSplitPath(target);
 		const self = this;
 		return Effect.fn("vam.markdown.read")(function* () {
 			yield* Effect.annotateCurrentSpan({ operation: "read", path });
-			const active = yield* self.activeEditor.observeTarget(target);
-			if (active) {
-				return yield* self.activeEditor.getContent(active);
-			}
-
-			const file = yield* self.backgroundFile(target);
-			const vault = yield* VaultIo;
-			return yield* vault.read(file);
+			const route = yield* self.route(target);
+			if (route.content !== null) return route.content;
+			return route._tag === "Editor"
+				? yield* self.activeEditor.getContent(route.snapshot)
+				: yield* self.diskContent(target);
 		}, Effect.tapError(annotateFileAccessFailure))();
 	}
 
@@ -54,7 +63,7 @@ export class MarkdownFileAccess {
 	 * Reads content through the same route as `readContent`, with the file's
 	 * stat taken first. A concurrent write can make the content newer than the
 	 * stat, never older, so a `(path, mtime)` cache only rereads too often.
-	 * The active editor may hold unsaved content; its stat describes disk.
+	 * An editor may hold unsaved content; its stat describes disk.
 	 */
 	readContentWithStat(target: SplitPathToMdFile) {
 		const path = pathfinder.systemPathFromSplitPath(target);
@@ -62,16 +71,18 @@ export class MarkdownFileAccess {
 		return Effect.fn("vam.markdown.readWithStat")(function* () {
 			yield* Effect.annotateCurrentSpan({ operation: "read", path });
 			const vault = yield* VaultIo;
-			const active = yield* self.activeEditor.observeTarget(target);
-			if (active) {
-				const stat = yield* vault.stat(active.file);
-				const content = yield* self.activeEditor.getContent(active);
-				return { content, stat };
-			}
-
 			const file = yield* self.backgroundFile(target);
 			const stat = yield* vault.stat(file);
-			const content = yield* vault.read(file);
+			const route = yield* resolveContentRoute(
+				self.activeEditor,
+				target,
+				Effect.suspend(() => vault.read(file)),
+			);
+			if (route.content !== null) return { content: route.content, stat };
+			const content =
+				route._tag === "Editor"
+					? yield* self.activeEditor.getContent(route.snapshot)
+					: yield* vault.read(file);
 			return { content, stat };
 		}, Effect.tapError(annotateFileAccessFailure))();
 	}
@@ -93,11 +104,11 @@ export class MarkdownFileAccess {
 		const self = this;
 		return Effect.fn("vam.markdown.replace")(function* () {
 			yield* Effect.annotateCurrentSpan({ operation: "replace", path });
-			const active = yield* self.activeEditor.observeTarget(target);
-			return active
+			const route = yield* self.route(target);
+			return route._tag === "Editor"
 				? yield* self.activeEditor.replaceAllContentInActiveFile(
 						content,
-						active,
+						route.snapshot,
 					)
 				: yield* self.backgroundVault.replaceAllContent(
 						target,
@@ -114,21 +125,20 @@ export class MarkdownFileAccess {
 		const self = this;
 		return Effect.fn("vam.markdown.transform")(function* () {
 			yield* Effect.annotateCurrentSpan({ operation: "transform", path });
-			const active = yield* self.activeEditor.observeTarget(
-				args.splitPath,
-			);
-			return active
-				? yield* self.activeEditor.processContent(args, active)
+			const route = yield* self.route(args.splitPath);
+			return route._tag === "Editor"
+				? yield* self.activeEditor.processContent(args, route.snapshot)
 				: yield* self.backgroundVault.processContent(args);
 		}, Effect.tapError(annotateFileAccessFailure))();
 	}
 
 	/**
 	 * Trashes the file; `NoOp` when it is gone. With `ifContent`, only while
-	 * it holds that content, as the route reads it: the active editor's
+	 * it holds that content, as `readContent` routes it: an open view's
 	 * buffer, unsaved typing included, or the file on disk. The check runs
-	 * immediately before the trash; otherwise it fails with
-	 * `VamContentConflictError` and trashes nothing.
+	 * immediately before the trash; otherwise, or when background views
+	 * hold different unsaved typing, it fails with `VamContentConflictError`
+	 * and trashes nothing.
 	 */
 	trashFile(target: SplitPathToMdFile, ifContent?: ExpectedContent) {
 		const path = pathfinder.systemPathFromSplitPath(target);
@@ -237,6 +247,23 @@ export class MarkdownFileAccess {
 
 	scrollOpenedFileToLine(line: number) {
 		return this.activeEditor.scrollToLine(line);
+	}
+
+	private route(target: SplitPathToMdFile) {
+		return resolveContentRoute(
+			this.activeEditor,
+			target,
+			this.diskContent(target),
+		);
+	}
+
+	private diskContent(target: SplitPathToMdFile) {
+		const self = this;
+		return Effect.gen(function* () {
+			const file = yield* self.backgroundFile(target);
+			const vault = yield* VaultIo;
+			return yield* vault.read(file);
+		});
 	}
 
 	private backgroundFile(target: SplitPathToMdFile) {

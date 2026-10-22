@@ -56,8 +56,9 @@ Effects and never expose live Obsidian file references.
 entries by `(path, mtime)`. `scan` entries stay unchanged because consumers
 spread them into Split Paths. A file whose stat cannot be read is omitted from
 `scanWithStat` with a `scanFile` diagnostic. `readContentWithStat` takes the
-stat before reading, so content is never older than its stat. For the active
-editor, the content may be unsaved while the stat describes the file on disk.
+stat before reading, so content is never older than its stat. For a file
+open in an editor, the content may be unsaved while the stat describes the
+file on disk.
 
 Do not import internal ports, the runtime, or helper classes.
 
@@ -142,7 +143,9 @@ same (`Foo.md` for `foo.md` on macOS), fails the action with
 `vault.create` refuses an existing file as well, so a file that appears
 between that check and the create fails it the same way.
 
-`ProcessMdFile` applies a transform to current content. VAM routes the operation to the active editor or the background vault adapter.
+`ProcessMdFile` applies a transform to current content. VAM routes the
+operation to an editor or the background vault adapter (see
+[Markdown access](#markdown-access)).
 
 In the background, a synchronous transform runs inside `Vault.process`, so the
 read, transform, and write are one atomic step. Collapsed transforms stay
@@ -163,9 +166,15 @@ over or trashed. `ExpectedContent` is the whole content, or
 
 | Action | Field | Checked | When it does not hold |
 | --- | --- | --- | --- |
-| `ProcessMdFile` | `expected` | Against the content the transform receives, inside the same `Vault.process` call that writes (in the editor, before the transform runs). | `VamContentConflictError`, kind `conflict`, `Failed`; nothing written. |
-| `TrashMdFile` | `ifContent` | Against the content read immediately before the trash: the open editor's buffer, unsaved typing included, or the file on disk. | `VamContentConflictError`, kind `conflict`, `Failed`; nothing trashed. A file already gone is a `NoOp`. |
+| `ProcessMdFile` | `expected` | Against the content the transform receives, inside the same `Vault.process` call that writes (in an editor, before the transform runs). | `VamContentConflictError`, kind `conflict`, `Failed`; nothing written. |
+| `TrashMdFile` | `ifContent` | Against the content read immediately before the trash, as `readContent` routes it: an open view's buffer, unsaved typing included, or the file on disk. | `VamContentConflictError`, kind `conflict`, `Failed`; nothing trashed. A file already gone is a `NoOp`. |
 | `CreateMdFile`, `CreateFile` | (always) | That no file is at the path, as the file system compares names. | `VamTargetExistsError`, kind `exists`, `Failed`. |
+
+Both checks see every open Markdown view of the file, not only the
+active one: a note typed into in a split or another tab, and not saved
+yet, is checked against that typing, and background views holding
+different unsaved typing fail the action with a conflict (see
+[Markdown access](#markdown-access)).
 
 The process check is atomic: nothing can land between the check and the
 write. The trash check is one read away from the trash, the closest Obsidian
@@ -727,8 +736,8 @@ subscribers that have started, and `caughtUp` and the window's queued work
 still complete. A window published meanwhile counts as progress, so the
 next round waits for it too.
 
-Writes routed to the active editor are not attributed: their modifications
-are `External`. Obsidian persists them
+Writes routed to an editor, the active one or a background pane's, are
+not attributed: their modifications are `External`. Obsidian persists them
 with a debounced editor save that can also carry the user's own typing, so
 suppressing that save could hide a hand edit. Subscribers can see such an echo
 and should treat modifications idempotently.
@@ -739,21 +748,93 @@ whether it hears it.
 
 ## Markdown access
 
-`MarkdownFileAccess` owns the route between the active editor and background vault I/O.
+`MarkdownFileAccess` owns the route between editors and background vault I/O.
 
-- Reads and transforms of the active file use the editor adapter.
-- Reads and transforms of other files use the vault adapter.
-- Selection preservation during rename stays inside this module.
 - Consumers request intent. They do not select an adapter.
+- Selection preservation during rename stays inside this module.
+- Content reads (`readContent`, `readContentWithStat`, scan entries'
+  `read`), content writes (`ProcessMdFile`, a contentful `UpsertMdFile`),
+  and the `ifContent` check of a `TrashMdFile` share one route,
+  `resolveContentRoute` in `file-services/content-route.ts`. A caller that
+  reads a file, plans, and writes with `expected` set to what it read is
+  therefore checked against the content it read.
 
-This single route prevents differences between read and write behavior.
+When the active view shows the file, it is the route, as it always was:
+typing goes into the active view, and Obsidian copies it into the file's
+other views (its `quick-preview`, debounced 10 ms), so they can only lag
+it. Otherwise the route looks at every loaded Markdown view showing the
+file (`ActiveEditorAccess.markdownViewsOf`, all windows; a deferred tab, or
+a view that has not loaded its content yet, holds no buffer and is
+skipped):
+
+| Background views of the file | Route |
+| --- | --- |
+| None | The disk. |
+| None holds unsaved typing | The disk. Obsidian reloads clean views; nothing is merged. |
+| Some hold unsaved typing, all the same | That buffer: reads return it, and a write goes through such a view's editor, one in source mode if there is one. |
+| They hold different unsaved typing | None: `VamContentConflictError`, kind `conflict`, with cause `OpenViewsDisagree`. Nothing is read or written. |
+
+A view's buffer is what it shows, `getViewData()`: in reading mode
+Obsidian updates only the rendered mode, so the view's `editor` can lag.
+A view holds unsaved typing when its buffer differs both from what it
+last loaded or saved and from the disk. The first comparison reads
+Obsidian's internal `TextFileView.lastSavedData` (and `saving`, since a
+view mid-save is not yet on disk). It matters right after a disk write:
+Obsidian reloads each clean view of the file with an asynchronous read,
+and until then the view holds the old content, which the disk alone would
+take for typing. Without these internals, every view is compared with
+the disk. A view of the file that is clean is ignored even when it holds
+something else, since it holds nothing that is not on disk. Different
+unsaved typing in two background views needs a keystroke the file's other
+views have not caught up with, so it lasts milliseconds; the action fails
+rather than guess, as on any other content conflict. A background view in reading mode with unsaved typing
+answers reads; a write through it fails as the active editor does in
+reading mode (`WrongMode`).
+
+Listing the views walks the workspace's leaves once per read of a file
+the active view does not show, untraced. A workspace holds tens of leaves,
+so a startup read of every file costs that many steps per file beside its
+disk read.
+
+### Writes to a file open in a background pane
+
+A write to a file whose background pane holds unsaved typing goes through
+that pane's editor, as a write to the active file does. It applies one
+`editor.transaction` to one view; Obsidian keeps the views of one file in
+step and saves the buffer on its own schedule, so the disk catches up
+later.
+
+The alternative was to write the disk with `Vault.process` and let
+Obsidian reload the pane, which merges the pane's unsaved typing into
+what it reloads (the link-update restoration relies on this, see
+[Link updates](#link-updates)). It was rejected for routed content:
+
+- The read route returns the pane's buffer, so the transform ran on the
+  buffer. Written to disk, its result already contains the typing, and
+  Obsidian's merge would see the typing twice, once in the buffer and once
+  on disk, around the transform's own changes. Through the editor the
+  result simply replaces the buffer it was computed from.
+- The check and the write then touch the same content, as on the active
+  route, with the same revalidation of an asynchronous transform
+  (`IdentityMismatch` when the buffer changed while it ran).
+
+Flushing the panes first (`view.save()`) was rejected too: a read would
+then write the user's half-typed note to disk on VAM's schedule, and two
+panes that disagree would leave whichever saved last.
+
+A clean background pane, even one not yet reloaded after a disk write,
+is written through the disk, which keeps the atomic `Vault.process`
+check. An unconditional `TrashMdFile` reads no
+content and consults no view: it trashes the note, unsaved typing and all,
+as asked.
 
 ## Effect runtime and lifecycle
 
 `createVaultActionManager` creates one managed Effect runtime. The runtime supplies two Obsidian ports:
 
 - `VaultIo` for vault, file-manager, and metadata-cache operations;
-- `ActiveEditorAccess` for the active Markdown view and navigation.
+- `ActiveEditorAccess` for the active Markdown view, the views of a file,
+  and navigation.
 
 Internal modules return Effect programs. They do not create runtimes.
 
@@ -787,7 +868,7 @@ Desktop scenarios use this idle barrier. They must not inspect VAM internals or 
 | Observation | `src/packages/independent/vault-action-manager/src/impl/event-processing/` |
 | Callback sequence | `src/packages/independent/vault-action-manager/src/impl/event-processing/callback-sequence.ts` |
 | Snapshot traversal | `VaultReader.snapshot` in `src/packages/independent/vault-action-manager/src/impl/vault-reader.ts` |
-| Markdown routing | `src/packages/independent/vault-action-manager/src/file-services/markdown-file-access.ts` |
+| Markdown routing | `src/packages/independent/vault-action-manager/src/file-services/markdown-file-access.ts`, `content-route.ts` |
 | Testing adapter | `src/packages/independent/vault-action-manager/src/testing-adapter.ts` |
 | Public types | `src/packages/independent/vault-action-manager/src/types/` |
 | Callers, operations, origins | `src/packages/independent/vault-action-manager/src/types/event-origin.ts` |

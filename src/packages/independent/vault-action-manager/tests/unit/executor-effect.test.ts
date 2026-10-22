@@ -141,6 +141,7 @@ function services(mode: "success" | "failure") {
 			ActiveEditorAccess,
 			ActiveEditorAccess.of({
 				getActiveEditor: Effect.succeed(null),
+				markdownViewsOf: () => Effect.succeed([]),
 				openFile: () => Effect.void,
 				openMarkdownPaths: Effect.succeed(new Set<string>()),
 				waitForActiveEditor: () => Effect.die("not used"),

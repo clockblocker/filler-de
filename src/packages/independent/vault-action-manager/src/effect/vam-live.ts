@@ -1,4 +1,4 @@
-import { Effect, Layer, Tracer } from "effect";
+import { Effect, Layer, Predicate, Tracer } from "effect";
 import { type App, MarkdownView, type TAbstractFile, TFolder } from "obsidian";
 import type { RecentTrace } from "../diagnostics/recent-trace";
 import {
@@ -268,6 +268,19 @@ function makeActiveEditorAccessLive(
 							}),
 						try: () => readActiveEditor(app),
 					}),
+					// Untraced: every content read of a file the active
+					// view does not show asks it.
+					markdownViewsOf: (path) =>
+						Effect.try({
+							catch: (cause) =>
+								new VamActiveEditorError({
+									cause,
+									operation: "markdownViewsOf",
+									path,
+									reason: "AdapterFailure",
+								}),
+							try: () => readMarkdownViewsOf(app, path),
+						}),
 					openFile: Effect.fn("ActiveEditorAccess.openFile")(
 						function* (file) {
 							const leaf = yield* Effect.try({
@@ -365,6 +378,28 @@ function readOpenMarkdownPaths(app: App): ReadonlySet<string> {
 	return paths;
 }
 
+/**
+ * The loaded Markdown views of the file at `path`, in every window. A
+ * deferred tab (not yet shown since startup) is no `MarkdownView` and holds
+ * no buffer, so it is not listed.
+ */
+function readMarkdownViewsOf(
+	app: App,
+	path: string,
+): readonly ActiveEditorHandle[] {
+	const handles: ActiveEditorHandle[] = [];
+	for (const leaf of app.workspace.getLeavesOfType("markdown")) {
+		const view = leaf.view;
+		if (
+			view instanceof MarkdownView &&
+			view.file &&
+			VaultPath.caseSensitive.same(view.file.path, path)
+		)
+			handles.push(readActiveEditorFromView(view));
+	}
+	return handles;
+}
+
 function readActiveEditor(app: App): ActiveEditorHandle | null {
 	const view = app.workspace.getActiveViewOfType(MarkdownView);
 	if (!view) return null;
@@ -385,10 +420,29 @@ function readActiveEditorFromView(view: MarkdownView): ActiveEditorHandle {
 			view.file?.path === path &&
 			view.getMode() === mode,
 		mode,
+		persisted: () => readPersisted(view),
 		readInlineTitleSelection: () => readInlineTitleSelection(view),
 		restoreInlineTitleSelection: (saved) =>
 			restoreInlineTitleSelection(view, saved),
+		viewData: () => view.getViewData(),
 	};
+}
+
+/**
+ * `TextFileView.lastSavedData` and `saving`, Obsidian internals: what the
+ * view last loaded from or saved to disk (`null` before it loads), and
+ * whether a save is writing. `undefined` when they are not there.
+ */
+function readPersisted(
+	view: MarkdownView,
+): { readonly data: string | null; readonly saving: boolean } | undefined {
+	const internals = view as unknown as {
+		readonly lastSavedData?: unknown;
+		readonly saving?: unknown;
+	};
+	const data = internals.lastSavedData;
+	if (!(data === null || Predicate.isString(data))) return undefined;
+	return { data, saving: internals.saving === true };
 }
 
 function readInlineTitleSelection(

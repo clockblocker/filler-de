@@ -15,6 +15,7 @@ import {
 } from "@textfresser/vault-action-manager";
 import { Effect } from "effect";
 import type { TFile } from "obsidian";
+import { OpenViewsDisagree } from "../../src/file-services/content-route";
 import { makeVaultHarness } from "./helpers/vault-harness";
 
 const md = (path: string) => splitPathCodec.parse(path) as SplitPathToMdFile;
@@ -307,6 +308,197 @@ describe("TrashMdFile ifContent", () => {
 		const report = await entries([trashIf("Library/gone.md", "read")]);
 		await Effect.runPromise(dispose);
 		expect(report.every((entry) => entry.status !== "Failed")).toBe(true);
+	});
+});
+
+describe("a file open in a background pane", () => {
+	const trashes = (writes: readonly string[]) =>
+		writes.filter((write) => write.startsWith("trash"));
+
+	it("keeps unsaved typing: a trash guarded by the disk content fails with conflict", async () => {
+		const { dispose, harness, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		const pane = harness.open("Library/a.md", {
+			buffer: "saved, then typed",
+		});
+		const entry = await run(trashIf("Library/a.md", "saved"));
+		await Effect.runPromise(dispose);
+		const error = failure(entry);
+		expect(error.kind).toBe("conflict");
+		expect(error.cause).toBeInstanceOf(VamContentConflictError);
+		expect(harness.exists("Library/a.md")).toBe(true);
+		expect(trashes(harness.writes)).toEqual([]);
+		expect(harness.shown(pane)).toBe("saved, then typed");
+	});
+
+	it("keeps unsaved typing: a process guarded by the disk content fails with conflict", async () => {
+		const { dispose, harness, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		const pane = harness.open("Library/a.md", {
+			buffer: "saved, then typed",
+		});
+		const entry = await run(swap("Library/a.md", "saved", "rewritten"));
+		await Effect.runPromise(dispose);
+		expect(failure(entry).kind).toBe("conflict");
+		expect(harness.contents.get("Library/a.md")).toBe("saved");
+		expect(harness.writes).toEqual([]);
+		expect(harness.shown(pane)).toBe("saved, then typed");
+	});
+
+	it("reads the unsaved buffer, and a write guarded by it goes through that pane's editor", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		const pane = harness.open("Library/a.md", {
+			buffer: "saved\ntyped",
+		});
+		const read = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")),
+		);
+		const entry = await run(
+			swap("Library/a.md", read, "saved\ntyped\nappended"),
+		);
+		await Effect.runPromise(dispose);
+		expect(read).toBe("saved\ntyped");
+		expect(entry).toMatchObject({
+			outcome: {
+				_tag: "Wrote",
+				afterHash: vaultContentHash("saved\ntyped\nappended"),
+				beforeHash: vaultContentHash("saved\ntyped"),
+			},
+			status: "Done",
+		});
+		// Obsidian saves the pane's buffer on its own schedule.
+		expect(harness.shown(pane)).toBe("saved\ntyped\nappended");
+		expect(harness.contents.get("Library/a.md")).toBe("saved");
+		expect(harness.writes).toEqual([]);
+	});
+
+	it("proceeds through the disk when the pane holds no unsaved typing", async () => {
+		const { dispose, harness, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		harness.addFile("Library/b.md", "saved");
+		const pane = harness.open("Library/a.md");
+		harness.open("Library/b.md");
+		const written = await run(swap("Library/a.md", "saved", "rewritten"));
+		const trashed = await run(trashIf("Library/b.md", "saved"));
+		await Effect.runPromise(dispose);
+		expect(written).toMatchObject({
+			outcome: { _tag: "Wrote" },
+			status: "Done",
+		});
+		expect(harness.contents.get("Library/a.md")).toBe("rewritten");
+		expect(harness.shown(pane)).toBe("rewritten");
+		expect(trashed).toMatchObject({
+			outcome: { _tag: "Trashed" },
+			status: "Done",
+		});
+		expect(harness.exists("Library/b.md")).toBe(false);
+	});
+
+	it("two panes with the same unsaved typing: reads it, and a guarded write lands once in both", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		const first = harness.open("Library/a.md", { buffer: "typed" });
+		const second = harness.open("Library/a.md", { buffer: "typed" });
+		const read = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")),
+		);
+		const stale = await run(trashIf("Library/a.md", "saved"));
+		const written = await run(swap("Library/a.md", "typed", "typed!"));
+		await Effect.runPromise(dispose);
+		expect(read).toBe("typed");
+		expect(failure(stale).kind).toBe("conflict");
+		expect(written.status).toBe("Done");
+		expect(harness.shown(first)).toBe("typed!");
+		expect(harness.shown(second)).toBe("typed!");
+		expect(harness.writes).toEqual([]);
+	});
+
+	it("two panes with different unsaved typing: reads, writes and trashes fail with conflict and change nothing", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		const first = harness.open("Library/a.md", { buffer: "typed here" });
+		const second = harness.open("Library/a.md", {
+			buffer: "typed there",
+		});
+		const readFailure = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")).pipe(Effect.flip),
+		);
+		const written = await run(swap("Library/a.md", "saved", "rewritten"));
+		const trashed = await run(trashIf("Library/a.md", "saved"));
+		await Effect.runPromise(dispose);
+		expect(readFailure).toBeInstanceOf(VamContentConflictError);
+		expect((readFailure as VamContentConflictError).cause).toBeInstanceOf(
+			OpenViewsDisagree,
+		);
+		for (const entry of [written, trashed]) {
+			const error = failure(entry);
+			expect(error.kind).toBe("conflict");
+			expect(
+				(error.cause as VamContentConflictError).cause,
+			).toBeInstanceOf(OpenViewsDisagree);
+		}
+		expect(harness.exists("Library/a.md")).toBe(true);
+		expect(harness.contents.get("Library/a.md")).toBe("saved");
+		expect(harness.writes).toEqual([]);
+		expect(harness.shown(first)).toBe("typed here");
+		expect(harness.shown(second)).toBe("typed there");
+	});
+
+	it("a typed pane beside a clean one: the typing is the content", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		const typed = harness.open("Library/a.md", { buffer: "typed here" });
+		const clean = harness.open("Library/a.md");
+		const read = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")),
+		);
+		const stale = await run(trashIf("Library/a.md", "saved"));
+		const written = await run(
+			swap("Library/a.md", "typed here", "typed here!"),
+		);
+		await Effect.runPromise(dispose);
+		expect(read).toBe("typed here");
+		expect(failure(stale).kind).toBe("conflict");
+		expect(written.status).toBe("Done");
+		expect(harness.shown(typed)).toBe("typed here!");
+		expect(harness.shown(clean)).toBe("typed here!");
+		expect(harness.writes).toEqual([]);
+	});
+
+	it("a clean pane not yet reloaded after a disk write is not taken for typing", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "new");
+		// Obsidian reloads a clean view after a write with an async read;
+		// until then it holds what it last loaded.
+		harness.open("Library/a.md", { buffer: "old", clean: true });
+		const read = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")),
+		);
+		const written = await run(swap("Library/a.md", "new", "newer"));
+		await Effect.runPromise(dispose);
+		expect(read).toBe("new");
+		expect(written).toMatchObject({
+			outcome: { _tag: "Wrote" },
+			status: "Done",
+		});
+		expect(harness.contents.get("Library/a.md")).toBe("newer");
+	});
+
+	it("a pane in reading mode is judged by what it shows, not by its lagging editor", async () => {
+		const { dispose, harness, manager, run } = setup();
+		harness.addFile("Library/a.md", "saved");
+		harness.open("Library/a.md", { editor: "older", mode: "preview" });
+		const read = await Effect.runPromise(
+			manager.readContent(md("Library/a.md")),
+		);
+		const trashed = await run(trashIf("Library/a.md", "saved"));
+		await Effect.runPromise(dispose);
+		expect(read).toBe("saved");
+		expect(trashed).toMatchObject({
+			outcome: { _tag: "Trashed" },
+			status: "Done",
+		});
 	});
 });
 

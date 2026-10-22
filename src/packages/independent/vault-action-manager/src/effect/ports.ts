@@ -25,12 +25,32 @@ export type SavedInlineTitleSelection = {
 	readonly text: string;
 };
 
-/** Narrow production/test seam captured from one active Markdown view lookup. */
+/**
+ * Narrow production/test seam captured from one Markdown view lookup: the
+ * active view, or any view `markdownViewsOf` lists. Each view has its own
+ * `editor`, so the editor object tells two views apart.
+ */
 export type ActiveEditorHandle = {
 	readonly editor: ActiveEditor;
 	readonly file: TFile | null;
 	readonly mode: string;
 	isCurrent(): boolean;
+	/**
+	 * The view's content in its current mode (`getViewData`). In reading
+	 * mode Obsidian updates only the rendered mode, so `editor` can lag it.
+	 * Absent: read `editor`.
+	 */
+	readonly viewData?: () => string;
+	/**
+	 * What the view last loaded from or saved to disk, from Obsidian's
+	 * internal `TextFileView.lastSavedData` and `saving`: `data` is `null`
+	 * while the view holds no content yet. A view whose content is `data`,
+	 * not mid-save, holds no unsaved typing. `undefined` when Obsidian does
+	 * not say.
+	 */
+	readonly persisted?: () =>
+		| { readonly data: string | null; readonly saving: boolean }
+		| undefined;
 	readInlineTitleSelection(): SavedInlineTitleSelection | null;
 	restoreInlineTitleSelection(saved: SavedInlineTitleSelection): void;
 };
@@ -121,6 +141,14 @@ export class ActiveEditorAccess extends Context.Service<
 			VamActiveEditorError
 		>;
 		openFile(file: TFile): Effect.Effect<void, VamActiveEditorError>;
+		/**
+		 * Every Markdown view that shows the file at `path` (compared case
+		 * sensitively), active or not, in workspace order, read in one
+		 * synchronous step.
+		 */
+		markdownViewsOf(
+			path: string,
+		): Effect.Effect<readonly ActiveEditorHandle[], VamActiveEditorError>;
 		/** Paths of the files shown in any Markdown view, active or not. */
 		readonly openMarkdownPaths: Effect.Effect<
 			ReadonlySet<string>,

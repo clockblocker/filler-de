@@ -14,6 +14,7 @@ import {
 } from "../../src/effect/ports";
 import { ActiveFileService } from "../../src/file-services/active-view/active-file-service";
 import { TFileHelper } from "../../src/file-services/background/helpers/tfile-helper";
+import { OpenViewsDisagree } from "../../src/file-services/content-route";
 import { MarkdownFileAccess } from "../../src/file-services/markdown-file-access";
 import { processTransformOf } from "../../src/helpers/action-helpers";
 import { vaultContentHash } from "../../src/internal/content-hash";
@@ -144,6 +145,16 @@ function makeHarness(
 		};
 	};
 
+	const backgroundViews: { file: TFile; buffer: string }[] = [];
+	const backgroundHandle = (view: {
+		file: TFile;
+		buffer: string;
+	}): ActiveEditorHandle => ({
+		...handleFor(view.file),
+		editor: { ...editor, getValue: () => view.buffer },
+		isCurrent: () => true,
+	});
+
 	const activeAccess = ActiveEditorAccess.of({
 		getActiveEditor: Effect.suspend(() => {
 			observationCount++;
@@ -157,6 +168,13 @@ function makeHarness(
 								: null,
 					);
 		}),
+		markdownViewsOf: (path) =>
+			Effect.sync(() => [
+				...(activeFile?.path === path ? [handleFor(activeFile)] : []),
+				...backgroundViews
+					.filter((view) => view.file.path === path)
+					.map(backgroundHandle),
+			]),
 		openFile: (file) =>
 			Effect.sync(() => {
 				activeFile = file;
@@ -261,6 +279,10 @@ function makeHarness(
 
 	return {
 		access,
+		/** Opens `file` in a background pane whose editor holds `buffer`. */
+		addBackgroundView: (file: TFile, buffer: string) => {
+			backgroundViews.push({ buffer, file });
+		},
 		addVaultFile: (file: TFile, fileContent: string) => {
 			files.set(file.path, file);
 			vaultContents.set(file.path, fileContent);
@@ -651,6 +673,82 @@ describe("MarkdownFileAccess", () => {
 		);
 		expect(typed.vaultRead).not.toHaveBeenCalled();
 		expect(outcome).toEqual({ _tag: "Trashed" });
+	});
+
+	it("reads a background pane's unsaved buffer, and the disk when the pane is clean", async () => {
+		const typed = makeHarness({ activePath: "Library/other.md" });
+		typed.addVaultFile(typed.targetFile, "saved");
+		typed.addBackgroundView(typed.targetFile, "saved, then typed");
+		const clean = makeHarness({ activePath: null });
+		clean.addVaultFile(clean.targetFile, "saved");
+		clean.addBackgroundView(clean.targetFile, "saved");
+
+		expect(await typed.run(typed.access.readContent(target))).toBe(
+			"saved, then typed",
+		);
+		expect(await clean.run(clean.access.readContent(target))).toBe("saved");
+		// The clean route reuses the disk read it compared the pane with.
+		expect(clean.vaultRead).toHaveBeenCalledTimes(1);
+	});
+
+	it("keeps the active route whatever a background pane of the file holds", async () => {
+		// Typing goes into the active view; Obsidian copies it into the
+		// file's other views a few milliseconds later, so they only lag it.
+		const harness = makeHarness();
+		harness.addBackgroundView(harness.targetFile, "lagging copy");
+
+		expect(await harness.run(harness.access.readContent(target))).toBe(
+			"editor content",
+		);
+		const outcome = await harness.run(
+			harness.access.processContent({
+				splitPath: target,
+				transform: (value) => `${value}!`,
+			}),
+		);
+
+		expect(harness.vaultRead).not.toHaveBeenCalled();
+		expect(outcome).toMatchObject({ _tag: "Wrote" });
+		expect(harness.getTransactionCount()).toBe(1);
+	});
+
+	it("refuses background panes with different unsaved typing", async () => {
+		const harness = makeHarness({ activePath: null });
+		harness.addVaultFile(harness.targetFile, "saved");
+		harness.addBackgroundView(harness.targetFile, "typed here");
+		harness.addBackgroundView(harness.targetFile, "typed there");
+
+		const failure = await harness.run(
+			Effect.flip(harness.access.readContent(target)),
+		);
+		const process = await harness.run(
+			Effect.flip(
+				harness.access.processContent({
+					splitPath: target,
+					transform: (value) => `${value}!`,
+				}),
+			),
+		);
+
+		expect(failure).toBeInstanceOf(VamContentConflictError);
+		expect((failure as VamContentConflictError).cause).toBeInstanceOf(
+			OpenViewsDisagree,
+		);
+		expect(process).toBeInstanceOf(VamContentConflictError);
+		expect(harness.getTransactionCount()).toBe(0);
+	});
+
+	it("takes the stat before a background pane's buffer", async () => {
+		const harness = makeHarness({ activePath: null });
+		harness.addVaultFile(harness.targetFile, "saved");
+		harness.addBackgroundView(harness.targetFile, "typed");
+
+		const read = await harness.run(
+			harness.access.readContentWithStat(target),
+		);
+
+		expect(read.content).toBe("typed");
+		expect(harness.ioOrder).toEqual(["stat", "read"]);
 	});
 
 	it("mutates an expected active line and rejects stale line content", async () => {

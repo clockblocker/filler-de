@@ -25,6 +25,7 @@ export {
 	VamDispatchReport,
 	type VamEffectError,
 	type VamFileAccessError,
+	type VamFileReadError,
 	type VamFileWriteError,
 	VamNoActiveEditorError,
 	type VamNotUndoable,
