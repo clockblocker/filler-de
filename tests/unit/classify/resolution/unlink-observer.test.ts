@@ -505,6 +505,33 @@ describe("unlink observer", () => {
 		expect(await refsOf(harness.store, see)).toHaveLength(0);
 	});
 
+	it("removes nothing when a Classify run starts after the check read the Scroll, and judges again once it ends", async () => {
+		const content = "Der See ist tief. ^0\n";
+		const { cache, harness } = await classifiedSee(content, ["Der See ist tief."]);
+		const activity = createScrollActivity();
+		let end: (() => void) | undefined;
+		const { observer } = observerOver({
+			activity,
+			cache,
+			// The run begins while the check judges, before its removal plans.
+			scroll: () => {
+				end ??= activity.begin(SCROLL);
+				return harness.scroll.content;
+			},
+			store: harness.store,
+			vault: harness.vault,
+		});
+		harness.scroll.content = "Der See ist tief. ^0\n";
+		observer.modified([SCROLL]);
+		const idle = observer.whenIdle();
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		expect(end).toBeDefined();
+		expect(await refsOf(harness.store, see)).toHaveLength(1);
+		end?.();
+		await idle;
+		expect(await refsOf(harness.store, see)).toHaveLength(0);
+	});
+
 	it("tells a repeated Sentence's instances apart by their recomputed occurrence keys", async () => {
 		const content = "Er fängt heute an. Er fängt heute an.\n";
 		const stub = stubDumgen({

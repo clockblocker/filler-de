@@ -1,23 +1,24 @@
 /**
  * Publishes generated Knowledge into the dictionary (#64), as tf-demo's
  * `knowledgeGeneration.publish` does: dumdict parses the changes once at
- * this edge (`checkApplyGeneratedKnowledgeRequest`), `applyGeneratedKnowledge`
- * plans them against fresh slices, and the store commits the plan. A plan
+ * this edge (`checkApplyGeneratedKnowledgeRequest`), and one store
+ * transaction plans them with `applyGeneratedKnowledge` from the store's
+ * view and commits the plan under the store's lock. A plan
  * larger than one commit takes (tf-demo's `MAX_PLANNED_CHANGES`), or a
  * relation slice larger than the store reads, is split by relation units
  * and sent in parts, the relations first and the rest of the Knowledge
  * with the last part.
  */
 
+import { Transaction } from "@textfresser/dictionary";
 import {
 	checkApplyGeneratedKnowledgeRequest,
 	createDumdictPlanner,
 } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
-import { Effect } from "effect";
-import { MAX_COMMIT_ATTEMPTS } from "./commit-occurrence";
-import { exclusive } from "./exclusive";
+import { Effect, Result } from "effect";
+import { commitFailure, MAX_COMMIT_ATTEMPTS } from "./commit-occurrence";
 import {
 	DictionaryCommitFailed,
 	type GermanKnowledgeChange,
@@ -38,19 +39,21 @@ export type KnowledgePublication = {
 	readonly paradigmChanges?: readonly Dumrel.ParadigmChange[];
 };
 
-type Attempt =
+type Published =
 	| { readonly _tag: "Committed" }
-	| { readonly _tag: "OverBudget"; readonly reason: string }
-	| { readonly _tag: "Retry"; readonly message: string };
+	| { readonly _tag: "OverBudget"; readonly reason: string };
 
 const isRelation = (change: GermanKnowledgeChange) =>
 	change.aspect === "semanticRelations";
 
-/** One publication's attempt: plan against fresh slices and commit. */
-const attempt = Effect.fnUntraced(function* (
-	store: ResolutionStore,
+/**
+ * One publication as one store transaction: dumdict checks it once, then
+ * it is planned from the store's view and committed under its lock.
+ */
+const publishOnce = Effect.fnUntraced(function* (
+	store: Pick<ResolutionStore, "transact">,
 	publication: KnowledgePublication,
-): Effect.fn.Return<Attempt, DictionaryCommitFailed> {
+): Effect.fn.Return<Published, DictionaryCommitFailed> {
 	const checked = yield* Effect.try({
 		catch: (cause) =>
 			new DictionaryCommitFailed({
@@ -73,56 +76,71 @@ const attempt = Effect.fnUntraced(function* (
 			cause: checked,
 			message: checked.message ?? checked.code,
 		});
-	const request = checked.request;
-	const context = yield* store
-		.loadReadingEntryContext(
-			planner.contextRequest({
-				intent: "applyGeneratedKnowledge",
-				request,
-			}),
-		)
-		.pipe(Effect.result);
-	// A relation slice the store cannot hold in one read is over budget too.
-	if (context._tag === "Failure")
-		return { _tag: "OverBudget", reason: context.failure.message };
-	if (context.success.intent !== "applyGeneratedKnowledge")
-		return yield* new DictionaryCommitFailed({
-			cause: context.success,
-			message: "The dictionary answered another slice",
-		});
-	const outcome = planner.applyGeneratedKnowledge(context.success, request);
-	if (outcome.status === "conflict")
-		return { _tag: "Retry", message: outcome.message ?? outcome.code };
-	if (outcome.status === "rejected")
-		return yield* new DictionaryCommitFailed({
-			cause: outcome,
-			message: outcome.message ?? outcome.code,
-		});
-	if (outcome.plan.changes.length > MAX_PLANNED_CHANGES)
-		return {
-			_tag: "OverBudget",
-			reason: `${outcome.plan.changes.length} planned changes`,
-		};
-	if (outcome.plan.changes.length === 0) return { _tag: "Committed" };
-	const result = yield* store.commitChanges(outcome.plan).pipe(
-		Effect.catch((error) =>
-			error._tag === "DictionaryWriteError"
-				? Effect.succeed({
-						code: "revisionConflict" as const,
-						message: error.message,
-						status: "conflict" as const,
-					})
-				: Effect.fail(
-						new DictionaryCommitFailed({
-							cause: error,
-							message: error.message,
+	const { request } = checked;
+	return yield* store
+		.transact(
+			(
+				view,
+			): Result.Result<
+				Transaction<Published>,
+				DictionaryCommitFailed
+			> => {
+				const context = view.loadReadingEntryContext(
+					planner.contextRequest({
+						intent: "applyGeneratedKnowledge",
+						request,
+					}),
+				);
+				// A relation slice the store cannot hold in one read is over budget too.
+				if (Result.isFailure(context))
+					return Result.succeed(
+						Transaction.stop<Published>({
+							_tag: "OverBudget",
+							reason: context.failure.message,
 						}),
-					),
-		),
-	);
-	return result.status === "committed"
-		? { _tag: "Committed" }
-		: { _tag: "Retry", message: result.message ?? result.code };
+					);
+				if (context.success.intent !== "applyGeneratedKnowledge")
+					return Result.fail(
+						new DictionaryCommitFailed({
+							cause: context.success,
+							message: "The dictionary answered another slice",
+						}),
+					);
+				const outcome = planner.applyGeneratedKnowledge(
+					context.success,
+					request,
+				);
+				if (outcome.status === "conflict")
+					return Result.succeed(
+						Transaction.replan(outcome.message ?? outcome.code),
+					);
+				if (outcome.status === "rejected")
+					return Result.fail(
+						new DictionaryCommitFailed({
+							cause: outcome,
+							message: outcome.message ?? outcome.code,
+						}),
+					);
+				if (outcome.plan.changes.length > MAX_PLANNED_CHANGES)
+					return Result.succeed(
+						Transaction.stop<Published>({
+							_tag: "OverBudget",
+							reason: `${outcome.plan.changes.length} planned changes`,
+						}),
+					);
+				if (outcome.plan.changes.length === 0)
+					return Result.succeed(
+						Transaction.stop<Published>({ _tag: "Committed" }),
+					);
+				return Result.succeed(
+					Transaction.commit<Published>(outcome.plan, {
+						_tag: "Committed",
+					}),
+				);
+			},
+			{ maxAttempts: MAX_COMMIT_ATTEMPTS },
+		)
+		.pipe(Effect.mapError(commitFailure("Knowledge was saved")));
 });
 
 /**
@@ -191,24 +209,19 @@ export type PublishOutcome = {
  * Publishes `publication`, splitting it when it does not fit one commit.
  * A part that keeps losing races fails the publication.
  */
-export const publishKnowledge = Effect.fnUntraced(function* (
-	store: ResolutionStore,
-	publication: KnowledgePublication,
-): Effect.fn.Return<PublishOutcome, DictionaryCommitFailed> {
-	if (
-		publication.changes.length === 0 &&
-		publication.pendingRelations.length === 0 &&
-		(publication.paradigmChanges?.length ?? 0) === 0
-	)
-		return { dropped: 0 };
-	let last = "";
-	for (let tries = 0; tries < MAX_COMMIT_ATTEMPTS; tries++) {
-		const result = yield* exclusive(store)(attempt(store, publication));
+export const publishKnowledge = Effect.fn("classify.publishKnowledge")(
+	function* (
+		store: Pick<ResolutionStore, "transact">,
+		publication: KnowledgePublication,
+	): Effect.fn.Return<PublishOutcome, DictionaryCommitFailed> {
+		if (
+			publication.changes.length === 0 &&
+			publication.pendingRelations.length === 0 &&
+			(publication.paradigmChanges?.length ?? 0) === 0
+		)
+			return { dropped: 0 };
+		const result = yield* publishOnce(store, publication);
 		if (result._tag === "Committed") return { dropped: 0 };
-		if (result._tag === "Retry") {
-			last = result.message;
-			continue;
-		}
 		const units = relationUnits(publication);
 		const rest: KnowledgePublication = {
 			changes: publication.changes.filter(
@@ -246,9 +259,5 @@ export const publishKnowledge = Effect.fnUntraced(function* (
 			merge(publication.reading, [...units.slice(half), rest]),
 		);
 		return { dropped: first.dropped + second.dropped };
-	}
-	return yield* new DictionaryCommitFailed({
-		cause: last,
-		message: `The dictionary kept changing while Knowledge was saved (${last})`,
-	});
-});
+	},
+);

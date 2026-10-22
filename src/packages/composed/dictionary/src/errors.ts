@@ -60,10 +60,38 @@ export class DictionaryWriteError extends Schema.TaggedError<DictionaryWriteErro
 		cause: Schema.Defect(),
 		/** Vault paths of the writes that completed before the failure. */
 		executed: Schema.Array(Schema.String),
+		/**
+		 * The write that stopped found its file changed by someone else: VAM
+		 * failed it as a `conflict`, `exists` or `missing` and wrote nothing.
+		 * A plan read from the files as they are now may land.
+		 */
+		externalChange: Schema.Boolean,
 		message: Schema.String,
 		rebuilt: Schema.Boolean,
 		/** Vault paths of the writes never attempted. */
 		skipped: Schema.Array(Schema.String),
+		/**
+		 * VAM failed the write that stopped as `io`, such as a file another
+		 * process held (`EBUSY`), which may not recur. `transact` plans once
+		 * more after a pause.
+		 */
+		transient: Schema.Boolean,
+	},
+) {}
+
+/**
+ * A transaction's plans kept meeting changes made outside the store, such
+ * as hand edits its compare-and-swaps found, until its attempts ran out.
+ * Nothing of its last plan was written; `cause` is its last conflict.
+ */
+export class DictionaryTransactionConflict extends Schema.TaggedError<DictionaryTransactionConflict>()(
+	"DictionaryTransactionConflict",
+	{
+		attempts: Schema.Number,
+		cause: Schema.Defect(),
+		message: Schema.String,
+		/** What the last attempt met. */
+		reason: Schema.String,
 	},
 ) {}
 

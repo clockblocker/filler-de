@@ -5,6 +5,7 @@ export {
 	DictionaryRequestError,
 	DictionaryRoundTripError,
 	DictionaryScanError,
+	DictionaryTransactionConflict,
 	DictionaryWriteError,
 } from "./errors";
 export { freeformPlacementProblem } from "./freeform";
@@ -26,9 +27,14 @@ export {
 	type DumdictVaultStore,
 	type DumdictVaultStoreOptions,
 	type HealingBlocked,
-	type LemmaCandidate,
 	makeDumdictVaultStore,
 	type QuarantinedNote,
 	type TablesRerendered,
 } from "./store";
+export { Transaction, type TransactOptions } from "./transaction";
 export { type DictionaryVault, WORTER_SPLIT_PATH } from "./vault";
+export type {
+	DictionaryView,
+	LemmaCandidate,
+	StoredLemmaNote,
+} from "./view";

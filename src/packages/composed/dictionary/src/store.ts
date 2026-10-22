@@ -9,6 +9,7 @@ import {
 	type BulkMdModifyEvent,
 	type BulkVaultEvent,
 	isContentConflict,
+	type VamActionFailureKind,
 	type VaultAction,
 	VaultActionKind,
 	VaultEventKind,
@@ -23,7 +24,6 @@ import {
 	ParsingError,
 	type PendingSemanticRelationRecord,
 	parseAsCommitChangesRequest,
-	type ReadingEntry,
 	type StoreRevision,
 	type SurfaceEntry,
 } from "dumdict";
@@ -41,8 +41,7 @@ import {
 	type RekeySurfacesSliceRequest,
 } from "dumdict/planning";
 import type * as Dumling from "dumling/types";
-import type * as Dumrel from "dumrel/types";
-import { Cause, Data, Effect, Fiber, Semaphore } from "effect";
+import { Cause, Data, Effect, Fiber, Result, Semaphore } from "effect";
 import { contentHash } from "./content-hash";
 import {
 	CrossroadNoteMetadata,
@@ -56,6 +55,7 @@ import {
 	DictionaryRequestError,
 	DictionaryRoundTripError,
 	DictionaryScanError,
+	DictionaryTransactionConflict,
 	DictionaryWriteError,
 } from "./errors";
 import {
@@ -117,14 +117,9 @@ import {
 	staleCrossroads,
 	staleTables,
 } from "./render";
-import {
-	loadCleanupRelationsContext,
-	loadOccurrenceSlice,
-	loadReadingEntryContext,
-	loadReevaluateShadowsContext,
-	loadRekeySurfacesSlice,
-} from "./slices";
+import { loadReevaluateShadowsContext } from "./slices";
 import { stageChanges } from "./stage-changes";
+import type { Transaction, TransactOptions } from "./transaction";
 import {
 	type DictionaryVault,
 	folderSplitPath,
@@ -134,12 +129,14 @@ import {
 	mdSplitPath,
 	WORTER_SPLIT_PATH,
 } from "./vault";
+import {
+	type DictionaryView,
+	type LemmaCandidate,
+	type StoredLemmaNote,
+	viewOf,
+} from "./view";
 
-/** A stored Lemma dumgen may name a unit by, and the texts it was found under. */
-export type LemmaCandidate = {
-	readonly lemma: Dumling.Lemma<"de">;
-	readonly foundUnder: readonly string[];
-};
+export type { LemmaCandidate } from "./view";
 
 /** A note the store does not read as data, and why. */
 export type QuarantinedNote =
@@ -279,6 +276,35 @@ export type DumdictVaultStore = {
 	readonly commitChanges: (
 		request: CommitChangesRequest<"de"> | DumdictPlan<"de">,
 	) => Effect.Effect<CommitChangesResult, DictionaryCommitError>;
+	/**
+	 * Plans and commits under the store's lock, so no other commit, event
+	 * or rescan lands between the read and the write. `plan` reads one
+	 * index version through its view and answers a `Transaction`: a plan to
+	 * commit, a plan to commit and plan again after, or a value to stop
+	 * with. It is synchronous, so nothing it does can wait on a model or a
+	 * timer while the lock is held; work like that goes before the
+	 * transaction, and a plan that finds it stale stops for its caller to
+	 * redo it and transact again.
+	 *
+	 * A commit that fails because of a change made outside the store (a
+	 * file ahead of the index, a compare-and-swap that found other content,
+	 * a create whose path was taken) plans again from the files as they are
+	 * now, after releasing the lock so pending events land. So does a plan
+	 * that answers `Replan`. After `maxAttempts` plans the transaction
+	 * fails with `DictionaryTransactionConflict`. A write VAM failed as
+	 * `io` (`DictionaryWriteError.transient`) plans again once, after a
+	 * pause, within the attempts; any other commit failure fails it at
+	 * once. Never call the store's locked operations
+	 * (`commitChanges`, `transact`, `rescan`, `appendFreeform`,
+	 * `refreshTables`) from inside `plan`: the lock is not reentrant.
+	 */
+	readonly transact: <A, E = never>(
+		plan: (view: DictionaryView) => Result.Result<Transaction<A>, E>,
+		options?: TransactOptions,
+	) => Effect.Effect<
+		A,
+		E | DictionaryCommitError | DictionaryTransactionConflict
+	>;
 	/** The current revision; it moves on every observed change under `Worter/`. */
 	readonly revision: Effect.Effect<StoreRevision>;
 
@@ -287,16 +313,9 @@ export type DumdictVaultStore = {
 		texts: readonly string[],
 	) => Effect.Effect<LemmaCandidate[]>;
 	/** A Lemma's note path and records, with its Paradigm, if it is stored. */
-	readonly lemmaNote: (lemma: Dumling.Lemma<"de">) => Effect.Effect<
-		| {
-				readonly path: string;
-				readonly paradigm?: Dumrel.LemmaParadigm;
-				readonly readings: readonly ReadingEntry<"de">[];
-				readonly ownedSurfaces: readonly SurfaceEntry<"de">[];
-				readonly pendingRelations: readonly PendingSemanticRelationRecord<"de">[];
-		  }
-		| undefined
-	>;
+	readonly lemmaNote: (
+		lemma: Dumling.Lemma<"de">,
+	) => Effect.Effect<StoredLemmaNote | undefined>;
 	/** Every stored Lemma and the path of its Lemma note, by path. */
 	readonly lemmaNotes: Effect.Effect<
 		readonly {
@@ -385,6 +404,16 @@ function createNote(path: string, content: string): VaultAction {
 		payload: { content, splitPath: mdSplitPath(path) },
 	};
 }
+
+/**
+ * How VAM fails a write that found its file changed by someone else; it
+ * wrote nothing (`Failed` in the dispatch report).
+ */
+const EXTERNAL_CHANGE_KINDS: ReadonlySet<VamActionFailureKind> = new Set([
+	"conflict",
+	"exists",
+	"missing",
+]);
 
 /** The index was behind the file at `path`: the caller re-reads and re-plans. */
 class StaleRead extends Data.TaggedError("StaleRead")<{
@@ -526,6 +555,12 @@ const REEVALUATION_CHUNK = 8;
 
 /** Follow-up re-evaluations a commit may start, nested. */
 const MAX_FOLLOW_UP_DEPTH = 2;
+
+/** Plans one `transact` tries before it gives up, unless told otherwise. */
+const DEFAULT_TRANSACT_ATTEMPTS = 4;
+
+/** How long `transact` waits, outside the lock, before it plans again after an `io` failure. */
+const TRANSIENT_RETRY_DELAY = "100 millis";
 
 /** Lemmas whose tables one hold of the writer lock re-renders. */
 const TABLES_CHUNK = 32;
@@ -1575,6 +1610,10 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				readonly landed: readonly PlannedWrite[];
 				readonly skipped: readonly PlannedWrite[];
 				readonly cause: unknown;
+				/** The write that stopped found its file changed by someone else. */
+				readonly externalChange: boolean;
+				/** VAM failed the write that stopped as `io`. */
+				readonly transient: boolean;
 		  };
 
 	/**
@@ -1612,12 +1651,14 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				continue;
 			}
 			const later = writes.filter((write) => write.phase > phase);
+			const { reason } = failure;
 			return {
 				_tag: "Failed",
 				cause:
-					failure.reason._tag === "VamDispatchError"
-						? failure.reason.cause
-						: failure,
+					reason._tag === "VamDispatchError" ? reason.cause : failure,
+				externalChange:
+					reason._tag === "VamDispatchError" &&
+					EXTERNAL_CHANGE_KINDS.has(reason.kind),
 				landed: [
 					...landed,
 					...batch.filter(({ path }) => executed.has(path)),
@@ -1627,6 +1668,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					...batch.filter(({ path }) => !executed.has(path)),
 					...later,
 				],
+				transient:
+					reason._tag === "VamDispatchError" && reason.kind === "io",
 			};
 		}
 		return { _tag: "Done", landed, missed };
@@ -2226,9 +2269,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 			return yield* new DictionaryWriteError({
 				cause: first.cause,
 				executed: first.landed.map(({ path }) => path),
+				externalChange: first.externalChange,
 				message: `The commit's creates stopped and could not be undone: ${message(first.cause)}. The index was ${rebuilt ? "rebuilt from the files" : "not rebuilt; the next operation retries"}.`,
 				rebuilt,
 				skipped: first.skipped.map(({ path }) => path),
+				transient: first.transient,
 			});
 		}
 
@@ -2273,9 +2318,11 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		return yield* new DictionaryWriteError({
 			cause: first.cause,
 			executed: first.landed.map(({ path }) => path),
+			externalChange: first.externalChange,
 			message: `The commit's writes stopped: ${message(first.cause)}. The index was ${rebuilt ? "rebuilt from the files" : "not rebuilt; the next operation retries"}.`,
 			rebuilt,
 			skipped: first.skipped.map(({ path }) => path),
+			transient: first.transient,
 		});
 	});
 
@@ -2595,11 +2642,133 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		)
 		.pipe(Effect.onError(() => close));
 
-	/** A read against one published index version. */
-	const read = <A>(f: (view: NoteIndex) => A) => Effect.sync(() => f(index));
+	/** Reads against the index version published when they run. */
+	const live = () => viewOf(index, revision());
 
-	const requestError = (cause: unknown) =>
-		new DictionaryRequestError({ cause, message: message(cause) });
+	/** What one hold of the lock in `transact` ended with. */
+	type Attempted<A> =
+		| { readonly _tag: "Done"; readonly value: A }
+		| {
+				readonly _tag: "Conflict";
+				readonly reason: string;
+				readonly cause: unknown;
+				/** A write failed as `io`: pause before planning again. */
+				readonly transient?: true;
+		  };
+
+	/**
+	 * Plans and commits until a plan stops or commits, a commit meets a
+	 * change made outside the store, or the attempts run out, under one
+	 * hold of the lock its caller takes. Nothing else moves the revision
+	 * while the lock is held, so only an external change re-plans.
+	 */
+	const attemptUnderLock = <A, E>(
+		plan: (view: DictionaryView) => Result.Result<Transaction<A>, E>,
+		attempts: { used: number; readonly max: number; transient: boolean },
+	): Effect.Effect<Attempted<A>, E | DictionaryCommitError> =>
+		Effect.gen(function* () {
+			for (;;) {
+				attempts.used += 1;
+				if (stale) {
+					yield* rebuild();
+					yield* settle;
+				}
+				const planned = plan(viewOf(index, revision()));
+				if (Result.isFailure(planned))
+					return yield* Effect.fail(planned.failure);
+				const step = planned.success;
+				if (step._tag === "Stop")
+					return { _tag: "Done", value: step.value } as const;
+				if (step._tag === "Replan")
+					return {
+						_tag: "Conflict",
+						cause: step.reason,
+						reason: step.reason,
+					} as const;
+				if (step.issues !== undefined)
+					yield* Effect.logWarning(
+						"Dictionary plan worked around stored claims",
+						step.issues,
+					);
+				const committed = yield* Effect.result(
+					commitUnderLock(step.plan),
+				);
+				if (committed._tag === "Failure") {
+					const error = committed.failure;
+					if (
+						error._tag === "DictionaryWriteError" &&
+						error.externalChange
+					)
+						return {
+							_tag: "Conflict",
+							cause: error,
+							reason: error.message,
+						} as const;
+					// An I/O failure, such as a file another process held,
+					// may not recur: plan once more, after a pause.
+					if (
+						error._tag === "DictionaryWriteError" &&
+						error.transient &&
+						!attempts.transient &&
+						attempts.used < attempts.max
+					) {
+						attempts.transient = true;
+						return {
+							_tag: "Conflict",
+							cause: error,
+							reason: error.message,
+							transient: true,
+						} as const;
+					}
+					return yield* Effect.fail(error);
+				}
+				const result = committed.success;
+				if (result.status === "conflict")
+					return {
+						_tag: "Conflict",
+						cause: result,
+						reason: result.message ?? result.code,
+					} as const;
+				if (step._tag === "Commit")
+					return { _tag: "Done", value: step.value } as const;
+				if (attempts.used >= attempts.max)
+					return {
+						_tag: "Conflict",
+						cause: step.reason,
+						reason: step.reason,
+					} as const;
+			}
+		});
+
+	const transact = Effect.fn("dictionary.transact")(function* <A, E>(
+		plan: (view: DictionaryView) => Result.Result<Transaction<A>, E>,
+		options?: TransactOptions,
+	): Effect.fn.Return<
+		A,
+		E | DictionaryCommitError | DictionaryTransactionConflict
+	> {
+		const max = Math.max(
+			1,
+			options?.maxAttempts ?? DEFAULT_TRANSACT_ATTEMPTS,
+		);
+		const attempts = { max, transient: false, used: 0 };
+		for (;;) {
+			const attempted = yield* lock.withPermit(
+				attemptUnderLock(plan, attempts).pipe(Effect.ensuring(report)),
+			);
+			if (attempted._tag === "Done") return attempted.value;
+			if (attempts.used >= max)
+				return yield* new DictionaryTransactionConflict({
+					attempts: attempts.used,
+					cause: attempted.cause,
+					message: `The dictionary kept changing outside the store over ${attempts.used} plans: ${attempted.reason}`,
+					reason: attempted.reason,
+				});
+			// Released: let the events behind the change land before planning again.
+			if (attempted.transient) yield* Effect.sleep(TRANSIENT_RETRY_DELAY);
+			else yield* Effect.yieldNow;
+		}
+	});
 
 	return {
 		appendFreeform: (request) =>
@@ -2607,83 +2776,41 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 				appendFreeformUnderLock(request).pipe(Effect.ensuring(report)),
 			),
 		attestationLinksWithRefPrefix: (prefix) =>
-			read((view) => view.linksWithRefPrefix(prefix)),
+			Effect.sync(() => live().attestationLinksWithRefPrefix(prefix)),
 		close,
 		commitChanges: (request) =>
 			lock.withPermit(
 				commitUnderLock(request).pipe(Effect.ensuring(report)),
 			),
-		diagnostics: read(diagnosticsOf),
+		diagnostics: Effect.sync(() => diagnosticsOf(index)),
 		lemmaCandidates: (texts) =>
-			read((view) => {
-				const found = new Map<
-					string,
-					{ lemma: Dumling.Lemma<"de">; foundUnder: string[] }
-				>();
-				for (const text of texts)
-					for (const key of view.lemmasWithForm(
-						formKeyOf(text, "de"),
-					)) {
-						const lemma = view.lemmaData(key)?.lemmaRecord.lemma;
-						if (!lemma) continue;
-						const candidate = found.get(key) ?? {
-							foundUnder: [],
-							lemma,
-						};
-						if (!candidate.foundUnder.includes(text))
-							candidate.foundUnder.push(text);
-						found.set(key, candidate);
-					}
-				return [...found.values()];
-			}),
-		lemmaNote: (lemma) =>
-			read((view) => {
-				const note = view.lemmaNote(lemmaKeyOf(lemma));
-				const paradigm = note?.data.lemmaRecord.paradigm;
-				return note
-					? {
-							ownedSurfaces: note.data.ownedSurfaceEntries,
-							...(paradigm === undefined ? {} : { paradigm }),
-							path: note.path,
-							pendingRelations: note.data.pendingRelations,
-							readings: note.data.readingEntries,
-						}
-					: undefined;
-			}),
-		lemmaNotes: read((view) =>
-			view.lemmaNotes().map(({ data, path }) => ({
-				lemma: data.lemmaRecord.lemma,
-				path,
-			})),
-		),
+			Effect.sync(() => live().lemmaCandidates(texts)),
+		lemmaNote: (lemma) => Effect.sync(() => live().lemmaNote(lemma)),
+		lemmaNotes: Effect.sync(() => live().lemmaNotes()),
 		loadCleanupRelationsContext: (request) =>
-			read((view) =>
-				loadCleanupRelationsContext(view, revision(), request),
-			),
+			Effect.sync(() => live().loadCleanupRelationsContext(request)),
 		loadOccurrenceSlice: (request) =>
-			read((view) => loadOccurrenceSlice(view, revision(), request)),
+			Effect.sync(() => live().loadOccurrenceSlice(request)),
 		loadReadingEntryContext: (request) =>
-			Effect.try({
-				catch: requestError,
-				try: () => loadReadingEntryContext(index, revision(), request),
-			}),
+			Effect.suspend(() =>
+				Effect.fromResult(live().loadReadingEntryContext(request)),
+			),
 		loadReevaluateShadowsContext: (request) =>
-			Effect.try({
-				catch: requestError,
-				try: () =>
-					loadReevaluateShadowsContext(index, revision(), request),
-			}),
+			Effect.suspend(() =>
+				Effect.fromResult(live().loadReevaluateShadowsContext(request)),
+			),
 		loadRekeySurfacesSlice: (request) =>
-			read((view) => loadRekeySurfacesSlice(view, revision(), request)),
+			Effect.sync(() => live().loadRekeySurfacesSlice(request)),
 		readingLocation: (reading) =>
-			read((view) => view.readingLocation(readingKeyOf(reading))),
+			Effect.sync(() => live().readingLocation(reading)),
 		refreshTables,
 		relationEdgesTo: (lemma) =>
-			read((view) => view.edgesTo(lemmaKeyOf(lemma))),
+			Effect.sync(() => live().relationEdgesTo(lemma)),
 		rescan: lock.withPermit(
 			rebuild().pipe(Effect.andThen(settle), Effect.ensuring(report)),
 		),
 		revision: Effect.sync(revision),
-		surface: (surfaceId) => read((view) => view.surface(surfaceId)),
+		surface: (surfaceId) => Effect.sync(() => live().surface(surfaceId)),
+		transact,
 	};
 });
