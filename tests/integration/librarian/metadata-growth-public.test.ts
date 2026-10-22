@@ -19,6 +19,7 @@ import {
 	Librarian,
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
+import { withScanAndSubscribe } from "../../support/librarian-vam";
 import { actionError, failedActions } from "../../support/vam-dispatch";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 
@@ -60,7 +61,7 @@ function makeVault(initial: Record<string, string>) {
 		}
 	};
 
-	const vam: LibrarianVam = {
+	const vam = withScanAndSubscribe({
 		cd: () => Effect.void,
 		dispatch: (actions) => {
 			const [first] = actions;
@@ -98,7 +99,7 @@ function makeVault(initial: Record<string, string>) {
 				emit = handler;
 				return { close: Effect.void };
 			}),
-	};
+	});
 
 	return {
 		/** A runtime Bulk whose dispatch fails, so the Librarian recovers. */

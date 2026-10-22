@@ -8,7 +8,10 @@ import {
 	TreeNodeStatus,
 	translateCreateObservation,
 } from "@textfresser/library-core";
-import type { VaultScanPath } from "@textfresser/vault-action-manager";
+import type {
+	SplitPathToAnyFile,
+	VaultScanPath,
+} from "@textfresser/vault-action-manager";
 import {
 	SplitPathKind,
 	splitPathCodec,
@@ -19,6 +22,17 @@ import {
 	noteMetadataHelper,
 } from "../../../stateless-helpers/note-metadata";
 import { logger } from "../../../utils/logger";
+
+/**
+ * The entry's split path alone: a snapshot entry also carries its reader
+ * and stat, which must not travel into tree or vault actions.
+ */
+function splitPathOf(file: VaultScanPath): SplitPathToAnyFile {
+	const { basename, kind, pathParts } = file;
+	return kind === SplitPathKind.MdFile
+		? { basename, extension: file.extension, kind, pathParts }
+		: { basename, extension: file.extension, kind, pathParts };
+}
 
 // ─── Scroll Metadata Schema ───
 
@@ -45,10 +59,7 @@ export const buildInitialCreateActions = Effect.fn("buildInitialCreateActions")(
 		const libraryScope = makeLibraryScope(codecs.rules);
 
 		for (const file of files) {
-			const observedFile =
-				file.kind === SplitPathKind.MdFile
-					? (({ read: _read, ...path }) => path)(file)
-					: file;
+			const observedFile = splitPathOf(file);
 			// Convert to library-scoped path
 			const libraryScopedResult =
 				libraryScope.toLibraryPath(observedFile);

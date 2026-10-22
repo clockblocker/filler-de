@@ -35,6 +35,8 @@ export {
 	type VaultActionManagerFactoryResult,
 	type VaultActionManagerOptions,
 	type VaultActionManagerSubscription,
+	type VaultSnapshotHandlers,
+	type VaultSnapshotSubscription,
 } from "./facade";
 export type { ActiveEditorContext } from "./file-services/active-view/active-file-service";
 export type { SelectionInfo } from "./file-services/active-view/selection-service";
@@ -89,9 +91,11 @@ export {
 	type VaultPathIdentity,
 } from "./vault-path";
 export type {
+	VaultCursor,
 	VaultScanCounts,
 	VaultScanPath,
 	VaultScanPathWithStat,
 	VaultScanReadableMdPath,
 	VaultScanResult,
+	VaultSnapshot,
 } from "./vault-scan";

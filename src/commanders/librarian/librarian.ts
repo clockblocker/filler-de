@@ -27,8 +27,8 @@ import type {
 	BulkVaultEvent,
 	VamScanError,
 	VaultActionManager,
-	VaultActionManagerSubscription,
 	VaultScanResult,
+	VaultSnapshotSubscription,
 } from "@textfresser/vault-action-manager";
 import {
 	type AnySplitPath,
@@ -50,7 +50,7 @@ import type {
 	LibrarianCommandInput,
 	LibrarianCommandKind,
 } from "./commands/types";
-import { buildInitialCreateActions, dropScannedEvents } from "./init";
+import { buildInitialCreateActions } from "./init";
 import { listCommandsExecutableIn as listCommandsExecutableInImpl } from "./navigation/list-commands-executable";
 import {
 	getNextPage as getNextPageImpl,
@@ -95,7 +95,16 @@ type CommandIntentionQueueItem = {
 	readonly observe: (result: LibraryCommandIntentionResult) => void;
 };
 
-type LibrarianQueueItem = ReconciliationQueueItem | CommandIntentionQueueItem;
+/** A bulk VAM delivered, interpreted only when its turn comes. */
+type ObservedBulkQueueItem = {
+	readonly bulk: BulkVaultEvent;
+	readonly kind: "ObservedBulk";
+};
+
+type LibrarianQueueItem =
+	| ReconciliationQueueItem
+	| CommandIntentionQueueItem
+	| ObservedBulkQueueItem;
 
 export type LibrarianVam = Pick<
 	VaultActionManager,
@@ -104,8 +113,7 @@ export type LibrarianVam = Pick<
 	| "getActiveEditorContext"
 	| "getOpenedContent"
 	| "mdPwd"
-	| "scan"
-	| "subscribeToBulk"
+	| "scanAndSubscribe"
 >;
 
 class LibrarianUnexpectedDispatchError extends Schema.TaggedError<LibrarianUnexpectedDispatchError>()(
@@ -141,7 +149,7 @@ function classifyLibrarianDispatchFailure(
 }
 
 type LibrarianRecoveryFailure =
-	| Effect.Error<ReturnType<LibrarianVam["scan"]>>
+	| Effect.Error<VaultSnapshotSubscription["rescan"]>
 	| LibrarianUnexpectedRecoveryError
 	| {
 			readonly diagnostics: VaultScanResult["diagnostics"];
@@ -212,12 +220,15 @@ export class Librarian {
 		LibrarianDispatchFailure,
 		LibrarianRecoveryFailure
 	>();
-	private eventSubscription: VaultActionManagerSubscription | null = null;
+	/**
+	 * The Library's snapshot and the vault changes after it. Kept after
+	 * `unsubscribe` closes it, so a reconciliation still running can rescan.
+	 */
+	private subscription: VaultSnapshotSubscription | null = null;
 	private actionQueue: VaultActionQueue<LibrarianQueueItem, never> | null =
 		null;
-	private startupBulkBuffer: BulkVaultEvent[] | null = null;
-	/** What startup last scanned: its first scan, or a recovery's rescan. */
-	private startupScanEntries: VaultScanResult["entries"] = [];
+	/** Until startup reconciliation ends; VAM holds vault changes meanwhile. */
+	private starting = false;
 	private nextCommandOperationId = 0;
 	private codecs!: Codecs;
 	private interpretBulk!: BulkInterpreter;
@@ -287,16 +298,22 @@ export class Librarian {
 
 	private readonly prepareRecovery = Effect.fn("Librarian.prepareRecovery")(
 		function* (this: Librarian) {
-			const rootSplitPath =
-				getParsedUserSettings().splitPathToLibraryRoot;
-			const scan = yield* this.vam.scan(rootSplitPath);
+			const subscription = this.subscription;
+			if (!subscription) {
+				return yield* new LibrarianUnexpectedRecoveryError({
+					cause: new Error("The Librarian has no Library snapshot"),
+					operation: "scan",
+				});
+			}
+			// The rescan moves VAM's cursor: changes it holds that were not
+			// yet delivered never are, and `afterSnapshot` trims a bulk that
+			// waited in the queue meanwhile.
+			const scan = yield* subscription.rescan;
 			// Startup accepted a partial scan, so its recovery does too.
-			const duringStartup = this.startupBulkBuffer !== null;
-			if (duringStartup) this.startupScanEntries = scan.entries;
 			return yield* this.prepareStartupReconciliation(
 				scan,
-				rootSplitPath.basename,
-				duringStartup,
+				getParsedUserSettings().splitPathToLibraryRoot.basename,
+				this.starting,
 			);
 		},
 	);
@@ -334,8 +351,8 @@ export class Librarian {
 					const settings = getParsedUserSettings();
 					self.reconciler = null;
 					self.actionQueue = null;
-					self.startupBulkBuffer = [];
-					self.startupScanEntries = [];
+					self.subscription = null;
+					self.starting = true;
 					self.reconciliationAudit = new ReconciliationAuditLog();
 					self._debugLastScanDiagnostics = [];
 					self.codecs = makeCodecs(
@@ -345,8 +362,14 @@ export class Librarian {
 					const rootSplitPath = settings.splitPathToLibraryRoot;
 					const libraryRoot = rootSplitPath.basename;
 
-					const scan = yield* self.vam
-						.scan(rootSplitPath)
+					// The snapshot and the subscription share one cursor: every
+					// vault change after the snapshot reaches handleBulkEvent
+					// once, and none it holds does. VAM holds them until
+					// `start`, below.
+					const subscription = yield* self.vam
+						.scanAndSubscribe(rootSplitPath, {
+							onBulk: (bulk) => self.handleBulkEvent(bulk),
+						})
 						.pipe(
 							Effect.tapError((failure) =>
 								Effect.sync(() =>
@@ -357,8 +380,9 @@ export class Librarian {
 								),
 							),
 						);
+					self.subscription = subscription;
+					const scan = subscription.snapshot;
 					self._debugLastScanDiagnostics = scan.diagnostics;
-					self.startupScanEntries = scan.entries;
 					if (scan.kind === "Partial") {
 						for (const diagnostic of scan.diagnostics) {
 							logger.warn(
@@ -378,10 +402,6 @@ export class Librarian {
 						LibrarianQueueItem,
 						never
 					>((item) => self.processQueueItem(item));
-
-					// Subscribe to vault events BEFORE dispatching actions
-					// This ensures we catch all events, including cascading healing from init actions
-					yield* self.subscribeToVaultEvents();
 
 					const startupResult: {
 						outcome?: LibrarianReconciliationOutcome;
@@ -407,20 +427,10 @@ export class Librarian {
 						);
 					}
 
-					const bufferedBulks = self.startupBulkBuffer;
-					self.startupBulkBuffer = null;
-					// After a recovery the rescan, not the first scan, holds
-					// what the buffered events did before it.
-					for (const bulk of dropScannedEvents(
-						bufferedBulks,
-						self.startupScanEntries,
-					)) {
-						yield* self.handleBulkEvent(bulk);
-					}
-
-					// Wait for queue to drain (events trigger handleBulkEvent which enqueues actions)
-					// This ensures all cascading healing is queued and processed
-					yield* self.actionQueue.waitForDrain();
+					self.starting = false;
+					// The changes after the latest snapshot, the first or a
+					// recovery's rescan, now reach handleBulkEvent.
+					yield* subscription.start;
 				}),
 			() => Effect.sync(decrementPending),
 		).pipe(
@@ -436,71 +446,69 @@ export class Librarian {
 	});
 
 	/**
-	 * Subscribe to file system events from VaultActionManager.
-	 */
-	private readonly subscribeToVaultEvents = Effect.fn(
-		"Librarian.subscribeToVaultEvents",
-	)(function* (this: Librarian) {
-		this.eventSubscription = yield* this.vam.subscribeToBulk((bulk) =>
-			this.handleBulkEvent(bulk),
-		);
-	});
-
-	/**
-	 * Handle a bulk event: convert to tree actions, apply, dispatch healing.
+	 * Handle a bulk event: queue it, to be turned into tree actions and
+	 * healed in its turn.
 	 */
 	private readonly handleBulkEvent = Effect.fn("Librarian.handleBulkEvent")(
 		function* (this: Librarian, bulk: BulkVaultEvent) {
 			// Store for debugging
 			this._debugLastBulkEvent = bulk;
-			if (this.startupBulkBuffer !== null) {
-				this.startupBulkBuffer.push(bulk);
-				return;
-			}
-
-			if (!this.reconciler) {
+			if (!this.reconciler || !this.actionQueue) {
 				logger.warn(
 					"[Librarian.handleBulkEvent] No healer, returning early",
 				);
 				return;
 			}
-
-			const { createDiagnostics, treeActions, invalidCodexActions } =
-				this.interpretBulk(bulk);
-			for (const diagnostic of createDiagnostics) {
-				logger.warn(
-					"[Librarian] Invalid live Create observation:",
-					diagnostic,
-				);
-			}
-
-			if (treeActions.length === 0 && invalidCodexActions.length === 0) {
-				return;
-			}
-
-			// Queue and process
-			if (!this.actionQueue) return;
-			yield* this.actionQueue.enqueue({
-				kind: "Reconciliation",
-				request: {
-					source: "ObservedBulk",
-					supplemental: {
-						invalidCodexDeletions: invalidCodexActions,
-					},
-					treeActions,
-				},
-			});
+			yield* this.actionQueue.enqueue({ bulk, kind: "ObservedBulk" });
 		},
 	);
 
+	/**
+	 * The reconciliation a queued bulk asks for, or null when it asks for
+	 * none. Interpreted in its turn, so a rescan that ran while it waited,
+	 * and holds part of it, leaves only the rest.
+	 */
+	private observedBulkRequest(
+		bulk: BulkVaultEvent,
+	): ReconciliationRequest | null {
+		const current = this.subscription
+			? this.subscription.afterSnapshot(bulk)
+			: bulk;
+		if (!current) return null;
+		const { createDiagnostics, treeActions, invalidCodexActions } =
+			this.interpretBulk(current);
+		for (const diagnostic of createDiagnostics) {
+			logger.warn(
+				"[Librarian] Invalid live Create observation:",
+				diagnostic,
+			);
+		}
+		if (treeActions.length === 0 && invalidCodexActions.length === 0) {
+			return null;
+		}
+		return {
+			source: "ObservedBulk",
+			supplemental: { invalidCodexDeletions: invalidCodexActions },
+			treeActions,
+		};
+	}
+
 	private readonly processQueueItem = Effect.fn("Librarian.processQueueItem")(
-		function* (this: Librarian, item: LibrarianQueueItem) {
+		function* (this: Librarian, queued: LibrarianQueueItem) {
 			if (!this.reconciler) return;
-			if (item.kind === "CommandIntention") {
-				yield* this.processCommandIntention(item).pipe(
+			if (queued.kind === "CommandIntention") {
+				yield* this.processCommandIntention(queued).pipe(
 					Effect.uninterruptible,
 				);
 				return;
+			}
+			let item: ReconciliationQueueItem;
+			if (queued.kind === "ObservedBulk") {
+				const request = this.observedBulkRequest(queued.bulk);
+				if (!request) return;
+				item = { kind: "Reconciliation", request };
+			} else {
+				item = queued;
 			}
 
 			const wasUnavailable = this.reconciler.isUnavailable();
@@ -617,14 +625,13 @@ export class Librarian {
 	readonly unsubscribe = Effect.fn("Librarian.unsubscribe")(function* (
 		this: Librarian,
 	) {
-		this.startupBulkBuffer = null;
+		this.starting = false;
 		const drain = this.actionQueue
 			? this.actionQueue.waitForDrain()
 			: Effect.void;
-		if (this.eventSubscription) {
-			const subscription = this.eventSubscription;
-			this.eventSubscription = null;
-			yield* subscription.close.pipe(Effect.ensuring(drain));
+		if (this.subscription) {
+			// Closing twice is a no-op; the subscription stays for rescans.
+			yield* this.subscription.close.pipe(Effect.ensuring(drain));
 			return;
 		}
 		yield* drain;

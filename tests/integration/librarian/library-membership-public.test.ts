@@ -14,6 +14,7 @@ import {
 } from "../../../src/commanders/librarian/librarian";
 import { CommandKind } from "../../../src/managers/obsidian/command-executor";
 import { getContextMenuFile } from "../../../src/managers/overlay-manager/context-menu/context-menu";
+import { withScanAndSubscribe } from "../../support/librarian-vam";
 import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 
 let settingsSpy: ReturnType<typeof spyOn> | null = null;
@@ -38,7 +39,7 @@ function makeVam(active: () => SplitPathToMdFile): LibrarianVam {
 		entries: [],
 		kind: "Complete",
 	};
-	return {
+	return withScanAndSubscribe({
 		cd: () => Effect.void,
 		dispatch: () => Effect.void,
 		getActiveEditorContext: () =>
@@ -59,7 +60,7 @@ function makeVam(active: () => SplitPathToMdFile): LibrarianVam {
 		mdPwd: () => Effect.sync(() => active()),
 		scan: () => Effect.succeed(emptyScan),
 		subscribeToBulk: () => Effect.succeed({ close: Effect.void }),
-	};
+	});
 }
 
 async function startLibrarian(root: SplitPathToFolder) {
