@@ -58,6 +58,10 @@ export class ActiveFileService {
 		return this.reader.observeTarget(splitPath);
 	}
 
+	observeViews(target: SplitPathToMdFile) {
+		return this.reader.observeViews(target);
+	}
+
 	isFileActive(splitPath: SplitPathToMdFile) {
 		return this.reader.isFileActive(splitPath);
 	}

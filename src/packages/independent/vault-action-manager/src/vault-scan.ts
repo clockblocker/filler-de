@@ -1,5 +1,5 @@
 import type { Effect } from "effect";
-import type { VamFileAccessError, VamScanError } from "./effect/errors";
+import type { VamFileReadError, VamScanError } from "./effect/errors";
 import type { VamRuntimeFailure } from "./effect/runtime";
 import type { VaultFileStat } from "./types/file-stat";
 import type { SplitPathToFile, SplitPathToMdFile } from "./types/split-path";
@@ -7,7 +7,7 @@ import type { SplitPathToFile, SplitPathToMdFile } from "./types/split-path";
 export type VaultScanReadableMdPath = SplitPathToMdFile & {
 	readonly read: () => Effect.Effect<
 		string,
-		VamRuntimeFailure<VamFileAccessError>
+		VamRuntimeFailure<VamFileReadError>
 	>;
 };
 

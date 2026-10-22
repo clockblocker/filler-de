@@ -12,6 +12,7 @@ import {
 import {
 	type VamActiveEditorError,
 	type VamFileAccessError,
+	type VamFileReadError,
 	type VamNoActiveEditorError,
 	type VamScanError,
 	VamShutdownError,
@@ -715,7 +716,7 @@ export class VaultActionManager {
 
 	readContent(
 		splitPath: SplitPathToMdFile,
-	): Effect.Effect<string, VamRuntimeFailure<VamFileAccessError>> {
+	): Effect.Effect<string, VamRuntimeFailure<VamFileReadError>> {
 		return this.runtime.provide(this.reader.readContent(splitPath));
 	}
 
@@ -724,7 +725,7 @@ export class VaultActionManager {
 		splitPath: SplitPathToMdFile,
 	): Effect.Effect<
 		{ readonly content: string; readonly stat: VaultFileStat },
-		VamRuntimeFailure<VamFileAccessError>
+		VamRuntimeFailure<VamFileReadError>
 	> {
 		return this.runtime.provide(this.reader.readContentWithStat(splitPath));
 	}
@@ -957,6 +958,7 @@ export {
 	VamDispatchOverflowError,
 	type VamEffectError,
 	type VamFileAccessError,
+	type VamFileReadError,
 	type VamFileWriteError,
 	VamNoActiveEditorError,
 	VamPlanningError,

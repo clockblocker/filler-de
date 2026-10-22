@@ -118,19 +118,21 @@ type RenameMdFilePayload = SplitPathFromTo<SplitPathToMdFile> & {
 type TrashMdFilePayload = {
 	splitPath: SplitPathToMdFile;
 	/**
-	 * Trash the file only while it holds this content, as the active editor
-	 * shows it when the file is open. Otherwise the action fails with
-	 * `VamContentConflictError` (kind `conflict`) and trashes nothing. A
-	 * file already gone is a `NoOp`.
+	 * Trash the file only while it holds this content, as `readContent`
+	 * routes it: an open view's unsaved buffer, active or not, or the disk.
+	 * Otherwise, or when the file's open views disagree, the action fails
+	 * with `VamContentConflictError` (kind `conflict`) and trashes nothing.
+	 * A file already gone is a `NoOp`.
 	 */
 	ifContent?: ExpectedContent;
 };
 type ProcessMdFileGuard = {
 	/**
 	 * The content the transform must receive. Otherwise the action fails with
-	 * `VamContentConflictError` (kind `conflict`) before anything is written;
-	 * in the background the check runs inside the same `Vault.process` call
-	 * as the write.
+	 * `VamContentConflictError` (kind `conflict`) before anything is written.
+	 * The transform receives what `readContent` returns: an open view's
+	 * unsaved buffer, active or not, or the disk. On the disk the check runs
+	 * inside the same `Vault.process` call as the write.
 	 */
 	expected?: ExpectedContent;
 };

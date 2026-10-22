@@ -268,6 +268,20 @@ function makeActiveEditorAccessLive(
 							}),
 						try: () => readActiveEditor(app),
 					}),
+					markdownViewsOf: Effect.fn(
+						"ActiveEditorAccess.markdownViewsOf",
+					)((path) =>
+						Effect.try({
+							catch: (cause) =>
+								new VamActiveEditorError({
+									cause,
+									operation: "markdownViewsOf",
+									path,
+									reason: "AdapterFailure",
+								}),
+							try: () => readMarkdownViewsOf(app, path),
+						}),
+					),
 					openFile: Effect.fn("ActiveEditorAccess.openFile")(
 						function* (file) {
 							const leaf = yield* Effect.try({
@@ -363,6 +377,28 @@ function readOpenMarkdownPaths(app: App): ReadonlySet<string> {
 			paths.add(view.file.path);
 	}
 	return paths;
+}
+
+/**
+ * The loaded Markdown views of the file at `path`, in every window. A
+ * deferred tab (not yet shown since startup) is no `MarkdownView` and holds
+ * no buffer, so it is not listed.
+ */
+function readMarkdownViewsOf(
+	app: App,
+	path: string,
+): readonly ActiveEditorHandle[] {
+	const handles: ActiveEditorHandle[] = [];
+	for (const leaf of app.workspace.getLeavesOfType("markdown")) {
+		const view = leaf.view;
+		if (
+			view instanceof MarkdownView &&
+			view.file &&
+			VaultPath.caseSensitive.same(view.file.path, path)
+		)
+			handles.push(readActiveEditorFromView(view));
+	}
+	return handles;
 }
 
 function readActiveEditor(app: App): ActiveEditorHandle | null {

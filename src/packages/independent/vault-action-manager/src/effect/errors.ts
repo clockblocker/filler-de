@@ -120,7 +120,9 @@ export class VamNoActiveEditorError extends Schema.TaggedError<VamNoActiveEditor
  * A Markdown write found other content than it may write over, and wrote
  * nothing: an asynchronous transform lost a race with a newer edit, a
  * `ProcessMdFile` did not receive its `expected` content, or a
- * `TrashMdFile` found other content than its `ifContent`.
+ * `TrashMdFile` found other content than its `ifContent`. A read or write
+ * also fails with it when the file's open views hold different content
+ * (`OpenViewsDisagree`), so VAM cannot tell which is current.
  */
 export class VamContentConflictError extends Schema.TaggedError<VamContentConflictError>()(
 	"VamContentConflictError",
@@ -159,6 +161,12 @@ export type VamFileAccessError =
 	| VamActiveEditorError
 	| VamNoActiveEditorError
 	| VamVaultIoError;
+
+/**
+ * Failures of a content read, which may also find the file's open views
+ * holding different content (`VamContentConflictError`).
+ */
+export type VamFileReadError = VamFileAccessError | VamContentConflictError;
 
 /**
  * Failures of a write, which may also lose a content race or find its

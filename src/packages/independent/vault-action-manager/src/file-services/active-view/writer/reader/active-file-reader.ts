@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 import type { TFolder } from "obsidian";
+import { pathfinder } from "../../../../helpers/pathfinder";
 import type {
 	AnySplitPath,
 	SplitPathToMdFile,
@@ -7,6 +8,7 @@ import type {
 import {
 	type ActiveEditorSnapshot,
 	acquireActiveEditorSnapshot,
+	acquireViewSnapshots,
 	activeEditorFailure,
 	requireSourceMode,
 	snapshotMatches,
@@ -83,6 +85,11 @@ export class ActiveFileReader {
 				Effect.succeed(null),
 			),
 		);
+	}
+
+	/** Every Markdown view showing `target`, the active one included. */
+	observeViews(target: SplitPathToMdFile) {
+		return acquireViewSnapshots(pathfinder.systemPathFromSplitPath(target));
 	}
 
 	isFileActive(splitPath: SplitPathToMdFile) {

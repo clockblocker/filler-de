@@ -72,6 +72,27 @@ export const acquireActiveEditorSnapshot = Effect.fn(
 	return snapshot;
 }, Effect.tapError(annotateFileAccessFailure));
 
+/**
+ * Snapshots of every Markdown view showing the file at `path`, active or
+ * not, each validated as the active editor's is.
+ */
+export const acquireViewSnapshots = Effect.fn("vam.activeEditor.views")(
+	function* (path: string) {
+		yield* Effect.annotateCurrentSpan({ operation: "views", path });
+		const access = yield* ActiveEditorAccess;
+		const handles = yield* access.markdownViewsOf(path);
+		const snapshots = yield* Effect.forEach(
+			handles,
+			validateActiveEditorHandle,
+		);
+		yield* Effect.annotateCurrentSpan({ views: snapshots.length });
+		return snapshots.filter((snapshot) =>
+			VaultPath.caseSensitive.same(snapshot.path, path),
+		);
+	},
+	Effect.tapError(annotateFileAccessFailure),
+);
+
 export const waitForActiveEditorSnapshot = Effect.fn(
 	"vam.activeEditor.snapshot.wait",
 )(function* (
