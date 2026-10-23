@@ -37,25 +37,25 @@ Page navigation (`GoToPrevPage`, `GoToNextPage`) needs only the note, so its con
 
 ## Behaviors
 
-`createHandlers(librarian, userEvent, onWikilinkClicked?)` creates the handlers that `main.ts` registers with `UserEventInterceptor`. A handler that runs an Effect hands it to `userEvent`, which runs it on the plugin runtime under a `user-event.<kind>` root span.
+`createHandlers(librarian, onWikilinkClicked?)` creates the handlers that `main.ts` sets on the event layer (`UserEvents`, `src/plugin/user-events.ts`) once a Librarian runs. The layer runs each handled event on the plugin runtime as one fiber, at its own `user-event.<kind>` edge, counted as pending work until it ends: the handler's program, then the result applied, then the handler's `afterwards`. Selection changes and toolbar button clicks run untraced: the first are frequent, and a button's command opens its own `command.<kind>`.
 
 | Event | Handler behavior |
 | --- | --- |
 | `ClipboardCopy` | Remove Librarian metadata from copied text. |
 | `SelectAll` | Exclude frontmatter, go-back links, and metadata. |
 | `WikilinkCompleted` | Land a bare word typed outside `Worter/` on its Crossroad note's path (ADR-0015); otherwise ask the Librarian to resolve a Library target. |
-| `CheckboxFrontmatterClicked` | Route the status change to the Librarian. |
 | `CheckboxClicked` | Route a Codex status change to the Librarian. |
-| `WikilinkClicked` | Tell Classify the clicked target, so a link to a Reading whose Knowledge is still generating scrolls to it once it lands. |
+| `WikilinkClicked` | Let Obsidian open the link, then, in the click's fiber, have Classify open a Reading note again once its Knowledge lands. |
 
-A handler has two stages:
+A handler has two stages, and an optional third:
 
 ```ts
 doesApply(payload): boolean
-handle(payload, context): HandleResult
+handle(payload): Effect<UserEventResult, UserEventFailure>
+afterwards?(payload): Effect<void, UserEventFailure>
 ```
 
-`doesApply` must be synchronous because it controls event cancellation. `handle` returns an outcome of `handled`, `effect`, or `passthrough`. An `effect` outcome carries a typed editor change.
+`doesApply` is plain and synchronous because it runs inside the DOM or editor event and controls its cancellation. A wikilink completion's `doesApply` is asked before VAM resolves the link, so its payload has no `resolvedPath` yet. `handle` answers `handled`, `effect`, or `passthrough`, and the layer applies it in the same fiber: an `effect` carries a clipboard text, a selection or an editor change, and a clicked link's `passthrough` opens the link. The fiber starts at once, inside the event, so a handler that never waits is applied before the event's dispatch ends. A copy handler must not wait: the clipboard is writable only during the event, and when it waits the selection is copied as it is.
 
 `chainHandlers` uses the first handler for which `doesApply` returns `true`. A handler must return `passthrough` when it cannot make a safe choice. For example, wikilink completion must not select an ambiguous Library leaf.
 

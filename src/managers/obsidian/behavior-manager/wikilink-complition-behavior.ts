@@ -39,7 +39,7 @@ import type {
 	UserEventResult,
 } from "@textfresser/obsidian-event-layer";
 import { VaultPath } from "@textfresser/vault-action-manager";
-import { Result as EffectResult } from "effect";
+import { Effect, Result as EffectResult } from "effect";
 import { nonEmptyArrayResult } from "../../../types/utils";
 import { pickClosestLeaf } from "./pick-closest-leaf";
 
@@ -150,17 +150,24 @@ export function createWikilinkCompletionHandler(
 ): UserEventHandler<typeof UserEventKind.WikilinkCompleted> {
 	return {
 		doesApply: () => true,
-		handle: (payload) => {
-			const crossroad = crossroadTargetOf(payload);
-			if (crossroad === undefined || namesAnotherNote(librarian, payload))
-				return libraryCompletion(librarian, payload);
-			return {
-				effect: {
-					aliasToInsert: payload.linkContent,
-					resolvedTarget: crossroad,
-				},
-				outcome: "effect",
-			};
+		handle: (payload) =>
+			Effect.sync(() => completionOf(librarian, payload)),
+	};
+}
+
+/** The completion of a link, by the rules above. */
+function completionOf(
+	librarian: WikilinkCompletionLibrarianPort,
+	payload: Payload,
+): Result {
+	const crossroad = crossroadTargetOf(payload);
+	if (crossroad === undefined || namesAnotherNote(librarian, payload))
+		return libraryCompletion(librarian, payload);
+	return {
+		effect: {
+			aliasToInsert: payload.linkContent,
+			resolvedTarget: crossroad,
 		},
+		outcome: "effect",
 	};
 }

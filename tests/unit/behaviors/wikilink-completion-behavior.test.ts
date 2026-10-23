@@ -4,6 +4,7 @@ import {
 	type PayloadFor,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
+import { Effect } from "effect";
 import { createWikilinkCompletionHandler } from "../../../src/managers/obsidian/behavior-manager/wikilink-complition-behavior";
 
 type WikilinkLibrarian = Parameters<typeof createWikilinkCompletionHandler>[0];
@@ -40,8 +41,10 @@ const handle = (
 	overrides: Partial<PayloadFor<"WikilinkCompleted">> = {},
 	librarian: WikilinkLibrarian = librarianWith(),
 ) =>
-	createWikilinkCompletionHandler(librarian).handle(
-		makePayload(linkContent, overrides),
+	Effect.runSync(
+		createWikilinkCompletionHandler(librarian).handle(
+			makePayload(linkContent, overrides),
+		),
 	);
 
 const landsOn = (target: string, alias: string) =>

@@ -1,190 +1,92 @@
+/**
+ * The event layer: DOM listeners and one editor extension, held in the
+ * scope it is made in, and the handlers set on it.
+ *
+ * Detectors stay plain and synchronous: inside each event they encode its
+ * payload, ask the handler of its kind `doesApply`, and prevent the default
+ * by it. A handled event then runs on the host's runtime, as one fiber that
+ * handles it and applies the result. Closing the scope removes every
+ * listener and the extension.
+ */
+import { Effect, MutableRef, Ref } from "effect";
 import type {
 	ObsidianEventLayer,
-	ObsidianEventLayerDeps,
-	PendingWork,
-	Teardown,
 	UserEventHandler,
 	UserEventKind,
-	UserEventResult,
+	UserEventsHost,
 } from "./contracts";
-import { ActionElementDetector } from "./events/click/action-element/detector";
-import { CheckboxClickedDetector } from "./events/click/checkbox/detector";
-import { CheckboxFrontmatterDetector } from "./events/click/checkbox-frontmatter/detector";
-import { GenericClickDetector } from "./events/click/generic-click-detector";
-import { WikilinkClickDetector } from "./events/click/wikilink-click/detector";
-import { ClipboardDetector } from "./events/clipboard/detector";
-import { SelectAllDetector } from "./events/select-all/detector";
-import { SelectionChangedDetector } from "./events/selection-changed/detector";
-import { WikilinkDetector } from "./events/wikilink/detector";
-import type { AnyPayload, PayloadKind } from "./types/payload-base";
+import { actionElementClick } from "./events/click/action-element/detector";
+import { checkboxClick } from "./events/click/checkbox/detector";
+import { frontmatterCheckboxClick } from "./events/click/checkbox-frontmatter/detector";
+import { listenForClicks } from "./events/click/generic-click-detector";
+import { wikilinkClick } from "./events/click/wikilink-click/detector";
+import { listenForClipboard } from "./events/clipboard/detector";
+import { listenForSelectAll } from "./events/select-all/detector";
+import { listenForSelectionChanges } from "./events/selection-changed/detector";
+import { wikilinkCompletionExtension } from "./events/wikilink/detector";
+import { type EventDispatch, handled } from "./internal/dispatch";
+import { PayloadKind } from "./types/payload-base";
 
-const NO_PENDING_WORK: PendingWork = { end: () => {}, start: () => {} };
-
-/**
- * Detector interface for lifecycle management.
- */
-interface Detector {
-	startListening(): void;
-	stopListening(): void;
-}
+type Handlers = ReadonlyMap<UserEventKind, UserEventHandler<UserEventKind>>;
 
 /**
- * Handler invoker function passed to detectors.
- * Returns true if a handler exists and applies, false otherwise.
+ * Kinds handled with no span: a selection change is frequent, and a
+ * toolbar button's command opens its own root, `command.<kind>`.
  */
-export type HandlerInvoker<P extends AnyPayload> = (payload: P) => {
-	applies: boolean;
-	invoke: () => Promise<UserEventResult<P["kind"]>>;
-};
+const UNTRACED: ReadonlySet<UserEventKind> = new Set([
+	PayloadKind.SelectionChanged,
+	PayloadKind.ActionElementClicked,
+]);
 
-class ObsidianEventLayerImpl implements ObsidianEventLayer {
-	private readonly genericClickDetector: GenericClickDetector;
-	private readonly detectors: Detector[];
-	private readonly handlers = new Map<
-		UserEventKind,
-		UserEventHandler<UserEventKind>
-	>();
-	private listening = false;
+/** The layer, listening while the scope is open. */
+export const makeObsidianEventLayer = Effect.fnUntraced(function* (
+	host: UserEventsHost,
+) {
+	// Read and written inside DOM events and by plain setters, so through
+	// its cell; one handler per kind.
+	const handlers = yield* Ref.make<Handlers>(new Map());
 
-	constructor({
-		app,
-		plugin,
-		selectionTextSource,
-		pendingWork = NO_PENDING_WORK,
-	}: ObsidianEventLayerDeps) {
-		// Create shared generic click detector
-		this.genericClickDetector = new GenericClickDetector();
-
-		// Create all detectors with handler invoker
-		this.detectors = [
-			new ClipboardDetector(
-				app,
-				selectionTextSource,
-				this.createInvoker.bind(this),
-			),
-			new CheckboxClickedDetector(
-				this.genericClickDetector,
-				app,
-				this.createInvoker.bind(this),
-				pendingWork,
-			),
-			new CheckboxFrontmatterDetector(
-				this.genericClickDetector,
-				app,
-				this.createInvoker.bind(this),
-				pendingWork,
-			),
-			new ActionElementDetector(
-				this.genericClickDetector,
-				this.createInvoker.bind(this),
-			),
-			new WikilinkClickDetector(
-				this.genericClickDetector,
-				app,
-				this.createInvoker.bind(this),
-				pendingWork,
-			),
-			new SelectAllDetector(app, this.createInvoker.bind(this)),
-			new SelectionChangedDetector(app, this.createInvoker.bind(this)),
-			new WikilinkDetector(plugin, this.createInvoker.bind(this)),
-		];
-	}
-
-	/**
-	 * Set a handler for a specific payload kind.
-	 * Only one handler per kind is allowed.
-	 * Returns teardown function to unregister.
-	 */
-	setHandler<K extends UserEventKind>(
-		kind: K,
-		handler: UserEventHandler<K>,
-	): Teardown {
-		const storedHandler =
-			handler as unknown as UserEventHandler<UserEventKind>;
-		this.handlers.set(kind, storedHandler);
-		return () => {
-			if (this.handlers.get(kind) === storedHandler) {
-				this.handlers.delete(kind);
-			}
-		};
-	}
-
-	/**
-	 * Start listening to all user events.
-	 */
-	start(): void {
-		if (this.listening) return;
-
-		this.listening = true;
-
-		// Start generic click detector first
-		this.genericClickDetector.startListening();
-
-		// Then start specialized detectors
-		for (const detector of this.detectors) {
-			detector.startListening();
-		}
-	}
-
-	/**
-	 * Stop listening to all user events.
-	 */
-	stop(): void {
-		if (!this.listening) return;
-
-		this.listening = false;
-
-		// Stop specialized detectors first
-		for (const detector of this.detectors) {
-			detector.stopListening();
-		}
-
-		// Stop generic click detector last
-		this.genericClickDetector.stopListening();
-	}
-
-	// ─── Private ───
-
-	/**
-	 * Create a handler invoker for a specific payload kind.
-	 * This is passed to detectors so they can check applicability and invoke handlers.
-	 */
-	private createInvoker<P extends AnyPayload>(
-		kind: PayloadKind,
-	): HandlerInvoker<P> {
-		return (payload: P) => {
-			const handler = this.handlers.get(kind) as
-				| UserEventHandler<UserEventKind>
+	const dispatch: EventDispatch = {
+		decide: (kind, payload) => {
+			const handler = Ref.getUnsafe(handlers).get(kind) as
+				| UserEventHandler<typeof kind>
 				| undefined;
+			return handler?.doesApply(payload) ? handler : undefined;
+		},
+		host,
+		run: (kind, handler, payload, apply) =>
+			host.fork(kind, handled(handler, payload, apply), {
+				traced: !UNTRACED.has(kind),
+			}),
+	};
 
-			if (!handler) {
-				return {
-					applies: false,
-					invoke: async () => ({ outcome: "passthrough" }),
-				};
-			}
+	// The clicks, in this order, before any other mouse listener.
+	yield* listenForClicks(dispatch, [
+		checkboxClick(dispatch),
+		frontmatterCheckboxClick(dispatch),
+		actionElementClick(dispatch),
+		wikilinkClick(dispatch),
+	]);
+	yield* listenForClipboard(dispatch);
+	yield* listenForSelectAll(dispatch);
+	yield* listenForSelectionChanges(dispatch);
+	yield* host.editorExtension(wikilinkCompletionExtension(dispatch));
 
-			const applies = handler.doesApply(payload as never);
-
-			return {
-				applies,
-				invoke: async () => {
-					if (!applies) {
-						return { outcome: "passthrough" } as UserEventResult<
-							P["kind"]
-						>;
-					}
-					return handler.handle(payload as never) as UserEventResult<
-						P["kind"]
-					>;
-				},
-			};
-		};
-	}
-}
-
-export function createObsidianEventLayer(
-	deps: ObsidianEventLayerDeps,
-): ObsidianEventLayer {
-	return new ObsidianEventLayerImpl(deps);
-}
+	const layer: ObsidianEventLayer = {
+		setHandler: (kind, handler) => {
+			const stored =
+				handler as unknown as UserEventHandler<UserEventKind>;
+			MutableRef.update(handlers.ref, (current) =>
+				new Map(current).set(kind, stored),
+			);
+			return () =>
+				MutableRef.update(handlers.ref, (current) => {
+					if (current.get(kind) !== stored) return current;
+					const next = new Map(current);
+					next.delete(kind);
+					return next;
+				});
+		},
+	};
+	return layer;
+});

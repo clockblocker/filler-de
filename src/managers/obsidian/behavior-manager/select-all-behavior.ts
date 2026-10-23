@@ -2,6 +2,7 @@ import type {
 	UserEventHandler,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
+import { Effect } from "effect";
 import { scrollBodyRange } from "../../../stateless-helpers/scroll-body-range";
 
 /**
@@ -17,19 +18,23 @@ export function createSelectAllHandler(): UserEventHandler<
 			// Only intercept when we would set a custom selection (not passthrough)
 			return (from !== 0 || to !== payload.content.length) && from < to;
 		},
-		handle: (payload) => {
-			const { from, to } = scrollBodyRange(payload.content);
+		handle: (payload) =>
+			Effect.sync(() => {
+				const { from, to } = scrollBodyRange(payload.content);
 
-			// If the range covers everything or nothing, passthrough
-			if ((from === 0 && to === payload.content.length) || from >= to) {
-				return { outcome: "passthrough" } as const;
-			}
+				// If the range covers everything or nothing, passthrough
+				if (
+					(from === 0 && to === payload.content.length) ||
+					from >= to
+				) {
+					return { outcome: "passthrough" } as const;
+				}
 
-			// Return custom selection effect
-			return {
-				effect: { selection: { from, to } },
-				outcome: "effect",
-			};
-		},
+				// Return custom selection effect
+				return {
+					effect: { selection: { from, to } },
+					outcome: "effect",
+				} as const;
+			}),
 	};
 }

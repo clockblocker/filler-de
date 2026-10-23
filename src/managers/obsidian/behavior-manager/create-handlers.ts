@@ -1,33 +1,27 @@
 /**
- * Handler factory for user event registration.
- * Creates handlers array that main.ts registers with UserEventInterceptor.
+ * The Librarian's and the plugin's handlers of user events, which
+ * `main.ts` sets on the event layer once a Librarian runs. Each handler's
+ * program runs at its event's edge, `user-event.<kind>`.
  *
- * Architecture:
- * - Stateless handlers (clipboard, select-all) call services directly
- * - All other handlers delegate to Librarian methods
+ * - Stateless handlers (clipboard, select-all) call helpers directly.
+ * - The others delegate to the Librarian.
+ * - A property checkbox has no handler: Obsidian toggles the property,
+ *   and the click does nothing more, as before (the Librarian has no
+ *   handler for it).
  */
 
 import {
+	type UserEventFailure,
 	type UserEventHandler,
 	type UserEventKind,
 	UserEventKind as UserEventKinds,
 } from "@textfresser/obsidian-event-layer";
-import type { Effect } from "effect";
+import { Effect } from "effect";
 import type { Librarian } from "../../../commanders/librarian/librarian";
-import { createCheckboxFrontmatterHandler } from "./checkbox-behavior";
 import { createClipboardHandler } from "./clipboard-behavior";
 import { createCodexCheckboxHandler } from "./codex-checkbox-behavior";
 import { createSelectAllHandler } from "./select-all-behavior";
 import { createWikilinkCompletionHandler } from "./wikilink-complition-behavior";
-
-/**
- * Runs a handler's program on the plugin runtime, under
- * `user-event.<kind>`; resolves once it ended, and logs a failure.
- */
-export type RunUserEvent = <A, E>(
-	kind: string,
-	effect: Effect.Effect<A, E>,
-) => Promise<void>;
 
 /**
  * Handler definition with kind and handler.
@@ -44,14 +38,15 @@ type HandlerDef = {
  * All librarian-dependent handlers delegate to librarian methods.
  *
  * @param librarian - Librarian instance for tree operations
- * @param userEvent - Runs a handler's program on the plugin runtime
- * @param onWikilinkClicked - Told every clicked link's target, such as
- *   Classify waiting for a Reading's Knowledge to open its note again
+ * @param onWikilinkClicked - Run with every clicked link's target, once
+ *   Obsidian was told to open it, in the click's fiber: Classify waits
+ *   there for a Reading's Knowledge to open its note again
  */
 export function createHandlers(
 	librarian: Librarian,
-	userEvent: RunUserEvent,
-	onWikilinkClicked?: (target: string) => void,
+	onWikilinkClicked?: (
+		target: string,
+	) => Effect.Effect<void, UserEventFailure>,
 ): HandlerDef[] {
 	const handlers: HandlerDef[] = [
 		// Stateless handlers (call services directly)
@@ -70,11 +65,7 @@ export function createHandlers(
 			kind: UserEventKinds.WikilinkCompleted,
 		},
 		{
-			handler: createCheckboxFrontmatterHandler(librarian),
-			kind: UserEventKinds.CheckboxFrontmatterClicked,
-		},
-		{
-			handler: createCodexCheckboxHandler(librarian, userEvent),
+			handler: createCodexCheckboxHandler(librarian),
 			kind: UserEventKinds.CheckboxClicked,
 		},
 	];
@@ -83,11 +74,12 @@ export function createHandlers(
 	if (onWikilinkClicked) {
 		handlers.push({
 			handler: {
+				afterwards: (payload) =>
+					onWikilinkClicked(payload.target.basename),
 				doesApply: () => true,
-				handle: (payload) => {
-					onWikilinkClicked(payload.target.basename);
-					return { outcome: "passthrough" } as const;
-				},
+				// Obsidian opens the link, as it would have.
+				handle: () =>
+					Effect.succeed({ outcome: "passthrough" } as const),
 			},
 			kind: UserEventKinds.WikilinkClicked,
 		});

@@ -18,6 +18,7 @@ import {
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import { Effect } from "effect";
 import type { App, Menu } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
 import type { ReadSync } from "../../runtime/plugin-runtime";
@@ -86,26 +87,27 @@ export class OverlayManager {
 
 	init(): void {
 		if (this.userEventInterceptor) {
+			// Rendering only, and frequent: the layer runs it untraced.
 			this.selectionHandlerTeardown =
 				this.userEventInterceptor.setHandler(
 					UserEventKind.SelectionChanged,
 					{
 						doesApply: () => true,
-						handle: async (
-							payload: PayloadFor<"SelectionChanged">,
-						) => {
-							const result = handleSelectionChanged(payload, {
-								activeLeafId: this.activeLeafId,
-								app: this.app,
-								bottomToolbars: this.bottomToolbars,
-								selectionToolbars: this.selectionToolbars,
-							});
-							this.activeLeafId = result.newActiveLeafId;
-							return { outcome: "passthrough" } as const;
-						},
+						handle: (payload: PayloadFor<"SelectionChanged">) =>
+							Effect.sync(() => {
+								const result = handleSelectionChanged(payload, {
+									activeLeafId: this.activeLeafId,
+									app: this.app,
+									bottomToolbars: this.bottomToolbars,
+									selectionToolbars: this.selectionToolbars,
+								});
+								this.activeLeafId = result.newActiveLeafId;
+								return { outcome: "passthrough" } as const;
+							}),
 					},
 				);
 
+			// The button's command runs under its own `command.<kind>`.
 			this.actionClickHandlerTeardown =
 				this.userEventInterceptor.setHandler(
 					UserEventKind.ActionElementClicked,
@@ -113,18 +115,20 @@ export class OverlayManager {
 						doesApply: (
 							payload: PayloadFor<"ActionElementClicked">,
 						) => KNOWN_ACTION_IDS.has(payload.actionId),
-						handle: async (
+						handle: (
 							payload: PayloadFor<"ActionElementClicked">,
 						) => {
 							const { commandExecutor } = this;
-							if (
+							const dispatched =
 								commandExecutor &&
 								isOverlayActionKind(payload.actionId)
-							)
-								await dispatchActionClick(payload.actionId, {
-									commandExecutor,
-								});
-							return { outcome: "handled" } as const;
+									? dispatchActionClick(payload.actionId, {
+											commandExecutor,
+										})
+									: Effect.void;
+							return Effect.as(dispatched, {
+								outcome: "handled",
+							} as const);
 						},
 					},
 				);
