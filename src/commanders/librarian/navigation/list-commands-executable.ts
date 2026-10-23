@@ -1,6 +1,7 @@
 import type { Codecs, Healer } from "@textfresser/library-core";
 import { isCodexSplitPath } from "@textfresser/library-core";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import {
 	CommandKind,
 	type CommandKind as CommandKindType,
@@ -30,12 +31,12 @@ export function listCommandsExecutableIn(
 
 	// Parse suffix to get coreName for page detection
 	const parsedSuffix = codecs.suffix.parseSeparatedSuffix(splitPath.basename);
-	if (parsedSuffix.isErr()) {
+	if (Result.isFailure(parsedSuffix)) {
 		// Not a valid library file, return empty
 		return [];
 	}
 
-	const { coreName } = parsedSuffix.value;
+	const { coreName } = parsedSuffix.success;
 
 	if (healer && getPrevPageImpl(healer, codecs, splitPath) !== null) {
 		commands.push(CommandKind.GoToPrevPage);

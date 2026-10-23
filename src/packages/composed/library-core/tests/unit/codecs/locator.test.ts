@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type { SuffixCodecs } from "../../../src/codecs/internal/suffix";
 import { makeSuffixCodecs } from "../../../src/codecs/internal/suffix";
 import type { LocatorCodecs } from "../../../src/codecs/locator/make";
@@ -67,8 +68,8 @@ describe("locator codecs", () => {
 				},
 			};
 			const result = codecs.canonicalSplitPathInsideLibraryToLocator(sp);
-			expect(result.isOk()).toBe(true);
-			const loc = result._unsafeUnwrap();
+			expect(Result.isSuccess(result)).toBe(true);
+			const loc = Result.getOrThrow(result);
 			expect(loc.targetKind).toBe(TreeNodeKind.Section);
 			expect(loc.segmentId).toBe(`child${SEP}Section${SEP}`);
 			expect(loc.segmentIdChainToParent).toEqual([
@@ -88,8 +89,8 @@ describe("locator codecs", () => {
 				},
 			};
 			const result = codecs.canonicalSplitPathInsideLibraryToLocator(sp);
-			expect(result.isOk()).toBe(true);
-			const loc = result._unsafeUnwrap();
+			expect(Result.isSuccess(result)).toBe(true);
+			const loc = Result.getOrThrow(result);
 			expect(loc.targetKind).toBe(TreeNodeKind.Scroll);
 			expect(loc.segmentId).toBe(`MyNote${SEP}Scroll${SEP}md`);
 			expect(loc.segmentIdChainToParent).toEqual([
@@ -109,8 +110,8 @@ describe("locator codecs", () => {
 				},
 			};
 			const result = codecs.canonicalSplitPathInsideLibraryToLocator(sp);
-			expect(result.isOk()).toBe(true);
-			const loc = result._unsafeUnwrap();
+			expect(Result.isSuccess(result)).toBe(true);
+			const loc = Result.getOrThrow(result);
 			expect(loc.targetKind).toBe(TreeNodeKind.File);
 			expect(loc.segmentId).toBe(`Image${SEP}File${SEP}png`);
 		});
@@ -130,8 +131,8 @@ describe("locator codecs", () => {
 				},
 			};
 			const result = codecs.canonicalSplitPathInsideLibraryToLocator(sp);
-			expect(result.isOk()).toBe(true);
-			const loc = result._unsafeUnwrap();
+			expect(Result.isSuccess(result)).toBe(true);
+			const loc = Result.getOrThrow(result);
 			expect(loc.segmentIdChainToParent).toEqual([
 				sec("Library"),
 				sec("grandpa"),
@@ -152,8 +153,8 @@ describe("locator codecs", () => {
 				targetKind: TreeNodeKind.Section as typeof TreeNodeKind.Section,
 			};
 			const result = codecs.locatorToCanonicalSplitPathInsideLibrary(loc);
-			expect(result.isOk()).toBe(true);
-			const sp = result._unsafeUnwrap();
+			expect(Result.isSuccess(result)).toBe(true);
+			const sp = Result.getOrThrow(result);
 			expect(sp.kind).toBe(SplitPathKind.Folder);
 			expect(sp.pathParts).toEqual(["Library", "parent"]);
 			expect(sp.separatedSuffixedBasename.coreName).toBe("child");
@@ -170,8 +171,8 @@ describe("locator codecs", () => {
 				targetKind: TreeNodeKind.Scroll as typeof TreeNodeKind.Scroll,
 			};
 			const result = codecs.locatorToCanonicalSplitPathInsideLibrary(loc);
-			expect(result.isOk()).toBe(true);
-			const sp = result._unsafeUnwrap();
+			expect(Result.isSuccess(result)).toBe(true);
+			const sp = Result.getOrThrow(result);
 			expect(sp.kind).toBe(SplitPathKind.MdFile);
 			expect(sp.pathParts).toEqual(["Library", "parent"]);
 			expect(sp.separatedSuffixedBasename.coreName).toBe("MyNote");
@@ -190,8 +191,8 @@ describe("locator codecs", () => {
 				targetKind: TreeNodeKind.File as typeof TreeNodeKind.File,
 			};
 			const result = codecs.locatorToCanonicalSplitPathInsideLibrary(loc);
-			expect(result.isOk()).toBe(true);
-			const sp = result._unsafeUnwrap();
+			expect(Result.isSuccess(result)).toBe(true);
+			const sp = Result.getOrThrow(result);
 			expect(sp.kind).toBe(SplitPathKind.File);
 			expect(sp.separatedSuffixedBasename.coreName).toBe("Image");
 		});
@@ -209,13 +210,13 @@ describe("locator codecs", () => {
 			};
 			const locResult =
 				codecs.canonicalSplitPathInsideLibraryToLocator(originalSp);
-			expect(locResult.isOk()).toBe(true);
-			const loc = locResult._unsafeUnwrap();
+			expect(Result.isSuccess(locResult)).toBe(true);
+			const loc = Result.getOrThrow(locResult);
 
 			const spResult =
 				codecs.locatorToCanonicalSplitPathInsideLibrary(loc);
-			expect(spResult.isOk()).toBe(true);
-			const sp = spResult._unsafeUnwrap();
+			expect(Result.isSuccess(spResult)).toBe(true);
+			const sp = Result.getOrThrow(spResult);
 			expect(sp.kind).toBe(originalSp.kind);
 			expect(sp.pathParts).toEqual(originalSp.pathParts);
 			expect(sp.separatedSuffixedBasename.coreName).toBe(
@@ -235,13 +236,13 @@ describe("locator codecs", () => {
 			};
 			const locResult =
 				codecs.canonicalSplitPathInsideLibraryToLocator(originalSp);
-			expect(locResult.isOk()).toBe(true);
-			const loc = locResult._unsafeUnwrap();
+			expect(Result.isSuccess(locResult)).toBe(true);
+			const loc = Result.getOrThrow(locResult);
 
 			const spResult =
 				codecs.locatorToCanonicalSplitPathInsideLibrary(loc);
-			expect(spResult.isOk()).toBe(true);
-			const sp = spResult._unsafeUnwrap();
+			expect(Result.isSuccess(spResult)).toBe(true);
+			const sp = Result.getOrThrow(spResult);
 			expect(sp.kind).toBe(SplitPathKind.MdFile);
 			expect(sp.pathParts).toEqual(originalSp.pathParts);
 			expect(sp.separatedSuffixedBasename.coreName).toBe("Leaf");

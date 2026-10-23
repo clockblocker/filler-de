@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+import { Result } from "effect";
 import type { CodecRules } from "../../../src/codecs/rules";
 import type { SegmentIdCodecs } from "../../../src/codecs/segment-id/make";
 import { makeSegmentIdCodecs } from "../../../src/codecs/segment-id/make";
@@ -44,8 +45,8 @@ describe("segment-id codecs", () => {
 		it("parses Section segment ID", () => {
 			const id = `MySection${SEP}Section${SEP}` as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toEqual({
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toEqual({
 				coreName: "MySection",
 				targetKind: TreeNodeKind.Section,
 			});
@@ -54,8 +55,8 @@ describe("segment-id codecs", () => {
 		it("parses Scroll segment ID", () => {
 			const id = `MyScroll${SEP}Scroll${SEP}md` as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toEqual({
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toEqual({
 				coreName: "MyScroll",
 				extension: "md",
 				targetKind: TreeNodeKind.Scroll,
@@ -65,8 +66,8 @@ describe("segment-id codecs", () => {
 		it("parses File segment ID", () => {
 			const id = `MyFile${SEP}File${SEP}png` as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toEqual({
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toEqual({
 				coreName: "MyFile",
 				extension: "png",
 				targetKind: TreeNodeKind.File,
@@ -76,10 +77,10 @@ describe("segment-id codecs", () => {
 		it("returns error for missing parts (only one part)", () => {
 			const id = "JustAName" as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
-			expect(result.isErr()).toBe(true);
-			if (result.isErr()) {
-				expect(result.error.kind).toBe("SegmentIdError");
-				expect((result.error as { reason: string }).reason).toBe(
+			expect(Result.isFailure(result)).toBe(true);
+			if (Result.isFailure(result)) {
+				expect(result.failure.kind).toBe("SegmentIdError");
+				expect((result.failure as { reason: string }).reason).toBe(
 					"MissingParts",
 				);
 			}
@@ -88,9 +89,9 @@ describe("segment-id codecs", () => {
 		it("returns error for unknown TreeNodeKind", () => {
 			const id = `MyNode${SEP}UnknownKind${SEP}md` as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
-			expect(result.isErr()).toBe(true);
-			if (result.isErr()) {
-				expect((result.error as { reason: string }).reason).toBe(
+			expect(Result.isFailure(result)).toBe(true);
+			if (Result.isFailure(result)) {
+				expect((result.failure as { reason: string }).reason).toBe(
 					"UnknownType",
 				);
 			}
@@ -99,9 +100,9 @@ describe("segment-id codecs", () => {
 		it("returns error for Section with non-empty extension", () => {
 			const id = `MySection${SEP}Section${SEP}md` as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
-			expect(result.isErr()).toBe(true);
-			if (result.isErr()) {
-				expect((result.error as { reason: string }).reason).toBe(
+			expect(Result.isFailure(result)).toBe(true);
+			if (Result.isFailure(result)) {
+				expect((result.failure as { reason: string }).reason).toBe(
 					"InvalidExtension",
 				);
 			}
@@ -111,15 +112,15 @@ describe("segment-id codecs", () => {
 			const id = `MyScroll${SEP}Scroll` as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
 			// Only 2 parts: coreName + "Scroll", missing extension
-			expect(result.isErr()).toBe(true);
+			expect(Result.isFailure(result)).toBe(true);
 		});
 
 		it("returns error for Scroll with non-md extension", () => {
 			const id = `MyScroll${SEP}Scroll${SEP}txt` as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
-			expect(result.isErr()).toBe(true);
-			if (result.isErr()) {
-				expect((result.error as { reason: string }).reason).toBe(
+			expect(Result.isFailure(result)).toBe(true);
+			if (Result.isFailure(result)) {
+				expect((result.failure as { reason: string }).reason).toBe(
 					"InvalidExtension",
 				);
 			}
@@ -128,15 +129,15 @@ describe("segment-id codecs", () => {
 		it("returns error for File without extension", () => {
 			const id = `MyFile${SEP}File` as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
-			expect(result.isErr()).toBe(true);
+			expect(Result.isFailure(result)).toBe(true);
 		});
 
 		it("returns error for empty coreName", () => {
 			const id = `${SEP}Section${SEP}` as TreeNodeSegmentId;
 			const result = codecs.parseSegmentId(id);
-			expect(result.isErr()).toBe(true);
-			if (result.isErr()) {
-				expect((result.error as { reason: string }).reason).toBe(
+			expect(Result.isFailure(result)).toBe(true);
+			if (Result.isFailure(result)) {
+				expect((result.failure as { reason: string }).reason).toBe(
 					"InvalidNodeName",
 				);
 			}
@@ -147,8 +148,8 @@ describe("segment-id codecs", () => {
 		it("parseSectionSegmentId", () => {
 			const id = `Library${SEP}Section${SEP}` as SectionNodeSegmentId;
 			const result = codecs.parseSectionSegmentId(id);
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap().targetKind).toBe(
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result).targetKind).toBe(
 				TreeNodeKind.Section,
 			);
 		});
@@ -156,17 +157,21 @@ describe("segment-id codecs", () => {
 		it("parseScrollSegmentId", () => {
 			const id = `MyNote${SEP}Scroll${SEP}md` as ScrollNodeSegmentId;
 			const result = codecs.parseScrollSegmentId(id);
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap().targetKind).toBe(TreeNodeKind.Scroll);
-			expect(result._unsafeUnwrap().extension).toBe("md");
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result).targetKind).toBe(
+				TreeNodeKind.Scroll,
+			);
+			expect(Result.getOrThrow(result).extension).toBe("md");
 		});
 
 		it("parseFileSegmentId", () => {
 			const id = `Image${SEP}File${SEP}png` as FileNodeSegmentId;
 			const result = codecs.parseFileSegmentId(id);
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap().targetKind).toBe(TreeNodeKind.File);
-			expect(result._unsafeUnwrap().extension).toBe("png");
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result).targetKind).toBe(
+				TreeNodeKind.File,
+			);
+			expect(Result.getOrThrow(result).extension).toBe("png");
 		});
 	});
 
@@ -204,8 +209,10 @@ describe("segment-id codecs", () => {
 				coreName: "MySection",
 				targetKind: TreeNodeKind.Section,
 			});
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toBe(`MySection${SEP}Section${SEP}`);
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toBe(
+				`MySection${SEP}Section${SEP}`,
+			);
 		});
 
 		it("validates and serializes Scroll", () => {
@@ -214,8 +221,10 @@ describe("segment-id codecs", () => {
 				extension: "md",
 				targetKind: TreeNodeKind.Scroll,
 			});
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toBe(`MyScroll${SEP}Scroll${SEP}md`);
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toBe(
+				`MyScroll${SEP}Scroll${SEP}md`,
+			);
 		});
 
 		it("returns error for Section with extension", () => {
@@ -224,7 +233,7 @@ describe("segment-id codecs", () => {
 				extension: "md",
 				targetKind: TreeNodeKind.Section,
 			});
-			expect(result.isErr()).toBe(true);
+			expect(Result.isFailure(result)).toBe(true);
 		});
 
 		it("returns error for Scroll without extension", () => {
@@ -232,7 +241,7 @@ describe("segment-id codecs", () => {
 				coreName: "MyScroll",
 				targetKind: TreeNodeKind.Scroll,
 			});
-			expect(result.isErr()).toBe(true);
+			expect(Result.isFailure(result)).toBe(true);
 		});
 
 		it("returns error for empty coreName", () => {
@@ -240,7 +249,7 @@ describe("segment-id codecs", () => {
 				coreName: "",
 				targetKind: TreeNodeKind.Section,
 			});
-			expect(result.isErr()).toBe(true);
+			expect(Result.isFailure(result)).toBe(true);
 		});
 	});
 
@@ -249,9 +258,9 @@ describe("segment-id codecs", () => {
 			const original =
 				`MySection${SEP}Section${SEP}` as TreeNodeSegmentId;
 			const parsed = codecs.parseSegmentId(original);
-			expect(parsed.isOk()).toBe(true);
+			expect(Result.isSuccess(parsed)).toBe(true);
 			const serialized = codecs.serializeSegmentId(
-				parsed._unsafeUnwrap(),
+				Result.getOrThrow(parsed),
 			);
 			expect(serialized).toBe(original);
 		});
@@ -260,9 +269,9 @@ describe("segment-id codecs", () => {
 			const original =
 				`MyScroll${SEP}Scroll${SEP}md` as TreeNodeSegmentId;
 			const parsed = codecs.parseSegmentId(original);
-			expect(parsed.isOk()).toBe(true);
+			expect(Result.isSuccess(parsed)).toBe(true);
 			const serialized = codecs.serializeSegmentId(
-				parsed._unsafeUnwrap(),
+				Result.getOrThrow(parsed),
 			);
 			expect(serialized).toBe(original);
 		});
@@ -270,9 +279,9 @@ describe("segment-id codecs", () => {
 		it("roundtrips File segment ID", () => {
 			const original = `Image${SEP}File${SEP}png` as TreeNodeSegmentId;
 			const parsed = codecs.parseSegmentId(original);
-			expect(parsed.isOk()).toBe(true);
+			expect(Result.isSuccess(parsed)).toBe(true);
 			const serialized = codecs.serializeSegmentId(
-				parsed._unsafeUnwrap(),
+				Result.getOrThrow(parsed),
 			);
 			expect(serialized).toBe(original);
 		});

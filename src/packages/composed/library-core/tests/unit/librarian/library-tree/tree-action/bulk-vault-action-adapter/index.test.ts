@@ -13,7 +13,7 @@ import {
 	SplitPathKind,
 	VaultEventKind,
 } from "@textfresser/vault-action-manager";
-import { err } from "neverthrow";
+import { Result } from "effect";
 import {
 	type CodecError,
 	type CodecRules,
@@ -581,7 +581,7 @@ describe("translateCreateObservation", () => {
 			reason: "InvalidSegmentId",
 		};
 		const failingLocator = (() =>
-			err(
+			Result.fail(
 				locatorFailure,
 			)) as Codecs["locator"]["canonicalSplitPathInsideLibraryToLocator"];
 		const failingCodecs: Codecs = {

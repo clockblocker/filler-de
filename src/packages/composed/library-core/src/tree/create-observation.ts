@@ -1,4 +1,5 @@
 import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type {
 	CanonicalSplitPathInsideLibraryOf,
 	CodecError,
@@ -106,11 +107,11 @@ export function translateCreateObservation(
 		codecs.locator.canonicalSplitPathInsideLibraryToLocator(
 			canonicalResult.value,
 		);
-	if (locatorResult.isErr()) {
+	if (Result.isFailure(locatorResult)) {
 		return {
 			diagnostic: {
 				canonicalSplitPath: canonicalResult.value,
-				cause: locatorResult.error,
+				cause: locatorResult.failure,
 				kind: "LocatorConstructionFailed",
 				observedSplitPath,
 				policy,
@@ -119,7 +120,7 @@ export function translateCreateObservation(
 		};
 	}
 
-	const targetLocator = locatorResult.value;
+	const targetLocator = locatorResult.success;
 	if (
 		observedSplitPath.kind === SplitPathKind.File &&
 		targetLocator.targetKind === TreeNodeKind.File

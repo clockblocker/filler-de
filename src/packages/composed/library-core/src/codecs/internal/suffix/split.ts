@@ -1,6 +1,5 @@
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import type { NonEmptyArray } from "../../../internal/root/type-helpers";
-import { nonEmptyArrayResult } from "../../../internal/root/type-utils";
 import {
 	type NodeName,
 	nodeNameSchema,
@@ -18,7 +17,7 @@ import type { CodecRules } from "../../rules";
 export function splitBySuffixDelimiter(
 	rules: CodecRules,
 	basename: string,
-): Result<NonEmptyArray<NodeName>, CodecError> {
+): Result.Result<NonEmptyArray<NodeName>, CodecError> {
 	// Use flexible pattern for parsing (accepts any spacing)
 	const raw = basename.split(rules.suffixDelimiterPattern);
 	const nameSchema = nodeNameSchema(rules.suffixDelimiterPattern);
@@ -29,7 +28,7 @@ export function splitBySuffixDelimiter(
 		const trimmed = seg.trim();
 		const r = nameSchema.safeParse(trimmed);
 		if (!r.success) {
-			return err(
+			return Result.fail(
 				makeSuffixError(
 					"InvalidNodeName",
 					basename,
@@ -44,9 +43,9 @@ export function splitBySuffixDelimiter(
 		out.push(r.data);
 	}
 
-	const nonEmptyResult = nonEmptyArrayResult(out);
-	if (nonEmptyResult.isErr()) {
-		return err(
+	const [first, ...rest] = out;
+	if (first === undefined) {
+		return Result.fail(
 			makeSuffixError(
 				"EmptyParts",
 				basename,
@@ -56,5 +55,5 @@ export function splitBySuffixDelimiter(
 		);
 	}
 
-	return ok(nonEmptyResult.value);
+	return Result.succeed([first, ...rest]);
 }

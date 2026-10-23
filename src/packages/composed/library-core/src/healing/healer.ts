@@ -1,4 +1,5 @@
 import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type {
 	Codecs,
 	FileNodeLocator,
@@ -123,11 +124,11 @@ export class Healer implements TreeReader {
 					const parsed = this.codecs.segmentId.parseSegmentId(
 						createAction.targetLocator.segmentId,
 					);
-					if (parsed.isOk() && parentSection) {
-						const { coreName, targetKind } = parsed.value;
+					if (Result.isSuccess(parsed) && parentSection) {
+						const { coreName, targetKind } = parsed.success;
 						const extension =
-							"extension" in parsed.value
-								? parsed.value.extension
+							"extension" in parsed.success
+								? parsed.success.extension
 								: undefined;
 						if (extension !== undefined) {
 							const newName = resolveNextAvailableNameInSection(
@@ -142,13 +143,13 @@ export class Healer implements TreeReader {
 										targetKind,
 									},
 								);
-							if (newSegmentIdResult.isOk()) {
+							if (Result.isSuccess(newSegmentIdResult)) {
 								// segmentId built from same targetKind+extension; locator variant unchanged
 								actionToApply = {
 									...createAction,
 									targetLocator: {
 										...createAction.targetLocator,
-										segmentId: newSegmentIdResult.value,
+										segmentId: newSegmentIdResult.success,
 									},
 								} as CreateTreeLeafAction;
 							}
@@ -160,11 +161,11 @@ export class Healer implements TreeReader {
 				const parsed = this.codecs.segmentId.parseSegmentId(
 					createAction.targetLocator.segmentId,
 				);
-				if (parsed.isOk()) {
-					const { coreName, targetKind } = parsed.value;
+				if (Result.isSuccess(parsed)) {
+					const { coreName, targetKind } = parsed.success;
 					const extension =
-						"extension" in parsed.value
-							? parsed.value.extension
+						"extension" in parsed.success
+							? parsed.success.extension
 							: undefined;
 					if (
 						extension !== undefined &&
@@ -183,12 +184,12 @@ export class Healer implements TreeReader {
 										targetKind,
 									},
 								);
-							if (newSegmentIdResult.isOk()) {
+							if (Result.isSuccess(newSegmentIdResult)) {
 								actionToApply = {
 									...createAction,
 									targetLocator: {
 										...createAction.targetLocator,
-										segmentId: newSegmentIdResult.value,
+										segmentId: newSegmentIdResult.success,
 									},
 								} as CreateTreeLeafAction;
 							}

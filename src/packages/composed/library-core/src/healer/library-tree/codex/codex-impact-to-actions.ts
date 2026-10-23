@@ -8,6 +8,7 @@ import {
 	SplitPathKind,
 	VaultEventKind,
 } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import { err, ok } from "neverthrow";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
@@ -472,10 +473,10 @@ function buildSectionChainFromPathParts(
 			coreName: nodeName,
 			targetKind: TreeNodeKind.Section,
 		});
-		if (segIdResult.isErr()) {
-			return err(segIdResult.error);
+		if (Result.isFailure(segIdResult)) {
+			return err(segIdResult.failure);
 		}
-		sectionChain.push(segIdResult.value as SectionNodeSegmentId);
+		sectionChain.push(segIdResult.success as SectionNodeSegmentId);
 	}
 
 	return ok(sectionChain);

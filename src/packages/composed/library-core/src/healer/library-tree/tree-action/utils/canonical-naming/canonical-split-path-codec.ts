@@ -1,4 +1,5 @@
 import type { AnySplitPath } from "@textfresser/vault-action-manager";
+import { Result as EffectResult } from "effect";
 import { err, ok, type Result } from "neverthrow";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
@@ -43,12 +44,12 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 		codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
 			sp,
 		);
-	if (withSeparatedSuffixResult.isErr()) {
-		return err(withSeparatedSuffixResult.error.message);
+	if (EffectResult.isFailure(withSeparatedSuffixResult)) {
+		return err(withSeparatedSuffixResult.failure.message);
 	}
 
 	// Use actual separated suffix from codec (contains parsed basename)
-	const actualSeparatedSuffix = withSeparatedSuffixResult.value;
+	const actualSeparatedSuffix = withSeparatedSuffixResult.success;
 
 	// Canonize using policy (validates format by comparing actual with expected)
 	const canonizedResult = canonizeSplitPathWithSeparatedSuffix(

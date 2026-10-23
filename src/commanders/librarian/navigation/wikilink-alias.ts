@@ -3,6 +3,7 @@
  * No framework dependencies - behaviors add library-specific logic.
  */
 
+import { Result } from "effect";
 import type { AliasResult, SuffixParser } from "./wikilink-alias-types";
 
 /**
@@ -20,9 +21,9 @@ export function resolveAliasFromSuffix(
 ): AliasResult {
 	// Parse basename to extract suffix parts
 	const parseResult = suffixParser.parseSeparatedSuffix(linkContent);
-	if (parseResult.isErr()) return null;
+	if (Result.isFailure(parseResult)) return null;
 
-	const { coreName, suffixParts } = parseResult.value;
+	const { coreName, suffixParts } = parseResult.success;
 
 	// Skip codex files
 	if (isCodexName(coreName)) return null;

@@ -1,4 +1,5 @@
 import { MD } from "@textfresser/vault-action-manager";
+import { Result as EffectResult } from "effect";
 import { err, ok, type Result } from "neverthrow";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
@@ -22,8 +23,8 @@ export function computeScrollSplitPath(
 	const segmentIdChainToParent: SectionNodeSegmentId[] = [];
 	for (const segId of parentChain) {
 		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
-		if (parseResult.isErr()) {
-			return err(parseResult.error);
+		if (EffectResult.isFailure(parseResult)) {
+			return err(parseResult.failure);
 		}
 		// Keep original segment ID (already validated)
 		segmentIdChainToParent.push(segId);
@@ -35,13 +36,13 @@ export function computeScrollSplitPath(
 		extension: MD,
 		targetKind: TreeNodeKind.Scroll,
 	});
-	if (segmentIdResult.isErr()) {
-		return err(segmentIdResult.error);
+	if (EffectResult.isFailure(segmentIdResult)) {
+		return err(segmentIdResult.failure);
 	}
 
 	// Construct ScrollNodeLocator
 	const locator: ScrollNodeLocator = {
-		segmentId: segmentIdResult.value as ScrollNodeSegmentId,
+		segmentId: segmentIdResult.success as ScrollNodeSegmentId,
 		segmentIdChainToParent,
 		targetKind: TreeNodeKind.Scroll,
 	};
@@ -50,16 +51,17 @@ export function computeScrollSplitPath(
 	const canonicalResult =
 		codecs.locator.locatorToCanonicalSplitPathInsideLibrary(locator);
 
-	// Chain: canonical -> split path
-	return canonicalResult.andThen((canonical) => {
-		// Convert canonical to split path
-		const splitPath =
-			codecs.splitPathWithSeparatedSuffix.fromSplitPathInsideLibraryWithSeparatedSuffix(
-				canonical,
-			);
+	if (EffectResult.isFailure(canonicalResult)) {
+		return err(canonicalResult.failure);
+	}
 
-		// Type assertion: ScrollNodeLocator only produces SplitPathToMdFileInsideLibrary
-		// The codec chain preserves types, but TypeScript widens due to generic inference
-		return ok(splitPath as SplitPathToMdFileInsideLibrary);
-	});
+	// Convert canonical to split path
+	const splitPath =
+		codecs.splitPathWithSeparatedSuffix.fromSplitPathInsideLibraryWithSeparatedSuffix(
+			canonicalResult.success,
+		);
+
+	// Type assertion: ScrollNodeLocator only produces SplitPathToMdFileInsideLibrary
+	// The codec chain preserves types, but TypeScript widens due to generic inference
+	return ok(splitPath as SplitPathToMdFileInsideLibrary);
 }

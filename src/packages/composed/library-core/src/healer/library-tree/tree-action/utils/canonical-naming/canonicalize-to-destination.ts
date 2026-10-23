@@ -1,4 +1,5 @@
 import type { SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result as EffectResult } from "effect";
 import { err, ok, type Result } from "neverthrow";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
@@ -58,32 +59,37 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	// --- PathKing: pathParts are source of truth, build canonical from them
 	if (effectivePolicy === ChangePolicy.PathKing) {
 		// Convert to split path with separated suffix (validates NodeNames)
-		const withSeparatedSuffixResult = codecs.splitPathWithSeparatedSuffix
-			.splitPathInsideLibraryToWithSeparatedSuffix(sp)
-			.mapErr((error) => error.message);
-		if (withSeparatedSuffixResult.isErr()) {
-			return err(withSeparatedSuffixResult.error);
+		const withSeparatedSuffixResult = EffectResult.mapError(
+			codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
+				sp,
+			),
+			(error) => error.message,
+		);
+		if (EffectResult.isFailure(withSeparatedSuffixResult)) {
+			return err(withSeparatedSuffixResult.failure);
 		}
 		let spWithSeparatedSuffix =
-			withSeparatedSuffixResult.value as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
+			withSeparatedSuffixResult.success as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
 
 		// Handle Obsidian duplicate marker (business logic)
 		// Extract duplicate marker and re-attach to coreName
 		const { cleanBasename, marker } = extractDuplicateMarker(sp.basename);
 		if (marker) {
 			// Re-parse without duplicate marker to get clean coreName
-			const cleanSepRes = codecs.suffix
-				.parseSeparatedSuffix(cleanBasename)
-				.mapErr((error) => error.message);
-			if (cleanSepRes.isErr()) return err(cleanSepRes.error);
+			const cleanSepRes = EffectResult.mapError(
+				codecs.suffix.parseSeparatedSuffix(cleanBasename),
+				(error) => error.message,
+			);
+			if (EffectResult.isFailure(cleanSepRes))
+				return err(cleanSepRes.failure);
 			// Re-attach marker to coreName
-			const coreNameWithMarker = (cleanSepRes.value.coreName +
+			const coreNameWithMarker = (cleanSepRes.success.coreName +
 				marker) as NodeName;
 			spWithSeparatedSuffix = {
 				...spWithSeparatedSuffix,
 				separatedSuffixedBasename: {
 					coreName: coreNameWithMarker,
-					suffixParts: cleanSepRes.value.suffixParts,
+					suffixParts: cleanSepRes.success.suffixParts,
 				},
 			} as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
 		}
@@ -123,29 +129,34 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	// --- NameKing: interpret basename as path intent, then OUTPUT PathKing-canonical split path
 
 	// Convert to split path with separated suffix (validates NodeNames)
-	const withSeparatedSuffixResult = codecs.splitPathWithSeparatedSuffix
-		.splitPathInsideLibraryToWithSeparatedSuffix(sp)
-		.mapErr((error) => error.message);
-	if (withSeparatedSuffixResult.isErr()) {
-		return err(withSeparatedSuffixResult.error);
+	const withSeparatedSuffixResult = EffectResult.mapError(
+		codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
+			sp,
+		),
+		(error) => error.message,
+	);
+	if (EffectResult.isFailure(withSeparatedSuffixResult)) {
+		return err(withSeparatedSuffixResult.failure);
 	}
 	let spWithSeparatedSuffix =
-		withSeparatedSuffixResult.value as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
+		withSeparatedSuffixResult.success as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
 
 	// Handle duplicate markers (business logic)
 	const { cleanBasename, marker } = extractDuplicateMarker(sp.basename);
 	if (marker) {
-		const cleanSepRes = codecs.suffix
-			.parseSeparatedSuffix(cleanBasename)
-			.mapErr((error) => error.message);
-		if (cleanSepRes.isErr()) return err(cleanSepRes.error);
-		const coreNameWithMarker = (cleanSepRes.value.coreName +
+		const cleanSepRes = EffectResult.mapError(
+			codecs.suffix.parseSeparatedSuffix(cleanBasename),
+			(error) => error.message,
+		);
+		if (EffectResult.isFailure(cleanSepRes))
+			return err(cleanSepRes.failure);
+		const coreNameWithMarker = (cleanSepRes.success.coreName +
 			marker) as NodeName;
 		spWithSeparatedSuffix = {
 			...spWithSeparatedSuffix,
 			separatedSuffixedBasename: {
 				coreName: coreNameWithMarker,
-				suffixParts: cleanSepRes.value.suffixParts,
+				suffixParts: cleanSepRes.success.suffixParts,
 			},
 		} as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
 	}

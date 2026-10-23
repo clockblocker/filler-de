@@ -1,5 +1,5 @@
 import { MD } from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import {
 	FileExtensionSchema,
 	MdExtensionSchema,
@@ -24,11 +24,11 @@ import {
 export function parseSegmentId<NK extends TreeNodeKind>(
 	rules: CodecRules,
 	id: TreeNodeSegmentId,
-): Result<SegmentIdComponents<NK>, CodecError> {
+): Result.Result<SegmentIdComponents<NK>, CodecError> {
 	const parts = id.split(NodeSegmentIdSeparator);
 
 	if (parts.length < 2) {
-		return err(
+		return Result.fail(
 			makeSegmentIdError(
 				"MissingParts",
 				id,
@@ -45,7 +45,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 		rules.suffixDelimiterPattern,
 	).safeParse(rawCoreName);
 	if (!nodeNameResult.success) {
-		return err(
+		return Result.fail(
 			makeSegmentIdError(
 				"InvalidNodeName",
 				id,
@@ -64,7 +64,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 	// Validate targetKind
 	const targetKindResult = TreeNodeKindSchema.safeParse(rawTargetKind);
 	if (!targetKindResult.success) {
-		return err(
+		return Result.fail(
 			makeSegmentIdError(
 				"UnknownType",
 				id,
@@ -85,7 +85,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 		case TreeNodeKind.Section: {
 			// Section must have empty extension (or no extension part)
 			if (rawExtension !== undefined && rawExtension !== "") {
-				return err(
+				return Result.fail(
 					makeSegmentIdError(
 						"InvalidExtension",
 						id,
@@ -94,7 +94,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 					),
 				);
 			}
-			return ok({
+			return Result.succeed({
 				coreName,
 				targetKind: TreeNodeKind.Section,
 			} as SegmentIdComponents<NK>);
@@ -102,7 +102,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 
 		case TreeNodeKind.Scroll: {
 			if (rawExtension === undefined) {
-				return err(
+				return Result.fail(
 					makeSegmentIdError(
 						"MissingParts",
 						id,
@@ -113,7 +113,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 			}
 			const extensionResult = MdExtensionSchema.safeParse(rawExtension);
 			if (!extensionResult.success) {
-				return err(
+				return Result.fail(
 					makeSegmentIdError(
 						"InvalidExtension",
 						id,
@@ -127,7 +127,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 					),
 				);
 			}
-			return ok({
+			return Result.succeed({
 				coreName,
 				extension: MD,
 				targetKind: TreeNodeKind.Scroll,
@@ -137,7 +137,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 		case TreeNodeKind.File: {
 			// File must have extension
 			if (rawExtension === undefined) {
-				return err(
+				return Result.fail(
 					makeSegmentIdError(
 						"MissingParts",
 						id,
@@ -148,7 +148,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 			}
 			const extensionResult = FileExtensionSchema.safeParse(rawExtension);
 			if (!extensionResult.success) {
-				return err(
+				return Result.fail(
 					makeSegmentIdError(
 						"InvalidExtension",
 						id,
@@ -162,7 +162,7 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 					),
 				);
 			}
-			return ok({
+			return Result.succeed({
 				coreName,
 				extension: extensionResult.data,
 				targetKind: TreeNodeKind.File,
@@ -177,20 +177,20 @@ export function parseSegmentId<NK extends TreeNodeKind>(
 export function parseSectionSegmentId(
 	rules: CodecRules,
 	id: SegmentIdOf<typeof TreeNodeKind.Section>,
-): Result<SegmentIdComponents<typeof TreeNodeKind.Section>, CodecError> {
+): Result.Result<SegmentIdComponents<typeof TreeNodeKind.Section>, CodecError> {
 	return parseSegmentId<typeof TreeNodeKind.Section>(rules, id);
 }
 
 export function parseScrollSegmentId(
 	rules: CodecRules,
 	id: SegmentIdOf<typeof TreeNodeKind.Scroll>,
-): Result<SegmentIdComponents<typeof TreeNodeKind.Scroll>, CodecError> {
+): Result.Result<SegmentIdComponents<typeof TreeNodeKind.Scroll>, CodecError> {
 	return parseSegmentId<typeof TreeNodeKind.Scroll>(rules, id);
 }
 
 export function parseFileSegmentId(
 	rules: CodecRules,
 	id: SegmentIdOf<typeof TreeNodeKind.File>,
-): Result<SegmentIdComponents<typeof TreeNodeKind.File>, CodecError> {
+): Result.Result<SegmentIdComponents<typeof TreeNodeKind.File>, CodecError> {
 	return parseSegmentId<typeof TreeNodeKind.File>(rules, id);
 }

@@ -8,6 +8,7 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type { Codecs } from "../codecs";
 import {
 	collectDescendantScrolls,
@@ -126,9 +127,9 @@ export function getIncrementalBacklinkHealingVaultActions(
 					const parsed = codecs.segmentId.parseSegmentId(
 						action.targetLocator.segmentId,
 					);
-					if (parsed.isOk()) {
+					if (Result.isSuccess(parsed)) {
 						addScroll(
-							parsed.value.coreName,
+							parsed.success.coreName,
 							action.targetLocator.segmentIdChainToParent,
 						);
 					}

@@ -8,7 +8,7 @@ import {
 	MD,
 	SplitPathKind as SplitPathKindEnum,
 } from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import type { CodecError } from "../errors";
 import type { SegmentIdCodecs } from "../segment-id";
 import type { SectionNodeSegmentId } from "../segment-id/types/segment-id";
@@ -113,18 +113,18 @@ function fromSplitPath(sp: AnySplitPathInsideLibrary): LibraryPath {
 function fromSectionChain(
 	chain: SectionNodeSegmentId[],
 	segmentIdCodecs: SegmentIdCodecs,
-): Result<LibraryPath, CodecError> {
+): Result.Result<LibraryPath, CodecError> {
 	const segments: string[] = [];
 
 	for (const segId of chain) {
 		const parseResult = segmentIdCodecs.parseSectionSegmentId(segId);
-		if (parseResult.isErr()) {
-			return err(parseResult.error);
+		if (Result.isFailure(parseResult)) {
+			return Result.fail(parseResult.failure);
 		}
-		segments.push(parseResult.value.coreName);
+		segments.push(parseResult.success.coreName);
 	}
 
-	return ok({
+	return Result.succeed({
 		extension: undefined,
 		kind: SplitPathKindEnum.Folder,
 		segments,

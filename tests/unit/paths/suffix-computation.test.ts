@@ -24,6 +24,7 @@ import {buildObservedLeafSplitPath,
 	TreeNodeStatus
 } from "@textfresser/library-core";
 import { MD } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
 
 describe("Suffix Computation", () => {
@@ -148,8 +149,8 @@ describe("Suffix Computation", () => {
 				coreName: "Note",
 				suffixParts: ["parent"],
 			});
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toBe("Note-parent");
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toBe("Note-parent");
 		});
 
 		it("empty coreName fails validation", () => {
@@ -157,7 +158,7 @@ describe("Suffix Computation", () => {
 				coreName: "",
 				suffixParts: [],
 			});
-			expect(result.isErr()).toBe(true);
+			expect(Result.isFailure(result)).toBe(true);
 		});
 
 		it("empty suffix part fails validation", () => {
@@ -165,7 +166,7 @@ describe("Suffix Computation", () => {
 				coreName: "Note",
 				suffixParts: ["parent", ""],
 			});
-			expect(result.isErr()).toBe(true);
+			expect(Result.isFailure(result)).toBe(true);
 		});
 	});
 

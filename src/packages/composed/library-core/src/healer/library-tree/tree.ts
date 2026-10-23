@@ -1,4 +1,5 @@
 import { MD } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type { Codecs } from "../../codecs";
 import type { SegmentIdOf } from "../../codecs/segment-id/types";
 import type {
@@ -166,12 +167,12 @@ export class Tree implements TreeFacade {
 		const parseResult = this.codecs.segmentId.parseSegmentId(
 			action.targetLocator.segmentId,
 		);
-		if (parseResult.isErr()) {
+		if (Result.isFailure(parseResult)) {
 			throw new Error(
-				`Invalid segment ID in targetLocator: ${parseResult.error.message}`,
+				`Invalid segment ID in targetLocator: ${parseResult.failure.message}`,
 			);
 		}
-		const nodeName = parseResult.value.coreName;
+		const nodeName = parseResult.success.coreName;
 
 		if (action.targetLocator.targetKind === TreeNodeKind.Scroll) {
 			return {
@@ -409,12 +410,12 @@ export class Tree implements TreeFacade {
 		segId: SectionNodeSegmentId,
 	): NodeName {
 		const parseResult = this.codecs.segmentId.parseSectionSegmentId(segId);
-		if (parseResult.isErr()) {
+		if (Result.isFailure(parseResult)) {
 			throw new Error(
-				`Invalid section segment ID during tree construction: ${parseResult.error.message}`,
+				`Invalid section segment ID during tree construction: ${parseResult.failure.message}`,
 			);
 		}
-		return parseResult.value.coreName;
+		return parseResult.success.coreName;
 	}
 
 	// ─── Corename Index ───

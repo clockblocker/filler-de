@@ -1,4 +1,4 @@
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import { nodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSuffixError, makeZodError } from "../../errors";
@@ -23,12 +23,12 @@ export function serializeSeparatedSuffix(
 export function serializeSeparatedSuffixUnchecked(
 	rules: CodecRules,
 	suffix: { coreName: string; suffixParts: string[] },
-): Result<string, CodecError> {
+): Result.Result<string, CodecError> {
 	const nameSchema = nodeNameSchema(rules.suffixDelimiterPattern);
 	// Validate coreName
 	const coreNameResult = nameSchema.safeParse(suffix.coreName);
 	if (!coreNameResult.success) {
-		return err(
+		return Result.fail(
 			makeSuffixError(
 				"InvalidNodeName",
 				suffix.coreName,
@@ -48,7 +48,7 @@ export function serializeSeparatedSuffixUnchecked(
 	for (const part of suffix.suffixParts) {
 		const partResult = nameSchema.safeParse(part);
 		if (!partResult.success) {
-			return err(
+			return Result.fail(
 				makeSuffixError(
 					"InvalidNodeName",
 					part,
@@ -66,7 +66,7 @@ export function serializeSeparatedSuffixUnchecked(
 		validatedSuffixParts.push(partResult.data);
 	}
 
-	return ok(
+	return Result.succeed(
 		serializeSeparatedSuffix(rules, {
 			coreName: coreNameResult.data,
 			suffixParts: validatedSuffixParts,

@@ -13,6 +13,7 @@
  */
 
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result as EffectResult } from "effect";
 import { err, ok, type Result } from "neverthrow";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "./codecs";
 import type {
@@ -77,14 +78,14 @@ function parseChainToNodeNames(
 
 	for (const segId of chain) {
 		const parseResult = codecs.segmentId.parseSegmentId(segId);
-		if (parseResult.isErr()) {
+		if (EffectResult.isFailure(parseResult)) {
 			return err({
 				kind: "ParseFailed",
-				reason: parseResult.error.message,
+				reason: parseResult.failure.message,
 				segmentId: segId,
 			});
 		}
-		nodeNames.push(parseResult.value.coreName);
+		nodeNames.push(parseResult.success.coreName);
 	}
 
 	return ok(nodeNames);

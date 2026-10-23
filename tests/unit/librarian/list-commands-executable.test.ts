@@ -7,6 +7,7 @@ import {
 } from "@textfresser/library-core";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import { listCommandsExecutableIn } from "../../../src/commanders/librarian/navigation/list-commands-executable";
 import { CommandKind } from "../../../src/managers/obsidian/command-executor";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
@@ -79,12 +80,12 @@ function makeScrollPath(
 		suffixParts,
 	});
 
-	if (basenameResult.isErr()) {
+	if (Result.isFailure(basenameResult)) {
 		throw new Error("Failed to build test basename");
 	}
 
 	return {
-		basename: basenameResult.value,
+		basename: basenameResult.success,
 		extension: "md",
 		kind: SplitPathKind.MdFile,
 		pathParts,

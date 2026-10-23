@@ -1,3 +1,4 @@
+import { Result } from "effect";
 import type { Codecs } from "../../../../../../../../codecs";
 import { TreeNodeKind } from "../../../../../../tree-node/types/atoms";
 import type { RenameTreeNodeNodeMaterializedEvent } from "../../../materialized-node-events/types";
@@ -68,14 +69,15 @@ export function inferRenameIntent(
 	if (!basenameChanged) return RenameIntent.Move;
 
 	// basename changed: check if it's a "move-by-name" or just a rename
-	const sepRes = codecs.suffix
-		.parseSeparatedSuffix(to.basename)
-		.mapErr((error) => error.message);
+	const sepRes = Result.mapError(
+		codecs.suffix.parseSeparatedSuffix(to.basename),
+		(error) => error.message,
+	);
 
 	// if invalid basename, treat as plain rename (will be rejected/healed later anyway)
-	if (sepRes.isErr()) return RenameIntent.Rename;
+	if (Result.isFailure(sepRes)) return RenameIntent.Rename;
 
-	const newSuffixParts = sepRes.value.suffixParts;
+	const newSuffixParts = sepRes.success.suffixParts;
 
 	// FOLDERS: no suffix in basename is normal (folders don't have suffixes)
 	// Only Move if user explicitly added a suffix to the folder name

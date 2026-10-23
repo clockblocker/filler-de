@@ -1,5 +1,5 @@
 import type { SplitPathKind } from "@textfresser/vault-action-manager";
-import type { Result } from "neverthrow";
+import type { Result } from "effect";
 import type { CodecError } from "../errors";
 import type { SuffixCodecs } from "../internal/suffix";
 import type { CodecRules } from "../rules";
@@ -11,7 +11,10 @@ import type { SplitPathInsideLibraryWithSeparatedSuffixOf } from "./types";
 export type SplitPathWithSeparatedSuffixCodecs = {
 	splitPathInsideLibraryToWithSeparatedSuffix: <SK extends SplitPathKind>(
 		sp: SplitPathInsideLibraryOf<SK>,
-	) => Result<SplitPathInsideLibraryWithSeparatedSuffixOf<SK>, CodecError>;
+	) => Result.Result<
+		SplitPathInsideLibraryWithSeparatedSuffixOf<SK>,
+		CodecError
+	>;
 	fromSplitPathInsideLibraryWithSeparatedSuffix: <SK extends SplitPathKind>(
 		sp: SplitPathInsideLibraryWithSeparatedSuffixOf<SK>,
 	) => SplitPathInsideLibraryOf<SK>;

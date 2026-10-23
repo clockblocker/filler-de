@@ -1,5 +1,5 @@
 import { MD } from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import {
 	FileExtensionSchema,
 	MdExtensionSchema,
@@ -56,13 +56,13 @@ export function serializeSegmentIdUnchecked(
 		targetKind: TreeNodeKind;
 		extension?: string;
 	},
-): Result<TreeNodeSegmentId, CodecError> {
+): Result.Result<TreeNodeSegmentId, CodecError> {
 	// Validate coreName
 	const nodeNameResult = nodeNameSchema(
 		rules.suffixDelimiterPattern,
 	).safeParse(components.coreName);
 	if (!nodeNameResult.success) {
-		return err(
+		return Result.fail(
 			makeSegmentIdError(
 				"InvalidNodeName",
 				components.coreName,
@@ -83,7 +83,7 @@ export function serializeSegmentIdUnchecked(
 		components.targetKind,
 	);
 	if (!targetKindResult.success) {
-		return err(
+		return Result.fail(
 			makeSegmentIdError(
 				"UnknownType",
 				String(components.targetKind),
@@ -106,7 +106,7 @@ export function serializeSegmentIdUnchecked(
 				components.extension !== undefined &&
 				components.extension !== ""
 			) {
-				return err(
+				return Result.fail(
 					makeSegmentIdError(
 						"InvalidExtension",
 						components.extension,
@@ -115,7 +115,7 @@ export function serializeSegmentIdUnchecked(
 					),
 				);
 			}
-			return ok(
+			return Result.succeed(
 				serializeSegmentId({
 					coreName,
 					targetKind: TreeNodeKind.Section,
@@ -125,7 +125,7 @@ export function serializeSegmentIdUnchecked(
 
 		case TreeNodeKind.Scroll: {
 			if (components.extension === undefined) {
-				return err(
+				return Result.fail(
 					makeSegmentIdError(
 						"MissingParts",
 						"",
@@ -138,7 +138,7 @@ export function serializeSegmentIdUnchecked(
 				components.extension,
 			);
 			if (!extensionResult.success) {
-				return err(
+				return Result.fail(
 					makeSegmentIdError(
 						"InvalidExtension",
 						components.extension,
@@ -152,7 +152,7 @@ export function serializeSegmentIdUnchecked(
 					),
 				);
 			}
-			return ok(
+			return Result.succeed(
 				serializeSegmentId({
 					coreName,
 					extension: MD,
@@ -163,7 +163,7 @@ export function serializeSegmentIdUnchecked(
 
 		case TreeNodeKind.File: {
 			if (components.extension === undefined) {
-				return err(
+				return Result.fail(
 					makeSegmentIdError(
 						"MissingParts",
 						"",
@@ -176,7 +176,7 @@ export function serializeSegmentIdUnchecked(
 				components.extension,
 			);
 			if (!extensionResult.success) {
-				return err(
+				return Result.fail(
 					makeSegmentIdError(
 						"InvalidExtension",
 						components.extension,
@@ -190,7 +190,7 @@ export function serializeSegmentIdUnchecked(
 					),
 				);
 			}
-			return ok(
+			return Result.succeed(
 				serializeSegmentId({
 					coreName,
 					extension: extensionResult.data,
