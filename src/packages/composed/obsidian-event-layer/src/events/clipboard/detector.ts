@@ -8,10 +8,15 @@
  * that waits finds the event over: the selection as it is was copied, and
  * its answer is logged and dropped.
  *
+ * The selection is read as the event begins, in the capture phase: by the
+ * time the event bubbles to the document, CodeMirror's own handler has put
+ * the raw selection on the clipboard and, for a cut, deleted it. The
+ * clipboard text is written as it bubbles, after CodeMirror's.
+ *
  * With no selection, a copy whose text ends in a block reference `^id`
  * copies the block's embed instead, `![[basename#^id]]`.
  */
-import { Effect, Exit } from "effect";
+import { Effect, Exit, MutableRef, Ref } from "effect";
 import { type App, MarkdownView } from "obsidian";
 import type { UserEventKind, UserEventResult } from "../../contracts";
 import { blockIdHelper } from "../../internal/block-id";
@@ -22,23 +27,53 @@ import { ClipboardCodec } from "./codec";
 
 type Result = UserEventResult<typeof UserEventKind.ClipboardCopy>;
 
+/** The selection a copy or cut began with, read before CodeMirror's handler. */
+type Began = { readonly event: Event; readonly selection: string | undefined };
+
 /** Listens for copy and cut while the scope is open. */
 export const listenForClipboard = Effect.fnUntraced(function* (
 	dispatch: EventDispatch,
 ) {
-	const onClipboard = (evt: ClipboardEvent) => handleClipboard(dispatch, evt);
-	yield* dispatch.host.listen("copy", onClipboard);
-	yield* dispatch.host.listen("cut", onClipboard);
+	const { listen } = dispatch.host;
+	const began = yield* Ref.make<Began | null>(null);
+	const onBegin = (event: ClipboardEvent) =>
+		MutableRef.set(began.ref, {
+			event,
+			selection: readSelection(dispatch),
+		});
+	const onClipboard = (evt: ClipboardEvent) => {
+		const start = Ref.getUnsafe(began);
+		MutableRef.set(began.ref, null);
+		handleClipboard(
+			dispatch,
+			evt,
+			start?.event === evt ? start.selection : readSelection(dispatch),
+		);
+	};
+	yield* listen("copy", onBegin, { capture: true });
+	yield* listen("cut", onBegin, { capture: true });
+	yield* listen("copy", onClipboard);
+	yield* listen("cut", onClipboard);
 });
 
-function handleClipboard(dispatch: EventDispatch, evt: ClipboardEvent): void {
-	const { app, document, readSync, vam } = dispatch.host;
-	// VAM reads the editor's selection, which CodeMirror may not have
-	// rendered in full; the document's selection is the fallback.
-	const read = readSync(vam.getSelectionText());
-	const selection =
+/**
+ * The selection now. VAM reads the editor's, which CodeMirror may not have
+ * rendered in full; the document's selection is the fallback.
+ */
+function readSelection({ host }: EventDispatch): string | undefined {
+	const read = host.readSync(host.vam.getSelectionText());
+	return (
 		(Exit.isSuccess(read) ? read.value : null) ??
-		document.getSelection?.()?.toString();
+		host.document.getSelection?.()?.toString()
+	);
+}
+
+function handleClipboard(
+	dispatch: EventDispatch,
+	evt: ClipboardEvent,
+	selection: string | undefined,
+): void {
+	const { app } = dispatch.host;
 
 	if (!selection) {
 		if (evt.type === "copy") copyBlockReference(app, evt);
