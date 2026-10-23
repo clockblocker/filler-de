@@ -19,7 +19,7 @@ LibraryReconciler
   ├─ codexImpactToDeletions() → HealingAction[] (DeleteMdFile)
   └─ full startup or incremental runtime Codex recreation
     +
-extractScrollStatusActions() → WriteScrollStatusAction[] (from direct scroll changes)
+extractScrollStatusActions() → { actions: WriteScrollStatusAction[], issues } (from direct scroll changes)
     ↓
 Merge: HealingAction[] + CodexAction[] + WriteScrollStatusAction[]
     ↓
@@ -27,6 +27,10 @@ healingActionsToVaultActions() + codexActionsToVaultActions() → VaultAction[]
     ↓
 VaultActionManager.dispatch() (single dispatch with topological sort)
 ```
+
+These functions log nothing. What they skip, such as a scroll whose path
+cannot be computed, they return as `issues` (`LibraryIssue`), and the
+Librarian logs them under its span.
 
 ## Regeneration Strategy
 
@@ -152,8 +156,8 @@ Children are sorted by display name before rendering at each depth:
 | `computeCodexSplitPath` | Section chain → codex file path |
 | `codexImpactToDeletions` | CodexImpact → HealingAction[] (DeleteMdFile) |
 | `LibraryReconciler` | Merge impacts and select full startup or incremental runtime derivation |
-| `codexImpactToIncrementalRecreations` | CodexImpact → CodexAction[] for impacted sections only |
-| `codexImpactToRecreations` | Full-tree codex recreation (used by init) |
+| `codexImpactToIncrementalRecreations` | CodexImpact → `{ actions: CodexAction[], issues }` for impacted sections only |
+| `codexImpactToRecreations` | Full-tree codex recreation (used by init), `{ actions, issues }` |
 | `codexActionsToVaultActions` | CodexAction[] → VaultAction[] |
 | `buildIntermediateCodexPath` | Build delete path at intermediate (observed) location |
 | `buildMovedCodexPath` | Build delete path at final (newChain) location |

@@ -419,7 +419,8 @@ export class DictionaryResetCommand {
 		const local = DateTime.toParts(
 			DateTime.setZone(DateTime.nowUnsafe(), DateTime.zoneMakeLocal()),
 		);
-		let failed: unknown;
+		/** The reset's own failure, already logged in its fiber. */
+		let failed: { readonly error: unknown } | undefined;
 		try {
 			const exit = await this.deps.runtime.runPromiseExit(
 				executeReset({
@@ -477,8 +478,8 @@ export class DictionaryResetCommand {
 			}
 			if (Exit.isFailure(exit)) {
 				// Logged above, with its whole cause.
-				failed = Cause.squash(exit.cause);
-				throw failed;
+				failed = { error: Cause.squash(exit.cause) };
+				throw failed.error;
 			}
 			const result = exit.value;
 			notice.hide();
@@ -495,7 +496,7 @@ export class DictionaryResetCommand {
 			notice.hide();
 			// What failed after the reset ran, such as opening its report:
 			// this Promise is outside any Effect.
-			if (error !== failed)
+			if (!failed || error !== failed.error)
 				logAtEdge(
 					"Error",
 					"[DictionaryReset] Failed:",

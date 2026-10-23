@@ -159,8 +159,6 @@ type DerivedActions = {
 	readonly codexDeletions: readonly HealingAction[];
 	readonly codexRecreations: readonly CodexAction[];
 	readonly healing: readonly HealingAction[];
-	/** What deriving skipped; logged once derived. */
-	readonly issues: readonly LibraryIssue[];
 	readonly statusProjections: readonly CodexAction[];
 	readonly supplemental: readonly HealingAction[];
 	readonly vault: readonly VaultAction[];
@@ -511,9 +509,12 @@ export class LibraryReconciler<E, R = unknown> {
 
 			const deriveStartedAt = yield* Clock.currentTimeMillis;
 			let derived: DerivedActions;
+			// Filled as deriving goes, so a derivation that throws keeps them.
+			const issues: LibraryIssue[] = [];
 			try {
-				derived = this.derive(staged, request, results);
+				derived = this.derive(staged, request, results, issues);
 			} catch (cause) {
+				yield* logLibraryIssues(issues);
 				const deriveEndedAt = yield* Clock.currentTimeMillis;
 				return {
 					outcome: {
@@ -537,7 +538,7 @@ export class LibraryReconciler<E, R = unknown> {
 				};
 			}
 			const deriveEndedAt = yield* Clock.currentTimeMillis;
-			yield* logLibraryIssues(derived.issues);
+			yield* logLibraryIssues(issues);
 			const derivedCounts = this.derivedCounts(derived);
 
 			if (derived.vault.length === 0) {
@@ -642,10 +643,12 @@ export class LibraryReconciler<E, R = unknown> {
 		},
 	);
 
+	/** The actions `results` call for; what it skips goes into `issues`. */
 	private derive(
 		staged: Healer,
 		request: ReconciliationRequest,
 		results: readonly HealerApplyResult[],
+		issues: LibraryIssue[],
 	): DerivedActions {
 		const impacts = results.map((result) => result.codexImpact);
 		const mergedImpact = mergeCodexImpacts(impacts);
@@ -663,6 +666,7 @@ export class LibraryReconciler<E, R = unknown> {
 						this.codecs,
 					);
 		const codexRecreations = recreations.actions;
+		issues.push(...recreations.issues);
 		const changedActions = results.flatMap((result) =>
 			result.changed ? [result.appliedAction] : [],
 		);
@@ -671,6 +675,7 @@ export class LibraryReconciler<E, R = unknown> {
 				? { actions: [], issues: [] }
 				: extractScrollStatusActions(changedActions, this.codecs);
 		const statusProjections = statuses.actions;
+		issues.push(...statuses.issues);
 		const healing = results.flatMap((result) => result.healingActions);
 		const supplemental = [...request.supplemental.invalidCodexDeletions];
 
@@ -725,7 +730,6 @@ export class LibraryReconciler<E, R = unknown> {
 			codexDeletions,
 			codexRecreations,
 			healing,
-			issues: [...recreations.issues, ...statuses.issues],
 			statusProjections,
 			supplemental: uniqueSupplemental,
 			vault,

@@ -39,9 +39,9 @@ describe("dictionary store service", () => {
 			build: () => Effect.never,
 			close: () => Effect.void,
 			onBuildFailed: (cause) =>
-			Effect.sync(() => {
-				failures.push(cause);
-			}),
+				Effect.sync(() => {
+					failures.push(cause);
+				}),
 			// Interrupts the build at once, as disposing the runtime does.
 			runtime: {
 				...defaultRunner,
