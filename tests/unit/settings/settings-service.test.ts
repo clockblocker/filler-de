@@ -348,7 +348,7 @@ describe("Settings and the delimiter migration", () => {
 					changeDelimiter(
 						{
 							applyDelimiter: apply,
-							confirm: () => Promise.resolve(true),
+							confirm: () => Effect.succeed(true),
 							libraryRoot,
 							notices,
 							service,

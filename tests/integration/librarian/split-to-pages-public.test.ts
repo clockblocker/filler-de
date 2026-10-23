@@ -256,7 +256,7 @@ describe("public Scroll split reconciliation", () => {
 
 		const result = await Effect.runPromise(
 			splitToPagesAction(
-				{ librarian: harness.librarian, vam: harness.vam },
+				{ librarian: harness.librarian, notify: () => {}, vam: harness.vam },
 				SPLIT_CONFIG,
 			),
 		);
@@ -364,7 +364,7 @@ describe("public Scroll split reconciliation", () => {
 
 		const result = await Effect.runPromise(
 			splitToPagesAction(
-				{ librarian: harness.librarian, vam: harness.vam },
+				{ librarian: harness.librarian, notify: () => {}, vam: harness.vam },
 				SPLIT_CONFIG,
 			),
 		);
@@ -407,7 +407,7 @@ describe("public Scroll split reconciliation", () => {
 
 		const result = await Effect.runPromise(
 			splitToPagesAction(
-				{ librarian: harness.librarian, vam: harness.vam },
+				{ librarian: harness.librarian, notify: () => {}, vam: harness.vam },
 				{ ...SPLIT_CONFIG, minContentSizeChars: 100 },
 			),
 		);
@@ -450,7 +450,7 @@ describe("public Scroll split reconciliation", () => {
 
 		const result = await Effect.runPromise(
 			splitToPagesAction(
-				{ librarian: harness.librarian, vam: harness.vam },
+				{ librarian: harness.librarian, notify: () => {}, vam: harness.vam },
 				SPLIT_CONFIG,
 			).pipe(Effect.result),
 		);
@@ -517,7 +517,7 @@ describe("public Scroll split reconciliation", () => {
 
 		const splitResult = Effect.runPromise(
 			splitToPagesAction(
-				{ librarian: harness.librarian, vam: harness.vam },
+				{ librarian: harness.librarian, notify: () => {}, vam: harness.vam },
 				SPLIT_CONFIG,
 			).pipe(Effect.result),
 		);
@@ -606,7 +606,7 @@ describe("public Scroll split reconciliation", () => {
 				});
 
 				const split = yield* splitToPagesAction(
-					{ librarian: harness.librarian, vam: harness.vam },
+					{ librarian: harness.librarian, notify: () => {}, vam: harness.vam },
 					SPLIT_CONFIG,
 				).pipe(Effect.forkChild);
 				yield* Deferred.await(dispatchStarted);
@@ -664,7 +664,7 @@ describe("public Scroll split reconciliation", () => {
 
 		const result = await Effect.runPromise(
 			splitToPagesAction(
-				{ librarian: harness.librarian, vam: harness.vam },
+				{ librarian: harness.librarian, notify: () => {}, vam: harness.vam },
 				SPLIT_CONFIG,
 			).pipe(Effect.result),
 		);
@@ -727,7 +727,7 @@ describe("public Scroll split reconciliation", () => {
 
 		const result = await Effect.runPromise(
 			splitToPagesAction(
-				{ librarian: harness.librarian, vam: harness.vam },
+				{ librarian: harness.librarian, notify: () => {}, vam: harness.vam },
 				SPLIT_CONFIG,
 			).pipe(Effect.result),
 		);
@@ -788,7 +788,7 @@ describe("public Scroll split reconciliation", () => {
 
 		const result = await Effect.runPromise(
 			splitToPagesAction(
-				{ librarian: harness.librarian, vam: harness.vam },
+				{ librarian: harness.librarian, notify: () => {}, vam: harness.vam },
 				SPLIT_CONFIG,
 			).pipe(Effect.result),
 		);
@@ -866,7 +866,7 @@ describe("public Scroll split reconciliation", () => {
 
 		const result = await Effect.runPromise(
 			splitToPagesAction(
-				{ librarian: harness.librarian, vam: harness.vam },
+				{ librarian: harness.librarian, notify: () => {}, vam: harness.vam },
 				SPLIT_CONFIG,
 			).pipe(Effect.result),
 		);
@@ -917,7 +917,7 @@ describe("public Scroll split reconciliation", () => {
 
 		const result = await Effect.runPromise(
 			splitToPagesAction(
-				{ librarian: harness.librarian, vam: harness.vam },
+				{ librarian: harness.librarian, notify: () => {}, vam: harness.vam },
 				SPLIT_CONFIG,
 			).pipe(Effect.result),
 		);

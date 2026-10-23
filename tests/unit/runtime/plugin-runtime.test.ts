@@ -157,7 +157,6 @@ describe("PluginLive", () => {
 		const trace = makeRecentTrace();
 		const runtime = makePluginRuntime(
 			PluginLive(vault.app as unknown as App, {
-				confirm: () => Promise.resolve(true),
 				data: options.data ?? memoryPluginData(),
 				host: fakeHost().layer,
 				notices: createLifecycleNotices(() => {}, {

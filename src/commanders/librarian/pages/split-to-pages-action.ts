@@ -13,7 +13,6 @@ import type {
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { Effect, Result } from "effect";
-import { Notice } from "obsidian";
 import type {
 	Librarian,
 	LibrarianReconciliationOutcome,
@@ -36,6 +35,8 @@ export type { SplitToPagesError } from "./error";
 type SplitToPagesContext = {
 	librarian: Librarian;
 	vam: Pick<VaultActionManager, "cd" | "getActiveEditorContext">;
+	/** Tells the user how the split went. */
+	notify: (message: string) => void;
 };
 
 export type SplitToPagesOutcome =
@@ -193,12 +194,13 @@ export const splitToPagesAction = Effect.fn("Librarian.splitToPagesAction")(
 		context: SplitToPagesContext,
 		config: SegmentationConfig = DEFAULT_SEGMENTATION_CONFIG,
 	): Effect.fn.Return<SplitToPagesOutcome, SplitToPagesError> {
+		const reportError = handleSplitToPagesError(context.notify);
 		const input = yield* gatherInput(context, config).pipe(
-			Effect.tapError(handleSplitToPagesError),
+			Effect.tapError(reportError),
 		);
 
 		const result = yield* executeIntention(context, input).pipe(
-			Effect.tapError(handleSplitToPagesError),
+			Effect.tapError(reportError),
 		);
 		if (result.tooShort) {
 			// Should not happen because UI only exposes the action for multi-page content.
@@ -213,11 +215,11 @@ export const splitToPagesAction = Effect.fn("Librarian.splitToPagesAction")(
 					operationId,
 				),
 			),
-			Effect.tapError(handleSplitToPagesError),
+			Effect.tapError(reportError),
 		);
-		yield* Effect.sync(() => {
-			new Notice(`Split into ${result.pageCount} pages`);
-		});
+		yield* Effect.sync(() =>
+			context.notify(`Split into ${result.pageCount} pages`),
+		);
 		return {
 			initialDispatch: result.execution.initialDispatch,
 			kind: "Completed",

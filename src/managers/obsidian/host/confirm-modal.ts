@@ -1,18 +1,15 @@
+/** The confirmation modal, as plain DOM; `Confirm` asks through it. */
 import { type App, Modal } from "obsidian";
+import type { OpenConfirm } from "./confirm";
 
-/**
- * Asks `message` under `title` with OK and Cancel; answers whether OK was
- * clicked. Closing the modal any other way answers Cancel.
- */
-export function confirmInModal(
-	app: App,
-	title: string,
-	message: string,
-): Promise<boolean> {
-	return new Promise((resolve) => {
-		new ConfirmModal(app, title, message, resolve).open();
-	});
-}
+/** `OpenConfirm` over Obsidian's `Modal`. */
+export const openConfirmModal =
+	(app: App): OpenConfirm =>
+	(title, message, answer) => {
+		const modal = new ConfirmModal(app, title, message, answer);
+		modal.open();
+		return { close: () => modal.close() };
+	};
 
 /**
  * Simple confirmation modal with OK/Cancel buttons.

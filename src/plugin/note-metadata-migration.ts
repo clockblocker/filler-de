@@ -7,11 +7,11 @@ import type {
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { Effect, Exit } from "effect";
-import { Notice } from "obsidian";
 import {
 	describeMetadataMigration,
 	migrateMetadataFormat,
 } from "../commanders/note-metadata-migration/migrate-metadata-format";
+import type { Notices } from "../managers/obsidian/host";
 import {
 	LemmaNoteMetadata,
 	LibraryMetadata,
@@ -27,6 +27,7 @@ import {
  */
 export const migrateNoteMetadata = Effect.fn("migrateNoteMetadata")(function* (
 	vam: VaultActionManager,
+	notices: Notices["Service"],
 	target: MetadataFormat,
 	libraryRoot: SplitPathToFolder,
 ) {
@@ -51,7 +52,7 @@ export const migrateNoteMetadata = Effect.fn("migrateNoteMetadata")(function* (
 			"[TextEaterPlugin] Metadata migration failed:",
 			exit.cause,
 		);
-		new Notice("Moving note metadata failed; see the console.");
+		yield* notices.show("Moving note metadata failed; see the console.");
 		return;
 	}
 	const report = exit.value;
@@ -65,5 +66,5 @@ export const migrateNoteMetadata = Effect.fn("migrateNoteMetadata")(function* (
 			}),
 		);
 	}
-	new Notice(describeMetadataMigration(report));
+	yield* notices.show(describeMetadataMigration(report));
 });

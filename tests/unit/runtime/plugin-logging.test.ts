@@ -67,7 +67,6 @@ describe("Plugin logging", () => {
 		let lifecycle: LifecycleSupervisor<Librarian> | null = null;
 		const runtime = makePluginRuntime(
 			PluginLive(vault.app as unknown as App, {
-				confirm: () => Promise.resolve(true),
 				data: memoryPluginData(),
 				host: fakeHost().layer,
 				notices: createLifecycleNotices(() => {}, {

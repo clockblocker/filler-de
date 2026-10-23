@@ -149,7 +149,7 @@ function makeHarness() {
 							events.push(`apply ${config.symbol}`);
 							delimiter = config.symbol;
 						}),
-					confirm: () => Promise.resolve(true),
+					confirm: () => Effect.succeed(true),
 					libraryRoot: "Library",
 					notices,
 					service,

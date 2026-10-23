@@ -31,13 +31,14 @@ import type { ScriptedJevAnswers } from "./managers/dumgen/scripted-jev";
 import { createHandlers } from "./managers/obsidian/behavior-manager";
 import { CommandKind } from "./managers/obsidian/command-executor";
 import {
+	Confirm,
 	Notices,
-	ObsidianHostLive,
 	obsidianNotices,
 	PluginHost,
+	Workspace,
 } from "./managers/obsidian/host";
+import { ObsidianHostLive } from "./managers/obsidian/host/live";
 import type { OverlayManager } from "./managers/overlay-manager";
-import { confirmInModal } from "./plugin/confirm-modal";
 import {
 	ClassifyServices,
 	DictionaryReset,
@@ -86,6 +87,8 @@ const pluginServices = Context.pick(
 	Settings,
 	PluginHost,
 	Notices,
+	Confirm,
+	Workspace,
 	IdleTracker,
 );
 
@@ -143,8 +146,6 @@ export default class TextEaterPlugin extends Plugin {
 		try {
 			const runtime = makePluginRuntime(
 				PluginLive(this.app, {
-					confirm: (title, message) =>
-						confirmInModal(this.app, title, message),
 					data: this,
 					host: ObsidianHostLive(this),
 					notices: this.notices,
@@ -176,7 +177,9 @@ export default class TextEaterPlugin extends Plugin {
 					);
 				}),
 			);
-			this.addSettingTab(new SettingsTab(this.app, this));
+			this.addSettingTab(
+				new SettingsTab(this.app, this, obsidianNotices),
+			);
 		} catch (error) {
 			this.notices.launchFailedOutsideRuntime(error);
 		}

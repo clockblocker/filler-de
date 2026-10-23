@@ -15,7 +15,7 @@ import {
 } from "@textfresser/vault-action-manager";
 import { operations } from "dumgen";
 import { Effect, Exit, Layer, Stream } from "effect";
-import { Notice, type Plugin } from "obsidian";
+import type { Plugin } from "obsidian";
 import {
 	ClassifyCommander,
 	createReadingReopener,
@@ -41,6 +41,7 @@ import type { LifecycleNotices } from "../lifecycle/lifecycle-notices";
 import { Lifecycle, releaseGuarded } from "../lifecycle/lifecycle-supervisor";
 import { Dumgen } from "../managers/dumgen";
 import type { CommandExecutor } from "../managers/obsidian/command-executor";
+import { Notices, Workspace } from "../managers/obsidian/host";
 import {
 	protectedPathRefusal,
 	watchProtectedPaths,
@@ -158,7 +159,7 @@ const ClassifyLive = (_deps: PluginServicesDeps) =>
 			const settings = yield* Settings;
 			const store = yield* DictionaryStore;
 			const dictionary = resolverStore(store);
-			const notify = (message: string) => void new Notice(message);
+			const notify = (yield* Notices).sink.show;
 
 			// Each Reading's Knowledge runs in the background, on the build
 			// every background run shares. The queue's runs are interrupted
@@ -267,6 +268,8 @@ const DictionaryResetLive = (deps: PluginServicesDeps) =>
 			const dumgen = yield* Dumgen;
 			const store = yield* DictionaryStore;
 			const classify = yield* ClassifyServices;
+			const notices = yield* Notices;
+			const workspace = yield* Workspace;
 			return yield* Effect.acquireRelease(
 				DictionaryResetCommand.make({
 					activity: classify.scrollActivity,
@@ -276,12 +279,14 @@ const DictionaryResetLive = (deps: PluginServicesDeps) =>
 					dumgen: dumgen.provide,
 					knowledge: classify.knowledgeQueue,
 					missingProviderKeys: dumgen.missingKeys,
+					notices,
 					// A modal's button, as a user's gesture.
 					run: (kind, effect) =>
 						void deps.runtime.userEvent(kind, effect),
 					segmenterVersion: classify.segmenterVersion,
 					store: store.get,
 					vam,
+					workspace,
 				}),
 				(reset) =>
 					releaseGuarded(
@@ -303,14 +308,15 @@ const ObservationLive = (deps: PluginServicesDeps) =>
 		Effect.gen(function* () {
 			const vam = yield* VaultActionManager;
 			const { unlinkObserver } = yield* ClassifyServices;
+			const notices = yield* Notices;
 			yield* vam.startListening();
 			// It logs each warning it shows, under its delivery's span.
 			yield* Effect.acquireRelease(
 				watchProtectedPaths(vam, (message) => {
-					const notice = new Notice(message, 0);
+					const notice = notices.sink.open(message, { sticky: true });
 					return {
-						showing: () => notice.noticeEl.isConnected,
-						update: (next) => notice.setMessage(next),
+						showing: notice.showing,
+						update: notice.setMessage,
 					};
 				}),
 				(subscription) =>

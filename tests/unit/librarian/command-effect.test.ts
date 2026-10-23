@@ -332,7 +332,7 @@ describe("splitToPagesAction", () => {
 		const librarian = { codecRules: null } as unknown as Librarian;
 
 		const error = await Effect.runPromise(
-			Effect.flip(splitToPagesAction({ librarian, vam })),
+			Effect.flip(splitToPagesAction({ librarian, notify: () => {}, vam })),
 		);
 
 		expect(error).toMatchObject({ kind: "LibrarianUnavailable" });
@@ -394,6 +394,7 @@ describe("splitToPagesAction", () => {
 			splitToPagesAction(
 				{
 					librarian,
+					notify: () => {},
 					vam,
 				},
 				{

@@ -27,10 +27,11 @@ export const splitToPagesCommand: LibrarianCommandFn = Effect.fn(
 	"Librarian.splitToPagesCommand",
 )(function* (input): Effect.fn.Return<void, CommandError> {
 	const { librarianState } = input;
-	const { vam, librarian } = librarianState;
+	const { librarian, notify, vam } = librarianState;
 
 	yield* splitToPagesAction({
 		librarian,
+		notify,
 		vam,
 	}).pipe(Effect.mapError(splitToPagesFailureToCommandError));
 });

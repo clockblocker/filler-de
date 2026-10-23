@@ -10,6 +10,11 @@ import {
 	type DictionaryResetDeps,
 } from "../../../src/commanders/dictionary-reset/reset-command";
 import type { DumgenProvide } from "../../../src/managers/dumgen";
+import {
+	Notices,
+	obsidianNotices,
+	Workspace,
+} from "../../../src/managers/obsidian/host";
 import { makeObsidianVault } from "../../../src/packages/independent/vault-action-manager/tests/unit/helpers/obsidian-vault";
 import { shownNotices } from "../../support/obsidian-dom";
 import { inScope } from "../../support/scoped";
@@ -51,12 +56,15 @@ async function resetOver(
 		dumgen,
 		knowledge,
 		missingProviderKeys: Effect.succeed([]),
+		// Obsidian's notices over the test's Notice, which records them.
+		notices: Notices.over(obsidianNotices),
 		run: (_kind, effect) => {
 			steps.push(Effect.runFork(effect));
 		},
 		segmenterVersion: Effect.succeed("test-segmenter"),
 		store: Effect.die("the store is not read before dumgen"),
 		vam: manager,
+		workspace: Workspace.over({ openLinkText: () => Promise.resolve() }),
 		...overrides,
 	};
 	const reset = Effect.runSync(DictionaryResetCommand.make(deps));

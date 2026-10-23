@@ -71,7 +71,7 @@ handle(payload, context): HandleResult
 | Area | Location |
 | --- | --- |
 | Command routing | `src/managers/obsidian/command-executor/` |
-| Obsidian host services (`PluginHost`, `Notices`, `HttpTransport`) | `src/managers/obsidian/host/` |
+| Obsidian host services (`PluginHost`, `Notices`, `Confirm`, `Workspace`, `HttpTransport`) | `src/managers/obsidian/host/` |
 | Behavior routing | `src/managers/obsidian/behavior-manager/` |
 | Event detection | `src/packages/composed/obsidian-event-layer/` |
 | Plugin wiring | `src/main.ts` |

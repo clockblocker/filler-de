@@ -25,13 +25,19 @@ import {
 	Predicate,
 	Ref,
 } from "effect";
-import { type App, Modal, Notice, Setting } from "obsidian";
+import { type App, Modal, Setting } from "obsidian";
 import type { DictionaryStoreClosed } from "../../lifecycle/dictionary-store-service";
 import {
 	conciseFailure,
 	type DumgenProvide,
 	type KeyCheckFailure,
 } from "../../managers/dumgen";
+import type {
+	NoticeHandle,
+	NoticeSink,
+	Notices,
+	Workspace,
+} from "../../managers/obsidian/host";
 import { catchWhole, causeMessages } from "../../utils/causes";
 import { getErrorMessage } from "../../utils/get-error-message";
 import { ClassifySegmenter } from "../classify/classify-selection";
@@ -59,6 +65,10 @@ const UNLOADED = "the plugin unloaded";
 export type DictionaryResetDeps = {
 	readonly app: App;
 	readonly vam: VaultActionManager;
+	/** What the reset tells the user, and its progress. */
+	readonly notices: Notices["Service"];
+	/** Opens the report note once an Execute wrote it. */
+	readonly workspace: Workspace["Service"];
 	/** Runs an Execute on one dumgen build: `Dumgen.provide`. */
 	readonly dumgen: DumgenProvide;
 	readonly segmenterVersion: Effect.Effect<string>;
@@ -202,22 +212,17 @@ const showInto = <A>(
 		Effect.asVoid,
 	);
 
-/** Runs `effect` with a notice, hidden however it ends. */
+/** Runs `effect` with a sticky notice, hidden however it ends. */
 const withNotice = <A, E, R>(
+	notices: Notices["Service"],
 	message: string,
-	effect: (notice: Notice) => Effect.Effect<A, E, R>,
+	effect: (notice: NoticeHandle) => Effect.Effect<A, E, R>,
 ): Effect.Effect<A, E, R> =>
 	Effect.acquireUseRelease(
-		Effect.sync(() => new Notice(message, 0)),
+		notices.open(message, { sticky: true }),
 		effect,
 		(notice) => Effect.sync(() => notice.hide()),
 	);
-
-/** Shows `message` as a notice; `0` keeps it until it is clicked. */
-const show = (message: string, duration?: number) =>
-	Effect.sync(() => {
-		new Notice(message, duration);
-	});
 
 export class DictionaryResetCommand {
 	private readonly modals = new OpenModals();
@@ -359,9 +364,11 @@ export class DictionaryResetCommand {
 				),
 				catchWhole((cause) => {
 					const notice = `⚠ Dictionary reset: could not look for old notes: ${formatCause(cause, { stack: false })}`;
-					return show(notice).pipe(
-						Effect.as<ResetOpening>({ kind: "Failed", notice }),
-					);
+					return this.deps.notices
+						.show(notice)
+						.pipe(
+							Effect.as<ResetOpening>({ kind: "Failed", notice }),
+						);
 				}),
 			);
 		},
@@ -380,6 +387,7 @@ export class DictionaryResetCommand {
 				dryRun: shown,
 			}));
 			const read = withNotice(
+				deps.notices,
 				`Dictionary reset dry run: reading the old notes in ${source}/…`,
 				() =>
 					Effect.all(
@@ -413,6 +421,7 @@ export class DictionaryResetCommand {
 									execute: () =>
 										this.confirmExecute(source, choice),
 									keyWarning,
+									notices: deps.notices.sink,
 									report: result.report,
 								},
 							);
@@ -427,7 +436,7 @@ export class DictionaryResetCommand {
 					),
 					catchWhole((cause) => {
 						const notice = `⚠ Dictionary reset dry run failed: ${conciseFailure(causeMessages(cause))}`;
-						return show(notice).pipe(
+						return this.deps.notices.show(notice).pipe(
 							Effect.as<ResetDryRunShown>({
 								kind: "Failed",
 								notice,
@@ -480,9 +489,11 @@ export class DictionaryResetCommand {
 	): Effect.Effect<ResetExecuteOutcome> {
 		const refuse = (refusal: string) => {
 			const notice = `⚠ ${refusal}`;
-			return show(notice, 0).pipe(
-				Effect.as<ResetExecuteOutcome>({ kind: "Refused", notice }),
-			);
+			return this.deps.notices
+				.show(notice, { sticky: true })
+				.pipe(
+					Effect.as<ResetExecuteOutcome>({ kind: "Refused", notice }),
+				);
 		};
 		return Effect.gen({ self: this }, function* () {
 			const cancel = yield* Deferred.make<void>();
@@ -497,6 +508,7 @@ export class DictionaryResetCommand {
 				const refusal = yield* this.refusal;
 				if (refusal) return yield* refuse(refusal);
 				return yield* withNotice(
+					this.deps.notices,
 					"Dictionary reset: checking the provider keys…",
 					(notice) =>
 						Effect.gen({ self: this }, function* () {
@@ -546,7 +558,7 @@ export class DictionaryResetCommand {
 	private run(
 		source: string,
 		cancel: Deferred.Deferred<void>,
-		notice: Notice,
+		notice: NoticeHandle,
 	): Effect.Effect<ResetExecuteOutcome> {
 		const notices: string[] = [];
 		const { deps } = this;
@@ -660,22 +672,20 @@ export class DictionaryResetCommand {
 			Effect.flatMap((result) =>
 				Effect.gen(function* () {
 					yield* Effect.sync(() => notice.hide());
-					yield* show(
+					yield* deps.notices.show(
 						`Dictionary reset ${result.execution.cancelled ? "cancelled" : "done"}; see ${result.reportPath}`,
 					);
-					yield* Effect.tryPromise({
-						catch: (cause) =>
-							new ResetFailed({
-								cause,
-								message: `The report ${result.reportPath} could not be opened: ${getErrorMessage(cause)}`,
-							}),
-						try: () =>
-							deps.app.workspace.openLinkText(
-								result.reportPath,
-								"",
-								true,
+					yield* deps.workspace
+						.openLink(result.reportPath, "", true)
+						.pipe(
+							Effect.mapError(
+								(error) =>
+									new ResetFailed({
+										cause: error.cause,
+										message: `The report ${result.reportPath} could not be opened: ${getErrorMessage(error.cause)}`,
+									}),
 							),
-					});
+						);
 					return {
 						cancelled: result.execution.cancelled,
 						kind: "Done",
@@ -690,7 +700,7 @@ export class DictionaryResetCommand {
 			),
 			catchWhole((cause) => {
 				const message = `⚠ Dictionary reset stopped: ${conciseFailure(causeMessages(cause))}`;
-				return show(message, 0).pipe(
+				return this.deps.notices.show(message, { sticky: true }).pipe(
 					Effect.as<ResetExecuteOutcome>({
 						kind: "Stopped",
 						notice: message,
@@ -860,6 +870,8 @@ class ReportModal extends TrackedModal {
 			readonly report: string;
 			readonly keyWarning: string | null;
 			readonly execute: () => void;
+			/** What the Copy button tells, within its click. */
+			readonly notices: NoticeSink;
 		},
 	) {
 		super(app, modals);
@@ -889,9 +901,10 @@ class ReportModal extends TrackedModal {
 		buttons
 			.createEl("button", { text: "Copy" })
 			.addEventListener("click", () => {
+				const { notices } = this.shown;
 				void navigator.clipboard.writeText(report).then(
-					() => new Notice("Copied the dry-run report"),
-					() => new Notice("⚠ Could not copy the report"),
+					() => notices.show("Copied the dry-run report"),
+					() => notices.show("⚠ Could not copy the report"),
 				);
 			});
 		buttons
