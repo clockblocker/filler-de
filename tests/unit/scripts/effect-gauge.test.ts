@@ -4,7 +4,9 @@ import {
 	checkTargets,
 	countSource,
 	emptyCounts,
+	ignoreGlobs,
 	isAllowlisted,
+	isRunSite,
 	ruleOf,
 	totalOf,
 } from "../../../scripts/effect-gauge";
@@ -35,6 +37,7 @@ describe("areaOf", () => {
 		expect(areaOf("src/runtime/plugin-runtime.ts")).toBe("src/runtime");
 		expect(areaOf("src/main.ts")).toBe("src/main.ts");
 		expect(areaOf("src/packages/README.ts")).toBe("src/packages");
+		expect(areaOf("src/packages/loose/src/index.ts")).toBe("loose");
 	});
 
 	it("leaves files outside src unclassified", () => {
@@ -87,6 +90,11 @@ describe("countSource", () => {
 		`	this.logger.warn("w");`,
 		`	logger.info(Cause.squash(c), getParsedUserSettings());`,
 		`	ManagedRuntime.make(layer);`,
+		`	this.runCallback(program);`,
+		`	this.clearState();`,
+		`	this.runtime.run(Effect.void);`,
+		`	pluginRuntime.fork(Effect.void);`,
+		`	Effect.fork(Effect.void);`,
 		`}`,
 	].join("\n");
 
@@ -98,8 +106,8 @@ describe("countSource", () => {
 			"managed-runtime-make": 1,
 			"module-let": 2,
 			"neverthrow-files": 1,
-			"run-sites": 2,
-			"schema-imports": 1,
+			"run-sites": 4,
+			"schema-files": 1,
 			throw: 1,
 			try: 1,
 		});
@@ -110,6 +118,45 @@ describe("countSource", () => {
 		expect(countSource("src/a.ts", source, allowlist)["run-sites"]).toBe(
 			undefined,
 		);
+	});
+});
+
+describe("isRunSite", () => {
+	it("counts Effect.run* and a runtime's run, fork and run*", () => {
+		expect(isRunSite("Effect", "runPromise")).toBe(true);
+		expect(isRunSite("managed", "runSyncExit")).toBe(true);
+		expect(isRunSite("runtime", "run")).toBe(true);
+		expect(isRunSite("PluginRuntime", "fork")).toBe(true);
+	});
+
+	it("skips this.run* helpers and Effect.fork", () => {
+		expect(isRunSite(undefined, "runCallback", true)).toBe(false);
+		expect(isRunSite("Effect", "fork")).toBe(false);
+		expect(isRunSite("Stream", "run")).toBe(false);
+	});
+
+	it("counts a run function imported from effect", () => {
+		const source = [
+			`import { runPromise as run } from "effect/Effect";`,
+			`run(program);`,
+		].join("\n");
+		expect(countSource("src/a.ts", source, [])["run-sites"]).toBe(1);
+	});
+});
+
+describe("ignoreGlobs", () => {
+	const ignored = (file: string) =>
+		ignoreGlobs(["**/tests/**", "*.test.ts", "src/legacy", "/main.js"]).some(
+			(g) => g.match(file),
+		);
+
+	it("reads ignorePatterns gitignore-style", () => {
+		expect(ignored("src/a/tests/b.ts")).toBe(true);
+		expect(ignored("src/a/b.test.ts")).toBe(true);
+		expect(ignored("src/legacy/x/y.ts")).toBe(true);
+		expect(ignored("main.js")).toBe(true);
+		expect(ignored("src/a/b.ts")).toBe(false);
+		expect(ignored("src/legacyish/b.ts")).toBe(false);
 	});
 });
 
@@ -143,13 +190,21 @@ describe("checkTargets", () => {
 		]);
 	});
 
-	it("counts an area with no files as zero", () => {
-		expect(checkTargets(report, { "src/runtime": { throw: 0 } })).toEqual([]);
+	it("rejects an area with no files, so a typo can't pass", () => {
+		expect(() =>
+			checkTargets(report, { "vault-actions-manager": { throw: 0 } }),
+		).toThrow('unknown area "vault-actions-manager"');
 	});
 
-	it("rejects an unknown metric", () => {
+	it("rejects an unknown metric and a malformed ceiling", () => {
 		expect(() =>
 			checkTargets(report, { total: { "run-site": 0 } }),
 		).toThrow('unknown metric "run-site"');
+		expect(() => checkTargets(report, { total: 5 })).toThrow(
+			'target "total" must map metrics',
+		);
+		expect(() => checkTargets(report, { total: { throw: "0" } })).toThrow(
+			"must be a number",
+		);
 	});
 });

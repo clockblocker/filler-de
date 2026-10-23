@@ -11,7 +11,7 @@
 // A targets file maps an area, or `total`, to metric ceilings:
 //   { "total": { "run-sites": 12 }, "vault-action-manager": { "cause-squash": 0 } }
 // An area with no files counts as zero. An unknown metric is an error.
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { Glob } from "bun";
 import { type Node, parseSync, Visitor } from "oxc-parser";
@@ -48,7 +48,7 @@ export const SOURCE_COUNTS = [
 	"cause-squash",
 	"throw",
 	"try",
-	"schema-imports",
+	"schema-files",
 	"module-let",
 ] as const;
 
@@ -76,6 +76,25 @@ const GLOBAL_SETTINGS_CALLS = new Set([
 	"clearState",
 ]);
 const RUN_METHOD = /^run(?:Promise|Sync|Fork|Callback)/;
+const EFFECT_RUN_SOURCES = new Set(["effect", "effect/Effect", "effect/Runtime"]);
+
+/**
+ * The run site a member access `receiver.property` is: `Effect.run*`,
+ * `runtime.run*` and `this.managed.run*`, and the plugin runtime's own
+ * `runtime.run` and `runtime.fork`. A `this.run*` method is a helper on the
+ * class itself, and `Effect.fork` forks inside an Effect, so neither counts.
+ */
+export function isRunSite(
+	receiver: string | undefined,
+	property: string,
+	receiverIsThis = false,
+): boolean {
+	if (RUN_METHOD.test(property)) return !receiverIsThis;
+	return (
+		(property === "run" || property === "fork") &&
+		/runtime$/i.test(receiver ?? "")
+	);
+}
 
 export function isAllowlisted(
 	file: string,
@@ -91,7 +110,10 @@ export function isAllowlisted(
 export function areaOf(file: string): string | undefined {
 	const parts = file.split(/[\\/]/);
 	if (parts[0] !== "src" || parts.length < 2) return undefined;
-	if (parts[1] === "packages" && parts.length >= 5) return parts[3];
+	if (parts[1] === "packages") {
+		if (parts.length >= 5 && parts[3] !== "src") return parts[3];
+		if (parts.length >= 4 && parts[3] === "src") return parts[2];
+	}
 	return `src/${parts[1]}`;
 }
 
@@ -115,26 +137,33 @@ export function countSource(
 	};
 	const name = (node: Node | null | undefined) =>
 		node?.type === "Identifier" ? node.name : undefined;
+	// `logger` in `logger.info` and `this.logger.info`.
+	const lastName = (node: Node) =>
+		node.type === "MemberExpression" && !node.computed
+			? name(node.property)
+			: name(node);
 	const runAllowed = isAllowlisted(file, allowlist);
+	const importedRuns = new Set<string>();
 	let importsNeverthrow = false;
+	let importsSchema = false;
 
 	new Visitor({
 		CallExpression(node) {
 			const callee = node.callee;
-			const fn =
-				callee.type === "MemberExpression" && !callee.computed
-					? name(callee.property)
-					: name(callee);
-			if (fn !== undefined && GLOBAL_SETTINGS_CALLS.has(fn)) {
-				add("global-settings-calls");
+			if (callee.type === "Identifier") {
+				if (GLOBAL_SETTINGS_CALLS.has(callee.name)) {
+					add("global-settings-calls");
+				}
+				if (importedRuns.has(callee.name) && !runAllowed) add("run-sites");
+				return;
 			}
-			if (callee.type !== "MemberExpression") return;
-			const receiver = callee.object;
-			const receiverName =
-				receiver.type === "MemberExpression" && !receiver.computed
-					? name(receiver.property)
-					: name(receiver);
-			if (receiverName === "logger") add("logger-calls");
+			if (callee.type !== "MemberExpression" || callee.computed) return;
+			const method = name(callee.property);
+			if (callee.object.type === "ThisExpression" || method === undefined) {
+				return;
+			}
+			if (GLOBAL_SETTINGS_CALLS.has(method)) add("global-settings-calls");
+			if (lastName(callee.object) === "logger") add("logger-calls");
 		},
 		ExportAllDeclaration(node) {
 			if (isNeverthrow(node.source.value)) importsNeverthrow = true;
@@ -147,24 +176,26 @@ export function countSource(
 		ImportDeclaration(node) {
 			const source = node.source.value;
 			if (isNeverthrow(source)) importsNeverthrow = true;
-			const importsSchema =
-				source === "effect/Schema" ||
-				(source === "effect" &&
-					node.specifiers.some(
-						(s) =>
-							s.type === "ImportSpecifier" &&
-							(s.imported.type === "Identifier"
-								? s.imported.name
-								: s.imported.value) === "Schema",
-					));
-			if (importsSchema) add("schema-imports");
+			if (source === "effect/Schema") importsSchema = true;
+			for (const s of node.specifiers) {
+				if (s.type !== "ImportSpecifier") continue;
+				const imported =
+					s.imported.type === "Identifier" ? s.imported.name : s.imported.value;
+				if (source === "effect" && imported === "Schema") importsSchema = true;
+				if (EFFECT_RUN_SOURCES.has(source) && RUN_METHOD.test(imported)) {
+					importedRuns.add(s.local.name);
+				}
+			}
 		},
 		MemberExpression(node) {
 			if (node.computed) return;
 			const object = name(node.object);
 			const property = name(node.property);
 			if (property === undefined) return;
-			if (RUN_METHOD.test(property) && !runAllowed) add("run-sites");
+			const isThis = node.object.type === "ThisExpression";
+			if (!runAllowed && isRunSite(lastName(node.object), property, isThis)) {
+				add("run-sites");
+			}
 			if (object === "ManagedRuntime" && property === "make") {
 				add("managed-runtime-make");
 			}
@@ -179,6 +210,7 @@ export function countSource(
 	}).visit(program);
 
 	if (importsNeverthrow) add("neverthrow-files");
+	if (importsSchema) add("schema-files");
 	for (const statement of program.body) {
 		const declaration =
 			statement.type === "ExportNamedDeclaration"
@@ -227,16 +259,24 @@ export function totalOf(areas: Record<string, Counts>): Counts {
 	return total;
 }
 
-/** Each place an area, or `total`, exceeds its target. */
+const isObject = (x: unknown): x is Record<string, unknown> =>
+	typeof x === "object" && x !== null && !Array.isArray(x);
+
+/**
+ * Each place an area, or `total`, exceeds its target. Throws on an area with
+ * no files, an unknown metric or a ceiling that is not a number, so a typo or
+ * a renamed area can't pass unnoticed.
+ */
 export function checkTargets(report: GaugeReport, targets: unknown): string[] {
-	if (typeof targets !== "object" || targets === null) {
-		throw new Error("targets must be an object of areas");
-	}
+	if (!isObject(targets)) throw new Error("targets must map areas to ceilings");
 	const violations: string[] = [];
 	for (const [area, ceilings] of Object.entries(targets)) {
-		const counts =
-			area === "total" ? report.total : (report.areas[area] ?? emptyCounts());
-		for (const [metric, ceiling] of Object.entries(ceilings ?? {})) {
+		const counts = area === "total" ? report.total : report.areas[area];
+		if (!counts) throw new Error(`unknown area "${area}": it has no files`);
+		if (!isObject(ceilings)) {
+			throw new Error(`target "${area}" must map metrics to ceilings`);
+		}
+		for (const [metric, ceiling] of Object.entries(ceilings)) {
 			if (!(METRICS as readonly string[]).includes(metric)) {
 				throw new Error(`unknown metric "${metric}" in target "${area}"`);
 			}
@@ -253,7 +293,7 @@ export function checkTargets(report: GaugeReport, targets: unknown): string[] {
 }
 
 export function formatTables(report: GaugeReport): string {
-	const areas = Object.keys(report.areas).sort(compareAreas);
+	const areas = Object.keys(report.areas);
 	return TABLES.map(({ metrics, title }) => {
 		const row = (label: string, counts: Counts) =>
 			`| ${label} | ${metrics.map((m) => counts[m]).join(" | ")} |`;
@@ -277,13 +317,44 @@ function compareAreas(a: string, b: string): number {
 	return rank(a) - rank(b) || a.localeCompare(b);
 }
 
-async function gauge(root: string): Promise<GaugeReport> {
+/**
+ * Globs for `.oxlintrc.json`'s `ignorePatterns`, read the way oxlint reads
+ * them, gitignore-style: a pattern without an inner `/` matches at any depth,
+ * and a pattern matches the files under a directory it names.
+ */
+export function ignoreGlobs(patterns: readonly string[]): Glob[] {
+	return patterns.flatMap((raw) => {
+		const trimmed = raw.replace(/^\//, "").replace(/\/$/, "");
+		const p = trimmed.includes("/") ? trimmed : `**/${trimmed}`;
+		return [new Glob(p), new Glob(`${p}/**`)];
+	});
+}
+
+/** The files oxlint lints under `src/`: not gitignored and not ignored. */
+function sourceFiles(root: string): string[] {
 	const config = JSON.parse(readFileSync(`${root}/.oxlintrc.json`, "utf8"));
-	const ignored = (config.ignorePatterns as string[]).map((p) => new Glob(p));
+	const ignored = ignoreGlobs(config.ignorePatterns ?? []);
+	const listed = Bun.spawnSync(
+		["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+		{ cwd: root, stderr: "inherit", stdout: "pipe" },
+	);
+	if (listed.exitCode !== 0) throw new Error("git ls-files failed");
+	return listed.stdout
+		.toString()
+		.split("\0")
+		.filter(
+			(f) =>
+				/^src\/.*\.[cm]?tsx?$/.test(f) &&
+				!ignored.some((g) => g.match(f)) &&
+				existsSync(path.join(root, f)),
+		);
+}
+
+async function gauge(root: string): Promise<GaugeReport> {
 	const areas: Record<string, Counts> = {};
-	for await (const file of new Glob("src/**/*.{ts,tsx,mts,cts}").scan(root)) {
+	for (const file of sourceFiles(root)) {
 		const area = areaOf(file);
-		if (!area || ignored.some((g) => g.match(file))) continue;
+		if (!area) continue;
 		areas[area] ??= emptyCounts();
 		const text = readFileSync(path.join(root, file), "utf8");
 		for (const [m, n] of Object.entries(countSource(file, text))) {
@@ -308,25 +379,43 @@ async function gauge(root: string): Promise<GaugeReport> {
 			addTo(areas, area, rule as Metric);
 		}
 	}
-	return { areas, total: totalOf(areas) };
+	const sorted = Object.fromEntries(
+		Object.entries(areas).sort(([a], [b]) => compareAreas(a, b)),
+	);
+	return { areas: sorted, total: totalOf(sorted) };
 }
 
+/** Exits 0, 1 when over a target, or 2 on bad arguments or targets. */
 async function main(args: string[]): Promise<number> {
 	const json = args.includes("--json");
 	const checkAt = args.indexOf("--check");
 	const targetsPath = checkAt === -1 ? undefined : args[checkAt + 1];
 	const known = new Set(["--json", "--check", targetsPath]);
-	if ((checkAt !== -1 && !targetsPath) || args.some((a) => !known.has(a))) {
+	if (
+		(checkAt !== -1 && (!targetsPath || targetsPath.startsWith("--"))) ||
+		args.some((a) => !known.has(a))
+	) {
 		console.error("usage: effect-gauge [--json] [--check <targets.json>]");
+		return 2;
+	}
+	let targets: unknown;
+	try {
+		if (targetsPath) targets = JSON.parse(readFileSync(targetsPath, "utf8"));
+	} catch (e) {
+		console.error(`cannot read targets ${targetsPath}: ${e}`);
 		return 2;
 	}
 	const report = await gauge(path.resolve(import.meta.dir, ".."));
 	console.log(json ? JSON.stringify(report, null, "\t") : formatTables(report));
 	if (!targetsPath) return 0;
-	const targets = JSON.parse(readFileSync(targetsPath, "utf8"));
-	const violations = checkTargets(report, targets);
-	for (const v of violations) console.error(`over target: ${v}`);
-	return violations.length > 0 ? 1 : 0;
+	try {
+		const violations = checkTargets(report, targets);
+		for (const v of violations) console.error(`over target: ${v}`);
+		return violations.length > 0 ? 1 : 0;
+	} catch (e) {
+		console.error(`bad targets ${targetsPath}: ${e}`);
+		return 2;
+	}
 }
 
 if (import.meta.main) {
