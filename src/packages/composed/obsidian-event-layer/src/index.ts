@@ -1,14 +1,15 @@
 export {
 	type ObsidianEventLayer,
-	type ObsidianEventLayerDeps,
 	type PayloadFor,
-	type PendingWork,
-	type SelectionTextSource,
 	type Teardown,
 	type UserEffectFor,
+	type UserEventDecisionMap,
+	type UserEventFailure,
+	type UserEventFork,
 	type UserEventHandler,
 	UserEventKind,
 	type UserEventPayloadMap,
 	type UserEventResult,
+	type UserEventsHost,
 } from "./contracts";
-export { createObsidianEventLayer } from "./user-event-interceptor";
+export { makeObsidianEventLayer } from "./user-event-interceptor";

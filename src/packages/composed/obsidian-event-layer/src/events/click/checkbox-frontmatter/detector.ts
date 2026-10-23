@@ -1,109 +1,66 @@
 /**
- * CheckboxFrontmatterDetector - detects property checkbox clicks in frontmatter.
- *
- * Handles:
- * - Property checkboxes (frontmatter boolean properties)
- *
- * Subscribes to GenericClickDetector and filters for property checkbox targets.
+ * Property checkbox clicks in a note's frontmatter. Obsidian toggles the
+ * property either way; a handler is only told.
  */
-
-import type { App } from "obsidian";
-import type { PendingWork } from "../../../contracts";
+import { Effect } from "effect";
+import type { EventDispatch } from "../../../internal/dispatch";
 import { DomSelectors } from "../../../internal/dom-selectors";
 import { PayloadKind } from "../../../types/payload-base";
-import type { HandlerInvoker } from "../../../user-event-interceptor";
 import { getCurrentFilePath } from "../../get-current-file-path";
-import type { GenericClickDetector } from "../generic-click-detector";
+import type { ClickSubscriber } from "../generic-click-detector";
 import { CheckboxFrontmatterCodec } from "./codec";
-import type { CheckboxFrontmatterPayload } from "./payload";
 
-export class CheckboxFrontmatterDetector {
-	private unsubscribe: (() => void) | null = null;
-	private readonly invoker: HandlerInvoker<CheckboxFrontmatterPayload>;
-
-	constructor(
-		private readonly genericClick: GenericClickDetector,
-		private readonly app: App,
-		createInvoker: (
-			kind: PayloadKind,
-		) => HandlerInvoker<CheckboxFrontmatterPayload>,
-		private readonly pending: PendingWork,
-	) {
-		this.invoker = createInvoker(PayloadKind.CheckboxInFrontmatterClicked);
-	}
-
-	startListening(): void {
-		if (this.unsubscribe) return;
-
-		this.unsubscribe = this.genericClick.subscribe((target, _evt) => {
-			this.pending.start();
-			this.handleClick(target).finally(() => this.pending.end());
-		});
-	}
-
-	stopListening(): void {
-		if (this.unsubscribe) {
-			this.unsubscribe();
-			this.unsubscribe = null;
-		}
-	}
-
-	// ─── Private ───
-
-	private async handleClick(target: HTMLElement): Promise<void> {
-		// Check if it's a property checkbox
-		const propertyInfo = this.getPropertyCheckboxInfo(target);
+export function frontmatterCheckboxClick(
+	dispatch: EventDispatch,
+): ClickSubscriber {
+	const { app } = dispatch.host;
+	return (target) => {
+		const propertyInfo = getPropertyCheckboxInfo(target);
 		if (!propertyInfo) return;
 
-		// Get current file path
-		const splitPath = getCurrentFilePath(this.app);
+		const splitPath = getCurrentFilePath(app);
 		if (!splitPath) return;
 
-		// Encode to payload
 		const payload = CheckboxFrontmatterCodec.encode({
 			checked: propertyInfo.checked,
 			propertyName: propertyInfo.propertyName,
 			splitPath,
 		});
 
-		// Check if handler applies
-		const { applies, invoke } = this.invoker(payload);
-
-		if (!applies) {
-			// No handler - let Obsidian handle property toggle
-			return;
-		}
-
-		// Invoke handler (property toggle handled by Obsidian)
-		await invoke();
-	}
-
-	private getPropertyCheckboxInfo(
-		element: HTMLElement,
-	): { propertyName: string; checked: boolean } | null {
-		if (element.tagName !== "INPUT") return null;
-		const input = element as HTMLInputElement;
-		if (input.type !== "checkbox") return null;
-
-		const metadataContainer = element.closest(
-			DomSelectors.METADATA_CONTAINER,
+		const handler = dispatch.decide(
+			PayloadKind.CheckboxInFrontmatterClicked,
+			payload,
 		);
-		if (!metadataContainer) return null;
+		if (!handler) return;
 
-		const propertyRow = element.closest(DomSelectors.METADATA_PROPERTY);
-		if (!propertyRow) return null;
-
-		const keyElement = propertyRow.querySelector(
-			DomSelectors.METADATA_PROPERTY_KEY,
+		dispatch.run(
+			PayloadKind.CheckboxInFrontmatterClicked,
+			handler,
+			Effect.succeed(payload),
 		);
-		if (!keyElement) return null;
+	};
+}
 
-		const propertyName = keyElement.textContent?.trim();
-		if (!propertyName) return null;
+function getPropertyCheckboxInfo(
+	element: HTMLElement,
+): { propertyName: string; checked: boolean } | null {
+	if (element.tagName !== "INPUT") return null;
+	const input = element as HTMLInputElement;
+	if (input.type !== "checkbox") return null;
 
-		return {
-			checked: input.checked,
-			propertyName,
-		};
-	}
+	const metadataContainer = element.closest(DomSelectors.METADATA_CONTAINER);
+	if (!metadataContainer) return null;
+
+	const propertyRow = element.closest(DomSelectors.METADATA_PROPERTY);
+	if (!propertyRow) return null;
+
+	const keyElement = propertyRow.querySelector(
+		DomSelectors.METADATA_PROPERTY_KEY,
+	);
+	if (!keyElement) return null;
+
+	const propertyName = keyElement.textContent?.trim();
+	if (!propertyName) return null;
+
+	return { checked: input.checked, propertyName };
 }

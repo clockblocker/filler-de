@@ -6,7 +6,6 @@
  * lifecycle, which closes that scope: the finalizers run newest first,
  * before the Librarian stops and VAM shuts down.
  */
-import type { ObsidianEventLayer } from "@textfresser/obsidian-event-layer";
 import type {
 	VamSetupError,
 	VamShutdownError,
@@ -23,6 +22,9 @@ import type { Textfresser } from "../commanders/textfresser/textfresser";
 import type { DictionaryStore } from "../lifecycle/dictionary-store-service";
 import type { OverlayManager } from "../managers/overlay-manager";
 import type { PluginServices } from "../runtime/plugin-live";
+import type { UserEvents } from "./user-events";
+
+export { UserEvents } from "./user-events";
 
 /**
  * The Textfresser commands for the languages in effect. A change of the
@@ -60,12 +62,6 @@ export class DictionaryReset extends Context.Service<
 	DictionaryReset,
 	DictionaryResetCommand
 >()("textfresser/plugin/DictionaryReset") {}
-
-/** The user event interceptor: clicks, clipboard, select-all, wikilinks. */
-export class UserEvents extends Context.Service<
-	UserEvents,
-	ObsidianEventLayer
->()("textfresser/plugin/UserEvents") {}
 
 export class Overlay extends Context.Service<Overlay, OverlayManager>()(
 	"textfresser/plugin/Overlay",

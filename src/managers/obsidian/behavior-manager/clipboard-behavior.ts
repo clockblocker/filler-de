@@ -3,6 +3,7 @@ import type {
 	UserEventHandler,
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
+import { Effect } from "effect";
 import { noteMetadataHelper } from "../../../stateless-helpers/note-metadata";
 
 /**
@@ -14,19 +15,23 @@ export function createClipboardHandler(): UserEventHandler<
 > {
 	return {
 		doesApply: () => true, // Always try to handle clipboard events
-		handle: (payload) => {
-			const original = payload.originalText;
-			let strippedText = goBackLinkHelper.strip(original);
-			strippedText = noteMetadataHelper.strip(strippedText);
+		// Synchronous: the clipboard is writable only while the copy is
+		// dispatched.
+		handle: (payload) =>
+			Effect.sync(() => {
+				const original = payload.originalText;
+				const strippedText = noteMetadataHelper.strip(
+					goBackLinkHelper.strip(original),
+				);
 
-			// Only return modified if we actually stripped something
-			if (strippedText === original.trim()) {
-				return { outcome: "passthrough" } as const;
-			}
-			return {
-				effect: { modifiedText: strippedText },
-				outcome: "effect",
-			};
-		},
+				// Only return modified if we actually stripped something
+				if (strippedText === original.trim()) {
+					return { outcome: "passthrough" } as const;
+				}
+				return {
+					effect: { modifiedText: strippedText },
+					outcome: "effect",
+				} as const;
+			}),
 	};
 }

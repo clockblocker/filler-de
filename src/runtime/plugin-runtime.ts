@@ -35,6 +35,16 @@ export class PluginEdgeError extends Data.TaggedError("PluginEdgeError")<{
 	readonly message: string;
 }> {}
 
+/** How a user event's edge runs its program. */
+export type UserEventOptions = {
+	/**
+	 * False for an event too frequent to trace, such as a selection change:
+	 * its program opens no span, and its failure is still logged. True by
+	 * default.
+	 */
+	readonly traced?: boolean;
+};
+
 /** A synchronous read reached the runtime after unload. */
 export class PluginUnloadedError extends Data.TaggedError(
 	"PluginUnloadedError",
@@ -59,6 +69,7 @@ export class PluginEdges extends Context.Service<
 		readonly userEvent: <A, E>(
 			kind: string,
 			effect: Effect.Effect<A, E>,
+			options?: UserEventOptions,
 		) => Promise<void>;
 	}
 >()("textfresser/runtime/PluginEdges") {}
@@ -79,10 +90,15 @@ export type PluginRuntime<R, ER> = {
 		id: string,
 		effect: Effect.Effect<A, E, R>,
 	) => Promise<void>;
-	/** A user's gesture, under `user-event.<kind>`, as `command` runs. */
+	/**
+	 * A user's gesture, under `user-event.<kind>`, as `command` runs. It
+	 * starts at once: a program that never waits has ended when this
+	 * returns, inside the DOM event that started it.
+	 */
 	readonly userEvent: <A, E>(
 		kind: string,
 		effect: Effect.Effect<A, E, R>,
+		options?: UserEventOptions,
 	) => Promise<void>;
 	/** Applying changed settings, under `settings.update`, as `command` runs. */
 	readonly settings: <A, E>(effect: Effect.Effect<A, E, R>) => Promise<void>;
@@ -125,7 +141,8 @@ export function makePluginRuntime<R, ER>(
 	// Its methods run only once the runtime is built, so after `managed`.
 	const edges = PluginEdges.of({
 		command: (id, effect) => settle(`command.${id}`, effect),
-		userEvent: (kind, effect) => settle(`user-event.${kind}`, effect),
+		userEvent: (kind, effect, options) =>
+			settle(`user-event.${kind}`, effect, options),
 	});
 	const managed = ManagedRuntime.make(
 		Layer.provide(layer, Layer.succeed(PluginEdges, edges)),
@@ -139,9 +156,16 @@ export function makePluginRuntime<R, ER>(
 		},
 	});
 
-	/** `effect` under its edge's root span, its failure logged under it. */
-	const atEdge = <A, E>(edge: EdgeSpan, effect: Effect.Effect<A, E, R>) =>
-		effect.pipe(
+	/**
+	 * `effect` under its edge's root span, its failure logged under it; an
+	 * untraced edge opens no span.
+	 */
+	const atEdge = <A, E>(
+		edge: EdgeSpan,
+		effect: Effect.Effect<A, E, R>,
+		traced = true,
+	) => {
+		const logged = effect.pipe(
 			Effect.tapCause((cause) =>
 				Cause.hasInterruptsOnly(cause)
 					? Effect.void
@@ -150,17 +174,19 @@ export function makePluginRuntime<R, ER>(
 							cause,
 						),
 			),
-			Effect.withSpan(edge, { root: true }),
 		);
+		return traced ? Effect.withSpan(logged, edge, { root: true }) : logged;
+	};
 
 	function settle<A, E>(
 		edge: EdgeSpan,
 		effect: Effect.Effect<A, E, R>,
+		options?: UserEventOptions,
 	): Promise<void> {
 		return disposal
 			? Promise.resolve()
 			: managed
-					.runPromiseExit(atEdge(edge, effect))
+					.runPromiseExit(atEdge(edge, effect, options?.traced))
 					.then(() => undefined);
 	}
 
@@ -198,7 +224,8 @@ export function makePluginRuntime<R, ER>(
 		readSync: (effect) =>
 			disposal ? Exit.fail(unloaded()) : managed.runSyncExit(effect),
 		settings: (effect) => settle("settings.update", effect),
-		userEvent: (kind, effect) => settle(`user-event.${kind}`, effect),
+		userEvent: (kind, effect, options) =>
+			settle(`user-event.${kind}`, effect, options),
 	};
 }
 

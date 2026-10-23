@@ -271,7 +271,6 @@ export default class TextEaterPlugin extends Plugin {
 				attachLibrarian: (librarian) => {
 					const teardowns = createHandlers(
 						librarian,
-						runtime.userEvent,
 						this.onWikilinkClicked,
 					).map((handler) =>
 						userEvents.setHandler(
@@ -320,22 +319,26 @@ export default class TextEaterPlugin extends Plugin {
 		return runtime.command(kind, services.commandProgram(kind));
 	}
 
-	/** A clicked Reading link reopens its note once its Knowledge lands. */
-	private readonly onWikilinkClicked = (target: string): void => {
-		const reopen = this.services?.classify.reopenReading;
-		if (!reopen || !this.runtime) return;
-		void this.runtime.userEvent(
-			"wikilink-clicked",
-			reopen(target).pipe(
+	/**
+	 * A clicked Reading link reopens its note once its Knowledge lands; it
+	 * runs in the click's fiber, under `user-event.wikilinkClicked`.
+	 */
+	private readonly onWikilinkClicked = (
+		target: string,
+	): Effect.Effect<void> =>
+		Effect.suspend(() => {
+			const reopen = this.services?.classify.reopenReading;
+			if (!reopen) return Effect.void;
+			return reopen(target).pipe(
+				Effect.asVoid,
 				Effect.catch((error) =>
 					Effect.logWarning(
 						"[TextEaterPlugin] Could not reopen the Reading note:",
 						getErrorMessage(error),
 					),
 				),
-			),
-		);
-	};
+			);
+		});
 
 	/**
 	 * Applies `patch` to the settings under `settings.update`, once the

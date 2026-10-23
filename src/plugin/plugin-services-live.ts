@@ -5,16 +5,12 @@ import {
 	makeDumdictVaultStore,
 } from "@textfresser/dictionary";
 import {
-	createObsidianEventLayer,
-	type PendingWork,
-} from "@textfresser/obsidian-event-layer";
-import {
 	SplitPathKind,
 	splitPathCodec,
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { operations } from "dumgen";
-import { Effect, Exit, Layer, Stream } from "effect";
+import { Effect, Layer, Stream } from "effect";
 import type { Plugin } from "obsidian";
 import {
 	ClassifyCommander,
@@ -55,7 +51,6 @@ import { Settings } from "../settings/settings-service";
 import { dictionaryProjections } from "../stateless-helpers/dictionary-projections";
 import { metadataFormatOf } from "../stateless-helpers/note-metadata";
 import { getErrorMessage } from "../utils/get-error-message";
-import { IdleTracker } from "../utils/idle-tracker";
 import {
 	ClassifyServices,
 	composePluginServices,
@@ -87,15 +82,12 @@ export const PluginServicesLive = (
 		reset: DictionaryResetLive(deps),
 		store: DictionaryStoreLive(deps),
 		textfresser: TextfresserLive,
-		userEvents: UserEventsLive(deps),
+		userEvents: UserEvents.layer({
+			app: deps.plugin.app,
+			document,
+			runtime: deps.runtime,
+		}),
 	});
-
-/** Counts plain-callback work on the runtime's idle tracker. */
-const pendingWork = (deps: PluginServicesDeps): Effect.Effect<PendingWork> =>
-	Effect.map(IdleTracker, (idle) => ({
-		end: () => void deps.runtime.readSync(idle.end),
-		start: () => void deps.runtime.readSync(idle.start),
-	}));
 
 /** The dictionary store over `Worter/`, built at once. */
 const DictionaryStoreLive = (deps: PluginServicesDeps) =>
@@ -336,40 +328,6 @@ const ObservationLive = (deps: PluginServicesDeps) =>
 							stop,
 						),
 				),
-			);
-		}),
-	);
-
-const UserEventsLive = (deps: PluginServicesDeps) =>
-	Layer.effect(
-		UserEvents,
-		Effect.gen(function* () {
-			const vam = yield* VaultActionManager;
-			const pending = yield* pendingWork(deps);
-			return yield* Effect.acquireRelease(
-				Effect.sync(() => {
-					const events = createObsidianEventLayer({
-						app: deps.plugin.app,
-						pendingWork: pending,
-						plugin: deps.plugin,
-						selectionTextSource: {
-							getSelectionText: () => {
-								const exit = deps.runtime.readSync(
-									vam.getSelectionText(),
-								);
-								return Exit.isSuccess(exit) ? exit.value : null;
-							},
-						},
-					});
-					events.start();
-					return events;
-				}),
-				(events) =>
-					releaseGuarded(
-						deps.notices,
-						"stop the user event interceptor",
-						Effect.sync(() => events.stop()),
-					),
 			);
 		}),
 	);

@@ -1,113 +1,83 @@
 /**
- * SelectAllDetector - detects Ctrl/Cmd+A with handler pattern.
- *
- * Emits SelectAllPayload when user presses select-all shortcut in source mode.
+ * Ctrl/Cmd+A in a note's source view. A handler that takes it prevents
+ * the native select-all, and may set a selection of its own. Not while the
+ * user edits the note's title.
  */
-
 import type { EditorView } from "@codemirror/view";
-import { type App, MarkdownView } from "obsidian";
+import { Effect } from "effect";
+import { MarkdownView } from "obsidian";
+import type { EventDispatch } from "../../internal/dispatch";
 import { DomSelectors } from "../../internal/dom-selectors";
 import { PayloadKind } from "../../types/payload-base";
-import type { HandlerInvoker } from "../../user-event-interceptor";
 import { getCurrentFilePath } from "../get-current-file-path";
 import { SelectAllCodec } from "./codec";
-import type { InternalSelectAllPayload } from "./payload";
 
-export class SelectAllDetector {
-	private handler: ((evt: KeyboardEvent) => void) | null = null;
-	private readonly invoker: HandlerInvoker<InternalSelectAllPayload>;
+/** Listens for select-all while the scope is open, before the editor does. */
+export const listenForSelectAll = Effect.fnUntraced(function* (
+	dispatch: EventDispatch,
+) {
+	yield* dispatch.host.listen(
+		"keydown",
+		(evt) => handleKeydown(dispatch, evt),
+		{ capture: true },
+	);
+});
 
-	constructor(
-		private readonly app: App,
-		createInvoker: (
-			kind: PayloadKind,
-		) => HandlerInvoker<InternalSelectAllPayload>,
-	) {
-		this.invoker = createInvoker(PayloadKind.SelectAll);
-	}
+function isSelectAll(evt: KeyboardEvent): boolean {
+	const isMacOS =
+		typeof navigator !== "undefined" &&
+		navigator.platform.toLowerCase().includes("mac");
+	return (
+		evt.key === "a" &&
+		(isMacOS ? evt.metaKey : evt.ctrlKey) &&
+		!evt.shiftKey &&
+		!evt.altKey
+	);
+}
 
-	startListening(): void {
-		if (this.handler) return;
+function handleKeydown(dispatch: EventDispatch, evt: KeyboardEvent): void {
+	if (!isSelectAll(evt)) return;
 
-		this.handler = (evt) => this.handleKeydown(evt);
+	const { app, document } = dispatch.host;
+	if (
+		document.activeElement?.classList.contains(
+			DomSelectors.INLINE_TITLE_CLASS,
+		)
+	)
+		return;
 
-		// Use capture phase to intercept before the editor
-		document.addEventListener("keydown", this.handler, { capture: true });
-	}
+	const view = app.workspace.getActiveViewOfType(MarkdownView);
+	if (!view || view.getMode() !== "source") return;
 
-	stopListening(): void {
-		if (this.handler) {
-			document.removeEventListener("keydown", this.handler, {
-				capture: true,
-			});
-			this.handler = null;
-		}
-	}
+	// biome-ignore lint/suspicious/noExplicitAny: cm exists but is not typed in Obsidian's API
+	const cm: EditorView | undefined = (view.editor as any).cm;
+	if (!cm) return;
 
-	// ─── Private ───
+	const content = cm.state.doc.toString();
+	if (!content) return;
 
-	private handleKeydown(evt: KeyboardEvent): void {
-		// Check for Ctrl+A (Windows/Linux) or Cmd+A (Mac)
-		const isMacOS =
-			typeof navigator !== "undefined" &&
-			navigator.platform.toLowerCase().includes("mac");
-		const isSelectAll =
-			evt.key === "a" &&
-			(isMacOS ? evt.metaKey : evt.ctrlKey) &&
-			!evt.shiftKey &&
-			!evt.altKey;
+	const payload = SelectAllCodec.encode({
+		content,
+		splitPath: getCurrentFilePath(app),
+		view: cm,
+	});
+	const handler = dispatch.decide(PayloadKind.SelectAll, payload);
+	// None: the native select-all proceeds.
+	if (!handler) return;
 
-		if (!isSelectAll) return;
+	evt.preventDefault();
+	evt.stopPropagation();
 
-		// Don't interfere when user is editing the file basename (inline title)
-		const activeEl = document.activeElement;
-		if (activeEl?.classList.contains(DomSelectors.INLINE_TITLE_CLASS))
-			return;
-
-		// Get active markdown view
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!view) return;
-
-		// Only work in source mode
-		if (view.getMode() !== "source") return;
-
-		// Get the CodeMirror 6 editor
-		// biome-ignore lint/suspicious/noExplicitAny: cm exists but is not typed in Obsidian's API
-		const cm: EditorView | undefined = (view.editor as any).cm;
-		if (!cm) return;
-
-		// Get document content
-		const content = cm.state.doc.toString();
-		if (!content) return;
-
-		// Get current file path
-		const splitPath = getCurrentFilePath(this.app);
-
-		// Encode to payload
-		const payload = SelectAllCodec.encode({
-			content,
-			splitPath,
-			view: cm,
-		});
-
-		// Check if handler applies
-		const { applies, invoke } = this.invoker(payload);
-
-		if (!applies) {
-			// No handler applies - let native behavior proceed
-			return;
-		}
-
-		// Handler applies - preventDefault and invoke
-		evt.preventDefault();
-		evt.stopPropagation();
-
-		void invoke().then((result) => {
-			if (result.outcome === "effect") {
-				SelectAllCodec.applySelection(payload, result.effect);
-			}
-			// For "handled" or "passthrough", nothing more to do
-			// (passthrough after preventDefault means no selection change)
-		});
-	}
+	// Passthrough, after the default was prevented, selects nothing.
+	dispatch.run(
+		PayloadKind.SelectAll,
+		handler,
+		Effect.succeed(payload),
+		(result) =>
+			result.outcome === "effect"
+				? Effect.sync(() =>
+						SelectAllCodec.applySelection(payload, result.effect),
+					)
+				: Effect.void,
+	);
 }

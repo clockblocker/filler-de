@@ -1,150 +1,84 @@
 /**
- * CheckboxClickedDetector - detects task checkbox clicks in markdown content.
+ * Task checkbox clicks (`- [ ]` / `- [x]`) in a note's content.
  *
- * Handles:
- * - Task checkboxes (- [ ] / - [x])
- *
- * Subscribes to GenericClickDetector and filters for checkbox targets.
+ * A handler that takes the click prevents Obsidian's toggle: the mousedown
+ * is stopped here, and the click stream blocks its mouseup and click.
  */
-
-import { type App, MarkdownView } from "obsidian";
-import type { PendingWork } from "../../../contracts";
+import { Effect } from "effect";
+import type { App } from "obsidian";
+import type { EventDispatch } from "../../../internal/dispatch";
 import { DomSelectors } from "../../../internal/dom-selectors";
 import { PayloadKind } from "../../../types/payload-base";
-import type { HandlerInvoker } from "../../../user-event-interceptor";
 import { getCurrentFilePath } from "../../get-current-file-path";
-import type { GenericClickDetector } from "../generic-click-detector";
+import { editorLineOf } from "../editor-line";
+import type { ClickSubscriber } from "../generic-click-detector";
 import { CheckboxCodec } from "./codec";
-import type { CheckboxPayload } from "./payload";
 
-export class CheckboxClickedDetector {
-	private unsubscribe: (() => void) | null = null;
-	private readonly invoker: HandlerInvoker<CheckboxPayload>;
+export function checkboxClick(dispatch: EventDispatch): ClickSubscriber {
+	const { app } = dispatch.host;
+	return (target, evt) => {
+		if (!isTaskCheckbox(target)) return;
 
-	constructor(
-		private readonly genericClick: GenericClickDetector,
-		private readonly app: App,
-		createInvoker: (kind: PayloadKind) => HandlerInvoker<CheckboxPayload>,
-		private readonly pending: PendingWork,
-	) {
-		this.invoker = createInvoker(PayloadKind.CheckboxClicked);
-	}
-
-	startListening(): void {
-		if (this.unsubscribe) return;
-
-		this.unsubscribe = this.genericClick.subscribe((target, evt) => {
-			this.pending.start();
-			this.handleClick(target, evt).finally(() => this.pending.end());
-		});
-	}
-
-	stopListening(): void {
-		if (this.unsubscribe) {
-			this.unsubscribe();
-			this.unsubscribe = null;
-		}
-	}
-
-	// ─── Private ───
-
-	private async handleClick(
-		target: HTMLElement,
-		evt: MouseEvent,
-	): Promise<void> {
-		// Check if it's a task checkbox
-		if (!this.isTaskCheckbox(target)) return;
-
-		// Get current file path
-		const splitPath = getCurrentFilePath(this.app);
+		const splitPath = getCurrentFilePath(app);
 		if (!splitPath) return;
 
-		const checkbox = target as HTMLInputElement;
-
-		// Extract line content
-		const lineContent = this.extractLineContent(checkbox);
+		const lineContent = extractLineContent(app, target);
 		if (lineContent === null) return;
 
-		// GenericClickDetector uses MOUSEDOWN in capture phase
-		// mousedown fires BEFORE browser toggles checkbox
-		// So checkbox.checked is PRE-toggle state (what user sees right now)
-		const wasChecked = checkbox.checked;
-
-		// Encode to payload
+		// The click stream listens on mousedown, before the browser toggles
+		// the checkbox: `checked` is the state the user sees and clicked.
 		const payload = CheckboxCodec.encode({
-			checked: wasChecked,
+			checked: target.checked,
 			lineContent,
-			splitPath: splitPath,
+			splitPath,
 		});
 
-		// Check if handler applies
-		const { applies, invoke } = this.invoker(payload);
+		const handler = dispatch.decide(PayloadKind.CheckboxClicked, payload);
+		// None: Obsidian toggles the checkbox.
+		if (!handler) return;
 
-		if (!applies) {
-			// No handler - let Obsidian handle checkbox toggle
-			return;
-		}
-
-		// Handler applies - BLOCK Obsidian and browser completely
-		// Block mousedown - GenericClickDetector will also block mouseup/click
 		evt.preventDefault();
 		evt.stopPropagation();
 		evt.stopImmediatePropagation();
 
-		await invoke();
-	}
-
-	private isTaskCheckbox(element: HTMLElement): element is HTMLInputElement {
-		return (
-			element.tagName === "INPUT" &&
-			(element as HTMLInputElement).type === "checkbox" &&
-			element.classList.contains(DomSelectors.TASK_CHECKBOX_CLASS)
+		dispatch.run(
+			PayloadKind.CheckboxClicked,
+			handler,
+			Effect.succeed(payload),
 		);
-	}
+	};
+}
 
-	private extractLineContent(checkbox: HTMLInputElement): string | null {
-		const lineContainer =
-			checkbox.closest(DomSelectors.CM_LINE) ??
-			checkbox.closest("li") ??
-			checkbox.parentElement;
+function isTaskCheckbox(element: HTMLElement): element is HTMLInputElement {
+	return (
+		element.tagName === "INPUT" &&
+		(element as HTMLInputElement).type === "checkbox" &&
+		element.classList.contains(DomSelectors.TASK_CHECKBOX_CLASS)
+	);
+}
 
-		if (!lineContainer) return null;
+function extractLineContent(
+	app: App,
+	checkbox: HTMLInputElement,
+): string | null {
+	const lineContainer =
+		checkbox.closest(DomSelectors.CM_LINE) ??
+		checkbox.closest("li") ??
+		checkbox.parentElement;
 
-		const editorLine = this.getLineFromEditor(lineContainer);
-		if (editorLine) {
-			return this.stripCheckboxPrefix(editorLine);
-		}
+	if (!lineContainer) return null;
 
-		const textContent = lineContainer.textContent;
-		if (textContent) {
-			return this.stripCheckboxPrefix(textContent);
-		}
+	const editorLine = editorLineOf(app, lineContainer);
+	if (editorLine) return stripCheckboxPrefix(editorLine);
 
-		return null;
-	}
+	const textContent = lineContainer.textContent;
+	if (textContent) return stripCheckboxPrefix(textContent);
 
-	private getLineFromEditor(lineElement: Element): string | null {
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!view?.editor) return null;
+	return null;
+}
 
-		const editor = view.editor;
-		const cmContent = lineElement.closest(DomSelectors.CM_CONTENT);
-		if (!cmContent) return null;
-
-		const lines = Array.from(
-			cmContent.querySelectorAll(DomSelectors.CM_LINE),
-		);
-		const lineIndex = lines.indexOf(lineElement as Element);
-		if (lineIndex === -1) return null;
-
-		return editor.getLine(lineIndex) ?? null;
-	}
-
-	private stripCheckboxPrefix(line: string): string {
-		const match = line.match(/^[\s]*-\s*\[[xX\s]\]\s*/);
-		if (match) {
-			return line.slice(match[0].length);
-		}
-		return line.trim();
-	}
+function stripCheckboxPrefix(line: string): string {
+	const match = line.match(/^[\s]*-\s*\[[xX\s]\]\s*/);
+	if (match) return line.slice(match[0].length);
+	return line.trim();
 }

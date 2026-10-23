@@ -86,6 +86,31 @@ describe("PluginRuntime edges", () => {
 		await runtime.dispose();
 	});
 
+	it("runs an untraced user event with no span, and still logs its failure", async () => {
+		const trace = makeRecentTrace();
+		const runtime = makePluginRuntime(ObservabilityLive(trace), {
+			onBuildFailed: () => {},
+		});
+		let ran = false;
+		const started = runtime.userEvent(
+			"selectionChanged",
+			Effect.sync(() => {
+				ran = true;
+			}).pipe(Effect.andThen(Effect.fail(new Error("no toolbar")))),
+			{ traced: false },
+		);
+		// It started at once, inside the caller.
+		expect(ran).toBe(true);
+		await started;
+
+		expect(trace.snapshot().spans).toEqual([]);
+		const [logged] = trace.snapshot().logs;
+		expect(logged?.level).toBe("ERROR");
+		expect(logged?.text).toContain("user-event.selectionChanged failed");
+		expect(logged?.cause).toContain("no toolbar");
+		await runtime.dispose();
+	});
+
 	it("rejects an E2E hook with its whole cause, and runs nothing at an edge after dispose", async () => {
 		const trace = makeRecentTrace();
 		const runtime = makePluginRuntime(ObservabilityLive(trace), {
@@ -110,7 +135,7 @@ describe("PluginRuntime edges", () => {
 			ran = true;
 		});
 		await runtime.command("restart-librarian", late);
-		await runtime.userEvent("codex-checkbox", late);
+		await runtime.userEvent("checkboxClicked", late);
 		await runtime.settings(late);
 		runtime.onload(late);
 		expect(Exit.isFailure(runtime.readSync(late))).toBe(true);

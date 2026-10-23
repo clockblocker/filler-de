@@ -1,119 +1,55 @@
 /**
- * GenericClickDetector - shared click stream for specialized click detectors.
+ * The shared click stream of the click detectors.
  *
- * Uses mousedown in capture phase to catch clicks before re-renders.
- * Specialized detectors subscribe and filter for their specific targets.
+ * Uses mousedown in the capture phase, to catch a click before Obsidian
+ * re-renders. Each subscriber filters for its own targets, in order.
  *
- * When a subscriber calls evt.preventDefault() on mousedown, this detector
- * also blocks the subsequent mouseup and click events to prevent Obsidian
- * from toggling checkboxes (Obsidian uses mouseup for checkbox toggling).
+ * When a subscriber prevents a mousedown's default, the mouseup and click
+ * that follow on the same target are blocked too, so Obsidian, which
+ * toggles a checkbox on mouseup, never sees them.
  */
+import { Effect, MutableRef, Ref } from "effect";
+import type { EventDispatch } from "../../internal/dispatch";
 
-type RawClickHandler = (target: HTMLElement, evt: MouseEvent) => void;
+export type ClickSubscriber = (target: HTMLElement, evt: MouseEvent) => void;
 
-export class GenericClickDetector {
-	private subscribers = new Set<RawClickHandler>();
-	private mousedownHandler: ((evt: MouseEvent) => void) | null = null;
-	private mouseupHandler: ((evt: MouseEvent) => void) | null = null;
-	private clickHandler: ((evt: MouseEvent) => void) | null = null;
+const CAPTURE = { capture: true } as const;
 
-	/** Track whether the last mousedown was handled (preventDefault called) */
-	private lastHandledMousedownTarget: EventTarget | null = null;
+/** Listens for clicks while the scope is open, for `subscribers` in order. */
+export const listenForClicks = Effect.fnUntraced(function* (
+	{ host }: EventDispatch,
+	subscribers: readonly ClickSubscriber[],
+) {
+	// The target of the last mousedown a subscriber handled, until its click.
+	const handledTarget = yield* Ref.make<EventTarget | null>(null);
 
-	/**
-	 * Subscribe to raw click events.
-	 * @returns Unsubscribe function
-	 */
-	subscribe(handler: RawClickHandler): () => void {
-		this.subscribers.add(handler);
-		return () => this.subscribers.delete(handler);
-	}
+	/** Blocks `evt` when it follows a handled mousedown on its target. */
+	const blockAfterHandled = (evt: MouseEvent, endsSequence: boolean) => {
+		const target = Ref.getUnsafe(handledTarget);
+		if (!target || evt.target !== target) return;
+		evt.preventDefault();
+		evt.stopPropagation();
+		evt.stopImmediatePropagation();
+		if (endsSequence) MutableRef.set(handledTarget.ref, null);
+	};
 
-	/**
-	 * Start listening to document clicks.
-	 * Uses mousedown + capture phase to intercept before re-renders.
-	 * Also listens to mouseup + click to block them when mousedown was handled.
-	 */
-	startListening(): void {
-		if (this.mousedownHandler) return;
-
-		this.mousedownHandler = (evt: MouseEvent) => {
-			// Reset handled state for each new mousedown
-			this.lastHandledMousedownTarget = null;
-
-			// Only handle left mouse button
+	yield* host.listen(
+		"mousedown",
+		(evt) => {
+			MutableRef.set(handledTarget.ref, null);
+			// Only the left mouse button.
 			if (evt.button !== 0) return;
-
 			const target = evt.target as HTMLElement;
-			for (const subscriber of this.subscribers) {
-				subscriber(target, evt);
-			}
-
-			// If any subscriber called preventDefault, track the target
-			if (evt.defaultPrevented) {
-				this.lastHandledMousedownTarget = evt.target;
-			}
-		};
-
-		this.mouseupHandler = (evt: MouseEvent) => {
-			// Block mouseup if the corresponding mousedown was handled
-			if (
-				this.lastHandledMousedownTarget &&
-				evt.target === this.lastHandledMousedownTarget
-			) {
-				evt.preventDefault();
-				evt.stopPropagation();
-				evt.stopImmediatePropagation();
-			}
-		};
-
-		this.clickHandler = (evt: MouseEvent) => {
-			// Block click if the corresponding mousedown was handled
-			if (
-				this.lastHandledMousedownTarget &&
-				evt.target === this.lastHandledMousedownTarget
-			) {
-				evt.preventDefault();
-				evt.stopPropagation();
-				evt.stopImmediatePropagation();
-				// Reset after click (end of event sequence)
-				this.lastHandledMousedownTarget = null;
-			}
-		};
-
-		document.addEventListener("mousedown", this.mousedownHandler, {
-			capture: true,
-		});
-		document.addEventListener("mouseup", this.mouseupHandler, {
-			capture: true,
-		});
-		document.addEventListener("click", this.clickHandler, {
-			capture: true,
-		});
-	}
-
-	/**
-	 * Stop listening to document clicks.
-	 */
-	stopListening(): void {
-		if (this.mousedownHandler) {
-			document.removeEventListener("mousedown", this.mousedownHandler, {
-				capture: true,
-			});
-			this.mousedownHandler = null;
-		}
-		if (this.mouseupHandler) {
-			document.removeEventListener("mouseup", this.mouseupHandler, {
-				capture: true,
-			});
-			this.mouseupHandler = null;
-		}
-		if (this.clickHandler) {
-			document.removeEventListener("click", this.clickHandler, {
-				capture: true,
-			});
-			this.clickHandler = null;
-		}
-		this.lastHandledMousedownTarget = null;
-	}
-}
+			for (const subscriber of subscribers) subscriber(target, evt);
+			if (evt.defaultPrevented)
+				MutableRef.set(handledTarget.ref, evt.target);
+		},
+		CAPTURE,
+	);
+	yield* host.listen(
+		"mouseup",
+		(evt) => blockAfterHandled(evt, false),
+		CAPTURE,
+	);
+	yield* host.listen("click", (evt) => blockAfterHandled(evt, true), CAPTURE);
+});

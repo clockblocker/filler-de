@@ -1,225 +1,166 @@
 /**
- * WikilinkClickDetector - detects internal link (wikilink) clicks.
+ * Internal link (wikilink) clicks, in reading mode (`a.internal-link`) and
+ * in the editor (`.cm-hmd-internal-link`). A click with a modifier is
+ * Obsidian's, for a new tab and the like.
  *
- * Handles:
- * - Internal links in reading mode (a.internal-link)
- * - Internal links in edit mode (.cm-hmd-internal-link)
- *
- * Subscribes to GenericClickDetector and filters for wikilink targets.
+ * A handler that takes the click prevents Obsidian's navigation; when it
+ * answers passthrough, the link is opened as Obsidian would have, through
+ * the host's workspace, in the same fiber.
  */
-
-import { type App, MarkdownView } from "obsidian";
-import type { PendingWork } from "../../../contracts";
+import { Effect } from "effect";
+import type { App } from "obsidian";
+import type { EventDispatch } from "../../../internal/dispatch";
 import { DomSelectors } from "../../../internal/dom-selectors";
 import { wikilinkHelper } from "../../../internal/wikilink-helper";
 import { PayloadKind } from "../../../types/payload-base";
-import type { HandlerInvoker } from "../../../user-event-interceptor";
 import { getCurrentFilePath } from "../../get-current-file-path";
-import type { GenericClickDetector } from "../generic-click-detector";
+import { editorLineOf } from "../editor-line";
+import type { ClickSubscriber } from "../generic-click-detector";
 import { WikilinkClickCodec } from "./codec";
-import type { WikilinkClickPayload, WikiTarget } from "./payload";
+import type { WikiTarget } from "./payload";
 
-export class WikilinkClickDetector {
-	private unsubscribe: (() => void) | null = null;
-	private readonly invoker: HandlerInvoker<WikilinkClickPayload>;
-
-	constructor(
-		private readonly genericClick: GenericClickDetector,
-		private readonly app: App,
-		createInvoker: (
-			kind: PayloadKind,
-		) => HandlerInvoker<WikilinkClickPayload>,
-		private readonly pending: PendingWork,
-	) {
-		this.invoker = createInvoker(PayloadKind.WikilinkClicked);
-	}
-
-	startListening(): void {
-		if (this.unsubscribe) return;
-
-		this.unsubscribe = this.genericClick.subscribe((target, evt) => {
-			this.pending.start();
-			this.handleClick(target, evt).finally(() => this.pending.end());
-		});
-	}
-
-	stopListening(): void {
-		if (this.unsubscribe) {
-			this.unsubscribe();
-			this.unsubscribe = null;
-		}
-	}
-
-	// ─── Private ───
-
-	private async handleClick(
-		target: HTMLElement,
-		evt: MouseEvent,
-	): Promise<void> {
-		// Check if it's an internal link
-		const linkElement = this.findLinkElement(target);
+export function wikilinkClick(dispatch: EventDispatch): ClickSubscriber {
+	const { app, openLink } = dispatch.host;
+	return (target, evt) => {
+		const linkElement = findLinkElement(target);
 		if (!linkElement) return;
 
-		// If any modifier is held, always passthrough to let Obsidian handle (new tab, etc.)
-		if (evt.ctrlKey || evt.metaKey || evt.shiftKey || evt.altKey) {
-			return;
-		}
+		if (evt.ctrlKey || evt.metaKey || evt.shiftKey || evt.altKey) return;
 
-		// Get current file path
-		const splitPath = getCurrentFilePath(this.app);
+		const splitPath = getCurrentFilePath(app);
 		if (!splitPath) return;
 
-		// Extract link data
-		const wikiTarget = this.extractLinkData(linkElement, target);
+		const wikiTarget = extractLinkData(app, linkElement, target);
 		if (!wikiTarget) return;
 
-		// Extract line content
-		const blockContent = this.extractBlockContent(linkElement);
+		const blockContent = extractBlockContent(app, linkElement);
 		if (blockContent === null) return;
 
-		// Encode to payload
 		const payload = WikilinkClickCodec.encode({
 			blockContent,
 			splitPath,
 			wikiTarget,
 		});
 
-		// Check if handler applies
-		const { applies, invoke } = this.invoker(payload);
+		const handler = dispatch.decide(PayloadKind.WikilinkClicked, payload);
+		// None: Obsidian navigates.
+		if (!handler) return;
 
-		if (!applies) {
-			// No handler - let Obsidian handle navigation
-			return;
-		}
-
-		// Handler applies - prevent default and invoke
 		evt.preventDefault();
-		const result = await invoke();
+		dispatch.run(
+			PayloadKind.WikilinkClicked,
+			handler,
+			Effect.succeed(payload),
+			// Passthrough: the navigation prevented above, as Obsidian does it.
+			(result) =>
+				result.outcome === "passthrough"
+					? openLink(wikiTarget.basename, payload.sourcePath)
+					: Effect.void,
+		);
+	};
+}
 
-		if (result.outcome === "passthrough") {
-			// Handler decided to passthrough - restore navigation that was prevented
-			this.app.workspace.openLinkText(
-				wikiTarget.basename,
-				payload.sourcePath,
-				false,
-			);
-		}
+function findLinkElement(target: HTMLElement): HTMLElement | null {
+	// Check for reading mode: a.internal-link
+	const readingModeLink = target.closest(
+		DomSelectors.INTERNAL_LINK,
+	) as HTMLElement | null;
+	if (readingModeLink) {
+		return readingModeLink;
 	}
 
-	private findLinkElement(target: HTMLElement): HTMLElement | null {
-		// Check for reading mode: a.internal-link
-		const readingModeLink = target.closest(
-			DomSelectors.INTERNAL_LINK,
-		) as HTMLElement | null;
-		if (readingModeLink) {
-			return readingModeLink;
-		}
-
-		// Check for edit mode: .cm-hmd-internal-link
-		const editModeLink = target.closest(
-			DomSelectors.CM_INTERNAL_LINK,
-		) as HTMLElement | null;
-		if (editModeLink) {
-			return editModeLink;
-		}
-
-		return null;
+	// Check for edit mode: .cm-hmd-internal-link
+	const editModeLink = target.closest(
+		DomSelectors.CM_INTERNAL_LINK,
+	) as HTMLElement | null;
+	if (editModeLink) {
+		return editModeLink;
 	}
 
-	private extractLinkData(
-		linkElement: HTMLElement,
-		clickedElement: HTMLElement,
-	): WikiTarget | null {
-		// Reading mode: get from data-href attribute
-		if (linkElement.classList.contains(DomSelectors.INTERNAL_LINK_CLASS)) {
-			const href = linkElement.getAttribute(DomSelectors.DATA_HREF);
-			if (!href) return null;
+	return null;
+}
 
-			const displayText = linkElement.textContent ?? href;
-			// If displayText differs from href, it's an alias
-			const alias = displayText !== href ? displayText : undefined;
-			return { alias, basename: href };
-		}
+function extractLinkData(
+	app: App,
+	linkElement: HTMLElement,
+	clickedElement: HTMLElement,
+): WikiTarget | null {
+	// Reading mode: get from data-href attribute
+	if (linkElement.classList.contains(DomSelectors.INTERNAL_LINK_CLASS)) {
+		const href = linkElement.getAttribute(DomSelectors.DATA_HREF);
+		if (!href) return null;
 
-		// Edit mode: parse from line content
-		return this.extractLinkDataFromEditMode(linkElement, clickedElement);
+		const displayText = linkElement.textContent ?? href;
+		// If displayText differs from href, it's an alias
+		const alias = displayText !== href ? displayText : undefined;
+		return { alias, basename: href };
 	}
 
-	private extractLinkDataFromEditMode(
-		linkElement: HTMLElement,
-		clickedElement: HTMLElement,
-	): WikiTarget | null {
-		// In edit mode, the link spans might be split. Get the line and find the link.
-		const lineElement = linkElement.closest(DomSelectors.CM_LINE);
-		if (!lineElement) return null;
+	// Edit mode: parse from line content
+	return extractLinkDataFromEditMode(app, linkElement, clickedElement);
+}
 
-		const lineText = this.getLineFromEditor(lineElement);
-		if (!lineText) return null;
+function extractLinkDataFromEditMode(
+	app: App,
+	linkElement: HTMLElement,
+	clickedElement: HTMLElement,
+): WikiTarget | null {
+	// In edit mode, the link spans might be split. Get the line and find the link.
+	const lineElement = linkElement.closest(DomSelectors.CM_LINE);
+	if (!lineElement) return null;
 
-		// Get clicked text to match against links
-		const clickedText = clickedElement.textContent ?? "";
+	const lineText = editorLineOf(app, lineElement);
+	if (!lineText) return null;
 
-		// Find all wikilinks in the line using matcher
-		const nextMatch = wikilinkHelper.createMatcher(lineText);
-		let match = nextMatch();
+	// Get clicked text to match against links
+	const clickedText = clickedElement.textContent ?? "";
 
-		while (match !== null) {
-			const basename = match.target;
-			const alias = match.alias;
-			const displayText = alias ?? basename;
+	// Find all wikilinks in the line using matcher
+	const nextMatch = wikilinkHelper.createMatcher(lineText);
+	let match = nextMatch();
 
-			// Match by display text (may be partial due to CM spans)
-			if (
-				displayText.includes(clickedText) ||
-				clickedText.includes(displayText)
-			) {
-				return { alias, basename };
-			}
-			match = nextMatch();
-		}
+	while (match !== null) {
+		const basename = match.target;
+		const alias = match.alias;
+		const displayText = alias ?? basename;
 
-		// Fallback: try to get any link from the line
-		const simpleMatch = lineText.match(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/);
-		if (simpleMatch?.[1]) {
-			const basename = simpleMatch[1];
-			const alias = simpleMatch[2]; // undefined if no alias
+		// Match by display text (may be partial due to CM spans)
+		if (
+			displayText.includes(clickedText) ||
+			clickedText.includes(displayText)
+		) {
 			return { alias, basename };
 		}
-
-		return null;
+		match = nextMatch();
 	}
 
-	private extractBlockContent(linkElement: HTMLElement): string | null {
-		const lineContainer =
-			linkElement.closest(DomSelectors.CM_LINE) ??
-			linkElement.closest("p") ??
-			linkElement.closest("li") ??
-			linkElement.parentElement;
-
-		if (!lineContainer) return null;
-
-		const editorLine = this.getLineFromEditor(lineContainer);
-		if (editorLine) {
-			return editorLine;
-		}
-
-		return lineContainer.textContent ?? null;
+	// Fallback: try to get any link from the line
+	const simpleMatch = lineText.match(/\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/);
+	if (simpleMatch?.[1]) {
+		const basename = simpleMatch[1];
+		const alias = simpleMatch[2]; // undefined if no alias
+		return { alias, basename };
 	}
 
-	private getLineFromEditor(lineElement: Element): string | null {
-		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-		if (!view?.editor) return null;
+	return null;
+}
 
-		const editor = view.editor;
-		const cmContent = lineElement.closest(DomSelectors.CM_CONTENT);
-		if (!cmContent) return null;
+function extractBlockContent(
+	app: App,
+	linkElement: HTMLElement,
+): string | null {
+	const lineContainer =
+		linkElement.closest(DomSelectors.CM_LINE) ??
+		linkElement.closest("p") ??
+		linkElement.closest("li") ??
+		linkElement.parentElement;
 
-		const lines = Array.from(
-			cmContent.querySelectorAll(DomSelectors.CM_LINE),
-		);
-		const lineIndex = lines.indexOf(lineElement as Element);
-		if (lineIndex === -1) return null;
+	if (!lineContainer) return null;
 
-		return editor.getLine(lineIndex) ?? null;
+	const editorLine = editorLineOf(app, lineContainer);
+	if (editorLine) {
+		return editorLine;
 	}
+
+	return lineContainer.textContent ?? null;
 }
