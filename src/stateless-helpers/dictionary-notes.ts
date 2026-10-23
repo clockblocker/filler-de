@@ -224,29 +224,45 @@ function writeNote<P extends { readonly document: unknown }, M>(
 	>,
 	format: MetadataFormat,
 ): MetadataTransform {
-	return (content) => {
+	const rewrite = (
+		content: string,
+	): Result.Result<string, NoteMetadataError | NoteSerializeError> => {
 		const current = read(content);
 		if (current._tag === "UnreadableMetadata")
-			throw new NoteMetadataError({
-				namespace: namespace.name,
-				reason: {
-					issue: current.issue,
-					kind: "UnreadableData",
-				},
-			});
-		const serialized = serialize(current.parse.document);
-		// A transform refuses by throwing, which aborts `Vault.process`.
-		if (Result.isFailure(serialized)) throw serialized.failure;
-		const { body, metadata } = serialized.success;
-		const withBody = noteMetadataHelper.mapBody(() => body)(content);
-		return noteMetadataHelper.write(namespace, metadata, format)(withBody);
+			return Result.fail(
+				new NoteMetadataError({
+					namespace: namespace.name,
+					reason: {
+						issue: current.issue,
+						kind: "UnreadableData",
+					},
+				}),
+			);
+		return Result.map(
+			serialize(current.parse.document),
+			({ body, metadata }) =>
+				noteMetadataHelper.write(
+					namespace,
+					metadata,
+					format,
+				)(noteMetadataHelper.mapBody(() => body)(content)),
+		);
+	};
+	return (content) => {
+		const written = rewrite(content);
+		// A transform refuses by throwing. Its callers, the store's commit
+		// planning and freeform placement, run it in `Effect.try` or a
+		// `try` and turn the throw into their own failure.
+		if (Result.isFailure(written)) throw written.failure;
+		return written.success;
 	};
 }
 
 /**
  * Rewrites a file as the Lemma note of `records`, keeping the user's
  * freeform text and frontmatter properties. Throws `NoteMetadataError`
- * rather than overwrite metadata it cannot read.
+ * rather than overwrite metadata it cannot read, and `NoteSerializeError`
+ * for records no valid note holds.
  */
 export function writeLemmaNote<L extends Dumling.Language>(
 	records: LemmaRecords<L>,

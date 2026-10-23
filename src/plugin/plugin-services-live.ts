@@ -179,7 +179,7 @@ const ClassifyLive = (_deps: PluginServicesDeps) =>
 						Effect.catchTag("DumgenUnavailable", (error) =>
 							Effect.fail(
 								new UnitResolverError({
-									cause: error.cause,
+									cause: error,
 									message: error.message,
 								}),
 							),

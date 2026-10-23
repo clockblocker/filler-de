@@ -85,13 +85,13 @@ Rendering either note reads the Lemma's records: a Lemma note links its Readings
 ```ts
 // Lemma notes
 parseLemmaNote(note: { body; metadata: LemmaNoteMetadata | undefined }, { language }): { document; data }
-serializeLemmaNote(records: LemmaRecords<L>, options?: SerializeOptions<L>): { body; metadata: LemmaNoteMetadata }
-renderLemmaNote(records, options?: RenderOptions<L>): string
+serializeLemmaNote(records: LemmaRecords<L>, options?: SerializeOptions<L>): Result<{ body; metadata: LemmaNoteMetadata }, NoteSerializeError>
+renderLemmaNote(records, options?: RenderOptions<L>): Result<string, NoteSerializeError>
 
 // Reading notes
 parseReadingNote(note: { body; metadata: ReadingNoteMetadata | undefined }, { language }): { document; data }
-serializeReadingNote(records, reading: Dumling.Reading<L>, options?: SerializeOptions<L>): { body; metadata: ReadingNoteMetadata }
-renderReadingNote(records, reading, options?: RenderOptions<L>): string
+serializeReadingNote(records, reading: Dumling.Reading<L>, options?: SerializeOptions<L>): Result<{ body; metadata: ReadingNoteMetadata }, NoteSerializeError>
+renderReadingNote(records, reading, options?: RenderOptions<L>): Result<string, NoteSerializeError>
 
 // Metadata: the plugin defines its namespaces from these specs
 LEMMA_NOTE_METADATA     // { name: "lemma-note", key: "lemmaNote", version: 1, schema, migrations }
@@ -106,7 +106,7 @@ surfaceBlockIds(surfaces); tableBlockIds(selectionKeys)
 notePathsOf(records): { lemma; readings; claims; collisions }
 ```
 
-`RenderOptions` are the projections' inputs: `resolve` (the store's link resolutions), `paths`, `inflection`, `tags`, `inverseRelations` and `titles`. `SerializeOptions` adds `previous`, the document parsed from the note's current file, whose freeform serialize keeps. Parse never throws and never repairs; serialize throws `NoteSerializeError` for records no valid note holds, such as a Reading of another Lemma.
+`RenderOptions` are the projections' inputs: `resolve` (the store's link resolutions), `paths`, `inflection`, `tags`, `inverseRelations` and `titles`. `SerializeOptions` adds `previous`, the document parsed from the note's current file, whose freeform serialize keeps. Parse never throws and never repairs. Serialize and render return Effect's `Result`, failing with a `NoteSerializeError` (a `Data.TaggedError`) for records no valid note holds, such as a Reading of another Lemma or a Reading the records do not hold.
 
 A document preserves the bytes of freeform text. Data holds dumdict records only, each validated by dumdict's `parseAs*` parser for the codec's language; an invalid note returns typed issues, never invalid content as a record.
 

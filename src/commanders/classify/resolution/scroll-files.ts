@@ -8,6 +8,7 @@ import {
 	isContentConflict,
 	SplitPathKind,
 	splitPathCodec,
+	type VamDispatchFailure,
 	VaultActionKind,
 	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
@@ -15,7 +16,8 @@ import { Data, Effect } from "effect";
 import type { UnlinkObserver, UnlinkScrolls } from "./unlink-observer";
 
 export class ScrollWriteFailed extends Data.TaggedError("ScrollWriteFailed")<{
-	readonly cause: unknown;
+	/** The failed dispatch, or the path that is no Markdown note. */
+	readonly cause: VamDispatchFailure | string;
 	/** Another write won the race; the transform may run again. */
 	readonly conflict: boolean;
 	readonly message: string;
