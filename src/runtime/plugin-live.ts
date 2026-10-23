@@ -54,8 +54,6 @@ export type PluginLiveDeps = {
 	readonly requestUrl: RequestUrl;
 	/** Where the settings are stored: the plugin's `data.json`. */
 	readonly data: Pick<Plugin, "loadData" | "saveData">;
-	/** Asks the user, such as before a delimiter change renames files. */
-	readonly confirm: (title: string, message: string) => Promise<boolean>;
 	/** How long unloading may wait before it is logged; 5 s by default. */
 	readonly slowShutdown?: Duration.Input;
 };
@@ -142,9 +140,7 @@ export function PluginLive(
 				),
 			),
 		),
-		Layer.provideMerge(
-			SettingsLive({ confirm: deps.confirm, notices: deps.notices }),
-		),
+		Layer.provideMerge(SettingsLive({ notices: deps.notices })),
 		Layer.provideMerge(
 			Layer.mergeAll(
 				Lifecycle.layer({ notices: deps.notices }),

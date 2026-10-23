@@ -1,5 +1,9 @@
-import { type App, Notice, PluginSettingTab, Setting } from "obsidian";
+import { type App, PluginSettingTab, Setting } from "obsidian";
 import type TextEaterPluginStripped from "../main-stripped";
+import {
+	type NoticeSink,
+	obsidianNotices,
+} from "../managers/obsidian/host/notices";
 import { ACTION_DEFINITIONS } from "../managers/overlay-manager/action-definitions/definitions";
 import {
 	KnownLanguageSchema,
@@ -31,7 +35,12 @@ const FORBIDDEN_DELIMITER_CHARS = [
 export class SettingsTab extends PluginSettingTab {
 	plugin: TextEaterPluginStripped;
 
-	constructor(app: App, plugin: TextEaterPluginStripped) {
+	constructor(
+		app: App,
+		plugin: TextEaterPluginStripped,
+		/** What the tab's own checks tell the user, as they decide. */
+		private readonly notices: NoticeSink = obsidianNotices,
+	) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -251,20 +260,22 @@ export class SettingsTab extends PluginSettingTab {
 					if (value === pending) return;
 					// Validate length: 1-3 chars
 					if (value.length < 1 || value.length > 3) {
-						new Notice(t.delimiterLengthError);
+						this.notices.show(t.delimiterLengthError);
 						text.setValue(delimiterNow());
 						return;
 					}
 					// Validate no spaces
 					if (value.includes(" ")) {
-						new Notice(t.delimiterSpacesError);
+						this.notices.show(t.delimiterSpacesError);
 						text.setValue(delimiterNow());
 						return;
 					}
 					// Validate each char against forbidden list
 					for (const char of value) {
 						if (FORBIDDEN_DELIMITER_CHARS.includes(char)) {
-							new Notice(t.delimiterForbiddenCharError(char));
+							this.notices.show(
+								t.delimiterForbiddenCharError(char),
+							);
 							text.setValue(delimiterNow());
 							return;
 						}

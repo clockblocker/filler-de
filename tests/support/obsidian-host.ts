@@ -9,6 +9,7 @@ import {
 	type NoticeHandle,
 	type NoticeSink,
 	ObsidianHostOver,
+	type OpenConfirm,
 } from "../../src/managers/obsidian/host";
 
 type Callback = (...args: never[]) => void;
@@ -115,13 +116,56 @@ export function recordingNotices() {
 	return { messages: () => shown.map(({ message }) => message), shown, sink };
 }
 
-/** The host over a fake plugin, with notices that record what they show. */
-export function fakeHost() {
+/**
+ * A confirmation that answers each question with the next of `answers`,
+ * at once, or holds it open while `answers` is empty.
+ */
+export function scriptedConfirm(answers: boolean[] = []) {
+	const asked: { title: string; message: string }[] = [];
+	let open = 0;
+	const confirm: OpenConfirm = (title, message, answer) => {
+		asked.push({ message, title });
+		const next = answers.shift();
+		if (next !== undefined) {
+			answer(next);
+			return { close: () => {} };
+		}
+		open++;
+		let closed = false;
+		return {
+			close: () => {
+				if (closed) return;
+				closed = true;
+				open--;
+				answer(false);
+			},
+		};
+	};
+	return { asked, confirm, open: () => open };
+}
+
+/**
+ * The host over a fake plugin, recording notices, a scripted confirmation
+ * and a workspace that records the links it opens. With no `answers`, a
+ * confirmation stays open until it is closed, as a modal the user has not
+ * answered: a test that asks must answer, or close it by disposing.
+ */
+export function fakeHost(options: { readonly answers?: boolean[] } = {}) {
 	const obsidian = fakeHostPlugin();
 	const notices = recordingNotices();
+	const confirm = scriptedConfirm(options.answers);
+	const opened: { target: string; sourcePath: string; newLeaf: unknown }[] =
+		[];
 	const layer = ObsidianHostOver({
+		confirm: confirm.confirm,
 		notices: notices.sink,
 		plugin: obsidian.plugin,
+		workspace: {
+			openLinkText: (target, sourcePath, newLeaf) => {
+				opened.push({ newLeaf, sourcePath, target });
+				return Promise.resolve();
+			},
+		},
 	});
-	return { layer, notices, obsidian };
+	return { confirm, layer, notices, obsidian, opened };
 }

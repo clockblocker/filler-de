@@ -2,9 +2,8 @@
  * Error types for the split-to-pages action.
  */
 
-import { logError } from "@textfresser/vault-action-manager/issue-handlers";
+import { formatError } from "@textfresser/vault-action-manager/issue-handlers";
 import { Effect, Schema } from "effect";
-import { Notice } from "obsidian";
 import {
 	type CommandRecoveryOutcome,
 	CommandRecoveryOutcomeSchema,
@@ -159,17 +158,21 @@ const ERROR_MESSAGES: Record<SplitToPagesError["kind"], string> = {
 
 // ─── Error Handler ───
 
-/** Shows and logs the error, then tells the user what failed. */
-export const handleSplitToPagesError = (
-	error: SplitToPagesError,
-): Effect.Effect<void> =>
-	logError({
-		description: `${error.kind}: ${error.reason}`,
-		location: "splitToPagesAction",
-	}).pipe(
-		Effect.andThen(
-			Effect.sync(() => {
-				new Notice(ERROR_MESSAGES[error.kind]);
-			}),
-		),
-	);
+/**
+ * Shows and logs the error, then tells the user what failed, each through
+ * `notify`.
+ */
+export const handleSplitToPagesError =
+	(notify: (message: string) => void) =>
+	(error: SplitToPagesError): Effect.Effect<void> => {
+		const message = formatError({
+			description: `${error.kind}: ${error.reason}`,
+			location: "splitToPagesAction",
+		});
+		return Effect.sync(() => notify(message)).pipe(
+			Effect.andThen(Effect.logError(message)),
+			Effect.andThen(
+				Effect.sync(() => notify(ERROR_MESSAGES[error.kind])),
+			),
+		);
+	};

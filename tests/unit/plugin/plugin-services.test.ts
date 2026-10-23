@@ -4,7 +4,12 @@ import { type Context, Effect, Exit, Layer, Scope } from "effect";
 import { DictionaryStore } from "../../../src/lifecycle/dictionary-store-service";
 import { Lifecycle } from "../../../src/lifecycle/lifecycle-supervisor";
 import { Dumgen } from "../../../src/managers/dumgen";
-import { Notices, PluginHost } from "../../../src/managers/obsidian/host";
+import {
+	Confirm,
+	Notices,
+	PluginHost,
+	Workspace,
+} from "../../../src/managers/obsidian/host";
 import {
 	ClassifyServices,
 	composePluginServices,
@@ -58,6 +63,8 @@ describe("the plugin's services", () => {
 					Layer.succeed(Settings, {} as never),
 					Layer.succeed(PluginHost, {} as never),
 					Layer.succeed(Notices, {} as never),
+					Layer.succeed(Confirm, {} as never),
+					Layer.succeed(Workspace, {} as never),
 				),
 			),
 		);

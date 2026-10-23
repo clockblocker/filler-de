@@ -30,28 +30,14 @@ import type {
 } from "../lifecycle/lifecycle-supervisor";
 import type { SuffixDelimiterConfig } from "../types";
 import { buildCanonicalDelimiter } from "../utils/delimiter";
-import { getErrorMessage } from "../utils/get-error-message";
 
 /** The migration could not begin, such as for a Library root that is no folder. */
 export class DelimiterMigrationUnavailable extends Data.TaggedError(
 	"DelimiterMigrationUnavailable",
 )<{ readonly message: string }> {}
 
-/** Asking the user to confirm the renames failed. */
-export class DelimiterConfirmationFailed extends Data.TaggedError(
-	"DelimiterConfirmationFailed",
-)<{
-	/** What the confirmation's Promise rejected with. */
-	readonly cause: unknown;
-}> {
-	override get message(): string {
-		return getErrorMessage(this.cause);
-	}
-}
-
 /** What the migration's lifecycle, around its plan and renames, fails with. */
 export type DelimiterLifecycleFailure =
-	| DelimiterConfirmationFailed
 	| DelimiterMigrationUnavailable
 	| LibrarianStartFailed
 	| LifecycleStoppedError
@@ -64,7 +50,11 @@ export type DelimiterMigrationDeps = {
 	>;
 	readonly service: DelimiterChangeService;
 	readonly libraryRoot: string;
-	readonly confirm: (title: string, message: string) => Promise<boolean>;
+	/** Asks the user before the renames: `Confirm.ask`. */
+	readonly confirm: (
+		title: string,
+		message: string,
+	) => Effect.Effect<boolean>;
 	/** Puts `config` into the settings in effect. */
 	readonly applyDelimiter: (
 		config: SuffixDelimiterConfig,
@@ -136,15 +126,10 @@ function migrate(
 			deps.service,
 			{
 				confirm: (plan) =>
-					Effect.tryPromise({
-						catch: (cause) =>
-							new DelimiterConfirmationFailed({ cause }),
-						try: () =>
-							deps.confirm(
-								"Rename files?",
-								`Changing suffix delimiter from "${delimiters.oldDelimiter}" to "${delimiters.newDelimiter}" will rename ${plan.previewCount} file(s). Continue?`,
-							),
-					}),
+					deps.confirm(
+						"Rename files?",
+						`Changing suffix delimiter from "${delimiters.oldDelimiter}" to "${delimiters.newDelimiter}" will rename ${plan.previewCount} file(s). Continue?`,
+					),
 				pause: () => deps.supervisor.pause("DelimiterMigration"),
 				// The supervisor knows whether the Librarian is paused, so it
 				// unsubscribes the current one only when it still runs.
