@@ -146,7 +146,9 @@ export function scriptedConfirm(answers: boolean[] = []) {
 
 /**
  * The host over a fake plugin, recording notices, a scripted confirmation
- * and a workspace that records the links it opens.
+ * and a workspace that records the links it opens. With no `answers`, a
+ * confirmation stays open until it is closed, as a modal the user has not
+ * answered: a test that asks must answer, or close it by disposing.
  */
 export function fakeHost(options: { readonly answers?: boolean[] } = {}) {
 	const obsidian = fakeHostPlugin();

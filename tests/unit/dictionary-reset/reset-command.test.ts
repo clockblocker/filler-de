@@ -48,9 +48,8 @@ async function resetOver(
 		}),
 	);
 	const deps: DictionaryResetDeps = {
-		app: {
-			workspace: { openLinkText: () => Promise.resolve() },
-		} as unknown as App,
+		// Only the modals take it.
+		app: {} as unknown as App,
 		cache: memorySegmentationCache(),
 		checkProviderKeys: Effect.succeed([]),
 		dumgen,
@@ -157,5 +156,80 @@ describe("the dictionary reset's Execute", () => {
 		expect(shownNotices.slice(before)).toEqual([]);
 		expect(reset.isRunning()).toBe(false);
 		expect(await Effect.runPromise(reset.cancel)).toBe(false);
+	});
+});
+
+describe("the dictionary reset's report", () => {
+	/** An Execute from an old note with nothing to regenerate, up to its report. */
+	async function executeToReport(openLinkText: () => Promise<void>) {
+		const vault = makeObsidianVault({
+			[`${SOURCE}/de/lexem/lemma/h/hun/hund/Hund.md`]:
+				"🐕 der [[Hund]] ^LX-LM-NOUN-1\n",
+		});
+		const { manager } = createVaultActionManager(vault.app);
+		const { value: knowledge } = await inScope(
+			makeKnowledgeQueue({
+				notify: () => {},
+				run: () => Effect.die("no Knowledge runs here"),
+			}),
+		);
+		const opened: unknown[][] = [];
+		const reset = Effect.runSync(
+			DictionaryResetCommand.make({
+				app: {} as unknown as App,
+				cache: memorySegmentationCache(),
+				checkProviderKeys: Effect.succeed([]),
+				dumgen: ((effect: Effect.Effect<unknown>) => effect) as never,
+				knowledge,
+				missingProviderKeys: Effect.succeed([]),
+				notices: Notices.over(obsidianNotices),
+				run: (_kind, effect) => {
+					Effect.runFork(effect);
+				},
+				segmenterVersion: Effect.succeed("test-segmenter"),
+				store: Effect.succeed({
+					appendFreeform: () => Effect.die("no freeform here"),
+					caughtUp: Effect.void,
+				} as never),
+				vam: manager,
+				workspace: Workspace.over({
+					openLinkText: (...args) => {
+						opened.push(args);
+						return openLinkText();
+					},
+				}),
+			}),
+		);
+		await Effect.runPromise(reset.open);
+		expect(reset.clickButton("Execute…")).toBe(true);
+		expect(reset.clickButton("Execute")).toBe(true);
+		const executed = reset.lastExecute();
+		if (!executed) throw new Error("the Execute did not start");
+		return { opened, outcome: await outcomeOf(executed) };
+	}
+
+	it("opens in a new tab once the Execute wrote it", async () => {
+		const { opened, outcome } = await executeToReport(() =>
+			Promise.resolve(),
+		);
+		expect(outcome.kind).toBe("Done");
+		const reportPath = outcome.kind === "Done" ? outcome.reportPath : "";
+		expect(opened).toEqual([[reportPath, "", true]]);
+		expect(shownNotices.at(-1)).toBe(
+			`Dictionary reset done; see ${reportPath}`,
+		);
+	});
+
+	it("stops the Execute, telling why, when it cannot be opened", async () => {
+		const { opened, outcome } = await executeToReport(() =>
+			Promise.reject(new Error("no leaf")),
+		);
+		const [[reportPath]] = opened as [[string]];
+		const notice = `⚠ Dictionary reset stopped: The report ${reportPath} could not be opened: no leaf`;
+		expect(outcome).toEqual({ kind: "Stopped", notice });
+		expect(shownNotices.slice(-2)).toEqual([
+			`Dictionary reset done; see ${reportPath}`,
+			notice,
+		]);
 	});
 });

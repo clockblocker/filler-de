@@ -152,13 +152,15 @@ describe("PluginLive", () => {
 		options: {
 			readonly slowShutdown?: number;
 			readonly data?: ReturnType<typeof memoryPluginData>;
+			readonly host?: ReturnType<typeof fakeHost>;
 		} = {},
 	) {
 		const trace = makeRecentTrace();
+		const host = options.host ?? fakeHost({ answers: [] });
 		const runtime = makePluginRuntime(
 			PluginLive(vault.app as unknown as App, {
 				data: options.data ?? memoryPluginData(),
-				host: fakeHost().layer,
+				host: host.layer,
 				notices: createLifecycleNotices(() => {}, {
 					trace,
 					writeStop: () => {},
@@ -202,6 +204,7 @@ describe("PluginLive", () => {
 			return runtime.e2e("vam", Effect.service(VaultActionManager));
 		};
 		return {
+			host,
 			launch,
 			lifecycle: () => lifecycle as LifecycleSupervisor<Librarian>,
 			runtime,
@@ -328,7 +331,40 @@ describe("PluginLive", () => {
 		}
 	}, 30_000);
 
-	it("disposes newest first: the services the launch built, then the Librarian, then VAM", async () => {
+	it("closes the delimiter migration's dialog when the plugin unloads while it asks, and renames nothing", async () => {
+		const data = memoryPluginData();
+		// No answer: the dialog stays open until something closes it.
+		const host = fakeHost();
+		const plugin = makePlugin(
+			makeObsidianVault({ [`${RAMEN}/Anchor-Ramen-Soup.md`]: "" }),
+			{ data, host },
+		);
+		const settings = await plugin.runtime.e2e(
+			"settings",
+			Effect.service(Settings),
+		);
+		await plugin.launch((manager) =>
+			Effect.succeed(
+				launched(
+					(onStopped) => Librarian.make(manager, { onStopped, settings }),
+				),
+			),
+		);
+		const update = plugin.runtime.settings(
+			settings.update({ suffixDelimiter: { symbol: "_" } }),
+		);
+		await until(() => host.confirm.open() === 1);
+		expect(host.confirm.asked[0]?.title).toBe("Rename files?");
+
+		await plugin.runtime.dispose();
+		await update;
+		expect(host.confirm.open()).toBe(0);
+		expect(plugin.vault.files()).toContain(`${RAMEN}/Anchor-Ramen-Soup.md`);
+		expect(data.saved).toEqual([]);
+		expect(host.notices.messages()).toEqual([]);
+	}, 30_000);
+
+		it("disposes newest first: the services the launch built, then the Librarian, then VAM", async () => {
 		const released: string[] = [];
 		const plugin = makePlugin(
 			makeObsidianVault({ [`${RAMEN}/Anchor-Ramen-Soup.md`]: "" }),
