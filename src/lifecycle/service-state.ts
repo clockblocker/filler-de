@@ -1,17 +1,18 @@
 /**
  * Where a long-lived plugin service is in its life. `Idle` is before its
- * first start; `Stopped` is after the plugin unloaded, and final.
+ * first start; `Stopped` is after the plugin unloaded, and final. `Failed`
+ * holds what failed it, a `Failure`.
  */
-export type ServiceState<PauseReason extends string = never> =
+export type ServiceState<PauseReason extends string = never, Failure = never> =
 	| { readonly kind: "Idle" }
 	| { readonly kind: "Starting" }
 	| { readonly kind: "Running" }
 	| { readonly kind: "Paused"; readonly reason: PauseReason }
-	| { readonly kind: "Failed"; readonly cause: unknown }
+	| { readonly kind: "Failed"; readonly cause: Failure }
 	| { readonly kind: "Stopped" };
 
 export const ServiceState = {
-	failed: (cause: unknown): ServiceState<never> =>
+	failed: <Failure>(cause: Failure): ServiceState<never, Failure> =>
 		Object.freeze({ cause, kind: "Failed" as const }),
 	idle: Object.freeze({ kind: "Idle" as const }),
 	paused: <PauseReason extends string>(

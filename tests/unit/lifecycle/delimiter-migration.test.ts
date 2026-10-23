@@ -2,8 +2,10 @@ import { describe, expect, it } from "bun:test";
 import {
 	SplitPathKind,
 	type SplitPathToFolder,
+	VamScanError,
 } from "@textfresser/vault-action-manager";
-import { Deferred, Effect } from "effect";
+import { Cause, Deferred, Effect } from "effect";
+import { LibrarianStopped } from "../../../src/commanders/librarian/librarian";
 import type { DelimiterChangeService } from "../../../src/commanders/librarian/runtime/delimiter-change-service";
 import { planDelimiterMigration } from "../../../src/commanders/librarian/runtime/delimiter-migration-plan";
 import { createLifecycleNotices } from "../../../src/lifecycle/lifecycle-notices";
@@ -102,9 +104,19 @@ function makeHarness() {
 								if (failStarts > 0) {
 									failStarts--;
 									fake.subscribed = false;
-									const cause = new Error("disk full");
-									onStopped({ kind: "Stopped", message: "Librarian notice" });
-									return yield* Effect.fail(cause);
+									const stop = new LibrarianStopped({
+										cause: Cause.fail(
+											new VamScanError({
+												cause: new Error("disk full"),
+												operation: "scanFolder",
+												path: "Library",
+											}),
+										),
+										message: "Librarian notice",
+										phase: "Startup",
+									});
+									onStopped(stop);
+									return yield* Effect.fail(stop);
 								}
 							}),
 						subscribed: false,

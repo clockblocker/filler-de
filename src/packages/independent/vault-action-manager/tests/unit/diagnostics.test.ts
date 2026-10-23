@@ -63,6 +63,28 @@ describe("formatCause", () => {
 		);
 	});
 
+	it("renders every reason of a Cause an error wraps in its cause field", () => {
+		class StartFailed extends Data.TaggedError("StartFailed")<{
+			readonly cause: Cause.Cause<ReadFailed>;
+		}> {}
+		const failure = new StartFailed({
+			cause: Cause.combine(
+				Cause.fail(new ReadFailed({ path: "Library" })),
+				Cause.die(new Error("finalizer exploded")),
+			),
+		});
+
+		expect(formatCause(Cause.fail(failure), { stack: false })).toBe(
+			'StartFailed; caused by ReadFailed (path="Library"); Defect: Error: finalizer exploded',
+		);
+		const text = formatCause(Cause.fail(failure));
+		expect(text).toContain('caused by: ReadFailed (path="Library")');
+		expect(text).toContain("Defect: Error: finalizer exploded");
+		expect(describeError(failure, { stack: false })).toContain(
+			"Defect: Error: finalizer exploded",
+		);
+	});
+
 	it("names who interrupted, alone or beside a failure", () => {
 		expect(formatCause(Cause.interrupt(7))).toBe("Interrupted by fiber #7");
 		expect(

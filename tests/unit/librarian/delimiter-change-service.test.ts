@@ -17,7 +17,7 @@ import {
 	VaultPath,
 	type VaultScanPath,
 } from "@textfresser/vault-action-manager";
-import { Effect } from "effect";
+import { Cause, Effect, Option } from "effect";
 import {
 	DelimiterChangeService,
 	type DelimiterMigrationVam,
@@ -355,6 +355,42 @@ describe("delimiter migration lifecycle", () => {
 		]);
 	});
 
+	test("a dispatch failure beside a defect decides on the typed failure and keeps both", async () => {
+		const harness = makeHarness([readableMdPath("alpha-beta")]);
+		harness.dispatchOrUndo = (actions) =>
+			Effect.fail(
+				notRun(
+					new VamPlanningError({
+						action: actions[0],
+						cause: new Error("folder lookup failed"),
+						operation: "planDispatchBatch",
+					}),
+					actions,
+				),
+			).pipe(Effect.ensuring(Effect.die(new Error("report exploded"))));
+		const coordinator = new DelimiterMigrationCoordinator(
+			harness.service,
+			harness.lifecycle(),
+		);
+
+		const outcome = await Effect.runPromise(
+			coordinator.migrate(oldConfig, newConfig, root),
+		);
+
+		expect(outcome.kind).toBe("Failed");
+		if (outcome.kind !== "Failed") return;
+		expect(outcome.execution?.kind).toBe("RolledBack");
+		if (outcome.execution?.kind !== "RolledBack") return;
+		expect(outcome.execution.failure.operation).toBe("planDispatchBatch");
+		const { dispatch } = outcome.execution.failure;
+		expect(dispatch.reasons.filter(Cause.isFailReason)).toHaveLength(1);
+		expect(dispatch.reasons.filter(Cause.isDieReason)).toHaveLength(1);
+		expect(outcome.problem.cause).toBe(dispatch);
+		expect(reportDelimiterMigration(outcome, delimiters).log).toContain(
+			"dispatch also: report exploded",
+		);
+	});
+
 	test("a planning failure touched nothing and is not observed", async () => {
 		const harness = makeHarness([readableMdPath("alpha-beta")]);
 		// VAM looks up each rename's target before the batch; only probes
@@ -637,16 +673,19 @@ describe("delimiter migration lifecycle", () => {
 
 		expect(outcome.kind).toBe("Failed");
 		if (outcome.kind !== "Failed") return;
+		const conflict = Option.getOrUndefined(
+			Cause.findErrorOption(outcome.problem.cause),
+		);
 		expect(outcome.problem.stage).toBe("Planning");
-		expect(outcome.problem.cause).toBeInstanceOf(
+		expect(conflict).toBeInstanceOf(
 			DelimiterRenameConflictError,
 		);
 		expect(outcome.problem.operation).toBe(
 			"planDelimiterMigration.conflicts",
 		);
-		if (!(outcome.problem.cause instanceof DelimiterRenameConflictError))
+		if (!(conflict instanceof DelimiterRenameConflictError))
 			return;
-		expect(outcome.problem.cause.conflicts).toEqual([
+		expect(conflict.conflicts).toEqual([
 			{
 				from: "Library/alpha-beta.md",
 				occupiedBy: "Library/alpha - beta.md",
@@ -660,11 +699,11 @@ describe("delimiter migration lifecycle", () => {
 				to: "Library/gamma ~ delta.md",
 			},
 		]);
-		expect(outcome.problem.cause.message).toBe(
+		expect(conflict.message).toBe(
 			"2 rename(s) would land on a name already in use: Library/alpha-beta.md → Library/alpha ~ beta.md (also the new name of Library/alpha - beta.md); Library/gamma-delta.md → Library/gamma ~ delta.md (already exists)",
 		);
 		expect(reportDelimiterMigration(outcome, delimiters).notice).toBe(
-			`Delimiter change failed before any file was renamed: ${outcome.problem.cause.message}. Kept the delimiter "-".`,
+			`Delimiter change failed before any file was renamed: ${conflict.message}. Kept the delimiter "-".`,
 		);
 		expect(harness.confirmCalls).toBe(0);
 		expect(harness.pauseCalls).toBe(0);
@@ -688,9 +727,12 @@ describe("delimiter migration lifecycle", () => {
 
 		expect(outcome.kind).toBe("Failed");
 		if (outcome.kind !== "Failed") return;
-		if (!(outcome.problem.cause instanceof DelimiterRenameConflictError))
+		const conflict = Option.getOrUndefined(
+			Cause.findErrorOption(outcome.problem.cause),
+		);
+		if (!(conflict instanceof DelimiterRenameConflictError))
 			throw new Error("expected a rename conflict");
-		expect(outcome.problem.cause.message).toBe(
+		expect(conflict.message).toBe(
 			"1 rename(s) would land on a name already in use: Library/Alpha-Beta.md → Library/Alpha ~ Beta.md (Library/alpha ~ beta.md already exists)",
 		);
 		expect(harness.pauseCalls).toBe(0);
@@ -748,6 +790,34 @@ describe("delimiter migration lifecycle", () => {
 		expect(harness.restoreCalls).toBe(0);
 	});
 
+	test("a scan failure beside a defect keeps both in the problem and the report", async () => {
+		const harness = makeHarness([]);
+		harness.scan = () =>
+			Effect.fail(
+				new VamScanError({
+					cause: new Error("folder unavailable"),
+					operation: "scanRoot",
+					path: "Library",
+				}),
+			).pipe(Effect.ensuring(Effect.die(new Error("listing exploded"))));
+		const coordinator = new DelimiterMigrationCoordinator(
+			harness.service,
+			harness.lifecycle(),
+		);
+
+		const outcome = await Effect.runPromise(
+			coordinator.migrate(oldConfig, newConfig, root),
+		);
+
+		expect(outcome.kind).toBe("Failed");
+		if (outcome.kind !== "Failed") return;
+		expect(outcome.problem.operation).toBe("scanRoot");
+		expect(outcome.problem.cause.reasons).toHaveLength(2);
+		const report = reportDelimiterMigration(outcome, delimiters);
+		expect(report.notice).toContain("folder unavailable");
+		expect(report.notice).toContain("listing exploded");
+	});
+
 	test("a typed root scan failure reaches the UI boundary unchanged", async () => {
 		const harness = makeHarness([]);
 		const scanFailure = new VamScanError({
@@ -767,7 +837,9 @@ describe("delimiter migration lifecycle", () => {
 
 		expect(outcome.kind).toBe("Failed");
 		if (outcome.kind !== "Failed") return;
-		expect(outcome.problem.cause).toBe(scanFailure);
+		expect(Cause.findErrorOption(outcome.problem.cause)).toEqual(
+			Option.some(scanFailure),
+		);
 		expect(outcome.problem.operation).toBe("scanRoot");
 		expect(harness.pauseCalls).toBe(0);
 	});
@@ -802,7 +874,9 @@ describe("delimiter migration lifecycle", () => {
 		expect(outcome.kind).toBe("Failed");
 		if (outcome.kind !== "Failed") return;
 		expect(outcome.problem.stage).toBe("Planning");
-		expect(outcome.problem.cause).toEqual([diagnostic]);
+		expect(Cause.findErrorOption(outcome.problem.cause)).toEqual(
+			Option.some([diagnostic]),
+		);
 		expect(harness.pauseCalls).toBe(0);
 		expect(harness.dispatchCalls).toBe(0);
 	});
@@ -1145,9 +1219,13 @@ function makeHarness(
 				: Effect.succeed(false),
 		readContent: () => Effect.die(new Error("renames read no content")),
 	};
+	let dispatchOrUndoImpl: DelimiterMigrationVam["dispatchOrUndo"] | null =
+		null;
 	const vam: DelimiterMigrationVam = {
 		dispatchOrUndo: (actions, options) =>
-			dispatchOrUndoVia(port, actions, options),
+			dispatchOrUndoImpl
+				? dispatchOrUndoImpl(actions, options)
+				: dispatchOrUndoVia(port, actions, options),
 		exists: (path) => existsImpl(path),
 		paths: VaultPath.forFileSystem({ caseInsensitive }),
 		scan: (libraryRoot) => {
@@ -1170,6 +1248,10 @@ function makeHarness(
 		get dispatchedActions() {
 			return dispatchedActions;
 		},
+		/** Stands in for VAM's whole `dispatchOrUndo`, undo included. */
+		set dispatchOrUndo(implementation: DelimiterMigrationVam["dispatchOrUndo"]) {
+			dispatchOrUndoImpl = implementation;
+		},
 		set exists(implementation: typeof existsImpl) {
 			existsImpl = implementation;
 		},
@@ -1181,8 +1263,8 @@ function makeHarness(
 		},
 		files,
 		lifecycle(
-			overrides: Partial<DelimiterMigrationLifecycle> = {},
-		): DelimiterMigrationLifecycle {
+			overrides: Partial<DelimiterMigrationLifecycle<Error>> = {},
+		): DelimiterMigrationLifecycle<Error> {
 			return {
 				confirm: (plan) => {
 					confirmCalls += 1;

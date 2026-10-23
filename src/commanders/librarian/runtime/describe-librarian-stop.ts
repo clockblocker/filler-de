@@ -7,7 +7,8 @@ import {
 	VamScanError,
 	VamVaultIoError,
 } from "@textfresser/vault-action-manager";
-import { Predicate } from "effect";
+import { Cause, Predicate } from "effect";
+import { causeValues } from "../../../utils/causes";
 import { getErrorMessage } from "../../../utils/get-error-message";
 
 export const RESTART_LIBRARIAN_COMMAND_NAME = "Restart Librarian";
@@ -45,8 +46,9 @@ export function describeMissingLibraryRoot(failure: VamScanError): string {
  * The notice for a Librarian that stopped: that it stopped, why, with the
  * files whose healing failed, and what to do about it.
  *
- * `failure` is what stopped it: a reconciliation outcome, or the error that
- * failed startup before reconciling.
+ * `failure` is what stopped it: a reconciliation outcome, the error that
+ * failed startup before reconciling, or a `Cause` of any of them, whose
+ * every failure and defect is told.
  */
 export function describeLibrarianStop(
 	phase: LibrarianStopPhase,
@@ -64,6 +66,8 @@ export function describeLibrarianStop(
 
 	if (files.length > 0) {
 		lines.push(`Failed: ${listItems(files)}.`);
+		const others = items.filter((item) => item.path === null);
+		if (others.length > 0) lines.push(`Also: ${listItems(others)}.`);
 		lines.push(
 			`Fix or move these files, then run "${RESTART_LIBRARIAN_COMMAND_NAME}" from the command palette.`,
 		);
@@ -113,6 +117,8 @@ function isReconciliationOutcome(value: unknown): value is {
 
 /** A failed recovery whose cause is not the original failure ran a rescan. */
 function wasRescanned(failure: unknown): boolean {
+	if (Array.isArray(failure)) return failure.some(wasRescanned);
+	if (Cause.isCause(failure)) return causeValues(failure).some(wasRescanned);
 	return (
 		isReconciliationOutcome(failure) &&
 		failure.recovery.kind === "Failed" &&
@@ -123,6 +129,8 @@ function wasRescanned(failure: unknown): boolean {
 function collectFailedItems(failure: unknown): FailedItem[] {
 	if (failure === undefined || failure === null) return [];
 	if (Array.isArray(failure)) return failure.flatMap(collectFailedItems);
+	if (Cause.isCause(failure))
+		return causeValues(failure).flatMap(collectFailedItems);
 
 	if (isReconciliationOutcome(failure)) {
 		// The last failure is the one that left the Librarian stopped: the
@@ -179,6 +187,8 @@ function collectFailedItems(failure: unknown): FailedItem[] {
 	const cause = Predicate.hasProperty(failure, "cause")
 		? failure.cause
 		: failure;
+	// A dispatch or rescan that died holds its whole cause.
+	if (Cause.isCause(cause)) return collectFailedItems(cause);
 	const path =
 		Predicate.hasProperty(failure, "path") &&
 		Predicate.isString(failure.path)

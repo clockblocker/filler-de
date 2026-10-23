@@ -1,5 +1,13 @@
-import { splitPathCodec } from "@textfresser/vault-action-manager";
-import { Predicate } from "effect";
+import {
+	splitPathCodec,
+	VamDispatchFailure,
+} from "@textfresser/vault-action-manager";
+import { Cause, Predicate } from "effect";
+import {
+	LibrarianStartFailed,
+	ReleaseFailed,
+} from "../../../lifecycle/lifecycle-errors";
+import { causeValues } from "../../../utils/causes";
 import { getErrorMessage } from "../../../utils/get-error-message";
 import type {
 	DelimiterActionFailure,
@@ -7,11 +15,8 @@ import type {
 } from "./delimiter-change-service";
 import type { DelimiterMigrationOutcome } from "./delimiter-migration-coordinator";
 import type { DelimiterRenameAction } from "./delimiter-migration-plan";
-import {
-	describeLibrarianStop,
-	describeMissingLibraryRoot,
-	isMissingLibraryRoot,
-} from "./describe-librarian-stop";
+import { describeLibrarianStop } from "./describe-librarian-stop";
+import { LibrarianStopped, LibraryRootMissing } from "./librarian-stop";
 
 export type DelimiterMigrationReport = {
 	/** Whether the setting must keep the new delimiter: every note carries it. */
@@ -35,8 +40,8 @@ const LISTED_FILES = 5;
  * Whether every note carries the new delimiter but the Librarian failed to
  * restart under it, so the restart is worth one more try.
  */
-export function needsLibrarianRestartRetry(
-	outcome: DelimiterMigrationOutcome,
+export function needsLibrarianRestartRetry<E>(
+	outcome: DelimiterMigrationOutcome<E>,
 ): boolean {
 	return (
 		outcome.kind === "Failed" &&
@@ -52,8 +57,8 @@ export function needsLibrarianRestartRetry(
  * `librarianRestartRetried` is whether the retry `needsLibrarianRestartRetry`
  * asks for restarted the Librarian; absent when there was none.
  */
-export function reportDelimiterMigration(
-	outcome: DelimiterMigrationOutcome,
+export function reportDelimiterMigration<E>(
+	outcome: DelimiterMigrationOutcome<E>,
 	delimiters: {
 		readonly newDelimiter: string;
 		readonly oldDelimiter: string;
@@ -87,8 +92,8 @@ export function reportDelimiterMigration(
 	}
 }
 
-function reportFailure(
-	outcome: Extract<DelimiterMigrationOutcome, { kind: "Failed" }>,
+function reportFailure<E>(
+	outcome: Extract<DelimiterMigrationOutcome<E>, { kind: "Failed" }>,
 	delimiters: {
 		readonly newDelimiter: string;
 		readonly oldDelimiter: string;
@@ -156,11 +161,25 @@ function reportFailure(
 	);
 }
 
-/** Why the Librarian did not restart, as its own stop notice would say. */
-function describeRestartFailure(cause: unknown): string {
-	return isMissingLibraryRoot(cause)
-		? describeMissingLibraryRoot(cause)
-		: describeLibrarianStop("Startup", cause);
+/**
+ * Why the Librarian did not restart, as its own stop notice would say, from
+ * what stopped it: every reason of its start's failure.
+ */
+function describeRestartFailure<E>(cause: Cause.Cause<E>): string {
+	const reasons = causeValues(cause).flatMap((failure) =>
+		failure instanceof LibrarianStartFailed
+			? causeValues(failure.cause)
+			: [failure],
+	);
+	const [first] = reasons;
+	if (reasons.length === 1 && first instanceof LibraryRootMissing)
+		return first.message;
+	return describeLibrarianStop(
+		"Startup",
+		reasons.map((reason) =>
+			reason instanceof LibrarianStopped ? reason.cause : reason,
+		),
+	);
 }
 
 /** One account of a failed execution: the failure, then the files' state. */
@@ -208,7 +227,7 @@ function describeFailure(failure: DelimiterActionFailure): string {
 		: `${failure.operation} failed (${reason})`;
 }
 
-function describeLog(outcome: DelimiterMigrationOutcome): string {
+function describeLog<E>(outcome: DelimiterMigrationOutcome<E>): string {
 	const lines: string[] = [];
 	if (outcome.kind === "Failed") {
 		lines.push(
@@ -222,6 +241,17 @@ function describeLog(outcome: DelimiterMigrationOutcome): string {
 	}
 	const execution = "execution" in outcome ? outcome.execution : undefined;
 	if (execution && execution.kind !== "Completed") {
+		// What else failed in the dispatch, beside the failure described:
+		// VAM's typed one, or else the first.
+		const values = causeValues(execution.failure.dispatch);
+		const described =
+			values.find((value) => value instanceof VamDispatchFailure) ??
+			values[0];
+		const others = values.filter((value) => value !== described);
+		if (others.length > 0)
+			lines.push(
+				`dispatch also: ${others.map(getErrorMessage).join("; ")}`,
+			);
 		if (execution.rolledBack.length > 0) {
 			lines.push(
 				`renamed back: ${execution.rolledBack.map(renamePath).join(", ")}`,
@@ -283,8 +313,23 @@ function report(
 	});
 }
 
-/** Describes a migration problem's cause, including a scan's diagnostics list. */
+/**
+ * Describes a migration problem's cause: each of its failures and defects,
+ * a scan's diagnostics list included.
+ */
 function describeDelimiterMigrationCause(cause: unknown): string {
+	if (Cause.isCause(cause))
+		return causeValues(cause)
+			.map(describeDelimiterMigrationCause)
+			.join("; ");
+	// A pause or restart that failed reads as what failed it.
+	if (
+		cause instanceof ReleaseFailed ||
+		cause instanceof LibrarianStartFailed ||
+		cause instanceof LibrarianStopped ||
+		cause instanceof LibraryRootMissing
+	)
+		return describeDelimiterMigrationCause(cause.cause);
 	if (!Array.isArray(cause)) return getErrorMessage(cause);
 	return cause
 		.map((item) => {

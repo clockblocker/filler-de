@@ -1,11 +1,11 @@
 import { describe, expect, it } from "bun:test";
-import { Effect, Fiber } from "effect";
+import { type Cause, Effect, Fiber } from "effect";
 import { createDictionaryStoreService } from "../../../src/lifecycle/dictionary-store-service";
 import { defaultRunner } from "../../support/effect-runner";
 
 function makeHarness(failBuilds = 0) {
 	const events: string[] = [];
-	const failures: unknown[] = [];
+	const failures: Cause.Cause<Error>[] = [];
 	let builds = 0;
 	let left = failBuilds;
 	const service = createDictionaryStoreService({
@@ -74,7 +74,11 @@ describe("dictionary store service", () => {
 		const h = makeHarness(1);
 
 		await expect(h.service.get()).rejects.toThrow("scan 0 failed");
-		expect(h.service.state().kind).toBe("Failed");
+		const state = h.service.state();
+		expect(state.kind).toBe("Failed");
+		// The state keeps the build's whole cause, as the log does.
+		if (state.kind === "Failed")
+			expect([state.cause]).toEqual(h.failures);
 		expect(h.failures).toHaveLength(1);
 
 		expect(await h.service.get()).toEqual({ id: 1 });

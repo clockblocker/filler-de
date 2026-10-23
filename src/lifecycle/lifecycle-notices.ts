@@ -8,10 +8,19 @@ import {
 } from "@textfresser/vault-action-manager/diagnostics";
 import { formatError } from "@textfresser/vault-action-manager/issue-handlers";
 import { Cause, Effect } from "effect";
-import type { LibrarianStop } from "../commanders/librarian/librarian";
+import type {
+	LibrarianStop,
+	LibrarianUnsubscribeFailure,
+} from "../commanders/librarian/librarian";
 import type { DelimiterMigrationReport } from "../commanders/librarian/runtime/delimiter-migration-report";
 import { logAtEdge } from "../runtime/edge-log";
+import { causeValues } from "../utils/causes";
 import { recentTrace } from "../utils/recent-trace";
+import {
+	BootFailed,
+	type LibrarianStartFailed,
+	type ReleaseFailed,
+} from "./lifecycle-errors";
 
 /** How many recent spans and log entries a Librarian stop writes out. */
 const STOP_TRACE_ENTRIES = 300;
@@ -34,18 +43,25 @@ export type LibrarianStartReason =
 
 export type LifecycleNotices = ReturnType<typeof createLifecycleNotices>;
 
-/** `error` as a cause, so the log keeps it whole: a `Cause` as it is. */
+/**
+ * What `onload` threw, or the cause a runtime build failed with, as a
+ * cause, so the log keeps it whole: a `Cause` as it is.
+ */
 const asCause = (error: unknown): Cause.Cause<unknown> =>
 	Cause.isCause(error) ? error : Cause.fail(error);
 
-/** Logs `message` with `error`'s whole cause, under the current span. */
-const logFailure = (message: string, error: unknown) =>
-	Effect.logError(message, asCause(error));
-
-const launchFailedMessage = (error: unknown) => ({
-	description: `Error during plugin initialization: ${describeError(error, { stack: false })}`,
+const launchFailedMessage = (failures: readonly unknown[]) => ({
+	description: `Error during plugin initialization: ${failures
+		.map((failure) => describeError(failure, { stack: false }))
+		.join("; ")}`,
 	location: "TextEaterPlugin",
 });
+
+/** Each failure and defect of a launch; a failed boot reads as what failed it. */
+const launchFailures = (cause: Cause.Cause<BootFailed>): unknown[] =>
+	causeValues(cause).flatMap((failure) =>
+		failure instanceof BootFailed ? causeValues(failure.cause) : [failure],
+	);
 
 /**
  * A Librarian stop hands its message and the recent `trace` to `writeStop`,
@@ -85,11 +101,13 @@ export function createLifecycleNotices(
 			}),
 
 		/** The launch failed: a Notice tells it, and the log keeps its cause. */
-		launchFailed: (error: unknown) =>
+		launchFailed: (cause: Cause.Cause<BootFailed>) =>
 			Effect.suspend(() => {
-				const message = formatError(launchFailedMessage(error));
+				const message = formatError(
+					launchFailedMessage(launchFailures(cause)),
+				);
 				show(message, { sticky: false });
-				return Effect.logError(message, asCause(error));
+				return Effect.logError(message, cause);
 			}),
 
 		/**
@@ -97,24 +115,35 @@ export function createLifecycleNotices(
 		 * plugin runtime could not be built, so there is none to log on.
 		 */
 		launchFailedOutsideRuntime: (error: unknown) => {
-			const message = formatError(launchFailedMessage(error));
+			const message = formatError(launchFailedMessage([error]));
 			show(message, { sticky: false });
 			logAtEdge("Error", message, asCause(error));
 		},
 
 		librarianRestarted: () => notify("Librarian restarted"),
 
-		/** A start or restart of the Librarian failed; its stop notice told why. */
-		librarianStartFailed: (reason: LibrarianStartReason, error: unknown) =>
-			logFailure(
+		/**
+		 * A start or restart of the Librarian failed, or unsubscribing the
+		 * one before it did; its stop notice told why.
+		 */
+		librarianStartFailed: (
+			reason: LibrarianStartReason,
+			failure: LibrarianStartFailed | ReleaseFailed,
+		) =>
+			Effect.logError(
 				reason === "Launch"
 					? "[TextEaterPlugin] Failed to initialize librarian:"
 					: "[TextEaterPlugin] Failed to reinitialize librarian:",
-				error,
+				Cause.fail(failure),
 			),
 
-		librarianStopFailed: (error: unknown) =>
-			logFailure("[TextEaterPlugin] Failed to stop Librarian:", error),
+		librarianStopFailed: (
+			cause: Cause.Cause<LibrarianUnsubscribeFailure>,
+		) =>
+			Effect.logError(
+				"[TextEaterPlugin] Failed to stop Librarian:",
+				cause,
+			),
 
 		/**
 		 * The Librarian stopped while it started for `starting`, or, when
@@ -128,12 +157,12 @@ export function createLifecycleNotices(
 			stop: LibrarianStop,
 			starting: LibrarianStartReason | null,
 		) => {
-			if (stop.kind === "Stopped")
+			if (stop._tag === "LibrarianStopped")
 				writeStop(
 					`[TextEaterPlugin] The Librarian stopped: ${stop.message}\n${trace.render({ last: STOP_TRACE_ENTRIES })}`,
 				);
 			if (starting === "DelimiterMigration") return;
-			if (stop.kind === "Stopped") notify(stop.message, true);
+			if (stop._tag === "LibrarianStopped") notify(stop.message, true);
 			else if (starting !== "Launch") notify(stop.message);
 		},
 
@@ -141,8 +170,8 @@ export function createLifecycleNotices(
 		 * Releasing part of the plugin as it unloads failed, such as
 		 * `"dispose VaultActionManager"`; the rest still unloads.
 		 */
-		releaseFailed: (what: string, error: unknown) =>
-			logFailure(`[TextEaterPlugin] Failed to ${what}:`, error),
+		releaseFailed: ({ cause, what }: ReleaseFailed) =>
+			Effect.logError(`[TextEaterPlugin] Failed to ${what}:`, cause),
 
 		restartWaitsForMigration: () =>
 			notify(
@@ -151,14 +180,14 @@ export function createLifecycleNotices(
 
 		stillLoading: () => notify("Textfresser is still loading"),
 
-		storeBuildFailed: (cause: Cause.Cause<unknown>) =>
+		storeBuildFailed: <E>(cause: Cause.Cause<E>) =>
 			Effect.logError(
 				"[TextEaterPlugin] Failed to build the dictionary store:",
 				cause,
 			),
 
 		/** The unlink sweep could not run: the dictionary store did not load. */
-		sweepSkipped: (cause: Cause.Cause<unknown>) =>
+		sweepSkipped: <E>(cause: Cause.Cause<E>) =>
 			Effect.logWarning(
 				"[TextEaterPlugin] Skipped the unlink sweep: the dictionary store did not load:",
 				cause,

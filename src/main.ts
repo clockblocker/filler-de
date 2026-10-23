@@ -1,4 +1,5 @@
 import {
+	type DictionaryScanError,
 	type DumdictVaultStore,
 	makeDumdictVaultStore,
 } from "@textfresser/dictionary";
@@ -10,11 +11,13 @@ import {
 	SplitPathKind,
 	splitPathCodec,
 	type VamSetupError,
+	type VamShutdownError,
+	type VamSubscriptionError,
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import { operations } from "dumgen";
-import { Effect, Exit, Option } from "effect";
+import { type Cause, Effect, Exit, Option } from "effect";
 import { Notice, Plugin, requestUrl } from "obsidian";
 import {
 	ClassifyCommander,
@@ -109,7 +112,10 @@ type LaunchedServices = {
 	/** "Reset dictionary from old notes…" (#65). */
 	readonly dictionaryReset: DictionaryResetCommand;
 	/** The dictionary store over `Worter/`. */
-	readonly store: DictionaryStoreService<DumdictVaultStore>;
+	readonly store: DictionaryStoreService<
+		DumdictVaultStore,
+		DictionaryScanError
+	>;
 	readonly delimiterChangeService: DelimiterChangeService;
 	readonly userEvents: ObsidianEventLayer;
 };
@@ -221,7 +227,13 @@ export default class TextEaterPlugin extends Plugin {
 		runtime: Runtime,
 		vam: VaultActionManager,
 		dumgen: Dumgen["Service"],
-	): Effect.Effect<LaunchedPlugin<Librarian>, unknown> {
+	): Effect.Effect<
+		LaunchedPlugin<Librarian>,
+		| Cause.UnknownError
+		| VamSetupError
+		| VamShutdownError
+		| VamSubscriptionError
+	> {
 		const { lifecycle } = this;
 		return Effect.gen({ self: this }, function* () {
 			yield* Effect.promise(() => this.whenObsidianIsReady());

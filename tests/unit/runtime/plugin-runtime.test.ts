@@ -13,6 +13,7 @@ import {
 	createLifecycleSupervisor,
 	type LaunchedPlugin,
 	type SupervisedLibrarian,
+	type TaggedFailure,
 } from "../../../src/lifecycle/lifecycle-supervisor";
 import { makeObsidianVault } from "../../../src/packages/independent/vault-action-manager/tests/unit/helpers/obsidian-vault";
 import { ObservabilityLive } from "../../../src/runtime/observability";
@@ -172,7 +173,7 @@ describe("PluginLive", () => {
 		const launch = async (
 			wire: (
 				vam: VaultActionManager,
-			) => Effect.Effect<LaunchedPlugin<L>, unknown>,
+			) => Effect.Effect<LaunchedPlugin<L>, TaggedFailure>,
 		) => {
 			runtime.onload(
 				Effect.gen(function* () {

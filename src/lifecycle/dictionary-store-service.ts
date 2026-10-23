@@ -8,31 +8,32 @@ import { Cause, Effect } from "effect";
 import type { EffectRunner } from "../runtime/plugin-runtime";
 import { ServiceState } from "./service-state";
 
-export type DictionaryStoreService<Store> = {
-	readonly state: () => ServiceState;
+export type DictionaryStoreService<Store, BuildError> = {
+	/** `Failed` holds the whole cause of the build that failed last. */
+	readonly state: () => ServiceState<never, Cause.Cause<BuildError>>;
 	/** The store, built on first use. Rejects once the plugin unloaded. */
 	readonly get: () => Promise<Store>;
 	/**
 	 * Closes the store. A build still under way is closed once it ends,
 	 * without waiting for it, as before VAM is disposed it would fail anyway.
 	 */
-	readonly stop: Effect.Effect<void, unknown>;
+	readonly stop: Effect.Effect<void>;
 };
 
-export function createDictionaryStoreService<Store>(deps: {
-	readonly build: () => Effect.Effect<Store, unknown>;
-	readonly close: (store: Store) => Effect.Effect<void, unknown>;
+export function createDictionaryStoreService<Store, BuildError>(deps: {
+	readonly build: () => Effect.Effect<Store, BuildError>;
+	readonly close: (store: Store) => Effect.Effect<void>;
 	/**
 	 * Logs a build that failed, in the build's fiber. A build the unloading
 	 * runtime interrupted is no failure to tell.
 	 */
 	readonly onBuildFailed: (
-		cause: Cause.Cause<unknown>,
+		cause: Cause.Cause<BuildError>,
 	) => Effect.Effect<void>;
 	/** Runs the build and a late close on the plugin runtime. */
-	readonly runtime: EffectRunner<unknown>;
-}): DictionaryStoreService<Store> {
-	let state: ServiceState = ServiceState.idle;
+	readonly runtime: Pick<EffectRunner, "runPromise">;
+}): DictionaryStoreService<Store, BuildError> {
+	let state: ServiceState<never, Cause.Cause<BuildError>> = ServiceState.idle;
 	let building: Promise<Store> | null = null;
 
 	const get = (): Promise<Store> => {
@@ -40,16 +41,19 @@ export function createDictionaryStoreService<Store>(deps: {
 			return Promise.reject(new Error("the plugin has unloaded"));
 		if (building) return building;
 		state = ServiceState.starting;
+		/** The build's whole cause, kept in its fiber: the Promise holds one reason. */
+		let failure: Cause.Cause<BuildError> | undefined;
 		const attempt = deps.runtime.runPromise(
-			deps
-				.build()
-				.pipe(
-					Effect.tapCause((cause) =>
-						Cause.hasInterruptsOnly(cause)
+			deps.build().pipe(
+				Effect.tapCause((cause) =>
+					Effect.suspend(() => {
+						failure = cause;
+						return Cause.hasInterruptsOnly(cause)
 							? Effect.void
-							: deps.onBuildFailed(cause),
-					),
+							: deps.onBuildFailed(cause);
+					}),
 				),
+			),
 		);
 		building = attempt;
 		attempt.then(
@@ -61,7 +65,9 @@ export function createDictionaryStoreService<Store>(deps: {
 				if (building === attempt) {
 					building = null;
 					if (state.kind === "Starting")
-						state = ServiceState.failed(error);
+						state = ServiceState.failed(
+							failure ?? Cause.die(error),
+						);
 				}
 			},
 		);

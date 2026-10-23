@@ -1,11 +1,18 @@
 import { describe, expect, it } from "bun:test";
-import { Deferred, Effect } from "effect";
-import type { LibrarianStop } from "../../../src/commanders/librarian/librarian";
+import { VamScanError } from "@textfresser/vault-action-manager";
+import { Cause, Deferred, Effect, Option } from "effect";
+import {
+	type LibrarianStop,
+	LibrarianStopped,
+	LibraryRootMissing,
+} from "../../../src/commanders/librarian/librarian";
 import { createLifecycleNotices } from "../../../src/lifecycle/lifecycle-notices";
 import {
 	createLifecycleSupervisor,
 	type LaunchedPlugin,
+	LibrarianStartFailed,
 	type SupervisedLibrarian,
+	type TaggedFailure,
 } from "../../../src/lifecycle/lifecycle-supervisor";
 
 /** A Librarian whose start the test ends, with `start` or `fail`. */
@@ -19,14 +26,19 @@ type FakeLibrarian = SupervisedLibrarian & {
 	readonly stopLater: (stop: LibrarianStop) => void;
 };
 
-const STOPPED: LibrarianStop = {
-	kind: "Stopped",
+const STOPPED: LibrarianStop = new LibrarianStopped({
+	cause: Cause.empty,
 	message: "The Librarian stopped: it could not heal the library.",
-};
-const ROOT_MISSING: LibrarianStop = {
-	kind: "LibraryRootMissing",
+	phase: "Startup",
+});
+const ROOT_MISSING: LibrarianStop = new LibraryRootMissing({
+	cause: new VamScanError({
+		cause: new Error("Folder not found: Library"),
+		operation: "scanRoot",
+		path: "Library",
+	}),
 	message: "The Librarian is off: there is no Library folder.",
-};
+});
 
 /** Lets every fiber and promise that can move, move. */
 const settle = async () => {
@@ -116,7 +128,7 @@ function makeHarness(options: { readonly autoStart?: boolean } = {}) {
 			return storeLoaded;
 		},
 		/** Launches with `boot`, by default one that wires `plugin` at once. */
-		launch: (boot: Effect.Effect<LaunchedPlugin<FakeLibrarian>, unknown> = Effect.succeed(plugin)) =>
+		launch: (boot: Effect.Effect<LaunchedPlugin<FakeLibrarian>, TaggedFailure> = Effect.succeed(plugin)) =>
 			Effect.runPromise(supervisor.launch(boot)),
 		librarians,
 		plugin,
@@ -339,7 +351,12 @@ describe("lifecycle supervisor: delimiter migration", () => {
 		const resume = Effect.runPromise(Effect.flip(h.supervisor.resume));
 		await settle();
 		h.librarians[1]?.fail(STOPPED);
-		expect(await resume).toBe(STOPPED);
+		const failure = await resume;
+		expect(failure).toBeInstanceOf(LibrarianStartFailed);
+		if (failure instanceof LibrarianStartFailed)
+			expect(Cause.findErrorOption(failure.cause)).toEqual(
+				Option.some(STOPPED),
+			);
 		expect(h.shown).toEqual([]);
 
 		// Once that start ended, a later stop is told again.
