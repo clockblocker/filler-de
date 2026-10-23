@@ -1,6 +1,6 @@
 /**
  * The Dictionary reset (#117) end to end without Obsidian: the plugin's
- * dumgen host with the `classify-resolution` script, the real resolver and
+ * dumgen service with the `classify-resolution` script, the real resolver and
  * dictionary store over a fake vault, and the dev vault's situation in
  * small. The old notes sit in the first reset's backup folder, and
  * `Worter/` holds that reset's obsolete marker-format Lemma and Shadow
@@ -10,7 +10,7 @@
  */
 import { describe, expect, it } from "bun:test";
 import { makeDumdictVaultStore } from "@textfresser/dictionary";
-import type { Answer } from "dumgen";
+import { type Answer, operations } from "dumgen";
 import { Deferred, Effect, Layer } from "effect";
 import { ClassifySegmenter } from "../../../src/commanders/classify/classify-selection";
 import { dumgenUnitResolver } from "../../../src/commanders/classify/resolution/dumgen-unit-resolver";
@@ -30,7 +30,6 @@ import {
 	ResetFailed,
 	type ResetVault,
 } from "../../../src/commanders/dictionary-reset/ports";
-import { DumgenHost } from "../../../src/managers/dumgen";
 import {
 	FakeVault,
 	vamWrite,
@@ -42,6 +41,7 @@ import {
 } from "../../obsidian-e2e/scenarios/classify-resolution-script";
 import { defaultRunner } from "../../support/effect-runner";
 import { MemoryScroll } from "../../unit/classify/resolution/support";
+import { dumgenServiceOver, unreachable } from "../../unit/dumgen/dumgen-support";
 
 const SCROLL = "Library/Story.md";
 const SOURCE = "Worter backup 2026-10-21 05-43-21";
@@ -149,14 +149,16 @@ function resetVault(vault: FakeVault, scroll: MemoryScroll): ResetVault {
 }
 
 async function setUp() {
-	const host = new DumgenHost({
-		fetch: () => Promise.reject(new Error("no provider in tests")),
-		keys: () => ({ openaiApiKey: "", typesafeApiKey: "" }),
-	});
-	host.useScriptedDumgenForTesting({
+	const dumgen = dumgenServiceOver(unreachable, () => ({
+		openaiApiKey: "",
+		typesafeApiKey: "",
+	}));
+	Effect.runSync(
+		dumgen.testing.useScripted({
 		jev: answersOf(CLASSIFY_RESOLUTION_DUMGEN.jev),
 		luna: CLASSIFY_RESOLUTION_DUMGEN.luna,
-	});
+		}),
+	);
 	// Obsidian knows the Scroll, so refs name it by its basename.
 	const vault = new FakeVault({ ...VAULT, [SCROLL]: STORY });
 	const store = await Effect.runPromise(makeDumdictVaultStore({ vault }));
@@ -169,9 +171,9 @@ async function setUp() {
 		notify: () => undefined,
 		run: (job) =>
 			produceKnowledge(
-				{ dumgen: host.get(), store, translationLanguages: ["en"] },
+				{ dumgen: operations, store, translationLanguages: ["en"] },
 				job,
-			),
+			).pipe(dumgen.provideBackground),
 		runtime: defaultRunner,
 	});
 	const dictionary: ResetDictionary = {
@@ -189,16 +191,13 @@ async function setUp() {
 		Layer.succeed(
 			UnitResolver,
 			dumgenUnitResolver({
-				dumgen: Effect.sync(() => host.get()),
+				dumgen: operations,
 				knowledge: queue,
 				scroll,
 				store: Effect.succeed(store),
 			}),
 		),
-		Layer.succeed(ClassifySegmenter, {
-			dumgen: Effect.sync(() => host.get()),
-			segmenterVersion: "test-segmenter",
-		}),
+		Layer.succeed(ClassifySegmenter, { segmenterVersion: "test-segmenter" }),
 	);
 	const execute = () =>
 		Effect.runPromiseExit(
@@ -208,7 +207,7 @@ async function setUp() {
 				source: SOURCE,
 				stamp: STAMP,
 				vault: resetVault(vault, scroll),
-			}).pipe(Effect.provide(layer)),
+			}).pipe(Effect.provide(layer), dumgen.provide),
 		);
 	return { execute, scroll, store, vault };
 }

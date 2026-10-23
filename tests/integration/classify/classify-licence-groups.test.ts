@@ -1,20 +1,19 @@
 /**
  * The `classify-licence-groups` desktop scenario's story without Obsidian:
- * the plugin's dumgen host with the scenario's script, the real resolver,
+ * the plugin's dumgen service with the scenario's script, the real resolver,
  * and the dictionary store over a fake vault with the plugin's
  * projections. It proves the script gives Mutter two Readings whose
  * plurals differ, so the desktop scenario tests the Obsidian side only.
  */
 import { describe, expect, it } from "bun:test";
 import { makeDumdictVaultStore } from "@textfresser/dictionary";
-import type { Answer } from "dumgen";
+import { type Answer, operations } from "dumgen";
 import { Effect } from "effect";
 import { ClassifyCommander } from "../../../src/commanders/classify/classify-commander";
 import { dumgenUnitResolver } from "../../../src/commanders/classify/resolution/dumgen-unit-resolver";
 import { createKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
 import { produceKnowledge } from "../../../src/commanders/classify/resolution/produce-knowledge";
 import { memorySegmentationCache } from "../../../src/commanders/classify/segmentation-cache";
-import { DumgenHost } from "../../../src/managers/dumgen";
 import { FakeVault } from "../../../src/packages/composed/dictionary/tests/support/fake-vault";
 import { dictionaryProjections } from "../../../src/stateless-helpers/dictionary-projections";
 import {
@@ -29,6 +28,7 @@ import {
 import { linkTo } from "../../obsidian-e2e/scenarios/dictionary-layout";
 import { defaultRunner } from "../../support/effect-runner";
 import { MemoryScroll } from "../../unit/classify/resolution/support";
+import { dumgenServiceOver, unreachable } from "../../unit/dumgen/dumgen-support";
 
 const SCROLL = "Library/Story.md";
 
@@ -53,14 +53,16 @@ function answersOf(
 
 describe("Classify gives each Licence Group its own table", () => {
 	it("draws one table per Licence Group of Mutter, and each Reading note embeds its own", async () => {
-		const host = new DumgenHost({
-			fetch: () => Promise.reject(new Error("no provider in tests")),
-			keys: () => ({ openaiApiKey: "", typesafeApiKey: "" }),
-		});
-		host.useScriptedDumgenForTesting({
+		const dumgen = dumgenServiceOver(unreachable, () => ({
+			openaiApiKey: "",
+			typesafeApiKey: "",
+		}));
+		Effect.runSync(
+			dumgen.testing.useScripted({
 			jev: answersOf(LICENCE_GROUPS_DUMGEN.jev),
 			luna: LICENCE_GROUPS_DUMGEN.luna,
-		});
+			}),
+		);
 		// Obsidian knows the Scroll, so refs name it by its basename.
 		const vault = new FakeVault({ [SCROLL]: STORY });
 		const store = await Effect.runPromise(
@@ -72,23 +74,23 @@ describe("Classify gives each Licence Group its own table", () => {
 			notify: (message) => notices.push(message),
 			run: (job) =>
 				produceKnowledge(
-					{ dumgen: host.get(), store, translationLanguages: ["en", "ru"] },
+					{ dumgen: operations, store, translationLanguages: ["en", "ru"] },
 					job,
-				),
+				).pipe(dumgen.provideBackground),
 			runtime: defaultRunner,
 		});
 		const commander = new ClassifyCommander({
 			cache: memorySegmentationCache(),
-			dumgen: () => host.get(),
-			missingProviderKeys: () => host.missingKeys(),
+			dumgen: dumgen.provide,
+			missingProviderKeys: dumgen.missingKeys,
 			resolver: dumgenUnitResolver({
-				dumgen: Effect.sync(() => host.get()),
+				dumgen: operations,
 				knowledge: queue,
 				notify: (message) => notices.push(message),
 				scroll,
 				store: Effect.succeed(store),
 			}),
-			segmenterVersion: () => "test-segmenter",
+			segmenterVersion: Effect.succeed("test-segmenter"),
 		});
 		const classify = async (selection: string) => {
 			const from = scroll.content.indexOf(selection);
@@ -124,6 +126,6 @@ describe("Classify gives each Licence Group its own table", () => {
 			),
 		);
 		// The licence judge was asked about the stored plural, once.
-		expect(host.scriptedRequests()?.jev.paradigmLicence).toBe(1);
+		expect(Effect.runSync(dumgen.testing.requests)?.jev.paradigmLicence).toBe(1);
 	});
 });

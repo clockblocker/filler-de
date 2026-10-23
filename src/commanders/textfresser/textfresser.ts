@@ -1,13 +1,18 @@
 /**
- * Textfresser commander: runs Translate on the active note.
+ * Textfresser commander: runs Translate on the active note, as one dumgen
+ * action.
  */
 
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { Cause, Effect } from "effect";
-import type { Dumgen } from "../../managers/dumgen/dumgen-over";
+import type { DumgenProvide } from "../../managers/dumgen";
 import type { CommandContext } from "../../managers/obsidian/command-executor";
 import type { LanguagesConfig } from "../../types";
-import { translateCommand } from "./commands/translate/translate-command";
+import { getErrorMessage } from "../../utils/get-error-message";
+import {
+	translateCommand,
+	translationFailed,
+} from "./commands/translate/translate-command";
 import type { CommandError, TextfresserCommandKind } from "./commands/types";
 import { CommandErrorKind } from "./errors";
 import { dispatchActions } from "./orchestration/shared/dispatch-actions";
@@ -19,9 +24,10 @@ export class Textfresser {
 	constructor(
 		private readonly vam: VaultActionManager,
 		languages: LanguagesConfig,
-		getDumgen: () => Dumgen,
+		/** `Dumgen.provide`. */
+		private readonly dumgen: DumgenProvide,
 	) {
-		this.state = { getDumgen, languages };
+		this.state = { languages };
 	}
 
 	executeCommand(
@@ -37,6 +43,10 @@ export class Textfresser {
 			commandContext: { ...context, activeFile: context.activeFile },
 			textfresserState: this.state,
 		}).pipe(
+			this.dumgen,
+			Effect.catchTag("DumgenUnavailable", (error) =>
+				Effect.fail(translationFailed(getErrorMessage(error.cause))),
+			),
 			Effect.flatMap((actions) => dispatchActions(this.vam, actions)),
 			Effect.tapError((error) =>
 				Effect.sync(() => {

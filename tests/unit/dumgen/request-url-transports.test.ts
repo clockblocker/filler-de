@@ -1,13 +1,20 @@
 import { describe, expect, it } from "bun:test";
-import { JevTransport, ProviderFailure } from "dumgen";
+import {
+	DumgenLive,
+	type Jev,
+	JevTransport,
+	type Luna,
+	operations,
+	ProviderFailure,
+} from "dumgen";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
+import type * as Layer from "effect/Layer";
 import {
-	buildDumgen,
 	createRequestUrlFetch,
+	type DumgenProviderKeys,
 	dumgenTransports,
 } from "../../../src/managers/dumgen";
-import type { Dumgen } from "../../../src/managers/dumgen/dumgen-over";
 import {
 	jevBody,
 	parsedBody,
@@ -18,30 +25,44 @@ import {
 
 const keys = { openaiApiKey: "sk-openai", typesafeApiKey: "ts-typesafe" };
 
-function dumgenOver(
+/** `DumgenLive` over the providers' transports through `requestUrl`. */
+const liveOver = (
+	requestUrl: Parameters<typeof createRequestUrlFetch>[0],
+	options: Partial<DumgenProviderKeys> & { readonly timeoutMs?: number } = {},
+) =>
+	DumgenLive(
+		dumgenTransports({
+			...keys,
+			fetch: createRequestUrlFetch(requestUrl),
+			...options,
+		}),
+	);
+
+function stubbedLive(
 	answer: () => StubAnswer,
 	options: { readonly timeoutMs?: number } = {},
 ) {
 	const stub = stubRequestUrl(answer);
-	const dumgen = buildDumgen({
-		...keys,
-		fetch: createRequestUrlFetch(stub.requestUrl),
-		...options,
-	});
-	return { ...stub, dumgen };
+	return { ...stub, dumgen: liveOver(stub.requestUrl, options) };
 }
 
-const translate = (dumgen: Dumgen) =>
-	dumgen.translate.sentence({
-		into: "en",
-		language: "de",
-		sentence: "Der Hund schläft.",
-	});
+type Live = Layer.Layer<Jev | Luna>;
 
-const detect = (dumgen: Dumgen) =>
-	dumgen.language.detect({
-		paragraphs: [{ sentences: ["Der Hund schläft im Garten."] }],
-	});
+const translate = (dumgen: Live) =>
+	operations.translate
+		.sentence({
+			into: "en",
+			language: "de",
+			sentence: "Der Hund schläft.",
+		})
+		.pipe(Effect.provide(dumgen));
+
+const detect = (dumgen: Live) =>
+	operations.language
+		.detect({
+			paragraphs: [{ sentences: ["Der Hund schläft im Garten."] }],
+		})
+		.pipe(Effect.provide(dumgen));
 
 const failureOf = <A, E>(effect: Effect.Effect<A, E>) =>
 	Effect.runPromise(Effect.flip(effect));
@@ -89,7 +110,7 @@ describe("TypeSafe (jev) over requestUrl", () => {
 	});
 
 	it("names the pinned jev model in what dumgen sends", async () => {
-		const { dumgen, requests } = dumgenOver(() => ({
+		const { dumgen, requests } = stubbedLive(() => ({
 			status: 500,
 			text: "down",
 		}));
@@ -98,7 +119,7 @@ describe("TypeSafe (jev) over requestUrl", () => {
 	});
 
 	it("maps a refused request to a ProviderFailure with its status", async () => {
-		const { dumgen } = dumgenOver(() => ({
+		const { dumgen } = stubbedLive(() => ({
 			status: 429,
 			text: "rate limited",
 		}));
@@ -111,7 +132,7 @@ describe("TypeSafe (jev) over requestUrl", () => {
 	});
 
 	it("maps a network failure to a ProviderFailure", async () => {
-		const { dumgen } = dumgenOver(() => new Error("net::ERR_INTERNET"));
+		const { dumgen } = stubbedLive(() => new Error("net::ERR_INTERNET"));
 		const failure = await failureOf(detect(dumgen));
 		expect(failure).toBeInstanceOf(ProviderFailure);
 		expect(failure.message).toBe(
@@ -120,7 +141,7 @@ describe("TypeSafe (jev) over requestUrl", () => {
 	});
 
 	it("fails at its deadline although requestUrl never settles", async () => {
-		const { dumgen } = dumgenOver(() => "never", { timeoutMs: 20 });
+		const { dumgen } = stubbedLive(() => "never", { timeoutMs: 20 });
 		const failure = await failureOf(detect(dumgen));
 		expect(failure).toBeInstanceOf(ProviderFailure);
 		expect(failure.message).toBe("TypeSafe did not answer within 20 ms");
@@ -129,7 +150,7 @@ describe("TypeSafe (jev) over requestUrl", () => {
 
 describe("OpenAI (Luna) over requestUrl", () => {
 	it("posts a Responses request and reads its output", async () => {
-		const { dumgen, requests } = dumgenOver(() => ({
+		const { dumgen, requests } = stubbedLive(() => ({
 			status: 200,
 			text: responsesBody("The dog sleeps."),
 		}));
@@ -160,7 +181,7 @@ describe("OpenAI (Luna) over requestUrl", () => {
 	});
 
 	it("maps a refused request to a ProviderFailure", async () => {
-		const { dumgen } = dumgenOver(() => ({
+		const { dumgen } = stubbedLive(() => ({
 			status: 401,
 			text: "invalid key",
 		}));
@@ -170,21 +191,21 @@ describe("OpenAI (Luna) over requestUrl", () => {
 	});
 
 	it("maps a network failure to a ProviderFailure", async () => {
-		const { dumgen } = dumgenOver(() => new Error("socket hang up"));
+		const { dumgen } = stubbedLive(() => new Error("socket hang up"));
 		const failure = await failureOf(translate(dumgen));
 		expect(failure).toBeInstanceOf(ProviderFailure);
 		expect(failure.message).toBe("OpenAI connection failed: socket hang up");
 	});
 
 	it("fails at its deadline although requestUrl never settles", async () => {
-		const { dumgen } = dumgenOver(() => "never", { timeoutMs: 20 });
+		const { dumgen } = stubbedLive(() => "never", { timeoutMs: 20 });
 		const failure = await failureOf(translate(dumgen));
 		expect(failure).toBeInstanceOf(ProviderFailure);
 		expect(failure.message).toBe("OpenAI did not answer within 20 ms");
 	});
 
 	it("settles an interrupted call without waiting for requestUrl", async () => {
-		const { dumgen, firstRequest, requests } = dumgenOver(() => "never");
+		const { dumgen, firstRequest, requests } = stubbedLive(() => "never");
 		const fiber = Effect.runFork(translate(dumgen));
 		await firstRequest;
 		await Effect.runPromise(Fiber.interrupt(fiber));
@@ -239,8 +260,7 @@ describe("missing provider keys", () => {
 			status: 200,
 			text: responsesBody("The dog sleeps."),
 		}));
-		const dumgen = buildDumgen({
-			fetch: createRequestUrlFetch(requestUrl),
+		const dumgen = liveOver(requestUrl, {
 			openaiApiKey: "sk-openai",
 			typesafeApiKey: "  ",
 		});
@@ -257,8 +277,7 @@ describe("missing provider keys", () => {
 
 	it("names the OpenAI key when it is the missing one", async () => {
 		const { requestUrl, requests } = stubRequestUrl(() => "never");
-		const dumgen = buildDumgen({
-			fetch: createRequestUrlFetch(requestUrl),
+		const dumgen = liveOver(requestUrl, {
 			openaiApiKey: "",
 			typesafeApiKey: "ts-typesafe",
 		});

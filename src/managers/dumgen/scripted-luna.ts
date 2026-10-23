@@ -26,15 +26,17 @@ export function createScriptedLuna(answers: ScriptedLunaAnswers = {}): {
 	readonly requests: () => Readonly<Record<string, number>>;
 } {
 	const requests: Record<string, number> = {};
-	const ask: LunaAsk = async (request, { stage }) => {
+	const ask: LunaAsk = (request, { stage }) => {
 		requests[stage] = (requests[stage] ?? 0) + 1;
 		const input = JSON.stringify(request.input);
 		const rule = (answers[stage] ?? []).find(
 			({ when }) => when === undefined || input.includes(when),
 		);
-		if (!rule)
-			throw new Error(`The scripted Luna has no answer for ${stage}`);
-		return { output: structuredClone(rule.output) };
+		return rule
+			? Promise.resolve({ output: structuredClone(rule.output) })
+			: Promise.reject(
+					new Error(`The scripted Luna has no answer for ${stage}`),
+				);
 	};
 	return { ask, requests: () => ({ ...requests }) };
 }

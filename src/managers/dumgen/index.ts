@@ -1,14 +1,13 @@
-export { DumgenHost } from "./dumgen-host";
-export { type Dumgen, dumgenOver } from "./dumgen-over";
+export {
+	Dumgen,
+	type DumgenOperations,
+	type DumgenProvide,
+	DumgenUnavailable,
+	type ScriptedDumgen,
+} from "./dumgen";
+export { HttpTransport } from "./http-transport";
 export type { KeyCheckFailure } from "./key-check";
 export { conciseFailure } from "./provider-failure";
-export {
-	buildDumgen,
-	type DumgenProviderKeys,
-	dumgenTransports,
-} from "./providers";
-export {
-	createRequestUrlFetch,
-	createRequestUrlGet,
-	type RequestUrl,
-} from "./request-url-fetch";
+export { ProviderKeys } from "./provider-keys";
+export { type DumgenProviderKeys, dumgenTransports } from "./providers";
+export { createRequestUrlFetch, type RequestUrl } from "./request-url-fetch";

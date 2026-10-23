@@ -3,13 +3,14 @@
  * Scroll and the selection's offsets, runs `classifySelection` with the
  * plugin's dumgen, Segmentation Cache and resolver port, and tells the
  * user what it found. The resolver commits each unit's Reading and links
- * its Segments (#64); this command writes nothing itself.
+ * its Segments (#64); this command writes nothing itself. One Classify is
+ * one dumgen action: its segmentation and resolution share one build, and
+ * so one request budget.
  */
 import { WORTER_FOLDER } from "@textfresser/lemma-note-codec";
 import { VaultPath } from "@textfresser/vault-action-manager";
 import { Cause, Effect, Layer } from "effect";
-import type { Dumgen } from "../../managers/dumgen/dumgen-over";
-import { getErrorMessage } from "../../utils/get-error-message";
+import type { DumgenProvide } from "../../managers/dumgen";
 import {
 	ClassifyError,
 	type ClassifyOutcome,
@@ -22,16 +23,16 @@ import type { SourceRange, UnitRef } from "./types";
 import { UnitResolver } from "./unit-resolver";
 
 export type ClassifyCommanderDeps = {
-	/** The plugin's dumgen; it throws once the plugin has unloaded. */
-	readonly dumgen: () => Dumgen;
-	readonly segmenterVersion: () => string;
+	/** Runs each Classify on one dumgen build: `Dumgen.provide`. */
+	readonly dumgen: DumgenProvide;
+	readonly segmenterVersion: Effect.Effect<string>;
 	readonly cache: SegmentationCache["Service"];
 	readonly resolver: UnitResolver["Service"];
 	/**
 	 * The provider keys Classify lacks, by provider name (`TypeSafe`,
 	 * `OpenAI`); Classify asks nothing without them.
 	 */
-	readonly missingProviderKeys?: () => readonly string[];
+	readonly missingProviderKeys?: Effect.Effect<readonly string[]>;
 	/**
 	 * Why Classify may not run now on the Scroll at `scrollPath`, such as a
 	 * dictionary reset moving `Worter/` or a protected Scroll; Classify then
@@ -173,60 +174,61 @@ export class ClassifyCommander {
 		context: ClassifyContext,
 		notify: (message: string) => void,
 	): Effect.Effect<void> {
-		const { cache, dumgen, resolver, segmenterVersion } = this.deps;
-		const layer = Layer.mergeAll(
-			Layer.succeed(SegmentationCache, cache),
-			Layer.succeed(UnitResolver, resolver),
-			Layer.succeed(ClassifySegmenter, {
-				dumgen: Effect.try({
-					catch: (cause) =>
+		const { cache, dumgen, resolver } = this.deps;
+		return Effect.gen({ self: this }, function* () {
+			const blocked =
+				dictionaryNoteRefusal(context.scrollPath) ??
+				this.deps.blockedBy?.(context.scrollPath);
+			const missing =
+				blocked === undefined
+					? missingKeysNotice(
+							yield* this.deps.missingProviderKeys ??
+								Effect.succeed([]),
+						)
+					: `⚠ ${blocked}`;
+			this.latest = null;
+			if (missing) {
+				notify(missing);
+				return;
+			}
+			const segmenterVersion = yield* this.deps.segmenterVersion;
+			const layer = Layer.mergeAll(
+				Layer.succeed(SegmentationCache, cache),
+				Layer.succeed(UnitResolver, resolver),
+				Layer.succeed(ClassifySegmenter, { segmenterVersion }),
+			);
+			yield* classifySelection({
+				content: context.content,
+				scrollPath: context.scrollPath,
+				selection: context.selection ?? { from: 0, to: 0 },
+			}).pipe(
+				Effect.provide(layer),
+				dumgen,
+				Effect.catchTag("DumgenUnavailable", (error) =>
+					Effect.fail(
 						new ClassifyError({
-							message: `dumgen is unavailable: ${getErrorMessage(cause)}`,
+							message: error.message,
 							reason: "DumgenUnavailable",
 						}),
-					try: dumgen,
-				}),
-				segmenterVersion: segmenterVersion(),
-			}),
-		);
-		const blocked =
-			dictionaryNoteRefusal(context.scrollPath) ??
-			this.deps.blockedBy?.(context.scrollPath);
-		const missing =
-			blocked === undefined
-				? missingKeysNotice(this.deps.missingProviderKeys?.() ?? [])
-				: `⚠ ${blocked}`;
-		if (missing)
-			return Effect.sync(() => {
-				this.latest = null;
-				notify(missing);
-			});
-		return Effect.sync(() => {
-			this.latest = null;
-		}).pipe(
-			Effect.andThen(
-				classifySelection({
-					content: context.content,
-					scrollPath: context.scrollPath,
-					selection: context.selection ?? { from: 0, to: 0 },
-				}),
-			),
-			Effect.provide(layer),
-			Effect.tap((outcome) =>
-				Effect.sync(() => {
-					this.latest = describeHandoff(context.content, outcome);
-					notify(summary(outcome));
-				}),
-			),
-			Effect.catchTag("ClassifyError", (error) =>
-				Effect.sync(() => notify(`⚠ ${error.message}`)).pipe(
-					Effect.andThen(
-						Effect.logWarning(
-							`[Classify] ${error.reason}: ${error.message}`,
+					),
+				),
+				Effect.tap((outcome) =>
+					Effect.sync(() => {
+						this.latest = describeHandoff(context.content, outcome);
+						notify(summary(outcome));
+					}),
+				),
+				Effect.catchTag("ClassifyError", (error) =>
+					Effect.sync(() => notify(`⚠ ${error.message}`)).pipe(
+						Effect.andThen(
+							Effect.logWarning(
+								`[Classify] ${error.reason}: ${error.message}`,
+							),
 						),
 					),
 				),
-			),
+			);
+		}).pipe(
 			Effect.catchCause((cause) =>
 				Cause.hasInterruptsOnly(cause)
 					? Effect.failCause(cause)
@@ -238,7 +240,6 @@ export class ClassifyCommander {
 							),
 						),
 			),
-			Effect.asVoid,
 		);
 	}
 }

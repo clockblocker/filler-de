@@ -5,7 +5,8 @@ import type {
 	SegmentedSentence,
 } from "dumgen";
 import * as Effect from "effect/Effect";
-import type { Dumgen } from "../../../src/managers/dumgen/dumgen-over";
+import type { DumgenOperations } from "../../../src/managers/dumgen";
+import { fakeDumgen } from "../../unit/dumgen/dumgen-support";
 import { parseCliOptions, requireOptIn } from "./run";
 import {
 	clickedUnit,
@@ -71,7 +72,7 @@ function offlineDumgen() {
 				return Effect.succeed("The old dog sleeps in the garden.");
 			},
 		},
-	} as unknown as Dumgen;
+	} as unknown as DumgenOperations;
 	return { dumgen, ran };
 }
 
@@ -117,7 +118,10 @@ describe("dumgen provider acceptance preflight", () => {
 
 	it("runs each budgeted operation once and passes on good answers", async () => {
 		const { dumgen, ran } = offlineDumgen();
-		const checks = await Effect.runPromise(runDumgenSmoke(dumgen));
+		// The stubs answer offline; no transport is reached.
+		const checks = await Effect.runPromise(
+			runDumgenSmoke(dumgen).pipe(Effect.provide(fakeDumgen())),
+		);
 		expect(ran).toEqual([...SMOKE_OPERATIONS]);
 		expect(checks.filter((check) => !check.passed)).toEqual([]);
 	});

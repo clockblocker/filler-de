@@ -4,23 +4,22 @@ import type {
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
-import { InvalidModelOutput } from "dumgen";
 import { Effect, Result } from "effect";
 import { neighbourSentences } from "../../../src/commanders/textfresser/commands/translate/neighbour-sentences";
 import { Textfresser } from "../../../src/commanders/textfresser/textfresser";
 import {
-	createRequestUrlFetch,
-	DumgenHost,
+	type DumgenProvide,
+	DumgenUnavailable,
 } from "../../../src/managers/dumgen";
-import type { Dumgen } from "../../../src/managers/dumgen/dumgen-over";
 import type { CommandContext } from "../../../src/managers/obsidian/command-executor";
 import type { LanguagesConfig } from "../../../src/types";
+import { dumgenServiceOver, provideFakes } from "../dumgen/dumgen-support";
 import {
 	parsedBody,
 	responsesBody,
 	stubRequestUrl,
 } from "../dumgen/request-url-stub";
-import { stubDumgen } from "./helpers/stub-dumgen";
+import { stubLuna } from "./helpers/stub-dumgen";
 
 const SOURCE_PATH: SplitPathToMdFile = {
 	basename: "Source",
@@ -61,7 +60,7 @@ function contextFor(
 }
 
 function harness(
-	getDumgen: () => Dumgen,
+	dumgen: DumgenProvide,
 	languages: LanguagesConfig = { known: "English", target: "German" },
 ) {
 	const dispatches: Array<readonly unknown[]> = [];
@@ -72,11 +71,7 @@ function harness(
 				dispatches.push(actions);
 			}),
 	} as unknown as VaultActionManager;
-	const textfresser = new Textfresser(
-		vam,
-		languages,
-		getDumgen,
-	);
+	const textfresser = new Textfresser(vam, languages, dumgen);
 	const translate = (context: CommandContext) =>
 		Effect.runPromise(
 			textfresser
@@ -94,8 +89,8 @@ const firstPayload = (dispatches: Array<readonly unknown[]>) =>
 
 describe("Translate through dumgen", () => {
 	it("translates the selection into the known language and writes it under it", async () => {
-		const stub = stubDumgen(() => Effect.succeed("He had three daughters."));
-		const { dispatches, notices, translate } = harness(() => stub.dumgen);
+		const stub = stubLuna(() => "He had three daughters.");
+		const { dispatches, notices, translate } = harness(stub.dumgen);
 		const selected = "Er hatte drei [[Tochter|Töchter]].";
 
 		const result = await translate(
@@ -106,12 +101,9 @@ describe("Translate through dumgen", () => {
 		expect(notices).toEqual([]);
 		expect(stub.inputs).toEqual([
 			{
-				into: "en",
-				language: "de",
-				neighbours: {
-					after: "Die jüngste war die schönste.",
-					before: "Es war einmal ein König.",
-				},
+				after: "Die jüngste war die schönste.",
+				before: "Es war einmal ein König.",
+				language: "en",
 				sentence: "Er hatte drei Töchter.",
 			},
 		]);
@@ -127,12 +119,10 @@ describe("Translate through dumgen", () => {
 	});
 
 	it("translates the caret's whole block, keeping its block ID, with the neighbouring blocks as context", async () => {
-		const stub = stubDumgen(() =>
-			Effect.succeed(
-				"Он имел трёх дочерей. Младшая была самой красивой.",
-			),
+		const stub = stubLuna(
+			() => "Он имел трёх дочерей. Младшая была самой красивой.",
 		);
-		const { dispatches, translate } = harness(() => stub.dumgen, {
+		const { dispatches, translate } = harness(stub.dumgen, {
 			known: "Russian",
 			target: "German",
 		});
@@ -140,12 +130,9 @@ describe("Translate through dumgen", () => {
 		await translate(contextFor({ startInBlock: null, text: null }));
 
 		expect(stub.inputs[0]).toEqual({
-			into: "ru",
-			language: "de",
-			neighbours: {
-				after: "Eines Tages ging sie in den Wald.",
-				before: "Es war einmal ein König.",
-			},
+			after: "Eines Tages ging sie in den Wald.",
+			before: "Es war einmal ein König.",
+			language: "ru",
 			sentence: "Er hatte drei Töchter. Die jüngste war die schönste.",
 		});
 		expect(firstPayload(dispatches)).toEqual({
@@ -160,11 +147,11 @@ describe("Translate through dumgen", () => {
 			status: 200,
 			text: responsesBody("Once upon a time there was a king."),
 		}));
-		const host = new DumgenHost({
-			fetch: createRequestUrlFetch(stub.requestUrl),
-			keys: () => ({ openaiApiKey: "sk-test", typesafeApiKey: "" }),
-		});
-		const { dispatches, notices, translate } = harness(() => host.get());
+		const dumgen = dumgenServiceOver(stub.requestUrl, () => ({
+			openaiApiKey: "sk-test",
+			typesafeApiKey: "",
+		}));
+		const { dispatches, notices, translate } = harness(dumgen.provide);
 		const block = "Es war einmal ein König. ^1";
 
 		await translate(contextFor({ startInBlock: null, text: null }, block));
@@ -181,11 +168,11 @@ describe("Translate through dumgen", () => {
 
 	it("shows a notice naming the missing OpenAI key and writes nothing", async () => {
 		const stub = stubRequestUrl(() => "never");
-		const host = new DumgenHost({
-			fetch: createRequestUrlFetch(stub.requestUrl),
-			keys: () => ({ openaiApiKey: "  ", typesafeApiKey: "ts-key" }),
-		});
-		const { dispatches, notices, translate } = harness(() => host.get());
+		const dumgen = dumgenServiceOver(stub.requestUrl, () => ({
+			openaiApiKey: "  ",
+			typesafeApiKey: "ts-key",
+		}));
+		const { dispatches, notices, translate } = harness(dumgen.provide);
 
 		const result = await translate(
 			contextFor({ startInBlock: 0, text: "Er hatte drei Töchter." }),
@@ -200,15 +187,8 @@ describe("Translate through dumgen", () => {
 	});
 
 	it("shows a notice for an answer dumgen cannot use", async () => {
-		const stub = stubDumgen(() =>
-			Effect.fail(
-				new InvalidModelOutput({
-					message: "Luna answered no translation: null",
-					stage: "translation",
-				}),
-			),
-		);
-		const { dispatches, notices, translate } = harness(() => stub.dumgen);
+		const stub = stubLuna(() => null);
+		const { dispatches, notices, translate } = harness(stub.dumgen);
 
 		await translate(contextFor({ startInBlock: null, text: null }));
 
@@ -218,25 +198,29 @@ describe("Translate through dumgen", () => {
 		]);
 	});
 
-	it("shows a notice once dumgen is disposed", async () => {
-		const host = new DumgenHost({
-			fetch: createRequestUrlFetch(stubRequestUrl(() => "never").requestUrl),
-			keys: () => ({ openaiApiKey: "sk-test", typesafeApiKey: "" }),
-		});
-		host.dispose();
-		const { dispatches, notices, translate } = harness(() => host.get());
+	it("shows a notice when dumgen is unavailable", async () => {
+		const { dispatches, notices, translate } = harness(() =>
+			Effect.fail(
+				new DumgenUnavailable({
+					cause: new Error("the settings could not be read"),
+					message: "dumgen is unavailable: the settings could not be read",
+				}),
+			),
+		);
 
 		await translate(contextFor({ startInBlock: null, text: null }));
 
 		expect(dispatches).toHaveLength(0);
 		expect(notices).toEqual([
-			"⚠ Translation failed: dumgen was disposed when the plugin unloaded",
+			"⚠ Translation failed: the settings could not be read",
 		]);
 	});
 
-	it("shows a notice when dumgen dies on its input", async () => {
-		const stub = stubDumgen(() => Effect.die(new Error("bad input")));
-		const { dispatches, notices, translate } = harness(() => stub.dumgen);
+	it("shows a notice when dumgen dies", async () => {
+		// A Luna answer with no output at all breaks dumgen's own check.
+		const { dispatches, notices, translate } = harness(
+			provideFakes({ luna: () => Promise.resolve(undefined as never) }),
+		);
 
 		const result = await translate(
 			contextFor({ startInBlock: null, text: null }),
@@ -244,12 +228,13 @@ describe("Translate through dumgen", () => {
 
 		expect(Result.isFailure(result)).toBe(true);
 		expect(dispatches).toHaveLength(0);
-		expect(notices).toEqual(["⚠ Translation failed: bad input"]);
+		expect(notices).toHaveLength(1);
+		expect(notices[0]).toStartWith("⚠ Translation failed: ");
 	});
 
 	it("refuses a text that is not German without asking dumgen", async () => {
-		const stub = stubDumgen(() => Effect.succeed("unused"));
-		const { dispatches, notices, translate } = harness(() => stub.dumgen, {
+		const stub = stubLuna(() => "unused");
+		const { dispatches, notices, translate } = harness(stub.dumgen, {
 			known: "Russian",
 			target: "English",
 		});
@@ -262,8 +247,8 @@ describe("Translate through dumgen", () => {
 	});
 
 	it("refuses a selection with nothing to translate", async () => {
-		const stub = stubDumgen(() => Effect.succeed("unused"));
-		const { dispatches, translate } = harness(() => stub.dumgen);
+		const stub = stubLuna(() => "unused");
+		const { dispatches, translate } = harness(stub.dumgen);
 
 		const blank = await translate(
 			contextFor({ startInBlock: 0, text: "^2" }, "^2"),

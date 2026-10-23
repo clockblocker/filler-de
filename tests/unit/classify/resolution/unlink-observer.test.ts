@@ -27,7 +27,6 @@ import {
 } from "../../../../src/commanders/classify/segmentation-cache";
 import { sentenceKey } from "../../../../src/commanders/classify/sentence-key";
 import { UnitResolver } from "../../../../src/commanders/classify/unit-resolver";
-import { dumgenOver } from "../../../../src/managers/dumgen";
 import { createScriptedJev } from "../../../../src/managers/dumgen/scripted-jev";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
 import {
@@ -37,6 +36,7 @@ import {
 } from "../../../../src/packages/composed/dictionary/tests/support/fixtures";
 import { openStore, seed } from "../../../../src/packages/composed/dictionary/tests/support/store";
 import { defaultRunner } from "../../../support/effect-runner";
+import { fakeDumgen } from "../../dumgen/dumgen-support";
 import { FAENGT_AN_ANSWERS, selectionOf } from "../support";
 import {
 	attestationOf,
@@ -155,7 +155,7 @@ function observerOver(options: {
 				}),
 			resolve: resolveAmong(() => [...options.vault.markdownPaths(), SCROLL]),
 		},
-		segmenterVersion: () => SEGMENTER_VERSION,
+		segmenterVersion: Effect.succeed(SEGMENTER_VERSION),
 		store: Effect.succeed(store),
 	});
 	return {
@@ -638,14 +638,12 @@ describe("unlink observer", () => {
 		});
 		const harness = await resolutionHarness({ content, dumgen: stub.dumgen, scrollPath: SCROLL });
 		const cache = memorySegmentationCache();
-		const segmenter = dumgenOver({
-			jev: JevTransport.fromAsk(createScriptedJev(FAENGT_AN_ANSWERS).ask),
-			luna: LunaTransport.fromAsk(() =>
-				Promise.reject(new Error("segmentation asked Luna")),
-			),
+		const segmenter = fakeDumgen({
+			jev: createScriptedJev(FAENGT_AN_ANSWERS).ask,
+			luna: () => Promise.reject(new Error("segmentation asked Luna")),
 		});
 		const resolver = dumgenUnitResolver({
-			dumgen: Effect.succeed(stub.dumgen),
+			dumgen: stub.dumgen,
 			knowledge: harness.queue,
 			scroll: harness.scroll,
 			store: Effect.succeed(harness.store),
@@ -661,9 +659,9 @@ describe("unlink observer", () => {
 						Layer.succeed(SegmentationCache, cache),
 						Layer.succeed(UnitResolver, resolver),
 						Layer.succeed(ClassifySegmenter, {
-							dumgen: Effect.succeed(segmenter),
 							segmenterVersion: "test-segmenter",
 						}),
+						segmenter,
 					),
 				),
 			),
@@ -970,7 +968,7 @@ describe("unlink observer", () => {
 					read: (path) => Effect.sync(() => scrolls[path]),
 					resolve: resolveAmong(() => [...vault.markdownPaths(), ...Object.keys(scrolls)]),
 				},
-				segmenterVersion: () => "test-segmenter",
+				segmenterVersion: Effect.succeed("test-segmenter"),
 				store: Effect.succeed(store),
 			});
 			observer.sweep();

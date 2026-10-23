@@ -1,4 +1,4 @@
-import { type Answer, JevTransport, LunaTransport } from "dumgen";
+import type { Answer } from "dumgen";
 import { Effect, Layer } from "effect";
 import {
 	type ClassifyInput,
@@ -13,8 +13,8 @@ import {
 	pendingUnitResolver,
 	UnitResolver,
 } from "../../../src/commanders/classify/unit-resolver";
-import { dumgenOver } from "../../../src/managers/dumgen";
 import { createScriptedJev } from "../../../src/managers/dumgen/scripted-jev";
+import { fakeDumgen } from "../dumgen/dumgen-support";
 
 const picked = (choice: string): Answer => ({
 	choice,
@@ -44,15 +44,12 @@ export function classifyHarness(
 	} = {},
 ) {
 	const scripted = createScriptedJev(options.answers ?? FAENGT_AN_ANSWERS);
-	const dumgen = dumgenOver({
-		jev: JevTransport.fromAsk((request, context) =>
+	const dumgen = fakeDumgen({
+		jev: (request, context) =>
 			context.stage === options.failStage
 				? Promise.reject(new Error("jev is down"))
 				: scripted.ask(request, context),
-		),
-		luna: LunaTransport.fromAsk(() =>
-			Promise.reject(new Error("segmentation asked Luna")),
-		),
+		luna: () => Promise.reject(new Error("segmentation asked Luna")),
 	});
 	const cache = memorySegmentationCache();
 	const handedOver: unknown[] = [];
@@ -64,10 +61,8 @@ export function classifyHarness(
 				return pendingUnitResolver.resolve(plan);
 			},
 		}),
-		Layer.succeed(ClassifySegmenter, {
-			dumgen: Effect.succeed(dumgen),
-			segmenterVersion: "test-segmenter",
-		}),
+		Layer.succeed(ClassifySegmenter, { segmenterVersion: "test-segmenter" }),
+		dumgen,
 	);
 	return {
 		cache,

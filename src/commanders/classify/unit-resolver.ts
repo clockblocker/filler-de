@@ -9,6 +9,7 @@
  * one policy value later, rehydrating a `UnitRef` from the cache instead of
  * receiving it, rather than a second implementation.
  */
+import type { Jev, Luna } from "dumgen";
 import { Context, Effect, Schema } from "effect";
 import type { ClassifyPlan, UnitRef } from "./types";
 
@@ -43,11 +44,16 @@ export class UnitResolver extends Context.Service<
 	{
 		/**
 		 * Resolves every unit of the plan and writes its occurrences' links.
-		 * It answers once per unit, in the plan's order.
+		 * It answers once per unit, in the plan's order, asking dumgen on
+		 * the build of the Classify it serves.
 		 */
 		resolve(
 			plan: ClassifyPlan,
-		): Effect.Effect<readonly UnitResolution[], UnitResolverError>;
+		): Effect.Effect<
+			readonly UnitResolution[],
+			UnitResolverError,
+			Jev | Luna
+		>;
 	}
 >()("textfresser/classify/UnitResolver") {}
 

@@ -8,7 +8,6 @@
 import { describe, expect, it } from "bun:test";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { JevTransport, LunaTransport } from "dumgen";
 import { Deferred, Effect, Layer } from "effect";
 import { ClassifySegmenter } from "../../../src/commanders/classify/classify-selection";
 import {
@@ -26,8 +25,8 @@ import {
 	ResetFailed,
 	type ResetVault,
 } from "../../../src/commanders/dictionary-reset/ports";
-import { dumgenOver } from "../../../src/managers/dumgen";
 import { createScriptedJev } from "../../../src/managers/dumgen/scripted-jev";
+import { fakeDumgen } from "../dumgen/dumgen-support";
 
 const FIXTURE = join(import.meta.dir, "fixtures/vault");
 const BACKUP = "Worter backup 2026-10-20 12-00-00";
@@ -193,18 +192,13 @@ function stubDictionary(vault: FakeResetVault): ResetDictionary {
 }
 
 function servicesWith(resolver: UnitResolver["Service"]) {
-	const dumgen = dumgenOver({
-		jev: JevTransport.fromAsk(createScriptedJev().ask),
-		luna: LunaTransport.fromAsk(() =>
-			Promise.reject(new Error("no Luna in this test")),
-		),
-	});
 	return Layer.mergeAll(
 		Layer.succeed(SegmentationCache, memorySegmentationCache()),
 		Layer.succeed(UnitResolver, resolver),
-		Layer.succeed(ClassifySegmenter, {
-			dumgen: Effect.succeed(dumgen),
-			segmenterVersion: "test",
+		Layer.succeed(ClassifySegmenter, { segmenterVersion: "test" }),
+		fakeDumgen({
+			jev: createScriptedJev().ask,
+			luna: () => Promise.reject(new Error("no Luna in this test")),
 		}),
 	);
 }

@@ -22,6 +22,7 @@
  * and the report still written.
  */
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
+import type { Jev, Luna } from "dumgen";
 import { Cause, Deferred, Effect, Option } from "effect";
 import {
 	type ClassifyError,
@@ -274,7 +275,7 @@ const regenerateOne = Effect.fnUntraced(function* (
 ): Effect.fn.Return<
 	RegenerationResult,
 	never,
-	ClassifySegmenter | SegmentationCache | UnitResolver
+	ClassifySegmenter | SegmentationCache | UnitResolver | Jev | Luna
 > {
 	const planned = plan.attestations[index];
 	if (!planned) return { _tag: "Unresolved", reason: "it is not planned" };
@@ -355,7 +356,7 @@ export const executeReset = Effect.fn("executeReset")(function* (
 ): Effect.fn.Return<
 	ExecuteResult,
 	ResetFailed,
-	ClassifySegmenter | SegmentationCache | UnitResolver
+	ClassifySegmenter | SegmentationCache | UnitResolver | Jev | Luna
 > {
 	const { cancel, dictionary, vault } = options;
 	const progress = (update: ResetProgress) =>

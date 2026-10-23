@@ -1,6 +1,7 @@
 /**
- * A dumgen instance with its two providers, TypeSafe (jev) and OpenAI
- * (Luna), over whatever `Fetch` the host injects: `requestUrl` in the
+ * dumgen's two providers, TypeSafe (jev) and OpenAI (Luna), as the
+ * transport Layers `DumgenLive` builds over, sending through whatever
+ * `Fetch` the host injects: `HttpTransport`'s `requestUrl` port in the
  * plugin, the runtime's `fetch` in provider acceptance.
  *
  * Each provider needs only its own key. Without one, its transport fails
@@ -13,11 +14,9 @@
  */
 import { JevTransport, LunaTransport } from "dumgen";
 import type * as Layer from "effect/Layer";
-import type * as Scope from "effect/Scope";
-import { type Dumgen, type DumgenOptions, dumgenOver } from "./dumgen-over";
 
 /** The `fetch` subset dumgen's TypeSafe and OpenAI transports send through. */
-export type DumgenFetch = NonNullable<
+type DumgenFetch = NonNullable<
 	Parameters<typeof JevTransport.typeSafe>[0]["fetch"]
 >;
 
@@ -32,11 +31,12 @@ export type DumgenProviderOptions = DumgenProviderKeys & {
 	readonly timeoutMs?: number;
 };
 
-const missingKey = (provider: string) => async (): Promise<never> => {
-	throw new Error(
-		`Textfresser has no ${provider} API key. Add one in the plugin's settings.`,
+const missingKey = (provider: string) => (): Promise<never> =>
+	Promise.reject(
+		new Error(
+			`Textfresser has no ${provider} API key. Add one in the plugin's settings.`,
+		),
 	);
-};
 
 /** The jev and Luna transports `DumgenLive` builds over, from the keys. */
 export function dumgenTransports(options: DumgenProviderOptions): {
@@ -59,16 +59,4 @@ export function dumgenTransports(options: DumgenProviderOptions): {
 			? LunaTransport.openAI({ apiKey: openaiApiKey, ...transport })
 			: LunaTransport.fromAsk(missingKey("OpenAI")),
 	};
-}
-
-/**
- * dumgen over the providers' transports, built in `scope`; `extra` adds
- * `DumgenLive`'s other options, such as `onOperation`.
- */
-export function buildDumgen(
-	options: DumgenProviderOptions,
-	scope?: Scope.Scope,
-	extra: Omit<DumgenOptions, "jev" | "luna"> = {},
-): Dumgen {
-	return dumgenOver({ ...extra, ...dumgenTransports(options) }, scope);
 }

@@ -24,10 +24,11 @@
  * links are written.
  */
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
+import type { Jev, Luna } from "dumgen";
 import { parseUnit } from "dumling";
 import type * as Dumling from "dumling/types";
 import { Cause, Data, Effect, Option } from "effect";
-import type { Dumgen } from "../../../managers/dumgen/dumgen-over";
+import type { DumgenOperations } from "../../../managers/dumgen";
 import { getErrorMessage } from "../../../utils/get-error-message";
 import type { ClassifyPlan, PlannedSentence, PlannedUnit } from "../types";
 import {
@@ -62,7 +63,8 @@ const MAX_LINK_WRITES = 3;
 const UNIT_CONCURRENCY = 3;
 
 export type DumgenUnitResolverDeps = {
-	readonly dumgen: Effect.Effect<Dumgen, UnitResolverError>;
+	/** dumgen's `operations`, which a test stubs; they run on the caller's build. */
+	readonly dumgen: Pick<DumgenOperations, "resolve">;
 	readonly store: Effect.Effect<ResolutionStore, UnitResolverError>;
 	readonly scroll: ScrollFiles;
 	readonly knowledge: Pick<KnowledgeQueue, "enqueue">;
@@ -155,7 +157,7 @@ type JudgedUnit = {
 	readonly judge: (
 		candidates: readonly string[],
 		written?: string,
-	) => Effect.Effect<Decided, UnitPending>;
+	) => Effect.Effect<Decided, UnitPending, Jev | Luna>;
 };
 
 /** One judgement per `UnitRef`: the instances of a repeated Sentence share it. */
@@ -164,11 +166,11 @@ const judgementKeyOf = ({ ref }: PlannedUnit) =>
 
 /** Asks dumgen for a unit's grammar and Reading; writes nothing. */
 const judgeUnit = Effect.fnUntraced(function* (
-	dumgen: Dumgen,
+	dumgen: DumgenUnitResolverDeps["dumgen"],
 	store: ResolutionStore,
 	plan: ClassifyPlan,
 	planned: PlannedUnit,
-): Effect.fn.Return<JudgedUnit, UnitPending> {
+): Effect.fn.Return<JudgedUnit, UnitPending, Jev | Luna> {
 	const sentence = plan.sentences.get(planned.ref.sentenceKey);
 	if (!sentence)
 		return yield* new UnitPending({
@@ -265,7 +267,7 @@ const commitUnit = Effect.fnUntraced(function* (
 	planned: PlannedUnit,
 	scrollPath: string,
 	refOf: RefOf,
-): Effect.fn.Return<ResolvedUnit, UnitPending> {
+): Effect.fn.Return<ResolvedUnit, UnitPending, Jev | Luna> {
 	const { attestation, judge, sentence } = judged;
 	let decided = judged.decided;
 	let created = false;
@@ -352,7 +354,7 @@ export function dumgenUnitResolver(
 	return UnitResolver.of({
 		resolve: Effect.fn("dumgenUnitResolver.resolve")(
 			function* (plan) {
-				const dumgen = yield* deps.dumgen;
+				const { dumgen } = deps;
 				const store = yield* deps.store;
 				const firstOf = (planned: PlannedUnit) =>
 					planned.occurrences[0]?.from ?? 0;
@@ -420,7 +422,7 @@ export function dumgenUnitResolver(
 				};
 				const judgements = new Map<
 					string,
-					Effect.Effect<JudgedUnit, UnitPending>
+					Effect.Effect<JudgedUnit, UnitPending, Jev | Luna>
 				>();
 				for (const planned of plan.units)
 					if (!judgements.has(judgementKeyOf(planned)))
@@ -432,7 +434,7 @@ export function dumgenUnitResolver(
 						);
 				const outcomes = yield* Effect.forEach(
 					plan.units,
-					(planned): Effect.Effect<UnitOutcome> =>
+					(planned): Effect.Effect<UnitOutcome, never, Jev | Luna> =>
 						(
 							judgements.get(judgementKeyOf(planned)) ??
 							judgeUnit(dumgen, store, plan, planned)
