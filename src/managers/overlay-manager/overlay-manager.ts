@@ -150,13 +150,16 @@ export class OverlayManager {
 
 		// Setup context menu for "Split into pages"
 		if (this.plugin) {
+			const { getLibrarian } = this;
 			this.contextMenuTeardown = setupContextMenu({
 				app: this.app,
 				commandExecutor: this.commandExecutor,
 				librarian: {
+					get codecRules() {
+						return getLibrarian()?.codecRules ?? null;
+					},
 					isInsideLibrary: (splitPath) =>
-						this.getLibrarian()?.isInsideLibrary(splitPath) ??
-						false,
+						getLibrarian()?.isInsideLibrary(splitPath) ?? false,
 				},
 				plugin: this.plugin,
 				readSync: this.readSync,

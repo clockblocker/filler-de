@@ -18,15 +18,21 @@ export function fixedSettings(
 	return { get: Effect.succeed(settings), now: () => settings };
 }
 
-/** A plugin's `data.json` in memory: what it holds, and every save. */
+/**
+ * A plugin's `data.json` in memory: what it holds, and every save. While
+ * `failSaves` is set, a save rejects, as a read-only file would.
+ */
 export function memoryPluginData(stored: unknown = null) {
 	const saved: unknown[] = [];
-	return {
+	const data = {
+		failSaves: false,
 		loadData: () => Promise.resolve(stored),
-		saveData: (data: unknown) => {
-			saved.push(structuredClone(data));
+		saveData: (value: unknown) => {
+			if (data.failSaves) return Promise.reject(new Error("EACCES"));
+			saved.push(structuredClone(value));
 			return Promise.resolve();
 		},
 		saved,
 	};
+	return data;
 }

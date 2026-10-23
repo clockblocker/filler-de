@@ -2,7 +2,10 @@
  * Context menu integration for editor and file-explorer actions.
  */
 
-import { makeCodecRulesFromSettings } from "@textfresser/library-core";
+import {
+	type CodecRules,
+	makeCodecRulesFromSettings,
+} from "@textfresser/library-core";
 import type {
 	SplitPathToMdFile,
 	VaultActionManager,
@@ -15,7 +18,6 @@ import type { ReadSync } from "../../../runtime/plugin-runtime";
 import type { ParsedUserSettings } from "../../../settings/parsed-settings";
 import {
 	LibraryMetadata,
-	metadataFormatOf,
 	noteMetadataHelper,
 } from "../../../stateless-helpers/note-metadata";
 import { FileType } from "../../../types/common-interface/enums";
@@ -28,9 +30,9 @@ type ContextMenuDeps = {
 	app: App;
 	plugin: Plugin;
 	commandExecutor: CommandExecutor | null;
-	librarian: Pick<Librarian, "isInsideLibrary">;
+	librarian: Pick<Librarian, "isInsideLibrary" | "codecRules">;
 	readSync: ReadSync;
-	/** The settings in effect, read as the menu opens. */
+	/** The settings in effect, read as the menu opens before the Librarian started. */
 	settings: () => ParsedUserSettings;
 	vam: VaultActionManager;
 };
@@ -63,7 +65,8 @@ export function setupContextMenu(deps: ContextMenuDeps): () => void {
 		handleEditorMenu(
 			menu,
 			readSync(getContextMenuFile(vam, librarian)),
-			settings(),
+			// The Librarian's rules, as Split to Pages splits under them.
+			librarian.codecRules ?? makeCodecRulesFromSettings(settings()),
 			commandExecutor,
 		);
 	});
@@ -86,7 +89,7 @@ function handleEditorMenu(
 		{ content: string; splitPath: SplitPathToMdFile } | null,
 		unknown
 	>,
-	settings: ParsedUserSettings,
+	rules: CodecRules,
 	commandExecutor: CommandExecutor | null,
 ): void {
 	if (Exit.isFailure(activeFileExit) || !activeFileExit.value) return;
@@ -100,13 +103,12 @@ function handleEditorMenu(
 		const metaInfo = noteMetadataHelper.read(
 			content,
 			LibraryMetadata,
-			metadataFormatOf(settings),
+			rules.metadataFormat(),
 		);
 		fileType = metaInfo?.noteKind ?? null;
 
 		// Check if scroll would split to multiple pages
 		if (fileType === FileType.Scroll || fileType === null) {
-			const rules = makeCodecRulesFromSettings(settings);
 			wouldSplitToMultiplePages = checkWouldSplit(
 				content,
 				splitPath.basename,

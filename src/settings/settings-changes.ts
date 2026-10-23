@@ -56,14 +56,20 @@ export function diffSettings(
 	return { delimiter, hideMetadata, languages, librarian, placement };
 }
 
-/** `settings` with `patch` over them, sharing no nested object with either. */
+/**
+ * `settings` with `patch` over them, sharing no nested object with either.
+ * A key the patch holds as undefined keeps its value.
+ */
 export function patchSettings(
 	settings: TextEaterSettings,
 	patch: SettingsPatch,
 ): TextEaterSettings {
+	const given = Object.fromEntries(
+		Object.entries(patch).filter(([, value]) => value !== undefined),
+	);
 	return {
 		...settings,
-		...patch,
+		...given,
 		languages: { ...settings.languages, ...patch.languages },
 		suffixDelimiter: {
 			...settings.suffixDelimiter,

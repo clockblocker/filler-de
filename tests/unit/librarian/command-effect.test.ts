@@ -324,6 +324,20 @@ describe("getAdjacentPageInfo", () => {
 });
 
 describe("splitToPagesAction", () => {
+	it("fails as the Librarian being unavailable before its first start", async () => {
+		const vam = {
+			getActiveEditorContext: () =>
+				Effect.succeed(makeActiveContext("First sentence.\n\nSecond.")),
+		} as unknown as VaultActionManager;
+		const librarian = { codecRules: null } as unknown as Librarian;
+
+		const error = await Effect.runPromise(
+			Effect.flip(splitToPagesAction({ librarian, vam })),
+		);
+
+		expect(error).toMatchObject({ kind: "LibrarianUnavailable" });
+	});
+
 	it("sequences reads, queued Library intention, and navigation in one Effect", async () => {
 		const order: string[] = [];
 		const intentions: PageSplitPlan[] = [];

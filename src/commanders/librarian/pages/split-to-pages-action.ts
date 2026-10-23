@@ -82,6 +82,11 @@ const gatherInput = Effect.fn("Librarian.splitToPages.gatherInput")(function* (
 
 	// The Librarian's own rules: it heals the pages under them.
 	const rules = context.librarian.codecRules;
+	if (!rules) {
+		return yield* makeSplitToPagesError.librarianUnavailable(
+			"the Librarian has not started",
+		);
+	}
 
 	const basenameResult = parseSeparatedSuffix(rules, sourcePath.basename);
 	if (Result.isFailure(basenameResult)) {

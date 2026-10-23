@@ -28,7 +28,7 @@ export class PluginData extends Context.Service<
 		/**
 		 * The stored settings: the defaults, overlaid with what `data.json`
 		 * holds. Data an older version saved with retired keys, such as
-		 * the Gemini key, is saved again without them.
+		 * the Gemini key, is saved again without them, if it can be.
 		 */
 		readonly load: Effect.Effect<TextEaterSettings, PluginDataError>;
 		readonly save: (
@@ -55,7 +55,16 @@ export function makePluginData(
 			try: () => plugin.loadData(),
 		});
 		const settings = settingsFromStoredData(stored);
-		if (holdsRetiredSettings(stored)) yield* save(settings);
+		// Best effort: a data.json that cannot be written still loads.
+		if (holdsRetiredSettings(stored))
+			yield* save(settings).pipe(
+				Effect.catch((error) =>
+					Effect.logWarning(
+						"[TextEaterPlugin] Could not drop the retired settings from data.json:",
+						error.message,
+					),
+				),
+			);
 		return settings;
 	}).pipe(Effect.withSpan("PluginData.load"));
 	return PluginData.of({ load, save });

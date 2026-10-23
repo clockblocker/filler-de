@@ -16,7 +16,11 @@ import {
 	type MetadataFormat,
 	metadataFormatOf,
 } from "../stateless-helpers/note-metadata";
-import type { SuffixDelimiterConfig, TextEaterSettings } from "../types";
+import {
+	DEFAULT_SETTINGS,
+	type SuffixDelimiterConfig,
+	type TextEaterSettings,
+} from "../types";
 import { getErrorMessage } from "../utils/get-error-message";
 import { type ParsedUserSettings, parseSettings } from "./parsed-settings";
 import type { PluginData, PluginDataError } from "./plugin-data";
@@ -92,6 +96,13 @@ export type SettingsService = {
 	/** `raw` at once, for the settings tab and the E2E driver. */
 	readonly rawNow: () => TextEaterSettings;
 	/**
+	 * Why the stored settings cannot be run under, such as a Library root
+	 * that is a file; undefined when they can. The launch then fails, the
+	 * tab still shows them, and an update that parses fixes them. Until
+	 * then `get` holds them with the default Library root.
+	 */
+	readonly invalid: () => SettingsInvalid | undefined;
+	/**
 	 * Applies `patch` once the launch ended, one update after another:
 	 * diffs it against the settings in effect, renames the Library's files
 	 * for a new delimiter (which may keep the old one), moves the notes'
@@ -113,6 +124,7 @@ export class Settings extends Context.Service<Settings, SettingsService>()(
 type SettingsState = {
 	readonly raw: TextEaterSettings;
 	readonly parsed: ParsedUserSettings;
+	readonly invalid?: SettingsInvalid;
 };
 
 const parse = (raw: TextEaterSettings) =>
@@ -127,7 +139,25 @@ export const makeSettings = Effect.fnUntraced(function* (deps: {
 	readonly reactions: SettingsReactions;
 }) {
 	const { data, reactions } = deps;
-	const state = yield* SubscriptionRef.make(yield* parse(yield* data.load));
+	const loaded = yield* data.load;
+	const state = yield* SubscriptionRef.make(
+		yield* parse(loaded).pipe(
+			Effect.catch((invalid) =>
+				// Only the Library root can fail to parse.
+				parse({
+					...loaded,
+					libraryRoot: DEFAULT_SETTINGS.libraryRoot,
+				}).pipe(
+					Effect.map(({ parsed }) => ({
+						invalid,
+						parsed,
+						raw: loaded,
+					})),
+					Effect.orDie,
+				),
+			),
+		),
+	);
 	const lock = yield* Semaphore.make(1);
 
 	const set = (raw: TextEaterSettings) =>
@@ -180,13 +210,21 @@ export const makeSettings = Effect.fnUntraced(function* (deps: {
 		}
 
 		yield* set(next);
-		if (JSON.stringify(next) !== JSON.stringify(before))
-			yield* data.save(next);
-		/** Whether the Librarian must restart under the settings now in effect. */
-		return (
-			(changes.librarian && !librarianRestarted) ||
-			options.restartLibrarian === true
-		);
+		// A failed save is raised after the Librarian's restart, below.
+		const saveFailed =
+			JSON.stringify(next) === JSON.stringify(before)
+				? undefined
+				: yield* data.save(next).pipe(
+						Effect.as(undefined),
+						Effect.catch((error) => Effect.succeed(error)),
+					);
+		return {
+			/** Whether the Librarian must restart under the settings now in effect. */
+			restart:
+				(changes.librarian && !librarianRestarted) ||
+				options.restartLibrarian === true,
+			saveFailed,
+		};
 	});
 
 	return Settings.of({
@@ -194,6 +232,7 @@ export const makeSettings = Effect.fnUntraced(function* (deps: {
 			Stream.map(({ parsed }) => parsed),
 		),
 		get: Effect.map(SubscriptionRef.get(state), ({ parsed }) => parsed),
+		invalid: () => SubscriptionRef.getUnsafe(state).invalid,
 		now: () => SubscriptionRef.getUnsafe(state).parsed,
 		raw: Effect.map(SubscriptionRef.get(state), ({ raw }) => raw),
 		rawNow: () => SubscriptionRef.getUnsafe(state).raw,
@@ -201,15 +240,17 @@ export const makeSettings = Effect.fnUntraced(function* (deps: {
 			patch: SettingsPatch,
 			options: SettingsUpdateOptions = {},
 		) {
-			const restart = yield* lock.withPermit(
+			const { restart, saveFailed } = yield* lock.withPermit(
 				reactions.whenLaunched.pipe(
 					Effect.andThen(apply(patch, options)),
 				),
 			);
 			// Outside the lock: restarts that wait together in the
 			// lifecycle's mailbox, such as one per keystroke in the Library
-			// root's field, run as one.
+			// root's field, run as one. The settings are in effect even when
+			// storing them failed, so the Librarian restarts under them first.
 			if (restart) yield* reactions.reconfigure;
+			if (saveFailed) return yield* saveFailed;
 		}),
 	});
 });

@@ -14,6 +14,8 @@ import type { TextEaterSettings } from "./types";
 export default interface TextEaterPluginStripped extends Plugin {
 	/** The settings in effect; undefined while they load, and after unload. */
 	readonly settings: TextEaterSettings | undefined;
+	/** Why the settings cannot be run under, such as a Library root that is a file. */
+	readonly settingsProblem: string | undefined;
 	/** Applies `patch` to the settings and stores them; resolves once done. */
 	updateSettings(patch: SettingsPatch): Promise<void>;
 }

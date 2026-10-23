@@ -59,7 +59,7 @@ import {
 } from "./runtime/plugin-runtime";
 import { SettingsTab } from "./settings";
 import type { SettingsPatch } from "./settings/settings-changes";
-import { Settings } from "./settings/settings-service";
+import { Settings, type SettingsInvalid } from "./settings/settings-service";
 import type { TextEaterSettings } from "./types";
 import { getErrorMessage } from "./utils/get-error-message";
 import { IdleTracker, isE2EMode } from "./utils/idle-tracker";
@@ -118,6 +118,11 @@ export default class TextEaterPlugin extends Plugin {
 	 */
 	get settings(): TextEaterSettings | undefined {
 		return this.settingsService?.rawNow();
+	}
+
+	/** Why the settings in effect cannot be run under, if they cannot. */
+	get settingsProblem(): string | undefined {
+		return this.settingsService?.invalid()?.message;
 	}
 
 	override onload() {
@@ -210,6 +215,7 @@ export default class TextEaterPlugin extends Plugin {
 	): Effect.Effect<
 		LaunchedPlugin<Librarian>,
 		| Cause.UnknownError
+		| SettingsInvalid
 		| VamSetupError
 		| VamShutdownError
 		| VamSubscriptionError,
@@ -219,6 +225,10 @@ export default class TextEaterPlugin extends Plugin {
 			yield* whenObsidianIsReady(this.app);
 			const lifecycle = yield* Lifecycle;
 			const settings = yield* Settings;
+			// The tab still shows settings that cannot be run under, so a
+			// save there can fix them; only the launch fails.
+			const invalid = settings.invalid();
+			if (invalid) return yield* invalid;
 			const vam = yield* VaultActionManager;
 			registerCommands(this, {
 				dictionaryReset: () => this.services?.dictionaryReset ?? null,

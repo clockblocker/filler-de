@@ -298,13 +298,13 @@ describe("PluginLive", () => {
 			),
 		);
 		try {
-			expect(plugin.lifecycle().librarian()?.codecRules.showScrollBacklinks).toBe(true);
+			expect(plugin.lifecycle().librarian()?.codecRules?.showScrollBacklinks).toBe(true);
 
 			await plugin.runtime.settings(
 				settings.update({ showScrollBacklinks: false }),
 			);
 
-			expect(plugin.lifecycle().librarian()?.codecRules.showScrollBacklinks).toBe(false);
+			expect(plugin.lifecycle().librarian()?.codecRules?.showScrollBacklinks).toBe(false);
 			expect(data.saved).toEqual([
 				{
 					...DEFAULT_SETTINGS,

@@ -38,6 +38,7 @@ const root: SplitPathToFolder = {
 async function makeHarness(
 	options: {
 		readonly stored?: unknown;
+		readonly failSaves?: boolean;
 		readonly reactions?: (
 			settings: () => SettingsService,
 			events: string[],
@@ -47,6 +48,7 @@ async function makeHarness(
 ) {
 	const events: string[] = [];
 	const data = memoryPluginData(options.stored ?? {});
+	data.failSaves = options.failSaves ?? false;
 	let service: SettingsService | null = null;
 	const settings = () => service as SettingsService;
 	const reactions: SettingsReactions = {
@@ -87,6 +89,53 @@ describe("Settings", () => {
 		});
 		expect(settings.now().splitPathToLibraryRoot.basename).toBe("Books");
 		expect(data.saved).toEqual([{ ...DEFAULT_SETTINGS, libraryRoot: "Books" }]);
+	});
+
+	it("still loads data with retired keys that it cannot save again", async () => {
+		const { data, settings } = await makeHarness({
+			failSaves: true,
+			stored: { googleApiKey: "old", libraryRoot: "Books" },
+		});
+		expect(settings.rawNow().libraryRoot).toBe("Books");
+		expect(settings.invalid()).toBeUndefined();
+		expect(data.saved).toEqual([]);
+	});
+
+	it("loads settings it cannot run under, marked invalid, and an update that parses fixes them", async () => {
+		const { data, events, settings } = await makeHarness({
+			stored: { libraryRoot: "Notes.md" },
+		});
+		expect(settings.invalid()?._tag).toBe("SettingsInvalid");
+		expect(settings.rawNow().libraryRoot).toBe("Notes.md");
+		expect(settings.now().splitPathToLibraryRoot.basename).toBe("Library");
+
+		await Effect.runPromise(settings.update({ libraryRoot: "Books" }));
+
+		expect(settings.invalid()).toBeUndefined();
+		expect(settings.now().splitPathToLibraryRoot.basename).toBe("Books");
+		expect(events).toEqual(["reconfigure under Books"]);
+		expect(data.saved).toEqual([{ ...DEFAULT_SETTINGS, libraryRoot: "Books" }]);
+	});
+
+	it("keeps a change it could not store in effect, restarts the Librarian under it, then fails", async () => {
+		const { events, settings } = await makeHarness({ failSaves: true });
+
+		const error = await Effect.runPromise(
+			Effect.flip(settings.update({ libraryRoot: "Books" })),
+		);
+
+		expect(error._tag).toBe("PluginDataError");
+		expect(settings.now().splitPathToLibraryRoot.basename).toBe("Books");
+		expect(events).toEqual(["reconfigure under Books"]);
+	});
+
+	it("keeps a value that a patch holds as undefined", async () => {
+		const { settings } = await makeHarness();
+		await Effect.runPromise(
+			settings.update({ libraryRoot: undefined, openaiApiKey: "sk" }),
+		);
+		expect(settings.rawNow().libraryRoot).toBe("Library");
+		expect(settings.rawNow().openaiApiKey).toBe("sk");
 	});
 
 	it("does not save data that holds no retired key at load", async () => {

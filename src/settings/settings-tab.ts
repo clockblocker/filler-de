@@ -7,6 +7,7 @@ import {
 	SelectionActionPlacementSchema,
 	type SelectionActionPlacement as SelectionActionPlacementType,
 	TargetLanguageSchema,
+	type TextEaterSettings,
 } from "../types";
 import { LOCALES } from "./locales";
 import type { SettingsPatch } from "./settings-changes";
@@ -36,16 +37,25 @@ export class SettingsTab extends PluginSettingTab {
 	}
 
 	/**
-	 * Applies `patch`. `redraw` draws the tab again once it is applied, to
-	 * show what took effect, such as the old delimiter the files kept.
+	 * Applies `patch`. `redraw` draws the tab again once it is applied, or
+	 * only when it answers true for the settings then in effect, to show
+	 * what took effect, such as the old delimiter the files kept. A redraw
+	 * moves the focus, so it is kept to those cases.
 	 */
 	private update(
 		patch: SettingsPatch,
-		{ redraw = false }: { readonly redraw?: boolean } = {},
+		{
+			redraw = false,
+		}: {
+			readonly redraw?: boolean | ((now: TextEaterSettings) => boolean);
+		} = {},
 	): Promise<void> {
-		return this.plugin
-			.updateSettings(patch)
-			.then(() => (redraw ? this.display() : undefined));
+		return this.plugin.updateSettings(patch).then(() => {
+			const now = this.plugin.settings;
+			const draw =
+				typeof redraw === "function" ? !!now && redraw(now) : redraw;
+			if (draw) this.display();
+		});
 	}
 
 	display(): void {
@@ -58,6 +68,12 @@ export class SettingsTab extends PluginSettingTab {
 			return;
 		}
 		const t = LOCALES[settings.languages.known];
+		const problem = this.plugin.settingsProblem;
+		if (problem)
+			containerEl.createEl("p", {
+				cls: "mod-warning",
+				text: `${problem}. Fix it below, then reload Textfresser.`,
+			});
 		/** The delimiter in effect now, which a change may not have reached yet. */
 		const delimiterNow = () =>
 			(this.plugin.settings ?? settings).suffixDelimiter.symbol;
@@ -228,8 +244,11 @@ export class SettingsTab extends PluginSettingTab {
 					settings.suffixDelimiter.symbol,
 				);
 
+				/** The delimiter a change under way asks for, so a second blur does not ask again. */
+				let pending: string | null = null;
 				text.inputEl.addEventListener("blur", () => {
 					const value = text.getValue().trim();
+					if (value === pending) return;
 					// Validate length: 1-3 chars
 					if (value.length < 1 || value.length > 3) {
 						new Notice(t.delimiterLengthError);
@@ -251,12 +270,18 @@ export class SettingsTab extends PluginSettingTab {
 						}
 					}
 					// Only save if value changed. The files may keep the old
-					// delimiter, so draw what took effect.
+					// delimiter: then draw what took effect.
 					if (value !== delimiterNow()) {
+						pending = value;
 						void this.update(
 							{ suffixDelimiter: { symbol: value } },
-							{ redraw: true },
-						);
+							{
+								redraw: (now) =>
+									now.suffixDelimiter.symbol !== value,
+							},
+						).finally(() => {
+							pending = null;
+						});
 					}
 				});
 			});
@@ -270,7 +295,10 @@ export class SettingsTab extends PluginSettingTab {
 					.onChange((value) =>
 						this.update(
 							{ suffixDelimiter: { padded: value } },
-							{ redraw: true },
+							{
+								redraw: (now) =>
+									now.suffixDelimiter.padded !== value,
+							},
 						),
 					),
 			);

@@ -24,7 +24,7 @@ import {
 import { PROTECTED_PATH_PREFIXES } from "../managers/obsidian/protected-paths/protected-paths-guard";
 import { SettingsLive } from "../plugin/settings-live";
 import { PluginData, type PluginDataError } from "../settings/plugin-data";
-import type { Settings, SettingsInvalid } from "../settings/settings-service";
+import type { Settings } from "../settings/settings-service";
 import { IdleTrackerLive } from "../utils/idle-tracker";
 import { ObservabilityLive } from "./observability";
 
@@ -32,7 +32,7 @@ import { ObservabilityLive } from "./observability";
 export type PluginServices = VaultActionManager | Dumgen | Lifecycle | Settings;
 
 /** What building the plugin's Layer fails with. */
-export type PluginLiveError = VamSetupError | PluginDataError | SettingsInvalid;
+export type PluginLiveError = VamSetupError | PluginDataError;
 
 export type PluginLiveDeps = {
 	/** What the lifecycle tells the user. */
@@ -102,10 +102,11 @@ class ShutdownWatch extends Context.Service<
 /**
  * The plugin's Layer: its observability and idle tracker, then VAM, then
  * the lifecycle and the stored data, then the settings, which load as the
- * runtime is built, then dumgen, which reads its keys from them. A
- * Layer's finalizers run newest first, so disposing the runtime stops the
- * lifecycle (the services it built, newest first, then the Librarian)
- * while VAM still runs, and then shuts VAM down. VAM installs no tracer or
+ * runtime is built, then dumgen, which reads its keys from them, then the
+ * lifecycle's stop. A Layer's finalizers run newest first, so disposing
+ * the runtime stops the lifecycle (the services it built, newest first,
+ * then the Librarian) while dumgen and VAM still run, and then shuts VAM
+ * down. VAM installs no tracer or
  * logger of its own: it is given the plugin's with `provideMerge`, so its
  * vault callbacks, which run with the Layer's build context, are traced
  * and counted by the idle tracker too. The settings and dumgen hold
@@ -117,6 +118,7 @@ export function PluginLive(
 	deps: PluginLiveDeps,
 ): Layer.Layer<PluginServices, PluginLiveError> {
 	return ShutdownWatch.armed.pipe(
+		Layer.provideMerge(Lifecycle.stopsOnRelease),
 		Layer.provideMerge(
 			Dumgen.layer.pipe(
 				Layer.provide(

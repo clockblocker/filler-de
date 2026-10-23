@@ -282,8 +282,9 @@ export class Librarian {
 		private readonly options: LibrarianOptions,
 	) {}
 
-	/** The codec rules this Librarian's start runs under. */
-	get codecRules(): CodecRules {
+	/** The codec rules this Librarian's start runs under; null before its first start. */
+	get codecRules(): CodecRules | null {
+		if (!this.codecs) return null;
 		return this.codecs.rules;
 	}
 
