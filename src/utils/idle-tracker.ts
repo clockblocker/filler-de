@@ -5,8 +5,11 @@
  * queue item, a Knowledge run, an unlink check, a click the event layer
  * handles.
  *
- * The count is a `SubscriptionRef`, so `whenIdle` waits on its changes
- * instead of polling it. The plugin runtime provides one tracker
+ * The count is a `Ref`, and each change is published, so `whenIdle` waits
+ * on its changes instead of polling it. A change is one synchronous step,
+ * with no lock to wait for, so the plain callbacks that count through the
+ * runtime's `readSync` never see it go async. The plugin runtime provides
+ * one tracker
  * (`IdleTrackerLive`); code run without it, such as most unit tests,
  * counts nothing.
  */
@@ -15,8 +18,10 @@ import {
 	type Duration,
 	Effect,
 	Layer,
+	MutableRef,
+	PubSub,
+	Ref,
 	Stream,
-	SubscriptionRef,
 } from "effect";
 
 export type IdleTrackerService = {
@@ -47,13 +52,25 @@ const untracked: IdleTrackerService = {
 
 /** A tracker of its own, as the plugin runtime holds one. */
 export const makeIdleTracker: Effect.Effect<IdleTrackerService> = Effect.map(
-	SubscriptionRef.make(0),
-	(count) => {
-		const start = SubscriptionRef.update(count, (n) => n + 1);
-		const end = SubscriptionRef.update(count, (n) => Math.max(0, n - 1));
+	PubSub.unbounded<number>({ replay: 1 }),
+	(changes) => {
+		const count = Ref.makeUnsafe(0);
+		PubSub.publishUnsafe(changes, 0);
+		/** Changes the count and publishes it, in one step. */
+		const change = (by: 1 | -1) =>
+			Effect.sync(() => {
+				PubSub.publishUnsafe(
+					changes,
+					MutableRef.updateAndGet(count.ref, (n) =>
+						Math.max(0, n + by),
+					),
+				);
+			});
+		const start = change(1);
+		const end = change(-1);
 		return {
 			end,
-			pending: SubscriptionRef.get(count),
+			pending: Ref.get(count),
 			start,
 			track: (effect) =>
 				Effect.acquireUseRelease(
@@ -64,7 +81,7 @@ export const makeIdleTracker: Effect.Effect<IdleTrackerService> = Effect.map(
 			// The count's changes, the current one first: idle once a
 			// zero is followed by no change for `grace`.
 			whenIdle: (grace = GRACE) =>
-				SubscriptionRef.changes(count).pipe(
+				Stream.fromPubSub(changes).pipe(
 					Stream.debounce(grace),
 					Stream.filter((n) => n === 0),
 					Stream.runHead,
