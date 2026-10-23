@@ -1,18 +1,10 @@
-import { Cause, Predicate, Schema } from "effect";
+import { Cause, Data } from "effect";
 import { formatCause } from "../diagnostics/format-cause";
 import { displayPath } from "../errors";
 import { getErrorMessage } from "../internal/get-error-message";
 import { splitPathCodec } from "../split-path-codec";
 import type { VaultAction } from "../types/vault-action";
 import type { VamDispatchFailure } from "./dispatch-report";
-
-/** A `VaultAction` field. Actions carry functions, so they are declared, not encoded. */
-export const VaultActionSchema = Schema.declare(
-	(input: unknown): input is VaultAction =>
-		Predicate.hasProperty(input, "kind") &&
-		Predicate.isString(input.kind) &&
-		Predicate.hasProperty(input, "payload"),
-);
 
 /**
  * The path an action names, as messages show it: `from → to` for a rename.
@@ -49,13 +41,10 @@ function describeFailure(
  * Building the Vault Action Manager failed. `cause` is what the failed
  * step threw, or the build's whole `Cause` when it failed some other way.
  */
-export class VamSetupError extends Schema.TaggedError<VamSetupError>()(
-	"VamSetupError",
-	{
-		cause: Schema.Defect(),
-		operation: Schema.String,
-	},
-) {
+export class VamSetupError extends Data.TaggedError("VamSetupError")<{
+	readonly cause: unknown;
+	readonly operation: string;
+}> {
 	override get message(): string {
 		return describeFailure(
 			this.operation,
@@ -67,61 +56,52 @@ export class VamSetupError extends Schema.TaggedError<VamSetupError>()(
 	}
 }
 
-export class VamVaultIoError extends Schema.TaggedError<VamVaultIoError>()(
-	"VamVaultIoError",
-	{
-		cause: Schema.Defect(),
-		operation: Schema.String,
-		path: Schema.optional(Schema.String),
-		stateChanged: Schema.optional(Schema.Boolean),
-	},
-) {
+export class VamVaultIoError extends Data.TaggedError("VamVaultIoError")<{
+	readonly cause: unknown;
+	readonly operation: string;
+	readonly path?: string | undefined;
+	readonly stateChanged?: boolean | undefined;
+}> {
 	override get message(): string {
 		return describeFailure(this.operation, this.path, this.cause);
 	}
 }
 
-export const VamActiveEditorFailureReasonSchema = Schema.Literals([
-	"AdapterFailure",
-	"DomFailure",
-	"IdentityMismatch",
-	"MissingFile",
-	"NavigationFailure",
-	"PathFailure",
-	"ReadFailure",
-	"ReadinessTimeout",
-	"StaleFile",
-	"WriteFailure",
-	"WrongMode",
-]);
-
 export type VamActiveEditorFailureReason =
-	typeof VamActiveEditorFailureReasonSchema.Type;
+	| "AdapterFailure"
+	| "DomFailure"
+	| "IdentityMismatch"
+	| "MissingFile"
+	| "NavigationFailure"
+	| "PathFailure"
+	| "ReadFailure"
+	| "ReadinessTimeout"
+	| "StaleFile"
+	| "WriteFailure"
+	| "WrongMode";
 
-export class VamActiveEditorError extends Schema.TaggedError<VamActiveEditorError>()(
+export class VamActiveEditorError extends Data.TaggedError(
 	"VamActiveEditorError",
-	{
-		cause: Schema.Defect(),
-		operation: Schema.String,
-		path: Schema.optional(Schema.String),
-		reason: VamActiveEditorFailureReasonSchema,
-		stateChanged: Schema.optional(Schema.Boolean),
-	},
-) {
+)<{
+	readonly cause: unknown;
+	readonly operation: string;
+	readonly path?: string | undefined;
+	readonly reason: VamActiveEditorFailureReason;
+	readonly stateChanged?: boolean | undefined;
+}> {
 	override get message(): string {
 		return describeFailure(this.operation, this.path, this.cause);
 	}
 }
 
 /** Expected absence, kept separate from operational active-editor failures. */
-export class VamNoActiveEditorError extends Schema.TaggedError<VamNoActiveEditorError>()(
+export class VamNoActiveEditorError extends Data.TaggedError(
 	"VamNoActiveEditorError",
-	{
-		cause: Schema.Defect(),
-		operation: Schema.String,
-		stateChanged: Schema.optional(Schema.Boolean),
-	},
-) {
+)<{
+	readonly cause: unknown;
+	readonly operation: string;
+	readonly stateChanged?: boolean | undefined;
+}> {
 	override get message(): string {
 		return describeFailure(this.operation, undefined, this.cause);
 	}
@@ -135,14 +115,13 @@ export class VamNoActiveEditorError extends Schema.TaggedError<VamNoActiveEditor
  * also fails with it when the file's open views hold different content
  * (`OpenViewsDisagree`), so VAM cannot tell which is current.
  */
-export class VamContentConflictError extends Schema.TaggedError<VamContentConflictError>()(
+export class VamContentConflictError extends Data.TaggedError(
 	"VamContentConflictError",
-	{
-		cause: Schema.Defect(),
-		operation: Schema.String,
-		path: Schema.String,
-	},
-) {
+)<{
+	readonly cause: unknown;
+	readonly operation: string;
+	readonly path: string;
+}> {
 	override get message(): string {
 		return describeFailure(this.operation, this.path, this.cause);
 	}
@@ -154,15 +133,14 @@ export class VamContentConflictError extends Schema.TaggedError<VamContentConfli
  * occupied. `occupiedBy` is the path that holds it, which differs from
  * `path` in case alone where the vault's file system ignores case.
  */
-export class VamTargetExistsError extends Schema.TaggedError<VamTargetExistsError>()(
+export class VamTargetExistsError extends Data.TaggedError(
 	"VamTargetExistsError",
-	{
-		cause: Schema.Defect(),
-		occupiedBy: Schema.String,
-		operation: Schema.String,
-		path: Schema.String,
-	},
-) {
+)<{
+	readonly cause: unknown;
+	readonly occupiedBy: string;
+	readonly operation: string;
+	readonly path: string;
+}> {
 	override get message(): string {
 		return describeFailure(this.operation, this.path, this.cause);
 	}
@@ -188,28 +166,22 @@ export type VamFileWriteError =
 	| VamContentConflictError
 	| VamTargetExistsError;
 
-export class VamScanError extends Schema.TaggedError<VamScanError>()(
-	"VamScanError",
-	{
-		cause: Schema.Defect(),
-		operation: Schema.Literals(["scanRoot", "scanFolder", "scanFile"]),
-		path: Schema.String,
-	},
-) {
+export class VamScanError extends Data.TaggedError("VamScanError")<{
+	readonly cause: unknown;
+	readonly operation: "scanRoot" | "scanFolder" | "scanFile";
+	readonly path: string;
+}> {
 	override get message(): string {
 		return describeFailure(this.operation, this.path, this.cause);
 	}
 }
 
-export class VamPlanningError extends Schema.TaggedError<VamPlanningError>()(
-	"VamPlanningError",
-	{
-		action: Schema.optional(VaultActionSchema),
-		cause: Schema.Defect(),
-		operation: Schema.String,
-		path: Schema.optional(Schema.String),
-	},
-) {
+export class VamPlanningError extends Data.TaggedError("VamPlanningError")<{
+	readonly action?: VaultAction | undefined;
+	readonly cause: unknown;
+	readonly operation: string;
+	readonly path?: string | undefined;
+}> {
 	override get message(): string {
 		return describeFailure(this.operation, this.path, this.cause);
 	}
@@ -228,16 +200,13 @@ export class VamPlanningError extends Schema.TaggedError<VamPlanningError>()(
  * - `interrupted`: it was interrupted while it ran. It may have changed the
  *   vault.
  */
-export const VamActionFailureKindSchema = Schema.Literals([
-	"conflict",
-	"exists",
-	"missing",
-	"io",
-	"defect",
-	"interrupted",
-]);
-
-export type VamActionFailureKind = typeof VamActionFailureKindSchema.Type;
+export type VamActionFailureKind =
+	| "conflict"
+	| "exists"
+	| "missing"
+	| "io"
+	| "defect"
+	| "interrupted";
 
 /**
  * What a failed fiber's `cause` holds, kept whole: the error or defect of
@@ -260,15 +229,12 @@ export function causeValue(cause: Cause.Cause<unknown>): unknown {
  * finalizer's defect, the whole `Cause`; for a batch interrupted while it
  * ran, the `VamShutdownError`. `formatCause` prints a `Cause`.
  */
-export class VamDispatchError extends Schema.TaggedError<VamDispatchError>()(
-	"VamDispatchError",
-	{
-		action: VaultActionSchema,
-		cause: Schema.Defect(),
-		kind: VamActionFailureKindSchema,
-		operation: Schema.String,
-	},
-) {
+export class VamDispatchError extends Data.TaggedError("VamDispatchError")<{
+	readonly action: VaultAction;
+	readonly cause: unknown;
+	readonly kind: VamActionFailureKind;
+	readonly operation: string;
+}> {
 	override get message(): string {
 		const because = Cause.isCause(this.cause)
 			? formatCause(this.cause, { stack: false })
@@ -282,15 +248,14 @@ export class VamDispatchError extends Schema.TaggedError<VamDispatchError>()(
  * A submitted batch found the Dispatch Batch queue at its ceiling. VAM waits
  * for queue space below the ceiling; reaching it signals a runaway producer.
  */
-export class VamDispatchOverflowError extends Schema.TaggedError<VamDispatchOverflowError>()(
+export class VamDispatchOverflowError extends Data.TaggedError(
 	"VamDispatchOverflowError",
-	{
-		action: Schema.optional(VaultActionSchema),
-		cause: Schema.Defect(),
-		limit: Schema.Number,
-		operation: Schema.String,
-	},
-) {
+)<{
+	readonly action?: VaultAction | undefined;
+	readonly cause: unknown;
+	readonly limit: number;
+	readonly operation: string;
+}> {
 	override get message(): string {
 		return describeFailure(this.operation, undefined, this.cause);
 	}
@@ -301,16 +266,15 @@ export class VamDispatchOverflowError extends Schema.TaggedError<VamDispatchOver
  * before running any of it. `relation` tells whether the path lies inside a
  * protected prefix or is a folder containing one.
  */
-export class VamProtectedPathError extends Schema.TaggedError<VamProtectedPathError>()(
+export class VamProtectedPathError extends Data.TaggedError(
 	"VamProtectedPathError",
-	{
-		action: VaultActionSchema,
-		operation: Schema.String,
-		path: Schema.String,
-		prefix: Schema.String,
-		relation: Schema.Literals(["inside", "contains"]),
-	},
-) {
+)<{
+	readonly action: VaultAction;
+	readonly operation: string;
+	readonly path: string;
+	readonly prefix: string;
+	readonly relation: "inside" | "contains";
+}> {
 	override get message(): string {
 		const where =
 			this.relation === "inside"
@@ -320,42 +284,34 @@ export class VamProtectedPathError extends Schema.TaggedError<VamProtectedPathEr
 	}
 }
 
-export class VamSubscriptionError extends Schema.TaggedError<VamSubscriptionError>()(
+export class VamSubscriptionError extends Data.TaggedError(
 	"VamSubscriptionError",
-	{
-		cause: Schema.Defect(),
-		operation: Schema.String,
-	},
-) {
+)<{
+	readonly cause: unknown;
+	readonly operation: string;
+}> {
 	override get message(): string {
 		return describeFailure(this.operation, undefined, this.cause);
 	}
 }
 
-export class VamShutdownError extends Schema.TaggedError<VamShutdownError>()(
-	"VamShutdownError",
-	{
-		cause: Schema.Defect(),
-		operation: Schema.String,
-	},
-) {
+export class VamShutdownError extends Data.TaggedError("VamShutdownError")<{
+	readonly cause: unknown;
+	readonly operation: string;
+}> {
 	override get message(): string {
 		return describeFailure(this.operation, undefined, this.cause);
 	}
 }
 
 /** Why a Dispatch Batch failed: its first failed action, or what kept it from running. */
-export const VamDispatchFailureReasonSchema = Schema.Union([
-	VamPlanningError,
-	VamProtectedPathError,
-	VamDispatchOverflowError,
-	VamShutdownError,
-	VamSetupError,
-	VamDispatchError,
-]);
-
 export type VamDispatchFailureReason =
-	typeof VamDispatchFailureReasonSchema.Type;
+	| VamPlanningError
+	| VamProtectedPathError
+	| VamDispatchOverflowError
+	| VamShutdownError
+	| VamSetupError
+	| VamDispatchError;
 
 export type VamEffectError =
 	| VamSetupError

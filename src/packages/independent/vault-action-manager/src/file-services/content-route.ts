@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect";
+import { Data, Effect } from "effect";
 import {
 	VamContentConflictError,
 	type VamVaultIoError,
@@ -38,10 +38,9 @@ export type ContentRoute =
  * `VamContentConflictError` a read or write fails with; nothing was read
  * or written.
  */
-export class OpenViewsDisagree extends Schema.TaggedError<OpenViewsDisagree>()(
-	"OpenViewsDisagree",
-	{ views: Schema.Number },
-) {
+export class OpenViewsDisagree extends Data.TaggedError("OpenViewsDisagree")<{
+	readonly views: number;
+}> {
 	override get message(): string {
 		return `${this.views} open views of the file hold different unsaved content; nothing was read or written`;
 	}

@@ -11,18 +11,18 @@ import {
 	formatValue,
 	makeRecentTrace,
 } from "@textfresser/vault-action-manager/diagnostics";
-import { Cause, Data, Effect, Exit, Fiber, Logger, Schema } from "effect";
+import { Cause, Data, Effect, Exit, Fiber, Logger } from "effect";
 import { vamConsoleLogger } from "../../src/effect/logger";
 import { makeVaultHarness } from "./helpers/vault-harness";
 
-class ReadFailed extends Schema.TaggedError<ReadFailed>()("ReadFailed", {
-	path: Schema.String,
-}) {}
+class ReadFailed extends Data.TaggedError("ReadFailed")<{
+	readonly path: string;
+}> {}
 
-class WriteFailed extends Schema.TaggedError<WriteFailed>()("WriteFailed", {
-	cause: Schema.Defect(),
-	operation: Schema.String,
-}) {}
+class WriteFailed extends Data.TaggedError("WriteFailed")<{
+	readonly cause: unknown;
+	readonly operation: string;
+}> {}
 
 class Refused extends Data.TaggedError("Refused")<{
 	readonly message: string;

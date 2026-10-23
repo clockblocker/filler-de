@@ -1,4 +1,4 @@
-import { Predicate, Schema } from "effect";
+import { Cause, Data } from "effect";
 import type { VamOperation } from "../types/event-origin";
 import type { AnySplitPath } from "../types/split-path";
 import { type VaultAction, VaultActionKind } from "../types/vault-action";
@@ -8,25 +8,15 @@ import {
 	VamContentConflictError,
 	VamDispatchError,
 	type VamDispatchFailureReason,
-	VamDispatchFailureReasonSchema,
 	VamNoActiveEditorError,
+	type VamSetupError,
+	type VamShutdownError,
 	VamTargetExistsError,
 	VamVaultIoError,
-	VaultActionSchema,
 } from "./errors";
-import { VamUndoReport } from "./undo-report";
+import type { VamUndoReport } from "./undo-report";
 
-export {
-	type VamDispatchFailureReason,
-	VamDispatchFailureReasonSchema,
-} from "./errors";
-
-const SplitPathSchema = Schema.declare(
-	(input: unknown): input is AnySplitPath =>
-		Predicate.hasProperty(input, "kind") &&
-		Predicate.hasProperty(input, "basename") &&
-		Predicate.hasProperty(input, "pathParts"),
-);
+export type { VamDispatchFailureReason } from "./errors";
 
 /**
  * What one completed action did to the vault. Hashes are
@@ -47,22 +37,21 @@ const SplitPathSchema = Schema.declare(
  *   file to trash was gone, or a rename's source was gone and its target
  *   there.
  */
-export const VamActionOutcomeSchema = Schema.Union([
-	Schema.TaggedStruct("Created", {
-		contentHash: Schema.optional(Schema.String),
-	}),
-	Schema.TaggedStruct("Wrote", {
-		afterHash: Schema.String,
-		beforeHash: Schema.String,
-	}),
-	Schema.TaggedStruct("Renamed", { to: SplitPathSchema }),
-	Schema.TaggedStruct("RenamedToIndexed", { to: SplitPathSchema }),
-	Schema.TaggedStruct("TrashedDuplicate", {}),
-	Schema.TaggedStruct("Trashed", {}),
-	Schema.TaggedStruct("NoOp", {}),
-]);
-
-export type VamActionOutcome = typeof VamActionOutcomeSchema.Type;
+export type VamActionOutcome =
+	| {
+			readonly _tag: "Created";
+			readonly contentHash?: string | undefined;
+	  }
+	| {
+			readonly _tag: "Wrote";
+			readonly afterHash: string;
+			readonly beforeHash: string;
+	  }
+	| { readonly _tag: "Renamed"; readonly to: AnySplitPath }
+	| { readonly _tag: "RenamedToIndexed"; readonly to: AnySplitPath }
+	| { readonly _tag: "TrashedDuplicate" }
+	| { readonly _tag: "Trashed" }
+	| { readonly _tag: "NoOp" };
 
 /**
  * One planned action of a Dispatch Batch and what became of it:
@@ -78,30 +67,24 @@ export type VamActionOutcome = typeof VamActionOutcomeSchema.Type;
  *   wrote or moved; it is absent when the action failed before that check.
  * - `Skipped`: it never ran.
  */
-export const VamDispatchEntrySchema = Schema.Union([
-	Schema.Struct({
-		action: VaultActionSchema,
-		outcome: VamActionOutcomeSchema,
-		status: Schema.Literal("Done"),
-	}),
-	Schema.Struct({
-		action: VaultActionSchema,
-		error: Schema.instanceOf(VamDispatchError),
-		status: Schema.Literal("Failed"),
-	}),
-	Schema.Struct({
-		action: VaultActionSchema,
-		error: Schema.instanceOf(VamDispatchError),
-		status: Schema.Literal("Uncertain"),
-		targetTaken: Schema.optional(Schema.Boolean),
-	}),
-	Schema.Struct({
-		action: VaultActionSchema,
-		status: Schema.Literal("Skipped"),
-	}),
-]);
-
-export type VamDispatchEntry = typeof VamDispatchEntrySchema.Type;
+export type VamDispatchEntry =
+	| {
+			readonly action: VaultAction;
+			readonly outcome: VamActionOutcome;
+			readonly status: "Done";
+	  }
+	| {
+			readonly action: VaultAction;
+			readonly error: VamDispatchError;
+			readonly status: "Failed";
+	  }
+	| {
+			readonly action: VaultAction;
+			readonly error: VamDispatchError;
+			readonly status: "Uncertain";
+			readonly targetTaken?: boolean | undefined;
+	  }
+	| { readonly action: VaultAction; readonly status: "Skipped" };
 
 /**
  * Whether a Dispatch Batch changed the vault: `yes` when a completed action
@@ -119,14 +102,12 @@ export type VamTouchedVault = "no" | "yes" | "unknown";
  * the origins of its events do. `undo` says what `dispatchOrUndo` took
  * back after a failure; other dispatches never set it.
  */
-export class VamDispatchReport extends Schema.Class<VamDispatchReport>(
-	"VamDispatchReport",
-)({
-	caller: Schema.String,
-	entries: Schema.Array(VamDispatchEntrySchema),
-	operationId: Schema.String,
-	undo: Schema.optional(VamUndoReport),
-}) {
+export class VamDispatchReport extends Data.Class<{
+	readonly caller: string;
+	readonly entries: readonly VamDispatchEntry[];
+	readonly operationId: string;
+	readonly undo?: VamUndoReport | undefined;
+}> {
 	/** A report for a batch of `operation` none of which ran. */
 	static notRun(
 		actions: readonly VaultAction[],
@@ -215,13 +196,10 @@ export class VamDispatchReport extends Schema.Class<VamDispatchReport>(
  * failed action's `VamDispatchError`, or an error that kept the batch from
  * running at all. `report` tells what each planned action did.
  */
-export class VamDispatchFailure extends Schema.TaggedError<VamDispatchFailure>()(
-	"VamDispatchFailure",
-	{
-		reason: VamDispatchFailureReasonSchema,
-		report: VamDispatchReport,
-	},
-) {
+export class VamDispatchFailure extends Data.TaggedError("VamDispatchFailure")<{
+	readonly reason: VamDispatchFailureReason;
+	readonly report: VamDispatchReport;
+}> {
 	/** A batch of `operation` that failed before any of it ran. */
 	static notRun(
 		reason: Exclude<VamDispatchFailureReason, VamDispatchError>,
@@ -251,6 +229,40 @@ export class VamDispatchFailure extends Schema.TaggedError<VamDispatchFailure>()
 			? `${failed.join("; ")}; ${skipped} later action(s) skipped`
 			: failed.join("; ");
 	}
+}
+
+/**
+ * A dispatch's `cause` with each `VamSetupError` or `VamShutdownError` that
+ * kept the batch from running turned into a `VamDispatchFailure` of
+ * `operation` that ran none of `actions`, where it stood. Every other
+ * failure and defect stays where it stood, so `Effect.catch` and `catchTag`
+ * still get the `notRun` failure first while a defect beside it is kept.
+ * Interruptions beside such a failure are left out, as `dispatchOrUndo`
+ * leaves them out: they say who stopped a fiber, not why it failed. A
+ * cause with neither error passes on whole.
+ */
+export function notRunCause(
+	cause: Cause.Cause<VamDispatchFailure | VamSetupError | VamShutdownError>,
+	actions: readonly VaultAction[],
+	operation: VamOperation,
+): Cause.Cause<VamDispatchFailure> {
+	const failures = Cause.map(cause, (error) =>
+		error._tag === "VamDispatchFailure"
+			? error
+			: VamDispatchFailure.notRun(error, actions, operation),
+	);
+	const keptFromRunning = cause.reasons.some(
+		(reason) =>
+			Cause.isFailReason(reason) &&
+			reason.error._tag !== "VamDispatchFailure",
+	);
+	return keptFromRunning
+		? Cause.fromReasons(
+				failures.reasons.filter(
+					(reason) => !Cause.isInterruptReason(reason),
+				),
+			)
+		: failures;
 }
 
 /**

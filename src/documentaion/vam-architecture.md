@@ -336,6 +336,12 @@ success, and answer `void`. All three fail with one error,
 | `VamDispatchOverflowError` | The queue was at its ceiling. | Every submitted action `Skipped` |
 | `VamShutdownError`, `VamSetupError` | VAM was shut down, or could not start. | Every submitted action `Skipped` |
 
+A shut-down or unstarted VAM's `VamDispatchFailure` stands where its
+`VamShutdownError` or `VamSetupError` stood in the cause, and a defect beside
+it stays there too, after it. `Effect.catch` and `catchTag` get the failure;
+`catchCause` gets every reason. Interruptions beside it are left out, as in
+`dispatchOrUndo`.
+
 The report has one entry per planned action, in the order VAM ran them. Its
 `status` is:
 
