@@ -1,5 +1,5 @@
 export { DumgenHost } from "./dumgen-host";
-export { type Dumgen, type DumgenOptions, dumgenOver } from "./dumgen-over";
+export { type Dumgen, dumgenOver } from "./dumgen-over";
 export type { KeyCheckFailure } from "./key-check";
 export { conciseFailure } from "./provider-failure";
 export {

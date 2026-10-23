@@ -3,7 +3,10 @@ import { JevTransport, type LunaAsk, LunaTransport } from "dumgen";
 import { Effect, Exit, Scope } from "effect";
 import { dumgenOver } from "../../../src/managers/dumgen";
 
-/** A Luna that holds every request until `release()`, counting how many it holds at once. */
+/**
+ * A Luna that holds every request until `release()`, counting how many it
+ * holds at once.
+ */
 function heldLuna() {
 	let held = 0;
 	let mostHeld = 0;
@@ -89,7 +92,10 @@ describe("dumgenOver", () => {
 	it("builds in the scope it is given, which releases it", async () => {
 		const scope = Scope.makeUnsafe();
 		expect(scope.state._tag).toBe("Empty");
-		dumgenOver({ jev: noJev, luna: LunaTransport.fromAsk(heldLuna().ask) }, scope);
+		dumgenOver(
+			{ jev: noJev, luna: LunaTransport.fromAsk(heldLuna().ask) },
+			scope,
+		);
 		expect(scope.state._tag).toBe("Open");
 		await Effect.runPromise(Scope.close(scope, Exit.void));
 		expect(scope.state._tag).toBe("Closed");

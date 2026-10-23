@@ -1,5 +1,9 @@
 import { describe, expect, it } from "bun:test";
-import type { GrammarResolution, ResolveGrammarInput, SegmentedSentence } from "dumgen";
+import type {
+	GrammarResolution,
+	ResolveGrammarInput,
+	SegmentedSentence,
+} from "dumgen";
 import * as Effect from "effect/Effect";
 import type { Dumgen } from "../../../src/managers/dumgen/dumgen-over";
 import { parseCliOptions, requireOptIn } from "./run";

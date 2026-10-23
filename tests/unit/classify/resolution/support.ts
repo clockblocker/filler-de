@@ -7,7 +7,14 @@ import {
 	type DumdictVaultStore,
 	makeDumdictVaultStore,
 } from "@textfresser/dictionary";
-import type { GrammarResolution, ReadingResolution, ResolveGrammarInput, ResolveReadingInput, SegmentedSentence, Unit } from "dumgen";
+import type {
+	GrammarResolution,
+	ReadingResolution,
+	ResolveGrammarInput,
+	ResolveReadingInput,
+	SegmentedSentence,
+	Unit,
+} from "dumgen";
 import { parseUnit } from "dumling";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
