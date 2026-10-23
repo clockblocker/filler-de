@@ -113,10 +113,21 @@ export type SelectionTextSource = {
 	getSelectionText(): string | null;
 };
 
+/**
+ * The host's count of pending work, which a click's handling joins until
+ * it ends, so that a test waiting for the host to be idle waits for it.
+ */
+export type PendingWork = {
+	readonly start: () => void;
+	readonly end: () => void;
+};
+
 export type ObsidianEventLayerDeps = {
 	app: App;
 	plugin: Plugin;
 	selectionTextSource: SelectionTextSource;
+	/** Counts each click being handled; none by default. */
+	pendingWork?: PendingWork;
 };
 
 export type Teardown = () => void;

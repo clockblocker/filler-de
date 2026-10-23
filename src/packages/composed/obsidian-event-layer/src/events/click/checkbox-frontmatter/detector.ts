@@ -8,11 +8,8 @@
  */
 
 import type { App } from "obsidian";
+import type { PendingWork } from "../../../contracts";
 import { DomSelectors } from "../../../internal/dom-selectors";
-import {
-	decrementPending,
-	incrementPending,
-} from "../../../internal/idle-tracker";
 import { PayloadKind } from "../../../types/payload-base";
 import type { HandlerInvoker } from "../../../user-event-interceptor";
 import { getCurrentFilePath } from "../../get-current-file-path";
@@ -30,6 +27,7 @@ export class CheckboxFrontmatterDetector {
 		createInvoker: (
 			kind: PayloadKind,
 		) => HandlerInvoker<CheckboxFrontmatterPayload>,
+		private readonly pending: PendingWork,
 	) {
 		this.invoker = createInvoker(PayloadKind.CheckboxInFrontmatterClicked);
 	}
@@ -38,8 +36,8 @@ export class CheckboxFrontmatterDetector {
 		if (this.unsubscribe) return;
 
 		this.unsubscribe = this.genericClick.subscribe((target, _evt) => {
-			incrementPending();
-			this.handleClick(target).finally(() => decrementPending());
+			this.pending.start();
+			this.handleClick(target).finally(() => this.pending.end());
 		});
 	}
 

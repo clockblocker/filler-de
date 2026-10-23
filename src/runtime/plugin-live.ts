@@ -13,6 +13,7 @@ import {
 	type RequestUrl,
 } from "../managers/dumgen";
 import { PROTECTED_PATH_PREFIXES } from "../managers/obsidian/protected-paths/protected-paths-guard";
+import { IdleTrackerLive } from "../utils/idle-tracker";
 import { ObservabilityLive } from "./observability";
 
 /** The services every program on the plugin runtime may use. */
@@ -29,13 +30,13 @@ export type PluginLiveDeps = {
 };
 
 /**
- * The plugin's Layer: its observability, then VAM and dumgen, then the
+ * The plugin's Layer: its observability and idle tracker, then VAM and dumgen, then the
  * lifecycle's release. A Layer's finalizers run newest first, so disposing
  * the runtime stops the lifecycle (its services newest first, then the
  * Librarian) while VAM still runs, and then shuts VAM down. VAM installs no
  * tracer or logger of its own: it is given the plugin's with
  * `provideMerge`, so its vault callbacks, which run with the Layer's build
- * context, are traced too. dumgen holds nothing to release: each action's
+ * context, are traced and counted by the idle tracker too. dumgen holds nothing to release: each action's
  * build lives as long as the action, which the runtime interrupts first.
  */
 export function PluginLive(
@@ -61,6 +62,7 @@ export function PluginLive(
 				),
 			),
 		),
+		Layer.provideMerge(IdleTrackerLive),
 		Layer.provideMerge(ObservabilityLive(deps.trace)),
 	);
 }

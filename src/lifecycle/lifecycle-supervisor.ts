@@ -44,7 +44,7 @@ import type {
 	LibrarianUnsubscribeFailure,
 } from "../commanders/librarian/librarian";
 import { catchWhole, failWhole } from "../utils/causes";
-import { decrementPending, incrementPending } from "../utils/idle-tracker";
+import { IdleTracker } from "../utils/idle-tracker";
 import {
 	BootFailed,
 	LibrarianStartFailed,
@@ -256,7 +256,6 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 		if (entry.settled) return;
 		entry.settled = true;
 		if (inFlight === entry) inFlight = null;
-		decrementPending();
 		Deferred.doneUnsafe(
 			entry.command.done,
 			stopping && Exit.hasInterrupts(exit)
@@ -297,12 +296,14 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 		);
 	});
 
+	/** Queues `body`; its submitter counts as pending work until answered. */
 	const submit = <A, E extends CommandFailure>(
 		kind: CommandKind,
 		body: Effect.Effect<A, E>,
 	): Effect.Effect<A, E | LifecycleStoppedError> =>
 		Effect.gen(function* () {
 			if (stopping) return yield* new LifecycleStoppedError();
+			const idle = yield* IdleTracker;
 			const done = Deferred.makeUnsafe<A, E | LifecycleStoppedError>();
 			mailbox.push({
 				body,
@@ -315,9 +316,9 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 				kind,
 				links: [],
 			});
-			incrementPending();
-			yield* pump;
-			return yield* Deferred.await(done);
+			return yield* idle.track(
+				pump.pipe(Effect.andThen(Deferred.await(done))),
+			);
 		});
 
 	const submitted = (kind: CommandKind): boolean =>
@@ -363,29 +364,33 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 		Effect.suspend(() => {
 			if (swept) return Effect.void;
 			swept = true;
-			incrementPending();
-			return Effect.promise(() => plugin.loadStore()).pipe(
-				Effect.matchCauseEffect({
-					onFailure: (cause) =>
-						Cause.hasInterruptsOnly(cause)
-							? Effect.void
-							: notices.sweepSkipped(cause),
-					onSuccess: () =>
-						Effect.sync(() => {
-							if (!stopping) plugin.sweep();
-						}),
-				}),
-				// Its fiber is detached: nothing else would tell this.
-				Effect.catchCause((cause) =>
-					Effect.logError(
-						"[TextEaterPlugin] The unlink sweep failed:",
-						cause,
+			return Effect.gen(function* () {
+				const idle = yield* IdleTracker;
+				// Pending from now, not from when its fiber first runs.
+				yield* idle.start;
+				return yield* Effect.promise(() => plugin.loadStore()).pipe(
+					Effect.matchCauseEffect({
+						onFailure: (cause) =>
+							Cause.hasInterruptsOnly(cause)
+								? Effect.void
+								: notices.sweepSkipped(cause),
+						onSuccess: () =>
+							Effect.sync(() => {
+								if (!stopping) plugin.sweep();
+							}),
+					}),
+					// Its fiber is detached: nothing else would tell this.
+					Effect.catchCause((cause) =>
+						Effect.logError(
+							"[TextEaterPlugin] The unlink sweep failed:",
+							cause,
+						),
 					),
-				),
-				Effect.ensuring(Effect.sync(decrementPending)),
-				Effect.forkDetach,
-				Effect.asVoid,
-			);
+					Effect.ensuring(idle.end),
+					Effect.forkDetach,
+					Effect.asVoid,
+				);
+			});
 		});
 
 	/**
@@ -655,13 +660,11 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 			notices.close();
 			// Interrupted now; released below once the owned services are.
 			inFlight?.fiber?.interruptUnsafe();
-			for (const command of mailbox.splice(0)) {
-				decrementPending();
+			for (const command of mailbox.splice(0))
 				Deferred.doneUnsafe(
 					command.done,
 					Exit.fail(new LifecycleStoppedError()),
 				);
-			}
 			return Effect.gen(function* () {
 				// Unwiring that throws still leaves the rest to release.
 				yield* release([

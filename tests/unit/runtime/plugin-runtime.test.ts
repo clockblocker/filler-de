@@ -5,8 +5,11 @@ import {
 	type RecentTrace,
 	type RecordedSpan,
 } from "@textfresser/vault-action-manager/diagnostics";
-import { Cause, Effect, Exit, Layer } from "effect";
+import type * as Dumling from "dumling/types";
+import { Cause, Deferred, Effect, Exit, Layer } from "effect";
 import type { App } from "obsidian";
+import { createKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
+import type { KnowledgeJob } from "../../../src/commanders/classify/resolution/knowledge-types";
 import { Librarian } from "../../../src/commanders/librarian/librarian";
 import { createLifecycleNotices } from "../../../src/lifecycle/lifecycle-notices";
 import {
@@ -22,6 +25,7 @@ import {
 	makePluginRuntime,
 	PluginEdgeError,
 } from "../../../src/runtime/plugin-runtime";
+import { IdleTracker } from "../../../src/utils/idle-tracker";
 import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 import { unreachable } from "../dumgen/dumgen-support";
 
@@ -298,4 +302,87 @@ describe("PluginLive", () => {
 		const shutdown = only(plugin.trace, "vam.shutdown");
 		expect(shutdown.status).toBe("ok");
 	}, 30_000);
+	it("waits in whenIdle for a queued Librarian item and a Knowledge run", async () => {
+		const plugin = makePlugin<Librarian>({
+			[`${RAMEN}/Anchor-Ramen-Soup.md`]: "",
+		});
+		const vam = await plugin.launch((manager) =>
+			Effect.succeed(
+				launched((onStopped) => new Librarian(manager, { onStopped })),
+			),
+		);
+		const { runtime } = plugin;
+		try {
+			const idle = await runtime.e2e("idle", IdleTracker);
+			const knowledgeGate = Deferred.makeUnsafe<void>();
+			const queue = createKnowledgeQueue({
+				notify: () => {},
+				onEnd: () => void runtime.readSync(idle.end),
+				onStart: () => void runtime.readSync(idle.start),
+				run: () =>
+					Deferred.await(knowledgeGate).pipe(
+						Effect.as({ _tag: "Covered" } as never),
+					),
+				runtime: runtime.hops,
+			});
+			queue.enqueue(knowledgeJob);
+			// The Librarian heals a file made by hand, through its queue:
+			// what is pending as it renames the file.
+			const fileManager = plugin.vault.app.fileManager as unknown as {
+				renameFile: (file: unknown, to: string) => Promise<void>;
+			};
+			const renameNow = fileManager.renameFile;
+			const pendingAtRename: number[] = [];
+			fileManager.renameFile = (file, to) => {
+				const pending = runtime.readSync(idle.pending);
+				if (Exit.isSuccess(pending)) pendingAtRename.push(pending.value);
+				return renameNow(file, to);
+			};
+			await plugin.vault.createByHand(`${RAMEN}/Offline.md`);
+
+			let idleNow = false;
+			const whenIdle = runtime
+				.e2e("when-idle", idle.whenIdle("50 millis"))
+				.then(() => {
+					idleNow = true;
+				});
+			await runtime.e2e("when-settled", vam.testing.whenSettled());
+			expect(plugin.vault.files()).toContain(
+				`${RAMEN}/Offline-Ramen-Soup.md`,
+			);
+			// The Knowledge run and the Librarian's queue item.
+			expect(pendingAtRename).toEqual([2]);
+			await new Promise((resolve) => setTimeout(resolve, 120));
+			// The Librarian's item is done; the Knowledge run is not.
+			expect(idleNow).toBe(false);
+			expect(await runtime.e2e("pending", idle.pending)).toBe(1);
+
+			Deferred.doneUnsafe(knowledgeGate, Effect.void);
+			await whenIdle;
+			expect(idleNow).toBe(true);
+			expect(queue.running()).toBe(0);
+		} finally {
+			await runtime.dispose();
+		}
+	}, 30_000);
 });
+
+const knowledgeJob: KnowledgeJob = {
+	attestation: {} as Dumling.Attestation<"de">,
+	label: "See 🌊",
+	origin: "New",
+	reading: {
+		emojiDescription: "🌊",
+		lemma: {
+			canonicalForm: "See",
+			coreFeatures: { gender: "Masc" },
+			family: "Lexeme",
+			kind: "NOUN",
+			language: "de",
+			unitKind: "Lemma",
+		},
+		unitKind: "Reading",
+	} as unknown as Dumling.Reading<"de">,
+	readingPath: "Worter/s/se/See.md",
+	sentence: { segments: [{ text: "See" }], target: [0] },
+};
