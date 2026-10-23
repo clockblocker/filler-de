@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
@@ -30,7 +30,6 @@ import {
 	notRun,
 } from "../../support/vam-dispatch";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
 import {
 	makeScrollLocator,
 	makeSectionLocator,
@@ -48,16 +47,6 @@ type RecoveryFailure =
 const codecs = makeCodecs(
 	makeCodecRulesFromSettings(defaultSettingsForUnitTests),
 );
-
-let settingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	settingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	settingsSpy.mockRestore();
-});
 
 function createScroll(
 	parentNames: string[],

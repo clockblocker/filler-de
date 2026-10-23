@@ -12,22 +12,27 @@ import {
 	Option,
 	Ref,
 } from "effect";
-import type { App } from "obsidian";
+import type { App, Plugin } from "obsidian";
 import type { LifecycleNotices } from "../lifecycle/lifecycle-notices";
 import { Lifecycle } from "../lifecycle/lifecycle-supervisor";
 import {
 	Dumgen,
-	type DumgenProviderKeys,
 	HttpTransport,
 	ProviderKeys,
 	type RequestUrl,
 } from "../managers/dumgen";
 import { PROTECTED_PATH_PREFIXES } from "../managers/obsidian/protected-paths/protected-paths-guard";
+import { SettingsLive } from "../plugin/settings-live";
+import { PluginData, type PluginDataError } from "../settings/plugin-data";
+import type { Settings } from "../settings/settings-service";
 import { IdleTrackerLive } from "../utils/idle-tracker";
 import { ObservabilityLive } from "./observability";
 
 /** The services every program on the plugin runtime may use. */
-export type PluginServices = VaultActionManager | Dumgen | Lifecycle;
+export type PluginServices = VaultActionManager | Dumgen | Lifecycle | Settings;
+
+/** What building the plugin's Layer fails with. */
+export type PluginLiveError = VamSetupError | PluginDataError;
 
 export type PluginLiveDeps = {
 	/** What the lifecycle tells the user. */
@@ -35,8 +40,10 @@ export type PluginLiveDeps = {
 	readonly trace: RecentTrace;
 	/** Obsidian's `requestUrl`, which dumgen sends through. */
 	readonly requestUrl: RequestUrl;
-	/** The provider keys in the settings, read at each dumgen action's start. */
-	readonly providerKeys: () => DumgenProviderKeys;
+	/** Where the settings are stored: the plugin's `data.json`. */
+	readonly data: Pick<Plugin, "loadData" | "saveData">;
+	/** Asks the user, such as before a delimiter change renames files. */
+	readonly confirm: (title: string, message: string) => Promise<boolean>;
 	/** How long unloading may wait before it is logged; 5 s by default. */
 	readonly slowShutdown?: Duration.Input;
 };
@@ -93,37 +100,49 @@ class ShutdownWatch extends Context.Service<
 }
 
 /**
- * The plugin's Layer: its observability and idle tracker, then VAM and
- * dumgen, then the lifecycle. A Layer's finalizers run newest first, so
- * disposing the runtime stops the lifecycle (the services it built, newest
- * first, then the Librarian) while VAM still runs, and then shuts VAM
- * down. VAM installs no tracer or logger of its own: it is given the
- * plugin's with `provideMerge`, so its vault callbacks, which run with the
- * Layer's build context, are traced and counted by the idle tracker too.
- * dumgen holds nothing to release: each action's build lives as long as
- * the action, which the runtime interrupts first.
+ * The plugin's Layer: its observability and idle tracker, then VAM, then
+ * the lifecycle and the stored data, then the settings, which load as the
+ * runtime is built, then dumgen, which reads its keys from them, then the
+ * lifecycle's stop. A Layer's finalizers run newest first, so disposing
+ * the runtime stops the lifecycle (the services it built, newest first,
+ * then the Librarian) while dumgen and VAM still run, and then shuts VAM
+ * down. VAM installs no tracer or
+ * logger of its own: it is given the plugin's with `provideMerge`, so its
+ * vault callbacks, which run with the Layer's build context, are traced
+ * and counted by the idle tracker too. The settings and dumgen hold
+ * nothing to release: each dumgen action's build lives as long as the
+ * action, which the runtime interrupts first.
  */
 export function PluginLive(
 	app: App,
 	deps: PluginLiveDeps,
-): Layer.Layer<PluginServices, VamSetupError> {
+): Layer.Layer<PluginServices, PluginLiveError> {
 	return ShutdownWatch.armed.pipe(
-		Layer.provideMerge(Lifecycle.layer({ notices: deps.notices })),
+		Layer.provideMerge(Lifecycle.stopsOnRelease),
 		Layer.provideMerge(
-			Layer.mergeAll(
-				VaultActionManager.layer(app, {
-					observability: "host",
-					protectedPaths: PROTECTED_PATH_PREFIXES,
-				}),
-				Dumgen.layer.pipe(
-					Layer.provide(
-						Layer.mergeAll(
-							HttpTransport.layer(deps.requestUrl),
-							ProviderKeys.layer(deps.providerKeys),
-						),
+			Dumgen.layer.pipe(
+				Layer.provide(
+					Layer.mergeAll(
+						HttpTransport.layer(deps.requestUrl),
+						ProviderKeys.fromSettings,
 					),
 				),
 			),
+		),
+		Layer.provideMerge(
+			SettingsLive({ confirm: deps.confirm, notices: deps.notices }),
+		),
+		Layer.provideMerge(
+			Layer.mergeAll(
+				Lifecycle.layer({ notices: deps.notices }),
+				PluginData.layer(deps.data),
+			),
+		),
+		Layer.provideMerge(
+			VaultActionManager.layer(app, {
+				observability: "host",
+				protectedPaths: PROTECTED_PATH_PREFIXES,
+			}),
 		),
 		Layer.provideMerge(
 			ShutdownWatch.layer(deps.slowShutdown ?? "5 seconds"),

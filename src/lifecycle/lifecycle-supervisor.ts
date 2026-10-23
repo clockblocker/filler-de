@@ -728,21 +728,23 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 }
 
 /**
- * The plugin's lifecycle, as a service of the plugin runtime: its
- * finalizer is `stop`, so disposing the runtime releases the services
- * (newest first) and the Librarian before VAM shuts down.
+ * The plugin's lifecycle, as a service of the plugin runtime. `layer`
+ * makes it; `stopsOnRelease`, built above every service the lifecycle's
+ * commands use (dumgen among them), gives it its finalizer, `stop`, so
+ * disposing the runtime releases the services (newest first) and the
+ * Librarian before those, and VAM, shut down.
  */
 export class Lifecycle extends Context.Service<
 	Lifecycle,
 	LifecycleSupervisor<Librarian>
 >()("textfresser/lifecycle/Lifecycle") {
 	static readonly layer = (deps: { readonly notices: LifecycleNotices }) =>
-		Layer.effect(
-			Lifecycle,
-			Effect.gen(function* () {
-				const supervisor = createLifecycleSupervisor<Librarian>(deps);
-				yield* Effect.addFinalizer(() => supervisor.stop);
-				return supervisor;
-			}),
-		);
+		Layer.sync(Lifecycle, () => createLifecycleSupervisor<Librarian>(deps));
+
+	static readonly stopsOnRelease = Layer.effectDiscard(
+		Effect.gen(function* () {
+			const lifecycle = yield* Lifecycle;
+			yield* Effect.addFinalizer(() => lifecycle.stop);
+		}),
+	);
 }

@@ -1,4 +1,21 @@
-import type { TextEaterSettings } from "../types";
+import type {
+	LanguagesConfig,
+	SuffixDelimiterConfig,
+	TextEaterSettings,
+} from "../types";
+
+/**
+ * A change to the settings. The languages and the delimiter merge into the
+ * ones in effect as the change applies, so two quick changes of one field
+ * each both land.
+ */
+export type SettingsPatch = Omit<
+	Partial<TextEaterSettings>,
+	"languages" | "suffixDelimiter"
+> & {
+	readonly languages?: Partial<LanguagesConfig>;
+	readonly suffixDelimiter?: Partial<SuffixDelimiterConfig>;
+};
 
 /** What a settings save changed, as far as the plugin acts on it. */
 export type SettingsChanges = {
@@ -39,9 +56,24 @@ export function diffSettings(
 	return { delimiter, hideMetadata, languages, librarian, placement };
 }
 
-/** A copy of `settings` to compare the next save against. */
-export function snapshotSettings(
+/**
+ * `settings` with `patch` over them, sharing no nested object with either.
+ * A key the patch holds as undefined keeps its value.
+ */
+export function patchSettings(
 	settings: TextEaterSettings,
+	patch: SettingsPatch,
 ): TextEaterSettings {
-	return { ...settings, suffixDelimiter: { ...settings.suffixDelimiter } };
+	const given = Object.fromEntries(
+		Object.entries(patch).filter(([, value]) => value !== undefined),
+	);
+	return {
+		...settings,
+		...given,
+		languages: { ...settings.languages, ...patch.languages },
+		suffixDelimiter: {
+			...settings.suffixDelimiter,
+			...patch.suffixDelimiter,
+		},
+	};
 }

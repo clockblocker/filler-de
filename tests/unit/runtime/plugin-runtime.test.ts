@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, type spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { VaultActionManager } from "@textfresser/vault-action-manager";
 import {
 	makeRecentTrace,
@@ -25,8 +25,13 @@ import {
 	makePluginRuntime,
 	PluginEdgeError,
 } from "../../../src/runtime/plugin-runtime";
+import { Settings } from "../../../src/settings/settings-service";
+import { DEFAULT_SETTINGS } from "../../../src/types";
 import { IdleTracker } from "../../../src/utils/idle-tracker";
-import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
+import {
+	fixedSettings,
+	memoryPluginData,
+} from "../common-utils/test-settings";
 import { unreachable } from "../dumgen/dumgen-support";
 
 const RAMEN = "Library/Soup/Ramen";
@@ -140,27 +145,23 @@ describe("PluginRuntime edges", () => {
 });
 
 describe("PluginLive", () => {
-	let settingsSpy: ReturnType<typeof spyOn>;
-	beforeEach(() => {
-		settingsSpy = setupGetParsedUserSettingsSpy();
-	});
-	afterEach(() => {
-		settingsSpy.mockRestore();
-	});
-
 	/** The plugin runtime over an in-memory vault, with its own trace. */
 	function makePlugin(
 		vault: ReturnType<typeof makeObsidianVault>,
-		options: { readonly slowShutdown?: number } = {},
+		options: {
+			readonly slowShutdown?: number;
+			readonly data?: ReturnType<typeof memoryPluginData>;
+		} = {},
 	) {
 		const trace = makeRecentTrace();
 		const runtime = makePluginRuntime(
 			PluginLive(vault.app as unknown as App, {
+				confirm: () => Promise.resolve(true),
+				data: options.data ?? memoryPluginData(),
 				notices: createLifecycleNotices(() => {}, {
 					trace,
 					writeStop: () => {},
 				}),
-				providerKeys: () => ({ openaiApiKey: "", typesafeApiKey: "" }),
 				requestUrl: unreachable,
 				...(options.slowShutdown === undefined
 					? {}
@@ -222,7 +223,7 @@ describe("PluginLive", () => {
 	const librarianOver =
 		(vam: VaultActionManager): LaunchedPlugin<Librarian>["makeLibrarian"] =>
 		(onStopped) =>
-			new Librarian(vam, { onStopped });
+			new Librarian(vam, { onStopped, settings: fixedSettings() });
 
 	it("shows a Librarian restart as one tree: the command, the Librarian's start, VAM's scan and dispatch", async () => {
 		const plugin = makePlugin(
@@ -278,6 +279,54 @@ describe("PluginLive", () => {
 		}
 	}, 30_000);
 
+	it("loads the settings from data.json as it builds; a change restarts the Librarian under it, as one tree, and is stored", async () => {
+		const data = memoryPluginData({ openaiApiKey: "sk-stored" });
+		const plugin = makePlugin(
+			makeObsidianVault({ [`${RAMEN}/Anchor-Ramen-Soup.md`]: "" }),
+			{ data },
+		);
+		const settings = await plugin.runtime.e2e(
+			"settings",
+			Effect.service(Settings),
+		);
+		expect(settings.now().openaiApiKey).toBe("sk-stored");
+		await plugin.launch((manager) =>
+			Effect.succeed(
+				launched(
+					(onStopped) => new Librarian(manager, { onStopped, settings }),
+				),
+			),
+		);
+		try {
+			expect(plugin.lifecycle().librarian()?.codecRules?.showScrollBacklinks).toBe(true);
+
+			await plugin.runtime.settings(
+				settings.update({ showScrollBacklinks: false }),
+			);
+
+			expect(plugin.lifecycle().librarian()?.codecRules?.showScrollBacklinks).toBe(false);
+			expect(data.saved).toEqual([
+				{
+					...DEFAULT_SETTINGS,
+					openaiApiKey: "sk-stored",
+					showScrollBacklinks: false,
+				},
+			]);
+			const edge = only(plugin.trace, "settings.update");
+			expect(edge.parentId).toBeUndefined();
+			expect(subtree(plugin.trace.snapshot().spans, edge)).toEqual(
+				expect.arrayContaining([
+					"Settings.update",
+					"Lifecycle.Reconfigure",
+					"Librarian.init",
+					"PluginData.save",
+				]),
+			);
+		} finally {
+			await plugin.runtime.dispose();
+		}
+	}, 30_000);
+
 	it("disposes newest first: the services the launch built, then the Librarian, then VAM", async () => {
 		const released: string[] = [];
 		const plugin = makePlugin(
@@ -296,7 +345,10 @@ describe("PluginLive", () => {
 				yield* Effect.addFinalizer(() => record(manager, "observer"));
 				return {
 					...launched((onStopped) => {
-						const librarian = new Librarian(manager, { onStopped });
+						const librarian = new Librarian(manager, {
+							onStopped,
+							settings: fixedSettings(),
+						});
 						const unsubscribe = librarian.unsubscribe.bind(librarian);
 						return Object.assign(librarian, {
 							unsubscribe: () =>

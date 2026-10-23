@@ -28,9 +28,11 @@ export function makeCodexTransform(
 	sectionChain: SectionNodeSegmentId[],
 	codecs: Codecs,
 ): Transform {
-	const metaTransform = noteMetadataHelper.write(LibraryMetadata, {
-		fileType: "Codex",
-	});
+	const metaTransform = noteMetadataHelper.write(
+		LibraryMetadata,
+		{ fileType: "Codex" },
+		codecs.rules.metadataFormat(),
+	);
 
 	return async (_content: string) => {
 		const childrenContent = generateChildrenList(

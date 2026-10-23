@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	generateCodexContent,
 	makeCodecRulesFromSettings,
@@ -26,17 +26,7 @@ import {
 import { withScanAndSubscribe } from "../../support/librarian-vam";
 import { actionError, failedActions } from "../../support/vam-dispatch";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
-
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
-});
+import { fixedSettings } from "../../unit/common-utils/test-settings";
 
 function sectionChain(...names: string[]): SectionNodeSegmentId[] {
 	return names.map(
@@ -138,7 +128,7 @@ function makeHarness(
 	return {
 		dispatches,
 		emitBulk: (bulk: BulkVaultEvent) => emitBulk(bulk),
-		librarian: new Librarian(vam),
+		librarian: new Librarian(vam, { settings: fixedSettings() }),
 		setDispatch: (
 			implementation: (
 				actions: readonly VaultAction[],

@@ -18,11 +18,11 @@ const SEP = "﹘";
 
 function makeDefaultRules(): CodecRules {
 	return {
-		hideMetadata: defaultSettingsForUnitTests.hideMetadata,
 		languages: defaultSettingsForUnitTests.languages,
 		libraryRootName: "Library",
 		libraryRootPathParts: [],
 		maxSectionDepth: defaultSettingsForUnitTests.maxSectionDepth,
+		metadataFormat: () => "Hidden",
 		showScrollBacklinks: defaultSettingsForUnitTests.showScrollBacklinks,
 		showScrollsInCodexesForDepth:
 			defaultSettingsForUnitTests.showScrollsInCodexesForDepth,

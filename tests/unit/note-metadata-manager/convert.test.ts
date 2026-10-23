@@ -23,9 +23,7 @@ import {
 	noteMetadataHelper as meta,
 } from "../../../src/stateless-helpers/note-metadata";
 import { actionError, failedActions } from "../../support/vam-dispatch";
-import { setupGetParsedUserSettingsSpyWithHooks } from "../common-utils/setup-spy";
 
-setupGetParsedUserSettingsSpyWithHooks({ hideMetadata: true });
 
 const OPEN = '<section id="textfresser_meta_keep_me_invisible">';
 const PADDING = "\n".repeat(20);

@@ -7,8 +7,10 @@ import {
 	SelectionActionPlacementSchema,
 	type SelectionActionPlacement as SelectionActionPlacementType,
 	TargetLanguageSchema,
+	type TextEaterSettings,
 } from "../types";
-import { LOCALES, type SettingsLocale } from "./locales";
+import { LOCALES } from "./locales";
+import type { SettingsPatch } from "./settings-changes";
 
 const FORBIDDEN_DELIMITER_CHARS = [
 	"/",
@@ -22,6 +24,10 @@ const FORBIDDEN_DELIMITER_CHARS = [
 	"|",
 ];
 
+/**
+ * The settings tab: plain DOM. It draws the settings in effect, and hands
+ * each change to the plugin's Settings service.
+ */
 export class SettingsTab extends PluginSettingTab {
 	plugin: TextEaterPluginStripped;
 
@@ -30,15 +36,47 @@ export class SettingsTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	private getLocale(): SettingsLocale {
-		return LOCALES[this.plugin.settings.languages.known];
+	/**
+	 * Applies `patch`. `redraw` draws the tab again once it is applied, or
+	 * only when it answers true for the settings then in effect, to show
+	 * what took effect, such as the old delimiter the files kept. A redraw
+	 * moves the focus, so it is kept to those cases.
+	 */
+	private update(
+		patch: SettingsPatch,
+		{
+			redraw = false,
+		}: {
+			readonly redraw?: boolean | ((now: TextEaterSettings) => boolean);
+		} = {},
+	): Promise<void> {
+		return this.plugin.updateSettings(patch).then(() => {
+			const now = this.plugin.settings;
+			const draw =
+				typeof redraw === "function" ? !!now && redraw(now) : redraw;
+			if (draw) this.display();
+		});
 	}
 
 	display(): void {
 		const { containerEl } = this;
-		const t = this.getLocale();
-
 		containerEl.empty();
+
+		const settings = this.plugin.settings;
+		if (!settings) {
+			containerEl.setText("Textfresser is still loading its settings.");
+			return;
+		}
+		const t = LOCALES[settings.languages.known];
+		const problem = this.plugin.settingsProblem;
+		if (problem)
+			containerEl.createEl("p", {
+				cls: "mod-warning",
+				text: `${problem}. Fix it below, then reload Textfresser.`,
+			});
+		/** The delimiter in effect now, which a change may not have reached yet. */
+		const delimiterNow = () =>
+			(this.plugin.settings ?? settings).suffixDelimiter.symbol;
 
 		new Setting(containerEl).setName(t.apiKeyHeading).setHeading();
 
@@ -48,11 +86,10 @@ export class SettingsTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setPlaceholder(t.apiKeyPlaceholder)
-					.setValue(this.plugin.settings.typesafeApiKey)
-					.onChange(async (value) => {
-						this.plugin.settings.typesafeApiKey = value;
-						await this.plugin.saveSettings();
-					}),
+					.setValue(settings.typesafeApiKey)
+					.onChange((value) =>
+						this.update({ typesafeApiKey: value }),
+					),
 			);
 
 		new Setting(containerEl)
@@ -61,11 +98,8 @@ export class SettingsTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setPlaceholder(t.apiKeyPlaceholder)
-					.setValue(this.plugin.settings.openaiApiKey)
-					.onChange(async (value) => {
-						this.plugin.settings.openaiApiKey = value;
-						await this.plugin.saveSettings();
-					}),
+					.setValue(settings.openaiApiKey)
+					.onChange((value) => this.update({ openaiApiKey: value })),
 			);
 
 		// Languages settings
@@ -79,18 +113,17 @@ export class SettingsTab extends PluginSettingTab {
 					dropdown.addOption(lang, ReprForLanguage[lang]);
 				}
 				dropdown
-					.setValue(this.plugin.settings.languages.known)
-					.onChange(async (value) => {
+					.setValue(settings.languages.known)
+					.onChange((value) => {
 						const parsed = KnownLanguageSchema.safeParse(value);
 						if (!parsed.success) {
 							return;
 						}
-						this.plugin.settings.languages = {
-							...this.plugin.settings.languages,
-							known: parsed.data,
-						};
-						await this.plugin.saveSettings();
-						this.display();
+						// The tab speaks the known language: draw it again.
+						return this.update(
+							{ languages: { known: parsed.data } },
+							{ redraw: true },
+						);
 					});
 			});
 
@@ -102,17 +135,15 @@ export class SettingsTab extends PluginSettingTab {
 					dropdown.addOption(lang, ReprForLanguage[lang]);
 				}
 				dropdown
-					.setValue(this.plugin.settings.languages.target)
-					.onChange(async (value) => {
+					.setValue(settings.languages.target)
+					.onChange((value) => {
 						const parsed = TargetLanguageSchema.safeParse(value);
 						if (!parsed.success) {
 							return;
 						}
-						this.plugin.settings.languages = {
-							...this.plugin.settings.languages,
-							target: parsed.data,
-						};
-						await this.plugin.saveSettings();
+						return this.update({
+							languages: { target: parsed.data },
+						});
 					});
 			});
 
@@ -120,9 +151,9 @@ export class SettingsTab extends PluginSettingTab {
 		new Setting(containerEl).setName(t.actionsHeading).setHeading();
 
 		for (const def of Object.values(ACTION_DEFINITIONS)) {
+			const { settingKey } = def;
 			// Skip if no settingKey or only 1 placement option
-			if (!def.settingKey || def.selectablePlacements.length <= 1)
-				continue;
+			if (!settingKey || def.selectablePlacements.length <= 1) continue;
 
 			const actionLabel = t.actionLabels[def.id] ?? def.label;
 			new Setting(containerEl)
@@ -138,23 +169,14 @@ export class SettingsTab extends PluginSettingTab {
 						);
 					}
 					dropdown
-						.setValue(
-							this.plugin.settings[
-								def.settingKey as keyof typeof this.plugin.settings
-							] as string,
-						)
-						.onChange(async (value) => {
+						.setValue(settings[settingKey])
+						.onChange((value) => {
 							const parsed =
 								SelectionActionPlacementSchema.safeParse(value);
 							if (!parsed.success) {
 								return;
 							}
-							// Type assertion needed: settingKey is dynamic but we know it's a placement key
-							// biome-ignore lint/suspicious/noExplicitAny: Dynamic settings key access
-							(this.plugin.settings as any)[
-								def.settingKey as string
-							] = parsed.data;
-							await this.plugin.saveSettings();
+							return this.update({ [settingKey]: parsed.data });
 						});
 				});
 		}
@@ -166,13 +188,12 @@ export class SettingsTab extends PluginSettingTab {
 				dropdown
 					.addOption("left", t.navButtonsLeft)
 					.addOption("right", t.navButtonsRight)
-					.setValue(this.plugin.settings.navButtonsPosition)
-					.onChange(async (value) => {
+					.setValue(settings.navButtonsPosition)
+					.onChange((value) => {
 						if (value !== "left" && value !== "right") {
 							return;
 						}
-						this.plugin.settings.navButtonsPosition = value;
-						await this.plugin.saveSettings();
+						return this.update({ navButtonsPosition: value });
 					});
 			});
 
@@ -185,11 +206,8 @@ export class SettingsTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setPlaceholder(t.libraryRootPlaceholder)
-					.setValue(this.plugin.settings.libraryRoot)
-					.onChange(async (value) => {
-						this.plugin.settings.libraryRoot = value;
-						await this.plugin.saveSettings();
-					}),
+					.setValue(settings.libraryRoot)
+					.onChange((value) => this.update({ libraryRoot: value })),
 			);
 
 		new Setting(containerEl)
@@ -198,12 +216,11 @@ export class SettingsTab extends PluginSettingTab {
 			.addSlider((slider) =>
 				slider
 					.setLimits(1, 10, 1)
-					.setValue(this.plugin.settings.maxSectionDepth)
+					.setValue(settings.maxSectionDepth)
 					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.maxSectionDepth = value;
-						await this.plugin.saveSettings();
-					}),
+					.onChange((value) =>
+						this.update({ maxSectionDepth: value }),
+					),
 			);
 
 		new Setting(containerEl)
@@ -212,13 +229,11 @@ export class SettingsTab extends PluginSettingTab {
 			.addSlider((slider) =>
 				slider
 					.setLimits(0, 10, 1)
-					.setValue(this.plugin.settings.showScrollsInCodexesForDepth)
+					.setValue(settings.showScrollsInCodexesForDepth)
 					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.showScrollsInCodexesForDepth =
-							value;
-						await this.plugin.saveSettings();
-					}),
+					.onChange((value) =>
+						this.update({ showScrollsInCodexesForDepth: value }),
+					),
 			);
 
 		new Setting(containerEl)
@@ -226,44 +241,47 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc(t.suffixDelimiterDesc)
 			.addText((text) => {
 				text.setPlaceholder(t.suffixDelimiterPlaceholder).setValue(
-					this.plugin.settings.suffixDelimiter.symbol,
+					settings.suffixDelimiter.symbol,
 				);
 
-				text.inputEl.addEventListener("blur", async () => {
+				/** The delimiter a change under way asks for, so a second blur does not ask again. */
+				let pending: string | null = null;
+				text.inputEl.addEventListener("blur", () => {
 					const value = text.getValue().trim();
+					if (value === pending) return;
 					// Validate length: 1-3 chars
 					if (value.length < 1 || value.length > 3) {
 						new Notice(t.delimiterLengthError);
-						text.setValue(
-							this.plugin.settings.suffixDelimiter.symbol,
-						);
+						text.setValue(delimiterNow());
 						return;
 					}
 					// Validate no spaces
 					if (value.includes(" ")) {
 						new Notice(t.delimiterSpacesError);
-						text.setValue(
-							this.plugin.settings.suffixDelimiter.symbol,
-						);
+						text.setValue(delimiterNow());
 						return;
 					}
 					// Validate each char against forbidden list
 					for (const char of value) {
 						if (FORBIDDEN_DELIMITER_CHARS.includes(char)) {
 							new Notice(t.delimiterForbiddenCharError(char));
-							text.setValue(
-								this.plugin.settings.suffixDelimiter.symbol,
-							);
+							text.setValue(delimiterNow());
 							return;
 						}
 					}
-					// Only save if value changed
-					if (value !== this.plugin.settings.suffixDelimiter.symbol) {
-						this.plugin.settings.suffixDelimiter = {
-							...this.plugin.settings.suffixDelimiter,
-							symbol: value,
-						};
-						await this.plugin.saveSettings();
+					// Only save if value changed. The files may keep the old
+					// delimiter: then draw what took effect.
+					if (value !== delimiterNow()) {
+						pending = value;
+						void this.update(
+							{ suffixDelimiter: { symbol: value } },
+							{
+								redraw: (now) =>
+									now.suffixDelimiter.symbol !== value,
+							},
+						).finally(() => {
+							pending = null;
+						});
 					}
 				});
 			});
@@ -273,14 +291,16 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc(t.wrapDelimiterDesc)
 			.addToggle((toggle) =>
 				toggle
-					.setValue(this.plugin.settings.suffixDelimiter.padded)
-					.onChange(async (value) => {
-						this.plugin.settings.suffixDelimiter = {
-							...this.plugin.settings.suffixDelimiter,
-							padded: value,
-						};
-						await this.plugin.saveSettings();
-					}),
+					.setValue(settings.suffixDelimiter.padded)
+					.onChange((value) =>
+						this.update(
+							{ suffixDelimiter: { padded: value } },
+							{
+								redraw: (now) =>
+									now.suffixDelimiter.padded !== value,
+							},
+						),
+					),
 			);
 
 		new Setting(containerEl)
@@ -288,11 +308,10 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc(t.showBacklinksDesc)
 			.addToggle((toggle) =>
 				toggle
-					.setValue(this.plugin.settings.showScrollBacklinks)
-					.onChange(async (value) => {
-						this.plugin.settings.showScrollBacklinks = value;
-						await this.plugin.saveSettings();
-					}),
+					.setValue(settings.showScrollBacklinks)
+					.onChange((value) =>
+						this.update({ showScrollBacklinks: value }),
+					),
 			);
 
 		new Setting(containerEl)
@@ -300,11 +319,8 @@ export class SettingsTab extends PluginSettingTab {
 			.setDesc(t.hideMetadataDesc)
 			.addToggle((toggle) =>
 				toggle
-					.setValue(this.plugin.settings.hideMetadata)
-					.onChange(async (value) => {
-						this.plugin.settings.hideMetadata = value;
-						await this.plugin.saveSettings();
-					}),
+					.setValue(settings.hideMetadata)
+					.onChange((value) => this.update({ hideMetadata: value })),
 			);
 	}
 }

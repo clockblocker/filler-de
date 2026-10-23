@@ -11,6 +11,7 @@ import {
 	TextfresserCommands,
 	UserEvents,
 } from "../../../src/plugin/plugin-services";
+import { Settings } from "../../../src/settings/settings-service";
 
 describe("the plugin's services", () => {
 	it("are built in order and released in reverse: user events first, the dictionary store last", async () => {
@@ -53,6 +54,7 @@ describe("the plugin's services", () => {
 					Layer.succeed(VaultActionManager, {} as never),
 					Layer.succeed(Dumgen, {} as never),
 					Layer.succeed(Lifecycle, {} as never),
+					Layer.succeed(Settings, {} as never),
 				),
 			),
 		);

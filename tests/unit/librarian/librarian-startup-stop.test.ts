@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { VamScanError } from "@textfresser/vault-action-manager";
 import { makeRecentTrace } from "@textfresser/vault-action-manager/diagnostics";
 import { Cause, Effect, Exit, Logger, Option } from "effect";
@@ -13,17 +13,7 @@ import {
 	LibrarianStartFailed,
 } from "../../../src/lifecycle/lifecycle-supervisor";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
-import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
-
-let settingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	settingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	settingsSpy.mockRestore();
-});
+import { fixedSettings } from "../common-utils/test-settings";
 
 /**
  * A vault whose scan of the Library fails, and whose scan then throws as
@@ -56,6 +46,7 @@ describe("a Librarian startup that fails for two reasons", () => {
 		const stops: LibrarianStop[] = [];
 		const librarian = new Librarian(twoReasonVam(), {
 			onStopped: (stop) => stops.push(stop),
+			settings: fixedSettings(),
 		});
 
 		const exit = await Effect.runPromiseExit(
@@ -108,7 +99,10 @@ describe("a Librarian startup that fails for two reasons", () => {
 						attachLibrarian: () => () => undefined,
 						loadStore: Effect.void,
 						makeLibrarian: (onStopped) =>
-							new Librarian(vam, { onStopped }),
+							new Librarian(vam, {
+								onStopped,
+								settings: fixedSettings(),
+							}),
 						onLaunched: () => Effect.void,
 						resetRunning: () => false,
 						sweep: () => undefined,

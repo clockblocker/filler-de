@@ -2,14 +2,16 @@ import {
 	CrossroadNoteMetadata,
 	WORTER_SPLIT_PATH,
 } from "@textfresser/dictionary";
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import type {
+	SplitPathToFolder,
+	VaultActionManager,
+} from "@textfresser/vault-action-manager";
 import { Effect, Exit } from "effect";
 import { Notice } from "obsidian";
 import {
 	describeMetadataMigration,
 	migrateMetadataFormat,
 } from "../commanders/note-metadata-migration/migrate-metadata-format";
-import { getParsedUserSettings } from "../global-state/global-state";
 import {
 	LemmaNoteMetadata,
 	LibraryMetadata,
@@ -18,19 +20,20 @@ import {
 } from "../stateless-helpers/note-metadata";
 
 /**
- * Moves the note metadata of the Library and of the dictionary under
- * `Worter/` into `target`, the format "Hide metadata" now selects, and
+ * Moves the note metadata of the Library at `libraryRoot` and of the
+ * dictionary under `Worter/` into `target`, the format "Hide metadata" now selects, and
  * reports the outcome in a Notice. The dictionary store hears the
  * migration's writes under `Worter/` as events and reads those notes again.
  */
 export const migrateNoteMetadata = Effect.fn("migrateNoteMetadata")(function* (
 	vam: VaultActionManager,
 	target: MetadataFormat,
+	libraryRoot: SplitPathToFolder,
 ) {
 	const exit = yield* Effect.exit(
 		migrateMetadataFormat(vam, target, [
 			{
-				folder: getParsedUserSettings().splitPathToLibraryRoot,
+				folder: libraryRoot,
 				namespaces: [LibraryMetadata],
 			},
 			{

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	type BulkVaultEvent,
 	EXTERNAL_ORIGIN,
@@ -19,17 +19,7 @@ import {
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
-import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
-
-let settingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	settingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	settingsSpy.mockRestore();
-});
+import { fixedSettings } from "../../unit/common-utils/test-settings";
 
 function scroll(basename: string): VaultScanPath {
 	return {
@@ -105,7 +95,7 @@ function makeHarness() {
 	return {
 		dispatches,
 		emitBulk: (bulk: BulkVaultEvent) => emitBulk(bulk),
-		librarian: new Librarian(vam),
+		librarian: new Librarian(vam, { settings: fixedSettings() }),
 	};
 }
 
@@ -264,7 +254,7 @@ async function initWithBulksDuringStartup(
 				return { close: Effect.void };
 			}),
 	});
-	const librarian = new Librarian(vam);
+	const librarian = new Librarian(vam, { settings: fixedSettings() });
 
 	await Effect.runPromise(librarian.init());
 	await Effect.runPromise(librarian.unsubscribe());

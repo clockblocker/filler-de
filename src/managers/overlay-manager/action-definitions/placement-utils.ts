@@ -4,8 +4,7 @@
 
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import type { Librarian } from "../../../commanders/librarian/librarian";
-import { getParsedUserSettings } from "../../../global-state/global-state";
-import type { SelectionActionPlacement } from "../../../types";
+import type { ParsedUserSettings } from "../../../settings/parsed-settings";
 import { CommandKind } from "../../obsidian/command-executor";
 import type { ActionConfig } from "../bottom-toolbar/types";
 import { ACTION_DEFINITIONS } from "./definitions";
@@ -20,11 +19,12 @@ type ComputedActions = {
 };
 
 /**
- * Compute which actions go to which toolbar based on current settings.
+ * Compute which actions go to which toolbar based on `settings`.
  * Does NOT include navigation buttons - use computeNavActions() separately.
  */
-export function computeAllowedActions(): ComputedActions {
-	const settings = getParsedUserSettings();
+export function computeAllowedActions(
+	settings: ParsedUserSettings,
+): ComputedActions {
 	const selectionActions: ActionConfig[] = [];
 	const bottomActions: ActionConfig[] = [];
 
@@ -32,9 +32,7 @@ export function computeAllowedActions(): ComputedActions {
 		// Skip nav buttons - they're computed separately from Librarian state.
 		if (def.settingKey === null) continue;
 
-		const placement = settings[
-			def.settingKey as keyof typeof settings
-		] as SelectionActionPlacement;
+		const placement = settings[def.settingKey];
 
 		if (placement === OverlayPlacement.AboveSelection) {
 			selectionActions.push({ id: def.id, label: def.label });

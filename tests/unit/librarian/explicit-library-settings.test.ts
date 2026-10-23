@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, type spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	generateCodexContent,
 	Healer,
@@ -23,7 +23,6 @@ import {
 	buildFlexibleDelimiterPattern,
 } from "../../../src/utils/delimiter";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
 const tilde = { padded: false, symbol: "~" };
 
@@ -42,18 +41,6 @@ function sectionId(name: string): SectionNodeSegmentId {
 		nodeName: name as NodeName,
 	});
 }
-
-// The plugin's global settings keep "-", as if the user changed the
-// delimiter after the Librarian took its snapshot.
-let globalSettings: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	globalSettings = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	globalSettings.mockRestore();
-});
 
 describe("library-core under explicit settings", () => {
 	it("heals with the snapshot's delimiter, never the global one", () => {
@@ -131,7 +118,5 @@ describe("library-core under explicit settings", () => {
 			kind: "Section",
 			sectionChain: ["Library", "Recipe", "Berry-Pie"].map(sectionId),
 		});
-
-		expect(globalSettings).not.toHaveBeenCalled();
 	});
 });

@@ -14,7 +14,7 @@ import {
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { operations } from "dumgen";
-import { Effect, Exit, Layer, Option, Ref } from "effect";
+import { Effect, Exit, Layer, Option, Stream } from "effect";
 import { Notice, type Plugin } from "obsidian";
 import {
 	ClassifyCommander,
@@ -33,8 +33,6 @@ import {
 	vamUnlinkScrolls,
 } from "../commanders/classify";
 import { DictionaryResetCommand } from "../commanders/dictionary-reset/reset-command";
-import { Textfresser } from "../commanders/textfresser/textfresser";
-import { getParsedUserSettings } from "../global-state/global-state";
 import {
 	DictionaryStore,
 	makeDictionaryStoreService,
@@ -50,8 +48,10 @@ import {
 import { OverlayManager } from "../managers/overlay-manager";
 import type { PluginServices } from "../runtime/plugin-live";
 import type { PluginRuntime } from "../runtime/plugin-runtime";
+import type { ParsedUserSettings } from "../settings/parsed-settings";
+import { Settings } from "../settings/settings-service";
 import { dictionaryProjections } from "../stateless-helpers/dictionary-projections";
-import type { TextEaterSettings } from "../types";
+import { metadataFormatOf } from "../stateless-helpers/note-metadata";
 import { getErrorMessage } from "../utils/get-error-message";
 import { IdleTracker } from "../utils/idle-tracker";
 import {
@@ -61,9 +61,9 @@ import {
 	type ObservationError,
 	Overlay,
 	type PluginServicesOut,
-	TextfresserCommands,
 	UserEvents,
 } from "./plugin-services";
+import { TextfresserLive } from "./textfresser-live";
 
 /** What the services' Layers take from the plugin. */
 export type PluginServicesDeps = {
@@ -73,8 +73,6 @@ export type PluginServicesDeps = {
 		"hops" | "readSync"
 	>;
 	readonly notices: LifecycleNotices;
-	/** The plugin's settings as they are now. */
-	readonly settings: () => TextEaterSettings;
 };
 
 /** The plugin's services. */
@@ -86,7 +84,7 @@ export const PluginServicesLive = (
 		observation: ObservationLive(deps),
 		reset: DictionaryResetLive(deps),
 		store: DictionaryStoreLive(deps),
-		textfresser: TextfresserLive(deps),
+		textfresser: TextfresserLive,
 		userEvents: UserEventsLive(deps),
 	});
 
@@ -97,37 +95,19 @@ const pendingWork = (deps: PluginServicesDeps): Effect.Effect<PendingWork> =>
 		start: () => void deps.runtime.readSync(idle.start),
 	}));
 
-const TextfresserLive = (deps: PluginServicesDeps) =>
-	Layer.effect(
-		TextfresserCommands,
-		Effect.gen(function* () {
-			const vam = yield* VaultActionManager;
-			const dumgen = yield* Dumgen;
-			const make = () =>
-				new Textfresser(vam, deps.settings().languages, dumgen.provide);
-			const current = yield* Ref.make(make());
-			return {
-				current: Ref.get(current),
-				rebuild: Effect.suspend(() => Ref.set(current, make())),
-			};
-		}),
-	);
-
 /** The dictionary store over `Worter/`, built at once. */
 const DictionaryStoreLive = (deps: PluginServicesDeps) =>
 	Layer.effect(
 		DictionaryStore,
 		Effect.gen(function* () {
 			const vault = yield* VaultActionManager;
+			const settings = yield* Settings;
 			return yield* makeDictionaryStoreService<
 				DumdictVaultStore,
 				DictionaryScanError
 			>({
 				build: makeDumdictVaultStore({
-					metadataFormat: () =>
-						getParsedUserSettings().hideMetadata
-							? "Hidden"
-							: "Frontmatter",
+					metadataFormat: () => metadataFormatOf(settings.now()),
 					onDiagnostics: (diagnostics) =>
 						diagnostics.quarantined.length > 0
 							? Effect.logWarning(
@@ -174,6 +154,7 @@ const ClassifyLive = (deps: PluginServicesDeps) =>
 			const vam = yield* VaultActionManager;
 			const dumgen = yield* Dumgen;
 			const lifecycle = yield* Lifecycle;
+			const settings = yield* Settings;
 			const store = yield* DictionaryStore;
 			const pending = yield* pendingWork(deps);
 			const dictionary = resolverStore(store);
@@ -184,15 +165,14 @@ const ClassifyLive = (deps: PluginServicesDeps) =>
 			const runKnowledge = (
 				job: Parameters<KnowledgeQueue["enqueue"]>[0],
 			) =>
-				dictionary.pipe(
-					Effect.flatMap((built) =>
+				Effect.all([dictionary, settings.get]).pipe(
+					Effect.flatMap(([built, { languages }]) =>
 						produceKnowledge(
 							{
 								dumgen: operations,
 								store: built,
 								translationLanguages:
-									deps.settings().languages.known ===
-									"Russian"
+									languages.known === "Russian"
 										? ["en", "ru"]
 										: ["en"],
 							},
@@ -432,8 +412,9 @@ export const OverlayLive = (
 		Effect.gen(function* () {
 			const vam = yield* VaultActionManager;
 			const lifecycle = yield* Lifecycle;
+			const settings = yield* Settings;
 			const userEvents = yield* UserEvents;
-			return yield* Effect.acquireRelease(
+			const overlay = yield* Effect.acquireRelease(
 				Effect.sync(() => {
 					const overlay = new OverlayManager({
 						app: deps.plugin.app,
@@ -441,6 +422,7 @@ export const OverlayLive = (
 						getLibrarian: () => lifecycle.librarian(),
 						plugin: deps.plugin,
 						readSync: deps.runtime.readSync,
+						settings: settings.now,
 						userEventInterceptor: userEvents,
 						vam,
 					});
@@ -454,5 +436,25 @@ export const OverlayLive = (
 						Effect.sync(() => overlay.destroy()),
 					),
 			);
+			// The toolbars follow the settings' button placements.
+			yield* settings.changes.pipe(
+				Stream.map(placements),
+				Stream.changesWith((a, b) => a === b),
+				Stream.drop(1),
+				Stream.runForEach(() =>
+					Effect.sync(() => overlay.refreshToolbars()),
+				),
+				Effect.forkScoped,
+			);
+			return overlay;
 		}),
 	);
+
+/** The toolbars' button placements, as one comparable value. */
+const placements = (settings: ParsedUserSettings): string =>
+	[
+		settings.translatePlacement,
+		settings.splitInBlocksPlacement,
+		settings.explainGrammarPlacement,
+		settings.generatePlacement,
+	].join("|");

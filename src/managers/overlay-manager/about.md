@@ -19,7 +19,7 @@ OverlayManager is a **UI orchestrator**. It responds to user behavior, places UI
 - **Does NOT modify vault state** - Actions handle their own side effects via `commandExecutor`
 - **Does NOT clear selection after actions** - Actions decide whether to clear selection
 - **Does NOT implement business logic** - Delegates to `commandExecutor` for actual work
-- **Does NOT persist state** - Reads settings from global state, does not write
+- **Does NOT persist state** - Reads the settings in effect (`Settings.now`), does not write
 
 ## Architecture
 

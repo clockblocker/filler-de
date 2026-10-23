@@ -4,6 +4,7 @@
  * every use, so a key the user changes applies to the next action.
  */
 import { Context, Effect, Layer } from "effect";
+import { Settings } from "../../settings/settings-service";
 import type { DumgenProviderKeys } from "./providers";
 
 export class ProviderKeys extends Context.Service<
@@ -16,4 +17,20 @@ export class ProviderKeys extends Context.Service<
 			ProviderKeys,
 			ProviderKeys.of({ current: Effect.sync(read) }),
 		);
+
+	/** The keys in the settings in effect, read on each use. */
+	static readonly fromSettings = Layer.effect(
+		ProviderKeys,
+		Effect.map(Settings, (settings) =>
+			ProviderKeys.of({
+				current: Effect.map(
+					settings.get,
+					({ openaiApiKey, typesafeApiKey }) => ({
+						openaiApiKey,
+						typesafeApiKey,
+					}),
+				),
+			}),
+		),
+	);
 }

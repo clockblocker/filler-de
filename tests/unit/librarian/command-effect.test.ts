@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { makeCodecRulesFromSettings } from "@textfresser/library-core";
 import {
 	type SplitPathToMdFile,
 	VamPlanningError,
@@ -18,7 +19,7 @@ import type { PageSplitPlan } from "../../../src/commanders/librarian/pages/buil
 import { getAdjacentPageInfo } from "../../../src/commanders/librarian/pages/page-codec";
 import { splitToPagesAction } from "../../../src/commanders/librarian/pages/split-to-pages-action";
 import { notRun } from "../../support/vam-dispatch";
-import { setupGetParsedUserSettingsSpyWithHooks } from "../common-utils/setup-spy";
+import { defaultSettingsForUnitTests } from "../common-utils/consts";
 
 const SOURCE_PATH: SplitPathToMdFile = {
 	basename: "Source",
@@ -31,8 +32,6 @@ const NEXT_PATH: SplitPathToMdFile = {
 	...SOURCE_PATH,
 	basename: "Next",
 };
-
-setupGetParsedUserSettingsSpyWithHooks();
 
 function makeInput(options: {
 	librarian?: Partial<Librarian>;
@@ -184,6 +183,7 @@ describe("Librarian Effect commands", () => {
 			treeActions: { changed: 0, failed: 0, noOp: 0, requested: 0 },
 		};
 		const librarian = {
+			codecRules: makeCodecRulesFromSettings(defaultSettingsForUnitTests),
 			executeSplitIntention: () =>
 				Effect.succeed({
 					failure,
@@ -260,6 +260,7 @@ describe("Librarian Effect commands", () => {
 			treeActions: { changed: 3, failed: 0, noOp: 0, requested: 3 },
 		};
 		const librarian = {
+			codecRules: makeCodecRulesFromSettings(defaultSettingsForUnitTests),
 			executeSplitIntention: () =>
 				Effect.succeed({
 					initialDispatch: { kind: "Completed" as const, submittedCount: 3 },
@@ -323,6 +324,20 @@ describe("getAdjacentPageInfo", () => {
 });
 
 describe("splitToPagesAction", () => {
+	it("fails as the Librarian being unavailable before its first start", async () => {
+		const vam = {
+			getActiveEditorContext: () =>
+				Effect.succeed(makeActiveContext("First sentence.\n\nSecond.")),
+		} as unknown as VaultActionManager;
+		const librarian = { codecRules: null } as unknown as Librarian;
+
+		const error = await Effect.runPromise(
+			Effect.flip(splitToPagesAction({ librarian, vam })),
+		);
+
+		expect(error).toMatchObject({ kind: "LibrarianUnavailable" });
+	});
+
 	it("sequences reads, queued Library intention, and navigation in one Effect", async () => {
 		const order: string[] = [];
 		const intentions: PageSplitPlan[] = [];
@@ -358,6 +373,7 @@ describe("splitToPagesAction", () => {
 			treeActions: { changed: 3, failed: 0, noOp: 0, requested: 3 },
 		};
 		const librarian = {
+			codecRules: makeCodecRulesFromSettings(defaultSettingsForUnitTests),
 			executeSplitIntention: (intention: PageSplitPlan) =>
 				Effect.sync(() => {
 					order.push("intention");

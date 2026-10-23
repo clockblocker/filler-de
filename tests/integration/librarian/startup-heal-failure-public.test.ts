@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	type BulkVaultEvent,
 	EXTERNAL_ORIGIN,
@@ -20,17 +20,7 @@ import {
 } from "../../../src/commanders/librarian/librarian";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
 import { actionError, failedActions } from "../../support/vam-dispatch";
-import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
-
-let settingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	settingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	settingsSpy.mockRestore();
-});
+import { fixedSettings } from "../../unit/common-utils/test-settings";
 
 function mdFile(basename: string): SplitPathToMdFile {
 	return {
@@ -130,6 +120,7 @@ function makeHarness(
 				stopped.push(stop);
 				if (stop._tag === "LibrarianStopped") stops.push(stop.message);
 			},
+			settings: fixedSettings(),
 		}),
 		scans: () => scans,
 		stopped,

@@ -4,7 +4,7 @@
  *
  * Obsidian enters it only at an edge, and each edge opens the root span of
  * what the user did: `obsidian.onload`, `command.<id>`, `user-event.<kind>`,
- * `settings.save` or `e2e.<hook>`. A failure is logged under that span, so
+ * `settings.update` or `e2e.<hook>`. A failure is logged under that span, so
  * it lands in the recent trace whole, and is never lost at the edge. Once
  * the runtime is disposed, an edge runs nothing: a late Obsidian callback
  * is a no-op, and an E2E hook rejects.
@@ -25,7 +25,7 @@ export type EdgeSpan =
 	| "obsidian.onload"
 	| `command.${string}`
 	| `user-event.${string}`
-	| "settings.save"
+	| "settings.update"
 	| `e2e.${string}`;
 
 /** An E2E hook's program failed, or ran after unload: its whole cause. */
@@ -76,7 +76,7 @@ export type PluginRuntime<R, ER> = {
 		kind: string,
 		effect: Effect.Effect<A, E, R>,
 	) => Promise<void>;
-	/** Applying changed settings, under `settings.save`, as `command` runs. */
+	/** Applying changed settings, under `settings.update`, as `command` runs. */
 	readonly settings: <A, E>(effect: Effect.Effect<A, E, R>) => Promise<void>;
 	/**
 	 * An E2E hook the driver awaits, under `e2e.<hook>`: resolves with its
@@ -188,7 +188,7 @@ export function makePluginRuntime<R, ER>(
 		},
 		readSync: (effect) =>
 			disposal ? Exit.fail(unloaded()) : managed.runSyncExit(effect),
-		settings: (effect) => settle("settings.save", effect),
+		settings: (effect) => settle("settings.update", effect),
 		userEvent: (kind, effect) => settle(`user-event.${kind}`, effect),
 	};
 }

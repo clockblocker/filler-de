@@ -2,7 +2,10 @@
  * Context menu integration for editor and file-explorer actions.
  */
 
-import { makeCodecRulesFromSettings } from "@textfresser/library-core";
+import {
+	type CodecRules,
+	makeCodecRulesFromSettings,
+} from "@textfresser/library-core";
 import type {
 	SplitPathToMdFile,
 	VaultActionManager,
@@ -11,8 +14,8 @@ import { Effect, Exit } from "effect";
 import type { App, Menu, Plugin } from "obsidian";
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/pages/split-to-pages-action";
-import { getParsedUserSettings } from "../../../global-state/global-state";
 import type { ReadSync } from "../../../runtime/plugin-runtime";
+import type { ParsedUserSettings } from "../../../settings/parsed-settings";
 import {
 	LibraryMetadata,
 	noteMetadataHelper,
@@ -27,8 +30,10 @@ type ContextMenuDeps = {
 	app: App;
 	plugin: Plugin;
 	commandExecutor: CommandExecutor | null;
-	librarian: Pick<Librarian, "isInsideLibrary">;
+	librarian: Pick<Librarian, "isInsideLibrary" | "codecRules">;
 	readSync: ReadSync;
+	/** The settings in effect, read as the menu opens before the Librarian started. */
+	settings: () => ParsedUserSettings;
 	vam: VaultActionManager;
 };
 
@@ -53,12 +58,15 @@ export const getContextMenuFile = Effect.fn("getContextMenuFile")(function* (
  * Returns teardown function for cleanup.
  */
 export function setupContextMenu(deps: ContextMenuDeps): () => void {
-	const { app, commandExecutor, librarian, plugin, readSync, vam } = deps;
+	const { app, commandExecutor, librarian, plugin, readSync, settings, vam } =
+		deps;
 
 	const editorMenuRef = app.workspace.on("editor-menu", (menu: Menu) => {
 		handleEditorMenu(
 			menu,
 			readSync(getContextMenuFile(vam, librarian)),
+			// The Librarian's rules, as Split to Pages splits under them.
+			librarian.codecRules ?? makeCodecRulesFromSettings(settings()),
 			commandExecutor,
 		);
 	});
@@ -81,6 +89,7 @@ function handleEditorMenu(
 		{ content: string; splitPath: SplitPathToMdFile } | null,
 		unknown
 	>,
+	rules: CodecRules,
 	commandExecutor: CommandExecutor | null,
 ): void {
 	if (Exit.isFailure(activeFileExit) || !activeFileExit.value) return;
@@ -91,13 +100,15 @@ function handleEditorMenu(
 	let wouldSplitToMultiplePages = false;
 
 	try {
-		const metaInfo = noteMetadataHelper.read(content, LibraryMetadata);
+		const metaInfo = noteMetadataHelper.read(
+			content,
+			LibraryMetadata,
+			rules.metadataFormat(),
+		);
 		fileType = metaInfo?.noteKind ?? null;
 
 		// Check if scroll would split to multiple pages
 		if (fileType === FileType.Scroll || fileType === null) {
-			const settings = getParsedUserSettings();
-			const rules = makeCodecRulesFromSettings(settings);
 			wouldSplitToMultiplePages = checkWouldSplit(
 				content,
 				splitPath.basename,

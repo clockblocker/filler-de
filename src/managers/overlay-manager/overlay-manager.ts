@@ -19,6 +19,7 @@ import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { App, Plugin } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
 import type { ReadSync } from "../../runtime/plugin-runtime";
+import type { ParsedUserSettings } from "../../settings/parsed-settings";
 import type { CommandExecutor } from "../obsidian/command-executor";
 import type {
 	Teardown,
@@ -57,6 +58,8 @@ type OverlayManagerDeps = {
 	commandExecutor?: CommandExecutor;
 	/** Reads the active note synchronously as the context menu opens. */
 	readSync: ReadSync;
+	/** The settings in effect, read as a toolbar or the context menu is drawn. */
+	settings: () => ParsedUserSettings;
 	vam: VaultActionManager;
 };
 
@@ -72,6 +75,7 @@ export class OverlayManager {
 	private readonly commandExecutor: CommandExecutor | null;
 	private readonly vam: VaultActionManager;
 	private readonly readSync: ReadSync;
+	private readonly settings: () => ParsedUserSettings;
 	private workspaceTeardown: Teardown | null = null;
 	private selectionHandlerTeardown: (() => void) | null = null;
 	private actionClickHandlerTeardown: (() => void) | null = null;
@@ -90,6 +94,7 @@ export class OverlayManager {
 		this.commandExecutor = deps.commandExecutor ?? null;
 		this.vam = deps.vam;
 		this.readSync = deps.readSync;
+		this.settings = deps.settings;
 	}
 
 	init(): void {
@@ -145,16 +150,20 @@ export class OverlayManager {
 
 		// Setup context menu for "Split into pages"
 		if (this.plugin) {
+			const { getLibrarian } = this;
 			this.contextMenuTeardown = setupContextMenu({
 				app: this.app,
 				commandExecutor: this.commandExecutor,
 				librarian: {
+					get codecRules() {
+						return getLibrarian()?.codecRules ?? null;
+					},
 					isInsideLibrary: (splitPath) =>
-						this.getLibrarian()?.isInsideLibrary(splitPath) ??
-						false,
+						getLibrarian()?.isInsideLibrary(splitPath) ?? false,
 				},
 				plugin: this.plugin,
 				readSync: this.readSync,
+				settings: this.settings,
 				vam: this.vam,
 			});
 		}
@@ -205,7 +214,7 @@ export class OverlayManager {
 	refreshToolbars(): void {
 		const librarian = this.getLibrarian();
 		if (!librarian) return;
-		const actions = computeAllowedActions();
+		const actions = computeAllowedActions(this.settings());
 		updateToolbarVisibility(
 			{
 				app: this.app,

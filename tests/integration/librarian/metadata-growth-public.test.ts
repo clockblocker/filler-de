@@ -4,7 +4,7 @@
  * dispatch (it re-runs the startup reconciliation), applies the backlink
  * pass to every Scroll; each pass used to add two lines.
  */
-import { afterEach, describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	type BulkVaultEvent,
 	EXTERNAL_ORIGIN,
@@ -22,7 +22,7 @@ import {
 } from "../../../src/commanders/librarian/librarian";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
 import { actionError, failedActions } from "../../support/vam-dispatch";
-import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
+import { fixedSettings } from "../../unit/common-utils/test-settings";
 
 const OPEN = '<section id="textfresser_meta_keep_me_invisible">';
 const PADDING = "\n".repeat(20);
@@ -38,7 +38,10 @@ const scrollPath = (basename: string): SplitPathToMdFile => ({
 const keyOf = (path: SplitPathToMdFile) =>
 	[...path.pathParts, path.basename].join("/");
 
-function makeVault(initial: Record<string, string>) {
+function makeVault(
+	initial: Record<string, string>,
+	settings: ReturnType<typeof fixedSettings>,
+) {
 	const files = new Map<string, string>();
 	const paths = Object.keys(initial).map(scrollPath);
 	for (const path of paths) files.set(keyOf(path), initial[path.basename] ?? "");
@@ -129,24 +132,23 @@ function makeVault(initial: Record<string, string>) {
 			);
 		},
 		/** One plugin load: a fresh Librarian runs its startup. */
-		load: () => Effect.runPromise(new Librarian(vam).init()),
+		load: () => Effect.runPromise(new Librarian(vam, { settings }).init()),
 		read: (basename: string) => files.get(keyOf(scrollPath(basename))),
 	};
 }
 
-let spy: ReturnType<typeof spyOn> | null = null;
-afterEach(() => spy?.mockRestore());
-
 describe("Scroll metadata does not grow across loads", () => {
 	for (const hideMetadata of [true, false]) {
 		it(`stays byte-stable over loads and recoveries (hideMetadata: ${hideMetadata})`, async () => {
-			spy = setupGetParsedUserSettingsSpy({ hideMetadata });
-			const vault = makeVault({
+			const vault = makeVault(
+				{
 				"Bloated-C1-P2": `\n ${LINK} ${"\n".repeat(1696)}${SECTION}`,
 				"Empty-C1-P2": `${PADDING}${SECTION}`,
 				"Frontmatter-C1-P2": "---\nstatus: false\n---\n",
 				"Text-C1-P2": `Es war einmal.\n${PADDING}${SECTION}`,
-			});
+				},
+				fixedSettings({ hideMetadata }),
+			);
 
 			await vault.load();
 			const afterFirstLoad = ["Bloated", "Empty", "Frontmatter", "Text"].map(

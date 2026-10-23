@@ -48,7 +48,7 @@ function readNote<M, P>(
 	content: string,
 	namespace: MetadataNamespace<M>,
 	parse: (note: { body: string; metadata: M | undefined }) => P,
-	prefer: MetadataFormat | undefined,
+	prefer: MetadataFormat,
 ): DictionaryNoteRead<P> {
 	const reading = noteMetadataHelper.inspect(content, namespace, prefer);
 	if (reading.kind === "Invalid")
@@ -70,7 +70,7 @@ function readNote<M, P>(
 export function readLemmaNote<L extends Dumling.Language>(
 	content: string,
 	options: CodecOptions<L>,
-	prefer?: MetadataFormat,
+	prefer: MetadataFormat,
 ): DictionaryNoteRead<LemmaNoteParse<L>> {
 	return readNote(
 		content,
@@ -84,7 +84,7 @@ export function readLemmaNote<L extends Dumling.Language>(
 export function readReadingNote<L extends Dumling.Language>(
 	content: string,
 	options: CodecOptions<L>,
-	prefer?: MetadataFormat,
+	prefer: MetadataFormat,
 ): DictionaryNoteRead<ReadingNoteParse<L>> {
 	return readNote(
 		content,
@@ -99,8 +99,8 @@ export type WriteOptions<L extends Dumling.Language> = Omit<
 	"previous"
 > & {
 	readonly language: L;
-	/** Where the metadata goes; the format "Hide metadata" selects by default. */
-	readonly format?: MetadataFormat;
+	/** Where the metadata goes: the format "Hide metadata" selects. */
+	readonly format: MetadataFormat;
 	/**
 	 * User text to place as freeform after the note's own, kept byte for
 	 * byte: text moved from a removed note, or text a caller adds.
@@ -218,7 +218,7 @@ function writeNote<P extends { readonly document: unknown }, M>(
 		readonly body: string;
 		readonly metadata: M;
 	},
-	format: MetadataFormat | undefined,
+	format: MetadataFormat,
 ): MetadataTransform {
 	return (content) => {
 		const current = read(content);

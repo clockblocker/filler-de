@@ -3,7 +3,7 @@
  * bytes; and the Library's startup backlink pass plus a metadata write,
  * run any number of times, gives the bytes of one run (#107).
  */
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	makeBacklinkTransform,
 	makeCodecRulesFromSettings,
@@ -21,10 +21,6 @@ import {
 	noteMetadataHelper as meta,
 } from "../../../src/stateless-helpers/note-metadata";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
-import {
-	setupGetParsedUserSettingsSpy,
-	setupGetParsedUserSettingsSpyWithHooks,
-} from "../common-utils/setup-spy";
 
 const OPEN = '<section id="textfresser_meta_keep_me_invisible">';
 const PADDING = "\n".repeat(20);
@@ -72,7 +68,7 @@ function transformsFor(format: MetadataFormat): Record<string, MetadataTransform
 		]),
 		"remove Library": meta.remove(LibraryMetadata),
 		"strip backlink": makeStripScrollBacklinkTransform() as MetadataTransform,
-		toggleStatus: meta.toggleStatus(true),
+		toggleStatus: meta.toggleStatus(true, format),
 		"update dictionary": meta.update(
 			Dictionary,
 			(current) => current ?? TRICKY,
@@ -89,14 +85,6 @@ function transformsFor(format: MetadataFormat): Record<string, MetadataTransform
 
 for (const format of FORMATS) {
 	describe(`idempotency (${format})`, () => {
-		let spy: ReturnType<typeof spyOn>;
-		beforeEach(() => {
-			spy = setupGetParsedUserSettingsSpy({
-				hideMetadata: format === "Hidden",
-			});
-		});
-		afterEach(() => spy.mockRestore());
-
 		for (const [fixtureName, fixture] of Object.entries(FIXTURES)) {
 			it(`every transform is idempotent on: ${fixtureName}`, () => {
 				for (const [name, transform] of Object.entries(transformsFor(format))) {
@@ -122,15 +110,13 @@ for (const format of FORMATS) {
 				let many: string = fixture;
 				for (let run = 0; run < 10; run++) many = pass(many);
 				expect(many).toBe(once);
-				expect(meta.read(once, LibraryMetadata)).toEqual({ status: "NotStarted" });
+				expect(meta.read(once, LibraryMetadata, format)).toEqual({ status: "NotStarted" });
 			});
 		}
 	});
 }
 
 describe("blank-line growth regression", () => {
-	setupGetParsedUserSettingsSpyWithHooks({ hideMetadata: true });
-
 	it("an empty Scroll with a hidden section keeps the canonical padding", () => {
 		const backlink = makeBacklinkTransform(parentChain, codecs) as MetadataTransform;
 		const start = meta.write(LibraryMetadata, { status: "NotStarted" }, "Hidden")("");

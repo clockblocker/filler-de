@@ -49,7 +49,10 @@ function translateCodexAction(
 					splitPath: libraryScope.toVaultPath(
 						action.payload.splitPath,
 					),
-					transform: noteMetadataHelper.toggleStatus(checked),
+					transform: noteMetadataHelper.toggleStatus(
+						checked,
+						codecs.rules.metadataFormat(),
+					),
 				},
 			};
 		}

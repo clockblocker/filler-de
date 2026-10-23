@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { TreeNodeStatus } from "@textfresser/library-core";
 import {
 	type BulkVaultEvent,
@@ -31,7 +31,7 @@ import {
 	failedActions,
 	notRun,
 } from "../../support/vam-dispatch";
-import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
+import { fixedSettings } from "../../unit/common-utils/test-settings";
 import { toShape } from "../../unit/librarian/library-tree/tree-test-helpers";
 
 type DispatchFailure = Effect.Error<ReturnType<LibrarianVam["dispatch"]>>;
@@ -50,16 +50,6 @@ const LONG_CONTENT = Array.from(
 	{ length: 10 },
 	(_, index) => `Sentence ${index} carries enough words to form a page.`,
 ).join(" ");
-
-let settingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	settingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	settingsSpy.mockRestore();
-});
 
 function scroll(
 	pathParts: string[],
@@ -171,7 +161,7 @@ function makeHarness(input: {
 				return { close: Effect.void };
 			}),
 	});
-	const librarian = new Librarian(vam);
+	const librarian = new Librarian(vam, { settings: fixedSettings() });
 
 	return {
 		dispatches,
