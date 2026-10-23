@@ -17,8 +17,7 @@ import {
 	type VaultScanReadableMdPath,
 	type VaultScanResult,
 } from "@textfresser/vault-action-manager";
-import { Effect } from "effect";
-import { err } from "neverthrow";
+import { Effect, Result } from "effect";
 import { buildInitialCreateActions } from "../../../src/commanders/librarian/init/build-initial-actions";
 import {
 	Librarian,
@@ -305,7 +304,7 @@ describe("Librarian Effect helpers", () => {
 			reason: "InvalidSegmentId",
 		};
 		const failingLocator = (() =>
-			err(
+			Result.fail(
 				locatorFailure,
 			)) as Codecs["locator"]["canonicalSplitPathInsideLibraryToLocator"];
 		const failingCodecs: Codecs = {

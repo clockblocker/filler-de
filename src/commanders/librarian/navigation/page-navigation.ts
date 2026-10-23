@@ -14,6 +14,7 @@ import {
 	SplitPathKind,
 	type SplitPathToMdFile,
 } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 
 /**
  * Get previous library scroll using the tree's display order.
@@ -60,7 +61,7 @@ function getAdjacentPage(
 	const parsedSuffix = codecs.suffix.parseSeparatedSuffix(
 		currentFilePath.basename,
 	);
-	if (parsedSuffix.isErr()) return null;
+	if (Result.isFailure(parsedSuffix)) return null;
 
 	if (direction === -1) {
 		const section = findSectionByPathParts(
@@ -71,7 +72,7 @@ function getAdjacentPage(
 		const firstDirectScroll = section
 			? (getSortedDirectScrolls(section)[0] ?? null)
 			: null;
-		if (firstDirectScroll?.nodeName === parsedSuffix.value.coreName) {
+		if (firstDirectScroll?.nodeName === parsedSuffix.success.coreName) {
 			return buildCodexPath(currentFilePath.pathParts, codecs);
 		}
 	}
@@ -81,7 +82,7 @@ function getAdjacentPage(
 	]);
 	const currentIndex = allScrolls.findIndex(
 		(entry) =>
-			entry.nodeName === parsedSuffix.value.coreName &&
+			entry.nodeName === parsedSuffix.success.coreName &&
 			pathPartsEqual(entry.pathParts, currentFilePath.pathParts),
 	);
 	if (currentIndex < 0) return null;
@@ -176,10 +177,10 @@ function findSectionByPathParts(
 			coreName: part,
 			targetKind: TreeNodeKind.Section,
 		});
-		if (segmentIdResult.isErr()) {
+		if (Result.isFailure(segmentIdResult)) {
 			return undefined;
 		}
-		chain.push(segmentIdResult.value as SectionNodeSegmentId);
+		chain.push(segmentIdResult.success as SectionNodeSegmentId);
 	}
 
 	return healer.findSection(chain);
@@ -202,12 +203,12 @@ function buildCodexPath(
 		coreName: "__",
 		suffixParts,
 	});
-	if (basenameResult.isErr()) {
+	if (Result.isFailure(basenameResult)) {
 		return null;
 	}
 
 	return {
-		basename: basenameResult.value,
+		basename: basenameResult.success,
 		extension: "md",
 		kind: SplitPathKind.MdFile,
 		pathParts: [...pathParts],
@@ -224,12 +225,12 @@ function buildScrollPath(
 		coreName: nodeName,
 		suffixParts,
 	});
-	if (basenameResult.isErr()) {
+	if (Result.isFailure(basenameResult)) {
 		return null;
 	}
 
 	return {
-		basename: basenameResult.value,
+		basename: basenameResult.success,
 		extension: "md",
 		kind: SplitPathKind.MdFile,
 		pathParts: [...pathParts],

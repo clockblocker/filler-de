@@ -13,7 +13,7 @@ import type {
 	SplitPathToMdFile,
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
-import { Effect } from "effect";
+import { Effect, Result } from "effect";
 import { Notice } from "obsidian";
 import { getParsedUserSettings } from "../../../global-state/global-state";
 import type {
@@ -86,9 +86,9 @@ const gatherInput = Effect.fn("Librarian.splitToPages.gatherInput")(function* (
 	const rules = makeCodecRulesFromSettings(settings);
 
 	const basenameResult = parseSeparatedSuffix(rules, sourcePath.basename);
-	if (basenameResult.isErr()) {
+	if (Result.isFailure(basenameResult)) {
 		return yield* Effect.fail(
-			makeSplitToPagesError.parseFailed(basenameResult.error.message),
+			makeSplitToPagesError.parseFailed(basenameResult.failure.message),
 		);
 	}
 
@@ -96,7 +96,7 @@ const gatherInput = Effect.fn("Librarian.splitToPages.gatherInput")(function* (
 	const cleanContent = goBackLinkHelper.strip(content);
 	const segmentation = segmentContentWithBlockMarkers(
 		cleanContent,
-		basenameResult.value,
+		basenameResult.success,
 		config,
 	);
 
@@ -242,9 +242,9 @@ export function wouldSplitToMultiplePages(
 	config: SegmentationConfig = DEFAULT_SEGMENTATION_CONFIG,
 ): boolean {
 	const basenameResult = parseSeparatedSuffix(rules, basename);
-	if (basenameResult.isErr()) return false;
+	if (Result.isFailure(basenameResult)) return false;
 
 	const cleanContent = goBackLinkHelper.strip(content);
-	const result = segmentContent(cleanContent, basenameResult.value, config);
+	const result = segmentContent(cleanContent, basenameResult.success, config);
 	return result.pages.length > 1;
 }

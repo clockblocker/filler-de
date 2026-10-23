@@ -1,4 +1,5 @@
 import type { SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result as EffectResult } from "effect";
 import { err, ok, type Result } from "neverthrow";
 import type {
 	Codecs,
@@ -13,29 +14,33 @@ export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
 	sp: SplitPathInsideLibraryOf<SK>,
 	codecs: Codecs,
 ): Result<TreeNodeLocatorForLibraryScopedSplitPath<SK>, string> {
-	const withSeparatedSuffixResult = codecs.splitPathWithSeparatedSuffix
-		.splitPathInsideLibraryToWithSeparatedSuffix(sp)
-		.mapErr((error) => error.message);
+	const withSeparatedSuffixResult = EffectResult.mapError(
+		codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
+			sp,
+		),
+		(error) => error.message,
+	);
 
-	if (withSeparatedSuffixResult.isErr()) {
-		return err(withSeparatedSuffixResult.error);
+	if (EffectResult.isFailure(withSeparatedSuffixResult)) {
+		return err(withSeparatedSuffixResult.failure);
 	}
 
 	const { libraryRootName } = codecs.rules;
 	const cspRes = canonizeSplitPathWithSeparatedSuffix(
 		codecs.suffix,
 		libraryRootName,
-		withSeparatedSuffixResult.value,
+		withSeparatedSuffixResult.success,
 	).mapErr((error) => error.message);
 	if (cspRes.isErr()) return err(cspRes.error);
 
-	const locatorRes = codecs.locator
-		.canonicalSplitPathInsideLibraryToLocator(cspRes.value)
-		.mapErr((error) => error.message);
-	if (locatorRes.isErr()) return err(locatorRes.error);
+	const locatorRes = EffectResult.mapError(
+		codecs.locator.canonicalSplitPathInsideLibraryToLocator(cspRes.value),
+		(error) => error.message,
+	);
+	if (EffectResult.isFailure(locatorRes)) return err(locatorRes.failure);
 
 	// Cast is safe: locator type corresponds to split path kind
 	return ok(
-		locatorRes.value as unknown as TreeNodeLocatorForLibraryScopedSplitPath<SK>,
+		locatorRes.success as unknown as TreeNodeLocatorForLibraryScopedSplitPath<SK>,
 	);
 }

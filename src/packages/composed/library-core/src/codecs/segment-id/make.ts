@@ -1,4 +1,4 @@
-import type { Result } from "neverthrow";
+import type { Result } from "effect";
 import type { TreeNodeKind } from "../../healer/library-tree/tree-node/types/atoms";
 import type { CodecError } from "../errors";
 import type { CodecRules } from "../rules";
@@ -20,18 +20,27 @@ export type SegmentIdCodecs = {
 	/** Generic parser (primary API) */
 	parseSegmentId: <NK extends TreeNodeKind>(
 		id: TreeNodeSegmentId,
-	) => Result<SegmentIdComponents<NK>, CodecError>;
+	) => Result.Result<SegmentIdComponents<NK>, CodecError>;
 
 	/** Type-specific convenience parsers (better type inference) */
 	parseSectionSegmentId: (
 		id: SegmentIdOf<typeof TreeNodeKind.Section>,
-	) => Result<SegmentIdComponents<typeof TreeNodeKind.Section>, CodecError>;
+	) => Result.Result<
+		SegmentIdComponents<typeof TreeNodeKind.Section>,
+		CodecError
+	>;
 	parseScrollSegmentId: (
 		id: SegmentIdOf<typeof TreeNodeKind.Scroll>,
-	) => Result<SegmentIdComponents<typeof TreeNodeKind.Scroll>, CodecError>;
+	) => Result.Result<
+		SegmentIdComponents<typeof TreeNodeKind.Scroll>,
+		CodecError
+	>;
 	parseFileSegmentId: (
 		id: SegmentIdOf<typeof TreeNodeKind.File>,
-	) => Result<SegmentIdComponents<typeof TreeNodeKind.File>, CodecError>;
+	) => Result.Result<
+		SegmentIdComponents<typeof TreeNodeKind.File>,
+		CodecError
+	>;
 
 	/** Serialize (validated inputs) */
 	serializeSegmentId: <NK extends TreeNodeKind>(
@@ -43,7 +52,7 @@ export type SegmentIdCodecs = {
 		coreName: string;
 		targetKind: TreeNodeKind;
 		extension?: string;
-	}) => Result<TreeNodeSegmentId, CodecError>;
+	}) => Result.Result<TreeNodeSegmentId, CodecError>;
 };
 
 export function makeSegmentIdCodecs(rules: CodecRules): SegmentIdCodecs {

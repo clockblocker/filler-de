@@ -3,6 +3,7 @@
  * Extracts link target and converts to locator.
  */
 
+import { Result as EffectResult } from "effect";
 import { err, ok, type Result } from "neverthrow";
 import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
@@ -66,15 +67,16 @@ export function parseCodexLinkTarget(
 	const libraryRoot = codecs.rules.libraryRootName;
 
 	// Parse as suffixed basename
-	const parseResult = codecs.suffix
-		.parseSeparatedSuffix(linkTarget)
-		.mapErr((error) => error.message);
+	const parseResult = EffectResult.mapError(
+		codecs.suffix.parseSeparatedSuffix(linkTarget),
+		(error) => error.message,
+	);
 
-	if (parseResult.isErr()) {
-		return err(`Failed to parse link target: ${parseResult.error}`);
+	if (EffectResult.isFailure(parseResult)) {
+		return err(`Failed to parse link target: ${parseResult.failure}`);
 	}
 
-	const { coreName, suffixParts } = parseResult.value;
+	const { coreName, suffixParts } = parseResult.success;
 
 	if (coreName === PREFIX_OF_CODEX) {
 		// Section codex: suffixParts are section names (deepest first)

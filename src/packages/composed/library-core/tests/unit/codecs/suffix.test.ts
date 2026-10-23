@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from "bun:test";
+import { Result } from "effect";
 import type { SuffixCodecs } from "../../../src/codecs/internal/suffix";
 import { makeSuffixCodecs } from "../../../src/codecs/internal/suffix";
 import type { CodecRules } from "../../../src/codecs/rules";
@@ -36,8 +37,8 @@ describe("suffix codecs", () => {
 	describe("parseSeparatedSuffix", () => {
 		it("parses basename with no suffix parts", () => {
 			const result = codecs.parseSeparatedSuffix("NoteName");
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toEqual({
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toEqual({
 				coreName: "NoteName",
 				suffixParts: [],
 			});
@@ -45,8 +46,8 @@ describe("suffix codecs", () => {
 
 		it("parses basename with one suffix part", () => {
 			const result = codecs.parseSeparatedSuffix("NoteName-parent");
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toEqual({
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toEqual({
 				coreName: "NoteName",
 				suffixParts: ["parent"],
 			});
@@ -54,8 +55,8 @@ describe("suffix codecs", () => {
 
 		it("parses basename with multiple suffix parts", () => {
 			const result = codecs.parseSeparatedSuffix("NoteName-child-parent");
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toEqual({
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toEqual({
 				coreName: "NoteName",
 				suffixParts: ["child", "parent"],
 			});
@@ -65,8 +66,8 @@ describe("suffix codecs", () => {
 			const result = codecs.parseSeparatedSuffix(
 				"NoteName - child - parent",
 			);
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toEqual({
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toEqual({
 				coreName: "NoteName",
 				suffixParts: ["child", "parent"],
 			});
@@ -74,7 +75,7 @@ describe("suffix codecs", () => {
 
 		it("returns error for empty string", () => {
 			const result = codecs.parseSeparatedSuffix("");
-			expect(result.isErr()).toBe(true);
+			expect(Result.isFailure(result)).toBe(true);
 		});
 	});
 
@@ -110,8 +111,8 @@ describe("suffix codecs", () => {
 				coreName: "NoteName",
 				suffixParts: ["parent"],
 			});
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toBe("NoteName-parent");
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toBe("NoteName-parent");
 		});
 
 		it("returns error for empty coreName", () => {
@@ -119,9 +120,9 @@ describe("suffix codecs", () => {
 				coreName: "",
 				suffixParts: [],
 			});
-			expect(result.isErr()).toBe(true);
-			if (result.isErr()) {
-				expect(result.error.kind).toBe("SuffixError");
+			expect(Result.isFailure(result)).toBe(true);
+			if (Result.isFailure(result)) {
+				expect(result.failure.kind).toBe("SuffixError");
 			}
 		});
 
@@ -130,23 +131,23 @@ describe("suffix codecs", () => {
 				coreName: "NoteName",
 				suffixParts: [""],
 			});
-			expect(result.isErr()).toBe(true);
+			expect(Result.isFailure(result)).toBe(true);
 		});
 	});
 
 	describe("splitBySuffixDelimiter", () => {
 		it("splits single part", () => {
 			const result = codecs.splitBySuffixDelimiter("NoteName");
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toEqual(["NoteName"]);
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toEqual(["NoteName"]);
 		});
 
 		it("splits multiple parts", () => {
 			const result = codecs.splitBySuffixDelimiter(
 				"NoteName-child-parent",
 			);
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toEqual([
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toEqual([
 				"NoteName",
 				"child",
 				"parent",
@@ -155,7 +156,7 @@ describe("suffix codecs", () => {
 
 		it("returns error for empty string", () => {
 			const result = codecs.splitBySuffixDelimiter("");
-			expect(result.isErr()).toBe(true);
+			expect(Result.isFailure(result)).toBe(true);
 		});
 	});
 
@@ -211,9 +212,9 @@ describe("suffix codecs", () => {
 		it("roundtrips basename with suffix", () => {
 			const original = "NoteName-child-parent";
 			const parsed = codecs.parseSeparatedSuffix(original);
-			expect(parsed.isOk()).toBe(true);
+			expect(Result.isSuccess(parsed)).toBe(true);
 			const serialized = codecs.serializeSeparatedSuffix(
-				parsed._unsafeUnwrap(),
+				Result.getOrThrow(parsed),
 			);
 			expect(serialized).toBe(original);
 		});
@@ -221,9 +222,9 @@ describe("suffix codecs", () => {
 		it("roundtrips basename without suffix", () => {
 			const original = "NoteName";
 			const parsed = codecs.parseSeparatedSuffix(original);
-			expect(parsed.isOk()).toBe(true);
+			expect(Result.isSuccess(parsed)).toBe(true);
 			const serialized = codecs.serializeSeparatedSuffix(
-				parsed._unsafeUnwrap(),
+				Result.getOrThrow(parsed),
 			);
 			expect(serialized).toBe(original);
 		});
@@ -255,8 +256,8 @@ describe("suffix codecs", () => {
 			const result = paddedCodecs.parseSeparatedSuffix(
 				"NoteName - child - parent",
 			);
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap()).toEqual({
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result)).toEqual({
 				coreName: "NoteName",
 				suffixParts: ["child", "parent"],
 			});

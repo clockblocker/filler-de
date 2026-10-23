@@ -8,7 +8,8 @@
  */
 
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
-import { ok, type Result } from "neverthrow";
+import { Result as EffectResult } from "effect";
+import { err, ok, type Result } from "neverthrow";
 import type {
 	Codecs,
 	SplitPathToFileInsideLibrary,
@@ -75,21 +76,23 @@ export function buildCanonicalLeafSplitPath(
 	CodecError
 > {
 	// Convert locator to canonical split path, then to split path
-	return codecs.locator
-		.locatorToCanonicalSplitPathInsideLibrary(locator)
-		.andThen((canonical) => {
-			// Convert canonical to split path
-			const splitPath =
-				codecs.splitPathWithSeparatedSuffix.fromSplitPathInsideLibraryWithSeparatedSuffix(
-					canonical,
-				);
+	const canonicalResult =
+		codecs.locator.locatorToCanonicalSplitPathInsideLibrary(locator);
+	if (EffectResult.isFailure(canonicalResult)) {
+		return err(canonicalResult.failure);
+	}
 
-			// Type assertion: leaf locators (Scroll/File) only produce MdFile/File split paths, never Folder
-			// The codec chain preserves types, but TypeScript widens due to union input
-			return ok(
-				splitPath as
-					| SplitPathToMdFileInsideLibrary
-					| SplitPathToFileInsideLibrary,
-			);
-		});
+	// Convert canonical to split path
+	const splitPath =
+		codecs.splitPathWithSeparatedSuffix.fromSplitPathInsideLibraryWithSeparatedSuffix(
+			canonicalResult.success,
+		);
+
+	// Type assertion: leaf locators (Scroll/File) only produce MdFile/File split paths, never Folder
+	// The codec chain preserves types, but TypeScript widens due to union input
+	return ok(
+		splitPath as
+			| SplitPathToMdFileInsideLibrary
+			| SplitPathToFileInsideLibrary,
+	);
 }

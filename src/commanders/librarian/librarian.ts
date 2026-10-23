@@ -828,12 +828,12 @@ export class Librarian {
 		basename: string,
 	): { coreName: string; suffixParts: string[] } | null {
 		const parsed = this.codecs.suffix.parseSeparatedSuffix(basename);
-		if (parsed.isErr()) {
+		if (Result.isFailure(parsed)) {
 			return null;
 		}
 		return {
-			coreName: parsed.value.coreName,
-			suffixParts: [...parsed.value.suffixParts],
+			coreName: parsed.success.coreName,
+			suffixParts: [...parsed.success.suffixParts],
 		};
 	}
 

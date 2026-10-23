@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import {
 	type LibraryPath,
 	makeLibraryPathCodecs,
@@ -220,8 +221,8 @@ describe("library-path codecs", () => {
 			const result = makeLibraryPathCodecs(
 				segmentIdCodecs,
 			).fromSectionChain(chain, segmentIdCodecs);
-			expect(result.isOk()).toBe(true);
-			const lp = result._unsafeUnwrap();
+			expect(Result.isSuccess(result)).toBe(true);
+			const lp = Result.getOrThrow(result);
 			expect(lp.segments).toEqual(["Library", "parent", "child"]);
 			expect(lp.kind).toBe(SplitPathKind.Folder);
 		});
@@ -232,8 +233,8 @@ describe("library-path codecs", () => {
 			const result = makeLibraryPathCodecs(
 				segmentIdCodecs,
 			).fromSectionChain([], segmentIdCodecs);
-			expect(result.isOk()).toBe(true);
-			expect(result._unsafeUnwrap().segments).toEqual([]);
+			expect(Result.isSuccess(result)).toBe(true);
+			expect(Result.getOrThrow(result).segments).toEqual([]);
 		});
 
 		it("returns error for invalid segment ID in chain", () => {
@@ -243,7 +244,7 @@ describe("library-path codecs", () => {
 			const result = makeLibraryPathCodecs(
 				segmentIdCodecs,
 			).fromSectionChain(chain, segmentIdCodecs);
-			expect(result.isErr()).toBe(true);
+			expect(Result.isFailure(result)).toBe(true);
 		});
 	});
 

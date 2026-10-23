@@ -6,6 +6,7 @@
  *
  * @see PathFinder.parseSectionChainToNodeNames in `@textfresser/library-core/path-finder.ts`
  */
+import { Result as EffectResult } from "effect";
 import { err, ok, type Result } from "neverthrow";
 import type { CodecError } from "../../../codecs/errors";
 import type { SegmentIdCodecs } from "../../../codecs/segment-id";
@@ -22,10 +23,10 @@ export function sectionChainToPathParts(
 	const pathParts: string[] = [];
 	for (const segId of segmentIds) {
 		const parseResult = segmentIdCodecs.parseSectionSegmentId(segId);
-		if (parseResult.isErr()) {
-			return err(parseResult.error);
+		if (EffectResult.isFailure(parseResult)) {
+			return err(parseResult.failure);
 		}
-		pathParts.push(parseResult.value.coreName);
+		pathParts.push(parseResult.success.coreName);
 	}
 	return ok(pathParts);
 }

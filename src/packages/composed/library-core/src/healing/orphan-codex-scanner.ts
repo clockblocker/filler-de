@@ -10,6 +10,7 @@
  * and generates cleanup actions for mismatched codexes.
  */
 
+import { Result } from "effect";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../codecs";
 import type { SectionNodeSegmentId } from "../codecs/segment-id";
 import { computeCodexSplitPath, isCodexSplitPath } from "../codex";
@@ -173,10 +174,10 @@ export class OrphanCodexScanner {
 					coreName: nodeName,
 					targetKind: TreeNodeKind.Section,
 				});
-			if (segIdResult.isErr()) {
+			if (Result.isFailure(segIdResult)) {
 				return null;
 			}
-			chain.push(segIdResult.value as SectionNodeSegmentId);
+			chain.push(segIdResult.success as SectionNodeSegmentId);
 		}
 
 		return chain;

@@ -1,3 +1,4 @@
+import { Result } from "effect";
 import type { Codecs } from "../../../../../../codecs";
 import {
 	type CreateObservationDiagnostic,
@@ -88,8 +89,11 @@ export const translateMaterializedEvents = (
 function isCodexEvent(ev: MaterializedNodeEvent, codecs: Codecs): boolean {
 	const splitPath =
 		ev.kind === MaterializedEventType.Rename ? ev.to : ev.splitPath;
-	const result = codecs.suffix
-		.parseSeparatedSuffix(splitPath.basename)
-		.mapErr((error) => error.message);
-	return result.isOk() && result.value.coreName === PREFIX_OF_CODEX;
+	const result = Result.mapError(
+		codecs.suffix.parseSeparatedSuffix(splitPath.basename),
+		(error) => error.message,
+	);
+	return (
+		Result.isSuccess(result) && result.success.coreName === PREFIX_OF_CODEX
+	);
 }

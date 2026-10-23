@@ -1,5 +1,5 @@
 import type { SplitPathKind } from "@textfresser/vault-action-manager";
-import type { Result } from "neverthrow";
+import type { Result } from "effect";
 import type { TreeNodeKind } from "../../healer/library-tree/tree-node/types/atoms";
 import type { CodecError } from "../errors";
 import type { SuffixCodecs } from "../internal/suffix";
@@ -21,13 +21,16 @@ import type { NodeLocatorOf } from "./types";
 export type LocatorCodecs = {
 	locatorToCanonicalSplitPathInsideLibrary: <NK extends TreeNodeKind>(
 		loc: NodeLocatorOf<NK>,
-	) => Result<
+	) => Result.Result<
 		CanonicalSplitPathInsideLibraryOf<CorrespondingSplitPathKind<NK>>,
 		CodecError
 	>;
 	canonicalSplitPathInsideLibraryToLocator: <SK extends SplitPathKind>(
 		sp: CanonicalSplitPathInsideLibraryOf<SK>,
-	) => Result<NodeLocatorOf<CorrespondingTreeNodeKind<SK>>, CodecError>;
+	) => Result.Result<
+		NodeLocatorOf<CorrespondingTreeNodeKind<SK>>,
+		CodecError
+	>;
 };
 
 export function makeLocatorCodecs(

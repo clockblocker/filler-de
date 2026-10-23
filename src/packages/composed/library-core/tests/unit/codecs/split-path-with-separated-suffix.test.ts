@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "bun:test";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type { SuffixCodecs } from "../../../src/codecs/internal/suffix";
 import { makeSuffixCodecs } from "../../../src/codecs/internal/suffix";
 import type { CodecRules } from "../../../src/codecs/rules";
@@ -51,8 +52,8 @@ describe("split-path-with-separated-suffix codecs", () => {
 			};
 			const result =
 				codecs.splitPathInsideLibraryToWithSeparatedSuffix(sp);
-			expect(result.isOk()).toBe(true);
-			const val = result._unsafeUnwrap();
+			expect(Result.isSuccess(result)).toBe(true);
+			const val = Result.getOrThrow(result);
 			expect(val.kind).toBe(SplitPathKind.MdFile);
 			expect(val.separatedSuffixedBasename).toEqual({
 				coreName: "NoteName",
@@ -69,8 +70,8 @@ describe("split-path-with-separated-suffix codecs", () => {
 			};
 			const result =
 				codecs.splitPathInsideLibraryToWithSeparatedSuffix(sp);
-			expect(result.isOk()).toBe(true);
-			const val = result._unsafeUnwrap();
+			expect(Result.isSuccess(result)).toBe(true);
+			const val = Result.getOrThrow(result);
 			expect(val.kind).toBe(SplitPathKind.Folder);
 			expect(val.separatedSuffixedBasename).toEqual({
 				coreName: "child",
@@ -87,8 +88,8 @@ describe("split-path-with-separated-suffix codecs", () => {
 			};
 			const result =
 				codecs.splitPathInsideLibraryToWithSeparatedSuffix(sp);
-			expect(result.isOk()).toBe(true);
-			const val = result._unsafeUnwrap();
+			expect(Result.isSuccess(result)).toBe(true);
+			const val = Result.getOrThrow(result);
 			expect(val.kind).toBe(SplitPathKind.File);
 			expect(val.separatedSuffixedBasename).toEqual({
 				coreName: "Image",
@@ -105,7 +106,7 @@ describe("split-path-with-separated-suffix codecs", () => {
 			};
 			const result =
 				codecs.splitPathInsideLibraryToWithSeparatedSuffix(sp);
-			expect(result.isErr()).toBe(true);
+			expect(Result.isFailure(result)).toBe(true);
 		});
 	});
 
@@ -169,9 +170,9 @@ describe("split-path-with-separated-suffix codecs", () => {
 			};
 			const withSuffix =
 				codecs.splitPathInsideLibraryToWithSeparatedSuffix(original);
-			expect(withSuffix.isOk()).toBe(true);
+			expect(Result.isSuccess(withSuffix)).toBe(true);
 			const back = codecs.fromSplitPathInsideLibraryWithSeparatedSuffix(
-				withSuffix._unsafeUnwrap(),
+				Result.getOrThrow(withSuffix),
 			);
 			expect(back.basename).toBe(original.basename);
 			expect(back.pathParts).toEqual(original.pathParts);
@@ -186,9 +187,9 @@ describe("split-path-with-separated-suffix codecs", () => {
 			};
 			const withSuffix =
 				codecs.splitPathInsideLibraryToWithSeparatedSuffix(original);
-			expect(withSuffix.isOk()).toBe(true);
+			expect(Result.isSuccess(withSuffix)).toBe(true);
 			const back = codecs.fromSplitPathInsideLibraryWithSeparatedSuffix(
-				withSuffix._unsafeUnwrap(),
+				Result.getOrThrow(withSuffix),
 			);
 			expect(back.basename).toBe(original.basename);
 			expect(back.pathParts).toEqual(original.pathParts);

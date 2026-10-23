@@ -1,3 +1,4 @@
+import { Result as EffectResult } from "effect";
 import { err, ok, type Result } from "neverthrow";
 import type { CodecError, Codecs } from "../../codecs";
 import type { SectionNodeSegmentId } from "../../codecs/segment-id";
@@ -30,10 +31,10 @@ export function parseOldSectionPath(
 
 	// Parse the section's own segment ID
 	const nodeNameResult = codecs.segmentId.parseSectionSegmentId(segmentId);
-	if (nodeNameResult.isErr()) {
-		return err(nodeNameResult.error);
+	if (EffectResult.isFailure(nodeNameResult)) {
+		return err(nodeNameResult.failure);
 	}
 
 	// Combine: parent path + node name
-	return ok([...parentPathResult.value, nodeNameResult.value.coreName]);
+	return ok([...parentPathResult.value, nodeNameResult.success.coreName]);
 }

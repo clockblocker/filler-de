@@ -1,4 +1,4 @@
-import type { Result } from "neverthrow";
+import type { Result } from "effect";
 import type { NonEmptyArray } from "../../../internal/root/type-helpers";
 import type { NodeName } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
@@ -19,15 +19,15 @@ import type { SeparatedSuffixedBasename } from "./types";
 export type SuffixCodecs = {
 	parseSeparatedSuffix: (
 		basename: string,
-	) => Result<SeparatedSuffixedBasename, CodecError>;
+	) => Result.Result<SeparatedSuffixedBasename, CodecError>;
 	serializeSeparatedSuffix: (suffix: SeparatedSuffixedBasename) => string;
 	serializeSeparatedSuffixUnchecked: (suffix: {
 		coreName: string;
 		suffixParts: string[];
-	}) => Result<string, CodecError>;
+	}) => Result.Result<string, CodecError>;
 	splitBySuffixDelimiter: (
 		basename: string,
-	) => Result<NonEmptyArray<NodeName>, CodecError>;
+	) => Result.Result<NonEmptyArray<NodeName>, CodecError>;
 	pathPartsWithRootToSuffixParts: (pathParts: string[]) => NodeName[];
 	pathPartsToSuffixParts: (pathParts: string[]) => NodeName[];
 	suffixPartsToPathParts: (suffixParts: NodeName[]) => string[];

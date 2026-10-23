@@ -2,7 +2,7 @@ import {
 	SplitPathKind,
 	type SplitPathKind as SplitPathKindType,
 } from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import { nodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSplitPathError, makeZodError } from "../../errors";
@@ -33,12 +33,12 @@ export function splitPathInsideLibraryToWithSeparatedSuffix<
 	rules: CodecRules,
 	suffix: SuffixCodecs,
 	sp: SplitPathInsideLibraryOf<SK>,
-): Result<SplitPathInsideLibraryWithSeparatedSuffixOf<SK>, CodecError>;
+): Result.Result<SplitPathInsideLibraryWithSeparatedSuffixOf<SK>, CodecError>;
 export function splitPathInsideLibraryToWithSeparatedSuffix(
 	rules: CodecRules,
 	suffix: SuffixCodecs,
 	sp: SplitPathToFolderInsideLibrary,
-): Result<
+): Result.Result<
 	SplitPathInsideLibraryWithSeparatedSuffixOf<typeof SplitPathKind.Folder>,
 	CodecError
 >;
@@ -46,7 +46,7 @@ export function splitPathInsideLibraryToWithSeparatedSuffix(
 	rules: CodecRules,
 	suffix: SuffixCodecs,
 	sp: SplitPathToFileInsideLibrary,
-): Result<
+): Result.Result<
 	SplitPathInsideLibraryWithSeparatedSuffixOf<typeof SplitPathKind.File>,
 	CodecError
 >;
@@ -54,7 +54,7 @@ export function splitPathInsideLibraryToWithSeparatedSuffix(
 	rules: CodecRules,
 	suffix: SuffixCodecs,
 	sp: SplitPathToMdFileInsideLibrary,
-): Result<
+): Result.Result<
 	SplitPathInsideLibraryWithSeparatedSuffixOf<typeof SplitPathKind.MdFile>,
 	CodecError
 >;
@@ -62,13 +62,13 @@ export function splitPathInsideLibraryToWithSeparatedSuffix(
 	rules: CodecRules,
 	suffix: SuffixCodecs,
 	sp: AnySplitPathInsideLibrary,
-): Result<AnySplitPathInsideLibraryWithSeparatedSuffix, CodecError> {
+): Result.Result<AnySplitPathInsideLibraryWithSeparatedSuffix, CodecError> {
 	// Validate path parts as NodeNames (split by delimiter validation)
 	const nameSchema = nodeNameSchema(rules.suffixDelimiterPattern);
 	for (const p of sp.pathParts) {
 		const r = nameSchema.safeParse(p);
 		if (!r.success) {
-			return err(
+			return Result.fail(
 				makeSplitPathError(
 					"InvalidPathParts",
 					r.error.issues[0]?.message ?? "Invalid path part",
@@ -83,37 +83,37 @@ export function splitPathInsideLibraryToWithSeparatedSuffix(
 
 	// Parse basename into separated suffix (validates NodeNames via splitBySuffixDelimiter)
 	const sepResult = suffix.parseSeparatedSuffix(sp.basename);
-	if (sepResult.isErr()) {
-		return err(
+	if (Result.isFailure(sepResult)) {
+		return Result.fail(
 			makeSplitPathError(
 				"InvalidBasename",
-				sepResult.error.message,
+				sepResult.failure.message,
 				{ basename: sp.basename },
-				sepResult.error,
+				sepResult.failure,
 			),
 		);
 	}
 
 	switch (sp.kind) {
 		case SplitPathKind.Folder:
-			return ok({
+			return Result.succeed({
 				kind: SplitPathKind.Folder,
 				pathParts: sp.pathParts,
-				separatedSuffixedBasename: sepResult.value,
+				separatedSuffixedBasename: sepResult.success,
 			});
 		case SplitPathKind.File:
-			return ok({
+			return Result.succeed({
 				extension: sp.extension,
 				kind: SplitPathKind.File,
 				pathParts: sp.pathParts,
-				separatedSuffixedBasename: sepResult.value,
+				separatedSuffixedBasename: sepResult.success,
 			});
 		case SplitPathKind.MdFile:
-			return ok({
+			return Result.succeed({
 				extension: sp.extension,
 				kind: SplitPathKind.MdFile,
 				pathParts: sp.pathParts,
-				separatedSuffixedBasename: sepResult.value,
+				separatedSuffixedBasename: sepResult.success,
 			});
 	}
 }

@@ -1,7 +1,6 @@
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import { TreeNodeKind } from "../../../healer/library-tree/tree-node/types/atoms";
-import { sectionChainToPathParts } from "../../../healer/library-tree/utils/section-chain-utils";
 import type { CodecError } from "../../errors";
 import { makeLocatorError } from "../../errors";
 import type { SuffixCodecs } from "../../internal/suffix";
@@ -23,7 +22,7 @@ export function locatorToCanonicalSplitPathInsideLibrary<
 	segmentId: SegmentIdCodecs,
 	suffix: SuffixCodecs,
 	loc: NodeLocatorOf<NK>,
-): Result<
+): Result.Result<
 	CanonicalSplitPathInsideLibraryOf<CorrespondingSplitPathKind<NK>>,
 	CodecError
 >;
@@ -31,38 +30,37 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 	segmentId: SegmentIdCodecs,
 	suffix: SuffixCodecs,
 	loc: TreeNodeLocator,
-): Result<AnyCanonicalSplitPathInsideLibrary, CodecError> {
+): Result.Result<AnyCanonicalSplitPathInsideLibrary, CodecError> {
 	// Both segmentIdChainToParent and pathParts INCLUDE Library root
-	const pathPartsResult = sectionChainToPathParts(
-		loc.segmentIdChainToParent,
-		segmentId,
-	);
-
-	if (pathPartsResult.isErr()) {
-		return err(
-			makeLocatorError(
-				"InvalidSegmentId",
-				"Failed to parse segment ID in chain",
-				{ segmentIdChain: loc.segmentIdChainToParent },
-				pathPartsResult.error,
-			),
-		);
+	const pathParts: string[] = [];
+	for (const segId of loc.segmentIdChainToParent) {
+		const sectionResult = segmentId.parseSectionSegmentId(segId);
+		if (Result.isFailure(sectionResult)) {
+			return Result.fail(
+				makeLocatorError(
+					"InvalidSegmentId",
+					"Failed to parse segment ID in chain",
+					{ segmentIdChain: loc.segmentIdChainToParent },
+					sectionResult.failure,
+				),
+			);
+		}
+		pathParts.push(sectionResult.success.coreName);
 	}
-	const pathParts = pathPartsResult.value;
 
 	// Parse segment ID components
 	const segmentIdResult = segmentId.parseSegmentId(loc.segmentId);
-	if (segmentIdResult.isErr()) {
-		return err(
+	if (Result.isFailure(segmentIdResult)) {
+		return Result.fail(
 			makeLocatorError(
 				"InvalidSegmentId",
 				"Failed to parse locator segment ID",
 				{ segmentId: loc.segmentId },
-				segmentIdResult.error,
+				segmentIdResult.failure,
 			),
 		);
 	}
-	const segmentIdComponents = segmentIdResult.value;
+	const segmentIdComponents = segmentIdResult.success;
 
 	// Build canonical separated suffixed basename
 	// Use suffix codecs to build expected canonical format
@@ -71,7 +69,7 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 	// Build split path with separated suffix directly (assumes canonical I/O as invariant)
 	switch (segmentIdComponents.targetKind) {
 		case TreeNodeKind.Section:
-			return ok({
+			return Result.succeed({
 				kind: SplitPathKind.Folder,
 				pathParts,
 				separatedSuffixedBasename: {
@@ -80,7 +78,7 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 				},
 			});
 		case TreeNodeKind.Scroll:
-			return ok({
+			return Result.succeed({
 				extension: MD,
 				kind: SplitPathKind.MdFile,
 				pathParts,
@@ -90,7 +88,7 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 				},
 			});
 		case TreeNodeKind.File:
-			return ok({
+			return Result.succeed({
 				extension: segmentIdComponents.extension,
 				kind: SplitPathKind.File,
 				pathParts,

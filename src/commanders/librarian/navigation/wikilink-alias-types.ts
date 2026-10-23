@@ -2,7 +2,7 @@
  * Types for wikilink alias service.
  */
 
-import type { Result } from "neverthrow";
+import type { Result } from "effect";
 
 /**
  * Parsed suffix result.
@@ -19,7 +19,7 @@ type ParsedSuffix = {
 export type SuffixParser = {
 	parseSeparatedSuffix: (
 		text: string,
-	) => Result<ParsedSuffix, { kind: string }>;
+	) => Result.Result<ParsedSuffix, { kind: string }>;
 };
 
 /**

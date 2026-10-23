@@ -1,4 +1,4 @@
-import type { Result } from "neverthrow";
+import { Result } from "effect";
 import type { CodecError } from "../../errors";
 import type { CodecRules } from "../../rules";
 import { splitBySuffixDelimiter } from "./split";
@@ -10,8 +10,8 @@ import type { SeparatedSuffixedBasename } from "./types";
 export function parseSeparatedSuffix(
 	rules: CodecRules,
 	basename: string,
-): Result<SeparatedSuffixedBasename, CodecError> {
-	return splitBySuffixDelimiter(rules, basename).map((parts) => {
+): Result.Result<SeparatedSuffixedBasename, CodecError> {
+	return Result.map(splitBySuffixDelimiter(rules, basename), (parts) => {
 		const [coreName, ...suffixParts] = parts;
 		return { coreName, suffixParts };
 	});
