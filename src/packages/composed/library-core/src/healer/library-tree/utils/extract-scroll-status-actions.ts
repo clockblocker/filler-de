@@ -1,20 +1,25 @@
 import type { Codecs } from "../../../codecs";
 import type { ScrollNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
-import { logger } from "../../../internal/root/logger";
 import type { WriteScrollStatusAction } from "../codex/types/codex-action";
 import type { TreeAction } from "../tree-action/types/tree-action";
 import { TreeNodeKind } from "../tree-node/types/atoms";
+import { type LibraryIssue, libraryError } from "../types/library-issue";
 import { computeScrollSplitPath } from "./compute-scroll-split-path";
 import { extractNodeNameFromScrollSegmentId } from "./segment-id-helpers";
 
 /**
- * Extract WriteScrollStatusAction from ChangeStatus actions on scrolls.
+ * Extract WriteScrollStatusAction from ChangeStatus actions on scrolls,
+ * with the scrolls it skipped, for the caller to log.
  */
 export function extractScrollStatusActions(
 	actions: TreeAction[],
 	codecs: Codecs,
-): WriteScrollStatusAction[] {
+): {
+	readonly actions: WriteScrollStatusAction[];
+	readonly issues: readonly LibraryIssue[];
+} {
 	const scrollActions: WriteScrollStatusAction[] = [];
+	const issues: LibraryIssue[] = [];
 
 	for (const action of actions) {
 		if (
@@ -29,9 +34,11 @@ export function extractScrollStatusActions(
 			codecs,
 		);
 		if (nodeNameResult.isErr()) {
-			logger.error(
-				"[Librarian] Failed to parse scroll segment ID:",
-				nodeNameResult.error,
+			issues.push(
+				libraryError(
+					"[Librarian] Failed to parse scroll segment ID:",
+					nodeNameResult.error,
+				),
 			);
 			continue;
 		}
@@ -44,9 +51,11 @@ export function extractScrollStatusActions(
 			codecs,
 		);
 		if (splitPathResult.isErr()) {
-			logger.error(
-				"[Librarian] Failed to compute scroll split path:",
-				splitPathResult.error,
+			issues.push(
+				libraryError(
+					"[Librarian] Failed to compute scroll split path:",
+					splitPathResult.error,
+				),
 			);
 			continue;
 		}
@@ -61,5 +70,5 @@ export function extractScrollStatusActions(
 		});
 	}
 
-	return scrollActions;
+	return { actions: scrollActions, issues };
 }

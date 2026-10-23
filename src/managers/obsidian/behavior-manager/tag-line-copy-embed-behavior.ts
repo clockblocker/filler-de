@@ -47,11 +47,9 @@ export const tagLineCopyEmbedBehavior = Effect.fn("tagLineCopyEmbedBehavior")(
 		yield* Effect.tryPromise(() => navigator.clipboard.writeText(embed));
 	},
 	Effect.catch((error) =>
-		Effect.sync(() =>
-			logError({
-				description: `Error tagging line with block embed: ${getErrorMessage(error)}`,
-				location: "tagLineCopyEmbedBehavior",
-			}),
-		),
+		logError({
+			description: `Error tagging line with block embed: ${getErrorMessage(error)}`,
+			location: "tagLineCopyEmbedBehavior",
+		}),
 	),
 );

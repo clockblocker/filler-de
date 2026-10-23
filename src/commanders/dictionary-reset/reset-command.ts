@@ -25,9 +25,9 @@ import {
 import { type App, Modal, Notice, Setting } from "obsidian";
 import { conciseFailure, type KeyCheckFailure } from "../../managers/dumgen";
 import type { Dumgen } from "../../managers/dumgen/dumgen-over";
+import { logAtEdge } from "../../runtime/edge-log";
 import type { EffectRunner } from "../../runtime/plugin-runtime";
 import { getErrorMessage } from "../../utils/get-error-message";
-import { logger } from "../../utils/logger";
 import {
 	ClassifyError,
 	ClassifySegmenter,
@@ -419,6 +419,7 @@ export class DictionaryResetCommand {
 		const local = DateTime.toParts(
 			DateTime.setZone(DateTime.nowUnsafe(), DateTime.zoneMakeLocal()),
 		);
+		let failed: unknown;
 		try {
 			const exit = await this.deps.runtime.runPromiseExit(
 				executeReset({
@@ -432,34 +433,55 @@ export class DictionaryResetCommand {
 					source,
 					stamp: resetStamp(local),
 					vault: vamResetVault(deps.vam),
-				}).pipe(Effect.provide(layer)),
+				}).pipe(
+					Effect.provide(layer),
+					// The report holds one line per failure (#147); the
+					// provider's own words go to the log.
+					Effect.tap((result) =>
+						Effect.forEach(
+							result.execution.regenerations,
+							(regeneration) =>
+								regeneration?._tag === "Unresolved" &&
+								conciseFailure(regeneration.reason) !==
+									regeneration.reason
+									? Effect.logWarning(
+											"[DictionaryReset] Unresolved:",
+											regeneration.reason,
+										)
+									: Effect.void,
+							{ discard: true },
+						),
+					),
+					Effect.tapError((failure) =>
+						failure instanceof ResetFailed &&
+						Predicate.isString(failure.cause)
+							? Effect.logError(
+									"[DictionaryReset] Report:",
+									failure.cause,
+								)
+							: Effect.void,
+					),
+					Effect.tapCause((cause) =>
+						Cause.hasInterruptsOnly(cause)
+							? Effect.void
+							: Effect.logError(
+									"[DictionaryReset] Failed:",
+									cause,
+								),
+					),
+				),
 			);
 			if (Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause)) {
 				notice.hide();
 				return { kind: "Stopped", notice: UNLOADED };
 			}
 			if (Exit.isFailure(exit)) {
-				const failure = Cause.squash(exit.cause);
-				if (
-					failure instanceof ResetFailed &&
-					Predicate.isString(failure.cause)
-				)
-					logger.error("[DictionaryReset] Report:", failure.cause);
-				throw failure;
+				// Logged above, with its whole cause.
+				failed = Cause.squash(exit.cause);
+				throw failed;
 			}
 			const result = exit.value;
 			notice.hide();
-			// The report holds one line per failure (#147); the provider's
-			// own words go to the console.
-			for (const regeneration of result.execution.regenerations)
-				if (
-					regeneration?._tag === "Unresolved" &&
-					conciseFailure(regeneration.reason) !== regeneration.reason
-				)
-					logger.warn(
-						"[DictionaryReset] Unresolved:",
-						regeneration.reason,
-					);
 			new Notice(
 				`Dictionary reset ${result.execution.cancelled ? "cancelled" : "done"}; see ${result.reportPath}`,
 			);
@@ -471,7 +493,14 @@ export class DictionaryResetCommand {
 			};
 		} catch (error) {
 			notice.hide();
-			logger.error("[DictionaryReset] Failed:", describeError(error));
+			// What failed after the reset ran, such as opening its report:
+			// this Promise is outside any Effect.
+			if (error !== failed)
+				logAtEdge(
+					"Error",
+					"[DictionaryReset] Failed:",
+					describeError(error),
+				);
 			const message = `⚠ Dictionary reset stopped: ${conciseFailure(getErrorMessage(error))}`;
 			new Notice(message, 0);
 			return { kind: "Stopped", notice: message };

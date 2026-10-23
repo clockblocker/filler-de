@@ -48,6 +48,16 @@ export function formatValue(value: unknown): string {
 	return guarded(() => valueText(value, 0));
 }
 
+/**
+ * A named value, such as a log annotation, as `formatValue` shows it, except
+ * that a note's text under a content field shows as its length.
+ */
+export function formatField(key: string, value: unknown): string {
+	return CONTENT_FIELDS.has(key) && Predicate.isString(value)
+		? contentLength(value)
+		: formatValue(value);
+}
+
 function guarded(render: () => string): string {
 	try {
 		return render();

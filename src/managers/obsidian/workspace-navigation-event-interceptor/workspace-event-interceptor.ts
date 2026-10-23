@@ -11,7 +11,7 @@
  */
 
 import type { App } from "obsidian";
-import { logger } from "../../../utils/logger";
+import { logAtEdge } from "../../../runtime/edge-log";
 import { WorkspaceListener } from "./listeners/workspace-listener";
 import type {
 	Teardown,
@@ -52,7 +52,9 @@ export class WorkspaceEventInterceptor {
 			try {
 				handler(event);
 			} catch (error) {
-				logger.error(
+				// A workspace callback, outside any Effect.
+				logAtEdge(
+					"Error",
 					"[WorkspaceEventInterceptor] Handler error:",
 					error,
 				);

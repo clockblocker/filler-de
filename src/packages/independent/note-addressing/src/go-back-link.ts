@@ -58,9 +58,10 @@ function build(targetBasename: string, displayName: string): string {
 }
 
 /**
- * Upsert go-back link with defensive check.
- * Strips existing go-back links, logs warning if strip failed
- * (indicates regex mismatch that could cause duplicate links).
+ * Upsert go-back link: strips existing go-back links, then prepends one.
+ * `strip` removes every leading go-back link `isMatch` accepts in the
+ * formats a note holds (`go-back-link.test.ts` pins that), so this pure
+ * helper checks nothing more, and logs nothing.
  */
 function upsert({
 	content,
@@ -72,21 +73,6 @@ function upsert({
 	displayName: string;
 }): string {
 	const body = strip(content);
-
-	// Defensive: check if strip left a go-back link (regex mismatch can cause duplicates)
-	const firstNonEmptyLine = body
-		.split("\n")
-		.map((l) => l.trim())
-		.find((l) => l.length > 0);
-
-	if (firstNonEmptyLine && isMatch(firstNonEmptyLine)) {
-		// biome-ignore lint/suspicious/noConsole: independent packages cannot import the plugin logger; this diagnostic must stay visible.
-		console.warn(
-			"[goBackLinkHelper.upsert] strip left a go-back link; regex may not match on-disk format",
-			{ firstLine: firstNonEmptyLine.slice(0, 80) },
-		);
-	}
-
 	const link = build(targetBasename, displayName);
 	return `${LINE_BREAK}${SPACE_F}${link}${SPACE_F}${LINE_BREAK}${LINE_BREAK}${body}`;
 }

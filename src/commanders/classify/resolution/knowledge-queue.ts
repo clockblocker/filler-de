@@ -12,9 +12,9 @@ import { VaultPath } from "@textfresser/vault-action-manager";
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import { readingIdentityKey } from "dumling";
 import { Cause, Effect, Exit, Fiber } from "effect";
+import { logAtEdge } from "../../../runtime/edge-log";
 import type { EffectRunner } from "../../../runtime/plugin-runtime";
 import { getErrorMessage } from "../../../utils/get-error-message";
-import { logger } from "../../../utils/logger";
 import { RETRIED_ASPECTS } from "./knowledge-request";
 import type { KnowledgeJob } from "./knowledge-types";
 import type { KnowledgeOutcome } from "./produce-knowledge";
@@ -80,11 +80,8 @@ function describeOutcome(
 			return `⚠ Knowledge for ${job.label} saved without ${missing.join(", ")}${outcome.failures.some(({ aspect }) => RETRIED_ASPECTS.has(aspect)) ? "; Classify it again to retry" : ""}`;
 		return SAVED;
 	}
+	// Its run logged the failure, in its fiber.
 	if (Cause.hasInterruptsOnly(exit.cause)) return undefined;
-	logger.warn(
-		`[Classify] Knowledge for ${job.label} failed:`,
-		formatCause(exit.cause),
-	);
 	return `⚠ Knowledge for ${job.label} failed: ${formatCause(exit.cause, { stack: false })}`;
 }
 
@@ -98,7 +95,9 @@ export function createKnowledgeQueue(
 		try {
 			options.notify(message);
 		} catch (error) {
-			logger.warn(
+			// Told from the Promise that awaits a run, outside any Effect.
+			logAtEdge(
+				"Warn",
 				"[Classify] Could not show a notice:",
 				getErrorMessage(error),
 			);
@@ -110,7 +109,18 @@ export function createKnowledgeQueue(
 		if (closed || runs.has(key)) return;
 		options.onStart?.();
 		const { runtime } = options;
-		const fiber = runtime.runFork(Effect.suspend(() => options.run(job)));
+		const fiber = runtime.runFork(
+			Effect.suspend(() => options.run(job)).pipe(
+				Effect.tapCause((cause) =>
+					Cause.hasInterruptsOnly(cause)
+						? Effect.void
+						: Effect.logWarning(
+								`[Classify] Knowledge for ${job.label} failed:`,
+								cause,
+							),
+				),
+			),
+		);
 		const done = runtime
 			.runPromiseExit(Fiber.await(fiber))
 			.then((awaited) => {

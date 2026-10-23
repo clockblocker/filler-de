@@ -202,7 +202,7 @@ describe("codexImpactToRecreations", () => {
 			renamed: [],
 		};
 
-		const actions = codexImpactToRecreations(impact, tree, codecs);
+		const { actions } = codexImpactToRecreations(impact, tree, codecs);
 
 		// Should generate actions for all sections:
 		// Library (root): EnsureCodexFileExists + ProcessCodex
@@ -266,7 +266,7 @@ describe("codexImpactToRecreations", () => {
 			renamed: [],
 		};
 
-		const actions = codexImpactToRecreations(impact, tree, codecs);
+		const { actions } = codexImpactToRecreations(impact, tree, codecs);
 
 		// Should have UpsertCodex for Library and A, plus WriteScrollStatus for scroll1
 		expect(actions.length).toBeGreaterThanOrEqual(3);
@@ -320,7 +320,7 @@ describe("codexImpactToIncrementalRecreations", () => {
 			renamed: [],
 		};
 
-		const actions = codexImpactToIncrementalRecreations(
+		const { actions } = codexImpactToIncrementalRecreations(
 			impact,
 			tree,
 			codecs,
@@ -379,7 +379,7 @@ describe("codexImpactToIncrementalRecreations", () => {
 			renamed: [],
 		};
 
-		const actions = codexImpactToIncrementalRecreations(
+		const { actions } = codexImpactToIncrementalRecreations(
 			impact,
 			tree,
 			codecs,
@@ -423,7 +423,7 @@ describe("codexImpactToIncrementalRecreations", () => {
 			renamed: [],
 		};
 
-		const actions = codexImpactToIncrementalRecreations(
+		const { actions } = codexImpactToIncrementalRecreations(
 			impact,
 			tree,
 			codecs,

@@ -60,7 +60,7 @@ describe("Codex init for nested sections", () => {
 
 		const mergedImpact = mergeCodexImpacts(impacts);
 
-		const codexActions = codexImpactToRecreations(
+		const { actions: codexActions } = codexImpactToRecreations(
 			mergedImpact,
 			healer,
 			codecs,

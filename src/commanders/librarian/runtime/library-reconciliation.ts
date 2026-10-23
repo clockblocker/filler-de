@@ -13,6 +13,7 @@ import {
 	type HealerApplyResult,
 	type HealingAction,
 	healingActionsToVaultActions,
+	type LibraryIssue,
 	mergeCodexImpacts,
 	type SplitPathToMdFileInsideLibrary,
 	scanAndGenerateOrphanActions,
@@ -25,6 +26,7 @@ import {
 	type VaultScanPath,
 } from "@textfresser/vault-action-manager";
 import { type Cause, Clock, Effect, Result } from "effect";
+import { logLibraryIssues } from "./log-library-issues";
 
 type ReconciliationSource =
 	| "Startup"
@@ -157,6 +159,8 @@ type DerivedActions = {
 	readonly codexDeletions: readonly HealingAction[];
 	readonly codexRecreations: readonly CodexAction[];
 	readonly healing: readonly HealingAction[];
+	/** What deriving skipped; logged once derived. */
+	readonly issues: readonly LibraryIssue[];
 	readonly statusProjections: readonly CodexAction[];
 	readonly supplemental: readonly HealingAction[];
 	readonly vault: readonly VaultAction[];
@@ -533,6 +537,7 @@ export class LibraryReconciler<E, R = unknown> {
 				};
 			}
 			const deriveEndedAt = yield* Clock.currentTimeMillis;
+			yield* logLibraryIssues(derived.issues);
 			const derivedCounts = this.derivedCounts(derived);
 
 			if (derived.vault.length === 0) {
@@ -649,7 +654,7 @@ export class LibraryReconciler<E, R = unknown> {
 			staged,
 			this.codecs,
 		);
-		const codexRecreations =
+		const recreations =
 			request.source === "Startup"
 				? codexImpactToRecreations(mergedImpact, staged, this.codecs)
 				: codexImpactToIncrementalRecreations(
@@ -657,13 +662,15 @@ export class LibraryReconciler<E, R = unknown> {
 						staged,
 						this.codecs,
 					);
+		const codexRecreations = recreations.actions;
 		const changedActions = results.flatMap((result) =>
 			result.changed ? [result.appliedAction] : [],
 		);
-		const statusProjections =
+		const statuses =
 			request.source === "Startup"
-				? []
+				? { actions: [], issues: [] }
 				: extractScrollStatusActions(changedActions, this.codecs);
+		const statusProjections = statuses.actions;
 		const healing = results.flatMap((result) => result.healingActions);
 		const supplemental = [...request.supplemental.invalidCodexDeletions];
 
@@ -718,6 +725,7 @@ export class LibraryReconciler<E, R = unknown> {
 			codexDeletions,
 			codexRecreations,
 			healing,
+			issues: [...recreations.issues, ...statuses.issues],
 			statusProjections,
 			supplemental: uniqueSupplemental,
 			vault,

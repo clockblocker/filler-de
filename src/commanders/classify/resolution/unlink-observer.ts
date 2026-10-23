@@ -96,9 +96,8 @@ import { VaultPath } from "@textfresser/vault-action-manager";
 import type { AttestationLink } from "dumdict";
 import { readingIdentityKey } from "dumling";
 import { Effect, Exit, Option, Result } from "effect";
+import { logAtEdge } from "../../../runtime/edge-log";
 import type { EffectRunner } from "../../../runtime/plugin-runtime";
-import { getErrorMessage } from "../../../utils/get-error-message";
-import { logger } from "../../../utils/logger";
 import { scrollSentences, segmentSourceRanges } from "../scroll-sentences";
 import type { SegmentationCache } from "../segmentation-cache";
 import {
@@ -600,12 +599,9 @@ const checkScroll = Effect.fnUntraced(function* (
 			)
 			.pipe(
 				Effect.catchTag("DictionaryTransactionConflict", () =>
-					Effect.sync(() => {
-						logger.warn(
-							`[Classify] Could not remove the unlinked occurrence ${ref}: the dictionary kept changing`,
-						);
-						return "Skipped" as const;
-					}),
+					Effect.logWarning(
+						`[Classify] Could not remove the unlinked occurrence ${ref}: the dictionary kept changing`,
+					).pipe(Effect.as("Skipped" as const)),
 				),
 			);
 		if (outcome === "Removed") removed++;
@@ -661,7 +657,9 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 		entry.sweep = undefined;
 		sweep.left--;
 		if (sweep.left > 0 || closed || sweep.removed === 0) return;
-		logger.info(
+		// Told once a check's Promise settles, outside any Effect.
+		logAtEdge(
+			"Info",
 			`[Classify] The startup sweep removed ${sweep.removed} unlinked occurrences from: ${sweep.scrolls.join(", ")}`,
 		);
 		const [only] = sweep.scrolls;
@@ -689,13 +687,10 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 			.runPromiseExit(
 				effect.pipe(
 					Effect.catchCause((cause) =>
-						Effect.sync(() => {
-							logger.warn(
-								"[Classify] Checking a Scroll's links failed:",
-								getErrorMessage(cause),
-							);
-							return undefined;
-						}),
+						Effect.logWarning(
+							"[Classify] Checking a Scroll's links failed:",
+							cause,
+						).pipe(Effect.as(undefined)),
 					),
 				),
 			)

@@ -5,5 +5,5 @@
 import type { CommandExecutor } from "../../obsidian/command-executor";
 
 export type ActionClickContext = {
-	commandExecutor: CommandExecutor | null;
+	commandExecutor: CommandExecutor;
 };

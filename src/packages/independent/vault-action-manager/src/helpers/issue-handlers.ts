@@ -1,4 +1,4 @@
-import { logger } from "../internal/logger";
+import { Effect } from "effect";
 
 // Notice is optional - may not be available in test environment
 let Notice: (new (message: string) => unknown) | null = null;
@@ -13,8 +13,6 @@ try {
 type TextfresserError = {
 	description: string;
 	location?: string;
-	withNotice?: boolean;
-	withLogs?: boolean;
 };
 
 export function formatError({
@@ -24,45 +22,15 @@ export function formatError({
 	return `[Textfresser] ${location ? `[${location}]: ${description}` : description}`;
 }
 
-function handleIssue({
-	description,
-	location,
-	withNotice,
-	withLogs,
-	issueType,
-}: TextfresserError & { issueType: "error" | "warning" }): void {
-	const errorMessage = formatError({
-		description,
-		location,
+/** Shows the error in a Notice, and logs it under the current span. */
+export const logError = Effect.fnUntraced(function* (error: TextfresserError) {
+	const message = formatError(error);
+	yield* Effect.sync(() => {
+		if (Notice) new Notice(message);
 	});
+	yield* Effect.logError(message);
+});
 
-	if (withNotice && Notice) {
-		new Notice(errorMessage);
-	}
-
-	if (withLogs) {
-		issueType === "error"
-			? logger.error(errorMessage)
-			: logger.warn(errorMessage);
-	}
-}
-
-export function logError({ description, location }: TextfresserError): void {
-	handleIssue({
-		description,
-		issueType: "error",
-		location,
-		withLogs: true,
-		withNotice: true,
-	});
-}
-
-export function logWarning({ description, location }: TextfresserError): void {
-	handleIssue({
-		description,
-		issueType: "warning",
-		location,
-		withLogs: true,
-		withNotice: false,
-	});
-}
+/** Logs the warning under the current span; it shows no Notice. */
+export const logWarning = (warning: TextfresserError): Effect.Effect<void> =>
+	Effect.logWarning(formatError(warning));

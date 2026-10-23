@@ -31,6 +31,7 @@ import {
 import { dispatchActionClick } from "./action-click-dispatcher/dispatcher";
 import { KNOWN_ACTION_IDS } from "./action-definitions/definitions";
 import { computeAllowedActions } from "./action-definitions/placement-utils";
+import { isOverlayActionKind } from "./action-definitions/types";
 import { createBottomToolbar } from "./bottom-toolbar/bottom-toolbar";
 import type { BottomToolbar } from "./bottom-toolbar/types";
 import { setupContextMenu } from "./context-menu/context-menu";
@@ -128,9 +129,14 @@ export class OverlayManager {
 						handle: async (
 							payload: PayloadFor<"ActionElementClicked">,
 						) => {
-							await dispatchActionClick(payload.actionId, {
-								commandExecutor: this.commandExecutor,
-							});
+							const { commandExecutor } = this;
+							if (
+								commandExecutor &&
+								isOverlayActionKind(payload.actionId)
+							)
+								await dispatchActionClick(payload.actionId, {
+									commandExecutor,
+								});
 							return { outcome: "handled" } as const;
 						},
 					},

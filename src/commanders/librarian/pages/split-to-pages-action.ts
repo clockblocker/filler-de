@@ -191,15 +191,11 @@ export const splitToPagesAction = Effect.fn("Librarian.splitToPagesAction")(
 		config: SegmentationConfig = DEFAULT_SEGMENTATION_CONFIG,
 	): Effect.fn.Return<SplitToPagesOutcome, SplitToPagesError> {
 		const input = yield* gatherInput(context, config).pipe(
-			Effect.tapError((error) =>
-				Effect.sync(() => handleSplitToPagesError(error)),
-			),
+			Effect.tapError(handleSplitToPagesError),
 		);
 
 		const result = yield* executeIntention(context, input).pipe(
-			Effect.tapError((error) =>
-				Effect.sync(() => handleSplitToPagesError(error)),
-			),
+			Effect.tapError(handleSplitToPagesError),
 		);
 		if (result.tooShort) {
 			// Should not happen because UI only exposes the action for multi-page content.
@@ -214,9 +210,7 @@ export const splitToPagesAction = Effect.fn("Librarian.splitToPagesAction")(
 					operationId,
 				),
 			),
-			Effect.tapError((error) =>
-				Effect.sync(() => handleSplitToPagesError(error)),
-			),
+			Effect.tapError(handleSplitToPagesError),
 		);
 		yield* Effect.sync(() => {
 			new Notice(`Split into ${result.pageCount} pages`);

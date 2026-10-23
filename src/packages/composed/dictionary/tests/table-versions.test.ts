@@ -13,6 +13,7 @@ import type { PlannedChangeOp } from "dumdict";
 import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
+import { Effect } from "effect";
 import {
 	type DumdictVaultStore,
 	makeDumdictVaultStore,
@@ -66,7 +67,10 @@ async function open(
 ): Promise<DumdictVaultStore> {
 	return run(
 		makeDumdictVaultStore({
-			onTablesRerendered: (report) => reports.push(report),
+			onTablesRerendered: (report) =>
+				Effect.sync(() => {
+					reports.push(report);
+				}),
 			vault,
 			...(pack
 				? { projections: { inflection: inflectionFromPack(pack) } }

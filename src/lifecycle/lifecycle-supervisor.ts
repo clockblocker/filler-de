@@ -25,6 +25,7 @@
  * first), stops the Librarian, and then what it owns last.
  */
 import {
+	Cause,
 	type Context,
 	Deferred,
 	Effect,
@@ -300,18 +301,38 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 		);
 	});
 
-	/** The sweep, once the dictionary store has loaded. */
-	const sweepOnce = (plugin: LaunchedPlugin<L>): void => {
-		if (swept) return;
-		swept = true;
-		incrementPending();
-		plugin
-			.loadStore()
-			.then(() => {
-				if (!stopping) plugin.sweep();
-			}, notices.sweepSkipped)
-			.finally(decrementPending);
-	};
+	/**
+	 * The sweep, once the dictionary store has loaded. It waits for the
+	 * store on a fiber of its own, so the start it follows does not.
+	 */
+	const sweepOnce = (plugin: LaunchedPlugin<L>): Effect.Effect<void> =>
+		Effect.suspend(() => {
+			if (swept) return Effect.void;
+			swept = true;
+			incrementPending();
+			return Effect.promise(() => plugin.loadStore()).pipe(
+				Effect.matchCauseEffect({
+					onFailure: (cause) =>
+						Cause.hasInterruptsOnly(cause)
+							? Effect.void
+							: notices.sweepSkipped(cause),
+					onSuccess: () =>
+						Effect.sync(() => {
+							if (!stopping) plugin.sweep();
+						}),
+				}),
+				// Its fiber is detached: nothing else would tell this.
+				Effect.catchCause((cause) =>
+					Effect.logError(
+						"[TextEaterPlugin] The unlink sweep failed:",
+						cause,
+					),
+				),
+				Effect.ensuring(Effect.sync(decrementPending)),
+				Effect.forkDetach,
+				Effect.asVoid,
+			);
+		});
 
 	const startLibrarian = (
 		plugin: LaunchedPlugin<L>,
@@ -335,11 +356,11 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 			librarianState = ServiceState.starting;
 			return librarian.init().pipe(
 				Effect.tap(() =>
-					Effect.sync(() => {
-						if (current !== started || stopping) return;
+					Effect.suspend(() => {
+						if (current !== started || stopping) return Effect.void;
 						started.detach = plugin.attachLibrarian(librarian);
 						librarianState = ServiceState.running;
-						sweepOnce(plugin);
+						return sweepOnce(plugin);
 					}),
 				),
 				// A start that throws failed like one that fails: the
@@ -393,7 +414,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 			({ what, release: run }) =>
 				run.pipe(
 					Effect.catchCause((cause) =>
-						Effect.sync(() => notices.releaseFailed(what, cause)),
+						notices.releaseFailed(what, cause),
 					),
 				),
 			{ discard: true },
@@ -446,9 +467,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 					launched = plugin;
 					yield* startLibrarian(plugin, "Launch").pipe(
 						Effect.catch((error) =>
-							Effect.sync(() =>
-								notices.librarianStartFailed("Launch", error),
-							),
+							notices.librarianStartFailed("Launch", error),
 						),
 					);
 					yield* plugin.onLaunched();
@@ -456,9 +475,9 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 				}).pipe(
 					Effect.catchDefect(Effect.fail),
 					Effect.catch((error) =>
-						Effect.sync(() => {
+						Effect.suspend(() => {
 							pluginState = ServiceState.failed(error);
-							notices.launchFailed(error);
+							return notices.launchFailed(error);
 						}),
 					),
 				),
@@ -509,10 +528,9 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 					return restartLibrarian("Settings").pipe(
 						Effect.as(true),
 						Effect.catch((error) =>
-							Effect.sync(() => {
-								notices.librarianStartFailed("Settings", error);
-								return false;
-							}),
+							notices
+								.librarianStartFailed("Settings", error)
+								.pipe(Effect.as(false)),
 						),
 					);
 				}),
@@ -537,12 +555,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 				restartLibrarian("RestartCommand").pipe(
 					Effect.tap(() => Effect.sync(notices.librarianRestarted)),
 					Effect.catch((error) =>
-						Effect.sync(() =>
-							notices.librarianStartFailed(
-								"RestartCommand",
-								error,
-							),
-						),
+						notices.librarianStartFailed("RestartCommand", error),
 					),
 				),
 			);
@@ -581,13 +594,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 					// Even a stop that throws leaves the rest to release.
 					yield* last.librarian
 						.unsubscribe()
-						.pipe(
-							Effect.catchCause((cause) =>
-								Effect.sync(() =>
-									notices.librarianStopFailed(cause),
-								),
-							),
-						);
+						.pipe(Effect.catchCause(notices.librarianStopFailed));
 				}
 				librarianState = ServiceState.stopped;
 				yield* release(ownedLast);

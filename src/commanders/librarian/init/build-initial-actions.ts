@@ -16,12 +16,11 @@ import {
 	SplitPathKind,
 	splitPathCodec,
 } from "@textfresser/vault-action-manager";
-import { Effect, Result } from "effect";
+import { Cause, Effect, Result } from "effect";
 import {
 	LibraryMetadata,
 	noteMetadataHelper,
 } from "../../../stateless-helpers/note-metadata";
-import { logger } from "../../../utils/logger";
 
 /**
  * The entry's split path alone: a snapshot entry also carries its reader
@@ -64,7 +63,7 @@ export const buildInitialCreateActions = Effect.fn("buildInitialCreateActions")(
 			const libraryScopedResult =
 				libraryScope.toLibraryPath(observedFile);
 			if (libraryScopedResult.isErr()) {
-				logger.warn(
+				yield* Effect.logWarning(
 					`[Librarian] Skipping file outside library: ${file.basename}`,
 				);
 				continue;
@@ -94,9 +93,9 @@ export const buildInitialCreateActions = Effect.fn("buildInitialCreateActions")(
 						status = TreeNodeStatus.Done;
 					}
 				} else {
-					logger.warn(
+					yield* Effect.logWarning(
 						`[Librarian] Failed to read startup status at ${splitPathCodec.format(file)}:`,
-						content.failure,
+						Cause.fail(content.failure),
 					);
 				}
 			}
