@@ -224,6 +224,7 @@ describe("readOldNote reads an old metadata section's shapes", () => {
 			'{"entries":{"__proto__":{"entity":{"lemma":"Proto"}}}}',
 		);
 		expect(note.metaShapes).toEqual(["Entity"]);
+		expect(note.forms).toContain("Proto");
 	});
 });
 

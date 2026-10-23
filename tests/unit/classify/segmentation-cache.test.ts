@@ -125,10 +125,28 @@ describe("filesSegmentationCache", () => {
 			"surface",
 			"text",
 		]);
+		expect(Object.keys(read.units[0]?.identity ?? {})).toEqual([
+			"canonicalForm",
+			"kind",
+			"poss",
+			"pronType",
+		]);
 
+		// What dumgen gives is written byte for byte.
 		files.clear();
 		await Effect.runPromise(cache.put(key, JSON.parse(stored).sentence));
 		expect(files.get(path)).toBe(stored);
+
+		// A decoded entry written back is the same entry, in the schema's
+		// key order, and reads back as it was.
+		files.clear();
+		await Effect.runPromise(cache.put(key, read));
+		const rewritten = files.get(path) ?? "";
+		expect(JSON.parse(rewritten)).toEqual(JSON.parse(stored));
+		expect(rewritten).toBe(
+			`{"format":1,"key":"${key}","sentence":{"segments":[{"kind":"ResolvableText","surface":"unser","text":"Unsere"},{"kind":"Whitespace","text":" "},{"kind":"OpaqueText","text":"Bank"}],"text":"Unsere Bank","units":[{"identity":{"canonicalForm":"unser","kind":"DET","poss":"Yes","pronType":null},"route":{"family":"Lexeme","kind":"DET","language":"de"},"segments":[0]},{"route":"Unresolved","segments":[2],"variants":[{"family":"Lexeme","kind":"NOUN","language":"de"},{"family":"Lexeme","kind":"PROPN","language":"de"}]}]}}`,
+		);
+		expect(await Effect.runPromise(cache.get(key))).toEqual(Option.some(read));
 	});
 
 	it("never stores a failed segmentation", async () => {

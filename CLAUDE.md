@@ -32,7 +32,7 @@ covered there.
 
 No Effect `Schema`, although that guide uses it: errors are
 `Data.TaggedError`s, and validation is Zod. `bun run lint:ox` bans `Schema`
-imports from `effect`.
+and `Schema*` imports from `effect`, and so also `import * as … from "effect"`.
 
 # Obsidian E2E
 

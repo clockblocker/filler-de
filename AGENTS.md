@@ -42,7 +42,9 @@ guide does not cover, search through `node_modules/effect/src`.
 Unlike that guide, this repository uses no Effect `Schema`. Define errors with
 `Data.TaggedError`, put a wrapped failure in a `cause` field, and validate
 with Zod, as the batteries do (texteater ADR 0013, dumgen ADR 0009).
-`bun run lint:ox` rejects imports of `Schema` from `effect`.
+`bun run lint:ox` rejects imports of `Schema` and its `Schema*` modules from
+`effect` and `effect/Schema*`. It also rejects `import * as … from "effect"`,
+which would reach `Schema`; import the modules you use by name.
 
 ## Battery packages from texteater
 
