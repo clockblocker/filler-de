@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Data, Effect } from "effect";
 import {
 	isProcessAction,
 	isRenameAction,
@@ -35,10 +35,18 @@ function collisionOf(action: VaultAction): string | undefined {
 	}
 }
 
+/**
+ * A `ProcessMdFile` transform threw, or its promise rejected, while collapse
+ * folded it into known content. `cause` is what it threw.
+ */
+export class CollapseTransformError extends Data.TaggedError(
+	"CollapseTransformError",
+)<{ readonly cause: unknown }> {}
+
 /** A transform applied to known content, as collapse folds it into a create. */
 const transformContent = (transform: Transform, content: string) =>
 	Effect.tryPromise({
-		catch: (cause) => cause,
+		catch: (cause) => new CollapseTransformError({ cause }),
 		try: () => Promise.resolve(transform(content)),
 	});
 

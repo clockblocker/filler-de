@@ -11,7 +11,11 @@ import {
 	Tracer,
 } from "effect";
 import { TFile, TFolder } from "obsidian";
-import { collapseActions } from "../impl/actions-processing/collapse";
+import { formatCause } from "../diagnostics/format-cause";
+import {
+	CollapseTransformError,
+	collapseActions,
+} from "../impl/actions-processing/collapse";
 import { buildDependencyGraph } from "../impl/actions-processing/dependency-detector";
 import {
 	ensureDestinationsExist,
@@ -39,8 +43,10 @@ import type {
 import type { VaultAction } from "../types/vault-action";
 import { VaultActionKind } from "../types/vault-action";
 import {
+	CurrentDispatchSpan,
 	CurrentTargetCheck,
 	CurrentVamOperation,
+	currentSpanRef,
 	type TargetCheck,
 } from "./current-operation";
 import {
@@ -49,6 +55,7 @@ import {
 	VamDispatchReport,
 } from "./dispatch-report";
 import {
+	causeValue,
 	VamDispatchError,
 	VamDispatchOverflowError,
 	VamPlanningError,
@@ -178,7 +185,11 @@ export class DispatchBatchWorker {
 	});
 	private readonly workerDone = Deferred.makeUnsafe<void>();
 
-	private readonly worker = Effect.fn("DispatchBatch.worker")(function* (
+	/**
+	 * Runs as long as VAM, so it opens no span of its own: each batch runs
+	 * under its submitter's span.
+	 */
+	private readonly worker = Effect.fnUntraced(function* (
 		self: DispatchBatchWorker,
 	) {
 		const queue = yield* Queue.unbounded<DispatchMessage>();
@@ -268,76 +279,65 @@ export class DispatchBatchWorker {
 	 * batches instead of being dropped. Interrupting a caller whose batch is
 	 * still waiting withdraws the batch; once queued, it runs to completion.
 	 */
-	dispatchEffect(
+	readonly dispatchEffect = Effect.fn("vam.dispatch")(function* (
+		this: DispatchBatchWorker,
 		actions: readonly VaultAction[],
 		request: DispatchRequest,
-	): Effect.Effect<VamDispatchReport, VamDispatchFailure> {
+	): Effect.fn.Return<VamDispatchReport, VamDispatchFailure> {
 		const submitted = [...actions];
 		const { operation } = request;
+		yield* Effect.annotateCurrentSpan(operationAttributes(operation));
+		yield* this.refuseProtected(submitted, operation);
+		const queue = yield* Deferred.await(this.queueReady);
+		const parentSpan = yield* Effect.option(Effect.currentSpan);
+		const observability = Context.make(
+			Tracer.Tracer,
+			yield* Effect.tracer,
+		).pipe(
+			Context.add(Logger.CurrentLoggers, yield* Logger.CurrentLoggers),
+		);
+		const completion = yield* Deferred.make<
+			VamDispatchReport,
+			VamDispatchFailure
+		>();
+		const batch: BatchMessage = {
+			_tag: "Batch",
+			actions: submitted,
+			completion,
+			observability,
+			operation,
+			parentSpan,
+			stopOnFirstFailure: request.stopOnFirstFailure === true,
+		};
 
-		return Effect.fn("vam.dispatch")(function* (self: DispatchBatchWorker) {
-			yield* Effect.annotateCurrentSpan(operationAttributes(operation));
-			yield* self.refuseProtected(submitted, operation);
-			const queue = yield* Deferred.await(self.queueReady);
-			const parentSpan = yield* Effect.option(Effect.currentSpan);
-			const observability = Context.make(
-				Tracer.Tracer,
-				yield* Effect.tracer,
-			).pipe(
-				Context.add(
-					Logger.CurrentLoggers,
-					yield* Logger.CurrentLoggers,
-				),
-			);
-			const completion = yield* Deferred.make<
-				VamDispatchReport,
-				VamDispatchFailure
-			>();
-			const batch: BatchMessage = {
-				_tag: "Batch",
-				actions: submitted,
-				completion,
-				observability,
-				operation,
-				parentSpan,
-				stopOnFirstFailure: request.stopOnFirstFailure === true,
-			};
+		// Submission is uninterruptible, so an interrupt can never land
+		// between joining the waiting list and installing the withdrawal.
+		return yield* Effect.uninterruptibleMask((restore) =>
+			SynchronizedRef.modifyEffect(this.state, (state) => {
+				if (state.lifecycle !== "running") {
+					return Effect.fail(
+						this.shutdownError("dispatch", submitted, operation),
+					);
+				}
 
-			// Submission is uninterruptible, so an interrupt can never land
-			// between joining the waiting list and installing the withdrawal.
-			return yield* Effect.uninterruptibleMask((restore) =>
-				SynchronizedRef.modifyEffect(self.state, (state) => {
-					if (state.lifecycle !== "running") {
-						return Effect.fail(
-							self.shutdownError(
-								"dispatch",
-								submitted,
-								operation,
-							),
-						);
-					}
-
-					return self.enqueueOrWait(queue, state, batch);
-				}).pipe(
-					Effect.tap((queued) =>
-						Effect.sync(() =>
-							self.onSubmitted?.(queued ? "queued" : "waiting"),
-						),
+				return this.enqueueOrWait(queue, state, batch);
+			}).pipe(
+				Effect.tap((queued) =>
+					Effect.sync(() =>
+						this.onSubmitted?.(queued ? "queued" : "waiting"),
 					),
-					Effect.flatMap((queued) => {
-						const result = restore(Deferred.await(completion));
-						return queued
-							? result
-							: result.pipe(
-									Effect.onInterrupt(() =>
-										self.withdraw(batch),
-									),
-								);
-					}),
 				),
-			);
-		})(this);
-	}
+				Effect.flatMap((queued) => {
+					const result = restore(Deferred.await(completion));
+					return queued
+						? result
+						: result.pipe(
+								Effect.onInterrupt(() => this.withdraw(batch)),
+							);
+				}),
+			),
+		);
+	});
 
 	/**
 	 * Refuses the batch, for a `VamProtectedPathError`, when any submitted
@@ -377,28 +377,26 @@ export class DispatchBatchWorker {
 		);
 	}
 
-	shutdownEffect(): Effect.Effect<void, VamShutdownError> {
-		return Effect.fn("DispatchBatch.shutdown")(function* (
-			self: DispatchBatchWorker,
-		) {
-			const queue = yield* Deferred.await(self.queueReady);
-			const waitForWorker = yield* SynchronizedRef.modifyEffect(
-				self.state,
-				(state) => {
-					if (state.lifecycle !== "running") {
-						return Effect.succeed([
-							Deferred.await(self.workerDone),
-							state,
-						] as const);
-					}
+	readonly shutdownEffect = Effect.fn("DispatchBatch.shutdown")(function* (
+		this: DispatchBatchWorker,
+	): Effect.fn.Return<void, VamShutdownError> {
+		const queue = yield* Deferred.await(this.queueReady);
+		const waitForWorker = yield* SynchronizedRef.modifyEffect(
+			this.state,
+			(state) => {
+				if (state.lifecycle !== "running") {
+					return Effect.succeed([
+						Deferred.await(this.workerDone),
+						state,
+					] as const);
+				}
 
-					return self.beginShutdown(self, queue, state);
-				},
-			);
+				return this.beginShutdown(this, queue, state);
+			},
+		);
 
-			return yield* waitForWorker;
-		})(this);
-	}
+		return yield* waitForWorker;
+	});
 
 	/**
 	 * Queues the batch when it can keep FIFO order and there is space;
@@ -531,27 +529,42 @@ export class DispatchBatchWorker {
 	private executeBatch(
 		batch: BatchMessage,
 	): Effect.Effect<VamDispatchReport, VamDispatchFailure, VamLiveServices> {
-		const { actions, operation, stopOnFirstFailure } = batch;
+		const { actions, operation } = batch;
 		if (actions.length === 0)
 			return Effect.succeed(
 				new VamDispatchReport({ ...operation, entries: [] }),
 			);
 
-		return Effect.fn("DispatchBatch.executeBatch")(function* (
-			self: DispatchBatchWorker,
-		) {
+		return this.runBatch(batch);
+	}
+
+	/**
+	 * Plans and runs a non-empty batch under its own span, which the Self
+	 * Events and link rewrites of its actions record as their cause.
+	 */
+	private readonly runBatch = Effect.fn("DispatchBatch.executeBatch")(
+		function* (
+			this: DispatchBatchWorker,
+			batch: BatchMessage,
+		): Effect.fn.Return<
+			VamDispatchReport,
+			VamDispatchFailure,
+			VamLiveServices
+		> {
+			const { actions, operation, stopOnFirstFailure } = batch;
 			yield* Effect.annotateCurrentSpan(operationAttributes(operation));
-			const planned = yield* self
-				.plan(actions)
-				.pipe(
-					Effect.mapError((error) =>
-						VamDispatchFailure.notRun(error, actions, operation),
-					),
-				);
+			const span = yield* currentSpanRef;
+			const planned = yield* this.plan(actions).pipe(
+				Effect.mapError((error) =>
+					VamDispatchFailure.notRun(error, actions, operation),
+				),
+			);
 
 			const entries: VamDispatchEntry[] = [];
 			for (const [index, action] of planned.entries()) {
-				const entry = yield* self.runAction(action, operation);
+				const entry = yield* this.runAction(action, operation).pipe(
+					Effect.provideService(CurrentDispatchSpan, span),
+				);
 				entries.push(entry);
 				if (stopOnFirstFailure && entry.status !== "Done") {
 					for (const skipped of planned.slice(index + 1))
@@ -564,8 +577,8 @@ export class DispatchBatchWorker {
 			const failure = VamDispatchFailure.ofReport(report);
 			if (failure) return yield* Effect.fail(failure);
 			return report;
-		})(this);
-	}
+		},
+	);
 
 	private readonly plan = Effect.fn("DispatchBatch.plan")(function* (
 		this: DispatchBatchWorker,
@@ -586,7 +599,11 @@ export class DispatchBatchWorker {
 				(cause) =>
 					new VamPlanningError({
 						action: representative,
-						cause,
+						// What the transform threw, as it is.
+						cause:
+							cause instanceof CollapseTransformError
+								? cause.cause
+								: cause,
 						operation: "planDispatchBatch",
 						path:
 							cause instanceof VamVaultIoError
@@ -717,49 +734,66 @@ export class DispatchBatchWorker {
 			? linkUpdates.aroundRename(rename, operation, run)
 			: run;
 		const execute = tracked.pipe(
-			Effect.matchCause({
-				onFailure: (cause): VamDispatchEntry => {
-					const squashed = Cause.squash(cause);
-					return VamDispatchReport.entryFor(
-						squashed instanceof VamDispatchError
-							? squashed
-							: new VamDispatchError({
-									action,
-									cause: squashed,
-									kind: "defect",
-									operation: `execute.${action.kind}`,
-								}),
+			Effect.matchCauseEffect({
+				onFailure: (cause) => {
+					const error = actionFailure(action, cause);
+					const entry = VamDispatchReport.entryFor(error);
+					return this.logActionFailure(entry, error, cause).pipe(
+						Effect.as(entry),
 					);
 				},
-				onSuccess: (outcome): VamDispatchEntry => ({
-					action,
-					outcome,
-					status: "Done",
-				}),
+				onSuccess: (outcome) =>
+					Effect.succeed<VamDispatchEntry>({
+						action,
+						outcome,
+						status: "Done",
+					}),
 			}),
-			Effect.tap((entry) =>
-				entry.status === "Done" || entry.status === "Skipped"
-					? Effect.void
-					: Effect.logError(
-							entry.error.kind === "defect"
-								? "[DispatchBatch] Action threw exception"
-								: "[DispatchBatch] Action failed",
-							{
-								error: this.causeMessage(
-									this.unwrapTaggedCause(entry.error.cause),
-								),
-								kind: action.kind,
-								path: this.describePath(action),
-								status: entry.status,
-							},
-						),
-			),
 			Effect.withSpan("vam.dispatch.action", {
 				attributes: this.spanAttributes(action),
 			}),
 		);
 
 		return execute;
+	}
+
+	/**
+	 * Logs a failed action. A defect's or an interrupt's whole `Cause` goes
+	 * with the entry, so the log keeps every reason.
+	 */
+	private logActionFailure(
+		entry: VamDispatchEntry,
+		error: VamDispatchError,
+		cause: Cause.Cause<VamDispatchError>,
+	): Effect.Effect<void> {
+		const { action } = error;
+		const details = {
+			error: Cause.isCause(error.cause)
+				? formatCause(error.cause, { stack: false })
+				: this.causeMessage(this.unwrapTaggedCause(error.cause)),
+			kind: action.kind,
+			path: this.describePath(action),
+			status: entry.status,
+		};
+		switch (error.kind) {
+			case "defect":
+				return Effect.logError(
+					"[DispatchBatch] Action threw exception",
+					details,
+					cause,
+				);
+			case "interrupted":
+				return Effect.logError(
+					"[DispatchBatch] Action was interrupted",
+					details,
+					cause,
+				);
+			default:
+				return Effect.logError(
+					"[DispatchBatch] Action failed",
+					details,
+				);
+		}
 	}
 
 	private nextDecision(
@@ -877,7 +911,7 @@ export class DispatchBatchWorker {
 					error: new VamDispatchError({
 						action,
 						cause: reason,
-						kind: "defect",
+						kind: "interrupted",
 						operation: "dispatch.interrupted",
 					}),
 					status: "Uncertain" as const,
@@ -973,4 +1007,37 @@ function operationAttributes(operation: VamOperation): Record<string, string> {
 		"vam.caller": operation.caller,
 		"vam.operationId": operation.operationId,
 	};
+}
+
+/**
+ * The error of an action whose execution failed with `cause`. When its one
+ * failure is a `VamDispatchError`, that error says how it failed; beside
+ * other reasons, such as a finalizer's defect, it keeps its kind and takes
+ * the whole cause. Anything else is kept whole too (`causeValue`):
+ * `interrupted` when the cause holds only interrupts, otherwise `defect`.
+ */
+function actionFailure(
+	action: VaultAction,
+	cause: Cause.Cause<VamDispatchError>,
+): VamDispatchError {
+	const failures = cause.reasons.filter(Cause.isFailReason);
+	const [failed] = failures;
+	// A port that lies about its error type can fail with anything.
+	if (failures.length === 1 && failed?.error instanceof VamDispatchError) {
+		const { error } = failed;
+		return cause.reasons.length === 1
+			? error
+			: new VamDispatchError({
+					action: error.action,
+					cause,
+					kind: error.kind,
+					operation: error.operation,
+				});
+	}
+	return new VamDispatchError({
+		action,
+		cause: causeValue(cause),
+		kind: Cause.hasInterruptsOnly(cause) ? "interrupted" : "defect",
+		operation: `execute.${action.kind}`,
+	});
 }

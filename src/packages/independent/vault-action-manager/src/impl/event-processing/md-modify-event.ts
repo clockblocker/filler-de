@@ -6,6 +6,7 @@ import type {
 	SplitPathToMdFile,
 } from "../../types/split-path";
 import { VaultPath } from "../../vault-path";
+import type { ObservationScope } from "./vault-observation";
 
 /** One Markdown file whose content changed, as Obsidian reported it. */
 export type MdFileChange = {
@@ -37,7 +38,10 @@ export type BulkMdModifyEvent = {
 		readonly startedAt: number;
 		/** Timestamp (ms since epoch) when the window was finalized. */
 		readonly endedAt: number;
-		/** Callbacks accepted into the window, before coalescing and scoping. */
+		/**
+		 * Callbacks accepted into the window that the subscription receives,
+		 * of its origins and below its folder, before coalescing.
+		 */
 		readonly trueCount: number;
 	};
 };
@@ -50,6 +54,25 @@ export function coalesceMdModifications(
 		byPath.set(splitPathCodec.format(modification.splitPath), modification);
 	}
 	return [...byPath.values()];
+}
+
+/**
+ * The Markdown changes below `folder`, as `scopeMdModifyEvent` keeps them:
+ * a subscription scoped to them is not delivered a window without one.
+ */
+export function mdChangesBelow(
+	folder: SplitPathToFolder,
+): ObservationScope<MdFileChange> {
+	const prefix = splitPathCodec.format(folder);
+	return {
+		accepts: ({ splitPath }) =>
+			VaultPath.caseSensitive.isUnder(
+				splitPathCodec.format(splitPath),
+				prefix,
+				{ inclusive: false },
+			),
+		key: `below:${VaultPath.caseSensitive.key(prefix)}`,
+	};
 }
 
 /**

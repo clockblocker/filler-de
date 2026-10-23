@@ -63,6 +63,7 @@ import { LinkUpdates } from "./impl/event-processing/link-updates";
 import {
 	type BulkMdModifyEvent,
 	type MdFileChange,
+	mdChangesBelow,
 	scopeMdModifyEvent,
 } from "./impl/event-processing/md-modify-event";
 import {
@@ -71,6 +72,7 @@ import {
 } from "./impl/event-processing/protected-modifications";
 import { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 import {
+	type ObservationScope,
 	VaultObservation,
 	type VaultObservationSubscription,
 } from "./impl/event-processing/vault-observation";
@@ -384,6 +386,7 @@ class VaultActionManagerFacade {
 		return this.trackSubscription(
 			this.mdModifyObservation.subscribeEffect(scopedHandler, {
 				filter: originFilter(options),
+				scope: mdChangesBelow(folder),
 			}),
 		);
 	}
@@ -438,6 +441,13 @@ class VaultActionManagerFacade {
 		return this.trackSubscription(
 			this.mdModifyObservation.subscribeEffect(protectedHandler, {
 				filter: originFilter({ from: "all" }),
+				scope: {
+					accepts: ({ splitPath }) =>
+						this.protectedPaths.prefixCovering(
+							splitPathCodec.format(splitPath),
+						) !== undefined,
+					key: "protected",
+				},
 			}),
 		);
 	}
@@ -505,6 +515,7 @@ class VaultActionManagerFacade {
 						},
 					),
 					filter,
+					mdChangesBelow(folder),
 				).pipe(Effect.onError(() => closeBulk))
 			: undefined;
 		const parts = [bulk, modify].filter((part) => part !== undefined);
@@ -558,13 +569,14 @@ class VaultActionManagerFacade {
 	});
 
 	/** A subscription that delivers nothing until started, on a channel that is listening. */
-	private subscribeGated<Ev, M extends object>(
+	private subscribeGated<Ev, M extends object, E>(
 		observation: VaultObservation<Ev, M>,
-		handler: (message: M) => Effect.Effect<void, unknown>,
+		handler: (message: M) => Effect.Effect<void, E>,
 		filter: OriginFilter,
+		scope?: ObservationScope<Ev>,
 	): Effect.Effect<VaultObservationSubscription<M>, VamSubscriptionError> {
 		return observation
-			.subscribeEffect(handler, { filter, gated: true })
+			.subscribeEffect(handler, { filter, gated: true, scope })
 			.pipe(
 				Effect.flatMap((subscription) =>
 					observation.isListeningEffect().pipe(

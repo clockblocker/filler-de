@@ -1,5 +1,6 @@
-import { Clock, Effect, Ref, Result } from "effect";
+import { Clock, Effect, Ref, Result, type Tracer } from "effect";
 import { TFile } from "obsidian";
+import { CurrentDispatchSpan } from "../../effect/current-operation";
 import type { VamActionOutcome } from "../../effect/dispatch-report";
 import type { VamDispatchError } from "../../effect/errors";
 import {
@@ -11,16 +12,12 @@ import type { TFileHelper } from "../../file-services/background/helpers/tfile-h
 import { processTransformOf } from "../../helpers/action-helpers";
 import { vaultContentHash } from "../../internal/content-hash";
 import { splitPathCodec } from "../../split-path-codec";
-import {
-	EXTERNAL_ORIGIN,
-	type VamOperation,
-	type VamOperationId,
-	type VaultEventOrigin,
-} from "../../types/event-origin";
+import type { VamOperation, VamOperationId } from "../../types/event-origin";
 import type { AnySplitPath } from "../../types/split-path";
 import { type VaultAction, VaultActionKind } from "../../types/vault-action";
 import { VaultPath } from "../../vault-path";
 import type { ProtectedPaths } from "../protected-paths";
+import { type Attribution, EXTERNAL_ATTRIBUTION } from "./callback-sequence";
 
 /**
  * How long after a link-updating rename its predicted rewrites stay
@@ -99,6 +96,8 @@ const NO_PREDICTION: Prediction = {
 type Expectation = {
 	readonly expiresAt: number;
 	readonly operationId: VamOperationId;
+	/** The span of the rename's Dispatch Batch. */
+	readonly span: Tracer.AnySpan | undefined;
 	/** Identifies the rename that expects it, so finishing it starts its TTL. */
 	readonly rename: object;
 };
@@ -108,6 +107,8 @@ type Window = {
 	/** `undefined` while the rename is still running. */
 	readonly end: number | undefined;
 	readonly operationId: VamOperationId;
+	/** The span of the rename's Dispatch Batch. */
+	readonly span: Tracer.AnySpan | undefined;
 };
 
 /** A protected file's pre-image, read before the rename. */
@@ -191,6 +192,7 @@ export class LinkUpdates {
 		const from = splitPathCodec.format(ends.from);
 		const to = splitPathCodec.format(ends.to);
 		const prediction = yield* this.predict(from, to);
+		const span = yield* CurrentDispatchSpan;
 		yield* Effect.annotateCurrentSpan({
 			"vam.linkUpdates.predicted": prediction.rewrites.length,
 			"vam.linkUpdates.protected": prediction.protectedSources.length,
@@ -210,11 +212,12 @@ export class LinkUpdates {
 					this.expect(
 						prediction.rewrites,
 						operation.operationId,
+						span,
 						rename,
 					),
 				),
 			),
-			() => this.timed(run, operation.operationId),
+			() => this.timed(run, operation.operationId, span),
 			(snapshots) =>
 				Effect.forEach(
 					snapshots,
@@ -233,7 +236,7 @@ export class LinkUpdates {
 		this: LinkUpdates,
 		path: string,
 		mtime: number,
-	): Effect.fn.Return<VaultEventOrigin> {
+	): Effect.fn.Return<Attribution> {
 		const now = yield* Clock.currentTimeMillis;
 		const key = VaultPath.caseSensitive.key(path);
 		const predicted = yield* Ref.modify(this.expected, (expected) => {
@@ -251,9 +254,12 @@ export class LinkUpdates {
 		});
 		if (predicted !== undefined)
 			return {
-				basis: "Predicted",
-				kind: "LinkUpdate",
-				operationId: predicted.operationId,
+				dispatchSpan: predicted.span,
+				origin: {
+					basis: "Predicted",
+					kind: "LinkUpdate",
+					operationId: predicted.operationId,
+				},
 			};
 		const timed = yield* Ref.modify(this.windows, (windows) => {
 			const live = this.pruneWindows(windows, now);
@@ -262,11 +268,18 @@ export class LinkUpdates {
 					mtime >= start - MTIME_SLACK_MS &&
 					mtime <= (end ?? now) + this.graceMs,
 			);
-			return [covered?.operationId, live];
+			return [covered, live];
 		});
 		return timed === undefined
-			? EXTERNAL_ORIGIN
-			: { basis: "Timing", kind: "LinkUpdate", operationId: timed };
+			? EXTERNAL_ATTRIBUTION
+			: {
+					dispatchSpan: timed.span,
+					origin: {
+						basis: "Timing",
+						kind: "LinkUpdate",
+						operationId: timed.operationId,
+					},
+				};
 	});
 
 	/**
@@ -469,6 +482,7 @@ export class LinkUpdates {
 		this: LinkUpdates,
 		paths: readonly string[],
 		operationId: VamOperationId,
+		span: Tracer.AnySpan | undefined,
 		rename: object,
 	): Effect.fn.Return<void> {
 		if (paths.length === 0) return;
@@ -484,6 +498,7 @@ export class LinkUpdates {
 						expiresAt: Number.POSITIVE_INFINITY,
 						operationId,
 						rename,
+						span,
 					},
 				]);
 			return next;
@@ -516,6 +531,7 @@ export class LinkUpdates {
 	private timed<A, E, R>(
 		run: Effect.Effect<A, E, R>,
 		operationId: VamOperationId,
+		span: Tracer.AnySpan | undefined,
 	): Effect.Effect<A, E, R> {
 		return Effect.acquireUseRelease(
 			Clock.currentTimeMillis.pipe(
@@ -523,6 +539,7 @@ export class LinkUpdates {
 					const window: Window = {
 						end: undefined,
 						operationId,
+						span,
 						start,
 					};
 					return Ref.update(this.windows, (windows) => [

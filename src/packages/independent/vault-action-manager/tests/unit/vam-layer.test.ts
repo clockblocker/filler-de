@@ -154,7 +154,7 @@ describe("VaultActionManager.layer", () => {
 			expect.arrayContaining(["vam.dispatch", "host.command"]),
 		);
 		// The delivery runs on the host's tracer too.
-		named("vam.observation.handle");
+		named("vam.observation.deliver");
 		// A vault callback is no part of the build that made its channel.
 		for (const span of named("SelfEventTracker.attribute"))
 			expect(ancestors(span, spans)).not.toContain(

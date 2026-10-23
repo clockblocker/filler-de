@@ -6,13 +6,10 @@ import { TFile, TFolder } from "obsidian";
 import { makeVaultListen } from "../../src/effect/vam-live";
 import { makeKeyForEvent } from "../../src/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/helpers/make-key-for-event";
 import type { BulkVaultEvent } from "../../src/impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
+import type { Attribution } from "../../src/impl/event-processing/callback-sequence";
 import type { SelfEventTracker } from "../../src/impl/event-processing/self-event-tracker";
 import { VaultObservation } from "../../src/impl/event-processing/vault-observation";
-import {
-	EXTERNAL_ORIGIN,
-	type VaultEventOrigin,
-	vamOrigin,
-} from "../../src/types/event-origin";
+import { EXTERNAL_ORIGIN, vamOrigin } from "../../src/types/event-origin";
 import type { VaultEvent } from "../../src/types/vault-event";
 import { VaultEventKind } from "../../src/types/vault-event";
 import { TEST_OPERATION } from "./helpers/self-events";
@@ -38,8 +35,10 @@ function makeHarness(shouldIgnore: (path: string) => boolean) {
 		},
 	};
 	const app = { vault } as unknown as App;
-	const originOf = (self: boolean): VaultEventOrigin =>
-		self ? vamOrigin(TEST_OPERATION) : EXTERNAL_ORIGIN;
+	const originOf = (self: boolean): Attribution => ({
+		dispatchSpan: undefined,
+		origin: self ? vamOrigin(TEST_OPERATION) : EXTERNAL_ORIGIN,
+	});
 	const selfEvents = {
 		attributeEffect: (path: string) =>
 			Effect.sync(() => originOf(shouldIgnore(path))),

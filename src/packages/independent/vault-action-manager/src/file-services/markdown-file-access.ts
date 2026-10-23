@@ -47,18 +47,18 @@ export class MarkdownFileAccess {
 	 * disk. Views with different unsaved content fail it with
 	 * `VamContentConflictError`.
 	 */
-	readContent(target: SplitPathToMdFile) {
+	readonly readContent = Effect.fn("vam.markdown.read")(function* (
+		this: MarkdownFileAccess,
+		target: SplitPathToMdFile,
+	) {
 		const path = pathfinder.systemPathFromSplitPath(target);
-		const self = this;
-		return Effect.fn("vam.markdown.read")(function* () {
-			yield* Effect.annotateCurrentSpan({ operation: "read", path });
-			const route = yield* self.route(target);
-			if (route.content !== null) return route.content;
-			return route._tag === "Editor"
-				? yield* self.activeEditor.getContent(route.snapshot)
-				: yield* self.diskContent(target);
-		}, Effect.tapError(annotateFileAccessFailure))();
-	}
+		yield* Effect.annotateCurrentSpan({ operation: "read", path });
+		const route = yield* this.route(target);
+		if (route.content !== null) return route.content;
+		return route._tag === "Editor"
+			? yield* this.activeEditor.getContent(route.snapshot)
+			: yield* this.diskContent(target);
+	}, Effect.tapError(annotateFileAccessFailure));
 
 	/**
 	 * Reads content through the same route as `readContent`, with the file's
@@ -66,72 +66,70 @@ export class MarkdownFileAccess {
 	 * stat, never older, so a `(path, mtime)` cache only rereads too often.
 	 * An editor may hold unsaved content; its stat describes disk.
 	 */
-	readContentWithStat(target: SplitPathToMdFile) {
-		const path = pathfinder.systemPathFromSplitPath(target);
-		const self = this;
-		return Effect.fn("vam.markdown.readWithStat")(function* () {
+	readonly readContentWithStat = Effect.fn("vam.markdown.readWithStat")(
+		function* (this: MarkdownFileAccess, target: SplitPathToMdFile) {
+			const path = pathfinder.systemPathFromSplitPath(target);
 			yield* Effect.annotateCurrentSpan({ operation: "read", path });
 			const vault = yield* VaultIo;
-			const file = yield* self.backgroundFile(target);
+			const file = yield* this.backgroundFile(target);
 			const stat = yield* vault.stat(file);
 			const route = yield* resolveContentRoute(
-				self.activeEditor,
+				this.activeEditor,
 				target,
 				Effect.suspend(() => vault.read(file)),
 			);
 			if (route.content !== null) return { content: route.content, stat };
 			const content =
 				route._tag === "Editor"
-					? yield* self.activeEditor.getContent(route.snapshot)
+					? yield* this.activeEditor.getContent(route.snapshot)
 					: yield* vault.read(file);
 			return { content, stat };
-		}, Effect.tapError(annotateFileAccessFailure))();
-	}
+		},
+		Effect.tapError(annotateFileAccessFailure),
+	);
 
 	/** The file's stat on disk, as `readContentWithStat` takes it, without its content. */
-	readStat(target: SplitPathToMdFile) {
+	readonly readStat = Effect.fn("vam.markdown.stat")(function* (
+		this: MarkdownFileAccess,
+		target: SplitPathToMdFile,
+	) {
 		const path = pathfinder.systemPathFromSplitPath(target);
-		const self = this;
-		return Effect.fn("vam.markdown.stat")(function* () {
-			yield* Effect.annotateCurrentSpan({ operation: "stat", path });
-			const vault = yield* VaultIo;
-			const file = yield* self.backgroundFile(target);
-			return yield* vault.stat(file);
-		}, Effect.tapError(annotateFileAccessFailure))();
-	}
+		yield* Effect.annotateCurrentSpan({ operation: "stat", path });
+		const vault = yield* VaultIo;
+		const file = yield* this.backgroundFile(target);
+		return yield* vault.stat(file);
+	}, Effect.tapError(annotateFileAccessFailure));
 
-	replaceContent(target: SplitPathToMdFile, content: string) {
+	readonly replaceContent = Effect.fn("vam.markdown.replace")(function* (
+		this: MarkdownFileAccess,
+		target: SplitPathToMdFile,
+		content: string,
+	) {
 		const path = pathfinder.systemPathFromSplitPath(target);
-		const self = this;
-		return Effect.fn("vam.markdown.replace")(function* () {
-			yield* Effect.annotateCurrentSpan({ operation: "replace", path });
-			const route = yield* self.route(target);
-			return route._tag === "Editor"
-				? yield* self.activeEditor.replaceAllContentInActiveFile(
-						content,
-						route.snapshot,
-					)
-				: yield* self.backgroundVault.replaceAllContent(
-						target,
-						content,
-					);
-		}, Effect.tapError(annotateFileAccessFailure))();
-	}
+		yield* Effect.annotateCurrentSpan({ operation: "replace", path });
+		const route = yield* this.route(target);
+		return route._tag === "Editor"
+			? yield* this.activeEditor.replaceAllContentInActiveFile(
+					content,
+					route.snapshot,
+				)
+			: yield* this.backgroundVault.replaceAllContent(target, content);
+	}, Effect.tapError(annotateFileAccessFailure));
 
-	processContent(args: {
-		splitPath: SplitPathToMdFile;
-		transform: Transform;
-	}) {
+	readonly processContent = Effect.fn("vam.markdown.transform")(function* (
+		this: MarkdownFileAccess,
+		args: {
+			splitPath: SplitPathToMdFile;
+			transform: Transform;
+		},
+	) {
 		const path = pathfinder.systemPathFromSplitPath(args.splitPath);
-		const self = this;
-		return Effect.fn("vam.markdown.transform")(function* () {
-			yield* Effect.annotateCurrentSpan({ operation: "transform", path });
-			const route = yield* self.route(args.splitPath);
-			return route._tag === "Editor"
-				? yield* self.activeEditor.processContent(args, route.snapshot)
-				: yield* self.backgroundVault.processContent(args);
-		}, Effect.tapError(annotateFileAccessFailure))();
-	}
+		yield* Effect.annotateCurrentSpan({ operation: "transform", path });
+		const route = yield* this.route(args.splitPath);
+		return route._tag === "Editor"
+			? yield* this.activeEditor.processContent(args, route.snapshot)
+			: yield* this.backgroundVault.processContent(args);
+	}, Effect.tapError(annotateFileAccessFailure));
 
 	/**
 	 * Trashes the file; `NoOp` when it is gone. With `ifContent`, only while
@@ -141,35 +139,39 @@ export class MarkdownFileAccess {
 	 * hold different unsaved typing, it fails with `VamContentConflictError`
 	 * and trashes nothing.
 	 */
-	trashFile(target: SplitPathToMdFile, ifContent?: ExpectedContent) {
+	readonly trashFile = Effect.fn("vam.markdown.trash")(function* (
+		this: MarkdownFileAccess,
+		target: SplitPathToMdFile,
+		ifContent?: ExpectedContent,
+	) {
 		const path = pathfinder.systemPathFromSplitPath(target);
-		const self = this;
-		return Effect.fn("vam.markdown.trash")(function* () {
-			yield* Effect.annotateCurrentSpan({ operation: "trash", path });
-			if (ifContent !== undefined) {
-				const present = yield* Effect.result(
-					self.backgroundVault.getFile(target),
-				);
-				if (Result.isFailure(present)) {
-					if (present.failure.operation !== "getFile")
-						return yield* present.failure;
-					return { _tag: "NoOp" } as const;
-				}
-				const current = yield* self.readContent(target);
-				if (!contentMatches(current, ifContent))
-					return yield* new VamContentConflictError({
-						cause: new ContentPreconditionFailed({
-							expected: ifContent,
-						}),
-						operation: "trashFile.ifContent",
-						path,
-					});
+		yield* Effect.annotateCurrentSpan({ operation: "trash", path });
+		if (ifContent !== undefined) {
+			const present = yield* Effect.result(
+				this.backgroundVault.getFile(target),
+			);
+			if (Result.isFailure(present)) {
+				if (present.failure.operation !== "getFile")
+					return yield* present.failure;
+				return { _tag: "NoOp" } as const;
 			}
-			return yield* self.backgroundVault.trashFile(target);
-		}, Effect.tapError(annotateFileAccessFailure))();
-	}
+			const current = yield* this.readContent(target);
+			if (!contentMatches(current, ifContent))
+				return yield* new VamContentConflictError({
+					cause: new ContentPreconditionFailed({
+						expected: ifContent,
+					}),
+					operation: "trashFile.ifContent",
+					path,
+				});
+		}
+		return yield* this.backgroundVault.trashFile(target);
+	}, Effect.tapError(annotateFileAccessFailure));
 
-	renameFile<SPF extends SplitPathToAnyFile>(
+	readonly renameFile = Effect.fn("vam.markdown.rename")(function* <
+		SPF extends SplitPathToAnyFile,
+	>(
+		this: MarkdownFileAccess,
 		paths: SplitPathFromTo<SPF> & {
 			readonly onCollision?: RenameCollision;
 			readonly updateLinks?: boolean;
@@ -177,35 +179,32 @@ export class MarkdownFileAccess {
 	) {
 		const fromPath = pathfinder.systemPathFromSplitPath(paths.from);
 		const toPath = pathfinder.systemPathFromSplitPath(paths.to);
-		const self = this;
-		return Effect.fn("vam.markdown.rename")(function* () {
-			yield* Effect.annotateCurrentSpan({
-				from: fromPath,
-				operation: "rename",
-				path: toPath,
-			});
-			const active = yield* self.activeEditor.observeTarget(paths.from);
-			const savedSelection = active
-				? yield* self.activeEditor.saveInlineTitleSelection(active)
-				: null;
-			const { file: renamed, outcome } =
-				yield* self.backgroundVault.renameFile(paths);
-			yield* Effect.annotateCurrentSpan({ path: renamed.path });
-			if (savedSelection && active && renamed === active.file) {
-				yield* self.activeEditor
-					.restoreInlineTitleSelectionAfterRename(
-						savedSelection,
-						renamed.path,
-						renamed.basename,
-					)
-					.pipe(
-						Effect.mapError(markPostRenameFailure),
-						Effect.uninterruptible,
-					);
-			}
-			return outcome;
-		}, Effect.tapError(annotateFileAccessFailure))();
-	}
+		yield* Effect.annotateCurrentSpan({
+			from: fromPath,
+			operation: "rename",
+			path: toPath,
+		});
+		const active = yield* this.activeEditor.observeTarget(paths.from);
+		const savedSelection = active
+			? yield* this.activeEditor.saveInlineTitleSelection(active)
+			: null;
+		const { file: renamed, outcome } =
+			yield* this.backgroundVault.renameFile(paths);
+		yield* Effect.annotateCurrentSpan({ path: renamed.path });
+		if (savedSelection && active && renamed === active.file) {
+			yield* this.activeEditor
+				.restoreInlineTitleSelectionAfterRename(
+					savedSelection,
+					renamed.path,
+					renamed.basename,
+				)
+				.pipe(
+					Effect.mapError(markPostRenameFailure),
+					Effect.uninterruptible,
+				);
+		}
+		return outcome;
+	}, Effect.tapError(annotateFileAccessFailure));
 
 	isActive(target: AnySplitPath) {
 		return this.activeEditor

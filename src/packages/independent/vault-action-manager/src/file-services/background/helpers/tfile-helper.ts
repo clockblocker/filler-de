@@ -202,54 +202,51 @@ export class TFileHelper {
 	 * `vault.create` refuses an existing file too, so a file created between
 	 * the check and the create fails it the same way.
 	 */
-	createFile(
+	readonly createFile = Effect.fn("vam.file.create")(function* (
+		this: TFileHelper,
 		splitPath: SplitPathToAnyFile,
 		content: string,
-	): Effect.Effect<
+	): Effect.fn.Return<
 		VamActionOutcome,
 		VamVaultIoError | VamTargetExistsError,
 		VaultIo
 	> {
 		const paths = this.paths;
-		return Effect.fn("vam.file.create")(function* () {
-			const vault = yield* VaultIo;
-			const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
-			yield* Effect.annotateCurrentSpan({ path: systemPath });
-			const occupant = yield* occupantOf(splitPath, paths);
-			yield* recordTargetTaken(occupant !== undefined);
-			if (occupant)
-				return yield* targetExists(
-					"createFile.exists",
-					splitPath,
-					occupant,
-					"Cannot create the file",
-				);
-			const created = yield* Effect.result(
-				vault.create(systemPath, content),
+		const vault = yield* VaultIo;
+		const systemPath = pathfinder.systemPathFromSplitPath(splitPath);
+		yield* Effect.annotateCurrentSpan({ path: systemPath });
+		const occupant = yield* occupantOf(splitPath, paths);
+		yield* recordTargetTaken(occupant !== undefined);
+		if (occupant)
+			return yield* targetExists(
+				"createFile.exists",
+				splitPath,
+				occupant,
+				"Cannot create the file",
 			);
-			if (Result.isSuccess(created))
-				return {
-					_tag: "Created",
-					contentHash: vaultContentHash(content),
-				} as const;
-			const message = originalMessage(created.failure);
-			if (message.includes("already exists")) {
-				const raced = yield* occupantOf(splitPath, paths);
-				return yield* new VamTargetExistsError({
-					cause: created.failure,
-					occupiedBy: raced?.path ?? systemPath,
-					operation: "createFile.exists",
-					path: systemPath,
-				});
-			}
-			return yield* operationFailure(
-				"createFile",
-				systemPath,
-				errorCreateFailed("file", systemPath, message),
-				created.failure,
-			);
-		})();
-	}
+		const created = yield* Effect.result(vault.create(systemPath, content));
+		if (Result.isSuccess(created))
+			return {
+				_tag: "Created",
+				contentHash: vaultContentHash(content),
+			} as const;
+		const message = originalMessage(created.failure);
+		if (message.includes("already exists")) {
+			const raced = yield* occupantOf(splitPath, paths);
+			return yield* new VamTargetExistsError({
+				cause: created.failure,
+				occupiedBy: raced?.path ?? systemPath,
+				operation: "createFile.exists",
+				path: systemPath,
+			});
+		}
+		return yield* operationFailure(
+			"createFile",
+			systemPath,
+			errorCreateFailed("file", systemPath, message),
+			created.failure,
+		);
+	});
 
 	/** Trashes the file; `NoOp` when it is gone. */
 	trashFile<SPF extends SplitPathToAnyFile>(splitPath: SPF) {
@@ -273,8 +270,8 @@ export class TFileHelper {
 	 */
 	renameFile<SPF extends SplitPathToAnyFile>({
 		from,
-		to,
 		onCollision,
+		to,
 		updateLinks = true,
 	}: SplitPathFromTo<SPF> & {
 		onCollision?: RenameCollision;

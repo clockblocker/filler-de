@@ -1,33 +1,41 @@
-import { Clock, Deferred, Effect, Ref } from "effect";
-import { CurrentVamOperation } from "../../effect/current-operation";
-import { pathfinder } from "../../helpers/pathfinder";
+import { Clock, Deferred, Effect, Ref, type Tracer } from "effect";
 import {
-	EXTERNAL_ORIGIN,
-	type VamOperation,
-	type VaultEventOrigin,
-	vamOrigin,
-} from "../../types/event-origin";
+	CurrentDispatchSpan,
+	CurrentVamOperation,
+} from "../../effect/current-operation";
+import { pathfinder } from "../../helpers/pathfinder";
+import { type VamOperation, vamOrigin } from "../../types/event-origin";
 import type { AnySplitPath } from "../../types/split-path";
 import type { VaultAction } from "../../types/vault-action";
 import { VaultActionKind } from "../../types/vault-action";
 import { VaultPath } from "../../vault-path";
+import { type Attribution, EXTERNAL_ATTRIBUTION } from "./callback-sequence";
+
+/**
+ * The Dispatch Batch that expects a callback: its operation, and the span
+ * it runs under, which the callback's delivery links to.
+ */
+type Expecter = {
+	readonly operation: VamOperation;
+	readonly span: Tracer.AnySpan | undefined;
+};
 
 type ExactEntry = {
 	readonly expiresAt: number;
 	readonly isFilePath: boolean;
 	/** The Dispatch Batch whose action expects the path. */
-	readonly operation: VamOperation;
+	readonly by: Expecter;
 };
 
 type PrefixEntry = {
+	readonly by: Expecter;
 	readonly expiresAt: number;
-	readonly operation: VamOperation;
 };
 
 /** One expected modify callback of a VAM write. */
 type ModifyEntry = {
+	readonly by: Expecter;
 	readonly expiresAt: number;
-	readonly operation: VamOperation;
 };
 
 /**
@@ -35,9 +43,9 @@ type ModifyEntry = {
  * descendant of the moved folder, and each such pair is Self.
  */
 type FolderRenameEntry = {
+	readonly by: Expecter;
 	readonly expiresAt: number;
 	readonly from: string;
-	readonly operation: VamOperation;
 	readonly to: string;
 };
 
@@ -146,20 +154,20 @@ function matchPath(
 	pruned: PrunedState,
 	normalized: string,
 ): {
-	readonly operation: VamOperation | undefined;
+	readonly by: Expecter | undefined;
 	readonly popped: boolean;
 } {
 	const exact = pruned.tracked.get(normalized);
 	if (exact !== undefined) {
 		pruned.tracked.delete(normalized);
-		return { operation: exact.operation, popped: true };
+		return { by: exact.by, popped: true };
 	}
 	for (const [prefix, entry] of pruned.prefixes) {
 		if (coveredByPrefix(normalized, prefix)) {
-			return { operation: entry.operation, popped: false };
+			return { by: entry.by, popped: false };
 		}
 	}
-	return { operation: undefined, popped: false };
+	return { by: undefined, popped: false };
 }
 
 /**
@@ -183,8 +191,8 @@ function folderRenameDescendantOf(
 	folderRenames: ReadonlyMap<string, FolderRenameEntry>,
 	oldPath: string,
 	newPath: string,
-): VamOperation | undefined {
-	for (const { from, operation, to } of folderRenames.values()) {
+): Expecter | undefined {
+	for (const { by, from, to } of folderRenames.values()) {
 		if (
 			from === VaultPath.root ||
 			!VaultPath.caseSensitive.isUnder(oldPath, from, {
@@ -196,15 +204,27 @@ function folderRenameDescendantOf(
 		if (
 			VaultPath.caseSensitive.same(newPath, VaultPath.join(to, remainder))
 		) {
-			return operation;
+			return by;
 		}
 	}
 	return undefined;
 }
 
-function originOf(operation: VamOperation | undefined): VaultEventOrigin {
-	return operation === undefined ? EXTERNAL_ORIGIN : vamOrigin(operation);
+function attributionOf(by: Expecter | undefined): Attribution {
+	return by === undefined
+		? EXTERNAL_ATTRIBUTION
+		: { dispatchSpan: by.span, origin: vamOrigin(by.operation) };
 }
+
+/** The batch running now: its operation and span, as the worker provides them. */
+const currentExpecter = Effect.fnUntraced(function* (
+	operation?: VamOperation,
+): Effect.fn.Return<Expecter> {
+	return {
+		operation: operation ?? (yield* CurrentVamOperation),
+		span: yield* CurrentDispatchSpan,
+	};
+});
 
 function pruneModifies(
 	modifies: ReadonlyMap<string, readonly ModifyEntry[]>,
@@ -287,6 +307,7 @@ export class SelfEventTracker {
 		operation: VamOperation,
 	): Effect.fn.Return<void> {
 		const now = yield* Clock.currentTimeMillis;
+		const by = yield* currentExpecter(operation);
 		const previousSignal = yield* Ref.modify(this.core.state, (state) => {
 			const pruned = pruneState(state, now);
 
@@ -304,16 +325,16 @@ export class SelfEventTracker {
 				for (const path of paths) {
 					const normalized = this.normalizePath(path);
 					pruned.tracked.set(normalized, {
+						by,
 						expiresAt: expiration,
 						isFilePath: normalized === normalizedFilePath,
-						operation,
 					});
 				}
 
 				for (const prefix of this.extractFolderPrefixes(action)) {
 					pruned.prefixes.set(this.normalizePath(prefix), {
+						by,
 						expiresAt: expiration,
-						operation,
 					});
 				}
 
@@ -321,7 +342,7 @@ export class SelfEventTracker {
 				if (folderRename !== undefined) {
 					pruned.folderRenames.set(
 						folderRenameKey(folderRename.from, folderRename.to),
-						{ ...folderRename, expiresAt: expiration, operation },
+						{ ...folderRename, by, expiresAt: expiration },
 					);
 				}
 			}
@@ -452,7 +473,7 @@ export class SelfEventTracker {
 		redirect: RenameRedirect,
 	): Effect.fn.Return<void> {
 		const now = yield* Clock.currentTimeMillis;
-		const current = yield* CurrentVamOperation;
+		const current = yield* currentExpecter();
 		const from = this.normalizePath(redirect.from);
 		const planned = this.normalizePath(redirect.planned);
 		const actual = this.normalizePath(redirect.actual);
@@ -465,22 +486,22 @@ export class SelfEventTracker {
 					? pruned.folderRenames.get(plannedKey)
 					: pruned.tracked.get(planned);
 				const window = plannedEntry?.expiresAt ?? now + this.ttlMs;
-				const operation = plannedEntry?.operation ?? current;
+				const by = plannedEntry?.by ?? current;
 				// Nothing lands at the planned destination now: its entries
 				// would only hide a user's event there, and hold the settle
 				// barrier until they expire.
 				pruned.tracked.delete(planned);
 				pruned.folderRenames.delete(plannedKey);
 				pruned.tracked.set(actual, {
+					by,
 					expiresAt: window,
 					isFilePath: !redirect.isFolder,
-					operation,
 				});
 				if (redirect.isFolder)
 					pruned.folderRenames.set(folderRenameKey(from, actual), {
+						by,
 						expiresAt: window,
 						from,
-						operation,
 						to: actual,
 					});
 				const redirects = new Map(state.redirects);
@@ -502,11 +523,11 @@ export class SelfEventTracker {
 		function* (
 			this: SelfEventTracker,
 			path: string,
-		): Effect.fn.Return<VaultEventOrigin> {
+		): Effect.fn.Return<Attribution> {
 			const normalized = this.normalizePath(path);
 			return yield* this.modifyPrunedEffect((pruned) => {
 				const match = matchPath(pruned, normalized);
-				return [originOf(match.operation), match.popped];
+				return [attributionOf(match.by), match.popped];
 			});
 		},
 	);
@@ -522,7 +543,7 @@ export class SelfEventTracker {
 		this: SelfEventTracker,
 		oldPath: string,
 		newPath: string,
-	): Effect.fn.Return<VaultEventOrigin> {
+	): Effect.fn.Return<Attribution> {
 		const normalizedOld = this.normalizePath(oldPath);
 		const normalizedNew = this.normalizePath(newPath);
 		return yield* this.modifyPrunedEffect((pruned) => {
@@ -532,15 +553,13 @@ export class SelfEventTracker {
 				normalizedNew,
 			);
 			if (descendantOf !== undefined) {
-				return [vamOrigin(descendantOf), false];
+				return [attributionOf(descendantOf), false];
 			}
 			const newMatch = matchPath(pruned, normalizedNew);
 			const oldMatch = matchPath(pruned, normalizedOld);
 			return [
-				originOf(
-					oldMatch.operation === undefined
-						? undefined
-						: newMatch.operation,
+				attributionOf(
+					oldMatch.by === undefined ? undefined : newMatch.by,
 				),
 				newMatch.popped || oldMatch.popped,
 			];
@@ -589,13 +608,13 @@ export class SelfEventTracker {
 			path: string,
 		): Effect.fn.Return<void> {
 			const now = yield* Clock.currentTimeMillis;
-			const operation = yield* CurrentVamOperation;
+			const by = yield* currentExpecter();
 			const normalized = this.normalizePath(path);
 			yield* Ref.update(this.core.state, (state) => {
 				const modifies = pruneModifies(state.modifies, now);
 				modifies.set(normalized, [
 					...(modifies.get(normalized) ?? []),
-					{ expiresAt: now + this.ttlMs, operation },
+					{ by, expiresAt: now + this.ttlMs },
 				]);
 				return { ...state, modifies };
 			});
@@ -643,17 +662,17 @@ export class SelfEventTracker {
 	)(function* (
 		this: SelfEventTracker,
 		path: string,
-	): Effect.fn.Return<VaultEventOrigin> {
+	): Effect.fn.Return<Attribution> {
 		const now = yield* Clock.currentTimeMillis;
 		const normalized = this.normalizePath(path);
 		return yield* Ref.modify(
 			this.core.state,
-			(state): readonly [VaultEventOrigin, SelfEventState] => {
+			(state): readonly [Attribution, SelfEventState] => {
 				const modifies = pruneModifies(state.modifies, now);
 				const [first, ...remaining] = modifies.get(normalized) ?? [];
 				if (remaining.length > 0) modifies.set(normalized, remaining);
 				else modifies.delete(normalized);
-				return [originOf(first?.operation), { ...state, modifies }];
+				return [attributionOf(first?.by), { ...state, modifies }];
 			},
 		);
 	});

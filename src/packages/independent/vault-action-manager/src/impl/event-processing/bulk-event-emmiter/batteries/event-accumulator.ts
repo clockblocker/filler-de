@@ -35,19 +35,18 @@ type EventWindow<Ev> = {
 };
 
 /**
- * Runs the single scoped observation-window worker.
+ * Runs the single scoped observation-window worker. It runs as long as its
+ * session, so it opens no span: each delivery is traced on its own.
  *
  * The worker is the only consumer of the intake queue, so event ordering and
  * window boundaries do not depend on callback or subscriber scheduling.
  */
-export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* <
-	Ev,
->(
+export const runEventAccumulator = Effect.fnUntraced(function* <Ev>(
 	intake: Queue.Dequeue<EventAccumulatorCommand<Ev>>,
 	options: EventAccumulatorOptions,
 	onFlush: (window: BulkWindow<Ev>) => Effect.Effect<void>,
 ): Effect.fn.Return<never> {
-	const flushWindow = Effect.fn("runEventAccumulator.flushWindow")(function* (
+	const flushWindow = Effect.fnUntraced(function* (
 		window: EventWindow<Ev>,
 	): Effect.fn.Return<void> {
 		const endedAt = yield* Clock.currentTimeMillis;
@@ -58,63 +57,61 @@ export const runEventAccumulator = Effect.fn("runEventAccumulator")(function* <
 		for (const run of window.after) yield* run;
 	});
 
-	const completeCommand = Effect.fn("runEventAccumulator.completeCommand")(
-		function* (
-			command: Extract<
-				EventAccumulatorCommand<Ev>,
-				{ readonly _tag: "Flush" | "Settled" | "AfterWindow" }
-			>,
-		): Effect.fn.Return<void> {
-			if (command._tag !== "Flush") return yield* command.run;
-			yield* Deferred.succeed(command.completed, undefined);
-		},
-	);
+	const completeCommand = Effect.fnUntraced(function* (
+		command: Extract<
+			EventAccumulatorCommand<Ev>,
+			{ readonly _tag: "Flush" | "Settled" | "AfterWindow" }
+		>,
+	): Effect.fn.Return<void> {
+		if (command._tag !== "Flush") return yield* command.run;
+		yield* Deferred.succeed(command.completed, undefined);
+	});
 
-	const collectWindow = Effect.fn("runEventAccumulator.collectWindow")(
-		function* (window: EventWindow<Ev>): Effect.fn.Return<void> {
-			const now = yield* Clock.currentTimeMillis;
-			const deadline = Math.min(
-				window.lastEventAt + options.quietWindowMs,
-				window.startedAt + options.maxWindowMs,
-			);
-			const waitFor = Math.max(0, deadline - now);
+	const collectWindow = Effect.fnUntraced(function* (
+		window: EventWindow<Ev>,
+	): Effect.fn.Return<void> {
+		const now = yield* Clock.currentTimeMillis;
+		const deadline = Math.min(
+			window.lastEventAt + options.quietWindowMs,
+			window.startedAt + options.maxWindowMs,
+		);
+		const waitFor = Math.max(0, deadline - now);
 
-			const next = yield* Queue.take(intake).pipe(
-				Effect.timeoutOption(waitFor),
-			);
-			if (Option.isNone(next)) {
-				yield* flushWindow(window);
-				return;
-			}
+		const next = yield* Queue.take(intake).pipe(
+			Effect.timeoutOption(waitFor),
+		);
+		if (Option.isNone(next)) {
+			yield* flushWindow(window);
+			return;
+		}
 
-			const command = next.value;
-			if (command._tag === "AfterWindow") {
-				yield* collectWindow({
-					...window,
-					after: [...window.after, command.run],
-				});
-				return;
-			}
-			if (command._tag !== "Event") {
-				yield* flushWindow(window);
-				yield* completeCommand(command);
-				return;
-			}
-
-			const receivedAt = yield* Clock.currentTimeMillis;
-			const nextWindow = {
+		const command = next.value;
+		if (command._tag === "AfterWindow") {
+			yield* collectWindow({
 				...window,
-				events: [...window.events, command.event],
-				lastEventAt: receivedAt,
-			};
-			if (receivedAt - window.startedAt >= options.maxWindowMs) {
-				yield* flushWindow(nextWindow);
-				return;
-			}
+				after: [...window.after, command.run],
+			});
+			return;
+		}
+		if (command._tag !== "Event") {
+			yield* flushWindow(window);
+			yield* completeCommand(command);
+			return;
+		}
 
-			yield* collectWindow(nextWindow);
-		},
-	);
+		const receivedAt = yield* Clock.currentTimeMillis;
+		const nextWindow = {
+			...window,
+			events: [...window.events, command.event],
+			lastEventAt: receivedAt,
+		};
+		if (receivedAt - window.startedAt >= options.maxWindowMs) {
+			yield* flushWindow(nextWindow);
+			return;
+		}
+
+		yield* collectWindow(nextWindow);
+	});
 
 	while (true) {
 		const command = yield* Queue.take(intake);
