@@ -382,7 +382,7 @@ describe("Settings and the delimiter migration", () => {
 					},
 					onLaunched: () => Effect.void,
 					resetRunning: () => false,
-					sweep: () => undefined,
+					sweep: Effect.void,
 				}),
 			),
 		);

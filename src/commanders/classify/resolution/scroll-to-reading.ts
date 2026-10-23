@@ -25,14 +25,14 @@ const notePathOf = (path: string) =>
 function awaitReadingKnowledge(
 	queue: Pick<KnowledgeQueue, "awaitNote">,
 	target: string,
-): Promise<boolean> {
+): Effect.Effect<boolean> {
 	const path = linkTargetPath(target);
 	if (
 		!VaultPath.caseSensitive.isUnder(path, WORTER_FOLDER, {
 			inclusive: false,
 		})
 	)
-		return Promise.resolve(false);
+		return Effect.succeed(false);
 	return queue.awaitNote(path);
 }
 
@@ -54,9 +54,7 @@ export function createReadingReopener<E>(
 	let latest = 0;
 	return Effect.fn("ReadingReopener.reopen")(function* (target: string) {
 		const click = ++latest;
-		const waited = yield* Effect.promise(() =>
-			awaitReadingKnowledge(deps.queue, target),
-		);
+		const waited = yield* awaitReadingKnowledge(deps.queue, target);
 		if (!waited || click !== latest) return false;
 		const path = notePathOf(linkTargetPath(target));
 		const active = yield* deps.activePath;

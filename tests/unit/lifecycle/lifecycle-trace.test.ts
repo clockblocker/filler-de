@@ -36,7 +36,7 @@ describe("lifecycle trace", () => {
 						}),
 						onLaunched: () => Effect.void,
 						resetRunning: () => false,
-						sweep: () => {},
+						sweep: Effect.void,
 					}),
 				)
 				.pipe(
@@ -93,7 +93,7 @@ describe("lifecycle trace", () => {
 						}),
 						onLaunched: () => Effect.void,
 						resetRunning: () => false,
-						sweep: () => {},
+						sweep: Effect.void,
 					}),
 				),
 			),

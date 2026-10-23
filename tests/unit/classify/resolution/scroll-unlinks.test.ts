@@ -185,8 +185,8 @@ describe("createReadingReopener", () => {
 				}),
 			queue: {
 				awaitNote: (path) =>
-					new Promise<boolean>((resolve) => {
-						running.set(path, () => resolve(true));
+					Effect.callback<boolean>((resume) => {
+						running.set(path, () => resume(Effect.succeed(true)));
 					}),
 			},
 		});

@@ -14,7 +14,7 @@ import { type Answer, operations } from "dumgen";
 import { Deferred, Effect, Layer } from "effect";
 import { ClassifySegmenter } from "../../../src/commanders/classify/classify-selection";
 import { dumgenUnitResolver } from "../../../src/commanders/classify/resolution/dumgen-unit-resolver";
-import { createKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
+import { makeKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
 import { produceKnowledge } from "../../../src/commanders/classify/resolution/produce-knowledge";
 import {
 	memorySegmentationCache,
@@ -39,7 +39,7 @@ import {
 	LEMMA_PATHS,
 	STORY,
 } from "../../obsidian-e2e/scenarios/classify-resolution-script";
-import { defaultRunner } from "../../support/effect-runner";
+import { inScope } from "../../support/scoped";
 import { MemoryScroll } from "../../unit/classify/resolution/support";
 import { dumgenServiceOver, unreachable } from "../../unit/dumgen/dumgen-support";
 
@@ -167,15 +167,16 @@ async function setUp() {
 		SCROLL,
 		STORY.replace("Der Hund schläft.", "Der [[Hund]] schläft."),
 	);
-	const queue = createKnowledgeQueue({
-		notify: () => undefined,
-		run: (job) =>
-			produceKnowledge(
-				{ dumgen: operations, store, translationLanguages: ["en"] },
-				job,
-			).pipe(dumgen.provideBackground),
-		runtime: defaultRunner,
-	});
+	const { value: queue } = await inScope(
+		makeKnowledgeQueue({
+			notify: () => undefined,
+			run: (job) =>
+				produceKnowledge(
+					{ dumgen: operations, store, translationLanguages: ["en"] },
+					job,
+				).pipe(dumgen.provideBackground),
+		}),
+	);
 	const dictionary: ResetDictionary = {
 		appendFreeform: (request) =>
 			store.appendFreeform(request).pipe(
@@ -184,7 +185,7 @@ async function setUp() {
 				),
 			),
 		caughtUp: store.caughtUp,
-		settleKnowledge: Effect.promise(() => queue.whenIdle()),
+		settleKnowledge: queue.whenIdle,
 	};
 	const layer = Layer.mergeAll(
 		Layer.succeed(SegmentationCache, memorySegmentationCache()),

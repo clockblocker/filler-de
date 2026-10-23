@@ -117,7 +117,9 @@ function makeHarness(options: { readonly autoStart?: boolean } = {}) {
 				events.push("launched");
 			}),
 		resetRunning: () => resetRunning,
-		sweep: () => events.push("sweep"),
+		sweep: Effect.sync(() => {
+			events.push("sweep");
+		}),
 	};
 
 	return {

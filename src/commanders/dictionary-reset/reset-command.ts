@@ -309,7 +309,7 @@ export class DictionaryResetCommand {
 			const { running } = yield* Ref.get(this.state);
 			if (Option.isNone(running)) return false;
 			yield* Deferred.succeed(running.value, undefined);
-			yield* Effect.sync(() => this.deps.knowledge.cancelAll());
+			yield* this.deps.knowledge.cancelAll;
 			return true;
 		}),
 	);
@@ -449,7 +449,7 @@ export class DictionaryResetCommand {
 				const missing = yield* deps.missingProviderKeys;
 				if (missing.length > 0)
 					return `The reset regenerates through dumgen and needs ${missing.join(" and ")} API keys in Textfresser's settings. Nothing changed.`;
-				if ((yield* Effect.sync(() => deps.knowledge.running())) > 0)
+				if ((yield* deps.knowledge.running) > 0)
 					return "Knowledge generation is still running. Wait for it, or cancel it, then reset. Nothing changed.";
 				return undefined;
 			});
@@ -575,7 +575,7 @@ export class DictionaryResetCommand {
 					),
 				),
 			caughtUp: store.pipe(Effect.flatMap((opened) => opened.caughtUp)),
-			settleKnowledge: Effect.promise(() => deps.knowledge.whenIdle()),
+			settleKnowledge: deps.knowledge.whenIdle,
 		};
 		const resolver = dumgenUnitResolver({
 			...(deps.activity === undefined ? {} : { activity: deps.activity }),

@@ -16,7 +16,7 @@ import {
 	classifySelection,
 } from "../../../../src/commanders/classify/classify-selection";
 import { dumgenUnitResolver } from "../../../../src/commanders/classify/resolution/dumgen-unit-resolver";
-import { createKnowledgeQueue } from "../../../../src/commanders/classify/resolution/knowledge-queue";
+import { makeKnowledgeQueue } from "../../../../src/commanders/classify/resolution/knowledge-queue";
 import {
 	memorySegmentationCache,
 	SegmentationCache,
@@ -24,7 +24,7 @@ import {
 import { UnitResolver } from "../../../../src/commanders/classify/unit-resolver";
 import { createScriptedJev } from "../../../../src/managers/dumgen/scripted-jev";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
-import { defaultRunner } from "../../../support/effect-runner";
+import { inScope } from "../../../support/scoped";
 import { fakeDumgen } from "../../dumgen/dumgen-support";
 import { FAENGT_AN_ANSWERS, selectionOf } from "../support";
 import {
@@ -462,7 +462,7 @@ describe("dumgenUnitResolver", () => {
 				),
 			),
 		);
-		await harness.queue.whenIdle();
+		await run(harness.queue.whenIdle);
 		const [resolution] = outcome.resolutions;
 		if (resolution?._tag !== "Resolved") throw new Error("anfangen did not resolve");
 		expect(resolution.readingPath).toMatch(
@@ -768,18 +768,19 @@ describe("Classify without provider keys", () => {
 	});
 });
 
-describe("createKnowledgeQueue", () => {
+describe("makeKnowledgeQueue", () => {
 	it("joins a Reading's running Knowledge and interrupts it on cancel", async () => {
 		const notices: string[] = [];
 		let started = 0;
-		const queue = createKnowledgeQueue({
-			notify: (message) => notices.push(message),
-			run: () =>
-				Effect.sync(() => {
-					started++;
-				}).pipe(Effect.andThen(Effect.never)),
-			runtime: defaultRunner,
-		});
+		const { value: queue } = await inScope(
+			makeKnowledgeQueue({
+				notify: (message) => notices.push(message),
+				run: () =>
+					Effect.sync(() => {
+						started++;
+					}).pipe(Effect.andThen(Effect.never)),
+			}),
+		);
 		const reading = { emojiDescription: "🌊", lemma: see, unitKind: "Reading" } as Dumling.Reading<"de">;
 		const job = {
 			attestation: attestationOf(see, "See", ["See"], NOUN_EVIDENCE),
@@ -789,15 +790,14 @@ describe("createKnowledgeQueue", () => {
 			readingPath: SEE_READING_PATH,
 			sentence: { segments: [{ text: "See" }], target: [0] },
 		};
-		queue.enqueue(job);
-		queue.enqueue(job);
-		await new Promise((resolve) => setTimeout(resolve, 0));
+		await run(queue.enqueue(job));
+		await run(queue.enqueue(job));
 		expect(started).toBe(1);
-		expect(queue.running()).toBe(1);
-		const waiting = queue.awaitNote(SEE_READING_PATH.slice(0, -3));
-		expect(queue.cancelAll()).toBe(1);
+		expect(await run(queue.running)).toBe(1);
+		const waiting = run(queue.awaitNote(SEE_READING_PATH.slice(0, -3)));
+		expect(await run(queue.cancelAll)).toBe(1);
 		expect(await waiting).toBe(true);
-		expect(queue.running()).toBe(0);
+		expect(await run(queue.running)).toBe(0);
 		expect(notices).toEqual([]);
 	});
 });

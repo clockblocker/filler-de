@@ -108,7 +108,7 @@ export type LaunchedPlugin<L extends SupervisedLibrarian> = {
 	/** Loads the dictionary store; the unlink sweep waits for it. */
 	readonly loadStore: Effect.Effect<unknown, TaggedFailure>;
 	/** The unlink observer's sweep for links removed while the plugin was off. */
-	readonly sweep: () => void;
+	readonly sweep: Effect.Effect<void>;
 	/**
 	 * Once the Librarian's first start ended, run or failed: what needs it,
 	 * such as the overlay, built in the services' scope.
@@ -412,9 +412,9 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 								? Effect.void
 								: notices.sweepSkipped(cause),
 						onSuccess: () =>
-							Effect.sync(() => {
-								if (!stopping) plugin.sweep();
-							}),
+							Effect.suspend(() =>
+								stopping ? Effect.void : plugin.sweep,
+							),
 					}),
 					// Its fiber is detached: nothing else would tell this.
 					Effect.catchCause((cause) =>

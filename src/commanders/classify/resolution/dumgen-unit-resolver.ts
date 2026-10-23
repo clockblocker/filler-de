@@ -528,7 +528,9 @@ export function dumgenUnitResolver(
 							target: [...unit.planned.unit.segments],
 						},
 					}));
-				for (const job of jobs) deps.knowledge.enqueue(job);
+				yield* Effect.forEach(jobs, deps.knowledge.enqueue, {
+					discard: true,
+				});
 
 				let index = 0;
 				return outcomes.map((outcome, position): UnitResolution => {
@@ -564,11 +566,7 @@ export function dumgenUnitResolver(
 				const { activity } = deps;
 				return activity === undefined
 					? effect
-					: Effect.acquireUseRelease(
-							Effect.sync(() => activity.begin(plan.scrollPath)),
-							() => effect,
-							(end) => Effect.sync(end),
-						);
+					: activity.during(plan.scrollPath, effect);
 			},
 		),
 	});

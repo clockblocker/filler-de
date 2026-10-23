@@ -11,7 +11,7 @@ import { type Answer, operations } from "dumgen";
 import { Effect } from "effect";
 import { ClassifyCommander } from "../../../src/commanders/classify/classify-commander";
 import { dumgenUnitResolver } from "../../../src/commanders/classify/resolution/dumgen-unit-resolver";
-import { createKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
+import { makeKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
 import { produceKnowledge } from "../../../src/commanders/classify/resolution/produce-knowledge";
 import { memorySegmentationCache } from "../../../src/commanders/classify/segmentation-cache";
 import { FakeVault } from "../../../src/packages/composed/dictionary/tests/support/fake-vault";
@@ -26,7 +26,7 @@ import {
 	STORY,
 } from "../../obsidian-e2e/scenarios/classify-licence-groups-script";
 import { linkTo } from "../../obsidian-e2e/scenarios/dictionary-layout";
-import { defaultRunner } from "../../support/effect-runner";
+import { inScope } from "../../support/scoped";
 import { MemoryScroll } from "../../unit/classify/resolution/support";
 import { dumgenServiceOver, unreachable } from "../../unit/dumgen/dumgen-support";
 
@@ -70,15 +70,16 @@ describe("Classify gives each Licence Group its own table", () => {
 		);
 		const scroll = new MemoryScroll(SCROLL, STORY);
 		const notices: string[] = [];
-		const queue = createKnowledgeQueue({
-			notify: (message) => notices.push(message),
-			run: (job) =>
-				produceKnowledge(
-					{ dumgen: operations, store, translationLanguages: ["en", "ru"] },
-					job,
-				).pipe(dumgen.provideBackground),
-			runtime: defaultRunner,
-		});
+		const { value: queue } = await inScope(
+			makeKnowledgeQueue({
+				notify: (message) => notices.push(message),
+				run: (job) =>
+					produceKnowledge(
+						{ dumgen: operations, store, translationLanguages: ["en", "ru"] },
+						job,
+					).pipe(dumgen.provideBackground),
+			}),
+		);
 		const commander = new ClassifyCommander({
 			cache: memorySegmentationCache(),
 			dumgen: dumgen.provide,
@@ -104,7 +105,7 @@ describe("Classify gives each Licence Group its own table", () => {
 					(message) => notices.push(message),
 				),
 			);
-			await queue.whenIdle();
+			await Effect.runPromise(queue.whenIdle);
 			return commander.latestHandoff()?.resolved;
 		};
 

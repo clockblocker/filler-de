@@ -1,60 +1,64 @@
 /**
  * Background Knowledge generation (#64): one interruptible fiber per
- * Reading. Classify returns as soon as its links are written; each
- * Reading's Knowledge runs on here, and the user hears how it ended. An
- * occurrence of a Reading whose run is still going joins that run instead
- * of starting another, a click on a link to a note whose Knowledge is
- * still running waits for it and then opens the Reading note again
- * (`awaitNote`, `createReadingReopener`), and `cancelAll` or unloading the
- * plugin interrupts every run, which keeps whatever it already published.
+ * Reading, in a `FiberMap` keyed by the Reading's identity and held by the
+ * scope the queue is made in. Classify returns as soon as its links are
+ * written; each Reading's Knowledge runs on here, and the user hears how it
+ * ended. An occurrence of a Reading whose run is still going joins that run
+ * instead of starting another, a click on a link to a note whose Knowledge
+ * is still running waits for it and then opens the Reading note again
+ * (`awaitNote`, `createReadingReopener`), and `cancelAll` interrupts every
+ * run, which keeps whatever it already published. Closing the scope, as
+ * the plugin unloads, interrupts every run and tells nothing.
  */
 import { VaultPath } from "@textfresser/vault-action-manager";
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import { readingIdentityKey } from "dumling";
-import { Cause, Effect, Exit, Fiber } from "effect";
-import { logAtEdge } from "../../../runtime/edge-log";
-import type { EffectRunner } from "../../../runtime/plugin-runtime";
-import { getErrorMessage } from "../../../utils/get-error-message";
+import {
+	Cause,
+	Effect,
+	Exit,
+	FiberMap,
+	type Scope,
+	Stream,
+	SubscriptionRef,
+} from "effect";
+import { IdleTracker } from "../../../utils/idle-tracker";
 import { RETRIED_ASPECTS } from "./knowledge-request";
 import type { KnowledgeJob } from "./knowledge-types";
+import { tellUser } from "./notify";
 import type { KnowledgeOutcome } from "./produce-knowledge";
 
 export type KnowledgeQueue = {
 	/** Starts the Reading's run unless one is already going. */
-	readonly enqueue: (job: KnowledgeJob) => void;
+	readonly enqueue: (job: KnowledgeJob) => Effect.Effect<void>;
 	/**
 	 * Waits for the runs on the Reading note at `path` (`.md` optional) and
 	 * answers whether any was running.
 	 */
-	readonly awaitNote: (path: string) => Promise<boolean>;
+	readonly awaitNote: (path: string) => Effect.Effect<boolean>;
 	/**
 	 * Interrupts every run; answers how many there were. A run stops asking
 	 * dumgen at once; a publication it already started finishes first.
 	 */
-	readonly cancelAll: () => number;
-	/** Cancels every run and starts no new one: the plugin unloads. */
-	readonly close: () => void;
-	/** Resolves once no run is going. */
-	readonly whenIdle: () => Promise<void>;
-	readonly running: () => number;
+	readonly cancelAll: Effect.Effect<number>;
+	/** Ends once no run is going. */
+	readonly whenIdle: Effect.Effect<void>;
+	readonly running: Effect.Effect<number>;
 };
 
-export type KnowledgeQueueOptions = {
-	readonly run: (
-		job: KnowledgeJob,
-	) => Effect.Effect<KnowledgeOutcome, unknown>;
+export type KnowledgeQueueOptions<E> = {
+	readonly run: (job: KnowledgeJob) => Effect.Effect<KnowledgeOutcome, E>;
+	/** Shows the user a notice; until #229, Obsidian's `Notice`. */
 	readonly notify: (message: string) => void;
-	/** Runs each Reading's run on the plugin runtime. */
-	readonly runtime: EffectRunner<unknown>;
-	/** Called as a run starts and ends, so the plugin's idle tracker sees it. */
-	readonly onStart?: () => void;
-	readonly onEnd?: () => void;
 };
 
-type Running = {
-	readonly job: KnowledgeJob;
-	readonly fiber: Fiber.Fiber<KnowledgeOutcome, unknown>;
-	readonly done: Promise<void>;
+type QueueState = {
+	/** The Readings whose run is going, by `readingIdentityKey`. */
+	readonly running: ReadonlyMap<string, KnowledgeJob>;
+	/** The runs that saved everything they asked for, told together once none is going. */
+	readonly saved: readonly string[];
+	/** The queue's scope is closing: no run starts, and nothing is told. */
+	readonly closing: boolean;
 };
 
 const notePath = (path: string) => (path.endsWith(".md") ? path : `${path}.md`);
@@ -62,9 +66,9 @@ const notePath = (path: string) => (path.endsWith(".md") ? path : `${path}.md`);
 /** A run that saved everything it asked for; told together once the queue is idle. */
 const SAVED = Symbol("saved");
 
-function describeOutcome(
+function describeOutcome<E>(
 	job: KnowledgeJob,
-	exit: Exit.Exit<KnowledgeOutcome, unknown>,
+	exit: Exit.Exit<KnowledgeOutcome, E>,
 ): string | typeof SAVED | undefined {
 	if (Exit.isSuccess(exit)) {
 		const outcome = exit.value;
@@ -85,99 +89,142 @@ function describeOutcome(
 	return `⚠ Knowledge for ${job.label} failed: ${formatCause(exit.cause, { stack: false })}`;
 }
 
-export function createKnowledgeQueue(
-	options: KnowledgeQueueOptions,
-): KnowledgeQueue {
-	const runs = new Map<string, Running>();
-	const saved: string[] = [];
-	let closed = false;
-	const notify = (message: string) => {
-		try {
-			options.notify(message);
-		} catch (error) {
-			// Told from the Promise that awaits a run, outside any Effect.
-			logAtEdge(
-				"Warn",
-				"[Classify] Could not show a notice:",
-				getErrorMessage(error),
+const savedNotice = (labels: readonly string[]) =>
+	labels.length === 1
+		? `✓ Knowledge for ${labels[0]} saved`
+		: `✓ Knowledge saved for ${labels.length} Readings: ${labels.join(", ")}`;
+
+/**
+ * The queue, in the current scope. Each run forks from the fiber that
+ * enqueues it, so it is traced under the Classify that asked for it, and
+ * the plugin's idle tracker counts it until it has told how it ended.
+ */
+export const makeKnowledgeQueue = Effect.fnUntraced(function* <E>(
+	options: KnowledgeQueueOptions<E>,
+): Effect.fn.Return<KnowledgeQueue, never, Scope.Scope> {
+	const idle = yield* IdleTracker;
+	const runs = yield* FiberMap.make<string, void>();
+	const state = yield* SubscriptionRef.make<QueueState>({
+		closing: false,
+		running: new Map(),
+		saved: [],
+	});
+	// Added after the map, so it runs before the map interrupts the runs.
+	yield* Effect.addFinalizer(() =>
+		SubscriptionRef.update(state, (current) => ({
+			...current,
+			closing: true,
+		})),
+	);
+	const tell = tellUser(options.notify);
+
+	/** The run ended: told as it ended, and with the saved ones once it was the last. */
+	const ended = (
+		key: string,
+		job: KnowledgeJob,
+		exit: Exit.Exit<KnowledgeOutcome, E>,
+	) =>
+		Effect.gen(function* () {
+			const message = describeOutcome(job, exit);
+			const { closing, told } = yield* SubscriptionRef.modify(
+				state,
+				(current) => {
+					const running = new Map(current.running);
+					running.delete(key);
+					const saved =
+						message === SAVED
+							? [...current.saved, job.label]
+							: current.saved;
+					const last = running.size === 0;
+					return [
+						{ closing: current.closing, told: last ? saved : [] },
+						{
+							closing: current.closing,
+							running,
+							saved: last ? [] : saved,
+						},
+					];
+				},
 			);
-		}
-	};
+			if (closing) return;
+			if (message !== SAVED && message !== undefined)
+				yield* tell(message);
+			if (told.length > 0) yield* tell(savedNotice(told));
+		});
 
-	const enqueue = (job: KnowledgeJob) => {
-		const key = readingIdentityKey(job.reading);
-		if (closed || runs.has(key)) return;
-		options.onStart?.();
-		const { runtime } = options;
-		const fiber = runtime.runFork(
-			Effect.suspend(() => options.run(job)).pipe(
-				Effect.tapCause((cause) =>
-					Cause.hasInterruptsOnly(cause)
-						? Effect.void
-						: Effect.logWarning(
-								`[Classify] Knowledge for ${job.label} failed:`,
-								cause,
-							),
+	const enqueue = (job: KnowledgeJob) =>
+		Effect.gen(function* () {
+			const key = readingIdentityKey(job.reading);
+			const starts = yield* SubscriptionRef.modify(
+				state,
+				(current): [boolean, QueueState] =>
+					current.closing || current.running.has(key)
+						? [false, current]
+						: [
+								true,
+								{
+									...current,
+									running: new Map(current.running).set(
+										key,
+										job,
+									),
+								},
+							],
+			);
+			if (!starts) return;
+			yield* FiberMap.run(
+				runs,
+				key,
+				Effect.suspend(() => options.run(job)).pipe(
+					Effect.tapCause((cause) =>
+						Cause.hasInterruptsOnly(cause)
+							? Effect.void
+							: Effect.logWarning(
+									`[Classify] Knowledge for ${job.label} failed:`,
+									cause,
+								),
+					),
+					Effect.onExit((exit) => ended(key, job, exit)),
+					Effect.ignore,
+					idle.track,
+					Effect.withSpan("KnowledgeQueue.run", {
+						attributes: { "knowledge.reading": job.label },
+					}),
 				),
-			),
-		);
-		const done = runtime
-			.runPromiseExit(Fiber.await(fiber))
-			.then((awaited) => {
-				// Disposing the runtime interrupts the wait with the run.
-				const exit: Exit.Exit<KnowledgeOutcome, unknown> =
-					Exit.isSuccess(awaited)
-						? awaited.value
-						: Exit.failCause(awaited.cause);
-				runs.delete(key);
-				const message = describeOutcome(job, exit);
-				if (message === SAVED) saved.push(job.label);
-				else if (message) notify(message);
-				if (runs.size === 0 && saved.length > 0) {
-					const labels = saved.splice(0);
-					notify(
-						labels.length === 1
-							? `✓ Knowledge for ${labels[0]} saved`
-							: `✓ Knowledge saved for ${labels.length} Readings: ${labels.join(", ")}`,
-					);
-				}
-			})
-			.finally(() => options.onEnd?.());
-		runs.set(key, { done, fiber, job });
-	};
+			);
+		});
 
-	const cancelAll = () => {
-		const count = runs.size;
-		for (const { fiber } of runs.values()) fiber.interruptUnsafe();
-		return count;
-	};
+	/** Ends once no job `pending` keeps is running. */
+	const settled = (pending: (job: KnowledgeJob) => boolean) =>
+		Effect.gen(function* () {
+			const some = (current: QueueState) =>
+				[...current.running.values()].some(pending);
+			if (!some(yield* SubscriptionRef.get(state))) return false;
+			yield* SubscriptionRef.changes(state).pipe(
+				Stream.filter((current) => !some(current)),
+				Stream.runHead,
+			);
+			return true;
+		});
 
 	return {
-		awaitNote: async (readingPath) => {
-			const path = notePath(readingPath);
-			let waited = false;
-			for (;;) {
-				const pending = [...runs.values()].filter(({ job }) =>
-					VaultPath.caseSensitive.same(
-						notePath(job.readingPath),
-						path,
-					),
+		awaitNote: (readingPath) =>
+			Effect.suspend(() => {
+				const path = notePath(readingPath);
+				return settled(({ readingPath }) =>
+					VaultPath.caseSensitive.same(notePath(readingPath), path),
 				);
-				if (pending.length === 0) return waited;
-				waited = true;
-				await Promise.all(pending.map(({ done }) => done));
-			}
-		},
-		cancelAll,
-		close: () => {
-			closed = true;
-			cancelAll();
-		},
+			}),
+		cancelAll: Effect.gen(function* () {
+			const count = yield* FiberMap.size(runs);
+			yield* FiberMap.clear(runs);
+			return count;
+		}),
 		enqueue,
-		running: () => runs.size,
-		whenIdle: async () => {
-			while (runs.size > 0)
-				await Promise.all([...runs.values()].map(({ done }) => done));
-		},
+		running: Effect.map(
+			SubscriptionRef.get(state),
+			({ running }) => running.size,
+		),
+		whenIdle: Effect.asVoid(settled(() => true)),
 	};
-}
+});

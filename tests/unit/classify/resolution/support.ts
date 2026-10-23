@@ -20,7 +20,7 @@ import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
 import { Effect } from "effect";
 import { dumgenUnitResolver } from "../../../../src/commanders/classify/resolution/dumgen-unit-resolver";
-import { createKnowledgeQueue } from "../../../../src/commanders/classify/resolution/knowledge-queue";
+import { makeKnowledgeQueue } from "../../../../src/commanders/classify/resolution/knowledge-queue";
 import type { ResolutionStore } from "../../../../src/commanders/classify/resolution/knowledge-types";
 import { produceKnowledge } from "../../../../src/commanders/classify/resolution/produce-knowledge";
 import {
@@ -33,7 +33,7 @@ import type {
 } from "../../../../src/commanders/classify/types";
 import type { DumgenOperations } from "../../../../src/managers/dumgen";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
-import { defaultRunner } from "../../../support/effect-runner";
+import { inScope } from "../../../support/scoped";
 import { fakeDumgen } from "../../dumgen/dumgen-support";
 
 export const run = <A, E>(effect: Effect.Effect<A, E>): Promise<A> =>
@@ -275,22 +275,23 @@ export async function resolutionHarness(options: {
 	const resolverStore = options.wrapStore?.(store) ?? store;
 	const scroll = new MemoryScroll(options.scrollPath, options.content);
 	const notices: string[] = [];
-	const queue = createKnowledgeQueue({
-		notify: (message) => notices.push(message),
-		run: (job) =>
-			produceKnowledge(
-				{
-					dumgen: options.dumgen,
-					store: resolverStore,
-					translationLanguages: ["en"],
-					...(options.produceParadigm === undefined
-						? {}
-						: { produceParadigm: options.produceParadigm }),
-				},
-				job,
-			).pipe(Effect.provide(fakeDumgen())),
-		runtime: defaultRunner,
-	});
+	const { value: queue } = await inScope(
+		makeKnowledgeQueue({
+			notify: (message) => notices.push(message),
+			run: (job) =>
+				produceKnowledge(
+					{
+						dumgen: options.dumgen,
+						store: resolverStore,
+						translationLanguages: ["en"],
+						...(options.produceParadigm === undefined
+							? {}
+							: { produceParadigm: options.produceParadigm }),
+					},
+					job,
+				).pipe(Effect.provide(fakeDumgen())),
+		}),
+	);
 	const resolver = dumgenUnitResolver({
 		dumgen: options.dumgen,
 		knowledge: queue,
@@ -305,7 +306,7 @@ export async function resolutionHarness(options: {
 			const resolutions = await run(
 				resolver.resolve(plan).pipe(Effect.provide(fakeDumgen())),
 			);
-			await queue.whenIdle();
+			await run(queue.whenIdle);
 			return resolutions;
 		},
 		scroll,
