@@ -11,6 +11,7 @@ import {
 	type CodecOptions,
 	type LemmaNoteParse,
 	type LemmaRecords,
+	type NoteSerializeError,
 	parseLemmaNote,
 	parseReadingNote,
 	type ReadingNoteParse,
@@ -19,6 +20,7 @@ import {
 	serializeReadingNote,
 } from "@textfresser/lemma-note-codec";
 import type * as Dumling from "dumling/types";
+import { Result } from "effect";
 import {
 	LemmaNoteMetadata,
 	type MetadataFormat,
@@ -214,20 +216,28 @@ function withExtraFreeform<
 function writeNote<P extends { readonly document: unknown }, M>(
 	namespace: MetadataNamespace<M>,
 	read: (content: string) => DictionaryNoteRead<P>,
-	serialize: (previous: P["document"] | undefined) => {
-		readonly body: string;
-		readonly metadata: M;
-	},
+	serialize: (
+		previous: P["document"] | undefined,
+	) => Result.Result<
+		{ readonly body: string; readonly metadata: M },
+		NoteSerializeError
+	>,
 	format: MetadataFormat,
 ): MetadataTransform {
 	return (content) => {
 		const current = read(content);
 		if (current._tag === "UnreadableMetadata")
-			throw new NoteMetadataError(namespace.name, {
-				issue: current.issue,
-				kind: "UnreadableData",
+			throw new NoteMetadataError({
+				namespace: namespace.name,
+				reason: {
+					issue: current.issue,
+					kind: "UnreadableData",
+				},
 			});
-		const { body, metadata } = serialize(current.parse.document);
+		const serialized = serialize(current.parse.document);
+		// A transform refuses by throwing, which aborts `Vault.process`.
+		if (Result.isFailure(serialized)) throw serialized.failure;
+		const { body, metadata } = serialized.success;
 		const withBody = noteMetadataHelper.mapBody(() => body)(content);
 		return noteMetadataHelper.write(namespace, metadata, format)(withBody);
 	};

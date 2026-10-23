@@ -1,6 +1,7 @@
 import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
+import { Result } from "effect";
 import { type RetargetedRefLine, retargetedRefLines } from "./attestation-ref";
 import {
 	type BodySegment,
@@ -191,20 +192,26 @@ void everyAspectShows;
  * Entry and the pending relations it is the source of, rendered in the
  * user's layout, with the freeform of `options.previous` in its Note
  * section. A freeform text holding only the Note placeholder is dropped. It
- * throws `NoteSerializeError` when `records` holds no such Reading.
+ * fails with a `NoteSerializeError` for records no valid note holds, or
+ * when `records` holds no such Reading.
  */
 export function serializeReadingNote<L extends Dumling.Language>(
 	records: LemmaRecords<L>,
 	reading: Dumling.Reading<L>,
 	options: SerializeOptions<L> = {},
-): SerializedNote<ReadingNoteMetadata> {
-	checkRecords(records);
+): Result.Result<SerializedNote<ReadingNoteMetadata>, NoteSerializeError> {
+	const invalid = checkRecords(records);
+	if (invalid) return Result.fail(invalid);
 	const key = readingIdentityKey(reading);
 	const entry = records.readingEntries.find(
 		(candidate) => readingIdentityKey(candidate.reading) === key,
 	);
 	if (entry === undefined)
-		throw new NoteSerializeError("The Reading is not one of its Lemma's");
+		return Result.fail(
+			new NoteSerializeError({
+				message: "The Reading is not one of its Lemma's",
+			}),
+		);
 	const pendingRelations = records.pendingRelations.filter(
 		(record) => readingIdentityKey(record.sourceReading) === key,
 	);
@@ -420,13 +427,13 @@ export function serializeReadingNote<L extends Dumling.Language>(
 	]);
 
 	const { body, rendering } = writer.finish();
-	return {
+	return Result.succeed({
 		body,
 		metadata: readingNoteMetadataOf(
 			{ pendingRelations, readingEntry: entry },
 			rendering,
 		),
-	};
+	});
 }
 
 /** A Reading note's visible body, as {@link serializeReadingNote} writes it with no previous note. */
@@ -434,6 +441,9 @@ export function renderReadingNote<L extends Dumling.Language>(
 	records: LemmaRecords<L>,
 	reading: Dumling.Reading<L>,
 	options: RenderOptions<L> = {},
-): string {
-	return serializeReadingNote(records, reading, options).body;
+): Result.Result<string, NoteSerializeError> {
+	return Result.map(
+		serializeReadingNote(records, reading, options),
+		({ body }) => body,
+	);
 }

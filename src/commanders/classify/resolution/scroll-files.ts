@@ -11,18 +11,15 @@ import {
 	VaultActionKind,
 	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
-import { Effect, Schema } from "effect";
+import { Data, Effect } from "effect";
 import type { UnlinkObserver, UnlinkScrolls } from "./unlink-observer";
 
-export class ScrollWriteFailed extends Schema.TaggedError<ScrollWriteFailed>()(
-	"ScrollWriteFailed",
-	{
-		cause: Schema.Defect(),
-		/** Another write won the race; the transform may run again. */
-		conflict: Schema.Boolean,
-		message: Schema.String,
-	},
-) {}
+export class ScrollWriteFailed extends Data.TaggedError("ScrollWriteFailed")<{
+	readonly cause: unknown;
+	/** Another write won the race; the transform may run again. */
+	readonly conflict: boolean;
+	readonly message: string;
+}> {}
 
 export type ScrollFiles = {
 	readonly process: (

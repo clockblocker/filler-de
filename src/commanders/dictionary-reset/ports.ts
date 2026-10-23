@@ -3,16 +3,13 @@
  * report into, and the dictionary store it regenerates through. Neither
  * offers a delete.
  */
-import { type Effect, Schema } from "effect";
+import { Data, type Effect } from "effect";
 import type { OldFile, ResetSources } from "./plan";
 
-export class ResetFailed extends Schema.TaggedError<ResetFailed>()(
-	"ResetFailed",
-	{
-		cause: Schema.Defect(),
-		message: Schema.String,
-	},
-) {}
+export class ResetFailed extends Data.TaggedError("ResetFailed")<{
+	readonly cause: unknown;
+	readonly message: string;
+}> {}
 
 /** A folder's files: Markdown with its content, and the paths of the rest. */
 type FolderListing = {

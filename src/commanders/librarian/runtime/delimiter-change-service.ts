@@ -13,7 +13,7 @@ import {
 	VaultActionKind,
 	VaultPath,
 } from "@textfresser/vault-action-manager";
-import { type Cause, Effect, Exit, Predicate, Schema } from "effect";
+import { type Cause, Data, Effect, Exit, Predicate } from "effect";
 import type { SuffixDelimiterConfig } from "../../../types";
 import { causeValues } from "../../../utils/causes";
 import {
@@ -95,20 +95,17 @@ export type DelimiterMigrationExecution =
 	  };
 
 /** The plan would rename notes onto names already in use. Nothing was renamed. */
-export class DelimiterRenameConflictError extends Schema.TaggedError<DelimiterRenameConflictError>()(
+export class DelimiterRenameConflictError extends Data.TaggedError(
 	"DelimiterRenameConflictError",
-	{
-		conflicts: Schema.Array(
-			Schema.Struct({
-				from: Schema.String,
-				occupiedBy: Schema.String,
-				reason: Schema.Literals(["SharedTarget", "TargetTaken"]),
-				to: Schema.String,
-			}),
-		),
-		operation: Schema.String,
-	},
-) {
+)<{
+	readonly conflicts: readonly {
+		readonly from: string;
+		readonly occupiedBy: string;
+		readonly reason: "SharedTarget" | "TargetTaken";
+		readonly to: string;
+	}[];
+	readonly operation: string;
+}> {
 	override get message(): string {
 		const listed = this.conflicts
 			.slice(0, 5)

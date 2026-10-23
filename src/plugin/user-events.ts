@@ -16,6 +16,7 @@ import {
 import { VaultActionManager } from "@textfresser/vault-action-manager";
 import { Context, Effect, Layer, Scope } from "effect";
 import type { App } from "obsidian";
+import type { TaggedFailure } from "../lifecycle/lifecycle-errors";
 import type { LifecycleNotices } from "../lifecycle/lifecycle-notices";
 import { releaseGuarded } from "../lifecycle/lifecycle-supervisor";
 import { PluginHost, Workspace } from "../managers/obsidian/host";
@@ -29,7 +30,7 @@ export type UserEventsDeps = {
 	readonly document: Document;
 	/** Where handled events run, and the reads that decide them. */
 	readonly runtime: Pick<
-		PluginRuntime<never, unknown>,
+		PluginRuntime<never, TaggedFailure>,
 		"readSync" | "userEvent"
 	>;
 	/** Told when the layer's listeners or extension fail to be released. */

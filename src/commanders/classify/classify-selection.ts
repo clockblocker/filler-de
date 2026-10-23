@@ -25,7 +25,7 @@ import {
 	type SegmentedSentence,
 	type Unit,
 } from "dumgen";
-import { Context, Effect, Option, Schema } from "effect";
+import { Context, Data, Effect, Option } from "effect";
 import type { UserLinks } from "./resolution/scroll-links";
 import {
 	type ScrollSentence,
@@ -51,20 +51,16 @@ import { type UnitResolution, UnitResolver } from "./unit-resolver";
 /** How many Sentences on either side `language.detect` reads with the touched ones. */
 const DETECTION_CONTEXT = 3;
 
-export class ClassifyError extends Schema.TaggedError<ClassifyError>()(
-	"ClassifyError",
-	{
-		message: Schema.String,
-		reason: Schema.Literals([
-			"EmptySelection",
-			"NoSentence",
-			"NoGermanSentence",
-			"DumgenUnavailable",
-			"LanguageDetectionFailed",
-			"ResolutionFailed",
-		]),
-	},
-) {}
+export class ClassifyError extends Data.TaggedError("ClassifyError")<{
+	readonly message: string;
+	readonly reason:
+		| "EmptySelection"
+		| "NoSentence"
+		| "NoGermanSentence"
+		| "DumgenUnavailable"
+		| "LanguageDetectionFailed"
+		| "ResolutionFailed";
+}> {}
 
 /** The version that keys what dumgen segments. */
 export class ClassifySegmenter extends Context.Service<

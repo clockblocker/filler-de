@@ -21,6 +21,11 @@ export type TextSlotCodec = {
 	readonly decode: (folder: string) => string | undefined;
 };
 
+/**
+ * The slots of a German route. Invariant: the route is a Lemma's, which
+ * dumling accepted, and the slot table holds every German route
+ * (`slot-table.test.ts`), so the throw is a bug in the table.
+ */
 export function slotsOrThrow(family: string, kind: string): readonly Slot[] {
 	const slots = germanSlotsOf(family, kind);
 	if (slots === undefined)
@@ -72,6 +77,9 @@ function encodeSlot(slot: Slot, value: unknown, text: TextSlotCodec): string {
 				return value.mixed.join(SET_SEPARATOR);
 			break;
 	}
+	// Invariant: the value is a Core Feature dumling accepted, and each
+	// slot's encoding spells every value its feature takes, so the throw is
+	// a bug in the slot table.
 	throw new Error(
 		`Core Feature ${slot.feature} has a value its path slot cannot spell: ${JSON.stringify(value)}`,
 	);

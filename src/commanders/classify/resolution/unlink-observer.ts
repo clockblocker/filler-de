@@ -81,6 +81,7 @@
  * check is done.
  */
 import type {
+	DictionaryCommitError,
 	DictionaryView,
 	DumdictVaultStore,
 	Transaction,
@@ -517,7 +518,7 @@ const checkScroll = Effect.fnUntraced(function* (
 	store: UnlinkStore,
 	scrollPath: string,
 	swept: ReadonlySet<string> | undefined,
-): Effect.fn.Return<Checked, unknown> {
+): Effect.fn.Return<Checked, DictionaryCommitFailed | DictionaryCommitError> {
 	if (deps.activity.busy(scrollPath)) return { _tag: "Busy" };
 	const endedAt = deps.activity.endedAt(scrollPath);
 	const nothing: Checked = { _tag: "Done", again: false, removed: 0 };

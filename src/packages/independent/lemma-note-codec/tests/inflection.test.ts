@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import type { DerivedTable, InflectionPack } from "dumdict/inflection";
 import { readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
+import { Result } from "effect";
 import {
 	DEFAULT_PATHS,
 	defaultResolve,
@@ -140,7 +141,9 @@ describe("one table per Licence Group", () => {
 			expect(table.blockId).toBe(
 				`t-${sha256Hex(table.selectionKey).slice(0, 8)}`,
 			);
-		const body = renderLemmaNote(nounData, { inflection });
+		const body = Result.getOrThrow(
+			renderLemmaNote(nounData, { inflection }),
+		);
 		const [mother, nut] = tables;
 		if (!mother || !nut) throw new Error("two tables");
 		expect(tableBlock(body, mother.blockId)).toEqual([
@@ -165,19 +168,23 @@ describe("one table per Licence Group", () => {
 		const [mother, nut] = tablesOf(nounData);
 		const path = "Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter";
 		expect(
-			renderReadingNote(nounData, mutterParent, { inflection }),
+			Result.getOrThrow(
+				renderReadingNote(nounData, mutterParent, { inflection }),
+			),
 		).toContain(
 			`<span class="note_block_title note_block_title_flexion">Flexion</span>\n![[${path}#^${mother?.blockId}|Mutter]]`,
 		);
 		expect(
-			renderReadingNote(nounData, mutterNut, { inflection }),
+			Result.getOrThrow(
+				renderReadingNote(nounData, mutterNut, { inflection }),
+			),
 		).toContain(`![[${path}#^${nut?.blockId}|Mutter]]`);
 	});
 
 	it("melken: a Free Lemma has one table, ^t, which every Reading embeds", () => {
 		const { melken } = licenceFixtures;
 		expect(tablesOf(melken).map(({ blockId }) => blockId)).toEqual(["t"]);
-		const body = renderLemmaNote(melken, { inflection });
+		const body = Result.getOrThrow(renderLemmaNote(melken, { inflection }));
 		// One panel: its rows, without a caption.
 		expect(tableBlock(body, "t")).toEqual([
 			"🐄 💰",
@@ -186,7 +193,9 @@ describe("one table per Licence Group", () => {
 		]);
 		for (const { reading } of melken.readingEntries)
 			expect(
-				renderReadingNote(melken, reading, { inflection }),
+				Result.getOrThrow(
+					renderReadingNote(melken, reading, { inflection }),
+				),
 			).toContain("#^t|melken]]");
 	});
 
@@ -228,7 +237,9 @@ describe("one table per Licence Group", () => {
 	});
 
 	it("makes each table one Obsidian block: blank lines around it, its Block ID last", () => {
-		const body = renderLemmaNote(nounData, { inflection });
+		const body = Result.getOrThrow(
+			renderLemmaNote(nounData, { inflection }),
+		);
 		for (const { blockId } of tablesOf(nounData)) {
 			const lines = body.split("\n");
 			const end = lines.indexOf(`^${blockId}`);
@@ -256,9 +267,11 @@ describe("one table per Licence Group", () => {
 		// The ID is assigned over both groups, so it does not move.
 		expect(tables[0]?.blockId).toBe(tablesOf(nounData)[1]?.blockId);
 		const embeds = [mutterParent, mutterNut].map((reading) =>
-			renderReadingNote(nounData, reading, {
-				inflection: empty,
-			}).includes("Mutter#^t"),
+			Result.getOrThrow(
+				renderReadingNote(nounData, reading, {
+					inflection: empty,
+				}),
+			).includes("Mutter#^t"),
 		);
 		expect(embeds.filter(Boolean)).toHaveLength(1);
 	});
@@ -266,7 +279,9 @@ describe("one table per Licence Group", () => {
 
 describe("the Surfaces met so far", () => {
 	it("lists every owned Surface with its Surface Axes and its ^s- anchor", () => {
-		const body = renderLemmaNote(nounData, { inflection });
+		const body = Result.getOrThrow(
+			renderLemmaNote(nounData, { inflection }),
+		);
 		const ids = surfaceBlockIds(nounData.ownedSurfaceEntries);
 		const [surface] = nounData.ownedSurfaceEntries;
 		if (!surface) throw new Error("fixture");
@@ -277,14 +292,16 @@ describe("the Surfaces met so far", () => {
 			`s-${sha256Hex(surface.id).slice(0, 8)}`,
 		);
 		// The parse returns the same anchors, recomputed from the data.
-		const parsed = parseLemma(serializeLemmaNote(nounData, { inflection }));
+		const parsed = parseLemma(
+			Result.getOrThrow(serializeLemmaNote(nounData, { inflection })),
+		);
 		valid(parsed.data);
 		if (!parsed.data.ok) throw new Error("valid");
 		expect(parsed.data.blockIds.surfaces).toEqual(ids);
 	});
 
 	it("lists a Surface with its form alone when the hook gives no axes", () => {
-		expect(renderLemmaNote(nounData)).toMatch(
+		expect(Result.getOrThrow(renderLemmaNote(nounData))).toMatch(
 			/\n- Mütter \^s-[0-9a-f]{8}\n/u,
 		);
 	});
@@ -297,16 +314,20 @@ describe("a Lemma without tables", () => {
 			lemmaRecord: { lemma: nounData.lemmaRecord.lemma },
 		};
 		const none: InflectionHook<"de"> = () => undefined;
-		expect(renderLemmaNote(foreignish, { inflection: none })).not.toContain(
-			"Flexion",
-		);
 		expect(
-			renderReadingNote(
-				foreignish,
-				mutterParent as Dumling.Reading<"de">,
-				{
-					inflection: none,
-				},
+			Result.getOrThrow(
+				renderLemmaNote(foreignish, { inflection: none }),
+			),
+		).not.toContain("Flexion");
+		expect(
+			Result.getOrThrow(
+				renderReadingNote(
+					foreignish,
+					mutterParent as Dumling.Reading<"de">,
+					{
+						inflection: none,
+					},
+				),
 			),
 		).not.toContain("Flexion");
 	});
@@ -314,7 +335,9 @@ describe("a Lemma without tables", () => {
 
 describe("table versions (#121)", () => {
 	it("a Lemma note records the pack's version and its Table Schema's id and version", () => {
-		const { metadata } = serializeLemmaNote(nounData, { inflection });
+		const { metadata } = Result.getOrThrow(
+			serializeLemmaNote(nounData, { inflection }),
+		);
 		expect(metadata.tables).toEqual({
 			pack: "toy-1",
 			schema: { id: "toy/NOUN", version: 1 },
@@ -337,9 +360,13 @@ describe("table versions (#121)", () => {
 	it("a hook that names no versions records none", () => {
 		const bare: InflectionHook<"de"> = (input) => inflection(input);
 		expect(
-			serializeLemmaNote(nounData, { inflection: bare }).metadata.tables,
+			Result.getOrThrow(
+				serializeLemmaNote(nounData, { inflection: bare }),
+			).metadata.tables,
 		).toBeUndefined();
-		expect(serializeLemmaNote(nounData).metadata.tables).toBeUndefined();
+		expect(
+			Result.getOrThrow(serializeLemmaNote(nounData)).metadata.tables,
+		).toBeUndefined();
 	});
 
 	it("a version bump changes the recorded versions, never a table's Block ID", () => {
@@ -348,10 +375,12 @@ describe("table versions (#121)", () => {
 		expect(
 			tablesOf(nounData, bumped).map(({ blockId }) => blockId),
 		).toEqual(before);
-		const was = serializeLemmaNote(nounData, { inflection }).metadata
-			.tables;
-		const is = serializeLemmaNote(nounData, { inflection: bumped }).metadata
-			.tables;
+		const was = Result.getOrThrow(
+			serializeLemmaNote(nounData, { inflection }),
+		).metadata.tables;
+		const is = Result.getOrThrow(
+			serializeLemmaNote(nounData, { inflection: bumped }),
+		).metadata.tables;
 		expect(sameTableVersions(was, is)).toBe(false);
 		expect(sameTableVersions(is, { ...is, pack: "toy-2" })).toBe(true);
 		expect(sameTableVersions(undefined, undefined)).toBe(true);

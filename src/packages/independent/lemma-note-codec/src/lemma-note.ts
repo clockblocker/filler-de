@@ -1,4 +1,5 @@
 import type * as Dumling from "dumling/types";
+import { Result } from "effect";
 import { surfaceBlockIds, withoutBlockIds } from "./block-ids";
 import {
 	type BodySegment,
@@ -22,6 +23,7 @@ import {
 import { articleOf, emojiOf, sectionTitle } from "./render/common";
 import {
 	checkRecords,
+	type NoteSerializeError,
 	type RenderOptions,
 	renderingOf,
 	type SerializedNote,
@@ -125,14 +127,15 @@ export function parseLemmaNote<L extends Dumling.Language>(
  * its Reading notes, its tables and its Surface lines, then the freeform of
  * `options.previous`, kept byte for byte but for the codec-owned Block IDs
  * an edited rendering still carries. Its metadata records the versions
- * `options.inflection` renders the tables at. It throws
+ * `options.inflection` renders the tables at. It fails with a
  * `NoteSerializeError` for records no valid note holds.
  */
 export function serializeLemmaNote<L extends Dumling.Language>(
 	records: LemmaRecords<L>,
 	options: SerializeOptions<L> = {},
-): SerializedNote<LemmaNoteMetadata> {
-	checkRecords(records);
+): Result.Result<SerializedNote<LemmaNoteMetadata>, NoteSerializeError> {
+	const invalid = checkRecords(records);
+	if (invalid) return Result.fail(invalid);
 	const { link, titles } = renderingOf(options);
 	const { lemma } = records.lemmaRecord;
 	const writer = new BodyWriter();
@@ -206,7 +209,7 @@ export function serializeLemmaNote<L extends Dumling.Language>(
 	if (freeform.length > 0) writer.gap(1).text(freeform.join("\n\n"));
 
 	const { body, rendering } = writer.finish();
-	return {
+	return Result.succeed({
 		body,
 		metadata: lemmaNoteMetadataOf(
 			{
@@ -216,13 +219,13 @@ export function serializeLemmaNote<L extends Dumling.Language>(
 			rendering,
 			tableVersionsOf(options.inflection, lemma),
 		),
-	};
+	});
 }
 
 /** A Lemma note's visible body, as {@link serializeLemmaNote} writes it with no previous note. */
 export function renderLemmaNote<L extends Dumling.Language>(
 	records: LemmaRecords<L>,
 	options: RenderOptions<L> = {},
-): string {
-	return serializeLemmaNote(records, options).body;
+): Result.Result<string, NoteSerializeError> {
+	return Result.map(serializeLemmaNote(records, options), ({ body }) => body);
 }

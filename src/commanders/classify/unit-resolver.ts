@@ -10,7 +10,7 @@
  * receiving it, rather than a second implementation.
  */
 import type { Jev, Luna } from "dumgen";
-import { Context, Effect, Schema } from "effect";
+import { Context, Data, Effect } from "effect";
 import type { ClassifyPlan, UnitRef } from "./types";
 
 /** What resolution made of one `UnitRef`. */
@@ -31,13 +31,10 @@ export type UnitResolution =
 			readonly reason: string;
 	  };
 
-export class UnitResolverError extends Schema.TaggedError<UnitResolverError>()(
-	"UnitResolverError",
-	{
-		cause: Schema.Defect(),
-		message: Schema.String,
-	},
-) {}
+export class UnitResolverError extends Data.TaggedError("UnitResolverError")<{
+	readonly cause: unknown;
+	readonly message: string;
+}> {}
 
 export class UnitResolver extends Context.Service<
 	UnitResolver,

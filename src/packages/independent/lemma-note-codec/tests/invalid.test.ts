@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type * as Dumling from "dumling/types";
+import { Result } from "effect";
 import {
 	type LemmaNoteMetadata,
 	notePathsOf,
@@ -12,8 +13,8 @@ import {
 import { mutter, mutterParent, nounData } from "./fixtures";
 import { issueTags } from "./helpers";
 
-const lemma = serializeLemmaNote(nounData);
-const reading = serializeReadingNote(nounData, mutterParent);
+const lemma = Result.getOrThrow(serializeLemmaNote(nounData));
+const reading = Result.getOrThrow(serializeReadingNote(nounData, mutterParent));
 
 const parseLemma = (metadata: unknown, body = lemma.body) =>
 	parseLemmaNote(

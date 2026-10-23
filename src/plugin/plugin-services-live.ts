@@ -33,6 +33,7 @@ import {
 	DictionaryStore,
 	makeDictionaryStoreService,
 } from "../lifecycle/dictionary-store-service";
+import type { TaggedFailure } from "../lifecycle/lifecycle-errors";
 import type { LifecycleNotices } from "../lifecycle/lifecycle-notices";
 import { Lifecycle, releaseGuarded } from "../lifecycle/lifecycle-supervisor";
 import { Dumgen } from "../managers/dumgen";
@@ -66,7 +67,7 @@ import { TextfresserLive } from "./textfresser-live";
 export type PluginServicesDeps = {
 	readonly plugin: Plugin;
 	readonly runtime: Pick<
-		PluginRuntime<PluginServices, unknown>,
+		PluginRuntime<PluginServices, TaggedFailure>,
 		"readSync" | "userEvent"
 	>;
 	readonly notices: LifecycleNotices;

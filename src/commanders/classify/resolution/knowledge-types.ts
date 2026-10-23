@@ -4,7 +4,7 @@
 import type { DumdictVaultStore } from "@textfresser/dictionary";
 import type * as Dumling from "dumling/types";
 import type * as Dumrel from "dumrel/types";
-import { Schema } from "effect";
+import { Data } from "effect";
 
 /** Whether the occurrence created the Reading (`New`) or reused a stored one (`TopUp`). */
 export type KnowledgeOrigin = "New" | "TopUp";
@@ -48,10 +48,9 @@ export type KnowledgeJob = {
 };
 
 /** A dictionary read or commit failed, or kept conflicting past its retries. */
-export class DictionaryCommitFailed extends Schema.TaggedError<DictionaryCommitFailed>()(
+export class DictionaryCommitFailed extends Data.TaggedError(
 	"DictionaryCommitFailed",
-	{
-		cause: Schema.Defect(),
-		message: Schema.String,
-	},
-) {}
+)<{
+	readonly cause: unknown;
+	readonly message: string;
+}> {}

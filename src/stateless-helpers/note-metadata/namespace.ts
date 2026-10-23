@@ -4,7 +4,7 @@
  * through a namespace, and never touches another namespace's keys.
  */
 
-import { Predicate } from "effect";
+import { Data, Predicate } from "effect";
 import type { z } from "zod";
 import { editDocument, type MetadataDocument } from "./internal/document";
 
@@ -104,13 +104,12 @@ export type NoteMetadataErrorReason =
  * update finds data it cannot decode (such as a newer `schemaVersion`).
  * Inside `Vault.process` the throw aborts the write.
  */
-export class NoteMetadataError extends Error {
-	override readonly name = "NoteMetadataError";
-	constructor(
-		readonly namespace: string,
-		readonly reason: NoteMetadataErrorReason,
-	) {
-		super(`[note-metadata:${namespace}] ${describeReason(reason)}`);
+export class NoteMetadataError extends Data.TaggedError("NoteMetadataError")<{
+	readonly namespace: string;
+	readonly reason: NoteMetadataErrorReason;
+}> {
+	override get message(): string {
+		return `[note-metadata:${this.namespace}] ${describeReason(this.reason)}`;
 	}
 }
 
@@ -257,9 +256,12 @@ export function defineNestedNamespace<T extends Record<string, unknown>>(
 	): MetadataDocument => {
 		const parsed = schema.safeParse(value);
 		if (!parsed.success) {
-			throw new NoteMetadataError(name, {
-				kind: "InvalidValue",
-				message: parsed.error.message,
+			throw new NoteMetadataError({
+				namespace: name,
+				reason: {
+					kind: "InvalidValue",
+					message: parsed.error.message,
+				},
 			});
 		}
 		const { [SCHEMA_VERSION_KEY]: _ignored, ...data } = parsed.data;

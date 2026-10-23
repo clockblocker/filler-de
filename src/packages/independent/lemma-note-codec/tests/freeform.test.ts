@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { Result } from "effect";
 import {
 	NOTE_PLACEHOLDER,
 	type SerializedNote,
@@ -29,12 +30,14 @@ const edit = <M>(
 	change: (body: string) => string,
 ): SerializedNote<M> => ({ ...note, body: change(note.body) });
 
-const nutNote = serializeReadingNote(nounData, nut);
+const nutNote = Result.getOrThrow(serializeReadingNote(nounData, nut));
 
 /** parse, then serialize again over what was parsed. */
 function rewrite(note: SerializedNote<unknown>) {
 	const parsed = parseReading(note);
-	return serializeReadingNote(nounData, nut, { previous: parsed.document });
+	return Result.getOrThrow(
+		serializeReadingNote(nounData, nut, { previous: parsed.document }),
+	);
 }
 
 describe("freeform in a Reading note", () => {
@@ -115,22 +118,28 @@ describe("freeform in a Reading note", () => {
 	});
 
 	it("puts freeform after the notes, and shows no placeholder beside notes", () => {
-		const note = serializeReadingNote(nounData, parent);
+		const note = Result.getOrThrow(serializeReadingNote(nounData, parent));
 		expect(note.body).not.toContain(NOTE_PLACEHOLDER);
 		const typed = edit(note, (body) =>
 			body.replace(`\n\n\n${SYNONYME}`, `\nmine\n\n\n${SYNONYME}`),
 		);
-		const again = serializeReadingNote(nounData, parent, {
-			previous: parseReading(typed).document,
-		});
+		const again = Result.getOrThrow(
+			serializeReadingNote(nounData, parent, {
+				previous: parseReading(typed).document,
+			}),
+		);
 		expect(again.body).toContain(`inside.\nmine\n\n\n${SYNONYME}`);
 	});
 });
 
 describe("freeform in a Lemma note", () => {
-	const lemmaNote = serializeLemmaNote(nounData);
+	const lemmaNote = Result.getOrThrow(serializeLemmaNote(nounData));
 	const lemmaRewrite = (note: SerializedNote<unknown>) =>
-		serializeLemmaNote(nounData, { previous: parseLemma(note).document });
+		Result.getOrThrow(
+			serializeLemmaNote(nounData, {
+				previous: parseLemma(note).document,
+			}),
+		);
 
 	it("stands last, byte for byte, wherever it was typed", () => {
 		const typed = edit(lemmaNote, (body) =>

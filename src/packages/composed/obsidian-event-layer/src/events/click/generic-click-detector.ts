@@ -11,8 +11,8 @@
  * A subscriber that throws, such as a handler's `doesApply`, is logged at
  * its kind's edge; the subscribers after it still run.
  */
-import { type Cause, Effect, Exit, MutableRef, Ref } from "effect";
-import type { UserEventFailure, UserEventKind } from "../../contracts";
+import { Effect, Exit, MutableRef, Ref } from "effect";
+import type { UserEventKind } from "../../contracts";
 import type { EventDispatch } from "../../internal/dispatch";
 
 export type ClickSubscriber = {
@@ -56,9 +56,7 @@ export const listenForClicks = Effect.fnUntraced(function* (
 					host.fork(
 						kind,
 						// A throw: a defect, logged whole at the edge.
-						Effect.failCause(
-							ran.cause as Cause.Cause<UserEventFailure>,
-						),
+						Effect.failCause(ran.cause),
 						{ traced: true },
 					);
 			}

@@ -11,10 +11,18 @@ const MAX_VALUE_LENGTH = 500;
 const MAX_FIELDS = 20;
 
 /**
- * Fields that hold a note's text, such as an action's `content`: shown as
- * their length, so a trace copied for sharing carries no note content.
+ * Fields that hold a note's text, such as an action's `content` or the
+ * `expected` content a guarded write or `ContentPreconditionFailed` names:
+ * shown as their length, so a trace copied for sharing carries no note
+ * content. An `expected` hash, `{ hash }`, is not text and shows as it is.
  */
-const CONTENT_FIELDS = new Set(["body", "content", "markdown", "text"]);
+const CONTENT_FIELDS = new Set([
+	"body",
+	"content",
+	"expected",
+	"markdown",
+	"text",
+]);
 
 const contentLength = (value: string) => `<${value.length} chars>`;
 
