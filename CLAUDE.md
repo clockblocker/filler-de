@@ -30,6 +30,10 @@ Before writing Effect code, read `node_modules/effect/AGENTS.md` completely and
 follow its required references. Search `node_modules/effect/src` for APIs not
 covered there.
 
+No Effect `Schema`, although that guide uses it: errors are
+`Data.TaggedError`s, and validation is Zod. `bun run lint:ox` bans `Schema`
+imports from `effect`.
+
 # Obsidian E2E
 
 Use only `tests/obsidian-e2e` and the official `obsidian-cli` executable. The

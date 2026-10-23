@@ -20,7 +20,8 @@
  * before the first entry, lines after a section once two or more blank
  * lines have ended it, and non-embed lines in a Kontexte section.
  */
-import { Option, Schema } from "effect";
+import { Option, Predicate } from "effect";
+import { z } from "zod";
 import { dictionaryNoteKind } from "./layout";
 
 /** The metadata shape of one old entry. */
@@ -111,34 +112,49 @@ const BLOCK_EMBED = /!\[\[([^\]|#\n]+)#\^([A-Za-z0-9-]+)(?:\|[^\]\n]*)?\]\]/gu;
 const WIKILINK = /(?<!!)\[\[([^\]|#\n]+)(?:#[^\]|\n]*)?(?:\|[^\]\n]*)?\]\]/gu;
 const isBlank = (line: string) => line.trim() === "";
 
-const EmojiDescription = Schema.optionalKey(Schema.Array(Schema.String));
+const EmojiDescription = z.array(z.string()).optional();
 
 /** Whether a token holds an emoji: a pictograph or a flag's letter. */
 const EMOJI = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u;
 
-const LexicalMetaEntry = Schema.Struct({
-	lexicalMeta: Schema.Struct({
+const LexicalMetaEntry = z.object({
+	lexicalMeta: z.object({
 		emojiDescription: EmojiDescription,
-		metaTag: Schema.String,
+		metaTag: z.string(),
 	}),
 });
 
-const EntityEntry = Schema.Struct({
-	entity: Schema.Struct({
+const EntityEntry = z.object({
+	entity: z.object({
 		emojiDescription: EmojiDescription,
-		lemma: Schema.String,
+		lemma: z.string(),
 	}),
 });
 
-const OldMeta = Schema.fromJsonString(
-	Schema.Struct({
-		entries: Schema.Record(Schema.String, Schema.Unknown),
-	}),
+const OldMeta = z.object({
+	/**
+	 * Any JSON object, every key kept: `z.record` would drop an own
+	 * `__proto__` key that `JSON.parse` makes.
+	 */
+	entries: z.custom<Readonly<Record<string, unknown>>>(Predicate.isObject),
+});
+
+/** `input` decoded by `schema`, or none. */
+const decodeWith =
+	<T>(schema: z.ZodType<T>) =>
+	(input: unknown): Option.Option<T> => {
+		const parsed = schema.safeParse(input);
+		return parsed.success ? Option.some(parsed.data) : Option.none();
+	};
+
+const parseJson = Option.liftThrowable((json: string): unknown =>
+	JSON.parse(json),
 );
 
-const decodeMeta = Schema.decodeUnknownOption(OldMeta);
-const decodeLexicalMeta = Schema.decodeUnknownOption(LexicalMetaEntry);
-const decodeEntity = Schema.decodeUnknownOption(EntityEntry);
+const decodeMeta = (json: string) =>
+	Option.flatMap(parseJson(json), decodeWith(OldMeta));
+const decodeLexicalMeta = decodeWith(LexicalMetaEntry);
+const decodeEntity = decodeWith(EntityEntry);
 
 type MetaRead = {
 	readonly shapes: OldMetaShape[];

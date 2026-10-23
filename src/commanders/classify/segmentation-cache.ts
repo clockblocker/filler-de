@@ -18,7 +18,8 @@
  */
 import type { HiddenFolder } from "@textfresser/vault-action-manager";
 import type { Route, SegmentedSentence, Unit } from "dumgen";
-import { Cause, Context, Effect, Option, Schema } from "effect";
+import { Cause, Context, Effect, Option } from "effect";
+import { z } from "zod";
 
 /** The plugin's hidden folder at the vault root. */
 export const HIDDEN_FOLDER = ".textfresser";
@@ -42,54 +43,64 @@ export type CacheFiles = Pick<
 	"exists" | "mkdir" | "read" | "write"
 >;
 
-const RouteSchema = Schema.Struct({
-	family: Schema.String,
-	kind: Schema.String,
-	language: Schema.Literal("de"),
+const RouteSchema = z.object({
+	family: z.string(),
+	kind: z.string(),
+	language: z.literal("de"),
 });
 
-const SegmentedSentenceSchema = Schema.Struct({
-	segments: Schema.Array(
-		Schema.Struct({
-			kind: Schema.Literals([
+const SegmentedSentenceSchema = z.object({
+	segments: z.array(
+		z.object({
+			kind: z.enum([
 				"ResolvableText",
 				"OpaqueText",
 				"Whitespace",
 				"Punctuation",
 			]),
-			surface: Schema.optionalKey(Schema.String),
-			text: Schema.String,
+			surface: z.string().optional(),
+			text: z.string(),
 		}),
 	),
-	text: Schema.String,
-	units: Schema.Array(
-		Schema.Struct({
-			identity: Schema.optionalKey(
-				Schema.Struct({
-					canonicalForm: Schema.String,
-					kind: Schema.Literals(["DET", "PRON"]),
-					poss: Schema.optionalKey(Schema.Literal("Yes")),
-					pronType: Schema.NullOr(Schema.String),
-				}),
-			),
-			route: Schema.Union([Schema.Literal("Unresolved"), RouteSchema]),
-			segments: Schema.Array(Schema.Int),
-			variants: Schema.optionalKey(Schema.Array(RouteSchema)),
+	text: z.string(),
+	units: z.array(
+		z.object({
+			identity: z
+				.object({
+					canonicalForm: z.string(),
+					kind: z.enum(["DET", "PRON"]),
+					poss: z.literal("Yes").optional(),
+					pronType: z.string().nullable(),
+				})
+				.optional(),
+			route: z.union([z.literal("Unresolved"), RouteSchema]),
+			segments: z.array(z.int()),
+			variants: z.array(RouteSchema).optional(),
 		}),
 	),
 });
 
-const CacheEntrySchema = Schema.fromJsonString(
-	Schema.Struct({
-		format: Schema.Literal(1),
-		key: Schema.String,
-		sentence: SegmentedSentenceSchema,
-	}),
+const CacheEntrySchema = z.object({
+	format: z.literal(1),
+	key: z.string(),
+	sentence: SegmentedSentenceSchema,
+});
+
+const parseJson = Option.liftThrowable((raw: string): unknown =>
+	JSON.parse(raw),
 );
 
-const decodeEntry = Schema.decodeUnknownOption(CacheEntrySchema);
+/** An entry's JSON, decoded; none when it is not JSON or not an entry. */
+function decodeEntry(raw: string): Option.Option<CacheEntry> {
+	return Option.flatMap(parseJson(raw), (json) => {
+		const parsed = CacheEntrySchema.safeParse(json);
+		return parsed.success ? Option.some(parsed.data) : Option.none();
+	});
+}
 
-type DecodedSentence = (typeof SegmentedSentenceSchema)["Type"];
+type CacheEntry = z.infer<typeof CacheEntrySchema>;
+
+type DecodedSentence = CacheEntry["sentence"];
 
 /**
  * A decoded entry as dumgen's types, once its Segments give its text back
@@ -129,7 +140,7 @@ function segmentedSentenceOf(
 	};
 }
 
-function asRoute(route: (typeof RouteSchema)["Type"]): Route {
+function asRoute(route: z.infer<typeof RouteSchema>): Route {
 	// Written by this cache from a dumgen Route under the same segmenter version.
 	return { ...route } as Route;
 }

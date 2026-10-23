@@ -106,6 +106,31 @@ describe("filesSegmentationCache", () => {
 		);
 	});
 
+	it("reads an entry as dumgen's order wrote it, and writes such an entry byte for byte", async () => {
+		// Every optional field, in the key order dumgen's units have: a
+		// Surface, a possessive identity with no pronoun type, variants, and
+		// an Unresolved unit.
+		const key = sentenceKey("v", "de", "Unsere Bank");
+		const stored = `{"format":1,"key":"${key}","sentence":{"segments":[{"kind":"ResolvableText","text":"Unsere","surface":"unser"},{"kind":"Whitespace","text":" "},{"kind":"OpaqueText","text":"Bank"}],"text":"Unsere Bank","units":[{"identity":{"kind":"DET","canonicalForm":"unser","pronType":null,"poss":"Yes"},"route":{"family":"Lexeme","kind":"DET","language":"de"},"segments":[0]},{"route":"Unresolved","segments":[2],"variants":[{"family":"Lexeme","kind":"NOUN","language":"de"},{"family":"Lexeme","kind":"PROPN","language":"de"}]}]}}`;
+		const { cacheFiles, files } = memoryFiles();
+		const cache = filesSegmentationCache(cacheFiles);
+		const path = `${HIDDEN_FOLDER}/${cacheEntryPath(key)}`;
+		files.set(path, stored);
+
+		const read = Option.getOrThrow(await Effect.runPromise(cache.get(key)));
+		expect(read).toEqual(JSON.parse(stored).sentence);
+		// Decoded in the schema's key order, as Effect Schema decoded it.
+		expect(Object.keys(read.segments[0] ?? {})).toEqual([
+			"kind",
+			"surface",
+			"text",
+		]);
+
+		files.clear();
+		await Effect.runPromise(cache.put(key, JSON.parse(stored).sentence));
+		expect(files.get(path)).toBe(stored);
+	});
+
 	it("never stores a failed segmentation", async () => {
 		const { cacheFiles, files } = memoryFiles();
 		await Effect.runPromise(
