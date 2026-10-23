@@ -1,9 +1,9 @@
 import { Clock, Effect, Option, Result } from "effect";
-import { type TAbstractFile, TFile, TFolder, type Vault } from "obsidian";
+import { type TAbstractFile, TFile, TFolder } from "obsidian";
 import { VamScanError, VamVaultIoError } from "../effect/errors";
-import type { VamLiveServices } from "../effect/ports";
+import type { VamLiveServices, VaultTree } from "../effect/ports";
 import { VaultIo } from "../effect/ports";
-import type { VamRuntimeFailure } from "../effect/runtime";
+import type { VamProvide } from "../effect/services";
 import type { TFileHelper } from "../file-services/background/helpers/tfile-helper";
 import type { TFolderHelper } from "../file-services/background/helpers/tfolder-helper";
 import type { MarkdownFileAccess } from "../file-services/markdown-file-access";
@@ -32,13 +32,6 @@ type ListedChild = {
 	readonly splitPath: AnySplitPath;
 };
 
-/** Obsidian's in-memory file tree, which a snapshot reads synchronously. */
-export type VaultTree = Pick<Vault, "getAbstractFileByPath" | "getRoot">;
-
-type ProvideRead = <A, E>(
-	effect: Effect.Effect<A, E, VamLiveServices>,
-) => Effect.Effect<A, VamRuntimeFailure<E>>;
-
 function readerFailure(
 	operation: string,
 	path: string,
@@ -60,7 +53,7 @@ export class VaultReader {
 		private readonly markdownFiles: MarkdownFileAccess,
 		private readonly tfileHelper: TFileHelper,
 		private readonly tfolderHelper: TFolderHelper,
-		private readonly provideRead: ProvideRead,
+		private readonly provideRead: VamProvide,
 		private readonly tree: VaultTree,
 	) {}
 

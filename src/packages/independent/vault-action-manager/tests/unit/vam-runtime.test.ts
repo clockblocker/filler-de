@@ -7,8 +7,8 @@ import {
 	VamVaultIoError,
 } from "../../src/effect/errors";
 import { ActiveEditorAccess, VaultIo } from "../../src/effect/ports";
-import { createVamRuntime } from "../../src/effect/runtime";
 import { makeVamLive } from "../../src/effect/vam-live";
+import { createVamRuntime } from "./helpers/vam-runtime";
 
 function makeApp(
 	overrides: {

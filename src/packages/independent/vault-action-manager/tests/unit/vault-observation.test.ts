@@ -3,6 +3,7 @@ import { Effect, Fiber } from "effect";
 import { TestClock } from "effect/testing";
 import type { App, TAbstractFile } from "obsidian";
 import { TFile, TFolder } from "obsidian";
+import { makeVaultListen } from "../../src/effect/vam-live";
 import { makeKeyForEvent } from "../../src/impl/event-processing/bulk-event-emmiter/batteries/processing-chain/helpers/make-key-for-event";
 import type { BulkVaultEvent } from "../../src/impl/event-processing/bulk-event-emmiter/types/bulk/bulk-vault-event";
 import type { SelfEventTracker } from "../../src/impl/event-processing/self-event-tracker";
@@ -52,7 +53,7 @@ function makeHarness(shouldIgnore: (path: string) => boolean) {
 			}),
 	} as unknown as SelfEventTracker;
 	const native = Effect.runSync(
-		VaultObservation.makeEffect(app, selfEvents, {
+		VaultObservation.makeEffect(makeVaultListen(app.vault), selfEvents, {
 			maxWindowMs: 100,
 			quietWindowMs: 10,
 		}),
@@ -150,7 +151,7 @@ describe("VaultObservation", () => {
 		await Effect.runPromise(
 			Effect.gen(function* () {
 				const observation = yield* VaultObservation.makeEffect(
-					app,
+					makeVaultListen(app.vault),
 					selfEvents,
 				);
 				yield* observation.startEffect();
@@ -510,7 +511,7 @@ describe("VaultObservation", () => {
 		await Effect.runPromise(
 			Effect.gen(function* () {
 				const observation = yield* VaultObservation.makeEffect(
-					app,
+					makeVaultListen(app.vault),
 					selfEvents,
 					{
 						maxWindowMs: 500,
@@ -547,7 +548,7 @@ describe("VaultObservation", () => {
 		await Effect.runPromise(
 			Effect.gen(function* () {
 				const observation = yield* VaultObservation.makeEffect(
-					app,
+					makeVaultListen(app.vault),
 					selfEvents,
 					{
 						maxWindowMs: 250,
@@ -592,7 +593,7 @@ describe("VaultObservation", () => {
 		await Effect.runPromise(
 			Effect.gen(function* () {
 				const observation = yield* VaultObservation.makeEffect(
-					app,
+					makeVaultListen(app.vault),
 					selfEvents,
 				);
 				yield* observation.startEffect();
@@ -633,7 +634,7 @@ describe("VaultObservation", () => {
 		await Effect.runPromise(
 			Effect.gen(function* () {
 				const observation = yield* VaultObservation.makeEffect(
-					app,
+					makeVaultListen(app.vault),
 					selfEvents,
 				);
 				yield* observation.startEffect();
@@ -668,7 +669,7 @@ describe("VaultObservation", () => {
 		await Effect.runPromise(
 			Effect.gen(function* () {
 				const observation = yield* VaultObservation.makeEffect(
-					app,
+					makeVaultListen(app.vault),
 					selfEvents,
 				);
 				yield* observation.startEffect();
@@ -722,7 +723,7 @@ describe("VaultObservation", () => {
 		await Effect.runPromise(
 			Effect.gen(function* () {
 				const observation = yield* VaultObservation.makeEffect(
-					app,
+					makeVaultListen(app.vault),
 					selfEvents,
 				);
 				yield* observation.startEffect();

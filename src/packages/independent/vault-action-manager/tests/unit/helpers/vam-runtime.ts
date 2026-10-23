@@ -1,9 +1,16 @@
 import { Effect, Exit, type Layer, ManagedRuntime } from "effect";
-import { type VamSetupError, VamShutdownError } from "./errors";
-import type { VamLiveServices } from "./ports";
+import {
+	type VamSetupError,
+	VamShutdownError,
+} from "../../../src/effect/errors";
+import type { VamLiveServices, VaultIo } from "../../../src/effect/ports";
+import type { VamRuntimeFailure } from "../../../src/effect/services";
+import type { DispatchBatchCoordinator } from "../../../src/impl/actions-processing/dispatch-batch";
 
-export type VamRuntimeFailure<E> = E | VamSetupError | VamShutdownError;
-
+/**
+ * A ManagedRuntime over VAM's ports alone, for tests of the parts the
+ * Vault Action Manager's Layer composes: the dispatch worker, the ports.
+ */
 export class VamRuntime {
 	private disposePromise: Promise<void> | null = null;
 	private disposed = false;
@@ -75,3 +82,24 @@ export function createVamRuntime(
 ): VamRuntime {
 	return new VamRuntime(ManagedRuntime.make(live));
 }
+
+/** Starts the coordinator's worker on `runtime`, as the Layer forks it. */
+export function startCoordinator<C extends DispatchBatchCoordinator>(
+	runtime: VamRuntime,
+	coordinator: C,
+): C {
+	void runtime.runPromiseExit(coordinator.run);
+	return coordinator;
+}
+
+/** The `VaultIo` members a test of dispatch or file access never reaches. */
+export const unusedVaultIoMembers = {
+	fileSystem: { caseInsensitive: false },
+	listen: () => Effect.die("not used"),
+	tree: {
+		getAbstractFileByPath: () => null,
+		getRoot: () => {
+			throw new Error("not used");
+		},
+	},
+} satisfies Pick<VaultIo["Service"], "fileSystem" | "listen" | "tree">;

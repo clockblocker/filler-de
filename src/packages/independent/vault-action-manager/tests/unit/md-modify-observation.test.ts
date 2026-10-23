@@ -3,6 +3,7 @@ import { Effect } from "effect";
 import { TestClock } from "effect/testing";
 import type { App, TAbstractFile } from "obsidian";
 import { TFile, TFolder } from "obsidian";
+import { makeVaultListen } from "../../src/effect/vam-live";
 import {
 	type BulkMdModifyEvent,
 	scopeMdModifyEvent,
@@ -79,7 +80,7 @@ function makeObservation(
 	return Effect.gen(function* () {
 		const selfEvents = yield* SelfEventTracker.makeEffect();
 		const observation = yield* VaultObservation.makeMdModifyEffect(
-			app,
+			makeVaultListen(app.vault),
 			selfEvents,
 			{ maxWindowMs: 100, quietWindowMs: 10, ...options },
 		);
@@ -105,7 +106,7 @@ describe("Markdown modify observation", () => {
 			Effect.gen(function* () {
 				const selfEvents = yield* SelfEventTracker.makeEffect();
 				const observation = yield* VaultObservation.makeMdModifyEffect(
-					vault.app,
+					makeVaultListen(vault.app.vault),
 					selfEvents,
 				);
 				const first = yield* observation.subscribeEffect(
@@ -227,7 +228,7 @@ describe("Markdown modify observation", () => {
 				// A VAM write whose callback fired while nobody listened.
 				yield* selfEvents.expectModifyEffect("Worter/Hund.md");
 				const observation = yield* VaultObservation.makeMdModifyEffect(
-					vault.app,
+					makeVaultListen(vault.app.vault),
 					selfEvents,
 					{ maxWindowMs: 100, quietWindowMs: 10 },
 				);

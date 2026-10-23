@@ -1,4 +1,5 @@
-import { Predicate, Schema } from "effect";
+import { Cause, Predicate, Schema } from "effect";
+import { formatCause } from "../diagnostics/format-cause";
 import { displayPath } from "../errors";
 import { getErrorMessage } from "../internal/get-error-message";
 import { splitPathCodec } from "../split-path-codec";
@@ -44,6 +45,10 @@ function describeFailure(
 		: `${operation}${where}`;
 }
 
+/**
+ * Building the Vault Action Manager failed. `cause` is what the failed
+ * step threw, or the build's whole `Cause` when it failed some other way.
+ */
 export class VamSetupError extends Schema.TaggedError<VamSetupError>()(
 	"VamSetupError",
 	{
@@ -52,7 +57,13 @@ export class VamSetupError extends Schema.TaggedError<VamSetupError>()(
 	},
 ) {
 	override get message(): string {
-		return describeFailure(this.operation, undefined, this.cause);
+		return describeFailure(
+			this.operation,
+			undefined,
+			Cause.isCause(this.cause)
+				? formatCause(this.cause, { stack: false })
+				: this.cause,
+		);
 	}
 }
 

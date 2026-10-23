@@ -12,7 +12,6 @@ import {
 	VamVaultIoError,
 } from "../../src/effect/errors";
 import { type VamLiveServices, VaultIo } from "../../src/effect/ports";
-import { createVamRuntime, type VamRuntime } from "../../src/effect/runtime";
 import {
 	DispatchBatchCoordinator,
 	type DispatchBatchOptions,
@@ -27,6 +26,12 @@ import type {
 import type { VaultAction } from "../../src/types/vault-action";
 import { VaultActionKind } from "../../src/types/vault-action";
 import { TEST_OPERATION } from "./helpers/self-events";
+import {
+	createVamRuntime,
+	startCoordinator,
+	unusedVaultIoMembers,
+	type VamRuntime,
+} from "./helpers/vam-runtime";
 
 const mdFile = (basename: string): SplitPathToMdFile => ({
 	basename,
@@ -119,6 +124,7 @@ function makeVamLayer(
 	lookup: AbstractFileLookup = defaultLookup,
 ): Layer.Layer<VamLiveServices, VamSetupError> {
 	const vault = VaultIo.of({
+		...unusedVaultIoMembers,
 		create: () => Effect.die("not used"),
 		createFolder: () => Effect.die("not used"),
 		getAbstractFileByPath: lookup,
@@ -164,11 +170,9 @@ function makeCoordinator(
 		finishEffect: (action: VaultAction) =>
 			Effect.sync(() => finish(action)),
 	} as unknown as SelfEventTracker;
-	const coordinator = new DispatchBatchCoordinator(
-		executor,
-		selfEvents,
+	const coordinator = startCoordinator(
 		runtime,
-		options,
+		new DispatchBatchCoordinator(executor, selfEvents, options),
 	);
 	runtimes.set(coordinator, runtime);
 	coordinators.push(coordinator);
@@ -668,8 +672,8 @@ describe("DispatchBatchCoordinator", () => {
 				beginEffect: () => Effect.void,
 				finishEffect: () => Effect.void,
 			} as unknown as SelfEventTracker,
-			runtime,
 		);
+		startCoordinator(runtime, coordinator);
 		runtimes.set(coordinator, runtime);
 		coordinators.push(coordinator);
 
@@ -706,8 +710,8 @@ describe("DispatchBatchCoordinator", () => {
 				beginEffect: () => Effect.void,
 				finishEffect: () => Effect.void,
 			} as unknown as SelfEventTracker,
-			runtime,
 		);
+		startCoordinator(runtime, coordinator);
 		runtimes.set(coordinator, runtime);
 		coordinators.push(coordinator);
 
@@ -1323,5 +1327,57 @@ describe("DispatchBatchCoordinator", () => {
 			}),
 		);
 		expect(firstFailure(postShutdown)).toBeInstanceOf(VamShutdownError);
+	});
+
+	it("fails every batch it holds, the running one as Uncertain, when its worker is interrupted", async () => {
+		const gate = deferred();
+		const started = deferred();
+		const coordinator = new DispatchBatchCoordinator(
+			{
+				execute: () =>
+					Effect.promise(() => {
+						started.resolve();
+						return gate.promise;
+					}).pipe(Effect.as({ _tag: "NoOp" } as const)),
+			} as unknown as Executor,
+			{
+				beginEffect: () => Effect.void,
+				finishEffect: () => Effect.void,
+			} as unknown as SelfEventTracker,
+		);
+		const worker = Effect.runFork(
+			coordinator.run.pipe(Effect.provide(makeVamLayer())),
+		);
+		const running = Effect.runPromiseExit(
+			coordinator.dispatchEffect([makeAction("running")], {
+				operation: TEST_OPERATION,
+			}),
+		);
+		await started.promise;
+		const queued = Effect.runPromiseExit(
+			coordinator.dispatchEffect([makeAction("queued")], {
+				operation: TEST_OPERATION,
+			}),
+		);
+		await Effect.runPromise(Fiber.interrupt(worker));
+
+		const interrupted = dispatchFailure(await running);
+		expect(interrupted?.reason).toBeInstanceOf(VamShutdownError);
+		expect(
+			interrupted?.report.entries.map((entry) => entry.status),
+		).toEqual(["Uncertain"]);
+		expect(dispatchFailure(await queued)?.reason).toBeInstanceOf(
+			VamShutdownError,
+		);
+		const late = await Effect.runPromiseExit(
+			coordinator.dispatchEffect([makeAction("late")], {
+				operation: TEST_OPERATION,
+			}),
+		);
+		expect(firstFailure(late)).toBeInstanceOf(VamShutdownError);
+		// Neither idleness nor shutdown waits on the dead worker.
+		await Effect.runPromise(coordinator.whenIdleEffect());
+		await Effect.runPromise(coordinator.shutdownEffect());
+		gate.resolve();
 	});
 });

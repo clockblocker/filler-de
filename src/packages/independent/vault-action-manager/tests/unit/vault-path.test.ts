@@ -110,25 +110,28 @@ describe("VaultPath.forFileSystem", () => {
 });
 
 describe("detectVaultFileSystem", () => {
-	const appWith = (adapter: unknown) =>
-		({ vault: { adapter } }) as Parameters<typeof detectVaultFileSystem>[0];
+	const adapterWith = (adapter: unknown) => adapter;
 
 	it("reads Obsidian's probe of the vault folder", () => {
-		expect(detectVaultFileSystem(appWith({ insensitive: true }))).toEqual({
+		expect(
+			detectVaultFileSystem(adapterWith({ insensitive: true })),
+		).toEqual({
 			caseInsensitive: true,
 		});
-		expect(detectVaultFileSystem(appWith({ insensitive: false }))).toEqual({
+		expect(
+			detectVaultFileSystem(adapterWith({ insensitive: false })),
+		).toEqual({
 			caseInsensitive: false,
 		});
 	});
 
 	it("falls back to the platform when the adapter has no probe", () => {
 		const platform = process.platform;
-		expect(detectVaultFileSystem(appWith({}))).toEqual({
+		expect(detectVaultFileSystem(adapterWith({}))).toEqual({
 			caseInsensitive: platform === "darwin" || platform === "win32",
 		});
-		expect(detectVaultFileSystem(appWith(undefined))).toEqual(
-			detectVaultFileSystem(appWith({ insensitive: "yes" })),
+		expect(detectVaultFileSystem(adapterWith(undefined))).toEqual(
+			detectVaultFileSystem(adapterWith({ insensitive: "yes" })),
 		);
 	});
 
@@ -140,9 +143,9 @@ describe("detectVaultFileSystem", () => {
 		});
 		try {
 			expect(
-				detectVaultFileSystem(appWith({ insensitive: false })),
+				detectVaultFileSystem(adapterWith({ insensitive: false })),
 			).toEqual({ caseInsensitive: true });
-			expect(detectVaultFileSystem(appWith(undefined))).toEqual({
+			expect(detectVaultFileSystem(adapterWith(undefined))).toEqual({
 				caseInsensitive: true,
 			});
 		} finally {
