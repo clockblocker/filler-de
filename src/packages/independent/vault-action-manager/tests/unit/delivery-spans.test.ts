@@ -260,6 +260,73 @@ describe("Delivery spans", () => {
 		});
 	});
 
+	it("delivers a folder's Markdown subscriber only windows with a change below it, linked only to their batches", async () => {
+		const vault = makeObsidianVault({
+			"Library/a.md": "a",
+			"Notes/n.md": "n",
+		});
+		const heard: string[][] = [];
+		const trace = await traced(
+			vault,
+			Effect.gen(function* () {
+				const vam = yield* VaultActionManager;
+				yield* vam.startListening();
+				yield* vam.subscribeToMdModifications(
+					folder("Notes"),
+					(event) =>
+						Effect.sync(() =>
+							heard.push(
+								event.modifications.map(({ splitPath }) =>
+									splitPathCodec.format(splitPath),
+								),
+							),
+						),
+					{ from: "all" },
+				);
+				// Only outside the folder: no delivery at all.
+				yield* vam.dispatch(
+					[
+						{
+							kind: VaultActionKind.ProcessMdFile,
+							payload: {
+								splitPath: md("Library/a.md"),
+								transform: (content) => `${content}!`,
+							},
+						},
+					],
+					{ caller: "library", operationId: "library#1" },
+				);
+				yield* vam.testing.whenSettled();
+				// Both: the delivery holds, and links to, the change below it.
+				yield* vam.dispatch(
+					[
+						{
+							kind: VaultActionKind.ProcessMdFile,
+							payload: {
+								splitPath: md("Library/a.md"),
+								transform: (content) => `${content}?`,
+							},
+						},
+					],
+					{ caller: "library", operationId: "library#2" },
+				);
+				vault.editByHand("Notes/n.md", "n!");
+				yield* vam.testing.whenSettled();
+			}),
+		);
+
+		expect(heard).toEqual([["Notes/n.md"]]);
+		const delivery = only(trace, "vam.observation.deliver");
+		expect(delivery.linkIds).toEqual([
+			only(trace, "VaultObservation.subscribe").spanId,
+		]);
+		expect(Object.fromEntries(delivery.attributes ?? [])).toMatchObject({
+			"vam.callbacks": 1,
+			"vam.modifications": 1,
+			"vam.origin": "External",
+		});
+	});
+
 	it("links an external change to the subscription alone", async () => {
 		const vault = makeObsidianVault({ "Library/a.md": "a" });
 		const trace = await traced(
@@ -398,6 +465,34 @@ describe("An action's failure keeps its whole cause", () => {
 				),
 		).toEqual(["create exploded", "cleanup exploded"]);
 		expect(failure.message).toContain("create exploded");
+		expect(failure.message).toContain("cleanup exploded");
+	});
+
+	it("keeps an action's own failure, and its kind, beside a finalizer's defect", async () => {
+		const exists = new VamDispatchError({
+			action,
+			cause: new Error("taken"),
+			kind: "exists",
+			operation: "createMdFile",
+		});
+		const failure = await dispatchWith(() =>
+			Effect.fail(exists).pipe(
+				Effect.ensuring(Effect.die(new Error("cleanup exploded"))),
+			),
+		);
+
+		const [entry] = failure.report.entries;
+		expect(entry?.status).toBe("Failed");
+		const error = failure.reason;
+		expect(error).toBeInstanceOf(VamDispatchError);
+		if (!(error instanceof VamDispatchError)) return;
+		expect(error.kind).toBe("exists");
+		expect(Cause.isCause(error.cause)).toBe(true);
+		if (!Cause.isCause(error.cause)) return;
+		expect(error.cause.reasons.find(Cause.isFailReason)?.error).toBe(
+			exists,
+		);
+		expect(error.cause.reasons.some(Cause.isDieReason)).toBe(true);
 		expect(failure.message).toContain("cleanup exploded");
 	});
 

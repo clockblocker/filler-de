@@ -253,10 +253,12 @@ export function causeValue(cause: Cause.Cause<unknown>): unknown {
 }
 
 /**
- * One failed action of a Dispatch Batch, with the error that failed it. For
- * a `defect` or an `interrupted` action, `cause` is `causeValue` of what
- * ended it: what it threw, or its whole `Cause` when that held more than
- * one reason, which `formatCause` prints.
+ * One failed action of a Dispatch Batch, with the error that failed it.
+ * `cause` is what failed it: for a `defect` or an `interrupted` action,
+ * `causeValue` of what ended it, the thrown value or the whole `Cause`; for
+ * an action whose own failure came with other reasons, such as a
+ * finalizer's defect, the whole `Cause`; for a batch interrupted while it
+ * ran, the `VamShutdownError`. `formatCause` prints a `Cause`.
  */
 export class VamDispatchError extends Schema.TaggedError<VamDispatchError>()(
 	"VamDispatchError",

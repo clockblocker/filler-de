@@ -46,6 +46,7 @@ import {
 	CurrentDispatchSpan,
 	CurrentTargetCheck,
 	CurrentVamOperation,
+	currentSpanRef,
 	type TargetCheck,
 } from "./current-operation";
 import {
@@ -552,9 +553,7 @@ export class DispatchBatchWorker {
 		> {
 			const { actions, operation, stopOnFirstFailure } = batch;
 			yield* Effect.annotateCurrentSpan(operationAttributes(operation));
-			const span = Option.getOrUndefined(
-				yield* Effect.option(Effect.currentSpan),
-			);
+			const span = yield* currentSpanRef;
 			const planned = yield* this.plan(actions).pipe(
 				Effect.mapError((error) =>
 					VamDispatchFailure.notRun(error, actions, operation),
@@ -1011,21 +1010,33 @@ function operationAttributes(operation: VamOperation): Record<string, string> {
 }
 
 /**
- * The error of an action whose execution failed with `cause`: its own
- * `VamDispatchError` when that is the cause's one reason. Anything else is
- * kept whole (`causeValue`): `interrupted` when the cause holds only
- * interrupts, otherwise `defect`, such as a throw, or a failure with a
- * finalizer's defect beside it.
+ * The error of an action whose execution failed with `cause`. When its one
+ * failure is a `VamDispatchError`, that error says how it failed; beside
+ * other reasons, such as a finalizer's defect, it keeps its kind and takes
+ * the whole cause. Anything else is kept whole too (`causeValue`):
+ * `interrupted` when the cause holds only interrupts, otherwise `defect`.
  */
 function actionFailure(
 	action: VaultAction,
 	cause: Cause.Cause<VamDispatchError>,
 ): VamDispatchError {
-	const error = causeValue(cause);
-	if (error instanceof VamDispatchError) return error;
+	const failures = cause.reasons.filter(Cause.isFailReason);
+	const [failed] = failures;
+	// A port that lies about its error type can fail with anything.
+	if (failures.length === 1 && failed?.error instanceof VamDispatchError) {
+		const { error } = failed;
+		return cause.reasons.length === 1
+			? error
+			: new VamDispatchError({
+					action: error.action,
+					cause,
+					kind: error.kind,
+					operation: error.operation,
+				});
+	}
 	return new VamDispatchError({
 		action,
-		cause: error,
+		cause: causeValue(cause),
 		kind: Cause.hasInterruptsOnly(cause) ? "interrupted" : "defect",
 		operation: `execute.${action.kind}`,
 	});

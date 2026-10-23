@@ -15,6 +15,7 @@ import {
 } from "effect";
 import { TFile } from "obsidian";
 import { formatCause } from "../../diagnostics/format-cause";
+import { currentSpanRef } from "../../effect/current-operation";
 import type { VamSubscriptionError } from "../../effect/errors";
 import type { VaultListen } from "../../effect/ports";
 import { splitPathFromAbstractInternal } from "../../helpers/pathfinder/path-codecs/split-and-abstract/split-path-from-abstract";
@@ -91,8 +92,8 @@ type SubscriberBarrier = {
 /**
  * A closed window, with the callbacks it holds and its message for every
  * subscriber whose cursor precedes them all and who takes every origin in
- * it. `byFilter` holds the message for each other origin filter, built
- * once by its first subscriber.
+ * it. `byFilter` holds the message for each other selection (origin
+ * filter and scope), built once by its first subscriber.
  */
 type PublishedWindow<Ev, M> = {
 	readonly byFilter: Map<string, M>;
@@ -104,7 +105,7 @@ type PublishedMessage<Ev, M> =
 	| { readonly _tag: "Bulk"; readonly published: PublishedWindow<Ev, M> }
 	| { readonly _tag: "Barrier"; readonly barrier: SubscriberBarrier };
 
-type SubscriberState<M> = {
+type SubscriberState<Ev, M> = {
 	/**
 	 * The latest callback this subscriber must not receive. Read and moved
 	 * synchronously, so a snapshot can move it on the tick it was taken.
@@ -113,8 +114,8 @@ type SubscriberState<M> = {
 	/** Completes when delivery may begin; complete from the start unless gated. */
 	readonly delivering: Deferred.Deferred<void>;
 	readonly deliver: Deliver<M>;
-	/** The origins this subscriber receives. */
-	readonly filter: OriginFilter;
+	/** The callbacks this subscriber receives, by origin and scope. */
+	readonly selection: Selection<Ev>;
 	readonly id: number;
 	readonly pendingBarriers: Ref.Ref<ReadonlySet<SubscriberBarrier>>;
 	readonly scope: Scope.Closeable;
@@ -139,7 +140,7 @@ type ObservationCore<Ev, M> = {
 	readonly rootScope: Scope.Closeable;
 	readonly session: Ref.Ref<ObservationSession<Ev> | null>;
 	readonly sessionLock: Semaphore.Semaphore;
-	readonly subscribers: Ref.Ref<ReadonlyMap<number, SubscriberState<M>>>;
+	readonly subscribers: Ref.Ref<ReadonlyMap<number, SubscriberState<Ev, M>>>;
 };
 
 /** Runs one Obsidian callback program synchronously in the VAM runtime. */
@@ -175,11 +176,51 @@ type MdModifyObservationOptions = VaultObservationOptions & {
 	readonly linkUpdates?: LinkUpdates;
 };
 
-type SubscribeOptions = {
+/**
+ * The events a subscription is about, such as Markdown changes below a
+ * folder. Subscriptions with equal keys keep the same events.
+ */
+export type ObservationScope<Ev> = {
+	readonly accepts: (event: Ev) => boolean;
+	readonly key: string;
+};
+
+/**
+ * Which callbacks a subscriber receives: those of an origin its filter
+ * takes, within its scope. Subscribers with equal keys receive the same
+ * callbacks of a window their cursors precede.
+ */
+type Selection<Ev> = {
+	readonly accepts: (callback: ObservedCallback<Ev>) => boolean;
+	readonly key: string;
+};
+
+function selectionOf<Ev>(
+	filter: OriginFilter,
+	scope: ObservationScope<Ev> | undefined,
+): Selection<Ev> {
+	if (scope === undefined)
+		return {
+			accepts: ({ origin }) => filter.accepts(origin),
+			key: filter.key,
+		};
+	return {
+		accepts: ({ event, origin }) =>
+			filter.accepts(origin) && scope.accepts(event),
+		key: `${filter.key}|${scope.key}`,
+	};
+}
+
+type SubscribeOptions<Ev> = {
 	/** Deliver nothing until `start`; messages wait in the subscription meanwhile. */
 	readonly gated?: boolean;
 	/** The origins to deliver; VAM's own writes are left out by default. */
 	readonly filter?: OriginFilter;
+	/**
+	 * The events to deliver; all by default. A window with none of them is
+	 * not delivered at all.
+	 */
+	readonly scope?: ObservationScope<Ev>;
 };
 
 export type VaultObservationSubscription<M> = {
@@ -226,9 +267,9 @@ const makeObservationCore = Effect.fn("makeObservationCore")(function* <
 		rootScope,
 		session: yield* Ref.make<ObservationSession<Ev> | null>(null),
 		sessionLock: yield* Semaphore.make(1),
-		subscribers: yield* Ref.make<ReadonlyMap<number, SubscriberState<M>>>(
-			new Map(),
-		),
+		subscribers: yield* Ref.make<
+			ReadonlyMap<number, SubscriberState<Ev, M>>
+		>(new Map()),
 	};
 });
 
@@ -322,14 +363,12 @@ export class VaultObservation<
 		function* <E>(
 			this: VaultObservation<Ev, M>,
 			handler: ObservationHandler<M, E>,
-			options: SubscribeOptions = {},
+			options: SubscribeOptions<Ev> = {},
 		): Effect.fn.Return<
 			VaultObservationSubscription<M>,
 			VamSubscriptionError
 		> {
-			const subscriptionSpan = Option.getOrUndefined(
-				yield* Effect.option(Effect.currentSpan),
-			);
+			const subscriptionSpan = yield* currentSpanRef;
 			const scope = yield* Scope.fork(this.core.rootScope, "sequential");
 			const subscription = yield* PubSub.subscribe(this.core.pubsub).pipe(
 				Effect.provideService(Scope.Scope, scope),
@@ -343,14 +382,17 @@ export class VaultObservation<
 			);
 			const delivering = yield* Deferred.make<void>();
 			if (!options.gated) yield* Deferred.succeed(delivering, undefined);
-			const state: SubscriberState<M> = {
+			const state: SubscriberState<Ev, M> = {
 				cursor: { value: this.sequence.current },
 				deliver: this.deliverTo(handler),
 				delivering,
-				filter: options.filter ?? originFilter(),
 				id,
 				pendingBarriers,
 				scope,
+				selection: selectionOf(
+					options.filter ?? originFilter(),
+					options.scope,
+				),
 				subscriptionSpan,
 			};
 
@@ -580,12 +622,13 @@ export class VaultObservation<
 	 */
 	private messageAfter(
 		cursor: number,
-		filter: OriginFilter,
+		selection: Selection<Ev>,
 		window: BulkWindow<ObservedCallback<Ev>>,
 		whole: M,
 	): M | null {
 		return (
-			this.deliveryAfter(cursor, filter, window, whole)?.message ?? null
+			this.deliveryAfter(cursor, selection, window, whole)?.message ??
+			null
 		);
 	}
 
@@ -595,14 +638,14 @@ export class VaultObservation<
 	 */
 	private deliveryAfter(
 		cursor: number,
-		filter: OriginFilter,
+		selection: Selection<Ev>,
 		window: BulkWindow<ObservedCallback<Ev>>,
 		whole: M,
 		byFilter?: Map<string, M>,
 	): Delivery<Ev, M> | null {
 		const callbacks = window.allObsidianEvents;
 		const kept = callbacks.filter(
-			({ origin, seq }) => seq > cursor && filter.accepts(origin),
+			(callback) => callback.seq > cursor && selection.accepts(callback),
 		);
 		if (kept.length === 0) return null;
 		return {
@@ -610,7 +653,7 @@ export class VaultObservation<
 			message:
 				kept.length === callbacks.length
 					? whole
-					: this.messageOf(window, kept, cursor, filter, byFilter),
+					: this.messageOf(window, kept, cursor, selection, byFilter),
 		};
 	}
 
@@ -619,14 +662,14 @@ export class VaultObservation<
 		window: BulkWindow<ObservedCallback<Ev>>,
 		kept: ObservedCallback<Ev>[],
 		cursor: number,
-		filter: OriginFilter,
+		selection: Selection<Ev>,
 		byFilter: Map<string, M> | undefined,
 	): M {
 		const callbacks = window.allObsidianEvents;
 		const build = () =>
 			this.buildMessage({ ...window, allObsidianEvents: kept });
 		// Subscribers whose cursor precedes the window differ only by
-		// filter, so those with one filter share one message.
+		// selection, so those with one selection share one message.
 		const first = callbacks[0];
 		if (
 			byFilter === undefined ||
@@ -634,19 +677,19 @@ export class VaultObservation<
 			first.seq <= cursor
 		)
 			return build();
-		const cached = byFilter.get(filter.key);
+		const cached = byFilter.get(selection.key);
 		if (cached !== undefined) return cached;
 		const message = build();
-		byFilter.set(filter.key, message);
+		byFilter.set(selection.key, message);
 		return message;
 	}
 
-	private afterCursor(state: SubscriberState<M>, message: M): M | null {
+	private afterCursor(state: SubscriberState<Ev, M>, message: M): M | null {
 		const window = this.windowsByMessage.get(message);
 		if (!window) return message;
 		return this.messageAfter(
 			state.cursor.value,
-			state.filter,
+			state.selection,
 			window,
 			message,
 		);
@@ -660,7 +703,7 @@ export class VaultObservation<
 	private readonly caughtUpEffect = Effect.fn("vam.observation.caughtUp")(
 		function* (
 			this: VaultObservation<Ev, M>,
-			state: SubscriberState<M>,
+			state: SubscriberState<Ev, M>,
 		): Effect.fn.Return<void> {
 			const session = yield* Ref.get(this.core.session);
 			if (!session) return;
@@ -740,7 +783,7 @@ export class VaultObservation<
 	 */
 	private readonly subscriberLoopEffect = Effect.fnUntraced(function* (
 		this: VaultObservation<Ev, M>,
-		state: SubscriberState<M>,
+		state: SubscriberState<Ev, M>,
 		subscription: PubSub.Subscription<PublishedMessage<Ev, M>>,
 	): Effect.fn.Return<never> {
 		// A gated subscriber takes nothing, barriers included, until it
@@ -757,7 +800,7 @@ export class VaultObservation<
 			// taken while it waited drops what that snapshot holds.
 			const delivery = this.deliveryAfter(
 				state.cursor.value,
-				state.filter,
+				state.selection,
 				message.published.window,
 				message.published.shared,
 				message.published.byFilter,
@@ -810,7 +853,7 @@ export class VaultObservation<
 	 * Dispatch Batch that caused a callback it delivers, once per batch.
 	 */
 	private deliverySpan(
-		state: SubscriberState<M>,
+		state: SubscriberState<Ev, M>,
 		{ callbacks, message }: Delivery<Ev, M>,
 	): Tracer.SpanOptionsNoTrace {
 		const links: Tracer.SpanLink[] = [];
@@ -819,31 +862,41 @@ export class VaultObservation<
 				attributes: { "vam.link": "subscription" },
 				span: state.subscriptionSpan,
 			});
-		const linked = new Set<Tracer.AnySpan>();
+		// Each batch once, with every origin its callbacks came by.
+		const batches = new Map<
+			Tracer.AnySpan,
+			{ readonly operationId: string; readonly origins: Set<string> }
+		>();
 		const origins = new Set<string>();
 		const operations = new Set<string>();
 		for (const { dispatchSpan, origin } of callbacks) {
 			origins.add(origin.kind);
 			if (origin.kind === "External") continue;
 			operations.add(origin.operationId);
-			if (dispatchSpan === undefined || linked.has(dispatchSpan))
-				continue;
-			linked.add(dispatchSpan);
+			if (dispatchSpan === undefined) continue;
+			const batch = batches.get(dispatchSpan);
+			if (batch) batch.origins.add(origin.kind);
+			else
+				batches.set(dispatchSpan, {
+					operationId: origin.operationId,
+					origins: new Set([origin.kind]),
+				});
+		}
+		for (const [span, batch] of batches)
 			links.push({
 				attributes: {
 					"vam.link": "dispatch",
-					"vam.operationId": origin.operationId,
-					"vam.origin": origin.kind,
+					"vam.operationId": batch.operationId,
+					"vam.origin": [...batch.origins].sort().join(","),
 				},
-				span: dispatchSpan,
+				span,
 			});
-		}
 		const attributes: Record<string, unknown> = {
 			...this.source.describe(message),
 			"vam.callbacks": callbacks.length,
 			"vam.origin": [...origins].sort().join(","),
 			"vam.subscriber": state.id,
-			"vam.subscriber.filter": state.filter.key,
+			"vam.subscriber.filter": state.selection.key,
 		};
 		if (operations.size > 0)
 			attributes["vam.operationIds"] = [...operations].join(",");
@@ -896,7 +949,7 @@ export class VaultObservation<
 	private readonly releasePendingBarriersEffect = Effect.fnUntraced(
 		function* (
 			this: VaultObservation<Ev, M>,
-			state: SubscriberState<M>,
+			state: SubscriberState<Ev, M>,
 		): Effect.fn.Return<void> {
 			const pending = yield* Ref.getAndSet(
 				state.pendingBarriers,
@@ -910,7 +963,7 @@ export class VaultObservation<
 
 	private readonly releaseBarrierEffect = Effect.fnUntraced(function* (
 		this: VaultObservation<Ev, M>,
-		state: SubscriberState<M>,
+		state: SubscriberState<Ev, M>,
 		barrier: SubscriberBarrier,
 	): Effect.fn.Return<void> {
 		const pending = yield* Ref.modify(state.pendingBarriers, (barriers) => {

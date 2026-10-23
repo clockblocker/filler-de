@@ -1,4 +1,4 @@
-import { Context, Effect, type Tracer } from "effect";
+import { Context, Effect, Option, Tracer } from "effect";
 import type { VamOperation } from "../types/event-origin";
 
 /**
@@ -21,6 +21,21 @@ export const CurrentDispatchSpan = Context.Reference<
 >("@textfresser/vault-action-manager/CurrentDispatchSpan", {
 	defaultValue: () => undefined,
 });
+
+/**
+ * The current span as a link target: its ids alone, so whatever keeps it,
+ * such as a Self Event waiting for its callback, keeps neither the span's
+ * parents, nor its links, nor the value it ended with. `undefined` outside
+ * a span.
+ */
+export const currentSpanRef: Effect.Effect<Tracer.ExternalSpan | undefined> =
+	Effect.map(Effect.option(Effect.currentSpan), (span) =>
+		Option.match(span, {
+			onNone: () => undefined,
+			onSome: ({ sampled, spanId, traceId }) =>
+				Tracer.externalSpan({ sampled, spanId, traceId }),
+		}),
+	);
 
 /** What the running create or rename found at its target. */
 export type TargetCheck = { taken: boolean | undefined };
