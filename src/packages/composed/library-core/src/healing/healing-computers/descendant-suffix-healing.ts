@@ -20,8 +20,8 @@ import {
  * @param oldSuffixPathParts - OLD path parts (for computing old basename suffix)
  * @param codecs - Codec API
  * @param currentPathParts - NEW path parts (where files ARE now in filesystem)
- * @returns the healing actions, or the first descendant whose canonical split
- *          path could not be built
+ * @returns the healing actions, or a `TreeActionError` for the first
+ *          descendant whose canonical split path could not be built
  */
 export function computeDescendantSuffixHealing(
 	sectionChain: SectionNodeSegmentId[],
@@ -30,15 +30,13 @@ export function computeDescendantSuffixHealing(
 	codecs: Codecs,
 	currentPathParts: string[],
 ): Result.Result<HealingAction[], TreeActionError> {
-	const actualCurrentPath = currentPathParts;
-
 	const healingActions: HealingAction[] = [];
 
 	for (const [segId, child] of Object.entries(section.children)) {
 		if (child.kind === TreeNodeKind.Section) {
 			// Recurse with extended paths
 			const childOldSuffixPath = [...oldSuffixPathParts, child.nodeName];
-			const childCurrentPath = [...actualCurrentPath, child.nodeName];
+			const childCurrentPath = [...currentPathParts, child.nodeName];
 			const childHealing = computeDescendantSuffixHealing(
 				[...sectionChain, segId as SectionNodeSegmentId],
 				child,
@@ -56,7 +54,7 @@ export function computeDescendantSuffixHealing(
 			const observedSplitPath = buildObservedLeafSplitPath(
 				child,
 				oldSuffixPathParts,
-				actualCurrentPath,
+				currentPathParts,
 				codecs,
 			);
 

@@ -435,7 +435,7 @@ describe("Tree Mutations", () => {
 			}
 		});
 
-		it("throws on rename collision", () => {
+		it("fails on rename collision", () => {
 			const tree = createTree();
 
 			Result.getOrThrow(tree.apply({
@@ -629,7 +629,7 @@ describe("Tree Mutations", () => {
 			).toBeDefined();
 		});
 
-		it("throws on move collision", () => {
+		it("fails on move collision", () => {
 			const tree = createTree();
 
 			Result.getOrThrow(tree.apply({

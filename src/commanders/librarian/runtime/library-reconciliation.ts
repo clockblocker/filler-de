@@ -509,7 +509,14 @@ export class LibraryReconciler<E, R = unknown> {
 			const applyStartedAt = yield* Clock.currentTimeMillis;
 
 			for (const [actionIndex, action] of request.treeActions.entries()) {
-				const applied = staged.getHealingActionsFor(action);
+				// A Tree Action that cannot be applied is a `TreeActionError`.
+				// Anything that throws here is a bug, and is recorded the same
+				// way, so the reconciler still resynchronizes after it.
+				const applied = Result.flatMap(
+					Result.try(() => staged.getHealingActionsFor(action)),
+					(result): Result.Result<HealerApplyResult, unknown> =>
+						result,
+				);
 				if (Result.isFailure(applied)) {
 					applyFailure = {
 						action,
