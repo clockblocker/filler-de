@@ -131,7 +131,7 @@ function makeHarness() {
 				},
 				onLaunched: () => Effect.void,
 				resetRunning: () => false,
-				sweep: () => undefined,
+				sweep: Effect.void,
 			}),
 		),
 	);

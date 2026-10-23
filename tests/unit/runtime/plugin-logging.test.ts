@@ -96,7 +96,7 @@ describe("Plugin logging", () => {
 									new Librarian(vam, { onStopped, settings: fixedSettings() }),
 								onLaunched: () => Effect.void,
 								resetRunning: () => false,
-								sweep: () => {},
+								sweep: Effect.void,
 							};
 						}),
 					);

@@ -118,11 +118,18 @@ export function registerCommands(plugin: Plugin, deps: PluginCommandDeps) {
 
 	plugin.addCommand({
 		callback: () => {
-			const cancelled = deps.knowledgeQueue()?.cancelAll() ?? 0;
-			new Notice(
-				cancelled > 0
-					? `Cancelled Knowledge generation for ${cancelled} Reading${cancelled === 1 ? "" : "s"}`
-					: "No Knowledge generation is running",
+			const queue = deps.knowledgeQueue();
+			void deps.runtime.command(
+				"cancel-knowledge-generation",
+				(queue?.cancelAll ?? Effect.succeed(0)).pipe(
+					Effect.flatMap((cancelled) =>
+						notify(
+							cancelled > 0
+								? `Cancelled Knowledge generation for ${cancelled} Reading${cancelled === 1 ? "" : "s"}`
+								: "No Knowledge generation is running",
+						),
+					),
+				),
 			);
 		},
 		id: "cancel-knowledge-generation",

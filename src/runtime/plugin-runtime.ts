@@ -10,15 +10,7 @@
  * is a no-op, and an E2E hook rejects.
  */
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
-import {
-	Cause,
-	Data,
-	Effect,
-	Exit,
-	type Fiber,
-	Layer,
-	ManagedRuntime,
-} from "effect";
+import { Cause, Data, Effect, Exit, Layer, ManagedRuntime } from "effect";
 
 /** The root span an edge opens. */
 export type EdgeSpan =
@@ -39,21 +31,6 @@ export class PluginEdgeError extends Data.TaggedError("PluginEdgeError")<{
 export class PluginUnloadedError extends Data.TaggedError(
 	"PluginUnloadedError",
 )<{ readonly message: string }> {}
-
-/**
- * Runs programs on the plugin runtime for the code that still hops into it
- * from outside an Effect (#227 removes these hops). Its programs are
- * traced and logged like any other, as root spans of their own.
- */
-export type EffectRunner<ER = never> = {
-	readonly runFork: <A, E>(
-		effect: Effect.Effect<A, E>,
-	) => Fiber.Fiber<A, E | ER>;
-	readonly runPromise: <A, E>(effect: Effect.Effect<A, E>) => Promise<A>;
-	readonly runPromiseExit: <A, E>(
-		effect: Effect.Effect<A, E>,
-	) => Promise<Exit.Exit<A, E | ER>>;
-};
 
 /** `PluginRuntime.readSync`, for code that holds only it. */
 export type ReadSync = <A, E>(
@@ -94,8 +71,6 @@ export type PluginRuntime<R, ER> = {
 	readonly readSync: <A, E>(
 		effect: Effect.Effect<A, E, R>,
 	) => Exit.Exit<A, E | ER | PluginUnloadedError>;
-	/** For the hops that remain; see `EffectRunner`. */
-	readonly hops: EffectRunner<ER>;
 	/**
 	 * Interrupts every program still running at an edge, then releases the
 	 * Layer's resources, newest first. Every later call shares the first.
@@ -178,11 +153,6 @@ export function makePluginRuntime<R, ER>(
 			return disposal;
 		},
 		e2e,
-		hops: {
-			runFork: (effect) => managed.runFork(effect),
-			runPromise: (effect) => managed.runPromise(effect),
-			runPromiseExit: (effect) => managed.runPromiseExit(effect),
-		},
 		onload: (effect) => {
 			void settle("obsidian.onload", effect);
 		},

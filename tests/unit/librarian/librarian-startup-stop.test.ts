@@ -105,7 +105,7 @@ describe("a Librarian startup that fails for two reasons", () => {
 							}),
 						onLaunched: () => Effect.void,
 						resetRunning: () => false,
-						sweep: () => undefined,
+						sweep: Effect.void,
 					}),
 				)
 				.pipe(Effect.provide(Logger.layer([trace.logger]))),

@@ -6,9 +6,9 @@ import {
 	type RecordedSpan,
 } from "@textfresser/vault-action-manager/diagnostics";
 import type * as Dumling from "dumling/types";
-import { Cause, Deferred, Effect, Exit, Layer, type Scope } from "effect";
+import { Cause, Deferred, Effect, Exit, Layer, Scope } from "effect";
 import type { App } from "obsidian";
-import { createKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
+import { makeKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
 import type { KnowledgeJob } from "../../../src/commanders/classify/resolution/knowledge-types";
 import { Librarian } from "../../../src/commanders/librarian/librarian";
 import { createLifecycleNotices } from "../../../src/lifecycle/lifecycle-notices";
@@ -217,7 +217,7 @@ describe("PluginLive", () => {
 		makeLibrarian,
 		onLaunched: () => Effect.void,
 		resetRunning: () => false,
-		sweep: () => {},
+		sweep: Effect.void,
 	});
 
 	const librarianOver =
@@ -403,25 +403,32 @@ describe("PluginLive", () => {
 			Effect.succeed(launched(librarianOver(manager))),
 		);
 		held = true;
-		const inFlight = plugin.runtime.hops.runPromiseExit(
-			vam.dispatch(
-				[
-					{
-						kind: "UpsertMdFile",
-						payload: {
-							content: "held",
-							splitPath: {
-								basename: "Held",
-								extension: "md",
-								kind: "MdFile",
-								pathParts: [],
+		// Its submitter is an edge: the hook rejects with the cause it ends with.
+		const inFlight = plugin.runtime
+			.e2e(
+				"dispatch",
+				vam.dispatch(
+					[
+						{
+							kind: "UpsertMdFile",
+							payload: {
+								content: "held",
+								splitPath: {
+									basename: "Held",
+									extension: "md",
+									kind: "MdFile",
+									pathParts: [],
+								},
 							},
-						},
-					} as never,
-				],
-				{ caller: "test" },
-			),
-		);
+						} as never,
+					],
+					{ caller: "test" },
+				),
+			)
+			.then(
+				() => undefined,
+				(error: PluginEdgeError) => error.cause,
+			);
 		await Effect.runPromise(Deferred.await(reached));
 
 		let disposed = false;
@@ -440,7 +447,10 @@ describe("PluginLive", () => {
 		// The batch wrote its file; only its submitter, a program on the
 		// runtime, was interrupted.
 		expect(vault.files()).toContain("Held.md");
-		expect(Exit.hasInterrupts(await inFlight)).toBe(true);
+		const interrupted = await inFlight;
+		expect(interrupted !== undefined && Cause.hasInterrupts(interrupted)).toBe(
+			true,
+		);
 	}, 30_000);
 
 	it("waits on unload for a Librarian heal whose rename hangs, and logs that it waits", async () => {
@@ -493,17 +503,22 @@ describe("PluginLive", () => {
 		try {
 			const idle = await runtime.e2e("idle", IdleTracker);
 			const knowledgeGate = Deferred.makeUnsafe<void>();
-			const queue = createKnowledgeQueue({
-				notify: () => {},
-				onEnd: () => void runtime.readSync(idle.end),
-				onStart: () => void runtime.readSync(idle.start),
-				run: () =>
-					Deferred.await(knowledgeGate).pipe(
-						Effect.as({ _tag: "Covered" } as never),
+			// The queue in a scope of the runtime's, as the Classify Layer holds it.
+			const queue = await runtime.e2e(
+				"knowledge-queue",
+				Effect.flatMap(Scope.make(), (scope) =>
+					Scope.provide(scope)(
+						makeKnowledgeQueue({
+							notify: () => {},
+							run: () =>
+								Deferred.await(knowledgeGate).pipe(
+									Effect.as({ _tag: "Covered" } as never),
+								),
+						}),
 					),
-				runtime: runtime.hops,
-			});
-			queue.enqueue(knowledgeJob);
+				),
+			);
+			await runtime.e2e("enqueue", queue.enqueue(knowledgeJob));
 			// The Librarian heals a file made by hand, through its queue:
 			// what is pending as it renames the file.
 			const fileManager = plugin.vault.app.fileManager as unknown as {
@@ -538,7 +553,7 @@ describe("PluginLive", () => {
 			Deferred.doneUnsafe(knowledgeGate, Effect.void);
 			await whenIdle;
 			expect(idleNow).toBe(true);
-			expect(queue.running()).toBe(0);
+			expect(await runtime.e2e("running", queue.running)).toBe(0);
 		} finally {
 			await runtime.dispose();
 		}

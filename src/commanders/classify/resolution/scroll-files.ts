@@ -127,11 +127,9 @@ export function observeScrollModifications(
 ) {
 	return vam
 		.subscribeToMdModifications(splitPathCodec.root, (event) =>
-			Effect.sync(() =>
-				observer.modified(
-					event.modifications.map(({ splitPath }) =>
-						splitPathCodec.format(splitPath),
-					),
+			observer.modified(
+				event.modifications.map(({ splitPath }) =>
+					splitPathCodec.format(splitPath),
 				),
 			),
 		)

@@ -15,10 +15,11 @@ function reopener(active: string | null) {
 				opened.push(path);
 			}),
 		queue: {
-			awaitNote: async (path) => {
-				awaited.push(path);
-				return true;
-			},
+			awaitNote: (path) =>
+				Effect.sync(() => {
+					awaited.push(path);
+					return true;
+				}),
 		},
 	});
 	const reopen = (target: string) => Effect.runPromise(reopenEffect(target));

@@ -18,15 +18,14 @@ import { Effect, Exit, Layer, Stream } from "effect";
 import { Notice, type Plugin } from "obsidian";
 import {
 	ClassifyCommander,
-	createKnowledgeQueue,
 	createReadingReopener,
 	createScrollActivity,
-	createUnlinkObserver,
 	DUMGEN_SEGMENTER_VERSION,
 	dumgenUnitResolver,
 	filesSegmentationCache,
 	HIDDEN_FOLDER,
-	type KnowledgeQueue,
+	makeKnowledgeQueue,
+	makeUnlinkObserver,
 	observeScrollModifications,
 	produceKnowledge,
 	UnitResolverError,
@@ -71,7 +70,7 @@ export type PluginServicesDeps = {
 	readonly plugin: Plugin;
 	readonly runtime: Pick<
 		PluginRuntime<PluginServices, unknown>,
-		"hops" | "readSync" | "userEvent"
+		"readSync" | "userEvent"
 	>;
 	readonly notices: LifecycleNotices;
 };
@@ -148,7 +147,7 @@ const resolverStore = (store: DictionaryStore["Service"]) =>
 		),
 	);
 
-const ClassifyLive = (deps: PluginServicesDeps) =>
+const ClassifyLive = (_deps: PluginServicesDeps) =>
 	Layer.effect(
 		ClassifyServices,
 		Effect.gen(function* () {
@@ -157,56 +156,40 @@ const ClassifyLive = (deps: PluginServicesDeps) =>
 			const lifecycle = yield* Lifecycle;
 			const settings = yield* Settings;
 			const store = yield* DictionaryStore;
-			const pending = yield* pendingWork(deps);
 			const dictionary = resolverStore(store);
-			const { notices, runtime } = deps;
+			const notify = (message: string) => void new Notice(message);
 
 			// Each Reading's Knowledge runs in the background, on the build
-			// every background run shares.
-			const runKnowledge = (
-				job: Parameters<KnowledgeQueue["enqueue"]>[0],
-			) =>
-				Effect.all([dictionary, settings.get]).pipe(
-					Effect.flatMap(([built, { languages }]) =>
-						produceKnowledge(
-							{
-								dumgen: operations,
-								store: built,
-								translationLanguages:
-									languages.known === "Russian"
-										? ["en", "ru"]
-										: ["en"],
-							},
-							job,
+			// every background run shares. The queue's runs are interrupted
+			// as this Layer's scope closes.
+			const knowledgeQueue = yield* makeKnowledgeQueue({
+				notify,
+				run: (job) =>
+					Effect.all([dictionary, settings.get]).pipe(
+						Effect.flatMap(([built, { languages }]) =>
+							produceKnowledge(
+								{
+									dumgen: operations,
+									store: built,
+									translationLanguages:
+										languages.known === "Russian"
+											? ["en", "ru"]
+											: ["en"],
+								},
+								job,
+							),
+						),
+						dumgen.provideBackground,
+						Effect.catchTag("DumgenUnavailable", (error) =>
+							Effect.fail(
+								new UnitResolverError({
+									cause: error.cause,
+									message: error.message,
+								}),
+							),
 						),
 					),
-					dumgen.provideBackground,
-					Effect.catchTag("DumgenUnavailable", (error) =>
-						Effect.fail(
-							new UnitResolverError({
-								cause: error.cause,
-								message: error.message,
-							}),
-						),
-					),
-				);
-			const knowledgeQueue = yield* Effect.acquireRelease(
-				Effect.sync(() =>
-					createKnowledgeQueue({
-						notify: (message) => new Notice(message),
-						onEnd: pending.end,
-						onStart: pending.start,
-						run: runKnowledge,
-						runtime: runtime.hops,
-					}),
-				),
-				(queue) =>
-					releaseGuarded(
-						notices,
-						"close the Knowledge queue",
-						Effect.sync(() => queue.close()),
-					),
-			);
+			});
 			const reopenReading = createReadingReopener({
 				activePath: vam.mdPwd().pipe(
 					Effect.map((path) =>
@@ -246,34 +229,23 @@ const ClassifyLive = (deps: PluginServicesDeps) =>
 					activity: scrollActivity,
 					dumgen: operations,
 					knowledge: knowledgeQueue,
-					notify: (message) => new Notice(message),
+					notify,
 					scroll: vamScrollFiles(vam),
 					store: dictionary,
 				}),
 				segmenterVersion,
 			});
-			const unlinkObserver = yield* Effect.acquireRelease(
-				Effect.sync(() =>
-					createUnlinkObserver({
-						activity: scrollActivity,
-						blockedBy: lifecycle.classifyRefusal,
-						cache,
-						notify: (message) => new Notice(message),
-						onEnd: pending.end,
-						onStart: pending.start,
-						runtime: runtime.hops,
-						scrolls: vamUnlinkScrolls(vam),
-						segmenterVersion,
-						store: dictionary,
-					}),
-				),
-				(observer) =>
-					releaseGuarded(
-						notices,
-						"close the unlink observer",
-						Effect.sync(() => observer.close()),
-					),
-			);
+			// Its checks are interrupted as this Layer's scope closes,
+			// before the Knowledge queue's runs.
+			const unlinkObserver = yield* makeUnlinkObserver({
+				activity: scrollActivity,
+				blockedBy: lifecycle.classifyRefusal,
+				cache,
+				notify,
+				scrolls: vamUnlinkScrolls(vam),
+				segmenterVersion,
+				store: dictionary,
+			});
 			return {
 				cache,
 				classify,

@@ -6,7 +6,8 @@ import { createPendingSemanticRelationRecord } from "dumdict/pending";
 import { createDumdictPlanner } from "dumdict/planning";
 import { JevTransport, LunaTransport, type Unit } from "dumgen";
 import type * as Dumling from "dumling/types";
-import { Effect, Layer } from "effect";
+import { Deferred, Effect, Exit, Layer, ManagedRuntime, Scope } from "effect";
+import { TestClock } from "effect/testing";
 import {
 	ClassifySegmenter,
 	classifySelection,
@@ -18,7 +19,8 @@ import {
 } from "../../../../src/commanders/classify/resolution/scroll-activity";
 import { occurrenceKeyOf } from "../../../../src/commanders/classify/resolution/scroll-links";
 import {
-	createUnlinkObserver,
+	makeUnlinkObserver,
+	type UnlinkObserverDeps,
 	type UnlinkStore,
 } from "../../../../src/commanders/classify/resolution/unlink-observer";
 import {
@@ -35,7 +37,6 @@ import {
 	readingEntry,
 } from "../../../../src/packages/composed/dictionary/tests/support/fixtures";
 import { openStore, seed } from "../../../../src/packages/composed/dictionary/tests/support/store";
-import { defaultRunner } from "../../../support/effect-runner";
 import { fakeDumgen } from "../../dumgen/dumgen-support";
 import { FAENGT_AN_ANSWERS, selectionOf } from "../support";
 import {
@@ -115,16 +116,57 @@ async function classifiedSee(content: string, sentences: readonly string[]) {
 	return { cache, harness };
 }
 
-/** An observer over an in-memory Scroll, checking at once instead of after a quiet period. */
+/**
+ * The observer on a runtime of its own, whose `TestClock` moves only when
+ * the test adjusts it: its quiet periods are slept out on that clock.
+ */
+function onTestClock<E>(deps: UnlinkObserverDeps<E>) {
+	const runtime = ManagedRuntime.make(TestClock.layer());
+	const scope = Scope.makeUnsafe();
+	const observer = runtime.runSync(Scope.provide(scope)(makeUnlinkObserver(deps)));
+	return {
+		/** Moves the clock on by `millis`, running the sleeps it passes. */
+		adjust: (millis: number) => runtime.runPromise(TestClock.adjust(millis)),
+		/** Closes the observer's scope, as the plugin's unload does. */
+		close: () => runtime.runPromise(Scope.close(scope, Exit.void)),
+		modified: (paths: readonly string[]) =>
+			runtime.runPromise(observer.modified(paths)),
+		/** Runs `effect` on the observer's clock, as a Classify run would. */
+		run: <A>(effect: Effect.Effect<A>) => runtime.runPromise(effect),
+		sweep: () => runtime.runPromise(observer.sweep),
+		whenIdle: () => runtime.runPromise(observer.whenIdle),
+	};
+}
+
+/**
+ * The Scroll activity, telling `askedIdle` when the observer first waits
+ * for a run on a Scroll to end.
+ */
+function watchedActivity() {
+	const activity = createScrollActivity();
+	const askedIdle = Deferred.makeUnsafe<void>();
+	const watched: ScrollActivity = {
+		...activity,
+		idle: (path) =>
+			Deferred.succeed(askedIdle, undefined).pipe(
+				Effect.andThen(activity.idle(path)),
+			),
+	};
+	return { activity: watched, askedIdle: Deferred.await(askedIdle) };
+}
+
+/** An observer over an in-memory Scroll, checking at once unless given a quiet period. */
 function observerOver(options: {
 	readonly store: DumdictVaultStore;
 	readonly vault: FakeVault;
 	readonly scroll: () => string;
+	readonly readScroll?: (content: string) => Effect.Effect<string>;
 	readonly activity?: ScrollActivity;
 	readonly cache?: SegmentationCache["Service"];
 	readonly blockedBy?: () => string | undefined;
 	/** When the Scroll was last written; after every note unless given. */
 	readonly scrollModifiedAt?: () => number;
+	readonly quietMs?: number;
 	readonly sweepQuietMs?: number;
 	/** Reads Scrolls from the vault instead of `scroll`, as after a rename. */
 	readonly readFromVault?: boolean;
@@ -132,13 +174,12 @@ function observerOver(options: {
 	const notices: string[] = [];
 	const reads: string[] = [];
 	const store: UnlinkStore = options.store;
-	const observer = createUnlinkObserver({
+	const observer = onTestClock({
 		activity: options.activity ?? createScrollActivity(),
-		runtime: defaultRunner,
 		...(options.blockedBy === undefined ? {} : { blockedBy: options.blockedBy }),
 		cache: options.cache ?? memorySegmentationCache(),
 		notify: (message) => notices.push(message),
-		quietMs: 0,
+		quietMs: options.quietMs ?? 0,
 		...(options.sweepQuietMs === undefined ? {} : { sweepQuietMs: options.sweepQuietMs }),
 		scrolls: {
 			modifiedAt: (path) =>
@@ -148,10 +189,12 @@ function observerOver(options: {
 						: options.vault.files.get(path)?.mtime,
 				),
 			read: (path) =>
-				Effect.sync(() => {
+				Effect.suspend(() => {
 					reads.push(path);
-					if (options.readFromVault) return options.vault.content(path);
-					return path === SCROLL ? options.scroll() : undefined;
+					if (options.readFromVault) return Effect.succeed(options.vault.content(path));
+					if (path !== SCROLL) return Effect.succeed(undefined);
+					const content = options.scroll();
+					return options.readScroll?.(content) ?? Effect.succeed(content);
 				}),
 			resolve: resolveAmong(() => [...options.vault.markdownPaths(), SCROLL]),
 		},
@@ -162,7 +205,7 @@ function observerOver(options: {
 		/** The user's edit lands, VAM reports it, and the check runs. */
 		edit: async (write: () => void) => {
 			write();
-			observer.modified([SCROLL]);
+			await observer.modified([SCROLL]);
 			await observer.whenIdle();
 		},
 		notices,
@@ -171,7 +214,7 @@ function observerOver(options: {
 		reads,
 		/** The plugin starts: the sweep runs and its checks end. */
 		sweep: async () => {
-			observer.sweep();
+			await observer.sweep();
 			await observer.whenIdle();
 		},
 	};
@@ -403,7 +446,7 @@ describe("unlink observer", () => {
 			TALE,
 			(vault.content(TALE) ?? "").replace(`Der ${link} ist kalt.`, "Der See ist kalt."),
 		);
-		observer.modified([SCROLL, TALE, notePath(lake)]);
+		await observer.modified([SCROLL, TALE, notePath(lake)]);
 		await observer.whenIdle();
 		expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 13))).toEqual([
 			"![[Story#^0|^",
@@ -418,7 +461,7 @@ describe("unlink observer", () => {
 			"![[Tale#^0|^",
 			"![[Tale#^1|^",
 		]);
-		observer.modified([TALE]);
+		await observer.modified([TALE]);
 		await observer.whenIdle();
 		expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 12))).toEqual([
 			"![[Tale#^0|^",
@@ -453,7 +496,7 @@ describe("unlink observer", () => {
 			TALE,
 			(vault.content(TALE) ?? "").replace(`Der ${link} ist kalt.`, "Der See ist kalt."),
 		);
-		observer.modified([TALE]);
+		await observer.modified([TALE]);
 		await observer.whenIdle();
 		expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 20))).toEqual([
 			"![[Library/Tale#^0|^",
@@ -478,14 +521,15 @@ describe("unlink observer", () => {
 		});
 		// Sync brought the lake's note with a ref another device recorded, and
 		// the user edits the Scroll before its links arrive.
-		observer.modified([notePath(lake)]);
+		await observer.modified([notePath(lake)]);
 		harness.scroll.content = linkedScroll.replace(`Der ${link} ist kalt.`, "Der See ist kalt.");
-		observer.modified([SCROLL]);
-		await Bun.sleep(50);
+		await observer.modified([SCROLL]);
+		await observer.adjust(50);
 		expect(await refsOf(harness.store, see)).toHaveLength(2);
-		// The Scroll lands.
+		// The Scroll lands, and the dictionary has been quiet long enough.
 		harness.scroll.content = linkedScroll;
-		observer.modified([SCROLL]);
+		await observer.modified([SCROLL]);
+		await observer.adjust(100);
 		await observer.whenIdle();
 		expect(await refsOf(harness.store, see)).toHaveLength(2);
 	});
@@ -515,6 +559,7 @@ describe("unlink observer", () => {
 		let resetRunning = true;
 		const { observer } = observerOver({
 			blockedBy: () => (resetRunning ? "A dictionary reset is running" : undefined),
+			quietMs: 1_000,
 			scroll: () => harness.scroll.content,
 			store: harness.store,
 			vault: harness.vault,
@@ -524,15 +569,64 @@ describe("unlink observer", () => {
 			`Der ${link} ist kalt.`,
 			"Der See ist kalt.",
 		);
-		observer.modified([SCROLL]);
-		const idle = observer.whenIdle();
-		await new Promise((resolve) => setTimeout(resolve, 30));
+		await observer.modified([SCROLL]);
+		// Quiet, and then quiet again while the reset holds Classify.
+		await observer.adjust(2_000);
 		expect(await refsOf(harness.store, see)).toHaveLength(2);
 		resetRunning = false;
-		await idle;
+		await observer.adjust(1_000);
+		await observer.whenIdle();
 		expect((await refsOf(harness.store, see)).map((ref) => ref.slice(0, 13))).toEqual([
 			"![[Story#^0|^",
 		]);
+	});
+
+	it("starts the quiet period again on each modification, and checks once it has passed", async () => {
+		const content = "Der See ist tief. ^0\n";
+		const { cache, harness } = await classifiedSee(content, ["Der See ist tief."]);
+		const { observer, reads } = observerOver({
+			cache,
+			quietMs: 1_000,
+			scroll: () => harness.scroll.content,
+			store: harness.store,
+			vault: harness.vault,
+		});
+		harness.scroll.content = "Der See ist tief. ^0\n";
+		await observer.modified([SCROLL]);
+		await observer.adjust(600);
+		await observer.modified([SCROLL]);
+		await observer.adjust(600);
+		// 1.2 s after the first edit, 0.6 s after the last: still quiet.
+		expect(reads).toEqual([]);
+		expect(await refsOf(harness.store, see)).toHaveLength(1);
+		await observer.adjust(400);
+		await observer.whenIdle();
+		expect(reads).toEqual([SCROLL]);
+		expect(await refsOf(harness.store, see)).toHaveLength(0);
+	});
+
+	it("drops its pending checks when its scope closes, and removes and tells nothing", async () => {
+		const content = "Der See ist tief. ^0\n";
+		const { cache, harness } = await classifiedSee(content, ["Der See ist tief."]);
+		const { notices, observer, reads } = observerOver({
+			cache,
+			quietMs: 1_000,
+			scroll: () => harness.scroll.content,
+			store: harness.store,
+			vault: harness.vault,
+		});
+		harness.scroll.content = "Der See ist tief. ^0\n";
+		await observer.modified([SCROLL]);
+		await observer.sweep();
+		// The plugin unloads during the quiet period.
+		await observer.close();
+		await observer.whenIdle();
+		await observer.adjust(10_000);
+		await observer.modified([SCROLL]);
+		await observer.adjust(10_000);
+		expect(reads).toEqual([]);
+		expect(notices).toEqual([]);
+		expect(await refsOf(harness.store, see)).toHaveLength(1);
 	});
 
 	it("leaves moved text, a lost block ID and another Scroll's refs alone", async () => {
@@ -575,7 +669,7 @@ describe("unlink observer", () => {
 	it("waits for a Classify run on the Scroll to end before it judges", async () => {
 		const content = "Der See ist tief. ^0\n";
 		const { cache, harness } = await classifiedSee(content, ["Der See ist tief."]);
-		const activity = createScrollActivity();
+		const { activity, askedIdle } = watchedActivity();
 		const { observer } = observerOver({
 			activity,
 			cache,
@@ -583,41 +677,47 @@ describe("unlink observer", () => {
 			store: harness.store,
 			vault: harness.vault,
 		});
-		const end = activity.begin(SCROLL);
+		const end = await observer.run(activity.begin(SCROLL));
 		harness.scroll.content = "Der See ist tief. ^0\n";
-		observer.modified([SCROLL]);
-		const idle = observer.whenIdle();
-		await new Promise((resolve) => setTimeout(resolve, 20));
+		await observer.modified([SCROLL]);
+		// The check found the Scroll busy, and waits for the run.
+		await observer.run(askedIdle);
 		expect(await refsOf(harness.store, see)).toHaveLength(1);
-		end();
-		await idle;
+		await observer.run(end);
+		await observer.whenIdle();
 		expect(await refsOf(harness.store, see)).toHaveLength(0);
 	});
 
 	it("removes nothing when a Classify run starts after the check read the Scroll, and judges again once it ends", async () => {
 		const content = "Der See ist tief. ^0\n";
 		const { cache, harness } = await classifiedSee(content, ["Der See ist tief."]);
-		const activity = createScrollActivity();
-		let end: (() => void) | undefined;
+		const { activity, askedIdle } = watchedActivity();
+		let end: Effect.Effect<void> | undefined;
 		const { observer } = observerOver({
 			activity,
 			cache,
 			// The run begins while the check judges, before its removal plans.
-			scroll: () => {
-				end ??= activity.begin(SCROLL);
-				return harness.scroll.content;
-			},
+			readScroll: (content) =>
+				end === undefined
+					? activity.begin(SCROLL).pipe(
+							Effect.map((ended) => {
+								end = ended;
+								return content;
+							}),
+						)
+					: Effect.succeed(content),
+			scroll: () => harness.scroll.content,
 			store: harness.store,
 			vault: harness.vault,
 		});
 		harness.scroll.content = "Der See ist tief. ^0\n";
-		observer.modified([SCROLL]);
-		const idle = observer.whenIdle();
-		await new Promise((resolve) => setTimeout(resolve, 20));
+		await observer.modified([SCROLL]);
+		// Its removal withheld, the check looked again and found the run.
+		await observer.run(askedIdle);
 		expect(end).toBeDefined();
 		expect(await refsOf(harness.store, see)).toHaveLength(1);
-		end?.();
-		await idle;
+		if (end) await observer.run(end);
+		await observer.whenIdle();
 		expect(await refsOf(harness.store, see)).toHaveLength(0);
 	});
 
@@ -666,7 +766,7 @@ describe("unlink observer", () => {
 				),
 			),
 		);
-		await harness.queue.whenIdle();
+		await run(harness.queue.whenIdle);
 		const verb = outcome.resolutions.find(({ _tag }) => _tag === "Resolved");
 		if (verb?._tag !== "Resolved") throw new Error("anfangen did not resolve");
 		const link = (shown: string) => linkTo(verb.readingPath, shown);
@@ -866,12 +966,14 @@ describe("unlink observer", () => {
 			const harness = await classified();
 			unlinkOffline(harness);
 			const { notices, observer, reads } = observerOver({
+				quietMs: 1_000,
 				scroll: () => harness.scroll.content,
 				store: harness.store,
 				vault: harness.vault,
 			});
-			observer.sweep();
-			observer.modified([SCROLL]);
+			await observer.sweep();
+			await observer.modified([SCROLL]);
+			await observer.adjust(1_000);
 			await observer.whenIdle();
 			expect(reads).toEqual([SCROLL]);
 			expect(await refsOf(harness.store, see)).toHaveLength(1);
@@ -918,11 +1020,12 @@ describe("unlink observer", () => {
 				sweepQuietMs: 150,
 				vault: harness.vault,
 			});
-			observer.sweep();
-			// Sync writes a note elsewhere.
-			observer.modified(["Worter/elsewhere.md"]);
-			await Bun.sleep(50);
+			// Sync writes a note elsewhere as the plugin starts.
+			await observer.modified(["Worter/elsewhere.md"]);
+			await observer.sweep();
+			await observer.adjust(149);
 			expect(await refsOf(harness.store, see)).toHaveLength(2);
+			await observer.adjust(1);
 			await observer.whenIdle();
 			expect(await refsOf(harness.store, see)).toHaveLength(1);
 		});
@@ -954,12 +1057,11 @@ describe("unlink observer", () => {
 			// After every note was written, and before the sweep's writes.
 			const editedAt = Math.max(...[...vault.files.values()].map(({ mtime }) => mtime)) + 0.5;
 			const notices: string[] = [];
-			const observer = createUnlinkObserver({
+			const observer = onTestClock({
 				activity: createScrollActivity(),
 				cache: memorySegmentationCache(),
 				notify: (message) => notices.push(message),
 				quietMs: 0,
-				runtime: defaultRunner,
 				scrolls: {
 					modifiedAt: (path) =>
 						Effect.sync(() =>
@@ -971,7 +1073,7 @@ describe("unlink observer", () => {
 				segmenterVersion: Effect.succeed("test-segmenter"),
 				store: Effect.succeed(store),
 			});
-			observer.sweep();
+			await observer.sweep();
 			await observer.whenIdle();
 			// Story's removal rewrote the lake's note; Tale's ref went too.
 			expect(await refsOf(store, see)).toEqual([

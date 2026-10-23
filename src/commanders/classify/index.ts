@@ -6,8 +6,8 @@
 export { ClassifyCommander } from "./classify-commander";
 export { dumgenUnitResolver } from "./resolution/dumgen-unit-resolver";
 export {
-	createKnowledgeQueue,
 	type KnowledgeQueue,
+	makeKnowledgeQueue,
 } from "./resolution/knowledge-queue";
 export { produceKnowledge } from "./resolution/produce-knowledge";
 export { createScrollActivity } from "./resolution/scroll-activity";
@@ -18,7 +18,7 @@ export {
 } from "./resolution/scroll-files";
 export { createReadingReopener } from "./resolution/scroll-to-reading";
 export {
-	createUnlinkObserver,
+	makeUnlinkObserver,
 	type UnlinkObserver,
 } from "./resolution/unlink-observer";
 export {

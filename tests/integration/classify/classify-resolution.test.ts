@@ -13,10 +13,10 @@ import { type Answer, operations } from "dumgen";
 import { Effect } from "effect";
 import { ClassifyCommander } from "../../../src/commanders/classify/classify-commander";
 import { dumgenUnitResolver } from "../../../src/commanders/classify/resolution/dumgen-unit-resolver";
-import { createKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
+import { makeKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
 import { produceKnowledge } from "../../../src/commanders/classify/resolution/produce-knowledge";
 import { createScrollActivity } from "../../../src/commanders/classify/resolution/scroll-activity";
-import { createUnlinkObserver } from "../../../src/commanders/classify/resolution/unlink-observer";
+import { makeUnlinkObserver } from "../../../src/commanders/classify/resolution/unlink-observer";
 import { memorySegmentationCache } from "../../../src/commanders/classify/segmentation-cache";
 import { FakeVault } from "../../../src/packages/composed/dictionary/tests/support/fake-vault";
 import { dictionaryProjections } from "../../../src/stateless-helpers/dictionary-projections";
@@ -30,7 +30,7 @@ import {
 	STORY,
 } from "../../obsidian-e2e/scenarios/classify-resolution-script";
 import { TITLES, visible } from "../../obsidian-e2e/scenarios/dictionary-layout";
-import { defaultRunner } from "../../support/effect-runner";
+import { inScope } from "../../support/scoped";
 import { MemoryScroll, resolveAmong } from "../../unit/classify/resolution/support";
 import { dumgenServiceOver, unreachable } from "../../unit/dumgen/dumgen-support";
 
@@ -86,15 +86,16 @@ describe("Classify resolves a selection end to end", () => {
 		);
 		const scroll = new MemoryScroll(SCROLL, STORY);
 		const notices: string[] = [];
-		const queue = createKnowledgeQueue({
-			notify: (message) => notices.push(message),
-			run: (job) =>
-				produceKnowledge(
-					{ dumgen: operations, store, translationLanguages: ["en", "ru"] },
-					job,
-				).pipe(dumgen.provideBackground),
-			runtime: defaultRunner,
-		});
+		const { value: queue } = await inScope(
+			makeKnowledgeQueue({
+				notify: (message) => notices.push(message),
+				run: (job) =>
+					produceKnowledge(
+						{ dumgen: operations, store, translationLanguages: ["en", "ru"] },
+						job,
+					).pipe(dumgen.provideBackground),
+			}),
+		);
 		const cache = memorySegmentationCache();
 		const activity = createScrollActivity();
 		const commander = new ClassifyCommander({
@@ -123,7 +124,7 @@ describe("Classify resolves a selection end to end", () => {
 					(message) => notices.push(message),
 				),
 			);
-			await queue.whenIdle();
+			await Effect.runPromise(queue.whenIdle);
 		};
 
 		await classify(FIRST_SELECTION);
@@ -187,25 +188,26 @@ describe("Classify resolves a selection end to end", () => {
 		// The user unlinks the second "Der Hund" and "heute" (#116).
 		const hundNote = await readingNoteOf(LEMMA_PATHS.hund);
 		const heuteNote = await readingNoteOf(LEMMA_PATHS.heute);
-		const observer = createUnlinkObserver({
-			activity,
-			cache,
-			quietMs: 0,
-			runtime: defaultRunner,
-			scrolls: {
-				modifiedAt: () => Effect.succeed(undefined),
-				read: (path) =>
-					Effect.sync(() => (path === SCROLL ? scroll.content : undefined)),
-				resolve: resolveAmong(() => [...vault.markdownPaths(), SCROLL]),
-			},
-			segmenterVersion: Effect.succeed("test-segmenter"),
-			store: Effect.succeed(store),
-		});
+		const { value: observer } = await inScope(
+			makeUnlinkObserver({
+				activity,
+				cache,
+				quietMs: 0,
+				scrolls: {
+					modifiedAt: () => Effect.succeed(undefined),
+					read: (path) =>
+						Effect.sync(() => (path === SCROLL ? scroll.content : undefined)),
+					resolve: resolveAmong(() => [...vault.markdownPaths(), SCROLL]),
+				},
+				segmenterVersion: Effect.succeed("test-segmenter"),
+				store: Effect.succeed(store),
+			}),
+		);
 		scroll.content = scroll.content
 			.replace(`${await link(LEMMA_PATHS.hund, "Der Hund")} schläft.`, "Der Hund schläft.")
 			.replace(await link(LEMMA_PATHS.heute, "heute"), "heute");
-		observer.modified([SCROLL]);
-		await observer.whenIdle();
+		await Effect.runPromise(observer.modified([SCROLL]));
+		await Effect.runPromise(observer.whenIdle);
 		expect(vault.content(hundNote)).toMatch(/!\[\[Story#\^0\|\^[0-9a-f]{8}\]\]/u);
 		expect(vault.content(hundNote)).not.toMatch(/Story#\^1/u);
 		expect(vault.content(heuteNote)).toBeUndefined();
