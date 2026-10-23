@@ -93,6 +93,13 @@ export type VamDispatchEntry =
  */
 export type VamTouchedVault = "no" | "yes" | "unknown";
 
+type VamDispatchReportFields = {
+	readonly caller: string;
+	readonly entries: readonly VamDispatchEntry[];
+	readonly operationId: string;
+	readonly undo?: VamUndoReport | undefined;
+};
+
 /**
  * The receipt of one Dispatch Batch: one entry per planned action, in the
  * order VAM ran them. Planned actions include prerequisites VAM added, such
@@ -102,12 +109,20 @@ export type VamTouchedVault = "no" | "yes" | "unknown";
  * the origins of its events do. `undo` says what `dispatchOrUndo` took
  * back after a failure; other dispatches never set it.
  */
-export class VamDispatchReport extends Data.Class<{
-	readonly caller: string;
-	readonly entries: readonly VamDispatchEntry[];
-	readonly operationId: string;
-	readonly undo?: VamUndoReport | undefined;
-}> {
+export class VamDispatchReport extends Data.Class<VamDispatchReportFields> {
+	/**
+	 * Holds its own copy of `entries`, and its fields in the order above,
+	 * whatever the caller's, as `formatCause` prints them.
+	 */
+	constructor(fields: VamDispatchReportFields) {
+		super({
+			caller: fields.caller,
+			entries: [...fields.entries],
+			operationId: fields.operationId,
+			...("undo" in fields ? { undo: fields.undo } : {}),
+		});
+	}
+
 	/** A report for a batch of `operation` none of which ran. */
 	static notRun(
 		actions: readonly VaultAction[],
@@ -247,22 +262,26 @@ export function notRunCause(
 	operation: VamOperation,
 ): Cause.Cause<VamDispatchFailure> {
 	const failures = Cause.map(cause, (error) =>
-		error._tag === "VamDispatchFailure"
-			? error
-			: VamDispatchFailure.notRun(error, actions, operation),
+		keptFromRunning(error)
+			? VamDispatchFailure.notRun(error, actions, operation)
+			: error,
 	);
-	const keptFromRunning = cause.reasons.some(
-		(reason) =>
-			Cause.isFailReason(reason) &&
-			reason.error._tag !== "VamDispatchFailure",
+	const notRun = cause.reasons.some(
+		(reason) => Cause.isFailReason(reason) && keptFromRunning(reason.error),
 	);
-	return keptFromRunning
+	return notRun
 		? Cause.fromReasons(
 				failures.reasons.filter(
 					(reason) => !Cause.isInterruptReason(reason),
 				),
 			)
 		: failures;
+}
+
+function keptFromRunning(
+	error: VamDispatchFailure | VamSetupError | VamShutdownError,
+): error is VamSetupError | VamShutdownError {
+	return error._tag === "VamSetupError" || error._tag === "VamShutdownError";
 }
 
 /**

@@ -14,7 +14,9 @@ export type VaultFileStat = {
 };
 
 /** Any number, as Obsidian reports it: unlike `z.number()`, `NaN` and infinities pass. */
-const anyNumber = z.custom<number>(Predicate.isNumber);
+const anyNumber = z.custom<number>(Predicate.isNumber, {
+	message: "Expected a number",
+});
 
 const VaultFileStatSchema = z.object({
 	ctime: anyNumber,

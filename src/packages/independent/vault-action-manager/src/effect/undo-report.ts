@@ -42,13 +42,7 @@ export type VamUndoBlock =
  */
 export type VamNotUndoable = "Created" | "Trashed" | "TrashedDuplicate";
 
-/**
- * What a guarded undo did after a Dispatch Batch stopped. Every entry names
- * the forward `action`, as the batch's report lists it. Inverses ran in
- * reverse run order, each guarded so that it changes only what the batch
- * left untouched.
- */
-export class VamUndoReport extends Data.Class<{
+type VamUndoReportFields = {
 	/** Changes that stay, why, and the inverse tried, if any. */
 	readonly couldNotUndo: readonly {
 		readonly action: VaultAction;
@@ -72,7 +66,25 @@ export class VamUndoReport extends Data.Class<{
 		readonly action: VaultAction;
 		readonly inverse: VaultAction;
 	}[];
-}> {
+};
+
+/**
+ * What a guarded undo did after a Dispatch Batch stopped. Every entry names
+ * the forward `action`, as the batch's report lists it. Inverses ran in
+ * reverse run order, each guarded so that it changes only what the batch
+ * left untouched.
+ */
+export class VamUndoReport extends Data.Class<VamUndoReportFields> {
+	/** Holds its own copies of the lists, its fields in the order above. */
+	constructor(fields: VamUndoReportFields) {
+		super({
+			couldNotUndo: [...fields.couldNotUndo],
+			notUndoable: [...fields.notUndoable],
+			probed: [...fields.probed],
+			undone: [...fields.undone],
+		});
+	}
+
 	/** Nothing to undo: the batch changed nothing. */
 	static readonly empty = new VamUndoReport({
 		couldNotUndo: [],

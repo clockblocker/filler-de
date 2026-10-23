@@ -8,6 +8,7 @@ import {
 	VamContentConflictError,
 	VamDispatchError,
 	VamDispatchFailure,
+	VamDispatchReport,
 	VamPlanningError,
 	VamProtectedPathError,
 	VamSetupError,
@@ -407,5 +408,29 @@ describe("notRunCause", () => {
 		expect(first && Cause.isFailReason(first) && first.error).toBe(failure);
 		expect(second && Cause.isInterruptReason(second)).toBe(true);
 		expect(third && Cause.isDieReason(third) && third.defect).toBe(defect);
+	});
+});
+
+describe("VamDispatchReport", () => {
+	it("holds its own entries and its fields in declared order, whatever the caller's", () => {
+		const entries = [
+			{
+				action: upsert("Library/Note.md", "new"),
+				status: "Skipped" as const,
+			},
+		];
+		const operation = { caller: "test", operationId: "test#1" };
+		const report = new VamDispatchReport({ ...{ entries }, ...operation });
+		entries.push({
+			action: upsert("Library/Later.md", "x"),
+			status: "Skipped",
+		});
+
+		expect(Object.keys(report)).toEqual([
+			"caller",
+			"entries",
+			"operationId",
+		]);
+		expect(report.entries).toHaveLength(1);
 	});
 });
