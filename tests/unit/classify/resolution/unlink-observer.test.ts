@@ -36,6 +36,7 @@ import {
 	readingEntry,
 } from "../../../../src/packages/composed/dictionary/tests/support/fixtures";
 import { openStore, seed } from "../../../../src/packages/composed/dictionary/tests/support/store";
+import { defaultRunner } from "../../../support/effect-runner";
 import { FAENGT_AN_ANSWERS, selectionOf } from "../support";
 import {
 	attestationOf,
@@ -133,6 +134,7 @@ function observerOver(options: {
 	const store: UnlinkStore = options.store;
 	const observer = createUnlinkObserver({
 		activity: options.activity ?? createScrollActivity(),
+		runtime: defaultRunner,
 		...(options.blockedBy === undefined ? {} : { blockedBy: options.blockedBy }),
 		cache: options.cache ?? memorySegmentationCache(),
 		notify: (message) => notices.push(message),
@@ -959,6 +961,7 @@ describe("unlink observer", () => {
 				cache: memorySegmentationCache(),
 				notify: (message) => notices.push(message),
 				quietMs: 0,
+				runtime: defaultRunner,
 				scrolls: {
 					modifiedAt: (path) =>
 						Effect.sync(() =>

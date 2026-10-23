@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { Effect } from "effect";
 import { createReadingReopener } from "../../../../src/commanders/classify/resolution/scroll-to-reading";
 
 const NFC = "Worter/de/Lexeme/NOUN/Fem/m/müt/mütte/\u{1F469} Mütter";
@@ -7,11 +8,12 @@ const NFD = NFC.normalize("NFD");
 function reopener(active: string | null) {
 	const awaited: string[] = [];
 	const opened: string[] = [];
-	const reopen = createReadingReopener({
-		activePath: async () => active,
-		open: async (path) => {
-			opened.push(path);
-		},
+	const reopenEffect = createReadingReopener({
+		activePath: Effect.succeed(active),
+		open: (path) =>
+			Effect.sync(() => {
+				opened.push(path);
+			}),
 		queue: {
 			awaitNote: async (path) => {
 				awaited.push(path);
@@ -19,6 +21,7 @@ function reopener(active: string | null) {
 			},
 		},
 	});
+	const reopen = (target: string) => Effect.runPromise(reopenEffect(target));
 	return { awaited, opened, reopen };
 }
 

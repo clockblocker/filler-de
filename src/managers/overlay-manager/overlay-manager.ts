@@ -18,6 +18,7 @@ import {
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import type { App, Plugin } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
+import type { ReadSync } from "../../runtime/plugin-runtime";
 import type { CommandExecutor } from "../obsidian/command-executor";
 import type {
 	Teardown,
@@ -53,6 +54,8 @@ type OverlayManagerDeps = {
 	plugin?: Plugin;
 	userEventInterceptor?: ObsidianEventLayer;
 	commandExecutor?: CommandExecutor;
+	/** Reads the active note synchronously as the context menu opens. */
+	readSync: ReadSync;
 	vam: VaultActionManager;
 };
 
@@ -67,6 +70,7 @@ export class OverlayManager {
 	private readonly userEventInterceptor: ObsidianEventLayer | null;
 	private readonly commandExecutor: CommandExecutor | null;
 	private readonly vam: VaultActionManager;
+	private readonly readSync: ReadSync;
 	private workspaceTeardown: Teardown | null = null;
 	private selectionHandlerTeardown: (() => void) | null = null;
 	private actionClickHandlerTeardown: (() => void) | null = null;
@@ -84,6 +88,7 @@ export class OverlayManager {
 		this.userEventInterceptor = deps.userEventInterceptor ?? null;
 		this.commandExecutor = deps.commandExecutor ?? null;
 		this.vam = deps.vam;
+		this.readSync = deps.readSync;
 	}
 
 	init(): void {
@@ -143,6 +148,7 @@ export class OverlayManager {
 						false,
 				},
 				plugin: this.plugin,
+				readSync: this.readSync,
 				vam: this.vam,
 			});
 		}

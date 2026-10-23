@@ -3,12 +3,16 @@
  */
 
 import { makeCodecRulesFromSettings } from "@textfresser/library-core";
-import type { VaultActionManager } from "@textfresser/vault-action-manager";
+import type {
+	SplitPathToMdFile,
+	VaultActionManager,
+} from "@textfresser/vault-action-manager";
 import { Effect, Exit } from "effect";
 import type { App, Menu, Plugin } from "obsidian";
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/pages/split-to-pages-action";
 import { getParsedUserSettings } from "../../../global-state/global-state";
+import type { ReadSync } from "../../../runtime/plugin-runtime";
 import {
 	LibraryMetadata,
 	noteMetadataHelper,
@@ -24,6 +28,7 @@ type ContextMenuDeps = {
 	plugin: Plugin;
 	commandExecutor: CommandExecutor | null;
 	librarian: Pick<Librarian, "isInsideLibrary">;
+	readSync: ReadSync;
 	vam: VaultActionManager;
 };
 
@@ -48,10 +53,14 @@ export const getContextMenuFile = Effect.fn("getContextMenuFile")(function* (
  * Returns teardown function for cleanup.
  */
 export function setupContextMenu(deps: ContextMenuDeps): () => void {
-	const { app, commandExecutor, librarian, plugin, vam } = deps;
+	const { app, commandExecutor, librarian, plugin, readSync, vam } = deps;
 
 	const editorMenuRef = app.workspace.on("editor-menu", (menu: Menu) => {
-		handleEditorMenu(menu, vam, librarian, commandExecutor);
+		handleEditorMenu(
+			menu,
+			readSync(getContextMenuFile(vam, librarian)),
+			commandExecutor,
+		);
 	});
 
 	plugin.registerEvent(editorMenuRef);
@@ -63,18 +72,17 @@ export function setupContextMenu(deps: ContextMenuDeps): () => void {
 }
 
 /**
- * Handle editor menu event synchronously.
- * Uses vam.getOpenedContent() for content access.
+ * Handle editor menu event synchronously, for the active Library note read
+ * as the menu opens.
  */
 function handleEditorMenu(
 	menu: Menu,
-	vam: VaultActionManager,
-	librarian: Pick<Librarian, "isInsideLibrary">,
+	activeFileExit: Exit.Exit<
+		{ content: string; splitPath: SplitPathToMdFile } | null,
+		unknown
+	>,
 	commandExecutor: CommandExecutor | null,
 ): void {
-	const activeFileExit = Effect.runSyncExit(
-		getContextMenuFile(vam, librarian),
-	);
 	if (Exit.isFailure(activeFileExit) || !activeFileExit.value) return;
 	const { content, splitPath } = activeFileExit.value;
 

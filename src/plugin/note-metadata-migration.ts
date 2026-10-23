@@ -25,11 +25,11 @@ import { logger } from "../utils/logger";
  * reports the outcome in a Notice. The dictionary store hears the
  * migration's writes under `Worter/` as events and reads those notes again.
  */
-export async function migrateNoteMetadata(
+export const migrateNoteMetadata = Effect.fn("migrateNoteMetadata")(function* (
 	vam: VaultActionManager,
 	target: MetadataFormat,
-): Promise<void> {
-	const exit = await Effect.runPromiseExit(
+) {
+	const exit = yield* Effect.exit(
 		migrateMetadataFormat(vam, target, [
 			{
 				folder: getParsedUserSettings().splitPathToLibraryRoot,
@@ -61,4 +61,4 @@ export async function migrateNoteMetadata(
 		});
 	}
 	new Notice(describeMetadataMigration(report));
-}
+});

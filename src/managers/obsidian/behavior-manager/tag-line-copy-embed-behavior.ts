@@ -1,31 +1,17 @@
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import { logError } from "@textfresser/vault-action-manager/issue-handlers";
 import { Effect } from "effect";
-import { type App, Notice } from "obsidian";
+import { Notice } from "obsidian";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import { getErrorMessage } from "../../../utils/get-error-message";
-
-type TagLineCopyEmbedServices = {
-	app: App;
-	vam: VaultActionManager;
-};
 
 /**
  * Tags the current line with a block marker (if missing) and copies the block embed to clipboard.
  * Does nothing silently on empty/blank lines.
  */
-export async function tagLineCopyEmbedBehavior(
-	services: Partial<TagLineCopyEmbedServices>,
-): Promise<void> {
-	const { app, vam } = services;
-
-	if (!app || !vam) {
-		new Notice("Error: Missing required services");
-		return;
-	}
-
-	try {
-		const context = await Effect.runPromise(vam.getActiveEditorContext());
+export const tagLineCopyEmbedBehavior = Effect.fn("tagLineCopyEmbedBehavior")(
+	function* (vam: VaultActionManager) {
+		const context = yield* vam.getActiveEditorContext();
 		if (!context) {
 			new Notice("No active markdown file");
 			return;
@@ -36,9 +22,7 @@ export async function tagLineCopyEmbedBehavior(
 		const lineText = context.currentLine;
 
 		// Skip empty/blank lines silently
-		if (!lineText.trim()) {
-			return;
-		}
+		if (!lineText.trim()) return;
 
 		let blockId = blockIdHelper.extractNumeric(lineText);
 
@@ -47,28 +31,27 @@ export async function tagLineCopyEmbedBehavior(
 			const highestBlockNumber = blockIdHelper.findHighestNumber(
 				context.content,
 			);
-			const newBlockNumber = highestBlockNumber + 1;
-			blockId = String(newBlockNumber);
+			blockId = String(highestBlockNumber + 1);
 
 			// Append block marker to end of line
-			const newLineText = `${lineText} ^${blockId}`;
-			await Effect.runPromise(
-				vam.replaceActiveLine({
-					after: newLineText,
-					before: lineText,
-					line: lineNumber,
-					splitPath: context.splitPath,
-				}),
-			);
+			yield* vam.replaceActiveLine({
+				after: `${lineText} ^${blockId}`,
+				before: lineText,
+				line: lineNumber,
+				splitPath: context.splitPath,
+			});
 		}
 
 		// Format and copy embed to clipboard
 		const embed = blockIdHelper.formatEmbed(basename, blockId);
-		await navigator.clipboard.writeText(embed);
-	} catch (error) {
-		logError({
-			description: `Error tagging line with block embed: ${getErrorMessage(error)}`,
-			location: "tagLineCopyEmbedBehavior",
-		});
-	}
-}
+		yield* Effect.tryPromise(() => navigator.clipboard.writeText(embed));
+	},
+	Effect.catch((error) =>
+		Effect.sync(() =>
+			logError({
+				description: `Error tagging line with block embed: ${getErrorMessage(error)}`,
+				location: "tagLineCopyEmbedBehavior",
+			}),
+		),
+	),
+);

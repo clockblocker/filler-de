@@ -12,6 +12,7 @@ import { VaultPath } from "@textfresser/vault-action-manager";
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import { readingIdentityKey } from "dumling";
 import { Cause, Effect, Exit, Fiber } from "effect";
+import type { EffectRunner } from "../../../runtime/plugin-runtime";
 import { getErrorMessage } from "../../../utils/get-error-message";
 import { logger } from "../../../utils/logger";
 import { RETRIED_ASPECTS } from "./knowledge-request";
@@ -43,6 +44,8 @@ export type KnowledgeQueueOptions = {
 		job: KnowledgeJob,
 	) => Effect.Effect<KnowledgeOutcome, unknown>;
 	readonly notify: (message: string) => void;
+	/** Runs each Reading's run on the plugin runtime. */
+	readonly runtime: EffectRunner<unknown>;
 	/** Called as a run starts and ends, so the plugin's idle tracker sees it. */
 	readonly onStart?: () => void;
 	readonly onEnd?: () => void;
@@ -106,9 +109,16 @@ export function createKnowledgeQueue(
 		const key = readingIdentityKey(job.reading);
 		if (closed || runs.has(key)) return;
 		options.onStart?.();
-		const fiber = Effect.runFork(Effect.suspend(() => options.run(job)));
-		const done = Effect.runPromise(Fiber.await(fiber))
-			.then((exit) => {
+		const { runtime } = options;
+		const fiber = runtime.runFork(Effect.suspend(() => options.run(job)));
+		const done = runtime
+			.runPromiseExit(Fiber.await(fiber))
+			.then((awaited) => {
+				// Disposing the runtime interrupts the wait with the run.
+				const exit: Exit.Exit<KnowledgeOutcome, unknown> =
+					Exit.isSuccess(awaited)
+						? awaited.value
+						: Exit.failCause(awaited.cause);
 				runs.delete(key);
 				const message = describeOutcome(job, exit);
 				if (message === SAVED) saved.push(job.label);
@@ -128,8 +138,7 @@ export function createKnowledgeQueue(
 
 	const cancelAll = () => {
 		const count = runs.size;
-		for (const { fiber } of runs.values())
-			Effect.runFork(Fiber.interrupt(fiber));
+		for (const { fiber } of runs.values()) fiber.interruptUnsafe();
 		return count;
 	};
 

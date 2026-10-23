@@ -8,8 +8,8 @@ import type {
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 import { splitPathCodec } from "@textfresser/vault-action-manager";
-import { Effect } from "effect";
 import type { Librarian } from "../../../commanders/librarian/librarian";
+import type { RunUserEvent } from "./create-handlers";
 
 /**
  * Create a handler for task checkbox clicks in codex files.
@@ -17,6 +17,7 @@ import type { Librarian } from "../../../commanders/librarian/librarian";
  */
 export function createCodexCheckboxHandler(
 	librarian: Librarian,
+	userEvent: RunUserEvent,
 ): UserEventHandler<typeof UserEventKind.CheckboxClicked> {
 	return {
 		doesApply: (payload) =>
@@ -30,7 +31,8 @@ export function createCodexCheckboxHandler(
 				},
 			),
 		handle: async (payload) => {
-			await Effect.runPromise(
+			await userEvent(
+				"codex-checkbox",
 				librarian.handleCodexCheckboxClick(payload),
 			);
 			return { outcome: "handled" } as const;

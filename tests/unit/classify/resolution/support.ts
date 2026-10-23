@@ -33,6 +33,7 @@ import type {
 } from "../../../../src/commanders/classify/types";
 import type { Dumgen } from "../../../../src/managers/dumgen/dumgen-over";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
+import { defaultRunner } from "../../../support/effect-runner";
 
 export const run = <A, E>(effect: Effect.Effect<A, E>): Promise<A> =>
 	Effect.runPromise(effect);
@@ -287,6 +288,7 @@ export async function resolutionHarness(options: {
 				},
 				job,
 			),
+		runtime: defaultRunner,
 	});
 	const resolver = dumgenUnitResolver({
 		dumgen: Effect.succeed(options.dumgen),

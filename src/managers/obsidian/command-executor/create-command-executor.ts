@@ -24,7 +24,7 @@ type CommandExecutorManagers = {
 
 /**
  * Create command executor with injected managers.
- * Returns a function that executes commands by kind.
+ * Returns a function that answers each command kind's program.
  */
 export function createCommandExecutor(managers: CommandExecutorManagers) {
 	const { classify, librarian, textfresser, vam } = managers;
@@ -87,7 +87,8 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 			);
 		});
 
-	return async function executeCommand(kind: CommandKind): Promise<void> {
+	/** The program of the command `kind`; it reports its own failures. */
+	return function commandProgram(kind: CommandKind): Effect.Effect<void> {
 		switch (kind) {
 			case CommandKind.GoToPrevPage:
 			case CommandKind.GoToNextPage:
@@ -98,83 +99,70 @@ export function createCommandExecutor(managers: CommandExecutorManagers) {
 					kind === CommandKind.GoToNextPage;
 				// Delegate to librarian - codex guard handled internally
 				const librarianKind = kind as LibrarianCommandKind;
-				await Effect.runPromise(
-					(navigates ? collectNoteContext() : collectContext()).pipe(
-						Effect.flatMap((context) =>
-							librarian
-								.executeCommand(librarianKind, context, notify)
-								.pipe(Effect.ignore),
-						),
-						Effect.catch(
-							reportUnreadEditor(
-								navigates
-									? "turn the page"
-									: kind === CommandKind.SplitToPages
-										? "split it into pages"
-										: "split it in blocks",
-							),
+				return (
+					navigates ? collectNoteContext() : collectContext()
+				).pipe(
+					Effect.flatMap((context) =>
+						librarian
+							.executeCommand(librarianKind, context, notify)
+							.pipe(Effect.ignore),
+					),
+					Effect.catch(
+						reportUnreadEditor(
+							navigates
+								? "turn the page"
+								: kind === CommandKind.SplitToPages
+									? "split it into pages"
+									: "split it in blocks",
 						),
 					),
 				);
-				break;
 			}
 
-			case CommandKind.TranslateSelection: {
-				await Effect.runPromise(
-					collectContext().pipe(
-						Effect.flatMap((context) =>
-							textfresser
-								.executeCommand(kind, context, notify)
-								.pipe(Effect.ignore),
-						),
-						Effect.catch(
-							reportUnreadEditor("translate a selection"),
-						),
+			case CommandKind.TranslateSelection:
+				return collectContext().pipe(
+					Effect.flatMap((context) =>
+						textfresser
+							.executeCommand(kind, context, notify)
+							.pipe(Effect.ignore),
 					),
+					Effect.catch(reportUnreadEditor("translate a selection")),
 				);
-				break;
-			}
 
-			case CommandKind.Classify: {
-				await Effect.runPromise(
-					vam.getActiveEditorContext().pipe(
-						Effect.flatMap((context) =>
-							context
-								? classify.execute(
-										{
-											content: context.content,
-											scrollPath: splitPathCodec.format(
-												context.splitPath,
-											),
-											selection: context.selectionRange,
-										},
-										notify,
-									)
-								: Effect.sync(() =>
-										notify(
-											"⚠ Open a Scroll to classify a selection",
+			case CommandKind.Classify:
+				return vam.getActiveEditorContext().pipe(
+					Effect.flatMap((context) =>
+						context
+							? classify.execute(
+									{
+										content: context.content,
+										scrollPath: splitPathCodec.format(
+											context.splitPath,
 										),
+										selection: context.selectionRange,
+									},
+									notify,
+								)
+							: Effect.sync(() =>
+									notify(
+										"⚠ Open a Scroll to classify a selection",
 									),
-						),
-						Effect.catch(
-							reportUnreadEditor("classify a selection"),
-						),
+								),
 					),
+					Effect.catch(reportUnreadEditor("classify a selection")),
 				);
-				break;
-			}
 
 			default: {
 				const exhaustiveCheck: never = kind;
-				logger.error(
-					`[CommandExecutor] Unknown command kind: ${exhaustiveCheck}`,
+				return Effect.sync(() =>
+					logger.error(
+						`[CommandExecutor] Unknown command kind: ${exhaustiveCheck}`,
+					),
 				);
 			}
 		}
 	};
 }
 
-/**
- * Type for the returned executor function.
- */
-export type CommandExecutor = ReturnType<typeof createCommandExecutor>;
+/** Runs a command on the plugin runtime, once the plugin has launched. */
+export type CommandExecutor = (kind: CommandKind) => Promise<void>;

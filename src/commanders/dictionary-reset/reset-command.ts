@@ -25,6 +25,7 @@ import {
 import { type App, Modal, Notice, Setting } from "obsidian";
 import { conciseFailure, type KeyCheckFailure } from "../../managers/dumgen";
 import type { Dumgen } from "../../managers/dumgen/dumgen-over";
+import type { EffectRunner } from "../../runtime/plugin-runtime";
 import { getErrorMessage } from "../../utils/get-error-message";
 import { logger } from "../../utils/logger";
 import {
@@ -49,6 +50,9 @@ import { findSources, type SourceChoice } from "./source";
 import { vamResetVault } from "./vam-reset-vault";
 
 export const RESET_COMMAND_NAME = "Reset dictionary from old notes…";
+
+/** What a step the unloading plugin interrupted answers; it shows nothing. */
+const UNLOADED = "the plugin unloaded";
 export const CANCEL_RESET_COMMAND_NAME = "Cancel dictionary reset";
 
 export type DictionaryResetDeps = {
@@ -64,6 +68,8 @@ export type DictionaryResetDeps = {
 	readonly missingProviderKeys: () => readonly string[];
 	/** Checks the provider keys with each provider; answers what failed. */
 	readonly checkProviderKeys: () => Effect.Effect<readonly KeyCheckFailure[]>;
+	/** Runs the command's steps on the plugin runtime. */
+	readonly runtime: EffectRunner<unknown>;
 };
 
 const STAGE_LABEL: Record<ResetProgress["stage"], string> = {
@@ -189,10 +195,12 @@ export class DictionaryResetCommand {
 	}
 
 	private async openModal(): Promise<ResetOpening> {
-		const found = await Effect.runPromiseExit(
+		const found = await this.deps.runtime.runPromiseExit(
 			findSources(vamResetVault(this.deps.vam)),
 		);
 		if (Exit.isFailure(found)) {
+			if (Cause.hasInterruptsOnly(found.cause))
+				return { kind: "Failed", notice: UNLOADED };
 			const notice = `⚠ Dictionary reset: could not look for old notes: ${formatCause(found.cause, { stack: false })}`;
 			new Notice(notice);
 			return { kind: "Failed", notice };
@@ -240,14 +248,21 @@ export class DictionaryResetCommand {
 			`Dictionary reset dry run: reading the old notes in ${source}/…`,
 			0,
 		);
+		let interrupted = false;
 		try {
-			const [result, failures] = await Effect.runPromise(
+			const [result, failures] = await this.deps.runtime.runPromise(
 				Effect.all(
 					[
 						dryRunReset(vamResetVault(this.deps.vam), { source }),
 						this.deps.checkProviderKeys(),
 					],
 					{ concurrency: "unbounded" },
+				).pipe(
+					Effect.onInterrupt(() =>
+						Effect.sync(() => {
+							interrupted = true;
+						}),
+					),
 				),
 			);
 			notice.hide();
@@ -269,6 +284,7 @@ export class DictionaryResetCommand {
 			};
 		} catch (error) {
 			notice.hide();
+			if (interrupted) return { kind: "Failed", notice: UNLOADED };
 			const message = `⚠ Dictionary reset dry run failed: ${conciseFailure(getErrorMessage(error))}`;
 			new Notice(message);
 			return { kind: "Failed", notice: message };
@@ -302,7 +318,7 @@ export class DictionaryResetCommand {
 		try {
 			// Before the backup moves anything: a key the provider rejects
 			// would fail every attestation after Worter/ was moved (#146).
-			const failures = await Effect.runPromise(
+			const failures = await this.deps.runtime.runPromise(
 				this.deps.checkProviderKeys(),
 			);
 			if (failures.length > 0) {
@@ -404,7 +420,7 @@ export class DictionaryResetCommand {
 			DateTime.setZone(DateTime.nowUnsafe(), DateTime.zoneMakeLocal()),
 		);
 		try {
-			const exit = await Effect.runPromiseExit(
+			const exit = await this.deps.runtime.runPromiseExit(
 				executeReset({
 					cancel,
 					dictionary,
@@ -418,6 +434,10 @@ export class DictionaryResetCommand {
 					vault: vamResetVault(deps.vam),
 				}).pipe(Effect.provide(layer)),
 			);
+			if (Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause)) {
+				notice.hide();
+				return { kind: "Stopped", notice: UNLOADED };
+			}
 			if (Exit.isFailure(exit)) {
 				const failure = Cause.squash(exit.cause);
 				if (

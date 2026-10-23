@@ -1,6 +1,6 @@
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { Effect, Exit } from "effect";
-import { type App, Notice, type Plugin } from "obsidian";
+import { type Effect, Exit } from "effect";
+import { Notice, type Plugin } from "obsidian";
 import type { KnowledgeQueue } from "../commanders/classify";
 import {
 	CANCEL_RESET_COMMAND_NAME,
@@ -10,16 +10,22 @@ import {
 import { RESTART_LIBRARIAN_COMMAND_NAME } from "../commanders/librarian/runtime/describe-librarian-stop";
 import { tagLineCopyEmbedBehavior } from "../managers/obsidian/behavior-manager";
 import { CommandKind } from "../managers/obsidian/command-executor";
+import type { PluginRuntime } from "../runtime/plugin-runtime";
 import { recentTrace } from "../utils/recent-trace";
 
 /** What the palette commands reach; null while the plugin still loads. */
 export type PluginCommandDeps = {
-	readonly app: App;
+	/** Runs a command's program under `command.<id>`, and reads synchronously. */
+	readonly runtime: Pick<
+		PluginRuntime<never, unknown>,
+		"command" | "readSync"
+	>;
 	readonly execute: (kind: CommandKind) => void;
 	readonly vam: () => VaultActionManager | null;
 	readonly knowledgeQueue: () => KnowledgeQueue | null;
 	readonly dictionaryReset: () => DictionaryResetCommand | null;
-	readonly restartLibrarian: () => void;
+	/** The "Restart Librarian" program. */
+	readonly restartLibrarian: Effect.Effect<void>;
 	readonly stillLoading: () => void;
 };
 
@@ -59,12 +65,15 @@ export function registerCommands(plugin: Plugin, deps: PluginCommandDeps) {
 				const vam = deps.vam();
 				if (!vam) return true;
 				// Check if there's a selection via VAM
-				const selection = Effect.runSyncExit(vam.getSelectionInfo());
+				const selection = deps.runtime.readSync(vam.getSelectionInfo());
 				if (Exit.isSuccess(selection) && selection.value) {
 					// Selection is collected by CommandContext in executor
 					deps.execute(CommandKind.SplitInBlocks);
 				} else {
-					tagLineCopyEmbedBehavior({ app: deps.app, vam });
+					void deps.runtime.command(
+						"split-selection-in-blocks",
+						tagLineCopyEmbedBehavior(vam),
+					);
 				}
 			}
 			return true;
@@ -149,7 +158,12 @@ export function registerCommands(plugin: Plugin, deps: PluginCommandDeps) {
 	});
 
 	plugin.addCommand({
-		callback: deps.restartLibrarian,
+		callback: () => {
+			void deps.runtime.command(
+				"restart-librarian",
+				deps.restartLibrarian,
+			);
+		},
 		id: "restart-librarian",
 		name: RESTART_LIBRARIAN_COMMAND_NAME,
 	});

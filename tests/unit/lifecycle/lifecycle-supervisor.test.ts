@@ -100,7 +100,10 @@ function makeHarness(options: { readonly autoStart?: boolean } = {}) {
 		},
 		loadStore: () => Effect.runPromise(Deferred.await(storeLoaded)),
 		makeLibrarian,
-		onLaunched: () => events.push("launched"),
+		onLaunched: () =>
+			Effect.sync(() => {
+				events.push("launched");
+			}),
 		resetRunning: () => resetRunning,
 		sweep: () => events.push("sweep"),
 	};
@@ -484,16 +487,16 @@ describe("lifecycle supervisor: unload", () => {
 	it("interrupts a startup in flight, tells nothing, and releases newest first, the vault last", async () => {
 		const h = makeHarness();
 		const released: string[] = [];
-		const boot = Effect.sync(() => {
-			h.supervisor.ownLast(
+		const boot = Effect.gen(function* () {
+			yield* h.supervisor.ownLast(
 				"dispose the vault",
 				Effect.sync(() => released.push("vault")),
 			);
-			h.supervisor.own(
+			yield* h.supervisor.own(
 				"close the store",
 				Effect.sync(() => released.push("store")),
 			);
-			h.supervisor.own(
+			yield* h.supervisor.own(
 				"close the observer",
 				Effect.sync(() => released.push("observer")),
 			);
@@ -519,6 +522,14 @@ describe("lifecycle supervisor: unload", () => {
 		expect(h.supervisor.state().kind).toBe("Stopped");
 		expect(h.supervisor.librarianState().kind).toBe("Stopped");
 		expect(h.supervisor.librarian()).toBeNull();
+	});
+
+	it("answers a command it interrupted before its fiber started", async () => {
+		const h = makeHarness();
+		// The command's fiber is scheduled, not started, when the unload comes.
+		const queued = Effect.runPromise(h.supervisor.reconfigure);
+		await Effect.runPromise(h.supervisor.stop);
+		expect(await queued).toBe(false);
 	});
 
 	it("interrupts a launch still waiting for Obsidian", async () => {
@@ -547,13 +558,14 @@ describe("lifecycle supervisor: unload", () => {
 		expect(h.librarians).toHaveLength(1);
 
 		let released = false;
-		h.supervisor.own(
-			"late",
-			Effect.sync(() => {
-				released = true;
-			}),
+		await Effect.runPromise(
+			h.supervisor.own(
+				"late",
+				Effect.sync(() => {
+					released = true;
+				}),
+			),
 		);
-		await settle();
 		expect(released).toBe(true);
 	});
 
@@ -561,12 +573,12 @@ describe("lifecycle supervisor: unload", () => {
 		const h = makeHarness({ autoStart: true });
 		const released: string[] = [];
 		await h.launch(
-			Effect.sync(() => {
-				h.supervisor.own(
+			Effect.gen(function* () {
+				yield* h.supervisor.own(
 					"first",
 					Effect.sync(() => released.push("first")),
 				);
-				h.supervisor.own(
+				yield* h.supervisor.own(
 					"broken",
 					Effect.sync(() => {
 						throw new Error("boom");
@@ -619,8 +631,8 @@ describe("lifecycle supervisor: thrown errors", () => {
 		const h = makeHarness({ autoStart: true });
 		let disposed = false;
 		await h.launch(
-			Effect.sync(() => {
-				h.supervisor.ownLast(
+			Effect.gen(function* () {
+				yield* h.supervisor.ownLast(
 					"dispose the vault",
 					Effect.sync(() => {
 						disposed = true;

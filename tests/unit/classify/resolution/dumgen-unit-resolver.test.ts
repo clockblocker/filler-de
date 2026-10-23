@@ -25,6 +25,7 @@ import { UnitResolver } from "../../../../src/commanders/classify/unit-resolver"
 import { dumgenOver } from "../../../../src/managers/dumgen";
 import { createScriptedJev } from "../../../../src/managers/dumgen/scripted-jev";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
+import { defaultRunner } from "../../../support/effect-runner";
 import { FAENGT_AN_ANSWERS, selectionOf } from "../support";
 import {
 	attestationOf,
@@ -779,6 +780,7 @@ describe("createKnowledgeQueue", () => {
 				Effect.sync(() => {
 					started++;
 				}).pipe(Effect.andThen(Effect.never)),
+			runtime: defaultRunner,
 		});
 		const reading = { emojiDescription: "🌊", lemma: see, unitKind: "Reading" } as Dumling.Reading<"de">;
 		const job = {

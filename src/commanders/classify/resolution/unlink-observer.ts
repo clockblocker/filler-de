@@ -95,7 +95,8 @@ import {
 import { VaultPath } from "@textfresser/vault-action-manager";
 import type { AttestationLink } from "dumdict";
 import { readingIdentityKey } from "dumling";
-import { Effect, Option, Result } from "effect";
+import { Effect, Exit, Option, Result } from "effect";
+import type { EffectRunner } from "../../../runtime/plugin-runtime";
 import { getErrorMessage } from "../../../utils/get-error-message";
 import { logger } from "../../../utils/logger";
 import { scrollSentences, segmentSourceRanges } from "../scroll-sentences";
@@ -168,6 +169,8 @@ export type UnlinkObserverDeps = {
 	/** Called as a check is pending and once it is done, for the plugin's idle tracker. */
 	readonly onStart?: () => void;
 	readonly onEnd?: () => void;
+	/** Runs each check on the plugin runtime. */
+	readonly runtime: EffectRunner<unknown>;
 };
 
 export type UnlinkObserver = {
@@ -680,20 +683,23 @@ export function createUnlinkObserver(deps: UnlinkObserverDeps): UnlinkObserver {
 		wakeIdle();
 	};
 
+	/** Answers undefined for a check that failed, or that unloading interrupted. */
 	const run = <A>(effect: Effect.Effect<A, unknown>) =>
-		Effect.runPromise(
-			effect.pipe(
-				Effect.catchCause((cause) =>
-					Effect.sync(() => {
-						logger.warn(
-							"[Classify] Checking a Scroll's links failed:",
-							getErrorMessage(cause),
-						);
-						return undefined;
-					}),
+		deps.runtime
+			.runPromiseExit(
+				effect.pipe(
+					Effect.catchCause((cause) =>
+						Effect.sync(() => {
+							logger.warn(
+								"[Classify] Checking a Scroll's links failed:",
+								getErrorMessage(cause),
+							);
+							return undefined;
+						}),
+					),
 				),
-			),
-		);
+			)
+			.then((exit) => (Exit.isSuccess(exit) ? exit.value : undefined));
 
 	const schedule = (path: string, entry: Watched, delay = quietMs) => {
 		if (entry.timer !== undefined) clearTimeout(entry.timer);
