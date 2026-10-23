@@ -1,12 +1,11 @@
 import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type { Codecs } from "../../codecs";
 import type { SectionNodeSegmentId } from "../../codecs/segment-id";
+import type { TreeActionError } from "../../healer/library-tree/tree-action/tree-action-error";
 import type { HealingAction } from "../../healer/library-tree/types/healing-action";
 import { type SectionNode, TreeNodeKind } from "../../tree";
-import {
-	buildObservedLeafSplitPath,
-	sectionChainToPathParts,
-} from "../../tree/utils";
+import { buildObservedLeafSplitPath } from "../../tree/utils";
 import {
 	computeLeafHealingForFile,
 	computeLeafHealingForScroll,
@@ -21,30 +20,17 @@ import {
  * @param oldSuffixPathParts - OLD path parts (for computing old basename suffix)
  * @param codecs - Codec API
  * @param currentPathParts - NEW path parts (where files ARE now in filesystem)
- *                           If undefined, derived from sectionChain.
+ * @returns the healing actions, or the first descendant whose canonical split
+ *          path could not be built
  */
 export function computeDescendantSuffixHealing(
 	sectionChain: SectionNodeSegmentId[],
 	section: SectionNode,
 	oldSuffixPathParts: string[],
 	codecs: Codecs,
-	currentPathParts?: string[],
-): HealingAction[] {
-	// Derive current path from sectionChain if not provided
-	const actualCurrentPath =
-		currentPathParts ??
-		(() => {
-			const pathResult = sectionChainToPathParts(
-				sectionChain,
-				codecs.segmentId,
-			);
-			if (pathResult.isErr()) {
-				throw new Error(
-					`Failed to parse section chain: ${pathResult.error.message}`,
-				);
-			}
-			return pathResult.value;
-		})();
+	currentPathParts: string[],
+): Result.Result<HealingAction[], TreeActionError> {
+	const actualCurrentPath = currentPathParts;
 
 	const healingActions: HealingAction[] = [];
 
@@ -60,7 +46,8 @@ export function computeDescendantSuffixHealing(
 				codecs,
 				childCurrentPath,
 			);
-			healingActions.push(...childHealing);
+			if (Result.isFailure(childHealing)) return childHealing;
+			healingActions.push(...childHealing.success);
 		} else {
 			// Leaf: derive observed path from parent + leaf basename
 			// Build observed split path for this leaf
@@ -88,7 +75,8 @@ export function computeDescendantSuffixHealing(
 						observedSplitPath,
 						codecs,
 					);
-					healingActions.push(...leafHealing);
+					if (Result.isFailure(leafHealing)) return leafHealing;
+					healingActions.push(...leafHealing.success);
 				}
 			} else {
 				if (observedSplitPath.kind === SplitPathKind.File) {
@@ -104,11 +92,12 @@ export function computeDescendantSuffixHealing(
 						observedSplitPath,
 						codecs,
 					);
-					healingActions.push(...leafHealing);
+					if (Result.isFailure(leafHealing)) return leafHealing;
+					healingActions.push(...leafHealing.success);
 				}
 			}
 		}
 	}
 
-	return healingActions;
+	return Result.succeed(healingActions);
 }

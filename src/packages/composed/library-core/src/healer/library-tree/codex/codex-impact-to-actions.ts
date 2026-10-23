@@ -9,7 +9,6 @@ import {
 	VaultEventKind,
 } from "@textfresser/vault-action-manager";
 import { Result } from "effect";
-import { err, ok } from "neverthrow";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
@@ -208,16 +207,16 @@ export function codexImpactToRecreations(
 				parentChain,
 				codecs,
 			);
-			if (splitPathResult.isErr()) {
+			if (Result.isFailure(splitPathResult)) {
 				issues.push(
 					libraryWarning(
 						"[Codex] Failed to compute scroll split path:",
-						splitPathResult.error,
+						splitPathResult.failure,
 					),
 				);
 				continue; // Maintain current behavior: skip on error
 			}
-			const splitPath = splitPathResult.value;
+			const splitPath = splitPathResult.success;
 
 			const writeStatusAction: WriteScrollStatusAction = {
 				kind: "WriteScrollStatus",
@@ -325,11 +324,11 @@ export function codexImpactToIncrementalRecreations(
 				parentChain,
 				codecs,
 			);
-			if (splitPathResult.isErr()) {
+			if (Result.isFailure(splitPathResult)) {
 				issues.push(
 					libraryWarning(
 						"[Codex] Failed to compute scroll split path:",
-						splitPathResult.error,
+						splitPathResult.failure,
 					),
 				);
 				continue;
@@ -338,7 +337,7 @@ export function codexImpactToIncrementalRecreations(
 			const writeStatusAction: WriteScrollStatusAction = {
 				kind: "WriteScrollStatus",
 				payload: {
-					splitPath: splitPathResult.value,
+					splitPath: splitPathResult.success,
 					status: newStatus,
 				},
 			};
@@ -448,11 +447,11 @@ function validateCodexSplitPath(
 		splitPath.pathParts,
 		codecs,
 	);
-	if (sectionChainResult.isErr()) {
+	if (Result.isFailure(sectionChainResult)) {
 		// Skip on parse error
 		return null;
 	}
-	const sectionChain = sectionChainResult.value;
+	const sectionChain = sectionChainResult.success;
 
 	// Compute expected codex basename for this section chain
 	const expectedSplitPath = computeCodexSplitPath(sectionChain, codecs);
@@ -477,7 +476,7 @@ function validateCodexSplitPath(
 function buildSectionChainFromPathParts(
 	pathParts: string[],
 	codecs: Codecs,
-): import("neverthrow").Result<SectionNodeSegmentId[], CodecError> {
+): Result.Result<SectionNodeSegmentId[], CodecError> {
 	const sectionChain: SectionNodeSegmentId[] = [];
 
 	for (const nodeName of pathParts) {
@@ -486,12 +485,12 @@ function buildSectionChainFromPathParts(
 			targetKind: TreeNodeKind.Section,
 		});
 		if (Result.isFailure(segIdResult)) {
-			return err(segIdResult.failure);
+			return Result.fail(segIdResult.failure);
 		}
 		sectionChain.push(segIdResult.success as SectionNodeSegmentId);
 	}
 
-	return ok(sectionChain);
+	return Result.succeed(sectionChain);
 }
 
 // ─── Helpers ───
@@ -514,7 +513,7 @@ function extractNodeNamesFromChain(
 	codecs: Codecs,
 ): string[] {
 	const result = parseSectionChainToNodeNames(chain, codecs);
-	return result.isOk() ? result.value : [];
+	return Result.isSuccess(result) ? result.success : [];
 }
 
 // Tree traversal functions moved to tree-collectors.ts

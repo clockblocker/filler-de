@@ -4,6 +4,7 @@ import {
 	MD,
 	SplitPathKind,
 } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import { makeCodecRulesFromSettings, makeCodecs } from "../../../src/codecs";
 import { splitPathsEqual } from "../../../src/healing/split-path-equality";
 import { makeLibraryScope } from "../../../src/tree/library-scope";
@@ -39,9 +40,9 @@ describe("Library membership path identity", () => {
 		const scope = makeLibraryScope(rules);
 		expect(checkIfInsideLibrary(md(["library"], "Scroll"))).toBe(false);
 		expect(checkIfInsideLibrary(folder([], "library"))).toBe(false);
-		expect(scope.toLibraryPath(md(["library"], "Scroll")).isErr()).toBe(
-			true,
-		);
+		expect(
+			Result.isFailure(scope.toLibraryPath(md(["library"], "Scroll"))),
+		).toBe(true);
 	});
 
 	it("matches a root and a path whatever their Unicode composition", () => {
@@ -52,7 +53,7 @@ describe("Library membership path identity", () => {
 		expect(checkIfInsideLibrary(md([NFC, "Library"], "Scroll"))).toBe(true);
 		expect(checkIfInsideLibrary(folder([NFC], "Library"))).toBe(true);
 		const scoped = scope.toLibraryPath(md([NFC, "Library", "A"], "Scroll"));
-		expect(scoped.isOk() && scoped.value.pathParts).toEqual([
+		expect(Result.isSuccess(scoped) && scoped.success.pathParts).toEqual([
 			"Library",
 			"A",
 		]);
@@ -66,8 +67,10 @@ describe("Library membership path identity", () => {
 		expect(checkIfInsideLibrary(md(["Notes"], "x"))).toBe(false);
 		expect(checkIfInsideLibrary(md([], "x"))).toBe(false);
 		expect(checkIfInsideLibrary(folder([], ""))).toBe(true);
-		expect(scope.toLibraryPath(md(["Notes"], "x")).isErr()).toBe(true);
-		expect(scope.toLibraryPath(md([], "x")).isErr()).toBe(true);
+		expect(Result.isFailure(scope.toLibraryPath(md(["Notes"], "x")))).toBe(
+			true,
+		);
+		expect(Result.isFailure(scope.toLibraryPath(md([], "x")))).toBe(true);
 	});
 });
 

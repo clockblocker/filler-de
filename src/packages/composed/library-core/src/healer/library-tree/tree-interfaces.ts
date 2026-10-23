@@ -7,7 +7,9 @@
  * The Tree class implements TreeFacade (both interfaces).
  */
 
+import type { Result } from "effect";
 import type { SectionNodeSegmentId } from "../../codecs/segment-id/types/segment-id";
+import type { TreeActionError } from "./tree-action/tree-action-error";
 import type { TreeAction } from "./tree-action/types/tree-action";
 import type { SectionNode, TreeNode } from "./tree-node/types/tree-node";
 import type { LeafMatch } from "./types/leaf-match";
@@ -50,14 +52,20 @@ export type TreeWriter = {
 	 * Returns { changed, node } where:
 	 * - changed: true if tree was actually modified, false if already in target state
 	 * - node: the affected node (or null for delete)
+	 *
+	 * Fails when the action cannot be applied; the tree may then hold the
+	 * part of the action that came before the failure.
 	 */
-	apply(action: TreeAction): TreeApplyResult;
+	apply(action: TreeAction): Result.Result<TreeApplyResult, TreeActionError>;
 
 	/**
 	 * Ensure a chain of sections exists, creating missing ones.
-	 * Returns the deepest section in the chain.
+	 * Returns the deepest section in the chain. Fails on a segment ID that
+	 * does not parse or names a leaf; the sections before it stay created.
 	 */
-	ensureSectionChain(chain: SectionNodeSegmentId[]): SectionNode;
+	ensureSectionChain(
+		chain: SectionNodeSegmentId[],
+	): Result.Result<SectionNode, TreeActionError>;
 };
 
 // ─── Combined Interface ───

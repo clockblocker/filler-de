@@ -5,6 +5,7 @@ import {
 	SplitPathKind,
 	VaultEventKind,
 } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import { makeCodecRulesFromSettings } from "../../../../../../../../src/codecs";
 import { makeLibraryScope } from "../../../../../../../../src/tree/library-scope";
 import { defaultSettingsForUnitTests } from "../../../../../../common-utils/consts";
@@ -22,10 +23,10 @@ describe("makeLibraryScope Vault ↔ Library round trips", () => {
 		};
 
 		const scoped = libraryScope.toLibraryPath(original);
-		expect(scoped.isOk()).toBe(true);
-		if (scoped.isErr()) return;
+		expect(Result.isSuccess(scoped)).toBe(true);
+		if (Result.isFailure(scoped)) return;
 
-		expect(libraryScope.toVaultPath(scoped.value)).toEqual(original);
+		expect(libraryScope.toVaultPath(scoped.success)).toEqual(original);
 	});
 
 	it("roundtrips FileCreated inside library", () => {

@@ -3,6 +3,7 @@ import {
 	SplitPathKind,
 	splitPathCodec,
 } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type { Codecs } from "../../../codecs";
 import { makeLibraryScope } from "../../../tree/library-scope";
 import { isCodexSplitPath } from "../codex/helpers";
@@ -34,14 +35,14 @@ export function findInvalidCodexFiles(
 
 		// This is a __ file - check if it's valid
 		const libraryScopedResult = libraryScope.toLibraryPath(file);
-		if (libraryScopedResult.isErr()) continue;
+		if (Result.isFailure(libraryScopedResult)) continue;
 
-		const filePath = splitPathCodec.format(libraryScopedResult.value);
+		const filePath = splitPathCodec.format(libraryScopedResult.success);
 
 		if (!validCodexPaths.has(filePath)) {
 			deleteActions.push({
 				kind: "DeleteMdFile",
-				payload: { splitPath: libraryScopedResult.value },
+				payload: { splitPath: libraryScopedResult.success },
 			});
 		}
 	}

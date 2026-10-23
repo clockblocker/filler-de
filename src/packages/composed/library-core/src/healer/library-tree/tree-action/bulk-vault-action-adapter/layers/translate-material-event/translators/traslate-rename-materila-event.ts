@@ -1,3 +1,4 @@
+import { Result } from "effect";
 import type { Codecs } from "../../../../../../../codecs";
 import { TreeNodeKind } from "../../../../../tree-node/types/atoms";
 import {
@@ -38,33 +39,33 @@ export function traslateRenameMaterializedEvent(
 		ev.from,
 		codecs,
 	);
-	if (targetRes.isErr()) {
+	if (Result.isFailure(targetRes)) {
 		return {
 			actions: out,
 			issues: [
 				libraryWarning(
 					"[translateRename] targetRes error:",
-					targetRes.error,
+					targetRes.failure,
 				),
 			],
 		};
 	}
-	const targetLocator = targetRes.value;
+	const targetLocator = targetRes.success;
 
 	// 2) destination canonical (TO + policy/intent)
 	const destinationRes = tryMakeDestinationLocatorFromEvent(ev, codecs);
-	if (destinationRes.isErr()) {
+	if (Result.isFailure(destinationRes)) {
 		return {
 			actions: out,
 			issues: [
 				libraryWarning(
 					"[translateRename] destinationRes error:",
-					destinationRes.error,
+					destinationRes.failure,
 				),
 			],
 		};
 	}
-	const destinationLocator = destinationRes.value;
+	const destinationLocator = destinationRes.success;
 
 	const newNodeName = getNodeName(destinationLocator, codecs);
 	const newParentLocator = getParentLocator(destinationLocator);

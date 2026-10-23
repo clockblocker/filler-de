@@ -3,6 +3,7 @@
  * Produces markdown content for a section's codex file.
  */
 
+import { Result } from "effect";
 import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { sortTreeNodesForDisplay } from "../../../display-name-sort";
@@ -20,19 +21,22 @@ import {
 // ─── Chain Parsing Helper ───
 
 /**
- * Parse section chain to path parts, throwing on error.
+ * Parse section chain to path parts.
+ *
+ * Invariant: `sectionChain` is a chain of the Tree, which holds only segment
+ * IDs that parse. A chain that breaks this is a bug, and this throws.
  */
 function parseChainOrThrow(
 	sectionChain: SectionNodeSegmentId[],
 	codecs: Codecs,
 ): string[] {
 	const result = sectionChainToPathParts(sectionChain, codecs);
-	if (result.isErr()) {
+	if (Result.isFailure(result)) {
 		throw new Error(
-			`Failed to parse section chain: ${result.error.kind}. Should never happen with valid tree state.`,
+			`Failed to parse section chain: ${result.failure.kind}. Should never happen with valid tree state.`,
 		);
 	}
-	return result.value;
+	return result.success;
 }
 
 // ─── Children List Generation ───

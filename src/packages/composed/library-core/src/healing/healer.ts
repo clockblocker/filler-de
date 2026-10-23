@@ -11,6 +11,7 @@ import type {
 import type { SectionNodeSegmentId } from "../codecs/segment-id";
 import type { CodexImpact } from "../codex";
 import { computeCodexImpact } from "../codex";
+import { TreeActionError } from "../healer/library-tree/tree-action/tree-action-error";
 import type {
 	ChangeNodeStatusAction,
 	CreateTreeLeafAction,
@@ -93,8 +94,14 @@ export class Healer implements TreeReader {
 	 * disambiguated name (e.g. "Untitled 1") so the new file gets its own node.
 	 * Nested duplicate: if coreName is "Untitled 2 1" (Obsidian duplicate), we
 	 * rewrite to next in root sequence (e.g. "Untitled 3").
+	 *
+	 * Fails when the action cannot be applied, or its healing cannot be
+	 * computed. The tree may then hold the part of the action that came before
+	 * the failure, so a caller that must stay consistent applies it to a fork.
 	 */
-	getHealingActionsFor(action: TreeAction): HealerApplyResult {
+	getHealingActionsFor(
+		action: TreeAction,
+	): Result.Result<HealerApplyResult, TreeActionError> {
 		let actionToApply = action;
 
 		if (action.actionType === TreeActionType.Create) {
@@ -114,9 +121,9 @@ export class Healer implements TreeReader {
 					this.codecs,
 				);
 				if (
-					canonicalResult.isOk() &&
+					Result.isSuccess(canonicalResult) &&
 					!splitPathsEqual(
-						canonicalResult.value,
+						canonicalResult.success,
 						createAction.observedSplitPath,
 					)
 				) {
@@ -200,33 +207,33 @@ export class Healer implements TreeReader {
 		}
 
 		// Apply action to tree (modifies tree structure), get change indicator
-		const { changed, node: mutatedNode } = this.tree.apply(actionToApply);
+		const applied = this.tree.apply(actionToApply);
+		if (Result.isFailure(applied)) return Result.fail(applied.failure);
+		const { changed, node: mutatedNode } = applied.success;
 
 		// If tree didn't change, skip healing - action was already applied
 		if (!changed) {
-			return {
+			return Result.succeed({
 				appliedAction: actionToApply,
 				changed: false,
 				codexImpact: EMPTY_CODEX_IMPACT,
 				healingActions: [],
-			};
+			});
 		}
 
 		// Compute codex impact AFTER applying (only if state changed)
 		const codexImpact = computeCodexImpact(actionToApply);
 
 		// Compute healing actions based on action type
-		const healingActions = this.computeHealingForAction(
-			actionToApply,
-			mutatedNode,
+		return Result.map(
+			this.computeHealingForAction(actionToApply, mutatedNode),
+			(healingActions) => ({
+				appliedAction: actionToApply,
+				changed: true,
+				codexImpact,
+				healingActions,
+			}),
 		);
-
-		return {
-			appliedAction: actionToApply,
-			changed: true,
-			codexImpact,
-			healingActions,
-		};
 	}
 
 	// ─── TreeReader Implementation ───
@@ -247,7 +254,9 @@ export class Healer implements TreeReader {
 	 * Ensure a section chain exists in the tree, creating missing sections as needed.
 	 * Used to bypass self-event filtering when Bookkeeper creates sections directly.
 	 */
-	ensureSectionChain(chain: SectionNodeSegmentId[]): SectionNode {
+	ensureSectionChain(
+		chain: SectionNodeSegmentId[],
+	): Result.Result<SectionNode, TreeActionError> {
 		return this.tree.ensureSectionChain(chain);
 	}
 
@@ -256,7 +265,7 @@ export class Healer implements TreeReader {
 	private computeHealingForAction(
 		action: TreeAction,
 		mutatedNode: TreeNode | null,
-	): HealingAction[] {
+	): Result.Result<HealingAction[], TreeActionError> {
 		const actionType = action.actionType;
 
 		if (actionType === "Create") {
@@ -285,7 +294,7 @@ export class Healer implements TreeReader {
 
 	private computeCreateHealing(
 		action: CreateTreeLeafAction,
-	): HealingAction[] {
+	): Result.Result<HealingAction[], TreeActionError> {
 		const { targetLocator, observedSplitPath } = action;
 		// Narrow types based on locator kind
 		if (targetLocator.targetKind === TreeNodeKind.Scroll) {
@@ -303,22 +312,24 @@ export class Healer implements TreeReader {
 				);
 			}
 		}
-		return [];
+		return Result.succeed([]);
 	}
 
-	private computeDeleteHealing(_action: DeleteNodeAction): HealingAction[] {
+	private computeDeleteHealing(
+		_action: DeleteNodeAction,
+	): Result.Result<HealingAction[], TreeActionError> {
 		// Delete doesn't generate healing actions
-		return [];
+		return Result.succeed([]);
 	}
 
 	private computeRenameHealing(
 		action: RenameNodeAction,
 		mutatedNode: TreeNode | null,
-	): HealingAction[] {
+	): Result.Result<HealingAction[], TreeActionError> {
 		const { targetLocator, newNodeName } = action;
 
 		// Use mutated node directly (returned from tree.apply)
-		if (!mutatedNode) return [];
+		if (!mutatedNode) return Result.succeed([]);
 		const node = mutatedNode;
 
 		// Compute new segment ID
@@ -332,12 +343,14 @@ export class Healer implements TreeReader {
 				targetLocator.segmentId as SectionNodeSegmentId,
 				this.codecs,
 			);
-			if (oldSectionPathResult.isErr()) {
-				throw new Error(
-					`Failed to parse section path: ${oldSectionPathResult.error.message}`,
+			if (Result.isFailure(oldSectionPathResult)) {
+				return Result.fail(
+					new TreeActionError({
+						message: `Failed to parse section path: ${oldSectionPathResult.failure.message}`,
+					}),
 				);
 			}
-			const oldSectionPath = oldSectionPathResult.value;
+			const oldSectionPath = oldSectionPathResult.success;
 
 			// New chain in tree (where section IS now)
 			const newSectionChain = [
@@ -365,13 +378,14 @@ export class Healer implements TreeReader {
 			targetLocator as ScrollNodeLocator | FileNodeLocator,
 			this.codecs,
 		);
-		if (oldCanonicalResult.isErr()) {
-			// Error indicates bug in tree structure - propagate by throwing
-			throw new Error(
-				`Failed to build canonical split path from old locator: ${oldCanonicalResult.error.message}`,
+		if (Result.isFailure(oldCanonicalResult)) {
+			return Result.fail(
+				new TreeActionError({
+					message: `Failed to build canonical split path from old locator: ${oldCanonicalResult.failure.message}`,
+				}),
 			);
 		}
-		const oldCanonical = oldCanonicalResult.value;
+		const oldCanonical = oldCanonicalResult.success;
 		const observedSplitPath =
 			"observedSplitPath" in action && action.observedSplitPath
 				? action.observedSplitPath
@@ -391,13 +405,13 @@ export class Healer implements TreeReader {
 				return this.computeLeafHealing(newLocator, observedSplitPath);
 			}
 		}
-		return [];
+		return Result.succeed([]);
 	}
 
 	private computeMoveHealing(
 		action: MoveNodeAction,
 		mutatedNode: TreeNode | null,
-	): HealingAction[] {
+	): Result.Result<HealingAction[], TreeActionError> {
 		const {
 			targetLocator,
 			newParentLocator,
@@ -406,7 +420,7 @@ export class Healer implements TreeReader {
 		} = action;
 
 		// Use mutated node directly (returned from tree.apply)
-		if (!mutatedNode) return [];
+		if (!mutatedNode) return Result.succeed([]);
 		const node = mutatedNode;
 
 		// Compute new parent chain
@@ -423,9 +437,11 @@ export class Healer implements TreeReader {
 				targetLocator.segmentId as SectionNodeSegmentId,
 				this.codecs,
 			);
-			if (oldSectionPathResult.isErr()) {
-				throw new Error(
-					`Failed to parse section path: ${oldSectionPathResult.error.message}`,
+			if (Result.isFailure(oldSectionPathResult)) {
+				return Result.fail(
+					new TreeActionError({
+						message: `Failed to parse section path: ${oldSectionPathResult.failure.message}`,
+					}),
 				);
 			}
 
@@ -435,7 +451,7 @@ export class Healer implements TreeReader {
 				newParentChain,
 				observedSplitPath:
 					observedSplitPath as SplitPathToFolderInsideLibrary,
-				oldSectionPath: oldSectionPathResult.value,
+				oldSectionPath: oldSectionPathResult.success,
 				section: node,
 			});
 		}
@@ -453,25 +469,25 @@ export class Healer implements TreeReader {
 
 	private computeChangeStatusHealing(
 		_action: ChangeNodeStatusAction,
-	): HealingAction[] {
+	): Result.Result<HealingAction[], TreeActionError> {
 		// ChangeStatus doesn't generate healing actions
-		return [];
+		return Result.succeed([]);
 	}
 
 	private computeLeafHealing(
 		locator: ScrollNodeLocator,
 		observedSplitPath: SplitPathToMdFileInsideLibrary,
-	): HealingAction[];
+	): Result.Result<HealingAction[], TreeActionError>;
 	private computeLeafHealing(
 		locator: FileNodeLocator,
 		observedSplitPath: SplitPathToFileInsideLibrary,
-	): HealingAction[];
+	): Result.Result<HealingAction[], TreeActionError>;
 	private computeLeafHealing(
 		locator: ScrollNodeLocator | FileNodeLocator,
 		observedSplitPath:
 			| SplitPathToMdFileInsideLibrary
 			| SplitPathToFileInsideLibrary,
-	): HealingAction[] {
+	): Result.Result<HealingAction[], TreeActionError> {
 		if (locator.targetKind === TreeNodeKind.Scroll) {
 			if (observedSplitPath.kind === SplitPathKind.MdFile) {
 				return computeLeafHealingForScroll(
@@ -489,6 +505,6 @@ export class Healer implements TreeReader {
 				);
 			}
 		}
-		return [];
+		return Result.succeed([]);
 	}
 }

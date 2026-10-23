@@ -1,3 +1,4 @@
+import { Result } from "effect";
 import type { Codecs } from "../../../codecs";
 import type { ScrollNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
 import type { WriteScrollStatusAction } from "../codex/types/codex-action";
@@ -33,16 +34,16 @@ export function extractScrollStatusActions(
 			action.targetLocator.segmentId as ScrollNodeSegmentId,
 			codecs,
 		);
-		if (nodeNameResult.isErr()) {
+		if (Result.isFailure(nodeNameResult)) {
 			issues.push(
 				libraryError(
 					"[Librarian] Failed to parse scroll segment ID:",
-					nodeNameResult.error,
+					nodeNameResult.failure,
 				),
 			);
 			continue;
 		}
-		const nodeName = nodeNameResult.value;
+		const nodeName = nodeNameResult.success;
 
 		const parentChain = action.targetLocator.segmentIdChainToParent;
 		const splitPathResult = computeScrollSplitPath(
@@ -50,16 +51,16 @@ export function extractScrollStatusActions(
 			parentChain,
 			codecs,
 		);
-		if (splitPathResult.isErr()) {
+		if (Result.isFailure(splitPathResult)) {
 			issues.push(
 				libraryError(
 					"[Librarian] Failed to compute scroll split path:",
-					splitPathResult.error,
+					splitPathResult.failure,
 				),
 			);
 			continue;
 		}
-		const splitPath = splitPathResult.value;
+		const splitPath = splitPathResult.success;
 
 		scrollActions.push({
 			kind: "WriteScrollStatus",

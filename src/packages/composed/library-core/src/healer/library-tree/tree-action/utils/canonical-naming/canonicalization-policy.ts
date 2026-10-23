@@ -1,5 +1,5 @@
 import { SplitPathKind } from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import type { CodecError } from "../../../../../codecs/errors";
 import { makeSplitPathError } from "../../../../../codecs/errors";
 import type { SuffixCodecs } from "../../../../../codecs/internal/suffix";
@@ -55,7 +55,7 @@ function validateCanonicalFormat<SK extends SplitPathKind>(
 	actual: SeparatedSuffixedBasename,
 	expected: SeparatedSuffixedBasename,
 	kind: SK,
-): Result<void, CodecError> {
+): Result.Result<void, CodecError> {
 	// Verify actual matches expected
 	const same =
 		actual.coreName === expected.coreName &&
@@ -63,7 +63,7 @@ function validateCanonicalFormat<SK extends SplitPathKind>(
 		actual.suffixParts.every((v, i) => v === expected.suffixParts[i]);
 
 	if (!same) {
-		return err(
+		return Result.fail(
 			makeSplitPathError(
 				"CanonicalizationFailed",
 				"Basename does not match canonical format",
@@ -83,7 +83,7 @@ function validateCanonicalFormat<SK extends SplitPathKind>(
 
 	// Additionally enforce folder has no suffixParts (redundant but explicit)
 	if (kind === SplitPathKind.Folder && actual.suffixParts.length !== 0) {
-		return err(
+		return Result.fail(
 			makeSplitPathError(
 				"CanonicalizationFailed",
 				"Folder basename must not contain suffix parts",
@@ -92,7 +92,7 @@ function validateCanonicalFormat<SK extends SplitPathKind>(
 		);
 	}
 
-	return ok(undefined);
+	return Result.void;
 }
 
 /**
@@ -103,7 +103,7 @@ export function canonizeSplitPathWithSeparatedSuffix<SK extends SplitPathKind>(
 	suffix: SuffixCodecs,
 	libraryRootName: string,
 	sp: SplitPathInsideLibraryWithSeparatedSuffixOf<SK>,
-): Result<SplitPathInsideLibraryWithSeparatedSuffixOf<SK>, CodecError> {
+): Result.Result<SplitPathInsideLibraryWithSeparatedSuffixOf<SK>, CodecError> {
 	const expected = buildCanonicalSeparatedSuffixedBasename(
 		suffix,
 		libraryRootName,
@@ -116,9 +116,9 @@ export function canonizeSplitPathWithSeparatedSuffix<SK extends SplitPathKind>(
 		expected.separatedSuffixedBasename,
 		sp.kind,
 	);
-	if (validationResult.isErr()) {
-		return err(validationResult.error);
+	if (Result.isFailure(validationResult)) {
+		return Result.fail(validationResult.failure);
 	}
 
-	return ok(sp);
+	return Result.succeed(sp);
 }

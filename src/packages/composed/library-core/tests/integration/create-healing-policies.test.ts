@@ -13,6 +13,7 @@ import {
 	SplitPathKind,
 	VaultEventKind,
 } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import { defaultSettingsForUnitTests } from "../unit/common-utils/consts";
 
 describe("Library create Healing policies", () => {
@@ -50,7 +51,9 @@ describe("Library create Healing policies", () => {
 		};
 
 		const healingActions = interpret(bulk).treeActions.flatMap(
-			(action) => healer.getHealingActionsFor(action).healingActions,
+			(action) =>
+				Result.getOrThrow(healer.getHealingActionsFor(action))
+					.healingActions,
 		);
 		const scrollRename = healingActions.find(
 			(action) => action.kind === "RenameMdFile",

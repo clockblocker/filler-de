@@ -88,12 +88,12 @@ export function translateCreateObservation(
 		undefined,
 		codecs,
 	);
-	if (canonicalResult.isErr()) {
+	if (Result.isFailure(canonicalResult)) {
 		return {
 			diagnostic: {
 				cause: {
 					kind: "CreateCanonicalizationError",
-					message: canonicalResult.error,
+					message: canonicalResult.failure,
 				},
 				kind: "CanonicalizationFailed",
 				observedSplitPath,
@@ -105,12 +105,12 @@ export function translateCreateObservation(
 
 	const locatorResult =
 		codecs.locator.canonicalSplitPathInsideLibraryToLocator(
-			canonicalResult.value,
+			canonicalResult.success,
 		);
 	if (Result.isFailure(locatorResult)) {
 		return {
 			diagnostic: {
-				canonicalSplitPath: canonicalResult.value,
+				canonicalSplitPath: canonicalResult.success,
 				cause: locatorResult.failure,
 				kind: "LocatorConstructionFailed",
 				observedSplitPath,

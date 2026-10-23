@@ -19,8 +19,7 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import { Schema } from "effect";
-import { err, ok, type Result } from "neverthrow";
+import { Result, Schema } from "effect";
 import {
 	LibraryMetadata,
 	noteMetadataHelper,
@@ -63,12 +62,12 @@ export function buildPageSplitActions(
 	result: SegmentationResult,
 	sourcePath: SplitPathToMdFile,
 	rules: CodecRules,
-): Result<PageSplitPlan, PageSplitPlanningError> {
+): Result.Result<PageSplitPlan, PageSplitPlanningError> {
 	const vaultActions: VaultAction[] = [];
 	const libraryScope = makeLibraryScope(rules);
 	const librarySourcePath = libraryScope.toLibraryPath(sourcePath);
-	if (librarySourcePath.isErr()) {
-		return err(
+	if (Result.isFailure(librarySourcePath)) {
+		return Result.fail(
 			new PageSplitPlanningError({
 				kind: "PathOutsideLibrary",
 				path: sourcePath,
@@ -93,7 +92,7 @@ export function buildPageSplitActions(
 			targetLocator: {
 				segmentId: deletedScrollSegmentId,
 				segmentIdChainToParent: buildSectionChainFromPathParts(
-					librarySourcePath.value.pathParts,
+					librarySourcePath.success.pathParts,
 				),
 				targetKind: TreeNodeKind.Scroll,
 			},
@@ -126,8 +125,8 @@ export function buildPageSplitActions(
 						rules,
 					);
 		const libraryPagePath = libraryScope.toLibraryPath(pagePath);
-		if (libraryPagePath.isErr()) {
-			return err(
+		if (Result.isFailure(libraryPagePath)) {
+			return Result.fail(
 				new PageSplitPlanningError({
 					kind: "PathOutsideLibrary",
 					path: pagePath,
@@ -152,7 +151,7 @@ export function buildPageSplitActions(
 		treeActions.push({
 			actionType: "Create",
 			initialStatus: TreeNodeStatus.NotStarted,
-			observedSplitPath: libraryPagePath.value,
+			observedSplitPath: libraryPagePath.success,
 			targetLocator: {
 				segmentId: makeNodeSegmentId({
 					extension: MD,
@@ -161,7 +160,7 @@ export function buildPageSplitActions(
 					status: TreeNodeStatus.NotStarted,
 				}),
 				segmentIdChainToParent: buildSectionChainFromPathParts(
-					libraryPagePath.value.pathParts,
+					libraryPagePath.success.pathParts,
 				),
 				targetKind: TreeNodeKind.Scroll,
 			},
@@ -174,7 +173,7 @@ export function buildPageSplitActions(
 		payload: { splitPath: sourcePath },
 	});
 
-	return ok({
+	return Result.succeed({
 		[PageSplitPlanBrand]: true,
 		firstPagePath,
 		treeActions,

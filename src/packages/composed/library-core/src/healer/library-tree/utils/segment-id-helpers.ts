@@ -1,5 +1,4 @@
-import { Result as EffectResult } from "effect";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import type { Codecs } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
 import type { ScrollNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
@@ -10,10 +9,9 @@ import type { ScrollNodeSegmentId } from "../../../codecs/segment-id/types/segme
 export function extractNodeNameFromScrollSegmentId(
 	segmentId: ScrollNodeSegmentId,
 	codecs: Codecs,
-): Result<string, CodecError> {
-	const parseResult = codecs.segmentId.parseScrollSegmentId(segmentId);
-	if (EffectResult.isFailure(parseResult)) {
-		return err(parseResult.failure);
-	}
-	return ok(parseResult.success.coreName);
+): Result.Result<string, CodecError> {
+	return Result.map(
+		codecs.segmentId.parseScrollSegmentId(segmentId),
+		(parsed) => parsed.coreName,
+	);
 }

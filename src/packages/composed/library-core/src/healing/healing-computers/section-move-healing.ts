@@ -1,6 +1,8 @@
 import { SplitPathKind, VaultPath } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type { Codecs, SplitPathToFolderInsideLibrary } from "../../codecs";
 import type { SectionNodeSegmentId } from "../../codecs/segment-id";
+import { TreeActionError } from "../../healer/library-tree/tree-action/tree-action-error";
 import type { HealingAction } from "../../healer/library-tree/types/healing-action";
 import { makeNodeSegmentId, type SectionNode } from "../../tree";
 import { sectionChainToPathParts } from "../../tree/utils";
@@ -24,10 +26,11 @@ type SectionMoveParams = {
 /**
  * Compute healing for a section move.
  * Handles folder rename and descendant suffix healing.
+ * Fails when the new parent chain or a descendant's locator does not parse.
  */
 export function computeSectionMoveHealing(
 	params: SectionMoveParams,
-): HealingAction[] {
+): Result.Result<HealingAction[], TreeActionError> {
 	const {
 		section,
 		newParentChain,
@@ -49,13 +52,15 @@ export function computeSectionMoveHealing(
 		newParentChain,
 		codecs.segmentId,
 	);
-	if (canonicalSectionPathResult.isErr()) {
-		throw new Error(
-			`Failed to parse section chain: ${canonicalSectionPathResult.error.message}`,
+	if (Result.isFailure(canonicalSectionPathResult)) {
+		return Result.fail(
+			new TreeActionError({
+				message: `Failed to parse section chain: ${canonicalSectionPathResult.failure.message}`,
+			}),
 		);
 	}
 	const canonicalSectionPath = [
-		...canonicalSectionPathResult.value,
+		...canonicalSectionPathResult.success,
 		newNodeName,
 	];
 
@@ -101,5 +106,8 @@ export function computeSectionMoveHealing(
 		canonicalSectionPath, // after folder heals, files are here
 	);
 
-	return [...healingActions, ...descendantHealing];
+	return Result.map(descendantHealing, (descendants) => [
+		...healingActions,
+		...descendants,
+	]);
 }

@@ -2,6 +2,7 @@
  * Compute the canonical split path for a section's codex file.
  */
 
+import { Result } from "effect";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id/types/segment-id";
 import { buildCodexSplitPath } from "../../../path-finder";
@@ -9,7 +10,11 @@ import { PREFIX_OF_CODEX } from "./literals";
 
 /**
  * Compute codex split path from section chain.
- * Throws on error.
+ *
+ * Invariant: `sectionChain` starts with the Library root, so it is not empty,
+ * and each of its segment IDs parses. Callers pass a chain of the Tree, which
+ * holds only segment IDs that parse, or one they serialized from node names
+ * the codecs accepted. A chain that breaks this is a bug, and this throws.
  *
  * @param sectionChain - Full chain including Library root, e.g. ["Library﹘Section﹘", "A﹘Section﹘"]
  * @param codecs - Codec API for parsing segment IDs
@@ -26,11 +31,11 @@ export function computeCodexSplitPath(
 ): SplitPathToMdFileInsideLibrary {
 	const result = buildCodexSplitPath(sectionChain, PREFIX_OF_CODEX, codecs);
 
-	if (result.isErr()) {
+	if (Result.isFailure(result)) {
 		throw new Error(
-			`Failed to compute codex split path: ${result.error.kind} - ${result.error.reason}`,
+			`Failed to compute codex split path: ${result.failure.kind} - ${result.failure.reason}`,
 		);
 	}
 
-	return result.value;
+	return result.success;
 }

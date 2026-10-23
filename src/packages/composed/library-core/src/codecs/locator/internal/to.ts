@@ -5,6 +5,7 @@ import type { CodecError } from "../../errors";
 import { makeLocatorError } from "../../errors";
 import type { SuffixCodecs } from "../../internal/suffix";
 import type { SegmentIdCodecs } from "../../segment-id";
+import { parseSectionChainCoreNames } from "../../segment-id/section-chain";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
 	CanonicalSplitPathInsideLibraryOf,
@@ -32,21 +33,21 @@ export function locatorToCanonicalSplitPathInsideLibrary(
 	loc: TreeNodeLocator,
 ): Result.Result<AnyCanonicalSplitPathInsideLibrary, CodecError> {
 	// Both segmentIdChainToParent and pathParts INCLUDE Library root
-	const pathParts: string[] = [];
-	for (const segId of loc.segmentIdChainToParent) {
-		const sectionResult = segmentId.parseSectionSegmentId(segId);
-		if (Result.isFailure(sectionResult)) {
-			return Result.fail(
-				makeLocatorError(
-					"InvalidSegmentId",
-					"Failed to parse segment ID in chain",
-					{ segmentIdChain: loc.segmentIdChainToParent },
-					sectionResult.failure,
-				),
-			);
-		}
-		pathParts.push(sectionResult.success.coreName);
+	const pathPartsResult = parseSectionChainCoreNames(
+		loc.segmentIdChainToParent,
+		segmentId,
+	);
+	if (Result.isFailure(pathPartsResult)) {
+		return Result.fail(
+			makeLocatorError(
+				"InvalidSegmentId",
+				"Failed to parse segment ID in chain",
+				{ segmentIdChain: loc.segmentIdChainToParent },
+				pathPartsResult.failure.error,
+			),
+		);
 	}
+	const pathParts: string[] = pathPartsResult.success;
 
 	// Parse segment ID components
 	const segmentIdResult = segmentId.parseSegmentId(loc.segmentId);

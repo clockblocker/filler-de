@@ -45,8 +45,8 @@ export function getBacklinkHealingVaultActions(
 			parentChain,
 			codecs,
 		);
-		if (splitPathResult.isErr()) continue;
-		const splitPath = splitPathResult.value;
+		if (Result.isFailure(splitPathResult)) continue;
+		const splitPath = splitPathResult.success;
 		actions.push({
 			kind: VaultActionKind.ProcessMdFile,
 			payload: {
@@ -91,8 +91,8 @@ export function getIncrementalBacklinkHealingVaultActions(
 		if (finalNode?.kind !== TreeNodeKind.Scroll) return;
 
 		const splitPath = computeScrollSplitPath(nodeName, parentChain, codecs);
-		if (splitPath.isErr()) return;
-		const vaultPath = libraryScope.toVaultPath(splitPath.value);
+		if (Result.isFailure(splitPath)) return;
+		const vaultPath = libraryScope.toVaultPath(splitPath.success);
 		actions.set(`scroll:${parentChain.join("/")}/${nodeName}`, {
 			kind: VaultActionKind.ProcessMdFile,
 			payload: {

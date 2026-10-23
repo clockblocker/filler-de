@@ -1,3 +1,4 @@
+import { Result } from "effect";
 import { nonEmptyArrayResult } from "../../../../../types/utils";
 import type {
 	AnnotatedSentence,
@@ -27,11 +28,11 @@ function splitLargeGroup(
 		// If adding this sentence exceeds target and we have content, start new sub-group
 		if (currentSize > 0 && currentSize + sentence.charCount > targetSize) {
 			const nonEmpty = nonEmptyArrayResult(currentSentences);
-			if (nonEmpty.isOk()) {
+			if (Result.isSuccess(nonEmpty)) {
 				subGroups.push({
 					charCount: currentSize,
 					isSplittable: true,
-					sentences: nonEmpty.value,
+					sentences: nonEmpty.success,
 				});
 			}
 			currentSentences = [];
@@ -44,11 +45,11 @@ function splitLargeGroup(
 
 	// Don't forget remaining
 	const nonEmpty = nonEmptyArrayResult(currentSentences);
-	if (nonEmpty.isOk()) {
+	if (Result.isSuccess(nonEmpty)) {
 		subGroups.push({
 			charCount: currentSize,
 			isSplittable: true,
-			sentences: nonEmpty.value,
+			sentences: nonEmpty.success,
 		});
 	}
 

@@ -1,4 +1,5 @@
 import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type {
 	Codecs,
 	FileNodeLocator,
@@ -6,6 +7,7 @@ import type {
 	SplitPathToFileInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "../../codecs";
+import { TreeActionError } from "../../healer/library-tree/tree-action/tree-action-error";
 import type { HealingAction } from "../../healer/library-tree/types/healing-action";
 import { buildCanonicalLeafSplitPath } from "../../tree/utils";
 import { splitPathsEqual } from "../split-path-equality";
@@ -13,22 +15,25 @@ import { splitPathsEqual } from "../split-path-equality";
 /**
  * Compute healing actions for a leaf node (Scroll or File).
  * Compares observed path against canonical path and generates rename if needed.
+ * Fails when the locator has no canonical split path.
  */
 export function computeLeafHealingForScroll(
 	locator: ScrollNodeLocator,
 	observedSplitPath: SplitPathToMdFileInsideLibrary,
 	codecs: Codecs,
-): HealingAction[] {
+): Result.Result<HealingAction[], TreeActionError> {
 	const canonicalSplitPathResult = buildCanonicalLeafSplitPath(
 		locator,
 		codecs,
 	);
-	if (canonicalSplitPathResult.isErr()) {
-		throw new Error(
-			`Failed to build canonical split path: ${canonicalSplitPathResult.error.message}`,
+	if (Result.isFailure(canonicalSplitPathResult)) {
+		return Result.fail(
+			new TreeActionError({
+				message: `Failed to build canonical split path: ${canonicalSplitPathResult.failure.message}`,
+			}),
 		);
 	}
-	const canonicalSplitPath = canonicalSplitPathResult.value;
+	const canonicalSplitPath = canonicalSplitPathResult.success;
 	const healingActions: HealingAction[] = [];
 
 	if (!splitPathsEqual(observedSplitPath, canonicalSplitPath)) {
@@ -43,24 +48,26 @@ export function computeLeafHealingForScroll(
 		}
 	}
 
-	return healingActions;
+	return Result.succeed(healingActions);
 }
 
 export function computeLeafHealingForFile(
 	locator: FileNodeLocator,
 	observedSplitPath: SplitPathToFileInsideLibrary,
 	codecs: Codecs,
-): HealingAction[] {
+): Result.Result<HealingAction[], TreeActionError> {
 	const canonicalSplitPathResult = buildCanonicalLeafSplitPath(
 		locator,
 		codecs,
 	);
-	if (canonicalSplitPathResult.isErr()) {
-		throw new Error(
-			`Failed to build canonical split path: ${canonicalSplitPathResult.error.message}`,
+	if (Result.isFailure(canonicalSplitPathResult)) {
+		return Result.fail(
+			new TreeActionError({
+				message: `Failed to build canonical split path: ${canonicalSplitPathResult.failure.message}`,
+			}),
 		);
 	}
-	const canonicalSplitPath = canonicalSplitPathResult.value;
+	const canonicalSplitPath = canonicalSplitPathResult.success;
 	const healingActions: HealingAction[] = [];
 
 	if (!splitPathsEqual(observedSplitPath, canonicalSplitPath)) {
@@ -75,5 +82,5 @@ export function computeLeafHealingForFile(
 		}
 	}
 
-	return healingActions;
+	return Result.succeed(healingActions);
 }

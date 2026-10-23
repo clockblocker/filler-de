@@ -39,6 +39,7 @@ import type {
 	UserEventResult,
 } from "@textfresser/obsidian-event-layer";
 import { VaultPath } from "@textfresser/vault-action-manager";
+import { Result as EffectResult } from "effect";
 import { nonEmptyArrayResult } from "../../../types/utils";
 import { pickClosestLeaf } from "./pick-closest-leaf";
 
@@ -104,16 +105,16 @@ function libraryCompletion(
 	// 3. Look up corename in library tree
 	const matches = librarian.findMatchingLeavesByCoreName(payload.linkContent);
 	const nonEmpty = nonEmptyArrayResult(matches);
-	if (nonEmpty.isErr()) return PASSTHROUGH;
+	if (EffectResult.isFailure(nonEmpty)) return PASSTHROUGH;
 	// Ambiguous corename match: do not auto-pick one leaf target.
 	// Keep user's input untouched to avoid silent mislinking.
-	if (nonEmpty.value.length > 1) return PASSTHROUGH;
+	if (nonEmpty.success.length > 1) return PASSTHROUGH;
 
 	const currentPathParts = payload.sourcePath?.split("/") ?? [];
 	// Drop filename to get folder path parts
 	currentPathParts.pop();
 
-	const best = pickClosestLeaf(nonEmpty.value, currentPathParts);
+	const best = pickClosestLeaf(nonEmpty.success, currentPathParts);
 
 	return {
 		effect: {

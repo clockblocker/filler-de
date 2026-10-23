@@ -17,7 +17,7 @@ import {
 	splitPathCodec,
 	VaultEventKind,
 } from "@textfresser/vault-action-manager";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import {
 	type CodecRules,
 	isUnderLibraryRoot,
@@ -186,7 +186,7 @@ export type LibraryScope = {
 	toLibraryEvent: (event: VaultEvent) => LibraryScopedVaultEvent;
 	toLibraryPath: <SP extends AnySplitPath>(
 		splitPath: SP,
-	) => Result<SplitPathInsideLibraryOf<SplitPathKindOf<SP>>, string>;
+	) => Result.Result<SplitPathInsideLibraryOf<SplitPathKindOf<SP>>, string>;
 	toVaultEvent: (event: LibraryScopedVaultEvent) => VaultEvent;
 	toVaultPath: <SP extends AnySplitPathInsideLibrary>(
 		splitPath: SP,
@@ -206,9 +206,9 @@ export function makeLibraryScope(rules: CodecRules): LibraryScope {
 
 	const toLibraryPath: LibraryScope["toLibraryPath"] = (splitPath) => {
 		if (!isUnderLibraryRoot(splitPathCodec.format(splitPath), libraryRoot))
-			return err("OutsideLibrary");
+			return Result.fail("OutsideLibrary");
 
-		return ok({
+		return Result.succeed({
 			...splitPath,
 			pathParts: splitPath.pathParts.slice(
 				rules.libraryRootPathParts.length,
@@ -231,9 +231,11 @@ export function makeLibraryScope(rules: CodecRules): LibraryScope {
 				const splitPath = toLibraryPath(event.splitPath);
 				return {
 					...event,
-					scope: splitPath.isOk() ? Scope.Inside : Scope.Outside,
-					splitPath: splitPath.isOk()
-						? splitPath.value
+					scope: Result.isSuccess(splitPath)
+						? Scope.Inside
+						: Scope.Outside,
+					splitPath: Result.isSuccess(splitPath)
+						? splitPath.success
 						: event.splitPath,
 				} as LibraryScopedVaultEvent;
 			}
@@ -241,26 +243,26 @@ export function makeLibraryScope(rules: CodecRules): LibraryScope {
 			case VaultEventKind.FolderRenamed: {
 				const from = toLibraryPath(event.from);
 				const to = toLibraryPath(event.to);
-				if (from.isOk() && to.isOk()) {
+				if (Result.isSuccess(from) && Result.isSuccess(to)) {
 					return {
 						...event,
-						from: from.value,
+						from: from.success,
 						scope: Scope.Inside,
-						to: to.value,
+						to: to.success,
 					} as LibraryScopedVaultEvent;
 				}
-				if (from.isOk()) {
+				if (Result.isSuccess(from)) {
 					return {
 						...event,
-						from: from.value,
+						from: from.success,
 						scope: Scope.InsideToOutside,
 					} as LibraryScopedVaultEvent;
 				}
-				if (to.isOk()) {
+				if (Result.isSuccess(to)) {
 					return {
 						...event,
 						scope: Scope.OutsideToInside,
-						to: to.value,
+						to: to.success,
 					} as LibraryScopedVaultEvent;
 				}
 				return { ...event, scope: Scope.Outside };
@@ -329,7 +331,7 @@ export function makeEventVaultScoped(
 export function tryParseAsInsideLibrarySplitPath<SP extends AnySplitPath>(
 	splitPath: SP,
 	rules: CodecRules,
-): Result<SplitPathInsideLibraryOf<SplitPathKindOf<SP>>, string> {
+): Result.Result<SplitPathInsideLibraryOf<SplitPathKindOf<SP>>, string> {
 	return makeLibraryScope(rules).toLibraryPath(splitPath);
 }
 

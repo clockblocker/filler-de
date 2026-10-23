@@ -408,6 +408,15 @@ describe("Library reconciliation interface", () => {
 
 		expect(outcome.status).toBe("Failed");
 		expect(outcome.failure?.kind).toBe("TreeActionFailed");
+		// The stop notice reads the cause's message, as it read the throw's.
+		const failure = outcome.failure;
+		expect(
+			failure?.kind === "TreeActionFailed" &&
+				failure.cause instanceof Error &&
+				failure.cause.message,
+		).toBe(
+			"Rename collision: destination segment Beta﹘Scroll﹘md is already occupied",
+		);
 		expect(outcome.treeActions).toEqual({
 			changed: 1,
 			failed: 1,

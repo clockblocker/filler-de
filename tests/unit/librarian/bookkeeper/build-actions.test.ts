@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 } from "@textfresser/library-core";
+import { Result } from "effect";
 import {
 	buildPageSplitActions,
 } from "../../../../src/commanders/librarian/pages/build-actions";
@@ -35,9 +36,9 @@ describe("buildPageSplitActions", () => {
 			},
 			rules,
 		);
-		expect(splitResult.isOk()).toBe(true);
-		if (splitResult.isErr()) throw new Error("Expected valid split plan");
-		const split = splitResult.value;
+		expect(Result.isSuccess(splitResult)).toBe(true);
+		if (Result.isFailure(splitResult)) throw new Error("Expected valid split plan");
+		const split = splitResult.success;
 
 		const firstAction = split.vaultActions[0];
 		if (!firstAction || firstAction.kind !== "UpsertMdFile") {
@@ -97,10 +98,10 @@ describe("buildPageSplitActions", () => {
 			rules,
 		);
 
-		expect(plan.isOk()).toBe(true);
-		if (plan.isErr()) throw new Error("Expected nested Library split plan");
-		const deleteAction = plan.value.treeActions[0];
-		const createAction = plan.value.treeActions[1];
+		expect(Result.isSuccess(plan)).toBe(true);
+		if (Result.isFailure(plan)) throw new Error("Expected nested Library split plan");
+		const deleteAction = plan.success.treeActions[0];
+		const createAction = plan.success.treeActions[1];
 		expect(deleteAction?.targetLocator.segmentIdChainToParent).toHaveLength(1);
 		if (createAction?.actionType !== "Create") {
 			throw new Error("Expected page Create action");
@@ -110,7 +111,7 @@ describe("buildPageSplitActions", () => {
 			"Story",
 		]);
 		expect(
-			plan.value.vaultActions[0]?.payload,
+			plan.success.vaultActions[0]?.payload,
 		).toMatchObject({
 			splitPath: {
 				pathParts: ["Archive", "Library", "Story"],

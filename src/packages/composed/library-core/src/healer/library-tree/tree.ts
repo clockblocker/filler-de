@@ -8,6 +8,7 @@ import type {
 } from "../../codecs/segment-id/types/segment-id";
 import { PREFIX_OF_CODEX } from "../../types/consts/literals";
 import type { NodeName } from "../../types/schemas/node-name";
+import { TreeActionError } from "./tree-action/tree-action-error";
 import type {
 	ChangeNodeStatusAction,
 	CreateTreeLeafAction,
@@ -121,7 +122,7 @@ export class Tree implements TreeFacade {
 	 * - changed: true if tree was actually modified, false if already in target state
 	 * - node: the affected node (or null for delete)
 	 */
-	apply(action: TreeAction): ApplyResult {
+	apply(action: TreeAction): Result.Result<ApplyResult, TreeActionError> {
 		this.coreNameIndex = null;
 		const actionType = action.actionType;
 
@@ -129,7 +130,7 @@ export class Tree implements TreeFacade {
 			return this.applyCreate(action as CreateTreeLeafAction);
 		}
 		if (actionType === "Delete") {
-			return this.applyDelete(action as DeleteNodeAction);
+			return Result.succeed(this.applyDelete(action as DeleteNodeAction));
 		}
 		if (actionType === "Rename") {
 			return this.applyRename(action as RenameNodeAction);
@@ -138,57 +139,71 @@ export class Tree implements TreeFacade {
 			return this.applyMove(action as MoveNodeAction);
 		}
 		// ChangeStatus
-		return this.applyChangeStatus(action as ChangeNodeStatusAction);
+		return Result.succeed(
+			this.applyChangeStatus(action as ChangeNodeStatusAction),
+		);
 	}
 
 	// ─── Create ───
 
-	private applyCreate(action: CreateTreeLeafAction): ApplyResult {
+	private applyCreate(
+		action: CreateTreeLeafAction,
+	): Result.Result<ApplyResult, TreeActionError> {
 		const { targetLocator } = action;
-		const parentSection = this.ensureSectionChain(
+		const parentSectionResult = this.ensureSectionChain(
 			targetLocator.segmentIdChainToParent,
 		);
+		if (Result.isFailure(parentSectionResult))
+			return Result.fail(parentSectionResult.failure);
+		const parentSection = parentSectionResult.success;
 
 		// Check if node already exists at this location
 		const existingNode = parentSection.children[targetLocator.segmentId];
 		if (existingNode) {
 			// Node already exists - idempotent no-op
-			return { changed: false, node: existingNode };
+			return Result.succeed({ changed: false, node: existingNode });
 		}
 
-		const node = this.makeLeafNode(action);
+		const nodeResult = this.makeLeafNode(action);
+		if (Result.isFailure(nodeResult))
+			return Result.fail(nodeResult.failure);
+		const node = nodeResult.success;
 		const segmentId = makeSegmentId(node);
 		parentSection.children[segmentId] = node;
 
-		return { changed: true, node };
+		return Result.succeed({ changed: true, node });
 	}
 
-	private makeLeafNode(action: CreateTreeLeafAction): LeafNode {
+	private makeLeafNode(
+		action: CreateTreeLeafAction,
+	): Result.Result<LeafNode, TreeActionError> {
 		const parseResult = this.codecs.segmentId.parseSegmentId(
 			action.targetLocator.segmentId,
 		);
 		if (Result.isFailure(parseResult)) {
-			throw new Error(
-				`Invalid segment ID in targetLocator: ${parseResult.failure.message}`,
+			return Result.fail(
+				new TreeActionError({
+					message: `Invalid segment ID in targetLocator: ${parseResult.failure.message}`,
+				}),
 			);
 		}
 		const nodeName = parseResult.success.coreName;
 
 		if (action.targetLocator.targetKind === TreeNodeKind.Scroll) {
-			return {
+			return Result.succeed({
 				extension: MD,
 				kind: TreeNodeKind.Scroll,
 				nodeName,
 				status: action.initialStatus ?? TreeNodeStatus.NotStarted,
-			};
+			});
 		}
 		// File
-		return {
+		return Result.succeed({
 			extension: action.observedSplitPath.extension,
 			kind: TreeNodeKind.File,
 			nodeName,
 			status: TreeNodeStatus.Unknown,
-		};
+		});
 	}
 
 	// ─── Delete ───
@@ -217,30 +232,34 @@ export class Tree implements TreeFacade {
 
 	// ─── Rename ───
 
-	private applyRename(action: RenameNodeAction): ApplyResult {
+	private applyRename(
+		action: RenameNodeAction,
+	): Result.Result<ApplyResult, TreeActionError> {
 		const { targetLocator, newNodeName } = action;
 		const parentSection = this.findSection(
 			targetLocator.segmentIdChainToParent,
 		);
 		if (!parentSection) {
-			return { changed: false, node: null };
+			return Result.succeed({ changed: false, node: null });
 		}
 
 		const node = parentSection.children[targetLocator.segmentId];
 		if (!node) {
-			return { changed: false, node: null };
+			return Result.succeed({ changed: false, node: null });
 		}
 
 		// Check if already renamed (idempotent check)
 		if (node.nodeName === newNodeName) {
-			return { changed: false, node };
+			return Result.succeed({ changed: false, node });
 		}
 
 		const newSegmentId = makeSegmentIdForNodeName(node, newNodeName);
 		const collidingNode = parentSection.children[newSegmentId];
 		if (collidingNode) {
-			throw new Error(
-				`Rename collision: destination segment ${newSegmentId} is already occupied`,
+			return Result.fail(
+				new TreeActionError({
+					message: `Rename collision: destination segment ${newSegmentId} is already occupied`,
+				}),
 			);
 		}
 
@@ -249,12 +268,14 @@ export class Tree implements TreeFacade {
 		node.nodeName = newNodeName;
 		parentSection.children[newSegmentId] = node;
 
-		return { changed: true, node };
+		return Result.succeed({ changed: true, node });
 	}
 
 	// ─── Move ───
 
-	private applyMove(action: MoveNodeAction): ApplyResult {
+	private applyMove(
+		action: MoveNodeAction,
+	): Result.Result<ApplyResult, TreeActionError> {
 		const { targetLocator, newParentLocator, newNodeName } = action;
 
 		// Detach from old parent
@@ -262,12 +283,12 @@ export class Tree implements TreeFacade {
 			targetLocator.segmentIdChainToParent,
 		);
 		if (!oldParent) {
-			return { changed: false, node: null };
+			return Result.succeed({ changed: false, node: null });
 		}
 
 		const node = oldParent.children[targetLocator.segmentId];
 		if (!node) {
-			return { changed: false, node: null };
+			return Result.succeed({ changed: false, node: null });
 		}
 
 		const newParentChain = [
@@ -278,8 +299,10 @@ export class Tree implements TreeFacade {
 		const newSegmentId = makeSegmentIdForNodeName(node, newNodeName);
 		const collidingNode = existingNewParent?.children[newSegmentId];
 		if (collidingNode && collidingNode !== node) {
-			throw new Error(
-				`Move collision: destination segment ${newSegmentId} is already occupied`,
+			return Result.fail(
+				new TreeActionError({
+					message: `Move collision: destination segment ${newSegmentId} is already occupied`,
+				}),
 			);
 		}
 
@@ -291,18 +314,21 @@ export class Tree implements TreeFacade {
 				(segment, index) => segment === newParentChain[index],
 			)
 		) {
-			return { changed: false, node };
+			return Result.succeed({ changed: false, node });
 		}
 
 		delete oldParent.children[targetLocator.segmentId];
 
 		// Ensure new parent chain exists
-		const newParent = this.ensureSectionChain(newParentChain);
+		const newParentResult = this.ensureSectionChain(newParentChain);
+		if (Result.isFailure(newParentResult))
+			return Result.fail(newParentResult.failure);
+		const newParent = newParentResult.success;
 
 		// Update node name and attach
 		node.nodeName = newNodeName;
 		newParent.children[newSegmentId] = node;
-		return { changed: true, node };
+		return Result.succeed({ changed: true, node });
 	}
 
 	// ─── ChangeStatus ───
@@ -378,7 +404,9 @@ export class Tree implements TreeFacade {
 		return current ?? this.root;
 	}
 
-	ensureSectionChain(chain: SectionNodeSegmentId[]): SectionNode {
+	ensureSectionChain(
+		chain: SectionNodeSegmentId[],
+	): Result.Result<SectionNode, TreeActionError> {
 		// First element is Library root → current = this.root; rest → traverse/create children
 		let current: SectionNode | null = null;
 		for (const segId of chain) {
@@ -389,33 +417,39 @@ export class Tree implements TreeFacade {
 			let child: TreeNode | undefined = current.children[segId];
 			if (!child) {
 				const nodeName = this.extractNodeNameFromSegmentId(segId);
+				if (Result.isFailure(nodeName))
+					return Result.fail(nodeName.failure);
 				child = {
 					children: {},
 					kind: TreeNodeKind.Section,
-					nodeName,
+					nodeName: nodeName.success,
 				};
 				current.children[segId] = child;
 			}
 			if (child.kind !== TreeNodeKind.Section) {
-				throw new Error(
-					`Expected section at ${segId}, got ${child.kind}`,
+				return Result.fail(
+					new TreeActionError({
+						message: `Expected section at ${segId}, got ${child.kind}`,
+					}),
 				);
 			}
 			current = child;
 		}
-		return current ?? this.root;
+		return Result.succeed(current ?? this.root);
 	}
 
 	private extractNodeNameFromSegmentId(
 		segId: SectionNodeSegmentId,
-	): NodeName {
+	): Result.Result<NodeName, TreeActionError> {
 		const parseResult = this.codecs.segmentId.parseSectionSegmentId(segId);
 		if (Result.isFailure(parseResult)) {
-			throw new Error(
-				`Invalid section segment ID during tree construction: ${parseResult.failure.message}`,
+			return Result.fail(
+				new TreeActionError({
+					message: `Invalid section segment ID during tree construction: ${parseResult.failure.message}`,
+				}),
 			);
 		}
-		return parseResult.success.coreName;
+		return Result.succeed(parseResult.success.coreName);
 	}
 
 	// ─── Corename Index ───

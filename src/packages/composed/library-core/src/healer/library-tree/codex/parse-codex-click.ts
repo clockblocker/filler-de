@@ -3,8 +3,7 @@
  * Extracts link target and converts to locator.
  */
 
-import { Result as EffectResult } from "effect";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { NodeSegmentIdSeparator } from "../../../codecs/segment-id/types/segment-id";
@@ -41,11 +40,11 @@ export type CodexClickTarget =
 export function parseCodexClickLineContent(
 	lineContent: string,
 	codecs: Codecs,
-): Result<CodexClickTarget, string> {
+): Result.Result<CodexClickTarget, string> {
 	// Extract link target from [[target|alias]] or [[target]]
 	const linkMatch = lineContent.match(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/);
 	if (!linkMatch?.[1]) {
-		return err("No link found in line content");
+		return Result.fail("No link found in line content");
 	}
 
 	const linkTarget = linkMatch[1];
@@ -63,17 +62,19 @@ export function parseCodexClickLineContent(
 export function parseCodexLinkTarget(
 	linkTarget: string,
 	codecs: Codecs,
-): Result<CodexClickTarget, string> {
+): Result.Result<CodexClickTarget, string> {
 	const libraryRoot = codecs.rules.libraryRootName;
 
 	// Parse as suffixed basename
-	const parseResult = EffectResult.mapError(
+	const parseResult = Result.mapError(
 		codecs.suffix.parseSeparatedSuffix(linkTarget),
 		(error) => error.message,
 	);
 
-	if (EffectResult.isFailure(parseResult)) {
-		return err(`Failed to parse link target: ${parseResult.failure}`);
+	if (Result.isFailure(parseResult)) {
+		return Result.fail(
+			`Failed to parse link target: ${parseResult.failure}`,
+		);
 	}
 
 	const { coreName, suffixParts } = parseResult.success;
@@ -83,7 +84,7 @@ export function parseCodexLinkTarget(
 		// e.g., "__-Child-Parent" → ["Child", "Parent"]
 		// Chain: [Library, Parent, Child]
 		const sectionChain = buildSectionChain(libraryRoot, suffixParts);
-		return ok({
+		return Result.succeed({
 			kind: "Section",
 			sectionChain,
 		});
@@ -93,7 +94,7 @@ export function parseCodexLinkTarget(
 	// e.g., "Note-Child-Parent" → coreName="Note", suffixParts=["Child", "Parent"]
 	// parentChain: [Library, Parent, Child]
 	const parentChain = buildSectionChain(libraryRoot, suffixParts);
-	return ok({
+	return Result.succeed({
 		kind: "Scroll",
 		nodeName: coreName,
 		parentChain,
