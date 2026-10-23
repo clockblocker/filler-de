@@ -19,6 +19,7 @@ import {
 	DateTime,
 	Deferred,
 	Effect,
+	Exit,
 	Layer,
 	Option,
 	Predicate,
@@ -121,6 +122,17 @@ export type ResetExecuteOutcome =
 	  }
 	| { readonly kind: "Stopped"; readonly notice: string };
 
+/** What each step answers once the unloading plugin interrupted it. */
+export const RESET_UNLOADED = {
+	dryRun: { kind: "Failed", notice: UNLOADED },
+	execute: { kind: "Stopped", notice: UNLOADED },
+	opening: { kind: "Failed", notice: UNLOADED },
+} as const satisfies {
+	readonly opening: ResetOpening;
+	readonly dryRun: ResetDryRunShown;
+	readonly execute: ResetExecuteOutcome;
+};
+
 /** The key check's failures as one sentence's worth: `A; B`. */
 const keyFailures = (failures: readonly KeyCheckFailure[]) =>
 	failures.map(({ reason }) => reason).join("; ");
@@ -166,17 +178,29 @@ type ResetState = {
 };
 
 /**
- * Runs `effect` and completes `shown` with what it answers. A step the
- * unloading plugin interrupted answers `unloaded`, and shows nothing.
+ * Runs `effect` and completes `shown` with what it answers, however it
+ * ends: a step the unloading plugin interrupted answers `unloaded` and
+ * shows nothing, and one that died answers `died` (its edge logs it).
  */
 const showInto = <A>(
 	shown: Deferred.Deferred<A>,
-	unloaded: A,
+	outcomes: {
+		readonly unloaded: A;
+		readonly died: (reasons: string) => A;
+	},
 	effect: Effect.Effect<A>,
 ): Effect.Effect<void> =>
 	effect.pipe(
-		Effect.flatMap((value) => Deferred.succeed(shown, value)),
-		Effect.onInterrupt(() => Deferred.succeed(shown, unloaded)),
+		Effect.onExit((exit) =>
+			Deferred.succeed(
+				shown,
+				Exit.isSuccess(exit)
+					? exit.value
+					: Cause.hasInterruptsOnly(exit.cause)
+						? outcomes.unloaded
+						: outcomes.died(causeMessages(exit.cause)),
+			),
+		),
 		Effect.asVoid,
 	);
 
@@ -231,9 +255,15 @@ export class DictionaryResetCommand {
 				...state,
 				opening: shown,
 			}));
-			yield* showInto(
+			yield* showInto<ResetOpening>(
 				shown,
-				{ kind: "Failed", notice: UNLOADED },
+				{
+					died: (reasons) => ({
+						kind: "Failed",
+						notice: `⚠ Dictionary reset: the modal failed: ${reasons}`,
+					}),
+					unloaded: RESET_UNLOADED.opening,
+				},
 				this.openModal,
 			);
 		}),
@@ -362,9 +392,15 @@ export class DictionaryResetCommand {
 						{ concurrency: "unbounded" },
 					),
 			);
-			yield* showInto(
+			yield* showInto<ResetDryRunShown>(
 				shown,
-				{ kind: "Failed", notice: UNLOADED },
+				{
+					died: (reasons) => ({
+						kind: "Failed",
+						notice: `⚠ Dictionary reset dry run failed: ${reasons}`,
+					}),
+					unloaded: RESET_UNLOADED.dryRun,
+				},
 				read.pipe(
 					Effect.flatMap(([result, failures]) =>
 						Effect.sync((): ResetDryRunShown => {
@@ -426,9 +462,15 @@ export class DictionaryResetCommand {
 				...state,
 				executed: shown,
 			}));
-			yield* showInto(
+			yield* showInto<ResetExecuteOutcome>(
 				shown,
-				{ kind: "Stopped", notice: UNLOADED },
+				{
+					died: (reasons) => ({
+						kind: "Stopped",
+						notice: `⚠ Dictionary reset stopped: ${reasons}`,
+					}),
+					unloaded: RESET_UNLOADED.execute,
+				},
 				this.claimAndExecute(source),
 			);
 		});

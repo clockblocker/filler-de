@@ -8,7 +8,7 @@ import {
 } from "@textfresser/vault-action-manager";
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import {
-	type Cause,
+	Cause,
 	Context,
 	Deferred,
 	Effect,
@@ -18,6 +18,7 @@ import {
 	type Scope,
 } from "effect";
 import { Notice, Plugin, requestUrl } from "obsidian";
+import { RESET_UNLOADED } from "./commanders/dictionary-reset/reset-command";
 import { Librarian } from "./commanders/librarian/librarian";
 import { DictionaryStore } from "./lifecycle/dictionary-store-service";
 import { createLifecycleNotices } from "./lifecycle/lifecycle-notices";
@@ -56,6 +57,7 @@ import {
 } from "./runtime/plugin-live";
 import {
 	makePluginRuntime,
+	PluginEdgeError,
 	type PluginRuntime,
 } from "./runtime/plugin-runtime";
 import { SettingsTab } from "./settings";
@@ -488,14 +490,22 @@ export default class TextEaterPlugin extends Plugin {
 		const reset = () => this.services?.dictionaryReset;
 		// One Promise per step, so the driver can tell a new step from the last.
 		const awaited = new WeakMap<object, Promise<unknown>>();
+		// A wait the unload interrupts answers as the step itself then does.
 		const awaitShown = <A>(
 			hook: string,
 			shown: Deferred.Deferred<A> | null | undefined,
+			unloaded: A,
 		): Promise<A> | null => {
 			if (!shown) return null;
 			let promise = awaited.get(shown) as Promise<A> | undefined;
 			if (!promise) {
-				promise = this.e2e(hook, Deferred.await(shown));
+				promise = this.e2e(hook, Deferred.await(shown)).catch(
+					(error: unknown) =>
+						error instanceof PluginEdgeError &&
+						Cause.hasInterruptsOnly(error.cause)
+							? unloaded
+							: Promise.reject(error),
+				);
 				awaited.set(shown, promise);
 			}
 			return promise;
@@ -505,11 +515,23 @@ export default class TextEaterPlugin extends Plugin {
 				reset()?.clickButton(label) ?? false,
 			closeModal: () => reset()?.closeModal(),
 			lastDryRun: () =>
-				awaitShown("dictionary-reset-dry-run", reset()?.lastDryRun()),
+				awaitShown(
+					"dictionary-reset-dry-run",
+					reset()?.lastDryRun(),
+					RESET_UNLOADED.dryRun,
+				),
 			lastExecute: () =>
-				awaitShown("dictionary-reset-execute", reset()?.lastExecute()),
+				awaitShown(
+					"dictionary-reset-execute",
+					reset()?.lastExecute(),
+					RESET_UNLOADED.execute,
+				),
 			lastOpening: () =>
-				awaitShown("dictionary-reset-opening", reset()?.lastOpening()),
+				awaitShown(
+					"dictionary-reset-opening",
+					reset()?.lastOpening(),
+					RESET_UNLOADED.opening,
+				),
 		};
 	}
 

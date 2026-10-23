@@ -7,6 +7,10 @@
  * device fills its own; other sync tools may copy entries, which is
  * harmless because an entry is only ever the segmentation of its key.
  *
+ * The cache is read once per Sentence a Classify, an unlink check or a
+ * reset touches, so its reads and writes open no spans: a large Scroll
+ * would push the rest out of the recent trace.
+ *
  * Losing an entry costs one re-segmentation, so the cache never fails
  * Classify: an entry that cannot be read or does not decode is a miss, and
  * a write that fails is logged and dropped. Failed segmentations are never
@@ -175,6 +179,7 @@ export function filesSegmentationCache(
 					Cause.fail(error),
 				).pipe(Effect.as(Option.none<SegmentedSentence>())),
 			),
+			Effect.withTracerEnabled(false),
 		);
 	const put = (key: string, sentence: SegmentedSentence) =>
 		Effect.gen(function* () {
@@ -193,6 +198,7 @@ export function filesSegmentationCache(
 					Cause.fail(error),
 				),
 			),
+			Effect.withTracerEnabled(false),
 		);
 	return SegmentationCache.of({ get, put });
 }

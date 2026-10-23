@@ -27,7 +27,10 @@ const OLD_HUND = [
  * The command over a vault holding one old note, its modal buttons run on
  * Effect's default runtime as the plugin runs them on its own: at once.
  */
-function resetOver(dumgen: DumgenProvide) {
+function resetOver(
+	dumgen: DumgenProvide,
+	overrides: Partial<DictionaryResetDeps> = {},
+) {
 	const vault = makeObsidianVault({
 		[`${SOURCE}/de/lexem/lemma/h/hun/hund/Hund.md`]: OLD_HUND,
 	});
@@ -52,6 +55,7 @@ function resetOver(dumgen: DumgenProvide) {
 		segmenterVersion: Effect.succeed("test-segmenter"),
 		store: Effect.die("the store is not read before dumgen"),
 		vam: manager,
+		...overrides,
 	};
 	const reset = Effect.runSync(DictionaryResetCommand.make(deps));
 	/** Opens the modal, then clicks Execute… and Execute in the confirmation. */
@@ -102,6 +106,17 @@ describe("the dictionary reset's Execute", () => {
 			"⚠ Dictionary reset stopped: the backup could not be checked; the transport exploded";
 		expect(outcome).toEqual({ kind: "Stopped", notice });
 		expect(shownNotices.at(-1)).toBe(notice);
+		expect(reset.isRunning()).toBe(false);
+	});
+
+	it("still answers when a step dies, and releases the reset", async () => {
+		const { execute, reset } = resetOver(() => Effect.never, {
+			missingProviderKeys: Effect.die(new Error("the keys are unreadable")),
+		});
+		expect(await outcomeOf(await execute())).toEqual({
+			kind: "Stopped",
+			notice: "⚠ Dictionary reset stopped: the keys are unreadable",
+		});
 		expect(reset.isRunning()).toBe(false);
 	});
 
