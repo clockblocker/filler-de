@@ -179,6 +179,8 @@ export class VaultIo extends Context.Service<
 export class HiddenFolderIo extends Context.Service<
 	HiddenFolderIo,
 	{
+		/** Obsidian's config folder (`Vault.configDir`), which VAM never writes. */
+		readonly configDir: string | undefined;
 		exists(path: string): Effect.Effect<boolean, VamVaultIoError>;
 		mkdir(path: string): Effect.Effect<void, VamVaultIoError>;
 		read(path: string): Effect.Effect<string, VamVaultIoError>;

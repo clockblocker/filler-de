@@ -652,6 +652,9 @@ function makeHiddenFolderIoLive(app: App): Layer.Layer<HiddenFolderIo> {
 	return Layer.succeed(
 		HiddenFolderIo,
 		HiddenFolderIo.of({
+			get configDir() {
+				return app.vault?.configDir;
+			},
 			exists: Effect.fn("HiddenFolderIo.exists")((path) =>
 				attempt("exists", path, (adapter) => adapter.exists(path)),
 			),

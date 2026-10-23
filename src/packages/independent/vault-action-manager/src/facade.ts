@@ -1,4 +1,12 @@
-import { Cause, Context, Effect, Layer, ManagedRuntime, Result } from "effect";
+import {
+	Cause,
+	Context,
+	Effect,
+	Layer,
+	ManagedRuntime,
+	Result,
+	Scheduler,
+} from "effect";
 import type { App } from "obsidian";
 import type { RecentTrace } from "./diagnostics/recent-trace";
 import type {
@@ -129,22 +137,24 @@ type VaultActionManagerCoreOptions = {
 /**
  * Who decides where VAM's spans and log entries go.
  *
- * - `"vam"` (the default): VAM installs its own, for every program it runs,
- *   its dispatch worker and its observation: the console logger, plus
- *   `recentTrace`'s tracer and logger when given. A caller's tracer does not
- *   see VAM's spans.
+ * - `"vam"` (the default): VAM installs its console logger for every
+ *   program it runs, its dispatch batches and its vault callbacks, and,
+ *   when `recentTrace` is given, that trace's tracer and logger too; a
+ *   caller's tracer then does not see VAM's spans. Without `recentTrace`,
+ *   VAM's spans go to the caller's tracer.
  * - `"host"`: VAM installs none, and its spans and logs go wherever the
- *   caller's fiber sends them. The dispatch worker and the observation
- *   channels run on the fibers the Layer forks, so provide the host's
- *   tracer and loggers to the Layer, with `Layer.provide` or
- *   `Layer.provideMerge`, not beside it with `Layer.merge`.
+ *   caller's fiber sends them; each Dispatch Batch runs with its
+ *   submitter's tracer and loggers. Vault callbacks run with the context
+ *   the Layer was built in, so provide the host's tracer and loggers to
+ *   the Layer, with `Layer.provide` or `Layer.provideMerge`, not beside it
+ *   with `Layer.merge`.
  */
 export type VaultActionManagerObservability =
 	| {
 			readonly observability?: "vam";
 			/**
 			 * Records VAM's spans and Effect log entries, for "Copy recent
-			 * trace". Without it VAM's spans are discarded.
+			 * trace".
 			 */
 			readonly recentTrace?: RecentTrace;
 	  }
@@ -251,6 +261,8 @@ type VamParts = {
 	readonly selfEvents: SelfEventTracker;
 	readonly sequence: VaultCallbackSequence;
 	readonly services: VamServices;
+	/** Each open subscription's close, for shutdown to run. */
+	readonly subscriptionClosers: Set<Effect.Effect<void>>;
 };
 
 /**
@@ -287,7 +299,7 @@ class VaultActionManagerFacade {
 	/** Numbers every vault callback either observation channel hears. */
 	private readonly sequence: VaultCallbackSequence;
 	private readonly services: VamServices;
-	private readonly subscriptionClosers = new Set<Effect.Effect<void>>();
+	private readonly subscriptionClosers: Set<Effect.Effect<void>>;
 
 	/** @internal Built by `VaultActionManager.layer`. */
 	constructor(parts: VamParts) {
@@ -301,6 +313,7 @@ class VaultActionManagerFacade {
 		this.reader = parts.reader;
 		this.sequence = parts.sequence;
 		this.services = parts.services;
+		this.subscriptionClosers = parts.subscriptionClosers;
 		this.provide = parts.services.provide;
 		this.testing = new VaultActionManagerTestingAdapter(
 			this.provide,
@@ -612,7 +625,8 @@ class VaultActionManagerFacade {
 		this.subscriptionClosers.add(rawClose);
 		let active = true;
 		return Effect.suspend(() => {
-			if (!active) return Effect.void;
+			// Shutdown already closed it.
+			if (!active || this.services.isClosed) return Effect.void;
 			active = false;
 			this.subscriptionClosers.delete(rawClose);
 			return this.provide(rawClose);
@@ -821,13 +835,18 @@ class VaultActionManagerFacade {
 	 * whose first segment starts with `.`, such as `.textfresser`. Obsidian
 	 * keeps such files out of its tree and fires no vault callback for them,
 	 * so they bypass dispatch, Self Events and observation. A `folder` that
-	 * is not hidden fails every operation with a `VamVaultIoError`.
+	 * is not hidden, or lies in Obsidian's config folder (`.obsidian`),
+	 * fails every operation with a `VamVaultIoError`.
 	 */
 	hiddenFolder(folder: string): HiddenFolder {
 		const root = VaultPath.normalize(folder);
-		const resolve = (operation: string, path: string) =>
+		const resolve = (
+			operation: string,
+			path: string,
+			configDir: string | undefined,
+		) =>
 			Effect.suspend(() => {
-				const problem = hiddenPathProblem(root, path);
+				const problem = hiddenPathProblem(root, path, configDir);
 				return problem
 					? Effect.fail(
 							new VamVaultIoError({
@@ -847,9 +866,9 @@ class VaultActionManagerFacade {
 			) => Effect.Effect<A, VamVaultIoError>,
 		) =>
 			this.provide(
-				resolve(operation, path).pipe(
-					Effect.flatMap((vaultPath) =>
-						HiddenFolderIo.use((io) => use(io, vaultPath)),
+				HiddenFolderIo.use((io) =>
+					resolve(operation, path, io.configDir).pipe(
+						Effect.flatMap((vaultPath) => use(io, vaultPath)),
 					),
 				),
 			);
@@ -959,38 +978,26 @@ class VaultActionManagerFacade {
 	> {
 		return this.provide(this.markdownFiles.scrollOpenedFileToLine(line));
 	}
-
-	/**
-	 * @internal The Layer's finalizer: refuses new programs, closes every
-	 * subscription and both observation channels, then shuts dispatch
-	 * down, which lets the active batch finish and fails the queued ones.
-	 */
-	readonly shutdown: Effect.Effect<void> = Effect.suspend(() => {
-		this.services.close();
-		const closes = [...this.subscriptionClosers];
-		this.subscriptionClosers.clear();
-		return Effect.all(closes, { discard: true }).pipe(
-			Effect.andThen(this.observation.disposeEffect()),
-			Effect.andThen(this.mdModifyObservation.disposeEffect()),
-			Effect.andThen(this.dispatches.shutdownEffect()),
-			Effect.catchCause((cause) =>
-				Effect.logError(
-					"[VaultActionManager] Shutdown did not finish cleanly",
-					cause,
-				),
-			),
-			Effect.withSpan("vam.shutdown"),
-		);
-	});
 }
 
-/** Why `path` is no file under the hidden folder `root`; `undefined` when it is. */
-function hiddenPathProblem(root: string, path: string): string | undefined {
-	const notInside = (segment: string) =>
-		segment === "" || segment === "." || segment === "..";
-	const rootSegments = root.split("/");
-	if (!root.startsWith(".") || rootSegments.some(notInside))
+/**
+ * Why `path` is no file under the hidden folder `root`; `undefined` when it
+ * is. A segment of only dots and spaces is refused, since Windows trims it
+ * to nothing or to `..`.
+ */
+function hiddenPathProblem(
+	root: string,
+	path: string,
+	configDir: string | undefined,
+): string | undefined {
+	const notInside = (segment: string) => /^[. ]*$/.test(segment);
+	if (!root.startsWith(".") || root.split("/").some(notInside))
 		return `"${root}" is not a hidden folder: its first segment must start with "."`;
+	if (
+		configDir !== undefined &&
+		VaultPath.caseInsensitive.isUnder(root, configDir, { inclusive: true })
+	)
+		return `"${root}" is in Obsidian's config folder "${configDir}"`;
 	if (path.split(/[\\/]/).some(notInside))
 		return `"${path}" is not a relative path inside "${root}"`;
 	return undefined;
@@ -1056,7 +1063,23 @@ const makeManager = Effect.fnUntraced(function* (
 		selfEvents,
 		{ linkUpdates, protectedPaths },
 	);
-	yield* Effect.forkScoped(dispatches.run);
+	// Started at once, so it is taking batches before the build returns. A
+	// build run synchronously (`runSync`) carries a sync scheduler, whose
+	// yields never let Obsidian paint; the worker outlives the build, so it
+	// gets the default one.
+	const scheduler = yield* Scheduler.Scheduler;
+	const forkWorker = Effect.forkScoped(dispatches.run, {
+		startImmediately: true,
+	});
+	yield* scheduler.executionMode === "sync"
+		? forkWorker.pipe(
+				Effect.provideService(
+					Scheduler.Scheduler,
+					new Scheduler.MixedScheduler(),
+				),
+			)
+		: forkWorker;
+	const subscriptionClosers = new Set<Effect.Effect<void>>();
 	const manager = new VaultActionManagerFacade({
 		dispatches,
 		linkUpdates,
@@ -1069,10 +1092,30 @@ const makeManager = Effect.fnUntraced(function* (
 		selfEvents,
 		sequence,
 		services,
+		subscriptionClosers,
 	});
 	// Added after the worker's fork, so it runs before the worker is
-	// interrupted: the active batch finishes first.
-	yield* Effect.addFinalizer(() => manager.shutdown);
+	// interrupted: new programs are refused, subscriptions and both
+	// channels close, and the active batch finishes while queued ones fail.
+	yield* Effect.addFinalizer(() =>
+		Effect.suspend(() => {
+			services.close();
+			const closes = [...subscriptionClosers];
+			subscriptionClosers.clear();
+			return Effect.all(closes, { discard: true });
+		}).pipe(
+			Effect.andThen(observation.disposeEffect()),
+			Effect.andThen(mdModifyObservation.disposeEffect()),
+			Effect.andThen(dispatches.shutdownEffect()),
+			Effect.catchCause((cause) =>
+				Effect.logError(
+					"[VaultActionManager] Shutdown did not finish cleanly",
+					cause,
+				),
+			),
+			Effect.withSpan("vam.shutdown"),
+		),
+	);
 	return manager;
 });
 
@@ -1115,7 +1158,10 @@ function vaultActionManagerLayer(
 		Layer.catchCause((cause) =>
 			Layer.effect(
 				VaultActionManagerKey,
-				Effect.fail(setupErrorOf(cause)),
+				// An interrupted build stays an interruption.
+				Cause.hasInterruptsOnly(cause)
+					? Effect.failCause(cause)
+					: Effect.fail(setupErrorOf(cause)),
 			),
 		),
 	);
@@ -1155,11 +1201,16 @@ export function createVaultActionManager(
 		);
 	}
 	const manager = built.value;
+	// One disposal for every caller: a second `dispose` waits for the first.
+	let disposal: Promise<void> | undefined;
 	return {
 		dispose: Effect.tryPromise({
 			catch: (cause) =>
 				new VamShutdownError({ cause, operation: "dispose" }),
-			try: () => runtime.dispose(),
+			try: () => {
+				disposal ??= runtime.dispose();
+				return disposal;
+			},
 		}),
 		manager,
 		testing: manager.testing,

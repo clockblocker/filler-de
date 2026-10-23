@@ -1,6 +1,6 @@
 import {
 	Cause,
-	type Context,
+	Context,
 	Deferred,
 	Effect,
 	Exit,
@@ -11,6 +11,7 @@ import {
 	Ref,
 	Scope,
 	Semaphore,
+	Tracer,
 } from "effect";
 import { TFile } from "obsidian";
 import { formatCause } from "../../diagnostics/format-cause";
@@ -183,7 +184,11 @@ const makeObservationCore = Effect.fn("makeObservationCore")(function* <
 	Ev,
 	M,
 >(): Effect.fn.Return<ObservationCore<Ev, M>> {
-	const context = yield* Effect.context<never>();
+	// Without the builder's span: a vault callback is no part of the build
+	// that happened to create its channel.
+	const context = Context.omit(Tracer.ParentSpan)(
+		yield* Effect.context<never>(),
+	);
 	const rootScope = yield* Scope.make("sequential");
 	const pubsub = yield* PubSub.unbounded<PublishedMessage<Ev, M>>();
 	yield* Scope.addFinalizer(rootScope, PubSub.shutdown(pubsub));

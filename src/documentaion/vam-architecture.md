@@ -885,9 +885,10 @@ supplies the ports and nothing else, so a program keeps its caller's span.
 
 `options.observability` decides where VAM's spans and logs go. By default
 (`"vam"`) VAM installs its console logger, plus `recentTrace`'s tracer and
-logger when given. With `"host"` it installs none: the host provides its
-tracer and loggers to the Layer (`Layer.provide` or `Layer.provideMerge`),
-and the worker and observation, forked while the Layer builds, use them.
+logger when given. With `"host"` it installs none. Each Dispatch Batch runs
+with its submitter's tracer and loggers. Vault callbacks run with the
+context the Layer was built in, so the host provides its tracer and
+loggers to the Layer (`Layer.provide` or `Layer.provideMerge`).
 
 `createVaultActionManager(app, options)` wraps the Layer in a
 `ManagedRuntime` of its own, for VAM's tests and standalone use. Its

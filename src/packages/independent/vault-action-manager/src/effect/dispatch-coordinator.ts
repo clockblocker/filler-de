@@ -1,12 +1,14 @@
 import {
 	Cause,
+	Context,
 	Deferred,
 	Effect,
 	Exit,
+	Logger,
 	Option,
 	Queue,
 	SynchronizedRef,
-	type Tracer,
+	Tracer,
 } from "effect";
 import { TFile, TFolder } from "obsidian";
 import { collapseActions } from "../impl/actions-processing/collapse";
@@ -122,6 +124,12 @@ type BatchMessage = {
 		VamDispatchReport,
 		VamDispatchFailure
 	>;
+	/**
+	 * The submitter's tracer and loggers: the batch runs with them, so its
+	 * spans and logs go where the submitter's do, however the worker's own
+	 * fiber was set up.
+	 */
+	readonly observability: Context.Context<never>;
 	readonly operation: VamOperation;
 	readonly parentSpan: Option.Option<Tracer.Span>;
 	readonly stopOnFirstFailure: boolean;
@@ -272,6 +280,15 @@ export class DispatchBatchWorker {
 			yield* self.refuseProtected(submitted, operation);
 			const queue = yield* Deferred.await(self.queueReady);
 			const parentSpan = yield* Effect.option(Effect.currentSpan);
+			const observability = Context.make(
+				Tracer.Tracer,
+				yield* Effect.tracer,
+			).pipe(
+				Context.add(
+					Logger.CurrentLoggers,
+					yield* Logger.CurrentLoggers,
+				),
+			);
 			const completion = yield* Deferred.make<
 				VamDispatchReport,
 				VamDispatchFailure
@@ -280,6 +297,7 @@ export class DispatchBatchWorker {
 				_tag: "Batch",
 				actions: submitted,
 				completion,
+				observability,
 				operation,
 				parentSpan,
 				stopOnFirstFailure: request.stopOnFirstFailure === true,
@@ -500,18 +518,11 @@ export class DispatchBatchWorker {
 		const execution = Option.match(batch.parentSpan, {
 			onNone: run,
 			onSome: (span) => Effect.withParentSpan(run(), span),
-		});
+		}).pipe(Effect.provideContext(batch.observability));
 		return Effect.exit(execution).pipe(
 			Effect.flatMap((exit) => Deferred.done(batch.completion, exit)),
 			Effect.onInterrupt(() =>
-				Deferred.fail(
-					batch.completion,
-					this.shutdownError(
-						"dispatch.interrupted",
-						batch.actions,
-						batch.operation,
-					),
-				),
+				Deferred.fail(batch.completion, this.interruptedFailure(batch)),
 			),
 			Effect.asVoid,
 		);
@@ -809,32 +820,69 @@ export class DispatchBatchWorker {
 	}
 
 	/**
-	 * After the worker ended without a shutdown: fails what is queued or
-	 * waiting, refuses new submissions, and releases idle and shutdown
-	 * waiters.
+	 * After the worker ended without a shutdown: under the state lock,
+	 * refuses new submissions, fails what is queued or waiting, and
+	 * releases idle and shutdown waiters.
 	 */
 	private abandon(): Effect.Effect<void> {
-		return Effect.gen({ self: this }, function* () {
-			const ready = yield* Deferred.poll(this.queueReady);
-			const queued = Option.isSome(ready)
-				? yield* Queue.clear(yield* ready.value)
-				: [];
-			const state = yield* SynchronizedRef.getAndUpdate(
-				this.state,
-				(current) => ({ ...current, waiting: [] }),
-			);
-			for (const message of [...queued, ...state.waiting]) {
-				if (message._tag !== "Batch") continue;
-				yield* Deferred.fail(
-					message.completion,
-					this.shutdownError(
-						"dispatch.queued",
-						message.actions,
-						message.operation,
-					),
-				);
-			}
-			yield* this.finishWorker();
+		return SynchronizedRef.modifyEffect(this.state, (state) =>
+			Effect.gen({ self: this }, function* () {
+				const ready = yield* Deferred.poll(this.queueReady);
+				const queued = Option.isSome(ready)
+					? yield* Queue.clear(yield* ready.value)
+					: [];
+				for (const message of [...queued, ...state.waiting]) {
+					if (message._tag !== "Batch") continue;
+					yield* Deferred.fail(
+						message.completion,
+						this.shutdownError(
+							"dispatch.queued",
+							message.actions,
+							message.operation,
+						),
+					);
+				}
+				yield* Deferred.succeed(state.idle, undefined);
+				yield* Deferred.succeed(this.workerDone, undefined);
+				return [
+					undefined,
+					{
+						...state,
+						busy: false,
+						lifecycle: "shutdown" as const,
+						waiting: [],
+					},
+				] as const;
+			}),
+		);
+	}
+
+	/**
+	 * A batch interrupted while it ran: any of its actions may have
+	 * written, so each is `Uncertain`, not `Skipped`.
+	 */
+	private interruptedFailure(batch: BatchMessage): VamDispatchFailure {
+		const reason = new VamShutdownError({
+			cause: new Error(
+				"Vault Action Manager dispatch was interrupted while the batch ran",
+			),
+			operation: "dispatch.interrupted",
+		});
+		return new VamDispatchFailure({
+			reason,
+			report: new VamDispatchReport({
+				...batch.operation,
+				entries: batch.actions.map((action) => ({
+					action,
+					error: new VamDispatchError({
+						action,
+						cause: reason,
+						kind: "defect",
+						operation: "dispatch.interrupted",
+					}),
+					status: "Uncertain" as const,
+				})),
+			}),
 		});
 	}
 

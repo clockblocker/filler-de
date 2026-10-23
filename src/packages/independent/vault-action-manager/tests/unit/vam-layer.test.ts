@@ -155,6 +155,36 @@ describe("VaultActionManager.layer", () => {
 		);
 		// The delivery runs on the host's tracer too.
 		named("vam.observation.handle");
+		// A vault callback is no part of the build that made its channel.
+		for (const span of named("SelfEventTracker.attribute"))
+			expect(ancestors(span, spans)).not.toContain(
+				"VaultObservation.makeEffect",
+			);
+	});
+
+	it("runs each batch with its submitter's tracer, even beside a merged tracer", async () => {
+		const vault = makeObsidianVault({ "Library/a.md": "a" });
+		const trace = makeRecentTrace();
+		const runtime = ManagedRuntime.make(
+			Layer.merge(
+				VaultActionManager.layer(vault.app, { observability: "host" }),
+				Layer.succeed(Tracer.Tracer, trace.tracer),
+			),
+		);
+		try {
+			await runtime.runPromise(
+				VaultActionManager.use((vam) =>
+					vam.dispatch([create("Library/b.md", "b")], {
+						caller: "host",
+					}),
+				).pipe(Effect.withSpan("host.command")),
+			);
+		} finally {
+			await runtime.dispose();
+		}
+		const names = trace.snapshot().spans.map((span) => span.name);
+		expect(names).toContain("vam.dispatch");
+		expect(names).toContain("DispatchBatch.executeBatch");
 	});
 
 	it("installs its own tracer only when asked to", async () => {
@@ -322,6 +352,8 @@ describe("VaultActionManager.layer", () => {
 				files.set(path, data);
 			},
 		};
+		(vault.app.vault as unknown as { configDir: string }).configDir =
+			".obsidian";
 		const { dispose, manager } = createVaultActionManager(vault.app);
 		const cache = manager.hiddenFolder(".textfresser");
 		const result = await Effect.runPromise(
@@ -345,7 +377,15 @@ describe("VaultActionManager.layer", () => {
 			const exit = await Effect.runPromiseExit(cache.write(outside, "x"));
 			expect(Exit.isFailure(exit)).toBe(true);
 		}
-		for (const folder of ["Library", "../outside", "", "."]) {
+		for (const folder of [
+			"Library",
+			"../outside",
+			"",
+			".",
+			". .",
+			".obsidian",
+			".obsidian/plugins/x",
+		]) {
 			const notHidden = await Effect.runPromiseExit(
 				manager.hiddenFolder(folder).write("a.md", "x"),
 			);
@@ -353,6 +393,25 @@ describe("VaultActionManager.layer", () => {
 		}
 		expect([...files.keys()]).toHaveLength(1);
 		await Effect.runPromise(dispose);
+	});
+
+	it("disposes once, and every dispose waits for it", async () => {
+		const vault = heldVault();
+		const { dispose, manager } = createVaultActionManager(vault.app);
+		vault.hold();
+		const inFlight = Effect.runPromiseExit(
+			manager.dispatch([create("Library/b.md", "b")], { caller: "test" }),
+		);
+		await vault.reachedGate;
+		let settled = 0;
+		const first = Effect.runPromise(dispose).then(() => settled++);
+		const second = Effect.runPromise(dispose).then(() => settled++);
+		await new Promise((resolve) => setTimeout(resolve, 20));
+		expect(settled).toBe(0);
+		vault.release();
+		await Promise.all([first, second]);
+		expect(settled).toBe(2);
+		expect(Exit.isSuccess(await inFlight)).toBe(true);
 	});
 
 	it("resolves a link synchronously, to any kind of file", () => {

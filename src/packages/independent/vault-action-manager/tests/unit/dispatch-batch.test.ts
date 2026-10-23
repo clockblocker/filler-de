@@ -1328,4 +1328,56 @@ describe("DispatchBatchCoordinator", () => {
 		);
 		expect(firstFailure(postShutdown)).toBeInstanceOf(VamShutdownError);
 	});
+
+	it("fails every batch it holds, the running one as Uncertain, when its worker is interrupted", async () => {
+		const gate = deferred();
+		const started = deferred();
+		const coordinator = new DispatchBatchCoordinator(
+			{
+				execute: () =>
+					Effect.promise(() => {
+						started.resolve();
+						return gate.promise;
+					}).pipe(Effect.as({ _tag: "NoOp" } as const)),
+			} as unknown as Executor,
+			{
+				beginEffect: () => Effect.void,
+				finishEffect: () => Effect.void,
+			} as unknown as SelfEventTracker,
+		);
+		const worker = Effect.runFork(
+			coordinator.run.pipe(Effect.provide(makeVamLayer())),
+		);
+		const running = Effect.runPromiseExit(
+			coordinator.dispatchEffect([makeAction("running")], {
+				operation: TEST_OPERATION,
+			}),
+		);
+		await started.promise;
+		const queued = Effect.runPromiseExit(
+			coordinator.dispatchEffect([makeAction("queued")], {
+				operation: TEST_OPERATION,
+			}),
+		);
+		await Effect.runPromise(Fiber.interrupt(worker));
+
+		const interrupted = dispatchFailure(await running);
+		expect(interrupted?.reason).toBeInstanceOf(VamShutdownError);
+		expect(
+			interrupted?.report.entries.map((entry) => entry.status),
+		).toEqual(["Uncertain"]);
+		expect(dispatchFailure(await queued)?.reason).toBeInstanceOf(
+			VamShutdownError,
+		);
+		const late = await Effect.runPromiseExit(
+			coordinator.dispatchEffect([makeAction("late")], {
+				operation: TEST_OPERATION,
+			}),
+		);
+		expect(firstFailure(late)).toBeInstanceOf(VamShutdownError);
+		// Neither idleness nor shutdown waits on the dead worker.
+		await Effect.runPromise(coordinator.whenIdleEffect());
+		await Effect.runPromise(coordinator.shutdownEffect());
+		gate.resolve();
+	});
 });
