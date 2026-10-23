@@ -14,6 +14,7 @@ import {
 	CommandKind,
 } from "../../../src/managers/obsidian/command-executor";
 import { createCommandExecutor } from "../../../src/managers/obsidian/command-executor/create-command-executor";
+import { Notices } from "../../../src/managers/obsidian/host";
 
 const page = splitPathCodec.parse("Library/Book/Page-001.md") as SplitPathToMdFile;
 
@@ -42,6 +43,10 @@ function inReadingView() {
 	const program = createCommandExecutor({
 		classify: {} as unknown as ClassifyCommander,
 		librarian: librarian as unknown as Librarian,
+		notices: Notices.over({
+			open: () => ({ hide() {}, setMessage() {}, showing: () => true }),
+			show: () => {},
+		}),
 		textfresser: {} as unknown as Textfresser,
 		vam: vam as unknown as VaultActionManager,
 	});

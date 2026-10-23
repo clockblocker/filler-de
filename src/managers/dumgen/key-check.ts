@@ -8,7 +8,7 @@
  */
 import { Effect, Option } from "effect";
 import { getErrorMessage } from "../../utils/get-error-message";
-import { HttpTransport } from "./http-transport";
+import { HttpTransport } from "../obsidian/host/http-transport";
 import {
 	errorCode,
 	type ProviderName,

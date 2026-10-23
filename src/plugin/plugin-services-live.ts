@@ -46,6 +46,7 @@ import {
 	watchProtectedPaths,
 } from "../managers/obsidian/protected-paths/protected-paths-guard";
 import { OverlayManager } from "../managers/overlay-manager";
+import { listenForOverlay } from "../managers/overlay-manager/overlay-listeners";
 import type { PluginServices } from "../runtime/plugin-live";
 import type { PluginRuntime } from "../runtime/plugin-runtime";
 import type { ParsedUserSettings } from "../settings/parsed-settings";
@@ -386,7 +387,6 @@ export const OverlayLive = (
 						app: deps.plugin.app,
 						commandExecutor: deps.commandExecutor,
 						getLibrarian: () => lifecycle.librarian(),
-						plugin: deps.plugin,
 						readSync: deps.runtime.readSync,
 						settings: settings.now,
 						userEventInterceptor: userEvents,
@@ -402,6 +402,8 @@ export const OverlayLive = (
 						Effect.sync(() => overlay.destroy()),
 					),
 			);
+			// Released before the overlay is destroyed: newest first.
+			yield* listenForOverlay(overlay);
 			// The toolbars follow the settings' button placements.
 			yield* settings.changes.pipe(
 				Stream.map(placements),

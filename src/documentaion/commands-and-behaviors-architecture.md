@@ -13,7 +13,9 @@ The two paths do not call each other.
 
 ## Commands
 
-`createCommandExecutor({ classify, librarian, textfresser, vam })` returns `commandProgram(kind)`, the command's Effect. `main.ts` runs it on the plugin runtime under a `command.<kind>` root span (`src/runtime/plugin-runtime.ts`).
+The palette commands are one table, `pluginCommands` in `src/plugin/register-commands.ts`: each entry is an id, a name, whether it needs a Markdown editor, and its Effect. The launch registers them through `PluginHost.command` (`src/managers/obsidian/host/`) once it has built the services, in the scope it built them in, so unloading removes them. Each invocation runs on the plugin runtime under a `command.<id>` root span, such as `command.classify-selection`. An editor command reads the editor through VAM, not from Obsidian's callback.
+
+`createCommandExecutor({ classify, librarian, notices, textfresser, vam })` returns `commandProgram(kind)`, the Effect of a `CommandKind`. The table's editor commands run it, and so do the toolbars and the editor menu, under `command.<kind>` (`src/runtime/plugin-runtime.ts`).
 
 For each command, the executor:
 
@@ -69,6 +71,7 @@ handle(payload, context): HandleResult
 | Area | Location |
 | --- | --- |
 | Command routing | `src/managers/obsidian/command-executor/` |
+| Obsidian host services (`PluginHost`, `Notices`, `HttpTransport`) | `src/managers/obsidian/host/` |
 | Behavior routing | `src/managers/obsidian/behavior-manager/` |
 | Event detection | `src/packages/composed/obsidian-event-layer/` |
 | Plugin wiring | `src/main.ts` |

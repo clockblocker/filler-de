@@ -28,6 +28,7 @@ import {
 import { Settings } from "../../../src/settings/settings-service";
 import { DEFAULT_SETTINGS } from "../../../src/types";
 import { IdleTracker } from "../../../src/utils/idle-tracker";
+import { fakeHost } from "../../support/obsidian-host";
 import {
 	fixedSettings,
 	memoryPluginData,
@@ -158,6 +159,7 @@ describe("PluginLive", () => {
 			PluginLive(vault.app as unknown as App, {
 				confirm: () => Promise.resolve(true),
 				data: options.data ?? memoryPluginData(),
+				host: fakeHost().layer,
 				notices: createLifecycleNotices(() => {}, {
 					trace,
 					writeStop: () => {},

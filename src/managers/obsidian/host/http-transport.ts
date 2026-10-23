@@ -6,7 +6,7 @@
  * once, so a request in flight when the plugin unloads stops with it.
  */
 import { Context, Data, Effect, Layer } from "effect";
-import { getErrorMessage } from "../../utils/get-error-message";
+import { getErrorMessage } from "../../../utils/get-error-message";
 import {
 	createRequestUrlFetch,
 	type HttpSend,
@@ -34,7 +34,7 @@ export class HttpTransport extends Context.Service<
 			init: HttpRequest,
 		) => Effect.Effect<HttpAnswer, HttpTransportError>;
 	}
->()("textfresser/managers/dumgen/HttpTransport") {
+>()("textfresser/managers/obsidian/host/HttpTransport") {
 	/** The transport over `send`, such as a test's scripted one. */
 	static readonly over = (send: HttpSend): HttpTransport["Service"] =>
 		HttpTransport.of({

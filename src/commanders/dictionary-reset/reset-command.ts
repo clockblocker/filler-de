@@ -41,6 +41,7 @@ import type { ScrollActivity } from "../classify/resolution/scroll-activity";
 import { vamScrollFiles } from "../classify/resolution/scroll-files";
 import { SegmentationCache } from "../classify/segmentation-cache";
 import { UnitResolver, UnitResolverError } from "../classify/unit-resolver";
+import { CANCEL_RESET_COMMAND_NAME } from "./command-names";
 import {
 	dryRunReset,
 	executeReset,
@@ -52,11 +53,8 @@ import { type ResetDictionary, ResetFailed } from "./ports";
 import { findSources, type SourceChoice } from "./source";
 import { vamResetVault } from "./vam-reset-vault";
 
-export const RESET_COMMAND_NAME = "Reset dictionary from old notes…";
-
 /** What a step the unloading plugin interrupted answers; it shows nothing. */
 const UNLOADED = "the plugin unloaded";
-export const CANCEL_RESET_COMMAND_NAME = "Cancel dictionary reset";
 
 export type DictionaryResetDeps = {
 	readonly app: App;

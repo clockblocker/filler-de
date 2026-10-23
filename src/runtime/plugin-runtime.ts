@@ -10,7 +10,15 @@
  * is a no-op, and an E2E hook rejects.
  */
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
-import { Cause, Data, Effect, Exit, Layer, ManagedRuntime } from "effect";
+import {
+	Cause,
+	Context,
+	Data,
+	Effect,
+	Exit,
+	Layer,
+	ManagedRuntime,
+} from "effect";
 
 /** The root span an edge opens. */
 export type EdgeSpan =
@@ -31,6 +39,29 @@ export class PluginEdgeError extends Data.TaggedError("PluginEdgeError")<{
 export class PluginUnloadedError extends Data.TaggedError(
 	"PluginUnloadedError",
 )<{ readonly message: string }> {}
+
+/**
+ * The edges a service opens from a plain Obsidian callback, such as a
+ * palette command's (`PluginHost.command`): each runs its program on the
+ * plugin runtime under the edge's root span, as `PluginRuntime.command`
+ * and `userEvent` do. `makePluginRuntime` provides it to the Layer it
+ * builds, so the runtime's own services can reach its edges.
+ */
+export class PluginEdges extends Context.Service<
+	PluginEdges,
+	{
+		/** `PluginRuntime.command`, for a program that needs nothing more. */
+		readonly command: <A, E>(
+			id: string,
+			effect: Effect.Effect<A, E>,
+		) => Promise<void>;
+		/** `PluginRuntime.userEvent`, for a program that needs nothing more. */
+		readonly userEvent: <A, E>(
+			kind: string,
+			effect: Effect.Effect<A, E>,
+		) => Promise<void>;
+	}
+>()("textfresser/runtime/PluginEdges") {}
 
 /** `PluginRuntime.readSync`, for code that holds only it. */
 export type ReadSync = <A, E>(
@@ -79,20 +110,27 @@ export type PluginRuntime<R, ER> = {
 };
 
 /**
- * Makes the runtime and starts building `layer` at once. A build that fails
- * is told once, to `onBuildFailed`, with its whole cause; every edge then
- * fails as its program never runs.
+ * Makes the runtime and starts building `layer` at once, given the
+ * runtime's own `PluginEdges`. A build that fails is told once, to
+ * `onBuildFailed`, with its whole cause; every edge then fails as its
+ * program never runs.
  */
 export function makePluginRuntime<R, ER>(
-	layer: Layer.Layer<R, ER>,
+	layer: Layer.Layer<R, ER, PluginEdges>,
 	options: {
 		readonly onBuildFailed: (cause: Cause.Cause<ER>) => void;
 	},
 ): PluginRuntime<R, ER> {
-	const managed = ManagedRuntime.make(layer, {
-		memoMap: Layer.makeMemoMapUnsafe(),
-	});
 	let disposal: Promise<void> | undefined;
+	// Its methods run only once the runtime is built, so after `managed`.
+	const edges = PluginEdges.of({
+		command: (id, effect) => settle(`command.${id}`, effect),
+		userEvent: (kind, effect) => settle(`user-event.${kind}`, effect),
+	});
+	const managed = ManagedRuntime.make(
+		Layer.provide(layer, Layer.succeed(PluginEdges, edges)),
+		{ memoMap: Layer.makeMemoMapUnsafe() },
+	);
 
 	managed.runCallback(Effect.void, {
 		onExit: (exit) => {
@@ -115,15 +153,16 @@ export function makePluginRuntime<R, ER>(
 			Effect.withSpan(edge, { root: true }),
 		);
 
-	const settle = <A, E>(
+	function settle<A, E>(
 		edge: EdgeSpan,
 		effect: Effect.Effect<A, E, R>,
-	): Promise<void> =>
-		disposal
+	): Promise<void> {
+		return disposal
 			? Promise.resolve()
 			: managed
 					.runPromiseExit(atEdge(edge, effect))
 					.then(() => undefined);
+	}
 
 	function e2e<A, E>(
 		hook: string,

@@ -1,7 +1,9 @@
 /**
  * OverlayManager - thin orchestrator for UI overlays.
  *
- * Subscribes to workspace and user events, delegates to extracted modules:
+ * Subscribes to user events, and is told the workspace events its Layer
+ * listens to (`OverlayLive`, through `PluginHost`); it delegates to
+ * extracted modules:
  * - action-definitions: action types and placement computation
  * - action-click-dispatcher: routing action clicks to commands
  * - selection-handler: managing selection toolbar visibility
@@ -16,26 +18,18 @@ import {
 	UserEventKind,
 } from "@textfresser/obsidian-event-layer";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import type { App, Plugin } from "obsidian";
+import type { App, Menu } from "obsidian";
 import type { Librarian } from "../../commanders/librarian/librarian";
 import type { ReadSync } from "../../runtime/plugin-runtime";
 import type { ParsedUserSettings } from "../../settings/parsed-settings";
 import type { CommandExecutor } from "../obsidian/command-executor";
-import type {
-	Teardown,
-	WorkspaceEvent,
-} from "../obsidian/workspace-navigation-event-interceptor";
-import {
-	WorkspaceEventInterceptor,
-	WorkspaceEventKind,
-} from "../obsidian/workspace-navigation-event-interceptor";
 import { dispatchActionClick } from "./action-click-dispatcher/dispatcher";
 import { KNOWN_ACTION_IDS } from "./action-definitions/definitions";
 import { computeAllowedActions } from "./action-definitions/placement-utils";
 import { isOverlayActionKind } from "./action-definitions/types";
 import { createBottomToolbar } from "./bottom-toolbar/bottom-toolbar";
 import type { BottomToolbar } from "./bottom-toolbar/types";
-import { setupContextMenu } from "./context-menu/context-menu";
+import { contextMenuHandler } from "./context-menu/context-menu";
 import { createEdgeZones } from "./edge-zones/edge-zones";
 import type { EdgeZones } from "./edge-zones/types";
 import { handleSelectionChanged } from "./selection-handler/handler";
@@ -53,7 +47,6 @@ type OverlayManagerDeps = {
 	 * Librarian when settings such as the Library root change.
 	 */
 	getLibrarian: () => Librarian | null;
-	plugin?: Plugin;
 	userEventInterceptor?: ObsidianEventLayer;
 	commandExecutor?: CommandExecutor;
 	/** Reads the active note synchronously as the context menu opens. */
@@ -69,17 +62,13 @@ type OverlayManagerDeps = {
 export class OverlayManager {
 	private readonly app: App;
 	private readonly getLibrarian: () => Librarian | null;
-	private readonly plugin: Plugin | null;
-	private readonly workspaceInterceptor: WorkspaceEventInterceptor;
 	private readonly userEventInterceptor: ObsidianEventLayer | null;
 	private readonly commandExecutor: CommandExecutor | null;
 	private readonly vam: VaultActionManager;
 	private readonly readSync: ReadSync;
 	private readonly settings: () => ParsedUserSettings;
-	private workspaceTeardown: Teardown | null = null;
 	private selectionHandlerTeardown: (() => void) | null = null;
 	private actionClickHandlerTeardown: (() => void) | null = null;
-	private contextMenuTeardown: (() => void) | null = null;
 	private bottomToolbars = new Map<string, BottomToolbar>();
 	private selectionToolbars = new Map<string, SelectionToolbar>();
 	private edgeZones = new Map<string, EdgeZones>();
@@ -88,8 +77,6 @@ export class OverlayManager {
 	constructor(deps: OverlayManagerDeps) {
 		this.app = deps.app;
 		this.getLibrarian = deps.getLibrarian;
-		this.plugin = deps.plugin ?? null;
-		this.workspaceInterceptor = new WorkspaceEventInterceptor(this.app);
 		this.userEventInterceptor = deps.userEventInterceptor ?? null;
 		this.commandExecutor = deps.commandExecutor ?? null;
 		this.vam = deps.vam;
@@ -98,11 +85,6 @@ export class OverlayManager {
 	}
 
 	init(): void {
-		this.workspaceInterceptor.startListening();
-		this.workspaceTeardown = this.workspaceInterceptor.subscribe(
-			this.handleWorkspaceEvent.bind(this),
-		);
-
 		if (this.userEventInterceptor) {
 			this.selectionHandlerTeardown =
 				this.userEventInterceptor.setHandler(
@@ -148,40 +130,32 @@ export class OverlayManager {
 				);
 		}
 
-		// Setup context menu for "Split into pages"
-		if (this.plugin) {
-			const { getLibrarian } = this;
-			this.contextMenuTeardown = setupContextMenu({
-				app: this.app,
-				commandExecutor: this.commandExecutor,
-				librarian: {
-					get codecRules() {
-						return getLibrarian()?.codecRules ?? null;
-					},
-					isInsideLibrary: (splitPath) =>
-						getLibrarian()?.isInsideLibrary(splitPath) ?? false,
-				},
-				plugin: this.plugin,
-				readSync: this.readSync,
-				settings: this.settings,
-				vam: this.vam,
-			});
-		}
-
 		this.refreshToolbars();
 	}
 
+	/** Adds the editor menu's "Split into pages" item, as the menu opens. */
+	readonly onEditorMenu: (menu: Menu) => void = (menu) => {
+		const { getLibrarian } = this;
+		contextMenuHandler({
+			commandExecutor: this.commandExecutor,
+			librarian: {
+				get codecRules() {
+					return getLibrarian()?.codecRules ?? null;
+				},
+				isInsideLibrary: (splitPath) =>
+					getLibrarian()?.isInsideLibrary(splitPath) ?? false,
+			},
+			readSync: this.readSync,
+			settings: this.settings,
+			vam: this.vam,
+		})(menu);
+	};
+
 	destroy(): void {
-		this.workspaceTeardown?.();
-		this.workspaceTeardown = null;
 		this.selectionHandlerTeardown?.();
 		this.selectionHandlerTeardown = null;
 		this.actionClickHandlerTeardown?.();
 		this.actionClickHandlerTeardown = null;
-		this.contextMenuTeardown?.();
-		this.contextMenuTeardown = null;
-
-		this.workspaceInterceptor.stopListening();
 
 		for (const toolbar of this.bottomToolbars.values()) toolbar.destroy();
 		this.bottomToolbars.clear();
@@ -194,23 +168,7 @@ export class OverlayManager {
 		this.edgeZones.clear();
 	}
 
-	// ─── Private ───
-
-	private handleWorkspaceEvent(event: WorkspaceEvent): void {
-		switch (event.kind) {
-			case WorkspaceEventKind.FileOpen:
-			case WorkspaceEventKind.LayoutChange:
-				this.refreshToolbars();
-				break;
-			case WorkspaceEventKind.Scroll:
-				this.hideSelectionToolbar();
-				break;
-			case WorkspaceEventKind.LayoutReady:
-			case WorkspaceEventKind.Resize:
-				break;
-		}
-	}
-
+	/** Places the toolbars anew: a file opened, or the layout changed. */
 	refreshToolbars(): void {
 		const librarian = this.getLibrarian();
 		if (!librarian) return;
@@ -232,7 +190,8 @@ export class OverlayManager {
 		);
 	}
 
-	private hideSelectionToolbar(): void {
+	/** A pane scrolled: the selection toolbar no longer sits by its selection. */
+	hideSelectionToolbar(): void {
 		if (this.activeLeafId) {
 			this.selectionToolbars.get(this.activeLeafId)?.hide();
 		}

@@ -15,26 +15,38 @@ import {
 import type { App, Plugin } from "obsidian";
 import type { LifecycleNotices } from "../lifecycle/lifecycle-notices";
 import { Lifecycle } from "../lifecycle/lifecycle-supervisor";
+import { Dumgen, ProviderKeys } from "../managers/dumgen";
 import {
-	Dumgen,
 	HttpTransport,
-	ProviderKeys,
+	type ObsidianHost,
 	type RequestUrl,
-} from "../managers/dumgen";
+} from "../managers/obsidian/host";
 import { PROTECTED_PATH_PREFIXES } from "../managers/obsidian/protected-paths/protected-paths-guard";
 import { SettingsLive } from "../plugin/settings-live";
 import { PluginData, type PluginDataError } from "../settings/plugin-data";
 import type { Settings } from "../settings/settings-service";
 import { IdleTrackerLive } from "../utils/idle-tracker";
 import { ObservabilityLive } from "./observability";
+import type { PluginEdges } from "./plugin-runtime";
 
 /** The services every program on the plugin runtime may use. */
-export type PluginServices = VaultActionManager | Dumgen | Lifecycle | Settings;
+export type PluginServices =
+	| VaultActionManager
+	| Dumgen
+	| Lifecycle
+	| Settings
+	| ObsidianHost;
 
 /** What building the plugin's Layer fails with. */
 export type PluginLiveError = VamSetupError | PluginDataError;
 
 export type PluginLiveDeps = {
+	/**
+	 * What the plugin registers with Obsidian and the notices it shows
+	 * (`ObsidianHostLive` over the plugin); its commands run at the
+	 * runtime's edges.
+	 */
+	readonly host: Layer.Layer<ObsidianHost, never, PluginEdges>;
 	/** What the lifecycle tells the user. */
 	readonly notices: LifecycleNotices;
 	readonly trace: RecentTrace;
@@ -100,7 +112,8 @@ class ShutdownWatch extends Context.Service<
 }
 
 /**
- * The plugin's Layer: its observability and idle tracker, then VAM, then
+ * The plugin's Layer: its observability, the Obsidian host and the idle
+ * tracker, then VAM, then
  * the lifecycle and the stored data, then the settings, which load as the
  * runtime is built, then dumgen, which reads its keys from them, then the
  * lifecycle's stop. A Layer's finalizers run newest first, so disposing
@@ -116,7 +129,7 @@ class ShutdownWatch extends Context.Service<
 export function PluginLive(
 	app: App,
 	deps: PluginLiveDeps,
-): Layer.Layer<PluginServices, PluginLiveError> {
+): Layer.Layer<PluginServices, PluginLiveError, PluginEdges> {
 	return ShutdownWatch.armed.pipe(
 		Layer.provideMerge(Lifecycle.stopsOnRelease),
 		Layer.provideMerge(
@@ -148,6 +161,7 @@ export function PluginLive(
 			ShutdownWatch.layer(deps.slowShutdown ?? "5 seconds"),
 		),
 		Layer.provideMerge(IdleTrackerLive),
+		Layer.provideMerge(deps.host),
 		Layer.provideMerge(ObservabilityLive(deps.trace)),
 	);
 }

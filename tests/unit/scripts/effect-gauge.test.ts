@@ -95,6 +95,9 @@ describe("countSource", () => {
 		`	this.runtime.run(Effect.void);`,
 		`	pluginRuntime.fork(Effect.void);`,
 		`	Effect.fork(Effect.void);`,
+		`	new Notice("done");`,
+		`	this.addCommand({ id: "x" });`,
+		`	app.workspace.openLinkText("Note", "", true);`,
 		`}`,
 	].join("\n");
 
@@ -102,6 +105,7 @@ describe("countSource", () => {
 		expect(countSource("src/a.ts", source, [])).toEqual({
 			"cause-squash": 1,
 			"global-settings-calls": 1,
+			"host-calls": 3,
 			"logger-calls": 2,
 			"managed-runtime-make": 1,
 			"module-let": 2,
@@ -111,6 +115,14 @@ describe("countSource", () => {
 			throw: 1,
 			try: 1,
 		});
+	});
+
+	it("counts no host calls in the host services", () => {
+		expect(
+			countSource("src/managers/obsidian/host/notices.ts", source, [])[
+				"host-calls"
+			],
+		).toBe(undefined);
 	});
 
 	it("skips run sites in allowlisted files", () => {

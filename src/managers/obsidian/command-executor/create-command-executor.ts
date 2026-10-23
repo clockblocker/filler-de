@@ -4,11 +4,11 @@ import {
 	type VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { Cause, Effect } from "effect";
-import { Notice } from "obsidian";
 import type { ClassifyCommander } from "../../../commanders/classify";
 import type { LibrarianCommandKind } from "../../../commanders/librarian/commands/types";
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import type { Textfresser } from "../../../commanders/textfresser/textfresser";
+import type { Notices } from "../host/notices";
 import { type CommandContext, CommandKind } from "./types";
 
 /**
@@ -17,6 +17,8 @@ import { type CommandContext, CommandKind } from "./types";
 type CommandExecutorManagers = {
 	classify: ClassifyCommander;
 	librarian: Librarian;
+	/** What a command tells the user. */
+	notices: Notices["Service"];
 	textfresser: Textfresser;
 	vam: VaultActionManager;
 };
@@ -26,11 +28,8 @@ type CommandExecutorManagers = {
  * Returns a function that answers each command kind's program.
  */
 export function createCommandExecutor(managers: CommandExecutorManagers) {
-	const { classify, librarian, textfresser, vam } = managers;
-
-	const notify = (message: string) => {
-		new Notice(message);
-	};
+	const { classify, librarian, notices, textfresser, vam } = managers;
+	const notify = (message: string) => notices.sink.show(message);
 
 	/**
 	 * Collect command context once at invocation.
