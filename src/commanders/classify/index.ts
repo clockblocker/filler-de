@@ -23,6 +23,7 @@ export {
 } from "./resolution/unlink-observer";
 export {
 	filesSegmentationCache,
+	HIDDEN_FOLDER,
 	memorySegmentationCache,
 } from "./segmentation-cache";
 export { DUMGEN_SEGMENTER_VERSION } from "./sentence-key";

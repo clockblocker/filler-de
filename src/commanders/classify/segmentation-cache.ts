@@ -1,8 +1,9 @@
 /**
  * The Segmentation Cache (ADR 0014): one immutable JSON entry per Sentence
  * key, holding the Segmented Sentence dumgen returned. It lives in a
- * hidden vault folder, outside VAM and the Library, read through
- * Obsidian's `vault.adapter`. Obsidian Sync skips hidden folders, so each
+ * hidden vault folder outside the Library, read and written through VAM's
+ * `hiddenFolder` (`HiddenFolderIo`), which bypasses dispatch and
+ * observation, as Obsidian fires no event there. Obsidian Sync skips hidden folders, so each
  * device fills its own; other sync tools may copy entries, which is
  * harmless because an entry is only ever the segmentation of its key.
  *
@@ -11,11 +12,15 @@
  * a write that fails is logged and dropped. Failed segmentations are never
  * stored.
  */
+import type { HiddenFolder } from "@textfresser/vault-action-manager";
 import type { Route, SegmentedSentence, Unit } from "dumgen";
 import { Cause, Context, Effect, Option, Schema } from "effect";
 
-/** The hidden folder at the vault root that holds the cache. */
-export const SEGMENTATION_CACHE_FOLDER = ".textfresser/segmentation";
+/** The plugin's hidden folder at the vault root. */
+export const HIDDEN_FOLDER = ".textfresser";
+
+/** The cache's folder, inside `HIDDEN_FOLDER`. */
+export const SEGMENTATION_CACHE_FOLDER = "segmentation";
 
 export class SegmentationCache extends Context.Service<
 	SegmentationCache,
@@ -27,13 +32,11 @@ export class SegmentationCache extends Context.Service<
 	}
 >()("textfresser/classify/SegmentationCache") {}
 
-/** The subset of Obsidian's `DataAdapter` the cache uses. */
-export type CacheFiles = {
-	exists(path: string): Promise<boolean>;
-	read(path: string): Promise<string>;
-	write(path: string, data: string): Promise<void>;
-	mkdir(path: string): Promise<void>;
-};
+/** The part of VAM's `hiddenFolder(HIDDEN_FOLDER)` the cache uses; paths are inside it. */
+export type CacheFiles = Pick<
+	HiddenFolder,
+	"exists" | "mkdir" | "read" | "write"
+>;
 
 const RouteSchema = Schema.Struct({
 	family: Schema.String,
@@ -127,7 +130,10 @@ function asRoute(route: (typeof RouteSchema)["Type"]): Route {
 	return { ...route } as Route;
 }
 
-/** The entry's path: keys are spread over 256 folders by their first two hex digits. */
+/**
+ * The entry's path inside `HIDDEN_FOLDER`: keys are spread over 256
+ * folders by their first two hex digits.
+ */
 export function cacheEntryPath(key: string): string {
 	return `${SEGMENTATION_CACHE_FOLDER}/${key.slice(0, 2)}/${key}.json`;
 }
@@ -136,24 +142,21 @@ function folderOf(path: string): string {
 	return path.slice(0, path.lastIndexOf("/"));
 }
 
-/** Every folder from the vault root down to `folder`, outermost first. */
+/** Every folder from `HIDDEN_FOLDER` down to `folder`, outermost first. */
 function foldersDownTo(folder: string): string[] {
 	const parts = folder.split("/");
 	return parts.map((_, index) => parts.slice(0, index + 1).join("/"));
 }
 
-/** The cache over hidden vault files. */
+/** The cache over the files of VAM's `hiddenFolder(HIDDEN_FOLDER)`. */
 export function filesSegmentationCache(
 	files: CacheFiles,
 ): SegmentationCache["Service"] {
 	const get = (key: string) =>
-		Effect.tryPromise({
-			catch: (cause) => cause,
-			try: async () => {
-				const path = cacheEntryPath(key);
-				if (!(await files.exists(path))) return Option.none<string>();
-				return Option.some(await files.read(path));
-			},
+		Effect.gen(function* () {
+			const path = cacheEntryPath(key);
+			if (!(yield* files.exists(path))) return Option.none<string>();
+			return Option.some(yield* files.read(path));
 		}).pipe(
 			Effect.map((read) =>
 				Option.flatMap(read, (raw) =>
@@ -174,19 +177,15 @@ export function filesSegmentationCache(
 			),
 		);
 	const put = (key: string, sentence: SegmentedSentence) =>
-		Effect.tryPromise({
-			catch: (cause) => cause,
-			try: async () => {
-				if (sentence.failed) return;
-				const path = cacheEntryPath(key);
-				for (const folder of foldersDownTo(folderOf(path)))
-					if (!(await files.exists(folder)))
-						await files.mkdir(folder);
-				await files.write(
-					path,
-					JSON.stringify({ format: 1, key, sentence }),
-				);
-			},
+		Effect.gen(function* () {
+			if (sentence.failed) return;
+			const path = cacheEntryPath(key);
+			for (const folder of foldersDownTo(folderOf(path)))
+				if (!(yield* files.exists(folder))) yield* files.mkdir(folder);
+			yield* files.write(
+				path,
+				JSON.stringify({ format: 1, key, sentence }),
+			);
 		}).pipe(
 			Effect.catch((error) =>
 				Effect.logWarning(

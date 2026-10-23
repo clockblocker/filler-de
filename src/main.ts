@@ -10,6 +10,7 @@ import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import {
 	type Cause,
 	Context,
+	Deferred,
 	Effect,
 	Exit,
 	Layer,
@@ -485,13 +486,30 @@ export default class TextEaterPlugin extends Plugin {
 	 */
 	getDictionaryResetTestingApi() {
 		const reset = () => this.services?.dictionaryReset;
+		// One Promise per step, so the driver can tell a new step from the last.
+		const awaited = new WeakMap<object, Promise<unknown>>();
+		const awaitShown = <A>(
+			hook: string,
+			shown: Deferred.Deferred<A> | null | undefined,
+		): Promise<A> | null => {
+			if (!shown) return null;
+			let promise = awaited.get(shown) as Promise<A> | undefined;
+			if (!promise) {
+				promise = this.e2e(hook, Deferred.await(shown));
+				awaited.set(shown, promise);
+			}
+			return promise;
+		};
 		return {
 			clickButton: (label: string) =>
 				reset()?.clickButton(label) ?? false,
 			closeModal: () => reset()?.closeModal(),
-			lastDryRun: () => reset()?.lastDryRun() ?? null,
-			lastExecute: () => reset()?.lastExecute() ?? null,
-			lastOpening: () => reset()?.lastOpening() ?? null,
+			lastDryRun: () =>
+				awaitShown("dictionary-reset-dry-run", reset()?.lastDryRun()),
+			lastExecute: () =>
+				awaitShown("dictionary-reset-execute", reset()?.lastExecute()),
+			lastOpening: () =>
+				awaitShown("dictionary-reset-opening", reset()?.lastOpening()),
 		};
 	}
 
