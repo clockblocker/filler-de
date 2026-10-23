@@ -38,39 +38,47 @@ describe("VaultActionManagerTestingAdapter.whenSettled", () => {
 			harness.app,
 		);
 		const path = "Worter/Katze.md";
-		await Effect.runPromise(manager.startListening());
-		await Effect.runPromise(manager.subscribeToBulk(() => Effect.void));
-		await Effect.runPromise(
-			manager.dispatch(
-				[
-					{
-						kind: VaultActionKind.UpsertMdFile,
-						payload: { content: "# Katze", splitPath: md(path) },
-					},
-				],
-				{ caller: "test" },
-			),
-		);
+		try {
+			await Effect.runPromise(manager.startListening());
+			await Effect.runPromise(manager.subscribeToBulk(() => Effect.void));
+			await Effect.runPromise(
+				manager.dispatch(
+					[
+						{
+							kind: VaultActionKind.UpsertMdFile,
+							payload: {
+								content: "# Katze",
+								splitPath: md(path),
+							},
+						},
+					],
+					{ caller: "test" },
+				),
+			);
 
-		// The new file stays unindexed for its next three lookups.
-		const lookUp = vault.getAbstractFileByPath;
-		const created = lookUp(path);
-		let unindexedLookups = 3;
-		vault.getAbstractFileByPath = (each) => {
-			if (each === path && unindexedLookups > 0) {
-				unindexedLookups--;
-				return null;
-			}
-			return lookUp(each);
-		};
+			// The new file stays unindexed for its next three lookups.
+			const lookUp = vault.getAbstractFileByPath;
+			const created = lookUp(path);
+			let unindexedLookups = 3;
+			vault.getAbstractFileByPath = (each) => {
+				if (each === path && unindexedLookups > 0) {
+					unindexedLookups--;
+					return null;
+				}
+				return lookUp(each);
+			};
 
-		const settled = Effect.runPromise(testing.whenSettled());
-		setTimeout(() => {
-			if (created) listeners.get("create")?.(created);
-		}, 20);
-		await settled;
+			// Settling lists the paths still awaiting their event before the
+			// create arrives; reported earlier, the path would not be listed.
+			const settled = Effect.runPromise(testing.whenSettled());
+			setTimeout(() => {
+				if (created) listeners.get("create")?.(created);
+			}, 20);
+			await settled;
 
-		expect(unindexedLookups).toBe(0);
-		await Effect.runPromise(dispose);
+			expect(unindexedLookups).toBe(0);
+		} finally {
+			await Effect.runPromise(dispose);
+		}
 	});
 });

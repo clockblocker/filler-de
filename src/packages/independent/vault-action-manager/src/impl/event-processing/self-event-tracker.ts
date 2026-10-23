@@ -351,11 +351,14 @@ export class SelfEventTracker {
 	/**
 	 * Starts the TTL of a begun action's still-unmatched entries now, so an
 	 * event Obsidian reports during or shortly after a slow action is still
-	 * Self. Entries already matched stay matched.
+	 * Self. Entries already matched stay matched. An action that did not
+	 * complete leaves no file for settling to wait on, so its entries stop
+	 * being registered file paths.
 	 */
 	readonly finishEffect = Effect.fn("SelfEventTracker.finish")(function* (
 		this: SelfEventTracker,
 		action: VaultAction,
+		completed = true,
 	): Effect.fn.Return<void> {
 		const now = yield* Clock.currentTimeMillis;
 		const expiration = now + this.ttlMs;
@@ -371,6 +374,7 @@ export class SelfEventTracker {
 					pruned.tracked.set(normalized, {
 						...entry,
 						expiresAt: expiration,
+						isFilePath: completed && entry.isFilePath,
 					});
 				}
 
@@ -413,6 +417,7 @@ export class SelfEventTracker {
 					pruned.tracked.set(actual, {
 						...entry,
 						expiresAt: expiration,
+						isFilePath: completed && entry.isFilePath,
 					});
 				const actualKey = folderRenameKey(rename.from, actual);
 				const redirected = pruned.folderRenames.get(actualKey);

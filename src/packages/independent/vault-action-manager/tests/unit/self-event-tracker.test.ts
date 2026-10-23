@@ -445,6 +445,31 @@ describe("SelfEventTracker", () => {
 		]);
 	});
 
+	it("stops listing the file of an action that did not complete", async () => {
+		await Effect.runPromise(
+			Effect.gen(function* () {
+				const tracker = yield* SelfEventTracker.makeEffect();
+				const create = (basename: string): VaultAction => ({
+					kind: VaultActionKind.UpsertMdFile,
+					payload: { splitPath: mdFile(basename, ["Library"]) },
+				});
+				yield* tracker.beginEffect(create("done"), TEST_OPERATION);
+				yield* tracker.beginEffect(create("failed"), TEST_OPERATION);
+
+				yield* tracker.finishEffect(create("done"), true);
+				yield* tracker.finishEffect(create("failed"), false);
+
+				// The failed create still attributes a late event as Self.
+				expect(yield* tracker.getRegisteredFilePathsEffect()).toEqual([
+					"Library/done.md",
+				]);
+				expect(
+					yield* selfOf(tracker.attributeEffect("Library/failed.md")),
+				).toBe(true);
+			}).pipe(Effect.provide(TestClock.layer())),
+		);
+	});
+
 	it("expires exact entries and releases waiters through TestClock", async () => {
 		await Effect.runPromise(
 			Effect.gen(function* () {
