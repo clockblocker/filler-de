@@ -16,6 +16,7 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "../../src/types/vault-action";
+import { unusedVaultIoMembers } from "./helpers/vam-runtime";
 
 const folder: SplitPathToFolder = {
 	basename: "folder",
@@ -123,6 +124,7 @@ function services(mode: "success" | "failure") {
 		Layer.succeed(
 			VaultIo,
 			VaultIo.of({
+				...unusedVaultIoMembers,
 				create: () => effect(tfile, "create"),
 				createFolder: () => Effect.die("not used"),
 				getAbstractFileByPath: () => Effect.die("not used"),

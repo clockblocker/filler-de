@@ -1,36 +1,80 @@
-import { Effect, Layer, Predicate, Tracer } from "effect";
-import { type App, MarkdownView, type TAbstractFile, TFolder } from "obsidian";
-import type { RecentTrace } from "../diagnostics/recent-trace";
+import { Effect, Layer, Predicate } from "effect";
+import {
+	type App,
+	type EventRef,
+	MarkdownView,
+	type TAbstractFile,
+	TFolder,
+	type Vault,
+} from "obsidian";
 import {
 	getAbstractFileByPath,
 	toSystemPath,
 } from "../internal/abstract-file-by-path";
 import { DomSelectors } from "../internal/dom-selectors";
+import { detectVaultFileSystem } from "../internal/file-system-case";
 import { decodeFileStat } from "../types/file-stat";
 import { VaultPath } from "../vault-path";
 import {
 	VamActiveEditorError,
 	type VamActiveEditorFailureReason,
 	VamSetupError,
+	VamSubscriptionError,
 	VamVaultIoError,
 } from "./errors";
-import { makeVamLoggerLive } from "./logger";
 import {
 	ActiveEditorAccess,
 	type ActiveEditorHandle,
 	type ActiveEditorReadiness,
+	HiddenFolderIo,
 	type LinkSources,
 	type LinkUpdateSetting,
 	type SavedInlineTitleSelection,
-	type VamLiveServices,
+	type VamPorts,
 	VaultIo,
+	type VaultListen,
+	type VaultListenerCallback,
+	type VaultListenerKind,
 } from "./ports";
 
 type VamLiveOptions = {
 	readonly onFinalize?: () => void;
-	/** Records VAM's spans and log entries, when the plugin keeps a trace. */
-	readonly recentTrace?: RecentTrace;
 };
+
+/**
+ * `vault.on` for as long as the caller's scope is open, and `offref` when it
+ * closes. A failed release is logged; the scope still closes.
+ */
+export function makeVaultListen(
+	vault: Pick<Vault, "offref"> & {
+		on(name: VaultListenerKind, callback: never): EventRef;
+	},
+): VaultListen {
+	return Effect.fnUntraced(function* <K extends VaultListenerKind>(
+		kind: K,
+		callback: VaultListenerCallback<K>,
+	) {
+		yield* Effect.acquireRelease(
+			Effect.try({
+				catch: (cause) =>
+					new VamSubscriptionError({
+						cause,
+						operation: `listen for ${kind}`,
+					}),
+				try: () => vault.on(kind, callback as never),
+			}),
+			(ref) =>
+				Effect.try(() => vault.offref(ref)).pipe(
+					Effect.catchCause((cause) =>
+						Effect.logError(
+							`[VaultObservation] Failed to release ${kind} listener`,
+							cause,
+						),
+					),
+				),
+		);
+	});
+}
 
 function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 	return Layer.effect(
@@ -65,6 +109,7 @@ function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 							try: () => app.vault.createFolder(path),
 						}),
 					),
+					fileSystem: detectVaultFileSystem(app.vault?.adapter),
 					getAbstractFileByPath: Effect.fn(
 						"VaultIo.getAbstractFileByPath",
 					)((path) =>
@@ -101,6 +146,7 @@ function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 							try: () => readLinkSources(app, path),
 						}),
 					),
+					listen: makeVaultListen(app.vault),
 					modify: Effect.fn("VaultIo.modify")((file, content) =>
 						Effect.tryPromise({
 							catch: (cause) =>
@@ -192,6 +238,7 @@ function makeVaultIoLive(app: App): Layer.Layer<VaultIo, VamSetupError> {
 							try: () => app.fileManager.trashFile(file),
 						}),
 					),
+					tree: app.vault,
 				}),
 		}),
 	);
@@ -583,25 +630,62 @@ function waitForViewReady(
 	);
 }
 
+/**
+ * Files under dot-folders, through `vault.adapter`: Obsidian keeps them out
+ * of its tree and fires no vault callback for them.
+ */
+function makeHiddenFolderIoLive(app: App): Layer.Layer<HiddenFolderIo> {
+	const attempt = <A>(
+		operation: string,
+		path: string,
+		run: (adapter: App["vault"]["adapter"]) => Promise<A>,
+	) =>
+		Effect.tryPromise({
+			catch: (cause) =>
+				new VamVaultIoError({
+					cause,
+					operation: `hiddenFolder.${operation}`,
+					path,
+				}),
+			try: () => run(app.vault.adapter),
+		});
+	return Layer.succeed(
+		HiddenFolderIo,
+		HiddenFolderIo.of({
+			exists: Effect.fn("HiddenFolderIo.exists")((path) =>
+				attempt("exists", path, (adapter) => adapter.exists(path)),
+			),
+			mkdir: Effect.fn("HiddenFolderIo.mkdir")((path) =>
+				attempt("mkdir", path, (adapter) => adapter.mkdir(path)),
+			),
+			read: Effect.fn("HiddenFolderIo.read")((path) =>
+				attempt("read", path, (adapter) => adapter.read(path)),
+			),
+			write: Effect.fn("HiddenFolderIo.write")((path, data) =>
+				attempt("write", path, (adapter) => adapter.write(path, data)),
+			),
+		}),
+	);
+}
+
+/**
+ * VAM's ports over Obsidian's `App`: the only place VAM reads it. Brings no
+ * tracer or logger; the Vault Action Manager's Layer decides those.
+ */
 export function makeVamLive(
 	app: App,
 	options: VamLiveOptions = {},
-): Layer.Layer<VamLiveServices, VamSetupError> {
+): Layer.Layer<VamPorts, VamSetupError> {
 	const lifecycle = Layer.effectDiscard(
 		Effect.acquireRelease(Effect.succeed(undefined), () =>
 			Effect.sync(() => options.onFinalize?.()),
 		),
 	);
 
-	const tracer = options.recentTrace
-		? Layer.succeed(Tracer.Tracer, options.recentTrace.tracer)
-		: Layer.empty;
-
 	return Layer.mergeAll(
 		makeVaultIoLive(app),
 		makeActiveEditorAccessLive(app),
-		makeVamLoggerLive(options.recentTrace),
-		tracer,
+		makeHiddenFolderIoLive(app),
 		lifecycle,
 	);
 }

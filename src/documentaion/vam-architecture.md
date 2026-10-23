@@ -28,21 +28,21 @@ VAM does not own Library names, Codexes, linguistic notes, or command policy.
 Import VAM only from the package root:
 
 ```ts
-import {
-	createVaultActionManager,
-	type VaultActionManager,
-} from "@textfresser/vault-action-manager";
+import { VaultActionManager } from "@textfresser/vault-action-manager";
+
+const live = VaultActionManager.layer(app, { protectedPaths });
 ```
 
 Public operations return environment-free Effects. Callers can compose these Effects. The plugin is the execution boundary.
 
-The API has four groups:
+The API has five groups:
 
 | Group | Examples |
 | --- | --- |
 | Dispatch | `dispatchWithReport`, `dispatch`, `dispatchStopOnFirstFailure`, `dispatchOrUndo` |
 | Observation | `startListening`, `scanAndSubscribe`, `subscribeToBulk`, `subscribeToMdModifications`, `subscribeToProtectedPathModifications` |
-| Vault reads | `readContent`, `readContentWithStat`, `exists`, `findByBasename`, `list`, `scan`, `scanWithStat` |
+| Vault reads | `readContent`, `readContentWithStat`, `exists`, `findByBasename`, `list`, `scan`, `scanWithStat`, `resolveLinkpathDest`, `resolveLinkpath` |
+| Hidden folders | `hiddenFolder(folder)`: `exists`, `read`, `write`, `mkdir` |
 | Active editor | `mdPwd`, `getOpenedContent`, `getSelectionInfo`, `cd`, `scrollOpenedFileToLine` |
 
 `findByBasename(basename, { folder, ignoreCase })` lists the Markdown files
@@ -866,21 +866,41 @@ as asked.
 
 ## Effect runtime and lifecycle
 
-`createVaultActionManager` creates one managed Effect runtime. The runtime supplies two Obsidian ports:
+VAM owns no runtime. `VaultActionManager.layer(app, options)` builds it in
+the host's: a `Layer` providing the `VaultActionManager` service. It builds
+three Obsidian ports, the only code that reads `App`
+(`effect/vam-live.ts`):
 
-- `VaultIo` for vault, file-manager, and metadata-cache operations;
+- `VaultIo` for vault, file-manager, and metadata-cache operations, the
+  vault listeners (`vault.on` and `offref`), the in-memory tree a snapshot
+  reads in one step, and the file system's case policy;
 - `ActiveEditorAccess` for the active Markdown view, the views of a file,
-  and navigation.
+  and navigation;
+- `HiddenFolderIo` for files under dot-folders, through `vault.adapter`,
+  which the facade's `hiddenFolder(folder)` keeps inside one folder.
 
-Internal modules return Effect programs. They do not create runtimes.
+Internal modules return Effect programs. They do not create runtimes. The
+Layer forks the dispatch worker in its own scope, and each facade method
+supplies the ports and nothing else, so a program keeps its caller's span.
 
-Shutdown is idempotent. It:
+`options.observability` decides where VAM's spans and logs go. By default
+(`"vam"`) VAM installs its console logger, plus `recentTrace`'s tracer and
+logger when given. With `"host"` it installs none: the host provides its
+tracer and loggers to the Layer (`Layer.provide` or `Layer.provideMerge`),
+and the worker and observation, forked while the Layer builds, use them.
 
-1. Closes public subscriptions.
-2. Stops observation and listeners.
-3. Lets the active Dispatch Batch finish.
-4. Fails queued, waiting, and new submissions, for a `VamShutdownError`.
-5. Disposes the managed runtime.
+`createVaultActionManager(app, options)` wraps the Layer in a
+`ManagedRuntime` of its own, for VAM's tests and standalone use. Its
+`dispose` closes that runtime.
+
+A failed build fails with one `VamSetupError` whose `cause` keeps the whole
+`Cause`. Closing the Layer's scope shuts VAM down. It:
+
+1. Fails new programs, for a `VamShutdownError`.
+2. Closes public subscriptions.
+3. Stops observation and releases the vault listeners.
+4. Lets the active Dispatch Batch finish.
+5. Fails queued and waiting submissions, for a `VamShutdownError`.
 
 Errors remain typed at the package boundary. They include the operation, cause, and path or typed action when applicable, and a `message` built from them.
 
@@ -897,7 +917,7 @@ Desktop scenarios use this idle barrier. They must not inspect VAM internals or 
 | Area | Location |
 | --- | --- |
 | Public facade | `src/packages/independent/vault-action-manager/src/facade.ts` |
-| Effect runtime and ports | `src/packages/independent/vault-action-manager/src/effect/` |
+| Layer, services and ports | `VaultActionManager.layer` in `facade.ts`; `src/packages/independent/vault-action-manager/src/effect/` |
 | Dispatch | `src/packages/independent/vault-action-manager/src/impl/actions-processing/` |
 | Dispatch reports | `src/packages/independent/vault-action-manager/src/effect/dispatch-report.ts` |
 | Guarded undo | `src/packages/independent/vault-action-manager/src/effect/undo-on-failure.ts`, `undo-report.ts` |

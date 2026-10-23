@@ -1,6 +1,6 @@
 import type { Effect } from "effect";
 import type { VamFileReadError, VamScanError } from "./effect/errors";
-import type { VamRuntimeFailure } from "./effect/runtime";
+import type { VamRuntimeFailure } from "./effect/services";
 import type { VaultFileStat } from "./types/file-stat";
 import type { SplitPathToFile, SplitPathToMdFile } from "./types/split-path";
 

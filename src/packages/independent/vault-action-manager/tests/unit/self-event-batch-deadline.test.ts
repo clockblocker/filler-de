@@ -3,7 +3,6 @@ import { Clock, Effect, Exit, Layer } from "effect";
 import { type TAbstractFile, TFile, TFolder } from "obsidian";
 import type { VamSetupError } from "../../src/effect/errors";
 import { type VamLiveServices, VaultIo } from "../../src/effect/ports";
-import { createVamRuntime, type VamRuntime } from "../../src/effect/runtime";
 import { DispatchBatchCoordinator } from "../../src/impl/actions-processing/dispatch-batch";
 import type { Executor } from "../../src/impl/actions-processing/executor";
 import { SelfEventTracker } from "../../src/impl/event-processing/self-event-tracker";
@@ -12,6 +11,12 @@ import type { SplitPathToMdFile } from "../../src/types/split-path";
 import type { VaultAction } from "../../src/types/vault-action";
 import { VaultActionKind } from "../../src/types/vault-action";
 import { selfOf, TEST_OPERATION } from "./helpers/self-events";
+import {
+	createVamRuntime,
+	startCoordinator,
+	unusedVaultIoMembers,
+	type VamRuntime,
+} from "./helpers/vam-runtime";
 
 const TTL_MS = 5000;
 
@@ -93,6 +98,7 @@ function setup(
 	const real = Effect.runSync(Clock.clockWith(Effect.succeed));
 	const time = manualClock(real);
 	const vault = VaultIo.of({
+		...unusedVaultIoMembers,
 		create: () => Effect.die("not used"),
 		createFolder: () => Effect.die("not used"),
 		getAbstractFileByPath: (path) => Effect.succeed(makeEntry(path)),
@@ -145,10 +151,9 @@ function setup(
 			}).pipe(Effect.as({ _tag: "NoOp" } as const)),
 	} as unknown as Executor;
 
-	const coordinator = new DispatchBatchCoordinator(
-		executor,
-		tracker,
+	const coordinator = startCoordinator(
 		runtime,
+		new DispatchBatchCoordinator(executor, tracker),
 	);
 	coordinators.push(coordinator);
 

@@ -9,7 +9,7 @@ import type {
 	VamDispatchReport,
 } from "../../effect/dispatch-report";
 import type { VamShutdownError } from "../../effect/errors";
-import type { VamRuntime } from "../../effect/runtime";
+import type { VamLiveServices } from "../../effect/ports";
 import type { VaultAction } from "../../types/vault-action";
 import type { LinkUpdates } from "../event-processing/link-updates";
 import type { SelfEventTracker } from "../event-processing/self-event-tracker";
@@ -47,15 +47,21 @@ export class DispatchBatchCoordinator {
 	constructor(
 		executor: Executor,
 		selfEventTracker: SelfEventTracker,
-		runtime: VamRuntime,
 		options: DispatchBatchOptions = {},
 	) {
 		this.worker = new DispatchBatchWorker(
-			runtime,
 			executor,
 			selfEventTracker,
 			options,
 		);
+	}
+
+	/**
+	 * The worker loop, to fork once in the owner's scope. Dispatches wait
+	 * until it runs.
+	 */
+	get run(): Effect.Effect<void, never, VamLiveServices> {
+		return this.worker.run;
 	}
 
 	/** Effect-native dispatch seam used by the public facade. */

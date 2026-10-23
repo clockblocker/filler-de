@@ -12,7 +12,6 @@ import {
 	VamVaultIoError,
 } from "../../src/effect/errors";
 import { type VamLiveServices, VaultIo } from "../../src/effect/ports";
-import { createVamRuntime, type VamRuntime } from "../../src/effect/runtime";
 import {
 	DispatchBatchCoordinator,
 	type DispatchBatchOptions,
@@ -27,6 +26,12 @@ import type {
 import type { VaultAction } from "../../src/types/vault-action";
 import { VaultActionKind } from "../../src/types/vault-action";
 import { TEST_OPERATION } from "./helpers/self-events";
+import {
+	createVamRuntime,
+	startCoordinator,
+	unusedVaultIoMembers,
+	type VamRuntime,
+} from "./helpers/vam-runtime";
 
 const mdFile = (basename: string): SplitPathToMdFile => ({
 	basename,
@@ -119,6 +124,7 @@ function makeVamLayer(
 	lookup: AbstractFileLookup = defaultLookup,
 ): Layer.Layer<VamLiveServices, VamSetupError> {
 	const vault = VaultIo.of({
+		...unusedVaultIoMembers,
 		create: () => Effect.die("not used"),
 		createFolder: () => Effect.die("not used"),
 		getAbstractFileByPath: lookup,
@@ -164,11 +170,9 @@ function makeCoordinator(
 		finishEffect: (action: VaultAction) =>
 			Effect.sync(() => finish(action)),
 	} as unknown as SelfEventTracker;
-	const coordinator = new DispatchBatchCoordinator(
-		executor,
-		selfEvents,
+	const coordinator = startCoordinator(
 		runtime,
-		options,
+		new DispatchBatchCoordinator(executor, selfEvents, options),
 	);
 	runtimes.set(coordinator, runtime);
 	coordinators.push(coordinator);
@@ -668,8 +672,8 @@ describe("DispatchBatchCoordinator", () => {
 				beginEffect: () => Effect.void,
 				finishEffect: () => Effect.void,
 			} as unknown as SelfEventTracker,
-			runtime,
 		);
+		startCoordinator(runtime, coordinator);
 		runtimes.set(coordinator, runtime);
 		coordinators.push(coordinator);
 
@@ -706,8 +710,8 @@ describe("DispatchBatchCoordinator", () => {
 				beginEffect: () => Effect.void,
 				finishEffect: () => Effect.void,
 			} as unknown as SelfEventTracker,
-			runtime,
 		);
+		startCoordinator(runtime, coordinator);
 		runtimes.set(coordinator, runtime);
 		coordinators.push(coordinator);
 

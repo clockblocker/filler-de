@@ -3,7 +3,6 @@ import {
 	Deferred,
 	Effect,
 	Exit,
-	Fiber,
 	Option,
 	Queue,
 	SynchronizedRef,
@@ -56,7 +55,6 @@ import {
 	VamVaultIoError,
 } from "./errors";
 import { type VamLiveServices, VaultIo } from "./ports";
-import type { VamRuntime } from "./runtime";
 
 /** Who dispatches a batch, and under which operation id. */
 export type DispatchCaller = {
@@ -152,8 +150,9 @@ const shutdownMessage: ShutdownMessage = { _tag: "Shutdown" };
 /**
  * Effect-native single-consumer Dispatch Batch coordinator.
  *
- * This class never creates or runs its own runtime. Its worker and all public
- * programs are attached to the runtime supplied by the VAM composition root.
+ * This class never creates or runs a runtime. Its owner forks `run`, the
+ * worker, in a scope of its own (the Vault Action Manager's Layer forks it
+ * in the Layer's scope); submissions wait until the worker has started.
  */
 export class DispatchBatchWorker {
 	private readonly idleSeed = Deferred.makeUnsafe<void>();
@@ -227,7 +226,6 @@ export class DispatchBatchWorker {
 	);
 
 	constructor(
-		private readonly runtime: VamRuntime,
 		private readonly executor: Executor,
 		private readonly selfEventTracker: SelfEventTracker,
 		options: DispatchBatchWorkerOptions = {},
@@ -239,12 +237,20 @@ export class DispatchBatchWorker {
 		this.onSubmitted = options.onSubmitted;
 		this.protectedPaths = options.protectedPaths;
 		this.linkUpdates = options.linkUpdates;
-		const scopedWorker = Effect.scoped(
-			Effect.forkScoped(this.worker(this)).pipe(
-				Effect.flatMap(Fiber.join),
+	}
+
+	/**
+	 * The worker: takes batches one at a time until `shutdownEffect`. Fork it
+	 * once, in the scope that owns the coordinator. Should it end any other
+	 * way, such as by interruption, it fails every batch it holds with
+	 * `VamShutdownError`, so neither a submitter nor a shutdown waits on it.
+	 */
+	get run(): Effect.Effect<void, never, VamLiveServices> {
+		return this.worker(this).pipe(
+			Effect.onExit((exit) =>
+				Exit.isSuccess(exit) ? Effect.void : this.abandon(),
 			),
 		);
-		void this.runtime.runPromiseExit(scopedWorker);
 	}
 
 	/**
@@ -497,6 +503,16 @@ export class DispatchBatchWorker {
 		});
 		return Effect.exit(execution).pipe(
 			Effect.flatMap((exit) => Deferred.done(batch.completion, exit)),
+			Effect.onInterrupt(() =>
+				Deferred.fail(
+					batch.completion,
+					this.shutdownError(
+						"dispatch.interrupted",
+						batch.actions,
+						batch.operation,
+					),
+				),
+			),
 			Effect.asVoid,
 		);
 	}
@@ -790,6 +806,36 @@ export class DispatchBatchWorker {
 				] as const),
 			),
 		);
+	}
+
+	/**
+	 * After the worker ended without a shutdown: fails what is queued or
+	 * waiting, refuses new submissions, and releases idle and shutdown
+	 * waiters.
+	 */
+	private abandon(): Effect.Effect<void> {
+		return Effect.gen({ self: this }, function* () {
+			const ready = yield* Deferred.poll(this.queueReady);
+			const queued = Option.isSome(ready)
+				? yield* Queue.clear(yield* ready.value)
+				: [];
+			const state = yield* SynchronizedRef.getAndUpdate(
+				this.state,
+				(current) => ({ ...current, waiting: [] }),
+			);
+			for (const message of [...queued, ...state.waiting]) {
+				if (message._tag !== "Batch") continue;
+				yield* Deferred.fail(
+					message.completion,
+					this.shutdownError(
+						"dispatch.queued",
+						message.actions,
+						message.operation,
+					),
+				);
+			}
+			yield* this.finishWorker();
+		});
 	}
 
 	private overflowError(batch: BatchMessage): VamDispatchFailure {

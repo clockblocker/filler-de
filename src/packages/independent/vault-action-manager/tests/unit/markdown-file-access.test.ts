@@ -20,6 +20,7 @@ import { processTransformOf } from "../../src/helpers/action-helpers";
 import { vaultContentHash } from "../../src/internal/content-hash";
 import { ContentPreconditionFailed } from "../../src/internal/content-precondition";
 import type { SplitPathToMdFile } from "../../src/types/split-path";
+import { unusedVaultIoMembers } from "./helpers/vam-runtime";
 
 const target: SplitPathToMdFile = {
 	basename: "note",
@@ -220,6 +221,7 @@ function makeHarness(
 	});
 
 	const vault = VaultIo.of({
+		...unusedVaultIoMembers,
 		create: () => Effect.die("not used"),
 		createFolder: () => Effect.die("not used"),
 		getAbstractFileByPath: (path) =>

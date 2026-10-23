@@ -1,9 +1,8 @@
 import { Predicate } from "effect";
-import type { App } from "obsidian";
 import type { VaultFileSystem } from "../vault-path";
 
 /**
- * How the vault's file system compares names.
+ * How the vault's file system compares names, from the vault's adapter.
  *
  * Obsidian's desktop adapter keeps an undocumented boolean,
  * `adapter.insensitive` (Obsidian 1.14.4). It starts from the platform
@@ -18,10 +17,9 @@ import type { VaultFileSystem } from "../vault-path";
  * unknown, VAM therefore assumes case is ignored: its two users, protected
  * paths and the delimiter collision check, then refuse more, never less.
  */
-export function detectVaultFileSystem(app: App): VaultFileSystem {
+export function detectVaultFileSystem(adapter: unknown): VaultFileSystem {
 	const platform: unknown = globalThis.process?.platform;
 	if (!Predicate.isString(platform)) return { caseInsensitive: true };
-	const adapter: unknown = app.vault?.adapter;
 	if (
 		Predicate.hasProperty(adapter, "insensitive") &&
 		Predicate.isBoolean(adapter.insensitive)

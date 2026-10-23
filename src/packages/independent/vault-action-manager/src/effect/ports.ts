@@ -1,7 +1,12 @@
-import { Context, type Effect } from "effect";
-import type { Editor, TAbstractFile, TFile, TFolder } from "obsidian";
+import { Context, type Effect, type Scope } from "effect";
+import type { Editor, TAbstractFile, TFile, TFolder, Vault } from "obsidian";
 import type { VaultFileStat } from "../types/file-stat";
-import type { VamActiveEditorError, VamVaultIoError } from "./errors";
+import type { VaultFileSystem } from "../vault-path";
+import type {
+	VamActiveEditorError,
+	VamSubscriptionError,
+	VamVaultIoError,
+} from "./errors";
 
 type ActiveEditor = Pick<
 	Editor,
@@ -78,6 +83,27 @@ export type LinkSources = {
 	readonly setting: LinkUpdateSetting;
 };
 
+/** Obsidian's in-memory file tree, which a snapshot reads synchronously. */
+export type VaultTree = Pick<Vault, "getAbstractFileByPath" | "getRoot">;
+
+/** The vault callbacks VAM observes. */
+export type VaultListenerKind = "create" | "delete" | "modify" | "rename";
+
+/** What Obsidian passes a listener of `kind`. */
+export type VaultListenerCallback<K extends VaultListenerKind> =
+	K extends "rename"
+		? (file: TAbstractFile, oldPath: string) => void
+		: (file: TAbstractFile) => void;
+
+/**
+ * Attaches `callback` to the vault's `kind` callbacks for as long as the
+ * caller's scope is open. Obsidian calls it synchronously.
+ */
+export type VaultListen = <K extends VaultListenerKind>(
+	kind: K,
+	callback: VaultListenerCallback<K>,
+) => Effect.Effect<void, VamSubscriptionError, Scope.Scope>;
+
 export class VaultIo extends Context.Service<
 	VaultIo,
 	{
@@ -93,6 +119,12 @@ export class VaultIo extends Context.Service<
 			readonly TFile[],
 			VamVaultIoError
 		>;
+		/**
+		 * How the vault's file system compares names, read once from
+		 * Obsidian's adapter when the port is built.
+		 */
+		readonly fileSystem: VaultFileSystem;
+		readonly listen: VaultListen;
 		modify(
 			file: TFile,
 			content: string,
@@ -130,8 +162,29 @@ export class VaultIo extends Context.Service<
 		/** Obsidian's cached stat for a file, as of its last vault change. */
 		stat(file: TFile): Effect.Effect<VaultFileStat, VamVaultIoError>;
 		trash(file: TAbstractFile): Effect.Effect<void, VamVaultIoError>;
+		/**
+		 * The vault's in-memory tree, read synchronously: a snapshot reads it
+		 * in one step, so no vault callback lands inside the read.
+		 */
+		readonly tree: VaultTree;
 	}
 >()("@textfresser/vault-action-manager/VaultIo") {}
+
+/**
+ * Files under hidden (dot) folders, which Obsidian neither indexes nor
+ * reports in vault callbacks, read and written through its adapter. Paths
+ * are vault paths; `VaultActionManager.hiddenFolder` keeps them inside one
+ * dot-folder.
+ */
+export class HiddenFolderIo extends Context.Service<
+	HiddenFolderIo,
+	{
+		exists(path: string): Effect.Effect<boolean, VamVaultIoError>;
+		mkdir(path: string): Effect.Effect<void, VamVaultIoError>;
+		read(path: string): Effect.Effect<string, VamVaultIoError>;
+		write(path: string, data: string): Effect.Effect<void, VamVaultIoError>;
+	}
+>()("@textfresser/vault-action-manager/HiddenFolderIo") {}
 
 export class ActiveEditorAccess extends Context.Service<
 	ActiveEditorAccess,
@@ -162,4 +215,8 @@ export class ActiveEditorAccess extends Context.Service<
 	}
 >()("@textfresser/vault-action-manager/ActiveEditorAccess") {}
 
+/** What VAM's programs run with. */
 export type VamLiveServices = VaultIo | ActiveEditorAccess;
+
+/** Every port the Vault Action Manager's Layer builds over Obsidian. */
+export type VamPorts = VamLiveServices | HiddenFolderIo;

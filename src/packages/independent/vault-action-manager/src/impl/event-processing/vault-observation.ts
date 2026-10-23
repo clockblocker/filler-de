@@ -12,9 +12,10 @@ import {
 	Scope,
 	Semaphore,
 } from "effect";
-import { type App, type EventRef, type TAbstractFile, TFile } from "obsidian";
+import { TFile } from "obsidian";
 import { formatCause } from "../../diagnostics/format-cause";
-import { VamSubscriptionError } from "../../effect/errors";
+import type { VamSubscriptionError } from "../../effect/errors";
+import type { VaultListen } from "../../effect/ports";
 import { splitPathFromAbstractInternal } from "../../helpers/pathfinder/path-codecs/split-and-abstract/split-path-from-abstract";
 import { logger } from "../../internal/logger";
 import {
@@ -240,7 +241,7 @@ export class VaultObservation<
 	/** Create, rename, and delete callbacks published as Bulk Vault Events. */
 	static readonly makeEffect = Effect.fn("VaultObservation.makeEffect")(
 		function* (
-			app: App,
+			listen: VaultListen,
 			selfEvents: SelfEventTracker,
 			options: VaultObservationOptions = {},
 		): Effect.fn.Return<VaultObservation> {
@@ -249,7 +250,7 @@ export class VaultObservation<
 				BulkVaultEvent
 			>();
 			return new VaultObservation(
-				bulkVaultEventSource(app, selfEvents),
+				bulkVaultEventSource(listen, selfEvents),
 				options,
 				core,
 			);
@@ -260,7 +261,7 @@ export class VaultObservation<
 	static readonly makeMdModifyEffect = Effect.fn(
 		"VaultObservation.makeMdModifyEffect",
 	)(function* (
-		app: App,
+		listen: VaultListen,
 		selfEvents: SelfEventTracker,
 		options: MdModifyObservationOptions = {},
 	): Effect.fn.Return<VaultObservation<MdFileChange, BulkMdModifyEvent>> {
@@ -269,7 +270,7 @@ export class VaultObservation<
 			BulkMdModifyEvent
 		>();
 		return new VaultObservation(
-			mdModifySource(app, selfEvents, options.linkUpdates),
+			mdModifySource(listen, selfEvents, options.linkUpdates),
 			options,
 			core,
 		);
@@ -827,66 +828,8 @@ export class VaultObservation<
 	}
 }
 
-type VaultListenerKind = "create" | "delete" | "modify" | "rename";
-
-const acquireVaultListener = Effect.fn("VaultObservation.acquireListener")(
-	function* <K extends VaultListenerKind>(
-		app: App,
-		kind: K,
-		callback: K extends "rename"
-			? (file: TAbstractFile, oldPath: string) => void
-			: (file: TAbstractFile) => void,
-	): Effect.fn.Return<EventRef, VamSubscriptionError, Scope.Scope> {
-		return yield* Effect.acquireRelease(
-			Effect.try({
-				catch: (cause) =>
-					new VamSubscriptionError({
-						cause,
-						operation: `listen for ${kind}`,
-					}),
-				try: () => {
-					if (kind === "rename") {
-						return app.vault.on(
-							"rename",
-							callback as (
-								file: TAbstractFile,
-								oldPath: string,
-							) => void,
-						);
-					}
-					if (kind === "create") {
-						return app.vault.on(
-							"create",
-							callback as (file: TAbstractFile) => void,
-						);
-					}
-					if (kind === "modify") {
-						return app.vault.on(
-							"modify",
-							callback as (file: TAbstractFile) => void,
-						);
-					}
-					return app.vault.on(
-						"delete",
-						callback as (file: TAbstractFile) => void,
-					);
-				},
-			}),
-			(ref) =>
-				Effect.sync(() => app.vault.offref(ref)).pipe(
-					Effect.catchCause((cause) =>
-						Effect.logError(
-							`[VaultObservation] Failed to release ${kind} listener`,
-							cause,
-						),
-					),
-				),
-		);
-	},
-);
-
 function bulkVaultEventSource(
-	app: App,
+	listen: VaultListen,
 	selfEvents: SelfEventTracker,
 ): ObservationSource<VaultEvent, BulkVaultEvent> {
 	return {
@@ -921,12 +864,12 @@ function bulkVaultEventSource(
 				);
 			};
 
-			yield* acquireVaultListener(app, "create", (file) =>
+			yield* listen("create", (file) =>
 				offerAttributed(file.path, () =>
 					makeVaultEventForFileCreated(file),
 				),
 			);
-			yield* acquireVaultListener(app, "rename", (file, oldPath) => {
+			yield* listen("rename", (file, oldPath) => {
 				const seq = sequence.next();
 				runCallback(
 					Effect.gen(function* () {
@@ -943,7 +886,7 @@ function bulkVaultEventSource(
 					}),
 				);
 			});
-			yield* acquireVaultListener(app, "delete", (file) =>
+			yield* listen("delete", (file) =>
 				offerAttributed(file.path, () =>
 					makeVaultEventForFileDeleted(file),
 				),
@@ -980,7 +923,7 @@ function bulkVaultEventSource(
 }
 
 function mdModifySource(
-	app: App,
+	listen: VaultListen,
 	selfEvents: SelfEventTracker,
 	linkUpdates: LinkUpdates | undefined,
 ): ObservationSource<MdFileChange, BulkMdModifyEvent> {
@@ -1008,7 +951,7 @@ function mdModifySource(
 			// callbacks that already fired. A spurious echo is harmless; a
 			// hidden hand edit is not.
 			yield* selfEvents.clearModifiesEffect();
-			yield* acquireVaultListener(app, "modify", (file) => {
+			yield* listen("modify", (file) => {
 				const seq = sequence.next();
 				if (!(file instanceof TFile) || file.extension !== "md") return;
 				// Obsidian mutates `file.stat` in place, so copy it now.

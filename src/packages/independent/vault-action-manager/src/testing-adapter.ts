@@ -1,6 +1,6 @@
 import { Clock, Effect } from "effect";
 import { VaultIo } from "./effect/ports";
-import type { VamRuntime } from "./effect/runtime";
+import type { VamProvide } from "./effect/services";
 import type { DispatchBatchCoordinator } from "./impl/actions-processing/dispatch-batch";
 import type { SelfEventTracker } from "./impl/event-processing/self-event-tracker";
 
@@ -18,11 +18,12 @@ type SettleableObservation = {
 };
 
 /**
- * Readiness adapter over the same runtime and object graph used in production.
+ * Readiness adapter over the same services and object graph used in
+ * production.
  */
 export class VaultActionManagerTestingAdapter {
 	constructor(
-		private readonly runtime: VamRuntime,
+		private readonly provide: VamProvide,
 		private readonly dispatches: DispatchBatchCoordinator,
 		private readonly observations: readonly SettleableObservation[],
 		private readonly selfEvents: SelfEventTracker,
@@ -31,7 +32,7 @@ export class VaultActionManagerTestingAdapter {
 	readonly whenSettled = Effect.fn(
 		"VaultActionManagerTestingAdapter.whenSettled",
 	)(function* (this: VaultActionManagerTestingAdapter) {
-		yield* this.runtime.provide(this.awaitSettled());
+		yield* this.provide(this.awaitSettled());
 	});
 
 	private readonly awaitSettled = Effect.fn(

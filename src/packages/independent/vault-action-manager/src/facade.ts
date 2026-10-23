@@ -1,4 +1,4 @@
-import { Cause, Effect, Exit, Result } from "effect";
+import { Cause, Context, Effect, Layer, ManagedRuntime, Result } from "effect";
 import type { App } from "obsidian";
 import type { RecentTrace } from "./diagnostics/recent-trace";
 import type {
@@ -15,16 +15,24 @@ import {
 	type VamFileReadError,
 	type VamNoActiveEditorError,
 	type VamScanError,
+	VamSetupError,
 	VamShutdownError,
 	VamSubscriptionError,
 	VamVaultIoError,
 } from "./effect/errors";
-import { type VamLiveServices, VaultIo } from "./effect/ports";
+import { vamOwnObservability } from "./effect/logger";
 import {
-	createVamRuntime,
-	type VamRuntime,
+	ActiveEditorAccess,
+	HiddenFolderIo,
+	type VamLiveServices,
+	type VamPorts,
+	VaultIo,
+} from "./effect/ports";
+import {
+	type VamProvide,
 	type VamRuntimeFailure,
-} from "./effect/runtime";
+	VamServices,
+} from "./effect/services";
 import {
 	type DispatchOrUndoOptions,
 	dispatchOrUndoVia,
@@ -60,7 +68,6 @@ import {
 } from "./impl/event-processing/vault-observation";
 import { ProtectedPaths } from "./impl/protected-paths";
 import { VaultReader } from "./impl/vault-reader";
-import { detectVaultFileSystem } from "./internal/file-system-case";
 import { splitPathCodec } from "./split-path-codec";
 import { VaultActionManagerTestingAdapter } from "./testing-adapter";
 import {
@@ -100,7 +107,7 @@ export type ProtectedPathModificationHandler<E = never> = (
 	event: ProtectedPathModificationsEvent,
 ) => Effect.Effect<void, E>;
 
-export type VaultActionManagerOptions = {
+type VaultActionManagerCoreOptions = {
 	/**
 	 * Vault path prefixes no Dispatch Batch may change, such as
 	 * `"Exemplar"`. A prefix protects the path itself and everything below
@@ -117,11 +124,59 @@ export type VaultActionManagerOptions = {
 	 * that, as tests do.
 	 */
 	readonly fileSystem?: VaultFileSystem;
-	/**
-	 * Records VAM's spans and Effect log entries, for "Copy recent trace".
-	 * Without it VAM's spans are discarded.
-	 */
-	readonly recentTrace?: RecentTrace;
+};
+
+/**
+ * Who decides where VAM's spans and log entries go.
+ *
+ * - `"vam"` (the default): VAM installs its own, for every program it runs,
+ *   its dispatch worker and its observation: the console logger, plus
+ *   `recentTrace`'s tracer and logger when given. A caller's tracer does not
+ *   see VAM's spans.
+ * - `"host"`: VAM installs none, and its spans and logs go wherever the
+ *   caller's fiber sends them. The dispatch worker and the observation
+ *   channels run on the fibers the Layer forks, so provide the host's
+ *   tracer and loggers to the Layer, with `Layer.provide` or
+ *   `Layer.provideMerge`, not beside it with `Layer.merge`.
+ */
+export type VaultActionManagerObservability =
+	| {
+			readonly observability?: "vam";
+			/**
+			 * Records VAM's spans and Effect log entries, for "Copy recent
+			 * trace". Without it VAM's spans are discarded.
+			 */
+			readonly recentTrace?: RecentTrace;
+	  }
+	| { readonly observability: "host"; readonly recentTrace?: never };
+
+export type VaultActionManagerOptions = VaultActionManagerCoreOptions &
+	VaultActionManagerObservability;
+
+/**
+ * Files under one hidden (dot) folder of the vault, such as
+ * `.textfresser`, which Obsidian neither indexes nor reports in vault
+ * callbacks. Paths are relative to the folder; one that leaves it, through
+ * `..`, `.` or an empty segment, fails with a `VamVaultIoError` before
+ * anything is touched.
+ */
+export type HiddenFolder = {
+	/** The folder's vault path. */
+	readonly folder: string;
+	exists(
+		path: string,
+	): Effect.Effect<boolean, VamRuntimeFailure<VamVaultIoError>>;
+	read(
+		path: string,
+	): Effect.Effect<string, VamRuntimeFailure<VamVaultIoError>>;
+	write(
+		path: string,
+		data: string,
+	): Effect.Effect<void, VamRuntimeFailure<VamVaultIoError>>;
+	/** Creates the folder at `path`, and its parents. */
+	mkdir(
+		path: string,
+	): Effect.Effect<void, VamRuntimeFailure<VamVaultIoError>>;
 };
 
 export type VaultActionManagerSubscription = {
@@ -180,21 +235,34 @@ export type VaultSnapshotSubscription = VaultActionManagerSubscription & {
 	readonly start: Effect.Effect<void, VamRuntimeFailure<never>>;
 };
 
-function successOrThrow<A>(exit: Exit.Exit<A, unknown>, operation: string): A {
-	if (Exit.isSuccess(exit)) return exit.value;
-	throw new Error(`Vault Action Manager ${operation} failed`, {
-		cause: Cause.squash(exit.cause),
-	});
-}
+/** What one Vault Action Manager is built from, in its Layer. */
+type VamParts = {
+	readonly dispatches: DispatchBatchCoordinator;
+	readonly linkUpdates: LinkUpdates;
+	readonly markdownFiles: MarkdownFileAccess;
+	readonly mdModifyObservation: VaultObservation<
+		MdFileChange,
+		BulkMdModifyEvent
+	>;
+	readonly observation: VaultObservation;
+	readonly paths: VaultPathIdentity;
+	readonly protectedPaths: ProtectedPaths;
+	readonly reader: VaultReader;
+	readonly selfEvents: SelfEventTracker;
+	readonly sequence: VaultCallbackSequence;
+	readonly services: VamServices;
+};
 
 /**
  * Canonical Effect facade.
  *
- * Every operation returns an environment-free Effect backed by this manager's
- * single memoized live layer and runtime. Consumers can compose these programs
- * directly and choose where to run them.
+ * Every operation returns an environment-free Effect that runs with this
+ * manager's services, on whatever fiber runs it. Consumers can compose
+ * these programs directly and choose where to run them. Build one with
+ * `VaultActionManager.layer`, or `createVaultActionManager` outside an
+ * Effect runtime.
  */
-export class VaultActionManager {
+class VaultActionManagerFacade {
 	readonly testing: VaultActionManagerTestingAdapter;
 	/**
 	 * Path identity on this vault's file system: case-insensitive where the
@@ -214,83 +282,31 @@ export class VaultActionManager {
 	/** Numbers the batches dispatched without an operation id. */
 	private operationCount = 0;
 	private readonly observation: VaultObservation;
+	private readonly provide: VamProvide;
 	private readonly reader: VaultReader;
-	private readonly selfEvents: SelfEventTracker;
 	/** Numbers every vault callback either observation channel hears. */
-	private readonly sequence = new VaultCallbackSequence();
+	private readonly sequence: VaultCallbackSequence;
+	private readonly services: VamServices;
 	private readonly subscriptionClosers = new Set<Effect.Effect<void>>();
-	private disposalPromise: Promise<void> | null = null;
 
-	/** @internal Construct through createVaultActionManager. */
-	constructor(
-		app: App,
-		private readonly runtime: VamRuntime,
-		options: VaultActionManagerOptions = {},
-	) {
-		this.paths = VaultPath.forFileSystem(
-			options.fileSystem ?? detectVaultFileSystem(app),
-		);
-		this.protectedPaths = new ProtectedPaths(
-			options.protectedPaths ?? [],
-			this.paths,
-		);
-		this.selfEvents = successOrThrow(
-			this.runtime.runSyncExit(SelfEventTracker.makeEffect()),
-			"initialize Self Event tracking",
-		);
-		const activeEditor = new ActiveFileService();
-		const tfileHelper = new TFileHelper(this.selfEvents, this.paths);
-		const tfolderHelper = new TFolderHelper(this.selfEvents, this.paths);
-		this.linkUpdates = new LinkUpdates({
-			files: tfileHelper,
-			protectedPaths: this.protectedPaths,
-		});
-
-		this.markdownFiles = new MarkdownFileAccess(activeEditor, tfileHelper);
-		this.reader = new VaultReader(
-			this.markdownFiles,
-			tfileHelper,
-			tfolderHelper,
-			(effect) => this.runtime.provide(effect),
-			app.vault,
-		);
-		this.observation = successOrThrow(
-			this.runtime.runSyncExit(
-				VaultObservation.makeEffect(app, this.selfEvents, {
-					sequence: this.sequence,
-				}),
-			),
-			"initialize Vault observation",
-		);
-		this.mdModifyObservation = successOrThrow(
-			this.runtime.runSyncExit(
-				VaultObservation.makeMdModifyEffect(app, this.selfEvents, {
-					linkUpdates: this.linkUpdates,
-					sequence: this.sequence,
-				}),
-			),
-			"initialize Markdown modify observation",
-		);
-
-		const executor = new Executor(
-			tfileHelper,
-			tfolderHelper,
-			this.markdownFiles,
-		);
-		this.dispatches = new DispatchBatchCoordinator(
-			executor,
-			this.selfEvents,
-			this.runtime,
-			{
-				linkUpdates: this.linkUpdates,
-				protectedPaths: this.protectedPaths,
-			},
-		);
+	/** @internal Built by `VaultActionManager.layer`. */
+	constructor(parts: VamParts) {
+		this.dispatches = parts.dispatches;
+		this.linkUpdates = parts.linkUpdates;
+		this.markdownFiles = parts.markdownFiles;
+		this.mdModifyObservation = parts.mdModifyObservation;
+		this.observation = parts.observation;
+		this.paths = parts.paths;
+		this.protectedPaths = parts.protectedPaths;
+		this.reader = parts.reader;
+		this.sequence = parts.sequence;
+		this.services = parts.services;
+		this.provide = parts.services.provide;
 		this.testing = new VaultActionManagerTestingAdapter(
-			this.runtime,
+			this.provide,
 			this.dispatches,
 			[this.observation, this.mdModifyObservation],
-			this.selfEvents,
+			parts.selfEvents,
 		);
 	}
 
@@ -298,7 +314,7 @@ export class VaultActionManager {
 		void,
 		VamRuntimeFailure<VamSubscriptionError>
 	> {
-		return this.runtime.provide(
+		return this.provide(
 			this.observation
 				.startEffect()
 				.pipe(Effect.andThen(this.mdModifyObservation.startEffect())),
@@ -438,7 +454,7 @@ export class VaultActionManager {
 		VaultSnapshotSubscription,
 		VamRuntimeFailure<VamScanError | VamSubscriptionError>
 	> {
-		return this.runtime.provide(
+		return this.provide(
 			this.openSnapshotSubscription(folder, handlers, options),
 		);
 	}
@@ -446,7 +462,7 @@ export class VaultActionManager {
 	private readonly openSnapshotSubscription = Effect.fn(
 		"vam.scanAndSubscribe",
 	)(function* <E>(
-		this: VaultActionManager,
+		this: VaultActionManagerFacade,
 		folder: SplitPathToFolder,
 		{ onBulk, onModifications }: VaultSnapshotHandlers<E>,
 		options: VamSubscribeOptions,
@@ -508,18 +524,18 @@ export class VaultActionManager {
 		return {
 			afterSnapshot: (event: BulkVaultEvent) =>
 				bulk ? bulk.afterCursor(event) : event,
-			caughtUp: this.runtime.provide(
+			caughtUp: this.provide(
 				Effect.all(
 					parts.map((part) => part.caughtUp),
 					{ concurrency: "unbounded", discard: true },
 				),
 			),
 			close: this.trackClose(close),
-			rescan: this.runtime.provide(
+			rescan: this.provide(
 				take.pipe(Effect.withSpan("vam.scanAndSubscribe.rescan")),
 			),
 			snapshot,
-			start: this.runtime.provide(
+			start: this.provide(
 				Effect.all(
 					parts.map((part) => part.start),
 					{ discard: true },
@@ -565,7 +581,7 @@ export class VaultActionManager {
 	private effectHandler<M, E>(
 		handler: (message: M) => Effect.Effect<void, E, VamLiveServices>,
 	): (message: M) => Effect.Effect<void, VamRuntimeFailure<E>> {
-		return (message) => this.runtime.provide(handler(message));
+		return (message) => this.provide(handler(message));
 	}
 
 	private trackSubscription(
@@ -581,9 +597,9 @@ export class VaultActionManager {
 		VaultActionManagerSubscription,
 		VamRuntimeFailure<VamSubscriptionError>
 	> {
-		return this.runtime.provide(subscribe).pipe(
+		return this.provide(subscribe).pipe(
 			Effect.map((subscription) => ({
-				caughtUp: this.runtime.provide(subscription.caughtUp),
+				caughtUp: this.provide(subscription.caughtUp),
 				close: this.trackClose(subscription.close),
 			})),
 		);
@@ -599,7 +615,7 @@ export class VaultActionManager {
 			if (!active) return Effect.void;
 			active = false;
 			this.subscriptionClosers.delete(rawClose);
-			return this.runtime.provide(rawClose);
+			return this.provide(rawClose);
 		});
 	}
 
@@ -622,33 +638,31 @@ export class VaultActionManager {
 	): Effect.Effect<VamDispatchReport, VamDispatchFailure> {
 		return Effect.suspend(() => {
 			const operation = this.operationFor(options);
-			return this.runtime
-				.provide(
-					this.dispatches.dispatchEffect(actions, {
-						operation,
-						stopOnFirstFailure: options.stopOnFirstFailure,
-					}),
-				)
-				.pipe(
-					Effect.catchTags({
-						VamSetupError: (error) =>
-							Effect.fail(
-								VamDispatchFailure.notRun(
-									error,
-									actions,
-									operation,
-								),
+			return this.provide(
+				this.dispatches.dispatchEffect(actions, {
+					operation,
+					stopOnFirstFailure: options.stopOnFirstFailure,
+				}),
+			).pipe(
+				Effect.catchTags({
+					VamSetupError: (error) =>
+						Effect.fail(
+							VamDispatchFailure.notRun(
+								error,
+								actions,
+								operation,
 							),
-						VamShutdownError: (error) =>
-							Effect.fail(
-								VamDispatchFailure.notRun(
-									error,
-									actions,
-									operation,
-								),
+						),
+					VamShutdownError: (error) =>
+						Effect.fail(
+							VamDispatchFailure.notRun(
+								error,
+								actions,
+								operation,
 							),
-					}),
-				);
+						),
+				}),
+			);
 		});
 	}
 
@@ -717,7 +731,7 @@ export class VaultActionManager {
 	readContent(
 		splitPath: SplitPathToMdFile,
 	): Effect.Effect<string, VamRuntimeFailure<VamFileReadError>> {
-		return this.runtime.provide(this.reader.readContent(splitPath));
+		return this.provide(this.reader.readContent(splitPath));
 	}
 
 	/** Reads like `readContent` and adds the file's stat, taken before the read. */
@@ -727,29 +741,27 @@ export class VaultActionManager {
 		{ readonly content: string; readonly stat: VaultFileStat },
 		VamRuntimeFailure<VamFileReadError>
 	> {
-		return this.runtime.provide(this.reader.readContentWithStat(splitPath));
+		return this.provide(this.reader.readContentWithStat(splitPath));
 	}
 
 	/** The file's stat on disk, without reading its content. */
 	readStat(
 		splitPath: SplitPathToMdFile,
 	): Effect.Effect<VaultFileStat, VamRuntimeFailure<VamFileAccessError>> {
-		return this.runtime.provide(this.reader.readStat(splitPath));
+		return this.provide(this.reader.readStat(splitPath));
 	}
 
 	exists(
 		splitPath: AnySplitPath,
 	): Effect.Effect<boolean, VamRuntimeFailure<never>> {
-		return this.runtime.provide(this.reader.exists(splitPath));
+		return this.provide(this.reader.exists(splitPath));
 	}
 
 	findByBasename(
 		basename: string,
 		options?: { folder?: SplitPathToFolder; ignoreCase?: boolean },
 	): Effect.Effect<SplitPathToMdFile[], VamRuntimeFailure<VamVaultIoError>> {
-		return this.runtime.provide(
-			this.reader.findByBasename(basename, options),
-		);
+		return this.provide(this.reader.findByBasename(basename, options));
 	}
 
 	resolveLinkpathDest(
@@ -783,19 +795,89 @@ export class VaultActionManager {
 					: Effect.succeed(null),
 			),
 		);
-		return this.runtime.provide(program);
+		return this.provide(program);
+	}
+
+	/**
+	 * Where Obsidian resolves `link` from the note at `sourcePath`, as a
+	 * vault path, any kind of file; `null` when it resolves nowhere. It
+	 * reads Obsidian's metadata cache and never waits, so an edge that must
+	 * answer synchronously, such as an editor event, can run it with
+	 * `runSync`.
+	 */
+	resolveLinkpath(
+		link: string,
+		sourcePath: string,
+	): Effect.Effect<string | null, VamRuntimeFailure<VamVaultIoError>> {
+		return this.provide(
+			VaultIo.use((vault) =>
+				vault.resolveLinkpathDest(link, sourcePath),
+			).pipe(Effect.map((file) => file?.path ?? null)),
+		);
+	}
+
+	/**
+	 * Reads and writes files under the hidden folder `folder`, a vault path
+	 * whose first segment starts with `.`, such as `.textfresser`. Obsidian
+	 * keeps such files out of its tree and fires no vault callback for them,
+	 * so they bypass dispatch, Self Events and observation. A `folder` that
+	 * is not hidden fails every operation with a `VamVaultIoError`.
+	 */
+	hiddenFolder(folder: string): HiddenFolder {
+		const root = VaultPath.normalize(folder);
+		const resolve = (operation: string, path: string) =>
+			Effect.suspend(() => {
+				const problem = hiddenPathProblem(root, path);
+				return problem
+					? Effect.fail(
+							new VamVaultIoError({
+								cause: new Error(problem),
+								operation: `hiddenFolder.${operation}`,
+								path: `${root}/${path}`,
+							}),
+						)
+					: Effect.succeed(VaultPath.join(root, path));
+			});
+		const run = <A>(
+			operation: string,
+			path: string,
+			use: (
+				io: HiddenFolderIo["Service"],
+				vaultPath: string,
+			) => Effect.Effect<A, VamVaultIoError>,
+		) =>
+			this.provide(
+				resolve(operation, path).pipe(
+					Effect.flatMap((vaultPath) =>
+						HiddenFolderIo.use((io) => use(io, vaultPath)),
+					),
+				),
+			);
+		return {
+			exists: (path) =>
+				run("exists", path, (io, vaultPath) => io.exists(vaultPath)),
+			folder: root,
+			mkdir: (path) =>
+				run("mkdir", path, (io, vaultPath) => io.mkdir(vaultPath)),
+			read: (path) =>
+				run("read", path, (io, vaultPath) => io.read(vaultPath)),
+			write: (path, data) =>
+				run("write", path, (io, vaultPath) =>
+					io.write(vaultPath, data),
+				),
+		};
 	}
 
 	list(
 		splitPath: SplitPathToFolder,
 	): Effect.Effect<AnySplitPath[], VamRuntimeFailure<VamVaultIoError>> {
-		return this.runtime.provide(this.reader.list(splitPath));
+		return this.provide(this.reader.list(splitPath));
 	}
 
 	scan(
 		splitPath: SplitPathToFolder,
 	): Effect.Effect<VaultScanResult, VamRuntimeFailure<VamScanError>> {
-		return this.runtime.provide(this.reader.scan(splitPath));
+		return this.provide(this.reader.scan(splitPath));
 	}
 
 	/**
@@ -809,21 +891,21 @@ export class VaultActionManager {
 		VaultScanResult<VaultScanPathWithStat>,
 		VamRuntimeFailure<VamScanError>
 	> {
-		return this.runtime.provide(this.reader.scanWithStat(splitPath));
+		return this.provide(this.reader.scanWithStat(splitPath));
 	}
 
 	mdPwd(): Effect.Effect<
 		SplitPathToMdFile | null,
 		VamRuntimeFailure<VamVaultIoError | VamActiveEditorError>
 	> {
-		return this.runtime.provide(this.markdownFiles.activeMdPath());
+		return this.provide(this.markdownFiles.activeMdPath());
 	}
 
 	getActiveEditorContext(): Effect.Effect<
 		ActiveEditorContext | null,
 		VamRuntimeFailure<VamVaultIoError | VamActiveEditorError>
 	> {
-		return this.runtime.provide(this.markdownFiles.activeContext());
+		return this.provide(this.markdownFiles.activeContext());
 	}
 
 	getOpenedContent(): Effect.Effect<
@@ -832,21 +914,21 @@ export class VaultActionManager {
 			VamVaultIoError | VamActiveEditorError | VamNoActiveEditorError
 		>
 	> {
-		return this.runtime.provide(this.markdownFiles.openedContent());
+		return this.provide(this.markdownFiles.openedContent());
 	}
 
 	getSelectionInfo(): Effect.Effect<
 		SelectionInfo | null,
 		VamRuntimeFailure<VamVaultIoError | VamActiveEditorError>
 	> {
-		return this.runtime.provide(this.markdownFiles.selectionInfo());
+		return this.provide(this.markdownFiles.selectionInfo());
 	}
 
 	getSelectionText(): Effect.Effect<
 		string | null,
 		VamRuntimeFailure<VamVaultIoError | VamActiveEditorError>
 	> {
-		return this.runtime.provide(this.markdownFiles.selectionText());
+		return this.provide(this.markdownFiles.selectionText());
 	}
 
 	replaceActiveLine(args: {
@@ -855,7 +937,7 @@ export class VaultActionManager {
 		readonly line: number;
 		readonly splitPath: SplitPathToMdFile;
 	}): Effect.Effect<void, VamRuntimeFailure<VamFileAccessError>> {
-		return this.runtime.provide(this.markdownFiles.replaceOpenedLine(args));
+		return this.provide(this.markdownFiles.replaceOpenedLine(args));
 	}
 
 	cd(
@@ -864,7 +946,7 @@ export class VaultActionManager {
 		void,
 		VamRuntimeFailure<VamVaultIoError | VamActiveEditorError>
 	> {
-		return this.runtime.provide(this.markdownFiles.open(splitPath));
+		return this.provide(this.markdownFiles.open(splitPath));
 	}
 
 	scrollOpenedFileToLine(
@@ -875,41 +957,177 @@ export class VaultActionManager {
 			VamVaultIoError | VamActiveEditorError | VamNoActiveEditorError
 		>
 	> {
-		return this.runtime.provide(
-			this.markdownFiles.scrollOpenedFileToLine(line),
-		);
+		return this.provide(this.markdownFiles.scrollOpenedFileToLine(line));
 	}
 
-	disposeEffect(): Effect.Effect<void, VamShutdownError> {
-		return Effect.tryPromise({
-			catch: (cause) =>
-				new VamShutdownError({ cause, operation: "dispose" }),
-			try: () => this.dispose(),
-		});
-	}
-
-	private dispose(): Promise<void> {
-		if (this.disposalPromise) return this.disposalPromise;
-		this.disposalPromise = this.disposeOnce();
-		return this.disposalPromise;
-	}
-
-	private async disposeOnce(): Promise<void> {
+	/**
+	 * @internal The Layer's finalizer: refuses new programs, closes every
+	 * subscription and both observation channels, then shuts dispatch
+	 * down, which lets the active batch finish and fails the queued ones.
+	 */
+	readonly shutdown: Effect.Effect<void> = Effect.suspend(() => {
+		this.services.close();
 		const closes = [...this.subscriptionClosers];
 		this.subscriptionClosers.clear();
-		const cleanup = Effect.all(closes, { discard: true }).pipe(
+		return Effect.all(closes, { discard: true }).pipe(
 			Effect.andThen(this.observation.disposeEffect()),
 			Effect.andThen(this.mdModifyObservation.disposeEffect()),
 			Effect.andThen(this.dispatches.shutdownEffect()),
-			Effect.ignore,
+			Effect.catchCause((cause) =>
+				Effect.logError(
+					"[VaultActionManager] Shutdown did not finish cleanly",
+					cause,
+				),
+			),
+			Effect.withSpan("vam.shutdown"),
 		);
-		try {
-			await this.runtime.runPromiseExit(cleanup);
-		} finally {
-			await this.runtime.dispose();
-		}
-	}
+	});
 }
+
+/** Why `path` is no file under the hidden folder `root`; `undefined` when it is. */
+function hiddenPathProblem(root: string, path: string): string | undefined {
+	const notInside = (segment: string) =>
+		segment === "" || segment === "." || segment === "..";
+	const rootSegments = root.split("/");
+	if (!root.startsWith(".") || rootSegments.some(notInside))
+		return `"${root}" is not a hidden folder: its first segment must start with "."`;
+	if (path.split(/[\\/]/).some(notInside))
+		return `"${path}" is not a relative path inside "${root}"`;
+	return undefined;
+}
+
+/** The facade a `VaultActionManager` Layer provides. */
+export type VaultActionManager = VaultActionManagerFacade;
+
+const VaultActionManagerKey = Context.Service<VaultActionManager>(
+	"@textfresser/vault-action-manager/VaultActionManager",
+);
+
+const makeManager = Effect.fnUntraced(function* (
+	options: VaultActionManagerCoreOptions,
+	own: Context.Context<never>,
+) {
+	const built = yield* Effect.context<VamPorts>();
+	const vault = Context.get(built, VaultIo);
+	const services = new VamServices(
+		Context.merge(
+			Context.pick(VaultIo, ActiveEditorAccess, HiddenFolderIo)(built),
+			own,
+		),
+	);
+	const paths = VaultPath.forFileSystem(
+		options.fileSystem ?? vault.fileSystem,
+	);
+	const protectedPaths = new ProtectedPaths(
+		options.protectedPaths ?? [],
+		paths,
+	);
+	const selfEvents = yield* SelfEventTracker.makeEffect();
+	const activeEditor = new ActiveFileService();
+	const tfileHelper = new TFileHelper(selfEvents, paths);
+	const tfolderHelper = new TFolderHelper(selfEvents, paths);
+	const linkUpdates = new LinkUpdates({
+		files: tfileHelper,
+		protectedPaths,
+	});
+	const markdownFiles = new MarkdownFileAccess(activeEditor, tfileHelper);
+	const reader = new VaultReader(
+		markdownFiles,
+		tfileHelper,
+		tfolderHelper,
+		services.provide,
+		vault.tree,
+	);
+	const sequence = new VaultCallbackSequence();
+	const observation = yield* VaultObservation.makeEffect(
+		vault.listen,
+		selfEvents,
+		{ sequence },
+	);
+	yield* Effect.addFinalizer(() => observation.disposeEffect());
+	const mdModifyObservation = yield* VaultObservation.makeMdModifyEffect(
+		vault.listen,
+		selfEvents,
+		{ linkUpdates, sequence },
+	);
+	yield* Effect.addFinalizer(() => mdModifyObservation.disposeEffect());
+	const dispatches = new DispatchBatchCoordinator(
+		new Executor(tfileHelper, tfolderHelper, markdownFiles),
+		selfEvents,
+		{ linkUpdates, protectedPaths },
+	);
+	yield* Effect.forkScoped(dispatches.run);
+	const manager = new VaultActionManagerFacade({
+		dispatches,
+		linkUpdates,
+		markdownFiles,
+		mdModifyObservation,
+		observation,
+		paths,
+		protectedPaths,
+		reader,
+		selfEvents,
+		sequence,
+		services,
+	});
+	// Added after the worker's fork, so it runs before the worker is
+	// interrupted: the active batch finishes first.
+	yield* Effect.addFinalizer(() => manager.shutdown);
+	return manager;
+});
+
+/** One `VamSetupError` for a failed build, keeping its whole cause. */
+function setupErrorOf(cause: Cause.Cause<unknown>): VamSetupError {
+	const [only, ...rest] = cause.reasons;
+	if (
+		only !== undefined &&
+		rest.length === 0 &&
+		Cause.isFailReason(only) &&
+		only.error instanceof VamSetupError
+	)
+		return only.error;
+	return new VamSetupError({
+		cause,
+		operation: "build the Vault Action Manager",
+	});
+}
+
+/**
+ * The Vault Action Manager over Obsidian's `App`: its ports, its facade,
+ * both observation channels, and its dispatch worker, forked in the
+ * Layer's scope. Closing that scope shuts it down: new programs fail with
+ * `VamShutdownError`, subscriptions close, the vault listeners are
+ * released, the active batch finishes and the queued ones fail. A build
+ * that fails fails with one `VamSetupError` whose `cause` holds the whole
+ * `Cause`.
+ */
+function vaultActionManagerLayer(
+	app: App,
+	options: VaultActionManagerOptions = {},
+): Layer.Layer<VaultActionManager, VamSetupError> {
+	const own =
+		options.observability === "host"
+			? Context.empty()
+			: vamOwnObservability(options.recentTrace);
+	return Layer.effect(VaultActionManagerKey, makeManager(options, own)).pipe(
+		Layer.provide(makeVamLive(app)),
+		Layer.provide(Layer.succeedContext(own)),
+		Layer.catchCause((cause) =>
+			Layer.effect(
+				VaultActionManagerKey,
+				Effect.fail(setupErrorOf(cause)),
+			),
+		),
+	);
+}
+
+/**
+ * The Vault Action Manager service, and its Layer:
+ * `VaultActionManager.layer(app, options)`.
+ */
+export const VaultActionManager: typeof VaultActionManagerKey & {
+	readonly layer: typeof vaultActionManagerLayer;
+} = Object.assign(VaultActionManagerKey, { layer: vaultActionManagerLayer });
 
 export type VaultActionManagerFactoryResult = {
 	readonly dispose: Effect.Effect<void, VamShutdownError>;
@@ -917,17 +1135,32 @@ export type VaultActionManagerFactoryResult = {
 	readonly testing: VaultActionManagerTestingAdapter;
 };
 
-/** Builds the canonical Effect facade over one ManagedRuntime. */
+/**
+ * Builds `VaultActionManager.layer` on a `ManagedRuntime` of its own, for
+ * VAM's tests and standalone use outside an Effect runtime. The build is
+ * synchronous; when it fails, the runtime is disposed and its
+ * `VamSetupError` is thrown. `dispose` closes the runtime, and with it the
+ * manager.
+ */
 export function createVaultActionManager(
 	app: App,
 	options: VaultActionManagerOptions = {},
 ): VaultActionManagerFactoryResult {
-	const runtime = createVamRuntime(
-		makeVamLive(app, { recentTrace: options.recentTrace }),
-	);
-	const manager = new VaultActionManager(app, runtime, options);
+	const runtime = ManagedRuntime.make(VaultActionManager.layer(app, options));
+	const built = runtime.runSyncExit(Effect.service(VaultActionManagerKey));
+	if (built._tag === "Failure") {
+		void runtime.dispose();
+		throw Result.getOrElse(Cause.findError(built.cause), () =>
+			setupErrorOf(built.cause),
+		);
+	}
+	const manager = built.value;
 	return {
-		dispose: manager.disposeEffect(),
+		dispose: Effect.tryPromise({
+			catch: (cause) =>
+				new VamShutdownError({ cause, operation: "dispose" }),
+			try: () => runtime.dispose(),
+		}),
 		manager,
 		testing: manager.testing,
 	};

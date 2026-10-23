@@ -1,3 +1,4 @@
+export { vamConsoleLogger } from "../effect/logger";
 export {
 	describeError,
 	type FormatOptions,

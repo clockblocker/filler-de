@@ -1,4 +1,4 @@
-import { Logger, type LogLevel, References } from "effect";
+import { Context, Logger, type LogLevel, References, Tracer } from "effect";
 import { formatCause } from "../diagnostics/format-cause";
 import type { RecentTrace } from "../diagnostics/recent-trace";
 
@@ -38,9 +38,16 @@ export const vamConsoleLogger = Logger.make<unknown, void>(
 	},
 );
 
-/** VAM's loggers: the console, and `trace` when the plugin keeps one. */
-export function makeVamLoggerLive(trace?: RecentTrace) {
-	return Logger.layer(
-		trace ? [vamConsoleLogger, trace.logger] : [vamConsoleLogger],
+/**
+ * The tracer and loggers VAM brings when its host brings none: the console,
+ * and `trace`'s tracer and logger when the plugin keeps one.
+ */
+export function vamOwnObservability(
+	trace?: RecentTrace,
+): Context.Context<never> {
+	const loggers = Context.make(
+		Logger.CurrentLoggers,
+		new Set(trace ? [vamConsoleLogger, trace.logger] : [vamConsoleLogger]),
 	);
+	return trace ? Context.add(loggers, Tracer.Tracer, trace.tracer) : loggers;
 }

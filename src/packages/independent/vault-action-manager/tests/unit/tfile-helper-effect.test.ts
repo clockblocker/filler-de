@@ -10,6 +10,7 @@ import { TFileHelper } from "../../src/file-services/background/helpers/tfile-he
 import { SelfEventTracker } from "../../src/impl/event-processing/self-event-tracker";
 import type { SplitPathToMdFile } from "../../src/types/split-path";
 import { selfOf } from "./helpers/self-events";
+import { unusedVaultIoMembers } from "./helpers/vam-runtime";
 
 const target: SplitPathToMdFile = {
 	basename: "note",
@@ -24,6 +25,7 @@ function service(overrides: Partial<VaultIoImplementation> = {}) {
 	return Layer.succeed(
 		VaultIo,
 		VaultIo.of({
+			...unusedVaultIoMembers,
 			create: () => Effect.die("not used"),
 			createFolder: () => Effect.die("not used"),
 			getAbstractFileByPath: () => Effect.succeed(null),
