@@ -225,8 +225,12 @@ describe("a Librarian's state", () => {
 		};
 		await Effect.runPromise(manager.startListening());
 		const scope = Scope.makeUnsafe();
+		const stops: unknown[] = [];
 		const librarian = Effect.runSync(
-			Librarian.make(vam, { settings: fixedSettings() }).pipe(
+			Librarian.make(vam, {
+				onStopped: (stop) => void stops.push(stop),
+				settings: fixedSettings(),
+			}).pipe(
 				Scope.provide(scope),
 			),
 		);
@@ -237,6 +241,7 @@ describe("a Librarian's state", () => {
 			librarian,
 			release: () => Effect.runPromise(Deferred.succeed(release, undefined)),
 			scanning: () => Effect.runPromise(Deferred.await(scanning)),
+			stops,
 		};
 	}
 
@@ -281,6 +286,24 @@ describe("a Librarian's state", () => {
 			expect(
 				h.librarian.getRecentReconciliationOutcomes().map((o) => o.source),
 			).toEqual(["Startup", "CommandIntention"]);
+		} finally {
+			await h.close();
+			await h.dispose();
+		}
+	}, 30_000);
+
+	it("refuses a second start, and keeps running and quiet", async () => {
+		const h = await heldLibrarian();
+		try {
+			await h.release();
+			await Effect.runPromise(h.librarian.init());
+			const again = await Effect.runPromiseExit(h.librarian.init());
+			expect(again._tag).toBe("Failure");
+			expect(h.stops).toEqual([]);
+			const split = await Effect.runPromise(
+				h.librarian.executeSplitIntention(SPLIT),
+			);
+			expect(split.kind).toBe("Completed");
 		} finally {
 			await h.close();
 			await h.dispose();

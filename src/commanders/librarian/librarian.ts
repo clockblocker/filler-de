@@ -512,6 +512,21 @@ export class Librarian {
 	readonly init = Effect.fn("Librarian.init")(function* (
 		this: Librarian,
 	): Effect.fn.Return<void, LibrarianStop> {
+		const begun = yield* Ref.modify(
+			this.state,
+			(state): [boolean, LibrarianState] =>
+				state.status === "Idle"
+					? [true, { ...state, status: "Starting" }]
+					: [false, state],
+		);
+		if (!begun) {
+			// Not a stop: the Librarian that runs, or closed, stays as it is.
+			return yield* Effect.die(
+				new Error(
+					"A Librarian starts once, and never after its scope closed",
+				),
+			);
+		}
 		const idle = yield* IdleTracker;
 		return yield* idle.track(this.start()).pipe(
 			// What stopped the start, every reason of it, as the typed stop.
@@ -528,20 +543,6 @@ export class Librarian {
 	private readonly start = Effect.fnUntraced(function* (
 		this: Librarian,
 	): Effect.fn.Return<void, LibrarianStopFailure> {
-		const begun = yield* Ref.modify(
-			this.state,
-			(state): [boolean, LibrarianState] =>
-				state.status === "Idle"
-					? [true, { ...state, status: "Starting" }]
-					: [false, state],
-		);
-		if (!begun) {
-			return yield* Effect.die(
-				new Error(
-					"A Librarian starts once, and never after its scope closed",
-				),
-			);
-		}
 		const settings = yield* this.options.settings.get;
 		const codecs = makeCodecs(
 			makeCodecRulesFromSettings(settings, {

@@ -263,6 +263,11 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 	const launchEnded = Deferred.makeUnsafe<void>();
 	/** Holds what the launch builds; `stop` closes it, newest first. */
 	const services = Scope.makeUnsafe();
+	/**
+	 * Holds each Librarian's own scope, a child of it; `stop` closes the
+	 * last one, then this, which closes any other left.
+	 */
+	const librarians = Scope.makeUnsafe();
 
 	// ─── Mailbox ───
 
@@ -370,12 +375,18 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 	const closeLibrarian = (
 		slot: LibrarianSlot<L>,
 	): Effect.Effect<Cause.Cause<LibrarianUnsubscribeFailure> | null> =>
-		Scope.close(slot.scope, Exit.void).pipe(
-			Effect.andThen(slot.librarian.unsubscribed),
-			Effect.map((unsubscribed) => {
-				if (slot.closed) return null;
-				slot.closed = true;
-				const exit = Option.getOrNull(unsubscribed);
+		Effect.suspend(() => {
+			// Only the first close answers; a close under way already
+			// counts as the first.
+			if (slot.closed)
+				return Scope.close(slot.scope, Exit.void).pipe(Effect.as(null));
+			slot.closed = true;
+			return Scope.close(slot.scope, Exit.void).pipe(
+				Effect.andThen(slot.librarian.unsubscribed),
+				Effect.map(Option.getOrNull),
+			);
+		}).pipe(
+			Effect.map((exit) => {
 				return exit &&
 					Exit.isFailure(exit) &&
 					!Cause.hasInterruptsOnly(exit.cause)
@@ -457,7 +468,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 					librarianState = ServiceState.failed(stop);
 				notices.librarianStopped(stop, slot.starting);
 			};
-			const scope = Scope.makeUnsafe();
+			const scope = Scope.forkUnsafe(librarians);
 			// Made in its scope, whose close unsubscribes it.
 			return plugin.makeLibrarian(onStopped).pipe(
 				Scope.provide(scope),
@@ -729,6 +740,10 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 					const failed = yield* closeLibrarian(last);
 					if (failed) yield* notices.librarianStopFailed(failed);
 				}
+				yield* guarded(
+					"release the Librarians",
+					Scope.close(librarians, Exit.void),
+				);
 				librarianState = ServiceState.stopped;
 			}).pipe(Effect.ensuring(Deferred.done(stopped, Exit.void)));
 		}),

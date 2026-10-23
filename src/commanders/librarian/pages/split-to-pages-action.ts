@@ -143,7 +143,7 @@ const executeIntention = Effect.fn("Librarian.splitToPages.executeIntention")(
 			.pipe(
 				Effect.mapError(() =>
 					makeSplitToPagesError.librarianUnavailable(
-						"Library reconciliation is not initialized",
+						"the Librarian is not running",
 					),
 				),
 			);
