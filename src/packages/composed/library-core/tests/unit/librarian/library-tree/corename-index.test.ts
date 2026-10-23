@@ -1,25 +1,7 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { TreeNodeStatus } from "../../../../src/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../../src/types/schemas/node-name";
-import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
 import { makeScrollLocator, makeTree } from "./tree-test-helpers";
-
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
-});
 
 describe("Tree corename index", () => {
 	it("returns empty for no matches", () => {

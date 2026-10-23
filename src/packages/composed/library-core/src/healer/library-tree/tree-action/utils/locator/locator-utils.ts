@@ -1,3 +1,4 @@
+import type { Codecs } from "../../../../../codecs";
 import type {
 	NodeLocatorOf,
 	TreeNodeLocator,
@@ -5,18 +6,21 @@ import type {
 import { NodeSegmentIdSeparator } from "../../../../../codecs/segment-id/types/segment-id";
 import {
 	type NodeName,
-	NodeNameSchema,
+	nodeNameSchema,
 } from "../../../../../types/schemas/node-name";
 import { TreeNodeKind } from "../../../tree-node/types/atoms";
 
 export const getNodeName = <NK extends TreeNodeKind>(
 	locator: NodeLocatorOf<NK>,
+	codecs: Codecs,
 ): NodeName => {
 	const sep = NodeSegmentIdSeparator; // "──" (your const)
 	const [raw] = locator.segmentId.split(sep, 1);
 
 	// runtime safety; should always pass if locators are well-formed
-	const r = NodeNameSchema.safeParse(raw);
+	const r = nodeNameSchema(codecs.rules.suffixDelimiterPattern).safeParse(
+		raw,
+	);
 	if (!r.success) {
 		throw new Error(
 			r.error.issues[0]?.message ?? "Invalid NodeName in locator",

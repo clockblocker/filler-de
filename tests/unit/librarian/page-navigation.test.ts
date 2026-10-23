@@ -1,15 +1,9 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	spyOn,
-} from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import type { NodeName } from "@textfresser/library-core";
 import {
 	makeCodecRulesFromSettings,
-	makeCodecs,makeCodexBasename 
+	makeCodecs,
+	makeCodexBasename,
 } from "@textfresser/library-core";
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
@@ -18,20 +12,13 @@ import {
 	getPrevPage,
 } from "../../../src/commanders/librarian/navigation/page-navigation";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 import { makeTree } from "./library-tree/tree-test-helpers";
 
 let codecs: ReturnType<typeof makeCodecs>;
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
 
 beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
 	const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 	codecs = makeCodecs(rules);
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
 });
 
 describe("page navigation", () => {
@@ -169,7 +156,7 @@ function makeScrollPath(
 
 function makeCodexPath(pathParts: string[]): SplitPathToMdFile {
 	return {
-		basename: makeCodexBasename(pathParts),
+		basename: makeCodexBasename(pathParts, codecs),
 		extension: "md",
 		kind: SplitPathKind.MdFile,
 		pathParts,

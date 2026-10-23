@@ -3,7 +3,7 @@ import type { NonEmptyArray } from "../../../internal/root/type-helpers";
 import { nonEmptyArrayResult } from "../../../internal/root/type-utils";
 import {
 	type NodeName,
-	NodeNameSchema,
+	nodeNameSchema,
 } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSuffixError, makeZodError } from "../../errors";
@@ -21,12 +21,13 @@ export function splitBySuffixDelimiter(
 ): Result<NonEmptyArray<NodeName>, CodecError> {
 	// Use flexible pattern for parsing (accepts any spacing)
 	const raw = basename.split(rules.suffixDelimiterPattern);
+	const nameSchema = nodeNameSchema(rules.suffixDelimiterPattern);
 	const out: NodeName[] = [];
 
 	for (const seg of raw) {
 		// Trim each segment after split
 		const trimmed = seg.trim();
-		const r = NodeNameSchema.safeParse(trimmed);
+		const r = nameSchema.safeParse(trimmed);
 		if (!r.success) {
 			return err(
 				makeSuffixError(

@@ -1,11 +1,4 @@
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	type spyOn,
-} from "bun:test";
+import { describe, expect, it } from "bun:test";
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
 import {
 	makeCodecRulesFromSettings,
@@ -24,7 +17,6 @@ import {
 } from "../../../../../src/healer/library-tree/tree-node/types/atoms";
 import { Healer } from "../../../../../src/healing";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../../common-utils/setup-spy";
 
 const sec = (name: string): SectionNodeSegmentId =>
 	`${name}﹘Section﹘` as SectionNodeSegmentId;
@@ -33,16 +25,6 @@ const scroll = (name: string): ScrollNodeSegmentId =>
 	`${name}﹘Scroll﹘md` as ScrollNodeSegmentId;
 
 describe("Codex init for nested sections", () => {
-	let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
-
-	beforeEach(() => {
-		getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
-	});
-
-	afterEach(() => {
-		getParsedUserSettingsSpy.mockRestore();
-	});
-
 	it("creates codexes for all ancestor sections", () => {
 		const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 		const codecs = makeCodecs(rules);

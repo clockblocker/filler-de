@@ -4,7 +4,6 @@ import type {
 	Codecs,
 	SplitPathInsideLibraryOf,
 } from "../../../../../../../../codecs";
-import { getParsedUserSettings } from "../../../../../../../../internal/root/global-state";
 import { canonizeSplitPathWithSeparatedSuffix } from "../../../../../utils/canonical-naming/canonicalization-policy";
 import type { TreeNodeLocatorForLibraryScopedSplitPath } from "../../../materialized-node-events/types";
 
@@ -22,8 +21,7 @@ export function tryMakeTargetLocatorFromLibraryScopedSplitPath<
 		return err(withSeparatedSuffixResult.error);
 	}
 
-	const { splitPathToLibraryRoot } = getParsedUserSettings();
-	const libraryRootName = splitPathToLibraryRoot.basename;
+	const { libraryRootName } = codecs.rules;
 	const cspRes = canonizeSplitPathWithSeparatedSuffix(
 		codecs.suffix,
 		libraryRootName,

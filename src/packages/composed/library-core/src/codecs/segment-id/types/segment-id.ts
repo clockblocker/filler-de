@@ -6,7 +6,13 @@ import {
 	TreeNodeKind,
 } from "../../../healer/library-tree/tree-node/types/atoms";
 import { SMALL_EM_DASH, SmallEmDashSchema } from "../../../internal/root/ui";
-import { NodeNameSchema } from "../../../types/schemas/node-name";
+
+/**
+ * The node-name part of a segment ID. A template literal checks only the
+ * shape, so names are validated by the segment-ID codecs, under the
+ * `CodecRules`' delimiter.
+ */
+const NodeNamePartSchema = z.string();
 
 export const NodeSegmentIdSeparatorSchema = z.templateLiteral([
 	SmallEmDashSchema,
@@ -18,7 +24,7 @@ export type NodeSegmentIdSeparator = z.infer<
 export const NodeSegmentIdSeparator: NodeSegmentIdSeparator = `${SMALL_EM_DASH}`;
 
 export const ScrollNodeSegmentIdSchema = z.templateLiteral([
-	NodeNameSchema,
+	NodeNamePartSchema,
 	NodeSegmentIdSeparator,
 	TreeNodeKind.Scroll,
 	NodeSegmentIdSeparator,
@@ -27,7 +33,7 @@ export const ScrollNodeSegmentIdSchema = z.templateLiteral([
 export type ScrollNodeSegmentId = z.infer<typeof ScrollNodeSegmentIdSchema>;
 
 export const FileNodeSegmentIdSchema = z.templateLiteral([
-	NodeNameSchema,
+	NodeNamePartSchema,
 	NodeSegmentIdSeparator,
 	TreeNodeKind.File,
 	NodeSegmentIdSeparator,
@@ -36,7 +42,7 @@ export const FileNodeSegmentIdSchema = z.templateLiteral([
 export type FileNodeSegmentId = z.infer<typeof FileNodeSegmentIdSchema>;
 
 export const SectionNodeSegmentIdSchema = z.templateLiteral([
-	NodeNameSchema,
+	NodeNamePartSchema,
 	NodeSegmentIdSeparator,
 	TreeNodeKind.Section,
 	NodeSegmentIdSeparator,

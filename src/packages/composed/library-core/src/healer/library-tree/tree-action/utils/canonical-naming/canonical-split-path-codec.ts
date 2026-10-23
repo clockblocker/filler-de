@@ -6,37 +6,37 @@ import type {
 	CanonicalSplitPathToFileInsideLibrary,
 	CanonicalSplitPathToFolderInsideLibrary,
 	CanonicalSplitPathToMdFileInsideLibrary,
+	Codecs,
 	SplitPathToFileInsideLibrary,
 	SplitPathToFolderInsideLibrary,
 	SplitPathToMdFileInsideLibrary,
 } from "../../../../../codecs";
-import { makeCodecRulesFromSettings, makeCodecs } from "../../../../../codecs";
-import { getParsedUserSettings } from "../../../../../internal/root/global-state";
-import { NodeNameSchema } from "../../../../../types/schemas/node-name";
+import { nodeNameSchema } from "../../../../../types/schemas/node-name";
 import { canonizeSplitPathWithSeparatedSuffix } from "./canonicalization-policy";
 
 export function tryParseCanonicalSplitPathInsideLibrary(
 	sp: SplitPathToFolderInsideLibrary,
+	codecs: Codecs,
 ): Result<CanonicalSplitPathToFolderInsideLibrary, string>;
 export function tryParseCanonicalSplitPathInsideLibrary(
 	sp: SplitPathToFileInsideLibrary,
+	codecs: Codecs,
 ): Result<CanonicalSplitPathToFileInsideLibrary, string>;
 export function tryParseCanonicalSplitPathInsideLibrary(
 	sp: SplitPathToMdFileInsideLibrary,
+	codecs: Codecs,
 ): Result<CanonicalSplitPathToMdFileInsideLibrary, string>;
 export function tryParseCanonicalSplitPathInsideLibrary(
 	sp: AnySplitPathInsideLibrary,
+	codecs: Codecs,
 ): Result<AnyCanonicalSplitPathInsideLibrary, string>;
 export function tryParseCanonicalSplitPathInsideLibrary(
 	sp: AnySplitPathInsideLibrary,
+	codecs: Codecs,
 ): Result<AnyCanonicalSplitPathInsideLibrary, string> {
-	const pathPartsRes = tryParsePathParts(sp.pathParts);
+	const { rules } = codecs;
+	const pathPartsRes = tryParsePathParts(sp.pathParts, codecs);
 	if (pathPartsRes.isErr()) return err(pathPartsRes.error);
-
-	// Create codecs for policy functions
-	const settings = getParsedUserSettings();
-	const rules = makeCodecRulesFromSettings(settings);
-	const codecs = makeCodecs(rules);
 
 	// Convert to separated suffix format using new codec
 	const withSeparatedSuffixResult =
@@ -66,9 +66,9 @@ export function tryParseCanonicalSplitPathInsideLibrary(
 
 function tryParsePathParts(
 	pathParts: AnySplitPath["pathParts"],
+	codecs: Codecs,
 ): Result<AnySplitPath["pathParts"], string> {
-	const { splitPathToLibraryRoot } = getParsedUserSettings();
-	const libraryRootName = splitPathToLibraryRoot.basename;
+	const { libraryRootName, suffixDelimiterPattern } = codecs.rules;
 
 	// Empty pathParts is allowed only for Library root folder
 	if (pathParts.length === 0) {
@@ -78,8 +78,9 @@ function tryParsePathParts(
 	// Non-empty pathParts must start with Library
 	if (pathParts[0] !== libraryRootName) return err("ExpectedLibraryRoot");
 
+	const nameSchema = nodeNameSchema(suffixDelimiterPattern);
 	for (const p of pathParts) {
-		const r = NodeNameSchema.safeParse(p);
+		const r = nameSchema.safeParse(p);
 		if (!r.success) {
 			return err(r.error.issues[0]?.message ?? "Invalid path part");
 		}
@@ -89,22 +90,24 @@ function tryParsePathParts(
 
 export function makeRegularSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToFolderInsideLibrary,
+	codecs: Codecs,
 ): SplitPathToFolderInsideLibrary;
 export function makeRegularSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToFileInsideLibrary,
+	codecs: Codecs,
 ): SplitPathToFileInsideLibrary;
 export function makeRegularSplitPathInsideLibrary(
 	sp: CanonicalSplitPathToMdFileInsideLibrary,
+	codecs: Codecs,
 ): SplitPathToMdFileInsideLibrary;
 export function makeRegularSplitPathInsideLibrary(
 	sp: AnyCanonicalSplitPathInsideLibrary,
+	codecs: Codecs,
 ): AnySplitPathInsideLibrary;
 export function makeRegularSplitPathInsideLibrary(
 	sp: AnyCanonicalSplitPathInsideLibrary,
+	codecs: Codecs,
 ): AnySplitPathInsideLibrary {
-	const settings = getParsedUserSettings();
-	const rules = makeCodecRulesFromSettings(settings);
-	const codecs = makeCodecs(rules);
 	const basename = codecs.suffix.serializeSeparatedSuffix(
 		sp.separatedSuffixedBasename,
 	);

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { beforeEach, describe, expect, it } from "bun:test";
 import { SplitPathKind } from "@textfresser/vault-action-manager";
 import type { SuffixCodecs } from "../../../src/codecs/internal/suffix";
 import { makeSuffixCodecs } from "../../../src/codecs/internal/suffix";
@@ -12,7 +12,6 @@ import type { SplitPathWithSeparatedSuffixCodecs } from "../../../src/codecs/spl
 import { makeSplitPathWithSeparatedSuffixCodecs } from "../../../src/codecs/split-path-with-separated-suffix/make";
 import type { NodeName } from "../../../src/types/schemas/node-name";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
 
 function makeDefaultRules(): CodecRules {
 	return {
@@ -20,7 +19,10 @@ function makeDefaultRules(): CodecRules {
 		languages: defaultSettingsForUnitTests.languages,
 		libraryRootName: "Library",
 		libraryRootPathParts: [],
+		maxSectionDepth: defaultSettingsForUnitTests.maxSectionDepth,
 		showScrollBacklinks: defaultSettingsForUnitTests.showScrollBacklinks,
+		showScrollsInCodexesForDepth:
+			defaultSettingsForUnitTests.showScrollsInCodexesForDepth,
 		suffixDelimiter: defaultSettingsForUnitTests.suffixDelimiter,
 		suffixDelimiterConfig:
 			defaultSettingsForUnitTests.suffixDelimiterConfig,
@@ -30,19 +32,13 @@ function makeDefaultRules(): CodecRules {
 }
 
 describe("split-path-with-separated-suffix codecs", () => {
-	let spy: ReturnType<typeof setupGetParsedUserSettingsSpy>;
 	let suffixCodecs: SuffixCodecs;
 	let codecs: SplitPathWithSeparatedSuffixCodecs;
 
 	beforeEach(() => {
-		spy = setupGetParsedUserSettingsSpy();
 		const rules = makeDefaultRules();
 		suffixCodecs = makeSuffixCodecs(rules);
-		codecs = makeSplitPathWithSeparatedSuffixCodecs(suffixCodecs);
-	});
-
-	afterEach(() => {
-		spy.mockRestore();
+		codecs = makeSplitPathWithSeparatedSuffixCodecs(rules, suffixCodecs);
 	});
 
 	describe("splitPathInsideLibraryToWithSeparatedSuffix", () => {

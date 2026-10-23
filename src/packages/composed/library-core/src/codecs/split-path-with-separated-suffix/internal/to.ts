@@ -3,10 +3,11 @@ import {
 	type SplitPathKind as SplitPathKindType,
 } from "@textfresser/vault-action-manager";
 import { err, ok, type Result } from "neverthrow";
-import { NodeNameSchema } from "../../../types/schemas/node-name";
+import { nodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSplitPathError, makeZodError } from "../../errors";
 import type { SuffixCodecs } from "../../internal/suffix";
+import type { CodecRules } from "../../rules";
 import type {
 	AnySplitPathInsideLibrary,
 	SplitPathInsideLibraryOf,
@@ -29,10 +30,12 @@ type AnySplitPathInsideLibraryWithSeparatedSuffix =
 export function splitPathInsideLibraryToWithSeparatedSuffix<
 	SK extends SplitPathKindType,
 >(
+	rules: CodecRules,
 	suffix: SuffixCodecs,
 	sp: SplitPathInsideLibraryOf<SK>,
 ): Result<SplitPathInsideLibraryWithSeparatedSuffixOf<SK>, CodecError>;
 export function splitPathInsideLibraryToWithSeparatedSuffix(
+	rules: CodecRules,
 	suffix: SuffixCodecs,
 	sp: SplitPathToFolderInsideLibrary,
 ): Result<
@@ -40,6 +43,7 @@ export function splitPathInsideLibraryToWithSeparatedSuffix(
 	CodecError
 >;
 export function splitPathInsideLibraryToWithSeparatedSuffix(
+	rules: CodecRules,
 	suffix: SuffixCodecs,
 	sp: SplitPathToFileInsideLibrary,
 ): Result<
@@ -47,6 +51,7 @@ export function splitPathInsideLibraryToWithSeparatedSuffix(
 	CodecError
 >;
 export function splitPathInsideLibraryToWithSeparatedSuffix(
+	rules: CodecRules,
 	suffix: SuffixCodecs,
 	sp: SplitPathToMdFileInsideLibrary,
 ): Result<
@@ -54,12 +59,14 @@ export function splitPathInsideLibraryToWithSeparatedSuffix(
 	CodecError
 >;
 export function splitPathInsideLibraryToWithSeparatedSuffix(
+	rules: CodecRules,
 	suffix: SuffixCodecs,
 	sp: AnySplitPathInsideLibrary,
 ): Result<AnySplitPathInsideLibraryWithSeparatedSuffix, CodecError> {
 	// Validate path parts as NodeNames (split by delimiter validation)
+	const nameSchema = nodeNameSchema(rules.suffixDelimiterPattern);
 	for (const p of sp.pathParts) {
-		const r = NodeNameSchema.safeParse(p);
+		const r = nameSchema.safeParse(p);
 		if (!r.success) {
 			return err(
 				makeSplitPathError(

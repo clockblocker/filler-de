@@ -3,7 +3,6 @@ import type {
 	AnySplitPathInsideLibrary,
 	Codecs,
 } from "../../../../../../../../codecs";
-import { getParsedUserSettings } from "../../../../../../../../internal/root/global-state";
 import { canonizeSplitPathWithSeparatedSuffix } from "../../../../../utils/canonical-naming/canonicalization-policy";
 import { tryCanonicalizeSplitPathToDestination } from "../../../../../utils/canonical-naming/canonicalize-to-destination";
 import {
@@ -45,8 +44,7 @@ const tryMakeCanonicalSplitPathToDestination = <
 				string
 			>;
 		}
-		const { splitPathToLibraryRoot } = getParsedUserSettings();
-		const libraryRootName = splitPathToLibraryRoot.basename;
+		const { libraryRootName } = codecs.rules;
 		const r = canonizeSplitPathWithSeparatedSuffix(
 			codecs.suffix,
 			libraryRootName,

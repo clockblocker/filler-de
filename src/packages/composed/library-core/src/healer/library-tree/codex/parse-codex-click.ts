@@ -4,10 +4,9 @@
  */
 
 import { err, ok, type Result } from "neverthrow";
-import { makeCodecRulesFromSettings, makeCodecs } from "../../../codecs";
+import type { Codecs } from "../../../codecs";
 import type { SectionNodeSegmentId } from "../../../codecs/segment-id";
 import { NodeSegmentIdSeparator } from "../../../codecs/segment-id/types/segment-id";
-import { getParsedUserSettings } from "../../../internal/root/global-state";
 import { TreeNodeKind } from "../tree-node/types/atoms";
 import { PREFIX_OF_CODEX } from "./literals";
 
@@ -35,10 +34,12 @@ export type CodexClickTarget =
  * Expected format: `[[linkTarget|displayName]]` or `[[linkTarget]]`
  *
  * @param lineContent - Line content after "- [ ] " stripped
+ * @param codecs - Codec API, for the suffix delimiter and Library root
  * @returns Parsed target or error
  */
 export function parseCodexClickLineContent(
 	lineContent: string,
+	codecs: Codecs,
 ): Result<CodexClickTarget, string> {
 	// Extract link target from [[target|alias]] or [[target]]
 	const linkMatch = lineContent.match(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/);
@@ -48,7 +49,7 @@ export function parseCodexClickLineContent(
 
 	const linkTarget = linkMatch[1];
 
-	return parseCodexLinkTarget(linkTarget);
+	return parseCodexLinkTarget(linkTarget, codecs);
 }
 
 /**
@@ -60,13 +61,9 @@ export function parseCodexClickLineContent(
  */
 export function parseCodexLinkTarget(
 	linkTarget: string,
+	codecs: Codecs,
 ): Result<CodexClickTarget, string> {
-	const settings = getParsedUserSettings();
-	const libraryRoot = settings.splitPathToLibraryRoot.basename;
-
-	// Create codecs
-	const rules = makeCodecRulesFromSettings(settings);
-	const codecs = makeCodecs(rules);
+	const libraryRoot = codecs.rules.libraryRootName;
 
 	// Parse as suffixed basename
 	const parseResult = codecs.suffix

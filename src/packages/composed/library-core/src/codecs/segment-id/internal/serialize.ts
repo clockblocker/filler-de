@@ -6,9 +6,10 @@ import {
 	TreeNodeKind,
 	TreeNodeKindSchema,
 } from "../../../healer/library-tree/tree-node/types/atoms";
-import { NodeNameSchema } from "../../../types/schemas/node-name";
+import { nodeNameSchema } from "../../../types/schemas/node-name";
 import type { CodecError } from "../../errors";
 import { makeSegmentIdError, makeZodError } from "../../errors";
+import type { CodecRules } from "../../rules";
 import type { SegmentIdOf } from "../../types";
 import type { SegmentIdComponents } from "../../types/type-mappings";
 import {
@@ -48,13 +49,18 @@ export function serializeSegmentId<NK extends TreeNodeKind>(
  * Serializes segment ID from unchecked inputs.
  * Validates inputs and returns Result.
  */
-export function serializeSegmentIdUnchecked(components: {
-	coreName: string;
-	targetKind: TreeNodeKind;
-	extension?: string;
-}): Result<TreeNodeSegmentId, CodecError> {
+export function serializeSegmentIdUnchecked(
+	rules: CodecRules,
+	components: {
+		coreName: string;
+		targetKind: TreeNodeKind;
+		extension?: string;
+	},
+): Result<TreeNodeSegmentId, CodecError> {
 	// Validate coreName
-	const nodeNameResult = NodeNameSchema.safeParse(components.coreName);
+	const nodeNameResult = nodeNameSchema(
+		rules.suffixDelimiterPattern,
+	).safeParse(components.coreName);
 	if (!nodeNameResult.success) {
 		return err(
 			makeSegmentIdError(
