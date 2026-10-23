@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { Result } from "effect";
 import {
 	attestationRef,
 	type LemmaRecords,
@@ -32,7 +33,7 @@ const records: LemmaRecords<"de"> = {
 	),
 };
 
-const note = serializeReadingNote(records, mutterParent);
+const note = Result.getOrThrow(serializeReadingNote(records, mutterParent));
 
 const edit = <M>(
 	written: SerializedNote<M>,
@@ -89,9 +90,11 @@ describe("a Reading note whose Kontexte Obsidian retargeted", () => {
 
 	it("writes the rendering once when the note is serialized again", () => {
 		const parsed = parseReading(retargeted);
-		const again = serializeReadingNote(records, mutterParent, {
-			previous: parsed.document,
-		});
+		const again = Result.getOrThrow(
+			serializeReadingNote(records, mutterParent, {
+				previous: parsed.document,
+			}),
+		);
 		expect(again.body).toBe(note.body);
 		expect(again.body).not.toContain("Tale");
 	});
@@ -119,9 +122,11 @@ describe("a Reading note whose Kontexte Obsidian retargeted", () => {
 		const parsed = parseReading(deleted);
 		expect(parsed.document.retargeted).toBeUndefined();
 		expect(freeformTexts(parsed).join("\n")).toContain(TALE_1);
-		const again = serializeReadingNote(records, mutterParent, {
-			previous: parsed.document,
-		});
+		const again = Result.getOrThrow(
+			serializeReadingNote(records, mutterParent, {
+				previous: parsed.document,
+			}),
+		);
 		expect(again.body).toContain(TALE_1);
 	});
 

@@ -3,11 +3,8 @@
  */
 
 import { formatError } from "@textfresser/vault-action-manager/issue-handlers";
-import { Effect, Schema } from "effect";
-import {
-	type CommandRecoveryOutcome,
-	CommandRecoveryOutcomeSchema,
-} from "../../../base-command-error";
+import { Data, Effect } from "effect";
+import type { CommandRecoveryOutcome } from "../../../base-command-error";
 
 // ─── Error Kind Enum ───
 
@@ -19,51 +16,44 @@ const SIMPLE_SPLIT_ERROR_KINDS = [
 	"LibrarianUnavailable",
 ] as const;
 
-class SplitToPagesInputError extends Schema.TaggedError<SplitToPagesInputError>()(
+class SplitToPagesInputError extends Data.TaggedError(
 	"SplitToPagesInputError",
-	{
-		kind: Schema.Literals(SIMPLE_SPLIT_ERROR_KINDS),
-		reason: Schema.String,
-	},
-) {}
+)<{
+	readonly kind: (typeof SIMPLE_SPLIT_ERROR_KINDS)[number];
+	readonly reason: string;
+}> {}
 
-class SplitToPagesDispatchError extends Schema.TaggedError<SplitToPagesDispatchError>()(
+class SplitToPagesDispatchError extends Data.TaggedError(
 	"SplitToPagesDispatchError",
-	{
-		execution: Schema.Literals([
-			"FailedBeforeExecution",
-			"ExecutionUncertain",
-		]),
-		kind: Schema.Literal("DispatchFailed"),
-		operationId: Schema.String,
-		phase: Schema.Literal("InitialVaultDispatch"),
-		reason: Schema.String,
-		recovery: CommandRecoveryOutcomeSchema,
-	},
-) {}
+)<{
+	readonly execution: "FailedBeforeExecution" | "ExecutionUncertain";
+	readonly kind: "DispatchFailed";
+	readonly operationId: string;
+	readonly phase: "InitialVaultDispatch";
+	readonly reason: string;
+	readonly recovery: CommandRecoveryOutcome;
+}> {}
 
-class SplitToPagesReconciliationError extends Schema.TaggedError<SplitToPagesReconciliationError>()(
+class SplitToPagesReconciliationError extends Data.TaggedError(
 	"SplitToPagesReconciliationError",
-	{
-		kind: Schema.Literal("ReconciliationFailed"),
-		operationId: Schema.String,
-		phase: Schema.Literal("SemanticReconciliation"),
-		reason: Schema.String,
-		reconciliationId: Schema.String,
-		recovery: CommandRecoveryOutcomeSchema,
-		status: Schema.Literals(["Failed", "PartialFailure"]),
-	},
-) {}
+)<{
+	readonly kind: "ReconciliationFailed";
+	readonly operationId: string;
+	readonly phase: "SemanticReconciliation";
+	readonly reason: string;
+	readonly reconciliationId: string;
+	readonly recovery: CommandRecoveryOutcome;
+	readonly status: "Failed" | "PartialFailure";
+}> {}
 
-class SplitToPagesNavigationError extends Schema.TaggedError<SplitToPagesNavigationError>()(
+class SplitToPagesNavigationError extends Data.TaggedError(
 	"SplitToPagesNavigationError",
-	{
-		kind: Schema.Literal("NavigationFailed"),
-		operationId: Schema.String,
-		phase: Schema.Literal("Navigation"),
-		reason: Schema.String,
-	},
-) {}
+)<{
+	readonly kind: "NavigationFailed";
+	readonly operationId: string;
+	readonly phase: "Navigation";
+	readonly reason: string;
+}> {}
 
 // ─── Error Type ───
 

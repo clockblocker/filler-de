@@ -117,8 +117,11 @@ function editNamespace<T>(
 	const unreadableFrontmatter =
 		layout.frontmatter !== null && layout.frontmatter.document === null;
 	if (format === "Frontmatter" && unreadableFrontmatter) {
-		throw new NoteMetadataError(namespace.name, {
-			kind: "UnreadableFrontmatter",
+		throw new NoteMetadataError({
+			namespace: namespace.name,
+			reason: {
+				kind: "UnreadableFrontmatter",
+			},
 		});
 	}
 	const target = edit(documents[format] ?? {});
@@ -158,9 +161,12 @@ function update<T>(
 	return (content) => {
 		const reading = inspect(content, namespace, format);
 		if (reading.kind === "Invalid") {
-			throw new NoteMetadataError(namespace.name, {
-				issue: reading.issue,
-				kind: "UnreadableData",
+			throw new NoteMetadataError({
+				namespace: namespace.name,
+				reason: {
+					issue: reading.issue,
+					kind: "UnreadableData",
+				},
 			});
 		}
 		const next = change(reading.kind === "Valid" ? reading.value : null);

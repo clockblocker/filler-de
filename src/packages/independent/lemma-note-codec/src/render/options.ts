@@ -1,6 +1,7 @@
 import type { ReadingEntry } from "dumdict";
 import { lemmaIdentityKey, readingIdentityKey } from "dumling";
 import type * as Dumling from "dumling/types";
+import { Data } from "effect";
 import type { BodySegment } from "../boundary";
 import type { InflectionHook } from "../inflection";
 import {
@@ -71,9 +72,9 @@ export type SerializedNote<M> = {
 };
 
 /** Data that no valid note holds, such as a Reading of another Lemma. */
-export class NoteSerializeError extends Error {
-	override readonly name = "NoteSerializeError";
-}
+export class NoteSerializeError extends Data.TaggedError("NoteSerializeError")<{
+	readonly message: string;
+}> {}
 
 export type Rendering<L extends Dumling.Language> = {
 	readonly link: LinkRenderer<L>;
@@ -94,11 +95,12 @@ export function renderingOf<L extends Dumling.Language>(
 
 /**
  * Checks the records a note is rendered from: every Reading, Surface and
- * pending relation is the Lemma's, and none is there twice.
+ * pending relation is the Lemma's, and none is there twice. Answers the
+ * first rule they break, or undefined.
  */
 export function checkRecords<L extends Dumling.Language>(
 	records: LemmaRecords<L>,
-): void {
+): NoteSerializeError | undefined {
 	const lemma = lemmaIdentityKey(records.lemmaRecord.lemma);
 	if (
 		records.readingEntries.some(
@@ -108,22 +110,27 @@ export function checkRecords<L extends Dumling.Language>(
 			({ ownerLemma }) => lemmaIdentityKey(ownerLemma) !== lemma,
 		)
 	)
-		throw new NoteSerializeError("A record of another Lemma");
+		return new NoteSerializeError({ message: "A record of another Lemma" });
 	const readings = records.readingEntries.map(({ reading }) =>
 		readingIdentityKey(reading),
 	);
 	if (new Set(readings).size !== readings.length)
-		throw new NoteSerializeError("Two Reading Entries hold one Reading");
+		return new NoteSerializeError({
+			message: "Two Reading Entries hold one Reading",
+		});
 	const surfaces = records.ownedSurfaceEntries.map(({ id }) => id);
 	if (new Set(surfaces).size !== surfaces.length)
-		throw new NoteSerializeError("Two Surface Entries hold one Surface");
+		return new NoteSerializeError({
+			message: "Two Surface Entries hold one Surface",
+		});
 	if (
 		records.pendingRelations.some(
 			({ sourceReading }) =>
 				!readings.includes(readingIdentityKey(sourceReading)),
 		)
 	)
-		throw new NoteSerializeError(
-			"A pending relation's source Reading is not the Lemma's",
-		);
+		return new NoteSerializeError({
+			message: "A pending relation's source Reading is not the Lemma's",
+		});
+	return undefined;
 }

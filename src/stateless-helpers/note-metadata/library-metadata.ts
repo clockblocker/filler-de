@@ -67,9 +67,12 @@ function encodeValue(
 ): MetadataDocument {
 	const parsed = LibraryMetadataSchema.safeParse(value);
 	if (!parsed.success) {
-		throw new NoteMetadataError(LIBRARY_NAMESPACE, {
-			kind: "InvalidValue",
-			message: parsed.error.message,
+		throw new NoteMetadataError({
+			namespace: LIBRARY_NAMESPACE,
+			reason: {
+				kind: "InvalidValue",
+				message: parsed.error.message,
+			},
 		});
 	}
 	const { fileType, noteKind, status } = parsed.data;

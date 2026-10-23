@@ -9,8 +9,12 @@
  * one policy value later, rehydrating a `UnitRef` from the cache instead of
  * receiving it, rather than a second implementation.
  */
+import type { DictionaryScanError } from "@textfresser/dictionary";
 import type { Jev, Luna } from "dumgen";
-import { Context, Effect, Schema } from "effect";
+import { Context, Data, Effect } from "effect";
+import type { DictionaryStoreClosed } from "../../lifecycle/dictionary-store-service";
+import type { DumgenUnavailable } from "../../managers/dumgen";
+import type { ResetFailed } from "../dictionary-reset/ports";
 import type { ClassifyPlan, UnitRef } from "./types";
 
 /** What resolution made of one `UnitRef`. */
@@ -31,13 +35,15 @@ export type UnitResolution =
 			readonly reason: string;
 	  };
 
-export class UnitResolverError extends Schema.TaggedError<UnitResolverError>()(
-	"UnitResolverError",
-	{
-		cause: Schema.Defect(),
-		message: Schema.String,
-	},
-) {}
+export class UnitResolverError extends Data.TaggedError("UnitResolverError")<{
+	/** What kept the resolver from the dictionary or from dumgen. */
+	readonly cause:
+		| DictionaryScanError
+		| DictionaryStoreClosed
+		| DumgenUnavailable
+		| ResetFailed;
+	readonly message: string;
+}> {}
 
 export class UnitResolver extends Context.Service<
 	UnitResolver,

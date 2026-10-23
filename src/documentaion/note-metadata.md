@@ -121,7 +121,7 @@ given. Callers pass the format: the Librarian reads it from its
 `CodecRules.metadataFormat()`, which follows the setting in effect, and the
 dictionary store from its `metadataFormat` option.
 
-**Errors.** `NoteMetadataError` has a `namespace` and one of these reasons:
+**Errors.** `NoteMetadataError`, a `Data.TaggedError`, has a `namespace` and one of these reasons:
 `InvalidValue` (the value breaks the schema), `UnreadableFrontmatter`, or
 `UnreadableData` (`update` found an issue). Thrown inside `Vault.process`, it
 aborts that write.
@@ -184,8 +184,9 @@ their schemas and versions. `src/stateless-helpers/dictionary-notes.ts`
 composes the codec and the facility: `readLemmaNote` / `readReadingNote` read
 a file's records and freeform, and `writeLemmaNote` / `writeReadingNote` are
 pure transforms that rewrite a file as its note, keeping the user's freeform
-and frontmatter properties, and throw `NoteMetadataError` rather than
-overwrite metadata they cannot read.
+and frontmatter properties. They throw `NoteMetadataError` rather than
+overwrite metadata they cannot read, and the codec's `NoteSerializeError`
+for records no valid note holds.
 
 ## Blank-line growth (#107)
 

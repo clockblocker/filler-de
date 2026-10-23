@@ -16,6 +16,37 @@ const MAX_FIELDS = 20;
  */
 const CONTENT_FIELDS = new Set(["body", "content", "markdown", "text"]);
 
+/**
+ * A Vault Action payload's fields that hold a note's text under names other
+ * values use too: a guard's `expected` or `ifContent` content, and a
+ * `ProcessMdFile`'s `before` and `after`. A payload is told by its
+ * `splitPath`. An `expected` `{ hash }` is not text and shows as it is.
+ */
+const PAYLOAD_CONTENT_FIELDS = new Set([
+	"after",
+	"before",
+	"expected",
+	"ifContent",
+]);
+
+/** By `_tag`, an error's fields that hold a note's text. */
+const ERROR_CONTENT_FIELDS: Readonly<Record<string, ReadonlySet<string>>> = {
+	ContentPreconditionFailed: new Set(["expected"]),
+};
+
+/** Whether `key` of `holder` holds a note's text. */
+function holdsContent(key: string, holder: unknown): boolean {
+	if (CONTENT_FIELDS.has(key)) return true;
+	if (!Predicate.isObject(holder)) return false;
+	if (PAYLOAD_CONTENT_FIELDS.has(key) && "splitPath" in holder) return true;
+	const tag = read(holder, "_tag");
+	return (
+		Predicate.isString(tag) &&
+		Object.hasOwn(ERROR_CONTENT_FIELDS, tag) &&
+		(ERROR_CONTENT_FIELDS[tag]?.has(key) ?? false)
+	);
+}
+
 const contentLength = (value: string) => `<${value.length} chars>`;
 
 /**
@@ -143,7 +174,7 @@ function valueText(value: unknown, depth: number): string {
 				if (budget < 0) return undefined;
 				budget -= key.length;
 				if (Predicate.isString(current)) {
-					const shown = CONTENT_FIELDS.has(key)
+					const shown = holdsContent(key, this)
 						? contentLength(current)
 						: current.length > budget
 							? `${current.slice(0, Math.max(0, budget))}…`
@@ -236,7 +267,7 @@ function renderError(
 	const fields = keys.slice(0, MAX_FIELDS).map((key) => {
 		const value = read(error, key);
 		return `${key}=${
-			CONTENT_FIELDS.has(key) && Predicate.isString(value)
+			holdsContent(key, error) && Predicate.isString(value)
 				? contentLength(value)
 				: valueText(value, depth + 1)
 		}`;

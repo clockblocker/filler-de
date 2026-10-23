@@ -19,7 +19,7 @@ import {
 	type VaultAction,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
-import { Result, Schema } from "effect";
+import { Data, Result } from "effect";
 import {
 	LibraryMetadata,
 	noteMetadataHelper,
@@ -37,18 +37,12 @@ export type PageSplitPlan = {
 	readonly vaultActions: readonly VaultAction[];
 };
 
-export class PageSplitPlanningError extends Schema.TaggedError<PageSplitPlanningError>()(
+export class PageSplitPlanningError extends Data.TaggedError(
 	"PageSplitPlanningError",
-	{
-		kind: Schema.Literal("PathOutsideLibrary"),
-		path: Schema.Struct({
-			basename: Schema.String,
-			extension: Schema.Literal(MD),
-			kind: Schema.Literal(SplitPathKind.MdFile),
-			pathParts: Schema.Array(Schema.String),
-		}),
-	},
-) {}
+)<{
+	readonly kind: "PathOutsideLibrary";
+	readonly path: SplitPathToMdFile;
+}> {}
 
 /**
  * Builds all VaultActions needed for page splitting.

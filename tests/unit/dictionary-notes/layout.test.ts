@@ -8,6 +8,7 @@ import {
 	serializeLemmaNote,
 	serializeReadingNote,
 } from "@textfresser/lemma-note-codec";
+import { Result } from "effect";
 import { dictionaryProjections } from "../../../src/stateless-helpers/dictionary-projections";
 import {
 	abfahren,
@@ -60,7 +61,7 @@ function tableBlock(body: string, blockId: string): string {
 
 describe("a Reading note reads as the user's dictionary example", () => {
 	it("lays out a noun with relations, morphemes and two Attestations", () => {
-		expect(renderReadingNote(kohlekraftwerk, kohlekraftwerkReading, options))
+		expect(Result.getOrThrow(renderReadingNote(kohlekraftwerk, kohlekraftwerkReading, options)))
 			.toBe(`🏭 das [[Worter/de/Lexeme/NOUN/Neut/k/koh/kohle/Kohlekraftwerk|Kohlekraftwerk]], [ˈkoːləˌkraftvɛɐ̯k ♫](https://youglish.com/pronounce/Kohlekraftwerk/german)
 
 ${KONTEXTE}
@@ -87,7 +88,7 @@ ${TAGS}
 	});
 
 	it("lays out a strong verb, its principal parts only in its Lemma note's table", () => {
-		expect(renderReadingNote(fahren, fahrenReading, options))
+		expect(Result.getOrThrow(renderReadingNote(fahren, fahrenReading, options)))
 			.toBe(`🚗 [[Worter/de/Lexeme/VERB/f/fah/fahre/fahren|fahren]], [ˈfaːʁən ♫](https://youglish.com/pronounce/fahren/german)
 
 ${KONTEXTE}
@@ -107,7 +108,7 @@ ${TAGS}
 	});
 
 	it("embeds the 👩 Mutter's own Licence Group's table", () => {
-		expect(renderReadingNote(mutter, mutterParent, options))
+		expect(Result.getOrThrow(renderReadingNote(mutter, mutterParent, options)))
 			.toBe(`👩 die [[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter|Mutter]], [ˈmʊtɐ ♫](https://youglish.com/pronounce/Mutter/german)
 
 ${KONTEXTE}
@@ -123,7 +124,7 @@ ${FLEXION}
 ${TAGS}
 #noun/feminine
 `);
-		expect(renderReadingNote(mutter, mutterNut, options)).toContain(
+		expect(Result.getOrThrow(renderReadingNote(mutter, mutterNut, options))).toContain(
 			`${FLEXION}\n![[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/Mutter#^t-eb48dc8c|Mutter]]\n`,
 		);
 	});
@@ -131,7 +132,7 @@ ${TAGS}
 
 describe("a Lemma note shows its Readings, tables and met Surfaces", () => {
 	it("Mutter 👩 / 🔩: one table per Licence Group, each its own Obsidian block", () => {
-		expect(renderLemmaNote(mutter, options)).toBe(`die [[Worter/m/mut/mutte/mutter|Mutter]]
+		expect(Result.getOrThrow(renderLemmaNote(mutter, options))).toBe(`die [[Worter/m/mut/mutte/mutter|Mutter]]
 
 [[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/👩 Mutter|👩]]
 [[Worter/de/Lexeme/NOUN/Fem/m/mut/mutte/🔩 Mutter|🔩]]
@@ -159,7 +160,7 @@ ${SURFACES}
 	});
 
 	it("marks a Licence Conflict on its Surface's line, never in a table", () => {
-		const body = renderLemmaNote(mutterConflict, options);
+		const body = Result.getOrThrow(renderLemmaNote(mutterConflict, options));
 		// Muttern met under 👩, whose Licence takes only Mütter: it fits 🔩.
 		expect(body).toContain(`${SURFACES}
 - Mütter: Nom.Pl ^s-95e50a29
@@ -167,12 +168,12 @@ ${SURFACES}
 `);
 		expect(tableBlock(body, "t-8ed83aad")).not.toContain("Muttern");
 		expect(tableBlock(body, "t-8ed83aad")).toBe(
-			tableBlock(renderLemmaNote(mutter, options), "t-8ed83aad"),
+			tableBlock(Result.getOrThrow(renderLemmaNote(mutter, options)), "t-8ed83aad"),
 		);
 	});
 
 	it("a single Licence Group's table is ^t", () => {
-		expect(renderLemmaNote(kohlekraftwerk, options)).toBe(`das [[Worter/k/koh/kohle/kohlekraftwerk|Kohlekraftwerk]]
+		expect(Result.getOrThrow(renderLemmaNote(kohlekraftwerk, options))).toBe(`das [[Worter/k/koh/kohle/kohlekraftwerk|Kohlekraftwerk]]
 
 [[Worter/de/Lexeme/NOUN/Neut/k/koh/kohle/🏭 Kohlekraftwerk|🏭]]
 
@@ -196,7 +197,7 @@ const bare = { ...options, paths: { lemma: () => undefined } };
 
 describe("the German Inflection Pack's tables in the dictionary's line style", () => {
 	it("fahren: one line per tense, the Lemma's own form linked", () => {
-		expect(tableBlock(renderLemmaNote(fahren, bare), "t")).toBe(`🚗
+		expect(tableBlock(Result.getOrThrow(renderLemmaNote(fahren, bare)), "t")).toBe(`🚗
 Präsens: ich fahre, du fährst, er fährt, wir [[fahren]], ihr fahrt, sie [[fahren]]
 Präteritum: ich fuhr, du fuhrst, er fuhr, wir fuhren, ihr fuhrt, sie fuhren
 Konjunktiv II: ich führe, du führest, er führe, wir führen, ihr führet, sie führen
@@ -205,7 +206,7 @@ Partizip II: gefahren
 	});
 
 	it("abfahren: a separable verb's finite forms split off their particle after a Gap", () => {
-		const body = renderLemmaNote(abfahren, bare);
+		const body = Result.getOrThrow(renderLemmaNote(abfahren, bare));
 		expect(tableBlock(body, "t")).toBe(`🚉
 Präsens: ich fahre … ab, du fährst … ab, er fährt … ab, wir fahren … ab, ihr fahrt … ab, sie fahren … ab
 Präteritum: ich fuhr … ab, du fuhrst … ab, er fuhr … ab, wir fuhren … ab, ihr fuhrt … ab, sie fuhren … ab
@@ -214,14 +215,14 @@ Partizip II: abgefahren
 ^t`);
 		expect(body).toContain(`${SURFACES}\n- fährt ab: Präs.3.Sg ^s-`);
 		expect(
-			renderReadingNote(abfahren, abfahrenReading, options),
+			Result.getOrThrow(renderReadingNote(abfahren, abfahrenReading, options)),
 		).toContain(
 			`${FLEXION}\n![[Worter/de/Lexeme/VERB/ab/a/abf/abfah/abfahren#^t|abfahren]]\n`,
 		);
 	});
 
 	it("melken: a Free Lemma has one table, its cells holding every licensed form", () => {
-		const body = renderLemmaNote(melken, bare);
+		const body = Result.getOrThrow(renderLemmaNote(melken, bare));
 		expect(tableBlock(body, "t")).toBe(`🐄 💰
 Präsens: ich melke, du melkst / milkst, er melkt / milkt, wir [[melken]], ihr melkt, sie [[melken]]
 Präteritum: ich melkte / molk, du melktest / molkst, er melkte / molk, wir melkten / molken, ihr melktet / molkt, sie melkten / molken
@@ -230,13 +231,13 @@ Partizip II: gemelkt / gemolken
 ^t`);
 		expect(body).toContain(`${SURFACES}\n- molk: Prät.3.Sg ^s-`);
 		for (const reading of [melkenCow, melkenFleece])
-			expect(renderReadingNote(melken, reading, options)).toContain(
+			expect(Result.getOrThrow(renderReadingNote(melken, reading, options))).toContain(
 				"/melken#^t|melken]]",
 			);
 	});
 
 	it("schnell: a comparable adjective's comparison, and a declined form in the list", () => {
-		const body = renderLemmaNote(schnell, bare);
+		const body = Result.getOrThrow(renderLemmaNote(schnell, bare));
 		expect(tableBlock(body, "t")).toBe(`⚡
 Positiv: [[schnell]]
 Komparativ: schneller
@@ -249,7 +250,7 @@ Superlativ: am schnellsten
 	});
 
 	it("dieser: a determiner stem's columns carry their labels", () => {
-		expect(tableBlock(renderLemmaNote(dieser, bare), "t")).toBe(`👉
+		expect(tableBlock(Result.getOrThrow(renderLemmaNote(dieser, bare)), "t")).toBe(`👉
 N: [[dieser]] (m), dieses (n), diese (f), diese (Pl)
 A: diesen (m), dieses (n), diese (f), diese (Pl)
 G: dieses (m), dieses (n), [[dieser]] (f), [[dieser]] (Pl)
@@ -327,7 +328,7 @@ describe("the dev vault's Flexion tables, through the German Inflection Pack", (
 	for (const { flexion, gender, lemma, plural } of VAULT_TABLES)
 		it(`${lemma}: every cell as the vault shows it, only the forms spelled as the Lemma linked`, () => {
 			const records = nounRecords(lemma, gender, plural);
-			expect(tableBlock(renderLemmaNote(records, bare), "t")).toBe(
+			expect(tableBlock(Result.getOrThrow(renderLemmaNote(records, bare)), "t")).toBe(
 				[
 					"📘",
 					flexion.replace(/\[\[([^\]]+)\]\]/gu, (whole, form) =>
@@ -351,24 +352,24 @@ describe("the golden notes round-trip", () => {
 		["dieser", dieser, [dieserReading]],
 	] as const)
 		it(`${name}: parse → serialize gives the same notes`, () => {
-			const lemma = serializeLemmaNote(records, options);
+			const lemma = Result.getOrThrow(serializeLemmaNote(records, options));
 			const lemmaParse = parseLemmaNote(lemma, { language: "de" });
 			expect(lemmaParse.data.ok).toBe(true);
 			expect(
-				serializeLemmaNote(records, {
+				Result.getOrThrow(serializeLemmaNote(records, {
 					...options,
 					previous: lemmaParse.document,
-				}),
+				})),
 			).toEqual(lemma);
 			for (const reading of readings) {
-				const note = serializeReadingNote(records, reading, options);
+				const note = Result.getOrThrow(serializeReadingNote(records, reading, options));
 				const parsed = parseReadingNote(note, { language: "de" });
 				expect(parsed.data.ok).toBe(true);
 				expect(
-					serializeReadingNote(records, reading, {
+					Result.getOrThrow(serializeReadingNote(records, reading, {
 						...options,
 						previous: parsed.document,
-					}),
+					})),
 				).toEqual(note);
 			}
 		});

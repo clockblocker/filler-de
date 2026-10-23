@@ -195,10 +195,14 @@ export type UserEventsHost = {
 		program: Effect.Effect<void, UserEventFailure>,
 		options: UserEventFork,
 	) => void;
-	/** Runs a small read at once, inside the event it decides. */
+	/**
+	 * Runs a small read at once, inside the event it decides. Besides the
+	 * read's own failure it may fail with the host's, such as a runtime
+	 * that has unloaded.
+	 */
 	readonly readSync: <A, E>(
 		effect: Effect.Effect<A, E>,
-	) => Exit.Exit<A, unknown>;
+	) => Exit.Exit<A, E | UserEventFailure>;
 	/** The selection a copy reads, and where a completed link resolves. */
 	readonly vam: Pick<
 		VaultActionManager,

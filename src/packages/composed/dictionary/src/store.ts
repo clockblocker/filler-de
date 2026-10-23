@@ -2138,24 +2138,18 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 					shadows: shadowList.slice(at, at + REEVALUATION_CHUNK),
 				});
 			for (const request of requests) {
-				const slice = yield* Effect.try({
-					catch: (cause) => cause,
-					try: () =>
-						loadReevaluateShadowsContext(
-							index,
-							revision(),
-							request,
-						),
-				}).pipe(Effect.option);
-				if (slice._tag === "None") {
+				const slice = Result.try(() =>
+					loadReevaluateShadowsContext(index, revision(), request),
+				);
+				if (Result.isFailure(slice)) {
 					yield* Effect.logWarning(
 						"Dictionary could not load a Shadow re-evaluation slice",
 					);
 					continue;
 				}
-				const outcome = planner.reevaluateShadows(slice.value, {
+				const outcome = planner.reevaluateShadows(slice.success, {
 					...request,
-					baseRevision: slice.value.revision,
+					baseRevision: slice.success.revision,
 				});
 				yield* logIssues(outcome);
 				if (outcome.status !== "planned") {
@@ -2523,12 +2517,12 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	});
 
 	/** How Obsidian resolves names, through VAM, from a dictionary note. */
-	const lookup: ScrollLookup<unknown> = {
-		named: (basename) =>
+	const lookup = {
+		named: (basename: string) =>
 			vault
 				.findByBasename(basename, { ignoreCase: true })
 				.pipe(Effect.map((paths) => paths.map(formatPath))),
-		resolve: (linkpath, from) =>
+		resolve: (linkpath: string, from: string) =>
 			vault
 				.resolveLinkpathDest(linkpath, mdSplitPath(from))
 				.pipe(
@@ -2536,7 +2530,7 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 						found === null ? undefined : formatPath(found),
 					),
 				),
-	};
+	} satisfies ScrollLookup<unknown>;
 
 	/** Every stored ref with the Reading note holding it, which its name resolves from. */
 	const heldRefs = (): HeldRef[] =>

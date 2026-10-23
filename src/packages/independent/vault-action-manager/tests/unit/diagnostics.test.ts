@@ -12,7 +12,10 @@ import {
 	makeRecentTrace,
 } from "@textfresser/vault-action-manager/diagnostics";
 import { Cause, Data, Effect, Exit, Fiber, Logger } from "effect";
+import { z } from "zod";
 import { vamConsoleLogger } from "../../src/effect/logger";
+import { vaultContentHash } from "../../src/internal/content-hash";
+import { ContentPreconditionFailed } from "../../src/internal/content-precondition";
 import { makeVaultHarness } from "./helpers/vault-harness";
 
 class ReadFailed extends Data.TaggedError("ReadFailed")<{
@@ -169,6 +172,50 @@ describe("describeError and formatValue", () => {
 		expect(describeError(error, { stack: false })).toBe(
 			"Error: refused (content=<15 chars>)",
 		);
+	});
+
+	it("leave the content a guarded write expected out, as its length, and keep its hash", () => {
+		expect(
+			describeError(
+				new ContentPreconditionFailed({ expected: "Der Hund bellt." }),
+				{ stack: false },
+			),
+		).toBe(
+			`ContentPreconditionFailed: The file no longer holds the content the action expected (15 characters, hash ${vaultContentHash("Der Hund bellt.")}); nothing was written (expected=<15 chars>)`,
+		);
+		expect(
+			formatValue({
+				payload: {
+					after: "Der Hund schläft.",
+					before: "Der Hund bellt.",
+					expected: "Der Hund bellt.",
+					splitPath: { basename: "Hund" },
+				},
+				trash: {
+					ifContent: { hash: "abc" },
+					splitPath: { basename: "Hund" },
+				},
+			}),
+		).toBe(
+			'{"payload":{"after":"<17 chars>","before":"<15 chars>","expected":"<15 chars>","splitPath":{"basename":"Hund"}},"trash":{"ifContent":{"hash":"abc"},"splitPath":{"basename":"Hund"}}}',
+		);
+	});
+
+	it("keep an expected value that is no note's text, such as a validation issue's", () => {
+		const parsed = z.object({ name: z.string() }).safeParse({ name: 1 });
+		if (parsed.success) throw new Error("expected a failure");
+		expect(formatValue(parsed.error.issues)).toContain(
+			'"expected":"string"',
+		);
+		expect(describeError(parsed.error, { stack: false })).toContain(
+			'"expected": "string"',
+		);
+		expect(
+			describeError(
+				Object.assign(new Error("refused"), { expected: "string" }),
+				{ stack: false },
+			),
+		).toBe('Error: refused (expected="string")');
 	});
 
 	it("never throw, on cycles, throwing getters or odd values", () => {
