@@ -35,13 +35,13 @@ import {
 	MD,
 	type SplitPathToMdFile,
 } from "@textfresser/vault-action-manager";
-import { Cause, Effect, Result, Schema } from "effect";
+import { Cause, Data, Effect, Result } from "effect";
 import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
 	CommandContext,
 	CommandKind,
 } from "../../managers/obsidian/command-executor";
-import { getErrorMessage } from "../../utils/get-error-message";
+import { catchWhole, causeMessages } from "../../utils/causes";
 import { decrementPending, incrementPending } from "../../utils/idle-tracker";
 import { commandFnForCommandKind } from "./commands";
 import type {
@@ -63,6 +63,11 @@ import {
 	isMissingLibraryRoot,
 	type LibrarianStopPhase,
 } from "./runtime/describe-librarian-stop";
+import {
+	type LibrarianStop,
+	LibrarianStopped,
+	LibraryRootMissing,
+} from "./runtime/librarian-stop";
 import {
 	classifyVamDispatchFailure,
 	LibraryReconciler,
@@ -116,25 +121,25 @@ export type LibrarianVam = Pick<
 	| "scanAndSubscribe"
 >;
 
-class LibrarianUnexpectedDispatchError extends Schema.TaggedError<LibrarianUnexpectedDispatchError>()(
+/** A dispatch that died or was interrupted; `cause` holds every reason. */
+class LibrarianUnexpectedDispatchError extends Data.TaggedError(
 	"LibrarianUnexpectedDispatchError",
-	{
-		cause: Schema.Defect(),
-		operation: Schema.Literal("dispatch"),
-	},
-) {
+)<{
+	readonly cause: Cause.Cause<never>;
+	readonly operation: "dispatch";
+}> {
 	override get message(): string {
-		return `${this.operation}: ${getErrorMessage(this.cause)}`;
+		return `${this.operation}: ${causeMessages(this.cause)}`;
 	}
 }
 
-class LibrarianUnexpectedRecoveryError extends Schema.TaggedError<LibrarianUnexpectedRecoveryError>()(
+/** A recovery rescan that died or was interrupted; `cause` holds every reason. */
+class LibrarianUnexpectedRecoveryError extends Data.TaggedError(
 	"LibrarianUnexpectedRecoveryError",
-	{
-		cause: Schema.Defect(),
-		operation: Schema.Literal("scan"),
-	},
-) {}
+)<{
+	readonly cause: Cause.Cause<never>;
+	readonly operation: "scan";
+}> {}
 
 type LibrarianDispatchFailure =
 	| Effect.Error<ReturnType<LibrarianVam["dispatch"]>>
@@ -187,19 +192,27 @@ export type LibraryCommandIntentionResult =
 			readonly outcome: LibrarianReconciliationOutcome;
 	  };
 
-export class LibraryCommandIntentionError extends Schema.TaggedError<LibraryCommandIntentionError>()(
+export class LibraryCommandIntentionError extends Data.TaggedError(
 	"LibraryCommandIntentionError",
-	{ kind: Schema.Literal("LibrarianUnavailable") },
-) {}
+)<{ readonly kind: "LibrarianUnavailable" }> {}
+
+export type { LibrarianStop } from "./runtime/librarian-stop";
+export { LibrarianStopped, LibraryRootMissing } from "./runtime/librarian-stop";
 
 /**
- * Why the Librarian stopped, with a message for the user. `LibraryRootMissing`
- * is a vault without its Library folder, not a failure to heal.
+ * What stopped the Librarian: what its start failed with, before or while
+ * reconciling, or the reconciliation that failed past recovery later on.
  */
-export type LibrarianStop = {
-	readonly kind: "Stopped" | "LibraryRootMissing";
-	readonly message: string;
-};
+export type LibrarianStopFailure =
+	| Effect.Error<ReturnType<LibrarianVam["scanAndSubscribe"]>>
+	| Effect.Error<VaultSnapshotSubscription["start"]>
+	| LibrarianRecoveryFailure
+	| LibrarianReconciliationOutcome;
+
+/** What the Librarian's `unsubscribe` fails with. */
+export type LibrarianUnsubscribeFailure = Effect.Error<
+	VaultSnapshotSubscription["close"]
+>;
 
 export type LibrarianOptions = {
 	/**
@@ -260,38 +273,44 @@ export class Librarian {
 		private readonly options: LibrarianOptions = {},
 	) {}
 
+	/**
+	 * Tells `onStopped` why the Librarian stopped, and logs it with every
+	 * reason in `cause`. At startup, a vault without its Library folder,
+	 * and nothing else, is a `LibraryRootMissing`.
+	 */
 	private reportStopped(
 		phase: LibrarianStopPhase,
-		failure: unknown,
-	): Effect.Effect<void> {
+		cause: Cause.Cause<LibrarianStopFailure>,
+	): Effect.Effect<LibrarianStop> {
 		return Effect.suspend(() => {
-			if (phase === "Startup" && isMissingLibraryRoot(failure)) {
-				const message = describeMissingLibraryRoot(failure);
+			const missing =
+				phase === "Startup" ? missingLibraryRoot(cause) : undefined;
+			if (missing) {
+				const stop = new LibraryRootMissing({
+					cause: missing,
+					message: describeMissingLibraryRoot(missing),
+				});
 				return Effect.logWarning(
-					`[Librarian] ${message}`,
-					failure,
-				).pipe(
-					Effect.andThen(
-						Effect.sync(() =>
-							this.options.onStopped?.({
-								kind: "LibraryRootMissing",
-								message,
-							}),
-						),
-					),
-				);
+					`[Librarian] ${stop.message}`,
+					cause,
+				).pipe(Effect.andThen(this.tellStopped(stop)));
 			}
-			const message = describeLibrarianStop(phase, failure);
+			const stop = new LibrarianStopped({
+				cause,
+				message: describeLibrarianStop(phase, cause),
+				phase,
+			});
 			return Effect.logError(
-				`[Librarian] Stopped. ${message}`,
-				failure,
-			).pipe(
-				Effect.andThen(
-					Effect.sync(() =>
-						this.options.onStopped?.({ kind: "Stopped", message }),
-					),
-				),
-			);
+				`[Librarian] Stopped. ${stop.message}`,
+				cause,
+			).pipe(Effect.andThen(this.tellStopped(stop)));
+		});
+	}
+
+	private tellStopped(stop: LibrarianStop): Effect.Effect<LibrarianStop> {
+		return Effect.sync(() => {
+			this.options.onStopped?.(stop);
+			return stop;
 		});
 	}
 
@@ -334,7 +353,9 @@ export class Librarian {
 			const subscription = this.subscription;
 			if (!subscription) {
 				return yield* new LibrarianUnexpectedRecoveryError({
-					cause: new Error("The Librarian has no Library snapshot"),
+					cause: Cause.die(
+						new Error("The Librarian has no Library snapshot"),
+					),
 					operation: "scan",
 				});
 			}
@@ -362,19 +383,21 @@ export class Librarian {
 			recover: () => this.prepareRecovery(),
 			unexpectedDispatchFailure: (cause) =>
 				new LibrarianUnexpectedDispatchError({
-					cause: Cause.squash(cause),
+					cause,
 					operation: "dispatch",
 				}),
 			unexpectedRecoveryFailure: (cause) =>
 				new LibrarianUnexpectedRecoveryError({
-					cause: Cause.squash(cause),
+					cause,
 					operation: "scan",
 				}),
 		});
 	}
 
 	/**
-	 * Initialize librarian: read tree and heal mismatches.
+	 * Initialize librarian: read tree and heal mismatches. A start that
+	 * fails fails with the Librarian's typed stop, holding every reason,
+	 * and tells `onStopped` it too.
 	 */
 	readonly init = Effect.fn("Librarian.init")(function* (this: Librarian) {
 		const self = this;
@@ -472,10 +495,11 @@ export class Librarian {
 				}),
 			() => Effect.sync(decrementPending),
 		).pipe(
-			Effect.tapCause((cause) =>
-				Cause.hasInterruptsOnly(cause)
-					? Effect.void
-					: self.reportStopped("Startup", Cause.squash(cause)),
+			// What stopped the start, every reason of it, as the typed stop.
+			catchWhole((cause) =>
+				self
+					.reportStopped("Startup", cause)
+					.pipe(Effect.flatMap(Effect.fail)),
 			),
 			Effect.onError(() => self.unsubscribe().pipe(Effect.ignore)),
 		);
@@ -572,7 +596,9 @@ export class Librarian {
 	): Effect.Effect<void> {
 		return Effect.suspend(() =>
 			!wasUnavailable && this.reconciler?.isUnavailable()
-				? this.reportStopped("Runtime", outcome)
+				? this.reportStopped("Runtime", Cause.fail(outcome)).pipe(
+						Effect.asVoid,
+					)
 				: Effect.void,
 		);
 	}
@@ -599,7 +625,7 @@ export class Librarian {
 					>(
 						Result.fail(
 							new LibrarianUnexpectedDispatchError({
-								cause: Cause.squash(cause),
+								cause,
 								operation: "dispatch",
 							}),
 						),
@@ -970,4 +996,20 @@ export class Librarian {
 			} as ScrollNodeLocator,
 		};
 	}
+}
+
+/**
+ * The scan failure that says the Library folder is not there, when it is
+ * all that stopped the start: a defect or another failure beside it is a
+ * Librarian that stopped.
+ */
+function missingLibraryRoot(
+	cause: Cause.Cause<LibrarianStopFailure>,
+): VamScanError | undefined {
+	if (Cause.hasDies(cause)) return undefined;
+	const failures = cause.reasons.filter(Cause.isFailReason);
+	const [first] = failures;
+	return failures.length === 1 && isMissingLibraryRoot(first?.error)
+		? first.error
+		: undefined;
 }

@@ -13,8 +13,9 @@ import {
 	VaultActionKind,
 	VaultPath,
 } from "@textfresser/vault-action-manager";
-import { Cause, Effect, Exit, Predicate, Schema } from "effect";
+import { type Cause, Effect, Exit, Predicate, Schema } from "effect";
 import type { SuffixDelimiterConfig } from "../../../types";
+import { causeValues } from "../../../utils/causes";
 import {
 	type DelimiterMigrationPlan,
 	type DelimiterRenameAction,
@@ -38,13 +39,27 @@ export type DelimiterMigrationVam = {
 	readonly paths: VaultActionManager["paths"];
 };
 
+/** What renaming the planned notes through `dispatchOrUndo` fails with. */
+export type DelimiterDispatchFailure = Effect.Error<
+	ReturnType<DelimiterMigrationVam["dispatchOrUndo"]>
+>;
+
 export type DelimiterActionFailure = {
 	/** The planned rename concerned; absent when the batch failed as a whole. */
 	readonly action?: DelimiterRenameAction;
+	/** What failed it, as VAM reported it: an error the vault threw. */
 	readonly cause: unknown;
 	readonly operation: string;
 	/** `from → to` of the rename that was attempted. */
 	readonly path?: string;
+};
+
+/**
+ * The failure that stopped a migration's renames, described as one rename's,
+ * with the dispatch's whole cause: every failure and defect beside it.
+ */
+export type DelimiterExecutionFailure = DelimiterActionFailure & {
+	readonly dispatch: Cause.Cause<DelimiterDispatchFailure>;
 };
 
 /**
@@ -60,13 +75,13 @@ export type DelimiterMigrationExecution =
 	  }
 	| {
 			/** The failure that stopped the migration. */
-			readonly failure: DelimiterActionFailure;
+			readonly failure: DelimiterExecutionFailure;
 			readonly kind: "RolledBack";
 			/** Renames that had succeeded and were renamed back. */
 			readonly rolledBack: readonly DelimiterRenameAction[];
 	  }
 	| {
-			readonly failure: DelimiterActionFailure;
+			readonly failure: DelimiterExecutionFailure;
 			readonly kind: "RollbackIncomplete";
 			/** Renames that succeeded and could not be renamed back. */
 			readonly leftRenamed: readonly DelimiterRenameAction[];
@@ -187,12 +202,18 @@ export class DelimiterChangeService {
 		);
 		if (Exit.isSuccess(exit)) return completed(plan.actions);
 
-		const dispatchFailure = failureFromCause(exit.cause);
-		const failure = describeDispatchFailure(plan.actions, dispatchFailure);
-		const undo =
-			dispatchFailure instanceof VamDispatchFailure
-				? dispatchFailure.report.undo
-				: undefined;
+		// VAM's typed failure tells whether it renamed back, and how far;
+		// without one, the vault is probed. Other reasons are kept for the
+		// report.
+		const dispatchFailure = causeValues(exit.cause).find(
+			(value) => value instanceof VamDispatchFailure,
+		);
+		const failure = describeDispatchFailure(
+			plan.actions,
+			exit.cause,
+			dispatchFailure,
+		);
+		const undo = dispatchFailure?.report.undo;
 		const settled = undo
 			? yield* this.placeAfterUndo(plan.actions, undo)
 			: yield* this.placeByProbing(plan.actions);
@@ -305,7 +326,7 @@ function completed(
 }
 
 function rolledBack(
-	failure: DelimiterActionFailure,
+	failure: DelimiterExecutionFailure,
 	restored: readonly DelimiterRenameAction[],
 ): DelimiterMigrationExecution {
 	return Object.freeze({
@@ -327,11 +348,6 @@ function conflictError(
 		})),
 		operation: "planDelimiterMigration.conflicts",
 	});
-}
-
-function failureFromCause(cause: Cause.Cause<unknown>): unknown {
-	const reason = cause.reasons.find(Cause.isFailReason);
-	return reason ? reason.error : Cause.squash(cause);
 }
 
 /** The planned rename a report names, matched by path: VAM plans its own copies. */
@@ -361,24 +377,31 @@ function sameRename(
 	);
 }
 
+/**
+ * The rename VAM's typed `failure` names, or the batch as a whole, when it
+ * names none or there is none: then the first failure or defect of `cause`
+ * is described. The whole `cause` is kept either way.
+ */
 function describeDispatchFailure(
 	actions: readonly DelimiterRenameAction[],
-	failure: unknown,
-): DelimiterActionFailure {
-	if (
-		failure instanceof VamDispatchFailure &&
-		failure.reason instanceof VamDispatchError
-	) {
+	cause: Cause.Cause<DelimiterDispatchFailure>,
+	failure: VamDispatchFailure | undefined,
+): DelimiterExecutionFailure {
+	if (failure && failure.reason instanceof VamDispatchError) {
 		const { reason } = failure;
 		const action = actions.find((candidate) =>
 			sameRename(reason.action, candidate),
 		);
-		if (action) return describeFailure(action, reason);
+		if (action)
+			return Object.freeze({
+				...describeFailure(action, reason),
+				dispatch: cause,
+			});
 	}
-	const inner =
-		failure instanceof VamDispatchFailure ? failure.reason : failure;
+	const inner = failure ? failure.reason : causeValues(cause)[0];
 	return Object.freeze({
 		cause: Predicate.hasProperty(inner, "cause") ? inner.cause : inner,
+		dispatch: cause,
 		operation: operationOf(inner),
 	});
 }

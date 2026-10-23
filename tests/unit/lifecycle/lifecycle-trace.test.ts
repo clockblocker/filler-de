@@ -1,6 +1,11 @@
 import { describe, expect, it } from "bun:test";
+import { VamScanError } from "@textfresser/vault-action-manager";
 import { makeRecentTrace } from "@textfresser/vault-action-manager/diagnostics";
-import { Deferred, Effect } from "effect";
+import { Cause, Deferred, Effect } from "effect";
+import {
+	LibrarianStopped,
+	LibraryRootMissing,
+} from "../../../src/commanders/librarian/librarian";
 import { createLifecycleNotices } from "../../../src/lifecycle/lifecycle-notices";
 import {
 	createLifecycleSupervisor,
@@ -120,11 +125,22 @@ describe("lifecycle trace", () => {
 			writeStop: (text) => written.push(text),
 		});
 		notices.librarianStopped(
-			{ kind: "Stopped", message: "Healing failed" },
+			new LibrarianStopped({
+				cause: Cause.empty,
+				message: "Healing failed",
+				phase: "Runtime",
+			}),
 			null,
 		);
 		notices.librarianStopped(
-			{ kind: "LibraryRootMissing", message: "No Library folder" },
+			new LibraryRootMissing({
+				cause: new VamScanError({
+					cause: new Error("Folder not found: Library"),
+					operation: "scanRoot",
+					path: "Library",
+				}),
+				message: "No Library folder",
+			}),
 			"Settings",
 		);
 

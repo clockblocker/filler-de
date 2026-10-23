@@ -245,11 +245,21 @@ function renderError(
 		fields.push(`…${keys.length - MAX_FIELDS} more`);
 	if (fields.length > 0) header += ` (${fields.join(", ")})`;
 
-	const cause = read(error, "cause");
-	const nested =
-		cause instanceof Error && depth < MAX_DEPTH
-			? renderError(cause, options, depth + 1)
+	// A wrapped `Cause` is read from the value that failed: its pretty
+	// form turned it into an error that kept one line of it.
+	const rawCause =
+		raw !== error && (Predicate.isObject(raw) || Predicate.isFunction(raw))
+			? read(raw, "cause")
 			: undefined;
+	const cause = Cause.isCause(rawCause) ? rawCause : read(error, "cause");
+	const nested =
+		depth >= MAX_DEPTH
+			? undefined
+			: Cause.isCause(cause)
+				? causeText(cause, options, depth + 1)
+				: cause instanceof Error
+					? renderError(cause, options, depth + 1)
+					: undefined;
 	if (options.stack === false)
 		return nested ? `${header}; caused by ${nested}` : header;
 

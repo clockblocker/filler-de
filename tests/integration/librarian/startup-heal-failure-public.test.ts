@@ -128,7 +128,7 @@ function makeHarness(
 		librarian: new Librarian(vam, {
 			onStopped: (stop) => {
 				stopped.push(stop);
-				if (stop.kind === "Stopped") stops.push(stop.message);
+				if (stop._tag === "LibrarianStopped") stops.push(stop.message);
 			},
 		}),
 		scans: () => scans,
@@ -215,7 +215,7 @@ describe("Librarian startup healing that partly fails", () => {
 		expect(Exit.isFailure(exit)).toBeTrue();
 		expect(dispatches).toHaveLength(0);
 		expect(stopped).toHaveLength(1);
-		expect(stopped[0]?.kind).toBe("LibraryRootMissing");
+		expect(stopped[0]?._tag).toBe("LibraryRootMissing");
 		expect(stopped[0]?.message).toContain(
 			'there is no Library folder at "Library"',
 		);

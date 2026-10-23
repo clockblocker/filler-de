@@ -9,7 +9,7 @@ import {
 	SplitPathKind,
 	splitPathCodec,
 } from "@textfresser/vault-action-manager";
-import { Effect } from "effect";
+import { Cause, Data, Effect } from "effect";
 import type { DelimiterChangeService } from "../commanders/librarian/runtime/delimiter-change-service";
 import {
 	DelimiterMigrationCoordinator,
@@ -22,11 +22,40 @@ import {
 } from "../commanders/librarian/runtime/delimiter-migration-report";
 import type { LifecycleNotices } from "../lifecycle/lifecycle-notices";
 import type {
+	LibrarianStartFailed,
+	LifecycleStoppedError,
 	LifecycleSupervisor,
+	ReleaseFailed,
 	SupervisedLibrarian,
 } from "../lifecycle/lifecycle-supervisor";
 import type { SuffixDelimiterConfig } from "../types";
 import { buildCanonicalDelimiter } from "../utils/delimiter";
+import { getErrorMessage } from "../utils/get-error-message";
+
+/** The migration could not begin, such as before the plugin launched. */
+export class DelimiterMigrationUnavailable extends Data.TaggedError(
+	"DelimiterMigrationUnavailable",
+)<{ readonly message: string }> {}
+
+/** Asking the user to confirm the renames failed. */
+export class DelimiterConfirmationFailed extends Data.TaggedError(
+	"DelimiterConfirmationFailed",
+)<{
+	/** What the confirmation's Promise rejected with. */
+	readonly cause: unknown;
+}> {
+	override get message(): string {
+		return getErrorMessage(this.cause);
+	}
+}
+
+/** What the migration's lifecycle, around its plan and renames, fails with. */
+export type DelimiterLifecycleFailure =
+	| DelimiterConfirmationFailed
+	| DelimiterMigrationUnavailable
+	| LibrarianStartFailed
+	| LifecycleStoppedError
+	| ReleaseFailed;
 
 export type DelimiterMigrationDeps = {
 	readonly supervisor: Pick<
@@ -64,10 +93,13 @@ export function changeDelimiter(
 		return reportDelimiterMigration(outcome, delimiters, retried);
 	}).pipe(
 		deps.supervisor.duringMigration,
-		Effect.catch((cause) =>
+		Effect.catchTag("LifecycleStoppedError", (stopped) =>
 			Effect.succeed(
 				reportDelimiterMigration(
-					failedBeforePlanning("delimiterMigration.lifecycle", cause),
+					failedBeforePlanning(
+						"delimiterMigration.lifecycle",
+						Cause.fail(stopped),
+					),
 					delimiters,
 				),
 			),
@@ -84,13 +116,16 @@ function migrate(
 		readonly newDelimiter: string;
 		readonly oldDelimiter: string;
 	},
-): Effect.Effect<DelimiterMigrationOutcome> {
+): Effect.Effect<DelimiterMigrationOutcome<DelimiterLifecycleFailure>> {
 	if (!deps.service) {
 		return Effect.succeed(
 			failedBeforePlanning(
 				"delimiterMigration.initialize",
-				new Error(
-					"DelimiterChangeService or Librarian not initialized",
+				Cause.fail(
+					new DelimiterMigrationUnavailable({
+						message:
+							"DelimiterChangeService or Librarian not initialized",
+					}),
 				),
 			),
 		);
@@ -100,37 +135,44 @@ function migrate(
 		return Effect.succeed(
 			failedBeforePlanning(
 				"delimiterMigration.parseLibraryRoot",
-				new Error(
-					`Library root "${deps.libraryRoot}" is not a folder path`,
+				Cause.fail(
+					new DelimiterMigrationUnavailable({
+						message: `Library root "${deps.libraryRoot}" is not a folder path`,
+					}),
 				),
 			),
 		);
 	}
-	const coordinator = new DelimiterMigrationCoordinator(deps.service, {
-		confirm: (plan) =>
-			Effect.tryPromise({
-				catch: (cause) => cause,
-				try: () =>
-					deps.confirm(
-						"Rename files?",
-						`Changing suffix delimiter from "${delimiters.oldDelimiter}" to "${delimiters.newDelimiter}" will rename ${plan.previewCount} file(s). Continue?`,
+	const coordinator =
+		new DelimiterMigrationCoordinator<DelimiterLifecycleFailure>(
+			deps.service,
+			{
+				confirm: (plan) =>
+					Effect.tryPromise({
+						catch: (cause) =>
+							new DelimiterConfirmationFailed({ cause }),
+						try: () =>
+							deps.confirm(
+								"Rename files?",
+								`Changing suffix delimiter from "${delimiters.oldDelimiter}" to "${delimiters.newDelimiter}" will rename ${plan.previewCount} file(s). Continue?`,
+							),
+					}),
+				pause: () => deps.supervisor.pause("DelimiterMigration"),
+				// The supervisor knows whether the Librarian is paused, so it
+				// unsubscribes the current one only when it still runs.
+				restore: (config) =>
+					Effect.sync(() => deps.applyDelimiter(config)).pipe(
+						Effect.andThen(deps.supervisor.resume),
 					),
-			}),
-		pause: () => deps.supervisor.pause("DelimiterMigration"),
-		// The supervisor knows whether the Librarian is paused, so it
-		// unsubscribes the current one only when it still runs.
-		restore: (config) =>
-			Effect.sync(() => deps.applyDelimiter(config)).pipe(
-				Effect.andThen(deps.supervisor.resume),
-			),
-	});
+			},
+		);
 	return coordinator.migrate(oldConfig, newConfig, libraryRoot);
 }
 
 function failedBeforePlanning(
 	operation: string,
-	cause: unknown,
-): DelimiterMigrationOutcome {
+	cause: Cause.Cause<DelimiterLifecycleFailure>,
+): DelimiterMigrationOutcome<DelimiterLifecycleFailure> {
 	return {
 		failures: [],
 		kind: "Failed",

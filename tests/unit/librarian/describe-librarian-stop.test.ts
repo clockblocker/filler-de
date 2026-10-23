@@ -7,6 +7,7 @@ import {
 	VamVaultIoError,
 	VaultActionKind,
 } from "@textfresser/vault-action-manager";
+import { Cause } from "effect";
 import {
 	describeLibrarianStop,
 	isMissingLibraryRoot,
@@ -68,6 +69,41 @@ describe("describeLibrarianStop", () => {
 		expect(message).toContain("Reason: tree out of sync.");
 		expect(message).toContain(
 			'Run "Restart Librarian" from the command palette to try again.',
+		);
+	});
+
+	it("reads a defect held as a cause as its own message, and an interruption as such", () => {
+		const died = describeLibrarianStop("Runtime", {
+			cause: Cause.die(
+				new Error("outer boom", { cause: new Error("inner detail") }),
+			),
+			operation: "dispatch",
+		});
+		expect(died).toContain("Reason: outer boom.");
+
+		const interrupted = describeLibrarianStop("Runtime", {
+			cause: Cause.interrupt(7),
+			operation: "scan",
+		});
+		expect(interrupted).toContain("Reason: interrupted.");
+	});
+
+	it("names every failure and defect of a startup's cause", () => {
+		const message = describeLibrarianStop(
+			"Startup",
+			Cause.combine(
+				Cause.fail(
+					new VamScanError({
+						cause: new Error("permission denied"),
+						operation: "scanFolder",
+						path: "Library/Soup",
+					}),
+				),
+				Cause.die(new Error("finalizer exploded")),
+			),
+		);
+		expect(message).toContain(
+			"Failed: Library/Soup (permission denied). Also: finalizer exploded.",
 		);
 	});
 
