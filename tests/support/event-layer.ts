@@ -16,8 +16,12 @@ import {
 	type UserEventKind,
 	type UserEventsHost,
 } from "@textfresser/obsidian-event-layer";
-import { Effect, Exit, Scope } from "effect";
+import { type Cause, Data, Effect, Exit, Scope } from "effect";
 import type { App } from "obsidian";
+
+class LinkNotOpened extends Data.TaggedError("LinkNotOpened")<{
+	readonly message: string;
+}> {}
 
 type Listener = {
 	readonly type: string;
@@ -274,11 +278,15 @@ export function eventLayerOn(
 		/** What VAM reads as the editor's selection; null for none. */
 		readonly selection?: string | null;
 		readonly resolveLinkpath?: (link: string) => string | null;
+		/** Opening a link fails, as Obsidian's `openLinkText` can. */
+		readonly openLinkFails?: boolean;
 	} = {},
 ) {
 	const dom = fakeDocument();
 	const forks: { kind: UserEventKind; fork: UserEventFork }[] = [];
 	const opened: { target: string; sourcePath: string }[] = [];
+	/** The causes the forked programs failed with, as the edge logs them. */
+	const failures: Cause.Cause<unknown>[] = [];
 	const extensions: Extension[] = [];
 	const host: UserEventsHost = {
 		app,
@@ -295,7 +303,9 @@ export function eventLayerOn(
 			),
 		fork: (kind, program, fork) => {
 			forks.push({ fork, kind });
-			Effect.runFork(program);
+			Effect.runFork(program).addObserver((exit) => {
+				if (Exit.isFailure(exit)) failures.push(exit.cause);
+			});
 		},
 		listen: (type, handler, listenOptions) =>
 			Effect.acquireRelease(
@@ -308,9 +318,11 @@ export function eventLayerOn(
 					),
 			),
 		openLink: (target, sourcePath) =>
-			Effect.sync(() => {
-				opened.push({ sourcePath, target });
-			}),
+			options.openLinkFails
+				? Effect.fail(new LinkNotOpened({ message: `no ${target}` }))
+				: Effect.sync(() => {
+						opened.push({ sourcePath, target });
+					}),
 		readSync: Effect.runSyncExit,
 		vam: {
 			getSelectionText: () => Effect.succeed(options.selection ?? null),
@@ -326,6 +338,7 @@ export function eventLayerOn(
 		...dom,
 		close: () => Effect.runSync(Scope.close(scope, Exit.void)),
 		extensions,
+		failures,
 		forks,
 		layer,
 		opened,

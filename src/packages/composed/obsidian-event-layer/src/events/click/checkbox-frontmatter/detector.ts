@@ -14,30 +14,33 @@ export function frontmatterCheckboxClick(
 	dispatch: EventDispatch,
 ): ClickSubscriber {
 	const { app } = dispatch.host;
-	return (target) => {
-		const propertyInfo = getPropertyCheckboxInfo(target);
-		if (!propertyInfo) return;
+	return {
+		kind: PayloadKind.CheckboxInFrontmatterClicked,
+		onMouseDown: (target) => {
+			const propertyInfo = getPropertyCheckboxInfo(target);
+			if (!propertyInfo) return;
 
-		const splitPath = getCurrentFilePath(app);
-		if (!splitPath) return;
+			const splitPath = getCurrentFilePath(app);
+			if (!splitPath) return;
 
-		const payload = CheckboxFrontmatterCodec.encode({
-			checked: propertyInfo.checked,
-			propertyName: propertyInfo.propertyName,
-			splitPath,
-		});
+			const payload = CheckboxFrontmatterCodec.encode({
+				checked: propertyInfo.checked,
+				propertyName: propertyInfo.propertyName,
+				splitPath,
+			});
 
-		const handler = dispatch.decide(
-			PayloadKind.CheckboxInFrontmatterClicked,
-			payload,
-		);
-		if (!handler) return;
+			const handler = dispatch.decide(
+				PayloadKind.CheckboxInFrontmatterClicked,
+				payload,
+			);
+			if (!handler) return;
 
-		dispatch.run(
-			PayloadKind.CheckboxInFrontmatterClicked,
-			handler,
-			Effect.succeed(payload),
-		);
+			dispatch.run(
+				PayloadKind.CheckboxInFrontmatterClicked,
+				handler,
+				Effect.succeed(payload),
+			);
+		},
 	};
 }
 

@@ -21,42 +21,49 @@ import type { WikiTarget } from "./payload";
 
 export function wikilinkClick(dispatch: EventDispatch): ClickSubscriber {
 	const { app, openLink } = dispatch.host;
-	return (target, evt) => {
-		const linkElement = findLinkElement(target);
-		if (!linkElement) return;
+	return {
+		kind: PayloadKind.WikilinkClicked,
+		onMouseDown: (target, evt) => {
+			const linkElement = findLinkElement(target);
+			if (!linkElement) return;
 
-		if (evt.ctrlKey || evt.metaKey || evt.shiftKey || evt.altKey) return;
+			if (evt.ctrlKey || evt.metaKey || evt.shiftKey || evt.altKey)
+				return;
 
-		const splitPath = getCurrentFilePath(app);
-		if (!splitPath) return;
+			const splitPath = getCurrentFilePath(app);
+			if (!splitPath) return;
 
-		const wikiTarget = extractLinkData(app, linkElement, target);
-		if (!wikiTarget) return;
+			const wikiTarget = extractLinkData(app, linkElement, target);
+			if (!wikiTarget) return;
 
-		const blockContent = extractBlockContent(app, linkElement);
-		if (blockContent === null) return;
+			const blockContent = extractBlockContent(app, linkElement);
+			if (blockContent === null) return;
 
-		const payload = WikilinkClickCodec.encode({
-			blockContent,
-			splitPath,
-			wikiTarget,
-		});
+			const payload = WikilinkClickCodec.encode({
+				blockContent,
+				splitPath,
+				wikiTarget,
+			});
 
-		const handler = dispatch.decide(PayloadKind.WikilinkClicked, payload);
-		// None: Obsidian navigates.
-		if (!handler) return;
+			const handler = dispatch.decide(
+				PayloadKind.WikilinkClicked,
+				payload,
+			);
+			// None: Obsidian navigates.
+			if (!handler) return;
 
-		evt.preventDefault();
-		dispatch.run(
-			PayloadKind.WikilinkClicked,
-			handler,
-			Effect.succeed(payload),
-			// Passthrough: the navigation prevented above, as Obsidian does it.
-			(result) =>
-				result.outcome === "passthrough"
-					? openLink(wikiTarget.basename, payload.sourcePath)
-					: Effect.void,
-		);
+			evt.preventDefault();
+			dispatch.run(
+				PayloadKind.WikilinkClicked,
+				handler,
+				Effect.succeed(payload),
+				// Passthrough: the navigation prevented above, as Obsidian does it.
+				(result) =>
+					result.outcome === "passthrough"
+						? openLink(wikiTarget.basename, payload.sourcePath)
+						: Effect.void,
+			);
+		},
 	};
 }
 

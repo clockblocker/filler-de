@@ -50,6 +50,7 @@ async function makeUserEvents() {
 		},
 	);
 	const dom = fakeDocument();
+	const releaseFailures: string[] = [];
 	const scope = Scope.makeUnsafe();
 	const built = await runtime.e2e(
 		"build",
@@ -58,6 +59,12 @@ async function makeUserEvents() {
 				UserEvents.layer({
 					app: fakeApp(STORY) as App,
 					document: dom.document,
+					notices: {
+						releaseFailed: ({ what }) =>
+							Effect.sync(() => {
+								releaseFailures.push(what);
+							}),
+					},
 					runtime,
 				}),
 			),
@@ -92,6 +99,7 @@ async function makeUserEvents() {
 				"pending",
 				Effect.flatMap(IdleTracker, (idle) => idle.pending),
 			),
+		releaseFailures,
 		runtime,
 		spans,
 		under,
@@ -125,7 +133,9 @@ describe("the plugin's user events", () => {
 
 		const view = completeLink(events.editorListeners());
 
-		// It ran at once, inside the editor's update.
+		// Never from inside CodeMirror's update listeners: a microtask later.
+		expect(view.state.doc.toString()).toBe("Der [[Fahrer]] fährt.");
+		await new Promise((resolve) => setTimeout(resolve, 0));
 		expect(view.state.doc.toString()).toBe(
 			"Der [[Worter/f/fah/fahre/fahrer|Fahrer]] fährt.",
 		);
@@ -191,6 +201,23 @@ describe("the plugin's user events", () => {
 		expect(events.editorListeners()).toHaveLength(0);
 		// Every open editor was told to drop it.
 		expect(events.host.obsidian.optionUpdates()).toBe(updates + 1);
+		await events.runtime.dispose();
+	});
+
+	it("tell a release that fails, and still remove every listener", async () => {
+		const events = await makeUserEvents();
+		const workspace = events.host.obsidian.plugin.app.workspace as {
+			updateOptions: () => void;
+		};
+		workspace.updateOptions = () => {
+			throw new Error("the editors refused");
+		};
+
+		await events.close();
+
+		expect(events.releaseFailures).toEqual(["stop the user event interceptor"]);
+		expect(events.dom.listeners()).toEqual([]);
+		expect(events.editorListeners()).toHaveLength(0);
 		await events.runtime.dispose();
 	});
 

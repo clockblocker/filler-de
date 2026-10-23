@@ -145,7 +145,9 @@ export type UserEventHandler<K extends UserEventKind> = {
 	) => Effect.Effect<UserEventResult<K>, UserEventFailure>;
 	/**
 	 * Work of the same gesture that runs once the result is applied, in
-	 * the same fiber and span, such as reopening a clicked note later.
+	 * the same fiber and span, such as reopening a clicked note later. It
+	 * runs whether or not the layer could apply the result, as a link that
+	 * failed to open; not when `handle` failed.
 	 */
 	readonly afterwards?: (
 		payload: UserEventPayloadMap[K],

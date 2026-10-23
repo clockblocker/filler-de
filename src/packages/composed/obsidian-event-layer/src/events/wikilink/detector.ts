@@ -15,7 +15,8 @@
  * (`resolveLinkpath`), and the payload carries where it resolves and
  * whether it is an embed, so the handler can tell a link to a Library or
  * other note from a word to land on its Crossroad note. The handler's edit
- * is dropped if the editor no longer holds the link by then.
+ * is dispatched a microtask later, once every update listener has seen the
+ * completing update, and dropped if the editor no longer holds the link.
  */
 import { EditorView, type ViewUpdate } from "@codemirror/view";
 import { Effect } from "effect";
@@ -71,16 +72,32 @@ function onEditorUpdate(dispatch: EventDispatch, vu: ViewUpdate): void {
 			})),
 		),
 		(result) =>
-			Effect.sync(() => {
-				if (result.outcome !== "effect") return;
-				if ("resolvedTarget" in result.effect) {
-					WikilinkCodec.replaceTarget(payload, result.effect);
-					return;
-				}
-				WikilinkCodec.insertAlias(payload, result.effect);
-			}),
+			result.outcome === "effect"
+				? Effect.andThen(
+						afterTheUpdate,
+						Effect.sync(() => {
+							if ("resolvedTarget" in result.effect) {
+								WikilinkCodec.replaceTarget(
+									payload,
+									result.effect,
+								);
+								return;
+							}
+							WikilinkCodec.insertAlias(payload, result.effect);
+						}),
+					)
+				: Effect.void,
 	);
 }
+
+/**
+ * Waits a microtask, in the same fiber: the editor change is dispatched
+ * once CodeMirror's update listeners, ours among them, have all seen the
+ * update that completed the link, never from inside one. Code that
+ * completed the link, such as a `replaceRange`, also reads its own text
+ * back before the rewrite lands.
+ */
+const afterTheUpdate = Effect.promise(() => Promise.resolve());
 
 /** Case 1: the cursor right after `]]`, typed by hand. */
 function detectCursorAfterClose(vu: ViewUpdate): CompletedLink | null {

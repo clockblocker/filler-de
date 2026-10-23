@@ -14,8 +14,10 @@ import {
 	type ObsidianEventLayer,
 } from "@textfresser/obsidian-event-layer";
 import { VaultActionManager } from "@textfresser/vault-action-manager";
-import { Context, Effect, Layer } from "effect";
+import { Context, Effect, Layer, Scope } from "effect";
 import type { App } from "obsidian";
+import type { LifecycleNotices } from "../lifecycle/lifecycle-notices";
+import { releaseGuarded } from "../lifecycle/lifecycle-supervisor";
 import { PluginHost, Workspace } from "../managers/obsidian/host";
 import type { PluginRuntime } from "../runtime/plugin-runtime";
 import { IdleTracker } from "../utils/idle-tracker";
@@ -30,6 +32,8 @@ export type UserEventsDeps = {
 		PluginRuntime<never, unknown>,
 		"readSync" | "userEvent"
 	>;
+	/** Told when the layer's listeners or extension fail to be released. */
+	readonly notices: Pick<LifecycleNotices, "releaseFailed">;
 };
 
 export class UserEvents extends Context.Service<
@@ -44,6 +48,17 @@ export class UserEvents extends Context.Service<
 				const workspace = yield* Workspace;
 				const vam = yield* VaultActionManager;
 				const idle = yield* IdleTracker;
+				// The layer's registrations, released together: one that fails,
+				// such as the editors refusing to drop the extension, is told,
+				// and the services released after it still are.
+				const registrations = yield* Scope.make();
+				yield* Effect.addFinalizer((exit) =>
+					releaseGuarded(
+						deps.notices,
+						"stop the user event interceptor",
+						Scope.close(registrations, exit),
+					),
+				);
 				return yield* makeObsidianEventLayer({
 					app: deps.app,
 					document: deps.document,
@@ -59,7 +74,7 @@ export class UserEvents extends Context.Service<
 						workspace.openLink(target, sourcePath, false),
 					readSync: deps.runtime.readSync,
 					vam,
-				});
+				}).pipe(Scope.provide(registrations));
 			}),
 		);
 }

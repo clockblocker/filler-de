@@ -85,6 +85,7 @@ export const PluginServicesLive = (
 		userEvents: UserEvents.layer({
 			app: deps.plugin.app,
 			document,
+			notices: deps.notices,
 			runtime: deps.runtime,
 		}),
 	});

@@ -44,7 +44,10 @@ describe("copy and cut", () => {
 		]);
 	});
 
-	it("cut strips the selection the same way", () => {
+	// Only as handed a selection: in a real editor, CodeMirror's own cut
+	// deletes the selection before this listener reads it, so a cut is not
+	// stripped there (on master too); see the follow-up issue.
+	it("a cut handed its selection strips it the same way (not yet in a real editor)", () => {
 		const events = eventLayerOn(fakeApp(NOTE), {
 			selection: `${GO_BACK}\nEs war einmal.`,
 		});

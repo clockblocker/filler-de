@@ -44,7 +44,6 @@ Page navigation (`GoToPrevPage`, `GoToNextPage`) needs only the note, so its con
 | `ClipboardCopy` | Remove Librarian metadata from copied text. |
 | `SelectAll` | Exclude frontmatter, go-back links, and metadata. |
 | `WikilinkCompleted` | Land a bare word typed outside `Worter/` on its Crossroad note's path (ADR-0015); otherwise ask the Librarian to resolve a Library target. |
-| `CheckboxFrontmatterClicked` | Route the status change to the Librarian. |
 | `CheckboxClicked` | Route a Codex status change to the Librarian. |
 | `WikilinkClicked` | Let Obsidian open the link, then, in the click's fiber, have Classify open a Reading note again once its Knowledge lands. |
 

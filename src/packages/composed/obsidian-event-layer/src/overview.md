@@ -45,7 +45,7 @@ The fork starts at once, inside the event, so a program that never waits is appl
 | ClipboardCopy | copy / cut with a selection | yes | Strip metadata from copied text |
 | (block reference) | copy with no selection | — | A line ending in `^id` copies its embed; no handler |
 | CheckboxClicked | task checkbox | yes | Codex status |
-| CheckboxFrontmatterClicked | property checkbox | yes | Node status |
+| CheckboxFrontmatterClicked | property checkbox | yes | No handler today; Obsidian toggles the property |
 | SelectAll | Cmd/Ctrl+A in source mode | yes | Select a note's body only; native when there is nothing to exclude |
 | WikilinkCompleted | `]]` typed, or a selection wrapped in `[[ ]]` | yes | Land a word on its Crossroad note, or a Library alias |
 | WikilinkClicked | internal link, no modifier | yes | Reopen a Reading note once its Knowledge lands |

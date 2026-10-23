@@ -16,36 +16,42 @@ import { CheckboxCodec } from "./codec";
 
 export function checkboxClick(dispatch: EventDispatch): ClickSubscriber {
 	const { app } = dispatch.host;
-	return (target, evt) => {
-		if (!isTaskCheckbox(target)) return;
+	return {
+		kind: PayloadKind.CheckboxClicked,
+		onMouseDown: (target, evt) => {
+			if (!isTaskCheckbox(target)) return;
 
-		const splitPath = getCurrentFilePath(app);
-		if (!splitPath) return;
+			const splitPath = getCurrentFilePath(app);
+			if (!splitPath) return;
 
-		const lineContent = extractLineContent(app, target);
-		if (lineContent === null) return;
+			const lineContent = extractLineContent(app, target);
+			if (lineContent === null) return;
 
-		// The click stream listens on mousedown, before the browser toggles
-		// the checkbox: `checked` is the state the user sees and clicked.
-		const payload = CheckboxCodec.encode({
-			checked: target.checked,
-			lineContent,
-			splitPath,
-		});
+			// The click stream listens on mousedown, before the browser toggles
+			// the checkbox: `checked` is the state the user sees and clicked.
+			const payload = CheckboxCodec.encode({
+				checked: target.checked,
+				lineContent,
+				splitPath,
+			});
 
-		const handler = dispatch.decide(PayloadKind.CheckboxClicked, payload);
-		// None: Obsidian toggles the checkbox.
-		if (!handler) return;
+			const handler = dispatch.decide(
+				PayloadKind.CheckboxClicked,
+				payload,
+			);
+			// None: Obsidian toggles the checkbox.
+			if (!handler) return;
 
-		evt.preventDefault();
-		evt.stopPropagation();
-		evt.stopImmediatePropagation();
+			evt.preventDefault();
+			evt.stopPropagation();
+			evt.stopImmediatePropagation();
 
-		dispatch.run(
-			PayloadKind.CheckboxClicked,
-			handler,
-			Effect.succeed(payload),
-		);
+			dispatch.run(
+				PayloadKind.CheckboxClicked,
+				handler,
+				Effect.succeed(payload),
+			);
+		},
 	};
 }
 

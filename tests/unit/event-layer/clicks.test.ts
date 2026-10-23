@@ -111,6 +111,69 @@ describe("task checkbox clicks", () => {
 	});
 });
 
+describe("a subscriber that throws", () => {
+	/** A task checkbox inside a toolbar button, so two subscribers see it. */
+	function checkboxInButton() {
+		const checkbox = taskCheckbox(false);
+		const line = checkbox.parentElement as FakeElement;
+		const button = new FakeElement("DIV").setAttribute(
+			"data-action",
+			"Translate",
+		);
+		button.append(line.parentElement as FakeElement);
+		return checkbox;
+	}
+
+	it("is logged at its kind's edge, and the subscribers after it still run", () => {
+		const events = eventLayerOn(fakeApp(CODEX, { lines: LINES }));
+		const actions: string[] = [];
+		events.layer.setHandler(UserEventKind.CheckboxClicked, {
+			doesApply: () => {
+				throw new Error("doesApply broke");
+			},
+			handle: () => Effect.succeed({ outcome: "handled" } as const),
+		});
+		events.layer.setHandler(UserEventKind.ActionElementClicked, {
+			doesApply: () => true,
+			handle: (payload) =>
+				Effect.sync(() => {
+					actions.push(payload.actionId);
+					return { outcome: "handled" } as const;
+				}),
+		});
+
+		const [down] = click(events, checkboxInButton());
+
+		expect(down?.defaultPrevented).toBe(false);
+		expect(actions).toEqual(["Translate"]);
+		expect(events.forks.map(({ kind }) => kind)).toEqual([
+			UserEventKind.CheckboxClicked,
+			UserEventKind.ActionElementClicked,
+		]);
+		expect(events.failures.map(String).join()).toContain("doesApply broke");
+	});
+
+	it("leaves a mousedown another subscriber handled blocked to its click", () => {
+		const events = eventLayerOn(fakeApp(CODEX, { lines: LINES }));
+		events.layer.setHandler(UserEventKind.CheckboxClicked, {
+			doesApply: () => true,
+			handle: () => Effect.succeed({ outcome: "handled" } as const),
+		});
+		events.layer.setHandler(UserEventKind.ActionElementClicked, {
+			doesApply: () => {
+				throw new Error("doesApply broke");
+			},
+			handle: () => Effect.succeed({ outcome: "handled" } as const),
+		});
+
+		const [down, up, done] = click(events, checkboxInButton());
+
+		expect(down?.defaultPrevented).toBe(true);
+		expect(up?.defaultPrevented).toBe(true);
+		expect(done?.defaultPrevented).toBe(true);
+	});
+});
+
 describe("frontmatter checkbox clicks", () => {
 	it("tell the handler, and leave the toggle to Obsidian", () => {
 		const input = new FakeElement("INPUT");
@@ -189,6 +252,28 @@ describe("wikilink clicks", () => {
 			"handle Fahrer",
 			"afterwards Worter/f/fah/fahre/fahrer, opened 1",
 		]);
+	});
+
+	it("runs the handler's afterwards even when the link fails to open, and fails at the edge", () => {
+		const events = eventLayerOn(fakeApp("Library/Story.md"), {
+			openLinkFails: true,
+		});
+		const reopened: string[] = [];
+		events.layer.setHandler(UserEventKind.WikilinkClicked, {
+			afterwards: (payload) =>
+				Effect.sync(() => {
+					reopened.push(payload.target.basename);
+				}),
+			doesApply: () => true,
+			handle: () => Effect.succeed({ outcome: "passthrough" } as const),
+		});
+
+		click(events, readingLink());
+
+		expect(reopened).toEqual(["Worter/f/fah/fahre/fahrer"]);
+		expect(events.failures.map(String).join()).toContain(
+			"no Worter/f/fah/fahre/fahrer",
+		);
 	});
 
 	it("a handled click opens nothing", () => {

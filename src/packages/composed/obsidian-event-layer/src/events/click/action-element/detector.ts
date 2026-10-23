@@ -10,27 +10,30 @@ import type { ClickSubscriber } from "../generic-click-detector";
 import { ActionElementCodec } from "./codec";
 
 export function actionElementClick(dispatch: EventDispatch): ClickSubscriber {
-	return (target) => {
-		const button = target.closest(
-			DomSelectors.DATA_ACTION,
-		) as HTMLElement | null;
-		if (!button) return;
-		if (button.hasAttribute("disabled")) return;
+	return {
+		kind: PayloadKind.ActionElementClicked,
+		onMouseDown: (target) => {
+			const button = target.closest(
+				DomSelectors.DATA_ACTION,
+			) as HTMLElement | null;
+			if (!button) return;
+			if (button.hasAttribute("disabled")) return;
 
-		const actionId = button.dataset[DomSelectors.DATA_ACTION_ATTR];
-		if (!actionId) return;
+			const actionId = button.dataset[DomSelectors.DATA_ACTION_ATTR];
+			if (!actionId) return;
 
-		const payload = ActionElementCodec.encode({ actionId });
-		const handler = dispatch.decide(
-			PayloadKind.ActionElementClicked,
-			payload,
-		);
-		if (!handler) return;
+			const payload = ActionElementCodec.encode({ actionId });
+			const handler = dispatch.decide(
+				PayloadKind.ActionElementClicked,
+				payload,
+			);
+			if (!handler) return;
 
-		dispatch.run(
-			PayloadKind.ActionElementClicked,
-			handler,
-			Effect.succeed(payload),
-		);
+			dispatch.run(
+				PayloadKind.ActionElementClicked,
+				handler,
+				Effect.succeed(payload),
+			);
+		},
 	};
 }

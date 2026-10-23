@@ -5,6 +5,9 @@
  *
  * - Stateless handlers (clipboard, select-all) call helpers directly.
  * - The others delegate to the Librarian.
+ * - A property checkbox has no handler: Obsidian toggles the property,
+ *   and the click does nothing more, as before (the Librarian has no
+ *   handler for it).
  */
 
 import {
@@ -15,7 +18,6 @@ import {
 } from "@textfresser/obsidian-event-layer";
 import { Effect } from "effect";
 import type { Librarian } from "../../../commanders/librarian/librarian";
-import { createCheckboxFrontmatterHandler } from "./checkbox-behavior";
 import { createClipboardHandler } from "./clipboard-behavior";
 import { createCodexCheckboxHandler } from "./codex-checkbox-behavior";
 import { createSelectAllHandler } from "./select-all-behavior";
@@ -61,10 +63,6 @@ export function createHandlers(
 		{
 			handler: createWikilinkCompletionHandler(librarian),
 			kind: UserEventKinds.WikilinkCompleted,
-		},
-		{
-			handler: createCheckboxFrontmatterHandler(librarian),
-			kind: UserEventKinds.CheckboxFrontmatterClicked,
 		},
 		{
 			handler: createCodexCheckboxHandler(librarian),

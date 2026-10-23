@@ -7,11 +7,19 @@
  * When a subscriber prevents a mousedown's default, the mouseup and click
  * that follow on the same target are blocked too, so Obsidian, which
  * toggles a checkbox on mouseup, never sees them.
+ *
+ * A subscriber that throws, such as a handler's `doesApply`, is logged at
+ * its kind's edge; the subscribers after it still run.
  */
-import { Effect, MutableRef, Ref } from "effect";
+import { type Cause, Effect, Exit, MutableRef, Ref } from "effect";
+import type { UserEventFailure, UserEventKind } from "../../contracts";
 import type { EventDispatch } from "../../internal/dispatch";
 
-export type ClickSubscriber = (target: HTMLElement, evt: MouseEvent) => void;
+export type ClickSubscriber = {
+	/** The kind it detects, whose edge logs what it throws. */
+	readonly kind: UserEventKind;
+	readonly onMouseDown: (target: HTMLElement, evt: MouseEvent) => void;
+};
 
 const CAPTURE = { capture: true } as const;
 
@@ -40,7 +48,20 @@ export const listenForClicks = Effect.fnUntraced(function* (
 			// Only the left mouse button.
 			if (evt.button !== 0) return;
 			const target = evt.target as HTMLElement;
-			for (const subscriber of subscribers) subscriber(target, evt);
+			for (const { kind, onMouseDown } of subscribers) {
+				const ran = host.readSync(
+					Effect.sync(() => onMouseDown(target, evt)),
+				);
+				if (Exit.isFailure(ran))
+					host.fork(
+						kind,
+						// A throw: a defect, logged whole at the edge.
+						Effect.failCause(
+							ran.cause as Cause.Cause<UserEventFailure>,
+						),
+						{ traced: true },
+					);
+			}
 			if (evt.defaultPrevented)
 				MutableRef.set(handledTarget.ref, evt.target);
 		},
