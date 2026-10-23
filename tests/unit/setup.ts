@@ -1,5 +1,6 @@
 import { mock } from "bun:test";
 import { parse, stringify } from "yaml";
+import { Modal, Notice, Setting } from "../support/obsidian-dom";
 
 /**
  * Obsidian's `parseYaml` and `stringifyYaml` are the `yaml` package's
@@ -19,10 +20,10 @@ mock.module("obsidian", () => ({
 		file: unknown;
 		editor: unknown;
 	},
-	Notice: class Notice {
-		constructor(_message: string) {}
-	},
+	Modal,
+	Notice,
 	parseYaml,
+	Setting,
 	stringifyYaml,
 	TFile: class TFile {
 		path = "";
@@ -45,10 +46,10 @@ if (typeof require !== "undefined") {
 				file: unknown;
 				editor: unknown;
 			},
-			Notice: class Notice {
-				constructor(_message: string) {}
-			},
+			Modal,
+			Notice,
 			parseYaml,
+			Setting,
 			stringifyYaml,
 			TFile: class TFile {
 				path = "";

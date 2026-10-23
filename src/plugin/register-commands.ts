@@ -1,5 +1,5 @@
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { type Effect, Exit } from "effect";
+import { Effect, Exit } from "effect";
 import { Notice, type Plugin } from "obsidian";
 import type { KnowledgeQueue } from "../commanders/classify";
 import {
@@ -28,6 +28,11 @@ export type PluginCommandDeps = {
 	readonly restartLibrarian: Effect.Effect<void>;
 	readonly stillLoading: () => void;
 };
+
+const notify = (message: string) =>
+	Effect.sync(() => {
+		new Notice(message);
+	});
 
 /** Adds the plugin's command palette commands. */
 export function registerCommands(plugin: Plugin, deps: PluginCommandDeps) {
@@ -127,7 +132,13 @@ export function registerCommands(plugin: Plugin, deps: PluginCommandDeps) {
 	plugin.addCommand({
 		callback: () => {
 			const reset = deps.dictionaryReset();
-			if (reset) reset.open();
+			// The command's program starts at once, so E2E finds the opening
+			// right after running the command.
+			if (reset)
+				void deps.runtime.command(
+					"reset-dictionary-from-old-notes",
+					reset.open,
+				);
 			else deps.stillLoading();
 		},
 		id: "reset-dictionary-from-old-notes",
@@ -136,10 +147,18 @@ export function registerCommands(plugin: Plugin, deps: PluginCommandDeps) {
 
 	plugin.addCommand({
 		callback: () => {
-			new Notice(
-				deps.dictionaryReset()?.cancel()
-					? "Cancelling the dictionary reset after its current step"
-					: "No dictionary reset is running",
+			const reset = deps.dictionaryReset();
+			void deps.runtime.command(
+				"cancel-dictionary-reset",
+				(reset?.cancel ?? Effect.succeed(false)).pipe(
+					Effect.flatMap((cancelled) =>
+						notify(
+							cancelled
+								? "Cancelling the dictionary reset after its current step"
+								: "No dictionary reset is running",
+						),
+					),
+				),
 			);
 		},
 		id: "cancel-dictionary-reset",

@@ -14,7 +14,7 @@ import {
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { operations } from "dumgen";
-import { Effect, Exit, Layer, Option, Stream } from "effect";
+import { Effect, Exit, Layer, Stream } from "effect";
 import { Notice, type Plugin } from "obsidian";
 import {
 	ClassifyCommander,
@@ -25,6 +25,7 @@ import {
 	DUMGEN_SEGMENTER_VERSION,
 	dumgenUnitResolver,
 	filesSegmentationCache,
+	HIDDEN_FOLDER,
 	type KnowledgeQueue,
 	observeScrollModifications,
 	produceKnowledge,
@@ -70,7 +71,7 @@ export type PluginServicesDeps = {
 	readonly plugin: Plugin;
 	readonly runtime: Pick<
 		PluginRuntime<PluginServices, unknown>,
-		"hops" | "readSync"
+		"hops" | "readSync" | "userEvent"
 	>;
 	readonly notices: LifecycleNotices;
 };
@@ -223,7 +224,9 @@ const ClassifyLive = (deps: PluginServicesDeps) =>
 				queue: knowledgeQueue,
 			});
 
-			const cache = filesSegmentationCache(deps.plugin.app.vault.adapter);
+			const cache = filesSegmentationCache(
+				vam.hiddenFolder(HIDDEN_FOLDER),
+			);
 			const segmenterVersion = Effect.map(
 				dumgen.scriptedJevTag,
 				(scripted) =>
@@ -291,36 +294,27 @@ const DictionaryResetLive = (deps: PluginServicesDeps) =>
 			const dumgen = yield* Dumgen;
 			const store = yield* DictionaryStore;
 			const classify = yield* ClassifyServices;
-			const { runtime } = deps;
 			return yield* Effect.acquireRelease(
-				Effect.sync(
-					() =>
-						new DictionaryResetCommand({
-							activity: classify.scrollActivity,
-							app: deps.plugin.app,
-							cache: classify.cache,
-							checkProviderKeys: dumgen.checkKeys,
-							dumgen: dumgen.provide,
-							knowledge: classify.knowledgeQueue,
-							// Read in the modal's click, to decide it.
-							missingProviderKeys: () =>
-								Option.getOrElse(
-									Exit.getSuccess(
-										runtime.readSync(dumgen.missingKeys),
-									),
-									() => [],
-								),
-							runtime: runtime.hops,
-							segmenterVersion: classify.segmenterVersion,
-							store: store.get,
-							vam,
-						}),
-				),
+				DictionaryResetCommand.make({
+					activity: classify.scrollActivity,
+					app: deps.plugin.app,
+					cache: classify.cache,
+					checkProviderKeys: dumgen.checkKeys,
+					dumgen: dumgen.provide,
+					knowledge: classify.knowledgeQueue,
+					missingProviderKeys: dumgen.missingKeys,
+					// A modal's button, as a user's gesture.
+					run: (kind, effect) =>
+						void deps.runtime.userEvent(kind, effect),
+					segmenterVersion: classify.segmenterVersion,
+					store: store.get,
+					vam,
+				}),
 				(reset) =>
 					releaseGuarded(
 						deps.notices,
 						"cancel the dictionary reset",
-						Effect.sync(() => void reset.cancel()),
+						Effect.asVoid(reset.cancel),
 					),
 			);
 		}),

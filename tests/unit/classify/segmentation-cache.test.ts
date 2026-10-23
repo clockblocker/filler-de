@@ -1,6 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
+import {
+	createVaultActionManager,
+	VamVaultIoError,
+} from "@textfresser/vault-action-manager";
 import type { SegmentedSentence } from "dumgen";
 import { Effect, Option } from "effect";
 import { pinnedJevModel } from "../../../.texteater/battery/dumgen/src/segment/jev";
@@ -9,6 +13,7 @@ import {
 	type CacheFiles,
 	cacheEntryPath,
 	filesSegmentationCache,
+	HIDDEN_FOLDER,
 	SEGMENTATION_CACHE_FOLDER,
 } from "../../../src/commanders/classify/segmentation-cache";
 import { segmenterSourceHash } from "../../../src/commanders/classify/segmenter-source-hash";
@@ -16,6 +21,7 @@ import {
 	DUMGEN_SEGMENTER_VERSION,
 	sentenceKey,
 } from "../../../src/commanders/classify/sentence-key";
+import { makeObsidianVault } from "../../../src/packages/independent/vault-action-manager/tests/unit/helpers/obsidian-vault";
 
 const SENTENCE: SegmentedSentence = {
 	segments: [
@@ -40,20 +46,26 @@ const SENTENCE: SegmentedSentence = {
 	],
 };
 
-function memoryFiles() {
+/**
+ * An adapter over in-memory files, as Obsidian's: `mkdir` makes the
+ * folder's parents too, and writing into a missing folder fails.
+ */
+function memoryAdapter() {
 	const files = new Map<string, string>();
 	const folders = new Set<string>();
-	const adapter: CacheFiles = {
-		exists: async (file) => files.has(file) || folders.has(file),
-		mkdir: async (folder) => {
-			folders.add(folder);
+	const adapter = {
+		exists: async (file: string) => files.has(file) || folders.has(file),
+		mkdir: async (folder: string) => {
+			const parts = folder.split("/");
+			for (const [index] of parts.entries())
+				folders.add(parts.slice(0, index + 1).join("/"));
 		},
-		read: async (file) => {
+		read: async (file: string) => {
 			const content = files.get(file);
 			if (content === undefined) throw new Error(`${file} is missing`);
 			return content;
 		},
-		write: async (file, data) => {
+		write: async (file: string, data: string) => {
 			if (!folders.has(file.slice(0, file.lastIndexOf("/"))))
 				throw new Error(`${file}'s folder is missing`);
 			files.set(file, data);
@@ -62,18 +74,28 @@ function memoryFiles() {
 	return { adapter, files, folders };
 }
 
+/** The cache's files through VAM's `hiddenFolder`, over `memoryAdapter`. */
+function memoryFiles() {
+	const memory = memoryAdapter();
+	const vault = makeObsidianVault({});
+	(vault.app.vault as unknown as { adapter: unknown }).adapter = memory.adapter;
+	(vault.app.vault as unknown as { configDir: string }).configDir = ".obsidian";
+	const { manager } = createVaultActionManager(vault.app);
+	return { ...memory, cacheFiles: manager.hiddenFolder(HIDDEN_FOLDER) };
+}
+
 const KEY = sentenceKey("v", "de", SENTENCE.text);
 
 describe("filesSegmentationCache", () => {
 	it("stores an entry in the hidden folder and reads it back", async () => {
-		const { adapter, files, folders } = memoryFiles();
-		const cache = filesSegmentationCache(adapter);
+		const { cacheFiles, files, folders } = memoryFiles();
+		const cache = filesSegmentationCache(cacheFiles);
 		expect(Option.isNone(await Effect.runPromise(cache.get(KEY)))).toBe(true);
 		await Effect.runPromise(cache.put(KEY, SENTENCE));
 		expect([...files.keys()]).toEqual([
-			`${SEGMENTATION_CACHE_FOLDER}/${KEY.slice(0, 2)}/${KEY}.json`,
+			`.textfresser/segmentation/${KEY.slice(0, 2)}/${KEY}.json`,
 		]);
-		expect(SEGMENTATION_CACHE_FOLDER.startsWith(".")).toBe(true);
+		expect(`${HIDDEN_FOLDER}/${SEGMENTATION_CACHE_FOLDER}`).toBe(".textfresser/segmentation");
 		expect([...folders]).toEqual([
 			".textfresser",
 			".textfresser/segmentation",
@@ -85,17 +107,17 @@ describe("filesSegmentationCache", () => {
 	});
 
 	it("never stores a failed segmentation", async () => {
-		const { adapter, files } = memoryFiles();
+		const { cacheFiles, files } = memoryFiles();
 		await Effect.runPromise(
-			filesSegmentationCache(adapter).put(KEY, { ...SENTENCE, failed: true }),
+			filesSegmentationCache(cacheFiles).put(KEY, { ...SENTENCE, failed: true }),
 		);
 		expect(files.size).toBe(0);
 	});
 
 	it("treats a corrupt, foreign or inconsistent entry as a miss", async () => {
-		const { adapter, files } = memoryFiles();
-		const cache = filesSegmentationCache(adapter);
-		const path = cacheEntryPath(KEY);
+		const { cacheFiles, files } = memoryFiles();
+		const cache = filesSegmentationCache(cacheFiles);
+		const path = `${HIDDEN_FOLDER}/${cacheEntryPath(KEY)}`;
 		const miss = async (content: string) => {
 			files.set(path, content);
 			return Option.isNone(await Effect.runPromise(cache.get(KEY)));
@@ -125,11 +147,18 @@ describe("filesSegmentationCache", () => {
 	});
 
 	it("swallows a failing adapter, so Classify segments again", async () => {
+		const gone = Effect.fail(
+			new VamVaultIoError({
+				cause: new Error("disk gone"),
+				operation: "hiddenFolder.read",
+				path: HIDDEN_FOLDER,
+			}),
+		);
 		const failing: CacheFiles = {
-			exists: () => Promise.reject(new Error("disk gone")),
-			mkdir: () => Promise.reject(new Error("disk gone")),
-			read: () => Promise.reject(new Error("disk gone")),
-			write: () => Promise.reject(new Error("disk gone")),
+			exists: () => gone,
+			mkdir: () => gone,
+			read: () => gone,
+			write: () => gone,
 		};
 		const cache = filesSegmentationCache(failing);
 		await Effect.runPromise(cache.put(KEY, SENTENCE));

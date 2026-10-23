@@ -12,10 +12,7 @@ import type {
 	DumdictVaultStore,
 } from "@textfresser/dictionary";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import {
-	describeError,
-	formatCause,
-} from "@textfresser/vault-action-manager/diagnostics";
+import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
 import { operations } from "dumgen";
 import {
 	Cause,
@@ -24,7 +21,9 @@ import {
 	Effect,
 	Exit,
 	Layer,
+	Option,
 	Predicate,
+	Ref,
 } from "effect";
 import { type App, Modal, Notice, Setting } from "obsidian";
 import type { DictionaryStoreClosed } from "../../lifecycle/dictionary-store-service";
@@ -33,8 +32,7 @@ import {
 	type DumgenProvide,
 	type KeyCheckFailure,
 } from "../../managers/dumgen";
-import { logAtEdge } from "../../runtime/edge-log";
-import type { EffectRunner } from "../../runtime/plugin-runtime";
+import { catchWhole, causeMessages } from "../../utils/causes";
 import { getErrorMessage } from "../../utils/get-error-message";
 import { ClassifySegmenter } from "../classify/classify-selection";
 import { dumgenUnitResolver } from "../classify/resolution/dumgen-unit-resolver";
@@ -74,11 +72,15 @@ export type DictionaryResetDeps = {
 	readonly knowledge: KnowledgeQueue;
 	/** Classify's runs per Scroll, which the unlink observer waits out. */
 	readonly activity?: ScrollActivity;
-	readonly missingProviderKeys: () => readonly string[];
+	readonly missingProviderKeys: Effect.Effect<readonly string[]>;
 	/** Checks the provider keys with each provider; answers what failed. */
 	readonly checkProviderKeys: Effect.Effect<readonly KeyCheckFailure[]>;
-	/** Runs the command's steps on the plugin runtime. */
-	readonly runtime: EffectRunner<unknown>;
+	/**
+	 * Runs a modal button's step on the plugin runtime, under
+	 * `user-event.<kind>`. It must start the step at once, so what the step
+	 * shows is held before the click returns.
+	 */
+	readonly run: (kind: string, effect: Effect.Effect<void>) => void;
 };
 
 const STAGE_LABEL: Record<ResetProgress["stage"], string> = {
@@ -120,6 +122,17 @@ export type ResetExecuteOutcome =
 	  }
 	| { readonly kind: "Stopped"; readonly notice: string };
 
+/** What each step answers once the unloading plugin interrupted it. */
+export const RESET_UNLOADED = {
+	dryRun: { kind: "Failed", notice: UNLOADED },
+	execute: { kind: "Stopped", notice: UNLOADED },
+	opening: { kind: "Failed", notice: UNLOADED },
+} as const satisfies {
+	readonly opening: ResetOpening;
+	readonly dryRun: ResetDryRunShown;
+	readonly execute: ResetExecuteOutcome;
+};
+
 /** The key check's failures as one sentence's worth: `A; B`. */
 const keyFailures = (failures: readonly KeyCheckFailure[]) =>
 	failures.map(({ reason }) => reason).join("; ");
@@ -152,32 +165,123 @@ class OpenModals {
 	}
 }
 
+/** What the command holds between its steps. */
+type ResetState = {
+	/** The Execute running, completed to cancel it. */
+	readonly running: Option.Option<Deferred.Deferred<void>>;
+	/** What the last opening showed, once it is shown. */
+	readonly opening: Deferred.Deferred<ResetOpening> | null;
+	/** What the last dry run showed, once it is shown. */
+	readonly dryRun: Deferred.Deferred<ResetDryRunShown> | null;
+	/** How the last confirmed Execute ended, once it ends. */
+	readonly executed: Deferred.Deferred<ResetExecuteOutcome> | null;
+};
+
+/**
+ * Runs `effect` and completes `shown` with what it answers, however it
+ * ends: a step the unloading plugin interrupted answers `unloaded` and
+ * shows nothing, and one that died answers `died` (its edge logs it).
+ */
+const showInto = <A>(
+	shown: Deferred.Deferred<A>,
+	outcomes: {
+		readonly unloaded: A;
+		readonly died: (reasons: string) => A;
+	},
+	effect: Effect.Effect<A>,
+): Effect.Effect<void> =>
+	effect.pipe(
+		Effect.onExit((exit) =>
+			Deferred.succeed(
+				shown,
+				Exit.isSuccess(exit)
+					? exit.value
+					: Cause.hasInterruptsOnly(exit.cause)
+						? outcomes.unloaded
+						: outcomes.died(causeMessages(exit.cause)),
+			),
+		),
+		Effect.asVoid,
+	);
+
+/** Runs `effect` with a notice, hidden however it ends. */
+const withNotice = <A, E, R>(
+	message: string,
+	effect: (notice: Notice) => Effect.Effect<A, E, R>,
+): Effect.Effect<A, E, R> =>
+	Effect.acquireUseRelease(
+		Effect.sync(() => new Notice(message, 0)),
+		effect,
+		(notice) => Effect.sync(() => notice.hide()),
+	);
+
+/** Shows `message` as a notice; `0` keeps it until it is clicked. */
+const show = (message: string, duration?: number) =>
+	Effect.sync(() => {
+		new Notice(message, duration);
+	});
+
 export class DictionaryResetCommand {
-	private running: Deferred.Deferred<void> | null = null;
-	private opening: Promise<ResetOpening> | null = null;
-	private shownDryRun: Promise<ResetDryRunShown> | null = null;
-	private executed: Promise<ResetExecuteOutcome> | null = null;
 	private readonly modals = new OpenModals();
 
-	constructor(private readonly deps: DictionaryResetDeps) {}
+	private constructor(
+		private readonly deps: DictionaryResetDeps,
+		private readonly state: Ref.Ref<ResetState>,
+	) {}
 
-	open(): void {
-		this.opening = this.openModal();
+	static make(
+		deps: DictionaryResetDeps,
+	): Effect.Effect<DictionaryResetCommand> {
+		return Effect.map(
+			Ref.make<ResetState>({
+				dryRun: null,
+				executed: null,
+				opening: null,
+				running: Option.none(),
+			}),
+			(state) => new DictionaryResetCommand(deps, state),
+		);
 	}
 
-	/** E2E: what the last `open()` showed, once shown; null before any. */
-	lastOpening(): Promise<ResetOpening> | null {
-		return this.opening;
+	/**
+	 * Looks for the old notes and opens the modal. What it shows is held at
+	 * once, as the command's program starts, so E2E finds it right after
+	 * running the command.
+	 */
+	readonly open: Effect.Effect<void> = Effect.suspend(() =>
+		Effect.gen({ self: this }, function* () {
+			const shown = yield* Deferred.make<ResetOpening>();
+			yield* Ref.update(this.state, (state) => ({
+				...state,
+				opening: shown,
+			}));
+			yield* showInto<ResetOpening>(
+				shown,
+				{
+					died: (reasons) => ({
+						kind: "Failed",
+						notice: `⚠ Dictionary reset: the modal failed: ${reasons}`,
+					}),
+					unloaded: RESET_UNLOADED.opening,
+				},
+				this.openModal,
+			);
+		}),
+	);
+
+	/** E2E: what the last `open` showed, once shown; null before any. */
+	lastOpening(): Deferred.Deferred<ResetOpening> | null {
+		return Ref.getUnsafe(this.state).opening;
 	}
 
 	/** E2E: what the last dry run showed, once shown; null before any. */
-	lastDryRun(): Promise<ResetDryRunShown> | null {
-		return this.shownDryRun;
+	lastDryRun(): Deferred.Deferred<ResetDryRunShown> | null {
+		return Ref.getUnsafe(this.state).dryRun;
 	}
 
 	/** E2E: how the last confirmed Execute ended, once it ends; null before any. */
-	lastExecute(): Promise<ResetExecuteOutcome> | null {
-		return this.executed;
+	lastExecute(): Deferred.Deferred<ResetExecuteOutcome> | null {
+		return Ref.getUnsafe(this.state).executed;
 	}
 
 	/** E2E: clicks a button of the newest modal the command has open. */
@@ -190,6 +294,26 @@ export class DictionaryResetCommand {
 		this.modals.closeAll();
 	}
 
+	/**
+	 * Whether an Execute is running; Classify waits for it to end. Read
+	 * synchronously, as Classify's refusal and the unlink observer's plans
+	 * read it.
+	 */
+	isRunning(): boolean {
+		return Option.isSome(Ref.getUnsafe(this.state).running);
+	}
+
+	/** Stops a running Execute; answers whether one was running. */
+	readonly cancel: Effect.Effect<boolean> = Effect.suspend(() =>
+		Effect.gen({ self: this }, function* () {
+			const { running } = yield* Ref.get(this.state);
+			if (Option.isNone(running)) return false;
+			yield* Deferred.succeed(running.value, undefined);
+			yield* Effect.sync(() => this.deps.knowledge.cancelAll());
+			return true;
+		}),
+	);
+
 	/** Asks once more, then executes from `source`. */
 	private confirmExecute(source: string, choice: SourceChoice): void {
 		new ConfirmExecuteModal(
@@ -197,170 +321,235 @@ export class DictionaryResetCommand {
 			this.modals,
 			source,
 			choice,
-			() => {
-				this.executed = this.execute(source);
-			},
+			() =>
+				this.deps.run("dictionary-reset.execute", this.execute(source)),
 		).open();
 	}
 
-	private async openModal(): Promise<ResetOpening> {
-		const found = await this.deps.runtime.runPromiseExit(
-			findSources(vamResetVault(this.deps.vam)),
-		);
-		if (Exit.isFailure(found)) {
-			if (Cause.hasInterruptsOnly(found.cause))
-				return { kind: "Failed", notice: UNLOADED };
-			const notice = `⚠ Dictionary reset: could not look for old notes: ${formatCause(found.cause, { stack: false })}`;
-			new Notice(notice);
-			return { kind: "Failed", notice };
-		}
-		let opened = false;
-		const choice = found.value;
-		const modal = new ResetModal(this.deps.app, this.modals, choice, {
-			dryRun: (source) => {
-				this.shownDryRun = this.dryRun(source, choice);
-			},
-			execute: (source) => this.confirmExecute(source, choice),
-			opened: () => {
-				opened = true;
-			},
-		});
-		modal.open();
-		return opened
-			? { kind: "Opened", ...found.value }
-			: { kind: "Failed", notice: "The reset modal did not open" };
-	}
-
-	/** Whether an Execute is running; Classify waits for it to end. */
-	isRunning(): boolean {
-		return this.running !== null;
-	}
-
-	/** Stops a running Execute; answers whether one was running. */
-	cancel(): boolean {
-		const running = this.running;
-		if (!running) return false;
-		Deferred.doneUnsafe(running, Effect.void);
-		this.deps.knowledge.cancelAll();
-		return true;
-	}
+	private readonly openModal: Effect.Effect<ResetOpening> = Effect.suspend(
+		() => {
+			const { deps } = this;
+			return findSources(vamResetVault(deps.vam)).pipe(
+				Effect.flatMap((choice) =>
+					Effect.sync((): ResetOpening => {
+						let opened = false;
+						const modal = new ResetModal(
+							deps.app,
+							this.modals,
+							choice,
+							{
+								dryRun: (source) =>
+									deps.run(
+										"dictionary-reset.dry-run",
+										this.dryRun(source, choice),
+									),
+								execute: (source) =>
+									this.confirmExecute(source, choice),
+								opened: () => {
+									opened = true;
+								},
+							},
+						);
+						modal.open();
+						return opened
+							? { kind: "Opened", ...choice }
+							: {
+									kind: "Failed",
+									notice: "The reset modal did not open",
+								};
+					}),
+				),
+				catchWhole((cause) => {
+					const notice = `⚠ Dictionary reset: could not look for old notes: ${formatCause(cause, { stack: false })}`;
+					return show(notice).pipe(
+						Effect.as<ResetOpening>({ kind: "Failed", notice }),
+					);
+				}),
+			);
+		},
+	);
 
 	/**
 	 * Reads and plans, and checks the provider keys meanwhile, then shows the
 	 * report with Execute beside it and a key that failed as a warning.
 	 */
-	private async dryRun(
-		source: string,
-		choice: SourceChoice,
-	): Promise<ResetDryRunShown> {
-		const notice = new Notice(
-			`Dictionary reset dry run: reading the old notes in ${source}/…`,
-			0,
-		);
-		let interrupted = false;
-		try {
-			const [result, failures] = await this.deps.runtime.runPromise(
-				Effect.all(
-					[
-						dryRunReset(vamResetVault(this.deps.vam), { source }),
-						this.deps.checkProviderKeys,
-					],
-					{ concurrency: "unbounded" },
-				).pipe(
-					Effect.onInterrupt(() =>
-						Effect.sync(() => {
-							interrupted = true;
+	private dryRun(source: string, choice: SourceChoice): Effect.Effect<void> {
+		const { deps } = this;
+		return Effect.gen({ self: this }, function* () {
+			const shown = yield* Deferred.make<ResetDryRunShown>();
+			yield* Ref.update(this.state, (state) => ({
+				...state,
+				dryRun: shown,
+			}));
+			const read = withNotice(
+				`Dictionary reset dry run: reading the old notes in ${source}/…`,
+				() =>
+					Effect.all(
+						[
+							dryRunReset(vamResetVault(deps.vam), { source }),
+							deps.checkProviderKeys,
+						],
+						{ concurrency: "unbounded" },
+					),
+			);
+			yield* showInto<ResetDryRunShown>(
+				shown,
+				{
+					died: (reasons) => ({
+						kind: "Failed",
+						notice: `⚠ Dictionary reset dry run failed: ${reasons}`,
+					}),
+					unloaded: RESET_UNLOADED.dryRun,
+				},
+				read.pipe(
+					Effect.flatMap(([result, failures]) =>
+						Effect.sync((): ResetDryRunShown => {
+							const keyWarning =
+								failures.length === 0
+									? null
+									: `⚠ Execute would stop before changing anything: ${keyFailures(failures)}. Fix the key in Textfresser's settings first.`;
+							const modal = new ReportModal(
+								deps.app,
+								this.modals,
+								{
+									execute: () =>
+										this.confirmExecute(source, choice),
+									keyWarning,
+									report: result.report,
+								},
+							);
+							modal.open();
+							return {
+								actions: modal.actions(),
+								keyWarning,
+								kind: "Report",
+								source,
+							};
 						}),
+					),
+					catchWhole((cause) => {
+						const notice = `⚠ Dictionary reset dry run failed: ${conciseFailure(causeMessages(cause))}`;
+						return show(notice).pipe(
+							Effect.as<ResetDryRunShown>({
+								kind: "Failed",
+								notice,
+							}),
+						);
+					}),
+				),
+			);
+		});
+	}
+
+	/** Why an Execute may not start now, if it may not. */
+	private readonly refusal: Effect.Effect<string | undefined> =
+		Effect.suspend(() => {
+			const { deps } = this;
+			return Effect.gen(function* () {
+				const missing = yield* deps.missingProviderKeys;
+				if (missing.length > 0)
+					return `The reset regenerates through dumgen and needs ${missing.join(" and ")} API keys in Textfresser's settings. Nothing changed.`;
+				if ((yield* Effect.sync(() => deps.knowledge.running())) > 0)
+					return "Knowledge generation is still running. Wait for it, or cancel it, then reset. Nothing changed.";
+				return undefined;
+			});
+		});
+
+	private execute(source: string): Effect.Effect<void> {
+		return Effect.gen({ self: this }, function* () {
+			const shown = yield* Deferred.make<ResetExecuteOutcome>();
+			yield* Ref.update(this.state, (state) => ({
+				...state,
+				executed: shown,
+			}));
+			yield* showInto<ResetExecuteOutcome>(
+				shown,
+				{
+					died: (reasons) => ({
+						kind: "Stopped",
+						notice: `⚠ Dictionary reset stopped: ${reasons}`,
+					}),
+					unloaded: RESET_UNLOADED.execute,
+				},
+				this.claimAndExecute(source),
+			);
+		});
+	}
+
+	/** Executes unless one runs already; it runs alone until it ends. */
+	private claimAndExecute(
+		source: string,
+	): Effect.Effect<ResetExecuteOutcome> {
+		const refuse = (refusal: string) => {
+			const notice = `⚠ ${refusal}`;
+			return show(notice, 0).pipe(
+				Effect.as<ResetExecuteOutcome>({ kind: "Refused", notice }),
+			);
+		};
+		return Effect.gen({ self: this }, function* () {
+			const cancel = yield* Deferred.make<void>();
+			const claimed = yield* Ref.modify(this.state, (state) =>
+				Option.isSome(state.running)
+					? [false, state]
+					: [true, { ...state, running: Option.some(cancel) }],
+			);
+			if (!claimed)
+				return yield* refuse("A dictionary reset is already running.");
+			const execute = Effect.gen({ self: this }, function* () {
+				const refusal = yield* this.refusal;
+				if (refusal) return yield* refuse(refusal);
+				return yield* withNotice(
+					"Dictionary reset: checking the provider keys…",
+					(notice) =>
+						Effect.gen({ self: this }, function* () {
+							// Before the backup moves anything: a key the
+							// provider rejects would fail every attestation
+							// after Worter/ was moved (#146).
+							const failures =
+								yield* this.deps.checkProviderKeys.pipe(
+									catchWhole((cause) =>
+										Effect.succeed(causeMessages(cause)),
+									),
+								);
+							if (Predicate.isString(failures))
+								return yield* refuse(
+									`Dictionary reset did not start: the provider keys could not be checked (${failures}). Nothing changed.`,
+								);
+							if (failures.length > 0)
+								return yield* refuse(
+									`Dictionary reset did not start: ${keyFailures(failures)}. Fix the key in Textfresser's settings and run it again. Nothing changed.`,
+								);
+							if (yield* Deferred.isDone(cancel))
+								return yield* refuse(
+									"Dictionary reset cancelled before it started. Nothing changed.",
+								);
+							yield* Effect.sync(() =>
+								notice.setMessage(
+									"Dictionary reset: starting…",
+								),
+							);
+							return yield* this.run(source, cancel, notice);
+						}),
+				);
+			});
+			return yield* execute.pipe(
+				Effect.ensuring(
+					Ref.update(this.state, (state) =>
+						Option.contains(state.running, cancel)
+							? { ...state, running: Option.none() }
+							: state,
 					),
 				),
 			);
-			notice.hide();
-			const keyWarning =
-				failures.length === 0
-					? null
-					: `⚠ Execute would stop before changing anything: ${keyFailures(failures)}. Fix the key in Textfresser's settings first.`;
-			const modal = new ReportModal(this.deps.app, this.modals, {
-				execute: () => this.confirmExecute(source, choice),
-				keyWarning,
-				report: result.report,
-			});
-			modal.open();
-			return {
-				actions: modal.actions(),
-				keyWarning,
-				kind: "Report",
-				source,
-			};
-		} catch (error) {
-			notice.hide();
-			if (interrupted) return { kind: "Failed", notice: UNLOADED };
-			const message = `⚠ Dictionary reset dry run failed: ${conciseFailure(getErrorMessage(error))}`;
-			new Notice(message);
-			return { kind: "Failed", notice: message };
-		}
-	}
-
-	private refusal(): string | undefined {
-		if (this.running) return "A dictionary reset is already running.";
-		const missing = this.deps.missingProviderKeys();
-		if (missing.length > 0)
-			return `The reset regenerates through dumgen and needs ${missing.join(" and ")} API keys in Textfresser's settings. Nothing changed.`;
-		if (this.deps.knowledge.running() > 0)
-			return "Knowledge generation is still running. Wait for it, or cancel it, then reset. Nothing changed.";
-		return undefined;
-	}
-
-	private async execute(source: string): Promise<ResetExecuteOutcome> {
-		const refuse = (refusal: string): ResetExecuteOutcome => {
-			const message = `⚠ ${refusal}`;
-			new Notice(message, 0);
-			return { kind: "Refused", notice: message };
-		};
-		const refusal = this.refusal();
-		if (refusal) return refuse(refusal);
-		const cancel = Deferred.makeUnsafe<void>();
-		this.running = cancel;
-		const notice = new Notice(
-			"Dictionary reset: checking the provider keys…",
-			0,
-		);
-		try {
-			// Before the backup moves anything: a key the provider rejects
-			// would fail every attestation after Worter/ was moved (#146).
-			const failures = await this.deps.runtime.runPromise(
-				this.deps.checkProviderKeys,
-			);
-			if (failures.length > 0) {
-				notice.hide();
-				if (this.running === cancel) this.running = null;
-				return refuse(
-					`Dictionary reset did not start: ${keyFailures(failures)}. Fix the key in Textfresser's settings and run it again. Nothing changed.`,
-				);
-			}
-			if (Deferred.isDoneUnsafe(cancel)) {
-				notice.hide();
-				if (this.running === cancel) this.running = null;
-				return refuse(
-					"Dictionary reset cancelled before it started. Nothing changed.",
-				);
-			}
-		} catch (error) {
-			notice.hide();
-			if (this.running === cancel) this.running = null;
-			return refuse(
-				`Dictionary reset did not start: the provider keys could not be checked (${getErrorMessage(error)}). Nothing changed.`,
-			);
-		}
-		notice.setMessage("Dictionary reset: starting…");
-		return this.run(source, cancel, notice);
+		});
 	}
 
 	/** Execute once the keys passed: back up, regenerate, report. */
-	private async run(
+	private run(
 		source: string,
 		cancel: Deferred.Deferred<void>,
 		notice: Notice,
-	): Promise<ResetExecuteOutcome> {
+	): Effect.Effect<ResetExecuteOutcome> {
 		const notices: string[] = [];
 		const { deps } = this;
 		const store = deps.store.pipe(
@@ -414,108 +603,103 @@ export class DictionaryResetCommand {
 				})),
 			),
 		);
-		const local = DateTime.toParts(
-			DateTime.setZone(DateTime.nowUnsafe(), DateTime.zoneMakeLocal()),
-		);
-		/** The reset's own failure, already logged in its fiber. */
-		let failed: { readonly error: unknown } | undefined;
-		try {
-			const exit = await this.deps.runtime.runPromiseExit(
-				executeReset({
-					cancel,
-					dictionary,
-					notices: () => notices,
-					onProgress: (progress) =>
-						notice.setMessage(
-							`Dictionary reset: ${STAGE_LABEL[progress.stage]}${progress.stage === "Regenerate" ? ` ${progress.done + 1}/${progress.total}${progress.label ? ` (${progress.label})` : ""}` : "…"}\nRun "${CANCEL_RESET_COMMAND_NAME}" to stop.`,
-						),
-					source,
-					stamp: resetStamp(local),
-					vault: vamResetVault(deps.vam),
-				}).pipe(
-					Effect.provide(layer),
-					// One Execute is one dumgen action, on one request budget.
-					deps.dumgen,
-					Effect.catchTag("DumgenUnavailable", (error) =>
-						Effect.fail(
-							new ResetFailed({
-								cause: error,
-								message: error.message,
-							}),
-						),
+		return Effect.gen(function* () {
+			const local = DateTime.toParts(
+				DateTime.setZone(yield* DateTime.now, DateTime.zoneMakeLocal()),
+			);
+			return yield* executeReset({
+				cancel,
+				dictionary,
+				notices: () => notices,
+				onProgress: (progress) =>
+					notice.setMessage(
+						`Dictionary reset: ${STAGE_LABEL[progress.stage]}${progress.stage === "Regenerate" ? ` ${progress.done + 1}/${progress.total}${progress.label ? ` (${progress.label})` : ""}` : "…"}\nRun "${CANCEL_RESET_COMMAND_NAME}" to stop.`,
 					),
-					// The report holds one line per failure (#147); the
-					// provider's own words go to the log.
-					Effect.tap((result) =>
-						Effect.forEach(
-							result.execution.regenerations,
-							(regeneration) =>
-								regeneration?._tag === "Unresolved" &&
-								conciseFailure(regeneration.reason) !==
-									regeneration.reason
-									? Effect.logWarning(
-											"[DictionaryReset] Unresolved:",
-											regeneration.reason,
-										)
-									: Effect.void,
-							{ discard: true },
-						),
-					),
-					Effect.tapError((failure) =>
-						failure instanceof ResetFailed &&
-						Predicate.isString(failure.cause)
-							? Effect.logError(
-									"[DictionaryReset] Report:",
-									failure.cause,
+				source,
+				stamp: resetStamp(local),
+				vault: vamResetVault(deps.vam),
+			});
+		}).pipe(
+			Effect.provide(layer),
+			// One Execute is one dumgen action, on one request budget.
+			deps.dumgen,
+			Effect.catchTag("DumgenUnavailable", (error) =>
+				Effect.fail(
+					new ResetFailed({
+						cause: error,
+						message: error.message,
+					}),
+				),
+			),
+			// The report holds one line per failure (#147); the provider's
+			// own words go to the log.
+			Effect.tap((result) =>
+				Effect.forEach(
+					result.execution.regenerations,
+					(regeneration) =>
+						regeneration?._tag === "Unresolved" &&
+						conciseFailure(regeneration.reason) !==
+							regeneration.reason
+							? Effect.logWarning(
+									"[DictionaryReset] Unresolved:",
+									regeneration.reason,
 								)
 							: Effect.void,
-					),
-					Effect.tapCause((cause) =>
-						Cause.hasInterruptsOnly(cause)
-							? Effect.void
-							: Effect.logError(
-									"[DictionaryReset] Failed:",
-									cause,
-								),
-					),
+					{ discard: true },
 				),
-			);
-			if (Exit.isFailure(exit) && Cause.hasInterruptsOnly(exit.cause)) {
-				notice.hide();
-				return { kind: "Stopped", notice: UNLOADED };
-			}
-			if (Exit.isFailure(exit)) {
-				// Logged above, with its whole cause.
-				failed = { error: Cause.squash(exit.cause) };
-				throw failed.error;
-			}
-			const result = exit.value;
-			notice.hide();
-			new Notice(
-				`Dictionary reset ${result.execution.cancelled ? "cancelled" : "done"}; see ${result.reportPath}`,
-			);
-			await deps.app.workspace.openLinkText(result.reportPath, "", true);
-			return {
-				cancelled: result.execution.cancelled,
-				kind: "Done",
-				reportPath: result.reportPath,
-			};
-		} catch (error) {
-			notice.hide();
-			// What failed after the reset ran, such as opening its report:
-			// this Promise is outside any Effect.
-			if (!failed || error !== failed.error)
-				logAtEdge(
-					"Error",
-					"[DictionaryReset] Failed:",
-					describeError(error),
+			),
+			Effect.tapError((failure) =>
+				failure instanceof ResetFailed &&
+				Predicate.isString(failure.cause)
+					? Effect.logError(
+							"[DictionaryReset] Report:",
+							failure.cause,
+						)
+					: Effect.void,
+			),
+			// What failed after the reset ran, such as opening its report,
+			// is logged here too: every reason of the cause, kept whole.
+			Effect.flatMap((result) =>
+				Effect.gen(function* () {
+					yield* Effect.sync(() => notice.hide());
+					yield* show(
+						`Dictionary reset ${result.execution.cancelled ? "cancelled" : "done"}; see ${result.reportPath}`,
+					);
+					yield* Effect.tryPromise({
+						catch: (cause) =>
+							new ResetFailed({
+								cause,
+								message: `The report ${result.reportPath} could not be opened: ${getErrorMessage(cause)}`,
+							}),
+						try: () =>
+							deps.app.workspace.openLinkText(
+								result.reportPath,
+								"",
+								true,
+							),
+					});
+					return {
+						cancelled: result.execution.cancelled,
+						kind: "Done",
+						reportPath: result.reportPath,
+					} satisfies ResetExecuteOutcome;
+				}),
+			),
+			Effect.tapCause((cause) =>
+				Cause.hasInterruptsOnly(cause)
+					? Effect.void
+					: Effect.logError("[DictionaryReset] Failed:", cause),
+			),
+			catchWhole((cause) => {
+				const message = `⚠ Dictionary reset stopped: ${conciseFailure(causeMessages(cause))}`;
+				return show(message, 0).pipe(
+					Effect.as<ResetExecuteOutcome>({
+						kind: "Stopped",
+						notice: message,
+					}),
 				);
-			const message = `⚠ Dictionary reset stopped: ${conciseFailure(getErrorMessage(error))}`;
-			new Notice(message, 0);
-			return { kind: "Stopped", notice: message };
-		} finally {
-			if (this.running === cancel) this.running = null;
-		}
+			}),
+		);
 	}
 }
 
