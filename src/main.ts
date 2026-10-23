@@ -12,6 +12,7 @@ import {
 	type VamSetupError,
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
+import { describeError } from "@textfresser/vault-action-manager/diagnostics";
 import { Effect, Exit } from "effect";
 import { Notice, Plugin, requestUrl } from "obsidian";
 import {
@@ -196,10 +197,17 @@ export default class TextEaterPlugin extends Plugin {
 		this.overlayManager = null;
 		// Interrupts what runs at an edge, stops the lifecycle (its services
 		// newest first, then the Librarian), then shuts VAM down.
-		void (runtime?.dispose() ?? Promise.resolve()).finally(() => {
-			this.dumgen.dispose();
-			clearState();
-		});
+		void (runtime?.dispose() ?? Promise.resolve())
+			.catch((error: unknown) =>
+				logger.error(
+					"[TextEaterPlugin] Unloading did not finish cleanly:",
+					describeError(error),
+				),
+			)
+			.finally(() => {
+				this.dumgen.dispose();
+				clearState();
+			});
 	}
 
 	/**
@@ -389,10 +397,15 @@ export default class TextEaterPlugin extends Plugin {
 				"stop observing Scrolls",
 				yield* observeScrollModifications(vam, unlinkObserver),
 			);
-			userEvents.start();
-			yield* lifecycle.own(
-				"stop the user event interceptor",
-				Effect.sync(() => userEvents.stop()),
+			// Started and owned at once, so an unload cannot fall between.
+			yield* Effect.uninterruptible(
+				Effect.suspend(() => {
+					userEvents.start();
+					return lifecycle.own(
+						"stop the user event interceptor",
+						Effect.sync(() => userEvents.stop()),
+					);
+				}),
 			);
 
 			this.services = {
@@ -425,24 +438,26 @@ export default class TextEaterPlugin extends Plugin {
 				loadStore: () => store.get(),
 				makeLibrarian: (onStopped) => new Librarian(vam, { onStopped }),
 				onLaunched: () =>
-					Effect.suspend(() => {
-						const overlay = new OverlayManager({
-							app: this.app,
-							commandExecutor: (kind) =>
-								this.executeCommand(kind),
-							getLibrarian: () => lifecycle.librarian(),
-							plugin: this,
-							readSync: runtime.readSync,
-							userEventInterceptor: userEvents,
-							vam,
-						});
-						this.overlayManager = overlay;
-						overlay.init();
-						return lifecycle.own(
-							"destroy the overlay",
-							Effect.sync(() => overlay.destroy()),
-						);
-					}),
+					Effect.uninterruptible(
+						Effect.suspend(() => {
+							const overlay = new OverlayManager({
+								app: this.app,
+								commandExecutor: (kind) =>
+									this.executeCommand(kind),
+								getLibrarian: () => lifecycle.librarian(),
+								plugin: this,
+								readSync: runtime.readSync,
+								userEventInterceptor: userEvents,
+								vam,
+							});
+							this.overlayManager = overlay;
+							overlay.init();
+							return lifecycle.own(
+								"destroy the overlay",
+								Effect.sync(() => overlay.destroy()),
+							);
+						}),
+					),
 				resetRunning: () => dictionaryReset.isRunning(),
 				sweep: () => unlinkObserver.sweep(),
 			};

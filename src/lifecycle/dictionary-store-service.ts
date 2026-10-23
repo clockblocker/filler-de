@@ -34,7 +34,16 @@ export function createDictionaryStoreService<Store>(deps: {
 			return Promise.reject(new Error("the plugin has unloaded"));
 		if (building) return building;
 		state = ServiceState.starting;
-		const attempt = deps.runtime.runPromise(deps.build());
+		let interrupted = false;
+		const attempt = deps.runtime.runPromise(
+			deps.build().pipe(
+				Effect.onInterrupt(() =>
+					Effect.sync(() => {
+						interrupted = true;
+					}),
+				),
+			),
+		);
 		building = attempt;
 		attempt.then(
 			() => {
@@ -47,7 +56,8 @@ export function createDictionaryStoreService<Store>(deps: {
 					if (state.kind === "Starting")
 						state = ServiceState.failed(error);
 				}
-				deps.onBuildFailed(error);
+				// Unloading interrupted it; that is no failure to tell.
+				if (!interrupted) deps.onBuildFailed(error);
 			},
 		);
 		return attempt;

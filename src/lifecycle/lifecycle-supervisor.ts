@@ -30,8 +30,10 @@ import {
 	Effect,
 	Exit,
 	type Fiber,
+	Option,
 	Schema,
 	Scope,
+	type Tracer,
 } from "effect";
 import type { LibrarianStop } from "../commanders/librarian/librarian";
 import { decrementPending, incrementPending } from "../utils/idle-tracker";
@@ -157,6 +159,8 @@ type Command = {
 	readonly done: Deferred.Deferred<unknown, unknown>;
 	/** The submitter's services, tracer, loggers and span. */
 	readonly context: Context.Context<never>;
+	/** The spans of the requests that joined it while it waited. */
+	readonly links: Tracer.SpanLink[];
 };
 
 type InFlight = {
@@ -230,7 +234,9 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 		const entry: InFlight = { command, fiber: null, settled: false };
 		inFlight = entry;
 		return command.body.pipe(
-			Effect.withSpan(`Lifecycle.${command.kind}`),
+			Effect.withSpan(`Lifecycle.${command.kind}`, {
+				links: command.links,
+			}),
 			Effect.provideContext(command.context),
 			Effect.onExit((exit) =>
 				Effect.suspend(() => {
@@ -261,6 +267,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 				context: yield* Effect.context<never>(),
 				done: done as Deferred.Deferred<unknown, unknown>,
 				kind,
+				links: [],
 			});
 			incrementPending();
 			yield* pump;
@@ -474,11 +481,22 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 		reconfigure: Effect.suspend(() => {
 			const last = mailbox.at(-1);
 			if (last?.kind === "Reconfigure")
-				return Deferred.await(
-					last.done as Deferred.Deferred<
-						boolean,
-						LifecycleStoppedError
-					>,
+				// It runs once for both: its span links to this request's.
+				return Effect.currentSpan.pipe(
+					Effect.option,
+					Effect.flatMap((span) => {
+						if (Option.isSome(span))
+							last.links.push({
+								attributes: {},
+								span: span.value,
+							});
+						return Deferred.await(
+							last.done as Deferred.Deferred<
+								boolean,
+								LifecycleStoppedError
+							>,
+						);
+					}),
 				);
 			return submit(
 				"Reconfigure",
@@ -545,8 +563,14 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 					Exit.fail(new LifecycleStoppedError()),
 				);
 			}
-			detach();
 			return Effect.gen(function* () {
+				// Unwiring that throws still leaves the rest to release.
+				yield* release([
+					{
+						release: Effect.sync(detach),
+						what: "unwire the Librarian",
+					},
+				]);
 				yield* release(owned);
 				// Waits for the command in flight to end, and interrupts any
 				// command fiber still starting.

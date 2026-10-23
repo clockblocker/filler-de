@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { Effect } from "effect";
+import { Effect, Fiber } from "effect";
 import { createDictionaryStoreService } from "../../../src/lifecycle/dictionary-store-service";
 import { defaultRunner } from "../../support/effect-runner";
 
@@ -30,6 +30,26 @@ function makeHarness(failBuilds = 0) {
 }
 
 describe("dictionary store service", () => {
+	it("tells no failure for a build the unloading runtime interrupted", async () => {
+		const failures: unknown[] = [];
+		const service = createDictionaryStoreService({
+			build: () => Effect.never,
+			close: () => Effect.void,
+			onBuildFailed: (error) => failures.push(error),
+			// Interrupts the build at once, as disposing the runtime does.
+			runtime: {
+				...defaultRunner,
+				runPromise: (effect) => {
+					const fiber = Effect.runFork(effect);
+					fiber.interruptUnsafe();
+					return Effect.runPromise(Fiber.join(fiber));
+				},
+			},
+		});
+		await expect(service.get()).rejects.toBeDefined();
+		expect(failures).toEqual([]);
+	});
+
 	it("builds once, on first use", async () => {
 		const h = makeHarness();
 		expect(h.service.state().kind).toBe("Idle");

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { makeRecentTrace } from "@textfresser/vault-action-manager/diagnostics";
-import { Effect } from "effect";
+import { Deferred, Effect } from "effect";
 import { createLifecycleNotices } from "../../../src/lifecycle/lifecycle-notices";
 import {
 	createLifecycleSupervisor,
@@ -58,6 +58,56 @@ describe("lifecycle trace", () => {
 			"Fake.init",
 			"Lifecycle.Launch",
 			"command.launch",
+		]);
+		await Effect.runPromise(supervisor.stop);
+	});
+
+	it("runs reconfigures that waited together once, linked to each request's span", async () => {
+		const trace = makeRecentTrace();
+		const supervisor = createLifecycleSupervisor<SupervisedLibrarian>({
+			notices: createLifecycleNotices(() => {}, {
+				trace,
+				writeStop: () => {},
+			}),
+		});
+		const ready = Deferred.makeUnsafe<void>();
+		const traced = <A, E>(name: string, effect: Effect.Effect<A, E>) =>
+			Effect.runPromise(
+				effect.pipe(Effect.withSpan(name), Effect.withTracer(trace.tracer)),
+			);
+		const launch = traced(
+			"obsidian.onload",
+			supervisor.launch(
+				Deferred.await(ready).pipe(
+					Effect.as({
+						attachLibrarian: () => () => {},
+						loadStore: () => Promise.resolve(),
+						makeLibrarian: () => ({
+							init: () => Effect.void,
+							unsubscribe: () => Effect.void,
+						}),
+						onLaunched: () => Effect.void,
+						resetRunning: () => false,
+						sweep: () => {},
+					}),
+				),
+			),
+		);
+		const first = traced("settings.first", supervisor.reconfigure);
+		const second = traced("settings.second", supervisor.reconfigure);
+		Deferred.doneUnsafe(ready, Effect.void);
+		await launch;
+		expect(await first).toBe(true);
+		expect(await second).toBe(true);
+
+		const { spans } = trace.snapshot();
+		const named = (name: string) =>
+			spans.filter((span) => span.name === name);
+		const [reconfigure, ...others] = named("Lifecycle.Reconfigure");
+		expect(others).toHaveLength(0);
+		expect(reconfigure?.parentId).toBe(named("settings.first")[0]?.spanId);
+		expect(reconfigure?.linkIds).toEqual([
+			named("settings.second")[0]?.spanId ?? "missing",
 		]);
 		await Effect.runPromise(supervisor.stop);
 	});
