@@ -14,7 +14,8 @@ import type {
 	DispatchOptions,
 } from "./effect/dispatch-coordinator";
 import {
-	VamDispatchFailure,
+	notRunCause,
+	type VamDispatchFailure,
 	type VamDispatchReport,
 } from "./effect/dispatch-report";
 import {
@@ -670,24 +671,11 @@ class VaultActionManagerFacade {
 					stopOnFirstFailure: options.stopOnFirstFailure,
 				}),
 			).pipe(
-				Effect.catchTags({
-					VamSetupError: (error) =>
-						Effect.fail(
-							VamDispatchFailure.notRun(
-								error,
-								actions,
-								operation,
-							),
-						),
-					VamShutdownError: (error) =>
-						Effect.fail(
-							VamDispatchFailure.notRun(
-								error,
-								actions,
-								operation,
-							),
-						),
-				}),
+				// Keeps a defect beside a setup or shutdown error, which
+				// `catchTags` would drop with every reason but the first.
+				Effect.catchCause((cause) =>
+					Effect.failCause(notRunCause(cause, actions, operation)),
+				),
 			);
 		});
 	}
@@ -1247,10 +1235,8 @@ export {
 export {
 	describeVaultActionPath,
 	type VamActionFailureKind,
-	VamActionFailureKindSchema,
 	VamActiveEditorError,
 	type VamActiveEditorFailureReason,
-	VamActiveEditorFailureReasonSchema,
 	VamContentConflictError,
 	VamDispatchError,
 	VamDispatchOverflowError,
@@ -1276,10 +1262,7 @@ export {
 } from "./effect/undo-on-failure";
 export {
 	type VamNotUndoable,
-	VamNotUndoableSchema,
 	type VamUndoBlock,
-	VamUndoBlockSchema,
 	type VamUndoProbe,
-	VamUndoProbeSchema,
 	VamUndoReport,
 } from "./effect/undo-report";

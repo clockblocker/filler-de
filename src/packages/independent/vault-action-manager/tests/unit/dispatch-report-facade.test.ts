@@ -8,14 +8,17 @@ import {
 	VamContentConflictError,
 	VamDispatchError,
 	VamDispatchFailure,
+	VamDispatchReport,
 	VamPlanningError,
 	VamProtectedPathError,
+	VamSetupError,
 	VamShutdownError,
 	type VaultAction,
 	VaultActionKind,
 	vaultContentHash,
 } from "@textfresser/vault-action-manager";
-import { Effect } from "effect";
+import { Cause, Effect } from "effect";
+import { notRunCause } from "../../src/effect/dispatch-report";
 import { makeVaultHarness } from "./helpers/vault-harness";
 
 const md = (path: string) => splitPathCodec.parse(path) as SplitPathToMdFile;
@@ -322,5 +325,112 @@ describe("VaultActionManager dispatch reports", () => {
 			upsert("Library/Later.md", "later"),
 		]);
 		await Effect.runPromise(dispose);
+	});
+});
+
+describe("notRunCause", () => {
+	const operation = { caller: "test", operationId: "test#1" };
+	const actions = [upsert("Library/Note.md", "new")];
+	const shutdown = new VamShutdownError({
+		cause: new Error("Vault Action Manager has been shut down"),
+		operation: "provide",
+	});
+	const setupError = new VamSetupError({
+		cause: new Error("no vault"),
+		operation: "build",
+	});
+	const defect = new Error("finalizer exploded");
+
+	it("keeps a defect beside a shutdown error, after the notRun failure that replaces it", async () => {
+		const cause = notRunCause(
+			Cause.fromReasons([
+				Cause.makeFailReason(shutdown),
+				Cause.makeDieReason(defect),
+			]),
+			actions,
+			operation,
+		);
+
+		const [first, second, ...rest] = cause.reasons;
+		expect(rest).toEqual([]);
+		if (!(first && Cause.isFailReason(first)))
+			throw new Error("expected the notRun failure first");
+		expect(first.error).toBeInstanceOf(VamDispatchFailure);
+		expect(first.error.reason).toBe(shutdown);
+		expect(first.error.report.skipped).toEqual(actions);
+		expect(first.error.report.operationId).toBe("test#1");
+		expect(second && Cause.isDieReason(second) && second.defect).toBe(
+			defect,
+		);
+		const caught = await Effect.runPromise(
+			Effect.failCause(cause).pipe(Effect.flip),
+		);
+		expect(caught).toBe(first.error);
+	});
+
+	it("turns every setup or shutdown error into a notRun failure where it stood, and leaves out interruptions beside them", () => {
+		const cause = notRunCause(
+			Cause.fromReasons<VamSetupError | VamShutdownError>([
+				Cause.makeDieReason(defect),
+				Cause.makeFailReason(setupError),
+				Cause.makeInterruptReason(7),
+				Cause.makeFailReason(shutdown),
+			]),
+			actions,
+			operation,
+		);
+
+		expect(
+			cause.reasons.map((reason) =>
+				Cause.isFailReason(reason)
+					? reason.error.reason
+					: Cause.isDieReason(reason)
+						? reason.defect
+						: reason._tag,
+			),
+		).toEqual([defect, setupError, shutdown]);
+	});
+
+	it("passes a cause without a setup or shutdown error on whole, interruptions included", () => {
+		const failure = VamDispatchFailure.notRun(shutdown, actions, operation);
+		const cause = notRunCause(
+			Cause.fromReasons([
+				Cause.makeFailReason(failure),
+				Cause.makeInterruptReason(7),
+				Cause.makeDieReason(defect),
+			]),
+			actions,
+			operation,
+		);
+
+		const [first, second, third] = cause.reasons;
+		expect(cause.reasons).toHaveLength(3);
+		expect(first && Cause.isFailReason(first) && first.error).toBe(failure);
+		expect(second && Cause.isInterruptReason(second)).toBe(true);
+		expect(third && Cause.isDieReason(third) && third.defect).toBe(defect);
+	});
+});
+
+describe("VamDispatchReport", () => {
+	it("holds its own entries and its fields in declared order, whatever the caller's", () => {
+		const entries = [
+			{
+				action: upsert("Library/Note.md", "new"),
+				status: "Skipped" as const,
+			},
+		];
+		const operation = { caller: "test", operationId: "test#1" };
+		const report = new VamDispatchReport({ ...{ entries }, ...operation });
+		entries.push({
+			action: upsert("Library/Later.md", "x"),
+			status: "Skipped",
+		});
+
+		expect(Object.keys(report)).toEqual([
+			"caller",
+			"entries",
+			"operationId",
+		]);
+		expect(report.entries).toHaveLength(1);
 	});
 });

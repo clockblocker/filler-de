@@ -1,18 +1,13 @@
-import { Schema } from "effect";
-import { VamDispatchFailureReasonSchema, VaultActionSchema } from "./errors";
+import { Data } from "effect";
+import type { VaultAction } from "../types/vault-action";
+import type { VamDispatchFailureReason } from "./errors";
 
 /**
  * What probing the vault said about an action whose dispatch entry was
  * `Uncertain`: it `Landed`, it did not (`NotLanded`), or the vault holds
  * something neither explains (`Unknown`).
  */
-export const VamUndoProbeSchema = Schema.Literals([
-	"Landed",
-	"NotLanded",
-	"Unknown",
-]);
-
-export type VamUndoProbe = typeof VamUndoProbeSchema.Type;
+export type VamUndoProbe = "Landed" | "NotLanded" | "Unknown";
 
 /**
  * Why a change could not be undone:
@@ -30,17 +25,14 @@ export type VamUndoProbe = typeof VamUndoProbeSchema.Type;
  *   did not land.
  * - `NotRun`: VAM did not run the inverse, being shut down or refusing it.
  */
-export const VamUndoBlockSchema = Schema.Literals([
-	"Changed",
-	"Missing",
-	"Taken",
-	"NoPreImage",
-	"Unknown",
-	"Failed",
-	"NotRun",
-]);
-
-export type VamUndoBlock = typeof VamUndoBlockSchema.Type;
+export type VamUndoBlock =
+	| "Changed"
+	| "Missing"
+	| "Taken"
+	| "NoPreImage"
+	| "Unknown"
+	| "Failed"
+	| "NotRun";
 
 /**
  * A change VAM leaves in place by design: a file or folder sent to the
@@ -48,13 +40,33 @@ export type VamUndoBlock = typeof VamUndoBlockSchema.Type;
  * it created (`Created`), which no content guard can keep from trashing
  * what was put there since.
  */
-export const VamNotUndoableSchema = Schema.Literals([
-	"Created",
-	"Trashed",
-	"TrashedDuplicate",
-]);
+export type VamNotUndoable = "Created" | "Trashed" | "TrashedDuplicate";
 
-export type VamNotUndoable = typeof VamNotUndoableSchema.Type;
+type VamUndoReportFields = {
+	/** Changes that stay, why, and the inverse tried, if any. */
+	readonly couldNotUndo: readonly {
+		readonly action: VaultAction;
+		readonly block: VamUndoBlock;
+		/** The inverse's failure, when one ran or VAM refused it. */
+		readonly error?: VamDispatchFailureReason | undefined;
+		readonly inverse?: VaultAction | undefined;
+	}[];
+	/** Changes no inverse exists for. */
+	readonly notUndoable: readonly {
+		readonly action: VaultAction;
+		readonly what: VamNotUndoable;
+	}[];
+	/** `Uncertain` actions and what the vault said about them. */
+	readonly probed: readonly {
+		readonly action: VaultAction;
+		readonly found: VamUndoProbe;
+	}[];
+	/** Changes taken back, with the inverse that did it. */
+	readonly undone: readonly {
+		readonly action: VaultAction;
+		readonly inverse: VaultAction;
+	}[];
+};
 
 /**
  * What a guarded undo did after a Dispatch Batch stopped. Every entry names
@@ -62,41 +74,17 @@ export type VamNotUndoable = typeof VamNotUndoableSchema.Type;
  * reverse run order, each guarded so that it changes only what the batch
  * left untouched.
  */
-export class VamUndoReport extends Schema.Class<VamUndoReport>("VamUndoReport")(
-	{
-		/** Changes that stay, why, and the inverse tried, if any. */
-		couldNotUndo: Schema.Array(
-			Schema.Struct({
-				action: VaultActionSchema,
-				block: VamUndoBlockSchema,
-				/** The inverse's failure, when one ran or VAM refused it. */
-				error: Schema.optional(VamDispatchFailureReasonSchema),
-				inverse: Schema.optional(VaultActionSchema),
-			}),
-		),
-		/** Changes no inverse exists for. */
-		notUndoable: Schema.Array(
-			Schema.Struct({
-				action: VaultActionSchema,
-				what: VamNotUndoableSchema,
-			}),
-		),
-		/** `Uncertain` actions and what the vault said about them. */
-		probed: Schema.Array(
-			Schema.Struct({
-				action: VaultActionSchema,
-				found: VamUndoProbeSchema,
-			}),
-		),
-		/** Changes taken back, with the inverse that did it. */
-		undone: Schema.Array(
-			Schema.Struct({
-				action: VaultActionSchema,
-				inverse: VaultActionSchema,
-			}),
-		),
-	},
-) {
+export class VamUndoReport extends Data.Class<VamUndoReportFields> {
+	/** Holds its own copies of the lists, its fields in the order above. */
+	constructor(fields: VamUndoReportFields) {
+		super({
+			couldNotUndo: [...fields.couldNotUndo],
+			notUndoable: [...fields.notUndoable],
+			probed: [...fields.probed],
+			undone: [...fields.undone],
+		});
+	}
+
 	/** Nothing to undo: the batch changed nothing. */
 	static readonly empty = new VamUndoReport({
 		couldNotUndo: [],

@@ -1,4 +1,4 @@
-import { Predicate, Schema } from "effect";
+import { Data, Predicate } from "effect";
 import type { ExpectedContent, Transform } from "../types/vault-action";
 import { vaultContentHash } from "./content-hash";
 
@@ -12,21 +12,15 @@ export function contentMatches(
 		: vaultContentHash(content) === expected.hash;
 }
 
-const ExpectedContentSchema = Schema.Union([
-	Schema.String,
-	Schema.Struct({ hash: Schema.String }),
-]);
-
 /**
  * Thrown by a guarded transform whose file holds other content than its
  * action expected, from inside the `Vault.process` callback. The writers
  * keep it as the `cause` of the `VamContentConflictError` they fail with,
  * having written nothing.
  */
-export class ContentPreconditionFailed extends Schema.TaggedError<ContentPreconditionFailed>()(
+export class ContentPreconditionFailed extends Data.TaggedError(
 	"ContentPreconditionFailed",
-	{ expected: ExpectedContentSchema },
-) {
+)<{ readonly expected: ExpectedContent }> {
 	override get message(): string {
 		return `The file no longer holds the content the action expected (${describe(this.expected)}); nothing was written`;
 	}
