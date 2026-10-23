@@ -74,6 +74,9 @@ import { recentTrace } from "./utils/recent-trace";
 
 type Runtime = PluginRuntime<PluginServices, VamSetupError>;
 
+/** The plugin runtime's services alone, without the fiber's span. */
+const pluginServices = Context.pick(VaultActionManager, Dumgen, Lifecycle);
+
 /** The services the launch built, once it built them. */
 type LaunchedServices = {
 	readonly vam: VaultActionManager;
@@ -135,9 +138,15 @@ export default class TextEaterPlugin extends Plugin {
 					const lifecycle = yield* Lifecycle;
 					this.lifecycle = lifecycle;
 					this.dumgen = yield* Dumgen;
-					const context = yield* Effect.context<PluginServices>();
+					// The launch runs with this fiber's context; this only tells
+					// the types, and keeps the launch's own span the parent.
+					const services = pluginServices(
+						yield* Effect.context<PluginServices>(),
+					);
 					yield* lifecycle.launch(
-						this.boot(runtime).pipe(Effect.provideContext(context)),
+						this.boot(runtime).pipe(
+							Effect.provideContext(services),
+						),
 					);
 				}),
 			);
@@ -224,7 +233,7 @@ export default class TextEaterPlugin extends Plugin {
 			};
 			const built = yield* Layer.build(PluginServicesLive(deps));
 			const context = Context.merge(
-				yield* Effect.context<PluginServices>(),
+				pluginServices(yield* Effect.context<PluginServices>()),
 				built,
 			);
 			const classify = Context.get(built, ClassifyServices);

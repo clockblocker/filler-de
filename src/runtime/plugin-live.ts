@@ -37,22 +37,23 @@ export type PluginLiveDeps = {
 	readonly requestUrl: RequestUrl;
 	/** The provider keys in the settings, read at each dumgen action's start. */
 	readonly providerKeys: () => DumgenProviderKeys;
-	/** How long VAM's shutdown may wait before it is logged; 5 s by default. */
+	/** How long unloading may wait before it is logged; 5 s by default. */
 	readonly slowShutdown?: Duration.Input;
 };
 
 /**
- * Logs a VAM shutdown that waits long. The shutdown never cuts the vault
- * batch in flight: a half-done batch can leave notes half renamed, so VAM
- * waits for it to finish, however long that takes. `onunload` does not
- * wait for the disposal, so Obsidian does not either; this only makes a
- * batch that hangs visible in the log and the recent trace.
+ * Logs an unload that waits long. Unloading never cuts the vault work in
+ * flight: a half-done batch can leave notes half renamed, so the
+ * Librarian's unsubscribe waits for its queue, and VAM's shutdown for the
+ * batch it runs, however long that takes. `onunload` does not wait for
+ * the disposal, so Obsidian does not either; this only makes a write that
+ * hangs visible in the log and the recent trace.
  */
 class ShutdownWatch extends Context.Service<
 	ShutdownWatch,
 	{ readonly arm: Effect.Effect<void> }
 >()("textfresser/runtime/ShutdownWatch") {
-	/** Below VAM: its finalizer runs once VAM has shut down. */
+	/** Below VAM: its finalizer runs once VAM has shut down, and disarms. */
 	static readonly layer = (after: Duration.Input) =>
 		Layer.effect(
 			ShutdownWatch,
@@ -70,7 +71,7 @@ class ShutdownWatch extends Context.Service<
 				);
 				return {
 					arm: Effect.logWarning(
-						"[TextEaterPlugin] Unloading waits for the vault batch in flight to finish; it is never cut short",
+						"[TextEaterPlugin] Unloading waits for the vault work in flight to finish; it is never cut short",
 					).pipe(
 						Effect.delay(after),
 						Effect.forkDetach,
@@ -82,7 +83,7 @@ class ShutdownWatch extends Context.Service<
 			}),
 		);
 
-	/** Above VAM: its finalizer runs just before VAM's shutdown. */
+	/** Above the lifecycle: its finalizer arms as the unload begins. */
 	static readonly armed = Layer.effectDiscard(
 		Effect.gen(function* () {
 			const { arm } = yield* ShutdownWatch;
@@ -106,8 +107,8 @@ export function PluginLive(
 	app: App,
 	deps: PluginLiveDeps,
 ): Layer.Layer<PluginServices, VamSetupError> {
-	return Lifecycle.layer({ notices: deps.notices }).pipe(
-		Layer.provideMerge(ShutdownWatch.armed),
+	return ShutdownWatch.armed.pipe(
+		Layer.provideMerge(Lifecycle.layer({ notices: deps.notices })),
 		Layer.provideMerge(
 			Layer.mergeAll(
 				VaultActionManager.layer(app, {

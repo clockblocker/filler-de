@@ -391,6 +391,45 @@ describe("PluginLive", () => {
 		expect(Exit.hasInterrupts(await inFlight)).toBe(true);
 	}, 30_000);
 
+	it("waits on unload for a Librarian heal whose rename hangs, and logs that it waits", async () => {
+		const vault = makeObsidianVault({
+			[`${RAMEN}/Anchor-Ramen-Soup.md`]: "",
+		});
+		const plugin = makePlugin(vault, { slowShutdown: 20 });
+		await plugin.launch((manager) =>
+			Effect.succeed(launched(librarianOver(manager))),
+		);
+		const fileManager = vault.app.fileManager as unknown as {
+			renameFile: (file: unknown, to: string) => Promise<void>;
+		};
+		const renameNow = fileManager.renameFile;
+		const gate = Deferred.makeUnsafe<void>();
+		const reached = Deferred.makeUnsafe<void>();
+		fileManager.renameFile = (file, to) =>
+			Effect.runPromise(
+				Deferred.succeed(reached, undefined).pipe(
+					Effect.andThen(Deferred.await(gate)),
+				),
+			).then(() => renameNow(file, to));
+		await vault.createByHand(`${RAMEN}/Offline.md`);
+		await Effect.runPromise(Deferred.await(reached));
+
+		let disposed = false;
+		const disposal = plugin.runtime.dispose().then(() => {
+			disposed = true;
+		});
+		await until(() =>
+			plugin.trace
+				.snapshot()
+				.logs.some((log) => log.text.includes("never cut short")),
+		);
+		expect(disposed).toBe(false);
+
+		Deferred.doneUnsafe(gate, Effect.void);
+		await disposal;
+		expect(vault.files()).toContain(`${RAMEN}/Offline-Ramen-Soup.md`);
+	}, 30_000);
+
 	it("waits in whenIdle for a queued Librarian item and a Knowledge run", async () => {
 		const plugin = makePlugin(
 			makeObsidianVault({ [`${RAMEN}/Anchor-Ramen-Soup.md`]: "" }),

@@ -130,20 +130,23 @@ export const makeDictionaryStoreService = Effect.fnUntraced(function* <
 		),
 	);
 
+	// Under the lock: a first use cannot start a build the close misses.
 	yield* Effect.addFinalizer(() =>
-		Effect.gen(function* () {
-			yield* Ref.set(closed, true);
-			yield* SubscriptionRef.set(state, ServiceState.stopped);
-			const last = yield* Ref.getAndSet(current, Option.none());
-			if (Option.isNone(last)) return;
-			const { done, fiber } = last.value;
-			// A fiber interrupted before it ran never tells `done`.
-			const exit = yield* Fiber.interrupt(fiber).pipe(
-				Effect.andThen(Fiber.await(fiber)),
-			);
-			yield* Deferred.done(done, exit);
-			if (Exit.isSuccess(exit)) yield* deps.close(exit.value);
-		}),
+		lock.withPermit(
+			Effect.gen(function* () {
+				yield* Ref.set(closed, true);
+				yield* SubscriptionRef.set(state, ServiceState.stopped);
+				const last = yield* Ref.getAndSet(current, Option.none());
+				if (Option.isNone(last)) return;
+				const { done, fiber } = last.value;
+				// A fiber interrupted before it ran never tells `done`.
+				const exit = yield* Fiber.interrupt(fiber).pipe(
+					Effect.andThen(Fiber.await(fiber)),
+				);
+				yield* Deferred.done(done, exit);
+				if (Exit.isSuccess(exit)) yield* deps.close(exit.value);
+			}),
+		),
 	);
 
 	yield* building;
