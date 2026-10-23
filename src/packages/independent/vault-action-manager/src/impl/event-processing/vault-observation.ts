@@ -999,11 +999,13 @@ export class VaultObservation<
 			// The one log that cannot go through Effect: Obsidian calls
 			// `vault.on` callbacks synchronously, and logging through
 			// Effect is what failed.
+			/* oxlint-disable effecttsgo/global-console -- VAM's vault.on bridge: Obsidian calls it synchronously, and logging through Effect is what failed. */
 			// biome-ignore lint/suspicious/noConsole: VAM's log of last resort, where Effect's loggers failed.
 			console.error(
 				"[VaultObservation] Vault callback logging failed",
 				formatCause(exit.cause),
 			);
+			/* oxlint-enable effecttsgo/global-console */
 		}
 	}
 }

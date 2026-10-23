@@ -34,15 +34,15 @@ export function makeCodexTransform(
 		codecs.rules.metadataFormat(),
 	);
 
-	return async (_content: string) => {
+	return (_content: string) => {
 		const childrenContent = generateChildrenList(
 			section,
 			sectionChain,
 			codecs,
 		);
-		const withMetadata = await metaTransform(childrenContent);
+		const withMetadata = metaTransform(childrenContent);
 		return sectionChain.length > 1
-			? await makeBacklinkTransform(
+			? makeBacklinkTransform(
 					sectionChain.slice(0, -1),
 					codecs,
 				)(withMetadata)

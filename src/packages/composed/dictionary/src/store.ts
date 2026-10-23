@@ -269,7 +269,7 @@ export type DumdictVaultStore = {
 		readonly resolutions: readonly {
 			readonly locator: PendingSemanticRelationRecord<"de">["locator"];
 		}[];
-	}) => Effect.Effect<CleanupRelationsSlice<"de">>;
+	}) => Effect.Effect<CleanupRelationsSlice<"de">, DictionaryRequestError>;
 	/** dumdict's `reevaluateShadows` slice. */
 	readonly loadReevaluateShadowsContext: (
 		request: Omit<ReevaluateShadowsRequest<"de">, "baseRevision">,
@@ -659,7 +659,8 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 	const planner = createDumdictPlanner("de");
 	const lock = yield* Semaphore.make(1);
 	sessionCounter += 1;
-	const session = `${Date.now().toString(36)}${sessionCounter.toString(36)}`;
+	const startedAt = yield* Clock.currentTimeMillis;
+	const session = `${startedAt.toString(36)}${sessionCounter.toString(36)}`;
 	/** The published index version; replaced, never changed, under the lock. */
 	let index = new NoteIndex();
 	let counter = 0;
@@ -3225,7 +3226,9 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		lemmaNote: (lemma) => Effect.sync(() => live().lemmaNote(lemma)),
 		lemmaNotes: Effect.sync(() => live().lemmaNotes()),
 		loadCleanupRelationsContext: (request) =>
-			Effect.sync(() => live().loadCleanupRelationsContext(request)),
+			Effect.suspend(() =>
+				Effect.fromResult(live().loadCleanupRelationsContext(request)),
+			),
 		loadOccurrenceSlice: (request) =>
 			Effect.sync(() => live().loadOccurrenceSlice(request)),
 		loadReadingEntryContext: (request) =>

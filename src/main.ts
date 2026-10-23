@@ -532,7 +532,7 @@ export default class TextEaterPlugin extends Plugin {
 	 * E2E test hook: records VAM's Markdown modify observations below one
 	 * vault folder until closed. Paths are vault-relative system paths.
 	 */
-	async observeMdModificationsForTesting(folderPath: string): Promise<{
+	observeMdModificationsForTesting(folderPath: string): Promise<{
 		readonly close: () => Promise<void>;
 		readonly read: () => readonly {
 			readonly mtime: number;
@@ -541,13 +541,16 @@ export default class TextEaterPlugin extends Plugin {
 		}[];
 	}> {
 		const vam = this.services?.vam;
-		if (!vam) throw new Error("Textfresser is still loading");
+		if (!vam)
+			return Promise.reject(new Error("Textfresser is still loading"));
 		const folder = splitPathCodec.parse(folderPath);
 		if (folder.kind !== SplitPathKind.Folder) {
-			throw new Error(`Expected a folder path, got '${folderPath}'`);
+			return Promise.reject(
+				new Error(`Expected a folder path, got '${folderPath}'`),
+			);
 		}
 		const observed: { mtime: number; path: string; size: number }[] = [];
-		const subscription = await this.e2e(
+		return this.e2e(
 			"observe-md-modifications",
 			vam.subscribeToMdModifications(folder, (event) =>
 				Effect.sync(() => {
@@ -560,12 +563,11 @@ export default class TextEaterPlugin extends Plugin {
 					}
 				}),
 			),
-		);
-		return {
+		).then((subscription) => ({
 			close: () =>
 				this.e2e("close-md-modification-observer", subscription.close),
 			read: () => [...observed],
-		};
+		}));
 	}
 
 	/**

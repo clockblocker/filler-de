@@ -7,14 +7,26 @@
 //   bun run gauge:effect                       Markdown tables, one row per area
 //   bun run gauge:effect --json                the same data as JSON
 //   bun run gauge:effect --check targets.json  fails when an area exceeds a target
+//   bun run gauge:effect --check targets.json --quiet  prints only what fails
 //
 // A targets file maps an area, or `total`, to metric ceilings:
 //   { "total": { "run-sites": 12 }, "vault-action-manager": { "cause-squash": 0 } }
 // An area with no files counts as zero. An unknown metric is an error.
+// `scripts/effect-gauge-targets.json` holds the migration's end state, and
+// `bun run lint` checks it.
+//
+// Run sites, `throw` and `try` count only beyond a file's allowance in
+// `effect-gauge-allowlist.ts`; `--check` also fails on an allowance a file
+// no longer uses up.
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { Glob } from "bun";
 import { type Node, parseSync, Visitor } from "oxc-parser";
+import {
+	type Allowance,
+	type AllowedMetric,
+	EDGE_ALLOWLIST,
+} from "./effect-gauge-allowlist";
 
 export const EFFECT_NATIVE_RULES = [
 	"async-function",
@@ -51,6 +63,8 @@ export const SOURCE_COUNTS = [
 	"schema-files",
 	"module-let",
 	"host-calls",
+	"suppressions",
+	"unexplained-suppressions",
 ] as const;
 
 const TABLES = [
@@ -63,12 +77,7 @@ export type Metric = (typeof TABLES)[number]["metrics"][number];
 export const METRICS: readonly Metric[] = TABLES.flatMap((t) => t.metrics);
 export type Counts = Record<Metric, number>;
 
-/**
- * Files whose `Effect.run*` / `runtime.run*` sites are edges by design and do
- * not count as run sites. Patterns are globs relative to the repo root.
- */
 export type AllowlistEntry = { readonly pattern: string; readonly reason: string };
-export const RUN_BOUNDARY_ALLOWLIST: readonly AllowlistEntry[] = [];
 
 /**
  * Where Obsidian's plugin host may be called directly: its services (#229).
@@ -97,6 +106,14 @@ const GLOBAL_SETTINGS_CALLS = new Set([
 	"clearState",
 ]);
 const RUN_METHOD = /^run(?:Promise|Sync|Fork|Callback)/;
+/** An `oxlint-disable` or `eslint-disable` directive, of any form. */
+const SUPPRESSION = /^\s*(?:oxlint|eslint)-disable\b/;
+/**
+ * A directive that names its rules and gives a reason after ` -- `. One
+ * with no rule list turns off every rule, so it never counts as explained.
+ */
+const EXPLAINED_SUPPRESSION =
+	/^\s*(?:oxlint|eslint)-disable(?:-next-line|-line)?\s+[\w@][\w@/-]*(?:\s*,\s*[\w@][\w@/-]*)*\s+--\s+\S/;
 const EFFECT_RUN_SOURCES = new Set(["effect", "effect/Effect", "effect/Runtime"]);
 
 /**
@@ -142,17 +159,15 @@ export function emptyCounts(): Counts {
 	return Object.fromEntries(METRICS.map((m) => [m, 0])) as Counts;
 }
 
-/** The source counts of one file. */
-export function countSource(
-	file: string,
-	text: string,
-	allowlist: readonly AllowlistEntry[] = RUN_BOUNDARY_ALLOWLIST,
-): Partial<Record<Metric, number>> {
-	const { program, errors } = parseSync(file, text);
+export type FileCounts = Partial<Record<Metric, number>>;
+
+/** The source counts of one file, before its allowance. */
+export function countSource(file: string, text: string): FileCounts {
+	const { comments, errors, program } = parseSync(file, text);
 	if (errors.length > 0) {
 		throw new Error(`${file}: ${errors.map((e) => e.message).join("; ")}`);
 	}
-	const counts: Partial<Record<Metric, number>> = {};
+	const counts: FileCounts = {};
 	const add = (metric: Metric) => {
 		counts[metric] = (counts[metric] ?? 0) + 1;
 	};
@@ -163,7 +178,6 @@ export function countSource(
 		node.type === "MemberExpression" && !node.computed
 			? name(node.property)
 			: name(node);
-	const runAllowed = isAllowlisted(file, allowlist);
 	const hostAllowed = isAllowlisted(file, HOST_SERVICES);
 	const importedRuns = new Set<string>();
 	let importsNeverthrow = false;
@@ -176,7 +190,7 @@ export function countSource(
 				if (GLOBAL_SETTINGS_CALLS.has(callee.name)) {
 					add("global-settings-calls");
 				}
-				if (importedRuns.has(callee.name) && !runAllowed) add("run-sites");
+				if (importedRuns.has(callee.name)) add("run-sites");
 				return;
 			}
 			if (callee.type !== "MemberExpression" || callee.computed) return;
@@ -211,12 +225,17 @@ export function countSource(
 			}
 		},
 		MemberExpression(node) {
-			if (node.computed) return;
 			const object = name(node.object);
-			const property = name(node.property);
+			// `Effect.runPromise`, and `Effect["runPromise"]` too.
+			const property = node.computed
+				? node.property.type === "Literal" &&
+					typeof node.property.value === "string"
+					? node.property.value
+					: undefined
+				: name(node.property);
 			if (property === undefined) return;
 			const isThis = node.object.type === "ThisExpression";
-			if (!runAllowed && isRunSite(lastName(node.object), property, isThis)) {
+			if (isRunSite(lastName(node.object), property, isThis)) {
 				add("run-sites");
 			}
 			if (object === "ManagedRuntime" && property === "make") {
@@ -233,8 +252,26 @@ export function countSource(
 		TryStatement() {
 			add("try");
 		},
+		// `const { runPromise } = Effect` counts once, where it is taken.
+		VariableDeclarator(node) {
+			if (node.id.type !== "ObjectPattern" || !node.init) return;
+			const receiver = lastName(node.init);
+			if (receiver !== "Effect" && !/runtime$/i.test(receiver ?? "")) return;
+			for (const p of node.id.properties) {
+				if (p.type !== "Property" || p.computed) continue;
+				const key = name(p.key);
+				if (key && isRunSite(receiver, key)) add("run-sites");
+			}
+		},
 	}).visit(program);
 
+	for (const comment of comments) {
+		if (!SUPPRESSION.test(comment.value)) continue;
+		add("suppressions");
+		if (!EXPLAINED_SUPPRESSION.test(comment.value)) {
+			add("unexplained-suppressions");
+		}
+	}
 	if (importsNeverthrow) add("neverthrow-files");
 	if (importsSchema) add("schema-files");
 	for (const statement of program.body) {
@@ -253,6 +290,62 @@ export function countSource(
 	return counts;
 }
 
+const ALLOWED_METRICS: ReadonlySet<string> = new Set<AllowedMetric>([
+	"run-sites",
+	"throw",
+	"try",
+]);
+
+export type Allowed = {
+	/** Each file's counts beyond its allowance. */
+	readonly counted: Map<string, FileCounts>;
+	/** Each allowance a file no longer uses up, or that matches no file. */
+	readonly stale: string[];
+};
+
+/**
+ * Takes each file's allowance off its counts. A file may match one
+ * allowance at most, so no site is allowed twice.
+ */
+export function applyAllowances(
+	files: ReadonlyMap<string, FileCounts>,
+	allowlist: readonly Allowance[] = EDGE_ALLOWLIST,
+): Allowed {
+	const globs = allowlist.map((entry) => new Glob(entry.pattern));
+	const used = new Set<Allowance>();
+	const counted = new Map<string, FileCounts>();
+	const stale: string[] = [];
+	for (const [file, counts] of files) {
+		const entries = allowlist.filter((_, i) => globs[i]?.match(file));
+		if (entries.length > 1) {
+			throw new Error(
+				`${file} matches more than one allowance: ${entries.map((e) => e.pattern).join(", ")}`,
+			);
+		}
+		const entry = entries[0];
+		if (!entry) {
+			counted.set(file, counts);
+			continue;
+		}
+		used.add(entry);
+		const left: FileCounts = { ...counts };
+		for (const [metric, ceiling = 0] of Object.entries(entry.allow)) {
+			const m = metric as Metric;
+			const actual = counts[m] ?? 0;
+			if (actual < ceiling && Number.isFinite(ceiling)) {
+				stale.push(`${file} ${m}: allows ${ceiling}, holds ${actual}`);
+			}
+			if (actual > ceiling) left[m] = actual - ceiling;
+			else delete left[m];
+		}
+		counted.set(file, left);
+	}
+	for (const entry of allowlist) {
+		if (!used.has(entry)) stale.push(`${entry.pattern}: matches no file`);
+	}
+	return { counted, stale };
+}
+
 function isNeverthrow(source: string): boolean {
 	return source === "neverthrow" || source.startsWith("neverthrow/");
 }
@@ -265,6 +358,10 @@ export function ruleOf(code: string): string | undefined {
 export type GaugeReport = {
 	readonly areas: Record<string, Counts>;
 	readonly total: Counts;
+	/** Allowances that no longer match what their files hold. */
+	readonly stale?: readonly string[];
+	/** Each file's run sites, `throw`s and `try`s beyond its allowance. */
+	readonly beyond?: readonly string[];
 };
 
 export function addTo(
@@ -378,13 +475,23 @@ function sourceFiles(root: string): string[] {
 
 async function gauge(root: string): Promise<GaugeReport> {
 	const areas: Record<string, Counts> = {};
+	const files = new Map<string, FileCounts>();
 	for (const file of sourceFiles(root)) {
+		if (!areaOf(file)) continue;
+		const text = readFileSync(path.join(root, file), "utf8");
+		files.set(file, countSource(file, text));
+	}
+	const { counted, stale } = applyAllowances(files);
+	const beyond: string[] = [];
+	for (const [file, counts] of counted) {
 		const area = areaOf(file);
 		if (!area) continue;
 		areas[area] ??= emptyCounts();
-		const text = readFileSync(path.join(root, file), "utf8");
-		for (const [m, n] of Object.entries(countSource(file, text))) {
+		for (const [m, n] of Object.entries(counts)) {
 			addTo(areas, area, m as Metric, n);
+			if (n > 0 && ALLOWED_METRICS.has(m)) {
+				beyond.push(`${file} ${m}: ${n}`);
+			}
 		}
 	}
 
@@ -408,20 +515,24 @@ async function gauge(root: string): Promise<GaugeReport> {
 	const sorted = Object.fromEntries(
 		Object.entries(areas).sort(([a], [b]) => compareAreas(a, b)),
 	);
-	return { areas: sorted, total: totalOf(sorted) };
+	return { areas: sorted, beyond, stale, total: totalOf(sorted) };
 }
 
 /** Exits 0, 1 when over a target, or 2 on bad arguments or targets. */
 async function main(args: string[]): Promise<number> {
 	const json = args.includes("--json");
+	const quiet = args.includes("--quiet");
 	const checkAt = args.indexOf("--check");
 	const targetsPath = checkAt === -1 ? undefined : args[checkAt + 1];
-	const known = new Set(["--json", "--check", targetsPath]);
+	const known = new Set(["--json", "--quiet", "--check", targetsPath]);
 	if (
 		(checkAt !== -1 && (!targetsPath || targetsPath.startsWith("--"))) ||
+		(quiet && checkAt === -1) ||
 		args.some((a) => !known.has(a))
 	) {
-		console.error("usage: effect-gauge [--json] [--check <targets.json>]");
+		console.error(
+			"usage: effect-gauge [--json] [--check <targets.json> [--quiet]]",
+		);
 		return 2;
 	}
 	let targets: unknown;
@@ -432,12 +543,23 @@ async function main(args: string[]): Promise<number> {
 		return 2;
 	}
 	const report = await gauge(path.resolve(import.meta.dir, ".."));
-	console.log(json ? JSON.stringify(report, null, "\t") : formatTables(report));
+	if (!quiet) {
+		console.log(
+			json ? JSON.stringify(report, null, "\t") : formatTables(report),
+		);
+	}
+	const stale = report.stale ?? [];
+	for (const s of stale) console.error(`stale allowance: ${s}`);
 	if (!targetsPath) return 0;
 	try {
 		const violations = checkTargets(report, targets);
 		for (const v of violations) console.error(`over target: ${v}`);
-		return violations.length > 0 ? 1 : 0;
+		if (violations.length > 0) {
+			for (const b of report.beyond ?? []) {
+				console.error(`  beyond allowance: ${b}`);
+			}
+		}
+		return violations.length > 0 || stale.length > 0 ? 1 : 0;
 	} catch (e) {
 		console.error(`bad targets ${targetsPath}: ${e}`);
 		return 2;

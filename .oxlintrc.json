@@ -10,11 +10,38 @@
 		"**/dist/**",
 		"**/.cache/**",
 		"**/tests/**",
-		"**/test/**",
-		"**/e2e/**",
-		"**/testing/**",
 		"**/*.test.ts",
 		"**/*.spec.ts"
+	],
+	"overrides": [
+		{
+			"files": ["src/**"],
+			"rules": {
+				"effecttsgo/any-unknown-in-error-context": "error",
+				"effecttsgo/async-function": "error",
+				"effecttsgo/extends-native-error": "error",
+				"effecttsgo/floating-effect": "error",
+				"effecttsgo/global-console": "error",
+				"effecttsgo/global-console-in-effect": "error",
+				"effecttsgo/global-date": "error",
+				"effecttsgo/global-date-in-effect": "error",
+				"effecttsgo/global-error-in-effect-failure": "error",
+				"effecttsgo/global-timers": "error",
+				"effecttsgo/global-timers-in-effect": "error",
+				"effecttsgo/new-promise": "error",
+				"effecttsgo/run-effect-inside-effect": "error",
+				"effecttsgo/try-catch-in-effect-gen": "error",
+				"effecttsgo/unknown-in-effect-catch": "error",
+				"typescript/no-floating-promises": "error"
+			}
+		},
+		{
+			"files": ["scripts/**"],
+			"rules": {
+				"effecttsgo/async-function": "off",
+				"effecttsgo/global-console": "off"
+			}
+		}
 	],
 	"rules": {
 		"effecttsgo/any-unknown-in-error-context": "warn",
