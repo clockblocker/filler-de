@@ -1,0 +1,29 @@
+{
+	"$schema": "./node_modules/@effect/tsgo/oxlint-schema.json",
+	"extends": ["./node_modules/@effect/tsgo/oxlint-presets/recommended.json"],
+	"ignorePatterns": [
+		"**/node_modules/**",
+		"repos-for-reference/**",
+		".texteater/**",
+		".claude/**",
+		"main.js",
+		"**/dist/**",
+		"**/.cache/**",
+		"**/tests/**",
+		"**/test/**",
+		"**/e2e/**",
+		"**/testing/**",
+		"**/*.test.ts",
+		"**/*.spec.ts"
+	],
+	"rules": {
+		"no-unused-vars": [
+			"warn",
+			{
+				"argsIgnorePattern": "^_.",
+				"ignoreRestSiblings": true,
+				"varsIgnorePattern": "^_"
+			}
+		]
+	}
+}

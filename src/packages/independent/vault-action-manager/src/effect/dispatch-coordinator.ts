@@ -2,6 +2,7 @@ import {
 	Cause,
 	Deferred,
 	Effect,
+	Exit,
 	Fiber,
 	Option,
 	Queue,
@@ -670,7 +671,11 @@ export class DispatchBatchWorker {
 					),
 				);
 			},
-			() => this.selfEventTracker.finishEffect(action),
+			(_, exit) =>
+				this.selfEventTracker.finishEffect(
+					action,
+					Exit.isSuccess(exit) && exit.value.status === "Done",
+				),
 		);
 	}
 

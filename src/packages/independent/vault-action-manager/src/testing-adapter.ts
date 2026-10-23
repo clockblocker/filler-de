@@ -7,6 +7,9 @@ import type { SelfEventTracker } from "./impl/event-processing/self-event-tracke
 /** Bounds settling when subscribers keep provoking each other's windows. */
 const MAX_SETTLE_ROUNDS = 100;
 
+/** Bounds the wait for settled files to become queryable. */
+const MAX_QUERYABLE_WAIT_MS = 10_000;
+
 /** The idle barrier of one VaultObservation channel. */
 type SettleableObservation = {
 	readonly flushPendingEffect: () => Effect.Effect<void>;
@@ -74,48 +77,44 @@ export class VaultActionManagerTestingAdapter {
 		return total;
 	});
 
+	/**
+	 * Polls until every file the settled dispatches registered is queryable,
+	 * backing off from 50ms to 200ms. Warns instead of failing after the
+	 * timeout.
+	 */
 	private readonly verifyFilesQueryableEffect = Effect.fn(
 		"VaultActionManagerTestingAdapter.verifyFilesQueryable",
 	)(function* (filePaths: readonly string[]) {
-		return Effect.gen(function* () {
-			if (filePaths.length === 0) return;
+		if (filePaths.length === 0) return;
 
-			const vault = yield* VaultIo;
-			const maxTimeoutMs = 10_000;
-			const startedAt = yield* Clock.currentTimeMillis;
-			let intervalMs = 50;
-			let checkCount = 0;
+		const vault = yield* VaultIo;
+		const findMissing = Effect.filter(filePaths, (path) =>
+			vault
+				.getAbstractFileByPath(path)
+				.pipe(Effect.map((file) => file === null)),
+		);
+		const startedAt = yield* Clock.currentTimeMillis;
+		let intervalMs = 50;
+		let checkCount = 0;
 
-			yield* Effect.sleep(100);
-			while (
-				(yield* Clock.currentTimeMillis) - startedAt <
-				maxTimeoutMs
-			) {
-				const missing = yield* Effect.filter(filePaths, (path) =>
-					vault
-						.getAbstractFileByPath(path)
-						.pipe(Effect.map((file) => file === null)),
-				);
-				if (missing.length === 0) return;
-
-				checkCount++;
-				if (checkCount > 10) {
-					intervalMs = Math.min(intervalMs * 1.2, 200);
-				}
-				yield* Effect.sleep(intervalMs);
+		let missing = yield* findMissing;
+		while (
+			missing.length > 0 &&
+			(yield* Clock.currentTimeMillis) - startedAt < MAX_QUERYABLE_WAIT_MS
+		) {
+			checkCount++;
+			if (checkCount > 10) {
+				intervalMs = Math.min(intervalMs * 1.2, 200);
 			}
+			yield* Effect.sleep(intervalMs);
+			missing = yield* findMissing;
+		}
 
-			const missing = yield* Effect.filter(filePaths, (path) =>
-				vault
-					.getAbstractFileByPath(path)
-					.pipe(Effect.map((file) => file === null)),
+		if (missing.length > 0) {
+			yield* Effect.logWarning(
+				`[VaultActionManagerTestingAdapter] Files not queryable after ${MAX_QUERYABLE_WAIT_MS}ms:`,
+				missing,
 			);
-			if (missing.length > 0) {
-				yield* Effect.logWarning(
-					`[VaultActionManagerTestingAdapter] Files not queryable after ${maxTimeoutMs}ms:`,
-					missing,
-				);
-			}
-		});
+		}
 	});
 }
