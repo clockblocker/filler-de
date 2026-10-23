@@ -269,7 +269,7 @@ export type DumdictVaultStore = {
 		readonly resolutions: readonly {
 			readonly locator: PendingSemanticRelationRecord<"de">["locator"];
 		}[];
-	}) => Effect.Effect<CleanupRelationsSlice<"de">>;
+	}) => Effect.Effect<CleanupRelationsSlice<"de">, DictionaryRequestError>;
 	/** dumdict's `reevaluateShadows` slice. */
 	readonly loadReevaluateShadowsContext: (
 		request: Omit<ReevaluateShadowsRequest<"de">, "baseRevision">,
@@ -3226,7 +3226,9 @@ export const makeDumdictVaultStore = Effect.fnUntraced(function* (
 		lemmaNote: (lemma) => Effect.sync(() => live().lemmaNote(lemma)),
 		lemmaNotes: Effect.sync(() => live().lemmaNotes()),
 		loadCleanupRelationsContext: (request) =>
-			Effect.sync(() => live().loadCleanupRelationsContext(request)),
+			Effect.suspend(() =>
+				Effect.fromResult(live().loadCleanupRelationsContext(request)),
+			),
 		loadOccurrenceSlice: (request) =>
 			Effect.sync(() => live().loadOccurrenceSlice(request)),
 		loadReadingEntryContext: (request) =>

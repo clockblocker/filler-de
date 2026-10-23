@@ -10,9 +10,9 @@
 export type AllowedMetric = "run-sites" | "throw" | "try";
 
 /**
- * A file, or a directory glob, and how many sites of each metric each file
- * it matches may hold. `Infinity` allows any number, for a directory that
- * is an edge as a whole. Patterns are globs relative to the repo root.
+ * A file, and how many sites of each metric it may hold. Patterns are globs
+ * relative to the repo root; a directory glob's count applies to each file
+ * it matches.
  */
 export type Allowance = {
 	readonly pattern: string;
@@ -30,10 +30,16 @@ const CATCHES_THROWING_CALL =
 export const EDGE_ALLOWLIST: readonly Allowance[] = [
 	// ─── The run boundary ───
 	{
-		allow: { "run-sites": Number.POSITIVE_INFINITY },
-		pattern: "src/runtime/**",
+		allow: { "run-sites": 4 },
+		pattern: "src/runtime/plugin-runtime.ts",
 		reason:
-			"the plugin runtime, the only `run*` boundary: every Obsidian callback enters it through `runtime.run` or `fork`, and its logger runs synchronously",
+			"the plugin runtime, the only `run*` boundary: it starts the one `ManagedRuntime`'s build with `runCallback`, and every command, user event, settings change, E2E hook and synchronous read enters it through `runPromiseExit` or `runSyncExit`",
+	},
+	{
+		allow: { "run-sites": 1 },
+		pattern: "src/runtime/observability.ts",
+		reason:
+			"the edge log, `logAtEdge`, for plain TypeScript where no Effect runs: it runs its log synchronously in the observability context with `runSyncExitWith`",
 	},
 
 	// ─── src/main.ts ───

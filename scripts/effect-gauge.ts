@@ -22,7 +22,11 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { Glob } from "bun";
 import { type Node, parseSync, Visitor } from "oxc-parser";
-import { type Allowance, EDGE_ALLOWLIST } from "./effect-gauge-allowlist";
+import {
+	type Allowance,
+	type AllowedMetric,
+	EDGE_ALLOWLIST,
+} from "./effect-gauge-allowlist";
 
 export const EFFECT_NATIVE_RULES = [
 	"async-function",
@@ -104,8 +108,12 @@ const GLOBAL_SETTINGS_CALLS = new Set([
 const RUN_METHOD = /^run(?:Promise|Sync|Fork|Callback)/;
 /** An `oxlint-disable` or `eslint-disable` directive, of any form. */
 const SUPPRESSION = /^\s*(?:oxlint|eslint)-disable\b/;
-/** A directive's reason, after ` -- `. */
-const SUPPRESSION_REASON = /\s--\s+\S/;
+/**
+ * A directive that names its rules and gives a reason after ` -- `. One
+ * with no rule list turns off every rule, so it never counts as explained.
+ */
+const EXPLAINED_SUPPRESSION =
+	/^\s*(?:oxlint|eslint)-disable(?:-next-line|-line)?\s+[\w@][\w@/-]*(?:\s*,\s*[\w@][\w@/-]*)*\s+--\s+\S/;
 const EFFECT_RUN_SOURCES = new Set(["effect", "effect/Effect", "effect/Runtime"]);
 
 /**
@@ -217,9 +225,14 @@ export function countSource(file: string, text: string): FileCounts {
 			}
 		},
 		MemberExpression(node) {
-			if (node.computed) return;
 			const object = name(node.object);
-			const property = name(node.property);
+			// `Effect.runPromise`, and `Effect["runPromise"]` too.
+			const property = node.computed
+				? node.property.type === "Literal" &&
+					typeof node.property.value === "string"
+					? node.property.value
+					: undefined
+				: name(node.property);
 			if (property === undefined) return;
 			const isThis = node.object.type === "ThisExpression";
 			if (isRunSite(lastName(node.object), property, isThis)) {
@@ -239,12 +252,23 @@ export function countSource(file: string, text: string): FileCounts {
 		TryStatement() {
 			add("try");
 		},
+		// `const { runPromise } = Effect` counts once, where it is taken.
+		VariableDeclarator(node) {
+			if (node.id.type !== "ObjectPattern" || !node.init) return;
+			const receiver = lastName(node.init);
+			if (receiver !== "Effect" && !/runtime$/i.test(receiver ?? "")) return;
+			for (const p of node.id.properties) {
+				if (p.type !== "Property" || p.computed) continue;
+				const key = name(p.key);
+				if (key && isRunSite(receiver, key)) add("run-sites");
+			}
+		},
 	}).visit(program);
 
 	for (const comment of comments) {
 		if (!SUPPRESSION.test(comment.value)) continue;
 		add("suppressions");
-		if (!SUPPRESSION_REASON.test(comment.value)) {
+		if (!EXPLAINED_SUPPRESSION.test(comment.value)) {
 			add("unexplained-suppressions");
 		}
 	}
@@ -265,6 +289,12 @@ export function countSource(file: string, text: string): FileCounts {
 	}
 	return counts;
 }
+
+const ALLOWED_METRICS: ReadonlySet<string> = new Set<AllowedMetric>([
+	"run-sites",
+	"throw",
+	"try",
+]);
 
 export type Allowed = {
 	/** Each file's counts beyond its allowance. */
@@ -330,6 +360,8 @@ export type GaugeReport = {
 	readonly total: Counts;
 	/** Allowances that no longer match what their files hold. */
 	readonly stale?: readonly string[];
+	/** Each file's run sites, `throw`s and `try`s beyond its allowance. */
+	readonly beyond?: readonly string[];
 };
 
 export function addTo(
@@ -450,12 +482,16 @@ async function gauge(root: string): Promise<GaugeReport> {
 		files.set(file, countSource(file, text));
 	}
 	const { counted, stale } = applyAllowances(files);
+	const beyond: string[] = [];
 	for (const [file, counts] of counted) {
 		const area = areaOf(file);
 		if (!area) continue;
 		areas[area] ??= emptyCounts();
 		for (const [m, n] of Object.entries(counts)) {
 			addTo(areas, area, m as Metric, n);
+			if (n > 0 && ALLOWED_METRICS.has(m)) {
+				beyond.push(`${file} ${m}: ${n}`);
+			}
 		}
 	}
 
@@ -479,7 +515,7 @@ async function gauge(root: string): Promise<GaugeReport> {
 	const sorted = Object.fromEntries(
 		Object.entries(areas).sort(([a], [b]) => compareAreas(a, b)),
 	);
-	return { areas: sorted, stale, total: totalOf(sorted) };
+	return { areas: sorted, beyond, stale, total: totalOf(sorted) };
 }
 
 /** Exits 0, 1 when over a target, or 2 on bad arguments or targets. */
@@ -491,6 +527,7 @@ async function main(args: string[]): Promise<number> {
 	const known = new Set(["--json", "--quiet", "--check", targetsPath]);
 	if (
 		(checkAt !== -1 && (!targetsPath || targetsPath.startsWith("--"))) ||
+		(quiet && checkAt === -1) ||
 		args.some((a) => !known.has(a))
 	) {
 		console.error(
@@ -517,6 +554,11 @@ async function main(args: string[]): Promise<number> {
 	try {
 		const violations = checkTargets(report, targets);
 		for (const v of violations) console.error(`over target: ${v}`);
+		if (violations.length > 0) {
+			for (const b of report.beyond ?? []) {
+				console.error(`  beyond allowance: ${b}`);
+			}
+		}
 		return violations.length > 0 || stale.length > 0 ? 1 : 0;
 	} catch (e) {
 		console.error(`bad targets ${targetsPath}: ${e}`);

@@ -61,7 +61,7 @@ export type DictionaryView = {
 		readonly resolutions: readonly {
 			readonly locator: PendingSemanticRelationRecord<"de">["locator"];
 		}[];
-	}) => CleanupRelationsSlice<"de">;
+	}) => Result.Result<CleanupRelationsSlice<"de">, DictionaryRequestError>;
 	/** dumdict's `reevaluateShadows` slice. */
 	readonly loadReevaluateShadowsContext: (
 		request: Omit<ReevaluateShadowsRequest<"de">, "baseRevision">,
@@ -168,7 +168,9 @@ export function viewOf(
 				path,
 			})),
 		loadCleanupRelationsContext: (request) =>
-			loadCleanupRelationsContext(index, revision, request),
+			attempted(() =>
+				loadCleanupRelationsContext(index, revision, request),
+			),
 		loadOccurrenceSlice: (request) =>
 			loadOccurrenceSlice(index, revision, request),
 		loadReadingEntryContext: (request) =>

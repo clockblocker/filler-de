@@ -103,6 +103,7 @@ describe("countSource", () => {
 		`	// oxlint-disable-next-line effecttsgo/global-date -- wall time, by #187`,
 		`	Date.now();`,
 		`	/* eslint-disable no-console */`,
+		`	// oxlint-disable-next-line -- every rule, so no explanation`,
 		`	// "oxlint-disable" in a comment that is no directive`,
 		`}`,
 	].join("\n");
@@ -118,10 +119,10 @@ describe("countSource", () => {
 			"neverthrow-files": 1,
 			"run-sites": 4,
 			"schema-files": 1,
-			suppressions: 2,
+			suppressions: 3,
 			throw: 1,
 			try: 1,
-			"unexplained-suppressions": 1,
+			"unexplained-suppressions": 2,
 		});
 	});
 
@@ -137,7 +138,7 @@ describe("countSource", () => {
 describe("applyAllowances", () => {
 	const allowlist = [
 		{
-			allow: { "run-sites": Number.POSITIVE_INFINITY },
+			allow: { "run-sites": 9 },
 			pattern: "src/runtime/**",
 			reason: "the run boundary",
 		},
@@ -150,6 +151,7 @@ describe("applyAllowances", () => {
 				["src/a.ts", { "run-sites": 1, throw: 3, try: 1 }],
 				["src/b.ts", { throw: 1 }],
 				["src/runtime/x.ts", { "run-sites": 9, throw: 1 }],
+				["src/runtime/y.ts", { "run-sites": 10 }],
 			]),
 			allowlist,
 		);
@@ -157,6 +159,7 @@ describe("applyAllowances", () => {
 			"src/a.ts": { "run-sites": 1, throw: 1 },
 			"src/b.ts": { throw: 1 },
 			"src/runtime/x.ts": { throw: 1 },
+			"src/runtime/y.ts": { "run-sites": 1 },
 		});
 		expect(stale).toEqual([]);
 	});
@@ -197,6 +200,16 @@ describe("isRunSite", () => {
 		expect(isRunSite(undefined, "runCallback", true)).toBe(false);
 		expect(isRunSite("Effect", "fork")).toBe(false);
 		expect(isRunSite("Stream", "run")).toBe(false);
+	});
+
+	it("counts a run method taken by destructuring or a computed key", () => {
+		const source = [
+			`const { runPromise, map } = Effect;`,
+			`const { run: go } = this.runtime;`,
+			`Effect["runFork"](program);`,
+			`Effect[key](program);`,
+		].join("\n");
+		expect(countSource("src/a.ts", source)["run-sites"]).toBe(3);
 	});
 
 	it("counts a run function imported from effect", () => {

@@ -57,13 +57,13 @@ The Effect migration (#215) is enforced by `bun run lint`, which runs
   error and run rules, and `typescript/no-floating-promises`, errors in all
   of non-test `src/`. A line that must break one says why, with
   `// oxlint-disable-next-line <rule> -- <reason>`. `lint:ox` fails on a
-  directive that suppresses nothing, and the gauge fails on one with no
-  reason, and on more suppressions than its target.
+  directive that suppresses nothing. The gauge fails on one that names no
+  rule or gives no reason, and on more suppressions than its target.
 - **What tsgo can't see.** `scripts/effect-gauge.ts` counts `Effect.run*`
   and `runtime.run*` sites, `throw` and `try`, and the retired APIs. Run
   sites, `throw` and `try` are allowed only in the files
   `scripts/effect-gauge-allowlist.ts` names, each with a reason and a count.
-  `src/runtime/**` is the one run boundary. A new edge needs an entry there,
+  `src/runtime/` is the one run boundary. A new edge needs an entry there,
   and a removed one needs its entry lowered or dropped; `--check` fails
   either way until the list matches.
 

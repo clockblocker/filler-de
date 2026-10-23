@@ -18,6 +18,7 @@ import {
 	laufenReading,
 	pendingFrom,
 	readingEntry,
+	readingOf,
 	synonym,
 	verb,
 } from "./support/fixtures";
@@ -296,6 +297,33 @@ test("the relation inventory is capped at 100 Lemmas, nearest first, and refuses
 	]);
 	expect(await load(others.slice(0, 99))).toEqual(context);
 	expect(await load(others).catch((error: unknown) => error)).toBeInstanceOf(
+		DictionaryRequestError,
+	);
+});
+
+test("the cleanup slice refuses a neighbourhood over the cap as a DictionaryRequestError", async () => {
+	const { store } = await openStore();
+	const readings = Array.from({ length: 101 }, (_, index) =>
+		readingOf(verb(`verb${String(index).padStart(3, "0")}en`), "🔁"),
+	);
+	const pendings = readings.map(pendingFrom);
+	await seed(store, [
+		...readings.flatMap((reading) => [
+			createLemma(reading.lemma),
+			createReading(readingEntry(reading)),
+		]),
+		...pendings.map(createPending),
+	]);
+	const load = (count: number) =>
+		run(
+			store.loadCleanupRelationsContext({
+				resolutions: pendings
+					.slice(0, count)
+					.map(({ locator }) => ({ locator })),
+			}),
+		);
+	expect((await load(100)).pendingRelations).toHaveLength(100);
+	expect(await load(101).catch((error: unknown) => error)).toBeInstanceOf(
 		DictionaryRequestError,
 	);
 });
