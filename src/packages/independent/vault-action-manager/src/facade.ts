@@ -729,7 +729,9 @@ class VaultActionManagerFacade {
 	 * blindly inverted. The failure's `report.undo` says what was undone,
 	 * what could not be and why, and what is not undoable. Pre-images of
 	 * the files the batch writes are read before it runs. The inverse
-	 * batches run under the batch's own `caller` and `operationId`.
+	 * batches run under the batch's own `caller` and `operationId`. The
+	 * failure keeps every reason of the batch's cause, after the
+	 * `VamDispatchFailure` (see `dispatchOrUndoVia`).
 	 */
 	dispatchOrUndo(
 		actions: readonly VaultAction[],

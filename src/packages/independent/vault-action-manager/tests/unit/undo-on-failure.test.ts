@@ -6,13 +6,16 @@ import {
 	type SplitPathToFolder,
 	type SplitPathToMdFile,
 	splitPathCodec,
+	VamDispatchError,
+	VamDispatchFailure,
+	VamDispatchReport,
 	type VamUndoPort,
 	VamUndoReport,
 	type VaultAction,
 	VaultActionKind,
 	vaultContentHash,
 } from "@textfresser/vault-action-manager";
-import { Effect } from "effect";
+import { Cause, Effect, Exit } from "effect";
 import type { TAbstractFile, TFile } from "obsidian";
 import { makeVaultHarness } from "./helpers/vault-harness";
 
@@ -160,6 +163,13 @@ const trash = (path: string): VaultAction => ({
 	payload: { splitPath: md(path) },
 });
 
+const emptyUndo = new VamUndoReport({
+	couldNotUndo: [],
+	notUndoable: [],
+	probed: [],
+	undone: [],
+});
+
 function blocks(undo: VamUndoReport) {
 	return undo.couldNotUndo.map(({ action, block }) => [action.kind, block]);
 }
@@ -245,6 +255,108 @@ describe("dispatchOrUndo", () => {
 		]);
 		expect(failure.report.caller).toBe("test");
 		expect(failure.report.operationId).toMatch(/^test#/);
+	});
+
+	it("keeps a defect beside the batch's failure, after the failure with its undo", async () => {
+		const { dispose, harness, manager, stop } = setup();
+		const port: VamUndoPort = {
+			dispatchWithReport: (actions, options) =>
+				options.stopOnFirstFailure
+					? manager
+							.dispatchWithReport(actions, options)
+							.pipe(
+								Effect.ensuring(
+									Effect.die(new Error("finalizer exploded")),
+								),
+							)
+					: manager.dispatchWithReport(actions, options),
+			exists: (path) => manager.exists(path),
+			readContent: (path) => manager.readContent(path),
+		};
+		const exit = await Effect.runPromise(
+			Effect.exit(
+				dispatchOrUndoVia(
+					port,
+					[createMd("Library/new.md", "fresh"), stop()],
+					{ caller: "test" },
+				),
+			),
+		);
+		await Effect.runPromise(dispose);
+		if (!Exit.isFailure(exit)) throw new Error("dispatchOrUndo succeeded");
+		const [first, ...others] = exit.cause.reasons;
+		if (!first || !Cause.isFailReason(first))
+			throw new Error("the cause's first reason is not a failure");
+		// What callers branch on is the batch's failure, with its undo.
+		expect(first.error.reason._tag).toBe("VamDispatchError");
+		expect(first.error.report.undo?.undone).toHaveLength(1);
+		expect(harness.exists("Library/new.md")).toBe(false);
+		expect(
+			others.map((reason) =>
+				Cause.isDieReason(reason) ? String(reason.defect) : reason._tag,
+			),
+		).toEqual(["Error: finalizer exploded"]);
+	});
+
+	it("keeps a defect beside an inverse's failure", async () => {
+		const { dispose, manager, stop } = setup();
+		const port: VamUndoPort = {
+			dispatchWithReport: (actions, options) => {
+				if (options.stopOnFirstFailure)
+					return manager.dispatchWithReport(actions, options);
+				const [inverse] = actions;
+				if (!inverse) throw new Error("an inverse batch is one action");
+				const failure = VamDispatchFailure.ofReport(
+					new VamDispatchReport({
+						caller: options.caller,
+						entries: [
+							{
+								action: inverse,
+								error: new VamDispatchError({
+									action: inverse,
+									cause: new Error("typed into meanwhile"),
+									kind: "conflict",
+									operation: "dispatch",
+								}),
+								status: "Failed",
+							},
+						],
+						operationId: options.operationId ?? "test#inverse",
+					}),
+				);
+				if (!failure)
+					throw new Error("the inverse's report failed nothing");
+				return Effect.fail(failure).pipe(
+					Effect.ensuring(
+						Effect.die(new Error("inverse finalizer exploded")),
+					),
+				);
+			},
+			exists: (path) => manager.exists(path),
+			readContent: (path) => manager.readContent(path),
+		};
+		const exit = await Effect.runPromise(
+			Effect.exit(
+				dispatchOrUndoVia(
+					port,
+					[createMd("Library/new.md", "fresh"), stop()],
+					{ caller: "test" },
+				),
+			),
+		);
+		await Effect.runPromise(dispose);
+		if (!Exit.isFailure(exit)) throw new Error("dispatchOrUndo succeeded");
+		const failures = exit.cause.reasons.filter(Cause.isFailReason);
+		// The inverse's failure is in the undo report, not beside it.
+		expect(failures).toHaveLength(1);
+		expect(blocks(failures[0]?.error.report.undo ?? emptyUndo)).toEqual([
+			[VaultActionKind.CreateMdFile, "Changed"],
+		]);
+		expect(
+			exit.cause.reasons
+				.filter(Cause.isDieReason)
+				.map(({ defect }) => String(defect)),
+		).toEqual(["Error: inverse finalizer exploded"]);
 	});
 
 	it("undoes nothing for a batch VAM refused before running it", async () => {

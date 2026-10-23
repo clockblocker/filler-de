@@ -124,7 +124,11 @@ const UNDONE: InverseResult = { _tag: "Undone" };
  * Dispatches `actions` as one batch that stops at its first failure. On
  * success it answers the batch's report. On failure it undoes what landed,
  * in reverse run order, and fails with the batch's `VamDispatchFailure`,
- * whose report's `undo` says what was taken back:
+ * whose report's `undo` says what was taken back. The failure keeps the
+ * batch's whole cause: the `VamDispatchFailure` is its first failure, and
+ * every other reason, such as a finalizer's defect, follows it, then those
+ * beside each inverse batch's failure. `Effect.catch` or `catchTag` get the
+ * `VamDispatchFailure`; `catchCause` gets every reason.
  *
  * - `Created` → the file is trashed only while it holds the content it was
  *   created with. Created folders and non-Markdown files stay.
@@ -157,17 +161,42 @@ export const dispatchOrUndoVia = Effect.fn("vam.dispatchOrUndo")(function* (
 	if (Exit.isSuccess(exit)) return exit.value;
 	const stopped = stoppedBatch(exit.cause, actions, caller);
 	if (!stopped) return yield* Effect.failCause(exit.cause);
+	const besideInverses: Cause.Reason<VamDispatchFailure>[] = [];
 	const undo = yield* undoStopped(
 		port,
 		stopped.report,
 		before,
 		inverseOptions(stopped.report),
+		(reasons) => besideInverses.push(...reasons),
 	);
-	return yield* new VamDispatchFailure({
+	const failure = new VamDispatchFailure({
 		reason: stopped.reason,
 		report: new VamDispatchReport({ ...stopped.report, undo }),
 	});
+	return yield* Effect.failCause(
+		Cause.fromReasons([
+			...withFailure(exit.cause, failure),
+			...besideInverses,
+		]),
+	);
 });
+
+/**
+ * The stopped batch's reasons, with its first failure replaced by
+ * `failure`, which carries the undo, and every other reason kept in order.
+ * A cause without a failure is `failure` alone: `stoppedBatch` made it
+ * from that cause, and each of its entries holds the cause's defects.
+ */
+function withFailure(
+	cause: Cause.Cause<VamDispatchFailure>,
+	failure: VamDispatchFailure,
+): readonly Cause.Reason<VamDispatchFailure>[] {
+	const first = cause.reasons.findIndex(Cause.isFailReason);
+	if (first < 0) return [Cause.makeFailReason(failure)];
+	return cause.reasons.map((reason, index) =>
+		index === first ? Cause.makeFailReason(failure) : reason,
+	);
+}
 
 /**
  * The options of the inverse batches: the forward batch's caller and
@@ -271,6 +300,7 @@ const undoStopped = Effect.fn("vam.undo")(function* (
 	report: VamDispatchReport,
 	before: BeforeBatch,
 	options: DispatchOptions,
+	onBeside: (reasons: readonly Cause.Reason<VamDispatchFailure>[]) => void,
 ) {
 	const couldNotUndo: VamUndoReport["couldNotUndo"][number][] = [];
 	const notUndoable: VamUndoReport["notUndoable"][number][] = [];
@@ -291,7 +321,7 @@ const undoStopped = Effect.fn("vam.undo")(function* (
 				couldNotUndo.push({ action, block: plan.block });
 				break;
 			case "Invert": {
-				const result = yield* runInverse(port, plan, options);
+				const result = yield* runInverse(port, plan, options, onBeside);
 				if (result._tag === "Undone") {
 					undone.push({ action, inverse: plan.inverse });
 					break;
@@ -654,11 +684,16 @@ const probeForward = Effect.fn("vam.undo.probe")(function* (
 	}
 });
 
-/** Runs one inverse on its own and says whether it took the change back. */
+/**
+ * Runs one inverse on its own and says whether it took the change back.
+ * The reasons beside the inverse's failure, which its result has no room
+ * for, go to `onBeside`.
+ */
 const runInverse = Effect.fnUntraced(function* (
 	port: VamUndoPort,
 	plan: Extract<UndoPlan, { _tag: "Invert" }>,
 	options: DispatchOptions,
+	onBeside: (reasons: readonly Cause.Reason<VamDispatchFailure>[]) => void,
 ): Effect.fn.Return<InverseResult> {
 	const exit = yield* Effect.exit(
 		port.dispatchWithReport([plan.inverse], options),
@@ -685,6 +720,7 @@ const runInverse = Effect.fnUntraced(function* (
 			}),
 		};
 	}
+	onBeside(exit.cause.reasons.filter((other) => other !== failed));
 	const { reason, report } = failed.error;
 	const entry = entryOf(report, plan.inverse);
 	switch (entry?.status) {
