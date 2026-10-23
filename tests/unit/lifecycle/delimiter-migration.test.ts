@@ -254,6 +254,8 @@ describe("changeDelimiter", () => {
 		expect(h.shown[0]?.message).toContain("the Librarian did not restart");
 		expect(h.shown[0]?.message).toContain("disk full");
 		expect(h.shown[0]?.message).not.toContain("Librarian notice");
+		// The log names the operation that stopped the restart.
+		expect(report.log).toContain("Restore/scanFolder: ");
 		expect(h.supervisor.librarianState().kind).toBe("Failed");
 	});
 

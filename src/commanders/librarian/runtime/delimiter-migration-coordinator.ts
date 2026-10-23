@@ -1,5 +1,5 @@
 import type { SplitPathToFolder } from "@textfresser/vault-action-manager";
-import { type Cause, Effect, Exit, Predicate } from "effect";
+import { Cause, Effect, Exit, Predicate } from "effect";
 import type { SuffixDelimiterConfig } from "../../../types";
 import { causeValues } from "../../../utils/causes";
 import type {
@@ -287,12 +287,31 @@ function problem<E>(
 	cause: Cause.Cause<DelimiterStageFailure | E>,
 	knownOperation?: string,
 ): DelimiterMigrationProblem<E> {
-	const [first] = causeValues(cause);
 	const operation =
-		knownOperation ??
-		(Predicate.hasProperty(first, "operation") &&
-		Predicate.isString(first.operation)
-			? first.operation
-			: stage.toLowerCase());
+		knownOperation ?? operationIn(cause) ?? stage.toLowerCase();
 	return Object.freeze({ cause, operation, stage });
+}
+
+/**
+ * The operation the first failure or defect in `cause` names. A wrapper
+ * that names none, such as the lifecycle's `LibrarianStartFailed`, is read
+ * through the cause it holds.
+ */
+function operationIn(
+	cause: Cause.Cause<unknown>,
+	depth = 0,
+): string | undefined {
+	const [first] = causeValues(cause);
+	if (
+		Predicate.hasProperty(first, "operation") &&
+		Predicate.isString(first.operation)
+	)
+		return first.operation;
+	if (depth >= 4 || !Predicate.hasProperty(first, "cause")) return undefined;
+	const inner = first.cause;
+	if (Cause.isCause(inner)) return operationIn(inner, depth + 1);
+	return Predicate.hasProperty(inner, "operation") &&
+		Predicate.isString(inner.operation)
+		? inner.operation
+		: undefined;
 }

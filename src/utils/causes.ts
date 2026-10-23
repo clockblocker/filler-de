@@ -2,17 +2,16 @@ import { Cause, Effect } from "effect";
 import { getErrorMessage } from "./get-error-message";
 
 /**
- * The value of each failure and defect in `cause`, in order. Interruptions
- * are left out: they say who stopped a fiber, not why it failed.
+ * The value of each failure in `cause`, then of each defect, each in
+ * order: the first is the failure that names what failed, when there is
+ * one. Interruptions are left out: they say who stopped a fiber, not why
+ * it failed.
  */
 export function causeValues<E>(cause: Cause.Cause<E>): unknown[] {
-	return cause.reasons.flatMap((reason) =>
-		Cause.isFailReason(reason)
-			? [reason.error]
-			: Cause.isDieReason(reason)
-				? [reason.defect]
-				: [],
-	);
+	return [
+		...cause.reasons.filter(Cause.isFailReason).map(({ error }) => error),
+		...cause.reasons.filter(Cause.isDieReason).map(({ defect }) => defect),
+	];
 }
 
 /**

@@ -187,8 +187,6 @@ function collectFailedItems(failure: unknown): FailedItem[] {
 	const cause = Predicate.hasProperty(failure, "cause")
 		? failure.cause
 		: failure;
-	// A dispatch or rescan that died holds its whole cause.
-	if (Cause.isCause(cause)) return collectFailedItems(cause);
 	const path =
 		Predicate.hasProperty(failure, "path") &&
 		Predicate.isString(failure.path)
@@ -196,6 +194,14 @@ function collectFailedItems(failure: unknown): FailedItem[] {
 			: Predicate.hasProperty(failure, "action")
 				? actionPath(failure.action)
 				: null;
+	// A dispatch or rescan that died holds its whole cause: each defect
+	// reads as its own message.
+	if (Cause.isCause(cause)) {
+		const values = causeValues(cause);
+		return values.length > 0
+			? values.map((value) => ({ path, reason: getErrorMessage(value) }))
+			: [{ path, reason: "interrupted" }];
+	}
 	return [{ path, reason: getErrorMessage(cause) }];
 }
 
