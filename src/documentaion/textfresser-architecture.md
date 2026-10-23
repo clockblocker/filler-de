@@ -71,7 +71,8 @@ The Librarian parses Library suffixes. Textfresser must not duplicate the separa
 | Classify | `src/commanders/classify/` |
 | Resolution and Knowledge | `src/commanders/classify/resolution/` |
 | Translate | `src/commanders/textfresser/` |
-| dumgen service (`Dumgen`, one `DumgenLive` build per action), its transports and `HttpTransport` | `src/managers/dumgen/` |
+| dumgen service (`Dumgen`, one `DumgenLive` build per action) and its transports | `src/managers/dumgen/` |
+| Obsidian host services: commands and listeners (`PluginHost`), `Notices`, `HttpTransport` | `src/managers/obsidian/host/` |
 | Dictionary store | `src/packages/composed/dictionary/` |
 | Lemma note codec | `src/packages/independent/lemma-note-codec/` |
 | Projections (tags only; tables come from `dumcorpus/inflection`) | `src/packages/independent/lemma-note-projections/` |

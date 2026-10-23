@@ -1,19 +1,19 @@
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
-import { logError } from "@textfresser/vault-action-manager/issue-handlers";
+import { formatError } from "@textfresser/vault-action-manager/issue-handlers";
 import { Effect } from "effect";
-import { Notice } from "obsidian";
 import { blockIdHelper } from "../../../stateless-helpers/block-id";
 import { getErrorMessage } from "../../../utils/get-error-message";
+import type { Notices } from "../host/notices";
 
 /**
  * Tags the current line with a block marker (if missing) and copies the block embed to clipboard.
  * Does nothing silently on empty/blank lines.
  */
 export const tagLineCopyEmbedBehavior = Effect.fn("tagLineCopyEmbedBehavior")(
-	function* (vam: VaultActionManager) {
+	function* (vam: VaultActionManager, notices: Notices["Service"]) {
 		const context = yield* vam.getActiveEditorContext();
 		if (!context) {
-			new Notice("No active markdown file");
+			yield* notices.show("No active markdown file");
 			return;
 		}
 
@@ -46,10 +46,14 @@ export const tagLineCopyEmbedBehavior = Effect.fn("tagLineCopyEmbedBehavior")(
 		const embed = blockIdHelper.formatEmbed(basename, blockId);
 		yield* Effect.tryPromise(() => navigator.clipboard.writeText(embed));
 	},
-	Effect.catch((error) =>
-		logError({
-			description: `Error tagging line with block embed: ${getErrorMessage(error)}`,
-			location: "tagLineCopyEmbedBehavior",
+	(effect, _vam, notices) =>
+		Effect.catch(effect, (error) => {
+			const message = formatError({
+				description: `Error tagging line with block embed: ${getErrorMessage(error)}`,
+				location: "tagLineCopyEmbedBehavior",
+			});
+			return notices
+				.show(message)
+				.pipe(Effect.andThen(Effect.logError(message)));
 		}),
-	),
 );

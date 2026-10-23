@@ -17,7 +17,7 @@ import {
 	Option,
 	type Scope,
 } from "effect";
-import { Notice, Plugin, requestUrl } from "obsidian";
+import { Plugin, requestUrl } from "obsidian";
 import { RESET_UNLOADED } from "./commanders/dictionary-reset/reset-command";
 import { Librarian } from "./commanders/librarian/librarian";
 import { DictionaryStore } from "./lifecycle/dictionary-store-service";
@@ -29,10 +29,13 @@ import {
 import { Dumgen, type ScriptedDumgen } from "./managers/dumgen";
 import type { ScriptedJevAnswers } from "./managers/dumgen/scripted-jev";
 import { createHandlers } from "./managers/obsidian/behavior-manager";
+import { CommandKind } from "./managers/obsidian/command-executor";
 import {
-	CommandKind,
-	createCommandExecutor,
-} from "./managers/obsidian/command-executor";
+	Notices,
+	ObsidianHostLive,
+	obsidianNotices,
+	PluginHost,
+} from "./managers/obsidian/host";
 import type { OverlayManager } from "./managers/overlay-manager";
 import { confirmInModal } from "./plugin/confirm-modal";
 import {
@@ -47,7 +50,12 @@ import {
 	type PluginServicesDeps,
 	PluginServicesLive,
 } from "./plugin/plugin-services-live";
-import { registerCommands } from "./plugin/register-commands";
+import {
+	commandKindProgram,
+	launchCommands,
+	registerCommands,
+	serviceCommands,
+} from "./plugin/register-commands";
 import { whenObsidianIsReady } from "./plugin/when-obsidian-is-ready";
 import { logAtEdge } from "./runtime/edge-log";
 import {
@@ -76,6 +84,9 @@ const pluginServices = Context.pick(
 	Dumgen,
 	Lifecycle,
 	Settings,
+	PluginHost,
+	Notices,
+	IdleTracker,
 );
 
 /** The services the launch built, once it built them. */
@@ -84,12 +95,12 @@ type LaunchedServices = {
 	readonly classify: ClassifyServices["Service"];
 	readonly textfresser: TextfresserCommands["Service"];
 	readonly dictionaryReset: DictionaryReset["Service"];
+	/** A command kind's program, as the palette and the toolbars run it. */
+	readonly commandProgram: (kind: CommandKind) => Effect.Effect<void>;
 };
 
 export default class TextEaterPlugin extends Plugin {
-	private readonly notices = createLifecycleNotices((message, { sticky }) => {
-		new Notice(message, sticky ? 0 : undefined);
-	});
+	private readonly notices = createLifecycleNotices(obsidianNotices.show);
 	/** The plugin's one Effect runtime: built in `onload`, disposed in `onunload`. */
 	private runtime: Runtime | null = null;
 	/** The runtime's lifecycle, once the runtime is built. */
@@ -97,7 +108,7 @@ export default class TextEaterPlugin extends Plugin {
 	/**
 	 * The runtime's dumgen, once built: each action runs on one build over
 	 * the TypeSafe and OpenAI keys in the settings, through `requestUrl`
-	 * (see `managers/dumgen/request-url-fetch.ts`).
+	 * (see `managers/obsidian/host/request-url-fetch.ts`).
 	 */
 	private dumgen: Dumgen["Service"] | null = null;
 	/** The runtime's settings, once the runtime is built and loaded them. */
@@ -135,6 +146,7 @@ export default class TextEaterPlugin extends Plugin {
 					confirm: (title, message) =>
 						confirmInModal(this.app, title, message),
 					data: this,
+					host: ObsidianHostLive(this),
 					notices: this.notices,
 					requestUrl,
 					trace: recentTrace,
@@ -165,21 +177,6 @@ export default class TextEaterPlugin extends Plugin {
 				}),
 			);
 			this.addSettingTab(new SettingsTab(this.app, this));
-			// Add testing command early so it exists, but callback waits for init
-			this.addCommand({
-				callback: () => {
-					// Initialization itself exposes the service required by the test harness.
-					void this.runtime?.command(
-						"textfresser-testing-expose-opened-service",
-						Effect.flatMap(
-							Lifecycle,
-							(lifecycle) => lifecycle.whenLaunched,
-						),
-					);
-				},
-				id: "textfresser-testing-expose-opened-service",
-				name: "Testing: expose opened file service",
-			});
 		} catch (error) {
 			this.notices.launchFailedOutsideRuntime(error);
 		}
@@ -233,17 +230,9 @@ export default class TextEaterPlugin extends Plugin {
 			const invalid = settings.invalid();
 			if (invalid) return yield* invalid;
 			const vam = yield* VaultActionManager;
-			registerCommands(this, {
-				dictionaryReset: () => this.services?.dictionaryReset ?? null,
-				execute: (kind) => void this.executeCommand(kind),
-				knowledgeQueue: () =>
-					this.services?.classify.knowledgeQueue ?? null,
-				restartLibrarian: lifecycle.restart,
-				runtime,
-				stillLoading: this.notices.stillLoading,
-				vam: () => this.services?.vam ?? null,
-			});
-
+			const notices = yield* Notices;
+			// In the services' scope: unloading removes them with the services.
+			yield* registerCommands(launchCommands({ lifecycle, notices }));
 			const deps: PluginServicesDeps = {
 				notices: this.notices,
 				plugin: this,
@@ -257,10 +246,22 @@ export default class TextEaterPlugin extends Plugin {
 			const classify = Context.get(built, ClassifyServices);
 			const dictionaryReset = Context.get(built, DictionaryReset);
 			const userEvents = Context.get(built, UserEvents);
-			this.services = {
+			const commands = {
 				classify,
 				dictionaryReset,
+				idle: yield* IdleTracker,
+				lifecycle,
+				notices,
 				textfresser: Context.get(built, TextfresserCommands),
+				vam,
+			};
+			yield* registerCommands(serviceCommands(commands));
+			const commandProgram = commandKindProgram(commands);
+			this.services = {
+				classify,
+				commandProgram,
+				dictionaryReset,
+				textfresser: commands.textfresser,
 				vam,
 			};
 			return {
@@ -287,7 +288,7 @@ export default class TextEaterPlugin extends Plugin {
 						OverlayLive({
 							...deps,
 							commandExecutor: (kind) =>
-								this.executeCommand(kind),
+								runtime.command(kind, commandProgram(kind)),
 						}),
 					).pipe(
 						Effect.provideContext(context),
@@ -308,26 +309,12 @@ export default class TextEaterPlugin extends Plugin {
 
 	/**
 	 * Runs a Textfresser, Librarian or Classify command on the active note,
-	 * once the launch is done, under `command.<kind>`.
+	 * once the launch is done, under `command.<kind>`, as a toolbar does.
 	 */
 	private executeCommand(kind: CommandKind): Promise<void> {
-		const runtime = this.runtime;
-		if (!runtime || !this.initialized) return Promise.resolve();
-		const program = Effect.gen({ self: this }, function* () {
-			const services = this.services;
-			const librarian = this.lifecycle?.librarian();
-			if (!services || !librarian) return;
-			yield* createCommandExecutor({
-				classify: services.classify.classify,
-				librarian,
-				textfresser: yield* services.textfresser.current,
-				vam: services.vam,
-			})(kind);
-		});
-		return runtime.command(
-			kind,
-			Effect.flatMap(IdleTracker, (idle) => idle.track(program)),
-		);
+		const { runtime, services } = this;
+		if (!runtime || !services) return Promise.resolve();
+		return runtime.command(kind, services.commandProgram(kind));
 	}
 
 	/** A clicked Reading link reopens its note once its Knowledge lands. */

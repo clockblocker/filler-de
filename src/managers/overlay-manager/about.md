@@ -7,7 +7,7 @@ OverlayManager is a **UI orchestrator**. It responds to user behavior, places UI
 ### What OverlayManager Does
 
 - Reads user settings (`ParsedUserSettings`) to determine which actions appear in which toolbar
-- Listens to selection change events and workspace events
+- Listens to selection change events, and is told the workspace events its Layer listens to through `PluginHost` (`overlay-listeners.ts`): a file opened or the layout changed, a scroll, the editor menu
 - Shows/hides selection toolbar above text selection
 - Shows/hides bottom toolbar with contextual actions
 - Manages toolbar lifecycles per leaf (create on open, destroy on close)

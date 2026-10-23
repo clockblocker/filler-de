@@ -50,6 +50,7 @@ export const SOURCE_COUNTS = [
 	"try",
 	"schema-files",
 	"module-let",
+	"host-calls",
 ] as const;
 
 const TABLES = [
@@ -68,6 +69,26 @@ export type Counts = Record<Metric, number>;
  */
 export type AllowlistEntry = { readonly pattern: string; readonly reason: string };
 export const RUN_BOUNDARY_ALLOWLIST: readonly AllowlistEntry[] = [];
+
+/**
+ * Where Obsidian's plugin host may be called directly: its services (#229).
+ * Everywhere else, a `new Notice`, a command or an event registration, or
+ * `openLinkText`, counts as a `host-calls` site.
+ */
+export const HOST_SERVICES: readonly AllowlistEntry[] = [
+	{
+		pattern: "src/managers/obsidian/host/**",
+		reason: "the Obsidian host services",
+	},
+];
+const HOST_METHODS = new Set([
+	"addCommand",
+	"removeCommand",
+	"registerEvent",
+	"registerDomEvent",
+	"registerEditorExtension",
+	"openLinkText",
+]);
 
 const GLOBAL_SETTINGS_CALLS = new Set([
 	"getParsedUserSettings",
@@ -143,6 +164,7 @@ export function countSource(
 			? name(node.property)
 			: name(node);
 	const runAllowed = isAllowlisted(file, allowlist);
+	const hostAllowed = isAllowlisted(file, HOST_SERVICES);
 	const importedRuns = new Set<string>();
 	let importsNeverthrow = false;
 	let importsSchema = false;
@@ -159,6 +181,7 @@ export function countSource(
 			}
 			if (callee.type !== "MemberExpression" || callee.computed) return;
 			const method = name(callee.property);
+			if (method && HOST_METHODS.has(method) && !hostAllowed) add("host-calls");
 			if (callee.object.type === "ThisExpression" || method === undefined) {
 				return;
 			}
@@ -200,6 +223,9 @@ export function countSource(
 				add("managed-runtime-make");
 			}
 			if (object === "Cause" && property === "squash") add("cause-squash");
+		},
+		NewExpression(node) {
+			if (name(node.callee) === "Notice" && !hostAllowed) add("host-calls");
 		},
 		ThrowStatement() {
 			add("throw");

@@ -18,6 +18,7 @@ import { makeObsidianVault } from "../../../src/packages/independent/vault-actio
 import { makeEdgeLog, ObservabilityLive } from "../../../src/runtime/observability";
 import { PluginLive } from "../../../src/runtime/plugin-live";
 import { makePluginRuntime } from "../../../src/runtime/plugin-runtime";
+import { fakeHost } from "../../support/obsidian-host";
 import {
 	fixedSettings,
 	memoryPluginData,
@@ -68,6 +69,7 @@ describe("Plugin logging", () => {
 			PluginLive(vault.app as unknown as App, {
 				confirm: () => Promise.resolve(true),
 				data: memoryPluginData(),
+				host: fakeHost().layer,
 				notices: createLifecycleNotices(() => {}, {
 					trace,
 					writeStop: () => {},

@@ -11,7 +11,7 @@ import type {
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { Effect, Exit } from "effect";
-import type { App, Menu, Plugin } from "obsidian";
+import type { Menu } from "obsidian";
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import { wouldSplitToMultiplePages as checkWouldSplit } from "../../../commanders/librarian/pages/split-to-pages-action";
 import type { ReadSync } from "../../../runtime/plugin-runtime";
@@ -27,8 +27,6 @@ import {
 } from "../../obsidian/command-executor";
 
 type ContextMenuDeps = {
-	app: App;
-	plugin: Plugin;
 	commandExecutor: CommandExecutor | null;
 	librarian: Pick<Librarian, "isInsideLibrary" | "codecRules">;
 	readSync: ReadSync;
@@ -54,14 +52,14 @@ export const getContextMenuFile = Effect.fn("getContextMenuFile")(function* (
 });
 
 /**
- * Setup context menu for "Split into pages" action.
- * Returns teardown function for cleanup.
+ * The editor menu's "Split into pages" item, added as the menu opens; the
+ * overlay's Layer listens for `editor-menu` with it (`PluginHost`).
  */
-export function setupContextMenu(deps: ContextMenuDeps): () => void {
-	const { app, commandExecutor, librarian, plugin, readSync, settings, vam } =
-		deps;
-
-	const editorMenuRef = app.workspace.on("editor-menu", (menu: Menu) => {
+export function contextMenuHandler(
+	deps: ContextMenuDeps,
+): (menu: Menu) => void {
+	const { commandExecutor, librarian, readSync, settings, vam } = deps;
+	return (menu) =>
 		handleEditorMenu(
 			menu,
 			readSync(getContextMenuFile(vam, librarian)),
@@ -69,14 +67,6 @@ export function setupContextMenu(deps: ContextMenuDeps): () => void {
 			librarian.codecRules ?? makeCodecRulesFromSettings(settings()),
 			commandExecutor,
 		);
-	});
-
-	plugin.registerEvent(editorMenuRef);
-
-	// Return teardown (Obsidian handles unregistration via registerEvent)
-	return () => {
-		app.workspace.offref(editorMenuRef);
-	};
 }
 
 /**
