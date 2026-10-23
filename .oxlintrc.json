@@ -17,6 +17,16 @@
 		"**/*.spec.ts"
 	],
 	"rules": {
+		"effecttsgo/any-unknown-in-error-context": "warn",
+		"effecttsgo/async-function": "warn",
+		"effecttsgo/extends-native-error": "warn",
+		"effecttsgo/global-console": "warn",
+		"effecttsgo/global-console-in-effect": "warn",
+		"effecttsgo/global-date": "warn",
+		"effecttsgo/global-date-in-effect": "warn",
+		"effecttsgo/global-timers": "warn",
+		"effecttsgo/global-timers-in-effect": "warn",
+		"effecttsgo/new-promise": "warn",
 		"no-unused-vars": [
 			"warn",
 			{

@@ -28,6 +28,7 @@
         "effect": "4.0.0",
         "knip": "^6.33.0",
         "obsidian": "^1.10.2",
+        "oxc-parser": "0.147.0",
         "oxlint": "1.89.0",
         "oxlint-tsgolint": "7.0.2004",
         "ts-plugin-sort-import-suggestions": "github:clockblocker/ts7-plugin-sort-import-suggestions",
