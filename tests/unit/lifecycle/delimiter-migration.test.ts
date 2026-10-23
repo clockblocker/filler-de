@@ -88,7 +88,7 @@ function makeHarness() {
 		supervisor.launch(
 			Effect.succeed({
 				attachLibrarian: () => () => undefined,
-				loadStore: () => Promise.resolve(),
+				loadStore: Effect.void,
 				makeLibrarian: (onStopped) => {
 					const id = librarians.length;
 					const fake: Fake = {

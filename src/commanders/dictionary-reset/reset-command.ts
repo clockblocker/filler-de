@@ -7,7 +7,10 @@
  * and reports progress in a notice until it opens its report note. "Cancel
  * dictionary reset" stops a run between or inside attestations.
  */
-import type { DumdictVaultStore } from "@textfresser/dictionary";
+import type {
+	DictionaryScanError,
+	DumdictVaultStore,
+} from "@textfresser/dictionary";
 import type { VaultActionManager } from "@textfresser/vault-action-manager";
 import {
 	describeError,
@@ -24,6 +27,7 @@ import {
 	Predicate,
 } from "effect";
 import { type App, Modal, Notice, Setting } from "obsidian";
+import type { DictionaryStoreClosed } from "../../lifecycle/dictionary-store-service";
 import {
 	conciseFailure,
 	type DumgenProvide,
@@ -63,7 +67,10 @@ export type DictionaryResetDeps = {
 	readonly dumgen: DumgenProvide;
 	readonly segmenterVersion: Effect.Effect<string>;
 	readonly cache: SegmentationCache["Service"];
-	readonly store: () => Promise<DumdictVaultStore>;
+	readonly store: Effect.Effect<
+		DumdictVaultStore,
+		DictionaryScanError | DictionaryStoreClosed
+	>;
 	readonly knowledge: KnowledgeQueue;
 	/** Classify's runs per Scroll, which the unlink observer waits out. */
 	readonly activity?: ScrollActivity;
@@ -356,14 +363,15 @@ export class DictionaryResetCommand {
 	): Promise<ResetExecuteOutcome> {
 		const notices: string[] = [];
 		const { deps } = this;
-		const store = Effect.tryPromise({
-			catch: (cause) =>
-				new ResetFailed({
-					cause,
-					message: `The dictionary could not be read: ${getErrorMessage(cause)}`,
-				}),
-			try: () => deps.store(),
-		});
+		const store = deps.store.pipe(
+			Effect.mapError(
+				(cause) =>
+					new ResetFailed({
+						cause,
+						message: `The dictionary could not be read: ${getErrorMessage(cause)}`,
+					}),
+			),
+		);
 		const dictionary: ResetDictionary = {
 			appendFreeform: (request) =>
 				store.pipe(

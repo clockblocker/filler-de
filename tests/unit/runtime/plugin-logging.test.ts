@@ -10,7 +10,10 @@ import { Cause, Effect } from "effect";
 import type { App } from "obsidian";
 import { Librarian } from "../../../src/commanders/librarian/librarian";
 import { createLifecycleNotices } from "../../../src/lifecycle/lifecycle-notices";
-import { createLifecycleSupervisor } from "../../../src/lifecycle/lifecycle-supervisor";
+import {
+	Lifecycle,
+	type LifecycleSupervisor,
+} from "../../../src/lifecycle/lifecycle-supervisor";
 import { makeObsidianVault } from "../../../src/packages/independent/vault-action-manager/tests/unit/helpers/obsidian-vault";
 import { makeEdgeLog, ObservabilityLive } from "../../../src/runtime/observability";
 import { PluginLive } from "../../../src/runtime/plugin-live";
@@ -60,15 +63,13 @@ describe("Plugin logging", () => {
 		const vault = makeObsidianVault({
 			"Library/Soup/Anchor-Soup.md": "",
 		});
-		const lifecycle = createLifecycleSupervisor<Librarian>({
-			notices: createLifecycleNotices(() => {}, {
-				trace,
-				writeStop: () => {},
-			}),
-		});
+		let lifecycle: LifecycleSupervisor<Librarian> | null = null;
 		const runtime = makePluginRuntime(
 			PluginLive(vault.app as unknown as App, {
-				lifecycle,
+				notices: createLifecycleNotices(() => {}, {
+					trace,
+					writeStop: () => {},
+				}),
 				providerKeys: () => ({ openaiApiKey: "", typesafeApiKey: "" }),
 				requestUrl: unreachable,
 				trace,
@@ -83,12 +84,13 @@ describe("Plugin logging", () => {
 			runtime.onload(
 				Effect.gen(function* () {
 					const vam = yield* VaultActionManager;
+					lifecycle = yield* Lifecycle;
 					yield* lifecycle.launch(
 						Effect.gen(function* () {
 							yield* vam.startListening();
 							return {
 								attachLibrarian: () => () => {},
-								loadStore: () => Promise.resolve(),
+								loadStore: Effect.void,
 								makeLibrarian: (onStopped) =>
 									new Librarian(vam, { onStopped }),
 								onLaunched: () => Effect.void,
@@ -99,7 +101,9 @@ describe("Plugin logging", () => {
 					);
 				}),
 			);
-			await until(() => lifecycle.librarianState().kind === "Running");
+			await until(
+				() => lifecycle?.librarianState().kind === "Running",
+			);
 			const vam = await runtime.e2e(
 				"vam",
 				Effect.service(VaultActionManager),

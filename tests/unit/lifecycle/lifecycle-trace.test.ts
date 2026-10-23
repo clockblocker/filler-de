@@ -28,7 +28,7 @@ describe("lifecycle trace", () => {
 				.launch(
 					Effect.succeed({
 						attachLibrarian: () => () => {},
-						loadStore: () => Promise.resolve(),
+						loadStore: Effect.void,
 						makeLibrarian: () => ({
 							init: () =>
 								Effect.void.pipe(Effect.withSpan("Fake.init")),
@@ -86,7 +86,7 @@ describe("lifecycle trace", () => {
 				Deferred.await(ready).pipe(
 					Effect.as({
 						attachLibrarian: () => () => {},
-						loadStore: () => Promise.resolve(),
+						loadStore: Effect.void,
 						makeLibrarian: () => ({
 							init: () => Effect.void,
 							unsubscribe: () => Effect.void,

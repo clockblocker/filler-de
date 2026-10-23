@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { VamScanError } from "@textfresser/vault-action-manager";
-import { Cause, Deferred, Effect, Option } from "effect";
+import { Cause, Deferred, Effect, Option, type Scope } from "effect";
 import {
 	type LibrarianStop,
 	LibrarianStopped,
@@ -51,7 +51,7 @@ function makeHarness(options: { readonly autoStart?: boolean } = {}) {
 	const events: string[] = [];
 	const librarians: FakeLibrarian[] = [];
 	let resetRunning = false;
-	let storeLoaded: Deferred.Deferred<void, unknown> = Deferred.makeUnsafe();
+	let storeLoaded: Deferred.Deferred<void> = Deferred.makeUnsafe();
 	Deferred.doneUnsafe(storeLoaded, Effect.void);
 
 	const notices = createLifecycleNotices(
@@ -110,7 +110,7 @@ function makeHarness(options: { readonly autoStart?: boolean } = {}) {
 			events.push(`attach ${librarian.id}`);
 			return () => events.push(`detach ${librarian.id}`);
 		},
-		loadStore: () => Effect.runPromise(Deferred.await(storeLoaded)),
+		loadStore: Effect.suspend(() => Deferred.await(storeLoaded)),
 		makeLibrarian,
 		onLaunched: () =>
 			Effect.sync(() => {
@@ -128,7 +128,13 @@ function makeHarness(options: { readonly autoStart?: boolean } = {}) {
 			return storeLoaded;
 		},
 		/** Launches with `boot`, by default one that wires `plugin` at once. */
-		launch: (boot: Effect.Effect<LaunchedPlugin<FakeLibrarian>, TaggedFailure> = Effect.succeed(plugin)) =>
+		launch: (
+			boot: Effect.Effect<
+				LaunchedPlugin<FakeLibrarian>,
+				TaggedFailure,
+				Scope.Scope
+			> = Effect.succeed(plugin),
+		) =>
 			Effect.runPromise(supervisor.launch(boot)),
 		librarians,
 		plugin,
@@ -501,22 +507,19 @@ describe("lifecycle supervisor: ordering", () => {
 });
 
 describe("lifecycle supervisor: unload", () => {
-	it("interrupts a startup in flight, tells nothing, and releases newest first, the vault last", async () => {
+	/** A service built in the launch's scope, released by its finalizer. */
+	const service = (h: ReturnType<typeof makeHarness>, name: string) =>
+		Effect.addFinalizer(() =>
+			Effect.sync(() => {
+				h.events.push(`release ${name}`);
+			}),
+		);
+
+	it("interrupts a startup in flight, tells nothing, and releases the services newest first, then the Librarian", async () => {
 		const h = makeHarness();
-		const released: string[] = [];
 		const boot = Effect.gen(function* () {
-			yield* h.supervisor.ownLast(
-				"dispose the vault",
-				Effect.sync(() => released.push("vault")),
-			);
-			yield* h.supervisor.own(
-				"close the store",
-				Effect.sync(() => released.push("store")),
-			);
-			yield* h.supervisor.own(
-				"close the observer",
-				Effect.sync(() => released.push("observer")),
-			);
+			yield* service(h, "store");
+			yield* service(h, "observer");
 			return h.plugin;
 		});
 		const launch = h.launch(boot);
@@ -534,8 +537,11 @@ describe("lifecycle supervisor: unload", () => {
 		expect(await queued).toBe(false);
 		expect(h.librarians).toHaveLength(1);
 		expect(h.events).not.toContain("launched");
-		expect(released).toEqual(["observer", "store", "vault"]);
-		expect(h.events.slice(-1)).toEqual(["unsubscribe 0"]);
+		expect(h.events.slice(-3)).toEqual([
+			"release observer",
+			"release store",
+			"unsubscribe 0",
+		]);
 		expect(h.supervisor.state().kind).toBe("Stopped");
 		expect(h.supervisor.librarianState().kind).toBe("Stopped");
 		expect(h.supervisor.librarian()).toBeNull();
@@ -573,30 +579,34 @@ describe("lifecycle supervisor: unload", () => {
 		);
 		expect((late as { _tag?: string })._tag).toBe("LifecycleStoppedError");
 		expect(h.librarians).toHaveLength(1);
+	});
 
-		let released = false;
-		await Effect.runPromise(
-			h.supervisor.own(
-				"late",
-				Effect.sync(() => {
-					released = true;
-				}),
-			),
+	it("releases the overlay onLaunched built with the services, before them", async () => {
+		const h = makeHarness({ autoStart: true });
+		await h.launch(
+			Effect.gen(function* () {
+				yield* service(h, "store");
+				return {
+					...h.plugin,
+					onLaunched: () => service(h, "overlay"),
+				};
+			}),
 		);
-		expect(released).toBe(true);
+		await Effect.runPromise(h.supervisor.stop);
+		expect(h.events.slice(-4)).toEqual([
+			"detach 0",
+			"release overlay",
+			"release store",
+			"unsubscribe 0",
+		]);
 	});
 
 	it("keeps releasing when one release fails", async () => {
 		const h = makeHarness({ autoStart: true });
-		const released: string[] = [];
 		await h.launch(
 			Effect.gen(function* () {
-				yield* h.supervisor.own(
-					"first",
-					Effect.sync(() => released.push("first")),
-				);
-				yield* h.supervisor.own(
-					"broken",
+				yield* service(h, "first");
+				yield* Effect.addFinalizer(() =>
 					Effect.sync(() => {
 						throw new Error("boom");
 					}),
@@ -605,7 +615,8 @@ describe("lifecycle supervisor: unload", () => {
 			}),
 		);
 		await Effect.runPromise(h.supervisor.stop);
-		expect(released).toEqual(["first"]);
+		expect(h.events.slice(-2)).toEqual(["release first", "unsubscribe 0"]);
+		expect(h.supervisor.librarianState().kind).toBe("Stopped");
 	});
 });
 
@@ -644,21 +655,11 @@ describe("lifecycle supervisor: thrown errors", () => {
 		expect(await Effect.runPromise(h.supervisor.reconfigure)).toBe(false);
 	});
 
-	it("still disposes the vault when the Librarian's stop throws", async () => {
+	it("still finishes the unload when the Librarian's stop throws", async () => {
 		const h = makeHarness({ autoStart: true });
-		let disposed = false;
-		await h.launch(
-			Effect.gen(function* () {
-				yield* h.supervisor.ownLast(
-					"dispose the vault",
-					Effect.sync(() => {
-						disposed = true;
-					}),
-				);
-				return throwingFirst(h, "unsubscribe");
-			}),
-		);
-		await Effect.runPromise(h.supervisor.stop);
-		expect(disposed).toBe(true);
+		await h.launch(Effect.succeed(throwingFirst(h, "unsubscribe")));
+		const stop = await Effect.runPromiseExit(h.supervisor.stop);
+		expect(stop._tag).toBe("Success");
+		expect(h.supervisor.librarianState().kind).toBe("Stopped");
 	});
 });
