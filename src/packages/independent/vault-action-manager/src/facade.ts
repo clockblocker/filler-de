@@ -730,8 +730,8 @@ class VaultActionManagerFacade {
 	 * what could not be and why, and what is not undoable. Pre-images of
 	 * the files the batch writes are read before it runs. The inverse
 	 * batches run under the batch's own `caller` and `operationId`. The
-	 * failure keeps every reason of the batch's cause, after the
-	 * `VamDispatchFailure` (see `dispatchOrUndoVia`).
+	 * failure keeps every failure and defect of the batch's cause, with the
+	 * `VamDispatchFailure` as its first failure (see `dispatchOrUndoVia`).
 	 */
 	dispatchOrUndo(
 		actions: readonly VaultAction[],

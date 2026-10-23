@@ -124,11 +124,14 @@ const UNDONE: InverseResult = { _tag: "Undone" };
  * Dispatches `actions` as one batch that stops at its first failure. On
  * success it answers the batch's report. On failure it undoes what landed,
  * in reverse run order, and fails with the batch's `VamDispatchFailure`,
- * whose report's `undo` says what was taken back. The failure keeps the
- * batch's whole cause: the `VamDispatchFailure` is its first failure, and
- * every other reason, such as a finalizer's defect, follows it, then those
- * beside each inverse batch's failure. `Effect.catch` or `catchTag` get the
- * `VamDispatchFailure`; `catchCause` gets every reason.
+ * whose report's `undo` says what was taken back. The failure keeps every
+ * failure and defect of the batch's cause, each where it stood: the
+ * `VamDispatchFailure` with the undo stands in for the batch's first
+ * failure, and the other reasons, such as a finalizer's defect, keep their
+ * places. The failures and defects beside each inverse batch's failure come
+ * last. Interruptions beside a failure are left out, as before: they say
+ * who stopped a fiber, not why it failed. `Effect.catch` or `catchTag` get
+ * the `VamDispatchFailure`; `catchCause` gets every reason.
  *
  * - `Created` → the file is trashed only while it holds the content it was
  *   created with. Created folders and non-Markdown files stay.
@@ -182,20 +185,28 @@ export const dispatchOrUndoVia = Effect.fn("vam.dispatchOrUndo")(function* (
 });
 
 /**
- * The stopped batch's reasons, with its first failure replaced by
- * `failure`, which carries the undo, and every other reason kept in order.
- * A cause without a failure is `failure` alone: `stoppedBatch` made it
- * from that cause, and each of its entries holds the cause's defects.
+ * The stopped batch's failures and defects, with its first failure
+ * replaced by `failure`, which carries the undo, and every other one kept
+ * where it stood. A cause without a failure is `failure` alone:
+ * `stoppedBatch` made it from that cause, and each of its entries holds
+ * what the batch died of.
  */
 function withFailure(
 	cause: Cause.Cause<VamDispatchFailure>,
 	failure: VamDispatchFailure,
 ): readonly Cause.Reason<VamDispatchFailure>[] {
-	const first = cause.reasons.findIndex(Cause.isFailReason);
-	if (first < 0) return [Cause.makeFailReason(failure)];
-	return cause.reasons.map((reason, index) =>
-		index === first ? Cause.makeFailReason(failure) : reason,
+	const first = cause.reasons.find(Cause.isFailReason);
+	if (!first) return [Cause.makeFailReason(failure)];
+	return failuresAndDefects(cause.reasons).map((reason) =>
+		reason === first ? Cause.makeFailReason(failure) : reason,
 	);
+}
+
+/** `reasons` without their interruptions. */
+function failuresAndDefects(
+	reasons: readonly Cause.Reason<VamDispatchFailure>[],
+): readonly Cause.Reason<VamDispatchFailure>[] {
+	return reasons.filter((reason) => !Cause.isInterruptReason(reason));
 }
 
 /**
@@ -686,8 +697,8 @@ const probeForward = Effect.fn("vam.undo.probe")(function* (
 
 /**
  * Runs one inverse on its own and says whether it took the change back.
- * The reasons beside the inverse's failure, which its result has no room
- * for, go to `onBeside`.
+ * The failures and defects beside the inverse's failure, which its result
+ * has no room for, go to `onBeside`.
  */
 const runInverse = Effect.fnUntraced(function* (
 	port: VamUndoPort,
@@ -720,7 +731,11 @@ const runInverse = Effect.fnUntraced(function* (
 			}),
 		};
 	}
-	onBeside(exit.cause.reasons.filter((other) => other !== failed));
+	onBeside(
+		failuresAndDefects(exit.cause.reasons).filter(
+			(other) => other !== failed,
+		),
+	);
 	const { reason, report } = failed.error;
 	const entry = entryOf(report, plan.inverse);
 	switch (entry?.status) {

@@ -359,6 +359,107 @@ describe("dispatchOrUndo", () => {
 		).toEqual(["Error: inverse finalizer exploded"]);
 	});
 
+	it("keeps each failure and defect where it stood, the inverses' last, and no interruption", async () => {
+		const created = createMd("Library/new.md", "fresh");
+		const stopped = createMd("Library/stop.md", "stop");
+		const failed = (action: VaultAction, operationId: string) => {
+			const failure = VamDispatchFailure.ofReport(
+				new VamDispatchReport({
+					caller: "test",
+					entries: [
+						...(action === stopped
+							? [
+									{
+										action: created,
+										outcome: {
+											_tag: "Created" as const,
+											contentHash:
+												vaultContentHash("fresh"),
+										},
+										status: "Done" as const,
+									},
+								]
+							: []),
+						{
+							action,
+							error: new VamDispatchError({
+								action,
+								cause: new Error(`${operationId} failed`),
+								kind: "conflict",
+								operation: "dispatch",
+							}),
+							status: "Failed" as const,
+						},
+					],
+					operationId,
+				}),
+			);
+			if (!failure) throw new Error("the report failed nothing");
+			return failure;
+		};
+		const second = failed(stopped, "second");
+		const port: VamUndoPort = {
+			dispatchWithReport: (actions, { stopOnFirstFailure }) => {
+				const [inverse] = actions;
+				if (!inverse) throw new Error("a batch is never empty here");
+				return stopOnFirstFailure
+					? Effect.failCause(
+							Cause.fromReasons([
+								Cause.makeDieReason("before"),
+								Cause.makeFailReason(
+									failed(stopped, "forward"),
+								),
+								Cause.makeInterruptReason(),
+								Cause.makeFailReason(second),
+								Cause.makeDieReason("after"),
+							]),
+						)
+					: Effect.failCause(
+							Cause.fromReasons([
+								Cause.makeFailReason(
+									failed(inverse, "inverse"),
+								),
+								Cause.makeInterruptReason(),
+								Cause.makeDieReason("inverse finalizer"),
+							]),
+						);
+			},
+			exists: () => Effect.succeed(false),
+			readContent: () => Effect.succeed(""),
+		};
+		const exit = await Effect.runPromise(
+			Effect.exit(
+				dispatchOrUndoVia(port, [created, stopped], { caller: "test" }),
+			),
+		);
+		if (!Exit.isFailure(exit)) throw new Error("dispatchOrUndo succeeded");
+		expect(
+			exit.cause.reasons.map((reason) => {
+				if (Cause.isDieReason(reason)) return `Die ${reason.defect}`;
+				if (!Cause.isFailReason(reason)) return reason._tag;
+				const { operationId, undo } = reason.error.report;
+				return `Fail ${operationId}${undo ? " with undo" : ""}`;
+			}),
+		).toEqual([
+			"Die before",
+			"Fail forward with undo",
+			"Fail second",
+			"Die after",
+			"Die inverse finalizer",
+		]);
+		const [, first] = exit.cause.reasons;
+		if (!first || !Cause.isFailReason(first))
+			throw new Error("the batch's failure moved");
+		expect(blocks(first.error.report.undo ?? emptyUndo)).toEqual([
+			[VaultActionKind.CreateMdFile, "Changed"],
+		]);
+		// What `Effect.catch` and `flip` see is the batch's failure, with its undo.
+		const caught = await Effect.runPromise(
+			Effect.flip(Effect.failCause(exit.cause)),
+		);
+		expect(caught).toBe(first.error);
+	});
+
 	it("undoes nothing for a batch VAM refused before running it", async () => {
 		const harness = makeVaultHarness();
 		harness.addFile("Exemplar/a.md", "kept");

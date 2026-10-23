@@ -423,8 +423,14 @@ describe("delimiter migration lifecycle", () => {
 		).toEqual(["alpha-beta"]);
 		expect(outcome.execution.failure.operation).toBe("execute.RenameMdFile");
 		const { dispatch } = outcome.execution.failure;
-		expect(dispatch.reasons.filter(Cause.isFailReason)).toHaveLength(1);
-		expect(dispatch.reasons.filter(Cause.isDieReason)).toHaveLength(1);
+		const [failed, died, ...others] = dispatch.reasons;
+		expect(others).toEqual([]);
+		if (!failed || !Cause.isFailReason(failed))
+			throw new Error("the dispatch's first reason is not its failure");
+		expect(failed.error.report.undo?.undone).toHaveLength(1);
+		expect(died && Cause.isDieReason(died) && String(died.defect)).toBe(
+			"Error: finalizer exploded",
+		);
 		expect(reportDelimiterMigration(outcome, delimiters).log).toContain(
 			"dispatch also: finalizer exploded",
 		);

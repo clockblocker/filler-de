@@ -431,14 +431,17 @@ undo as part of the same operation. A bare implementation of the
 `VamUndoPort` (`dispatchWithReport`, `exists`, `readContent`) can run the
 same layer through `dispatchOrUndoVia`, as test fakes do.
 
-The failure keeps the batch's whole `Cause`. Its first failure is the
-`VamDispatchFailure` with `report.undo`, and every other reason of the
-batch, such as a finalizer's defect, follows in order. After those come
-the reasons beside each inverse batch's failure, which the undo report
-has no room for. `Effect.catch`, `catchTag` and `mapError` see only the
-first failure, so a caller that reports every reason reads the cause,
-with `catchCause` or `Effect.exit`. A batch that only died is the one
-failure `dispatchOrUndo` makes for it, whose entries hold what it died of.
+The failure keeps every failure and defect of the batch's `Cause`, each
+where it stood. The `VamDispatchFailure` with `report.undo` stands in for
+the batch's first failure, and the other reasons, such as a finalizer's
+defect, keep their places. The failures and defects beside each inverse
+batch's failure, which the undo report has no room for, come last.
+Interruptions beside a failure are left out. `Effect.catch`, `catchTag`
+and `mapError` see only the first failure, so a caller that reports every
+reason reads the cause, with `catchCause` or `Effect.exit`. A batch that
+only died fails with the one failure `dispatchOrUndo` makes for it, whose
+entries hold what it died of, followed by what was beside any inverse's
+failure.
 
 Callers: the delimiter migration renames back every note it moved; the
 dictionary store undoes its create phase, and rolls forward from the files
