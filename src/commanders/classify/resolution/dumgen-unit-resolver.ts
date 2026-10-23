@@ -24,10 +24,10 @@
  * links are written.
  */
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
-import type { Dumgen } from "dumgen";
 import { parseUnit } from "dumling";
 import type * as Dumling from "dumling/types";
 import { Cause, Data, Effect, Option } from "effect";
+import type { Dumgen } from "../../../managers/dumgen/dumgen-over";
 import { getErrorMessage } from "../../../utils/get-error-message";
 import type { ClassifyPlan, PlannedSentence, PlannedUnit } from "../types";
 import {

@@ -15,8 +15,9 @@
  *    the Scroll shares its segmentation, but each instance gives units of
  *    its own, so each stays its own occurrence.
  */
-import type { Dumgen, SegmentedSentence, Unit } from "dumgen";
+import type { SegmentedSentence, Unit } from "dumgen";
 import { Context, Effect, Option, Schema } from "effect";
+import type { Dumgen } from "../../managers/dumgen/dumgen-over";
 import type { UserLinks } from "./resolution/scroll-links";
 import {
 	type ScrollSentence,

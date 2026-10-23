@@ -8,7 +8,6 @@ import {
 	makeDumdictVaultStore,
 } from "@textfresser/dictionary";
 import type {
-	Dumgen,
 	GrammarResolution,
 	ReadingResolution,
 	ResolveGrammarInput,
@@ -32,6 +31,7 @@ import type {
 	ClassifyPlan,
 	PlannedUnit,
 } from "../../../../src/commanders/classify/types";
+import type { Dumgen } from "../../../../src/managers/dumgen/dumgen-over";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
 
 export const run = <A, E>(effect: Effect.Effect<A, E>): Promise<A> =>

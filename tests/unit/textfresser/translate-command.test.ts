@@ -4,7 +4,7 @@ import type {
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { VaultActionKind } from "@textfresser/vault-action-manager";
-import { type Dumgen, InvalidModelOutput } from "dumgen";
+import { InvalidModelOutput } from "dumgen";
 import { Effect, Result } from "effect";
 import { neighbourSentences } from "../../../src/commanders/textfresser/commands/translate/neighbour-sentences";
 import { Textfresser } from "../../../src/commanders/textfresser/textfresser";
@@ -12,6 +12,7 @@ import {
 	createRequestUrlFetch,
 	DumgenHost,
 } from "../../../src/managers/dumgen";
+import type { Dumgen } from "../../../src/managers/dumgen/dumgen-over";
 import type { CommandContext } from "../../../src/managers/obsidian/command-executor";
 import type { LanguagesConfig } from "../../../src/types";
 import {

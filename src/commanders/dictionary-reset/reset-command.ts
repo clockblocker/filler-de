@@ -13,7 +13,6 @@ import {
 	describeError,
 	formatCause,
 } from "@textfresser/vault-action-manager/diagnostics";
-import type { Dumgen } from "dumgen";
 import {
 	Cause,
 	DateTime,
@@ -25,6 +24,7 @@ import {
 } from "effect";
 import { type App, Modal, Notice, Setting } from "obsidian";
 import { conciseFailure, type KeyCheckFailure } from "../../managers/dumgen";
+import type { Dumgen } from "../../managers/dumgen/dumgen-over";
 import { getErrorMessage } from "../../utils/get-error-message";
 import { logger } from "../../utils/logger";
 import {

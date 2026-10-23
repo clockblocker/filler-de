@@ -9,11 +9,13 @@
  * `ProviderFailure` reading "… connection failed: Cancelled because the
  * plugin unloaded", since it tells apart only its own aborts. A rebuilt
  * instance gets a fresh request budget, and the old instance's in-flight
- * calls run on.
+ * calls run on. Every instance is one `DumgenLive` build (`dumgenOver`) in
+ * the host's scope, which `dispose()` closes.
  */
 import { sha256Hex } from "@textfresser/lemma-note-codec";
-import { createDumgen, type Dumgen } from "dumgen";
-import { Effect } from "effect";
+import { JevTransport, LunaTransport } from "dumgen";
+import { Effect, Exit, Scope } from "effect";
+import { type Dumgen, dumgenOver } from "./dumgen-over";
 import {
 	checkProviderKeys,
 	KEY_CHECK_URLS,
@@ -61,6 +63,8 @@ export type DumgenHostOptions = {
 
 export class DumgenHost {
 	private readonly lifetime = new AbortController();
+	/** Holds every instance's build; closed on dispose. */
+	private readonly scope = Scope.makeUnsafe();
 	private current:
 		| { readonly keys: DumgenProviderKeys; readonly dumgen: Dumgen }
 		| undefined;
@@ -91,13 +95,16 @@ export class DumgenHost {
 			current.keys.typesafeApiKey === keys.typesafeApiKey
 		)
 			return current.dumgen;
-		const dumgen = buildDumgen({
-			...keys,
-			fetch: this.fetch,
-			...(this.options.timeoutMs === undefined
-				? {}
-				: { timeoutMs: this.options.timeoutMs }),
-		});
+		const dumgen = buildDumgen(
+			{
+				...keys,
+				fetch: this.fetch,
+				...(this.options.timeoutMs === undefined
+					? {}
+					: { timeoutMs: this.options.timeoutMs }),
+			},
+			this.scope,
+		);
 		this.current = { dumgen, keys };
 		return dumgen;
 	}
@@ -127,7 +134,13 @@ export class DumgenHost {
 		const jev = createScriptedJev(script.jev);
 		const luna = createScriptedLuna(script.luna ?? {});
 		this.scripted = {
-			dumgen: createDumgen({ jev: jev.ask, luna: luna.ask }),
+			dumgen: dumgenOver(
+				{
+					jev: JevTransport.fromAsk(jev.ask),
+					luna: LunaTransport.fromAsk(luna.ask),
+				},
+				this.scope,
+			),
 			keyCheck: script.keyCheck ?? {},
 			requests: () => ({ jev: jev.requests(), luna: luna.requests() }),
 			tag: sha256Hex(
@@ -199,11 +212,15 @@ export class DumgenHost {
 		});
 	}
 
-	/** Aborts every call in flight; `get()` throws afterwards. Idempotent. */
+	/**
+	 * Aborts every call in flight and releases every build; `get()` throws
+	 * afterwards. Idempotent.
+	 */
 	dispose(): void {
 		this.current = undefined;
 		this.scripted = undefined;
 		this.lifetime.abort(new Error("Cancelled because the plugin unloaded"));
+		Effect.runSync(Scope.close(this.scope, Exit.void));
 	}
 
 	private readonly fetch: DumgenFetch = (url, init) =>

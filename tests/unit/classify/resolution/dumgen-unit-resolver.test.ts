@@ -3,7 +3,7 @@ import type { DumdictVaultStore } from "@textfresser/dictionary";
 import { Transaction } from "@textfresser/dictionary";
 import { lemmaNotePath, readingNotePath } from "@textfresser/lemma-note-codec";
 import type { Unit } from "dumgen";
-import { createDumgen } from "dumgen";
+import { JevTransport, LunaTransport } from "dumgen";
 import type * as Dumling from "dumling/types";
 import { variantIdOf } from "dumrel";
 import { Effect, Layer, Result } from "effect";
@@ -22,6 +22,7 @@ import {
 	SegmentationCache,
 } from "../../../../src/commanders/classify/segmentation-cache";
 import { UnitResolver } from "../../../../src/commanders/classify/unit-resolver";
+import { dumgenOver } from "../../../../src/managers/dumgen";
 import { createScriptedJev } from "../../../../src/managers/dumgen/scripted-jev";
 import { FakeVault } from "../../../../src/packages/composed/dictionary/tests/support/fake-vault";
 import { FAENGT_AN_ANSWERS, selectionOf } from "../support";
@@ -432,9 +433,11 @@ describe("dumgenUnitResolver", () => {
 			dumgen: stub.dumgen,
 			scrollPath: SCROLL,
 		});
-		const segmenter = createDumgen({
-			jev: createScriptedJev(FAENGT_AN_ANSWERS).ask,
-			luna: () => Promise.reject(new Error("segmentation asked Luna")),
+		const segmenter = dumgenOver({
+			jev: JevTransport.fromAsk(createScriptedJev(FAENGT_AN_ANSWERS).ask),
+			luna: LunaTransport.fromAsk(() =>
+				Promise.reject(new Error("segmentation asked Luna")),
+			),
 		});
 		const resolver = dumgenUnitResolver({
 			dumgen: Effect.succeed(stub.dumgen),

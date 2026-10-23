@@ -8,8 +8,8 @@
 import { WORTER_FOLDER } from "@textfresser/lemma-note-codec";
 import { VaultPath } from "@textfresser/vault-action-manager";
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
-import type { Dumgen } from "dumgen";
 import { Cause, Effect, Layer } from "effect";
+import type { Dumgen } from "../../managers/dumgen/dumgen-over";
 import { getErrorMessage } from "../../utils/get-error-message";
 import { logger } from "../../utils/logger";
 import {

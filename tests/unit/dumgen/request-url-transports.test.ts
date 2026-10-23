@@ -1,12 +1,13 @@
 import { describe, expect, it } from "bun:test";
-import { type Dumgen, ProviderFailure } from "dumgen";
+import { JevTransport, ProviderFailure } from "dumgen";
 import * as Effect from "effect/Effect";
 import * as Fiber from "effect/Fiber";
 import {
 	buildDumgen,
-	createDumgenProviders,
 	createRequestUrlFetch,
+	dumgenTransports,
 } from "../../../src/managers/dumgen";
+import type { Dumgen } from "../../../src/managers/dumgen/dumgen-over";
 import {
 	jevBody,
 	parsedBody,
@@ -51,10 +52,16 @@ describe("TypeSafe (jev) over requestUrl", () => {
 			status: 200,
 			text: jevBody,
 		}));
-		const { jev } = createDumgenProviders({
-			...keys,
-			fetch: createRequestUrlFetch(requestUrl),
-		});
+		const jev = Effect.runSync(
+			JevTransport.use(({ ask }) => Effect.succeed(ask)).pipe(
+				Effect.provide(
+					dumgenTransports({
+						...keys,
+						fetch: createRequestUrlFetch(requestUrl),
+					}).jev,
+				),
+			),
+		);
 		const response = await jev(
 			{
 				model: "jev-1.13.0",
