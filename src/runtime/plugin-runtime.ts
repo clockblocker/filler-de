@@ -42,7 +42,7 @@ export class PluginUnloadedError extends Data.TaggedError(
 
 /**
  * Runs programs on the plugin runtime for the code that still hops into it
- * from outside an Effect (#226, #227 remove these hops). Its programs are
+ * from outside an Effect (#227 removes these hops). Its programs are
  * traced and logged like any other, as root spans of their own.
  */
 export type EffectRunner<ER = never> = {

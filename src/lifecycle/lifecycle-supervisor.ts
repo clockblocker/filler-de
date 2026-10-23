@@ -20,9 +20,13 @@
  * a `Lifecycle.<kind>` span: a "Restart Librarian" shows under its
  * `command.restart-librarian`, and the Librarian's start under it.
  *
- * `stop` does not wait in the mailbox: it interrupts the command in flight,
- * drops those waiting, releases every service the launch owned (newest
- * first), stops the Librarian, and then what it owns last.
+ * The services the launch builds live in a scope the supervisor owns, and
+ * each Librarian it starts in a child scope of its own, which a restart or
+ * a pause closes. `stop` does not wait in the mailbox: it interrupts the
+ * command in flight, drops those waiting, closes the services' scope (their
+ * finalizers run newest first), waits for the command, and closes the
+ * Librarian's scope. The plugin runtime runs `stop` as the `Lifecycle`
+ * Layer's finalizer, before it shuts VAM down.
  *
  * What fails is typed (`lifecycle-errors.ts`), and each failure keeps its
  * whole cause: a Librarian start that failed and threw as it cleaned up
@@ -30,16 +34,18 @@
  */
 import {
 	Cause,
-	type Context,
+	Context,
 	Deferred,
 	Effect,
 	Exit,
 	type Fiber,
+	Layer,
 	Option,
 	Scope,
 	type Tracer,
 } from "effect";
 import type {
+	Librarian,
 	LibrarianStop,
 	LibrarianUnsubscribeFailure,
 } from "../commanders/librarian/librarian";
@@ -100,11 +106,14 @@ export type LaunchedPlugin<L extends SupervisedLibrarian> = {
 	/** Whether a dictionary reset runs: Classify is paused meanwhile. */
 	readonly resetRunning: () => boolean;
 	/** Loads the dictionary store; the unlink sweep waits for it. */
-	readonly loadStore: () => Promise<unknown>;
+	readonly loadStore: Effect.Effect<unknown, TaggedFailure>;
 	/** The unlink observer's sweep for links removed while the plugin was off. */
 	readonly sweep: () => void;
-	/** Once the Librarian's first start ended, run or failed: what needs it, such as the overlay. */
-	readonly onLaunched: () => Effect.Effect<void>;
+	/**
+	 * Once the Librarian's first start ended, run or failed: what needs it,
+	 * such as the overlay, built in the services' scope.
+	 */
+	readonly onLaunched: () => Effect.Effect<void, never, Scope.Scope>;
 };
 
 export type LifecycleSupervisor<L extends SupervisedLibrarian> = {
@@ -121,12 +130,16 @@ export type LifecycleSupervisor<L extends SupervisedLibrarian> = {
 	readonly classifyRefusal: () => string | undefined;
 
 	/**
-	 * Waits for Obsidian with `boot`, which builds the plugin's services and
-	 * owns them, then starts the Librarian. A failure is logged.
+	 * Waits for Obsidian with `boot`, which builds the plugin's services in
+	 * the scope it is given, then starts the Librarian. A failure is
+	 * logged. The services are released as the plugin unloads, newest
+	 * first, before the Librarian stops.
 	 */
 	readonly launch: (
-		boot: Effect.Effect<LaunchedPlugin<L>, TaggedFailure>,
+		boot: Effect.Effect<LaunchedPlugin<L>, TaggedFailure, Scope.Scope>,
 	) => Effect.Effect<void>;
+	/** Ends once the launch ended, launched or failed, or the plugin unloads. */
+	readonly whenLaunched: Effect.Effect<void>;
 	/**
 	 * The "Restart Librarian" command: refused while one is under way or a
 	 * delimiter migration runs, and told when it worked.
@@ -158,21 +171,6 @@ export type LifecycleSupervisor<L extends SupervisedLibrarian> = {
 	readonly duringMigration: <A, E>(
 		task: Effect.Effect<A, E>,
 	) => Effect.Effect<A, E | LifecycleStoppedError>;
-
-	/**
-	 * Releases `release` as the plugin unloads, before the Librarian stops.
-	 * `what` names it in the log should it fail, such as `"close the
-	 * dictionary store"`. Owned after unload began, it is released at once.
-	 */
-	readonly own: (
-		what: string,
-		release: Effect.Effect<void, TaggedFailure>,
-	) => Effect.Effect<void>;
-	/** Releases `release` last, after the Librarian stopped. */
-	readonly ownLast: (
-		what: string,
-		release: Effect.Effect<void, TaggedFailure>,
-	) => Effect.Effect<void>;
 	/** Unloads the plugin. What it can release at once, it releases synchronously. */
 	readonly stop: Effect.Effect<void>;
 };
@@ -208,18 +206,34 @@ type InFlight = {
 	settled: boolean;
 };
 
-type Owned = {
-	readonly what: string;
-	readonly release: Effect.Effect<void, TaggedFailure>;
-};
-
-/** The Librarian started last, and how its stop is told. */
+/** The Librarian started last, the scope it lives in, and how its stop is told. */
 type LibrarianSlot<L> = {
 	readonly librarian: L;
+	/** Closed by a restart, a pause or the unload: unwires and unsubscribes it. */
+	readonly scope: Scope.Closeable;
 	/** Its start's reason until the start ended; `null` once it runs. */
 	starting: LibrarianStartReason | null;
 	detach: (() => void) | null;
+	/** How unsubscribing it ended, once its scope closed, until read. */
+	unsubscribed: Exit.Exit<void, LibrarianUnsubscribeFailure> | null;
 };
+
+/**
+ * Runs `release`, a part of the plugin being released, such as a Layer's
+ * finalizer. What it fails or dies with is logged as a `ReleaseFailed`
+ * named `what`, not raised: the releases after it still run.
+ */
+export const releaseGuarded = (
+	notices: Pick<LifecycleNotices, "releaseFailed">,
+	what: string,
+	release: Effect.Effect<void, TaggedFailure>,
+): Effect.Effect<void> =>
+	release.pipe(
+		// Even an interrupted release leaves the rest to release.
+		Effect.catchCause((cause) =>
+			notices.releaseFailed(new ReleaseFailed({ cause, what })),
+		),
+	);
 
 export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 	readonly notices: LifecycleNotices;
@@ -238,8 +252,9 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 	let migrations = 0;
 	let stopping = false;
 	const stopped = Deferred.makeUnsafe<void>();
-	const owned: Owned[] = [];
-	const ownedLast: Owned[] = [];
+	const launchEnded = Deferred.makeUnsafe<void>();
+	/** Holds what the launch builds; `stop` closes it, newest first. */
+	const services = Scope.makeUnsafe();
 
 	// ─── Mailbox ───
 
@@ -327,31 +342,53 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 
 	// ─── Librarian ───
 
-	const detach = (): void => {
-		const teardown = current?.detach;
-		if (current) current.detach = null;
+	/** Unwires the Librarian now, such as before the services stop. */
+	const detach = (slot: LibrarianSlot<L> | null = current): void => {
+		const teardown = slot?.detach;
+		if (slot) slot.detach = null;
 		teardown?.();
 	};
+
+	const guarded = (
+		what: string,
+		release: Effect.Effect<void, TaggedFailure>,
+	) => releaseGuarded(notices, what, release);
+
+	/**
+	 * Closes the Librarian's scope, which unwires and unsubscribes it, and
+	 * answers how unsubscribing it failed, if it did. A scope closed before,
+	 * as a pause closes it, answers nothing.
+	 */
+	const closeLibrarian = (
+		slot: LibrarianSlot<L>,
+	): Effect.Effect<Cause.Cause<LibrarianUnsubscribeFailure> | null> =>
+		Scope.close(slot.scope, Exit.void).pipe(
+			Effect.map(() => {
+				const exit = slot.unsubscribed;
+				slot.unsubscribed = null;
+				return exit &&
+					Exit.isFailure(exit) &&
+					!Cause.hasInterruptsOnly(exit.cause)
+					? exit.cause
+					: null;
+			}),
+		);
 
 	/** Unwires the Librarian and unsubscribes it, unless it is paused. */
 	const stopCurrent: Effect.Effect<void, ReleaseFailed> = Effect.suspend(
 		() => {
-			detach();
-			if (!current || librarianState.kind === "Paused")
-				return Effect.void;
-			return current.librarian.unsubscribe().pipe(
-				failWhole(
-					(cause) =>
-						new ReleaseFailed({
-							cause,
-							what: "unsubscribe the Librarian",
-						}),
-				),
-				Effect.tapError((failure) =>
-					Effect.sync(() => {
-						librarianState = ServiceState.failed(failure);
-					}),
-				),
+			const slot = current;
+			if (!slot) return Effect.void;
+			return closeLibrarian(slot).pipe(
+				Effect.flatMap((cause) => {
+					if (!cause) return Effect.void;
+					const failure = new ReleaseFailed({
+						cause,
+						what: "unsubscribe the Librarian",
+					});
+					librarianState = ServiceState.failed(failure);
+					return Effect.fail(failure);
+				}),
 			);
 		},
 	);
@@ -368,7 +405,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 				const idle = yield* IdleTracker;
 				// Pending from now, not from when its fiber first runs.
 				yield* idle.start;
-				return yield* Effect.promise(() => plugin.loadStore()).pipe(
+				return yield* plugin.loadStore.pipe(
 					Effect.matchCauseEffect({
 						onFailure: (cause) =>
 							Cause.hasInterruptsOnly(cause)
@@ -394,8 +431,9 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 		});
 
 	/**
-	 * Starts a new Librarian. A start that throws failed like one that
-	 * fails: the command reports it, and the launch goes on.
+	 * Starts a new Librarian, in a scope of its own. A start that throws
+	 * failed like one that fails: the command reports it, and the launch
+	 * goes on.
 	 */
 	const startLibrarian = (
 		plugin: LaunchedPlugin<L>,
@@ -412,12 +450,35 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 			const started: LibrarianSlot<L> = {
 				detach: null,
 				librarian,
+				scope: Scope.makeUnsafe(),
 				starting: reason,
+				unsubscribed: null,
 			};
 			slot = started;
 			current = started;
 			librarianState = ServiceState.starting;
-			return librarian.init().pipe(
+			// Its scope closes newest first: unwired, then unsubscribed.
+			return Scope.addFinalizer(
+				started.scope,
+				Effect.suspend(() => librarian.unsubscribe()).pipe(
+					Effect.exit,
+					Effect.flatMap((exit) =>
+						Effect.sync(() => {
+							started.unsubscribed = exit;
+						}),
+					),
+				),
+			).pipe(
+				Effect.andThen(
+					Scope.addFinalizer(
+						started.scope,
+						guarded(
+							"unwire the Librarian",
+							Effect.sync(() => detach(started)),
+						),
+					),
+				),
+				Effect.andThen(librarian.init()),
 				Effect.tap(() =>
 					Effect.suspend(() => {
 						if (current !== started || stopping) return Effect.void;
@@ -485,35 +546,6 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 				),
 			);
 
-	// ─── Release ───
-
-	const release = (list: Owned[]) =>
-		Effect.forEach(
-			list.splice(0).reverse(),
-			({ what, release: run }) =>
-				run.pipe(
-					// Even an interrupted release leaves the rest to release.
-					Effect.catchCause((cause) =>
-						notices.releaseFailed(
-							new ReleaseFailed({ cause, what }),
-						),
-					),
-				),
-			{ discard: true },
-		);
-
-	const own =
-		(list: Owned[]) =>
-		(
-			what: string,
-			run: Effect.Effect<void, TaggedFailure>,
-		): Effect.Effect<void> =>
-			Effect.suspend(() => {
-				if (stopping) return release([{ release: run, what }]);
-				list.push({ release: run, what });
-				return Effect.void;
-			});
-
 	// ─── Commands ───
 
 	return {
@@ -546,6 +578,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 				Effect.gen(function* () {
 					pluginState = ServiceState.starting;
 					const plugin = yield* boot.pipe(
+						Scope.provide(services),
 						failWhole((cause) => new BootFailed({ cause })),
 					);
 					launched = plugin;
@@ -554,7 +587,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 							notices.librarianStartFailed("Launch", failure),
 						),
 					);
-					yield* plugin.onLaunched();
+					yield* plugin.onLaunched().pipe(Scope.provide(services));
 					pluginState = ServiceState.running;
 				}).pipe(
 					// A boot that failed, or a launch that threw: every reason.
@@ -564,12 +597,11 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 							return notices.launchFailed(cause);
 						}),
 					),
+					Effect.ensuring(Deferred.done(launchEnded, Exit.void)),
 				),
 			).pipe(ignoreStopped(undefined)),
 		librarian: () => (stopping ? null : (current?.librarian ?? null)),
 		librarianState: () => librarianState,
-		own: own(owned),
-		ownLast: own(ownedLast),
 		pause: (reason) =>
 			submit(
 				"Pause",
@@ -658,22 +690,26 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 			stopping = true;
 			pluginState = ServiceState.stopped;
 			notices.close();
-			// Interrupted now; released below once the owned services are.
+			// Interrupted now; waited for once the services are released.
 			inFlight?.fiber?.interruptUnsafe();
 			for (const command of mailbox.splice(0))
 				Deferred.doneUnsafe(
 					command.done,
 					Exit.fail(new LifecycleStoppedError()),
 				);
+			Deferred.doneUnsafe(launchEnded, Exit.void);
 			return Effect.gen(function* () {
 				// Unwiring that throws still leaves the rest to release.
-				yield* release([
-					{
-						release: Effect.sync(detach),
-						what: "unwire the Librarian",
-					},
-				]);
-				yield* release(owned);
+				yield* guarded(
+					"unwire the Librarian",
+					Effect.sync(() => detach()),
+				);
+				// Every service's finalizer runs, newest first, even after
+				// one failed; each logs its own failure.
+				yield* guarded(
+					"release the plugin's services",
+					Scope.close(services, Exit.void),
+				);
 				// Waits for the command in flight to end, and interrupts any
 				// command fiber still starting.
 				yield* Scope.close(commands, Exit.void);
@@ -681,13 +717,32 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 				current = null;
 				if (last) {
 					// Even a stop that throws leaves the rest to release.
-					yield* last.librarian
-						.unsubscribe()
-						.pipe(Effect.catchCause(notices.librarianStopFailed));
+					const failed = yield* closeLibrarian(last);
+					if (failed) yield* notices.librarianStopFailed(failed);
 				}
 				librarianState = ServiceState.stopped;
-				yield* release(ownedLast);
 			}).pipe(Effect.ensuring(Deferred.done(stopped, Exit.void)));
 		}),
+		whenLaunched: Deferred.await(launchEnded),
 	};
+}
+
+/**
+ * The plugin's lifecycle, as a service of the plugin runtime: its
+ * finalizer is `stop`, so disposing the runtime releases the services
+ * (newest first) and the Librarian before VAM shuts down.
+ */
+export class Lifecycle extends Context.Service<
+	Lifecycle,
+	LifecycleSupervisor<Librarian>
+>()("textfresser/lifecycle/Lifecycle") {
+	static readonly layer = (deps: { readonly notices: LifecycleNotices }) =>
+		Layer.effect(
+			Lifecycle,
+			Effect.gen(function* () {
+				const supervisor = createLifecycleSupervisor<Librarian>(deps);
+				yield* Effect.addFinalizer(() => supervisor.stop);
+				return supervisor;
+			}),
+		);
 }

@@ -106,7 +106,7 @@ describe("a Librarian startup that fails for two reasons", () => {
 				.launch(
 					Effect.succeed({
 						attachLibrarian: () => () => undefined,
-						loadStore: () => Promise.resolve(),
+						loadStore: Effect.void,
 						makeLibrarian: (onStopped) =>
 							new Librarian(vam, { onStopped }),
 						onLaunched: () => Effect.void,

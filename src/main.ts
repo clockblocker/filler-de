@@ -1,13 +1,4 @@
 import {
-	type DictionaryScanError,
-	type DumdictVaultStore,
-	makeDumdictVaultStore,
-} from "@textfresser/dictionary";
-import {
-	createObsidianEventLayer,
-	type ObsidianEventLayer,
-} from "@textfresser/obsidian-event-layer";
-import {
 	SplitPathKind,
 	splitPathCodec,
 	type VamSetupError,
@@ -16,43 +7,28 @@ import {
 	VaultActionManager,
 } from "@textfresser/vault-action-manager";
 import { formatCause } from "@textfresser/vault-action-manager/diagnostics";
-import { operations } from "dumgen";
-import { type Cause, Effect, Exit, Option } from "effect";
-import { Notice, Plugin, requestUrl } from "obsidian";
 import {
-	ClassifyCommander,
-	createKnowledgeQueue,
-	createReadingReopener,
-	createScrollActivity,
-	createUnlinkObserver,
-	DUMGEN_SEGMENTER_VERSION,
-	dumgenUnitResolver,
-	filesSegmentationCache,
-	type KnowledgeQueue,
-	observeScrollModifications,
-	produceKnowledge,
-	UnitResolverError,
-	vamScrollFiles,
-	vamUnlinkScrolls,
-} from "./commanders/classify";
-import { DictionaryResetCommand } from "./commanders/dictionary-reset/reset-command";
+	type Cause,
+	Context,
+	Effect,
+	Exit,
+	Layer,
+	Option,
+	type Scope,
+} from "effect";
+import { Notice, Plugin, requestUrl } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
 import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
-import { Textfresser } from "./commanders/textfresser/textfresser";
 import {
 	clearState,
-	getParsedUserSettings,
 	initializeState,
 	updateParsedSettings,
 } from "./global-state/global-state";
-import {
-	createDictionaryStoreService,
-	type DictionaryStoreService,
-} from "./lifecycle/dictionary-store-service";
+import { DictionaryStore } from "./lifecycle/dictionary-store-service";
 import { createLifecycleNotices } from "./lifecycle/lifecycle-notices";
 import {
-	createLifecycleSupervisor,
 	type LaunchedPlugin,
+	Lifecycle,
 } from "./lifecycle/lifecycle-supervisor";
 import { Dumgen, type ScriptedDumgen } from "./managers/dumgen";
 import type { ScriptedJevAnswers } from "./managers/dumgen/scripted-jev";
@@ -61,16 +37,25 @@ import {
 	CommandKind,
 	createCommandExecutor,
 } from "./managers/obsidian/command-executor";
-import {
-	protectedPathRefusal,
-	watchProtectedPaths,
-} from "./managers/obsidian/protected-paths/protected-paths-guard";
-import { OverlayManager } from "./managers/overlay-manager";
+import type { OverlayManager } from "./managers/overlay-manager";
 import { confirmInModal } from "./plugin/confirm-modal";
 import { changeDelimiter } from "./plugin/delimiter-migration";
 import { migrateNoteMetadata } from "./plugin/note-metadata-migration";
+import {
+	ClassifyServices,
+	DictionaryReset,
+	Overlay,
+	TextfresserCommands,
+	UserEvents,
+} from "./plugin/plugin-services";
+import {
+	OverlayLive,
+	type PluginServicesDeps,
+	PluginServicesLive,
+} from "./plugin/plugin-services-live";
 import { registerCommands } from "./plugin/register-commands";
 import { diffSettings, snapshotSettings } from "./plugin/settings-changes";
+import { whenObsidianIsReady } from "./plugin/when-obsidian-is-ready";
 import { logAtEdge } from "./runtime/edge-log";
 import { PluginLive, type PluginServices } from "./runtime/plugin-live";
 import {
@@ -82,38 +67,23 @@ import {
 	holdsRetiredSettings,
 	settingsFromStoredData,
 } from "./settings/stored-settings";
-import { dictionaryProjections } from "./stateless-helpers/dictionary-projections";
 import type { TextEaterSettings } from "./types";
 import { getErrorMessage } from "./utils/get-error-message";
 import { IdleTracker, isE2EMode } from "./utils/idle-tracker";
 import { recentTrace } from "./utils/recent-trace";
-import { sleep } from "./utils/sleep";
 
 type Runtime = PluginRuntime<PluginServices, VamSetupError>;
 
-/** The services the launch builds, once it built them. */
+/** The plugin runtime's services alone, without the fiber's span. */
+const pluginServices = Context.pick(VaultActionManager, Dumgen, Lifecycle);
+
+/** The services the launch built, once it built them. */
 type LaunchedServices = {
 	readonly vam: VaultActionManager;
-	readonly vamTesting: VaultActionManager["testing"];
-	readonly classify: ClassifyCommander;
-	/** Classify's background Knowledge runs, one per Reading (#64). */
-	readonly knowledgeQueue: KnowledgeQueue;
-	/** Reopens a clicked Reading note once its Knowledge lands (#116). */
-	readonly reopenReading: (
-		target: string,
-	) => Effect.Effect<
-		boolean,
-		Effect.Error<ReturnType<VaultActionManager["cd"]>>
-	>;
-	/** "Reset dictionary from old notes…" (#65). */
-	readonly dictionaryReset: DictionaryResetCommand;
-	/** The dictionary store over `Worter/`. */
-	readonly store: DictionaryStoreService<
-		DumdictVaultStore,
-		DictionaryScanError
-	>;
+	readonly classify: ClassifyServices["Service"];
+	readonly textfresser: TextfresserCommands["Service"];
+	readonly dictionaryReset: DictionaryReset["Service"];
 	readonly delimiterChangeService: DelimiterChangeService;
-	readonly userEvents: ObsidianEventLayer;
 };
 
 export default class TextEaterPlugin extends Plugin {
@@ -121,11 +91,10 @@ export default class TextEaterPlugin extends Plugin {
 	private readonly notices = createLifecycleNotices((message, { sticky }) => {
 		new Notice(message, sticky ? 0 : undefined);
 	});
-	private readonly lifecycle = createLifecycleSupervisor<Librarian>({
-		notices: this.notices,
-	});
 	/** The plugin's one Effect runtime: built in `onload`, disposed in `onunload`. */
 	private runtime: Runtime | null = null;
+	/** The runtime's lifecycle, once the runtime is built. */
+	private lifecycle: Lifecycle["Service"] | null = null;
 	/**
 	 * The runtime's dumgen, once built: each action runs on one build over
 	 * the TypeSafe and OpenAI keys in the settings, through `requestUrl`
@@ -134,23 +103,22 @@ export default class TextEaterPlugin extends Plugin {
 	private dumgen: Dumgen["Service"] | null = null;
 	private services: LaunchedServices | null = null;
 	private overlayManager: OverlayManager | null = null;
-	private textfresser: Textfresser | null = null;
 	private previousSettings: TextEaterSettings | null = null;
 
 	/** Whether the launch is done; the E2E driver waits for it. */
 	get initialized(): boolean {
-		return this.lifecycle.state().kind === "Running";
+		return this.lifecycle?.state().kind === "Running";
 	}
 
 	get librarian(): Librarian | null {
-		return this.lifecycle.librarian();
+		return this.lifecycle?.librarian() ?? null;
 	}
 
 	override onload() {
 		try {
 			const runtime = makePluginRuntime(
 				PluginLive(this.app, {
-					lifecycle: this.lifecycle,
+					notices: this.notices,
 					providerKeys: () => ({
 						openaiApiKey: this.settings?.openaiApiKey ?? "",
 						typesafeApiKey: this.settings?.typesafeApiKey ?? "",
@@ -167,22 +135,33 @@ export default class TextEaterPlugin extends Plugin {
 			// The launch waits for Obsidian; it does not block onload.
 			runtime.onload(
 				Effect.gen({ self: this }, function* () {
-					const vam = yield* VaultActionManager;
-					const dumgen = yield* Dumgen;
-					this.dumgen = dumgen;
-					yield* this.lifecycle.launch(
-						this.boot(runtime, vam, dumgen),
+					const lifecycle = yield* Lifecycle;
+					this.lifecycle = lifecycle;
+					this.dumgen = yield* Dumgen;
+					// The launch runs with this fiber's context; this only tells
+					// the types, and keeps the launch's own span the parent.
+					const services = pluginServices(
+						yield* Effect.context<PluginServices>(),
+					);
+					yield* lifecycle.launch(
+						this.boot(runtime).pipe(
+							Effect.provideContext(services),
+						),
 					);
 				}),
 			);
 			this.addSettingTab(new SettingsTab(this.app, this));
 			// Add testing command early so it exists, but callback waits for init
 			this.addCommand({
-				callback: async () => {
-					while (!this.initialized) {
-						await sleep(100);
-					}
+				callback: () => {
 					// Initialization itself exposes the service required by the test harness.
+					void this.runtime?.command(
+						"textfresser-testing-expose-opened-service",
+						Effect.flatMap(
+							Lifecycle,
+							(lifecycle) => lifecycle.whenLaunched,
+						),
+					);
 				},
 				id: "textfresser-testing-expose-opened-service",
 				name: "Testing: expose opened file service",
@@ -195,6 +174,7 @@ export default class TextEaterPlugin extends Plugin {
 	override onunload() {
 		const runtime = this.runtime;
 		this.runtime = null;
+		this.lifecycle = null;
 		this.services = null;
 		this.dumgen = null;
 		this.overlayManager = null;
@@ -215,233 +195,56 @@ export default class TextEaterPlugin extends Plugin {
 
 	/**
 	 * Builds the plugin's services once Obsidian has laid out the workspace
-	 * and indexed the vault, each owned by the lifecycle, which releases them
-	 * newest first on unload. VAM and dumgen come from the runtime, which
-	 * shuts VAM down after the lifecycle stopped.
+	 * and indexed the vault, in the scope the lifecycle gives it, which it
+	 * closes on unload: their finalizers run newest first, before the
+	 * Librarian stops and VAM shuts down.
 	 */
 	private boot(
 		runtime: Runtime,
-		vam: VaultActionManager,
-		dumgen: Dumgen["Service"],
 	): Effect.Effect<
 		LaunchedPlugin<Librarian>,
 		| Cause.UnknownError
 		| VamSetupError
 		| VamShutdownError
-		| VamSubscriptionError
+		| VamSubscriptionError,
+		PluginServices | Scope.Scope
 	> {
-		const { lifecycle } = this;
 		return Effect.gen({ self: this }, function* () {
-			yield* Effect.promise(() => this.whenObsidianIsReady());
+			yield* whenObsidianIsReady(this.app);
 			yield* Effect.tryPromise(() => this.loadSettings());
+			const lifecycle = yield* Lifecycle;
+			const vam = yield* VaultActionManager;
 			registerCommands(this, {
 				dictionaryReset: () => this.services?.dictionaryReset ?? null,
 				execute: (kind) => void this.executeCommand(kind),
-				knowledgeQueue: () => this.services?.knowledgeQueue ?? null,
+				knowledgeQueue: () =>
+					this.services?.classify.knowledgeQueue ?? null,
 				restartLibrarian: lifecycle.restart,
 				runtime,
 				stillLoading: this.notices.stillLoading,
 				vam: () => this.services?.vam ?? null,
 			});
-			this.rebuildTextfresser(vam, dumgen);
-			const idle = yield* IdleTracker;
-			// Plain callbacks count their work on the runtime's idle tracker.
-			const pending = {
-				end: () => void runtime.readSync(idle.end),
-				start: () => void runtime.readSync(idle.start),
-			};
 
-			const store = createDictionaryStoreService({
-				build: () => this.buildDictionaryStore(vam),
-				close: (built) => built.close,
-				onBuildFailed: this.notices.storeBuildFailed,
-				runtime: runtime.hops,
-			});
-			yield* lifecycle.own("close the dictionary store", store.stop);
-			void store.get().catch(() => undefined);
-			const dictionary = Effect.tryPromise({
-				catch: (cause) =>
-					new UnitResolverError({
-						cause,
-						message: `the dictionary could not be read: ${getErrorMessage(cause)}`,
-					}),
-				try: () => store.get(),
-			});
-			// Each Reading's Knowledge runs in the background, on the build
-			// every background run shares.
-			const runKnowledge = (
-				job: Parameters<KnowledgeQueue["enqueue"]>[0],
-			) =>
-				dictionary.pipe(
-					Effect.flatMap((built) =>
-						produceKnowledge(
-							{
-								dumgen: operations,
-								store: built,
-								translationLanguages:
-									this.settings.languages.known === "Russian"
-										? ["en", "ru"]
-										: ["en"],
-							},
-							job,
-						),
-					),
-					dumgen.provideBackground,
-					Effect.catchTag("DumgenUnavailable", (error) =>
-						Effect.fail(
-							new UnitResolverError({
-								cause: error.cause,
-								message: error.message,
-							}),
-						),
-					),
-				);
-			const knowledgeQueue = createKnowledgeQueue({
-				notify: (message) => new Notice(message),
-				onEnd: pending.end,
-				onStart: pending.start,
-				run: runKnowledge,
-				runtime: runtime.hops,
-			});
-			yield* lifecycle.own(
-				"close the Knowledge queue",
-				Effect.sync(() => knowledgeQueue.close()),
-			);
-			const reopenReading = createReadingReopener({
-				activePath: vam.mdPwd().pipe(
-					Effect.map((path) =>
-						path ? splitPathCodec.format(path) : null,
-					),
-					Effect.orElseSucceed(() => null),
-				),
-				open: (path) =>
-					Effect.suspend(() => {
-						const splitPath = splitPathCodec.parse(path);
-						return splitPath.kind === SplitPathKind.MdFile
-							? vam.cd(splitPath)
-							: Effect.void;
-					}),
-				queue: knowledgeQueue,
-			});
-
-			const segmentationCache = filesSegmentationCache(
-				this.app.vault.adapter,
-			);
-			const segmenterVersion = Effect.map(
-				dumgen.scriptedJevTag,
-				(scripted) =>
-					scripted
-						? `${DUMGEN_SEGMENTER_VERSION}+scripted-${scripted}`
-						: DUMGEN_SEGMENTER_VERSION,
-			);
-			const scrollActivity = createScrollActivity();
-			const classify = new ClassifyCommander({
-				blockedBy: (scrollPath) =>
-					lifecycle.classifyRefusal() ??
-					protectedPathRefusal(vam, scrollPath),
-				cache: segmentationCache,
-				dumgen: dumgen.provide,
-				missingProviderKeys: dumgen.missingKeys,
-				resolver: dumgenUnitResolver({
-					activity: scrollActivity,
-					dumgen: operations,
-					knowledge: knowledgeQueue,
-					notify: (message) => new Notice(message),
-					scroll: vamScrollFiles(vam),
-					store: dictionary,
-				}),
-				segmenterVersion,
-			});
-			/** Removes the occurrences whose links the user deletes from a Scroll (#116). */
-			const unlinkObserver = createUnlinkObserver({
-				activity: scrollActivity,
-				blockedBy: lifecycle.classifyRefusal,
-				cache: segmentationCache,
-				notify: (message) => new Notice(message),
-				onEnd: pending.end,
-				onStart: pending.start,
-				runtime: runtime.hops,
-				scrolls: vamUnlinkScrolls(vam),
-				segmenterVersion,
-				store: dictionary,
-			});
-			yield* lifecycle.own(
-				"close the unlink observer",
-				Effect.sync(() => unlinkObserver.close()),
-			);
-			const dictionaryReset = new DictionaryResetCommand({
-				activity: scrollActivity,
-				app: this.app,
-				cache: segmentationCache,
-				checkProviderKeys: dumgen.checkKeys,
-				dumgen: dumgen.provide,
-				knowledge: knowledgeQueue,
-				// Read in the modal's click, to decide it.
-				missingProviderKeys: () =>
-					Option.getOrElse(
-						Exit.getSuccess(runtime.readSync(dumgen.missingKeys)),
-						() => [],
-					),
-				runtime: runtime.hops,
-				segmenterVersion,
-				store: () => store.get(),
-				vam,
-			});
-			yield* lifecycle.own(
-				"cancel the dictionary reset",
-				Effect.sync(() => void dictionaryReset.cancel()),
-			);
-
-			// Unified user event interceptor (clicks, clipboard, select-all, wikilinks)
-			const userEvents = createObsidianEventLayer({
-				app: this.app,
-				pendingWork: pending,
+			const deps: PluginServicesDeps = {
+				notices: this.notices,
 				plugin: this,
-				selectionTextSource: {
-					getSelectionText: () => {
-						const exit = runtime.readSync(vam.getSelectionText());
-						return Exit.isSuccess(exit) ? exit.value : null;
-					},
-				},
-			});
-
-			// VAM turns file system events into VaultEvents, filters its own,
-			// and notifies subscribers such as the Librarian.
-			yield* vam.startListening();
-			// VAM closes this subscription when it is disposed.
-			// It logs each warning it shows, under its delivery's span.
-			yield* watchProtectedPaths(vam, (message) => {
-				const notice = new Notice(message, 0);
-				return {
-					showing: () => notice.noticeEl.isConnected,
-					update: (next) => notice.setMessage(next),
-				};
-			});
-			yield* lifecycle.own(
-				"stop observing Scrolls",
-				yield* observeScrollModifications(vam, unlinkObserver),
+				runtime,
+				settings: () => this.settings,
+			};
+			const built = yield* Layer.build(PluginServicesLive(deps));
+			const context = Context.merge(
+				pluginServices(yield* Effect.context<PluginServices>()),
+				built,
 			);
-			// Started and owned at once, so an unload cannot fall between.
-			yield* Effect.uninterruptible(
-				Effect.suspend(() => {
-					userEvents.start();
-					return lifecycle.own(
-						"stop the user event interceptor",
-						Effect.sync(() => userEvents.stop()),
-					);
-				}),
-			);
-
+			const classify = Context.get(built, ClassifyServices);
+			const dictionaryReset = Context.get(built, DictionaryReset);
+			const userEvents = Context.get(built, UserEvents);
 			this.services = {
 				classify,
 				delimiterChangeService: new DelimiterChangeService(vam),
 				dictionaryReset,
-				knowledgeQueue,
-				reopenReading,
-				store,
-				userEvents,
+				textfresser: Context.get(built, TextfresserCommands),
 				vam,
-				vamTesting: vam.testing,
 			};
 			return {
 				attachLibrarian: (librarian) => {
@@ -459,53 +262,30 @@ export default class TextEaterPlugin extends Plugin {
 						for (const teardown of teardowns) teardown();
 					};
 				},
-				loadStore: () => store.get(),
+				loadStore: Context.get(built, DictionaryStore).get,
 				makeLibrarian: (onStopped) => new Librarian(vam, { onStopped }),
 				onLaunched: () =>
-					Effect.uninterruptible(
-						Effect.suspend(() => {
-							const overlay = new OverlayManager({
-								app: this.app,
-								commandExecutor: (kind) =>
-									this.executeCommand(kind),
-								getLibrarian: () => lifecycle.librarian(),
-								plugin: this,
-								readSync: runtime.readSync,
-								userEventInterceptor: userEvents,
-								vam,
-							});
-							this.overlayManager = overlay;
-							overlay.init();
-							return lifecycle.own(
-								"destroy the overlay",
-								Effect.sync(() => overlay.destroy()),
-							);
+					Layer.build(
+						OverlayLive({
+							...deps,
+							commandExecutor: (kind) =>
+								this.executeCommand(kind),
 						}),
+					).pipe(
+						Effect.provideContext(context),
+						Effect.flatMap((overlay) =>
+							Effect.sync(() => {
+								this.overlayManager = Context.get(
+									overlay,
+									Overlay,
+								);
+							}),
+						),
 					),
 				resetRunning: () => dictionaryReset.isRunning(),
-				sweep: () => unlinkObserver.sweep(),
+				sweep: () => classify.unlinkObserver.sweep(),
 			};
 		});
-	}
-
-	/** Resolves once the workspace is laid out and the vault indexed. */
-	private async whenObsidianIsReady(): Promise<void> {
-		const { metadataCache, vault, workspace } = this.app;
-		if (!workspace.layoutReady)
-			await new Promise<void>((resolve) =>
-				workspace.onLayoutReady(resolve),
-			);
-		// Initial metadata indexing fires `resolved` once per app session.
-		if (!vault.getRoot()) {
-			await new Promise<void>((resolve) => {
-				const onResolved = () => {
-					metadataCache.off("resolved", onResolved);
-					resolve();
-				};
-				metadataCache.on("resolved", onResolved);
-			});
-		}
-		await sleep(300);
 	}
 
 	private async loadSettings() {
@@ -519,28 +299,6 @@ export default class TextEaterPlugin extends Plugin {
 		this.previousSettings = snapshotSettings(this.settings);
 	}
 
-	private buildDictionaryStore(vault: VaultActionManager) {
-		return makeDumdictVaultStore({
-			metadataFormat: () =>
-				getParsedUserSettings().hideMetadata ? "Hidden" : "Frontmatter",
-			onDiagnostics: (diagnostics) =>
-				diagnostics.quarantined.length > 0
-					? Effect.logWarning(
-							"[TextEaterPlugin] Dictionary notes the store cannot read:",
-							diagnostics.quarantined
-								.map(({ path }) => path)
-								.join(", "),
-						)
-					: Effect.void,
-			onTablesRerendered: ({ lemmas, notes, remaining }) =>
-				Effect.logInfo(
-					`[TextEaterPlugin] Re-rendered the inflection tables of ${lemmas} Lemma notes for the current language pack (${notes} notes written${remaining > 0 ? `, ${remaining} left for the next scan` : ""})`,
-				),
-			projections: dictionaryProjections,
-			vault,
-		});
-	}
-
 	/**
 	 * Runs a Textfresser, Librarian or Classify command on the active note,
 	 * once the launch is done, under `command.<kind>`.
@@ -548,15 +306,14 @@ export default class TextEaterPlugin extends Plugin {
 	private executeCommand(kind: CommandKind): Promise<void> {
 		const runtime = this.runtime;
 		if (!runtime || !this.initialized) return Promise.resolve();
-		const program = Effect.suspend(() => {
+		const program = Effect.gen({ self: this }, function* () {
 			const services = this.services;
-			const librarian = this.lifecycle.librarian();
-			const textfresser = this.textfresser;
-			if (!services || !librarian || !textfresser) return Effect.void;
-			return createCommandExecutor({
-				classify: services.classify,
+			const librarian = this.lifecycle?.librarian();
+			if (!services || !librarian) return;
+			yield* createCommandExecutor({
+				classify: services.classify.classify,
 				librarian,
-				textfresser,
+				textfresser: yield* services.textfresser.current,
 				vam: services.vam,
 			})(kind);
 		});
@@ -568,7 +325,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	/** A clicked Reading link reopens its note once its Knowledge lands. */
 	private readonly onWikilinkClicked = (target: string): void => {
-		const reopen = this.services?.reopenReading;
+		const reopen = this.services?.classify.reopenReading;
 		if (!reopen || !this.runtime) return;
 		void this.runtime.userEvent(
 			"wikilink-clicked",
@@ -583,17 +340,10 @@ export default class TextEaterPlugin extends Plugin {
 		);
 	};
 
-	private rebuildTextfresser(
-		vam: VaultActionManager | undefined = this.services?.vam,
-		dumgen: Dumgen["Service"] | null = this.dumgen,
-	): void {
-		if (!vam || !dumgen) return;
-		this.textfresser = new Textfresser(
-			vam,
-			this.settings.languages,
-			dumgen.provide,
-		);
-	}
+	/** A Textfresser for the languages in the settings now. */
+	private readonly rebuildTextfresser = Effect.suspend(
+		() => this.services?.textfresser.rebuild ?? Effect.void,
+	);
 
 	/** Applies the changed settings, under `settings.save`, and stores them. */
 	saveSettings(): Promise<void> {
@@ -603,6 +353,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	private applySettings() {
 		return Effect.gen({ self: this }, function* () {
+			const lifecycle = yield* Lifecycle;
 			const prev = this.previousSettings;
 			const curr = this.settings;
 
@@ -623,7 +374,7 @@ export default class TextEaterPlugin extends Plugin {
 							notices: this.notices,
 							service:
 								this.services?.delimiterChangeService ?? null,
-							supervisor: this.lifecycle,
+							supervisor: lifecycle,
 						},
 						prev.suffixDelimiter,
 						curr.suffixDelimiter,
@@ -653,8 +404,8 @@ export default class TextEaterPlugin extends Plugin {
 				if (changes.librarian && !librarianRestarted) {
 					// Update global state BEFORE the restart so the Librarian uses the new settings
 					updateParsedSettings(this.settings);
-					if (changes.languages) this.rebuildTextfresser();
-					yield* this.lifecycle.reconfigure;
+					if (changes.languages) yield* this.rebuildTextfresser;
+					yield* lifecycle.reconfigure;
 				}
 
 				if (changes.placement) this.overlayManager?.refreshToolbars();
@@ -682,7 +433,7 @@ export default class TextEaterPlugin extends Plugin {
 
 	getLibrarianTestingApi() {
 		const vam = this.services?.vam;
-		const librarian = this.lifecycle.librarian();
+		const librarian = this.lifecycle?.librarian() ?? null;
 		return {
 			getActiveSelection: () =>
 				vam
@@ -700,7 +451,7 @@ export default class TextEaterPlugin extends Plugin {
 			handleCodexCheckboxClick: (
 				payload: Parameters<Librarian["handleCodexCheckboxClick"]>[0],
 			) => {
-				const current = this.lifecycle.librarian();
+				const current = this.lifecycle?.librarian();
 				if (!current) return Promise.resolve();
 				return this.e2e(
 					"handle-codex-checkbox-click",
@@ -715,7 +466,7 @@ export default class TextEaterPlugin extends Plugin {
 						: CommandKind.GoToPrevPage,
 				),
 			runSplitInBlocks: () => {
-				const current = this.lifecycle.librarian();
+				const current = this.lifecycle?.librarian();
 				if (!current || !vam) return Promise.resolve();
 				return this.e2e(
 					"run-split-in-blocks",
@@ -768,7 +519,7 @@ export default class TextEaterPlugin extends Plugin {
 				return Option.getOrUndefined(requests) ?? null;
 			},
 			latestHandoff: () =>
-				this.services?.classify.latestHandoff() ?? null,
+				this.services?.classify.classify.latestHandoff() ?? null,
 			useScriptedDumgen: useScripted,
 			useScriptedJev: (answers: ScriptedJevAnswers | null) =>
 				useScripted(answers === null ? null : { jev: answers }),
@@ -859,8 +610,8 @@ export default class TextEaterPlugin extends Plugin {
 			Effect.gen({ self: this }, function* () {
 				const idle = yield* IdleTracker;
 				yield* idle.whenIdle();
-				const vamTesting = this.services?.vamTesting;
-				if (vamTesting) yield* vamTesting.whenSettled();
+				const vam = this.services?.vam;
+				if (vam) yield* vam.testing.whenSettled();
 			}),
 		);
 	}
@@ -878,7 +629,14 @@ export default class TextEaterPlugin extends Plugin {
 		await this.saveData(this.settings);
 		// Avoid a dialog on the next saveSettings
 		this.previousSettings = snapshotSettings(this.settings);
-		this.rebuildTextfresser();
-		await this.e2e("reset-settings", this.lifecycle.reconfigure);
+		const rebuild = this.rebuildTextfresser;
+		await this.e2e(
+			"reset-settings",
+			Effect.gen(function* () {
+				yield* rebuild;
+				const lifecycle = yield* Lifecycle;
+				yield* lifecycle.reconfigure;
+			}),
+		);
 	}
 }

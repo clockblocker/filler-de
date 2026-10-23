@@ -6,16 +6,16 @@ import {
 	type RecordedSpan,
 } from "@textfresser/vault-action-manager/diagnostics";
 import type * as Dumling from "dumling/types";
-import { Cause, Deferred, Effect, Exit, Layer } from "effect";
+import { Cause, Deferred, Effect, Exit, Layer, type Scope } from "effect";
 import type { App } from "obsidian";
 import { createKnowledgeQueue } from "../../../src/commanders/classify/resolution/knowledge-queue";
 import type { KnowledgeJob } from "../../../src/commanders/classify/resolution/knowledge-types";
 import { Librarian } from "../../../src/commanders/librarian/librarian";
 import { createLifecycleNotices } from "../../../src/lifecycle/lifecycle-notices";
 import {
-	createLifecycleSupervisor,
 	type LaunchedPlugin,
-	type SupervisedLibrarian,
+	Lifecycle,
+	type LifecycleSupervisor,
 	type TaggedFailure,
 } from "../../../src/lifecycle/lifecycle-supervisor";
 import { makeObsidianVault } from "../../../src/packages/independent/vault-action-manager/tests/unit/helpers/obsidian-vault";
@@ -149,22 +149,22 @@ describe("PluginLive", () => {
 	});
 
 	/** The plugin runtime over an in-memory vault, with its own trace. */
-	function makePlugin<L extends SupervisedLibrarian>(
-		initial: Record<string, string>,
+	function makePlugin(
+		vault: ReturnType<typeof makeObsidianVault>,
+		options: { readonly slowShutdown?: number } = {},
 	) {
 		const trace = makeRecentTrace();
-		const vault = makeObsidianVault(initial);
-		const lifecycle = createLifecycleSupervisor<L>({
-			notices: createLifecycleNotices(() => {}, {
-				trace,
-				writeStop: () => {},
-			}),
-		});
 		const runtime = makePluginRuntime(
 			PluginLive(vault.app as unknown as App, {
-				lifecycle,
+				notices: createLifecycleNotices(() => {}, {
+					trace,
+					writeStop: () => {},
+				}),
 				providerKeys: () => ({ openaiApiKey: "", typesafeApiKey: "" }),
 				requestUrl: unreachable,
+				...(options.slowShutdown === undefined
+					? {}
+					: { slowShutdown: options.slowShutdown }),
 				trace,
 			}),
 			{
@@ -173,15 +173,21 @@ describe("PluginLive", () => {
 				},
 			},
 		);
+		let lifecycle: LifecycleSupervisor<Librarian> | null = null;
 		/** Launches as `onload` does, with `wire` building the services. */
 		const launch = async (
 			wire: (
 				vam: VaultActionManager,
-			) => Effect.Effect<LaunchedPlugin<L>, TaggedFailure>,
+			) => Effect.Effect<
+				LaunchedPlugin<Librarian>,
+				TaggedFailure,
+				Scope.Scope
+			>,
 		) => {
 			runtime.onload(
 				Effect.gen(function* () {
 					const vam = yield* VaultActionManager;
+					lifecycle = yield* Lifecycle;
 					yield* lifecycle.launch(
 						Effect.gen(function* () {
 							yield* vam.startListening();
@@ -190,36 +196,43 @@ describe("PluginLive", () => {
 					);
 				}),
 			);
-			await until(() => lifecycle.state().kind === "Running");
+			await until(() => lifecycle?.state().kind === "Running");
 			return runtime.e2e("vam", Effect.service(VaultActionManager));
 		};
-		return { launch, lifecycle, runtime, trace, vault };
+		return {
+			launch,
+			lifecycle: () => lifecycle as LifecycleSupervisor<Librarian>,
+			runtime,
+			trace,
+			vault,
+		};
 	}
 
-	const launched = <L extends SupervisedLibrarian>(
-		makeLibrarian: LaunchedPlugin<L>["makeLibrarian"],
-	): LaunchedPlugin<L> => ({
+	const launched = (
+		makeLibrarian: LaunchedPlugin<Librarian>["makeLibrarian"],
+	): LaunchedPlugin<Librarian> => ({
 		attachLibrarian: () => () => {},
-		loadStore: () => Promise.resolve(),
+		loadStore: Effect.void,
 		makeLibrarian,
 		onLaunched: () => Effect.void,
 		resetRunning: () => false,
 		sweep: () => {},
 	});
 
+	const librarianOver =
+		(vam: VaultActionManager): LaunchedPlugin<Librarian>["makeLibrarian"] =>
+		(onStopped) =>
+			new Librarian(vam, { onStopped });
+
 	it("shows a Librarian restart as one tree: the command, the Librarian's start, VAM's scan and dispatch", async () => {
-		const plugin = makePlugin<Librarian>({
-			[`${RAMEN}/Anchor-Ramen-Soup.md`]: "",
-		});
+		const plugin = makePlugin(
+			makeObsidianVault({ [`${RAMEN}/Anchor-Ramen-Soup.md`]: "" }),
+		);
 		const vam = await plugin.launch((manager) =>
-			Effect.succeed(
-				launched(
-					(onStopped) => new Librarian(manager, { onStopped }),
-				),
-			),
+			Effect.succeed(launched(librarianOver(manager))),
 		);
 		try {
-			expect(plugin.lifecycle.librarianState().kind).toBe("Running");
+			expect(plugin.lifecycle().librarianState().kind).toBe("Running");
 			const onload = only(plugin.trace, "obsidian.onload");
 			expect(subtree(plugin.trace.snapshot().spans, onload)).toEqual(
 				expect.arrayContaining([
@@ -232,12 +245,12 @@ describe("PluginLive", () => {
 			// Paused, the Librarian does not hear this file; its restart heals it.
 			await plugin.runtime.command(
 				"pause",
-				plugin.lifecycle.pause("DelimiterMigration"),
+				plugin.lifecycle().pause("DelimiterMigration"),
 			);
 			await plugin.vault.createByHand(`${RAMEN}/Offline.md`);
 			await plugin.runtime.command(
 				"restart-librarian",
-				plugin.lifecycle.restart,
+				plugin.lifecycle().restart,
 			);
 			await plugin.runtime.e2e("when-settled", vam.testing.whenSettled());
 
@@ -265,9 +278,11 @@ describe("PluginLive", () => {
 		}
 	}, 30_000);
 
-	it("disposes newest first: the owned services, then the Librarian, then VAM", async () => {
+	it("disposes newest first: the services the launch built, then the Librarian, then VAM", async () => {
 		const released: string[] = [];
-		const plugin = makePlugin<SupervisedLibrarian>({});
+		const plugin = makePlugin(
+			makeObsidianVault({ [`${RAMEN}/Anchor-Ramen-Soup.md`]: "" }),
+		);
 		/** Records `what`, and whether VAM still answered then. */
 		const record = (vam: VaultActionManager, what: string) =>
 			Effect.exit(vam.mdPwd()).pipe(
@@ -277,39 +292,150 @@ describe("PluginLive", () => {
 			);
 		const vam = await plugin.launch((manager) =>
 			Effect.gen(function* () {
-				yield* plugin.lifecycle.own("close the store", record(manager, "store"));
-				yield* plugin.lifecycle.own(
-					"close the observer",
-					record(manager, "observer"),
-				);
-				return launched<SupervisedLibrarian>(() => ({
-					init: () => Effect.void,
-					unsubscribe: () => record(manager, "librarian"),
-				}));
+				yield* Effect.addFinalizer(() => record(manager, "store"));
+				yield* Effect.addFinalizer(() => record(manager, "observer"));
+				return {
+					...launched((onStopped) => {
+						const librarian = new Librarian(manager, { onStopped });
+						const unsubscribe = librarian.unsubscribe.bind(librarian);
+						return Object.assign(librarian, {
+							unsubscribe: () =>
+								record(manager, "librarian").pipe(
+									Effect.andThen(unsubscribe()),
+								),
+						});
+					}),
+					onLaunched: () =>
+						Effect.addFinalizer(() => record(manager, "overlay")),
+				};
 			}),
 		);
 
 		await plugin.runtime.dispose();
 
 		expect(released).toEqual([
+			"overlay: VAM up",
 			"observer: VAM up",
 			"store: VAM up",
 			"librarian: VAM up",
 		]);
 		const read = await Effect.runPromiseExit(vam.mdPwd());
 		expect(Exit.isFailure(read)).toBe(true);
-		expect(plugin.lifecycle.state().kind).toBe("Stopped");
+		expect(plugin.lifecycle().state().kind).toBe("Stopped");
 		const shutdown = only(plugin.trace, "vam.shutdown");
 		expect(shutdown.status).toBe("ok");
 	}, 30_000);
-	it("waits in whenIdle for a queued Librarian item and a Knowledge run", async () => {
-		const plugin = makePlugin<Librarian>({
+
+	it("never cuts the vault batch in flight on unload: it waits for it, and logs that it waits", async () => {
+		const vault = makeObsidianVault({
 			[`${RAMEN}/Anchor-Ramen-Soup.md`]: "",
 		});
+		const obsidian = vault.app.vault as unknown as {
+			create: (path: string, content: string) => Promise<unknown>;
+		};
+		const createNow = obsidian.create;
+		const gate = Deferred.makeUnsafe<void>();
+		const reached = Deferred.makeUnsafe<void>();
+		let held = false;
+		obsidian.create = (path, content) =>
+			(held
+				? Effect.runPromise(
+						Deferred.succeed(reached, undefined).pipe(
+							Effect.andThen(Deferred.await(gate)),
+						),
+					)
+				: Promise.resolve()
+			).then(() => createNow(path, content));
+		const plugin = makePlugin(vault, { slowShutdown: 20 });
 		const vam = await plugin.launch((manager) =>
-			Effect.succeed(
-				launched((onStopped) => new Librarian(manager, { onStopped })),
+			Effect.succeed(launched(librarianOver(manager))),
+		);
+		held = true;
+		const inFlight = plugin.runtime.hops.runPromiseExit(
+			vam.dispatch(
+				[
+					{
+						kind: "UpsertMdFile",
+						payload: {
+							content: "held",
+							splitPath: {
+								basename: "Held",
+								extension: "md",
+								kind: "MdFile",
+								pathParts: [],
+							},
+						},
+					} as never,
+				],
+				{ caller: "test" },
 			),
+		);
+		await Effect.runPromise(Deferred.await(reached));
+
+		let disposed = false;
+		const disposal = plugin.runtime.dispose().then(() => {
+			disposed = true;
+		});
+		await until(() =>
+			plugin.trace
+				.snapshot()
+				.logs.some((log) => log.text.includes("never cut short")),
+		);
+		expect(disposed).toBe(false);
+
+		Deferred.doneUnsafe(gate, Effect.void);
+		await disposal;
+		// The batch wrote its file; only its submitter, a program on the
+		// runtime, was interrupted.
+		expect(vault.files()).toContain("Held.md");
+		expect(Exit.hasInterrupts(await inFlight)).toBe(true);
+	}, 30_000);
+
+	it("waits on unload for a Librarian heal whose rename hangs, and logs that it waits", async () => {
+		const vault = makeObsidianVault({
+			[`${RAMEN}/Anchor-Ramen-Soup.md`]: "",
+		});
+		const plugin = makePlugin(vault, { slowShutdown: 20 });
+		await plugin.launch((manager) =>
+			Effect.succeed(launched(librarianOver(manager))),
+		);
+		const fileManager = vault.app.fileManager as unknown as {
+			renameFile: (file: unknown, to: string) => Promise<void>;
+		};
+		const renameNow = fileManager.renameFile;
+		const gate = Deferred.makeUnsafe<void>();
+		const reached = Deferred.makeUnsafe<void>();
+		fileManager.renameFile = (file, to) =>
+			Effect.runPromise(
+				Deferred.succeed(reached, undefined).pipe(
+					Effect.andThen(Deferred.await(gate)),
+				),
+			).then(() => renameNow(file, to));
+		await vault.createByHand(`${RAMEN}/Offline.md`);
+		await Effect.runPromise(Deferred.await(reached));
+
+		let disposed = false;
+		const disposal = plugin.runtime.dispose().then(() => {
+			disposed = true;
+		});
+		await until(() =>
+			plugin.trace
+				.snapshot()
+				.logs.some((log) => log.text.includes("never cut short")),
+		);
+		expect(disposed).toBe(false);
+
+		Deferred.doneUnsafe(gate, Effect.void);
+		await disposal;
+		expect(vault.files()).toContain(`${RAMEN}/Offline-Ramen-Soup.md`);
+	}, 30_000);
+
+	it("waits in whenIdle for a queued Librarian item and a Knowledge run", async () => {
+		const plugin = makePlugin(
+			makeObsidianVault({ [`${RAMEN}/Anchor-Ramen-Soup.md`]: "" }),
+		);
+		const vam = await plugin.launch((manager) =>
+			Effect.succeed(launched(librarianOver(manager))),
 		);
 		const { runtime } = plugin;
 		try {
