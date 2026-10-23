@@ -17,6 +17,7 @@
 	"description": "Go trough the german texts, building your own dictionary from your personal contexts",
 	"devDependencies": {
 		"@biomejs/biome": "^2.2.6",
+		"@effect/tsgo": "0.56.0",
 		"@types/bun": "latest",
 		"@types/node": "^18.19.130",
 		"@typesafe-ai/sdk": "^0.6.0",
@@ -24,6 +25,8 @@
 		"effect": "4.0.0",
 		"knip": "^6.33.0",
 		"obsidian": "^1.10.2",
+		"oxlint": "1.89.0",
+		"oxlint-tsgolint": "7.0.2004",
 		"ts-plugin-sort-import-suggestions": "github:clockblocker/ts7-plugin-sort-import-suggestions",
 		"typescript": "^7.0.2",
 		"yaml": "2.9.0"
@@ -46,7 +49,9 @@
 		"knip": "knip",
 		"link:texteater": "bun scripts/link-texteater.ts",
 		"lint": "bun x biome check .",
+		"lint:ox": "oxlint",
 		"postinstall": "bun scripts/link-texteater.ts --warn-only",
+		"prepare": "effect-tsgo patch --oxlint --skip-missing",
 		"runbook": "bash scripts/runbook-cli/textfresser-runbook",
 		"splitter:run": "bun tests/splitter-runner.ts",
 		"test": "bun run test:unit",
