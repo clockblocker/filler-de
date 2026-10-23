@@ -4,7 +4,7 @@
  * Obsidian reports that rename for every descendant; none of those reports
  * may reach the Librarian as a second user change.
  */
-import { afterEach, beforeEach, describe, expect, it, type spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	type BulkVaultEvent,
 	createVaultActionManager,
@@ -21,17 +21,7 @@ import {
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
 import { makeObsidianVault } from "../../../src/packages/independent/vault-action-manager/tests/unit/helpers/obsidian-vault";
-import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
-
-let settingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	settingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	settingsSpy.mockRestore();
-});
+import { fixedSettings } from "../../unit/common-utils/test-settings";
 
 function folderAt(path: string): SplitPathToFolder {
 	const splitPath = splitPathCodec.parse(path);
@@ -75,6 +65,7 @@ async function startLibrarian(vault: ReturnType<typeof makeObsidianVault>) {
 	};
 	const librarian = new Librarian(vam, {
 		onStopped: (stop) => void stops.push(stop),
+		settings: fixedSettings(),
 	});
 	await Effect.runPromise(manager.startListening());
 	await Effect.runPromise(librarian.init());

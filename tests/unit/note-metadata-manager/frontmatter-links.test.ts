@@ -12,9 +12,7 @@ import {
 	type MetadataFormat,
 	noteMetadataHelper as meta,
 } from "../../../src/stateless-helpers/note-metadata";
-import { setupGetParsedUserSettingsSpyWithHooks } from "../common-utils/setup-spy";
 
-setupGetParsedUserSettingsSpyWithHooks({ hideMetadata: false });
 
 const Schema = z.object({
 	embeds: z.array(z.string()),

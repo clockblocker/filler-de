@@ -18,12 +18,6 @@ import {
 } from "effect";
 import { Notice, Plugin, requestUrl } from "obsidian";
 import { Librarian } from "./commanders/librarian/librarian";
-import { DelimiterChangeService } from "./commanders/librarian/runtime/delimiter-change-service";
-import {
-	clearState,
-	initializeState,
-	updateParsedSettings,
-} from "./global-state/global-state";
 import { DictionaryStore } from "./lifecycle/dictionary-store-service";
 import { createLifecycleNotices } from "./lifecycle/lifecycle-notices";
 import {
@@ -39,8 +33,6 @@ import {
 } from "./managers/obsidian/command-executor";
 import type { OverlayManager } from "./managers/overlay-manager";
 import { confirmInModal } from "./plugin/confirm-modal";
-import { changeDelimiter } from "./plugin/delimiter-migration";
-import { migrateNoteMetadata } from "./plugin/note-metadata-migration";
 import {
 	ClassifyServices,
 	DictionaryReset,
@@ -54,28 +46,34 @@ import {
 	PluginServicesLive,
 } from "./plugin/plugin-services-live";
 import { registerCommands } from "./plugin/register-commands";
-import { diffSettings, snapshotSettings } from "./plugin/settings-changes";
 import { whenObsidianIsReady } from "./plugin/when-obsidian-is-ready";
 import { logAtEdge } from "./runtime/edge-log";
-import { PluginLive, type PluginServices } from "./runtime/plugin-live";
+import {
+	PluginLive,
+	type PluginLiveError,
+	type PluginServices,
+} from "./runtime/plugin-live";
 import {
 	makePluginRuntime,
 	type PluginRuntime,
 } from "./runtime/plugin-runtime";
 import { SettingsTab } from "./settings";
-import {
-	holdsRetiredSettings,
-	settingsFromStoredData,
-} from "./settings/stored-settings";
+import type { SettingsPatch } from "./settings/settings-changes";
+import { Settings } from "./settings/settings-service";
 import type { TextEaterSettings } from "./types";
 import { getErrorMessage } from "./utils/get-error-message";
 import { IdleTracker, isE2EMode } from "./utils/idle-tracker";
 import { recentTrace } from "./utils/recent-trace";
 
-type Runtime = PluginRuntime<PluginServices, VamSetupError>;
+type Runtime = PluginRuntime<PluginServices, PluginLiveError>;
 
 /** The plugin runtime's services alone, without the fiber's span. */
-const pluginServices = Context.pick(VaultActionManager, Dumgen, Lifecycle);
+const pluginServices = Context.pick(
+	VaultActionManager,
+	Dumgen,
+	Lifecycle,
+	Settings,
+);
 
 /** The services the launch built, once it built them. */
 type LaunchedServices = {
@@ -83,11 +81,9 @@ type LaunchedServices = {
 	readonly classify: ClassifyServices["Service"];
 	readonly textfresser: TextfresserCommands["Service"];
 	readonly dictionaryReset: DictionaryReset["Service"];
-	readonly delimiterChangeService: DelimiterChangeService;
 };
 
 export default class TextEaterPlugin extends Plugin {
-	settings: TextEaterSettings;
 	private readonly notices = createLifecycleNotices((message, { sticky }) => {
 		new Notice(message, sticky ? 0 : undefined);
 	});
@@ -101,9 +97,10 @@ export default class TextEaterPlugin extends Plugin {
 	 * (see `managers/dumgen/request-url-fetch.ts`).
 	 */
 	private dumgen: Dumgen["Service"] | null = null;
+	/** The runtime's settings, once the runtime is built and loaded them. */
+	private settingsService: Settings["Service"] | null = null;
 	private services: LaunchedServices | null = null;
 	private overlayManager: OverlayManager | null = null;
-	private previousSettings: TextEaterSettings | null = null;
 
 	/** Whether the launch is done; the E2E driver waits for it. */
 	get initialized(): boolean {
@@ -114,15 +111,23 @@ export default class TextEaterPlugin extends Plugin {
 		return this.lifecycle?.librarian() ?? null;
 	}
 
+	/**
+	 * The settings in effect, as `data.json` stores them; undefined until
+	 * the runtime loaded them, and after unload. The settings tab and the
+	 * E2E driver read them here; changes go through `updateSettings`.
+	 */
+	get settings(): TextEaterSettings | undefined {
+		return this.settingsService?.rawNow();
+	}
+
 	override onload() {
 		try {
 			const runtime = makePluginRuntime(
 				PluginLive(this.app, {
+					confirm: (title, message) =>
+						confirmInModal(this.app, title, message),
+					data: this,
 					notices: this.notices,
-					providerKeys: () => ({
-						openaiApiKey: this.settings?.openaiApiKey ?? "",
-						typesafeApiKey: this.settings?.typesafeApiKey ?? "",
-					}),
 					requestUrl,
 					trace: recentTrace,
 				}),
@@ -138,6 +143,7 @@ export default class TextEaterPlugin extends Plugin {
 					const lifecycle = yield* Lifecycle;
 					this.lifecycle = lifecycle;
 					this.dumgen = yield* Dumgen;
+					this.settingsService = yield* Settings;
 					// The launch runs with this fiber's context; this only tells
 					// the types, and keeps the launch's own span the parent.
 					const services = pluginServices(
@@ -177,6 +183,7 @@ export default class TextEaterPlugin extends Plugin {
 		this.lifecycle = null;
 		this.services = null;
 		this.dumgen = null;
+		this.settingsService = null;
 		this.overlayManager = null;
 		// Interrupts what runs at an edge, dumgen's actions included, stops
 		// the lifecycle (its services newest first, then the Librarian), then
@@ -189,8 +196,7 @@ export default class TextEaterPlugin extends Plugin {
 					"[TextEaterPlugin] Unloading did not finish cleanly:",
 					error,
 				),
-			)
-			.finally(() => clearState());
+			);
 	}
 
 	/**
@@ -211,8 +217,8 @@ export default class TextEaterPlugin extends Plugin {
 	> {
 		return Effect.gen({ self: this }, function* () {
 			yield* whenObsidianIsReady(this.app);
-			yield* Effect.tryPromise(() => this.loadSettings());
 			const lifecycle = yield* Lifecycle;
+			const settings = yield* Settings;
 			const vam = yield* VaultActionManager;
 			registerCommands(this, {
 				dictionaryReset: () => this.services?.dictionaryReset ?? null,
@@ -229,7 +235,6 @@ export default class TextEaterPlugin extends Plugin {
 				notices: this.notices,
 				plugin: this,
 				runtime,
-				settings: () => this.settings,
 			};
 			const built = yield* Layer.build(PluginServicesLive(deps));
 			const context = Context.merge(
@@ -241,7 +246,6 @@ export default class TextEaterPlugin extends Plugin {
 			const userEvents = Context.get(built, UserEvents);
 			this.services = {
 				classify,
-				delimiterChangeService: new DelimiterChangeService(vam),
 				dictionaryReset,
 				textfresser: Context.get(built, TextfresserCommands),
 				vam,
@@ -263,7 +267,8 @@ export default class TextEaterPlugin extends Plugin {
 					};
 				},
 				loadStore: Context.get(built, DictionaryStore).get,
-				makeLibrarian: (onStopped) => new Librarian(vam, { onStopped }),
+				makeLibrarian: (onStopped) =>
+					new Librarian(vam, { onStopped, settings }),
 				onLaunched: () =>
 					Layer.build(
 						OverlayLive({
@@ -286,17 +291,6 @@ export default class TextEaterPlugin extends Plugin {
 				sweep: () => classify.unlinkObserver.sweep(),
 			};
 		});
-	}
-
-	private async loadSettings() {
-		const stored: unknown = await this.loadData();
-		this.settings = settingsFromStoredData(stored);
-		// Drop the retired keys, the Gemini key among them, from data.json now.
-		if (holdsRetiredSettings(stored)) await this.saveData(this.settings);
-
-		// Initialize global state with parsed settings
-		initializeState(this.settings);
-		this.previousSettings = snapshotSettings(this.settings);
 	}
 
 	/**
@@ -340,83 +334,16 @@ export default class TextEaterPlugin extends Plugin {
 		);
 	};
 
-	/** A Textfresser for the languages in the settings now. */
-	private readonly rebuildTextfresser = Effect.suspend(
-		() => this.services?.textfresser.rebuild ?? Effect.void,
-	);
-
-	/** Applies the changed settings, under `settings.save`, and stores them. */
-	saveSettings(): Promise<void> {
+	/**
+	 * Applies `patch` to the settings under `settings.update`, once the
+	 * launch ended and every update before it is done; resolves once it
+	 * is applied and stored. The settings tab calls it.
+	 */
+	updateSettings(patch: SettingsPatch): Promise<void> {
 		if (!this.runtime) return Promise.resolve();
-		return this.runtime.settings(this.applySettings());
-	}
-
-	private applySettings() {
-		return Effect.gen({ self: this }, function* () {
-			const lifecycle = yield* Lifecycle;
-			const prev = this.previousSettings;
-			const curr = this.settings;
-
-			if (prev) {
-				const changes = diffSettings(prev, curr);
-				let librarianRestarted = false;
-
-				if (changes.delimiter) {
-					const report = yield* changeDelimiter(
-						{
-							applyDelimiter: (config) => {
-								this.settings.suffixDelimiter = { ...config };
-								updateParsedSettings(this.settings);
-							},
-							confirm: (title, message) =>
-								confirmInModal(this.app, title, message),
-							libraryRoot: curr.libraryRoot,
-							notices: this.notices,
-							service:
-								this.services?.delimiterChangeService ?? null,
-							supervisor: lifecycle,
-						},
-						prev.suffixDelimiter,
-						curr.suffixDelimiter,
-					);
-					// The setting follows the files: it keeps the new delimiter
-					// only when every file carries it.
-					if (!report.keepsNewDelimiter) {
-						this.settings.suffixDelimiter = {
-							...prev.suffixDelimiter,
-						};
-						updateParsedSettings(this.settings);
-						return;
-					}
-					librarianRestarted =
-						report.librarianReinitialized && !changes.languages;
-				}
-
-				const services = this.services;
-				if (changes.hideMetadata && services) {
-					updateParsedSettings(this.settings);
-					yield* migrateNoteMetadata(
-						services.vam,
-						curr.hideMetadata ? "Hidden" : "Frontmatter",
-					);
-				}
-
-				if (changes.librarian && !librarianRestarted) {
-					// Update global state BEFORE the restart so the Librarian uses the new settings
-					updateParsedSettings(this.settings);
-					if (changes.languages) yield* this.rebuildTextfresser;
-					yield* lifecycle.reconfigure;
-				}
-
-				if (changes.placement) this.overlayManager?.refreshToolbars();
-			}
-
-			yield* Effect.tryPromise(() => this.saveData(this.settings));
-			// Allow file system to flush before any potential reload
-			yield* Effect.sleep("100 millis");
-			this.previousSettings = snapshotSettings(this.settings);
-			updateParsedSettings(this.settings);
-		});
+		return this.runtime.settings(
+			Effect.flatMap(Settings, (settings) => settings.update(patch)),
+		);
 	}
 
 	// ─── E2E test hooks ───
@@ -617,26 +544,21 @@ export default class TextEaterPlugin extends Plugin {
 	}
 
 	/**
-	 * E2E test hook: reset settings to provided values and restart the
-	 * Librarian, bypassing the confirmation dialog.
+	 * E2E test hook: puts the given settings into effect and restarts the
+	 * Librarian, without the delimiter and metadata migrations, and so
+	 * without their confirmation dialog: each scenario lays out its notes.
 	 */
-	async resetSettingsForTesting(
+	resetSettingsForTesting(
 		newSettings: Partial<TextEaterSettings>,
 	): Promise<void> {
-		Object.assign(this.settings, newSettings);
-		// Update global state so codecs use new settings
-		updateParsedSettings(this.settings);
-		await this.saveData(this.settings);
-		// Avoid a dialog on the next saveSettings
-		this.previousSettings = snapshotSettings(this.settings);
-		const rebuild = this.rebuildTextfresser;
-		await this.e2e(
+		return this.e2e(
 			"reset-settings",
-			Effect.gen(function* () {
-				yield* rebuild;
-				const lifecycle = yield* Lifecycle;
-				yield* lifecycle.reconfigure;
-			}),
+			Effect.flatMap(Settings, (settings) =>
+				settings.update(newSettings, {
+					migrate: false,
+					restartLibrarian: true,
+				}),
+			),
 		);
 	}
 }

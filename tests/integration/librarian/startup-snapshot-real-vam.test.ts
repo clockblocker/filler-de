@@ -5,7 +5,7 @@
  * exactly once, even when it lands while startup reconciliation runs or a
  * startup recovery rescans.
  */
-import { afterEach, beforeEach, describe, expect, it, type spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	type BulkVaultEvent,
 	createVaultActionManager,
@@ -22,17 +22,7 @@ import {
 } from "../../../src/commanders/librarian/librarian";
 import { makeObsidianVault } from "../../../src/packages/independent/vault-action-manager/tests/unit/helpers/obsidian-vault";
 import { actionError, failedActions } from "../../support/vam-dispatch";
-import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
-
-let settingsSpy: ReturnType<typeof spyOn>;
-
-beforeEach(() => {
-	settingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	settingsSpy.mockRestore();
-});
+import { fixedSettings } from "../../unit/common-utils/test-settings";
 
 const RAMEN = "Library/Soup/Ramen";
 
@@ -83,6 +73,7 @@ function makeHarness(
 	};
 	const librarian = new Librarian(vam, {
 		onStopped: (stop) => void stops.push(stop),
+		settings: fixedSettings(),
 	});
 	return {
 		batches,

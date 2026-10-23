@@ -24,14 +24,13 @@ import type { DictionaryStore } from "../lifecycle/dictionary-store-service";
 import type { OverlayManager } from "../managers/overlay-manager";
 import type { PluginServices } from "../runtime/plugin-live";
 
-/** The Textfresser commands, rebuilt when the languages change. */
+/**
+ * The Textfresser commands for the languages in effect. A change of the
+ * languages builds a new Textfresser, once, as it is next used.
+ */
 export class TextfresserCommands extends Context.Service<
 	TextfresserCommands,
-	{
-		readonly current: Effect.Effect<Textfresser>;
-		/** A new Textfresser for the languages in the settings now. */
-		readonly rebuild: Effect.Effect<void>;
-	}
+	{ readonly current: Effect.Effect<Textfresser> }
 >()("textfresser/plugin/TextfresserCommands") {}
 
 /** Classify and its background work: Knowledge runs, unlink checks. */

@@ -6,6 +6,7 @@ import type {
 import {
 	type BulkInterpreter,
 	type ChangeNodeStatusAction,
+	type CodecRules,
 	type Codecs,
 	type CodexClickTarget,
 	Healer,
@@ -36,11 +37,12 @@ import {
 	type SplitPathToMdFile,
 } from "@textfresser/vault-action-manager";
 import { Cause, Data, Effect, Result } from "effect";
-import { getParsedUserSettings } from "../../global-state/global-state";
 import type {
 	CommandContext,
 	CommandKind,
 } from "../../managers/obsidian/command-executor";
+import type { SettingsService } from "../../settings/settings-service";
+import { metadataFormatOf } from "../../stateless-helpers/note-metadata";
 import { catchWhole, causeMessages } from "../../utils/causes";
 import { IdleTracker } from "../../utils/idle-tracker";
 import { commandFnForCommandKind } from "./commands";
@@ -216,6 +218,13 @@ export type LibrarianUnsubscribeFailure = Effect.Error<
 
 export type LibrarianOptions = {
 	/**
+	 * Where the Librarian reads its settings: each start runs under the
+	 * settings in effect as it begins, and recovers under the same ones.
+	 * Only the metadata format is read as each note is written (see
+	 * `CodecRules.metadataFormat`).
+	 */
+	readonly settings: Pick<SettingsService, "get" | "now">;
+	/**
 	 * Told when the Librarian stops: its startup failed, or a later
 	 * reconciliation failed past recovery.
 	 */
@@ -270,8 +279,13 @@ export class Librarian {
 
 	constructor(
 		private readonly vam: LibrarianVam,
-		private readonly options: LibrarianOptions = {},
+		private readonly options: LibrarianOptions,
 	) {}
+
+	/** The codec rules this Librarian's start runs under. */
+	get codecRules(): CodecRules {
+		return this.codecs.rules;
+	}
 
 	/**
 	 * Tells `onStopped` why the Librarian stopped, and logs it with every
@@ -405,7 +419,7 @@ export class Librarian {
 		return yield* idle
 			.track(
 				Effect.gen(function* () {
-					const settings = getParsedUserSettings();
+					const settings = yield* self.options.settings.get;
 					self.reconciler = null;
 					self.actionQueue = null;
 					self.subscription = null;
@@ -413,7 +427,10 @@ export class Librarian {
 					self.reconciliationAudit = new ReconciliationAuditLog();
 					self._debugLastScanDiagnostics = [];
 					self.codecs = makeCodecs(
-						makeCodecRulesFromSettings(settings),
+						makeCodecRulesFromSettings(settings, {
+							metadataFormat: () =>
+								metadataFormatOf(self.options.settings.now()),
+						}),
 					);
 					self.interpretBulk = makeBulkInterpreter(self.codecs);
 					const rootSplitPath = settings.splitPathToLibraryRoot;

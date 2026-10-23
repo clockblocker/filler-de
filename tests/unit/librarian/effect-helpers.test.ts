@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	type CodecError,
 	type Codecs,
@@ -25,10 +25,7 @@ import {
 } from "../../../src/commanders/librarian/librarian";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
 import { defaultSettingsForUnitTests } from "../common-utils/consts";
-
-mock.module("../../../src/global-state/global-state", () => ({
-	getParsedUserSettings: () => defaultSettingsForUnitTests,
-}));
+import { fixedSettings } from "../common-utils/test-settings";
 
 const codecs = makeCodecs(
 	makeCodecRulesFromSettings(defaultSettingsForUnitTests),
@@ -70,6 +67,7 @@ describe("Librarian Effect helpers", () => {
 					subscriptions += 1;
 				},
 			),
+			{ settings: fixedSettings() },
 		);
 
 		await Effect.runPromise(librarian.init());
@@ -91,6 +89,7 @@ describe("Librarian Effect helpers", () => {
 			makeLibrarianVam(Effect.fail(scanFailure), () => {
 				subscriptions += 1;
 			}),
+			{ settings: fixedSettings() },
 		);
 
 		const exit = await Effect.runPromiseExit(librarian.init());

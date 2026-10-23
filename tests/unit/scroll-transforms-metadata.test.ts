@@ -1,19 +1,13 @@
 /**
  * Unit test to verify scroll transforms preserve JSON metadata.
  */
-import { describe, expect, it, mock } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import type { SectionNodeSegmentId } from "@textfresser/library-core";
 import { 
 	makeBacklinkTransform,makeCodecRulesFromSettings, makeCodecs, 
 	makeStripScrollBacklinkTransform,NodeSegmentIdSeparator, } from "@textfresser/library-core";
 import { noteMetadataHelper } from "../../src/stateless-helpers/note-metadata";
 import { defaultSettingsForUnitTests } from "./common-utils/consts";
-
-// Mock the global state module - MUST be before imports that use it
-const mockSettings = defaultSettingsForUnitTests;
-mock.module("../../src/global-state/global-state", () => ({
-	getParsedUserSettings: () => mockSettings,
-}));
 
 const codecs = makeCodecs(
 	makeCodecRulesFromSettings(defaultSettingsForUnitTests),
@@ -71,7 +65,7 @@ ${JSON_META_SECTION}
 	it("toggleStatus then makeBacklinkTransform preserves all metadata", async () => {
 		// Simulate the real flow: first toggleStatus, then ProcessScrollBacklink
 		// Step 1: toggleStatus to Done (this should merge with existing metadata)
-		const toggleTransform = noteMetadataHelper.toggleStatus(true);
+		const toggleTransform = noteMetadataHelper.toggleStatus(true, "Hidden");
 		const afterToggle = await toggleTransform(contentWithMeta);
 
 		// Should have merged metadata

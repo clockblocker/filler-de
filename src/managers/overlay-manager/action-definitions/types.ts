@@ -5,6 +5,7 @@
  */
 
 import { z } from "zod";
+import type { TextEaterSettings } from "../../../types";
 import type { CommandKind } from "../../obsidian/command-executor";
 
 // Subset of CommandKind that can appear in overlay UI
@@ -34,10 +35,19 @@ const OverlayPlacementSchema = z.enum(OVERLAY_PLACEMENT_LITERALS);
 export type OverlayPlacement = z.infer<typeof OverlayPlacementSchema>;
 export const OverlayPlacement = OverlayPlacementSchema.enum;
 
+/** The settings that place a toolbar action. */
+export type PlacementSettingKey = keyof Pick<
+	TextEaterSettings,
+	| "translatePlacement"
+	| "splitInBlocksPlacement"
+	| "explainGrammarPlacement"
+	| "generatePlacement"
+>;
+
 export type ActionDefinition = {
 	id: OverlayActionKind;
 	label: string;
-	settingKey: string | null;
+	settingKey: PlacementSettingKey | null;
 	requiresSelection: boolean;
 	selectablePlacements: readonly OverlayPlacement[];
 };

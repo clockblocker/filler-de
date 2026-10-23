@@ -32,7 +32,7 @@ import type { SuffixDelimiterConfig } from "../types";
 import { buildCanonicalDelimiter } from "../utils/delimiter";
 import { getErrorMessage } from "../utils/get-error-message";
 
-/** The migration could not begin, such as before the plugin launched. */
+/** The migration could not begin, such as for a Library root that is no folder. */
 export class DelimiterMigrationUnavailable extends Data.TaggedError(
 	"DelimiterMigrationUnavailable",
 )<{ readonly message: string }> {}
@@ -62,12 +62,13 @@ export type DelimiterMigrationDeps = {
 		LifecycleSupervisor<SupervisedLibrarian>,
 		"duringMigration" | "pause" | "resume"
 	>;
-	/** Null before the plugin launched. */
-	readonly service: DelimiterChangeService | null;
+	readonly service: DelimiterChangeService;
 	readonly libraryRoot: string;
 	readonly confirm: (title: string, message: string) => Promise<boolean>;
-	/** Puts `config` into the settings and the global state. */
-	readonly applyDelimiter: (config: SuffixDelimiterConfig) => void;
+	/** Puts `config` into the settings in effect. */
+	readonly applyDelimiter: (
+		config: SuffixDelimiterConfig,
+	) => Effect.Effect<void>;
 	readonly notices: LifecycleNotices;
 };
 
@@ -117,19 +118,6 @@ function migrate(
 		readonly oldDelimiter: string;
 	},
 ): Effect.Effect<DelimiterMigrationOutcome<DelimiterLifecycleFailure>> {
-	if (!deps.service) {
-		return Effect.succeed(
-			failedBeforePlanning(
-				"delimiterMigration.initialize",
-				Cause.fail(
-					new DelimiterMigrationUnavailable({
-						message:
-							"DelimiterChangeService or Librarian not initialized",
-					}),
-				),
-			),
-		);
-	}
 	const libraryRoot = splitPathCodec.parse(deps.libraryRoot);
 	if (libraryRoot.kind !== SplitPathKind.Folder) {
 		return Effect.succeed(
@@ -161,9 +149,9 @@ function migrate(
 				// The supervisor knows whether the Librarian is paused, so it
 				// unsubscribes the current one only when it still runs.
 				restore: (config) =>
-					Effect.sync(() => deps.applyDelimiter(config)).pipe(
-						Effect.andThen(deps.supervisor.resume),
-					),
+					deps
+						.applyDelimiter(config)
+						.pipe(Effect.andThen(deps.supervisor.resume)),
 			},
 		);
 	return coordinator.migrate(oldConfig, newConfig, libraryRoot);

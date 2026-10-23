@@ -105,18 +105,21 @@ defaults to the one the setting selects when the transform is built.
 | --- | --- |
 | `read(content, ns, prefer?)` | The value, or null when absent or unreadable. |
 | `inspect(content, ns, prefer?)` | `Absent`, `Valid` with its format, or `Invalid` with a `MetadataIssue` and its format. |
-| `write(ns, value, format?)` | Replaces the namespace's data in `format` and removes it from the other format. |
-| `update(ns, change, format?)` | Reads, applies `change(current \| null)`, writes; returning null removes. Throws `NoteMetadataError` rather than overwrite data it can't read. |
+| `write(ns, value, format)` | Replaces the namespace's data in `format` and removes it from the other format. |
+| `update(ns, change, format)` | Reads, applies `change(current \| null)`, writes; returning null removes. Throws `NoteMetadataError` rather than overwrite data it can't read. |
 | `remove(ns)` | Removes the namespace from both formats. Drops the hidden section once it is empty. |
 | `mapBody(change)` | Rewrites the visible body and keeps all metadata. Used by the backlink transforms. |
 | `convertNote(content, target, namespaces)` / `convertFormat(...)` | Moves the namespaces into `target`; the report variant lists what moved and what stayed. |
 | `strip`, `body`, `stripOnlyFrontmatter`, `findSectionStart` | Visible text, without metadata. |
-| `toggleStatus(checked)` | The Library's Reading Status update. |
+| `toggleStatus(checked, format)` | The Library's Reading Status update. |
 
-**Reading across formats.** `read` and `inspect` try `prefer` first (by
-default the current format), then the other one. A note that hasn't been
-migrated yet after a toggle still reads. Each write then moves the namespace
-into the current format.
+**Reading across formats.** `read` and `inspect` try `prefer` first
+(usually the format "Hide metadata" selects, `metadataFormatOf(settings)`),
+then the other one. A note that hasn't been migrated yet after a toggle
+still reads. Each write then moves the namespace into the format it is
+given. Callers pass the format: the Librarian reads it from its
+`CodecRules.metadataFormat()`, which follows the setting in effect, and the
+dictionary store from its `metadataFormat` option.
 
 **Errors.** `NoteMetadataError` has a `namespace` and one of these reasons:
 `InvalidValue` (the value breaks the schema), `UnreadableFrontmatter`, or
@@ -138,7 +141,7 @@ const Lemma = defineNestedNamespace({
 	version: 1,
 });
 
-const next = noteMetadataHelper.write(Lemma, data)(expected);
+const next = noteMetadataHelper.write(Lemma, data, metadataFormat())(expected);
 transform: compareAndSwap(path, expected, next);
 ```
 
@@ -148,9 +151,10 @@ quarantine the second kind instead of overwriting it.
 
 ## Toggling "Hide metadata"
 
-`saveSettings` runs `migrateMetadataFormat`
-(`src/commanders/note-metadata-migration/`) before it reinitializes the
-Librarian. Each scope gives a folder and the namespaces its notes hold; today
+`Settings.update` puts the new format into effect, then runs
+`migrateMetadataFormat` (`src/commanders/note-metadata-migration/`), then
+restarts the Librarian. What the running Librarian writes meanwhile, such as
+a Codex or a Scroll's status, already lands in the new format. Each scope gives a folder and the namespaces its notes hold; today
 the only scope is the Library root with `LibraryMetadata`. Every Markdown note
 in it that carries their data in the other format is rewritten. The transform
 runs again inside `Vault.process`, so a concurrent edit is kept. A Notice

@@ -2,6 +2,10 @@ import {
 	type SplitPathToFolder,
 	VaultPath,
 } from "@textfresser/vault-action-manager";
+import {
+	type MetadataFormat,
+	metadataFormatOf,
+} from "../internal/root/note-metadata";
 import type {
 	LanguagesConfig,
 	SuffixDelimiterConfig,
@@ -41,8 +45,14 @@ export type CodecRules = {
 	libraryRootPathParts: string[];
 	/** Whether to add go-back links on scroll files */
 	showScrollBacklinks: boolean;
-	/** Store metadata invisibly at end of file. When false, uses YAML frontmatter. */
-	hideMetadata: boolean;
+	/**
+	 * The format a Codex's metadata and a Scroll's status are written in,
+	 * read as each is written. The one rule that is not a snapshot: a
+	 * "Hide metadata" toggle selects the new format before it moves the
+	 * notes and restarts the Librarian, so what the Librarian writes in
+	 * between already lands in it.
+	 */
+	metadataFormat: () => MetadataFormat;
 	/** User's known and target languages */
 	languages: LanguagesConfig;
 	/** How deep a Codex lists nested Sections (0 = own children only) */
@@ -53,17 +63,20 @@ export type CodecRules = {
 
 /**
  * Creates codec rules from the Library's settings.
- * Extracts required naming conventions for codec operations.
+ * Extracts required naming conventions for codec operations. The metadata
+ * format is `settings`' own unless `live` reads the one in effect.
  */
 export function makeCodecRulesFromSettings(
 	settings: LibrarySettings,
+	live: { readonly metadataFormat?: () => MetadataFormat } = {},
 ): CodecRules {
+	const format = metadataFormatOf(settings);
 	return {
-		hideMetadata: settings.hideMetadata,
 		languages: settings.languages,
 		libraryRootName: settings.splitPathToLibraryRoot.basename,
 		libraryRootPathParts: settings.splitPathToLibraryRoot.pathParts,
 		maxSectionDepth: settings.maxSectionDepth,
+		metadataFormat: live.metadataFormat ?? (() => format),
 		showScrollBacklinks: settings.showScrollBacklinks,
 		showScrollsInCodexesForDepth: settings.showScrollsInCodexesForDepth,
 		suffixDelimiter: settings.suffixDelimiter,

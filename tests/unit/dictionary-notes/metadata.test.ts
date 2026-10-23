@@ -18,7 +18,6 @@ import {
 	NoteMetadataError,
 	ReadingNoteMetadata,
 } from "../../../src/stateless-helpers/note-metadata";
-import { setupGetParsedUserSettingsSpyWithHooks } from "../common-utils/setup-spy";
 import {
 	kohlekraftwerk,
 	kohlekraftwerkReading,
@@ -26,7 +25,6 @@ import {
 	mutterParent,
 } from "./layout-fixtures";
 
-setupGetParsedUserSettingsSpyWithHooks({ hideMetadata: true });
 
 const FORMATS: readonly MetadataFormat[] = ["Hidden", "Frontmatter"];
 const NAMESPACES = [LemmaNoteMetadata, ReadingNoteMetadata];
@@ -38,14 +36,14 @@ const writeLemma = (format: MetadataFormat) =>
 	writeLemmaNote(mutter, { ...de, format });
 
 function readingData(content: string) {
-	const read = readReadingNote(content, de);
+	const read = readReadingNote(content, de, "Hidden");
 	if (read._tag !== "Parsed" || !read.parse.data.ok)
 		throw new Error("Expected a readable Reading note");
 	return read.parse.data.data;
 }
 
 function lemmaData(content: string) {
-	const read = readLemmaNote(content, de);
+	const read = readLemmaNote(content, de, "Hidden");
 	if (read._tag !== "Parsed" || !read.parse.data.ok)
 		throw new Error("Expected a readable Lemma note");
 	return read.parse.data.data;
@@ -157,7 +155,7 @@ describe("what the facility cannot read is never overwritten", () => {
 			'"schemaVersion":1',
 			'"schemaVersion":9',
 		);
-		expect(readLemmaNote(content, de)).toMatchObject({
+		expect(readLemmaNote(content, de, "Hidden")).toMatchObject({
 			_tag: "UnreadableMetadata",
 			issue: { kind: "NewerVersion" },
 		});
@@ -165,7 +163,7 @@ describe("what the facility cannot read is never overwritten", () => {
 	});
 
 	it("a note in the marker format parses to a typed issue, never a throw", () => {
-		const read = readLemmaNote("%%tf-part:lemma%%\n%%tf:identity {}%%\n", de);
+		const read = readLemmaNote("%%tf-part:lemma%%\n%%tf:identity {}%%\n", de, "Hidden");
 		expect(read).toMatchObject({
 			_tag: "Parsed",
 			parse: {

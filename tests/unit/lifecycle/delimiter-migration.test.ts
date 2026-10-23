@@ -140,10 +140,11 @@ function makeHarness() {
 		Effect.runPromise(
 			changeDelimiter(
 				{
-					applyDelimiter: (config) => {
-						events.push(`apply ${config.symbol}`);
-						delimiter = config.symbol;
-					},
+					applyDelimiter: (config) =>
+						Effect.sync(() => {
+							events.push(`apply ${config.symbol}`);
+							delimiter = config.symbol;
+						}),
 					confirm: () => Promise.resolve(true),
 					libraryRoot: "Library",
 					notices,

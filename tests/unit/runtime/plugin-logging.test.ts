@@ -18,7 +18,10 @@ import { makeObsidianVault } from "../../../src/packages/independent/vault-actio
 import { makeEdgeLog, ObservabilityLive } from "../../../src/runtime/observability";
 import { PluginLive } from "../../../src/runtime/plugin-live";
 import { makePluginRuntime } from "../../../src/runtime/plugin-runtime";
-import { setupGetParsedUserSettingsSpy } from "../common-utils/setup-spy";
+import {
+	fixedSettings,
+	memoryPluginData,
+} from "../common-utils/test-settings";
 import { unreachable } from "../dumgen/dumgen-support";
 
 /** Lets every fiber and promise that can move, move. */
@@ -47,14 +50,11 @@ const logsMatching = (trace: RecentTrace, text: string): RecordedLog[] =>
 	trace.snapshot().logs.filter((log) => log.text.includes(text));
 
 describe("Plugin logging", () => {
-	let settingsSpy: ReturnType<typeof spyOn>;
 	let warn: ReturnType<typeof spyOn>;
 	beforeEach(() => {
-		settingsSpy = setupGetParsedUserSettingsSpy();
 		warn = spyOn(console, "warn").mockImplementation(() => {});
 	});
 	afterEach(() => {
-		settingsSpy.mockRestore();
 		warn.mockRestore();
 	});
 
@@ -66,11 +66,12 @@ describe("Plugin logging", () => {
 		let lifecycle: LifecycleSupervisor<Librarian> | null = null;
 		const runtime = makePluginRuntime(
 			PluginLive(vault.app as unknown as App, {
+				confirm: () => Promise.resolve(true),
+				data: memoryPluginData(),
 				notices: createLifecycleNotices(() => {}, {
 					trace,
 					writeStop: () => {},
 				}),
-				providerKeys: () => ({ openaiApiKey: "", typesafeApiKey: "" }),
 				requestUrl: unreachable,
 				trace,
 			}),
@@ -92,7 +93,7 @@ describe("Plugin logging", () => {
 								attachLibrarian: () => () => {},
 								loadStore: Effect.void,
 								makeLibrarian: (onStopped) =>
-									new Librarian(vam, { onStopped }),
+									new Librarian(vam, { onStopped, settings: fixedSettings() }),
 								onLaunched: () => Effect.void,
 								resetRunning: () => false,
 								sweep: () => {},

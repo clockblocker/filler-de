@@ -88,6 +88,7 @@ export const buildInitialCreateActions = Effect.fn("buildInitialCreateActions")(
 					const meta = noteMetadataHelper.read(
 						content.success,
 						LibraryMetadata,
+						codecs.rules.metadataFormat(),
 					);
 					if (meta?.status === "Done") {
 						status = TreeNodeStatus.Done;

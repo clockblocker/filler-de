@@ -5,7 +5,6 @@
 
 import {
 	type CodecRules,
-	makeCodecRulesFromSettings,
 	parseSeparatedSuffix,
 } from "@textfresser/library-core";
 import { goBackLinkHelper } from "@textfresser/note-addressing";
@@ -15,7 +14,6 @@ import type {
 } from "@textfresser/vault-action-manager";
 import { Effect, Result } from "effect";
 import { Notice } from "obsidian";
-import { getParsedUserSettings } from "../../../global-state/global-state";
 import type {
 	Librarian,
 	LibrarianReconciliationOutcome,
@@ -82,8 +80,8 @@ const gatherInput = Effect.fn("Librarian.splitToPages.gatherInput")(function* (
 	}
 	const { content, splitPath: sourcePath } = editorContext;
 
-	const settings = getParsedUserSettings();
-	const rules = makeCodecRulesFromSettings(settings);
+	// The Librarian's own rules: it heals the pages under them.
+	const rules = context.librarian.codecRules;
 
 	const basenameResult = parseSeparatedSuffix(rules, sourcePath.basename);
 	if (Result.isFailure(basenameResult)) {

@@ -8,7 +8,6 @@
  * applying it to its own output gives the same bytes.
  */
 
-import { getParsedUserSettings } from "../../global-state/global-state";
 import type { MetadataDocument } from "./internal/document";
 import { editDocument, isEmptyDocument } from "./internal/document";
 import { joinNote, type NoteLayout, splitNote } from "./internal/note-layout";
@@ -40,9 +39,11 @@ export {
 /** A pure rewrite of a note's content. */
 export type MetadataTransform = (content: string) => string;
 
-/** The format "Hide metadata" currently selects. */
-function currentMetadataFormat(): MetadataFormat {
-	return getParsedUserSettings().hideMetadata ? "Hidden" : "Frontmatter";
+/** The format the "Hide metadata" setting selects. */
+export function metadataFormatOf(settings: {
+	readonly hideMetadata: boolean;
+}): MetadataFormat {
+	return settings.hideMetadata ? "Hidden" : "Frontmatter";
 }
 
 // ─── Reading ───
@@ -71,15 +72,15 @@ function readFrom<T>(
 }
 
 /**
- * Reads `namespace` from `content`. Tries `prefer` first, by default the
- * current format, then the other one, so a note not yet migrated after the
- * toggle still reads. Returns the first valid reading; otherwise the first
+ * Reads `namespace` from `content`. Tries `prefer` first, usually the
+ * format "Hide metadata" selects, then the other one, so a note not yet
+ * migrated after the toggle still reads. Returns the first valid reading; otherwise the first
  * invalid one, so callers can tell broken data from none.
  */
 function inspect<T>(
 	content: string,
 	namespace: MetadataNamespace<T>,
-	prefer: MetadataFormat = currentMetadataFormat(),
+	prefer: MetadataFormat,
 ): MetadataReading<T> {
 	const documents = documentsOf(splitNote(content));
 	const first = readFrom(documents, namespace, prefer);
@@ -93,7 +94,7 @@ function inspect<T>(
 function read<T>(
 	content: string,
 	namespace: MetadataNamespace<T>,
-	prefer?: MetadataFormat,
+	prefer: MetadataFormat,
 ): T | null {
 	const reading = inspect(content, namespace, prefer);
 	return reading.kind === "Valid" ? reading.value : null;
@@ -129,14 +130,14 @@ function editNamespace<T>(
 }
 
 /**
- * Replaces the namespace's data with `value`, in `format` (by default the
- * current one), and removes it from the other format. Other namespaces'
+ * Replaces the namespace's data with `value`, in `format`, and removes it
+ * from the other format. Other namespaces'
  * data and the user's own frontmatter properties stay.
  */
 function write<T>(
 	namespace: MetadataNamespace<T>,
 	value: T,
-	format: MetadataFormat = currentMetadataFormat(),
+	format: MetadataFormat,
 ): MetadataTransform {
 	return (content) =>
 		editNamespace(content, namespace, format, (document) =>
@@ -152,7 +153,7 @@ function write<T>(
 function update<T>(
 	namespace: MetadataNamespace<T>,
 	change: (current: T | null) => T | null,
-	format: MetadataFormat = currentMetadataFormat(),
+	format: MetadataFormat,
 ): MetadataTransform {
 	return (content) => {
 		const reading = inspect(content, namespace, format);
@@ -326,12 +327,22 @@ function findSectionStart(content: string): number | null {
 
 // ─── Library ───
 
-/** Sets a Scroll's Reading Status, keeping its other Library metadata. */
-function toggleStatus(checked: boolean): MetadataTransform {
+/**
+ * Sets a Scroll's Reading Status in `format`, keeping its other Library
+ * metadata.
+ */
+function toggleStatus(
+	checked: boolean,
+	format: MetadataFormat,
+): MetadataTransform {
 	const status: LibraryMetadataValue["status"] = checked
 		? "Done"
 		: "NotStarted";
-	return update(LibraryMetadata, (current) => ({ ...current, status }));
+	return update(
+		LibraryMetadata,
+		(current) => ({ ...current, status }),
+		format,
+	);
 }
 
 /**

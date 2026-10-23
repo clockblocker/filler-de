@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, type spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
@@ -20,14 +20,7 @@ import { CommandKind } from "../../../src/managers/obsidian/command-executor";
 import { getContextMenuFile } from "../../../src/managers/overlay-manager/context-menu/context-menu";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../unit/common-utils/setup-spy";
-
-let settingsSpy: ReturnType<typeof spyOn> | null = null;
-
-afterEach(() => {
-	settingsSpy?.mockRestore();
-	settingsSpy = null;
-});
+import { fixedSettings } from "../../unit/common-utils/test-settings";
 
 function md(pathParts: string[], basename: string): SplitPathToMdFile {
 	return { basename, extension: MD, kind: SplitPathKind.MdFile, pathParts };
@@ -69,10 +62,11 @@ function makeVam(active: () => SplitPathToMdFile): LibrarianVam {
 }
 
 async function startLibrarian(root: SplitPathToFolder) {
-	settingsSpy = setupGetParsedUserSettingsSpy({ splitPathToLibraryRoot: root });
 	let active = md([], "README");
 	const vam = makeVam(() => active);
-	const librarian = new Librarian(vam);
+	const librarian = new Librarian(vam, {
+		settings: fixedSettings({ splitPathToLibraryRoot: root }),
+	});
 	await Effect.runPromise(librarian.init());
 	const contextMenuAccepts = (splitPath: SplitPathToMdFile): boolean => {
 		active = splitPath;
@@ -83,7 +77,9 @@ async function startLibrarian(root: SplitPathToFolder) {
 
 describe("Librarian library membership", () => {
 	it("answers false before init", () => {
-		const librarian = new Librarian(makeVam(() => md([], "README")));
+		const librarian = new Librarian(makeVam(() => md([], "README")), {
+			settings: fixedSettings(),
+		});
 		expect(librarian.isInsideLibrary(md(["Library"], "Scroll"))).toBe(false);
 	});
 

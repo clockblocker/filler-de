@@ -7,9 +7,7 @@ import {
 	noteMetadataHelper as meta,
 	NoteMetadataError,
 } from "../../../src/stateless-helpers/note-metadata";
-import { setupGetParsedUserSettingsSpyWithHooks } from "../common-utils/setup-spy";
 
-setupGetParsedUserSettingsSpyWithHooks({ hideMetadata: true });
 
 const OPEN = '<section id="textfresser_meta_keep_me_invisible">';
 const FORMATS: readonly MetadataFormat[] = ["Hidden", "Frontmatter"];
@@ -88,7 +86,7 @@ describe("note-metadata facility", () => {
 				"Frontmatter",
 			)("Text\n");
 			expect(page).toBe("---\nnoteKind: Page\nstatus: true\n---\nText\n");
-			expect(meta.read(page, LibraryMetadata)).toEqual({
+			expect(meta.read(page, LibraryMetadata, "Hidden")).toEqual({
 				noteKind: "Page",
 				status: "Done",
 			});
@@ -116,7 +114,7 @@ describe("note-metadata facility", () => {
 				["whatever", "NotStarted"],
 			] as const) {
 				const content = `---\nstatus: ${stored}\n---\nText`;
-				expect(meta.read(content, LibraryMetadata)?.status).toBe(status);
+				expect(meta.read(content, LibraryMetadata, "Hidden")?.status).toBe(status);
 			}
 		});
 	});
@@ -160,8 +158,8 @@ describe("note-metadata facility", () => {
 				`Text${"\n".repeat(20)}${OPEN}\n{"prevPageIdx":0,"status":"NotStarted"}\n</section>\n`,
 			);
 			const both = meta.write(Dictionary, TRICKY, "Hidden")(withLibrary);
-			expect(meta.read(both, LibraryMetadata)).toEqual({ status: "Done" });
-			expect(meta.read(both, Dictionary)).toEqual(TRICKY);
+			expect(meta.read(both, LibraryMetadata, "Hidden")).toEqual({ status: "Done" });
+			expect(meta.read(both, Dictionary, "Hidden")).toEqual(TRICKY);
 			expect(both).toContain('"prevPageIdx":0');
 
 			const withoutDictionary = meta.remove(Dictionary)(both);
@@ -192,7 +190,7 @@ describe("note-metadata facility", () => {
 			`Text\n${OPEN}\n${JSON.stringify({ dictionary: data })}\n</section>\n`;
 
 		it("migrates older data on read", () => {
-			expect(meta.read(stored({ schemaVersion: 1, word: "Fahrer" }), Dictionary)).toEqual({
+			expect(meta.read(stored({ schemaVersion: 1, word: "Fahrer" }), Dictionary, "Hidden")).toEqual({
 				lemma: "Fahrer",
 				readings: [],
 			});
@@ -270,7 +268,7 @@ describe("note-metadata facility", () => {
 
 		it("never reads visible content as data", () => {
 			const content = `Body ${OPEN}{"status":"Done"}</section> more text\n`;
-			expect(meta.read(content, LibraryMetadata)).toBeNull();
+			expect(meta.read(content, LibraryMetadata, "Hidden")).toBeNull();
 			expect(meta.strip(content)).toBe(content.trim());
 			expect(meta.findSectionStart(content)).toBeNull();
 		});

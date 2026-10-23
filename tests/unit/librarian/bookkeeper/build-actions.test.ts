@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import { describe, expect, it } from "bun:test";
 import {
 	makeCodecRulesFromSettings,
 } from "@textfresser/library-core";
@@ -11,18 +11,6 @@ import {
 	noteMetadataHelper,
 } from "../../../../src/stateless-helpers/note-metadata";
 import { defaultSettingsForUnitTests } from "../../common-utils/consts";
-import { setupGetParsedUserSettingsSpy } from "../../common-utils/setup-spy";
-
-let getParsedUserSettingsSpy: ReturnType<typeof spyOn>;
-
-
-beforeEach(() => {
-	getParsedUserSettingsSpy = setupGetParsedUserSettingsSpy();
-});
-
-afterEach(() => {
-	getParsedUserSettingsSpy.mockRestore();
-});
 
 describe("buildPageSplitActions", () => {
 	it("does not write page adjacency metadata into split pages", () => {
@@ -61,7 +49,7 @@ describe("buildPageSplitActions", () => {
 
 		const metadata = noteMetadataHelper.read(
 			firstAction.payload.content,
-			LibraryMetadata,
+			LibraryMetadata, "Hidden",
 		);
 		expect(metadata).toEqual({ noteKind: "Page", status: "NotStarted" });
 		expect(firstAction.payload.content).not.toContain("PageIdx");

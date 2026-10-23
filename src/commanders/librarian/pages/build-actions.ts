@@ -113,7 +113,7 @@ export function buildPageSplitActions(
 
 	for (const page of result.pages) {
 		// Pages from segmentContentWithBlockMarkers already have block markers.
-		const pageContent = formatPageContent(page.content);
+		const pageContent = formatPageContent(page.content, rules);
 
 		const pagePath =
 			page.pageIndex === 0
@@ -201,15 +201,16 @@ function buildPageSplitPath(
 	};
 }
 
-/**
- * Formats page content with page metadata.
- * Uses upsertMetadata to respect hideMetadata setting.
- */
-function formatPageContent(content: string): string {
-	return noteMetadataHelper.write(LibraryMetadata, {
-		noteKind: PAGE_FRONTMATTER.noteKind,
-		status: PAGE_FRONTMATTER.status,
-	})(content);
+/** Formats page content with page metadata, in the rules' metadata format. */
+function formatPageContent(content: string, rules: CodecRules): string {
+	return noteMetadataHelper.write(
+		LibraryMetadata,
+		{
+			noteKind: PAGE_FRONTMATTER.noteKind,
+			status: PAGE_FRONTMATTER.status,
+		},
+		rules.metadataFormat(),
+	)(content);
 }
 
 /**
