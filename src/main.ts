@@ -281,7 +281,7 @@ export default class TextEaterPlugin extends Plugin {
 				},
 				loadStore: Context.get(built, DictionaryStore).get,
 				makeLibrarian: (onStopped) =>
-					new Librarian(vam, { onStopped, settings }),
+					Librarian.make(vam, { onStopped, settings }),
 				onLaunched: () =>
 					Layer.build(
 						OverlayLive({

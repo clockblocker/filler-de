@@ -19,6 +19,7 @@ import {
 import { CommandKind } from "../../../src/managers/obsidian/command-executor";
 import { getContextMenuFile } from "../../../src/managers/overlay-manager/context-menu/context-menu";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
+import { closeLibrarian, makeLibrarian } from "../../support/scoped-librarian";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { fixedSettings } from "../../unit/common-utils/test-settings";
 
@@ -64,7 +65,7 @@ function makeVam(active: () => SplitPathToMdFile): LibrarianVam {
 async function startLibrarian(root: SplitPathToFolder) {
 	let active = md([], "README");
 	const vam = makeVam(() => active);
-	const librarian = new Librarian(vam, {
+	const librarian = makeLibrarian(vam, {
 		settings: fixedSettings({ splitPathToLibraryRoot: root }),
 	});
 	await Effect.runPromise(librarian.init());
@@ -77,7 +78,7 @@ async function startLibrarian(root: SplitPathToFolder) {
 
 describe("Librarian library membership", () => {
 	it("answers false before init", () => {
-		const librarian = new Librarian(makeVam(() => md([], "README")), {
+		const librarian = makeLibrarian(makeVam(() => md([], "README")), {
 			settings: fixedSettings(),
 		});
 		expect(librarian.isInsideLibrary(md(["Library"], "Scroll"))).toBe(false);
@@ -96,7 +97,7 @@ describe("Librarian library membership", () => {
 			expect(librarian.isInsideLibrary(md([], "README"))).toBe(false);
 			expect(librarian.isInsideLibrary(md(["Notes"], "x"))).toBe(false);
 			expect(librarian.isInsideLibrary(md(["Library2"], "x"))).toBe(false);
-			await Effect.runPromise(librarian.unsubscribe());
+			await Effect.runPromise(closeLibrarian(librarian));
 		});
 
 		it("offers the context menu only to files inside the Library", async () => {
@@ -109,7 +110,7 @@ describe("Librarian library membership", () => {
 			expect(contextMenuAccepts(md([], "README"))).toBe(false);
 			expect(contextMenuAccepts(md(["Notes"], "x"))).toBe(false);
 			expect(contextMenuAccepts(md(["Library2"], "x"))).toBe(false);
-			await Effect.runPromise(librarian.unsubscribe());
+			await Effect.runPromise(closeLibrarian(librarian));
 		});
 	});
 
@@ -129,7 +130,7 @@ describe("Librarian library membership", () => {
 			expect(
 				librarian.isInsideLibrary(md(["Books", "Library2"], "x")),
 			).toBe(false);
-			await Effect.runPromise(librarian.unsubscribe());
+			await Effect.runPromise(closeLibrarian(librarian));
 		});
 
 		it("still lists Library commands for files under the nested root", async () => {
@@ -144,7 +145,7 @@ describe("Librarian library membership", () => {
 			expect(
 				librarian.listCommandsExecutableIn(md(["Books"], "Scroll-A")),
 			).toEqual([]);
-			await Effect.runPromise(librarian.unsubscribe());
+			await Effect.runPromise(closeLibrarian(librarian));
 		});
 
 		it("offers the context menu only to files under Books/Library", async () => {
@@ -159,7 +160,7 @@ describe("Librarian library membership", () => {
 			expect(contextMenuAccepts(md(["Books", "Library2"], "x"))).toBe(
 				false,
 			);
-			await Effect.runPromise(librarian.unsubscribe());
+			await Effect.runPromise(closeLibrarian(librarian));
 		});
 	});
 
@@ -175,6 +176,6 @@ describe("Librarian library membership", () => {
 		expect(librarian.isCodex(codexPath)).toBe(true);
 		expect(librarian.isCodex(md(["Library", "A"], "Scroll-A"))).toBe(false);
 		expect(librarian.isCodex(md(["Library", "A"], "_Scroll-A"))).toBe(false);
-		await Effect.runPromise(librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(librarian));
 	});
 });

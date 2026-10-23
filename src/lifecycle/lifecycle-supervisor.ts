@@ -72,13 +72,16 @@ export {
 	type TaggedFailure,
 } from "./lifecycle-errors";
 
-/** The Librarian as the supervisor runs it. */
+/**
+ * The Librarian as the supervisor runs it. It is made in a scope of its
+ * own, and closing that scope unsubscribes it.
+ */
 export type SupervisedLibrarian = {
 	/** Fails with why it stopped, which it told `onStopped` too. */
 	readonly init: () => Effect.Effect<void, LibrarianStop>;
-	readonly unsubscribe: () => Effect.Effect<
-		void,
-		LibrarianUnsubscribeFailure
+	/** How closing its scope unsubscribed it; none before that scope closed. */
+	readonly unsubscribed: Effect.Effect<
+		Option.Option<Exit.Exit<void, LibrarianUnsubscribeFailure>>
 	>;
 };
 
@@ -96,8 +99,13 @@ export type ClassifyPauseReason = "DictionaryReset";
 
 /** What the launch wired, for the supervisor to run. */
 export type LaunchedPlugin<L extends SupervisedLibrarian> = {
-	/** A new Librarian under the current settings, telling `onStopped` when it stops. */
-	readonly makeLibrarian: (onStopped: (stop: LibrarianStop) => void) => L;
+	/**
+	 * A new Librarian, in the scope it is given, telling `onStopped` when it
+	 * stops. Its start reads the settings in effect.
+	 */
+	readonly makeLibrarian: (
+		onStopped: (stop: LibrarianStop) => void,
+	) => Effect.Effect<L, never, Scope.Scope>;
 	/**
 	 * Wires a Running Librarian into the plugin, such as its user event
 	 * handlers; answers how to unwire it.
@@ -214,8 +222,8 @@ type LibrarianSlot<L> = {
 	/** Its start's reason until the start ended; `null` once it runs. */
 	starting: LibrarianStartReason | null;
 	detach: (() => void) | null;
-	/** How unsubscribing it ended, once its scope closed, until read. */
-	unsubscribed: Exit.Exit<void, LibrarianUnsubscribeFailure> | null;
+	/** Whether its scope's close was answered already. */
+	closed: boolean;
 };
 
 /**
@@ -363,9 +371,11 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 		slot: LibrarianSlot<L>,
 	): Effect.Effect<Cause.Cause<LibrarianUnsubscribeFailure> | null> =>
 		Scope.close(slot.scope, Exit.void).pipe(
-			Effect.map(() => {
-				const exit = slot.unsubscribed;
-				slot.unsubscribed = null;
+			Effect.andThen(slot.librarian.unsubscribed),
+			Effect.map((unsubscribed) => {
+				if (slot.closed) return null;
+				slot.closed = true;
+				const exit = Option.getOrNull(unsubscribed);
 				return exit &&
 					Exit.isFailure(exit) &&
 					!Cause.hasInterruptsOnly(exit.cause)
@@ -441,66 +451,65 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 	): Effect.Effect<void, LibrarianStartFailed> =>
 		Effect.suspend(() => {
 			let slot: LibrarianSlot<L> | null = null;
-			const librarian = plugin.makeLibrarian((stop) => {
+			const onStopped = (stop: LibrarianStop) => {
 				if (stopping || !slot) return;
 				if (current === slot && librarianState.kind === "Running")
 					librarianState = ServiceState.failed(stop);
 				notices.librarianStopped(stop, slot.starting);
-			});
-			const started: LibrarianSlot<L> = {
-				detach: null,
-				librarian,
-				scope: Scope.makeUnsafe(),
-				starting: reason,
-				unsubscribed: null,
 			};
-			slot = started;
-			current = started;
-			librarianState = ServiceState.starting;
-			// Its scope closes newest first: unwired, then unsubscribed.
-			return Scope.addFinalizer(
-				started.scope,
-				Effect.suspend(() => librarian.unsubscribe()).pipe(
-					Effect.exit,
-					Effect.flatMap((exit) =>
-						Effect.sync(() => {
-							started.unsubscribed = exit;
-						}),
-					),
-				),
-			).pipe(
-				Effect.andThen(
-					Scope.addFinalizer(
-						started.scope,
+			const scope = Scope.makeUnsafe();
+			// Made in its scope, whose close unsubscribes it.
+			return plugin.makeLibrarian(onStopped).pipe(
+				Scope.provide(scope),
+				Effect.flatMap((librarian) => {
+					const started: LibrarianSlot<L> = {
+						closed: false,
+						detach: null,
+						librarian,
+						scope,
+						starting: reason,
+					};
+					slot = started;
+					current = started;
+					librarianState = ServiceState.starting;
+					// Its scope closes newest first: unwired, then
+					// unsubscribed.
+					return Scope.addFinalizer(
+						scope,
 						guarded(
 							"unwire the Librarian",
 							Effect.sync(() => detach(started)),
 						),
-					),
-				),
-				Effect.andThen(librarian.init()),
-				Effect.tap(() =>
-					Effect.suspend(() => {
-						if (current !== started || stopping) return Effect.void;
-						started.detach = plugin.attachLibrarian(librarian);
-						librarianState = ServiceState.running;
-						return sweepOnce(plugin);
-					}),
-				),
-				failWhole(
-					(cause) => new LibrarianStartFailed({ cause, reason }),
-				),
-				Effect.tapError((failure) =>
-					Effect.sync(() => {
-						if (current === started)
-							librarianState = ServiceState.failed(failure);
-					}),
-				),
-				Effect.ensuring(
-					Effect.sync(() => {
-						started.starting = null;
-					}),
-				),
+					).pipe(
+						Effect.andThen(librarian.init()),
+						Effect.tap(() =>
+							Effect.suspend(() => {
+								if (current !== started || stopping)
+									return Effect.void;
+								started.detach =
+									plugin.attachLibrarian(librarian);
+								librarianState = ServiceState.running;
+								return sweepOnce(plugin);
+							}),
+						),
+						failWhole(
+							(cause) =>
+								new LibrarianStartFailed({ cause, reason }),
+						),
+						Effect.tapError((failure) =>
+							Effect.sync(() => {
+								if (current === started)
+									librarianState =
+										ServiceState.failed(failure);
+							}),
+						),
+						Effect.ensuring(
+							Effect.sync(() => {
+								started.starting = null;
+							}),
+						),
+					);
+				}),
 			);
 		}).pipe(
 			// `makeLibrarian` threw.

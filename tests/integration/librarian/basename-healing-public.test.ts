@@ -19,6 +19,7 @@ import {
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
+import { closeLibrarian, makeLibrarian } from "../../support/scoped-librarian";
 import { fixedSettings } from "../../unit/common-utils/test-settings";
 
 function scroll(basename: string): VaultScanPath {
@@ -95,7 +96,7 @@ function makeHarness() {
 	return {
 		dispatches,
 		emitBulk: (bulk: BulkVaultEvent) => emitBulk(bulk),
-		librarian: new Librarian(vam, { settings: fixedSettings() }),
+		librarian: makeLibrarian(vam, { settings: fixedSettings() }),
 	};
 }
 
@@ -132,7 +133,7 @@ describe("Librarian basename healing through its public event seam", () => {
 			},
 		});
 
-		await Effect.runPromise(librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(librarian));
 	});
 
 	it("heals a file created and then renamed while startup reconciliation runs", async () => {
@@ -254,10 +255,10 @@ async function initWithBulksDuringStartup(
 				return { close: Effect.void };
 			}),
 	});
-	const librarian = new Librarian(vam, { settings: fixedSettings() });
+	const librarian = makeLibrarian(vam, { settings: fixedSettings() });
 
 	await Effect.runPromise(librarian.init());
-	await Effect.runPromise(librarian.unsubscribe());
+	await Effect.runPromise(closeLibrarian(librarian));
 	expect(delivered).toBe(true);
 	return { dispatches, files };
 }

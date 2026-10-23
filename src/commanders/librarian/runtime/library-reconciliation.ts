@@ -25,7 +25,7 @@ import {
 	type VaultAction,
 	type VaultScanPath,
 } from "@textfresser/vault-action-manager";
-import { type Cause, Clock, Effect, Result } from "effect";
+import { type Cause, Clock, Effect, Ref, Result } from "effect";
 import { logLibraryIssues } from "./log-library-issues";
 
 type ReconciliationSource =
@@ -193,26 +193,50 @@ const ZERO_STAGE_DURATIONS: ReconciliationStageDurations = {
 	recoveryMs: 0,
 };
 
+/** The audit log's entries, oldest first, and the last id it gave. */
+type AuditEntries<E, R> = {
+	readonly entries: readonly ReconciliationOutcome<E, R>[];
+	readonly lastId: number;
+};
+
+/** The latest reconciliation outcomes, at most `maxEntries` of them. */
 export class ReconciliationAuditLog<E, R = unknown> {
-	private readonly entries: ReconciliationOutcome<E, R>[] = [];
-	private nextId = 0;
+	private readonly state = Ref.makeUnsafe<AuditEntries<E, R>>({
+		entries: [],
+		lastId: 0,
+	});
 
 	constructor(private readonly maxEntries = 1_000) {}
 
-	allocateId(): string {
-		this.nextId += 1;
-		return `reconcile-${this.nextId}`;
+	readonly allocateId: Effect.Effect<string> = Ref.modify(
+		this.state,
+		(state): [string, AuditEntries<E, R>] => [
+			`reconcile-${state.lastId + 1}`,
+			{ ...state, lastId: state.lastId + 1 },
+		],
+	);
+
+	record(outcome: ReconciliationOutcome<E, R>): Effect.Effect<void> {
+		return Ref.update(this.state, (state) => ({
+			...state,
+			entries: [...state.entries, outcome].slice(-this.maxEntries),
+		}));
 	}
 
-	record(outcome: ReconciliationOutcome<E, R>): void {
-		this.entries.push(outcome);
-		if (this.entries.length > this.maxEntries) this.entries.shift();
-	}
-
+	/** The latest `count` outcomes, oldest first, as they are now. */
 	getRecent(count = 10): readonly ReconciliationOutcome<E, R>[] {
-		return this.entries.slice(-count);
+		return Ref.getUnsafe(this.state).entries.slice(-count);
 	}
 }
+
+/**
+ * What a reconciler holds: the committed Tree, and, once a failure was not
+ * recovered, its cause, which stops every later reconciliation.
+ */
+type ReconcilerState = {
+	readonly healer: Healer;
+	readonly unavailable: { readonly cause: unknown } | null;
+};
 
 /**
  * Owns the complete Tree Action -> VAM reconciliation boundary.
@@ -223,24 +247,28 @@ export class ReconciliationAuditLog<E, R = unknown> {
  * vault-backed recovery before the reconciler accepts later work.
  */
 export class LibraryReconciler<E, R = unknown> {
-	private healer: Healer;
-	private unavailableCause: unknown | undefined;
+	/** The committed Tree, and what stops every later reconciliation. */
+	private readonly state: Ref.Ref<ReconcilerState>;
 
 	constructor(
 		healer: Healer,
 		private readonly codecs: Codecs,
 		private readonly options: LibraryReconcilerOptions<E, R>,
 	) {
-		this.healer = healer;
+		this.state = Ref.makeUnsafe<ReconcilerState>({
+			healer,
+			unavailable: null,
+		});
 	}
 
+	/** The Tree of the last reconciliation that was acknowledged, as it is now. */
 	getCommittedHealer(): Healer {
-		return this.healer;
+		return Ref.getUnsafe(this.state).healer;
 	}
 
 	/** Whether an unrecovered failure stops every later reconciliation. */
 	isUnavailable(): boolean {
-		return this.unavailableCause !== undefined;
+		return Ref.getUnsafe(this.state).unavailable !== null;
 	}
 
 	getAuditLog(): ReconciliationAuditLog<E, R> {
@@ -249,27 +277,41 @@ export class LibraryReconciler<E, R = unknown> {
 
 	private readonly fallbackAudit = new ReconciliationAuditLog<E, R>();
 
+	/** Publishes `healer` as the committed Tree; the reconciler is available again. */
+	private commit(healer: Healer): Effect.Effect<void> {
+		return Ref.set(this.state, { healer, unavailable: null });
+	}
+
+	/** Stops every later reconciliation, for `cause`, until a recovery succeeds. */
+	private markUnavailable(cause: unknown): Effect.Effect<void> {
+		return Ref.update(this.state, (state) => ({
+			...state,
+			unavailable: { cause },
+		}));
+	}
+
 	readonly reconcile = Effect.fn("LibraryReconciler.reconcile")(function* (
 		this: LibraryReconciler<E, R>,
 		request: ReconciliationRequest,
 	): Effect.fn.Return<ReconciliationOutcome<E, R>> {
 		const audit = this.getAuditLog();
-		const id = audit.allocateId();
+		const id = yield* audit.allocateId;
 		const startedAt = yield* Clock.currentTimeMillis;
+		const { healer, unavailable } = yield* Ref.get(this.state);
 
-		if (this.unavailableCause !== undefined) {
+		if (unavailable !== null) {
 			const endedAt = yield* Clock.currentTimeMillis;
 			const outcome: ReconciliationOutcome<E, R> = {
 				derived: ZERO_DERIVED_COUNTS,
 				dispatch: { kind: "NotRequired" },
 				durationMs: endedAt - startedAt,
 				failure: {
-					cause: this.unavailableCause,
+					cause: unavailable.cause,
 					kind: "ReconciliationUnavailable",
 				},
 				id,
 				operationId: request.operationId,
-				recovery: { cause: this.unavailableCause, kind: "Failed" },
+				recovery: { cause: unavailable.cause, kind: "Failed" },
 				source: request.source,
 				stages: ZERO_STAGE_DURATIONS,
 				startedAt,
@@ -281,21 +323,16 @@ export class LibraryReconciler<E, R = unknown> {
 					requested: request.treeActions.length,
 				},
 			};
-			audit.record(outcome);
+			yield* audit.record(outcome);
 			return outcome;
 		}
 
-		const attempt = yield* this.attempt(
-			id,
-			startedAt,
-			this.healer,
-			request,
-		);
+		const attempt = yield* this.attempt(id, startedAt, healer, request);
 		let outcome = attempt.outcome;
 
 		if (attempt.candidate) {
-			this.healer = attempt.candidate;
-			audit.record(outcome);
+			yield* this.commit(attempt.candidate);
+			yield* audit.record(outcome);
 			return outcome;
 		}
 
@@ -310,7 +347,7 @@ export class LibraryReconciler<E, R = unknown> {
 		) {
 			outcome = yield* this.resynchronize(outcome);
 		} else if (outcome.dispatch.kind === "ExecutionUncertain") {
-			this.unavailableCause = outcome.failure;
+			yield* this.markUnavailable(outcome.failure);
 			outcome = {
 				...outcome,
 				recovery: { cause: outcome.failure, kind: "Failed" },
@@ -322,7 +359,7 @@ export class LibraryReconciler<E, R = unknown> {
 			};
 		}
 
-		audit.record(outcome);
+		yield* audit.record(outcome);
 		return outcome;
 	});
 
@@ -337,7 +374,7 @@ export class LibraryReconciler<E, R = unknown> {
 		input: ExternalDispatchFailureInput<E>,
 	): Effect.fn.Return<ReconciliationOutcome<E, R>> {
 		const audit = this.getAuditLog();
-		const id = audit.allocateId();
+		const id = yield* audit.allocateId;
 		const startedAt = yield* Clock.currentTimeMillis;
 		const dispatchKind = this.options.classifyDispatchFailure(
 			input.failure,
@@ -377,7 +414,7 @@ export class LibraryReconciler<E, R = unknown> {
 			outcome = { ...outcome, durationMs: endedAt - startedAt };
 		}
 
-		audit.record(outcome);
+		yield* audit.record(outcome);
 		return outcome;
 	});
 
@@ -390,17 +427,11 @@ export class LibraryReconciler<E, R = unknown> {
 		const recoveryStartedAt = yield* Clock.currentTimeMillis;
 		const recover = this.options.recover;
 		if (!recover) {
-			this.unavailableCause = outcome.failure ?? outcome;
-			const endedAt = yield* Clock.currentTimeMillis;
-			return {
-				...outcome,
-				durationMs: endedAt - outcome.startedAt,
-				recovery: { cause: this.unavailableCause, kind: "Failed" },
-				stages: {
-					...outcome.stages,
-					recoveryMs: endedAt - recoveryStartedAt,
-				},
-			};
+			return yield* this.unavailableAfter(
+				outcome,
+				recoveryStartedAt,
+				outcome.failure ?? outcome,
+			);
 		}
 
 		const recoveryInput = yield* recover().pipe(
@@ -411,39 +442,52 @@ export class LibraryReconciler<E, R = unknown> {
 				),
 			),
 		);
-		if (Result.isSuccess(recoveryInput)) {
-			const recoveryAttempt = yield* this.attempt(
-				`${outcome.id}:recovery`,
+		if (Result.isFailure(recoveryInput)) {
+			return yield* this.unavailableAfter(
+				outcome,
 				recoveryStartedAt,
-				recoveryInput.success.healer,
-				recoveryInput.success.request,
+				recoveryInput.failure,
 			);
-			if (recoveryAttempt.candidate) {
-				this.healer = recoveryAttempt.candidate;
-				this.unavailableCause = undefined;
-				const endedAt = yield* Clock.currentTimeMillis;
-				return {
-					...outcome,
-					durationMs: endedAt - outcome.startedAt,
-					recovery: { kind: "Resynchronized" },
-					stages: {
-						...outcome.stages,
-						recoveryMs: endedAt - recoveryStartedAt,
-					},
-				};
-			}
-
-			this.unavailableCause =
-				recoveryAttempt.outcome.failure ?? recoveryAttempt.outcome;
-		} else {
-			this.unavailableCause = recoveryInput.failure;
 		}
-
+		const recoveryAttempt = yield* this.attempt(
+			`${outcome.id}:recovery`,
+			recoveryStartedAt,
+			recoveryInput.success.healer,
+			recoveryInput.success.request,
+		);
+		if (!recoveryAttempt.candidate) {
+			return yield* this.unavailableAfter(
+				outcome,
+				recoveryStartedAt,
+				recoveryAttempt.outcome.failure ?? recoveryAttempt.outcome,
+			);
+		}
+		yield* this.commit(recoveryAttempt.candidate);
 		const endedAt = yield* Clock.currentTimeMillis;
 		return {
 			...outcome,
 			durationMs: endedAt - outcome.startedAt,
-			recovery: { cause: this.unavailableCause, kind: "Failed" },
+			recovery: { kind: "Resynchronized" },
+			stages: {
+				...outcome.stages,
+				recoveryMs: endedAt - recoveryStartedAt,
+			},
+		};
+	});
+
+	/** `outcome`, whose recovery failed for `cause`: no reconciliation runs after it. */
+	private readonly unavailableAfter = Effect.fnUntraced(function* (
+		this: LibraryReconciler<E, R>,
+		outcome: ReconciliationOutcome<E, R>,
+		recoveryStartedAt: number,
+		cause: unknown,
+	): Effect.fn.Return<ReconciliationOutcome<E, R>> {
+		yield* this.markUnavailable(cause);
+		const endedAt = yield* Clock.currentTimeMillis;
+		return {
+			...outcome,
+			durationMs: endedAt - outcome.startedAt,
+			recovery: { cause, kind: "Failed" },
 			stages: {
 				...outcome.stages,
 				recoveryMs: endedAt - recoveryStartedAt,

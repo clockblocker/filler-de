@@ -24,6 +24,7 @@ import {
 	type SettingsService,
 } from "../../../src/settings/settings-service";
 import { DEFAULT_SETTINGS, type SuffixDelimiterConfig } from "../../../src/types";
+import { inItsScope } from "../../support/supervised-librarian";
 import { memoryPluginData } from "../common-utils/test-settings";
 
 const dash: SuffixDelimiterConfig = { padded: false, symbol: "-" };
@@ -370,7 +371,7 @@ describe("Settings and the delimiter migration", () => {
 					loadStore: Effect.void,
 					makeLibrarian: () => {
 						const id = started++;
-						return {
+						return inItsScope({
 							init: () =>
 								Effect.sync(() => {
 									events.push(
@@ -378,7 +379,7 @@ describe("Settings and the delimiter migration", () => {
 									);
 								}),
 							unsubscribe: () => Effect.void,
-						};
+						});
 					},
 					onLaunched: () => Effect.void,
 					resetRunning: () => false,

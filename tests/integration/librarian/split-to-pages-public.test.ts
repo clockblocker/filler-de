@@ -26,6 +26,7 @@ import {
 } from "../../../src/commanders/librarian/pages/split-to-pages-action";
 import type { SegmentationConfig } from "../../../src/commanders/librarian/pages/types";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
+import { closeLibrarian, makeLibrarian } from "../../support/scoped-librarian";
 import {
 	actionError,
 	failedActions,
@@ -161,7 +162,7 @@ function makeHarness(input: {
 				return { close: Effect.void };
 			}),
 	});
-	const librarian = new Librarian(vam, { settings: fixedSettings() });
+	const librarian = makeLibrarian(vam, { settings: fixedSettings() });
 
 	return {
 		dispatches,
@@ -344,7 +345,7 @@ describe("public Scroll split reconciliation", () => {
 			harness.librarian._debugLastReconciliationOutcome?.operationId,
 		).toBe(result.operationId);
 
-		await Effect.runPromise(harness.librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(harness.librarian));
 	});
 
 	it("splits a nested Scroll and regenerates destination and ancestor Codexes", async () => {
@@ -384,7 +385,7 @@ describe("public Scroll split reconciliation", () => {
 		expect(codexPaths).toContain("Library/Parent/__-Parent.md");
 		expect(codexPaths).toContain("Library/__-Library.md");
 
-		await Effect.runPromise(harness.librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(harness.librarian));
 	});
 
 	it("does nothing for content below the split threshold", async () => {
@@ -419,7 +420,7 @@ describe("public Scroll split reconciliation", () => {
 			auditCount,
 		);
 
-		await Effect.runPromise(harness.librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(harness.librarian));
 	});
 
 	it("returns typed planning failure and does not navigate or mutate the Tree", async () => {
@@ -477,7 +478,7 @@ describe("public Scroll split reconciliation", () => {
 			status: "Failed",
 		});
 
-		await Effect.runPromise(harness.librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(harness.librarian));
 	});
 
 	it("resynchronizes an uncertain page batch before later queued work", async () => {
@@ -573,7 +574,7 @@ describe("public Scroll split reconciliation", () => {
 			},
 		]);
 
-		await Effect.runPromise(harness.librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(harness.librarian));
 	});
 
 	it("finishes semantic reconciliation before honoring command interruption", async () => {
@@ -637,7 +638,7 @@ describe("public Scroll split reconciliation", () => {
 			harness.librarian.findMatchingLeavesByCoreName("Later"),
 		).toHaveLength(1);
 
-		await Effect.runPromise(harness.librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(harness.librarian));
 	});
 
 	it("treats an unexpected dispatch defect as uncertain and resynchronizes", async () => {
@@ -693,7 +694,7 @@ describe("public Scroll split reconciliation", () => {
 			harness.librarian.findMatchingLeavesByCoreName("Story_Page_000"),
 		).toHaveLength(1);
 
-		await Effect.runPromise(harness.librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(harness.librarian));
 	});
 
 	it("resynchronizes when the derived reconciliation dispatch defects", async () => {
@@ -758,7 +759,7 @@ describe("public Scroll split reconciliation", () => {
 			harness.librarian.findMatchingLeavesByCoreName("Story_Page_000"),
 		).toHaveLength(1);
 
-		await Effect.runPromise(harness.librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(harness.librarian));
 	});
 
 	it("latches unavailable when recovery scanning defects", async () => {
@@ -826,7 +827,7 @@ describe("public Scroll split reconciliation", () => {
 			status: "Failed",
 		});
 
-		await Effect.runPromise(harness.librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(harness.librarian));
 	});
 
 	it("recovers after reconciliation failure and skips navigation", async () => {
@@ -888,7 +889,7 @@ describe("public Scroll split reconciliation", () => {
 			harness.librarian.findMatchingLeavesByCoreName("Story_Page_000"),
 		).toHaveLength(1);
 
-		await Effect.runPromise(harness.librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(harness.librarian));
 	});
 
 	it("returns a typed navigation failure after a reconciled split", async () => {
@@ -934,6 +935,6 @@ describe("public Scroll split reconciliation", () => {
 			harness.librarian._debugLastReconciliationOutcome,
 		).toMatchObject({ operationId: "split-1", status: "Success" });
 
-		await Effect.runPromise(harness.librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(harness.librarian));
 	});
 });

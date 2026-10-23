@@ -24,6 +24,7 @@ import {
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
+import { closeLibrarian, makeLibrarian } from "../../support/scoped-librarian";
 import { actionError, failedActions } from "../../support/vam-dispatch";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import { fixedSettings } from "../../unit/common-utils/test-settings";
@@ -128,7 +129,7 @@ function makeHarness(
 	return {
 		dispatches,
 		emitBulk: (bulk: BulkVaultEvent) => emitBulk(bulk),
-		librarian: new Librarian(vam, { settings: fixedSettings() }),
+		librarian: makeLibrarian(vam, { settings: fixedSettings() }),
 		setDispatch: (
 			implementation: (
 				actions: readonly VaultAction[],
@@ -207,7 +208,7 @@ describe("Librarian checkbox-click public seam", () => {
 		expect(
 			librarian.findMatchingLeavesByCoreName("DuringStartup"),
 		).toHaveLength(1);
-		await Effect.runPromise(librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(librarian));
 	});
 
 	it("routes observed Bulk Vault Events through reconciliation", async () => {
@@ -245,7 +246,7 @@ describe("Librarian checkbox-click public seam", () => {
 		expect(librarian.findMatchingLeavesByCoreName("Observed")).toHaveLength(
 			1,
 		);
-		await Effect.runPromise(librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(librarian));
 	});
 
 	it("keeps later queued work behind partial-dispatch recovery", async () => {
@@ -317,7 +318,7 @@ describe("Librarian checkbox-click public seam", () => {
 		expect(librarian.findMatchingLeavesByCoreName("Second")).toHaveLength(1);
 		expect(dispatches).toHaveLength(2);
 
-		await Effect.runPromise(librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(librarian));
 	});
 
 	it("marks one Scroll Done and updates its ancestor Section status", async () => {
@@ -365,7 +366,7 @@ describe("Librarian checkbox-click public seam", () => {
 			0,
 		);
 
-		await Effect.runPromise(librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(librarian));
 	});
 
 	it("marks every descendant Scroll Done when a Section is checked", async () => {
@@ -418,6 +419,6 @@ describe("Librarian checkbox-click public seam", () => {
 			"Success",
 		);
 
-		await Effect.runPromise(librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(librarian));
 	});
 });

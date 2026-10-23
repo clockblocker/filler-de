@@ -11,6 +11,7 @@ import {
 	createLifecycleSupervisor,
 	type SupervisedLibrarian,
 } from "../../../src/lifecycle/lifecycle-supervisor";
+import { inItsScope } from "../../support/supervised-librarian";
 
 describe("lifecycle trace", () => {
 	it("runs each command under the tracer and span of the fiber that submitted it", async () => {
@@ -29,11 +30,12 @@ describe("lifecycle trace", () => {
 					Effect.succeed({
 						attachLibrarian: () => () => {},
 						loadStore: Effect.void,
-						makeLibrarian: () => ({
-							init: () =>
-								Effect.void.pipe(Effect.withSpan("Fake.init")),
-							unsubscribe: () => Effect.void,
-						}),
+						makeLibrarian: () =>
+							inItsScope({
+								init: () =>
+									Effect.void.pipe(Effect.withSpan("Fake.init")),
+								unsubscribe: () => Effect.void,
+							}),
 						onLaunched: () => Effect.void,
 						resetRunning: () => false,
 						sweep: Effect.void,
@@ -87,10 +89,11 @@ describe("lifecycle trace", () => {
 					Effect.as({
 						attachLibrarian: () => () => {},
 						loadStore: Effect.void,
-						makeLibrarian: () => ({
-							init: () => Effect.void,
-							unsubscribe: () => Effect.void,
-						}),
+						makeLibrarian: () =>
+							inItsScope({
+								init: () => Effect.void,
+								unsubscribe: () => Effect.void,
+							}),
 						onLaunched: () => Effect.void,
 						resetRunning: () => false,
 						sweep: Effect.void,

@@ -223,7 +223,7 @@ describe("PluginLive", () => {
 	const librarianOver =
 		(vam: VaultActionManager): LaunchedPlugin<Librarian>["makeLibrarian"] =>
 		(onStopped) =>
-			new Librarian(vam, { onStopped, settings: fixedSettings() });
+			Librarian.make(vam, { onStopped, settings: fixedSettings() });
 
 	it("shows a Librarian restart as one tree: the command, the Librarian's start, VAM's scan and dispatch", async () => {
 		const plugin = makePlugin(
@@ -293,7 +293,7 @@ describe("PluginLive", () => {
 		await plugin.launch((manager) =>
 			Effect.succeed(
 				launched(
-					(onStopped) => new Librarian(manager, { onStopped, settings }),
+					(onStopped) => Librarian.make(manager, { onStopped, settings }),
 				),
 			),
 		);
@@ -344,19 +344,20 @@ describe("PluginLive", () => {
 				yield* Effect.addFinalizer(() => record(manager, "store"));
 				yield* Effect.addFinalizer(() => record(manager, "observer"));
 				return {
-					...launched((onStopped) => {
-						const librarian = new Librarian(manager, {
+					...launched((onStopped) =>
+						// Its scope closes newest first: recorded, then
+						// unsubscribed.
+						Librarian.make(manager, {
 							onStopped,
 							settings: fixedSettings(),
-						});
-						const unsubscribe = librarian.unsubscribe.bind(librarian);
-						return Object.assign(librarian, {
-							unsubscribe: () =>
-								record(manager, "librarian").pipe(
-									Effect.andThen(unsubscribe()),
+						}).pipe(
+							Effect.tap(() =>
+								Effect.addFinalizer(() =>
+									record(manager, "librarian"),
 								),
-						});
-					}),
+							),
+						),
+					),
 					onLaunched: () =>
 						Effect.addFinalizer(() => record(manager, "overlay")),
 				};

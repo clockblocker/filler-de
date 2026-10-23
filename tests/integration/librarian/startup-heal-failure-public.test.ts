@@ -19,6 +19,7 @@ import {
 	type LibrarianVam,
 } from "../../../src/commanders/librarian/librarian";
 import { withScanAndSubscribe } from "../../support/librarian-vam";
+import { closeLibrarian, makeLibrarian } from "../../support/scoped-librarian";
 import { actionError, failedActions } from "../../support/vam-dispatch";
 import { fixedSettings } from "../../unit/common-utils/test-settings";
 
@@ -115,7 +116,7 @@ function makeHarness(
 		dispatches,
 		emitBulk: (bulk: BulkVaultEvent) => emitBulk(bulk),
 		files,
-		librarian: new Librarian(vam, {
+		librarian: makeLibrarian(vam, {
 			onStopped: (stop) => {
 				stopped.push(stop);
 				if (stop._tag === "LibrarianStopped") stops.push(stop.message);
@@ -173,7 +174,7 @@ describe("Librarian startup healing that partly fails", () => {
 		).toBeTrue();
 		expect(stops).toEqual([]);
 
-		await Effect.runPromise(librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(librarian));
 	});
 
 	it("stops after one rescan when the heal keeps failing, and tells the user which file and what to do", async () => {
@@ -237,6 +238,6 @@ describe("Librarian startup healing that partly fails", () => {
 		// dispatches nothing.
 		expect(dispatches.length - afterStartup).toBe(2);
 
-		await Effect.runPromise(librarian.unsubscribe());
+		await Effect.runPromise(closeLibrarian(librarian));
 	});
 });
