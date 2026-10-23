@@ -25,6 +25,7 @@ import {
 import { type App, Modal, Notice, Setting } from "obsidian";
 import { conciseFailure, type KeyCheckFailure } from "../../managers/dumgen";
 import type { Dumgen } from "../../managers/dumgen/dumgen-over";
+import type { EffectRunner } from "../../runtime/plugin-runtime";
 import { getErrorMessage } from "../../utils/get-error-message";
 import { logger } from "../../utils/logger";
 import {
@@ -64,6 +65,8 @@ export type DictionaryResetDeps = {
 	readonly missingProviderKeys: () => readonly string[];
 	/** Checks the provider keys with each provider; answers what failed. */
 	readonly checkProviderKeys: () => Effect.Effect<readonly KeyCheckFailure[]>;
+	/** Runs the command's steps on the plugin runtime. */
+	readonly runtime: EffectRunner<unknown>;
 };
 
 const STAGE_LABEL: Record<ResetProgress["stage"], string> = {
@@ -189,7 +192,7 @@ export class DictionaryResetCommand {
 	}
 
 	private async openModal(): Promise<ResetOpening> {
-		const found = await Effect.runPromiseExit(
+		const found = await this.deps.runtime.runPromiseExit(
 			findSources(vamResetVault(this.deps.vam)),
 		);
 		if (Exit.isFailure(found)) {
@@ -241,7 +244,7 @@ export class DictionaryResetCommand {
 			0,
 		);
 		try {
-			const [result, failures] = await Effect.runPromise(
+			const [result, failures] = await this.deps.runtime.runPromise(
 				Effect.all(
 					[
 						dryRunReset(vamResetVault(this.deps.vam), { source }),
@@ -302,7 +305,7 @@ export class DictionaryResetCommand {
 		try {
 			// Before the backup moves anything: a key the provider rejects
 			// would fail every attestation after Worter/ was moved (#146).
-			const failures = await Effect.runPromise(
+			const failures = await this.deps.runtime.runPromise(
 				this.deps.checkProviderKeys(),
 			);
 			if (failures.length > 0) {
@@ -404,7 +407,7 @@ export class DictionaryResetCommand {
 			DateTime.setZone(DateTime.nowUnsafe(), DateTime.zoneMakeLocal()),
 		);
 		try {
-			const exit = await Effect.runPromiseExit(
+			const exit = await this.deps.runtime.runPromiseExit(
 				executeReset({
 					cancel,
 					dictionary,

@@ -40,6 +40,7 @@ import {
 	LEMMA_PATHS,
 	STORY,
 } from "../../obsidian-e2e/scenarios/classify-resolution-script";
+import { defaultRunner } from "../../support/effect-runner";
 import { MemoryScroll } from "../../unit/classify/resolution/support";
 
 const SCROLL = "Library/Story.md";
@@ -171,6 +172,7 @@ async function setUp() {
 				{ dumgen: host.get(), store, translationLanguages: ["en"] },
 				job,
 			),
+		runtime: defaultRunner,
 	});
 	const dictionary: ResetDictionary = {
 		appendFreeform: (request) =>

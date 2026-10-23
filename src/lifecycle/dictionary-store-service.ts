@@ -5,6 +5,7 @@
  * answers no more.
  */
 import { Effect } from "effect";
+import type { EffectRunner } from "../runtime/plugin-runtime";
 import { ServiceState } from "./service-state";
 
 export type DictionaryStoreService<Store> = {
@@ -22,6 +23,8 @@ export function createDictionaryStoreService<Store>(deps: {
 	readonly build: () => Effect.Effect<Store, unknown>;
 	readonly close: (store: Store) => Effect.Effect<void, unknown>;
 	readonly onBuildFailed: (error: unknown) => void;
+	/** Runs the build and a late close on the plugin runtime. */
+	readonly runtime: EffectRunner<unknown>;
 }): DictionaryStoreService<Store> {
 	let state: ServiceState = ServiceState.idle;
 	let building: Promise<Store> | null = null;
@@ -31,7 +34,7 @@ export function createDictionaryStoreService<Store>(deps: {
 			return Promise.reject(new Error("the plugin has unloaded"));
 		if (building) return building;
 		state = ServiceState.starting;
-		const attempt = Effect.runPromise(deps.build());
+		const attempt = deps.runtime.runPromise(deps.build());
 		building = attempt;
 		attempt.then(
 			() => {
@@ -64,7 +67,7 @@ export function createDictionaryStoreService<Store>(deps: {
 					Effect.flatMap(deps.close),
 				);
 			void last
-				.then((store) => Effect.runPromise(deps.close(store)))
+				.then((store) => deps.runtime.runPromise(deps.close(store)))
 				.catch(() => undefined);
 			return Effect.void;
 		}),

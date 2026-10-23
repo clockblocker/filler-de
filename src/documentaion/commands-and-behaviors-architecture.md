@@ -13,7 +13,7 @@ The two paths do not call each other.
 
 ## Commands
 
-`createCommandExecutor({ classify, librarian, textfresser, vam })` returns `executeCommand(kind)`.
+`createCommandExecutor({ classify, librarian, textfresser, vam })` returns `commandProgram(kind)`, the command's Effect. `main.ts` runs it on the plugin runtime under a `command.<kind>` root span (`src/runtime/plugin-runtime.ts`).
 
 For each command, the executor:
 
@@ -21,7 +21,7 @@ For each command, the executor:
 2. Reads the current selection from VAM.
 3. Routes Librarian commands to `Librarian.executeCommand`.
 4. Routes `Classify` to `ClassifyCommander.execute` and `TranslateSelection` to `Textfresser.executeCommand`.
-5. Runs the returned Effect at the Obsidian boundary.
+5. Returns the command's Effect; the plugin runtime runs it at the Obsidian boundary.
 
 The context is a snapshot. A commander must not read the editor again to reconstruct the same input.
 
@@ -35,7 +35,7 @@ Page navigation (`GoToPrevPage`, `GoToNextPage`) needs only the note, so its con
 
 ## Behaviors
 
-`createHandlers(librarian, onWikilinkClicked?)` creates the handlers that `main.ts` registers with `UserEventInterceptor`.
+`createHandlers(librarian, userEvent, onWikilinkClicked?)` creates the handlers that `main.ts` registers with `UserEventInterceptor`. A handler that runs an Effect hands it to `userEvent`, which runs it on the plugin runtime under a `user-event.<kind>` root span.
 
 | Event | Handler behavior |
 | --- | --- |

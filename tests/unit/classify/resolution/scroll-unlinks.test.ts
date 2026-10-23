@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { Effect } from "effect";
 import {
 	attestationRefOf,
 	parseAttestationRef,
@@ -176,11 +177,12 @@ describe("createReadingReopener", () => {
 		const running = new Map<string, () => void>();
 		const opened: string[] = [];
 		let active: string | null = "Library/Story.md";
-		const reopen = createReadingReopener({
-			activePath: async () => active,
-			open: async (path) => {
-				opened.push(path);
-			},
+		const reopenEffect = createReadingReopener({
+			activePath: Effect.sync(() => active),
+			open: (path) =>
+				Effect.sync(() => {
+					opened.push(path);
+				}),
 			queue: {
 				awaitNote: (path) =>
 					new Promise<boolean>((resolve) => {
@@ -188,6 +190,7 @@ describe("createReadingReopener", () => {
 					}),
 			},
 		});
+		const reopen = (target: string) => Effect.runPromise(reopenEffect(target));
 		const see = reopen(`${SEE}|See`);
 		const teich = reopen(`${TEICH}|Teich`);
 		running.get(SEE)?.();

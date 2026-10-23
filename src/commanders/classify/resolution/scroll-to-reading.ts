@@ -8,6 +8,7 @@
  */
 import { WORTER_FOLDER } from "@textfresser/lemma-note-codec";
 import { VaultPath } from "@textfresser/vault-action-manager";
+import { Effect } from "effect";
 import type { KnowledgeQueue } from "./knowledge-queue";
 
 /** `Worter/…/🌊 See|See` or `Worter/…/See#^r-1a2b|See` → its note path. */
@@ -35,31 +36,33 @@ function awaitReadingKnowledge(
 	return queue.awaitNote(path);
 }
 
-export type ReadingReopenerDeps = {
+export type ReadingReopenerDeps<E> = {
 	readonly queue: Pick<KnowledgeQueue, "awaitNote">;
 	/** The active note's vault path, if a Markdown note is active. */
-	readonly activePath: () => Promise<string | null>;
+	readonly activePath: Effect.Effect<string | null>;
 	/** Opens the note at a vault path in the active leaf. */
-	readonly open: (path: string) => Promise<void>;
+	readonly open: (path: string) => Effect.Effect<void, E>;
 };
 
 /**
  * Answers a clicked link: once the Knowledge of the note it points at
  * lands, the note opens again. It answers whether it reopened the note.
  */
-export function createReadingReopener(
-	deps: ReadingReopenerDeps,
-): (target: string) => Promise<boolean> {
+export function createReadingReopener<E>(
+	deps: ReadingReopenerDeps<E>,
+): (target: string) => Effect.Effect<boolean, E> {
 	let latest = 0;
-	return async (target) => {
+	return Effect.fn("ReadingReopener.reopen")(function* (target: string) {
 		const click = ++latest;
-		if (!(await awaitReadingKnowledge(deps.queue, target))) return false;
-		if (click !== latest) return false;
+		const waited = yield* Effect.promise(() =>
+			awaitReadingKnowledge(deps.queue, target),
+		);
+		if (!waited || click !== latest) return false;
 		const path = notePathOf(linkTargetPath(target));
-		const active = await deps.activePath();
+		const active = yield* deps.activePath;
 		if (active !== null && VaultPath.caseSensitive.same(active, path))
 			return false;
-		await deps.open(path);
+		yield* deps.open(path);
 		return true;
-	};
+	});
 }

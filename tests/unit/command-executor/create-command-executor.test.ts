@@ -39,12 +39,13 @@ function inReadingView() {
 				received.push({ context, kind });
 			}),
 	};
-	const execute = createCommandExecutor({
+	const program = createCommandExecutor({
 		classify: {} as unknown as ClassifyCommander,
 		librarian: librarian as unknown as Librarian,
 		textfresser: {} as unknown as Textfresser,
 		vam: vam as unknown as VaultActionManager,
 	});
+	const execute = (kind: CommandKind) => Effect.runPromise(program(kind));
 	return { execute, received };
 }
 

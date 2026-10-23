@@ -31,6 +31,7 @@ import {
 	STORY,
 } from "../../obsidian-e2e/scenarios/classify-resolution-script";
 import { TITLES, visible } from "../../obsidian-e2e/scenarios/dictionary-layout";
+import { defaultRunner } from "../../support/effect-runner";
 import { MemoryScroll, resolveAmong } from "../../unit/classify/resolution/support";
 
 const SCROLL = "Library/Story.md";
@@ -90,6 +91,7 @@ describe("Classify resolves a selection end to end", () => {
 					{ dumgen: host.get(), store, translationLanguages: ["en", "ru"] },
 					job,
 				),
+			runtime: defaultRunner,
 		});
 		const cache = memorySegmentationCache();
 		const activity = createScrollActivity();
@@ -187,6 +189,7 @@ describe("Classify resolves a selection end to end", () => {
 			activity,
 			cache,
 			quietMs: 0,
+			runtime: defaultRunner,
 			scrolls: {
 				modifiedAt: () => Effect.succeed(undefined),
 				read: (path) =>

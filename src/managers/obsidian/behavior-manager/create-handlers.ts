@@ -12,12 +12,22 @@ import {
 	type UserEventKind,
 	UserEventKind as UserEventKinds,
 } from "@textfresser/obsidian-event-layer";
+import type { Effect } from "effect";
 import type { Librarian } from "../../../commanders/librarian/librarian";
 import { createCheckboxFrontmatterHandler } from "./checkbox-behavior";
 import { createClipboardHandler } from "./clipboard-behavior";
 import { createCodexCheckboxHandler } from "./codex-checkbox-behavior";
 import { createSelectAllHandler } from "./select-all-behavior";
 import { createWikilinkCompletionHandler } from "./wikilink-complition-behavior";
+
+/**
+ * Runs a handler's program on the plugin runtime, under
+ * `user-event.<kind>`; resolves once it ended, and logs a failure.
+ */
+export type RunUserEvent = <A, E>(
+	kind: string,
+	effect: Effect.Effect<A, E>,
+) => Promise<void>;
 
 /**
  * Handler definition with kind and handler.
@@ -34,11 +44,13 @@ type HandlerDef = {
  * All librarian-dependent handlers delegate to librarian methods.
  *
  * @param librarian - Librarian instance for tree operations
+ * @param userEvent - Runs a handler's program on the plugin runtime
  * @param onWikilinkClicked - Told every clicked link's target, such as
  *   Classify waiting for a Reading's Knowledge to open its note again
  */
 export function createHandlers(
 	librarian: Librarian,
+	userEvent: RunUserEvent,
 	onWikilinkClicked?: (target: string) => void,
 ): HandlerDef[] {
 	const handlers: HandlerDef[] = [
@@ -62,7 +74,7 @@ export function createHandlers(
 			kind: UserEventKinds.CheckboxFrontmatterClicked,
 		},
 		{
-			handler: createCodexCheckboxHandler(librarian),
+			handler: createCodexCheckboxHandler(librarian, userEvent),
 			kind: UserEventKinds.CheckboxClicked,
 		},
 	];

@@ -8,7 +8,7 @@ import {
 } from "../../../src/lifecycle/lifecycle-supervisor";
 
 describe("lifecycle trace", () => {
-	it("records the spans of the lifecycle's commands", async () => {
+	it("runs each command under the tracer and span of the fiber that submitted it", async () => {
 		const trace = makeRecentTrace();
 		const notices = createLifecycleNotices(() => {}, {
 			trace,
@@ -16,28 +16,49 @@ describe("lifecycle trace", () => {
 		});
 		const supervisor = createLifecycleSupervisor<SupervisedLibrarian>({
 			notices,
-			tracer: trace.tracer,
 		});
 
 		await Effect.runPromise(
-			supervisor.launch(
-				Effect.succeed({
-					attachLibrarian: () => () => {},
-					loadStore: () => Promise.resolve(),
-					makeLibrarian: () => ({
-						init: () => Effect.void.pipe(Effect.withSpan("Fake.init")),
-						unsubscribe: () => Effect.void,
+			supervisor
+				.launch(
+					Effect.succeed({
+						attachLibrarian: () => () => {},
+						loadStore: () => Promise.resolve(),
+						makeLibrarian: () => ({
+							init: () =>
+								Effect.void.pipe(Effect.withSpan("Fake.init")),
+							unsubscribe: () => Effect.void,
+						}),
+						onLaunched: () => Effect.void,
+						resetRunning: () => false,
+						sweep: () => {},
 					}),
-					onLaunched: () => {},
-					resetRunning: () => false,
-					sweep: () => {},
-				}),
-			),
+				)
+				.pipe(
+					Effect.withSpan("command.launch"),
+					Effect.withTracer(trace.tracer),
+				),
 		);
 
-		expect(trace.snapshot().spans.map(({ name }) => name)).toContain(
+		const { spans } = trace.snapshot();
+		const byId = new Map(spans.map((span) => [span.spanId, span]));
+		const ancestry = (name: string) => {
+			const names: string[] = [];
+			let span = spans.find((candidate) => candidate.name === name);
+			while (span) {
+				names.push(span.name);
+				span =
+					span.parentId === undefined
+						? undefined
+						: byId.get(span.parentId);
+			}
+			return names;
+		};
+		expect(ancestry("Fake.init")).toEqual([
 			"Fake.init",
-		);
+			"Lifecycle.Launch",
+			"command.launch",
+		]);
 		await Effect.runPromise(supervisor.stop);
 	});
 

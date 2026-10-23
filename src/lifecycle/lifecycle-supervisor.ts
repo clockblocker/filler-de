@@ -15,11 +15,24 @@
  * sweep runs once, when the Librarian first runs and the dictionary store
  * has loaded.
  *
+ * Each command runs in a fiber of a scope the supervisor owns, with the
+ * services, tracer, loggers and span of the fiber that submitted it, under
+ * a `Lifecycle.<kind>` span: a "Restart Librarian" shows under its
+ * `command.restart-librarian`, and the Librarian's start under it.
+ *
  * `stop` does not wait in the mailbox: it interrupts the command in flight,
  * drops those waiting, releases every service the launch owned (newest
- * first), stops the Librarian, and then the vault itself.
+ * first), stops the Librarian, and then what it owns last.
  */
-import { Deferred, Effect, Exit, Fiber, Schema, type Tracer } from "effect";
+import {
+	type Context,
+	Deferred,
+	Effect,
+	Exit,
+	type Fiber,
+	Schema,
+	Scope,
+} from "effect";
 import type { LibrarianStop } from "../commanders/librarian/librarian";
 import { decrementPending, incrementPending } from "../utils/idle-tracker";
 import type {
@@ -63,7 +76,7 @@ export type LaunchedPlugin<L extends SupervisedLibrarian> = {
 	/** The unlink observer's sweep for links removed while the plugin was off. */
 	readonly sweep: () => void;
 	/** Once the Librarian's first start ended, run or failed: what needs it, such as the overlay. */
-	readonly onLaunched: () => void;
+	readonly onLaunched: () => Effect.Effect<void>;
 };
 
 export type LifecycleSupervisor<L extends SupervisedLibrarian> = {
@@ -117,12 +130,15 @@ export type LifecycleSupervisor<L extends SupervisedLibrarian> = {
 	 * `what` names it in the log should it fail, such as `"close the
 	 * dictionary store"`. Owned after unload began, it is released at once.
 	 */
-	readonly own: (what: string, release: Effect.Effect<void, unknown>) => void;
-	/** Releases `release` last, after the Librarian stopped: the vault. */
+	readonly own: (
+		what: string,
+		release: Effect.Effect<void, unknown>,
+	) => Effect.Effect<void>;
+	/** Releases `release` last, after the Librarian stopped. */
 	readonly ownLast: (
 		what: string,
 		release: Effect.Effect<void, unknown>,
-	) => void;
+	) => Effect.Effect<void>;
 	/** Unloads the plugin. What it can release at once, it releases synchronously. */
 	readonly stop: Effect.Effect<void>;
 };
@@ -139,11 +155,15 @@ type Command = {
 	readonly kind: CommandKind;
 	readonly body: Effect.Effect<unknown, unknown>;
 	readonly done: Deferred.Deferred<unknown, unknown>;
+	/** The submitter's services, tracer, loggers and span. */
+	readonly context: Context.Context<never>;
 };
 
 type InFlight = {
 	readonly command: Command;
 	fiber: Fiber.Fiber<unknown, unknown> | null;
+	/** Whether its submitter has been answered. */
+	settled: boolean;
 };
 
 type Owned = {
@@ -161,10 +181,8 @@ type LibrarianSlot<L> = {
 
 export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 	readonly notices: LifecycleNotices;
-	/** Records each command's spans, such as the Librarian's start. */
-	readonly tracer?: Tracer.Tracer;
 }): LifecycleSupervisor<L> {
-	const { notices, tracer } = deps;
+	const { notices } = deps;
 
 	let pluginState: ServiceState = ServiceState.idle;
 	let launched: LaunchedPlugin<L> | null = null;
@@ -181,45 +199,72 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 
 	const mailbox: Command[] = [];
 	let inFlight: InFlight | null = null;
+	/** Holds the command fibers; `stop` closes it once they are interrupted. */
+	const commands = Scope.makeUnsafe();
 
-	const pump = (): void => {
-		if (inFlight || stopping) return;
-		const command = mailbox.shift();
-		if (!command) return;
-		const entry: InFlight = { command, fiber: null };
-		inFlight = entry;
-		const fiber = Effect.runFork(
-			tracer ? Effect.withTracer(command.body, tracer) : command.body,
+	/** Answers the command's submitter, once. */
+	const settle = (
+		entry: InFlight,
+		exit: Exit.Exit<unknown, unknown>,
+	): void => {
+		if (entry.settled) return;
+		entry.settled = true;
+		if (inFlight === entry) inFlight = null;
+		decrementPending();
+		Deferred.doneUnsafe(
+			entry.command.done,
+			stopping && Exit.hasInterrupts(exit)
+				? Exit.fail(new LifecycleStoppedError())
+				: exit,
 		);
-		entry.fiber = fiber;
-		fiber.addObserver((exit) => {
-			if (inFlight === entry) inFlight = null;
-			decrementPending();
-			Deferred.doneUnsafe(
-				command.done,
-				stopping && Exit.hasInterrupts(exit)
-					? Exit.fail(new LifecycleStoppedError())
-					: exit,
-			);
-			pump();
-		});
 	};
+
+	/**
+	 * Starts the next command unless one runs. Its fiber starts the one
+	 * after as it ends, whether it succeeded, failed or was interrupted.
+	 */
+	const pump: Effect.Effect<void> = Effect.suspend(() => {
+		if (inFlight || stopping) return Effect.void;
+		const command = mailbox.shift();
+		if (!command) return Effect.void;
+		const entry: InFlight = { command, fiber: null, settled: false };
+		inFlight = entry;
+		return command.body.pipe(
+			Effect.withSpan(`Lifecycle.${command.kind}`),
+			Effect.provideContext(command.context),
+			Effect.onExit((exit) =>
+				Effect.suspend(() => {
+					settle(entry, exit);
+					return pump;
+				}),
+			),
+			Effect.forkIn(commands),
+			Effect.flatMap((fiber) =>
+				Effect.sync(() => {
+					entry.fiber = fiber;
+					// A fiber interrupted before it started never ran `onExit`.
+					fiber.addObserver((exit) => settle(entry, exit));
+				}),
+			),
+		);
+	});
 
 	const submit = <A, E>(
 		kind: CommandKind,
 		body: Effect.Effect<A, E>,
 	): Effect.Effect<A, E | LifecycleStoppedError> =>
-		Effect.suspend(() => {
-			if (stopping) return Effect.fail(new LifecycleStoppedError());
+		Effect.gen(function* () {
+			if (stopping) return yield* new LifecycleStoppedError();
 			const done = Deferred.makeUnsafe<A, E | LifecycleStoppedError>();
 			mailbox.push({
 				body,
+				context: yield* Effect.context<never>(),
 				done: done as Deferred.Deferred<unknown, unknown>,
 				kind,
 			});
 			incrementPending();
-			pump();
-			return Deferred.await(done);
+			yield* pump;
+			return yield* Deferred.await(done);
 		});
 
 	const submitted = (kind: CommandKind): boolean =>
@@ -349,13 +394,15 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 
 	const own =
 		(list: Owned[]) =>
-		(what: string, run: Effect.Effect<void, unknown>): void => {
-			if (stopping) {
-				Effect.runFork(release([{ release: run, what }]));
-				return;
-			}
-			list.push({ release: run, what });
-		};
+		(
+			what: string,
+			run: Effect.Effect<void, unknown>,
+		): Effect.Effect<void> =>
+			Effect.suspend(() => {
+				if (stopping) return release([{ release: run, what }]);
+				list.push({ release: run, what });
+				return Effect.void;
+			});
 
 	// ─── Commands ───
 
@@ -397,7 +444,7 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 							),
 						),
 					);
-					plugin.onLaunched();
+					yield* plugin.onLaunched();
 					pluginState = ServiceState.running;
 				}).pipe(
 					Effect.catchDefect(Effect.fail),
@@ -489,8 +536,8 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 			stopping = true;
 			pluginState = ServiceState.stopped;
 			notices.close();
-			const interrupted = inFlight?.fiber ?? null;
-			interrupted?.interruptUnsafe();
+			// Interrupted now; released below once the owned services are.
+			inFlight?.fiber?.interruptUnsafe();
 			for (const command of mailbox.splice(0)) {
 				decrementPending();
 				Deferred.doneUnsafe(
@@ -501,11 +548,13 @@ export function createLifecycleSupervisor<L extends SupervisedLibrarian>(deps: {
 			detach();
 			return Effect.gen(function* () {
 				yield* release(owned);
-				if (interrupted) yield* Fiber.await(interrupted);
+				// Waits for the command in flight to end, and interrupts any
+				// command fiber still starting.
+				yield* Scope.close(commands, Exit.void);
 				const last = current;
 				current = null;
 				if (last) {
-					// Even a stop that throws leaves the vault to dispose.
+					// Even a stop that throws leaves the rest to release.
 					yield* last.librarian
 						.unsubscribe()
 						.pipe(

@@ -27,6 +27,7 @@ import {
 	STORY,
 } from "../../obsidian-e2e/scenarios/classify-licence-groups-script";
 import { linkTo } from "../../obsidian-e2e/scenarios/dictionary-layout";
+import { defaultRunner } from "../../support/effect-runner";
 import { MemoryScroll } from "../../unit/classify/resolution/support";
 
 const SCROLL = "Library/Story.md";
@@ -74,6 +75,7 @@ describe("Classify gives each Licence Group its own table", () => {
 					{ dumgen: host.get(), store, translationLanguages: ["en", "ru"] },
 					job,
 				),
+			runtime: defaultRunner,
 		});
 		const commander = new ClassifyCommander({
 			cache: memorySegmentationCache(),

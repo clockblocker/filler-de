@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { Effect } from "effect";
 import { createDictionaryStoreService } from "../../../src/lifecycle/dictionary-store-service";
+import { defaultRunner } from "../../support/effect-runner";
 
 function makeHarness(failBuilds = 0) {
 	const events: string[] = [];
@@ -23,6 +24,7 @@ function makeHarness(failBuilds = 0) {
 				events.push(`close ${store.id}`);
 			}),
 		onBuildFailed: (error) => failures.push(error),
+		runtime: defaultRunner,
 	});
 	return { events, failures, service };
 }

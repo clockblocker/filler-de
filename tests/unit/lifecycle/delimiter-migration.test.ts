@@ -117,7 +117,7 @@ function makeHarness() {
 					librarians.push(fake);
 					return fake;
 				},
-				onLaunched: () => undefined,
+				onLaunched: () => Effect.void,
 				resetRunning: () => false,
 				sweep: () => undefined,
 			}),
