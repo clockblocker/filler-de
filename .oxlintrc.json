@@ -34,12 +34,33 @@
 					{
 						"message": "neverthrow is retired; use Effect's Result.",
 						"name": "neverthrow"
+					},
+					{
+						"importNames": [
+							"Schema",
+							"SchemaAST",
+							"SchemaGetter",
+							"SchemaIssue",
+							"SchemaParser",
+							"SchemaRepresentation",
+							"SchemaTransformation"
+						],
+						"message": "Effect Schema is not used; validate with Zod, and define errors with Data.TaggedError (#233).",
+						"name": "effect"
 					}
 				],
 				"patterns": [
 					{
 						"group": ["neverthrow/*"],
 						"message": "neverthrow is retired; use Effect's Result."
+					},
+					{
+						"group": [
+							"effect/Schema*",
+							"effect/unstable/schema",
+							"effect/unstable/schema/*"
+						],
+						"message": "Effect Schema is not used; validate with Zod, and define errors with Data.TaggedError (#233)."
 					}
 				]
 			}

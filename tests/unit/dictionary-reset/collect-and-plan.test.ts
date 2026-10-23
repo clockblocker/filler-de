@@ -176,6 +176,58 @@ describe("Collect", () => {
 	});
 });
 
+describe("readOldNote reads an old metadata section's shapes", () => {
+	const noteWith = (json: string) =>
+		readOldNote(
+			"Worter/x/Hund.md",
+			[
+				"🐕 der [[Hund]] ^LX-LM-NOUN-1",
+				"",
+				'<section id="textfresser_meta_keep_me_invisible">',
+				json,
+				"</section>",
+			].join("\n"),
+		);
+
+	it("tells each entry's shape, keeping every entry ID", () => {
+		const note = noteWith(
+			JSON.stringify({
+				entries: {
+					"LX-LM-NOUN-1": {
+						entity: { emojiDescription: ["🐕"], lemma: "Hund", more: 1 },
+					},
+					"LX-LM-NOUN-2": { lexicalMeta: { metaTag: "t" } },
+					"LX-LM-NOUN-3": { entity: { lemma: 3 } },
+					"LX-LM-NOUN-4": { lexicalMeta: { emojiDescription: null, metaTag: "t" } },
+					"LX-LM-NOUN-5": [],
+				},
+			}),
+		);
+		expect(note.unreadableMeta).toBe(false);
+		expect(note.metaShapes).toEqual([
+			"Entity",
+			"LexicalMeta",
+			"Unrecognized",
+			"Unrecognized",
+			"Unrecognized",
+		]);
+	});
+
+	it("reads entries that are not an object, or no JSON, as unreadable", () => {
+		for (const json of ['{"entries":[]}', '{"entries":null}', "[]", "{"])
+			expect(noteWith(json).unreadableMeta).toBe(true);
+		expect(noteWith('{"entries":{}}').unreadableMeta).toBe(false);
+	});
+
+	it("keeps an entry ID JSON.parse makes an own __proto__", () => {
+		const note = noteWith(
+			'{"entries":{"__proto__":{"entity":{"lemma":"Proto"}}}}',
+		);
+		expect(note.metaShapes).toEqual(["Entity"]);
+		expect(note.forms).toContain("Proto");
+	});
+});
+
 describe("readOldNote keeps what the old generator did not write", () => {
 	const title = (kind: string, text: string) =>
 		`<span class="entry_section_title entry_section_title_${kind}">${text}</span>`;
