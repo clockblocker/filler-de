@@ -131,16 +131,16 @@ const executeIntention = Effect.fn("Librarian.splitToPages.executeIntention")(
 		}
 
 		const plan = buildPageSplitActions(segmentation, sourcePath, rules);
-		if (plan.isErr()) {
+		if (Result.isFailure(plan)) {
 			return yield* Effect.fail(
 				makeSplitToPagesError.intentionFailed(
-					`Source path is outside the configured Library: ${plan.error.path.pathParts.join("/")}/${plan.error.path.basename}`,
+					`Source path is outside the configured Library: ${plan.failure.path.pathParts.join("/")}/${plan.failure.path.basename}`,
 				),
 			);
 		}
 
 		const execution = yield* context.librarian
-			.executeSplitIntention(plan.value)
+			.executeSplitIntention(plan.success)
 			.pipe(
 				Effect.mapError(() =>
 					makeSplitToPagesError.librarianUnavailable(
@@ -180,7 +180,7 @@ const executeIntention = Effect.fn("Librarian.splitToPages.executeIntention")(
 
 		return {
 			execution,
-			firstPagePath: plan.value.firstPagePath,
+			firstPagePath: plan.success.firstPagePath,
 			pageCount: segmentation.pages.length,
 			tooShort: false,
 		};

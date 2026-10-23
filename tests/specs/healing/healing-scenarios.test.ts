@@ -20,6 +20,7 @@ import {
 	mergeCodexImpacts,Tree, TreeActionType, TreeNodeKind, TreeNodeStatus 
 } from "@textfresser/library-core";
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import {
 	makeFileLocator,
@@ -57,7 +58,7 @@ describe("Healing Scenarios", () => {
 			);
 
 			// Simulate user creating file with wrong basename (missing suffix)
-			const result = healer.getHealingActionsFor({
+			const result = Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note", // Wrong! Should be "Note-recipes"
@@ -66,7 +67,7 @@ describe("Healing Scenarios", () => {
 					pathParts: ["Library", "recipes"],
 				},
 				targetLocator: locator,
-			});
+			}));
 
 			// Should generate rename action to fix the suffix
 			const renameActions = result.healingActions.filter(
@@ -100,7 +101,7 @@ describe("Healing Scenarios", () => {
 			);
 
 			// Simulate creating with wrong suffix
-			const result = healer.getHealingActionsFor({
+			const result = Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note", // Wrong! Should be "Note-soup-recipes"
@@ -109,7 +110,7 @@ describe("Healing Scenarios", () => {
 					pathParts: ["Library", "recipes", "soup"],
 				},
 				targetLocator: locator,
-			});
+			}));
 
 			const renameActions = result.healingActions.filter(
 				(a) => a.kind === "RenameMdFile",
@@ -158,11 +159,11 @@ describe("Healing Scenarios", () => {
 				"soup" as NodeName,
 			);
 
-			const result = healer.getHealingActionsFor({
+			const result = Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Rename,
 				newNodeName: "stew" as NodeName,
 				targetLocator: locator,
-			});
+			}));
 
 			// Renaming a section generates renamed impact
 			// The renamed chain should be in the result
@@ -208,11 +209,11 @@ describe("Healing Scenarios", () => {
 				"recipes" as NodeName,
 			);
 
-			const result = healer.getHealingActionsFor({
+			const result = Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Rename,
 				newNodeName: "cooking" as NodeName,
 				targetLocator: locator,
-			});
+			}));
 
 			// All nested sections should be marked as having descendants changed
 			// This is because the suffix for deeply nested items includes ancestor names
@@ -254,7 +255,7 @@ describe("Healing Scenarios", () => {
 				"archive" as NodeName,
 			);
 
-			const result = healer.getHealingActionsFor({
+			const result = Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Move,
 				newNodeName: "soup" as NodeName,
 				newParentLocator,
@@ -265,7 +266,7 @@ describe("Healing Scenarios", () => {
 					pathParts: ["Library", "archive"],
 				},
 				targetLocator,
-			});
+			}));
 
 			// Move operation generates codex impact
 			// It should mark the section as renamed (moved from recipes to archive)
@@ -301,7 +302,7 @@ describe("Healing Scenarios", () => {
 				"Untitled" as NodeName,
 			);
 
-			healer.getHealingActionsFor({
+			Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Untitled-recipes",
@@ -310,7 +311,7 @@ describe("Healing Scenarios", () => {
 					pathParts: ["Library", "recipes"],
 				},
 				targetLocator: createLocator,
-			});
+			}));
 
 			// Verify created
 			let shape = toShape(healer);
@@ -324,11 +325,11 @@ describe("Healing Scenarios", () => {
 				"Untitled" as NodeName,
 			);
 
-			healer.getHealingActionsFor({
+			Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Rename,
 				newNodeName: "MyNote" as NodeName,
 				targetLocator: renameLocator,
-			});
+			}));
 
 			// Verify renamed
 			shape = toShape(healer);
@@ -351,7 +352,7 @@ describe("Healing Scenarios", () => {
 				"Note" as NodeName,
 			);
 
-			healer.getHealingActionsFor({
+			Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-recipes",
@@ -360,7 +361,7 @@ describe("Healing Scenarios", () => {
 					pathParts: ["Library", "recipes"],
 				},
 				targetLocator: createLocator,
-			});
+			}));
 
 			// Step 2: Rename parent section
 			const renameSectionLocator = makeSectionLocator(
@@ -368,11 +369,11 @@ describe("Healing Scenarios", () => {
 				"recipes" as NodeName,
 			);
 
-			healer.getHealingActionsFor({
+			Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Rename,
 				newNodeName: "cooking" as NodeName,
 				targetLocator: renameSectionLocator,
-			});
+			}));
 
 			// Verify state
 			let shape = toShape(healer);
@@ -387,10 +388,10 @@ describe("Healing Scenarios", () => {
 				"Note" as NodeName,
 			);
 
-			healer.getHealingActionsFor({
+			Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Delete,
 				targetLocator: deleteLocator,
-			});
+			}));
 
 			// Verify deleted; empty parent section remains in the tree
 			shape = toShape(healer);
@@ -420,23 +421,23 @@ describe("Healing Scenarios", () => {
 			});
 
 			// Create impacts for two separate operations
-			const impact1 = healer.getHealingActionsFor({
+			const impact1 = Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Rename,
 				newNodeName: "aa" as NodeName,
 				targetLocator: makeSectionLocator(
 					["Library" as NodeName],
 					"a" as NodeName,
 				),
-			}).codexImpact;
+			})).codexImpact;
 
-			const impact2 = healer.getHealingActionsFor({
+			const impact2 = Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Rename,
 				newNodeName: "bb" as NodeName,
 				targetLocator: makeSectionLocator(
 					["Library" as NodeName],
 					"b" as NodeName,
 				),
-			}).codexImpact;
+			})).codexImpact;
 
 			// Merge impacts
 			const merged = mergeCodexImpacts([impact1, impact2]);
@@ -462,7 +463,7 @@ describe("Healing Scenarios", () => {
 			);
 
 			// This should NOT throw - it should create parent sections
-			const result = healer.getHealingActionsFor({
+			const result = Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-deep-nonexistent",
@@ -471,7 +472,7 @@ describe("Healing Scenarios", () => {
 					pathParts: ["Library", "nonexistent", "deep"],
 				},
 				targetLocator: locator,
-			});
+			}));
 
 			// Verify sections were created
 			const shape = toShape(healer);
@@ -501,10 +502,10 @@ describe("Healing Scenarios", () => {
 
 			// Current behavior: this should not throw, but may produce empty actions
 			expect(() => {
-				healer.getHealingActionsFor({
+				Result.getOrThrow(healer.getHealingActionsFor({
 					actionType: TreeActionType.Delete,
 					targetLocator: locator,
-				});
+				}));
 			}).not.toThrow();
 		});
 	});
@@ -524,7 +525,7 @@ describe("Healing Scenarios", () => {
 				"png",
 			);
 
-			const result = healer.getHealingActionsFor({
+			const result = Result.getOrThrow(healer.getHealingActionsFor({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "image",
@@ -533,7 +534,7 @@ describe("Healing Scenarios", () => {
 					pathParts: ["Library", "assets"],
 				},
 				targetLocator: locator,
-			});
+			}));
 
 			// Verify file was added to tree
 			const shape = toShape(healer);

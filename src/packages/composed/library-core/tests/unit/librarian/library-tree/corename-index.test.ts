@@ -1,4 +1,5 @@
 import { describe, expect, it } from "bun:test";
+import { Result } from "effect";
 import { TreeNodeStatus } from "../../../../src/healer/library-tree/tree-node/types/atoms";
 import type { NodeName } from "../../../../src/types/schemas/node-name";
 import { makeScrollLocator, makeTree } from "./tree-test-helpers";
@@ -141,20 +142,22 @@ describe("Tree corename index", () => {
 		expect(healer.getLeavesByCoreName("pick")).toHaveLength(1);
 
 		// Mutate tree via healer (add a new node)
-		healer.getHealingActionsFor({
-			actionType: "Create",
-			initialStatus: TreeNodeStatus.NotStarted,
-			observedSplitPath: {
-				basename: "run-german",
-				extension: "md",
-				kind: "MdFile" as const,
-				pathParts: ["Library", "german"],
-			},
-			targetLocator: makeScrollLocator(
-				["Library" as NodeName, "german" as NodeName],
-				"run" as NodeName,
-			),
-		});
+		Result.getOrThrow(
+			healer.getHealingActionsFor({
+				actionType: "Create",
+				initialStatus: TreeNodeStatus.NotStarted,
+				observedSplitPath: {
+					basename: "run-german",
+					extension: "md",
+					kind: "MdFile" as const,
+					pathParts: ["Library", "german"],
+				},
+				targetLocator: makeScrollLocator(
+					["Library" as NodeName, "german" as NodeName],
+					"run" as NodeName,
+				),
+			}),
+		);
 
 		// After mutation, new leaf should be found
 		const runMatches = healer.getLeavesByCoreName("run");

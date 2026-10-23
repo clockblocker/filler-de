@@ -13,6 +13,7 @@ import {
 	TreeNodeStatus,
 } from "@textfresser/library-core";
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import { defaultSettingsForUnitTests } from "../unit/common-utils/consts";
 
 function sectionId(name: string): SectionNodeSegmentId {
@@ -44,21 +45,23 @@ describe("Core Name rename through Codex generation", () => {
 		const ramenChain = ["Library", "Recipe", "Soup", "Ramen"].map(
 			sectionId,
 		);
-		healer.ensureSectionChain(ramenChain);
-		healer.getHealingActionsFor({
-			actionType: TreeActionType.Create,
-			observedSplitPath: {
-				basename: "Untitled",
-				extension: MD,
-				kind: SplitPathKind.MdFile,
-				pathParts: ["Library", "Recipe", "Soup", "Ramen"],
-			},
-			targetLocator: {
-				segmentId: scrollId("Untitled"),
-				segmentIdChainToParent: ramenChain,
-				targetKind: TreeNodeKind.Scroll,
-			},
-		});
+		Result.getOrThrow(healer.ensureSectionChain(ramenChain));
+		Result.getOrThrow(
+			healer.getHealingActionsFor({
+				actionType: TreeActionType.Create,
+				observedSplitPath: {
+					basename: "Untitled",
+					extension: MD,
+					kind: SplitPathKind.MdFile,
+					pathParts: ["Library", "Recipe", "Soup", "Ramen"],
+				},
+				targetLocator: {
+					segmentId: scrollId("Untitled"),
+					segmentIdChainToParent: ramenChain,
+					targetKind: TreeNodeKind.Scroll,
+				},
+			}),
+		);
 
 		const names = ["Untitled", "Draft", "Review", "Final"];
 		for (let index = 0; index < names.length - 1; index += 1) {
@@ -67,15 +70,17 @@ describe("Core Name rename through Codex generation", () => {
 			expect(current).toBeDefined();
 			expect(next).toBeDefined();
 			if (!current || !next) continue;
-			healer.getHealingActionsFor({
-				actionType: TreeActionType.Rename,
-				newNodeName: next as NodeName,
-				targetLocator: {
-					segmentId: scrollId(current),
-					segmentIdChainToParent: ramenChain,
-					targetKind: TreeNodeKind.Scroll,
-				},
-			});
+			Result.getOrThrow(
+				healer.getHealingActionsFor({
+					actionType: TreeActionType.Rename,
+					newNodeName: next as NodeName,
+					targetLocator: {
+						segmentId: scrollId(current),
+						segmentIdChainToParent: ramenChain,
+						targetKind: TreeNodeKind.Scroll,
+					},
+				}),
+			);
 		}
 
 		const ramen = healer.findSection(ramenChain);

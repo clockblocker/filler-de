@@ -955,11 +955,11 @@ export class Librarian {
 		const view = this.libraryView();
 		if (!view) return null;
 		const libraryPath = view.libraryScope.toLibraryPath(currentFilePath);
-		if (libraryPath.isErr()) return null;
+		if (Result.isFailure(libraryPath)) return null;
 		const previous = getPrevPageImpl(
 			view.healer,
 			view.codecs,
-			libraryPath.value,
+			libraryPath.success,
 		);
 		return previous ? view.libraryScope.toVaultPath(previous) : null;
 	}
@@ -972,11 +972,11 @@ export class Librarian {
 		const view = this.libraryView();
 		if (!view) return null;
 		const libraryPath = view.libraryScope.toLibraryPath(currentFilePath);
-		if (libraryPath.isErr()) return null;
+		if (Result.isFailure(libraryPath)) return null;
 		const next = getNextPageImpl(
 			view.healer,
 			view.codecs,
-			libraryPath.value,
+			libraryPath.success,
 		);
 		return next ? view.libraryScope.toVaultPath(next) : null;
 	}
@@ -992,11 +992,11 @@ export class Librarian {
 		const libraryPath = makeLibraryScope(codecs.rules).toLibraryPath(
 			splitPath,
 		);
-		if (libraryPath.isErr()) return [];
+		if (Result.isFailure(libraryPath)) return [];
 		return listCommandsExecutableInImpl(
 			codecs,
 			healing?.reconciler.getCommittedHealer() ?? null,
-			libraryPath.value,
+			libraryPath.success,
 		);
 	}
 
@@ -1120,14 +1120,14 @@ export class Librarian {
 			payload.lineContent,
 			codecs,
 		);
-		if (parseResult.isErr()) {
+		if (Result.isFailure(parseResult)) {
 			yield* Effect.logWarning(
 				"[Librarian.handleCodexCheckboxClick] Parse failed:",
-				Cause.fail(parseResult.error),
+				Cause.fail(parseResult.failure),
 			);
 			return;
 		}
-		const target = parseResult.value;
+		const target = parseResult.success;
 
 		// 2. Determine new status from checkbox state
 		// payload.checked = PRE-toggle state (what user saw before clicking)

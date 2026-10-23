@@ -1,6 +1,5 @@
 import { MD } from "@textfresser/vault-action-manager";
-import { Result as EffectResult } from "effect";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "../../../codecs";
 import type { CodecError } from "../../../codecs/errors";
 import type { ScrollNodeLocator } from "../../../codecs/locator/types";
@@ -18,13 +17,13 @@ export function computeScrollSplitPath(
 	nodeName: string,
 	parentChain: SectionNodeSegmentId[],
 	codecs: Codecs,
-): Result<SplitPathToMdFileInsideLibrary, CodecError> {
+): Result.Result<SplitPathToMdFileInsideLibrary, CodecError> {
 	// Build segmentIdChainToParent by parsing each segment ID
 	const segmentIdChainToParent: SectionNodeSegmentId[] = [];
 	for (const segId of parentChain) {
 		const parseResult = codecs.segmentId.parseSectionSegmentId(segId);
-		if (EffectResult.isFailure(parseResult)) {
-			return err(parseResult.failure);
+		if (Result.isFailure(parseResult)) {
+			return Result.fail(parseResult.failure);
 		}
 		// Keep original segment ID (already validated)
 		segmentIdChainToParent.push(segId);
@@ -36,8 +35,8 @@ export function computeScrollSplitPath(
 		extension: MD,
 		targetKind: TreeNodeKind.Scroll,
 	});
-	if (EffectResult.isFailure(segmentIdResult)) {
-		return err(segmentIdResult.failure);
+	if (Result.isFailure(segmentIdResult)) {
+		return Result.fail(segmentIdResult.failure);
 	}
 
 	// Construct ScrollNodeLocator
@@ -51,8 +50,8 @@ export function computeScrollSplitPath(
 	const canonicalResult =
 		codecs.locator.locatorToCanonicalSplitPathInsideLibrary(locator);
 
-	if (EffectResult.isFailure(canonicalResult)) {
-		return err(canonicalResult.failure);
+	if (Result.isFailure(canonicalResult)) {
+		return Result.fail(canonicalResult.failure);
 	}
 
 	// Convert canonical to split path
@@ -63,5 +62,5 @@ export function computeScrollSplitPath(
 
 	// Type assertion: ScrollNodeLocator only produces SplitPathToMdFileInsideLibrary
 	// The codec chain preserves types, but TypeScript widens due to generic inference
-	return ok(splitPath as SplitPathToMdFileInsideLibrary);
+	return Result.succeed(splitPath as SplitPathToMdFileInsideLibrary);
 }

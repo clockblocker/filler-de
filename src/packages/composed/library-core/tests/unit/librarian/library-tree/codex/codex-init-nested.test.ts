@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import {
 	makeCodecRulesFromSettings,
 	makeCodecs,
@@ -15,7 +16,7 @@ import {
 	TreeNodeKind,
 	TreeNodeStatus,
 } from "../../../../../src/healer/library-tree/tree-node/types/atoms";
-import { Healer } from "../../../../../src/healing";
+import { Healer, type HealerApplyResult } from "../../../../../src/healing";
 import { defaultSettingsForUnitTests } from "../../../common-utils/consts";
 
 const sec = (name: string): SectionNodeSegmentId =>
@@ -29,9 +30,7 @@ describe("Codex init for nested sections", () => {
 		const rules = makeCodecRulesFromSettings(defaultSettingsForUnitTests);
 		const codecs = makeCodecs(rules);
 		const healer = new Healer(new Tree("Library", codecs), codecs);
-		const impacts: ReturnType<
-			typeof healer.getHealingActionsFor
-		>["codexImpact"][] = [];
+		const impacts: HealerApplyResult["codexImpact"][] = [];
 
 		// Create a file at Library/grandpa/father/kid/Diary.md
 		const createAction = {
@@ -55,7 +54,9 @@ describe("Codex init for nested sections", () => {
 			},
 		};
 
-		const result = healer.getHealingActionsFor(createAction);
+		const result = Result.getOrThrow(
+			healer.getHealingActionsFor(createAction),
+		);
 		impacts.push(result.codexImpact);
 
 		const mergedImpact = mergeCodexImpacts(impacts);

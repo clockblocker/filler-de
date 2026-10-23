@@ -509,17 +509,24 @@ export class LibraryReconciler<E, R = unknown> {
 			const applyStartedAt = yield* Clock.currentTimeMillis;
 
 			for (const [actionIndex, action] of request.treeActions.entries()) {
-				try {
-					results.push(staged.getHealingActionsFor(action));
-				} catch (cause) {
+				// A Tree Action that cannot be applied is a `TreeActionError`.
+				// Anything that throws here is a bug, and is recorded the same
+				// way, so the reconciler still resynchronizes after it.
+				const applied = Result.flatMap(
+					Result.try(() => staged.getHealingActionsFor(action)),
+					(result): Result.Result<HealerApplyResult, unknown> =>
+						result,
+				);
+				if (Result.isFailure(applied)) {
 					applyFailure = {
 						action,
 						actionIndex,
-						cause,
+						cause: applied.failure,
 						kind: "TreeActionFailed",
 					};
 					break;
 				}
+				results.push(applied.success);
 			}
 
 			const applyEndedAt = yield* Clock.currentTimeMillis;
@@ -552,12 +559,15 @@ export class LibraryReconciler<E, R = unknown> {
 			}
 
 			const deriveStartedAt = yield* Clock.currentTimeMillis;
-			let derived: DerivedActions;
 			// Filled as deriving goes, so a derivation that throws keeps them.
 			const issues: LibraryIssue[] = [];
-			try {
-				derived = this.derive(staged, request, results, issues);
-			} catch (cause) {
+			// Deriving throws only when one of library-core's documented
+			// invariants is broken: a codex path for a chain the Tree holds.
+			const derivation = Result.try(() =>
+				this.derive(staged, request, results, issues),
+			);
+			if (Result.isFailure(derivation)) {
+				const cause = derivation.failure;
 				yield* logLibraryIssues(issues);
 				const deriveEndedAt = yield* Clock.currentTimeMillis;
 				return {
@@ -581,6 +591,7 @@ export class LibraryReconciler<E, R = unknown> {
 					},
 				};
 			}
+			const derived = derivation.success;
 			const deriveEndedAt = yield* Clock.currentTimeMillis;
 			yield* logLibraryIssues(issues);
 			const derivedCounts = this.derivedCounts(derived);

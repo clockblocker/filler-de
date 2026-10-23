@@ -62,13 +62,13 @@ export const buildInitialCreateActions = Effect.fn("buildInitialCreateActions")(
 			// Convert to library-scoped path
 			const libraryScopedResult =
 				libraryScope.toLibraryPath(observedFile);
-			if (libraryScopedResult.isErr()) {
+			if (Result.isFailure(libraryScopedResult)) {
 				yield* Effect.logWarning(
 					`[Librarian] Skipping file outside library: ${file.basename}`,
 				);
 				continue;
 			}
-			const observedPath = libraryScopedResult.value;
+			const observedPath = libraryScopedResult.success;
 			const preflight = translateCreateObservation(observedPath, codecs);
 			if (preflight.kind === "IgnoredGeneratedCodex") continue;
 			if (preflight.kind === "Invalid") {

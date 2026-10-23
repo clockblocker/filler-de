@@ -1,6 +1,5 @@
 import type { SplitPathKind } from "@textfresser/vault-action-manager";
-import { Result as EffectResult } from "effect";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import type {
 	AnyCanonicalSplitPathInsideLibrary,
 	AnySplitPathInsideLibrary,
@@ -37,19 +36,19 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	policy: ChangePolicy,
 	intent: RenameIntent | undefined, // undefined = not rename
 	codecs: Codecs,
-): Result<CanonicalSplitPathInsideLibraryOf<SK>, string>;
+): Result.Result<CanonicalSplitPathInsideLibraryOf<SK>, string>;
 export function tryCanonicalizeSplitPathToDestination(
 	sp: AnySplitPathInsideLibrary,
 	policy: ChangePolicy,
 	intent: RenameIntent | undefined, // undefined = not rename
 	codecs: Codecs,
-): Result<AnyCanonicalSplitPathInsideLibrary, string>;
+): Result.Result<AnyCanonicalSplitPathInsideLibrary, string>;
 export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	sp: AnySplitPathInsideLibrary,
 	policy: ChangePolicy,
 	intent: RenameIntent | undefined, // undefined = not rename
 	codecs: Codecs,
-): Result<
+): Result.Result<
 	CanonicalSplitPathInsideLibraryOf<SK> | AnyCanonicalSplitPathInsideLibrary,
 	string
 > {
@@ -59,14 +58,14 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	// --- PathKing: pathParts are source of truth, build canonical from them
 	if (effectivePolicy === ChangePolicy.PathKing) {
 		// Convert to split path with separated suffix (validates NodeNames)
-		const withSeparatedSuffixResult = EffectResult.mapError(
+		const withSeparatedSuffixResult = Result.mapError(
 			codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
 				sp,
 			),
 			(error) => error.message,
 		);
-		if (EffectResult.isFailure(withSeparatedSuffixResult)) {
-			return err(withSeparatedSuffixResult.failure);
+		if (Result.isFailure(withSeparatedSuffixResult)) {
+			return Result.fail(withSeparatedSuffixResult.failure);
 		}
 		let spWithSeparatedSuffix =
 			withSeparatedSuffixResult.success as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
@@ -76,12 +75,12 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 		const { cleanBasename, marker } = extractDuplicateMarker(sp.basename);
 		if (marker) {
 			// Re-parse without duplicate marker to get clean coreName
-			const cleanSepRes = EffectResult.mapError(
+			const cleanSepRes = Result.mapError(
 				codecs.suffix.parseSeparatedSuffix(cleanBasename),
 				(error) => error.message,
 			);
-			if (EffectResult.isFailure(cleanSepRes))
-				return err(cleanSepRes.failure);
+			if (Result.isFailure(cleanSepRes))
+				return Result.fail(cleanSepRes.failure);
 			// Re-attach marker to coreName
 			const coreNameWithMarker = (cleanSepRes.success.coreName +
 				marker) as NodeName;
@@ -115,12 +114,12 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 			libraryRootName,
 			spWithSeparatedSuffix,
 		);
-		if (canonizedResult.isErr()) {
-			return err(canonizedResult.error.message);
+		if (Result.isFailure(canonizedResult)) {
+			return Result.fail(canonizedResult.failure.message);
 		}
 
-		return ok(
-			canonizedResult.value as unknown as
+		return Result.succeed(
+			canonizedResult.success as unknown as
 				| CanonicalSplitPathInsideLibraryOf<SK>
 				| AnyCanonicalSplitPathInsideLibrary,
 		);
@@ -129,14 +128,14 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	// --- NameKing: interpret basename as path intent, then OUTPUT PathKing-canonical split path
 
 	// Convert to split path with separated suffix (validates NodeNames)
-	const withSeparatedSuffixResult = EffectResult.mapError(
+	const withSeparatedSuffixResult = Result.mapError(
 		codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
 			sp,
 		),
 		(error) => error.message,
 	);
-	if (EffectResult.isFailure(withSeparatedSuffixResult)) {
-		return err(withSeparatedSuffixResult.failure);
+	if (Result.isFailure(withSeparatedSuffixResult)) {
+		return Result.fail(withSeparatedSuffixResult.failure);
 	}
 	let spWithSeparatedSuffix =
 		withSeparatedSuffixResult.success as SplitPathInsideLibraryWithSeparatedSuffixOf<SplitPathKind>;
@@ -144,12 +143,12 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	// Handle duplicate markers (business logic)
 	const { cleanBasename, marker } = extractDuplicateMarker(sp.basename);
 	if (marker) {
-		const cleanSepRes = EffectResult.mapError(
+		const cleanSepRes = Result.mapError(
 			codecs.suffix.parseSeparatedSuffix(cleanBasename),
 			(error) => error.message,
 		);
-		if (EffectResult.isFailure(cleanSepRes))
-			return err(cleanSepRes.failure);
+		if (Result.isFailure(cleanSepRes))
+			return Result.fail(cleanSepRes.failure);
 		const coreNameWithMarker = (cleanSepRes.success.coreName +
 			marker) as NodeName;
 		spWithSeparatedSuffix = {
@@ -164,7 +163,7 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 	const { coreName, suffixParts } =
 		spWithSeparatedSuffix.separatedSuffixedBasename;
 	const libraryRoot = sp.pathParts[0];
-	if (!libraryRoot) return err("Expected Library root in pathParts");
+	if (!libraryRoot) return Result.fail("Expected Library root in pathParts");
 
 	// MOVE-by-name (NameKing): suffix defines the new path
 	if (intent === RenameIntent.Move) {
@@ -226,12 +225,12 @@ export function tryCanonicalizeSplitPathToDestination<SK extends SplitPathKind>(
 		libraryRootName,
 		spWithSeparatedSuffix,
 	);
-	if (canonizedResult.isErr()) {
-		return err(canonizedResult.error.message);
+	if (Result.isFailure(canonizedResult)) {
+		return Result.fail(canonizedResult.failure.message);
 	}
 
-	return ok(
-		canonizedResult.value as unknown as
+	return Result.succeed(
+		canonizedResult.success as unknown as
 			| CanonicalSplitPathInsideLibraryOf<SK>
 			| AnyCanonicalSplitPathInsideLibrary,
 	);

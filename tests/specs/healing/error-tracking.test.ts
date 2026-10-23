@@ -408,6 +408,15 @@ describe("Library reconciliation interface", () => {
 
 		expect(outcome.status).toBe("Failed");
 		expect(outcome.failure?.kind).toBe("TreeActionFailed");
+		// The stop notice reads the cause's message, as it read the throw's.
+		const failure = outcome.failure;
+		expect(
+			failure?.kind === "TreeActionFailed" &&
+				failure.cause instanceof Error &&
+				failure.cause.message,
+		).toBe(
+			"Rename collision: destination segment Beta﹘Scroll﹘md is already occupied",
+		);
 		expect(outcome.treeActions).toEqual({
 			changed: 1,
 			failed: 1,
@@ -418,6 +427,71 @@ describe("Library reconciliation interface", () => {
 		expect(toShape(reconciler.getCommittedHealer())).toEqual(initialShape);
 		expect(dispatches).toEqual([]);
 		expect(audit.getRecent()).toEqual([outcome]);
+	});
+
+	it("records an exception from applying a Tree Action as a failed action", async () => {
+		const healer = makeTree({
+			children: { Alpha: { kind: "Scroll" } },
+			libraryRoot: "Library",
+		});
+		const initialShape = toShape(healer);
+		const { dispatches, reconciler } = makeHarness({ healer });
+		// A malformed action: the Healer reads a locator that is not there.
+		const malformed = { actionType: "Create" } as unknown as TreeAction;
+		const outcome = await Effect.runPromise(
+			reconciler.reconcile(runtimeRequest([malformed])),
+		);
+
+		expect(outcome.status).toBe("Failed");
+		expect(outcome.failure?.kind).toBe("TreeActionFailed");
+		const failure = outcome.failure;
+		expect(
+			failure?.kind === "TreeActionFailed" &&
+				failure.cause instanceof TypeError,
+		).toBe(true);
+		expect(outcome.recovery.kind).toBe("StagedStateDiscarded");
+		expect(toShape(reconciler.getCommittedHealer())).toEqual(initialShape);
+		expect(dispatches).toEqual([]);
+	});
+
+	it("records a broken codex invariant as a failed derivation", async () => {
+		const healer = makeTree({
+			children: { Recipes: { children: { Pie: { kind: "Scroll" } } } },
+			libraryRoot: "Library",
+		});
+		const { dispatches, reconciler } = makeHarness({ healer });
+		// The Tree never parses a chain's first segment ID, the Library root's,
+		// so applying this succeeds. Its Codex path cannot be built.
+		const outcome = await Effect.runPromise(
+			reconciler.reconcile(
+				runtimeRequest([
+					{
+						actionType: "ChangeStatus",
+						newStatus: TreeNodeStatus.Done,
+						targetLocator: {
+							segmentId: "Recipes﹘Section﹘" as SectionNodeSegmentId,
+							segmentIdChainToParent: [
+								"Library" as SectionNodeSegmentId,
+							],
+							targetKind: "Section",
+						},
+					},
+				]),
+			),
+		);
+
+		expect(outcome.status).toBe("Failed");
+		expect(outcome.treeActions.changed).toBe(1);
+		const failure = outcome.failure;
+		expect(
+			failure?.kind === "DerivationFailed" &&
+				failure.cause instanceof Error &&
+				failure.cause.message,
+		).toBe(
+			"Failed to compute codex split path: ParseFailed - Segment ID must have at least 2 parts separated by ﹘",
+		);
+		expect(outcome.recovery.kind).toBe("StagedStateDiscarded");
+		expect(dispatches).toEqual([]);
 	});
 
 	it("records typed planning failure and leaves committed state reusable", async () => {

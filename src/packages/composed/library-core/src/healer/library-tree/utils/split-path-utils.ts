@@ -8,8 +8,7 @@
  */
 
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
-import { Result as EffectResult } from "effect";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import type {
 	Codecs,
 	SplitPathToFileInsideLibrary,
@@ -71,15 +70,15 @@ export function buildObservedLeafSplitPath(
 export function buildCanonicalLeafSplitPath(
 	locator: ScrollNodeLocator | FileNodeLocator,
 	codecs: Codecs,
-): Result<
+): Result.Result<
 	SplitPathToMdFileInsideLibrary | SplitPathToFileInsideLibrary,
 	CodecError
 > {
 	// Convert locator to canonical split path, then to split path
 	const canonicalResult =
 		codecs.locator.locatorToCanonicalSplitPathInsideLibrary(locator);
-	if (EffectResult.isFailure(canonicalResult)) {
-		return err(canonicalResult.failure);
+	if (Result.isFailure(canonicalResult)) {
+		return Result.fail(canonicalResult.failure);
 	}
 
 	// Convert canonical to split path
@@ -90,7 +89,7 @@ export function buildCanonicalLeafSplitPath(
 
 	// Type assertion: leaf locators (Scroll/File) only produce MdFile/File split paths, never Folder
 	// The codec chain preserves types, but TypeScript widens due to union input
-	return ok(
+	return Result.succeed(
 		splitPath as
 			| SplitPathToMdFileInsideLibrary
 			| SplitPathToFileInsideLibrary,

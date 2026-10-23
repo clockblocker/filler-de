@@ -20,6 +20,7 @@ import {
 	TreeNodeStatus
 } from "@textfresser/library-core";
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import { defaultSettingsForUnitTests } from "../../unit/common-utils/consts";
 import {
 	makeFileLocator,
@@ -54,7 +55,7 @@ describe("Tree Mutations", () => {
 				"Note" as NodeName,
 			);
 
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
@@ -63,7 +64,7 @@ describe("Tree Mutations", () => {
 					pathParts: ["Library"],
 				},
 				targetLocator: locator,
-			});
+			}));
 
 			const root = tree.getRoot();
 			expect(Object.keys(root.children)).toHaveLength(1);
@@ -89,7 +90,7 @@ describe("Tree Mutations", () => {
 				"Note" as NodeName,
 			);
 
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-soup-recipes",
@@ -98,7 +99,7 @@ describe("Tree Mutations", () => {
 					pathParts: ["Library", "recipes", "soup"],
 				},
 				targetLocator: locator,
-			});
+			}));
 
 			// Verify structure
 			const root = tree.getRoot();
@@ -129,7 +130,7 @@ describe("Tree Mutations", () => {
 				"png",
 			);
 
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "image",
@@ -138,7 +139,7 @@ describe("Tree Mutations", () => {
 					pathParts: ["Library", "assets"],
 				},
 				targetLocator: locator,
-			});
+			}));
 
 			const root = tree.getRoot();
 			const assets = Object.values(root.children).find(
@@ -161,7 +162,7 @@ describe("Tree Mutations", () => {
 			const tree = createTree();
 
 			// First create
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
@@ -173,16 +174,16 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			// Then delete
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Delete,
 				targetLocator: makeScrollLocator(
 					["Library" as NodeName],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			const root = tree.getRoot();
 			expect(Object.keys(root.children)).toHaveLength(0);
@@ -192,7 +193,7 @@ describe("Tree Mutations", () => {
 			const tree = createTree();
 
 			// Create deep structure
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-c-b-a",
@@ -209,14 +210,14 @@ describe("Tree Mutations", () => {
 					],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			// Verify structure exists
 			let root = tree.getRoot();
 			expect(Object.values(root.children).find((c) => c.nodeName === "a")).toBeDefined();
 
 			// Delete the leaf
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Delete,
 				targetLocator: makeScrollLocator(
 					[
@@ -227,7 +228,7 @@ describe("Tree Mutations", () => {
 					],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			// Empty sections remain addressable so their codexes can be regenerated.
 			root = tree.getRoot();
@@ -254,7 +255,7 @@ describe("Tree Mutations", () => {
 			const tree = createTree();
 
 			// Create two siblings
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note1-recipes",
@@ -266,9 +267,9 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "recipes" as NodeName],
 					"Note1" as NodeName,
 				),
-			});
+			}));
 
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note2-recipes",
@@ -280,16 +281,16 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "recipes" as NodeName],
 					"Note2" as NodeName,
 				),
-			});
+			}));
 
 			// Delete one
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Delete,
 				targetLocator: makeScrollLocator(
 					["Library" as NodeName, "recipes" as NodeName],
 					"Note1" as NodeName,
 				),
-			});
+			}));
 
 			// Sibling should remain
 			const root = tree.getRoot();
@@ -309,7 +310,7 @@ describe("Tree Mutations", () => {
 			const tree = createTree();
 
 			// Create
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Untitled",
@@ -321,17 +322,17 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName],
 					"Untitled" as NodeName,
 				),
-			});
+			}));
 
 			// Rename
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Rename,
 				newNodeName: "MyNote" as NodeName,
 				targetLocator: makeScrollLocator(
 					["Library" as NodeName],
 					"Untitled" as NodeName,
 				),
-			});
+			}));
 
 			const root = tree.getRoot();
 			expect(
@@ -346,7 +347,7 @@ describe("Tree Mutations", () => {
 			const tree = createTree();
 
 			// Create section with child
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-recipes",
@@ -358,17 +359,17 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "recipes" as NodeName],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			// Rename section
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Rename,
 				newNodeName: "cooking" as NodeName,
 				targetLocator: makeSectionLocator(
 					["Library" as NodeName],
 					"recipes" as NodeName,
 				),
-			});
+			}));
 
 			const root = tree.getRoot();
 			expect(
@@ -390,7 +391,7 @@ describe("Tree Mutations", () => {
 			const tree = createTree();
 
 			// Create with specific status
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
@@ -402,27 +403,27 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			// Change status
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.ChangeStatus,
 				newStatus: TreeNodeStatus.Done,
 				targetLocator: makeScrollLocator(
 					["Library" as NodeName],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			// Rename
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Rename,
 				newNodeName: "CompletedNote" as NodeName,
 				targetLocator: makeScrollLocator(
 					["Library" as NodeName],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			const root = tree.getRoot();
 			const renamed = Object.values(root.children).find(
@@ -434,10 +435,10 @@ describe("Tree Mutations", () => {
 			}
 		});
 
-		it("throws on rename collision", () => {
+		it("fails on rename collision", () => {
 			const tree = createTree();
 
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "A",
@@ -449,9 +450,9 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName],
 					"A" as NodeName,
 				),
-			});
+			}));
 
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "B",
@@ -463,18 +464,19 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName],
 					"B" as NodeName,
 				),
-			});
+			}));
 
-			expect(() =>
-				tree.apply({
-					actionType: TreeActionType.Rename,
-					newNodeName: "B" as NodeName,
-					targetLocator: makeScrollLocator(
-						["Library" as NodeName],
-						"A" as NodeName,
-					),
-				}),
-			).toThrow();
+			const renamed = tree.apply({
+				actionType: TreeActionType.Rename,
+				newNodeName: "B" as NodeName,
+				targetLocator: makeScrollLocator(
+					["Library" as NodeName],
+					"A" as NodeName,
+				),
+			});
+			expect(Result.isFailure(renamed) && renamed.failure.message).toBe(
+				"Rename collision: destination segment B﹘Scroll﹘md is already occupied",
+			);
 		});
 	});
 
@@ -483,7 +485,7 @@ describe("Tree Mutations", () => {
 			const tree = createTree();
 
 			// Create structure: recipes/Note and archive/
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-recipes",
@@ -495,10 +497,10 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "recipes" as NodeName],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			// Create archive section
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "placeholder-archive",
@@ -510,10 +512,10 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "archive" as NodeName],
 					"placeholder" as NodeName,
 				),
-			});
+			}));
 
 			// Move Note from recipes to archive
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Move,
 				newNodeName: "Note" as NodeName,
 				newParentLocator: makeSectionLocator(
@@ -530,7 +532,7 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "recipes" as NodeName],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			const root = tree.getRoot();
 
@@ -558,7 +560,7 @@ describe("Tree Mutations", () => {
 			const tree = createTree();
 
 			// Create nested structure
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-soup-recipes",
@@ -574,10 +576,10 @@ describe("Tree Mutations", () => {
 					],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			// Create archive
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "x-archive",
@@ -589,10 +591,10 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "archive" as NodeName],
 					"x" as NodeName,
 				),
-			});
+			}));
 
 			// Move soup section to archive
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Move,
 				newNodeName: "soup" as NodeName,
 				newParentLocator: makeSectionLocator(
@@ -608,7 +610,7 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "recipes" as NodeName],
 					"soup" as NodeName,
 				),
-			});
+			}));
 
 			const root = tree.getRoot();
 
@@ -627,10 +629,10 @@ describe("Tree Mutations", () => {
 			).toBeDefined();
 		});
 
-		it("throws on move collision", () => {
+		it("fails on move collision", () => {
 			const tree = createTree();
 
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-recipes",
@@ -642,9 +644,9 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "recipes" as NodeName],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note-archive",
@@ -656,28 +658,29 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "archive" as NodeName],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
-			expect(() =>
-				tree.apply({
-					actionType: TreeActionType.Move,
-					newNodeName: "Note" as NodeName,
-					newParentLocator: makeSectionLocator(
-						["Library" as NodeName],
-						"archive" as NodeName,
-					),
-					observedSplitPath: {
-						basename: "Note-recipes",
-						extension: MD,
-						kind: SplitPathKind.MdFile,
-						pathParts: ["Library", "archive"],
-					},
-					targetLocator: makeScrollLocator(
-						["Library" as NodeName, "recipes" as NodeName],
-						"Note" as NodeName,
-					),
-				}),
-			).toThrow();
+			const moved = tree.apply({
+				actionType: TreeActionType.Move,
+				newNodeName: "Note" as NodeName,
+				newParentLocator: makeSectionLocator(
+					["Library" as NodeName],
+					"archive" as NodeName,
+				),
+				observedSplitPath: {
+					basename: "Note-recipes",
+					extension: MD,
+					kind: SplitPathKind.MdFile,
+					pathParts: ["Library", "archive"],
+				},
+				targetLocator: makeScrollLocator(
+					["Library" as NodeName, "recipes" as NodeName],
+					"Note" as NodeName,
+				),
+			});
+			expect(Result.isFailure(moved) && moved.failure.message).toBe(
+				"Move collision: destination segment Note﹘Scroll﹘md is already occupied",
+			);
 		});
 	});
 
@@ -686,7 +689,7 @@ describe("Tree Mutations", () => {
 			const tree = createTree();
 
 			// Create
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note",
@@ -698,7 +701,7 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			// Verify initial status
 			let root = tree.getRoot();
@@ -712,14 +715,14 @@ describe("Tree Mutations", () => {
 			expect(note.status).toBe(TreeNodeStatus.NotStarted);
 
 			// Change status
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.ChangeStatus,
 				newStatus: TreeNodeStatus.Done,
 				targetLocator: makeScrollLocator(
 					["Library" as NodeName],
 					"Note" as NodeName,
 				),
-			});
+			}));
 
 			// Verify changed
 			root = tree.getRoot();
@@ -735,7 +738,7 @@ describe("Tree Mutations", () => {
 			const tree = createTree();
 
 			// Create multiple leaves under a section
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note1-recipes",
@@ -747,9 +750,9 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "recipes" as NodeName],
 					"Note1" as NodeName,
 				),
-			});
+			}));
 
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "Note2-recipes",
@@ -761,17 +764,17 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "recipes" as NodeName],
 					"Note2" as NodeName,
 				),
-			});
+			}));
 
 			// Change status on section
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.ChangeStatus,
 				newStatus: TreeNodeStatus.Done,
 				targetLocator: makeSectionLocator(
 					["Library" as NodeName],
 					"recipes" as NodeName,
 				),
-			});
+			}));
 
 			// Verify all descendants have new status
 			const root = tree.getRoot();
@@ -810,8 +813,8 @@ describe("Tree Mutations", () => {
 			};
 
 			// Create twice - should not throw
-			tree.apply(action);
-			tree.apply(action);
+			Result.getOrThrow(tree.apply(action));
+			Result.getOrThrow(tree.apply(action));
 
 			const root = tree.getRoot();
 			expect(Object.values(root.children)).toHaveLength(1);
@@ -823,13 +826,13 @@ describe("Tree Mutations", () => {
 
 			// Try to delete non-existent - should not throw
 			expect(() => {
-				tree.apply({
+				Result.getOrThrow(tree.apply({
 					actionType: TreeActionType.Delete,
 					targetLocator: makeScrollLocator(
 						["Library" as NodeName],
 						"NonExistent" as NodeName,
 					),
-				});
+				}));
 			}).not.toThrow();
 		});
 
@@ -837,7 +840,7 @@ describe("Tree Mutations", () => {
 			const tree = createTree();
 
 			// Perform various operations
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "A",
@@ -849,9 +852,9 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName],
 					"A" as NodeName,
 				),
-			});
+			}));
 
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Create,
 				observedSplitPath: {
 					basename: "B-section",
@@ -863,24 +866,24 @@ describe("Tree Mutations", () => {
 					["Library" as NodeName, "section" as NodeName],
 					"B" as NodeName,
 				),
-			});
+			}));
 
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Rename,
 				newNodeName: "AA" as NodeName,
 				targetLocator: makeScrollLocator(
 					["Library" as NodeName],
 					"A" as NodeName,
 				),
-			});
+			}));
 
-			tree.apply({
+			Result.getOrThrow(tree.apply({
 				actionType: TreeActionType.Delete,
 				targetLocator: makeScrollLocator(
 					["Library" as NodeName, "section" as NodeName],
 					"B" as NodeName,
 				),
-			});
+			}));
 
 			// Tree should be in consistent state
 			const root = tree.getRoot();

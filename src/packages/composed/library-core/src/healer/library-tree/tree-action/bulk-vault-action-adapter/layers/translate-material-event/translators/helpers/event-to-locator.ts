@@ -1,5 +1,4 @@
-import { Result as EffectResult } from "effect";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import type {
 	AnySplitPathInsideLibrary,
 	Codecs,
@@ -16,18 +15,18 @@ import { inferPolicyAndIntent } from "../../policy-and-intent/infer-policy-and-i
 
 export function tryMakeDestinationLocatorFromEvent<
 	E extends MaterializedNodeEvent,
->(ev: E, codecs: Codecs): Result<TreeNodeLocatorForEvent<E>, string> {
+>(ev: E, codecs: Codecs): Result.Result<TreeNodeLocatorForEvent<E>, string> {
 	const cspRes = tryMakeCanonicalSplitPathToDestination(ev, codecs);
-	if (cspRes.isErr()) return err(cspRes.error);
+	if (Result.isFailure(cspRes)) return Result.fail(cspRes.failure);
 
-	const locatorRes = EffectResult.mapError(
-		codecs.locator.canonicalSplitPathInsideLibraryToLocator(cspRes.value),
+	const locatorRes = Result.mapError(
+		codecs.locator.canonicalSplitPathInsideLibraryToLocator(cspRes.success),
 		(error) => error.message,
 	);
-	if (EffectResult.isFailure(locatorRes)) return err(locatorRes.failure);
+	if (Result.isFailure(locatorRes)) return Result.fail(locatorRes.failure);
 
 	// Cast is safe: locator type corresponds to event's split path kind
-	return ok(locatorRes.success as TreeNodeLocatorForEvent<E>);
+	return Result.succeed(locatorRes.success as TreeNodeLocatorForEvent<E>);
 }
 
 const tryMakeCanonicalSplitPathToDestination = <
@@ -35,32 +34,32 @@ const tryMakeCanonicalSplitPathToDestination = <
 >(
 	ev: E,
 	codecs: Codecs,
-): Result<CanonicalSplitPathToDestination<E>, string> => {
+): Result.Result<CanonicalSplitPathToDestination<E>, string> => {
 	if (ev.kind === MaterializedEventKind.Delete) {
-		const withSeparatedSuffixResult = EffectResult.mapError(
+		const withSeparatedSuffixResult = Result.mapError(
 			codecs.splitPathWithSeparatedSuffix.splitPathInsideLibraryToWithSeparatedSuffix(
 				ev.splitPath,
 			),
 			(error) => error.message,
 		);
-		if (EffectResult.isFailure(withSeparatedSuffixResult)) {
-			return err(withSeparatedSuffixResult.failure) as Result<
-				CanonicalSplitPathToDestination<E>,
-				string
-			>;
+		if (Result.isFailure(withSeparatedSuffixResult)) {
+			return Result.fail(withSeparatedSuffixResult.failure);
 		}
 		const { libraryRootName } = codecs.rules;
-		const r = canonizeSplitPathWithSeparatedSuffix(
-			codecs.suffix,
-			libraryRootName,
-			withSeparatedSuffixResult.success,
-		).mapErr((error) => error.message);
-		return r as Result<CanonicalSplitPathToDestination<E>, string>;
+		const r = Result.mapError(
+			canonizeSplitPathWithSeparatedSuffix(
+				codecs.suffix,
+				libraryRootName,
+				withSeparatedSuffixResult.success,
+			),
+			(error) => error.message,
+		);
+		return r as Result.Result<CanonicalSplitPathToDestination<E>, string>;
 	}
 
 	const sp = extractSplitPathToDestination(ev);
 	if (!("kind" in sp)) {
-		return err("Invalid split path: missing kind");
+		return Result.fail("Invalid split path: missing kind");
 	}
 	const { policy, intent } = inferPolicyAndIntent(
 		ev as MaterializedNodeEvent,
@@ -73,7 +72,7 @@ const tryMakeCanonicalSplitPathToDestination = <
 		intent,
 		codecs,
 	);
-	return r as Result<CanonicalSplitPathToDestination<E>, string>;
+	return r as Result.Result<CanonicalSplitPathToDestination<E>, string>;
 };
 
 const extractSplitPathToDestination = (e: MaterializedNodeEvent) => {

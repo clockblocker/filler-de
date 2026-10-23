@@ -1,3 +1,4 @@
+import { Result } from "effect";
 import type { NonEmptyArray } from "../../../../../types/helpers";
 import { nonEmptyArrayResult } from "../../../../../types/utils";
 import type {
@@ -111,8 +112,11 @@ export function groupTokens(tokens: ContentToken[]): SentenceGroup[] {
 		if (token.kind === "paragraphBreak") {
 			// Finish current group if non-empty
 			const nonEmpty = nonEmptyArrayResult(currentGroup);
-			if (nonEmpty.isOk()) {
-				const group = createGroup(nonEmpty.value, afterParagraphBreak);
+			if (Result.isSuccess(nonEmpty)) {
+				const group = createGroup(
+					nonEmpty.success,
+					afterParagraphBreak,
+				);
 				groups.push(group);
 			}
 			currentGroup = [];
@@ -140,8 +144,11 @@ export function groupTokens(tokens: ContentToken[]): SentenceGroup[] {
 		} else {
 			// Finish current group and start new one
 			const nonEmpty = nonEmptyArrayResult(currentGroup);
-			if (nonEmpty.isOk()) {
-				const group = createGroup(nonEmpty.value, afterParagraphBreak);
+			if (Result.isSuccess(nonEmpty)) {
+				const group = createGroup(
+					nonEmpty.success,
+					afterParagraphBreak,
+				);
 				groups.push(group);
 				afterParagraphBreak = false;
 			}
@@ -151,8 +158,8 @@ export function groupTokens(tokens: ContentToken[]): SentenceGroup[] {
 
 	// Don't forget the last group
 	const nonEmpty = nonEmptyArrayResult(currentGroup);
-	if (nonEmpty.isOk()) {
-		const group = createGroup(nonEmpty.value, afterParagraphBreak);
+	if (Result.isSuccess(nonEmpty)) {
+		const group = createGroup(nonEmpty.success, afterParagraphBreak);
 		groups.push(group);
 	}
 

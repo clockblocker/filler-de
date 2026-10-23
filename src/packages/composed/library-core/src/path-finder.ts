@@ -13,9 +13,9 @@
  */
 
 import { MD, SplitPathKind } from "@textfresser/vault-action-manager";
-import { Result as EffectResult } from "effect";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import type { Codecs, SplitPathToMdFileInsideLibrary } from "./codecs";
+import { parseSectionChainCoreNames } from "./codecs/segment-id/section-chain";
 import type {
 	SectionNodeSegmentId,
 	TreeNodeSegmentId,
@@ -60,46 +60,31 @@ export function computeCodexSuffix(nodeNames: string[]): string[] {
 // ─── Segment ID Parsing ───
 
 /**
- * Parse a chain of segment IDs to extract node names.
+ * Parse a section chain (parent chain) to extract node names.
  * Returns Result to handle parse failures explicitly.
  *
- * @param chain - Array of segment IDs
+ * @param chain - Array of section segment IDs
  * @param codecs - Codec instance for parsing
- */
-function parseChainToNodeNames(
-	chain: TreeNodeSegmentId[],
-	codecs: Codecs,
-): Result<string[], PathFinderError> {
-	if (chain.length === 0) {
-		return err({ kind: "EmptyChain", reason: "Cannot parse empty chain" });
-	}
-
-	const nodeNames: string[] = [];
-
-	for (const segId of chain) {
-		const parseResult = codecs.segmentId.parseSegmentId(segId);
-		if (EffectResult.isFailure(parseResult)) {
-			return err({
-				kind: "ParseFailed",
-				reason: parseResult.failure.message,
-				segmentId: segId,
-			});
-		}
-		nodeNames.push(parseResult.success.coreName);
-	}
-
-	return ok(nodeNames);
-}
-
-/**
- * Parse a section chain (parent chain) to extract node names.
- * Specialized version for section chains.
  */
 export function parseSectionChainToNodeNames(
 	chain: SectionNodeSegmentId[],
 	codecs: Codecs,
-): Result<string[], PathFinderError> {
-	return parseChainToNodeNames(chain as TreeNodeSegmentId[], codecs);
+): Result.Result<string[], PathFinderError> {
+	if (chain.length === 0) {
+		return Result.fail({
+			kind: "EmptyChain",
+			reason: "Cannot parse empty chain",
+		});
+	}
+
+	return Result.mapError(
+		parseSectionChainCoreNames(chain, codecs.segmentId),
+		({ error, segmentId }): PathFinderError => ({
+			kind: "ParseFailed",
+			reason: error.message,
+			segmentId,
+		}),
+	);
 }
 
 // ─── Section Path Building ───
@@ -114,7 +99,7 @@ export function parseSectionChainToNodeNames(
 export function sectionChainToPathParts(
 	chain: SectionNodeSegmentId[],
 	codecs: Codecs,
-): Result<string[], PathFinderError> {
+): Result.Result<string[], PathFinderError> {
 	return parseSectionChainToNodeNames(chain, codecs);
 }
 
@@ -152,9 +137,9 @@ export function buildCodexSplitPath(
 	sectionChain: SectionNodeSegmentId[],
 	codexPrefix: string,
 	codecs: Codecs,
-): Result<SplitPathToMdFileInsideLibrary, PathFinderError> {
+): Result.Result<SplitPathToMdFileInsideLibrary, PathFinderError> {
 	if (sectionChain.length === 0) {
-		return err({
+		return Result.fail({
 			kind: "EmptyChain",
 			reason: "Section chain cannot be empty",
 		});
@@ -162,15 +147,15 @@ export function buildCodexSplitPath(
 
 	// Parse chain to get node names (includes Library root)
 	const nodeNamesResult = parseSectionChainToNodeNames(sectionChain, codecs);
-	if (nodeNamesResult.isErr()) {
-		return err(nodeNamesResult.error);
+	if (Result.isFailure(nodeNamesResult)) {
+		return Result.fail(nodeNamesResult.failure);
 	}
 
-	const nodeNames = nodeNamesResult.value;
+	const nodeNames = nodeNamesResult.success;
 	const basename = buildCodexBasename(nodeNames, codexPrefix, codecs);
 
 	// pathParts = nodeNames (already includes Library root from chain)
-	return ok({
+	return Result.succeed({
 		basename,
 		extension: MD,
 		kind: SplitPathKind.MdFile,

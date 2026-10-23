@@ -18,6 +18,7 @@ import {
 	SplitPathKind,
 	VaultEventKind,
 } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import {
 	buildCanonicalDelimiter,
 	buildFlexibleDelimiterPattern,
@@ -77,7 +78,8 @@ describe("library-core under explicit settings", () => {
 		};
 
 		const healingActions = interpret(bulk).treeActions.flatMap(
-			(action) => healer.getHealingActionsFor(action).healingActions,
+			(action) =>
+				Result.getOrThrow(healer.getHealingActionsFor(action)).healingActions,
 		);
 
 		expect(
@@ -114,7 +116,7 @@ describe("library-core under explicit settings", () => {
 			"[[__~Berry-Pie~Recipe|Berry-Pie]]",
 			codecs,
 		);
-		expect(click.isOk() ? click.value : click.error).toEqual({
+		expect(Result.isSuccess(click) ? click.success : click.failure).toEqual({
 			kind: "Section",
 			sectionChain: ["Library", "Recipe", "Berry-Pie"].map(sectionId),
 		});

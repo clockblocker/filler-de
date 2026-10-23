@@ -27,6 +27,23 @@
 		"effecttsgo/global-timers": "warn",
 		"effecttsgo/global-timers-in-effect": "warn",
 		"effecttsgo/new-promise": "warn",
+		"no-restricted-imports": [
+			"error",
+			{
+				"paths": [
+					{
+						"message": "neverthrow is retired; use Effect's Result.",
+						"name": "neverthrow"
+					}
+				],
+				"patterns": [
+					{
+						"group": ["neverthrow/*"],
+						"message": "neverthrow is retired; use Effect's Result."
+					}
+				]
+			}
+		],
 		"no-unused-vars": [
 			"warn",
 			{

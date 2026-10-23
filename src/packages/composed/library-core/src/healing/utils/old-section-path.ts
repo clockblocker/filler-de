@@ -1,5 +1,4 @@
-import { Result as EffectResult } from "effect";
-import { err, ok, type Result } from "neverthrow";
+import { Result } from "effect";
 import type { CodecError, Codecs } from "../../codecs";
 import type { SectionNodeSegmentId } from "../../codecs/segment-id";
 import { sectionChainToPathParts } from "../../tree/utils";
@@ -19,22 +18,25 @@ export function parseOldSectionPath(
 	segmentIdChainToParent: SectionNodeSegmentId[],
 	segmentId: SectionNodeSegmentId,
 	codecs: Codecs,
-): Result<string[], CodecError> {
+): Result.Result<string[], CodecError> {
 	// Parse parent chain to path parts
 	const parentPathResult = sectionChainToPathParts(
 		segmentIdChainToParent,
 		codecs.segmentId,
 	);
-	if (parentPathResult.isErr()) {
-		return err(parentPathResult.error);
+	if (Result.isFailure(parentPathResult)) {
+		return Result.fail(parentPathResult.failure);
 	}
 
 	// Parse the section's own segment ID
 	const nodeNameResult = codecs.segmentId.parseSectionSegmentId(segmentId);
-	if (EffectResult.isFailure(nodeNameResult)) {
-		return err(nodeNameResult.failure);
+	if (Result.isFailure(nodeNameResult)) {
+		return Result.fail(nodeNameResult.failure);
 	}
 
 	// Combine: parent path + node name
-	return ok([...parentPathResult.value, nodeNameResult.success.coreName]);
+	return Result.succeed([
+		...parentPathResult.success,
+		nodeNameResult.success.coreName,
+	]);
 }

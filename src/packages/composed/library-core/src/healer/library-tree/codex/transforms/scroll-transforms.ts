@@ -5,6 +5,7 @@
 
 import { goBackLinkHelper } from "@textfresser/note-addressing";
 import type { Transform } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type { Codecs } from "../../../../codecs";
 import type { SectionNodeSegmentId } from "../../../../codecs/segment-id";
 import { noteMetadataHelper } from "../../../../internal/root/note-metadata";
@@ -51,11 +52,11 @@ export function makeBacklinkTransform(
 			parentChain,
 			codecs,
 		);
-		if (parentPathPartsResult.isErr()) {
+		if (Result.isFailure(parentPathPartsResult)) {
 			return content;
 		}
 
-		const parentPathParts = parentPathPartsResult.value;
+		const parentPathParts = parentPathPartsResult.success;
 		const parentName = parentPathParts[parentPathParts.length - 1];
 		if (!parentName) {
 			return content;

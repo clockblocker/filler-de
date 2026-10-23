@@ -1,4 +1,5 @@
 import type { SplitPathToMdFile } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type { CodecRules } from "../../../codecs";
 import { makeLibraryScope } from "../../../tree/library-scope";
 import { PREFIX_OF_CODEX } from "./literals";
@@ -22,5 +23,5 @@ export function isCodexInsideLibrary(
 	if (!isCodexSplitPath(splitPath)) return false;
 	const libraryScopedResult =
 		makeLibraryScope(rules).toLibraryPath(splitPath);
-	return libraryScopedResult.isOk();
+	return Result.isSuccess(libraryScopedResult);
 }

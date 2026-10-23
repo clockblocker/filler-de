@@ -10,6 +10,12 @@ import {
 } from "../../../../../types/schemas/node-name";
 import { TreeNodeKind } from "../../../tree-node/types/atoms";
 
+/**
+ * The node name in a locator's segment ID.
+ *
+ * Invariant: the locator comes from the locator codecs, which validate its
+ * segment ID. One whose node name does not parse is a bug, and this throws.
+ */
 export const getNodeName = <NK extends TreeNodeKind>(
 	locator: NodeLocatorOf<NK>,
 	codecs: Codecs,
@@ -29,6 +35,13 @@ export const getNodeName = <NK extends TreeNodeKind>(
 	return r.data;
 };
 
+/**
+ * The locator of a locator's parent section.
+ *
+ * Invariant: the locator is below the Library root. The root has no parent,
+ * and the caller must handle it on its own; passing it is a bug, and this
+ * throws.
+ */
 export const getParentLocator = (
 	locator: TreeNodeLocator,
 ): NodeLocatorOf<"Section"> => {

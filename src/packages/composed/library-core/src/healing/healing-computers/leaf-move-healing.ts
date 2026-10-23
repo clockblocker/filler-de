@@ -1,4 +1,5 @@
 import { SplitPathKind } from "@textfresser/vault-action-manager";
+import { Result } from "effect";
 import type {
 	Codecs,
 	FileNodeLocator,
@@ -7,6 +8,7 @@ import type {
 	SplitPathToMdFileInsideLibrary,
 } from "../../codecs";
 import type { SectionNodeSegmentId } from "../../codecs/segment-id";
+import type { TreeActionError } from "../../healer/library-tree/tree-action/tree-action-error";
 import type { HealingAction } from "../../healer/library-tree/types/healing-action";
 import {
 	type FileNode,
@@ -37,7 +39,7 @@ type LeafMoveParams = {
  */
 export function computeLeafMoveHealing(
 	params: LeafMoveParams,
-): HealingAction[] {
+): Result.Result<HealingAction[], TreeActionError> {
 	const { node, newParentChain, observedSplitPath, codecs } = params;
 
 	const newSegmentId = makeNodeSegmentId(node);
@@ -56,7 +58,7 @@ export function computeLeafMoveHealing(
 				codecs,
 			);
 		}
-		return [];
+		return Result.succeed([]);
 	}
 
 	// File
@@ -70,5 +72,5 @@ export function computeLeafMoveHealing(
 		return computeLeafHealingForFile(newLocator, observedSplitPath, codecs);
 	}
 
-	return [];
+	return Result.succeed([]);
 }

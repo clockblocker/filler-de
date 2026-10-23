@@ -11,6 +11,7 @@ import {
 import { Result } from "effect";
 import type { CodecError } from "../errors";
 import type { SegmentIdCodecs } from "../segment-id";
+import { parseSectionChainCoreNames } from "../segment-id/section-chain";
 import type { SectionNodeSegmentId } from "../segment-id/types/segment-id";
 import type {
 	AnySplitPathInsideLibrary,
@@ -114,20 +115,15 @@ function fromSectionChain(
 	chain: SectionNodeSegmentId[],
 	segmentIdCodecs: SegmentIdCodecs,
 ): Result.Result<LibraryPath, CodecError> {
-	const segments: string[] = [];
-
-	for (const segId of chain) {
-		const parseResult = segmentIdCodecs.parseSectionSegmentId(segId);
-		if (Result.isFailure(parseResult)) {
-			return Result.fail(parseResult.failure);
-		}
-		segments.push(parseResult.success.coreName);
+	const segments = parseSectionChainCoreNames(chain, segmentIdCodecs);
+	if (Result.isFailure(segments)) {
+		return Result.fail(segments.failure.error);
 	}
 
 	return Result.succeed({
 		extension: undefined,
 		kind: SplitPathKindEnum.Folder,
-		segments,
+		segments: segments.success,
 	});
 }
 
