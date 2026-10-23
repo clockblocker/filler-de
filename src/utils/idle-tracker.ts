@@ -9,9 +9,8 @@
  * on its changes instead of polling it. A change is one synchronous step,
  * with no lock to wait for, so the plain callbacks that count through the
  * runtime's `readSync` never see it go async. The plugin runtime provides
- * one tracker
- * (`IdleTrackerLive`); code run without it, such as most unit tests,
- * counts nothing.
+ * one tracker (`IdleTrackerLive`); code run without it, such as most unit
+ * tests, counts nothing.
  */
 import {
 	Context,
